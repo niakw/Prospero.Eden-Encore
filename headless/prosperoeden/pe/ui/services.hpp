@@ -156,6 +156,8 @@ class Services
     virtual std::vector<Game> games() = 0; // reads every game file: slow
     // The value the launcher hands back to start a game.
     virtual std::string game_path(const std::string &file) = 0;
+    // Cheap presence check used while the launcher is open.
+    virtual bool game_exists(const std::string &) { return true; }
     virtual bool docked(std::uint64_t title_id) = 0;
     virtual bool set_docked(std::uint64_t title_id, bool docked) = 0;
     virtual GameSettings game_settings(std::uint64_t title_id) = 0;
