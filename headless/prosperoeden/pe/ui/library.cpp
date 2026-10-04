@@ -34,6 +34,7 @@ enum GameRow : int
 {
     row_mode,
     row_renderer,
+    row_performance,
     row_resolution,
     row_filter,
     row_refresh,
@@ -642,6 +643,8 @@ void Launcher::press_game(Key key)
         GameSettings next = game_settings_;
         if (option_ == row_renderer)
             next.renderer = cycle(next.renderer, 2);
+        if (option_ == row_performance)
+            next.performance_profile = cycle(next.performance_profile, 3);
         if (option_ == row_resolution)
             next.resolution =
                 cycle(next.resolution, static_cast<int>(services_.resolution_labels().size()));
@@ -693,6 +696,9 @@ void Launcher::draw_game(Canvas &c, float open)
         game_docked_ ? tr("Docked") : tr("Handheld"),
         game_settings_.renderer >= 0 ? kRenderers[game_settings_.renderer] :
             fill(tr("Default ({0})"), {kRenderers[prefs_.renderer != 0 ? 1 : 0]}),
+        game_settings_.performance_profile >= 0 ?
+            Eden::kPerformanceProfileLabels[game_settings_.performance_profile] :
+            fill(tr("Default ({0})"), {Eden::kPerformanceProfileLabels[std::clamp(prefs_.performance_profile, 0, 2)]}),
         game_settings_.resolution >= 0 ? pick(resolutions, game_settings_.resolution) :
             fill(tr("Default ({0})"), {short_resolution(pick(resolutions, prefs_.resolution))}),
         game_settings_.filter >= 0 ? pick(filters, game_settings_.filter) :
@@ -712,8 +718,8 @@ void Launcher::draw_game(Canvas &c, float open)
         import_source_ == SaveSource::ryujinx ? tr("Ryujinx save found") :
         import_source_ == SaveSource::folder ? tr("Save folder found") : tr("Nothing to import"),
     };
-    static constexpr const char *kLabels[] = {TR("Console mode"), TR("Renderer"), TR("Resolution"),
-                                              TR("Upscaling filter"), TR("Refresh rate"),
+    static constexpr const char *kLabels[] = {TR("Console mode"), TR("Renderer"), TR("Performance profile"),
+                                              TR("Resolution"), TR("Upscaling filter"), TR("Refresh rate"),
                                               TR("Button layout"), TR("Mods"), TR("Save data")};
     // Five rows show; the list scrolls to the others.
     list.push_clip({kDialogWindow.x - 24.0f, kDialogWindow.y - 6.0f, kDialogWindow.w + 48.0f,
@@ -777,6 +783,7 @@ void Launcher::draw_game(Canvas &c, float open)
         static constexpr const char *kGameAbout[] = {
             TR("Docked can improve graphics but may cost performance; Handheld is lighter for demanding games."),
             TR("Vulkan is recommended on PS5. Use OpenGL only as a fallback for a title with Vulkan issues."),
+            TR("Recommended keeps accuracy high and compiles earlier-used code ahead. Performance may trade graphics accuracy for speed."),
             TR("1x is the safe default. Lower it for performance/memory; higher scales use much more graphics memory."),
             TR("Bilinear is the lightest default. AMD FSR is useful when rendering below the TV output size."),
             TR("60 Hz is the safe default. Use 120 Hz only with a compatible display or high-FPS patch."),
