@@ -580,7 +580,7 @@ int main(int argc, char** argv) {
         Eden::JitList::enabled = effective_performance_profile >= 1;
         Eden::Report("performance",
             (std::string("Profile ") + Eden::kPerformanceProfileLabels[effective_performance_profile] +
-             ": compile-ahead " + (Eden::JitList::enabled ? "on" : "off") +
+             ": compile-ahead " + (Eden::JitList::enabled.load(std::memory_order_relaxed) ? "on" : "off") +
              ", async shaders " + (Settings::values.use_asynchronous_shaders.GetValue() ? "on" : "off") +
              ", GPU accuracy " + (profile_gpu_accuracy == Settings::GpuAccuracy::Low ? "low" : "high")).c_str());
         // RADV presents the console's 12 GiB of direct memory as an integrated GPU, for which
@@ -1002,6 +1002,9 @@ int main(int argc, char** argv) {
                 try {
                     loaded = system.Load(window, guest, params);
                 } catch (const std::exception& error) {
+                    load_input.request_stop();
+                    if (load_input.joinable()) load_input.join();
+                    if (left_while_loading) Eden::StopLimit::End();
                     // Preserve the original error before partial core teardown.
                     std::fprintf(stderr, "Game load failed: %s\n", error.what());
                     std::fflush(stdout);
@@ -1010,6 +1013,7 @@ int main(int argc, char** argv) {
                 load_input.request_stop();
                 if (load_input.joinable()) load_input.join();
                 if (loaded != Core::SystemResultStatus::Success) {
+                    if (left_while_loading) Eden::StopLimit::End();
                     std::fprintf(stderr, "Core load failed: %u\n", static_cast<unsigned>(loaded));
                     if (loaded == Core::SystemResultStatus::ErrorVideoCore) {
                         throw std::runtime_error("Graphics backend initialization failed. Try another backend in Settings; see stderr.log and eden_log.txt for driver details.");
