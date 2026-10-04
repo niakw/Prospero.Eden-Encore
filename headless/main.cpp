@@ -160,9 +160,11 @@ int main(int argc, char** argv) {
             std::filesystem::create_directories(folder, folder_error);
         }
         // Keep the previous session's logs: a freeze is diagnosed after the app is reopened.
-        for (const char* name : {"stderr.log", "heap.log"}) {
-            const std::string log = Eden::LogFile(name);
-            std::rename(log.c_str(), (log.substr(0, log.size() - 4) + ".prev.log").c_str());
+        for (const char* base : {"stderr", "heap"}) {
+            const std::string current = Eden::LogFile(std::string{base} + ".log");
+            const std::string first = Eden::LogFile(std::string{base} + ".first.log");
+            (void)std::rename(current.c_str(), Eden::LogFile(std::string{base} + ".prev.log").c_str());
+            (void)std::rename(first.c_str(), Eden::LogFile(std::string{base} + ".prev.first.log").c_str());
         }
         // A crash report the previous run left: that run's logs move beside it, and the launcher
         // says where it is (crash_report.h).
@@ -183,8 +185,11 @@ int main(int argc, char** argv) {
         if (std::setvbuf(stdout, stdout_buffer, _IOFBF, sizeof(stdout_buffer)) != 0) return 2;
         // Console storage writes take ~25 ms each; background threads copy both streams to disk.
         static Eden::LogPipe stderr_pipe, stdout_pipe;
-        if (!stderr_pipe.Attach(stderr) || !stdout_pipe.Attach(stdout))
-            Eden::Report("logs", "Asynchronous log writing unavailable; writing directly");
+        const std::string stderr_path = Eden::LogFile("stderr.log");
+        const std::string heap_path = Eden::LogFile("heap.log");
+        if (!stderr_pipe.Attach(stderr, stderr_path, Eden::LogFile("stderr.first.log")) ||
+            !stdout_pipe.Attach(stdout, heap_path, Eden::LogFile("heap.first.log")))
+            Eden::Report("logs", "Asynchronous bounded log writing unavailable; writing directly");
         Eden::Crash::Install(Eden::LogsDir(), Eden::kAppVersion, last_crash.restarted);
         Eden::BootTrace::Ready(Eden::LogsDir(), Eden::FilesystemAccess());
         Eden::BootTrace::Line("logs ready; app=%s data=%s", Eden::AppDir().c_str(), Eden::UserDir().c_str());
