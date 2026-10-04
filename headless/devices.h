@@ -56,7 +56,7 @@ private:
 class Pad final {
 public:
     static constexpr std::size_t kMaxPlayers = 4;
-    explicit Pad(float deadzone = 0.08f, float trigger_threshold = 0.5f);
+    explicit Pad(float deadzone = 0.08f, float trigger_threshold = 0.5f, bool playstation_layout = true);
     ~Pad();
     Pad(const Pad&) = delete;
     Pad& operator=(const Pad&) = delete;
@@ -89,6 +89,7 @@ private:
     std::shared_ptr<PadEngine> engine;
     float deadzone;
     float trigger_threshold;
+    bool playstation_layout;
     std::array<Slot, kMaxPlayers> slots{};
     bool owns_user_service = false;
     std::atomic<bool> return_to_menu = false;
