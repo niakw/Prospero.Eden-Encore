@@ -480,6 +480,12 @@ bool EdenServices::game_exists(const std::string& file) {
     return Eden::ValidRomFilename(file) && IsFile(Eden::AssetsPath("roms/" + file));
 }
 
+void EdenServices::arm_safe_launch() {
+    // Same process: main.cpp consumes and unsets this before applying the game's settings.
+    setenv("EDEN_SAFE_LAUNCH", "1", 1);
+    Eden::Report("launch", "Safe launch armed for the next game only");
+}
+
 bool EdenServices::docked(std::uint64_t title_id) { return Eden::LoadGameDocked(title_id); }
 
 bool EdenServices::set_docked(std::uint64_t title_id, bool docked) {
