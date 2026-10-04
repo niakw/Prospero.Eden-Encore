@@ -33,7 +33,7 @@ class Textures
     Textures &operator=(const Textures &) = delete;
     ~Textures();
 
-    // The background art, its blurred copy (frosted panels) and the app icon.
+    // Launcher brand/controller art. The Eden theme no longer loads the legacy scenic backdrops.
     bool load_art(const std::string &directory);
     // Deletes every texture; the GL context must still be current.
     void release();
