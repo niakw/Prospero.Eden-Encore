@@ -91,7 +91,10 @@ struct Preferences
     int filter = 0;
     int refresh = 0; // the output while a game runs: 0 60 Hz, 1 120 Hz
     int output = 0;  // the size of the picture, menu and games: 0 1080p, 1 1440p, 2 2160p
+    int controller_layout = 0; // 0 PlayStation, 1 Nintendo
     bool vibration = true;
+    int vibration_strength = 100;
+    int stick_deadzone = 8;
     int language = 0;
     int menu_volume = 70; // launcher sounds, 0-100
     // Accessibility: how the launcher itself is shown (theme.hpp, Look).
@@ -107,6 +110,7 @@ struct GameSettings
     int resolution = -1;
     int filter = -1;
     int refresh = -1;
+    int controller_layout = -1;
 };
 
 // A mod of one game, from the game files folder's mods/<title ID>/.
