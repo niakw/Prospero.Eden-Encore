@@ -6,6 +6,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: eden-040-improved-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -39,6 +43,10 @@ jobs:
             ~/.cache/prosperoeden-deps
             ~/.cache/ps5-eden-headless.*
             .deps
+            ../ps5-native-app-boilerplate
+            ../mihawk-vulkan-review
+            ../mihawk-mesa-review
+            ../mihawk-sdk-review
           key: prosperoeden-040-zbic-${{ runner.os }}-${{ hashFiles('tools/deps.json') }}
           restore-keys: |
             prosperoeden-040-zbic-${{ runner.os }}-
