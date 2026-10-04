@@ -3,7 +3,7 @@
 //
 //   {
 //     "version": 1,
-//     "video": { "renderer": "vulkan", "fps_overlay": true, "resolution": "1x",
+//     "video": { "renderer": "vulkan", "fps_overlay": false, "resolution": "1x",
 //                "upscaling_filter": "bilinear", "refresh_rate": "60",
 //                "output_resolution": "1080p" },
 //     "audio": { "volume": 100, "mute": false, "menu_volume": 70 },
@@ -46,7 +46,7 @@ inline const char* BackendName(GraphicsBackend backend) {
 // or 1080p docked output) and the filter that scales the result to the TV output. 3x and 4x draw
 // nine and sixteen times the game's own pixels: they need the graphics memory for it.
 inline constexpr const char* kResolutionKeys[] = {"0.5x", "0.75x", "1x", "1.5x", "2x", "3x", "4x"};
-inline constexpr const char* kResolutionLabels[] = {"0.5x (faster, softer)", "0.75x (faster)", "1x (native)",
+inline constexpr const char* kResolutionLabels[] = {"0.5x (faster, softer)", "0.75x (faster)", "1x (recommended)",
                                                     "1.5x (sharper)", "2x (sharpest)", "3x (slower)",
                                                     "4x (slowest)"};
 static_assert(std::size(kResolutionLabels) == std::size(kResolutionKeys));
@@ -82,7 +82,7 @@ static_assert(std::size(kLanguageLabels) == std::size(kLanguageKeys) &&
               std::size(kLanguageSettings) == std::size(kLanguageKeys) &&
               std::size(kLanguageRegions) == std::size(kLanguageKeys));
 struct Preferences {
-    bool hud = true;
+    bool hud = false;
     int volume = 100;
     bool mute = false;
     bool detailed_logging = false;
