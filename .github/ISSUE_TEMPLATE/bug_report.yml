@@ -1,0 +1,67 @@
+name: Bug report
+description: Report a reproducible Prospero.Eden Encore problem
+title: "[Bug] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Do not upload keys, firmware, copyrighted game files, account data or secrets.
+        Security vulnerabilities must follow SECURITY.md instead of this public form.
+  - type: input
+    id: version
+    attributes:
+      label: Encore version / commit
+      placeholder: "e.g. v1.000.040-encore-... or commit SHA"
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: PS5 firmware
+      placeholder: "13.60"
+    validations:
+      required: true
+  - type: dropdown
+    id: renderer
+    attributes:
+      label: Renderer
+      options:
+        - Vulkan
+        - OpenGL
+        - Launcher / not applicable
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs / diagnostics
+      description: Remove keys, account data, private paths and copyrighted content before posting.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I reproduced this on an official Encore build or the default branch.
+          required: true
+        - label: I checked that this is not an FPKG/kstuff/jailbreak support request.
+          required: true
+        - label: I did not include keys, firmware, game files or secrets.
+          required: true
