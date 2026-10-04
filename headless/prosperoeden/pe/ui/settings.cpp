@@ -107,6 +107,24 @@ void Launcher::press_settings(Key key)
             cue(Cue::focus);
         }
         return;
+    case Key::triangle:
+    {
+        const Preferences before = prefs_;
+        const int language = prefs_.language;
+        prefs_ = Preferences{};
+        prefs_.language = language; // a recovery reset must not change the user's language
+        if (!save_preferences(true))
+        {
+            prefs_ = before;
+            apply_look();
+            cue(Cue::error);
+            return;
+        }
+        apply_look();
+        say(tr("Recommended defaults restored."));
+        cue(Cue::saved);
+        return;
+    }
     case Key::cross:
         press_ = 1.0f;
         switch (settings_.selected)
@@ -282,8 +300,9 @@ void Launcher::draw_settings(Canvas &c)
     list.pop_opacity();
 
     static constexpr Hint kHints[] = {
-        {Pad::cross, TR("Select")}, {Pad::circle, TR("Back")}, {Pad::updown, TR("Browse settings")}};
-    draw_footer(c, kHints, 3);
+        {Pad::cross, TR("Select")}, {Pad::triangle, TR("Restore defaults")},
+        {Pad::circle, TR("Back")}, {Pad::updown, TR("Browse settings")}};
+    draw_footer(c, kHints, 4);
 }
 
 // ---------------------------------------------------------------- dialogs
