@@ -49,6 +49,11 @@ command -v rsvg-convert >/dev/null 2>&1 || {
 rsvg-convert -w 512 -h 512 "$root/assets/eden-official.svg" -o "$app/sce_sys/icon0.png"
 rm -rf "$app/ui"
 cp -a "$root/headless/prosperoeden/ui" "$app/ui"
+command -v convert >/dev/null 2>&1 || {
+    echo "ImageMagick convert is required to build the Eden launcher brand asset" >&2
+    exit 2
+}
+convert "$app/sce_sys/icon0.png" -resize 256x256 "$app/ui/art/brand.tga"
 # Filesystem access helper (headless/elevation, built for PPSA99008): elfldr runs it at startup.
 make -s -C "$root/headless/elevation/helper" OUTPUT="$root/build/elevation/sandbox-elevator.elf" \
     PS5_PAYLOAD_SDK="${PS5_ELEVATION_SDK:-/opt/ps5-payload-sdk}"
