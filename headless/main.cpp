@@ -446,7 +446,10 @@ int main(int argc, char** argv) {
 #else
         // Library > Game settings take precedence over Settings > Video.
         const auto game_video = Eden::LoadGameSettings(eden_game_title_id(selected_game.c_str()));
-        const auto backend = game_video.renderer >= 0 ?
+        const bool safe_launch = std::getenv("EDEN_SAFE_LAUNCH") != nullptr;
+        if (safe_launch) unsetenv("EDEN_SAFE_LAUNCH");
+        const auto backend = safe_launch ? Eden::GraphicsBackend::OpenGL :
+            game_video.renderer >= 0 ?
             (game_video.renderer == 0 ? Eden::GraphicsBackend::OpenGL : Eden::GraphicsBackend::Vulkan) :
             Eden::LoadPreferences().backend;
 #ifdef EDEN_PS5_VULKAN
@@ -456,13 +459,15 @@ int main(int argc, char** argv) {
 #endif
 #endif
         const auto launch_preferences = Eden::LoadPreferences();
-        const int effective_performance_profile = game_video.performance_profile >= 0 ?
+        const int effective_performance_profile = safe_launch ? 0 :
+            game_video.performance_profile >= 0 ?
             game_video.performance_profile : launch_preferences.performance_profile;
 #ifndef EDEN_PS5_VULKAN
         if (backend == Eden::GraphicsBackend::Vulkan)
             throw std::runtime_error("Vulkan is not available in this build yet. Select OpenGL in Settings > Video to play.");
 #endif
         Eden::Report("launch", Eden::BackendName(backend));
+        if (safe_launch) Eden::Report("launch", "Safe launch active: OpenGL, Handheld, 1x, Bilinear, 60 Hz, 1080p, mods off");
         const bool game = std::filesystem::is_regular_file(selected_game);
         if (!game) throw std::runtime_error("Selected ROM is no longer available");
         const char* guest = selected_game.c_str();
@@ -757,7 +762,7 @@ int main(int argc, char** argv) {
 #else
         Settings::values.use_docked_mode.SetValue(Settings::ConsoleMode::Handheld);
 #if defined(PS5_NATIVE) && defined(EDEN_PS5_OPENGL)
-        const bool docked = Eden::LoadGameDocked(eden_game_title_id(guest));
+        const bool docked = safe_launch ? false : Eden::LoadGameDocked(eden_game_title_id(guest));
         Settings::values.use_docked_mode.SetValue(docked ? Settings::ConsoleMode::Docked
                                                        : Settings::ConsoleMode::Handheld);
         Eden::Report("launch", docked ? "Console mode: Docked" : "Console mode: Handheld");
@@ -775,25 +780,28 @@ int main(int argc, char** argv) {
                 Settings::ScalingFilter::Bilinear, Settings::ScalingFilter::Fsr, Settings::ScalingFilter::Bicubic,
                 Settings::ScalingFilter::NearestNeighbor};
             const auto video = Eden::LoadPreferences();
-            const int resolution = game_video.resolution >= 0 ? game_video.resolution : video.resolution;
-            const int filter = game_video.upscaling_filter >= 0 ? game_video.upscaling_filter : video.upscaling_filter;
+            const int resolution = safe_launch ? Eden::kNativeResolution :
+                (game_video.resolution >= 0 ? game_video.resolution : video.resolution);
+            const int filter = safe_launch ? 0 :
+                (game_video.upscaling_filter >= 0 ? game_video.upscaling_filter : video.upscaling_filter);
             Settings::values.resolution_setup.SetValue(resolutions[resolution]);
             Settings::values.scaling_filter.SetValue(filters[filter]);
             Settings::UpdateRescalingInfo();
             // The output's refresh rate while the game runs (display_refresh.h): the renderer asks
             // for it as it opens the output.
-            const int refresh = game_video.refresh >= 0 ? game_video.refresh : video.refresh;
+            const int refresh = safe_launch ? 0 : (game_video.refresh >= 0 ? game_video.refresh : video.refresh);
             Eden::Display::requested_hz.store(Eden::kRefreshHz[refresh]);
             Eden::Display::output_millihertz.store(0);
             setenv(Eden::Display::kVulkanSwitch, refresh ? "1" : "0", 1);
             Eden::Display::game_millihertz.store(60000);
             Eden::Display::skipped_frames.store(0);
             // The size of the picture the session puts out (Settings > Video > Output resolution).
-            Eden::Display::output_width.store(Eden::kOutputWidth[video.output]);
-            Eden::Display::output_height.store(Eden::kOutputHeight[video.output]);
+            const int output = safe_launch ? 0 : video.output;
+            Eden::Display::output_width.store(Eden::kOutputWidth[output]);
+            Eden::Display::output_height.store(Eden::kOutputHeight[output]);
             Eden::Report("launch", (std::string("Resolution ") + Eden::kResolutionKeys[resolution] + ", " +
                                     Eden::kUpscalingFilterLabels[filter] + ", output " +
-                                    Eden::kOutputKeys[video.output] + ", " + Eden::kRefreshKeys[refresh] +
+                                    Eden::kOutputKeys[output] + ", " + Eden::kRefreshKeys[refresh] +
                                     " Hz").c_str());
             // What a crash report says was running.
             char title_id[20];
@@ -805,7 +813,11 @@ int main(int argc, char** argv) {
             const u64 title = eden_game_title_id(guest);
             const auto all_mods = Eden::Mods::List(Eden::AssetsPath("mods"), title);
             auto mods_off = Eden::LoadDisabledMods(title);
-            if (!Eden::LoadModsEnabled(title)) {
+            if (safe_launch) {
+                for (const auto& mod : all_mods)
+                    if (std::find(mods_off.begin(), mods_off.end(), mod.name) == mods_off.end())
+                        mods_off.push_back(mod.name);
+            } else if (!Eden::LoadModsEnabled(title)) {
                 for (const auto& mod : all_mods)
                     if (std::find(mods_off.begin(), mods_off.end(), mod.name) == mods_off.end())
                         mods_off.push_back(mod.name);
@@ -816,7 +828,7 @@ int main(int argc, char** argv) {
             Eden::Crash::SetSession("game " + std::filesystem::path(guest).filename().string() + " (" + title_id +
                                     "), " + Eden::BackendName(backend) + ", resolution " +
                                     Eden::kResolutionKeys[resolution] + ", " + Eden::kUpscalingFilterLabels[filter] +
-                                    ", output " + Eden::kOutputKeys[video.output] + ", " +
+                                    ", output " + Eden::kOutputKeys[output] + ", " +
                                     Eden::kRefreshKeys[refresh] + " Hz, mods: " + mods,
                                     true);
         }
