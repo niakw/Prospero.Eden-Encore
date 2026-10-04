@@ -12,6 +12,7 @@
 #include "jit_list.h"
 #ifdef PS5_NATIVE
 #include "elevation/elevation.hpp"
+#include "boot_trace.h"
 #include <sys/stat.h>
 #endif
 #ifdef EDEN_DEV_VULKAN
@@ -142,10 +143,16 @@ int main(int argc, char** argv) {
         SCOPE_EXIT { if (report != stdout) std::fclose(report); };
         std::setvbuf(report, nullptr, _IONBF, 0);
 #ifdef PS5_NATIVE
+        Eden::BootTrace::Begin(Eden::kAppVersion, __DATE__ " " __TIME__);
+        Eden::BootTrace::Line("requesting filesystem access");
         // Filesystem access beyond the sandbox, first: every path below depends on it
         // (assets_dir.h). Requested once, still single-threaded. Without it the app keeps its
         // sandbox paths.
         Eden::FilesystemAccessStatus() = static_cast<int>(elevation::request(elevation::Capability::filesystem));
+        Eden::BootTrace::Line("filesystem status=%d uid=%d/%d gid=%d/%d",
+                              Eden::FilesystemAccessStatus(), static_cast<int>(getuid()),
+                              static_cast<int>(geteuid()), static_cast<int>(getgid()),
+                              static_cast<int>(getegid()));
         if (Eden::FilesystemAccess()) MigrateSandboxData();
         for (const auto& folder : {Eden::UserDir(), Eden::ConfigDir(), Eden::CoversDir(), Eden::LogsDir()}) {
             std::error_code folder_error;
@@ -178,6 +185,12 @@ int main(int argc, char** argv) {
         if (!stderr_pipe.Attach(stderr) || !stdout_pipe.Attach(stdout))
             Eden::Report("logs", "Asynchronous log writing unavailable; writing directly");
         Eden::Crash::Install(Eden::LogsDir(), Eden::kAppVersion, last_crash.restarted);
+        Eden::BootTrace::Ready(Eden::LogsDir(), Eden::FilesystemAccess());
+        Eden::BootTrace::Line("logs ready; app=%s data=%s", Eden::AppDir().c_str(), Eden::UserDir().c_str());
+        for (const char* candidate : {"/app0", Eden::kMountedAppDir, Eden::kInstallDir,
+                                      "/mnt/sandbox/PPSA99008_000/app0"})
+            Eden::BootTrace::Line("app candidate %s: %s", candidate,
+                                  Eden::FileExists(std::string{candidate} + "/eboot.bin") ? "yes" : "no");
         std::set_new_handler([] {
             ps5_opengl_heap_snapshot("allocation_failure", 0);
             std::fflush(stdout);
@@ -218,6 +231,9 @@ int main(int argc, char** argv) {
                     Eden::Report("cache", "The driver's shader cache could not move to the data folder; it starts empty");
                 (void)mkdir(cache.c_str(), 0777);
                 setenv("MESA_SHADER_CACHE_DIR", cache.c_str(), 1);
+                // Mesa otherwise allows a cache up to 1 GiB. Bound it on a console app so shader
+                // churn cannot consume a large portion of writable storage over time.
+                setenv("MESA_SHADER_CACHE_MAX_SIZE", "256M", 1);
             }
         }
         // Whether Eden's large tables can be sparse on this console (src/memory_pages.cpp),
@@ -367,10 +383,14 @@ int main(int argc, char** argv) {
         if (selected_game.empty())
             throw std::runtime_error("Development ROM not found");
         } else {
+            Eden::BootTrace::Line("opening launcher");
             selected_game = SelectProsperoEdenGame(launch_error);
+            Eden::BootTrace::Line("launcher closed: %s", selected_game.empty() ? "quit" : "game selected");
         }
 #else
+        Eden::BootTrace::Line("opening launcher");
         selected_game = SelectProsperoEdenGame(launch_error);
+        Eden::BootTrace::Line("launcher closed: %s", selected_game.empty() ? "quit" : "game selected");
 #endif
         }
         if (selected_game.empty()) {
