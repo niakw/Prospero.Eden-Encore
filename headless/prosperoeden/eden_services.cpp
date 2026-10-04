@@ -456,12 +456,14 @@ bool EdenServices::set_docked(std::uint64_t title_id, bool docked) {
 
 pe::ui::GameSettings EdenServices::game_settings(std::uint64_t title_id) {
     const Eden::GameSettings saved = Eden::LoadGameSettings(title_id);
-    return {saved.renderer, saved.resolution, saved.upscaling_filter, saved.refresh, saved.controller_layout};
+    return {saved.renderer, saved.resolution, saved.upscaling_filter, saved.refresh,
+            saved.performance_profile, saved.controller_layout};
 }
 
 bool EdenServices::set_game_settings(std::uint64_t title_id, const pe::ui::GameSettings& settings) {
     const bool saved = Eden::SaveGameSettings(
-        title_id, {settings.renderer, settings.resolution, settings.filter, settings.refresh, settings.controller_layout});
+        title_id, {settings.renderer, settings.resolution, settings.filter, settings.refresh,
+                   settings.performance_profile, settings.controller_layout});
     if (!saved) Eden::Report("settings", "Could not write game settings");
     return saved;
 }
@@ -478,6 +480,7 @@ pe::ui::Preferences EdenServices::preferences() {
     result.filter = saved.upscaling_filter;
     result.refresh = saved.refresh;
     result.output = saved.output;
+    result.performance_profile = saved.performance_profile;
     result.controller_layout = saved.controller_layout;
     result.vibration = saved.vibration;
     result.vibration_strength = saved.vibration_strength;
@@ -501,6 +504,7 @@ bool EdenServices::set_preferences(const pe::ui::Preferences& preferences) {
     value.upscaling_filter = preferences.filter;
     value.refresh = preferences.refresh;
     value.output = preferences.output;
+    value.performance_profile = preferences.performance_profile;
     value.controller_layout = preferences.controller_layout;
     value.vibration = preferences.vibration;
     value.vibration_strength = preferences.vibration_strength;
