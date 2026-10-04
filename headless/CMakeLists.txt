@@ -77,8 +77,8 @@ if(PS5_NATIVE)
         message(FATAL_ERROR "ZBIC source is missing (${ZBIC_DIR}); run make deps")
     endif()
     target_sources(common PRIVATE "${EDEN_PORT_DIR}/zbic_compression.cpp")
+    target_include_directories(common PRIVATE "${ZBIC_DIR}")
     set_source_files_properties("${EDEN_PORT_DIR}/zbic_compression.cpp" PROPERTIES
-        INCLUDE_DIRECTORIES "${ZBIC_DIR}"
         COMPILE_OPTIONS "-Wno-unused-function;-Wno-missing-declarations;-Wno-shadow")
     target_include_directories(core PRIVATE "${EDEN_PORT_DIR}")
 endif()
