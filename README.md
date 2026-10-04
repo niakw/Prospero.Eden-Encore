@@ -43,6 +43,14 @@ The goal is simple: keep the working 0.40 behavior on 13.60, stay self-contained
   - Keeps the TV/controller-friendly PS5 launcher structure while moving the branding back toward upstream Eden.
 
 
+- **Stability and PS5 integration**
+  - Keeps conservative Vulkan / 1x / 1080p / 60 Hz defaults, with OpenGL and per-game overrides available.
+  - Preserves crash recovery, early guest-fault retry and useful GPU out-of-memory errors.
+  - Uses asynchronous library scanning and bounded cover-texture caching so large libraries do not block the launcher or grow VRAM indefinitely.
+  - Binds launcher input to the foreground PS5 user and keeps multi-controller hotplug support.
+  - Hardens settings validation, package metadata checks and native RADV linking.
+
+
 ## Changes in v1.000.040
 
 - Keeps the self-contained ProsperoEden 0.40 filesystem elevation path for PS5 firmware 13.60.
@@ -85,6 +93,8 @@ See `docs/BUILDING.md` for the full toolchain details.
 This is an experimental fork focused on **Eden / ProsperoEden 0.40 + PS5 firmware 13.60**.
 
 The ZBIC loader path compiles successfully and passes the existing NSO loader checks. Controller and UI changes are PS5-specific. Hardware compatibility still depends on the individual title and should be tested on-console.
+
+For the complete technical change log, validation history, audit findings and planned improvements, see [docs/FORK_NOTES.md](docs/FORK_NOTES.md).
 
 ## Credits
 
