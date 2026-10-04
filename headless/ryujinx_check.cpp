@@ -156,6 +156,27 @@ int main() {
             "nothing to export");
     require(!fs::exists(none), "no folder for an empty export");
 
+    // Imports must never follow symlinks. The native app has broad filesystem access on PS5,
+    // so a hand-copied save tree cannot be allowed to escape its selected source directory.
+    const fs::path outside = base / "outside";
+    write_text(outside / "secret.bin", "outside-save-tree");
+    const fs::path linked_root = base / "linked-save";
+    std::error_code link_error;
+    fs::create_directory_symlink(outside, linked_root, link_error);
+    require(!link_error, "create save-root symlink for safety check");
+    const std::vector<Save> linked{{Kind::Account, linked_root}};
+    require(!Import(linked, base / "symlink-target", base / "unused-device", backups,
+                    "symlink-root", error),
+            "symlink save root rejected");
+    require(!fs::exists(base / "symlink-target" / "secret.bin"), "symlink root not copied");
+
+    const fs::path nested_source = base / "nested-symlink-save";
+    write_text(nested_source / "normal.bin", "normal");
+    fs::create_symlink(outside / "secret.bin", nested_source / "escape.bin", link_error);
+    require(!link_error, "create nested save symlink for safety check");
+    require(!CopyTree(nested_source, base / "nested-symlink-target"), "nested symlink rejected");
+    require(!fs::exists(base / "nested-symlink-target" / "escape.bin"), "nested symlink not copied");
+
     fs::remove_all(base);
     std::printf("Save transfer PASS: Ryujinx folder, hand-copied folder, account/device choice, backup, restore on "
                 "failure, export and re-import\n");
