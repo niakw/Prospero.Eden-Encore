@@ -69,6 +69,18 @@ if(PS5_NATIVE)
     write_derived("${PORT_BUILD_DIR}/emutls.c" "${emutls}")
     target_sources(common PRIVATE "${PORT_BUILD_DIR}/emutls.c")
     target_include_directories(common PRIVATE "${COMPILER_RT}")
+
+    # Switch 22.0+ may store compressed NSO segments as ZBIC, a Nintendo
+    # zstd variant. The pinned Eden source predates upstream #4482.
+    set(ZBIC_DIR "${PORT_ROOT}/.deps/zbic-11b08f27/src")
+    if(NOT EXISTS "${ZBIC_DIR}/zstd.c")
+        message(FATAL_ERROR "ZBIC source is missing (${ZBIC_DIR}); run make deps")
+    endif()
+    target_sources(common PRIVATE "${EDEN_PORT_DIR}/zbic_compression.cpp")
+    set_source_files_properties("${EDEN_PORT_DIR}/zbic_compression.cpp" PROPERTIES
+        INCLUDE_DIRECTORIES "${ZBIC_DIR}"
+        COMPILE_OPTIONS "-Wno-unused-function;-Wno-missing-declarations;-Wno-shadow")
+    target_include_directories(core PRIVATE "${EDEN_PORT_DIR}")
 endif()
 # Use the already-qualified no-arena allocation contract in the full core.
 get_target_property(common_sources common SOURCES)
@@ -939,11 +951,27 @@ if(PS5_NATIVE)
     string(REPLACE "            nso_file.Read(compressed_data.data(), nso_header.segments_compressed_size[i], nso_header.segments[i].offset);"
         "            auto* destination = codeset.memory.data() + module_start + nso_header.segments[i].location;\n            if (!nso_header.IsSegmentCompressed(i)) {\n                if (nso_file.Read(destination, nso_header.segments[i].size, nso_header.segments[i].offset) != nso_header.segments[i].size) return std::nullopt;\n            } else if (nso_file.Read(compressed_data.data(), nso_header.segments_compressed_size[i], nso_header.segments[i].offset) != nso_header.segments_compressed_size[i]) return std::nullopt;"
         nso_source "${nso_source}")
-    string(REPLACE "DecompressDataLZ4(decompressed_size.data()," "DecompressDataLZ4(destination," nso_source "${nso_source}")
-    string(REPLACE "                ASSERT(r == int(nso_header.segments[i].size));" "                if (r != int(nso_header.segments[i].size)) return std::nullopt;" nso_source "${nso_source}")
+    set(old_nso_decompress [=[                int r = Common::Compression::DecompressDataLZ4(decompressed_size.data(), nso_header.segments[i].size, compressed_data.data(), nso_header.segments_compressed_size[i]);
+                ASSERT(r == int(nso_header.segments[i].size));]=])
+    set(new_nso_decompress [=[                int r = -1;
+                if ((nso_header.flags >> 7) & 1) {
+                    r = Common::Compression::DecompressDataZBIC(
+                        std::span<u8>{destination, nso_header.segments[i].size},
+                        std::span<const u8>{compressed_data.data(), nso_header.segments_compressed_size[i]});
+                } else {
+                    r = Common::Compression::DecompressDataLZ4(
+                        destination, nso_header.segments[i].size,
+                        compressed_data.data(), nso_header.segments_compressed_size[i]);
+                }
+                if (r != int(nso_header.segments[i].size)) return std::nullopt;]=])
+    string(FIND "${nso_source}" "${old_nso_decompress}" nso_decompress_offset)
+    if(nso_decompress_offset LESS 0)
+        message(FATAL_ERROR "Pinned NSO decompression block changed")
+    endif()
+    string(REPLACE "${old_nso_decompress}" "${new_nso_decompress}" nso_source "${nso_source}")
     string(REPLACE "                std::memcpy(codeset.memory.data() + module_start + nso_header.segments[i].location, decompressed_size.data(), nso_header.segments[i].size);" "" nso_source "${nso_source}")
     string(REPLACE "            } else {\n                std::memcpy(codeset.memory.data() + module_start + nso_header.segments[i].location, compressed_data.data(), nso_header.segments[i].size);" "" nso_source "${nso_source}")
-    string(PREPEND nso_source "#include <cstdio>\n")
+    string(PREPEND nso_source "#include <cstdio>\n#include <span>\n#include \"zbic_compression.h\"\n")
     write_derived("${PORT_BUILD_DIR}/nso.cpp" "${nso_source}")
     list(REMOVE_ITEM core_sources loader/nso.cpp)
     list(APPEND core_sources "${PORT_BUILD_DIR}/nso.cpp")
