@@ -46,9 +46,9 @@ inline const char* BackendName(GraphicsBackend backend) {
 // or 1080p docked output) and the filter that scales the result to the TV output. 3x and 4x draw
 // nine and sixteen times the game's own pixels: they need the graphics memory for it.
 inline constexpr const char* kResolutionKeys[] = {"0.5x", "0.75x", "1x", "1.5x", "2x", "3x", "4x"};
-inline constexpr const char* kResolutionLabels[] = {"0.5x (faster, softer)", "0.75x (faster)", "1x (recommended)",
-                                                    "1.5x (sharper)", "2x (sharpest)", "3x (slower)",
-                                                    "4x (slowest)"};
+inline constexpr const char* kResolutionLabels[] = {"0.5x (fastest, softer)", "0.75x (faster)", "1x (recommended)",
+                                                     "1.5x (sharper)", "2x (high memory)", "3x (very high memory)",
+                                                     "4x (extreme memory)"};
 static_assert(std::size(kResolutionLabels) == std::size(kResolutionKeys));
 inline constexpr int kNativeResolution = 2;
 inline constexpr const char* kUpscalingFilterKeys[] = {"bilinear", "fsr", "bicubic", "nearest"};
@@ -246,6 +246,9 @@ inline Preferences LoadPreferences(const std::string& file = SettingsFile()) {
                               kRefreshKeys, int(std::size(kRefreshKeys)), result.refresh);
     result.output = KeyIndex(Settings::String(document, Json::json_pointer("/video/output_resolution")),
                              kOutputKeys, int(std::size(kOutputKeys)), result.output);
+    result.performance_profile = KeyIndex(
+        Settings::String(document, Json::json_pointer("/video/performance_profile")),
+        kPerformanceProfileKeys, int(std::size(kPerformanceProfileKeys)), result.performance_profile);
     result.controller_layout = KeyIndex(Settings::String(document, Json::json_pointer("/controls/layout")),
                                         kControllerLayoutKeys, int(std::size(kControllerLayoutKeys)),
                                         result.controller_layout);
