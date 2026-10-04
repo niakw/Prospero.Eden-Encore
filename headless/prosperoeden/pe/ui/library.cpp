@@ -434,7 +434,7 @@ void Launcher::draw_library(Canvas &c)
     {
         const Rect track{1322.0f, kModeRow.y + 8.0f, 420.0f, kModeRow.h - 16.0f};
         const float half = track.w * 0.5f;
-        list.rounded_rect(track, 14.0f, Color::rgb(0x0d1814, 0.75f));
+        list.rounded_rect(track, 14.0f, Color::rgb(0x11121c, 0.75f));
         plate_focus(c, kNavPlate, {track.x + half * mode_.value + 3.0f, track.y + 3.0f, half - 6.0f,
                                    track.h - 6.0f},
                     1.0f);
@@ -631,7 +631,7 @@ void Launcher::draw_game(Canvas &c, float open)
                 theme::kDisplay, theme::kTitle, 736.0f);
     const Game *game = games_.empty() ? nullptr : &games_[static_cast<std::size_t>(library_.selected)];
     text_fit(c, game != nullptr ? game->name : std::string{}, 592.0f,
-             baseline(291.0f, 32.0f, theme::kSmall), theme::kSmall, Color::rgb(0xbecbb9), 736.0f);
+             baseline(291.0f, 32.0f, theme::kSmall), theme::kSmall, Color::rgb(0xc5c1d2), 736.0f);
 
     static constexpr const char *kRenderers[] = {"OpenGL", "Vulkan"};
     const auto &resolutions = services_.resolution_labels();
@@ -810,7 +810,7 @@ void Launcher::draw_mods(Canvas &c, float open)
                 theme::kTitle, 736.0f);
     const Game *game = games_.empty() ? nullptr : &games_[static_cast<std::size_t>(library_.selected)];
     text_fit(c, game != nullptr ? game->name : std::string{}, 592.0f,
-             baseline(291.0f, 32.0f, theme::kSmall), theme::kSmall, Color::rgb(0xbecbb9), 736.0f);
+             baseline(291.0f, 32.0f, theme::kSmall), theme::kSmall, Color::rgb(0xc5c1d2), 736.0f);
 
     if (mods_.empty())
     {
