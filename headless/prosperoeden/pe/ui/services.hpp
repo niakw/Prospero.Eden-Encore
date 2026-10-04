@@ -169,6 +169,9 @@ class Services
     virtual std::string game_path(const std::string &file) = 0;
     // Cheap presence check used while the launcher is open.
     virtual bool game_exists(const std::string &) { return true; }
+    // Arms a one-shot conservative launch profile. Native builds override this; host/preview
+    // services may safely leave it as a no-op.
+    virtual void arm_safe_launch() {}
     virtual bool docked(std::uint64_t title_id) = 0;
     virtual bool set_docked(std::uint64_t title_id, bool docked) = 0;
     virtual GameSettings game_settings(std::uint64_t title_id) = 0;
