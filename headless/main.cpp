@@ -416,6 +416,8 @@ int main(int argc, char** argv) {
         }
         try {
         launch_error.clear();
+        const bool safe_launch = std::getenv("EDEN_SAFE_LAUNCH") != nullptr;
+        if (safe_launch) unsetenv("EDEN_SAFE_LAUNCH");
 #ifdef EDEN_DEV_VULKAN
         Eden::Performance::vulkan_cost_enabled = std::filesystem::exists(Eden::AppFile("cost-run.txt"));
         const bool performance_run = std::filesystem::exists(Eden::AppFile("performance-run.txt"));
@@ -438,8 +440,6 @@ int main(int argc, char** argv) {
         std::printf("EDEN_VULKAN_MEASUREMENT quiet=%d captures=%d\n",
                     performance_run, !performance_run);
         const auto game_video = Eden::LoadGameSettings(eden_game_title_id(selected_game.c_str()));
-        const bool safe_launch = std::getenv("EDEN_SAFE_LAUNCH") != nullptr;
-        if (safe_launch) unsetenv("EDEN_SAFE_LAUNCH");
         const auto backend = safe_launch ? Eden::GraphicsBackend::OpenGL : automatic_launch ?
             (recovery_opengl ? Eden::GraphicsBackend::OpenGL : Eden::GraphicsBackend::Vulkan) :
             game_video.renderer >= 0 ?
