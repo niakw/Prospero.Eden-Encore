@@ -160,7 +160,7 @@ void Launcher::draw_settings(Canvas &c)
     const std::string summaries[kCategoryCount] = {
         prefs_.renderer != 0 ? "Vulkan" : "OpenGL",
         prefs_.mute ? tr("Muted") : percent(prefs_.volume),
-        prefs_.vibration ? tr("Vibration on") : tr("Vibration off"),
+        prefs_.controller_layout == 0 ? "PlayStation" : "Nintendo",
         prefs_.large_text || prefs_.high_contrast || prefs_.reduce_motion ? tr("On") : "",
         prefs_.detailed_logging ? tr("Detailed logs on") : "",
         "",
@@ -221,8 +221,11 @@ void Launcher::draw_settings(Canvas &c)
                  {tr("MENU SOUNDS"), prefs_.menu_volume > 0 ? percent(prefs_.menu_volume) : tr("Off")}};
         break;
     case kControls:
-        about = tr("Shortcuts during a game, and vibration.");
-        lines = {{tr("VIBRATION"), on_off(prefs_.vibration)},
+        about = tr("DualSense layout, calibration, vibration and shortcuts.");
+        lines = {{tr("BUTTON LAYOUT"), prefs_.controller_layout == 0 ? "PlayStation" : "Nintendo"},
+                 {tr("VIBRATION"), on_off(prefs_.vibration)},
+                 {tr("VIBRATION STRENGTH"), percent(prefs_.vibration_strength)},
+                 {tr("STICK DEADZONE"), percent(prefs_.stick_deadzone)},
                  {tr("END GAME"), "Select + L1"},
                  {tr("FPS OVERLAY"), "Select + R1"}};
         break;
@@ -286,6 +289,8 @@ int Launcher::dialog_rows(Modal modal) const
     case Modal::audio:
     case Modal::accessibility:
         return 3;
+    case Modal::controls:
+        return 4;
     case Modal::game:
         // Console mode, renderer, resolution, filter, refresh rate, mods; save data in builds that
         // move saves.
@@ -300,6 +305,7 @@ float Launcher::dialog_row_top(Modal modal, int row) const
     switch (modal)
     {
     case Modal::audio:
+    case Modal::controls:
     case Modal::accessibility:
         return 370.0f + 102.0f * static_cast<float>(row);
     case Modal::video: // five of its rows show; the list scrolls to the others
@@ -389,7 +395,22 @@ void Launcher::press_dialog(Key key)
         }
         break;
     case Modal::controls:
-        prefs_.vibration = !prefs_.vibration;
+        if (option_ == 0)
+            prefs_.controller_layout = prefs_.controller_layout != 0 ? 0 : 1;
+        else if (option_ == 1)
+            prefs_.vibration = !prefs_.vibration;
+        else if (option_ == 2)
+        {
+            if (!adjust) return;
+            prefs_.vibration_strength = std::clamp(prefs_.vibration_strength + 10 * step, 0, 100);
+            sound = Cue::slider;
+        }
+        else
+        {
+            if (!adjust) return;
+            prefs_.stick_deadzone = std::clamp(prefs_.stick_deadzone + 2 * step, 0, 20);
+            sound = Cue::slider;
+        }
         break;
     case Modal::accessibility:
         if (option_ == 0)
@@ -549,29 +570,24 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
     }
     case Modal::controls:
     {
-        // Each shortcut: its buttons as a key cap, then what it does.
-        struct Shortcut
+        const auto level_row = [&](int row, const char *name, const std::string &value, int level, int maximum)
         {
-            const char *keys;
-            const char *action;
+            const float shown =
+                text(c, value, 1292.0f, baseline(dialog_row_top(modal, row), 94.0f, theme::kText24),
+                     theme::kText24, theme::kLimePale, Align::right);
+            const float gap = std::max(96.0f, shown + 20.0f);
+            level_bar(c, 1292.0f - gap, row_centre(row), 260.0f,
+                      maximum > 0 ? static_cast<float>(level) / static_cast<float>(maximum) : 0.0f,
+                      option_ == row ? 1.0f : 0.0f);
+            label(row, name, 260.0f + gap);
         };
-        static constexpr Shortcut kShortcuts[] = {
-            {"Select + L1", TR("End the game and return to this menu")},
-            {"Select + R1", TR("Show or hide the FPS overlay")}};
-        for (int i = 0; i < 2; ++i)
-        {
-            const float top = 366.0f + 78.0f * static_cast<float>(i);
-            list.bordered_rect({592.0f, top, 186.0f, 54.0f}, 12.0f, Color::rgb(0x15231d, 0.9f),
-                               1.0f, theme::kRowEdge.with_alpha(0.6f));
-            text(c, kShortcuts[i].keys, 685.0f, baseline(top, 54.0f, theme::kSmall), theme::kSmall,
-                 theme::kLimePale, Align::center);
-            text_shrink(c, tr(kShortcuts[i].action), 802.0f, baseline(top, 54.0f, 22.0f), 22.0f,
-                        theme::kBody, 526.0f);
-        }
-        text_shrink(c, tr("Select is the touchpad button on PS5."), 592.0f,
-                    baseline(540.0f, 36.0f, theme::kSmall), theme::kSmall, theme::kMeta, 736.0f);
-        label(0, tr("Vibration"), kToggle);
-        toggle(c, 1292.0f, row_centre(0), knob);
+        const std::string layout = prefs_.controller_layout == 0 ? "PlayStation" : "Nintendo";
+        label(0, tr("Button layout"), choice(0, layout));
+        label(1, tr("Vibration"), kToggle);
+        toggle(c, 1292.0f, row_centre(1), tween::clamp01(switches_[1].value));
+        level_row(2, tr("Vibration strength"), percent(prefs_.vibration_strength),
+                  prefs_.vibration_strength, 100);
+        level_row(3, tr("Stick deadzone"), percent(prefs_.stick_deadzone), prefs_.stick_deadzone, 20);
         break;
     }
     case Modal::accessibility:
