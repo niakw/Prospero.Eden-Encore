@@ -232,8 +232,20 @@ Encore is built from and depends on the work of:
 
 All credit for the original projects belongs to their respective authors and contributors.
 
-## Legal
+## Community
+
+- [Contributing](CONTRIBUTING.md)
+- [Support](SUPPORT.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security Policy](SECURITY.md)
+
+## License and legal
+
+Prospero.Eden Encore is distributed under **GPL-3.0-or-later**. See [LICENSE](LICENSE).
+Third-party components keep their own licenses and attribution; see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 No keys, firmware, games or other copyrighted console data are included.
 
-Use software and console data dumped from hardware and games you own. This project is provided without warranty and is not affiliated with Sony Interactive Entertainment or the Eden project.
+Use software and console data dumped from hardware and games you own. This project is provided
+without warranty and is not affiliated with Sony Interactive Entertainment or the Eden project.
