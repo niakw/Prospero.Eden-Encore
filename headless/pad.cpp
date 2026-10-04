@@ -98,9 +98,9 @@ bool PadEngine::TakeRumble(std::size_t player, Rumble& out) {
     return true;
 }
 
-Pad::Pad(float deadzone_, float threshold)
+Pad::Pad(float deadzone_, float threshold, bool playstation_layout_)
     : engine{std::make_shared<PadEngine>("virtual_gamepad")},
-      deadzone{deadzone_}, trigger_threshold{threshold} {
+      deadzone{deadzone_}, trigger_threshold{threshold}, playstation_layout{playstation_layout_} {
     if (!std::isfinite(deadzone) || deadzone < 0 || deadzone >= 1 ||
         !std::isfinite(threshold) || threshold <= 0 || threshold > 1)
         throw std::invalid_argument("Invalid pad calibration");
@@ -246,7 +246,17 @@ bool Pad::Poll() {
 void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
     using namespace ps5::pad;
     using Button = InputCommon::VirtualGamepad::VirtualButton;
-    static constexpr std::pair<ButtonMask, Button> buttons[] = {
+    static constexpr std::array<std::pair<ButtonMask, Button>, 14> playstation_buttons = {{
+        {kButtonCross, Button::ButtonA}, {kButtonCircle, Button::ButtonB},
+        {kButtonSquare, Button::ButtonX}, {kButtonTriangle, Button::ButtonY},
+        {kButtonL3, Button::StickL}, {kButtonR3, Button::StickR},
+        {kButtonL1, Button::TriggerL}, {kButtonR1, Button::TriggerR},
+        {kButtonOptions, Button::ButtonPlus},
+        {kButtonLeft, Button::ButtonLeft}, {kButtonUp, Button::ButtonUp},
+        {kButtonRight, Button::ButtonRight}, {kButtonDown, Button::ButtonDown},
+        {kButtonL1, Button::ButtonSL},
+    }};
+    static constexpr std::array<std::pair<ButtonMask, Button>, 14> nintendo_buttons = {{
         {kButtonCircle, Button::ButtonA}, {kButtonCross, Button::ButtonB},
         {kButtonTriangle, Button::ButtonX}, {kButtonSquare, Button::ButtonY},
         {kButtonL3, Button::StickL}, {kButtonR3, Button::StickR},
@@ -254,13 +264,9 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
         {kButtonOptions, Button::ButtonPlus},
         {kButtonLeft, Button::ButtonLeft}, {kButtonUp, Button::ButtonUp},
         {kButtonRight, Button::ButtonRight}, {kButtonDown, Button::ButtonDown},
-        // SL and SR, the shoulder buttons of a single Joy-Con held sideways: L1 and R1 press them
-        // too. A game that takes single Joy-Cons asks for SL + SR on its controller screen, and
-        // nothing pressed them before. Eden passes them to the game only for that controller
-        // style (left Joy-Con: virtual buttons 16 and 17, right Joy-Con: kRightSL and kRightSR).
-        {kButtonL1, Button::ButtonSL}, {kButtonR1, Button::ButtonSR},
-        {kButtonL1, static_cast<Button>(kRightSL)}, {kButtonR1, static_cast<Button>(kRightSR)},
-    };
+        {kButtonL1, Button::ButtonSL},
+    }};
+    const auto& buttons = playstation_layout ? playstation_buttons : nintendo_buttons;
     auto& slot = slots[player];
     // The guest's Minus: the Create button, or the touchpad as Select.
     const auto set_minus = [&](u32 pressed) {
@@ -310,6 +316,10 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
         last_buttons = pressed;
         for (const auto [mask, button] : buttons)
             engine->SetButtonState(player, button, (sample.buttons & mask) != 0);
+        // Single Joy-Con shoulder buttons are independent of face-button layout.
+        engine->SetButtonState(player, Button::ButtonSR, (sample.buttons & kButtonR1) != 0);
+        engine->SetButtonState(player, static_cast<Button>(kRightSL), (sample.buttons & kButtonL1) != 0);
+        engine->SetButtonState(player, static_cast<Button>(kRightSR), (sample.buttons & kButtonR1) != 0);
         set_minus(sample.buttons);
         // Guest ZL/ZR are digital; normalize the physical analog triggers first.
         const float left = sample.triggers.l2 / 255.0f;
