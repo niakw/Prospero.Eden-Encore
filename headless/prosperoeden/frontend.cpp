@@ -162,6 +162,22 @@ int SaveCapture(const std::string& path, int width, int height) {
 #endif
 
 std::string RunApp(const std::string& launch_error, bool first_start) {
+    // A fresh/legacy config with no explicit game language follows the PS5 once. Once saved,
+    // Settings > Language remains authoritative and is never overwritten by later system changes.
+    if (first_start && !Eden::HasSavedLanguage()) {
+        int system_language = -1;
+        if (sceSystemServiceParamGetInt(ps5::i18n::kSystemLanguageParameter, &system_language) == 0) {
+            const std::string_view tag = ps5::i18n::language_tag(system_language);
+            const int language = Eden::LanguageIndexForLocale(tag);
+            if (language >= 0) {
+                Eden::Preferences preferences = Eden::LoadPreferences();
+                preferences.language = language;
+                if (Eden::SavePreferences(preferences))
+                    Eden::Report("language", (std::string("Initial game language follows PS5: ") +
+                                               std::string(tag)).c_str());
+            }
+        }
+    }
     const auto opened = Clock::now();
     // What Settings > Video asks for, and what opened.
     int output = std::clamp(Eden::LoadPreferences().output, 0, static_cast<int>(std::size(Eden::kOutputKeys)) - 1);
