@@ -18,34 +18,35 @@ using gfx::Rect;
 namespace theme
 {
 
-// Backgrounds
-inline const Color kBase = Color::rgb(0x06090a);
-inline const Color kScrim = Color::rgb(0x010806);
-inline const Color kGlass = Color::rgb(0x16221d);  // home panels
-inline const Color kPanel = Color::rgb(0x0b1713);  // screens and dialogs
-inline const Color kPanelEdge = Color::rgb(0x768e75);
-inline const Color kRow = Color::rgb(0x17241e);
-inline const Color kRowEdge = Color::rgb(0x6a8267);
-inline const Color kRowFocus = Color::rgb(0x294433);
+// Eden brand palette: dark neutral surfaces with the official violet/pink/blue accents.
+inline const Color kBase = Color::rgb(0x090a12);
+inline const Color kScrim = Color::rgb(0x05060d);
+inline const Color kGlass = Color::rgb(0x151522);  // home panels
+inline const Color kPanel = Color::rgb(0x10111b);  // screens and dialogs
+inline const Color kPanelEdge = Color::rgb(0x58536f);
+inline const Color kRow = Color::rgb(0x191a28);
+inline const Color kRowEdge = Color::rgb(0x4d4965);
+inline const Color kRowFocus = Color::rgb(0x2b2140);
 
-// The accent: lime to deep green, left to right.
-inline const Color kLime = Color::rgb(0xa9db63);
-inline const Color kLimeDeep = Color::rgb(0x245d4a);
-inline const Color kLimePale = Color::rgb(0xdfe8a6);
-inline const Color kSun = Color::rgb(0xffd76a);
+// Keep the historic names to avoid touching every widget; values are Eden's official accents.
+inline const Color kLime = Color::rgb(0xbf42f6);      // Eden violet
+inline const Color kLimeDeep = Color::rgb(0x5d4aa8);  // deep violet/blue
+inline const Color kLimePale = Color::rgb(0xd6a4ff);  // pale violet
+inline const Color kSun = Color::rgb(0xff44c4);       // Eden pink
+inline const Color kBlue = Color::rgb(0x5da5ed);      // Eden blue
 
 // Text
-inline const Color kText = Color::rgb(0xf0f5f2);
-inline const Color kTitle = Color::rgb(0xfffcef);
-inline const Color kValue = Color::rgb(0xf2f4e9);
-inline const Color kBody = Color::rgb(0xe2e8d7);
-inline const Color kCopy = Color::rgb(0xc5d0bd);
-inline const Color kMeta = Color::rgb(0xb7c6b5);
-inline const Color kLabel = Color::rgb(0xaebdaa);
-inline const Color kMuted = Color::rgb(0xaab8ac);
-inline const Color kFaint = Color::rgb(0x8c9e90);
-inline const Color kWarning = Color::rgb(0xe8b39a);
-inline const Color kRule = Color::rgb(0x536b55);
+inline const Color kText = Color::rgb(0xf4f2f8);
+inline const Color kTitle = Color::rgb(0xffffff);
+inline const Color kValue = Color::rgb(0xf0edf7);
+inline const Color kBody = Color::rgb(0xdedbe8);
+inline const Color kCopy = Color::rgb(0xc5c1d2);
+inline const Color kMeta = Color::rgb(0xa9a5b8);
+inline const Color kLabel = Color::rgb(0xb7b2c5);
+inline const Color kMuted = Color::rgb(0xa19cad);
+inline const Color kFaint = Color::rgb(0x7e798b);
+inline const Color kWarning = Color::rgb(0xff9f9f);
+inline const Color kRule = Color::rgb(0x3f3b51);
 
 // Type sizes (Montserrat Medium)
 constexpr float kDisplay = 48.0f;
