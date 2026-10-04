@@ -357,7 +357,7 @@ The PS5 SDK exposes video-output resolution status APIs, so an `Auto (TV)` outpu
 | `37225854300` / job `111505228821` | post-link RADV check | Failed | Large set of optional Mesa/RADV weak dispatch references survived the native link. | Reworked native link strategy; later generalized to a two-pass link. |
 | `37227976171` / job `111511486244` | 1563/1597 | Failed | Eden re-theme removed scenic code but left `kTau` and `noise()` unused; `-Werror` stopped compilation. | Removed obsolete helpers. |
 | `37229928282` / job `111517277606` | 1563/1597 | Failed | Same `kTau` / `noise()` compile failure; this run was already obsolete and confirmed the same blocker. | No new fix required; corrected in `7fb3823f…`. |
-| `37229710339` | older RADV-validation head | In progress / obsolete | Older than the scenic-helper fix, so useful only as corroborating data. | Do not treat as release candidate. |
+| `37229710339` / job `111516627804` | 1594/1597 | Failed | Independently confirmed the same `kTau` / `noise()` `-Werror` blocker after nearly the entire tree compiled. | No new fix required; current reference run contains their removal. |
 | `37230146719` | audited build, head `538fbef8…` | **Current reference run** | Contains ZBIC, DualSense, Eden UI, package-title fix, scenic-helper cleanup and two-pass weak-import linker. | Follow until build/package/artifact completes. |
 
 ### Rule for future CI failures
