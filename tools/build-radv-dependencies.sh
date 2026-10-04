@@ -6,9 +6,23 @@ refs=$(dirname "$root")
 export PS5_MESA_FORK="$refs/mihawk-mesa-review"
 export PS5_PAYLOAD_SDK_FORK="$refs/mihawk-sdk-review"
 vulkan="$refs/mihawk-vulkan-review"
-[[ $(git -C "$vulkan" rev-parse HEAD) == 71026e7ec1951fe72ae5b9118ff0905216a4c220 ]]
-[[ $(git -C "$PS5_MESA_FORK" rev-parse HEAD) == cedb774b27d089fa81f46add28d0a8c13ff0f7d2 ]]
-[[ $(git -C "$PS5_PAYLOAD_SDK_FORK" rev-parse HEAD) == 95c08f27386fc698f6bbe21dde3030140a41d10b ]]
+pin() {
+    python3 - "$root/tools/deps.json" "$1" <<'PY'
+import json, sys
+manifest, name = sys.argv[1], sys.argv[2]
+data = json.load(open(manifest))
+print(next(item["commit"] for item in data["items"] if item["name"] == name))
+PY
+}
+for check in "ps5-vulkan-tools $vulkan" "ps5-mesa $PS5_MESA_FORK" "ps5-payload-sdk-fork $PS5_PAYLOAD_SDK_FORK"; do
+    read -r name path <<< "$check"
+    actual=$(git -C "$path" rev-parse HEAD)
+    expected=$(pin "$name")
+    [[ $actual == "$expected" ]] || {
+        echo "$path is at $actual, expected $expected from tools/deps.json" >&2
+        exit 1
+    }
+done
 export BUILD_JOBS=24 CMAKE_BUILD_PARALLEL_LEVEL=24
 mkdir -p "$root/build/radv-tools"
 # Upstream calls ninja directly; enforce the same bounded parallelism everywhere.
