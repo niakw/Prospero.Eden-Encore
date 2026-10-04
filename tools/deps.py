@@ -5,6 +5,7 @@
   tools/deps.py status          list every input, where it lives and whether it matches its pin
   tools/deps.py fetch [NAME...] fetch what is missing (all inputs, or the named ones)
   tools/deps.py path NAME       print where an input lives
+  tools/deps.py verify          fail unless every git checkout matches its pinned commit
   tools/deps.py clean           remove the fetched inputs inside .deps (sibling checkouts stay)
 
 Nothing that already exists is modified: an existing checkout stays at whatever revision it
@@ -213,6 +214,28 @@ def status():
         print(f'\n{mismatched} checkout(s) differ from their pin; the build uses them as they are.')
 
 
+def verify():
+    """Release preflight: every dependency must exist, and git inputs must match their pin."""
+    problems = []
+    for item in MANIFEST['items']:
+        if not present(item):
+            problems.append(f'{item["name"]}: missing')
+            continue
+        if item['kind'] == 'git':
+            head = revision(location(item))
+            if head != item['commit']:
+                problems.append(
+                    f'{item["name"]}: at {head[:12] if head else "no git checkout"}, '
+                    f'pinned {item["commit"][:12]}')
+            if 'setup' in item and not (location(item) / item['setup_creates']).exists():
+                problems.append(f'{item["name"]}: setup output missing: {item["setup_creates"]}')
+    if problems:
+        for problem in problems:
+            print('deps:', problem, file=sys.stderr)
+        fail('release dependency verification failed')
+    print('deps: all release inputs match their pins')
+
+
 def clean():
     """Removes the fetched inputs inside this repository's .deps; sibling checkouts stay."""
     deps = (ROOT / '.deps').resolve()
@@ -249,6 +272,10 @@ def main(argv):
         status()
     elif command == 'clean':
         clean()
+    elif command == 'verify':
+        if names:
+            fail('usage: tools/deps.py verify')
+        verify()
     elif command == 'fetch':
         for item in items(names):
             fetch(item)
@@ -257,7 +284,7 @@ def main(argv):
             fail('usage: tools/deps.py path NAME')
         print(location(items(names)[0]))
     else:
-        fail(f'unknown command {command} (status, fetch, path)')
+        fail(f'unknown command {command} (status, verify, fetch, path, clean)')
 
 
 if __name__ == '__main__':
