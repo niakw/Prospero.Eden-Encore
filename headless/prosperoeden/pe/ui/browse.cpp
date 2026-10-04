@@ -51,7 +51,7 @@ void draw_folder(Canvas &c, float x, float cy, Color ink, bool up)
     c.list.rounded_rect({x, cy - 9.0f, 40.0f, 24.0f}, 4.0f, ink);
     if (up)
     {
-        const Color dark = Color::rgb(0x12201a);
+        const Color dark = theme::kPanel;
         c.list.line(x + 20.0f, cy + 9.0f, x + 20.0f, cy - 3.0f, 2.4f, dark);
         c.list.line(x + 14.0f, cy + 2.0f, x + 20.0f, cy - 4.0f, 2.4f, dark);
         c.list.line(x + 26.0f, cy + 2.0f, x + 20.0f, cy - 4.0f, 2.4f, dark);
@@ -141,7 +141,7 @@ void Launcher::press_files(Key key)
     case Key::triangle:
     {
         const bool saved = services_.set_files_folder(browse_dir_);
-        say(saved ? tr("Saved. Reopen ProsperoEden to use this folder.") :
+        say(saved ? tr("Saved. Reopen Eden to use this folder.") :
                     tr("Could not save the folder. Please try again."),
             !saved);
         cue(saved ? Cue::saved : Cue::error);
@@ -152,7 +152,7 @@ void Launcher::press_files(Key key)
         const std::string fallback = services_.default_files_folder();
         const bool saved = services_.set_files_folder(fallback);
         (void)browse_to(fallback);
-        say(saved ? tr("Default folder saved. Reopen ProsperoEden to use it.") :
+        say(saved ? tr("Default folder saved. Reopen Eden to use it.") :
                     tr("Could not save the folder. Please try again."),
             !saved);
         cue(saved ? Cue::saved : Cue::error);
@@ -204,13 +204,13 @@ void Launcher::draw_files(Canvas &c)
             const Rect r = row_rect(row);
             list.push_opacity(files_.row_alpha(row, kRowHeight));
             draw_folder(c, r.x + 24.0f, r.y + kRowHeight * 0.5f,
-                        up ? theme::kLimePale : Color::rgb(0xc9d6bd), up);
+                        up ? theme::kLimePale : theme::kCopy, up);
             const float tag = text(c, up ? tr("UP") : tr("OPEN"), r.x + 730.0f,
                                    baseline(r.y, kRowHeight, theme::kSmall), theme::kSmall,
                                    theme::kMeta, Align::right);
             text_fit(c, up ? tr("Parent folder") : entry, r.x + 84.0f,
                      baseline(r.y, kRowHeight, theme::kText24), theme::kText24,
-                     up ? theme::kLimePale : Color::rgb(0xf3f5e9), 730.0f - 84.0f - tag - 24.0f);
+                     up ? theme::kLimePale : theme::kText, 730.0f - 84.0f - tag - 24.0f);
             list.pop_opacity();
         }
         list.pop_clip();
@@ -366,7 +366,7 @@ void Launcher::draw_language(Canvas &c)
         // The language in use carries a lime tag; its name has the room the tag leaves.
         const float width = text_width(c, tr("IN USE"), 18.0f, 2.0f) + 28.0f;
         text_shrink(c, labels[static_cast<std::size_t>(row)], r.x + 26.0f,
-                    baseline(r.y, kRowHeight, theme::kText24), theme::kText24, Color::rgb(0xf3f5e9),
+                    baseline(r.y, kRowHeight, theme::kText24), theme::kText24, theme::kText,
                     row == prefs_.language ? 734.0f - 26.0f - width - 24.0f : 708.0f);
         if (row == prefs_.language)
         {
@@ -429,7 +429,7 @@ void Launcher::draw_language(Canvas &c)
 void Launcher::draw_about(Canvas &c)
 {
     gfx::DrawList &list = c.list;
-    draw_frame(c, tr("About ProsperoEden"), tr("Credits and setup"));
+    draw_frame(c, tr("About Eden PS5"), tr("Credits and setup"));
 
     glass(c, kListPanel, 26.0f, theme::kPanel.with_alpha(0.80f), theme::kPanelEdge.with_alpha(0.55f));
     text(c, tr("PROJECT CREDITS"), 144.0f, baseline(210.0f, 28.0f, theme::kSmall), theme::kSmall,
@@ -450,9 +450,9 @@ void Launcher::draw_about(Canvas &c)
                144.0f, baseline(500.0f, 36.0f, theme::kText24), theme::kText24, 36.0f, theme::kBody,
                748.0f, 3, kShrink);
     list.rounded_rect({144.0f, 628.0f, 748.0f, 1.0f}, 0.0f, theme::kRule);
-    text(c, tr("PS5 EDITION"), 144.0f, baseline(648.0f, 30.0f, theme::kSmall), theme::kSmall,
+    text(c, tr("PS5 13.60 FORK"), 144.0f, baseline(648.0f, 30.0f, theme::kSmall), theme::kSmall,
          theme::kLimePale, Align::left, 2.0f);
-    text_block(c, tr("ProsperoEden is an unofficial PS5 port brought to you by BlackBearReloaded."),
+    text_block(c, tr("This build keeps the working ProsperoEden 0.40 base for PS5 13.60, with Eden branding and targeted compatibility improvements."),
                144.0f, baseline(684.0f, 36.0f, theme::kText24), theme::kText24, 36.0f, theme::kBody,
                748.0f, 2, kShrink);
     text_shrink(c, tr("Menu sound effects made with ElevenLabs."), 144.0f,
