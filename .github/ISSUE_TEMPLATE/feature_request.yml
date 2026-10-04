@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest a focused improvement for Prospero.Eden Encore
+title: "[Feature] "
+labels: []
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: Problem / user need
+      description: What problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the smallest useful version of the feature.
+    validations:
+      required: true
+  - type: textarea
+    id: risk
+    attributes:
+      label: Compatibility / security considerations
+      description: Note any 13.60, elevation, filesystem, renderer, save-data or performance implications.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: This request is about Encore itself, not external FPKG/kstuff support.
+          required: true
+        - label: This request does not require distributing keys, firmware or copyrighted game data.
+          required: true
