@@ -132,10 +132,6 @@ msgstr ""
 msgid "Change"
 msgstr ""
 
-#: pe/ui/library.cpp
-msgid "Change mode. Saved per game."
-msgstr ""
-
 #. What a mod is made of: cheat codes.
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Cheats"
