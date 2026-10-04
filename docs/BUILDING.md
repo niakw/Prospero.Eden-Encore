@@ -95,6 +95,7 @@ The tools that made them are in `tools/launcher`:
 
 `make toolchain` checks them: `clang-18`, `lld-18` and the LLVM 18 tools, `cmake`, `ninja`,
 `ccache`, `make`, `nasm`, `meson`, `rsync`, `git`, `glslangValidator`, `spirv-val`, `bison`,
+- `librsvg2-bin` (`rsvg-convert`) for the official Eden PS5 icon
 `flex`, `curl`, `wget`, `unzip`, and Python 3.11 or later with `venv`, `mako` and `yaml`.
 The image step fetches [PSBrew/MkPFS](https://github.com/PSBrew/MkPFS) at a pinned commit into
 `~/.cache/prosperoeden-mkpfs`.
