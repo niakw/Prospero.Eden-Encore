@@ -54,7 +54,9 @@ inline std::string ConfigFile(std::string_view name) { return ConfigDir() + "/" 
 inline std::string LogFile(std::string_view name) { return LogsDir() + "/" + std::string(name); }
 
 inline bool ValidAssetsDir(std::string_view path) {
-    if (path.empty() || path.size() > 240 || path.front() != '/') return false;
+    // "/" would make library/setup scans walk the console root and can expose unrelated system
+    // folders in the browser. Game files must live in an explicit directory.
+    if (path.empty() || path == "/" || path.size() > 240 || path.front() != '/') return false;
     if (path.size() > 1 && path.back() == '/') return false;
     for (unsigned char c : path)
         if (c < 32 || c == 127 || c == '\\') return false;
