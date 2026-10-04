@@ -83,46 +83,29 @@ Rect Backdrop::uv(const Rect &r) const
     return {(r.x - a.x) / a.w, (r.y - a.y) / a.h, r.w / a.w, r.h / a.h};
 }
 
-void Backdrop::draw(gfx::DrawList &list, const Textures &textures, float dim) const
+void Backdrop::draw(gfx::DrawList &list, const Textures &, float dim) const
 {
     const Rect screen{0.0f, 0.0f, 1920.0f, 1080.0f};
     list.rounded_rect(screen, 0.0f, theme::kBase);
-    const Rect a = art();
-    if (textures.backdrop() != 0)
-        list.image(textures.backdrop(), a, {0.0f, 0.0f, 1.0f, 1.0f}, kWhite);
 
-    // The sun breathes.
-    const float sun_x = a.x + 0.710f * a.w;
-    const float sun_y = a.y + 0.391f * a.h;
-    const float breath = 0.5f + 0.5f * std::sin(time_ * 0.55f);
-    list.shadow({sun_x - 150.0f, sun_y - 150.0f, 300.0f, 300.0f}, 150.0f, 170.0f,
-                theme::kSun.with_alpha(0.03f + 0.04f * breath));
-
-    // Motes of light rise over the water, nearer than the art.
-    constexpr int kMotes = 26;
-    constexpr float kSpan = 640.0f;
-    const float near_x = (a.x + 64.0f) * 1.7f;
-    const float near_y = (a.y + 36.0f) * 1.7f;
-    for (int i = 0; i < kMotes && !look().reduce_motion && !look().high_contrast; ++i)
+    // Eden's desktop UI is intentionally clean and dark. Keep only restrained brand glows
+    // instead of ProsperoEden's scenic background art.
+    if (!look().high_contrast)
     {
-        const float speed = 6.0f + 11.0f * noise(i, 2);
-        const float travel = std::fmod(time_ * speed + noise(i, 3) * kSpan, kSpan);
-        const float life = std::sin(3.14159265f * travel / kSpan);
-        const float x = 800.0f + 1120.0f * noise(i, 1) + near_x +
-                        28.0f * std::sin(time_ * (0.21f + 0.2f * noise(i, 4)) + kTau * noise(i, 5));
-        const float y = 900.0f - travel + near_y;
-        const float size = 3.0f + 5.0f * noise(i, 6);
-        const float twinkle =
-            0.65f + 0.35f * std::sin(time_ * (0.9f + 1.4f * noise(i, 7)) + kTau * noise(i, 8));
-        const float alpha = 0.30f * life * twinkle;
-        const Color color = gfx::mix(theme::kLimePale, theme::kSun, noise(i, 9));
-        list.shadow({x - size, y - size, size * 2.0f, size * 2.0f}, size, size * 0.9f,
-                    color.with_alpha(alpha));
-        list.circle(x, y, size * 0.28f, color.with_alpha(std::min(1.0f, alpha * 1.8f)));
+        const float drift = motion();
+        const float violet_x = 310.0f + 40.0f * std::sin(time_ * 0.08f) * drift;
+        const float pink_x = 1550.0f + 55.0f * std::sin(time_ * 0.065f + 1.8f) * drift;
+        const float blue_y = 880.0f + 32.0f * std::sin(time_ * 0.05f + 0.7f) * drift;
+        list.shadow({violet_x - 260.0f, 90.0f, 520.0f, 520.0f}, 260.0f, 300.0f,
+                    theme::kLime.with_alpha(0.11f));
+        list.shadow({pink_x - 250.0f, 120.0f, 500.0f, 500.0f}, 250.0f, 300.0f,
+                    theme::kSun.with_alpha(0.075f));
+        list.shadow({720.0f, blue_y - 180.0f, 480.0f, 360.0f}, 180.0f, 260.0f,
+                    theme::kBlue.with_alpha(0.055f));
     }
-    // High contrast: the art steps back behind everything.
+
     if (look().high_contrast)
-        dim = std::max(dim, 0.62f);
+        dim = std::max(dim, 0.45f);
     if (dim > 0.0f)
         list.rounded_rect(screen, 0.0f, theme::kScrim.with_alpha(dim));
 }
