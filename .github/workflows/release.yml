@@ -45,6 +45,10 @@ jobs:
             ~/.cache/prosperoeden-deps
             ~/.cache/ps5-eden-headless.*
             .deps
+            ../ps5-native-app-boilerplate
+            ../mihawk-vulkan-review
+            ../mihawk-mesa-review
+            ../mihawk-sdk-review
           key: eden-040-improved-${{ runner.os }}-${{ hashFiles('tools/deps.json') }}
           restore-keys: |
             eden-040-improved-${{ runner.os }}-
