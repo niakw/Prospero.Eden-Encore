@@ -27,4 +27,7 @@ if [[ -n ${EDEN_DEV_CHECKOUT:-} ]]; then
         fi
     fi
 fi
+# A release must never silently consume a sibling checkout at a different revision.
+python3 -B tools/deps.py fetch
+python3 -B tools/deps.py verify
 make release
