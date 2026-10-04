@@ -125,6 +125,14 @@ bool Launcher::save_preferences(bool quiet)
 
 void Launcher::launch(const std::string &file, const std::string &title, const std::string &cover)
 {
+    if (!services_.game_exists(file))
+    {
+        read_home();
+        drop_missing_games();
+        say(tr("ROM missing from the game files folder"), true);
+        cue(Cue::error);
+        return;
+    }
     selected_game_ = services_.game_path(file);
     launch_title_ = title;
     launch_cover_ = cover;
@@ -211,6 +219,13 @@ void Launcher::update(float dt)
     {
         switches_[i].target = states[i] ? 1.0f : 0.0f;
         switches_[i].update(dt, 22.0f);
+    }
+
+    presence_wait_ += dt;
+    if (presence_wait_ >= 2.0f && selected_game_.empty())
+    {
+        presence_wait_ = 0.0f;
+        check_games_present();
     }
 
     clock_wait_ += dt;
