@@ -49,6 +49,7 @@ command -v rsvg-convert >/dev/null 2>&1 || {
 rsvg-convert -w 512 -h 512 "$root/assets/eden-official.svg" -o "$app/sce_sys/icon0.png"
 rm -rf "$app/ui"
 cp -a "$root/headless/prosperoeden/ui" "$app/ui"
+rm -f "$app/ui/art/backdrop.tga" "$app/ui/art/backdrop-blur.tga"
 command -v convert >/dev/null 2>&1 || {
     echo "ImageMagick convert is required to build the Eden launcher brand asset" >&2
     exit 2
