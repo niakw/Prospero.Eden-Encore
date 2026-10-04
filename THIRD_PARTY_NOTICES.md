@@ -49,7 +49,8 @@ builds on the following projects, each under its own license.
 - **[stb](https://github.com/nothings/stb)** by Sean Barrett, MIT or public
   domain (`tools/launcher/stb`). `stb_truetype` bakes the launcher's font and,
   in the app, reads the console's system fonts for the scripts Montserrat does
-  not have. `stb_image_write` saves the PC previews and is not part of the app.
+  not have. Encore carries a small local integer-width hardening patch for the
+  host font baker; the otherwise-unused `stb_image_write` header was removed.
 - The launcher's sound effects were generated with
   [ElevenLabs](https://elevenlabs.io) and edited for this project.
 - `third_party/ps5_pad.hpp` comes from
