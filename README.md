@@ -200,6 +200,15 @@ The GitHub release workflow validates translations, performs the full native bui
 
 See [docs/BUILDING.md](docs/BUILDING.md) for toolchain details and [docs/FORK_NOTES.md](docs/FORK_NOTES.md) for the technical audit and validation history.
 
+## Security
+
+Encore uses CodeQL scanning, pinned build inputs, SHA-pinned GitHub Actions, checksummed release assets,
+save-import symlink protection and a documented one-shot elevation security model.
+
+Please report exploitable issues privately and avoid publishing proof-of-concept details before a
+fix is available. See [SECURITY.md](SECURITY.md) for supported versions, scope and disclosure
+instructions.
+
 ## What Encore intentionally does not claim
 
 - It does **not** repair PS5 **FPKG entitlement/PPR** support.
