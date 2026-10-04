@@ -237,10 +237,17 @@ void Launcher::draw_settings(Canvas &c)
                  {tr("REDUCE MOTION"), on_off(prefs_.reduce_motion)}};
         break;
     case kDiagnostics:
-        about = tr("Setup status and detailed logs.");
+    {
+        const DiagnosticsInfo info = services_.diagnostics();
+        about = tr("Runtime health, storage and recovery tools.");
         lines = {{tr("SETUP"), home_.setup_ready ? tr("Ready") : tr("Needs attention")},
-                 {tr("DETAILED LOGS"), on_off(prefs_.detailed_logging)}};
+                 {tr("FILESYSTEM"), info.filesystem},
+                 {tr("FREE SPACE"), info.free_space},
+                 {tr("SHADER/JIT CACHES"), info.shader_caches},
+                 {tr("LOGS"), info.logs},
+                 {tr("DATA"), short_path(info.data_path, 34)}};
         break;
+    }
     case kFiles:
         about = tr("The folder that holds your keys, firmware and games.");
         lines = {{tr("IN USE"), short_path(folder, 34)}};
@@ -292,6 +299,8 @@ int Launcher::dialog_rows(Modal modal) const
         return 3;
     case Modal::controls:
         return 4;
+    case Modal::diagnostics:
+        return 2;
     case Modal::game:
         // Console mode, renderer, performance, resolution, filter, refresh rate, button layout,
         // mods; save data in builds that move saves.
@@ -309,6 +318,8 @@ float Launcher::dialog_row_top(Modal modal, int row) const
     case Modal::controls:
     case Modal::accessibility:
         return 370.0f + 102.0f * static_cast<float>(row);
+    case Modal::diagnostics:
+        return 570.0f + 102.0f * static_cast<float>(row);
     case Modal::video: // five of its rows show; the list scrolls to the others
         return kVideoRowsTop + kVideoRowPitch * static_cast<float>(row) - video_rows_.scroll();
     case Modal::game:
@@ -424,7 +435,19 @@ void Launcher::press_dialog(Key key)
             prefs_.reduce_motion = !prefs_.reduce_motion;
         break;
     case Modal::diagnostics:
-        prefs_.detailed_logging = !prefs_.detailed_logging;
+        if (option_ == 0)
+        {
+            prefs_.detailed_logging = !prefs_.detailed_logging;
+        }
+        else
+        {
+            if (!activate) return;
+            std::string result;
+            const bool cleared = services_.clear_shader_caches(&result);
+            say(result, !cleared);
+            cue(cleared ? Cue::saved : Cue::error);
+            return;
+        }
         break;
     default:
         return;
@@ -492,7 +515,7 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
         break;
     default:
         title = tr("Diagnostics");
-        copy = tr("Detailed logs apply to the next game launch.");
+        copy = tr("Health and storage tools. Cache cleanup never removes saves, settings, keys or games.");
         break;
     }
     text_shrink(c, title, 592.0f, baseline(218.0f, 62.0f, theme::kDisplay), theme::kDisplay,
@@ -630,6 +653,21 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
         text_block(c, tr(kAbout[std::clamp(option_, 0, 2)]), 592.0f,
                    baseline(700.0f, 30.0f, theme::kSmall), theme::kSmall, 30.0f, theme::kMeta, 736.0f,
                    2, kShrink);
+        break;
+    }
+    case Modal::diagnostics:
+    {
+        const DiagnosticsInfo info = services_.diagnostics();
+        const std::string details =
+            services_.setup_details() + "\n" +
+            fill(tr("Filesystem: {0}  |  Free: {1}"), {info.filesystem, info.free_space}) + "\n" +
+            fill(tr("Shader/JIT caches: {0}  |  Logs: {1}"), {info.shader_caches, info.logs}) + "\n" +
+            fill(tr("Data: {0}"), {info.data_path});
+        text_block(c, details, 592.0f, baseline(350.0f, 30.0f, theme::kSmall),
+                   theme::kSmall, 30.0f, theme::kBody, 736.0f, 6, kShrink);
+        label(0, tr("Detailed logging"), kToggle);
+        toggle(c, 1292.0f, row_centre(0), knob);
+        label(1, tr("Clear shader caches"), choice(1, tr("Clear")));
         break;
     }
     default:
