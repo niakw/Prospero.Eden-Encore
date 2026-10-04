@@ -67,6 +67,8 @@ inline constexpr int kOutputHeight[] = {1080, 1440, 2160};
 // Nintendo preserves the physical-position mapping used by the original port.
 inline constexpr const char* kControllerLayoutKeys[] = {"playstation", "nintendo"};
 inline constexpr const char* kControllerLayoutLabels[] = {"PlayStation", "Nintendo"};
+inline constexpr const char* kPerformanceProfileKeys[] = {"compatibility", "recommended", "performance"};
+inline constexpr const char* kPerformanceProfileLabels[] = {"Compatibility", "Recommended", "Performance"};
 // Settings > Language: the system language games see, in launcher order. Each entry maps to Eden's
 // Settings::Language and to the Settings::Region consoles sold with that language have (indices in
 // Eden's enum order; headless/main.cpp checks them). Eden's older "Chinese" and "Taiwanese" codes
@@ -91,6 +93,7 @@ struct Preferences {
     int upscaling_filter = 0;            // index into kUpscalingFilterKeys
     int refresh = 0;                     // index into kRefreshKeys
     int output = 0;                      // index into kOutputKeys
+    int performance_profile = 1;         // 0 compatibility, 1 recommended, 2 performance
     int controller_layout = 0;            // 0 PlayStation, 1 Nintendo
     bool vibration = true;
     int vibration_strength = 100;         // 0-100
@@ -268,6 +271,7 @@ inline bool SavePreferences(const Preferences& value, const std::string& file = 
         value.upscaling_filter < 0 || value.upscaling_filter >= int(std::size(kUpscalingFilterKeys)) ||
         value.refresh < 0 || value.refresh >= int(std::size(kRefreshKeys)) ||
         value.output < 0 || value.output >= int(std::size(kOutputKeys)) ||
+        value.performance_profile < 0 || value.performance_profile >= int(std::size(kPerformanceProfileKeys)) ||
         value.controller_layout < 0 || value.controller_layout >= int(std::size(kControllerLayoutKeys)) ||
         value.vibration_strength < 0 || value.vibration_strength > 100 ||
         value.stick_deadzone < 0 || value.stick_deadzone > 20 ||
@@ -280,6 +284,7 @@ inline bool SavePreferences(const Preferences& value, const std::string& file = 
     document["video"]["upscaling_filter"] = kUpscalingFilterKeys[value.upscaling_filter];
     document["video"]["refresh_rate"] = kRefreshKeys[value.refresh];
     document["video"]["output_resolution"] = kOutputKeys[value.output];
+    document["video"]["performance_profile"] = kPerformanceProfileKeys[value.performance_profile];
     document["audio"]["volume"] = value.volume;
     document["audio"]["mute"] = value.mute;
     document["audio"]["menu_volume"] = value.menu_volume;
@@ -324,6 +329,7 @@ struct GameSettings {
     int resolution = -1;        // index into kResolutionKeys
     int upscaling_filter = -1;  // index into kUpscalingFilterKeys
     int refresh = -1;           // index into kRefreshKeys
+    int performance_profile = -1; // index into kPerformanceProfileKeys
     int controller_layout = -1; // index into kControllerLayoutKeys
 };
 inline constexpr const char* kRendererKeys[] = {"opengl", "vulkan"};
@@ -340,6 +346,8 @@ inline GameSettings LoadGameSettings(uint64_t title_id, const std::string& file 
     result.upscaling_filter = KeyIndex(key("upscaling_filter"), kUpscalingFilterKeys,
                                        int(std::size(kUpscalingFilterKeys)), -1);
     result.refresh = KeyIndex(key("refresh_rate"), kRefreshKeys, int(std::size(kRefreshKeys)), -1);
+    result.performance_profile = KeyIndex(key("performance_profile"), kPerformanceProfileKeys,
+                                          int(std::size(kPerformanceProfileKeys)), -1);
     result.controller_layout = KeyIndex(key("controller_layout"), kControllerLayoutKeys,
                                         int(std::size(kControllerLayoutKeys)), -1);
     return result;
@@ -350,6 +358,8 @@ inline bool SaveGameSettings(uint64_t title_id, const GameSettings& value, const
         value.resolution < -1 || value.resolution >= int(std::size(kResolutionKeys)) ||
         value.upscaling_filter < -1 || value.upscaling_filter >= int(std::size(kUpscalingFilterKeys)) ||
         value.refresh < -1 || value.refresh >= int(std::size(kRefreshKeys)) ||
+        value.performance_profile < -1 ||
+        value.performance_profile >= int(std::size(kPerformanceProfileKeys)) ||
         value.controller_layout < -1 ||
         value.controller_layout >= int(std::size(kControllerLayoutKeys))) return false;
     Settings::Json document = Settings::Load(file);
@@ -364,6 +374,7 @@ inline bool SaveGameSettings(uint64_t title_id, const GameSettings& value, const
     store("resolution", value.resolution, kResolutionKeys);
     store("upscaling_filter", value.upscaling_filter, kUpscalingFilterKeys);
     store("refresh_rate", value.refresh, kRefreshKeys);
+    store("performance_profile", value.performance_profile, kPerformanceProfileKeys);
     store("controller_layout", value.controller_layout, kControllerLayoutKeys);
     return Settings::Write(document, file);
 }
