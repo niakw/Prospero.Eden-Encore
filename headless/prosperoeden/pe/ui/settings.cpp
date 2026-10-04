@@ -485,7 +485,7 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
         title = tr("Video");
         static constexpr const char *kAbout[kVideoRows] = {
             TR("Vulkan is recommended on PS5. Use OpenGL only as a fallback for a game with Vulkan issues."),
-            TR("Recommended keeps accurate CPU/GPU/DMA and compiles earlier-used code ahead. Performance can trade graphics accuracy for speed."),
+            TR("Recommended keeps accuracy and synchronous shaders. Smooth compiles earlier-used code ahead. Performance may trade graphics accuracy for speed."),
             TR("Final app output size. 1080p is recommended for stability and memory; this is not the game's render scale."),
             TR("Game render scale. 1x is recommended; lower it for performance or memory, raise it only when a game has headroom."),
             TR("Bilinear is the lightest default. AMD FSR is most useful when rendering below the TV output size."),
