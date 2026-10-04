@@ -2,249 +2,85 @@
   <img src="sce_sys/icon0.png" width="128" alt="ProsperoEden icon">
 </p>
 
-<h1 align="center">ProsperoEden</h1>
+<h1 align="center">ProsperoEden 0.40 for PS5 13.60</h1>
 
 <p align="center">
-  <strong>An unofficial Eden emulator port for PlayStation 5 homebrew</strong>
+  A small compatibility-focused fork of ProsperoEden v1.000.040.
 </p>
 
-**ProsperoEden is an unofficial PlayStation 5 port of [Eden](https://github.com/eden-emulator/mirror)** - an accurate, high-performance emulator. All credit for the emulator core belongs to the Eden project and its contributors. ProsperoEden is not affiliated with or endorsed by the Eden team or Sony.
+## Why this fork?
 
-This is an early alpha. Video, audio, controller input, and saves have been confirmed working. Compatibility and performance will vary between games. The current release is **v1.000.040**.
+This fork keeps the **v1.000.040** base, which works on PS5 firmware **13.60**, while adding targeted compatibility fixes without pulling in the newer Lapy-based elevation changes.
 
-## Source code
+ProsperoEden v1.000.050+ changed the filesystem elevation path to Lapy. Lapy currently targets older firmware ranges, so on 13.60 newer builds can remain sandboxed and lose access to `/data/prosperoeden`.
 
-The complete ProsperoEden source is in this repository: the PS5 frontend and launcher in `headless/`, and the build and packaging tools in `tools/`. To build it yourself, run `make` on Linux (Ubuntu 26.04; WSL works). It fetches every dependency at its pinned revision and writes the release files to `dist/`; `make help` lists the other targets. See [docs/BUILDING.md](docs/BUILDING.md).
+The goal here is simple: keep the working 0.40 behavior on 13.60 and improve game compatibility on top of it.
 
-## Project foundation
+## Improvements
 
-> [!IMPORTANT]
-> **Built on the [PS5 Native App Boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate), the same native foundation used by ProsperoLight.**
-> It provides the native PS5 application structure, runtime, packaging, and homebrew deployment foundation.
+- **ZBIC NSO decompression**
+  - Adds support for the ZBIC/zstd-compressed NSO segments used by newer Switch software.
+  - Keeps the existing LZ4 path for older titles.
+  - Based on Eden's upstream Switch 22.0+ ZBIC support.
 
-> [!IMPORTANT]
-> **Graphics are powered by [ps5-opengl](https://github.com/blackbearreloaded/ps5-opengl).**
-> This OpenGL implementation provides the native PS5 rendering layer used by the Eden graphics backend.
+- **PS5 13.60 focus**
+  - Keeps the 0.40 built-in filesystem elevation path.
+  - No Lapy dependency is required by this fork.
 
-> [!IMPORTANT]
-> **Vulkan is powered by Mihawk's [PS5 Mesa](https://github.com/mihawk-99/PS5_Mesa) and [PS5 Vulkan](https://github.com/mihawk-99/PS5_Vulkan).**
-> Mihawk's Mesa/RADV driver for the PS5 runs ProsperoEden's Vulkan renderer. Many thanks to Mihawk for this work and for [all of the PS5 projects](https://github.com/mihawk-99) behind it.
-
-> [!IMPORTANT]
-> **Thanks to [ps5-vulkan](https://github.com/mpereiraesaa/ps5-vulkan) by mpereiraesaa**, an experimental Vulkan graphics and compute API for native PS5 homebrew.
-
-## Features
-
-- **Vulkan renderer (recommended)** - the default backend, running on Mihawk's PS5 Mesa (RADV) driver.
-- **OpenGL renderer** - still available through ps5-opengl. Switch between them in **Settings > Video**.
-- **Resolution and upscaling** - render at 0.5x to 4x of the game's resolution and choose the filter that scales it to your TV (Bilinear, AMD FSR, Bicubic or Nearest) in **Settings > Video**.
-- **Output resolution** - the picture is made at 1080p, 1440p or 2160p: **Output resolution** in **Settings > Video**. The menu is drawn at that size too, and the PS5 scales it to your TV.
-- **120 Hz output** - on a display that shows 120 Hz, games can run on a 120 Hz output: **Refresh rate** in **Settings > Video**, or in one game's settings. A frame that is a little late is then shown 8 ms later instead of 17 ms, and patches for more than 60 FPS need it. The menu stays at 60 Hz.
-- **Game files anywhere** - keys, firmware, and games can live in any folder the PS5 can read: internal storage, an M.2 or external drive, or a USB device.
-- **Folder browser** - pick the game files folder in **Settings > Game files**. It shows how many keys, firmware files, and games each folder holds. Hold L1/R1 to page quickly.
-- **Library** - game covers, **Continue Playing**, and **Recently Played**, which keep working after you move your files.
-- **Launcher** - an animated interface drawn with OpenGL, with sound effects (their level is in **Settings > Audio**) and a loading screen while a game starts. The home screen shows which controllers are connected.
-- **Per-game settings** - renderer, resolution, upscaling filter, refresh rate and Handheld / Docked mode for each game (Triangle in the Library).
-- **Your language** - the launcher follows the language the PS5 is set to (29 languages; English otherwise).
-- **Accessibility** - larger text, high contrast and reduced motion, in **Settings > Accessibility**.
-- **Save data in and out** - import a game's save from a folder or from a Ryujinx data folder, and export a copy (Triangle in the Library, then **Save data**).
-- **Game updates and DLC** - put update and DLC files (NSP or XCI) in the `updates` folder next to `roms`. They apply when the game starts, and each game's details show the update version and DLC count.
-- **Mods** - patches, replacement game files and cheats for a game, from a `mods` folder next to `roms`, each switched on or off in the game's settings (Triangle in the Library, then **Mods**).
-- **Shader cache** - shaders compiled in earlier sessions are loaded when a game starts, so an effect stutters only the first time it appears.
-- **In-game shortcuts** - a performance overlay (Select + R1), and Select + L1 to end the game and return to the library.
-- **Settings in one place** - a single JSON file under `/data/prosperoeden`, with game volume, mute, and detailed logging options. Logs keep the previous session.
-- **Crash reports** - if ProsperoEden stops because of an error, it saves a report with that session's logs, starts again and shows where the report is.
-- **Controllers, audio, and saves** - up to four DualSense controllers (one per signed-in PS5 user) with rumble and motion controls, game audio, and save data work out of the box.
+- **Build fixes**
+  - Improves clean-runner build compatibility for RADV/Mesa weak Vulkan entrypoints.
+  - Keeps optional RADV weak symbols out of PS5 dynamic imports.
 
 ## Install
 
-1. Download and extract the release ZIP.
-2. Copy the included `PPSA99008` folder to `/data/homebrew/PPSA99008` on the PS5.
-3. Put your own legally dumped keys, firmware, and games in a **game files folder** (layout below). It can be anywhere the PS5 can read: internal storage, an M.2 or external drive, or a USB device.
-4. Launch **ProsperoEden**, open **Settings > Game files**, browse to that folder and select it. The default is `/data/prosperoeden`.
-5. Close and reopen ProsperoEden, then open **Library**. Setup is checked when the app opens, so reopen it after changing the folder or adding keys or firmware.
-
-### Game files folder
-
-Only these subfolders matter; the folder itself can have any name and location.
+1. Download the release ZIP.
+2. Copy the included `PPSA99008` folder to:
 
 ```text
-<game files folder>/                    # e.g. /data/prosperoeden, /mnt/ext1/eden, /mnt/usb0/eden
-├── keys/
-│   ├── prod.keys
-│   └── title.keys                      # optional
-├── firmware/
-│   └── *.nca                           # extracted firmware NCAs
-├── roms/
-│   ├── Game.nsp
-│   └── Game.xci
-├── updates/                            # optional: update and DLC files
-│   └── Game update.nsp
-├── mods/                               # optional: mods, one folder per title ID
-├── save-import/                        # optional: saves to import, one folder per title ID
-├── ryujinx/                            # optional: a Ryujinx data folder to import saves from
-└── save-export/                        # written by "Export a copy"
+/data/homebrew/PPSA99008
 ```
 
-The folder browser shows how many keys, firmware files, and games each folder holds, so you can check a folder before selecting it. Moving your files later only needs a new selection in Settings; saved settings, covers, and recently played games carry over.
-
-### App data
-
-ProsperoEden keeps its own data in `/data/prosperoeden`, separately from the game files folder:
+3. Keep your existing data in:
 
 ```text
-/data/prosperoeden/
-├── config/prosperoeden.json            # settings, including the game files folder
-├── covers/                             # cached game covers
-├── logs/                               # current and previous session logs, crash reports
-└── user/                               # saves and emulator user data
+/data/prosperoeden
 ```
 
-The app itself stays in `/data/homebrew/PPSA99008` and can be updated by copying a new release over it.
+Updating the app folder does not require deleting your settings, saves, covers, logs, keys, firmware, or game files stored elsewhere.
 
-ProsperoEden does not include keys, firmware, games, or other copyrighted console data. Dump these files from hardware and software you own. Do not download or redistribute them.
+## Build
 
-### Moving save data
+Linux is recommended.
 
-Emulators like Eden keep a save as the files the game wrote, so nothing is converted: folders are copied. In the Library, press Triangle on a game and pick **Save data**. The folders below are next to `roms/` in the game files folder.
+```bash
+make release
+```
 
-- **Import from a folder.** Copy the contents of the game's save folder (what an emulator opens as the game's save directory) into `save-import/<title ID>/`. The title ID is the 16-character code in the game's file name; Save data also shows it when there is nothing to import.
-- **Import from Ryujinx.** Copy Ryujinx's data folder (the one that holds `bis/`, or a portable folder around it) to `ryujinx/`. ProsperoEden finds the game's save in it: the first user's, and the device save when there is one.
-- **Export.** Square writes `save-export/<title ID>-<date>-<time>/`, with `account/` and `device/` inside. An exported folder can be imported again: put it in `save-import/` under the title ID.
+Release files are written to `dist/`.
 
-Cross imports, and asks before it replaces a save. The save it replaces is first moved to `/data/prosperoeden/backup/save-import`, so nothing is lost.
+See `docs/BUILDING.md` for the full toolchain details.
 
-### Mods
+## Status
 
-A mod changes a game: a patch to its code (`.pchtxt` or `.ips` files in an `exefs` folder), replacement game files (a `romfs` folder), or cheats (a `cheats` folder). Mods made for other emulators of the same console come in this layout.
+This is an experimental fork focused on **ProsperoEden 0.40 + PS5 firmware 13.60**.
 
-- **Add a mod.** Each mod is a folder. Copy it to `mods/<title ID>/`, next to `roms/` in the game files folder, so that a patch ends up at `mods/<title ID>/<mod name>/exefs/<file>.pchtxt`. The title ID is the 16-character code in the game's file name. The Mods screen names the exact folder, and Square creates it. The About screen shows where the `mods` folder is.
-- **Switch it on or off.** In the Library, press Triangle on the game and pick **Mods**. Every mod found is listed with a switch. A mod is on unless you switch it off, and a change applies the next time the game starts.
-- **Switch all of a game's mods off or on.** In the Library, a game that has mods shows a **Mods** switch under its console mode; Square flips it. Off, the game starts without any of its mods, and each mod keeps its own switch for when you turn it back on.
-- **See what a game has.** The home screen and the Library count a game's mods next to its update and DLC (`Update 1.2.0, 2 DLC, 1 mod`), and say so when some are switched off (`1 of 2 mods on`).
-- **Match the game's version.** A patch is made for one version of a game. One made for another version is ignored without a message, so check that the mod matches the update you have in `updates/`.
-- **Frame rate.** A patch that makes a 30 FPS game run at 60 FPS works on the 60 Hz output ProsperoEden uses. A patch for more than 60 FPS needs the 120 Hz output: set **Refresh rate** to 120 Hz in the game's settings (Triangle in the Library) or in **Settings > Video**. That takes a display that shows 120 Hz and the PS5's own 120 Hz output setting; without them the game runs at 60 Hz. A 60 FPS patch can gain from it too: a game that misses some frames at 60 Hz has twice as many chances to show them. A patch for more frames than the output shows (240 FPS on the 120 Hz output, 120 FPS on the 60 Hz one) still runs at its own pace: the frames the display has no refresh for are left out.
-
-ProsperoEden does not include or download mods.
-
-### Language and accessibility
-
-The launcher follows the language the PS5 is set to: Arabic, Chinese (simplified and traditional), Czech, Danish, Dutch, Finnish, French, German, Greek, Hungarian, Indonesian, Italian, Japanese, Korean, Norwegian, Polish, Portuguese, Romanian, Russian, Spanish, Swedish, Thai, Turkish, Ukrainian and Vietnamese (with the regional variants the PS5 has for French, Portuguese and Spanish), and English otherwise. Arabic, Chinese, Greek, Japanese, Korean and Thai are drawn with the PS5's own system fonts. Arabic text runs right to left; the screens themselves are not mirrored. To use another one, put a file named `language.txt` holding its tag (for example `en-US` or `pt-BR`) in `/data/homebrew/PPSA99008`. The language *games* use is a separate setting, **Settings > Language**.
-
-**Settings > Accessibility** has three switches. **Larger text** draws the menu's small text about a third larger. **High contrast** uses solid panels, brighter text and an outlined highlight. **Reduce motion** stops the background drifting and the screens sliding, in the menu and on the loading screen. There is no screen reader.
-
-### Upgrading from an earlier alpha
-
-Earlier versions read everything from `/data/homebrew/PPSA99008/assets/`. That folder keeps working until you choose a game files folder, and settings are migrated automatically on first launch. To move to the new layout, move `assets/keys`, `assets/firmware` and `assets/roms` into any folder, then select it in **Settings > Game files**. The release ZIP contains no user files, so copy its app files over your installation without deleting your own data.
-
-## Changes in v1.000.040
-
-- **The launcher in your language.** It follows the language the PS5 is set to, in 29 languages. Arabic, Chinese, Greek, Japanese, Korean and Thai are drawn with the console's own fonts. Text that runs longer in another language makes its own room instead of being cut.
-- **Accessibility.** **Settings > Accessibility** adds **Larger text**, **High contrast** and **Reduce motion**. Warnings carry a mark as well as a colour.
-- **Save data in and out.** Import a game's save from a folder or from a Ryujinx data folder, and export a copy. See [Moving save data](#moving-save-data).
-- **A ten-second slowdown with the AMD FSR filter is fixed.** In a large open-world game, gameplay could start at 3-9 FPS for about ten seconds, and frames of about a tenth of a second kept coming afterwards. The texture cache was throwing away images the GPU had drawn, with a wait for the GPU each time, as soon as memory use passed a mark that the FSR filter's own images pushed it over. It now keeps them until graphics memory is really short.
-- **Smoother heavy scenes.** The renderer hands its work to the Vulkan worker in larger batches, and the emulated cores wait less on the GPU caches' locks. In the heaviest area of a test walk this removed drops to 26-28 FPS and cut the GPU thread's work by about a quarter.
-- **Touchpad as Select in games.** A tap of the touchpad presses the game's Select (Minus) button, and a longer press holds it. The Select + L1 and Select + R1 shortcuts never reach the game as a press.
-- **A crash a few seconds into some games is fixed.** The motion sensors' updates could reach a part of the controller service that was not set up yet.
-- **Games' own system screens.** A game's error dialog, profile picker and similar screens use Eden's built-in versions, and its error dialog now answers the game instead of leaving it waiting. The firmware's versions could end a session with an out-of-memory error.
-- **More graphics memory.** The PS5 gives an app one pool of memory that the CPU and the GPU share, and ProsperoEden held about 3 GiB of it without using it: its heap took 3 GiB at start and the emulated console's page table 1 GiB. Both now take memory as they need it, which gives graphics about 2.6 GiB more in the largest game tested. That game ran out of graphics memory while loading at 2x; it now runs at 2x with the AMD FSR filter at a steady 30 FPS, with about 2 GiB to spare. The texture cache also measures its memory use from what is really left of the pool, instead of a driver figure that counted every allocation twice.
-- **A clearer message when a game runs out of graphics memory.** If a game still needs more than there is at a high resolution, give it its own lower one: Triangle on it in the Library, then **Resolution**.
-- **Games that accept only single Joy-Cons** now get one, and L1 and R1 are its SL and SR buttons, which those games ask for on their controller screen.
-- **Mods.** A game's patches, replacement files and cheats load from `mods/<title ID>/` next to `roms/`, and the game's settings list them with a switch each. `.ips` and text `.pchtxt` patches, which the emulator core could not apply, now work. The Library has one switch per game for all of its mods. See [Mods](#mods).
-- **120 Hz output.** **Refresh rate** in **Settings > Video**, and in each game's settings, asks the display for 120 Hz while a game runs. A display that cannot show it stays at 60 Hz, and the menu always runs at 60 Hz. After a game at 120 Hz the menu takes about five seconds to come back while the display changes rate.
-- **Output resolution.** **Settings > Video** has a new **Output resolution** row: 1080p (as before), 1440p or 2160p. It is the size of the picture ProsperoEden puts out, for the menu and for games. Until now a game's picture was made at 1080p and enlarged, whatever its internal resolution; at 2160p the upscaling filter scales the game straight to a 4K picture. A larger picture needs more graphics memory.
-- **3x and 4x resolution.** The internal resolution now goes up to 4x. These need far more graphics memory than 2x; a game that runs out says so, and can be given its own lower resolution.
-- **Patches for more frames than the display shows.** A game patched to run faster than the output refreshes keeps its pace: the frames the display has no refresh for are left out.
-- **Crash reports.** If ProsperoEden stops because of an error, it writes `crash-<date>-<time>.txt` to `/data/prosperoeden/logs`, starts again and says on the home screen where the report is. That session's logs are kept beside it, and the five newest reports stay. A report holds what failed, where in the app's code, and what was running; it never holds the contents of memory.
-- The launcher and the OpenGL renderer use the PS5 OpenGL 4.6 SDK 1.0.0.
-- The graphics driver's shader cache moved to `/data/prosperoeden/cache`, so a read-only package install keeps it.
-- **Experimental: block list.** With an empty file named `block-list.txt` in `/data/homebrew/PPSA99008`, ProsperoEden saves which code a 64-bit game compiled and compiles it again on a spare CPU when the game next starts. In a repeat session of a large open-world game, the emulated cores then compiled 426 blocks during play instead of 138,262, and gameplay started at 30 FPS instead of 22. It is off by default until more games have run with it.
-
-## Changes in v1.000.030
-
-- **New launcher.** Every screen is redrawn with OpenGL: smooth transitions between screens, text that stays sharp, panels that blur the artwork behind them, and sound effects for moving, selecting and going back. **Settings > Audio > Menu sounds** sets their level.
-- **Controllers on the home screen.** Four controller icons show which controllers are connected, and change as one joins or leaves.
-- **Loading screen.** An animated scene shows while a game starts, on both renderers.
-- **The Library opens at once.** The game list is read in the background, and the home screen shows each game's own name instead of its file name.
-- **New music** on the PS5 home screen.
-- **Smoother first-time gameplay.** The emulated CPU cores now share the code they compile, so each part of a game is compiled once instead of once per core. In large open-world games this halves the compile work and removes most of the stutter when gameplay starts or a new area loads.
-- **Faster compiling.** Compiling a game's code now takes about 40% less CPU time, which shortens the remaining stutter when gameplay starts or a new area loads.
-- **Startup hang fixed.** A game could stop for good right after starting, because the emulator's memory allocator could leave high-priority threads waiting on each other forever. Development builds also report where a slow start is stuck.
-- **Games close in about a second.** Select + L1 used to take 10-25 seconds to return to the library; logging no longer waits on the console's storage, and the emulator skips needless teardown work.
-- **Up to four controllers.** Each signed-in PS5 user's controller becomes the next player (player 1 is whoever launched the game); controllers can join or leave during a game, and games that ask for controllers connect every one in use.
-- The Select + L1 and Select + R1 shortcuts work from any controller.
-- **Vibration and motion.** DualSense rumble for games that use it (turn it off in **Settings > Controls**), and the controller's gyro and accelerometer for motion controls.
-- **Resolution and upscaling.** **Settings > Video** now sets the internal rendering resolution (0.5x to 2x) and the filter that scales it to the TV: Bilinear, AMD FSR, Bicubic or Nearest.
-- **Per-game settings.** Press Triangle on a game in the Library to give it its own renderer, resolution and upscaling filter.
-- **Language setting.** **Settings > Language** picks the language games use (18 languages), with the console region that goes with it. It applies when a game starts.
-- **Game updates and DLC.** Put update and DLC files (NSP or XCI) in the `updates` folder next to `roms`; the newest update and all DLC apply when the game starts, and the game details show them.
-- **Build it yourself.** `make` fetches every dependency at its pinned revision and builds the release. The OpenGL renderer now uses the published PS5 OpenGL 4.6 SDK 0.6.0.
-
-## Changes in v1.000.020
-
-- **Vulkan is now the recommended and default renderer.** OpenGL remains available in Settings.
-- **Choose where your game files live.** The new **Settings > Game files** browser selects any folder, including external drives and USB devices. The old `assets/` folder keeps working until you choose one.
-- **App data moved to `/data/prosperoeden`.** Config, logs, covers, and saves now live outside the app folder, so updating the app never touches them.
-- **Settings are now stored in one JSON file.** Earlier text settings are migrated automatically on first launch.
-- **Faster Library navigation**, and covers and recent games that survive folder moves.
-- **New icons** for controller actions, pages, and the Handheld / Docked mode.
-
-**Known issues:** Ending a game with Select + L1 can take several seconds. Some games can still hang on the loading screen, and some demanding games remain slow. This is a testing pre-release, not a compatibility guarantee.
-
-## In-game shortcuts
-
-“Select” means pressing the DualSense touchpad itself, as in ProsperoLight. On its own, a tap of the touchpad is the game's Select (Minus) button, and a longer press holds it.
-
-| Shortcut | Action |
-|---|---|
-| Select + R1 | Toggle the performance HUD |
-| Select + L1 | End the running game and return to the library |
-
-## Roadmap
-
-- **FPKG support** - install ProsperoEden as a fake package, alongside the current homebrew folder install. Each release includes a ShadowMountPlus package image (`.ffpfsc`); installing it still needs testing.
-- **More performance** - CPU and GPU work to keep demanding games at their target frame rate: the short stutter when a game reaches new areas (the block list, once it is on by default), heavy cutscenes, and games that run slower in Docked mode than in Handheld.
-- **More reliable game loading** - fix the remaining hangs on the loading screen.
-- **Faster exit in every game** - a few games still take up to several minutes to close.
-- **Controller selection screen** - some games wait forever on the screen that asks you to choose a controller. Games that take single Joy-Cons should now get past it; other cases still need a log from a game that does it.
-- **More game compatibility** - validate more games on the PS5, and fix what keeps them from running well, such as games that crash at launch.
-
-## Issues are disabled
-
-GitHub issues are turned off for this repository on purpose. ProsperoEden is a general-purpose emulator port, and the project does not host discussion of console makers, specific commercial games, compatibility reports, or where to find game files. Issue threads tend to fill up with exactly that, so there are none.
-
-Please do not use pull requests or other channels to post that kind of content either.
-
-<!-- bbr-footer:start -->
-<!-- Generated by ps5-homebrew-dev-protocol/scripts/readme-footer. Edit the template there, not here. -->
+The ZBIC loader path compiles successfully and passes the existing NSO loader checks. Hardware compatibility still depends on the individual title and should be tested on-console.
 
 ## Credits
 
-Built with the [PS5 Payload SDK](https://github.com/ps5-payload-dev/sdk) by John Törnblom (ps5-payload-dev).
-Third-party components, authors and licenses are listed in
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+This project is based on:
 
-## License
+- [ProsperoEden](https://github.com/blackbearreloaded/ProsperoEden)
+- [Eden](https://github.com/eden-emulator/mirror)
+- [PS5 Native App Boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate)
+- [PS5 OpenGL](https://github.com/blackbearreloaded/ps5-opengl)
+- [Mihawk's PS5 Mesa](https://github.com/mihawk-99/PS5_Mesa)
+- [Mihawk's PS5 Vulkan](https://github.com/mihawk-99/PS5_Vulkan)
 
-Copyright © 2026 BlackBearReloaded. Licensed under GPL-3.0-or-later; see [LICENSE](LICENSE). Third-party components keep their own licenses. Binary releases are built from the tagged source in this repository.
+All credit for the original projects belongs to their respective authors and contributors.
 
-## Disclaimer
+## Legal
 
-- **No affiliation.** This is an independent homebrew project. It is not
-  affiliated with, endorsed by, or sponsored by Sony Interactive Entertainment.
-  "PlayStation", "PS5" and related marks are trademarks of Sony Interactive
-  Entertainment Inc. This project is not affiliated with or endorsed by the Eden project.
-- **No proprietary material.** No Sony SDK, firmware, encryption keys or
-  decrypted system modules are included.
-- **No warranty.** This project is provided "as is", without warranty of any
-  kind, to the extent permitted by law. See sections 15 and 16 of the GPL.
-- **Use at your own risk.** Running homebrew requires a modified console, which
-  may void its warranty, breach the platform's terms of service, or cause data
-  loss.
-- **Legal use only.** Use it only with hardware, accounts and content you own.
-  This project does not support or enable piracy.
+No keys, firmware, games, or other copyrighted console data are included.
 
-## AI assistance
-
-This project was developed with AI assistance from OpenAI and/or Anthropic tools.
-<!-- bbr-footer:end -->
+Use software and console data dumped from hardware and games you own.
