@@ -438,7 +438,9 @@ int main(int argc, char** argv) {
         std::printf("EDEN_VULKAN_MEASUREMENT quiet=%d captures=%d\n",
                     performance_run, !performance_run);
         const auto game_video = Eden::LoadGameSettings(eden_game_title_id(selected_game.c_str()));
-        const auto backend = automatic_launch ?
+        const bool safe_launch = std::getenv("EDEN_SAFE_LAUNCH") != nullptr;
+        if (safe_launch) unsetenv("EDEN_SAFE_LAUNCH");
+        const auto backend = safe_launch ? Eden::GraphicsBackend::OpenGL : automatic_launch ?
             (recovery_opengl ? Eden::GraphicsBackend::OpenGL : Eden::GraphicsBackend::Vulkan) :
             game_video.renderer >= 0 ?
             (game_video.renderer == 0 ? Eden::GraphicsBackend::OpenGL : Eden::GraphicsBackend::Vulkan) :
@@ -446,8 +448,6 @@ int main(int argc, char** argv) {
 #else
         // Library > Game settings take precedence over Settings > Video.
         const auto game_video = Eden::LoadGameSettings(eden_game_title_id(selected_game.c_str()));
-        const bool safe_launch = std::getenv("EDEN_SAFE_LAUNCH") != nullptr;
-        if (safe_launch) unsetenv("EDEN_SAFE_LAUNCH");
         const auto backend = safe_launch ? Eden::GraphicsBackend::OpenGL :
             game_video.renderer >= 0 ?
             (game_video.renderer == 0 ? Eden::GraphicsBackend::OpenGL : Eden::GraphicsBackend::Vulkan) :
