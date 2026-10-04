@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# ProsperoEden - Regenerate the launcher's baked assets (font atlas and art).
+# Eden PS5 - Regenerate the launcher's baked font and art.
 # Copyright (C) 2026 BlackBearReloaded
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # The results are committed under headless/prosperoeden/ui; run this only after changing the
-# font, the glyph set or the source images. Needs a host C++ compiler and Python with Pillow.
+# font, the glyph set or the source images. Needs a host C++ compiler, Python with Pillow, and rsvg-convert (librsvg2-bin).
 
 set -euo pipefail
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
