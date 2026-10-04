@@ -32,6 +32,14 @@
       "creates": ".deps/fmt-12.1.0/include/fmt/format.h"
     },
     {
+      "name": "zbic",
+      "about": "Nintendo Switch 22.0+ ZBIC (zstd variant) NSO decompressor, matching Eden upstream #4482",
+      "kind": "git",
+      "url": "https://github.com/kinnay/zbic.git",
+      "commit": "11b08f2712264bbed731545085cbd9702096ceb7",
+      "path": ".deps/zbic-11b08f27"
+    },
+    {
       "name": "compiler-rt",
       "about": "LLVM 18.1.8 emulated-TLS runtime (emutls.c and its headers) for the PS5 build",
       "kind": "files",
