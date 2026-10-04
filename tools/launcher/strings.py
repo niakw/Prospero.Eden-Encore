@@ -10,11 +10,15 @@ The code holds the English text: tr("...") where it is drawn, TR("...") in const
 the setting labels of headless/settings_store.h). A catalog is a gettext .po file named after the
 PS5 system language's tag (third_party/ps5_system_language.hpp): pt-BR.po, fr-FR.po...
 
-check fails when a catalog
-  - translates text the code no longer has, or leaves text untranslated,
-  - changes the {0} {1} placeholders of a text,
-  - uses a character the launcher's font does not have.
-It warns when a translation is much longer than the English text (it may not fit its place).
+check keeps fr-FR complete because it is the release's primary maintained translation. Other
+catalogs may be partial: missing text falls back to English at runtime and stale entries are
+harmless. Every translation that is present is still validated.
+
+check fails when
+  - fr-FR leaves current code text untranslated,
+  - a translation changes the {0} {1} placeholders,
+  - a translation uses a character the launcher's font does not have.
+It warns about partial/stale non-primary catalogs and translations much longer than English.
 
 The launcher's own font has Latin and Cyrillic letters. Japanese, Korean, Chinese, Greek, Thai and
 Arabic are drawn with the console's fonts (pe/gfx/system_fonts.hpp): their catalogs are checked
@@ -239,6 +243,7 @@ def font_characters():
 
 # Catalogs written in scripts the console's fonts draw.
 SYSTEM_FONT_CATALOGS = {"ja-JP", "ko-KR", "zh-Hans", "zh-Hant", "el-GR", "th-TH", "ar"}
+STRICT_CATALOGS = {"fr-FR"}
 # Characters that take no room: the zero-width space (a line may break there), direction marks.
 INVISIBLE = {0x200B, 0x200C, 0x200D, 0x200E, 0x200F}
 
@@ -333,12 +338,13 @@ def check():
                 characters = characters | unchecked
             else:
                 characters = characters | system
+        strict = path.stem in STRICT_CATALOGS
         for text in texts:
             if not entries.get(text):
-                problems.append(f"untranslated: {text!r}")
+                (problems if strict else warnings).append(f"untranslated: {text!r}")
         for text, translation in entries.items():
             if text not in texts:
-                problems.append(f"not in the code any more: {text!r}")
+                warnings.append(f"not in the code any more: {text!r}")
                 continue
             if sorted(re.findall(r"\{\d\}", text)) != sorted(re.findall(r"\{\d\}", translation)) and translation:
                 problems.append(f"placeholders differ: {text!r} -> {translation!r}")
@@ -351,7 +357,7 @@ def check():
                 warnings.append(f"long ({len(text)} -> {len(translation)}): {translation!r}")
         note = f", {len(unchecked)} characters of the console's fonts not checked" if unchecked else ""
         print(f"{path.name}: {len(entries)} texts, {len(problems)} problems, {len(warnings)} warnings{note}")
-        for line in problems[:40]:
+        for line in (problems if strict else problems[:40]):
             print("   ", line)
         for line in warnings[:12]:
             print("    warning:", line)
