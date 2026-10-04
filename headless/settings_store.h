@@ -7,7 +7,7 @@
 //                "upscaling_filter": "bilinear", "refresh_rate": "60",
 //                "output_resolution": "1080p" },
 //     "audio": { "volume": 100, "mute": false, "menu_volume": 70 },
-//     "controls": { "vibration": true },
+//     "controls": { "layout": "playstation", "vibration": true, "vibration_strength": 100, "stick_deadzone": 8 },
 //     "system": { "language": "en-US" },
 //     "accessibility": { "large_text": false, "high_contrast": false, "reduce_motion": false },
 //     "diagnostics": { "detailed_logging": false },
@@ -62,6 +62,11 @@ inline constexpr int kRefreshHz[] = {60, 120};
 inline constexpr const char* kOutputKeys[] = {"1080p", "1440p", "2160p"};
 inline constexpr int kOutputWidth[] = {1920, 2560, 3840};
 inline constexpr int kOutputHeight[] = {1080, 1440, 2160};
+// Settings > Controls: face-button semantics on the DualSense while a Switch game runs.
+// PlayStation is the native PS5 feel (Cross=A, Circle=B, Square=X, Triangle=Y).
+// Nintendo preserves the physical-position mapping used by the original port.
+inline constexpr const char* kControllerLayoutKeys[] = {"playstation", "nintendo"};
+inline constexpr const char* kControllerLayoutLabels[] = {"PlayStation", "Nintendo"};
 // Settings > Language: the system language games see, in launcher order. Each entry maps to Eden's
 // Settings::Language and to the Settings::Region consoles sold with that language have (indices in
 // Eden's enum order; headless/main.cpp checks them). Eden's older "Chinese" and "Taiwanese" codes
@@ -86,7 +91,10 @@ struct Preferences {
     int upscaling_filter = 0;            // index into kUpscalingFilterKeys
     int refresh = 0;                     // index into kRefreshKeys
     int output = 0;                      // index into kOutputKeys
+    int controller_layout = 0;            // 0 PlayStation, 1 Nintendo
     bool vibration = true;
+    int vibration_strength = 100;         // 0-100
+    int stick_deadzone = 8;               // percent, 0-20
     int language = 0;                    // index into kLanguageKeys (English (US), Eden's default)
     int menu_volume = 70;                // the launcher's own sounds, 0 (off) to 100
     bool large_text = false;             // Settings > Accessibility: the launcher's look
@@ -235,7 +243,16 @@ inline Preferences LoadPreferences(const std::string& file = SettingsFile()) {
                               kRefreshKeys, int(std::size(kRefreshKeys)), result.refresh);
     result.output = KeyIndex(Settings::String(document, Json::json_pointer("/video/output_resolution")),
                              kOutputKeys, int(std::size(kOutputKeys)), result.output);
+    result.controller_layout = KeyIndex(Settings::String(document, Json::json_pointer("/controls/layout")),
+                                        kControllerLayoutKeys, int(std::size(kControllerLayoutKeys)),
+                                        result.controller_layout);
     result.vibration = Settings::Bool(document, Json::json_pointer("/controls/vibration"), result.vibration);
+    const int vibration_strength = Settings::Int(document, Json::json_pointer("/controls/vibration_strength"),
+                                                  result.vibration_strength);
+    if (vibration_strength >= 0 && vibration_strength <= 100) result.vibration_strength = vibration_strength;
+    const int stick_deadzone = Settings::Int(document, Json::json_pointer("/controls/stick_deadzone"),
+                                              result.stick_deadzone);
+    if (stick_deadzone >= 0 && stick_deadzone <= 20) result.stick_deadzone = stick_deadzone;
     result.language = KeyIndex(Settings::String(document, Json::json_pointer("/system/language")),
                                kLanguageKeys, int(std::size(kLanguageKeys)), result.language);
     result.large_text = Settings::Bool(document, Json::json_pointer("/accessibility/large_text"), false);
@@ -251,6 +268,9 @@ inline bool SavePreferences(const Preferences& value, const std::string& file = 
         value.upscaling_filter < 0 || value.upscaling_filter >= int(std::size(kUpscalingFilterKeys)) ||
         value.refresh < 0 || value.refresh >= int(std::size(kRefreshKeys)) ||
         value.output < 0 || value.output >= int(std::size(kOutputKeys)) ||
+        value.controller_layout < 0 || value.controller_layout >= int(std::size(kControllerLayoutKeys)) ||
+        value.vibration_strength < 0 || value.vibration_strength > 100 ||
+        value.stick_deadzone < 0 || value.stick_deadzone > 20 ||
         value.language < 0 || value.language >= int(std::size(kLanguageKeys))) return false;
     Settings::Json document = Settings::Load(file);
     document["version"] = 1;
@@ -263,7 +283,10 @@ inline bool SavePreferences(const Preferences& value, const std::string& file = 
     document["audio"]["volume"] = value.volume;
     document["audio"]["mute"] = value.mute;
     document["audio"]["menu_volume"] = value.menu_volume;
+    document["controls"]["layout"] = kControllerLayoutKeys[value.controller_layout];
     document["controls"]["vibration"] = value.vibration;
+    document["controls"]["vibration_strength"] = value.vibration_strength;
+    document["controls"]["stick_deadzone"] = value.stick_deadzone;
     document["system"]["language"] = kLanguageKeys[value.language];
     document["diagnostics"]["detailed_logging"] = value.detailed_logging;
     document["accessibility"]["large_text"] = value.large_text;
@@ -294,13 +317,14 @@ inline bool SaveGameDocked(uint64_t title_id, bool docked, const std::string& fi
     return Settings::Write(document, file);
 }
 
-// Library > Game settings: renderer, resolution, upscaling filter and refresh rate for one game;
-// -1 (absent from the file) uses Settings > Video.
+// Library > Game settings: renderer, resolution, upscaling filter, refresh rate and controller layout for one game;
+// -1 (absent from the file) uses the global setting.
 struct GameSettings {
     int renderer = -1;          // 0 OpenGL, 1 Vulkan
     int resolution = -1;        // index into kResolutionKeys
     int upscaling_filter = -1;  // index into kUpscalingFilterKeys
     int refresh = -1;           // index into kRefreshKeys
+    int controller_layout = -1; // index into kControllerLayoutKeys
 };
 inline constexpr const char* kRendererKeys[] = {"opengl", "vulkan"};
 
@@ -316,6 +340,8 @@ inline GameSettings LoadGameSettings(uint64_t title_id, const std::string& file 
     result.upscaling_filter = KeyIndex(key("upscaling_filter"), kUpscalingFilterKeys,
                                        int(std::size(kUpscalingFilterKeys)), -1);
     result.refresh = KeyIndex(key("refresh_rate"), kRefreshKeys, int(std::size(kRefreshKeys)), -1);
+    result.controller_layout = KeyIndex(key("controller_layout"), kControllerLayoutKeys,
+                                        int(std::size(kControllerLayoutKeys)), -1);
     return result;
 }
 
@@ -323,7 +349,8 @@ inline bool SaveGameSettings(uint64_t title_id, const GameSettings& value, const
     if (!title_id || value.renderer >= int(std::size(kRendererKeys)) ||
         value.resolution >= int(std::size(kResolutionKeys)) ||
         value.upscaling_filter >= int(std::size(kUpscalingFilterKeys)) ||
-        value.refresh >= int(std::size(kRefreshKeys))) return false;
+        value.refresh >= int(std::size(kRefreshKeys)) ||
+        value.controller_layout >= int(std::size(kControllerLayoutKeys))) return false;
     Settings::Json document = Settings::Load(file);
     document["version"] = 1;
     auto& game = document["games"][Settings::TitleKey(title_id)];
@@ -336,6 +363,7 @@ inline bool SaveGameSettings(uint64_t title_id, const GameSettings& value, const
     store("resolution", value.resolution, kResolutionKeys);
     store("upscaling_filter", value.upscaling_filter, kUpscalingFilterKeys);
     store("refresh_rate", value.refresh, kRefreshKeys);
+    store("controller_layout", value.controller_layout, kControllerLayoutKeys);
     return Settings::Write(document, file);
 }
 
