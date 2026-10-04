@@ -783,7 +783,7 @@ void Launcher::draw_game(Canvas &c, float open)
         static constexpr const char *kGameAbout[] = {
             TR("Docked can improve graphics but may cost performance; Handheld is lighter for demanding games."),
             TR("Vulkan is recommended on PS5. Use OpenGL only as a fallback for a title with Vulkan issues."),
-            TR("Recommended keeps accuracy high and compiles earlier-used code ahead. Performance may trade graphics accuracy for speed."),
+            TR("Recommended keeps accuracy high. Smooth compiles earlier-used code ahead. Performance may trade graphics accuracy for speed."),
             TR("1x is the safe default. Lower it for performance/memory; higher scales use much more graphics memory."),
             TR("Bilinear is the lightest default. AMD FSR is useful when rendering below the TV output size."),
             TR("60 Hz is the safe default. Use 120 Hz only with a compatible display or high-FPS patch."),
