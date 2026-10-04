@@ -257,7 +257,7 @@ void Launcher::draw_frame(Canvas &c, const char *title, const char *copy)
 
 void Launcher::draw_footer(Canvas &c, const Hint *hints, int count)
 {
-    c.list.rounded_rect({108.0f, 955.0f, 1704.0f, 1.0f}, 0.0f, Color::rgb(0x586d5a, 0.9f));
+    c.list.rounded_rect({108.0f, 955.0f, 1704.0f, 1.0f}, 0.0f, theme::kRule.with_alpha(0.9f));
     draw_hints(c, hints, count, 108.0f, 987.0f, theme::kCopy, 1704.0f);
 }
 
@@ -267,7 +267,7 @@ void Launcher::draw_launch(Canvas &c)
     // The menu dims, the game's cover steps forward, then everything goes dark.
     const float black = tween::cubic_in_out((t - 0.45f) / 0.55f);
     const float veil = std::max(0.90f * tween::cubic_out(t / 0.22f), black);
-    c.list.rounded_rect(kScreen, 0.0f, Color::rgb(0x020705, veil));
+    c.list.rounded_rect(kScreen, 0.0f, theme::kScrim.with_alpha(veil));
 
     const float appear = tween::back_out(t / 0.38f);
     const float leave = 1.0f - tween::cubic_in_out((t - 0.60f) / 0.40f);
