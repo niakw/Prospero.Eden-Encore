@@ -1,26 +1,53 @@
-name: Release build
+name: Eden 0.40 Improved release
 
-# Builds the release ZIP (make release, which fetches pinned dependencies; docs/BUILDING.md)
-# on the self-hosted runner. A manual run keeps the ZIP as a 7-day artifact; a v* tag also
-# publishes it as a pre-release.
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: release-build
+  group: eden-040-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   build:
-    runs-on: [self-hosted, linux, prosperoeden]
+    runs-on: ubuntu-24.04
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install build toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang-18 libclang-18-dev lld-18 llvm-18 llvm-18-dev llvm-18-tools llvm-spirv-18 libllvmspirvlib-18-dev \
+            cmake ninja-build ccache make nasm meson rsync git \
+            glslang-tools spirv-tools bison flex curl wget unzip librsvg2-bin imagemagick \
+            python3 python3-venv python3-pip python3-mako python3-yaml pkg-config
+
+      - name: Upgrade Meson
+        run: |
+          python3 -m pip install --user --break-system-packages "meson>=1.4,<2"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/meson" --version
+
+      - name: Check toolchain
+        run: make toolchain
+
+      - name: Restore build caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/ccache
+            ~/.cache/prosperoeden-deps
+            ~/.cache/ps5-eden-headless.*
+            .deps
+          key: eden-040-improved-${{ runner.os }}-${{ hashFiles('tools/deps.json') }}
+          restore-keys: |
+            eden-040-improved-${{ runner.os }}-
 
       - name: Build and package
         run: bash tools/ci/build-release.sh
@@ -31,15 +58,26 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ProsperoEden
+          name: Eden-0.40-Improved-PS5-13.60
           path: dist/
-          retention-days: 7
+          retention-days: 14
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Eden-0.40-Improved-PS5-13.60
+          path: dist
 
       - name: Publish the pre-release
-        if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         run: >
-          gh release create "$GITHUB_REF_NAME" --verify-tag --prerelease
-          --title "ProsperoEden $GITHUB_REF_NAME" --notes-file dist/release-notes.md
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease
+          --title "Eden 0.40 Improved $GITHUB_REF_NAME" --notes-file dist/release-notes.md
           "dist/ProsperoEden-$GITHUB_REF_NAME.zip" dist/SHA256SUMS
