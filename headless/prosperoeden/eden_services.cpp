@@ -35,6 +35,38 @@ bool IsFile(const std::string& path) {
     return stat(path.c_str(), &info) == 0 && S_ISREG(info.st_mode);
 }
 
+std::uintmax_t TreeBytes(const std::filesystem::path& root) {
+    std::error_code error;
+    if (!std::filesystem::exists(root, error)) return 0;
+    std::uintmax_t bytes = 0;
+    std::filesystem::recursive_directory_iterator it(
+        root, std::filesystem::directory_options::skip_permission_denied, error), end;
+    while (!error && it != end) {
+        std::error_code entry_error;
+        if (it->is_regular_file(entry_error)) {
+            const auto size = it->file_size(entry_error);
+            if (!entry_error) bytes += size;
+        }
+        it.increment(error);
+        if (error) error.clear(); // Skip an unreadable entry and continue where possible.
+    }
+    return bytes;
+}
+
+std::string StorageSize(std::uintmax_t bytes) {
+    constexpr std::uintmax_t KiB = 1024;
+    constexpr std::uintmax_t MiB = KiB * 1024;
+    constexpr std::uintmax_t GiB = MiB * 1024;
+    char text[64];
+    if (bytes >= GiB)
+        std::snprintf(text, sizeof(text), "%.1f GB", static_cast<double>(bytes) / static_cast<double>(GiB));
+    else if (bytes >= MiB)
+        std::snprintf(text, sizeof(text), "%.1f MB", static_cast<double>(bytes) / static_cast<double>(MiB));
+    else
+        std::snprintf(text, sizeof(text), "%.0f KB", static_cast<double>(bytes) / static_cast<double>(KiB));
+    return text;
+}
+
 // A game's update and DLC: "Update 1.2.0, 2 DLC"; brief leaves the word out ("v1.2.0, 2 DLC") for
 // places with little room.
 std::string AddOnSummary(uint64_t title_id, bool brief = false) {
@@ -555,6 +587,43 @@ std::string EdenServices::setup_details() {
     return setup_.empty() ?
         tr("Keys and firmware: startup checks passed. Game-specific compatibility is checked at launch.") :
         SetupMessage(setup_);
+}
+
+pe::ui::DiagnosticsInfo EdenServices::diagnostics() {
+    pe::ui::DiagnosticsInfo result;
+    result.filesystem = Eden::FilesystemAccess() ? tr("Full filesystem") : tr("Sandbox only");
+    result.data_path = Eden::FilesystemAccess() ? Eden::kDataDir : Eden::UserDir();
+
+    std::error_code error;
+    const auto space = std::filesystem::space(Eden::UserDir(), error);
+    result.free_space = error ? tr("Unknown") : StorageSize(space.available);
+
+    const std::filesystem::path cache = std::filesystem::path{Eden::UserDir()} / "cache";
+    const std::uintmax_t shader_bytes =
+        TreeBytes(cache / "radv") + TreeBytes(cache / "native-opengl") + TreeBytes(cache / "jit");
+    result.shader_caches = StorageSize(shader_bytes);
+    result.logs = StorageSize(TreeBytes(Eden::LogsDir()));
+    return result;
+}
+
+bool EdenServices::clear_shader_caches(std::string* message) {
+    const std::filesystem::path cache = std::filesystem::path{Eden::UserDir()} / "cache";
+    const std::uintmax_t before =
+        TreeBytes(cache / "radv") + TreeBytes(cache / "native-opengl") + TreeBytes(cache / "jit");
+    bool ok = true;
+    for (const char* name : {"radv", "native-opengl", "jit"}) {
+        std::error_code error;
+        std::filesystem::remove_all(cache / name, error);
+        ok = ok && !error;
+    }
+    if (message) {
+        if (ok)
+            *message = fill(tr("Cleared {0} of shader/JIT caches."), {StorageSize(before)});
+        else
+            *message = tr("Some cache files could not be removed.");
+    }
+    if (ok) Eden::Report("cache", "Shader/JIT caches cleared from Diagnostics");
+    return ok;
 }
 
 bool EdenServices::folders(const std::string& directory, std::vector<std::string>* names) {
