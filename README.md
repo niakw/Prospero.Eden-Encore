@@ -69,6 +69,20 @@ For a stable first run, keep **Vulkan**, **1080p output**, **1x internal resolut
 - Restores Eden's official visual identity for the launcher and PS5 app icon.
 - Hardens clean-runner RADV packaging and build reproducibility.
 
+## Recommended defaults
+
+For a normal user, the fork starts with conservative settings:
+
+- **Vulkan**
+- **1080p TV output**
+- **1x game resolution**
+- **Bilinear scaling**
+- **60 Hz**
+- **FPS overlay off**
+- **PlayStation button layout**
+
+Video and controller screens show a short explanation for the selected setting, including when 120 Hz, FSR or higher render resolutions are useful.
+
 ## Install
 
 1. Download the release ZIP.
