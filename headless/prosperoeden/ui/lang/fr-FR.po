@@ -1225,3 +1225,23 @@ msgstr "Réinitialiser"
 #: pe/ui/settings.cpp pe/ui/library.cpp
 msgid "Game overrides reset to global defaults."
 msgstr "Les réglages spécifiques au jeu utilisent de nouveau les réglages globaux."
+
+#: pe/ui/browse.cpp pe/ui/library.cpp
+msgid "About Prospero.Eden Encore"
+msgstr "À propos de Prospero.Eden Encore"
+
+#: pe/ui/browse.cpp pe/ui/library.cpp
+msgid "tools and libraries make Prospero.Eden Encore possible."
+msgstr "les outils et bibliothèques rendent Prospero.Eden Encore possible."
+
+#: pe/ui/browse.cpp pe/ui/library.cpp
+msgid "Prospero.Eden Encore keeps the proven 0.40 base for PS5 13.60, with Eden branding, safer recovery, and targeted compatibility and performance improvements."
+msgstr "Prospero.Eden Encore conserve la base 0.40 éprouvée pour PS5 13.60, avec l’identité Eden, une récupération plus sûre et des améliorations ciblées de compatibilité et de performances."
+
+#: pe/ui/browse.cpp pe/ui/library.cpp
+msgid "Options starts a one-shot Safe Launch without changing saved settings."
+msgstr "Options lance un démarrage sûr unique sans modifier les réglages enregistrés."
+
+#: pe/ui/browse.cpp pe/ui/library.cpp
+msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
+msgstr "Démarrage sûr : OpenGL, mode portable, 1x, 60 Hz, 1080p et mods désactivés uniquement pour ce lancement."
