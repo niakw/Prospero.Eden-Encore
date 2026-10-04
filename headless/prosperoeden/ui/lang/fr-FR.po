@@ -1241,3 +1241,227 @@ msgstr "Options lance un démarrage sûr unique sans modifier les réglages enre
 #: pe/ui/browse.cpp pe/ui/library.cpp
 msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
 msgstr "Démarrage sûr : OpenGL, mode portable, 1x, 60 Hz, 1080p et mods désactivés uniquement pour ce lancement."
+
+#: synchronized release UI
+msgid "Sandbox only"
+msgstr "Sandbox uniquement"
+
+#: synchronized release UI
+msgid "Unknown"
+msgstr "Inconnu"
+
+#: synchronized release UI
+msgid "Cleared {0} of shader/JIT caches."
+msgstr "Caches shaders/JIT supprimés : {0}."
+
+#: synchronized release UI
+msgid "Some cache files could not be removed."
+msgstr "Certains fichiers de cache n'ont pas pu être supprimés."
+
+#: synchronized release UI
+msgid "Saved. Reopen Eden to use this folder."
+msgstr "Enregistré. Rouvrez Eden pour utiliser ce dossier."
+
+#: synchronized release UI
+msgid "Default folder saved. Reopen Eden to use it."
+msgstr "Dossier par défaut enregistré. Rouvrez Eden pour l'utiliser."
+
+#: synchronized release UI
+msgid "Thanks to the whole PS5 homebrew community and to every developer whose drivers, tools and libraries make Prospero.Eden Encore possible."
+msgstr "Merci à toute la communauté homebrew PS5 et à chaque développeur dont les pilotes, outils et bibliothèques rendent Prospero.Eden Encore possible."
+
+#: synchronized release UI
+msgid "PS5 13.60 FORK"
+msgstr "FORK PS5 13.60"
+
+#: synchronized release UI
+msgid "PS5 13.60  /  0.40 IMPROVED  /  {0}"
+msgstr "PS5 13.60  /  0.40 AMÉLIORÉE  /  {0}"
+
+#: synchronized release UI
+msgid "Performance profile"
+msgstr "Profil de performances"
+
+#: synchronized release UI
+msgid "Button layout"
+msgstr "Disposition des boutons"
+
+#: synchronized release UI
+msgid "Docked can improve graphics but may cost performance; Handheld is lighter for demanding games."
+msgstr "Le mode TV peut améliorer les graphismes mais coûter en performances ; le mode portable est plus léger pour les jeux exigeants."
+
+#: synchronized release UI
+msgid "Vulkan is recommended on PS5. Use OpenGL only as a fallback for a title with Vulkan issues."
+msgstr "Vulkan est recommandé sur PS5. Utilisez OpenGL seulement en solution de repli pour un jeu ayant des problèmes avec Vulkan."
+
+#: synchronized release UI
+msgid "Recommended keeps accuracy high. Smooth compiles earlier-used code ahead. Performance may trade graphics accuracy for speed."
+msgstr "Recommandé privilégie la précision. Fluide précompile le code déjà utilisé. Performance peut sacrifier de la précision graphique pour gagner en vitesse."
+
+#: synchronized release UI
+msgid "1x is the safe default. Lower it for performance/memory; higher scales use much more graphics memory."
+msgstr "1x est le réglage sûr. Réduisez-le pour gagner en performances ou en mémoire ; les valeurs supérieures utilisent beaucoup plus de mémoire graphique."
+
+#: synchronized release UI
+msgid "Bilinear is the lightest default. AMD FSR is useful when rendering below the TV output size."
+msgstr "Bilinéaire est le réglage le plus léger. AMD FSR est utile lorsque le rendu est inférieur à la résolution de sortie TV."
+
+#: synchronized release UI
+msgid "60 Hz is the safe default. Use 120 Hz only with a compatible display or high-FPS patch."
+msgstr "60 Hz est le réglage sûr. Utilisez 120 Hz seulement avec un écran compatible ou un patch haute fréquence d'images."
+
+#: synchronized release UI
+msgid "PlayStation is recommended on PS5; Nintendo restores the original Switch button positions."
+msgstr "PlayStation est recommandé sur PS5 ; Nintendo restaure la position d'origine des boutons Switch."
+
+#: synchronized release UI
+msgid "TV OUTPUT"
+msgstr "SORTIE TV"
+
+#: synchronized release UI
+msgid "GAME RESOLUTION"
+msgstr "RÉSOLUTION DU JEU"
+
+#: synchronized release UI
+msgid "DualSense layout, calibration, vibration and shortcuts."
+msgstr "Disposition DualSense, calibrage, vibrations et raccourcis."
+
+#: synchronized release UI
+msgid "BUTTON LAYOUT"
+msgstr "DISPOSITION DES BOUTONS"
+
+#: synchronized release UI
+msgid "VIBRATION STRENGTH"
+msgstr "INTENSITÉ DES VIBRATIONS"
+
+#: synchronized release UI
+msgid "STICK DEADZONE"
+msgstr "ZONE MORTE DES STICKS"
+
+#: synchronized release UI
+msgid "Runtime health, storage and recovery tools."
+msgstr "État d'exécution, stockage et outils de récupération."
+
+#: synchronized release UI
+msgid "FILESYSTEM"
+msgstr "SYSTÈME DE FICHIERS"
+
+#: synchronized release UI
+msgid "FREE SPACE"
+msgstr "ESPACE LIBRE"
+
+#: synchronized release UI
+msgid "SHADER/JIT CACHES"
+msgstr "CACHES SHADERS/JIT"
+
+#: synchronized release UI
+msgid "LOGS"
+msgstr "JOURNAUX"
+
+#: synchronized release UI
+msgid "DATA"
+msgstr "DONNÉES"
+
+#: synchronized release UI
+msgid "Vulkan is recommended on PS5. Use OpenGL only as a fallback for a game with Vulkan issues."
+msgstr "Vulkan est recommandé sur PS5. Utilisez OpenGL seulement en solution de repli pour un jeu ayant des problèmes avec Vulkan."
+
+#: synchronized release UI
+msgid "Recommended keeps accuracy and synchronous shaders. Smooth compiles earlier-used code ahead. Performance may trade graphics accuracy for speed."
+msgstr "Recommandé conserve la précision et les shaders synchrones. Fluide précompile le code déjà utilisé. Performance peut sacrifier de la précision graphique pour gagner en vitesse."
+
+#: synchronized release UI
+msgid "Final app output size. 1080p is recommended for stability and memory; this is not the game's render scale."
+msgstr "Taille finale de l'image envoyée par l'application. 1080p est recommandé pour la stabilité et la mémoire ; ce n'est pas l'échelle de rendu du jeu."
+
+#: synchronized release UI
+msgid "Game render scale. 1x is recommended; lower it for performance or memory, raise it only when a game has headroom."
+msgstr "Échelle de rendu du jeu. 1x est recommandé ; réduisez-la pour gagner en performances ou en mémoire, augmentez-la seulement si le jeu a de la marge."
+
+#: synchronized release UI
+msgid "Bilinear is the lightest default. AMD FSR is most useful when rendering below the TV output size."
+msgstr "Bilinéaire est le réglage le plus léger. AMD FSR est surtout utile lorsque le rendu est inférieur à la résolution de sortie TV."
+
+#: synchronized release UI
+msgid "60 Hz is recommended. 120 Hz changes display mode only; the game still needs to render above 60 FPS to benefit."
+msgstr "60 Hz est recommandé. 120 Hz ne change que le mode d'affichage ; le jeu doit quand même dépasser 60 FPS pour en profiter."
+
+#: synchronized release UI
+msgid "Shows live FPS while playing. Off is cleaner for normal use; Select + R1 toggles it at any time."
+msgstr "Affiche les FPS en temps réel pendant le jeu. Désactivé est plus propre en usage normal ; Select + R1 permet de le basculer à tout moment."
+
+#: synchronized release UI
+msgid "PlayStation is recommended on PS5: Cross maps to A and Circle to B. Nintendo preserves Switch button positions."
+msgstr "PlayStation est recommandé sur PS5 : Croix correspond à A et Rond à B. Nintendo conserve la position des boutons Switch."
+
+#: synchronized release UI
+msgid "Turns DualSense vibration on or off for games."
+msgstr "Active ou désactive les vibrations DualSense dans les jeux."
+
+#: synchronized release UI
+msgid "100% is full DualSense rumble strength. Lower it if vibration feels too strong."
+msgstr "100 % correspond à l'intensité maximale des vibrations DualSense. Réduisez-la si elles sont trop fortes."
+
+#: synchronized release UI
+msgid "8% is recommended. Increase it for stick drift; decrease it for more sensitive aiming."
+msgstr "8 % est recommandé. Augmentez-la en cas de drift ; réduisez-la pour une visée plus sensible."
+
+#: synchronized release UI
+msgid "Health and storage tools. Cache cleanup never removes saves, settings, keys or games."
+msgstr "Outils d'état et de stockage. Le nettoyage du cache ne supprime jamais les sauvegardes, réglages, clés ni jeux."
+
+#: synchronized release UI
+msgid "TV output"
+msgstr "Sortie TV"
+
+#: synchronized release UI
+msgid "Game resolution"
+msgstr "Résolution du jeu"
+
+#: synchronized release UI
+msgid "Vibration strength"
+msgstr "Intensité des vibrations"
+
+#: synchronized release UI
+msgid "Stick deadzone"
+msgstr "Zone morte des sticks"
+
+#: synchronized release UI
+msgid "Filesystem: {0}  |  Free: {1}"
+msgstr "Système de fichiers : {0}  |  Libre : {1}"
+
+#: synchronized release UI
+msgid "Shader/JIT caches: {0}  |  Logs: {1}"
+msgstr "Caches shaders/JIT : {0}  |  Journaux : {1}"
+
+#: synchronized release UI
+msgid "Data: {0}"
+msgstr "Données : {0}"
+
+#: synchronized release UI
+msgid "Clear shader caches"
+msgstr "Vider les caches shaders"
+
+#: synchronized release UI
+msgid "Clear"
+msgstr "Vider"
+
+#: synchronized release UI
+msgid "0.5x (fastest, softer)"
+msgstr "0,5x (le plus rapide, plus doux)"
+
+#: synchronized release UI
+msgid "1x (recommended)"
+msgstr "1x (recommandé)"
+
+#: synchronized release UI
+msgid "2x (high memory)"
+msgstr "2x (mémoire élevée)"
+
+#: synchronized release UI
+msgid "3x (very high memory)"
+msgstr "3x (mémoire très élevée)"
+
+#: synchronized release UI
+msgid "4x (extreme memory)"
+msgstr "4x (mémoire extrême)"
