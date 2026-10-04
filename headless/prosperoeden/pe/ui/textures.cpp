@@ -41,12 +41,12 @@ bool Textures::load_art(const std::string &directory)
         *texture = create(image);
         return *texture != 0;
     };
-    const bool backdrop = load("art/backdrop.tga", &backdrop_);
-    const bool blur = load("art/backdrop-blur.tga", &backdrop_blur_);
+    // Eden PS5 uses a generated dark brand backdrop, so the old ProsperoEden scenic
+    // backdrop textures are intentionally not loaded. This saves both package size and VRAM.
     const bool brand = load("art/brand.tga", &brand_);
     // Only the home screen's controller display needs this one.
     (void)load("art/controller.tga", &controller_);
-    return backdrop && blur && brand;
+    return brand;
 }
 
 void Textures::release()
