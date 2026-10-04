@@ -36,6 +36,7 @@ extern int scePadGetHandle(int32_t user_id, int32_t port_type, int32_t index);
 extern int sceUserServiceGetLoginUserIdList(login_user_list_t * list);
 extern int sceUserServiceInitialize(void * init_params);
 extern int sceUserServiceGetInitialUser(int32_t * user_id);
+extern int sceUserServiceGetForegroundUser(int32_t * user_id);
 extern int sceUserServiceTerminate(void);
 
 static const button_map_t buttons[] = {
@@ -228,7 +229,12 @@ bool radio_input_init(void)
     owns_user_service = user_init == 0;
 
     int32_t user_id = -1;
-    if(sceUserServiceGetInitialUser(&user_id) < 0 || scePadInit() < 0) {
+    // Match the game input path: the menu follows the profile that currently owns the foreground
+    // application. Fall back to the initial user for older/system states where foreground lookup
+    // is temporarily unavailable.
+    if(sceUserServiceGetForegroundUser(&user_id) < 0 || user_id < 0)
+        (void)sceUserServiceGetInitialUser(&user_id);
+    if(user_id < 0 || scePadInit() < 0) {
         radio_input_shutdown();
         return false;
     }
