@@ -43,6 +43,14 @@ The goal is simple: keep the working 0.40 behavior on 13.60, stay self-contained
   - Keeps the TV/controller-friendly PS5 launcher structure while moving the branding back toward upstream Eden.
 
 
+## Changes in v1.000.040
+
+- Keeps the self-contained ProsperoEden 0.40 filesystem elevation path for PS5 firmware 13.60.
+- Adds ZBIC NSO decompression for newer Switch software.
+- Adds PlayStation-first DualSense controls, per-game layout overrides, vibration strength and stick deadzone settings.
+- Restores Eden's official visual identity for the launcher and PS5 app icon.
+- Hardens clean-runner RADV packaging and build reproducibility.
+
 ## Install
 
 1. Download the release ZIP.
