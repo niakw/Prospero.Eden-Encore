@@ -363,3 +363,13 @@ The PS5 SDK exposes video-output resolution status APIs, so an `Auto (TV)` outpu
 ### Rule for future CI failures
 
 Every red run is inspected even if superseded. Record the first failing stage and exact error before discarding it: an older run can reveal a blocker that the newer run has not reached yet.
+
+
+### Defaults audit corrections
+
+Two UI/default inconsistencies were found after the initial recommendations were written:
+
+- `Preferences::hud` is currently **true** by default, so the FPS overlay starts enabled on a fresh config. For a normal user build the recommended default is **false**; the overlay should be opt-in for tuning/diagnostics.
+- Internal-resolution labels are misleading around high scales: `2x (sharpest)` is followed by `3x (slower)` and `4x (slowest)`, even though 3x/4x are also sharper. Replace the labels with neutral quality/cost wording and rely on contextual help for recommendations.
+
+Do not silently rewrite an existing user's saved HUD preference when changing the fresh-install default.
