@@ -82,7 +82,7 @@ struct Home
 
 struct Preferences
 {
-    bool hud = true;
+    bool hud = false;
     int volume = 100; // game volume, 0-100
     bool mute = false;
     bool detailed_logging = false;
