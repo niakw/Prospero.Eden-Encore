@@ -15,7 +15,6 @@ namespace pe::ui
 namespace
 {
 
-constexpr float kTau = 6.28318530718f;
 FitReport fit_report = nullptr;
 
 // A text colour as shown: with high contrast, greys go most of the way to white and accents a
@@ -46,18 +45,6 @@ float draw_text(Canvas &c, std::string_view value, float x, float baseline, floa
 const Color kWhite{1.0f, 1.0f, 1.0f, 1.0f};
 const Color kBlack{0.0f, 0.0f, 0.0f, 1.0f};
 
-// A repeatable 0..1 value for element `index` and property `salt`.
-float noise(int index, int salt)
-{
-    std::uint32_t value = static_cast<std::uint32_t>(index) * 0x9e3779b1u +
-                          static_cast<std::uint32_t>(salt) * 0x85ebca6bu + 0x27d4eb2fu;
-    value ^= value >> 15;
-    value *= 0x2c1b3c6du;
-    value ^= value >> 12;
-    value *= 0x297a2d39u;
-    value ^= value >> 15;
-    return static_cast<float>(value >> 8) / 16777216.0f;
-}
 
 } // namespace
 
