@@ -455,6 +455,9 @@ int main(int argc, char** argv) {
         setenv("PS5VK_QUIET_LOG", "1", 1);
 #endif
 #endif
+        const auto launch_preferences = Eden::LoadPreferences();
+        const int effective_performance_profile = game_video.performance_profile >= 0 ?
+            game_video.performance_profile : launch_preferences.performance_profile;
 #ifndef EDEN_PS5_VULKAN
         if (backend == Eden::GraphicsBackend::Vulkan)
             throw std::runtime_error("Vulkan is not available in this build yet. Select OpenGL in Settings > Video to play.");
@@ -567,8 +570,19 @@ int main(int argc, char** argv) {
         Settings::values.vulkan_device = recovery_mode == "init-failure" && !recovery_opengl ?
             0xffffffffu : 0u;
 #endif
-        Settings::values.use_asynchronous_shaders = false;
+        Settings::values.use_asynchronous_shaders =
+            effective_performance_profile == 2 && backend == Eden::GraphicsBackend::Vulkan;
         Settings::values.renderer_debug = false;
+        const auto profile_gpu_accuracy = effective_performance_profile == 2 ?
+            Settings::GpuAccuracy::Low : Settings::GpuAccuracy::High;
+        Settings::values.gpu_accuracy.SetValue(profile_gpu_accuracy);
+        Settings::values.current_gpu_accuracy = profile_gpu_accuracy;
+        Eden::JitList::enabled = effective_performance_profile >= 1;
+        Eden::Report("performance",
+            (std::string("Profile ") + Eden::kPerformanceProfileLabels[effective_performance_profile] +
+             ": compile-ahead " + (Eden::JitList::enabled ? "on" : "off") +
+             ", async shaders " + (Settings::values.use_asynchronous_shaders.GetValue() ? "on" : "off") +
+             ", GPU accuracy " + (profile_gpu_accuracy == Settings::GpuAccuracy::Low ? "low" : "high")).c_str());
         // RADV presents the console's 12 GiB of direct memory as an integrated GPU, for which
         // Eden budgets 4 GiB: a game using ~4.4 GB of Vulkan memory then ran the texture GC
         // every frame (20-25 FPS). Eden's larger integrated budget (6 GiB) holds it at 30 FPS
@@ -1128,8 +1142,12 @@ int main(int argc, char** argv) {
                                  Eden::Watch::dump_range.offset, Eden::Watch::dump_range.size);
                 }
 #endif
-                // The blocks this game compiled in earlier sessions, compiled ahead on a spare CPU.
-                if (std::filesystem::exists(Eden::AppFile("block-list.txt"))) Eden::JitList::enabled = true;
+                // The blocks this game compiled in earlier sessions, compiled ahead on a spare CPU
+                // according to the selected performance profile.
+#if defined(EDEN_DEV_PROFILE) || defined(EDEN_DEV_ROM_ID)
+                if (std::filesystem::exists(Eden::AppFile("block-list.txt")))
+                    Eden::JitList::enabled = true;
+#endif
                 Eden::JitList::Session jit_list;
                 if (auto* process = system.ApplicationProcess()) {
                     Eden::JitList::BuildId build{};
