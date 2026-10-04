@@ -48,6 +48,7 @@
 #include "cache_budget.h"
 #include "performance.h"
 #include "stall_watchdog.h"
+#include "stop_limit.h"
 #include "dev_vulkan.h"
 #include "../src/fastmem.h"
 #include "crash_report.h"
@@ -187,6 +188,10 @@ int main(int argc, char** argv) {
         Eden::Crash::Install(Eden::LogsDir(), Eden::kAppVersion, last_crash.restarted);
         Eden::BootTrace::Ready(Eden::LogsDir(), Eden::FilesystemAccess());
         Eden::BootTrace::Line("logs ready; app=%s data=%s", Eden::AppDir().c_str(), Eden::UserDir().c_str());
+        const std::string stop_note = Eden::LogFile("stop-limit.txt");
+        if (std::remove(stop_note.c_str()) == 0)
+            Eden::Report("exit", "The previous game did not stop within ten seconds; Eden restarted safely");
+        Eden::StopLimit::Start(stop_note);
         for (const char* candidate : {"/app0", Eden::kMountedAppDir, Eden::kInstallDir,
                                       "/mnt/sandbox/PPSA99008_000/app0"})
             Eden::BootTrace::Line("app candidate %s: %s", candidate,
@@ -924,7 +929,11 @@ int main(int argc, char** argv) {
                     completion->wake.notify_one();
                 });
                 SCOPE_EXIT {
-                    if (system.IsPoweredOn()) system.ShutdownMainProcess();
+                    if (system.IsPoweredOn()) {
+                        Eden::StopLimit::Begin();
+                        system.ShutdownMainProcess();
+                        Eden::StopLimit::End();
+                    }
                     system.RegisterExitCallback({});
                 };
                 // Like Eden's Qt/Android frontends, reset shutdown state for each load.
@@ -953,6 +962,23 @@ int main(int argc, char** argv) {
                 Service::AM::FrontendAppletParameters params{
                     .applet_id = Service::AM::AppletId::Application,
                 };
+                std::atomic<bool> left_while_loading{false};
+                std::jthread load_input;
+                if (pad && game) {
+                    load_input = std::jthread([&](std::stop_token stop) {
+                        while (!stop.stop_requested()) {
+                            pad->Poll();
+                            (void)pad->TakeHudToggle();
+                            if (pad->TakeReturnToMenu()) {
+                                Eden::Report("exit", "Touchpad + L1 while loading; requesting bounded return");
+                                left_while_loading = true;
+                                Eden::StopLimit::Begin();
+                                break;
+                            }
+                            std::this_thread::sleep_for(std::chrono::milliseconds(8));
+                        }
+                    });
+                }
                 Core::SystemResultStatus loaded;
                 try {
                     loaded = system.Load(window, guest, params);
@@ -962,6 +988,8 @@ int main(int argc, char** argv) {
                     std::fflush(stdout);
                     throw;
                 }
+                load_input.request_stop();
+                if (load_input.joinable()) load_input.join();
                 if (loaded != Core::SystemResultStatus::Success) {
                     std::fprintf(stderr, "Core load failed: %u\n", static_cast<unsigned>(loaded));
                     if (loaded == Core::SystemResultStatus::ErrorVideoCore) {
@@ -1117,6 +1145,11 @@ int main(int argc, char** argv) {
                 }
                 Eden::TakeGuestFault(); // Nothing from an earlier session belongs to this one.
                 system.Run();
+                if (left_while_loading) {
+                    std::lock_guard lock(completion->mutex);
+                    completion->return_to_menu = true;
+                    completion->wake.notify_one();
+                }
 #if defined(EDEN_DEV_PROFILE) && defined(PS5_NATIVE)
                 Eden::Stall::Trace("main running");
                 Eden::Stall::Disarm();
@@ -1348,7 +1381,9 @@ int main(int argc, char** argv) {
                 // Shutdown requests cancellation before suspending cores; Pause can
                 // block while a CPU producer is waiting on a full GPU queue.
                 Eden::ReportStep("shutdown", "Stopping the game");
+                Eden::StopLimit::Begin();
                 system.ShutdownMainProcess();
+                Eden::StopLimit::End();
                 Eden::Report("shutdown", "Game stopped; releasing renderer");
 #ifndef PS5_NATIVE
                 if (devices) {
