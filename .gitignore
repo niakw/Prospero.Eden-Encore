@@ -4,3 +4,15 @@ dist/
 results/
 .local/
 __pycache__/
+
+# Never commit user-owned console/game data.
+**/prod.keys
+**/title.keys
+*.[nN][sS][pP]
+*.[xX][cC][iI]
+*.[nN][cC][aA]
+*.[nN][sS][zZ]
+*.[xX][cC][zZ]
+**/save-import/
+**/save-export/
+**/ryujinx/
