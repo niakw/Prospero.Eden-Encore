@@ -29,6 +29,12 @@ link = (build/'bin/eden-headless.map').read_text()
 assert 'heap_wrap' not in link, 'A second SDK heap wrapper owner was linked'
 assert 'libps5vk.a' not in link and 'libpsbc.a' not in link, 'Old Vulkan implementation linked'
 assert 'libvulkan_radeon.ps5.a' in link and 'libps5_opengl_core33.a' in link
+# Mesa's generated dispatch tables use weak references for optional entrypoints.
+# A PS5 title has no ELF dynamic loader for those: they must resolve to NULL at
+# static link time, not survive as imports for the native package converter.
+dyn_undefined = subprocess.check_output(
+    ['llvm-nm-18', '-D', '--undefined-only', str(build/'bin/eden-headless')], text=True)
+assert not any('radv_' in line for line in dyn_undefined.splitlines()), dyn_undefined
 sdk = root.parent/'mihawk-vulkan-review/.deps/native/ps5-payload-sdk'
 for name in ('libc++.a', 'libc++abi.a', 'libunwind.a'):
     subprocess.run(['cmp', str(cache/'sdk/target/lib'/name), str(sdk/'target/lib'/name)], check=True)
