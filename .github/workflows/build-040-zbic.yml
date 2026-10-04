@@ -24,7 +24,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Install build toolchain
         run: |
@@ -37,7 +39,7 @@ jobs:
 
       - name: Upgrade Meson
         run: |
-          python3 -m pip install --user --break-system-packages "meson>=1.4,<2"
+          python3 -m pip install --user --break-system-packages "meson==1.12.1"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           "$HOME/.local/bin/meson" --version
 
@@ -49,7 +51,7 @@ jobs:
 
       - name: Restore build caches
         id: build-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.cache/ccache
@@ -68,9 +70,9 @@ jobs:
       - name: Build shipping release
         run: make release JOBS=4
 
-      - name: Save build caches even on failure
-        if: always()
-        uses: actions/cache/save@v4
+      - name: Save build caches after a successful build
+        if: success()
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.cache/ccache
@@ -84,8 +86,8 @@ jobs:
           key: prospero-eden-encore-040-${{ runner.os }}-${{ hashFiles('tools/deps.json') }}-${{ github.run_id }}
 
       - name: Upload compiled release bundle
-        if: always()
-        uses: actions/upload-artifact@v4
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: Prospero.Eden-Encore-release
           path: |
@@ -101,11 +103,12 @@ jobs:
           ((github.event_name == 'push' && contains(github.event.head_commit.message, '[release]')) ||
            (github.event_name == 'workflow_dispatch' && inputs.publish)) }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     permissions:
       contents: write
     steps:
       - name: Download compiled bundle
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: Prospero.Eden-Encore-release
           path: release-bundle
