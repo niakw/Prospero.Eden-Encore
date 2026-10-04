@@ -1,6 +1,9 @@
 name: Build 0.40 ZBIC test
 
 on:
+  push:
+    branches:
+      - fix/0.40-zbic-13.60
   workflow_dispatch:
 
 permissions:
