@@ -838,10 +838,18 @@ int main(int argc, char** argv) {
         std::unique_ptr<Eden::Pad> pad;
         bool return_to_menu = false;
         if (devices || game) {
-            pad = std::make_unique<Eden::Pad>();
+            const auto controls = Eden::LoadPreferences();
+            const int controller_layout = game_video.controller_layout >= 0 ?
+                game_video.controller_layout : controls.controller_layout;
+            pad = std::make_unique<Eden::Pad>(
+                static_cast<float>(controls.stick_deadzone) / 100.0f, 0.5f, controller_layout == 0);
             if (!pad->Open()) throw std::runtime_error("PS5 controller initialization failed");
+            Eden::Report("controls", (std::string("Layout ") +
+                Eden::kControllerLayoutLabels[controller_layout] + ", deadzone " +
+                std::to_string(controls.stick_deadzone) + "%, vibration " +
+                (controls.vibration ? std::to_string(controls.vibration_strength) + "%" : "off")).c_str());
             Settings::values.audio_output_device_id = "ps5";
-            Settings::values.vibration_enabled.SetValue(Eden::LoadPreferences().vibration);
+            Settings::values.vibration_enabled.SetValue(controls.vibration);
             // One Pro Controller per signed-in user's DualSense; later changes apply mid-game.
             const unsigned connected = pad->ConnectedPlayers();
             (void)pad->TakeConnectionChanges();
@@ -849,9 +857,8 @@ int main(int argc, char** argv) {
                 auto& player = Settings::values.players.GetValue()[index];
                 player.connected = index == 0 || (connected & (1u << index)) != 0;
                 player.controller_type = Settings::ControllerType::ProController;
-                // DualSense rumble (headless/pad.cpp) at Eden's full strength.
-                player.vibration_enabled = true;
-                player.vibration_strength = 100;
+                player.vibration_enabled = controls.vibration;
+                player.vibration_strength = controls.vibration_strength;
             }
         }
         {
