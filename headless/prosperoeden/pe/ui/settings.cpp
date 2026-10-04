@@ -45,6 +45,7 @@ constexpr const char *kHeadings[kCategoryCount] = {
 enum VideoRow : int
 {
     video_renderer,
+    video_performance,
     video_output,
     video_resolution,
     video_filter,
@@ -355,6 +356,8 @@ void Launcher::press_dialog(Key key)
     case Modal::video:
         if (option_ == video_renderer)
             prefs_.renderer = prefs_.renderer != 0 ? 0 : 1;
+        else if (option_ == video_performance)
+            prefs_.performance_profile = (std::clamp(prefs_.performance_profile, 0, 2) + step + 3) % 3;
         else if (option_ == video_output)
         {
             // The menu follows at once (the frontend opens its display again at this size).
@@ -459,6 +462,7 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
         title = tr("Video");
         static constexpr const char *kAbout[kVideoRows] = {
             TR("Vulkan is recommended on PS5. Use OpenGL only as a fallback for a game with Vulkan issues."),
+            TR("Recommended keeps accurate CPU/GPU/DMA and compiles earlier-used code ahead. Performance can trade graphics accuracy for speed."),
             TR("Final app output size. 1080p is recommended for stability and memory; this is not the game's render scale."),
             TR("Game render scale. 1x is recommended; lower it for performance or memory, raise it only when a game has headroom."),
             TR("Bilinear is the lightest default. AMD FSR is most useful when rendering below the TV output size."),
@@ -539,14 +543,15 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
     {
         const std::string values[] = {
             prefs_.renderer != 0 ? tr("Vulkan (recommended)") : "OpenGL",
+            Eden::kPerformanceProfileLabels[std::clamp(prefs_.performance_profile, 0, 2)],
             output_name(prefs_.output),
             pick(services_.resolution_labels(), prefs_.resolution),
             pick(services_.filter_labels(), prefs_.filter),
             hertz(prefs_.refresh),
         };
         static constexpr const char *kNames[kVideoRows] = {
-            TR("Renderer"),         TR("TV output"),       TR("Game resolution"),
-            TR("Upscaling filter"), TR("Refresh rate"),      TR("FPS overlay")};
+            TR("Renderer"), TR("Performance profile"), TR("TV output"), TR("Game resolution"),
+            TR("Upscaling filter"), TR("Refresh rate"), TR("FPS overlay")};
         for (int row = first; row <= last; ++row)
         {
             list.push_opacity(video_rows_.row_alpha(row, kVideoRowHeight));
