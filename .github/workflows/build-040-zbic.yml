@@ -23,7 +23,13 @@ jobs:
             clang-18 lld-18 llvm-18 llvm-18-tools \
             cmake ninja-build ccache make nasm meson rsync git \
             glslang-tools spirv-tools bison flex curl wget unzip \
-            python3 python3-venv python3-mako python3-yaml pkg-config
+            python3 python3-venv python3-pip python3-mako python3-yaml pkg-config
+
+      - name: Upgrade Meson
+        run: |
+          python3 -m pip install --user --break-system-packages "meson>=1.4,<2"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/meson" --version
 
       - name: Check toolchain
         run: make toolchain
