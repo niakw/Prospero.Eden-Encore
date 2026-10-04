@@ -1,4 +1,4 @@
-# Eden 0.40 Improved — PS5 13.60 Fork Notes
+# Prospero.Eden Encore — PS5 13.60 Technical Notes
 
 This file is the technical continuity log for this fork. It records what diverges from ProsperoEden v1.000.040, why each change exists, what was validated, and what still needs hardware confirmation.
 
@@ -148,9 +148,10 @@ Existing save-transfer code was audited:
 - Failed import removes partial output and restores the previous save.
 - Export/re-import behavior is covered by host tests.
 
-Remaining hardening candidate:
+Hardening completed:
 
-- Do not follow symlinks while importing a user-provided save tree.
+- Save imports reject a symlink at the source root and any nested symlink before copying.
+- Host regression coverage verifies a save tree cannot escape its selected source through a symlink.
 
 ### Mods
 
@@ -358,7 +359,7 @@ The PS5 SDK exposes video-output resolution status APIs, so an `Auto (TV)` outpu
 | `37227976171` / job `111511486244` | 1563/1597 | Failed | Eden re-theme removed scenic code but left `kTau` and `noise()` unused; `-Werror` stopped compilation. | Removed obsolete helpers. |
 | `37229928282` / job `111517277606` | 1563/1597 | Failed | Same `kTau` / `noise()` compile failure; this run was already obsolete and confirmed the same blocker. | No new fix required; corrected in `7fb3823f…`. |
 | `37229710339` / job `111516627804` | 1594/1597 | Failed | Independently confirmed the same `kTau` / `noise()` `-Werror` blocker after nearly the entire tree compiled. | No new fix required; current reference run contains their removal. |
-| `37230146719` | audited build, head `538fbef8…` | **Current reference run** | Contains ZBIC, DualSense, Eden UI, package-title fix, scenic-helper cleanup and two-pass weak-import linker. | Follow until build/package/artifact completes. |
+| `37230146719` | audited build, head `538fbef8…` | **PASS** | Full build/package job completed successfully; ZBIC, DualSense, Eden UI, package-title fix and two-pass weak-import linker reached artifact generation. | Used as the pre-closure green baseline. |
 
 ### Rule for future CI failures
 
@@ -399,3 +400,55 @@ Rationale:
 - 8% deadzone is a practical default that tolerates minor stick noise without making aiming feel excessively sluggish.
 
 The Video and Controls dialogs now show a contextual explanation for the currently selected row.
+
+
+## Release closure — 2026-10-04
+
+This section is the authoritative close-out of the audit for **Prospero.Eden Encore**. Older "candidate" lists above are preserved as design history; this matrix says what the release actually carries.
+
+### Delivered
+
+| Area | Closure state |
+| --- | --- |
+| PS5 13.60 base | **Kept on ProsperoEden 0.40.** The known self-contained elevation path remains; Lapy/newer elevation is not blindly merged. |
+| Newer Switch software | **ZBIC support delivered** alongside the existing LZ4 NSO path. |
+| Vulkan/RADV | **Build/link hardening delivered.** Optional weak Mesa imports are resolved only after the real link and rejected if they survive. |
+| Defaults | **Vulkan / 1080p / 1x / Bilinear / 60 Hz / FPS HUD off / PlayStation layout.** Existing saved user preferences are not silently rewritten. |
+| Performance UX | **Recommended / Smooth / Performance** profiles with explicit accuracy/performance trade-offs. |
+| Recovery | **One-shot Safe Launch**: OpenGL, Handheld, 1x, Bilinear, 60 Hz, 1080p, mods off for that launch only; saved settings stay untouched. |
+| Settings recovery | **Global Restore recommended defaults** plus **per-game Reset overrides**. |
+| Controller UX | PlayStation-first face buttons, Nintendo alternative, vibration strength and deadzone, per-game layout override, multi-controller hotplug. |
+| Launcher guidance | Contextual help for renderer, profile, output, internal resolution, filter, refresh rate and controls. |
+| Storage stability | RADV shader cache capped at **256 MB**; asynchronous session logs rotate in bounded segments; cover textures are bounded/LRU. |
+| Diagnostics | Filesystem mode, free space, cache size, log size and safe shader/JIT-cache cleanup. |
+| Save transfer | Ryujinx/hand-copied import, export, backup/rollback on failure, **symlink rejection** and regression tests. |
+| Language | Launcher uses PS5 locale/catalogs; a fresh config seeds game language from the PS5 once and later user choices remain authoritative. |
+| Repository safety | Explicit ignores for keys, ROM/container formats and local save-transfer data. |
+| Branding | Repo/release-facing name aligned to **Prospero.Eden Encore** while preserving the existing title ID/data relationship. |
+| Reproducibility | Pinned dependencies, clean hosted build, deterministic ZIP timestamps, SHA256SUMS and symbol artifact retention. |
+| Release publication | GitHub Actions builds the shipping package first, uploads the full artifact, then publishes the compiled ZIP/FFPFSC/checksums only after a green build. |
+
+### Deliberately deferred / excluded from this 13.60 release
+
+These were audit ideas or newer-branch features, not safe requirements for closing this release:
+
+- Lapy/newer elevation rewrite.
+- Automatic renderer fallback that silently changes behavior.
+- Network auto-updater.
+- Large multi-profile/player-settings subsystem.
+- Arbitrary button-remapping UI.
+- Cheat/patch-library expansion.
+- Favorites/search/compatibility-note database.
+- A new Updates/DLC enable/disable manager.
+- FSR sharpening UI without a pinned/verified matching upstream setting contract.
+- Extra per-game vibration/deadzone/FPS-HUD controls until a real title needs them.
+- Controller calibration screen.
+
+They can be revisited individually, but they are **not** silently pulled from the divergent `>0.50-bug_13.60` branch.
+
+### PS5 FPKG / kstuff boundary
+
+Prospero.Eden Encore does **not** claim to add or repair PS5 FPKG entitlement/PPR support. The known 13.60 kstuff path remains a separate jailbreak/runtime concern: profiles/offsets may exist, but FPKG support above the older validated range is not considered reliable here. A failure such as `CE-109297-8` therefore cannot be treated as an emulator regression or "fixed" by this fork.
+
+The shipping artifact is the homebrew application package produced by this repository; its own 13.60 compatibility and package inventory are validated independently of that external FPKG limitation.
+
