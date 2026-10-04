@@ -373,3 +373,29 @@ Two UI/default inconsistencies were found after the initial recommendations were
 - Internal-resolution labels are misleading around high scales: `2x (sharpest)` is followed by `3x (slower)` and `4x (slowest)`, even though 3x/4x are also sharper. Replace the labels with neutral quality/cost wording and rely on contextual help for recommendations.
 
 Do not silently rewrite an existing user's saved HUD preference when changing the fresh-install default.
+
+
+## Recommended default settings
+
+The fork intentionally keeps conservative defaults for a normal PS5 user:
+
+- Renderer: Vulkan.
+- TV output: 1080p.
+- Game resolution: 1x.
+- Upscaling filter: Bilinear.
+- Refresh rate: 60 Hz.
+- FPS overlay: Off for new configurations.
+- Controller layout: PlayStation.
+- Stick deadzone: 8%.
+- Vibration: On, 100%.
+
+Rationale:
+
+- Vulkan is the primary PS5 renderer; OpenGL is a compatibility fallback.
+- 1080p output and 1x internal resolution minimize memory pressure while preserving native game rendering.
+- Bilinear has the smallest scaling overhead. FSR is most useful when rendering below output resolution.
+- 120 Hz only changes the display mode; it does not itself unlock game FPS.
+- FPS overlay is useful for diagnostics but visually intrusive for normal use.
+- 8% deadzone is a practical default that tolerates minor stick noise without making aiming feel excessively sluggish.
+
+The Video and Controls dialogs now show a contextual explanation for the currently selected row.
