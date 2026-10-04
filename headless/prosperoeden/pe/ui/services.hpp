@@ -91,6 +91,7 @@ struct Preferences
     int filter = 0;
     int refresh = 0; // the output while a game runs: 0 60 Hz, 1 120 Hz
     int output = 0;  // the size of the picture, menu and games: 0 1080p, 1 1440p, 2 2160p
+    int performance_profile = 1; // 0 compatibility, 1 recommended, 2 performance
     int controller_layout = 0; // 0 PlayStation, 1 Nintendo
     bool vibration = true;
     int vibration_strength = 100;
@@ -110,6 +111,7 @@ struct GameSettings
     int resolution = -1;
     int filter = -1;
     int refresh = -1;
+    int performance_profile = -1;
     int controller_layout = -1;
 };
 
