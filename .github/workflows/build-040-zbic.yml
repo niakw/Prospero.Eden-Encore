@@ -1,13 +1,22 @@
-name: Build 0.40 ZBIC test
+name: Build and release Prospero.Eden Encore
 
 on:
+  push:
+    branches:
+      - fix/0.40-zbic-13.60
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the green build as a GitHub Release
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: eden-040-improved-${{ github.ref }}
+  group: prospero-eden-encore-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -35,6 +44,9 @@ jobs:
       - name: Check toolchain
         run: make toolchain
 
+      - name: Validate launcher translations
+        run: python3 -B tools/launcher/strings.py check
+
       - name: Restore build caches
         id: build-cache
         uses: actions/cache/restore@v4
@@ -48,11 +60,12 @@ jobs:
             ../mihawk-vulkan-review
             ../mihawk-mesa-review
             ../mihawk-sdk-review
-          key: prosperoeden-040-zbic-${{ runner.os }}-${{ hashFiles('tools/deps.json') }}
+          key: prospero-eden-encore-040-${{ runner.os }}-${{ hashFiles('tools/deps.json') }}
           restore-keys: |
+            prospero-eden-encore-040-${{ runner.os }}-
             prosperoeden-040-zbic-${{ runner.os }}-
 
-      - name: Build release
+      - name: Build shipping release
         run: make release JOBS=4
 
       - name: Save build caches even on failure
@@ -68,14 +81,58 @@ jobs:
             ../mihawk-vulkan-review
             ../mihawk-mesa-review
             ../mihawk-sdk-review
-          key: prosperoeden-040-zbic-${{ runner.os }}-${{ hashFiles('tools/deps.json') }}-${{ github.run_id }}
+          key: prospero-eden-encore-040-${{ runner.os }}-${{ hashFiles('tools/deps.json') }}-${{ github.run_id }}
 
-      - name: Upload ProsperoEden 0.40 ZBIC build
+      - name: Upload compiled release bundle
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ProsperoEden-0.40-ZBIC
+          name: Prospero.Eden-Encore-release
           path: |
             dist/
             build/symbols/
-          retention-days: 7
+          retention-days: 14
+          if-no-files-found: warn
+
+  release:
+    needs: build
+    if: >-
+      ${{ needs.build.result == 'success' &&
+          ((github.event_name == 'push' && contains(github.event.head_commit.message, '[release]')) ||
+           (github.event_name == 'workflow_dispatch' && inputs.publish)) }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download compiled bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: Prospero.Eden-Encore-release
+          path: release-bundle
+
+      - name: Verify release assets
+        run: |
+          set -euo pipefail
+          test -f release-bundle/dist/SHA256SUMS
+          ls release-bundle/dist/*.zip >/dev/null
+          ls release-bundle/dist/*.ffpfsc >/dev/null
+          (cd release-bundle/dist && sha256sum -c SHA256SUMS)
+
+      - name: Publish immutable GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          short="${GITHUB_SHA:0:7}"
+          tag="v1.000.040-encore-${short}"
+          notes="release-bundle/dist/release-notes.md"
+          test -f "$notes"
+          gh release create "$tag" \
+            release-bundle/dist/*.zip \
+            release-bundle/dist/*.ffpfsc \
+            release-bundle/dist/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Prospero.Eden Encore 1.000.040 (${short})" \
+            --notes-file "$notes" \
+            --latest
