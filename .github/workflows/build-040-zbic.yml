@@ -1,9 +1,6 @@
 name: Build 0.40 ZBIC test
 
 on:
-  push:
-    branches:
-      - fix/0.40-zbic
   workflow_dispatch:
 
 permissions:
@@ -34,10 +31,23 @@ jobs:
       - name: Check toolchain
         run: make toolchain
 
+      - name: Restore build caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/ccache
+            ~/.cache/prosperoeden-deps
+            ~/.cache/ps5-eden-headless.*
+            .deps
+          key: prosperoeden-040-zbic-${{ runner.os }}-${{ hashFiles('tools/deps.json') }}
+          restore-keys: |
+            prosperoeden-040-zbic-${{ runner.os }}-
+
       - name: Build release
         run: make release JOBS=4
 
       - name: Upload ProsperoEden 0.40 ZBIC build
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ProsperoEden-0.40-ZBIC
