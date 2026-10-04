@@ -191,7 +191,7 @@ void Launcher::draw_controllers(Canvas &c)
     if (textures_.controller() == 0)
         return;
     text(c, tr("CONTROLLERS"), kPadsRight, baseline(462.0f, 30.0f, theme::kSmall), theme::kSmall,
-         Color::rgb(0xc6d2c7), Align::right, 3.0f);
+         theme::kCopy, Align::right, 3.0f);
     for (int player = 0; player < 4; ++player)
     {
         const std::size_t index = static_cast<std::size_t>(player);
@@ -245,10 +245,10 @@ void Launcher::draw_home(Canvas &c)
     if (textures_.brand() != 0)
         list.rounded_image(textures_.brand(), {120.0f, 72.0f, 72.0f, 72.0f},
                            {0.0f, 0.0f, 1.0f, 1.0f}, 16.0f, kWhite);
-    text(c, "PROSPEROEDEN", 216.0f, baseline(72.0f, 44.0f, theme::kBrand), theme::kBrand,
+    text(c, "EDEN", 216.0f, baseline(72.0f, 44.0f, theme::kBrand), theme::kBrand,
          theme::kText, Align::left, 3.0f);
-    text(c, fill(tr("PS5 EDITION  /  {0}"), {version_}), 216.0f, baseline(120.0f, 28.0f, theme::kSmall),
-         theme::kSmall, Color::rgb(0x9fac9e), Align::left, 1.0f);
+    text(c, fill(tr("PS5 13.60  /  0.40 IMPROVED  /  {0}"), {version_}), 216.0f, baseline(120.0f, 28.0f, theme::kSmall),
+         theme::kSmall, theme::kMeta, Align::left, 1.0f);
     static constexpr const char *kNav[] = {TR("Library"), TR("Settings"), TR("About")};
     Rect nav[3];
     float nav_right = kNavRight;
@@ -269,7 +269,7 @@ void Launcher::draw_home(Canvas &c)
         list.pop_opacity();
     }
     text(c, clock_, 1800.0f, baseline(92.0f, 40.0f, theme::kClock), theme::kClock,
-         Color::rgb(0xc1cdc2), Align::right);
+         theme::kCopy, Align::right);
     list.rounded_rect({120.0f, 160.0f, 1680.0f, 1.0f}, 0.0f, theme::kText.with_alpha(0.12f));
     end_band();
 
@@ -284,7 +284,7 @@ void Launcher::draw_home(Canvas &c)
                1120.0f, 2);
     notice(c, home_.last_file.empty() ? tr("Choose a game from your library.") : home_.last_caption,
            560.0f, baseline(424.0f, 36.0f, theme::kText24), theme::kText24,
-           home_.last_caption_warning ? theme::kWarning : Color::rgb(0xabb8ae), 1040.0f,
+           home_.last_caption_warning ? theme::kWarning : theme::kMeta, 1040.0f,
            home_.last_caption_warning);
     // The line under it ends before the controllers' label.
     const float info_width =
@@ -326,7 +326,7 @@ void Launcher::draw_home(Canvas &c)
     {
         const Rect panel{120.0f, 728.0f, 1680.0f, 152.0f};
         const Color accent = home_.launch_failed ? theme::kWarning : theme::kLime;
-        glass(c, panel, 10.0f, Color::rgb(0x0a1611, 0.62f), kWhite.with_alpha(0.08f), 0.6f);
+        glass(c, panel, 10.0f, theme::kPanel.with_alpha(0.72f), kWhite.with_alpha(0.08f), 0.6f);
         list.rounded_rect({panel.x, panel.y + 10.0f, 4.0f, panel.h - 20.0f}, 2.0f, accent);
         notice_block(c, home_.status, 148.0f, baseline(752.0f, 36.0f, theme::kText24),
                      theme::kText24, 36.0f, theme::kText, 1624.0f, 3, home_.launch_failed);
@@ -342,7 +342,7 @@ void Launcher::draw_home(Canvas &c)
             const Rect r{1800.0f - width, 708.0f, width, 40.0f};
             plate(c, kNavPlate, r, f);
             text(c, tr("VIEW ALL GAMES"), r.x + r.w - 24.0f, baseline(r.y, 40.0f, theme::kSmall),
-                 theme::kSmall, gfx::mix(Color::rgb(0xafbbaf), theme::kLime, f), Align::right);
+                 theme::kSmall, gfx::mix(theme::kMuted, theme::kLime, f), Align::right);
         }
         if (home_.recents.empty())
             text(c, tr("Games you launch will appear here."), 120.0f,
@@ -356,7 +356,7 @@ void Launcher::draw_home(Canvas &c)
             plate(c, kTilePlate, r, f);
             cover(c, recent.cover, {r.x + 24.0f, r.y + 24.0f, 96.0f, 96.0f}, 10.0f, 0.5f);
             text_block(c, recent.title, r.x + 144.0f, baseline(r.y + 40.0f, 32.0f, theme::kText24),
-                       theme::kText24, 32.0f, gfx::mix(Color::rgb(0xd7e1d9), theme::kTitle, f),
+                       theme::kText24, 32.0f, gfx::mix(theme::kBody, theme::kTitle, f),
                        232.0f, 2);
             list.pop_transform();
         }
@@ -369,7 +369,7 @@ void Launcher::draw_home(Canvas &c)
     static constexpr Hint kHints[] = {
         {Pad::cross, TR("Select")}, {Pad::triangle, TR("Details")}, {Pad::dpad, TR("Navigate")}};
     const float status_width = text(c, home_.system_status, 1800.0f, 989.0f, theme::kSmall,
-                                    Color::rgb(0x9eac9f), Align::right);
+                                    theme::kMeta, Align::right);
     draw_hints(c, kHints, 3, 120.0f, 982.0f, theme::kMuted, 1680.0f - status_width - 48.0f);
     end_band();
 }
