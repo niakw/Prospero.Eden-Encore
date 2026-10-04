@@ -552,6 +552,17 @@ void Launcher::draw_library(Canvas &c)
 void Launcher::press_game(Key key)
 {
     Game &game = games_[static_cast<std::size_t>(library_.selected)];
+    if (key == Key::triangle && option_ >= row_renderer && option_ <= row_controls)
+    {
+        const GameSettings reset{};
+        const bool saved = services_.set_game_settings(game.title_id, reset);
+        if (saved) game_settings_ = reset;
+        say(saved ? tr("Game overrides reset to global defaults.") :
+                    tr("Could not save. Please try again."),
+            !saved);
+        cue(saved ? Cue::saved : Cue::error);
+        return;
+    }
     switch (key)
     {
     case Key::circle:
@@ -794,8 +805,9 @@ void Launcher::draw_game(Canvas &c, float open)
                         baseline(kDialogHints - 34.0f, 24.0f, 18.0f), 18.0f,
                         theme::kMeta, 736.0f);
         static constexpr Hint kHints[] = {
-            {Pad::updown, TR("Select")}, {Pad::leftright, TR("Change")}, {Pad::circle, TR("Back")}};
-        draw_hints(c, kHints, 3, 592.0f, kDialogHints + 12.0f, theme::kCopy, 736.0f);
+            {Pad::updown, TR("Select")}, {Pad::leftright, TR("Change")},
+            {Pad::triangle, TR("Reset overrides")}, {Pad::circle, TR("Back")}};
+        draw_hints(c, kHints, 4, 592.0f, kDialogHints + 12.0f, theme::kCopy, 736.0f);
     }
     list.pop_transform();
     list.pop_opacity();
