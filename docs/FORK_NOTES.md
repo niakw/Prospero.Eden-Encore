@@ -342,3 +342,24 @@ Planned Controls help text:
 ### Possible future display auto mode
 
 The PS5 SDK exposes video-output resolution status APIs, so an `Auto (TV)` output mode is technically possible. It should not become the default until validated on hardware because automatically selecting 4K increases framebuffer/VRAM pressure and works against this fork's stability-first goal.
+
+
+## CI validation ledger
+
+| Run | Head / phase | Result | Data collected | Follow-up |
+| --- | --- | --- | --- | --- |
+| `37208757625` | early 0.40 ZBIC hosted build | Failed | Ubuntu Meson 1.3.2 was below the PS5 Mesa requirement. | CI upgrades Meson to >=1.4,<2. |
+| `37209005362` | toolchain | Failed | `LLVMSPIRVLib` missing. | Added `llvm-spirv-18` and `libllvmspirvlib-18-dev`. |
+| `37209346447` | deeper clean build | Failed later | Toolchain progressed past previous blocker. | Continued clean-runner hardening. |
+| `37209589337` | 143/1597 | Failed | `headless/zbic_compression.cpp: zstd.c not found`. | Exposed the pinned ZBIC include directory to the common target. |
+| `37211222037` | full compile | Failed post-link | ZBIC and `eden-headless` compiled/linked; old NSO memory harness did not know the ZBIC helper. | Updated harness for `std::span` / `DecompressDataZBIC`. |
+| `37214268693` | packaging | Failed | All ZBIC/NSO checks passed; package conversion rejected `radv_EnumeratePhysicalDevices` as an unresolved native import. | Began RADV weak-import linker hardening. |
+| `37225854300` / job `111505228821` | post-link RADV check | Failed | Large set of optional Mesa/RADV weak dispatch references survived the native link. | Reworked native link strategy; later generalized to a two-pass link. |
+| `37227976171` / job `111511486244` | 1563/1597 | Failed | Eden re-theme removed scenic code but left `kTau` and `noise()` unused; `-Werror` stopped compilation. | Removed obsolete helpers. |
+| `37229928282` / job `111517277606` | 1563/1597 | Failed | Same `kTau` / `noise()` compile failure; this run was already obsolete and confirmed the same blocker. | No new fix required; corrected in `7fb3823f…`. |
+| `37229710339` | older RADV-validation head | In progress / obsolete | Older than the scenic-helper fix, so useful only as corroborating data. | Do not treat as release candidate. |
+| `37230146719` | audited build, head `538fbef8…` | **Current reference run** | Contains ZBIC, DualSense, Eden UI, package-title fix, scenic-helper cleanup and two-pass weak-import linker. | Follow until build/package/artifact completes. |
+
+### Rule for future CI failures
+
+Every red run is inspected even if superseded. Record the first failing stage and exact error before discarding it: an older run can reveal a blocker that the newer run has not reached yet.
