@@ -347,6 +347,16 @@ void Launcher::press_library(Key key)
         game_rows_.pitch = kDialogRowPitch;
         game_rows_.reset(dialog_rows(Modal::game), 0);
         return;
+    case Key::options:
+        if (game == nullptr || !home_.setup_ready)
+        {
+            cue(Cue::error);
+            return;
+        }
+        services_.arm_safe_launch();
+        say(tr("Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."));
+        launch(game->file, game->name, game->cover);
+        return;
     case Key::cross:
         if (game == nullptr || !home_.setup_ready)
         {
@@ -532,7 +542,7 @@ void Launcher::draw_library(Canvas &c)
     // A message said while Game settings is open belongs to that dialog.
     const bool said = !message_.empty() && modal_shown_ != Modal::game && modal_shown_ != Modal::mods;
     const std::string hint = said ? message_ :
-                             can_configure ? tr("Change mode. Saved per game.") :
+                             can_configure ? tr("Options starts a one-shot Safe Launch without changing saved settings.") :
                                              tr("Select a readable game to configure its mode.");
     notice(c, hint, 1060.0f, 883.0f, theme::kSmall,
            said ? (message_warning_ ? theme::kWarning : theme::kLimePale) : theme::kMeta, 700.0f,
