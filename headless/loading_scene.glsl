@@ -212,10 +212,18 @@ vec3 loading_scene(vec2 pixel, vec2 size, float seconds)
     add_leaf(color, q, vec2(1.09 * aspect, 0.66), vec2(0.83 * aspect, 0.25), 0.080, 0.009, 1.0, world, 3.1);
     add_leaf(color, q, vec2(-0.07 * aspect, 0.50), vec2(0.17 * aspect, 0.83), 0.075, 0.013, -1.0, world, 4.4);
 
-    // Darker towards the edges, and at the bottom where the wordmark sits.
+    // Eden PS5 uses the clean dark desktop identity instead of the old scenic ProsperoEden look.
     vec2 centred = uv - vec2(0.5, 0.52);
-    color *= 1.0 - 0.55 * smoothstep(0.35, 0.95, length(centred * vec2(1.0, 1.25)));
-    color *= 0.55 + 0.45 * smoothstep(0.0, 0.30, uv.y);
+    vec3 eden_dark = vec3(0.030, 0.032, 0.065);
+    vec3 eden_violet = vec3(0.749, 0.259, 0.965);
+    vec3 eden_pink = vec3(1.000, 0.267, 0.769);
+    vec3 eden_blue = vec3(0.365, 0.647, 0.929);
+    float violet_glow = exp(-dot(uv - vec2(0.22, 0.28), uv - vec2(0.22, 0.28)) * 8.0);
+    float pink_glow = exp(-dot(uv - vec2(0.82, 0.24), uv - vec2(0.82, 0.24)) * 10.0);
+    float blue_glow = exp(-dot(uv - vec2(0.52, 0.86), uv - vec2(0.52, 0.86)) * 10.0);
+    color = eden_dark + eden_violet * 0.10 * violet_glow +
+            eden_pink * 0.07 * pink_glow + eden_blue * 0.05 * blue_glow;
+    color *= 1.0 - 0.35 * smoothstep(0.35, 0.95, length(centred * vec2(1.0, 1.2)));
 
     // ---- the ring and the wordmark, bottom centre ----
     float unit = size.y / 1080.0; // one design pixel
@@ -226,8 +234,8 @@ vec3 loading_scene(vec2 pixel, vec2 size, float seconds)
     float gap = 16.0 * unit;
     float group = ring_radius * 2.0 + gap + word_width;
     vec2 origin = vec2(0.5 * size.x - 0.5 * group, 0.118 * size.y);
-    vec3 lime = vec3(0.663, 0.859, 0.388);
-    vec3 pale = vec3(0.875, 0.910, 0.651);
+    vec3 lime = vec3(0.749, 0.259, 0.965);
+    vec3 pale = vec3(0.843, 0.643, 1.000);
 
     // The ring: a faint track with an arc that runs round it, stretching and closing.
     vec2 from_centre = pixel - (origin + vec2(ring_radius, 0.0));
