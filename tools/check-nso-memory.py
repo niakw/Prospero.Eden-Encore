@@ -12,6 +12,7 @@ code=r'''
 #include <vector>
 #include <string>
 #include <optional>
+#include <span>
 #include <cstring>
 #include <cstdint>
 #include <cassert>
@@ -24,7 +25,7 @@ namespace Settings { struct Arg {std::string value; const std::string& GetValue(
 struct PatchManager { bool patched{}; bool HasNSOPatch(int,const std::string&)const{return patched;} };
 struct Memory {size_t address{},length{};bool fail{};bool ZeroBlock(size_t a,size_t n){address=a;length=n;return !fail;}} memory;
 struct Process {Memory& GetMemory(){return memory;}} process;
-namespace Common::Compression {int DecompressDataLZ4(u8* d,size_t n,const u8*s,size_t m){return LZ4_decompress_safe((const char*)s,(char*)d,m,n);}}
+namespace Common::Compression {int DecompressDataLZ4(u8* d,size_t n,const u8*s,size_t m){return LZ4_decompress_safe((const char*)s,(char*)d,m,n);} int DecompressDataZBIC(std::span<u8>,std::span<const u8>){return -1;}}
 int constructions=0;
 namespace Kernel {struct CodeSet { struct Segment {size_t addr{},offset{};u32 size{};}; std::vector<u8>memory;std::array<Segment,3>segments; CodeSet(){++constructions;} Segment&DataSegment(){return segments[2];}};}
 struct Header {struct Segment {u32 offset,location,size,bss_size;};std::array<Segment,3>segments;std::array<u32,3>segments_compressed_size;u32 flags{};int build_id{};bool IsSegmentCompressed(size_t i)const{return flags&(1u<<i);}};
