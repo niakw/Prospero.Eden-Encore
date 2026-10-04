@@ -697,8 +697,8 @@ void Launcher::draw_game(Canvas &c, float open)
         game_settings_.renderer >= 0 ? kRenderers[game_settings_.renderer] :
             fill(tr("Default ({0})"), {kRenderers[prefs_.renderer != 0 ? 1 : 0]}),
         game_settings_.performance_profile >= 0 ?
-            Eden::kPerformanceProfileLabels[game_settings_.performance_profile] :
-            fill(tr("Default ({0})"), {Eden::kPerformanceProfileLabels[std::clamp(prefs_.performance_profile, 0, 2)]}),
+            services_.performance_profile_labels()[static_cast<std::size_t>(game_settings_.performance_profile)] :
+            fill(tr("Default ({0})"), {services_.performance_profile_labels()[static_cast<std::size_t>(std::clamp(prefs_.performance_profile, 0, 2))]}),
         game_settings_.resolution >= 0 ? pick(resolutions, game_settings_.resolution) :
             fill(tr("Default ({0})"), {short_resolution(pick(resolutions, prefs_.resolution))}),
         game_settings_.filter >= 0 ? pick(filters, game_settings_.filter) :
