@@ -14,6 +14,7 @@ namespace Eden {
 inline constexpr const char* kDataDir = "/data/prosperoeden";
 inline constexpr const char* kDefaultAssetsDir = "/data/prosperoeden";
 inline constexpr const char* kInstallDir = "/data/homebrew/PPSA99008";
+inline constexpr const char* kMountedAppDir = "/system_ex/app/PPSA99008";
 
 // Filesystem access requested at startup: -1 not requested, 0 granted, otherwise the
 // elevation::Status that refused it.
@@ -32,12 +33,13 @@ inline bool DirectoryExists(const std::string& path) {
     return stat(path.c_str(), &info) == 0 && S_ISDIR(info.st_mode);
 }
 
-// The app's own files (eboot, ui/, development markers).
+// The app's own files. ShadowMountPlus may mount a folder from USB/extended storage at
+// /system_ex/app/PPSA99008; prefer the path of the running app instead of assuming /data/homebrew.
 inline const std::string& AppDir() {
     static const std::string directory = [] {
         if (!FilesystemAccess()) return std::string{"/app0"};
-        // A console root has no /app0: the sandbox mounts it from the install folder.
-        for (const char* candidate : {kInstallDir, "/mnt/sandbox/PPSA99008_000/app0"})
+        for (const char* candidate : {"/app0", kMountedAppDir, kInstallDir,
+                                      "/mnt/sandbox/PPSA99008_000/app0"})
             if (FileExists(std::string{candidate} + "/eboot.bin")) return std::string{candidate};
         return std::string{kInstallDir};
     }();
