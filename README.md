@@ -51,6 +51,15 @@ The goal is simple: keep the working 0.40 behavior on 13.60, stay self-contained
   - Hardens settings validation, package metadata checks and native RADV linking.
 
 
+## Recommended settings
+
+For a stable first run, keep **Vulkan**, **1080p output**, **1x internal resolution**, **Bilinear** and **60 Hz**.
+
+- Use **OpenGL** as a compatibility fallback if a game has Vulkan-specific issues.
+- Use **0.75x / 0.5x** when a game needs more performance; **FSR** is a good upscaler in that case.
+- Use **1.5x+** only when the game has enough GPU/memory headroom.
+- **120 Hz** is for compatible displays and titles/patches capable of higher frame rates; it does not by itself turn a 30/60 FPS game into 120 FPS.
+
 ## Changes in v1.000.040
 
 - Keeps the self-contained ProsperoEden 0.40 filesystem elevation path for PS5 firmware 13.60.
