@@ -59,6 +59,7 @@ For a stable first run, keep **Vulkan**, **1080p output**, **1x internal resolut
 - Use **0.75x / 0.5x** when a game needs more performance; **FSR** is a good upscaler in that case.
 - Use **1.5x+** only when the game has enough GPU/memory headroom.
 - **120 Hz** is for compatible displays and titles/patches capable of higher frame rates; it does not by itself turn a 30/60 FPS game into 120 FPS.
+- **Docked** is the normal PS5 console mode; try **Handheld** when a demanding title needs more performance or behaves better with the Switch handheld profile.
 
 ## Changes in v1.000.040
 
