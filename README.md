@@ -2,10 +2,10 @@
   <img src="assets/eden-official.svg" width="150" alt="Eden logo">
 </p>
 
-<h1 align="center">Eden 0.40 Improved for PS5 13.60</h1>
+<h1 align="center">Prospero.Eden Encore — PS5 13.60</h1>
 
 <p align="center">
-  A compatibility-focused PS5 fork built on ProsperoEden v1.000.040 and Eden.
+  A stability-, compatibility- and UX-focused continuation of ProsperoEden v1.000.040 and Eden.
 </p>
 
 ## Why this fork?
@@ -14,7 +14,7 @@ This fork keeps the **v1.000.040** base, which works on PS5 firmware **13.60**, 
 
 ProsperoEden v1.000.050+ changed the filesystem elevation path to Lapy. Lapy currently targets older firmware ranges, so on 13.60 newer builds can remain sandboxed and lose access to `/data/prosperoeden`.
 
-The goal is simple: keep the working 0.40 behavior on 13.60, stay self-contained, and bring the PS5 experience closer to upstream Eden.
+The goal is simple: keep the working 0.40 behavior on 13.60, stay self-contained, and improve compatibility, recovery, performance tuning and everyday controller-first UX without blindly merging newer elevation code.
 
 ## Improvements
 
@@ -43,12 +43,23 @@ The goal is simple: keep the working 0.40 behavior on 13.60, stay self-contained
   - Keeps the TV/controller-friendly PS5 launcher structure while moving the branding back toward upstream Eden.
 
 
-- **Stability and PS5 integration**
+- **Launcher quality-of-life**
+  - Diagnostics shows filesystem mode, free space, shader/JIT cache size and log size, with safe shader-cache cleanup.
+  - Save import/export supports Ryujinx and hand-copied saves, backs up replaced saves and rejects symlinked import trees.
+  - On a fresh configuration, the game-language preference follows the PS5 system language once; later user choices are preserved.
+  - Contextual help explains renderer, performance profile, output resolution, internal resolution, upscaling, refresh rate and controls for non-technical users.
+
+
+- **Stability, recovery and PS5 integration**
   - Keeps conservative Vulkan / 1x / 1080p / 60 Hz defaults, with OpenGL and per-game overrides available.
+  - Adds **Recommended / Smooth / Performance** profiles with clear trade-off descriptions.
+  - Adds a one-shot **Safe Launch** from the Library: OpenGL + Handheld + 1x + Bilinear + 60 Hz + 1080p + mods off for that launch only, without rewriting saved settings.
+  - Adds one-button **Restore recommended defaults** globally and **Reset overrides** per game.
   - Preserves crash recovery, early guest-fault retry and useful GPU out-of-memory errors.
-  - Uses asynchronous library scanning and bounded cover-texture caching so large libraries do not block the launcher or grow VRAM indefinitely.
+  - Bounds RADV shader cache, session logs and cover-texture memory so noisy or long sessions cannot grow storage/VRAM indefinitely.
+  - Uses asynchronous library scanning so large libraries do not block the launcher.
   - Binds launcher input to the foreground PS5 user and keeps multi-controller hotplug support.
-  - Hardens settings validation, package metadata checks and native RADV linking.
+  - Hardens settings validation, package metadata checks, native RADV linking and save imports against symlink escapes.
 
 
 ## Recommended settings
@@ -63,11 +74,16 @@ For a stable first run, keep **Vulkan**, **1080p output**, **1x internal resolut
 
 ## Changes in v1.000.040
 
-- Keeps the self-contained ProsperoEden 0.40 filesystem elevation path for PS5 firmware 13.60.
-- Adds ZBIC NSO decompression for newer Switch software.
+- Keeps the self-contained ProsperoEden 0.40 filesystem-elevation path proven on PS5 firmware 13.60; no Lapy migration.
+- Adds ZBIC NSO decompression for newer Switch software while retaining the LZ4 path.
 - Adds PlayStation-first DualSense controls, per-game layout overrides, vibration strength and stick deadzone settings.
-- Restores Eden's official visual identity for the launcher and PS5 app icon.
-- Hardens clean-runner RADV packaging and build reproducibility.
+- Adds Recommended / Smooth / Performance profiles, contextual settings guidance and conservative defaults.
+- Adds one-shot Safe Launch, global recommended-settings reset and per-game override reset.
+- Adds storage diagnostics, bounded RADV cache/log growth and safe shader/JIT cache cleanup.
+- Hardens save import/export with backup/restore behavior and symlink rejection.
+- Uses the PS5 system language for the initial game-language choice without overwriting later user preferences.
+- Restores Eden's official visual identity and aligns project-facing branding with **Prospero.Eden Encore**.
+- Hardens clean-runner RADV packaging, weak-import closure, reproducibility and release artifact generation.
 
 ## Recommended defaults
 
@@ -116,7 +132,9 @@ See `docs/BUILDING.md` for the full toolchain details.
 
 This is an experimental fork focused on **Eden / ProsperoEden 0.40 + PS5 firmware 13.60**.
 
-The ZBIC loader path compiles successfully and passes the existing NSO loader checks. Controller and UI changes are PS5-specific. Hardware compatibility still depends on the individual title and should be tested on-console.
+The ZBIC loader path and the native package pipeline are validated in CI; title-level compatibility still depends on the individual game and ultimately needs on-console testing.
+
+**Important:** this project does **not** implement PS5 FPKG entitlement/PPR support. On firmware 13.60, FPKG installation/launch still depends on the separate jailbreak/kstuff stack, whose 13.60 support is not considered reliable by this project. Prospero.Eden Encore's release is a homebrew app package and does not claim to fix that external limitation.
 
 For the complete technical change log, validation history, audit findings and planned improvements, see [docs/FORK_NOTES.md](docs/FORK_NOTES.md).
 
