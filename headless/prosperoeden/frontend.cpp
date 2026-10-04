@@ -17,6 +17,8 @@
 #include "pe/platform/display_egl.hpp"
 #include "pe/ui/launcher.hpp"
 #include "radio_input.h"
+#include <cerrno>
+#include <cstring>
 #include "ps5_system_language.hpp"
 #ifdef EDEN_DEV_ROM_ID
 #include "crash_trigger.h"
@@ -180,11 +182,21 @@ std::string RunApp(const std::string& launch_error, bool first_start) {
         pe::gfx::GlBatch batch;
         pe::gfx::Font font;
         std::string font_data;
-        const bool ready = batch.init() &&
-            pe::read_file(Eden::AppFile("ui/fonts/montserrat-medium.pefont"), &font_data) &&
-            font.load(font_data);
+        const std::string font_path = Eden::AppFile("ui/fonts/montserrat-medium.pefont");
+        const bool shaders_ready = batch.init();
+        errno = 0;
+        const bool font_read = shaders_ready && pe::read_file(font_path, &font_data);
+        const int font_errno = errno;
+        const bool ready = font_read && font.load(font_data);
         if (!ready) {
-            Eden::Report("menu failure", "The launcher's shaders or font could not load; check the app's ui folder");
+            const std::string why = !shaders_ready ?
+                "The launcher's shaders could not be built" :
+                !font_read ?
+                    "The launcher's font could not be read: " + font_path +
+                        (font_errno ? " (" + std::string{std::strerror(font_errno)} + ")" : "") :
+                    "The launcher's font is invalid: " + font_path + " (" +
+                        std::to_string(font_data.size()) + " bytes)";
+            Eden::Report("menu failure", why.c_str());
             glClearColor(0.7f, 0.08f, 0.16f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT);
             display.swap();
