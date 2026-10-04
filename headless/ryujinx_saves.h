@@ -183,7 +183,12 @@ inline bool CopyFile(const fs::path& from, const fs::path& to) {
 }
 
 inline bool CopyTree(const fs::path& from, const fs::path& to) {
+    // Save imports are user-provided trees. Never follow a symlink: a link inside save-import/
+    // must not be able to make the privileged PS5 process read files outside the selected save.
     std::error_code error;
+    const fs::file_status root_status = fs::symlink_status(from, error);
+    if (error || fs::is_symlink(root_status) || !fs::is_directory(root_status)) return false;
+
     fs::create_directories(to, error);
     if (error) return false;
     const auto entries = ListFolder(from, error);
@@ -191,9 +196,12 @@ inline bool CopyTree(const fs::path& from, const fs::path& to) {
     for (const auto& entry : entries) {
         const fs::path target = to / entry.path().filename();
         std::error_code type_error;
-        const bool copied = entry.is_directory(type_error) ? CopyTree(entry.path(), target)
-                                                           : CopyFile(entry.path(), target);
-        if (type_error || !copied) return false;
+        const fs::file_status status = entry.symlink_status(type_error);
+        if (type_error || fs::is_symlink(status)) return false;
+        const bool copied = fs::is_directory(status) ? CopyTree(entry.path(), target)
+                            : fs::is_regular_file(status) ? CopyFile(entry.path(), target)
+                                                         : false;
+        if (!copied) return false;
     }
     return true;
 }
