@@ -208,8 +208,8 @@ void Launcher::draw_settings(Canvas &c)
     case kVideo:
         about = tr("Graphics backend and how games are scaled to your TV.");
         lines = {{tr("RENDERER"), prefs_.renderer != 0 ? tr("Vulkan (recommended)") : "OpenGL"},
-                 {tr("OUTPUT RESOLUTION"), output_name(prefs_.output)},
-                 {tr("RESOLUTION"), pick(services_.resolution_labels(), prefs_.resolution)},
+                 {tr("TV OUTPUT"), output_name(prefs_.output)},
+                 {tr("GAME RESOLUTION"), pick(services_.resolution_labels(), prefs_.resolution)},
                  {tr("UPSCALING FILTER"), pick(services_.filter_labels(), prefs_.filter)},
                  {tr("REFRESH RATE"), hertz(prefs_.refresh)},
                  {tr("FPS OVERLAY"), on_off(prefs_.hud)}};
@@ -455,17 +455,33 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
     switch (modal)
     {
     case Modal::video:
+    {
         title = tr("Video");
-        copy = tr("How games are drawn and scaled to your TV.");
+        static constexpr const char *kAbout[kVideoRows] = {
+            TR("Vulkan is recommended on PS5. Use OpenGL only as a fallback for a game with Vulkan issues."),
+            TR("Final app output size. 1080p is recommended for stability and memory; this is not the game's render scale."),
+            TR("Game render scale. 1x is recommended; lower it for performance or memory, raise it only when a game has headroom."),
+            TR("Bilinear is the lightest default. AMD FSR is most useful when rendering below the TV output size."),
+            TR("60 Hz is recommended. 120 Hz changes display mode only; the game still needs to render above 60 FPS to benefit."),
+            TR("Shows live FPS while playing. Off is cleaner for normal use; Select + R1 toggles it at any time.")};
+        copy = tr(kAbout[std::clamp(option_, 0, kVideoRows - 1)]);
         break;
+    }
     case Modal::audio:
         title = tr("Audio");
         copy = tr("Game audio; PS5 system-menu music is unchanged.");
         break;
     case Modal::controls:
+    {
         title = tr("Controls");
-        copy = tr("Controller shortcuts and supported features.");
+        static constexpr const char *kAbout[] = {
+            TR("PlayStation is recommended on PS5: Cross maps to A and Circle to B. Nintendo preserves Switch button positions."),
+            TR("Turns DualSense vibration on or off for games."),
+            TR("100% is full DualSense rumble strength. Lower it if vibration feels too strong."),
+            TR("8% is recommended. Increase it for stick drift; decrease it for more sensitive aiming.")};
+        copy = tr(kAbout[std::clamp(option_, 0, 3)]);
         break;
+    }
     case Modal::accessibility:
         title = tr("Accessibility");
         copy = tr("Make the menu easier to see and follow.");
@@ -529,7 +545,7 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
             hertz(prefs_.refresh),
         };
         static constexpr const char *kNames[kVideoRows] = {
-            TR("Renderer"),         TR("Output resolution"), TR("Resolution"),
+            TR("Renderer"),         TR("TV output"),       TR("Game resolution"),
             TR("Upscaling filter"), TR("Refresh rate"),      TR("FPS overlay")};
         for (int row = first; row <= last; ++row)
         {
