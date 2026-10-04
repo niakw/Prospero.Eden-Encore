@@ -139,6 +139,15 @@ struct FolderInfo
     int games = -1;
 };
 
+struct DiagnosticsInfo
+{
+    std::string filesystem;
+    std::string free_space;
+    std::string shader_caches;
+    std::string logs;
+    std::string data_path;
+};
+
 class Services
 {
   public:
@@ -175,6 +184,12 @@ class Services
     virtual const std::vector<std::string> &language_labels() = 0;
     virtual std::string language_region(int language) = 0;
     virtual std::string setup_details() = 0;
+    virtual DiagnosticsInfo diagnostics() { return {}; }
+    virtual bool clear_shader_caches(std::string *message)
+    {
+        if (message) *message = "Unavailable";
+        return false;
+    }
 
     // ---- game files ----
     // The subfolder names of a folder; false when it cannot be opened.
