@@ -543,7 +543,7 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
     {
         const std::string values[] = {
             prefs_.renderer != 0 ? tr("Vulkan (recommended)") : "OpenGL",
-            Eden::kPerformanceProfileLabels[std::clamp(prefs_.performance_profile, 0, 2)],
+            services_.performance_profile_labels()[static_cast<std::size_t>(std::clamp(prefs_.performance_profile, 0, 2))],
             output_name(prefs_.output),
             pick(services_.resolution_labels(), prefs_.resolution),
             pick(services_.filter_labels(), prefs_.filter),
