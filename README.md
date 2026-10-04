@@ -2,119 +2,189 @@
   <img src="assets/eden-official.svg" width="150" alt="Eden logo">
 </p>
 
-<h1 align="center">Prospero.Eden Encore — PS5 13.60</h1>
+<h1 align="center">Prospero.Eden Encore</h1>
 
 <p align="center">
-  A stability-, compatibility- and UX-focused continuation of ProsperoEden v1.000.040 and Eden.
+  <strong>The PS5 13.60-focused continuation of ProsperoEden 1.000.040.</strong><br>
+  Stability first. Newer game support. Better recovery. Better PS5 UX.
 </p>
 
-## Why this fork?
+<p align="center">
+  <img alt="PS5 firmware 13.60 tested" src="https://img.shields.io/badge/PS5%20firmware-13.60%20TESTED-2ea44f">
+  <img alt="ProsperoEden base 1.000.040" src="https://img.shields.io/badge/base-ProsperoEden%201.000.040-6f42c1">
+  <img alt="ZBIC and LZ4" src="https://img.shields.io/badge/NSO-ZBIC%20%2B%20LZ4-blue">
+  <img alt="DualSense first" src="https://img.shields.io/badge/UX-DualSense--first-8250df">
+</p>
 
-This fork keeps the **v1.000.040** base, which works on PS5 firmware **13.60**, while adding targeted compatibility fixes without pulling in the newer Lapy-based elevation changes.
+> [!IMPORTANT]
+> **PS5 firmware 13.60 is the tested and primary target of Encore.**
+> Other firmware versions are not currently claimed as validated by this fork.
 
-ProsperoEden v1.000.050+ changed the filesystem elevation path to Lapy. Lapy currently targets older firmware ranges, so on 13.60 newer builds can remain sandboxed and lose access to `/data/prosperoeden`.
+## Why Encore?
 
-The goal is simple: keep the working 0.40 behavior on 13.60, stay self-contained, and improve compatibility, recovery, performance tuning and everyday controller-first UX without blindly merging newer elevation code.
+Current ProsperoEden releases moved beyond the 1.000.040 base and use a newer Lapy-based elevation path. That newer direction brings useful features, but **13.60 is not one of the firmware versions currently validated by upstream's Lapy helper**.
 
-## Improvements
+Encore takes the opposite approach: keep the **known-working 1.000.040 filesystem path on 13.60**, then selectively add the compatibility, stability, recovery and usability improvements that are valuable on a PS5 today.
 
-- **ZBIC NSO decompression**
-  - Adds support for the ZBIC/zstd-compressed NSO segments used by newer Switch software.
-  - Keeps the existing LZ4 path for older titles.
-  - Based on Eden's upstream Switch 22.0+ ZBIC support.
+The result is not a blind downgrade and not a blind merge of newer upstream code. It is a **13.60-specific maintained branch** with its own hardening and release validation.
 
-- **PS5 13.60 focus**
-  - Keeps the 0.40 built-in filesystem elevation path.
-  - No Lapy dependency is required by this fork.
+## The big advantages
 
-- **Build fixes**
-  - Improves clean-runner build compatibility for RADV/Mesa weak Vulkan entrypoints.
-  - Keeps optional RADV weak symbols out of PS5 dynamic imports.
+### 🎯 PS5 13.60 is a first-class target
 
-- **DualSense-first controls**
-  - PlayStation layout is the default: Cross = A, Circle = B, Square = X, Triangle = Y.
-  - Switch back to the original Nintendo layout globally from **Settings > Controls**.
-  - Override the controller layout per game from **Game settings**.
-  - Adjustable vibration strength and stick deadzone.
+- **Tested target: PS5 firmware 13.60.**
+- Keeps the 1.000.040 filesystem-access path instead of switching to Lapy.
+- No Lapy daemon or Lapy helper dependency is required.
+- If filesystem elevation is unavailable, Encore fails closed and stays sandboxed instead of pretending elevation succeeded.
 
-- **Eden visual identity**
-  - Uses Eden's official logo for the PS5 app icon, launcher branding and this README.
-  - Replaces the custom green/scenic ProsperoEden look with Eden's dark violet/pink/blue identity.
-  - Keeps the TV/controller-friendly PS5 launcher structure while moving the branding back toward upstream Eden.
+### 🧩 Newer Switch software support
 
+- Adds **ZBIC / zstd NSO decompression** used by newer Switch software.
+- Keeps the existing **LZ4** loader path for older titles.
+- Preserves ProsperoEden's PS5 low-memory NSO loading strategy.
 
-- **Launcher quality-of-life**
-  - Diagnostics shows filesystem mode, free space, shader/JIT cache size and log size, with safe shader-cache cleanup.
-  - Save import/export supports Ryujinx and hand-copied saves, backs up replaced saves and rejects symlinked import trees.
-  - On a fresh configuration, the game-language preference follows the PS5 system language once; later user choices are preserved.
-  - Contextual help explains renderer, performance profile, output resolution, internal resolution, upscaling, refresh rate and controls for non-technical users.
+### 🛟 Recovery built for a couch / TV emulator
 
+- **Safe Launch** starts one game with conservative settings only for that run:
+  - OpenGL
+  - Handheld mode
+  - 1x internal resolution
+  - Bilinear
+  - 60 Hz
+  - 1080p
+  - mods disabled
+- Saved settings are **not overwritten**.
+- One-button **Restore recommended defaults** globally.
+- One-button **Reset overrides** per game.
 
-- **Stability, recovery and PS5 integration**
-  - Keeps conservative Vulkan / 1x / 1080p / 60 Hz defaults, with OpenGL and per-game overrides available.
-  - Adds **Recommended / Smooth / Performance** profiles with clear trade-off descriptions.
-  - Adds a one-shot **Safe Launch** from the Library: OpenGL + Handheld + 1x + Bilinear + 60 Hz + 1080p + mods off for that launch only, without rewriting saved settings.
-  - Adds one-button **Restore recommended defaults** globally and **Reset overrides** per game.
-  - Preserves crash recovery, early guest-fault retry and useful GPU out-of-memory errors.
-  - Bounds RADV shader cache, session logs and cover-texture memory so noisy or long sessions cannot grow storage/VRAM indefinitely.
-  - Uses asynchronous library scanning so large libraries do not block the launcher.
-  - Binds launcher input to the foreground PS5 user and keeps multi-controller hotplug support.
-  - Hardens settings validation, package metadata checks, native RADV linking and save imports against symlink escapes.
+### 🎮 DualSense-first UX
 
+- PlayStation face-button layout by default.
+- Nintendo layout remains available.
+- Per-game controller-layout override.
+- Adjustable vibration and stick deadzone.
+- Multi-controller hotplug, motion controls and analog triggers retained.
+- Launcher input follows the foreground PS5 user.
 
-## Recommended settings
+### ⚙️ Simple performance profiles
 
-For a stable first run, keep **Vulkan**, **1080p output**, **1x internal resolution**, **Bilinear** and **60 Hz**.
+Instead of making every user understand seven low-level emulator switches first, Encore exposes:
 
-- Use **OpenGL** as a compatibility fallback if a game has Vulkan-specific issues.
-- Use **0.75x / 0.5x** when a game needs more performance; **FSR** is a good upscaler in that case.
-- Use **1.5x+** only when the game has enough GPU/memory headroom.
-- **120 Hz** is for compatible displays and titles/patches capable of higher frame rates; it does not by itself turn a 30/60 FPS game into 120 FPS.
-- **Docked** is the normal PS5 console mode; try **Handheld** when a demanding title needs more performance or behaves better with the Switch handheld profile.
+- **Recommended** — conservative accuracy/stability.
+- **Smooth** — compile-ahead oriented.
+- **Performance** — more aggressive performance trade-offs.
 
-## Changes in v1.000.040
+Advanced settings and per-game overrides remain available.
 
-- Keeps the self-contained ProsperoEden 0.40 filesystem-elevation path proven on PS5 firmware 13.60; no Lapy migration.
-- Adds ZBIC NSO decompression for newer Switch software while retaining the LZ4 path.
-- Adds PlayStation-first DualSense controls, per-game layout overrides, vibration strength and stick deadzone settings.
-- Adds Recommended / Smooth / Performance profiles, contextual settings guidance and conservative defaults.
-- Adds one-shot Safe Launch, global recommended-settings reset and per-game override reset.
-- Adds storage diagnostics, bounded RADV cache/log growth and safe shader/JIT cache cleanup.
-- Hardens save import/export with backup/restore behavior and symlink rejection.
-- Uses the PS5 system language for the initial game-language choice without overwriting later user preferences.
-- Restores Eden's official visual identity and aligns project-facing branding with **Prospero.Eden Encore**.
-- Hardens clean-runner RADV packaging, weak-import closure, reproducibility and release artifact generation.
+### 🧰 Better diagnostics and bounded storage
+
+- Filesystem-access status.
+- Writable free space.
+- Shader/JIT cache size.
+- Log size.
+- Safe shader-cache cleanup.
+- RADV shader cache capped at **256 MB**.
+- Session logs rotate instead of growing forever.
+- Cover textures use a bounded LRU cache.
+
+### 🔐 Extra hardening
+
+- Save imports reject **symlink escapes**.
+- Settings writes are atomic and invalid JSON falls back safely.
+- Package metadata and native dependency closure are validated.
+- Optional RADV/Mesa weak imports are resolved only after the real native link.
+- Release inputs are pinned and release bundles are reproducible/checksummed.
+- Keys, ROM/container files and local save-transfer folders are explicitly ignored by Git.
+
+## Encore vs ProsperoEden upstream
+
+This comparison is against **ProsperoEden v1.000.070**, the current upstream line this fork intentionally does not merge wholesale.
+
+| Area | Prospero.Eden Encore | ProsperoEden v1.000.070 |
+| --- | --- | --- |
+| Main PS5 target | **13.60 — tested** | Lapy helper validated upstream on **6.02 and 12.70**; other firmware experimental |
+| Elevation design | **1.000.040 one-shot sandbox elevator**, no Lapy dependency | Lapy-based exact-title helper / resident-service path |
+| Newer NSO compression | **ZBIC + LZ4** | Upstream line evolves independently |
+| Recovery | **Safe Launch + global reset + per-game reset** | No equivalent Encore recovery workflow documented |
+| Performance UX | **Recommended / Smooth / Performance presets** | Seven individual performance switches |
+| PS5 controls | **PlayStation-first simplified layout + per-game override** | Full button mapping system |
+| Diagnostics | **Filesystem mode, free space, cache/log sizes, safe cleanup** | Crash/boot diagnostics and logs |
+| Storage hardening | **Bounded RADV cache, rotating logs, bounded cover VRAM** | Shader cache / logging present, different policy |
+| Save import safety | **Backup/rollback + symlink rejection** | Save import/export support |
+| Updates | **Manual release updates by design** | Built-in network updater |
+
+Encore deliberately chooses **predictability on 13.60** over importing every newer upstream subsystem.
+
+## Firmware compatibility
+
+| PS5 firmware | Encore status |
+| --- | --- |
+| **13.60** | ✅ **Tested target / supported release target** |
+| Other firmware supported by underlying tooling | ⚠️ **Not validated by Encore yet** |
+| Unknown/newer firmware layouts | ❌ **No compatibility claim** |
+
+A firmware having offsets somewhere in the wider PS5 ecosystem does **not** automatically mean Encore has been validated on it.
+
+## Filesystem elevation and security
+
+Encore does **not** use Lapy. It keeps the 1.000.040 one-request elevation helper and hardens the interaction around it.
+
+The helper:
+
+- runs **once at startup**, not as a persistent service;
+- talks only through the local ELF-loader connection on **127.0.0.1:9021**;
+- accepts only one declared capability: **filesystem access**;
+- validates a fixed, versioned **24-byte protocol**;
+- accepts no arbitrary kernel pointer or privilege mask from the application;
+- verifies the target **PID and exact title ID `PPSA99008`** before touching credentials;
+- requires the application to clone its credentials before modification;
+- confirms the credential pointer actually changed before writing;
+- validates kernel pointers while finding the process;
+- verifies the complete resulting credential/filesystem state after the write;
+- attempts to restore the original state if applying elevation fails;
+- uses bounded I/O timeouts and no unbounded retry loop;
+- exits after the one request.
+
+> [!WARNING]
+> This reduces attack surface and makes elevation more transactional; it does **not** make an elevated Encore process unprivileged. Filesystem escape still requires broad credentials/capabilities on the PS5. The local ELF loader and jailbreak environment remain part of the trusted chain.
+
+See [headless/elevation/README.md](headless/elevation/README.md) for the implementation-specific notes.
 
 ## Recommended defaults
 
-For a normal user, the fork starts with conservative settings:
+Encore starts conservative:
 
-- **Vulkan**
-- **1080p TV output**
-- **1x game resolution**
-- **Bilinear scaling**
-- **60 Hz**
-- **FPS overlay off**
-- **PlayStation button layout**
+| Setting | Default |
+| --- | --- |
+| Renderer | **Vulkan** |
+| TV output | **1080p** |
+| Internal resolution | **1x** |
+| Upscaling | **Bilinear** |
+| Refresh rate | **60 Hz** |
+| FPS overlay | **Off** |
+| Controller layout | **PlayStation** |
+| Stick deadzone | **8%** |
+| Vibration | **100%** |
+| Console mode | **Docked** |
 
-Video and controller screens show a short explanation for the selected setting, including when 120 Hz, FSR or higher render resolutions are useful.
+Try **OpenGL** when a title has a Vulkan-specific issue. Use **0.75x / 0.5x + FSR** when performance is the priority. Higher internal resolutions require substantially more GPU/memory headroom.
 
 ## Install
 
-1. Download the release ZIP.
+1. Download a compiled Encore release bundle.
 2. Copy the included `PPSA99008` folder to:
 
 ```text
 /data/homebrew/PPSA99008
 ```
 
-3. Keep your existing data in:
+3. Encore stores its application data under:
 
 ```text
 /data/prosperoeden
 ```
 
-Updating the app folder does not require deleting your settings, saves, covers, logs, keys, firmware, or game files stored elsewhere.
+Updating the app folder does not require deleting your existing settings, saves, covers, logs, keys, firmware or game files stored elsewhere.
 
 ## Build
 
@@ -124,23 +194,25 @@ Linux is recommended.
 make release
 ```
 
-Release files are written to `dist/`.
+Release files are generated under `dist/`.
 
-See `docs/BUILDING.md` for the full toolchain details.
+The GitHub release workflow validates translations, performs the full native build/package pipeline, verifies SHA-256 checksums, and only publishes compiled assets after a successful build.
 
-## Status
+See [docs/BUILDING.md](docs/BUILDING.md) for toolchain details and [docs/FORK_NOTES.md](docs/FORK_NOTES.md) for the technical audit and validation history.
 
-This is an experimental fork focused on **Eden / ProsperoEden 0.40 + PS5 firmware 13.60**.
+## What Encore intentionally does not claim
 
-The ZBIC loader path and the native package pipeline are validated in CI; title-level compatibility still depends on the individual game and ultimately needs on-console testing.
+- It does **not** repair PS5 **FPKG entitlement/PPR** support.
+- It does **not** make the 13.60 kstuff/FPKG stack reliable.
+- It does **not** include keys, firmware, games or copyrighted console data.
+- It does **not** silently import the newer Lapy elevation rewrite.
+- It does **not** use an automatic renderer fallback that hides real failures.
 
-**Important:** this project does **not** implement PS5 FPKG entitlement/PPR support. On firmware 13.60, FPKG installation/launch still depends on the separate jailbreak/kstuff stack, whose 13.60 support is not considered reliable by this project. Prospero.Eden Encore's release is a homebrew app package and does not claim to fix that external limitation.
-
-For the complete technical change log, validation history, audit findings and planned improvements, see [docs/FORK_NOTES.md](docs/FORK_NOTES.md).
+FPKG/kstuff behavior is a separate jailbreak/runtime concern from the emulator itself.
 
 ## Credits
 
-This project is based on:
+Encore is built from and depends on the work of:
 
 - [ProsperoEden](https://github.com/blackbearreloaded/ProsperoEden)
 - [Eden](https://github.com/eden-emulator/mirror)
@@ -153,6 +225,6 @@ All credit for the original projects belongs to their respective authors and con
 
 ## Legal
 
-No keys, firmware, games, or other copyrighted console data are included.
+No keys, firmware, games or other copyrighted console data are included.
 
-Use software and console data dumped from hardware and games you own.
+Use software and console data dumped from hardware and games you own. This project is provided without warranty and is not affiliated with Sony Interactive Entertainment or the Eden project.
