@@ -36,7 +36,8 @@ jobs:
         run: make toolchain
 
       - name: Restore build caches
-        uses: actions/cache@v4
+        id: build-cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cache/ccache
@@ -53,6 +54,21 @@ jobs:
 
       - name: Build release
         run: make release JOBS=4
+
+      - name: Save build caches even on failure
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cache/ccache
+            ~/.cache/prosperoeden-deps
+            ~/.cache/ps5-eden-headless.*
+            .deps
+            ../ps5-native-app-boilerplate
+            ../mihawk-vulkan-review
+            ../mihawk-mesa-review
+            ../mihawk-sdk-review
+          key: prosperoeden-040-zbic-${{ runner.os }}-${{ hashFiles('tools/deps.json') }}-${{ github.run_id }}
 
       - name: Upload ProsperoEden 0.40 ZBIC build
         if: always()
