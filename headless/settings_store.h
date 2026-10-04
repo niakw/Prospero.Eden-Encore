@@ -111,6 +111,18 @@ inline int KeyIndex(const std::string& value, const char* const* keys, int count
     return fallback;
 }
 
+inline int LanguageIndexForLocale(std::string_view locale) {
+    for (int i = 0; i < int(std::size(kLanguageKeys)); ++i)
+        if (locale == kLanguageKeys[i]) return i;
+    const std::size_t dash = locale.find('-');
+    if (dash != std::string_view::npos) {
+        const std::string_view base = locale.substr(0, dash);
+        for (int i = 0; i < int(std::size(kLanguageKeys)); ++i)
+            if (base == kLanguageKeys[i]) return i;
+    }
+    return -1;
+}
+
 inline bool ValidRomFilename(std::string_view name) {
     if (name.size() < 5 || name.size() > 255) return false;
     for (unsigned char c : name)
@@ -265,6 +277,13 @@ inline Preferences LoadPreferences(const std::string& file = SettingsFile()) {
     result.high_contrast = Settings::Bool(document, Json::json_pointer("/accessibility/high_contrast"), false);
     result.reduce_motion = Settings::Bool(document, Json::json_pointer("/accessibility/reduce_motion"), false);
     return result;
+}
+
+inline bool HasSavedLanguage(const std::string& file = SettingsFile()) {
+    using Settings::Json;
+    const std::string saved =
+        Settings::String(Settings::Load(file), Json::json_pointer("/system/language"));
+    return KeyIndex(saved, kLanguageKeys, int(std::size(kLanguageKeys)), -1) >= 0;
 }
 
 inline bool SavePreferences(const Preferences& value, const std::string& file = SettingsFile()) {
