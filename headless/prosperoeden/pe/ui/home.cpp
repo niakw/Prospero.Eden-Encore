@@ -295,7 +295,7 @@ void Launcher::draw_home(Canvas &c)
                          {addons_line(home_.last_addons, home_.last_mods, home_.last_mods_on),
                           home_.last_language}),
                     560.0f, baseline(462.0f, 30.0f, theme::kSmall), theme::kSmall,
-                    Color::rgb(0xabb8ae), info_width);
+                    Color::rgb(0xa9a5b8), info_width);
     const char *first = continue_ready ? tr("Launch game") : tr("Open library");
     const char *second = tr("Game details");
     const float button = std::clamp(
@@ -334,7 +334,7 @@ void Launcher::draw_home(Canvas &c)
     else
     {
         text(c, tr("RECENTLY PLAYED"), 120.0f, baseline(712.0f, 30.0f, theme::kSmall), theme::kSmall,
-             Color::rgb(0xc6d2c7), Align::left, 3.0f);
+             Color::rgb(0xc5c1d2), Align::left, 3.0f);
         {
             const float f = focus(9);
             const float width =
