@@ -478,7 +478,7 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
     text_shrink(c, title, 592.0f, baseline(218.0f, 62.0f, theme::kDisplay), theme::kDisplay,
                 theme::kTitle, 736.0f);
     text_shrink(c, copy, 592.0f, baseline(291.0f, 32.0f, theme::kSmall), theme::kSmall,
-                Color::rgb(0xbecbb9), 736.0f);
+                Color::rgb(0xc5c1d2), 736.0f);
 
     const int rows = dialog_rows(modal);
     // Video's rows scroll in a window of five; the other dialogs show all of theirs.
