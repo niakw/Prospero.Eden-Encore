@@ -774,9 +774,21 @@ void Launcher::draw_game(Canvas &c, float open)
     }
     else
     {
+        static constexpr const char *kGameAbout[] = {
+            TR("Docked can improve graphics but may cost performance; Handheld is lighter for demanding games."),
+            TR("Vulkan is recommended on PS5. Use OpenGL only as a fallback for a title with Vulkan issues."),
+            TR("1x is the safe default. Lower it for performance/memory; higher scales use much more graphics memory."),
+            TR("Bilinear is the lightest default. AMD FSR is useful when rendering below the TV output size."),
+            TR("60 Hz is the safe default. Use 120 Hz only with a compatible display or high-FPS patch."),
+            TR("PlayStation is recommended on PS5; Nintendo restores the original Switch button positions."),
+        };
+        if (option_ >= row_mode && option_ <= row_controls)
+            text_shrink(c, tr(kGameAbout[option_]), 592.0f,
+                        baseline(kDialogHints - 34.0f, 24.0f, 18.0f), 18.0f,
+                        theme::kMeta, 736.0f);
         static constexpr Hint kHints[] = {
             {Pad::updown, TR("Select")}, {Pad::leftright, TR("Change")}, {Pad::circle, TR("Back")}};
-        draw_hints(c, kHints, 3, 592.0f, kDialogHints, theme::kCopy, 736.0f);
+        draw_hints(c, kHints, 3, 592.0f, kDialogHints + 12.0f, theme::kCopy, 736.0f);
     }
     list.pop_transform();
     list.pop_opacity();
