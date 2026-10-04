@@ -46,12 +46,36 @@
       "dest": ".deps/compiler-rt-18.1.8",
       "creates": ".deps/compiler-rt-18.1.8/emutls.c",
       "files": [
-        {"name": "emutls.c", "url": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-18.1.8/compiler-rt/lib/builtins/emutls.c", "sha256": "a4437f3e329a0835adbc7df38e36df12f358d05c073b11813c409f849c2345d2"},
-        {"name": "int_endianness.h", "url": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-18.1.8/compiler-rt/lib/builtins/int_endianness.h", "sha256": "ec5175561075845b7b16a92ad5ecdfd42a284de2736dd07e4ca7011b75c37709"},
-        {"name": "int_lib.h", "url": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-18.1.8/compiler-rt/lib/builtins/int_lib.h", "sha256": "b31130f10484636895daa13b91b63d47ea82b45547f29e4dd136b48a67854d30"},
-        {"name": "int_types.h", "url": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-18.1.8/compiler-rt/lib/builtins/int_types.h", "sha256": "26517abcfb05e989f4ac18b38779bc118637e0a5b3e44536c3733cc47b33026e"},
-        {"name": "int_util.h", "url": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-18.1.8/compiler-rt/lib/builtins/int_util.h", "sha256": "63d06198ab720a75c20bfd84be895c2746581b129168bae6201e7384bbb0473b"},
-        {"name": "cxa_thread_atexit.reference.cpp", "url": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-18.1.8/libcxxabi/src/cxa_thread_atexit.cpp", "sha256": "a36d48fd9f3d5b8ba4d94387d66c83cd2f2e96ad64677dde714f0daba7272ad6"}
+        {
+          "name": "emutls.c",
+          "url": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-18.1.8/compiler-rt/lib/builtins/emutls.c",
+          "sha256": "a4437f3e329a0835adbc7df38e36df12f358d05c073b11813c409f849c2345d2"
+        },
+        {
+          "name": "int_endianness.h",
+          "url": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-18.1.8/compiler-rt/lib/builtins/int_endianness.h",
+          "sha256": "ec5175561075845b7b16a92ad5ecdfd42a284de2736dd07e4ca7011b75c37709"
+        },
+        {
+          "name": "int_lib.h",
+          "url": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-18.1.8/compiler-rt/lib/builtins/int_lib.h",
+          "sha256": "b31130f10484636895daa13b91b63d47ea82b45547f29e4dd136b48a67854d30"
+        },
+        {
+          "name": "int_types.h",
+          "url": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-18.1.8/compiler-rt/lib/builtins/int_types.h",
+          "sha256": "26517abcfb05e989f4ac18b38779bc118637e0a5b3e44536c3733cc47b33026e"
+        },
+        {
+          "name": "int_util.h",
+          "url": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-18.1.8/compiler-rt/lib/builtins/int_util.h",
+          "sha256": "63d06198ab720a75c20bfd84be895c2746581b129168bae6201e7384bbb0473b"
+        },
+        {
+          "name": "cxa_thread_atexit.reference.cpp",
+          "url": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-18.1.8/libcxxabi/src/cxa_thread_atexit.cpp",
+          "sha256": "a36d48fd9f3d5b8ba4d94387d66c83cd2f2e96ad64677dde714f0daba7272ad6"
+        }
       ]
     },
     {
@@ -80,7 +104,10 @@
       "sha256": "6f6db164359a2da5a84ef826615b448b33e6306067ad829d85d5b0bf936f1bb8",
       "extract": ".deps/harfbuzz-12.3.2",
       "strip": 1,
-      "only": ["src", "COPYING"],
+      "only": [
+        "src",
+        "COPYING"
+      ],
       "creates": ".deps/harfbuzz-12.3.2/src/harfbuzz.cc"
     },
     {
@@ -90,7 +117,10 @@
       "url": "https://github.com/blackbearreloaded/ps5-native-app-boilerplate.git",
       "commit": "dd44bbdc75437332ed22e3ba95126733419ef25a",
       "path": "../ps5-native-app-boilerplate",
-      "setup": ["bash", "tools/setup-native-dependencies.sh"],
+      "setup": [
+        "bash",
+        "tools/setup-native-dependencies.sh"
+      ],
       "setup_creates": ".deps/native/ps5-payload-sdk/bin/prospero-clang"
     },
     {
@@ -98,7 +128,7 @@
       "about": "Mihawk's PS5_Vulkan: the RADV build and link recipes",
       "kind": "git",
       "url": "https://github.com/mihawk-99/PS5_Vulkan.git",
-      "commit": "71026e7ec1951fe72ae5b9118ff0905216a4c220",
+      "commit": "3f3ee69607013b345d2baa6d6a37c86745649a08",
       "path": "../mihawk-vulkan-review"
     },
     {
@@ -106,7 +136,7 @@
       "about": "Mihawk's PS5 Mesa (RADV) source",
       "kind": "git",
       "url": "https://github.com/mihawk-99/PS5_Mesa.git",
-      "commit": "cedb774b27d089fa81f46add28d0a8c13ff0f7d2",
+      "commit": "0b2d6d1a61d9bbf89cf8beb88a696144f67c61f8",
       "path": "../mihawk-mesa-review"
     },
     {
