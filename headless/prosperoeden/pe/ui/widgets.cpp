@@ -250,7 +250,7 @@ void glass(Canvas &c, const Rect &r, float radius, Color tint, Color edge, float
     if (look().high_contrast)
     {
         // A solid panel with a clear edge: nothing of the art shows through the text.
-        c.list.bordered_rect(r, radius, Color::rgb(0x050b08), 2.0f, Color::rgb(0xb9c9b4));
+        c.list.bordered_rect(r, radius, Color::rgb(0x0b0c14), 2.0f, Color::rgb(0xc5c1d2));
         return;
     }
     if (c.textures.backdrop_blur() != 0)
@@ -270,30 +270,30 @@ const Plate kRowPlate{15.0f,
                       theme::kLimeDeep.with_alpha(0.50f),
                       theme::kLime.with_alpha(0.63f)};
 const Plate kListPlate{13.0f,
-                       Color::rgb(0x15231d, 0.91f),
-                       Color::rgb(0x688267, 0.47f),
-                       Color::rgb(0x2a4434, 0.95f),
+                       Color::rgb(0x191a28, 0.91f),
+                       Color::rgb(0x5b5572, 0.47f),
+                       Color::rgb(0x2b2140, 0.95f),
                        theme::kLime.with_alpha(0.44f),
                        theme::kLimeDeep.with_alpha(0.50f),
                        theme::kLime.with_alpha(0.63f)};
 const Plate kButtonPlate{12.0f,
-                         Color::rgb(0xe6ede4, 0.10f),
+                         Color::rgb(0xf0edf7, 0.10f),
                          kWhite.with_alpha(0.19f),
-                         Color::rgb(0x1c2c24, 0.55f),
+                         Color::rgb(0x1d1e2d, 0.55f),
                          theme::kLime.with_alpha(0.50f),
                          theme::kLimeDeep.with_alpha(0.44f),
                          theme::kLime.with_alpha(0.63f)};
 const Plate kTilePlate{12.0f,
-                       Color::rgb(0xeef7ed, 0.06f),
+                       Color::rgb(0xf4f2f8, 0.06f),
                        kWhite.with_alpha(0.125f),
-                       Color::rgb(0x1c2c24, 0.45f),
+                       Color::rgb(0x1d1e2d, 0.45f),
                        theme::kLime.with_alpha(0.345f),
                        theme::kLimeDeep.with_alpha(0.376f),
                        theme::kLime.with_alpha(0.63f)};
 const Plate kNavPlate{12.0f,
                       kWhite.with_alpha(0.0f),
                       kWhite.with_alpha(0.0f),
-                      Color::rgb(0x1c2c24, 0.0f),
+                      Color::rgb(0x1d1e2d, 0.0f),
                       theme::kLime.with_alpha(0.31f),
                       theme::kLimeDeep.with_alpha(0.31f),
                       theme::kLime.with_alpha(0.50f)};
@@ -303,7 +303,7 @@ void plate_rest(Canvas &c, const Plate &style, const Rect &r)
     if (style.fill.a <= 0.0f && style.edge.a <= 0.0f)
         return;
     if (look().high_contrast)
-        c.list.bordered_rect(r, style.radius, Color::rgb(0x0f1a14), 1.5f, Color::rgb(0x93a890));
+        c.list.bordered_rect(r, style.radius, Color::rgb(0x12131d), 1.5f, Color::rgb(0xa9a5b8));
     else
         c.list.bordered_rect(r, style.radius, style.fill, 1.0f, style.edge);
 }
@@ -315,8 +315,8 @@ void plate_focus(Canvas &c, const Plate &style, const Rect &r, float amount)
     if (look().high_contrast)
     {
         // The highlight is a dark fill inside a bright outline: it does not rest on colour.
-        c.list.bordered_rect(r, style.radius, Color::rgb(0x1b3a29, amount), 3.0f,
-                             Color::rgb(0xf2ffc4, amount));
+        c.list.bordered_rect(r, style.radius, Color::rgb(0x2a1d3a, amount), 3.0f,
+                             Color::rgb(0xd6a4ff, amount));
         return;
     }
     // The highlight glows, breathing slowly.
@@ -346,7 +346,7 @@ void cover(Canvas &c, const std::string &path, const Rect &r, float radius, floa
     if (fade < 1.0f)
     {
         // A dark tile until the cover is ready; the app icon when the game has none.
-        c.list.gradient_rect(r, radius, Color::rgb(0x16241d), Color::rgb(0x0c1511));
+        c.list.gradient_rect(r, radius, Color::rgb(0x191a28), Color::rgb(0x10111b));
         if (image.missing && c.textures.brand() != 0)
             c.list.rounded_image(c.textures.brand(), r, {0.0f, 0.0f, 1.0f, 1.0f}, radius,
                                  kWhite.with_alpha(0.92f));
@@ -371,7 +371,7 @@ void controller_icon(Canvas &c, const Rect &r, float lit)
                       14.0f * u, 22.0f * u, theme::kLime.with_alpha(0.26f * lit * breath));
     }
     c.list.image(picture, r, {0.0f, 0.0f, 1.0f, 1.0f},
-                 gfx::mix(kWhite.with_alpha(0.16f), Color::rgb(0xf3f7ef), lit));
+                 gfx::mix(kWhite.with_alpha(0.16f), Color::rgb(0xf4f2f8), lit));
     if (lit > 0.01f)
     {
         // The light bar on either side of the touchpad.
@@ -386,10 +386,10 @@ void toggle(Canvas &c, float right, float cy, float position)
     constexpr float kWidth = 64.0f;
     constexpr float kHeight = 34.0f;
     const Rect track{right - kWidth, cy - kHeight * 0.5f, kWidth, kHeight};
-    c.list.bordered_rect(track, kHeight * 0.5f, Color::rgb(0x24332c, 0.95f), 1.0f,
+    c.list.bordered_rect(track, kHeight * 0.5f, Color::rgb(0x252333, 0.95f), 1.0f,
                          theme::kRowEdge.with_alpha(0.7f));
     c.list.hgradient_rect(track, kHeight * 0.5f, theme::kLime.with_alpha(0.95f * position),
-                          Color::rgb(0x6fae52, 0.95f * position));
+                          Color::rgb(0xbf42f6, 0.95f * position));
     const float knob_x = track.x + kHeight * 0.5f + (kWidth - kHeight) * position;
     c.list.shadow({knob_x - 12.0f, cy - 10.0f, 24.0f, 24.0f}, 12.0f, 6.0f, kBlack.with_alpha(0.35f));
     c.list.circle(knob_x, cy, 12.5f, gfx::mix(theme::kCopy, theme::kTitle, position));
@@ -399,7 +399,7 @@ void level_bar(Canvas &c, float right, float cy, float width, float level, float
 {
     constexpr float kHeight = 8.0f;
     const Rect track{right - width, cy - kHeight * 0.5f, width, kHeight};
-    c.list.rounded_rect(track, kHeight * 0.5f, Color::rgb(0x2b3b33, 0.95f));
+    c.list.rounded_rect(track, kHeight * 0.5f, Color::rgb(0x302b42, 0.95f));
     const float filled = std::max(kHeight, width * std::clamp(level, 0.0f, 1.0f));
     if (level > 0.0f)
         c.list.hgradient_rect({track.x, track.y, filled, kHeight}, kHeight * 0.5f, theme::kLimeDeep,
@@ -660,11 +660,11 @@ void scrollbar(Canvas &c, const ListView &view, float x, float y, float height)
 {
     if (view.count <= view.visible)
         return;
-    c.list.rounded_rect({x, y, 10.0f, height}, 5.0f, Color::rgb(0x49624a, 0.53f));
+    c.list.rounded_rect({x, y, 10.0f, height}, 5.0f, Color::rgb(0x514b68, 0.53f));
     const float thumb = std::max(
         64.0f, height * static_cast<float>(view.visible) / static_cast<float>(view.count));
     c.list.rounded_rect({x, y + (height - thumb) * view.thumb(), 10.0f, thumb}, 5.0f,
-                        Color::rgb(0xd8e8aa));
+                        Color::rgb(0xd6a4ff));
 }
 
 } // namespace pe::ui
