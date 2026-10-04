@@ -346,10 +346,11 @@ inline GameSettings LoadGameSettings(uint64_t title_id, const std::string& file 
 }
 
 inline bool SaveGameSettings(uint64_t title_id, const GameSettings& value, const std::string& file = SettingsFile()) {
-    if (!title_id || value.renderer >= int(std::size(kRendererKeys)) ||
-        value.resolution >= int(std::size(kResolutionKeys)) ||
-        value.upscaling_filter >= int(std::size(kUpscalingFilterKeys)) ||
-        value.refresh >= int(std::size(kRefreshKeys)) ||
+    if (!title_id || value.renderer < -1 || value.renderer >= int(std::size(kRendererKeys)) ||
+        value.resolution < -1 || value.resolution >= int(std::size(kResolutionKeys)) ||
+        value.upscaling_filter < -1 || value.upscaling_filter >= int(std::size(kUpscalingFilterKeys)) ||
+        value.refresh < -1 || value.refresh >= int(std::size(kRefreshKeys)) ||
+        value.controller_layout < -1 ||
         value.controller_layout >= int(std::size(kControllerLayoutKeys))) return false;
     Settings::Json document = Settings::Load(file);
     document["version"] = 1;
