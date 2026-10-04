@@ -34,7 +34,9 @@ assert 'libvulkan_radeon.ps5.a' in link and 'libps5_opengl_core33.a' in link
 # static link time, not survive as imports for the native package converter.
 dyn_undefined = subprocess.check_output(
     ['llvm-nm-18', '-D', '--undefined-only', str(build/'bin/eden-headless')], text=True)
-assert not any('radv_' in line for line in dyn_undefined.splitlines()), dyn_undefined
+weak_undefined = [line for line in dyn_undefined.splitlines()
+                  if len(line.split()) >= 2 and line.split()[-2].lower() in ('w', 'v')]
+assert not weak_undefined, 'weak native imports survived static link:\n' + '\n'.join(weak_undefined)
 sdk = root.parent/'mihawk-vulkan-review/.deps/native/ps5-payload-sdk'
 for name in ('libc++.a', 'libc++abi.a', 'libunwind.a'):
     subprocess.run(['cmp', str(cache/'sdk/target/lib'/name), str(sdk/'target/lib'/name)], check=True)
