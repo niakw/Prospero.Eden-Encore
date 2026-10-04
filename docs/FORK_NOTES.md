@@ -247,3 +247,44 @@ Important CI findings during this fork:
 - Launcher brand TGA generation was hardened to match the image loader's exact supported format.
 
 The current reference validation run should be recorded here once it reaches a final result.
+
+
+## Recommended user defaults
+
+The PS5 launcher deliberately starts conservative. These are the recommended defaults for a normal user:
+
+| Setting | Recommended default | Why |
+| --- | --- | --- |
+| Renderer | Vulkan | Native PS5 RADV path and the main performance target. OpenGL is a compatibility fallback. |
+| Output resolution | 1080p | Lowest framebuffer/VRAM pressure and the safest TV output. 1440p/2160p increase output cost but do not increase the game's internal detail by themselves. |
+| Internal resolution | 1x | Native game render scale. Use 0.75x/0.5x to recover performance; >1x only when the title has enough headroom. |
+| Upscaling filter | Bilinear | Lowest-risk general default. FSR is a better quality choice when rendering below 1x; Bicubic is another quality option; Nearest is mainly useful for pixel-art/2D content. |
+| Refresh rate | 60 Hz | Compatibility-first default. 120 Hz does not magically double game FPS; it is useful only when the game/patch can produce a higher rate and the TV accepts 120 Hz. |
+| FPS overlay | Off | Turn it on for tuning or diagnostics. |
+| Controller layout | PlayStation | Matches PS5 muscle memory. Nintendo layout remains available for titles where original button positions are preferred. |
+| Stick deadzone | 8% | Conservative DualSense default. Increase if a stick drifts; lower only for a healthy/calibrated stick. |
+| Vibration strength | 100% | Native full rumble. Reduce to preference. |
+
+### Planned UI guidance
+
+The launcher already has contextual explanatory text for Accessibility rows. The same pattern should be reused for Video and Controls instead of adding more permanent clutter.
+
+Planned Video help text:
+
+- **Renderer:** Vulkan is recommended. Try OpenGL if a title crashes or renders incorrectly.
+- **Output resolution:** Size of the final picture sent to the TV. 1080p is recommended for stability; higher output sizes use more memory and do not increase internal game detail on their own.
+- **Resolution:** Internal game rendering scale. 1x is recommended; below 1x improves performance, above 1x improves image quality at a substantial GPU/memory cost.
+- **Upscaling filter:** Bilinear is the safe default. FSR is recommended when using an internal resolution below 1x.
+- **Refresh rate:** 60 Hz is recommended. 120 Hz only helps titles capable of higher frame rates and requires a compatible display.
+- **FPS overlay:** Diagnostic display only.
+
+Planned Controls help text:
+
+- **Button layout:** PlayStation is recommended on PS5; Nintendo preserves the original Switch face-button positions.
+- **Vibration:** Disables guest rumble without affecting PS5 system haptics.
+- **Vibration strength:** Scales game rumble intensity.
+- **Stick deadzone:** 8% is recommended; raise it to mask drift, lower it for more immediate response.
+
+### Possible future display auto mode
+
+The PS5 SDK exposes video-output resolution status APIs, so an `Auto (TV)` output mode is technically possible. It should not become the default until validated on hardware because automatically selecting 4K increases framebuffer/VRAM pressure and works against this fork's stability-first goal.
