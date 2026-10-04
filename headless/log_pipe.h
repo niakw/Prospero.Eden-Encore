@@ -9,6 +9,8 @@
 #include <cstdio>
 #include <fcntl.h>
 #include <thread>
+#include <string>
+#include <cstddef>
 #include <unistd.h>
 
 namespace Eden {
@@ -20,7 +22,11 @@ public:
     ~LogPipe() { Detach(); }
 
     // The stream must already write to its log file; on failure it keeps doing so.
-    bool Attach(std::FILE* target) {
+    // At segment_limit the first segment is preserved as first_path and logging continues in path.
+    // If the second segment fills too, it is recycled so disk use stays bounded while the earliest
+    // context and the latest messages are both retained.
+    bool Attach(std::FILE* target, std::string path, std::string first_path,
+                std::size_t segment_limit = 32u * 1024u * 1024u) {
         if (stream) return false;
         std::fflush(target);
         const int stream_fd = fileno(target);
@@ -43,6 +49,11 @@ public:
         close(ends[1]);
         read_fd = ends[0];
         stream = target;
+        log_path = std::move(path);
+        first_log_path = std::move(first_path);
+        limit = segment_limit;
+        bytes = 0;
+        rotated = false;
         worker = std::thread([this] { Drain(); });
         return true;
     }
@@ -61,6 +72,29 @@ public:
     }
 
 private:
+    bool Rotate() {
+        if (!limit || log_path.empty()) return true;
+        if (!rotated) {
+            // The descriptor remains valid after rename; open a fresh current file before closing it.
+            (void)std::remove(first_log_path.c_str());
+            if (std::rename(log_path.c_str(), first_log_path.c_str()) != 0) return false;
+            const int next = open(log_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
+            if (next < 0) return false;
+            close(file_fd);
+            file_fd = next;
+            rotated = true;
+        } else {
+            // Keep the very first segment, recycle only the current one to retain the newest tail.
+            if (ftruncate(file_fd, 0) != 0 || lseek(file_fd, 0, SEEK_SET) < 0) return false;
+        }
+        bytes = 0;
+        static constexpr char marker[] =
+            "[Eden 0.40 Improved] log segment rotated to keep storage bounded\n";
+        const ssize_t wrote = write(file_fd, marker, sizeof(marker) - 1);
+        if (wrote > 0) bytes = static_cast<std::size_t>(wrote);
+        return true;
+    }
+
     void Drain() {
         char buffer[16384];
         for (;;) {
@@ -70,11 +104,14 @@ private:
                 if (errno == EINTR) continue;
                 return;
             }
+            if (limit && bytes + static_cast<std::size_t>(count) > limit)
+                (void)Rotate();
             for (ssize_t written = 0; written < count;) {
                 const ssize_t result = write(file_fd, buffer + written, static_cast<size_t>(count - written));
                 if (result < 0 && errno == EINTR) continue;
                 if (result <= 0) break;
                 written += result;
+                bytes += static_cast<std::size_t>(result);
             }
         }
     }
@@ -83,5 +120,10 @@ private:
     int read_fd = -1;
     int file_fd = -1;
     std::thread worker;
+    std::string log_path;
+    std::string first_log_path;
+    std::size_t limit = 0;
+    std::size_t bytes = 0;
+    bool rotated = false;
 };
 }
