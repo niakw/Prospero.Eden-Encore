@@ -132,10 +132,6 @@ msgstr "{0}의 firmware/를 읽을 수 없습니다. 추출한 펌웨어 NCA를 
 msgid "Change"
 msgstr "변경"
 
-#: pe/ui/library.cpp
-msgid "Change mode. Saved per game."
-msgstr "모드를 변경합니다. 게임별로 저장됩니다."
-
 #. What a mod is made of: cheat codes.
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Cheats"
@@ -1209,3 +1205,39 @@ msgstr "{0}/(NSP 또는 XCI)"
 #: pe/ui/browse.cpp
 msgid "{0}/ (one folder per game ID)"
 msgstr "{0}/(타이틀 ID마다 폴더 하나)"
+
+#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
+msgid "Restore defaults"
+msgstr "Restore defaults"
+
+#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
+msgid "Recommended defaults restored."
+msgstr "Recommended defaults restored."
+
+#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
+msgid "Reset overrides"
+msgstr "Reset overrides"
+
+#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
+msgid "Game overrides reset to global defaults."
+msgstr "Game overrides reset to global defaults."
+
+#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
+msgid "About Prospero.Eden Encore"
+msgstr "About Prospero.Eden Encore"
+
+#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
+msgid "tools and libraries make Prospero.Eden Encore possible."
+msgstr "tools and libraries make Prospero.Eden Encore possible."
+
+#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
+msgid "Prospero.Eden Encore keeps the proven 0.40 base for PS5 13.60, with Eden branding, safer recovery, and targeted compatibility and performance improvements."
+msgstr "Prospero.Eden Encore keeps the proven 0.40 base for PS5 13.60, with Eden branding, safer recovery, and targeted compatibility and performance improvements."
+
+#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
+msgid "Options starts a one-shot Safe Launch without changing saved settings."
+msgstr "Options starts a one-shot Safe Launch without changing saved settings."
+
+#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
+msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
+msgstr "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
