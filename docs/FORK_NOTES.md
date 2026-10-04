@@ -238,6 +238,20 @@ Priority order after the current build is validated:
    - Live stick/trigger values and deadzone preview.
    - Useful for drift diagnosis and selecting the deadzone instead of guessing.
 
+8. **Reset settings**
+   - Global "Restore recommended defaults".
+   - Per-game "Reset overrides" so renderer/resolution/filter/refresh/controller layout return to global settings in one action.
+   - Per-row cycling already supports "Default"; the missing part is an obvious one-button recovery path.
+
+9. **System-language first run**
+   - The PS5 SystemService API exposes the console language (parameter id 1).
+   - On a fresh settings file, initialize Eden's game/launcher language from the PS5 system language when it maps to a supported option.
+   - Keep the saved language untouched after the user explicitly changes it.
+
+10. **Console-mode guidance**
+   - Keep Docked as the normal PS5 default for image quality.
+   - Explain that Handheld lowers the guest's expected render/output profile and can help performance/compatibility in demanding titles.
+
 
 1. **Per-game performance presets**
    - Safe / Balanced / Quality presets that populate renderer, internal resolution, filter and refresh while keeping advanced manual settings available.
@@ -303,6 +317,7 @@ The PS5 launcher deliberately starts conservative. These are the recommended def
 | Controller layout | PlayStation | Matches PS5 muscle memory. Nintendo layout remains available for titles where original button positions are preferred. |
 | Stick deadzone | 8% | Conservative DualSense default. Increase if a stick drifts; lower only for a healthy/calibrated stick. |
 | Vibration strength | 100% | Native full rumble. Reduce to preference. |
+| Console mode | Docked | Best normal PS5 presentation. Try Handheld when a title needs extra performance or behaves better in handheld mode. |
 
 ### Planned UI guidance
 
