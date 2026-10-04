@@ -534,6 +534,11 @@ const std::vector<std::string>& EdenServices::filter_labels() {
     return labels;
 }
 
+const std::vector<std::string>& EdenServices::performance_profile_labels() {
+    static const std::vector<std::string> labels = Labels(Eden::kPerformanceProfileLabels);
+    return labels;
+}
+
 const std::vector<std::string>& EdenServices::language_labels() {
     static const std::vector<std::string> labels = Labels(Eden::kLanguageLabels);
     return labels;
