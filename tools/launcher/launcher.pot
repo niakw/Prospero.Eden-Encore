@@ -1209,3 +1209,19 @@ msgstr ""
 #: pe/ui/browse.cpp
 msgid "{0}/ (one folder per game ID)"
 msgstr ""
+
+#: pe/ui/settings.cpp pe/ui/library.cpp
+msgid "Restore defaults"
+msgstr ""
+
+#: pe/ui/settings.cpp pe/ui/library.cpp
+msgid "Recommended defaults restored."
+msgstr ""
+
+#: pe/ui/settings.cpp pe/ui/library.cpp
+msgid "Reset overrides"
+msgstr ""
+
+#: pe/ui/settings.cpp pe/ui/library.cpp
+msgid "Game overrides reset to global defaults."
+msgstr ""
