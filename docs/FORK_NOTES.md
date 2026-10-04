@@ -200,6 +200,45 @@ These are not all implemented yet; they are the next safe candidates after the c
 
 ### Functional candidates
 
+Priority order after the current build is validated:
+
+0. **Contextual settings guidance**
+   - Reuse the launcher's existing Accessibility help-text pattern for Video and Controls.
+   - Show a short explanation/recommendation for the highlighted setting instead of making normal users guess what renderer/output/internal resolution/filter/120 Hz mean.
+
+1. **Updates / DLC manager**
+   - Eden already has native per-title `Settings::values.disabled_addons` support.
+   - The PS5 port currently only scans and summarizes updates/DLC; it never exposes disabled add-ons.
+   - Add a per-game list to enable/disable an update or DLC without moving files manually.
+
+2. **FSR sharpening**
+   - Eden exposes `fsr_sharpening_slider` (desktop default 25); the PS5 UI currently exposes FSR but hides its sharpening control.
+   - Show the slider only while FSR is selected.
+
+3. **Safe launch / recovery**
+   - Development builds already contain a Vulkan -> OpenGL recovery path.
+   - Promote the idea to a user-facing, explicit safe launch rather than enabling an opaque automatic fallback: conservative renderer/resolution/60 Hz and optionally mods off for one launch without overwriting saved settings.
+
+4. **Diagnostics dashboard**
+   - Expand Diagnostics beyond setup + detailed logs.
+   - Show writable free space, shader-cache size, log size, active renderer, last crash state and filesystem-access mode.
+   - Provide safe cache/log cleanup actions that never touch saves, firmware, keys or game files.
+
+5. **Library quality-of-life**
+   - Favorites.
+   - Sort by name / recently played / favorite.
+   - Optional compact compatibility note per title.
+   - Search is lower priority on a controller-only TV UI unless an on-screen keyboard is added.
+
+6. **Per-game controller tuning**
+   - Layout is already per game.
+   - Optional per-game deadzone/vibration strength can follow if real titles need different values.
+
+7. **Controller calibration screen**
+   - Live stick/trigger values and deadzone preview.
+   - Useful for drift diagnosis and selecting the deadzone instead of guessing.
+
+
 1. **Per-game performance presets**
    - Safe / Balanced / Quality presets that populate renderer, internal resolution, filter and refresh while keeping advanced manual settings available.
 
