@@ -747,6 +747,9 @@ void Launcher::draw_game(Canvas &c, float open)
         return index >= 0 && index < static_cast<int>(values.size()) ?
                    values[static_cast<std::size_t>(index)] : std::string{"-"};
     };
+    const auto percentage = [](int value) {
+        return fill(tr("{0}%"), {std::to_string(value)});
+    };
     const std::string values[] = {
         game_docked_ ? tr("Docked") : tr("Handheld"),
         game_settings_.renderer >= 0 ? kRenderers[game_settings_.renderer] :
@@ -760,8 +763,8 @@ void Launcher::draw_game(Canvas &c, float open)
             fill(tr("Default ({0})"), {short_resolution(pick(resolutions, prefs_.resolution))}),
         game_settings_.filter >= 0 ? pick(filters, game_settings_.filter) :
             fill(tr("Default ({0})"), {pick(filters, prefs_.filter)}),
-        game_settings_.fsr_sharpness >= 0 ? percent(game_settings_.fsr_sharpness) :
-            fill(tr("Default ({0})"), {percent(prefs_.fsr_sharpness)}),
+        game_settings_.fsr_sharpness >= 0 ? percentage(game_settings_.fsr_sharpness) :
+            fill(tr("Default ({0})"), {percentage(prefs_.fsr_sharpness)}),
         game_settings_.anti_aliasing >= 0 ? pick(anti_aliasing, game_settings_.anti_aliasing) :
             fill(tr("Default ({0})"), {pick(anti_aliasing, prefs_.anti_aliasing)}),
         game_settings_.refresh >= 0 ? hertz(game_settings_.refresh) :
