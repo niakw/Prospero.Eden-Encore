@@ -17,6 +17,7 @@ int main(int argc, char** argv) {
     assert(argc == 2);
     namespace fs = std::filesystem;
     const fs::path base = argv[1];
+    fs::create_directories(base);
 
     // Clean install: the root is created and the temporary proof file is removed.
     const fs::path clean = base / "clean";
