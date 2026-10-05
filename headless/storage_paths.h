@@ -58,16 +58,18 @@ inline std::string BackupDir() { return FilesystemAccess() ? std::string{kDataDi
                                                            ConfigDir() + "/backup"; }
 
 inline bool ValidAssetsDir(std::string_view path) {
-    // "/" would make library/setup scans walk the console root and can expose unrelated system
-    // folders in the browser. Game files must live in an explicit directory.
+    // Storage roots are user-data locations only. "/" and system/application mounts must never
+    // become recursive library roots while Encore has filesystem access.
     if (path.empty() || path == "/" || path.size() > 240 || path.front() != '/') return false;
     if (path.size() > 1 && path.back() == '/') return false;
+    if (!(path.starts_with("/data/") || path.starts_with("/mnt/"))) return false;
+    if (path.starts_with("/mnt/sandbox/")) return false;
     for (unsigned char c : path)
         if (c < 32 || c == 127 || c == '\\') return false;
     for (std::size_t start = 1; start <= path.size();) {
         const std::size_t end = path.find('/', start);
         const std::string_view part = path.substr(start, end == std::string_view::npos ? path.npos : end - start);
-        if (part.empty() || part == "." || part == "..") return path == "/";
+        if (part.empty() || part == "." || part == "..") return false;
         if (end == std::string_view::npos) break;
         start = end + 1;
     }
