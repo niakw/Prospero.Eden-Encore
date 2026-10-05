@@ -11,7 +11,7 @@
 //     "system": { "language": "en-US" },
 //     "accessibility": { "large_text": false, "high_contrast": false, "reduce_motion": false },
 //     "diagnostics": { "detailed_logging": false },
-//     "game_files": "/mnt/ext1/eden",
+//     "game_files": "/mnt/ext1/eden", // legacy JSON key: one Encore storage root
 //     "library": { "last_game": "Game [id].nsp", "recent": ["Game [id].nsp"] },
 //     "games": { "0100000000010000": { "console_mode": "handheld", "renderer": "opengl",
 //                                      "resolution": "0.75x", "upscaling_filter": "fsr",
@@ -491,7 +491,8 @@ inline bool SaveRecentGame(std::string_view name, const std::string& file = Sett
     return Settings::Write(document, file);
 }
 
-// The saved game files folder, or empty when none is saved.
+// The saved Encore storage root, or empty for the internal /data/prosperoeden default.
+// The JSON key remains "game_files" for backward compatibility with ProsperoEden.
 inline std::string LoadSavedAssetsDir(const std::string& file = SettingsFile()) {
     const std::string value = Settings::String(Settings::Load(file), Settings::Json::json_pointer("/game_files"));
     return ValidAssetsDir(value) ? value : std::string{};
