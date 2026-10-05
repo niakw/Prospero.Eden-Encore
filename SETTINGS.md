@@ -208,20 +208,32 @@ Increase one setting at a time. If frame pacing worsens, return TV output to 144
 
 ### 4K TV — demanding game / unstable frame pacing
 
-A useful starting point for a heavy modern title:
+For a heavy title, start by separating **stability** from **image reconstruction**.
+
+**Preferred first test when the picture already looked grainy/pixelated:**
 
 | Setting | Value |
 | --- | --- |
 | Renderer | Vulkan |
 | TV output | **1080p** |
-| Game resolution | **0.75x** |
-| Filter | **AMD FSR** |
-| FSR sharpness | **40–50%** |
-| Anti-aliasing | None |
+| Game resolution | **1x** |
+| Filter | **Bilinear** |
+| FSR sharpness | Not used |
+| Anti-aliasing | None first; test FXAA only if edge shimmer remains |
 | Refresh | 60 Hz |
-| Console mode | Docked; try Handheld if still too heavy |
+| Console mode | Docked |
 
-Once stable, try 1x before raising TV output.
+This avoids adding FSR sharpening while diagnosing grain, shimmer or pixel crawl. If 1x is still too
+heavy after runtime/stability fixes, then try **0.75x + AMD FSR**, but begin around **25–35% FSR
+sharpness**, not an aggressive value. Raise sharpness only if the image is too soft.
+
+Anti-aliasing can reduce jagged edges or shimmer, but it does not fix every kind of grain. FXAA may
+hide some high-frequency shimmer at the cost of softness; SMAA preserves more detail but is a little
+heavier. A game's own temporal AA/reconstruction may also interact with Encore's post-process AA, so
+there is no universally best AA choice.
+
+Once stable and visually clean at 1080p/1x, try 1440p output. Treat 2160p and internal scales above
+1x as later image-quality experiments, not starting values.
 
 ### 1080p TV
 
