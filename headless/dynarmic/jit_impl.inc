@@ -455,29 +455,45 @@ private:
             EdenWaitWhileClearing();  // another member is clearing everything
             return;
         }
+        const auto clear_started = std::chrono::steady_clock::now();
         std::vector<Impl*> members;
         {
             std::lock_guard lock{group->mutex};
             for (void* member : group->members)
                 members.push_back(static_cast<Impl*>(member));
         }
+        std::printf("EDEN_JIT_CLEAR_BEGIN core=%u members=%zu epoch=%llu\n",
+                    unsigned(conf.processor_id), members.size(),
+                    static_cast<unsigned long long>(group->epoch.load(std::memory_order_relaxed)));
         for (Impl* member : members)
             if (member != this)
                 member->HaltExecution(HaltReason::CacheInvalidation);
+
+        // These workers may have real-time priority on PS5. A pure yield loop can keep winning
+        // the same CPU and prevent the core we just halted from ever reaching its dispatcher.
+        // Spin briefly for the normal fast case, then sleep so the owner is guaranteed a chance.
+        const auto wait_until_quiescent = [](const auto& predicate) {
+            unsigned spins = 0;
+            while (predicate()) {
+                if (++spins < 256)
+                    __builtin_ia32_pause();
+                else
+                    std::this_thread::sleep_for(std::chrono::microseconds(50));
+            }
+        };
         for (Impl* member : members) {
             if (member == this)
                 continue;
-            for (;;) {
+            wait_until_quiescent([member] {
                 const u32 state = member->eden_state.load(std::memory_order_seq_cst);
-                if (state != EdenRunning && state != EdenCompiling)
-                    break;
-                std::this_thread::yield();
-            }
+                return state == EdenRunning || state == EdenCompiling;
+            });
         }
         // A precompilation may be emitting into any member's region, this core's included.
         for (Impl* member : members)
-            while (member->eden_pre_state.load(std::memory_order_seq_cst) == EdenCompiling)
-                std::this_thread::yield();
+            wait_until_quiescent([member] {
+                return member->eden_pre_state.load(std::memory_order_seq_cst) == EdenCompiling;
+            });
         {
             std::lock_guard lock{group->mutex};
             // Eden asks every core's JIT for the same clear or invalidation: this clear satisfies
@@ -505,6 +521,12 @@ private:
             group->clearing.store(false, std::memory_order_seq_cst);
         }
         group->parked.notify_all();
+        const auto clear_us = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now() - clear_started).count();
+        std::printf("EDEN_JIT_CLEAR_END core=%u members=%zu epoch=%llu elapsed_us=%lld\n",
+                    unsigned(conf.processor_id), members.size(),
+                    static_cast<unsigned long long>(group->epoch.load(std::memory_order_relaxed)),
+                    static_cast<long long>(clear_us));
     }
 
     // What generated code reads from the JIT state instead of embedding (a64_jitstate.h).
