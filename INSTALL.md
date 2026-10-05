@@ -16,13 +16,15 @@ Encore's primary validated target is:
 Encore does **not** provide or install console keys, firmware, games, FPKG entitlement support or
 kstuff.
 
-Your persistent Encore data is stored under:
+Encore has two storage modes:
 
-```text
-/data/prosperoeden
-```
+- **External-storage mode (default):** persistent data lives under `/data/prosperoeden` and Encore
+  can use custom/USB game-file folders through the hardened one-shot filesystem helper.
+- **Self-contained mode (optional):** Encore never requests filesystem elevation. Keys, firmware,
+  games, updates and mods stay under the app's own `assets/` tree; mutable data stays in the
+  title-local `/download0` sandbox.
 
-Updating the application does not require deleting that directory.
+Updating the application does not require deleting either data area.
 
 ---
 
@@ -54,10 +56,13 @@ Why this matters: very old ProsperoEden layouts could still keep game files unde
 /data/homebrew/PPSA99008/assets
 ```
 
-On first elevated Encore startup, that legacy folder is migrated safely toward
+On the normal first Encore startup, that legacy folder can be migrated safely toward
 `/data/prosperoeden` when it is still the active game-files location. Existing custom game-files
 folders are left untouched, destination conflicts are never overwritten, and a stale setting that
 points to an already-removed legacy `assets` folder is repaired to `/data/prosperoeden`.
+
+For an existing ProsperoEden installation, **do this normal first launch before enabling
+self-contained mode**. That preserves the old migration path.
 
 If the old application folder was physically deleted **before** migration, files that existed only
 inside its `assets/` directory cannot be recreated by Encore. Persistent data that was already
@@ -74,6 +79,57 @@ If ShadowMountPlus reports **`TitleDir bridge unavailable`**, that failure is in
 ShadowMountPlus/title-registration path, before Encore itself is running. It does not mean Encore's
 filesystem elevation failed. Use the ZIP/folder installation path to get Encore running and migrated
 first, then troubleshoot the ShadowMountPlus environment separately.
+
+---
+
+## Optional self-contained mode — no filesystem elevation
+
+This mode is for users who want the simplest fixed folder layout and do not need a custom/USB
+game-files path.
+
+Before launching Encore, keep your own files under the installed title:
+
+```text
+/data/homebrew/PPSA99008/assets/keys/prod.keys
+/data/homebrew/PPSA99008/assets/firmware/*.nca
+/data/homebrew/PPSA99008/assets/roms/
+/data/homebrew/PPSA99008/assets/updates/
+/data/homebrew/PPSA99008/assets/mods/
+/data/homebrew/PPSA99008/assets/save-import/
+/data/homebrew/PPSA99008/assets/ryujinx/
+```
+
+Then create an empty marker file:
+
+```text
+/data/homebrew/PPSA99008/self-contained.txt
+```
+
+On the next start, Encore sees that marker through `/app0` before any filesystem request and
+**does not contact the elevation helper at all**.
+
+In this mode:
+
+- the game-files root is fixed to `/app0/assets`;
+- Settings cannot switch it to another folder;
+- keys, firmware, games, updates and mods are read from the app folder;
+- settings, saves, logs, caches, save backups and exports are written to `/download0`;
+- the RADV/OpenGL shader caches stay in writable sandbox storage;
+- if a required key/firmware file is missing, Encore reports setup incomplete instead of falling
+  back to elevation.
+
+### Updating a self-contained install
+
+**Do not delete the existing `PPSA99008` folder first.**
+
+Copy the new release files over the existing app folder so your user-created `assets/` tree and
+`self-contained.txt` remain in place. The official release ZIP does not contain your keys,
+firmware, games or saves.
+
+If you intentionally remove/re-register the title, remember that `/download0` is title-local
+sandbox data. Keep your own backups of important saves before destructive title-management work.
+
+To return to external-storage mode, remove `self-contained.txt` and restart Encore.
 
 ---
 
@@ -121,8 +177,11 @@ Do not copy only `eboot.bin`; keep the whole title folder together.
 
 Start the application through your normal PS5 homebrew launcher/runtime.
 
-On startup, Encore attempts its one-shot filesystem-access request. If that request is unavailable,
-Encore falls back to its sandbox paths instead of reporting a false success.
+On startup:
+
+- with `self-contained.txt`, Encore stays entirely in its app/sandbox paths and does not request
+  filesystem elevation;
+- without the marker, Encore uses the external-storage path and its hardened one-shot request.
 
 ---
 
@@ -165,7 +224,7 @@ FFPFSC is useful as an **alternative deployment/mount path**:
 
 It does **not**:
 
-- bypass Encore's filesystem elevation;
+- by itself select self-contained/no-elevation mode;
 - repair PS5 FPKG entitlement/PPR;
 - replace kstuff;
 - make an unsupported firmware compatible;
@@ -185,7 +244,7 @@ If ShadowMountPlus itself cannot mount the image, use the ZIP method.
 | Requires ShadowMountPlus | No | **Yes** |
 | Convenient as one file | No | **Yes** |
 | Solves FPKG/kstuff problems | No | No |
-| Changes Encore elevation | No | No |
+| Can use self-contained no-elevation mode | **Yes** | Official image: No |
 
 ---
 
@@ -214,14 +273,16 @@ Compare the result with `SHA256SUMS`.
 
 ### ZIP installation
 
+For external-storage mode:
+
 1. Keep `/data/prosperoeden`.
-2. Replace the application folder:
+2. Replace/update the application folder without deleting the persistent data directory.
 
-```text
-/data/homebrew/PPSA99008
-```
+For self-contained mode:
 
-with the new release folder.
+1. **Do not delete the old `PPSA99008` folder first.**
+2. Copy the new release files over it.
+3. Preserve your `assets/` tree and `self-contained.txt`.
 
 ### FFPFSC installation
 
@@ -235,13 +296,14 @@ configuration/data.
 
 ## User data
 
-Encore keeps application data separately from the release files:
+In external-storage mode, Encore keeps mutable application data under:
 
 ```text
 /data/prosperoeden
 ```
 
-That area may contain configuration, covers, logs, caches and emulator data created by Encore.
+In self-contained mode, mutable application data uses the title's writable `/download0` sandbox
+while user-supplied game files remain under `PPSA99008/assets`.
 
 Game files, keys and firmware are not distributed by this project.
 
