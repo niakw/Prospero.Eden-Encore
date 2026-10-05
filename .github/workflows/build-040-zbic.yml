@@ -68,6 +68,9 @@ jobs:
             prospero-eden-encore-040-${{ runner.os }}-
             prosperoeden-040-zbic-${{ runner.os }}-
 
+      - name: Validate release metadata
+        run: python3 -B tools/ci/check-release-metadata.py
+
       - name: Preflight release packaging
         run: bash tools/ci/package-image.sh --prepare
 
