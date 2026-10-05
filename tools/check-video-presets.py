@@ -8,6 +8,8 @@ for expected in ('{1, 0, 2, 0, 0}', '{1, 0, 1, 1, 0}', '{1, 0, 0, 0, 0}'):
     assert expected in preset, expected
 assert 'ApplyVideoPreset(prefs_, preset);' in settings
 assert 'ApplyVideoPreset(next, preset);' in library
+for reset in ('next.renderer = -1;', 'next.resolution = -1;', 'next.filter = -1;', 'next.refresh = -1;'):
+    assert reset in library, reset
 assert 'tr("VIDEO PRESET")' in settings
 assert 'tr("DETAILED LOGGING")' in settings
 assert 'TR("Video preset")' in settings
