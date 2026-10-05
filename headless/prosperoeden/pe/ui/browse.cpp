@@ -83,7 +83,9 @@ bool Launcher::browse_to(const std::string &directory)
         return false;
     browse_dir_ = directory;
     browse_entries_.clear();
-    if (directory != "/")
+    const bool fixed_root = services_.filesystem_access() == -2 &&
+                            directory == services_.files_folder();
+    if (directory != "/" && !fixed_root)
         browse_entries_.push_back("..");
     browse_entries_.insert(browse_entries_.end(), folders.begin(), folders.end());
     files_.reset(static_cast<int>(browse_entries_.size()), 0);
@@ -257,8 +259,9 @@ void Launcher::draw_files(Canvas &c)
     const int access = services_.filesystem_access();
     line(634.0f, tr("ACCESS"),
          access == 0 ? tr("Full filesystem") :
-                       fill(tr("Sandboxed (code {0}): app folder only"), {std::to_string(access)}),
-         state(access == 0));
+         access == -2 ? tr("Sandbox only") :
+                        fill(tr("Sandboxed (code {0}): app folder only"), {std::to_string(access)}),
+         state(access == 0 || access == -2));
     list.rounded_rect({1016.0f, 698.0f, 748.0f, 1.0f}, 0.0f, theme::kRule);
     notice_block(c,
                  message_.empty() ?
