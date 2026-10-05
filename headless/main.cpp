@@ -341,12 +341,9 @@ int main(int argc, char** argv) {
 #ifdef PS5_NATIVE
         Eden::BootTrace::Begin(Eden::kAppVersion, __DATE__ " " __TIME__);
 
-        // Prefer the sandbox when the running title already carries its own game-file layout.
-        // keys/, firmware/, roms/, updates/ and mods/ are then read from /app0/assets, while
-        // mutable state stays in /download0. No filesystem elevation is requested at all.
+        // One hardened one-shot filesystem request covers both the internal
+        // /data/prosperoeden root and an optional external storage root.
         Eden::BootTrace::Line("requesting filesystem access");
-        // External/custom folders and /data/prosperoeden still use the existing one-shot path.
-        // The request remains single-threaded and fails closed.
         const uid_t uid_before = getuid();
         const uid_t euid_before = geteuid();
         const gid_t gid_before = getgid();
@@ -448,7 +445,8 @@ int main(int argc, char** argv) {
                 " app=" + Eden::AppDir() + " data=" + Eden::UserDir() + " game_files=" + Eden::AssetsDir();
             Eden::Report("filesystem access", access.c_str());
             if (Eden::FilesystemAccess() && Eden::AssetsDir() == Eden::kDefaultAssetsDir)
-                for (const char* folder : {"/keys", "/firmware", "/roms", "/updates", "/mods", "/ryujinx"})
+                for (const char* folder : {"/keys", "/firmware", "/roms", "/updates", "/mods",
+                                           "/save-import", "/save-export", "/ryujinx"})
                     (void)mkdir((std::string{Eden::kDefaultAssetsDir} + folder).c_str(), 0777);
             // Keep RADV's shader cache in writable data, never under /app0. Elevated installs use
             // /data/prosperoeden; self-contained/sandboxed installs use /download0.
@@ -699,7 +697,7 @@ int main(int argc, char** argv) {
             for (const char* capture : {"game-frame.ppm", "scanout.ppm", "game-hud.ppm", "game-hud-steady.ppm",
                                         "game-hud-late.ppm"})
                 std::filesystem::remove(std::filesystem::path{Eden::LogsDir()} / capture);
-            // Firmware and keys stay in the user-provided read-only assets tree.
+            // Firmware, keys, games, updates and mods all resolve from the selected storage root.
             std::puts("EDEN_GAME_ASSETS_READY");
         }
         constexpr bool cpu_pressure = false;
