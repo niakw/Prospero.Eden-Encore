@@ -1287,6 +1287,10 @@ msgid "VIDEO PRESET"
 msgstr "PRÉRÉGLAGE VIDÉO"
 
 #: synchronized release UI
+msgid "DETAILED LOGGING"
+msgstr "JOURNALISATION DÉTAILLÉE"
+
+#: synchronized release UI
 msgid "Button layout"
 msgstr "Disposition des boutons"
 
