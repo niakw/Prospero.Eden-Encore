@@ -19,6 +19,7 @@ for forbidden in ("std::thread", "std::jthread", "pthread_create"):
     assert forbidden not in body[:request], f"{forbidden} starts before the one-shot helper"
 
 assert "ProbeWritableRoot(Eden::kDataDir)" in body
+assert body.index("MigrateLegacyInstallAssets") < body.index("PrepareStorageLayout();") < body.index("BootTrace::Ready")
 assert "invalid_success_identity" not in body, "uid/gid inference must not kill a valid filesystem grant"
 assert 'target_title_id[] = "PPSA99008"' in helper
 assert 'sandbox-elevator.elf' in packager
