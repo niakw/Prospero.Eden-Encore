@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "elevation.hpp"
+#include "../boot_trace.h"
 
 #include <array>
 #include <fcntl.h>
@@ -52,26 +53,41 @@ elevation::Status exchange(int socket, const elevation::wire::Message &request) 
 {
     using namespace elevation;
     using wire::Kind;
-    if (!send_all(socket, &request, sizeof(request)))
+    Eden::BootTrace::Line("elevation: send request");
+    if (!send_all(socket, &request, sizeof(request))) {
+        Eden::BootTrace::Line("elevation: request send failed");
         return Status::transport_error;
+    }
     wire::Message reply{};
-    if (!receive(socket, reply))
+    if (!receive(socket, reply)) {
+        Eden::BootTrace::Line("elevation: first response receive failed");
         return Status::transport_error;
+    }
     if (wire::matches(reply, request, Kind::response) && reply.status != Status::ok)
         return reply.status;
-    if (!wire::matches(reply, request, Kind::prepare) || reply.status != Status::ok)
+    if (!wire::matches(reply, request, Kind::prepare) || reply.status != Status::ok) {
+        Eden::BootTrace::Line("elevation: unexpected first response kind=%u status=%u",
+                              static_cast<unsigned>(reply.kind), static_cast<unsigned>(reply.status));
         return Status::protocol_error;
+    }
+    Eden::BootTrace::Line("elevation: prepare received");
 
     // The native same-UID syscall clones credentials before the helper edits them.
     // The helper independently verifies that p_ucred actually changed.
     wire::Message prepared = request;
     prepared.kind = Kind::prepared;
+    Eden::BootTrace::Line("elevation: clone credentials");
     if (seteuid(geteuid()) != 0)
         prepared.status = Status::prepare_failed;
-    if (!send_all(socket, &prepared, sizeof(prepared)) || !receive(socket, reply))
+    if (!send_all(socket, &prepared, sizeof(prepared)) || !receive(socket, reply)) {
+        Eden::BootTrace::Line("elevation: prepared/final exchange failed");
         return Status::transport_error;
-    if (!wire::matches(reply, request, Kind::response))
+    }
+    if (!wire::matches(reply, request, Kind::response)) {
+        Eden::BootTrace::Line("elevation: invalid final response");
         return Status::protocol_error;
+    }
+    Eden::BootTrace::Line("elevation: final response status=%u", static_cast<unsigned>(reply.status));
     if (prepared.status != Status::ok)
         return Status::prepare_failed;
     return reply.status;
@@ -81,12 +97,15 @@ elevation::Status submit(int socket, int helper, const elevation::wire::Message 
 {
     using elevation::Status;
     // SceNet uses integer microseconds and its own timeout options, not BSD timeval.
+    Eden::BootTrace::Line("elevation: configure socket");
     constexpr int socket_level = 0xffff;
     constexpr int timeout_us = elevation::wire::io_timeout_us;
     for (const int option : {0x1105, 0x1106, 0x1109}) // send, receive, connect
     {
-        if (sceNetSetsockopt(socket, socket_level, option, &timeout_us, sizeof(timeout_us)) < 0)
+        if (sceNetSetsockopt(socket, socket_level, option, &timeout_us, sizeof(timeout_us)) < 0) {
+            Eden::BootTrace::Line("elevation: socket option 0x%x failed", option);
             return Status::transport_error;
+        }
     }
     constexpr std::uint16_t port = 9021;
     const NetSockaddrIn address{sizeof(NetSockaddrIn),
@@ -95,18 +114,27 @@ elevation::Status submit(int socket, int helper, const elevation::wire::Message 
                                 0x0100007f,
                                 0,
                                 {0}};
-    if (sceNetConnect(socket, &address, sizeof(address)) < 0)
+    Eden::BootTrace::Line("elevation: connect 127.0.0.1:9021");
+    if (sceNetConnect(socket, &address, sizeof(address)) < 0) {
+        Eden::BootTrace::Line("elevation: connect failed");
         return Status::transport_error;
+    }
+    Eden::BootTrace::Line("elevation: connected; stream helper");
 
     std::array<std::uint8_t, 4096> buffer{};
+    std::size_t streamed = 0;
     for (;;)
     {
         const auto count = sceKernelRead(helper, buffer.data(), buffer.size());
         if (count == 0)
             break;
-        if (count < 0 || !send_all(socket, buffer.data(), static_cast<std::size_t>(count)))
+        if (count < 0 || !send_all(socket, buffer.data(), static_cast<std::size_t>(count))) {
+            Eden::BootTrace::Line("elevation: helper stream failed after %zu bytes", streamed);
             return Status::transport_error;
+        }
+        streamed += static_cast<std::size_t>(count);
     }
+    Eden::BootTrace::Line("elevation: helper stream complete bytes=%zu", streamed);
     // elfldr consumes the ELF's section extent, then hands this same connection
     // to the helper as stdin/stdout. Keep it open for the protocol exchange.
     return exchange(socket, request);
@@ -115,6 +143,7 @@ elevation::Status submit(int socket, int helper, const elevation::wire::Message 
 
 elevation::Status elevation::request(Capability capability, const char *helper_path) noexcept
 {
+    Eden::BootTrace::Line("elevation: request begin");
     wire::Message message{};
     message.pid = static_cast<std::uint32_t>(getpid());
     message.capability = capability;
@@ -123,12 +152,20 @@ elevation::Status elevation::request(Capability capability, const char *helper_p
     if (helper_path == nullptr)
         return Status::invalid_request;
     const int helper = sceKernelOpen(helper_path, O_RDONLY, 0);
-    if (helper < 0)
+    if (helper < 0) {
+        Eden::BootTrace::Line("elevation: helper open failed path=%s", helper_path);
         return Status::unavailable;
+    }
+    Eden::BootTrace::Line("elevation: helper opened");
     const int socket = sceNetSocket("sandbox_elevator", 2, 1, 6);
+    if (socket < 0)
+        Eden::BootTrace::Line("elevation: socket create failed");
+    else
+        Eden::BootTrace::Line("elevation: socket created");
     const auto result = socket < 0 ? Status::transport_error : submit(socket, helper, message);
     if (socket >= 0)
         (void)sceNetSocketClose(socket);
     (void)sceKernelClose(helper);
+    Eden::BootTrace::Line("elevation: request end status=%u", static_cast<unsigned>(result));
     return result;
 }
