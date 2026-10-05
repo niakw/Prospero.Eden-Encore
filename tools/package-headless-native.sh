@@ -56,7 +56,7 @@ python3 - "$app/ui/art/brand.tga" <<'PY'
 import pathlib, sys
 data = pathlib.Path(sys.argv[1]).read_bytes()
 if len(data) < 18 or data[1] != 0 or data[2] != 2 or data[16] not in (24, 32):
-    raise SystemExit("Generated Eden brand.tga is not an uncompressed true-colour TGA")
+    raise SystemExit("Generated Encore brand.tga is not an uncompressed true-colour TGA")
 PY
 # Filesystem access helper (headless/elevation, built for PPSA99008): elfldr runs it at startup.
 make -s -C "$root/headless/elevation/helper" OUTPUT="$root/build/elevation/sandbox-elevator.elf" \
