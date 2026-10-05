@@ -444,10 +444,16 @@ int main(int argc, char** argv) {
             const std::string access = "status=" + std::to_string(Eden::FilesystemAccessStatus()) +
                 " app=" + Eden::AppDir() + " data=" + Eden::UserDir() + " game_files=" + Eden::AssetsDir();
             Eden::Report("filesystem access", access.c_str());
-            if (Eden::FilesystemAccess() && Eden::AssetsDir() == Eden::kDefaultAssetsDir)
-                for (const char* folder : {"/keys", "/firmware", "/roms", "/updates", "/mods",
-                                           "/save-import", "/save-export", "/ryujinx"})
-                    (void)mkdir((std::string{Eden::kDefaultAssetsDir} + folder).c_str(), 0777);
+            if (Eden::FilesystemAccess()) {
+                const std::string storage_root = Eden::AssetsDir();
+                if (storage_root == Eden::kDefaultAssetsDir || Eden::DirectoryExists(storage_root)) {
+                    if (storage_root == Eden::kDefaultAssetsDir)
+                        (void)mkdir(storage_root.c_str(), 0777);
+                    for (const char* folder : {"keys", "firmware", "roms", "updates", "mods",
+                                               "save-import", "save-export", "ryujinx"})
+                        (void)mkdir((storage_root + "/" + folder).c_str(), 0777);
+                }
+            }
             // Keep RADV's shader cache in writable data, never under /app0. Elevated installs use
             // /data/prosperoeden; self-contained/sandboxed installs use /download0.
             const std::string cache_root = Eden::FilesystemAccess() ?
