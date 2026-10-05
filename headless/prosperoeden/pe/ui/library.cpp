@@ -36,8 +36,11 @@ enum GameRow : int
     row_mode,
     row_renderer,
     row_performance,
+    row_output,
     row_resolution,
     row_filter,
+    row_fsr_sharpness,
+    row_anti_aliasing,
     row_refresh,
     row_controls,
     row_mods,
@@ -681,16 +684,27 @@ void Launcher::press_game(Key key)
                 // the global values; otherwise "Default" would silently keep old overrides.
                 next.performance_profile = -1;
                 next.renderer = -1;
+                next.output = -1;
                 next.resolution = -1;
                 next.filter = -1;
+                next.fsr_sharpness = -1;
+                next.anti_aliasing = -1;
                 next.refresh = -1;
             }
         }
+        if (option_ == row_output)
+            next.output = cycle(next.output, 3);
         if (option_ == row_resolution)
             next.resolution =
                 cycle(next.resolution, static_cast<int>(services_.resolution_labels().size()));
         if (option_ == row_filter)
             next.filter = cycle(next.filter, static_cast<int>(services_.filter_labels().size()));
+        if (option_ == row_fsr_sharpness) {
+            const int current = next.fsr_sharpness >= 0 ? next.fsr_sharpness : prefs_.fsr_sharpness;
+            next.fsr_sharpness = std::clamp(current + 5 * step, 0, 100);
+        }
+        if (option_ == row_anti_aliasing)
+            next.anti_aliasing = cycle(next.anti_aliasing, static_cast<int>(services_.anti_aliasing_labels().size()));
         if (option_ == row_refresh)
             next.refresh = cycle(next.refresh, 2);
         saved = services_.set_game_settings(game.title_id, next);
@@ -726,6 +740,8 @@ void Launcher::draw_game(Canvas &c, float open)
     const auto short_resolution = [](const std::string &label)
     { return label.substr(0, label.find(' ')); };
     const auto &filters = services_.filter_labels();
+    const auto &anti_aliasing = services_.anti_aliasing_labels();
+    static constexpr const char *kOutputs[] = {"1080p", "1440p", "2160p"};
     const auto pick = [](const std::vector<std::string> &values, int index) -> std::string
     {
         return index >= 0 && index < static_cast<int>(values.size()) ?
@@ -738,10 +754,16 @@ void Launcher::draw_game(Canvas &c, float open)
         game_settings_.performance_profile >= 0 ?
             services_.performance_profile_labels()[static_cast<std::size_t>(game_settings_.performance_profile)] :
             fill(tr("Default ({0})"), {services_.performance_profile_labels()[static_cast<std::size_t>(std::clamp(prefs_.performance_profile, 0, 2))]}),
+        game_settings_.output >= 0 ? kOutputs[game_settings_.output] :
+            fill(tr("Default ({0})"), {kOutputs[std::clamp(prefs_.output, 0, 2)]}),
         game_settings_.resolution >= 0 ? pick(resolutions, game_settings_.resolution) :
             fill(tr("Default ({0})"), {short_resolution(pick(resolutions, prefs_.resolution))}),
         game_settings_.filter >= 0 ? pick(filters, game_settings_.filter) :
             fill(tr("Default ({0})"), {pick(filters, prefs_.filter)}),
+        game_settings_.fsr_sharpness >= 0 ? percent(game_settings_.fsr_sharpness) :
+            fill(tr("Default ({0})"), {percent(prefs_.fsr_sharpness)}),
+        game_settings_.anti_aliasing >= 0 ? pick(anti_aliasing, game_settings_.anti_aliasing) :
+            fill(tr("Default ({0})"), {pick(anti_aliasing, prefs_.anti_aliasing)}),
         game_settings_.refresh >= 0 ? hertz(game_settings_.refresh) :
             fill(tr("Default ({0})"), {hertz(prefs_.refresh)}),
         game_settings_.own_mapping ? tr("Custom") : tr("Global"),
@@ -755,9 +777,10 @@ void Launcher::draw_game(Canvas &c, float open)
         import_source_ == SaveSource::ryujinx ? tr("Ryujinx save found") :
         import_source_ == SaveSource::folder ? tr("Save folder found") : tr("Nothing to import"),
     };
-    static constexpr const char *kLabels[] = {TR("Console mode"), TR("Renderer"), TR("Video preset"),
-                                              TR("Resolution"), TR("Upscaling filter"), TR("Refresh rate"),
-                                              TR("Button mapping"), TR("Mods"), TR("Save data")};
+    static constexpr const char *kLabels[] = {
+        TR("Console mode"), TR("Renderer"), TR("Video preset"), TR("TV output"),
+        TR("Resolution"), TR("Upscaling filter"), TR("FSR sharpness"), TR("Anti-aliasing"),
+        TR("Refresh rate"), TR("Button mapping"), TR("Mods"), TR("Save data")};
     // Five rows show; the list scrolls to the others.
     list.push_clip({kDialogWindow.x - 24.0f, kDialogWindow.y - 6.0f, kDialogWindow.w + 48.0f,
                     kDialogWindow.h + 12.0f});
