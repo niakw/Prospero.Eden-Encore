@@ -83,18 +83,14 @@ Reports are especially useful for:
 
 ## Filesystem access security model
 
-Encore prefers avoiding elevation entirely when the user explicitly selects self-contained mode.
+Encore uses one storage contract. Internal storage defaults to `/data/prosperoeden`; an optional
+external storage root may be selected, but it uses the same fixed
+`keys/firmware/roms/updates/mods/save-import/save-export/ryujinx` layout.
 
-With `self-contained.txt` present in the running title, Encore checks the marker through `/app0`
-before any filesystem request. The game-files root is fixed to `/app0/assets`; mutable state,
-backups, exports and caches remain in writable `/download0` storage. The elevation helper is not
-contacted in this mode.
-
-Without the marker, Encore keeps the ProsperoEden 1.000.040 one-request filesystem-elevation design
-for `/data/prosperoeden`, migrations and custom/external game-file locations instead of adopting
+Encore keeps the ProsperoEden 1.000.040 one-request filesystem-elevation design instead of adopting
 the newer Lapy path.
 
-The fallback helper:
+The helper:
 
 - is packaged for the exact title ID `PPSA99008`;
 - accepts only the `filesystem` capability;
@@ -110,10 +106,8 @@ The fallback helper:
 - uses bounded local transport timeouts;
 - handles one request and exits instead of installing a persistent privilege service.
 
-When external-storage mode is used, the helper necessarily grants the filesystem access needed for
-the selected `/data` or external paths. Encore limits that path to one validated request and
-verifies the result/rollback. Users who do not need external storage can avoid that request
-completely with self-contained mode.
+Legacy migration is transactional: the complete move is preflighted, destination conflicts are not
+overwritten, and directories already moved are rolled back if migration or root persistence fails.
 
 Implementation details are documented in
 [`headless/elevation/README.md`](headless/elevation/README.md).
@@ -154,7 +148,6 @@ The repository uses or is designed to use:
 - release publication only after a successful shipping build;
 - explicit Git ignores for keys, ROM/container files and local save-transfer data;
 - save-import symlink rejection and regression tests;
-- an explicit self-contained mode that skips elevation entirely and keeps writes in the title
-  sandbox.
+- one internal/external storage-root schema with guarded legacy migration.
 
 No keys, firmware, games or proprietary console data should ever be committed to this repository.
