@@ -173,6 +173,8 @@ See [headless/elevation/README.md](headless/elevation/README.md) for implementat
 
 ## Recommended defaults
 
+See **[SETTINGS.md](SETTINGS.md)** for every exposed setting, defaults, per-game overrides and recommended profiles for 4K/1080p displays and demanding games.
+
 Encore starts conservative:
 
 | Setting | Default |
