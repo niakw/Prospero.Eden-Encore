@@ -153,15 +153,8 @@ static bool CopySandboxTree(const std::filesystem::path& from,
     return !error;
 }
 
-static bool LegacyGameFilesRemain(const std::filesystem::path& legacy) {
-    for (const char* name : {"keys", "firmware", "roms", "updates", "mods",
-                             "save-import", "ryujinx", "save-export"})
-        if (Eden::DirectoryExists((legacy / name).string())) return true;
-    return false;
-}
-
 static void MigrateLegacyInstallAssets() {
-    const std::string saved = Eden::LoadSavedAssetsDir();
+    const std::string saved = Eden::LoadStoredAssetsDirForMigration();
     const std::filesystem::path target{Eden::kDefaultAssetsDir};
 
     // A user who already selected another game-files folder has intentionally left the old
