@@ -15,6 +15,14 @@ inline constexpr const char* kDataDir = "/data/prosperoeden";
 inline constexpr const char* kDefaultAssetsDir = "/data/prosperoeden";
 inline constexpr const char* kInstallDir = "/data/homebrew/PPSA99008";
 inline constexpr const char* kMountedAppDir = "/system_ex/app/PPSA99008";
+inline constexpr const char* kLegacyInstallAssetsDir = "/data/homebrew/PPSA99008/assets";
+
+inline bool LegacyAppAssetsPath(std::string_view path) {
+    return path == kLegacyInstallAssetsDir ||
+           path == "/app0/assets" ||
+           path == "/system_ex/app/PPSA99008/assets" ||
+           path == "/mnt/sandbox/PPSA99008_000/app0/assets";
+}
 
 // Filesystem status: -1 not decided yet, 0 elevated filesystem access granted, otherwise the
 // elevation::Status that refused it.
