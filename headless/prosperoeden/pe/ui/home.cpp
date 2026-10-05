@@ -245,9 +245,9 @@ void Launcher::draw_home(Canvas &c)
     if (textures_.brand() != 0)
         list.rounded_image(textures_.brand(), {120.0f, 72.0f, 72.0f, 72.0f},
                            {0.0f, 0.0f, 1.0f, 1.0f}, 16.0f, kWhite);
-    text(c, "EDEN", 216.0f, baseline(72.0f, 44.0f, theme::kBrand), theme::kBrand,
+    text(c, "EDEN ENCORE", 216.0f, baseline(72.0f, 44.0f, theme::kBrand), theme::kBrand,
          theme::kText, Align::left, 3.0f);
-    text(c, fill(tr("PS5 13.60  /  0.40 IMPROVED  /  {0}"), {version_}), 216.0f, baseline(120.0f, 28.0f, theme::kSmall),
+    text(c, fill(tr("PS5 13.60  /  ENCORE  /  {0}"), {version_}), 216.0f, baseline(120.0f, 28.0f, theme::kSmall),
          theme::kSmall, theme::kMeta, Align::left, 1.0f);
     static constexpr const char *kNav[] = {TR("Library"), TR("Settings"), TR("About")};
     Rect nav[3];
