@@ -160,14 +160,20 @@ static bool LegacyGameFilesRemain(const std::filesystem::path& legacy) {
 }
 
 static void MigrateLegacyInstallAssets() {
-    const std::filesystem::path legacy{Eden::kLegacyInstallAssetsDir};
-    const std::filesystem::path target{Eden::kDefaultAssetsDir};
     const std::string saved = Eden::LoadSavedAssetsDir();
+    const std::filesystem::path target{Eden::kDefaultAssetsDir};
 
     // A user who already selected another game-files folder has intentionally left the old
     // app-local assets behind. Do not move historical/duplicate data they are no longer using.
     if (!saved.empty() && !Eden::LegacyAppAssetsPath(saved))
         return;
+
+    // Prefer the exact legacy alias recorded by ProsperoEden when it is still mounted. Otherwise
+    // use the normal folder-install location. This also covers upgrades from ShadowMountPlus
+    // mounts without assuming that /data/homebrew is the active backing source.
+    std::filesystem::path legacy{Eden::kLegacyInstallAssetsDir};
+    if (!saved.empty() && Eden::LegacyAppAssetsPath(saved) && Eden::DirectoryExists(saved))
+        legacy = saved;
 
     std::error_code error;
     const auto root_status = std::filesystem::symlink_status(legacy, error);
