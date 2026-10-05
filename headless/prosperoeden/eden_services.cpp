@@ -32,6 +32,8 @@ using pe::tr;
 
 bool IsFile(const std::string& path) {
     struct stat info {};
+    if (lstat(path.c_str(), &info) == 0) return S_ISREG(info.st_mode);
+    if (errno != EPERM && errno != EACCES) return false;
     return stat(path.c_str(), &info) == 0 && S_ISREG(info.st_mode);
 }
 
@@ -141,11 +143,18 @@ std::vector<std::string> ListEntries(const std::string& path, bool folders, bool
             const std::string entry(name, strnlen(name, length - offsetof(dirent, d_name)));
             offset += length;
             if (entry.empty() || entry == "." || entry == "..") continue;
+            if (type == DT_LNK) continue;
             bool is_folder = type == DT_DIR, is_file = type == DT_REG;
-            if (type == DT_UNKNOWN || type == DT_LNK) {
+            if (type == DT_UNKNOWN) {
                 struct stat info {};
                 const std::string full = path == "/" ? "/" + entry : path + "/" + entry;
-                if (stat(full.c_str(), &info) != 0) continue;
+                if (lstat(full.c_str(), &info) == 0) {
+                    if (S_ISLNK(info.st_mode)) continue;
+                } else if (errno != EPERM && errno != EACCES) {
+                    continue;
+                } else if (stat(full.c_str(), &info) != 0) {
+                    continue;
+                }
                 is_folder = S_ISDIR(info.st_mode);
                 is_file = S_ISREG(info.st_mode);
             }
