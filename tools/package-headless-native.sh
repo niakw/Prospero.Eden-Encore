@@ -42,11 +42,8 @@ fi
 "$builder" self --sign --in "$out/eboot.elf" --out "$app/eboot.bin" --magic 0x1D3D154F
 cp "$template/runtime/libc.prx" "$app/sce_module/libc.prx"
 cp "$root/assets/"{pic0.dds,pic1.dds,snd0.at9} "$app/sce_sys/"
-command -v rsvg-convert >/dev/null 2>&1 || {
-    echo "rsvg-convert is required to build the official Eden PS5 icon (install librsvg2-bin)" >&2
-    exit 2
-}
-rsvg-convert -w 512 -h 512 "$root/assets/eden-official.svg" -o "$app/sce_sys/icon0.png"
+# One Encore raster source feeds both the PS5 tile and the launcher brand.
+cp "$root/assets/icon0.png" "$app/sce_sys/icon0.png"
 rm -rf "$app/ui"
 cp -a "$root/headless/prosperoeden/ui" "$app/ui"
 rm -f "$app/ui/art/backdrop.tga" "$app/ui/art/backdrop-blur.tga"
@@ -80,7 +77,7 @@ value.update(titleId='PPSA99008', conceptId='99008', contentId='UP9000-PPSA99008
 import re
 value['contentVersion'] = re.search(r'kAppVersion = "([0-9.]+)"',
     (root / 'headless/prosperoeden/version.h').read_text()).group(1)
-value['localizedParameters']['en-US']['titleName'] = 'Eden 0.40 Improved'
+value['localizedParameters']['en-US']['titleName'] = 'Prospero.Eden Encore'
 value['pubtools']['loudnessSnd0'] = '-28.00'
 # The console gives a 120 Hz output (Settings > Video, headless/display_refresh.h) only to a title
 # that declares it. Declaring it changes nothing by itself: the output stays at 60 Hz until asked.
