@@ -46,6 +46,14 @@ assert struct.unpack(">II", logo_bytes[16:24]) == (512, 512), "Encore logo must 
 assert not (root / "assets/eden-official.svg").exists(), "obsolete upstream Eden logo must stay removed"
 assert not (root / "assets/prosperoeden-icon-source.png").exists(), "obsolete ProsperoEden logo source must stay removed"
 
+lifecycle = (root / "src/lifecycle.c").read_text()
+assert "PPSA99121" not in lifecycle, "stale lifecycle title ID"
+assert "PPSA99008" in lifecycle, "lifecycle must name Encore's title ID"
+
+startup = (root / "headless/main.cpp").read_text()
+assert "ProbeWritableRoot(Eden::kDataDir)" in startup, "release must prove /data/prosperoeden before migration"
+assert "invalid_success_identity" not in startup, "release must not infer filesystem capability from uid/gid alone"
+
 packager = (root / "tools/package-headless-native.sh").read_text()
 assert "titleId='PPSA99008'" in packager, "packager title ID contract changed"
 assert "PROSPEROEDEN0001" in packager, "packager content ID contract changed"
