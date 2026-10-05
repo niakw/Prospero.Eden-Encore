@@ -12,7 +12,7 @@ body:
     id: version
     attributes:
       label: Encore version / commit
-      placeholder: "e.g. v1.000.040-encore-... or commit SHA"
+      placeholder: "e.g. Encore R1 or commit SHA"
     validations:
       required: true
   - type: input

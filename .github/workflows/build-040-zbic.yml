@@ -91,6 +91,7 @@ jobs:
           python3 -B tools/check-filesystem-probe.py
           python3 -B tools/check-storage-contract.py
           python3 -B tools/check-legacy-migration.py
+          python3 -B tools/check-video-presets.py
 
       - name: Preflight release packaging
         if: ${{ inputs.resume_run_id == '' }}
@@ -164,7 +165,7 @@ jobs:
 
 
   publish-existing:
-    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message || '', '[publish-existing]') }}
+    if: ${{ false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -228,7 +229,7 @@ jobs:
         run: |
           set -euo pipefail
           short="${GITHUB_SHA:0:7}"
-          tag="v1.000.040-encore-${short}"
+          tag="encore-R1-${short}"
           notes="release-bundle/dist/release-notes.md"
           test -f "$notes"
           gh release create "$tag" \
@@ -237,6 +238,6 @@ jobs:
             release-bundle/dist/SHA256SUMS \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "Prospero.Eden Encore 1.000.040 (${short})" \
+            --title "Prospero.Eden Encore R1 (${short})" \
             --notes-file "$notes" \
             --latest
