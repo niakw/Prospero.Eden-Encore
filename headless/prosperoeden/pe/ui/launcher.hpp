@@ -78,6 +78,7 @@ class Launcher
         diagnostics,
         game,
         mods, // a game's mods, opened from its settings
+        mapping, // global or per-game DualSense button mapping
     };
 
     // ---- shell (launcher.cpp) ----
@@ -135,6 +136,9 @@ class Launcher
     void draw_game(Canvas &c, float open);
     void press_mods(Key key);
     void draw_mods(Canvas &c, float open);
+    void open_mapping(bool for_game);
+    void press_mapping(Key key);
+    void draw_mapping(Canvas &c, float open);
 
     // ---- settings and its dialogs (settings.cpp) ----
     void press_settings(Key key);
@@ -223,6 +227,8 @@ class Launcher
     ListView game_rows_;                          // the game dialog's rows (more than it shows)
     std::vector<Mod> mods_;                       // the game's mods, read when its dialog opens
     ListView mod_rows_;
+    bool mapping_for_game_ = false;
+    ListView mapping_rows_;
 
     // game files
     std::string browse_dir_;
