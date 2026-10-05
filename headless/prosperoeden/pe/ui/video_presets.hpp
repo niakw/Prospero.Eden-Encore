@@ -50,8 +50,11 @@ inline void ApplyVideoPreset(GameSettings& settings, int preset) {
     const auto& value = kVideoPresets[preset];
     settings.performance_profile = preset;
     settings.renderer = value.renderer;
+    settings.output = value.output;
     settings.resolution = value.resolution;
     settings.filter = value.filter;
+    settings.fsr_sharpness = value.fsr_sharpness;
+    settings.anti_aliasing = value.anti_aliasing;
     settings.refresh = value.refresh;
 }
 
