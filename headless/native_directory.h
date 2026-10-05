@@ -50,6 +50,8 @@ inline std::vector<std::filesystem::directory_entry> ReadNativeDirectory(
                 std::fprintf(stderr, "EDEN_DIRECTORY record length=%u available=%zu name_offset=%zu path=%s\n", length, available, name_offset, path.c_str());
                 error = std::make_error_code(std::errc::io_error); return {};
             }
+            uint8_t type = DT_UNKNOWN;
+            std::memcpy(&type, buffer.data() + offset + offsetof(dirent, d_type), sizeof(type));
             const char* name = buffer.data() + offset + name_offset;
             const char* end = static_cast<const char*>(std::memchr(name, 0, length - name_offset));
             if (!end || end == name || std::memchr(name, '/', end - name)) {
@@ -57,9 +59,25 @@ inline std::vector<std::filesystem::directory_entry> ReadNativeDirectory(
             }
             const std::string_view filename{name, static_cast<std::size_t>(end - name)};
             if (filename != "." && filename != "..") {
-                entries.emplace_back(path / filename, error);
-                // Native lstat is denied even for readable app files. Eden's
-                // directory callbacks use followed status, which stat supports.
+                if (type == DT_LNK) {
+                    offset += length;
+                    continue;
+                }
+                const auto full = path / filename;
+                struct stat native {};
+                if (lstat(full.c_str(), &native) == 0) {
+                    if (S_ISLNK(native.st_mode)) {
+                        offset += length;
+                        continue;
+                    }
+                } else if (errno != EPERM && errno != EACCES) {
+                    error = {errno, std::generic_category()};
+                    return {};
+                }
+
+                entries.emplace_back(full, error);
+                // Some PS5 app mounts deny lstat; in that specific case the directory entry may
+                // still be readable through followed status.
                 if (error == std::errc::operation_not_permitted) {
                     const auto status = entries.back().status(error);
                     if (!error && !std::filesystem::exists(status))
