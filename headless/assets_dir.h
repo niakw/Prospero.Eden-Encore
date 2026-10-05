@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The game files folder: keys/, firmware/ and roms/ in the folder chosen in Settings > Game
-// files (/data/prosperoeden by default), or the app folder's assets/ without filesystem access.
-// Resolved once per process; a new choice applies when ProsperoEden is reopened. Where the rest
-// lives: storage_paths.h; what is saved: settings_store.h.
+// The storage root for game/user-supplied files. Internal storage is /data/prosperoeden by
+// default; an external selection changes only this root, never the required subfolder layout.
+// Resolved once per process; a new root applies after Encore is reopened.
 #pragma once
 #include <string>
 #include <string_view>
@@ -20,17 +19,15 @@ inline bool LegacyAppAssetsPath(std::string_view path) {
            path == "/mnt/sandbox/PPSA99008_000/app0/assets";
 }
 
-inline bool SelfContainedModeRequested() {
-    // Explicit opt-in. The marker is checked through the running title's own sandbox mount before
-    // any elevation request. When present, Encore never asks for broader filesystem access.
-    return FileExists("/app0/self-contained.txt");
-}
-
-// Encore's canonical game-files root is fixed. Legacy/custom locations are migration inputs
-// only; normal elevated operation always resolves to /data/prosperoeden. Without filesystem
-// access, the app can still read a self-contained assets/ folder from its own mount.
+// One storage root, one schema. Internal storage defaults to /data/prosperoeden; an optional
+// external root is saved as a single path and must contain the same keys/, firmware/, roms/,
+// updates/, mods/, save-import/, save-export/ and ryujinx/ layout. Without filesystem access the
+// app can only see its packaged/sandbox assets/ fallback.
 inline std::string ResolveAssetsDir() {
-    return FilesystemAccess() ? std::string{kDefaultAssetsDir} : AppFile("assets");
+    if (!FilesystemAccess()) return AppFile("assets");
+    if (std::string saved = LoadSavedAssetsDir(); !saved.empty())
+        return saved;
+    return kDefaultAssetsDir;
 }
 
 inline const std::string& AssetsDir() {
