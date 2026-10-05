@@ -1465,3 +1465,76 @@ msgstr "3x (mémoire très élevée)"
 #: synchronized release UI
 msgid "4x (extreme memory)"
 msgstr "4x (mémoire extrême)"
+
+#: Encore unified storage UI
+msgid "Storage"
+msgstr "Stockage"
+
+#: Encore unified storage UI
+msgid "STORAGE"
+msgstr "STOCKAGE"
+
+#: Encore unified storage UI
+msgid "One root for keys, firmware, games, updates, mods and transfers."
+msgstr "Une seule racine pour les clés, le firmware, les jeux, les mises à jour, les mods et les transferts."
+
+#: Encore unified storage UI
+msgid "ROOT"
+msgstr "RACINE"
+
+#: Encore unified storage UI
+msgid "LAYOUT"
+msgstr "STRUCTURE"
+
+#: Encore unified storage UI
+msgid "Fixed Encore folder structure"
+msgstr "Structure de dossiers Encore fixe"
+
+#: Encore unified storage UI
+msgid "Internal storage saved. Reopen Encore to use it."
+msgstr "Stockage interne enregistré. Rouvrez Encore pour l'utiliser."
+
+#: Encore unified storage UI
+msgid "Choose one root for keys, firmware, games, updates and mods"
+msgstr "Choisissez une racine unique pour les clés, le firmware, les jeux, les mises à jour et les mods"
+
+#: Encore unified storage UI
+msgid "Use this root"
+msgstr "Utiliser cette racine"
+
+#: Encore unified storage UI
+msgid "Internal storage"
+msgstr "Stockage interne"
+
+#: Encore unified storage UI
+msgid "THIS ROOT"
+msgstr "CETTE RACINE"
+
+#: Encore unified storage UI
+msgid "Encore uses the same keys, firmware, roms, updates and mods folders under every storage root."
+msgstr "Encore utilise les mêmes dossiers keys, firmware, roms, updates et mods sous chaque racine de stockage."
+
+#: Encore unified storage UI
+msgid "Use extracted firmware NCA files. Choose the root in Settings, Storage; restart the app after changing it."
+msgstr "Utilisez des fichiers NCA de firmware extraits. Choisissez la racine dans Réglages, Stockage ; redémarrez l'application après l'avoir modifiée."
+
+#: Encore unified storage UI
+msgid "Storage root saved. Reopen Encore to use it."
+msgstr "Racine de stockage enregistrée. Rouvrez Encore pour l'utiliser."
+
+#: Encore unified storage UI
+msgid "Could not save the storage root. Please try again."
+msgstr "Impossible d'enregistrer la racine de stockage. Réessayez."
+
+#: Encore unified storage UI
+msgid "Setup required: {0} Open Settings, Storage to choose the root that holds the standard keys, firmware and roms folders (or add the files to {1}), then reopen Encore."
+msgstr "Configuration requise : {0} Ouvrez Réglages, Stockage pour choisir la racine contenant les dossiers standard keys, firmware et roms (ou ajoutez les fichiers dans {1}), puis rouvrez Encore."
+
+#: Encore unified storage UI
+msgid "ROM missing from the storage root"
+msgstr "ROM absente de la racine de stockage"
+
+#: Encore unified storage UI
+msgid "Check that the storage root can be written."
+msgstr "Vérifiez que la racine de stockage est accessible en écriture."
+
