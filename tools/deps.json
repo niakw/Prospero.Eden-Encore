@@ -121,7 +121,14 @@
         "bash",
         "tools/setup-native-dependencies.sh"
       ],
-      "setup_creates": ".deps/native/ps5-payload-sdk/bin/prospero-clang"
+      "setup_creates": ".deps/native/ps5-payload-sdk/bin/prospero-clang",
+      "setup_prefetch": [
+        {
+          "url": "https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz",
+          "sha256": "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16",
+          "dest": ".deps/native/zlib/zlib-1.3.2.tar.gz"
+        }
+      ]
     },
     {
       "name": "ps5-vulkan-tools",
