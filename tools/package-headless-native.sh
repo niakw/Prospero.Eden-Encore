@@ -48,7 +48,7 @@ rm -rf "$app/ui"
 cp -a "$root/headless/prosperoeden/ui" "$app/ui"
 rm -f "$app/ui/art/backdrop.tga" "$app/ui/art/backdrop-blur.tga"
 command -v convert >/dev/null 2>&1 || {
-    echo "ImageMagick convert is required to build the Eden launcher brand asset" >&2
+    echo "ImageMagick convert is required to build the Encore launcher brand asset" >&2
     exit 2
 }
 convert "$app/sce_sys/icon0.png" -resize 256x256 -alpha on -define tga:bits-per-pixel=32 -compress None "$app/ui/art/brand.tga"
