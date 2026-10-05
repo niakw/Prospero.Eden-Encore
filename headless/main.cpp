@@ -166,7 +166,7 @@ static void MigrateLegacyInstallAssets() {
 
     // A user who already selected another game-files folder has intentionally left the old
     // app-local assets behind. Do not move historical/duplicate data they are no longer using.
-    if (!saved.empty() && saved != Eden::kLegacyInstallAssetsDir)
+    if (!saved.empty() && !Eden::LegacyAppAssetsPath(saved))
         return;
 
     std::error_code error;
@@ -175,7 +175,7 @@ static void MigrateLegacyInstallAssets() {
         // v1.000.020+ already used /data/prosperoeden, but an older saved game-files choice can
         // still name the app-local assets folder. If the app was removed first, that path is gone:
         // repair the stale selection rather than leaving Encore pointed at nowhere.
-        if (saved == Eden::kLegacyInstallAssetsDir) {
+        if (Eden::LegacyAppAssetsPath(saved)) {
             if (Eden::SaveAssetsDir(Eden::kDefaultAssetsDir))
                 Eden::Report("data migration", "Legacy app assets path is gone; game files now use /data/prosperoeden");
             else
@@ -239,13 +239,13 @@ static void MigrateLegacyInstallAssets() {
         error.clear();
         if (std::filesystem::is_empty(legacy, error) && !error)
             std::filesystem::remove(legacy, error);
-        if (saved.empty() || saved == Eden::kLegacyInstallAssetsDir) {
+        if (saved.empty() || Eden::LegacyAppAssetsPath(saved)) {
             if (!Eden::SaveAssetsDir(Eden::kDefaultAssetsDir))
                 Eden::Report("data migration", "Legacy assets moved but game-files setting could not be updated");
         }
         if (moved_any)
             Eden::Report("data migration", "Legacy ProsperoEden game files moved to /data/prosperoeden");
-    } else if (saved.empty() || saved == Eden::kLegacyInstallAssetsDir) {
+    } else if (saved.empty() || Eden::LegacyAppAssetsPath(saved)) {
         // A conflict is safer than data loss: keep the legacy root selected until the user resolves
         // the duplicate folders in Settings > Game files.
         if (!Eden::SaveAssetsDir(Eden::kLegacyInstallAssetsDir))
