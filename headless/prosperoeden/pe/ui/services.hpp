@@ -103,8 +103,10 @@ struct Preferences
     bool mute = false;
     bool detailed_logging = false;
     int renderer = 1; // 0 OpenGL, 1 Vulkan
-    int resolution = 2;
+    int resolution = 3;
     int filter = 0;
+    int fsr_sharpness = 88;
+    int anti_aliasing = 0; // 0 none, 1 FXAA, 2 SMAA
     int refresh = 0; // the output while a game runs: 0 60 Hz, 1 120 Hz
     int output = 0;  // the size of the picture, menu and games: 0 1080p, 1 1440p, 2 2160p
     int performance_profile = 0; // 0 recommended, 1 smooth, 2 performance
@@ -202,6 +204,7 @@ class Services
     virtual const std::vector<std::string> &resolution_labels() = 0; // "1x (native)"
     virtual const std::vector<std::string> &resolution_keys() = 0;   // "1x"
     virtual const std::vector<std::string> &filter_labels() = 0;
+    virtual const std::vector<std::string> &anti_aliasing_labels() = 0;
     virtual const std::vector<std::string> &performance_profile_labels() = 0;
     virtual const std::vector<std::string> &language_labels() = 0;
     virtual std::string language_region(int language) = 0;

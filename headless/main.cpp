@@ -1067,6 +1067,12 @@ int main(int argc, char** argv) {
                 (game_video.upscaling_filter >= 0 ? game_video.upscaling_filter : video.upscaling_filter);
             Settings::values.resolution_setup.SetValue(resolutions[resolution]);
             Settings::values.scaling_filter.SetValue(filters[filter]);
+            // Eden's raw FSR control is reversed (0 = sharpest, 200 = softest). Encore presents
+            // a normal 0-100 sharpness percentage.
+            Settings::values.fsr_sharpening_slider.SetValue(200 - std::clamp(video.fsr_sharpness, 0, 100) * 2);
+            static constexpr Settings::AntiAliasing aa[] = {
+                Settings::AntiAliasing::None, Settings::AntiAliasing::Fxaa, Settings::AntiAliasing::Smaa};
+            Settings::values.anti_aliasing.SetValue(aa[std::clamp(video.anti_aliasing, 0, 2)]);
             Settings::UpdateRescalingInfo();
             // The output's refresh rate while the game runs (display_refresh.h): the renderer asks
             // for it as it opens the output.
@@ -1081,7 +1087,9 @@ int main(int argc, char** argv) {
             Eden::Display::output_width.store(Eden::kOutputWidth[output]);
             Eden::Display::output_height.store(Eden::kOutputHeight[output]);
             Eden::Report("launch", (std::string("Resolution ") + Eden::kResolutionKeys[resolution] + ", " +
-                                    Eden::kUpscalingFilterLabels[filter] + ", output " +
+                                    Eden::kUpscalingFilterLabels[filter] + ", FSR sharpness " +
+                                    std::to_string(video.fsr_sharpness) + "%, AA " +
+                                    Eden::kAntiAliasingLabels[std::clamp(video.anti_aliasing, 0, 2)] + ", output " +
                                     Eden::kOutputKeys[output] + ", " + Eden::kRefreshKeys[refresh] +
                                     " Hz").c_str());
             // What a crash report says was running.
