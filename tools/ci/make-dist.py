@@ -4,10 +4,9 @@
 
   tools/ci/make-dist.py [--image-only] APP_DIR
 
-dist/Prospero.Eden-Encore-vX.Y.Z.zip (the folder plus README, INSTALL, SECURITY, LICENSE and
-THIRD_PARTY_NOTICES; fixed timestamps, so equal inputs give equal bytes), dist/Prospero.Eden-Encore-vX.Y.Z.ffpfsc (the same title as
-a package image, tools/ci/package-image.sh), SHA256SUMS and release-notes.md (the README's
-"Changes in vX.Y.Z" section).
+dist/Prospero.Eden-Encore-RN.zip (the folder plus README, INSTALL, SECURITY, LICENSE and
+THIRD_PARTY_NOTICES; fixed timestamps, so equal inputs give equal bytes), dist/Prospero.Eden-Encore-RN.ffpfsc
+(the same title as a package image, tools/ci/package-image.sh), SHA256SUMS and release-notes.md.
 """
 import hashlib
 import json
@@ -26,10 +25,13 @@ if image_only:
 if len(args) != 1:
     sys.exit(__doc__.strip())
 app = pathlib.Path(args[0]).resolve()
-version = json.loads((app / 'sce_sys/param.json').read_text())['contentVersion']
-tag = 'v' + version.removeprefix('0')
+version_h = (root / 'headless/prosperoeden/version.h').read_text()
+match = re.search(r'kAppVersion\s*=\s*"([^"]+)"', version_h)
+if not match:
+    sys.exit('Cannot read Encore release name from version.h')
+release = match.group(1)
 dist = root / 'dist'
-image = dist / f'Prospero.Eden-Encore-{tag}.ffpfsc'
+image = dist / f'Prospero.Eden-Encore-{release}.ffpfsc'
 if image_only:
     dist.mkdir(exist_ok=True)
     subprocess.run(['bash', str(root / 'tools/ci/package-image.sh'), str(app), str(image)], check=True)
@@ -37,7 +39,7 @@ if image_only:
     sys.exit(0)
 shutil.rmtree(dist, ignore_errors=True)
 dist.mkdir()
-archive = dist / f'Prospero.Eden-Encore-{tag}.zip'
+archive = dist / f'Prospero.Eden-Encore-{release}.zip'
 files = [(p, 'PPSA99008/' + p.relative_to(app).as_posix()) for p in sorted(app.rglob('*')) if p.is_file()]
 files += [(root / name, name) for name in
           ('README.md', 'INSTALL.md', 'SECURITY.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md')
@@ -56,15 +58,16 @@ image_digest = hashlib.sha256(image.read_bytes()).hexdigest()
 # (tools/symbolize-crash.py). Kept out of dist/: it is not a release file.
 unstripped = root / 'build/headless-native/llvm-pie.elf'
 if unstripped.exists():
-    symbols = root / 'build/symbols' / f'Prospero.Eden-Encore-{tag}.elf'
+    symbols = root / 'build/symbols' / f'Prospero.Eden-Encore-{release}.elf'
     symbols.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(unstripped, symbols)
     print(f'{symbols} (keep it with the release: crash reports are read with it)')
 readme = (root / 'README.md').read_text()
-match = re.search(rf'^## Changes in {re.escape(tag)}\n(.*?)(?=^## )', readme, re.M | re.S)
+heading = f'Encore {release}'
+match = re.search(rf'^## Changes in {re.escape(heading)}\n(.*?)(?=^## )', readme, re.M | re.S)
 if match:
     (dist / 'release-notes.md').write_text(match.group(1).strip() + '\n')
 else:
-    sys.exit(f'README.md has no "## Changes in {tag}" section; release notes are required')
+    sys.exit(f'README.md has no "## Changes in {heading}" section; release notes are required')
 print(f'{archive} {digest}')
 print(f'{image} {image_digest}')
