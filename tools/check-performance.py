@@ -40,6 +40,15 @@ assert 'Timer compile_timer' not in cmake
 assert 'protection_timer' not in cmake
 shared_jit = (root / 'headless/dynarmic/jit_group_support.inc').read_text()
 assert 'bool eden_jit_shared = false;' in shared_jit
+jit_group = (root / 'headless/dynarmic/jit_group.h').read_text()
+jit_impl = (root / 'headless/dynarmic/jit_impl.inc').read_text()
+# Production JIT waits must yield the CPU after their short spin. On PS5 real-time workers,
+# std::this_thread::yield() can repeatedly reschedule the waiter and starve the owner.
+assert 'std::this_thread::yield()' not in jit_group
+assert 'std::this_thread::yield()' not in jit_impl
+assert 'sleep_for(std::chrono::microseconds(50))' in jit_group
+assert 'sleep_for(std::chrono::microseconds(50))' in jit_impl
+assert 'EDEN_JIT_CLEAR_BEGIN' in jit_impl and 'EDEN_JIT_CLEAR_END' in jit_impl
 main = (root / 'headless/main.cpp').read_text()
 assert 'Performance::Reset()' not in main
 assert 'Performance::Report()' not in main
