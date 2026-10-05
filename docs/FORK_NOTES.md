@@ -277,3 +277,7 @@ presence of profiles or offsets does not make that path reliable, and failures s
 
 Encore's own homebrew application build, filesystem path and emulator runtime are validated
 separately from that external limitation.
+
+## 13.60 startup revalidation
+
+The next stable release is gated on the fast startup/elevation/storage checks plus a successful native build and a hardware smoke test. A green compile alone is not treated as hardware validation.
