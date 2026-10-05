@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Eden PS5 - Regenerate the launcher's baked font and art.
+# Prospero.Eden Encore - Regenerate the launcher's baked font and art.
 # Copyright (C) 2026 BlackBearReloaded
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
