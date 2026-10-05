@@ -49,6 +49,8 @@ assert 'std::this_thread::yield()' not in jit_impl
 assert 'sleep_for(std::chrono::microseconds(50))' in jit_group
 assert 'sleep_for(std::chrono::microseconds(50))' in jit_impl
 assert 'EDEN_JIT_CLEAR_BEGIN' in jit_impl and 'EDEN_JIT_CLEAR_END' in jit_impl
+monitor_lock = (root / 'headless/spin-lock.inc').read_text()
+assert 'sceKernelUsleep(50);' in monitor_lock
 main = (root / 'headless/main.cpp').read_text()
 assert 'Performance::Reset()' not in main
 assert 'Performance::Report()' not in main
