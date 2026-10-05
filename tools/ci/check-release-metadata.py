@@ -29,11 +29,14 @@ assert f"## Changes in {tag}\n" in readme, f"README missing Changes in {tag}"
 assert "[INSTALL.md](INSTALL.md)" in readme, "README must link INSTALL.md"
 assert "[SECURITY.md](SECURITY.md)" in readme, "README must link SECURITY.md"
 assert "GPL-3.0-or-later" in readme, "README must state GPL-3.0-or-later"
+assert 'src="assets/icon0.png"' in readme, "README must use the Encore package logo"
 
 packager = (root / "tools/package-headless-native.sh").read_text()
 assert "titleId='PPSA99008'" in packager, "packager title ID contract changed"
 assert "PROSPEROEDEN0001" in packager, "packager content ID contract changed"
-assert "Eden 0.40 Improved" in packager, "package title-name contract changed"
+assert 'assets/icon0.png' in packager, "packager must use the Encore raster logo"
+assert 'eden-official.svg' not in packager, "packager must not fall back to the old upstream logo"
+assert "Prospero.Eden Encore" in packager, "package title-name contract changed"
 
 workflow = (root / ".github/workflows/build-040-zbic.yml").read_text()
 assert "if-no-files-found: error" in workflow, "release artifact upload must fail if files are missing"
