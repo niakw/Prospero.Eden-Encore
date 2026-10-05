@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Release build for CI (.github/workflows/release.yml): `make release` in this checkout.
+# Release build helper: `make release` in this checkout. The hosted workflow is .github/workflows/build-040-zbic.yml.
 # EDEN_DEV_CHECKOUT optionally names a development checkout whose inputs are reused instead of
 # fetched: its sibling repositories and .deps inputs are linked in (never copied or modified),
 # and its Eden package cache seeds this checkout's. See docs/BUILDING.md.
