@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <filesystem>
 #include <system_error>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <vector>
 
