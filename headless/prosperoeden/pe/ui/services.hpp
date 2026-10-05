@@ -5,7 +5,9 @@
 #pragma once
 
 #include "pe/gfx/image.hpp"
+#include "button_mapping.h"
 
+#include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -28,6 +30,20 @@ enum class Key : std::uint8_t
     left,
     right,
 };
+
+// Button mapping shared with the runtime: guest button -> physical DualSense button.
+using ButtonMapping = Eden::ButtonMapping;
+inline constexpr int kGameButtons = Eden::kGameButtons;
+inline constexpr int kPadButtons = Eden::kPadButtons;
+inline constexpr ButtonMapping kDefaultMapping = Eden::kDefaultMapping;
+inline ButtonMapping assign_button(ButtonMapping mapping, int game, int pad) {
+    return Eden::Assign(mapping, game, pad);
+}
+inline constexpr const char* kGameButtonNames[kGameButtons] = {
+    "A", "B", "X", "Y", "L", "R", "ZL", "ZR", "+", "-", "Left stick", "Right stick"};
+inline constexpr const char* kPadButtonNames[kPadButtons] = {
+    "Cross", "Circle", "Square", "Triangle", "L1", "R1", "L2", "R2", "L3", "R3",
+    "Options", "Create", "Touchpad"};
 
 // A game file in the games folder.
 struct Game
@@ -92,7 +108,8 @@ struct Preferences
     int refresh = 0; // the output while a game runs: 0 60 Hz, 1 120 Hz
     int output = 0;  // the size of the picture, menu and games: 0 1080p, 1 1440p, 2 2160p
     int performance_profile = 0; // 0 recommended, 1 smooth, 2 performance
-    int controller_layout = 0; // 0 PlayStation, 1 Nintendo
+    int controller_layout = 0; // legacy only; mapping is authoritative
+    ButtonMapping mapping = kDefaultMapping;
     bool vibration = true;
     int vibration_strength = 100;
     int stick_deadzone = 8;
@@ -112,7 +129,9 @@ struct GameSettings
     int filter = -1;
     int refresh = -1;
     int performance_profile = -1;
-    int controller_layout = -1;
+    int controller_layout = -1; // legacy only
+    bool own_mapping = false;
+    ButtonMapping mapping = kDefaultMapping;
 };
 
 // A mod of one game, from the game files folder's mods/<title ID>/.
