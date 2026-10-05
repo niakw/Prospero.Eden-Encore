@@ -144,6 +144,18 @@ def fetch_git(item):
         if head != item['commit']:
             fail(f'{item["name"]}: fetched {head}, pinned {item["commit"]}')
         staging.rename(path)
+    for entry in item.get('setup_prefetch', ()):
+        target = path / entry['dest']
+        if target.exists():
+            algorithm, expected = pinned_hash(entry)
+            if digest(target, algorithm) != expected:
+                target.unlink()
+        if not target.exists():
+            algorithm, expected = pinned_hash(entry)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            cached = download(entry['url'], algorithm, expected,
+                              f'{item["name"]}-{pathlib.PurePosixPath(entry["dest"]).name}')
+            shutil.copyfile(cached, target)
     if 'setup' in item and not (path / item['setup_creates']).exists():
         print(f'deps: setting up {item["name"]}: {" ".join(item["setup"])}', flush=True)
         subprocess.run(item['setup'], cwd=path, check=True)
