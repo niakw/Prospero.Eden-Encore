@@ -17,7 +17,7 @@
 </p>
 
 > [!IMPORTANT]
-> **PS5 firmware 13.60 is Encore's primary target. The current startup fix is being hardware revalidated before another stable release.**
+> **PS5 firmware 13.60 is Encore's primary hardware-tested target.**
 > Other firmware versions are not currently claimed as validated by this fork.
 
 ## Why Encore?
@@ -28,11 +28,11 @@ Encore takes the opposite approach: keep the **known-working 1.000.040 filesyste
 
 The result is not a blind downgrade and not a blind merge of newer upstream code. It is a **13.60-specific maintained branch** with its own hardening and release validation.
 
-## Changes in v1.000.040
+## Changes in Encore R1
 
-Prospero.Eden Encore turns the proven ProsperoEden 1.000.040 base into a PS5 13.60-focused release:
+Prospero.Eden Encore R1 turns the proven ProsperoEden 1.000.040 base into a PS5 13.60-focused release:
 
-- PS5 firmware **13.60 tested** as the primary target.
+- PS5 firmware **13.60 hardware-tested** as the primary target; Encore reaches the launcher and a current ZBIC title launches successfully.
 - ZBIC/zstd NSO support for newer Switch software while retaining LZ4.
 - One storage-root contract: internal defaults to `/data/prosperoeden`; external storage uses the
   exact same `keys/firmware/roms/updates/mods/...` layout under another root.
@@ -51,7 +51,7 @@ Prospero.Eden Encore turns the proven ProsperoEden 1.000.040 base into a PS5 13.
 
 ### 🎯 PS5 13.60 is a first-class target
 
-- **Primary target: PS5 firmware 13.60. Hardware revalidation is required before the next stable release.**
+- **Primary hardware-tested target: PS5 firmware 13.60.**
 - Internal storage defaults to **`/data/prosperoeden`** with a fixed folder structure.
 - External storage changes only the root; it uses the same required subfolders.
 - Encore keeps the 1.000.040 filesystem-access path instead of switching to Lapy.
