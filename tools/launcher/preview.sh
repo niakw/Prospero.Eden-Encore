@@ -18,6 +18,7 @@ source_dir="$root/headless/prosperoeden"
 build=${PROSPEROEDEN_LAUNCHER_BUILD:-"$HOME/.cache/prosperoeden-launcher"}
 cxx=${HOST_CXX:-c++}
 mkdir -p "$build/obj"
+python3 "$root/tools/launcher/render-art.py" brand
 python3 -B "$root/tools/deps.py" fetch harfbuzz
 harfbuzz=$(python3 -B "$root/tools/deps.py" path harfbuzz)
 harfbuzz=${harfbuzz%/harfbuzz.cc}
