@@ -857,7 +857,11 @@ int main(int argc, char** argv) {
             Settings::GpuAccuracy::Low : Settings::GpuAccuracy::High;
         Settings::values.gpu_accuracy.SetValue(profile_gpu_accuracy);
         Settings::values.current_gpu_accuracy = profile_gpu_accuracy;
-        Eden::JitList::enabled = effective_performance_profile >= 1;
+        // Keep saved-block compile-ahead out of normal Encore profiles for now. On FC 27 the
+        // hardware logs show the saved list filling half of every JIT region at boot, followed by
+        // EDEN_JIT_PRESSURE and multi-hundred-ms/second stalls. Development builds can still opt in
+        // with block-list.txt below while the mechanism is requalified.
+        Eden::JitList::enabled = false;
         Eden::Report("performance",
             (std::string("Profile ") + Eden::kPerformanceProfileLabels[effective_performance_profile] +
              ": compile-ahead " + (Eden::JitList::enabled.load(std::memory_order_relaxed) ? "on" : "off") +
@@ -1047,8 +1051,10 @@ int main(int argc, char** argv) {
         {
             // Settings > Video: internal resolution and the filter scaling it to the output.
             static constexpr Settings::ResolutionSetup resolutions[] = {
-                Settings::ResolutionSetup::Res1_2X, Settings::ResolutionSetup::Res3_4X, Settings::ResolutionSetup::Res1X,
-                Settings::ResolutionSetup::Res3_2X, Settings::ResolutionSetup::Res2X, Settings::ResolutionSetup::Res3X,
+                Settings::ResolutionSetup::Res1_4X, Settings::ResolutionSetup::Res1_2X,
+                Settings::ResolutionSetup::Res3_4X, Settings::ResolutionSetup::Res1X,
+                Settings::ResolutionSetup::Res5_4X, Settings::ResolutionSetup::Res3_2X,
+                Settings::ResolutionSetup::Res2X, Settings::ResolutionSetup::Res3X,
                 Settings::ResolutionSetup::Res4X};
             static_assert(std::size(resolutions) == std::size(Eden::kResolutionKeys));
             static constexpr Settings::ScalingFilter filters[] = {

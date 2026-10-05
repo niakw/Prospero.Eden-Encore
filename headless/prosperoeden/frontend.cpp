@@ -87,7 +87,12 @@ void LoadLanguage(pe::gfx::Font& font) {
     int rc = 0;
     if (first) {
         rc = sceSystemServiceParamGetInt(ps5::i18n::kSystemLanguageParameter, &system_language);
-        tag = rc == 0 ? ps5::i18n::language_tag(system_language) : ps5::i18n::kFallbackLanguage;
+        const Eden::Preferences preferences = Eden::LoadPreferences();
+        const int language = std::clamp(preferences.language, 0, int(std::size(Eden::kLanguageCatalogTags)) - 1);
+        // Settings > Language is shared with the games, so the Encore launcher speaks the same
+        // language. First-start code seeds this preference from the PS5 system language.
+        tag = Eden::kLanguageCatalogTags[language];
+        // A development-only file may still force a catalog while testing translations.
         std::string chosen;
         if (pe::read_file(Eden::AppFile("language.txt"), &chosen, 64)) {
             while (!chosen.empty() && static_cast<unsigned char>(chosen.back()) <= ' ') chosen.pop_back();

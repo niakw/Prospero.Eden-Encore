@@ -19,11 +19,11 @@ struct VideoPresetValues {
 // Conservative PS5 presets. Advanced rows remain editable after applying a preset.
 inline constexpr VideoPresetValues kVideoPresets[] = {
     // Recommended: native internal resolution and the lightest scaler.
-    {1, 0, 2, 0, 0},
+    {1, 0, 3, 0, 0},
     // Smooth: a small resolution reduction, recovered with FSR.
-    {1, 0, 1, 1, 0},
+    {1, 0, 2, 1, 0},
     // Performance: prioritize headroom and memory pressure over sharpness.
-    {1, 0, 0, 0, 0},
+    {1, 0, 1, 1, 0},
 };
 
 inline int ClampVideoPreset(int preset) {
