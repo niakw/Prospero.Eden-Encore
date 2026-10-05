@@ -329,9 +329,9 @@ int Launcher::dialog_rows(Modal modal) const
     case Modal::diagnostics:
         return 2;
     case Modal::game:
-        // Console mode, renderer, performance, resolution, filter, refresh rate, button layout,
-        // mods; save data in builds that move saves.
-        return services_.save_transfer_available() ? 9 : 8;
+        // Complete per-game video overrides, button mapping and mods; save data in builds that
+        // move saves.
+        return services_.save_transfer_available() ? 12 : 11;
     default:
         return 1;
     }
