@@ -21,13 +21,14 @@ missing = [name for name in required if not (root / name).is_file()]
 assert not missing, f"missing release/community files: {missing}"
 
 version_h = (root / "headless/prosperoeden/version.h").read_text()
-m = re.search(r'kAppVersion\s*=\s*"([0-9.]+)"', version_h)
-assert m, "cannot read kAppVersion"
-version = m.group(1)
-tag = "v" + version.removeprefix("0")
+app = re.search(r'kAppVersion\s*=\s*"([^"]+)"', version_h)
+package = re.search(r'kPackageVersion\s*=\s*"([0-9.]+)"', version_h)
+assert app and package, "cannot read Encore/package versions"
+release = app.group(1)
+package_version = package.group(1)
 
 readme = (root / "README.md").read_text()
-assert f"## Changes in {tag}\n" in readme, f"README missing Changes in {tag}"
+assert f"## Changes in Encore {release}\n" in readme, f"README missing Changes in Encore {release}"
 assert "[INSTALL.md](INSTALL.md)" in readme, "README must link INSTALL.md"
 assert "[SECURITY.md](SECURITY.md)" in readme, "README must link SECURITY.md"
 assert "GPL-3.0-or-later" in readme, "README must state GPL-3.0-or-later"
@@ -58,6 +59,7 @@ packager = (root / "tools/package-headless-native.sh").read_text()
 assert "titleId='PPSA99008'" in packager, "packager title ID contract changed"
 assert "PROSPEROEDEN0001" in packager, "packager content ID contract changed"
 assert 'assets/icon0.png' in packager, "packager must use the Encore raster logo"
+assert '-flip' in packager and 'brand.tga' in packager, "launcher logo orientation fix missing"
 assert 'eden-official.svg' not in packager, "packager must not fall back to the old upstream logo"
 assert "Prospero.Eden Encore" in packager, "package title-name contract changed"
 
@@ -69,4 +71,8 @@ install = (root / "INSTALL.md").read_text()
 assert "Upgrading from ProsperoEden" in install, "legacy migration instructions missing"
 assert "FFPFSC" in install and "ZIP" in install, "both installation paths must be documented"
 
-print(f"Release metadata preflight PASS ({tag}, PPSA99008)")
+preset = (root / "headless/prosperoeden/pe/ui/video_presets.hpp").read_text()
+assert "ApplyVideoPreset(Preferences&" in preset and "ApplyVideoPreset(GameSettings&" in preset
+assert "{1, 0, 2, 0, 0}" in preset and "{1, 0, 1, 1, 0}" in preset and "{1, 0, 0, 0, 0}" in preset
+
+print(f"Release metadata preflight PASS (Encore {release}, package {package_version}, PPSA99008)")
