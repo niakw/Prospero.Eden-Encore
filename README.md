@@ -91,11 +91,11 @@ Prospero.Eden Encore R1 turns the proven ProsperoEden 1.000.040 base into a PS5 
 
 Instead of making every user understand seven low-level emulator switches first, Encore exposes:
 
-- **Recommended** — conservative accuracy/stability.
-- **Smooth** — compile-ahead oriented.
-- **Performance** — more aggressive performance trade-offs.
+- **Recommended** — Vulkan, 1440p output, 1x, Bilinear, 60 Hz.
+- **Smooth** — Vulkan, 1080p output, 1x, Bilinear, 60 Hz.
+- **Performance** — Vulkan, 1080p output, 0.75x + AMD FSR, 60 Hz.
 
-Advanced settings and per-game overrides remain available.
+The normal release profiles do not enable saved-block JIT compile-ahead. Advanced settings and complete per-game overrides remain available.
 
 ### 🧰 Better diagnostics and bounded storage
 
@@ -128,7 +128,7 @@ This comparison is against **ProsperoEden v1.000.070**, the current upstream lin
 | Newer NSO compression | **ZBIC + LZ4** | Upstream line evolves independently |
 | Recovery | **Safe Launch + global reset + per-game reset** | No equivalent Encore recovery workflow documented |
 | Performance UX | **Recommended / Smooth / Performance presets** | Seven individual performance switches |
-| PS5 controls | **PlayStation-first simplified layout + per-game override** | Full button mapping system |
+| PS5 controls | **Full DualSense button mapping globally and per game** | Full button mapping system |
 | Diagnostics | **Filesystem mode, free space, cache/log sizes, safe cleanup** | Crash/boot diagnostics and logs |
 | Storage hardening | **Bounded RADV cache, rotating logs, bounded cover VRAM** | Shader cache / logging present, different policy |
 | Save import safety | **Backup/rollback + symlink rejection** | Save import/export support |
@@ -140,7 +140,7 @@ Encore deliberately chooses **predictability on 13.60** over importing every new
 
 | PS5 firmware | Encore status |
 | --- | --- |
-| **13.60** | 🧪 **Primary target — startup fix undergoing hardware revalidation** |
+| **13.60** | 🧪 **Primary hardware target — active stability revalidation** |
 | Other firmware supported by underlying tooling | ⚠️ **Not validated by Encore yet** |
 | Unknown/newer firmware layouts | ❌ **No compatibility claim** |
 
