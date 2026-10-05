@@ -57,6 +57,7 @@ jobs:
             ~/.cache/ccache
             ~/.cache/prosperoeden-deps
             ~/.cache/ps5-eden-headless.*
+            ~/.cache/prosperoeden-mkpfs
             .deps
             ../ps5-native-app-boilerplate
             ../mihawk-vulkan-review
@@ -66,6 +67,9 @@ jobs:
           restore-keys: |
             prospero-eden-encore-040-${{ runner.os }}-
             prosperoeden-040-zbic-${{ runner.os }}-
+
+      - name: Preflight release packaging
+        run: bash tools/ci/package-image.sh --prepare
 
       - name: Build shipping release
         run: make release JOBS=4
