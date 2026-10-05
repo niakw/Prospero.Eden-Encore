@@ -20,11 +20,10 @@ inline bool LegacyAppAssetsPath(std::string_view path) {
            path == "/mnt/sandbox/PPSA99008_000/app0/assets";
 }
 
-inline bool SelfContainedAssetsAvailable() {
-    // Before elevation is decided, /app0 is the only path we need: it is the running title's own
-    // mount and therefore readable without escaping the sandbox.
-    return FileExists("/app0/assets/keys/prod.keys") &&
-           DirectoryExists("/app0/assets/firmware");
+inline bool SelfContainedModeRequested() {
+    // Explicit opt-in. The marker is checked through the running title's own sandbox mount before
+    // any elevation request. When present, Encore never asks for broader filesystem access.
+    return FileExists("/app0/self-contained.txt");
 }
 
 // Without filesystem access only the app folder's assets/ is readable. With it: the saved
