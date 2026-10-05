@@ -4,7 +4,7 @@ root = Path(__file__).resolve().parents[1]
 preset = (root / 'headless/prosperoeden/pe/ui/video_presets.hpp').read_text()
 settings = (root / 'headless/prosperoeden/pe/ui/settings.cpp').read_text()
 library = (root / 'headless/prosperoeden/pe/ui/library.cpp').read_text()
-for expected in ('{1, 0, 2, 0, 0}', '{1, 0, 1, 1, 0}', '{1, 0, 0, 0, 0}'):
+for expected in ('{1, 0, 3, 0, 0}', '{1, 0, 2, 1, 0}', '{1, 0, 1, 1, 0}'):
     assert expected in preset, expected
 assert 'ApplyVideoPreset(prefs_, preset);' in settings
 assert 'ApplyVideoPreset(next, preset);' in library

@@ -504,6 +504,8 @@ pe::ui::GameSettings EdenServices::game_settings(std::uint64_t title_id) {
     result.renderer = saved.renderer;
     result.resolution = saved.resolution;
     result.filter = saved.upscaling_filter;
+    result.fsr_sharpness = saved.fsr_sharpness;
+    result.anti_aliasing = saved.anti_aliasing;
     result.refresh = saved.refresh;
     result.performance_profile = saved.performance_profile;
     result.controller_layout = saved.controller_layout;
@@ -562,6 +564,8 @@ bool EdenServices::set_preferences(const pe::ui::Preferences& preferences) {
     value.backend = preferences.renderer == 0 ? Eden::GraphicsBackend::OpenGL : Eden::GraphicsBackend::Vulkan;
     value.resolution = preferences.resolution;
     value.upscaling_filter = preferences.filter;
+    value.fsr_sharpness = preferences.fsr_sharpness;
+    value.anti_aliasing = preferences.anti_aliasing;
     value.refresh = preferences.refresh;
     value.output = preferences.output;
     value.performance_profile = preferences.performance_profile;
@@ -592,6 +596,11 @@ const std::vector<std::string>& EdenServices::resolution_keys() {
 
 const std::vector<std::string>& EdenServices::filter_labels() {
     static const std::vector<std::string> labels = Labels(Eden::kUpscalingFilterLabels);
+    return labels;
+}
+
+const std::vector<std::string>& EdenServices::anti_aliasing_labels() {
+    static const std::vector<std::string> labels = Labels(Eden::kAntiAliasingLabels);
     return labels;
 }
 
