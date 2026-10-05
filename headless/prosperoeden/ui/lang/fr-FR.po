@@ -1275,8 +1275,8 @@ msgid "PS5 13.60 FORK"
 msgstr "FORK PS5 13.60"
 
 #: synchronized release UI
-msgid "PS5 13.60  /  0.40 IMPROVED  /  {0}"
-msgstr "PS5 13.60  /  0.40 AMÉLIORÉE  /  {0}"
+msgid "PS5 13.60  /  ENCORE  /  {0}"
+msgstr "PS5 13.60  /  ENCORE  /  {0}"
 
 #: synchronized release UI
 msgid "Performance profile"
