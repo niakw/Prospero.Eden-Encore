@@ -46,12 +46,13 @@ inline const char* BackendName(GraphicsBackend backend) {
 // Settings > Video: the internal rendering resolution (a scale of the game's own 720p handheld
 // or 1080p docked output) and the filter that scales the result to the TV output. 3x and 4x draw
 // nine and sixteen times the game's own pixels: they need the graphics memory for it.
-inline constexpr const char* kResolutionKeys[] = {"0.5x", "0.75x", "1x", "1.5x", "2x", "3x", "4x"};
-inline constexpr const char* kResolutionLabels[] = {"0.5x (fastest, softer)", "0.75x (faster)", "1x (recommended)",
-                                                     "1.5x (sharper)", "2x (high memory)", "3x (very high memory)",
-                                                     "4x (extreme memory)"};
+inline constexpr const char* kResolutionKeys[] = {"0.25x", "0.5x", "0.75x", "1x", "1.25x", "1.5x", "2x", "3x", "4x"};
+inline constexpr const char* kResolutionLabels[] = {
+    "0.25x (minimum)", "0.5x (fastest, softer)", "0.75x (faster)", "1x (recommended)",
+    "1.25x (sharper)", "1.5x (sharper)", "2x (high memory)", "3x (very high memory)",
+    "4x (extreme memory)"};
 static_assert(std::size(kResolutionLabels) == std::size(kResolutionKeys));
-inline constexpr int kNativeResolution = 2;
+inline constexpr int kNativeResolution = 3;
 inline constexpr const char* kUpscalingFilterKeys[] = {"bilinear", "fsr", "bicubic", "nearest"};
 inline constexpr const char* kUpscalingFilterLabels[] = {"Bilinear", "AMD FSR", "Bicubic", "Nearest"};
 // Settings > Video: the refresh rate of the output while a game runs. 120 Hz is asked of the
