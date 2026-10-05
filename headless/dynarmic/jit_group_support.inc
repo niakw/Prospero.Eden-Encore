@@ -3,8 +3,12 @@
 extern "C" void eden_state_arg_add(u64 value, u32 offset);  // callback.cpp
 extern "C" void eden_state_arg_remove(u64 value);
 extern "C" {
-// Development switch (dev-settings jit_shared=off): every core keeps its own blocks.
-bool eden_jit_shared = true;
+// Stability-first production default: every guest core keeps its own compiled blocks.
+// Cross-core sharing saves compilation work, but a full shared-cache clear must quiesce every
+// member. FC 27 hardware runs reached JIT pressure shortly before repeated long stalls / guest
+// faults, so sharing stays an explicit development experiment until that clear protocol is
+// requalified on PS5. dev-settings jit_shared=on opts back in.
+bool eden_jit_shared = false;
 }
 
 namespace {
