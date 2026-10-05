@@ -28,6 +28,23 @@ Encore takes the opposite approach: keep the **known-working 1.000.040 filesyste
 
 The result is not a blind downgrade and not a blind merge of newer upstream code. It is a **13.60-specific maintained branch** with its own hardening and release validation.
 
+## Changes in v1.000.040
+
+Prospero.Eden Encore turns the proven ProsperoEden 1.000.040 base into a PS5 13.60-focused release:
+
+- PS5 firmware **13.60 tested** as the primary target.
+- ZBIC/zstd NSO support for newer Switch software while retaining LZ4.
+- One-shot filesystem elevation kept from the working 0.40 path and hardened with target validation,
+  cloned-credential checks, verified rollback, fail-closed postconditions and symlink-safe migration.
+- Safe Launch recovery profile without overwriting saved settings.
+- Recommended / Smooth / Performance profiles.
+- Global settings reset and per-game override reset.
+- DualSense-first controls, vibration/deadzone controls and multi-controller handling.
+- Diagnostics, bounded caches/logs and safer save import/export.
+- Reproducible release packaging with ZIP, optional FFPFSC image and SHA-256 checksums.
+- Complete French launcher catalog plus safe English fallback for incomplete translations.
+- CodeQL, pinned GitHub Actions, Dependabot and documented security/community policies.
+
 ## The big advantages
 
 ### 🎯 PS5 13.60 is a first-class target
