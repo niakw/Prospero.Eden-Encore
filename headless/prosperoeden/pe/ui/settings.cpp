@@ -215,7 +215,6 @@ void Launcher::draw_settings(Canvas &c)
     };
     std::vector<Line> lines;
     const char *about = "";
-    const std::string folder = services_.files_folder();
     switch (settings_.selected)
     {
     case kVideo:
