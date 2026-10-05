@@ -11,9 +11,15 @@ on:
         required: false
         type: boolean
         default: false
+      resume_run_id:
+        description: Optional failed run ID whose staged app artifact should be reused
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: prospero-eden-encore-${{ github.ref }}
@@ -74,11 +80,22 @@ jobs:
       - name: Preflight release packaging
         run: bash tools/ci/package-image.sh --prepare
 
-      - name: Build shipping release
-        run: make release JOBS=4
+      - name: Restore staged app from a previous failed run
+        if: ${{ inputs.resume_run_id != '' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: Prospero.Eden-Encore-staged-app
+          path: build/release/PPSA99008
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.resume_run_id }}
 
-      - name: Save build caches after a successful build
-        if: success()
+      - name: Build and stage shipping app
+        id: stage
+        if: ${{ inputs.resume_run_id == '' }}
+        run: bash tools/build-package.sh release-stage
+
+      - name: Save build caches immediately after staging
+        if: ${{ !cancelled() && steps.stage.outcome == 'success' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -91,6 +108,21 @@ jobs:
             ../mihawk-mesa-review
             ../mihawk-sdk-review
           key: prospero-eden-encore-040-${{ runner.os }}-${{ hashFiles('tools/deps.json') }}-${{ github.run_id }}
+
+      - name: Upload resumable staged app
+        if: ${{ steps.stage.outcome == 'success' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Prospero.Eden-Encore-staged-app
+          path: build/release/PPSA99008/
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Validate staged app
+        run: python3 -B headless/check_package.py --check
+
+      - name: Assemble release files
+        run: python3 -B tools/ci/make-dist.py build/release/PPSA99008
 
       - name: Upload compiled release bundle
         if: success()
