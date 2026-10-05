@@ -11,13 +11,22 @@
 #include "storage_paths.h"
 
 namespace Eden {
+inline constexpr const char* kLegacyInstallAssetsDir = "/data/homebrew/PPSA99008/assets";
+
 // Without filesystem access only the app folder's assets/ is readable. With it: the saved
 // folder, else /data/prosperoeden, except that an install from before the setting keeps the
 // app folder's assets/ while /data/prosperoeden has no keys.
 inline std::string ResolveAssetsDir() {
     const std::string legacy = AppFile("assets");
     if (!FilesystemAccess()) return legacy;
-    if (std::string saved = LoadSavedAssetsDir(); !saved.empty()) return saved;
+    if (std::string saved = LoadSavedAssetsDir(); !saved.empty()) {
+        // ProsperoEden <= 1.000.040 could explicitly keep the pre-1.000.020 game-files folder
+        // inside the installed app. If that app was removed before Encore started, do not keep
+        // resolving a dead path forever: the migration path is /data/prosperoeden.
+        if (saved == kLegacyInstallAssetsDir && !DirectoryExists(saved))
+            return kDefaultAssetsDir;
+        return saved;
+    }
     const std::string keys = "/keys/prod.keys";
     if (!FileExists(kDefaultAssetsDir + keys) && FileExists(legacy + keys)) return legacy;
     return kDefaultAssetsDir;
