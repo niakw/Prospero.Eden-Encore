@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Fast release metadata checks that must pass before the native build."""
 from pathlib import Path
-import json
 import re
 
 root = Path(__file__).resolve().parents[2]
@@ -31,9 +30,10 @@ assert "[INSTALL.md](INSTALL.md)" in readme, "README must link INSTALL.md"
 assert "[SECURITY.md](SECURITY.md)" in readme, "README must link SECURITY.md"
 assert "GPL-3.0-or-later" in readme, "README must state GPL-3.0-or-later"
 
-param = json.loads((root / "sce_sys/param.json").read_text())
-assert param.get("titleId") == "PPSA99008", "unexpected title ID"
-assert str(param.get("contentId", "")).endswith("PROSPEROEDEN0001"), "unexpected content ID"
+packager = (root / "tools/package-headless-native.sh").read_text()
+assert "titleId='PPSA99008'" in packager, "packager title ID contract changed"
+assert "PROSPEROEDEN0001" in packager, "packager content ID contract changed"
+assert "Eden 0.40 Improved" in packager, "package title-name contract changed"
 
 workflow = (root / ".github/workflows/build-040-zbic.yml").read_text()
 assert "if-no-files-found: error" in workflow, "release artifact upload must fail if files are missing"
