@@ -149,6 +149,8 @@ void Launcher::press(Key key)
         return press_game(key);
     if (modal_ == Modal::mods)
         return press_mods(key);
+    if (modal_ == Modal::mapping)
+        return press_mapping(key);
     if (modal_ != Modal::none)
         return press_dialog(key);
     switch (screen_)
@@ -201,6 +203,7 @@ void Launcher::update(float dt)
     video_rows_.update(dt);
     game_rows_.update(dt);
     mod_rows_.update(dt);
+    mapping_rows_.update(dt);
     mode_.target = selected_docked_ ? 0.0f : 1.0f;
     mode_.update(dt, 22.0f);
     const bool mods_on = library_.selected >= 0 && library_.selected < static_cast<int>(games_.size()) &&
@@ -211,7 +214,7 @@ void Launcher::update(float dt)
     detail_.update(dt, 14.0f);
     section_.target = 1.0f;
     section_.update(dt, 14.0f);
-    if (modal_ != Modal::none)
+    if (modal_ != Modal::none && modal_ != Modal::mapping)
         option_cursor_.target = dialog_row_top(modal_, option_);
     option_cursor_.update(dt, theme::kCursorSpring);
     const std::array<bool, 3> states = switch_states(modal_shown_);
@@ -337,6 +340,8 @@ void Launcher::draw(gfx::DrawList &list)
             draw_game(c, opened);
         else if (modal_shown_ == Modal::mods)
             draw_mods(c, opened);
+        else if (modal_shown_ == Modal::mapping)
+            draw_mapping(c, opened);
         else
             draw_dialog(c, modal_shown_, opened);
     }
