@@ -46,7 +46,7 @@ def check():
     assert all(not (APP / p).is_symlink() and (APP / p).stat().st_size for p in REQUIRED)
     param = json.loads((APP / 'sce_sys/param.json').read_text())
     assert param['titleId'] == 'PPSA99008' and param['contentId'].endswith('PROSPEROEDEN0001')
-    assert param['localizedParameters']['en-US']['titleName'] == 'Eden 0.40 Improved'
+    assert param['localizedParameters']['en-US']['titleName'] == 'Prospero.Eden Encore'
     assert param['pubtools']['loudnessSnd0'] == '-28.00'
     sound = (APP / 'sce_sys/snd0.at9').read_bytes()
     assert len(sound) <= 2 * 1024 * 1024 and sound[:4] == b'RIFF' and sound[8:12] == b'WAVE'
