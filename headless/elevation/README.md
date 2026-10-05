@@ -1,7 +1,8 @@
 # Filesystem access (sandbox elevation)
 
-Encore keeps the self-contained ProsperoEden 1.000.040 elevation design instead of adopting the
-newer Lapy path.
+Encore keeps the ProsperoEden 1.000.040 one-shot helper as the **external-storage fallback**
+instead of adopting the newer Lapy path. A folder installation can avoid this helper entirely by
+using Encore's explicit self-contained mode.
 
 The implementation originates from
 [ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate)
@@ -14,7 +15,8 @@ The implementation originates from
 - Primary validated firmware target: **PS5 13.60**.
 - Requested capability: `Capability::filesystem`.
 - Helper packaged as `/app0/sandbox-elevator.elf`.
-- The request is made once during single-threaded startup.
+- If `/app0/self-contained.txt` is present, no elevation request is made.
+- Otherwise the request is made once during single-threaded startup.
 - Without a usable local ELF loader/elevation path, the request fails and the application stays
   sandboxed instead of treating elevation as successful.
 
@@ -52,22 +54,13 @@ This path is intentionally one-shot and narrow at the protocol boundary:
 15. Legacy sandbox-data migration is symlink-safe. The entire source tree is validated before
     copying, and symlinks or unexpected file types are rejected after elevation.
 
-## Important limitation
+## Scope
 
-The word "filesystem" describes Encore's requested capability, not a kernel-enforced least-
-privilege sandbox after success.
+Self-contained mode is the narrowest runtime path because the helper is never contacted.
 
-To escape the PS5 application sandbox, the helper still applies broad process credentials,
-authority/capabilities and root/jail vnode changes. Therefore these checks primarily reduce:
-
-- accidental modification of the wrong process;
-- partial credential writes;
-- silent elevation failure;
-- protocol misuse;
-- persistent-service attack surface.
-
-They do **not** make the elevated application harmless if the application, jailbreak environment or
-local ELF loader is compromised.
+External-storage mode uses the one-shot helper only when access outside the title sandbox is needed.
+Its validation primarily protects against wrong-target changes, partial application, silent failure,
+protocol misuse and persistent-service exposure. The helper exits after the request.
 
 ## Runtime use
 
