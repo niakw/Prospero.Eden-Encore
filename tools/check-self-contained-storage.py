@@ -15,10 +15,9 @@ assert "SelfContainedMode()" in storage
 assert 'ConfigDir() + "/backup"' in storage
 assert 'ConfigDir() + "/save-export"' in storage
 
-assert 'FileExists("/app0/assets/keys/prod.keys")' in assets
-assert 'DirectoryExists("/app0/assets/firmware")' in assets
+assert 'FileExists("/app0/self-contained.txt")' in assets
 
-detect = main.index("SelfContainedAssetsAvailable()")
+detect = main.index("SelfContainedModeRequested()")
 request = main.index("elevation::request(elevation::Capability::filesystem)")
 assert detect < request, "self-contained detection must happen before elevation"
 assert "filesystem elevation skipped" in main
@@ -31,4 +30,4 @@ assert "if (Eden::SelfContainedMode())" in services
 assert "return directory == Eden::AssetsDir();" in services
 assert "access == -2 ? tr("Sandbox only")" in browse
 
-print("Self-contained storage contract PASS: app assets read-only path, sandbox writes, no elevation request")
+print("Self-contained storage contract PASS: explicit marker, fixed app assets, sandbox writes, no elevation request")
