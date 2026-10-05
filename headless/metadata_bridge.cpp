@@ -391,7 +391,7 @@ int eden_save_export(uint64_t title_id, char* path, size_t capacity) {
     const std::string user = EdenUserFolder(root, error);
     if (user.empty()) return EDEN_SAVE_NOTHING;
     const std::string title = TitleName(title_id);
-    const fs::path target = fs::path{Eden::ExportDir()} / (title + "-" + TimeStamp());
+    const fs::path target = fs::path{Eden::AssetsPath("save-export")} / (title + "-" + TimeStamp());
     if (!Eden::RyujinxSaves::Export(root / user / title, root / std::string(32, '0') / title, target, error)) {
         Eden::Report("save export", error.c_str());
         return error == "no save yet" ? EDEN_SAVE_NOTHING : EDEN_SAVE_FAILED;
