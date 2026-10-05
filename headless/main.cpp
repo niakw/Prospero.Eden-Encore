@@ -152,6 +152,104 @@ static bool CopySandboxTree(const std::filesystem::path& from,
     return !error;
 }
 
+static bool LegacyGameFilesRemain(const std::filesystem::path& legacy) {
+    for (const char* name : {"keys", "firmware", "roms", "updates", "mods",
+                             "save-import", "ryujinx", "save-export"})
+        if (Eden::DirectoryExists((legacy / name).string())) return true;
+    return false;
+}
+
+static void MigrateLegacyInstallAssets() {
+    const std::filesystem::path legacy{Eden::kLegacyInstallAssetsDir};
+    const std::filesystem::path target{Eden::kDefaultAssetsDir};
+    const std::string saved = Eden::LoadSavedAssetsDir();
+
+    std::error_code error;
+    const auto root_status = std::filesystem::symlink_status(legacy, error);
+    if (error || !std::filesystem::exists(root_status)) {
+        // v1.000.020+ already used /data/prosperoeden, but an older saved game-files choice can
+        // still name the app-local assets folder. If the app was removed first, that path is gone:
+        // repair the stale selection rather than leaving Encore pointed at nowhere.
+        if (saved == Eden::kLegacyInstallAssetsDir) {
+            if (Eden::SaveAssetsDir(Eden::kDefaultAssetsDir))
+                Eden::Report("data migration", "Legacy app assets path is gone; game files now use /data/prosperoeden");
+            else
+                Eden::Report("data migration", "Legacy app assets path is gone; could not update game-files setting");
+        }
+        return;
+    }
+    if (std::filesystem::is_symlink(root_status) || !std::filesystem::is_directory(root_status)) {
+        Eden::Report("data migration", "Legacy app assets rejected: source is not a real directory");
+        return;
+    }
+
+    bool conflict = false;
+    bool moved_any = false;
+    for (const char* name : {"keys", "firmware", "roms", "updates", "mods",
+                             "save-import", "ryujinx", "save-export"}) {
+        const auto from = legacy / name;
+        const auto to = target / name;
+        error.clear();
+        const auto status = std::filesystem::symlink_status(from, error);
+        if (error || !std::filesystem::exists(status)) continue;
+        if (std::filesystem::is_symlink(status) || !std::filesystem::is_directory(status)) {
+            conflict = true;
+            Eden::Report("data migration", (std::string{"Legacy "} + name + " rejected: unsafe file type").c_str());
+            continue;
+        }
+
+        const auto destination = std::filesystem::symlink_status(to, error);
+        if (!error && std::filesystem::exists(destination)) {
+            bool empty = false;
+            std::error_code empty_error;
+            if (std::filesystem::is_directory(destination))
+                empty = std::filesystem::is_empty(to, empty_error) && !empty_error;
+            if (!empty) {
+                conflict = true;
+                Eden::Report("data migration",
+                             (std::string{"Legacy "} + name + " kept in place: destination already has data").c_str());
+                continue;
+            }
+            std::filesystem::remove(to, error);
+            if (error) {
+                conflict = true;
+                continue;
+            }
+        } else {
+            error.clear();
+        }
+
+        std::filesystem::rename(from, to, error);
+        if (error) {
+            conflict = true;
+            Eden::Report("data migration",
+                         (std::string{"Legacy "} + name + " move failed: " + error.message()).c_str());
+        } else {
+            moved_any = true;
+        }
+    }
+
+    const bool remains = LegacyGameFilesRemain(legacy);
+    if (!remains) {
+        error.clear();
+        if (std::filesystem::is_empty(legacy, error) && !error)
+            std::filesystem::remove(legacy, error);
+        if (saved.empty() || saved == Eden::kLegacyInstallAssetsDir) {
+            if (!Eden::SaveAssetsDir(Eden::kDefaultAssetsDir))
+                Eden::Report("data migration", "Legacy assets moved but game-files setting could not be updated");
+        }
+        if (moved_any)
+            Eden::Report("data migration", "Legacy ProsperoEden game files moved to /data/prosperoeden");
+    } else if (saved.empty() || saved == Eden::kLegacyInstallAssetsDir) {
+        // A conflict is safer than data loss: keep the legacy root selected until the user resolves
+        // the duplicate folders in Settings > Game files.
+        if (!Eden::SaveAssetsDir(Eden::kLegacyInstallAssetsDir))
+            Eden::Report("data migration", "Legacy assets remain but their game-files setting could not be preserved");
+        if (conflict)
+            Eden::Report("data migration", "Legacy ProsperoEden assets need manual merge; original files were kept");
+    }
+}
+
 static void MigrateSandboxData() {
     const std::filesystem::path sandbox{"/mnt/sandbox/PPSA99008_000/download0"};
     const std::pair<std::filesystem::path, std::string> moves[] = {
@@ -237,6 +335,7 @@ int main(int argc, char** argv) {
             std::error_code folder_error;
             std::filesystem::create_directories(folder, folder_error);
         }
+        if (Eden::FilesystemAccess()) MigrateLegacyInstallAssets();
         // Keep the previous session's logs: a freeze is diagnosed after the app is reopened.
         for (const char* base : {"stderr", "heap"}) {
             const std::string current = Eden::LogFile(std::string{base} + ".log");
