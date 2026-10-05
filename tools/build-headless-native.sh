@@ -65,39 +65,45 @@ cmake -S "$scratch/source" -B "$scratch/native-local" -G Ninja \
 python3 -B "$root/headless/check_slab_lifetime.py" \
     "$scratch/native-local/headless/include/core/hle/kernel/slab_helpers.h" \
     "$scratch/source/src/core/hle/kernel/slab_helpers.h"
-echo "Building Eden with $jobs parallel jobs"
-cmake --build "$scratch/native-local" --target eden-headless core -j "$jobs"
-# In every build: an object that saw Eden's own table header would write a table the rest keeps sparse.
-python3 -B "$root/tools/check-sparse-header.py" "$scratch/native-local"
-# Source checks of the release configuration (development builds opt out: EDEN_SKIP_SOURCE_CHECKS=1).
-[[ ${EDEN_SKIP_SOURCE_CHECKS:-0} == 1 ]] && exit 0
-python3 -B "$root/headless/check_audio_shutdown.py" "$scratch/native-local/headless/core.cpp" "$scratch/source/src/core/core.cpp"
-python3 -B "$root/tools/check-load-failure.py"
-python3 -B "$root/tools/check-nso-memory.py"
-python3 -B "$root/tools/check-performance.py"
-python3 -B "$root/tools/check-startup-performance.py"
-python3 -B "$root/tools/check-worker-affinity.py"
-python3 -B "$root/tools/check-tsc-fallback.py"
-python3 -B "$root/tools/check-jit-protection.py"
-python3 -B "$root/tools/check-jit-allocator.py"
-python3 -B "$root/tools/check-jit-patch-lookup.py"
-python3 -B "$root/tools/check-jit-assert.py"
-python3 -B "$root/tools/check-crash-report.py"
-if [[ "$probe" == OFF ]]; then
-    python3 -B "$root/tools/check-exclusive-monitor.py"
-else
-    # The graphics-only entry returns before Core construction; its JIT is dead-stripped.
-    python3 -B "$root/tools/check-gpu-probe.py" --self-test
-    python3 -B "$root/tools/check-native-queue-probe.py"
-fi
-if [[ "$graphics" == ON ]]; then
-    python3 -B "$root/tools/check-native-gpu-thread.py"
-    python3 -B "$root/tools/check-gpu-producer-stop.py"
-    python3 -B "$root/tools/check-gpu-sync-stop.py"
-    python3 -B "$root/tools/check-nvdrv-process-lifetime.py"
-    python3 -B "$root/tools/check-integer-buffer-clear.py"
-    python3 -B "$root/tools/check-game-capture-shutdown.py"
+
+# Run every source/harness check that only needs the configured/generated source tree BEFORE the
+# expensive native compile. A stale source extraction should fail in minutes, not after a 40-minute
+# build. Development builds intentionally skip these release-shape checks.
+if [[ ${EDEN_SKIP_SOURCE_CHECKS:-0} != 1 ]]; then
+    python3 -B "$root/headless/check_audio_shutdown.py" "$scratch/native-local/headless/core.cpp" "$scratch/source/src/core/core.cpp"
+    python3 -B "$root/tools/check-load-failure.py"
+    python3 -B "$root/tools/check-nso-memory.py"
+    python3 -B "$root/tools/check-performance.py"
+    python3 -B "$root/tools/check-startup-performance.py"
+    python3 -B "$root/tools/check-worker-affinity.py"
+    python3 -B "$root/tools/check-tsc-fallback.py"
+    python3 -B "$root/tools/check-jit-protection.py"
+    python3 -B "$root/tools/check-jit-allocator.py"
+    python3 -B "$root/tools/check-jit-patch-lookup.py"
+    python3 -B "$root/tools/check-jit-assert.py"
+    python3 -B "$root/tools/check-crash-report.py"
+    if [[ "$probe" != OFF ]]; then
+        # The graphics-only entry returns before Core construction; its JIT is dead-stripped.
+        python3 -B "$root/tools/check-gpu-probe.py" --self-test
+        python3 -B "$root/tools/check-native-queue-probe.py"
+    fi
+    if [[ "$graphics" == ON ]]; then
+        python3 -B "$root/tools/check-native-gpu-thread.py"
+        python3 -B "$root/tools/check-gpu-producer-stop.py"
+        python3 -B "$root/tools/check-gpu-sync-stop.py"
+        python3 -B "$root/tools/check-nvdrv-process-lifetime.py"
+        python3 -B "$root/tools/check-integer-buffer-clear.py"
+        python3 -B "$root/tools/check-game-capture-shutdown.py"
+    fi
+    python3 -B "$root/tools/check-hud.py"
+    python3 -B "$root/tools/check-game-frame-summary.py"
 fi
 
-python3 -B tools/check-hud.py
-python3 -B tools/check-game-frame-summary.py
+echo "Building Eden with $jobs parallel jobs"
+cmake --build "$scratch/native-local" --target eden-headless core -j "$jobs"
+
+# These two checks intentionally require the compiled dependency graph/native machine code.
+python3 -B "$root/tools/check-sparse-header.py" "$scratch/native-local"
+if [[ ${EDEN_SKIP_SOURCE_CHECKS:-0} != 1 && "$probe" == OFF ]]; then
+    python3 -B "$root/tools/check-exclusive-monitor.py"
+fi
