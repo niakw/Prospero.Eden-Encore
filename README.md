@@ -24,7 +24,7 @@
 
 Current ProsperoEden releases moved beyond the 1.000.040 base and use a newer Lapy-based elevation path. That newer direction brings useful features, but **13.60 is not one of the firmware versions currently validated by upstream's Lapy helper**.
 
-Encore takes the opposite approach: keep the **known-working 1.000.040 fallback path on 13.60**, add a self-contained mode that can avoid filesystem elevation entirely, then selectively add compatibility, stability, recovery and usability improvements that are valuable on a PS5 today.
+Encore takes the opposite approach: keep the **known-working 1.000.040 filesystem-access path on 13.60**, harden it, simplify storage to one root with one fixed layout, then selectively add compatibility, stability, recovery and usability improvements that are valuable on a PS5 today.
 
 The result is not a blind downgrade and not a blind merge of newer upstream code. It is a **13.60-specific maintained branch** with its own hardening and release validation.
 
@@ -34,10 +34,10 @@ Prospero.Eden Encore turns the proven ProsperoEden 1.000.040 base into a PS5 13.
 
 - PS5 firmware **13.60 tested** as the primary target.
 - ZBIC/zstd NSO support for newer Switch software while retaining LZ4.
-- Optional **self-contained mode** keeps keys, firmware and games inside the app's own `assets/`
-  tree and skips filesystem elevation completely.
-- External-storage mode keeps the working 0.40 one-shot filesystem helper, hardened with target
-  validation, verified rollback, fail-closed postconditions and symlink-safe migration.
+- One storage-root contract: internal defaults to `/data/prosperoeden`; external storage uses the
+  exact same `keys/firmware/roms/updates/mods/...` layout under another root.
+- The working 0.40 one-shot filesystem helper is hardened with target validation, verified rollback,
+  fail-closed postconditions and symlink-safe migration.
 - Safe Launch recovery profile without overwriting saved settings.
 - Recommended / Smooth / Performance profiles.
 - Global settings reset and per-game override reset.
@@ -52,10 +52,11 @@ Prospero.Eden Encore turns the proven ProsperoEden 1.000.040 base into a PS5 13.
 ### 🎯 PS5 13.60 is a first-class target
 
 - **Tested target: PS5 firmware 13.60.**
-- **Self-contained ZIP installs can run without requesting filesystem elevation at all.**
-- External/custom storage keeps the 1.000.040 filesystem-access path instead of switching to Lapy.
+- Internal storage defaults to **`/data/prosperoeden`** with a fixed folder structure.
+- External storage changes only the root; it uses the same required subfolders.
+- Encore keeps the 1.000.040 filesystem-access path instead of switching to Lapy.
 - No Lapy daemon or Lapy helper dependency is required.
-- If the external-storage request is unavailable, Encore stays sandboxed instead of pretending it succeeded.
+- If the filesystem request is unavailable, Encore stays sandboxed instead of pretending it succeeded.
 
 ### 🧩 Newer Switch software support
 
@@ -123,7 +124,7 @@ This comparison is against **ProsperoEden v1.000.070**, the current upstream lin
 | Area | Prospero.Eden Encore | ProsperoEden v1.000.070 |
 | --- | --- | --- |
 | Main PS5 target | **13.60 — tested** | Lapy helper validated upstream on **6.02 and 12.70**; other firmware experimental |
-| Filesystem model | **Optional no-elevation self-contained mode + hardened 1.000.040 one-shot fallback** | Lapy-based exact-title helper / resident-service path |
+| Filesystem model | **Hardened 1.000.040 one-shot access + one internal/external storage-root contract** | Lapy-based exact-title helper / resident-service path |
 | Newer NSO compression | **ZBIC + LZ4** | Upstream line evolves independently |
 | Recovery | **Safe Launch + global reset + per-game reset** | No equivalent Encore recovery workflow documented |
 | Performance UX | **Recommended / Smooth / Performance presets** | Seven individual performance switches |
@@ -147,30 +148,15 @@ A firmware having offsets somewhere in the wider PS5 ecosystem does **not** auto
 
 ## Filesystem access and security
 
-Encore supports two storage modes.
+Encore uses one storage model:
 
-### Self-contained mode — no elevation
+- default internal root: `/data/prosperoeden`;
+- optional external root selected in **Settings → Storage**;
+- the same fixed subfolders are used in both cases: `keys/`, `firmware/`, `roms/`,
+  `updates/`, `mods/`, `save-import/`, `save-export/` and `ryujinx/`.
 
-For a folder install, create an empty `self-contained.txt` beside `eboot.bin` and keep your own
-files under:
-
-```text
-PPSA99008/assets/keys/prod.keys
-PPSA99008/assets/firmware/
-PPSA99008/assets/roms/
-PPSA99008/assets/updates/
-PPSA99008/assets/mods/
-```
-
-Encore checks the marker through `/app0` **before** any filesystem-access request. When it is
-present, no elevation helper is contacted. Read-only game content stays under `/app0/assets`;
-settings, saves, logs, caches, backups and exports stay in the title's writable `/download0`
-sandbox.
-
-### External-storage mode
-
-Without the marker, Encore keeps the proven 1.000.040 one-request helper for
-`/data/prosperoeden`, migration and custom/external game-file locations. The helper:
+Encore keeps the proven ProsperoEden 1.000.040 one-request helper rather than adopting the newer
+Lapy path. The helper:
 
 - runs once during single-threaded startup;
 - validates the exact Encore title ID `PPSA99008`;
@@ -179,6 +165,9 @@ Without the marker, Encore keeps the proven 1.000.040 one-request helper for
 - verifies the resulting state and verifies rollback on failure;
 - terminates instead of continuing when the post-request state is inconsistent;
 - exits after the one request.
+
+Legacy ProsperoEden data migration is preflighted, symlink-safe and rollback-aware. A pre-existing
+external root is preserved instead of being rewritten into a different storage layout.
 
 See [headless/elevation/README.md](headless/elevation/README.md) for implementation details.
 
@@ -208,9 +197,8 @@ ShadowMountPlus users.
 
 - **ZIP:** extract `PPSA99008` to `/data/homebrew/PPSA99008`.
 - **FFPFSC:** mount the release image through a compatible ShadowMountPlus/etaHEN setup.
-- **External-storage mode:** persistent data lives under `/data/prosperoeden`.
-- **Self-contained mode:** mutable data lives in the title sandbox under `/download0`; game files
-  remain under `PPSA99008/assets`.
+- **Internal storage:** default root is `/data/prosperoeden`.
+- **External storage:** choose another root in Settings → Storage; the folder structure stays identical.
 
 See **[INSTALL.md](INSTALL.md)** for the complete step-by-step guide, update procedure, checksum
 verification and troubleshooting.
@@ -232,8 +220,8 @@ See [docs/BUILDING.md](docs/BUILDING.md) for toolchain details and [docs/FORK_NO
 ## Security
 
 Encore uses CodeQL scanning, pinned build inputs, SHA-pinned GitHub Actions, checksummed release
-assets, save-import symlink protection, an explicit no-elevation self-contained mode and a hardened
-one-shot fallback for external storage.
+assets, save-import symlink protection, transactional migration checks and a hardened one-shot
+filesystem-access path.
 
 Please report exploitable issues privately and avoid publishing proof-of-concept details before a
 fix is available. See [SECURITY.md](SECURITY.md) for supported versions, scope and disclosure
