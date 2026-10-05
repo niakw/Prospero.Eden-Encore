@@ -601,6 +601,12 @@ void Launcher::press_game(Key key)
     default:
         return;
     }
+    if (option_ == row_controls)
+    {
+        if (key == Key::cross)
+            open_mapping(true);
+        return;
+    }
     if (option_ == row_mods)
     {
         // The game's mods have their own list. It is read again: mods may have been copied in
@@ -687,8 +693,6 @@ void Launcher::press_game(Key key)
             next.filter = cycle(next.filter, static_cast<int>(services_.filter_labels().size()));
         if (option_ == row_refresh)
             next.refresh = cycle(next.refresh, 2);
-        if (option_ == row_controls)
-            next.controller_layout = cycle(next.controller_layout, 2);
         saved = services_.set_game_settings(game.title_id, next);
         if (saved)
             game_settings_ = next;
@@ -740,9 +744,7 @@ void Launcher::draw_game(Canvas &c, float open)
             fill(tr("Default ({0})"), {pick(filters, prefs_.filter)}),
         game_settings_.refresh >= 0 ? hertz(game_settings_.refresh) :
             fill(tr("Default ({0})"), {hertz(prefs_.refresh)}),
-        game_settings_.controller_layout >= 0 ?
-            (game_settings_.controller_layout == 0 ? "PlayStation" : "Nintendo") :
-            fill(tr("Default ({0})"), {prefs_.controller_layout == 0 ? "PlayStation" : "Nintendo"}),
+        game_settings_.own_mapping ? tr("Custom") : tr("Global"),
         // With the game's Mods switch off (the Library's), none of them is on.
         mods_.empty() ? std::string{tr("No mods")} :
         game != nullptr && !game->mods_enabled ? std::string{tr("Off")} :
@@ -755,7 +757,7 @@ void Launcher::draw_game(Canvas &c, float open)
     };
     static constexpr const char *kLabels[] = {TR("Console mode"), TR("Renderer"), TR("Video preset"),
                                               TR("Resolution"), TR("Upscaling filter"), TR("Refresh rate"),
-                                              TR("Button layout"), TR("Mods"), TR("Save data")};
+                                              TR("Button mapping"), TR("Mods"), TR("Save data")};
     // Five rows show; the list scrolls to the others.
     list.push_clip({kDialogWindow.x - 24.0f, kDialogWindow.y - 6.0f, kDialogWindow.w + 48.0f,
                     kDialogWindow.h + 12.0f});
@@ -808,7 +810,7 @@ void Launcher::draw_game(Canvas &c, float open)
                                              {Pad::circle, TR("Back")}};
         draw_hints(c, kTransfer, 3, 592.0f, kDialogHints, theme::kCopy, 736.0f);
     }
-    else if (option_ == row_mods)
+    else if (option_ == row_mods || option_ == row_controls)
     {
         static constexpr Hint kOpen[] = {{Pad::cross, TR("Open")}, {Pad::circle, TR("Back")}};
         draw_hints(c, kOpen, 2, 592.0f, kDialogHints, theme::kCopy, 736.0f);
@@ -822,7 +824,7 @@ void Launcher::draw_game(Canvas &c, float open)
             TR("1x is the safe default. Lower it for performance/memory; higher scales use much more graphics memory."),
             TR("Bilinear is the lightest default. AMD FSR is useful when rendering below the TV output size."),
             TR("60 Hz is the safe default. Use 120 Hz only with a compatible display or high-FPS patch."),
-            TR("PlayStation is recommended on PS5; Nintendo restores the original Switch button positions."),
+            TR("Open the per-game DualSense mapping. Global uses Settings > Controls; Custom overrides it only for this game."),
         };
         if (option_ >= row_mode && option_ <= row_controls)
             text_shrink(c, tr(kGameAbout[option_]), 592.0f,
