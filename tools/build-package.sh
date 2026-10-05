@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Builds the PS5 app and its PPSA99008 folder (after make prepare).
-#   tools/build-package.sh release   build/release/PPSA99008, the configuration that ships
+#   tools/build-package.sh release         build + package + validate the shipping app
+#   tools/build-package.sh release-stage   build + package only; validation is a separate resumable CI step
 #   tools/build-package.sh dev ID    build/dev/PPSA99008 (EDEN_DEV_PACKAGE_DIR) with the development switches
 #                                    (profiling counters, dev-settings.txt A/B switches) that
 #                                    boots title ID on launch
@@ -9,12 +10,12 @@ set -euo pipefail
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$root"
-mode=${1:?usage: tools/build-package.sh release|dev TITLE_ID}
+mode=${1:?usage: tools/build-package.sh release|release-stage|dev TITLE_ID}
 scratch=$(cat .local/headless-cache)
 export PS5_PAYLOAD_SDK="$scratch/sdk"
 export EDEN_PS5_VULKAN=ON EDEN_VULKAN_DRIVER=RADV
 case $mode in
-release)
+release|release-stage)
     export EDEN_DEV_VULKAN=OFF EDEN_DEV_ROM_ID= EDEN_DEV_PROFILE=OFF EDEN_DEV_WAIT_CALLERS=OFF
     export EDEN_PACKAGE_DIR="$root/build/release/PPSA99008"
     ;;
@@ -27,7 +28,7 @@ dev)
     export EDEN_PACKAGE_DIR="${EDEN_DEV_PACKAGE_DIR:-$root/build/dev/PPSA99008}"
     ;;
 *)
-    echo "usage: tools/build-package.sh release|dev TITLE_ID" >&2
+    echo "usage: tools/build-package.sh release|release-stage|dev TITLE_ID" >&2
     exit 2
     ;;
 esac
@@ -40,6 +41,8 @@ PS5_ELEVATION_SDK="$root/../ps5-native-app-boilerplate/.deps/native/ps5-payload-
     bash tools/package-headless-native.sh --integration
 if [[ $mode == release ]]; then
     python3 -B headless/check_package.py --check
+elif [[ $mode == release-stage ]]; then
+    echo "== Staged $EDEN_PACKAGE_DIR (validation deferred)"
 elif [[ -f CANDIDATE.json ]]; then
     # Development layout: the console runner verifies this receipt before every run.
     python3 -B headless/check_package.py --freeze
