@@ -9,8 +9,8 @@ This document is the authoritative technical close-out for the Encore fork.
 - Hardware status: **13.60 tested**.
 - Default branch: `fix/0.40-zbic-13.60`.
 - Divergent archive/reference branch: `>0.50-bug_13.60`.
-- Goal: keep the working 1.000.040 filesystem-access behavior on 13.60 while selectively adding
-  compatibility, stability, recovery, PS5 UX and release-engineering improvements.
+- Goal: prefer a fixed self-contained app/sandbox layout that needs no elevation, while retaining
+  the working 1.000.040 filesystem-access path on 13.60 for migration and external/custom storage.
 - Newer ProsperoEden Lapy/elevation work is intentionally **not** merged wholesale.
 
 ## Firmware compatibility
@@ -24,13 +24,23 @@ This document is the authoritative technical close-out for the Encore fork.
 An offset existing in a payload SDK or another PS5 project is not treated as proof of Encore
 compatibility. Hardware validation is required before adding a firmware to the supported table.
 
-## Filesystem elevation
+## Filesystem access
 
-Encore keeps the 1.000.040 one-shot sandbox-elevation path and does not depend on Lapy.
+Encore supports two explicit paths and does not depend on Lapy.
 
-### Request model
+### Self-contained path
 
-- `main.cpp` requests `Capability::filesystem` once during single-threaded startup.
+- `/app0/self-contained.txt` is checked before any elevation request.
+- When present, no helper connection is attempted.
+- The game-files root is fixed to `/app0/assets`.
+- Keys, firmware, ROMs, updates, mods and import sources are read from the app tree.
+- Config, saves, logs, caches, backups and exports stay in writable `/download0`.
+- The Game files UI cannot switch to an arbitrary path in this mode.
+
+### External-storage request model
+
+- Without the marker, `main.cpp` requests `Capability::filesystem` once during single-threaded
+  startup.
 - The packaged helper is `/app0/sandbox-elevator.elf`.
 - The application connects to the local ELF-loader endpoint at `127.0.0.1:9021`.
 - If elevation is unavailable or validation fails, the request returns an error and Encore remains
@@ -61,14 +71,13 @@ The helper is deliberately narrow at the protocol boundary:
 17. Post-elevation legacy-data migration validates its source tree first and rejects symlinks or
     unexpected file types.
 
-### Security limitation
+### Scope
 
-This is **not** a least-privilege sandbox after elevation. To escape the PS5 application sandbox,
-the helper still applies broad process identity, authority/capabilities and root/jail vnode changes.
+Self-contained mode avoids the helper entirely and is the narrowest storage path.
 
-The hardening therefore reduces the risk of wrong-target writes, partial writes, silent failure,
-protocol misuse and persistent-service exposure. It does not make a compromised elevated process,
-jailbreak environment or local ELF loader safe.
+External-storage mode retains the helper because `/data/prosperoeden`, migration and arbitrary
+external folders are outside the normal application sandbox. The helper remains one-shot,
+exact-title validated, rollback-checked and fail-closed.
 
 The implementation-specific note lives in
 [`headless/elevation/README.md`](../headless/elevation/README.md).
@@ -161,6 +170,10 @@ For that run only it selects:
 - Diagnostics can safely clear shader/JIT caches without touching saves, settings, keys, firmware or
   game files.
 - Game-files selection rejects `/` to avoid accidental console-root scanning.
+- Self-contained mode fixes the game-files root to `/app0/assets` and bypasses the elevation
+  request entirely.
+- Sandbox mode keeps RADV/native caches, save backups and save exports under writable
+  `/download0` paths.
 - Git ignores explicitly cover keys, ROM/container formats and local save-transfer data.
 
 ## Save transfer hardening
@@ -240,7 +253,8 @@ Key findings that materially changed the release:
 | `37227976171` / `37229710339` | Failed | Removed obsolete Eden-theme helpers rejected by `-Werror`. |
 | `37230146719` | **PASS** | Full audited baseline reached build/package artifact generation. |
 
-Later closure work added Safe Launch, resets, storage bounds, diagnostics, save hardening, locale
+Later closure work added Safe Launch, resets, storage bounds, diagnostics, save hardening,
+transactional ProsperoEden migration, the explicit self-contained/no-elevation mode, locale
 behavior, full French catalog validation and the release workflow. Publication is gated on a green
 build of the release head.
 
