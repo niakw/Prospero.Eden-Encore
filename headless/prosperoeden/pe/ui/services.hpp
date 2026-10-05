@@ -127,8 +127,11 @@ struct Preferences
 struct GameSettings
 {
     int renderer = -1;
+    int output = -1;
     int resolution = -1;
     int filter = -1;
+    int fsr_sharpness = -1;
+    int anti_aliasing = -1;
     int refresh = -1;
     int performance_profile = -1;
     int controller_layout = -1; // legacy only

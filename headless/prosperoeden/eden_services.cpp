@@ -502,6 +502,7 @@ pe::ui::GameSettings EdenServices::game_settings(std::uint64_t title_id) {
     const Eden::GameSettings saved = Eden::LoadGameSettings(title_id);
     pe::ui::GameSettings result;
     result.renderer = saved.renderer;
+    result.output = saved.output;
     result.resolution = saved.resolution;
     result.filter = saved.upscaling_filter;
     result.fsr_sharpness = saved.fsr_sharpness;
@@ -517,8 +518,11 @@ pe::ui::GameSettings EdenServices::game_settings(std::uint64_t title_id) {
 bool EdenServices::set_game_settings(std::uint64_t title_id, const pe::ui::GameSettings& settings) {
     Eden::GameSettings value;
     value.renderer = settings.renderer;
+    value.output = settings.output;
     value.resolution = settings.resolution;
     value.upscaling_filter = settings.filter;
+    value.fsr_sharpness = settings.fsr_sharpness;
+    value.anti_aliasing = settings.anti_aliasing;
     value.refresh = settings.refresh;
     value.performance_profile = settings.performance_profile;
     value.controller_layout = settings.controller_layout;

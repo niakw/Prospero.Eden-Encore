@@ -393,8 +393,11 @@ inline bool SaveGameDocked(uint64_t title_id, bool docked, const std::string& fi
 // -1 (absent from the file) uses the global setting.
 struct GameSettings {
     int renderer = -1;          // 0 OpenGL, 1 Vulkan
+    int output = -1;            // index into kOutputKeys
     int resolution = -1;        // index into kResolutionKeys
     int upscaling_filter = -1;  // index into kUpscalingFilterKeys
+    int fsr_sharpness = -1;     // 0-100; -1 follows global
+    int anti_aliasing = -1;     // index into kAntiAliasingKeys
     int refresh = -1;           // index into kRefreshKeys
     int performance_profile = -1; // index into kPerformanceProfileKeys
     int controller_layout = -1; // legacy only
@@ -411,9 +414,13 @@ inline GameSettings LoadGameSettings(uint64_t title_id, const std::string& file 
     const std::string base = "/games/" + Settings::TitleKey(title_id);
     const auto key = [&](const char* name) { return Settings::String(document, Json::json_pointer(base + "/" + name)); };
     result.renderer = KeyIndex(key("renderer"), kRendererKeys, int(std::size(kRendererKeys)), -1);
+    result.output = KeyIndex(key("output_resolution"), kOutputKeys, int(std::size(kOutputKeys)), -1);
     result.resolution = KeyIndex(key("resolution"), kResolutionKeys, int(std::size(kResolutionKeys)), -1);
     result.upscaling_filter = KeyIndex(key("upscaling_filter"), kUpscalingFilterKeys,
                                        int(std::size(kUpscalingFilterKeys)), -1);
+    const int fsr_sharpness = Settings::Int(document, Json::json_pointer(base + "/fsr_sharpness"), -1);
+    result.fsr_sharpness = fsr_sharpness >= 0 && fsr_sharpness <= 100 ? fsr_sharpness : -1;
+    result.anti_aliasing = KeyIndex(key("anti_aliasing"), kAntiAliasingKeys, int(std::size(kAntiAliasingKeys)), -1);
     result.refresh = KeyIndex(key("refresh_rate"), kRefreshKeys, int(std::size(kRefreshKeys)), -1);
     result.performance_profile = KeyIndex(key("performance_profile"), kPerformanceProfileKeys,
                                           int(std::size(kPerformanceProfileKeys)), -1);
@@ -428,8 +435,11 @@ inline GameSettings LoadGameSettings(uint64_t title_id, const std::string& file 
 
 inline bool SaveGameSettings(uint64_t title_id, const GameSettings& value, const std::string& file = SettingsFile()) {
     if (!title_id || value.renderer < -1 || value.renderer >= int(std::size(kRendererKeys)) ||
+        value.output < -1 || value.output >= int(std::size(kOutputKeys)) ||
         value.resolution < -1 || value.resolution >= int(std::size(kResolutionKeys)) ||
         value.upscaling_filter < -1 || value.upscaling_filter >= int(std::size(kUpscalingFilterKeys)) ||
+        value.fsr_sharpness < -1 || value.fsr_sharpness > 100 ||
+        value.anti_aliasing < -1 || value.anti_aliasing >= int(std::size(kAntiAliasingKeys)) ||
         value.refresh < -1 || value.refresh >= int(std::size(kRefreshKeys)) ||
         value.performance_profile < -1 ||
         value.performance_profile >= int(std::size(kPerformanceProfileKeys)) ||
@@ -445,8 +455,12 @@ inline bool SaveGameSettings(uint64_t title_id, const GameSettings& value, const
         else game[name] = keys[index];
     };
     store("renderer", value.renderer, kRendererKeys);
+    store("output_resolution", value.output, kOutputKeys);
     store("resolution", value.resolution, kResolutionKeys);
     store("upscaling_filter", value.upscaling_filter, kUpscalingFilterKeys);
+    if (value.fsr_sharpness < 0) game.erase("fsr_sharpness");
+    else game["fsr_sharpness"] = value.fsr_sharpness;
+    store("anti_aliasing", value.anti_aliasing, kAntiAliasingKeys);
     store("refresh_rate", value.refresh, kRefreshKeys);
     store("performance_profile", value.performance_profile, kPerformanceProfileKeys);
     game.erase("controller_layout");
