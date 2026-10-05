@@ -1538,3 +1538,7 @@ msgstr "ROM absente de la racine de stockage"
 msgid "Check that the storage root can be written."
 msgstr "Vérifiez que la racine de stockage est accessible en écriture."
 
+#: Encore unified storage UI
+msgid "Export failed. Check that the storage root can be written."
+msgstr "Échec de l'export. Vérifiez que la racine de stockage est accessible en écriture."
+
