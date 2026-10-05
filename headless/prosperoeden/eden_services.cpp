@@ -120,7 +120,7 @@ std::string LaunchError(const std::string& reason) {
 
 // Names of the subfolders (folders = true) or regular files in path, sorted without regard
 // to case. Unlike ReadNativeDirectory, an odd entry is skipped rather than failing the
-// folder: the Game files browser walks the whole console filesystem.
+// folder: the Storage browser walks available roots/directories so an external root can be chosen.
 std::vector<std::string> ListEntries(const std::string& path, bool folders, bool& ok) {
     ok = false;
     std::vector<std::string> names;
@@ -320,8 +320,8 @@ pe::ui::Home EdenServices::home() {
     pe::ui::Home home;
     home.setup_ready = setup_.empty();
     if (!home.setup_ready) {
-        home.status = fill(tr("Setup required: {0} Open Settings, Game files to choose the folder that holds your "
-                              "keys, firmware and roms folders (or add the files to {1}), then reopen ProsperoEden."),
+        home.status = fill(tr("Setup required: {0} Open Settings, Storage to choose the root that holds the standard "
+                              "keys, firmware and roms folders (or add the files to {1}), then reopen Encore."),
                            {SetupMessage(setup_), Eden::AssetsDir()});
     } else if (launch_error_.starts_with(Eden::Crash::kNotice)) {
         // The previous run ended with a crash report (headless/crash_report.h).
@@ -357,7 +357,7 @@ pe::ui::Home EdenServices::home() {
         }
         home.last_title = title;
         home.last_caption = home.last_exists ? tr("Last game opened") :
-                                               tr("ROM missing from the game files folder");
+                                               tr("ROM missing from the storage root");
         home.last_caption_warning = !home.last_exists;
         if (has_cover) home.last_cover = cover;
     }
@@ -724,7 +724,7 @@ bool EdenServices::save_export(std::uint64_t title_id, std::string* message) {
         *message = tr("This game has no save to export yet.");
         return false;
     default:
-        *message = tr("Export failed. Check that the game files folder can be written.");
+        *message = tr("Export failed. Check that the storage root can be written.");
         return false;
     }
 }
@@ -735,7 +735,7 @@ bool EdenServices::save_import(std::uint64_t, std::string*) { return false; }
 bool EdenServices::save_export(std::uint64_t, std::string*) { return false; }
 #endif
 
-// Mods (headless/mods.h): what the game files folder's mods/<title ID>/ holds for a game, and
+// Mods (headless/mods.h): what the selected storage root's mods/<title ID>/ holds for a game, and
 // which of them are switched off (settings_store.h).
 std::vector<pe::ui::Mod> EdenServices::mods(std::uint64_t title_id) {
     std::vector<pe::ui::Mod> result;
