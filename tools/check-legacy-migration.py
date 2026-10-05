@@ -24,6 +24,11 @@ const char* kDefaultAssetsDir = nullptr;
 static std::string saved;
 static std::vector<std::string> reports;
 
+bool LegacyAppAssetsPath(std::string_view path) {
+    return path == kLegacyInstallAssetsDir || path == "/app0/assets" ||
+           path == "/system_ex/app/PPSA99008/assets" ||
+           path == "/mnt/sandbox/PPSA99008_000/app0/assets";
+}
 bool DirectoryExists(const std::string& path) {
     std::error_code error;
     return std::filesystem::is_directory(path, error) && !error;
