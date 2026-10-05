@@ -22,6 +22,7 @@ namespace Eden {
 const char* kLegacyInstallAssetsDir = nullptr;
 const char* kDefaultAssetsDir = nullptr;
 static std::string saved;
+static bool save_ok = true;
 static std::vector<std::string> reports;
 
 bool LegacyAppAssetsPath(std::string_view path) {
@@ -35,6 +36,7 @@ bool DirectoryExists(const std::string& path) {
 }
 std::string LoadSavedAssetsDir() { return saved; }
 bool SaveAssetsDir(std::string_view directory) {
+    if (!save_ok) return false;
     saved = std::string(directory);
     return true;
 }
@@ -80,13 +82,18 @@ int main(int argc, char** argv) {
     assert(std::filesystem::exists(custom / "roms/current.nsp"));
     assert(Eden::saved == custom.string());
 
-    // 3. Destination conflict: never overwrite/merge silently; preserve the legacy selection.
+    // 3. Destination conflict: preflight the whole plan, so even a conflict discovered after
+    // another movable directory leaves every legacy directory untouched.
     std::filesystem::remove_all(base);
+    file(legacy / "keys/prod.keys");
     file(legacy / "roms/legacy.nsp");
     file(target / "roms/new.nsp");
     Eden::saved = legacy_s;
+    Eden::save_ok = true;
     MigrateLegacyInstallAssets();
+    assert(std::filesystem::exists(legacy / "keys/prod.keys"));
     assert(std::filesystem::exists(legacy / "roms/legacy.nsp"));
+    assert(!std::filesystem::exists(target / "keys/prod.keys"));
     assert(std::filesystem::exists(target / "roms/new.nsp"));
     assert(Eden::saved == legacy_s);
 
@@ -97,7 +104,21 @@ int main(int argc, char** argv) {
     MigrateLegacyInstallAssets();
     assert(Eden::saved == target_s);
 
-    // 5. A still-mounted legacy alias is the migration source even when /data/homebrew is absent.
+    // 5. If persisting the new game-files path fails, already moved directories are rolled back.
+    std::filesystem::remove_all(base);
+    file(legacy / "keys/prod.keys");
+    file(legacy / "roms/game.nsp");
+    Eden::saved = legacy_s;
+    Eden::save_ok = false;
+    MigrateLegacyInstallAssets();
+    Eden::save_ok = true;
+    assert(std::filesystem::exists(legacy / "keys/prod.keys"));
+    assert(std::filesystem::exists(legacy / "roms/game.nsp"));
+    assert(!std::filesystem::exists(target / "keys/prod.keys"));
+    assert(!std::filesystem::exists(target / "roms/game.nsp"));
+    assert(Eden::saved == legacy_s);
+
+    // 6. A still-mounted legacy alias is the migration source even when /data/homebrew is absent.
     std::filesystem::remove_all(base);
     const auto mounted = base / "mounted/assets";
     std::string mounted_s = mounted.string();
