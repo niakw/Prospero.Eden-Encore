@@ -204,7 +204,7 @@ inline Json Legacy(const std::string& folder) {
     }
     if (ReadFile(folder + "/assets-dir.txt", text)) {
         while (!text.empty() && (text.back() == '\n' || text.back() == '\r')) text.pop_back();
-        if (ValidAssetsDir(text)) document["game_files"] = text;
+        if (ValidAssetsDir(text) || LegacyAppAssetsPath(text)) document["game_files"] = text;
     }
     return document;
 }
@@ -496,6 +496,13 @@ inline bool SaveRecentGame(std::string_view name, const std::string& file = Sett
 inline std::string LoadSavedAssetsDir(const std::string& file = SettingsFile()) {
     const std::string value = Settings::String(Settings::Load(file), Settings::Json::json_pointer("/game_files"));
     return ValidAssetsDir(value) ? value : std::string{};
+}
+
+// Migration-only reader: accepts historical app-local aliases so Encore can recognize and retire
+// them, without making those paths valid as a normal storage root.
+inline std::string LoadStoredAssetsDirForMigration(const std::string& file = SettingsFile()) {
+    const std::string value = Settings::String(Settings::Load(file), Settings::Json::json_pointer("/game_files"));
+    return (ValidAssetsDir(value) || LegacyAppAssetsPath(value)) ? value : std::string{};
 }
 
 inline bool SaveAssetsDir(std::string_view directory, const std::string& file = SettingsFile()) {
