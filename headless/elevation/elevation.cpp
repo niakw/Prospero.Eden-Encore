@@ -63,8 +63,11 @@ elevation::Status exchange(int socket, const elevation::wire::Message &request) 
         Eden::BootTrace::Line("elevation: first response receive failed");
         return Status::transport_error;
     }
-    if (wire::matches(reply, request, Kind::response) && reply.status != Status::ok)
+    if (wire::matches(reply, request, Kind::response) && reply.status != Status::ok) {
+        Eden::BootTrace::Line("elevation: helper rejected request status=%u",
+                              static_cast<unsigned>(reply.status));
         return reply.status;
+    }
     if (!wire::matches(reply, request, Kind::prepare) || reply.status != Status::ok) {
         Eden::BootTrace::Line("elevation: unexpected first response kind=%u status=%u",
                               static_cast<unsigned>(reply.kind), static_cast<unsigned>(reply.status));
