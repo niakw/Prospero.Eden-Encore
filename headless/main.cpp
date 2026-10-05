@@ -108,29 +108,82 @@ public:
 // First start with filesystem access: copy what the sandbox kept (settings, covers, Eden's saves
 // and caches) into /data/prosperoeden. Only folders that do not exist yet are filled, and the
 // sandbox copy stays, so an older ProsperoEden still finds its data.
+static bool CopySandboxTree(const std::filesystem::path& from,
+                            const std::filesystem::path& to,
+                            std::error_code& error) {
+    const auto root = std::filesystem::symlink_status(from, error);
+    if (error) return false;
+    if (std::filesystem::is_symlink(root) || !std::filesystem::is_directory(root)) {
+        error = std::make_error_code(std::errc::operation_not_permitted);
+        return false;
+    }
+
+    // Validate the whole source tree before copying anything with elevated filesystem access.
+    for (std::filesystem::recursive_directory_iterator it{from, error}, end;
+         !error && it != end; it.increment(error)) {
+        const auto status = it->symlink_status(error);
+        if (error) return false;
+        if (std::filesystem::is_symlink(status) ||
+            (!std::filesystem::is_directory(status) && !std::filesystem::is_regular_file(status))) {
+            error = std::make_error_code(std::errc::operation_not_permitted);
+            return false;
+        }
+    }
+    if (error) return false;
+
+    std::filesystem::create_directories(to, error);
+    if (error) return false;
+    for (std::filesystem::recursive_directory_iterator it{from, error}, end;
+         !error && it != end; it.increment(error)) {
+        const auto relative = it->path().lexically_relative(from);
+        const auto destination = to / relative;
+        const auto status = it->symlink_status(error);
+        if (error) break;
+        if (std::filesystem::is_directory(status)) {
+            std::filesystem::create_directories(destination, error);
+        } else {
+            std::filesystem::create_directories(destination.parent_path(), error);
+            if (!error)
+                std::filesystem::copy_file(it->path(), destination,
+                                           std::filesystem::copy_options::skip_existing, error);
+        }
+    }
+    return !error;
+}
+
 static void MigrateSandboxData() {
     const std::filesystem::path sandbox{"/mnt/sandbox/PPSA99008_000/download0"};
     const std::pair<std::filesystem::path, std::string> moves[] = {
         {sandbox / "eden-headless-g7/user", Eden::UserDir()},
         {sandbox / "prosperoeden/covers", Eden::CoversDir()},
     };
-    const auto options = std::filesystem::copy_options::recursive | std::filesystem::copy_options::skip_existing;
     for (const auto& [from, to] : moves) {
         std::error_code error;
         if (Eden::DirectoryExists(to) || !Eden::DirectoryExists(from.string())) continue;
-        std::filesystem::copy(from, to, options, error);
-        const std::string detail = from.string() + " -> " + to + (error ? " failed: " + error.message() : "");
+        const bool copied = CopySandboxTree(from, to, error);
+        const std::string detail = from.string() + " -> " + to +
+            (!copied ? " rejected/failed: " + error.message() : "");
         Eden::Report("data migration", detail.c_str());
     }
-    // Settings files (not the covers folder) go to config/.
+
+    // Settings files (not the covers folder) go to config/. Never follow a sandbox symlink after
+    // elevation: a pre-elevation file tree must not be able to redirect privileged reads.
     if (!Eden::DirectoryExists(Eden::ConfigDir()) && Eden::DirectoryExists((sandbox / "prosperoeden").string())) {
         std::error_code error;
         std::filesystem::create_directories(Eden::ConfigDir(), error);
-        for (std::filesystem::directory_iterator it{sandbox / "prosperoeden", error}, end; !error && it != end; it.increment(error))
-            if (it->is_regular_file())
+        for (std::filesystem::directory_iterator it{sandbox / "prosperoeden", error}, end;
+             !error && it != end; it.increment(error)) {
+            const auto status = it->symlink_status(error);
+            if (error) break;
+            if (std::filesystem::is_symlink(status)) {
+                error = std::make_error_code(std::errc::operation_not_permitted);
+                break;
+            }
+            if (std::filesystem::is_regular_file(status))
                 std::filesystem::copy_file(it->path(), std::filesystem::path{Eden::ConfigDir()} / it->path().filename(),
                                            std::filesystem::copy_options::skip_existing, error);
-        Eden::Report("data migration", error ? ("settings failed: " + error.message()).c_str() : "settings copied");
+        }
+        Eden::Report("data migration", error ? ("settings rejected/failed: " + error.message()).c_str() : "settings copied");
     }
 }
 #endif
@@ -149,11 +202,35 @@ int main(int argc, char** argv) {
         // Filesystem access beyond the sandbox, first: every path below depends on it
         // (assets_dir.h). Requested once, still single-threaded. Without it the app keeps its
         // sandbox paths.
-        Eden::FilesystemAccessStatus() = static_cast<int>(elevation::request(elevation::Capability::filesystem));
+        const uid_t uid_before = getuid();
+        const uid_t euid_before = geteuid();
+        const gid_t gid_before = getgid();
+        const gid_t egid_before = getegid();
+        const auto elevation_status = elevation::request(elevation::Capability::filesystem);
+        Eden::FilesystemAccessStatus() = static_cast<int>(elevation_status);
+        const uid_t uid_after = getuid();
+        const uid_t euid_after = geteuid();
+        const gid_t gid_after = getgid();
+        const gid_t egid_after = getegid();
         Eden::BootTrace::Line("filesystem status=%d uid=%d/%d gid=%d/%d",
-                              Eden::FilesystemAccessStatus(), static_cast<int>(getuid()),
-                              static_cast<int>(geteuid()), static_cast<int>(getgid()),
-                              static_cast<int>(getegid()));
+                              Eden::FilesystemAccessStatus(), static_cast<int>(uid_after),
+                              static_cast<int>(euid_after), static_cast<int>(gid_after),
+                              static_cast<int>(egid_after));
+
+        // A failed rollback means the helper cannot prove that the process returned to its original
+        // credential state. Do not continue running an emulator with partially modified privileges.
+        const bool identity_changed_on_failure =
+            elevation_status != elevation::Status::ok &&
+            (uid_after != uid_before || euid_after != euid_before ||
+             gid_after != gid_before || egid_after != egid_before);
+        const bool invalid_success_identity =
+            elevation_status == elevation::Status::ok &&
+            (uid_after != 0 || euid_after != 0 || gid_after != 0 || egid_after != 0);
+        if (elevation_status == elevation::Status::rollback_failed ||
+            identity_changed_on_failure || invalid_success_identity) {
+            Eden::BootTrace::Line("unsafe elevation state; terminating before privileged filesystem use");
+            std::_Exit(125);
+        }
         if (Eden::FilesystemAccess()) MigrateSandboxData();
         for (const auto& folder : {Eden::UserDir(), Eden::ConfigDir(), Eden::CoversDir(), Eden::LogsDir()}) {
             std::error_code folder_error;
