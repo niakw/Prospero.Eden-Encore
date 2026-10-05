@@ -55,6 +55,11 @@ The helper is deliberately narrow at the protocol boundary:
 12. Connect/send/receive operations have bounded five-second timeouts.
 13. The helper serves one request and exits; Encore installs no persistent elevation service.
 14. The packaged ELF is structurally validated so trailing data cannot corrupt the protocol stream.
+15. The application independently checks user/group identity after the helper returns.
+16. `rollback_failed`, a failed request that changed identity, or a reported success with an
+    unexpected identity is fatal before any privileged filesystem use.
+17. Post-elevation legacy-data migration validates its source tree first and rejects symlinks or
+    unexpected file types.
 
 ### Security limitation
 
