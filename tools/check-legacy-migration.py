@@ -6,7 +6,7 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 main = (root / "headless/main.cpp").read_text()
-start = main.index("static bool LegacyGameFilesRemain(")
+start = main.index("static void MigrateLegacyInstallAssets()")
 end = main.index("static void MigrateSandboxData()", start)
 migration = main[start:end]
 
@@ -34,7 +34,7 @@ bool DirectoryExists(const std::string& path) {
     std::error_code error;
     return std::filesystem::is_directory(path, error) && !error;
 }
-std::string LoadSavedAssetsDir() { return saved; }
+std::string LoadStoredAssetsDirForMigration() { return saved; }
 bool SaveAssetsDir(std::string_view directory) {
     if (!save_ok) return false;
     saved = std::string(directory);
