@@ -51,7 +51,9 @@ command -v convert >/dev/null 2>&1 || {
     echo "ImageMagick convert is required to build the Encore launcher brand asset" >&2
     exit 2
 }
-convert "$app/sce_sys/icon0.png" -resize 256x256 -alpha on -define tga:bits-per-pixel=32 -compress None "$app/ui/art/brand.tga"
+# OpenGL's launcher texture convention is vertically opposite ImageMagick's TGA output.
+# Flip only the generated launcher texture; the canonical PNG/PS5 tile remains untouched.
+convert "$app/sce_sys/icon0.png" -resize 256x256 -flip -alpha on -define tga:bits-per-pixel=32 -compress None "$app/ui/art/brand.tga"
 python3 - "$app/ui/art/brand.tga" <<'PY'
 import pathlib, sys
 data = pathlib.Path(sys.argv[1]).read_bytes()
@@ -75,7 +77,7 @@ value = json.loads((template / 'sce_sys/param.json').read_text())
 value.update(titleId='PPSA99008', conceptId='99008', contentId='UP9000-PPSA99008_00-PROSPEROEDEN0001')
 # The app version has one home: the launcher shows the same value.
 import re
-value['contentVersion'] = re.search(r'kAppVersion = "([0-9.]+)"',
+value['contentVersion'] = re.search(r'kPackageVersion = "([0-9.]+)"',
     (root / 'headless/prosperoeden/version.h').read_text()).group(1)
 value['localizedParameters']['en-US']['titleName'] = 'Prospero.Eden Encore'
 value['pubtools']['loudnessSnd0'] = '-28.00'
