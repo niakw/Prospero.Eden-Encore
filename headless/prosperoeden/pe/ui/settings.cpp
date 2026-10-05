@@ -244,13 +244,13 @@ void Launcher::draw_settings(Canvas &c)
                  {tr("MENU SOUNDS"), prefs_.menu_volume > 0 ? percent(prefs_.menu_volume) : tr("Off")}};
         break;
     case kControls:
-        about = tr("DualSense layout, calibration, vibration and shortcuts.");
-        lines = {{tr("BUTTON LAYOUT"), prefs_.controller_layout == 0 ? "PlayStation" : "Nintendo"},
+        about = tr("DualSense mapping, calibration, vibration and shortcuts.");
+        lines = {{tr("BUTTON MAPPING"), prefs_.mapping == kDefaultMapping ? tr("PS5 default") : tr("Custom")},
                  {tr("VIBRATION"), on_off(prefs_.vibration)},
                  {tr("VIBRATION STRENGTH"), percent(prefs_.vibration_strength)},
                  {tr("STICK DEADZONE"), percent(prefs_.stick_deadzone)},
-                 {tr("END GAME"), "Select + L1"},
-                 {tr("FPS OVERLAY"), "Select + R1"}};
+                 {tr("END GAME"), std::string(tr("Touchpad")) + " + L1"},
+                 {tr("FPS OVERLAY"), std::string(tr("Touchpad")) + " + R1"}};
         break;
     case kAccessibility:
         about = tr("Make the menu easier to see and follow.");
@@ -436,7 +436,10 @@ void Launcher::press_dialog(Key key)
         break;
     case Modal::controls:
         if (option_ == 0)
-            prefs_.controller_layout = prefs_.controller_layout != 0 ? 0 : 1;
+        {
+            if (activate) open_mapping(false);
+            return;
+        }
         else if (option_ == 1)
             prefs_.vibration = !prefs_.vibration;
         else if (option_ == 2)
@@ -528,7 +531,7 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
     {
         title = tr("Controls");
         static constexpr const char *kAbout[] = {
-            TR("PlayStation is recommended on PS5: Cross maps to A and Circle to B. Nintendo preserves Switch button positions."),
+            TR("Customize every guest button. The PS5 default uses Cross for the bottom action, Circle for the right action, Square for the left action and Triangle for the top action."),
             TR("Turns DualSense vibration on or off for games."),
             TR("100% is full DualSense rumble strength. Lower it if vibration feels too strong."),
             TR("8% is recommended. Increase it for stick drift; decrease it for more sensitive aiming.")};
@@ -651,8 +654,8 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
                       option_ == row ? 1.0f : 0.0f);
             label(row, name, 260.0f + gap);
         };
-        const std::string layout = prefs_.controller_layout == 0 ? "PlayStation" : "Nintendo";
-        label(0, tr("Button layout"), choice(0, layout));
+        const std::string mapping = prefs_.mapping == kDefaultMapping ? tr("PS5 default") : tr("Custom");
+        label(0, tr("Button mapping"), choice(0, mapping));
         label(1, tr("Vibration"), kToggle);
         toggle(c, 1292.0f, row_centre(1), tween::clamp01(switches_[1].value));
         level_row(2, tr("Vibration strength"), percent(prefs_.vibration_strength),
@@ -716,6 +719,12 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
     {
         notice(c, message_, 592.0f, foot + 7.0f, theme::kSmall,
                message_warning_ ? theme::kWarning : theme::kLimePale, 736.0f, message_warning_);
+    }
+    else if (modal == Modal::controls && option_ == 0)
+    {
+        static constexpr Hint kOpen[] = {
+            {Pad::updown, TR("Select")}, {Pad::cross, TR("Open")}, {Pad::circle, TR("Back")}};
+        draw_hints(c, kOpen, 3, 592.0f, foot, theme::kCopy, 736.0f);
     }
     else if (rows > 1)
     {
