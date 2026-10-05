@@ -19,6 +19,7 @@
 #include "sdk_audit.h"
 #endif
 #include <filesystem>
+#include <system_error>
 #include <condition_variable>
 #include <chrono>
 #include <cstdlib>
