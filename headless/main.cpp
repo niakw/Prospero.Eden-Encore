@@ -14,6 +14,7 @@
 #ifdef PS5_NATIVE
 #include "elevation/elevation.hpp"
 #include "boot_trace.h"
+#include "filesystem_probe.h"
 #include <sys/stat.h>
 #endif
 #ifdef EDEN_DEV_VULKAN
@@ -369,28 +370,41 @@ int main(int argc, char** argv) {
         const gid_t gid_before = getgid();
         const gid_t egid_before = getegid();
         const auto elevation_status = elevation::request(elevation::Capability::filesystem);
-        Eden::FilesystemAccessStatus() = static_cast<int>(elevation_status);
         const uid_t uid_after = getuid();
         const uid_t euid_after = geteuid();
         const gid_t gid_after = getgid();
         const gid_t egid_after = getegid();
-        Eden::BootTrace::Line("filesystem status=%d uid=%d/%d gid=%d/%d",
-                              Eden::FilesystemAccessStatus(), static_cast<int>(uid_after),
-                              static_cast<int>(euid_after), static_cast<int>(gid_after),
-                              static_cast<int>(egid_after));
 
         const bool identity_changed_on_failure =
             elevation_status != elevation::Status::ok &&
             (uid_after != uid_before || euid_after != euid_before ||
              gid_after != gid_before || egid_after != egid_before);
-        const bool invalid_success_identity =
-            elevation_status == elevation::Status::ok &&
-            (uid_after != 0 || euid_after != 0 || gid_after != 0 || egid_after != 0);
         if (elevation_status == elevation::Status::rollback_failed ||
-            identity_changed_on_failure || invalid_success_identity) {
-            Eden::BootTrace::Line("unsafe elevation state; terminating before privileged filesystem use");
+            identity_changed_on_failure) {
+            Eden::BootTrace::Line(
+                "unsafe failed elevation state status=%d uid=%d/%d gid=%d/%d; terminating before filesystem use",
+                static_cast<int>(elevation_status), static_cast<int>(uid_after),
+                static_cast<int>(euid_after), static_cast<int>(gid_after),
+                static_cast<int>(egid_after));
             std::_Exit(125);
         }
+
+        // A successful protocol reply is not enough: prove the actual capability Encore uses.
+        // This also creates /data/prosperoeden on a clean installation. Do not reject a valid
+        // grant merely because a firmware reports credentials differently through get*id().
+        bool filesystem_proven = false;
+        int filesystem_status = static_cast<int>(elevation_status);
+        if (elevation_status == elevation::Status::ok) {
+            Eden::BootTrace::Line("filesystem protocol ok; proving writable persistent root");
+            filesystem_proven = Eden::ProbeWritableRoot(Eden::kDataDir);
+            if (!filesystem_proven)
+                filesystem_status = static_cast<int>(elevation::Status::apply_failed);
+        }
+        Eden::FilesystemAccessStatus() = filesystem_status;
+        Eden::BootTrace::Line("filesystem status=%d proof=%s uid=%d/%d gid=%d/%d",
+                              Eden::FilesystemAccessStatus(), filesystem_proven ? "ok" : "no",
+                              static_cast<int>(uid_after), static_cast<int>(euid_after),
+                              static_cast<int>(gid_after), static_cast<int>(egid_after));
         if (Eden::FilesystemAccess()) MigrateSandboxData();
         for (const auto& folder : {Eden::UserDir(), Eden::ConfigDir(), Eden::CoversDir(), Eden::LogsDir()}) {
             std::error_code folder_error;
