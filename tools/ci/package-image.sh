@@ -6,15 +6,25 @@
 # The image holds the same files as the folder, with sce_sys/param.json at its root. MkPFS
 # (PSBrew/MkPFS, pinned below) is fetched into a user cache on first use; nothing of it is
 # redistributed. Same procedure as ps5-native-app-boilerplate's `make ffpfsc`.
+#   tools/ci/package-image.sh --prepare
 #   tools/ci/package-image.sh TITLE_FOLDER OUTPUT.ffpfsc
 set -euo pipefail
-[[ $# -eq 2 ]] || { echo "usage: $0 TITLE_FOLDER OUTPUT.ffpfsc" >&2; exit 2; }
-folder=$(cd -- "$1" && pwd)
-output=$2
-[[ -f $folder/sce_sys/param.json && -f $folder/eboot.bin ]] || {
-    echo "$folder is not a title folder (sce_sys/param.json and eboot.bin)" >&2
+prepare_only=0
+if [[ ${1:-} == --prepare ]]; then
+    [[ $# -eq 1 ]] || { echo "usage: $0 --prepare" >&2; exit 2; }
+    prepare_only=1
+elif [[ $# -ne 2 ]]; then
+    echo "usage: $0 --prepare | TITLE_FOLDER OUTPUT.ffpfsc" >&2
     exit 2
-}
+fi
+if (( ! prepare_only )); then
+    folder=$(cd -- "$1" && pwd)
+    output=$2
+    [[ -f $folder/sce_sys/param.json && -f $folder/eboot.bin ]] || {
+        echo "$folder is not a title folder (sce_sys/param.json and eboot.bin)" >&2
+        exit 2
+    }
+fi
 for command in git python3; do
     command -v "$command" >/dev/null || { echo "missing required command: $command" >&2; exit 2; }
 done
@@ -36,14 +46,23 @@ python="$checkout/.venv/bin/python"
 if [[ ! -x $python ]]; then
     python3 -m venv "$checkout/.venv" || { echo "python3 venv support is required (python3-venv)" >&2; exit 2; }
 fi
-if [[ ! -f $checkout/.venv/.installed ]]; then
-    "$python" -m pip install --disable-pip-version-check --quiet "$checkout" >&2
-    touch "$checkout/.venv/.installed"
+deps_stamp="$checkout/.venv/.encore-cli-deps-v1"
+if [[ ! -f $deps_stamp ]]; then
+    # Exact CLI/runtime versions from this MkPFS commit's uv.lock. Encore runs the checked-out
+    # source directly, so GUI/Pillow/build-backend dependencies are not part of the release path.
+    "$python" -m pip install --disable-pip-version-check --quiet --only-binary=:all: \
+        "cryptography==49.0.0" "cffi==2.0.0" "pycparser==3.0" \
+        "zlib-ng==1.0.0" "isal==1.8.0" >&2
+    touch "$deps_stamp"
+fi
+if (( prepare_only )); then
+    PYTHONPATH="$checkout" "$python" -c 'import cryptography, isal, zlib_ng, mkpfs; print("MkPFS release tooling ready", mkpfs.__version__)'
+    exit 0
 fi
 rm -f -- "$output"
 log="$output.log"
 # Wrapped-folder mode (MkPFS's maximum-compatibility .ffpfsc layout), verified after writing.
-if ! "$python" -m mkpfs pack folder --no-adjust-output-file-extension --version PS5 --verify \
+if ! PYTHONPATH="$checkout" "$python" -m mkpfs pack folder --no-adjust-output-file-extension --version PS5 --verify \
         "$folder" "$output" > "$log" 2>&1; then
     tail -40 "$log" >&2
     exit 1
