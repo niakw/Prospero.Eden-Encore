@@ -1,142 +1,191 @@
-# Building ProsperoEden
+# Building Prospero.Eden Encore
 
-ProsperoEden builds on Linux (Ubuntu 26.04; WSL works). One command builds the release:
+Encore builds on Linux. The release CI uses **Ubuntu 24.04**; WSL/Linux hosts with the same tools are
+also suitable.
 
 ```bash
-make
+make release
 ```
 
-The first run fetches every dependency at its pinned revision, builds the RADV driver and
-Eden for the PS5, and writes the release files to `dist/`:
+The first build fetches pinned dependencies, prepares RADV and builds Eden for PS5. Later builds reuse
+the dependency cache, the checkout-specific native build cache and ccache.
 
-- `ProsperoEden-vX.Y.Z.zip`: the `PPSA99008` folder to copy to `/data/homebrew/PPSA99008`;
-- `ProsperoEden-vX.Y.Z.ffpfsc`: the same folder as a compressed PFS image that
-  ShadowMountPlus installs like a package;
-- `SHA256SUMS` and `release-notes.md`.
+## Release outputs
 
-The first build takes a while (RADV and Eden are large). Later builds reuse everything that
-already exists: the dependencies, this checkout's build cache in
-`~/.cache/ps5-eden-headless.<hash>`, and ccache.
+A successful `make release` writes:
+
+- `dist/Prospero.Eden-Encore-vX.Y.Z.zip` — standard installation bundle;
+- `dist/Prospero.Eden-Encore-vX.Y.Z.ffpfsc` — optional ShadowMountPlus PFS image;
+- `dist/SHA256SUMS` — SHA-256 digests for both distributable binaries;
+- `dist/release-notes.md` — extracted from the matching README `Changes in vX.Y.Z` section.
+
+The ZIP includes the `PPSA99008` application folder plus README, INSTALL, SECURITY, LICENSE and
+third-party notices.
+
+Unstripped symbols are kept separately under:
+
+```text
+build/symbols/Prospero.Eden-Encore-vX.Y.Z.elf
+```
+
+They are uploaded as a CI artifact for crash diagnosis but are not attached to the public Release.
 
 ## Make targets
 
 | Target | What it does |
-|---|---|
-| `make` / `make release` | Release files in `dist/` |
-| `make package` | Only the app folder, `build/release/PPSA99008` |
-| `make image` | Only the `.ffpfsc` package image |
-| `make install PS5_HOST=<address>` | Copy `build/release/PPSA99008` to a console over FTP (close ProsperoEden first) |
-| `make dev DEV_TITLE=<title ID>` | Development build, `build/dev/PPSA99008` (or `EDEN_DEV_PACKAGE_DIR`): profiling counters, `dev-settings.txt` switches, boots the given title |
-| `make test` | Host (Linux) build of the emulator and its test suites |
-| `make deps` | Fetch missing dependencies at their pinned revisions |
-| `make deps-status` | List the dependencies, where they live and whether they match their pins |
-| `make prepare` | Everything besides Eden itself: build cache, FFmpeg, packaging tool, driver stub, RADV |
-| `make toolchain` | Check the host tools |
+| --- | --- |
+| `make` / `make release` | Full release bundle |
+| `make package` | App folder only: `build/release/PPSA99008` |
+| `make image` | FFPFSC image only |
+| `make install PS5_HOST=<address>` | Copy the built app folder over FTP |
+| `make dev DEV_TITLE=<title ID>` | Development build with profiling/dev switches |
+| `make test` | Host emulator/tests |
+| `make deps` | Fetch missing pinned dependencies |
+| `make deps-status` | Show dependency locations and pin state |
+| `make prepare` | Prepare dependencies/tooling/driver inputs without the final Eden build |
+| `make toolchain` | Validate required host tools |
 | `make clean` | Remove `build/` and `dist/` |
-| `make distclean` | Also remove the fetched `.deps` and this checkout's build cache |
+| `make distclean` | Also remove fetched local dependencies/build cache |
 
-`JOBS=<n>` sets the number of parallel compile jobs (default: all cores).
+`JOBS=<n>` controls native compile parallelism.
 
 ## Dependencies
 
-Every input is pinned in `tools/deps.json` and fetched by `make deps` (`tools/deps.py`) only when
-it is missing: archives are checked against their SHA-256/SHA-512 before use and git
-repositories are fetched at their pinned commit. Nothing that already exists is modified, so a
-checkout you work in stays at whatever revision it has (`make deps-status` shows it).
-Downloads are cached in `~/.cache/prosperoeden-deps` (`PROSPEROEDEN_DEPS_CACHE`).
+Primary source/build inputs are pinned in `tools/deps.json`. Archives are hash-checked and Git
+repositories are fetched at explicit commits. The dependency cache defaults to:
 
-Inside this repository, in `.deps/`:
+```text
+~/.cache/prosperoeden-deps
+```
 
-- **Eden** at commit `5f142c7926d0c7fcbbd0ce30794d72f638a43b2a` (GitHub mirror archive), with
-  Eden's own hash-pinned packages, which its configure step downloads. ProsperoEden does not
-  modify Eden's files: the PS5 frontend in `headless/` replaces and derives sources at
-  configure time (`headless/inject.cmake`).
-- **FFmpeg** at the commit Eden pins, built with only the decoders games use.
-- **PS5 OpenGL 4.6 SDK 1.0.0** (release archive), for the launcher and the OpenGL renderer.
-- **OpenSSL and zlib** from pacbrew v0.40.2.
-- **LLVM 18.1.8 compiler-rt** emulated-TLS sources and **fmt 12.1.0** headers.
+Important inputs include:
 
-Next to this repository (`../`), as git checkouts:
+- **Eden** at the revision pinned by Encore;
+- Eden's pinned FFmpeg source;
+- PS5 OpenGL SDK;
+- PacBrew OpenSSL/zlib inputs;
+- LLVM compiler-rt and fmt inputs;
+- **ps5-native-app-boilerplate** / PS5 Payload SDK;
+- Mihawk PS5 Vulkan/Mesa/Payload SDK sources used for RADV.
 
-- **ps5-native-app-boilerplate**: the PS5 Payload SDK v0.42, the runtime `libc.prx` and the
-  native packaging tool;
-- **Mihawk's PS5_Vulkan, PS5_Mesa and PS5_PayloadSDK** (`../mihawk-*-review`): RADV and its
-  build recipe. `make prepare` builds RADV once and isolates it beside the OpenGL Mesa
-  (`tools/isolate-radv.py`). RADV's display code carries this repository's adaptation
-  (`tools/patch-radv-wsi.py`: the output's lifetime, and the 120 Hz output a game session can ask
-  for); when the adaptation changes, `make prepare` builds RADV again, which compiles only that
-  file. The three checkouts have to be at the commits `tools/build-radv-dependencies.sh` names.
+RADV is isolated and validated before use. Encore's WSI adaptation is checked by
+`tools/patch-radv-wsi.py`.
 
-The `libSceAgcDriver` import facade both drivers link against is built from
-`tools/stubs/libSceAgcDriver.c`. Small contracts from our research repositories are in
-`third_party/`.
+The optional FFPFSC step fetches **PSBrew/MkPFS** at the immutable commit recorded in
+`tools/ci/package-image.sh` and caches it under `~/.cache/prosperoeden-mkpfs`.
+
+## Fast preflight vs native compile
+
+The release build intentionally runs source/harness checks **before** the expensive native compile
+whenever those checks only need the configured/generated source tree. This catches stale extraction
+harnesses and source-shape regressions early.
+
+After CMake configuration, preflight includes checks for:
+
+- slab lifetime and audio shutdown;
+- load-failure recovery;
+- ProsperoEden legacy migration;
+- NSO memory / ZBIC behavior;
+- performance/startup/worker/TSC contracts;
+- JIT protection/allocation/patch/assert paths;
+- crash reporting;
+- native GPU queue/thread/producer/sync behavior;
+- NVDRV process lifetime;
+- integer buffer clear;
+- game-capture shutdown;
+- HUD/frame summary behavior.
+
+Only checks that need compiled dependency records or machine code remain after the native build,
+notably the sparse-header dependency check and native exclusive-monitor assembly validation.
 
 ## Launcher
 
-The launcher (`headless/prosperoeden`) draws with OpenGL through the PS5 OpenGL SDK and plays its
-sounds through the console's audio output; it needs no other library. Its font atlas, artwork
-and sounds are committed in `headless/prosperoeden/ui`, so a build does not regenerate them.
-The tools that made them are in `tools/launcher`:
+The launcher lives under `headless/prosperoeden`. Its committed UI assets are shipped directly;
+release builds do not regenerate them.
 
-- `assets.sh` bakes the font (`third_party/fonts/Montserrat-Medium.ttf`) and renders the art from
-  `assets/`; it needs a host C++ compiler and Python with Pillow.
-- `process-sfx.py` trims and levels the raw sound effects (needs `ffmpeg` and `numpy`).
-- `bake-wordmark.py` writes the "LOADING" lettering of the loading screen
-  (`headless/loading_wordmark.glsl`).
-- `preview.sh` draws every launcher screen on a PC (Mesa's software renderer, sample games) to
-  PNG files or a video, with the same code, shaders and font as on the console.
-- `strings.py` keeps the translations: `extract` writes the template (`launcher.pot`) from the
-  text in the code, `new <tag>` starts a catalog in `headless/prosperoeden/ui/lang`, and `check`
-  fails on missing or stale text, changed placeholders and characters the font does not have.
-- `text-check.sh` compares the launcher's right-to-left text code with ICU on generated lines
-  and on every translation (needs `libicu-dev`).
+Useful tooling under `tools/launcher` includes:
 
-## Host tools
+- `assets.sh` — font/art generation;
+- `process-sfx.py` — sound preparation;
+- `bake-wordmark.py` — loading wordmark;
+- `preview.sh` — host UI previews;
+- `strings.py` — extraction/catalog validation;
+- `text-check.sh` — text/RTL validation.
 
-`make toolchain` checks them: `clang-18`, `lld-18` and the LLVM 18 tools, `cmake`, `ninja`,
-`ccache`, `make`, `nasm`, `meson`, `rsync`, `git`, `glslangValidator`, `spirv-val`, `bison`,
-- `librsvg2-bin` (`rsvg-convert`) and ImageMagick (`convert`) for the official Eden PS5 and launcher icons
-`flex`, `curl`, `wget`, `unzip`, and Python 3.11 or later with `venv`, `mako` and `yaml`.
-The image step fetches [PSBrew/MkPFS](https://github.com/PSBrew/MkPFS) at a pinned commit into
-`~/.cache/prosperoeden-mkpfs`.
+The release workflow runs `python3 -B tools/launcher/strings.py check` before native compilation.
+
+## Host toolchain
+
+`make toolchain` checks the required toolset. CI installs, among others:
+
+- clang/lld/LLVM 18;
+- CMake, Ninja, ccache, make, nasm and Meson;
+- glslang/spirv tools;
+- bison/flex;
+- git, curl, wget, unzip and rsync;
+- Python 3 with venv/pip/mako/yaml;
+- librsvg and ImageMagick.
+
+CI pins Meson to the version validated by the release workflow.
 
 ## Crash reports
 
-When the app crashes it writes `crash-YYYYMMDD-HHMMSS.txt` to its logs folder
-(`/data/prosperoeden/logs`), starts again and says on the home screen where the report is
-(`headless/crash_report.h`). At the next start that run's logs are moved beside the report
-(`-stderr.log`, `-heap.log`, `-eden_log.txt`); the five newest reports are kept.
+Encore writes crash reports under:
 
-The report lists addresses as `eboot+0x...`. To get function names, files and lines:
-
-```bash
-python3 tools/symbolize-crash.py crash-20261001-121314.txt build/symbols/ProsperoEden-v1.000.040.elf
+```text
+/data/prosperoeden/logs
 ```
 
-The second argument is the unstripped executable of the build that wrote the report:
-`build/headless-native/llvm-pie.elf` right after a build. `make release` copies it to
-`build/symbols/ProsperoEden-vX.Y.Z.elf`; keep that file with the release, it is not published.
+To symbolize one, use the exact unstripped ELF from the matching build:
 
-`make test` checks the report on the host (`tools/check-crash-report.py`). A development build
-crashes on request, to try it on a console: write `segv`, `thread`, `abort` or `throw` to
-`crash-app.txt` in the app folder.
+```bash
+python3 tools/symbolize-crash.py crash-YYYYMMDD-HHMMSS.txt \
+  build/symbols/Prospero.Eden-Encore-v1.000.040.elf
+```
 
-## Release workflow
+## GitHub release workflow
 
-`.github/workflows/release.yml` runs `tools/ci/build-release.sh` (`make release`) on a
-self-hosted runner labelled `prosperoeden`. `EDEN_DEV_CHECKOUT` in the runner's `.env` may name a
-development checkout whose dependencies are reused instead of fetched.
+The authoritative workflow is:
 
-- **Manual run** (Actions > Release build > Run workflow): builds the release files and keeps
-  them as a 7-day artifact.
-- **Tag `vX.Y.Z`**: builds them, checks that the tag matches the package version, and publishes
-  a pre-release. The release notes come from the README's "Changes in vX.Y.Z" section.
+```text
+.github/workflows/build-040-zbic.yml
+```
 
-To cut a release:
+It runs on pushes to the default Encore branch and can also be dispatched manually.
 
-1. Bump the version in `headless/prosperoeden/version.h` (the launcher and the package read it).
-2. Add the "Changes in" section to the README.
-3. Test the build on a console.
-4. Push a `vX.Y.Z` tag.
-5. Keep `build/symbols/ProsperoEden-vX.Y.Z.elf` from the build that was published (crash reports
-   are read with it).
+The build job:
+
+1. checks out without persisting credentials;
+2. installs the Ubuntu 24.04 toolchain;
+3. pins Meson;
+4. validates translations;
+5. restores build caches;
+6. performs `make release JOBS=4`;
+7. saves caches only after success;
+8. uploads `dist/` and symbols as a 14-day workflow artifact.
+
+The publish job receives `contents: write` only after the build succeeds. Publication occurs when:
+
+- a push commit message contains `[release]`; or
+- a manual workflow dispatch sets `publish=true`.
+
+Before publishing it checks `SHA256SUMS` against the ZIP and FFPFSC image. It then creates an
+immutable tag of the form:
+
+```text
+v1.000.040-encore-<shortsha>
+```
+
+and publishes the ZIP, FFPFSC image and `SHA256SUMS` as the latest GitHub Release.
+
+## Cutting an Encore release
+
+Before the final `[release]` commit:
+
+1. confirm the package/content version;
+2. update the matching README `Changes in vX.Y.Z` section;
+3. keep `INSTALL.md`, `SECURITY.md`, `THIRD_PARTY_NOTICES.md` and technical notes current;
+4. require a green CodeQL run;
+5. require a green shipping build/package run;
+6. verify the generated checksums and Release assets;
+7. keep the matching symbols artifact for crash reports.
