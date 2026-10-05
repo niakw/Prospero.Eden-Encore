@@ -455,22 +455,23 @@ int main(int argc, char** argv) {
             if (Eden::FilesystemAccess() && Eden::AssetsDir() == Eden::kDefaultAssetsDir)
                 for (const char* folder : {"/keys", "/firmware", "/roms", "/updates", "/mods", "/ryujinx"})
                     (void)mkdir((std::string{Eden::kDefaultAssetsDir} + folder).c_str(), 0777);
-            // RADV's shader cache is kept with the app's data (its own default is /app0), so it also
-            // works when the app is installed as a read-only package image. The cache an earlier
-            // version kept in the app folder moves over.
+            // Keep RADV's shader cache in writable data, never under /app0. Elevated installs use
+            // /data/prosperoeden; self-contained/sandboxed installs use /download0.
+            const std::string cache_root = Eden::FilesystemAccess() ?
+                std::string{Eden::kDataDir} + "/cache" : Eden::UserDir() + "/cache";
+            const std::string cache = cache_root + "/radv";
+            (void)mkdir(cache_root.c_str(), 0777);
             if (Eden::FilesystemAccess()) {
-                const std::string cache = std::string{Eden::kDataDir} + "/cache/radv";
                 const std::string before = Eden::AppFile("radv-shader-cache");
-                (void)mkdir((std::string{Eden::kDataDir} + "/cache").c_str(), 0777);
                 if (!Eden::DirectoryExists(cache) && Eden::DirectoryExists(before) &&
                     std::rename(before.c_str(), cache.c_str()) != 0)
                     Eden::Report("cache", "The driver's shader cache could not move to the data folder; it starts empty");
-                (void)mkdir(cache.c_str(), 0777);
-                setenv("MESA_SHADER_CACHE_DIR", cache.c_str(), 1);
-                // Mesa otherwise allows a cache up to 1 GiB. Bound it on a console app so shader
-                // churn cannot consume a large portion of writable storage over time.
-                setenv("MESA_SHADER_CACHE_MAX_SIZE", "256M", 1);
             }
+            (void)mkdir(cache.c_str(), 0777);
+            setenv("MESA_SHADER_CACHE_DIR", cache.c_str(), 1);
+            // Mesa otherwise allows a cache up to 1 GiB. Bound it on a console app so shader
+            // churn cannot consume a large portion of writable storage over time.
+            setenv("MESA_SHADER_CACHE_MAX_SIZE", "256M", 1);
         }
         // Whether Eden's large tables can be sparse on this console (src/memory_pages.cpp),
         // decided now: every session's log says it, with or without a game.
