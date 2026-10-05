@@ -671,7 +671,16 @@ bool EdenServices::set_files_folder(const std::string& directory) {
     // layout; individual keys/firmware/roms/etc. paths are never configurable.
     for (const char* name : {"keys", "firmware", "roms", "updates", "mods",
                              "save-import", "save-export", "ryujinx"}) {
-        std::filesystem::create_directories(std::filesystem::path{directory} / name, error);
+        const std::filesystem::path child = std::filesystem::path{directory} / name;
+        error.clear();
+        const auto child_status = std::filesystem::symlink_status(child, error);
+        if (!error && std::filesystem::exists(child_status) &&
+            (std::filesystem::is_symlink(child_status) || !std::filesystem::is_directory(child_status))) {
+            Eden::Report("storage", (std::string{"Unsafe storage entry: "} + child.string()).c_str());
+            return false;
+        }
+        error.clear();
+        std::filesystem::create_directories(child, error);
         if (error) {
             Eden::Report("storage", (std::string{"Could not prepare "} + name + ": " + error.message()).c_str());
             return false;
