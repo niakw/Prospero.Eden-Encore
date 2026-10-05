@@ -65,6 +65,6 @@ match = re.search(rf'^## Changes in {re.escape(tag)}\n(.*?)(?=^## )', readme, re
 if match:
     (dist / 'release-notes.md').write_text(match.group(1).strip() + '\n')
 else:
-    print(f'README.md has no "## Changes in {tag}" section; no release-notes.md', file=sys.stderr)
+    sys.exit(f'README.md has no "## Changes in {tag}" section; release notes are required')
 print(f'{archive} {digest}')
 print(f'{image} {image_digest}')
