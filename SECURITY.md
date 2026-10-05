@@ -95,6 +95,10 @@ The current helper:
 - requires a cloned credential before modification;
 - reads back and verifies the complete resulting state;
 - attempts to restore and verify the original state after an apply failure;
+- makes `rollback_failed` fatal before any privileged filesystem use;
+- independently checks the process user/group identity after the helper returns and fails closed on
+  inconsistent success/failure states;
+- refuses symlinks during post-elevation legacy-data migration;
 - uses bounded local transport timeouts;
 - handles one request and exits instead of installing a persistent privilege service.
 
