@@ -1,4 +1,4 @@
-// ProsperoEden - Launcher: the Game files folder browser, Language and About.
+// ProsperoEden - Launcher: Storage root browser, Language and About.
 // Copyright (C) 2026 BlackBearReloaded
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -60,7 +60,7 @@ void draw_folder(Canvas &c, float x, float cy, Color ink, bool up)
 
 } // namespace
 
-// ---------------------------------------------------------------- game files
+// ---------------------------------------------------------------- storage
 
 void Launcher::enter_files()
 {
@@ -143,8 +143,8 @@ void Launcher::press_files(Key key)
     case Key::triangle:
     {
         const bool saved = services_.set_files_folder(browse_dir_);
-        say(saved ? tr("Saved. Reopen Eden to use this folder.") :
-                    tr("Could not save the folder. Please try again."),
+        say(saved ? tr("Storage root saved. Reopen Encore to use it.") :
+                    tr("Could not save the storage root. Please try again."),
             !saved);
         cue(saved ? Cue::saved : Cue::error);
         return;
@@ -154,8 +154,8 @@ void Launcher::press_files(Key key)
         const std::string fallback = services_.default_files_folder();
         const bool saved = services_.set_files_folder(fallback);
         (void)browse_to(fallback);
-        say(saved ? tr("Default folder saved. Reopen Eden to use it.") :
-                    tr("Could not save the folder. Please try again."),
+        say(saved ? tr("Internal storage saved. Reopen Encore to use it.") :
+                    tr("Could not save the storage root. Please try again."),
             !saved);
         cue(saved ? Cue::saved : Cue::error);
         return;
@@ -169,7 +169,7 @@ void Launcher::draw_files(Canvas &c)
 {
     gfx::DrawList &list = c.list;
     const int count = static_cast<int>(browse_entries_.size());
-    draw_frame(c, tr("Game files"), tr("Choose the folder that holds your keys, firmware and games"));
+    draw_frame(c, tr("Storage"), tr("Choose one root for keys, firmware, games, updates and mods"));
 
     // ---- folders ----
     glass(c, kListPanel, 26.0f, theme::kPanel.with_alpha(0.80f), theme::kPanelEdge.with_alpha(0.55f));
@@ -224,7 +224,7 @@ void Launcher::draw_files(Canvas &c)
     // ---- what the folder shown holds ----
     glass(c, kDetailPanel, 26.0f, theme::kPanel.with_alpha(0.80f),
           theme::kPanelEdge.with_alpha(0.55f));
-    text(c, tr("THIS FOLDER"), 1016.0f, baseline(210.0f, 28.0f, theme::kSmall), theme::kSmall,
+    text(c, tr("THIS ROOT"), 1016.0f, baseline(210.0f, 28.0f, theme::kSmall), theme::kSmall,
          theme::kLimePale, Align::left, 3.0f);
     text_block(c, browse_dir_, 1016.0f, baseline(250.0f, 42.0f, theme::kHeading), theme::kHeading,
                42.0f, theme::kTitle, 748.0f, 2);
@@ -265,7 +265,7 @@ void Launcher::draw_files(Canvas &c)
     list.rounded_rect({1016.0f, 698.0f, 748.0f, 1.0f}, 0.0f, theme::kRule);
     notice_block(c,
                  message_.empty() ?
-                     tr("Keep keys, firmware and roms folders together. TRIANGLE uses the folder shown.") :
+                     tr("Encore uses the same keys, firmware, roms, updates and mods folders under every storage root.") :
                      message_,
                  1016.0f, baseline(722.0f, 36.0f, theme::kText24), theme::kText24, 36.0f,
                  message_.empty() ? theme::kCopy :
@@ -274,8 +274,8 @@ void Launcher::draw_files(Canvas &c)
 
     static constexpr Hint kHints[] = {{Pad::cross, TR("Open")},
                                       {Pad::circle, TR("Back")},
-                                      {Pad::triangle, TR("Use this folder")},
-                                      {Pad::square, TR("Default folder")},
+                                      {Pad::triangle, TR("Use this root")},
+                                      {Pad::square, TR("Internal storage")},
                                       {Pad::updown, TR("Browse")},
                                       {Pad::l1, TR("Page"), Pad::r1}};
     draw_footer(c, kHints, 6);
@@ -488,7 +488,7 @@ void Launcher::draw_about(Canvas &c)
     line(648.0f, tr("MODS"), fill(tr("{0}/ (one folder per game ID)"), {short_path(folder + "/mods", 36)}));
     list.rounded_rect({1016.0f, 712.0f, 748.0f, 1.0f}, 0.0f, theme::kRule);
     text_block(c,
-               tr("Use extracted firmware NCA files. Choose the folder in Settings, Game files; "
+               tr("Use extracted firmware NCA files. Choose the root in Settings, Storage; "
                "restart the app after changing it."),
                1016.0f, baseline(740.0f, 36.0f, theme::kText24), theme::kText24, 36.0f,
                theme::kMeta, 748.0f, 3, kShrink);
