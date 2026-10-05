@@ -55,6 +55,8 @@ static_assert(std::size(kResolutionLabels) == std::size(kResolutionKeys));
 inline constexpr int kNativeResolution = 3;
 inline constexpr const char* kUpscalingFilterKeys[] = {"bilinear", "fsr", "bicubic", "nearest"};
 inline constexpr const char* kUpscalingFilterLabels[] = {"Bilinear", "AMD FSR", "Bicubic", "Nearest"};
+inline constexpr const char* kAntiAliasingKeys[] = {"none", "fxaa", "smaa"};
+inline constexpr const char* kAntiAliasingLabels[] = {"None", "FXAA", "SMAA"};
 // Settings > Video: the refresh rate of the output while a game runs. 120 Hz is asked of the
 // display (display_refresh.h); one that cannot show it stays at 60 Hz.
 inline constexpr const char* kRefreshKeys[] = {"60", "120"};
@@ -97,6 +99,8 @@ struct Preferences {
     GraphicsBackend backend = GraphicsBackend::Vulkan;
     int resolution = kNativeResolution;  // index into kResolutionKeys
     int upscaling_filter = 0;            // index into kUpscalingFilterKeys
+    int fsr_sharpness = 88;              // 0-100 UI sharpness; Eden stores the inverse 0-200 value
+    int anti_aliasing = 0;               // index into kAntiAliasingKeys
     int refresh = 0;                     // index into kRefreshKeys
     int output = 0;                      // index into kOutputKeys
     int performance_profile = 0;         // 0 recommended, 1 smooth, 2 performance
@@ -283,6 +287,10 @@ inline Preferences LoadPreferences(const std::string& file = SettingsFile()) {
     result.upscaling_filter = KeyIndex(Settings::String(document, Json::json_pointer("/video/upscaling_filter")),
                                        kUpscalingFilterKeys, int(std::size(kUpscalingFilterKeys)),
                                        result.upscaling_filter);
+    const int fsr_sharpness = Settings::Int(document, Json::json_pointer("/video/fsr_sharpness"), result.fsr_sharpness);
+    if (fsr_sharpness >= 0 && fsr_sharpness <= 100) result.fsr_sharpness = fsr_sharpness;
+    result.anti_aliasing = KeyIndex(Settings::String(document, Json::json_pointer("/video/anti_aliasing")),
+                                    kAntiAliasingKeys, int(std::size(kAntiAliasingKeys)), result.anti_aliasing);
     result.refresh = KeyIndex(Settings::String(document, Json::json_pointer("/video/refresh_rate")),
                               kRefreshKeys, int(std::size(kRefreshKeys)), result.refresh);
     result.output = KeyIndex(Settings::String(document, Json::json_pointer("/video/output_resolution")),
@@ -321,6 +329,8 @@ inline bool SavePreferences(const Preferences& value, const std::string& file = 
         (value.backend != GraphicsBackend::OpenGL && value.backend != GraphicsBackend::Vulkan) ||
         value.resolution < 0 || value.resolution >= int(std::size(kResolutionKeys)) ||
         value.upscaling_filter < 0 || value.upscaling_filter >= int(std::size(kUpscalingFilterKeys)) ||
+        value.fsr_sharpness < 0 || value.fsr_sharpness > 100 ||
+        value.anti_aliasing < 0 || value.anti_aliasing >= int(std::size(kAntiAliasingKeys)) ||
         value.refresh < 0 || value.refresh >= int(std::size(kRefreshKeys)) ||
         value.output < 0 || value.output >= int(std::size(kOutputKeys)) ||
         value.performance_profile < 0 || value.performance_profile >= int(std::size(kPerformanceProfileKeys)) ||
@@ -335,6 +345,8 @@ inline bool SavePreferences(const Preferences& value, const std::string& file = 
     document["video"]["fps_overlay"] = value.hud;
     document["video"]["resolution"] = kResolutionKeys[value.resolution];
     document["video"]["upscaling_filter"] = kUpscalingFilterKeys[value.upscaling_filter];
+    document["video"]["fsr_sharpness"] = value.fsr_sharpness;
+    document["video"]["anti_aliasing"] = kAntiAliasingKeys[value.anti_aliasing];
     document["video"]["refresh_rate"] = kRefreshKeys[value.refresh];
     document["video"]["output_resolution"] = kOutputKeys[value.output];
     document["video"]["performance_profile"] = kPerformanceProfileKeys[value.performance_profile];
