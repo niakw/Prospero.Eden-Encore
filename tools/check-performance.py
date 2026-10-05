@@ -38,6 +38,8 @@ cmake = (root / 'headless/CMakeLists.txt').read_text()
 assert 'Timer read_timer' not in cmake
 assert 'Timer compile_timer' not in cmake
 assert 'protection_timer' not in cmake
+shared_jit = (root / 'headless/dynarmic/jit_group_support.inc').read_text()
+assert 'bool eden_jit_shared = false;' in shared_jit
 main = (root / 'headless/main.cpp').read_text()
 assert 'Performance::Reset()' not in main
 assert 'Performance::Report()' not in main
