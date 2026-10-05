@@ -233,6 +233,28 @@ static void MigrateLegacyInstallAssets() {
         return;
     }
 
+    // rename() cannot create the destination parent. A clean 13.60 install may not have
+    // /data/prosperoeden yet, so create only the persistent root after the whole migration plan
+    // has passed preflight. If anything later fails, remove it again when it is still empty.
+    bool created_target = false;
+    error.clear();
+    const auto target_status = std::filesystem::symlink_status(target, error);
+    if (!error && std::filesystem::exists(target_status)) {
+        if (std::filesystem::is_symlink(target_status) || !std::filesystem::is_directory(target_status)) {
+            Eden::Report("data migration", "Legacy move aborted: persistent target is not a real directory");
+            return;
+        }
+    } else {
+        error.clear();
+        if (!std::filesystem::create_directories(target, error) && error) {
+            Eden::Report("data migration",
+                         (std::string{"Legacy move aborted: could not create persistent target: "} +
+                          error.message()).c_str());
+            return;
+        }
+        created_target = true;
+    }
+
     std::vector<Move> moved;
     auto rollback = [&] {
         for (auto it = moved.rbegin(); it != moved.rend(); ++it) {
@@ -247,6 +269,11 @@ static void MigrateLegacyInstallAssets() {
             std::error_code restore_error;
             if (!std::filesystem::exists(directory, restore_error))
                 std::filesystem::create_directories(directory, restore_error);
+        }
+        if (created_target) {
+            std::error_code cleanup_error;
+            if (std::filesystem::is_empty(target, cleanup_error) && !cleanup_error)
+                std::filesystem::remove(target, cleanup_error);
         }
     };
 
