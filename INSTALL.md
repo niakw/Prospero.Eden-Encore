@@ -26,6 +26,57 @@ Updating the application does not require deleting that directory.
 
 ---
 
+## Upgrading from ProsperoEden
+
+Encore deliberately keeps the same title ID (`PPSA99008`) and the same persistent data root:
+
+```text
+/data/prosperoeden
+```
+
+So ProsperoEden 1.000.020–1.000.040 settings, saves, covers and user data already stored there are
+reused directly.
+
+**Do not delete `/data/prosperoeden`.**
+
+For the application itself, the safest upgrade is:
+
+1. Fully close ProsperoEden.
+2. **Do not delete the old `PPSA99008` folder first.**
+3. Copy/extract Encore's new `PPSA99008` folder over the existing application folder.
+4. Launch Encore once.
+5. Only after that first successful launch should you remove obsolete duplicate installation
+   sources.
+
+Why this matters: very old ProsperoEden layouts could still keep game files under:
+
+```text
+/data/homebrew/PPSA99008/assets
+```
+
+On first elevated Encore startup, that legacy folder is migrated safely toward
+`/data/prosperoeden` when it is still the active game-files location. Existing custom game-files
+folders are left untouched, destination conflicts are never overwritten, and a stale setting that
+points to an already-removed legacy `assets` folder is repaired to `/data/prosperoeden`.
+
+If the old application folder was physically deleted **before** migration, files that existed only
+inside its `assets/` directory cannot be recreated by Encore. Persistent data that was already
+under `/data/prosperoeden` is unaffected.
+
+### Switching an existing install to FFPFSC
+
+Migrate/launch the ordinary folder installation first, then switch to FFPFSC if desired.
+
+Do not leave both a `PPSA99008` folder and a `.ffpfsc` image with the same title ID in active
+ShadowMountPlus scan locations. The loader may keep or prefer the previously registered source.
+
+If ShadowMountPlus reports **`TitleDir bridge unavailable`**, that failure is in the
+ShadowMountPlus/title-registration path, before Encore itself is running. It does not mean Encore's
+filesystem elevation failed. Use the ZIP/folder installation path to get Encore running and migrated
+first, then troubleshoot the ShadowMountPlus environment separately.
+
+---
+
 ## Method 1 — ZIP installation (recommended)
 
 Use this method unless you specifically use ShadowMountPlus.
