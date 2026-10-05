@@ -15,14 +15,16 @@ inline constexpr const char* kDataDir = "/data/prosperoeden";
 inline constexpr const char* kDefaultAssetsDir = "/data/prosperoeden";
 inline constexpr const char* kInstallDir = "/data/homebrew/PPSA99008";
 inline constexpr const char* kMountedAppDir = "/system_ex/app/PPSA99008";
+inline constexpr int kFilesystemSelfContained = -2;
 
-// Filesystem access requested at startup: -1 not requested, 0 granted, otherwise the
-// elevation::Status that refused it.
+// Filesystem status: -1 not decided yet, -2 deliberately self-contained in the app sandbox,
+// 0 elevated filesystem access granted, otherwise the elevation::Status that refused it.
 inline int& FilesystemAccessStatus() {
     static int status = -1;
     return status;
 }
 inline bool FilesystemAccess() { return FilesystemAccessStatus() == 0; }
+inline bool SelfContainedMode() { return FilesystemAccessStatus() == kFilesystemSelfContained; }
 
 inline bool FileExists(const std::string& path) {
     struct stat info {};
@@ -54,6 +56,10 @@ inline std::string CoversDir() { return FilesystemAccess() ? std::string{kDataDi
 inline std::string UserDir() { return FilesystemAccess() ? std::string{kDataDir} + "/user" : "/download0/eden-headless-g7/user"; }
 inline std::string ConfigFile(std::string_view name) { return ConfigDir() + "/" + std::string(name); }
 inline std::string LogFile(std::string_view name) { return LogsDir() + "/" + std::string(name); }
+inline std::string BackupDir() { return FilesystemAccess() ? std::string{kDataDir} + "/backup" :
+                                                           ConfigDir() + "/backup"; }
+inline std::string ExportDir() { return FilesystemAccess() ? kDefaultAssetsDir :
+                                                           ConfigDir() + "/save-export"; }
 
 inline bool ValidAssetsDir(std::string_view path) {
     // "/" would make library/setup scans walk the console root and can expose unrelated system
