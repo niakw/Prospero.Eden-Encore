@@ -85,12 +85,12 @@ extern "C" std::int64_t sceKernelGetDirectMemorySize();
 #include "core/hle/kernel/k_thread.h"
 #endif
 #pragma clang diagnostic pop
+extern "C" bool eden_jit_shared;  // headless/dynarmic/jit_group_support.inc
 #ifdef EDEN_DEV_PROFILE
 #include "crash_trigger.h"
 #include "watch.h"
 #include "core/arm/debug.h"
 #include "core/memory.h"
-extern "C" bool eden_jit_shared;  // headless/dynarmic/jit_group_support.inc
 #endif
 #include "video_core/gpu.h"
 namespace Common {
