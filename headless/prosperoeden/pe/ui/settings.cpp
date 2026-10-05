@@ -28,16 +28,17 @@ enum Category
     kControls,
     kAccessibility,
     kDiagnostics,
+    kStorage,
     kLanguage,
     kCategoryCount,
 };
 constexpr const char *kCategories[kCategoryCount] = {
     TR("Video"), TR("Audio"), TR("Controls"), TR("Accessibility"), TR("Diagnostics"),
-    TR("Language")};
+    TR("Storage"), TR("Language")};
 // The same as headings: capitals differ by language, so each is its own text.
 constexpr const char *kHeadings[kCategoryCount] = {
     TR("VIDEO"), TR("AUDIO"), TR("CONTROLS"), TR("ACCESSIBILITY"), TR("DIAGNOSTICS"),
-    TR("LANGUAGE")};
+    TR("STORAGE"), TR("LANGUAGE")};
 
 // The Video dialog's rows, and the window that shows five of them (placed as a game's settings
 // are).
@@ -128,6 +129,10 @@ void Launcher::press_settings(Key key)
         press_ = 1.0f;
         switch (settings_.selected)
         {
+        case kStorage:
+            open(Screen::files, true);
+            enter_files();
+            break;
         case kLanguage:
             open(Screen::language, true);
             enter_language();
@@ -177,7 +182,7 @@ void Launcher::draw_settings(Canvas &c)
         prefs_.controller_layout == 0 ? "PlayStation" : "Nintendo",
         prefs_.large_text || prefs_.high_contrast || prefs_.reduce_motion ? tr("On") : "",
         prefs_.detailed_logging ? tr("Detailed logs on") : "",
-        "",
+        short_path(services_.files_folder(), 22),
         pick(services_.language_labels(), prefs_.language),
     };
     for (int row = 0; row < kCategoryCount; ++row)
@@ -259,6 +264,11 @@ void Launcher::draw_settings(Canvas &c)
                  {tr("DATA"), short_path(info.data_path, 34)}};
         break;
     }
+    case kStorage:
+        about = tr("One root for keys, firmware, games, updates, mods and transfers.");
+        lines = {{tr("ROOT"), short_path(services_.files_folder(), 34)},
+                 {tr("LAYOUT"), tr("Fixed Encore folder structure")}};
+        break;
     default:
         about = tr("The language games use when they offer it.");
         lines = {{tr("LANGUAGE"), pick(services_.language_labels(), prefs_.language)},
