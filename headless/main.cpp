@@ -344,9 +344,9 @@ int main(int argc, char** argv) {
         // Prefer the sandbox when the running title already carries its own game-file layout.
         // keys/, firmware/, roms/, updates/ and mods/ are then read from /app0/assets, while
         // mutable state stays in /download0. No filesystem elevation is requested at all.
-        if (Eden::SelfContainedAssetsAvailable()) {
+        if (Eden::SelfContainedModeRequested()) {
             Eden::FilesystemAccessStatus() = Eden::kFilesystemSelfContained;
-            Eden::BootTrace::Line("self-contained app assets detected; filesystem elevation skipped");
+            Eden::BootTrace::Line("self-contained mode requested; filesystem elevation skipped");
         } else {
             Eden::BootTrace::Line("requesting filesystem access");
             // External/custom folders and /data/prosperoeden still use the existing one-shot path.
