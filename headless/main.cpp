@@ -164,6 +164,11 @@ static void MigrateLegacyInstallAssets() {
     const std::filesystem::path target{Eden::kDefaultAssetsDir};
     const std::string saved = Eden::LoadSavedAssetsDir();
 
+    // A user who already selected another game-files folder has intentionally left the old
+    // app-local assets behind. Do not move historical/duplicate data they are no longer using.
+    if (!saved.empty() && saved != Eden::kLegacyInstallAssetsDir)
+        return;
+
     std::error_code error;
     const auto root_status = std::filesystem::symlink_status(legacy, error);
     if (error || !std::filesystem::exists(root_status)) {
