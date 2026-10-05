@@ -633,12 +633,6 @@ bool EdenServices::clear_shader_caches(std::string* message) {
 }
 
 bool EdenServices::folders(const std::string& directory, std::vector<std::string>* names) {
-    if (Eden::SelfContainedMode()) {
-        const std::string root = Eden::AssetsDir();
-        if (directory != root &&
-            !(directory.size() > root.size() && directory.starts_with(root + "/")))
-            return false;
-    }
     bool ok = false;
     *names = ListEntries(directory, true, ok);
     return ok;
@@ -653,18 +647,29 @@ pe::ui::FolderInfo EdenServices::folder_info(const std::string& directory) {
 }
 
 std::string EdenServices::files_folder() { return Eden::AssetsDir(); }
-std::string EdenServices::saved_files_folder() {
-    return Eden::SelfContainedMode() ? Eden::AssetsDir() : Eden::LoadSavedAssetsDir();
-}
-std::string EdenServices::default_files_folder() {
-    return Eden::SelfContainedMode() ? Eden::AssetsDir() : std::string{Eden::kDefaultAssetsDir};
-}
+std::string EdenServices::saved_files_folder() { return Eden::LoadSavedAssetsDir(); }
+std::string EdenServices::default_files_folder() { return Eden::kDefaultAssetsDir; }
 
 bool EdenServices::set_files_folder(const std::string& directory) {
-    if (Eden::SelfContainedMode())
-        return directory == Eden::AssetsDir();
+    if (!Eden::FilesystemAccess() || !Eden::ValidAssetsDir(directory)) return false;
+
+    std::error_code error;
+    const auto status = std::filesystem::symlink_status(directory, error);
+    if (error || std::filesystem::is_symlink(status) || !std::filesystem::is_directory(status))
+        return false;
+
+    // Selecting external storage changes only the root. Every root has the exact same Encore
+    // layout; individual keys/firmware/roms/etc. paths are never configurable.
+    for (const char* name : {"keys", "firmware", "roms", "updates", "mods",
+                             "save-import", "save-export", "ryujinx"}) {
+        std::filesystem::create_directories(std::filesystem::path{directory} / name, error);
+        if (error) {
+            Eden::Report("storage", (std::string{"Could not prepare "} + name + ": " + error.message()).c_str());
+            return false;
+        }
+    }
     const bool saved = Eden::SaveAssetsDir(directory);
-    if (!saved) Eden::Report("settings", "Could not write the game files folder");
+    if (!saved) Eden::Report("settings", "Could not write the storage root");
     return saved;
 }
 
