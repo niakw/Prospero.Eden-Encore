@@ -22,6 +22,7 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <cstdint>
 #include <mutex>
@@ -46,10 +47,14 @@ public:
             if (!locked.exchange(true, std::memory_order_acquire))
                 return;
             while (locked.load(std::memory_order_relaxed)) {
-                if (++spins < 4096)
+                if (++spins < 4096) {
                     __builtin_ia32_pause();
-                else
-                    std::this_thread::yield();
+                } else {
+                    // PS5 guest/GPU workers can run at real-time priority. yield() can immediately
+                    // reschedule this waiter and starve a preempted lock owner on the same CPU.
+                    // Match the heap/runtime rule: once the short spin is exhausted, actually sleep.
+                    std::this_thread::sleep_for(std::chrono::microseconds(50));
+                }
             }
         }
     }
