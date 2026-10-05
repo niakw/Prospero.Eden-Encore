@@ -96,6 +96,18 @@ int main(int argc, char** argv) {
     Eden::saved = legacy_s;
     MigrateLegacyInstallAssets();
     assert(Eden::saved == target_s);
+
+    // 5. A still-mounted legacy alias is the migration source even when /data/homebrew is absent.
+    std::filesystem::remove_all(base);
+    const auto mounted = base / "mounted/assets";
+    std::string mounted_s = mounted.string();
+    file(mounted / "keys/prod.keys");
+    Eden::saved = mounted_s;
+    // Model the real predicate for this test's synthetic mounted alias.
+    Eden::kLegacyInstallAssetsDir = mounted_s.c_str();
+    MigrateLegacyInstallAssets();
+    assert(std::filesystem::exists(target / "keys/prod.keys"));
+    assert(Eden::saved == target_s);
 }
 '''.replace("MIGRATION", migration)
 
