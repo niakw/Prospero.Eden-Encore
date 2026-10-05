@@ -17,9 +17,15 @@ with tempfile.TemporaryDirectory(prefix='eden-load-failure-') as tmp:
  src.write_text('''#include <cstdio>
 #include <stdexcept>
 #include <cassert>
+#include <atomic>
+#include <thread>
 namespace Core { enum class SystemResultStatus { Success }; }
+namespace Eden { namespace StopLimit { inline void End() {} } }
 struct System { Core::SystemResultStatus Load(int,int,int) { throw std::runtime_error("injected load failure"); } };
-int main() { System system; int window=0,guest=0,params=0; try {
+int main() {
+ std::atomic<bool> left_while_loading{false};
+ std::jthread load_input;
+ System system; int window=0,guest=0,params=0; try {
 '''+body+'''
  return 2;
  } catch(const std::runtime_error& e) { return 0; }
