@@ -1,6 +1,6 @@
 # Third-party notices
 
-ProsperoEden is licensed under GPL-3.0-or-later (see [LICENSE](LICENSE)). It
+Prospero.Eden Encore is licensed under GPL-3.0-or-later (see [LICENSE](LICENSE)). It
 builds on the following projects, each under its own license.
 
 ## Emulator
