@@ -633,6 +633,12 @@ bool EdenServices::clear_shader_caches(std::string* message) {
 }
 
 bool EdenServices::folders(const std::string& directory, std::vector<std::string>* names) {
+    if (Eden::SelfContainedMode()) {
+        const std::string root = Eden::AssetsDir();
+        if (directory != root &&
+            !(directory.size() > root.size() && directory.starts_with(root + "/")))
+            return false;
+    }
     bool ok = false;
     *names = ListEntries(directory, true, ok);
     return ok;
@@ -647,10 +653,16 @@ pe::ui::FolderInfo EdenServices::folder_info(const std::string& directory) {
 }
 
 std::string EdenServices::files_folder() { return Eden::AssetsDir(); }
-std::string EdenServices::saved_files_folder() { return Eden::LoadSavedAssetsDir(); }
-std::string EdenServices::default_files_folder() { return Eden::kDefaultAssetsDir; }
+std::string EdenServices::saved_files_folder() {
+    return Eden::SelfContainedMode() ? Eden::AssetsDir() : Eden::LoadSavedAssetsDir();
+}
+std::string EdenServices::default_files_folder() {
+    return Eden::SelfContainedMode() ? Eden::AssetsDir() : std::string{Eden::kDefaultAssetsDir};
+}
 
 bool EdenServices::set_files_folder(const std::string& directory) {
+    if (Eden::SelfContainedMode())
+        return directory == Eden::AssetsDir();
     const bool saved = Eden::SaveAssetsDir(directory);
     if (!saved) Eden::Report("settings", "Could not write the game files folder");
     return saved;
