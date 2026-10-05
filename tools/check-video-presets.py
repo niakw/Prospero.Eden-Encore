@@ -8,8 +8,11 @@ for expected in ('{1, 1, 3, 0, 88, 0, 0}', '{1, 0, 3, 0, 88, 0, 0}', '{1, 0, 2, 
     assert expected in preset, expected
 assert 'ApplyVideoPreset(prefs_, preset);' in settings
 assert 'ApplyVideoPreset(next, preset);' in library
-for reset in ('next.renderer = -1;', 'next.resolution = -1;', 'next.filter = -1;', 'next.refresh = -1;'):
+for reset in ('next.renderer = -1;', 'next.output = -1;', 'next.resolution = -1;', 'next.filter = -1;',
+              'next.fsr_sharpness = -1;', 'next.anti_aliasing = -1;', 'next.refresh = -1;'):
     assert reset in library, reset
+for row in ('row_output', 'row_fsr_sharpness', 'row_anti_aliasing'):
+    assert row in library, row
 assert 'tr("VIDEO PRESET")' in settings
 assert 'tr("DETAILED LOGGING")' in settings
 assert 'TR("Video preset")' in settings
