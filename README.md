@@ -10,14 +10,14 @@
 </p>
 
 <p align="center">
-  <img alt="PS5 firmware 13.60 tested" src="https://img.shields.io/badge/PS5%20firmware-13.60%20TESTED-2ea44f">
+  <img alt="PS5 firmware 13.60 target" src="https://img.shields.io/badge/PS5%20firmware-13.60%20TARGET-2ea44f">
   <img alt="ProsperoEden base 1.000.040" src="https://img.shields.io/badge/base-ProsperoEden%201.000.040-6f42c1">
   <img alt="ZBIC and LZ4" src="https://img.shields.io/badge/NSO-ZBIC%20%2B%20LZ4-blue">
   <img alt="DualSense first" src="https://img.shields.io/badge/UX-DualSense--first-8250df">
 </p>
 
 > [!IMPORTANT]
-> **PS5 firmware 13.60 is the tested and primary target of Encore.**
+> **PS5 firmware 13.60 is Encore's primary target. The current startup fix is being hardware revalidated before another stable release.**
 > Other firmware versions are not currently claimed as validated by this fork.
 
 ## Why Encore?
@@ -51,7 +51,7 @@ Prospero.Eden Encore turns the proven ProsperoEden 1.000.040 base into a PS5 13.
 
 ### 🎯 PS5 13.60 is a first-class target
 
-- **Tested target: PS5 firmware 13.60.**
+- **Primary target: PS5 firmware 13.60. Hardware revalidation is required before the next stable release.**
 - Internal storage defaults to **`/data/prosperoeden`** with a fixed folder structure.
 - External storage changes only the root; it uses the same required subfolders.
 - Encore keeps the 1.000.040 filesystem-access path instead of switching to Lapy.
@@ -140,7 +140,7 @@ Encore deliberately chooses **predictability on 13.60** over importing every new
 
 | PS5 firmware | Encore status |
 | --- | --- |
-| **13.60** | ✅ **Tested target / supported release target** |
+| **13.60** | 🧪 **Primary target — startup fix undergoing hardware revalidation** |
 | Other firmware supported by underlying tooling | ⚠️ **Not validated by Encore yet** |
 | Unknown/newer firmware layouts | ❌ **No compatibility claim** |
 
