@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/eden-official.svg" width="150" alt="Eden logo">
+  <img src="assets/icon0.png" width="180" alt="Prospero.Eden Encore logo">
 </p>
 
 <h1 align="center">Prospero.Eden Encore</h1>
