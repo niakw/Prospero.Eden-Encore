@@ -56,8 +56,6 @@ inline std::string ConfigFile(std::string_view name) { return ConfigDir() + "/" 
 inline std::string LogFile(std::string_view name) { return LogsDir() + "/" + std::string(name); }
 inline std::string BackupDir() { return FilesystemAccess() ? std::string{kDataDir} + "/backup" :
                                                            ConfigDir() + "/backup"; }
-inline std::string ExportDir() { return FilesystemAccess() ? kDefaultAssetsDir :
-                                                           ConfigDir() + "/save-export"; }
 
 inline bool ValidAssetsDir(std::string_view path) {
     // "/" would make library/setup scans walk the console root and can expose unrelated system
