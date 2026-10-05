@@ -340,38 +340,44 @@ int main(int argc, char** argv) {
         std::setvbuf(report, nullptr, _IONBF, 0);
 #ifdef PS5_NATIVE
         Eden::BootTrace::Begin(Eden::kAppVersion, __DATE__ " " __TIME__);
-        Eden::BootTrace::Line("requesting filesystem access");
-        // Filesystem access beyond the sandbox, first: every path below depends on it
-        // (assets_dir.h). Requested once, still single-threaded. Without it the app keeps its
-        // sandbox paths.
-        const uid_t uid_before = getuid();
-        const uid_t euid_before = geteuid();
-        const gid_t gid_before = getgid();
-        const gid_t egid_before = getegid();
-        const auto elevation_status = elevation::request(elevation::Capability::filesystem);
-        Eden::FilesystemAccessStatus() = static_cast<int>(elevation_status);
-        const uid_t uid_after = getuid();
-        const uid_t euid_after = geteuid();
-        const gid_t gid_after = getgid();
-        const gid_t egid_after = getegid();
-        Eden::BootTrace::Line("filesystem status=%d uid=%d/%d gid=%d/%d",
-                              Eden::FilesystemAccessStatus(), static_cast<int>(uid_after),
-                              static_cast<int>(euid_after), static_cast<int>(gid_after),
-                              static_cast<int>(egid_after));
 
-        // A failed rollback means the helper cannot prove that the process returned to its original
-        // credential state. Do not continue running an emulator with partially modified privileges.
-        const bool identity_changed_on_failure =
-            elevation_status != elevation::Status::ok &&
-            (uid_after != uid_before || euid_after != euid_before ||
-             gid_after != gid_before || egid_after != egid_before);
-        const bool invalid_success_identity =
-            elevation_status == elevation::Status::ok &&
-            (uid_after != 0 || euid_after != 0 || gid_after != 0 || egid_after != 0);
-        if (elevation_status == elevation::Status::rollback_failed ||
-            identity_changed_on_failure || invalid_success_identity) {
-            Eden::BootTrace::Line("unsafe elevation state; terminating before privileged filesystem use");
-            std::_Exit(125);
+        // Prefer the sandbox when the running title already carries its own game-file layout.
+        // keys/, firmware/, roms/, updates/ and mods/ are then read from /app0/assets, while
+        // mutable state stays in /download0. No filesystem elevation is requested at all.
+        if (Eden::SelfContainedAssetsAvailable()) {
+            Eden::FilesystemAccessStatus() = Eden::kFilesystemSelfContained;
+            Eden::BootTrace::Line("self-contained app assets detected; filesystem elevation skipped");
+        } else {
+            Eden::BootTrace::Line("requesting filesystem access");
+            // External/custom folders and /data/prosperoeden still use the existing one-shot path.
+            // The request remains single-threaded and fails closed.
+            const uid_t uid_before = getuid();
+            const uid_t euid_before = geteuid();
+            const gid_t gid_before = getgid();
+            const gid_t egid_before = getegid();
+            const auto elevation_status = elevation::request(elevation::Capability::filesystem);
+            Eden::FilesystemAccessStatus() = static_cast<int>(elevation_status);
+            const uid_t uid_after = getuid();
+            const uid_t euid_after = geteuid();
+            const gid_t gid_after = getgid();
+            const gid_t egid_after = getegid();
+            Eden::BootTrace::Line("filesystem status=%d uid=%d/%d gid=%d/%d",
+                                  Eden::FilesystemAccessStatus(), static_cast<int>(uid_after),
+                                  static_cast<int>(euid_after), static_cast<int>(gid_after),
+                                  static_cast<int>(egid_after));
+
+            const bool identity_changed_on_failure =
+                elevation_status != elevation::Status::ok &&
+                (uid_after != uid_before || euid_after != euid_before ||
+                 gid_after != gid_before || egid_after != egid_before);
+            const bool invalid_success_identity =
+                elevation_status == elevation::Status::ok &&
+                (uid_after != 0 || euid_after != 0 || gid_after != 0 || egid_after != 0);
+            if (elevation_status == elevation::Status::rollback_failed ||
+                identity_changed_on_failure || invalid_success_identity) {
+                Eden::BootTrace::Line("unsafe elevation state; terminating before privileged filesystem use");
+                std::_Exit(125);
+            }
         }
         if (Eden::FilesystemAccess()) MigrateSandboxData();
         for (const auto& folder : {Eden::UserDir(), Eden::ConfigDir(), Eden::CoversDir(), Eden::LogsDir()}) {
