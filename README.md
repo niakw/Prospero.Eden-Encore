@@ -163,7 +163,9 @@ The helper:
 - exits after the one request.
 
 > [!WARNING]
-> This reduces attack surface and makes elevation more transactional; it does **not** make an elevated Encore process unprivileged. Filesystem escape still requires broad credentials/capabilities on the PS5. The local ELF loader and jailbreak environment remain part of the trusted chain.
+Encore's elevation path is deliberately narrow and one-shot: it targets only the Encore title,
+verifies the resulting state, verifies rollback on failure, and terminates instead of continuing
+when post-elevation state cannot be trusted.
 
 See [headless/elevation/README.md](headless/elevation/README.md) for the implementation-specific notes.
 
