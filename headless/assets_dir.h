@@ -10,15 +10,6 @@
 #include "storage_paths.h"
 
 namespace Eden {
-inline constexpr const char* kLegacyInstallAssetsDir = "/data/homebrew/PPSA99008/assets";
-
-inline bool LegacyAppAssetsPath(std::string_view path) {
-    return path == kLegacyInstallAssetsDir ||
-           path == "/app0/assets" ||
-           path == "/system_ex/app/PPSA99008/assets" ||
-           path == "/mnt/sandbox/PPSA99008_000/app0/assets";
-}
-
 // One storage root, one schema. Internal storage defaults to /data/prosperoeden; an optional
 // external root is saved as a single path and must contain the same keys/, firmware/, roms/,
 // updates/, mods/, save-import/, save-export/ and ryujinx/ layout. Without filesystem access the
