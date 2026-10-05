@@ -13,17 +13,19 @@ struct VideoPresetValues {
     int output;
     int resolution;
     int filter;
+    int fsr_sharpness;
+    int anti_aliasing;
     int refresh;
 };
 
 // Conservative PS5 presets. Advanced rows remain editable after applying a preset.
 inline constexpr VideoPresetValues kVideoPresets[] = {
-    // Recommended: native internal resolution and the lightest scaler.
-    {1, 0, 3, 0, 0},
-    // Smooth: a small resolution reduction, recovered with FSR.
-    {1, 0, 2, 1, 0},
-    // Performance: prioritize headroom and memory pressure over sharpness.
-    {1, 0, 1, 1, 0},
+    // Recommended: native game resolution, moderate TV output, no sharpening artifacts.
+    {1, 1, 3, 0, 88, 0, 0},
+    // Smooth: native game resolution at the lightest stable output path.
+    {1, 0, 3, 0, 88, 0, 0},
+    // Performance: lower internal load, recovered with moderate FSR sharpening.
+    {1, 0, 2, 1, 50, 0, 0},
 };
 
 inline int ClampVideoPreset(int preset) {
@@ -38,6 +40,8 @@ inline void ApplyVideoPreset(Preferences& preferences, int preset) {
     preferences.output = value.output;
     preferences.resolution = value.resolution;
     preferences.filter = value.filter;
+    preferences.fsr_sharpness = value.fsr_sharpness;
+    preferences.anti_aliasing = value.anti_aliasing;
     preferences.refresh = value.refresh;
 }
 

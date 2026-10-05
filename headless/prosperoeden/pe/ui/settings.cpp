@@ -50,6 +50,8 @@ enum VideoRow : int
     video_output,
     video_resolution,
     video_filter,
+    video_fsr_sharpness,
+    video_anti_aliasing,
     video_refresh,
     video_overlay,
     kVideoRows,
@@ -234,6 +236,8 @@ void Launcher::draw_settings(Canvas &c)
                  {tr("TV OUTPUT"), output_name(prefs_.output)},
                  {tr("GAME RESOLUTION"), pick(services_.resolution_labels(), prefs_.resolution)},
                  {tr("UPSCALING FILTER"), pick(services_.filter_labels(), prefs_.filter)},
+                 {tr("FSR SHARPNESS"), percent(prefs_.fsr_sharpness)},
+                 {tr("ANTI-ALIASING"), pick(services_.anti_aliasing_labels(), prefs_.anti_aliasing)},
                  {tr("REFRESH RATE"), hertz(prefs_.refresh)},
                  {tr("FPS OVERLAY"), on_off(prefs_.hud)}};
         break;
@@ -289,7 +293,7 @@ void Launcher::draw_settings(Canvas &c)
          theme::kSmall, theme::kLime, Align::left, 3.0f);
     text_shrink(c, about, 1016.0f, baseline(494.0f, 32.0f, 22.0f), 22.0f, theme::kCopy, 748.0f);
     // Dense categories still show every setting in the preview panel.
-    const float pitch = lines.size() >= 7 ? 44.0f : lines.size() > 5 ? 52.0f : 62.0f;
+    const float pitch = lines.size() >= 9 ? 40.0f : lines.size() >= 7 ? 44.0f : lines.size() > 5 ? 52.0f : 62.0f;
     for (std::size_t i = 0; i < lines.size(); ++i)
     {
         const float top = 562.0f + pitch * static_cast<float>(i);
@@ -411,6 +415,17 @@ void Launcher::press_dialog(Key key)
             const int count = static_cast<int>(services_.filter_labels().size());
             prefs_.filter = (prefs_.filter + step + count) % count;
         }
+        else if (option_ == video_fsr_sharpness)
+        {
+            if (!adjust) return;
+            prefs_.fsr_sharpness = std::clamp(prefs_.fsr_sharpness + 5 * step, 0, 100);
+            sound = Cue::slider;
+        }
+        else if (option_ == video_anti_aliasing)
+        {
+            const int count = static_cast<int>(services_.anti_aliasing_labels().size());
+            prefs_.anti_aliasing = (prefs_.anti_aliasing + step + count) % count;
+        }
         else if (option_ == video_refresh)
             prefs_.refresh = prefs_.refresh != 0 ? 0 : 1;
         else
@@ -518,6 +533,8 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
             TR("Final app output size. 1080p is recommended for stability and memory; this is not the game's render scale."),
             TR("Game render scale. 1x is recommended; lower it for performance or memory, raise it only when a game has headroom."),
             TR("Bilinear is the lightest default. AMD FSR is most useful when rendering below the TV output size."),
+            TR("FSR sharpness changes detail recovery only when AMD FSR is selected. Lower it if the picture looks grainy or over-sharpened."),
+            TR("Anti-aliasing smooths jagged edges. None is fastest; FXAA is light; SMAA prioritizes image quality."),
             TR("60 Hz is recommended. 120 Hz changes display mode only; the game still needs to render above 60 FPS to benefit."),
             TR("Shows live FPS while playing. Off is cleaner for normal use; Select + R1 toggles it at any time.")};
         copy = tr(kAbout[std::clamp(option_, 0, kVideoRows - 1)]);
@@ -599,11 +616,14 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
             output_name(prefs_.output),
             pick(services_.resolution_labels(), prefs_.resolution),
             pick(services_.filter_labels(), prefs_.filter),
+            percent(prefs_.fsr_sharpness),
+            pick(services_.anti_aliasing_labels(), prefs_.anti_aliasing),
             hertz(prefs_.refresh),
         };
         static constexpr const char *kNames[kVideoRows] = {
             TR("Renderer"), TR("Video preset"), TR("TV output"), TR("Game resolution"),
-            TR("Upscaling filter"), TR("Refresh rate"), TR("FPS overlay")};
+            TR("Upscaling filter"), TR("FSR sharpness"), TR("Anti-aliasing"),
+            TR("Refresh rate"), TR("FPS overlay")};
         for (int row = first; row <= last; ++row)
         {
             list.push_opacity(video_rows_.row_alpha(row, kVideoRowHeight));
