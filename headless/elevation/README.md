@@ -44,6 +44,13 @@ This path is intentionally one-shot and narrow at the protocol boundary:
     Encore.
 12. The packaged ELF is validated before release so malformed/trailing data cannot overlap the
     socket protocol that follows the ELF stream.
+13. The application independently checks its user/group identity after the helper returns. A
+    reported success with an unexpected identity, or any failed request that changed identity,
+    terminates the process before privileged filesystem use.
+14. A helper `rollback_failed` result is treated as unsafe: Encore terminates immediately rather
+    than continuing with credentials whose restoration could not be proven.
+15. Legacy sandbox-data migration is symlink-safe. The entire source tree is validated before
+    copying, and symlinks or unexpected file types are rejected after elevation.
 
 ## Important limitation
 
