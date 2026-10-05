@@ -500,14 +500,29 @@ bool EdenServices::set_docked(std::uint64_t title_id, bool docked) {
 
 pe::ui::GameSettings EdenServices::game_settings(std::uint64_t title_id) {
     const Eden::GameSettings saved = Eden::LoadGameSettings(title_id);
-    return {saved.renderer, saved.resolution, saved.upscaling_filter, saved.refresh,
-            saved.performance_profile, saved.controller_layout};
+    pe::ui::GameSettings result;
+    result.renderer = saved.renderer;
+    result.resolution = saved.resolution;
+    result.filter = saved.upscaling_filter;
+    result.refresh = saved.refresh;
+    result.performance_profile = saved.performance_profile;
+    result.controller_layout = saved.controller_layout;
+    result.own_mapping = saved.own_mapping;
+    result.mapping = saved.mapping;
+    return result;
 }
 
 bool EdenServices::set_game_settings(std::uint64_t title_id, const pe::ui::GameSettings& settings) {
-    const bool saved = Eden::SaveGameSettings(
-        title_id, {settings.renderer, settings.resolution, settings.filter, settings.refresh,
-                   settings.performance_profile, settings.controller_layout});
+    Eden::GameSettings value;
+    value.renderer = settings.renderer;
+    value.resolution = settings.resolution;
+    value.upscaling_filter = settings.filter;
+    value.refresh = settings.refresh;
+    value.performance_profile = settings.performance_profile;
+    value.controller_layout = settings.controller_layout;
+    value.own_mapping = settings.own_mapping;
+    value.mapping = settings.mapping;
+    const bool saved = Eden::SaveGameSettings(title_id, value);
     if (!saved) Eden::Report("settings", "Could not write game settings");
     return saved;
 }
@@ -526,6 +541,7 @@ pe::ui::Preferences EdenServices::preferences() {
     result.output = saved.output;
     result.performance_profile = saved.performance_profile;
     result.controller_layout = saved.controller_layout;
+    result.mapping = saved.mapping;
     result.vibration = saved.vibration;
     result.vibration_strength = saved.vibration_strength;
     result.stick_deadzone = saved.stick_deadzone;
@@ -550,6 +566,7 @@ bool EdenServices::set_preferences(const pe::ui::Preferences& preferences) {
     value.output = preferences.output;
     value.performance_profile = preferences.performance_profile;
     value.controller_layout = preferences.controller_layout;
+    value.mapping = preferences.mapping;
     value.vibration = preferences.vibration;
     value.vibration_strength = preferences.vibration_strength;
     value.stick_deadzone = preferences.stick_deadzone;
