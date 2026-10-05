@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # The results are committed under headless/prosperoeden/ui; run this only after changing the
-# font, the glyph set or the source images. Needs a host C++ compiler, Python with Pillow, and rsvg-convert (librsvg2-bin).
+# font, the glyph set or the source images. Needs a host C++ compiler and Python with Pillow.
 
 set -euo pipefail
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
