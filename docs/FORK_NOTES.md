@@ -197,7 +197,7 @@ Security fix:
 
 ## Eden / Encore identity
 
-- Uses the supplied Eden Encore neon logo as the canonical project-facing source asset.
+- Uses `assets/icon0.png`, the supplied Eden Encore neon logo, as the single canonical project-facing raster asset.
 - Encore branding is used in repo/release-facing surfaces.
 - Existing Title ID `PPSA99008` is preserved to keep the installation/data relationship.
 - Internal package-title validation remains deterministic.
