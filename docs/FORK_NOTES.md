@@ -9,8 +9,8 @@ This document is the authoritative technical close-out for the Encore fork.
 - Hardware status: **13.60 tested**.
 - Default branch: `fix/0.40-zbic-13.60`.
 - Divergent archive/reference branch: `>0.50-bug_13.60`.
-- Goal: prefer a fixed self-contained app/sandbox layout that needs no elevation, while retaining
-  the working 1.000.040 filesystem-access path on 13.60 for migration and external/custom storage.
+- Goal: keep the working 1.000.040 filesystem-access path on 13.60 while simplifying storage to
+  one internal/external root with an identical folder schema.
 - Newer ProsperoEden Lapy/elevation work is intentionally **not** merged wholesale.
 
 ## Firmware compatibility
@@ -26,58 +26,50 @@ compatibility. Hardware validation is required before adding a firmware to the s
 
 ## Filesystem access
 
-Encore supports two explicit paths and does not depend on Lapy.
+Encore does not depend on Lapy. It uses the proven 1.000.040 one-shot filesystem request for both
+the default internal root and optional external storage.
 
-### Self-contained path
+### Storage model
 
-- `/app0/self-contained.txt` is checked before any elevation request.
-- When present, no helper connection is attempted.
-- The game-files root is fixed to `/app0/assets`.
-- Keys, firmware, ROMs, updates, mods and import sources are read from the app tree.
-- Config, saves, logs, caches, backups and exports stay in writable `/download0`.
-- The Game files UI cannot switch to an arbitrary path in this mode.
+- Default root: `/data/prosperoeden`.
+- Optional external root: selected once as a root, not as separate per-folder paths.
+- Required schema is identical under either root:
+  `keys/`, `firmware/`, `roms/`, `updates/`, `mods/`, `save-import/`,
+  `save-export/`, `ryujinx/`.
+- App-managed config/logs/covers/user/cache/backups remain under `/data/prosperoeden`.
+- An unavailable external root is not silently replaced by another location.
 
-### External-storage request model
+### Request model
 
-- Without the marker, `main.cpp` requests `Capability::filesystem` once during single-threaded
-  startup.
+- `main.cpp` requests `Capability::filesystem` once during single-threaded startup.
 - The packaged helper is `/app0/sandbox-elevator.elf`.
 - The application connects to the local ELF-loader endpoint at `127.0.0.1:9021`.
-- If elevation is unavailable or validation fails, the request returns an error and Encore remains
-  sandboxed rather than reporting success.
+- If access is unavailable or validation fails, Encore remains sandboxed instead of reporting
+  success.
 
 ### Safety / hardening properties
-
-The helper is deliberately narrow at the protocol boundary:
 
 1. Fixed 24-byte, little-endian, versioned protocol.
 2. Magic/version/message-kind/PID/status validation.
 3. Only the declared `filesystem` capability is accepted.
 4. No arbitrary kernel pointer, address or privilege mask is sent by the application.
-5. Requested PID must resolve to the exact application title ID `PPSA99008`.
+5. Requested PID must resolve to exact title ID `PPSA99008`.
 6. Kernel pointers are checked and process traversal is bounded.
 7. Original credential/filesystem state is read before modification.
 8. The application performs the same-UID credential-clone handshake first.
 9. The helper refuses to write if the credential pointer did not change or the clone does not match
    the captured original state.
-10. The elevated state is read back and must exactly match the intended state.
-11. A failed apply attempts a full write-back and verification of the original state.
+10. Elevated state is read back and must exactly match the intended state.
+11. Failed apply attempts a full write-back and verification of original state.
 12. Connect/send/receive operations have bounded five-second timeouts.
-13. The helper serves one request and exits; Encore installs no persistent elevation service.
-14. The packaged ELF is structurally validated so trailing data cannot corrupt the protocol stream.
+13. The helper serves one request and exits; no persistent service is installed.
+14. The packaged ELF is structurally validated.
 15. The application independently checks user/group identity after the helper returns.
-16. `rollback_failed`, a failed request that changed identity, or a reported success with an
-    unexpected identity is fatal before any privileged filesystem use.
-17. Post-elevation legacy-data migration validates its source tree first and rejects symlinks or
-    unexpected file types.
-
-### Scope
-
-Self-contained mode avoids the helper entirely and is the narrowest storage path.
-
-External-storage mode retains the helper because `/data/prosperoeden`, migration and arbitrary
-external folders are outside the normal application sandbox. The helper remains one-shot,
-exact-title validated, rollback-checked and fail-closed.
+16. `rollback_failed`, a failed request that changed identity, or a success with unexpected identity
+    is fatal before privileged filesystem use.
+17. Legacy sandbox migration rejects symlinks/unexpected file types.
+18. Legacy game-file migration preflights the complete move, never overwrites conflicts and rolls
+    back already moved directories if persistence fails.
 
 The implementation-specific note lives in
 [`headless/elevation/README.md`](../headless/elevation/README.md).
@@ -169,11 +161,10 @@ For that run only it selects:
 - Diagnostics reports filesystem mode, free space, shader/JIT cache size and log size.
 - Diagnostics can safely clear shader/JIT caches without touching saves, settings, keys, firmware or
   game files.
-- Game-files selection rejects `/` to avoid accidental console-root scanning.
-- Self-contained mode fixes the game-files root to `/app0/assets` and bypasses the elevation
-  request entirely.
-- Sandbox mode keeps RADV/native caches, save backups and save exports under writable
-  `/download0` paths.
+- Storage-root selection rejects `/` to avoid accidental console-root scanning.
+- Internal and external roots use the same fixed folder schema.
+- Save exports follow the selected storage root; app-managed backups/caches remain under the
+  persistent Encore data root.
 - Git ignores explicitly cover keys, ROM/container formats and local save-transfer data.
 
 ## Save transfer hardening
@@ -254,8 +245,8 @@ Key findings that materially changed the release:
 | `37230146719` | **PASS** | Full audited baseline reached build/package artifact generation. |
 
 Later closure work added Safe Launch, resets, storage bounds, diagnostics, save hardening,
-transactional ProsperoEden migration, the explicit self-contained/no-elevation mode, locale
-behavior, full French catalog validation and the release workflow. Publication is gated on a green
+transactional ProsperoEden migration, the unified storage-root model, locale behavior, full French
+catalog validation and the release workflow. Publication is gated on a green
 build of the release head.
 
 ## Deliberately excluded from this release
