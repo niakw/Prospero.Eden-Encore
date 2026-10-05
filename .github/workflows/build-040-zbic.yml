@@ -78,6 +78,13 @@ jobs:
       - name: Validate release metadata
         run: python3 -B tools/ci/check-release-metadata.py
 
+      - name: Validate startup, elevation and storage contracts
+        run: |
+          python3 -B tools/check-startup-contract.py
+          python3 -B tools/check-filesystem-probe.py
+          python3 -B tools/check-storage-contract.py
+          python3 -B tools/check-legacy-migration.py
+
       - name: Preflight release packaging
         run: bash tools/ci/package-image.sh --prepare
 
