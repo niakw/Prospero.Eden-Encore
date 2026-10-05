@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "pe/ui/launcher.hpp"
+#include "pe/ui/video_presets.hpp"
 
 #include <algorithm>
 #include <string>
@@ -177,7 +178,9 @@ void Launcher::draw_settings(Canvas &c)
         plate_rest(c, kRowPlate, row_rect(row));
     plate_focus(c, kRowPlate, {150.0f, kRowsTop + settings_.cursor(), 736.0f, kRowHeight}, 1.0f);
     const std::string summaries[kCategoryCount] = {
-        prefs_.renderer != 0 ? "Vulkan" : "OpenGL",
+        services_.performance_profile_labels()[static_cast<std::size_t>(
+            std::clamp(prefs_.performance_profile, 0, 2))] + " · " +
+            (prefs_.renderer != 0 ? "Vulkan" : "OpenGL"),
         prefs_.mute ? tr("Muted") : percent(prefs_.volume),
         prefs_.controller_layout == 0 ? "PlayStation" : "Nintendo",
         prefs_.large_text || prefs_.high_contrast || prefs_.reduce_motion ? tr("On") : "",
@@ -224,7 +227,10 @@ void Launcher::draw_settings(Canvas &c)
     {
     case kVideo:
         about = tr("Graphics backend and how games are scaled to your TV.");
-        lines = {{tr("RENDERER"), prefs_.renderer != 0 ? tr("Vulkan (recommended)") : "OpenGL"},
+        lines = {{tr("VIDEO PRESET"),
+                  services_.performance_profile_labels()[static_cast<std::size_t>(
+                      std::clamp(prefs_.performance_profile, 0, 2))]},
+                 {tr("RENDERER"), prefs_.renderer != 0 ? tr("Vulkan (recommended)") : "OpenGL"},
                  {tr("TV OUTPUT"), output_name(prefs_.output)},
                  {tr("GAME RESOLUTION"), pick(services_.resolution_labels(), prefs_.resolution)},
                  {tr("UPSCALING FILTER"), pick(services_.filter_labels(), prefs_.filter)},
@@ -256,7 +262,8 @@ void Launcher::draw_settings(Canvas &c)
     {
         const DiagnosticsInfo info = services_.diagnostics();
         about = tr("Runtime health, storage and recovery tools.");
-        lines = {{tr("SETUP"), home_.setup_ready ? tr("Ready") : tr("Needs attention")},
+        lines = {{tr("DETAILED LOGGING"), on_off(prefs_.detailed_logging)},
+                 {tr("SETUP"), home_.setup_ready ? tr("Ready") : tr("Needs attention")},
                  {tr("FILESYSTEM"), info.filesystem},
                  {tr("FREE SPACE"), info.free_space},
                  {tr("SHADER/JIT CACHES"), info.shader_caches},
@@ -281,8 +288,8 @@ void Launcher::draw_settings(Canvas &c)
     text(c, tr(kHeadings[settings_.selected]), 1016.0f, baseline(458.0f, 30.0f, theme::kSmall),
          theme::kSmall, theme::kLime, Align::left, 3.0f);
     text_shrink(c, about, 1016.0f, baseline(494.0f, 32.0f, 22.0f), 22.0f, theme::kCopy, 748.0f);
-    // Five lines sit 62 apart; Video's six move closer to stay inside the panel.
-    const float pitch = lines.size() > 5 ? 52.0f : 62.0f;
+    // Dense categories still show every setting in the preview panel.
+    const float pitch = lines.size() >= 7 ? 44.0f : lines.size() > 5 ? 52.0f : 62.0f;
     for (std::size_t i = 0; i < lines.size(); ++i)
     {
         const float top = 562.0f + pitch * static_cast<float>(i);
@@ -384,7 +391,10 @@ void Launcher::press_dialog(Key key)
         if (option_ == video_renderer)
             prefs_.renderer = prefs_.renderer != 0 ? 0 : 1;
         else if (option_ == video_performance)
-            prefs_.performance_profile = (std::clamp(prefs_.performance_profile, 0, 2) + step + 3) % 3;
+        {
+            const int preset = (std::clamp(prefs_.performance_profile, 0, 2) + step + 3) % 3;
+            ApplyVideoPreset(prefs_, preset);
+        }
         else if (option_ == video_output)
         {
             // The menu follows at once (the frontend opens its display again at this size).
@@ -589,7 +599,7 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
             hertz(prefs_.refresh),
         };
         static constexpr const char *kNames[kVideoRows] = {
-            TR("Renderer"), TR("Performance profile"), TR("TV output"), TR("Game resolution"),
+            TR("Renderer"), TR("Video preset"), TR("TV output"), TR("Game resolution"),
             TR("Upscaling filter"), TR("Refresh rate"), TR("FPS overlay")};
         for (int row = first; row <= last; ++row)
         {
