@@ -94,7 +94,7 @@ jobs:
             dist/
             build/symbols/
           retention-days: 14
-          if-no-files-found: warn
+          if-no-files-found: error
 
   release:
     needs: build
