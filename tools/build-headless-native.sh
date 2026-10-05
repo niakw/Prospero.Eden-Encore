@@ -73,6 +73,7 @@ if [[ ${EDEN_SKIP_SOURCE_CHECKS:-0} != 1 ]]; then
     python3 -B "$root/headless/check_audio_shutdown.py" "$scratch/native-local/headless/core.cpp" "$scratch/source/src/core/core.cpp"
     python3 -B "$root/tools/check-load-failure.py"
     python3 -B "$root/tools/check-legacy-migration.py"
+    python3 -B "$root/tools/check-self-contained-storage.py"
     python3 -B "$root/tools/check-nso-memory.py"
     python3 -B "$root/tools/check-performance.py"
     python3 -B "$root/tools/check-startup-performance.py"
