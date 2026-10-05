@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "pe/ui/launcher.hpp"
+#include "pe/ui/video_presets.hpp"
 
 #include "pe/core/log.hpp"
 
@@ -665,7 +666,13 @@ void Launcher::press_game(Key key)
         if (option_ == row_renderer)
             next.renderer = cycle(next.renderer, 2);
         if (option_ == row_performance)
-            next.performance_profile = cycle(next.performance_profile, 3);
+        {
+            const int preset = cycle(next.performance_profile, 3);
+            if (preset >= 0)
+                ApplyVideoPreset(next, preset);
+            else
+                next.performance_profile = -1;
+        }
         if (option_ == row_resolution)
             next.resolution =
                 cycle(next.resolution, static_cast<int>(services_.resolution_labels().size()));
@@ -739,7 +746,7 @@ void Launcher::draw_game(Canvas &c, float open)
         import_source_ == SaveSource::ryujinx ? tr("Ryujinx save found") :
         import_source_ == SaveSource::folder ? tr("Save folder found") : tr("Nothing to import"),
     };
-    static constexpr const char *kLabels[] = {TR("Console mode"), TR("Renderer"), TR("Performance profile"),
+    static constexpr const char *kLabels[] = {TR("Console mode"), TR("Renderer"), TR("Video preset"),
                                               TR("Resolution"), TR("Upscaling filter"), TR("Refresh rate"),
                                               TR("Button layout"), TR("Mods"), TR("Save data")};
     // Five rows show; the list scrolls to the others.
@@ -804,7 +811,7 @@ void Launcher::draw_game(Canvas &c, float open)
         static constexpr const char *kGameAbout[] = {
             TR("Docked can improve graphics but may cost performance; Handheld is lighter for demanding games."),
             TR("Vulkan is recommended on PS5. Use OpenGL only as a fallback for a title with Vulkan issues."),
-            TR("Recommended keeps accuracy high. Smooth compiles earlier-used code ahead. Performance may trade graphics accuracy for speed."),
+            TR("Recommended, Smooth and Performance also apply the renderer, resolution, scaler and refresh-rate overrides shown below."),
             TR("1x is the safe default. Lower it for performance/memory; higher scales use much more graphics memory."),
             TR("Bilinear is the lightest default. AMD FSR is useful when rendering below the TV output size."),
             TR("60 Hz is the safe default. Use 120 Hz only with a compatible display or high-FPS patch."),
