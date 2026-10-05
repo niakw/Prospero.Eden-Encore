@@ -7,7 +7,7 @@
 //                "upscaling_filter": "bilinear", "refresh_rate": "60",
 //                "output_resolution": "1080p" },
 //     "audio": { "volume": 100, "mute": false, "menu_volume": 70 },
-//     "controls": { "layout": "playstation", "vibration": true, "vibration_strength": 100, "stick_deadzone": 8 },
+//     "controls": { "vibration": true, "vibration_strength": 100, "stick_deadzone": 8, "mapping": { "a": "cross" } },
 //     "system": { "language": "en-US" },
 //     "accessibility": { "large_text": false, "high_contrast": false, "reduce_motion": false },
 //     "diagnostics": { "detailed_logging": false },
@@ -35,6 +35,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "button_mapping.h"
 #include "storage_paths.h"
 
 namespace Eden {
@@ -78,9 +79,13 @@ inline constexpr const char* kLanguageKeys[] = {"en-US", "en-GB", "fr", "fr-CA",
 inline constexpr const char* kLanguageLabels[] = {"English (US)", "English (UK)", "French", "French (Canada)",
     "German", "Italian", "Spanish", "Spanish (Latin America)", "Portuguese", "Portuguese (Brazil)", "Dutch",
     "Russian", "Polish", "Japanese", "Korean", "Chinese (Simplified)", "Chinese (Traditional)", "Thai"};
+inline constexpr const char* kLanguageCatalogTags[] = {
+    "en-US", "en-GB", "fr-FR", "fr-CA", "de-DE", "it-IT", "es-ES", "es-419", "pt-PT",
+    "pt-BR", "nl-NL", "ru-RU", "pl-PL", "ja-JP", "ko-KR", "zh-Hans", "zh-Hant", "th-TH"};
 inline constexpr int kLanguageSettings[] = {1, 12, 2, 13, 3, 4, 5, 14, 9, 17, 8, 10, 18, 0, 7, 15, 16, 19};
 inline constexpr int kLanguageRegions[] = {1, 2, 2, 1, 2, 2, 2, 1, 2, 1, 2, 2, 2, 0, 5, 4, 6, 1};
 static_assert(std::size(kLanguageLabels) == std::size(kLanguageKeys) &&
+              std::size(kLanguageCatalogTags) == std::size(kLanguageKeys) &&
               std::size(kLanguageSettings) == std::size(kLanguageKeys) &&
               std::size(kLanguageRegions) == std::size(kLanguageKeys));
 struct Preferences {
@@ -94,7 +99,8 @@ struct Preferences {
     int refresh = 0;                     // index into kRefreshKeys
     int output = 0;                      // index into kOutputKeys
     int performance_profile = 0;         // 0 recommended, 1 smooth, 2 performance
-    int controller_layout = 0;            // 0 PlayStation, 1 Nintendo
+    int controller_layout = 0;            // legacy setting; mapping below is authoritative
+    ButtonMapping mapping = kDefaultMapping;
     bool vibration = true;
     int vibration_strength = 100;         // 0-100
     int stick_deadzone = 8;               // percent, 0-20
@@ -224,6 +230,28 @@ inline Json Load(const std::string& file) {
     return document;
 }
 
+// A button mapping as the file names it. Invalid or duplicate assignments fail back safely.
+inline ButtonMapping Mapping(const Json& document, const Json::json_pointer& at,
+                             const ButtonMapping& fallback) {
+    if (!document.contains(at) || !document.at(at).is_object()) return fallback;
+    ButtonMapping result = kDefaultMapping;
+    for (const auto& [name, value] : document.at(at).items()) {
+        const int game = KeyIndex(name, kGameButtonKeys, kGameButtons, -1);
+        const int pad = value.is_string() ?
+            KeyIndex(value.get<std::string>(), kPadButtonKeys, kPadButtons, -1) : -1;
+        if (game < 0 || pad < 0) return fallback;
+        result[game] = pad;
+    }
+    return ValidMapping(result) ? result : fallback;
+}
+inline Json MappingJson(const ButtonMapping& mapping) {
+    Json result = Json::object();
+    for (int game = 0; game < kGameButtons; ++game)
+        if (mapping[game] != kDefaultMapping[game])
+            result[kGameButtonKeys[game]] = kPadButtonKeys[mapping[game]];
+    return result;
+}
+
 inline bool Bool(const Json& document, const Json::json_pointer& at, bool fallback) {
     return document.contains(at) && document.at(at).is_boolean() ? document.at(at).get<bool>() : fallback;
 }
@@ -264,6 +292,7 @@ inline Preferences LoadPreferences(const std::string& file = SettingsFile()) {
     result.controller_layout = KeyIndex(Settings::String(document, Json::json_pointer("/controls/layout")),
                                         kControllerLayoutKeys, int(std::size(kControllerLayoutKeys)),
                                         result.controller_layout);
+    result.mapping = Settings::Mapping(document, Json::json_pointer("/controls/mapping"), kDefaultMapping);
     result.vibration = Settings::Bool(document, Json::json_pointer("/controls/vibration"), result.vibration);
     const int vibration_strength = Settings::Int(document, Json::json_pointer("/controls/vibration_strength"),
                                                   result.vibration_strength);
@@ -295,6 +324,7 @@ inline bool SavePreferences(const Preferences& value, const std::string& file = 
         value.output < 0 || value.output >= int(std::size(kOutputKeys)) ||
         value.performance_profile < 0 || value.performance_profile >= int(std::size(kPerformanceProfileKeys)) ||
         value.controller_layout < 0 || value.controller_layout >= int(std::size(kControllerLayoutKeys)) ||
+        !ValidMapping(value.mapping) ||
         value.vibration_strength < 0 || value.vibration_strength > 100 ||
         value.stick_deadzone < 0 || value.stick_deadzone > 20 ||
         value.language < 0 || value.language >= int(std::size(kLanguageKeys))) return false;
@@ -310,7 +340,9 @@ inline bool SavePreferences(const Preferences& value, const std::string& file = 
     document["audio"]["volume"] = value.volume;
     document["audio"]["mute"] = value.mute;
     document["audio"]["menu_volume"] = value.menu_volume;
-    document["controls"]["layout"] = kControllerLayoutKeys[value.controller_layout];
+    document["controls"].erase("layout");
+    if (value.mapping == kDefaultMapping) document["controls"].erase("mapping");
+    else document["controls"]["mapping"] = Settings::MappingJson(value.mapping);
     document["controls"]["vibration"] = value.vibration;
     document["controls"]["vibration_strength"] = value.vibration_strength;
     document["controls"]["stick_deadzone"] = value.stick_deadzone;
@@ -352,7 +384,9 @@ struct GameSettings {
     int upscaling_filter = -1;  // index into kUpscalingFilterKeys
     int refresh = -1;           // index into kRefreshKeys
     int performance_profile = -1; // index into kPerformanceProfileKeys
-    int controller_layout = -1; // index into kControllerLayoutKeys
+    int controller_layout = -1; // legacy only
+    bool own_mapping = false;
+    ButtonMapping mapping = kDefaultMapping;
 };
 inline constexpr const char* kRendererKeys[] = {"opengl", "vulkan"};
 
@@ -372,6 +406,10 @@ inline GameSettings LoadGameSettings(uint64_t title_id, const std::string& file 
                                           int(std::size(kPerformanceProfileKeys)), -1);
     result.controller_layout = KeyIndex(key("controller_layout"), kControllerLayoutKeys,
                                         int(std::size(kControllerLayoutKeys)), -1);
+    const Json::json_pointer mapping(base + "/mapping");
+    result.own_mapping = document.contains(mapping);
+    if (result.own_mapping)
+        result.mapping = Settings::Mapping(document, mapping, kDefaultMapping);
     return result;
 }
 
@@ -383,7 +421,8 @@ inline bool SaveGameSettings(uint64_t title_id, const GameSettings& value, const
         value.performance_profile < -1 ||
         value.performance_profile >= int(std::size(kPerformanceProfileKeys)) ||
         value.controller_layout < -1 ||
-        value.controller_layout >= int(std::size(kControllerLayoutKeys))) return false;
+        value.controller_layout >= int(std::size(kControllerLayoutKeys)) ||
+        (value.own_mapping && !ValidMapping(value.mapping))) return false;
     Settings::Json document = Settings::Load(file);
     document["version"] = 1;
     auto& game = document["games"][Settings::TitleKey(title_id)];
@@ -397,7 +436,9 @@ inline bool SaveGameSettings(uint64_t title_id, const GameSettings& value, const
     store("upscaling_filter", value.upscaling_filter, kUpscalingFilterKeys);
     store("refresh_rate", value.refresh, kRefreshKeys);
     store("performance_profile", value.performance_profile, kPerformanceProfileKeys);
-    store("controller_layout", value.controller_layout, kControllerLayoutKeys);
+    game.erase("controller_layout");
+    if (value.own_mapping) game["mapping"] = Settings::MappingJson(value.mapping);
+    else game.erase("mapping");
     return Settings::Write(document, file);
 }
 
