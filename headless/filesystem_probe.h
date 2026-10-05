@@ -2,6 +2,7 @@
 #pragma once
 
 #include <cerrno>
+#include <cstddef>
 #include <fcntl.h>
 #include <string>
 #include <sys/stat.h>
