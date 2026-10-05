@@ -97,6 +97,10 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.resume_run_id }}
 
+      - name: Prepare native build inputs
+        if: ${{ inputs.resume_run_id == '' }}
+        run: make prepare JOBS=4
+
       - name: Build and stage shipping app
         id: stage
         if: ${{ inputs.resume_run_id == '' }}
