@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Fast release metadata checks that must pass before the native build."""
 from pathlib import Path
+import hashlib
 import re
+import struct
 
 root = Path(__file__).resolve().parents[2]
 
@@ -30,6 +32,19 @@ assert "[INSTALL.md](INSTALL.md)" in readme, "README must link INSTALL.md"
 assert "[SECURITY.md](SECURITY.md)" in readme, "README must link SECURITY.md"
 assert "GPL-3.0-or-later" in readme, "README must state GPL-3.0-or-later"
 assert 'src="assets/icon0.png"' in readme, "README must use the Encore package logo"
+
+logo = root / "assets/icon0.png"
+packaged_logo = root / "sce_sys/icon0.png"
+assert logo.is_file(), "canonical Encore logo missing"
+assert packaged_logo.is_file(), "source sce_sys Encore logo missing"
+logo_bytes = logo.read_bytes()
+assert logo_bytes == packaged_logo.read_bytes(), "repo and package Encore logos diverged"
+assert hashlib.sha256(logo_bytes).hexdigest() == "2364c92807866e304706a437db47ec5927edb341186c5495d04b18f496711204", \
+    "canonical Encore logo bytes changed unexpectedly"
+assert logo_bytes[:8] == b"\x89PNG\r\n\x1a\n", "Encore logo must remain PNG"
+assert struct.unpack(">II", logo_bytes[16:24]) == (512, 512), "Encore logo must remain 512x512"
+assert not (root / "assets/eden-official.svg").exists(), "obsolete upstream Eden logo must stay removed"
+assert not (root / "assets/prosperoeden-icon-source.png").exists(), "obsolete ProsperoEden logo source must stay removed"
 
 packager = (root / "tools/package-headless-native.sh").read_text()
 assert "titleId='PPSA99008'" in packager, "packager title ID contract changed"
