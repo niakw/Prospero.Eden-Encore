@@ -4,16 +4,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Writes the Eden PS5 launcher's baked art.
 
-  brand.tga       Eden's official logo, for the header and games without cover art.
+  brand.tga       Prospero.Eden Encore logo, for the header and games without cover art.
   controller.tga  a controller in white on transparent, tinted by the home screen.
 
 The old ProsperoEden scenic backdrop is intentionally no longer generated or loaded.
 render-art.py [name...] renders only the named pictures (brand, controller).
 """
 
-import subprocess
 import sys
-import tempfile
 
 from pathlib import Path
 
@@ -79,11 +77,9 @@ def main():
     if unknown:
         raise SystemExit("unknown Eden launcher art: " + ", ".join(sorted(unknown)))
     if "brand" in wanted:
-        source = ROOT / "assets/eden-official.svg"
-        with tempfile.NamedTemporaryFile(suffix=".png") as temp:
-            subprocess.run(["rsvg-convert", "-w", "384", "-h", "384", str(source), "-o", temp.name],
-                           check=True)
-            icon = Image.open(temp.name).convert("RGBA").copy()
+        source = ROOT / "assets/icon0.png"
+        icon = Image.open(source).convert("RGBA")
+        icon = icon.resize((384, 384), Image.Resampling.LANCZOS)
         save_tga(icon, "brand.tga")
     if "controller" in wanted:
         save_tga(controller(), "controller.tga")
