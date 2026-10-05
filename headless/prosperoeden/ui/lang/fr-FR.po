@@ -1279,8 +1279,12 @@ msgid "PS5 13.60  /  ENCORE  /  {0}"
 msgstr "PS5 13.60  /  ENCORE  /  {0}"
 
 #: synchronized release UI
-msgid "Performance profile"
-msgstr "Profil de performances"
+msgid "Video preset"
+msgstr "Préréglage vidéo"
+
+#: synchronized release UI
+msgid "VIDEO PRESET"
+msgstr "PRÉRÉGLAGE VIDÉO"
 
 #: synchronized release UI
 msgid "Button layout"
@@ -1295,8 +1299,8 @@ msgid "Vulkan is recommended on PS5. Use OpenGL only as a fallback for a title w
 msgstr "Vulkan est recommandé sur PS5. Utilisez OpenGL seulement en solution de repli pour un jeu ayant des problèmes avec Vulkan."
 
 #: synchronized release UI
-msgid "Recommended keeps accuracy high. Smooth compiles earlier-used code ahead. Performance may trade graphics accuracy for speed."
-msgstr "Recommandé privilégie la précision. Fluide précompile le code déjà utilisé. Performance peut sacrifier de la précision graphique pour gagner en vitesse."
+msgid "Recommended, Smooth and Performance also apply the renderer, resolution, scaler and refresh-rate overrides shown below."
+msgstr "Recommandé, Fluide et Performance appliquent aussi le moteur de rendu, la résolution, le filtre de mise à l’échelle et la fréquence affichés ci-dessous."
 
 #: synchronized release UI
 msgid "1x is the safe default. Lower it for performance/memory; higher scales use much more graphics memory."
