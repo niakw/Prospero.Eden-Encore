@@ -81,12 +81,20 @@ Reports are especially useful for:
   - accidental inclusion of console keys, firmware, saves or private data in build artifacts/logs;
   - crash reports containing memory contents or secrets.
 
-## Elevation security model
+## Filesystem access security model
 
-Encore intentionally keeps the ProsperoEden 1.000.040 one-request filesystem-elevation design
-instead of the newer Lapy path.
+Encore prefers avoiding elevation entirely when the user explicitly selects self-contained mode.
 
-The current helper:
+With `self-contained.txt` present in the running title, Encore checks the marker through `/app0`
+before any filesystem request. The game-files root is fixed to `/app0/assets`; mutable state,
+backups, exports and caches remain in writable `/download0` storage. The elevation helper is not
+contacted in this mode.
+
+Without the marker, Encore keeps the ProsperoEden 1.000.040 one-request filesystem-elevation design
+for `/data/prosperoeden`, migrations and custom/external game-file locations instead of adopting
+the newer Lapy path.
+
+The fallback helper:
 
 - is packaged for the exact title ID `PPSA99008`;
 - accepts only the `filesystem` capability;
@@ -102,9 +110,10 @@ The current helper:
 - uses bounded local transport timeouts;
 - handles one request and exits instead of installing a persistent privilege service.
 
-This reduces attack surface and failure modes but **does not create a least-privilege sandbox after
-successful elevation**. Filesystem escape still requires broad process credentials/capabilities.
-The jailbreak environment and local ELF loader are therefore part of the trusted computing base.
+When external-storage mode is used, the helper necessarily grants the filesystem access needed for
+the selected `/data` or external paths. Encore limits that path to one validated request and
+verifies the result/rollback. Users who do not need external storage can avoid that request
+completely with self-contained mode.
 
 Implementation details are documented in
 [`headless/elevation/README.md`](headless/elevation/README.md).
@@ -144,6 +153,8 @@ The repository uses or is designed to use:
 - reproducible release packaging and SHA-256 checksums;
 - release publication only after a successful shipping build;
 - explicit Git ignores for keys, ROM/container files and local save-transfer data;
-- save-import symlink rejection and regression tests.
+- save-import symlink rejection and regression tests;
+- an explicit self-contained mode that skips elevation entirely and keeps writes in the title
+  sandbox.
 
 No keys, firmware, games or proprietary console data should ever be committed to this repository.
