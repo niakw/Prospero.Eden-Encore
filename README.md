@@ -24,7 +24,7 @@
 
 Current ProsperoEden releases moved beyond the 1.000.040 base and use a newer Lapy-based elevation path. That newer direction brings useful features, but **13.60 is not one of the firmware versions currently validated by upstream's Lapy helper**.
 
-Encore takes the opposite approach: keep the **known-working 1.000.040 filesystem path on 13.60**, then selectively add the compatibility, stability, recovery and usability improvements that are valuable on a PS5 today.
+Encore takes the opposite approach: keep the **known-working 1.000.040 fallback path on 13.60**, add a self-contained mode that can avoid filesystem elevation entirely, then selectively add compatibility, stability, recovery and usability improvements that are valuable on a PS5 today.
 
 The result is not a blind downgrade and not a blind merge of newer upstream code. It is a **13.60-specific maintained branch** with its own hardening and release validation.
 
@@ -34,8 +34,10 @@ Prospero.Eden Encore turns the proven ProsperoEden 1.000.040 base into a PS5 13.
 
 - PS5 firmware **13.60 tested** as the primary target.
 - ZBIC/zstd NSO support for newer Switch software while retaining LZ4.
-- One-shot filesystem elevation kept from the working 0.40 path and hardened with target validation,
-  cloned-credential checks, verified rollback, fail-closed postconditions and symlink-safe migration.
+- Optional **self-contained mode** keeps keys, firmware and games inside the app's own `assets/`
+  tree and skips filesystem elevation completely.
+- External-storage mode keeps the working 0.40 one-shot filesystem helper, hardened with target
+  validation, verified rollback, fail-closed postconditions and symlink-safe migration.
 - Safe Launch recovery profile without overwriting saved settings.
 - Recommended / Smooth / Performance profiles.
 - Global settings reset and per-game override reset.
@@ -50,9 +52,10 @@ Prospero.Eden Encore turns the proven ProsperoEden 1.000.040 base into a PS5 13.
 ### 🎯 PS5 13.60 is a first-class target
 
 - **Tested target: PS5 firmware 13.60.**
-- Keeps the 1.000.040 filesystem-access path instead of switching to Lapy.
+- **Self-contained ZIP installs can run without requesting filesystem elevation at all.**
+- External/custom storage keeps the 1.000.040 filesystem-access path instead of switching to Lapy.
 - No Lapy daemon or Lapy helper dependency is required.
-- If filesystem elevation is unavailable, Encore fails closed and stays sandboxed instead of pretending elevation succeeded.
+- If the external-storage request is unavailable, Encore stays sandboxed instead of pretending it succeeded.
 
 ### 🧩 Newer Switch software support
 
@@ -120,7 +123,7 @@ This comparison is against **ProsperoEden v1.000.070**, the current upstream lin
 | Area | Prospero.Eden Encore | ProsperoEden v1.000.070 |
 | --- | --- | --- |
 | Main PS5 target | **13.60 — tested** | Lapy helper validated upstream on **6.02 and 12.70**; other firmware experimental |
-| Elevation design | **1.000.040 one-shot sandbox elevator**, no Lapy dependency | Lapy-based exact-title helper / resident-service path |
+| Filesystem model | **Optional no-elevation self-contained mode + hardened 1.000.040 one-shot fallback** | Lapy-based exact-title helper / resident-service path |
 | Newer NSO compression | **ZBIC + LZ4** | Upstream line evolves independently |
 | Recovery | **Safe Launch + global reset + per-game reset** | No equivalent Encore recovery workflow documented |
 | Performance UX | **Recommended / Smooth / Performance presets** | Seven individual performance switches |
@@ -142,32 +145,42 @@ Encore deliberately chooses **predictability on 13.60** over importing every new
 
 A firmware having offsets somewhere in the wider PS5 ecosystem does **not** automatically mean Encore has been validated on it.
 
-## Filesystem elevation and security
+## Filesystem access and security
 
-Encore does **not** use Lapy. It keeps the 1.000.040 one-request elevation helper and hardens the interaction around it.
+Encore supports two storage modes.
 
-The helper:
+### Self-contained mode — no elevation
 
-- runs **once at startup**, not as a persistent service;
-- talks only through the local ELF-loader connection on **127.0.0.1:9021**;
-- accepts only one declared capability: **filesystem access**;
-- validates a fixed, versioned **24-byte protocol**;
-- accepts no arbitrary kernel pointer or privilege mask from the application;
-- verifies the target **PID and exact title ID `PPSA99008`** before touching credentials;
-- requires the application to clone its credentials before modification;
-- confirms the credential pointer actually changed before writing;
-- validates kernel pointers while finding the process;
-- verifies the complete resulting credential/filesystem state after the write;
-- attempts to restore the original state if applying elevation fails;
-- uses bounded I/O timeouts and no unbounded retry loop;
+For a folder install, create an empty `self-contained.txt` beside `eboot.bin` and keep your own
+files under:
+
+```text
+PPSA99008/assets/keys/prod.keys
+PPSA99008/assets/firmware/
+PPSA99008/assets/roms/
+PPSA99008/assets/updates/
+PPSA99008/assets/mods/
+```
+
+Encore checks the marker through `/app0` **before** any filesystem-access request. When it is
+present, no elevation helper is contacted. Read-only game content stays under `/app0/assets`;
+settings, saves, logs, caches, backups and exports stay in the title's writable `/download0`
+sandbox.
+
+### External-storage mode
+
+Without the marker, Encore keeps the proven 1.000.040 one-request helper for
+`/data/prosperoeden`, migration and custom/external game-file locations. The helper:
+
+- runs once during single-threaded startup;
+- validates the exact Encore title ID `PPSA99008`;
+- accepts only the filesystem request used by Encore;
+- uses a fixed/versioned protocol and bounded I/O timeouts;
+- verifies the resulting state and verifies rollback on failure;
+- terminates instead of continuing when the post-request state is inconsistent;
 - exits after the one request.
 
-> [!WARNING]
-Encore's elevation path is deliberately narrow and one-shot: it targets only the Encore title,
-verifies the resulting state, verifies rollback on failure, and terminates instead of continuing
-when post-elevation state cannot be trusted.
-
-See [headless/elevation/README.md](headless/elevation/README.md) for the implementation-specific notes.
+See [headless/elevation/README.md](headless/elevation/README.md) for implementation details.
 
 ## Recommended defaults
 
@@ -195,7 +208,9 @@ ShadowMountPlus users.
 
 - **ZIP:** extract `PPSA99008` to `/data/homebrew/PPSA99008`.
 - **FFPFSC:** mount the release image through a compatible ShadowMountPlus/etaHEN setup.
-- Persistent Encore data lives under `/data/prosperoeden`.
+- **External-storage mode:** persistent data lives under `/data/prosperoeden`.
+- **Self-contained mode:** mutable data lives in the title sandbox under `/download0`; game files
+  remain under `PPSA99008/assets`.
 
 See **[INSTALL.md](INSTALL.md)** for the complete step-by-step guide, update procedure, checksum
 verification and troubleshooting.
@@ -216,8 +231,9 @@ See [docs/BUILDING.md](docs/BUILDING.md) for toolchain details and [docs/FORK_NO
 
 ## Security
 
-Encore uses CodeQL scanning, pinned build inputs, SHA-pinned GitHub Actions, checksummed release assets,
-save-import symlink protection and a documented one-shot elevation security model.
+Encore uses CodeQL scanning, pinned build inputs, SHA-pinned GitHub Actions, checksummed release
+assets, save-import symlink protection, an explicit no-elevation self-contained mode and a hardened
+one-shot fallback for external storage.
 
 Please report exploitable issues privately and avoid publishing proof-of-concept details before a
 fix is available. See [SECURITY.md](SECURITY.md) for supported versions, scope and disclosure
