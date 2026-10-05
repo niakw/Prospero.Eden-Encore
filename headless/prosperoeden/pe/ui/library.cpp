@@ -668,10 +668,17 @@ void Launcher::press_game(Key key)
         if (option_ == row_performance)
         {
             const int preset = cycle(next.performance_profile, 3);
-            if (preset >= 0)
+            if (preset >= 0) {
                 ApplyVideoPreset(next, preset);
-            else
+            } else {
+                // Returning the preset to Default also returns the settings the preset owns to
+                // the global values; otherwise "Default" would silently keep old overrides.
                 next.performance_profile = -1;
+                next.renderer = -1;
+                next.resolution = -1;
+                next.filter = -1;
+                next.refresh = -1;
+            }
         }
         if (option_ == row_resolution)
             next.resolution =
