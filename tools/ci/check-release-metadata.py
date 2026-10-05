@@ -73,6 +73,6 @@ assert "FFPFSC" in install and "ZIP" in install, "both installation paths must b
 
 preset = (root / "headless/prosperoeden/pe/ui/video_presets.hpp").read_text()
 assert "ApplyVideoPreset(Preferences&" in preset and "ApplyVideoPreset(GameSettings&" in preset
-assert "{1, 0, 2, 0, 0}" in preset and "{1, 0, 1, 1, 0}" in preset and "{1, 0, 0, 0, 0}" in preset
+assert "{1, 1, 3, 0, 88, 0, 0}" in preset and "{1, 0, 3, 0, 88, 0, 0}" in preset and "{1, 0, 2, 1, 50, 0, 0}" in preset
 
 print(f"Release metadata preflight PASS (Encore {release}, package {package_version}, PPSA99008)")
