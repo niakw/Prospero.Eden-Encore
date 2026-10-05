@@ -171,20 +171,15 @@ Try **OpenGL** when a title has a Vulkan-specific issue. Use **0.75x / 0.5x + FS
 
 ## Install
 
-1. Download a compiled Encore release bundle.
-2. Copy the included `PPSA99008` folder to:
+**ZIP is the recommended installation method.** Encore also ships an optional `.ffpfsc` image for
+ShadowMountPlus users.
 
-```text
-/data/homebrew/PPSA99008
-```
+- **ZIP:** extract `PPSA99008` to `/data/homebrew/PPSA99008`.
+- **FFPFSC:** mount the release image through a compatible ShadowMountPlus/etaHEN setup.
+- Persistent Encore data lives under `/data/prosperoeden`.
 
-3. Encore stores its application data under:
-
-```text
-/data/prosperoeden
-```
-
-Updating the app folder does not require deleting your existing settings, saves, covers, logs, keys, firmware or game files stored elsewhere.
+See **[INSTALL.md](INSTALL.md)** for the complete step-by-step guide, update procedure, checksum
+verification and troubleshooting.
 
 ## Build
 
