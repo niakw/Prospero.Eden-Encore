@@ -174,8 +174,26 @@ Encore creates the normal folder structure automatically once filesystem access 
 
 ### 4. Launch Encore
 
-Encore performs its one-shot filesystem-access request during startup, then uses the selected
-storage root.
+Encore performs its one-shot filesystem-access request during startup, then proves the selected
+storage root is actually writable before any migration is allowed to run.
+
+On a clean internal installation, a successful first launch creates:
+
+```text
+/data/prosperoeden
+/data/prosperoeden/keys
+/data/prosperoeden/firmware
+/data/prosperoeden/roms
+/data/prosperoeden/updates
+/data/prosperoeden/mods
+/data/prosperoeden/save-import
+/data/prosperoeden/save-export
+/data/prosperoeden/ryujinx
+```
+
+Migration is therefore **not an installation-time operation**. It happens only after Encore itself
+has launched and full filesystem access has been proved. If `/data/prosperoeden` never appears,
+the startup/access stage did not complete and no legacy migration could have run.
 
 If filesystem access cannot be obtained, Encore remains in its normal PS5 sandbox rather than
 pretending access succeeded. External and `/data/prosperoeden` storage will not be treated as
