@@ -2,7 +2,7 @@
 # ProsperoEden - Launcher art from the source images (run by tools/launcher/assets.sh).
 # Copyright (C) 2026 BlackBearReloaded
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Writes the Eden PS5 launcher's baked art.
+"""Writes the Prospero.Eden Encore launcher's baked art.
 
   brand.tga       Prospero.Eden Encore logo, for the header and games without cover art.
   controller.tga  a controller in white on transparent, tinted by the home screen.
@@ -75,7 +75,7 @@ def main():
     wanted = set(sys.argv[1:]) or {"brand", "controller"}
     unknown = wanted - {"brand", "controller"}
     if unknown:
-        raise SystemExit("unknown Eden launcher art: " + ", ".join(sorted(unknown)))
+        raise SystemExit("unknown Encore launcher art: " + ", ".join(sorted(unknown)))
     if "brand" in wanted:
         source = ROOT / "assets/icon0.png"
         icon = Image.open(source).convert("RGBA")
