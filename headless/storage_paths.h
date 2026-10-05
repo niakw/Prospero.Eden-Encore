@@ -15,16 +15,14 @@ inline constexpr const char* kDataDir = "/data/prosperoeden";
 inline constexpr const char* kDefaultAssetsDir = "/data/prosperoeden";
 inline constexpr const char* kInstallDir = "/data/homebrew/PPSA99008";
 inline constexpr const char* kMountedAppDir = "/system_ex/app/PPSA99008";
-inline constexpr int kFilesystemSelfContained = -2;
 
-// Filesystem status: -1 not decided yet, -2 deliberately self-contained in the app sandbox,
-// 0 elevated filesystem access granted, otherwise the elevation::Status that refused it.
+// Filesystem status: -1 not decided yet, 0 elevated filesystem access granted, otherwise the
+// elevation::Status that refused it.
 inline int& FilesystemAccessStatus() {
     static int status = -1;
     return status;
 }
 inline bool FilesystemAccess() { return FilesystemAccessStatus() == 0; }
-inline bool SelfContainedMode() { return FilesystemAccessStatus() == kFilesystemSelfContained; }
 
 inline bool FileExists(const std::string& path) {
     struct stat info {};
