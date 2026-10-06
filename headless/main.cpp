@@ -1209,9 +1209,13 @@ int main(int argc, char** argv) {
             pad->SetMapping(mapping);
             if (!pad->Open()) throw std::runtime_error("PS5 controller initialization failed");
             const bool custom_mapping = Eden::MappingIsCustom(mapping, effective_layout);
+            // Stock PlayStation is context-adaptive globally: PS-style confirm/back in menus,
+            // physical Switch face-button positions during gameplay. Explicit custom mappings and
+            // Switch mode are never altered behind the user's back.
+            pad->SetAdaptivePlayStation(effective_layout == 0 && !custom_mapping);
             const std::string mapping_profile =
                 custom_mapping ? (effective_layout == 1 ? "Custom Switch" : "Custom PS5") :
-                                 (effective_layout == 1 ? "Switch" : "PlayStation");
+                                 (effective_layout == 1 ? "Switch" : "PlayStation Auto");
             Eden::Report("controls", (std::string("Controller profile ") + mapping_profile +
                 ", map " + Eden::Settings::MappingJson(mapping, Eden::BaseMappingForLayout(effective_layout)).dump() +
                 ", deadzone " + std::to_string(controls.stick_deadzone) + "%, vibration " +

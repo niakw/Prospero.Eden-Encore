@@ -231,7 +231,7 @@ void Launcher::press_home(Key key)
     case Key::up:
         if (focus == 0 || focus == 4)
             focus = ready ? 1 : 2;
-        else if (focus >= 5 && focus <= 9)
+        else if (focus >= 5 && focus <= 8)
             focus = hero_ready ? 0 : (ready ? 1 : 2);
         else if (focus >= 10 && focus <= 16)
             focus = focus > 10 ? focus - 1 : 3;
@@ -244,11 +244,11 @@ void Launcher::press_home(Key key)
         }
         else if ((focus == 0 || focus == 4) && recents_shown)
         {
-            focus = recent_count > 0 ? 5 : 9;
+            if (recent_count > 0) focus = 5;
         }
         else if (focus >= 10 && focus <= 16)
         {
-            focus = focus < 16 ? focus + 1 : (recents_shown ? 9 : focus);
+            focus = focus < 16 ? focus + 1 : (recents_shown && recent_count > 0 ? 5 : focus);
         }
         break;
     case Key::left:
@@ -273,23 +273,33 @@ void Launcher::press_home(Key key)
         }
         else if (focus >= 10 && focus <= 16)
         {
-            change_quick(focus - 10, delta);
-            return;
+            if (home_quick_edit_ == focus - 10)
+            {
+                change_quick(focus - 10, delta);
+                return;
+            }
         }
-        else if (focus >= 5 && focus <= 9)
+        else if (focus >= 5 && focus <= 8 && recent_count > 0)
         {
-            const int length = recent_count + 1;
-            int position = focus == 9 ? recent_count : focus - 5;
-            position = (position + delta + length) % length;
-            focus = position == recent_count ? 9 : position + 5;
+            int position = focus - 5;
+            position = (position + delta + recent_count) % recent_count;
+            focus = position + 5;
         }
         break;
     }
     case Key::circle:
         if (focus >= 10 && focus <= 16)
         {
-            focus = 4;
-            cue(Cue::back);
+            if (home_quick_edit_ >= 0)
+            {
+                home_quick_edit_ = -1;
+                cue(Cue::back);
+            }
+            else
+            {
+                focus = 4;
+                cue(Cue::back);
+            }
         }
         return;
     case Key::triangle:
@@ -310,7 +320,9 @@ void Launcher::press_home(Key key)
         press_ = 1.0f;
         if (focus >= 10 && focus <= 16)
         {
-            change_quick(focus - 10, 1);
+            const int row = focus - 10;
+            home_quick_edit_ = home_quick_edit_ == row ? -1 : row;
+            cue(home_quick_edit_ >= 0 ? Cue::toggle : Cue::saved);
             return;
         }
         if (focus == 0 && hero_ready)
@@ -324,14 +336,14 @@ void Launcher::press_home(Key key)
             // the game they explicitly selected.
             launch(file, title, cover);
         }
-        else if ((focus == 0 || focus == 1 || focus == 9) && ready)
+        else if ((focus == 0 || focus == 1) && ready)
         {
             open(Screen::library, true);
             enter_library();
         }
         else if (focus == 2)
         {
-            focus = recent_count > 0 ? 5 : 9;
+            if (recent_count > 0) focus = 5;
             if (recent_count > 0)
             {
                 home_recent_ = 0;
@@ -368,6 +380,8 @@ void Launcher::press_home(Key key)
     }
     if (focus != before)
     {
+        if (focus < 10 || focus > 16 || home_quick_edit_ != focus - 10)
+            home_quick_edit_ = -1;
         if (focus >= 5 && focus < 5 + recent_count)
         {
             home_recent_ = focus - 5;
@@ -484,7 +498,12 @@ void Launcher::draw_home(Canvas &c)
          theme::kLime, Align::left, 5.0f);
 
     const Rect home_nav{720.0f, 44.0f, 154.0f, 54.0f};
-    plate(c, kNavPlate, home_nav, 1.0f);
+    // Active section: quiet persistent pill. Controller focus uses the brighter animated
+    // kNavPlate below, so "current page" and "currently hovered target" never look identical.
+    list.bordered_rect(home_nav, 22.0f, theme::kPanel.with_alpha(0.34f), 1.0f,
+                       theme::kPanelEdge.with_alpha(0.34f));
+    list.rounded_rect({home_nav.x + 34.0f, home_nav.y + home_nav.h - 5.0f,
+                       home_nav.w - 68.0f, 3.0f}, 1.5f, theme::kLime.with_alpha(0.74f));
     text(c, tr("Home"), home_nav.x + home_nav.w * 0.5f,
          baseline(home_nav.y, home_nav.h, theme::kSmall), theme::kSmall, theme::kTitle,
          Align::center);
@@ -664,6 +683,10 @@ void Launcher::draw_home(Canvas &c)
                               theme::kRule.with_alpha(0.40f));
         if (f > 0.01f)
             plate_focus(c, kRowPlate, row_box, f);
+        const bool editing = home_quick_edit_ == i;
+        if (editing)
+            list.bordered_rect(row_box, 14.0f, theme::kPanel.with_alpha(0.18f), 2.0f,
+                               theme::kLime.with_alpha(0.92f));
         home_icon(c, quick_rows[i].icon, quick.x + 28.0f, y + 10.0f,
                   gfx::mix(theme::kMeta, theme::kTitle, f));
         text_shrink(c, quick_rows[i].label, quick.x + 66.0f,
@@ -674,7 +697,13 @@ void Launcher::draw_home(Canvas &c)
                     gfx::mix(theme::kLimePale, theme::kTitle, f), 178.0f, Align::right);
         const float cx = quick.x + quick.w - 30.0f;
         const float cy = y + 10.0f;
-        const Color arrow = gfx::mix(theme::kFaint, theme::kLimePale, f);
+        const Color arrow = editing ? theme::kLimePale : gfx::mix(theme::kFaint, theme::kLimePale, f);
+        if (editing)
+        {
+            const float lx = quick.x + 18.0f;
+            list.line(lx + 3.0f, cy - 4.0f, lx - 2.0f, cy, 1.7f, arrow);
+            list.line(lx - 2.0f, cy, lx + 3.0f, cy + 4.0f, 1.7f, arrow);
+        }
         list.line(cx - 3.0f, cy - 4.0f, cx + 2.0f, cy, 1.5f, arrow);
         list.line(cx + 2.0f, cy, cx - 3.0f, cy + 4.0f, 1.5f, arrow);
     }
@@ -759,13 +788,6 @@ void Launcher::draw_home(Canvas &c)
     {
         text(c, tr("RECENTLY PLAYED"), 72.0f, baseline(712.0f, 28.0f, theme::kSmall),
              theme::kSmall, theme::kTitle, Align::left, 3.0f);
-        const float vf = focus(9);
-        const Rect all{1590.0f, 704.0f, 258.0f, 44.0f};
-        plate(c, kNavPlate, all, vf);
-        text_shrink(c, tr("VIEW ALL GAMES"), all.x + all.w * 0.5f,
-                    baseline(all.y, all.h, theme::kSmall), theme::kSmall,
-                    gfx::mix(theme::kMuted, theme::kLime, vf), all.w - 24.0f, Align::center);
-
         if (home_.recents.empty())
             text(c, tr("Games you launch will appear here."), 72.0f,
                  baseline(786.0f, 36.0f, theme::kText24), theme::kText24, theme::kMuted);
@@ -834,9 +856,18 @@ void Launcher::draw_home(Canvas &c)
     list.rounded_rect({72.0f, 970.0f, 1776.0f, 1.0f}, 0.0f, theme::kText.with_alpha(0.11f));
     if (home_focus_ >= 10 && home_focus_ <= 16)
     {
-        static constexpr Hint kQuickHints[] = {
-            {Pad::leftright, TR("Change")}, {Pad::cross, TR("Change")}, {Pad::circle, TR("Back")}};
-        draw_hints(c, kQuickHints, 3, 72.0f, 1000.0f, theme::kMuted, 1200.0f);
+        if (home_quick_edit_ == home_focus_ - 10)
+        {
+            static constexpr Hint kQuickEditHints[] = {
+                {Pad::leftright, TR("Change")}, {Pad::cross, TR("Done")}, {Pad::circle, TR("Done")}};
+            draw_hints(c, kQuickEditHints, 3, 72.0f, 1000.0f, theme::kMuted, 1200.0f);
+        }
+        else
+        {
+            static constexpr Hint kQuickBrowseHints[] = {
+                {Pad::cross, TR("Edit")}, {Pad::dpad, TR("Navigate")}, {Pad::circle, TR("Back")}};
+            draw_hints(c, kQuickBrowseHints, 3, 72.0f, 1000.0f, theme::kMuted, 1200.0f);
+        }
     }
     else
     {

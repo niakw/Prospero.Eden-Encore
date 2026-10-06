@@ -176,7 +176,7 @@ void Launcher::check_games_present()
             read_home();
             const int recents = static_cast<int>(home_.recents.size());
             if (home_focus_ >= 5 && home_focus_ < 9 && home_focus_ - 5 >= recents)
-                home_focus_ = recents > 0 ? 4 + recents : 9;
+                home_focus_ = home_.last_exists ? 0 : (home_.setup_ready ? 1 : 2);
             if (home_focus_ == 4 && !home_.last_exists)
                 home_focus_ = 0;
         }
