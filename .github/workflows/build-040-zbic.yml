@@ -59,7 +59,7 @@ jobs:
           "$HOME/.local/bin/meson" --version
 
       - name: Check toolchain
-        if: ${{ inputs.resume_run_id == '' }}
+        if: ${{ inputs.resume_run_id == '' && !inputs.build_only }}
         run: make toolchain
 
       - name: Validate launcher translations and locale runtime
@@ -104,7 +104,7 @@ jobs:
           python3 -B tools/check-jit-stability.py
 
       - name: Preflight release packaging
-        if: ${{ inputs.resume_run_id == '' }}
+        if: ${{ inputs.resume_run_id == '' && !inputs.build_only }}
         run: bash tools/ci/package-image.sh --prepare
 
       - name: Restore staged app from a previous failed run
@@ -123,6 +123,8 @@ jobs:
       - name: Build and stage shipping app
         id: stage
         if: ${{ inputs.resume_run_id == '' }}
+        env:
+          EDEN_SKIP_PREBUILD_SOURCE_CHECKS: ${{ inputs.build_only && '1' || '0' }}
         run: bash tools/build-package.sh release-stage
 
       - name: Save build caches immediately after staging
