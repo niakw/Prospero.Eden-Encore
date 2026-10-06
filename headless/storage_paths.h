@@ -55,6 +55,21 @@ inline const std::string& AppDir() {
 }
 inline std::string AppFile(std::string_view name) { return AppDir() + "/" + std::string(name); }
 
+// Auxiliary files can be absent from a ShadowMount/system app projection even when the backing
+// installation contains them. Prefer the running app path, then fall back to the known backing
+// locations. This keeps launcher translations/art/resources available without changing where the
+// executable itself was loaded from.
+inline std::string AppResourceFile(std::string_view name) {
+    const std::string primary = AppFile(name);
+    if (FileExists(primary) || !FilesystemAccess()) return primary;
+    for (const char* candidate : {kInstallDir, kMountedAppDir,
+                                  "/mnt/sandbox/PPSA99008_000/app0", "/app0"}) {
+        const std::string path = std::string{candidate} + "/" + std::string{name};
+        if (path != primary && FileExists(path)) return path;
+    }
+    return primary;
+}
+
 // Settings, logs, covers and Eden's user folder.
 inline std::string ConfigDir() { return FilesystemAccess() ? std::string{kDataDir} + "/config" : "/download0/prosperoeden"; }
 inline std::string LogsDir() { return FilesystemAccess() ? std::string{kDataDir} + "/logs" : "/download0/eden-headless-g7"; }
