@@ -67,7 +67,7 @@ fi
 # screen. 1080p is enough for the launcher/loading texture while keeping its transient VRAM cost
 # small; the PS5 home-screen DDS stays native 4K.
 "${image_convert[@]}" "$root/assets/encore-background.jpg" -resize '1920x1080^' -gravity center -extent 1920x1080 \
-    -alpha off -define tga:bits-per-pixel=24 -compress None "$app/ui/art/backdrop.tga"
+    -flip -alpha off -define tga:bits-per-pixel=24 -compress None "$app/ui/art/backdrop.tga"
 python3 - "$app/ui/art/backdrop.tga" <<'PY2'
 import pathlib, sys
 data = pathlib.Path(sys.argv[1]).read_bytes()
