@@ -25,6 +25,8 @@
 #include <filesystem>
 #include <future>
 #include <initializer_list>
+#include <nlohmann/json.hpp>
+#include <stb_image.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -40,10 +42,90 @@ bool IsFile(const std::string& path) {
     return stat(path.c_str(), &info) == 0 && S_ISREG(info.st_mode);
 }
 
+std::uint64_t TitleIdFromFilename(const std::string& file) {
+    for (std::size_t open = file.find('['); open != std::string::npos;
+         open = file.find('[', open + 1)) {
+        const std::size_t close = file.find(']', open + 1);
+        if (close == std::string::npos || close - open != 17) continue;
+        std::uint64_t value = 0;
+        bool valid = true;
+        for (std::size_t i = open + 1; i < close; ++i) {
+            const unsigned char c = static_cast<unsigned char>(file[i]);
+            unsigned digit = 0;
+            if (c >= '0' && c <= '9') digit = c - '0';
+            else if (c >= 'a' && c <= 'f') digit = c - 'a' + 10;
+            else if (c >= 'A' && c <= 'F') digit = c - 'A' + 10;
+            else { valid = false; break; }
+            value = (value << 4) | digit;
+        }
+        if (valid && value != 0) return value;
+    }
+    return 0;
+}
+
+std::uint64_t ResolveTitleId(const std::string& path, const std::string& file) {
+    const std::uint64_t metadata_id = eden_game_title_id(path.c_str());
+    if (metadata_id != 0) return metadata_id;
+    const std::uint64_t filename_id = TitleIdFromFilename(file);
+    if (filename_id != 0)
+        std::fprintf(stderr, "EDEN_TITLE_ID_FALLBACK file=%s title_id=%016llX\n", file.c_str(),
+                     static_cast<unsigned long long>(filename_id));
+    return filename_id;
+}
+
 std::string NlibHeroPath(std::uint64_t title_id) {
     char id[17]{};
     std::snprintf(id, sizeof(id), "%016llX", static_cast<unsigned long long>(title_id));
-    return Eden::CoversDir() + "/hero-" + id + ".jpg";
+    return Eden::CoversDir() + "/hero-" + id + ".tga";
+}
+
+bool WriteJpegTga(const std::string& encoded, const std::string& output) {
+    int width = 0;
+    int height = 0;
+    int channels = 0;
+    unsigned char* rgba = stbi_load_from_memory(
+        reinterpret_cast<const unsigned char*>(encoded.data()), static_cast<int>(encoded.size()),
+        &width, &height, &channels, 4);
+    if (!rgba || width <= 0 || height <= 0 || width > 4096 || height > 4096) {
+        stbi_image_free(rgba);
+        return false;
+    }
+
+    std::FILE* file = std::fopen(output.c_str(), "wb");
+    if (!file) {
+        stbi_image_free(rgba);
+        return false;
+    }
+
+    unsigned char header[18]{};
+    header[2] = 2;
+    header[12] = static_cast<unsigned char>(width);
+    header[13] = static_cast<unsigned char>(width >> 8);
+    header[14] = static_cast<unsigned char>(height);
+    header[15] = static_cast<unsigned char>(height >> 8);
+    header[16] = 32;
+    header[17] = 0x28; // top-left origin + 8 alpha bits
+    bool ok = std::fwrite(header, 1, sizeof(header), file) == sizeof(header);
+    std::vector<unsigned char> row(static_cast<std::size_t>(width) * 4);
+    for (int y = 0; ok && y < height; ++y) {
+        const unsigned char* source = rgba + static_cast<std::size_t>(y) * row.size();
+        for (int x = 0; x < width; ++x) {
+            row[4 * x + 0] = source[4 * x + 2];
+            row[4 * x + 1] = source[4 * x + 1];
+            row[4 * x + 2] = source[4 * x + 0];
+            row[4 * x + 3] = source[4 * x + 3];
+        }
+        ok = std::fwrite(row.data(), 1, row.size(), file) == row.size();
+    }
+    ok = std::fclose(file) == 0 && ok;
+    stbi_image_free(rgba);
+    return ok;
+}
+
+std::string NlibPlayersPath(std::uint64_t title_id) {
+    char id[17]{};
+    std::snprintf(id, sizeof(id), "%016llX", static_cast<unsigned long long>(title_id));
+    return Eden::CoversDir() + "/players-" + id + ".txt";
 }
 
 std::string CachedNlibHero(std::uint64_t title_id) {
@@ -52,42 +134,87 @@ std::string CachedNlibHero(std::uint64_t title_id) {
     return IsFile(path) ? path : std::string{};
 }
 
+int CachedNlibPlayers(std::uint64_t title_id) {
+    if (title_id == 0) return 0;
+    std::FILE* file = std::fopen(NlibPlayersPath(title_id).c_str(), "rb");
+    if (!file) return 0;
+    int players = 0;
+    const int read = std::fscanf(file, "%d", &players);
+    (void)std::fclose(file);
+    return read == 1 && players > 0 && players <= 16 ? players : 0;
+}
+
+void CacheNlibPlayers(std::uint64_t title_id, int players) {
+    if (title_id == 0 || players <= 0 || players > 16) return;
+    (void)mkdir(Eden::CoversDir().c_str(), 0777);
+    const std::string path = NlibPlayersPath(title_id);
+    const std::string staged = path + ".new";
+    std::FILE* file = std::fopen(staged.c_str(), "wb");
+    if (!file) return;
+    const bool written = std::fprintf(file, "%d\n", players) > 0;
+    const bool closed = std::fclose(file) == 0;
+    if (!written || !closed || std::rename(staged.c_str(), path.c_str()) != 0)
+        (void)std::remove(staged.c_str());
+}
+
+struct NlibEnrichment {
+    std::string hero;
+    int max_players = 0;
+};
+
 // Nlib is optional enrichment only: the ROM's embedded icon remains the offline fallback.
 // Called from the asynchronous library scan, never from the launcher render/input thread.
-std::string EnsureNlibHero(std::uint64_t title_id) {
-    if (title_id == 0) return {};
-    const std::string cached = CachedNlibHero(title_id);
-    if (!cached.empty()) return cached;
+NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id) {
+    NlibEnrichment result;
+    if (title_id == 0) return result;
+
+    result.hero = CachedNlibHero(title_id);
+    result.max_players = CachedNlibPlayers(title_id);
 
     char id[17]{};
     std::snprintf(id, sizeof(id), "%016llX", static_cast<unsigned long long>(title_id));
-    try {
-        const std::string endpoint = std::string{"/nx/"} + id + "/banner/720p";
-        const auto response = Common::Net::MakeRequest("https://api.nlib.cc", endpoint);
-        if (!response) return {};
-        const std::string& body = *response;
-        if (body.size() < 4096 || body.size() > (10u << 20) ||
-            static_cast<unsigned char>(body[0]) != 0xff ||
-            static_cast<unsigned char>(body[1]) != 0xd8)
-            return {};
+    std::fprintf(stderr, "EDEN_NLIB_BEGIN title_id=%s cached_hero=%d cached_players=%d\n", id,
+                 !result.hero.empty(), result.max_players);
 
-        (void)mkdir(Eden::CoversDir().c_str(), 0777);
-        const std::string path = NlibHeroPath(title_id);
-        const std::string staged = path + ".new";
-        std::FILE* file = std::fopen(staged.c_str(), "wb");
-        if (!file) return {};
-        const bool written = std::fwrite(body.data(), 1, body.size(), file) == body.size();
-        const bool closed = std::fclose(file) == 0;
-        if (!written || !closed || std::rename(staged.c_str(), path.c_str()) != 0) {
-            (void)std::remove(staged.c_str());
-            return {};
+    try {
+        if (result.max_players == 0) {
+            const std::string endpoint = std::string{"/nx/"} + id + "?fields=numberOfPlayers";
+            if (const auto response = Common::Net::MakeRequest("https://api.nlib.cc", endpoint)) {
+                const auto json = nlohmann::json::parse(*response);
+                const int players = json.value("numberOfPlayers", 0);
+                if (players > 0 && players <= 16) {
+                    result.max_players = players;
+                    CacheNlibPlayers(title_id, players);
+                }
+            }
         }
-        Eden::Report("artwork", (std::string{"Nlib hero cached for "} + id).c_str());
-        return path;
+
+        if (result.hero.empty()) {
+            const std::string endpoint = std::string{"/nx/"} + id + "/banner/720p";
+            if (const auto response = Common::Net::MakeRequest("https://api.nlib.cc", endpoint)) {
+                const std::string& body = *response;
+                if (body.size() >= 4096 && body.size() <= (10u << 20) &&
+                    static_cast<unsigned char>(body[0]) == 0xff &&
+                    static_cast<unsigned char>(body[1]) == 0xd8) {
+                    (void)mkdir(Eden::CoversDir().c_str(), 0777);
+                    const std::string path = NlibHeroPath(title_id);
+                    const std::string staged = path + ".new";
+                    if (WriteJpegTga(body, staged) && std::rename(staged.c_str(), path.c_str()) == 0) {
+                        result.hero = path;
+                        Eden::Report("artwork", (std::string{"Nlib hero cached for "} + id).c_str());
+                    } else {
+                        (void)std::remove(staged.c_str());
+                    }
+                }
+            }
+        }
     } catch (const std::exception& error) {
         Eden::Report("artwork", (std::string{"Nlib unavailable: "} + error.what()).c_str());
-        return {};
     }
+
+    std::fprintf(stderr, "EDEN_NLIB_RESULT title_id=%s hero=%d players=%d\n", id,
+                 !result.hero.empty(), result.max_players);
+    return result;
 }
 
 std::uintmax_t TreeBytes(const std::filesystem::path& root) {
@@ -437,10 +564,11 @@ pe::ui::Home EdenServices::home() {
     if (home.setup_ready)
         eden_scan_addons(Eden::AssetsPath("updates").c_str(), Eden::AssetsPath("keys").c_str());
     if (home.setup_ready && home.last_exists) {
-        const uint64_t title_id = eden_game_title_id(last_path.c_str());
+        const uint64_t title_id = ResolveTitleId(last_path, home.last_file);
         const GameLanguage language = LanguageFor(last_path, title_id, selected_language);
         home.last_title_id = title_id;
         home.last_hero = CachedNlibHero(title_id);
+        home.last_max_players = CachedNlibPlayers(title_id);
         home.last_addons = AddOnSummary(title_id);
         home.last_language = language.label;
         if (!language.note.empty()) {
@@ -463,9 +591,10 @@ pe::ui::Home EdenServices::home() {
         recent.title = GameTitle(name);
         recent.cover = EnsureCover(name);
         if (home.setup_ready) {
-            recent.title_id = eden_game_title_id(recent_path.c_str());
+            recent.title_id = ResolveTitleId(recent_path, name);
             if (recent.title_id != 0) {
                 recent.hero = CachedNlibHero(recent.title_id);
+                recent.max_players = CachedNlibPlayers(recent.title_id);
                 recent.addons = AddOnSummary(recent.title_id);
                 recent.language = LanguageFor(recent_path, recent.title_id, selected_language).label;
             }
@@ -549,10 +678,13 @@ std::vector<pe::ui::Game> EdenServices::games() {
                 game.cover = cover;
             else
                 (void)std::remove(staged.c_str());
-            game.title_id = eden_game_title_id(path.c_str());
+            game.title_id = ResolveTitleId(path, file);
             if (game.title_id != 0 &&
                 std::find(artwork_files.begin(), artwork_files.end(), file) != artwork_files.end())
                 game.hero = CachedNlibHero(game.title_id);
+            if (game.title_id != 0 &&
+                std::find(artwork_files.begin(), artwork_files.end(), file) != artwork_files.end())
+                game.max_players = CachedNlibPlayers(game.title_id);
             const GameLanguage language = LanguageFor(path, game.title_id, language_choice);
             game.addons = AddOnSummary(game.title_id);
             game.addons_short = AddOnSummary(game.title_id, true);
@@ -568,19 +700,23 @@ std::vector<pe::ui::Game> EdenServices::games() {
     // optional, bounded to the Home games, and runs in parallel so a slow network costs one timeout
     // rather than one timeout per game.
     lock.unlock();
-    std::vector<std::pair<std::size_t, std::future<std::string>>> artwork_tasks;
+    std::vector<std::pair<std::size_t, std::future<NlibEnrichment>>> artwork_tasks;
     for (std::size_t i = 0; i < games.size(); ++i) {
         auto& game = games[i];
-        if (game.title_id == 0 || !game.hero.empty() ||
+        if (game.title_id == 0 ||
+            (game.hero.empty() == false && game.max_players > 0) ||
             std::find(artwork_files.begin(), artwork_files.end(), game.file) == artwork_files.end())
             continue;
         const std::uint64_t title_id = game.title_id;
         artwork_tasks.emplace_back(i, std::async(std::launch::async, [title_id] {
-            return EnsureNlibHero(title_id);
+            return EnsureNlibEnrichment(title_id);
         }));
     }
-    for (auto& [index, task] : artwork_tasks)
-        games[index].hero = task.get();
+    for (auto& [index, task] : artwork_tasks) {
+        NlibEnrichment enrichment = task.get();
+        games[index].hero = std::move(enrichment.hero);
+        games[index].max_players = enrichment.max_players;
+    }
 
     std::sort(games.begin(), games.end(),
               [](const pe::ui::Game& a, const pe::ui::Game& b) { return a.name < b.name; });
@@ -740,11 +876,17 @@ pe::ui::DiagnosticsInfo EdenServices::diagnostics() {
     std::error_code error;
     const auto space = std::filesystem::space(Eden::UserDir(), error);
     result.free_space = error ? tr("Unknown") : StorageSize(space.available);
+    result.total_space = error ? tr("Unknown") : StorageSize(space.capacity);
+    if (!error) {
+        result.free_bytes = static_cast<std::uint64_t>(space.available);
+        result.total_bytes = static_cast<std::uint64_t>(space.capacity);
+    }
 
     const std::filesystem::path cache = std::filesystem::path{Eden::UserDir()} / "cache";
     const std::uintmax_t shader_bytes =
         TreeBytes(cache / "shader") + TreeBytes(cache / "radv") +
         TreeBytes(cache / "native-opengl") + TreeBytes(cache / "jit");
+    result.shader_cache_bytes = static_cast<std::uint64_t>(shader_bytes);
     result.shader_caches = StorageSize(shader_bytes);
     result.logs = StorageSize(TreeBytes(Eden::LogsDir()));
     return result;

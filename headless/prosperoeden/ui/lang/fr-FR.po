@@ -1556,3 +1556,63 @@ msgstr "Accueil"
 #: pe/ui/home.cpp
 msgid "Output resolution"
 msgstr "Résolution de sortie"
+
+#: Encore R1
+msgid "Custom Switch"
+msgstr "Switch personnalisé"
+
+#: Encore R1
+msgid "Switch"
+msgstr "Switch"
+
+#: Encore R1
+msgid "Custom PS5"
+msgstr "PS5 personnalisé"
+
+#: Encore R1
+msgid "PlayStation"
+msgstr "PlayStation"
+
+#: Encore R1
+msgid "Global ({0})"
+msgstr "Global ({0})"
+
+#: Encore R1
+msgid "Button mapping reset to the active profile."
+msgstr "Attribution des touches réinitialisée selon le profil actif."
+
+#: Encore R1
+msgid "Global controller profile: {0}"
+msgstr "Profil de manette global : {0}"
+
+#: Encore R1
+msgid "BUTTON PROFILE"
+msgstr "PROFIL DE TOUCHES"
+
+#: Encore R1
+msgid "Preset"
+msgstr "Préréglage"
+
+#: Encore R1
+msgid "Controller profile: {0}"
+msgstr "Profil de manette : {0}"
+
+#: Encore R1
+msgid "PlayStation uses Cross=A and Circle=B. Switch keeps Nintendo face-button positions. Editing any button creates a custom profile."
+msgstr "PlayStation utilise Croix=A et Rond=B. Switch conserve les positions des boutons Nintendo. Modifier une touche crée un profil personnalisé."
+
+#: Encore R1
+msgid "Customize every guest button. The profile automatically becomes Custom PS5 or Custom Switch."
+msgstr "Personnalisez chaque touche du jeu. Le profil devient automatiquement PS5 personnalisé ou Switch personnalisé."
+
+#: Encore R1
+msgid "Edit custom mapping"
+msgstr "Modifier l’attribution personnalisée"
+
+#: Encore R1
+msgid "Customize"
+msgstr "Personnaliser"
+
+#: Encore R1
+msgid "Button profile"
+msgstr "Profil de touches"

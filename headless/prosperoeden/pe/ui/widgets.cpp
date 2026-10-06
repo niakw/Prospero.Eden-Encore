@@ -314,15 +314,23 @@ void plate_focus(Canvas &c, const Plate &style, const Rect &r, float amount)
                              Color::rgb(0xd6a4ff, amount));
         return;
     }
-    // The highlight glows, breathing slowly.
-    const float glow = 0.21f + 0.08f * std::sin(c.time * 2.4f * motion());
-    c.list.shadow({r.x - 2.0f, r.y + 2.0f, r.w + 4.0f, r.h + 2.0f}, style.radius + 2.0f, 26.0f,
-                  theme::kLime.with_alpha(glow * amount));
+    // Console-style focus: a soft two-colour bloom plus a crisp luminous edge.
+    // The outline stays readable from sofa distance while the fill remains restrained.
+    const float breathe = 0.82f + 0.18f * std::sin(c.time * 2.1f * motion());
+    const Color glow_a = gfx::mix(theme::kBlue, theme::kLime, 0.55f);
+    const Color glow_b = gfx::mix(theme::kSun, theme::kLime, 0.45f);
+    c.list.shadow({r.x - 7.0f, r.y - 3.0f, r.w + 14.0f, r.h + 10.0f},
+                  style.radius + 7.0f, 34.0f, glow_a.with_alpha(0.17f * amount * breathe));
+    c.list.shadow({r.x + r.w * 0.38f, r.y + r.h * 0.10f, r.w * 0.48f, r.h * 0.82f},
+                  style.radius, 28.0f, glow_b.with_alpha(0.10f * amount));
     if (style.focus_base.a > 0.0f)
-        c.list.rounded_rect(r, style.radius, style.focus_base.with_alpha(amount));
-    c.list.hgradient_rect(r, style.radius, style.focus_left.with_alpha(amount),
-                          style.focus_right.with_alpha(amount), 1.5f,
-                          style.focus_edge.with_alpha(amount));
+        c.list.rounded_rect(r, style.radius, style.focus_base.with_alpha(0.82f * amount));
+    c.list.hgradient_rect(r, style.radius, style.focus_left.with_alpha(0.72f * amount),
+                          style.focus_right.with_alpha(0.48f * amount), 2.0f,
+                          style.focus_edge.with_alpha(0.94f * amount));
+    c.list.bordered_rect({r.x + 2.0f, r.y + 2.0f, r.w - 4.0f, r.h - 4.0f},
+                         std::max(1.0f, style.radius - 2.0f), kWhite.with_alpha(0.0f), 1.0f,
+                         kWhite.with_alpha(0.13f * amount));
 }
 
 void plate(Canvas &c, const Plate &style, const Rect &r, float focus)
@@ -350,6 +358,40 @@ void cover(Canvas &c, const std::string &path, const Rect &r, float radius, floa
         c.list.rounded_image(image.texture, r, {0.0f, 0.0f, 1.0f, 1.0f}, radius,
                              kWhite.with_alpha(fade));
     c.list.bordered_rect(r, radius, kWhite.with_alpha(0.0f), 1.0f, kWhite.with_alpha(0.10f));
+}
+
+void cover_crop(Canvas &c, const std::string &path, const Rect &r, float radius, float shadow)
+{
+    if (shadow > 0.0f)
+        c.list.shadow({r.x + 3.0f, r.y + 10.0f * shadow, r.w - 6.0f, r.h - 4.0f}, radius,
+                      24.0f * shadow, kBlack.with_alpha(0.5f));
+    const Cover image = c.textures.cover(path, std::max(r.w, r.h));
+    const float fade = image.texture != 0 ? tween::cubic_out(image.age / 0.22f) : 0.0f;
+    if (fade < 1.0f)
+    {
+        c.list.gradient_rect(r, radius, Color::rgb(0x191a28), Color::rgb(0x10111b));
+        if (image.missing && c.textures.brand() != 0)
+            c.list.rounded_image(c.textures.brand(), r, {0.0f, 0.0f, 1.0f, 1.0f}, radius,
+                                 kWhite.with_alpha(0.92f));
+    }
+    if (image.texture != 0)
+    {
+        const float source = std::max(0.01f, image.aspect);
+        const float target = std::max(0.01f, r.w / std::max(1.0f, r.h));
+        Rect uv{0.0f, 0.0f, 1.0f, 1.0f};
+        if (source > target)
+        {
+            uv.w = target / source;
+            uv.x = (1.0f - uv.w) * 0.5f;
+        }
+        else if (source < target)
+        {
+            uv.h = source / target;
+            uv.y = (1.0f - uv.h) * 0.5f;
+        }
+        c.list.rounded_image(image.texture, r, uv, radius, kWhite.with_alpha(fade));
+    }
+    c.list.bordered_rect(r, radius, kWhite.with_alpha(0.0f), 1.0f, kWhite.with_alpha(0.12f));
 }
 
 void controller_icon(Canvas &c, const Rect &r, float lit)
@@ -446,10 +488,19 @@ void draw_pad(Canvas &c, Pad button, float x, float cy, float size, float alpha)
     const float cx = x + width * 0.5f;
     const float half = size * 0.5f;
     const bool bold = look().high_contrast;
-    const Color ring = theme::kText.with_alpha((bold ? 0.85f : 0.40f) * alpha);
-    const Color ink = theme::kText.with_alpha((bold ? 1.0f : 0.92f) * alpha);
-    const Color dim = theme::kText.with_alpha((bold ? 0.45f : 0.30f) * alpha);
-    const float stroke = size * 0.085f;
+    const Color ring = theme::kText.with_alpha((bold ? 0.88f : 0.34f) * alpha);
+    const Color ink = theme::kTitle.with_alpha((bold ? 1.0f : 0.96f) * alpha);
+    const Color dim = theme::kText.with_alpha((bold ? 0.48f : 0.28f) * alpha);
+    const float stroke = size * 0.082f;
+    // PS5-like input chip: dark circular keycap, hairline rim and a tiny violet underglow.
+    if (button == Pad::cross || button == Pad::circle || button == Pad::square ||
+        button == Pad::triangle)
+    {
+        c.list.shadow({cx - half + 2.0f, cy - half + 3.0f, size - 4.0f, size - 4.0f},
+                      half, size * 0.48f, theme::kLime.with_alpha(0.11f * alpha));
+        c.list.circle(cx, cy, half, theme::kPanel.with_alpha(0.88f * alpha));
+        c.list.ring(cx, cy, half - 0.5f, 1.3f, ring);
+    }
     switch (button)
     {
     case Pad::none:

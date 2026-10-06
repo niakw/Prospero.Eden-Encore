@@ -56,7 +56,9 @@ inline Xbyak::Allocator* EdenJitAllocator() {
                 try {
                     std::lock_guard lock(mutex);
                     mappings.emplace(pointer, Mapping{writable, span});
-                    std::fprintf(diagnostics, "EDEN_JIT_ALIAS bytes=%zu active=1\n", span);
+                    std::fprintf(diagnostics,
+                                 "EDEN_JIT_ALIAS rx=%p rw=%p bytes=%zu active=1\n",
+                                 static_cast<void*>(pointer), writable, span);
                     return pointer;
                 } catch (...) {
                     // Release both views before reporting allocation failure.

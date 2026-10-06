@@ -118,6 +118,8 @@ void plate_focus(Canvas &c, const Plate &style, const Rect &r, float amount);
 
 // A cover (or the app icon while it loads or when there is none), with rounded corners.
 void cover(Canvas &c, const std::string &path, const Rect &r, float radius, float shadow = 0.0f);
+// CSS-like object-fit: cover. Keeps the source aspect ratio and centre-crops overflow.
+void cover_crop(Canvas &c, const std::string &path, const Rect &r, float radius, float shadow = 0.0f);
 
 // A controller r.w wide (r.h is 25/36 of that): a faint outline at lit 0, white with its light
 // bar glowing at lit 1.
