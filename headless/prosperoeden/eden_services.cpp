@@ -643,7 +643,8 @@ pe::ui::DiagnosticsInfo EdenServices::diagnostics() {
 
     const std::filesystem::path cache = std::filesystem::path{Eden::UserDir()} / "cache";
     const std::uintmax_t shader_bytes =
-        TreeBytes(cache / "radv") + TreeBytes(cache / "native-opengl") + TreeBytes(cache / "jit");
+        TreeBytes(cache / "shader") + TreeBytes(cache / "radv") +
+        TreeBytes(cache / "native-opengl") + TreeBytes(cache / "jit");
     result.shader_caches = StorageSize(shader_bytes);
     result.logs = StorageSize(TreeBytes(Eden::LogsDir()));
     return result;
@@ -652,9 +653,13 @@ pe::ui::DiagnosticsInfo EdenServices::diagnostics() {
 bool EdenServices::clear_shader_caches(std::string* message) {
     const std::filesystem::path cache = std::filesystem::path{Eden::UserDir()} / "cache";
     const std::uintmax_t before =
-        TreeBytes(cache / "radv") + TreeBytes(cache / "native-opengl") + TreeBytes(cache / "jit");
+        TreeBytes(cache / "shader") + TreeBytes(cache / "radv") +
+        TreeBytes(cache / "native-opengl") + TreeBytes(cache / "jit");
     bool ok = true;
-    for (const char* name : {"radv", "native-opengl", "jit"}) {
+    // Eden's per-title Vulkan/OpenGL pipeline cache lives under cache/shader. The other
+    // directories are backend/JIT auxiliaries. A maintenance clear must remove all of them,
+    // otherwise the launcher can report success while the active game's pipelines survive.
+    for (const char* name : {"shader", "radv", "native-opengl", "jit"}) {
         std::error_code error;
         std::filesystem::remove_all(cache / name, error);
         ok = ok && !error;

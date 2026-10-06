@@ -265,6 +265,8 @@ void Launcher::refresh_selected_game()
 
 void Launcher::press_library(Key key)
 {
+    if (key != Key::left && key != Key::right && key != Key::cross && key != Key::options)
+        clear_confirmation();
     const int count = static_cast<int>(games_.size());
     const Game *game = count > 0 ? &games_[static_cast<std::size_t>(library_.selected)] : nullptr;
     switch (key)
@@ -301,6 +303,8 @@ void Launcher::press_library(Key key)
                 cue(Cue::error);
             return;
         }
+        if (!confirm_action(Confirmation::console_mode))
+            return;
         const bool saved = services_.set_docked(game->title_id, !selected_docked_);
         if (saved)
             selected_docked_ = !selected_docked_;
@@ -357,6 +361,8 @@ void Launcher::press_library(Key key)
             cue(Cue::error);
             return;
         }
+        if (!confirm_action(Confirmation::launch_game))
+            return;
         services_.arm_safe_launch();
         say(tr("Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."));
         launch(game->file, game->name, game->cover);
@@ -367,6 +373,8 @@ void Launcher::press_library(Key key)
             cue(Cue::error);
             return;
         }
+        if (!confirm_action(Confirmation::launch_game))
+            return;
         launch(game->file, game->name, game->cover);
         return;
     default:
@@ -566,7 +574,9 @@ void Launcher::draw_library(Canvas &c)
 void Launcher::press_game(Key key)
 {
     Game &game = games_[static_cast<std::size_t>(library_.selected)];
-    if (key != Key::triangle)
+    const bool mode_confirmation =
+        option_ == row_mode && (key == Key::left || key == Key::right || key == Key::cross);
+    if (key != Key::triangle && !mode_confirmation)
         clear_confirmation();
     if (key == Key::triangle && option_ >= row_renderer && option_ <= row_controls)
     {
@@ -666,6 +676,8 @@ void Launcher::press_game(Key key)
     bool saved = false;
     if (option_ == row_mode)
     {
+        if (!confirm_action(Confirmation::console_mode))
+            return;
         saved = services_.set_docked(game.title_id, !game_docked_);
         if (saved)
             game_docked_ = !game_docked_;

@@ -21,6 +21,8 @@ ui_expected = {
 }
 ui_expected.discard("ui/art/backdrop-blur.tga")
 ui_expected.add("ui/art/backdrop.tga")
+for source in (source_ui / "lang").glob("*.po"):
+    ui_expected.add("ui/lang/" + source.with_suffix(".txt").name)
 expected = base | ui_expected
 actual = {p.relative_to(app).as_posix() for p in app.rglob("*") if p.is_file()}
 missing = sorted(expected - actual)
@@ -43,7 +45,9 @@ assert [p.name for p in staged_lang] == [p.name for p in source_lang], "launcher
 assert any(p.name == "fr-FR.po" for p in staged_lang), "fr-FR launcher catalog missing"
 for source in source_lang:
     staged = app / "ui/lang" / source.name
+    companion = app / "ui/lang" / source.with_suffix(".txt").name
     assert staged.read_bytes() == source.read_bytes(), f"stale/corrupt launcher catalog: {source.name}"
+    assert companion.read_bytes() == source.read_bytes(), f"stale/corrupt launcher catalog companion: {companion.name}"
 assert (app / "sandbox-elevator.elf").stat().st_size > 0
 assert (app / "eboot.bin").stat().st_size > 1024 * 1024
 print(f"Staged Encore artifact PASS ({len(actual)} files)")
