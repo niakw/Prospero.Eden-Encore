@@ -127,10 +127,16 @@ void Launcher::name_home_games()
     for (const Game &game : games_)
     {
         if (game.file == home_.last_file)
+        {
             home_.last_title = game.name;
+            if (!game.hero.empty()) home_.last_hero = game.hero;
+        }
         for (Recent &recent : home_.recents)
             if (recent.file == game.file)
+            {
                 recent.title = game.name;
+                if (!game.hero.empty()) recent.hero = game.hero;
+            }
     }
 }
 
@@ -251,6 +257,43 @@ void Launcher::enter_library()
     mode_.snap(selected_docked_ ? 0.0f : 1.0f);
 }
 
+bool Launcher::open_game_settings_at_file(const std::string &file)
+{
+    if (!games_loaded_)
+    {
+        start_scan();
+        finish_scan(true);
+    }
+    for (int i = 0; i < static_cast<int>(games_.size()); ++i)
+    {
+        Game &game = games_[static_cast<std::size_t>(i)];
+        if (game.file != file) continue;
+        if (game.title_id == 0)
+        {
+            say(tr("This game's settings cannot be saved (no title ID)."), true);
+            cue(Cue::error);
+            return false;
+        }
+        library_.reset(static_cast<int>(games_.size()), i);
+        refresh_selected_game();
+        game_settings_ = services_.game_settings(game.title_id);
+        game_docked_ = selected_docked_;
+        import_source_ = services_.save_transfer_available() ?
+                             services_.save_import_source(game.title_id) : SaveSource::none;
+        import_armed_ = false;
+        mods_ = services_.mods(game.title_id);
+        count_mods(game, mods_);
+        open_modal(Modal::game);
+        game_rows_.visible = kDialogRowsShown;
+        game_rows_.pitch = kDialogRowPitch;
+        game_rows_.reset(dialog_rows(Modal::game), 0);
+        return true;
+    }
+    say(tr("ROM missing from the game files folder"), true);
+    cue(Cue::error);
+    return false;
+}
+
 void Launcher::refresh_selected_game()
 {
     const std::uint64_t id =
@@ -361,8 +404,6 @@ void Launcher::press_library(Key key)
             cue(Cue::error);
             return;
         }
-        if (!confirm_action(Confirmation::launch_game))
-            return;
         services_.arm_safe_launch();
         say(tr("Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."));
         launch(game->file, game->name, game->cover);
@@ -373,8 +414,6 @@ void Launcher::press_library(Key key)
             cue(Cue::error);
             return;
         }
-        if (!confirm_action(Confirmation::launch_game))
-            return;
         launch(game->file, game->name, game->cover);
         return;
     default:

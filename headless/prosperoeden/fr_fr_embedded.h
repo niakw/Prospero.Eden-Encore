@@ -1,4 +1,8 @@
-# ProsperoEden launcher - fr-FR
+// SPDX-License-Identifier: GPL-3.0-or-later
+#pragma once
+#include <string_view>
+namespace pe::ui::embedded {
+inline constexpr std::string_view kFrFr = R"FRPO(# ProsperoEden launcher - fr-FR
 # English text is the key (msgid); msgstr is the translation. Keep {0} {1} as they are,
 # keep UPPERCASE labels uppercase, and keep names (ProsperoEden, Eden, PS5, Vulkan, OpenGL,
 # AMD FSR, DLC, NSP, XCI, prod.keys, Ryujinx) unchanged.
@@ -1556,3 +1560,5 @@ msgstr "Accueil"
 #: pe/ui/home.cpp
 msgid "Output resolution"
 msgstr "Résolution de sortie"
+)FRPO";
+}

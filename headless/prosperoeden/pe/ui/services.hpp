@@ -52,7 +52,8 @@ struct Game
     std::string format; // "NSP" or "XCI"
     std::string size;   // "1.2 GB"
     std::string file;   // its name in the games folder
-    std::string cover;  // image path; empty without cover art
+    std::string cover;  // square icon path; empty without cover art
+    std::string hero;   // optional cached 16:9 artwork (Nlib); empty => use cover
     std::uint64_t title_id = 0;
     std::string addons;        // "Update 1.2.0, 2 DLC"; empty without either
     std::string addons_short;  // the same where there is little room: "v1.2.0, 2 DLC"
@@ -71,6 +72,10 @@ struct Recent
     std::string file;
     std::string title;
     std::string cover;
+    std::string hero; // cached 16:9 artwork; empty => square cover fallback
+    std::uint64_t title_id = 0;
+    std::string addons;
+    std::string language;
 };
 
 // The home screen's content.
@@ -85,6 +90,7 @@ struct Home
     std::string last_caption;
     bool last_caption_warning = false; // the caption says what is wrong with the game
     std::string last_cover;
+    std::string last_hero; // cached 16:9 artwork; empty => last_cover
     // What the last game comes with, when it can be started: its title ID, its update and DLC
     // (as Game::addons) and the language it will use. Its mods are counted by the launcher.
     std::uint64_t last_title_id = 0;

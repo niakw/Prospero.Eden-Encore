@@ -653,7 +653,10 @@ foreach(bits 32 64)
           string(REPLACE "std::uint32_t(16_MiB)" "std::uint32_t(${jit_cache_sizes})" wrapper "${wrapper}")
       endif()
     set(derived "${PORT_BUILD_DIR}/arm_dynarmic_${bits}.cpp")
-    if(EDEN_DEV_PROFILE)
+    # Release soft-hang diagnostics need an owner-written guest snapshot too. Mark the interval
+    # spent inside Dynarmic::Run() as Guest; if Run never returns the watchdog sees Guest plus a
+    # stale sample timestamp, while a core blocked in HLE/kernel code reports Kernel.
+    if(PS5_NATIVE)
         string(PREPEND wrapper "#include \"${EDEN_PORT_DIR}/performance.h\"\n")
         if(bits EQUAL 64)
             set(sample_pc "m_jit->GetPC()")
@@ -663,8 +666,10 @@ foreach(bits 32 64)
             set(sample_fp "m_jit->Fpscr()")
         endif()
         string(REPLACE "    return TranslateHaltReason(m_jit->Run());"
-            "    const auto halt = m_jit->Run();\n    ::Eden::Performance::SampleCpu(m_core_index, 0, ${sample_pc}, GetSvcNumber(), ${sample_fp});\n    return TranslateHaltReason(halt);"
+            "    ::Eden::Performance::SampleCpu(m_core_index, 0, ${sample_pc}, GetSvcNumber(), ${sample_fp});\n    ::Eden::Performance::cpu_state[m_core_index].phase.store(::Eden::Performance::CpuPhase::Guest, std::memory_order_release);\n    const auto halt = m_jit->Run();\n    ::Eden::Performance::cpu_state[m_core_index].phase.store(::Eden::Performance::CpuPhase::Kernel, std::memory_order_release);\n    ::Eden::Performance::SampleCpu(m_core_index, 0, ${sample_pc}, GetSvcNumber(), ${sample_fp});\n    return TranslateHaltReason(halt);"
             wrapper "${wrapper}")
+    endif()
+    if(EDEN_DEV_PROFILE)
         if(bits EQUAL 32)
             string(REPLACE "u8 DynarmicCallbacks32::MemoryRead8(u32 vaddr) {"
                 "u8 DynarmicCallbacks32::MemoryRead8(u32 vaddr) {\n    ::Eden::Performance::CountJit(::Eden::Performance::jit_callbacks[m_parent.m_core_index].reads);"
@@ -765,19 +770,33 @@ string(FIND "${physical_core_source}" "${idle_old}" idle_at)
 if(idle_at LESS 0)
     message(FATAL_ERROR "Pinned PhysicalCore::Idle changed")
 endif()
-string(REPLACE "${idle_old}" [=[void PhysicalCore::Idle() {
-    const long long start = ::Eden::Performance::NowNs();
-    const unsigned spins = ::Eden::Performance::idle_spin_iterations.load(std::memory_order_relaxed);
-    for (unsigned i = 0; i < spins && !__atomic_load_n(&m_is_interrupted, __ATOMIC_ACQUIRE); ++i)
-        __builtin_ia32_pause();
-    bool slept;
-    {
+# Keep Eden's exact mutex/condition-variable idle path in shipping builds. Only annotate
+# the phase so the release watchdog can distinguish an intentionally sleeping core from a guest
+# or kernel stall. The former pre-lock spin remains development-only until requalified on PS5.
+if(EDEN_DEV_PROFILE)
+    string(REPLACE "${idle_old}" [=[void PhysicalCore::Idle() {
+        const long long start = ::Eden::Performance::NowNs();
+        const unsigned spins = ::Eden::Performance::idle_spin_iterations.load(std::memory_order_relaxed);
+        for (unsigned i = 0; i < spins && !__atomic_load_n(&m_is_interrupted, __ATOMIC_ACQUIRE); ++i)
+            __builtin_ia32_pause();
+        bool slept;
+        {
+            std::unique_lock lk{m_guard};
+            slept = !m_is_interrupted;
+            m_on_interrupt.wait(lk, [this] { return m_is_interrupted; });
+        }
+        ::Eden::Performance::CountIdle(m_core_index, ::Eden::Performance::NowNs() - start, slept);
+    }]=] physical_core_source "${physical_core_source}")
+elseif(PS5_NATIVE)
+    string(REPLACE "${idle_old}" [=[void PhysicalCore::Idle() {
+        ::Eden::Performance::cpu_state[m_core_index].phase.store(
+            ::Eden::Performance::CpuPhase::Idle, std::memory_order_release);
         std::unique_lock lk{m_guard};
-        slept = !m_is_interrupted;
         m_on_interrupt.wait(lk, [this] { return m_is_interrupted; });
-    }
-    ::Eden::Performance::CountIdle(m_core_index, ::Eden::Performance::NowNs() - start, slept);
-}]=] physical_core_source "${physical_core_source}")
+        ::Eden::Performance::cpu_state[m_core_index].phase.store(
+            ::Eden::Performance::CpuPhase::Kernel, std::memory_order_release);
+    }]=] physical_core_source "${physical_core_source}")
+endif()
 string(REPLACE "${prefetch_old}"
     "            } else {\n                interface->LogBacktrace(process);\n                if (prefetch_abort)\n                    ::Eden::RecordGuestFault(\"guest thread \" + Core::GetThreadName(thread).value_or(\"?\") +\n                                             \" jumped to an unmapped address\");\n            }\n            thread->RequestSuspend(kernel, SuspendType::Debug);"
     physical_core_source "${physical_core_source}")

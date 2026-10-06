@@ -5,6 +5,7 @@
 // same controller style priority (Pro Controller, dual Joy-Con, single Joy-Con, handheld).
 #pragma once
 #include <algorithm>
+#include <array>
 #include <bit>
 #include <cstdio>
 #include <optional>
@@ -51,16 +52,49 @@ public:
         const std::size_t players = std::clamp(pads, min_players, max_players);
         const bool docked = ::Settings::IsDockedMode();
         std::size_t connected = 0;
-        hid_core.GetEmulatedController(Core::HID::NpadIdType::Handheld)->Disconnect();
+
+        // Preserve already-connected compatible controllers when the guest explicitly asks us
+        // to. This mirrors Eden #4420 while still targeting one emulated player per connected PS5
+        // pad. The old PS5 applet disconnected/reconnected every pad unconditionally.
+        using Core::HID::NpadStyleIndex;
+        std::array<bool, Core::HID::HIDCore::available_controllers> keep_connected{};
+        for (std::size_t index = 0;
+             index < Core::HID::HIDCore::available_controllers - 1 && connected < players; ++index) {
+            const auto* controller = hid_core.GetEmulatedControllerByIndex(index);
+            if (!parameters.keep_controllers_connected || !controller->IsConnected()) continue;
+            const auto style = controller->GetNpadStyleIndex();
+            keep_connected[index] =
+                (style == NpadStyleIndex::Fullkey && parameters.allow_pro_controller) ||
+                (style == NpadStyleIndex::JoyconDual && parameters.allow_dual_joycons) ||
+                (style == NpadStyleIndex::JoyconLeft && parameters.allow_left_joycon) ||
+                (style == NpadStyleIndex::JoyconRight && parameters.allow_right_joycon) ||
+                (style == NpadStyleIndex::Handheld && parameters.allow_handheld) ||
+                (style == NpadStyleIndex::GameCube && parameters.allow_gamecube_controller);
+            connected += keep_connected[index] ? 1u : 0u;
+        }
+
+        auto* handheld = hid_core.GetEmulatedController(Core::HID::NpadIdType::Handheld);
+        if (!keep_connected[Core::HID::HIDCore::available_controllers - 2] && handheld->IsConnected())
+            handheld->Disconnect();
+
         for (std::size_t index = 0; index < Core::HID::HIDCore::available_controllers - 2; ++index) {
             auto* controller = hid_core.GetEmulatedControllerByIndex(index);
-            controller->Disconnect();
-            if (index >= players) continue;
+            if (keep_connected[index]) continue;
+            if (controller->IsConnected()) controller->Disconnect();
+            if (connected >= players) continue;
             const auto style = ControllerStyle(parameters, index);
             if (!style) continue;
             controller->SetNpadStyleIndex(*style);
             controller->Connect(true);
             ++connected;
+        }
+
+        // A handheld-only title has no numbered pad slot. Keep the existing Encore fallback so a
+        // docked PS5 does not leave that guest waiting forever for a controller style it requires.
+        if (connected == 0 && players == 1 && parameters.allow_handheld) {
+            handheld->SetNpadStyleIndex(NpadStyleIndex::Handheld);
+            handheld->Connect(true);
+            connected = 1;
         }
         // What the game asked for goes to the log: a game stuck on this screen can then be told
         // apart from one that asks for a controller this port does not provide.
