@@ -625,7 +625,10 @@ foreach(bits 32 64)
     # global monitor lock (~7,000 pairs/frame in a measured racing game). The exclusive
     # emitter patch below supports page-table addresses; eden-memory-check covers
     # it for A64 and A32 (atomic loops, 1-4 cores).
-    option(EDEN_INLINE_EXCLUSIVES "Inline page-table exclusive accesses" ON)
+    # Stability-first release default. The forced page-table exclusive path is faster, but a
+    # hardware-only soft hang can leave the guest stopped while presentation/input remain alive.
+    # Keep the callback/monitor path until inline exclusives are requalified on PS5 hardware.
+    option(EDEN_INLINE_EXCLUSIVES "Inline page-table exclusive accesses" OFF)
     if(EDEN_INLINE_EXCLUSIVES)
         foreach(spacing "  " " ")
             string(REPLACE "config.fastmem_exclusive_access = config.fastmem_pointer${spacing}!= std::nullopt;"

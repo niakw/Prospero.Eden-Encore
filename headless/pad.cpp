@@ -2,6 +2,7 @@
 #include "devices.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <numbers>
 #include <stdexcept>
 #include "common/input.h"
@@ -313,6 +314,12 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
             // A controller that went away neither tapped nor holds anything.
             slot.select_pulse = 0;
             slot.select_held = false;
+        }
+        if (player == 0 && pressed != last_buttons) {
+            std::fprintf(stderr,
+                         "EDEN_PAD_EVENT player=1 previous=%08x buttons=%08x timestamp_us=%llu usable=%d\n",
+                         last_buttons, pressed, static_cast<unsigned long long>(raw.timestamp_us),
+                         is_usable(raw) ? 1 : 0);
         }
         last_buttons = pressed;
         for (const auto [mask, button] : fixed)

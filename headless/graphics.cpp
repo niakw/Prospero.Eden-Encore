@@ -320,8 +320,8 @@ public:
         if (!DrawLoading(now - loading_start + LoadingCalm())) {
             // The scene's shader did not build on this driver: plain text instead.
             const unsigned dots = static_cast<unsigned>(now * 4) % 4;
-            char text[16] = "LOADING";
-            for (unsigned i = 0; i < dots; ++i) text[7 + i] = '.';
+            char text[16] = "ENCORE";
+            for (unsigned i = 0; i < dots; ++i) text[6 + i] = '.';
             DrawHud(text, true);
         }
         Check(eglSwapBuffers(display, surface), "loading swap");

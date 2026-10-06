@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The screen shown while a game loads: dusk over the water, drawn entirely in this shader (no
-// textures), with a turning ring and the LOADING wordmark. Shared by both graphics backends,
+// textures), with a language-neutral turning ring. Shared by both graphics backends,
 // which add their own #version line, loading_wordmark.glsl before this file, and a main().
 //
 //   vec3 loading_scene(vec2 pixel, vec2 size, float seconds)
@@ -227,13 +227,8 @@ vec3 loading_scene(vec2 pixel, vec2 size, float seconds)
 
     // ---- the ring and the wordmark, bottom centre ----
     float unit = size.y / 1080.0; // one design pixel
-    float word_height = 38.0 * unit;
-    float texel = word_height / float(kWordHeight);
-    float word_width = texel * float(kWordWidth);
     float ring_radius = 17.0 * unit;
-    float gap = 16.0 * unit;
-    float group = ring_radius * 2.0 + gap + word_width;
-    vec2 origin = vec2(0.5 * size.x - 0.5 * group, 0.118 * size.y);
+    vec2 origin = vec2(0.5 * size.x - ring_radius, 0.118 * size.y);
     vec3 lime = vec3(0.749, 0.259, 0.965);
     vec3 pale = vec3(0.843, 0.643, 1.000);
 
@@ -249,17 +244,6 @@ vec3 loading_scene(vec2 pixel, vec2 size, float seconds)
     color = mix(color, pale, ring_cover * 0.14);
     color = mix(color, lime, ring_cover * arc);
     color += lime * 0.22 * arc * exp(-max(ring, 0.0) / (5.0 * unit));
-
-    // The wordmark, with a slow glimmer passing along it.
-    vec2 word_at = pixel - vec2(origin.x + ring_radius * 2.0 + gap, origin.y - 0.5 * word_height);
-    if (word_at.x > -texel && word_at.x < word_width + texel && word_at.y > -texel &&
-        word_at.y < word_height + texel)
-    {
-        vec2 st = vec2(word_at.x, word_height - word_at.y) / texel;
-        float cover = clamp(word_distance(st) * texel + 0.5, 0.0, 1.0);
-        float glimmer = exp(-pow((word_at.x / word_width - fract(world * 0.38) * 1.6 + 0.3) * 5.0, 2.0));
-        color = mix(color, mix(pale, vec3(1.0), glimmer * 0.8), cover * (0.80 + 0.20 * glimmer));
-    }
 
     // Arrive out of the dark; a little noise keeps the gradients from banding.
     color *= smoothstep(0.0, 0.7, seconds);

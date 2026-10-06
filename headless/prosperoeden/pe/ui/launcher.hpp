@@ -93,6 +93,8 @@ class Launcher
         game_overrides,
         mapping_reset,
         shader_caches,
+        launch_game,
+        console_mode,
     };
 
     // ---- shell (launcher.cpp) ----
@@ -110,6 +112,7 @@ class Launcher
     void draw_screen(Canvas &c, Screen screen);
     void draw_frame(Canvas &c, const char *title, const char *copy);
     void draw_footer(Canvas &c, const Hint *hints, int count);
+    void draw_confirmation(Canvas &c);
     void draw_launch(Canvas &c);
     // quiet: a change that shows at once needs no "Saved" line.
     bool save_preferences(bool quiet = false);

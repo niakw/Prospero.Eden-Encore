@@ -50,6 +50,11 @@ cp "$root/assets/icon0.png" "$app/sce_sys/icon0.png"
 rm -rf "$app/ui"
 cp -a "$root/headless/prosperoeden/ui" "$app/ui"
 rm -f "$app/ui/art/backdrop.tga" "$app/ui/art/backdrop-blur.tga"
+# Some ShadowMount/package-image install paths preserve ui/lang but drop .po payloads.
+# Keep the canonical catalogs and add byte-identical .txt companions; the runtime accepts either.
+for catalog in "$app/ui/lang/"*.po; do
+    cp "$catalog" "${catalog%.po}.txt"
+done
 if command -v magick >/dev/null 2>&1; then
     image_convert=(magick)
 elif command -v convert >/dev/null 2>&1; then
@@ -62,7 +67,7 @@ fi
 # screen. 1080p is enough for the launcher/loading texture while keeping its transient VRAM cost
 # small; the PS5 home-screen DDS stays native 4K.
 "${image_convert[@]}" "$root/assets/encore-background.jpg" -resize '1920x1080^' -gravity center -extent 1920x1080 \
-    -alpha off -define tga:bits-per-pixel=24 -compress None "$app/ui/art/backdrop.tga"
+    -flip -alpha off -define tga:bits-per-pixel=24 -compress None "$app/ui/art/backdrop.tga"
 python3 - "$app/ui/art/backdrop.tga" <<'PY2'
 import pathlib, sys
 data = pathlib.Path(sys.argv[1]).read_bytes()

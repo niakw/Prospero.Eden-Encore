@@ -167,6 +167,15 @@ void Launcher::press(Key key)
 {
     if (!selected_game_.empty())
         return; // a game is starting
+    // A confirmation is a real modal surface: Circle dismisses it without also navigating
+    // away from the underlying screen. The action's original button confirms on its second press.
+    if (confirmation_ != Confirmation::none && key == Key::circle)
+    {
+        clear_confirmation();
+        message_.clear();
+        cue(Cue::back);
+        return;
+    }
     if (modal_ == Modal::game)
         return press_game(key);
     if (modal_ == Modal::mods)
@@ -301,6 +310,32 @@ void Launcher::draw_footer(Canvas &c, const Hint *hints, int count)
     draw_hints(c, hints, count, 108.0f, 987.0f, theme::kCopy, 1704.0f);
 }
 
+void Launcher::draw_confirmation(Canvas &c)
+{
+    if (confirmation_ == Confirmation::none)
+        return;
+
+    const char *title = tr("Settings");
+    if (confirmation_ == Confirmation::launch_game)
+        title = tr("Launch game");
+    else if (confirmation_ == Confirmation::console_mode)
+        title = tr("Console mode");
+
+    c.list.rounded_rect(kScreen, 0.0f, theme::kScrim.with_alpha(0.74f));
+    const Rect panel{548.0f, 354.0f, 824.0f, 330.0f};
+    c.list.shadow({panel.x - 16.0f, panel.y - 12.0f, panel.w + 32.0f, panel.h + 36.0f},
+                  38.0f, 74.0f, theme::kLime.with_alpha(0.20f));
+    glass(c, panel, 30.0f, theme::kGlass.with_alpha(0.94f), theme::kLime.with_alpha(0.68f), 1.2f);
+    c.list.rounded_rect({panel.x + 28.0f, panel.y + 34.0f, 6.0f, 94.0f}, 3.0f, theme::kLime);
+    text_shrink(c, title, panel.x + 64.0f, baseline(panel.y + 38.0f, 54.0f, theme::kHeading),
+                theme::kHeading, theme::kTitle, panel.w - 104.0f);
+    text_block(c, message_, panel.x + 64.0f, baseline(panel.y + 142.0f, 38.0f, theme::kText24),
+               theme::kText24, 40.0f, theme::kBody, panel.w - 128.0f, 2, kShrink);
+    static constexpr Hint kConfirmHints[] = {{Pad::circle, TR("Back")}};
+    draw_hints(c, kConfirmHints, 1, panel.x + 64.0f, panel.y + panel.h - 52.0f,
+               theme::kText, panel.w - 128.0f);
+}
+
 void Launcher::draw_launch(Canvas &c)
 {
     const float t = launch_.progress();
@@ -367,6 +402,7 @@ void Launcher::draw(gfx::DrawList &list)
         else
             draw_dialog(c, modal_shown_, opened);
     }
+    draw_confirmation(c);
     list.pop_transform();
     if (launching)
         draw_launch(c);

@@ -31,15 +31,16 @@ enum Category
     kDiagnostics,
     kStorage,
     kLanguage,
+    kAbout,
     kCategoryCount,
 };
 constexpr const char *kCategories[kCategoryCount] = {
     TR("Video"), TR("Audio"), TR("Controls"), TR("Accessibility"), TR("Diagnostics"),
-    TR("Storage"), TR("Language")};
+    TR("Storage"), TR("Language"), TR("About")};
 // The same as headings: capitals differ by language, so each is its own text.
 constexpr const char *kHeadings[kCategoryCount] = {
     TR("VIDEO"), TR("AUDIO"), TR("CONTROLS"), TR("ACCESSIBILITY"), TR("DIAGNOSTICS"),
-    TR("STORAGE"), TR("LANGUAGE")};
+    TR("STORAGE"), TR("LANGUAGE"), TR("ABOUT")};
 
 // The Video dialog's rows, and the window that shows five of them (placed as a game's settings
 // are).
@@ -144,6 +145,9 @@ void Launcher::press_settings(Key key)
             open(Screen::language, true);
             enter_language();
             break;
+        case kAbout:
+            open(Screen::about, true);
+            break;
         case kVideo:
             open_modal(Modal::video);
             video_rows_.visible = kVideoRowsShown;
@@ -193,6 +197,7 @@ void Launcher::draw_settings(Canvas &c)
         prefs_.detailed_logging ? tr("Detailed logs on") : "",
         short_path(services_.files_folder(), 22),
         pick(services_.language_labels(), prefs_.language),
+        version_,
     };
     for (int row = 0; row < kCategoryCount; ++row)
     {
@@ -284,10 +289,16 @@ void Launcher::draw_settings(Canvas &c)
         lines = {{tr("ROOT"), short_path(services_.files_folder(), 34)},
                  {tr("LAYOUT"), tr("Fixed Encore folder structure")}};
         break;
-    default:
+    case kLanguage:
         about = tr("The language games use when they offer it.");
         lines = {{tr("LANGUAGE"), pick(services_.language_labels(), prefs_.language)},
                  {tr("REGION"), services_.language_region(prefs_.language)}};
+        break;
+    case kAbout:
+        about = tr("Powered by Eden");
+        lines = {{"ENCORE", version_}, {tr("THANKS"), "ProsperoEden · Eden"}};
+        break;
+    default:
         break;
     }
     const float shown = tween::clamp01(section_.value);

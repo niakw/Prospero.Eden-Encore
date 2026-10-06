@@ -1697,7 +1697,17 @@ int main(int argc, char** argv) {
                             lock.lock();
                         }
 #else
-                        completion->wake.wait(lock, completed);
+                        // Release watchdog: a soft guest hang can leave presentation and native
+                        // input alive forever, so a crash report never fires. Sample the guest CPU
+                        // state periodically with negligible overhead; if hardware still hangs,
+                        // the persisted log tells us which core/PC stopped progressing.
+                        for (;;) {
+                            if (completion->wake.wait_for(lock, std::chrono::seconds(10), completed))
+                                break;
+                            lock.unlock();
+                            Eden::Performance::Snapshot();
+                            lock.lock();
+                        }
 #endif
                     } else
 #endif
