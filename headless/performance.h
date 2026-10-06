@@ -61,11 +61,10 @@ inline Totals gpu_fence_drain, gpu_present_wait, gpu_queue_full;
 // Guest threads entering the GPU caches: CPU writes to tracked pages and flush-area lookups.
 inline Totals guest_cpu_write, guest_cpu_read;
 // Those entries take the buffer and texture cache locks, which the GPU thread holds for one draw at
-// a time. A guest core that sleeps in the kernel for each wait loses more than most holds last
-// (a large open-world game: 1.5-3.2 ms per frame at 8-12 us per write), so it first retries try_lock for a bounded
-// ~25 us (dev-settings cache_spin=N retries; 0 blocks at once, as upstream). Guest cores are
-// pinned alone, so the spin takes no CPU from the lock holder.
-inline std::atomic<unsigned> cache_lock_spins{256};
+// a time. Shipping builds block exactly as upstream: the earlier bounded spin reduced wake latency
+// but remains a development-only experiment until it is requalified against PS5 soft hangs.
+// dev-settings cache_spin=N can still opt into bounded try_lock retries for profiling.
+inline std::atomic<unsigned> cache_lock_spins{0};
 inline std::atomic<unsigned long long> cache_lock_contended{0}, cache_lock_blocked{0};
 template <typename Mutex>
 inline void GuestCacheLock(Mutex& mutex) {
@@ -151,9 +150,9 @@ inline std::array<IdleCounters, 4> guest_idle{};
 // idle_spin_us=N overrides it (0 sleeps at once).
 inline std::atomic<unsigned> idle_spin_iterations{5000};
 // Draws between the Vulkan rasterizer's hand-offs to its worker, minus one (a power of two minus
-// one; tools/prepare-vulkan-port.py). Upstream hands off every 8 draws; dev-settings
-// dispatch_draws=N (8 to 512) overrides the 64 used here.
-inline std::atomic<unsigned> dispatch_mask{63};
+// one; tools/prepare-vulkan-port.py). Shipping uses Eden's upstream 8-draw cadence again;
+// dev-settings dispatch_draws=N (8 to 512) can still profile wider batching explicitly.
+inline std::atomic<unsigned> dispatch_mask{7};
 inline void CountIdle(std::size_t core, long long nanoseconds, bool slept) {
     if (core >= guest_idle.size()) return;
     guest_idle[core].calls.fetch_add(1, std::memory_order_relaxed);

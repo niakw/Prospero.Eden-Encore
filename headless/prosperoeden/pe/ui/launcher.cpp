@@ -26,6 +26,7 @@ Launcher::Launcher(Services &services, Textures &textures, const Fonts &fonts, b
     prefs_ = services_.preferences();
     apply_look();
     read_home();
+    refresh_home_hero();
     const bool continue_ready = home_.setup_ready && home_.last_exists;
     home_focus_ = continue_ready ? 0 : home_.setup_ready ? 1 : 2;
     home_springs_[static_cast<std::size_t>(home_focus_)].snap(1.0f);
@@ -69,7 +70,18 @@ bool Launcher::confirm_action(Confirmation action)
     if (confirmation_ != action)
     {
         confirmation_ = action;
-        say(tr("Press the same button again to confirm."), true);
+        confirmation_key_ = pressed_key_;
+        const char *question = TR("Confirm this action?");
+        switch (action)
+        {
+        case Confirmation::restore_defaults: question = TR("Restore default settings?"); break;
+        case Confirmation::game_overrides: question = TR("Reset this game's custom settings?"); break;
+        case Confirmation::mapping_reset: question = TR("Reset controller mapping?"); break;
+        case Confirmation::shader_caches: question = TR("Clear shader/JIT caches?"); break;
+        case Confirmation::console_mode: question = TR("Change console mode for this game?"); break;
+        default: break;
+        }
+        say(tr(question), true);
         cue(Cue::notify);
         return false;
     }
@@ -167,15 +179,26 @@ void Launcher::press(Key key)
 {
     if (!selected_game_.empty())
         return; // a game is starting
-    // A confirmation is a real modal surface: Circle dismisses it without also navigating
-    // away from the underlying screen. The action's original button confirms on its second press.
-    if (confirmation_ != Confirmation::none && key == Key::circle)
+    // Confirmation is a real modal: Circle cancels, Cross confirms. Other buttons cannot leak
+    // through to the underlying screen while the dialog is visible.
+    if (confirmation_ != Confirmation::none)
     {
-        clear_confirmation();
-        message_.clear();
-        cue(Cue::back);
-        return;
+        if (key == Key::circle)
+        {
+            clear_confirmation();
+            message_.clear();
+            cue(Cue::back);
+            return;
+        }
+        if (key == Key::cross)
+            key = confirmation_key_;
+        else
+        {
+            cue(Cue::error);
+            return;
+        }
     }
+    pressed_key_ = key;
     if (modal_ == Modal::game)
         return press_game(key);
     if (modal_ == Modal::mods)
@@ -316,10 +339,12 @@ void Launcher::draw_confirmation(Canvas &c)
         return;
 
     const char *title = tr("Settings");
-    if (confirmation_ == Confirmation::launch_game)
-        title = tr("Launch game");
-    else if (confirmation_ == Confirmation::console_mode)
+    if (confirmation_ == Confirmation::console_mode)
         title = tr("Console mode");
+    else if (confirmation_ == Confirmation::mapping_reset)
+        title = tr("Controls");
+    else if (confirmation_ == Confirmation::shader_caches)
+        title = tr("Diagnostics");
 
     c.list.rounded_rect(kScreen, 0.0f, theme::kScrim.with_alpha(0.74f));
     const Rect panel{548.0f, 354.0f, 824.0f, 330.0f};
@@ -331,8 +356,9 @@ void Launcher::draw_confirmation(Canvas &c)
                 theme::kHeading, theme::kTitle, panel.w - 104.0f);
     text_block(c, message_, panel.x + 64.0f, baseline(panel.y + 142.0f, 38.0f, theme::kText24),
                theme::kText24, 40.0f, theme::kBody, panel.w - 128.0f, 2, kShrink);
-    static constexpr Hint kConfirmHints[] = {{Pad::circle, TR("Back")}};
-    draw_hints(c, kConfirmHints, 1, panel.x + 64.0f, panel.y + panel.h - 52.0f,
+    static constexpr Hint kConfirmHints[] = {
+        {Pad::cross, TR("Confirm")}, {Pad::circle, TR("Cancel")}};
+    draw_hints(c, kConfirmHints, 2, panel.x + 64.0f, panel.y + panel.h - 52.0f,
                theme::kText, panel.w - 128.0f);
 }
 

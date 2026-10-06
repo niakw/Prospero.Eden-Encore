@@ -20,6 +20,7 @@
 #include <cerrno>
 #include <cstring>
 #include "ps5_system_language.hpp"
+#include "fr_fr_embedded.h"
 #ifdef EDEN_DEV_ROM_ID
 #include "crash_trigger.h"
 #include "development_input.h"
@@ -118,9 +119,17 @@ void LoadLanguage(pe::gfx::Font& font) {
         bool read = pe::read_file(Eden::AppResourceFile("ui/lang/" + candidate + ".po"), &po, 1u << 20);
         if (!read)
             read = pe::read_file(Eden::AppResourceFile("ui/lang/" + candidate + ".txt"), &po, 1u << 20);
+        // Some PS5 package-image/ShadowMount paths preserve ui/lang but strip its text payloads.
+        // French is our primary tested locale, so keep an embedded copy as a final in-binary
+        // fallback. The external catalog stays authoritative whenever it is actually present.
+        if (!read && candidate.rfind("fr", 0) == 0) {
+            po.assign(pe::ui::embedded::kFrFr.data(), pe::ui::embedded::kFrFr.size());
+            read = true;
+            catalog = candidate + " (embedded)";
+        }
         if (!read) continue;
         texts = pe::catalog().load(po);
-        catalog = candidate;
+        if (catalog == "none") catalog = candidate;
         break;
     }
     if (texts != 0 && !pe::catalog().every([&font](std::string_view text) { return font.can_draw(text); })) {

@@ -1,0 +1,34 @@
+diff --git a/src/hid_core/resources/npad/npad.cpp b/src/hid_core/resources/npad/npad.cpp
+--- a/src/hid_core/resources/npad/npad.cpp
++++ b/src/hid_core/resources/npad/npad.cpp
+@@ -466,6 +466,10 @@ void NPad::OnUpdate(Kernel::KernelCore& kernel, const Core::Timing::CoreTiming& c
+     }
+ 
+     std::scoped_lock lock{*applet_resource_holder.shared_mutex};
++    static u64 eden_watchdog_updates = 0;
++    u64 eden_watchdog_sample = 0;
++    u64 eden_watchdog_buttons = 0;
++    bool eden_watchdog_wrote = false;
+     for (std::size_t aruid_index = 0; aruid_index < AruidIndexMax; ++aruid_index) {
+         const auto* data = applet_resource_holder.applet_resource->GetAruidDataByIndex(aruid_index);
+ 
+@@ -589,8 +593,19 @@ void NPad::OnUpdate(Kernel::KernelCore& kernel, const Core::Timing::CoreTiming& c
+             libnx_state.sampling_number =
+                 npad->system_ext_lifo.ReadCurrentEntry().state.sampling_number + 1;
+             npad->system_ext_lifo.WriteNextEntry(libnx_state);
++            if (!eden_watchdog_wrote) {
++                eden_watchdog_sample = libnx_state.sampling_number;
++                eden_watchdog_buttons = static_cast<u64>(pad_state.npad_buttons.raw);
++                eden_watchdog_wrote = true;
++            }
+ 
+             press_state |= static_cast<u64>(pad_state.npad_buttons.raw);
+         }
+     }
++    const u64 eden_watchdog_update = ++eden_watchdog_updates;
++    if ((eden_watchdog_update % 600) == 0) {
++        LOG_INFO(Service_HID, "EDEN_HID_NPAD update={} sample={} buttons={:016X} wrote={}",
++                 eden_watchdog_update, eden_watchdog_sample, eden_watchdog_buttons,
++                 eden_watchdog_wrote);
++    }
+ }

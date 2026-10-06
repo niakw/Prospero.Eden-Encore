@@ -250,13 +250,61 @@ msgstr "Vider les caches shaders"
 msgid "Cleared {0} of shader/JIT caches."
 msgstr "Caches shaders/JIT supprimés : {0}."
 
-#: pe/ui/library.cpp
+#: pe/ui/library.cpp, pe/ui/home.cpp
 msgid "Console mode"
 msgstr "Mode console"
+
+#: pe/ui/launcher.cpp
+msgid "Cancel"
+msgstr "Annuler"
+
+#: pe/ui/launcher.cpp
+msgid "Confirm"
+msgstr "Confirmer"
+
+#: pe/ui/launcher.cpp
+msgid "Confirm this action?"
+msgstr "Confirmer cette action ?"
+
+#: pe/ui/launcher.cpp
+msgid "Restore default settings?"
+msgstr "Rétablir les paramètres par défaut ?"
+
+#: pe/ui/launcher.cpp
+msgid "Reset this game's custom settings?"
+msgstr "Réinitialiser les paramètres personnalisés de ce jeu ?"
+
+#: pe/ui/launcher.cpp
+msgid "Reset controller mapping?"
+msgstr "Réinitialiser l'affectation de la manette ?"
+
+#: pe/ui/launcher.cpp
+msgid "Clear shader/JIT caches?"
+msgstr "Vider les caches shaders/JIT ?"
+
+#: pe/ui/launcher.cpp
+msgid "Change console mode for this game?"
+msgstr "Changer le mode console de ce jeu ?"
 
 #: pe/ui/home.cpp
 msgid "CONTINUE PLAYING"
 msgstr "CONTINUER À JOUER"
+
+#: pe/ui/home.cpp
+msgid "QUICK SETTINGS"
+msgstr "PARAMÈTRES RAPIDES"
+
+#: pe/ui/home.cpp
+msgid "SELECTED GAME"
+msgstr "JEU SÉLECTIONNÉ"
+
+#: pe/ui/home.cpp
+msgid "SYSTEM STATUS"
+msgstr "ÉTAT DU SYSTÈME"
+
+#: pe/ui/home.cpp
+msgid "Recently played"
+msgstr "Joué récemment"
 
 #: pe/ui/home.cpp
 msgid "CONTROLLERS"

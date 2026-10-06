@@ -90,10 +90,9 @@ void RasterizerVulkan::DispatchCompute() {"""),
     ('        std::scoped_lock lock{texture_cache.mutex};\n        texture_cache.WriteMemory(addr, size);\n    }\n    pipeline_cache.InvalidateRegion(addr, size);',
      '        ::Eden::Performance::GuestCacheLock(texture_cache.mutex);\n'
      '        std::lock_guard lock{texture_cache.mutex, std::adopt_lock};\n        texture_cache.WriteMemory(addr, size);\n    }\n    pipeline_cache.InvalidateRegion(addr, size);'),
-    # Hand recorded work to the worker every 64 draws rather than every 8: each hand-off wakes the
-    # worker with a system call (about 16.7k per second and ~7 us each in heavy scenes). A 32 KiB
-    # chunk still dispatches whenever it fills (about 15-25 draws of records); the 4,096-draw flush
-    # is unchanged. Development builds can pick 8-512 draws (dev-settings dispatch_draws=N).
+    # Make the dispatch cadence runtime-tunable. Shipping keeps Eden's upstream 8-draw cadence;
+    # wider 16-512 draw batching remains available only through dev-settings dispatch_draws=N
+    # until the earlier 64-draw optimization is requalified against PS5 soft hangs.
     ('    static constexpr u32 CHECK_MASK = 7;\n#endif // __ANDROID__\n\n    static_assert(DRAWS_TO_DISPATCH % (CHECK_MASK + 1) == 0);\n',
      '    const u32 CHECK_MASK = ::Eden::Performance::dispatch_mask.load(std::memory_order_relaxed);\n#endif // __ANDROID__\n\n'),
     # Per-draw count for the GPU-thread report (dispatch time per draw).

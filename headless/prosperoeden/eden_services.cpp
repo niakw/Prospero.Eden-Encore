@@ -8,10 +8,12 @@
 #include "mods.h"
 #include "native_directory.h"
 #include "pe/core/strings.hpp"
+#include "common/net/net.h"
 #include "radio_input.h"
 #include "version.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cctype>
 #include <cstddef>
 #include <cstdio>
@@ -21,6 +23,7 @@
 #include <exception>
 #include <fcntl.h>
 #include <filesystem>
+#include <future>
 #include <initializer_list>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -35,6 +38,56 @@ bool IsFile(const std::string& path) {
     if (lstat(path.c_str(), &info) == 0) return S_ISREG(info.st_mode);
     if (errno != EPERM && errno != EACCES) return false;
     return stat(path.c_str(), &info) == 0 && S_ISREG(info.st_mode);
+}
+
+std::string NlibHeroPath(std::uint64_t title_id) {
+    char id[17]{};
+    std::snprintf(id, sizeof(id), "%016llX", static_cast<unsigned long long>(title_id));
+    return Eden::CoversDir() + "/hero-" + id + ".jpg";
+}
+
+std::string CachedNlibHero(std::uint64_t title_id) {
+    if (title_id == 0) return {};
+    const std::string path = NlibHeroPath(title_id);
+    return IsFile(path) ? path : std::string{};
+}
+
+// Nlib is optional enrichment only: the ROM's embedded icon remains the offline fallback.
+// Called from the asynchronous library scan, never from the launcher render/input thread.
+std::string EnsureNlibHero(std::uint64_t title_id) {
+    if (title_id == 0) return {};
+    const std::string cached = CachedNlibHero(title_id);
+    if (!cached.empty()) return cached;
+
+    char id[17]{};
+    std::snprintf(id, sizeof(id), "%016llX", static_cast<unsigned long long>(title_id));
+    try {
+        const std::string endpoint = std::string{"/nx/"} + id + "/banner/720p";
+        const auto response = Common::Net::MakeRequest("https://api.nlib.cc", endpoint);
+        if (!response) return {};
+        const std::string& body = *response;
+        if (body.size() < 4096 || body.size() > (10u << 20) ||
+            static_cast<unsigned char>(body[0]) != 0xff ||
+            static_cast<unsigned char>(body[1]) != 0xd8)
+            return {};
+
+        (void)mkdir(Eden::CoversDir().c_str(), 0777);
+        const std::string path = NlibHeroPath(title_id);
+        const std::string staged = path + ".new";
+        std::FILE* file = std::fopen(staged.c_str(), "wb");
+        if (!file) return {};
+        const bool written = std::fwrite(body.data(), 1, body.size(), file) == body.size();
+        const bool closed = std::fclose(file) == 0;
+        if (!written || !closed || std::rename(staged.c_str(), path.c_str()) != 0) {
+            (void)std::remove(staged.c_str());
+            return {};
+        }
+        Eden::Report("artwork", (std::string{"Nlib hero cached for "} + id).c_str());
+        return path;
+    } catch (const std::exception& error) {
+        Eden::Report("artwork", (std::string{"Nlib unavailable: "} + error.what()).c_str());
+        return {};
+    }
 }
 
 std::uintmax_t TreeBytes(const std::filesystem::path& root) {
@@ -378,12 +431,16 @@ pe::ui::Home EdenServices::home() {
         if (has_cover) home.last_cover = cover;
     }
     // The last game's update and DLC and the language it will use; when it does not offer the
-    // chosen one, the caption says so.
-    if (home.setup_ready && home.last_exists) {
+    // chosen one, the caption says so. The same metadata is reused by Recent cards so selecting
+    // one can become the Home hero without opening the full library first.
+    const int selected_language = Eden::LoadPreferences().language;
+    if (home.setup_ready)
         eden_scan_addons(Eden::AssetsPath("updates").c_str(), Eden::AssetsPath("keys").c_str());
+    if (home.setup_ready && home.last_exists) {
         const uint64_t title_id = eden_game_title_id(last_path.c_str());
-        const GameLanguage language = LanguageFor(last_path, title_id, Eden::LoadPreferences().language);
+        const GameLanguage language = LanguageFor(last_path, title_id, selected_language);
         home.last_title_id = title_id;
+        home.last_hero = CachedNlibHero(title_id);
         home.last_addons = AddOnSummary(title_id);
         home.last_language = language.label;
         if (!language.note.empty()) {
@@ -399,8 +456,22 @@ pe::ui::Home EdenServices::home() {
         history.push_back(home.last_file);
     }
     for (const auto& name : history) {
-        if (!IsFile(Eden::AssetsPath("roms/" + name))) continue;
-        home.recents.push_back({name, GameTitle(name), EnsureCover(name)});
+        const std::string recent_path = Eden::AssetsPath("roms/" + name);
+        if (!IsFile(recent_path)) continue;
+        pe::ui::Recent recent;
+        recent.file = name;
+        recent.title = GameTitle(name);
+        recent.cover = EnsureCover(name);
+        if (home.setup_ready) {
+            recent.title_id = eden_game_title_id(recent_path.c_str());
+            if (recent.title_id != 0) {
+                recent.hero = CachedNlibHero(recent.title_id);
+                recent.addons = AddOnSummary(recent.title_id);
+                recent.language = LanguageFor(recent_path, recent.title_id, selected_language).label;
+            }
+        }
+        home.recents.push_back(std::move(recent));
+        if (home.recents.size() == 4) break;
     }
     const int installed = CountInstalledGames();
     home.system_status = fill(installed == 1 ? tr("{0} game installed") : tr("{0} games installed"),
@@ -426,7 +497,7 @@ std::string EdenServices::version() {
 std::vector<pe::ui::Game> EdenServices::games() {
     // The launcher reads the list beside its menu (pe/ui/library.cpp), so the metadata reader
     // is used by one thread at a time.
-    const std::lock_guard lock(bridge_);
+    std::unique_lock lock(bridge_);
     std::vector<pe::ui::Game> games;
     (void)mkdir(Eden::ConfigDir().c_str(), 0777);
     (void)mkdir(Eden::CoversDir().c_str(), 0777);
@@ -435,6 +506,13 @@ std::vector<pe::ui::Game> EdenServices::games() {
     if (directory_error) return games;
     eden_scan_addons(Eden::AssetsPath("updates").c_str(), Eden::AssetsPath("keys").c_str());
     const int language_choice = Eden::LoadPreferences().language;
+    // Network artwork is deliberately limited to what Home can display. The library scan stays
+    // bounded even with a very large ROM collection: last played + at most four recent games.
+    std::vector<std::string> artwork_files = Eden::LoadRecentGames();
+    if (artwork_files.size() > 4) artwork_files.resize(4);
+    const std::string last_file = Eden::LoadLastGame();
+    if (!last_file.empty() && std::find(artwork_files.begin(), artwork_files.end(), last_file) == artwork_files.end())
+        artwork_files.insert(artwork_files.begin(), last_file);
     for (const auto& entry : entries) {
         const std::string file = entry.path().filename().string();
         const std::size_t dot = file.find_last_of('.');
@@ -472,6 +550,9 @@ std::vector<pe::ui::Game> EdenServices::games() {
             else
                 (void)std::remove(staged.c_str());
             game.title_id = eden_game_title_id(path.c_str());
+            if (game.title_id != 0 &&
+                std::find(artwork_files.begin(), artwork_files.end(), file) != artwork_files.end())
+                game.hero = CachedNlibHero(game.title_id);
             const GameLanguage language = LanguageFor(path, game.title_id, language_choice);
             game.addons = AddOnSummary(game.title_id);
             game.addons_short = AddOnSummary(game.title_id, true);
@@ -482,6 +563,25 @@ std::vector<pe::ui::Game> EdenServices::games() {
         }
         games.push_back(std::move(game));
     }
+
+    // Metadata bridge work is finished. Do not hold it across network I/O: Nlib enrichment is
+    // optional, bounded to the Home games, and runs in parallel so a slow network costs one timeout
+    // rather than one timeout per game.
+    lock.unlock();
+    std::vector<std::pair<std::size_t, std::future<std::string>>> artwork_tasks;
+    for (std::size_t i = 0; i < games.size(); ++i) {
+        auto& game = games[i];
+        if (game.title_id == 0 || !game.hero.empty() ||
+            std::find(artwork_files.begin(), artwork_files.end(), game.file) == artwork_files.end())
+            continue;
+        const std::uint64_t title_id = game.title_id;
+        artwork_tasks.emplace_back(i, std::async(std::launch::async, [title_id] {
+            return EnsureNlibHero(title_id);
+        }));
+    }
+    for (auto& [index, task] : artwork_tasks)
+        games[index].hero = task.get();
+
     std::sort(games.begin(), games.end(),
               [](const pe::ui::Game& a, const pe::ui::Game& b) { return a.name < b.name; });
     return games;

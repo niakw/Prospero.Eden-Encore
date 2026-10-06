@@ -93,7 +93,6 @@ class Launcher
         game_overrides,
         mapping_reset,
         shader_caches,
-        launch_game,
         console_mode,
     };
 
@@ -126,7 +125,8 @@ class Launcher
     void update_controllers(float dt);
     void draw_home(Canvas &c);
     void draw_controllers(Canvas &c);
-    void open_library_at_last();
+    void open_library_at_file(const std::string &file);
+    void refresh_home_hero();
 
     // ---- library and game settings (library.cpp) ----
     // The game list is read beside the menu: reading every game takes a moment.
@@ -148,6 +148,7 @@ class Launcher
     // A refresh rate setting as the player reads it: 0 is "60 Hz", 1 is "120 Hz".
     static std::string hertz(int refresh);
     void enter_library();
+    bool open_game_settings_at_file(const std::string &file);
     void press_library(Key key);
     void draw_library(Canvas &c);
     void refresh_selected_game();
@@ -202,6 +203,8 @@ class Launcher
     bool message_warning_ = false;
     float message_age_ = 0.0f;
     Confirmation confirmation_ = Confirmation::none;
+    Key confirmation_key_ = Key::cross;
+    Key pressed_key_ = Key::cross;
 
     // launching a game
     std::string selected_game_;
@@ -211,8 +214,11 @@ class Launcher
     bool done_ = false;
     bool restart_requested_ = false;
 
-    // home: 0 continue, 1-3 header, 4 game details, 5-8 recent, 9 view all
+    // home: 0 launch hero, 1-3 header, 4 game details, 5-8 recent, 9 view all
     Home home_;
+    int home_recent_ = -1; // -1 = last played; otherwise the selected Recent card becomes the hero
+    GameSettings home_game_settings_{};
+    bool home_game_docked_ = true;
     // The controllers connected now (bit 0 is player 1), and how lit each one's icon is.
     unsigned controllers_ = 0;
     bool controllers_known_ = false;

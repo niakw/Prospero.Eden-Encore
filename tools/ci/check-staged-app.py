@@ -49,5 +49,21 @@ for source in source_lang:
     assert staged.read_bytes() == source.read_bytes(), f"stale/corrupt launcher catalog: {source.name}"
     assert companion.read_bytes() == source.read_bytes(), f"stale/corrupt launcher catalog companion: {companion.name}"
 assert (app / "sandbox-elevator.elf").stat().st_size > 0
-assert (app / "eboot.bin").stat().st_size > 1024 * 1024
-print(f"Staged Encore artifact PASS ({len(actual)} files)")
+eboot = (app / "eboot.bin").read_bytes()
+assert len(eboot) > 1024 * 1024
+# The native build cache once shipped a stale launcher while packaging current art/catalogs.
+# These literals prove the redesigned Home, in-binary French fallback, Nlib enrichment and PS5 HID
+# watchdog were all compiled into the shipping binary rather than merely present in the checkout.
+for text in (
+    "QUICK SETTINGS", "SELECTED GAME", "Confirm this action?", "PARAMÈTRES RAPIDES",
+    "api.nlib.cc", "Nlib hero cached for ", "EDEN_HID_NPAD update={}", " (embedded)",
+):
+    marker = text.encode("utf-8")
+    assert marker in eboot, f"stale launcher binary: missing {marker!r}"
+
+home_source = (root / "headless/prosperoeden/pe/ui/home.cpp").read_text()
+library_source = (root / "headless/prosperoeden/pe/ui/library.cpp").read_text()
+assert "Confirmation::launch_game" not in home_source + library_source, "launch still asks for confirmation"
+assert "open_game_settings_at_file" in home_source, "Home Triangle no longer opens per-game settings"
+assert "recent.hero" in home_source, "recent-game Nlib artwork is not used by Home"
+print(f"Staged Encore artifact PASS ({len(actual)} files, current launcher/runtime markers present)")

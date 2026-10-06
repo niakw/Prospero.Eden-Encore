@@ -40,6 +40,13 @@ cdeps="$EDEN_NATIVE_C_DEPS"
 test -f "$cdeps/lib/libcrypto.a"
 ffmpeg="$scratch/ffmpeg-native/install"
 test -f "$ffmpeg/lib/libavcodec.a" || { echo 'Run tools/build-headless-ffmpeg.sh first.' >&2; exit 1; }
+# GitHub restores native-local as a cache. Its object mtimes can be newer than the freshly
+# checked-out fork sources, causing Ninja to reuse an old launcher even though home.cpp changed.
+# Touch only fork-owned launcher sources/headers so they are always recompiled against this commit;
+# ccache still makes an unchanged rebuild cheap.
+find "$root/headless/prosperoeden" -type f \
+    \( -name '*.cpp' -o -name '*.c' -o -name '*.hpp' -o -name '*.h' \) -exec touch {} +
+
 cmake -S "$scratch/source" -B "$scratch/native-local" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="$root/headless/ps5.cmake" -DPS5_NATIVE=ON -DEDEN_DEVICE_FRONTEND="$devices" \
     -DCMAKE_BUILD_TYPE=Release -DENABLE_LTO=OFF \
