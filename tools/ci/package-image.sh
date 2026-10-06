@@ -74,7 +74,11 @@ _epoch = int(os.environ['SOURCE_DATE_EPOCH'])
 time.time = lambda: float(_epoch)
 PYTIME
 # Wrapped-folder mode (MkPFS's maximum-compatibility .ffpfsc layout), verified after writing.
-if ! SOURCE_DATE_EPOCH="$release_epoch" PYTHONPATH="$time_shim:$checkout" "$python" -m mkpfs pack folder --no-adjust-output-file-extension --version PS5 --verify \
+# Release packaging favors byte reproducibility over parallel compression throughput. Linux
+# multiprocessing can otherwise expose hash/order differences that do not affect validity but do
+# make two packs of the same staged app hash differently. A fixed hash seed plus one compression
+# worker removes that variable; this does not alter the staged title contents.
+if ! SOURCE_DATE_EPOCH="$release_epoch" PYTHONHASHSEED=0 PYTHONPATH="$time_shim:$checkout" "$python" -m mkpfs pack folder --no-adjust-output-file-extension --version PS5 --cpu-count 1 --verify \
         "$folder" "$output" > "$log" 2>&1; then
     tail -40 "$log" >&2
     exit 1
