@@ -1508,7 +1508,3 @@ msgstr "Accueil"
 #: pe/ui/home.cpp
 msgid "Output resolution"
 msgstr "Résolution de sortie"
-
-#: pe/ui/settings.cpp
-msgid "ABOUT"
-msgstr "À PROPOS"
