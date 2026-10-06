@@ -66,7 +66,7 @@ void Textures::release()
 Cover Textures::cover(const std::string &path, float size)
 {
     if (path.empty())
-        return {0, 0.0f, true};
+        return {0, 0.0f, true, 1.0f};
     // Covers are 256 pixels a side: draw a small one from a halved copy, which
     // a single-level texture cannot do for itself.
     const float pixels = size * output_scale_;
@@ -82,7 +82,8 @@ Cover Textures::cover(const std::string &path, float size)
         queue_.push_back(key);
     }
     it->second.used = frame_;
-    return {it->second.texture, it->second.age, it->second.loaded && it->second.texture == 0};
+    return {it->second.texture, it->second.age, it->second.loaded && it->second.texture == 0,
+            it->second.aspect};
 }
 
 void Textures::pump(float dt, int budget)
@@ -105,6 +106,8 @@ void Textures::pump(float dt, int budget)
             continue; // stays without a texture: the placeholder is drawn
         for (int level = 0; level < entry.level && image.width > 64; ++level)
             image = gfx::halve(image);
+        if (image.height > 0)
+            entry.aspect = static_cast<float>(image.width) / static_cast<float>(image.height);
         entry.texture = create(image);
         --budget;
     }

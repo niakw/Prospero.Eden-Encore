@@ -21,6 +21,7 @@ struct Cover
     std::uint32_t texture = 0; // 0 while it is queued, and when there is none
     float age = 0.0f;          // seconds since it loaded, for the fade-in
     bool missing = false;      // the game has no cover, or its file cannot be read
+    float aspect = 1.0f;       // loaded source width / height, used for CSS-like cover cropping
 };
 
 // Owns every GL texture of the launcher. Covers load a few per frame, at the
@@ -75,6 +76,7 @@ class Textures
         std::uint64_t used = 0;
         std::string path;
         int level = 0;
+        float aspect = 1.0f;
     };
 
     std::uint32_t create(const gfx::Image &image);

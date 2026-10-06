@@ -36,6 +36,10 @@ using ButtonMapping = Eden::ButtonMapping;
 inline constexpr int kGameButtons = Eden::kGameButtons;
 inline constexpr int kPadButtons = Eden::kPadButtons;
 inline constexpr ButtonMapping kDefaultMapping = Eden::kDefaultMapping;
+inline constexpr ButtonMapping kPlayStationMapping = Eden::kPlayStationMapping;
+inline constexpr ButtonMapping kSwitchMapping = Eden::kSwitchMapping;
+inline const ButtonMapping& base_mapping_for_layout(int layout) { return Eden::BaseMappingForLayout(layout); }
+inline bool mapping_is_custom(const ButtonMapping& mapping, int layout) { return Eden::MappingIsCustom(mapping, layout); }
 inline ButtonMapping assign_button(ButtonMapping mapping, int game, int pad) {
     return Eden::Assign(mapping, game, pad);
 }
@@ -54,6 +58,7 @@ struct Game
     std::string file;   // its name in the games folder
     std::string cover;  // square icon path; empty without cover art
     std::string hero;   // optional cached 16:9 artwork (Nlib); empty => use cover
+    int max_players = 0; // Nlib maximum local players; 0 when unknown/offline
     std::uint64_t title_id = 0;
     std::string addons;        // "Update 1.2.0, 2 DLC"; empty without either
     std::string addons_short;  // the same where there is little room: "v1.2.0, 2 DLC"
@@ -73,6 +78,7 @@ struct Recent
     std::string title;
     std::string cover;
     std::string hero; // cached 16:9 artwork; empty => square cover fallback
+    int max_players = 0; // Nlib maximum local players; 0 when unknown/offline
     std::uint64_t title_id = 0;
     std::string addons;
     std::string language;
@@ -91,6 +97,7 @@ struct Home
     bool last_caption_warning = false; // the caption says what is wrong with the game
     std::string last_cover;
     std::string last_hero; // cached 16:9 artwork; empty => last_cover
+    int last_max_players = 0; // Nlib maximum local players; 0 when unknown/offline
     // What the last game comes with, when it can be started: its title ID, its update and DLC
     // (as Game::addons) and the language it will use. Its mods are counted by the launcher.
     std::uint64_t last_title_id = 0;
@@ -116,8 +123,8 @@ struct Preferences
     int refresh = 0; // the output while a game runs: 0 60 Hz, 1 120 Hz
     int output = 0;  // the size of the picture, menu and games: 0 1080p, 1 1440p, 2 2160p
     int performance_profile = 0; // 0 recommended, 1 smooth, 2 performance, 3 custom
-    int controller_layout = 0; // legacy only; mapping is authoritative
-    ButtonMapping mapping = kDefaultMapping;
+    int controller_layout = 0; // 0 PlayStation, 1 Switch; custom status derives from mapping
+    ButtonMapping mapping = kPlayStationMapping;
     bool vibration = true;
     int vibration_strength = 100;
     int stick_deadzone = 8;
@@ -140,9 +147,9 @@ struct GameSettings
     int anti_aliasing = -1;
     int refresh = -1;
     int performance_profile = -1;
-    int controller_layout = -1; // legacy only
+    int controller_layout = -1; // -1 follows global, 0 PlayStation, 1 Switch
     bool own_mapping = false;
-    ButtonMapping mapping = kDefaultMapping;
+    ButtonMapping mapping = kPlayStationMapping;
 };
 
 // A mod of one game, from the game files folder's mods/<title ID>/.
@@ -173,9 +180,13 @@ struct DiagnosticsInfo
 {
     std::string filesystem;
     std::string free_space;
+    std::string total_space;
     std::string shader_caches;
     std::string logs;
     std::string data_path;
+    std::uint64_t free_bytes = 0;
+    std::uint64_t total_bytes = 0;
+    std::uint64_t shader_cache_bytes = 0;
 };
 
 class Services

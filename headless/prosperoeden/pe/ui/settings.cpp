@@ -86,6 +86,14 @@ std::string pick(const std::vector<std::string> &values, int index)
                values[static_cast<std::size_t>(index)] : std::string{"-"};
 }
 
+std::string controller_profile_name(int layout, const ButtonMapping& mapping)
+{
+    const bool custom = mapping_is_custom(mapping, layout);
+    if (layout == 1)
+        return custom ? tr("Custom Switch") : tr("Switch");
+    return custom ? tr("Custom PS5") : tr("PlayStation");
+}
+
 // A path that fits a label: the end is what tells folders apart.
 std::string short_path(const std::string &path, std::size_t limit)
 {
@@ -188,7 +196,7 @@ void Launcher::draw_settings(Canvas &c)
             std::clamp(prefs_.performance_profile, 0, 3))] + " · " +
             (prefs_.renderer != 0 ? "Vulkan" : "OpenGL"),
         prefs_.mute ? tr("Muted") : percent(prefs_.volume),
-        prefs_.controller_layout == 0 ? "PlayStation" : "Nintendo",
+        controller_profile_name(prefs_.controller_layout, prefs_.mapping),
         prefs_.large_text || prefs_.high_contrast || prefs_.reduce_motion ? tr("On") : "",
         prefs_.detailed_logging ? tr("Detailed logs on") : "",
         short_path(services_.files_folder(), 22),
@@ -253,7 +261,8 @@ void Launcher::draw_settings(Canvas &c)
         break;
     case kControls:
         about = tr("DualSense mapping, calibration, vibration and shortcuts.");
-        lines = {{tr("BUTTON MAPPING"), prefs_.mapping == kDefaultMapping ? tr("PS5 default") : tr("Custom")},
+        lines = {{tr("BUTTON PROFILE"), controller_profile_name(prefs_.controller_layout, prefs_.mapping)},
+                 {tr("BUTTON MAPPING"), mapping_is_custom(prefs_.mapping, prefs_.controller_layout) ? tr("Custom") : tr("Preset")},
                  {tr("VIBRATION"), on_off(prefs_.vibration)},
                  {tr("VIBRATION STRENGTH"), percent(prefs_.vibration_strength)},
                  {tr("STICK DEADZONE"), percent(prefs_.stick_deadzone)},
@@ -337,7 +346,7 @@ int Launcher::dialog_rows(Modal modal) const
     case Modal::accessibility:
         return 3;
     case Modal::controls:
-        return 4;
+        return 5;
     case Modal::diagnostics:
         return 2;
     case Modal::game:
@@ -353,8 +362,9 @@ float Launcher::dialog_row_top(Modal modal, int row) const
 {
     switch (modal)
     {
-    case Modal::audio:
     case Modal::controls:
+        return 334.0f + 96.0f * static_cast<float>(row);
+    case Modal::audio:
     case Modal::accessibility:
         return 370.0f + 102.0f * static_cast<float>(row);
     case Modal::diagnostics:
@@ -479,12 +489,20 @@ void Launcher::press_dialog(Key key)
     case Modal::controls:
         if (option_ == 0)
         {
+            if (!adjust && !activate) return;
+            prefs_.controller_layout = (prefs_.controller_layout + step + 2) % 2;
+            prefs_.mapping = base_mapping_for_layout(prefs_.controller_layout);
+            say(fill(tr("Controller profile: {0}"),
+                     {controller_profile_name(prefs_.controller_layout, prefs_.mapping)}));
+        }
+        else if (option_ == 1)
+        {
             if (activate) open_mapping(false);
             return;
         }
-        else if (option_ == 1)
-            prefs_.vibration = !prefs_.vibration;
         else if (option_ == 2)
+            prefs_.vibration = !prefs_.vibration;
+        else if (option_ == 3)
         {
             if (!adjust) return;
             prefs_.vibration_strength = std::clamp(prefs_.vibration_strength + 10 * step, 0, 100);
@@ -576,11 +594,12 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
     {
         title = tr("Controls");
         static constexpr const char *kAbout[] = {
-            TR("Customize every guest button. The PS5 default uses Cross for the bottom action, Circle for the right action, Square for the left action and Triangle for the top action."),
+            TR("PlayStation uses Cross=A and Circle=B. Switch keeps Nintendo face-button positions. Editing any button creates a custom profile."),
+            TR("Customize every guest button. The profile automatically becomes Custom PS5 or Custom Switch."),
             TR("Turns DualSense vibration on or off for games."),
             TR("100% is full DualSense rumble strength. Lower it if vibration feels too strong."),
             TR("8% is recommended. Increase it for stick drift; decrease it for more sensitive aiming.")};
-        copy = tr(kAbout[std::clamp(option_, 0, 3)]);
+        copy = tr(kAbout[std::clamp(option_, 0, 4)]);
         break;
     }
     case Modal::accessibility:
@@ -702,13 +721,16 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
                       option_ == row ? 1.0f : 0.0f);
             label(row, name, 260.0f + gap);
         };
-        const std::string mapping = prefs_.mapping == kDefaultMapping ? tr("PS5 default") : tr("Custom");
-        label(0, tr("Button mapping"), choice(0, mapping));
-        label(1, tr("Vibration"), kToggle);
-        toggle(c, 1292.0f, row_centre(1), tween::clamp01(switches_[1].value));
-        level_row(2, tr("Vibration strength"), percent(prefs_.vibration_strength),
+        const std::string profile = controller_profile_name(prefs_.controller_layout, prefs_.mapping);
+        const std::string mapping = mapping_is_custom(prefs_.mapping, prefs_.controller_layout) ?
+                                        tr("Edit custom mapping") : tr("Customize");
+        label(0, tr("Button profile"), choice(0, profile));
+        label(1, tr("Button mapping"), choice(1, mapping));
+        label(2, tr("Vibration"), kToggle);
+        toggle(c, 1292.0f, row_centre(2), tween::clamp01(switches_[1].value));
+        level_row(3, tr("Vibration strength"), percent(prefs_.vibration_strength),
                   prefs_.vibration_strength, 100);
-        level_row(3, tr("Stick deadzone"), percent(prefs_.stick_deadzone), prefs_.stick_deadzone, 20);
+        level_row(4, tr("Stick deadzone"), percent(prefs_.stick_deadzone), prefs_.stick_deadzone, 20);
         break;
     }
     case Modal::accessibility:
@@ -762,13 +784,13 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
     }
 
     // Under the rows: Video's five end lower than the other dialogs' three.
-    const float foot = modal == Modal::video ? 848.0f : 811.0f;
+    const float foot = modal == Modal::video || modal == Modal::controls ? 848.0f : 811.0f;
     if (!message_.empty())
     {
         notice(c, message_, 592.0f, foot + 7.0f, theme::kSmall,
                message_warning_ ? theme::kWarning : theme::kLimePale, 736.0f, message_warning_);
     }
-    else if (modal == Modal::controls && option_ == 0)
+    else if (modal == Modal::controls && option_ == 1)
     {
         static constexpr Hint kOpen[] = {
             {Pad::updown, TR("Select")}, {Pad::cross, TR("Open")}, {Pad::circle, TR("Back")}};

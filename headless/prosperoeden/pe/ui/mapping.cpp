@@ -23,6 +23,14 @@ constexpr const char* kGameLabels[kGameButtons] = {
 constexpr const char* kPadLabels[kPadButtons] = {
     TR("Cross"), TR("Circle"), TR("Square"), TR("Triangle"), "L1", "R1", "L2", "R2",
     "L3", "R3", TR("Options"), TR("Create"), TR("Touchpad")};
+
+std::string profile_name(int layout, const ButtonMapping& mapping)
+{
+    const bool custom = mapping_is_custom(mapping, layout);
+    if (layout == 1)
+        return custom ? tr("Custom Switch") : tr("Switch");
+    return custom ? tr("Custom PS5") : tr("PlayStation");
+}
 }
 
 void Launcher::open_mapping(bool for_game)
@@ -48,7 +56,7 @@ void Launcher::press_mapping(Key key)
     if (key == Key::circle)
     {
         modal_ = modal_shown_ = mapping_for_game_ ? Modal::game : Modal::controls;
-        option_ = mapping_for_game_ ? 6 : 0;
+        option_ = mapping_for_game_ ? 9 : 1;
         option_cursor_.snap(dialog_row_top(modal_, option_));
         message_.clear();
         cue(Cue::back);
@@ -84,11 +92,14 @@ void Launcher::press_mapping(Key key)
         if (reset)
         {
             next.own_mapping = false;
-            next.mapping = kDefaultMapping;
+            next.controller_layout = -1;
+            next.mapping = base_mapping_for_layout(prefs_.controller_layout);
         }
         else
         {
             next.own_mapping = true;
+            if (next.controller_layout < 0)
+                next.controller_layout = prefs_.controller_layout;
             next.mapping = mapping;
         }
         if (!games_.empty())
@@ -101,11 +112,11 @@ void Launcher::press_mapping(Key key)
     else
     {
         const Preferences before = prefs_;
-        prefs_.mapping = reset ? kDefaultMapping : mapping;
+        prefs_.mapping = reset ? base_mapping_for_layout(prefs_.controller_layout) : mapping;
         saved = save_preferences(true);
         if (!saved) prefs_ = before;
         if (saved)
-            say(reset ? tr("Button mapping reset to PS5 defaults.") : tr("Button mapping saved."));
+            say(reset ? tr("Button mapping reset to the active profile.") : tr("Button mapping saved."));
     }
     cue(saved ? Cue::toggle : Cue::error);
 }
@@ -122,15 +133,19 @@ void Launcher::draw_mapping(Canvas& c, float open)
 
     const Game* game = mapping_for_game_ && !games_.empty() ?
         &games_[static_cast<std::size_t>(library_.selected)] : nullptr;
-    const std::string subtitle = game ?
-        game->name + (game_settings_.own_mapping ? " · " + std::string(tr("Custom")) :
-                                                  " · " + std::string(tr("Global"))) :
-        std::string(tr("DualSense buttons used by every game."));
-    text_fit(c, subtitle, 592.0f, baseline(291.0f, 32.0f, theme::kSmall),
-             theme::kSmall, theme::kCopy, 736.0f);
-
+    const int effective_layout =
+        mapping_for_game_ && game_settings_.controller_layout >= 0 ?
+            game_settings_.controller_layout : prefs_.controller_layout;
     const ButtonMapping& mapping =
         mapping_for_game_ && game_settings_.own_mapping ? game_settings_.mapping : prefs_.mapping;
+    const std::string active_profile = profile_name(effective_layout, mapping);
+    const std::string subtitle = game ?
+        game->name + " · " +
+            (game_settings_.own_mapping ? active_profile :
+                                         fill(tr("Global ({0})"), {active_profile})) :
+        fill(tr("Global controller profile: {0}"), {active_profile});
+    text_fit(c, subtitle, 592.0f, baseline(291.0f, 32.0f, theme::kSmall),
+             theme::kSmall, theme::kCopy, 736.0f);
 
     list.push_clip({kWindow.x - 24.0f, kWindow.y - 6.0f, kWindow.w + 48.0f, kWindow.h + 12.0f});
     const auto row_top = [&](int row) {
@@ -150,7 +165,8 @@ void Launcher::draw_mapping(Canvas& c, float open)
     {
         const float top = row_top(row);
         const int pad = mapping[static_cast<std::size_t>(row)];
-        const bool usual = pad == kDefaultMapping[static_cast<std::size_t>(row)];
+        const ButtonMapping& base = base_mapping_for_layout(effective_layout);
+        const bool usual = pad == base[static_cast<std::size_t>(row)];
         list.push_opacity(mapping_rows_.row_alpha(row, kRowHeight));
         const float taken = chooser(c, tr(kPadLabels[std::clamp(pad, 0, kPadButtons - 1)]), 1296.0f,
                                     baseline(top, kRowHeight, theme::kText24),

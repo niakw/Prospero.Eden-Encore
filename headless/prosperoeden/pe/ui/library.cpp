@@ -68,6 +68,14 @@ void draw_handheld(Canvas &c, float x, float cy, Color ink)
     c.list.circle(x + 33.0f, cy, 2.2f, ink);
 }
 
+std::string controller_profile_name(int layout, const ButtonMapping& mapping)
+{
+    const bool custom = mapping_is_custom(mapping, layout);
+    if (layout == 1)
+        return custom ? tr("Custom Switch") : tr("Switch");
+    return custom ? tr("Custom PS5") : tr("PlayStation");
+}
+
 } // namespace
 
 void Launcher::start_scan()
@@ -130,12 +138,14 @@ void Launcher::name_home_games()
         {
             home_.last_title = game.name;
             if (!game.hero.empty()) home_.last_hero = game.hero;
+            if (game.max_players > 0) home_.last_max_players = game.max_players;
         }
         for (Recent &recent : home_.recents)
             if (recent.file == game.file)
             {
                 recent.title = game.name;
                 if (!game.hero.empty()) recent.hero = game.hero;
+                if (game.max_players > 0) recent.max_players = game.max_players;
             }
     }
 }
@@ -143,6 +153,7 @@ void Launcher::name_home_games()
 void Launcher::read_home()
 {
     home_ = services_.home();
+    home_diagnostics_ = services_.diagnostics();
     if (home_.last_title_id == 0)
         return;
     const std::vector<Mod> mods = services_.mods(home_.last_title_id);
@@ -847,7 +858,12 @@ void Launcher::draw_game(Canvas &c, float open)
             fill(tr("Default ({0})"), {pick(anti_aliasing, prefs_.anti_aliasing)}),
         game_settings_.refresh >= 0 ? hertz(game_settings_.refresh) :
             fill(tr("Default ({0})"), {hertz(prefs_.refresh)}),
-        game_settings_.own_mapping ? tr("Custom") : tr("Global"),
+        game_settings_.own_mapping ?
+            controller_profile_name(game_settings_.controller_layout >= 0 ?
+                                        game_settings_.controller_layout : prefs_.controller_layout,
+                                    game_settings_.mapping) :
+            fill(tr("Global ({0})"),
+                 {controller_profile_name(prefs_.controller_layout, prefs_.mapping)}),
         // With the game's Mods switch off (the Library's), none of them is on.
         mods_.empty() ? std::string{tr("No mods")} :
         game != nullptr && !game->mods_enabled ? std::string{tr("Off")} :

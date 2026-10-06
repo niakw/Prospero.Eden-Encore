@@ -24,11 +24,28 @@ inline constexpr const char* kPadButtonKeys[kPadButtons] = {
     "touchpad"};
 
 using ButtonMapping = std::array<int, kGameButtons>;  // game button -> DualSense button
-// The game's A, B, X and Y where the DualSense has the same places; the touchpad is Minus (the
-// Create button presses it too while it has no game button of its own).
-inline constexpr ButtonMapping kDefaultMapping = {
+
+// PlayStation semantics: the game's primary action (A) is Cross, back/cancel (B) is Circle,
+// X is Square and Y is Triangle. This is Encore's default on a PS5.
+inline constexpr ButtonMapping kPlayStationMapping = {
+    pad_cross, pad_circle, pad_square, pad_triangle, pad_l1, pad_r1, pad_l2, pad_r2, pad_options,
+    pad_touchpad, pad_l3, pad_r3};
+
+// Switch semantics/physical positions: A is the right face button, B the bottom, X the top and Y
+// the left. This matches the original Nintendo layout when played on a DualSense.
+inline constexpr ButtonMapping kSwitchMapping = {
     pad_circle, pad_cross, pad_triangle, pad_square, pad_l1, pad_r1, pad_l2, pad_r2, pad_options,
     pad_touchpad, pad_l3, pad_r3};
+
+inline constexpr ButtonMapping kDefaultMapping = kPlayStationMapping;
+
+inline const ButtonMapping& BaseMappingForLayout(int layout) {
+    return layout == 1 ? kSwitchMapping : kPlayStationMapping;
+}
+
+inline bool MappingIsCustom(const ButtonMapping& mapping, int layout) {
+    return mapping != BaseMappingForLayout(layout);
+}
 
 inline bool ValidMapping(const ButtonMapping& mapping) {
     std::array<bool, kPadButtons> used{};

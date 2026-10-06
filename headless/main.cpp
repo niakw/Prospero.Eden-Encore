@@ -1198,13 +1198,22 @@ int main(int argc, char** argv) {
         bool return_to_menu = false;
         if (devices || game) {
             const auto controls = Eden::LoadPreferences();
-            const auto mapping = game_video.own_mapping ? game_video.mapping : controls.mapping;
+            const int effective_layout =
+                game_video.controller_layout >= 0 ? game_video.controller_layout : controls.controller_layout;
+            const auto mapping =
+                game_video.own_mapping ? game_video.mapping :
+                game_video.controller_layout >= 0 ? Eden::BaseMappingForLayout(effective_layout) :
+                                                    controls.mapping;
             pad = std::make_unique<Eden::Pad>(
                 static_cast<float>(controls.stick_deadzone) / 100.0f, 0.5f);
             pad->SetMapping(mapping);
             if (!pad->Open()) throw std::runtime_error("PS5 controller initialization failed");
-            Eden::Report("controls", (std::string("DualSense map ") +
-                (mapping == Eden::kDefaultMapping ? "PS5 physical default" : Eden::Settings::MappingJson(mapping).dump()) +
+            const bool custom_mapping = Eden::MappingIsCustom(mapping, effective_layout);
+            const std::string mapping_profile =
+                custom_mapping ? (effective_layout == 1 ? "Custom Switch" : "Custom PS5") :
+                                 (effective_layout == 1 ? "Switch" : "PlayStation");
+            Eden::Report("controls", (std::string("Controller profile ") + mapping_profile +
+                ", map " + Eden::Settings::MappingJson(mapping, Eden::BaseMappingForLayout(effective_layout)).dump() +
                 ", deadzone " + std::to_string(controls.stick_deadzone) + "%, vibration " +
                 (controls.vibration ? std::to_string(controls.vibration_strength) + "%" : "off")).c_str());
             Settings::values.audio_output_device_id = "ps5";

@@ -216,6 +216,7 @@ class Launcher
 
     // home: 0 launch hero, 1-3 header, 4 game details, 5-8 recent, 9 view all
     Home home_;
+    DiagnosticsInfo home_diagnostics_{};
     int home_recent_ = -1; // -1 = last played; otherwise the selected Recent card becomes the hero
     GameSettings home_game_settings_{};
     bool home_game_docked_ = true;
@@ -225,7 +226,7 @@ class Launcher
     std::array<tween::Spring, 4> controller_lit_{};
     std::array<float, 4> controller_pop_{}; // 1 when a controller appears, then decays
     int home_focus_ = 0;
-    std::array<tween::Spring, 10> home_springs_{};
+    std::array<tween::Spring, 17> home_springs_{};
     float intro_ = 0.0f;
     bool first_start_ = true;
 

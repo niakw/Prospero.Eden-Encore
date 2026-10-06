@@ -56,7 +56,9 @@ assert len(eboot) > 1024 * 1024
 # watchdog were all compiled into the shipping binary rather than merely present in the checkout.
 for text in (
     "QUICK SETTINGS", "SELECTED GAME", "Confirm this action?", "PARAMÈTRES RAPIDES",
-    "api.nlib.cc", "Nlib hero cached for ", "EDEN_HID_NPAD update={}",
+    "api.nlib.cc", "Nlib hero cached for ", "EDEN_NLIB_RESULT title_id=",
+    "BUTTON PROFILE", "Custom PS5", "Custom Switch",
+    "EDEN_HID_NPAD update={}", "EDEN_JIT_ALIAS rx=",
 ):
     marker = text.encode("utf-8")
     assert marker in eboot, f"stale launcher binary: missing {marker!r}"
