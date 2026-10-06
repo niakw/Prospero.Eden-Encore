@@ -63,14 +63,6 @@ msgstr ""
 msgid "A firmware NCA cannot be read. Reinstall the firmware dump."
 msgstr ""
 
-#: pe/ui/settings.cpp
-msgid "About"
-msgstr ""
-
-#: pe/ui/settings.cpp
-msgid "ABOUT"
-msgstr ""
-
 #: pe/ui/browse.cpp
 msgid "About Prospero.Eden Encore"
 msgstr ""
@@ -923,7 +915,7 @@ msgid "Portuguese (Brazil)"
 msgstr ""
 
 #. Eden is the emulator's name (unchanged).
-#: pe/ui/browse.cpp, pe/ui/settings.cpp
+#: pe/ui/browse.cpp
 msgid "Powered by Eden"
 msgstr ""
 
@@ -1258,7 +1250,7 @@ msgid "Thai"
 msgstr ""
 
 #. Heading of the acknowledgements.
-#: pe/ui/browse.cpp, pe/ui/settings.cpp
+#: pe/ui/browse.cpp
 msgid "THANKS"
 msgstr ""
 
