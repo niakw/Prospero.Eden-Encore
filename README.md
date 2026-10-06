@@ -247,16 +247,49 @@ FPKG/kstuff behavior is a separate jailbreak/runtime concern from the emulator i
 
 ## Credits
 
-Encore is built from and depends on the work of:
+Encore is built from and depends on the work of many upstream projects. The list below covers the
+**direct repositories and pinned build/runtime inputs used by Encore**; transitive dependencies of
+Eden and the individual licence details are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-- [ProsperoEden](https://github.com/blackbearreloaded/ProsperoEden)
-- [Eden](https://github.com/eden-emulator/mirror)
-- [PS5 Native App Boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate)
-- [PS5 OpenGL](https://github.com/blackbearreloaded/ps5-opengl)
-- [Mihawk's PS5 Mesa](https://github.com/mihawk-99/PS5_Mesa)
-- [Mihawk's PS5 Vulkan](https://github.com/mihawk-99/PS5_Vulkan)
+### Emulator and launcher foundations
 
-All credit for the original projects belongs to their respective authors and contributors.
+- [ProsperoEden](https://github.com/blackbearreloaded/ProsperoEden) — original PS5 emulator port/fork Encore is based on.
+- [Eden](https://github.com/eden-emulator/mirror) — emulator core used by Encore.
+- [ProsperoPuzzles](https://github.com/blackbearreloaded/ProsperoPuzzles) — origin of the launcher drawing/text/animation/sound framework used by Encore.
+
+### PS5 platform, graphics and packaging
+
+- [PS5 Native App Boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) — native runtime, packaging and base platform integration.
+- [PS5 OpenGL](https://github.com/blackbearreloaded/ps5-opengl) — OpenGL 4.6 runtime used by Encore.
+- [Mihawk's PS5 Mesa](https://github.com/mihawk-99/PS5_Mesa) — Mesa/RADV source used by the Vulkan path.
+- [Mihawk's PS5 Vulkan](https://github.com/mihawk-99/PS5_Vulkan) — PS5 Vulkan/RADV build and link recipes.
+- [Mihawk's PS5 PayloadSDK](https://github.com/mihawk-99/PS5_PayloadSDK) — PayloadSDK fork used by the RADV toolchain.
+- [PS5 Payload SDK](https://github.com/ps5-payload-dev/sdk) — PS5 homebrew SDK used by the native toolchain.
+- [ps5-vulkan](https://github.com/mpereiraesaa/ps5-vulkan) — earlier PS5 Vulkan platform work used by the graphics stack.
+- [PSBrew/MkPFS](https://github.com/PSBrew/MkPFS) — optional reproducible `.ffpfsc` image packaging.
+- [SharpProspero](https://github.com/SvenGDK/SharpProspero) — source/reference used by the native packaging toolchain.
+
+### Compatibility, media, text and build inputs
+
+- [kinnay/zbic](https://github.com/kinnay/zbic) — ZBIC/zstd NSO decompression support.
+- [FFmpeg](https://github.com/FFmpeg/FFmpeg) — H.264/VP8/VP9 decoding in the PS5 build.
+- [HarfBuzz](https://github.com/harfbuzz/harfbuzz) — shaping for Arabic, Thai and other complex scripts in the launcher.
+- [fmt](https://github.com/fmtlib/fmt) — formatting headers used by build/runtime validation paths.
+- [LLVM](https://github.com/llvm/llvm-project) — compiler-rt pieces used by the PS5 cross build.
+- [pacbrew](https://github.com/ps5-payload-dev/pacbrew-repo) — pinned PS5 OpenSSL/zlib packages.
+- [zlib](https://github.com/madler/zlib) — pinned native dependency used by the PS5 toolchain setup.
+- [Boost.Context](https://github.com/boostorg/context) — pinned context runtime source used by Eden's PS5 build.
+- [Xbyak](https://github.com/herumi/xbyak) — x86/x64 JIT assembler used by Dynarmic/Eden and adapted by Encore's JIT allocator path.
+- [SPIRV-LLVM-Translator](https://github.com/KhronosGroup/SPIRV-LLVM-Translator) — macOS host-toolchain support for the graphics build.
+- [stb](https://github.com/nothings/stb) — launcher font baking/system-font loading support.
+
+### PS5 input/audio research reused directly
+
+- [ps5-native-gamepad-input-research](https://github.com/blackbearreloaded/ps5-native-gamepad-input-research) — native DualSense/gamepad integration reference/code.
+- [ps5-audio-decoding-research](https://github.com/blackbearreloaded/ps5-audio-decoding-research) — native audio integration reference/code.
+
+All credit for the original projects belongs to their respective authors and contributors. Encore's
+changes do not imply endorsement by those projects or their maintainers.
 
 ## Community
 
