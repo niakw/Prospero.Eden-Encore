@@ -5,6 +5,9 @@ builds on the following projects, each under its own license.
 
 ## Emulator
 
+- **[ProsperoEden](https://github.com/blackbearreloaded/ProsperoEden)**, GPL-3.0-or-later. Encore is
+  derived from its PS5 port/fork and keeps portions of its native integration and 1.000.040-era
+  filesystem-access path.
 - **[Eden](https://github.com/eden-emulator/mirror)**, GPL-3.0-or-later. The emulator core, built
   from the commit pinned in `UPSTREAM.json`, together with the dependencies Eden
   fetches and pins itself: Dynarmic, Boost, fmt, xbyak, zstd, lz4, Opus, SDL3,
@@ -16,6 +19,7 @@ builds on the following projects, each under its own license.
 - **[OpenSSL](https://www.openssl.org)**, Apache-2.0, and
   **[zlib](https://zlib.net)**, zlib license. Taken from the
   [pacbrew](https://github.com/ps5-payload-dev/pacbrew-repo) PS5 packages.
+- **[kinnay/zbic](https://github.com/kinnay/zbic)**, used for ZBIC/zstd NSO decompression.
 - **LLVM compiler-rt** `emutls.c`, Apache-2.0 WITH LLVM-exception.
 
 ## Graphics
@@ -37,6 +41,8 @@ builds on the following projects, each under its own license.
 
 - **[PS5 Payload SDK](https://github.com/ps5-payload-dev/sdk)** by John
   Törnblom (ps5-payload-dev).
+- **[Mihawk's PS5 PayloadSDK](https://github.com/mihawk-99/PS5_PayloadSDK)**, the fork pinned by
+  Encore's RADV/Vulkan build path.
 - **[PS5 Native App Boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate)**,
   GPL-3.0-or-later. The native app runtime, packaging tool and sandbox
   elevation helper (`headless/elevation`). Its packaging tool translates parts
