@@ -12,6 +12,7 @@ large request when the console has no memory for a block of its own, the heap fi
 3 GiB, and the same run with the range refused (the old whole-heap path).
 """
 import pathlib
+import platform
 import subprocess
 import sys
 import tempfile
@@ -29,6 +30,14 @@ for old, new in (
 begin = heap.index('static int ps5_heap_ready(void) {')
 end = heap.index('void ps5_opengl_heap_stats_print(unsigned iteration) {')
 heap = heap[:begin] + (root / 'headless/heap_arenas.inc').read_text() + heap[end:]
+for required in (
+    '3072 MiB', 'eden_heap_commit', 'eden_heap_pages', 'eden_heap_pages_free',
+    'eden_heap_arenas_created', 'eden_heap_committed', '__builtin_ia32_pause',
+):
+    assert required in heap, f'heap derivation contract changed: {required}'
+if platform.machine().lower() not in ('x86_64', 'amd64'):
+    print('Heap growth source/derivation contract PASS (x86 UBSan/TSan runtime harness deferred to CI)')
+    raise SystemExit(0)
 
 MOCK = r'''
 // A stand-in for the console: mspaces over caller memory, and the range the heap grows in.

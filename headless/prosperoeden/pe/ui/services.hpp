@@ -105,11 +105,11 @@ struct Preferences
     int renderer = 1; // 0 OpenGL, 1 Vulkan
     int resolution = 3;
     int filter = 0;
-    int fsr_sharpness = 88;
+    int fsr_sharpness = 50;
     int anti_aliasing = 0; // 0 none, 1 FXAA, 2 SMAA
     int refresh = 0; // the output while a game runs: 0 60 Hz, 1 120 Hz
     int output = 0;  // the size of the picture, menu and games: 0 1080p, 1 1440p, 2 2160p
-    int performance_profile = 0; // 0 recommended, 1 smooth, 2 performance
+    int performance_profile = 0; // 0 recommended, 1 smooth, 2 performance, 3 custom
     int controller_layout = 0; // legacy only; mapping is authoritative
     ButtonMapping mapping = kDefaultMapping;
     bool vibration = true;

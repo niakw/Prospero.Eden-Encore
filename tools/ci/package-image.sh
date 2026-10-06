@@ -61,8 +61,20 @@ if (( prepare_only )); then
 fi
 rm -f -- "$output"
 log="$output.log"
+# MkPFS stamps PFS inodes with time.time(). Freeze that clock for release packaging instead of
+# patching the pinned third-party checkout. The epoch matches make-dist.py's fixed ZIP timestamp
+# (2026-01-01 00:00:00 UTC), making equal title folders produce byte-identical FFPFSC images.
+release_epoch=1767225600
+time_shim=$(mktemp -d "${TMPDIR:-/tmp}/encore-mkpfs-time.XXXXXX")
+cleanup_time_shim() { rm -rf "$time_shim"; }
+trap cleanup_time_shim EXIT
+cat > "$time_shim/sitecustomize.py" <<'PYTIME'
+import os, time
+_epoch = int(os.environ['SOURCE_DATE_EPOCH'])
+time.time = lambda: float(_epoch)
+PYTIME
 # Wrapped-folder mode (MkPFS's maximum-compatibility .ffpfsc layout), verified after writing.
-if ! PYTHONPATH="$checkout" "$python" -m mkpfs pack folder --no-adjust-output-file-extension --version PS5 --verify \
+if ! SOURCE_DATE_EPOCH="$release_epoch" PYTHONPATH="$time_shim:$checkout" "$python" -m mkpfs pack folder --no-adjust-output-file-extension --version PS5 --verify \
         "$folder" "$output" > "$log" 2>&1; then
     tail -40 "$log" >&2
     exit 1

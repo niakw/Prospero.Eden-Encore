@@ -1,7 +1,7 @@
 # Building Prospero.Eden Encore
 
-Encore builds on Linux. The release CI uses **Ubuntu 24.04**; WSL/Linux hosts with the same tools are
-also suitable.
+The authoritative release build runs on **Ubuntu 24.04**. WSL/Linux hosts with the same tools are suitable.
+Encore also supports local native-build iteration on Apple Silicon macOS through `tools/host-env.sh` and Homebrew LLVM 18; CI remains the release authority.
 
 ```bash
 make release
@@ -14,10 +14,10 @@ the dependency cache, the checkout-specific native build cache and ccache.
 
 A successful `make release` writes:
 
-- `dist/Prospero.Eden-Encore-vX.Y.Z.zip` — standard installation bundle;
-- `dist/Prospero.Eden-Encore-vX.Y.Z.ffpfsc` — optional ShadowMountPlus PFS image;
+- `dist/Prospero.Eden-Encore-R1.zip` — standard installation bundle;
+- `dist/Prospero.Eden-Encore-R1.ffpfsc` — optional ShadowMountPlus PFS image;
 - `dist/SHA256SUMS` — SHA-256 digests for both distributable binaries;
-- `dist/release-notes.md` — extracted from the matching README `Changes in vX.Y.Z` section.
+- `dist/release-notes.md` — extracted from the matching README `Changes in Encore R1` section.
 
 The ZIP includes the `PPSA99008` application folder plus README, INSTALL, SECURITY, LICENSE and
 third-party notices.
@@ -25,7 +25,7 @@ third-party notices.
 Unstripped symbols are kept separately under:
 
 ```text
-build/symbols/Prospero.Eden-Encore-vX.Y.Z.elf
+build/symbols/Prospero.Eden-Encore-R1.elf
 ```
 
 They are uploaded as a CI artifact for crash diagnosis but are not attached to the public Release.
@@ -62,7 +62,7 @@ Important inputs include:
 
 - **Eden** at the revision pinned by Encore;
 - Eden's pinned FFmpeg source;
-- PS5 OpenGL SDK;
+- PS5 OpenGL source snapshot `ad2807d` (the SDK is rebuilt and manifest-verified by `tools/build-opengl-sdk.sh`);
 - PacBrew OpenSSL/zlib inputs;
 - LLVM compiler-rt and fmt inputs;
 - **ps5-native-app-boilerplate** / PS5 Payload SDK;
@@ -70,6 +70,12 @@ Important inputs include:
 
 RADV is isolated and validated before use. Encore's WSI adaptation is checked by
 `tools/patch-radv-wsi.py`.
+
+The OpenGL build deliberately does **not** consume a moving upstream HEAD or an unverified local
+archive. `tools/deps.json` pins `blackbearreloaded/ps5-opengl` to `ad2807d`; `make prepare` builds
+`.local/ps5-opengl-sdk-ad2807d`, verifies every entry in its `manifest.sha256`, and writes the exact
+source commit beside it. Release validation records the resulting manifest and all SDK files in the
+candidate receipt.
 
 The optional FFPFSC step fetches **PSBrew/MkPFS** at the immutable commit recorded in
 `tools/ci/package-image.sh` and caches it under `~/.cache/prosperoeden-mkpfs`.
@@ -100,8 +106,7 @@ notably the sparse-header dependency check and native exclusive-monitor assembly
 
 ## Launcher
 
-The launcher lives under `headless/prosperoeden`. Its committed UI assets are shipped directly;
-release builds do not regenerate them.
+The launcher lives under `headless/prosperoeden`. Catalog/font/sound assets are copied from the committed UI tree; release packaging generates `brand.tga` from the canonical Encore logo and `backdrop.tga` from the canonical Encore background.
 
 Useful tooling under `tools/launcher` includes:
 
@@ -121,12 +126,19 @@ The release workflow runs `python3 -B tools/launcher/strings.py check` before na
 - clang/lld/LLVM 18;
 - CMake, Ninja, ccache, make, nasm and Meson;
 - glslang/spirv tools;
-- bison/flex;
+- bison/flex and autoconf;
+- binutils/coreutils/util-linux (including `ar`, GNU `realpath` and `flock`);
 - git, curl, wget, unzip and rsync;
-- Python 3 with venv/pip/mako/yaml;
+- Python **3.12+** with venv/pip/mako/yaml;
 - librsvg and ImageMagick.
 
 CI pins Meson to the version validated by the release workflow.
+
+For Apple Silicon local iteration, install the host tools with Homebrew (LLVM 18, CMake, Ninja, ccache, NASM, Meson, glslang/SPIR-V Tools, bison/flex, pkgconf, autoconf, coreutils, flock and Python). `tools/host-env.sh` creates checkout-local `*-18` shims instead of modifying system tool names, and the Python helper environment lives under `.local/`.
+
+The first Apple Silicon RADV preparation also builds the pinned LLVM 18 SPIR-V translator under
+`.local/` through `tools/prepare-macos-llvm-spirv.sh`. It is a host build helper only; it does not
+replace the PS5 cross compiler or become part of the installed Encore application.
 
 ## Crash reports
 
@@ -140,7 +152,7 @@ To symbolize one, use the exact unstripped ELF from the matching build:
 
 ```bash
 python3 tools/symbolize-crash.py crash-YYYYMMDD-HHMMSS.txt \
-  build/symbols/Prospero.Eden-Encore-v1.000.040.elf
+  build/symbols/Prospero.Eden-Encore-R1.elf
 ```
 
 ## GitHub release workflow
@@ -173,7 +185,7 @@ Before publishing it checks `SHA256SUMS` against the ZIP and FFPFSC image. It th
 immutable tag of the form:
 
 ```text
-v1.000.040-encore-<shortsha>
+encore-R1-<shortsha>
 ```
 
 and publishes the ZIP, FFPFSC image and `SHA256SUMS` as the latest GitHub Release.
@@ -183,7 +195,7 @@ and publishes the ZIP, FFPFSC image and `SHA256SUMS` as the latest GitHub Releas
 Before the final `[release]` commit:
 
 1. confirm the package/content version;
-2. update the matching README `Changes in vX.Y.Z` section;
+2. update the matching README `Changes in Encore R1` section;
 3. keep `INSTALL.md`, `SECURITY.md`, `THIRD_PARTY_NOTICES.md` and technical notes current;
 4. require a green CodeQL run;
 5. require a green shipping build/package run;

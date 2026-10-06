@@ -15,8 +15,8 @@ A clean Encore configuration starts with:
 | TV output | **1080p** |
 | Game resolution | **1x** |
 | Upscaling filter | **Bilinear** |
-| FSR sharpness | **88%** |
-| Anti-aliasing | **None** |
+| FSR sharpness | **50%** |
+| Anti-aliasing | **None** (factory fallback; Recommended applies FXAA) |
 | Refresh rate | **60 Hz** |
 | FPS overlay | **Off** |
 | Console mode | **Docked** |
@@ -31,11 +31,11 @@ The factory values above are the fallback values of an empty configuration. Sele
 
 | Preset | Renderer | TV output | Game resolution | Filter | FSR sharpness | AA | Refresh |
 | --- | --- | --- | --- | --- | ---: | --- | --- |
-| **Recommended** | Vulkan | 1440p | 1x | Bilinear | 88% | None | 60 Hz |
-| **Smooth** | Vulkan | 1080p | 1x | Bilinear | 88% | None | 60 Hz |
+| **Recommended** | Vulkan | 1440p | 1x | Bilinear | 50% | **FXAA** | 60 Hz |
+| **Smooth** | Vulkan | 1080p | 1x | Bilinear | 50% | None | 60 Hz |
 | **Performance** | Vulkan | 1080p | 0.75x | AMD FSR | 50% | None | 60 Hz |
 
-Presets are real starting points, not labels. After applying one, every advanced row can still be changed manually. Per-game settings can override the same options without changing the global configuration.
+Presets are real starting points, not labels. After applying one, every advanced row can still be changed manually. If the resulting combination no longer matches Recommended, Smooth or Performance, Encore automatically shows **Custom** (`Personnalisé` in French). If the values later match one of the three authored presets exactly, that preset is recognized again automatically. The same behavior applies to per-game overrides without changing the global configuration.
 
 ## Video settings
 
@@ -77,7 +77,7 @@ Docked and Handheld modes can also change what the game itself chooses to render
 
 ### FSR sharpness
 
-Range: **0–100%**, changed in 5% steps. Factory value: **88%**.
+Range: **0–100%**, changed in 5% steps. Factory value: **50%**.
 
 Higher is not automatically better. Too much sharpening can make grass, hair, crowds and thin lines look noisy or grainy.
 
@@ -91,8 +91,8 @@ Useful starting points:
 
 Available: **None, FXAA, SMAA**.
 
-- **None — default/fastest.**
-- **FXAA.** Light smoothing with a small clarity trade-off.
+- **None — fastest and the raw factory fallback.**
+- **FXAA — Recommended preset.** Light smoothing with a small clarity trade-off.
 - **SMAA.** Better edge quality, but use it only when performance headroom remains.
 
 ### Refresh rate
@@ -149,7 +149,7 @@ If a game's own rebinding menu does not recognize the expected PS5 layout, adjus
 
 Settings → Language is shared by Encore and the games.
 
-On first setup, Encore seeds the preference from the PS5 system language. Changing it later changes both the launcher catalog and the language/region value presented to games. A game can still ignore the choice when that language is not included.
+On first setup, Encore seeds the preference from the PS5 system language. Changing it later rebuilds the launcher immediately with the selected catalog/fonts and also changes the language/region value presented to games. A game can still ignore the choice when that language is not included.
 
 ## Audio
 
@@ -185,7 +185,7 @@ These are starting points, not compatibility guarantees.
 | TV output | **1440p** |
 | Game resolution | **1x** |
 | Filter | Bilinear |
-| Anti-aliasing | None |
+| Anti-aliasing | **FXAA** |
 | Refresh | 60 Hz |
 | Console mode | Docked |
 
@@ -229,7 +229,9 @@ sharpness**, not an aggressive value. Raise sharpness only if the image is too s
 
 Anti-aliasing can reduce jagged edges or shimmer, but it does not fix every kind of grain. FXAA may
 hide some high-frequency shimmer at the cost of softness; SMAA preserves more detail but is a little
-heavier. A game's own temporal AA/reconstruction may also interact with Encore's post-process AA, so
+heavier. Encore R1 does not add a separate debanding pass: Eden has no reusable deband stage today,
+and an extra fullscreen shader is not enabled without PS5 performance evidence. A game's own temporal
+AA/reconstruction may also interact with Encore's post-process AA, so
 there is no universally best AA choice.
 
 Once stable and visually clean at 1080p/1x, try 1440p output. Treat 2160p and internal scales above

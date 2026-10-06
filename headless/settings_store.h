@@ -71,8 +71,8 @@ inline constexpr int kOutputHeight[] = {1080, 1440, 2160};
 // Nintendo preserves the physical-position mapping used by the original port.
 inline constexpr const char* kControllerLayoutKeys[] = {"playstation", "nintendo"};
 inline constexpr const char* kControllerLayoutLabels[] = {"PlayStation", "Nintendo"};
-inline constexpr const char* kPerformanceProfileKeys[] = {"recommended", "smooth", "performance"};
-inline constexpr const char* kPerformanceProfileLabels[] = {"Recommended", "Smooth", "Performance"};
+inline constexpr const char* kPerformanceProfileKeys[] = {"recommended", "smooth", "performance", "custom"};
+inline constexpr const char* kPerformanceProfileLabels[] = {"Recommended", "Smooth", "Performance", "Custom"};
 // Settings > Language: the system language games see, in launcher order. Each entry maps to Eden's
 // Settings::Language and to the Settings::Region consoles sold with that language have (indices in
 // Eden's enum order; headless/main.cpp checks them). Eden's older "Chinese" and "Taiwanese" codes
@@ -99,11 +99,11 @@ struct Preferences {
     GraphicsBackend backend = GraphicsBackend::Vulkan;
     int resolution = kNativeResolution;  // index into kResolutionKeys
     int upscaling_filter = 0;            // index into kUpscalingFilterKeys
-    int fsr_sharpness = 88;              // 0-100 UI sharpness; Eden stores the inverse 0-200 value
+    int fsr_sharpness = 50;              // 0-100 UI sharpness; Eden stores the inverse 0-200 value
     int anti_aliasing = 0;               // index into kAntiAliasingKeys
     int refresh = 0;                     // index into kRefreshKeys
     int output = 0;                      // index into kOutputKeys
-    int performance_profile = 0;         // 0 recommended, 1 smooth, 2 performance
+    int performance_profile = 0;         // 0 recommended, 1 smooth, 2 performance, 3 custom
     int controller_layout = 0;            // legacy setting; mapping below is authoritative
     ButtonMapping mapping = kDefaultMapping;
     bool vibration = true;

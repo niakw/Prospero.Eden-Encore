@@ -1,1 +1,4 @@
 * text=auto eol=lf
+
+# Unified diff files require single-space context lines; do not flag those as trailing whitespace.
+headless/backports/*.patch -whitespace

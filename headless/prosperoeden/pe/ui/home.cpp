@@ -19,22 +19,22 @@ namespace
 
 const Color kWhite{1.0f, 1.0f, 1.0f, 1.0f};
 
-constexpr Rect kHero{120.0f, 200.0f, 1680.0f, 480.0f};
+constexpr Rect kHero{92.0f, 188.0f, 1736.0f, 500.0f};
 // Header tabs, hero buttons and "view all" are as wide as their words need in the language shown;
 // these are their sizes in English and the edges they keep.
-constexpr float kNavRight = 1480.0f;
-constexpr float kNavWidth = 136.0f;
+constexpr float kNavRight = 1492.0f;
+constexpr float kNavWidth = 142.0f;
 constexpr float kButtonWidth = 272.0f;
 constexpr float kButtonWidest = 390.0f;
 constexpr float kViewAllWidth = 304.0f;
 
 Rect tile_rect(int index)
 {
-    return {120.0f + 424.0f * static_cast<float>(index), 760.0f, 400.0f, 144.0f};
+    return {92.0f + 430.0f * static_cast<float>(index), 772.0f, 410.0f, 164.0f};
 }
 
 // The four controllers, at the right of the hero beside its buttons.
-constexpr float kPadsRight = 1752.0f;
+constexpr float kPadsRight = 1768.0f;
 Rect pad_rect(int player)
 {
     return {kPadsRight - 354.0f + 94.0f * static_cast<float>(player), 506.0f, 72.0f, 50.0f};
@@ -243,19 +243,17 @@ void Launcher::draw_home(Canvas &c)
     // ---- header ----
     begin_band(0, -18.0f);
     if (textures_.brand() != 0)
-        list.rounded_image(textures_.brand(), {120.0f, 72.0f, 72.0f, 72.0f},
-                           {0.0f, 0.0f, 1.0f, 1.0f}, 16.0f, kWhite);
-    text(c, "EDEN ENCORE", 216.0f, baseline(72.0f, 44.0f, theme::kBrand), theme::kBrand,
-         theme::kText, Align::left, 3.0f);
-    text(c, fill(tr("PS5 13.60  /  ENCORE  /  {0}"), {version_}), 216.0f, baseline(120.0f, 28.0f, theme::kSmall),
-         theme::kSmall, theme::kMeta, Align::left, 1.0f);
+        list.rounded_image(textures_.brand(), {92.0f, 34.0f, 112.0f, 112.0f},
+                           {0.0f, 0.0f, 1.0f, 1.0f}, 22.0f, kWhite);
+    text(c, fill(tr("PS5 13.60  /  ENCORE  /  {0}"), {version_}), 230.0f,
+         baseline(84.0f, 34.0f, theme::kSmall), theme::kSmall, theme::kMeta, Align::left, 1.0f);
     static constexpr const char *kNav[] = {TR("Library"), TR("Settings"), TR("About")};
     Rect nav[3];
     float nav_right = kNavRight;
     for (int i = 2; i >= 0; --i)
     {
         const float width = std::max(kNavWidth, measure(tr(kNav[i]), theme::kText24) + 48.0f);
-        nav[i] = {nav_right - width, 80.0f, width, 64.0f};
+        nav[i] = {nav_right - width, 70.0f, width, 58.0f};
         nav_right -= width + 8.0f;
     }
     for (int i = 0; i < 3; ++i)
@@ -264,45 +262,45 @@ void Launcher::draw_home(Canvas &c)
         const float f = focus(1 + i);
         list.push_opacity(i == 0 && !ready ? 0.4f : 1.0f);
         plate(c, kNavPlate, r, f);
-        text(c, tr(kNav[i]), r.x + r.w * 0.5f, baseline(r.y, 60.0f, theme::kText24), theme::kText24,
+        text(c, tr(kNav[i]), r.x + r.w * 0.5f, baseline(r.y, 58.0f, theme::kText24), theme::kText24,
              gfx::mix(theme::kMuted, theme::kText, f), Align::center);
         list.pop_opacity();
     }
-    text(c, clock_, 1800.0f, baseline(92.0f, 40.0f, theme::kClock), theme::kClock,
+    text(c, clock_, 1828.0f, baseline(80.0f, 40.0f, theme::kClock), theme::kClock,
          theme::kCopy, Align::right);
-    list.rounded_rect({120.0f, 160.0f, 1680.0f, 1.0f}, 0.0f, theme::kText.with_alpha(0.12f));
+    list.rounded_rect({92.0f, 154.0f, 1736.0f, 1.0f}, 0.0f, theme::kText.with_alpha(0.12f));
     end_band();
 
     // ---- continue playing ----
     begin_band(1, 28.0f);
-    glass(c, kHero, 14.0f, theme::kGlass.with_alpha(0.60f), kWhite.with_alpha(0.125f));
-    cover(c, home_.last_cover, {168.0f, 272.0f, 336.0f, 336.0f}, 16.0f, 1.0f);
-    text(c, tr("CONTINUE PLAYING"), 560.0f, baseline(264.0f, 30.0f, theme::kSmall), theme::kSmall,
+    glass(c, kHero, 34.0f, theme::kGlass.with_alpha(0.68f), kWhite.with_alpha(0.15f), 1.15f);
+    cover(c, home_.last_cover, {136.0f, 246.0f, 392.0f, 392.0f}, 26.0f, 1.0f);
+    text(c, tr("CONTINUE PLAYING"), 580.0f, baseline(242.0f, 30.0f, theme::kSmall), theme::kSmall,
          theme::kLime, Align::left, 3.0f);
-    text_block(c, home_.last_file.empty() ? tr("Your next adventure") : home_.last_title, 560.0f,
-               baseline(312.0f, 56.0f, theme::kDisplay), theme::kDisplay, 56.0f, theme::kText,
-               1120.0f, 2);
+    text_block(c, home_.last_file.empty() ? tr("Your next adventure") : home_.last_title, 580.0f,
+               baseline(294.0f, 60.0f, theme::kDisplay), theme::kDisplay, 60.0f, theme::kText,
+               1160.0f, 2);
     notice(c, home_.last_file.empty() ? tr("Choose a game from your library.") : home_.last_caption,
-           560.0f, baseline(424.0f, 36.0f, theme::kText24), theme::kText24,
-           home_.last_caption_warning ? theme::kWarning : theme::kMeta, 1040.0f,
+           580.0f, baseline(420.0f, 36.0f, theme::kText24), theme::kText24,
+           home_.last_caption_warning ? theme::kWarning : theme::kMeta, 1120.0f,
            home_.last_caption_warning);
     // The line under it ends before the controllers' label.
     const float info_width =
-        kPadsRight - measure(tr("CONTROLLERS"), theme::kSmall, 3.0f) - 48.0f - 560.0f;
+        kPadsRight - measure(tr("CONTROLLERS"), theme::kSmall, 3.0f) - 48.0f - 580.0f;
     if (!home_.last_language.empty())
         text_shrink(c,
                     fill(tr("Add-ons: {0}  /  Language: {1}"),
                          {addons_line(home_.last_addons, home_.last_mods, home_.last_mods_on),
                           home_.last_language}),
-                    560.0f, baseline(462.0f, 30.0f, theme::kSmall), theme::kSmall,
+                    580.0f, baseline(464.0f, 30.0f, theme::kSmall), theme::kSmall,
                     Color::rgb(0xa9a5b8), info_width);
     const char *first = continue_ready ? tr("Launch game") : tr("Open library");
     const char *second = tr("Game details");
     const float button = std::clamp(
         std::max(measure(first, theme::kText24), measure(second, theme::kText24)) + 64.0f,
         kButtonWidth, kButtonWidest);
-    const Rect continue_rect{560.0f, 504.0f, button, 72.0f};
-    const Rect details_rect{560.0f + button + 16.0f, 504.0f, button, 72.0f};
+    const Rect continue_rect{580.0f, 526.0f, button, 72.0f};
+    const Rect details_rect{580.0f + button + 16.0f, 526.0f, button, 72.0f};
     const auto hero_button = [&](const Rect &r, const char *label, float f, bool enabled)
     {
         list.push_opacity(enabled ? 1.0f : 0.4f);
@@ -315,7 +313,7 @@ void Launcher::draw_home(Canvas &c)
     };
     hero_button(continue_rect, first, focus(0), ready);
     hero_button(details_rect, second, focus(4), continue_ready);
-    text(c, tr("Eden emulator for PlayStation 5"), 560.0f, baseline(616.0f, 30.0f, theme::kSmall),
+    text(c, tr("Eden emulator for PlayStation 5"), 580.0f, baseline(626.0f, 30.0f, theme::kSmall),
          theme::kSmall, theme::kFaint);
     draw_controllers(c);
     end_band();
@@ -324,29 +322,29 @@ void Launcher::draw_home(Canvas &c)
     begin_band(2, 28.0f);
     if (!home_.status.empty())
     {
-        const Rect panel{120.0f, 728.0f, 1680.0f, 152.0f};
+        const Rect panel{92.0f, 760.0f, 1736.0f, 176.0f};
         const Color accent = home_.launch_failed ? theme::kWarning : theme::kLime;
         glass(c, panel, 10.0f, theme::kPanel.with_alpha(0.72f), kWhite.with_alpha(0.08f), 0.6f);
         list.rounded_rect({panel.x, panel.y + 10.0f, 4.0f, panel.h - 20.0f}, 2.0f, accent);
-        notice_block(c, home_.status, 148.0f, baseline(752.0f, 36.0f, theme::kText24),
-                     theme::kText24, 36.0f, theme::kText, 1624.0f, 3, home_.launch_failed);
+        notice_block(c, home_.status, 124.0f, baseline(784.0f, 36.0f, theme::kText24),
+                     theme::kText24, 36.0f, theme::kText, 1660.0f, 3, home_.launch_failed);
     }
     else
     {
-        text(c, tr("RECENTLY PLAYED"), 120.0f, baseline(712.0f, 30.0f, theme::kSmall), theme::kSmall,
+        text(c, tr("RECENTLY PLAYED"), 92.0f, baseline(724.0f, 30.0f, theme::kSmall), theme::kSmall,
              Color::rgb(0xc5c1d2), Align::left, 3.0f);
         {
             const float f = focus(9);
             const float width =
                 std::max(kViewAllWidth, measure(tr("VIEW ALL GAMES"), theme::kSmall) + 48.0f);
-            const Rect r{1800.0f - width, 708.0f, width, 40.0f};
+            const Rect r{1828.0f - width, 720.0f, width, 40.0f};
             plate(c, kNavPlate, r, f);
             text(c, tr("VIEW ALL GAMES"), r.x + r.w - 24.0f, baseline(r.y, 40.0f, theme::kSmall),
                  theme::kSmall, gfx::mix(theme::kMuted, theme::kLime, f), Align::right);
         }
         if (home_.recents.empty())
-            text(c, tr("Games you launch will appear here."), 120.0f,
-                 baseline(784.0f, 36.0f, theme::kText24), theme::kText24, theme::kMuted);
+            text(c, tr("Games you launch will appear here."), 92.0f,
+                 baseline(806.0f, 36.0f, theme::kText24), theme::kText24, theme::kMuted);
         for (int i = 0; i < static_cast<int>(home_.recents.size()) && i < 4; ++i)
         {
             const Recent &recent = home_.recents[static_cast<std::size_t>(i)];
@@ -354,10 +352,10 @@ void Launcher::draw_home(Canvas &c)
             const float f = focus(5 + i);
             begin_lift(r, f, 0.03f);
             plate(c, kTilePlate, r, f);
-            cover(c, recent.cover, {r.x + 24.0f, r.y + 24.0f, 96.0f, 96.0f}, 10.0f, 0.5f);
-            text_block(c, recent.title, r.x + 144.0f, baseline(r.y + 40.0f, 32.0f, theme::kText24),
+            cover(c, recent.cover, {r.x + 18.0f, r.y + 18.0f, 128.0f, 128.0f}, 22.0f, 0.5f);
+            text_block(c, recent.title, r.x + 166.0f, baseline(r.y + 38.0f, 34.0f, theme::kText24),
                        theme::kText24, 32.0f, gfx::mix(theme::kBody, theme::kTitle, f),
-                       232.0f, 2);
+                       220.0f, 3);
             list.pop_transform();
         }
     }
@@ -365,12 +363,12 @@ void Launcher::draw_home(Canvas &c)
 
     // ---- footer ----
     begin_band(3, 0.0f);
-    list.rounded_rect({120.0f, 952.0f, 1680.0f, 1.0f}, 0.0f, theme::kText.with_alpha(0.10f));
+    list.rounded_rect({92.0f, 964.0f, 1736.0f, 1.0f}, 0.0f, theme::kText.with_alpha(0.10f));
     static constexpr Hint kHints[] = {
         {Pad::cross, TR("Select")}, {Pad::triangle, TR("Details")}, {Pad::dpad, TR("Navigate")}};
-    const float status_width = text(c, home_.system_status, 1800.0f, 989.0f, theme::kSmall,
+    const float status_width = text(c, home_.system_status, 1828.0f, 1001.0f, theme::kSmall,
                                     theme::kMeta, Align::right);
-    draw_hints(c, kHints, 3, 120.0f, 982.0f, theme::kMuted, 1680.0f - status_width - 48.0f);
+    draw_hints(c, kHints, 3, 92.0f, 994.0f, theme::kMuted, 1736.0f - status_width - 48.0f);
     end_band();
 }
 

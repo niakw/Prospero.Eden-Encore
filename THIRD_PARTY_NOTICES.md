@@ -27,7 +27,10 @@ builds on the following projects, each under its own license.
 - **[ps5-vulkan](https://github.com/mpereiraesaa/ps5-vulkan)** by mpereiraesaa,
   an experimental Vulkan graphics and compute API for native PS5 homebrew.
 - **[ps5-opengl](https://github.com/blackbearreloaded/ps5-opengl)**,
-  GPL-3.0-or-later, which includes Mesa components under their own licenses.
+  GPL-3.0-or-later, which includes Mesa components under their own licenses. Encore R1 pins
+  source commit **`ad2807d41cef2681882a9ee0d20808779f74b7cd`** in `tools/deps.json` and rebuilds
+  its OpenGL 4.6 SDK with the upstream pinned/hash-verified inputs. That snapshot contains SDK
+  1.0.1 plus the reviewed `217da45` constant-buffer/alignment and `67c873f` scanout-flush fixes.
   `third_party/app_heap.c` comes from it.
 
 ## Platform and interface

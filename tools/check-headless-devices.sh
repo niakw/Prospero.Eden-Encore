@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 set -euo pipefail
-root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 scratch=$(cat "$root/.local/headless-cache")
-[[ "$(cat "$scratch/owner")" == "$root" ]]
+[[ "$(cd -- "$(cat "$scratch/owner")" && pwd -P)" == "$root" ]]
 # A fresh checkout has no results folder yet. The check runs from the build cache: the run's
 # folder keeps what it wrote and the executable's hash, not a copy of the executable.
 mkdir -p "$root/results"

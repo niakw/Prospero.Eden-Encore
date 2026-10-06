@@ -10,14 +10,27 @@ import hashlib
 import json
 import re
 import subprocess
+import shutil
 
 root = Path(__file__).resolve().parents[1]
 source = root.parent/'mihawk-vulkan-review/.deps/native/radv-release/lib/libvulkan_radeon.ps5.a'
 output = root/'build/radv-isolated'
 output.mkdir(parents=True, exist_ok=True)
 
+def tool(*names):
+    for name in names:
+        found = shutil.which(name)
+        if found:
+            return found
+    raise RuntimeError(f'missing required tool: {" / ".join(names)}')
+
+nm = tool('llvm-nm-18', 'llvm-nm', 'nm')
+objcopy = tool('llvm-objcopy-18', 'llvm-objcopy', 'objcopy')
+ranlib = tool('llvm-ranlib-18', 'llvm-ranlib', 'ranlib')
+cxxfilt = tool('llvm-cxxfilt-18', 'llvm-cxxfilt', 'c++filt')
+
 def symbols(path, defined=False):
-    cmd = ['nm', '-g', '--format=posix']
+    cmd = [nm, '-g', '--format=posix']
     if defined:
         cmd.append('--defined-only')
     result = subprocess.run(cmd+[str(path)], check=True, capture_output=True, text=True)
@@ -29,7 +42,7 @@ def digest(path):
         return hashlib.file_digest(f, 'sha256').hexdigest()
 
 defined = sorted(symbols(source, True))
-demangled = subprocess.run(['c++filt'], input='\n'.join(defined)+'\n',
+demangled = subprocess.run([cxxfilt], input='\n'.join(defined)+'\n',
                            check=True, capture_output=True, text=True).stdout.splitlines()
 assert len(defined) == len(demangled)
 public = {s for s in defined if re.match(r'vk[A-Z]|vk_icd', s)} | {'radv_GetInstanceProcAddr'}
@@ -49,8 +62,8 @@ mapping = output/'symbols.map'
 mapping.write_text(''.join(f'{s} eden_radv_private_{s}\n' for s in private))
 before = digest(source)
 target = output/source.name
-subprocess.run(['objcopy', '--redefine-syms='+str(mapping), str(source), str(target)], check=True)
-subprocess.run(['ranlib', str(target)], check=True)
+subprocess.run([objcopy, '--redefine-syms='+str(mapping), str(source), str(target)], check=True)
+subprocess.run([ranlib, str(target)], check=True)
 assert digest(source) == before, 'Input RADV archive changed'
 after_symbols = symbols(target)
 assert not set(private).intersection(after_symbols), 'Unrenamed implementation symbol'

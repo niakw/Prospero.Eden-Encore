@@ -7,7 +7,7 @@
 # Compares pe::gfx::bidi with ICU on generated lines and on every translation of the catalogs.
 
 set -euo pipefail
-root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 build=${PROSPEROEDEN_LAUNCHER_BUILD:-"$HOME/.cache/prosperoeden-launcher"}
 mkdir -p "$build/text-check"
 "${HOST_CXX:-c++}" -std=c++20 -O2 -Wall -Wextra -I"$root/headless/prosperoeden" \

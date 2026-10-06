@@ -158,7 +158,15 @@ def fetch_git(item):
             shutil.copyfile(cached, target)
     if 'setup' in item and not (path / item['setup_creates']).exists():
         print(f'deps: setting up {item["name"]}: {" ".join(item["setup"])}', flush=True)
-        subprocess.run(item['setup'], cwd=path, check=True)
+        env = None
+        if sys.platform == 'darwin' and item['name'] == 'boilerplate':
+            # zlib's configure selects Apple's `libtool -o` archive convention on Darwin.
+            # The pinned bootstrap deliberately replaces libtool with llvm-ar; make must
+            # therefore use llvm-ar's `rcs` operation instead of the generated `-o` flag.
+            env = os.environ.copy()
+            env['ARFLAGS'] = 'rcs'
+            env['MAKEFLAGS'] = '-e'
+        subprocess.run(item['setup'], cwd=path, check=True, env=env)
 
 
 def fetch(item):
@@ -201,6 +209,16 @@ def revision(path):
         return None
 
 
+def tracked_changes(path):
+    """Tracked/staged changes in a pinned checkout; generated/untracked build outputs are allowed."""
+    try:
+        return subprocess.check_output(
+            ['git', 'status', '--porcelain', '--untracked-files=no'], cwd=path, text=True,
+            stderr=subprocess.DEVNULL).strip()
+    except (subprocess.CalledProcessError, FileNotFoundError, NotADirectoryError):
+        return ''
+
+
 def status():
     width = max(len(item['name']) for item in MANIFEST['items'])
     mismatched = 0
@@ -212,8 +230,12 @@ def status():
                 state = 'missing'
             else:
                 head = revision(path)
-                if head == item['commit']:
-                    state = 'ok (pinned commit)'
+                dirty = tracked_changes(path)
+                if head == item['commit'] and not dirty:
+                    state = 'ok (pinned commit, clean)'
+                elif head == item['commit']:
+                    mismatched += 1
+                    state = 'pinned commit; tracked changes present'
                 else:
                     mismatched += 1
                     state = f'present at {head[:12] if head else "no git checkout"}, pinned {item["commit"][:12]}'
@@ -223,7 +245,7 @@ def status():
             state = 'ok' if present(item) else 'missing'
         print(f'{item["name"]:<{width}}  {state:<40}  {where}')
     if mismatched:
-        print(f'\n{mismatched} checkout(s) differ from their pin; the build uses them as they are.')
+        print(f'\n{mismatched} checkout(s) differ from their pin or have tracked changes; release verification will fail.')
 
 
 def verify():
@@ -239,13 +261,17 @@ def verify():
                 problems.append(
                     f'{item["name"]}: at {head[:12] if head else "no git checkout"}, '
                     f'pinned {item["commit"][:12]}')
+            dirty = tracked_changes(location(item))
+            if dirty:
+                summary = '; '.join(dirty.splitlines()[:4])
+                problems.append(f'{item["name"]}: tracked checkout changes: {summary}')
             if 'setup' in item and not (location(item) / item['setup_creates']).exists():
                 problems.append(f'{item["name"]}: setup output missing: {item["setup_creates"]}')
     if problems:
         for problem in problems:
             print('deps:', problem, file=sys.stderr)
         fail('release dependency verification failed')
-    print('deps: all release inputs match their pins')
+    print('deps: all release inputs match their pins and tracked git files are clean')
 
 
 def clean():

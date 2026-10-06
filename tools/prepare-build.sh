@@ -5,8 +5,9 @@
 # SDK, FFmpeg for the PS5, the native packaging tool, the runtime libc.prx, the libSceAgcDriver
 # link stub and the isolated RADV driver. Each step is skipped when its result already exists.
 set -euo pipefail
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
+source "$root/tools/host-env.sh"
+eden_host_env "$root"
 cd "$root"
 step() { echo "== $*"; }
 
@@ -19,7 +20,7 @@ if [[ ! -f .local/headless-cache ]] || [[ ! -d "$(cat .local/headless-cache)" ]]
     printf '%s\n' "$scratch" > .local/headless-cache
 fi
 scratch=$(cat .local/headless-cache)
-[[ "$(cat "$scratch/owner")" == "$root" ]] || { echo "Build cache $scratch belongs to another checkout" >&2; exit 1; }
+[[ "$(cd -- "$(cat "$scratch/owner")" && pwd -P)" == "$root" ]] || { echo "Build cache $scratch belongs to another checkout" >&2; exit 1; }
 
 eden="$scratch/source"
 if [[ ! -f $eden/CMakeLists.txt ]]; then
@@ -29,6 +30,9 @@ if [[ ! -f $eden/CMakeLists.txt ]]; then
 fi
 printf '%s\n' '5f142c7926d0c7fcbbd0ce30794d72f638a43b2a' > "$eden/GIT-COMMIT"
 printf '%s\n' 'ps5-headless' > "$eden/GIT-REFSPEC"
+step "Audited Eden backports (GPU, FW23/services, runtime/HID)"
+bash tools/apply-eden-backports.sh "$eden"
+
 # Optional: seed Eden's package cache from another checkout's (CI reuses a development cache).
 if [[ -n ${EDEN_CPM_CACHE_SEED:-} && ! -d $eden/.cache/cpm ]]; then
     step "Eden package cache from $EDEN_CPM_CACHE_SEED"
@@ -62,6 +66,8 @@ if [[ ! -f ../ps5-native-app-boilerplate/runtime/libc.prx ]]; then
 fi
 step "libSceAgcDriver link stub"
 bash tools/build-agc-driver-stub.sh
+step "PS5 OpenGL audited SDK (ad2807d)"
+bash tools/build-opengl-sdk.sh
 # Reuse RADV only when both its Mesa revision and this fork's display adaptation match.
 # A stale cached archive can link successfully while carrying different weak entrypoints/behaviour.
 radv_release=../mihawk-vulkan-review/.deps/native/radv-release

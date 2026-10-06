@@ -457,6 +457,38 @@ void CommitSparsePage(std::uintptr_t page) noexcept {
     range->owned[slot].store(true, std::memory_order_release);
 }
 
+std::size_t SparseCommitSpan() noexcept {
+    return SparseSlot;
+}
+
+// A complete zeroed sparse slot no longer needs private direct memory. Replace it with the
+// process-wide read-only zero block again, then release its backing. SparseLargeVector calls this
+// only after its committed-page bitmap says the whole 2 MiB slot is empty.
+void DecommitSparsePage(std::uintptr_t page) noexcept {
+    SparseRange* range = SparseRangeOf(page);
+    if (range == nullptr) return; // Dense fallback: ZeroRegion already wrote the zeroes.
+    const std::lock_guard lock{sparse_mutex};
+    range = SparseRangeOf(page);
+    if (range == nullptr) return;
+    const auto begin = range->begin.load(std::memory_order_relaxed);
+    const std::size_t slot = (page - begin) / SparseSlot;
+    if (!range->owned[slot].load(std::memory_order_relaxed)) return;
+    const std::uintptr_t at = begin + slot * SparseSlot;
+#ifdef PS5_NATIVE
+    const std::int64_t physical = range->physical[slot];
+    // MAP_FIXED swaps the mapping at the same VA. Readers therefore see either the old private
+    // block or the shared zero block, never an unmapped hole.
+    if (!MapSlot(at, PROT_READ, zero_block)) std::abort();
+    if (sceKernelReleaseDirectMemory(physical, SparseSlot) != 0) std::abort();
+#else
+    if (madvise(reinterpret_cast<void*>(at), SparseSlot, MADV_DONTNEED) != 0) std::abort();
+    if (mprotect(reinterpret_cast<void*>(at), SparseSlot, PROT_READ) != 0) std::abort();
+#endif
+    range->physical[slot] = -1;
+    range->owned[slot].store(false, std::memory_order_release);
+    sparse_committed.fetch_sub(SparseSlot, std::memory_order_relaxed);
+}
+
 // Address space the sparse tables span, and the memory they hold (for the log).
 void SparseUsage(std::size_t* reserved, std::size_t* committed) noexcept {
     *reserved = sparse_reserved.load(std::memory_order_relaxed);

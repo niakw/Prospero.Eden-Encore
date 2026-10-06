@@ -6,13 +6,14 @@ if(NOT EDEN_VULKAN_DRIVER MATCHES "^(CUSTOM|RADV)$")
 endif()
 set(PORT_ROOT "${CMAKE_CURRENT_LIST_DIR}/..")
 set(PORT_BUILD_DIR "${CMAKE_BINARY_DIR}/headless")
-# One compiled-code namespace per guest process for the A64 JITs (headless/dynarmic/jit_group.h).
+# Stability defaults: use Dynarmic's ordinary per-core JIT in production. The cross-core
+# JitGroup and bounded successor compile batching are Encore experiments and stay compile-time
+# off unless a development build explicitly opts in.
+option(EDEN_SHARED_JIT "Enable the experimental cross-core A64 JIT" OFF)
+option(EDEN_JIT_COMPILE_BATCH "Compile bounded A64 successor chains on a cache miss" OFF)
 include("${CMAKE_CURRENT_LIST_DIR}/dynarmic/shared-jit.cmake")
 # Register-allocator bookkeeping visits only the host locations in use (compile time).
 include("${CMAKE_CURRENT_LIST_DIR}/dynarmic/reg_alloc.cmake")
-if(PS5_NATIVE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    set(EDEN_SHARED_JIT ON)
-endif()
 file(MAKE_DIRECTORY "${PORT_BUILD_DIR}")
 file(MAKE_DIRECTORY "${PORT_BUILD_DIR}/recovery/common")
 file(REMOVE "${PORT_BUILD_DIR}/include/common/slot_vector.h")
@@ -67,8 +68,15 @@ if(PS5_NATIVE)
     file(READ "${COMPILER_RT}/emutls.c" emutls)
     string(REPLACE "#define EMUTLS_SKIP_DESTRUCTOR_ROUNDS 0" "#define EMUTLS_SKIP_DESTRUCTOR_ROUNDS 1" emutls "${emutls}")
     write_derived("${PORT_BUILD_DIR}/emutls.c" "${emutls}")
-    target_sources(common PRIVATE "${PORT_BUILD_DIR}/emutls.c")
+    target_sources(common PRIVATE "${PORT_BUILD_DIR}/emutls.c" "${COMPILER_RT}/cpu_model_x86.c")
     target_include_directories(common PRIVATE "${COMPILER_RT}")
+    # RADV's AMD addrlib uses __builtin_cpu_supports(), whose x86 runtime
+    # state (__cpu_model/__cpu_features2) lives in compiler-rt. Linux CI gets
+    # that from Clang's builtins archive; macOS cross-builds provide the same
+    # pinned LLVM 18.1.8 implementation directly so the PS5 binary is identical
+    # in semantics and does not depend on a host-Linux runtime archive.
+    set_source_files_properties("${COMPILER_RT}/cpu_model_x86.c" PROPERTIES
+        COMPILE_OPTIONS "-Wno-unused-function;-Wno-missing-declarations")
 
     # Switch 22.0+ may store compressed NSO segments as ZBIC, a Nintendo
     # zstd variant. The pinned Eden source predates upstream #4482.
@@ -115,7 +123,41 @@ eden_sparse_replace("mprotect(reinterpret_cast<void*>(page), HostPageSize, PROT_
 # the first entries of the unmapped range as they were.
 eden_sparse_replace("if (IsCommittedPage(start / sizeof(T))) {" "if (IsCommittedPage(start)) {" 1)
 eden_sparse_replace("void FreeMemoryPages(void* base, std::size_t size) noexcept;"
-    "void FreeMemoryPages(void* base, std::size_t size) noexcept;\nvoid* AllocateSparsePages(std::size_t size) noexcept;\nvoid FreeSparsePages(void* base, std::size_t size) noexcept;\nvoid CommitSparsePage(std::uintptr_t page) noexcept;" 1)
+    "void FreeMemoryPages(void* base, std::size_t size) noexcept;\nvoid* AllocateSparsePages(std::size_t size) noexcept;\nvoid FreeSparsePages(void* base, std::size_t size) noexcept;\nvoid CommitSparsePage(std::uintptr_t page) noexcept;\nvoid DecommitSparsePage(std::uintptr_t page) noexcept;\nstd::size_t SparseCommitSpan() noexcept;" 1)
+# Upstream #4471 decommits complete host pages. Encore's PS5 sparse backing is coarser (2 MiB),
+# so clear the host-page bit first and release the private slot only when no committed page in
+# that slot remains. Partial first/last host pages are still zeroed in place.
+set(sparse_zero_loop [=[            std::memset(reinterpret_cast<void*>(page), 0, (std::min)( HostPageSize, end - page));]=])
+set(sparse_zero_release [=[            const auto index = (page - reinterpret_cast<u64>(base_ptr)) / sizeof(T);
+            if (end - page >= HostPageSize) {
+                DecommitPage(index);
+            } else {
+                std::memset(reinterpret_cast<void*>(page), 0, end - page);
+            }]=])
+eden_sparse_replace("${sparse_zero_loop}" "${sparse_zero_release}" 1)
+set(sparse_private_anchor [=[    constexpr void CommitPage(std::size_t index) noexcept {
+        auto page_index = (index * sizeof(T)) >> HostPageBits;]=])
+set(sparse_private_replacement [=[    void DecommitPage(std::size_t index) noexcept {
+        const auto page_index = (index * sizeof(T)) >> HostPageBits;
+        committed_pages[page_index >> 6].fetch_and(~(1ULL << (page_index & 63)), std::memory_order_acq_rel);
+
+        const std::size_t span = SparseCommitSpan();
+        const auto vector_base = reinterpret_cast<std::uintptr_t>(base_ptr);
+        const auto page_address = reinterpret_cast<std::uintptr_t>(base_ptr + index) & HostPageMask;
+        const std::size_t slot_offset = ((page_address - vector_base) / span) * span;
+        const std::size_t first_page = slot_offset / HostPageSize;
+        const std::size_t last_page = (std::min)(first_page + span / HostPageSize,
+                                                  (alloc_size + HostPageSize - 1) / HostPageSize);
+        for (std::size_t candidate = first_page; candidate < last_page; ++candidate) {
+            const auto bits = committed_pages[candidate >> 6].load(std::memory_order_acquire);
+            if ((bits >> (candidate & 63)) & 1) return;
+        }
+        DecommitSparsePage(vector_base + slot_offset);
+    }
+
+    constexpr void CommitPage(std::size_t index) noexcept {
+        auto page_index = (index * sizeof(T)) >> HostPageBits;]=])
+eden_sparse_replace("${sparse_private_anchor}" "${sparse_private_replacement}" 1)
 write_derived("${PORT_BUILD_DIR}/sparse/common/sparse_large_vector.h" "${sparse_header}")
 
 # An abandoned fiber stack is not unwound. Empty the by-value weak reference
@@ -211,11 +253,15 @@ foreach(bits 32 64)
     file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/dynarmic/backend/x64/a${bits}_emit_x64.cpp" emitter)
     if(bits EQUAL 64)
         file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/dynarmic/backend/x64/a64_emit_x64.h" emitter_header)
-        string(REPLACE "Emit(IR::Block& block) noexcept" "Emit(IR::Block& block, bool publish = true) noexcept" emitter_header "${emitter_header}")
-        eden_shared_jit_emitter_header()
+        if(EDEN_SHARED_JIT OR EDEN_JIT_COMPILE_BATCH)
+            string(REPLACE "Emit(IR::Block& block) noexcept" "Emit(IR::Block& block, bool publish = true) noexcept" emitter_header "${emitter_header}")
+            string(REPLACE "A64EmitX64::Emit(IR::Block& block) noexcept" "A64EmitX64::Emit(IR::Block& block, bool publish) noexcept" emitter "${emitter}")
+            string(REPLACE "    code.DisableWriting();\n    shared_labels.clear();" "    if (publish) code.DisableWriting();\n    shared_labels.clear();" emitter "${emitter}")
+        endif()
+        if(EDEN_SHARED_JIT)
+            eden_shared_jit_emitter_header()
+        endif()
         write_derived("${PORT_BUILD_DIR}/include/dynarmic/backend/x64/a64_emit_x64.h" "${emitter_header}")
-        string(REPLACE "A64EmitX64::Emit(IR::Block& block) noexcept" "A64EmitX64::Emit(IR::Block& block, bool publish) noexcept" emitter "${emitter}")
-        string(REPLACE "    code.DisableWriting();\n    shared_labels.clear();" "    if (publish) code.DisableWriting();\n    shared_labels.clear();" emitter "${emitter}")
     endif()
     set(lookup_transitions "        code.DisableWriting();\n        (*fast_dispatch_table_lookup)(location.Value()) = {};\n        code.EnableWriting();")
     string(FIND "${emitter}" "${lookup_transitions}" lookup_offset)
@@ -224,7 +270,7 @@ foreach(bits 32 64)
     endif()
     string(REPLACE "${lookup_transitions}"
         "        // Prelude occupies separate RX pages throughout guest-code patching.\n        (*fast_dispatch_table_lookup)(location.Value()) = {};" emitter "${emitter}")
-    if(bits EQUAL 64)
+    if(bits EQUAL 64 AND EDEN_SHARED_JIT)
         eden_shared_jit_emitter()
     endif()
     write_derived("${PORT_BUILD_DIR}/a${bits}_emit_x64.cpp" "${emitter}")
@@ -491,7 +537,7 @@ endif()
 # Diagnostics record actual automatic cache evacuation, not explicit clears.
     set(jit_interface "${PROJECT_SOURCE_DIR}/src/dynarmic/src/dynarmic/backend/x64/a64_interface.cpp")
     file(READ "${jit_interface}" jit_source)
-    if(PS5_NATIVE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    if(EDEN_JIT_COMPILE_BATCH AND (PS5_NATIVE OR CMAKE_SYSTEM_NAME STREQUAL "Linux"))
         set(compile_begin "        const auto get_code = [this](u64 vaddr) { return conf.callbacks->MemoryReadCode(vaddr); };")
         set(compile_end "        return emitter.Emit(ir_block).entrypoint;")
         string(FIND "${jit_source}" "${compile_begin}" begin)
@@ -528,14 +574,16 @@ endif()
             message(FATAL_ERROR "Pinned JIT block lookup changed.")
         endif()
         string(REPLACE "${compile_site}" "${compile_site}        struct EdenCompileTimer {\n            unsigned core;\n            std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();\n            ~EdenCompileTimer() {\n                if (eden_jit_compile)\n                    eden_jit_compile(core, static_cast<unsigned long long>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count()));\n            }\n        } eden_compile_timer{unsigned(conf.processor_id)};\n" jit_source "${jit_source}")
-        # Development: the compile phases of every block (eden_jit_phases).
-        set(phase_old "            A64::Translate(ir_block, arch_descriptor, get_code, {conf.define_unpredictable_behaviour, conf.wall_clock_cntpct});\n            Optimization::Optimize(ir_block, conf, polyfill_options);\n            const auto entrypoint = emitter.Emit(ir_block, false).entrypoint;")
-        string(FIND "${jit_source}" "${phase_old}" phase_at)
-        if(phase_at LESS 0)
-            message(FATAL_ERROR "Pinned JIT compile batch changed.")
+        if(EDEN_JIT_COMPILE_BATCH)
+            # Development: the compile phases of every block (eden_jit_phases).
+            set(phase_old "            A64::Translate(ir_block, arch_descriptor, get_code, {conf.define_unpredictable_behaviour, conf.wall_clock_cntpct});\n            Optimization::Optimize(ir_block, conf, polyfill_options);\n            const auto entrypoint = emitter.Emit(ir_block, false).entrypoint;")
+            string(FIND "${jit_source}" "${phase_old}" phase_at)
+            if(phase_at LESS 0)
+                message(FATAL_ERROR "Pinned JIT compile batch changed.")
+            endif()
+            string(REPLACE "${phase_old}" "            const auto eden_t0 = std::chrono::steady_clock::now();\n            A64::Translate(ir_block, arch_descriptor, get_code, {conf.define_unpredictable_behaviour, conf.wall_clock_cntpct});\n            const auto eden_t1 = std::chrono::steady_clock::now();\n            Optimization::Optimize(ir_block, conf, polyfill_options);\n            const auto eden_t2 = std::chrono::steady_clock::now();\n            const auto entrypoint = emitter.Emit(ir_block, false).entrypoint;\n            if (eden_jit_phases) {\n                const auto eden_ns = [](auto a, auto b) { return static_cast<unsigned long long>(std::chrono::duration_cast<std::chrono::nanoseconds>(b - a).count()); };\n                eden_jit_phases(unsigned(conf.processor_id), eden_ns(eden_t0, eden_t1), eden_ns(eden_t1, eden_t2), eden_ns(eden_t2, std::chrono::steady_clock::now()), descriptor.Value());\n            }" jit_source "${jit_source}")
+            string(PREPEND jit_source "extern \"C\" void eden_jit_phases(unsigned core, unsigned long long translate, unsigned long long optimize, unsigned long long emit, unsigned long long location) __attribute__((weak));\n")
         endif()
-        string(REPLACE "${phase_old}" "            const auto eden_t0 = std::chrono::steady_clock::now();\n            A64::Translate(ir_block, arch_descriptor, get_code, {conf.define_unpredictable_behaviour, conf.wall_clock_cntpct});\n            const auto eden_t1 = std::chrono::steady_clock::now();\n            Optimization::Optimize(ir_block, conf, polyfill_options);\n            const auto eden_t2 = std::chrono::steady_clock::now();\n            const auto entrypoint = emitter.Emit(ir_block, false).entrypoint;\n            if (eden_jit_phases) {\n                const auto eden_ns = [](auto a, auto b) { return static_cast<unsigned long long>(std::chrono::duration_cast<std::chrono::nanoseconds>(b - a).count()); };\n                eden_jit_phases(unsigned(conf.processor_id), eden_ns(eden_t0, eden_t1), eden_ns(eden_t1, eden_t2), eden_ns(eden_t2, std::chrono::steady_clock::now()), descriptor.Value());\n            }" jit_source "${jit_source}")
-        string(PREPEND jit_source "extern \"C\" void eden_jit_phases(unsigned core, unsigned long long translate, unsigned long long optimize, unsigned long long emit, unsigned long long location) __attribute__((weak));\n")
     endif()
     if(EDEN_SHARED_JIT)
         eden_shared_jit_interface()
@@ -2132,6 +2180,7 @@ else()
     add_executable(eden-memory-check "${EDEN_PORT_DIR}/memory_check.cpp")
     target_include_directories(eden-memory-check PRIVATE "${PROJECT_SOURCE_DIR}/src")
     target_link_libraries(eden-memory-check PRIVATE dynarmic common)
+    target_compile_definitions(eden-memory-check PRIVATE EDEN_SHARED_JIT_AVAILABLE=$<BOOL:${EDEN_SHARED_JIT}>)
     target_compile_options(eden-scalar-check PRIVATE -fno-rtti)
     add_executable(eden-ryujinx-check "${EDEN_PORT_DIR}/ryujinx_check.cpp")
     add_executable(eden-mods-check "${EDEN_PORT_DIR}/mods_check.cpp")
@@ -2147,6 +2196,9 @@ else()
     target_compile_options(eden-devices-check PRIVATE -fno-rtti)
 endif()
 target_include_directories(eden-headless PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_compile_definitions(eden-headless PRIVATE
+    EDEN_SHARED_JIT_AVAILABLE=$<BOOL:${EDEN_SHARED_JIT}>
+    EDEN_JIT_COMPILE_BATCH_AVAILABLE=$<BOOL:${EDEN_JIT_COMPILE_BATCH}>)
 target_link_libraries(eden-headless PRIVATE core eden-pad)
 add_library(eden-metadata STATIC "${EDEN_PORT_DIR}/metadata_bridge.cpp")
 target_include_directories(eden-metadata PUBLIC "${EDEN_PORT_DIR}" PRIVATE "${PROJECT_SOURCE_DIR}/src")
@@ -2214,18 +2266,23 @@ if(EDEN_PS5_OPENGL)
     if(NOT PS5_NATIVE OR NOT ENABLE_OPENGL)
         message(FATAL_ERROR "PS5 graphics requires the native OpenGL build")
     endif()
-    # The pinned PS5 OpenGL 4.6 SDK release (tools/deps.json, make deps).
-    set(gl46 "${PORT_ROOT}/.deps/ps5-opengl-sdk-1.0.0/sdk")
-    set(gl46_expected "d0c5accb58e07f1359fecfd9e4313df08acb86af71fb80052da3e9f06203fdc8")
-    if(NOT EXISTS "${gl46}/lib/libps5_opengl_core33.a")
-        message(FATAL_ERROR "Missing the PS5 OpenGL SDK in ${gl46}; run make deps")
+    # Audited PS5 OpenGL source snapshot. It includes SDK 1.0.1 plus the reviewed post-release
+    # constant-buffer/alignment and scanout-flush fixes; tools/build-opengl-sdk.sh verifies its
+    # source commit and installed manifest before CMake sees it.
+    set(gl46 "${PORT_ROOT}/.local/ps5-opengl-sdk-ad2807d")
+    set(gl46_commit "ad2807d41cef2681882a9ee0d20808779f74b7cd")
+    if(NOT EXISTS "${gl46}/lib/libps5_opengl_core33.a" OR NOT EXISTS "${gl46}/manifest.sha256" OR
+       NOT EXISTS "${gl46}/ENCORE_SOURCE_COMMIT")
+        message(FATAL_ERROR "Missing audited PS5 OpenGL SDK in ${gl46}; run make prepare")
     endif()
-    file(SHA256 "${gl46}/lib/libps5_opengl_core33.a" gl46_hash)
+    file(READ "${gl46}/ENCORE_SOURCE_COMMIT" gl46_built_commit)
+    string(STRIP "${gl46_built_commit}" gl46_built_commit)
+    if(NOT gl46_built_commit STREQUAL gl46_commit)
+        message(FATAL_ERROR "Frozen OpenGL source commit changed: ${gl46_built_commit}")
+    endif()
+    file(SHA256 "${gl46}/manifest.sha256" gl46_manifest_hash)
     if(EDEN_DEV_PROFILE)
-        target_compile_definitions(eden-headless PRIVATE EDEN_DEV_GL_VERSION="${gl46_hash}-sdk-1.0.0")
-    endif()
-    if(NOT gl46_hash STREQUAL gl46_expected)
-        message(FATAL_ERROR "Frozen OpenGL 4.6 runtime changed")
+        target_compile_definitions(eden-headless PRIVATE EDEN_DEV_GL_VERSION="${gl46_commit}-${gl46_manifest_hash}")
     endif()
     set(PS5OpenGL_DIR "${gl46}/lib/cmake/PS5OpenGL" CACHE PATH "Frozen Eden graphics SDK" FORCE)
     find_package(PS5OpenGL CONFIG REQUIRED PATHS "${gl46}/lib/cmake/PS5OpenGL" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)

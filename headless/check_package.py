@@ -21,14 +21,29 @@ BASE_REQUIRED = {'eboot.bin', 'core-homebrew.nro', 'sce_module/libc.prx',
 REQUIRED = set(BASE_REQUIRED)
 REQUIRED.update(p.relative_to(APP).as_posix() for p in (APP / 'ui').rglob('*') if p.is_file())
 RECEIPT = ROOT / 'HEADLESS_CANDIDATE.json'
-# The pinned OpenGL SDK release (tools/deps.json): digest of its manifest.sha256.
-GL_SDK_MANIFEST_SHA256 = 'f4b91f672be037fbac3f82494f1225deaf4c227a03f37ac3ffa56abb213b943f'
+GL_SDK_SOURCE_COMMIT = 'ad2807d41cef2681882a9ee0d20808779f74b7cd'
 
 
 def digest(path):
     with path.open('rb') as stream:
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
+
+
+
+def verified_opengl_sdk_files():
+    sdk = ROOT / '.local/ps5-opengl-sdk-ad2807d'
+    assert (sdk / 'ENCORE_SOURCE_COMMIT').read_text().strip() == GL_SDK_SOURCE_COMMIT
+    subprocess.run(['sha256sum', '--check', '--strict', 'manifest.sha256'], cwd=sdk, check=True,
+                   stdout=subprocess.DEVNULL)
+    manifest = sdk / 'manifest.sha256'
+    files = [manifest, sdk / 'ENCORE_SOURCE_COMMIT', sdk / 'ENCORE_AUDIT_FIXES']
+    for line in manifest.read_text().splitlines():
+        expected, name = line.split('  ', 1)
+        path = sdk / name
+        assert digest(path) == expected, name
+        files.append(path)
+    return files
 
 def check():
     frontend = json.loads((OUT / 'frontend.json').read_text())
@@ -57,6 +72,7 @@ def check():
     expected = ['libSceAudioOut.sprx', 'libSceLibcInternal.sprx', 'libSceNet.sprx',
                 'libScePad.sprx', 'libSceUserService.sprx', 'libkernel.sprx']
     if json.loads((OUT / 'frontend.json').read_text())['renderer'] == 'opengl-4.6-compatibility':
+        verified_opengl_sdk_files()
         assert b'[ps5-batch-summary] config gpu-present=1 multidraw=1 deferred=1 ' in (OUT / 'llvm-pie.elf').read_bytes(), 'SDK batching disabled or missing compiled receipt'
         expected += ['libSceAgc.prx', 'libSceAgcDriver.prx', 'libSceSystemService.sprx',
                      'libSceVideoOut.sprx']
@@ -82,21 +98,14 @@ if __name__ == '__main__':
                         for p in (ROOT / folder).rglob('*') if p.is_file() and '__pycache__' not in p.parts)
         paths += [ROOT / p for p in ('tools/load_alignment.py', 'third_party/ps5_pad.hpp',
             'third_party/native_audio.hpp', 'third_party/app_heap.c',
-            '../ps5-opengl/tools/Assert-Ps5ForegroundIdle.ps1',
+            '../ps5-opengl-review/tools/Assert-Ps5ForegroundIdle.ps1',
             '../../docs/ps5-homebrew-dev-protocol/scripts/send-controller.sh',
             '../../docs/ps5-homebrew-dev-protocol/scripts/controllers/launch.c',
             '../../docs/ps5-homebrew-dev-protocol/scripts/controllers/close.c')
             if not p.startswith('../') or (ROOT / p).exists()]  # console tooling of a development layout
         frontend = json.loads((OUT / 'frontend.json').read_text())
         if frontend['renderer'] == 'opengl-4.6-compatibility':
-            sdk = ROOT / '.deps/ps5-opengl-sdk-1.0.0/sdk'
-            manifest = sdk / 'manifest.sha256'
-            assert digest(manifest) == GL_SDK_MANIFEST_SHA256
-            paths.append(manifest)
-            for line in manifest.read_text().splitlines():
-                expected, name = line.split('  ', 1)
-                assert digest(sdk / name) == expected, name
-                paths.append(sdk / name)
+            paths += verified_opengl_sdk_files()
         if frontend.get('vulkan'):
             if frontend.get('vulkan_driver', 'CUSTOM') == 'RADV':
                 paths += [ROOT / 'build/radv-isolated' / name for name in
@@ -117,7 +126,7 @@ if __name__ == '__main__':
             previous = ({p: prior['files']['dist/headless/PPSA99008/' + p] for p in prior['package_sizes']}
                         if prior['hardware_run'] else prior['previous_package'])
         retail_launch = frontend['guest_fixture'] == 'retail-game' or bool(frontend.get('development_rom_id'))
-        value = dict(gate='G7', title_id='PPSA99008', firmware='6.02', hardware_run=False,
+        value = dict(gate='G7', title_id='PPSA99008', firmware='13.60', hardware_run=False,
                      classification='offline-validated', needed_libraries=needed,
                      data_heap_bytes=3072 * 1024**2, guest_backing_bytes=4 * 1024**3,
                      observation_seconds=120 if retail_launch else 60,

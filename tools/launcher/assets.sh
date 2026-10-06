@@ -7,7 +7,7 @@
 # font, the glyph set or the source images. Needs a host C++ compiler and Python with Pillow.
 
 set -euo pipefail
-root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 build=${PROSPEROEDEN_LAUNCHER_BUILD:-"$HOME/.cache/prosperoeden-launcher"}
 mkdir -p "$build" "$root/headless/prosperoeden/ui/fonts"
 

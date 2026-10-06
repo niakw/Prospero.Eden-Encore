@@ -38,6 +38,6 @@ int main(){
 '''
 with tempfile.TemporaryDirectory() as d:
  p=Path(d);(p/'test.cpp').write_text(code)
- subprocess.run(['clang++-18','-std=c++20','-fsanitize=address,undefined','-g',str(p/'test.cpp'),'-o',str(p/'test')],check=True)
+ subprocess.run(['c++','-std=c++20','-fsanitize=address,undefined','-g',str(p/'test.cpp'),'-o',str(p/'test')],check=True)
  subprocess.run([str(p/'test')],check=True)
 print('Generated nvdrv session ownership: shared sessions, dead external owner, final unmap before release, ID reuse PASS')

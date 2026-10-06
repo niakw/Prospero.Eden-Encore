@@ -115,6 +115,7 @@ constexpr const char *kResolutionLabels[] = {"0.25x (minimum)", "0.5x (fastest, 
 const std::vector<std::string> kResolutionKeys = {"0.25x", "0.5x", "0.75x", "1x", "1.25x", "1.5x", "2x", "3x", "4x"};
 constexpr const char *kFilterLabels[] = {"Bilinear", "AMD FSR", "Bicubic", "Nearest"};
 constexpr const char *kAntiAliasingLabels[] = {"None", "FXAA", "SMAA"};
+constexpr const char *kPerformanceProfileLabels[] = {"Recommended", "Smooth", "Performance", "Custom"};
 constexpr const char *kLanguageLabels[] = {
     "English (US)", "English (UK)", "French", "French (Canada)", "German", "Italian", "Spanish",
     "Spanish (Latin America)", "Portuguese", "Portuguese (Brazil)", "Dutch", "Russian", "Polish",
@@ -257,6 +258,11 @@ const std::vector<std::string> &FakeServices::filter_labels()
 const std::vector<std::string> &FakeServices::anti_aliasing_labels()
 {
     static const std::vector<std::string> labels = translated(kAntiAliasingLabels);
+    return labels;
+}
+const std::vector<std::string> &FakeServices::performance_profile_labels()
+{
+    static const std::vector<std::string> labels = translated(kPerformanceProfileLabels);
     return labels;
 }
 const std::vector<std::string> &FakeServices::language_labels()

@@ -318,7 +318,14 @@ std::string SetupMessage(const std::string& english) {
 
 } // namespace
 
-EdenServices::EdenServices(std::string launch_error) : launch_error_(std::move(launch_error)) {
+EdenServices::EdenServices(std::string launch_error)
+    : launch_error_(std::move(launch_error)),
+      resolution_labels_(Labels(Eden::kResolutionLabels)),
+      resolution_keys_(Labels(Eden::kResolutionKeys)),
+      filter_labels_(Labels(Eden::kUpscalingFilterLabels)),
+      anti_aliasing_labels_(Labels(Eden::kAntiAliasingLabels)),
+      performance_profile_labels_(Labels(Eden::kPerformanceProfileLabels)),
+      language_labels_(Labels(Eden::kLanguageLabels)) {
     (void)mkdir(Eden::ConfigDir().c_str(), 0777);
     setup_ = eden_startup_error();
     Eden::Report("setup", setup_.empty() ? "Keys and firmware startup checks passed" : setup_.c_str());
@@ -589,33 +596,27 @@ bool EdenServices::set_preferences(const pe::ui::Preferences& preferences) {
 }
 
 const std::vector<std::string>& EdenServices::resolution_labels() {
-    static const std::vector<std::string> labels = Labels(Eden::kResolutionLabels);
-    return labels;
+    return resolution_labels_;
 }
 
 const std::vector<std::string>& EdenServices::resolution_keys() {
-    static const std::vector<std::string> labels = Labels(Eden::kResolutionKeys);
-    return labels;
+    return resolution_keys_;
 }
 
 const std::vector<std::string>& EdenServices::filter_labels() {
-    static const std::vector<std::string> labels = Labels(Eden::kUpscalingFilterLabels);
-    return labels;
+    return filter_labels_;
 }
 
 const std::vector<std::string>& EdenServices::anti_aliasing_labels() {
-    static const std::vector<std::string> labels = Labels(Eden::kAntiAliasingLabels);
-    return labels;
+    return anti_aliasing_labels_;
 }
 
 const std::vector<std::string>& EdenServices::performance_profile_labels() {
-    static const std::vector<std::string> labels = Labels(Eden::kPerformanceProfileLabels);
-    return labels;
+    return performance_profile_labels_;
 }
 
 const std::vector<std::string>& EdenServices::language_labels() {
-    static const std::vector<std::string> labels = Labels(Eden::kLanguageLabels);
-    return labels;
+    return language_labels_;
 }
 
 std::string EdenServices::language_region(int language) {

@@ -96,6 +96,8 @@ std::string short_path(const std::string &path, std::size_t limit)
 
 void Launcher::press_settings(Key key)
 {
+    if (key != Key::triangle)
+        clear_confirmation();
     switch (key)
     {
     case Key::circle:
@@ -112,6 +114,8 @@ void Launcher::press_settings(Key key)
         return;
     case Key::triangle:
     {
+        if (!confirm_action(Confirmation::restore_defaults))
+            return;
         const Preferences before = prefs_;
         const int language = prefs_.language;
         prefs_ = Preferences{};
@@ -181,7 +185,7 @@ void Launcher::draw_settings(Canvas &c)
     plate_focus(c, kRowPlate, {150.0f, kRowsTop + settings_.cursor(), 736.0f, kRowHeight}, 1.0f);
     const std::string summaries[kCategoryCount] = {
         services_.performance_profile_labels()[static_cast<std::size_t>(
-            std::clamp(prefs_.performance_profile, 0, 2))] + " · " +
+            std::clamp(prefs_.performance_profile, 0, 3))] + " · " +
             (prefs_.renderer != 0 ? "Vulkan" : "OpenGL"),
         prefs_.mute ? tr("Muted") : percent(prefs_.volume),
         prefs_.controller_layout == 0 ? "PlayStation" : "Nintendo",
@@ -231,7 +235,7 @@ void Launcher::draw_settings(Canvas &c)
         about = tr("Graphics backend and how games are scaled to your TV.");
         lines = {{tr("VIDEO PRESET"),
                   services_.performance_profile_labels()[static_cast<std::size_t>(
-                      std::clamp(prefs_.performance_profile, 0, 2))]},
+                      std::clamp(prefs_.performance_profile, 0, 3))]},
                  {tr("RENDERER"), prefs_.renderer != 0 ? tr("Vulkan (recommended)") : "OpenGL"},
                  {tr("TV OUTPUT"), output_name(prefs_.output)},
                  {tr("GAME RESOLUTION"), pick(services_.resolution_labels(), prefs_.resolution)},
@@ -307,6 +311,12 @@ void Launcher::draw_settings(Canvas &c)
     list.pop_transform();
     list.pop_opacity();
 
+    // Global reset is a two-press action. Keep its warning visible above the footer so the first
+    // press has an obvious result instead of silently arming a destructive action.
+    if (!message_.empty())
+        notice(c, message_, 1016.0f, baseline(904.0f, 32.0f, theme::kSmall), theme::kSmall,
+               message_warning_ ? theme::kWarning : theme::kLimePale, 748.0f, message_warning_);
+
     static constexpr Hint kHints[] = {
         {Pad::cross, TR("Select")}, {Pad::triangle, TR("Restore defaults")},
         {Pad::circle, TR("Back")}, {Pad::updown, TR("Browse settings")}};
@@ -358,6 +368,10 @@ float Launcher::dialog_row_top(Modal modal, int row) const
 
 void Launcher::press_dialog(Key key)
 {
+    const bool clearing_shader_cache =
+        modal_ == Modal::diagnostics && option_ == 1 && key == Key::cross;
+    if (!clearing_shader_cache)
+        clear_confirmation();
     const int rows = dialog_rows(modal_);
     const bool adjust = key == Key::left || key == Key::right;
     const bool activate = key == Key::cross;
@@ -393,10 +407,13 @@ void Launcher::press_dialog(Key key)
     {
     case Modal::video:
         if (option_ == video_renderer)
+        {
             prefs_.renderer = prefs_.renderer != 0 ? 0 : 1;
+            RefreshVideoProfile(prefs_);
+        }
         else if (option_ == video_performance)
         {
-            const int preset = (std::clamp(prefs_.performance_profile, 0, 2) + step + 3) % 3;
+            const int preset = CycleVideoPreset(prefs_.performance_profile, step);
             ApplyVideoPreset(prefs_, preset);
         }
         else if (option_ == video_output)
@@ -404,30 +421,38 @@ void Launcher::press_dialog(Key key)
             // The menu follows at once (the frontend opens its display again at this size).
             const int count = static_cast<int>(std::size(kOutputs));
             prefs_.output = (std::clamp(prefs_.output, 0, count - 1) + step + count) % count;
+            RefreshVideoProfile(prefs_);
         }
         else if (option_ == video_resolution)
         {
             const int count = static_cast<int>(services_.resolution_labels().size());
             prefs_.resolution = (prefs_.resolution + step + count) % count;
+            RefreshVideoProfile(prefs_);
         }
         else if (option_ == video_filter)
         {
             const int count = static_cast<int>(services_.filter_labels().size());
             prefs_.filter = (prefs_.filter + step + count) % count;
+            RefreshVideoProfile(prefs_);
         }
         else if (option_ == video_fsr_sharpness)
         {
             if (!adjust) return;
             prefs_.fsr_sharpness = std::clamp(prefs_.fsr_sharpness + 5 * step, 0, 100);
+            RefreshVideoProfile(prefs_);
             sound = Cue::slider;
         }
         else if (option_ == video_anti_aliasing)
         {
             const int count = static_cast<int>(services_.anti_aliasing_labels().size());
             prefs_.anti_aliasing = (prefs_.anti_aliasing + step + count) % count;
+            RefreshVideoProfile(prefs_);
         }
         else if (option_ == video_refresh)
+        {
             prefs_.refresh = prefs_.refresh != 0 ? 0 : 1;
+            RefreshVideoProfile(prefs_);
+        }
         else
             prefs_.hud = !prefs_.hud;
         break;
@@ -486,6 +511,7 @@ void Launcher::press_dialog(Key key)
         else
         {
             if (!activate) return;
+            if (!confirm_action(Confirmation::shader_caches)) return;
             std::string result;
             const bool cleared = services_.clear_shader_caches(&result);
             say(result, !cleared);
@@ -612,7 +638,7 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
     {
         const std::string values[] = {
             prefs_.renderer != 0 ? tr("Vulkan (recommended)") : "OpenGL",
-            services_.performance_profile_labels()[static_cast<std::size_t>(std::clamp(prefs_.performance_profile, 0, 2))],
+            services_.performance_profile_labels()[static_cast<std::size_t>(std::clamp(prefs_.performance_profile, 0, 3))],
             output_name(prefs_.output),
             pick(services_.resolution_labels(), prefs_.resolution),
             pick(services_.filter_labels(), prefs_.filter),

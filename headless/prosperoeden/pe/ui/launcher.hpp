@@ -52,6 +52,12 @@ class Launcher
     {
         return done_;
     }
+    // A language change rebuilds the launcher in-process so its catalog, fonts and cached labels
+    // all change together without closing Encore.
+    bool restart_requested() const
+    {
+        return restart_requested_;
+    }
     // Empty until a game is chosen.
     const std::string &selected_game() const
     {
@@ -80,6 +86,14 @@ class Launcher
         mods, // a game's mods, opened from its settings
         mapping, // global or per-game DualSense button mapping
     };
+    enum class Confirmation : std::uint8_t
+    {
+        none,
+        restore_defaults,
+        game_overrides,
+        mapping_reset,
+        shader_caches,
+    };
 
     // ---- shell (launcher.cpp) ----
     void cue(audio::Cue value)
@@ -89,6 +103,8 @@ class Launcher
     void open(Screen screen, bool forward);
     void open_modal(Modal modal);
     void close_modal();
+    void clear_confirmation();
+    bool confirm_action(Confirmation action);
     void say(const std::string &text, bool warning = false);
     void launch(const std::string &file, const std::string &title, const std::string &cover);
     void draw_screen(Canvas &c, Screen screen);
@@ -182,6 +198,7 @@ class Launcher
     std::string message_; // the last result ("Saved..."), shown where the screen has room
     bool message_warning_ = false;
     float message_age_ = 0.0f;
+    Confirmation confirmation_ = Confirmation::none;
 
     // launching a game
     std::string selected_game_;
@@ -189,6 +206,7 @@ class Launcher
     std::string launch_cover_;
     tween::Timer launch_;
     bool done_ = false;
+    bool restart_requested_ = false;
 
     // home: 0 continue, 1-3 header, 4 game details, 5-8 recent, 9 view all
     Home home_;

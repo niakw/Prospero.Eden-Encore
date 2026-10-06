@@ -70,29 +70,37 @@ Rect Backdrop::uv(const Rect &r) const
     return {(r.x - a.x) / a.w, (r.y - a.y) / a.h, r.w / a.w, r.h / a.h};
 }
 
-void Backdrop::draw(gfx::DrawList &list, const Textures &, float dim) const
+void Backdrop::draw(gfx::DrawList &list, const Textures &textures, float dim) const
 {
     const Rect screen{0.0f, 0.0f, 1920.0f, 1080.0f};
     list.rounded_rect(screen, 0.0f, theme::kBase);
 
-    // Eden's desktop UI is intentionally clean and dark. Keep only restrained brand glows
-    // instead of ProsperoEden's scenic background art.
+    // A single Eden art direction across the PS5 shell, launcher and game-loading transition.
+    // The oversized crop drifts by only a few pixels, giving the shell depth without making
+    // navigation feel busy.
+    if (textures.backdrop() != 0 && !look().high_contrast)
+    {
+        const Rect a = art();
+        list.image(textures.backdrop(), a, {0.0f, 0.0f, 1.0f, 1.0f}, kWhite.with_alpha(0.72f));
+        list.gradient_rect(screen, 0.0f, Color::rgb(0x07070d, 0.20f), Color::rgb(0x05040b, 0.78f));
+    }
+
     if (!look().high_contrast)
     {
         const float drift = motion();
-        const float violet_x = 310.0f + 40.0f * std::sin(time_ * 0.08f) * drift;
-        const float pink_x = 1550.0f + 55.0f * std::sin(time_ * 0.065f + 1.8f) * drift;
-        const float blue_y = 880.0f + 32.0f * std::sin(time_ * 0.05f + 0.7f) * drift;
-        list.shadow({violet_x - 260.0f, 90.0f, 520.0f, 520.0f}, 260.0f, 300.0f,
-                    theme::kLime.with_alpha(0.11f));
-        list.shadow({pink_x - 250.0f, 120.0f, 500.0f, 500.0f}, 250.0f, 300.0f,
-                    theme::kSun.with_alpha(0.075f));
-        list.shadow({720.0f, blue_y - 180.0f, 480.0f, 360.0f}, 180.0f, 260.0f,
-                    theme::kBlue.with_alpha(0.055f));
+        const float violet_x = 330.0f + 42.0f * std::sin(time_ * 0.08f) * drift;
+        const float pink_x = 1570.0f + 50.0f * std::sin(time_ * 0.065f + 1.8f) * drift;
+        const float blue_y = 900.0f + 30.0f * std::sin(time_ * 0.05f + 0.7f) * drift;
+        list.shadow({violet_x - 280.0f, 78.0f, 560.0f, 560.0f}, 280.0f, 320.0f,
+                    theme::kLime.with_alpha(0.13f));
+        list.shadow({pink_x - 260.0f, 120.0f, 520.0f, 520.0f}, 260.0f, 310.0f,
+                    theme::kSun.with_alpha(0.09f));
+        list.shadow({710.0f, blue_y - 190.0f, 500.0f, 380.0f}, 190.0f, 270.0f,
+                    theme::kBlue.with_alpha(0.065f));
     }
 
     if (look().high_contrast)
-        dim = std::max(dim, 0.45f);
+        dim = std::max(dim, 0.55f);
     if (dim > 0.0f)
         list.rounded_rect(screen, 0.0f, theme::kScrim.with_alpha(dim));
 }
@@ -249,35 +257,35 @@ void glass(Canvas &c, const Rect &r, float radius, Color tint, Color edge, float
                          kWhite.with_alpha(0.045f), kWhite.with_alpha(0.0f));
 }
 
-const Plate kRowPlate{15.0f,
+const Plate kRowPlate{22.0f,
                       theme::kRow.with_alpha(0.90f),
                       theme::kRowEdge.with_alpha(0.47f),
                       theme::kRowFocus.with_alpha(0.95f),
                       theme::kLime.with_alpha(0.44f),
                       theme::kLimeDeep.with_alpha(0.50f),
                       theme::kLime.with_alpha(0.63f)};
-const Plate kListPlate{13.0f,
+const Plate kListPlate{20.0f,
                        Color::rgb(0x191a28, 0.91f),
                        Color::rgb(0x5b5572, 0.47f),
                        Color::rgb(0x2b2140, 0.95f),
                        theme::kLime.with_alpha(0.44f),
                        theme::kLimeDeep.with_alpha(0.50f),
                        theme::kLime.with_alpha(0.63f)};
-const Plate kButtonPlate{12.0f,
+const Plate kButtonPlate{24.0f,
                          Color::rgb(0xf0edf7, 0.10f),
                          kWhite.with_alpha(0.19f),
                          Color::rgb(0x1d1e2d, 0.55f),
                          theme::kLime.with_alpha(0.50f),
                          theme::kLimeDeep.with_alpha(0.44f),
                          theme::kLime.with_alpha(0.63f)};
-const Plate kTilePlate{12.0f,
+const Plate kTilePlate{24.0f,
                        Color::rgb(0xf4f2f8, 0.06f),
                        kWhite.with_alpha(0.125f),
                        Color::rgb(0x1d1e2d, 0.45f),
                        theme::kLime.with_alpha(0.345f),
                        theme::kLimeDeep.with_alpha(0.376f),
                        theme::kLime.with_alpha(0.63f)};
-const Plate kNavPlate{12.0f,
+const Plate kNavPlate{22.0f,
                       kWhite.with_alpha(0.0f),
                       kWhite.with_alpha(0.0f),
                       Color::rgb(0x1d1e2d, 0.0f),
@@ -307,7 +315,7 @@ void plate_focus(Canvas &c, const Plate &style, const Rect &r, float amount)
         return;
     }
     // The highlight glows, breathing slowly.
-    const float glow = 0.17f + 0.07f * std::sin(c.time * 2.6f * motion());
+    const float glow = 0.21f + 0.08f * std::sin(c.time * 2.4f * motion());
     c.list.shadow({r.x - 2.0f, r.y + 2.0f, r.w + 4.0f, r.h + 2.0f}, style.radius + 2.0f, 26.0f,
                   theme::kLime.with_alpha(glow * amount));
     if (style.focus_base.a > 0.0f)

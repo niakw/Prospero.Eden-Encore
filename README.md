@@ -34,17 +34,21 @@ Prospero.Eden Encore R1 turns the proven ProsperoEden 1.000.040 base into a PS5 
 
 - PS5 firmware **13.60 hardware-tested** as the primary target; Encore reaches the launcher and a current ZBIC title launches successfully.
 - ZBIC/zstd NSO support for newer Switch software while retaining LZ4.
+- Shipping CPU stability profile uses **Dynarmic per-core JIT**; shared-JIT, successor batching and saved-block compile-ahead stay disabled after the FC 27 freeze investigation.
+- Audited Eden fixes are backported without a wholesale rebase: sparse-memory decommit **#4471**, CPU/GPU dirty tracking **#4473**, fence/synchronization cleanup **#4477**, plus reviewed FW23/service/max-session and runtime/HID fixes.
+- PS5 OpenGL is built from audited source snapshot **`ad2807d`**: SDK 1.0.1's vertex-buffer lifetime fix plus the reviewed constant-buffer/alignment (`217da45`) and one-time scanout-pool flush (`67c873f`) fixes. RADV/Mesa/PayloadSDK remain on their coherent hardware-qualified 13.60 baseline.
 - One storage-root contract: internal defaults to `/data/prosperoeden`; external storage uses the
   exact same `keys/firmware/roms/updates/mods/...` layout under another root.
 - The working 0.40 one-shot filesystem helper is hardened with target validation, verified rollback,
   fail-closed postconditions and symlink-safe migration.
 - Safe Launch recovery profile without overwriting saved settings.
-- Recommended / Smooth / Performance profiles.
-- Global settings reset and per-game override reset.
+- Reworked TV-first **Encore launcher UI/UX** with the final Eden Encore neon identity, 4K tropical-night artwork, dark glass surfaces, controller-first navigation and accessibility modes.
+- Recommended / Smooth / Performance profiles; **Recommended now uses FXAA**, and FSR sharpness defaults to **50%** instead of the previous aggressive 88%.
+- Global settings reset and per-game override reset now require an explicit second press; mapping reset and shader/JIT cache clearing use the same confirmation rule.
 - DualSense-first controls, vibration/deadzone controls and multi-controller handling.
 - Diagnostics, bounded caches/logs and safer save import/export.
 - Reproducible release packaging with ZIP, optional FFPFSC image and SHA-256 checksums.
-- Complete French launcher catalog plus safe English fallback for incomplete translations.
+- Complete French launcher catalog with **29 packaged language catalogs**, immediate in-app launcher reconstruction for language/font/label changes, release-safe locale detection and hash-verified FTP installation; stale development `language.txt` overrides can no longer force English.
 - CodeQL, pinned GitHub Actions, Dependabot and documented security/community policies.
 
 ## The big advantages
@@ -75,8 +79,8 @@ Prospero.Eden Encore R1 turns the proven ProsperoEden 1.000.040 base into a PS5 
   - 1080p
   - mods disabled
 - Saved settings are **not overwritten**.
-- One-button **Restore recommended defaults** globally.
-- One-button **Reset overrides** per game.
+- Confirmed **Restore recommended defaults** globally.
+- Confirmed **Reset overrides** per game.
 
 ### 🎮 DualSense-first UX
 
@@ -91,7 +95,7 @@ Prospero.Eden Encore R1 turns the proven ProsperoEden 1.000.040 base into a PS5 
 
 Instead of making every user understand seven low-level emulator switches first, Encore exposes:
 
-- **Recommended** — Vulkan, 1440p output, 1x, Bilinear, 60 Hz.
+- **Recommended** — Vulkan, 1440p output, 1x, Bilinear, **FXAA**, 60 Hz.
 - **Smooth** — Vulkan, 1080p output, 1x, Bilinear, 60 Hz.
 - **Performance** — Vulkan, 1080p output, 0.75x + AMD FSR, 60 Hz.
 
@@ -183,6 +187,8 @@ Encore starts conservative:
 | TV output | **1080p** |
 | Internal resolution | **1x** |
 | Upscaling | **Bilinear** |
+| FSR sharpness | **50%** (used only with FSR) |
+| Anti-aliasing | **FXAA** after applying Recommended |
 | Refresh rate | **60 Hz** |
 | FPS overlay | **Off** |
 | Controller layout | **PlayStation** |

@@ -53,6 +53,16 @@ with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as zip
 digest = hashlib.sha256(archive.read_bytes()).hexdigest()
 subprocess.run(['bash', str(root / 'tools/ci/package-image.sh'), str(app), str(image)], check=True)
 image_digest = hashlib.sha256(image.read_bytes()).hexdigest()
+# Prove the package-image path is deterministic before publishing its checksum. This catches a
+# third-party timestamp/randomness regression instead of silently changing release bytes.
+repro = dist / f'.{image.name}.repro'
+try:
+    subprocess.run(['bash', str(root / 'tools/ci/package-image.sh'), str(app), str(repro)], check=True)
+    repro_digest = hashlib.sha256(repro.read_bytes()).hexdigest()
+    if repro_digest != image_digest:
+        raise SystemExit(f'FFPFSC reproducibility check failed: {image_digest} != {repro_digest}')
+finally:
+    repro.unlink(missing_ok=True)
 (dist / 'SHA256SUMS').write_text(f'{digest}  {archive.name}\n{image_digest}  {image.name}\n')
 # The unstripped executable of this release, to name the functions in a crash report later
 # (tools/symbolize-crash.py). Kept out of dist/: it is not a release file.

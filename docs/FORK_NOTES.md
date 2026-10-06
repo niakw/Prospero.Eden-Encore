@@ -92,7 +92,7 @@ This addresses newer software reaching the NSO loader and failing with
 
 - PlayStation-first face-button mapping by default.
 - Nintendo-position layout remains available.
-- Per-game controller-layout override.
+- Full DualSense button mapping globally and per game; per-game mappings can return to the global map.
 - Vibration on/off and strength.
 - Adjustable stick deadzone.
 - Up to four controllers with runtime hotplug.
@@ -110,9 +110,10 @@ This addresses newer software reaching the NSO loader and failing with
 Fresh configurations use conservative defaults:
 
 - Vulkan.
-- 1080p output.
+- 1080p output as the raw factory fallback; **Recommended** applies 1440p.
 - 1x internal resolution.
 - Bilinear scaling.
+- FSR sharpness 50% when FSR is selected.
 - 60 Hz.
 - FPS overlay off.
 - PlayStation controller layout.
@@ -126,9 +127,11 @@ Existing saved preferences are not silently rewritten.
 
 Encore exposes three user-facing profiles:
 
-- **Recommended** — conservative accuracy/stability.
-- **Smooth** — compile-ahead oriented.
-- **Performance** — more aggressive performance trade-offs.
+- **Recommended** — Vulkan, 1440p, 1x, Bilinear, FXAA, 60 Hz.
+- **Smooth** — Vulkan, 1080p, 1x, Bilinear, AA off, 60 Hz.
+- **Performance** — Vulkan, 1080p, 0.75x + FSR at 50%, AA off, 60 Hz.
+
+Shipping profiles keep Dynarmic **per-core JIT** and do not enable shared-JIT, batching or saved-block compile-ahead.
 
 ### Safe Launch
 
@@ -146,8 +149,9 @@ For that run only it selects:
 
 ### Reset paths
 
-- Global **Restore recommended defaults**.
-- Per-game **Reset overrides**.
+- Global **Restore recommended defaults**, requiring a second press to confirm.
+- Per-game **Reset overrides**, requiring a second press to confirm.
+- Mapping reset and shader/JIT cache clear use the same confirmation rule.
 
 ## Launcher and storage hardening
 
@@ -186,8 +190,10 @@ Security fix:
 
 ## Language and accessibility
 
-- Launcher catalogs cover the existing language set.
-- French is treated as the strict complete catalog in release validation.
+- Launcher catalogs cover 29 PS5 language tags.
+- French (`fr-FR`) is treated as the strict complete catalog in release validation and every packaged catalog is byte-checked.
+- A language change rebuilds the launcher in-process so the catalog, system-font fallback and cached labels switch immediately.
+- Release builds ignore the development-only `language.txt` override, preventing stale test files from forcing English.
 - Other incomplete catalogs safely fall back to English for missing strings while still validating
   existing placeholders/fonts.
 - On a fresh config, game language is seeded once from the PS5 system locale when supported.
@@ -202,6 +208,25 @@ Security fix:
 - Existing Title ID `PPSA99008` is preserved to keep the installation/data relationship.
 - Internal package-title validation remains deterministic.
 - Launcher TGA assets are generated in the exact uncompressed format supported by the runtime.
+
+## Audited upstream backports
+
+Encore keeps the stable Eden/ProsperoEden base pin and applies narrowly reviewed fixes instead of a wholesale rebase:
+
+- Eden **#4471** sparse-memory handling: the first-page bug is fixed and fully-zero sparse slots can release their owned backing and return to the shared zero mapping.
+- Eden **#4473** dirty tracking: CPU/GPU modified-range handling for Kepler uploads and Maxwell macros.
+- Eden **#4477** fence/synchronization cleanup, applied with #4473 as one coherent change.
+- Reviewed FW23/service/max-session updates and runtime/HID fixes are applied through `headless/backports/` with exact patch checks.
+- PS5 OpenGL is rebuilt from pinned source snapshot **`ad2807d`**. It contains the official SDK 1.0.1 vertex-buffer lifetime fix plus `217da45` (constant-buffer lifetime / vertex-binding alignment) and `67c873f` (one-time scanout-pool flush instead of an expensive whole-pool flush on every unbatched scanout write). `tools/build-opengl-sdk.sh` verifies the source commit and every installed manifest entry; the final candidate receipt freezes the exact produced SDK.
+
+The Vulkan/RADV platform remains one coherent hardware-qualified baseline for R1: PS5_Vulkan `3f3ee696…`, PS5_Mesa `0b2d6d1a…` and Mihawk PayloadSDK `95c08f27…`. This is deliberate rather than an omitted update: the audited newer candidates (`fde9e379…`, `7b59ef27…`, `b5efad52…`) are a coupled platform migration. The Mesa branch diverges by roughly **107 commits ahead / 103 behind** and introduces a PS5 winsys, threaded layer, GS-compute path and broad RADV changes; the PayloadSDK branch diverges by roughly **100 ahead / 48 behind** and adds a new platform libc/elevation/memory stack. Those three must be migrated and hardware-qualified together. Mixing one member into the 13.60 release would be less safe than retaining the proven trio.
+
+The image-quality audit is closed conservatively for R1: Recommended uses native internal resolution,
+Bilinear output scaling and FXAA, while FSR sharpness defaults to 50% instead of the former aggressive
+88%. Eden does not currently expose a reusable debanding post-process (the FSR source only contains
+its own internal dithering). Encore therefore does not add an unmeasured fullscreen deband pass to a
+release whose main performance target is 13.60; a future deband option requires PS5 frame-time and
+image-capture evidence first.
 
 ## Native build and packaging hardening
 
@@ -259,11 +284,9 @@ Deferred/excluded:
 - Automatic renderer fallback that silently changes persisted behavior.
 - Network auto-updater.
 - Large multi-profile/player subsystem.
-- Arbitrary button-remapping UI.
 - Cheat/patch-library expansion.
 - Favorites/search/local compatibility database.
 - New update/DLC enable-disable manager.
-- FSR sharpening UI without a verified matching upstream contract.
 - Extra per-title vibration/deadzone/FPS-HUD overrides without a demonstrated need.
 - Controller calibration screen.
 
