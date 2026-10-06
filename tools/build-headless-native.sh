@@ -72,7 +72,7 @@ python3 -B "$root/headless/check_slab_lifetime.py" \
 # Run every source/harness check that only needs the configured/generated source tree BEFORE the
 # expensive native compile. A stale source extraction should fail in minutes, not after a 40-minute
 # build. Development builds intentionally skip these release-shape checks.
-if [[ ${EDEN_SKIP_SOURCE_CHECKS:-0} != 1 ]]; then
+if [[ ${EDEN_SKIP_SOURCE_CHECKS:-0} != 1 && ${EDEN_SKIP_PREBUILD_SOURCE_CHECKS:-0} != 1 ]]; then
     python3 -B "$root/headless/check_audio_shutdown.py" "$scratch/native-local/headless/core.cpp" "$scratch/source/src/core/core.cpp"
     python3 -B "$root/tools/check-load-failure.py"
     python3 -B "$root/tools/check-legacy-migration.py"
