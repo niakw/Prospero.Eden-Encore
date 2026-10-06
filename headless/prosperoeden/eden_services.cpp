@@ -755,6 +755,9 @@ pe::ui::GameSettings EdenServices::game_settings(std::uint64_t title_id) {
     result.controller_layout = saved.controller_layout;
     result.own_mapping = saved.own_mapping;
     result.mapping = saved.mapping;
+    result.extra_controller_layouts = saved.extra_controller_layouts;
+    result.extra_own_mappings = saved.extra_own_mappings;
+    result.extra_mappings = saved.extra_mappings;
     return result;
 }
 
@@ -771,6 +774,9 @@ bool EdenServices::set_game_settings(std::uint64_t title_id, const pe::ui::GameS
     value.controller_layout = settings.controller_layout;
     value.own_mapping = settings.own_mapping;
     value.mapping = settings.mapping;
+    value.extra_controller_layouts = settings.extra_controller_layouts;
+    value.extra_own_mappings = settings.extra_own_mappings;
+    value.extra_mappings = settings.extra_mappings;
     const bool saved = Eden::SaveGameSettings(title_id, value);
     if (!saved) Eden::Report("settings", "Could not write game settings");
     return saved;
@@ -791,6 +797,8 @@ pe::ui::Preferences EdenServices::preferences() {
     result.performance_profile = saved.performance_profile;
     result.controller_layout = saved.controller_layout;
     result.mapping = saved.mapping;
+    result.extra_controller_layouts = saved.extra_controller_layouts;
+    result.extra_mappings = saved.extra_mappings;
     result.vibration = saved.vibration;
     result.vibration_strength = saved.vibration_strength;
     result.stick_deadzone = saved.stick_deadzone;
@@ -818,6 +826,8 @@ bool EdenServices::set_preferences(const pe::ui::Preferences& preferences) {
     value.performance_profile = preferences.performance_profile;
     value.controller_layout = preferences.controller_layout;
     value.mapping = preferences.mapping;
+    value.extra_controller_layouts = preferences.extra_controller_layouts;
+    value.extra_mappings = preferences.extra_mappings;
     value.vibration = preferences.vibration;
     value.vibration_strength = preferences.vibration_strength;
     value.stick_deadzone = preferences.stick_deadzone;
@@ -1074,5 +1084,25 @@ bool EdenServices::make_mods_folder(std::uint64_t title_id) {
 
 bool EdenServices::load_image(const std::string& path, pe::gfx::Image* image) {
     // Covers have full paths; the launcher's own art is named from its ui folder.
-    return pe::gfx::load_tga(!path.empty() && path[0] == '/' ? path : Eden::AppFile("ui/" + path), image);
+    const std::string resolved =
+        !path.empty() && path[0] == '/' ? path : Eden::AppFile("ui/" + path);
+    if (pe::gfx::load_tga(resolved, image))
+        return true;
+
+    // Remote enrichment (Nlib) is cached as JPEG. Decode it with the same stb_image
+    // implementation already linked for game metadata/icon extraction.
+    int width = 0;
+    int height = 0;
+    int channels = 0;
+    stbi_uc* rgba = stbi_load(resolved.c_str(), &width, &height, &channels, 4);
+    if (!rgba || width <= 0 || height <= 0 || width > 8192 || height > 8192) {
+        if (rgba) stbi_image_free(rgba);
+        return false;
+    }
+    image->width = width;
+    image->height = height;
+    image->rgba.assign(rgba, rgba + static_cast<std::size_t>(width) *
+                                      static_cast<std::size_t>(height) * 4u);
+    stbi_image_free(rgba);
+    return true;
 }
