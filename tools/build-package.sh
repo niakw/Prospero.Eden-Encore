@@ -7,8 +7,9 @@
 #                                    (profiling counters, dev-settings.txt A/B switches) that
 #                                    boots title ID on launch
 set -euo pipefail
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
+source "$root/tools/host-env.sh"
+eden_host_env "$root"
 cd "$root"
 mode=${1:?usage: tools/build-package.sh release|release-stage|dev TITLE_ID}
 scratch=$(cat .local/headless-cache)
@@ -17,6 +18,9 @@ export EDEN_PS5_VULKAN=ON EDEN_VULKAN_DRIVER=RADV
 case $mode in
 release|release-stage)
     export EDEN_DEV_VULKAN=OFF EDEN_DEV_ROM_ID= EDEN_DEV_PROFILE=OFF EDEN_DEV_WAIT_CALLERS=OFF
+    # Shipping stability contract: experimental cross-core JIT and successor batching never
+    # inherit an operator's shell environment or a reused CMake cache.
+    export EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF
     export EDEN_PACKAGE_DIR="$root/build/release/PPSA99008"
     ;;
 dev)

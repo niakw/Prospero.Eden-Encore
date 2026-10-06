@@ -566,8 +566,12 @@ void Launcher::draw_library(Canvas &c)
 void Launcher::press_game(Key key)
 {
     Game &game = games_[static_cast<std::size_t>(library_.selected)];
+    if (key != Key::triangle)
+        clear_confirmation();
     if (key == Key::triangle && option_ >= row_renderer && option_ <= row_controls)
     {
+        if (!confirm_action(Confirmation::game_overrides))
+            return;
         const GameSettings reset{};
         const bool saved = services_.set_game_settings(game.title_id, reset);
         if (saved) game_settings_ = reset;
@@ -673,10 +677,17 @@ void Launcher::press_game(Key key)
         { return (value + 1 + step + count + 1) % (count + 1) - 1; };
         GameSettings next = game_settings_;
         if (option_ == row_renderer)
+        {
             next.renderer = cycle(next.renderer, 2);
+            RefreshVideoProfile(next, prefs_);
+        }
         if (option_ == row_performance)
         {
-            const int preset = cycle(next.performance_profile, 3);
+            int preset = -1;
+            if (next.performance_profile == kCustomVideoProfile)
+                preset = step > 0 ? -1 : 2;
+            else
+                preset = cycle(next.performance_profile, 3);
             if (preset >= 0) {
                 ApplyVideoPreset(next, preset);
             } else {
@@ -693,20 +704,36 @@ void Launcher::press_game(Key key)
             }
         }
         if (option_ == row_output)
+        {
             next.output = cycle(next.output, 3);
+            RefreshVideoProfile(next, prefs_);
+        }
         if (option_ == row_resolution)
+        {
             next.resolution =
                 cycle(next.resolution, static_cast<int>(services_.resolution_labels().size()));
+            RefreshVideoProfile(next, prefs_);
+        }
         if (option_ == row_filter)
+        {
             next.filter = cycle(next.filter, static_cast<int>(services_.filter_labels().size()));
+            RefreshVideoProfile(next, prefs_);
+        }
         if (option_ == row_fsr_sharpness) {
             const int current = next.fsr_sharpness >= 0 ? next.fsr_sharpness : prefs_.fsr_sharpness;
             next.fsr_sharpness = std::clamp(current + 5 * step, 0, 100);
+            RefreshVideoProfile(next, prefs_);
         }
         if (option_ == row_anti_aliasing)
+        {
             next.anti_aliasing = cycle(next.anti_aliasing, static_cast<int>(services_.anti_aliasing_labels().size()));
+            RefreshVideoProfile(next, prefs_);
+        }
         if (option_ == row_refresh)
+        {
             next.refresh = cycle(next.refresh, 2);
+            RefreshVideoProfile(next, prefs_);
+        }
         saved = services_.set_game_settings(game.title_id, next);
         if (saved)
             game_settings_ = next;
@@ -756,7 +783,7 @@ void Launcher::draw_game(Canvas &c, float open)
             fill(tr("Default ({0})"), {kRenderers[prefs_.renderer != 0 ? 1 : 0]}),
         game_settings_.performance_profile >= 0 ?
             services_.performance_profile_labels()[static_cast<std::size_t>(game_settings_.performance_profile)] :
-            fill(tr("Default ({0})"), {services_.performance_profile_labels()[static_cast<std::size_t>(std::clamp(prefs_.performance_profile, 0, 2))]}),
+            fill(tr("Default ({0})"), {services_.performance_profile_labels()[static_cast<std::size_t>(std::clamp(prefs_.performance_profile, 0, 3))]}),
         game_settings_.output >= 0 ? kOutputs[game_settings_.output] :
             fill(tr("Default ({0})"), {kOutputs[std::clamp(prefs_.output, 0, 2)]}),
         game_settings_.resolution >= 0 ? pick(resolutions, game_settings_.resolution) :

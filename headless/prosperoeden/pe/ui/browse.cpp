@@ -325,10 +325,16 @@ void Launcher::press_language(Key key)
         prefs_.language = language_.selected;
         const bool saved = services_.set_preferences(prefs_);
         if (!saved)
+        {
             prefs_.language = before;
-        say(saved ? tr("Saved. Applies when a game starts.") : tr("Could not save. Please try again."),
-            !saved);
-        cue(saved ? Cue::saved : Cue::error);
+            say(tr("Could not save. Please try again."), true);
+            cue(Cue::error);
+            return;
+        }
+        // Recreate the launcher immediately: the new catalog, script-specific system fonts and
+        // translated label caches must all change together. Games also use the same preference.
+        restart_requested_ = true;
+        cue(Cue::saved);
         return;
     }
     default:

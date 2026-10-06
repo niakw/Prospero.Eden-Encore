@@ -1,8 +1,25 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 set -euo pipefail
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
+base_path=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+darwin_zlib_include=
+darwin_zlib_library=
+darwin_icu_root=
+if [[ $(uname -s) == Darwin && -d /opt/homebrew/opt/llvm@18/bin ]]; then
+    shim="$root/.local/llvm18-bin"
+    mkdir -p "$shim"
+    for tool in clang++ ld.lld llvm-ar llvm-ranlib llvm-nm llvm-readobj llvm-objcopy; do
+        [[ -x /opt/homebrew/opt/llvm@18/bin/$tool ]] || continue
+        ln -sf "/opt/homebrew/opt/llvm@18/bin/$tool" "$shim/${tool}-18"
+    done
+    export PATH="$shim:/opt/homebrew/opt/llvm@18/bin:/opt/homebrew/bin:/opt/homebrew/sbin:$base_path"
+    [[ -d /opt/homebrew/opt/zlib/include ]] && darwin_zlib_include=-DZLIB_INCLUDE_DIR=/opt/homebrew/opt/zlib/include
+    [[ -f /opt/homebrew/opt/zlib/lib/libz.dylib ]] && darwin_zlib_library=-DZLIB_LIBRARY=/opt/homebrew/opt/zlib/lib/libz.dylib
+    [[ -d /opt/homebrew/opt/icu4c@78 ]] && darwin_icu_root=-DICU_ROOT=/opt/homebrew/opt/icu4c@78
+else
+    export PATH="$base_path"
+fi
 cd "$root"
 mkdir -p .local build/headless-host build/fixture
 bash tools/build-core-fixture.sh
@@ -15,7 +32,7 @@ if [[ ! -f .local/headless-cache ]] || [[ ! -d "$(cat .local/headless-cache)" ]]
     printf '%s\n' "$scratch" > .local/headless-cache
 fi
 scratch=$(cat .local/headless-cache)
-[[ "$scratch" == "$cache_parent"/ps5-eden-headless.* && "$(cat "$scratch/owner")" == "$root" ]]
+[[ "$scratch" == "$cache_parent"/ps5-eden-headless.* && "$(cd -- "$(cat "$scratch/owner")" && pwd -P)" == "$root" ]]
 eden="$scratch/source"
 if [[ ! -f "$eden/CMakeLists.txt" ]]; then
     python3 - <<'PY'
@@ -47,8 +64,12 @@ if target.read_text() != text:
     (pathlib.Path(sys.argv[2]) / '_deps/ffmpeg-build/Makefile').unlink(missing_ok=True)
 PY
 cmake -S "$eden" -B "$scratch/build" -G Ninja \
+    ${darwin_zlib_include:+"$darwin_zlib_include"} \
+    ${darwin_zlib_library:+"$darwin_zlib_library"} \
+    ${darwin_icu_root:+"$darwin_icu_root"} \
     -DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18 \
     -DCMAKE_BUILD_TYPE=Release -DENABLE_LTO=OFF -DCMAKE_EXE_LINKER_FLAGS= -DEDEN_HOST_ASAN=OFF \
+    -DEDEN_SHARED_JIT=OFF -DEDEN_JIT_COMPILE_BATCH=OFF \
     -DCMAKE_PROJECT_yuzu_INCLUDE="$root/headless/inject.cmake" \
     -DENABLE_QT=OFF -DYUZU_CMD=OFF -DYUZU_ROOM=OFF -DYUZU_ROOM_STANDALONE=OFF \
     -DYUZU_TESTS=OFF -DBUILD_TESTING=OFF -DENABLE_OPENGL=OFF -DENABLE_CUBEB=OFF \

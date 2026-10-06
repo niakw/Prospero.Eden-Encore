@@ -19,8 +19,8 @@ ui_expected = {
     "ui/" + p.relative_to(source_ui).as_posix()
     for p in source_ui.rglob("*") if p.is_file()
 }
-ui_expected.discard("ui/art/backdrop.tga")
 ui_expected.discard("ui/art/backdrop-blur.tga")
+ui_expected.add("ui/art/backdrop.tga")
 expected = base | ui_expected
 actual = {p.relative_to(app).as_posix() for p in app.rglob("*") if p.is_file()}
 missing = sorted(expected - actual)
@@ -36,6 +36,14 @@ assert param["titleId"] == "PPSA99008"
 assert param["contentId"].endswith("PROSPEROEDEN0001")
 assert param["localizedParameters"]["en-US"]["titleName"] == "Prospero.Eden Encore"
 assert (app / "sce_sys/icon0.png").read_bytes() == (root / "assets/icon0.png").read_bytes()
+source_lang = sorted((source_ui / "lang").glob("*.po"))
+staged_lang = sorted((app / "ui/lang").glob("*.po"))
+assert len(source_lang) == 29, f"expected 29 launcher catalogs, got {len(source_lang)}"
+assert [p.name for p in staged_lang] == [p.name for p in source_lang], "launcher catalog inventory differs"
+assert any(p.name == "fr-FR.po" for p in staged_lang), "fr-FR launcher catalog missing"
+for source in source_lang:
+    staged = app / "ui/lang" / source.name
+    assert staged.read_bytes() == source.read_bytes(), f"stale/corrupt launcher catalog: {source.name}"
 assert (app / "sandbox-elevator.elf").stat().st_size > 0
 assert (app / "eboot.bin").stat().st_size > 1024 * 1024
 print(f"Staged Encore artifact PASS ({len(actual)} files)")

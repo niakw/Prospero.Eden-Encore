@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Exercise actual Dynarmic monitor operations with the PS5 lock derivative."""
 from pathlib import Path
+import platform
 import re
 import subprocess
+import sys
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
@@ -14,10 +16,15 @@ monitor = monitor.replace('#include "common/assert.h"', '')
 lock = (root / 'headless/spin-lock.inc').read_text()
 source = r'''
 #include <cassert>
+#include <chrono>
 #include <thread>
 #include <vector>
 #include <barrier>
 #include "dynarmic/interface/exclusive_monitor.h"
+extern "C" int sceKernelUsleep(unsigned int microseconds) {
+    std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
+    return 0;
+}
 namespace Dynarmic {
 LOCK
 }
@@ -58,8 +65,18 @@ with tempfile.TemporaryDirectory(prefix='eden-monitor-') as tmp:
     cpp = Path(tmp) / 'check.cpp'
     binary = Path(tmp) / 'check'
     cpp.write_text(source)
-    subprocess.run(['clang++-18', '-std=c++20', '-O3', '-flto=thin', '-fuse-ld=lld-18', '-pthread', '-Wall', '-Wextra',
-                    '-Werror', *includes, str(cpp), '-o', str(binary)], check=True)
+    compile_command = ['clang++-18', '-std=c++20', '-O3', '-flto=thin', '-fuse-ld=lld-18',
+                       '-pthread', '-Wall', '-Wextra', '-Werror']
+    # Dynarmic's x64 monitor contains x86 pause instructions. On Apple Silicon,
+    # build the host semantics harness as a real x86_64 macOS binary and run it
+    # through Rosetta; compiling it as arm64 would reject __builtin_ia32_pause.
+    if sys.platform == 'darwin' and platform.machine() == 'arm64':
+        preferred_sdk = Path('/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk')
+        sdk = (str(preferred_sdk) if preferred_sdk.is_dir() else
+               subprocess.check_output(['xcrun', '--sdk', 'macosx', '--show-sdk-path'], text=True).strip())
+        compile_command = ['/usr/bin/clang++', '-arch', 'x86_64', '-isysroot', sdk,
+                           '-std=c++20', '-O3', '-pthread', '-Wall', '-Wextra', '-Werror']
+    subprocess.run([*compile_command, *includes, str(cpp), '-o', str(binary)], check=True)
     subprocess.run([str(binary)], check=True, timeout=20)
 native = cache / 'native-local/bin/eden-headless'
 symbols = subprocess.check_output(['llvm-nm-18', '--defined-only', str(native)], text=True)
@@ -71,10 +88,30 @@ assembly = subprocess.check_output(['llvm-objdump-18',
     str(native)], text=True)
 for name in names.split(','):
     assert '<' + name + '>:' in assembly
-assert not re.search(r'\bcallq?\b', assembly), 'Unexpected runtime call in native monitor lock'
-# ThinLTO inlines the lock in ClearProcessor and may lower the same seq_cst
+# The bounded slow path deliberately sleeps so a critical-priority waiter cannot starve a
+# preempted owner. It is the only runtime call permitted in the lock implementation.
+calls = [line for line in assembly.splitlines() if re.search(r'\bcallq?\b', line)]
+assert calls, 'Native monitor lock lost its bounded backoff call'
+# lld may render a GOT import as an indirect register call after ThinLTO. Prove
+# that the register was loaded from the relocation slot for sceKernelUsleep.
+direct_backoff = any('sceKernelUsleep' in line for line in calls)
+if not direct_backoff:
+    got_load = re.search(r'movq\s+[^#\n]+%r12\s+#\s+0x([0-9a-f]+)', assembly)
+    assert got_load and any('callq\t*%r12' in line for line in calls), (
+        'Native monitor backoff is neither a direct nor the expected GOT call: ' + repr(calls))
+    relocations = subprocess.check_output(['llvm-readobj-18', '--relocations', str(native)], text=True)
+    slot = '0X' + got_load.group(1).upper()
+    assert any(slot in line.upper() and 'SCEKERNELUSLEEP' in line.upper()
+               for line in relocations.splitlines()), (
+        'Native monitor GOT call does not resolve to sceKernelUsleep: ' + slot)
+# A noexcept inlined ClearProcessor may carry Clang's exception-termination
+# landing pad outside the lock path; it is not part of the backoff loop.
+assert all('sceKernelUsleep' in line or '__clang_call_terminate' in line or '*%r12' in line
+           for line in calls), 'Unexpected runtime call in native monitor lock: ' + repr(calls)
+# ThinLTO may inline the lock in ClearProcessor and may lower the same seq_cst
 # fence to a locked zero-OR on the stack instead of MFENCE.
 full_fence = 'mfence' in assembly or re.search(r'\block\s*\n[^\n]*\borl\s+\$0x0,\s*-0x[0-9a-f]+\(%rsp\)', assembly)
-assert full_fence and 'pause' in assembly and assembly.count('xchgl') == 2
+minimum_exchanges = 3 if not outlined else 2
+assert full_fence and 'pause' in assembly and assembly.count('xchgl') >= minimum_exchanges
 print('Exclusive monitor: peer invalidation, clear, wrong address and 200000 contended increments PASS')
-print('Native lock machine code: no calls, exchange acquisition/release and full fence PASS')
+print('Native lock machine code: bounded sceKernelUsleep backoff, exchange acquisition/release and full fence PASS')

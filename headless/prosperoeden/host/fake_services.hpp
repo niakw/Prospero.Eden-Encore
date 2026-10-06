@@ -74,6 +74,7 @@ class FakeServices final : public ui::Services
     const std::vector<std::string> &resolution_keys() override;
     const std::vector<std::string> &filter_labels() override;
     const std::vector<std::string> &anti_aliasing_labels() override;
+    const std::vector<std::string> &performance_profile_labels() override;
     const std::vector<std::string> &language_labels() override;
     std::string language_region(int language) override;
     std::string setup_details() override;

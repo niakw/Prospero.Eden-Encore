@@ -13,7 +13,7 @@
 # them, as on the console. Without it such text shows as question marks.
 
 set -euo pipefail
-root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 source_dir="$root/headless/prosperoeden"
 build=${PROSPEROEDEN_LAUNCHER_BUILD:-"$HOME/.cache/prosperoeden-launcher"}
 cxx=${HOST_CXX:-c++}

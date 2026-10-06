@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # ProsperoEden build. `make` builds the release files in dist/; `make help` lists every target.
 # Missing dependencies are fetched at their pinned revisions (tools/deps.json); nothing that
-# already exists is changed. The build runs on Linux (Ubuntu 26.04; WSL works).
+# already exists is changed. Release CI runs on Linux (Ubuntu 24.04); local PS5 builds also support Apple Silicon macOS.
 
 SHELL := /bin/bash
 .SHELLFLAGS := -eu -o pipefail -c
@@ -9,7 +9,7 @@ SHELL := /bin/bash
 MAKEFLAGS += --no-print-directory
 
 # Parallel compile jobs.
-JOBS ?= $(shell nproc)
+JOBS ?= $(shell (command -v nproc >/dev/null 2>&1 && nproc) || (command -v sysctl >/dev/null 2>&1 && sysctl -n hw.logicalcpu 2>/dev/null) || (command -v getconf >/dev/null 2>&1 && getconf _NPROCESSORS_ONLN 2>/dev/null) || echo 4)
 export EDEN_BUILD_JOBS := $(JOBS)
 # make dev: the title ID (16 hex digits) the development build boots.
 DEV_TITLE ?= $(shell cat .local/dev-profile-title 2>/dev/null)
@@ -23,7 +23,7 @@ RELEASE_APP := build/release/PPSA99008
 .PHONY: help release package image dev prepare deps deps-status toolchain test install clean distclean
 
 help: ## List the targets and variables
-	@echo 'ProsperoEden build - make [target] [VARIABLE=value]'
+	@echo 'Prospero.Eden Encore build - make [target] [VARIABLE=value]'
 	@echo
 	@awk 'BEGIN { FS = ":.*## " } /^[a-z][a-z-]*:.*## / { printf "  %-12s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 	@echo

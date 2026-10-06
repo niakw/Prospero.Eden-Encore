@@ -26,9 +26,9 @@
 // compiled 426 blocks during play instead of 138,262, and the 5-second window in which gameplay
 // starts ran at 30.0 FPS instead of 22.3.
 //
-// Off unless a file named block-list.txt is in the app folder (or dev-settings jit_list=on): it
-// has run in one game on the console so far. Only for 64-bit games: the shared JIT the list hangs
-// on does not cover 32-bit ones.
+// Experimental builds only: the shipping build does not compile the cross-core JitGroup, so this
+// mechanism is structurally unavailable there. When the experiment is compiled, it remains off
+// unless block-list.txt (or dev-settings jit_list=on) opts in. Only 64-bit games are supported.
 #pragma once
 #include <algorithm>
 #include <array>
@@ -44,6 +44,10 @@
 #include <sys/stat.h>
 
 #ifndef EDEN_JIT_LIST_FORMAT_ONLY  // a host check includes only the file format
+#ifndef EDEN_SHARED_JIT_AVAILABLE
+#define EDEN_SHARED_JIT_AVAILABLE 0
+#endif
+#if EDEN_SHARED_JIT_AVAILABLE
 #include "performance.h"
 #include "storage_paths.h"
 
@@ -51,6 +55,7 @@ extern "C" void* eden_jit_list_open();
 extern "C" void eden_jit_list_close(void* handle);
 extern "C" int eden_jit_precompile(void* handle, unsigned long long location);
 extern "C" std::size_t eden_jit_history(void* handle, unsigned long long* out, std::size_t capacity);
+#endif
 #endif
 
 namespace Eden::JitList {
@@ -127,6 +132,7 @@ inline std::vector<Value> Load(const std::string& path, const BuildId& build) {
 }
 
 #ifndef EDEN_JIT_LIST_FORMAT_ONLY
+#if EDEN_SHARED_JIT_AVAILABLE
 // One game session: Start once the game is loaded and its JITs exist, Finish before they go.
 // `image` is the size of the game's own modules from code_start.
 class Session {
@@ -213,5 +219,14 @@ private:
     std::vector<Value> earlier_;
     std::jthread worker_;
 };
+#else
+// Production stability mode: saved-block precompilation is structurally unavailable when the
+// cross-core JitGroup is not compiled. Dynarmic's normal per-core JIT is unaffected.
+class Session {
+public:
+    void Start(Value, const BuildId&, Value, Value) {}
+    void Finish() {}
+};
+#endif
 #endif
 } // namespace Eden::JitList

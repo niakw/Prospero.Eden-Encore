@@ -86,6 +86,19 @@ def main(argv):
         language_files = [p for p in files if p.relative_to(app).as_posix().startswith('ui/lang/') and p.suffix == '.po']
         if language_files and not any(p.name == 'fr-FR.po' for p in language_files):
             sys.exit('Package has language catalogs but fr-FR.po is missing')
+        if len(language_files) != 29:
+            sys.exit(f'Package must contain all 29 launcher catalogs, found {len(language_files)}')
+        # Size alone can miss a stale same-length catalog. These files are small enough to verify
+        # byte identity after FTP, which makes a partial/stale language install impossible to miss.
+        for local in language_files:
+            relative = local.relative_to(app).as_posix()
+            digest = hashlib.sha256()
+            try:
+                client.retrbinary(f'RETR {REMOTE}/{relative}', digest.update)
+            except (ftplib.error_perm, OSError) as error:
+                sys.exit(f'Could not verify language catalog {relative}: {error}')
+            if digest.hexdigest() != hashlib.sha256(local.read_bytes()).hexdigest():
+                sys.exit(f'{relative} differs on the console after the copy')
 
         try:
             client.sendcmd('SELF')  # raw transfers of executables, where supported

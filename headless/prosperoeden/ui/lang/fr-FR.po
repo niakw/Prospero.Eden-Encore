@@ -1,4 +1,4 @@
-# ProsperoEden launcher - French (France)
+# ProsperoEden launcher - fr-FR
 # English text is the key (msgid); msgstr is the translation. Keep {0} {1} as they are,
 # keep UPPERCASE labels uppercase, and keep names (ProsperoEden, Eden, PS5, Vulkan, OpenGL,
 # AMD FSR, DLC, NSP, XCI, prod.keys, Ryujinx) unchanged.
@@ -111,13 +111,13 @@ msgstr "AMD FSR"
 msgid "Another language"
 msgstr "Autre langue"
 
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Anti-aliasing"
+msgstr "Anticrénelage"
+
 #: pe/ui/settings.cpp
 msgid "ANTI-ALIASING"
 msgstr "ANTICRÉNELAGE"
-
-#: pe/ui/settings.cpp
-msgid "Anti-aliasing"
-msgstr "Anticrénelage"
 
 #: pe/ui/settings.cpp
 msgid "Anti-aliasing smooths jagged edges. None is fastest; FXAA is light; SMAA prioritizes image quality."
@@ -496,13 +496,13 @@ msgstr "Français"
 msgid "French (Canada)"
 msgstr "Français (Canada)"
 
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "FSR sharpness"
+msgstr "Netteté FSR"
+
 #: pe/ui/settings.cpp
 msgid "FSR SHARPNESS"
 msgstr "NETTETÉ FSR"
-
-#: pe/ui/settings.cpp
-msgid "FSR sharpness"
-msgstr "Netteté FSR"
 
 #: pe/ui/settings.cpp
 msgid "FSR sharpness changes detail recovery only when AMD FSR is selected. Lower it if the picture looks grainy or over-sharpened."
@@ -898,6 +898,10 @@ msgid "Patch"
 msgstr "Patch"
 
 #: settings_store.h
+msgid "Performance"
+msgstr "Performance"
+
+#: settings_store.h
 msgid "Polish"
 msgstr "Polonais"
 
@@ -922,6 +926,11 @@ msgstr "PRÉFÉRENCES"
 #: pe/ui/library.cpp
 msgid "Press again to replace this game's save. The current one is backed up."
 msgstr "Appuyez à nouveau pour remplacer la sauvegarde de ce jeu. Une copie de l'actuelle est conservée."
+
+#. Generic confirmation before a reset or other destructive maintenance action.
+#: pe/ui/launcher.cpp
+msgid "Press the same button again to confirm."
+msgstr "Appuyez de nouveau sur le même bouton pour confirmer."
 
 #: eden_services.cpp
 msgid "prod.keys could not supply an NCA header key. Replace it with a valid key dump."
@@ -972,6 +981,10 @@ msgstr "Prête"
 #: pe/ui/home.cpp
 msgid "RECENTLY PLAYED"
 msgstr "JOUÉS RÉCEMMENT"
+
+#: settings_store.h
+msgid "Recommended"
+msgstr "Recommandé"
 
 #: pe/ui/settings.cpp
 msgid "Recommended defaults restored."
@@ -1093,7 +1106,7 @@ msgstr "Enregistré pour ce jeu. S'applique au prochain lancement."
 msgid "Saved. A display that cannot show 120 Hz stays at 60 Hz."
 msgstr "Enregistré. Un écran incompatible avec le 120 Hz reste à 60 Hz."
 
-#: pe/ui/browse.cpp, pe/ui/launcher.cpp
+#: pe/ui/launcher.cpp
 msgid "Saved. Applies when a game starts."
 msgstr "Enregistré. S'applique au lancement d'un jeu."
 
@@ -1168,6 +1181,10 @@ msgstr "TAILLE"
 #: settings_store.h
 msgid "SMAA"
 msgstr "SMAA"
+
+#: settings_store.h
+msgid "Smooth"
+msgstr "Fluide"
 
 #: pe/ui/settings.cpp
 msgid "Solid panels, brighter text and an outlined highlight."
@@ -1291,13 +1308,13 @@ msgstr "Activer ou désactiver"
 msgid "Turns DualSense vibration on or off for games."
 msgstr "Active ou désactive les vibrations DualSense dans les jeux."
 
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "TV output"
+msgstr "Sortie TV"
+
 #: pe/ui/settings.cpp
 msgid "TV OUTPUT"
 msgstr "SORTIE TV"
-
-#: pe/ui/settings.cpp
-msgid "TV output"
-msgstr "Sortie TV"
 
 #: pe/ui/library.cpp
 msgid "Unavailable"
@@ -1470,7 +1487,7 @@ msgid "{0} of {1} on"
 msgstr "{0} sur {1} activés"
 
 #. A percentage (a volume): write it as the language does, for example with a space before the sign.
-#: pe/ui/settings.cpp
+#: pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "{0}%"
 msgstr "{0} %"
 

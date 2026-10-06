@@ -85,7 +85,9 @@ extern "C" std::int64_t sceKernelGetDirectMemorySize();
 #include "core/hle/kernel/k_thread.h"
 #endif
 #pragma clang diagnostic pop
+#if EDEN_SHARED_JIT_AVAILABLE
 extern "C" bool eden_jit_shared;  // headless/dynarmic/jit_group_support.inc
+#endif
 #ifdef EDEN_DEV_PROFILE
 #include "crash_trigger.h"
 #include "watch.h"
@@ -734,9 +736,10 @@ int main(int argc, char** argv) {
 #endif
 #endif
         const auto launch_preferences = Eden::LoadPreferences();
-        const int effective_performance_profile = safe_launch ? 0 :
-            game_video.performance_profile >= 0 ?
-            game_video.performance_profile : launch_preferences.performance_profile;
+        const int effective_performance_profile = safe_launch ? 0 : std::clamp(
+            game_video.performance_profile >= 0 ? game_video.performance_profile :
+                                                   launch_preferences.performance_profile,
+            0, 3);
 #ifndef EDEN_PS5_VULKAN
         if (backend == Eden::GraphicsBackend::Vulkan)
             throw std::runtime_error("Vulkan is not available in this build yet. Select OpenGL in Settings > Video to play.");
@@ -862,6 +865,10 @@ int main(int argc, char** argv) {
         // EDEN_JIT_PRESSURE and multi-hundred-ms/second stalls. Development builds can still opt in
         // with block-list.txt below while the mechanism is requalified.
         Eden::JitList::enabled = false;
+#if !EDEN_SHARED_JIT_AVAILABLE && !EDEN_JIT_COMPILE_BATCH_AVAILABLE
+        Eden::Report("performance",
+            "CPU JIT: Dynarmic per-core; Encore cross-core sharing, successor batching and saved-block compile-ahead disabled");
+#endif
         Eden::Report("performance",
             (std::string("Profile ") + Eden::kPerformanceProfileLabels[effective_performance_profile] +
              ": compile-ahead " + (Eden::JitList::enabled.load(std::memory_order_relaxed) ? "on" : "off") +
@@ -919,8 +926,10 @@ int main(int argc, char** argv) {
                     // The saved block list (jit_list.h): off unless asked for.
                     Eden::JitList::enabled = entry.ends_with("on");
                 } else if (entry == "jit_shared=off") {
-                    // Every guest core keeps its own compiled blocks (headless/dynarmic/jit_group.h).
+                    // Development A/B only. Production does not compile the cross-core JitGroup.
+#if EDEN_SHARED_JIT_AVAILABLE
                     eden_jit_shared = false;
+#endif
                 } else if (entry == "cpu_accuracy=unsafe") {
                     // Dynarmic's unsafe FP shortcuts on top of Auto (reduced-error estimates, inaccurate NaN).
                     Settings::values.cpu_accuracy = Settings::CpuAccuracy::Unsafe;
@@ -1067,7 +1076,7 @@ int main(int argc, char** argv) {
                 (game_video.upscaling_filter >= 0 ? game_video.upscaling_filter : video.upscaling_filter);
             Settings::values.resolution_setup.SetValue(resolutions[resolution]);
             Settings::values.scaling_filter.SetValue(filters[filter]);
-            const int fsr_sharpness = safe_launch ? 88 :
+            const int fsr_sharpness = safe_launch ? 50 :
                 (game_video.fsr_sharpness >= 0 ? game_video.fsr_sharpness : video.fsr_sharpness);
             const int anti_aliasing = safe_launch ? 0 :
                 (game_video.anti_aliasing >= 0 ? game_video.anti_aliasing : video.anti_aliasing);

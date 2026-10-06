@@ -74,32 +74,29 @@ float MenuGain(int volume) {
 
 // The launcher speaks the console's language when the app has a catalog for it
 // (ui/lang/<tag>.po, tags as in third_party/ps5_system_language.hpp), and English otherwise.
-// language.txt in the app's folder, holding a tag, chooses another one ("en-US": English).
+// Development profiles may override it with language.txt; release builds always follow the saved setting.
 //
 // Montserrat has Latin and Cyrillic letters. The other scripts (Japanese, Korean, Chinese, Greek,
 // Thai, Arabic: in the launcher's own text, a game's title or a file name) are drawn with the
 // console's own fonts, which the font is told of here every time the launcher opens. A catalog
 // those fonts cannot draw in full is not used: English is better than missing letters.
 void LoadLanguage(pe::gfx::Font& font) {
-    static bool loaded = false;
-    static std::string tag;
-    const bool first = !std::exchange(loaded, true);
     int system_language = -1;
-    int rc = 0;
-    if (first) {
-        rc = sceSystemServiceParamGetInt(ps5::i18n::kSystemLanguageParameter, &system_language);
-        const Eden::Preferences preferences = Eden::LoadPreferences();
-        const int language = std::clamp(preferences.language, 0, int(std::size(Eden::kLanguageCatalogTags)) - 1);
-        // Settings > Language is shared with the games, so the Encore launcher speaks the same
-        // language. First-start code seeds this preference from the PS5 system language.
-        tag = Eden::kLanguageCatalogTags[language];
-        // A development-only file may still force a catalog while testing translations.
-        std::string chosen;
-        if (pe::read_file(Eden::AppFile("language.txt"), &chosen, 64)) {
-            while (!chosen.empty() && static_cast<unsigned char>(chosen.back()) <= ' ') chosen.pop_back();
-            if (!chosen.empty()) tag = chosen;
-        }
+    const int rc = sceSystemServiceParamGetInt(ps5::i18n::kSystemLanguageParameter, &system_language);
+    const Eden::Preferences preferences = Eden::LoadPreferences();
+    const int language = std::clamp(preferences.language, 0,
+                                    int(std::size(Eden::kLanguageCatalogTags)) - 1);
+    std::string tag = Eden::kLanguageCatalogTags[language];
+#ifdef EDEN_DEV_PROFILE
+    // Development builds may force a catalog without rewriting preferences. Release builds must
+    // never honor a stale language.txt left behind by an older test install.
+    std::string chosen;
+    if (pe::read_file(Eden::AppFile("language.txt"), &chosen, 64)) {
+        while (!chosen.empty() && static_cast<unsigned char>(chosen.back()) <= ' ') chosen.pop_back();
+        if (!chosen.empty()) tag = chosen;
     }
+#endif
+
     std::string folder = "none";
     std::size_t files = 0;
     for (const std::string& candidate : pe::gfx::system_font_folders()) {
@@ -110,7 +107,10 @@ void LoadLanguage(pe::gfx::Font& font) {
         font.use_system_fonts(std::move(found), tag);
         break;
     }
-    if (!first) return;
+
+    // Every launcher instance starts with a clean catalog. This is essential when switching from
+    // a translated language back to English, whose candidate list is deliberately empty.
+    pe::catalog().clear();
     std::string catalog = "none";
     std::size_t texts = 0;
     for (const std::string& candidate : pe::catalog_candidates(tag)) {
@@ -124,6 +124,10 @@ void LoadLanguage(pe::gfx::Font& font) {
         pe::catalog().clear();
         catalog += " (not used: no font for it)";
         texts = 0;
+    }
+    if (tag.rfind("en", 0) != 0 && texts == 0) {
+        Eden::Report("language", ("Requested launcher catalog unavailable: " + tag +
+                                   " under " + Eden::AppFile("ui/lang")).c_str());
     }
     std::fprintf(stderr, "EDEN_LANGUAGE system=%d rc=0x%x tag=%s catalog=%s texts=%zu\n", system_language,
                  static_cast<unsigned>(rc), tag.c_str(), catalog.c_str(), texts);
@@ -167,7 +171,7 @@ int SaveCapture(const std::string& path, int width, int height) {
 }
 #endif
 
-std::string RunApp(const std::string& launch_error, bool first_start) {
+std::string RunApp(const std::string& launch_error, bool first_start, bool* restart_requested) {
     // A fresh/legacy config with no explicit game language follows the PS5 once. Once saved,
     // Settings > Language remains authoritative and is never overwritten by later system changes.
     if (first_start && !Eden::HasSavedLanguage()) {
@@ -267,7 +271,7 @@ std::string RunApp(const std::string& launch_error, bool first_start) {
         pe::gfx::Viewport viewport = pe::gfx::fit_viewport(display.width(), display.height());
         auto previous = Clock::now();
         bool first_frame = true;
-        while (running && !launcher.done()) {
+        while (running && !launcher.done() && !launcher.restart_requested()) {
             const auto frame_start = Clock::now();
             // Start-to-start frame time; a long frame does not make the animations jump.
             const float dt = first_frame ? 1.0f / 60.0f :
@@ -379,6 +383,8 @@ std::string RunApp(const std::string& launch_error, bool first_start) {
             }
         }
 
+        if (restart_requested != nullptr)
+            *restart_requested = launcher.restart_requested();
         selected_game = launcher.selected_game();
         if (!launcher.done()) selected_game.clear();
         // Let the last sound end (the screen is already dark), then give everything back.
@@ -397,7 +403,16 @@ std::string RunApp(const std::string& launch_error, bool first_start) {
 } // namespace
 
 std::string SelectProsperoEdenGame(const std::string& launch_error) {
-    // The first time is the app opening; afterwards the launcher returns from a game.
+    // The first time is the app opening; afterwards the launcher returns from a game. A language
+    // change rebuilds only the launcher in this same call so translated text/font caches refresh.
     static bool first_start = true;
-    return RunApp(launch_error, std::exchange(first_start, false));
+    bool opening = std::exchange(first_start, false);
+    for (;;) {
+        bool restart = false;
+        std::string selected = RunApp(launch_error, opening, &restart);
+        opening = false;
+        if (!restart)
+            return selected;
+        std::fprintf(stderr, "EDEN_LANGUAGE launcher-restart=1\n");
+    }
 }

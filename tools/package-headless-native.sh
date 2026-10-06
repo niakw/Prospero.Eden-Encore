@@ -2,10 +2,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 set -euo pipefail
 [[ $# == 0 || ( $# == 1 && ( "$1" == --integration || "$1" == --game ) ) ]]
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
+source "$root/tools/host-env.sh"
+eden_host_env "$root"
 scratch=$(cat "$root/.local/headless-cache")
-[[ "$(cat "$scratch/owner")" == "$root" ]]
+[[ "$(cd -- "$(cat "$scratch/owner")" && pwd -P)" == "$root" ]]
 template="$root/../ps5-native-app-boilerplate"
 builder="$root/build/host/ps5-native-tool"
 out="$root/build/headless-native"
@@ -13,7 +14,9 @@ app="${EDEN_PACKAGE_DIR:-$root/dist/headless/PPSA99008}"
 # A separate clean staging directory lets driver candidates omit private game
 # assets without deleting or copying the existing development installation.
 if [[ -n ${EDEN_PACKAGE_DIR:-} ]]; then
-    [[ $(realpath -m "$app") == "$root"/build/*/PPSA99008 ]] || exit 2
+    canonical_root=$(realpath -m "$root")
+    canonical_app=$(realpath -m "$app")
+    [[ $canonical_app == "$canonical_root"/build/*/PPSA99008 ]] || exit 2
     [[ ${1:-} != --game ]] || exit 2
 fi
 test -x "$builder"
@@ -24,7 +27,7 @@ cp "$scratch/native-local/bin/eden-headless.map" "$out/link.map"
 cp "$scratch/native-local/CMakeCache.txt" "$out/CMakeCache.txt"
 stub_flags=(--stub-dir "$scratch/sdk/target/lib")
 if grep -qx 'EDEN_PS5_OPENGL:BOOL=ON' "$out/CMakeCache.txt"; then
-    gl46="$root/.deps/ps5-opengl-sdk-1.0.0/sdk"
+    gl46="$root/.local/ps5-opengl-sdk-ad2807d"
     stub_flags=()
     for stub in "$scratch/sdk/target/lib/"*.so; do
         case "${stub##*/}" in libSceAgc.so|libSceAgcDriver.so) continue ;; esac
@@ -47,13 +50,29 @@ cp "$root/assets/icon0.png" "$app/sce_sys/icon0.png"
 rm -rf "$app/ui"
 cp -a "$root/headless/prosperoeden/ui" "$app/ui"
 rm -f "$app/ui/art/backdrop.tga" "$app/ui/art/backdrop-blur.tga"
-command -v convert >/dev/null 2>&1 || {
-    echo "ImageMagick convert is required to build the Encore launcher brand asset" >&2
+if command -v magick >/dev/null 2>&1; then
+    image_convert=(magick)
+elif command -v convert >/dev/null 2>&1; then
+    image_convert=(convert)
+else
+    echo "ImageMagick (magick or convert) is required to build Encore launcher art" >&2
     exit 2
-}
+fi
+# One canonical Eden background is reused for the PS5 shell art, launcher and in-game loading
+# screen. 1080p is enough for the launcher/loading texture while keeping its transient VRAM cost
+# small; the PS5 home-screen DDS stays native 4K.
+"${image_convert[@]}" "$root/assets/encore-background.jpg" -resize '1920x1080^' -gravity center -extent 1920x1080 \
+    -alpha off -define tga:bits-per-pixel=24 -compress None "$app/ui/art/backdrop.tga"
+python3 - "$app/ui/art/backdrop.tga" <<'PY2'
+import pathlib, sys
+data = pathlib.Path(sys.argv[1]).read_bytes()
+if len(data) != 18 + 1920 * 1080 * 3 or data[1] != 0 or data[2] != 2 or data[16] != 24:
+    raise SystemExit("Generated Encore backdrop.tga is not 1920x1080 uncompressed true-colour TGA")
+PY2
 # OpenGL's launcher texture convention is vertically opposite ImageMagick's TGA output.
 # Flip only the generated launcher texture; the canonical PNG/PS5 tile remains untouched.
-convert "$app/sce_sys/icon0.png" -resize 256x256 -flip -alpha on -define tga:bits-per-pixel=32 -compress None "$app/ui/art/brand.tga"
+"${image_convert[@]}" "$app/sce_sys/icon0.png" -resize 256x256 -flip -alpha on \
+    -define tga:bits-per-pixel=32 -compress None "$app/ui/art/brand.tga"
 python3 - "$app/ui/art/brand.tga" <<'PY'
 import pathlib, sys
 data = pathlib.Path(sys.argv[1]).read_bytes()
@@ -87,6 +106,10 @@ value['attribute3'] = int(value['attribute3']) | 0x80040
 (app / 'sce_sys/param.json').write_text(json.dumps(value, indent=2) + '\n')
 runpy.run_path(str(root / 'tools/load_alignment.py'))['check_load_alignment']((app / 'eboot.bin').read_bytes())
 profile = (root / 'build/headless-native/CMakeCache.txt').read_text()
+development = 'EDEN_DEV_PROFILE:BOOL=ON' in profile
+if not development:
+    assert 'EDEN_SHARED_JIT:BOOL=OFF' in profile
+    assert 'EDEN_JIT_COMPILE_BATCH:BOOL=OFF' in profile
 assert sum(profile.count('EDEN_DEVICE_FRONTEND:BOOL=' + v) for v in ('ON', 'OFF')) == 1
 devices = 'EDEN_DEVICE_FRONTEND:BOOL=ON' in profile
 graphics = 'EDEN_PS5_OPENGL:BOOL=ON' in profile

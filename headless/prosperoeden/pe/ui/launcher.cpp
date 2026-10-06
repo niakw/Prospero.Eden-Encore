@@ -59,6 +59,25 @@ void Launcher::say(const std::string &text, bool warning)
     message_age_ = 0.0f;
 }
 
+void Launcher::clear_confirmation()
+{
+    confirmation_ = Confirmation::none;
+}
+
+bool Launcher::confirm_action(Confirmation action)
+{
+    if (confirmation_ != action)
+    {
+        confirmation_ = action;
+        say(tr("Press the same button again to confirm."), true);
+        cue(Cue::notify);
+        return false;
+    }
+    clear_confirmation();
+    message_.clear();
+    return true;
+}
+
 void Launcher::open(Screen screen, bool forward)
 {
     leaving_ = screen_;
@@ -66,6 +85,7 @@ void Launcher::open(Screen screen, bool forward)
     forward_ = forward;
     transition_.start(theme::kScreenSeconds);
     message_.clear();
+    clear_confirmation();
     cue(forward ? Cue::open : Cue::back);
 }
 
@@ -75,6 +95,7 @@ void Launcher::open_modal(Modal modal)
     option_ = 0;
     option_cursor_.snap(dialog_row_top(modal, 0));
     message_.clear();
+    clear_confirmation();
     // Switches show their state at once; they only animate when changed.
     const std::array<bool, 3> states = switch_states(modal);
     for (std::size_t i = 0; i < states.size(); ++i)
@@ -103,6 +124,7 @@ void Launcher::close_modal()
 {
     modal_ = Modal::none;
     message_.clear();
+    clear_confirmation();
     cue(Cue::modal_close);
 }
 

@@ -19,21 +19,21 @@ namespace theme
 {
 
 // Eden brand palette: dark neutral surfaces with the official violet/pink/blue accents.
-inline const Color kBase = Color::rgb(0x090a12);
-inline const Color kScrim = Color::rgb(0x05060d);
-inline const Color kGlass = Color::rgb(0x151522);  // home panels
-inline const Color kPanel = Color::rgb(0x10111b);  // screens and dialogs
-inline const Color kPanelEdge = Color::rgb(0x58536f);
-inline const Color kRow = Color::rgb(0x191a28);
-inline const Color kRowEdge = Color::rgb(0x4d4965);
-inline const Color kRowFocus = Color::rgb(0x2b2140);
+inline const Color kBase = Color::rgb(0x07070d);
+inline const Color kScrim = Color::rgb(0x04040a);
+inline const Color kGlass = Color::rgb(0x15101f);  // translucent Eden surfaces
+inline const Color kPanel = Color::rgb(0x0d0c16);  // screens and dialogs
+inline const Color kPanelEdge = Color::rgb(0x6c5b82);
+inline const Color kRow = Color::rgb(0x171321);
+inline const Color kRowEdge = Color::rgb(0x5c4d70);
+inline const Color kRowFocus = Color::rgb(0x32194b);
 
 // Keep the historic names to avoid touching every widget; values are Eden's official accents.
 inline const Color kLime = Color::rgb(0xbf42f6);      // Eden violet
-inline const Color kLimeDeep = Color::rgb(0x5d4aa8);  // deep violet/blue
-inline const Color kLimePale = Color::rgb(0xd6a4ff);  // pale violet
+inline const Color kLimeDeep = Color::rgb(0x6547c7);  // deep violet/blue
+inline const Color kLimePale = Color::rgb(0xe1b7ff);  // pale violet
 inline const Color kSun = Color::rgb(0xff44c4);       // Eden pink
-inline const Color kBlue = Color::rgb(0x5da5ed);      // Eden blue
+inline const Color kBlue = Color::rgb(0x62b4ff);      // Eden blue
 
 // Text
 inline const Color kText = Color::rgb(0xf4f2f8);

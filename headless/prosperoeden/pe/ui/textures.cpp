@@ -41,8 +41,9 @@ bool Textures::load_art(const std::string &directory)
         *texture = create(image);
         return *texture != 0;
     };
-    // Eden PS5 uses a generated dark brand backdrop, so the old ProsperoEden scenic
-    // backdrop textures are intentionally not loaded. This saves both package size and VRAM.
+    // The package generates this from assets/encore-background.jpg. It is launcher-only and is
+    // released before a game starts, so it does not consume gameplay VRAM.
+    (void)load("art/backdrop.tga", &backdrop_);
     const bool brand = load("art/brand.tga", &brand_);
     // Only the home screen's controller display needs this one.
     (void)load("art/controller.tga", &controller_);

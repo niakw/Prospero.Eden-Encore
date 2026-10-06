@@ -1,0 +1,1287 @@
+diff --git a/src/audio_core/audio_render_manager.cpp b/src/audio_core/audio_render_manager.cpp
+index 3c53e3a..8c4e74c 100644
+--- a/src/audio_core/audio_render_manager.cpp
++++ b/src/audio_core/audio_render_manager.cpp
+@@ -1,3 +1,6 @@
++// SPDX-FileCopyrightText: Copyright 2026 Eden Emulator Project
++// SPDX-License-Identifier: GPL-3.0-or-later
++
+ // SPDX-FileCopyrightText: Copyright 2022 yuzu Emulator Project
+ // SPDX-License-Identifier: GPL-2.0-or-later
+ 
+@@ -9,7 +12,9 @@
+ namespace AudioCore::Renderer {
+ 
+ Manager::Manager(Core::System& system_)
+-    : system{system_}, system_manager{std::make_unique<SystemManager>(system)} {
++    : system{system_}
++    , system_manager{std::make_unique<SystemManager>(system)}
++{
+     std::iota(session_ids.begin(), session_ids.end(), 0);
+ }
+ 
+@@ -38,14 +43,12 @@ Result Manager::GetWorkBufferSize(const AudioRendererParameterInternal& params,
+ 
+ s32 Manager::GetSessionId() {
+     std::scoped_lock l{session_lock};
+-    auto session_id{session_ids[session_count]};
+-
+-    if (session_id == -1) {
+-        return -1;
++    ASSERT(session_count <= session_ids.size());
++    auto const session_id = session_ids[session_count];
++    if (session_id >= 0) {
++        session_ids[session_count] = -1;
++        session_count++;
+     }
+-
+-    session_ids[session_count] = -1;
+-    session_count++;
+     return session_id;
+ }
+ 
+diff --git a/src/core/CMakeLists.txt b/src/core/CMakeLists.txt
+index 508ace3..2ea03d6 100644
+--- a/src/core/CMakeLists.txt
++++ b/src/core/CMakeLists.txt
+@@ -810,6 +810,8 @@ add_library(core STATIC
+     hle/service/ns/ecommerce_interface.h
+     hle/service/ns/factory_reset_interface.cpp
+     hle/service/ns/factory_reset_interface.h
++    hle/service/ns/i_async_result.cpp
++    hle/service/ns/i_async_result.h
+     hle/service/ns/language.cpp
+     hle/service/ns/language.h
+     hle/service/ns/ns.cpp
+diff --git a/src/core/file_sys/system_archive/system_version.cpp b/src/core/file_sys/system_archive/system_version.cpp
+index 2dbe4a8..be6cde7 100644
+--- a/src/core/file_sys/system_archive/system_version.cpp
++++ b/src/core/file_sys/system_archive/system_version.cpp
+@@ -40,10 +40,14 @@ VirtualDir SystemVersion() {
+     VirtualFile file = std::make_shared<VectorVfsFile>(file_data, "file");
+ 
+     // the "/digest"
+-    std::vector<u8> digest_data(sizeof(HLE::ApiVersion::VERSION_DIGEST));
+-    std::memcpy(digest_data.data(), HLE::ApiVersion::VERSION_DIGEST, sizeof(HLE::ApiVersion::VERSION_DIGEST));
+-    VirtualFile digest_file = std::make_shared<VectorVfsFile>(digest_data, "digest");
+-    return std::make_shared<VectorVfsDirectory>(std::vector<VirtualFile>{file, digest_file}, std::vector<VirtualDir>{}, "data");
++    if (HLE::ApiVersion::VERSION_DIGEST[0] == '\0') {
++        return std::make_shared<VectorVfsDirectory>(std::vector<VirtualFile>{file}, std::vector<VirtualDir>{}, "data");
++    } else {
++        std::vector<u8> digest_data(sizeof(HLE::ApiVersion::VERSION_DIGEST));
++        std::memcpy(digest_data.data(), HLE::ApiVersion::VERSION_DIGEST, sizeof(HLE::ApiVersion::VERSION_DIGEST));
++        VirtualFile digest_file = std::make_shared<VectorVfsFile>(digest_data, "digest");
++        return std::make_shared<VectorVfsDirectory>(std::vector<VirtualFile>{file, digest_file}, std::vector<VirtualDir>{}, "data");
++    }
+ }
+ 
+ } // namespace FileSys::SystemArchive
+diff --git a/src/core/hle/api_version.h b/src/core/hle/api_version.h
+index 29b4f40..0aff969 100644
+--- a/src/core/hle/api_version.h
++++ b/src/core/hle/api_version.h
+@@ -16,8 +16,8 @@ namespace HLE::ApiVersion {
+ 
+ // Horizon OS version constants.
+ 
+-constexpr u8 HOS_VERSION_MAJOR = 22;
+-constexpr u8 HOS_VERSION_MINOR = 5;
++constexpr u8 HOS_VERSION_MAJOR = 23;
++constexpr u8 HOS_VERSION_MINOR = 0;
+ constexpr u8 HOS_VERSION_MICRO = 0;
+ 
+ // NintendoSDK version constants.
+@@ -25,15 +25,16 @@ constexpr u8 SDK_REVISION_MAJOR = 1;
+ constexpr u8 SDK_REVISION_MINOR = 0;
+ 
+ constexpr char PLATFORM_STRING[0x20] = "NX";
+-constexpr char VERSION_HASH[0x40] = "ae93061abbc7791fcf8d2f7e7b7b2d62163af697";
+-constexpr char DISPLAY_VERSION[0x18] = "22.5.0";
+-constexpr char DISPLAY_TITLE[0x80] = "NintendoSDK Firmware for NX 22.5.0-1.0 ";
+-constexpr char VERSION_DIGEST[0x40] = "CusHY#00160500#WxlZDREksAFSi6bQJEV6nm6-cHLg2jikdYRVN3bwqyE=";
++constexpr char VERSION_HASH[0x40] = "c2663accb7490a6ccfe9bc4dfd120ca215490525";
++constexpr char DISPLAY_VERSION[0x18] = "23.0.0";
++constexpr char DISPLAY_TITLE[0x80] = "NintendoSDK Firmware for NX 23.0.0-4.0";
++// Leave empty when there's no digest (N/A)
++constexpr char VERSION_DIGEST[0x40] = "";
+ 
+ // Atmosphere version constants.
+ constexpr u8 ATMOSPHERE_RELEASE_VERSION_MAJOR = 1;
+-constexpr u8 ATMOSPHERE_RELEASE_VERSION_MINOR = 11;
+-constexpr u8 ATMOSPHERE_RELEASE_VERSION_MICRO = 2;
++constexpr u8 ATMOSPHERE_RELEASE_VERSION_MINOR = 12;
++constexpr u8 ATMOSPHERE_RELEASE_VERSION_MICRO = 0;
+ 
+ constexpr u32 AtmosphereTargetFirmwareWithRevision(u8 major, u8 minor, u8 micro, u8 rev) {
+     return u32{major} << 24 | u32{minor} << 16 | u32{micro} << 8 | u32{rev};
+diff --git a/src/core/hle/kernel/svc/svc_info.cpp b/src/core/hle/kernel/svc/svc_info.cpp
+index e6190ac..863bb58 100644
+--- a/src/core/hle/kernel/svc/svc_info.cpp
++++ b/src/core/hle/kernel/svc/svc_info.cpp
+@@ -210,6 +210,13 @@ Result GetInfo(Core::System& system, u64* result, InfoType info_id_type, Handle
+         *result = system.Kernel().CurrentScheduler()->GetIdleThread()->GetCpuTime();
+         R_SUCCEED();
+     }
++    case InfoType::Unknown37:
++    case InfoType::Unknown38: {
++        LOG_WARNING(Kernel_SVC, "(STUBBED) called, info_id={:#x}, info_sub_id={:#x}, handle={:#08x}",
++                    info_id, info_sub_id, handle);
++        *result = 0;
++        R_SUCCEED();
++    }
+     case InfoType::MesosphereMeta: {
+         enum MesosphereMetaInfo : u64 {
+             KernelVersion = 0,
+diff --git a/src/core/hle/kernel/svc_types.h b/src/core/hle/kernel/svc_types.h
+index fce3dea..b0f4796 100644
+--- a/src/core/hle/kernel/svc_types.h
++++ b/src/core/hle/kernel/svc_types.h
+@@ -1,4 +1,4 @@
+-// SPDX-FileCopyrightText: Copyright 2025 Eden Emulator Project
++// SPDX-FileCopyrightText: Copyright 2026 Eden Emulator Project
+ // SPDX-License-Identifier: GPL-3.0-or-later
+ 
+ // SPDX-FileCopyrightText: Copyright 2020 yuzu Emulator Project
+@@ -158,6 +158,11 @@ enum class InfoType : u32 {
+     IoRegionHint = 27,
+     AliasRegionExtraSize = 28,
+ 
++    TransferMemoryHint = 34,
++
++    Unknown37 = 37,
++    Unknown38 = 38,
++
+     MesosphereMeta = 65000,
+     MesosphereCurrentProcess = 65001,
+ };
+diff --git a/src/core/hle/service/am/display_layer_manager.cpp b/src/core/hle/service/am/display_layer_manager.cpp
+index 494e8a1..cd9e26e 100644
+--- a/src/core/hle/service/am/display_layer_manager.cpp
++++ b/src/core/hle/service/am/display_layer_manager.cpp
+@@ -73,16 +73,20 @@ Result DisplayLayerManager::CreateManagedDisplayLayer(u64* out_layer_id) {
+     R_TRY(m_manager_display_service->CreateManagedLayer(
+         out_layer_id, 0, display_id, Service::AppletResourceUserId{m_process->GetProcessId()}));
+ 
++    m_manager_display_service->SetLayerVisibility(m_visible, *out_layer_id);
++    (void)m_display_service->GetContainer()->SetLayerStackMask(*out_layer_id,
++                                                              this->GetLayerStackMask());
++
+     if (m_applet_id != AppletId::Application) {
+         (void)m_manager_display_service->SetLayerBlending(m_blending_enabled, *out_layer_id);
+         if (m_applet_id == AppletId::OverlayDisplay) {
+-            (void)m_manager_display_service->SetLayerZIndex(-1, *out_layer_id);
+-            (void)m_display_service->GetContainer()->SetLayerIsOverlay(*out_layer_id, true);
++            (void)m_manager_display_service->SetLayerZIndex(Overlay, *out_layer_id);
+         } else {
+-            (void)m_manager_display_service->SetLayerZIndex(1, *out_layer_id);
++            (void)m_manager_display_service->SetLayerZIndex(Foreground, *out_layer_id);
+         }
+     }
+-    (void)m_display_service->GetContainer()->SetLayerZIndex(*out_layer_id, true);
++
++    m_display_service->GetContainer()->SetLayerZIndex(*out_layer_id, true);
+     m_managed_display_layers.emplace(*out_layer_id);
+ 
+     R_SUCCEED();
+@@ -122,14 +126,16 @@ Result DisplayLayerManager::IsSystemBufferSharingEnabled() {
+ 
+     // Ensure the overlay layer is visible
+     m_manager_display_service->SetLayerVisibility(m_visible, m_system_shared_layer_id);
+-    m_manager_display_service->SetLayerBlending(m_blending_enabled, m_system_shared_layer_id);
+-    s32 initial_z = 1;
+-    (void)m_display_service->GetContainer()->SetLayerZIndex(m_system_shared_layer_id, true);
++    (void)m_manager_display_service->SetLayerBlending(m_blending_enabled, m_system_shared_layer_id);
++    s32 initial_z = Foreground;
+     if (m_applet_id == AppletId::OverlayDisplay) {
+-        initial_z = -1;
++        initial_z = Overlay;
++        (void)m_manager_display_service->SetLayerZIndex(initial_z, m_system_shared_layer_id);
+         (void)m_display_service->GetContainer()->SetLayerIsOverlay(m_system_shared_layer_id, true);
+     }
+     m_manager_display_service->SetLayerZIndex(initial_z, m_system_shared_layer_id);
++    m_display_service->GetContainer()->SetLayerZIndex(m_system_shared_layer_id, true);
++    m_managed_display_layers.emplace(m_system_shared_layer_id);
+     R_SUCCEED();
+ }
+ 
+diff --git a/src/core/hle/service/am/service/application_creator.cpp b/src/core/hle/service/am/service/application_creator.cpp
+index e3bb92c..4eb2f29 100644
+--- a/src/core/hle/service/am/service/application_creator.cpp
++++ b/src/core/hle/service/am/service/application_creator.cpp
+@@ -16,6 +16,7 @@
+ #include "core/hle/service/cmif_serialization.h"
+ #include "core/loader/loader.h"
+ #include "core/launch_timestamp_cache.h"
++#include "core/hle/api_version.h"
+ 
+ namespace Service::AM {
+ 
+@@ -87,7 +88,7 @@ Result IApplicationCreator::CreateSystemApplication(
+ 
+     std::vector<u8> control;
+     std::unique_ptr<Loader::AppLoader> loader;
+-    auto process = CreateProcess(system, application_id, 1, 22);
++    auto process = CreateProcess(system, application_id, 1, HLE::ApiVersion::HOS_VERSION_MAJOR);
+     R_UNLESS(process != nullptr, ResultUnknown);
+ 
+     const auto applet = std::make_shared<Applet>(system, std::move(process), true);
+diff --git a/src/core/hle/service/am/service/library_applet_creator.cpp b/src/core/hle/service/am/service/library_applet_creator.cpp
+index c20a77f..ce80ce9 100644
+--- a/src/core/hle/service/am/service/library_applet_creator.cpp
++++ b/src/core/hle/service/am/service/library_applet_creator.cpp
+@@ -13,6 +13,8 @@
+ #include "core/hle/service/am/process_creation.h"
+ #include "core/hle/service/am/service/library_applet_accessor.h"
+ #include "core/hle/service/am/service/library_applet_creator.h"
++
++#include "core/hle/api_version.h"
+ #include "core/hle/service/am/service/storage.h"
+ #include "core/hle/service/am/window_system.h"
+ #include "core/hle/service/cmif_serialization.h"
+@@ -108,20 +110,7 @@ std::shared_ptr<ILibraryAppletAccessor> CreateGuestApplet(Core::System& system,
+         return {};
+     }
+ 
+-    // TODO: enable other versions of applets
+-    enum : u8 {
+-        Firmware1400 = 14,
+-        Firmware1500 = 15,
+-        Firmware1600 = 16,
+-        Firmware1700 = 17,
+-        Firmware1800 = 18,
+-        Firmware1900 = 19,
+-        Firmware2000 = 20,
+-        Firmware2100 = 21,
+-        Firmware2200 = 22,
+-    };
+-
+-    auto process = CreateProcess(system, program_id, Firmware1400, Firmware2200);
++    auto process = CreateProcess(system, program_id, 1, HLE::ApiVersion::HOS_VERSION_MAJOR);
+     if (process) {
+         const auto applet = std::make_shared<Applet>(system, std::move(process), false);
+         applet->program_id = program_id;
+diff --git a/src/core/hle/service/am/service/self_controller.cpp b/src/core/hle/service/am/service/self_controller.cpp
+index 70ce744..3a654b9 100644
+--- a/src/core/hle/service/am/service/self_controller.cpp
++++ b/src/core/hle/service/am/service/self_controller.cpp
+@@ -71,6 +71,7 @@ ISelfController::ISelfController(Core::System& system_, std::shared_ptr<Applet>
+         {120, D<&ISelfController::SaveCurrentScreenshot>, "SaveCurrentScreenshot"},
+         {130, D<&ISelfController::SetRecordVolumeMuted>, "SetRecordVolumeMuted"},
+         {230, D<&ISelfController::Unknown230>, "Unknown230"},
++        {240, D<&ISelfController::Unknown240>, "Unknown240"},
+         {1000, nullptr, "GetDebugStorageChannel"},
+     };
+     // clang-format on
+@@ -422,4 +423,10 @@ Result ISelfController::Unknown230(u32 in_val, Out<u16> out_val) {
+     R_SUCCEED();
+ }
+ 
++Result ISelfController::Unknown240(u32 in_val) {
++    LOG_WARNING(Service_AM, "(STUBBED) called, in_val={}", in_val);
++
++    R_SUCCEED();
++}
++
+ } // namespace Service::AM
+diff --git a/src/core/hle/service/am/service/self_controller.h b/src/core/hle/service/am/service/self_controller.h
+index b6403ab..c9f480f 100644
+--- a/src/core/hle/service/am/service/self_controller.h
++++ b/src/core/hle/service/am/service/self_controller.h
+@@ -68,6 +68,7 @@ private:
+     Result SaveCurrentScreenshot(Capture::AlbumReportOption album_report_option);
+     Result SetRecordVolumeMuted(bool muted);
+     Result Unknown230(u32 in_val, Out<u16> out_val);
++    Result Unknown240(u32 in_val);
+ 
+     Kernel::KProcess* const m_process;
+     const std::shared_ptr<Applet> m_applet;
+diff --git a/src/core/hle/service/audio/audio.cpp b/src/core/hle/service/audio/audio.cpp
+index c433283..6caf794 100644
+--- a/src/core/hle/service/audio/audio.cpp
++++ b/src/core/hle/service/audio/audio.cpp
+@@ -185,26 +185,26 @@ public:
+ void LoopProcess(Core::System& system) {
+     auto server_manager = std::make_unique<ServerManager>(system);
+ 
+-    server_manager->RegisterNamedService("aud:a", std::make_shared<IAudioSystemManagerForApplet>(system));
+-    server_manager->RegisterNamedService("aud:d", std::make_shared<IAudioSystemManagerForDebugger>(system));
+-
+-    server_manager->RegisterNamedService("audout:d", std::make_shared<IAudioOutManagerForDebugger>(system));
+-    server_manager->RegisterNamedService("audin:d", std::make_shared<IAudioInManagerForDebugger>(system));
+-    server_manager->RegisterNamedService("audrec:d", std::make_shared<IFinalOutputRecorderManagerForDebugger>(system));
+-    server_manager->RegisterNamedService("audren:d", std::make_shared<IAudioInManager>(system));
+-
+-    server_manager->RegisterNamedService("audin:u", std::make_shared<IAudioInManager>(system));
+-    server_manager->RegisterNamedService("audin:a", std::make_shared<IAudioInManagerForApplet>(system));
+-    server_manager->RegisterNamedService("audout:u", std::make_shared<IAudioOutManager>(system));
+-    server_manager->RegisterNamedService("audout:a", std::make_shared<IAudioOutManagerForApplet>(system));
+-    server_manager->RegisterNamedService("auddev", std::make_shared<IAudioSnoopManager>(system));
++    server_manager->RegisterNamedService("aud:a", std::make_shared<IAudioSystemManagerForApplet>(system), 30);
++    server_manager->RegisterNamedService("aud:d", std::make_shared<IAudioSystemManagerForDebugger>(system), 30);
++
++    server_manager->RegisterNamedService("audout:d", std::make_shared<IAudioOutManagerForDebugger>(system), 30);
++    server_manager->RegisterNamedService("audin:d", std::make_shared<IAudioInManagerForDebugger>(system), 30);
++    server_manager->RegisterNamedService("audrec:d", std::make_shared<IFinalOutputRecorderManagerForDebugger>(system), 30);
++    server_manager->RegisterNamedService("audren:d", std::make_shared<IAudioInManager>(system), 30);
++
++    server_manager->RegisterNamedService("audin:u", std::make_shared<IAudioInManager>(system), 30);
++    server_manager->RegisterNamedService("audin:a", std::make_shared<IAudioInManagerForApplet>(system), 30);
++    server_manager->RegisterNamedService("audout:u", std::make_shared<IAudioOutManager>(system), 30);
++    server_manager->RegisterNamedService("audout:a", std::make_shared<IAudioOutManagerForApplet>(system), 30);
++    server_manager->RegisterNamedService("auddev", std::make_shared<IAudioSnoopManager>(system), 30);
+     // Depends on audout:u and audin:u on ctor!
+-    server_manager->RegisterNamedService("audctl", std::make_shared<IAudioController>(system));
+-    server_manager->RegisterNamedService("audrec:a", std::make_shared<IFinalOutputRecorderManagerForApplet>(system));
+-    server_manager->RegisterNamedService("audrec:u", std::make_shared<IFinalOutputRecorderManager>(system));
+-    server_manager->RegisterNamedService("audren:u", std::make_shared<IAudioRendererManager>(system));
+-    server_manager->RegisterNamedService("audren:a", std::make_shared<IAudioRendererManagerForApplet>(system));
+-    server_manager->RegisterNamedService("hwopus", std::make_shared<IHardwareOpusDecoderManager>(system));
++    server_manager->RegisterNamedService("audctl", std::make_shared<IAudioController>(system), 30);
++    server_manager->RegisterNamedService("audrec:a", std::make_shared<IFinalOutputRecorderManagerForApplet>(system), 30);
++    server_manager->RegisterNamedService("audrec:u", std::make_shared<IFinalOutputRecorderManager>(system), 30);
++    server_manager->RegisterNamedService("audren:u", std::make_shared<IAudioRendererManager>(system), 30);
++    server_manager->RegisterNamedService("audren:a", std::make_shared<IAudioRendererManagerForApplet>(system), 30);
++    server_manager->RegisterNamedService("hwopus", std::make_shared<IHardwareOpusDecoderManager>(system), 25);
+     ServerManager::RunServer(std::move(server_manager));
+ }
+ 
+diff --git a/src/core/hle/service/bcat/bcat.cpp b/src/core/hle/service/bcat/bcat.cpp
+index ea8b159..bf9e054 100644
+--- a/src/core/hle/service/bcat/bcat.cpp
++++ b/src/core/hle/service/bcat/bcat.cpp
+@@ -1,3 +1,6 @@
++// SPDX-FileCopyrightText: Copyright 2026 Eden Emulator Project
++// SPDX-License-Identifier: GPL-3.0-or-later
++
+ // SPDX-FileCopyrightText: Copyright 2018 yuzu Emulator Project
+ // SPDX-License-Identifier: GPL-2.0-or-later
+ 
+@@ -12,25 +15,16 @@ namespace Service::BCAT {
+ void LoopProcess(Core::System& system) {
+     auto server_manager = std::make_unique<ServerManager>(system);
+ 
+-    server_manager->RegisterNamedService("bcat:a",
+-                                         std::make_shared<IServiceCreator>(system, "bcat:a"));
+-    server_manager->RegisterNamedService("bcat:m",
+-                                         std::make_shared<IServiceCreator>(system, "bcat:m"));
+-    server_manager->RegisterNamedService("bcat:u",
+-                                         std::make_shared<IServiceCreator>(system, "bcat:u"));
+-    server_manager->RegisterNamedService("bcat:s",
+-                                         std::make_shared<IServiceCreator>(system, "bcat:s"));
+-
+-    server_manager->RegisterNamedService(
+-        "news:a", std::make_shared<News::IServiceCreator>(system, 0xffffffff, "news:a"));
+-    server_manager->RegisterNamedService(
+-        "news:p", std::make_shared<News::IServiceCreator>(system, 0x1, "news:p"));
+-    server_manager->RegisterNamedService(
+-        "news:c", std::make_shared<News::IServiceCreator>(system, 0x2, "news:c"));
+-    server_manager->RegisterNamedService(
+-        "news:v", std::make_shared<News::IServiceCreator>(system, 0x4, "news:v"));
+-    server_manager->RegisterNamedService(
+-        "news:m", std::make_shared<News::IServiceCreator>(system, 0xd, "news:m"));
++    server_manager->RegisterNamedService("bcat:a", std::make_shared<IServiceCreator>(system, "bcat:a"), 32);
++    server_manager->RegisterNamedService("bcat:m", std::make_shared<IServiceCreator>(system, "bcat:m"), 32);
++    server_manager->RegisterNamedService("bcat:u", std::make_shared<IServiceCreator>(system, "bcat:u"), 32);
++    server_manager->RegisterNamedService("bcat:s", std::make_shared<IServiceCreator>(system, "bcat:s"), 32);
++
++    server_manager->RegisterNamedService("news:a", std::make_shared<News::IServiceCreator>(system, 0xffffffff, "news:a"), 32);
++    server_manager->RegisterNamedService("news:p", std::make_shared<News::IServiceCreator>(system, 0x1, "news:p"), 32);
++    server_manager->RegisterNamedService("news:c", std::make_shared<News::IServiceCreator>(system, 0x2, "news:c"), 32);
++    server_manager->RegisterNamedService("news:v", std::make_shared<News::IServiceCreator>(system, 0x4, "news:v"), 32);
++    server_manager->RegisterNamedService("news:m", std::make_shared<News::IServiceCreator>(system, 0xd, "news:m"), 32);
+ 
+     ServerManager::RunServer(std::move(server_manager));
+ }
+diff --git a/src/core/hle/service/bpc/bpc.cpp b/src/core/hle/service/bpc/bpc.cpp
+index 6fd7001..6f2e00b 100644
+--- a/src/core/hle/service/bpc/bpc.cpp
++++ b/src/core/hle/service/bpc/bpc.cpp
+@@ -101,14 +101,28 @@ public:
+     }
+ };
+ 
++class BPC_AMS final : public ServiceFramework<BPC_AMS> {
++public:
++    explicit BPC_AMS(Core::System& system_) : ServiceFramework{system_, "bpc:ams"} {
++        // clang-format off
++        static const FunctionInfo functions[] = {
++            {65000, nullptr, "RebootToFatalError"},
++            {65001, nullptr, "SetRebootPayload"},
++        };
++        // clang-format on
++        RegisterHandlers(functions);
++    }
++};
++
+ void LoopProcess(Core::System& system) {
+     auto server_manager = std::make_unique<ServerManager>(system);
+ 
+-    server_manager->RegisterNamedService("bpc", std::make_shared<BPC>(system));
+-    server_manager->RegisterNamedService("bpc:r", std::make_shared<BPC_R>(system));
+-    server_manager->RegisterNamedService("bpc:c", std::make_shared<BPC_C>(system));
+-    server_manager->RegisterNamedService("bpc:b", std::make_shared<BPC_B>(system));
+-    server_manager->RegisterNamedService("bpc:w", std::make_shared<BPC_W>(system));
++    server_manager->RegisterNamedService("bpc", std::make_shared<BPC>(system), 13);
++    server_manager->RegisterNamedService("bpc:r", std::make_shared<BPC_R>(system), 13);
++    server_manager->RegisterNamedService("bpc:c", std::make_shared<BPC_C>(system), 13);
++    server_manager->RegisterNamedService("bpc:b", std::make_shared<BPC_B>(system), 13);
++    server_manager->RegisterNamedService("bpc:w", std::make_shared<BPC_W>(system), 13);
++    server_manager->RegisterNamedService("bpc:ams", std::make_shared<BPC_AMS>(system), 4);
+     ServerManager::RunServer(std::move(server_manager));
+ }
+ 
+diff --git a/src/core/hle/service/filesystem/filesystem.cpp b/src/core/hle/service/filesystem/filesystem.cpp
+index 306e870..47448ac 100644
+--- a/src/core/hle/service/filesystem/filesystem.cpp
++++ b/src/core/hle/service/filesystem/filesystem.cpp
+@@ -797,9 +797,9 @@ void LoopProcess(Core::System& system) {
+ 
+     const auto FileSystemProxyFactory = [&] { return std::make_shared<FSP_SRV>(system); };
+ 
+-    server_manager->RegisterNamedService("fsp-ldr", std::make_shared<FSP_LDR>(system));
+-    server_manager->RegisterNamedService("fsp-pr", std::make_shared<FSP_PR>(system));
+-    server_manager->RegisterNamedService("fsp-srv", std::move(FileSystemProxyFactory));
++    server_manager->RegisterNamedService("fsp-ldr", std::make_shared<FSP_LDR>(system), 61);
++    server_manager->RegisterNamedService("fsp-pr", std::make_shared<FSP_PR>(system), 61);
++    server_manager->RegisterNamedService("fsp-srv", std::move(FileSystemProxyFactory), 61);
+     ServerManager::RunServer(std::move(server_manager));
+ }
+ 
+diff --git a/src/core/hle/service/filesystem/fsp/fsp_srv.cpp b/src/core/hle/service/filesystem/fsp/fsp_srv.cpp
+index fdbd50e..7d270b7 100644
+--- a/src/core/hle/service/filesystem/fsp/fsp_srv.cpp
++++ b/src/core/hle/service/filesystem/fsp/fsp_srv.cpp
+@@ -54,7 +54,7 @@ FSP_SRV::FSP_SRV(Core::System& system_)
+     static const FunctionInfo functions[] = {
+         {0, nullptr, "OpenFileSystem"},
+         {1, D<&FSP_SRV::SetCurrentProcess>, "SetCurrentProcess"},
+-        {2, nullptr, "OpenDataFileSystemByCurrentProcess"},
++        {2, D<&FSP_SRV::OpenDataFileSystemByCurrentProcess>, "OpenDataFileSystemByCurrentProcess"},
+         {7, D<&FSP_SRV::OpenFileSystemWithPatch>, "OpenFileSystemWithPatch"},
+         {8, nullptr, "OpenFileSystemWithId"},
+         {9, nullptr, "OpenDataFileSystemByApplicationId"},
+@@ -118,6 +118,7 @@ FSP_SRV::FSP_SRV(Core::System& system_)
+         {204, nullptr, "OpenDataFileSystemByProgramIndex"},
+         {205, D<&FSP_SRV::OpenDataStorageWithProgramIndex>, "OpenDataStorageWithProgramIndex"},
+         {206, nullptr, "OpenDataStorageByPath"},
++        {210, D<&FSP_SRV::SetCurrentProcess>, "SetCurrentProcess"},
+         {400, nullptr, "OpenDeviceOperator"},
+         {500, nullptr, "OpenSdCardDetectionEventNotifier"},
+         {501, nullptr, "OpenGameCardDetectionEventNotifier"},
+@@ -460,6 +461,31 @@ Result FSP_SRV::OpenSaveDataTransferProhibiter(
+     R_SUCCEED();
+ }
+ 
++Result FSP_SRV::OpenDataFileSystemByCurrentProcess(OutInterface<IFileSystem> out_interface) {
++    LOG_DEBUG(Service_FS, "called");
++
++    if (!romfs) {
++        auto current_romfs = romfs_controller->OpenRomFSCurrentProcess();
++        if (!current_romfs) {
++            LOG_CRITICAL(Service_FS, "No file system interface available!");
++            R_RETURN(ResultUnknown);
++        }
++
++        romfs = current_romfs;
++    }
++
++    auto extracted_romfs = FileSys::ExtractRomFS(romfs);
++    if (!extracted_romfs) {
++        LOG_CRITICAL(Service_FS, "Failed to extract RomFS for the current process!");
++        R_RETURN(ResultUnknown);
++    }
++
++    *out_interface = std::make_shared<IFileSystem>(
++        system, extracted_romfs, SizeGetter::FromStorageId(fsc, FileSys::StorageId::NandUser));
++
++    R_SUCCEED();
++}
++
+ Result FSP_SRV::OpenDataStorageByCurrentProcess(OutInterface<IStorage> out_interface) {
+     LOG_DEBUG(Service_FS, "called");
+ 
+diff --git a/src/core/hle/service/filesystem/fsp/fsp_srv.h b/src/core/hle/service/filesystem/fsp/fsp_srv.h
+index 0ea4190..156cf4e 100644
+--- a/src/core/hle/service/filesystem/fsp/fsp_srv.h
++++ b/src/core/hle/service/filesystem/fsp/fsp_srv.h
+@@ -51,6 +51,7 @@ public:
+ 
+ private:
+     Result SetCurrentProcess(ClientProcessId pid);
++    Result OpenDataFileSystemByCurrentProcess(OutInterface<IFileSystem> out_interface);
+     Result OpenFileSystemWithPatch(OutInterface<IFileSystem> out_interface,
+                                    FileSystemProxyType type, u64 open_program_id);
+     Result OpenSdCardFileSystem(OutInterface<IFileSystem> out_interface);
+diff --git a/src/core/hle/service/glue/arp.cpp b/src/core/hle/service/glue/arp.cpp
+index b5dfbe9..7eda57d 100644
+--- a/src/core/hle/service/glue/arp.cpp
++++ b/src/core/hle/service/glue/arp.cpp
+@@ -36,18 +36,18 @@ std::optional<u64> GetTitleIDForProcessID(Core::System& system, u64 process_id)
+ ARP_R::ARP_R(Core::System& system_, const ARPManager& manager_)
+     : ServiceFramework{system_, "arp:r"}, manager{manager_} {
+     // clang-format off
+-        static const FunctionInfo functions[] = {
+-            {0, &ARP_R::GetApplicationLaunchProperty, "GetApplicationLaunchProperty"},
+-            {1, &ARP_R::GetApplicationLaunchPropertyWithApplicationId, "GetApplicationLaunchPropertyWithApplicationId"},
+-            {2, &ARP_R::GetApplicationControlProperty, "GetApplicationControlProperty"},
+-            {3, &ARP_R::GetApplicationControlPropertyWithApplicationId, "GetApplicationControlPropertyWithApplicationId"},
+-            {4, nullptr, "GetApplicationInstanceUnregistrationNotifier"},
+-            {5, nullptr, "ListApplicationInstanceId"},
+-            {6, nullptr, "GetMicroApplicationInstanceId"},
+-            {7, nullptr, "GetApplicationCertificate"},
+-            {9998, nullptr, "GetPreomiaApplicationLaunchProperty"},
+-            {9999, nullptr, "GetPreomiaApplicationControlProperty"},
+-        };
++    static const FunctionInfo functions[] = {
++        {0, &ARP_R::GetApplicationLaunchProperty, "GetApplicationLaunchProperty"},
++        {1, &ARP_R::GetApplicationLaunchPropertyWithApplicationId, "GetApplicationLaunchPropertyWithApplicationId"},
++        {2, &ARP_R::GetApplicationControlProperty, "GetApplicationControlProperty"},
++        {3, &ARP_R::GetApplicationControlPropertyWithApplicationId, "GetApplicationControlPropertyWithApplicationId"},
++        {4, nullptr, "GetApplicationInstanceUnregistrationNotifier"},
++        {5, nullptr, "ListApplicationInstanceId"},
++        {6, nullptr, "GetMicroApplicationInstanceId"},
++        {7, nullptr, "GetApplicationCertificate"},
++        {9998, nullptr, "GetPreomiaApplicationLaunchProperty"},
++        {9999, nullptr, "GetPreomiaApplicationControlProperty"},
++    };
+     // clang-format on
+ 
+     RegisterHandlers(functions);
+@@ -191,8 +191,7 @@ private:
+         }
+ 
+         if (issued) {
+-            LOG_ERROR(Service_ARP,
+-                      "Attempted to issue registrar, but registrar is already issued!");
++            LOG_ERROR(Service_ARP, "Attempted to issue registrar, but registrar is already issued!");
+             IPC::ResponseBuilder rb{ctx, 2};
+             rb.Push(Glue::ResultAlreadyBound);
+             return;
+@@ -209,9 +208,7 @@ private:
+         LOG_DEBUG(Service_ARP, "called");
+ 
+         if (issued) {
+-            LOG_ERROR(
+-                Service_ARP,
+-                "Attempted to set application launch property, but registrar is already issued!");
++            LOG_ERROR(Service_ARP, "Attempted to set application launch property, but registrar is already issued!");
+             IPC::ResponseBuilder rb{ctx, 2};
+             rb.Push(Glue::ResultAlreadyBound);
+             return;
+@@ -228,9 +225,7 @@ private:
+         LOG_DEBUG(Service_ARP, "called");
+ 
+         if (issued) {
+-            LOG_ERROR(
+-                Service_ARP,
+-                "Attempted to set application control property, but registrar is already issued!");
++            LOG_ERROR(Service_ARP, "Attempted to set application control property, but registrar is already issued!");
+             IPC::ResponseBuilder rb{ctx, 2};
+             rb.Push(Glue::ResultAlreadyBound);
+             return;
+diff --git a/src/core/hle/service/glue/glue.cpp b/src/core/hle/service/glue/glue.cpp
+index 46d078d..f267060 100644
+--- a/src/core/hle/service/glue/glue.cpp
++++ b/src/core/hle/service/glue/glue.cpp
+@@ -22,8 +22,8 @@ void LoopProcess(Core::System& system) {
+     auto server_manager = std::make_unique<ServerManager>(system);
+ 
+     // ARP
+-    server_manager->RegisterNamedService("arp:r", std::make_shared<ARP_R>(system, system.GetARPManager()));
+-    server_manager->RegisterNamedService("arp:w", std::make_shared<ARP_W>(system, system.GetARPManager()));
++    server_manager->RegisterNamedService("arp:r", std::make_shared<ARP_R>(system, system.GetARPManager()), 16);
++    server_manager->RegisterNamedService("arp:w", std::make_shared<ARP_W>(system, system.GetARPManager()), 8);
+ 
+     // BackGround Task Controller
+     server_manager->RegisterNamedService("bgtc:t", std::make_shared<BGTC_T>(system));
+diff --git a/src/core/hle/service/grc/grc.cpp b/src/core/hle/service/grc/grc.cpp
+index b3d39a6..e8e9016 100644
+--- a/src/core/hle/service/grc/grc.cpp
++++ b/src/core/hle/service/grc/grc.cpp
+@@ -46,8 +46,8 @@ public:
+ void LoopProcess(Core::System& system) {
+     auto server_manager = std::make_unique<ServerManager>(system);
+ 
+-    server_manager->RegisterNamedService("grc:c", std::make_shared<GRC>(system));
+-    server_manager->RegisterNamedService("grc:d", std::make_shared<GRC_D>(system));
++    server_manager->RegisterNamedService("grc:c", std::make_shared<GRC>(system), 4);
++    server_manager->RegisterNamedService("grc:d", std::make_shared<GRC_D>(system), 4);
+     ServerManager::RunServer(std::move(server_manager));
+ }
+ 
+diff --git a/src/core/hle/service/ldr/ldr.cpp b/src/core/hle/service/ldr/ldr.cpp
+index ba58b3a..db4d51b 100644
+--- a/src/core/hle/service/ldr/ldr.cpp
++++ b/src/core/hle/service/ldr/ldr.cpp
+@@ -1,3 +1,6 @@
++// SPDX-FileCopyrightText: Copyright 2026 Eden Emulator Project
++// SPDX-License-Identifier: GPL-3.0-or-later
++
+ // SPDX-FileCopyrightText: Copyright 2018 yuzu Emulator Project
+ // SPDX-License-Identifier: GPL-2.0-or-later
+ 
+@@ -56,9 +59,9 @@ public:
+ void LoopProcess(Core::System& system) {
+     auto server_manager = std::make_unique<ServerManager>(system);
+ 
+-    server_manager->RegisterNamedService("ldr:dmnt", std::make_shared<DebugMonitor>(system));
+-    server_manager->RegisterNamedService("ldr:pm", std::make_shared<ProcessManager>(system));
+-    server_manager->RegisterNamedService("ldr:shel", std::make_shared<Shell>(system));
++    server_manager->RegisterNamedService("ldr:dmnt", std::make_shared<DebugMonitor>(system), 3);
++    server_manager->RegisterNamedService("ldr:pm", std::make_shared<ProcessManager>(system), 1);
++    server_manager->RegisterNamedService("ldr:shel", std::make_shared<Shell>(system), 3);
+ 
+     ServerManager::RunServer(std::move(server_manager));
+ }
+diff --git a/src/core/hle/service/nfp/nfp.cpp b/src/core/hle/service/nfp/nfp.cpp
+index b9922ce..e0c2467 100644
+--- a/src/core/hle/service/nfp/nfp.cpp
++++ b/src/core/hle/service/nfp/nfp.cpp
+@@ -42,6 +42,7 @@ public:
+             {22, &IUser::GetApplicationAreaSize, "GetApplicationAreaSize"},
+             {23, &IUser::AttachAvailabilityChangeEvent, "AttachAvailabilityChangeEvent"},
+             {24, &IUser::RecreateApplicationArea, "RecreateApplicationArea"},
++            {25, &IUser::StartDetection, "StartDetectionWithFilter"},
+         };
+         // clang-format on
+ 
+@@ -74,6 +75,7 @@ public:
+             {20, &ISystem::GetDeviceState, "GetDeviceState"},
+             {21, &ISystem::GetNpadId, "GetNpadId"},
+             {23, &ISystem::AttachAvailabilityChangeEvent, "AttachAvailabilityChangeEvent"},
++            {25, &ISystem::StartDetection, "StartDetectionWithFilter"},
+             {100, &ISystem::Format, "Format"},
+             {101, &ISystem::GetAdminInfo, "GetAdminInfo"},
+             {102, &ISystem::GetRegisterInfoPrivate, "GetRegisterInfoPrivate"},
+@@ -118,6 +120,7 @@ public:
+             {22, &IDebug::GetApplicationAreaSize, "GetApplicationAreaSize"},
+             {23, &IDebug::AttachAvailabilityChangeEvent, "AttachAvailabilityChangeEvent"},
+             {24, &IDebug::RecreateApplicationArea, "RecreateApplicationArea"},
++            {25, &IDebug::StartDetection, "StartDetectionWithFilter"},
+             {100, &IDebug::Format, "Format"},
+             {101, &IDebug::GetAdminInfo, "GetAdminInfo"},
+             {102, &IDebug::GetRegisterInfoPrivate, "GetRegisterInfoPrivate"},
+diff --git a/src/core/hle/service/ngc/ngc.cpp b/src/core/hle/service/ngc/ngc.cpp
+index 0af4a7b..0631014 100644
+--- a/src/core/hle/service/ngc/ngc.cpp
++++ b/src/core/hle/service/ngc/ngc.cpp
+@@ -169,9 +169,9 @@ public:
+ void LoopProcess(Core::System& system) {
+     auto server_manager = std::make_unique<ServerManager>(system);
+ 
+-    server_manager->RegisterNamedService("ngct:u", std::make_shared<IService>(system));
+-    server_manager->RegisterNamedService("ngct:s", std::make_shared<IServiceWithManagementApi>(system));
+-    server_manager->RegisterNamedService("ngc:u", std::make_shared<NgcServiceImpl>(system));
++    server_manager->RegisterNamedService("ngct:u", std::make_shared<IService>(system), 4);
++    server_manager->RegisterNamedService("ngct:s", std::make_shared<IServiceWithManagementApi>(system), 4);
++    server_manager->RegisterNamedService("ngc:u", std::make_shared<NgcServiceImpl>(system), 4);
+     ServerManager::RunServer(std::move(server_manager));
+ }
+ 
+diff --git a/src/core/hle/service/nifm/nifm.cpp b/src/core/hle/service/nifm/nifm.cpp
+index 898b9ec..efada9b 100644
+--- a/src/core/hle/service/nifm/nifm.cpp
++++ b/src/core/hle/service/nifm/nifm.cpp
+@@ -1144,12 +1144,9 @@ private:
+ void LoopProcess(Core::System& system) {
+     auto server_manager = std::make_unique<ServerManager>(system);
+ 
+-    server_manager->RegisterNamedService("nifm:a",
+-                                         std::make_shared<NetworkInterface>("nifm:a", system));
+-    server_manager->RegisterNamedService("nifm:s",
+-                                         std::make_shared<NetworkInterface>("nifm:s", system));
+-    server_manager->RegisterNamedService("nifm:u",
+-                                         std::make_shared<NetworkInterface>("nifm:u", system));
++    server_manager->RegisterNamedService("nifm:a", std::make_shared<NetworkInterface>("nifm:a", system), 2);
++    server_manager->RegisterNamedService("nifm:s", std::make_shared<NetworkInterface>("nifm:s", system), 16);
++    server_manager->RegisterNamedService("nifm:u", std::make_shared<NetworkInterface>("nifm:u", system), 5);
+     ServerManager::RunServer(std::move(server_manager));
+ }
+ 
+diff --git a/src/core/hle/service/ns/application_manager_interface.cpp b/src/core/hle/service/ns/application_manager_interface.cpp
+index c3b2aee..3486499 100644
+--- a/src/core/hle/service/ns/application_manager_interface.cpp
++++ b/src/core/hle/service/ns/application_manager_interface.cpp
+@@ -228,9 +228,9 @@ IApplicationManagerInterface::IApplicationManagerInterface(Core::System& system_
+         {930, nullptr, "Unknown930"}, //20.0.0+
+         {931, nullptr, "Unknown931"}, //20.0.0+
+         {933, nullptr, "Unknown933"}, //20.0.0+
+-        {934, nullptr, "Unknown934"}, //20.0.0+
+-        {935, nullptr, "Unknown935"}, //20.0.0+
+-        {936, nullptr, "Unknown936"}, //20.0.0+
++        {934, nullptr, "Unknown934"}, //21.0.0+
++        {935, nullptr, "Unknown935"}, //21.0.0+
++        {936, D<&IApplicationManagerInterface::Unknown936>, "Unknown936"}, //21.0.0+
+         {1000, nullptr, "RequestVerifyApplicationDeprecated"},
+         {1001, nullptr, "CorruptApplicationForDebug"},
+         {1002, nullptr, "RequestVerifyAddOnContentsRights"},
+@@ -422,7 +422,7 @@ IApplicationManagerInterface::IApplicationManagerInterface(Core::System& system_
+         {4039, nullptr, "Unknown4039"}, //20.0.0+
+         {4040, nullptr, "Unknown4040"}, //20.0.0+
+         {4041, nullptr, "Unknown4041"}, //20.0.0+
+-        {4042, nullptr, "Unknown4042"}, //20.0.0+
++        {4042, D<&IApplicationManagerInterface::Unknown4042>, "Unknown4042"}, //20.0.0+
+         {4043, nullptr, "Unknown4043"}, //20.0.0+
+         {4044, nullptr, "Unknown4044"}, //20.0.0+
+         {4045, nullptr, "Unknown4045"}, //20.0.0+
+@@ -476,6 +476,7 @@ IApplicationManagerInterface::IApplicationManagerInterface(Core::System& system_
+         {4096, nullptr, "Unknown4096"}, //20.0.0+
+         {4097, nullptr, "Unknown4097"}, //20.0.0+
+         {4099, nullptr, "Unknown4099"}, //21.0.0+
++        {4105, D<&IApplicationManagerInterface::Unknown4105>, "Unknown4105"}, //23.0.0+
+         {5000, nullptr, "Unknown5000"}, //18.0.0+
+         {5001, nullptr, "Unknown5001"}, //18.0.0+
+         {9999, nullptr, "GetApplicationCertificate"}, //10.0.0-10.2.0
+@@ -638,6 +639,12 @@ Result IApplicationManagerInterface::IsGameCardApplicationRunning(Out<bool> out_
+     R_SUCCEED();
+ }
+ 
++Result IApplicationManagerInterface::Unknown936(Out<u64> out_result) {
++    LOG_WARNING(Service_NS, "(STUBBED) called.");
++    *out_result = 0;
++    R_SUCCEED();
++}
++
+ Result IApplicationManagerInterface::IsAnyApplicationEntityInstalled(
+     Out<bool> out_is_any_application_entity_installed) {
+     LOG_WARNING(Service_NS, "(STUBBED) called");
+@@ -861,11 +868,25 @@ Result IApplicationManagerInterface::Unknown4023(Out<u64> out_result) {
+     R_SUCCEED();
+ }
+ 
++Result IApplicationManagerInterface::Unknown4042(OutInterface<IAsyncResult> out_interface,
++                                                 OutCopyHandle<Kernel::KReadableEvent> out_event,
++                                                 u64 arg1, u64 arg2) {
++    LOG_WARNING(Service_NS, "(STUBBED) called, arg1={:016X}, arg2={:016X}", arg1, arg2);
++    *out_event = unknown_event.GetHandle();
++    *out_interface = std::make_shared<IAsyncResult>(system, &unknown_event);
++    R_SUCCEED();
++}
++
+ Result IApplicationManagerInterface::Unknown4053() {
+     LOG_WARNING(Service_NS, "(STUBBED) called.");
+     R_SUCCEED();
+ }
+ 
++Result IApplicationManagerInterface::Unknown4105() {
++    LOG_WARNING(Service_NS, "(STUBBED) called.");
++    R_SUCCEED();
++}
++
+ void IApplicationManagerInterface::PushApplicationRecord(HLERequestContext& ctx) {
+     const auto record = ctx.ReadBuffer();
+     u64 application_id{};
+diff --git a/src/core/hle/service/ns/application_manager_interface.h b/src/core/hle/service/ns/application_manager_interface.h
+index f09ccf7..af5ec78 100644
+--- a/src/core/hle/service/ns/application_manager_interface.h
++++ b/src/core/hle/service/ns/application_manager_interface.h
+@@ -7,6 +7,7 @@
+ #pragma once
+ 
+ #include "core/hle/service/cmif_types.h"
++#include "core/hle/service/ns/i_async_result.h"
+ #include "core/hle/service/ns/language.h"
+ #include "core/hle/service/ns/ns_types.h"
+ #include "core/hle/service/os/event.h"
+@@ -34,6 +35,7 @@ public:
+     Result GetGameCardMountFailureEvent(OutCopyHandle<Kernel::KReadableEvent> out_event);
+     Result GetGameCardWakenReadyEvent(OutCopyHandle<Kernel::KReadableEvent> out_event);
+     Result IsGameCardApplicationRunning(Out<bool> out_is_running);
++    Result Unknown936(Out<u64> out_result);
+     Result IsAnyApplicationEntityInstalled(Out<bool> out_is_any_application_entity_installed);
+     Result GetApplicationViewDeprecated(
+         OutArray<ApplicationViewV19, BufferAttr_HipcMapAlias> out_application_views,
+@@ -71,7 +73,11 @@ public:
+                                   InBuffer<BufferAttr_HipcMapAlias> logo_path_buffer);
+     Result Unknown4022(OutCopyHandle<Kernel::KReadableEvent> out_event);
+     Result Unknown4023(Out<u64> out_result);
++    Result Unknown4042(OutInterface<IAsyncResult> out_interface,
++                       OutCopyHandle<Kernel::KReadableEvent> out_event,
++                       u64 arg1, u64 arg2);
+     Result Unknown4053();
++    Result Unknown4105();
+ 
+     Result RequestDownloadApplicationControlDataInBackground(u64 control_source,
+                                                              u64 application_id);
+diff --git a/src/core/hle/service/ns/i_async_result.cpp b/src/core/hle/service/ns/i_async_result.cpp
+new file mode 100644
+index 0000000..be04c16
+--- /dev/null
++++ b/src/core/hle/service/ns/i_async_result.cpp
+@@ -0,0 +1,35 @@
++// SPDX-FileCopyrightText: Copyright 2026 Eden Emulator Project
++// SPDX-License-Identifier: GPL-3.0-or-later
++
++#include "core/hle/service/cmif_serialization.h"
++#include "core/hle/service/ns/i_async_result.h"
++
++#include <cstring>
++
++namespace Service::NS {
++
++IAsyncResult::IAsyncResult(Core::System& system_, Service::Event* event_)
++    : ServiceFramework{system_, "nn::ns::detail::IAsyncResult"}, event{event_} {
++    // clang-format off
++    static const FunctionInfo functions[] = {
++        {0, nullptr, "Get"},
++        {1, D<&IAsyncResult::Cancel>, "Cancel"},
++        {2, nullptr, "GetErrorContext"}, // 4.0.0+
++    };
++    // clang-format on
++
++    RegisterHandlers(functions);
++}
++
++IAsyncResult::~IAsyncResult() = default;
++
++Result IAsyncResult::Cancel() {
++    LOG_DEBUG(Service_NS, "called");
++    if (event != nullptr) {
++        event->Signal(system.Kernel());
++    }
++
++    R_SUCCEED();
++}
++
++} // namespace Service::NS
+\ No newline at end of file
+diff --git a/src/core/hle/service/ns/i_async_result.h b/src/core/hle/service/ns/i_async_result.h
+new file mode 100644
+index 0000000..914ea5a
+--- /dev/null
++++ b/src/core/hle/service/ns/i_async_result.h
+@@ -0,0 +1,19 @@
++// SPDX-FileCopyrightText: Copyright 2026 Eden Emulator Project
++// SPDX-License-Identifier: GPL-3.0-or-later
++
++#include "core/hle/service/service.h"
++
++namespace Service::NS {
++
++class IAsyncResult final : public ServiceFramework<IAsyncResult> {
++public:
++    explicit IAsyncResult(Core::System& system_, Service::Event* event_);
++    ~IAsyncResult() override;
++
++private:
++    Result Cancel();
++
++    Service::Event* event{};
++};
++
++} // namespace Service::NS
+\ No newline at end of file
+diff --git a/src/core/hle/service/ns/ns.cpp b/src/core/hle/service/ns/ns.cpp
+index 4e3915f..fe05742 100644
+--- a/src/core/hle/service/ns/ns.cpp
++++ b/src/core/hle/service/ns/ns.cpp
+@@ -81,16 +81,16 @@ public:
+ void LoopProcess(Core::System& system) {
+     auto server_manager = std::make_unique<ServerManager>(system);
+ 
+-    server_manager->RegisterNamedService("ns:am2", std::make_shared<IServiceGetterInterface>(system, "ns:am2"));
+-    server_manager->RegisterNamedService("ns:ec", std::make_shared<IServiceGetterInterface>(system, "ns:ec"));
+-    server_manager->RegisterNamedService("ns:rid", std::make_shared<IServiceGetterInterface>(system, "ns:rid"));
+-    server_manager->RegisterNamedService("ns:rt", std::make_shared<IServiceGetterInterface>(system, "ns:rt"));
+-    server_manager->RegisterNamedService("ns:web", std::make_shared<IServiceGetterInterface>(system, "ns:web"));
+-    server_manager->RegisterNamedService("ns:ro", std::make_shared<IServiceGetterInterface>(system, "ns:ro"));
++    server_manager->RegisterNamedService("ns:am2", std::make_shared<IServiceGetterInterface>(system, "ns:am2"), 5);
++    server_manager->RegisterNamedService("ns:ec", std::make_shared<IServiceGetterInterface>(system, "ns:ec"), 5);
++    server_manager->RegisterNamedService("ns:rid", std::make_shared<IServiceGetterInterface>(system, "ns:rid"), 5);
++    server_manager->RegisterNamedService("ns:rt", std::make_shared<IServiceGetterInterface>(system, "ns:rt"), 5);
++    server_manager->RegisterNamedService("ns:web", std::make_shared<IServiceGetterInterface>(system, "ns:web"), 5);
++    server_manager->RegisterNamedService("ns:ro", std::make_shared<IServiceGetterInterface>(system, "ns:ro"), 5);
+ 
+-    server_manager->RegisterNamedService("ns:dev", std::make_shared<IDevelopInterface>(system));
+-    server_manager->RegisterNamedService("ns:su", std::make_shared<ISystemUpdateInterface>(system));
+-    server_manager->RegisterNamedService("ns:vm", std::make_shared<IVulnerabilityManagerInterface>(system));
++    server_manager->RegisterNamedService("ns:dev", std::make_shared<IDevelopInterface>(system), 5);
++    server_manager->RegisterNamedService("ns:su", std::make_shared<ISystemUpdateInterface>(system), 5);
++    server_manager->RegisterNamedService("ns:vm", std::make_shared<IVulnerabilityManagerInterface>(system), 5);
+     server_manager->RegisterNamedService("pdm:ntfy", std::make_shared<INotifyService>(system));
+     server_manager->RegisterNamedService("pdm:qry", std::make_shared<IQueryService>(system));
+ 
+diff --git a/src/core/hle/service/ns/read_only_application_control_data_interface.cpp b/src/core/hle/service/ns/read_only_application_control_data_interface.cpp
+index c7606a8..1359cdb 100644
+--- a/src/core/hle/service/ns/read_only_application_control_data_interface.cpp
++++ b/src/core/hle/service/ns/read_only_application_control_data_interface.cpp
+@@ -142,6 +142,7 @@ IReadOnlyApplicationControlDataInterface::IReadOnlyApplicationControlDataInterfa
+         {10, &IReadOnlyApplicationControlDataInterface::ListApplicationIcon, "ListApplicationIcon"},
+         {13, &IReadOnlyApplicationControlDataInterface::ListApplicationTitle, "ListApplicationTitle"},
+         {19, D<&IReadOnlyApplicationControlDataInterface::GetApplicationControlData3>, "GetApplicationControlData"},
++        {23, D<&IReadOnlyApplicationControlDataInterface::GetApplicationControlData3>, "GetApplicationControlData"}, //23.0.0+
+     };
+     // clang-format on
+ 
+@@ -310,27 +311,30 @@ void IReadOnlyApplicationControlDataInterface::ListApplicationIcon(HLERequestCon
+         // u64 - app count
+         memory.WriteBlock(t_mem_address + out_length, &app_count, sizeof(u64));
+         out_length += sizeof(u64);
++        ASSERT(out_length <= t_mem->GetSize());
+         // [list of u64] - size of icons
+         for (size_t i = 0; i < app_count; ++i) {
+             const u64 app_id = app_ids_buffer[i];
+             const FileSys::PatchManager pm{app_id, system.GetFileSystemController(), system.GetContentProvider()};
+-            const auto control = pm.GetControlMetadata();
+-            u64 full_size = control.second->GetSize();
+-            memory.WriteBlock(t_mem_address + out_length, &full_size, sizeof(u64));
++            if (const auto control = pm.GetControlMetadata(); control.second) {
++                u64 full_size = control.second->GetSize();
++                memory.WriteBlock(t_mem_address + out_length, &full_size, sizeof(u64));
++            }
+             out_length += sizeof(u64);
++            ASSERT(out_length <= t_mem->GetSize());
+         }
+         // [list of raw icon data]
+-        std::vector<u8> full_icon_data;
+         for (size_t i = 0; i < app_count; ++i) {
+             const u64 app_id = app_ids_buffer[i];
+             const FileSys::PatchManager pm{app_id, system.GetFileSystemController(), system.GetContentProvider()};
+-            const auto control = pm.GetControlMetadata();
+-            auto const full_size = control.second->GetSize();
+-            if (full_size > 0) {
+-                full_icon_data.resize(full_size);
+-                control.second->Read(full_icon_data.data(), full_size, 0);
+-                memory.WriteBlock(t_mem_address + out_length, full_icon_data.data(), full_size);
+-                out_length += full_size;
++            if (const auto control = pm.GetControlMetadata(); control.second) {
++                if (auto const full_size = control.second->GetSize(); full_size > 0) {
++                    std::vector<u8> full_icon_data(full_size);
++                    control.second->Read(full_icon_data.data(), full_size, 0);
++                    memory.WriteBlock(t_mem_address + out_length, full_icon_data.data(), full_size);
++                    out_length += full_size;
++                    ASSERT(out_length <= t_mem->GetSize());
++                }
+             }
+         }
+     }
+@@ -344,6 +348,12 @@ void IReadOnlyApplicationControlDataInterface::ListApplicationIcon(HLERequestCon
+ void IReadOnlyApplicationControlDataInterface::ListApplicationTitle(HLERequestContext& ctx) {
+     const auto app_ids_buffer = ctx.ReadBuffer();
+     const size_t app_count = app_ids_buffer.size() / sizeof(u64);
++
++    std::vector<u64> application_ids(app_count);
++    if (app_count > 0) {
++        std::memcpy(application_ids.data(), app_ids_buffer.data(), app_count * sizeof(u64));
++    }
++
+     auto t_mem_obj = ctx.GetObjectFromHandle<Kernel::KTransferMemory>(ctx.GetCopyHandle(0));
+     auto* t_mem = t_mem_obj.GetPointerUnsafe();
+     constexpr size_t title_entry_size = sizeof(FileSys::LanguageEntry);
+@@ -353,8 +363,9 @@ void IReadOnlyApplicationControlDataInterface::ListApplicationTitle(HLERequestCo
+         auto& memory = system.ApplicationMemory();
+         const auto t_mem_address = t_mem->GetSourceAddress();
+         for (size_t i = 0; i < app_count; ++i) {
+-            const u64 app_id = app_ids_buffer[i];
+-            const FileSys::PatchManager pm{app_id, system.GetFileSystemController(), system.GetContentProvider()};
++            const u64 app_id = application_ids[i];
++            const FileSys::PatchManager pm{app_id, system.GetFileSystemController(),
++                                           system.GetContentProvider()};
+             const auto control = pm.GetControlMetadata();
+             FileSys::LanguageEntry entry{};
+             if (control.first != nullptr) {
+diff --git a/src/core/hle/service/olsc/transfer_task_list_controller.cpp b/src/core/hle/service/olsc/transfer_task_list_controller.cpp
+index 0f9042b..95e41cd 100644
+--- a/src/core/hle/service/olsc/transfer_task_list_controller.cpp
++++ b/src/core/hle/service/olsc/transfer_task_list_controller.cpp
+@@ -36,7 +36,7 @@ ITransferTaskListController::ITransferTaskListController(Core::System& system_)
+         {18, nullptr, "ListTransferTaskInfo"},
+         {19, nullptr, "DeleteTransferTask"},
+         {20, nullptr, "RaiseTransferTaskPriority"},
+-        {21, nullptr, "GetTransferTaskProgress"},
++        {21, D<&ITransferTaskListController::GetTransferTaskProgress>, "GetTransferTaskProgress"}, //10.1.0+
+         {22, nullptr, "GetTransferTaskLastResult"},
+         {23, nullptr, "SuspendTransferTask"},
+         {24, D<&ITransferTaskListController::GetCurrentTransferTaskInfo>, "GetCurrentTransferTaskInfo"},
+@@ -82,6 +82,11 @@ Result ITransferTaskListController::GetCurrentTransferTaskInfo(Out<std::array<u8
+     R_SUCCEED();
+ }
+ 
++Result ITransferTaskListController::GetTransferTaskProgress() {
++    LOG_WARNING(Service_OLSC, "(STUBBED) called.");
++    R_SUCCEED();
++}
++
+ Result ITransferTaskListController::FindTransferTaskInfo(Out<std::array<u8, 0x30>> out_info,
+                                                         InBuffer<BufferAttr_HipcAutoSelect> in) {
+     LOG_WARNING(Service_OLSC, "(STUBBED) called, in_size={}", in.size());
+diff --git a/src/core/hle/service/olsc/transfer_task_list_controller.h b/src/core/hle/service/olsc/transfer_task_list_controller.h
+index 4ac770b..5f34298 100644
+--- a/src/core/hle/service/olsc/transfer_task_list_controller.h
++++ b/src/core/hle/service/olsc/transfer_task_list_controller.h
+@@ -24,6 +24,7 @@ private:
+     Result GetTransferTaskStartEventNativeHandleHolder(Out<SharedPointer<INativeHandleHolder>> out_holder);
+     Result StopNextTransferTaskExecution(Out<SharedPointer<IStopperObject>> out_stopper);
+     Result GetTransferTaskCount(Out<u32> out_count, u8 unknown);
++    Result GetTransferTaskProgress();
+     Result GetCurrentTransferTaskInfo(Out<std::array<u8, 0x30>> out_info, u8 unknown);
+     Result FindTransferTaskInfo(Out<std::array<u8, 0x30>> out_info, InBuffer<BufferAttr_HipcAutoSelect> in);
+ };
+diff --git a/src/core/hle/service/pctl/parental_control_service.cpp b/src/core/hle/service/pctl/parental_control_service.cpp
+index 97c1787..51953c2 100644
+--- a/src/core/hle/service/pctl/parental_control_service.cpp
++++ b/src/core/hle/service/pctl/parental_control_service.cpp
+@@ -4,6 +4,8 @@
+ // SPDX-FileCopyrightText: Copyright 2024 yuzu Emulator Project
+ // SPDX-License-Identifier: GPL-2.0-or-later
+ 
++#include <chrono>
++
+ #include "core/core.h"
+ #include "core/file_sys/control_metadata.h"
+ #include "core/file_sys/patch_manager.h"
+@@ -94,6 +96,7 @@ IParentalControlService::IParentalControlService(Core::System& system_, Capabili
+         {1457, D<&IParentalControlService::GetPlayTimerEventToRequestSuspension>, "GetPlayTimerEventToRequestSuspension"},
+         {1458, D<&IParentalControlService::IsPlayTimerAlarmDisabled>, "IsPlayTimerAlarmDisabled"},
+         {1459, D<&IParentalControlService::GetPlayTimerRemainingTimeDisplayInfo>, "GetPlayTimerRemainingTimeDisplayInfo"},
++        {1460, D<&IParentalControlService::Unknown1460>, "Unknown1460"},
+         {1471, nullptr, "NotifyWrongPinCodeInputManyTimes"},
+         {1472, nullptr, "CancelNetworkRequest"},
+         {1473, D<&IParentalControlService::GetUnlinkedEvent>, "GetUnlinkedEvent"},
+@@ -440,8 +443,15 @@ Result IParentalControlService::IsPlayTimerAlarmDisabled(Out<bool> out_play_time
+     R_SUCCEED();
+ }
+ 
+-Result IParentalControlService::GetPlayTimerRemainingTimeDisplayInfo(/* Out 0x18 */) {
+-    LOG_INFO(Service_PCTL, "called");
++Result IParentalControlService::GetPlayTimerRemainingTimeDisplayInfo(Out<PlayTimerRemainingTimeDisplayInfo> out_display_info) {
++    LOG_DEBUG(Service_PCTL, "called");
++    *out_display_info = {.state = PlayTimerDisplayState::NotConfigured};
++    R_SUCCEED();
++}
++
++Result IParentalControlService::Unknown1460(u8 in_unk, Out<PlayTimerRemainingTimeDisplayInfo> out_display_info) {
++    LOG_DEBUG(Service_PCTL, "called, in_unk={}", in_unk);
++    *out_display_info = {.state = PlayTimerDisplayState::NotConfigured};
+     R_SUCCEED();
+ }
+ 
+diff --git a/src/core/hle/service/pctl/parental_control_service.h b/src/core/hle/service/pctl/parental_control_service.h
+index 92d1d38..9dabe3d 100644
+--- a/src/core/hle/service/pctl/parental_control_service.h
++++ b/src/core/hle/service/pctl/parental_control_service.h
+@@ -55,7 +55,8 @@ private:
+     Result GetPlayTimerSettingsOld(Out<PlayTimerSettingsOld> out_play_timer_settings);
+     Result GetPlayTimerEventToRequestSuspension(OutCopyHandle<Kernel::KReadableEvent> out_event);
+     Result IsPlayTimerAlarmDisabled(Out<bool> out_play_timer_alarm_disabled);
+-    Result GetPlayTimerRemainingTimeDisplayInfo();
++    Result GetPlayTimerRemainingTimeDisplayInfo(Out<PlayTimerRemainingTimeDisplayInfo> out_display_info);
++    Result Unknown1460(u8 in_unk, Out<PlayTimerRemainingTimeDisplayInfo> out_display_info);
+     Result GetUnlinkedEvent(OutCopyHandle<Kernel::KReadableEvent> out_event);
+     Result GetStereoVisionRestriction(Out<bool> out_stereo_vision_restriction);
+     Result SetStereoVisionRestriction(bool stereo_vision_restriction);
+diff --git a/src/core/hle/service/pctl/pctl_types.h b/src/core/hle/service/pctl/pctl_types.h
+index a559c5d..3a5a190 100644
+--- a/src/core/hle/service/pctl/pctl_types.h
++++ b/src/core/hle/service/pctl/pctl_types.h
+@@ -1,4 +1,4 @@
+-// SPDX-FileCopyrightText: Copyright 2025 Eden Emulator Project
++// SPDX-FileCopyrightText: Copyright 2026 Eden Emulator Project
+ // SPDX-License-Identifier: GPL-3.0-or-later
+ 
+ // SPDX-FileCopyrightText: Copyright 2024 yuzu Emulator Project
+@@ -49,4 +49,25 @@ struct PlayTimerSettings {
+ };
+ static_assert(sizeof(PlayTimerSettings) == 0x44, "PlayTimerSettings has incorrect size.");
+ 
++enum class PlayTimerDisplayState : u8 {
++    TimesUp = 0,
++    BedtimeAlarm = 1,
++    RemainingTime = 2,
++    Unknown3 = 3,
++    Unknown4 = 4,
++    Unknown5 = 5,
++    TimerDisabled = 6,
++    NotConfigured = 7,
++};
++
++// This is nn::pctl::PlayTimerRemainingTimeDisplayInfo
++struct PlayTimerRemainingTimeDisplayInfo {
++    PlayTimerDisplayState state;
++    INSERT_PADDING_BYTES(0x7);
++    u64 unknown_08;
++    u64 remaining_time;
++};
++static_assert(sizeof(PlayTimerRemainingTimeDisplayInfo) == 0x18,
++              "PlayTimerRemainingTimeDisplayInfo has incorrect size.");
++
+ } // namespace Service::PCTL
+diff --git a/src/core/hle/service/pm/pm.cpp b/src/core/hle/service/pm/pm.cpp
+index 97efb1a..ff7053b 100644
+--- a/src/core/hle/service/pm/pm.cpp
++++ b/src/core/hle/service/pm/pm.cpp
+@@ -252,10 +252,10 @@ private:
+ void LoopProcess(Core::System& system) {
+     auto server_manager = std::make_unique<ServerManager>(system);
+ 
+-    server_manager->RegisterNamedService("pm:bm", std::make_shared<BootMode>(system));
+-    server_manager->RegisterNamedService("pm:dmnt", std::make_shared<DebugMonitor>(system));
+-    server_manager->RegisterNamedService("pm:info", std::make_shared<Info>(system));
+-    server_manager->RegisterNamedService("pm:shell", std::make_shared<Shell>(system));
++    server_manager->RegisterNamedService("pm:bm", std::make_shared<BootMode>(system), 4); // Nx = 4, Ams = 8
++    server_manager->RegisterNamedService("pm:dmnt", std::make_shared<DebugMonitor>(system), 16);
++    server_manager->RegisterNamedService("pm:shell", std::make_shared<Shell>(system), 3); //Nx = 3, AMS = 8
++    server_manager->RegisterNamedService("pm:info", std::make_shared<Info>(system), 25); //48-(4+16+3)
+     ServerManager::RunServer(std::move(server_manager));
+ }
+ 
+diff --git a/src/core/hle/service/ro/ro.cpp b/src/core/hle/service/ro/ro.cpp
+index 922fc10..13de9f9 100644
+--- a/src/core/hle/service/ro/ro.cpp
++++ b/src/core/hle/service/ro/ro.cpp
+@@ -593,9 +593,9 @@ void LoopProcess(Core::System& system) {
+         return std::make_shared<RoInterface>(system, "ldr:ro", ro, NrrKind::User);
+     };
+ 
+-    server_manager->RegisterNamedService("ldr:ro", std::move(RoInterfaceFactoryForUser));
+-    server_manager->RegisterNamedService("ro:1", std::make_shared<RoInterface>(system, "ro:1", ro, NrrKind::JitPlugin));
+-    server_manager->RegisterNamedService("ro:dmnt", std::make_shared<IDebugMonitorInterface>(system));
++    server_manager->RegisterNamedService("ldr:ro", std::move(RoInterfaceFactoryForUser), 2);
++    server_manager->RegisterNamedService("ro:1", std::make_shared<RoInterface>(system, "ro:1", ro, NrrKind::JitPlugin), 2);
++    server_manager->RegisterNamedService("ro:dmnt", std::make_shared<IDebugMonitorInterface>(system), 2);
+     ServerManager::RunServer(std::move(server_manager));
+ }
+ 
+diff --git a/src/core/hle/service/set/settings.cpp b/src/core/hle/service/set/settings.cpp
+index 73d021f..407332b 100644
+--- a/src/core/hle/service/set/settings.cpp
++++ b/src/core/hle/service/set/settings.cpp
+@@ -1,3 +1,6 @@
++// SPDX-FileCopyrightText: Copyright 2026 Eden Emulator Project
++// SPDX-License-Identifier: GPL-3.0-or-later
++
+ // SPDX-FileCopyrightText: Copyright 2018 yuzu Emulator Project
+ // SPDX-License-Identifier: GPL-2.0-or-later
+ 
+@@ -13,13 +16,10 @@ namespace Service::Set {
+ void LoopProcess(Core::System& system) {
+     auto server_manager = std::make_unique<ServerManager>(system);
+ 
+-    server_manager->RegisterNamedService("set", std::make_shared<ISettingsServer>(system));
+-    server_manager->RegisterNamedService("set:cal",
+-                                         std::make_shared<IFactorySettingsServer>(system));
+-    server_manager->RegisterNamedService("set:fd",
+-                                         std::make_shared<IFirmwareDebugSettingsServer>(system));
+-    server_manager->RegisterNamedService("set:sys",
+-                                         std::make_shared<ISystemSettingsServer>(system));
++    server_manager->RegisterNamedService("set", std::make_shared<ISettingsServer>(system), 60);
++    server_manager->RegisterNamedService("set:cal", std::make_shared<IFactorySettingsServer>(system), 60);
++    server_manager->RegisterNamedService("set:fd", std::make_shared<IFirmwareDebugSettingsServer>(system), 60);
++    server_manager->RegisterNamedService("set:sys", std::make_shared<ISystemSettingsServer>(system), 60);
+     ServerManager::RunServer(std::move(server_manager));
+ }
+ 
+diff --git a/src/core/hle/service/sm/sm.cpp b/src/core/hle/service/sm/sm.cpp
+index 45d2a14..c75c543 100644
+--- a/src/core/hle/service/sm/sm.cpp
++++ b/src/core/hle/service/sm/sm.cpp
+@@ -53,8 +53,7 @@ static Result ValidateServiceName(const std::string& name) {
+     return ResultSuccess;
+ }
+ 
+-Result ServiceManager::RegisterService(Kernel::KServerPort** out_server_port, std::string name,
+-                                       u32 max_sessions, SessionRequestHandlerFactory handler) {
++Result ServiceManager::RegisterService(Kernel::KServerPort** out_server_port, std::string name, u32 max_sessions, SessionRequestHandlerFactory handler) {
+     R_TRY(ValidateServiceName(name));
+ 
+     std::scoped_lock lk{lock};
+@@ -64,7 +63,7 @@ Result ServiceManager::RegisterService(Kernel::KServerPort** out_server_port, st
+     }
+ 
+     auto* port = Kernel::KPort::Create(kernel);
+-    port->Initialize(kernel, ServerSessionCountMax, false, 0);
++    port->Initialize(kernel, max_sessions, false, 0);
+ 
+     // Register the port.
+     Kernel::KPort::Register(kernel, port);
+@@ -264,7 +263,7 @@ void SM::AtmosphereHasService(HLERequestContext& ctx) {
+ }
+ 
+ SM::SM(ServiceManager& service_manager_, Core::System& system_)
+-    : ServiceFramework{system_, "sm:", 4}
++    : ServiceFramework{system_, "sm:", 64}
+     , service_manager{service_manager_}
+     , kernel{system_.Kernel()}
+ {
+diff --git a/src/core/hle/service/sockets/sockets.cpp b/src/core/hle/service/sockets/sockets.cpp
+index e14617d..e96d7c5 100644
+--- a/src/core/hle/service/sockets/sockets.cpp
++++ b/src/core/hle/service/sockets/sockets.cpp
+@@ -64,17 +64,17 @@ public:
+ void LoopProcess(Core::System& system) {
+     auto server_manager = std::make_unique<ServerManager>(system);
+ 
+-    server_manager->RegisterNamedService("ethc:c", std::make_shared<ETHC_C>(system));
+-    server_manager->RegisterNamedService("ethc:i", std::make_shared<ETHC_I>(system));
+-    server_manager->RegisterNamedService("bsd:s", std::make_shared<BSD_USA>(system, "bsd:s", false));
+-    server_manager->RegisterNamedService("bsd:u", std::make_shared<BSD_USA>(system, "bsd:u", true));
+-    server_manager->RegisterNamedService("bsd:a", std::make_shared<BSD_USA>(system, "bsd:a", true));
+-    server_manager->RegisterNamedService("bsd:nu", std::make_shared<BSD_NU>(system));
++    server_manager->RegisterNamedService("ethc:c", std::make_shared<ETHC_C>(system), 5);
++    server_manager->RegisterNamedService("ethc:i", std::make_shared<ETHC_I>(system), 5);
++    server_manager->RegisterNamedService("bsd:s", std::make_shared<BSD_USA>(system, "bsd:s", false), 0x7E);
++    server_manager->RegisterNamedService("bsd:u", std::make_shared<BSD_USA>(system, "bsd:u", true), 0x0f);
++    server_manager->RegisterNamedService("bsd:a", std::make_shared<BSD_USA>(system, "bsd:a", true), 0x17);
++    server_manager->RegisterNamedService("bsd:nu", std::make_shared<BSD_NU>(system), 4);
+     server_manager->RegisterNamedService("bsdcfg", std::make_shared<BSDCFG>(system, "bsdcfg"));
+     server_manager->RegisterNamedService("ifcfg", std::make_shared<BSDCFG>(system, "ifcfg"));
+     server_manager->RegisterNamedService("nsd:a", std::make_shared<NSD>(system, "nsd:a"));
+     server_manager->RegisterNamedService("nsd:u", std::make_shared<NSD>(system, "nsd:u"));
+-    server_manager->RegisterNamedService("sfdnsres", std::make_shared<SFDNSRES>(system));
++    server_manager->RegisterNamedService("sfdnsres", std::make_shared<SFDNSRES>(system), 30);
+     server_manager->RegisterNamedService("dns:priv", std::make_shared<DNS_PRIV>(system));
+     server_manager->RegisterNamedService("eth:nd", std::make_shared<ISfDriverServiceCreator>(system));
+ 
+diff --git a/src/core/hle/service/usb/usb.cpp b/src/core/hle/service/usb/usb.cpp
+index 179d1f7..ff2a377 100644
+--- a/src/core/hle/service/usb/usb.cpp
++++ b/src/core/hle/service/usb/usb.cpp
+@@ -265,17 +265,17 @@ void LoopProcess(Core::System& system) {
+ 
+     server_manager->RegisterNamedService("usb:ds", std::make_shared<IDsRootSession>(system));
+     server_manager->RegisterNamedService("usb:hs", std::make_shared<IClientRootSession>(system));
+-    server_manager->RegisterNamedService("usb:pd", std::make_shared<IPdManager>(system));
+-    server_manager->RegisterNamedService("usb:pd:c", std::make_shared<IPdCradleManager>(system));
++    server_manager->RegisterNamedService("usb:pd", std::make_shared<IPdManager>(system), 6);
++    server_manager->RegisterNamedService("usb:pd:c", std::make_shared<IPdCradleManager>(system), 4);
+     server_manager->RegisterNamedService("usb:pd:m", std::make_shared<IPdManufactureManager>(system));
+-    server_manager->RegisterNamedService("usb:pm", std::make_shared<IPmMainService>(system));
++    server_manager->RegisterNamedService("usb:pm", std::make_shared<IPmMainService>(system), 5);
+     // +7.0.0
+     if (FirmwareManager::GetFirmwareVersion(system).first.major >= 7) {
+         server_manager->RegisterNamedService("usb:qdb", std::make_shared<IQdbManager>(system));
+     }
+     // +8.0.0
+     if (FirmwareManager::GetFirmwareVersion(system).first.major >= 8) {
+-        server_manager->RegisterNamedService("usb:obsv", std::make_shared<IPmObserverService>(system));
++        server_manager->RegisterNamedService("usb:obsv", std::make_shared<IPmObserverService>(system), 2);
+     }
+     ServerManager::RunServer(std::move(server_manager));
+ }
+diff --git a/src/core/hle/service/wlan/wlan.cpp b/src/core/hle/service/wlan/wlan.cpp
+index 7f118c6..bcd357d 100644
+--- a/src/core/hle/service/wlan/wlan.cpp
++++ b/src/core/hle/service/wlan/wlan.cpp
+@@ -246,14 +246,14 @@ public:
+ 
+ void LoopProcess(Core::System& system) {
+     auto server_manager = std::make_unique<ServerManager>(system);
+-    server_manager->RegisterNamedService("wlan:lcl", std::make_shared<ILocalManager>(system));
+-    server_manager->RegisterNamedService("wlan:lg", std::make_shared<ILocalGetFrame>(system));
+-    server_manager->RegisterNamedService("wlan:lga", std::make_shared<ILocalGetActionFrame>(system));
+-    server_manager->RegisterNamedService("wlan:sg", std::make_shared<ISocketGetFrame>(system));
+-    server_manager->RegisterNamedService("wlan:soc", std::make_shared<ISocketManager>(system));
+-    server_manager->RegisterNamedService("wlan:dtc", std::make_shared<IDetectManager>(system));
+-    server_manager->RegisterNamedService("wlan:p", std::make_shared<IPrivateServiceCreator>(system));
+-    server_manager->RegisterNamedService("wlan:nd", std::make_shared<ISfDriverServiceCreator>(system));
++    server_manager->RegisterNamedService("wlan:lcl", std::make_shared<ILocalManager>(system), 10);
++    server_manager->RegisterNamedService("wlan:lg", std::make_shared<ILocalGetFrame>(system), 10);
++    server_manager->RegisterNamedService("wlan:lga", std::make_shared<ILocalGetActionFrame>(system), 10);
++    server_manager->RegisterNamedService("wlan:sg", std::make_shared<ISocketGetFrame>(system), 10);
++    server_manager->RegisterNamedService("wlan:soc", std::make_shared<ISocketManager>(system), 10);
++    server_manager->RegisterNamedService("wlan:dtc", std::make_shared<IDetectManager>(system), 4);
++    server_manager->RegisterNamedService("wlan:p", std::make_shared<IPrivateServiceCreator>(system), 30);
++    server_manager->RegisterNamedService("wlan:nd", std::make_shared<ISfDriverServiceCreator>(system), 5);
+     ServerManager::RunServer(std::move(server_manager));
+ }
+ 

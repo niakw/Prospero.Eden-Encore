@@ -38,6 +38,8 @@ void Launcher::open_mapping(bool for_game)
 
 void Launcher::press_mapping(Key key)
 {
+    if (key != Key::square)
+        clear_confirmation();
     const ButtonMapping effective =
         mapping_for_game_ && game_settings_.own_mapping ? game_settings_.mapping : prefs_.mapping;
     ButtonMapping mapping = effective;
@@ -64,6 +66,8 @@ void Launcher::press_mapping(Key key)
 
     bool reset = key == Key::square;
     if (!reset && key != Key::left && key != Key::right && key != Key::cross)
+        return;
+    if (reset && !confirm_action(Confirmation::mapping_reset))
         return;
 
     if (!reset)
@@ -123,7 +127,7 @@ void Launcher::draw_mapping(Canvas& c, float open)
                                                   " · " + std::string(tr("Global"))) :
         std::string(tr("DualSense buttons used by every game."));
     text_fit(c, subtitle, 592.0f, baseline(291.0f, 32.0f, theme::kSmall),
-             theme::kSmall, Color::rgb(0xbecbb9), 736.0f);
+             theme::kSmall, theme::kCopy, 736.0f);
 
     const ButtonMapping& mapping =
         mapping_for_game_ && game_settings_.own_mapping ? game_settings_.mapping : prefs_.mapping;

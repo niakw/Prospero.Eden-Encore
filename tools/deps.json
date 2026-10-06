@@ -44,7 +44,7 @@
       "about": "LLVM 18.1.8 emulated-TLS runtime (emutls.c and its headers) for the PS5 build",
       "kind": "files",
       "dest": ".deps/compiler-rt-18.1.8",
-      "creates": ".deps/compiler-rt-18.1.8/emutls.c",
+      "creates": ".deps/compiler-rt-18.1.8/cpu_model_x86.c",
       "files": [
         {
           "name": "emutls.c",
@@ -75,6 +75,16 @@
           "name": "cxa_thread_atexit.reference.cpp",
           "url": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-18.1.8/libcxxabi/src/cxa_thread_atexit.cpp",
           "sha256": "a36d48fd9f3d5b8ba4d94387d66c83cd2f2e96ad64677dde714f0daba7272ad6"
+        },
+        {
+          "name": "cpu_model_x86.c",
+          "url": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-18.1.8/compiler-rt/lib/builtins/cpu_model/x86.c",
+          "sha256": "76e43483ff498d8849b933d04e63d9710bca1ae7624057a044bb117b6477aa51"
+        },
+        {
+          "name": "cpu_model.h",
+          "url": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-18.1.8/compiler-rt/lib/builtins/cpu_model/cpu_model.h",
+          "sha256": "cfb51c855bbffc0216e21f64a0f792d0354a6f07e693c56564a309bbe2e17757"
         }
       ]
     },
@@ -88,13 +98,12 @@
       "creates": ".deps/pacbrew-0.40.2/opt/ps5-payload-sdk/target/user/homebrew/lib/libcrypto.a"
     },
     {
-      "name": "opengl-sdk",
-      "about": "PS5 OpenGL 4.6 SDK 1.0.0 (launcher UI and the OpenGL renderer)",
-      "kind": "archive",
-      "url": "https://github.com/blackbearreloaded/ps5-opengl/releases/download/v1.0.0/ps5-opengl-sdk-1.0.0.tar.gz",
-      "sha256": "f93643c04c843d56143b00951df1f8042ea7706ae9f19e4e9abf158e1ead77c5",
-      "extract": ".deps",
-      "creates": ".deps/ps5-opengl-sdk-1.0.0/sdk/lib/libps5_opengl_core33.a"
+      "name": "opengl-source",
+      "about": "PS5 OpenGL audited source snapshot: SDK 1.0.1 plus constant-buffer/alignment and scanout-flush fixes",
+      "kind": "git",
+      "url": "https://github.com/blackbearreloaded/ps5-opengl.git",
+      "commit": "ad2807d41cef2681882a9ee0d20808779f74b7cd",
+      "path": "../ps5-opengl-review"
     },
     {
       "name": "harfbuzz",

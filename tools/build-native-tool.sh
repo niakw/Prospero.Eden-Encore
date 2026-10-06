@@ -3,7 +3,7 @@
 # Builds build/host/ps5-native-tool (links, signs and inspects the eboot) from the
 # native app boilerplate's tooling.
 set -euo pipefail
-root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 template="$root/../ps5-native-app-boilerplate"
 native="$template/tooling/native"
 zlib="$template/.deps/native/zlib/root"

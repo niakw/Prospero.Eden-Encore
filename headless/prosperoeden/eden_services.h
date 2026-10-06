@@ -66,5 +66,13 @@ public:
 private:
     std::string launch_error_;
     std::string setup_; // what is missing from keys and firmware; empty when ready
+    // These depend on the active launcher catalog. They belong to this service instance rather
+    // than process-global statics so an in-process language restart rebuilds every translated label.
+    std::vector<std::string> resolution_labels_;
+    std::vector<std::string> resolution_keys_;
+    std::vector<std::string> filter_labels_;
+    std::vector<std::string> anti_aliasing_labels_;
+    std::vector<std::string> performance_profile_labels_;
+    std::vector<std::string> language_labels_;
     std::mutex bridge_; // Eden's metadata reader keeps state between calls: one caller at a time
 };

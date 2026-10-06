@@ -940,6 +940,7 @@ static void BenchFastmemA32() {
     }
 }
 
+#if EDEN_SHARED_JIT_AVAILABLE
 // Shared compiled code (headless/dynarmic/jit_group.h): four guest cores run one branchy program
 // through one page table, so they share one JIT group. Small code caches force whole-group clears
 // while the cores run, and another thread invalidates random code ranges and clears the caches;
@@ -1180,6 +1181,7 @@ static void CheckBlockList() {
     std::printf("Block list PASS: %zu locations saved, %llu compiled ahead, the cores compiled %llu blocks instead of "
                 "%llu\n", list.size(), ahead, warm, cold);
 }
+#endif  // EDEN_SHARED_JIT_AVAILABLE
 
 // The block list's file: offsets from where the code starts, only inside the game's own modules,
 // the session's blocks before earlier ones, one build per list, nothing from a damaged file.
@@ -1214,6 +1216,7 @@ static void CheckBlockListFile() {
     std::puts("Block list file PASS: offsets, own modules only, session first, one build, damaged file ignored");
 }
 
+#if EDEN_SHARED_JIT_AVAILABLE
 // Dispatcher lookups of three hot loops (100k iterations each) once their blocks exist: a
 // conditional branch to itself (block link), a call and return (return stack buffer) and an
 // indirect branch (fast dispatch). Linked code needs only a handful of lookups per loop.
@@ -1255,6 +1258,7 @@ static void CheckLinks() {
     }
     std::puts("Linked loops PASS: block link, call/return and indirect branch without per-iteration lookups");
 }
+#endif  // EDEN_SHARED_JIT_AVAILABLE
 
 // Eden's large tables (src/memory_pages.cpp): zero wherever nothing was written, memory only for
 // the 2 MiB slots that were, and a fault for a write that was not announced.
@@ -1316,6 +1320,17 @@ static void CheckSparseTables() {
             }
         Common::SparseUsage(&span, &held);
         require(held - held0 == 5 * slot); // entries [shared, shared + 520006): two more slots
+        // #4471 adapted to the PS5's 2 MiB sparse backing: when the last committed host page in a
+        // slot is fully zeroed, the slot returns to the shared zero mapping and releases its RAM.
+        const std::size_t single = entries / 2 + 5;
+        const std::size_t slot_entries = slot / sizeof(std::uint64_t);
+        const std::size_t single_slot = single / slot_entries * slot_entries;
+        table.ZeroRegion(single_slot, single_slot + slot_entries);
+        Common::SparseUsage(&span, &held);
+        require(held - held0 == 4 * slot && table[single] == 0);
+        table.Set(single, 0x8877665544332211ull);
+        Common::SparseUsage(&span, &held);
+        require(held - held0 == 5 * slot && table[single] == 0x8877665544332211ull);
         // An unmap zeroes what was written and nothing else. Upstream decides by the page of entry
         // start / 8: here that page is written and the range itself never was (it must not be
         // touched), then the other way round (it must be zeroed from its first entry).
@@ -1334,16 +1349,22 @@ static void CheckSparseTables() {
     Common::SparseUsage(&span, &held);
     require(span == span0 && held == held0);
     std::puts("Sparse tables PASS: zero until written, 2 MiB per slot written, a fault for an unannounced write, "
-              "six threads on shared slots, an unmap that touches only what was written");
+              "six threads on shared slots, full-slot decommit/recommit, an unmap that touches only what was written");
 }
 
 int main(int argc, char** argv) {
     CheckSparseTables();
     if (argc == 2 && std::strcmp(argv[1], "--link-check") == 0) {
+#if EDEN_SHARED_JIT_AVAILABLE
         CheckLinks();
         return 0;
+#else
+        std::puts("Shared-JIT link check unavailable in the shipping stability build");
+        return 0;
+#endif
     }
     if (argc == 2 && std::strcmp(argv[1], "--shared-jit") == 0) {
+#if EDEN_SHARED_JIT_AVAILABLE
         for (bool same_path : {false, true})
         for (unsigned disturb : {0u, 1u, 2u}) {
             CheckSharedJit(4, false, disturb, same_path);
@@ -1351,6 +1372,9 @@ int main(int argc, char** argv) {
             CheckSharedJit(4, true, disturb, same_path, true);
         }
         CheckBlockList();
+#else
+        std::puts("Shared JIT unavailable in the shipping stability build");
+#endif
         CheckBlockListFile();
         return 0;
     }
@@ -1400,11 +1424,13 @@ int main(int argc, char** argv) {
     std::printf("Page-table exclusives PASS: %u cases\n", CheckTableExclusives(backing));
     CheckAtomicLoop(backing, false);
     CheckAtomicLoopA32(backing, false);
+#if EDEN_SHARED_JIT_AVAILABLE
     CheckSharedJit(2, true, 2, true);
     CheckSharedJit(2, true, 2, false, true);
     CheckBlockList();
-    CheckBlockListFile();
     CheckLinks();
+#endif
+    CheckBlockListFile();
     CheckFastmemA32();
     StressFastmemA32();
     require(munmap(backing, 8192) == 0);

@@ -8,16 +8,17 @@ probe=OFF
 if [[ ${1:-} == --devices ]]; then devices=ON; fi
 if [[ ${1:-} == --graphics ]]; then graphics=ON; fi
 if [[ ${1:-} == --gpu-probe ]]; then graphics=ON; probe=ON; fi
-jobs=${EDEN_BUILD_JOBS:-$(nproc)}
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
+source "$root/tools/host-env.sh"
+eden_host_env "$root"
+jobs=${EDEN_BUILD_JOBS:-$(eden_host_jobs)}
 [[ "$jobs" =~ ^[1-9][0-9]*$ ]] || { echo "Invalid EDEN_BUILD_JOBS: $jobs" >&2; exit 1; }
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 command -v ninja >/dev/null
 cache=$(command -v ccache)
-root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$root"
 bash tools/build-core-fixture.sh
 scratch=$(cat .local/headless-cache)
-[[ "$scratch" == "${XDG_CACHE_HOME:-$HOME/.cache}"/ps5-eden-headless.* && "$(cat "$scratch/owner")" == "$root" ]]
+[[ "$scratch" == "${XDG_CACHE_HOME:-$HOME/.cache}"/ps5-eden-headless.* && "$(cd -- "$(cat "$scratch/owner")" && pwd -P)" == "$root" ]]
 # Cache the read-only native dependency trees beside the upstream sources.
 # Repeated header checks across /mnt/c took minutes before compilation began.
 if [[ ! -f "$scratch/sdk/.complete" ]]; then
@@ -42,6 +43,8 @@ test -f "$ffmpeg/lib/libavcodec.a" || { echo 'Run tools/build-headless-ffmpeg.sh
 cmake -S "$scratch/source" -B "$scratch/native-local" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="$root/headless/ps5.cmake" -DPS5_NATIVE=ON -DEDEN_DEVICE_FRONTEND="$devices" \
     -DCMAKE_BUILD_TYPE=Release -DENABLE_LTO=OFF \
+    -DEDEN_SHARED_JIT="${EDEN_SHARED_JIT:-OFF}" \
+    -DEDEN_JIT_COMPILE_BATCH="${EDEN_JIT_COMPILE_BATCH:-OFF}" \
     -DEDEN_PS5_VULKAN="${EDEN_PS5_VULKAN:-OFF}" \
     -DEDEN_VULKAN_DRIVER="${EDEN_VULKAN_DRIVER:-CUSTOM}" \
     -DEDEN_DEV_VULKAN="${EDEN_DEV_VULKAN:-OFF}" \

@@ -15,6 +15,7 @@ Please check:
 2. [docs/FORK_NOTES.md](docs/FORK_NOTES.md) for technical limitations and validation history.
 3. The launcher's **Diagnostics** screen for filesystem mode, free space, cache and logs.
 4. **Safe Launch** if one title no longer starts after changing settings.
+5. [INSTALL.md](INSTALL.md) if the PS5/Encore language is French but the launcher still appears in English; a complete install must include all 29 `ui/lang/*.po` catalogs.
 
 Useful reports include the Encore version/commit, PS5 firmware, renderer, relevant settings, exact
 steps, and sanitized logs.

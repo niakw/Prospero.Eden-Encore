@@ -5,20 +5,19 @@
 # fetched: its sibling repositories and .deps inputs are linked in (never copied or modified),
 # and its Eden package cache seeds this checkout's. See docs/BUILDING.md.
 set -euo pipefail
-root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 cd "$root"
 if [[ -n ${EDEN_DEV_CHECKOUT:-} ]]; then
     dev=$(cd -- "$EDEN_DEV_CHECKOUT" && pwd)
     if [[ $dev != "$root" ]]; then
-        for sibling in ps5-native-app-boilerplate mihawk-vulkan-review mihawk-mesa-review mihawk-sdk-review; do
+        for sibling in ps5-native-app-boilerplate ps5-opengl-review mihawk-vulkan-review mihawk-mesa-review mihawk-sdk-review; do
             if [[ ! -e ../$sibling && -d $dev/../$sibling ]]; then
                 ln -s "$(cd -- "$dev/../$sibling" && pwd)" "../$sibling"
             fi
         done
         mkdir -p .deps build
         for input in "$dev"/.deps/eden-5f142c79.tar.gz "$dev"/.deps/mirror-* "$dev"/.deps/ffmpeg-* \
-                     "$dev"/.deps/fmt-12.1.0 "$dev"/.deps/compiler-rt-18.1.8 "$dev"/.deps/pacbrew-* \
-                     "$dev"/.deps/ps5-opengl-sdk-*; do
+                     "$dev"/.deps/fmt-12.1.0 "$dev"/.deps/compiler-rt-18.1.8 "$dev"/.deps/pacbrew-*; do
             [[ -e $input && ! -e .deps/${input##*/} ]] && ln -s "$input" ".deps/${input##*/}"
         done
         [[ -e build/radv-isolated || ! -d $dev/build/radv-isolated ]] || ln -s "$dev/build/radv-isolated" build/radv-isolated

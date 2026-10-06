@@ -131,7 +131,7 @@ This is the recommended installation method.
 Download:
 
 ```text
-Prospero.Eden-Encore-v*.zip
+Prospero.Eden-Encore-R1.zip
 ```
 
 The Release also includes `SHA256SUMS`.
@@ -209,7 +209,7 @@ image for compatible ShadowMountPlus / etaHEN setups.
 Download:
 
 ```text
-Prospero.Eden-Encore-v*.ffpfsc
+Prospero.Eden-Encore-R1.ffpfsc
 ```
 
 It can be placed in a location supported by your ShadowMountPlus setup, for example a compatible
@@ -261,8 +261,8 @@ Compare the downloaded files with `SHA256SUMS`.
 On macOS or Linux:
 
 ```bash
-shasum -a 256 Prospero.Eden-Encore-v*.zip
-shasum -a 256 Prospero.Eden-Encore-v*.ffpfsc
+shasum -a 256 Prospero.Eden-Encore-R1.zip
+shasum -a 256 Prospero.Eden-Encore-R1.ffpfsc
 ```
 
 ---
@@ -290,6 +290,21 @@ subfolders after an update.
 
 Replace the old Encore `.ffpfsc` image with the new one and remount/rescan it using the same
 ShadowMountPlus workflow.
+
+---
+
+## If Encore is set to French but the launcher stays in English
+
+A complete R1 install contains **29** catalog files under `PPSA99008/ui/lang/`, including `fr-FR.po`. On a PS5 set to French, the first setup selects French automatically; changing **Settings → Language** later now rebuilds the launcher immediately so its catalog, fonts and cached labels switch together.
+
+Release builds also ignore the old development-only `language.txt` override. That prevents a stale test file from forcing `en-US` after an update.
+
+For an older/manual FTP installation that stays English:
+
+1. reinstall the **complete** `PPSA99008` folder, including nested `ui/lang/`;
+2. remove any old test-only `language.txt` from the application folder if one was left by a development build;
+3. prefer `make install PS5_HOST=<address>` — the installer checks all 29 language catalogues by SHA-256 after copying;
+4. inspect `/data/prosperoeden/logs/stderr.log`: a healthy French launcher reports a line containing `EDEN_LANGUAGE ... tag=fr-FR catalog=fr-FR texts=...`.
 
 ---
 

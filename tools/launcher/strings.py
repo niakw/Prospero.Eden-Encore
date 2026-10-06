@@ -38,7 +38,8 @@ CATALOGS = LAUNCHER / "ui/lang"
 TEMPLATE = ROOT / "tools/launcher/launcher.pot"
 FONT = LAUNCHER / "ui/fonts/montserrat-medium.pefont"
 SETTINGS = ROOT / "headless/settings_store.h"
-SETTING_LABELS = ("kResolutionLabels", "kUpscalingFilterLabels", "kAntiAliasingLabels", "kLanguageLabels")
+SETTING_LABELS = ("kResolutionLabels", "kUpscalingFilterLabels", "kAntiAliasingLabels",
+                  "kPerformanceProfileLabels", "kLanguageLabels")
 
 LITERALS = r'((?:"(?:[^"\\]|\\.)*"\s*)+)'
 MARKED = re.compile(r"\b(?:tr|TR)\(\s*" + LITERALS)
@@ -150,6 +151,8 @@ NOTES = {
     "Export a copy": "Button hint: copy the game's save out to a folder.",
     "Press again to replace this game's save. The current one is backed up.":
         "Asked before a save is imported over the one in use.",
+    "Press the same button again to confirm.":
+        "Generic confirmation before a reset or other destructive maintenance action.",
     "To import, copy a Ryujinx folder to ryujinx/ or a save to save-import/{0}/, next to roms/.":
         "ryujinx/, save-import/ and roms/ are folder names (unchanged); {0} is the game's ID.",
     "Exported to {0}.": "{0} is a folder.",

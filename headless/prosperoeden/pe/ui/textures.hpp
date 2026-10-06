@@ -33,7 +33,7 @@ class Textures
     Textures &operator=(const Textures &) = delete;
     ~Textures();
 
-    // Launcher brand/controller art. The Eden theme no longer loads the legacy scenic backdrops.
+    // Launcher background, brand and controller art. The background is generated from Encore art.
     bool load_art(const std::string &directory);
     // Deletes every texture; the GL context must still be current.
     void release();
