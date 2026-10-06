@@ -16,6 +16,11 @@ on:
         required: false
         type: string
         default: ""
+      build_only:
+        description: Skip already-green validation gates and go straight to native prepare/build
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -58,7 +63,7 @@ jobs:
         run: make toolchain
 
       - name: Validate launcher translations and locale runtime
-        if: ${{ inputs.resume_run_id == '' }}
+        if: ${{ inputs.resume_run_id == '' && !inputs.build_only }}
         run: |
           python3 -B tools/launcher/strings.py check
           python3 -B tools/check-language-runtime.py
@@ -85,11 +90,11 @@ jobs:
             prosperoeden-040-zbic-${{ runner.os }}-
 
       - name: Validate release metadata
-        if: ${{ inputs.resume_run_id == '' }}
+        if: ${{ inputs.resume_run_id == '' && !inputs.build_only }}
         run: python3 -B tools/ci/check-release-metadata.py
 
       - name: Validate startup, elevation and storage contracts
-        if: ${{ inputs.resume_run_id == '' }}
+        if: ${{ inputs.resume_run_id == '' && !inputs.build_only }}
         run: |
           python3 -B tools/check-startup-contract.py
           python3 -B tools/check-filesystem-probe.py
