@@ -20,11 +20,14 @@ assert derived_body == original.replace(
     'void SetCurrentThreadName(const char* name) {\n    ::Eden::Performance::RegisterWorker(name);')
 main = (root / 'headless/main.cpp').read_text()
 assert main.index('Performance::PlatformChecks()') < main.index('Common::Log::Initialize()')
-# Periodic sampling is allowed only in the explicit development profile branch.
+# Development profiling samples frequently; release builds also take one low-frequency
+# watchdog snapshot every 10 seconds so a presentation-alive guest soft hang leaves useful state.
 development_wait = main.split('#ifdef EDEN_DEV_PROFILE\n                        for ', 1)[1].split('#elif defined(EDEN_DEV_ROM_ID)', 1)[0]
-assert main.count('Performance::Snapshot()') == development_wait.count('Performance::Snapshot()') == 1
+assert development_wait.count('Performance::Snapshot()') == 1
+assert main.count('Performance::Snapshot()') == 2
 assert 'completion->wake.wait(lock,' in main
 assert 'completion->wake.wait(lock, completed);' in main
+assert 'completion->wake.wait_for(lock, std::chrono::seconds(10), completed)' in main
 assert 'completion->return_to_menu' in main
 if sys.platform == 'darwin':
     # The executable harness below intentionally exercises Linux/x86 host APIs

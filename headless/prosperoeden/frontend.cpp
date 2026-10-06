@@ -115,9 +115,9 @@ void LoadLanguage(pe::gfx::Font& font) {
     std::size_t texts = 0;
     for (const std::string& candidate : pe::catalog_candidates(tag)) {
         std::string po;
-        bool read = pe::read_file(Eden::AppFile("ui/lang/" + candidate + ".po"), &po, 1u << 20);
+        bool read = pe::read_file(Eden::AppResourceFile("ui/lang/" + candidate + ".po"), &po, 1u << 20);
         if (!read)
-            read = pe::read_file(Eden::AppFile("ui/lang/" + candidate + ".txt"), &po, 1u << 20);
+            read = pe::read_file(Eden::AppResourceFile("ui/lang/" + candidate + ".txt"), &po, 1u << 20);
         if (!read) continue;
         texts = pe::catalog().load(po);
         catalog = candidate;
