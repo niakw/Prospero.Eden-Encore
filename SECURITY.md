@@ -81,6 +81,21 @@ Reports are especially useful for:
   - accidental inclusion of console keys, firmware, saves or private data in build artifacts/logs;
   - crash reports containing memory contents or secrets.
 
+## External metadata / Nlib network access
+
+Encore optionally enriches launcher presentation from **ghost-land/Nlib-API** over HTTPS. Requests
+contain the Switch **Title ID**, selected launcher/game language and the requested metadata/media
+endpoint. Encore does **not** send `prod.keys`, firmware contents, ROM/container files, save data,
+PS5 account credentials or the selected storage path to Nlib.
+
+Returned metadata and images are treated as untrusted network input and cached under Encore's
+application-managed cache. Cache schema/version checks allow older metadata to be refreshed without
+making remote content authoritative over local game files or settings. Losing network access does
+not block the launcher or game boot; local metadata/artwork fallbacks remain available.
+
+Security reports are in scope if malformed remote metadata/media can escape its cache path, corrupt
+native memory, disclose local files/secrets, or otherwise affect Encore beyond presentation data.
+
 ## Filesystem access security model
 
 Encore uses one storage contract. Internal storage defaults to `/data/prosperoeden`; an optional
