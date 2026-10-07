@@ -35,6 +35,7 @@
 #include "devices.h"
 #include "encore_overrides_generated.h"
 #include "encore_overrides_runtime.h"
+#include "encore_performance_policy.h"
 #include "diagnostics.h"
 #include "display_refresh.h"
 #include "log_pipe.h"
@@ -757,7 +758,9 @@ int main(int argc, char** argv) {
         setenv("PS5VK_QUIET_LOG", "1", 1);
 #endif
 #endif
-        const int effective_performance_profile = safe_launch ? 0 :
+        // Safe Launch lowers rendering cost but keeps conservative accuracy. It is a recovery
+        // path, not the aggressive Minimum performance tier.
+        const int effective_performance_profile = safe_launch ? 1 :
             game_video.performance_profile >= 0 ? game_video.performance_profile :
                                                   launch_preferences.performance_profile;
         const int effective_resolution_for_tuning = safe_launch ? Eden::kNativeResolution :
@@ -879,6 +882,15 @@ int main(int argc, char** argv) {
         }
         Common::Log::Start();
         SCOPE_EXIT { Common::Log::Stop(); };
+        // Reset every mutable speed/accuracy control for each session. One app process can launch
+        // many games; no game's hidden runtime policy may leak into the next one.
+        Settings::values.cpu_accuracy = Settings::CpuAccuracy::Auto;
+        Settings::values.dma_accuracy.SetValue(Settings::DmaAccuracy::Default);
+        Settings::values.use_reactive_flushing.SetValue(true);
+        Settings::values.skip_cpu_inner_invalidation.SetValue(false);
+#ifdef PS5_NATIVE
+        const auto performance_policy = Eden::EncorePerformance::ForTier(runtime_performance_profile);
+#endif
         #ifdef EDEN_PS5_OPENGL
         Settings::values.renderer_backend = backend == Eden::GraphicsBackend::Vulkan ?
             Settings::RendererBackend::Vulkan : Settings::RendererBackend::OpenGL_GLSL;
@@ -895,31 +907,45 @@ int main(int argc, char** argv) {
             0xffffffffu : 0u;
 #endif
         Settings::values.use_asynchronous_shaders =
-            runtime_performance_profile == 0 && backend == Eden::GraphicsBackend::Vulkan;
+            performance_policy.async_shaders && backend == Eden::GraphicsBackend::Vulkan;
         Settings::values.renderer_debug = false;
-        const auto profile_gpu_accuracy = runtime_performance_profile == 0 ?
+        const auto profile_gpu_accuracy = performance_policy.fast_gpu ?
             Settings::GpuAccuracy::Low : Settings::GpuAccuracy::High;
         Settings::values.gpu_accuracy.SetValue(profile_gpu_accuracy);
         Settings::values.current_gpu_accuracy = profile_gpu_accuracy;
-        // Keep saved-block compile-ahead out of normal Encore profiles for now. On FC 27 the
-        // hardware logs show the saved list filling half of every JIT region at boot, followed by
-        // EDEN_JIT_PRESSURE and multi-hundred-ms/second stalls. Development builds can still opt in
-        // with block-list.txt below while the mechanism is requalified.
+        if (performance_policy.unsafe_cpu)
+            Settings::values.cpu_accuracy = Settings::CpuAccuracy::Unsafe;
+        if (performance_policy.unsafe_dma)
+            Settings::values.dma_accuracy.SetValue(Settings::DmaAccuracy::Unsafe);
+        Settings::values.use_reactive_flushing.SetValue(performance_policy.reactive_flushing);
+        Settings::values.skip_cpu_inner_invalidation.SetValue(performance_policy.skip_invalidation);
+#if EDEN_SHARED_JIT_AVAILABLE
+        Eden::JitList::enabled = performance_policy.compile_ahead;
+#else
+        // Shipping stability architecture: the saved-block worker depends on the experimental
+        // shared JIT, so compile-ahead stays structurally unavailable rather than pretending to
+        // honour a switch that cannot run.
         Eden::JitList::enabled = false;
+#endif
 #if !EDEN_SHARED_JIT_AVAILABLE && !EDEN_JIT_COMPILE_BATCH_AVAILABLE
         Eden::Report("performance",
             "CPU JIT: Dynarmic per-core; Encore cross-core sharing, successor batching and saved-block compile-ahead disabled");
 #endif
         const int profile_label_index = std::clamp(
             effective_performance_profile, 0, Eden::EncoreOverrides::kCustomProfile);
+        const auto on = [](bool value) { return value ? "on" : "off"; };
         Eden::Report("performance",
             (std::string("Profile ") + Eden::kPerformanceProfileLabels[profile_label_index] +
              (profile_label_index == Eden::EncoreOverrides::kCustomProfile ?
                  std::string(" (runtime ") + Eden::kPerformanceProfileLabels[runtime_performance_profile] + ")" :
                  std::string{}) +
-             ": compile-ahead " + (Eden::JitList::enabled.load(std::memory_order_relaxed) ? "on" : "off") +
-             ", async shaders " + (Settings::values.use_asynchronous_shaders.GetValue() ? "on" : "off") +
-             ", GPU accuracy " + (profile_gpu_accuracy == Settings::GpuAccuracy::Low ? "low" : "high")).c_str());
+             ": compile-ahead " + on(Eden::JitList::enabled.load(std::memory_order_relaxed)) +
+             ", async shaders " + on(Settings::values.use_asynchronous_shaders.GetValue()) +
+             ", fast GPU " + on(performance_policy.fast_gpu) +
+             ", unsafe CPU " + on(performance_policy.unsafe_cpu) +
+             ", unsafe DMA " + on(performance_policy.unsafe_dma) +
+             ", reactive flushing " + on(performance_policy.reactive_flushing) +
+             ", skip invalidation " + on(performance_policy.skip_invalidation)).c_str());
         // RADV presents the console's 12 GiB of direct memory as an integrated GPU, for which
         // Eden budgets 4 GiB: a game using ~4.4 GB of Vulkan memory then ran the texture GC
         // every frame (20-25 FPS). Eden's larger integrated budget (6 GiB) holds it at 30 FPS
@@ -928,7 +954,6 @@ int main(int argc, char** argv) {
 #else
         Settings::values.renderer_backend = Settings::RendererBackend::Null;
 #endif
-        Settings::values.cpu_accuracy = Settings::CpuAccuracy::Auto;
         Settings::values.memory_layout_mode = Settings::MemoryLayout::Memory_4Gb;
 #ifdef EDEN_DEV_PROFILE
         // One-run A/B switches written by the development runner; absent = defaults.

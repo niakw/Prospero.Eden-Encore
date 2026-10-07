@@ -35,6 +35,8 @@ jobs:
     if: ${{ !contains(github.event.head_commit.message || '', '[publish-existing]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 240
+    env:
+      PROSPEROEDEN_GIT_DEPS_ROOT: .deps/repos
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -79,15 +81,14 @@ jobs:
             ~/.cache/ps5-eden-headless.*
             ~/.cache/prosperoeden-mkpfs
             .deps
-            ../ps5-native-app-boilerplate
-            ../ps5-opengl-review
-            ../mihawk-vulkan-review
-            ../mihawk-mesa-review
-            ../mihawk-sdk-review
           key: prospero-eden-encore-040-${{ runner.os }}-${{ hashFiles('tools/deps.json') }}
           restore-keys: |
             prospero-eden-encore-040-${{ runner.os }}-
             prosperoeden-040-zbic-${{ runner.os }}-
+
+      - name: Prepare cacheable sibling dependency paths
+        if: ${{ inputs.resume_run_id == '' }}
+        run: bash tools/ci/link-sibling-deps.sh
 
       - name: Validate release metadata and legal bundle
         if: ${{ inputs.resume_run_id == '' && !inputs.build_only }}
@@ -105,6 +106,9 @@ jobs:
           python3 -B tools/check-video-presets.py
           python3 -B tools/check-encore-ux.py
           python3 -B tools/check-jit-stability.py
+          python3 -B tools/check-performance-policy.py
+          python3 -B tools/check-network-runtime.py
+          python3 -B tools/check-ci-cache.py
 
       - name: Preflight release packaging
         if: ${{ inputs.resume_run_id == '' && !inputs.build_only }}
@@ -140,11 +144,6 @@ jobs:
             ~/.cache/ps5-eden-headless.*
             ~/.cache/prosperoeden-mkpfs
             .deps
-            ../ps5-native-app-boilerplate
-            ../ps5-opengl-review
-            ../mihawk-vulkan-review
-            ../mihawk-mesa-review
-            ../mihawk-sdk-review
           key: prospero-eden-encore-040-${{ runner.os }}-${{ hashFiles('tools/deps.json') }}-${{ github.run_id }}
 
       - name: Upload resumable staged app

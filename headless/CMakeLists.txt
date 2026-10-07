@@ -2188,7 +2188,7 @@ void Initialize() {
             "${PORT_ROOT}/tools/radv-link-eden.sh"
             "${PORT_ROOT}/../mihawk-vulkan-review/tools/radv-link.sh")
     endif()
-    target_compile_definitions(common PRIVATE PS5_NATIVE=1)
+    target_compile_definitions(common PRIVATE PS5_NATIVE=1 YUZU_BUNDLED_OPENSSL=1)
 else()
     add_executable(eden-headless "${EDEN_PORT_DIR}/main.cpp" "${PORT_ROOT}/src/aligned_alloc.c")
     target_link_options(eden-headless PRIVATE -Wl,--wrap=aligned_alloc)

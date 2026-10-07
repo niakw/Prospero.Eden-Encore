@@ -124,7 +124,7 @@ assert 'const Rect status{1324.0f, 470.0f, 524.0f, 454.0f}' in home
 # Custom low-cost settings keep the light hidden runtime policy.
 assert 'runtime_performance_profile' in main
 assert 'effective_resolution_for_tuning <= Eden::kNativeResolution' in main
-assert 'Settings::values.use_asynchronous_shaders =\n            runtime_performance_profile == 0' in main
+assert 'performance_policy.async_shaders && backend == Eden::GraphicsBackend::Vulkan' in main
 
 # Nlib HTTP identity is applied as an audited pinned-Eden backport.
 apply=(root/'tools/apply-eden-backports.sh').read_text()

@@ -47,6 +47,13 @@ def items(names=()):
 
 def location(item):
     key = {'git': 'path', 'files': 'dest'}.get(item['kind'])
+    if item['kind'] == 'git' and item.get('path', '').startswith('../'):
+        cache_root = os.environ.get('PROSPEROEDEN_GIT_DEPS_ROOT')
+        if cache_root:
+            base = pathlib.Path(cache_root)
+            if not base.is_absolute():
+                base = ROOT / base
+            return (base / pathlib.Path(item['path']).name).resolve()
     return (ROOT / item[key]).resolve() if key else (ROOT / item['creates']).resolve()
 
 

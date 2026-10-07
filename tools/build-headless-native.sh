@@ -38,14 +38,60 @@ export PKG_CONFIG_PATH=
 mkdir -p "$PKG_CONFIG_LIBDIR"
 cdeps="$EDEN_NATIVE_C_DEPS"
 test -f "$cdeps/lib/libcrypto.a"
+python3 -B "$root/tools/materialize-openssl-cert.py"     "$scratch/source/.patch/openssl/0001-add-bundled-cert.patch"     "$cdeps/include/openssl/cert.h"
 ffmpeg="$scratch/ffmpeg-native/install"
 test -f "$ffmpeg/lib/libavcodec.a" || { echo 'Run tools/build-headless-ffmpeg.sh first.' >&2; exit 1; }
-# GitHub restores native-local as a cache. Its object mtimes can be newer than the freshly
-# checked-out fork sources, causing Ninja to reuse an old launcher even though home.cpp changed.
-# Touch only fork-owned launcher sources/headers so they are always recompiled against this commit;
-# ccache still makes an unchanged rebuild cheap.
-find "$root/headless/prosperoeden" -type f \
-    \( -name '*.cpp' -o -name '*.c' -o -name '*.hpp' -o -name '*.h' \) -exec touch {} +
+# A fresh Git checkout gives every fork-owned source a new mtime, which makes a restored Ninja
+# tree rebuild it even when its bytes did not change. Preserve a content+mtime manifest inside the
+# cached scratch tree: matching files recover their previous mtime, while changed files keep the
+# fresh checkout mtime and are rebuilt normally. Missing objects are still rebuilt by Ninja.
+python3 -B - "$root" "$scratch/fork-source-stamps.json" <<'PY_STAMPS'
+import hashlib, json, os, pathlib, subprocess, sys
+root = pathlib.Path(sys.argv[1])
+manifest_path = pathlib.Path(sys.argv[2])
+previous = {}
+try:
+    previous = json.loads(manifest_path.read_text())
+except (FileNotFoundError, json.JSONDecodeError, OSError):
+    pass
+
+tracked = subprocess.check_output(
+    ['git', '-C', str(root), 'ls-files', '-z', 'headless'], text=False
+).split(b'\0')
+extensions = {'.c', '.cc', '.cpp', '.h', '.hpp', '.inc', '.cmake'}
+files = []
+for raw in tracked:
+    if not raw:
+        continue
+    rel = raw.decode()
+    path = root / rel
+    if not path.is_file():
+        continue
+    if path.suffix not in extensions and path.name != 'CMakeLists.txt':
+        continue
+    files.append((rel, path))
+
+current = {}
+restored = 0
+for rel, path in files:
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    old = previous.get(rel)
+    if isinstance(old, dict) and old.get('sha256') == digest:
+        try:
+            mtime_ns = int(old['mtime_ns'])
+            os.utime(path, ns=(mtime_ns, mtime_ns))
+            restored += 1
+        except (KeyError, ValueError, OSError):
+            pass
+    stat = path.stat()
+    current[rel] = {'sha256': digest, 'mtime_ns': stat.st_mtime_ns}
+
+manifest_path.parent.mkdir(parents=True, exist_ok=True)
+tmp = manifest_path.with_suffix('.new')
+tmp.write_text(json.dumps(current, sort_keys=True, separators=(',', ':')) + '\n')
+tmp.replace(manifest_path)
+print(f'Encore incremental source stamps: {restored}/{len(files)} restored')
+PY_STAMPS
 
 cmake -S "$scratch/source" -B "$scratch/native-local" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="$root/headless/ps5.cmake" -DPS5_NATIVE=ON -DEDEN_DEVICE_FRONTEND="$devices" \
