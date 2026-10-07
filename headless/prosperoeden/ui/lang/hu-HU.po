@@ -567,10 +567,6 @@ msgstr "Tedd a sajátoddá."
 msgid "Make the menu easier to see and follow."
 msgstr "Legyen a menü könnyebben látható és követhető."
 
-#: pe/ui/browse.cpp
-msgid "Menu sound effects made with ElevenLabs."
-msgstr "A menü hangeffektjei az ElevenLabs segítségével készültek."
-
 #: pe/ui/settings.cpp
 msgid "MENU SOUNDS"
 msgstr "MENÜHANGOK"

@@ -20,6 +20,8 @@ BASE_REQUIRED = {'eboot.bin', 'core-homebrew.nro', 'sce_module/libc.prx',
             'sce_sys/snd0.at9', 'sandbox-elevator.elf'}
 REQUIRED = set(BASE_REQUIRED)
 REQUIRED.update(p.relative_to(APP).as_posix() for p in (APP / 'ui').rglob('*') if p.is_file())
+REQUIRED.update({'legal/LICENSE', 'legal/THIRD_PARTY_NOTICES.md'})
+REQUIRED.update('legal/LICENSES/' + p.name for p in (ROOT / 'LICENSES').iterdir() if p.is_file())
 RECEIPT = ROOT / 'HEADLESS_CANDIDATE.json'
 GL_SDK_SOURCE_COMMIT = 'ad2807d41cef2681882a9ee0d20808779f74b7cd'
 

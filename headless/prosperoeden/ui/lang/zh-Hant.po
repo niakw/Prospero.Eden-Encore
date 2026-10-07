@@ -567,10 +567,6 @@ msgstr "隨心自訂。"
 msgid "Make the menu easier to see and follow."
 msgstr "讓選單更容易看清楚、更容易操作。"
 
-#: pe/ui/browse.cpp
-msgid "Menu sound effects made with ElevenLabs."
-msgstr "選單音效使用 ElevenLabs 製作。"
-
 #: pe/ui/settings.cpp
 msgid "MENU SOUNDS"
 msgstr "選單音效"

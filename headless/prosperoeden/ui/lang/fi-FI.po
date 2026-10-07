@@ -567,10 +567,6 @@ msgstr "Tee siitä omasi."
 msgid "Make the menu easier to see and follow."
 msgstr "Tee valikosta helpompi nähdä ja seurata."
 
-#: pe/ui/browse.cpp
-msgid "Menu sound effects made with ElevenLabs."
-msgstr "Valikon äänitehosteet on tehty ElevenLabs-palvelulla."
-
 #: pe/ui/settings.cpp
 msgid "MENU SOUNDS"
 msgstr "VALIKKOÄÄNET"

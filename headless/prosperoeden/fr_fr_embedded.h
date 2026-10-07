@@ -767,10 +767,6 @@ msgstr "JOURNAUX"
 msgid "Make the menu easier to see and follow."
 msgstr "Rendez le menu plus lisible et plus facile à suivre."
 
-#: pe/ui/browse.cpp
-msgid "Menu sound effects made with ElevenLabs."
-msgstr "Effets sonores du menu réalisés avec ElevenLabs."
-
 #: pe/ui/settings.cpp
 msgid "MENU SOUNDS"
 msgstr "SONS DU MENU"
@@ -1549,4 +1545,4 @@ msgstr "{0}/ (NSP ou XCI)"
 msgid "{0}/ (one folder per game ID)"
 msgstr "{0}/ (un dossier par ID de titre)"
 )FRPO";
-} // namespace pe::ui::embedded
+}

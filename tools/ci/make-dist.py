@@ -4,8 +4,9 @@
 
   tools/ci/make-dist.py [--image-only] APP_DIR
 
-dist/Prospero.Eden-Encore-RN.zip (the folder plus README, INSTALL, SECURITY, LICENSE and
-THIRD_PARTY_NOTICES; fixed timestamps, so equal inputs give equal bytes), dist/Prospero.Eden-Encore-RN.ffpfsc
+dist/Prospero.Eden-Encore-RN.zip (the folder plus README, INSTALL, SECURITY, LICENSE,
+THIRD_PARTY_NOTICES and LICENSES/; fixed timestamps, so equal inputs give equal bytes),
+dist/Prospero.Eden-Encore-RN.ffpfsc
 (the same title as a package image, tools/ci/package-image.sh), SHA256SUMS and release-notes.md.
 """
 import hashlib
@@ -44,6 +45,7 @@ files = [(p, 'PPSA99008/' + p.relative_to(app).as_posix()) for p in sorted(app.r
 files += [(root / name, name) for name in
           ('README.md', 'INSTALL.md', 'SECURITY.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md')
           if (root / name).exists()]
+files += [(p, 'LICENSES/' + p.name) for p in sorted((root / 'LICENSES').iterdir()) if p.is_file()]
 with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as zip_file:
     for path, name in files:
         info = zipfile.ZipInfo(name, (2026, 1, 1, 0, 0, 0))
