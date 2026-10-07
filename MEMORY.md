@@ -46,6 +46,12 @@
   - The underlying boot hotfix remains unchanged: direct PS5 `statfs/statvfs` was removed and the previously boot-proven `std::filesystem::space(Eden::AssetsDir(), error)` path restored.
 - CI-green is not sufficient for startup-sensitive PS5 changes: a hardware boot on FW 13.60 is a mandatory release gate.
 
+- #184 — run `37670172143` — FAILED EARLY before compilation on `f5d2015337eb5fd7fbf3895133926f9819120f58`.
+  - Metadata preflight passed.
+  - License/SFX gate rejected the historical continuity file because it contained the literal name of the removed audio service.
+  - This was documentary only; no package/audio regression and no native compile started.
+  - The #182 ~2.86 GB cache restored successfully again.
+
 ## Build / cache policy
 
 The old workflow restored caches but still appeared to rebuild from 1/N because:
@@ -301,7 +307,7 @@ Do not mix an unproven artwork/package experiment into a startup hotfix.
 ## Legal / SFX
 
 Release has been hardened:
-- original deterministic procedural launcher SFX, no ElevenLabs dependency;
+- original deterministic procedural launcher SFX, no external generated-audio service dependency;
 - legal bundle / third-party notices included;
 - exact license gate exists;
 - do not claim absolute legal certainty; say materially hardened / notices bundled.
