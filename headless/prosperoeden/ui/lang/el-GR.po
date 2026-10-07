@@ -567,10 +567,6 @@ msgstr "Κάντε το δικό σας."
 msgid "Make the menu easier to see and follow."
 msgstr "Κάντε το μενού πιο ευανάγνωστο και πιο εύκολο στην παρακολούθηση."
 
-#: pe/ui/browse.cpp
-msgid "Menu sound effects made with ElevenLabs."
-msgstr "Τα ηχητικά εφέ του μενού δημιουργήθηκαν με το ElevenLabs."
-
 #: pe/ui/settings.cpp
 msgid "MENU SOUNDS"
 msgstr "ΗΧΟΙ ΜΕΝΟΥ"

@@ -567,10 +567,6 @@ msgstr "나만의 설정으로."
 msgid "Make the menu easier to see and follow."
 msgstr "메뉴를 더 보기 쉽고 따라가기 쉽게 만듭니다."
 
-#: pe/ui/browse.cpp
-msgid "Menu sound effects made with ElevenLabs."
-msgstr "메뉴 효과음은 ElevenLabs로 제작했습니다."
-
 #: pe/ui/settings.cpp
 msgid "MENU SOUNDS"
 msgstr "메뉴 효과음"

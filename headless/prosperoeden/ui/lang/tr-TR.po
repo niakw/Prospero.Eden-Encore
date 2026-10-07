@@ -567,10 +567,6 @@ msgstr "Kendinize göre ayarlayın."
 msgid "Make the menu easier to see and follow."
 msgstr "Menüyü görmeyi ve takip etmeyi kolaylaştırın."
 
-#: pe/ui/browse.cpp
-msgid "Menu sound effects made with ElevenLabs."
-msgstr "Menü ses efektleri ElevenLabs ile oluşturuldu."
-
 #: pe/ui/settings.cpp
 msgid "MENU SOUNDS"
 msgstr "MENÜ SESLERİ"

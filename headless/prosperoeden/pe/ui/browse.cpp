@@ -476,7 +476,7 @@ void Launcher::draw_about(Canvas &c)
     text_block(c, tr("Eden Encore builds on the proven ProsperoEden 0.40 PS5 base for firmware 13.60, with the Eden core, safer recovery, and targeted compatibility, performance and TV-first UX improvements."),
                144.0f, baseline(684.0f, 36.0f, theme::kText24), theme::kText24, 36.0f, theme::kBody,
                748.0f, 2, kShrink);
-    text_shrink(c, tr("Menu sound effects made with ElevenLabs."), 144.0f,
+    text_shrink(c, "GPL-3.0-or-later  /  no warranty  /  source + licenses: github.com/niakw/Prospero.Eden-Encore", 144.0f,
                 baseline(788.0f, 30.0f, theme::kSmall), theme::kSmall, theme::kMeta, 748.0f);
     text(c, version_, 892.0f, baseline(866.0f, 28.0f, theme::kSmall), theme::kSmall,
          theme::kLimePale, Align::right);

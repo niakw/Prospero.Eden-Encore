@@ -23,7 +23,11 @@ ui_expected.discard("ui/art/backdrop-blur.tga")
 ui_expected.add("ui/art/backdrop.tga")
 for source in (source_ui / "lang").glob("*.po"):
     ui_expected.add("ui/lang/" + source.with_suffix(".txt").name)
-expected = base | ui_expected
+legal_source = root / "LICENSES"
+legal_expected = {"legal/LICENSE", "legal/THIRD_PARTY_NOTICES.md"} | {
+    "legal/LICENSES/" + p.name for p in legal_source.iterdir() if p.is_file()
+}
+expected = base | ui_expected | legal_expected
 actual = {p.relative_to(app).as_posix() for p in app.rglob("*") if p.is_file()}
 missing = sorted(expected - actual)
 extra = sorted(actual - expected)

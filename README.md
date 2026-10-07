@@ -305,11 +305,34 @@ changes do not imply endorsement by those projects or their maintainers.
 
 ## License and legal
 
-Prospero.Eden Encore is distributed under **GPL-3.0-or-later**. See [LICENSE](LICENSE).
-Third-party components keep their own licenses and attribution; see
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Prospero.Eden Encore is an **unofficial community fork** distributed under
+**GPL-3.0-or-later**. See [LICENSE](LICENSE). Third-party components keep their
+own licenses and attribution; the component map is in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and the collected full texts
+are in [LICENSES](LICENSES/). Release ZIPs and the installable PS5 title carry
+those notices; the standalone `.ffpfsc` therefore keeps a `legal/` directory
+inside the installed title.
 
-No keys, firmware, games or other copyrighted console data are included.
+Encore is not affiliated with, sponsored by, endorsed by, or supported by Sony
+Interactive Entertainment, Nintendo, the Eden Emulator Project, or other
+upstream projects unless they expressly state otherwise. Product, project and
+company names and logos are used only for attribution, compatibility
+identification or description of upstream lineage. Copyright licensing does
+not itself grant trademark rights.
 
-Use software and console data dumped from hardware and games you own. This project is provided
-without warranty and is not affiliated with Sony Interactive Entertainment or the Eden project.
+No encryption keys, Nintendo firmware, commercial games, DLC, updates or other
+proprietary console content are included. Use only software and console data
+you are lawfully entitled to use.
+
+Nlib is queried at runtime; Encore does not ship a pre-seeded Nlib media
+library. Copyright/trademark rights in remote icons, banners, screenshots and
+metadata remain with their respective rightsholders. Encore does not claim
+that such remote media is public-domain, royalty-free or independently
+redistributable.
+
+The launcher SFX are generated locally and deterministically by
+`tools/launcher/generate-sfx.py`; no third-party audio samples or external
+generative-audio service output is included.
+
+This project is provided **without warranty**, subject to the complete terms in
+the applicable licenses.
