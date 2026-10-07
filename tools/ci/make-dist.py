@@ -6,6 +6,8 @@
 
 dist/Prospero.Eden-Encore-RN.zip (the folder plus README, INSTALL, SECURITY, LICENSE,
 THIRD_PARTY_NOTICES and LICENSES/; fixed timestamps, so equal inputs give equal bytes),
+dist/Prospero.Eden-Encore-RN-FTP.zip (minimal PPSA99008 folder for manual FTP installs:
+runtime files only, without installed legal texts or ShadowMount-only .txt language companions),
 dist/Prospero.Eden-Encore-RN.ffpfsc
 (the same title as a package image, tools/ci/package-image.sh), SHA256SUMS and release-notes.md.
 """
@@ -53,6 +55,31 @@ with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as zip
         info.external_attr = 0o644 << 16
         zip_file.writestr(info, path.read_bytes())
 digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+
+# Manual PS5 FTP servers commonly support binary STOR only. FileZilla may switch .txt files to
+# ASCII automatically, so publish a separate runtime-only folder archive for manual FTP installs.
+# The full ZIP and FFPFSC above remain the canonical distribution artifacts and keep every legal
+# notice plus the ShadowMount .txt catalog companions.
+ftp_archive = dist / f'Prospero.Eden-Encore-{release}-FTP.zip'
+ftp_files = []
+for path in sorted(app.rglob('*')):
+    if not path.is_file():
+        continue
+    relative = path.relative_to(app)
+    posix = relative.as_posix()
+    if posix == 'legal' or posix.startswith('legal/'):
+        continue
+    if relative.parent.as_posix() == 'ui/lang' and relative.suffix == '.txt':
+        continue
+    ftp_files.append((path, 'PPSA99008/' + posix))
+with zipfile.ZipFile(ftp_archive, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as zip_file:
+    for path, name in ftp_files:
+        info = zipfile.ZipInfo(name, (2026, 1, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_DEFLATED
+        info.external_attr = 0o644 << 16
+        zip_file.writestr(info, path.read_bytes())
+ftp_digest = hashlib.sha256(ftp_archive.read_bytes()).hexdigest()
+
 subprocess.run(['bash', str(root / 'tools/ci/package-image.sh'), str(app), str(image)], check=True)
 image_digest = hashlib.sha256(image.read_bytes()).hexdigest()
 # Prove the package-image path is deterministic before publishing its checksum. This catches a
@@ -65,7 +92,11 @@ try:
         raise SystemExit(f'FFPFSC reproducibility check failed: {image_digest} != {repro_digest}')
 finally:
     repro.unlink(missing_ok=True)
-(dist / 'SHA256SUMS').write_text(f'{digest}  {archive.name}\n{image_digest}  {image.name}\n')
+(dist / 'SHA256SUMS').write_text(
+    f'{digest}  {archive.name}\n'
+    f'{ftp_digest}  {ftp_archive.name}\n'
+    f'{image_digest}  {image.name}\n'
+)
 # The unstripped executable of this release, to name the functions in a crash report later
 # (tools/symbolize-crash.py). Kept out of dist/: it is not a release file.
 unstripped = root / 'build/headless-native/llvm-pie.elf'
@@ -82,4 +113,5 @@ if match:
 else:
     sys.exit(f'README.md has no "## Changes in {heading}" section; release notes are required')
 print(f'{archive} {digest}')
+print(f'{ftp_archive} {ftp_digest}')
 print(f'{image} {image_digest}')
