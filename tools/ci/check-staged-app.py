@@ -57,8 +57,10 @@ assert len(eboot) > 1024 * 1024
 for text in (
     "QUICK SETTINGS", "SELECTED GAME", "Confirm this action?", "PARAMÈTRES RAPIDES",
     "api.nlib.cc", "Nlib hero cached for ", "EDEN_NLIB_RESULT title_id=",
-    "/screen/", "fields=name,intro,description,publisher,developer,releaseDate",
-    "BUTTON PROFILE", "Custom PS5", "Custom Switch",
+    "/banner/1080p", "/screen/", "fields=name,intro,description,publisher,developer,releaseDate",
+    "BUTTON PROFILE", "PlayStation Auto", "Custom PS5", "Custom Switch",
+    "EDEN_PAD_CONTEXT mode=gameplay", "EDEN_PAD_CONTEXT mode=ui",
+    "Minimum", "Recommended", "High", "Ultra",
     "EDEN_HID_NPAD update={}", "EDEN_JIT_ALIAS rx=",
 ):
     marker = text.encode("utf-8")
@@ -72,5 +74,7 @@ assert "recent.hero" in home_source, "recent-game Nlib artwork is not used by Ho
 assert "hero_intro" in home_source, "Nlib intro is not used by Home hero"
 assert "game->screenshots" in library_source, "Nlib screenshots are not used by Library"
 assert "VIEW ALL GAMES" not in home_source, "removed Home pseudo-link returned"
+assert "kHomeQuickPanel" in home_source and "kHomeCache" in home_source, "final Home navigation contract missing"
+assert "const Rect hero_art{hero.x + 4.0f" in home_source, "full-bleed Nlib hero banner missing"
 assert "Cross launches" not in library_source, "text-only controller hint returned"
 print(f"Staged Encore artifact PASS ({len(actual)} files, current launcher/runtime markers present)")
