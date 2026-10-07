@@ -160,6 +160,23 @@ The installation should include at least:
 
 Do not copy only `eboot.bin`.
 
+For a **manual FTP install**, the release also provides:
+
+```text
+Prospero.Eden-Encore-R1-FTP.zip
+```
+
+This contains only the runtime `PPSA99008/` tree. The complete legal bundle remains in the
+normal release ZIP/FFPFSC, while ShadowMount-only `ui/lang/*.txt` companions are omitted from
+the FTP variant because the canonical `.po` catalogs are sufficient for an ordinary folder install.
+
+**FileZilla:** force **Transfer > Transfer type > Binary** before copying to a PS5 FTP server.
+Some PS5 FTP servers reject ASCII `STOR`, while FileZilla's Auto mode may classify text-like
+extensions as ASCII.
+
+The repository's `tools/install-ftp.py` / `make install` path always uses binary `STOR`
+and verifies the copied language catalogs.
+
 ### 3. Prepare storage
 
 For the default internal layout, place your own files under:
