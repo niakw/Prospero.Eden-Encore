@@ -44,6 +44,8 @@ Launcher::~Launcher()
     // The game list may still be reading; it uses the services this launcher was given.
     if (scan_.valid())
         scan_.wait();
+    if (media_scan_.valid())
+        media_scan_.wait();
 }
 
 std::vector<Cue> Launcher::take_cues()
@@ -234,6 +236,7 @@ void Launcher::update(float dt)
     backdrop_.update(dt);
     textures_.pump(dt);
     finish_scan(false);
+    finish_selected_media();
     update_controllers(dt);
     transition_.update(dt);
     press_ = std::max(0.0f, press_ - dt / 0.18f);
@@ -319,12 +322,55 @@ void Launcher::draw_screen(Canvas &c, Screen screen)
     }
 }
 
+void Launcher::draw_top_nav(Canvas &c, int active_tab, int focus_tab, float focus_amount)
+{
+    auto& list = c.list;
+    if (textures_.brand() != 0)
+        list.rounded_image(textures_.brand(), {72.0f, 28.0f, 84.0f, 84.0f},
+                           {0.0f, 0.0f, 1.0f, 1.0f}, 18.0f, kWhite);
+    text(c, "EDEN", 176.0f, baseline(43.0f, 35.0f, theme::kText24), theme::kText24,
+         theme::kTitle, Align::left, 3.0f);
+    text(c, "ENCORE", 176.0f, baseline(77.0f, 24.0f, theme::kSmall), theme::kSmall,
+         theme::kLime, Align::left, 5.0f);
+
+    static constexpr const char* labels[] = {TR("Home"), TR("Library"), TR("RECENTLY PLAYED"), TR("Settings")};
+    static constexpr float xs[] = {720.0f, 886.0f, 1046.0f, 1260.0f};
+    static constexpr float widths[] = {154.0f, 148.0f, 202.0f, 160.0f};
+    for (int i = 0; i < 4; ++i)
+    {
+        const Rect r{xs[i], 44.0f, widths[i], 54.0f};
+        const bool active = i == active_tab;
+        const float focused = i == focus_tab ? tween::clamp01(focus_amount) : 0.0f;
+        if (active)
+        {
+            // Persistent section state: restrained pill + underline. Controller focus is the
+            // brighter animated glow, so selected and hovered can never be confused.
+            list.bordered_rect(r, 22.0f, theme::kPanel.with_alpha(0.34f), 1.0f,
+                               theme::kPanelEdge.with_alpha(0.34f));
+            list.rounded_rect({r.x + 34.0f, r.y + r.h - 5.0f, r.w - 68.0f, 3.0f},
+                              1.5f, theme::kLime.with_alpha(0.74f));
+        }
+        if (focused > 0.001f)
+            plate_focus(c, kNavPlate, r, focused);
+        text_shrink(c, tr(labels[i]), r.x + r.w * 0.5f,
+                    baseline(r.y, r.h, theme::kSmall), theme::kSmall,
+                    active || focused > 0.01f ? theme::kTitle : theme::kMuted,
+                    r.w - 24.0f, Align::center);
+    }
+    text(c, clock_, 1848.0f, baseline(42.0f, 54.0f, theme::kClock), theme::kClock,
+         theme::kTitle, Align::right);
+    list.rounded_rect({72.0f, 126.0f, 1776.0f, 1.0f}, 0.0f, theme::kText.with_alpha(0.12f));
+}
+
 void Launcher::draw_frame(Canvas &c, const char *title, const char *copy)
 {
-    text_shrink(c, title, 108.0f, baseline(62.0f, 64.0f, theme::kDisplay), theme::kDisplay,
-                theme::kTitle, 1704.0f);
-    text_shrink(c, copy, 110.0f, baseline(130.0f, 30.0f, theme::kSmall), theme::kSmall, theme::kCopy,
-                1700.0f);
+    // Storage, Language and About are Settings subpages; keep the global TV shell visible so
+    // entering a utility never feels like falling back to the old launcher.
+    draw_top_nav(c, 3);
+    text_shrink(c, title, 72.0f, baseline(142.0f, 38.0f, theme::kHeading), theme::kHeading,
+                theme::kTitle, 1280.0f);
+    text_shrink(c, copy, 72.0f, baseline(176.0f, 24.0f, 18.0f), 18.0f, theme::kMeta,
+                1540.0f);
 }
 
 void Launcher::draw_footer(Canvas &c, const Hint *hints, int count)

@@ -21,6 +21,19 @@ namespace
 
 const Color kWhite{1.0f, 1.0f, 1.0f, 1.0f};
 
+constexpr int kHomeHero = 0;
+constexpr int kHomeNavLibrary = 1;
+constexpr int kHomeNavRecent = 2;
+constexpr int kHomeNavSettings = 3;
+constexpr int kHomeDetails = 4;
+constexpr int kHomeRecentFirst = 5;
+constexpr int kHomeRecentMax = 6;
+constexpr int kHomeQuickPanel = kHomeRecentFirst + kHomeRecentMax; // 11
+constexpr int kHomeQuickFirst = kHomeQuickPanel + 1;               // 12
+constexpr int kHomeQuickCount = 7;
+constexpr int kHomeStorage = kHomeQuickFirst + kHomeQuickCount;    // 19
+constexpr int kHomeCache = kHomeStorage + 1;                       // 20
+
 enum class HomeIcon { performance, display, output, mode, resolution, filter, antialias, storage, cache, language };
 
 void home_icon(Canvas& c, HomeIcon icon, float x, float cy, Color ink)
@@ -126,7 +139,7 @@ void Launcher::press_home(Key key)
 {
     const bool ready = home_.setup_ready;
     const bool recents_shown = home_.status.empty();
-    const int recent_count = recents_shown ? static_cast<int>(home_.recents.size()) : 0;
+    const int recent_count = recents_shown ? std::min<int>(kHomeRecentMax, static_cast<int>(home_.recents.size())) : 0;
     const auto selected_recent = [&]() -> const Recent *
     {
         return home_recent_ >= 0 && home_recent_ < recent_count ?
@@ -154,32 +167,31 @@ void Launcher::press_home(Key key)
         }
 
         bool saved = false;
+        GameSettings next = home_game_settings_;
         if (row == 6)
         {
-            const bool next_docked = !home_game_docked_;
-            saved = services_.set_docked(title_id, next_docked);
-            if (saved) home_game_docked_ = next_docked;
+            next.console_mode = home_game_docked_ ? 0 : 1;
+            RefreshVideoProfile(next, prefs_, title_id);
         }
         else
         {
-            GameSettings next = home_game_settings_;
             if (row == 0)
             {
                 const int current = next.performance_profile >= 0 ?
-                    next.performance_profile : DetectVideoProfile(next, prefs_);
-                ApplyVideoPreset(next, CycleVideoPreset(current, step));
+                    next.performance_profile : DetectVideoProfile(next, prefs_, title_id);
+                ApplyVideoPreset(next, CycleVideoPreset(current, step), title_id);
             }
             else if (row == 1)
             {
                 const int current = next.renderer >= 0 ? next.renderer : prefs_.renderer;
                 next.renderer = current == 0 ? 1 : 0;
-                RefreshVideoProfile(next, prefs_);
+                RefreshVideoProfile(next, prefs_, title_id);
             }
             else if (row == 2)
             {
                 const int current = next.output >= 0 ? next.output : prefs_.output;
                 next.output = (current + step + 3) % 3;
-                RefreshVideoProfile(next, prefs_);
+                RefreshVideoProfile(next, prefs_, title_id);
             }
             else if (row == 3)
             {
@@ -187,7 +199,7 @@ void Launcher::press_home(Key key)
                 if (count <= 0) return;
                 const int current = next.resolution >= 0 ? next.resolution : prefs_.resolution;
                 next.resolution = (current + step + count) % count;
-                RefreshVideoProfile(next, prefs_);
+                RefreshVideoProfile(next, prefs_, title_id);
             }
             else if (row == 4)
             {
@@ -195,7 +207,7 @@ void Launcher::press_home(Key key)
                 if (count <= 0) return;
                 const int current = next.filter >= 0 ? next.filter : prefs_.filter;
                 next.filter = (current + step + count) % count;
-                RefreshVideoProfile(next, prefs_);
+                RefreshVideoProfile(next, prefs_, title_id);
             }
             else
             {
@@ -204,10 +216,13 @@ void Launcher::press_home(Key key)
                 const int current = next.anti_aliasing >= 0 ?
                     next.anti_aliasing : prefs_.anti_aliasing;
                 next.anti_aliasing = (current + step + count) % count;
-                RefreshVideoProfile(next, prefs_);
+                RefreshVideoProfile(next, prefs_, title_id);
             }
-            saved = services_.set_game_settings(title_id, next);
-            if (saved) home_game_settings_ = next;
+        }
+        saved = services_.set_game_settings(title_id, next);
+        if (saved) {
+            home_game_settings_ = next;
+            home_game_docked_ = next.console_mode >= 0 ? next.console_mode == 1 : services_.docked(title_id);
         }
 
         if (saved)
@@ -229,66 +244,87 @@ void Launcher::press_home(Key key)
     switch (key)
     {
     case Key::up:
-        if (focus == 0 || focus == 4)
-            focus = ready ? 1 : 2;
-        else if (focus >= 5 && focus <= 8)
-            focus = hero_ready ? 0 : (ready ? 1 : 2);
-        else if (focus >= 10 && focus <= 16)
-            focus = focus > 10 ? focus - 1 : 3;
+        if (focus == kHomeHero || focus == kHomeDetails)
+            focus = ready ? kHomeNavLibrary : kHomeNavRecent;
+        else if (focus >= kHomeRecentFirst && focus < kHomeRecentFirst + recent_count)
+            focus = hero_ready ? kHomeHero : (ready ? kHomeNavLibrary : kHomeNavRecent);
+        else if (focus == kHomeQuickPanel)
+            focus = kHomeNavSettings;
+        else if (focus >= kHomeQuickFirst && focus < kHomeQuickFirst + kHomeQuickCount)
+            focus = focus > kHomeQuickFirst ? focus - 1 : kHomeQuickPanel;
+        else if (focus == kHomeStorage || focus == kHomeCache)
+            focus = kHomeQuickFirst + kHomeQuickCount - 1;
         break;
     case Key::down:
-        if (focus >= 1 && focus <= 3)
+        if (focus >= kHomeNavLibrary && focus <= kHomeNavSettings)
         {
             if (hero_ready)
-                focus = focus == 3 ? 10 : 0;
+                focus = focus == kHomeNavSettings ? kHomeQuickPanel : kHomeHero;
         }
-        else if ((focus == 0 || focus == 4) && recents_shown)
+        else if ((focus == kHomeHero || focus == kHomeDetails) && recents_shown)
         {
-            if (recent_count > 0) focus = 5;
+            if (recent_count > 0) focus = kHomeRecentFirst;
         }
-        else if (focus >= 10 && focus <= 16)
+        else if (focus == kHomeQuickPanel)
         {
-            focus = focus < 16 ? focus + 1 : (recents_shown && recent_count > 0 ? 5 : focus);
+            focus = kHomeCache;
+        }
+        else if (focus >= kHomeQuickFirst && focus < kHomeQuickFirst + kHomeQuickCount)
+        {
+            focus = focus < kHomeQuickFirst + kHomeQuickCount - 1 ? focus + 1 : kHomeCache;
+        }
+        else if (focus == kHomeStorage || focus == kHomeCache)
+        {
+            if (recents_shown && recent_count > 0) focus = kHomeRecentFirst;
         }
         break;
     case Key::left:
     case Key::right:
     {
         const int delta = key == Key::right ? 1 : -1;
-        if (focus >= 1 && focus <= 3)
+        if (focus >= kHomeNavLibrary && focus <= kHomeNavSettings)
         {
-            focus = 1 + (focus - 1 + delta + 3) % 3;
-            if (focus == 1 && !ready)
-                focus = delta > 0 ? 2 : 3;
+            focus = kHomeNavLibrary + (focus - kHomeNavLibrary + delta + 3) % 3;
+            if (focus == kHomeNavLibrary && !ready)
+                focus = delta > 0 ? kHomeNavRecent : kHomeNavSettings;
         }
-        else if (focus == 0 || focus == 4)
+        else if (focus == kHomeHero || focus == kHomeDetails)
         {
             if (hero_ready)
             {
                 if (delta > 0)
-                    focus = focus == 0 ? 4 : 10;
+                    focus = focus == kHomeHero ? kHomeDetails : kHomeQuickPanel;
                 else
-                    focus = focus == 4 ? 0 : focus;
+                    focus = focus == kHomeDetails ? kHomeHero : focus;
             }
         }
-        else if (focus >= 10 && focus <= 16)
+        else if (focus == kHomeQuickPanel)
         {
-            if (home_quick_edit_ == focus - 10)
+            // Deliberately inert: the user must press Cross to enter the quick-settings block.
+            return;
+        }
+        else if (focus >= kHomeQuickFirst && focus < kHomeQuickFirst + kHomeQuickCount)
+        {
+            if (home_quick_edit_ == focus - kHomeQuickFirst)
             {
-                change_quick(focus - 10, delta);
+                change_quick(focus - kHomeQuickFirst, delta);
                 return;
             }
         }
-        else if (focus >= 5 && focus <= 8 && recent_count > 0)
+        else if (focus >= kHomeRecentFirst && focus < kHomeRecentFirst + recent_count && recent_count > 0)
         {
-            int position = focus - 5;
+            int position = focus - kHomeRecentFirst;
             position = (position + delta + recent_count) % recent_count;
-            focus = position + 5;
+            focus = position + kHomeRecentFirst;
+        }
+        else if (focus == kHomeStorage || focus == kHomeCache)
+        {
+            focus = focus == kHomeStorage ? kHomeCache : kHomeStorage;
         }
         break;
     }
     case Key::circle:
-        if (focus >= 10 && focus <= 16)
+        if (focus >= kHomeQuickFirst && focus < kHomeQuickFirst + kHomeQuickCount)
         {
             if (home_quick_edit_ >= 0)
             {
@@ -297,16 +333,26 @@ void Launcher::press_home(Key key)
             }
             else
             {
-                focus = 4;
+                focus = kHomeQuickPanel;
                 cue(Cue::back);
             }
+        }
+        else if (focus == kHomeQuickPanel)
+        {
+            focus = kHomeDetails;
+            cue(Cue::back);
+        }
+        else if (focus == kHomeStorage || focus == kHomeCache)
+        {
+            focus = kHomeQuickFirst + kHomeQuickCount - 1;
+            cue(Cue::back);
         }
         return;
     case Key::triangle:
     {
-        if (focus >= 5 && focus < 5 + recent_count)
+        if (focus >= kHomeRecentFirst && focus < kHomeRecentFirst + recent_count)
         {
-            home_recent_ = focus - 5;
+            home_recent_ = focus - kHomeRecentFirst;
             refresh_home_hero();
         }
         const std::string file = hero_file();
@@ -318,32 +364,52 @@ void Launcher::press_home(Key key)
     }
     case Key::cross:
         press_ = 1.0f;
-        if (focus >= 10 && focus <= 16)
+        if (focus == kHomeQuickPanel)
         {
-            const int row = focus - 10;
+            focus = kHomeQuickFirst;
+            home_quick_edit_ = -1;
+            cue(Cue::open);
+            break;
+        }
+        if (focus >= kHomeQuickFirst && focus < kHomeQuickFirst + kHomeQuickCount)
+        {
+            const int row = focus - kHomeQuickFirst;
             home_quick_edit_ = home_quick_edit_ == row ? -1 : row;
             cue(home_quick_edit_ >= 0 ? Cue::toggle : Cue::saved);
             return;
         }
-        if (focus == 0 && hero_ready)
+        if (focus == kHomeCache)
+        {
+            if (!confirm_action(Confirmation::shader_caches)) return;
+            std::string result;
+            const bool cleared = services_.clear_shader_caches(&result);
+            home_diagnostics_ = services_.diagnostics();
+            say(result, !cleared);
+            cue(cleared ? Cue::saved : Cue::error);
+            return;
+        }
+        if (focus == kHomeStorage)
+        {
+            open(Screen::files, true);
+            enter_files();
+            return;
+        }
+        if (focus == kHomeHero && hero_ready)
         {
             const Recent *recent = selected_recent();
             const std::string file = recent != nullptr ? recent->file : home_.last_file;
             const std::string title = recent != nullptr ? recent->title : home_.last_title;
             const std::string cover = recent != nullptr ? recent->cover : home_.last_cover;
-            // Launch is an immediate, reversible user action. Confirmation is reserved for
-            // mode/configuration changes that can surprise the player, not for simply starting
-            // the game they explicitly selected.
             launch(file, title, cover);
         }
-        else if ((focus == 0 || focus == 1) && ready)
+        else if ((focus == kHomeHero || focus == kHomeNavLibrary) && ready)
         {
             open(Screen::library, true);
             enter_library();
         }
-        else if (focus == 2)
+        else if (focus == kHomeNavRecent)
         {
-            if (recent_count > 0) focus = 5;
+            if (recent_count > 0) focus = kHomeRecentFirst;
             if (recent_count > 0)
             {
                 home_recent_ = 0;
@@ -351,23 +417,21 @@ void Launcher::press_home(Key key)
             }
             cue(Cue::focus);
         }
-        else if (focus == 3)
+        else if (focus == kHomeNavSettings)
         {
             open(Screen::settings, true);
             prefs_ = services_.preferences();
             section_.snap(1.0f);
         }
-        else if (focus == 4 && hero_ready)
+        else if (focus == kHomeDetails && hero_ready)
         {
             open_library_at_file(hero_file());
         }
-        else if (focus >= 5 && focus < 5 + recent_count && ready)
+        else if (focus >= kHomeRecentFirst && focus < kHomeRecentFirst + recent_count && ready)
         {
-            // A recent card selects the Home hero. Launching is then an explicit action from
-            // the hero, so browsing the rail never starts a game by accident.
-            home_recent_ = focus - 5;
+            home_recent_ = focus - kHomeRecentFirst;
             refresh_home_hero();
-            focus = 0;
+            focus = kHomeHero;
             cue(Cue::saved);
         }
         else
@@ -380,11 +444,12 @@ void Launcher::press_home(Key key)
     }
     if (focus != before)
     {
-        if (focus < 10 || focus > 16 || home_quick_edit_ != focus - 10)
+        if (focus < kHomeQuickFirst || focus >= kHomeQuickFirst + kHomeQuickCount ||
+            home_quick_edit_ != focus - kHomeQuickFirst)
             home_quick_edit_ = -1;
-        if (focus >= 5 && focus < 5 + recent_count)
+        if (focus >= kHomeRecentFirst && focus < kHomeRecentFirst + recent_count)
         {
-            home_recent_ = focus - 5;
+            home_recent_ = focus - kHomeRecentFirst;
             refresh_home_hero();
         }
         cue(Cue::focus);
@@ -458,6 +523,8 @@ void Launcher::draw_home(Canvas &c)
     const std::string &hero_artwork = hero_recent != nullptr ? hero_recent->hero : home_.last_hero;
     const std::string &hero_addons = hero_recent != nullptr ? hero_recent->addons : home_.last_addons;
     const std::string &hero_language = hero_recent != nullptr ? hero_recent->language : home_.last_language;
+    const std::string &hero_intro = hero_recent != nullptr ? hero_recent->intro : home_.last_intro;
+    const std::uint64_t hero_title_id = hero_recent != nullptr ? hero_recent->title_id : home_.last_title_id;
     int hero_max_players = hero_recent != nullptr ? hero_recent->max_players : home_.last_max_players;
     const bool hero_ready = ready && !hero_file.empty();
     const auto focus = [&](int index) { return home_springs_[static_cast<std::size_t>(index)].value; };
@@ -485,62 +552,35 @@ void Launcher::draw_home(Canvas &c)
 
     const Rect hero{72.0f, 164.0f, 1228.0f, 514.0f};
     const Rect quick{1324.0f, 164.0f, 524.0f, 286.0f};
-    const Rect status{1324.0f, 470.0f, 524.0f, 208.0f};
+    const Rect status{1324.0f, 470.0f, 524.0f, 454.0f};
 
     // ---- brand + TV-first navigation ----
     begin_band(0, -16.0f);
-    if (textures_.brand() != 0)
-        list.rounded_image(textures_.brand(), {72.0f, 28.0f, 84.0f, 84.0f},
-                           {0.0f, 0.0f, 1.0f, 1.0f}, 18.0f, kWhite);
-    text(c, "EDEN", 176.0f, baseline(43.0f, 35.0f, theme::kText24), theme::kText24,
-         theme::kTitle, Align::left, 3.0f);
-    text(c, "ENCORE", 176.0f, baseline(77.0f, 24.0f, theme::kSmall), theme::kSmall,
-         theme::kLime, Align::left, 5.0f);
-
-    const Rect home_nav{720.0f, 44.0f, 154.0f, 54.0f};
-    // Active section: quiet persistent pill. Controller focus uses the brighter animated
-    // kNavPlate below, so "current page" and "currently hovered target" never look identical.
-    list.bordered_rect(home_nav, 22.0f, theme::kPanel.with_alpha(0.34f), 1.0f,
-                       theme::kPanelEdge.with_alpha(0.34f));
-    list.rounded_rect({home_nav.x + 34.0f, home_nav.y + home_nav.h - 5.0f,
-                       home_nav.w - 68.0f, 3.0f}, 1.5f, theme::kLime.with_alpha(0.74f));
-    text(c, tr("Home"), home_nav.x + home_nav.w * 0.5f,
-         baseline(home_nav.y, home_nav.h, theme::kSmall), theme::kSmall, theme::kTitle,
-         Align::center);
-
-    static constexpr const char *kNav[] = {TR("Library"), TR("RECENTLY PLAYED"), TR("Settings")};
-    const float nav_x[] = {886.0f, 1046.0f, 1260.0f};
-    const float nav_w[] = {148.0f, 202.0f, 160.0f};
-    for (int i = 0; i < 3; ++i)
-    {
-        const Rect r{nav_x[i], 44.0f, nav_w[i], 54.0f};
-        const float f = focus(1 + i);
-        list.push_opacity(i == 0 && !ready ? 0.45f : 1.0f);
-        plate(c, kNavPlate, r, f);
-        text_shrink(c, tr(kNav[i]), r.x + r.w * 0.5f,
-                    baseline(r.y, r.h, theme::kSmall), theme::kSmall,
-                    gfx::mix(theme::kMuted, theme::kTitle, f), r.w - 24.0f, Align::center);
-        list.pop_opacity();
-    }
-    text(c, clock_, 1848.0f, baseline(42.0f, 54.0f, theme::kClock), theme::kClock,
-         theme::kTitle, Align::right);
-    list.rounded_rect({72.0f, 126.0f, 1776.0f, 1.0f}, 0.0f, theme::kText.with_alpha(0.12f));
+    const int header_focus = home_focus_ >= kHomeNavLibrary && home_focus_ <= kHomeNavSettings ? home_focus_ : -1;
+    draw_top_nav(c, 0, header_focus, header_focus >= 0 ? focus(header_focus) : 0.0f);
     end_band();
 
     // ---- cinematic continue card ----
     begin_band(1, 24.0f);
     list.shadow({hero.x - 12.0f, hero.y - 8.0f, hero.w + 24.0f, hero.h + 24.0f},
                 36.0f, 74.0f, theme::kLime.with_alpha(0.13f));
-    glass(c, hero, 30.0f, theme::kGlass.with_alpha(0.58f), theme::kLime.with_alpha(0.28f), 1.1f);
-    // The selected game owns the hero. Prefer Nlib's native 16:9 banner; the embedded square
-    // icon remains the fully-offline fallback. The fade on the banner's left edge keeps the
-    // artwork cinematic without sacrificing text contrast on a television.
+    glass(c, hero, 30.0f, theme::kGlass.with_alpha(0.44f), theme::kLime.with_alpha(0.28f), 1.1f);
+    // The selected game owns the whole hero. Nlib's 16:9 banner fills the card edge-to-edge;
+    // layered scrims preserve TV readability without reducing the artwork to a thumbnail on the right.
     if (!hero_artwork.empty())
     {
-        const Rect hero_art{642.0f, 190.0f, 622.0f, 350.0f};
-        cover_crop(c, hero_artwork, hero_art, 26.0f, 0.72f);
-        list.hgradient_rect({642.0f, 190.0f, 236.0f, 350.0f}, 26.0f,
-                            theme::kGlass.with_alpha(0.96f), theme::kGlass.with_alpha(0.02f));
+        const Rect hero_art{hero.x + 4.0f, hero.y + 4.0f, hero.w - 8.0f, hero.h - 8.0f};
+        cover_crop(c, hero_artwork, hero_art, 28.0f, 0.78f);
+        list.hgradient_rect(hero_art, 28.0f,
+                            theme::kScrim.with_alpha(0.93f), theme::kScrim.with_alpha(0.08f));
+        list.gradient_rect({hero_art.x, hero_art.y + hero_art.h * 0.52f, hero_art.w, hero_art.h * 0.48f},
+                           28.0f, theme::kScrim.with_alpha(0.02f),
+                           theme::kScrim.with_alpha(0.74f));
+        // Redraw the premium glass edge after the artwork so the banner can never cover the focus frame.
+        list.bordered_rect(hero, 30.0f, kWhite.with_alpha(0.0f), 1.35f,
+                           theme::kPanelEdge.with_alpha(0.76f));
+        list.bordered_rect({hero.x + 2.0f, hero.y + 2.0f, hero.w - 4.0f, hero.h - 4.0f},
+                           28.0f, kWhite.with_alpha(0.0f), 0.7f, kWhite.with_alpha(0.08f));
     }
     else
     {
@@ -555,14 +595,18 @@ void Launcher::draw_home(Canvas &c)
          theme::kSmall, theme::kLime, Align::left, 3.5f);
     text_block(c, hero_file.empty() ? tr("Your next adventure") : hero_title,
                118.0f, baseline(252.0f, 64.0f, theme::kDisplay), theme::kDisplay, 62.0f,
-               theme::kTitle, 690.0f, 2, kShrink);
+               theme::kTitle, 620.0f, 2, kShrink);
     const std::string hero_caption =
         hero_file.empty() ? std::string{tr("Choose a game from your library.")} :
+        !hero_intro.empty() ? hero_intro :
         hero_recent != nullptr ? std::string{tr("Recently played")} : home_.last_caption;
     const bool hero_caption_warning = hero_recent == nullptr && home_.last_caption_warning;
-    notice(c, hero_caption, 118.0f, baseline(390.0f, 34.0f, theme::kText24), theme::kText24,
-           hero_caption_warning ? theme::kWarning : theme::kBody, 690.0f,
-           hero_caption_warning);
+    if (hero_caption_warning)
+        notice(c, hero_caption, 118.0f, baseline(390.0f, 34.0f, theme::kText24), theme::kText24,
+               theme::kWarning, 620.0f, true);
+    else
+        text_block(c, hero_caption, 118.0f, baseline(380.0f, 28.0f, 21.0f), 21.0f, 30.0f,
+                   theme::kBody, 620.0f, 2, kShrink);
     int hero_mods = hero_recent == nullptr ? home_.last_mods : 0;
     int hero_mods_on = hero_recent == nullptr ? home_.last_mods_on : 0;
     for (const Game &game : games_)
@@ -577,7 +621,7 @@ void Launcher::draw_home(Canvas &c)
                     fill(tr("Add-ons: {0}  /  Language: {1}"),
                          {addons_line(hero_addons, hero_mods, hero_mods_on), hero_language}),
                     118.0f, baseline(432.0f, 28.0f, theme::kSmall), theme::kSmall,
-                    theme::kMeta, 700.0f);
+                    theme::kMeta, 620.0f);
 
     const char *first = hero_ready ? tr("Launch game") : tr("Open library");
     const char *second = tr("Game details");
@@ -596,20 +640,30 @@ void Launcher::draw_home(Canvas &c)
         list.pop_transform();
         list.pop_opacity();
     };
-    hero_button(continue_rect, first, focus(0), ready);
-    hero_button(details_rect, second, focus(4), hero_ready);
+    hero_button(continue_rect, first, focus(kHomeHero), ready);
+    hero_button(details_rect, second, focus(kHomeDetails), hero_ready);
 
-    // Effective values for the selected game: per-game override first, then global fallback.
+    // Effective values: authored general tier -> title-specific encore-overrides tier -> manual game override.
+    // A Custom global profile has no authored tier, so its raw global values remain the fallback.
+    const bool authored_global = prefs_.performance_profile >= 0 &&
+                                 prefs_.performance_profile < kAuthoredVideoProfiles;
+    const auto& base_profile = VideoPresetForTitle(hero_title_id,
+        authored_global ? prefs_.performance_profile : 1);
+    const int base_renderer = authored_global ? base_profile.renderer : prefs_.renderer;
+    const int base_output = authored_global ? base_profile.output : prefs_.output;
+    const int base_resolution = authored_global ? base_profile.resolution : prefs_.resolution;
+    const int base_filter = authored_global ? base_profile.filter : prefs_.filter;
+    const int base_aa = authored_global ? base_profile.anti_aliasing : prefs_.anti_aliasing;
     const int effective_renderer =
-        home_game_settings_.renderer >= 0 ? home_game_settings_.renderer : prefs_.renderer;
+        home_game_settings_.renderer >= 0 ? home_game_settings_.renderer : base_renderer;
     const int effective_output =
-        home_game_settings_.output >= 0 ? home_game_settings_.output : prefs_.output;
+        home_game_settings_.output >= 0 ? home_game_settings_.output : base_output;
     const int effective_resolution =
-        home_game_settings_.resolution >= 0 ? home_game_settings_.resolution : prefs_.resolution;
+        home_game_settings_.resolution >= 0 ? home_game_settings_.resolution : base_resolution;
     const int effective_filter =
-        home_game_settings_.filter >= 0 ? home_game_settings_.filter : prefs_.filter;
+        home_game_settings_.filter >= 0 ? home_game_settings_.filter : base_filter;
     const int effective_aa =
-        home_game_settings_.anti_aliasing >= 0 ? home_game_settings_.anti_aliasing : prefs_.anti_aliasing;
+        home_game_settings_.anti_aliasing >= 0 ? home_game_settings_.anti_aliasing : base_aa;
     const int effective_profile =
         home_game_settings_.performance_profile >= 0 ?
             home_game_settings_.performance_profile : prefs_.performance_profile;
@@ -644,28 +698,31 @@ void Launcher::draw_home(Canvas &c)
     }
     if (hero_max_players > 0)
     {
-        const Rect players_chip{hero.x + hero.w - 148.0f, 602.0f, 112.0f, 42.0f};
-        list.shadow({players_chip.x - 3.0f, players_chip.y + 2.0f,
-                     players_chip.w + 6.0f, players_chip.h + 4.0f},
-                    18.0f, 20.0f, theme::kBlue.with_alpha(0.10f));
-        list.bordered_rect(players_chip, 19.0f, theme::kPanel.with_alpha(0.84f), 1.0f,
-                           theme::kPanelEdge.with_alpha(0.62f));
-        controller_icon(c, {players_chip.x + 10.0f, players_chip.y + 6.0f, 42.0f, 29.0f}, 1.0f);
-        const std::string players = "×" + std::to_string(hero_max_players);
-        text(c, players, players_chip.x + 70.0f,
-             baseline(players_chip.y, players_chip.h, 20.0f), 20.0f,
-             theme::kTitle, Align::center);
+        // Local controller capacity belongs to the same metadata rail as profile / renderer /
+        // output / resolution, anchored at the hero's lower-right edge.
+        const Rect players_chip{hero.x + hero.w - 192.0f, 606.0f, 156.0f, 34.0f};
+        list.bordered_rect(players_chip, 17.0f, theme::kPanel.with_alpha(0.82f), 1.0f,
+                           theme::kPanelEdge.with_alpha(0.58f));
+        controller_icon(c, {players_chip.x + 10.0f, players_chip.y + 5.0f, 34.0f, 24.0f}, 1.0f);
+        const std::string controllers = std::string{tr("DualSense")} + " ×" +
+                                        std::to_string(hero_max_players);
+        text_shrink(c, controllers, players_chip.x + 51.0f,
+                    baseline(players_chip.y, players_chip.h, 15.0f), 15.0f,
+                    theme::kTitle, players_chip.w - 61.0f);
     }
     end_band();
 
     // ---- right column: selected game's effective quick settings ----
     begin_band(2, 22.0f);
     glass(c, quick, 26.0f, theme::kGlass.with_alpha(0.68f), theme::kPanelEdge.with_alpha(0.72f), 0.8f);
+    const float quick_panel_focus = focus(kHomeQuickPanel);
+    if (quick_panel_focus > 0.001f)
+        plate_focus(c, kTilePlate, quick, quick_panel_focus);
     text(c, tr("QUICK SETTINGS"), quick.x + 28.0f, baseline(quick.y + 24.0f, 30.0f, theme::kSmall),
          theme::kSmall, theme::kLimePale, Align::left, 3.0f);
     struct QuickRow { HomeIcon icon; const char *label; std::string value; };
     const QuickRow quick_rows[] = {
-        {HomeIcon::performance, tr("Performance"), profile},
+        {HomeIcon::performance, tr("Video preset"), profile},
         {HomeIcon::display, tr("Renderer"), renderer},
         {HomeIcon::output, tr("TV output"), output},
         {HomeIcon::resolution, tr("Resolution"), resolution},
@@ -677,7 +734,7 @@ void Launcher::draw_home(Canvas &c)
     {
         const float y = quick.y + 64.0f + static_cast<float>(i) * 31.0f;
         const Rect row_box{quick.x + 14.0f, y - 4.0f, quick.w - 28.0f, 28.0f};
-        const float f = focus(10 + i);
+        const float f = focus(kHomeQuickFirst + i);
         if (i != 0)
             list.rounded_rect({quick.x + 28.0f, y - 6.0f, quick.w - 56.0f, 1.0f}, 0.0f,
                               theme::kRule.with_alpha(0.40f));
@@ -692,9 +749,10 @@ void Launcher::draw_home(Canvas &c)
         text_shrink(c, quick_rows[i].label, quick.x + 66.0f,
                     baseline(y - 1.0f, 24.0f, 16.0f), 16.0f,
                     gfx::mix(theme::kMuted, theme::kTitle, f), 178.0f);
+        const Color value_color = gfx::mix(theme::kAccentTeal, theme::kTitle, f);
         text_shrink(c, quick_rows[i].value, quick.x + quick.w - 52.0f,
                     baseline(y - 1.0f, 24.0f, 16.0f), 16.0f,
-                    gfx::mix(theme::kLimePale, theme::kTitle, f), 178.0f, Align::right);
+                    value_color, 178.0f, Align::right);
         const float cx = quick.x + quick.w - 30.0f;
         const float cy = y + 10.0f;
         const Color arrow = editing ? theme::kLimePale : gfx::mix(theme::kFaint, theme::kLimePale, f);
@@ -709,66 +767,89 @@ void Launcher::draw_home(Canvas &c)
     }
 
     // ---- right column: system state ----
-    glass(c, status, 26.0f, theme::kGlass.with_alpha(0.68f), theme::kPanelEdge.with_alpha(0.72f), 0.8f);
+    glass(c, status, 26.0f, theme::kGlass.with_alpha(0.70f),
+          theme::kPanelEdge.with_alpha(0.68f), 0.95f);
     text(c, tr("SYSTEM STATUS"), status.x + 28.0f,
          baseline(status.y + 22.0f, 30.0f, theme::kSmall), theme::kSmall,
-         theme::kLimePale, Align::left, 3.0f);
-    text_shrink(c, version_, status.x + status.w - 28.0f,
-                baseline(status.y + 22.0f, 30.0f, 18.0f), 18.0f,
-                theme::kMeta, 170.0f, Align::right);
+         theme::kTitle, Align::left, 2.0f);
     text_fit(c, home_.system_status, status.x + 28.0f,
-             baseline(status.y + 58.0f, 30.0f, theme::kSmall), theme::kSmall,
-             theme::kTitle, status.w - 56.0f);
+             baseline(status.y + 58.0f, 26.0f, 17.0f), 17.0f,
+             theme::kMeta, status.w - 56.0f);
+    list.rounded_rect({status.x + 28.0f, status.y + 96.0f, status.w - 56.0f, 1.0f},
+                      0.0f, theme::kRule.with_alpha(0.56f));
 
-    const float metric_y = status.y + 94.0f;
-    const float metric_gap = 14.0f;
-    const float metric_w = (status.w - 56.0f - metric_gap) * 0.5f;
-    const Rect storage_metric{status.x + 28.0f, metric_y, metric_w, 58.0f};
-    const Rect cache_metric{storage_metric.x + metric_w + metric_gap, metric_y, metric_w, 58.0f};
-    for (const Rect& metric : {storage_metric, cache_metric})
-        list.bordered_rect(metric, 16.0f, theme::kPanel.with_alpha(0.56f), 1.0f,
-                           theme::kPanelEdge.with_alpha(0.38f));
-    home_icon(c, HomeIcon::storage, storage_metric.x + 12.0f, storage_metric.y + 29.0f,
-              theme::kMeta);
-    text(c, tr("FREE SPACE"), storage_metric.x + 47.0f,
-         baseline(storage_metric.y + 7.0f, 18.0f, 15.0f), 15.0f, theme::kMuted);
+    const Rect cache_row{status.x + 22.0f, status.y + 116.0f, status.w - 44.0f, 76.0f};
+    const Rect storage_row{status.x + 22.0f, status.y + 202.0f, status.w - 44.0f, 88.0f};
+    const float cache_focus = focus(kHomeCache);
+    const float storage_focus = focus(kHomeStorage);
+    for (const auto& row : {cache_row, storage_row})
+        list.bordered_rect(row, 18.0f, theme::kPanel.with_alpha(0.46f), 1.0f,
+                           theme::kPanelEdgeSoft.with_alpha(0.52f));
+    if (cache_focus > 0.001f) plate_focus(c, kRowPlate, cache_row, cache_focus);
+    if (storage_focus > 0.001f) plate_focus(c, kRowPlate, storage_row, storage_focus);
+
+    home_icon(c, HomeIcon::cache, cache_row.x + 18.0f, cache_row.y + 38.0f,
+              gfx::mix(theme::kMeta, theme::kTitle, cache_focus));
+    text(c, tr("SHADER/JIT CACHES"), cache_row.x + 58.0f,
+         baseline(cache_row.y + 11.0f, 22.0f, 15.0f), 15.0f,
+         gfx::mix(theme::kMuted, theme::kLimePale, cache_focus));
+    text_shrink(c, home_diagnostics_.shader_caches, cache_row.x + 58.0f,
+                baseline(cache_row.y + 35.0f, 27.0f, 20.0f), 20.0f,
+                theme::kTitle, 250.0f);
+    if (cache_focus > 0.02f)
+        text_shrink(c, tr("Cross to clear"), cache_row.x + cache_row.w - 18.0f,
+                    baseline(cache_row.y + 35.0f, 27.0f, 15.0f), 15.0f,
+                    theme::kLimePale, 150.0f, Align::right);
+
+    home_icon(c, HomeIcon::storage, storage_row.x + 18.0f, storage_row.y + 38.0f,
+              gfx::mix(theme::kMeta, theme::kTitle, storage_focus));
+    text(c, tr("STORAGE"), storage_row.x + 58.0f,
+         baseline(storage_row.y + 10.0f, 22.0f, 15.0f), 15.0f,
+         gfx::mix(theme::kMuted, theme::kLimePale, storage_focus));
     const std::string storage_value =
         home_diagnostics_.total_space.empty() ? home_diagnostics_.free_space :
         home_diagnostics_.free_space + " / " + home_diagnostics_.total_space;
-    text_shrink(c, storage_value, storage_metric.x + 47.0f,
-                baseline(storage_metric.y + 24.0f, 22.0f, 18.0f), 18.0f,
-                theme::kTitle, storage_metric.w - 60.0f);
+    text_shrink(c, storage_value, storage_row.x + 58.0f,
+                baseline(storage_row.y + 34.0f, 26.0f, 19.0f), 19.0f,
+                theme::kTitle, storage_row.w - 86.0f);
     if (home_diagnostics_.total_bytes > 0)
     {
         const float used = std::clamp(
             1.0f - static_cast<float>(home_diagnostics_.free_bytes) /
                        static_cast<float>(home_diagnostics_.total_bytes),
             0.0f, 1.0f);
-        const Rect bar{storage_metric.x + 47.0f, storage_metric.y + 48.0f,
-                       storage_metric.w - 62.0f, 4.0f};
-        list.rounded_rect(bar, 2.0f, theme::kRule.with_alpha(0.76f));
+        const Rect bar{storage_row.x + 58.0f, storage_row.y + 69.0f,
+                       storage_row.w - 86.0f, 5.0f};
+        list.rounded_rect(bar, 2.5f, theme::kRule.with_alpha(0.76f));
         if (used > 0.002f)
-            list.rounded_rect({bar.x, bar.y, bar.w * used, bar.h}, 2.0f,
-                              theme::kBlue.with_alpha(0.92f));
+        {
+            list.rounded_rect({bar.x, bar.y, bar.w * used, bar.h}, 2.5f,
+                              theme::kBlue.with_alpha(0.94f));
+            list.shadow({bar.x, bar.y - 2.0f, bar.w * used, bar.h + 4.0f}, 3.0f, 9.0f,
+                        theme::kBlue.with_alpha(0.20f));
+        }
     }
-    home_icon(c, HomeIcon::cache, cache_metric.x + 12.0f, cache_metric.y + 29.0f,
-              theme::kMeta);
-    text(c, tr("SHADER/JIT CACHES"), cache_metric.x + 47.0f,
-         baseline(cache_metric.y + 7.0f, 18.0f, 15.0f), 15.0f, theme::kMuted);
-    text_shrink(c, home_diagnostics_.shader_caches, cache_metric.x + 47.0f,
-                baseline(cache_metric.y + 26.0f, 26.0f, 20.0f), 20.0f,
-                theme::kTitle, cache_metric.w - 60.0f);
 
-    home_icon(c, HomeIcon::language, status.x + 28.0f, status.y + 178.0f, theme::kMeta);
-    text(c, tr("Language"), status.x + 64.0f,
-         baseline(status.y + 164.0f, 28.0f, theme::kSmall), theme::kSmall, theme::kMuted);
+    list.rounded_rect({status.x + 28.0f, status.y + 310.0f, status.w - 56.0f, 1.0f},
+                      0.0f, theme::kRule.with_alpha(0.46f));
+    home_icon(c, HomeIcon::language, status.x + 28.0f, status.y + 348.0f, theme::kMeta);
+    text(c, tr("Language"), status.x + 66.0f,
+         baseline(status.y + 332.0f, 32.0f, 18.0f), 18.0f, theme::kMuted);
     const auto& language_labels = services_.language_labels();
     const std::string language_label =
         prefs_.language >= 0 && prefs_.language < static_cast<int>(language_labels.size()) ?
             language_labels[static_cast<std::size_t>(prefs_.language)] : tr("Unknown");
-    text(c, language_label, status.x + status.w - 28.0f,
-         baseline(status.y + 164.0f, 28.0f, theme::kSmall), theme::kSmall,
-         theme::kValue, Align::right);
+    text_shrink(c, language_label, status.x + status.w - 28.0f,
+                baseline(status.y + 332.0f, 32.0f, 18.0f), 18.0f,
+                theme::kValue, 220.0f, Align::right);
+
+    list.rounded_rect({status.x + 28.0f, status.y + 378.0f, status.w - 56.0f, 1.0f},
+                      0.0f, theme::kRule.with_alpha(0.38f));
+    text(c, tr("Version"), status.x + 28.0f,
+         baseline(status.y + 394.0f, 30.0f, 17.0f), 17.0f, theme::kMuted);
+    text_shrink(c, version_, status.x + status.w - 28.0f,
+                baseline(status.y + 394.0f, 30.0f, 17.0f), 17.0f,
+                theme::kValue, 220.0f, Align::right);
     end_band();
 
     // ---- recently played ----
@@ -792,34 +873,32 @@ void Launcher::draw_home(Canvas &c)
             text(c, tr("Games you launch will appear here."), 72.0f,
                  baseline(786.0f, 36.0f, theme::kText24), theme::kText24, theme::kMuted);
 
-        const int shown = std::min<int>(4, static_cast<int>(home_.recents.size()));
-        constexpr float available = 1776.0f;
-        constexpr float gap = 24.0f;
-        constexpr float card_h = 206.0f;
-        float card_w = 0.0f;
-        if (shown == 1) card_w = 840.0f;
-        else if (shown > 1) card_w = (available - gap * static_cast<float>(shown - 1)) /
-                                     static_cast<float>(shown);
-        const float row_w = shown > 0 ?
-            card_w * static_cast<float>(shown) + gap * static_cast<float>(shown - 1) : 0.0f;
-        const float row_x = 72.0f + (available - row_w) * 0.5f;
+        const int shown = std::min<int>(6, static_cast<int>(home_.recents.size()));
+        constexpr float available = 1228.0f;
+        constexpr float gap = 14.0f;
+        constexpr float card_h = 174.0f;
+        constexpr float card_w = (available - gap * 5.0f) / 6.0f;
+        // Keep the console-card proportions even with only one or two installed/recent games.
+        // Stretching a pair of cards across the full TV made the Home look like a debug dashboard.
+        const float row_x = 72.0f;
         for (int i = 0; i < shown; ++i)
         {
             const Recent &recent = home_.recents[static_cast<std::size_t>(i)];
-            const Rect r{row_x + (card_w + gap) * static_cast<float>(i), 756.0f, card_w, card_h};
-            const float f = focus(5 + i);
+            const Rect r{row_x + (card_w + gap) * static_cast<float>(i), 750.0f, card_w, card_h};
+            const float f = focus(kHomeRecentFirst + i);
             begin_lift(r, f, 0.030f);
 
             // Artwork first, then overlays, then focus. This keeps the hover border visible instead
             // of letting a late texture draw hide it.
             plate_rest(c, kTilePlate, r);
-            const std::string& art = !recent.hero.empty() ? recent.hero : recent.cover;
+            const std::string& art = !recent.screenshot.empty() ? recent.screenshot :
+                                     (!recent.hero.empty() ? recent.hero : recent.cover);
             cover_crop(c, art, {r.x + 4.0f, r.y + 4.0f, r.w - 8.0f, r.h - 8.0f}, 20.0f, 0.28f);
             list.gradient_rect({r.x + 4.0f, r.y + r.h * 0.40f, r.w - 8.0f, r.h * 0.56f}, 20.0f,
                                theme::kScrim.with_alpha(0.0f), theme::kScrim.with_alpha(0.92f));
 
-            const float title_size = shown <= 2 ? 26.0f : 22.0f;
-            const float title_y = r.y + r.h - 48.0f;
+            const float title_size = shown <= 2 ? 22.0f : 18.0f;
+            const float title_y = r.y + r.h - 34.0f;
             // Soft text shadow like the approved mock-up's caption treatment.
             text_shrink(c, recent.title, r.x + 22.0f + 1.5f,
                         baseline(title_y + 1.5f, 28.0f, title_size), title_size,
@@ -828,10 +907,6 @@ void Launcher::draw_home(Canvas &c)
                         baseline(title_y, 28.0f, title_size), title_size,
                         theme::kTitle, r.w - 44.0f);
 
-            if (!recent.language.empty())
-                text_shrink(c, recent.language, r.x + 22.0f,
-                            baseline(r.y + r.h - 24.0f, 18.0f, 15.0f), 15.0f,
-                            theme::kMeta, r.w - 110.0f);
             if (recent.max_players > 0)
             {
                 const Rect icon{r.x + r.w - 79.0f, r.y + r.h - 33.0f, 34.0f, 23.0f};
@@ -854,9 +929,15 @@ void Launcher::draw_home(Canvas &c)
     // ---- footer ----
     begin_band(4, 0.0f);
     list.rounded_rect({72.0f, 970.0f, 1776.0f, 1.0f}, 0.0f, theme::kText.with_alpha(0.11f));
-    if (home_focus_ >= 10 && home_focus_ <= 16)
+    if (home_focus_ == kHomeQuickPanel)
     {
-        if (home_quick_edit_ == home_focus_ - 10)
+        static constexpr Hint kQuickPanelHints[] = {
+            {Pad::cross, TR("Open quick settings")}, {Pad::dpad, TR("Navigate")}, {Pad::circle, TR("Back")}};
+        draw_hints(c, kQuickPanelHints, 3, 72.0f, 1000.0f, theme::kMuted, 1200.0f);
+    }
+    else if (home_focus_ >= kHomeQuickFirst && home_focus_ < kHomeQuickFirst + kHomeQuickCount)
+    {
+        if (home_quick_edit_ == home_focus_ - kHomeQuickFirst)
         {
             static constexpr Hint kQuickEditHints[] = {
                 {Pad::leftright, TR("Change")}, {Pad::cross, TR("Done")}, {Pad::circle, TR("Done")}};
@@ -868,6 +949,18 @@ void Launcher::draw_home(Canvas &c)
                 {Pad::cross, TR("Edit")}, {Pad::dpad, TR("Navigate")}, {Pad::circle, TR("Back")}};
             draw_hints(c, kQuickBrowseHints, 3, 72.0f, 1000.0f, theme::kMuted, 1200.0f);
         }
+    }
+    else if (home_focus_ == kHomeCache)
+    {
+        static constexpr Hint kCacheHints[] = {
+            {Pad::cross, TR("Clear caches")}, {Pad::leftright, TR("Switch card")}, {Pad::circle, TR("Back")}};
+        draw_hints(c, kCacheHints, 3, 72.0f, 1000.0f, theme::kMuted, 1200.0f);
+    }
+    else if (home_focus_ == kHomeStorage)
+    {
+        static constexpr Hint kStorageHints[] = {
+            {Pad::cross, TR("Open storage")}, {Pad::leftright, TR("Switch card")}, {Pad::circle, TR("Back")}};
+        draw_hints(c, kStorageHints, 3, 72.0f, 1000.0f, theme::kMuted, 1200.0f);
     }
     else
     {

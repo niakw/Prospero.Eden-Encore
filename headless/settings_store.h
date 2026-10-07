@@ -36,6 +36,8 @@
 #include <nlohmann/json.hpp>
 
 #include "button_mapping.h"
+#include "encore_overrides_generated.h"
+#include "encore_overrides_runtime.h"
 #include "storage_paths.h"
 
 namespace Eden {
@@ -48,8 +50,8 @@ inline const char* BackendName(GraphicsBackend backend) {
 // nine and sixteen times the game's own pixels: they need the graphics memory for it.
 inline constexpr const char* kResolutionKeys[] = {"0.25x", "0.5x", "0.75x", "1x", "1.25x", "1.5x", "2x", "3x", "4x"};
 inline constexpr const char* kResolutionLabels[] = {
-    "0.25x (minimum)", "0.5x (fastest, softer)", "0.75x (faster)", "1x (recommended)",
-    "1.25x (sharper)", "1.5x (sharper)", "2x (high memory)", "3x (very high memory)",
+    "0.25x (minimum)", "0.5x (fastest, softer)", "0.75x (faster)", "1x (native)",
+    "1.25x (recommended)", "1.5x (sharper)", "2x (high memory)", "3x (very high memory)",
     "4x (extreme memory)"};
 static_assert(std::size(kResolutionLabels) == std::size(kResolutionKeys));
 inline constexpr int kNativeResolution = 3;
@@ -71,8 +73,8 @@ inline constexpr int kOutputHeight[] = {1080, 1440, 2160};
 // Nintendo preserves the physical-position mapping used by the original port.
 inline constexpr const char* kControllerLayoutKeys[] = {"playstation", "switch"};
 inline constexpr const char* kControllerLayoutLabels[] = {"PlayStation", "Switch"};
-inline constexpr const char* kPerformanceProfileKeys[] = {"recommended", "smooth", "performance", "custom"};
-inline constexpr const char* kPerformanceProfileLabels[] = {"Recommended", "Smooth", "Performance", "Custom"};
+inline constexpr const char* kPerformanceProfileKeys[] = {"minimum", "recommended", "high", "ultra", "custom"};
+inline constexpr const char* kPerformanceProfileLabels[] = {"Minimum", "Recommended", "High", "Ultra", "Custom"};
 // Settings > Language: the system language games see, in launcher order. Each entry maps to Eden's
 // Settings::Language and to the Settings::Region consoles sold with that language have (indices in
 // Eden's enum order; headless/main.cpp checks them). Eden's older "Chinese" and "Taiwanese" codes
@@ -97,13 +99,13 @@ struct Preferences {
     bool mute = false;
     bool detailed_logging = false;
     GraphicsBackend backend = GraphicsBackend::Vulkan;
-    int resolution = kNativeResolution;  // index into kResolutionKeys
-    int upscaling_filter = 0;            // index into kUpscalingFilterKeys
-    int fsr_sharpness = 50;              // 0-100 UI sharpness; Eden stores the inverse 0-200 value
-    int anti_aliasing = 0;               // index into kAntiAliasingKeys
-    int refresh = 0;                     // index into kRefreshKeys
-    int output = 0;                      // index into kOutputKeys
-    int performance_profile = 0;         // 0 recommended, 1 smooth, 2 performance, 3 custom
+    int resolution = EncoreOverrides::kGeneralProfiles[1].resolution;  // Recommended from encore-overrides
+    int upscaling_filter = EncoreOverrides::kGeneralProfiles[1].filter;
+    int fsr_sharpness = EncoreOverrides::kGeneralProfiles[1].fsr_sharpness;
+    int anti_aliasing = EncoreOverrides::kGeneralProfiles[1].anti_aliasing;
+    int refresh = EncoreOverrides::kGeneralProfiles[1].refresh;
+    int output = EncoreOverrides::kGeneralProfiles[1].output;
+    int performance_profile = 1;         // 0 Minimum, 1 Recommended, 2 High, 3 Ultra, 4 Custom
     int controller_layout = 0;            // 0 PlayStation, 1 Switch; custom status is derived from mapping
     ButtonMapping mapping = kPlayStationMapping;
     bool vibration = true;
@@ -119,6 +121,26 @@ struct Preferences {
 inline int KeyIndex(const std::string& value, const char* const* keys, int count, int fallback) {
     for (int i = 0; i < count; ++i)
         if (value == keys[i]) return i;
+    return fallback;
+}
+
+inline int DetectPerformanceProfile(const Preferences& value) {
+    const int renderer = value.backend == GraphicsBackend::Vulkan ? 1 : 0;
+    for (int tier = 0; tier < EncoreOverrides::kAuthoredProfileCount; ++tier) {
+        const auto p = EncoreOverridesRuntime::ProfileForTitle(0, tier);
+        if (renderer == p.renderer && value.output == p.output && value.resolution == p.resolution &&
+            value.upscaling_filter == p.filter && value.fsr_sharpness == p.fsr_sharpness &&
+            value.anti_aliasing == p.anti_aliasing && value.refresh == p.refresh)
+            return tier;
+    }
+    return EncoreOverrides::kCustomProfile;
+}
+
+inline int PerformanceProfileIndex(std::string_view value, int fallback = -1) {
+    for (int i = 0; i < int(std::size(kPerformanceProfileKeys)); ++i)
+        if (value == kPerformanceProfileKeys[i]) return i;
+    // Migration from Encore builds that exposed Recommended / Smooth / Performance.
+    if (value == "smooth" || value == "performance") return EncoreOverrides::kCustomProfile;
     return fallback;
 }
 
@@ -295,9 +317,9 @@ inline Preferences LoadPreferences(const std::string& file = SettingsFile()) {
                               kRefreshKeys, int(std::size(kRefreshKeys)), result.refresh);
     result.output = KeyIndex(Settings::String(document, Json::json_pointer("/video/output_resolution")),
                              kOutputKeys, int(std::size(kOutputKeys)), result.output);
-    result.performance_profile = KeyIndex(
-        Settings::String(document, Json::json_pointer("/video/performance_profile")),
-        kPerformanceProfileKeys, int(std::size(kPerformanceProfileKeys)), result.performance_profile);
+    // The profile label is derived from the actual settings. This migrates older three-profile
+    // Encore configs honestly: a combination that no longer matches a current authored tier is Custom.
+    result.performance_profile = DetectPerformanceProfile(result);
     const Json::json_pointer global_layout("/controls/layout");
     const Json::json_pointer global_mapping("/controls/mapping");
     const std::string saved_layout = Settings::String(document, global_layout);
@@ -375,18 +397,31 @@ inline bool SavePreferences(const Preferences& value, const std::string& file = 
     return Settings::Write(document, file);
 }
 
-// Games run docked unless the player saved "Handheld" for that title in the launcher.
-inline bool LoadGameDocked(uint64_t title_id, const std::string& file = SettingsFile()) {
-    if (!title_id) return true;
+// -1 means no explicit per-title console mode; authored Encore profiles then supply the default.
+inline int LoadGameDockedOverride(uint64_t title_id, const std::string& file = SettingsFile()) {
+    if (!title_id) return -1;
     using Settings::Json;
     const Json document = Settings::Load(file);
     const Json::json_pointer at("/games/" + Settings::TitleKey(title_id) + "/console_mode");
-    if (document.contains(at)) return Settings::String(document, at) != "handheld";
+    if (document.contains(at)) {
+        const std::string mode = Settings::String(document, at);
+        if (mode == "docked") return 1;
+        if (mode == "handheld") return 0;
+    }
     // A mode saved by an earlier version, in its own file.
     char name[48];
     std::snprintf(name, sizeof(name), "/game-%016llx-mode.txt", static_cast<unsigned long long>(title_id));
     std::string text;
-    return !(Settings::ReadFile(Settings::Folder(file) + name, text) && text == "1 handheld\n");
+    if (Settings::ReadFile(Settings::Folder(file) + name, text)) {
+        if (text == "1 handheld\n") return 0;
+        if (text == "0 docked\n") return 1;
+    }
+    return -1;
+}
+
+inline bool LoadGameDocked(uint64_t title_id, const std::string& file = SettingsFile()) {
+    const int saved = LoadGameDockedOverride(title_id, file);
+    return saved < 0 || saved == 1;
 }
 
 inline bool SaveGameDocked(uint64_t title_id, bool docked, const std::string& file = SettingsFile()) {
@@ -400,6 +435,7 @@ inline bool SaveGameDocked(uint64_t title_id, bool docked, const std::string& fi
 // Library > Game settings: renderer, resolution, upscaling filter, refresh rate and controller layout for one game;
 // -1 (absent from the file) uses the global setting.
 struct GameSettings {
+    int console_mode = -1;      // -1 follows profile/default, 0 Handheld, 1 Docked
     int renderer = -1;          // 0 OpenGL, 1 Vulkan
     int output = -1;            // index into kOutputKeys
     int resolution = -1;        // index into kResolutionKeys
@@ -421,6 +457,10 @@ inline GameSettings LoadGameSettings(uint64_t title_id, const std::string& file 
     const Json document = Settings::Load(file);
     const std::string base = "/games/" + Settings::TitleKey(title_id);
     const auto key = [&](const char* name) { return Settings::String(document, Json::json_pointer(base + "/" + name)); };
+    const std::string mode = key("console_mode");
+    if (mode == "docked") result.console_mode = 1;
+    else if (mode == "handheld") result.console_mode = 0;
+    else result.console_mode = LoadGameDockedOverride(title_id, file);
     result.renderer = KeyIndex(key("renderer"), kRendererKeys, int(std::size(kRendererKeys)), -1);
     result.output = KeyIndex(key("output_resolution"), kOutputKeys, int(std::size(kOutputKeys)), -1);
     result.resolution = KeyIndex(key("resolution"), kResolutionKeys, int(std::size(kResolutionKeys)), -1);
@@ -430,8 +470,7 @@ inline GameSettings LoadGameSettings(uint64_t title_id, const std::string& file 
     result.fsr_sharpness = fsr_sharpness >= 0 && fsr_sharpness <= 100 ? fsr_sharpness : -1;
     result.anti_aliasing = KeyIndex(key("anti_aliasing"), kAntiAliasingKeys, int(std::size(kAntiAliasingKeys)), -1);
     result.refresh = KeyIndex(key("refresh_rate"), kRefreshKeys, int(std::size(kRefreshKeys)), -1);
-    result.performance_profile = KeyIndex(key("performance_profile"), kPerformanceProfileKeys,
-                                          int(std::size(kPerformanceProfileKeys)), -1);
+    result.performance_profile = PerformanceProfileIndex(key("performance_profile"), -1);
     const std::string saved_game_layout = key("controller_layout");
     if (saved_game_layout == "switch" || saved_game_layout == "nintendo")
         result.controller_layout = 1;
@@ -445,11 +484,25 @@ inline GameSettings LoadGameSettings(uint64_t title_id, const std::string& file 
         result.mapping = Settings::Mapping(document, mapping,
                                            BaseMappingForLayout(result.controller_layout));
     }
+    if (result.performance_profile >= 0 &&
+        result.performance_profile < EncoreOverrides::kAuthoredProfileCount) {
+        const auto p = EncoreOverridesRuntime::ProfileForTitle(title_id, result.performance_profile);
+        const bool complete = result.renderer >= 0 && result.output >= 0 && result.resolution >= 0 &&
+                              result.upscaling_filter >= 0 && result.fsr_sharpness >= 0 &&
+                              result.anti_aliasing >= 0 && result.refresh >= 0;
+        if (complete && (result.renderer != p.renderer || result.output != p.output ||
+            result.resolution != p.resolution || result.upscaling_filter != p.filter ||
+            result.fsr_sharpness != p.fsr_sharpness || result.anti_aliasing != p.anti_aliasing ||
+            result.refresh != p.refresh ||
+            (result.console_mode >= 0 && (result.console_mode == 1) != p.docked)))
+            result.performance_profile = EncoreOverrides::kCustomProfile;
+    }
     return result;
 }
 
 inline bool SaveGameSettings(uint64_t title_id, const GameSettings& value, const std::string& file = SettingsFile()) {
-    if (!title_id || value.renderer < -1 || value.renderer >= int(std::size(kRendererKeys)) ||
+    if (!title_id || value.console_mode < -1 || value.console_mode > 1 ||
+        value.renderer < -1 || value.renderer >= int(std::size(kRendererKeys)) ||
         value.output < -1 || value.output >= int(std::size(kOutputKeys)) ||
         value.resolution < -1 || value.resolution >= int(std::size(kResolutionKeys)) ||
         value.upscaling_filter < -1 || value.upscaling_filter >= int(std::size(kUpscalingFilterKeys)) ||
@@ -469,6 +522,8 @@ inline bool SaveGameSettings(uint64_t title_id, const GameSettings& value, const
         if (index < 0) game.erase(name);
         else game[name] = keys[index];
     };
+    if (value.console_mode < 0) game.erase("console_mode");
+    else game["console_mode"] = value.console_mode == 1 ? "docked" : "handheld";
     store("renderer", value.renderer, kRendererKeys);
     store("output_resolution", value.output, kOutputKeys);
     store("resolution", value.resolution, kResolutionKeys);

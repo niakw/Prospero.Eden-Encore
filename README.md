@@ -43,7 +43,7 @@ Prospero.Eden Encore R1 turns the proven ProsperoEden 1.000.040 base into a PS5 
   fail-closed postconditions and symlink-safe migration.
 - Safe Launch recovery profile without overwriting saved settings.
 - Reworked TV-first **Encore launcher UI/UX** with the final Eden Encore neon identity, 4K tropical-night artwork, dark glass surfaces, controller-first navigation and accessibility modes.
-- Recommended / Smooth / Performance profiles; **Recommended now uses FXAA**, and FSR sharpness defaults to **50%** instead of the previous aggressive 88%.
+- Four authored video profiles — **Minimum / Recommended / High / Ultra** — plus a derived **Custom** state; profiles are generated from `encore-overrides`, remain title-aware, and keep FSR sharpness conservative by default.
 - Global settings reset and per-game override reset now require an explicit second press; mapping reset and shader/JIT cache clearing use the same confirmation rule.
 - DualSense-first controls, vibration/deadzone controls and multi-controller handling.
 - Diagnostics, bounded caches/logs and safer save import/export.
@@ -91,15 +91,16 @@ Prospero.Eden Encore R1 turns the proven ProsperoEden 1.000.040 base into a PS5 
 - Multi-controller hotplug, motion controls and analog triggers retained.
 - Launcher input follows the foreground PS5 user.
 
-### ⚙️ Simple performance profiles
+### ⚙️ Four title-aware video profiles
 
-Instead of making every user understand seven low-level emulator switches first, Encore exposes:
+Encore exposes four authored tiers sourced from `encore-overrides`, plus a derived **Custom** state when manual values no longer match a tier:
 
-- **Recommended** — Vulkan, 1440p output, 1x, Bilinear, **FXAA**, 60 Hz.
-- **Smooth** — Vulkan, 1080p output, 1x, Bilinear, 60 Hz.
-- **Performance** — Vulkan, 1080p output, 0.75x + AMD FSR, 60 Hz.
+- **Minimum** — Vulkan, 1080p, 1x, Bilinear, AA off, 60 Hz.
+- **Recommended** — Vulkan, 1440p, 1.25x, Bilinear, **FXAA**, 60 Hz.
+- **High** — Vulkan, 2160p, 1.5x, Bicubic, **FXAA**, 60 Hz.
+- **Ultra** — Vulkan, 2160p, 2x, Bilinear, AA off, 60 Hz.
 
-The normal release profiles do not enable saved-block JIT compile-ahead. Advanced settings and complete per-game overrides remain available.
+A title-specific override may adjust those values without changing the global tier. Manual edits become **Custom** for that scope. Shipping profiles keep the conservative per-core JIT contract; saved-block compile-ahead stays disabled.
 
 ### 🧰 Better diagnostics and bounded storage
 
@@ -131,7 +132,7 @@ This comparison is against **ProsperoEden v1.000.070**, the current upstream lin
 | Filesystem model | **Hardened 1.000.040 one-shot access + one internal/external storage-root contract** | Lapy-based exact-title helper / resident-service path |
 | Newer NSO compression | **ZBIC + LZ4** | Upstream line evolves independently |
 | Recovery | **Safe Launch + global reset + per-game reset** | No equivalent Encore recovery workflow documented |
-| Performance UX | **Recommended / Smooth / Performance presets** | Seven individual performance switches |
+| Performance UX | **Minimum / Recommended / High / Ultra + Custom**, title-aware via `encore-overrides` | Seven individual performance switches |
 | PS5 controls | **Full DualSense button mapping globally and per game** | Full button mapping system |
 | Diagnostics | **Filesystem mode, free space, cache/log sizes, safe cleanup** | Crash/boot diagnostics and logs |
 | Storage hardening | **Bounded RADV cache, rotating logs, bounded cover VRAM** | Shader cache / logging present, different policy |
@@ -184,11 +185,11 @@ Encore starts conservative:
 | Setting | Default |
 | --- | --- |
 | Renderer | **Vulkan** |
-| TV output | **1080p** |
-| Internal resolution | **1x** |
+| TV output | **1440p** |
+| Internal resolution | **1.25x** |
 | Upscaling | **Bilinear** |
 | FSR sharpness | **50%** (used only with FSR) |
-| Anti-aliasing | **FXAA** after applying Recommended |
+| Anti-aliasing | **FXAA** |
 | Refresh rate | **60 Hz** |
 | FPS overlay | **Off** |
 | Controller layout | **PlayStation** |

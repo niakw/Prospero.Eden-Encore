@@ -4,12 +4,14 @@
 #include "assets_dir.h"
 #include "crash_report.h"
 #include "diagnostics.h"
+#include "encore_overrides_runtime.h"
 #include "metadata_bridge.h"
 #include "mods.h"
 #include "native_directory.h"
 #include "pe/core/strings.hpp"
 #include "common/net/net.h"
 #include "radio_input.h"
+#include "settings_store.h"
 #include "version.h"
 
 #include <algorithm>
@@ -23,11 +25,13 @@
 #include <exception>
 #include <fcntl.h>
 #include <filesystem>
+#include <fstream>
 #include <future>
 #include <initializer_list>
 #include <nlohmann/json.hpp>
 #include <stb_image.h>
 #include <sys/stat.h>
+#include <thread>
 #include <unistd.h>
 
 namespace {
@@ -77,6 +81,65 @@ std::string NlibHeroPath(std::uint64_t title_id) {
     char id[17]{};
     std::snprintf(id, sizeof(id), "%016llX", static_cast<unsigned long long>(title_id));
     return Eden::CoversDir() + "/hero-" + id + ".tga";
+}
+
+std::string NlibIconPath(std::uint64_t title_id) {
+    char id[17]{};
+    std::snprintf(id, sizeof(id), "%016llX", static_cast<unsigned long long>(title_id));
+    return Eden::CoversDir() + "/nlib-icon-" + id + ".tga";
+}
+
+std::string NlibScreenshotPath(std::uint64_t title_id, int index) {
+    char id[17]{};
+    std::snprintf(id, sizeof(id), "%016llX", static_cast<unsigned long long>(title_id));
+    return Eden::CoversDir() + "/screen-" + id + "-" + std::to_string(index) + ".tga";
+}
+
+
+std::string NlibLanguageCode(int language) {
+    language = std::clamp(language, 0, static_cast<int>(std::size(Eden::kLanguageKeys)) - 1);
+    std::string key = Eden::kLanguageKeys[static_cast<std::size_t>(language)];
+    const std::size_t dash = key.find('-');
+    std::string base = dash == std::string::npos ? key : key.substr(0, dash);
+    static constexpr const char* supported[] = {
+        "en", "ja", "es", "de", "fr", "nl", "pt", "it", "zh", "ko", "ru"};
+    for (const char* code : supported)
+        if (base == code) return base;
+    return "en";
+}
+
+std::string NlibMetadataPath(std::uint64_t title_id, const std::string& language) {
+    char id[17]{};
+    std::snprintf(id, sizeof(id), "%016llX", static_cast<unsigned long long>(title_id));
+    return Eden::CoversDir() + "/nlib-" + id + "-" + language + ".json";
+}
+
+std::string JoinJsonStrings(const nlohmann::json& value) {
+    if (!value.is_array()) return {};
+    std::string result;
+    for (const auto& item : value) {
+        if (!item.is_string()) continue;
+        if (!result.empty()) result += " · ";
+        result += item.get<std::string>();
+    }
+    return result;
+}
+
+bool AtomicWriteText(const std::string& path, const std::string& body) {
+    std::error_code directory_error;
+    const std::filesystem::path parent = std::filesystem::path(path).parent_path();
+    if (!parent.empty()) std::filesystem::create_directories(parent, directory_error);
+    if (directory_error) return false;
+    const std::string staged = path + ".new";
+    std::FILE* file = std::fopen(staged.c_str(), "wb");
+    if (!file) return false;
+    const bool written = std::fwrite(body.data(), 1, body.size(), file) == body.size();
+    const bool closed = std::fclose(file) == 0;
+    if (!written || !closed || std::rename(staged.c_str(), path.c_str()) != 0) {
+        (void)std::remove(staged.c_str());
+        return false;
+    }
+    return true;
 }
 
 bool WriteJpegTga(const std::string& encoded, const std::string& output) {
@@ -157,63 +220,182 @@ void CacheNlibPlayers(std::uint64_t title_id, int players) {
         (void)std::remove(staged.c_str());
 }
 
+constexpr int kNlibCacheSchema = 2; // v2 adds banner/screens/numberOfPlayers to launcher enrichment
+
 struct NlibEnrichment {
+    std::string icon;
     std::string hero;
+    std::vector<std::string> screenshots;
     int max_players = 0;
+    std::string name;
+    std::string intro;
+    std::string description;
+    std::string publisher;
+    std::string developer;
+    std::string release_date;
+    std::string categories;
 };
 
-// Nlib is optional enrichment only: the ROM's embedded icon remains the offline fallback.
-// Called from the asynchronous library scan, never from the launcher render/input thread.
-NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id) {
+std::string CachedNlibIcon(std::uint64_t title_id) {
+    if (title_id == 0) return {};
+    const std::string path = NlibIconPath(title_id);
+    return IsFile(path) ? path : std::string{};
+}
+
+std::vector<std::string> CachedNlibScreens(std::uint64_t title_id) {
+    std::vector<std::string> screens;
+    if (title_id == 0) return screens;
+    for (int index = 1; index <= 3; ++index) {
+        const std::string path = NlibScreenshotPath(title_id, index);
+        if (IsFile(path)) screens.push_back(path);
+    }
+    return screens;
+}
+
+bool LoadNlibMetadata(std::uint64_t title_id, const std::string& language, nlohmann::json* out) {
+    if (out == nullptr) return false;
+    std::ifstream file(NlibMetadataPath(title_id, language), std::ios::binary);
+    if (!file) return false;
+    try {
+        file >> *out;
+        return out->is_object();
+    } catch (...) {
+        return false;
+    }
+}
+
+void ApplyNlibMetadata(const nlohmann::json& json, NlibEnrichment* result) {
+    if (result == nullptr || !json.is_object()) return;
+    const auto string_value = [&](const char* key) -> std::string {
+        const auto it = json.find(key);
+        return it != json.end() && it->is_string() ? it->get<std::string>() : std::string{};
+    };
+    result->name = string_value("name");
+    result->intro = string_value("intro");
+    result->description = string_value("description");
+    result->publisher = string_value("publisher");
+    result->developer = string_value("developer");
+    result->release_date = string_value("releaseDate");
+    result->categories = json.contains("category") ? JoinJsonStrings(json["category"]) : std::string{};
+    const auto players_it = json.find("numberOfPlayers");
+    const int players = players_it != json.end() && players_it->is_number_integer() ?
+        players_it->get<int>() : 0;
+    if (players > 0 && players <= 16) result->max_players = players;
+}
+
+bool CacheNlibJpeg(const std::string& endpoint, const std::string& path,
+                   std::size_t minimum_bytes = 1024) {
+    const auto response = Common::Net::MakeRequest("https://api.nlib.cc", endpoint);
+    if (!response) return false;
+    const std::string& body = *response;
+    if (body.size() < minimum_bytes || body.size() > (16u << 20) || body.size() < 2 ||
+        static_cast<unsigned char>(body[0]) != 0xff ||
+        static_cast<unsigned char>(body[1]) != 0xd8)
+        return false;
+    (void)mkdir(Eden::CoversDir().c_str(), 0777);
+    const std::string staged = path + ".new";
+    if (WriteJpegTga(body, staged) && std::rename(staged.c_str(), path.c_str()) == 0)
+        return true;
+    (void)std::remove(staged.c_str());
+    return false;
+}
+
+NlibEnrichment CachedNlibEnrichment(std::uint64_t title_id, int language_choice) {
     NlibEnrichment result;
     if (title_id == 0) return result;
-
+    result.icon = CachedNlibIcon(title_id);
     result.hero = CachedNlibHero(title_id);
+    result.screenshots = CachedNlibScreens(title_id);
     result.max_players = CachedNlibPlayers(title_id);
+    nlohmann::json metadata;
+    if (LoadNlibMetadata(title_id, NlibLanguageCode(language_choice), &metadata))
+        ApplyNlibMetadata(metadata, &result);
+    if (result.hero.empty() && !result.screenshots.empty())
+        result.hero = result.screenshots.front();
+    return result;
+}
+
+// Nlib enriches the launcher only; no game ever depends on the network. The ROM icon stays the
+// offline fallback. Cards prefer Nlib's square icon, Home prefers its 16:9 banner, and Library
+// details use up to three gameplay screenshots. Only Home/recent titles are fetched in parallel.
+NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice) {
+    NlibEnrichment result = CachedNlibEnrichment(title_id, language_choice);
+    if (title_id == 0) return result;
+
+    const std::string language = NlibLanguageCode(language_choice);
+    nlohmann::json metadata;
+    const bool cached_metadata = LoadNlibMetadata(title_id, language, &metadata);
+    const bool current_metadata_cache = cached_metadata && metadata.is_object() &&
+        metadata.value("_encore_cache_schema", 0) >= kNlibCacheSchema;
 
     char id[17]{};
     std::snprintf(id, sizeof(id), "%016llX", static_cast<unsigned long long>(title_id));
-    std::fprintf(stderr, "EDEN_NLIB_BEGIN title_id=%s cached_hero=%d cached_players=%d\n", id,
-                 !result.hero.empty(), result.max_players);
+    std::fprintf(stderr,
+                 "EDEN_NLIB_BEGIN title_id=%s lang=%s cached_meta=%d cache_schema=%d cached_icon=%d cached_hero=%d cached_screens=%zu cached_players=%d\n",
+                 id, language.c_str(), cached_metadata, current_metadata_cache, !result.icon.empty(), !result.hero.empty(),
+                 result.screenshots.size(), result.max_players);
 
     try {
-        if (result.max_players == 0) {
-            const std::string endpoint = std::string{"/nx/"} + id + "?fields=numberOfPlayers";
-            if (const auto response = Common::Net::MakeRequest("https://api.nlib.cc", endpoint)) {
-                const auto json = nlohmann::json::parse(*response);
-                const int players = json.value("numberOfPlayers", 0);
-                if (players > 0 && players <= 16) {
-                    result.max_players = players;
-                    CacheNlibPlayers(title_id, players);
+        // One localized metadata request tells us which media exist and fills the selected game's
+        // actual title/intro/publisher/etc. The response is cached separately per Nlib language.
+        bool has_icon = cached_metadata && metadata.contains("icon");
+        bool has_banner = cached_metadata && metadata.contains("banner");
+        int screen_count = static_cast<int>(result.screenshots.size());
+        if (cached_metadata && metadata.contains("screens") && metadata["screens"].is_object())
+            screen_count = std::max(screen_count, metadata["screens"].value("count", 0));
+        if (!current_metadata_cache) {
+            const std::string metadata_endpoint = std::string{"/nx/"} + id + "?lang=" + language +
+                "&fields=name,intro,description,publisher,developer,releaseDate,category,languages,"
+                "numberOfPlayers,icon,banner,screens";
+            if (const auto response = Common::Net::MakeRequest("https://api.nlib.cc", metadata_endpoint)) {
+                metadata = nlohmann::json::parse(*response);
+                if (metadata.is_object()) {
+                    metadata["_encore_cache_schema"] = kNlibCacheSchema;
+                    (void)AtomicWriteText(NlibMetadataPath(title_id, language), metadata.dump());
+                    ApplyNlibMetadata(metadata, &result);
+                    has_icon = metadata.contains("icon") && metadata["icon"].is_string();
+                    has_banner = metadata.contains("banner") && metadata["banner"].is_string();
+                    if (metadata.contains("screens") && metadata["screens"].is_object())
+                        screen_count = std::max(screen_count, metadata["screens"].value("count", 0));
                 }
+            }
+        }
+        if (result.max_players > 0) CacheNlibPlayers(title_id, result.max_players);
+
+        if (result.icon.empty() && has_icon) {
+            const std::string path = NlibIconPath(title_id);
+            if (CacheNlibJpeg(std::string{"/nx/"} + id + "/icon/512", path))
+                result.icon = path;
+        }
+
+        if (result.hero.empty() && has_banner) {
+            const std::string path = NlibHeroPath(title_id);
+            if (CacheNlibJpeg(std::string{"/nx/"} + id + "/banner/1080p", path, 4096)) {
+                result.hero = path;
+                Eden::Report("artwork", (std::string{"Nlib hero cached for "} + id).c_str());
             }
         }
 
-        if (result.hero.empty()) {
-            const std::string endpoint = std::string{"/nx/"} + id + "/banner/720p";
-            if (const auto response = Common::Net::MakeRequest("https://api.nlib.cc", endpoint)) {
-                const std::string& body = *response;
-                if (body.size() >= 4096 && body.size() <= (10u << 20) &&
-                    static_cast<unsigned char>(body[0]) == 0xff &&
-                    static_cast<unsigned char>(body[1]) == 0xd8) {
-                    (void)mkdir(Eden::CoversDir().c_str(), 0777);
-                    const std::string path = NlibHeroPath(title_id);
-                    const std::string staged = path + ".new";
-                    if (WriteJpegTga(body, staged) && std::rename(staged.c_str(), path.c_str()) == 0) {
-                        result.hero = path;
-                        Eden::Report("artwork", (std::string{"Nlib hero cached for "} + id).c_str());
-                    } else {
-                        (void)std::remove(staged.c_str());
-                    }
-                }
-            }
+        const int wanted_screens = std::clamp(screen_count, 0, 3);
+        for (int index = 1; index <= wanted_screens; ++index) {
+            const std::string path = NlibScreenshotPath(title_id, index);
+            if (!IsFile(path))
+                (void)CacheNlibJpeg(std::string{"/nx/"} + id + "/screen/" +
+                                        std::to_string(index), path, 4096);
         }
+        result.screenshots = CachedNlibScreens(title_id);
+        // Some titles have no dedicated banner. A real gameplay screenshot is a much better hero
+        // than stretching the square icon over a TV-sized 16:9 surface.
+        if (result.hero.empty() && !result.screenshots.empty())
+            result.hero = result.screenshots.front();
     } catch (const std::exception& error) {
         Eden::Report("artwork", (std::string{"Nlib unavailable: "} + error.what()).c_str());
     }
 
-    std::fprintf(stderr, "EDEN_NLIB_RESULT title_id=%s hero=%d players=%d\n", id,
-                 !result.hero.empty(), result.max_players);
+    std::fprintf(stderr,
+                 "EDEN_NLIB_RESULT title_id=%s icon=%d hero=%d screens=%zu players=%d\n", id,
+                 !result.icon.empty(), !result.hero.empty(), result.screenshots.size(),
+                 result.max_players);
     return result;
 }
 
@@ -496,6 +678,42 @@ std::string SetupMessage(const std::string& english) {
     return english;
 }
 
+void RefreshEncoreOverridesManifest() {
+    try {
+        constexpr std::string_view kHost = "https://raw.githubusercontent.com";
+        constexpr std::string_view kPath = "/niakw/encore-overrides/main/runtime-manifest.json";
+        const auto response = Common::Net::MakeRequest(std::string{kHost}, std::string{kPath});
+        if (!response) {
+            Eden::Report("overrides", "Remote runtime manifest unavailable; using embedded snapshot");
+            return;
+        }
+        Eden::EncoreOverridesRuntime::State checked;
+        if (!Eden::EncoreOverridesRuntime::ParseManifestText(*response, &checked)) {
+            Eden::Report("overrides", "Remote runtime manifest rejected; using embedded snapshot");
+            return;
+        }
+        if (!AtomicWriteText(Eden::EncoreOverridesRuntime::ManifestPath(), *response)) {
+            Eden::Report("overrides", "Could not cache remote runtime manifest");
+            return;
+        }
+        Eden::Report("overrides",
+                     ("Runtime manifest cached: revision " +
+                      std::to_string(checked.database_revision) + ", " +
+                      std::to_string(checked.titles.size()) + " specific title(s)").c_str());
+    } catch (const std::exception& error) {
+        Eden::Report("overrides", (std::string{"Remote runtime manifest failed: "} + error.what()).c_str());
+    }
+}
+
+void StartEncoreOverridesRefresh() {
+    static std::once_flag once;
+    std::call_once(once, [] {
+        // Never block launcher startup on GitHub. The validated cache becomes authoritative on the
+        // next process start (or before first profile lookup if the fetch finishes early enough).
+        std::thread(RefreshEncoreOverridesManifest).detach();
+    });
+}
+
 } // namespace
 
 EdenServices::EdenServices(std::string launch_error)
@@ -507,6 +725,7 @@ EdenServices::EdenServices(std::string launch_error)
       performance_profile_labels_(Labels(Eden::kPerformanceProfileLabels)),
       language_labels_(Labels(Eden::kLanguageLabels)) {
     (void)mkdir(Eden::ConfigDir().c_str(), 0777);
+    StartEncoreOverridesRefresh();
     setup_ = eden_startup_error();
     Eden::Report("setup", setup_.empty() ? "Keys and firmware startup checks passed" : setup_.c_str());
 }
@@ -567,8 +786,13 @@ pe::ui::Home EdenServices::home() {
         const uint64_t title_id = ResolveTitleId(last_path, home.last_file);
         const GameLanguage language = LanguageFor(last_path, title_id, selected_language);
         home.last_title_id = title_id;
-        home.last_hero = CachedNlibHero(title_id);
-        home.last_max_players = CachedNlibPlayers(title_id);
+        const NlibEnrichment nlib = CachedNlibEnrichment(title_id, selected_language);
+        if (!nlib.icon.empty()) home.last_cover = nlib.icon;
+        home.last_hero = nlib.hero;
+        home.last_screenshot = nlib.screenshots.empty() ? std::string{} : nlib.screenshots.front();
+        home.last_max_players = nlib.max_players;
+        home.last_intro = nlib.intro;
+        if (!nlib.name.empty()) home.last_title = nlib.name;
         home.last_addons = AddOnSummary(title_id);
         home.last_language = language.label;
         if (!language.note.empty()) {
@@ -593,14 +817,19 @@ pe::ui::Home EdenServices::home() {
         if (home.setup_ready) {
             recent.title_id = ResolveTitleId(recent_path, name);
             if (recent.title_id != 0) {
-                recent.hero = CachedNlibHero(recent.title_id);
-                recent.max_players = CachedNlibPlayers(recent.title_id);
+                const NlibEnrichment nlib = CachedNlibEnrichment(recent.title_id, selected_language);
+                if (!nlib.icon.empty()) recent.cover = nlib.icon;
+                recent.hero = nlib.hero;
+                recent.screenshot = nlib.screenshots.empty() ? std::string{} : nlib.screenshots.front();
+                recent.max_players = nlib.max_players;
+                recent.intro = nlib.intro;
+                if (!nlib.name.empty()) recent.title = nlib.name;
                 recent.addons = AddOnSummary(recent.title_id);
                 recent.language = LanguageFor(recent_path, recent.title_id, selected_language).label;
             }
         }
         home.recents.push_back(std::move(recent));
-        if (home.recents.size() == 4) break;
+        if (home.recents.size() == 6) break;
     }
     const int installed = CountInstalledGames();
     home.system_status = fill(installed == 1 ? tr("{0} game installed") : tr("{0} games installed"),
@@ -636,9 +865,9 @@ std::vector<pe::ui::Game> EdenServices::games() {
     eden_scan_addons(Eden::AssetsPath("updates").c_str(), Eden::AssetsPath("keys").c_str());
     const int language_choice = Eden::LoadPreferences().language;
     // Network artwork is deliberately limited to what Home can display. The library scan stays
-    // bounded even with a very large ROM collection: last played + at most four recent games.
+    // bounded even with a very large ROM collection: last played + at most six recent games.
     std::vector<std::string> artwork_files = Eden::LoadRecentGames();
-    if (artwork_files.size() > 4) artwork_files.resize(4);
+    if (artwork_files.size() > 6) artwork_files.resize(6);
     const std::string last_file = Eden::LoadLastGame();
     if (!last_file.empty() && std::find(artwork_files.begin(), artwork_files.end(), last_file) == artwork_files.end())
         artwork_files.insert(artwork_files.begin(), last_file);
@@ -680,11 +909,20 @@ std::vector<pe::ui::Game> EdenServices::games() {
                 (void)std::remove(staged.c_str());
             game.title_id = ResolveTitleId(path, file);
             if (game.title_id != 0 &&
-                std::find(artwork_files.begin(), artwork_files.end(), file) != artwork_files.end())
-                game.hero = CachedNlibHero(game.title_id);
-            if (game.title_id != 0 &&
-                std::find(artwork_files.begin(), artwork_files.end(), file) != artwork_files.end())
-                game.max_players = CachedNlibPlayers(game.title_id);
+                std::find(artwork_files.begin(), artwork_files.end(), file) != artwork_files.end()) {
+                const NlibEnrichment nlib = CachedNlibEnrichment(game.title_id, language_choice);
+                if (!nlib.icon.empty()) game.cover = nlib.icon;
+                game.hero = nlib.hero;
+                game.screenshots = nlib.screenshots;
+                game.max_players = nlib.max_players;
+                if (!nlib.name.empty()) game.name = nlib.name;
+                game.intro = nlib.intro;
+                game.description = nlib.description;
+                game.publisher = nlib.publisher;
+                game.developer = nlib.developer;
+                game.release_date = nlib.release_date;
+                game.categories = nlib.categories;
+            }
             const GameLanguage language = LanguageFor(path, game.title_id, language_choice);
             game.addons = AddOnSummary(game.title_id);
             game.addons_short = AddOnSummary(game.title_id, true);
@@ -704,23 +942,54 @@ std::vector<pe::ui::Game> EdenServices::games() {
     for (std::size_t i = 0; i < games.size(); ++i) {
         auto& game = games[i];
         if (game.title_id == 0 ||
-            (game.hero.empty() == false && game.max_players > 0) ||
             std::find(artwork_files.begin(), artwork_files.end(), game.file) == artwork_files.end())
             continue;
+        const bool has_icon = !CachedNlibIcon(game.title_id).empty();
+        if (has_icon && !game.hero.empty() && !game.screenshots.empty() &&
+            game.max_players > 0 && !game.intro.empty())
+            continue;
         const std::uint64_t title_id = game.title_id;
-        artwork_tasks.emplace_back(i, std::async(std::launch::async, [title_id] {
-            return EnsureNlibEnrichment(title_id);
+        artwork_tasks.emplace_back(i, std::async(std::launch::async, [title_id, language_choice] {
+            return EnsureNlibEnrichment(title_id, language_choice);
         }));
     }
     for (auto& [index, task] : artwork_tasks) {
         NlibEnrichment enrichment = task.get();
-        games[index].hero = std::move(enrichment.hero);
-        games[index].max_players = enrichment.max_players;
+        auto& game = games[index];
+        if (!enrichment.icon.empty()) game.cover = std::move(enrichment.icon);
+        game.hero = std::move(enrichment.hero);
+        game.screenshots = std::move(enrichment.screenshots);
+        game.max_players = enrichment.max_players;
+        if (!enrichment.name.empty()) game.name = std::move(enrichment.name);
+        game.intro = std::move(enrichment.intro);
+        game.description = std::move(enrichment.description);
+        game.publisher = std::move(enrichment.publisher);
+        game.developer = std::move(enrichment.developer);
+        game.release_date = std::move(enrichment.release_date);
+        game.categories = std::move(enrichment.categories);
     }
 
     std::sort(games.begin(), games.end(),
               [](const pe::ui::Game& a, const pe::ui::Game& b) { return a.name < b.name; });
     return games;
+}
+
+pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game) {
+    if (game.title_id == 0) return game;
+    const int language_choice = Eden::LoadPreferences().language;
+    NlibEnrichment enrichment = EnsureNlibEnrichment(game.title_id, language_choice);
+    if (!enrichment.icon.empty()) game.cover = std::move(enrichment.icon);
+    if (!enrichment.hero.empty()) game.hero = std::move(enrichment.hero);
+    if (!enrichment.screenshots.empty()) game.screenshots = std::move(enrichment.screenshots);
+    if (enrichment.max_players > 0) game.max_players = enrichment.max_players;
+    if (!enrichment.name.empty()) game.name = std::move(enrichment.name);
+    if (!enrichment.intro.empty()) game.intro = std::move(enrichment.intro);
+    if (!enrichment.description.empty()) game.description = std::move(enrichment.description);
+    if (!enrichment.publisher.empty()) game.publisher = std::move(enrichment.publisher);
+    if (!enrichment.developer.empty()) game.developer = std::move(enrichment.developer);
+    if (!enrichment.release_date.empty()) game.release_date = std::move(enrichment.release_date);
+    if (!enrichment.categories.empty()) game.categories = std::move(enrichment.categories);
+    return game;
 }
 
 std::string EdenServices::game_path(const std::string& file) { return Eden::AssetsPath("roms/" + file); }
@@ -735,15 +1004,30 @@ void EdenServices::arm_safe_launch() {
     Eden::Report("launch", "Safe launch armed for the next game only");
 }
 
-bool EdenServices::docked(std::uint64_t title_id) { return Eden::LoadGameDocked(title_id); }
+bool EdenServices::docked(std::uint64_t title_id) {
+    if (title_id == 0) return true;
+    const Eden::GameSettings game = Eden::LoadGameSettings(title_id);
+    if (game.console_mode >= 0) return game.console_mode == 1;
+    const Eden::Preferences global = Eden::LoadPreferences();
+    const int tier = game.performance_profile >= 0 &&
+                             game.performance_profile < Eden::EncoreOverrides::kAuthoredProfileCount ?
+                         game.performance_profile :
+                     global.performance_profile >= 0 &&
+                             global.performance_profile < Eden::EncoreOverrides::kAuthoredProfileCount ?
+                         global.performance_profile : -1;
+    return tier >= 0 ? Eden::EncoreOverridesRuntime::ProfileForTitle(title_id, tier).docked : true;
+}
 
 bool EdenServices::set_docked(std::uint64_t title_id, bool docked) {
-    return Eden::SaveGameDocked(title_id, docked);
+    Eden::GameSettings settings = Eden::LoadGameSettings(title_id);
+    settings.console_mode = docked ? 1 : 0;
+    return Eden::SaveGameSettings(title_id, settings);
 }
 
 pe::ui::GameSettings EdenServices::game_settings(std::uint64_t title_id) {
     const Eden::GameSettings saved = Eden::LoadGameSettings(title_id);
     pe::ui::GameSettings result;
+    result.console_mode = saved.console_mode;
     result.renderer = saved.renderer;
     result.output = saved.output;
     result.resolution = saved.resolution;
@@ -760,6 +1044,7 @@ pe::ui::GameSettings EdenServices::game_settings(std::uint64_t title_id) {
 
 bool EdenServices::set_game_settings(std::uint64_t title_id, const pe::ui::GameSettings& settings) {
     Eden::GameSettings value;
+    value.console_mode = settings.console_mode;
     value.renderer = settings.renderer;
     value.output = settings.output;
     value.resolution = settings.resolution;
@@ -874,7 +1159,12 @@ pe::ui::DiagnosticsInfo EdenServices::diagnostics() {
     result.data_path = Eden::FilesystemAccess() ? Eden::kDataDir : Eden::UserDir();
 
     std::error_code error;
-    const auto space = std::filesystem::space(Eden::UserDir(), error);
+    // Report the filesystem that actually stores the user's Encore library. UserDir() can be a
+    // small app/sandbox filesystem (e.g. ~64 GB) and is meaningless as a console storage meter.
+    // AssetsDir() is the selected Encore root: internal /data/prosperoeden by default, or the
+    // user's external root when one is configured.
+    const std::string storage_root = Eden::AssetsDir();
+    const auto space = std::filesystem::space(storage_root, error);
     result.free_space = error ? tr("Unknown") : StorageSize(space.available);
     result.total_space = error ? tr("Unknown") : StorageSize(space.capacity);
     if (!error) {

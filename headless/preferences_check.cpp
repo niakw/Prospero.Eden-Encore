@@ -64,21 +64,22 @@ int main() {
 
     // Resolution and upscaling filter (Settings > Video).
     auto video = Eden::LoadPreferences(file);
-    assert(video.resolution == Eden::kNativeResolution && video.upscaling_filter == 0);
-    video.resolution = 1;
+    assert(video.resolution == 4 && video.upscaling_filter == 0 && video.anti_aliasing == 1 &&
+           video.output == 1 && video.performance_profile == 1);
+    video.resolution = 2;
     video.upscaling_filter = 1;
     assert(Eden::SavePreferences(video, file));
     video = Eden::LoadPreferences(file);
-    assert(video.resolution == 1 && video.upscaling_filter == 1 && video.volume == 40);
+    assert(video.resolution == 2 && video.upscaling_filter == 1 && video.volume == 40);
     assert(Read(file).find("\"resolution\": \"0.75x\"") != std::string::npos);
     assert(Read(file).find("\"upscaling_filter\": \"fsr\"") != std::string::npos);
     // The largest scale is 4x; nothing beyond the list is saved.
-    video.resolution = 6;
-    assert(Eden::SavePreferences(video, file) && Eden::LoadPreferences(file).resolution == 6);
+    video.resolution = 8;
+    assert(Eden::SavePreferences(video, file) && Eden::LoadPreferences(file).resolution == 8);
     assert(Read(file).find("\"resolution\": \"4x\"") != std::string::npos);
     video.resolution = int(std::size(Eden::kResolutionKeys));
     assert(!Eden::SavePreferences(video, file));
-    video.resolution = 1;
+    video.resolution = 2;
     assert(Eden::SavePreferences(video, file));
 
     // Refresh rate (Settings > Video): 60 Hz unless 120 Hz is chosen; other values are refused or
@@ -95,10 +96,10 @@ int main() {
     std::ofstream(unknown_refresh) << R"({"video": {"refresh_rate": "144"}})";
     assert(Eden::LoadPreferences(unknown_refresh).refresh == 0);
 
-    // Output resolution (Settings > Video): 1080p unless another size is chosen; other values are
-    // refused or read as 1080p.
+    // Output resolution (Settings > Video): Recommended starts at 1440p; invalid values fall back to it.
     video = Eden::LoadPreferences(file);
-    assert(video.output == 0 && Eden::kOutputWidth[video.output] == 1920 && Eden::kOutputHeight[video.output] == 1080);
+    // The earlier manual edits make this configuration Custom, but output remains the Recommended 1440p default.
+    assert(video.output == 1 && Eden::kOutputWidth[video.output] == 2560 && Eden::kOutputHeight[video.output] == 1440);
     video.output = 2;
     assert(Eden::SavePreferences(video, file));
     video = Eden::LoadPreferences(file);
@@ -108,7 +109,7 @@ int main() {
     assert(!Eden::SavePreferences(video, file));
     const std::string unknown_output = std::string(directory) + "/unknown-output.json";
     std::ofstream(unknown_output) << R"({"video": {"output_resolution": "720p"}})";
-    assert(Eden::LoadPreferences(unknown_output).output == 0);
+    assert(Eden::LoadPreferences(unknown_output).output == 1);
 
     // Vibration (Settings > Controls): on unless turned off.
     auto controls = Eden::LoadPreferences(file);

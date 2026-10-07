@@ -51,9 +51,21 @@ bool EmitTerminalImpl(A64EmitX64& e, IR::Term::LinkBlock terminal, IR::LocationD
     return true;
 }
 
-bool EmitTerminalImpl(A64EmitX64& e, IR::Term::LinkBlockFast terminal, IR::LocationDescriptor, bool is_single_step) {
+bool EmitTerminalImpl(A64EmitX64& e, IR::Term::LinkBlockFast terminal,
+                      IR::LocationDescriptor initial_location, bool is_single_step) {
     if (e.conf.HasOptimization(OptimizationFlag::BlockLinking) && !is_single_step) {
-        EdenEmitLink(e, terminal.next, EdenLinkCheck::None);
+        // Eden multicore uses wall-clock timing, which disables Dynarmic cycle counting. Upstream
+        // LinkBlockFast then has no halt/cycle check at all. A direct guest back-edge can therefore
+        // stay inside generated code forever and never observe BreakLoop / scheduler interrupts.
+        //
+        // Preserve the zero-overhead fast path for forward links. Only loop/back-edge links in
+        // wall-clock mode pay one halt_reason check, making tight guest spins pre-emptible without
+        // penalising ordinary straight-line block linking. This is title-agnostic and also catches
+        // multi-block loops because their closing edge branches backward.
+        const u64 from_pc = A64::LocationDescriptor{initial_location}.PC();
+        const u64 next_pc = A64::LocationDescriptor{terminal.next}.PC();
+        const bool wall_clock_back_edge = !e.conf.enable_cycle_counting && next_pc <= from_pc;
+        EdenEmitLink(e, terminal.next, wall_clock_back_edge ? EdenLinkCheck::Halt : EdenLinkCheck::None);
     } else {
         e.code.mov(rax, A64::LocationDescriptor{terminal.next}.PC());
         e.code.mov(qword[e.code.ABI_JIT_PTR + offsetof(A64JitState, pc)], rax);

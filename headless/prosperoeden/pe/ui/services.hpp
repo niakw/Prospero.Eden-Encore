@@ -57,8 +57,15 @@ struct Game
     std::string size;   // "1.2 GB"
     std::string file;   // its name in the games folder
     std::string cover;  // square icon path; empty without cover art
-    std::string hero;   // optional cached 16:9 artwork (Nlib); empty => use cover
+    std::string hero;   // cached 16:9 Nlib banner; empty => use first screenshot/cover
+    std::vector<std::string> screenshots; // up to three cached Nlib gameplay screenshots
     int max_players = 0; // Nlib maximum local players; 0 when unknown/offline
+    std::string intro;
+    std::string description;
+    std::string publisher;
+    std::string developer;
+    std::string release_date;
+    std::string categories;
     std::uint64_t title_id = 0;
     std::string addons;        // "Update 1.2.0, 2 DLC"; empty without either
     std::string addons_short;  // the same where there is little room: "v1.2.0, 2 DLC"
@@ -77,8 +84,10 @@ struct Recent
     std::string file;
     std::string title;
     std::string cover;
-    std::string hero; // cached 16:9 artwork; empty => square cover fallback
+    std::string hero; // cached Nlib banner; empty => screenshot/cover fallback
+    std::string screenshot; // first cached Nlib screenshot
     int max_players = 0; // Nlib maximum local players; 0 when unknown/offline
+    std::string intro;
     std::uint64_t title_id = 0;
     std::string addons;
     std::string language;
@@ -96,8 +105,10 @@ struct Home
     std::string last_caption;
     bool last_caption_warning = false; // the caption says what is wrong with the game
     std::string last_cover;
-    std::string last_hero; // cached 16:9 artwork; empty => last_cover
+    std::string last_hero; // cached Nlib banner; empty => last_screenshot/last_cover
+    std::string last_screenshot;
     int last_max_players = 0; // Nlib maximum local players; 0 when unknown/offline
+    std::string last_intro;
     // What the last game comes with, when it can be started: its title ID, its update and DLC
     // (as Game::addons) and the language it will use. Its mods are counted by the launcher.
     std::uint64_t last_title_id = 0;
@@ -105,7 +116,7 @@ struct Home
     std::string last_language;
     int last_mods = 0;
     int last_mods_on = 0;
-    std::vector<Recent> recents; // at most four
+    std::vector<Recent> recents; // at most six
     std::string system_status;
 };
 
@@ -116,13 +127,13 @@ struct Preferences
     bool mute = false;
     bool detailed_logging = false;
     int renderer = 1; // 0 OpenGL, 1 Vulkan
-    int resolution = 3;
+    int resolution = 4; // Recommended: 1.25x
     int filter = 0;
     int fsr_sharpness = 50;
-    int anti_aliasing = 0; // 0 none, 1 FXAA, 2 SMAA
+    int anti_aliasing = 1; // 0 none, 1 FXAA, 2 SMAA
     int refresh = 0; // the output while a game runs: 0 60 Hz, 1 120 Hz
-    int output = 0;  // the size of the picture, menu and games: 0 1080p, 1 1440p, 2 2160p
-    int performance_profile = 0; // 0 recommended, 1 smooth, 2 performance, 3 custom
+    int output = 1;  // Recommended: 1440p
+    int performance_profile = 1; // 0 Minimum, 1 Recommended, 2 High, 3 Ultra, 4 Custom
     int controller_layout = 0; // 0 PlayStation, 1 Switch; custom status derives from mapping
     ButtonMapping mapping = kPlayStationMapping;
     bool vibration = true;
@@ -139,6 +150,7 @@ struct Preferences
 // One game's overrides; -1 uses Settings > Video.
 struct GameSettings
 {
+    int console_mode = -1; // -1 follows authored profile/default, 0 Handheld, 1 Docked
     int renderer = -1;
     int output = -1;
     int resolution = -1;
@@ -206,6 +218,9 @@ class Services
 
     // ---- library ----
     virtual std::vector<Game> games() = 0; // reads every game file: slow
+    // Enrich one already-scanned game lazily (Nlib on native builds). The default is a no-op so
+    // host/preview services stay deterministic and offline.
+    virtual Game enrich_game_media(Game game) { return game; }
     // The value the launcher hands back to start a game.
     virtual std::string game_path(const std::string &file) = 0;
     // Cheap presence check used while the launcher is open.

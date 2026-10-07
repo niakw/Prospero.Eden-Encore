@@ -107,12 +107,13 @@ This addresses newer software reaching the NSO loader and failing with
 
 ### Defaults
 
-Fresh configurations use conservative defaults:
+Fresh configurations start on the authored **Recommended** tier:
 
 - Vulkan.
-- 1080p output as the raw factory fallback; **Recommended** applies 1440p.
-- 1x internal resolution.
+- 1440p TV output.
+- 1.25x internal resolution.
 - Bilinear scaling.
+- FXAA.
 - FSR sharpness 50% when FSR is selected.
 - 60 Hz.
 - FPS overlay off.
@@ -125,13 +126,14 @@ Existing saved preferences are not silently rewritten.
 
 ### Performance profiles
 
-Encore exposes three user-facing profiles:
+Encore exposes four authored, title-aware video tiers plus a derived Custom state:
 
-- **Recommended** — Vulkan, 1440p, 1x, Bilinear, FXAA, 60 Hz.
-- **Smooth** — Vulkan, 1080p, 1x, Bilinear, AA off, 60 Hz.
-- **Performance** — Vulkan, 1080p, 0.75x + FSR at 50%, AA off, 60 Hz.
+- **Minimum** — Vulkan, 1080p, 1x, Bilinear, AA off, 60 Hz.
+- **Recommended** — Vulkan, 1440p, 1.25x, Bilinear, FXAA, 60 Hz.
+- **High** — Vulkan, 2160p, 1.5x, Bicubic, FXAA, 60 Hz.
+- **Ultra** — Vulkan, 2160p, 2x, Bilinear, AA off, 60 Hz.
 
-Shipping profiles keep Dynarmic **per-core JIT** and do not enable shared-JIT, batching or saved-block compile-ahead.
+The authoritative profile data is generated from `niakw/encore-overrides`; title-specific overrides are applied before manual game settings. Shipping profiles keep Dynarmic **per-core JIT** and do not enable shared-JIT, successor batching or saved-block compile-ahead.
 
 ### Safe Launch
 
@@ -221,7 +223,7 @@ Encore keeps the stable Eden/ProsperoEden base pin and applies narrowly reviewed
 
 The Vulkan/RADV platform remains one coherent hardware-qualified baseline for R1: PS5_Vulkan `3f3ee696…`, PS5_Mesa `0b2d6d1a…` and Mihawk PayloadSDK `95c08f27…`. This is deliberate rather than an omitted update: the audited newer candidates (`fde9e379…`, `7b59ef27…`, `b5efad52…`) are a coupled platform migration. The Mesa branch diverges by roughly **107 commits ahead / 103 behind** and introduces a PS5 winsys, threaded layer, GS-compute path and broad RADV changes; the PayloadSDK branch diverges by roughly **100 ahead / 48 behind** and adds a new platform libc/elevation/memory stack. Those three must be migrated and hardware-qualified together. Mixing one member into the 13.60 release would be less safe than retaining the proven trio.
 
-The image-quality audit is closed conservatively for R1: Recommended uses native internal resolution,
+The image-quality baseline now comes from the authored `encore-overrides` tiers: Recommended uses 1.25x internal resolution with FXAA,
 Bilinear output scaling and FXAA, while FSR sharpness defaults to 50% instead of the former aggressive
 88%. Eden does not currently expose a reusable debanding post-process (the FSR source only contains
 its own internal dithering). Encore therefore does not add an unmeasured fullscreen deband pass to a

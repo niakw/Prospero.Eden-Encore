@@ -57,6 +57,27 @@ print('Eden audited FW23/service/max_sessions backports: PASS')
 PY
 }
 
+validate_spinlock_mutex() {
+python3 - "$eden" <<'PY2'
+from pathlib import Path
+import sys
+r=Path(sys.argv[1])
+thread=(r/'src/core/hle/kernel/k_thread.h').read_text()
+slab=(r/'src/core/hle/kernel/k_slab_heap.h').read_text()
+cmake=(r/'src/common/CMakeLists.txt').read_text()
+for rel,text,needle in [
+    ('k_thread.h',thread,'std::mutex m_context_guard{};'),
+    ('k_slab_heap.h',slab,'std::mutex m_lock;'),
+]:
+    if needle not in text: raise SystemExit(f'Eden #4436 missing from {rel}: {needle}')
+if 'common/spin_lock.h' in thread or 'common/spin_lock.h' in slab:
+    raise SystemExit('Eden #4436 incomplete: kernel still includes Common::SpinLock')
+if 'spin_lock.h' in cmake:
+    raise SystemExit('Eden #4436 incomplete: spin_lock.h still registered in common CMake')
+print('Eden audited kernel mutex backport #4436: PASS')
+PY2
+}
+
 validate_runtime_hid() {
 python3 - "$eden" <<'PY'
 from pathlib import Path
@@ -115,6 +136,7 @@ PY
 }
 
 apply_one "$root/headless/backports/eden-4473-4477.patch" "$eden/.encore-backport-gpu.sha256" validate_gpu
+apply_one "$root/headless/backports/eden-4436-spinlock-mutex.patch" "$eden/.encore-backport-4436.sha256" validate_spinlock_mutex
 apply_one "$root/headless/backports/eden-fw23-services.patch" "$eden/.encore-backport-fw23.sha256" validate_fw23
 apply_one "$root/headless/backports/eden-runtime-hid.patch" "$eden/.encore-backport-runtime-hid.sha256" validate_runtime_hid
 apply_one "$root/headless/backports/eden-ps5-hid-watchdog.patch" "$eden/.encore-backport-ps5-hid-watchdog.sha256" validate_ps5_hid_watchdog

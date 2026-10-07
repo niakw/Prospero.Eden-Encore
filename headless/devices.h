@@ -69,11 +69,9 @@ public:
     unsigned ConnectedPlayers() const { return connected_players.load(); }
     unsigned TakeConnectionChanges() { return connection_changes.exchange(0); }
     void Close();
-    // Which DualSense button presses each guest button. The default follows PS5 UI semantics.
-    // The stock PlayStation profile can optionally adapt between UI semantics and physical
-    // gameplay positions. Custom mappings and Switch mode stay fixed.
+    // Which DualSense button presses each guest button. Profiles are deterministic: the mapping
+    // chosen by the player is the mapping used in menus and gameplay.
     void SetMapping(const ButtonMapping& value) { mapping = ValidMapping(value) ? value : kDefaultMapping; }
-    void SetAdaptivePlayStation(bool enabled) { adaptive_playstation = enabled; }
     void Consume(std::span<const ps5::pad::Data> samples) { Consume(0, samples); }
     void Consume(std::size_t player, std::span<const ps5::pad::Data> samples);
     PadEngine& Engine() { return *engine; }
@@ -96,12 +94,6 @@ private:
     float deadzone;
     float trigger_threshold;
     ButtonMapping mapping = kDefaultMapping;
-    enum class MappingContext : unsigned char { ui, gameplay };
-    MappingContext mapping_context = MappingContext::ui;
-    bool adaptive_playstation = false;
-    unsigned gameplay_evidence = 0;
-    unsigned menu_evidence = 0;
-    unsigned quiet_polls = 0;
     std::array<Slot, kMaxPlayers> slots{};
     bool owns_user_service = false;
     std::atomic<bool> return_to_menu = false;

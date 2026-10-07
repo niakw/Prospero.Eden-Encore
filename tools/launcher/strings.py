@@ -4,7 +4,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """strings.py extract          write tools/launcher/launcher.pot from the text marked in the code
 strings.py new <tag>          start headless/prosperoeden/ui/lang/<tag>.po from the template
-strings.py check              check every catalog in headless/prosperoeden/ui/lang
+strings.py check              check every catalog in headless/prosperoeden/ui/lang and embedded French
+strings.py embed-fr           rebuild headless/prosperoeden/fr_fr_embedded.h from fr-FR.po
 
 The code holds the English text: tr("...") where it is drawn, TR("...") in constant tables (and
 the setting labels of headless/settings_store.h). A catalog is a gettext .po file named after the
@@ -36,6 +37,7 @@ ROOT = Path(__file__).resolve().parents[2]
 LAUNCHER = ROOT / "headless/prosperoeden"
 CATALOGS = LAUNCHER / "ui/lang"
 TEMPLATE = ROOT / "tools/launcher/launcher.pot"
+EMBEDDED_FR = LAUNCHER / "fr_fr_embedded.h"
 FONT = LAUNCHER / "ui/fonts/montserrat-medium.pefont"
 SETTINGS = ROOT / "headless/settings_store.h"
 SETTING_LABELS = ("kResolutionLabels", "kUpscalingFilterLabels", "kAntiAliasingLabels",
@@ -317,11 +319,31 @@ def launch_error_problems():
             if '"' + escape(joined(literal)) + '"' not in reported]
 
 
+def embedded_fr_text():
+    source = EMBEDDED_FR.read_text(encoding="utf-8")
+    match = re.search(r'R"FRPO\((.*)\)FRPO";', source, re.S)
+    return match.group(1) if match else None
+
+
+def write_embedded_fr():
+    po = (CATALOGS / "fr-FR.po").read_text(encoding="utf-8")
+    if ')FRPO"' in po:
+        raise SystemExit("fr-FR.po collides with the embedded raw-string delimiter")
+    source = ("// SPDX-License-Identifier: GPL-3.0-or-later\n#pragma once\n#include <string_view>\n"
+              "namespace pe::ui::embedded {\ninline constexpr std::string_view kFrFr = R\"FRPO(" +
+              po + ")FRPO\";\n}\n")
+    EMBEDDED_FR.write_text(source, encoding="utf-8", newline="\n")
+
+
 def check():
     texts = marked_text()
     baked = font_characters()
     system = system_font_characters()
     failed = False
+    french_source = (CATALOGS / "fr-FR.po").read_text(encoding="utf-8")
+    if embedded_fr_text() != french_source:
+        print("fr_fr_embedded.h is stale; run tools/launcher/strings.py embed-fr")
+        failed = True
     for problem in launch_error_problems():
         print(problem)
         failed = True
@@ -384,6 +406,9 @@ def main():
         print(f"{path.relative_to(ROOT)}: {len(existing)} translations kept")
     elif command == "check":
         sys.exit(check())
+    elif command == "embed-fr":
+        write_embedded_fr()
+        print(f"{EMBEDDED_FR.relative_to(ROOT)}: synced from fr-FR.po")
     else:
         sys.exit(__doc__)
 

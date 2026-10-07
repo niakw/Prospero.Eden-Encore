@@ -57,6 +57,7 @@ assert len(eboot) > 1024 * 1024
 for text in (
     "QUICK SETTINGS", "SELECTED GAME", "Confirm this action?", "PARAMÈTRES RAPIDES",
     "api.nlib.cc", "Nlib hero cached for ", "EDEN_NLIB_RESULT title_id=",
+    "/screen/", "fields=name,intro,description,publisher,developer,releaseDate",
     "BUTTON PROFILE", "Custom PS5", "Custom Switch",
     "EDEN_HID_NPAD update={}", "EDEN_JIT_ALIAS rx=",
 ):
@@ -68,4 +69,8 @@ library_source = (root / "headless/prosperoeden/pe/ui/library.cpp").read_text()
 assert "Confirmation::launch_game" not in home_source + library_source, "launch still asks for confirmation"
 assert "open_game_settings_at_file" in home_source, "Home Triangle no longer opens per-game settings"
 assert "recent.hero" in home_source, "recent-game Nlib artwork is not used by Home"
+assert "hero_intro" in home_source, "Nlib intro is not used by Home hero"
+assert "game->screenshots" in library_source, "Nlib screenshots are not used by Library"
+assert "VIEW ALL GAMES" not in home_source, "removed Home pseudo-link returned"
+assert "Cross launches" not in library_source, "text-only controller hint returned"
 print(f"Staged Encore artifact PASS ({len(actual)} files, current launcher/runtime markers present)")

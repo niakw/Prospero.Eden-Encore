@@ -109,6 +109,7 @@ class Launcher
     void say(const std::string &text, bool warning = false);
     void launch(const std::string &file, const std::string &title, const std::string &cover);
     void draw_screen(Canvas &c, Screen screen);
+    void draw_top_nav(Canvas &c, int active_tab, int focus_tab = -1, float focus_amount = 0.0f);
     void draw_frame(Canvas &c, const char *title, const char *copy);
     void draw_footer(Canvas &c, const Hint *hints, int count);
     void draw_confirmation(Canvas &c);
@@ -132,6 +133,8 @@ class Launcher
     // The game list is read beside the menu: reading every game takes a moment.
     void start_scan();
     void finish_scan(bool wait);
+    void start_selected_media();
+    void finish_selected_media();
     void apply_games(std::vector<Game> games);
     void name_home_games();
     // The home screen's content, with its game's mods counted.
@@ -214,7 +217,7 @@ class Launcher
     bool done_ = false;
     bool restart_requested_ = false;
 
-    // home: 0 launch hero, 1-3 header, 4 game details, 5-8 recent, 10-16 quick settings
+    // home: 0 hero, 1-3 header, 4 details, 5-10 recent, 11 quick panel, 12-18 quick rows, 19 storage, 20 caches
     Home home_;
     DiagnosticsInfo home_diagnostics_{};
     int home_recent_ = -1; // -1 = last played; otherwise the selected Recent card becomes the hero
@@ -227,13 +230,16 @@ class Launcher
     std::array<float, 4> controller_pop_{}; // 1 when a controller appears, then decays
     int home_focus_ = 0;
     int home_quick_edit_ = -1; // -1 browsing; 0-6 editing one quick-setting row
-    std::array<tween::Spring, 17> home_springs_{};
+    std::array<tween::Spring, 21> home_springs_{};
     float intro_ = 0.0f;
     bool first_start_ = true;
 
     // library
     std::vector<Game> games_;
     std::future<std::vector<Game>> scan_; // the list being read
+    std::future<Game> media_scan_; // lazy Nlib enrichment for the highlighted title
+    std::uint64_t media_scan_title_id_ = 0;
+    std::vector<std::uint64_t> media_attempted_;
     bool games_loaded_ = false;
     ListView library_;
     bool selected_docked_ = true;
