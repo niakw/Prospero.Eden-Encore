@@ -50,6 +50,10 @@ builds on the following projects, each under its own license.
 - **[ProsperoPuzzles](https://github.com/blackbearreloaded/ProsperoPuzzles)**,
   GPL-3.0-or-later. The launcher's drawing, text, animation and sound code
   (`headless/prosperoeden/pe`) started there.
+- **[ghost-land/Nlib-API](https://github.com/ghost-land/Nlib-API)**, GPL-3.0. Encore
+  queries its public NX endpoints at runtime for title metadata and rich launcher media (icons,
+  1080p banners and screenshots). Nlib source code is not embedded in the Encore binary; cached
+  responses/media are stored locally under Encore's cache.
 - **Montserrat** by Julieta Ulanovsky and contributors, SIL Open Font License
   1.1 (`third_party/fonts`). The launcher's font is baked from Montserrat Medium.
 - **[HarfBuzz](https://github.com/harfbuzz/harfbuzz)**, "Old MIT" license (its
