@@ -620,7 +620,7 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
     {
         title = tr("Controls");
         static constexpr const char *kAbout[] = {
-            TR("PlayStation Auto keeps Cross/Round menu semantics while adapting gameplay to physical Switch positions. Switch stays fixed; editing any button creates a custom profile."),
+            TR("PlayStation Auto keeps Cross/Circle menu semantics while adapting gameplay to physical Switch positions. Switch stays fixed; editing any button creates a custom profile."),
             TR("Customize every guest button. The profile automatically becomes Custom PS5 or Custom Switch."),
             TR("Turns DualSense vibration on or off for games."),
             TR("100% is full DualSense rumble strength. Lower it if vibration feels too strong."),
