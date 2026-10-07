@@ -120,6 +120,9 @@ void Launcher::press_settings(Key key)
         return;
     }
     case Key::up:
+        top_nav_focus_ = 3;
+        cue(Cue::focus);
+        return;
     case Key::down:
         return;
     case Key::triangle:
@@ -182,7 +185,7 @@ void Launcher::press_settings(Key key)
 void Launcher::draw_settings(Canvas &c)
 {
     gfx::DrawList &list = c.list;
-    draw_top_nav(c, 3);
+    draw_top_nav(c, 3, top_nav_focus_, top_nav_focus_ >= 0 ? 1.0f : 0.0f);
     text_shrink(c, tr("Settings"), 72.0f, baseline(142.0f, 38.0f, theme::kHeading),
                 theme::kHeading, theme::kTitle, 980.0f);
     text_shrink(c, tr("Fine-tune your experience"), 72.0f, baseline(176.0f, 24.0f, 18.0f),

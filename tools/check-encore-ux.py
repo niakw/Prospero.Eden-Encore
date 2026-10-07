@@ -30,7 +30,9 @@ assert 'kHomeRecentMax = 6' in home
 assert 'kHomeQuickPanel' in home
 assert 'focus == kHomeQuickPanel' in home
 assert 'Open quick settings' in home
-assert 'Deliberately inert: the user must press Cross to enter the quick-settings block.' in home
+assert 'if (delta < 0)' in home
+assert 'focus = kHomeDetails;' in home
+assert 'if (focus == kHomeQuickPanel)' in home and 'focus = kHomeQuickFirst' in home
 assert 'home_quick_edit_' in home and 'Pad::cross, TR("Edit")' in home
 assert 'VIEW ALL GAMES' not in home
 assert 'View all games' not in home
@@ -40,8 +42,14 @@ assert 'const Rect status{1324.0f, 470.0f, 524.0f, 454.0f}' in home
 assert 'kHomeStorage' in home and 'kHomeCache' in home
 assert 'Confirmation::shader_caches' in home and 'clear_shader_caches' in home
 assert 'Cross to clear' in home
-assert 'AssetsDir()' in services
-assert 'std::filesystem::space(storage_root' in services
+assert 'Ps5ConsoleStorage' in services
+assert 'statfs("/user"' in services and '"/system_data", "/system_ex"' in services
+assert 'home_diagnostics_.used_space + " / " + home_diagnostics_.total_space' in home
+
+assert 'const std::string hero_artwork = !hero_banner.empty() ? hero_banner : hero_screenshot;' in home
+assert 'Never promote the square ROM icon to a TV hero.' in home
+assert 'bool Launcher::press_top_nav(Key key)' in launcher
+assert 'top_nav_focus_ = 3' in settings and 'top_nav_focus_ = 1' in library
 
 # Cards: gameplay media first and no ugly language subtitle under recent titles.
 assert 'recent.screenshot' in home
@@ -111,5 +119,17 @@ assert 'gfx::mix(theme::kAccentTeal, theme::kTitle, f)' in home
 assert 'constexpr float card_h = 174.0f' in home
 assert '750.0f, card_w, card_h' in home
 assert 'const Rect status{1324.0f, 470.0f, 524.0f, 454.0f}' in home
+
+
+# Custom low-cost settings keep the light hidden runtime policy.
+assert 'runtime_performance_profile' in main
+assert 'effective_resolution_for_tuning <= Eden::kNativeResolution' in main
+assert 'Settings::values.use_asynchronous_shaders =\n            runtime_performance_profile == 0' in main
+
+# Nlib HTTP identity is applied as an audited pinned-Eden backport.
+apply=(root/'tools/apply-eden-backports.sh').read_text()
+net_patch=(root/'headless/backports/eden-ps5-net-user-agent.patch').read_text()
+assert 'eden-ps5-net-user-agent.patch' in apply
+assert 'Prospero.Eden-Encore/1' in net_patch and 'User-Agent' in net_patch
 
 print('Encore UX/media/profile contracts: PASS')

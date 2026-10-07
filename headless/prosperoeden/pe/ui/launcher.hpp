@@ -109,6 +109,7 @@ class Launcher
     void say(const std::string &text, bool warning = false);
     void launch(const std::string &file, const std::string &title, const std::string &cover);
     void draw_screen(Canvas &c, Screen screen);
+    bool press_top_nav(Key key);
     void draw_top_nav(Canvas &c, int active_tab, int focus_tab = -1, float focus_amount = 0.0f);
     void draw_frame(Canvas &c, const char *title, const char *copy);
     void draw_footer(Canvas &c, const Hint *hints, int count);
@@ -208,6 +209,7 @@ class Launcher
     Confirmation confirmation_ = Confirmation::none;
     Key confirmation_key_ = Key::cross;
     Key pressed_key_ = Key::cross;
+    int top_nav_focus_ = -1; // -1 = content; 0..3 = Home/Library/Recents/Settings
 
     // launching a game
     std::string selected_game_;

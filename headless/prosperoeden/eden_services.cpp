@@ -31,6 +31,9 @@
 #include <nlohmann/json.hpp>
 #include <stb_image.h>
 #include <sys/stat.h>
+#ifdef PS5_NATIVE
+#include <sys/mount.h>
+#endif
 #include <thread>
 #include <unistd.h>
 
@@ -430,6 +433,51 @@ std::string StorageSize(std::uintmax_t bytes) {
         std::snprintf(text, sizeof(text), "%.0f KB", static_cast<double>(bytes) / static_cast<double>(KiB));
     return text;
 }
+
+#ifdef PS5_NATIVE
+bool Ps5ConsoleStorage(std::uint64_t* total_bytes, std::uint64_t* free_bytes) {
+    if (total_bytes == nullptr || free_bytes == nullptr) return false;
+
+    struct statfs user{};
+    if (statfs("/user", &user) != 0) return false;
+
+    const auto bytes = [](std::uint64_t blocks, std::uint64_t block_size) {
+        return blocks * block_size;
+    };
+    const std::uint64_t user_total =
+        bytes(static_cast<std::uint64_t>(user.f_blocks), static_cast<std::uint64_t>(user.f_bsize));
+    const std::uint64_t user_free =
+        bytes(static_cast<std::uint64_t>(user.f_bfree), static_cast<std::uint64_t>(user.f_bsize));
+    const std::uint64_t user_available_blocks =
+        user.f_bavail > 0 ? static_cast<std::uint64_t>(user.f_bavail) :
+                            static_cast<std::uint64_t>(user.f_bfree);
+    const std::uint64_t user_available =
+        bytes(user_available_blocks, static_cast<std::uint64_t>(user.f_bsize));
+    const std::uint64_t reserved =
+        user_free > user_available ? user_free - user_available : 0;
+
+    // Match the capacity exposed by PS5 Settings rather than the small /data view used by
+    // homebrew. /user carries the main SSD allocation; system_data and system_ex are separate
+    // visible partitions on the same internal drive.
+    std::uint64_t total = user_total > reserved ? user_total - reserved : user_total;
+    std::uint64_t available = user_available;
+    for (const char* path : {"/system_data", "/system_ex"}) {
+        struct statfs fs{};
+        if (statfs(path, &fs) != 0) continue;
+        const std::uint64_t block_size = static_cast<std::uint64_t>(fs.f_bsize);
+        total += bytes(static_cast<std::uint64_t>(fs.f_blocks), block_size);
+        const std::uint64_t free_blocks =
+            fs.f_bavail > 0 ? static_cast<std::uint64_t>(fs.f_bavail) :
+                              static_cast<std::uint64_t>(fs.f_bfree);
+        available += bytes(free_blocks, block_size);
+    }
+
+    if (total == 0 || available > total) return false;
+    *total_bytes = total;
+    *free_bytes = available;
+    return true;
+}
+#endif
 
 // A game's update and DLC: "Update 1.2.0, 2 DLC"; brief leaves the word out ("v1.2.0, 2 DLC") for
 // places with little room.
@@ -1159,17 +1207,34 @@ pe::ui::DiagnosticsInfo EdenServices::diagnostics() {
     result.data_path = Eden::FilesystemAccess() ? Eden::kDataDir : Eden::UserDir();
 
     std::error_code error;
-    // Report the filesystem that actually stores the user's Encore library. UserDir() can be a
-    // small app/sandbox filesystem (e.g. ~64 GB) and is meaningless as a console storage meter.
-    // AssetsDir() is the selected Encore root: internal /data/prosperoeden by default, or the
-    // user's external root when one is configured.
-    const std::string storage_root = Eden::AssetsDir();
-    const auto space = std::filesystem::space(storage_root, error);
-    result.free_space = error ? tr("Unknown") : StorageSize(space.available);
-    result.total_space = error ? tr("Unknown") : StorageSize(space.capacity);
-    if (!error) {
-        result.free_bytes = static_cast<std::uint64_t>(space.available);
-        result.total_bytes = static_cast<std::uint64_t>(space.capacity);
+    std::uint64_t storage_total = 0;
+    std::uint64_t storage_free = 0;
+#ifdef PS5_NATIVE
+    const bool console_storage = Eden::FilesystemAccess() &&
+                                 Ps5ConsoleStorage(&storage_total, &storage_free);
+#else
+    const bool console_storage = false;
+#endif
+    if (!console_storage) {
+        // Host/development fallback, and sandbox fallback before filesystem elevation succeeds.
+        const auto space = std::filesystem::space(Eden::AssetsDir(), error);
+        if (!error) {
+            storage_free = static_cast<std::uint64_t>(space.available);
+            storage_total = static_cast<std::uint64_t>(space.capacity);
+        }
+    }
+    if (error || storage_total == 0) {
+        result.free_space = tr("Unknown");
+        result.used_space = tr("Unknown");
+        result.total_space = tr("Unknown");
+    } else {
+        const std::uint64_t storage_used =
+            storage_total > storage_free ? storage_total - storage_free : 0;
+        result.free_space = StorageSize(storage_free);
+        result.used_space = StorageSize(storage_used);
+        result.total_space = StorageSize(storage_total);
+        result.free_bytes = storage_free;
+        result.total_bytes = storage_total;
     }
 
     const std::filesystem::path cache = std::filesystem::path{Eden::UserDir()} / "cache";
