@@ -14,6 +14,10 @@ mapping=read('headless/prosperoeden/pe/ui/mapping.cpp')
 services=read('headless/prosperoeden/eden_services.cpp')
 presets=read('headless/prosperoeden/pe/ui/video_presets.hpp')
 store=read('headless/settings_store.h')
+devices=read('headless/devices.h')
+pad=read('headless/pad.cpp')
+main=read('headless/main.cpp')
+generated=read('headless/encore_overrides_generated.h')
 
 # One TV shell everywhere.
 assert 'void Launcher::draw_top_nav' in launcher
@@ -81,6 +85,14 @@ assert 'kNlibCacheSchema = 2' in services
 assert 'current_metadata_cache' in services
 assert 'artwork_files.resize(6)' in services
 assert 'game->screenshots' in library
+
+# Global PlayStation Auto control contract.
+assert 'kPlayStationAutoControls' in generated
+assert 'SetAdaptivePlayStation(bool enabled)' in devices
+assert 'mapping_context == MappingContext::gameplay ? kSwitchMapping : mapping' in pad
+assert 'EDEN_PAD_CONTEXT mode=gameplay' in pad and 'EDEN_PAD_CONTEXT mode=ui' in pad
+assert 'pad->SetAdaptivePlayStation(effective_layout == 0 && !custom_mapping);' in main
+assert '"PlayStation Auto"' in main
 
 # Four authored performance tiers + derived Custom.
 for label in ('"Minimum"','"Recommended"','"High"','"Ultra"','"Custom"'):
