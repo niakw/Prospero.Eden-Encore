@@ -107,7 +107,19 @@ assert "Upgrading from ProsperoEden" in install, "legacy migration instructions 
 assert "FFPFSC" in install and "ZIP" in install, "both installation paths must be documented"
 
 preset = (root / "headless/prosperoeden/pe/ui/video_presets.hpp").read_text()
+generated = (root / "headless/encore_overrides_generated.h").read_text()
 assert "ApplyVideoPreset(Preferences&" in preset and "ApplyVideoPreset(GameSettings&" in preset
-assert "{1, 1, 3, 0, 50, 1, 0}" in preset and "{1, 0, 3, 0, 50, 0, 0}" in preset and "{1, 0, 2, 1, 50, 0, 0}" in preset
+assert "kAuthoredVideoProfiles = Eden::EncoreOverrides::kAuthoredProfileCount" in preset,     "video presets must use the generated authored-profile count"
+assert "kCustomVideoProfile = Eden::EncoreOverrides::kCustomProfile" in preset,     "Custom profile must stay derived from encore-overrides"
+assert "VideoPresetForTitle" in preset and "ProfileForTitle(title_id, preset)" in preset,     "title-aware video preset resolution missing"
+assert "kAuthoredProfileCount = 4" in generated and "kCustomProfile = 4" in generated,     "Encore must ship four authored tiers plus derived Custom"
+for value in (
+    "{1, 0, 3, 0, 50, 0, 0, true}",
+    "{1, 1, 4, 0, 50, 1, 0, true}",
+    "{1, 2, 5, 2, 50, 1, 0, true}",
+    "{1, 2, 6, 0, 50, 0, 0, true}",
+):
+    assert value in generated, f"missing generated video profile: {value}"
+assert "kPlayStationAutoControls{0.30f, 48, 18, 2, 0.16f, 75, 10, 4, 2, true}" in generated,     "generated PlayStation Auto profile snapshot missing"
 
 print(f"Release metadata preflight PASS (Encore {release}, package {package_version}, PPSA99008)")
