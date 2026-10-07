@@ -21,13 +21,6 @@ using audio::Cue;
 namespace
 {
 
-constexpr Rect kListPanel{108.0f, 188.0f, 820.0f, 720.0f};
-constexpr Rect kDetailPanel{980.0f, 188.0f, 820.0f, 720.0f};
-constexpr Rect kWindow{138.0f, 250.0f, 760.0f, 606.0f};
-constexpr float kRowHeight = 78.0f;
-// Under the game's details: its console mode, then the switch for its mods.
-constexpr Rect kModeRow{1022.0f, 700.0f, 736.0f, 74.0f};
-constexpr Rect kModsRow{1022.0f, 782.0f, 736.0f, 74.0f};
 constexpr Rect kDialog{550.0f, 180.0f, 820.0f, 720.0f};
 
 // The game settings dialog's rows, and the window that shows five of them (also the Mods list's).
@@ -53,20 +46,6 @@ constexpr int kDialogRowsShown = 5;
 constexpr Rect kDialogWindow{592.0f, kDialogRowsTop, 736.0f,
                              kDialogRowPitch * (kDialogRowsShown - 1) + kDialogRowHeight};
 constexpr float kDialogHints = 848.0f;
-
-// Console mode marks, drawn from lines: a screen on its stand, and a handheld.
-void draw_docked(Canvas &c, float x, float cy, Color ink)
-{
-    c.list.bordered_rect({x, cy - 13.0f, 36.0f, 22.0f}, 3.0f, ink.with_alpha(0.0f), 2.0f, ink);
-    c.list.line(x + 11.0f, cy + 14.0f, x + 25.0f, cy + 14.0f, 2.0f, ink);
-}
-
-void draw_handheld(Canvas &c, float x, float cy, Color ink)
-{
-    c.list.bordered_rect({x, cy - 10.0f, 40.0f, 20.0f}, 6.0f, ink.with_alpha(0.0f), 2.0f, ink);
-    c.list.circle(x + 7.0f, cy, 2.2f, ink);
-    c.list.circle(x + 33.0f, cy, 2.2f, ink);
-}
 
 std::string controller_profile_name(int layout, const ButtonMapping& mapping)
 {

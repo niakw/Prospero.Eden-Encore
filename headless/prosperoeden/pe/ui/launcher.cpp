@@ -15,6 +15,7 @@ namespace
 {
 
 constexpr Rect kScreen{0.0f, 0.0f, 1920.0f, 1080.0f};
+const Color kWhite{1.0f, 1.0f, 1.0f, 1.0f};
 
 } // namespace
 
