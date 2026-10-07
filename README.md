@@ -43,9 +43,10 @@ Prospero.Eden Encore R1 turns the proven ProsperoEden 1.000.040 base into a PS5 
   fail-closed postconditions and symlink-safe migration.
 - Safe Launch recovery profile without overwriting saved settings.
 - Reworked TV-first **Encore launcher UI/UX** with the final Eden Encore neon identity, 4K tropical-night artwork, dark glass surfaces, controller-first navigation and accessibility modes.
+- **Nlib rich-media enrichment** for the launcher: cached title metadata, icons, **1080p banners**, gameplay screenshots and local-player capacity, with versioned cache migration and offline fallbacks.
 - Four authored video profiles — **Minimum / Recommended / High / Ultra** — plus a derived **Custom** state; profiles are generated from `encore-overrides`, remain title-aware, and keep FSR sharpness conservative by default.
 - Global settings reset and per-game override reset now require an explicit second press; mapping reset and shader/JIT cache clearing use the same confirmation rule.
-- DualSense-first controls, vibration/deadzone controls and multi-controller handling.
+- DualSense-first controls with four profiles (**PlayStation / Switch / Custom PS5 / Custom Switch**); the stock PlayStation profile adapts menu/gameplay context while fixed/custom mappings are never rewritten, alongside vibration/deadzone controls and multi-controller handling.
 - Diagnostics, bounded caches/logs and safer save import/export.
 - Reproducible release packaging with ZIP, optional FFPFSC image and SHA-256 checksums.
 - Complete French launcher catalog with **29 packaged language catalogs**, immediate in-app launcher reconstruction for language/font/label changes, release-safe locale detection and hash-verified FTP installation; stale development `language.txt` overrides can no longer force English.
@@ -84,9 +85,10 @@ Prospero.Eden Encore R1 turns the proven ProsperoEden 1.000.040 base into a PS5 
 
 ### 🎮 DualSense-first UX
 
-- PlayStation face-button layout by default.
-- Nintendo layout remains available.
-- Per-game controller-layout override.
+- **PlayStation** is the default profile. In the stock profile Encore starts with PS-style menu semantics and can switch to physical Switch face-button positions for sustained gameplay input, with hysteresis when returning to menu/navigation context.
+- **Switch** remains a fixed Nintendo-position layout.
+- **Custom PS5** and **Custom Switch** stay exactly as mapped by the player and are never changed automatically.
+- Global and per-game button mappings are supported.
 - Adjustable vibration and stick deadzone.
 - Multi-controller hotplug, motion controls and analog triggers retained.
 - Launcher input follows the foreground PS5 user.
@@ -105,7 +107,7 @@ A title-specific override may adjust those values without changing the global ti
 ### 🧰 Better diagnostics and bounded storage
 
 - Filesystem-access status.
-- Writable free space.
+- Free/total capacity of the **selected Encore storage filesystem** (internal root or configured external root).
 - Shader/JIT cache size.
 - Log size.
 - Safe shader-cache cleanup.
@@ -133,7 +135,7 @@ This comparison is against **ProsperoEden v1.000.070**, the current upstream lin
 | Newer NSO compression | **ZBIC + LZ4** | Upstream line evolves independently |
 | Recovery | **Safe Launch + global reset + per-game reset** | No equivalent Encore recovery workflow documented |
 | Performance UX | **Minimum / Recommended / High / Ultra + Custom**, title-aware via `encore-overrides` | Seven individual performance switches |
-| PS5 controls | **Full DualSense button mapping globally and per game** | Full button mapping system |
+| PS5 controls | **PlayStation / Switch / Custom PS5 / Custom Switch**, with PlayStation menu↔gameplay auto-context plus global/per-game mapping | Full button mapping system |
 | Diagnostics | **Filesystem mode, free space, cache/log sizes, safe cleanup** | Crash/boot diagnostics and logs |
 | Storage hardening | **Bounded RADV cache, rotating logs, bounded cover VRAM** | Shader cache / logging present, different policy |
 | Save import safety | **Backup/rollback + symlink rejection** | Save import/export support |
