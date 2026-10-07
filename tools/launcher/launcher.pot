@@ -32,7 +32,7 @@ msgid "1x (native)"
 msgstr ""
 
 #: pe/ui/library.cpp
-msgid "1x is the safe default. Lower it for performance/memory; higher scales use much more graphics memory."
+msgid "Resolution follows the selected title-aware profile. Lower it for performance or memory; raise it only when the title has headroom."
 msgstr ""
 
 #: settings_store.h
@@ -474,7 +474,7 @@ msgid "Filesystem: {0}  |  Free: {1}"
 msgstr ""
 
 #: pe/ui/settings.cpp
-msgid "Final app output size. 1080p is recommended for stability and memory; this is not the game's render scale."
+msgid "Final app output size. Choose 1080p for lower memory use, 1440p for balance, or 2160p for maximum output detail."
 msgstr ""
 
 #: pe/ui/settings.cpp
@@ -565,7 +565,7 @@ msgid "Game overrides reset to global defaults."
 msgstr ""
 
 #: pe/ui/settings.cpp
-msgid "Game render scale. 1x is recommended; lower it for performance or memory, raise it only when a game has headroom."
+msgid "Game render scale follows the selected profile. Lower it for performance or memory; raise it only when a game has headroom."
 msgstr ""
 
 #: pe/ui/settings.cpp
@@ -935,7 +935,7 @@ msgid "PlayStation"
 msgstr ""
 
 #: pe/ui/settings.cpp
-msgid "PlayStation uses Cross=A and Circle=B. Switch keeps Nintendo face-button positions. Editing any button creates a custom profile."
+msgid "PlayStation Auto keeps Cross/Circle menu semantics while adapting gameplay to physical Switch positions. Switch stays fixed; editing any button creates a custom profile."
 msgstr ""
 
 #: settings_store.h
