@@ -42,8 +42,12 @@ assert 'const Rect status{1324.0f, 470.0f, 524.0f, 454.0f}' in home
 assert 'kHomeStorage' in home and 'kHomeCache' in home
 assert 'Confirmation::shader_caches' in home and 'clear_shader_caches' in home
 assert 'Cross to clear' in home
-assert 'Ps5ConsoleStorage' in services
-assert 'statfs("/user"' in services and '"/system_data", "/system_ex"' in services
+# PS5 startup safety: diagnostics is called synchronously by Launcher::Launcher before
+# the first frame. Direct libc statfs/statvfs caused 0xa002030a on FW 13.60 in build #182.
+assert 'Ps5ConsoleStorage' not in services
+assert 'statfs(' not in services and 'statvfs(' not in services
+assert 'std::filesystem::space(Eden::AssetsDir(), error)' in services
+assert '0xa002030a SYSTEM_ILLEGAL_FUNCTION_CALL' in services
 assert 'home_diagnostics_.used_space + " / " + home_diagnostics_.total_space' in home
 
 assert 'const std::string hero_artwork = !hero_banner.empty() ? hero_banner : hero_screenshot;' in home
