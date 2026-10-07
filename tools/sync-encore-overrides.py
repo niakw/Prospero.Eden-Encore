@@ -36,6 +36,22 @@ def main() -> None:
     database_revision = int(manifest.get("database_revision", 0))
     general = {pid: json.loads((source / "general" / f"{pid}.json").read_text())["settings"] for pid in PROFILE_IDS}
     general_cpp = [profile(general[pid]) for pid in PROFILE_IDS]
+    controls = json.loads((source / "general" / "controls.json").read_text())
+    detection = controls["detection"]
+    gameplay = detection["gameplay"]
+    ui = detection["ui"]
+    control_cpp = (
+        f'{float(gameplay["stick_threshold"]):.2f}f',
+        int(gameplay["trigger_threshold_raw"]),
+        int(gameplay["evidence_enter"]),
+        int(gameplay["evidence_per_active_poll"]),
+        f'{float(ui["quiet_stick_threshold"]):.2f}f',
+        int(ui["quiet_polls_before_dpad"]),
+        int(ui["menu_evidence_enter"]),
+        int(ui["options_touchpad_weight"]),
+        int(ui["dpad_weight"]),
+        bool(detection.get("hysteresis", True)),
+    )
     specifics: list[tuple[int,str,list[tuple[int,int,int,int,int,int,int,bool]]]] = []
     for path in sorted((source / "games").glob("*.json")):
         data = json.loads(path.read_text())
@@ -57,11 +73,15 @@ def main() -> None:
         "#include <array>",
         "#include <cstdint>",
         "namespace Eden::EncoreOverrides {",
+        "struct AutoControlProfile { float gameplay_stick_threshold; int trigger_threshold_raw; unsigned gameplay_evidence_enter; unsigned gameplay_evidence_per_active_poll; float quiet_stick_threshold; unsigned quiet_polls_before_dpad; unsigned menu_evidence_enter; unsigned options_touchpad_weight; unsigned dpad_weight; bool hysteresis; };",
         "struct VideoProfile { int renderer; int output; int resolution; int filter; int fsr_sharpness; int anti_aliasing; int refresh; bool docked; };",
         "inline constexpr int kAuthoredProfileCount = 4;",
         "inline constexpr int kCustomProfile = 4;",
         f'inline constexpr const char* kSourceRevision = "{revision}";',
         f"inline constexpr int kDatabaseRevision = {database_revision};",
+        "inline constexpr AutoControlProfile kPlayStationAutoControls{"
+            + ", ".join(map(str, control_cpp[:-1]))
+            + ", " + ("true" if control_cpp[-1] else "false") + "};",
         "inline constexpr std::array<VideoProfile, kAuthoredProfileCount> kGeneralProfiles = {{",
     ]
     for p in general_cpp:
