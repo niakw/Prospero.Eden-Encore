@@ -274,6 +274,7 @@ Eden and the individual licence details are documented in [THIRD_PARTY_NOTICES.m
 
 ### Compatibility, media, text and build inputs
 
+- [ghost-land/Nlib-API](https://github.com/ghost-land/Nlib-API) — runtime title metadata and rich launcher media source (icons, 1080p banners, screenshots and local-player metadata).
 - [kinnay/zbic](https://github.com/kinnay/zbic) — ZBIC/zstd NSO decompression support.
 - [FFmpeg](https://github.com/FFmpeg/FFmpeg) — H.264/VP8/VP9 decoding in the PS5 build.
 - [HarfBuzz](https://github.com/harfbuzz/harfbuzz) — shaping for Arabic, Thai and other complex scripts in the launcher.
