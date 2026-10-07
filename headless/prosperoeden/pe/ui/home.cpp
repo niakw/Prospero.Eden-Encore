@@ -523,7 +523,6 @@ void Launcher::draw_home(Canvas &c)
             &home_.recents[static_cast<std::size_t>(home_recent_)] : nullptr;
     const std::string &hero_file = hero_recent != nullptr ? hero_recent->file : home_.last_file;
     const std::string &hero_title = hero_recent != nullptr ? hero_recent->title : home_.last_title;
-    const std::string &hero_cover = hero_recent != nullptr ? hero_recent->cover : home_.last_cover;
     const std::string &hero_banner = hero_recent != nullptr ? hero_recent->hero : home_.last_hero;
     const std::string &hero_screenshot = hero_recent != nullptr ? hero_recent->screenshot : home_.last_screenshot;
     const std::string hero_artwork = !hero_banner.empty() ? hero_banner : hero_screenshot;
