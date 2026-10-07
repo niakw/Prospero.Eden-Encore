@@ -145,6 +145,13 @@ enum class Pad : std::uint8_t
     leftright,
     l1,
     r1,
+    l2,
+    r2,
+    l3,
+    r3,
+    options,
+    create,
+    touchpad,
 };
 struct Hint
 {

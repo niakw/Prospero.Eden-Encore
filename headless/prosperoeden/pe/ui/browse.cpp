@@ -438,7 +438,7 @@ void Launcher::draw_language(Canvas &c)
 void Launcher::draw_about(Canvas &c)
 {
     gfx::DrawList &list = c.list;
-    draw_frame(c, tr("About Prospero.Eden Encore"), tr("Credits and setup"));
+    draw_frame(c, tr("About Eden Encore"), tr("Credits and setup"));
 
     glass(c, kListPanel, 26.0f, theme::kPanel.with_alpha(0.80f), theme::kPanelEdge.with_alpha(0.55f));
     text(c, tr("PROJECT CREDITS"), 144.0f, baseline(210.0f, 28.0f, theme::kSmall), theme::kSmall,
@@ -455,13 +455,13 @@ void Launcher::draw_about(Canvas &c)
          theme::kLimePale, Align::left, 2.0f);
     text_block(c,
                tr("Thanks to the whole PS5 homebrew community and to every developer whose drivers, "
-               "tools and libraries make Prospero.Eden Encore possible."),
+               "tools and libraries make Eden Encore possible."),
                144.0f, baseline(500.0f, 36.0f, theme::kText24), theme::kText24, 36.0f, theme::kBody,
                748.0f, 3, kShrink);
     list.rounded_rect({144.0f, 628.0f, 748.0f, 1.0f}, 0.0f, theme::kRule);
     text(c, tr("PS5 13.60 FORK"), 144.0f, baseline(648.0f, 30.0f, theme::kSmall), theme::kSmall,
          theme::kLimePale, Align::left, 2.0f);
-    text_block(c, tr("Prospero.Eden Encore keeps the proven 0.40 base for PS5 13.60, with Eden branding, safer recovery, and targeted compatibility and performance improvements."),
+    text_block(c, tr("Eden Encore builds on the proven ProsperoEden 0.40 PS5 base for firmware 13.60, with the Eden core, safer recovery, and targeted compatibility, performance and TV-first UX improvements."),
                144.0f, baseline(684.0f, 36.0f, theme::kText24), theme::kText24, 36.0f, theme::kBody,
                748.0f, 2, kShrink);
     text_shrink(c, tr("Menu sound effects made with ElevenLabs."), 144.0f,

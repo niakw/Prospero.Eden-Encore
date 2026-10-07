@@ -1,34 +1,35 @@
 #!/usr/bin/env python3
 from pathlib import Path
 root = Path(__file__).resolve().parents[1]
-preset = (root / 'headless/prosperoeden/pe/ui/video_presets.hpp').read_text()
-settings = (root / 'headless/prosperoeden/pe/ui/settings.cpp').read_text()
-library = (root / 'headless/prosperoeden/pe/ui/library.cpp').read_text()
-for expected in ('{1, 1, 3, 0, 50, 1, 0}', '{1, 0, 3, 0, 50, 0, 0}', '{1, 0, 2, 1, 50, 0, 0}'):
-    assert expected in preset, expected
-assert 'ApplyVideoPreset(prefs_, preset);' in settings
-assert 'ApplyVideoPreset(next, preset);' in library
-for reset in ('next.renderer = -1;', 'next.output = -1;', 'next.resolution = -1;', 'next.filter = -1;',
-              'next.fsr_sharpness = -1;', 'next.anti_aliasing = -1;', 'next.refresh = -1;'):
+preset = (root / "headless/prosperoeden/pe/ui/video_presets.hpp").read_text()
+settings = (root / "headless/prosperoeden/pe/ui/settings.cpp").read_text()
+library = (root / "headless/prosperoeden/pe/ui/library.cpp").read_text()
+store = (root / "headless/settings_store.h").read_text()
+generated = (root / "headless/encore_overrides_generated.h").read_text()
+
+assert "kAuthoredProfileCount = 4" in generated
+assert "kCustomProfile = 4" in generated
+for profile in (
+    "{1, 0, 3, 0, 50, 0, 0, true}",      # Minimum
+    "{1, 1, 4, 0, 50, 1, 0, true}",      # Recommended
+    "{1, 2, 5, 2, 50, 1, 0, true}",      # High
+    "{1, 2, 6, 0, 50, 0, 0, true}",      # Ultra
+):
+    assert profile in generated, profile
+assert "0x0100C49025D3E000ULL" in generated
+assert "ProfileForTitle" in generated
+assert "kCustomVideoProfile = Eden::EncoreOverrides::kCustomProfile" in preset
+assert "VideoPresetForTitle" in preset
+assert "ApplyVideoPreset(prefs_, preset);" in settings
+assert "ApplyVideoPreset(next, preset, game.title_id);" in library
+for reset in ("next.renderer = -1;", "next.output = -1;", "next.resolution = -1;", "next.filter = -1;",
+              "next.fsr_sharpness = -1;", "next.anti_aliasing = -1;", "next.refresh = -1;"):
     assert reset in library, reset
-for row in ('row_output', 'row_fsr_sharpness', 'row_anti_aliasing'):
-    assert row in library, row
-assert 'tr("VIDEO PRESET")' in settings
-assert 'tr("DETAILED LOGGING")' in settings
-assert 'TR("Video preset")' in settings
-assert 'TR("Video preset")' in library
-
-assert 'kCustomVideoProfile = 3' in preset
-assert 'DetectVideoProfile(const Preferences& preferences)' in preset
-assert 'RefreshVideoProfile(Preferences& preferences)' in preset
-assert 'DetectVideoProfile(const GameSettings& settings, const Preferences& global)' in preset
-assert 'RefreshVideoProfile(GameSettings& settings, const Preferences& global)' in preset
-assert 'CycleVideoPreset(prefs_.performance_profile, step)' in settings
-assert settings.count('RefreshVideoProfile(prefs_)') >= 7
-assert library.count('RefreshVideoProfile(next, prefs_)') >= 7
-assert '"custom"' in (root / 'headless/settings_store.h').read_text()
-
-print('Video presets: global/per-game presets, automatic Custom state and complete previews PASS')
-
-assert 'video_fsr_sharpness' in settings and 'video_anti_aliasing' in settings
-assert 'FSR SHARPNESS' in settings and 'ANTI-ALIASING' in settings
+assert "CycleVideoPreset(prefs_.performance_profile, step)" in settings
+assert settings.count("RefreshVideoProfile(prefs_)") >= 7
+assert library.count("RefreshVideoProfile(next, prefs_, game.title_id)") >= 7
+assert '"minimum", "recommended", "high", "ultra", "custom"' in store
+assert '"Minimum", "Recommended", "High", "Ultra", "Custom"' in store
+assert "Smooth" not in settings
+assert "Smooth" not in library
+print("Video presets: 4 authored tiers + Custom, title-aware encore-overrides snapshot PASS")

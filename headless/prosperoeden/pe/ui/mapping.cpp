@@ -24,6 +24,14 @@ constexpr const char* kPadLabels[kPadButtons] = {
     TR("Cross"), TR("Circle"), TR("Square"), TR("Triangle"), "L1", "R1", "L2", "R2",
     "L3", "R3", TR("Options"), TR("Create"), TR("Touchpad")};
 
+Pad physical_pad_icon(int pad)
+{
+    static constexpr Pad icons[kPadButtons] = {
+        Pad::cross, Pad::circle, Pad::square, Pad::triangle, Pad::l1, Pad::r1, Pad::l2,
+        Pad::r2, Pad::l3, Pad::r3, Pad::options, Pad::create, Pad::touchpad};
+    return icons[static_cast<std::size_t>(std::clamp(pad, 0, kPadButtons - 1))];
+}
+
 std::string profile_name(int layout, const ButtonMapping& mapping)
 {
     const bool custom = mapping_is_custom(mapping, layout);
@@ -168,12 +176,18 @@ void Launcher::draw_mapping(Canvas& c, float open)
         const ButtonMapping& base = base_mapping_for_layout(effective_layout);
         const bool usual = pad == base[static_cast<std::size_t>(row)];
         list.push_opacity(mapping_rows_.row_alpha(row, kRowHeight));
+        const float value_baseline = baseline(top, kRowHeight, theme::kText24);
         const float taken = chooser(c, tr(kPadLabels[std::clamp(pad, 0, kPadButtons - 1)]), 1296.0f,
-                                    baseline(top, kRowHeight, theme::kText24),
-                                    row == mapping_rows_.selected ? 1.0f : 0.0f,
+                                    value_baseline, row == mapping_rows_.selected ? 1.0f : 0.0f,
                                     usual ? theme::kLimePale : theme::kLime);
-        text_shrink(c, tr(kGameLabels[row]), 628.0f, baseline(top, kRowHeight, theme::kText24),
-                    theme::kText24, theme::kValue, 664.0f - taken - 28.0f);
+        // Do not make players translate a controller button name in their head: the actual PS5
+        // glyph is shown beside the textual label, including shoulders, sticks and touchpad.
+        const float icon_size = 28.0f;
+        const Pad icon = physical_pad_icon(pad);
+        const float icon_w = pad_width(icon, icon_size);
+        draw_pad(c, icon, 1296.0f - taken - icon_w - 10.0f, top + kRowHeight * 0.5f, icon_size);
+        text_shrink(c, tr(kGameLabels[row]), 628.0f, value_baseline, theme::kText24, theme::kValue,
+                    664.0f - taken - icon_w - 42.0f);
         list.pop_opacity();
     }
     list.pop_clip();

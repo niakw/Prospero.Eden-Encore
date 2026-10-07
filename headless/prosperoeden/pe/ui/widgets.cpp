@@ -239,9 +239,14 @@ float value_column(Canvas &c, std::initializer_list<std::string_view> labels, fl
 
 void glass(Canvas &c, const Rect &r, float radius, Color tint, Color edge, float shadow)
 {
-    if (shadow > 0.0f)
-        c.list.shadow({r.x + 6.0f, r.y + 20.0f, r.w - 12.0f, r.h - 8.0f}, radius, 48.0f,
-                      kBlack.with_alpha(0.42f * shadow));
+    if (shadow > 0.0f) {
+        // Two-layer elevation: a broad neutral shadow grounds the glass on the artwork, while a
+        // very faint Eden-violet halo gives the premium console-card separation of the mockup.
+        c.list.shadow({r.x + 8.0f, r.y + 22.0f, r.w - 16.0f, r.h - 10.0f}, radius, 54.0f,
+                      kBlack.with_alpha(0.48f * shadow));
+        c.list.shadow({r.x - 4.0f, r.y - 2.0f, r.w + 8.0f, r.h + 8.0f}, radius + 4.0f, 36.0f,
+                      theme::kLimeDeep.with_alpha(0.075f * shadow));
+    }
     if (look().high_contrast)
     {
         // A solid panel with a clear edge: nothing of the art shows through the text.
@@ -250,20 +255,26 @@ void glass(Canvas &c, const Rect &r, float radius, Color tint, Color edge, float
     }
     if (c.textures.backdrop_blur() != 0)
         c.list.rounded_image(c.textures.backdrop_blur(), r, c.backdrop.uv(r), radius, kWhite);
-    c.list.bordered_rect(r, radius, tint, 1.0f, edge);
+    c.list.bordered_rect(r, radius, tint, 1.15f, edge);
+    // Inner hairline gives the glass the crisp double-edge visible in the reference UI without
+    // turning every panel into a thick neon frame.
+    if (r.w > 8.0f && r.h > 8.0f)
+        c.list.bordered_rect({r.x + 2.0f, r.y + 2.0f, r.w - 4.0f, r.h - 4.0f},
+                             std::max(2.0f, radius - 2.0f), kWhite.with_alpha(0.0f), 0.7f,
+                             kWhite.with_alpha(0.055f));
     // Light catches the top edge.
     const float sheen = std::min(r.h * 0.45f, 150.0f);
     c.list.gradient_rect({r.x + 1.0f, r.y + 1.0f, r.w - 2.0f, sheen}, radius,
                          kWhite.with_alpha(0.045f), kWhite.with_alpha(0.0f));
 }
 
-const Plate kRowPlate{22.0f,
-                      theme::kRow.with_alpha(0.90f),
-                      theme::kRowEdge.with_alpha(0.47f),
-                      theme::kRowFocus.with_alpha(0.95f),
-                      theme::kLime.with_alpha(0.44f),
-                      theme::kLimeDeep.with_alpha(0.50f),
-                      theme::kLime.with_alpha(0.63f)};
+const Plate kRowPlate{20.0f,
+                      theme::kRow.with_alpha(0.82f),
+                      theme::kRowEdge.with_alpha(0.42f),
+                      theme::kRowFocus.with_alpha(0.92f),
+                      theme::kFocusBlue.with_alpha(0.36f),
+                      theme::kLimeDeep.with_alpha(0.54f),
+                      theme::kFocusCore.with_alpha(0.82f)};
 const Plate kListPlate{20.0f,
                        Color::rgb(0x191a28, 0.91f),
                        Color::rgb(0x5b5572, 0.47f),
@@ -271,27 +282,27 @@ const Plate kListPlate{20.0f,
                        theme::kLime.with_alpha(0.44f),
                        theme::kLimeDeep.with_alpha(0.50f),
                        theme::kLime.with_alpha(0.63f)};
-const Plate kButtonPlate{24.0f,
-                         Color::rgb(0xf0edf7, 0.10f),
-                         kWhite.with_alpha(0.19f),
-                         Color::rgb(0x1d1e2d, 0.55f),
-                         theme::kLime.with_alpha(0.50f),
-                         theme::kLimeDeep.with_alpha(0.44f),
-                         theme::kLime.with_alpha(0.63f)};
-const Plate kTilePlate{24.0f,
-                       Color::rgb(0xf4f2f8, 0.06f),
-                       kWhite.with_alpha(0.125f),
-                       Color::rgb(0x1d1e2d, 0.45f),
-                       theme::kLime.with_alpha(0.345f),
-                       theme::kLimeDeep.with_alpha(0.376f),
-                       theme::kLime.with_alpha(0.63f)};
-const Plate kNavPlate{22.0f,
+const Plate kButtonPlate{22.0f,
+                         Color::rgb(0xf0edf7, 0.085f),
+                         kWhite.with_alpha(0.16f),
+                         Color::rgb(0x1d172b, 0.68f),
+                         theme::kFocusBlue.with_alpha(0.35f),
+                         theme::kLimeDeep.with_alpha(0.60f),
+                         theme::kFocusCore.with_alpha(0.90f)};
+const Plate kTilePlate{22.0f,
+                       Color::rgb(0xf4f2f8, 0.045f),
+                       kWhite.with_alpha(0.105f),
+                       Color::rgb(0x1b1428, 0.50f),
+                       theme::kFocusBlue.with_alpha(0.30f),
+                       theme::kLimeDeep.with_alpha(0.50f),
+                       theme::kFocusCore.with_alpha(0.86f)};
+const Plate kNavPlate{20.0f,
                       kWhite.with_alpha(0.0f),
                       kWhite.with_alpha(0.0f),
-                      Color::rgb(0x1d1e2d, 0.0f),
-                      theme::kLime.with_alpha(0.31f),
-                      theme::kLimeDeep.with_alpha(0.31f),
-                      theme::kLime.with_alpha(0.50f)};
+                      Color::rgb(0x241833, 0.34f),
+                      theme::kFocusBlue.with_alpha(0.28f),
+                      theme::kLimeDeep.with_alpha(0.38f),
+                      theme::kFocusCore.with_alpha(0.82f)};
 
 void plate_rest(Canvas &c, const Plate &style, const Rect &r)
 {
@@ -316,21 +327,26 @@ void plate_focus(Canvas &c, const Plate &style, const Rect &r, float amount)
     }
     // Console-style focus: a soft two-colour bloom plus a crisp luminous edge.
     // The outline stays readable from sofa distance while the fill remains restrained.
-    const float breathe = 0.82f + 0.18f * std::sin(c.time * 2.1f * motion());
-    const Color glow_a = gfx::mix(theme::kBlue, theme::kLime, 0.55f);
-    const Color glow_b = gfx::mix(theme::kSun, theme::kLime, 0.45f);
-    c.list.shadow({r.x - 7.0f, r.y - 3.0f, r.w + 14.0f, r.h + 10.0f},
-                  style.radius + 7.0f, 34.0f, glow_a.with_alpha(0.17f * amount * breathe));
-    c.list.shadow({r.x + r.w * 0.38f, r.y + r.h * 0.10f, r.w * 0.48f, r.h * 0.82f},
-                  style.radius, 28.0f, glow_b.with_alpha(0.10f * amount));
+    const float breathe = 0.88f + 0.12f * std::sin(c.time * 2.0f * motion());
+    const Color glow_a = gfx::mix(theme::kBlue, theme::kLime, 0.58f);
+    const Color glow_b = gfx::mix(theme::kSun, theme::kLime, 0.40f);
+    c.list.shadow({r.x - 9.0f, r.y - 6.0f, r.w + 18.0f, r.h + 16.0f},
+                  style.radius + 9.0f, 40.0f, glow_a.with_alpha(0.20f * amount * breathe));
+    c.list.shadow({r.x + r.w * 0.30f, r.y + r.h * 0.04f, r.w * 0.58f, r.h * 0.90f},
+                  style.radius + 2.0f, 30.0f, glow_b.with_alpha(0.095f * amount));
     if (style.focus_base.a > 0.0f)
         c.list.rounded_rect(r, style.radius, style.focus_base.with_alpha(0.82f * amount));
-    c.list.hgradient_rect(r, style.radius, style.focus_left.with_alpha(0.72f * amount),
-                          style.focus_right.with_alpha(0.48f * amount), 2.0f,
-                          style.focus_edge.with_alpha(0.94f * amount));
+    c.list.hgradient_rect(r, style.radius, style.focus_left.with_alpha(0.68f * amount),
+                          style.focus_right.with_alpha(0.46f * amount), 2.2f,
+                          style.focus_edge.with_alpha(0.98f * amount));
     c.list.bordered_rect({r.x + 2.0f, r.y + 2.0f, r.w - 4.0f, r.h - 4.0f},
                          std::max(1.0f, style.radius - 2.0f), kWhite.with_alpha(0.0f), 1.0f,
-                         kWhite.with_alpha(0.13f * amount));
+                         kWhite.with_alpha(0.18f * amount));
+    // A short top highlight makes selected cards feel lit rather than merely outlined.
+    c.list.gradient_rect({r.x + style.radius, r.y + 1.0f,
+                          std::max(0.0f, r.w - style.radius * 2.0f), 2.0f}, 1.0f,
+                         theme::kFocusBlue.with_alpha(0.28f * amount),
+                         theme::kLimePale.with_alpha(0.62f * amount));
 }
 
 void plate(Canvas &c, const Plate &style, const Rect &r, float focus)
@@ -476,7 +492,16 @@ float pad_width(Pad button, float size)
         return 0.0f;
     case Pad::l1:
     case Pad::r1:
+    case Pad::l2:
+    case Pad::r2:
         return size * 1.45f;
+    case Pad::l3:
+    case Pad::r3:
+    case Pad::options:
+    case Pad::create:
+        return size * 1.25f;
+    case Pad::touchpad:
+        return size * 1.60f;
     default:
         return size;
     }
@@ -490,6 +515,17 @@ void draw_pad(Canvas &c, Pad button, float x, float cy, float size, float alpha)
     const bool bold = look().high_contrast;
     const Color ring = theme::kText.with_alpha((bold ? 0.88f : 0.34f) * alpha);
     const Color ink = theme::kTitle.with_alpha((bold ? 1.0f : 0.96f) * alpha);
+    const auto face_ink = [&](Pad value) {
+        // PlayStation-style face-button colours used consistently in every Encore footer/dialog.
+        // The dark keycap remains neutral so the symbol itself is the quick visual cue at TV distance.
+        switch (value) {
+        case Pad::cross: return Color::rgb(0x55b7ff).with_alpha(alpha);
+        case Pad::circle: return Color::rgb(0xff6b8a).with_alpha(alpha);
+        case Pad::square: return Color::rgb(0xe987ff).with_alpha(alpha);
+        case Pad::triangle: return Color::rgb(0x66e6a6).with_alpha(alpha);
+        default: return ink;
+        }
+    };
     const Color dim = theme::kText.with_alpha((bold ? 0.48f : 0.28f) * alpha);
     const float stroke = size * 0.082f;
     // PS5-like input chip: dark circular keycap, hairline rim and a tiny violet underglow.
@@ -509,20 +545,22 @@ void draw_pad(Canvas &c, Pad button, float x, float cy, float size, float alpha)
     {
         const float d = size * 0.17f;
         c.list.ring(cx, cy, half - 0.5f, 1.6f, ring);
-        c.list.line(cx - d, cy - d, cx + d, cy + d, stroke, ink);
-        c.list.line(cx - d, cy + d, cx + d, cy - d, stroke, ink);
+        const Color symbol = face_ink(button);
+        c.list.line(cx - d, cy - d, cx + d, cy + d, stroke, symbol);
+        c.list.line(cx - d, cy + d, cx + d, cy - d, stroke, symbol);
         return;
     }
     case Pad::circle:
         c.list.ring(cx, cy, half - 0.5f, 1.6f, ring);
-        c.list.ring(cx, cy, size * 0.21f, stroke, ink);
+        c.list.ring(cx, cy, size * 0.21f, stroke, face_ink(button));
         return;
     case Pad::square:
     {
         const float side = size * 0.36f;
         c.list.ring(cx, cy, half - 0.5f, 1.6f, ring);
+        const Color symbol = face_ink(button);
         c.list.bordered_rect({cx - side * 0.5f, cy - side * 0.5f, side, side}, 1.5f,
-                             ink.with_alpha(0.0f), stroke, ink);
+                             symbol.with_alpha(0.0f), stroke, symbol);
         return;
     }
     case Pad::triangle:
@@ -530,7 +568,7 @@ void draw_pad(Canvas &c, Pad button, float x, float cy, float size, float alpha)
         const float w = size * 0.46f;
         const float h = size * 0.40f;
         c.list.ring(cx, cy, half - 0.5f, 1.6f, ring);
-        c.list.triangle({cx - w * 0.5f, cy - h * 0.60f, w, h}, ink, stroke);
+        c.list.triangle({cx - w * 0.5f, cy - h * 0.60f, w, h}, face_ink(button), stroke);
         return;
     }
     case Pad::dpad:
@@ -559,12 +597,51 @@ void draw_pad(Canvas &c, Pad button, float x, float cy, float size, float alpha)
     }
     case Pad::l1:
     case Pad::r1:
+    case Pad::l2:
+    case Pad::r2:
     {
         const float height = size * 0.80f;
         c.list.bordered_rect({x, cy - height * 0.5f, width, height}, height * 0.30f,
                              ink.with_alpha(0.0f), 1.6f, ring);
-        draw_text(c, button == Pad::l1 ? "L1" : "R1", cx, cy + size * 0.17f, size * 0.48f,
-                  size * 0.48f, ink, Align::center, 0.0f);
+        const char* label = button == Pad::l1 ? "L1" : button == Pad::r1 ? "R1" :
+                            button == Pad::l2 ? "L2" : "R2";
+        draw_text(c, label, cx, cy + size * 0.17f, size * 0.48f, size * 0.48f, ink,
+                  Align::center, 0.0f);
+        return;
+    }
+    case Pad::l3:
+    case Pad::r3:
+    {
+        c.list.circle(cx, cy, half * 0.76f, theme::kPanel.with_alpha(0.88f * alpha));
+        c.list.ring(cx, cy, half * 0.76f, 1.5f, ring);
+        draw_text(c, button == Pad::l3 ? "L3" : "R3", cx, cy + size * 0.15f, size * 0.42f,
+                  size * 0.42f, ink, Align::center, 0.0f);
+        return;
+    }
+    case Pad::options:
+    case Pad::create:
+    {
+        const float h = size * 0.72f;
+        c.list.bordered_rect({x, cy - h * 0.5f, width, h}, h * 0.30f,
+                             theme::kPanel.with_alpha(0.72f * alpha), 1.4f, ring);
+        const float line_w = size * 0.34f;
+        const float dx = button == Pad::options ? size * 0.05f : -size * 0.05f;
+        for (int i = -1; i <= 1; ++i)
+            c.list.line(cx - line_w * 0.5f + dx, cy + float(i) * size * 0.14f,
+                        cx + line_w * 0.5f + dx, cy + float(i) * size * 0.14f,
+                        std::max(1.2f, stroke * 0.55f), ink);
+        if (button == Pad::create)
+            c.list.line(cx - size * 0.28f, cy - size * 0.22f, cx - size * 0.28f,
+                        cy + size * 0.22f, std::max(1.2f, stroke * 0.55f), ink);
+        return;
+    }
+    case Pad::touchpad:
+    {
+        const float h = size * 0.72f;
+        c.list.bordered_rect({x, cy - h * 0.5f, width, h}, h * 0.18f,
+                             theme::kPanel.with_alpha(0.72f * alpha), 1.5f, ring);
+        c.list.line(x + width * 0.20f, cy - h * 0.22f, x + width * 0.80f, cy - h * 0.22f,
+                    1.2f, dim);
         return;
     }
     }

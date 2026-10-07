@@ -111,14 +111,20 @@ void Launcher::press_settings(Key key)
     case Key::circle:
         open(Screen::home, false);
         return;
-    case Key::up:
-    case Key::down:
-        if (settings_.move(key == Key::down ? 1 : -1))
+    case Key::left:
+    case Key::right:
+    {
+        const int delta = key == Key::right ? 1 : -1;
+        if (settings_.move(delta))
         {
             section_.value = 0.0f;
             section_.velocity = 0.0f;
             cue(Cue::focus);
         }
+        return;
+    }
+    case Key::up:
+    case Key::down:
         return;
     case Key::triangle:
     {
@@ -180,70 +186,62 @@ void Launcher::press_settings(Key key)
 void Launcher::draw_settings(Canvas &c)
 {
     gfx::DrawList &list = c.list;
-    draw_frame(c, tr("Settings"), tr("Fine-tune your experience"));
+    draw_top_nav(c, 3);
+    text_shrink(c, tr("Settings"), 72.0f, baseline(142.0f, 38.0f, theme::kHeading),
+                theme::kHeading, theme::kTitle, 980.0f);
+    text_shrink(c, tr("Fine-tune your experience"), 72.0f, baseline(176.0f, 24.0f, 18.0f),
+                18.0f, theme::kMeta, 1200.0f);
 
-    // ---- categories ----
-    glass(c, kListPanel, 26.0f, theme::kPanel.with_alpha(0.80f), theme::kPanelEdge.with_alpha(0.55f));
-    text(c, tr("PREFERENCES"), 138.0f, baseline(208.0f, 28.0f, theme::kSmall), theme::kSmall,
-         theme::kLimePale, Align::left, 3.0f);
-    const auto row_rect = [&](int row) -> Rect
-    { return {150.0f, kRowsTop + settings_.pitch * static_cast<float>(row), 736.0f, kRowHeight}; };
-    for (int row = 0; row < kCategoryCount; ++row)
-        plate_rest(c, kRowPlate, row_rect(row));
-    plate_focus(c, kRowPlate, {150.0f, kRowsTop + settings_.cursor(), 736.0f, kRowHeight}, 1.0f);
     const std::string summaries[kCategoryCount] = {
         services_.performance_profile_labels()[static_cast<std::size_t>(
-            std::clamp(prefs_.performance_profile, 0, 3))] + " · " +
-            (prefs_.renderer != 0 ? "Vulkan" : "OpenGL"),
+            std::clamp(prefs_.performance_profile, 0, kCustomVideoProfile))],
         prefs_.mute ? tr("Muted") : percent(prefs_.volume),
         controller_profile_name(prefs_.controller_layout, prefs_.mapping),
-        prefs_.large_text || prefs_.high_contrast || prefs_.reduce_motion ? tr("On") : "",
-        prefs_.detailed_logging ? tr("Detailed logs on") : "",
-        short_path(services_.files_folder(), 22),
+        prefs_.large_text || prefs_.high_contrast || prefs_.reduce_motion ? tr("On") : tr("Off"),
+        prefs_.detailed_logging ? tr("Detailed logs on") : tr("Ready"),
+        short_path(services_.files_folder(), 18),
         pick(services_.language_labels(), prefs_.language),
     };
+
+    // ---- category rail: one row, controller-first ----
+    constexpr float rail_x = 72.0f;
+    constexpr float rail_y = 220.0f;
+    constexpr float rail_w = 1776.0f;
+    constexpr float gap = 14.0f;
+    constexpr float card_h = 118.0f;
+    constexpr float card_w = (rail_w - gap * float(kCategoryCount - 1)) / float(kCategoryCount);
     for (int row = 0; row < kCategoryCount; ++row)
     {
-        const Rect r = row_rect(row);
-        // What the category is set to, then a chevron: there is more behind the row.
-        const float summary =
-            text_shrink(c, summaries[row], r.x + r.w - 62.0f, baseline(r.y, r.h, theme::kSmall),
-                        theme::kSmall, theme::kMeta, 330.0f, Align::right);
-        text_shrink(c, tr(kCategories[row]), r.x + 36.0f, baseline(r.y, r.h, theme::kText24),
-                    theme::kText24, theme::kValue, r.w - 36.0f - 62.0f - summary - 24.0f);
-        const float cx = r.x + r.w - 34.0f;
-        const float cy = r.y + r.h * 0.5f;
-        const Color ink = theme::kLimePale.with_alpha(row == settings_.selected ? 0.95f : 0.4f);
-        list.line(cx - 4.0f, cy - 8.0f, cx + 4.0f, cy, 2.2f, ink);
-        list.line(cx + 4.0f, cy, cx - 4.0f, cy + 8.0f, 2.2f, ink);
+        const Rect r{rail_x + float(row) * (card_w + gap), rail_y, card_w, card_h};
+        const bool selected = row == settings_.selected;
+        if (selected)
+            list.shadow({r.x - 4.0f, r.y - 3.0f, r.w + 8.0f, r.h + 10.0f},
+                        24.0f, 32.0f, theme::kLime.with_alpha(0.16f));
+        plate_rest(c, kTilePlate, r);
+        if (selected)
+            plate_focus(c, kTilePlate, r, 1.0f);
+        text_shrink(c, tr(kCategories[row]), r.x + 18.0f,
+                    baseline(r.y + 18.0f, 32.0f, 20.0f), 20.0f,
+                    selected ? theme::kTitle : theme::kValue, r.w - 36.0f);
+        text_shrink(c, summaries[row], r.x + 18.0f,
+                    baseline(r.y + 65.0f, 24.0f, 15.0f), 15.0f,
+                    selected ? theme::kLimePale : theme::kMeta, r.w - 36.0f);
+        if (selected)
+            list.rounded_rect({r.x + 18.0f, r.y + r.h - 10.0f, r.w - 36.0f, 3.0f},
+                              1.5f, theme::kLime.with_alpha(0.80f));
     }
 
-    // ---- what the focused category holds ----
-    glass(c, kDetailPanel, 26.0f, theme::kPanel.with_alpha(0.80f),
-          theme::kPanelEdge.with_alpha(0.55f));
-    text(c, tr("ON THIS CONSOLE"), 1016.0f, baseline(210.0f, 28.0f, theme::kSmall), theme::kSmall,
-         theme::kLimePale, Align::left, 3.0f);
-    text_shrink(c, tr("Make it yours."), 1016.0f, baseline(258.0f, 54.0f, theme::kLead),
-                theme::kLead, theme::kTitle, 748.0f);
-    text_block(c, tr("Adjust the essentials without leaving your library behind."), 1016.0f,
-               baseline(332.0f, 36.0f, theme::kText24), theme::kText24, 36.0f, theme::kCopy, 748.0f,
-               2, kShrink);
-    list.rounded_rect({1016.0f, 432.0f, 748.0f, 1.0f}, 0.0f, theme::kRule);
-
-    struct Line
-    {
-        const char *label;
-        std::string value;
-    };
+    // ---- selected category details ----
+    struct Line { const char* label; std::string value; Pad first = Pad::none; Pad second = Pad::none; };
     std::vector<Line> lines;
-    const char *about = "";
+    const char* about = "";
     switch (settings_.selected)
     {
     case kVideo:
         about = tr("Graphics backend and how games are scaled to your TV.");
         lines = {{tr("VIDEO PRESET"),
                   services_.performance_profile_labels()[static_cast<std::size_t>(
-                      std::clamp(prefs_.performance_profile, 0, 3))]},
+                      std::clamp(prefs_.performance_profile, 0, kCustomVideoProfile))]},
                  {tr("RENDERER"), prefs_.renderer != 0 ? tr("Vulkan (recommended)") : "OpenGL"},
                  {tr("TV OUTPUT"), output_name(prefs_.output)},
                  {tr("GAME RESOLUTION"), pick(services_.resolution_labels(), prefs_.resolution)},
@@ -266,8 +264,8 @@ void Launcher::draw_settings(Canvas &c)
                  {tr("VIBRATION"), on_off(prefs_.vibration)},
                  {tr("VIBRATION STRENGTH"), percent(prefs_.vibration_strength)},
                  {tr("STICK DEADZONE"), percent(prefs_.stick_deadzone)},
-                 {tr("END GAME"), std::string(tr("Touchpad")) + " + L1"},
-                 {tr("FPS OVERLAY"), std::string(tr("Touchpad")) + " + R1"}};
+                 {tr("END GAME"), "", Pad::touchpad, Pad::l1},
+                 {tr("FPS OVERLAY"), "", Pad::touchpad, Pad::r1}};
         break;
     case kAccessibility:
         about = tr("Make the menu easier to see and follow.");
@@ -301,36 +299,64 @@ void Launcher::draw_settings(Canvas &c)
     default:
         break;
     }
+
+    const Rect detail{72.0f, 366.0f, 1776.0f, 530.0f};
+    glass(c, detail, 28.0f, theme::kGlass.with_alpha(0.67f),
+          theme::kPanelEdge.with_alpha(0.58f), 0.9f);
     const float shown = tween::clamp01(section_.value);
     list.push_opacity(shown);
     list.push_transform(1.0f, 0.0f, 0.0f, 0.0f, (1.0f - shown) * 10.0f * motion());
-    text(c, tr(kHeadings[settings_.selected]), 1016.0f, baseline(458.0f, 30.0f, theme::kSmall),
-         theme::kSmall, theme::kLime, Align::left, 3.0f);
-    text_shrink(c, about, 1016.0f, baseline(494.0f, 32.0f, 22.0f), 22.0f, theme::kCopy, 748.0f);
-    // Dense categories still show every setting in the preview panel.
-    const float pitch = lines.size() >= 9 ? 40.0f : lines.size() >= 7 ? 44.0f : lines.size() > 5 ? 52.0f : 62.0f;
+    text(c, tr(kHeadings[settings_.selected]), 108.0f,
+         baseline(398.0f, 28.0f, theme::kSmall), theme::kSmall,
+         theme::kLimePale, Align::left, 3.0f);
+    text_shrink(c, about, 108.0f, baseline(438.0f, 38.0f, 22.0f), 22.0f,
+                theme::kCopy, 1640.0f);
+    list.rounded_rect({108.0f, 488.0f, 1704.0f, 1.0f}, 0.0f, theme::kRule.with_alpha(0.52f));
+
+    constexpr int columns = 3;
+    constexpr float tile_gap_x = 16.0f;
+    constexpr float tile_gap_y = 14.0f;
+    constexpr float tiles_x = 108.0f;
+    constexpr float tiles_w = 1704.0f;
+    constexpr float tile_w = (tiles_w - tile_gap_x * float(columns - 1)) / float(columns);
+    constexpr float tile_h = 104.0f;
+    constexpr float tiles_y = 516.0f;
     for (std::size_t i = 0; i < lines.size(); ++i)
     {
-        const float top = 562.0f + pitch * static_cast<float>(i);
-        const float value =
-            text_shrink(c, lines[i].value, 1764.0f, baseline(top, 36.0f, theme::kText24),
-                        theme::kText24, theme::kValue, 470.0f, Align::right);
-        text_shrink(c, lines[i].label, 1016.0f, baseline(top, 36.0f, theme::kSmall), theme::kSmall,
-                    theme::kLabel, 748.0f - value - 24.0f, Align::left, 2.0f);
-        list.rounded_rect({1016.0f, top + 48.0f, 748.0f, 1.0f}, 0.0f, theme::kRule.with_alpha(0.45f));
+        const int column = int(i) % columns;
+        const int row = int(i) / columns;
+        const Rect tile{tiles_x + float(column) * (tile_w + tile_gap_x),
+                        tiles_y + float(row) * (tile_h + tile_gap_y), tile_w, tile_h};
+        list.bordered_rect(tile, 18.0f, theme::kPanel.with_alpha(0.48f), 1.0f,
+                           theme::kPanelEdge.with_alpha(0.36f));
+        text_shrink(c, lines[i].label, tile.x + 20.0f,
+                    baseline(tile.y + 14.0f, 24.0f, 15.0f), 15.0f,
+                    theme::kLabel, tile.w - 40.0f, Align::left, 1.5f);
+        if (lines[i].first != Pad::none) {
+            const float cy = tile.y + 69.0f;
+            constexpr float icon_size = 30.0f;
+            float px = tile.x + 20.0f;
+            draw_pad(c, lines[i].first, px, cy, icon_size);
+            px += pad_width(lines[i].first, icon_size) + 10.0f;
+            text(c, "+", px, cy + 7.0f, 18.0f, theme::kMeta);
+            px += 24.0f;
+            draw_pad(c, lines[i].second, px, cy, icon_size);
+        } else {
+            text_shrink(c, lines[i].value, tile.x + 20.0f,
+                        baseline(tile.y + 48.0f, 34.0f, 21.0f), 21.0f,
+                        theme::kValue, tile.w - 40.0f);
+        }
     }
     list.pop_transform();
     list.pop_opacity();
 
-    // Global reset is a two-press action. Keep its warning visible above the footer so the first
-    // press has an obvious result instead of silently arming a destructive action.
     if (!message_.empty())
-        notice(c, message_, 1016.0f, baseline(904.0f, 32.0f, theme::kSmall), theme::kSmall,
-               message_warning_ ? theme::kWarning : theme::kLimePale, 748.0f, message_warning_);
+        notice(c, message_, 108.0f, baseline(902.0f, 28.0f, 17.0f), 17.0f,
+               message_warning_ ? theme::kWarning : theme::kLimePale, 1500.0f, message_warning_);
 
     static constexpr Hint kHints[] = {
-        {Pad::cross, TR("Select")}, {Pad::triangle, TR("Restore defaults")},
-        {Pad::circle, TR("Back")}, {Pad::updown, TR("Browse settings")}};
+        {Pad::leftright, TR("Browse settings")}, {Pad::cross, TR("Open")},
+        {Pad::triangle, TR("Restore defaults")}, {Pad::circle, TR("Back")}};
     draw_footer(c, kHints, 4);
 }
 
@@ -575,14 +601,14 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
         title = tr("Video");
         static constexpr const char *kAbout[kVideoRows] = {
             TR("Vulkan is recommended on PS5. Use OpenGL only as a fallback for a game with Vulkan issues."),
-            TR("Recommended keeps accuracy and synchronous shaders. Smooth compiles earlier-used code ahead. Performance may trade graphics accuracy for speed."),
+            TR("Minimum reduces GPU load and may use lower GPU accuracy for speed. Recommended balances quality and stability. High and Ultra raise image quality when the game has headroom."),
             TR("Final app output size. 1080p is recommended for stability and memory; this is not the game's render scale."),
             TR("Game render scale. 1x is recommended; lower it for performance or memory, raise it only when a game has headroom."),
             TR("Bilinear is the lightest default. AMD FSR is most useful when rendering below the TV output size."),
             TR("FSR sharpness changes detail recovery only when AMD FSR is selected. Lower it if the picture looks grainy or over-sharpened."),
             TR("Anti-aliasing smooths jagged edges. None is fastest; FXAA is light; SMAA prioritizes image quality."),
             TR("60 Hz is recommended. 120 Hz changes display mode only; the game still needs to render above 60 FPS to benefit."),
-            TR("Shows live FPS while playing. Off is cleaner for normal use; Select + R1 toggles it at any time.")};
+            TR("Shows live FPS while playing. Off is cleaner for normal use; Touchpad + R1 toggles it at any time.")};
         copy = tr(kAbout[std::clamp(option_, 0, kVideoRows - 1)]);
         break;
     }
@@ -659,7 +685,7 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
     {
         const std::string values[] = {
             prefs_.renderer != 0 ? tr("Vulkan (recommended)") : "OpenGL",
-            services_.performance_profile_labels()[static_cast<std::size_t>(std::clamp(prefs_.performance_profile, 0, 3))],
+            services_.performance_profile_labels()[static_cast<std::size_t>(std::clamp(prefs_.performance_profile, 0, kCustomVideoProfile))],
             output_name(prefs_.output),
             pick(services_.resolution_labels(), prefs_.resolution),
             pick(services_.filter_labels(), prefs_.filter),

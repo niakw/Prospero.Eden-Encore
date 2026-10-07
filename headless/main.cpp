@@ -33,6 +33,8 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include "devices.h"
+#include "encore_overrides_generated.h"
+#include "encore_overrides_runtime.h"
 #include "diagnostics.h"
 #include "display_refresh.h"
 #include "log_pipe.h"
@@ -695,6 +697,28 @@ int main(int argc, char** argv) {
         launch_error.clear();
         const bool safe_launch = std::getenv("EDEN_SAFE_LAUNCH") != nullptr;
         if (safe_launch) unsetenv("EDEN_SAFE_LAUNCH");
+        const std::uint64_t launch_title_id = eden_game_title_id(selected_game.c_str());
+        const auto game_video = Eden::LoadGameSettings(launch_title_id);
+        const auto launch_preferences = Eden::LoadPreferences();
+        const int global_authored_tier =
+            launch_preferences.performance_profile >= 0 &&
+            launch_preferences.performance_profile < Eden::EncoreOverrides::kAuthoredProfileCount ?
+                launch_preferences.performance_profile : -1;
+        const int game_authored_tier =
+            game_video.performance_profile >= 0 &&
+            game_video.performance_profile < Eden::EncoreOverrides::kAuthoredProfileCount ?
+                game_video.performance_profile : -1;
+        const int effective_authored_tier = game_authored_tier >= 0 ? game_authored_tier : global_authored_tier;
+        const auto title_profile = Eden::EncoreOverridesRuntime::ProfileForTitle(
+            launch_title_id, effective_authored_tier >= 0 ? effective_authored_tier : 1);
+        const int profile_renderer = effective_authored_tier >= 0 ? title_profile.renderer :
+            (launch_preferences.backend == Eden::GraphicsBackend::Vulkan ? 1 : 0);
+        const int profile_output = effective_authored_tier >= 0 ? title_profile.output : launch_preferences.output;
+        const int profile_resolution = effective_authored_tier >= 0 ? title_profile.resolution : launch_preferences.resolution;
+        const int profile_filter = effective_authored_tier >= 0 ? title_profile.filter : launch_preferences.upscaling_filter;
+        const int profile_fsr = effective_authored_tier >= 0 ? title_profile.fsr_sharpness : launch_preferences.fsr_sharpness;
+        const int profile_aa = effective_authored_tier >= 0 ? title_profile.anti_aliasing : launch_preferences.anti_aliasing;
+        const int profile_refresh = effective_authored_tier >= 0 ? title_profile.refresh : launch_preferences.refresh;
 #ifdef EDEN_DEV_VULKAN
         Eden::Performance::vulkan_cost_enabled = std::filesystem::exists(Eden::AppFile("cost-run.txt"));
         const bool performance_run = std::filesystem::exists(Eden::AppFile("performance-run.txt"));
@@ -716,30 +740,26 @@ int main(int argc, char** argv) {
         else setenv("PS5VK_CAPTURE_SCANOUT", "1", 1);
         std::printf("EDEN_VULKAN_MEASUREMENT quiet=%d captures=%d\n",
                     performance_run, !performance_run);
-        const auto game_video = Eden::LoadGameSettings(eden_game_title_id(selected_game.c_str()));
         const auto backend = safe_launch ? Eden::GraphicsBackend::OpenGL : automatic_launch ?
             (recovery_opengl ? Eden::GraphicsBackend::OpenGL : Eden::GraphicsBackend::Vulkan) :
             game_video.renderer >= 0 ?
             (game_video.renderer == 0 ? Eden::GraphicsBackend::OpenGL : Eden::GraphicsBackend::Vulkan) :
-            Eden::LoadPreferences().backend;
+            (profile_renderer == 0 ? Eden::GraphicsBackend::OpenGL : Eden::GraphicsBackend::Vulkan);
 #else
-        // Library > Game settings take precedence over Settings > Video.
-        const auto game_video = Eden::LoadGameSettings(eden_game_title_id(selected_game.c_str()));
+        // Manual game settings win over title-specific Encore profile, then global settings.
         const auto backend = safe_launch ? Eden::GraphicsBackend::OpenGL :
             game_video.renderer >= 0 ?
             (game_video.renderer == 0 ? Eden::GraphicsBackend::OpenGL : Eden::GraphicsBackend::Vulkan) :
-            Eden::LoadPreferences().backend;
+            (profile_renderer == 0 ? Eden::GraphicsBackend::OpenGL : Eden::GraphicsBackend::Vulkan);
 #ifdef EDEN_PS5_VULKAN
         // The user-facing diagnostics option controls Eden logs, not synchronous
         // driver traces for every draw. Keep those in explicit development probes.
         setenv("PS5VK_QUIET_LOG", "1", 1);
 #endif
 #endif
-        const auto launch_preferences = Eden::LoadPreferences();
-        const int effective_performance_profile = safe_launch ? 0 : std::clamp(
+        const int effective_performance_profile = safe_launch ? 0 :
             game_video.performance_profile >= 0 ? game_video.performance_profile :
-                                                   launch_preferences.performance_profile,
-            0, 3);
+                                                  launch_preferences.performance_profile;
 #ifndef EDEN_PS5_VULKAN
         if (backend == Eden::GraphicsBackend::Vulkan)
             throw std::runtime_error("Vulkan is not available in this build yet. Select OpenGL in Settings > Video to play.");
@@ -854,9 +874,9 @@ int main(int argc, char** argv) {
             0xffffffffu : 0u;
 #endif
         Settings::values.use_asynchronous_shaders =
-            effective_performance_profile == 2 && backend == Eden::GraphicsBackend::Vulkan;
+            effective_performance_profile == 0 && backend == Eden::GraphicsBackend::Vulkan;
         Settings::values.renderer_debug = false;
-        const auto profile_gpu_accuracy = effective_performance_profile == 2 ?
+        const auto profile_gpu_accuracy = effective_performance_profile == 0 ?
             Settings::GpuAccuracy::Low : Settings::GpuAccuracy::High;
         Settings::values.gpu_accuracy.SetValue(profile_gpu_accuracy);
         Settings::values.current_gpu_accuracy = profile_gpu_accuracy;
@@ -1050,7 +1070,9 @@ int main(int argc, char** argv) {
 #else
         Settings::values.use_docked_mode.SetValue(Settings::ConsoleMode::Handheld);
 #if defined(PS5_NATIVE) && defined(EDEN_PS5_OPENGL)
-        const bool docked = safe_launch ? false : Eden::LoadGameDocked(eden_game_title_id(guest));
+        const bool docked = safe_launch ? false :
+            game_video.console_mode >= 0 ? game_video.console_mode == 1 :
+            effective_authored_tier >= 0 ? title_profile.docked : true;
         Settings::values.use_docked_mode.SetValue(docked ? Settings::ConsoleMode::Docked
                                                        : Settings::ConsoleMode::Handheld);
         Eden::Report("launch", docked ? "Console mode: Docked" : "Console mode: Handheld");
@@ -1069,17 +1091,16 @@ int main(int argc, char** argv) {
             static constexpr Settings::ScalingFilter filters[] = {
                 Settings::ScalingFilter::Bilinear, Settings::ScalingFilter::Fsr, Settings::ScalingFilter::Bicubic,
                 Settings::ScalingFilter::NearestNeighbor};
-            const auto video = Eden::LoadPreferences();
             const int resolution = safe_launch ? Eden::kNativeResolution :
-                (game_video.resolution >= 0 ? game_video.resolution : video.resolution);
+                (game_video.resolution >= 0 ? game_video.resolution : profile_resolution);
             const int filter = safe_launch ? 0 :
-                (game_video.upscaling_filter >= 0 ? game_video.upscaling_filter : video.upscaling_filter);
+                (game_video.upscaling_filter >= 0 ? game_video.upscaling_filter : profile_filter);
             Settings::values.resolution_setup.SetValue(resolutions[resolution]);
             Settings::values.scaling_filter.SetValue(filters[filter]);
             const int fsr_sharpness = safe_launch ? 50 :
-                (game_video.fsr_sharpness >= 0 ? game_video.fsr_sharpness : video.fsr_sharpness);
+                (game_video.fsr_sharpness >= 0 ? game_video.fsr_sharpness : profile_fsr);
             const int anti_aliasing = safe_launch ? 0 :
-                (game_video.anti_aliasing >= 0 ? game_video.anti_aliasing : video.anti_aliasing);
+                (game_video.anti_aliasing >= 0 ? game_video.anti_aliasing : profile_aa);
             // Eden's raw FSR control is reversed (0 = sharpest, 200 = softest). Encore presents
             // a normal 0-100 sharpness percentage.
             Settings::values.fsr_sharpening_slider.SetValue(200 - std::clamp(fsr_sharpness, 0, 100) * 2);
@@ -1089,7 +1110,8 @@ int main(int argc, char** argv) {
             Settings::UpdateRescalingInfo();
             // The output's refresh rate while the game runs (display_refresh.h): the renderer asks
             // for it as it opens the output.
-            const int refresh = safe_launch ? 0 : (game_video.refresh >= 0 ? game_video.refresh : video.refresh);
+            const int refresh = safe_launch ? 0 :
+                (game_video.refresh >= 0 ? game_video.refresh : profile_refresh);
             Eden::Display::requested_hz.store(Eden::kRefreshHz[refresh]);
             Eden::Display::output_millihertz.store(0);
             setenv(Eden::Display::kVulkanSwitch, refresh ? "1" : "0", 1);
@@ -1097,7 +1119,7 @@ int main(int argc, char** argv) {
             Eden::Display::skipped_frames.store(0);
             // The size of the picture the session puts out (Settings > Video > Output resolution).
             const int output = safe_launch ? 0 :
-                (game_video.output >= 0 ? game_video.output : video.output);
+                (game_video.output >= 0 ? game_video.output : profile_output);
             Eden::Display::output_width.store(Eden::kOutputWidth[output]);
             Eden::Display::output_height.store(Eden::kOutputHeight[output]);
             Eden::Report("launch", (std::string("Resolution ") + Eden::kResolutionKeys[resolution] + ", " +
@@ -1209,13 +1231,11 @@ int main(int argc, char** argv) {
             pad->SetMapping(mapping);
             if (!pad->Open()) throw std::runtime_error("PS5 controller initialization failed");
             const bool custom_mapping = Eden::MappingIsCustom(mapping, effective_layout);
-            // Stock PlayStation is context-adaptive globally: PS-style confirm/back in menus,
-            // physical Switch face-button positions during gameplay. Explicit custom mappings and
-            // Switch mode are never altered behind the user's back.
-            pad->SetAdaptivePlayStation(effective_layout == 0 && !custom_mapping);
+            // Controller profiles are deterministic. PlayStation stays PlayStation in both menus
+            // and gameplay; Switch stays Switch; custom profiles are never rewritten at runtime.
             const std::string mapping_profile =
                 custom_mapping ? (effective_layout == 1 ? "Custom Switch" : "Custom PS5") :
-                                 (effective_layout == 1 ? "Switch" : "PlayStation Auto");
+                                 (effective_layout == 1 ? "Switch" : "PlayStation");
             Eden::Report("controls", (std::string("Controller profile ") + mapping_profile +
                 ", map " + Eden::Settings::MappingJson(mapping, Eden::BaseMappingForLayout(effective_layout)).dump() +
                 ", deadzone " + std::to_string(controls.stick_deadzone) + "%, vibration " +

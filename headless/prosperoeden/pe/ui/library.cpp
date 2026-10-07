@@ -101,6 +101,59 @@ void Launcher::finish_scan(bool wait)
     }
 }
 
+void Launcher::start_selected_media()
+{
+    if (media_scan_.valid() || games_.empty()) return;
+    const int index = std::clamp(library_.selected, 0, static_cast<int>(games_.size()) - 1);
+    const Game& game = games_[static_cast<std::size_t>(index)];
+    if (game.title_id == 0) return;
+    if (std::find(media_attempted_.begin(), media_attempted_.end(), game.title_id) != media_attempted_.end())
+        return;
+    // Already-rich cached data needs no network work this session.
+    if (!game.hero.empty() && !game.screenshots.empty() && !game.intro.empty()) {
+        media_attempted_.push_back(game.title_id);
+        return;
+    }
+    media_attempted_.push_back(game.title_id);
+    media_scan_title_id_ = game.title_id;
+    Game copy = game;
+    media_scan_ = std::async(std::launch::async, [this, copy = std::move(copy)]() mutable {
+        return services_.enrich_game_media(std::move(copy));
+    });
+}
+
+void Launcher::finish_selected_media()
+{
+    if (!media_scan_.valid() || media_scan_.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+        return;
+    try {
+        Game enriched = media_scan_.get();
+        for (Game& game : games_) {
+            if (game.title_id != enriched.title_id) continue;
+            if (!enriched.cover.empty()) game.cover = std::move(enriched.cover);
+            if (!enriched.hero.empty()) game.hero = std::move(enriched.hero);
+            if (!enriched.screenshots.empty()) game.screenshots = std::move(enriched.screenshots);
+            if (enriched.max_players > 0) game.max_players = enriched.max_players;
+            if (!enriched.name.empty()) game.name = std::move(enriched.name);
+            if (!enriched.intro.empty()) game.intro = std::move(enriched.intro);
+            if (!enriched.description.empty()) game.description = std::move(enriched.description);
+            if (!enriched.publisher.empty()) game.publisher = std::move(enriched.publisher);
+            if (!enriched.developer.empty()) game.developer = std::move(enriched.developer);
+            if (!enriched.release_date.empty()) game.release_date = std::move(enriched.release_date);
+            if (!enriched.categories.empty()) game.categories = std::move(enriched.categories);
+            break;
+        }
+        name_home_games();
+    }
+    catch (const std::exception& error)
+    {
+        sys::log("Nlib selected media: %s", error.what());
+    }
+    media_scan_title_id_ = 0;
+    // If the player moved while that request was running, enrich the title highlighted now.
+    start_selected_media();
+}
+
 void Launcher::apply_games(std::vector<Game> games)
 {
     // The same games in the same order (the usual case) keep the list where it is; otherwise
@@ -138,6 +191,8 @@ void Launcher::name_home_games()
         {
             home_.last_title = game.name;
             if (!game.hero.empty()) home_.last_hero = game.hero;
+            if (!game.screenshots.empty()) home_.last_screenshot = game.screenshots.front();
+            if (!game.intro.empty()) home_.last_intro = game.intro;
             if (game.max_players > 0) home_.last_max_players = game.max_players;
         }
         for (Recent &recent : home_.recents)
@@ -145,6 +200,8 @@ void Launcher::name_home_games()
             {
                 recent.title = game.name;
                 if (!game.hero.empty()) recent.hero = game.hero;
+                if (!game.screenshots.empty()) recent.screenshot = game.screenshots.front();
+                if (!game.intro.empty()) recent.intro = game.intro;
                 if (game.max_players > 0) recent.max_players = game.max_players;
             }
     }
@@ -174,8 +231,8 @@ void Launcher::check_games_present()
         if (gone)
         {
             read_home();
-            const int recents = static_cast<int>(home_.recents.size());
-            if (home_focus_ >= 5 && home_focus_ < 9 && home_focus_ - 5 >= recents)
+            const int recents = std::min<int>(6, static_cast<int>(home_.recents.size()));
+            if (home_focus_ >= 5 && home_focus_ < 11 && home_focus_ - 5 >= recents)
                 home_focus_ = home_.last_exists ? 0 : (home_.setup_ready ? 1 : 2);
             if (home_focus_ == 4 && !home_.last_exists)
                 home_focus_ = 0;
@@ -260,8 +317,8 @@ void Launcher::enter_library()
         start_scan();
         finish_scan(true);
     }
-    library_.visible = 7;
-    library_.pitch = 88.0f;
+    library_.visible = 5;
+    library_.pitch = 1.0f;
     library_.reset(static_cast<int>(games_.size()), 0);
     refresh_selected_game();
     detail_.snap(1.0f);
@@ -315,6 +372,7 @@ void Launcher::refresh_selected_game()
                           1.0f : 0.0f);
     detail_.value = 0.0f;
     detail_.velocity = 0.0f;
+    start_selected_media();
 }
 
 void Launcher::press_library(Key key)
@@ -330,13 +388,8 @@ void Launcher::press_library(Key key)
         return;
     case Key::up:
     case Key::down:
-        if (library_.move(key == Key::down ? 1 : -1))
-        {
-            message_.clear();
-            refresh_selected_game();
-            mode_.snap(selected_docked_ ? 0.0f : 1.0f);
-            cue(Cue::focus);
-        }
+        // The Library is a horizontal console rail. Vertical input is intentionally reserved for
+        // future shelves/actions instead of silently changing game settings.
         return;
     case Key::l1:
     case Key::r1:
@@ -350,24 +403,14 @@ void Launcher::press_library(Key key)
         return;
     case Key::left:
     case Key::right:
-    {
-        if (game == nullptr || game->title_id == 0)
+        if (library_.move(key == Key::right ? 1 : -1))
         {
-            if (game != nullptr)
-                cue(Cue::error);
-            return;
+            message_.clear();
+            refresh_selected_game();
+            mode_.snap(selected_docked_ ? 0.0f : 1.0f);
+            cue(Cue::focus);
         }
-        if (!confirm_action(Confirmation::console_mode))
-            return;
-        const bool saved = services_.set_docked(game->title_id, !selected_docked_);
-        if (saved)
-            selected_docked_ = !selected_docked_;
-        say(saved ? tr("Saved for this game. Applies on next launch.") :
-                    tr("Could not save console mode. Please try again."),
-            !saved);
-        cue(saved ? Cue::toggle : Cue::error);
         return;
-    }
     case Key::square:
     {
         // The Mods switch: all of the game's mods on or off at once. Their own switches (Game
@@ -436,190 +479,168 @@ void Launcher::draw_library(Canvas &c)
 {
     gfx::DrawList &list = c.list;
     const int count = static_cast<int>(games_.size());
-    draw_frame(c, tr("Your games"), tr("Select a game to begin"));
+    draw_top_nav(c, 1);
+    text_shrink(c, tr("Your games"), 72.0f, baseline(142.0f, 38.0f, theme::kHeading),
+                theme::kHeading, theme::kTitle, 980.0f);
+    text_shrink(c, tr("Select a game to begin"), 72.0f, baseline(176.0f, 24.0f, 18.0f),
+                18.0f, theme::kMeta, 1200.0f);
+    text(c, list_position(count > 0 ? library_.selected + 1 : 0, count), 1848.0f,
+         baseline(150.0f, 32.0f, theme::kSmall), theme::kSmall, theme::kLimePale, Align::right);
 
-    // ---- the list ----
-    glass(c, kListPanel, 26.0f, theme::kPanel.with_alpha(0.80f), theme::kPanelEdge.with_alpha(0.55f));
-    text(c, tr("LIBRARY"), 138.0f, baseline(208.0f, 28.0f, theme::kSmall), theme::kSmall,
-         theme::kLimePale, Align::left, 3.0f);
+    // ---- horizontal TV-first game rail ----
+    constexpr float rail_x = 72.0f;
+    constexpr float rail_y = 220.0f;
+    constexpr float rail_w = 1776.0f;
+    constexpr float gap = 20.0f;
+    constexpr int slots = 5;
+    constexpr float card_h = 286.0f;
+    constexpr float card_w = (rail_w - gap * float(slots - 1)) / float(slots);
+
     if (count == 0)
     {
-        text(c, tr("No ROM files found."), kListPanel.x + kListPanel.w * 0.5f,
-             baseline(488.0f, 38.0f, theme::kText24), theme::kText24, theme::kCopy, Align::center);
+        const Rect empty{rail_x, rail_y, rail_w, card_h};
+        glass(c, empty, 28.0f, theme::kGlass.with_alpha(0.58f), theme::kPanelEdge.with_alpha(0.48f));
+        text(c, tr("No ROM files found."), empty.x + empty.w * 0.5f,
+             baseline(empty.y, empty.h, theme::kText24), theme::kText24, theme::kCopy, Align::center);
     }
     else
     {
-        // The window is wider than its rows so the highlight's glow is not cut at the sides.
-        list.push_clip({kWindow.x - 24.0f, kWindow.y - 6.0f, kWindow.w + 48.0f, kWindow.h + 12.0f});
-        const auto row_rect = [&](int row) -> Rect
+        const int first = std::clamp(library_.selected - slots / 2, 0, std::max(0, count - slots));
+        const int last = std::min(count, first + slots);
+        for (int index = first; index < last; ++index)
         {
-            return {kWindow.x,
-                    kWindow.y + static_cast<float>(row) * library_.pitch - library_.scroll(),
-                    kWindow.w, kRowHeight};
-        };
-        for (int row = library_.first_row(); row <= library_.last_row(); ++row)
-        {
-            list.push_opacity(library_.row_alpha(row, kRowHeight));
-            plate_rest(c, kListPlate, row_rect(row));
-            list.pop_opacity();
-        }
-        plate_focus(c, kListPlate,
-                    {kWindow.x, kWindow.y + library_.cursor() - library_.scroll(), kWindow.w,
-                     kRowHeight},
-                    1.0f);
-        for (int row = library_.first_row(); row <= library_.last_row(); ++row)
-        {
-            const Game &game = games_[static_cast<std::size_t>(row)];
-            const Rect r = row_rect(row);
-            list.push_opacity(library_.row_alpha(row, kRowHeight));
-            cover(c, game.cover, {r.x + 12.0f, r.y + 11.0f, 56.0f, 56.0f}, 8.0f);
-            text_fit(c, game.name, r.x + 86.0f, baseline(r.y, kRowHeight, theme::kText24),
-                     theme::kText24, Color::rgb(0xf3f5e9), 560.0f);
-            text(c, game.format, r.x + 730.0f, baseline(r.y, kRowHeight, theme::kSmall),
-                 theme::kSmall, theme::kMeta, Align::right);
-            list.pop_opacity();
-        }
-        list.pop_clip();
-        scrollbar(c, library_, 910.0f, kWindow.y, kWindow.h);
-    }
-    text(c, list_position(count > 0 ? library_.selected + 1 : 0, count), 898.0f, baseline(866.0f, 28.0f, theme::kSmall), theme::kSmall,
-         theme::kLimePale, Align::right);
+            const int slot = index - first;
+            const Game& game = games_[static_cast<std::size_t>(index)];
+            const Rect card{rail_x + float(slot) * (card_w + gap), rail_y, card_w, card_h};
+            const bool selected = index == library_.selected;
+            const float lift = selected ? 1.0f : 0.0f;
+            list.push_transform(selected ? 1.025f : 1.0f, card.x + card.w * 0.5f,
+                                card.y + card.h * 0.5f, 0.0f, selected ? -5.0f : 0.0f);
+            if (selected)
+                list.shadow({card.x - 7.0f, card.y - 5.0f, card.w + 14.0f, card.h + 16.0f},
+                            28.0f, 42.0f, theme::kLime.with_alpha(0.20f));
+            plate_rest(c, kTilePlate, card);
+            const std::string& artwork = !game.hero.empty() ? game.hero : game.cover;
+            cover_crop(c, artwork, {card.x + 4.0f, card.y + 4.0f, card.w - 8.0f, card.h - 8.0f},
+                       20.0f, selected ? 0.42f : 0.28f);
+            list.gradient_rect({card.x + 4.0f, card.y + card.h * 0.43f, card.w - 8.0f,
+                                card.h * 0.53f}, 20.0f,
+                               theme::kScrim.with_alpha(0.0f), theme::kScrim.with_alpha(0.94f));
+            if (selected)
+                plate_focus(c, kTilePlate, card, lift);
 
-    // ---- the selected game ----
-    glass(c, kDetailPanel, 26.0f, theme::kPanel.with_alpha(0.80f),
-          theme::kPanelEdge.with_alpha(0.55f));
-    text(c, tr("GAME DETAILS"), 1016.0f, baseline(210.0f, 28.0f, theme::kSmall), theme::kSmall,
-         theme::kLimePale, Align::left, 3.0f);
-    const Game *game = count > 0 ? &games_[static_cast<std::size_t>(library_.selected)] : nullptr;
+            text_shrink(c, game.name, card.x + 20.0f,
+                        baseline(card.y + card.h - 66.0f, 32.0f, 22.0f), 22.0f,
+                        theme::kTitle, card.w - 40.0f);
+            text_shrink(c, game.format, card.x + 20.0f,
+                        baseline(card.y + card.h - 31.0f, 22.0f, 15.0f), 15.0f,
+                        theme::kMeta, 90.0f);
+            if (game.max_players > 0)
+            {
+                controller_icon(c, {card.x + card.w - 74.0f, card.y + card.h - 37.0f, 30.0f, 21.0f}, 0.9f);
+                text(c, "×" + std::to_string(game.max_players), card.x + card.w - 16.0f,
+                     baseline(card.y + card.h - 36.0f, 22.0f, 15.0f), 15.0f,
+                     theme::kTitle, Align::right);
+            }
+            list.pop_transform();
+        }
+    }
+
+    // ---- selected game: one clean detail surface, no hidden left/right setting changes ----
+    const Game* game = count > 0 ? &games_[static_cast<std::size_t>(library_.selected)] : nullptr;
+    const Rect detail{72.0f, 546.0f, 1776.0f, 350.0f};
+    glass(c, detail, 28.0f, theme::kGlass.with_alpha(0.66f),
+          theme::kPanelEdge.with_alpha(0.58f), 0.9f);
     const float shown = tween::clamp01(detail_.value);
     list.push_opacity(shown);
     list.push_transform(1.0f, 0.0f, 0.0f, 0.0f, (1.0f - shown) * 10.0f * motion());
-    text_block(c, game != nullptr ? game->name : tr("No ROM selected"), 1016.0f,
-               baseline(250.0f, 42.0f, theme::kHeading), theme::kHeading, 42.0f, theme::kTitle,
-               760.0f, 2);
-    cover(c, game != nullptr ? game->cover : std::string{}, {1016.0f, 372.0f, 288.0f, 288.0f},
-          14.0f, 0.9f);
-    if (game == nullptr || game->cover.empty())
-        text_shrink(c, game == nullptr ? tr("Select a game") : tr("No cover art"), 1160.0f,
-                    baseline(676.0f, 30.0f, theme::kSmall), theme::kSmall, theme::kMeta, 288.0f,
-                    Align::center);
-    struct Field
+
+    if (game != nullptr)
     {
-        const char *label;
-        std::string value;
-        Color color;
-    };
-    Field fields[] = {
-        {tr("FORMAT"), game != nullptr ? game->format : "-", theme::kValue},
-        {tr("SIZE"), game != nullptr ? game->size : "-", theme::kValue},
-        {tr("ADD-ONS"),
-         game != nullptr ? addons_line(game->addons, game->mods, game->mods_on) : "-",
-         game != nullptr && (!game->addons.empty() || game->mods > 0) ? theme::kLimePale :
-                                                                         theme::kValue},
-        {tr("LANGUAGE"), game != nullptr ? game->language : "-",
-         game != nullptr && !game->language_note.empty() ? theme::kWarning : theme::kValue},
-    };
-    for (int i = 0; i < 4; ++i)
-    {
-        const float line = baseline(384.0f + 42.0f * static_cast<float>(i), 30.0f, theme::kSmall);
-        // The name keeps its size up to 200 wide; the value has the rest of the line.
-        const float label =
-            text_shrink(c, fields[i].label, 1336.0f, line, theme::kSmall, theme::kLabel, 200.0f);
-        const float room = 440.0f - label - 16.0f;
-        // What a game comes with is said briefly where the whole line does not fit.
-        if (i == 2 && game != nullptr && text_width(c, fields[i].value, theme::kSmall) > room)
-            fields[i].value = addons_line(game->addons_short, game->mods, game->mods_on, true);
-        text_shrink(c, fields[i].value, 1776.0f, line, theme::kSmall, fields[i].color, room,
-                    Align::right);
+        const Rect art{96.0f, 572.0f, 420.0f, 298.0f};
+        const std::string& artwork = !game->screenshots.empty() ? game->screenshots.front() :
+            (!game->hero.empty() ? game->hero : game->cover);
+        cover_crop(c, artwork, art, 22.0f, 0.70f);
+        text_block(c, game->name, 558.0f, baseline(574.0f, 48.0f, theme::kHeading),
+                   theme::kHeading, 46.0f, theme::kTitle, 1160.0f, 2, kShrink);
+
+        std::string identity;
+        if (!game->publisher.empty()) identity = game->publisher;
+        else if (!game->developer.empty()) identity = game->developer;
+        if (!game->release_date.empty()) {
+            if (!identity.empty()) identity += "  ·  ";
+            identity += game->release_date;
+        }
+        if (!game->categories.empty()) {
+            if (!identity.empty()) identity += "  ·  ";
+            identity += game->categories;
+        }
+        if (!identity.empty())
+            text_shrink(c, identity, 558.0f, baseline(632.0f, 24.0f, 17.0f), 17.0f,
+                        theme::kLimePale, 1180.0f);
+
+        if (!game->intro.empty())
+            text_block(c, game->intro, 558.0f, baseline(662.0f, 24.0f, 18.0f), 18.0f, 25.0f,
+                       theme::kCopy, 1180.0f, 2, kShrink);
+
+        const std::string addons = addons_line(game->addons, game->mods, game->mods_on, true);
+        const std::string mode = selected_docked_ ? tr("Docked") : tr("Handheld");
+        const std::array<std::string, 5> chips{
+            game->format,
+            game->size,
+            mode,
+            game->language.empty() ? std::string{tr("Unknown")} : game->language,
+            addons,
+        };
+        float chip_x = 558.0f;
+        for (const auto& chip : chips)
+        {
+            const float w = std::clamp(text_width(c, chip, 15.0f) + 26.0f, 82.0f, 220.0f);
+            list.bordered_rect({chip_x, 722.0f, w, 34.0f}, 17.0f,
+                               theme::kPanel.with_alpha(0.54f), 1.0f,
+                               theme::kPanelEdge.with_alpha(0.45f));
+            text_shrink(c, chip, chip_x + w * 0.5f, baseline(722.0f, 34.0f, 15.0f), 15.0f,
+                        theme::kLimePale, w - 18.0f, Align::center);
+            chip_x += w + 9.0f;
+            if (chip_x > 1760.0f) break;
+        }
+
+        // Nlib gameplay strip: three real screenshots at most; loaded lazily by Textures.
+        constexpr float shot_y = 778.0f;
+        constexpr float shot_h = 86.0f;
+        constexpr float shot_w = 154.0f;
+        constexpr float shot_gap = 12.0f;
+        const int shot_count = std::min<int>(3, static_cast<int>(game->screenshots.size()));
+        for (int i = 0; i < shot_count; ++i) {
+            const Rect shot{558.0f + float(i) * (shot_w + shot_gap), shot_y, shot_w, shot_h};
+            cover_crop(c, game->screenshots[static_cast<std::size_t>(i)], shot, 12.0f, 0.18f);
+            list.bordered_rect(shot, 12.0f, theme::kPanel.with_alpha(0.0f), 1.0f,
+                               i == 0 ? theme::kLime.with_alpha(0.72f) :
+                                        theme::kPanelEdge.with_alpha(0.46f));
+        }
+
+        if (game->mods > 0)
+        {
+            const float on = tween::clamp01(mods_switch_.value);
+            toggle(c, 1792.0f, 742.0f, on);
+            text_shrink(c, tr("Mods"), 1668.0f, baseline(722.0f, 40.0f, 18.0f),
+                        18.0f, gfx::mix(theme::kMeta, theme::kLimePale, on), 100.0f, Align::right);
+        }
     }
-    if (game != nullptr && !game->language_note.empty())
-        notice(c, game->language_note, 1776.0f, baseline(544.0f, 28.0f, 18.0f), 18.0f,
-               theme::kWarning, 440.0f, true, Align::right);
-    text(c, tr("FILE"), 1336.0f, baseline(574.0f, 30.0f, theme::kSmall), theme::kSmall, theme::kLabel);
-    text_block(c, game != nullptr ? game->file : "-", 1336.0f,
-               baseline(606.0f, 30.0f, theme::kSmall), theme::kSmall, 30.0f, theme::kValue, 440.0f,
-               3);
+    else
+    {
+        text(c, tr("Select a game"), detail.x + detail.w * 0.5f,
+             baseline(detail.y, detail.h, theme::kText24), theme::kText24, theme::kMeta, Align::center);
+    }
     list.pop_transform();
     list.pop_opacity();
 
-    // ---- console mode ----
-    const bool can_configure = game != nullptr && game->title_id != 0;
-    plate_rest(c, kRowPlate, kModeRow);
-    text_shrink(c, tr("Console mode"), kModeRow.x + 26.0f,
-                baseline(kModeRow.y, kModeRow.h, theme::kText24), theme::kText24,
-                can_configure ? theme::kValue : theme::kMeta, 256.0f);
-    if (can_configure)
-    {
-        const Rect track{1322.0f, kModeRow.y + 8.0f, 420.0f, kModeRow.h - 16.0f};
-        const float half = track.w * 0.5f;
-        list.rounded_rect(track, 14.0f, Color::rgb(0x11121c, 0.75f));
-        plate_focus(c, kNavPlate, {track.x + half * mode_.value + 3.0f, track.y + 3.0f, half - 6.0f,
-                                   track.h - 6.0f},
-                    1.0f);
-        const float cy = track.y + track.h * 0.5f;
-        const Color docked = gfx::mix(theme::kLimePale, theme::kValue.with_alpha(0.45f), mode_.value);
-        const Color handheld =
-            gfx::mix(theme::kValue.with_alpha(0.45f), theme::kLimePale, mode_.value);
-        draw_docked(c, track.x + 26.0f, cy, docked);
-        text_shrink(c, tr("Docked"), track.x + 78.0f, baseline(track.y, track.h, theme::kText24),
-                    theme::kText24, docked, half - 78.0f - 10.0f, Align::left, 0.0f, 0.7f);
-        draw_handheld(c, track.x + half + 18.0f, cy, handheld);
-        text_shrink(c, tr("Handheld"), track.x + half + 72.0f,
-                    baseline(track.y, track.h, theme::kText24), theme::kText24, handheld,
-                    half - 72.0f - 10.0f, Align::left, 0.0f, 0.7f);
-    }
-    else
-    {
-        text_shrink(c, tr("Unavailable"), kModeRow.x + kModeRow.w - 26.0f,
-                    baseline(kModeRow.y, kModeRow.h, theme::kText24), theme::kText24, theme::kMeta,
-                    400.0f, Align::right);
-    }
-
-    // ---- mods: one switch for all of the game's mods (Square) ----
-    const bool has_mods = can_configure && game->mods > 0;
-    plate_rest(c, kRowPlate, kModsRow);
-    text_shrink(c, tr("Mods"), kModsRow.x + 26.0f, baseline(kModsRow.y, kModsRow.h, theme::kText24),
-                theme::kText24, has_mods ? theme::kValue : theme::kMeta, 256.0f);
-    if (has_mods)
-    {
-        // The switch at the right, as wide as the console mode's control is from the edge; what
-        // it means for this game beside it: how many of its mods are on, or that none is.
-        const float right = kModsRow.x + kModsRow.w - 16.0f;
-        const float on = tween::clamp01(mods_switch_.value);
-        toggle(c, right, kModsRow.y + kModsRow.h * 0.5f, on);
-        const std::string state =
-            game->mods_enabled ? fill(tr("{0} of {1} on"),
-                                      {std::to_string(game->mods_on), std::to_string(game->mods)}) :
-                                 std::string{tr("Off")};
-        text_shrink(c, state, right - 64.0f - 22.0f, baseline(kModsRow.y, kModsRow.h, theme::kSmall),
-                    theme::kSmall, gfx::mix(theme::kMeta, theme::kLimePale, on), 330.0f, Align::right);
-    }
-    else
-    {
-        text_shrink(c, can_configure ? tr("No mods") : tr("Unavailable"),
-                    kModsRow.x + kModsRow.w - 26.0f, baseline(kModsRow.y, kModsRow.h, theme::kText24),
-                    theme::kText24, theme::kMeta, 400.0f, Align::right);
-    }
-    draw_pad(c, Pad::leftright, 1022.0f, 876.0f, 26.0f);
-    // A message said while Game settings is open belongs to that dialog.
-    const bool said = !message_.empty() && modal_shown_ != Modal::game && modal_shown_ != Modal::mods;
-    const std::string hint = said ? message_ :
-                             can_configure ? tr("Options starts a one-shot Safe Launch without changing saved settings.") :
-                                             tr("Select a readable game to configure its mode.");
-    notice(c, hint, 1060.0f, 883.0f, theme::kSmall,
-           said ? (message_warning_ ? theme::kWarning : theme::kLimePale) : theme::kMeta, 700.0f,
-           said && message_warning_);
-
-    static constexpr Hint kHints[] = {{Pad::cross, TR("Select")},
-                                      {Pad::circle, TR("Back")},
-                                      {Pad::updown, TR("Browse games")},
-                                      {Pad::leftright, TR("Console mode")},
-                                      {Pad::square, TR("Mods")},
-                                      {Pad::triangle, TR("Game settings")}};
+    static constexpr Hint kHints[] = {
+        {Pad::leftright, TR("Browse games")}, {Pad::cross, TR("Launch game")},
+        {Pad::triangle, TR("Game settings")}, {Pad::square, TR("Mods")},
+        {Pad::options, TR("Safe launch")}, {Pad::circle, TR("Back")}};
     draw_footer(c, kHints, 6);
 }
-
-// ---------------------------------------------------------------- game settings dialog
 
 void Launcher::press_game(Key key)
 {
@@ -728,9 +749,14 @@ void Launcher::press_game(Key key)
     {
         if (!confirm_action(Confirmation::console_mode))
             return;
-        saved = services_.set_docked(game.title_id, !game_docked_);
-        if (saved)
-            game_docked_ = !game_docked_;
+        GameSettings next = game_settings_;
+        next.console_mode = game_docked_ ? 0 : 1;
+        RefreshVideoProfile(next, prefs_, game.title_id);
+        saved = services_.set_game_settings(game.title_id, next);
+        if (saved) {
+            game_settings_ = next;
+            game_docked_ = next.console_mode == 1;
+        }
     }
     else
     {
@@ -741,21 +767,22 @@ void Launcher::press_game(Key key)
         if (option_ == row_renderer)
         {
             next.renderer = cycle(next.renderer, 2);
-            RefreshVideoProfile(next, prefs_);
+            RefreshVideoProfile(next, prefs_, game.title_id);
         }
         if (option_ == row_performance)
         {
             int preset = -1;
             if (next.performance_profile == kCustomVideoProfile)
-                preset = step > 0 ? -1 : 2;
+                preset = step > 0 ? -1 : 3;
             else
-                preset = cycle(next.performance_profile, 3);
+                preset = cycle(next.performance_profile, 4);
             if (preset >= 0) {
-                ApplyVideoPreset(next, preset);
+                ApplyVideoPreset(next, preset, game.title_id);
             } else {
                 // Returning the preset to Default also returns the settings the preset owns to
                 // the global values; otherwise "Default" would silently keep old overrides.
                 next.performance_profile = -1;
+                next.console_mode = -1;
                 next.renderer = -1;
                 next.output = -1;
                 next.resolution = -1;
@@ -768,37 +795,39 @@ void Launcher::press_game(Key key)
         if (option_ == row_output)
         {
             next.output = cycle(next.output, 3);
-            RefreshVideoProfile(next, prefs_);
+            RefreshVideoProfile(next, prefs_, game.title_id);
         }
         if (option_ == row_resolution)
         {
             next.resolution =
                 cycle(next.resolution, static_cast<int>(services_.resolution_labels().size()));
-            RefreshVideoProfile(next, prefs_);
+            RefreshVideoProfile(next, prefs_, game.title_id);
         }
         if (option_ == row_filter)
         {
             next.filter = cycle(next.filter, static_cast<int>(services_.filter_labels().size()));
-            RefreshVideoProfile(next, prefs_);
+            RefreshVideoProfile(next, prefs_, game.title_id);
         }
         if (option_ == row_fsr_sharpness) {
             const int current = next.fsr_sharpness >= 0 ? next.fsr_sharpness : prefs_.fsr_sharpness;
             next.fsr_sharpness = std::clamp(current + 5 * step, 0, 100);
-            RefreshVideoProfile(next, prefs_);
+            RefreshVideoProfile(next, prefs_, game.title_id);
         }
         if (option_ == row_anti_aliasing)
         {
             next.anti_aliasing = cycle(next.anti_aliasing, static_cast<int>(services_.anti_aliasing_labels().size()));
-            RefreshVideoProfile(next, prefs_);
+            RefreshVideoProfile(next, prefs_, game.title_id);
         }
         if (option_ == row_refresh)
         {
             next.refresh = cycle(next.refresh, 2);
-            RefreshVideoProfile(next, prefs_);
+            RefreshVideoProfile(next, prefs_, game.title_id);
         }
         saved = services_.set_game_settings(game.title_id, next);
-        if (saved)
+        if (saved) {
             game_settings_ = next;
+            game_docked_ = next.console_mode >= 0 ? next.console_mode == 1 : services_.docked(game.title_id);
+        }
     }
     // 120 Hz is a request: the display has the last word.
     const bool fast = saved && option_ == row_refresh &&
@@ -839,25 +868,37 @@ void Launcher::draw_game(Canvas &c, float open)
     const auto percentage = [](int value) {
         return fill(tr("{0}%"), {std::to_string(value)});
     };
+    const std::uint64_t title_id = game != nullptr ? game->title_id : 0;
+    const bool authored_global = prefs_.performance_profile >= 0 &&
+                                 prefs_.performance_profile < kAuthoredVideoProfiles;
+    const auto& base_profile = VideoPresetForTitle(title_id,
+        authored_global ? prefs_.performance_profile : 1);
+    const int base_renderer = authored_global ? base_profile.renderer : prefs_.renderer;
+    const int base_output = authored_global ? base_profile.output : prefs_.output;
+    const int base_resolution = authored_global ? base_profile.resolution : prefs_.resolution;
+    const int base_filter = authored_global ? base_profile.filter : prefs_.filter;
+    const int base_fsr = authored_global ? base_profile.fsr_sharpness : prefs_.fsr_sharpness;
+    const int base_aa = authored_global ? base_profile.anti_aliasing : prefs_.anti_aliasing;
+    const int base_refresh = authored_global ? base_profile.refresh : prefs_.refresh;
     const std::string values[] = {
         game_docked_ ? tr("Docked") : tr("Handheld"),
         game_settings_.renderer >= 0 ? kRenderers[game_settings_.renderer] :
-            fill(tr("Default ({0})"), {kRenderers[prefs_.renderer != 0 ? 1 : 0]}),
+            fill(tr("Default ({0})"), {kRenderers[base_renderer != 0 ? 1 : 0]}),
         game_settings_.performance_profile >= 0 ?
             services_.performance_profile_labels()[static_cast<std::size_t>(game_settings_.performance_profile)] :
-            fill(tr("Default ({0})"), {services_.performance_profile_labels()[static_cast<std::size_t>(std::clamp(prefs_.performance_profile, 0, 3))]}),
+            fill(tr("Default ({0})"), {services_.performance_profile_labels()[static_cast<std::size_t>(std::clamp(prefs_.performance_profile, 0, kCustomVideoProfile))]}),
         game_settings_.output >= 0 ? kOutputs[game_settings_.output] :
-            fill(tr("Default ({0})"), {kOutputs[std::clamp(prefs_.output, 0, 2)]}),
+            fill(tr("Default ({0})"), {kOutputs[std::clamp(base_output, 0, 2)]}),
         game_settings_.resolution >= 0 ? pick(resolutions, game_settings_.resolution) :
-            fill(tr("Default ({0})"), {short_resolution(pick(resolutions, prefs_.resolution))}),
+            fill(tr("Default ({0})"), {short_resolution(pick(resolutions, base_resolution))}),
         game_settings_.filter >= 0 ? pick(filters, game_settings_.filter) :
-            fill(tr("Default ({0})"), {pick(filters, prefs_.filter)}),
+            fill(tr("Default ({0})"), {pick(filters, base_filter)}),
         game_settings_.fsr_sharpness >= 0 ? percentage(game_settings_.fsr_sharpness) :
-            fill(tr("Default ({0})"), {percentage(prefs_.fsr_sharpness)}),
+            fill(tr("Default ({0})"), {percentage(base_fsr)}),
         game_settings_.anti_aliasing >= 0 ? pick(anti_aliasing, game_settings_.anti_aliasing) :
-            fill(tr("Default ({0})"), {pick(anti_aliasing, prefs_.anti_aliasing)}),
+            fill(tr("Default ({0})"), {pick(anti_aliasing, base_aa)}),
         game_settings_.refresh >= 0 ? hertz(game_settings_.refresh) :
-            fill(tr("Default ({0})"), {hertz(prefs_.refresh)}),
+            fill(tr("Default ({0})"), {hertz(base_refresh)}),
         game_settings_.own_mapping ?
             controller_profile_name(game_settings_.controller_layout >= 0 ?
                                         game_settings_.controller_layout : prefs_.controller_layout,
@@ -940,7 +981,7 @@ void Launcher::draw_game(Canvas &c, float open)
         static constexpr const char *kGameAbout[] = {
             TR("Docked can improve graphics but may cost performance; Handheld is lighter for demanding games."),
             TR("Vulkan is recommended on PS5. Use OpenGL only as a fallback for a title with Vulkan issues."),
-            TR("Recommended, Smooth and Performance also apply the renderer, resolution, scaler and refresh-rate overrides shown below."),
+            TR("Minimum, Recommended, High and Ultra apply the title-aware Encore profile. Manual changes become Custom for this game."),
             TR("1x is the safe default. Lower it for performance/memory; higher scales use much more graphics memory."),
             TR("Bilinear is the lightest default. AMD FSR is useful when rendering below the TV output size."),
             TR("60 Hz is the safe default. Use 120 Hz only with a compatible display or high-FPS patch."),

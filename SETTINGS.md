@@ -12,11 +12,11 @@ A clean Encore configuration starts with:
 | --- | --- |
 | Renderer | **Vulkan** |
 | Video preset | **Recommended** |
-| TV output | **1080p** |
-| Game resolution | **1x** |
+| TV output | **1440p** |
+| Game resolution | **1.25x** |
 | Upscaling filter | **Bilinear** |
 | FSR sharpness | **50%** |
-| Anti-aliasing | **None** (factory fallback; Recommended applies FXAA) |
+| Anti-aliasing | **FXAA** (Recommended) |
 | Refresh rate | **60 Hz** |
 | FPS overlay | **Off** |
 | Console mode | **Docked** |
@@ -25,17 +25,18 @@ A clean Encore configuration starts with:
 | Detailed logging | **Off** |
 | Language | Seeded from the PS5 system language on first setup |
 
-The factory values above are the fallback values of an empty configuration. Selecting a Video preset actively rewrites the video settings owned by that preset.
+A clean configuration starts on the authored **Recommended** tier. Selecting another Video preset rewrites the video settings owned by that tier; manual edits become Custom when they no longer match an authored profile.
 
 ## Video presets
 
 | Preset | Renderer | TV output | Game resolution | Filter | FSR sharpness | AA | Refresh |
 | --- | --- | --- | --- | --- | ---: | --- | --- |
-| **Recommended** | Vulkan | 1440p | 1x | Bilinear | 50% | **FXAA** | 60 Hz |
-| **Smooth** | Vulkan | 1080p | 1x | Bilinear | 50% | None | 60 Hz |
-| **Performance** | Vulkan | 1080p | 0.75x | AMD FSR | 50% | None | 60 Hz |
+| **Minimum** | Vulkan | 1080p | 1x | Bilinear | 50% | None | 60 Hz |
+| **Recommended** | Vulkan | 1440p | 1.25x | Bilinear | 50% | **FXAA** | 60 Hz |
+| **High** | Vulkan | 2160p | 1.5x | Bicubic | 50% | **FXAA** | 60 Hz |
+| **Ultra** | Vulkan | 2160p | 2x | Bilinear | 50% | None | 60 Hz |
 
-Presets are real starting points, not labels. After applying one, every advanced row can still be changed manually. If the resulting combination no longer matches Recommended, Smooth or Performance, Encore automatically shows **Custom** (`Personnalisé` in French). If the values later match one of the three authored presets exactly, that preset is recognized again automatically. The same behavior applies to per-game overrides without changing the global configuration.
+Presets are real starting points, not labels. They are generated from `encore-overrides`, and a title-specific profile can refine a tier without changing the global choice. After applying one, every advanced row can still be changed manually. If the resulting combination no longer matches an authored tier, Encore shows **Custom** (`Personnalisé` in French); matching a tier again restores its label automatically. The same behavior applies to per-game overrides.
 
 ## Video settings
 
@@ -91,7 +92,7 @@ Useful starting points:
 
 Available: **None, FXAA, SMAA**.
 
-- **None — fastest and the raw factory fallback.**
+- **None — fastest manual choice.**
 - **FXAA — Recommended preset.** Light smoothing with a small clarity trade-off.
 - **SMAA.** Better edge quality, but use it only when performance headroom remains.
 

@@ -1,0 +1,153 @@
+From ac35358b3ffed74aaac56b0e99b09e81bb60d2e1 Mon Sep 17 00:00:00 2001
+From: lizzie <lizzie@eden-emu.dev>
+Date: Wed, 16 Sep 2026 15:35:13 +0200
+Subject: [PATCH] [common] Replace `Common::SpinLock` with `std::mutex` (#4436)
+
+`std::mutex` can be better than the spin-lock specially since we don't waste CPU cycles for no reason.
+
+Test less stuttering/heat consumption.
+
+Signed-off-by: lizzie <lizzie@eden-emu.dev>
+
+- [x] I have read and followed the [Contribution Guidelines](https://git.eden-emu.dev/eden-emu/eden/src/branch/master/CONTRIBUTING.md#code-contributions).
+- [x] I have read and followed the [AI Policy](https://git.eden-emu.dev/eden-emu/eden/src/branch/master/docs/policies/AI.md)
+- [x] I have read and followed the [Coding Guidelines](https://git.eden-emu.dev/eden-emu/eden/src/branch/master/docs/policies/Coding.md) to the best of my ability.
+
+-------------------
+
+Reviewed-on: https://git.eden-emu.dev/eden-emu/eden/pulls/4436
+Reviewed-by: CamilleLaVey <camillelavey99@gmail.com>
+Reviewed-by: MaranBr <maranbr@eden-emu.dev>
+---
+ src/common/CMakeLists.txt         |  1 -
+ src/common/spin_lock.h            | 50 -------------------------------
+ src/core/hle/kernel/k_slab_heap.h |  7 ++---
+ src/core/hle/kernel/k_thread.h    |  3 +-
+ 4 files changed, 4 insertions(+), 57 deletions(-)
+ delete mode 100644 src/common/spin_lock.h
+
+diff --git a/src/common/CMakeLists.txt b/src/common/CMakeLists.txt
+index 61e0e64aa8..94da1724df 100644
+--- a/src/common/CMakeLists.txt
++++ b/src/common/CMakeLists.txt
+@@ -110,7 +110,6 @@ add_library(
+     socket_types.h
+     sparse_large_vector.cpp
+     sparse_large_vector.h
+-    spin_lock.h
+     stb.cpp
+     stb.h
+     steady_clock.cpp
+diff --git a/src/common/spin_lock.h b/src/common/spin_lock.h
+deleted file mode 100644
+index 93d507ae80..0000000000
+--- a/src/common/spin_lock.h
++++ /dev/null
+@@ -1,50 +0,0 @@
+-// SPDX-FileCopyrightText: Copyright 2025 Eden Emulator Project
+-// SPDX-License-Identifier: GPL-3.0-or-later
+-
+-// SPDX-FileCopyrightText: Copyright 2020 yuzu Emulator Project
+-// SPDX-License-Identifier: GPL-2.0-or-later
+-
+-#pragma once
+-
+-#ifdef _MSC_VER
+-#include <intrin.h>
+-#elif defined(ARCHITECTURE_x86_64)
+-#include <xmmintrin.h>
+-#endif
+-#include <atomic>
+-
+-namespace Common {
+-
+-/// @brief A lock similar to mutex that forces a thread to spin wait instead calling the
+-/// supervisor. Should be used on short sequences of code.
+-struct SpinLock {
+-    SpinLock() noexcept = default;
+-    SpinLock(const SpinLock&) noexcept = delete;
+-    SpinLock& operator=(const SpinLock&) noexcept = delete;
+-    SpinLock(SpinLock&&) noexcept = delete;
+-    SpinLock& operator=(SpinLock&&) noexcept = delete;
+-
+-    inline void lock() noexcept {
+-        while (lck.test_and_set(std::memory_order_acquire)) {
+-#if defined(ARCHITECTURE_x86_64)
+-            _mm_pause();
+-#elif defined(ARCHITECTURE_arm64) && defined(_MSC_VER)
+-            __yield();
+-#elif defined(ARCHITECTURE_arm64)
+-            asm("yield");
+-#endif
+-        }
+-    }
+-
+-    inline void unlock() noexcept {
+-        lck.clear(std::memory_order_release);
+-    }
+-
+-    [[nodiscard]] inline bool try_lock() noexcept {
+-        return !lck.test_and_set(std::memory_order_acquire);
+-    }
+-
+-    std::atomic_flag lck = ATOMIC_FLAG_INIT;
+-};
+-
+-} // namespace Common
+diff --git a/src/core/hle/kernel/k_slab_heap.h b/src/core/hle/kernel/k_slab_heap.h
+index c91e7969a2..a5dbab9571 100644
+--- a/src/core/hle/kernel/k_slab_heap.h
++++ b/src/core/hle/kernel/k_slab_heap.h
+@@ -1,4 +1,4 @@
+-// SPDX-FileCopyrightText: Copyright 2025 Eden Emulator Project
++// SPDX-FileCopyrightText: Copyright 2026 Eden Emulator Project
+ // SPDX-License-Identifier: GPL-3.0-or-later
+ 
+ // SPDX-FileCopyrightText: Copyright 2020 yuzu Emulator Project
+@@ -12,7 +12,6 @@
+ #include "common/atomic_ops.h"
+ #include "common/common_funcs.h"
+ #include "common/common_types.h"
+-#include "common/spin_lock.h"
+ 
+ namespace Kernel {
+ 
+@@ -30,7 +29,7 @@ class KSlabHeapImpl {
+     };
+ 
+ public:
+-    constexpr KSlabHeapImpl() = default;
++    KSlabHeapImpl() = default;
+ 
+     void Initialize() {
+         ASSERT(m_head == nullptr);
+@@ -68,7 +67,7 @@ class KSlabHeapImpl {
+ 
+ private:
+     std::atomic<Node*> m_head{};
+-    Common::SpinLock m_lock;
++    std::mutex m_lock;
+ };
+ 
+ } // namespace impl
+diff --git a/src/core/hle/kernel/k_thread.h b/src/core/hle/kernel/k_thread.h
+index 95ba1b4d76..0ee5f72c8e 100644
+--- a/src/core/hle/kernel/k_thread.h
++++ b/src/core/hle/kernel/k_thread.h
+@@ -19,7 +19,6 @@
+ 
+ #include "common/intrusive_red_black_tree.h"
+ #include "common/scratch_buffer.h"
+-#include "common/spin_lock.h"
+ #include "core/arm/arm_interface.h"
+ #include "core/hle/kernel/k_affinity_mask.h"
+ #include "core/hle/kernel/k_light_lock.h"
+@@ -920,7 +919,7 @@ class KThread final : public KAutoObjectWithSlabHeapAndContainer<KThread, KWorke
+     bool m_resource_limit_release_hint{};
+     bool m_is_kernel_address_key{};
+     StackParameters m_stack_parameters{};
+-    Common::SpinLock m_context_guard{};
++    std::mutex m_context_guard{};
+ 
+     // For emulation
+     std::shared_ptr<Common::Fiber> m_host_context{};

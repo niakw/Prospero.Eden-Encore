@@ -23,10 +23,13 @@ inline const Color kBase = Color::rgb(0x07070d);
 inline const Color kScrim = Color::rgb(0x04040a);
 inline const Color kGlass = Color::rgb(0x120f1c);  // translucent Eden surfaces
 inline const Color kPanel = Color::rgb(0x0b0a12);  // screens and dialogs
-inline const Color kPanelEdge = Color::rgb(0x76698f);
-inline const Color kRow = Color::rgb(0x14111d);
-inline const Color kRowEdge = Color::rgb(0x554b68);
-inline const Color kRowFocus = Color::rgb(0x26183b);
+inline const Color kPanelEdge = Color::rgb(0x8c78ad);
+inline const Color kPanelEdgeSoft = Color::rgb(0x5b506f);
+inline const Color kRow = Color::rgb(0x12101a);
+inline const Color kRowEdge = Color::rgb(0x625875);
+inline const Color kRowFocus = Color::rgb(0x2b1b42);
+inline const Color kFocusCore = Color::rgb(0xdab4ff);
+inline const Color kFocusBlue = Color::rgb(0x72b8ff);
 
 // Keep the historic names to avoid touching every widget; values are Eden's official accents.
 inline const Color kLime = Color::rgb(0xbf42f6);      // Eden violet
@@ -34,6 +37,7 @@ inline const Color kLimeDeep = Color::rgb(0x6547c7);  // deep violet/blue
 inline const Color kLimePale = Color::rgb(0xe1b7ff);  // pale violet
 inline const Color kSun = Color::rgb(0xff44c4);       // Eden pink
 inline const Color kBlue = Color::rgb(0x62b4ff);      // Eden blue
+inline const Color kAccentTeal = Color::rgb(0x52e0c4); // active value accent
 
 // Text
 inline const Color kText = Color::rgb(0xf4f2f8);

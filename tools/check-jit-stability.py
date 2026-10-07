@@ -7,6 +7,7 @@ root = Path(__file__).resolve().parents[1]
 cmake = (root / 'headless/CMakeLists.txt').read_text()
 main = (root / 'headless/main.cpp').read_text()
 jit_list = (root / 'headless/jit_list.h').read_text()
+jit_links = (root / 'headless/dynarmic/jit_links.inc').read_text()
 
 assert 'option(EDEN_SHARED_JIT "Enable the experimental cross-core A64 JIT" OFF)' in cmake
 assert 'option(EDEN_JIT_COMPILE_BATCH "Compile bounded A64 successor chains on a cache miss" OFF)' in cmake
@@ -39,5 +40,11 @@ assert 'Production stability mode: saved-block precompilation is structurally un
 # Normal profiles always start with saved-block precompilation off.
 assert 'Eden::JitList::enabled = false;' in main
 assert 'CPU JIT: Dynarmic per-core; Encore cross-core sharing, successor batching and saved-block compile-ahead disabled' in main
+
+
+# Wall-clock multicore must remain pre-emptible inside direct guest loops. Dynarmic's stock
+# LinkBlockFast has no halt check; Encore guards only backward/self links to avoid a global cost.
+assert 'wall_clock_back_edge = !e.conf.enable_cycle_counting && next_pc <= from_pc' in jit_links
+assert 'wall_clock_back_edge ? EdenLinkCheck::Halt : EdenLinkCheck::None' in jit_links
 
 print('Shipping JIT stability defaults PASS (per-core Dynarmic, no compile-ahead/batching/shared JIT)')

@@ -101,6 +101,7 @@ jobs:
           python3 -B tools/check-storage-contract.py
           python3 -B tools/check-legacy-migration.py
           python3 -B tools/check-video-presets.py
+          python3 -B tools/check-encore-ux.py
           python3 -B tools/check-jit-stability.py
 
       - name: Preflight release packaging
