@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "devices.h"
+#include "encore_overrides_generated.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -30,6 +31,7 @@ constexpr unsigned kSelectHoldPolls = 60;
 // (hid_core, emulated_controller.cpp: virtual_button_params).
 constexpr int kRightSL = 20;
 constexpr int kRightSR = 21;
+inline constexpr const auto& kAutoControls = EncoreOverrides::kPlayStationAutoControls;
 
 PadEngine::PadEngine(std::string name) : InputEngine(std::move(name)) {
     for (std::size_t player = 0; player < kPlayers; ++player) PreSetController(Identifier(player));
@@ -269,7 +271,8 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
     // The game button the touchpad presses (tap or hold, see kSelectTapPolls); the Create button
     // presses it too while it has no game button of its own.
     const auto set_touch = [&](u32 pressed) {
-        const ButtonMapping& active = mapping;
+        const ButtonMapping& active =
+            adaptive_playstation && mapping_context == MappingContext::gameplay ? kSwitchMapping : mapping;
         const int touch_button = MappedTo(active, pad_touchpad);
         const bool create_free = MappedTo(active, pad_create) < 0;
         if (touch_button < 0) return;
@@ -285,7 +288,57 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
     for (const auto& raw : samples) {
         auto sample = is_usable(raw) ? raw : neutral_data(raw.timestamp_us);
 
+        if (player == 0 && adaptive_playstation && is_usable(raw)) {
+            const auto centered = [](u8 value) {
+                return std::abs(static_cast<float>(static_cast<int>(value) - 128)) / 128.0f;
+            };
+            const float stick_peak = std::max({centered(sample.left_stick.x), centered(sample.left_stick.y),
+                                               centered(sample.right_stick.x), centered(sample.right_stick.y)});
+            const bool trigger_active =
+                sample.triggers.l2 >= kAutoControls.trigger_threshold_raw ||
+                sample.triggers.r2 >= kAutoControls.trigger_threshold_raw;
+            const bool gameplay_motion =
+                stick_peak >= kAutoControls.gameplay_stick_threshold || trigger_active;
+            const bool sticks_quiet =
+                stick_peak <= kAutoControls.quiet_stick_threshold && !trigger_active;
+            const bool dpad =
+                (sample.buttons & (kButtonLeft | kButtonRight | kButtonUp | kButtonDown)) != 0;
+            const bool explicit_menu =
+                (sample.buttons & (kButtonOptions | kButtonTouchPad)) != 0;
 
+            if (gameplay_motion) {
+                gameplay_evidence = std::min(
+                    gameplay_evidence + kAutoControls.gameplay_evidence_per_active_poll,
+                    kAutoControls.gameplay_evidence_enter + 8u);
+                menu_evidence = 0;
+                quiet_polls = 0;
+            } else {
+                if (gameplay_evidence > 0) --gameplay_evidence;
+                quiet_polls = std::min(quiet_polls + 1u, kAutoControls.quiet_polls_before_dpad + 32u);
+            }
+
+            if (explicit_menu ||
+                (dpad && sticks_quiet && quiet_polls >= kAutoControls.quiet_polls_before_dpad)) {
+                const unsigned weight = explicit_menu ? kAutoControls.options_touchpad_weight :
+                                                        kAutoControls.dpad_weight;
+                menu_evidence = std::min(menu_evidence + weight,
+                                         kAutoControls.menu_evidence_enter + 8u);
+            } else if (menu_evidence > 0) {
+                --menu_evidence;
+            }
+
+            if (mapping_context == MappingContext::ui &&
+                gameplay_evidence >= kAutoControls.gameplay_evidence_enter) {
+                mapping_context = MappingContext::gameplay;
+                menu_evidence = 0;
+                std::fprintf(stderr, "EDEN_PAD_CONTEXT mode=gameplay reason=activity\n");
+            } else if (mapping_context == MappingContext::gameplay &&
+                       menu_evidence >= kAutoControls.menu_evidence_enter) {
+                mapping_context = MappingContext::ui;
+                gameplay_evidence = 0;
+                std::fprintf(stderr, "EDEN_PAD_CONTEXT mode=ui reason=navigation\n");
+            }
+        }
 
         // The shortcuts work from every controller.
         constexpr ButtonMask menu_chord = kButtonTouchPad | kButtonL1;
@@ -331,7 +384,8 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
         // The game's buttons are digital: the analog triggers count from the threshold.
         const bool left = sample.triggers.l2 / 255.0f >= trigger_threshold;
         const bool right = sample.triggers.r2 / 255.0f >= trigger_threshold;
-        const ButtonMapping& active_mapping = mapping;
+        const ButtonMapping& active_mapping =
+            adaptive_playstation && mapping_context == MappingContext::gameplay ? kSwitchMapping : mapping;
         for (int game = 0; game < kGameButtons; ++game) {
             const int pad = active_mapping[game];
             if (pad == pad_touchpad) continue;  // set_touch
