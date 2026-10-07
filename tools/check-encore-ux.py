@@ -5,6 +5,7 @@ def read(path): return (root/path).read_text()
 home=read('headless/prosperoeden/pe/ui/home.cpp')
 library=read('headless/prosperoeden/pe/ui/library.cpp')
 settings=read('headless/prosperoeden/pe/ui/settings.cpp')
+browse=read('headless/prosperoeden/pe/ui/browse.cpp')
 launcher=read('headless/prosperoeden/pe/ui/launcher.cpp')
 launcher_h=read('headless/prosperoeden/pe/ui/launcher.hpp')
 widgets=read('headless/prosperoeden/pe/ui/widgets.cpp')
@@ -52,6 +53,12 @@ press_library=library[library.index('void Launcher::press_library'):library.inde
 assert 'set_docked' not in press_library
 assert 'game->screenshots' in library
 assert 'category rail: one row, controller-first' in settings
+assert browse.count('draw_top_nav(c, 3)') >= 3
+assert 'draw_frame(c' not in browse
+assert '1080p is recommended for stability and memory' not in settings
+assert 'Game render scale. 1x is recommended' not in settings
+assert 'PlayStation uses Cross=A and Circle=B' not in settings
+assert '1x is the safe default' not in library
 
 # Face button visuals: PS-style primitives and coloured symbols.
 for name in ('cross','circle','square','triangle','dpad','l1','r1','l2','r2','l3','r3','options','create','touchpad'):
