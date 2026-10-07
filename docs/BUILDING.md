@@ -163,18 +163,27 @@ The authoritative workflow is:
 .github/workflows/build-040-zbic.yml
 ```
 
-It runs on pushes to the default Encore branch and can also be dispatched manually.
+It runs on pushes to `fix/0.40-zbic-13.60` and can also be dispatched manually. WIP branches do not trigger the shipping build.
 
 The build job:
 
 1. checks out without persisting credentials;
-2. installs the Ubuntu 24.04 toolchain;
-3. pins Meson;
-4. validates translations;
-5. restores build caches;
-6. performs `make release JOBS=4`;
-7. saves caches only after success;
-8. uploads `dist/` and symbols as a 14-day workflow artifact.
+2. installs the Ubuntu 24.04 toolchain and pins Meson;
+3. runs the source gates before the expensive native build: translations, release metadata,
+   startup/elevation/storage contracts, video-profile contracts, Encore UX/media contracts and
+   shipping-JIT stability;
+4. restores dependency/native/ccache state;
+5. prepares native dependencies;
+6. builds and stages only the shipping app into `build/release/PPSA99008`;
+7. saves caches immediately after successful staging;
+8. uploads the staged app as a seven-day resumable artifact;
+9. validates the staged app;
+10. assembles `dist/` from that validated app and uploads `dist/` plus symbols.
+
+A manual dispatch may set `resume_run_id` to a failed run whose staged-app artifact is already
+green. In that mode CI downloads that exact staged app, skips toolchain/dependency/native compilation,
+revalidates it and only reassembles the release files. This is the preferred recovery path for a
+late packaging/upload failure and avoids paying for another full native compile.
 
 The publish job receives `contents: write` only after the build succeeds. Publication occurs when:
 
