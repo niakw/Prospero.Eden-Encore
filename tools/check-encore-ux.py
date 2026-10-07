@@ -88,6 +88,7 @@ assert 'game->screenshots' in library
 
 # Global PlayStation Auto control contract.
 assert 'kPlayStationAutoControls' in generated
+assert 'kPlayStationAutoControls{0.30f, 48, 18, 2, 0.16f, 75, 10, 4, 2, true}' in generated
 assert 'SetAdaptivePlayStation(bool enabled)' in devices
 assert 'mapping_context == MappingContext::gameplay ? kSwitchMapping : mapping' in pad
 assert 'EDEN_PAD_CONTEXT mode=gameplay' in pad and 'EDEN_PAD_CONTEXT mode=ui' in pad
