@@ -5,11 +5,13 @@
 #include <array>
 #include <cstdint>
 namespace Eden::EncoreOverrides {
+struct AutoControlProfile { float gameplay_stick_threshold; int trigger_threshold_raw; unsigned gameplay_evidence_enter; unsigned gameplay_evidence_per_active_poll; float quiet_stick_threshold; unsigned quiet_polls_before_dpad; unsigned menu_evidence_enter; unsigned options_touchpad_weight; unsigned dpad_weight; bool hysteresis; };
 struct VideoProfile { int renderer; int output; int resolution; int filter; int fsr_sharpness; int anti_aliasing; int refresh; bool docked; };
 inline constexpr int kAuthoredProfileCount = 4;
 inline constexpr int kCustomProfile = 4;
 inline constexpr const char* kSourceRevision = "0afb14f3c148b19111f15a4f2416bb4590b0edc3";
 inline constexpr int kDatabaseRevision = 6;
+inline constexpr AutoControlProfile kPlayStationAutoControls{0.30f, 48, 18, 2, 0.16f, 75, 10, 4, 2, true};
 inline constexpr std::array<VideoProfile, kAuthoredProfileCount> kGeneralProfiles = {{
     {1, 0, 3, 0, 50, 0, 0, true},
     {1, 1, 4, 0, 50, 1, 0, true},
