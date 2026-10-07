@@ -602,8 +602,8 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
         static constexpr const char *kAbout[kVideoRows] = {
             TR("Vulkan is recommended on PS5. Use OpenGL only as a fallback for a game with Vulkan issues."),
             TR("Minimum reduces GPU load and may use lower GPU accuracy for speed. Recommended balances quality and stability. High and Ultra raise image quality when the game has headroom."),
-            TR("Final app output size. 1080p is recommended for stability and memory; this is not the game's render scale."),
-            TR("Game render scale. 1x is recommended; lower it for performance or memory, raise it only when a game has headroom."),
+            TR("Final app output size. Choose 1080p for lower memory use, 1440p for balance, or 2160p for maximum output detail."),
+            TR("Game render scale follows the selected profile. Lower it for performance or memory; raise it only when a game has headroom."),
             TR("Bilinear is the lightest default. AMD FSR is most useful when rendering below the TV output size."),
             TR("FSR sharpness changes detail recovery only when AMD FSR is selected. Lower it if the picture looks grainy or over-sharpened."),
             TR("Anti-aliasing smooths jagged edges. None is fastest; FXAA is light; SMAA prioritizes image quality."),
@@ -620,7 +620,7 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
     {
         title = tr("Controls");
         static constexpr const char *kAbout[] = {
-            TR("PlayStation uses Cross=A and Circle=B. Switch keeps Nintendo face-button positions. Editing any button creates a custom profile."),
+            TR("PlayStation Auto keeps Cross/Round menu semantics while adapting gameplay to physical Switch positions. Switch stays fixed; editing any button creates a custom profile."),
             TR("Customize every guest button. The profile automatically becomes Custom PS5 or Custom Switch."),
             TR("Turns DualSense vibration on or off for games."),
             TR("100% is full DualSense rumble strength. Lower it if vibration feels too strong."),
