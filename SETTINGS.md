@@ -61,10 +61,11 @@ Available:
 
 **0.25x · 0.5x · 0.75x · 1x · 1.25x · 1.5x · 2x · 3x · 4x**
 
-- **1x — default/recommended.** Normal Switch render scale.
+- **1x.** Native Switch render scale and a useful lighter manual choice.
 - **0.75x.** Useful performance compromise, especially with FSR.
 - **0.5x / 0.25x.** Emergency performance or diagnostic values; visibly softer.
-- **1.25x / 1.5x.** Moderate supersampling when the title has spare GPU headroom.
+- **1.25x — Recommended tier.** Moderate supersampling while keeping sensible PS5 headroom.
+- **1.5x.** Higher-quality supersampling for titles with spare GPU headroom.
 - **2x and above.** Expensive in GPU time and graphics memory; not normal PS5 defaults.
 
 Docked and Handheld modes can also change what the game itself chooses to render.
@@ -132,19 +133,29 @@ A per-game value of **Default** means “follow the global setting”. Resetting
 
 ## Controls
 
-Encore exposes full DualSense button mapping globally and per game.
+Encore exposes four controller profiles globally and per game:
+
+| Profile | Behavior |
+| --- | --- |
+| **PlayStation** — default | PS-style Cross/Circle menu semantics. In the stock profile, Encore can switch to physical Switch face-button positions during sustained gameplay input and return to menu context with hysteresis. |
+| **Switch** | Fixed Nintendo-position face-button layout. No automatic context switching. |
+| **Custom PS5** | User-defined mapping derived from the PlayStation layout. Fixed exactly as configured. |
+| **Custom Switch** | User-defined mapping derived from the Switch layout. Fixed exactly as configured. |
 
 Settings → Controls → Button mapping can assign the emulated A/B/X/Y, L/R/ZL/ZR, Plus/Minus and stick-click actions to DualSense buttons. A title can use its own mapping without changing the global one.
+
+The adaptive behavior applies **only** to the untouched PlayStation profile. Switch and both Custom profiles are never rewritten automatically. The profile's thresholds are generated from `encore-overrides/general/controls.json` with the video-profile snapshot.
 
 Defaults:
 
 | Setting | Default |
 | --- | --- |
+| Button profile | **PlayStation** |
 | Stick deadzone | **8%** |
 | Vibration | **On** |
 | Vibration strength | **100%** |
 
-If a game's own rebinding menu does not recognize the expected PS5 layout, adjust Encore's mapping first: the game receives emulated controller actions, not native DualSense labels.
+Encore controls the emulated input mapping and its own PlayStation-style UI glyphs. A game's own rendered button textures/prompts are game assets and cannot be universally replaced by the emulator; per-title patches may still be needed for titles that hard-code Nintendo glyph artwork.
 
 ## Language
 
