@@ -192,6 +192,7 @@ struct DiagnosticsInfo
 {
     std::string filesystem;
     std::string free_space;
+    std::string used_space;
     std::string total_space;
     std::string shader_caches;
     std::string logs;

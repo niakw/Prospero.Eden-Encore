@@ -366,9 +366,12 @@ void Launcher::press_library(Key key)
         open(Screen::home, false);
         return;
     case Key::up:
+        top_nav_focus_ = 1;
+        cue(Cue::focus);
+        return;
     case Key::down:
-        // The Library is a horizontal console rail. Vertical input is intentionally reserved for
-        // future shelves/actions instead of silently changing game settings.
+        // The Library is a horizontal console rail. Down is intentionally reserved for future
+        // shelves/actions instead of silently changing game settings.
         return;
     case Key::l1:
     case Key::r1:
@@ -458,7 +461,7 @@ void Launcher::draw_library(Canvas &c)
 {
     gfx::DrawList &list = c.list;
     const int count = static_cast<int>(games_.size());
-    draw_top_nav(c, 1);
+    draw_top_nav(c, 1, top_nav_focus_, top_nav_focus_ >= 0 ? 1.0f : 0.0f);
     text_shrink(c, tr("Your games"), 72.0f, baseline(142.0f, 38.0f, theme::kHeading),
                 theme::kHeading, theme::kTitle, 980.0f);
     text_shrink(c, tr("Select a game to begin"), 72.0f, baseline(176.0f, 24.0f, 18.0f),

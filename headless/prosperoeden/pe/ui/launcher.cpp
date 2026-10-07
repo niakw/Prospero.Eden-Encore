@@ -97,6 +97,7 @@ void Launcher::open(Screen screen, bool forward)
 {
     leaving_ = screen_;
     screen_ = screen;
+    top_nav_focus_ = -1;
     forward_ = forward;
     transition_.start(theme::kScreenSeconds);
     message_.clear();
@@ -210,6 +211,11 @@ void Launcher::press(Key key)
         return press_mapping(key);
     if (modal_ != Modal::none)
         return press_dialog(key);
+    if (top_nav_focus_ >= 0 && screen_ != Screen::home)
+    {
+        if (press_top_nav(key))
+            return;
+    }
     switch (screen_)
     {
     case Screen::home:
@@ -320,6 +326,83 @@ void Launcher::draw_screen(Canvas &c, Screen screen)
         return draw_language(c);
     case Screen::about:
         return draw_about(c);
+    }
+}
+
+bool Launcher::press_top_nav(Key key)
+{
+    if (top_nav_focus_ < 0)
+        return false;
+
+    switch (key)
+    {
+    case Key::left:
+    case Key::right:
+    {
+        const int step = key == Key::right ? 1 : -1;
+        top_nav_focus_ = (top_nav_focus_ + step + 4) % 4;
+        cue(Cue::focus);
+        return true;
+    }
+    case Key::down:
+    case Key::circle:
+        top_nav_focus_ = -1;
+        cue(Cue::back);
+        return true;
+    case Key::up:
+        return true;
+    case Key::cross:
+    {
+        const int target = top_nav_focus_;
+        if (target == 0)
+        {
+            open(Screen::home, false);
+        }
+        else if (target == 1)
+        {
+            if (screen_ == Screen::library)
+            {
+                top_nav_focus_ = -1;
+                cue(Cue::focus);
+            }
+            else
+            {
+                open(Screen::library, true);
+                enter_library();
+            }
+        }
+        else if (target == 2)
+        {
+            open(Screen::home, false);
+            if (!home_.recents.empty())
+            {
+                home_recent_ = 0;
+                home_focus_ = 5; // first card in the Home recently-played rail
+                refresh_home_hero();
+            }
+            else
+            {
+                home_focus_ = 2; // Home's Recently Played header item
+            }
+        }
+        else
+        {
+            if (screen_ == Screen::settings)
+            {
+                top_nav_focus_ = -1;
+                cue(Cue::focus);
+            }
+            else
+            {
+                open(Screen::settings, true);
+                prefs_ = services_.preferences();
+                section_.snap(1.0f);
+            }
+        }
+        return true;
+    }
+    default:
+        return true;
     }
 }
 

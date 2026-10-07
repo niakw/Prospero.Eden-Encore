@@ -760,6 +760,27 @@ int main(int argc, char** argv) {
         const int effective_performance_profile = safe_launch ? 0 :
             game_video.performance_profile >= 0 ? game_video.performance_profile :
                                                   launch_preferences.performance_profile;
+        const int effective_resolution_for_tuning = safe_launch ? Eden::kNativeResolution :
+            (game_video.resolution >= 0 ? game_video.resolution : profile_resolution);
+        const int effective_output_for_tuning = safe_launch ? 0 :
+            (game_video.output >= 0 ? game_video.output : profile_output);
+        int runtime_performance_profile = effective_performance_profile;
+        if (runtime_performance_profile < 0 ||
+            runtime_performance_profile >= Eden::EncoreOverrides::kAuthoredProfileCount) {
+            // Custom means one or more visible knobs differ from an authored preset. Do not silently
+            // turn a 1x/1080p custom setup back into the heavy High runtime policy. Derive the hidden
+            // GPU policy from the effective render/output cost instead.
+            if (effective_resolution_for_tuning <= Eden::kNativeResolution &&
+                effective_output_for_tuning <= 0)
+                runtime_performance_profile = 0;
+            else if (effective_resolution_for_tuning <= Eden::kNativeResolution + 1 &&
+                     effective_output_for_tuning <= 1)
+                runtime_performance_profile = 1;
+            else if (effective_resolution_for_tuning <= Eden::kNativeResolution + 2)
+                runtime_performance_profile = 2;
+            else
+                runtime_performance_profile = 3;
+        }
 #ifndef EDEN_PS5_VULKAN
         if (backend == Eden::GraphicsBackend::Vulkan)
             throw std::runtime_error("Vulkan is not available in this build yet. Select OpenGL in Settings > Video to play.");
@@ -874,9 +895,9 @@ int main(int argc, char** argv) {
             0xffffffffu : 0u;
 #endif
         Settings::values.use_asynchronous_shaders =
-            effective_performance_profile == 0 && backend == Eden::GraphicsBackend::Vulkan;
+            runtime_performance_profile == 0 && backend == Eden::GraphicsBackend::Vulkan;
         Settings::values.renderer_debug = false;
-        const auto profile_gpu_accuracy = effective_performance_profile == 0 ?
+        const auto profile_gpu_accuracy = runtime_performance_profile == 0 ?
             Settings::GpuAccuracy::Low : Settings::GpuAccuracy::High;
         Settings::values.gpu_accuracy.SetValue(profile_gpu_accuracy);
         Settings::values.current_gpu_accuracy = profile_gpu_accuracy;
@@ -889,8 +910,13 @@ int main(int argc, char** argv) {
         Eden::Report("performance",
             "CPU JIT: Dynarmic per-core; Encore cross-core sharing, successor batching and saved-block compile-ahead disabled");
 #endif
+        const int profile_label_index = std::clamp(
+            effective_performance_profile, 0, Eden::EncoreOverrides::kCustomProfile);
         Eden::Report("performance",
-            (std::string("Profile ") + Eden::kPerformanceProfileLabels[effective_performance_profile] +
+            (std::string("Profile ") + Eden::kPerformanceProfileLabels[profile_label_index] +
+             (profile_label_index == Eden::EncoreOverrides::kCustomProfile ?
+                 std::string(" (runtime ") + Eden::kPerformanceProfileLabels[runtime_performance_profile] + ")" :
+                 std::string{}) +
              ": compile-ahead " + (Eden::JitList::enabled.load(std::memory_order_relaxed) ? "on" : "off") +
              ", async shaders " + (Settings::values.use_asynchronous_shaders.GetValue() ? "on" : "off") +
              ", GPU accuracy " + (profile_gpu_accuracy == Settings::GpuAccuracy::Low ? "low" : "high")).c_str());

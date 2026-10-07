@@ -135,8 +135,21 @@ print('Encore PS5 HID progress watchdog: PASS')
 PY
 }
 
+
+validate_ps5_net_user_agent() {
+python3 - "$eden" <<'PYNET'
+from pathlib import Path
+import sys
+text=(Path(sys.argv[1])/'src/common/net/net.cpp').read_text()
+for needle in ['Prospero.Eden-Encore/1', 'request.headers.emplace("User-Agent"', 'request.headers.emplace("Accept"']:
+    if needle not in text: raise SystemExit(f'Encore PS5 HTTP identity missing: {needle}')
+print('Encore PS5 HTTP identity backport: PASS')
+PYNET
+}
+
 apply_one "$root/headless/backports/eden-4473-4477.patch" "$eden/.encore-backport-gpu.sha256" validate_gpu
 apply_one "$root/headless/backports/eden-4436-spinlock-mutex.patch" "$eden/.encore-backport-4436.sha256" validate_spinlock_mutex
 apply_one "$root/headless/backports/eden-fw23-services.patch" "$eden/.encore-backport-fw23.sha256" validate_fw23
 apply_one "$root/headless/backports/eden-runtime-hid.patch" "$eden/.encore-backport-runtime-hid.sha256" validate_runtime_hid
 apply_one "$root/headless/backports/eden-ps5-hid-watchdog.patch" "$eden/.encore-backport-ps5-hid-watchdog.sha256" validate_ps5_hid_watchdog
+apply_one "$root/headless/backports/eden-ps5-net-user-agent.patch" "$eden/.encore-backport-ps5-net-user-agent.sha256" validate_ps5_net_user_agent

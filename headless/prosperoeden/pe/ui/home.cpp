@@ -300,8 +300,12 @@ void Launcher::press_home(Key key)
         }
         else if (focus == kHomeQuickPanel)
         {
-            // Deliberately inert: the user must press Cross to enter the quick-settings block.
-            return;
+            // Cross enters Quick Settings. While the panel itself is only highlighted, Left must
+            // return naturally to the neighbouring hero actions instead of trapping focus.
+            if (delta < 0)
+                focus = kHomeDetails;
+            else
+                return;
         }
         else if (focus >= kHomeQuickFirst && focus < kHomeQuickFirst + kHomeQuickCount)
         {
@@ -520,7 +524,9 @@ void Launcher::draw_home(Canvas &c)
     const std::string &hero_file = hero_recent != nullptr ? hero_recent->file : home_.last_file;
     const std::string &hero_title = hero_recent != nullptr ? hero_recent->title : home_.last_title;
     const std::string &hero_cover = hero_recent != nullptr ? hero_recent->cover : home_.last_cover;
-    const std::string &hero_artwork = hero_recent != nullptr ? hero_recent->hero : home_.last_hero;
+    const std::string &hero_banner = hero_recent != nullptr ? hero_recent->hero : home_.last_hero;
+    const std::string &hero_screenshot = hero_recent != nullptr ? hero_recent->screenshot : home_.last_screenshot;
+    const std::string hero_artwork = !hero_banner.empty() ? hero_banner : hero_screenshot;
     const std::string &hero_addons = hero_recent != nullptr ? hero_recent->addons : home_.last_addons;
     const std::string &hero_language = hero_recent != nullptr ? hero_recent->language : home_.last_language;
     const std::string &hero_intro = hero_recent != nullptr ? hero_recent->intro : home_.last_intro;
@@ -584,10 +590,11 @@ void Launcher::draw_home(Canvas &c)
     }
     else
     {
-        const Rect hero_art{884.0f, 192.0f, 380.0f, 380.0f};
-        cover(c, hero_cover, hero_art, 26.0f, 0.75f);
-        list.rounded_rect({844.0f, 192.0f, 72.0f, 380.0f}, 20.0f,
-                          theme::kGlass.with_alpha(0.34f));
+        // Never promote the square ROM icon to a TV hero. Until Nlib provides a banner or a real
+        // gameplay screenshot, keep the shared backdrop visible and use only a soft readability
+        // wash. This avoids the old dark rectangle + cover-art block seen on the PS5 build.
+        list.hgradient_rect({hero.x + 4.0f, hero.y + 4.0f, hero.w - 8.0f, hero.h - 8.0f}, 28.0f,
+                            theme::kScrim.with_alpha(0.68f), theme::kScrim.with_alpha(0.08f));
     }
 
     text(c, hero_recent != nullptr ? tr("SELECTED GAME") : tr("CONTINUE PLAYING"),
@@ -808,7 +815,7 @@ void Launcher::draw_home(Canvas &c)
          gfx::mix(theme::kMuted, theme::kLimePale, storage_focus));
     const std::string storage_value =
         home_diagnostics_.total_space.empty() ? home_diagnostics_.free_space :
-        home_diagnostics_.free_space + " / " + home_diagnostics_.total_space;
+        home_diagnostics_.used_space + " / " + home_diagnostics_.total_space;
     text_shrink(c, storage_value, storage_row.x + 58.0f,
                 baseline(storage_row.y + 34.0f, 26.0f, 19.0f), 19.0f,
                 theme::kTitle, storage_row.w - 86.0f);

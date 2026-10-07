@@ -1,0 +1,13 @@
+diff --git a/src/common/net/net.cpp b/src/common/net/net.cpp
+index 5c45e1370..f9f9e1f0a 100644
+--- a/src/common/net/net.cpp
++++ b/src/common/net/net.cpp
+@@ -151,6 +151,8 @@ std::optional<std::string> MakeRequest(const std::string& url, const std::string&
+             .method = "GET",
+             .path = path,
+         };
++        request.headers.emplace("User-Agent", "Prospero.Eden-Encore/1");
++        request.headers.emplace("Accept", "*/*");
+ 
+         client->set_follow_location(true);
+         httplib::Result result = client->send(request);
