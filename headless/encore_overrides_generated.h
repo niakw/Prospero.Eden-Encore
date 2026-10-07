@@ -26,7 +26,7 @@ inline constexpr std::array<TitleProfiles, 1> kTitleProfiles = {{
         {1, 1, 4, 0, 50, 1, 0, true},
         {1, 1, 5, 0, 50, 1, 0, true},
         {1, 2, 6, 0, 50, 0, 0, true},
-    }}}},
+    }}},
 }};
 inline constexpr int ClampTier(int tier) { return tier < 0 ? 0 : tier >= kAuthoredProfileCount ? kAuthoredProfileCount - 1 : tier; }
 inline constexpr const VideoProfile& GeneralProfile(int tier) { return kGeneralProfiles[static_cast<std::size_t>(ClampTier(tier))]; }

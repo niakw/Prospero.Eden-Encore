@@ -1,11 +1,21 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import shutil
+import subprocess
 root = Path(__file__).resolve().parents[1]
 preset = (root / "headless/prosperoeden/pe/ui/video_presets.hpp").read_text()
 settings = (root / "headless/prosperoeden/pe/ui/settings.cpp").read_text()
 library = (root / "headless/prosperoeden/pe/ui/library.cpp").read_text()
 store = (root / "headless/settings_store.h").read_text()
 generated = (root / "headless/encore_overrides_generated.h").read_text()
+
+compiler = shutil.which("clang++") or shutil.which("g++") or shutil.which("c++")
+assert compiler, "No host C++ compiler available for generated-profile syntax gate"
+syntax = subprocess.run(
+    [compiler, "-std=c++20", "-fsyntax-only", "-x", "c++", "-"],
+    input=generated, text=True, capture_output=True, check=False,
+)
+assert syntax.returncode == 0, "encore_overrides_generated.h syntax error:\n" + syntax.stderr
 
 assert "kAuthoredProfileCount = 4" in generated
 assert "kCustomProfile = 4" in generated

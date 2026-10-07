@@ -94,7 +94,7 @@ def main() -> None:
         lines.append(f"    {{0x{title:016X}ULL, {{{{")
         for p in values:
             lines.append(f"        {cpp_profile(p)},")
-        lines.append("    }}}},")
+        lines.append("    }}},")
     lines += [
         "}};",
         "inline constexpr int ClampTier(int tier) { return tier < 0 ? 0 : tier >= kAuthoredProfileCount ? kAuthoredProfileCount - 1 : tier; }",
