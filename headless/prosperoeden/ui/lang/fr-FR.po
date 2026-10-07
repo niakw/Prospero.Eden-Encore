@@ -32,8 +32,8 @@ msgid "1x (native)"
 msgstr "1x (natif)"
 
 #: pe/ui/library.cpp
-msgid "1x is the safe default. Lower it for performance/memory; higher scales use much more graphics memory."
-msgstr "1x est le réglage sûr. Réduisez-le pour gagner en performances ou en mémoire ; les valeurs supérieures utilisent beaucoup plus de mémoire graphique."
+msgid "Resolution follows the selected title-aware profile. Lower it for performance or memory; raise it only when the title has headroom."
+msgstr "La résolution suit le profil Encore adapté au jeu. Réduisez-la pour gagner en performances ou en mémoire ; augmentez-la seulement si le jeu a de la marge."
 
 #: settings_store.h
 msgid "2x (high memory)"
@@ -474,8 +474,8 @@ msgid "Filesystem: {0}  |  Free: {1}"
 msgstr "Système de fichiers : {0}  |  Libre : {1}"
 
 #: pe/ui/settings.cpp
-msgid "Final app output size. 1080p is recommended for stability and memory; this is not the game's render scale."
-msgstr "Taille finale de l'image envoyée par l'application. 1080p est recommandé pour la stabilité et la mémoire ; ce n'est pas l'échelle de rendu du jeu."
+msgid "Final app output size. Choose 1080p for lower memory use, 1440p for balance, or 2160p for maximum output detail."
+msgstr "Taille finale de l'image envoyée par l'application. Choisissez 1080p pour réduire l'usage mémoire, 1440p pour un bon équilibre ou 2160p pour un maximum de détails en sortie."
 
 #: pe/ui/settings.cpp
 msgid "Fine-tune your experience"
@@ -565,8 +565,8 @@ msgid "Game overrides reset to global defaults."
 msgstr "Les réglages spécifiques au jeu utilisent de nouveau les réglages globaux."
 
 #: pe/ui/settings.cpp
-msgid "Game render scale. 1x is recommended; lower it for performance or memory, raise it only when a game has headroom."
-msgstr "Échelle de rendu du jeu. 1x est recommandé ; réduisez-la pour gagner en performances ou en mémoire, augmentez-la seulement si le jeu a de la marge."
+msgid "Game render scale follows the selected profile. Lower it for performance or memory; raise it only when a game has headroom."
+msgstr "L'échelle de rendu du jeu suit le profil sélectionné. Réduisez-la pour gagner en performances ou en mémoire ; augmentez-la seulement si le jeu a de la marge."
 
 #: pe/ui/settings.cpp
 msgid "GAME RESOLUTION"
@@ -935,8 +935,8 @@ msgid "PlayStation"
 msgstr "PlayStation"
 
 #: pe/ui/settings.cpp
-msgid "PlayStation uses Cross=A and Circle=B. Switch keeps Nintendo face-button positions. Editing any button creates a custom profile."
-msgstr "PlayStation utilise Croix=A et Rond=B. Switch conserve les positions des boutons Nintendo. Modifier une touche crée un profil personnalisé."
+msgid "PlayStation Auto keeps Cross/Circle menu semantics while adapting gameplay to physical Switch positions. Switch stays fixed; editing any button creates a custom profile."
+msgstr "PlayStation Auto conserve Croix/Rond dans les menus tout en adaptant le gameplay aux positions physiques Switch. Switch reste fixe ; modifier une touche crée un profil personnalisé."
 
 #: settings_store.h
 msgid "Polish"
