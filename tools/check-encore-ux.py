@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import re
 root=Path(__file__).resolve().parents[1]
 def read(path): return (root/path).read_text()
 home=read('headless/prosperoeden/pe/ui/home.cpp')
@@ -45,7 +46,8 @@ assert 'Cross to clear' in home
 # PS5 startup safety: diagnostics is called synchronously by Launcher::Launcher before
 # the first frame. Direct libc statfs/statvfs caused 0xa002030a on FW 13.60 in build #182.
 assert 'Ps5ConsoleStorage' not in services
-assert 'statfs(' not in services and 'statvfs(' not in services
+services_code = re.sub(r'/\*.*?\*/|//[^\n]*', '', services, flags=re.S)
+assert 'statfs(' not in services_code and 'statvfs(' not in services_code
 assert 'std::filesystem::space(Eden::AssetsDir(), error)' in services
 assert '0xa002030a SYSTEM_ILLEGAL_FUNCTION_CALL' in services
 assert 'home_diagnostics_.used_space + " / " + home_diagnostics_.total_space' in home
