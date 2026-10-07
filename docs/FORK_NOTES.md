@@ -90,9 +90,11 @@ This addresses newer software reaching the NSO loader and failing with
 
 ## PS5 UX and controls
 
-- PlayStation-first face-button mapping by default.
-- Nintendo-position layout remains available.
-- Full DualSense button mapping globally and per game; per-game mappings can return to the global map.
+- Four controller profiles are exposed: **PlayStation** (default), **Switch**, **Custom PS5** and **Custom Switch**.
+- The untouched PlayStation profile is context-adaptive: PS-style Cross/Circle menu semantics are used initially, sustained stick/trigger activity can switch the face buttons to physical Switch gameplay positions, and menu/navigation evidence switches them back with hysteresis.
+- The detector is title-agnostic. Its thresholds are generated from `encore-overrides/general/controls.json` into the same committed snapshot as the video profiles.
+- Switch and both Custom profiles are deterministic and never rewritten automatically.
+- Full DualSense button mapping is available globally and per game; per-game mappings can return to the global map.
 - Vibration on/off and strength.
 - Adjustable stick deadzone.
 - Up to four controllers with runtime hotplug.
@@ -102,6 +104,7 @@ This addresses newer software reaching the NSO loader and failing with
   - Touchpad + L1: return to launcher.
   - Touchpad + R1: toggle FPS HUD where supported.
 - Launcher ownership follows the foreground PS5 user with initial-user fallback.
+- Encore can replace its own button glyphs, but game-owned prompt textures remain title assets and are not universally replaced by input mapping.
 
 ## Performance and recovery
 
@@ -135,6 +138,12 @@ Encore exposes four authored, title-aware video tiers plus a derived Custom stat
 
 The authoritative profile data is generated from `niakw/encore-overrides`; title-specific overrides are applied before manual game settings. Shipping profiles keep Dynarmic **per-core JIT** and do not enable shared-JIT, successor batching or saved-block compile-ahead.
 
+### JIT freeze revalidation
+
+The 01:22 hardware freeze trace showed a guest core remaining inside Dynarmic at the same guest PC (`0x124AA117A8`) for many minutes while telemetry continued and PS5 submit/present timings stayed negligible. The current WIP therefore adds a narrowly scoped pre-emption check on **wall-clock LinkBlockFast backward/self edges** only. Forward links keep the zero-check fast path.
+
+This is a **candidate fix under hardware revalidation**, not a resolved-freeze claim. It must pass the final native build and PS5 smoke/soak test before release status changes.
+
 ### Safe Launch
 
 A Library Safe Launch is one-shot and does not rewrite saved preferences.
@@ -158,13 +167,15 @@ For that run only it selects:
 ## Launcher and storage hardening
 
 - Library scanning is asynchronous.
+- Nlib enrichment provides cached title metadata, icons, **1080p banners**, up to three gameplay screenshots per title in the launcher, and local-player capacity; cache schema v2 refreshes older icon-only metadata once.
+- Home uses a full-bleed Nlib banner when available, six compact recent-game cards, and a controller-first quick-settings gate that requires Cross before entering row editing.
 - Cover loading is lazy and texture memory is bounded/LRU.
 - Settings use temporary-file + rename semantics.
 - Invalid JSON falls back safely.
 - Per-game option indexes are range checked.
 - RADV shader cache is capped at **256 MB**.
 - Session logs rotate in bounded segments.
-- Diagnostics reports filesystem mode, free space, shader/JIT cache size and log size.
+- Diagnostics reports filesystem mode, **free/total capacity of the selected Encore storage filesystem**, shader/JIT cache size and log size.
 - Diagnostics can safely clear shader/JIT caches without touching saves, settings, keys, firmware or
   game files.
 - Storage-root selection rejects `/` to avoid accidental console-root scanning.
@@ -273,8 +284,9 @@ Key findings that materially changed the release:
 
 Later closure work added Safe Launch, resets, storage bounds, diagnostics, save hardening,
 transactional ProsperoEden migration, the unified storage-root model, locale behavior, full French
-catalog validation and the release workflow. Publication is gated on a green
-build of the release head.
+catalog validation, title-aware overrides, Nlib rich-media UX and the release workflow. The current
+WIP additionally carries the unvalidated guest-loop pre-emption candidate above. Publication remains
+gated on a green shipping build **and** PS5 hardware revalidation of the release head.
 
 ## Deliberately excluded from this release
 
