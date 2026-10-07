@@ -17,11 +17,7 @@ using audio::Cue;
 namespace
 {
 
-constexpr Rect kListPanel{108.0f, 188.0f, 820.0f, 720.0f};
-constexpr Rect kDetailPanel{980.0f, 188.0f, 820.0f, 720.0f};
 constexpr Rect kDialog{550.0f, 180.0f, 820.0f, 720.0f};
-constexpr float kRowsTop = 264.0f;
-constexpr float kRowHeight = 80.0f;
 enum Category
 {
     kVideo,
