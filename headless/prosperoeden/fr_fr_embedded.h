@@ -35,10 +35,6 @@ msgstr "100 % correspond à l'intensité maximale des vibrations DualSense. Réd
 msgid "1x (native)"
 msgstr "1x (natif)"
 
-#: pe/ui/library.cpp
-msgid "Resolution follows the selected title-aware profile. Lower it for performance or memory; raise it only when the title has headroom."
-msgstr "La résolution suit le profil Encore adapté au jeu. Réduisez-la pour gagner en performances ou en mémoire ; augmentez-la seulement si le jeu a de la marge."
-
 #: settings_store.h
 msgid "2x (high memory)"
 msgstr "2x (mémoire élevée)"
@@ -408,6 +404,10 @@ msgstr "Terminé"
 #: pe/ui/settings.cpp
 msgid "Draws the menu's small text larger."
 msgstr "Agrandit les petits textes du menu."
+
+#: pe/ui/home.cpp
+msgid "DualSense"
+msgstr "DualSense"
 
 #: pe/ui/settings.cpp
 msgid "DualSense mapping, calibration, vibration and shortcuts."
@@ -1073,6 +1073,10 @@ msgstr "Réinitialiser les paramètres personnalisés de ce jeu ?"
 msgid "Resolution"
 msgstr "Résolution"
 
+#: pe/ui/library.cpp
+msgid "Resolution follows the selected title-aware profile. Lower it for performance or memory; raise it only when the title has headroom."
+msgstr "La résolution suit le profil Encore adapté au jeu. Réduisez-la pour gagner en performances ou en mémoire ; augmentez-la seulement si le jeu a de la marge."
+
 #: pe/ui/launcher.cpp
 msgid "Restore default settings?"
 msgstr "Rétablir les paramètres par défaut ?"
@@ -1545,4 +1549,4 @@ msgstr "{0}/ (NSP ou XCI)"
 msgid "{0}/ (one folder per game ID)"
 msgstr "{0}/ (un dossier par ID de titre)"
 )FRPO";
-}
+} // namespace pe::ui::embedded
