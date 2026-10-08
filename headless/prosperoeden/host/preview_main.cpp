@@ -152,6 +152,11 @@ void pictures(Stage &s)
     s.press({Key::up, Key::up, Key::right});
     s.wait(0.6f);
     s.shoot("04-home-settings-focus");
+    // Mini production renderer: real launcher C++/GL pipeline, Home-only output.
+    // Run by the lightweight GitHub preview job (not a full PS5 emulator build).
+    if (const char* home_only = std::getenv("PE_PREVIEW_HOME_ONLY");
+        home_only != nullptr && std::strcmp(home_only, "1") == 0)
+        return;
 
     // Library.
     s.restart();
