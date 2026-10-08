@@ -108,6 +108,12 @@ for marker in ('/banner/1080p','/screen/','/icon/512','fields=name,intro,descrip
                'CachedNlibScreens','result.screenshots','result.hero'):
     assert marker in services, marker
 assert 'hero_intro' in home
+# Visual regressions from actual 1920x1080 PS5 captures (2026-10-08): the
+# Zelda title must not occupy the same vertical lines as its description.
+assert 'text_shrink(c, hero_file.empty() ? tr("Your next adventure") : hero_title' in home
+assert 'theme::kTitle, 1160.0f);' in home
+assert 'text_shrink(c, game->name, 558.0f, baseline(574.0f, 52.0f, 40.0f)' in library
+assert 'text_block(c, game->name, 558.0f' not in library
 assert 'kNlibCacheSchema = 2' in services
 assert 'current_metadata_cache' in services
 assert 'artwork_files.resize(6)' in services
