@@ -253,6 +253,7 @@ class Launcher
     std::vector<Game> games_;
     std::string pending_settings_file_; // Home game options requested before async scan completes
     std::atomic<bool> scan_cancel_{false}; // game launch/teardown cancels remaining mod enumeration
+    std::atomic<bool> media_cancel_{false}; // stop launching new Nlib requests on game start
     std::future<std::vector<Game>> scan_; // the list being read
     std::future<std::vector<std::string>> presence_scan_; // nonblocking filesystem presence results
     std::vector<std::string> previous_missing_; // sorted previous poll; two-scan absence confirmation
