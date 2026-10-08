@@ -24,7 +24,10 @@ assert 'Common::Net::MakeRequest("https://api.nlib.cc", metadata_endpoint)' in s
 assert 'const std::size_t timeout_seconds = url == "https://api.nlib.cc" ? 3 : 5;' in http
 assert "std::unordered_map<std::string, std::chrono::steady_clock::time_point> next_retry;" in services
 assert "std::lock_guard lock(retry_guard);" in services
-assert "std::chrono::hours(6)" in services
+# Current Nlib negative-result retry policy: 30 minutes for incomplete metadata,
+# 5 minutes for transient network errors. The old six-hour policy was removed.
+assert "std::chrono::minutes(30)" in services
+assert "std::chrono::minutes(5)" in services
 assert 'NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)' in services
 assert 'const int wanted_screens = std::clamp(screen_count, 0, 3);' in services
 assert 'std::vector<std::future<bool>> downloads;' in services
