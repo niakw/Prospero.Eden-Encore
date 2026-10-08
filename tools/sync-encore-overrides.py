@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, json, subprocess
+import argparse, json, subprocess, sys
 from pathlib import Path
 
 PROFILE_IDS = ("minimum", "recommended", "high", "ultra")
@@ -112,6 +112,13 @@ def main() -> None:
     ]
     args.output.write_text("\n".join(lines))
     print(f"generated {args.output}: revision={database_revision} general={len(general_cpp)} specific={len(specifics)} source={revision}")
+    # The default Encore snapshot sync now also captures curated visual
+    # button-art rules. Custom --output fixture runs remain untouched.
+    if args.output == Path("headless/encore_overrides_generated.h") and (
+        source / "glyphs" / "manifest.json").is_file():
+        subprocess.run([sys.executable, "-B",
+                        str(Path(__file__).with_name("sync-glyph-overrides.py")),
+                        "--source", str(source)], check=True)
 
 if __name__ == "__main__":
     main()
