@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Statically prove the FC27 HLE patch applies and survives PS5 target parsing.
+"""Statically verify generic account/BSD/address HLE patches for every game.
 
 Does NOT build, link, invoke CI or change the pinned Eden source/cache.
 """
@@ -20,11 +20,14 @@ PATCH = ROOT / 'headless/backports/eden-fc27-hle-compat.patch'
 assert PATCH.is_file()
 source = Path(PIN) / 'source' if PIN else None
 if source is None or not (source / 'GIT-COMMIT').exists():
-    print('FC27 HLE patch static markers only (no local pinned Eden source)')
+    print('Universal HLE patch static markers only (no local pinned Eden source)')
     s = PATCH.read_text()
-    for term in ('LoadOpenContext', 'Ioctl', 'GetSockNameImpl', 'GetPeerNameImpl',
-                 'guest_addrin.len', 'Errno::INVAL'):
+    for term in ('LoadOpenContext', 'Ioctl', 'guest_addrin.len', 'Errno::INVAL'):
         assert term in s, term
+    assert s.count('+    write_buffer.resize(guest_addrin.len);') == 2
+    # No `GetSockNameImpl` declaration is added by the patch: it modifies the
+    # two existing handlers. Earlier CI incorrectly required this absent marker.
+    print('Universal account/BSD/sockaddr patch markers: PASS')
     sys.exit(0)
 assert (source / 'GIT-COMMIT').read_text().strip() == '5f142c7926d0c7fcbbd0ce30794d72f638a43b2a'
 need = ('src/core/hle/service/acc/acc.h', 'src/core/hle/service/acc/acc.cpp',
