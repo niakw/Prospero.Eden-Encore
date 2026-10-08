@@ -82,6 +82,14 @@ Cover Textures::cover(const std::string &path, float size)
         queue_.push_back(key);
     }
     it->second.used = frame_;
+    // Nlib downloads arrive asynchronously. Retry only a previously missing
+    // texture after three seconds while its card remains visible, so a race
+    // against the final file rename cannot persist until an app restart.
+    if (it->second.loaded && it->second.texture == 0 && it->second.age >= 3.0f) {
+        it->second.loaded = false;
+        it->second.age = 0.0f;
+        queue_.push_back(key);
+    }
     return {it->second.texture, it->second.age, it->second.loaded && it->second.texture == 0,
             it->second.aspect};
 }
