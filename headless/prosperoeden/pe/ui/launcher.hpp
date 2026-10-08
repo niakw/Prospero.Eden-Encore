@@ -147,6 +147,8 @@ class Launcher
     void sync_home_game(const Game& game); // one Nlib update must not walk every installed title
     // The home screen's content, with its game's mods counted.
     void read_home();
+    void start_diagnostics();
+    void finish_diagnostics();
     // Games removed/moved while the launcher is open disappear without a full rescan.
     void check_games_present();
     bool drop_missing_games(const std::vector<std::string>* known_missing = nullptr);
@@ -231,6 +233,7 @@ class Launcher
     // home: 0 hero, 1-3 header, 4 details, 5-11 recent, 12 quick card, 13-19 quick rows, 20 storage, 21 controllers, 22 full settings
     Home home_;
     DiagnosticsInfo home_diagnostics_{};
+    std::future<DiagnosticsInfo> diagnostics_scan_; // asynchronous cache/log disk inventory
     int home_recent_ = -1; // -1 = last played; otherwise the selected Recent card becomes the hero
     GameSettings home_game_settings_{};
     bool home_game_docked_ = true;
