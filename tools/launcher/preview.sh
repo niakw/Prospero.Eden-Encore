@@ -26,6 +26,9 @@ harfbuzz=${harfbuzz%/harfbuzz.cc}
 sources=("$source_dir"/host/*.cpp "$source_dir"/pe/core/*.cpp "$source_dir"/pe/gfx/*.cpp "$source_dir"/pe/ui/*.cpp)
 objects=()
 pids=()
+# A two-worker render-only build is intentionally much lighter than PS5 CI.
+max_workers=${PE_PREVIEW_JOBS:-2}
+[[ "$max_workers" =~ ^[1-9][0-9]*$ ]] || { echo "invalid PE_PREVIEW_JOBS" >&2; exit 2; }
 for source in "${sources[@]}"; do
     relative=${source#"$source_dir/"}
     object="$build/obj/${relative//\//_}.o"
@@ -37,8 +40,12 @@ for source in "${sources[@]}"; do
         warnings=(-Wall -Wextra)
         [[ $relative == pe/gfx/harfbuzz.cpp ]] && warnings=(-w)
         "$cxx" -std=c++20 -O2 "${warnings[@]}" -DGL_GLEXT_PROTOTYPES=1 -I"$source_dir" \
-            -I"$source_dir/host" -I"$root/tools/launcher/stb" -I"$harfbuzz" -c "$source" -o "$object" &
+            -I"$source_dir/host" -I"$root/tools/launcher/stb" -I/usr/include/stb -I"$harfbuzz" -c "$source" -o "$object" &
         pids+=($!)
+        if (( ${#pids[@]} >= max_workers )); then
+            for pid in "${pids[@]}"; do wait "$pid"; done
+            pids=()
+        fi
     fi
 done
 for pid in "${pids[@]}"; do wait "$pid"; done
