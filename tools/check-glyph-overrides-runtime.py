@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
     std::array<char, 16> nacp{};
     nacp[0] = '1'; nacp[1] = '.'; nacp[2] = '2'; nacp[3] = '.'; nacp[4] = '0';
     assert(Eden::GlyphVersion::FromNacp(nacp) == "1.2.0");
-    nacp[0] = '\\x01';
+    nacp[0] = '\x01';
     assert(Eden::GlyphVersion::FromNacp(nacp).empty());
     nacp.fill('A');
     assert(Eden::GlyphVersion::FromNacp(nacp) == std::string(16, 'A'));
