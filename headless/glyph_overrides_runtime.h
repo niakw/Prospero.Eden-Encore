@@ -154,6 +154,12 @@ inline bool EvidenceMatches(const Mods::fs::path& folder, const Rule& rule) {
         // Installer checks ORIGINAL RomFS bytes at packaging; launch checks
         // each replacement asset byte-for-byte via SHA-256. The original
         // file currently mounted by the emulator is still a separate gate.
+        // Match the 512 MiB aggregate installer cap, not only the 128 MiB
+        // per-file cap: otherwise an edited 64-file manifest could force
+        // gigabytes of filesystem reads and freeze the game-launch path.
+        constexpr std::uintmax_t max_pack_bytes = 512ull * 1024 * 1024;
+        constexpr std::uintmax_t max_file_bytes = 128ull * 1024 * 1024;
+        std::uintmax_t verified_bytes = 0;
         for (const auto& item : value["files"]) {
             if (!item.is_object() || !item.contains("romfs_path") ||
                 !item["romfs_path"].is_string() ||
@@ -191,9 +197,12 @@ inline bool EvidenceMatches(const Mods::fs::path& folder, const Rule& rule) {
                 asset /= part;
                 if (Mods::fs::is_symlink(asset, ec) || ec) return false;
             }
-            if (!Mods::fs::is_regular_file(asset, ec) || ec ||
-                Mods::fs::file_size(asset, ec) > (128u << 20) || ec) return false;
-            const auto actual = GlyphIntegrity::FileSha256(asset);
+            if (!Mods::fs::is_regular_file(asset, ec) || ec) return false;
+            const auto bytes = Mods::fs::file_size(asset, ec);
+            if (ec || bytes > max_file_bytes ||
+                bytes > max_pack_bytes - verified_bytes) return false;
+            verified_bytes += bytes;
+            const auto actual = GlyphIntegrity::FileSha256(asset, max_file_bytes);
             std::string expected = item["replacement_sha256"].get<std::string>();
             std::transform(expected.begin(), expected.end(), expected.begin(),
                            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
