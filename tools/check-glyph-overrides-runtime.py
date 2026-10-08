@@ -42,11 +42,11 @@ void put(const fs::path& path, const std::string& value) {
     out << value;
 }
 std::string catalogue(std::string_view version = "v1.2.0") {
-    return R"({"schema_version":1,"revision":7,"titles":[{"title_id":"0100C49025D3E000","update_version":")"
-        + std::string(version) + R"(","build_id":"0123456789ABCDEF0123456789ABCDEF01234567"}]})";
+    return R"({"schema_version":2,"revision":7,"titles":[{"title_id":"0100C49025D3E000","update_version":")"
+        + std::string(version) + R"("}]})";
 }
-const std::string evidence = R"({"schema":1,"title_id":"0100C49025D3E000",
-    "build_id":"0123456789ABCDEF0123456789ABCDEF01234567",
+const std::string evidence = R"({"schema":2,"title_id":"0100C49025D3E000",
+    "update_version":"v1.2.0",
     "rights":"Original artist-owned PlayStation art",
     "files":[{"romfs_path":"ui/controller.bntx",
               "replacement":"files/controller.bntx",
@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
            default_built_in.rules.empty());
     Catalogue data = Eden::GlyphOverrides::LoadCatalogue(catalogue_path);
     assert(data.valid && data.revision == 7 && data.rules.size() == 1);
-    put(catalogue_path, R"({"schema_version":1,"revision":0,"titles":[]})");
+    put(catalogue_path, R"({"schema_version":2,"revision":0,"titles":[]})");
     const auto stale = Eden::GlyphOverrides::LoadCatalogue(catalogue_path);
     assert(stale.valid && stale.revision == default_built_in.revision);
     put(catalogue_path, catalogue());
@@ -97,18 +97,16 @@ int main(int argc, char** argv) {
         Catalogue bad;
         assert(!Eden::GlyphOverrides::ParseCatalogue(body, &bad));
     };
-    rejected(R"({"schema_version":2,"revision":7,"titles":[]})");
-    rejected(R"({"schema_version":1,"revision":7,"titles":[
-      {"title_id":"NOTHEX","update_version":"v1","build_id":"123"}]})");
-    rejected(R"({"schema_version":1,"revision":7,"titles":[
-      {"title_id":"0100C49025D3E000","update_version":"v1",
-       "build_id":"0123456789ABCDEF0123456789ABCDEF01234567"},
-      {"title_id":"0100C49025D3E000","update_version":"v1",
-       "build_id":"0123456789ABCDEF0123456789ABCDEF01234567"}]})");
+    rejected(R"({"schema_version":1,"revision":7,"titles":[]})");
+    rejected(R"({"schema_version":2,"revision":7,"titles":[
+      {"title_id":"NOTHEX","update_version":"v1"}]})");
+    rejected(R"({"schema_version":2,"revision":7,"titles":[
+      {"title_id":"0100C49025D3E000","update_version":"v1"},
+      {"title_id":"0100C49025D3E000","update_version":"v1"}]})");
 
     // Correct game ID but a tampered / missing pack is NOT admitted.
     put(pack / "eden-glyph-pack.json",
-        R"({"schema":1,"title_id":"0100DEAD00000000","build_id":"0123456789ABCDEF0123456789ABCDEF01234567","rights":"ok","files":[{"romfs_path":"ui/controller.bntx"}]})");
+        R"({"schema":2,"title_id":"0100DEAD00000000","update_version":"v1.2.0","rights":"ok","files":[{"romfs_path":"ui/controller.bntx"}]})");
     assert(select(data, "v1.2.0", Style::PlayStation) == State::EvidenceMismatch);
     put(pack / "eden-glyph-pack.json", evidence);
     fs::remove(pack / "romfs" / "ui" / "controller.bntx");
