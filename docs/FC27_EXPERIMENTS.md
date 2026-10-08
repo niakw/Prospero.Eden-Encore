@@ -1,9 +1,8 @@
 # FC27 — experimental performance A/B (PS5 firmware 13.60)
 
-**PS5 build requested on the experiment branch; not PS5 hardware tested. OFF by default.**
+**Archive of the completed A/B/C/D campaign. Historical JIT tiers are retired; developer sparse mode remains unbuilt and unqualified on PS5.**
 
-Create `/data/prosperoeden/config/experiments.json` explicitly, after a build
-containing the experimental code has been installed:
+Historical `experiments.json` example from that campaign (not a recommendation for current builds):
 
 ```json
 {
@@ -17,8 +16,9 @@ containing the experimental code has been installed:
 }
 ```
 
-Change **one setting at a time**, then restart FC27. Safe Launch ignores
-all experiments. Delete the game entry to revert everything.
+During the historical campaign, changes were tested one at a time with an FC27 restart.
+Safe Launch ignores experiments. The retired `jit_cache` values no longer select
+an A/B/C code cache size in the current development branch.
 
 - `jit_cache`: `off` (default, A64 core0/1/2 256/192/192 MiB),
   `balanced` (256/224/224 MiB, +64 MiB), or `expanded`
@@ -65,18 +65,20 @@ The dense PS5 code allocator used by A/B/C/D commits **all** requested direct
 memory at JIT creation, even when a small game uses only a fraction. This branch
 prototypes a different backing scheme while retaining stable RX and RW views:
 
-- `jit_memory: "sparse"` (only when compiled with `EDEN_SPARSE_JIT_DEV=ON`\n  and `EDEN_DEV_PROFILE`) reserves both virtual views, but
-  commits 2 MiB *physical direct-memory* chunks only when Dynarmic calls
-  `BlockOfCode::EnsureMemoryCommitted` before emitting code. It does not rely
+- `jit_memory: "sparse"` (only when compiled with `EDEN_SPARSE_JIT_DEV=ON`
+  and `EDEN_DEV_PROFILE`) reserves both virtual views. It commits an initial
+  4 MiB bootstrap before Dynarmic construction (constant-pool initialization),
+  then commits further 2 MiB *physical direct-memory* chunks on
+  `BlockOfCode::EnsureMemoryCommitted` before emitting more code. It does not rely
   on execution-time page faults, change guest timing, or move existing code.
 - The old 4 GiB fixed-capacity prototype has been **removed**: no arbitrary
   new total ceiling should become the architecture. The sparse prototype
   currently retains the tested A/B/C capacities while safe multi-segment
   auto-growth and actual memory-pressure controls are developed.
-- The qualified A/B/C/D experiments remain dense and unchanged unless the
-  new `jit_memory` option is explicitly enabled. A32/core3 retain their
-  default capacity sizes, although their direct backing is also incremental
-  while sparse mode is enabled.
+- Normal PS5 builds retain dense direct-memory mappings; the developer-only
+  `jit_memory` option must be compiled and explicitly enabled before using
+  the sparse prototype. A32/core3 retain their default capacity sizes,
+  although their direct backing becomes incremental in sparse mode.
 - During a session, committed chunks are retained across cache clears to keep
   JIT pointers safe. All owned chunks and both reservations are released only
   when the corresponding JIT is destroyed.
