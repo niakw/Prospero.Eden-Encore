@@ -312,7 +312,7 @@ void Launcher::check_games_present()
         if (gone)
         {
             read_home();
-            const int recents = std::min<int>(6, static_cast<int>(home_.recents.size()));
+            const int recents = std::min<int>(7, static_cast<int>(home_.recents.size()));
             if (home_focus_ >= 5 && home_focus_ < 11 && home_focus_ - 5 >= recents)
                 home_focus_ = home_.last_exists ? 0 : (home_.setup_ready ? 1 : 2);
             if (home_focus_ == 4 && !home_.last_exists)
