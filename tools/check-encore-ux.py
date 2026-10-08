@@ -155,7 +155,7 @@ assert 'VideoPresetForTitle' in presets
 assert 'const Rect hero{0.0f, 0.0f, 1920.0f, 1080.0f}' in home
 assert 'list.hgradient_rect(hero, 0.0f' in home
 assert 'kAccentTeal' in read('headless/prosperoeden/pe/ui/theme.hpp')
-assert 'tr("Local players: {0}")' in home and 'std::to_string(hero_max_players)' in home
+assert 'tr("Max. players: {0}")' in home and 'std::to_string(hero_max_players)' in home
 assert '552.0f, 406.0f, 210.0f, 36.0f' in home
 assert 'float chip_x = hero_max_players > 0 ? 774.0f : 570.0f;' in home
 assert 'gfx::mix(theme::kAccentTeal, theme::kTitle, f)' in home
