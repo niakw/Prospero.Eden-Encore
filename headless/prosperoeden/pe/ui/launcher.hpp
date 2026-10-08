@@ -194,6 +194,8 @@ class Launcher
     float time_ = 0.0f;
     float clock_wait_ = 0.0f;
     float presence_wait_ = 0.0f;
+    // Bounded PS5 update-stall diagnoses: never log in the normal 60 Hz path.
+    std::chrono::steady_clock::time_point last_ui_hotspot_report_{};
     std::string clock_;
     std::string version_;
 
