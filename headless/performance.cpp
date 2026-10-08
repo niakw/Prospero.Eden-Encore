@@ -375,6 +375,22 @@ struct DirectMemoryRegion { std::int64_t start; std::int64_t end; std::int32_t t
 extern "C" std::int32_t sceKernelDirectMemoryQuery(std::int64_t, int, DirectMemoryRegion*, std::size_t);
 #endif
 
+// Query the actual contiguous direct-memory headroom available at guest
+// launch. Fail closed (no expanded JIT) when firmware cannot report it.
+bool QueryLargestDirectMemoryBlock(std::size_t* largest) noexcept {
+    if (!largest) return false;
+    *largest = 0;
+#ifdef PS5_NATIVE
+    const std::int64_t total = sceKernelGetDirectMemorySize();
+    if (total <= 0) return false;
+    std::int64_t start = 0;
+    return sceKernelAvailableDirectMemorySize(0, total, 0x4000,
+                                                &start, largest) == 0;
+#else
+    return false;
+#endif
+}
+
 #ifdef PS5_NATIVE
 // The largest free block of direct memory is what the next graphics allocation needs. Looked at
 // again every 100 ms; called on the GPU thread by the texture collector (KeepDirtyTextures).
