@@ -102,7 +102,7 @@ Available: **None, FXAA, SMAA**.
 - **60 Hz — default/recommended.**
 - **120 Hz.** Requests a 120 Hz output mode when the display supports it.
 
-120 Hz does not turn a 30 FPS game into a 120 FPS game.
+120 Hz does not turn a 30 FPS game into a 120 FPS game. Encore currently has **no verified frame-generation option**. For the separate research paths to improve *real* game FPS and investigate 30→60 **display** FPS via interpolation, see [Performance roadmap](docs/PERFORMANCE_ROADMAP.md). Synthetic FPS must never be presented as native game FPS.
 
 ### FPS overlay
 
@@ -181,9 +181,16 @@ All are **Off by default**.
 
 ## Diagnostics
 
-Detailed logging is **Off by default**. Enable it while reproducing a problem, then disable it for normal use.
+Detailed logging is **Off by default**. In the **unreleased local release-profile candidate**,
+turning the setting on will **not** force the whole game to `*:Debug`: that previously generated
+excessive output during FC27. Detailed guest tracing requires an explicitly diagnostic build.
+The preference may remain visible for compatibility, but normal shipping builds use a bounded
+log policy instead of unlimited debug output.
 
-Logs are stored under the Encore storage root, normally /data/prosperoeden/logs/.
+Logs are stored under the Encore storage root, normally `/data/prosperoeden/logs/`.
+The local candidate keeps up to **8 MiB of earliest plus 8 MiB of recent content per active
+log stream**, with previous-session rotation/cleanup. This is a storage policy, not a guarantee
+that a crash or frozen guest can always be diagnosed from the available records.
 
 ## Practical profiles
 

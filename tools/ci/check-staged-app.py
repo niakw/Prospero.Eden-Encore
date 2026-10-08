@@ -11,7 +11,7 @@ assert app.name == "PPSA99008" and app.is_dir(), app
 
 base = {
     "eboot.bin", "core-homebrew.nro", "sandbox-elevator.elf",
-    "sce_module/libc.prx", "sce_sys/param.json", "sce_sys/icon0.png",
+    "sce_module/libc.prx", "sce_sys/param.json", "sce_sys/icon0.png", "sce_sys/icon0.dds",
     "sce_sys/pic0.dds", "sce_sys/pic1.dds", "sce_sys/snd0.at9",
 }
 source_ui = root / "headless/prosperoeden/ui"
@@ -42,6 +42,7 @@ assert param["titleId"] == "PPSA99008"
 assert param["contentId"].endswith("PROSPEROEDEN0001")
 assert param["localizedParameters"]["en-US"]["titleName"] == "Prospero.Eden Encore"
 assert (app / "sce_sys/icon0.png").read_bytes() == (root / "assets/icon0.png").read_bytes()
+assert (app / "sce_sys/icon0.dds").read_bytes() == (root / "assets/icon0.dds").read_bytes()
 source_lang = sorted((source_ui / "lang").glob("*.po"))
 staged_lang = sorted((app / "ui/lang").glob("*.po"))
 assert len(source_lang) == 29, f"expected 29 launcher catalogs, got {len(source_lang)}"

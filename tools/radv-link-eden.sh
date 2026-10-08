@@ -54,6 +54,12 @@ eden_radv_link_recipe() {
             --wrap=posix_memalign|--wrap=aligned_alloc|--wrap=memalign|\
             --wrap=malloc_usable_size|--wrap=reallocf|--wrap=reallocarray|\
             --wrap=getline|--wrap=getdelim) ;;
+            # Mihawk's standalone RADV platform binds host DNS to EAI_FAIL stubs.
+            # Encore instead compiles its own sceNetResolver-backed getaddrinfo shim;
+            # the SDK libc resolver import may point at an unloaded WebKit module.
+            --defsym=getaddrinfo=ps5_getaddrinfo|--defsym=freeaddrinfo=ps5_freeaddrinfo|\
+            --defsym=gai_strerror=ps5_gai_strerror|--defsym=gethostbyname=ps5_gethostbyname|\
+            --defsym=gethostbyname_r=ps5_gethostbyname_r|--defsym=getnameinfo=ps5_getnameinfo) ;;
             *) retained+=("$flag") ;;
         esac
     done

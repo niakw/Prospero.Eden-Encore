@@ -1,0 +1,46 @@
+--- a/src/core/hle/kernel/k_light_lock.cpp
++++ b/src/core/hle/kernel/k_light_lock.cpp
+@@ -76,8 +76,21 @@
+         if (owner_thread->IsSuspended()) {
+             owner_thread->ContinueIfHasKernelWaiters(m_kernel);
+         }
++
++        if (cur_thread->IsDummyThread()) {
++            cur_thread->RequestDummyThreadWait(m_kernel);
++        }
+     }
+ 
++    // The wait queue is stack-local. Once a host/dummy waiter resumes, make sure
++    // no KThread keeps a pointer to the object that is about to go out of scope.
++    {
++        KScopedSchedulerLock sl2{m_kernel};
++        if (cur_thread->GetState() != ThreadState::Waiting || cur_thread->IsDummyThread()) {
++            cur_thread->ClearWaitQueue();
++        }
++    }
++
+     return true;
+ }
+ 
+--- a/src/core/hle/kernel/k_thread.cpp
++++ b/src/core/hle/kernel/k_thread.cpp
+@@ -1365,13 +1365,13 @@
+         KScopedSchedulerLock sl(kernel);
+         // If we're waiting, notify our queue that we're available.
+         if (this->GetState() == ThreadState::Waiting) {
+-            if (m_wait_queue == nullptr) {
+-                // This should never happen, but avoid a hard crash below to get this logged.
+-                ASSERT_MSG(false, "wait_queue is nullptr!");
+-                return;
++            if (m_wait_queue != nullptr) {
++                m_wait_queue->EndWait(kernel, this, wait_result);
++            } else {
++                // A dummy host thread may already have cleared its stack-local wait queue.
++                this->SetWaitResult(wait_result);
++                this->SetState(kernel, ThreadState::Runnable);
+             }
+-
+-            m_wait_queue->EndWait(kernel, this, wait_result);
+         }
+     }
+ 

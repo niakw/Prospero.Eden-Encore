@@ -45,6 +45,8 @@ Launcher::~Launcher()
     // The game list may still be reading; it uses the services this launcher was given.
     if (scan_.valid())
         scan_.wait();
+    if (home_media_scan_.valid())
+        home_media_scan_.wait();
     if (media_scan_.valid())
         media_scan_.wait();
 }
@@ -243,6 +245,7 @@ void Launcher::update(float dt)
     backdrop_.update(dt);
     textures_.pump(dt);
     finish_scan(false);
+    finish_home_media();
     finish_selected_media();
     update_controllers(dt);
     transition_.update(dt);

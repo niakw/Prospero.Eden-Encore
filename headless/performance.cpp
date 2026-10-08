@@ -123,42 +123,6 @@ void PcSignal(int, siginfo_t*, void* context) {
     pc_count.store(index + 1, std::memory_order_release);
 }
 #endif
-#if defined(PS5_NATIVE) && !defined(EDEN_DEV_PROFILE)
-static_assert(std::atomic<uintptr_t>::is_always_lock_free);
-std::array<pthread_t, 4> release_guest_threads{};
-std::array<std::atomic<bool>, 4> release_guest_registered{};
-std::array<std::atomic<uintptr_t>, 4> release_guest_pcs{};
-std::array<std::atomic<unsigned>, 4> release_guest_pc_samples{};
-std::array<std::atomic<long long>, 4> release_guest_registered_mono{};
-std::atomic<long long> release_guest_started_mono{};
-std::once_flag release_pc_signal_once;
-std::atomic<bool> release_pc_signal_ready{};
-
-void ReleasePcSignal(int, siginfo_t*, void* context) {
-    const auto self = pthread_self();
-    for (unsigned i = 0; i < release_guest_threads.size(); ++i) {
-        if (!release_guest_registered[i].load(std::memory_order_acquire) ||
-            !pthread_equal(self, release_guest_threads[i]))
-            continue;
-        const auto pc = static_cast<const uintptr_t*>(context)[224 / sizeof(uintptr_t)];
-        release_guest_pcs[i].store(pc, std::memory_order_relaxed);
-        release_guest_pc_samples[i].fetch_add(1, std::memory_order_release);
-        break;
-    }
-}
-
-void EnableReleasePcSignal() {
-    std::call_once(release_pc_signal_once, [] {
-        struct sigaction previous{}, action{};
-        if (sigaction(SIGUSR2, nullptr, &previous) || previous.sa_handler != SIG_DFL) return;
-        action.sa_sigaction = ReleasePcSignal;
-        action.sa_flags = SA_SIGINFO | SA_RESTART;
-        sigemptyset(&action.sa_mask);
-        if (sigaction(SIGUSR2, &action, nullptr) == 0)
-            release_pc_signal_ready.store(true, std::memory_order_release);
-    });
-}
-#endif
 #ifdef PS5_NATIVE
 std::array<unsigned, 5> worker_cpus{};
 bool worker_topology_ready = false;
@@ -175,6 +139,9 @@ void CheckWorkerTopology() {
     cpuset_t original{};
     if (__get_cpuid_max(0, nullptr) < 0xb ||
         cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, 8, &original)) return;
+    secondary_cpus = 0;
+    worker_cpus.fill(0);
+    cpu_core.fill(-1);
     std::array<unsigned, 5> cores{};
     unsigned count = 0;
     bool changed = false;
@@ -184,6 +151,11 @@ void CheckWorkerTopology() {
         CPU_SET(cpu, &one);
         if (cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, 8, &one)) break;
         changed = true;
+        // Affinity-mask changes are not necessarily reflected by the immediately following
+        // instruction. Give the kernel a scheduling point before sampling x2APIC topology;
+        // the old probe observed the same physical core for every allowed CPU on hardware.
+        sched_yield();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         unsigned a, b, c, d;
         __cpuid_count(0xb, 0, a, b, c, d);
         // Architectural SMT level: x2APIC ID above the SMT shift identifies
@@ -517,24 +489,6 @@ void RegisterWorker(const char* name) {
         if (std::strcmp(name, names[i])) continue;
         Worker worker;
         worker.thread = pthread_self();
-#if defined(PS5_NATIVE) && !defined(EDEN_DEV_PROFILE)
-        if (i < 4) {
-            EnableReleasePcSignal();
-            if (release_pc_signal_ready.load(std::memory_order_acquire)) {
-                sigset_t mask;
-                sigemptyset(&mask);
-                sigaddset(&mask, SIGUSR2);
-                if (pthread_sigmask(SIG_UNBLOCK, &mask, nullptr) == 0) {
-                    const long long registered_mono = ClockNs(CLOCK_MONOTONIC);
-                    release_guest_threads[i] = pthread_self();
-                    release_guest_registered_mono[i].store(registered_mono, std::memory_order_relaxed);
-                    if (i == 0)
-                        release_guest_started_mono.store(registered_mono, std::memory_order_relaxed);
-                    release_guest_registered[i].store(true, std::memory_order_release);
-                }
-            }
-        }
-#endif
 #ifdef EDEN_DEV_PROFILE
         if (pc_sampling && (i == 4 || i == pc_sample_core.load())) {
             sigset_t mask;
@@ -611,26 +565,6 @@ void Snapshot() {
     std::printf("EDEN_PERF_SAMPLE mono_ns=%lld process_cpu_ns=%lld wall_ns=%lld\n",
                 mono, cpu_clocks_valid ? ClockNs(process_clock) : -static_cast<long long>(ENOTSUP),
                 static_cast<long long>(Common::g_wall_clock.GetTimeNS().count()));
-#if defined(PS5_NATIVE) && !defined(EDEN_DEV_PROFILE)
-    // Early signal sampling previously destabilized boot. Start only after two minutes, when the
-    // game is fully established, then sample each guest worker once per existing 10 s watchdog tick.
-    const long long guest_started = release_guest_started_mono.load(std::memory_order_relaxed);
-    if (release_pc_signal_ready.load(std::memory_order_acquire) && guest_started > 0 &&
-        mono - guest_started >= 120LL * 1'000'000'000LL) {
-        for (unsigned i = 0; i < release_guest_threads.size(); ++i) {
-            if (!release_guest_registered[i].load(std::memory_order_acquire) ||
-                release_guest_registered_mono[i].load(std::memory_order_relaxed) < guest_started)
-                continue;
-            const unsigned samples = release_guest_pc_samples[i].load(std::memory_order_acquire);
-            const auto pc = release_guest_pcs[i].load(std::memory_order_relaxed);
-            std::printf("EDEN_RELEASE_GUEST_PC mono_ns=%lld core=%u samples=%u pc=%llx\n",
-                        mono, i, samples, static_cast<unsigned long long>(pc));
-            const int error = pthread_kill(release_guest_threads[i], SIGUSR2);
-            if (error)
-                std::printf("EDEN_RELEASE_GUEST_PC_SIGNAL core=%u error=%d\n", i, error);
-        }
-    }
-#endif
     std::lock_guard lock(workers_mutex);
 #ifdef EDEN_DEV_PROFILE
     std::map<uintptr_t, unsigned> counts;

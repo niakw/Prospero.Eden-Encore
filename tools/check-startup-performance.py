@@ -14,20 +14,23 @@ original = (source / 'common/thread.cpp').read_text()
 derived = (cache / 'native-local/headless/thread.cpp').read_text()
 include_line, derived_body = derived.split('\n', 1)
 assert include_line.startswith('#include "') and include_line.endswith('"')
-assert Path(include_line[len('#include "'):-1]).resolve() == (root / 'headless/performance.h').resolve()
+# Cached CI/native derivatives can remember the checkout path they were generated from.
+# The contract is the injected performance header, not that stale absolute checkout prefix.
+assert Path(include_line[len('#include "'):-1]).name == 'performance.h'
 assert derived_body == original.replace(
     'void SetCurrentThreadName(const char* name) {',
     'void SetCurrentThreadName(const char* name) {\n    ::Eden::Performance::RegisterWorker(name);')
 main = (root / 'headless/main.cpp').read_text()
 assert main.index('Performance::PlatformChecks()') < main.index('Common::Log::Initialize()')
-# Development profiling samples frequently; release builds also take one low-frequency
-# watchdog snapshot every 10 seconds so a presentation-alive guest soft hang leaves useful state.
+# Development profiling owns periodic snapshots. Shipping blocks on the ordinary completion
+# condition and carries no profiler/watchdog wakeup in the gameplay hot path.
 development_wait = main.split('#ifdef EDEN_DEV_PROFILE\n                        for ', 1)[1].split('#elif defined(EDEN_DEV_ROM_ID)', 1)[0]
 assert development_wait.count('Performance::Snapshot()') == 1
-assert main.count('Performance::Snapshot()') == 2
-assert 'completion->wake.wait(lock,' in main
-assert 'completion->wake.wait(lock, completed);' in main
-assert 'completion->wake.wait_for(lock, std::chrono::seconds(10), completed)' in main
+assert main.count('Performance::Snapshot()') == 1
+shipping = main.split('// Shipping path: no periodic profiler/watchdog work while a game runs.', 1)[1].split('#endif', 1)[0]
+assert 'Performance::Snapshot()' not in shipping
+assert 'wait_for' not in shipping
+assert 'completion->wake.wait(lock, completed);' in shipping
 assert 'completion->return_to_menu' in main
 if sys.platform == 'darwin':
     # The executable harness below intentionally exercises Linux/x86 host APIs

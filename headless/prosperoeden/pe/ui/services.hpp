@@ -197,6 +197,7 @@ struct DiagnosticsInfo
     std::string shader_caches;
     std::string logs;
     std::string data_path;
+    std::string storage_root; // actual selected Encore root; not a claim about physical SSD capacity
     std::uint64_t free_bytes = 0;
     std::uint64_t total_bytes = 0;
     std::uint64_t shader_cache_bytes = 0;

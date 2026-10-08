@@ -15,6 +15,7 @@
 #include "version.h"
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cctype>
 #include <cstddef>
@@ -28,6 +29,7 @@
 #include <fstream>
 #include <future>
 #include <initializer_list>
+#include <mutex>
 #include <nlohmann/json.hpp>
 #include <stb_image.h>
 #include <sys/stat.h>
@@ -319,9 +321,15 @@ NlibEnrichment CachedNlibEnrichment(std::uint64_t title_id, int language_choice)
 // offline fallback. Cards prefer Nlib's square icon, Home prefers its 16:9 banner, and Library
 // details use up to three gameplay screenshots. Only Home/recent titles are fetched in parallel.
 NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice) {
-    NlibEnrichment result = CachedNlibEnrichment(title_id, language_choice);
-    if (title_id == 0) return result;
+    if (title_id == 0) return {};
 
+    // Home and Library can request the same title at the same time. Cache writes use
+    // the same .new staging path, so serialize per hash bucket while leaving other
+    // titles free to enrich in parallel.
+    static std::array<std::mutex, 16> title_locks;
+    std::scoped_lock title_lock{title_locks[title_id % title_locks.size()]};
+
+    NlibEnrichment result = CachedNlibEnrichment(title_id, language_choice);
     const std::string language = NlibLanguageCode(language_choice);
     nlohmann::json metadata;
     const bool cached_metadata = LoadNlibMetadata(title_id, language, &metadata);
@@ -935,40 +943,10 @@ std::vector<pe::ui::Game> EdenServices::games() {
         games.push_back(std::move(game));
     }
 
-    // Metadata bridge work is finished. Do not hold it across network I/O: Nlib enrichment is
-    // optional, bounded to the Home games, and runs in parallel so a slow network costs one timeout
-    // rather than one timeout per game.
+    // Metadata bridge work is finished. Home and Library issue targeted Nlib enrichment
+    // asynchronously from the launcher. A library enumeration must stay local/cache-only so a
+    // slow or offline network never delays listing games or duplicates the Home request.
     lock.unlock();
-    std::vector<std::pair<std::size_t, std::future<NlibEnrichment>>> artwork_tasks;
-    for (std::size_t i = 0; i < games.size(); ++i) {
-        auto& game = games[i];
-        if (game.title_id == 0 ||
-            std::find(artwork_files.begin(), artwork_files.end(), game.file) == artwork_files.end())
-            continue;
-        const bool has_icon = !CachedNlibIcon(game.title_id).empty();
-        if (has_icon && !game.hero.empty() && !game.screenshots.empty() &&
-            game.max_players > 0 && !game.intro.empty())
-            continue;
-        const std::uint64_t title_id = game.title_id;
-        artwork_tasks.emplace_back(i, std::async(std::launch::async, [title_id, language_choice] {
-            return EnsureNlibEnrichment(title_id, language_choice);
-        }));
-    }
-    for (auto& [index, task] : artwork_tasks) {
-        NlibEnrichment enrichment = task.get();
-        auto& game = games[index];
-        if (!enrichment.icon.empty()) game.cover = std::move(enrichment.icon);
-        game.hero = std::move(enrichment.hero);
-        game.screenshots = std::move(enrichment.screenshots);
-        game.max_players = enrichment.max_players;
-        if (!enrichment.name.empty()) game.name = std::move(enrichment.name);
-        game.intro = std::move(enrichment.intro);
-        game.description = std::move(enrichment.description);
-        game.publisher = std::move(enrichment.publisher);
-        game.developer = std::move(enrichment.developer);
-        game.release_date = std::move(enrichment.release_date);
-        game.categories = std::move(enrichment.categories);
-    }
 
     std::sort(games.begin(), games.end(),
               [](const pe::ui::Game& a, const pe::ui::Game& b) { return a.name < b.name; });
@@ -1159,29 +1137,12 @@ pe::ui::DiagnosticsInfo EdenServices::diagnostics() {
     result.filesystem = Eden::FilesystemAccess() ? tr("Full filesystem") : tr("Sandbox only");
     result.data_path = Eden::FilesystemAccess() ? Eden::kDataDir : Eden::UserDir();
 
-    std::error_code error;
-    // RELEASE-SAFETY (FW 13.60): this function runs synchronously from Launcher::Launcher()
-    // before the first UI frame. Do not call libc statfs/statvfs directly here. The R1 build
-    // #182 introduced statfs("/user") and the title immediately died with
-    // 0xa002030a SYSTEM_ILLEGAL_FUNCTION_CALL before KStuff could pause it.
-    // std::filesystem::space() on Encore's selected storage root is the hardware-proven path
-    // used by the last bootable release (#180).
-    const auto space = std::filesystem::space(Eden::AssetsDir(), error);
-    if (error || space.capacity == 0) {
-        result.free_space = tr("Unknown");
-        result.used_space = tr("Unknown");
-        result.total_space = tr("Unknown");
-    } else {
-        const std::uint64_t storage_free = static_cast<std::uint64_t>(space.available);
-        const std::uint64_t storage_total = static_cast<std::uint64_t>(space.capacity);
-        const std::uint64_t storage_used =
-            storage_total > storage_free ? storage_total - storage_free : 0;
-        result.free_space = StorageSize(storage_free);
-        result.used_space = StorageSize(storage_used);
-        result.total_space = StorageSize(storage_total);
-        result.free_bytes = storage_free;
-        result.total_bytes = storage_total;
-    }
+    // RELEASE-SAFETY (FW 13.60): diagnostics runs synchronously from Launcher::Launcher()
+    // before the first UI frame. Build #182 proved that direct libc statfs/statvfs here can kill
+    // the title with 0xa002030a SYSTEM_ILLEGAL_FUNCTION_CALL. std::filesystem::space() on the
+    // selected root is boot-safe, but on this console it reports a 64 GiB filesystem view rather
+    // than the physical PS5 SSD, so Encore deliberately does not present it as storage capacity.
+    result.storage_root = Eden::AssetsDir();
 
     const std::filesystem::path cache = std::filesystem::path{Eden::UserDir()} / "cache";
     const std::uintmax_t shader_bytes =

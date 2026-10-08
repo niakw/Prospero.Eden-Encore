@@ -47,6 +47,7 @@ cp "$template/runtime/libc.prx" "$app/sce_module/libc.prx"
 cp "$root/assets/"{pic0.dds,pic1.dds,snd0.at9} "$app/sce_sys/"
 # One Encore raster source feeds both the PS5 tile and the launcher brand.
 cp "$root/assets/icon0.png" "$app/sce_sys/icon0.png"
+cp "$root/assets/icon0.dds" "$app/sce_sys/icon0.dds"
 rm -rf "$app/ui"
 cp -a "$root/headless/prosperoeden/ui" "$app/ui"
 rm -f "$app/ui/art/backdrop.tga" "$app/ui/art/backdrop-blur.tga"
@@ -143,5 +144,5 @@ PY
 llvm-readobj-18 --dyn-symbols --needed-libs "$out/llvm-pie.elf" > "$out/imports.txt"
 "$builder" self --inspect --file "$app/eboot.bin" > "$out/fself-inspection.txt"
 sha256sum "$app/eboot.bin" "$app/core-homebrew.nro" "$app/sce_module/libc.prx" \
-    "$app/sce_sys/param.json" "$app/sce_sys/icon0.png" "$app/sce_sys/pic0.dds" "$app/sce_sys/pic1.dds" \
+    "$app/sce_sys/param.json" "$app/sce_sys/icon0.png" "$app/sce_sys/icon0.dds" "$app/sce_sys/pic0.dds" "$app/sce_sys/pic1.dds" \
     "$app/sce_sys/snd0.at9"

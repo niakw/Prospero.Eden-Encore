@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <fcntl.h>
 #include <thread>
+#include <mutex>
 #include <string>
 #include <cstddef>
 #include <unistd.h>
@@ -26,7 +27,7 @@ public:
     // If the second segment fills too, it is recycled so disk use stays bounded while the earliest
     // context and the latest messages are both retained.
     bool Attach(std::FILE* target, std::string path, std::string first_path,
-                std::size_t segment_limit = 32u * 1024u * 1024u) {
+                std::size_t segment_limit = 8u * 1024u * 1024u) {
         if (stream) return false;
         std::fflush(target);
         const int stream_fd = fileno(target);
@@ -62,9 +63,15 @@ public:
     void Detach() {
         if (!stream) return;
         std::fflush(stream);
-        // Replacing the pipe's only write end ends the copy after the remaining data.
-        dup2(file_fd, fileno(stream));
+        // Rotations can replace file_fd on the draining thread. Serialize descriptor
+        // handoff, then join and point the stream at the *final* current segment.
+        // Without the lock a concurrent close/open could make dup2 see EBADF.
+        {
+            std::scoped_lock lock{file_mutex};
+            (void)dup2(file_fd, fileno(stream));
+        }
         worker.join();
+        (void)dup2(file_fd, fileno(stream));
         close(read_fd);
         close(file_fd);
         read_fd = file_fd = -1;
@@ -79,13 +86,24 @@ private:
             (void)std::remove(first_log_path.c_str());
             if (std::rename(log_path.c_str(), first_log_path.c_str()) != 0) return false;
             const int next = open(log_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
-            if (next < 0) return false;
+            if (next < 0) {
+                // Restore the current path if the new segment could not be opened.
+                (void)std::rename(first_log_path.c_str(), log_path.c_str());
+                return false;
+            }
             close(file_fd);
             file_fd = next;
             rotated = true;
         } else {
             // Keep the very first segment, recycle only the current one to retain the newest tail.
-            if (ftruncate(file_fd, 0) != 0 || lseek(file_fd, 0, SEEK_SET) < 0) return false;
+            // Some native runtimes refuse ftruncate even when O_TRUNC on open is supported.
+            // Reopening safely covers this case without growing the previous segment forever.
+            if (ftruncate(file_fd, 0) != 0 || lseek(file_fd, 0, SEEK_SET) < 0) {
+                const int next = open(log_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
+                if (next < 0) return false;
+                close(file_fd);
+                file_fd = next;
+            }
         }
         bytes = 0;
         static constexpr char marker[] =
@@ -104,8 +122,13 @@ private:
                 if (errno == EINTR) continue;
                 return;
             }
-            if (limit && bytes + static_cast<std::size_t>(count) > limit)
-                (void)Rotate();
+            std::scoped_lock lock{file_mutex};
+            if (limit && bytes + static_cast<std::size_t>(count) > limit && !Rotate()) {
+                // Do not fill the console disk on a transient filesystem error.
+                // Keep draining the pipe (avoiding producer stalls) and retry on
+                // the next chunk instead of permanently disabling the logger.
+                continue;
+            }
             for (ssize_t written = 0; written < count;) {
                 const ssize_t result = write(file_fd, buffer + written, static_cast<size_t>(count - written));
                 if (result < 0 && errno == EINTR) continue;
@@ -120,6 +143,7 @@ private:
     int read_fd = -1;
     int file_fd = -1;
     std::thread worker;
+    std::mutex file_mutex; // guards worker rotation/write vs Detach descriptor handoff
     std::string log_path;
     std::string first_log_path;
     std::size_t limit = 0;

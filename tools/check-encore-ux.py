@@ -31,37 +31,50 @@ assert 'kHomeRecentMax = 6' in home
 assert 'kHomeQuickPanel' in home
 assert 'focus == kHomeQuickPanel' in home
 assert 'Open quick settings' in home
-assert 'if (delta < 0)' in home
-assert 'focus = kHomeDetails;' in home
+assert 'constexpr std::array utility{kHomeQuickPanel, kHomeStorage, kHomeControllers, kHomeFullSettings}' in home
+assert 'position == 0 && delta < 0' in home
+assert 'utility[static_cast<std::size_t>((position + delta + 4) % 4)]' in home
+# Regression: the connected-controller icons must not overlap the hero metadata chips.
+assert '410.0f, 72.0f, 50.0f' in home
+assert 'const Rect players_chip{hero.x + hero.w - 208.0f, 506.0f' in home
+# Regression: do not remove the only width-measure helper while rearranging the hero.
+assert 'text_width(c, chip, 18.0f)' in home
 assert 'if (focus == kHomeQuickPanel)' in home and 'focus = kHomeQuickFirst' in home
 assert 'home_quick_edit_' in home and 'Pad::cross, TR("Edit")' in home
 assert 'VIEW ALL GAMES' not in home
 assert 'View all games' not in home
-assert 'const Rect hero{72.0f, 164.0f, 1228.0f, 514.0f}' in home
-assert 'const Rect quick{1324.0f, 164.0f, 524.0f, 286.0f}' in home
-assert 'const Rect status{1324.0f, 470.0f, 524.0f, 454.0f}' in home
-assert 'kHomeStorage' in home and 'kHomeCache' in home
-assert 'Confirmation::shader_caches' in home and 'clear_shader_caches' in home
-assert 'Cross to clear' in home
+assert 'const Rect hero{60.0f, 140.0f, 1800.0f, 430.0f}' in home
+assert 'const Rect quick{' not in home and 'const Rect status{' not in home
+for marker in ('kHomeStorage', 'kHomeControllers', 'kHomeFullSettings', 'quick_sheet',
+               'utility_card(0', 'utility_card(1', 'utility_card(2', 'utility_card(3'):
+    assert marker in home, marker
+assert 'open_mapping(false)' in home
+assert 'clear_shader_caches' not in home and 'clear_shader_caches' in settings
 # PS5 startup safety: diagnostics is called synchronously by Launcher::Launcher before
 # the first frame. Direct libc statfs/statvfs caused 0xa002030a on FW 13.60 in build #182.
 assert 'Ps5ConsoleStorage' not in services
 services_code = re.sub(r'/\*.*?\*/|//[^\n]*', '', services, flags=re.S)
 assert 'statfs(' not in services_code and 'statvfs(' not in services_code
-assert 'std::filesystem::space(Eden::AssetsDir(), error)' in services
+assert 'std::filesystem::space(Eden::AssetsDir(), error)' not in services
 assert '0xa002030a SYSTEM_ILLEGAL_FUNCTION_CALL' in services
-assert 'home_diagnostics_.used_space + " / " + home_diagnostics_.total_space' in home
+assert 'home_diagnostics_.used_space + " / " + home_diagnostics_.total_space' not in home
+assert 'home_diagnostics_.storage_root' in home
 
 assert 'const std::string hero_artwork = !hero_banner.empty() ? hero_banner : hero_screenshot;' in home
-assert 'Never promote the square ROM icon to a TV hero.' in home
+# Hero content is game media only: banner -> screenshot -> opaque neutral fallback.
+hero_draw = home[home.index('// ---- cinematic continue card ----'):home.index('// Effective values:')]
+assert 'hero_recent->cover' not in hero_draw and 'home_.last_cover' not in hero_draw
+assert 'theme::kPanel.with_alpha(0.96f)' in hero_draw
+assert 'shared Encore' in hero_draw
 assert 'bool Launcher::press_top_nav(Key key)' in launcher
 assert 'top_nav_focus_ = 3' in settings and 'top_nav_focus_ = 1' in library
 
 # Cards: gameplay media first and no ugly language subtitle under recent titles.
 assert 'recent.screenshot' in home
-recent_block=home[home.index('// ---- recently played ----'):home.index('// ---- footer ----')]
+recent_block=home[home.index('// ---- recently played: full-width visual rail ----'):home.index('// ---- footer ----')]
 assert 'recent.language' not in recent_block
-assert 'const int shown = std::min<int>(6' in recent_block
+assert 'const int shown = std::min<int>(kHomeRecentMax' in recent_block
+assert 'constexpr float available = 1800.0f' in recent_block
 assert 'card_w = (available - gap * 5.0f) / 6.0f' in recent_block
 
 # Library/Settings are horizontal TV surfaces, not legacy utility lists.
@@ -116,15 +129,17 @@ assert 'kAuthoredVideoProfiles = Eden::EncoreOverrides::kAuthoredProfileCount' i
 assert 'VideoPresetForTitle' in presets
 
 
-# Final Home polish contracts: full-bleed banner, explicit teal values, DualSense capacity, exact baseline.
+# Final Home polish contracts: full-bleed banner, explicit violet/teal values, local-player capacity,
+# full-width recent rail, four utility cards and no permanent debug/dashboard column.
 assert 'const Rect hero_art{hero.x + 4.0f, hero.y + 4.0f, hero.w - 8.0f, hero.h - 8.0f}' in home
 assert 'kAccentTeal' in read('headless/prosperoeden/pe/ui/theme.hpp')
-assert 'tr("DualSense")' in home and 'std::to_string(hero_max_players)' in home
-assert 'hero.x + hero.w - 192.0f, 606.0f, 156.0f, 34.0f' in home
+assert 'tr("Local players: {0}")' in home and 'std::to_string(hero_max_players)' in home
+assert 'hero.x + hero.w - 208.0f, 506.0f, 172.0f, 34.0f' in home
 assert 'gfx::mix(theme::kAccentTeal, theme::kTitle, f)' in home
-assert 'constexpr float card_h = 174.0f' in home
-assert '750.0f, card_w, card_h' in home
-assert 'const Rect status{1324.0f, 470.0f, 524.0f, 454.0f}' in home
+assert 'constexpr float card_h = 166.0f' in home
+assert '622.0f, card_w, card_h' in home
+assert 'constexpr float utility_w = (1800.0f - utility_gap * 3.0f) / 4.0f' in home
+assert 'const bool quick_open' in home
 
 
 # Custom low-cost settings keep the light hidden runtime policy.

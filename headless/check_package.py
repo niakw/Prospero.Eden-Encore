@@ -16,7 +16,7 @@ if 'EDEN_PACKAGE_DIR' in os.environ:
     assert APP.is_relative_to(ROOT/'build') and APP.name == 'PPSA99008'
 OUT = ROOT / 'build/headless-native'
 BASE_REQUIRED = {'eboot.bin', 'core-homebrew.nro', 'sce_module/libc.prx',
-            'sce_sys/param.json', 'sce_sys/icon0.png', 'sce_sys/pic0.dds', 'sce_sys/pic1.dds',
+            'sce_sys/param.json', 'sce_sys/icon0.png', 'sce_sys/icon0.dds', 'sce_sys/pic0.dds', 'sce_sys/pic1.dds',
             'sce_sys/snd0.at9', 'sandbox-elevator.elf'}
 REQUIRED = set(BASE_REQUIRED)
 REQUIRED.update(p.relative_to(APP).as_posix() for p in (APP / 'ui').rglob('*') if p.is_file())

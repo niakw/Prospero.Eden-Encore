@@ -10,10 +10,10 @@ development = 'EDEN_DEV_PROFILE:BOOL=ON' in cache_text
 shared_jit_enabled = 'EDEN_SHARED_JIT:BOOL=ON' in cache_text
 compile_batch_enabled = 'EDEN_JIT_COMPILE_BATCH:BOOL=ON' in cache_text
 
-# Keep timers/sampling out of Dynarmic's internal hot paths. The PS5 wrapper around
-# Dynarmic::Run() is different: shipping soft-hang diagnostics deliberately take one owner-written
-# snapshot before and after the guest run and publish Guest/Kernel phase transitions for the
-# watchdog. Validate that bounded contract instead of banning the release diagnostics themselves.
+# Production Dynarmic and its wrapper must contain no CPU sampling/phase atomics.
+# Only EDEN_DEV_PROFILE builds may wrap guest runs with owner-written snapshots.
+# Regenerate native-local sources before running this generated-output test; cached
+# output from the previous hardware build still contains the removed instrumentation.
 for name in ('a32_interface.cpp', 'a64_interface.cpp', 'block_of_code.cpp'):
     source = (generated / name).read_text()
     assert 'Eden::Performance::Timer' not in source
@@ -23,9 +23,11 @@ for name in ('a32_interface.cpp', 'a64_interface.cpp', 'block_of_code.cpp'):
 for bits in (32, 64):
     wrapper = (generated / f'arm_dynarmic_{bits}.cpp').read_text()
     assert 'Eden::Performance::Timer' not in wrapper
-    assert wrapper.count('::Eden::Performance::SampleCpu(') == 2
-    assert wrapper.count('::Eden::Performance::cpu_state[m_core_index].phase.store(') == 2
-    assert 'CpuPhase::Guest' in wrapper and 'CpuPhase::Kernel' in wrapper
+    expected_samples = 2 if development else 0
+    assert wrapper.count('::Eden::Performance::SampleCpu(') == expected_samples
+    assert wrapper.count('::Eden::Performance::cpu_state[m_core_index].phase.store(') == expected_samples
+    if development:
+        assert 'CpuPhase::Guest' in wrapper and 'CpuPhase::Kernel' in wrapper
 
 jit = (generated / 'a64_interface.cpp').read_text()
 if not development:

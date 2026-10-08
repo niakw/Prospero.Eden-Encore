@@ -279,7 +279,7 @@ void Launcher::draw_settings(Canvas &c)
         lines = {{tr("DETAILED LOGGING"), on_off(prefs_.detailed_logging)},
                  {tr("SETUP"), home_.setup_ready ? tr("Ready") : tr("Needs attention")},
                  {tr("FILESYSTEM"), info.filesystem},
-                 {tr("FREE SPACE"), info.free_space},
+                 {tr("ROOT"), short_path(info.storage_root, 34)},
                  {tr("SHADER/JIT CACHES"), info.shader_caches},
                  {tr("LOGS"), info.logs},
                  {tr("DATA"), short_path(info.data_path, 34)}};
@@ -784,7 +784,8 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
         const DiagnosticsInfo info = services_.diagnostics();
         const std::string details =
             services_.setup_details() + "\n" +
-            fill(tr("Filesystem: {0}  |  Free: {1}"), {info.filesystem, info.free_space}) + "\n" +
+            tr("FILESYSTEM") + ": " + info.filesystem + "  |  " +
+            tr("ROOT") + ": " + info.storage_root + "\n" +
             fill(tr("Shader/JIT caches: {0}  |  Logs: {1}"), {info.shader_caches, info.logs}) + "\n" +
             fill(tr("Data: {0}"), {info.data_path});
         text_block(c, details, 592.0f, baseline(350.0f, 30.0f, theme::kSmall),
