@@ -570,14 +570,26 @@ void Launcher::draw_home(Canvas &c)
 
     // ---- full-bleed cinematic game hero (no giant rounded panel) ----
     begin_band(1, 18.0f);
+    // Non-blocking background: if an Nlib banner has not yet loaded, show
+    // the actual Eden wallpaper already drawn underneath, NOT a solid
+    // placeholder covering the entire TV. The normal texture cache retries
+    // asynchronously when Nlib finishes its atomic file write.
     if (!hero_artwork.empty()) {
-        cover_crop(c, hero_artwork, hero, 0.0f, 0.0f);
-    } else {
-        // Backdrop remains visible if Nlib has no real image. Never enlarge a ROM
-        // icon or the Eden brand as a counterfeit 16:9 game background.
-        list.gradient_rect(hero, 0.0f,
-                           theme::kScrim.with_alpha(0.04f),
-                           theme::kPanel.with_alpha(0.16f));
+        const Cover hero_picture = c.textures.cover(hero_artwork, 1920.0f);
+        if (hero_picture.texture != 0) {
+            const float source = std::max(0.01f, hero_picture.aspect);
+            constexpr float target = 1920.0f / 1080.0f;
+            Rect uv{0.0f, 0.0f, 1.0f, 1.0f};
+            if (source > target) {
+                uv.w = target / source;
+                uv.x = (1.0f - uv.w) * 0.5f;
+            } else if (source < target) {
+                uv.h = source / target;
+                uv.y = (1.0f - uv.h) * 0.5f;
+            }
+            list.image(hero_picture.texture, hero, uv,
+                       kWhite.with_alpha(tween::cubic_out(hero_picture.age / 0.30f)));
+        }
     }
     // Game artwork stays legible around the header, name and play controls.
     list.hgradient_rect(hero, 0.0f,
@@ -802,8 +814,10 @@ void Launcher::draw_home(Canvas &c)
             const float f = focus(kHomeRecentFirst + i);
             begin_lift(r, f, 0.030f);
             plate_rest(c, kTilePlate, r);
-            const std::string& art = !recent.screenshot.empty() ? recent.screenshot :
-                                     (!recent.hero.empty() ? recent.hero : recent.cover);
+            // Reference uses recognisable game-key art, not a random gameplay
+            // screenshot or a cropped panoramic banner on the small tile.
+            const std::string& art = !recent.cover.empty() ? recent.cover :
+                                     (!recent.hero.empty() ? recent.hero : recent.screenshot);
             cover_crop(c, art, {r.x + 4.0f, r.y + 4.0f, r.w - 8.0f, r.h - 8.0f}, 20.0f, 0.32f);
             // Never bury a game's title inside a dark overlay on its artwork.
             text_shrink(c, recent.title, r.x + card_w * 0.5f,
