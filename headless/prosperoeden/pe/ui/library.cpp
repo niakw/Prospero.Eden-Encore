@@ -346,12 +346,18 @@ void Launcher::check_games_present()
         if (presence_scan_.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
             return;
         try {
-            const std::vector<std::string> missing = presence_scan_.get();
+            const std::vector<std::string> observed_missing = presence_scan_.get();
+            // Results can be stale after a ROM folder refresh or atomic file
+            // replacement. Require the same missing path in two independent
+            // scans before removing UI items. Worker paths are sorted, so
+            // this confirmation needs no filesystem I/O on the UI thread.
+            std::vector<std::string> missing;
+            std::set_intersection(observed_missing.begin(), observed_missing.end(),
+                                  previous_missing_.begin(), previous_missing_.end(),
+                                  std::back_inserter(missing));
+            previous_missing_ = observed_missing;
             if (missing.empty())
                 return;
-            // A result can become stale after a library/media refresh. The
-            // existing synchronous removal path rechecks only on a reported
-            // missing file; normal navigation never does blocking I/O.
             const bool home_affected = (home_.last_exists &&
                 std::find(missing.begin(), missing.end(), home_.last_file) != missing.end()) ||
                 std::any_of(home_.recents.begin(), home_.recents.end(), [&](const Recent &recent) {
@@ -368,8 +374,10 @@ void Launcher::check_games_present()
             if (modal_ == Modal::none)
                 drop_missing_games(&missing);
         } catch (const std::exception &error) {
+            previous_missing_.clear();
             sys::log("presence scan: %s", error.what());
         } catch (...) {
+            previous_missing_.clear();
             sys::log("presence scan failed");
         }
         return;
@@ -387,8 +395,10 @@ void Launcher::check_games_present()
         for (const Game &game : games_)
             if (!game.file.empty())
                 paths.push_back(game.file);
-    if (paths.empty())
+    if (paths.empty()) {
+        previous_missing_.clear();
         return;
+    }
     std::sort(paths.begin(), paths.end());
     paths.erase(std::unique(paths.begin(), paths.end()), paths.end());
     presence_scan_ = std::async(std::launch::async,
