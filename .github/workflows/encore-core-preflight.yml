@@ -2,7 +2,7 @@ name: Encore core source regressions — no GUI or PS5 build
 
 on:
   push:
-    branches: [local/fc27-offline-no-build, dev/ps5-sparse-jit]
+    branches: [dev/ps5-sparse-jit]
   workflow_dispatch:
 
 permissions:
