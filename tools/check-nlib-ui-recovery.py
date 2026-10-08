@@ -59,5 +59,12 @@ assert 'slow_stage("media_merge", media_started);' in nav
 assert 'slow_stage("game_presence_scan", presence_started);' in nav
 assert "now - last_ui_hotspot_report_ >= std::chrono::seconds(2)" in nav
 
+# Presence checks may run every two seconds, but normal PS5 UI navigation
+# must not synchronously stat the entire game library.
+assert "std::future<std::vector<std::string>> presence_scan_;" in hdr
+assert "presence_scan_.wait_for(std::chrono::seconds(0))" in lib
+assert "presence_scan_ = std::async(std::launch::async" in lib
+assert "if (!services_.game_exists(path))" in lib
+assert "if (presence_scan_.valid())" in nav
 
 print("Nlib and four PS5 capture regressions: SOURCE CONTRACT PASS")
