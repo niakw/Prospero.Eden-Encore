@@ -645,8 +645,10 @@ void Launcher::draw_library(Canvas &c)
         const std::string& artwork = !game->screenshots.empty() ? game->screenshots.front() :
             (!game->hero.empty() ? game->hero : game->cover);
         cover_crop(c, artwork, art, 22.0f, 0.70f);
-        text_block(c, game->name, 558.0f, baseline(574.0f, 48.0f, theme::kHeading),
-                   theme::kHeading, 46.0f, theme::kTitle, 1160.0f, 2, kShrink);
+        // A two-line title previously overlapped the publisher/date and intro
+        // (e.g. Breath of the Wild in French). Keep one readable, scaled line.
+        text_shrink(c, game->name, 558.0f, baseline(574.0f, 52.0f, 40.0f),
+                    40.0f, theme::kTitle, 1160.0f);
 
         std::string identity;
         if (!game->publisher.empty()) identity = game->publisher;
