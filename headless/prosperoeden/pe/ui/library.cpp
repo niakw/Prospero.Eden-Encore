@@ -348,7 +348,7 @@ void Launcher::check_games_present()
                     home_focus_ = 0;
             }
             if (modal_ == Modal::none)
-                drop_missing_games();
+                drop_missing_games(&missing);
         } catch (const std::exception &error) {
             sys::log("presence scan: %s", error.what());
         } catch (...) {
@@ -383,7 +383,7 @@ void Launcher::check_games_present()
         });
 }
 
-bool Launcher::drop_missing_games()
+bool Launcher::drop_missing_games(const std::vector<std::string>* known_missing)
 {
     if (!games_loaded_)
         return false;
@@ -391,7 +391,13 @@ bool Launcher::drop_missing_games()
         library_.selected >= 0 && library_.selected < static_cast<int>(games_.size()) ?
             games_[static_cast<std::size_t>(library_.selected)].file : std::string{};
     const auto gone = std::remove_if(games_.begin(), games_.end(),
-        [this](const Game &game) { return !services_.game_exists(game.file); });
+        [this, known_missing](const Game &game) {
+            // Periodic background poll has already checked these paths.
+            // Avoid repeating hundreds of filesystem calls on the UI thread.
+            if (known_missing)
+                return std::find(known_missing->begin(), known_missing->end(), game.file) != known_missing->end();
+            return !services_.game_exists(game.file);
+        });
     if (gone == games_.end())
         return false;
     games_.erase(gone, games_.end());
