@@ -305,13 +305,18 @@ public:
         }
 #endif
         clock.Present(now);
-        if (system && now - last_stats >= 1.0) {
-            const auto stats = system->GetAndResetPerfStats();
-            speed_percent = stats.emulation_speed * 100.0;
-            last_stats = now;
+        // No periodic performance-stat reset, string formatting or HUD draw
+        // while the overlay is OFF. Keep the ultra-cheap present clock so
+        // enabling it later still gives a fresh, valid FPS sample.
+        if (hud_enabled.load(std::memory_order_relaxed)) {
+            if (system && now - last_stats >= 1.0) {
+                const auto stats = system->GetAndResetPerfStats();
+                speed_percent = stats.emulation_speed * 100.0;
+                last_stats = now;
+            }
+            const auto text = FormatHudText(clock, speed_percent, "OGL");
+            DrawHud(text.data(), false);
         }
-        const auto text = FormatHudText(clock, speed_percent, "OGL");
-        if (hud_enabled.load(std::memory_order_relaxed)) DrawHud(text.data(), false);
         Check(eglSwapBuffers(display, surface), "eglSwapBuffers");
     }
     void PresentLoading() {
@@ -615,11 +620,16 @@ void GraphicsWindow::OnFrameDisplayed() {
         vulkan_loading = false;
 #ifdef EDEN_PS5_VULKAN
         vulkan_hud_clock.Present(now);
-        if (system && now - vulkan_hud_stats_time >= 1.0) {
-            vulkan_hud_speed = system->GetAndResetPerfStats().emulation_speed * 100.0;
-            vulkan_hud_stats_time = now;
+        // When FPS HUD is hidden (the default for most players), avoid
+        // a per-frame snprintf/glyph conversion and a per-second perf-stats
+        // reset on the compositor's frame callback.
+        if (hud_enabled.load(std::memory_order_relaxed)) {
+            if (system && now - vulkan_hud_stats_time >= 1.0) {
+                vulkan_hud_speed = system->GetAndResetPerfStats().emulation_speed * 100.0;
+                vulkan_hud_stats_time = now;
+            }
+            vulkan_hud = MakeHudSnapshot(vulkan_hud_clock, vulkan_hud_speed);
         }
-        vulkan_hud = MakeHudSnapshot(vulkan_hud_clock, vulkan_hud_speed);
 #endif
         ++frame_total;
         if (frame_sample_start < 0) {
