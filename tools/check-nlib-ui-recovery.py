@@ -65,6 +65,13 @@ assert "std::future<std::vector<std::string>> presence_scan_;" in hdr
 assert "presence_scan_.wait_for(std::chrono::seconds(0))" in lib
 assert "presence_scan_ = std::async(std::launch::async" in lib
 assert "if (!services_.game_exists(path))" in lib
+# Library navigation must not wait for a full scan or stat every game on the UI thread.
+library_entry = lib.split("void Launcher::enter_library()", 1)[1].split("bool Launcher::open_game_settings_at_file", 1)[0]
+assert "finish_scan(false);" in library_entry
+assert "finish_scan(true);" not in library_entry
+assert "drop_missing_games();" not in library_entry
+assert "start_scan();" in library_entry
+assert "library_.selected >= 0 &&" in lib
 assert "if (presence_scan_.valid())" in nav
 assert "drop_missing_games(&missing);" in lib
 assert "if (known_missing)" in lib
