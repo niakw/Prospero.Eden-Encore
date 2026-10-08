@@ -652,6 +652,13 @@ if(PS5_NATIVE)
     target_sources(dynarmic PRIVATE "${PORT_BUILD_DIR}/a32_interface.cpp")
 endif()
 
+# Dynarmic keeps its Xbyak dependency PRIVATE; the PS5-specific core
+# wrapper also needs Xbyak::Error for typed allocator-only startup retries.
+# Expose the imported header-only target to core without changing Dynarmic's
+# public dependency surface or pulling a new Xbyak version.
+if(PS5_NATIVE)
+    target_link_libraries(core PRIVATE xbyak::xbyak)
+endif()
 # Carry both qualified JIT configuration changes into the real core wrappers.
 # Generate local derivatives; the pinned dependency itself remains unchanged.
 get_target_property(core_sources core SOURCES)
