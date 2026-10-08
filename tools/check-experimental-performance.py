@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Static contracts for OFF-by-default PS5 performance experiments.
+"""Shared PS5 performance policy and development-only tracing contracts.
 
-This does not compile PS5 code or demonstrate FPS gains on hardware.
+The completed A/B/C/D campaign is preserved as history; user-facing runtime
+no longer selects those experimental JIT tiers.
+This source contract does NOT validate firmware performance.
 """
 from pathlib import Path
+
 root = Path(__file__).resolve().parents[1]
 read = lambda name: (root / name).read_text()
 header = read("headless/experimental_performance.h")
@@ -14,20 +17,24 @@ graphics = read("headless/graphics.cpp")
 graphics_h = read("headless/graphics.h")
 guide = read("docs/FC27_EXPERIMENTS.md")
 
-assert "jit_cache_tier{0}" in header
-assert "vulkan_frame_probe{false}" in header
-assert "if (core >= 3) return baseline;" in header
-assert "224u * mib" in header and "320u : 256u" in header
-assert "return baseline;" in header
+assert "ChooseJitMemoryPlan(" in header
+assert "ApplyJitMemoryPlan(" in header
+assert "A64CacheBytes(" in header and "A32CacheBytes(" in header
+assert "kSingleArenaAddressingLimit" in header
+assert "kHostReserve" in header
+assert "std::array<std::atomic<std::uint32_t>,4>" in header
+assert "jit_cache_tier{0}" not in header
 
 assert 'ConfigFile("experiments.json")' in main
 assert "if (!safe_launch && launch_title_id)" in main
-assert 'jit == "balanced" ? 1u : jit == "expanded" ? 2u : 0u' in main
 assert 'get("cpu_placement") == "logical"' in main
 assert 'get("vulkan_pacing") == "trace"' in main
 assert "EnableExperimentalLogicalPlacement();" in main
+assert 'jit == "balanced"' not in main and 'jit == "expanded"' not in main
+assert "ChooseJitMemoryPlan(" in main and "ApplyJitMemoryPlan(" in main
 
 assert "A64CacheBytes(m_core_index" in cmake
+assert "A32CacheBytes(m_core_index" in cmake
 assert 'string(PREPEND wrapper "#include' in cmake
 assert "experimental_performance.h" in cmake
 assert 'option(EDEN_SHARED_JIT "Enable the experimental cross-core A64 JIT" OFF)' in cmake
@@ -44,8 +51,7 @@ present = graphics.split("void GraphicsWindow::OnFrameDisplayed()", 1)[1].split(
     "void GraphicsWindow::CheckPresentation(", 1)[0]
 assert "std::this_thread::sleep" not in present
 
-assert "0100C49025D3E000" in guide
-assert '"jit_cache": "balanced"' in guide
-assert '"cpu_placement": "off"' in guide
-assert "Safe Launch ignores" in guide
-print("PS5 experimental JIT budgets, CPU fallback and Vulkan histogram: static contracts PASS")
+assert "0100C49025D3E000" in guide  # historical benchmark identifier only
+assert "developer-build only" in guide
+assert "Safe Launch" in guide
+print("PS5 universal A64/A32 JIT budget and dev-only trace controls: source contracts PASS")
