@@ -197,14 +197,15 @@ set(fermi_layer_new [=[
     }
 ]=])
 set(fermi_new [=[
-    // The software swizzler already handles the z=0 subrectangle of
-    // a 3D block-linear/pitch image, provided the source/destination
-    // layers are both zero. Keep nonzero layers explicitly unsupported:
+    // The software swizzler already handles the z=0 subrectangle when
+    // EITHER the source OR destination has 3D depth, provided both
+    // layers are zero. Keep nonzero layers explicitly unsupported:
     // the current UnswizzleSubrect API hardcodes origin_z = 0.
-    const bool base_layer_3d_copy = regs.src.depth > 1 &&
+    const bool base_layer_3d_copy =
+        (regs.src.depth > 1 || regs.dst.depth > 1) &&
+        regs.src.depth >= 1 && regs.dst.depth >= 1 &&
         regs.src.layer == 0 && regs.dst.layer == 0 &&
-        regs.dst.depth >= 1 && regs.operation == Operation::SrcCopy &&
-        regs.clip_enable == 0;
+        regs.operation == Operation::SrcCopy && regs.clip_enable == 0;
     if (regs.src.depth != 1 && !base_layer_3d_copy && !pitch_layer_copy) {
         static std::atomic<unsigned> depth_reports{0};
         const unsigned count = depth_reports.fetch_add(1, std::memory_order_relaxed);
