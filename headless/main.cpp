@@ -47,6 +47,8 @@
 #include "metadata_bridge.h"
 #ifdef EDEN_PS5_OPENGL
 #include "graphics.h"
+#endif
+#if defined(EDEN_PS5_OPENGL) || defined(EDEN_PS5_VULKAN)
 #include "video_core/renderer_base.h"
 #include "video_core/rasterizer_interface.h"
 #endif
@@ -1374,10 +1376,16 @@ int main(int argc, char** argv) {
         // The PS5 build bounds Eden's GPU command queue below, so the CPU and renderer can run in
         // parallel without accumulating the multi-frame controller lag of the upstream queue.
         Settings::values.use_asynchronous_gpu_emulation = true;
-#ifdef EDEN_PS5_OPENGL
+#if defined(EDEN_PS5_OPENGL) || defined(EDEN_PS5_VULKAN)
+        // Persist compiled shaders in the foreground game title cache.
         Settings::values.use_disk_shader_cache = game;
 #else
         Settings::values.use_disk_shader_cache = false;
+#endif
+#ifdef EDEN_PS5_VULKAN
+        // Vulkan driver cache complements (but does not replace) guest shader
+        // pipeline metadata persisted by the rasterizer.
+        Settings::values.use_vulkan_driver_pipeline_cache = game;
 #endif
         // The PS5 port has software FFmpeg decoders but no FFmpeg hardware-device adapter.
         Settings::values.nvdec_emulation = game ? Settings::NvdecEmulation::Cpu
@@ -1646,6 +1654,24 @@ int main(int argc, char** argv) {
                                                        total.load(), load_ms).c_str());
                     std::puts("EDEN_SHADER_CACHE_LOADED");
                     std::fflush(stdout);
+                }
+#endif
+#ifdef EDEN_PS5_VULKAN
+                if (game && Settings::values.use_disk_shader_cache.GetValue()) {
+                    // Vulkan's per-title pipeline metadata was never configured:
+                    // previous launches could serialize nothing because the
+                    // filename stayed empty. Request initialization only, NOT
+                    // Worker's destructive stop-token cancellation path.
+                    std::stop_source lazy_cache;
+                    lazy_cache.request_stop();
+                    const auto title_id = system.GetApplicationProcessProgramID();
+                    if (title_id) {
+                        system.Renderer().ReadRasterizer()->LoadDiskResources(
+                            title_id, lazy_cache.get_token(),
+                            [](VideoCore::LoadCallbackStage, size_t, size_t) {});
+                        std::printf("EDEN_VULKAN_SHADER_CACHE title=%016llX mode=lazy-persistent\n",
+                                    static_cast<unsigned long long>(title_id));
+                    }
                 }
 #endif
 #ifndef PS5_NATIVE
