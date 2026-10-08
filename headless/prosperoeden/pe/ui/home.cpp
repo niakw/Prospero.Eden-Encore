@@ -101,21 +101,10 @@ void home_icon(Canvas& c, HomeIcon icon, float x, float cy, Color ink)
         list.line(left + 12.0f, cy - 10.0f, left + 12.0f, cy + 10.0f, 1.4f, ink);
         break;
     case HomeIcon::controller:
-        list.bordered_rect({left + 1.0f, cy - 7.0f, 23.0f, 14.0f}, 6.0f,
-                           ink.with_alpha(0.0f), 1.7f, ink);
-        list.line(left + 6.0f, cy, left + 11.0f, cy, 1.6f, ink);
-        list.line(left + 8.5f, cy - 2.5f, left + 8.5f, cy + 2.5f, 1.6f, ink);
-        list.circle(left + 18.0f, cy - 2.0f, 1.5f, ink);
-        list.circle(left + 21.0f, cy + 1.0f, 1.5f, ink);
+        dualsense_icon(c, {left - 2.0f, cy - 12.0f, 29.0f, 24.0f}, ink);
         break;
     case HomeIcon::settings:
-        list.ring(left + 12.0f, cy, 7.0f, 1.8f, ink);
-        list.circle(left + 12.0f, cy, 2.2f, ink);
-        for (int i = 0; i < 4; ++i) {
-            const float dx = i % 2 == 0 ? 0.0f : 7.0f;
-            const float dy = i % 2 == 0 ? 7.0f : 0.0f;
-            list.line(left + 12.0f - dx, cy - dy, left + 12.0f + dx, cy + dy, 1.8f, ink);
-        }
+        settings_gear(c, left + 12.0f, cy, 10.0f, ink);
         break;
     }
 }
@@ -501,8 +490,6 @@ void Launcher::update_controllers(float dt)
 
 void Launcher::draw_controllers(Canvas &c)
 {
-    if (textures_.controller() == 0)
-        return;
     text(c, tr("CONTROLLERS"), kPadsRight, baseline(376.0f, 30.0f, theme::kSmall), theme::kSmall,
          theme::kCopy, Align::right, 3.0f);
     for (int player = 0; player < 4; ++player)
