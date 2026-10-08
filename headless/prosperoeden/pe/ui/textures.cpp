@@ -177,12 +177,17 @@ void Textures::pump(float dt, int budget)
                         DecodedCover decoded;
                         decoded.key = std::move(key);
                         decoded.generation = generation;
-                        decoded.ok = services_.load_image(path, &decoded.image);
-                        if (decoded.ok) {
-                            for (int i = 0; i < level &&
-                                 decoded.image.width > 64 &&
-                                 decoded.image.height > 64; ++i)
-                                decoded.image = gfx::halve(decoded.image);
+                        try {
+                            decoded.ok = services_.load_image(path, &decoded.image);
+                            if (decoded.ok) {
+                                for (int i = 0; i < level &&
+                                     decoded.image.width > 64 &&
+                                     decoded.image.height > 64; ++i)
+                                    decoded.image = gfx::halve(decoded.image);
+                            }
+                        } catch (...) {
+                            decoded.image = {};
+                            decoded.ok = false; // normal retry/backoff on bad media
                         }
                         return decoded;
                     });
