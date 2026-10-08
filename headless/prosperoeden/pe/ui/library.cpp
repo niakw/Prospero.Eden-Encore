@@ -254,7 +254,8 @@ void Launcher::apply_games(std::vector<Game> games)
     bool same = games_loaded_ && games.size() == games_.size();
     for (std::size_t i = 0; same && i < games.size(); ++i)
         same = games[i].file == games_[i].file;
-    const std::string selected = library_.selected < static_cast<int>(games_.size()) ?
+    const std::string selected = library_.selected >= 0 &&
+                                 library_.selected < static_cast<int>(games_.size()) ?
                                      games_[static_cast<std::size_t>(library_.selected)].file :
                                      std::string{};
     games_ = std::move(games);
@@ -452,18 +453,12 @@ std::string Launcher::hertz(int refresh)
 
 void Launcher::enter_library()
 {
-    if (games_loaded_)
-    {
-        // New games appear after the async scan; removed games disappear immediately.
-        finish_scan(false);
-        drop_missing_games();
-        start_scan();
-    }
-    else
-    {
-        start_scan();
-        finish_scan(true);
-    }
+    // Library navigation must never block on game enumeration or a full
+    // synchronous stat() sweep. The launcher constructor already starts the
+    // initial scan; poll its completion here and let update() apply the result.
+    // The normal periodic presence worker handles removals in the background.
+    finish_scan(false);
+    start_scan();
     library_.visible = 5;
     library_.pitch = 1.0f;
     library_.reset(static_cast<int>(games_.size()), 0);
