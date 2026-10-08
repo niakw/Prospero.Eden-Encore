@@ -26,7 +26,11 @@ assert "std::array<std::atomic<std::uint32_t>,4>" in header
 assert "jit_cache_tier{0}" not in header
 
 assert 'ConfigFile("experiments.json")' in main
-assert "if (!safe_launch && launch_title_id)" in main
+assert "if (!safe_launch)" in main
+assert 'doc.find("defaults")' in main
+assert 'doc.contains(at) && doc.at(at).is_object()' in main
+assert 'if (game_options)' in main and 'if (defaults)' in main
+assert main.index('if (game_options)') < main.index('if (defaults)')
 assert 'get("cpu_placement") == "logical"' in main
 assert 'get("vulkan_pacing") == "trace"' in main
 assert "EnableExperimentalLogicalPlacement();" in main
