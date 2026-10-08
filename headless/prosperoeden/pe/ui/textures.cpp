@@ -18,6 +18,7 @@ namespace
 {
 
 constexpr std::size_t kMaxCovers = 160;
+constexpr std::size_t kMaxTextureReclaimsPerFrame = 2;
 
 } // namespace
 
@@ -221,13 +222,19 @@ void Textures::pump(float dt, int budget)
             if (entry.loaded && entry.used + 2 < frame_)
                 order.emplace_back(entry.used, key);
         std::sort(order.begin(), order.end());
-        for (std::size_t index = 0; index < order.size() && covers_.size() > kMaxCovers * 3 / 4;
-             ++index)
+        // Mass glDeleteTextures during one D-pad navigation update can
+        // itself block the PS5 driver. Spread reclaim over frames; the queue
+        // still creates/uploads at most one image per frame.
+        std::size_t reclaimed = 0;
+        for (std::size_t index = 0;
+             index < order.size() && covers_.size() > kMaxCovers * 3 / 4 &&
+             reclaimed < kMaxTextureReclaimsPerFrame; ++index)
         {
             const auto found = covers_.find(order[index].second);
             if (found == covers_.end()) continue;
             batch_.delete_texture(found->second.texture);
             covers_.erase(found);
+            ++reclaimed;
         }
     }
 }
