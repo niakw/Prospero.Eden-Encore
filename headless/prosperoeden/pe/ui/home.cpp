@@ -821,6 +821,13 @@ void Launcher::draw_home(Canvas &c)
             const Rect r{row_x + (card_w + gap) * static_cast<float>(i), 551.0f, card_w, card_h};
             const float f = focus(kHomeRecentFirst + i);
             begin_lift(r, f, 0.030f);
+            // Paint bloom BEFORE the opaque cover, not over its pixels.
+            if (f > 0.01f) {
+                list.shadow({r.x - 8.0f, r.y - 8.0f, r.w + 16.0f, r.h + 16.0f},
+                            26.0f, 33.0f, theme::kSun.with_alpha(0.33f * f));
+                list.shadow({r.x - 14.0f, r.y - 14.0f, r.w + 28.0f, r.h + 28.0f},
+                            29.0f, 39.0f, theme::kLime.with_alpha(0.27f * f));
+            }
             plate_rest(c, kTilePlate, r);
             // Reference uses recognisable game-key art, not a random gameplay
             // screenshot or a cropped panoramic banner on the small tile.
@@ -833,10 +840,7 @@ void Launcher::draw_home(Canvas &c)
                         theme::kTitle, card_w - 8.0f, Align::center);
             // Local-player capacity is shown in the hero metadata, not on this tile.
 
-            if (f > 0.01f)
-                list.shadow({r.x - 5.0f, r.y - 5.0f, r.w + 10.0f, r.h + 10.0f},
-                            24.0f, 34.0f,
-                            gfx::mix(theme::kLime, theme::kSun, 0.45f).with_alpha(0.20f * f));
+            // Only the luminous outline is above the game cover.
             plate_focus(c, kTilePlate, r, f);
             list.pop_transform();
         }
