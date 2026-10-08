@@ -69,6 +69,19 @@ assert "if (!services_.game_exists(path))" in lib
 library_entry = lib.split("void Launcher::enter_library()", 1)[1].split("bool Launcher::open_game_settings_at_file", 1)[0]
 assert "finish_scan(false);" in library_entry
 assert "finish_scan(true);" not in library_entry
+# Home Triangle game options can be requested before the first background
+# library scan returns: defer it rather than blocking the UI for a full scan.
+settings_entry = lib.split("bool Launcher::open_game_settings_at_file(", 1)[1].split(
+    "void Launcher::refresh_selected_game()", 1)[0]
+assert "finish_scan(false);" in settings_entry
+assert "finish_scan(true);" not in settings_entry
+assert "pending_settings_file_ = file;" in settings_entry
+assert "std::string pending_settings_file_;" in hdr
+assert "const std::string file = std::move(pending_settings_file_);" in nav
+assert "if (games_loaded_ && !pending_settings_file_.empty())" in nav
+assert "pending_settings_file_.clear();" in nav
+assert "(void)open_game_settings_at_file(file);" in nav
+
 assert "drop_missing_games();" not in library_entry
 assert "start_scan();" in library_entry
 assert "library_.selected >= 0 &&" in lib
