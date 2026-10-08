@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check Maxwell PRMT immediate index translation and Fermi2D base-layer copy.
+"""Check Maxwell PRMT Index translation (immediate and register selector) and Fermi2D z0.
 
 Other PRMT addressing/modes and nonzero Fermi2D layers remain unsupported.
 This is a source contract, not a native graphics correctness test.
@@ -18,6 +18,8 @@ def extract(name: str):
     return m.group(1)
 prmt_old = extract("prmt_old")
 prmt_new = extract("prmt_new")
+prmt_reg_old = extract("prmt_reg_old")
+prmt_reg_new = extract("prmt_reg_new")
 fermi_old = extract("fermi_old")
 fermi_new = extract("fermi_new")
 fermi_copy_old = extract("fermi_copy_old")
@@ -58,6 +60,25 @@ assert prmt_index(0x11223344, 0x55667788, 0x7654) == 0x55667788
 assert prmt_index(0x80abcdef, 0, 0xbbbb) == 0xffffffff
 assert prmt_index(0x11223344, 0x55667788, 0xffff) == 0
 assert prmt_index(0xff000000, 0, 0x000b) == 0xff
+# A register selector uses identical nibble semantics, but is evaluated
+# dynamically in the shader IR rather than once at translation time.
+assert prmt_reg_old.count("ThrowNotImplemented(Opcode::PRMT_reg);") == 1
+assert prmt_reg_new.count("ThrowNotImplemented(Opcode::PRMT_reg);") == 1
+assert "const unsigned mode = static_cast<unsigned>((insn >> 48) & 7ULL);" in prmt_reg_new
+assert "if (mode != 0)" in prmt_reg_new
+assert "const IR::U32 selector{GetReg20(insn)};" in prmt_reg_new
+assert "const IR::U32 a{GetReg8(insn)};" in prmt_reg_new
+assert "const IR::U32 b{GetReg39(insn)};" in prmt_reg_new
+assert "ir.ShiftRightLogical(selector, ir.Imm32(i * 4u))" in prmt_reg_new
+assert "ir.ShiftRightLogical(source, byte_shift)" in prmt_reg_new
+assert "ir.BitwiseAnd(selected_byte, ir.Imm32(128))" in prmt_reg_new
+assert "ir.Select(signed_replication, replicated, selected_byte)" in prmt_reg_new
+assert "X(static_cast<IR::Reg>(insn & 255ULL), result);" in prmt_reg_new
+assert "EDEN_GPU_PRMT_REG_INDEX raw=%016llx sample=%u" in prmt_reg_new
+assert "EDEN_GPU_PRMT_REG_UNSUPPORTED raw=%016llx mode=%u sample=%u" in prmt_reg_new
+assert 'message(FATAL_ERROR "Pinned Maxwell PRMT_reg exception anchor changed")' in cmake
+assert prmt_index(0x01234567, 0x89abcdef, 0x1111) == 0x45454545
+
 assert "if (index < 8)" in prmt_new
 assert "fetch_add(1, std::memory_order_relaxed)" in prmt_new
 assert 'UNIMPLEMENTED_IF_MSG(regs.src.depth != 1, "Source depth is not one")' in fermi_old
@@ -97,5 +118,5 @@ assert "sw_source_depth_at LESS 0 OR sw_dest_depth_at LESS 0 OR sw_z0_at LESS 0"
 assert "file(READ" in cmake and cmake.count("write_derived(") == 2
 assert 'target_sources(shader_recompiler PRIVATE' in cmake
 assert 'target_sources(video_core PRIVATE' in cmake
-print("GPU SOURCE CONTRACT: PRMT immediate Index implemented, other modes throw; Fermi2D z=0 software only")
+print("GPU SOURCE CONTRACT: PRMT immediate and register Index modes implemented, others throw; Fermi2D z=0 software only")
 print("NOTE graphics correctness and PS5 native CMake build remain to be qualified")
