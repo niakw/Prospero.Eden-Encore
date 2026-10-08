@@ -112,7 +112,7 @@ assert "library_.selected >= 0 &&" in lib
 # synchronously when finish_scan() updates the visible Library.
 scan_entry = lib.split("void Launcher::start_scan()", 1)[1].split("void Launcher::finish_scan(", 1)[0]
 apply_entry = lib.split("void Launcher::apply_games(", 1)[1].split("void Launcher::name_home_games()", 1)[0]
-assert "std::vector<Game> games = services_.games();" in scan_entry
+assert "std::vector<Game> games = services_.games(&scan_cancel_);" in scan_entry
 assert "services_.mods(game.title_id)" in scan_entry
 assert "services_.mods_enabled(game.title_id)" in scan_entry
 assert "catch (const std::bad_alloc&)" in scan_entry
@@ -125,6 +125,19 @@ assert "scan_cancel_.load(std::memory_order_acquire)" in scan_entry
 assert "if (scan_cancel_.load(std::memory_order_acquire)) break;" in scan_entry
 assert "if (!scan_cancel_.load(std::memory_order_acquire))" in lib
 assert "scan_cancel_.store(true, std::memory_order_release);" in nav
+# Native game enumeration must itself honor cancellation between ROMs,
+# not merely skip the follow-up mod scan in the Launcher wrapper.
+native_svc = src("headless/prosperoeden/eden_services.cpp")
+native_hdr = src("headless/prosperoeden/eden_services.h")
+assert "virtual std::vector<Game> games(const std::atomic<bool>* cancel)" in hero_types
+assert "games(const std::atomic<bool>* cancel) override;" in native_hdr
+assert "EdenServices::games(const std::atomic<bool>* cancel)" in native_svc
+native_scan = native_svc.split(
+    "EdenServices::games(const std::atomic<bool>* cancel)", 1)[1].split(
+    "EdenServices::enrich_game_media", 1)[0]
+assert "cancel && cancel->load(std::memory_order_acquire)" in native_scan
+assert "return {}; // discard partial results and stop per-title disk work" in native_scan
+
 assert "auto games = scan_.get();" in lib
 # A failed first scan must not become a valid empty list. Otherwise the
 # delayed Home settings action reports a nonexistent missing ROM.
