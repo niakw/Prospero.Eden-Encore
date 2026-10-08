@@ -124,6 +124,7 @@ jobs:
           python3 -B tools/check-jit-memory-policy.py
           python3 -B tools/check-jit-startup-retry.py
           python3 -B tools/check-vulkan-pipeline-persistence.py
+          python3 -B tools/check-vulkan-cache-atomic.py
           python3 -B tools/check-jit-sparse-host.py
           python3 -B tools/check-shader-cache-pressure.py
           python3 -B tools/check-performance-policy.py
