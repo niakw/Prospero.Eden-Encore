@@ -116,7 +116,7 @@ struct Home
     std::string last_language;
     int last_mods = 0;
     int last_mods_on = 0;
-    std::vector<Recent> recents; // at most six
+    std::vector<Recent> recents; // at most seven
     std::string system_status;
 };
 
