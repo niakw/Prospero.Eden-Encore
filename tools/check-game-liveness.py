@@ -5,6 +5,8 @@ No game or SDK build. Detection is evidence-only: GPU counters can remain
 constant while a game is legitimately paused. Never auto-reboot a title.
 """
 from pathlib import Path
+import platform
+import sys
 import shutil
 import subprocess
 import tempfile
@@ -116,12 +118,24 @@ with tempfile.TemporaryDirectory(prefix="eden-game-liveness-host-") as folder:
         'if (Eden::Stall::game_session_epoch.load() != first + 1) return 2; '
         'Eden::Stall::DisarmGame(); return 0; }\n'
     )
-    subprocess.run([cxx, "-std=c++20", "-O1", "-Wall", "-Wextra", "-Werror",
-                    "-pthread", "-DPS5_NATIVE=1", "-DEDEN_DEV_PROFILE=1",
-                    "-I", str(root), "-I", str(ROOT / "headless"),
-                    str(native_src), "-o", str(native_obj)], check=True)
-    subprocess.run([str(native_obj)], check=True)
+    native_cmd = [cxx, "-std=c++20", "-O1", "-Wall", "-Wextra", "-Werror",
+                  "-pthread", "-DPS5_NATIVE=1", "-DEDEN_DEV_PROFILE=1",
+                  "-I", str(root), "-I", str(ROOT / "headless")]
+    # PS5 executes x86_64 instructions such as __builtin_ia32_pause.
+    # macOS ARM64 can run the portable C++ policy but must cross-*compile*
+    # this DEV/PS5 header instead of attempting to execute x86 guest code.
+    mac_arm = sys.platform == "darwin" and platform.machine() in ("arm64", "aarch64")
+    if mac_arm:
+        subprocess.run([*native_cmd, "-target", "x86_64-apple-macos13.0",
+                        "-c", str(native_src), "-o", str(root / "watchdog_native_x86.o")],
+                       check=True)
+    else:
+        subprocess.run([*native_cmd, str(native_src), "-o", str(native_obj)], check=True)
+        subprocess.run([str(native_obj)], check=True)
 
 print("PASS developer-only in-game GPU liveness: 30s threshold, four reports, no counters -> no false alert")
-print("PASS real PS5/DEV watchdog header host-links and runs session-epoch reset check")
+if mac_arm:
+    print("PASS real PS5/DEV watchdog header cross-compiles for x86_64 from ARM64 Mac (not executable here)")
+else:
+    print("PASS real PS5/DEV watchdog header host-links and runs session-epoch reset check")
 print("PS5 native SDK/gameplay observation remains UNTESTED")
