@@ -170,7 +170,7 @@ void Textures::pump(float dt, int budget)
     if (budget > 0 && !decode_.valid()) {
         while (!queue_.empty()) {
             std::string key = std::move(queue_.front());
-            queue_.erase(queue_.begin());
+            queue_.pop_front();
             const auto it = covers_.find(key);
             if (it == covers_.end() || it->second.loaded) continue;
             const std::string path = it->second.path;
@@ -214,27 +214,28 @@ void Textures::pump(float dt, int budget)
 
     if (covers_.size() > kMaxCovers)
     {
-        // Drop textures not drawn recently, but never an entry that is still
-        // loading. A completed stale worker response is rejected by its
-        // generation token if the path was invalidated/recreated meanwhile.
-        std::vector<std::pair<std::uint64_t, std::string>> order;
-        for (const auto &[key, entry] : covers_)
-            if (entry.loaded && entry.used + 2 < frame_)
-                order.emplace_back(entry.used, key);
-        std::sort(order.begin(), order.end());
-        // Mass glDeleteTextures during one D-pad navigation update can
-        // itself block the PS5 driver. Spread reclaim over frames; the queue
-        // still creates/uploads at most one image per frame.
-        std::size_t reclaimed = 0;
-        for (std::size_t index = 0;
-             index < order.size() && covers_.size() > kMaxCovers * 3 / 4 &&
-             reclaimed < kMaxTextureReclaimsPerFrame; ++index)
+        // Avoid building and sorting a temporary vector every UI frame.
+        // Evict at most two stale, completed covers per update: a bounded
+        // number of GL deletes and no heap allocation in this hot path.
+        for (std::size_t reclaimed = 0;
+             reclaimed < kMaxTextureReclaimsPerFrame &&
+             covers_.size() > kMaxCovers * 3 / 4; ++reclaimed)
         {
-            const auto found = covers_.find(order[index].second);
-            if (found == covers_.end()) continue;
-            batch_.delete_texture(found->second.texture);
-            covers_.erase(found);
-            ++reclaimed;
+            auto oldest = covers_.end();
+            for (auto it = covers_.begin(); it != covers_.end(); ++it)
+            {
+                // Never evict in-flight decodes or the last two frames'
+                // visible covers, even under a large collection pressure.
+                if (!it->second.loaded || it->second.used + 2 >= frame_)
+                    continue;
+                if (oldest == covers_.end() ||
+                    it->second.used < oldest->second.used)
+                    oldest = it;
+            }
+            if (oldest == covers_.end())
+                break;
+            batch_.delete_texture(oldest->second.texture);
+            covers_.erase(oldest);
         }
     }
 }
