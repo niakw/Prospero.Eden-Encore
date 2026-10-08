@@ -146,7 +146,8 @@ class Launcher
     void name_home_games();
     void sync_home_game(const Game& game); // one Nlib update must not walk every installed title
     // The home screen's content, with its game's mods counted.
-    void read_home();
+    void read_home(); // queue native metadata refresh, never blocks the UI frame
+    void finish_home_scan(); // owner-thread application of one complete Home snapshot
     void start_diagnostics(bool force = false);
     void finish_diagnostics();
     // Games removed/moved while the launcher is open disappear without a full rescan.
@@ -232,6 +233,10 @@ class Launcher
 
     // home: 0 hero, 1-3 header, 4 details, 5-11 recent, 12 quick card, 13-19 quick rows, 20 storage, 21 controllers, 22 full settings
     Home home_;
+    std::future<Home> home_scan_; // costly recent-game metadata is read off-thread
+    bool home_loaded_ = false; // no game launch or Home actions before snapshot
+    bool home_reload_pending_ = false; // don't apply an obsolete in-flight refresh
+    bool home_scan_failed_ = false; // avoid spawning a failed query every frame
     DiagnosticsInfo home_diagnostics_{};
     std::future<DiagnosticsInfo> diagnostics_scan_; // asynchronous cache/log disk inventory
     bool diagnostics_refresh_pending_ = false; // discard an outdated scan after maintenance
