@@ -469,13 +469,7 @@ void Launcher::draw_top_nav(Canvas &c, int active_tab, int focus_tab, float focu
             list.line(gx, gy, gx, gy - 8.0f, 2.6f, ink);
             list.line(gx, gy, gx + 7.0f, gy + 5.0f, 2.6f, ink);
         } else {
-            list.ring(gx, gy, 10.0f, 3.6f, ink);
-            list.circle(gx, gy, 3.2f, ink);
-            for (int spoke = 0; spoke < 8; ++spoke) {
-                const float a = static_cast<float>(spoke) * 0.78539816f;
-                list.line(gx + std::cos(a) * 14.0f, gy + std::sin(a) * 14.0f,
-                          gx + std::cos(a) * 17.5f, gy + std::sin(a) * 17.5f, 3.4f, ink);
-            }
+            settings_gear(c, gx, gy, 13.0f, ink);
         }
         const float label_width = r.w - 70.0f;
         text_shrink(c, tr(labels[i]), r.x + 60.0f + label_width * 0.5f,
