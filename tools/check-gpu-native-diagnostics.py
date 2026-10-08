@@ -136,8 +136,13 @@ assert "regs.src.layer < regs.src.depth && regs.dst.layer < regs.dst.depth" in f
 assert "regs.src.format == regs.dst.format" in fermi_layer_new
 assert "BytesPerBlock(PixelFormatFromRenderTargetFormat(regs.src.format))" in fermi_layer_new
 assert "BytesPerBlock(PixelFormatFromRenderTargetFormat(regs.dst.format))" in fermi_layer_new
-assert "regs.src.layer != 0 && !pitch_layer_copy" in fermi_layer_new
-assert "regs.dst.layer != 0 && !pitch_layer_copy" in fermi_layer_new
+assert "if ((regs.src.layer != 0 || regs.dst.layer != 0) && !pitch_layer_copy)" in fermi_layer_new
+assert "EDEN_GPU_FERMI2D_UNSUPPORTED_LAYER" in fermi_layer_new
+assert "if (count < 8)" in fermi_layer_new
+assert fermi_layer_new.count("AssertFailSoftImpl();") == 1
+assert fermi_layer_new.index("AssertFailSoftImpl();") < fermi_layer_new.index("return;")
+assert fermi_new.count("AssertFailSoftImpl();") == 1
+assert fermi_new.index("AssertFailSoftImpl();") < fermi_new.index("return;")
 assert "const u64 plane_bytes = static_cast<u64>(surface.pitch) * surface.height;" in fermi_copy_new
 assert "const u64 offset = plane_bytes * surface.layer;" in fermi_copy_new
 assert "offset / surface.layer != plane_bytes" in fermi_copy_new
