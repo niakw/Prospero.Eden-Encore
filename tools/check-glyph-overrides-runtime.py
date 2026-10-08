@@ -31,6 +31,10 @@ assert "eden_game_glyph_display_version(" in metadata_cpp
 assert "eden_game_glyph_display_version(" in metadata_h
 assert "eden_game_glyph_display_version(" in main_cpp
 assert "eden_game_addons(title, glyph_update_version" not in main_cpp
+assert "NeedsGameVersion(" in main_cpp
+assert "const bool all_mods_enabled = Eden::LoadModsEnabled(title)" in main_cpp
+assert main_cpp.find("if (Eden::GlyphOverrides::NeedsGameVersion(") <
+       main_cpp.find("(void)eden_game_glyph_display_version(")
 CXX = next((item for item in ("clang++-18", "clang++", "g++") if shutil.which(item)), None)
 if not CXX:
     raise SystemExit("missing host C++20 compiler")
@@ -159,6 +163,14 @@ int main(int argc, char** argv) {
     assert(stale.valid && stale.revision == default_built_in.revision);
     put(catalogue_path, catalogue());
     auto mods_found = Eden::Mods::List(mods.string(), GAME);
+    // Real source C++ chooses whether loading/decrypting base game NACP is
+    // necessary. No rule means no extra metadata reads for ordinary games.
+    using Eden::GlyphOverrides::NeedsGameVersion;
+    assert(!NeedsGameVersion(default_built_in, GAME, Style::PlayStation, mods_found));
+    assert(NeedsGameVersion(data, GAME, Style::PlayStation, mods_found));
+    assert(!NeedsGameVersion(data, GAME, Style::Nintendo, mods_found));
+    assert(!NeedsGameVersion(data, 0x0100DEAD00000000ull, Style::PlayStation, mods_found));
+    assert(!NeedsGameVersion(data, GAME, Style::PlayStation, {}));
     assert(mods_found.size() == 1 &&
            mods_found[0].name == "Eden Encore PS Glyphs" &&
            (mods_found[0].kinds & Eden::Mods::kFiles));
