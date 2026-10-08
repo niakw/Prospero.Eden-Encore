@@ -108,6 +108,11 @@ for marker in ('/banner/1080p','/screen/','/icon/512','fields=name,intro,descrip
                'CachedNlibScreens','result.screenshots','result.hero'):
     assert marker in services, marker
 assert 'hero_intro' in home
+# Artwork arrives in the background, possibly after its first texture lookup.
+widgets_src = read('headless/prosperoeden/pe/ui/widgets.cpp')
+textures_src = read('headless/prosperoeden/pe/ui/textures.cpp')
+assert 'if (image.missing && c.textures.brand() != 0)' not in widgets_src
+assert 'it->second.loaded && it->second.texture == 0 && it->second.age >= 3.0f' in textures_src
 # Visual regressions from actual 1920x1080 PS5 captures (2026-10-08): the
 # Zelda title must not occupy the same vertical lines as its description.
 assert 'text_shrink(c, hero_file.empty() ? tr("Your next adventure") : hero_title' in home
