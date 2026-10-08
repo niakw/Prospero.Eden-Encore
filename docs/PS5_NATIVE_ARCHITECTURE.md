@@ -180,6 +180,31 @@ before increasing internal resolution. Test load time as well as gameplay.
 These are source-level changes; no native build or firmware-13.60 runtime
 validation has been completed. No general FPS improvement is claimed.
 
+## Safety and host contract updates (source only)
+
+- The `GetTotalPipelineWorkers` PS5 derivative now reads the **actual
+  schedulable logical CPUs** using the firmware CPU-affinity mask, with
+  a conservative fallback if affinity reporting is unavailable. This
+  replaces the desktop `hardware_concurrency() - 1` assumption for
+  background shader compilation. Physical Zen2-core topology is still
+  unverified, and these thread counts have not been benchmarked.
+- Fixed an unreachable diagnostic: the original `game_loaded` phase
+  never occurred in `passed(...)`. Memory snapshot calls now use real
+  lifecycle phases **`core_initialized`** and **`core_shutdown`**.
+- The developer-only sparse JIT first uses a disposable 2 MiB fixed-VA
+  RW/RX alias check and returns to dense allocation if the test fails.
+  It tests mapped-data visibility and RX protection, **not actual
+  execution or the safety of a mid-session OOM**. The prototype still
+  fails closed on a mapping/commit error while emitting code; do not
+  enable it in a release build.
+- `EDEN_JIT_MEMORY` lifecycle summaries now distinguish **virtual
+  reserved** from **physical committed** memory, under a mutex. These
+  diagnostics are not called on the rendering hot path.
+- Added `python3 tools/check-ps5-architecture.py` for offline source
+  invariants, including lifecycle stage reachability, compiler gating,
+  PS5 affinity headers and the absence of the old fixed 4 GiB tier.
+  This is **not** an emulator test or PS5 hardware qualification.
+
 ## Immediate implementation gates
 
 1. Audit physical memory ownership and executable page-map APIs; do not
