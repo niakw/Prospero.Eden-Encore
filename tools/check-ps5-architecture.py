@@ -113,6 +113,17 @@ def main() -> None:
             "Guest JIT admission boundary assertions missing")
     require('A64CacheBytes(m_core_index' in cmake and 'A32CacheBytes(m_core_index' in cmake,
             "Both Dynarmic core wrappers must consume the runtime memory budget")
+    startup = read("headless/jit-startup-retry.h")
+    require('target_link_libraries(core PRIVATE xbyak::xbyak)' in cmake,
+            "PS5 core wrapper requires pinned private Xbyak target for typed retries")
+    require('ConstructWithCapacityFallback(' in cmake and
+            'Pinned Dynarmic guest JIT construction changed' in cmake,
+            "Dynarmic constructor integration must be source-anchored")
+    require('Xbyak::ERR_CANT_ALLOC' in startup and
+            'catch (const std::bad_alloc&)' in startup,
+            "Startup retry must only catch actual code allocator failures")
+    require('NextCapacity(capacity, baseline)' in startup,
+            "A64/A32 cache retry must step toward each core baseline")
     dev_start = app.index('#if defined(PS5_NATIVE) && defined(EDEN_DEV_PROFILE)')
     dev_end = app.index('\n#endif\n#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)', dev_start)
     require(app.index('ApplyJitMemoryPlan(jit_plan)') > dev_end,
