@@ -136,6 +136,25 @@ assert "services_.mods_enabled(game.title_id)" in scan_entry
 # Each completed Nlib request changes one title. Do not execute an O(N*M)
 # full Home/library name/metadata reconciliation on a D-pad frame.
 assert "void sync_home_game(const Game& game);" in hdr
+# Once a user launches a game, native Nlib workers must not start another
+# queued HTTP request or JPEG/TGA conversion. Already in-flight HTTP remains
+# non-preemptive and workers are joined before Launcher/Services destruction.
+assert "std::atomic<bool> media_cancel_{false};" in hdr
+assert "media_cancel_.store(true, std::memory_order_release);" in nav
+assert "media_cancel_.load(std::memory_order_acquire)" in lib
+assert "services_.enrich_game_media(std::move(request), &media_cancel_)" in lib
+assert "services_.enrich_game_media(std::move(copy), &media_cancel_)" in lib
+assert "virtual Game enrich_game_media(Game game, const std::atomic<bool>* cancel)" in hero_types
+assert "enrich_game_media(pe::ui::Game game, const std::atomic<bool>* cancel) override;" in native_hdr
+assert "EnsureNlibEnrichment(game.title_id, language_choice, cancel)" in native_svc
+assert "NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice," in native_svc
+assert "const auto cancelled = [cancel]" in native_svc
+assert "const std::atomic<bool>* cancel = nullptr)" in native_svc
+assert "if (!response || (cancel && cancel->load(std::memory_order_acquire)))" in native_svc
+assert "return CacheNlibJpeg(endpoint, path, minimum, cancel);" in native_svc
+assert "if (cancelled()) return;" in native_svc
+assert "if (cancelled()) break;" in native_svc
+
 assert "void Launcher::sync_home_game(const Game& game)" in lib
 selected_media = lib.split("void Launcher::finish_selected_media()", 1)[1].split(
     "void Launcher::apply_games(", 1)[0]
