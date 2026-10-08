@@ -852,12 +852,17 @@ void Launcher::draw_home(Canvas &c)
         plate_rest(c, kTilePlate, r);
         if (f > 0.01f)
             plate_focus(c, kTilePlate, r, f);
-        home_icon(c, icon, r.x + 26.0f, r.y + r.h * 0.5f,
+        // The approved TV mock-up uses full-size utility symbols, not the
+        // 24 px diagnostic glyphs that previously looked almost invisible.
+        // Scale only the vector icon (never the text or hit target).
+        list.push_transform(1.65f, r.x + 41.0f, r.y + r.h * 0.5f, 0.0f, 0.0f);
+        home_icon(c, icon, r.x + 29.0f, r.y + r.h * 0.5f,
                   gfx::mix(theme::kMeta, theme::kLimePale, f));
-        text_shrink(c, label, r.x + 72.0f, baseline(r.y + 20.0f, 30.0f, 20.0f),
-                    20.0f, theme::kTitle, r.w - 100.0f);
-        text_shrink(c, value, r.x + 72.0f, baseline(r.y + 52.0f, 30.0f, 16.0f),
-                    16.0f, gfx::mix(theme::kMuted, theme::kAccentTeal, f), r.w - 100.0f);
+        list.pop_transform();
+        text_shrink(c, label, r.x + 108.0f, baseline(r.y + 20.0f, 30.0f, 20.0f),
+                    20.0f, theme::kTitle, r.w - 131.0f);
+        text_shrink(c, value, r.x + 108.0f, baseline(r.y + 52.0f, 30.0f, 16.0f),
+                    16.0f, gfx::mix(theme::kMuted, theme::kAccentTeal, f), r.w - 131.0f);
         list.pop_transform();
     };
 
