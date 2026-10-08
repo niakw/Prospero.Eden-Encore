@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 namespace pe::ui
 {
@@ -188,6 +189,9 @@ void Launcher::press(Key key)
 {
     if (!selected_game_.empty())
         return; // a game is starting
+    // A newer user action invalidates an asynchronous Home Triangle request.
+    // Another Triangle press may immediately schedule a replacement request.
+    pending_settings_file_.clear();
     // Confirmation is a real modal: Circle cancels, Cross confirms. Other buttons cannot leak
     // through to the underlying screen while the dialog is visible.
     if (confirmation_ != Confirmation::none)
@@ -265,6 +269,12 @@ void Launcher::update(float dt)
     slow_stage("texture_upload", update_stage_begin);
     const auto media_started = std::chrono::steady_clock::now();
     finish_scan(false);
+    if (games_loaded_ && !pending_settings_file_.empty()) {
+        const std::string file = std::move(pending_settings_file_);
+        pending_settings_file_.clear();
+        if (screen_ == Screen::home && modal_ == Modal::none && selected_game_.empty())
+            (void)open_game_settings_at_file(file);
+    }
     finish_home_media();
     finish_selected_media();
     slow_stage("media_merge", media_started);
