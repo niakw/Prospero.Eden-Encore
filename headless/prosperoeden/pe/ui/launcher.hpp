@@ -147,7 +147,7 @@ class Launcher
     void sync_home_game(const Game& game); // one Nlib update must not walk every installed title
     // The home screen's content, with its game's mods counted.
     void read_home();
-    void start_diagnostics();
+    void start_diagnostics(bool force = false);
     void finish_diagnostics();
     // Games removed/moved while the launcher is open disappear without a full rescan.
     void check_games_present();
