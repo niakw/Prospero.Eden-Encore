@@ -1,6 +1,6 @@
 --- a/src/common/net/net.cpp
 +++ b/src/common/net/net.cpp
-@@ -207,7 +207,10 @@
+@@ -207,6 +207,9 @@
  std::optional<std::string> MakeRequest(const std::string& url, const std::string& path) {
      try {
 -        constexpr std::size_t timeout_seconds = 15;
