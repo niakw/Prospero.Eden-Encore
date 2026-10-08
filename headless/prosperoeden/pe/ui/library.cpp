@@ -606,9 +606,23 @@ void Launcher::draw_library(Canvas &c)
                 list.shadow({card.x - 7.0f, card.y - 5.0f, card.w + 14.0f, card.h + 16.0f},
                             28.0f, 42.0f, theme::kLime.with_alpha(0.20f));
             plate_rest(c, kTilePlate, card);
-            const std::string& artwork = !game.hero.empty() ? game.hero : game.cover;
-            cover_crop(c, artwork, {card.x + 4.0f, card.y + 4.0f, card.w - 8.0f, card.h - 8.0f},
-                       20.0f, selected ? 0.42f : 0.28f);
+            // A square Nlib/ROM icon belongs on a square game tile; the
+            // panoramic banner is only a fallback, never the first choice.
+            const std::string& artwork = !game.cover.empty() ? game.cover : game.hero;
+            const Rect tile_art{card.x + 4.0f, card.y + 4.0f,
+                                card.w - 8.0f, card.h - 8.0f};
+            cover_crop(c, artwork, tile_art, 20.0f, selected ? 0.42f : 0.28f);
+            const Cover image = c.textures.cover(artwork, std::max(tile_art.w, tile_art.h));
+            if (image.texture == 0) {
+                const bool fetching = game.title_id != 0 &&
+                    (media_scan_title_id_ == game.title_id ||
+                     home_media_scan_title_id_ == game.title_id);
+                text_shrink(c, tr(fetching || !image.missing ?
+                                      "Loading artwork" : "Artwork unavailable"),
+                            card.x + card.w * 0.5f,
+                            baseline(card.y + 78.0f, 35.0f, 16.0f), 16.0f,
+                            theme::kMuted, card.w - 22.0f, Align::center);
+            }
             list.gradient_rect({card.x + 4.0f, card.y + card.h * 0.43f, card.w - 8.0f,
                                 card.h * 0.53f}, 20.0f,
                                theme::kScrim.with_alpha(0.0f), theme::kScrim.with_alpha(0.94f));
@@ -646,7 +660,20 @@ void Launcher::draw_library(Canvas &c)
         const Rect art{96.0f, 572.0f, 420.0f, 298.0f};
         const std::string& artwork = !game->screenshots.empty() ? game->screenshots.front() :
             (!game->hero.empty() ? game->hero : game->cover);
-        cover_crop(c, artwork, art, 22.0f, 0.70f);
+        if (game->screenshots.empty() && game->hero.empty() && !game->cover.empty())
+            cover(c, artwork, art, 22.0f, 0.70f);
+        else
+            cover_crop(c, artwork, art, 22.0f, 0.70f);
+        const Cover art_state = c.textures.cover(artwork, std::max(art.w, art.h));
+        if (art_state.texture == 0) {
+            const bool fetching = game->title_id != 0 &&
+                (media_scan_title_id_ == game->title_id ||
+                 home_media_scan_title_id_ == game->title_id);
+            text_shrink(c, tr(fetching || !art_state.missing ?
+                                  "Loading artwork" : "Artwork unavailable"),
+                        art.x + art.w * 0.5f, baseline(art.y + 115.0f, 36.0f, 19.0f),
+                        19.0f, theme::kMuted, art.w - 28.0f, Align::center);
+        }
         // A two-line title previously overlapped the publisher/date and intro
         // (e.g. Breath of the Wild in French). Keep one readable, scaled line.
         text_shrink(c, game->name, 558.0f, baseline(574.0f, 52.0f, 40.0f),
@@ -699,13 +726,28 @@ void Launcher::draw_library(Canvas &c)
         constexpr float shot_w = 154.0f;
         constexpr float shot_gap = 12.0f;
         const int shot_count = std::min<int>(3, static_cast<int>(game->screenshots.size()));
+        int shown_screens = 0;
         for (int i = 0; i < shot_count; ++i) {
-            const Rect shot{558.0f + float(i) * (shot_w + shot_gap), shot_y, shot_w, shot_h};
-            cover_crop(c, game->screenshots[static_cast<std::size_t>(i)], shot, 12.0f, 0.18f);
+            const std::string& path = game->screenshots[static_cast<std::size_t>(i)];
+            const Cover image = c.textures.cover(path, shot_w);
+            // Never reserve a blank, bordered thumbnail for an unreadable file.
+            if (image.missing) continue;
+            const Rect shot{558.0f + float(shown_screens) * (shot_w + shot_gap),
+                            shot_y, shot_w, shot_h};
+            cover_crop(c, path, shot, 12.0f, 0.18f);
+            if (image.texture == 0)
+                text_shrink(c, tr("Loading artwork"), shot.x + shot.w * 0.5f,
+                            baseline(shot.y + 29.0f, 25.0f, 13.0f), 13.0f,
+                            theme::kMuted, shot.w - 12.0f, Align::center);
             list.bordered_rect(shot, 12.0f, theme::kPanel.with_alpha(0.0f), 1.0f,
-                               i == 0 ? theme::kLime.with_alpha(0.72f) :
-                                        theme::kPanelEdge.with_alpha(0.46f));
+                               shown_screens == 0 ? theme::kLime.with_alpha(0.72f) :
+                                                    theme::kPanelEdge.with_alpha(0.46f));
+            ++shown_screens;
         }
+        if (shown_screens == 0)
+            text_shrink(c, tr("No screenshots available"), 558.0f,
+                        baseline(shot_y + 20.0f, 32.0f, 16.0f), 16.0f,
+                        theme::kMuted, 480.0f);
 
         if (game->mods > 0)
         {
