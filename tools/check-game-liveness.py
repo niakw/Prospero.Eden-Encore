@@ -88,5 +88,32 @@ with tempfile.TemporaryDirectory(prefix="eden-game-liveness-host-") as folder:
     subprocess.run([cxx, "-std=c++20", "-O2", "-Wall", "-Wextra", "-Werror",
                     "-I", str(ROOT / "headless"), str(src), "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True)
-print("PASS developer-only in-game GPU liveness: evidence-only, 30s silent-gpu threshold, max 4 per session, no progress->no alert")
-print("PS5 native watchdog thread/compiler/gameplay remains UNTESTED")
+
+    # Compile the actual PS5/DEV watchdog branch (without linking or running
+    # proprietary SDK calls) against the REAL performance.h and diagnostics.h.
+    # Only the pinned CPU-clock header absent from this repo is stubbed.
+    clock = root / "common" / "cpu_features.h"
+    clock.parent.mkdir()
+    clock.write_text(
+        "#pragma once\\n#include <chrono>\\n"
+        "namespace Common {\\n"
+        "struct HostTestClock { std::chrono::nanoseconds GetTimeNS() const { return {}; } };\\n"
+        "inline HostTestClock g_wall_clock{};\\n"
+        "}\\n".replace("\\\\n", "\\n")
+    )
+    native_src = root / "watchdog_native_header.cpp"
+    native_obj = root / "watchdog_native_header.o"
+    native_src.write_text(
+        '#include "stall_watchdog.h"\\n'
+        'extern "C" unsigned long eden_heap_create_lock_state(unsigned* waiters) '
+        '{ *waiters = 0; return 0; }\\n'
+        'int main() { Eden::Stall::ArmGame(); Eden::Stall::DisarmGame(); return 0; }\\n'
+    )
+    subprocess.run([cxx, "-std=c++20", "-O1", "-Wall", "-Wextra", "-Werror",
+                    "-pthread", "-DPS5_NATIVE=1", "-DEDEN_DEV_PROFILE=1",
+                    "-I", str(root), "-I", str(ROOT / "headless"),
+                    "-c", str(native_src), "-o", str(native_obj)], check=True)
+
+print("PASS developer-only in-game GPU liveness: 30s threshold, four reports, no counters -> no false alert")
+print("PASS real PS5/DEV watchdog header compiles with host-only stub of pinned CPU clock")
+print("PS5 native SDK/gameplay observation remains UNTESTED")
