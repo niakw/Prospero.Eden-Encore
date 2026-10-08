@@ -35,7 +35,7 @@
  
 +    // No host DNS for emulated titles, regardless of destination. The
 +    // launcher artwork uses Common::Net::MakeRequest, not this guest IPC.
-+    if (Eden::Encore::kGuestNetworkOffline) return {0, GetAddrInfoError::AGAIN};
++    if (Eden::Encore::kGuestNetworkOffline) return {0, GetAddrInfoError::NODATA};
 +
      // Prevent resolution of Nintendo servers
      if (IsBlockedHost(host)) {
@@ -46,7 +46,7 @@
  
 +    // No host DNS for emulated titles, regardless of destination. The
 +    // launcher artwork uses Common::Net::MakeRequest, not this guest IPC.
-+    if (Eden::Encore::kGuestNetworkOffline) return {0, GetAddrInfoError::AGAIN};
++    if (Eden::Encore::kGuestNetworkOffline) return {0, GetAddrInfoError::NODATA};
 +
      // Prevent resolution of Nintendo servers
      if (IsBlockedHost(host)) {
