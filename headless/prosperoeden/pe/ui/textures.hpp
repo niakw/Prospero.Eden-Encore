@@ -73,6 +73,7 @@ class Textures
         std::uint32_t texture = 0;
         float age = 0.0f;
         bool loaded = false; // false: queued
+        unsigned failed_loads = 0; // bounded retry backoff when async Nlib media arrive
         std::uint64_t used = 0;
         std::string path;
         int level = 0;
