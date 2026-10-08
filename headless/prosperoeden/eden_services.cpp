@@ -327,9 +327,14 @@ void ApplyNlibMetadata(const nlohmann::json& json, NlibEnrichment* result) {
 }
 
 bool CacheNlibJpeg(const std::string& endpoint, const std::string& path,
-                   std::size_t minimum_bytes = 1024) {
+                   std::size_t minimum_bytes = 1024,
+                   const std::atomic<bool>* cancel = nullptr) {
+    // Cancellation avoids new network requests and expensive JPEG/PNG-to-TGA
+    // conversion; an HTTP request already in flight must time out naturally.
+    if (cancel && cancel->load(std::memory_order_acquire)) return false;
     const auto response = Common::Net::MakeRequest("https://api.nlib.cc", endpoint);
-    if (!response) return false;
+    if (!response || (cancel && cancel->load(std::memory_order_acquire)))
+        return false;
     const std::string& body = *response;
     const bool jpeg = body.size() >= 2 &&
         static_cast<unsigned char>(body[0]) == 0xff &&
@@ -340,6 +345,7 @@ bool CacheNlibJpeg(const std::string& endpoint, const std::string& path,
     // of persisting them as permanently broken thumbnails.
     if (body.size() < minimum_bytes || body.size() > (16u << 20) || (!jpeg && !png))
         return false;
+    if (cancel && cancel->load(std::memory_order_acquire)) return false;
     (void)mkdir(Eden::CoversDir().c_str(), 0777);
     const std::string staged = path + ".new";
     if (WriteJpegTga(body, staged) && std::rename(staged.c_str(), path.c_str()) == 0)
