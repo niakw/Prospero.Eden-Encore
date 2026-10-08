@@ -63,7 +63,9 @@ assert 'home_diagnostics_.storage_root' in home
 assert 'const std::string hero_artwork = !hero_banner.empty() ? hero_banner : hero_screenshot;' in home
 # Hero content is game media only: banner -> screenshot -> opaque neutral fallback.
 hero_draw = home[home.index('// ---- full-bleed cinematic game hero'):home.index('// Effective values:')]
-assert 'cover_crop(c, hero_artwork, hero, 0.0f, 0.0f);' in hero_draw
+assert 'const Cover hero_picture = c.textures.cover(hero_artwork, 1920.0f)' in hero_draw
+assert 'list.image(hero_picture.texture, hero, uv' in hero_draw
+assert 'if (hero_picture.texture != 0)' in hero_draw
 assert 'hero_recent->cover' not in hero_draw and 'home_.last_cover' not in hero_draw
 assert 'never enlarge a ROM' in hero_draw
 assert 'bool Launcher::press_top_nav(Key key)' in launcher
@@ -71,6 +73,7 @@ assert 'top_nav_focus_ = 3' in settings and 'top_nav_focus_ = 1' in library
 
 # Cards: gameplay media first and no ugly language subtitle under recent titles.
 assert 'recent.screenshot' in home
+assert 'const std::string& art = !recent.cover.empty() ? recent.cover' in home
 recent_block=home[home.index('// ---- recently played: seven-ish large artwork tiles'):home.index('// ---- compact system strip')]
 assert 'recent.language' not in recent_block
 assert 'const int shown = std::min<int>(kHomeRecentMax' in recent_block
