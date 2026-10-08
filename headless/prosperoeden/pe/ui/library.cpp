@@ -61,15 +61,19 @@ std::string controller_profile_name(int layout, const ButtonMapping& mapping)
 
 void Launcher::start_scan()
 {
-    if (!scan_.valid() && home_.setup_ready)
+    if (!scan_cancel_.load(std::memory_order_acquire) &&
+        !scan_.valid() && home_.setup_ready)
         scan_ = std::async(std::launch::async, [this] {
             std::vector<Game> games = services_.games();
+            if (scan_cancel_.load(std::memory_order_acquire))
+                return std::vector<Game>{};
             // Reading mod folders / disabled-mod settings for each installed
             // title used to happen inside apply_games() on the UI update
             // thread, potentially scanning hundreds of directories at once.
             // Populate the immutable game-list snapshot on this worker instead.
             unsigned mod_scan_errors = 0;
             for (Game &game : games) {
+                if (scan_cancel_.load(std::memory_order_acquire)) break;
                 if (game.title_id == 0) continue;
                 try {
                     const std::vector<Mod> mods = services_.mods(game.title_id);
@@ -100,7 +104,11 @@ void Launcher::finish_scan(bool wait)
         return;
     try
     {
-        apply_games(scan_.get());
+        auto games = scan_.get();
+        // A completed worker is still joined, but never apply its stale
+        // results after a game launch has begun.
+        if (!scan_cancel_.load(std::memory_order_acquire))
+            apply_games(std::move(games));
     }
     catch (const std::exception &error)
     {
