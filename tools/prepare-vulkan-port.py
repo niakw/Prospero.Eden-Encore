@@ -832,6 +832,114 @@ vulkan_cache_create_replacement = '''        try {
 if shader_source.count(vulkan_cache_create_anchor) != 1:
     raise RuntimeError("Pinned Vulkan pipeline-cache constructor changed")
 shader_source = shader_source.replace(vulkan_cache_create_anchor, vulkan_cache_create_replacement)
+
+# PS5 game exit and crashes must not truncate the *last valid* driver cache.
+# Serialize off to a .new file and atomically rename over the current file
+# only after flush/close succeed. A local mutex prevents two asynchronous
+# serializations from sharing the same staging path during shutdown.
+# The same directory guarantees an in-filesystem rename on PS5.
+vulkan_cache_save_anchor = '''void PipelineCache::SerializeVulkanPipelineCache(const std::filesystem::path& filename,
+                                                 const vk::PipelineCache& pipeline_cache,
+                                                 u32 cache_version) try {
+    std::ofstream file(filename, std::ios::binary);
+    file.exceptions(std::ifstream::failbit);
+    if (!file.is_open()) {
+        LOG_ERROR(Common_Filesystem, "Failed to open Vulkan driver pipeline cache file {}",
+                  Common::FS::PathToUTF8String(filename));
+        return;
+    }
+    file.write(VULKAN_CACHE_MAGIC_NUMBER.data(), VULKAN_CACHE_MAGIC_NUMBER.size())
+        .write(reinterpret_cast<const char*>(&cache_version), sizeof(cache_version));
+
+    size_t cache_size = 0;
+    std::vector<char> cache_data;
+    if (pipeline_cache) {
+        pipeline_cache.Read(&cache_size, nullptr);
+        cache_data.resize(cache_size);
+        pipeline_cache.Read(&cache_size, cache_data.data());
+    }
+    file.write(cache_data.data(), cache_size);
+
+    LOG_INFO(Render_Vulkan, "Vulkan driver pipelines cached at: {}",
+             Common::FS::PathToUTF8String(filename));
+
+} catch (const std::ios_base::failure& e) {
+    LOG_ERROR(Common_Filesystem, "{}", e.what());
+    if (!Common::FS::RemoveFile(filename)) {
+        LOG_ERROR(Common_Filesystem, "Failed to delete Vulkan driver pipeline cache file {}",
+                  Common::FS::PathToUTF8String(filename));
+    }
+}
+'''
+vulkan_cache_save_replacement = '''void PipelineCache::SerializeVulkanPipelineCache(const std::filesystem::path& filename,
+                                                 const vk::PipelineCache& pipeline_cache,
+                                                 u32 cache_version) {
+#ifdef PS5_NATIVE
+    // The foreground title may exit while background serializer work exists.
+    // Serialize staged files to one writer at a time. Never erase the
+    // previously verified driver cache in a write/rename failure path.
+    static std::mutex save_mutex;
+    const std::lock_guard save_lock{save_mutex};
+    auto staging = filename;
+    staging += ".new";
+    try {
+        std::ofstream file;
+        file.exceptions(std::ios::failbit | std::ios::badbit);
+        file.open(staging, std::ios::binary | std::ios::trunc);
+        file.write(VULKAN_CACHE_MAGIC_NUMBER.data(), VULKAN_CACHE_MAGIC_NUMBER.size())
+            .write(reinterpret_cast<const char*>(&cache_version), sizeof(cache_version));
+
+        size_t cache_size = 0;
+        std::vector<char> cache_data;
+        if (pipeline_cache) {
+            pipeline_cache.Read(&cache_size, nullptr);
+            cache_data.resize(cache_size);
+            pipeline_cache.Read(&cache_size, cache_data.data());
+        }
+        if (cache_size != 0)
+            file.write(cache_data.data(), static_cast<std::streamsize>(cache_size));
+        file.flush();
+        file.close();
+        std::error_code rename_error;
+        std::filesystem::rename(staging, filename, rename_error);
+        if (rename_error) {
+            LOG_WARNING(Common_Filesystem, "Driver cache rename failed: {}", rename_error.message());
+            std::error_code cleanup_error;
+            std::filesystem::remove(staging, cleanup_error);
+            return;
+        }
+        LOG_INFO(Render_Vulkan, "Saved PS5 driver pipeline cache atomically: {}",
+                 Common::FS::PathToUTF8String(filename));
+    } catch (const std::exception& error) {
+        LOG_WARNING(Common_Filesystem, "Retained old driver cache after failed save: {}", error.what());
+        std::error_code cleanup_error;
+        std::filesystem::remove(staging, cleanup_error);
+    }
+#else
+    try {
+        std::ofstream file(filename, std::ios::binary);
+        file.exceptions(std::ifstream::failbit);
+        if (!file.is_open())
+            return;
+        file.write(VULKAN_CACHE_MAGIC_NUMBER.data(), VULKAN_CACHE_MAGIC_NUMBER.size())
+            .write(reinterpret_cast<const char*>(&cache_version), sizeof(cache_version));
+        size_t cache_size = 0;
+        std::vector<char> cache_data;
+        if (pipeline_cache) {
+            pipeline_cache.Read(&cache_size, nullptr);
+            cache_data.resize(cache_size);
+            pipeline_cache.Read(&cache_size, cache_data.data());
+        }
+        file.write(cache_data.data(), cache_size);
+    } catch (const std::ios_base::failure& error) {
+        LOG_ERROR(Common_Filesystem, "{}", error.what());
+    }
+#endif
+}
+'''
+if shader_source.count(vulkan_cache_save_anchor) != 1:
+    raise RuntimeError("Pinned Vulkan driver cache serializer changed")
+shader_source = shader_source.replace(vulkan_cache_save_anchor, vulkan_cache_save_replacement)
 # Native affinity masks describe the CPUs the *process can schedule on*;
 # hardware_concurrency() can report more than the PS5 runtime permits.
 pipeline_ps5_headers = '''#ifdef PS5_NATIVE
