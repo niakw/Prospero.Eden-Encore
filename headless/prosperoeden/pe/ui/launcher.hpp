@@ -13,6 +13,7 @@
 #include <future>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace pe::ui
@@ -232,6 +233,9 @@ class Launcher
     int home_recent_ = -1; // -1 = last played; otherwise the selected Recent card becomes the hero
     GameSettings home_game_settings_{};
     bool home_game_docked_ = true;
+    // Repeated recent-card navigation and quick-setting saves must not
+    // reread the same game JSON file on every controller input.
+    std::unordered_map<std::uint64_t, std::pair<GameSettings, bool>> home_settings_cache_;
     // The controllers connected now (bit 0 is player 1), and how lit each one's icon is.
     unsigned controllers_ = 0;
     bool controllers_known_ = false;
