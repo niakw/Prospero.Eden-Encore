@@ -169,7 +169,7 @@ before increasing internal resolution. Test load time as well as gameplay.
   profiling builds via `EDEN_DEV_PROFILE`. Ordinary app builds ignore the
   now-completed tuning file. The incomplete sparse JIT path additionally
   requires explicit build opt-in `EDEN_SPARSE_JIT_DEV=ON`.
-- `EDEN_MEMORY_LAYOUT` is emitted on the game-loaded and core-shutdown
+- `EDEN_MEMORY_LAYOUT` is emitted on the core-initialized and core-shutdown
   lifecycle boundaries (not per frame). It reports the kernel's largest
   available contiguous block and a conservative `free_upper` derived from
   scanned direct-memory regions. That upper bound is **not** used for GPU
