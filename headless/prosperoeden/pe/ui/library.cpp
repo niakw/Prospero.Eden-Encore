@@ -436,7 +436,7 @@ void Launcher::finish_home_scan()
                 home_.recents[static_cast<std::size_t>(home_recent_)].file : std::string{};
         home_ = std::move(snapshot);
         home_loaded_ = true;
-            if (!previous_file.empty()) {
+        if (!previous_file.empty()) {
             const auto recent = std::find_if(home_.recents.begin(), home_.recents.end(),
                 [&](const Recent& entry) { return entry.file == previous_file; });
             home_recent_ = recent == home_.recents.end() ? -1 :
