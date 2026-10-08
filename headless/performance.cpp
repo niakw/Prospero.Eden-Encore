@@ -416,6 +416,58 @@ void RecordHle(const char* service, unsigned command, long long ns) {
     entry.second += static_cast<unsigned long long>(ns > 0 ? ns : 0);
 }
 
+// Samples are restricted to lifecycle and explicit development snapshots.
+// Vulkan's hot texture collector only uses the kernel's bounded largest-free
+// query; a potentially long region enumeration never belongs in that path.
+void ReportDirectMemoryState(const char* phase) {
+#ifdef PS5_NATIVE
+    const std::int64_t total = sceKernelGetDirectMemorySize();
+    if (total <= 0) {
+        std::printf("EDEN_MEMORY_LAYOUT phase=%s status=unavailable\n", phase);
+        return;
+    }
+    std::int64_t largest_start = -1;
+    std::size_t largest = 0;
+    const int largest_rc = sceKernelAvailableDirectMemorySize(
+        0, total, 0x4000, &largest_start, &largest);
+
+    // This list can be incomplete if the kernel refuses enumeration. Therefore
+    // taken is only a lower bound and total-taken only an UPPER bound on free RAM;
+    // never feed that diagnostic estimate back into the allocator or renderer.
+    std::int64_t taken_lower = 0;
+    std::int64_t cursor = 0;
+    unsigned regions = 0;
+    bool valid = true;
+    while (cursor < total && regions < 8192) {
+        DirectMemoryRegion region{};
+        if (sceKernelDirectMemoryQuery(cursor, 1, &region, sizeof(region)) != 0)
+            break;
+        if (region.start < 0 || region.start < cursor || region.end <= region.start ||
+            region.end > total) {
+            valid = false;
+            break;
+        }
+        const std::int64_t span = region.end - region.start;
+        if (taken_lower > total - span) {
+            valid = false;
+            break;
+        }
+        taken_lower += span;
+        cursor = region.end;
+        ++regions;
+    }
+    const long long free_upper = valid ? static_cast<long long>(total - taken_lower) : -1LL;
+    std::printf("EDEN_MEMORY_LAYOUT phase=%s largest_rc=%d total=%lld largest=%zu "
+                "largest_start=%lld free_upper=%lld scanned_regions=%u scan_valid=%d short=%d\n",
+                phase, largest_rc, static_cast<long long>(total),
+                largest_rc == 0 ? largest : size_t{0},
+                static_cast<long long>(largest_start), free_upper,
+                regions, int(valid), int(graphics_memory_short.load(std::memory_order_relaxed)));
+#else
+    (void)phase;
+#endif
+}
+
 void ReportGpuThread(unsigned frame) {
     // Heap growth and arena use over the run (allocation failures abort the title).
     ps5_opengl_heap_snapshot("vulkan_report", frame);
@@ -441,28 +493,7 @@ void ReportGpuThread(unsigned frame) {
                             key.second, value.first, value.second);
     }
 #ifdef PS5_NATIVE
-    // Direct memory headroom (guest RAM, JIT, RADV and the caches share the pool).
-    if (const std::int64_t total = sceKernelGetDirectMemorySize(); total > 0) {
-        std::int64_t start = 0;
-        std::size_t largest = 0;
-        if (sceKernelAvailableDirectMemorySize(0, total, 0x4000, &start, &largest) == 0) {
-            // All that is free, against the largest block: how far apart they are tells how much
-            // of the pool is holes between allocations. -1: the regions could not be read.
-            std::int64_t taken = 0, offset = 0;
-            unsigned regions = 0;
-            DirectMemoryRegion region{};
-            while (offset < total && regions < 8192 &&
-                   sceKernelDirectMemoryQuery(offset, 1, &region, sizeof(region)) == 0 && region.end > offset) {
-                taken += region.end - region.start;
-                offset = region.end;
-                ++regions;
-            }
-            std::printf("EDEN_PERF_DIRECT total=%lld largest_free=%zu free=%lld regions=%u short=%d\n",
-                        static_cast<long long>(total), largest,
-                        regions != 0 ? static_cast<long long>(total - taken) : -1LL, regions,
-                        int(graphics_memory_short.load(std::memory_order_relaxed)));
-        }
-    }
+    ReportDirectMemoryState("dev-profile");
 #endif
     const auto load = [](const Totals& totals, bool calls) {
         return (calls ? totals.calls : totals.nanoseconds).load(std::memory_order_relaxed);
