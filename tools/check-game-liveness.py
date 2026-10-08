@@ -17,6 +17,8 @@ assert "Performance::gpu_dispatch.calls.load" in source
 assert "Performance::rasterizer_draw.calls.load" in source
 assert "game_probe.Observe(" in source
 assert "game_armed.load(" in source
+assert "game_session_epoch.fetch_add(1" in source
+assert "epoch != previous_game_epoch" in source
 assert "Eden::Stall::ArmGame();" in main
 assert "Eden::Stall::DisarmGame();" in main
 assert main.find("Eden::Stall::ArmGame();") > main.find("system.Run();")
@@ -107,7 +109,12 @@ with tempfile.TemporaryDirectory(prefix="eden-game-liveness-host-") as folder:
         '#include "stall_watchdog.h"\n'
         'extern "C" unsigned long eden_heap_create_lock_state(unsigned* waiters) '
         '{ *waiters = 0; return 0; }\n'
-        'int main() { Eden::Stall::ArmGame(); Eden::Stall::DisarmGame(); return 0; }\n'
+        'int main() { '
+        'Eden::Stall::ArmGame(); '
+        'const unsigned first = Eden::Stall::game_session_epoch.load(); '
+        'Eden::Stall::DisarmGame(); Eden::Stall::ArmGame(); '
+        'if (Eden::Stall::game_session_epoch.load() != first + 1) return 2; '
+        'Eden::Stall::DisarmGame(); return 0; }\n'
     )
     subprocess.run([cxx, "-std=c++20", "-O1", "-Wall", "-Wextra", "-Werror",
                     "-pthread", "-DPS5_NATIVE=1", "-DEDEN_DEV_PROFILE=1",
