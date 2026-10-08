@@ -372,12 +372,16 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
             slot.select_pulse = 0;
             slot.select_held = false;
         }
+#ifdef EDEN_DEV_PROFILE
+        // Diagnostic input trace only. Per-button fprintf in a shipping 4 ms
+        // poll loop adds avoidable pipe/log pressure during a match.
         if (player == 0 && pressed != last_buttons) {
             std::fprintf(stderr,
                          "EDEN_PAD_EVENT player=1 previous=%08x buttons=%08x timestamp_us=%llu usable=%d\n",
                          last_buttons, pressed, static_cast<unsigned long long>(raw.timestamp_us),
                          is_usable(raw) ? 1 : 0);
         }
+#endif
         last_buttons = pressed;
         for (const auto [mask, button] : fixed)
             engine->SetButtonState(player, button, (sample.buttons & mask) != 0);

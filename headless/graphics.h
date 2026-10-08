@@ -34,6 +34,8 @@ private:
     // Constant-cost five-second present-jitter counts. 30 FPS is ~33.33 ms:
     // 38 ms catches a visible 4–6 FPS dip, without per-frame file writes.
     unsigned frame_late_38{}, frame_late_50{}, frame_late_100{};
+    unsigned frame_late_200{}, frame_late_500{};
+    unsigned frame_slow_streak{}, frame_max_slow_streak{};
     EGLDisplay display{EGL_NO_DISPLAY};
     EGLConfig config{};
     EGLContext root{EGL_NO_CONTEXT};

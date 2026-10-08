@@ -480,3 +480,22 @@ Remaining before asking approval for **one** incremental CI build: finish code r
 - A screenshot fallback must not count as an already-cached real banner.
 - When an atomic download replaces a file under the same path, the launcher now invalidates its affected in-memory GL texture, instead of retaining stale artwork until restart.
 - Source-contract guard updated. No native PS5 compilation, workflow dispatch, preview, or hardware validation. Never claim this is in the previously shipped package.
+
+### 2026-10-08 — User-provided FC27 PS5 stutter logs; source-only fixes
+
+- Current heap.log includes a 70.3-minute Vulkan session (29.58 mean present FPS,
+  13/840 five-second windows below 20 FPS, 148 present gaps >100ms, worst 2641ms).
+  Late `EDEN_JIT_PRESSURE` on cores 0/1/2 recurs near stutters; worker topology
+  is still not proven (`ready=0 distinct_cores=1`). Shader/JIT caches were
+  cleared from Diagnostics, some launches show 0 pipelines. Causality unproven.
+- stderr.log and stderr.prev.log contain 32 PlayStation Auto context flips and
+  1826 per-button event logs; user reports actual button layout reverting.
+- Fixed launcher activation: PlayStation mapping now remains fixed across UI
+  and gameplay (no automatic Nintendo-position switchover); raw button-event
+  printf restricted to diagnostic builds. Added bounded Vulkan frame gap/streak
+  counters to release frame summaries for next hardware investigation.
+- Updated stale UX source contract left by prior Nlib cache-schema v3 change.
+- FSR 3.1/ML, logical-core pinning, JIT pressure-aware reuse are investigation
+  only; *nothing experimental enabled in shipping* without exact PS5 tests.
+- Feature branch `local/fc27-offline-no-build`; no CI, PS5 build or preview,
+  and no claim that new stutter fixes are installed on hardware.

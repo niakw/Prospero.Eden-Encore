@@ -133,3 +133,51 @@ project maintainers and license must be added to `README.md`,
 
 Offline trace analyzer: `tools/analyze-fc27-trace.py`.
 Regression: `python3 -B tools/check-fc27-trace.py`.
+
+## 8 October 2026 — Hardware evidence, no-build follow-up
+
+The supplied PS5 FW 13.60 logs include an approximately 70.3-minute Vulkan
+session with 29.58 average host-present FPS but 13 five-second windows under 20,
+31 under 25 and 148 gaps above 100 ms; the worst single gap is 2641 ms.
+Repeated 30 FPS windows do **not** prove smooth per-frame gameplay.
+
+- Late-session `EDEN_JIT_PRESSURE` events repeatedly report roughly 1 MiB
+  remaining in per-core code regions (256 MiB / 192 MiB / 192 MiB).
+  The pressure recurs near some of the worst present gaps. Do not infer exact
+  causality without aligned JIT clear/compile durations, guest progress and
+  shader/GPU timing. Saved-block compile-ahead and shared JIT stay OFF.
+- `EDEN_WORKER_TOPOLOGY ready=0 distinct_cores=1` persists on the real console,
+  so the intended CPU worker pinning and secondary-CPU placement are inactive.
+  Do not force logical/SMT placement without verifying the actual CPU affinity
+  and topology reported by firmware; it might worsen frame pacing.
+- Cache clearing was performed from Diagnostics and some sessions report zero
+  preloaded shader pipelines. Repeated cache deletion is not a stutter fix;
+  preserving a warm cache is the comparison baseline.
+- Before experimenting with cache capacity or CPU placement, add bounded
+  compile/clear-cost timing to the exact pinned Dynarmic implementation and
+  driver GPU-completion timestamps where supported. The release present summary
+  now additionally reports gaps >200/>500 ms and longest >=50ms streak.
+- The shipping PlayStation control profile no longer switches to Switch mapping
+  when sticks/triggers resemble gameplay. Keep custom mappings deterministic.
+  Individual button transitions are printed only in diagnostic builds.
+
+### Experimental technology decision (do not ship unqualified)
+
+1. **JIT tuning**: candidate pressure-aware region sizing or code reuse; requires
+   hardware memory headroom and fault-free long A/B sessions. No blanket
+   cache increase or experimental shared JIT until those gates pass.
+2. **Vulkan presentation timing**: inspect driver support for
+   `VK_GOOGLE_display_timing` / `VK_EXT_present_timing` (or PS5-native present
+   timestamps), measure real display intervals, then trial pacing with an OFF
+   switch. Never invent a supported extension.
+3. **FSR 3.1 frame generation**: AMD recommends 60 FPS input and warns against
+   below-30 FPS; this observed 15–20 FPS tail is not a safe target.
+   FSR SDK 2.3 has no Vulkan backend, and newer ML FSR-FG is not an assumed
+   RDNA2 PS5 feature. Generating duplicate frames cannot recover slow guest
+   CPU/JIT frames. Keep any optical-flow experiment isolated and OFF by default.
+4. **Radeon GPU/texture cache and shader batching**: already in the PS5 driver.
+   Bench new changes with graphics output fidelity, GPU time, worst-frame
+   tail, and guest liveness, not average presented FPS alone.
+
+Source and baseline observations only. No PS5 app build or GitHub workflow
+dispatched; no measured improvement claimed.
