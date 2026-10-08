@@ -205,7 +205,7 @@ validation has been completed. No general FPS improvement is claimed.
   execution or the safety of a mid-session OOM**. The prototype still
   fails closed on a mapping/commit error while emitting code; do not
   enable it in a release build.
-- `EDEN_JIT_MEMORY` lifecycle summaries now distinguish **virtual
+- `EDEN_JIT_SPARSE_MEMORY` lifecycle summaries now distinguish **virtual
   reserved** from **physical committed** memory, under a mutex. These
   diagnostics are not called on the rendering hot path.
 - Added `python3 tools/check-ps5-architecture.py` for offline source
