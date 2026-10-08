@@ -60,6 +60,33 @@ def main() -> None:
             "Alias probe cleanup is missing")
     require('::Common::SparseJitUsage(&jit_reserved, &jit_committed)' in perf,
             "Physical JIT memory accounting must target global Common")
+    native_alloc = read("headless/jit-allocator.h")
+    require('#include <algorithm>' in native, "Sparse constructor bootstrap needs std::min")
+    require('const std::size_t bootstrap = std::min<std::size_t>(size, 2 * LargePage)' in native,
+            "Dynarmic constant pool requires committed pages before construction")
+    require('if (!CommitSparseJitCode(rx, bootstrap))' in native and
+            'ReleaseSparseJitCode(rx);' in native,
+            "Startup bootstrap must clean up failed sparse reservation")
+    require('bool IsSparseJitCode(const void* executable) noexcept' in native and
+            '::Common::IsSparseJitCode(getCode())' in cmake,
+            "Dense JIT fallback must not enter sparse physical commits")
+    require('EDEN_JIT_SPARSE_FALLBACK bytes=' in native_alloc and
+            'writable = Common::AllocateMemoryPages(size)' in native_alloc,
+            "Sparse reservation failure must use dense JIT fallback")
+    require('throw std::bad_alloc{};' in cmake and
+            'Pinned A64 JIT commit checkpoint changed' in cmake and
+            'Pinned A32 JIT commit checkpoint changed' in cmake,
+            "A64 and A32 need recoverable one-shot sparse allocation fallback")
+    require(cmake.count('catch (const std::bad_alloc&)') >= 2,
+            "Both guest architectures must recycle committed code pages on OOM")
+    require('CountDenseJitDirect(void* writable, bool acquire) noexcept' in native and
+            'DenseJitDirectBytes() noexcept' in native,
+            "Normal dense JIT physical allocation accounting absent")
+    require(native_alloc.count('Common::CountDenseJitDirect(') >= 4,
+            "Dense JIT alloc/catch/free physical ownership paths not instrumented")
+    require('EDEN_JIT_DENSE_MEMORY phase=' in perf and
+            '::Common::DenseJitDirectBytes()' in perf,
+            "Lifecycle memory must include actual dense JIT residency")
     require(perf.index('void SparseJitUsage(') < perf.index('namespace Eden::Performance {'),
             "JIT memory declaration is inside the wrong C++ namespace")
 
@@ -107,7 +134,7 @@ def main() -> None:
 
     print("PASS PS5_NATIVE_ARCHITECTURE_CONTRACTS")
     print(f"  lifecycle points: {', '.join(sorted(memory_stages))}")
-    print("  sparse JIT: compile-gated, startup alias preflight, committed-memory accounting")
+    print("  JIT memory: dense physical accounting + developer sparse bootstrap, alias and OOM retry")
     print("  all titles: continuous A64/A32 capacities from available direct memory")
     print("  Vulkan: available CPU mask, pinned-source transformation, bounded worker budget")
     print("  Native PS5 compile and firmware 13.60 tests: NOT RUN")
