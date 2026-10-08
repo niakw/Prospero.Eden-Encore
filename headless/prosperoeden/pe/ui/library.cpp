@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <exception>
 #include <iterator>
+#include <new>
 #include <string>
 
 namespace pe::ui
@@ -67,14 +68,25 @@ void Launcher::start_scan()
             // title used to happen inside apply_games() on the UI update
             // thread, potentially scanning hundreds of directories at once.
             // Populate the immutable game-list snapshot on this worker instead.
+            unsigned mod_scan_errors = 0;
             for (Game &game : games) {
                 if (game.title_id == 0) continue;
-                const std::vector<Mod> mods = services_.mods(game.title_id);
-                game.mods = static_cast<int>(mods.size());
-                game.mods_enabled = mods.empty() || services_.mods_enabled(game.title_id);
-                game.mods_on = !game.mods_enabled ? 0 : static_cast<int>(
-                    std::count_if(mods.begin(), mods.end(),
-                                  [](const Mod &mod) { return mod.enabled; }));
+                try {
+                    const std::vector<Mod> mods = services_.mods(game.title_id);
+                    game.mods = static_cast<int>(mods.size());
+                    game.mods_enabled = mods.empty() || services_.mods_enabled(game.title_id);
+                    game.mods_on = !game.mods_enabled ? 0 : static_cast<int>(
+                        std::count_if(mods.begin(), mods.end(),
+                                      [](const Mod &mod) { return mod.enabled; }));
+                } catch (const std::bad_alloc&) {
+                    throw; // never disguise memory exhaustion as an absent mod
+                } catch (const std::exception& error) {
+                    // One damaged/inaccessible mod folder must not discard the
+                    // entire game list. Keep defaults for that title only.
+                    if (mod_scan_errors++ < 3)
+                        sys::log("mod scan title=%llx: %s",
+                                 static_cast<unsigned long long>(game.title_id), error.what());
+                }
             }
             return games;
         });
