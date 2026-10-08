@@ -133,7 +133,6 @@ int main() {
         auto* rw = allocator->writableAddress(rx);
         assert(rw && rw != rx && owned.find(rw) != owned.end());
         assert(dense_bytes >= size);
-        const auto* tail = rx + size;
         allocator->free(rx);
         assert(owned.empty() && dense_bytes == 0);
         if (size == 3u * 1024u * 1024u) {
@@ -144,6 +143,7 @@ int main() {
             // above, leaving the unmapped-tail probe to Linux source CI.
             assert(owned.empty() && dense_bytes == 0);
 #else
+            const auto* tail = rx + size;
             unsigned char residency = 0;
             errno = 0;
             // The fourth MiB of the rounded 4 MiB RX alias must be GONE.
