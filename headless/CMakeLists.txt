@@ -646,11 +646,15 @@ foreach(bits 32 64)
       # Only the active architecture allocates these caches; core3/host stay 16 MiB.
       if(PS5_NATIVE)
           if(bits EQUAL 64)
-              set(jit_cache_sizes "m_core_index == 0 ? 256_MiB : m_core_index < 3 ? 192_MiB : 16_MiB")
+              # One-time, per-title opt-in A64 cache capacity. Default unchanged.
+              set(jit_cache_sizes "::Eden::Experimental::A64CacheBytes(m_core_index, m_core_index == 0 ? 256_MiB : m_core_index < 3 ? 192_MiB : 16_MiB)")
           else()
               set(jit_cache_sizes "m_core_index == 0 ? 512_MiB : m_core_index < 3 ? 64_MiB : 16_MiB")
           endif()
           string(REPLACE "std::uint32_t(16_MiB)" "std::uint32_t(${jit_cache_sizes})" wrapper "${wrapper}")
+          if(bits EQUAL 64)
+              string(PREPEND wrapper "#include \"${EDEN_PORT_DIR}/experimental_performance.h\"\n")
+          endif()
       endif()
     set(derived "${PORT_BUILD_DIR}/arm_dynarmic_${bits}.cpp")
     # JIT entry/exit sampling is diagnostic instrumentation, not a shipping feature.
