@@ -16,6 +16,9 @@ service = (root / "headless/prosperoeden/eden_services.cpp").read_text()
 
 # One cinematic scene, behind the nav, and no framed right-column dashboard.
 assert "const Rect hero{0.0f, 0.0f, 1920.0f, 1080.0f}" in home
+assert "list.hgradient_rect(hero, 0.0f" in home
+assert "list.gradient_rect({0.0f, 325.0f, 1920.0f, 755.0f}" in home
+assert 'tr("Max. players: {0}")' in home
 assert "const Cover hero_picture = c.textures.cover(hero_artwork, 1920.0f)" in home
 assert "list.image(hero_picture.texture, hero, uv" in home
 assert "list.gradient_rect(hero, 0.0f" not in home
