@@ -56,10 +56,10 @@ prototypes a different backing scheme while retaining stable RX and RW views:
   commits 2 MiB *physical direct-memory* chunks only when Dynarmic calls
   `BlockOfCode::EnsureMemoryCommitted` before emitting code. It does not rely
   on execution-time page faults, change guest timing, or move existing code.
-- `jit_cache: "elastic"` implies sparse memory and reserves a **4 GiB virtual
-  capacity ceiling total** for A64 core 0/1/2 (1536/1280/1280 MiB). This is
-  not 4 GiB of immediately committed physical RAM; unfilled capacity remains
-  virtual. Each cache remains below 2 GiB to preserve x64 rel32 assumptions.
+- The old 4 GiB fixed-capacity prototype has been **removed**: no arbitrary
+  new total ceiling should become the architecture. The sparse prototype
+  currently retains the tested A/B/C capacities while safe multi-segment
+  auto-growth and actual memory-pressure controls are developed.
 - The qualified A/B/C/D experiments remain dense and unchanged unless the
   new `jit_memory` option is explicitly enabled. A32/core3 retain their
   default capacity sizes, although their direct backing is also incremental
@@ -75,20 +75,5 @@ the MAP_FIXED dual-alias path, executable permissions, physical-memory exhaustio
 fragmentation, teardown and repeated FC27 stress tests still require native
 compilation and real hardware qualification. A failed mid-session direct-memory
 commit deliberately fails closed rather than executing a partially mapped cache;
-it is **not yet** a production-safe auto-sizing policy. 4 GiB is an upper bound,
-not a recommended physical budget.
-
-Example for a future separately qualified build (NOT for the current A/B/C/D app):
-
-```json
-{
-  "games": {
-    "0100C49025D3E000": {
-      "jit_cache": "elastic",
-      "jit_memory": "sparse",
-      "cpu_placement": "off",
-      "vulkan_pacing": "trace"
-    }
-  }
-}
-```
+it is **not yet** a production-safe auto-sizing policy. There is currently
+no unlimited executable-code allocator and no shipping auto-growth.
