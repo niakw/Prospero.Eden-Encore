@@ -58,8 +58,13 @@ inline constexpr JitMemoryPlan ChooseJitMemoryPlan(
                                   kA32Baseline[1] + kA32Baseline[2] +
                                   kA32Baseline[3]);
     const std::size_t budget = ((largest_free_block - kHostReserve) / 2) / kLargePage * kLargePage;
-    if (budget <= native_floor) return plan;
-    const std::size_t growth = budget - native_floor;
+    // AllocateMemoryPages gives every dense JIT cache its own 2 MiB direct-
+    // memory header/alignment page. Four baseline arenas therefore commit
+    // 656 + 8 MiB, not only the advertised 656 MiB code capacity. Account
+    // for that *physical* overhead before admitting new code capacity.
+    constexpr std::size_t dense_allocation_overhead = 4 * kLargePage;
+    if (budget <= native_floor + dense_allocation_overhead) return plan;
+    const std::size_t growth = budget - native_floor - dense_allocation_overhead;
 
     const auto clamp_arena = [](std::size_t bytes) constexpr -> std::uint32_t {
         if (bytes > kSingleArenaAddressingLimit)
