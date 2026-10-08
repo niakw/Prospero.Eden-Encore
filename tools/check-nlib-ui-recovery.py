@@ -50,6 +50,20 @@ assert "decode_ = std::async(std::launch::async" in texture_cpp
 assert "it->second.generation == result.generation" in texture_cpp
 assert "entry.texture = create(result.image);" in texture_cpp
 assert "decode_.wait_for(std::chrono::seconds(0))" in texture_cpp
+# Nlib media must be scaled on the decode worker to the dimensions the
+# launcher actually draws. Otherwise every 300px card uploads a 1080p image.
+assert "int target_pixels = 64;" in texture_cpp
+assert "target_pixels *= 2;" in texture_cpp
+assert "path + '#' + std::to_string(target_pixels)" in texture_cpp
+assert "entry.target_pixels = target_pixels;" in texture_cpp
+assert "const int target_pixels = it->second.target_pixels;" in texture_cpp
+assert "std::max(decoded.image.width, decoded.image.height) >" in texture_cpp
+assert "target_pixels * 3 / 2" in texture_cpp
+assert "decoded.image = gfx::halve(decoded.image);" in texture_cpp
+assert "int target_pixels = 64;" in texture_h
+assert "kMaxTextureReclaimsPerFrame = 2" in texture_cpp
+assert "reclaimed < kMaxTextureReclaimsPerFrame" in texture_cpp
+
 # A rare native frame overrun gets one bounded phase label (no noisy per-frame
 # printf) so the next PS5 test can tell GPU texture upload, cache/media merge,
 # and 2-second game-presence file I/O apart.
