@@ -1237,4 +1237,56 @@ msgstr "Options lance un démarrage sûr unique sans modifier les réglages enre
 #: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
 msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
 msgstr "Démarrage sûr : OpenGL, mode portable, 1x, 60 Hz, 1080p et mods désactivés uniquement pour ce lancement."
-\n#: pe/ui/home.cpp pe/ui/settings.cpp pe/ui/launcher.cpp eden_services.cpp\nmsgid "Max. players: {0}"\nmsgstr "Joueurs max. : {0}"\n\n#: pe/ui/home.cpp pe/ui/settings.cpp pe/ui/launcher.cpp eden_services.cpp\nmsgid "CACHE"\nmsgstr "CACHE"\n\n#: pe/ui/home.cpp pe/ui/settings.cpp pe/ui/launcher.cpp eden_services.cpp\nmsgid "Clear cache"\nmsgstr "Vider le cache"\n\n#: pe/ui/home.cpp pe/ui/settings.cpp pe/ui/launcher.cpp eden_services.cpp\nmsgid "Clear cache?"\nmsgstr "Vider le cache ?"\n\n#: pe/ui/home.cpp pe/ui/settings.cpp pe/ui/launcher.cpp eden_services.cpp\nmsgid "Cleared {0} of cache."\nmsgstr "Cache vidé : {0}."\n\n#: pe/ui/home.cpp pe/ui/settings.cpp pe/ui/launcher.cpp eden_services.cpp\nmsgid "Cache: {0}  |  Logs: {1}"\nmsgstr "Cache : {0}  |  Journaux : {1}"\n
+
+
+#: pe/ui/home.cpp pe/ui/settings.cpp pe/ui/launcher.cpp eden_services.cpp
+msgid "Max. players: {0}"
+msgstr "Joueurs max. : {0}"
+
+#: pe/ui/home.cpp pe/ui/settings.cpp pe/ui/launcher.cpp eden_services.cpp
+msgid "CACHE"
+msgstr "CACHE"
+
+#: pe/ui/home.cpp pe/ui/settings.cpp pe/ui/launcher.cpp eden_services.cpp
+msgid "Clear cache"
+msgstr "Vider le cache"
+
+#: pe/ui/home.cpp pe/ui/settings.cpp pe/ui/launcher.cpp eden_services.cpp
+msgid "Clear cache?"
+msgstr "Vider le cache ?"
+
+#: pe/ui/home.cpp pe/ui/settings.cpp pe/ui/launcher.cpp eden_services.cpp
+msgid "Cleared {0} of cache."
+msgstr "Cache vidé : {0}."
+
+#: pe/ui/home.cpp pe/ui/settings.cpp pe/ui/launcher.cpp eden_services.cpp
+msgid "Cache: {0}  |  Logs: {1}"
+msgstr "Cache : {0}  |  Journaux : {1}"
+
+#: pe/ui/home.cpp pe/ui/library.cpp pe/ui/launcher.cpp
+msgid "Recent"
+msgstr "Récents"
+
+#: pe/ui/home.cpp pe/ui/library.cpp pe/ui/launcher.cpp
+msgid "Loading artwork"
+msgstr "Chargement du visuel"
+
+#: pe/ui/home.cpp pe/ui/library.cpp pe/ui/launcher.cpp
+msgid "Artwork unavailable"
+msgstr "Visuel indisponible"
+
+#: pe/ui/home.cpp pe/ui/library.cpp pe/ui/launcher.cpp
+msgid "No screenshots available"
+msgstr "Aucune capture disponible"
+
+#: pe/ui/home.cpp pe/ui/library.cpp pe/ui/launcher.cpp
+msgid "Games and cache"
+msgstr "Jeux · Cache"
+
+#: pe/ui/home.cpp pe/ui/library.cpp pe/ui/launcher.cpp
+msgid "Storage not configured"
+msgstr "Stockage non configuré"
+
+#: pe/ui/home.cpp pe/ui/library.cpp pe/ui/launcher.cpp
+msgid "Storage ready"
+msgstr "Stockage configuré"
