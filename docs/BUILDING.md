@@ -179,6 +179,23 @@ patches are intentionally disabled by default (`EDEN_EXPERIMENTAL_DUMMY_THREAD_W
 `EDEN_EXPERIMENTAL_ICACHE_COHERENCE`, `EDEN_EXPERIMENTAL_SM_HOST_WAIT`). Toggle only one per
 isolated hardware A/B test and never silently package all three.
 
+## Preserving a prepared Eden source when a verified patch evolves
+
+GitHub Actions restores the complete pinned Eden source and CMake/FFmpeg caches.
+For the old Encore HTTP identification patch (SHA-256
+`7117c1c3f353157b7fa46a86c6f77226b1183d9b374462cefe8b8dc5f32bf613`),
+the updated patch only adds the missing `httplib::Result` error message.
+`tools/apply-eden-backports.sh` now accepts *only* that exact old receipt,
+verifies the old markers, upgrades the one `src/common/net/net.cpp` block,
+revalidates and records the new patch digest. No source or dependency cache is
+reset. Unexpected content or other changed patch hashes remain hard failures.
+`tools/check-net-cache-migration.py` exercises successful upgrade,
+idempotent resume and two rejection cases.
+
+This addresses CI run [#37709504223](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/37709504223),
+which stopped in `make prepare` because a restored source cache contained the
+older HTTP backport receipt; native compilation had not started.
+
 ## Two-stage experimental-backport validation in CI
 
 The early `Validate startup, elevation and storage contracts` CI job step runs

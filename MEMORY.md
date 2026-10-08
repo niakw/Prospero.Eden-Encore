@@ -441,3 +441,10 @@ Remaining before asking approval for **one** incremental CI build: finish code r
 - Error: new `tools/check-dummy-thread-waits.py` accessed `.local/headless-cache` before GitHub runner ran `make prepare`. The companion `check-dynarmic-icache.py` had identical assumption and would fail next. This is a fixture lifecycle bug, not PS5 code compilation.
 - Changed both checkers to always enforce source-patch invariants at early preflight, then *defer* exact source patch applicability when local `.local/headless-cache` is not present. `--require-pinned-source` explicitly refuses deferred behavior. Added strict second-stage checks in `tools/build-headless-native.sh` after pinned source is prepared and before native CMake/compile. Verified by temporarily hiding local cache record: both early policies PASS, strict missing source deliberately FAILS, restored pinned source strict checks PASS.
 - Restored the `.local/headless-cache` record after the simulation. Do not rerun build #37709145188; commit/push the targeted fix and use new triggered run.
+
+
+### 2026-10-08 CI red #37709504223: changed HTTP patch vs restored source cache
+
+- Run #37709504223 at `d4a2b30` FAILED in `Prepare native build inputs` (`make prepare`), before native compilation. Error: `Backport changed; reset the Eden source cache: eden-ps5-net-user-agent.patch`. Cached Eden source had receipt for initial network patch SHA-256 `7117c1c3...` (UA+Accept only); revised patch added error reason to LOG_ERROR.
+- Added strictly gated migration for *that exact old receipt* in `tools/apply-eden-backports.sh`. New `tools/migrate-net-user-agent-cache.py` changes only the verified `src/common/net/net.cpp` error log statement, checks UA/Accept, is idempotent and fails closed on unexpected source. Does not delete cached Eden, FFmpeg, CMake, or compiled objects.
+- Added four-case migration unit `tools/check-net-cache-migration.py` to full CI preflight. Tested old upgrade/retry/pristine mismatch/unexpected source, all PASS. New and logging patch git-apply dry-runs against local pinned source PASS. This is a build-environment fix, not gameplay freeze repair.
