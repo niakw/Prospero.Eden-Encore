@@ -5,6 +5,7 @@
 #include "pe/ui/launcher.hpp"
 
 #include <algorithm>
+#include <cmath>
 
 namespace pe::ui
 {
@@ -433,9 +434,12 @@ void Launcher::draw_top_nav(Canvas &c, int active_tab, int focus_tab, float focu
     text(c, "ENCORE", 147.0f, baseline(77.0f, 16.0f, 13.0f), 13.0f,
          theme::kCopy, Align::left, 4.5f);
 
+    // Reference uses large icon+label destinations in the right side of the
+    // navigation. Keep the existing functional Recent tab until a real PS5
+    // suspend service is verified; never label Exit as "Sleep".
     static constexpr const char* labels[] = {TR("Home"), TR("Library"), TR("RECENTLY PLAYED"), TR("Settings")};
-    static constexpr float xs[] = {720.0f, 886.0f, 1046.0f, 1260.0f};
-    static constexpr float widths[] = {154.0f, 148.0f, 202.0f, 160.0f};
+    static constexpr float xs[] = {715.0f, 918.0f, 1152.0f, 1420.0f};
+    static constexpr float widths[] = {186.0f, 222.0f, 254.0f, 200.0f};
     for (int i = 0; i < 4; ++i)
     {
         const Rect r{xs[i], 44.0f, widths[i], 54.0f};
@@ -443,19 +447,43 @@ void Launcher::draw_top_nav(Canvas &c, int active_tab, int focus_tab, float focu
         const float focused = i == focus_tab ? tween::clamp01(focus_amount) : 0.0f;
         if (active)
         {
-            // Persistent section state: restrained pill + underline. Controller focus is the
-            // brighter animated glow, so selected and hovered can never be confused.
-            list.bordered_rect(r, 22.0f, theme::kPanel.with_alpha(0.34f), 1.0f,
-                               theme::kPanelEdge.with_alpha(0.34f));
-            list.rounded_rect({r.x + 34.0f, r.y + r.h - 5.0f, r.w - 68.0f, 3.0f},
-                              1.5f, theme::kLime.with_alpha(0.74f));
+            list.shadow({r.x - 4.0f, r.y - 4.0f, r.w + 8.0f, r.h + 8.0f},
+                        24.0f, 28.0f, theme::kFocusBlue.with_alpha(0.22f));
+            list.bordered_rect(r, 19.0f, theme::kPanel.with_alpha(0.55f), 1.8f,
+                               theme::kFocusBlue.with_alpha(0.96f));
         }
         if (focused > 0.001f)
             plate_focus(c, kNavPlate, r, focused);
-        text_shrink(c, tr(labels[i]), r.x + r.w * 0.5f,
+        // Functional vector icons from the same native DrawList as the PS5
+        // screens; avoid emoji glyph fallbacks on consoles without those fonts.
+        const float gx = r.x + 30.0f;
+        const float gy = r.y + r.h * 0.5f;
+        const Color ink = active || focused > 0.01f ? theme::kTitle : theme::kMuted;
+        if (i == 0) {
+            list.triangle({gx - 13.0f, gy - 16.0f, 26.0f, 17.0f}, ink);
+            list.rounded_rect({gx - 10.0f, gy - 2.0f, 20.0f, 16.0f}, 2.0f, ink);
+        } else if (i == 1) {
+            list.bordered_rect({gx - 12.0f, gy - 14.0f, 16.0f, 30.0f}, 3.0f,
+                               theme::kGlass, 2.0f, ink);
+            list.bordered_rect({gx + 5.0f, gy - 10.0f, 11.0f, 27.0f}, 3.0f,
+                               theme::kGlass, 2.0f, ink);
+        } else if (i == 2) {
+            list.ring(gx, gy, 13.0f, 2.6f, ink);
+            list.line(gx, gy, gx, gy - 8.0f, 2.6f, ink);
+            list.line(gx, gy, gx + 7.0f, gy + 5.0f, 2.6f, ink);
+        } else {
+            list.ring(gx, gy, 10.0f, 3.6f, ink);
+            list.circle(gx, gy, 3.2f, ink);
+            for (int spoke = 0; spoke < 8; ++spoke) {
+                const float a = static_cast<float>(spoke) * 0.78539816f;
+                list.line(gx + std::cos(a) * 14.0f, gy + std::sin(a) * 14.0f,
+                          gx + std::cos(a) * 17.5f, gy + std::sin(a) * 17.5f, 3.4f, ink);
+            }
+        }
+        const float label_width = r.w - 70.0f;
+        text_shrink(c, tr(labels[i]), r.x + 60.0f + label_width * 0.5f,
                     baseline(r.y, r.h, theme::kSmall), theme::kSmall,
-                    active || focused > 0.01f ? theme::kTitle : theme::kMuted,
-                    r.w - 24.0f, Align::center);
+                    ink, label_width - 8.0f, Align::center);
     }
     text(c, clock_, 1848.0f, baseline(42.0f, 54.0f, theme::kClock), theme::kClock,
          theme::kTitle, Align::right);
