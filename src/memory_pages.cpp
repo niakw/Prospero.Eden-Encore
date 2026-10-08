@@ -257,6 +257,9 @@ bool ProbeSparseJitAlias() noexcept {
     return success;
 }
 
+// Forward declarations: reservation bootstrap may release its own ownership.
+void ReleaseSparseJitCode(void* executable) noexcept;
+
 // The console has unified memory, so report separately the space promised
 // to the JIT and the physical direct pages it actually holds. Only snapshots
 // call this, never the frame or code-emission hot paths.
@@ -270,6 +273,11 @@ void SparseJitUsage(std::size_t* virtual_bytes, std::size_t* committed_bytes) no
     *virtual_bytes = reserved;
     *committed_bytes = sparse_jit_committed;
 }
+
+// The upstream ConstantPool constructor writes ~2 MiB (plus alignment) before
+// BlockOfCode's constructor body calls EnsureMemoryCommitted. Provision 4 MiB
+// before returning RX/RW pointers; later code commits stay demand-driven.
+bool CommitSparseJitCode(void* executable, std::size_t required) noexcept;
 
 // Reserve two VA ranges, but no direct memory. The RX base never changes,
 // so Dynarmic's generated PC-relative branches and published pointers survive
@@ -315,8 +323,19 @@ void* ReserveSparseJitCode(std::size_t size, void** writable_out) noexcept {
     // This firmware wrapper reports zero even if it is unsupported; actual
     // per-chunk MapDirectMemory/mprotect calls below are the qualification.
     (void)sceKernelEnableDmemAliasing();
+    // The 2 MiB constant pool writes during member construction, so simply
+    // reserving zero-backed virtual addresses would immediately fault.
+    // If even the required first 4 MiB are unavailable, drop the reservation;
+    // EdenJitAllocator can transparently try the dense backend instead.
+    const std::size_t bootstrap = std::min<std::size_t>(size, 2 * LargePage);
+    if (!CommitSparseJitCode(rx, bootstrap)) {
+        ReleaseSparseJitCode(rx);
+        errno = ENOMEM;
+        return nullptr;
+    }
     *writable_out = rw;
-    std::printf("EDEN_JIT_SPARSE_RESERVE rx=%p rw=%p capacity=%zu committed=0\n", rx, rw, size);
+    std::printf("EDEN_JIT_SPARSE_RESERVE rx=%p rw=%p capacity=%zu bootstrap=%zu\n",
+                rx, rw, size, bootstrap);
     return rx;
 }
 
