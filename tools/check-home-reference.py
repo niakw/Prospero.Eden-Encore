@@ -42,12 +42,19 @@ utility_top, utility_bottom = 825, 825 + 96
 assert title_baseline_top + 32 < utility_top  # no overlap
 assert utility_bottom < 940  # footer begins below utilities
 assert "utility_card(3, kHomeFullSettings" in home
+assert 'float chip_x = hero_max_players > 0 ? 774.0f : 570.0f;' in home
+assert 'const Rect players_chip{552.0f, 406.0f, 210.0f, 36.0f};' in home
+assert 'players_chip{1390.0f' not in home
 assert "list.push_transform(1.65f, r.x + 41.0f, r.y + r.h * 0.5f" in home
 
-# The reference uses a light cyan focus and a smaller 'eden' wordmark.
-assert 'text(c, "eden", 145.0f' in nav
+# Approved layout, but with the actual Eden Encore brand, not the mock-up's
+# provisional cyan flower. The logo's real pixels come from assets/icon0.png.
+assert 'list.image(c.textures.brand(), {56.0f, 17.0f, 110.0f, 110.0f}' in nav
+assert 'text(c, "EDEN", 175.0f' in nav
+assert 'text(c, "ENCORE", 176.0f' in nav
+assert 'text(c, "eden", 145.0f' not in nav
 assert "theme::kFocusBlue" in nav
-assert "Color::rgb(0x12b7ff)" in theme
+assert "Color::rgb(0xbb59ff)" in theme and "Color::rgb(0xff70e4)" in theme
 assert "push_transform(1.0f, cx, cy, 0.0f, 90.0f" not in nav  # no fictitious rotation
 
 # Game's actual resolution/output and real cache data only; do not show 60 FPS
