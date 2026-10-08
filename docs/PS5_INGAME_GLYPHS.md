@@ -143,3 +143,23 @@ RomFS is NOT yet hashed on PS5. Files may also be changed between the
 launch verification and the emulator's later filesystem read; production
 qualification needs a stable filesystem snapshot or guarded asset
 lifecycle. No game-specific PlayStation graphics are bundled yet.
+
+### Boot-path audit — 8 October 2026 (third pass)
+
+The global shared glyph catalogue has no verified game rules yet. Previously,
+each game launch still called `eden_game_glyph_display_version`, potentially
+opening/decrypting its Control RomFS **even when no compatible glyph pack
+existed**. Eden now checks the curated title rule, installed graphics mod,
+Safe Launch/global mods and the player's Nintendo/PlayStation artwork
+preference **before** consulting the running title's NACP. This makes the
+default unsupported-title path cheap and adds no per-frame work.
+
+The JSON loader previously compared its size via `file_size`, then used
+an **unbounded** istream-buffer read. This was vulnerable to a growing or
+replaced JSON file between stat and read. It now reads at most the declared
+size limit in fixed 4 KiB chunks, fails closed on any extra bytes or I/O
+error, and checks the final file size. Same-revision local JSON cannot
+supersede compiled-in rules; updates require a strictly newer revision.
+This is input safety, **not cryptographic authenticity** of remote
+catalogues. The selected live RomFS originals, legal textures and console
+gameplay qualification remain open in Issue #7.
