@@ -271,7 +271,7 @@ if 'inline constexpr bool kGuestNetworkOffline = true;' not in p:
     raise SystemExit('Guest network policy must be immutable offline')
 if 'if (Eden::Encore::kGuestNetworkOffline) return {-1, Errno::NOTCONN};' not in bsd:
     raise SystemExit('Guest BSD socket allocation is not blocked')
-if dns.count('if (Eden::Encore::kGuestNetworkOffline) return {0, GetAddrInfoError::AGAIN};') != 2:
+if dns.count('if (Eden::Encore::kGuestNetworkOffline) return {0, GetAddrInfoError::NODATA};') != 2:
     raise SystemExit('Both guest DNS entry points must be blocked')
 for key in ('enable == 0 || Eden::Encore::kGuestNetworkOffline',
             'if (Eden::Encore::kGuestNetworkOffline || !st.connected)',
