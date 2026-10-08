@@ -43,7 +43,6 @@ inline const char* StateName(State state) noexcept {
 struct Rule {
     std::uint64_t title = 0;
     std::string update_version;
-    std::string build_id;
 };
 struct Catalogue {
     bool valid = false;
@@ -64,24 +63,13 @@ inline bool ParseHex(std::string_view input, std::uint64_t* value) noexcept {
     *value = parsed;
     return parsed != 0;
 }
-inline bool HexBuild(std::string_view input) noexcept {
-    if (input.size() != 40 && input.size() != 64) return false;
-    return std::all_of(input.begin(), input.end(), [](unsigned char c) {
-        return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') ||
-               (c >= 'A' && c <= 'F');
-    });
-}
-inline std::string Upper(std::string text) {
-    for (auto& c : text) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
-    return text;
-}
 inline bool ParseCatalogue(std::string_view text, Catalogue* output) {
     if (!output || text.empty() || text.size() > kMaxCatalogBytes) return false;
     try {
         const auto root = nlohmann::json::parse(text.begin(), text.end());
         if (!root.is_object() || root.size() != 3 ||
             !root.contains("schema_version") || !root["schema_version"].is_number_integer() ||
-            root["schema_version"].get<int>() != 1 ||
+            root["schema_version"].get<int>() != 2 ||
             !root.contains("revision") || !root["revision"].is_number_integer() ||
             root["revision"].get<int>() < 0 ||
             !root.contains("titles") || !root["titles"].is_array() ||
@@ -89,18 +77,15 @@ inline bool ParseCatalogue(std::string_view text, Catalogue* output) {
         Catalogue parsed;
         parsed.revision = root["revision"].get<int>();
         for (const auto& item : root["titles"]) {
-            if (!item.is_object() || item.size() != 3 ||
+            if (!item.is_object() || item.size() != 2 ||
                 !item.contains("title_id") || !item["title_id"].is_string() ||
-                !item.contains("update_version") || !item["update_version"].is_string() ||
-                !item.contains("build_id") || !item["build_id"].is_string())
+                !item.contains("update_version") || !item["update_version"].is_string())
                 return false;
             Rule rule;
             if (!ParseHex(item["title_id"].get<std::string>(), &rule.title))
                 return false;
             rule.update_version = item["update_version"].get<std::string>();
-            rule.build_id = Upper(item["build_id"].get<std::string>());
             if (rule.update_version.empty() || rule.update_version.size() > 64 ||
-                !HexBuild(rule.build_id) ||
                 std::any_of(rule.update_version.begin(), rule.update_version.end(), [](unsigned char c) {
                     return c < 32 || c == 127;
                 })) return false;
@@ -131,7 +116,7 @@ inline Catalogue BuiltInCatalogue() {
     built_in.valid = true;
     built_in.revision = GlyphOverridesGenerated::kRevision;
     for (const auto& entry : GlyphOverridesGenerated::kRules)
-        built_in.rules.push_back({entry.title, entry.update_version, entry.build_id});
+        built_in.rules.push_back({entry.title, entry.update_version});
     return built_in;
 }
 inline Catalogue LoadCatalogue(const Mods::fs::path& path) {
@@ -152,9 +137,9 @@ inline bool EvidenceMatches(const Mods::fs::path& folder, const Rule& rule) {
     try {
         const auto value = nlohmann::json::parse(text);
         if (!value.is_object() || !value.contains("schema") ||
-            !value["schema"].is_number_integer() || value["schema"].get<int>() != 1 ||
+            !value["schema"].is_number_integer() || value["schema"].get<int>() != 2 ||
             !value.contains("title_id") || !value["title_id"].is_string() ||
-            !value.contains("build_id") || !value["build_id"].is_string() ||
+            !value.contains("update_version") || !value["update_version"].is_string() ||
             !value.contains("rights") || !value["rights"].is_string() ||
             value["rights"].get<std::string>().empty() ||
             !value.contains("files") || !value["files"].is_array() ||
@@ -163,7 +148,7 @@ inline bool EvidenceMatches(const Mods::fs::path& folder, const Rule& rule) {
         std::uint64_t evidence_title = 0;
         if (!ParseHex(value["title_id"].get<std::string>(), &evidence_title) ||
             evidence_title != rule.title ||
-            Upper(value["build_id"].get<std::string>()) != rule.build_id)
+            value["update_version"].get<std::string>() != rule.update_version)
             return false;
         // Install writes hash-verified graphics into the real RomFS mod dir.
         // Check their declared paths still exist; do not trust a stale marker.
