@@ -217,6 +217,12 @@ class Services
 
     // ---- home ----
     virtual Home home() = 0;
+    // A native recent-game metadata walk can be long; prevent teardown
+    // from waiting for entries that have not yet been inspected.
+    virtual Home home(const std::atomic<bool>* cancel) {
+        if (cancel && cancel->load(std::memory_order_acquire)) return {};
+        return home();
+    }
     virtual std::string clock() = 0;   // "14:05"
     // The players (bit 0 is player 1) whose controller is connected right now.
     virtual unsigned controllers()
