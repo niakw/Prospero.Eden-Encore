@@ -274,7 +274,7 @@ void Launcher::draw_settings(Canvas &c)
         break;
     case kDiagnostics:
     {
-        const DiagnosticsInfo info = services_.diagnostics();
+        const DiagnosticsInfo& info = home_diagnostics_;
         about = tr("Runtime health, storage and recovery tools.");
         lines = {{tr("DETAILED LOGGING"), on_off(prefs_.detailed_logging)},
                  {tr("SETUP"), home_.setup_ready ? tr("Ready") : tr("Needs attention")},
@@ -559,6 +559,9 @@ void Launcher::press_dialog(Key key)
             if (!confirm_action(Confirmation::shader_caches)) return;
             std::string result;
             const bool cleared = services_.clear_shader_caches(&result);
+            // Refresh only after the explicit maintenance operation, never
+            // while the diagnostics overlay is being rendered every frame.
+            home_diagnostics_ = services_.diagnostics();
             say(result, !cleared);
             cue(cleared ? Cue::saved : Cue::error);
             return;
@@ -781,7 +784,7 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
     }
     case Modal::diagnostics:
     {
-        const DiagnosticsInfo info = services_.diagnostics();
+        const DiagnosticsInfo& info = home_diagnostics_;
         const std::string details =
             services_.setup_details() + "\n" +
             tr("FILESYSTEM") + ": " + info.filesystem + "  |  " +
