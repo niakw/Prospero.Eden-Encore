@@ -81,6 +81,22 @@ assert "std::sort(order.begin(), order.end());" not in texture_cpp
 assert "auto oldest = covers_.end();" in texture_cpp
 assert "oldest->second.used" in texture_cpp
 assert "covers_.erase(oldest);" in texture_cpp
+# Nlib media replacement must NEVER burst-delete GPU textures on a
+# single UI frame. Frame-time invalidation and cache eviction share a
+# two-texture budget; release() drains all IDs before context teardown.
+assert "std::deque<std::uint32_t> pending_deletes_;" in texture_h
+invalidation = texture_cpp.split("void Textures::invalidate(", 1)[1].split(
+    "void Textures::pump(", 1)[0]
+assert "pending_deletes_.push_back(it->second.texture);" in invalidation
+assert "batch_.delete_texture" not in invalidation
+assert "deleted_this_frame < kMaxTextureReclaimsPerFrame" in texture_cpp
+assert "deleted_this_frame + reclaimed < kMaxTextureReclaimsPerFrame" in texture_cpp
+assert "pending_deletes_.pop_front();" in texture_cpp
+release_entry = texture_cpp.split("void Textures::release()", 1)[1].split(
+    "Cover Textures::cover(", 1)[0]
+assert "for (const std::uint32_t texture : pending_deletes_)" in release_entry
+assert "pending_deletes_.clear();" in release_entry
+
 
 
 # A rare native frame overrun gets one bounded phase label (no noisy per-frame
