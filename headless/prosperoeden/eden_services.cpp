@@ -428,7 +428,7 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
                 // ROM artwork and avoid serial HTTP waits on subsequent visits.
                 std::lock_guard lock(retry_guard);
                 next_retry[retry_key] = std::chrono::steady_clock::now() +
-                                        std::chrono::hours(6);
+                                        std::chrono::minutes(5);
                 return result;
             }
         }
