@@ -392,3 +392,22 @@ The new host-only `check-controller-semantic-mapping.py` compiles the real
 `button_mapping.h` and protects PlayStation/Switch defaults, custom swaps,
 bijective assignments and invalid input handling without altering the
 approved launcher or claiming in-game PlayStation glyphs.
+
+### Reusing capped guest-code budget across the active ISA (8 October 2026)
+
+The all-title A64 and A32 dense JIT policy initially apportions physical
+code capacity to guest workers, capped at 1536 MiB **per core** because of
+x64 relative-branch constraints. When an initial weighted share reaches
+that limit, the excess that cannot enter its code arena is no longer
+silently abandoned: source policy redistributes **whole 2 MiB** pages of
+that clamped surplus among other guest workers of the same active ISA,
+each respecting its own 1536 MiB limit and the SAME total physical
+admission budget (including 8 MiB for four direct-memory headers).
+
+This is not dynamic resizing of a live Xbyak code arena and not a claim
+that allocating unused worker caches accelerates a particular game.
+The planner is run once at session launch; actual physical allocation
+still follows bounded retries under fragmentation. Monotonicity at
+2 MiB increments, physical budget and per-core address caps are host
+checked across 3–15 GiB input free blocks. PS5 hardware 13.60
+qualification and a real inter-worker JIT growth mechanism remain open.
