@@ -83,6 +83,42 @@ int main() {
     assert(seven.a32[0] > 512u * kMiB);
     assert(seven.a32[1] > 64u * kMiB);
 
+    // Once core 0 hits the single-arena addressing ceiling, guest JIT
+    // capacity that would otherwise be wasted goes to cores 1-2. The
+    // higher-capacity plan must STILL obey the unchanged physical budget.
+    const auto ten = ChooseJitMemoryPlan(false, true, 10ull * 1024 * kMiB);
+    assert(ten.a32[0] == kSingleArenaAddressingLimit);
+    const auto ten_growth = ten.admission_budget_bytes - baseline - physical_headers;
+    const auto ten_original_core1 = std::size_t{kA32Baseline[1]} +
+        ((ten_growth / 4) / kLargePage) * kLargePage;
+    assert(ten.a32[1] > ten_original_core1);
+    const auto twelve = ChooseJitMemoryPlan(false, true, 12ull * 1024 * kMiB);
+    assert(twelve.a64[0] == kSingleArenaAddressingLimit);
+    assert(twelve.a64[1] == kSingleArenaAddressingLimit);
+    // Two-megabyte granularity regression: no single worker's allocation
+    // may SHRINK because another worker just reached its memory ceiling.
+    auto last = ChooseJitMemoryPlan(false, true, kHostReserve);
+    for (std::size_t free = kHostReserve + kLargePage;
+         free <= 15ull * 1024 * kMiB; free += kLargePage) {
+        const auto plan = ChooseJitMemoryPlan(false, true, free);
+        for (std::size_t i = 0; i < 4; ++i) {
+            assert(plan.a64[i] >= last.a64[i]);
+            assert(plan.a32[i] >= last.a32[i]);
+            assert(plan.a64[i] <= kSingleArenaAddressingLimit);
+            assert(plan.a32[i] <= kSingleArenaAddressingLimit);
+        }
+        if (plan.expanded) {
+            std::size_t total64 = 0, total32 = 0;
+            for (std::size_t i = 0; i < 4; ++i) {
+                total64 += plan.a64[i];
+                total32 += plan.a32[i];
+            }
+            assert(total64 + physical_headers <= plan.admission_budget_bytes);
+            assert(total32 + physical_headers <= plan.admission_budget_bytes);
+        }
+        last = plan;
+    }
+
     const auto huge = ChooseJitMemoryPlan(false, true,
                                           std::numeric_limits<std::size_t>::max());
     assert(huge.a64[0] <= kSingleArenaAddressingLimit);
