@@ -33,6 +33,8 @@ jobs:
           python3 -B tools/check-experimental-performance.py
           python3 -B tools/check-ps5-architecture.py
           python3 -B tools/check-jit-memory-policy.py
+          python3 -B tools/check-jit-startup-retry.py
+          python3 -B tools/check-vulkan-pipeline-persistence.py
           python3 -B tools/check-jit-sparse-host.py
           python3 -B tools/check-shader-cache-pressure.py
           python3 -B tools/check-log-budget.py
