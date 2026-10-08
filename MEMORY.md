@@ -499,3 +499,16 @@ Remaining before asking approval for **one** incremental CI build: finish code r
   only; *nothing experimental enabled in shipping* without exact PS5 tests.
 - Feature branch `local/fc27-offline-no-build`; no CI, PS5 build or preview,
   and no claim that new stutter fixes are installed on hardware.
+
+### 2026-10-08 — Source-only opt-in runtime experiments
+
+Feature branch `local/fc27-offline-no-build` has experimental A64 JIT
+cache tiers (normal/256-224-224/320-256-256 MiB), guarded fallback to
+distinct *logical* OS CPUs if PS5 topology is unreliable, passive Vulkan
+frame-pacing histogram, and CPU affinity restoration on game return/failure.
+Only explicit `/data/prosperoeden/config/experiments.json` per-title
+settings activate them; Safe Launch always disables them. Stable mapping fix
+and shipping GPU/CPU policies remain intact. Source-check script:
+`tools/check-experimental-performance.py`; instructions:
+`docs/FC27_EXPERIMENTS.md`. No compile, workflow run, real frame generation,
+or PS5 hardware performance validation.
