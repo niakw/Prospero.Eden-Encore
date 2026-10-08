@@ -120,6 +120,9 @@ jobs:
           python3 -B tools/check-native-ui-focus.py
           python3 -B tools/check-jit-stability.py
           python3 -B tools/check-experimental-performance.py
+          python3 -B tools/check-ps5-architecture.py
+          python3 -B tools/check-jit-memory-policy.py
+          python3 -B tools/check-shader-cache-pressure.py
           python3 -B tools/check-performance-policy.py
           python3 -B tools/check-network-runtime.py
           python3 -B tools/check-guest-network-isolation.py
