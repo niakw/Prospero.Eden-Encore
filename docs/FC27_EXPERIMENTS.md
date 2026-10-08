@@ -1,6 +1,6 @@
 # FC27 — experimental performance A/B (PS5 firmware 13.60)
 
-**Source-only; not compiled or PS5 tested. OFF by default.**
+**PS5 build requested on the experiment branch; not PS5 hardware tested. OFF by default.**
 
 Create `/data/prosperoeden/config/experiments.json` explicitly, after a build
 containing the experimental code has been installed:
