@@ -1055,6 +1055,8 @@ std::vector<pe::ui::Game> EdenServices::games(const std::atomic<bool>* cancel) {
                 game.cover = cover;
             else
                 (void)std::remove(staged.c_str());
+            if (cancel && cancel->load(std::memory_order_acquire))
+                return {}; // extraction finished; skip ID/Nlib/add-on metadata
             game.title_id = ResolveTitleId(path, file);
             if (game.title_id != 0) {
                 const NlibEnrichment nlib = CachedNlibEnrichment(game.title_id, language_choice);
