@@ -37,6 +37,9 @@ extern "C" void eden_jit_path_counters(unsigned core, unsigned long long* out) _
 namespace Common {
 // Address space Eden's sparse tables span and the memory they hold (src/memory_pages.cpp).
 void SparseUsage(std::size_t* reserved, std::size_t* committed) noexcept;
+#ifdef PS5_NATIVE
+void SparseJitUsage(std::size_t* reserved, std::size_t* committed) noexcept;
+#endif
 } // namespace Common
 
 namespace Eden::Performance {
@@ -364,7 +367,6 @@ extern "C" unsigned eden_heap_arenas_created(void) __attribute__((weak));
 extern "C" std::size_t eden_heap_committed(void) __attribute__((weak));
 extern "C" std::size_t eden_heap_large_held(unsigned* blocks) __attribute__((weak));
 #ifdef PS5_NATIVE
-namespace Common { void SparseJitUsage(std::size_t*, std::size_t*) noexcept; }
 extern "C" std::int64_t sceKernelGetDirectMemorySize();
 extern "C" std::int32_t sceKernelAvailableDirectMemorySize(std::int64_t, std::int64_t, std::size_t, std::int64_t*,
                                                            std::size_t*);
@@ -459,7 +461,7 @@ void ReportDirectMemoryState(const char* phase) {
     }
     const long long free_upper = valid ? static_cast<long long>(total - taken_lower) : -1LL;
     std::size_t jit_reserved = 0, jit_committed = 0;
-    Common::SparseJitUsage(&jit_reserved, &jit_committed);
+    ::Common::SparseJitUsage(&jit_reserved, &jit_committed);
     std::printf("EDEN_JIT_MEMORY phase=%s reserved=%zu committed=%zu\n",
                 phase, jit_reserved, jit_committed);
     std::printf("EDEN_MEMORY_LAYOUT phase=%s largest_rc=%d total=%lld largest=%zu "
