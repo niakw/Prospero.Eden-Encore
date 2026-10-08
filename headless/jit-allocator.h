@@ -11,16 +11,24 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <xbyak/xbyak.h>
+#ifdef EDEN_JIT_ALIAS_NATIVE
+#include "experimental_performance.h"
+#endif
 namespace Common {
 void* AllocateMemoryPages(std::size_t) noexcept;
 void FreeMemoryPages(void*) noexcept;
 void* MapExecutableAlias(void*, std::size_t) noexcept;
+#ifdef EDEN_JIT_ALIAS_NATIVE
+void* ReserveSparseJitCode(std::size_t, void**) noexcept;
+bool CommitSparseJitCode(void*, std::size_t) noexcept;
+void ReleaseSparseJitCode(void*) noexcept;
+#endif
 }
 // Separate RW/NX and RX views avoid changing page permissions per compiled block.
 // Unsupported native JIT allocation falls back to the qualified owned W^X path.
 inline Xbyak::Allocator* EdenJitAllocator() {
     struct Allocator final : Xbyak::Allocator {
-        struct Mapping { void* writable; std::size_t size; };
+        struct Mapping { void* writable; std::size_t size; bool sparse = false; };
         std::mutex mutex;
         std::unordered_map<std::uint8_t*, Mapping> mappings;
         std::uint8_t* alloc(std::size_t size) override {
@@ -36,6 +44,27 @@ inline Xbyak::Allocator* EdenJitAllocator() {
             void* executable = MAP_FAILED;
             void* writable = MAP_FAILED;
 #ifdef EDEN_JIT_ALIAS_NATIVE
+            // Optional per-title path: stable RX/RW virtual ranges, commit only
+            // the pages requested by BlockOfCode::EnsureMemoryCommitted.
+            if (Eden::Experimental::sparse_jit_cache.load(std::memory_order_relaxed)) {
+                executable = Common::ReserveSparseJitCode(size, &writable);
+                if (!executable) {
+                    std::fprintf(diagnostics, "EDEN_JIT_ALIAS bytes=%zu active=0 sparse=1 errno=%d\n",
+                                 span, errno);
+                    return nullptr;
+                }
+                auto* pointer = static_cast<std::uint8_t*>(executable);
+                try {
+                    std::lock_guard lock(mutex);
+                    mappings.emplace(pointer, Mapping{writable, span, true});
+                } catch (...) {
+                    Common::ReleaseSparseJitCode(executable);
+                    return nullptr;
+                }
+                std::fprintf(diagnostics, "EDEN_JIT_ALIAS rx=%p rw=%p bytes=%zu active=1 sparse=1\n",
+                             executable, writable, span);
+                return pointer;
+            }
             writable = Common::AllocateMemoryPages(size);
             if (!writable) return nullptr;
             executable = Common::MapExecutableAlias(writable, size);
@@ -91,6 +120,13 @@ inline Xbyak::Allocator* EdenJitAllocator() {
                 const auto entry = mappings.find(pointer);
                 if (entry != mappings.end()) {
                     const auto mapping = entry->second;
+                    if (mapping.sparse) {
+#ifdef EDEN_JIT_ALIAS_NATIVE
+                        Common::ReleaseSparseJitCode(pointer);
+#endif
+                        mappings.erase(entry);
+                        return;
+                    }
                     if (munmap(pointer, mapping.size) != 0) std::abort();
 #ifdef EDEN_JIT_ALIAS_NATIVE
                     Common::FreeMemoryPages(mapping.writable);
