@@ -356,12 +356,14 @@ void Launcher::name_home_games()
         sync_home_game(game);
 }
 
-void Launcher::start_diagnostics()
+void Launcher::start_diagnostics(bool force)
 {
     if (diagnostics_scan_.valid()) {
-        // Disk cleanup or navigation may invalidate a scan that has already
-        // started. Finish its worker safely, then request a fresh snapshot.
-        diagnostics_refresh_pending_ = true;
+        // A modal opened immediately after category navigation should
+        // reuse its ongoing scan. Only an explicit mutation/maintenance
+        // invalidates the result and demands a second disk inventory.
+        if (force)
+            diagnostics_refresh_pending_ = true;
         return;
     }
     diagnostics_scan_ = std::async(std::launch::async,
