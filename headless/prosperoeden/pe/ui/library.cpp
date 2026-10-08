@@ -105,6 +105,7 @@ void Launcher::start_home_media()
 
     Game request;
     request.title_id = title_id;
+    request.home_media_priority = true;
     if (recent != nullptr) {
         request.file = recent->file;
         request.name = recent->title;
