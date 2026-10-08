@@ -779,6 +779,8 @@ shader_source = (source / 'src/video_core/renderer_vulkan/vk_pipeline_cache.cpp'
 pipeline_ps5_headers = '''#ifdef PS5_NATIVE
 #include <pthread.h>
 #include <sched.h>
+#include <sys/param.h>
+#include <sys/cpuset.h>
 #include <cstdio>
 #endif
 '''
