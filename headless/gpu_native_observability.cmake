@@ -245,6 +245,31 @@ set(fermi_copy_old [=[
 ]=])
 set(fermi_copy_new [=[
     if (base_layer_3d_copy || pitch_layer_copy) {
+        // These new software-only paths must not turn negative or
+        // out-of-bounds subrectangles into oversized unsigned copies.
+        // The existing general Fermi copy path is unchanged.
+        const bool rect_valid =
+            config.src_x0 >= 0 && config.src_y0 >= 0 &&
+            config.dst_x0 >= 0 && config.dst_y0 >= 0 &&
+            config.src_x1 > config.src_x0 && config.src_y1 > config.src_y0 &&
+            config.dst_x1 > config.dst_x0 && config.dst_y1 > config.dst_y0 &&
+            static_cast<u64>(config.src_x1) <= src.width &&
+            static_cast<u64>(config.src_y1) <= src.height &&
+            static_cast<u64>(config.dst_x1) <= regs.dst.width &&
+            static_cast<u64>(config.dst_y1) <= regs.dst.height;
+        if (!rect_valid) {
+            static std::atomic<unsigned> rect_reports{0};
+            const unsigned count = rect_reports.fetch_add(1, std::memory_order_relaxed);
+            if (count < 8)
+                LOG_CRITICAL(Debug,
+                    "EDEN_GPU_FERMI2D_SOFTWARE_RECT_INVALID src={}..{},{}..{} "
+                    "dst={}..{},{}..{} sample={}",
+                    config.src_x0, config.src_x1, config.src_y0, config.src_y1,
+                    config.dst_x0, config.dst_x1, config.dst_y0, config.dst_y1,
+                    count + 1);
+            AssertFailSoftImpl();
+            return;
+        }
         // 3D z=0 uses the original block-depth swizzle. Nonzero layers
         // are supported ONLY in pitch-linear images, with explicit
         // overflow-checked pitch*height*layer addressing. Both routes
