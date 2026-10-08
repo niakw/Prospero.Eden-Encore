@@ -932,6 +932,7 @@ pe::ui::Home EdenServices::home() {
         home.last_screenshot = nlib.screenshots.empty() ? std::string{} : nlib.screenshots.front();
         home.last_max_players = nlib.max_players;
         home.last_intro = nlib.intro;
+        home.last_description = nlib.description;
         if (!nlib.name.empty()) home.last_title = nlib.name;
         home.last_addons = AddOnSummary(title_id);
         home.last_language = language.label;
@@ -963,6 +964,7 @@ pe::ui::Home EdenServices::home() {
                 recent.screenshot = nlib.screenshots.empty() ? std::string{} : nlib.screenshots.front();
                 recent.max_players = nlib.max_players;
                 recent.intro = nlib.intro;
+                recent.description = nlib.description;
                 if (!nlib.name.empty()) recent.title = nlib.name;
                 recent.addons = AddOnSummary(recent.title_id);
                 recent.language = LanguageFor(recent_path, recent.title_id, selected_language).label;
