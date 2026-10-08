@@ -312,3 +312,26 @@ Before the final `[release]` commit:
 5. require a green shipping build/package run;
 6. verify the generated checksums and Release assets;
 7. keep the matching symbols artifact for crash reports.
+
+## Visual validation without rebuilding the PS5 emulator
+
+The **authoritative visual reference** for the Encore dashboard is the user-supplied
+1920 × 1080 `maquetteunique.png` (one approved screenshot only).
+The lightweight GitHub workflow
+[`launcher-production-preview.yml`](../.github/workflows/launcher-production-preview.yml)
+compiles the **actual launcher** C++ UI, draw lists, shaders and fonts using
+Mesa surfaceless EGL. No Switch emulator, native PS5 runtime, firmware or
+game binaries are compiled.
+
+On the feature branch it intentionally runs only for a commit containing
+`[preview-ready]`, or for a manual workflow dispatch. It exports
+`Encore-launcher-native-render-1080p`: five 1920 × 1080 PNGs covering the
+actual Home screen and focus transitions, plus the renderer log.
+
+Its gameplay artwork uses an explicitly **synthetic preview fixture** generated
+only by the host runner. This checks layout, clipping, focus and image layering.
+It is not a substitute for a real Nlib/banner screenshot on the console and
+must never be packaged or presented as actual game media. After examining
+the PNGs against the single screenshot, run the full PS5 build only when
+code quality checks and host visual review are complete.
+
