@@ -242,12 +242,20 @@ std::mutex& ScannedAddOnsMutex() {
     static std::mutex mutex;
     return mutex;
 }
+std::mutex& ScanAddOnsJobMutex() {
+    static std::mutex mutex;
+    return mutex;
+}
 // Both the map and completion flag are protected by ScannedAddOnsMutex.
 // A scanner builds its snapshot privately, publishing only at completion.
 // Never hold this mutex while reading/decrypting game files.
 }
 
 void eden_scan_addons(const char* updates_dir, const char* keys_dir) {
+    // Serialise concurrent library rescans: otherwise an older scan can
+    // publish after a later refresh, replacing fresh update metadata.
+    // The job lock is independent of the short reader snapshot lock.
+    const std::lock_guard scan_job_guard{ScanAddOnsJobMutex()};
     // The library scan may overlap a game launch. Mutating a std::map while
     // the launcher reads metadata is undefined behavior, including crashes.
     // Build off-thread/off-lock and atomically publish a complete snapshot.
