@@ -4,7 +4,8 @@ on:
   push:
     branches:
       - fix/0.40-zbic-13.60
-      - local/fc27-offline-no-build
+  # Feature branch is intentionally manual-only until UI/HLE/runtime audit closes.
+  # workflow_dispatch remains available for the final ready-for-build gate.
   workflow_dispatch:
     inputs:
       publish:
