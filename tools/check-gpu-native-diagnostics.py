@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Check pinned Maxwell diagnostics and the bounded Fermi2D z=0 copy path.
+"""Check Maxwell PRMT immediate index translation and Fermi2D base-layer copy.
 
-Maxwell PRMT and nonzero Fermi2D layers remain unsupported.
+Other PRMT addressing/modes and nonzero Fermi2D layers remain unsupported.
+This is a source contract, not a native graphics correctness test.
 """
 import re
 from pathlib import Path
@@ -24,7 +25,39 @@ fermi_copy_new = extract("fermi_copy_new")
 assert prmt_old.count("ThrowNotImplemented(Opcode::PRMT_imm);") == 1
 assert prmt_new.count("ThrowNotImplemented(Opcode::PRMT_imm);") == 1
 assert "u64 insn" in prmt_new
-assert "EDEN_GPU_PRMT_IMM raw=%016llx sample=%u" in prmt_new
+assert "EDEN_GPU_PRMT_IMM raw=%016llx mode=%u sample=%u" in prmt_new
+assert "EDEN_GPU_PRMT_IMM_INDEX raw=%016llx selector=%04x sample=%u" in prmt_new
+assert "const unsigned mode = static_cast<unsigned>((insn >> 48) & 7ULL);" in prmt_new
+assert "if (mode != 0)" in prmt_new
+assert "const unsigned selector = static_cast<unsigned>((insn >> 20) & 0xffffULL);" in prmt_new
+assert "const IR::U32 a{GetReg8(insn)};" in prmt_new
+assert "const IR::U32 b{GetReg39(insn)};" in prmt_new
+assert "const unsigned nibble = (selector >> (output_byte * 4)) & 15u;" in prmt_new
+assert "const IR::U32 source = (nibble & 4u) ? b : a;" in prmt_new
+assert "ir.BitFieldExtract(source, ir.Imm32(src_offset + 7u), ir.Imm32(1), true)" in prmt_new
+assert "ir.BitwiseAnd(extracted, ir.Imm32(255))" in prmt_new
+assert "ir.ShiftLeftLogical(value, ir.Imm32(output_byte * 8u))" in prmt_new
+assert "X(static_cast<IR::Reg>(insn & 255ULL), result);" in prmt_new
+assert prmt_new.index("if (mode != 0)") < prmt_new.index("ThrowNotImplemented(Opcode::PRMT_imm);")
+assert prmt_new.index("ThrowNotImplemented(Opcode::PRMT_imm);") < prmt_new.index("const unsigned selector")
+# Independently model the NVIDIA SM50 Index-mode nibble semantics from Nouveau.
+# This model guards sign replication, not merely byte extraction/reordering.
+def prmt_index(a: int, b: int, selector: int) -> int:
+    result = 0
+    for out in range(4):
+        nibble = (selector >> (out * 4)) & 0xf
+        source = b if nibble & 4 else a
+        value = (source >> ((nibble & 3) * 8)) & 0xff
+        if nibble & 8:
+            value = 0xff if value & 0x80 else 0
+        result |= value << (out * 8)
+    return result
+
+assert prmt_index(0x11223344, 0x55667788, 0x3210) == 0x11223344
+assert prmt_index(0x11223344, 0x55667788, 0x7654) == 0x55667788
+assert prmt_index(0x80abcdef, 0, 0xbbbb) == 0xffffffff
+assert prmt_index(0x11223344, 0x55667788, 0xffff) == 0
+assert prmt_index(0xff000000, 0, 0x000b) == 0xff
 assert "if (index < 8)" in prmt_new
 assert "fetch_add(1, std::memory_order_relaxed)" in prmt_new
 assert 'UNIMPLEMENTED_IF_MSG(regs.src.depth != 1, "Source depth is not one")' in fermi_old
@@ -64,5 +97,5 @@ assert "sw_source_depth_at LESS 0 OR sw_dest_depth_at LESS 0 OR sw_z0_at LESS 0"
 assert "file(READ" in cmake and cmake.count("write_derived(") == 2
 assert 'target_sources(shader_recompiler PRIVATE' in cmake
 assert 'target_sources(video_core PRIVATE' in cmake
-print("GPU SOURCE CONTRACT: PRMT still throws; Fermi2D z=0 depth>1 uses software only; unsupported layers retain soft assert")
+print("GPU SOURCE CONTRACT: PRMT immediate Index implemented, other modes throw; Fermi2D z=0 software only")
 print("NOTE graphics correctness and PS5 native CMake build remain to be qualified")
