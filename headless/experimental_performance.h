@@ -30,7 +30,7 @@ inline constexpr std::array<std::uint32_t, 4> kA32Baseline{
 struct JitMemoryPlan {
     std::array<std::uint32_t, 4> a64 = kA64Baseline;
     std::array<std::uint32_t, 4> a32 = kA32Baseline;
-    std::size_t desired_active_jit_bytes = 0;
+    std::size_t admission_budget_bytes = 0;
     bool memory_known = false;
     bool expanded = false;
 };
@@ -66,7 +66,7 @@ inline constexpr JitMemoryPlan ChooseJitMemoryPlan(
     plan.a32[0] = clamp_arena(std::size_t{kA32Baseline[0]} + growth / 2);
     plan.a32[1] = clamp_arena(std::size_t{kA32Baseline[1]} + growth / 4);
     plan.a32[2] = clamp_arena(std::size_t{kA32Baseline[2]} + growth / 4);
-    plan.desired_active_jit_bytes = budget;
+    plan.admission_budget_bytes = budget;
     plan.expanded = true;
     return plan;
 }
