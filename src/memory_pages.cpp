@@ -173,6 +173,16 @@ std::size_t DenseJitDirectBytes() noexcept {
     return dense_jit_direct_bytes.load(std::memory_order_relaxed);
 }
 
+// Return the actual RX virtual-mapping length, not just Xbyak's requested
+// size: large-page direct allocations can round, for example, 3 MiB to 4 MiB.
+// Free must unmap the WHOLE executable view before releasing direct RAM.
+std::size_t ExecutableAliasSpan(void* writable) noexcept {
+    const long page = sysconf(_SC_PAGESIZE);
+    if (!writable || page <= 0) std::abort();
+    const auto header = header_of(writable, page);
+    return header.total - header.lead;
+}
+
 // A second view of our own direct allocation; ownership stays with pointer.
 void* MapExecutableAlias(void* pointer, std::size_t size) noexcept {
     const long page = sysconf(_SC_PAGESIZE);
