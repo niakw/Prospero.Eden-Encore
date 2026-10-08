@@ -761,8 +761,10 @@ shader_costs = [
      'std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline() {\n    auto timer = Eden::Performance::VulkanTimer(17);'),
     ('    const ComputePipelineCacheKey& key, const ShaderInfo* shader) {',
      '    const ComputePipelineCacheKey& key, const ShaderInfo* shader) {\n    auto timer = Eden::Performance::VulkanTimer(17);'),
-    ('                                                 u32 cache_version) try {',
-     '                                                 u32 cache_version) try {\n    auto timer = Eden::Performance::VulkanTimer(18);'),
+    # The cache serializer is rewritten above, so its old "try" signature
+     # no longer exists here. Instrument the FINAL generated signature.
+     ('                                                 u32 cache_version) {\n#ifdef PS5_NATIVE',
+     '                                                 u32 cache_version) {\n    auto timer = Eden::Performance::VulkanTimer(18);\n#ifdef PS5_NATIVE'),
     ('}\n\nPipelineCache::~PipelineCache()',
      '    if (Eden::Performance::vulkan_cost_enabled.load(std::memory_order_relaxed))\n'
      '        std::printf("EDEN_VULKAN_DYNAMIC blend=%u enables=%u vertex=%u\\n",\n'
