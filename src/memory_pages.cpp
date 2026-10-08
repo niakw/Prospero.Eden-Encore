@@ -387,21 +387,42 @@ bool CommitSparseJitCode(void* executable, std::size_t required) noexcept {
         auto* rx = static_cast<std::uint8_t*>(executable) + region.committed;
         void* actual_rw = rw;
         void* actual_rx = rx;
-        // MAP_FIXED replaces the unbacked reservation with the *same* direct
-        // allocation in two views. A failed partial mapping is fatal rather
-        // than leaving stale executable pointers in a corrupt JIT region.
-        if (sceKernelMapDirectMemory(&actual_rw, LargePage, PROT_READ | PROT_WRITE,
-                                     MAP_FIXED, physical, LargePage) != 0 || actual_rw != rw) {
-            std::fprintf(stderr, "EDEN_JIT_SPARSE_MAP failed=rw at=%p\n", rw);
-            std::abort();
-        }
+        // The fixed RX/RW views are stable for already-published guest code.
+        // A kernel mapping can fail after the RW view has succeeded; do not
+        // abort the whole game while the new (unpublished) page is recoverable.
+        // Restore *only this new page* to inaccessible guards in BOTH views,
+        // release its physical backing and leave committed bytes unchanged.
+        // If the firmware cannot restore the fixed reservation, fail closed:
+        // reusing a partially mapped code page could execute stale data.
+        const auto restore_guard = [](void* address) noexcept {
+            void* restored = mmap(address, LargePage, PROT_NONE,
+                                  MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+            if (restored != address) std::abort();
+        };
+        const auto rollback = [&](const char* stage, int error) noexcept {
+            std::fprintf(stderr,
+                         "EDEN_JIT_SPARSE_MAP_FAILED stage=%s committed=%zu errno=%d rollback=guard\\n",
+                         stage, region.committed, error);
+            restore_guard(rx);
+            restore_guard(rw);
+            if (sceKernelReleaseDirectMemory(physical, LargePage) != 0)
+                std::abort();
+            errno = error ? error : ENOMEM;
+            return false;
+        };
+        const auto rw_rc = sceKernelMapDirectMemory(&actual_rw, LargePage,
+                                                    PROT_READ | PROT_WRITE,
+                                                    MAP_FIXED, physical, LargePage);
+        if (actual_rw != rw) std::abort(); // Unexpected mapping address: ownership unknown.
+        if (rw_rc != 0) return rollback("rw", ENOMEM);
         std::memset(rw, 0, LargePage);
-        if (sceKernelMapDirectMemory(&actual_rx, LargePage, PROT_READ,
-                                     MAP_FIXED, physical, LargePage) != 0 || actual_rx != rx ||
-            mprotect(rx, LargePage, PROT_READ | PROT_EXEC) != 0) {
-            std::fprintf(stderr, "EDEN_JIT_SPARSE_MAP failed=rx at=%p\n", rx);
-            std::abort();
-        }
+        const auto rx_rc = sceKernelMapDirectMemory(&actual_rx, LargePage,
+                                                    PROT_READ, MAP_FIXED,
+                                                    physical, LargePage);
+        if (actual_rx != rx) std::abort();
+        if (rx_rc != 0) return rollback("rx", ENOMEM);
+        if (mprotect(rx, LargePage, PROT_READ | PROT_EXEC) != 0)
+            return rollback("rx_exec", errno);
         region.physical.push_back(physical); // capacity reserved at region creation
         region.committed += LargePage;
         sparse_jit_committed += LargePage;
