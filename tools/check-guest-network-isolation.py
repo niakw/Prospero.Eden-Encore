@@ -22,8 +22,10 @@ assert "Settings::values.airplane_mode.SetValue(true);" in main
 assert 'Common::Net::MakeRequest("https://api.nlib.cc", endpoint)' in services
 assert 'Common::Net::MakeRequest("https://api.nlib.cc", metadata_endpoint)' in services
 assert 'const std::size_t timeout_seconds = url == "https://api.nlib.cc" ? 3 : 5;' in http
-assert '"/nlib-retry-" + id + ".txt"' in services
-assert 'since < std::chrono::hours(6)' in services
+assert "std::unordered_map<std::string, std::chrono::steady_clock::time_point> next_retry;" in services
+assert "std::lock_guard lock(retry_guard);" in services
+assert "std::chrono::hours(6)" in services
+assert "std::filesystem::last_write_time(retry_marker" not in services
 
 # UI cannot render the app's brand in place of missing game media.
 widgets = (root / "headless/prosperoeden/pe/ui/widgets.cpp").read_text()
