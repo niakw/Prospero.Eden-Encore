@@ -66,5 +66,8 @@ assert "presence_scan_.wait_for(std::chrono::seconds(0))" in lib
 assert "presence_scan_ = std::async(std::launch::async" in lib
 assert "if (!services_.game_exists(path))" in lib
 assert "if (presence_scan_.valid())" in nav
+assert "drop_missing_games(&missing);" in lib
+assert "if (known_missing)" in lib
+assert "bool drop_missing_games(const std::vector<std::string>* known_missing = nullptr);" in hdr
 
 print("Nlib and four PS5 capture regressions: SOURCE CONTRACT PASS")
