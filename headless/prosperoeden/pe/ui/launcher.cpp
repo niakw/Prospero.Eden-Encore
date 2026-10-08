@@ -56,6 +56,8 @@ Launcher::~Launcher()
         home_media_scan_.wait();
     if (media_scan_.valid())
         media_scan_.wait();
+    if (diagnostics_scan_.valid())
+        diagnostics_scan_.wait();
 }
 
 std::vector<Cue> Launcher::take_cues()
@@ -292,6 +294,7 @@ void Launcher::update(float dt)
     slow_stage("texture_upload", update_stage_begin);
     const auto media_started = std::chrono::steady_clock::now();
     finish_scan(false);
+    finish_diagnostics(); // nonblocking; heavy cache/log enumeration stays off the UI frame
     if (games_loaded_ && !pending_settings_file_.empty()) {
         const std::string file = std::move(pending_settings_file_);
         pending_settings_file_.clear();
