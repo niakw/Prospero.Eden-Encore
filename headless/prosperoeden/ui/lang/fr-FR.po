@@ -1540,3 +1540,31 @@ msgstr "{0}/ (NSP ou XCI)"
 #: pe/ui/browse.cpp
 msgid "{0}/ (one folder per game ID)"
 msgstr "{0}/ (un dossier par ID de titre)"
+
+#: pe/ui/home.cpp pe/ui/library.cpp pe/ui/launcher.cpp
+msgid "Recent"
+msgstr "Récents"
+
+#: pe/ui/home.cpp pe/ui/library.cpp pe/ui/launcher.cpp
+msgid "Loading artwork"
+msgstr "Chargement du visuel"
+
+#: pe/ui/home.cpp pe/ui/library.cpp pe/ui/launcher.cpp
+msgid "Artwork unavailable"
+msgstr "Visuel indisponible"
+
+#: pe/ui/home.cpp pe/ui/library.cpp pe/ui/launcher.cpp
+msgid "No screenshots available"
+msgstr "Aucune capture disponible"
+
+#: pe/ui/home.cpp pe/ui/library.cpp pe/ui/launcher.cpp
+msgid "Games and cache"
+msgstr "Jeux · Cache"
+
+#: pe/ui/home.cpp pe/ui/library.cpp pe/ui/launcher.cpp
+msgid "Storage not configured"
+msgstr "Stockage non configuré"
+
+#: pe/ui/home.cpp pe/ui/library.cpp pe/ui/launcher.cpp
+msgid "Storage ready"
+msgstr "Stockage configuré"
