@@ -152,16 +152,26 @@ with tempfile.TemporaryDirectory(prefix="eden-glyph-packs-host-") as folder:
     lowercase_game.mkdir()
     lowercase_result = gate.install(pack, source, lowercase_mods, TITLE)
     assert lowercase_result.parent == lowercase_game
-    assert not (lowercase_mods / TITLE).exists()
+    # HFS+/default APFS on macOS is often case-insensitive: in that case
+    # both spellings refer to the SAME directory, not a duplicate tree.
+    assert [p.name for p in lowercase_mods.iterdir()] == [TITLE.lower()]
+    if (lowercase_mods / TITLE).exists():
+        assert (lowercase_mods / TITLE).samefile(lowercase_game)
     assert (lowercase_result / "romfs" / GAMEFILE).read_bytes() == replacement
 
     # Conflicting case variants are ambiguous to the actual game mod loader.
     conflicting = root / "mods-conflicting"
     conflicting.mkdir()
     (conflicting / TITLE.lower()).mkdir()
-    (conflicting / TITLE).mkdir()
-    rejected(lambda: gate.install(pack, source, conflicting, TITLE),
-             "two case-colliding game title folders")
+    upper = conflicting / TITLE
+    if upper.exists():
+        # The host volume prevents duplicate case names itself.
+        assert upper.samefile(conflicting / TITLE.lower())
+    else:
+        # On case-sensitive volumes, the installer must reject both.
+        upper.mkdir()
+        rejected(lambda: gate.install(pack, source, conflicting, TITLE),
+                 "two case-colliding game title folders")
 
     # Even an incorrectly capitalized pre-existing glyph mod is never
     # silently overwritten.
