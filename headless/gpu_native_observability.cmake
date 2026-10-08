@@ -50,13 +50,16 @@ set(fermi_new [=[
         // Fermi2D blit. Do not normalize depth to one: the texture-cache
         // source currently cannot represent arbitrary 3D slices.
         if (count < 8) {
-            LOG_WARNING(HW_GPU,
+            LOG_CRITICAL(Debug,
                 "EDEN_GPU_FERMI2D_UNSUPPORTED src_depth={} dst_depth={} src_layer={} dst_layer={} "
                 "src_block_depth={} dst_block_depth={} src_addr={:#x} dst_addr={:#x} sample={}",
                 regs.src.depth, regs.dst.depth, regs.src.layer, regs.dst.layer,
                 regs.src.block_depth, regs.dst.block_depth, regs.src.Address(),
                 regs.dst.Address(), count + 1);
         }
+        // Preserve UNIMPLEMENTED_IF_MSG soft-assert / debug-break semantics
+        // even after the diagnostic log's bounded eight samples.
+        AssertFailSoftImpl();
     }
 ]=])
 string(FIND "${fermi_source}" "${fermi_old}" fermi_at)
