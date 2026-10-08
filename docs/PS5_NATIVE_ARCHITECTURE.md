@@ -157,6 +157,29 @@ available *contiguous* allocation, with bounded sampling cost and a safe
 fallback. Then address measured rendering queue stalls and guest liveness
 before increasing internal resolution. Test load time as well as gameplay.
 
+## Implementation checkpoint — automatic policy and protected diagnostics
+
+- FC27 is automatically assigned the observed best C *cache capacity*
+  (320/256/256 MiB for A64 cores 0–2) on this branch. No new player-facing
+  A/B/C/D setting is added. It is an interim title-specific capacity hint,
+  not the final demand-driven multi-segment allocator. **Safe Launch** keeps
+  the qualified baseline (256/192/192 MiB). Until an app is compiled and
+  installed, the player's existing PS5 build is unchanged.
+- Reading `experiments.json` for A/B/C/D is now restricted to developer
+  profiling builds via `EDEN_DEV_PROFILE`. Ordinary app builds ignore the
+  now-completed tuning file. The incomplete sparse JIT path additionally
+  requires explicit build opt-in `EDEN_SPARSE_JIT_DEV=ON`.
+- `EDEN_MEMORY_LAYOUT` is emitted on the game-loaded and core-shutdown
+  lifecycle boundaries (not per frame). It reports the kernel's largest
+  available contiguous block and a conservative `free_upper` derived from
+  scanned direct-memory regions. That upper bound is **not** used for GPU
+  eviction, because the kernel's region enumeration may be incomplete.
+- The source-only Vulkan worker policy logs `EDEN_PS5_SHADER_WORKERS` once
+  when the pipeline cache is constructed, to reveal the actual selected pool.
+
+These are source-level changes; no native build or firmware-13.60 runtime
+validation has been completed. No general FPS improvement is claimed.
+
 ## Immediate implementation gates
 
 1. Audit physical memory ownership and executable page-map APIs; do not
