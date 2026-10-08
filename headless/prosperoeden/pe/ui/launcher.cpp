@@ -146,9 +146,17 @@ std::array<bool, 3> Launcher::switch_states(Modal modal) const
 
 void Launcher::close_modal()
 {
+    const bool game_settings_closed = modal_ == Modal::game;
     modal_ = Modal::none;
     message_.clear();
     clear_confirmation();
+    // A game dialog can change the same overrides displayed on Home.
+    // Invalidate the UI-only cache after returning from that editor.
+    if (game_settings_closed) {
+        home_settings_cache_.clear();
+        if (screen_ == Screen::home)
+            refresh_home_hero();
+    }
     cue(Cue::modal_close);
 }
 
@@ -160,6 +168,13 @@ void Launcher::apply_look()
 bool Launcher::save_preferences(bool quiet)
 {
     const bool saved = services_.set_preferences(prefs_);
+    if (saved) {
+        // Global defaults can change whether an uncustomized title is
+        // docked. Don't keep a stale per-title Home profile across saves.
+        home_settings_cache_.clear();
+        if (screen_ == Screen::home)
+            refresh_home_hero();
+    }
     if (!saved)
         say(tr("Could not save settings. Please try again."), true);
     else if (quiet)
