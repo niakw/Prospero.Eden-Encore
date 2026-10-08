@@ -70,6 +70,11 @@ def main() -> None:
     require('bool IsSparseJitCode(const void* executable) noexcept' in native and
             '::Common::IsSparseJitCode(getCode())' in cmake,
             "Dense JIT fallback must not enter sparse physical commits")
+    require('std::size_t ExecutableAliasSpan(void* writable) noexcept' in native and
+            'Common::ExecutableAliasSpan(writable)' in native_alloc and
+            'mappings.emplace(pointer, Mapping{writable, mapped_span})' in native_alloc and
+            'munmap(executable, mapped_span)' in native_alloc,
+            "Full rounded native RX alias must be recorded and released")
     require('EDEN_JIT_SPARSE_MAP_FAILED stage=' in native and
             'MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS' in native and
             'rollback("rw", ENOMEM)' in native and
