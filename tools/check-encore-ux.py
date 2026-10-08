@@ -137,12 +137,14 @@ assert 'const int wanted_screens = std::clamp(screen_count, 0, 3);' in services
 assert 'for (std::size_t offset = 0; offset < games_.size(); ++offset)' in library
 assert 'game->screenshots' in library
 
-# Physical PlayStation mapping must remain fixed for an entire match.
-assert 'SetAdaptivePlayStation(bool enabled)' in devices  # experimental code may remain dormant
-assert 'pad->SetAdaptivePlayStation(false);' in main
-assert 'pad->SetAdaptivePlayStation(effective_layout == 0 && !custom_mapping);' not in main
-assert '"PlayStation Auto"' not in main
-assert '(effective_layout == 1 ? "Switch" : "PlayStation")' in main
+# FC27 hardware feedback (Oct 8, 2026): the fixed mapping REGRESSED
+# the previously qualified in-match behavior. Restore the shipping
+# PlayStation Auto contract for default PS layout without changing the
+# already-approved launcher or an explicitly custom controller mapping.
+assert 'SetAdaptivePlayStation(bool enabled)' in devices
+assert 'pad->SetAdaptivePlayStation(effective_layout == 0 && !custom_mapping);' in main
+assert 'pad->SetAdaptivePlayStation(false);' not in main
+assert '(effective_layout == 1 ? "Switch" : "PlayStation Auto")' in main
 assert '#ifdef EDEN_DEV_PROFILE\n        // Diagnostic input trace only.' in pad
 assert 'frame_late_200' in read('headless/graphics.cpp')
 assert 'frame_max_slow_streak' in read('headless/graphics.h')
