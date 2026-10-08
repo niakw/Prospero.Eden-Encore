@@ -36,6 +36,7 @@ jobs:
           PE_PREVIEW_JOBS: "2"
           PROSPEROEDEN_LAUNCHER_BUILD: ${{ runner.temp }}/encore-launcher-only
         run: |
+          set -o pipefail
           bash tools/launcher/preview.sh build/launcher-production 1920 1080 \
             2>&1 | tee build-launcher-render.log
 
