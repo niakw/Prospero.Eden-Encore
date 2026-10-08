@@ -774,6 +774,17 @@ shader_costs = [
 # Time both graphics and compute preparation, without modifying the compiler or
 # reading guest state on another thread. These intervals overlap shader_prepare.
 shader_source = (source / 'src/video_core/renderer_vulkan/vk_pipeline_cache.cpp').read_text()
+# Native affinity masks describe the CPUs the *process can schedule on*;
+# hardware_concurrency() can report more than the PS5 runtime permits.
+pipeline_ps5_headers = '''#ifdef PS5_NATIVE
+#include <pthread.h>
+#include <sched.h>
+#include <cstdio>
+#endif
+'''
+if shader_source.count('#include <thread>') != 1:
+    raise RuntimeError('Pinned Vulkan pipeline header changed')
+shader_source = shader_source.replace('#include <thread>', '#include <thread>\n' + pipeline_ps5_headers)
 # PS5 is a dedicated guest-emulation workload, not a desktop host doing
 # arbitrary foreground work. Upstream's hardware_concurrency()-1 launches
 # 15 Vulkan pipeline builders in observed FC27 test D, potentially competing with
@@ -787,12 +798,24 @@ pipeline_worker_anchor = '''    return max_core_threads;
 #endif
 }'''
 pipeline_worker_replacement = '''#ifdef PS5_NATIVE
-    const size_t logical = std::max<size_t>(static_cast<size_t>(std::thread::hardware_concurrency()), 2ULL);
+    const size_t reported = std::max<size_t>(static_cast<size_t>(std::thread::hardware_concurrency()), 2ULL);
+    cpuset_t allowed{};
+    const int affinity_rc = cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, 8, &allowed);
+    size_t available = 0;
+    if (affinity_rc == 0) {
+        for (unsigned cpu = 0; cpu < 64; ++cpu) {
+            if (CPU_ISSET(cpu, &allowed)) ++available;
+        }
+    }
+    // If the firmware's affinity API fails, keep background concurrency low,
+    // rather than oversubscribe a console with an unknown allowed CPU mask.
+    const size_t schedulable = available ? std::min(available, reported) : std::min<size_t>(reported, 4);
     constexpr size_t guest_and_gpu_slots = 6;
-    const size_t background_slots = logical > guest_and_gpu_slots ? logical - guest_and_gpu_slots : 1ULL;
-    const size_t selected = std::max<size_t>(1ULL, background_slots / 2ULL);
-    std::printf("EDEN_PS5_SHADER_WORKERS logical=%zu workers=%zu reserved_slots=%zu\\n",
-                logical, selected, guest_and_gpu_slots);
+    const size_t spare = schedulable > guest_and_gpu_slots ?
+                         schedulable - guest_and_gpu_slots : 0ULL;
+    const size_t selected = std::max<size_t>(1ULL, spare / 2ULL);
+    std::printf("EDEN_PS5_SHADER_WORKERS reported=%zu available=%zu workers=%zu affinity_rc=%d\\n",
+                reported, available, selected, affinity_rc);
     return selected;
 #else
     return max_core_threads;
