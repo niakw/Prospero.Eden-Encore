@@ -76,6 +76,12 @@ def analyze(lines: list[str], repeated_pc_seconds: float = 10.0) -> dict:
     mean_fps = round(sum(x["frames"] for x in frames) / sum(x["seconds"] for x in frames), 2) if frames and sum(x["seconds"] for x in frames) > 0 else None
     return {
         "present_windows": len(frames), "mean_present_fps": mean_fps,
+        "min_window_present_fps": min((x["fps"] for x in frames), default=None),
+        "present_jitter_intervals": {
+            "over_38ms": int(sum(x["late38"] for x in frames)),
+            "over_50ms": int(sum(x["late50"] for x in frames)),
+            "over_100ms": int(sum(x["late100"] for x in frames)),
+        },
         "long_present_gaps": gaps[:20], "repeated_guest_pc_spans": spans[:20],
         "most_expensive_hle_samples": hle[:10], "queue_samples": queue[-10:],
         "can_prove_gameplay_liveness": False,
