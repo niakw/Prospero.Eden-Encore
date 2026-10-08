@@ -27,7 +27,7 @@ for call in ('draw_top_nav(c, 0','draw_top_nav(c, 1','draw_top_nav(c, 3'):
 assert 'Persistent section state' in launcher
 
 # Home composition and controller-first navigation.
-assert 'kHomeRecentMax = 6' in home
+assert 'kHomeRecentMax = 7' in home
 assert 'kHomeQuickPanel' in home
 assert 'focus == kHomeQuickPanel' in home
 assert 'Open quick settings' in home
@@ -43,7 +43,7 @@ assert 'if (focus == kHomeQuickPanel)' in home and 'focus = kHomeQuickFirst' in 
 assert 'home_quick_edit_' in home and 'Pad::cross, TR("Edit")' in home
 assert 'VIEW ALL GAMES' not in home
 assert 'View all games' not in home
-assert 'const Rect hero{0.0f, 0.0f, 1920.0f, 544.0f}' in home
+assert 'const Rect hero{0.0f, 0.0f, 1920.0f, 1080.0f}' in home
 assert 'const Rect quick{' not in home and 'const Rect status{' not in home
 for marker in ('kHomeStorage', 'kHomeControllers', 'kHomeFullSettings', 'quick_sheet',
                'utility_card(0', 'utility_card(1', 'utility_card(2', 'utility_card(3'):
@@ -75,7 +75,7 @@ recent_block=home[home.index('// ---- recently played: seven-ish large artwork t
 assert 'recent.language' not in recent_block
 assert 'const int shown = std::min<int>(kHomeRecentMax' in recent_block
 assert 'constexpr float available = 1770.0f' in recent_block
-assert 'card_w = (available - gap * 5.0f) / 6.0f' in recent_block
+assert 'card_w = (available - gap * 6.0f) / 7.0f' in recent_block
 
 # Library/Settings are horizontal TV surfaces, not legacy utility lists.
 assert 'horizontal TV-first game rail' in library
@@ -142,7 +142,7 @@ assert 'VideoPresetForTitle' in presets
 
 # Final Home polish contracts: full-bleed banner, explicit violet/teal values, local-player capacity,
 # full-width recent rail, four utility cards and no permanent debug/dashboard column.
-assert 'const Rect hero{0.0f, 0.0f, 1920.0f, 544.0f}' in home
+assert 'const Rect hero{0.0f, 0.0f, 1920.0f, 1080.0f}' in home
 assert 'list.hgradient_rect(hero, 0.0f' in home
 assert 'kAccentTeal' in read('headless/prosperoeden/pe/ui/theme.hpp')
 assert 'tr("Local players: {0}")' in home and 'std::to_string(hero_max_players)' in home
@@ -151,6 +151,7 @@ assert 'gfx::mix(theme::kAccentTeal, theme::kTitle, f)' in home
 assert 'constexpr float card_h = 214.0f' in home
 assert '551.0f, card_w, card_h' in home
 assert 'constexpr float utility_w = (1800.0f - utility_gap * 3.0f) / 4.0f' in home
+assert 'std::array<tween::Spring, 23> home_springs_' in launcher_h
 assert 'const bool quick_open' in home
 assert 'begin_band(0, -16.0f);' in home[home.index('// Header must be composited AFTER'):]
 assert 'fake CPU' not in home and 'Storage' in home
