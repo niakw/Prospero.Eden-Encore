@@ -205,10 +205,37 @@ std::string NlibPlayersPath(std::uint64_t title_id) {
     return Eden::CoversDir() + "/players-" + id + ".txt";
 }
 
+// Nlib JPEGs are converted into uncompressed BGRA TGA before being cached.
+// A filename alone is not sufficient: incomplete/old files previously showed
+// permanently empty tiles and prevented download retries. Validate the header
+// and complete payload without allocating or decoding image buffers.
+bool ValidNlibTga(const std::string& path) {
+    struct stat info{};
+    if (stat(path.c_str(), &info) != 0 || !S_ISREG(info.st_mode) ||
+        info.st_size < 18) return false;
+    std::FILE* file = std::fopen(path.c_str(), "rb");
+    if (!file) return false;
+    unsigned char header[18]{};
+    const bool readable = std::fread(header, 1, sizeof(header), file) == sizeof(header);
+    std::fclose(file);
+    if (!readable || header[1] != 0 || header[2] != 2 || header[16] != 32)
+        return false;
+    const unsigned width = static_cast<unsigned>(header[12]) |
+                           (static_cast<unsigned>(header[13]) << 8);
+    const unsigned height = static_cast<unsigned>(header[14]) |
+                            (static_cast<unsigned>(header[15]) << 8);
+    if (width == 0 || height == 0 || width > 4096 || height > 2160 ||
+        static_cast<std::uint64_t>(width) * height > 3840u * 2160u)
+        return false;
+    const std::uint64_t bytes = 18u + header[0] +
+        static_cast<std::uint64_t>(width) * height * 4u;
+    return static_cast<std::uint64_t>(info.st_size) >= bytes;
+}
+
 std::string CachedNlibHero(std::uint64_t title_id) {
     if (title_id == 0) return {};
     const std::string path = NlibHeroPath(title_id);
-    return IsFile(path) ? path : std::string{};
+    return ValidNlibTga(path) ? path : std::string{};
 }
 
 int CachedNlibPlayers(std::uint64_t title_id) {
@@ -253,7 +280,7 @@ struct NlibEnrichment {
 std::string CachedNlibIcon(std::uint64_t title_id) {
     if (title_id == 0) return {};
     const std::string path = NlibIconPath(title_id);
-    return IsFile(path) ? path : std::string{};
+    return ValidNlibTga(path) ? path : std::string{};
 }
 
 std::vector<std::string> CachedNlibScreens(std::uint64_t title_id) {
@@ -261,7 +288,7 @@ std::vector<std::string> CachedNlibScreens(std::uint64_t title_id) {
     if (title_id == 0) return screens;
     for (int index = 1; index <= 3; ++index) {
         const std::string path = NlibScreenshotPath(title_id, index);
-        if (IsFile(path)) screens.push_back(path);
+        if (ValidNlibTga(path)) screens.push_back(path);
     }
     return screens;
 }
@@ -430,14 +457,18 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
         const int wanted_screens = std::clamp(screen_count, 0, 3);
         for (int index = 1; index <= wanted_screens; ++index) {
             const std::string path = NlibScreenshotPath(title_id, index);
-            if (!IsFile(path))
+            if (!ValidNlibTga(path))
                 request_media(std::string{"/nx/"} + id + "/screen/" + std::to_string(index),
                               path, 4096);
         }
         // Join only in the background enrichment task. The UI thread remains
         // free to render/input; title mutex excludes duplicate .new file writes.
+        int failed_media = 0;
         for (auto& pending : downloads)
-            (void)pending.get();
+            if (!pending.get()) ++failed_media;
+        if (failed_media > 0)
+            std::fprintf(stderr, "EDEN_NLIB_ASSETS title_id=%s failed=%d attempted=%zu\n",
+                         id, failed_media, downloads.size());
 
         const NlibEnrichment complete = CachedNlibEnrichment(title_id, language_choice);
         if (!complete.icon.empty()) result.icon = complete.icon;
