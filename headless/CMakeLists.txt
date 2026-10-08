@@ -2467,3 +2467,7 @@ if(EDEN_DEV_VULKAN)
     endif()
     target_compile_definitions(eden-headless PRIVATE EDEN_DEV_VULKAN=1)
 endif()
+
+# Capture reproducible GPU compatibility evidence without changing any
+# Maxwell/Fermi instructions or swallowing unsupported feature failures.
+include("${CMAKE_CURRENT_LIST_DIR}/gpu_native_observability.cmake")
