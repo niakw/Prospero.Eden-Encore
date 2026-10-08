@@ -358,6 +358,8 @@ void Launcher::name_home_games()
 
 void Launcher::start_diagnostics(bool force)
 {
+    if (diagnostics_cancel_.load(std::memory_order_acquire))
+        return;
     if (diagnostics_scan_.valid()) {
         // A modal opened immediately after category navigation should
         // reuse its ongoing scan. Only an explicit mutation/maintenance
@@ -367,7 +369,7 @@ void Launcher::start_diagnostics(bool force)
         return;
     }
     diagnostics_scan_ = std::async(std::launch::async,
-        [this] { return services_.diagnostics(); });
+        [this] { return services_.diagnostics(&diagnostics_cancel_); });
 }
 
 void Launcher::finish_diagnostics()
