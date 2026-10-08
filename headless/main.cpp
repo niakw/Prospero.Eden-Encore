@@ -815,9 +815,9 @@ int main(int argc, char** argv) {
         Eden::Experimental::vulkan_frame_probe.store(experimental_frame_probe, std::memory_order_relaxed);
 #ifdef PS5_NATIVE
         std::printf("EDEN_PS5_JIT_POLICY scope=all_titles memory_known=%u free_mib=%zu "
-                    "planned_mib=%zu a64=%u,%u,%u a32=%u,%u,%u safe=%u sparse=%u\n",
+                    "admission_budget_mib=%zu a64=%u,%u,%u a32=%u,%u,%u safe=%u sparse=%u\n",
                     unsigned(jit_memory_known), jit_largest_free / Eden::Experimental::kMiB,
-                    jit_plan.desired_active_jit_bytes / Eden::Experimental::kMiB,
+                    jit_plan.admission_budget_bytes / Eden::Experimental::kMiB,
                     jit_plan.a64[0] / Eden::Experimental::kMiB, jit_plan.a64[1] / Eden::Experimental::kMiB,
                     jit_plan.a64[2] / Eden::Experimental::kMiB,
                     jit_plan.a32[0] / Eden::Experimental::kMiB, jit_plan.a32[1] / Eden::Experimental::kMiB,
