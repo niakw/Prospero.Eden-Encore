@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cstdio>
 #include <exception>
+#include <iterator>
 #include <string>
 
 namespace pe::ui
