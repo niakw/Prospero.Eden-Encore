@@ -63,6 +63,16 @@ assert "decoded.image = gfx::halve(decoded.image);" in texture_cpp
 assert "int target_pixels = 64;" in texture_h
 assert "kMaxTextureReclaimsPerFrame = 2" in texture_cpp
 assert "reclaimed < kMaxTextureReclaimsPerFrame" in texture_cpp
+# The old cache collected/sorted a vector of 160+ records every frame and
+# erased the first item from a vector queue. Neither belongs in D-pad input.
+assert "std::deque<std::string> queue_;" in texture_h
+assert "queue_.pop_front();" in texture_cpp
+assert "queue_.erase(queue_.begin());" not in texture_cpp
+assert "std::sort(order.begin(), order.end());" not in texture_cpp
+assert "auto oldest = covers_.end();" in texture_cpp
+assert "oldest->second.used" in texture_cpp
+assert "covers_.erase(oldest);" in texture_cpp
+
 
 # A rare native frame overrun gets one bounded phase label (no noisy per-frame
 # printf) so the next PS5 test can tell GPU texture upload, cache/media merge,
