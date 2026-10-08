@@ -1094,9 +1094,15 @@ std::vector<pe::ui::Game> EdenServices::games(const std::atomic<bool>* cancel) {
 }
 
 pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game) {
-    if (game.title_id == 0) return game;
+    return enrich_game_media(std::move(game), nullptr);
+}
+
+pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game,
+                                             const std::atomic<bool>* cancel) {
+    if (game.title_id == 0 ||
+        (cancel && cancel->load(std::memory_order_acquire))) return game;
     const int language_choice = Eden::LoadPreferences().language;
-    NlibEnrichment enrichment = EnsureNlibEnrichment(game.title_id, language_choice);
+    NlibEnrichment enrichment = EnsureNlibEnrichment(game.title_id, language_choice, cancel);
     game.artwork_changed = enrichment.artwork_changed;
     if (!enrichment.icon.empty()) game.cover = std::move(enrichment.icon);
     if (!enrichment.hero.empty()) game.hero = std::move(enrichment.hero);
