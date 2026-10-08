@@ -190,6 +190,39 @@ void CheckWorkerTopology() {
     std::printf("EDEN_WORKER_TOPOLOGY ready=%d distinct_cores=%u cpus=%u,%u,%u,%u,%u\n",
         worker_topology_ready, count, worker_cpus[0], worker_cpus[1], worker_cpus[2], worker_cpus[3], worker_cpus[4]);
 }
+// Explicit logical-CPU A/B trial when x2APIC topology is unverifiable.
+// Different OS logical CPU IDs do NOT establish distinct physical cores.
+void EnableExperimentalLogicalPlacementImpl() {
+    if (worker_topology_ready || !topology_allowed_valid) {
+        std::printf("EDEN_EXPERIMENT_CPU result=skipped reason=%s\n",
+                    worker_topology_ready ? "physical_topology_available" : "affinity_unavailable");
+        return;
+    }
+    std::array<unsigned, 64> allowed{};
+    unsigned count = 0;
+    for (unsigned cpu = 0; cpu < 64; ++cpu)
+        if (CPU_ISSET(cpu, &topology_allowed)) allowed[count++] = cpu;
+    if (count < 7) {
+        std::printf("EDEN_EXPERIMENT_CPU result=skipped reason=too_few_logical_cpus count=%u\n", count);
+        return;
+    }
+    std::array<unsigned, 5> candidate{};
+    unsigned long long reserved = 0;
+    for (unsigned i = 0; i < candidate.size(); ++i) {
+        candidate[i] = allowed[i * (count - 1) / (candidate.size() - 1)];
+        reserved |= 1ULL << candidate[i];
+    }
+    unsigned long long secondary = 0;
+    for (unsigned i = 0; i < count; ++i)
+        if (!(reserved & (1ULL << allowed[i]))) secondary |= 1ULL << allowed[i];
+    if (!secondary) return;
+    worker_cpus = candidate;
+    secondary_cpus = secondary;
+    worker_topology_ready = true;
+    std::printf("EDEN_EXPERIMENT_CPU result=enabled physical_verified=0 logical=%u,%u,%u,%u,%u secondary_mask=%llx\n",
+                worker_cpus[0], worker_cpus[1], worker_cpus[2],
+                worker_cpus[3], worker_cpus[4], secondary_cpus);
+}
 void PlaceSecondary(const char* name) {
     if (!placement_secondary.load(std::memory_order_relaxed) || !secondary_cpus) return;
     cpuset_t mask{};
@@ -293,6 +326,12 @@ void CheckCpuClocks() {
                 cpu_clocks_valid, worker_error, process_error, int(worker_clock), int(process_clock),
                 busy, idle, process_sleep);
 }
+}
+
+void EnableExperimentalLogicalPlacement() {
+#ifdef PS5_NATIVE
+    EnableExperimentalLogicalPlacementImpl();
+#endif
 }
 
 void SetSecondaryPlacement(bool enabled) {
