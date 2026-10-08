@@ -889,7 +889,16 @@ EdenServices::EdenServices(std::string launch_error)
 }
 
 pe::ui::Home EdenServices::home() {
+    return home(nullptr);
+}
+
+pe::ui::Home EdenServices::home(const std::atomic<bool>* cancel) {
+    const auto cancelled = [cancel] {
+        return cancel && cancel->load(std::memory_order_acquire);
+    };
+    if (cancelled()) return {};
     const std::lock_guard lock(bridge_);
+    if (cancelled()) return {};
     pe::ui::Home home;
     home.setup_ready = setup_.empty();
     if (!home.setup_ready) {
@@ -918,6 +927,7 @@ pe::ui::Home EdenServices::home() {
             }
         }
     }
+    if (cancelled()) return {};
     const std::string last_path = Eden::AssetsPath("roms/" + home.last_file);
     home.last_exists = !home.last_file.empty() && IsFile(last_path);
     if (!home.last_file.empty()) {
@@ -937,9 +947,11 @@ pe::ui::Home EdenServices::home() {
     // The last game's update and DLC and the language it will use; when it does not offer the
     // chosen one, the caption says so. The same metadata is reused by Recent cards so selecting
     // one can become the Home hero without opening the full library first.
+    if (cancelled()) return {};
     const int selected_language = Eden::LoadPreferences().language;
     if (home.setup_ready)
         eden_scan_addons(Eden::AssetsPath("updates").c_str(), Eden::AssetsPath("keys").c_str());
+    if (cancelled()) return {};
     if (home.setup_ready && home.last_exists) {
         const uint64_t title_id = ResolveTitleId(last_path, home.last_file);
         const GameLanguage language = LanguageFor(last_path, title_id, selected_language);
@@ -967,6 +979,7 @@ pe::ui::Home EdenServices::home() {
         history.push_back(home.last_file);
     }
     for (const auto& name : history) {
+        if (cancelled()) return {};
         const std::string recent_path = Eden::AssetsPath("roms/" + name);
         if (!IsFile(recent_path)) continue;
         pe::ui::Recent recent;
@@ -991,6 +1004,7 @@ pe::ui::Home EdenServices::home() {
         home.recents.push_back(std::move(recent));
         if (home.recents.size() == 7) break;
     }
+    if (cancelled()) return {};
     const int installed = CountInstalledGames();
     home.system_status = fill(installed == 1 ? tr("{0} game installed") : tr("{0} games installed"),
                               {std::to_string(installed)}) +
