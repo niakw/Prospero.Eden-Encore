@@ -111,6 +111,7 @@ jobs:
           python3 -B tools/check-performance-policy.py
           python3 -B tools/check-network-runtime.py
           python3 -B tools/check-guest-network-isolation.py
+          python3 -B tools/check-nlib-media-safety.py
           python3 -B tools/check-universal-emulation-policy.py
           python3 -B tools/check-fc27-hle-compat.py
           python3 -B tools/check-net-cache-migration.py
