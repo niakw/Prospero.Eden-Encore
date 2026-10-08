@@ -566,26 +566,29 @@ void Launcher::draw_home(Canvas &c)
     // Full-bleed game scene behind navigation; actions float on the artwork.
     // Below it: real recent game artwork, four utilities, concise system footer.
     // No always-visible diagnostic/sidebar cards and no bordered game hero.
-    const Rect hero{0.0f, 0.0f, 1920.0f, 544.0f};
+    const Rect hero{0.0f, 0.0f, 1920.0f, 1080.0f};
 
     // ---- full-bleed cinematic game hero (no giant rounded panel) ----
     begin_band(1, 18.0f);
     if (!hero_artwork.empty()) {
         cover_crop(c, hero_artwork, hero, 0.0f, 0.0f);
     } else {
-        // Keep launcher wallpaper if Nlib has no real image; never enlarge a ROM
+        // Backdrop remains visible if Nlib has no real image. Never enlarge a ROM
         // icon or the Eden brand as a counterfeit 16:9 game background.
         list.gradient_rect(hero, 0.0f,
-                           theme::kScrim.with_alpha(0.28f),
-                           theme::kPanel.with_alpha(0.09f));
+                           theme::kScrim.with_alpha(0.04f),
+                           theme::kPanel.with_alpha(0.16f));
     }
     // Game artwork stays legible around the header, name and play controls.
     list.hgradient_rect(hero, 0.0f,
                         theme::kScrim.with_alpha(0.90f),
                         theme::kScrim.with_alpha(0.02f));
-    list.gradient_rect({0.0f, 350.0f, 1920.0f, 220.0f}, 0.0f,
-                       theme::kScrim.with_alpha(0.02f),
-                       theme::kBase.with_alpha(0.88f));
+    // Nlib banners are generally 16:9. Preserve their original scene ratio
+    // instead of letterbox-cropping a 1920x1080 scene into a 1920x544 strip.
+    // The lower image softly yields to the rail, tiles and legible status bar.
+    list.gradient_rect({0.0f, 375.0f, 1920.0f, 705.0f}, 0.0f,
+                       theme::kScrim.with_alpha(0.00f),
+                       theme::kBase.with_alpha(0.94f));
     list.gradient_rect({0.0f, 0.0f, 1920.0f, 124.0f}, 0.0f,
                        theme::kBase.with_alpha(0.40f),
                        theme::kBase.with_alpha(0.0f));
