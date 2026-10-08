@@ -96,7 +96,11 @@ The catalogue is now maintained alongside the existing profiles in
 It uses the same authoring model: one versioned JSON, per-title rules, a
 generated C++ snapshot and an optional runtime JSON update.
 
-Sync a reviewed source checkout with:
+The **existing** full profile sync now includes glyph rules automatically:
+
+    python3 tools/sync-encore-overrides.py --source /path/to/encore-overrides
+
+Or sync only visual rules without changing performance profiles:
 
     python3 tools/sync-glyph-overrides.py --source /path/to/encore-overrides
 
