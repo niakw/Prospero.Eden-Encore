@@ -153,6 +153,26 @@ std::int64_t DirectMemoryStart(const void* pointer) noexcept {
     return header.physical + static_cast<std::int64_t>(header.lead);
 }
 
+// Report *physical direct bytes*, including allocator alignment/header slack,
+// for actual dense Dynarmic regions. Increments happen only on JIT
+// construction/destruction, never per emulated frame.
+static std::atomic<std::size_t> dense_jit_direct_bytes{0};
+void CountDenseJitDirect(void* writable, bool acquire) noexcept {
+    if (!writable) return;
+    const long page = sysconf(_SC_PAGESIZE);
+    if (page <= 0) std::abort();
+    const std::size_t bytes = header_of(writable, page).total;
+    if (acquire) {
+        dense_jit_direct_bytes.fetch_add(bytes, std::memory_order_relaxed);
+    } else {
+        const std::size_t old = dense_jit_direct_bytes.fetch_sub(bytes, std::memory_order_relaxed);
+        if (old < bytes) std::abort();
+    }
+}
+std::size_t DenseJitDirectBytes() noexcept {
+    return dense_jit_direct_bytes.load(std::memory_order_relaxed);
+}
+
 // A second view of our own direct allocation; ownership stays with pointer.
 void* MapExecutableAlias(void* pointer, std::size_t size) noexcept {
     const long page = sysconf(_SC_PAGESIZE);
