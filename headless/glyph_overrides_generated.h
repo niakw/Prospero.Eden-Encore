@@ -5,8 +5,8 @@
 #include <array>
 #include <cstdint>
 namespace Eden::GlyphOverridesGenerated {
-struct Rule { std::uint64_t title; const char* update_version; const char* build_id; };
-inline constexpr int kRevision = 1;
+struct Rule { std::uint64_t title; const char* update_version; };
+inline constexpr int kRevision = 2;
 inline constexpr std::array<Rule, 0> kRules = {{
 }};
 } // namespace Eden::GlyphOverridesGenerated
