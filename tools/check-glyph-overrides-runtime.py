@@ -161,6 +161,12 @@ int main(int argc, char** argv) {
     put(catalogue_path, R"({"schema_version":2,"revision":0,"titles":[]})");
     const auto stale = Eden::GlyphOverrides::LoadCatalogue(catalogue_path);
     assert(stale.valid && stale.revision == default_built_in.revision);
+    // Equal revisions are not updates. A conflicting local JSON cannot
+    // silently impersonate the committed catalogue at the same revision.
+    put(catalogue_path,
+        R"({"schema_version":2,"revision":2,"titles":[{"title_id":"0100C49025D3E000","update_version":"v1.2.0"}]})");
+    const auto equal_revision = Eden::GlyphOverrides::LoadCatalogue(catalogue_path);
+    assert(equal_revision.valid && equal_revision.rules.empty());
     put(catalogue_path, catalogue());
     auto mods_found = Eden::Mods::List(mods.string(), GAME);
     // Real source C++ chooses whether loading/decrypting base game NACP is
