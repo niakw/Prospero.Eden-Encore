@@ -2,8 +2,8 @@
 # Native-only pinned Eden shader/GPU compatibility. Maxwell PRMT immediate
 # Index mode (0), including dynamic register selectors, translates the NVIDIA
 # byte selector; other modes still throw.
-# The Fermi2D software swizzler handles only z=0 on depth>1 surfaces; other
-# layers retain their original unsupported soft-assert semantics.
+# Fermi2D software handles 3D z=0 and explicitly pitched linear layers;
+# other layered/block-linear cases retain unsupported soft asserts.
 # Successful and unsupported cases produce bounded diagnostics.
 if(NOT PS5_NATIVE)
     return()
@@ -135,6 +135,29 @@ file(READ "${PROJECT_SOURCE_DIR}/src/video_core/${fermi_relative}" fermi_source)
 set(fermi_old [=[
     UNIMPLEMENTED_IF_MSG(regs.src.depth != 1, "Source depth is not one");
 ]=])
+set(fermi_layer_old [=[
+    UNIMPLEMENTED_IF_MSG(regs.src.layer != 0, "Source layer is not zero");
+    UNIMPLEMENTED_IF_MSG(regs.dst.layer != 0, "Destination layer is not zero");
+]=])
+set(fermi_layer_new [=[
+    // For pitch-linear images, one layer starts exactly pitch*height
+    // bytes after the preceding one. Keep nonzero layers of block-linear
+    // 3D images unsupported until origin_z has a verified implementation.
+    const bool pitch_layer_copy =
+        (regs.src.layer != 0 || regs.dst.layer != 0) &&
+        regs.src.linear == MemoryLayout::Pitch &&
+        regs.dst.linear == MemoryLayout::Pitch &&
+        regs.src.layer < regs.src.depth && regs.dst.layer < regs.dst.depth &&
+        regs.src.pitch != 0 && regs.dst.pitch != 0 &&
+        regs.src.width != 0 && regs.src.height != 0 &&
+        regs.dst.width != 0 && regs.dst.height != 0 &&
+        regs.src.format == regs.dst.format &&
+        regs.operation == Operation::SrcCopy && regs.clip_enable == 0;
+    UNIMPLEMENTED_IF_MSG(regs.src.layer != 0 && !pitch_layer_copy,
+                         "Source layer is not zero");
+    UNIMPLEMENTED_IF_MSG(regs.dst.layer != 0 && !pitch_layer_copy,
+                         "Destination layer is not zero");
+]=])
 set(fermi_new [=[
     // The software swizzler already handles the z=0 subrectangle of
     // a 3D block-linear/pitch image, provided the source/destination
@@ -168,6 +191,11 @@ if(fermi_at LESS 0)
     message(FATAL_ERROR "Pinned Fermi2D source-depth exception anchor changed")
 endif()
 string(REPLACE "${fermi_old}" "${fermi_new}" fermi_source "${fermi_source}")
+string(FIND "${fermi_source}" "${fermi_layer_old}" fermi_layer_at)
+if(fermi_layer_at LESS 0)
+    message(FATAL_ERROR "Pinned Fermi2D source/destination layer exception anchors changed")
+endif()
+string(REPLACE "${fermi_layer_old}" "${fermi_layer_new}" fermi_source "${fermi_source}")
 
 # The pinned software blitter must really honor 3D block-depth layout and
 # read only the z=0 rectangle. Refuse this compatibility implementation if
@@ -187,22 +215,47 @@ set(fermi_copy_old [=[
     }
 ]=])
 set(fermi_copy_new [=[
-    if (base_layer_3d_copy) {
-        // GPU acceleration is not proven for 3D source copies. Software
-        // decoders handle z=0 using the original block_depth for address
-        // swizzling. Expose depth=1 only to the temporary software
-        // surface descriptors to avoid loading all untouched 3D slices.
-        src.depth = 1;
+    if (base_layer_3d_copy || pitch_layer_copy) {
+        // 3D z=0 uses the original block-depth swizzle. Nonzero layers
+        // are supported ONLY in pitch-linear images, with explicit
+        // overflow-checked pitch*height*layer addressing. Both routes
+        // use the software decoder and avoid unknown GPU acceleration.
         Surface dst = regs.dst;
+        if (pitch_layer_copy) {
+            const auto select_pitch_layer = [](Surface& surface) {
+                const u64 plane_bytes = static_cast<u64>(surface.pitch) * surface.height;
+                const u64 last = ~u64{0};
+                const u64 offset = plane_bytes * surface.layer;
+                if (plane_bytes == 0 || surface.layer >= surface.depth ||
+                    (surface.layer != 0 && offset / surface.layer != plane_bytes) ||
+                    offset > last - surface.Address()) {
+                    return false;
+                }
+                const u64 address = surface.Address() + offset;
+                surface.addr_upper = static_cast<u32>(address >> 32);
+                surface.addr_lower = static_cast<u32>(address);
+                surface.layer = 0;
+                return true;
+            };
+            if (!select_pitch_layer(src) || !select_pitch_layer(dst)) {
+                LOG_CRITICAL(Debug, "EDEN_GPU_FERMI2D_PITCH_LAYER_INVALID");
+                AssertFailSoftImpl();
+                return;
+            }
+        }
+        // Temporary descriptors only: guest originals are untouched.
+        // depth=1 means one subrectangle is copied; block_depth remains
+        // unchanged for the block-linear z=0 path.
+        src.depth = 1;
         dst.depth = 1;
-        static std::atomic<unsigned> z0_reports{0};
-        const unsigned report = z0_reports.fetch_add(1, std::memory_order_relaxed);
+        static std::atomic<unsigned> software_reports{0};
+        const unsigned report = software_reports.fetch_add(1, std::memory_order_relaxed);
         if (report < 8) {
             LOG_INFO(HW_GPU,
-                "EDEN_GPU_FERMI2D_Z0_SOFTWARE src_depth={} dst_depth={} "
-                "src_addr={:#x} dst_addr={:#x} sample={}",
-                regs.src.depth, regs.dst.depth, regs.src.Address(),
-                regs.dst.Address(), report + 1);
+                "EDEN_GPU_FERMI2D_SOFTWARE mode={} src_depth={} dst_depth={} "
+                "src_layer={} dst_layer={} src_addr={:#x} dst_addr={:#x} sample={}",
+                pitch_layer_copy ? "pitch_layer" : "z0", regs.src.depth, regs.dst.depth,
+                regs.src.layer, regs.dst.layer, src.Address(), dst.Address(), report + 1);
         }
         sw_blitter->Blit(src, dst, config);
     } else if (!rasterizer->AccelerateSurfaceCopy(src, regs.dst, config)) {
