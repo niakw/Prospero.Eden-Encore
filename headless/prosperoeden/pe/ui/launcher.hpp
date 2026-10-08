@@ -146,7 +146,7 @@ class Launcher
     void read_home();
     // Games removed/moved while the launcher is open disappear without a full rescan.
     void check_games_present();
-    bool drop_missing_games();
+    bool drop_missing_games(const std::vector<std::string>* known_missing = nullptr);
     // A game's mods as its list has them: how many, and how many are switched on.
     void count_mods(Game &game, const std::vector<Mod> &mods);
     // What a game comes with, on one line: "Update 1.2.0, 2 DLC, 2 mods"; "None" without any.
