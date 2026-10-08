@@ -330,8 +330,11 @@ void plate_focus(Canvas &c, const Plate &style, const Rect &r, float amount)
     // the cover artwork remains fully visible under the selected tile.
     const float breathe = 0.88f + 0.12f * std::sin(c.time * 2.0f * motion());
     const bool artwork_plate = &style == &kTilePlate;
-    const float fill_strength = artwork_plate ? 0.24f : 0.82f;
-    const float gradient_strength = artwork_plate ? 0.28f : 0.70f;
+    // Game covers get mostly *edge* emphasis so even dark artwork stays
+    // recognisable; solid-action buttons may use the richer dark gradient.
+    const float fill_strength = artwork_plate ? 0.06f : 0.82f;
+    const float gradient_strength = artwork_plate ? 0.06f : 0.70f;
+    const float right_strength = artwork_plate ? 0.06f : 0.34f;
     c.list.shadow({r.x - 13.0f, r.y - 10.0f, r.w + 26.0f, r.h + 24.0f},
                   style.radius + 13.0f, 43.0f,
                   theme::kLime.with_alpha(0.30f * amount * breathe));
@@ -343,7 +346,7 @@ void plate_focus(Canvas &c, const Plate &style, const Rect &r, float amount)
                             style.focus_base.with_alpha(fill_strength * amount));
     c.list.hgradient_rect(r, style.radius,
                           style.focus_left.with_alpha(gradient_strength * amount),
-                          style.focus_right.with_alpha(0.34f * amount),
+                          style.focus_right.with_alpha(right_strength * amount),
                           2.5f, theme::kFocusCore.with_alpha(0.95f * amount));
     c.list.bordered_rect({r.x + 2.3f, r.y + 2.3f, r.w - 4.6f, r.h - 4.6f},
                          std::max(1.0f, style.radius - 2.3f),
