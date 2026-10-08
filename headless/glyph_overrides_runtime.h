@@ -245,6 +245,20 @@ inline State Select(const Catalogue& catalogue, std::uint64_t title,
                                        return r.title == title && r.update_version == running_update_version;
                                    });
     if (rule == catalogue.rules.end()) return State::VersionMismatch;
+    // The ordinary mod loader chooses the first case-insensitive title
+    // directory it encounters. Two folders with the same logical Title ID
+    // can change which RomFS wins between filesystem enumerations. Require
+    // exactly one unambiguous physical title folder for verified artwork.
+    const std::string wanted_title = Mods::Lower(Mods::TitleName(title));
+    unsigned title_folders = 0;
+    for (const auto& entry : Mods::ListFolder(mods_root)) {
+        if (Mods::Lower(entry.path().filename().string()) != wanted_title) continue;
+        std::error_code symlink_error;
+        if (!Mods::IsFolder(entry) ||
+            Mods::fs::is_symlink(entry.path(), symlink_error) || symlink_error ||
+            ++title_folders > 1) return State::EvidenceMismatch;
+    }
+    if (title_folders != 1) return State::EvidenceMismatch;
     const auto root = Mods::TitleFolder(mods_root, title);
     if (root.empty()) return State::EvidenceMismatch;
     const auto title_folder = Mods::fs::path(root);
