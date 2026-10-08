@@ -443,3 +443,43 @@ separate host-only compilation check using a fake upstream CPU clock.
 Neither source test substitutes for real PS5 firmware 13.60
 diagnostic logs, multi-source guest liveness traces or gameplay
 freeze reproduction. Issue #8 remains OPEN.
+
+### Pre-build Mac verification, independently of GitHub CI — 8 October 2026
+
+The user authorized a read/test-only Mac access, **not Mac-originated
+commits**. Connected ARM64 Mac tested an isolated shallow temporary Git
+clone under `/tmp/eden-prebuild-audit.*`; its git status was clean and
+no local project or remote tracking branch was modified by the tests.
+Source changes were committed separately via the GitHub connector.
+
+The default local Xcode CommandLineTools selected macOS 27.0 SDK, whose
+`.tbd` files were not compatible with this machine's installed linker.
+A **pre-existing** macOS 26.5 SDK was selected **only for process-local
+SDKROOT**, without installing or changing system software. The repo's
+glyph tests needed platform-aware expectations for default APFS
+case-insensitive directory aliases. The developer PS5 watchdog uses
+x86 pause instructions, so on this ARM64 Mac its generic GPU liveness
+logic was *executed natively* and the PS5 DEV header was
+*cross-compiled to x86_64* without running x86 code. The dense-JIT
+mock now accounts for the Mac's 16 KiB VM pages. Linux retains its
+unmapped tail check; the sparse JIT host fault harness requires Linux's
+`memfd_create`/`MAP_FIXED_NOREPLACE` and cannot execute as-is on Mac.
+
+A real data race was found in `headless/metadata_bridge.cpp`: update
+library scans wrote to the shared `std::map` while launching games
+read it without locking. Fixed with a distinct serial scan-job mutex,
+off-lock construction, short atomic map publication, and locked
+copies/readers. This behavior has a new host stress test
+`tools/check-addon-snapshot-host.py`, compiling the REAL registry
+declarations and exercising 3 simultaneous readers plus 3000
+consecutive complete publications. This remains a **source-host
+concurrency gate**, not an end-to-end native NCA/PS5 compilation.
+
+**Verified Mac passes (9/9)**: addon metadata registry concurrency,
+C++ in-game glyph selection, RomFS staged resource integrity,
+developer liveness, all-title JIT memory planning, dense JIT alias
+ownership, A64/A32 JIT startup fallbacks, Vulkan cache transactions,
+and controller input semantics. Original live game's RomFS, sparse JIT
+firmware permissions, FC27 actual freeze/FPS and full PS5 native SDK
+linking are still unqualified. A passing preflight allows a carefully
+observed native build **attempt**, not a promised successful executable.
