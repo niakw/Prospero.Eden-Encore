@@ -463,17 +463,19 @@ int main(int argc, char** argv) {
         // live logs, saves, shader caches, or the current game's diagnostics.
         {
             constexpr std::uintmax_t kLegacyBackupLimit = 32u * 1024u * 1024u;
-            const auto old_log = std::filesystem::path{Eden::UserDir()} / "log" /
-                                 "eden_log.txt.old.txt";
-            std::error_code old_error;
-            const auto old_bytes = std::filesystem::file_size(old_log, old_error);
-            if (!old_error && old_bytes > kLegacyBackupLimit) {
-                (void)std::filesystem::remove(old_log, old_error);
-                if (old_error)
-                    Eden::BootTrace::Line("legacy Eden log pruning failed status=%d", old_error.value());
-                else
+            const std::string old_log = Eden::UserDir() + "/log/eden_log.txt.old.txt";
+            // Direct stat/remove are already used by the validated PS5-native
+            // storage layer. Avoid std::filesystem::file_size here: on firmware
+            // 13.60, some C++ filesystem probes failed at launcher startup.
+            struct stat info {};
+            if (::stat(old_log.c_str(), &info) == 0 && S_ISREG(info.st_mode) &&
+                info.st_size > 0 &&
+                static_cast<std::uintmax_t>(info.st_size) > kLegacyBackupLimit) {
+                if (std::remove(old_log.c_str()) == 0)
                     Eden::BootTrace::Line("legacy Eden log backup removed bytes=%llu",
-                        static_cast<unsigned long long>(old_bytes));
+                        static_cast<unsigned long long>(info.st_size));
+                else
+                    Eden::BootTrace::Line("legacy Eden log pruning failed");
             }
         }
 #ifdef EDEN_DEV_PROFILE
