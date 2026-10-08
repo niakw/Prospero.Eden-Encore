@@ -1472,16 +1472,16 @@ int main(int argc, char** argv) {
             pad = std::make_unique<Eden::Pad>(
                 static_cast<float>(controls.stick_deadzone) / 100.0f, 0.5f);
             pad->SetMapping(mapping);
-            // Never silently swap Cross/Circle based on stick or trigger activity:
-            // football games mix animated menus, pre-match scenes and gameplay.
-            // Physical DualSense mapping must remain stable for the entire session.
-            // Keep the adaptive algorithm in Pad only for a separately qualified,
-            // explicit future experiment; it is disabled in every shipped profile.
-            pad->SetAdaptivePlayStation(false);
+            // Restore the last gameplay-qualified release's PlayStation Auto
+            // mapping. Disabling it changed face-button semantics in MATCHES
+            // despite the selected controller profile still saying PlayStation.
+            // Explicit Custom/Switched profiles keep their authored mapping.
+            // In-game Nintendo prompt artwork is an independent RomFS feature.
+            pad->SetAdaptivePlayStation(effective_layout == 0 && !custom_mapping);
             if (!pad->Open()) throw std::runtime_error("PS5 controller initialization failed");
             const std::string mapping_profile =
                 custom_mapping ? (effective_layout == 1 ? "Custom Switch" : "Custom PS5") :
-                                 (effective_layout == 1 ? "Switch" : "PlayStation");
+                                 (effective_layout == 1 ? "Switch" : "PlayStation Auto");
             Eden::Report("controls", (std::string("Controller profile ") + mapping_profile +
                 ", map " + Eden::Settings::MappingJson(mapping, Eden::BaseMappingForLayout(effective_layout)).dump() +
                 ", deadzone " + std::to_string(controls.stick_deadzone) + "%, vibration " +
