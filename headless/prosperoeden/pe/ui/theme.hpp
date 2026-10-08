@@ -28,8 +28,8 @@ inline const Color kPanelEdgeSoft = Color::rgb(0x5b506f);
 inline const Color kRow = Color::rgb(0x12101a);
 inline const Color kRowEdge = Color::rgb(0x625875);
 inline const Color kRowFocus = Color::rgb(0x2b1b42);
-inline const Color kFocusCore = Color::rgb(0x74eaff); // reference: bright cyan keyline
-inline const Color kFocusBlue = Color::rgb(0x12b7ff); // reference: electric-blue selected card
+inline const Color kFocusCore = Color::rgb(0xff70e4); // Eden neon pink focus edge
+inline const Color kFocusBlue = Color::rgb(0xbb59ff); // Eden luminous violet; historic identifier retained
 
 // Keep the historic names to avoid touching every widget; values are Eden's official accents.
 inline const Color kLime = Color::rgb(0xbf42f6);      // Eden violet
@@ -37,7 +37,7 @@ inline const Color kLimeDeep = Color::rgb(0x6547c7);  // deep violet/blue
 inline const Color kLimePale = Color::rgb(0xe1b7ff);  // pale violet
 inline const Color kSun = Color::rgb(0xff44c4);       // Eden pink
 inline const Color kBlue = Color::rgb(0x62b4ff);      // Eden blue
-inline const Color kAccentTeal = Color::rgb(0x52e0c4); // active value accent
+inline const Color kAccentTeal = Color::rgb(0xe0b1ff); // Eden lilac values; historic identifier retained
 
 // Text
 inline const Color kText = Color::rgb(0xf4f2f8);
