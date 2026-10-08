@@ -34,7 +34,7 @@ def main() -> None:
 
     stages = set(re.findall(r'passed\("([A-Za-z_]+)"\)', app))
     memory_stages = set(re.findall(r'std::string_view\{name\} == "([A-Za-z_]+)"', app))
-    require(memory_stages == {"core_initialized", "core_shutdown"}, "Wrong memory snapshot stages")
+    require(memory_stages == {"core_initialized", "core_shutdown", "core_destroyed"}, "Wrong memory snapshot stages")
     require(memory_stages.issubset(stages), "Memory snapshot references an unreachable lifecycle stage")
     require('Eden::Performance::ReportDirectMemoryState(name);' in app, "Lifecycle call absent")
     require('void ReportDirectMemoryState(const char* phase);' in perf_h, "Lifecycle API declaration absent")
