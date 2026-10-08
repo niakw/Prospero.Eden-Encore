@@ -104,7 +104,7 @@ with tempfile.TemporaryDirectory(prefix="eden-game-liveness-host-") as folder:
         "}\n"
     )
     native_src = root / "watchdog_native_header.cpp"
-    native_obj = root / "watchdog_native_header.o"
+    native_obj = root / "watchdog_native_test"
     native_src.write_text(
         '#include "stall_watchdog.h"\n'
         'extern "C" unsigned long eden_heap_create_lock_state(unsigned* waiters) '
@@ -119,8 +119,9 @@ with tempfile.TemporaryDirectory(prefix="eden-game-liveness-host-") as folder:
     subprocess.run([cxx, "-std=c++20", "-O1", "-Wall", "-Wextra", "-Werror",
                     "-pthread", "-DPS5_NATIVE=1", "-DEDEN_DEV_PROFILE=1",
                     "-I", str(root), "-I", str(ROOT / "headless"),
-                    "-c", str(native_src), "-o", str(native_obj)], check=True)
+                    str(native_src), "-o", str(native_obj)], check=True)
+    subprocess.run([str(native_obj)], check=True)
 
 print("PASS developer-only in-game GPU liveness: 30s threshold, four reports, no counters -> no false alert")
-print("PASS real PS5/DEV watchdog header compiles with host-only stub of pinned CPU clock")
+print("PASS real PS5/DEV watchdog header host-links and runs session-epoch reset check")
 print("PS5 native SDK/gameplay observation remains UNTESTED")
