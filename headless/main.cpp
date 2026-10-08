@@ -921,7 +921,7 @@ int main(int argc, char** argv) {
                         Eden::BackendName(backend), name, static_cast<long long>(mono_ns));
             ps5_opengl_heap_snapshot(name, 0);
             // These are lifecycle points, not render-frame callbacks.
-            if (std::string_view{name} == "game_loaded" ||
+            if (std::string_view{name} == "core_initialized" ||
                 std::string_view{name} == "core_shutdown")
                 Eden::Performance::ReportDirectMemoryState(name);
             std::fflush(stdout);
