@@ -17,10 +17,10 @@ assert 'finish_home_media();' in launch
 assert 'home_media_scan_.wait();' in launch
 assert 'artwork_tasks' not in svc
 assert 'library enumeration must stay local/cache-only' in svc
-assert 'const Rect hero{60.0f, 140.0f, 1800.0f, 430.0f};' in home
-for needle in ('quick settings overlay', 'recently played: full-width visual rail',
+assert 'const Rect hero{0.0f, 0.0f, 1920.0f, 544.0f};' in home
+for needle in ('quick settings overlay', 'recently played: seven-ish large artwork tiles',
                'utility cards: the four Home actions', 'hero_button(details_rect, "..."'):
     assert needle in home, needle
 assert 'recent.max_players' not in home
-assert 'never let the shared Encore' in home
+assert 'never enlarge a ROM' in home
 print('Targeted asynchronous Home media + TV-first layout PASS')
