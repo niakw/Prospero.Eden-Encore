@@ -119,6 +119,7 @@ jobs:
           python3 -B tools/check-encore-ux.py
           python3 -B tools/check-native-ui-focus.py
           python3 -B tools/check-jit-stability.py
+          python3 -B tools/check-experimental-performance.py
           python3 -B tools/check-performance-policy.py
           python3 -B tools/check-network-runtime.py
           python3 -B tools/check-guest-network-isolation.py
