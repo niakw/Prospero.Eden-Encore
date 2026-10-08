@@ -1,0 +1,13 @@
+--- a/src/common/net/net.cpp
++++ b/src/common/net/net.cpp
+@@ -207,7 +207,10 @@
+ std::optional<std::string> MakeRequest(const std::string& url, const std::string& path) {
+     try {
+-        constexpr std::size_t timeout_seconds = 15;
++        // Launcher-only HTTPS. A missing Nlib banner must not hold navigation
++        // or destruction of an async media worker for fifteen seconds per file.
++        // Longer-lived GitHub runtime manifests are still best-effort.
++        const std::size_t timeout_seconds = url == "https://api.nlib.cc" ? 3 : 5;
+ 
+         std::unique_ptr<httplib::Client> client = std::make_unique<httplib::Client>(url);
+         client->set_connection_timeout(timeout_seconds);
