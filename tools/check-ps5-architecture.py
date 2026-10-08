@@ -70,6 +70,12 @@ def main() -> None:
     require('bool IsSparseJitCode(const void* executable) noexcept' in native and
             '::Common::IsSparseJitCode(getCode())' in cmake,
             "Dense JIT fallback must not enter sparse physical commits")
+    require('EDEN_JIT_SPARSE_MAP_FAILED stage=' in native and
+            'MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS' in native and
+            'rollback("rw", ENOMEM)' in native and
+            'rollback("rx", ENOMEM)' in native and
+            'rollback("rx_exec", errno)' in native,
+            "Sparse native partial map must restore fixed inaccessible guards")
     require('EDEN_JIT_SPARSE_FALLBACK bytes=' in native_alloc and
             'writable = Common::AllocateMemoryPages(size)' in native_alloc,
             "Sparse reservation failure must use dense JIT fallback")
