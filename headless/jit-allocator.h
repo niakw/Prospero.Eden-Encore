@@ -76,8 +76,18 @@ inline Xbyak::Allocator* EdenJitAllocator() {
             Common::CountDenseJitDirect(writable, true);
             executable = Common::MapExecutableAlias(writable, size);
             if (!executable) {
-                std::fprintf(diagnostics, "EDEN_JIT_ALIAS bytes=%zu active=0 errno=%d\n", span, errno);
-                return static_cast<std::uint8_t*>(writable);
+                // PS5's JIT code must have a distinct executable alias.
+                // Returning RW/NX here silently publishes a non-executable
+                // instruction pointer. Release direct RAM and let Xbyak
+                // propagate ERR_CANT_ALLOC to the bounded startup fallback.
+                const int original_errno = errno;
+                std::fprintf(diagnostics,
+                             "EDEN_JIT_ALIAS bytes=%zu active=0 errno=%d fallback=retry\n",
+                             span, original_errno);
+                Common::CountDenseJitDirect(writable, false);
+                Common::FreeMemoryPages(writable);
+                errno = original_errno;
+                return nullptr;
             }
 #else
             const int executable_fd = memfd_create("eden-jit", MFD_CLOEXEC);
