@@ -11,6 +11,7 @@
 #include <atomic>
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace pe::ui
@@ -235,6 +236,12 @@ class Services
     // Enrich one already-scanned game lazily (Nlib on native builds). The default is a no-op so
     // host/preview services stay deterministic and offline.
     virtual Game enrich_game_media(Game game) { return game; }
+    // Cancel Nlib work that has not started by the time a title launches;
+    // in-flight HTTPS requests still complete naturally before teardown.
+    virtual Game enrich_game_media(Game game, const std::atomic<bool>* cancel) {
+        if (cancel && cancel->load(std::memory_order_acquire)) return game;
+        return enrich_game_media(std::move(game));
+    }
     // The value the launcher hands back to start a game.
     virtual std::string game_path(const std::string &file) = 0;
     // Cheap presence check used while the launcher is open.
