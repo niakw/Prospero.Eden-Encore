@@ -89,8 +89,9 @@ void Launcher::start_home_media()
             &home_.recents[static_cast<std::size_t>(home_recent_)] : nullptr;
     const std::uint64_t title_id = recent != nullptr ? recent->title_id : home_.last_title_id;
     if (title_id == 0) return;
-    if (std::find(home_media_attempted_.begin(), home_media_attempted_.end(), title_id) !=
-        home_media_attempted_.end())
+    const auto now = std::chrono::steady_clock::now();
+    const auto due = home_media_next_retry_.find(title_id);
+    if (due != home_media_next_retry_.end() && now < due->second)
         return;
 
     // Do not infer the full Nlib media set from a banner/intro: an otherwise
@@ -115,7 +116,9 @@ void Launcher::start_home_media()
         request.intro = home_.last_intro;
     }
 
-    home_media_attempted_.push_back(title_id);
+    // An incomplete response must never blacklist this game until restart.
+    // A short cooldown keeps the UI responsive without retrying every frame.
+    home_media_next_retry_[title_id] = now + std::chrono::minutes(2);
     home_media_scan_title_id_ = title_id;
     home_media_scan_ = std::async(std::launch::async, [this, request = std::move(request)]() mutable {
         return services_.enrich_game_media(std::move(request));
@@ -184,10 +187,13 @@ void Launcher::start_selected_media()
     for (std::size_t offset = 0; offset < games_.size(); ++offset) {
         const auto index = (static_cast<std::size_t>(selected) + offset) % games_.size();
         const Game& game = games_[index];
-        if (game.title_id == 0 ||
-            std::find(media_attempted_.begin(), media_attempted_.end(), game.title_id) !=
-                media_attempted_.end()) continue;
-        media_attempted_.push_back(game.title_id);
+        if (game.title_id == 0) continue;
+        const auto now = std::chrono::steady_clock::now();
+        const auto due = media_next_retry_.find(game.title_id);
+        if (due != media_next_retry_.end() && now < due->second) continue;
+        // Retry missing/corrupt cached artwork after a bounded cooldown rather
+        // than treating the first failed HTTPS request as permanent.
+        media_next_retry_[game.title_id] = now + std::chrono::minutes(5);
         media_scan_title_id_ = game.title_id;
         Game copy = game;
         media_scan_ = std::async(std::launch::async, [this, copy = std::move(copy)]() mutable {
