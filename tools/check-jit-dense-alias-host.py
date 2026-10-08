@@ -49,11 +49,14 @@ std::size_t frees = 0;
 namespace Common {
 void* AllocateMemoryPages(std::size_t size) noexcept {
     if (fail_direct) { errno = ENOMEM; return nullptr; }
-    void* p = mmap(nullptr, size, PROT_READ | PROT_WRITE,
+    const auto actual = size >= (2u << 20)
+                        ? (size + (2u << 20) - 1) / (2u << 20) * (2u << 20)
+                        : size;
+    void* p = mmap(nullptr, actual, PROT_READ | PROT_WRITE,
                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (p == MAP_FAILED) return nullptr;
-    try { owned.emplace(p, size); }
-    catch (...) { munmap(p, size); return nullptr; }
+    try { owned.emplace(p, actual); }
+    catch (...) { munmap(p, actual); return nullptr; }
     return p;
 }
 void FreeMemoryPages(void* p) noexcept {
@@ -73,10 +76,15 @@ void CountDenseJitDirect(void* p, bool acquire) noexcept {
     if (acquire) dense_bytes += it->second;
     else { assert(dense_bytes >= it->second); dense_bytes -= it->second; }
 }
+std::size_t ExecutableAliasSpan(void* p) noexcept {
+    auto it = owned.find(p);
+    assert(it != owned.end());
+    return it->second;
+}
 void* MapExecutableAlias(void* p, std::size_t size) noexcept {
-    assert(owned.find(p) != owned.end());
+    assert(owned.find(p) != owned.end() && owned[p] >= size);
     if (fail_alias) { errno = EACCES; return nullptr; }
-    void* rx = mmap(nullptr, size, PROT_READ | PROT_EXEC,
+    void* rx = mmap(nullptr, owned[p], PROT_READ | PROT_EXEC,
                     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     return rx == MAP_FAILED ? nullptr : rx;
 }
@@ -111,14 +119,23 @@ int main() {
 
     // A successful alias has distinct RW and RX pointers, and both owners
     // are discarded on allocator.free rather than leaked over game restarts.
-    for (std::size_t size : {4096u, 65536u, 4u * 1024u * 1024u}) {
+    for (std::size_t size : {4096u, 65536u, 3u * 1024u * 1024u,
+                             4u * 1024u * 1024u}) {
         auto* rx = allocator->alloc(size);
         assert(rx);
         auto* rw = allocator->writableAddress(rx);
         assert(rw && rw != rx && owned.find(rw) != owned.end());
         assert(dense_bytes >= size);
+        const auto* tail = rx + size;
         allocator->free(rx);
         assert(owned.empty() && dense_bytes == 0);
+        if (size == 3u * 1024u * 1024u) {
+            unsigned char residency = 0;
+            errno = 0;
+            // The fourth MiB of the rounded 4 MiB RX alias must be GONE.
+            assert(mincore(const_cast<std::uint8_t*>(tail), 4096, &residency) == -1);
+            assert(errno == ENOMEM);
+        }
     }
     allocator->free(nullptr);
     assert(owned.empty() && dense_bytes == 0);
