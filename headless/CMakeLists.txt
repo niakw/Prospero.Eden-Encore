@@ -11,6 +11,11 @@ set(PORT_BUILD_DIR "${CMAKE_BINARY_DIR}/headless")
 # off unless a development build explicitly opts in.
 option(EDEN_SHARED_JIT "Enable the experimental cross-core A64 JIT" OFF)
 option(EDEN_JIT_COMPILE_BATCH "Compile bounded A64 successor chains on a cache miss" OFF)
+# Incomplete PS5 sparse JIT page mapper; never expose to normal builds via JSON alone.
+option(EDEN_SPARSE_JIT_DEV "Allow developer-only PS5 sparse JIT cache experiments" OFF)
+if(EDEN_SPARSE_JIT_DEV AND NOT PS5_NATIVE)
+    message(FATAL_ERROR "EDEN_SPARSE_JIT_DEV requires PS5_NATIVE")
+endif()
 include("${CMAKE_CURRENT_LIST_DIR}/dynarmic/shared-jit.cmake")
 # Register-allocator bookkeeping visits only the host locations in use (compile time).
 include("${CMAKE_CURRENT_LIST_DIR}/dynarmic/reg_alloc.cmake")
@@ -2183,6 +2188,9 @@ void Initialize() {
         "${eden_app_crt}" "${PORT_ROOT}/src/lifecycle.c"
         "${PORT_BUILD_DIR}/app_heap.c")
     target_compile_definitions(eden-headless PRIVATE PS5_NATIVE=1)
+    if(EDEN_SPARSE_JIT_DEV)
+        target_compile_definitions(eden-headless PRIVATE EDEN_SPARSE_JIT_DEV=1)
+    endif()
     # Native-title libc rejects socket fcntl and its resolver may depend on an
     # unloaded WebKit module. ps5_net_compat.c supplies sceNetResolver DNS and
     # translates only refused socket flags to native SO_NBIO.
