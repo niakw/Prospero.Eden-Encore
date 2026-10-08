@@ -109,6 +109,16 @@ assert "services_.mods_enabled(game.title_id)" in scan_entry
 assert "catch (const std::bad_alloc&)" in scan_entry
 assert "catch (const std::exception& error)" in scan_entry
 assert "if (mod_scan_errors++ < 3)" in scan_entry
+# Obsolete scans must stop enumerating optional per-game mod folders
+# when the user launches a game. Do not asynchronously kill a thread.
+assert "std::atomic<bool> scan_cancel_{false};" in hdr
+assert "scan_cancel_.load(std::memory_order_acquire)" in scan_entry
+assert "if (scan_cancel_.load(std::memory_order_acquire)) break;" in scan_entry
+assert "if (!scan_cancel_.load(std::memory_order_acquire))" in lib
+assert "scan_cancel_.store(true, std::memory_order_release);" in nav
+assert "auto games = scan_.get();" in lib
+assert "apply_games(std::move(games));" in lib
+
 assert "#include <new>" in lib
 assert "services_.mods(game.title_id)" not in apply_entry
 assert "home_.last_mods = game.mods;" in lib
