@@ -107,6 +107,24 @@ int main(int argc, char** argv) {
     static_assert(!FitsGraphicPackBudget(512 * mib, 1));
     static_assert(!FitsGraphicPackBudget(~std::uintmax_t{0}, 1));
     const fs::path base = argv[1];
+    // ReadBounded MUST enforce the bound while reading, not only by a
+    // preliminary file_size(). This also covers the exact boundary and
+    // symlink attempts before external JSON reaches the parser.
+    const fs::path bounded_json = base / "bounded" / "manifest.json";
+    std::string bounded_data;
+    put(bounded_json, std::string(4096, 'z'));
+    assert(Eden::GlyphOverrides::ReadBounded(bounded_json, 4096, &bounded_data));
+    assert(bounded_data.size() == 4096);
+    assert(!Eden::GlyphOverrides::ReadBounded(bounded_json, 4095, &bounded_data));
+    put(bounded_json, std::string(4097, 'z'));
+    assert(!Eden::GlyphOverrides::ReadBounded(bounded_json, 4096, &bounded_data));
+    const fs::path symlinked_json = base / "bounded" / "manifest-link.json";
+    fs::create_symlink(bounded_json, symlinked_json);
+    assert(!Eden::GlyphOverrides::ReadBounded(symlinked_json, 8192, &bounded_data));
+    put(bounded_json, "");
+    assert(Eden::GlyphOverrides::ReadBounded(bounded_json, 4096, &bounded_data));
+    assert(bounded_data.empty());
+
     const fs::path million_file = base / "sha-test" / "million-a.bin";
     put(million_file, std::string(1000000, 'a'));
     assert(Eden::GlyphIntegrity::FileSha256(million_file) ==
