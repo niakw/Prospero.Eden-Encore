@@ -68,7 +68,7 @@ for text in (
     "api.nlib.cc", "EDEN_NLIB_RESULT title_id=",
     "/banner/1080p", "/screen/", "fields=name,intro,description,publisher,developer,releaseDate",
     "BUTTON PROFILE", "PlayStation Auto", "Custom PS5", "Custom Switch",
-    "EDEN_PAD_CONTEXT mode=gameplay", "EDEN_PAD_CONTEXT mode=ui",
+    "EDEN_PAD_CONTEXT mode=gameplay reason=sustained_activity sticky=1",
     "Minimum", "Recommended", "High", "Ultra",
     "EDEN_HID_NPAD update={}", "EDEN_JIT_ALIAS rx=",
 ):
