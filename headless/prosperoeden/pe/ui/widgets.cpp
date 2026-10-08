@@ -325,28 +325,36 @@ void plate_focus(Canvas &c, const Plate &style, const Rect &r, float amount)
                              Color::rgb(0xd6a4ff, amount));
         return;
     }
-    // Console-style focus: a soft two-colour bloom plus a crisp luminous edge.
-    // The outline stays readable from sofa distance while the fill remains restrained.
+    // Eden Encore luminous focus: pink/violet dual halo, crisp outer edge and
+    // a dark-to-plum translucent sweep. Unlike a solid focused rectangle,
+    // the cover artwork remains fully visible under the selected tile.
     const float breathe = 0.88f + 0.12f * std::sin(c.time * 2.0f * motion());
-    const Color glow_a = gfx::mix(theme::kBlue, theme::kLime, 0.58f);
-    const Color glow_b = gfx::mix(theme::kSun, theme::kLime, 0.40f);
-    c.list.shadow({r.x - 9.0f, r.y - 6.0f, r.w + 18.0f, r.h + 16.0f},
-                  style.radius + 9.0f, 40.0f, glow_a.with_alpha(0.20f * amount * breathe));
-    c.list.shadow({r.x + r.w * 0.30f, r.y + r.h * 0.04f, r.w * 0.58f, r.h * 0.90f},
-                  style.radius + 2.0f, 30.0f, glow_b.with_alpha(0.095f * amount));
+    const bool artwork_plate = &style == &kTilePlate;
+    const float fill_strength = artwork_plate ? 0.24f : 0.82f;
+    const float gradient_strength = artwork_plate ? 0.28f : 0.70f;
+    c.list.shadow({r.x - 13.0f, r.y - 10.0f, r.w + 26.0f, r.h + 24.0f},
+                  style.radius + 13.0f, 43.0f,
+                  theme::kLime.with_alpha(0.30f * amount * breathe));
+    c.list.shadow({r.x - 5.0f, r.y - 5.0f, r.w + 10.0f, r.h + 10.0f},
+                  style.radius + 6.0f, 19.0f,
+                  theme::kSun.with_alpha(0.29f * amount * breathe));
     if (style.focus_base.a > 0.0f)
-        c.list.rounded_rect(r, style.radius, style.focus_base.with_alpha(0.82f * amount));
-    c.list.hgradient_rect(r, style.radius, style.focus_left.with_alpha(0.68f * amount),
-                          style.focus_right.with_alpha(0.46f * amount), 2.2f,
-                          style.focus_edge.with_alpha(0.98f * amount));
-    c.list.bordered_rect({r.x + 2.0f, r.y + 2.0f, r.w - 4.0f, r.h - 4.0f},
-                         std::max(1.0f, style.radius - 2.0f), kWhite.with_alpha(0.0f), 1.0f,
-                         kWhite.with_alpha(0.18f * amount));
-    // A short top highlight makes selected cards feel lit rather than merely outlined.
-    c.list.gradient_rect({r.x + style.radius, r.y + 1.0f,
-                          std::max(0.0f, r.w - style.radius * 2.0f), 2.0f}, 1.0f,
-                         theme::kFocusBlue.with_alpha(0.28f * amount),
-                         theme::kLimePale.with_alpha(0.62f * amount));
+        c.list.rounded_rect(r, style.radius,
+                            style.focus_base.with_alpha(fill_strength * amount));
+    c.list.hgradient_rect(r, style.radius,
+                          style.focus_left.with_alpha(gradient_strength * amount),
+                          style.focus_right.with_alpha(0.34f * amount),
+                          2.5f, theme::kFocusCore.with_alpha(0.95f * amount));
+    c.list.bordered_rect({r.x + 2.3f, r.y + 2.3f, r.w - 4.6f, r.h - 4.6f},
+                         std::max(1.0f, style.radius - 2.3f),
+                         kWhite.with_alpha(0.0f), 0.9f,
+                         theme::kLimePale.with_alpha(0.30f * amount));
+    // The top rim catches the neon pink and fades into the darkened right side.
+    c.list.hgradient_rect({r.x + style.radius, r.y + 1.2f,
+                           std::max(0.0f, r.w - style.radius * 2.0f), 2.2f},
+                          1.1f,
+                          theme::kSun.with_alpha(0.78f * amount),
+                          theme::kLimePale.with_alpha(0.12f * amount));
 }
 
 void plate(Canvas &c, const Plate &style, const Rect &r, float focus)
