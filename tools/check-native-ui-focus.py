@@ -44,7 +44,8 @@ assert "rounded_image(image.texture, fitted" in widgets
 # Shared focus affects *all* relevant interaction surfaces, including tiles,
 # buttons, menus and utility cards. Artwork underneath stays readable.
 assert "const bool artwork_plate = &style == &kTilePlate;" in widgets
-assert "const float fill_strength = artwork_plate ? 0.24f : 0.82f;" in widgets
+assert "const float fill_strength = artwork_plate ? 0.06f : 0.82f;" in widgets
+assert "const float right_strength = artwork_plate ? 0.06f : 0.34f;" in widgets
 assert "theme::kSun.with_alpha(0.29f * amount * breathe)" in widgets
 assert "theme::kFocusCore.with_alpha(0.95f * amount)" in widgets
 assert "list.hgradient_rect(r, 19.0f" in nav
