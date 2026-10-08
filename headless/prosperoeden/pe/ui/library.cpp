@@ -356,10 +356,37 @@ void Launcher::name_home_games()
         sync_home_game(game);
 }
 
+void Launcher::start_diagnostics()
+{
+    if (diagnostics_scan_.valid())
+        return;
+    diagnostics_scan_ = std::async(std::launch::async,
+        [this] { return services_.diagnostics(); });
+}
+
+void Launcher::finish_diagnostics()
+{
+    if (!diagnostics_scan_.valid() ||
+        diagnostics_scan_.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+        return;
+    try {
+        home_diagnostics_ = diagnostics_scan_.get();
+    } catch (const std::exception& error) {
+        sys::log("diagnostics scan: %s", error.what());
+    } catch (...) {
+        sys::log("diagnostics scan failed");
+    }
+}
+
 void Launcher::read_home()
 {
     home_ = services_.home();
-    home_diagnostics_ = services_.diagnostics();
+    // Never recursively enumerate caches/log files during Home construction
+    // or when recovering from a missing game on the UI update thread.
+    // Render the cached/latest result until the background scan completes.
+    if (home_diagnostics_.storage_root.empty())
+        home_diagnostics_.storage_root = services_.files_folder();
+    start_diagnostics();
     if (home_.last_title_id == 0)
         return;
     const std::vector<Mod> mods = services_.mods(home_.last_title_id);
