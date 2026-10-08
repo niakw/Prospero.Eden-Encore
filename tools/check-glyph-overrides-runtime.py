@@ -61,7 +61,7 @@ std::string catalogue(std::string_view version = "v1.2.0") {
     return R"({"schema_version":2,"revision":7,"titles":[{"title_id":"0100C49025D3E000","update_version":")"
         + std::string(version) + R"("}]})";
 }
-const std::string evidence = R"({"schema":2,"title_id":"0100C49025D3E000",
+std::string evidence = R"({"schema":2,"title_id":"0100C49025D3E000",
     "update_version":"v1.2.0",
     "rights":"Original artist-owned PlayStation art",
     "files":[{"romfs_path":"ui/controller.bntx",
@@ -82,13 +82,36 @@ int main(int argc, char** argv) {
     assert(Eden::GlyphVersion::FromNacp(nacp) == std::string(16, 'A'));
     nacp.fill('\0');
     assert(Eden::GlyphVersion::FromNacp(nacp).empty());
+    // Independent SHA-256 vectors: empty, split update and million 'a'.
+    Eden::GlyphIntegrity::Sha256 empty_hash;
+    assert(empty_hash.FinishHex() ==
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+    Eden::GlyphIntegrity::Sha256 abc;
+    abc.Update("a", 1);
+    abc.Update("bc", 2);
+    assert(abc.FinishHex() ==
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+    Eden::GlyphIntegrity::Sha256 million;
+    const std::string block(1000, 'a');
+    for (int i = 0; i < 1000; ++i) million.Update(block.data(), block.size());
+    assert(million.FinishHex() ==
+        "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0");
     const fs::path base = argv[1];
     const fs::path mods = base / "mods";
     const fs::path title = mods / "0100c49025d3e000"; // existing LOWERCASE
     const fs::path pack = title / "Eden Encore PS Glyphs";
     const fs::path catalogue_path = base / "encore-glyph-overrides.json";
     const fs::path preferences = base / "prosperoeden.json";
-    put(pack / "romfs" / "ui" / "controller.bntx", "synthetic user-owned PS atlas");
+    const auto atlas = pack / "romfs" / "ui" / "controller.bntx";
+    const std::string original_asset = "synthetic user-owned PS atlas";
+    put(atlas, original_asset);
+    const auto actual_sha = Eden::GlyphIntegrity::FileSha256(atlas);
+    assert(actual_sha && actual_sha->size() == 64);
+    assert(!Eden::GlyphIntegrity::FileSha256(atlas, original_asset.size() - 1));
+    const auto placeholder = std::string(64, 'b');
+    const auto digest_at = evidence.find(placeholder);
+    assert(digest_at != std::string::npos);
+    evidence.replace(digest_at, placeholder.size(), *actual_sha);
     put(pack / "eden-glyph-pack.json", evidence);
     put(catalogue_path, catalogue());
     const auto default_built_in = Eden::GlyphOverrides::LoadCatalogue(base / "missing-catalogue.json");
@@ -109,6 +132,10 @@ int main(int argc, char** argv) {
         return Eden::GlyphOverrides::Select(cat, GAME, version, style,
                                             mods.string(), mods_found);
     };
+    assert(select(data, "v1.2.0", Style::PlayStation) == State::Enabled);
+    put(atlas, "synthetic-user-owned PS atlas");
+    assert(select(data, "v1.2.0", Style::PlayStation) == State::EvidenceMismatch);
+    put(atlas, original_asset);
     assert(select(data, "v1.2.0", Style::PlayStation) == State::Enabled);
     assert(select(data, "v1.2.0", Style::Nintendo) == State::Disabled);
     assert(select(data, "", Style::PlayStation) == State::UnknownVersion);
@@ -139,7 +166,7 @@ int main(int argc, char** argv) {
     put(pack / "eden-glyph-pack.json", evidence);
     fs::remove(pack / "romfs" / "ui" / "controller.bntx");
     assert(select(data, "v1.2.0", Style::PlayStation) == State::EvidenceMismatch);
-    put(pack / "romfs" / "ui" / "controller.bntx", "restored synthetic PS atlas");
+    put(atlas, original_asset);
     assert(select(data, "v1.2.0", Style::PlayStation) == State::Enabled);
     auto mismatched_evidence = evidence;
     const std::string known_version = "\"update_version\":\"v1.2.0\"";
@@ -159,7 +186,7 @@ int main(int argc, char** argv) {
     fs::create_directory_symlink(external, pack / "romfs" / "ui");
     assert(select(data, "v1.2.0", Style::PlayStation) == State::EvidenceMismatch);
     fs::remove(pack / "romfs" / "ui");
-    put(pack / "romfs" / "ui" / "controller.bntx", "restored synthetic PS atlas");
+    put(atlas, original_asset);
     assert(select(data, "v1.2.0", Style::PlayStation) == State::Enabled);
 
     // Stored artist preference never silently modifies effective button mapping.
