@@ -278,9 +278,9 @@ void Launcher::finish_selected_media()
             if (!enriched.developer.empty()) game.developer = std::move(enriched.developer);
             if (!enriched.release_date.empty()) game.release_date = std::move(enriched.release_date);
             if (!enriched.categories.empty()) game.categories = std::move(enriched.categories);
+            sync_home_game(game);
             break;
         }
-        name_home_games();
     }
     catch (const std::exception& error)
     {
@@ -321,33 +321,38 @@ void Launcher::apply_games(std::vector<Game> games)
     start_selected_media();
 }
 
+void Launcher::sync_home_game(const Game& game)
+{
+    // Nlib updates only one title. Updating every installed ROM here
+    // creates avoidable work on the PS5 UI thread during navigation.
+    if (game.file == home_.last_file)
+    {
+        home_.last_mods = game.mods;
+        home_.last_mods_on = game.mods_on;
+        home_.last_title = game.name;
+        if (!game.hero.empty()) home_.last_hero = game.hero;
+        if (!game.screenshots.empty()) home_.last_screenshot = game.screenshots.front();
+        if (!game.intro.empty()) home_.last_intro = game.intro;
+        if (!game.description.empty()) home_.last_description = game.description;
+        if (game.max_players > 0) home_.last_max_players = game.max_players;
+    }
+    for (Recent &recent : home_.recents)
+        if (recent.file == game.file)
+        {
+            recent.title = game.name;
+            if (!game.hero.empty()) recent.hero = game.hero;
+            if (!game.screenshots.empty()) recent.screenshot = game.screenshots.front();
+            if (!game.intro.empty()) recent.intro = game.intro;
+            if (!game.description.empty()) recent.description = game.description;
+            if (game.max_players > 0) recent.max_players = game.max_players;
+        }
+}
+
 void Launcher::name_home_games()
 {
-    // Games carry their own names; until one has been read the home screen names it by its file.
-    for (const Game &game : games_)
-    {
-        if (game.file == home_.last_file)
-        {
-            home_.last_mods = game.mods;
-            home_.last_mods_on = game.mods_on;
-            home_.last_title = game.name;
-            if (!game.hero.empty()) home_.last_hero = game.hero;
-            if (!game.screenshots.empty()) home_.last_screenshot = game.screenshots.front();
-            if (!game.intro.empty()) home_.last_intro = game.intro;
-            if (!game.description.empty()) home_.last_description = game.description;
-            if (game.max_players > 0) home_.last_max_players = game.max_players;
-        }
-        for (Recent &recent : home_.recents)
-            if (recent.file == game.file)
-            {
-                recent.title = game.name;
-                if (!game.hero.empty()) recent.hero = game.hero;
-                if (!game.screenshots.empty()) recent.screenshot = game.screenshots.front();
-                if (!game.intro.empty()) recent.intro = game.intro;
-                if (!game.description.empty()) recent.description = game.description;
-                if (game.max_players > 0) recent.max_players = game.max_players;
-            }
-    }
+    // One complete pass only after the native ROM-list scan changes.
+    for (const Game& game : games_)
+        sync_home_game(game);
 }
 
 void Launcher::read_home()
