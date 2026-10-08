@@ -272,7 +272,7 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
     // presses it too while it has no game button of its own.
     const auto set_touch = [&](u32 pressed) {
         const ButtonMapping& active =
-            adaptive_playstation && mapping_context == MappingContext::gameplay ? kSwitchMapping : mapping;
+            adaptive_playstation && mapping_context.gameplay() ? kSwitchMapping : mapping;
         const int touch_button = MappedTo(active, pad_touchpad);
         const bool create_free = MappedTo(active, pad_create) < 0;
         if (touch_button < 0) return;
@@ -299,45 +299,17 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
                 sample.triggers.r2 >= kAutoControls.trigger_threshold_raw;
             const bool gameplay_motion =
                 stick_peak >= kAutoControls.gameplay_stick_threshold || trigger_active;
-            const bool sticks_quiet =
-                stick_peak <= kAutoControls.quiet_stick_threshold && !trigger_active;
-            const bool dpad =
-                (sample.buttons & (kButtonLeft | kButtonRight | kButtonUp | kButtonDown)) != 0;
-            const bool explicit_menu =
-                (sample.buttons & (kButtonOptions | kButtonTouchPad)) != 0;
-
-            if (gameplay_motion) {
-                gameplay_evidence = std::min(
-                    gameplay_evidence + kAutoControls.gameplay_evidence_per_active_poll,
-                    kAutoControls.gameplay_evidence_enter + 8u);
-                menu_evidence = 0;
-                quiet_polls = 0;
-            } else {
-                if (gameplay_evidence > 0) --gameplay_evidence;
-                quiet_polls = std::min(quiet_polls + 1u, kAutoControls.quiet_polls_before_dpad + 32u);
+            const auto face = sample.buttons & (kButtonCross | kButtonCircle |
+                                                kButtonSquare | kButtonTriangle);
+            if (mapping_context.observe(gameplay_motion, face != 0,
+                    kAutoControls.gameplay_evidence_per_active_poll,
+                    kAutoControls.gameplay_evidence_enter)) {
+                std::fprintf(stderr,
+                    "EDEN_PAD_CONTEXT mode=gameplay reason=sustained_activity sticky=1\n");
             }
-
-            if (explicit_menu ||
-                (dpad && sticks_quiet && quiet_polls >= kAutoControls.quiet_polls_before_dpad)) {
-                const unsigned weight = explicit_menu ? kAutoControls.options_touchpad_weight :
-                                                        kAutoControls.dpad_weight;
-                menu_evidence = std::min(menu_evidence + weight,
-                                         kAutoControls.menu_evidence_enter + 8u);
-            } else if (menu_evidence > 0) {
-                --menu_evidence;
-            }
-
-            if (mapping_context == MappingContext::ui &&
-                gameplay_evidence >= kAutoControls.gameplay_evidence_enter) {
-                mapping_context = MappingContext::gameplay;
-                menu_evidence = 0;
-                std::fprintf(stderr, "EDEN_PAD_CONTEXT mode=gameplay reason=activity\n");
-            } else if (mapping_context == MappingContext::gameplay &&
-                       menu_evidence >= kAutoControls.menu_evidence_enter) {
-                mapping_context = MappingContext::ui;
-                gameplay_evidence = 0;
-                std::fprintf(stderr, "EDEN_PAD_CONTEXT mode=ui reason=navigation\n");
-            }
+            // There is deliberately NO gameplay->ui transition based on
+            // D-pad, Options or touchpad: all are valid while FC27 displays
+            // in-match overlays. Guest title shutdown resets this object.
         }
 
         // The shortcuts work from every controller.
@@ -389,7 +361,7 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
         const bool left = sample.triggers.l2 / 255.0f >= trigger_threshold;
         const bool right = sample.triggers.r2 / 255.0f >= trigger_threshold;
         const ButtonMapping& active_mapping =
-            adaptive_playstation && mapping_context == MappingContext::gameplay ? kSwitchMapping : mapping;
+            adaptive_playstation && mapping_context.gameplay() ? kSwitchMapping : mapping;
         for (int game = 0; game < kGameButtons; ++game) {
             const int pad = active_mapping[game];
             if (pad == pad_touchpad) continue;  // set_touch
