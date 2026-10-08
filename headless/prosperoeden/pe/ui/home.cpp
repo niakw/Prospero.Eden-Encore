@@ -568,12 +568,6 @@ void Launcher::draw_home(Canvas &c)
     // No always-visible diagnostic/sidebar cards and no bordered game hero.
     const Rect hero{0.0f, 0.0f, 1920.0f, 544.0f};
 
-    // ---- brand + TV-first navigation ----
-    begin_band(0, -16.0f);
-    const int header_focus = home_focus_ >= kHomeNavLibrary && home_focus_ <= kHomeNavSettings ? home_focus_ : -1;
-    draw_top_nav(c, 0, header_focus, header_focus >= 0 ? focus(header_focus) : 0.0f);
-    end_band();
-
     // ---- full-bleed cinematic game hero (no giant rounded panel) ----
     begin_band(1, 18.0f);
     if (!hero_artwork.empty()) {
@@ -934,6 +928,15 @@ void Launcher::draw_home(Canvas &c)
     }
     text(c, version_, 1860.0f, 1026.0f,
          theme::kSmall, theme::kMeta, Align::right);
+    end_band();
+
+    // Header must be composited AFTER the full-bleed hero image, otherwise
+    // the artwork paints over the navigation, brand and focus ring.
+    begin_band(0, -16.0f);
+    const int header_focus =
+        home_focus_ >= kHomeNavLibrary && home_focus_ <= kHomeNavSettings ? home_focus_ : -1;
+    draw_top_nav(c, 0, header_focus,
+                 header_focus >= 0 ? focus(header_focus) : 0.0f);
     end_band();
 }
 
