@@ -84,6 +84,17 @@ The currently installed/downloadable application does **not** include these
 changes. FC27's input mapping and in-game PlayStation glyph replacement remain
 separate outstanding issues.
 
+- Shader worker selection now uses the actual PS5 process CPU-affinity mask
+  (not only the machine's advertised logical CPU count). Native performance
+  and shader-load timing have not been verified.
+- Added lifecycle-specific virtual-vs-committed JIT memory reporting,
+  and fixed the uncalled startup memory diagnostic.
+- A startup-only RW/RX mapping check can reject the incomplete sparse
+  JIT path in a developer build; the production option remains OFF.
+- The offline architecture contract check is available at
+  `python3 tools/check-ps5-architecture.py` (not a substitute for
+  a console build or hardware validation).
+
 ## Changes in Encore R1
 
 Prospero.Eden Encore R1 turns the proven ProsperoEden 1.000.040 base into a PS5 13.60-focused release:
