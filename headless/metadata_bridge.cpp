@@ -16,8 +16,10 @@
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <stb_image.h>
@@ -236,12 +238,30 @@ bool& UpdatesScanCompleted() {
     static bool completed = false;
     return completed;
 }
+std::mutex& ScannedAddOnsMutex() {
+    static std::mutex mutex;
+    return mutex;
+}
+// Both the map and completion flag are protected by ScannedAddOnsMutex.
+// A scanner builds its snapshot privately, publishing only at completion.
+// Never hold this mutex while reading/decrypting game files.
 }
 
 void eden_scan_addons(const char* updates_dir, const char* keys_dir) {
-    auto& scanned = ScannedAddOns();
-    scanned.clear();
-    UpdatesScanCompleted() = false;
+    // The library scan may overlap a game launch. Mutating a std::map while
+    // the launcher reads metadata is undefined behavior, including crashes.
+    // Build off-thread/off-lock and atomically publish a complete snapshot.
+    std::map<uint64_t, AddOns> scanned;
+    const auto publish = [&](bool complete) {
+        std::lock_guard lock{ScannedAddOnsMutex()};
+        ScannedAddOns().swap(scanned);
+        UpdatesScanCompleted() = complete;
+    };
+    {
+        std::lock_guard lock{ScannedAddOnsMutex()};
+        ScannedAddOns().clear();
+        UpdatesScanCompleted() = false;
+    }
     if (!updates_dir || !keys_dir) return;
     try {
         Common::FS::SetEdenPath(Common::FS::EdenPath::KeysDir, keys_dir);
@@ -254,7 +274,7 @@ void eden_scan_addons(const char* updates_dir, const char* keys_dir) {
             // remain unknown and fail closed to original Nintendo visuals.
             std::error_code error;
             const bool exists = std::filesystem::exists(updates_dir, error);
-            if (!error && !exists) UpdatesScanCompleted() = true;
+            if (!error && !exists) publish(true);
             return;
         }
         const FileSys::ExternalContentProvider provider({std::move(directory)});
@@ -277,10 +297,10 @@ void eden_scan_addons(const char* updates_dir, const char* keys_dir) {
         std::set<uint64_t> dlc;
         for (const auto& entry : provider.ListEntriesFilter(FileSys::TitleType::AOC, std::nullopt, std::nullopt))
             if (dlc.insert(entry.title_id).second) ++scanned[FileSys::GetBaseTitleID(entry.title_id)].dlc;
-        UpdatesScanCompleted() = true;
+        publish(true);
     } catch (const std::exception& error) {
         std::fprintf(stderr, "[ProsperoEden] updates: %s\n", error.what());
-        scanned.clear();
+        // Fail closed. The incomplete scan never becomes visible to readers.
     }
 }
 
@@ -290,15 +310,22 @@ void eden_scan_addons(const char* updates_dir, const char* keys_dir) {
 int eden_game_glyph_display_version(const char* rom_path, const char* keys_dir,
                                     uint64_t title_id, char* output, size_t capacity) {
     if (output && capacity) output[0] = '\0';
-    if (!rom_path || !keys_dir || !title_id || !output || capacity == 0 ||
-        !UpdatesScanCompleted()) return 0;
+    if (!rom_path || !keys_dir || !title_id || !output || capacity == 0) return 0;
     try {
         std::string version;
-        const auto found = ScannedAddOns().find(FileSys::GetBaseTitleID(title_id));
-        if (found != ScannedAddOns().end() && found->second.update_present) {
-            // An installed update with unreadable version must fail closed.
-            version = found->second.update;
-        } else {
+        bool scanned_update = false;
+        {
+            const std::lock_guard lock{ScannedAddOnsMutex()};
+            if (!UpdatesScanCompleted()) return 0;
+            const auto& entries = ScannedAddOns();
+            const auto found = entries.find(FileSys::GetBaseTitleID(title_id));
+            if (found != entries.end() && found->second.update_present) {
+                // An installed update with unreadable version fails closed.
+                scanned_update = true;
+                version = found->second.update;
+            }
+        }
+        if (!scanned_update) {
             Common::FS::SetEdenPath(Common::FS::EdenPath::KeysDir, keys_dir);
             FileSys::RealVfsFilesystem vfs;
             const auto file = vfs.OpenFile(rom_path, FileSys::OpenMode::Read);
@@ -323,10 +350,13 @@ int eden_game_language(const char* rom_path, const char* keys_dir, uint64_t titl
     const auto& codes = Service::Set::available_language_codes;
     if (chosen < 0 || chosen >= static_cast<int>(codes.size())) return chosen;
     uint32_t supported = 0;
-    const auto& scanned = ScannedAddOns();
-    if (const auto found = scanned.find(FileSys::GetBaseTitleID(title_id));
-        title_id && found != scanned.end() && !found->second.update.empty())
-        supported = found->second.languages;
+    {
+        const std::lock_guard lock{ScannedAddOnsMutex()};
+        const auto& scanned = ScannedAddOns();
+        if (const auto found = scanned.find(FileSys::GetBaseTitleID(title_id));
+            title_id && found != scanned.end() && !found->second.update.empty())
+            supported = found->second.languages;
+    }
     if (!supported) supported = eden_game_supported_languages(rom_path, keys_dir);
     namespace NS = Service::NS;
     const auto application = NS::ConvertToApplicationLanguage(codes[static_cast<std::size_t>(chosen)]);
@@ -344,12 +374,17 @@ int eden_game_language(const char* rom_path, const char* keys_dir, uint64_t titl
 int eden_game_addons(uint64_t title_id, char* update_version, size_t capacity, unsigned* dlc_count) {
     if (update_version && capacity) update_version[0] = '\0';
     if (dlc_count) *dlc_count = 0;
-    const auto& scanned = ScannedAddOns();
-    const auto found = scanned.find(FileSys::GetBaseTitleID(title_id));
-    if (!title_id || found == scanned.end()) return 0;
-    if (update_version && capacity) std::snprintf(update_version, capacity, "%s", found->second.update.c_str());
-    if (dlc_count) *dlc_count = found->second.dlc;
-    return !found->second.update.empty() || found->second.dlc != 0;
+    AddOns snapshot;
+    {
+        const std::lock_guard lock{ScannedAddOnsMutex()};
+        const auto& scanned = ScannedAddOns();
+        const auto found = scanned.find(FileSys::GetBaseTitleID(title_id));
+        if (!title_id || found == scanned.end()) return 0;
+        snapshot = found->second;
+    }
+    if (update_version && capacity) std::snprintf(update_version, capacity, "%s", snapshot.update.c_str());
+    if (dlc_count) *dlc_count = snapshot.dlc;
+    return !snapshot.update.empty() || snapshot.dlc != 0;
 }
 
 namespace {
