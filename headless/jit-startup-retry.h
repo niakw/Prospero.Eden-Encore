@@ -4,6 +4,7 @@
 // turn available, but fragmented direct memory into a hard game-start crash.
 // This header is used by BOTH A64 and A32 per-core wrappers.
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <new>
