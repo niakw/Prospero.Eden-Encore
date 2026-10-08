@@ -1,0 +1,49 @@
+name: Encore core source regressions — no GUI or PS5 build
+
+on:
+  push:
+    branches: [local/fc27-offline-no-build]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: encore-core-preflight-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core-tests:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[core-ready]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout source (GitHub only)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Audit generic graphics, JIT, runtime and offline game networking
+        run: |
+          set -euxo pipefail
+          python3 -B tools/check-performance-policy.py
+          python3 -B tools/check-runtime-frame-budget.py
+          python3 -B tools/check-universal-emulation-policy.py
+          python3 -B tools/check-guest-network-isolation.py
+          python3 -B tools/check-fc27-hle-compat.py
+          python3 -B tools/check-fc27-trace.py
+          python3 -B tools/check-log-budget.py
+          python3 -B tools/check-bounded-logs.py
+          python3 -B tools/check-nlib-media-safety.py
+          python3 -B tools/check-ci-cache.py
+
+      - name: Check approved user-facing UX invariants (no graphics compilation)
+        run: |
+          set -euxo pipefail
+          python3 -B tools/check-native-ui-focus.py
+          python3 -B tools/check-home-reference.py
+          python3 -B tools/check-home-media.py
+          python3 -B tools/check-encore-ux.py
+
+      - name: Validate source diffs
+        run: |
+          git diff --check HEAD^ HEAD
+          echo CORE_PREFLIGHT_ALL_PASS
