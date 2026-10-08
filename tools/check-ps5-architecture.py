@@ -124,8 +124,8 @@ def main() -> None:
             "Safe Launch/unknown memory must use baseline")
     require('kSingleArenaAddressingLimit' in jit_policy,
             "Dynarmic per-arena addressing constraint must be documented")
-    require('const std::size_t budget = ((largest_free_block - kHostReserve) / 2)' in jit_policy,
-            "JIT must scale continuously with available resources")
+    require('const std::size_t budget = ((largest_free_block - kHostReserve) / 4)' in jit_policy,
+            "JIT must grow with available memory while preserving late-game GPU/guest direct-memory headroom")
     require('plan.a64[0] =' in jit_policy and 'plan.a32[0] =' in jit_policy,
             "Both A64/A32 paths must participate in global budgeting")
     require(jit_policy.count('static_assert(ChooseJitMemoryPlan(') >= 6,
