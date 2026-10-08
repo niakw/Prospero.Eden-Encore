@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -43,6 +44,11 @@ constexpr std::size_t PAGE = 2 * 1024 * 1024;
 static int owned_fds = 0;
 static int alloc_calls = 0;
 static int fail_at_call = 0;
+static int map_calls = 0;
+static int fail_map_at = 0;
+static bool fail_after_mapping = false;
+static int fail_protect_at = 0;
+static int protect_calls = 0;
 static std::uintptr_t next_reservation = 0x1000000000ULL;
 
 extern "C" std::int64_t sceKernelGetDirectMemorySize() {
@@ -80,12 +86,24 @@ extern "C" std::int32_t sceKernelMapDirectMemory(
         std::int64_t physical, std::size_t align) {
     assert(size == PAGE && align == PAGE && (flags & MAP_FIXED));
     assert((prot & PROT_EXEC) == 0);
+    ++map_calls;
+    if (fail_map_at == map_calls && !fail_after_mapping) return -1;
     const int fd = static_cast<int>(physical >> 32);
     void* mapped = mmap(*address, size, prot, MAP_SHARED | MAP_FIXED, fd, 0);
     if (mapped == MAP_FAILED) return -1;
     *address = mapped;
+    // Simulate a PS5 syscall that changes a mapping but reports failure.
+    if (fail_map_at == map_calls && fail_after_mapping) return -1;
     return 0;
 }
+#ifdef EDEN_TEST_WRAP_MPROTECT
+extern "C" int __real_mprotect(void*, std::size_t, int);
+extern "C" int __wrap_mprotect(void* address, std::size_t size, int prot) {
+    ++protect_calls;
+    if (fail_protect_at == protect_calls) { errno = EPERM; return -1; }
+    return __real_mprotect(address, size, prot);
+}
+#endif
 extern "C" std::int32_t sceKernelReleaseDirectMemory(
         std::int64_t physical, std::size_t size) {
     assert(size == PAGE);
@@ -131,6 +149,32 @@ int main() {
     assert(!Common::CommitSparseJitCode(rx, 65 * 1024 * 1024));
     assert(x[0] == 13 && x[2 * PAGE] == 99);
     fail_at_call = 0;
+
+    // Recoverable mid-map failures: only the NEW chunk is rolled back.
+    // A previous executable chunk must remain intact and usable.
+    for (int point = 0; point != 3; ++point) {
+#ifndef EDEN_TEST_WRAP_MPROTECT
+        if (point == 2) continue;
+#endif
+        fail_map_at = map_calls + (point == 0 ? 1 : 2);
+        fail_after_mapping = point == 1;
+        if (point == 2) {
+            fail_map_at = 0;
+            fail_after_mapping = false;
+            fail_protect_at = protect_calls + 1;
+        }
+        assert(!Common::CommitSparseJitCode(rx, 8 * 1024 * 1024));
+        usage(64 * 1024 * 1024, 3 * PAGE);
+        assert(owned_fds == 3);
+        assert(x[0] == 13 && x[2 * PAGE] == 99);
+        fail_map_at = 0;
+        fail_after_mapping = false;
+        fail_protect_at = 0;
+    }
+    assert(Common::CommitSparseJitCode(rx, 8 * 1024 * 1024));
+    usage(64 * 1024 * 1024, 4 * PAGE);
+    w[3 * PAGE] = 0x77;
+    assert(x[3 * PAGE] == 0x77);
     Common::ReleaseSparseJitCode(rx);
     usage(0, 0);
     assert(owned_fds == 0);
@@ -144,7 +188,19 @@ int main() {
     assert(failed_writable == nullptr);
     usage(0, 0);
     assert(owned_fds == 0);
-    std::puts("PASS sparse PS5 direct-memory mocks: alias/bootstrap/growth/OOM/cleanup");
+    // A partially mapped bootstrap must also release both VA ranges and
+    // physical memory, rather than leaving a dangling constructor pointer.
+    fail_at_call = 0;
+    fail_map_at = map_calls + 2;
+    fail_after_mapping = false;
+    failed_writable = nullptr;
+    assert(Common::ReserveSparseJitCode(32 * 1024 * 1024,
+                                       &failed_writable) == nullptr);
+    assert(failed_writable == nullptr);
+    fail_map_at = 0;
+    usage(0, 0);
+    assert(owned_fds == 0);
+    std::puts("PASS sparse PS5 direct-memory mocks: alias/bootstrap/growth/OOM/partial-map rollback/cleanup");
 }
 """;
 
@@ -152,8 +208,11 @@ with tempfile.TemporaryDirectory(prefix="eden-sparse-host-") as temp:
     source = Path(temp) / "sparse.cpp"
     executable = Path(temp) / "sparse-check"
     source.write_text(MOCK)
+    linux = sys.platform.startswith("linux")
     subprocess.run([CXX, "-std=c++20", "-O1", "-g0", "-pthread", "-Wall",
                     "-Wextra", "-Werror", "-DPS5_NATIVE=1",
+                    *(["-DEDEN_TEST_WRAP_MPROTECT=1", "-Wl,--wrap=mprotect"]
+                      if linux else []),
                     str(source), str(ROOT / "src/memory_pages.cpp"),
                     "-o", str(executable)], check=True)
     subprocess.run([str(executable)], check=True)
