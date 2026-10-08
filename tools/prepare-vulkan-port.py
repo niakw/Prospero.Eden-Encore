@@ -774,6 +774,40 @@ shader_costs = [
 # Time both graphics and compute preparation, without modifying the compiler or
 # reading guest state on another thread. These intervals overlap shader_prepare.
 shader_source = (source / 'src/video_core/renderer_vulkan/vk_pipeline_cache.cpp').read_text()
+# The permanent Vulkan pipeline worker pool cannot safely be interrupted by
+# StatefulThreadWorker::WaitForRequests(stop_token): it requests stop on each
+# worker, so later on-demand shader compilation would lose its pool. Instead,
+# initialize the game's persistent pipeline filenames/driver cache and return
+# before scheduling any warmup tasks when an already-stopped token is passed.
+# Real guest shaders still compile asynchronously and serialize during play.
+lazy_vulkan_cache_anchor = '''    if (use_vulkan_pipeline_cache) {
+        vulkan_pipeline_cache_filename = base_dir / "vulkan_pipelines.bin";
+        vulkan_pipeline_cache =
+            LoadVulkanPipelineCache(vulkan_pipeline_cache_filename, CACHE_VERSION);
+    }
+
+    struct {'''
+lazy_vulkan_cache_replacement = '''    if (use_vulkan_pipeline_cache) {
+        vulkan_pipeline_cache_filename = base_dir / "vulkan_pipelines.bin";
+        vulkan_pipeline_cache =
+            LoadVulkanPipelineCache(vulkan_pipeline_cache_filename, CACHE_VERSION);
+    }
+
+#ifdef PS5_NATIVE
+    // The PS5 is launching one foreground game, so do not delay it by
+    // compiling the full backlog of shaders from earlier sessions.
+    // An already-stopped token is a special initialization-only request:
+    // after naming the per-title cache, leave workers RUNNING for later jobs.
+    if (stop_loading.stop_requested()) {
+        LOG_INFO(Render_Vulkan, "PS5 lazy shader cache ready for {:016x}", title_id);
+        return;
+    }
+#endif
+
+    struct {'''
+if shader_source.count(lazy_vulkan_cache_anchor) != 1:
+    raise RuntimeError("Pinned Vulkan persistent-cache setup changed")
+shader_source = shader_source.replace(lazy_vulkan_cache_anchor, lazy_vulkan_cache_replacement)
 # Native affinity masks describe the CPUs the *process can schedule on*;
 # hardware_concurrency() can report more than the PS5 runtime permits.
 pipeline_ps5_headers = '''#ifdef PS5_NATIVE
