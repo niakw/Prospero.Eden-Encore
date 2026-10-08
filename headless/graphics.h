@@ -2,6 +2,7 @@
 #pragma once
 #include <EGL/egl.h>
 #include <atomic>
+#include <array>
 #include <future>
 #include <functional>
 #include "core/frontend/emu_window.h"
@@ -36,6 +37,7 @@ private:
     unsigned frame_late_38{}, frame_late_50{}, frame_late_100{};
     unsigned frame_late_200{}, frame_late_500{};
     unsigned frame_slow_streak{}, frame_max_slow_streak{};
+    std::array<unsigned, 6> experimental_pacing_bins{};
     EGLDisplay display{EGL_NO_DISPLAY};
     EGLConfig config{};
     EGLContext root{EGL_NO_CONTEXT};
