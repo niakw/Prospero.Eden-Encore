@@ -13,6 +13,9 @@ namespace Eden::Performance {
 void RegisterWorker(const char* name);
 // Development: keep other named threads off guest cores 0-2 and their SMT siblings.
 void SetSecondaryPlacement(bool enabled);
+// Explicit PS5 diagnostic A/B: spread workers across distinct OS logical CPUs,
+// without claiming separate physical cores when firmware CPUID is unreliable.
+void EnableExperimentalLogicalPlacement();
 void PlatformChecks();
 // Main thread only, between GPU readiness and guest shutdown.
 void Snapshot();
