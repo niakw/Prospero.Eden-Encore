@@ -18,6 +18,7 @@
 #include <nlohmann/json.hpp>
 
 #include "mods.h"
+#include "glyph_overrides_generated.h"
 
 namespace Eden::GlyphOverrides {
 inline constexpr std::string_view kModName = "Eden Encore PS Glyphs";
@@ -125,11 +126,24 @@ inline bool ReadBounded(const Mods::fs::path& file, std::size_t limit, std::stri
     out->assign(std::istreambuf_iterator<char>(input), {});
     return input.eof() || (input.good() && out->size() <= limit);
 }
+inline Catalogue BuiltInCatalogue() {
+    Catalogue built_in;
+    built_in.valid = true;
+    built_in.revision = GlyphOverridesGenerated::kRevision;
+    for (const auto& entry : GlyphOverridesGenerated::kRules)
+        built_in.rules.push_back({entry.title, entry.update_version, entry.build_id});
+    return built_in;
+}
 inline Catalogue LoadCatalogue(const Mods::fs::path& path) {
-    Catalogue result;
+    Catalogue built_in = BuiltInCatalogue();
     std::string content;
-    if (ReadBounded(path, kMaxCatalogBytes, &content)) (void)ParseCatalogue(content, &result);
-    return result;
+    Catalogue remote;
+    // Runtime updates may add support, never silently downgrade the embedded
+    // source snapshot (same model as encore-overrides video profiles).
+    if (ReadBounded(path, kMaxCatalogBytes, &content) &&
+        ParseCatalogue(content, &remote) &&
+        remote.revision >= built_in.revision) return remote;
+    return built_in;
 }
 inline bool EvidenceMatches(const Mods::fs::path& folder, const Rule& rule) {
     std::string text;
