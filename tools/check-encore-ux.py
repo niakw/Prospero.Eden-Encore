@@ -36,7 +36,9 @@ assert 'position == 0 && delta < 0' in home
 assert 'utility[static_cast<std::size_t>((position + delta + 4) % 4)]' in home
 # Regression: the connected-controller icons must not overlap the hero metadata chips.
 assert '410.0f, 72.0f, 50.0f' in home
-assert 'const Rect players_chip{1390.0f, 407.0f, 189.0f, 36.0f}' in home
+assert 'const Rect players_chip{552.0f, 406.0f, 210.0f, 36.0f}' in home
+assert 'list.image(c.textures.brand(), {56.0f, 17.0f, 110.0f, 110.0f}' in launcher
+assert 'Color::rgb(0xbb59ff)' in read('headless/prosperoeden/pe/ui/theme.hpp')
 # Regression: do not remove the only width-measure helper while rearranging the hero.
 assert 'text_width(c, chip, 18.0f)' in home
 assert 'if (focus == kHomeQuickPanel)' in home and 'focus = kHomeQuickFirst' in home
