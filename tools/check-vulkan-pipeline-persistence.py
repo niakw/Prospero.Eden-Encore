@@ -39,6 +39,36 @@ assert 'std::lock_guard save_lock{save_mutex};' in port
 assert 'file.flush();' in port and 'file.close();' in port
 assert 'Retained old driver cache after failed save' in port
 # PS5 branch must never remove an existing valid cache after an interrupted save.
+# Reproduce the REAL patch order applied during native CMake generation:
+# transactional PS5 driver-cache saving is injected BEFORE pipeline timer
+# instrumentation. In build #37843116788 this changed the function from
+# ") try {" to ") {" and an obsolete later shader_costs anchor aborted CMake.
+# This regression must run before make prepare, not only after a failed build.
+def literal(name: str):
+    tree = ast.parse(port)
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == name
+                for target in node.targets):
+            return ast.literal_eval(node.value)
+    raise AssertionError(f"Missing Vulkan patch assignment: {name}")
+
+original_save = literal("vulkan_cache_save_anchor")
+rewritten_save = literal("vulkan_cache_save_replacement")
+costs = literal("shader_costs")
+timer_sites = [(old, new) for old, new in costs if "cache_version" in old]
+assert len(timer_sites) == 1
+timer_old, timer_new = timer_sites[0]
+assert original_save.count("cache_version) try {") == 1
+assert rewritten_save.count("cache_version) {") == 1
+# This was the exact exception thrown by prepare-vulkan-port.py before any
+# native C++ compilation. Match the generated *final* function, not upstream.
+assert rewritten_save.count(timer_old) == 1
+instrumented = rewritten_save.replace(timer_old, timer_new)
+assert instrumented.count("Eden::Performance::VulkanTimer(18)") == 1
+assert instrumented.count("std::filesystem::rename(staging, filename, rename_error)") == 1
+assert instrumented.index("Eden::Performance::VulkanTimer(18)") < instrumented.index("#ifdef PS5_NATIVE")
+
 saving = port.split("vulkan_cache_save_replacement = '''", 1)[1].split("'''", 1)[0]
 native = saving.split("#ifdef PS5_NATIVE", 1)[1].split("#else", 1)[0]
 assert 'std::filesystem::remove(filename' not in native
