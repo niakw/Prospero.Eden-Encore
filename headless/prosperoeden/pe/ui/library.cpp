@@ -512,6 +512,13 @@ bool Launcher::open_game_settings_at_file(const std::string &file)
     if (!games_loaded_) {
         start_scan();
         finish_scan(false);
+        if (!games_loaded_ && !scan_.valid()) {
+            // A setup-disabled library cannot start a worker; avoid leaving
+            // an impossible pending request that never resolves.
+            say(tr("ROM missing from the game files folder"), true);
+            cue(Cue::error);
+            return false;
+        }
         if (!games_loaded_) {
             // Home Triangle can arrive while first-time game enumeration is
             // still running. Never block a PS5 UI frame waiting for NACP,
