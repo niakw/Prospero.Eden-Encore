@@ -24,7 +24,8 @@ generated=read('headless/encore_overrides_generated.h')
 assert 'void Launcher::draw_top_nav' in launcher
 for call in ('draw_top_nav(c, 0','draw_top_nav(c, 1','draw_top_nav(c, 3'):
     assert call in home+library+settings, call
-assert 'list.bordered_rect(r, 19.0f, theme::kPanel.with_alpha(0.55f)' in launcher
+assert 'list.hgradient_rect(r, 19.0f' in launcher
+assert 'theme::kFocusBlue.with_alpha(0.96f)' in launcher
 assert 'list.image(c.textures.brand(), {56.0f, 17.0f, 110.0f, 110.0f}' in launcher
 
 # Home composition and controller-first navigation.
