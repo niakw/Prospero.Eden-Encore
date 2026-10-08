@@ -213,10 +213,18 @@ inline State Select(const Catalogue& catalogue, std::uint64_t title,
     const auto it = std::find_if(catalogue.rules.begin(), catalogue.rules.end(),
                                  [&](const Rule& rule) { return rule.title == title; });
     if (it == catalogue.rules.end()) return State::Unsupported;
-    const auto mod = std::find_if(mods.begin(), mods.end(), [](const Mods::Mod& entry) {
-        return entry.name == kModName && (entry.kinds & Mods::kFiles);
-    });
-    if (mod == mods.end()) return State::MissingMod;
+    // Eden mod discovery is case-insensitive for titles but not for mod
+    // payload order. Two visually identical mod names differing by case
+    // can be applied together, with ambiguous graphic replacement order.
+    const auto matching = [](const Mods::Mod& entry) {
+        return Mods::Lower(entry.name) == Mods::Lower(kModName);
+    };
+    const auto count = std::count_if(mods.begin(), mods.end(), matching);
+    if (count == 0) return State::MissingMod;
+    if (count != 1) return State::EvidenceMismatch;
+    const auto mod = std::find_if(mods.begin(), mods.end(), matching);
+    if (mod->name != kModName || !(mod->kinds & Mods::kFiles))
+        return State::EvidenceMismatch;
     if (running_update_version.empty()) return State::UnknownVersion;
     const auto rule = std::find_if(catalogue.rules.begin(), catalogue.rules.end(),
                                    [&](const Rule& r) {
@@ -224,7 +232,13 @@ inline State Select(const Catalogue& catalogue, std::uint64_t title,
                                    });
     if (rule == catalogue.rules.end()) return State::VersionMismatch;
     const auto root = Mods::TitleFolder(mods_root, title);
-    if (root.empty() || !EvidenceMatches(Mods::fs::path(root) / std::string(kModName), *rule))
+    if (root.empty()) return State::EvidenceMismatch;
+    const auto title_folder = Mods::fs::path(root);
+    const auto pack_folder = title_folder / std::string(kModName);
+    std::error_code ec;
+    if (Mods::fs::is_symlink(title_folder, ec) || ec ||
+        Mods::fs::is_symlink(pack_folder, ec) || ec ||
+        !EvidenceMatches(pack_folder, *rule))
         return State::EvidenceMismatch;
     return State::Enabled;
 }
