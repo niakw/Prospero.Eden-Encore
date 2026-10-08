@@ -56,12 +56,16 @@ for source in source_lang:
 assert (app / "sandbox-elevator.elf").stat().st_size > 0
 eboot = (app / "eboot.bin").read_bytes()
 assert len(eboot) > 1024 * 1024
+# The earlier "Nlib hero cached for " diagnostic was intentionally removed when
+# banner/icon/screens requests became concurrent for every installed game.
+# Keep the authoritative, still-compiled EDEN_NLIB_RESULT and live Nlib API
+# endpoint markers. Do NOT insist on historical debug strings in shipping code.
 # The native build cache once shipped a stale launcher while packaging current art/catalogs.
 # These literals prove the redesigned Home, in-binary French fallback, Nlib enrichment and PS5 HID
 # watchdog were all compiled into the shipping binary rather than merely present in the checkout.
 for text in (
     "QUICK SETTINGS", "SELECTED GAME", "Confirm this action?", "PARAMÈTRES RAPIDES",
-    "api.nlib.cc", "Nlib hero cached for ", "EDEN_NLIB_RESULT title_id=",
+    "api.nlib.cc", "EDEN_NLIB_RESULT title_id=",
     "/banner/1080p", "/screen/", "fields=name,intro,description,publisher,developer,releaseDate",
     "BUTTON PROFILE", "PlayStation Auto", "Custom PS5", "Custom Switch",
     "EDEN_PAD_CONTEXT mode=gameplay", "EDEN_PAD_CONTEXT mode=ui",
@@ -71,6 +75,9 @@ for text in (
     marker = text.encode("utf-8")
     assert marker in eboot, f"stale launcher binary: missing {marker!r}"
 
+nlib_source = (root / "headless/prosperoeden/eden_services.cpp").read_text()
+assert 'const int wanted_screens = std::clamp(screen_count, 0, 3);' in nlib_source, "all advertised Nlib screens must be fetched"
+assert 'std::vector<std::future<bool>> downloads;' in nlib_source, "complete media downloads must be concurrent"
 home_source = (root / "headless/prosperoeden/pe/ui/home.cpp").read_text()
 library_source = (root / "headless/prosperoeden/pe/ui/library.cpp").read_text()
 assert "Confirmation::launch_game" not in home_source + library_source, "launch still asks for confirmation"
