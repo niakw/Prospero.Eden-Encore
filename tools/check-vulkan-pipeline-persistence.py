@@ -32,5 +32,17 @@ assert 'if shader_source.count(vulkan_cache_create_anchor) != 1:' in port
 assert 'if (data_size == 0) throw;' in port
 assert 'Ignoring incompatible driver pipeline cache' in port
 assert 'pipeline_cache_ci.initialDataSize = 0;' in port
+assert 'if shader_source.count(vulkan_cache_save_anchor) != 1:' in port
+assert 'vulkan_cache_save_replacement' in port
+assert 'std::filesystem::rename(staging, filename, rename_error);' in port
+assert 'std::lock_guard save_lock{save_mutex};' in port
+assert 'file.flush();' in port and 'file.close();' in port
+assert 'Retained old driver cache after failed save' in port
+# PS5 branch must never remove an existing valid cache after an interrupted save.
+saving = port.split("vulkan_cache_save_replacement = '''", 1)[1].split("'''", 1)[0]
+native = saving.split("#ifdef PS5_NATIVE", 1)[1].split("#else", 1)[0]
+assert 'std::filesystem::remove(filename' not in native
+assert 'Common::FS::RemoveFile(filename)' not in native
+assert 'std::filesystem::remove(staging, cleanup_error)' in native
 print("PASS Vulkan PS5 lazy shader cache lifecycle and non-destructive persistent worker pool")
 print("Driver cache / filesystem correctness on real PS5: NOT TESTED")
