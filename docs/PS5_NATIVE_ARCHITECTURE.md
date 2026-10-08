@@ -353,3 +353,15 @@ physical-accounting returns to zero after every tested allocation/free.
 Tracking: docs/FC27_EXPERIMENTS.md, docs/PERFORMANCE_ROADMAP.md,
 GitHub issue #8 (sparse JIT qualification). This file is a design decision,
 **not evidence that those implementation gates already passed**.
+
+### Native dense executable-view sizing and teardown (8 October 2026)
+
+The dense allocator may round a requested non-2-MiB JIT size to a
+larger large-page direct-memory span. Its RX alias must be destroyed
+using the **actual** mapped span from the direct-memory allocation
+header, not a smaller page-rounded Xbyak request. The native source
+exposes `Common::ExecutableAliasSpan(writable)` and records it in
+`EdenJitAllocator` ownership, including the exception-cleanup path.
+A host fixture exercises a 3 MiB request with a 4 MiB RX alias and
+checks that the entire tail is unmapped at release. This is a host
+ownership test, **not** a real PS5 SDK/hardware mapping qualification.
