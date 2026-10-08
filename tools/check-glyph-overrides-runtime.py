@@ -11,6 +11,11 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+# A single existing encore-overrides sync must also bring in the visual
+# catalogue; two independent manual procedures would go stale quickly.
+video_sync = (ROOT / "tools" / "sync-encore-overrides.py").read_text()
+assert '"sync-glyph-overrides.py"' in video_sync
+assert '"--source", str(source)' in video_sync
 CXX = next((item for item in ("clang++-18", "clang++", "g++") if shutil.which(item)), None)
 if not CXX:
     raise SystemExit("missing host C++20 compiler")
