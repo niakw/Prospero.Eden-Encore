@@ -36,6 +36,7 @@ if not CXX:
     raise SystemExit("missing host C++20 compiler")
 TEST = r"""
 #include "glyph_overrides_runtime.h"
+#include "glyph_version.h"
 #include "settings_store.h"
 #include <cassert>
 #include <filesystem>
@@ -69,6 +70,18 @@ const std::string evidence = R"({"schema":2,"title_id":"0100C49025D3E000",
               "replacement_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]})";
 int main(int argc, char** argv) {
     assert(argc == 2);
+    // The exact C++ helper used by the native NACP bridge must accept
+    // base-game display versions (including a full 16-byte field), but
+    // reject unreadable control data without inventing a Build ID.
+    std::array<char, 16> nacp{};
+    nacp[0] = '1'; nacp[1] = '.'; nacp[2] = '2'; nacp[3] = '.'; nacp[4] = '0';
+    assert(Eden::GlyphVersion::FromNacp(nacp) == "1.2.0");
+    nacp[0] = '\\x01';
+    assert(Eden::GlyphVersion::FromNacp(nacp).empty());
+    nacp.fill('A');
+    assert(Eden::GlyphVersion::FromNacp(nacp) == std::string(16, 'A'));
+    nacp.fill('\0');
+    assert(Eden::GlyphVersion::FromNacp(nacp).empty());
     const fs::path base = argv[1];
     const fs::path mods = base / "mods";
     const fs::path title = mods / "0100c49025d3e000"; // existing LOWERCASE
