@@ -66,6 +66,8 @@ void FreeMemoryPages(void* p) noexcept {
     ++frees;
 }
 void CountDenseJitDirect(void* p, bool acquire) noexcept {
+    // Match production Common::CountDenseJitDirect(nullptr), a no-op.
+    if (!p) return;
     auto it = owned.find(p);
     assert(it != owned.end());
     if (acquire) dense_bytes += it->second;
