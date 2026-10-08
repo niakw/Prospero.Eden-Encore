@@ -257,6 +257,24 @@ int main() {
     allocator->free(executable);
     usage(0, 0);
     assert(owned_fds == 0);
+
+    // A genuine Xbyak caller may ask for an uneven number of bytes.
+    // The adapter must round only virtual span to 2 MiB; physical backing
+    // remains 4 MiB until code emission reaches the extra page.
+    constexpr std::size_t uneven = 5 * 1024 * 1024 + 4096;
+    auto* uneven_rx = allocator->alloc(uneven);
+    assert(uneven_rx && Common::IsSparseJitCode(uneven_rx));
+    auto* uneven_rw = allocator->writableAddress(uneven_rx);
+    assert(uneven_rw && uneven_rw != uneven_rx);
+    usage(6 * 1024 * 1024, 4 * 1024 * 1024);
+    assert(Common::CommitSparseJitCode(uneven_rx, uneven));
+    usage(6 * 1024 * 1024, 6 * 1024 * 1024);
+    uneven_rw[uneven - 1] = 0x61;
+    assert(uneven_rx[uneven - 1] == 0x61);
+    allocator->free(uneven_rx);
+    usage(0, 0);
+    assert(owned_fds == 0);
+
     // Explicit sparse selection must NEVER allocate the entire 64 MiB
     // densely after a 2 MiB bootstrap allocation fails. Historically
     // EdenJitAllocator silently fell back to dense and defeated demand
@@ -271,7 +289,7 @@ int main() {
     }
     Eden::Experimental::sparse_jit_cache.store(false);
     std::puts("PASS sparse PS5 direct-memory mocks: alias/bootstrap/growth/OOM/partial-map rollback/cleanup");
-    std::puts("PASS actual Xbyak JIT adapter: 64MiB virtual / 4MiB physical at boot, 10MiB after growth, zero after free");
+    std::puts("PASS actual Xbyak JIT adapter: 64MiB virtual / 4MiB physical at boot, uneven 5MiB+4KiB request rounded to 6MiB, zero after free");
 }
 """;
 
