@@ -126,7 +126,7 @@ void Launcher::finish_scan(bool wait)
 
 void Launcher::start_home_media()
 {
-    if (home_media_scan_.valid()) return;
+    if (media_cancel_.load(std::memory_order_acquire) || home_media_scan_.valid()) return;
 
     const Recent* recent =
         home_recent_ >= 0 && home_recent_ < static_cast<int>(home_.recents.size()) ?
@@ -165,7 +165,7 @@ void Launcher::start_home_media()
     home_media_next_retry_[title_id] = now + std::chrono::minutes(2);
     home_media_scan_title_id_ = title_id;
     home_media_scan_ = std::async(std::launch::async, [this, request = std::move(request)]() mutable {
-        return services_.enrich_game_media(std::move(request));
+        return services_.enrich_game_media(std::move(request), &media_cancel_);
     });
 }
 
@@ -230,7 +230,8 @@ void Launcher::finish_home_media()
 
 void Launcher::start_selected_media()
 {
-    if (media_scan_.valid() || games_.empty()) return;
+    if (media_cancel_.load(std::memory_order_acquire) ||
+        media_scan_.valid() || games_.empty()) return;
     // Prefer the highlighted title but then cover ALL installed titles, even
     // those never selected. Download the complete Nlib media set per title
     // without blocking input, drawing or ROM enumeration.
@@ -248,7 +249,7 @@ void Launcher::start_selected_media()
         media_scan_title_id_ = game.title_id;
         Game copy = game;
         media_scan_ = std::async(std::launch::async, [this, copy = std::move(copy)]() mutable {
-            return services_.enrich_game_media(std::move(copy));
+            return services_.enrich_game_media(std::move(copy), &media_cancel_);
         });
         return;
     }
