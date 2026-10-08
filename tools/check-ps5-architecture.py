@@ -81,9 +81,10 @@ def main() -> None:
             'rollback("rx", ENOMEM)' in native and
             'rollback("rx_exec", errno)' in native,
             "Sparse native partial map must restore fixed inaccessible guards")
-    require('EDEN_JIT_SPARSE_FALLBACK bytes=' in native_alloc and
-            'writable = Common::AllocateMemoryPages(size)' in native_alloc,
-            "Sparse reservation failure must use dense JIT fallback")
+    require('EDEN_JIT_SPARSE_RESERVE_FAILED bytes=' in native_alloc and
+            'fallback=smaller_virtual_arena' in native_alloc and
+            'return nullptr;\n            }\n            writable = Common::AllocateMemoryPages(size);' in native_alloc,
+            "Explicit sparse reservation failure must retry a smaller VA arena, never eagerly allocate all dense RAM")
     require('if (!executable) {' in native_alloc and
             'Common::CountDenseJitDirect(writable, false);' in native_alloc and
             'Common::FreeMemoryPages(writable);' in native_alloc and
