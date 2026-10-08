@@ -32,6 +32,7 @@ jobs:
           python3 -B tools/check-fc27-trace.py
           python3 -B tools/check-experimental-performance.py
           python3 -B tools/check-ps5-architecture.py
+          python3 -B tools/check-controller-semantic-mapping.py
           python3 -B tools/check-jit-memory-policy.py
           python3 -B tools/check-jit-startup-retry.py
           python3 -B tools/check-vulkan-pipeline-persistence.py
