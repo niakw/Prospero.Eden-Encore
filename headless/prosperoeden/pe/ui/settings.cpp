@@ -113,6 +113,8 @@ void Launcher::press_settings(Key key)
         const int delta = key == Key::right ? 1 : -1;
         if (settings_.move(delta))
         {
+            if (settings_.selected == kDiagnostics)
+                start_diagnostics(); // refresh on entry, without walking disk in draw()
             section_.value = 0.0f;
             section_.velocity = 0.0f;
             cue(Cue::focus);
@@ -561,7 +563,7 @@ void Launcher::press_dialog(Key key)
             const bool cleared = services_.clear_shader_caches(&result);
             // Refresh only after the explicit maintenance operation, never
             // while the diagnostics overlay is being rendered every frame.
-            home_diagnostics_ = services_.diagnostics();
+            start_diagnostics(); // disk recount stays off the UI/input thread
             say(result, !cleared);
             cue(cleared ? Cue::saved : Cue::error);
             return;
