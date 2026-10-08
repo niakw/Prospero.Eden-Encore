@@ -412,13 +412,22 @@ bool Launcher::press_top_nav(Key key)
 void Launcher::draw_top_nav(Canvas &c, int active_tab, int focus_tab, float focus_amount)
 {
     auto& list = c.list;
-    if (textures_.brand() != 0)
-        list.rounded_image(textures_.brand(), {72.0f, 28.0f, 84.0f, 84.0f},
-                           {0.0f, 0.0f, 1.0f, 1.0f}, 18.0f, kWhite);
-    text(c, "EDEN", 176.0f, baseline(43.0f, 35.0f, theme::kText24), theme::kText24,
-         theme::kTitle, Align::left, 3.0f);
-    text(c, "ENCORE", 176.0f, baseline(77.0f, 24.0f, theme::kSmall), theme::kSmall,
-         theme::kLime, Align::left, 5.0f);
+    // Reference header: lightweight cyan four-petal mark and lowercase
+    // eden wordmark. The old oversized tropical palm image was unrelated
+    // to the single approved screenshot (maquetteunique.png).
+    constexpr float cx = 100.0f;
+    constexpr float cy = 62.0f;
+    for (int i = 0; i < 4; ++i) {
+        list.push_transform(1.0f, cx, cy, 0.0f, 90.0f * static_cast<float>(i));
+        list.rounded_rect({cx - 7.0f, cy - 31.0f, 14.0f, 25.0f}, 7.0f,
+                          i % 2 == 0 ? theme::kFocusCore : theme::kFocusBlue);
+        list.pop_transform();
+    }
+    list.circle(cx, cy, 5.0f, theme::kFocusBlue);
+    text(c, "eden", 145.0f, baseline(29.0f, 49.0f, 39.0f), 39.0f,
+         theme::kTitle, Align::left);
+    text(c, "ENCORE", 147.0f, baseline(77.0f, 16.0f, 13.0f), 13.0f,
+         theme::kCopy, Align::left, 4.5f);
 
     static constexpr const char* labels[] = {TR("Home"), TR("Library"), TR("RECENTLY PLAYED"), TR("Settings")};
     static constexpr float xs[] = {720.0f, 886.0f, 1046.0f, 1260.0f};
