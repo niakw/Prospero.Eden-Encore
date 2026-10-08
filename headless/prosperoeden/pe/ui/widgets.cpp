@@ -366,9 +366,7 @@ void cover(Canvas &c, const std::string &path, const Rect &r, float radius, floa
     {
         // A dark tile until the cover is ready; the app icon when the game has none.
         c.list.gradient_rect(r, radius, Color::rgb(0x191a28), Color::rgb(0x10111b));
-        if (image.missing && c.textures.brand() != 0)
-            c.list.rounded_image(c.textures.brand(), r, {0.0f, 0.0f, 1.0f, 1.0f}, radius,
-                                 kWhite.with_alpha(0.92f));
+        // An absent game image uses a neutral gradient, never the Eden logo.
     }
     if (image.texture != 0)
         c.list.rounded_image(image.texture, r, {0.0f, 0.0f, 1.0f, 1.0f}, radius,
@@ -386,9 +384,7 @@ void cover_crop(Canvas &c, const std::string &path, const Rect &r, float radius,
     if (fade < 1.0f)
     {
         c.list.gradient_rect(r, radius, Color::rgb(0x191a28), Color::rgb(0x10111b));
-        if (image.missing && c.textures.brand() != 0)
-            c.list.rounded_image(c.textures.brand(), r, {0.0f, 0.0f, 1.0f, 1.0f}, radius,
-                                 kWhite.with_alpha(0.92f));
+        // An absent game image uses a neutral gradient, never the Eden logo.
     }
     if (image.texture != 0)
     {
