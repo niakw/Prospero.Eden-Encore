@@ -437,10 +437,17 @@ void Launcher::draw_top_nav(Canvas &c, int active_tab, int focus_tab, float focu
         const float focused = i == focus_tab ? tween::clamp01(focus_amount) : 0.0f;
         if (active)
         {
-            list.shadow({r.x - 4.0f, r.y - 4.0f, r.w + 8.0f, r.h + 8.0f},
-                        24.0f, 28.0f, theme::kFocusBlue.with_alpha(0.22f));
-            list.bordered_rect(r, 19.0f, theme::kPanel.with_alpha(0.55f), 1.8f,
-                               theme::kFocusBlue.with_alpha(0.96f));
+            // Selected navigation has the same dark plum dispersion and neon
+            // edge as the button/card focus, not a flat blue rectangle.
+            list.shadow({r.x - 5.0f, r.y - 5.0f, r.w + 10.0f, r.h + 10.0f},
+                        23.0f, 27.0f, theme::kLime.with_alpha(0.29f));
+            list.hgradient_rect(r, 19.0f,
+                                Color::rgb(0x301446, 0.73f),
+                                Color::rgb(0x110a21, 0.48f),
+                                2.0f, theme::kFocusBlue.with_alpha(0.96f));
+            list.bordered_rect({r.x + 2.0f, r.y + 2.0f, r.w - 4.0f, r.h - 4.0f},
+                               17.0f, kWhite.with_alpha(0.0f), 0.8f,
+                               theme::kLimePale.with_alpha(0.28f));
         }
         if (focused > 0.001f)
             plate_focus(c, kNavPlate, r, focused);
