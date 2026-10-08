@@ -320,23 +320,67 @@ void Launcher::read_home()
 
 void Launcher::check_games_present()
 {
-    if (screen_ == Screen::home && modal_ == Modal::none)
-    {
-        bool gone = home_.last_exists && !services_.game_exists(home_.last_file);
-        for (const Recent &recent : home_.recents)
-            gone = gone || !services_.game_exists(recent.file);
-        if (gone)
-        {
-            read_home();
-            const int recents = std::min<int>(7, static_cast<int>(home_.recents.size()));
-            if (home_focus_ >= 5 && home_focus_ < 11 && home_focus_ - 5 >= recents)
-                home_focus_ = home_.last_exists ? 0 : (home_.setup_ready ? 1 : 2);
-            if (home_focus_ == 4 && !home_.last_exists)
-                home_focus_ = 0;
+    // The old two-second poll stat'ed every Home/Library path on the UI
+    // update thread. A slow PS5 filesystem response stalled menu navigation.
+    // Collect an immutable filename snapshot on the owner thread and query
+    // existence in a single worker. Only UI-thread code mutates game state.
+    if (presence_scan_.valid()) {
+        if (presence_scan_.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+            return;
+        try {
+            const std::vector<std::string> missing = presence_scan_.get();
+            if (missing.empty())
+                return;
+            // A result can become stale after a library/media refresh. The
+            // existing synchronous removal path rechecks only on a reported
+            // missing file; normal navigation never does blocking I/O.
+            const bool home_affected = (home_.last_exists &&
+                std::find(missing.begin(), missing.end(), home_.last_file) != missing.end()) ||
+                std::any_of(home_.recents.begin(), home_.recents.end(), [&](const Recent &recent) {
+                    return std::find(missing.begin(), missing.end(), recent.file) != missing.end();
+                });
+            if (screen_ == Screen::home && modal_ == Modal::none && home_affected) {
+                read_home();
+                const int recents = std::min<int>(7, static_cast<int>(home_.recents.size()));
+                if (home_focus_ >= 5 && home_focus_ < 11 && home_focus_ - 5 >= recents)
+                    home_focus_ = home_.last_exists ? 0 : (home_.setup_ready ? 1 : 2);
+                if (home_focus_ == 4 && !home_.last_exists)
+                    home_focus_ = 0;
+            }
+            if (modal_ == Modal::none)
+                drop_missing_games();
+        } catch (const std::exception &error) {
+            sys::log("presence scan: %s", error.what());
+        } catch (...) {
+            sys::log("presence scan failed");
         }
+        return;
     }
-    if (modal_ == Modal::none)
-        drop_missing_games();
+
+    std::vector<std::string> paths;
+    if (screen_ == Screen::home && modal_ == Modal::none) {
+        if (home_.last_exists && !home_.last_file.empty())
+            paths.push_back(home_.last_file);
+        for (const Recent &recent : home_.recents)
+            if (!recent.file.empty())
+                paths.push_back(recent.file);
+    }
+    if (modal_ == Modal::none && games_loaded_)
+        for (const Game &game : games_)
+            if (!game.file.empty())
+                paths.push_back(game.file);
+    if (paths.empty())
+        return;
+    std::sort(paths.begin(), paths.end());
+    paths.erase(std::unique(paths.begin(), paths.end()), paths.end());
+    presence_scan_ = std::async(std::launch::async,
+        [this, paths = std::move(paths)] {
+            std::vector<std::string> missing;
+            for (const std::string &path : paths)
+                if (!services_.game_exists(path))
+                    missing.push_back(path);
+            return missing;
+        });
 }
 
 bool Launcher::drop_missing_games()
