@@ -403,14 +403,18 @@ void Launcher::read_home()
     if (home_diagnostics_.storage_root.empty())
         home_diagnostics_.storage_root = services_.files_folder();
     start_diagnostics();
-    if (home_.last_title_id == 0)
+    if (home_.last_title_id == 0 || !games_loaded_)
         return;
-    const std::vector<Mod> mods = services_.mods(home_.last_title_id);
-    home_.last_mods = static_cast<int>(mods.size());
-    // With the game's Mods switch off none of them is on.
-    const bool enabled = mods.empty() || services_.mods_enabled(home_.last_title_id);
-    home_.last_mods_on = !enabled ? 0 : static_cast<int>(
-        std::count_if(mods.begin(), mods.end(), [](const Mod &mod) { return mod.enabled; }));
+    // The asynchronous ROM scan already counted and resolved per-title mods.
+    // A second synchronous service mod enumeration delayed first Home frame
+    // and ROM-missing recovery; borrow its completed snapshot instead.
+    const auto it = std::find_if(games_.begin(), games_.end(), [this](const Game& game) {
+        return game.file == home_.last_file;
+    });
+    if (it != games_.end()) {
+        home_.last_mods = it->mods;
+        home_.last_mods_on = it->mods_on;
+    }
 }
 
 void Launcher::check_games_present()
