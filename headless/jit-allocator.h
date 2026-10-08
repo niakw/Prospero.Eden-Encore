@@ -66,11 +66,16 @@ inline Xbyak::Allocator* EdenJitAllocator() {
                                  executable, writable, span);
                     return pointer;
                 }
-                // Reserving two large virtual ranges may fail under address-space
-                // fragmentation. Revert this individual JIT to the already
-                // qualified dense mapper rather than failing game startup.
-                std::fprintf(diagnostics, "EDEN_JIT_SPARSE_FALLBACK bytes=%zu errno=%d mode=dense\n",
+                // Demand-backed JIT must NOT silently switch to a full
+                // physical dense allocation on virtual-range failure:
+                // that recreates the late-game RAM exhaustion observed on
+                // real FC27 hardware. Let the A64/A32 JIT constructor
+                // retry with a smaller stable VA arena. If even the
+                // baseline fails, surface startup failure instead of
+                // violating the explicitly selected sparse contract.
+                std::fprintf(diagnostics, "EDEN_JIT_SPARSE_RESERVE_FAILED bytes=%zu errno=%d fallback=smaller_virtual_arena\n",
                              span, errno);
+                return nullptr;
             }
             writable = Common::AllocateMemoryPages(size);
             if (!writable) return nullptr;
