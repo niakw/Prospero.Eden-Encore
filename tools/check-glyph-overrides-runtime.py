@@ -133,6 +133,28 @@ int main(int argc, char** argv) {
                                             mods.string(), mods_found);
     };
     assert(select(data, "v1.2.0", Style::PlayStation) == State::Enabled);
+    // Ambiguous case-colliding graphic mods cannot be enabled together:
+    // the ordinary Eden loader could otherwise overwrite the correct
+    // atlas with a second mod in an unpredictable order.
+    auto duplicate_mods = mods_found;
+    duplicate_mods.push_back({"eden encore ps glyphs", Eden::Mods::kFiles});
+    assert(Eden::GlyphOverrides::Select(data, GAME, "v1.2.0",
+        Style::PlayStation, mods.string(), duplicate_mods) == State::EvidenceMismatch);
+    auto wrongly_capitalized = mods_found;
+    wrongly_capitalized.front().name = "eden encore ps glyphs";
+    assert(Eden::GlyphOverrides::Select(data, GAME, "v1.2.0",
+        Style::PlayStation, mods.string(), wrongly_capitalized) == State::EvidenceMismatch);
+
+    // Title-directory symlinks may be followed by general mod discovery,
+    // but verified in-game artwork packs must refuse that location.
+    const auto symlink_root = base / "symlink-mods";
+    fs::create_directories(symlink_root);
+    fs::create_directory_symlink(title, symlink_root / "0100C49025D3E000");
+    const auto symlink_mods = Eden::Mods::List(symlink_root.string(), GAME);
+    assert(symlink_mods.size() == 1);
+    assert(Eden::GlyphOverrides::Select(data, GAME, "v1.2.0",
+        Style::PlayStation, symlink_root.string(), symlink_mods) == State::EvidenceMismatch);
+
     put(atlas, "synthetic-user-owned PS atlas");
     assert(select(data, "v1.2.0", Style::PlayStation) == State::EvidenceMismatch);
     put(atlas, original_asset);
