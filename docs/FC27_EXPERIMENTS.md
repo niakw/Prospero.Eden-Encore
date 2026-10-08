@@ -92,3 +92,54 @@ compilation and real hardware qualification. A failed mid-session direct-memory
 commit deliberately fails closed rather than executing a partially mapped cache;
 it is **not yet** a production-safe auto-sizing policy. There is currently
 no unlimited executable-code allocator and no shipping auto-growth.
+
+
+## Verified PS5 FC27 crash — 8 October 2026, build #37844050191
+
+This hardware run is no longer speculative. User-supplied native crash files
+`crash-20261008-234818.txt`, `*-stderr.log`, `*-heap.log` prove:
+
+- FC27 `0100C49025D3E000` ran Vulkan/RADV, 1440p output, internal 1x,
+  FXAA, PlayStation *input* profile. Compiled A64 **dense** JIT admitted
+  approximately 4376 MiB of direct memory, with worker code arenas
+  1536/1508/1304 MiB plus core3, after querying a largest contiguous
+  free block of 11826 MiB. Sparse JIT was OFF (correct for release).
+- Several minutes into a match the native direct allocator **rejected a
+  440 MiB allocation** (`rc=80020023`), the operator-new handler logged
+  `std::bad_alloc`, and the process terminated on `CPUCore_1`.
+  Crash report: largest remaining free direct-memory block **38 MiB**,
+  heap **1280 MiB**, five large blocks totalling **1016 MiB**.
+  Do not equate 6 GiB advertised Vulkan VRAM to free physical RAM.
+- Frame-present telemetry has genuine stutter under the nominal 30-FPS
+  cap: 22.562 / 23.761 / 24.717 FPS five-second windows, worst frames
+  above 200 and 300 ms. Stable 30-FPS windows cannot prove responsive
+  emulated gameplay (guest CPU and graphics progress may diverge).
+- Guest GPU shader translation reported missing `PRMT (imm)` and Fermi2D
+  repeatedly reported `Source depth is not one`. These are additional
+  graphics-compatibility concerns, **not proven to be the allocation
+  that caused the process to terminate**.
+- Launch log proves `Controller profile PlayStation` with empty custom
+  map and `In-game button art: Nintendo original (rule=unsupported)`.
+  The development branch explicitly disabled the last qualified
+  `PlayStation Auto` gameplay switching. Restoring it is an input
+  regression fix, **not** visual PlayStation glyph replacement: FC27
+  has no verified RomFS artwork pack and the catalogue has no rule.
+
+Root-level source response:
+- `ChooseJitMemoryPlan` no longer physically commits HALF of the
+  post-reserve pool for non-reclaimable dense JIT at game start. It
+  admits a **quarter** at most and preserves the remaining three quarters
+  for the guest renderer/graphics/runtime. This remains adaptive to
+  the launch-time physical contiguous pool for **all A32/A64 games**,
+  not title-based or the retired A/B/C tiers. The exact 11826-MiB
+  hardware trace is a regression fixture.
+- Restore `Pad::SetAdaptivePlayStation(effective_layout == 0 &&
+  !custom_mapping)` from the last FC27 gameplay-qualified branch;
+  preserve fixed custom mappings and explicit Nintendo mode. Add a
+  source regression to stop future accidental deactivation.
+
+**Qualification still required**: code host tests, new native SDK build,
+repeat match with the *same* settings, late-memory exhaustion proof,
+30-FPS responsiveness, and console-side controller behavior. These
+changes are a diagnosis-driven **candidate**, not a claimed crash fix
+until PS5 runtime passes. Do not clear or reset caches for the repeat.
