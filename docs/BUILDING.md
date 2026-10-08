@@ -368,3 +368,7 @@ French user text says **Joueurs max.** and **Cache**. The low-level diagnostics
 and emulator paths may retain technical `shader/JIT` identifiers internally.
 The GitHub native launcher preview exports its true 1920×1080 PNGs; no full
 PS5 build is part of this visual check.
+
+Focus review: the selected game cover keeps its native colour and recognisable
+art. Reduce translucent colour wash over cover plates; reserve the stronger
+plum fill for primary actions and use pink/violet glow mainly on the edges.
