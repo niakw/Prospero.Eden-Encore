@@ -266,6 +266,12 @@ class Services
     virtual std::string language_region(int language) = 0;
     virtual std::string setup_details() = 0;
     virtual DiagnosticsInfo diagnostics() { return {}; }
+    // Optional cooperative cancellation for lengthy native cache/log walks.
+    // Host/preview implementations retain their original behavior.
+    virtual DiagnosticsInfo diagnostics(const std::atomic<bool>* cancel) {
+        if (cancel && cancel->load(std::memory_order_acquire)) return {};
+        return diagnostics();
+    }
     virtual bool clear_shader_caches(std::string *message)
     {
         if (message) *message = "Unavailable";
