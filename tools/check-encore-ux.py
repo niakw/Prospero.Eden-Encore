@@ -124,8 +124,10 @@ assert 'it->second.loaded && it->second.texture == 0 &&' in textures_src
 assert 'it->second.age >= retry_after' in textures_src
 # Visual regressions from actual 1920x1080 PS5 captures (2026-10-08): the
 # Zelda title must not occupy the same vertical lines as its description.
-assert 'text_shrink(c, hero_file.empty() ? tr("Your next adventure") : hero_title' in home
-assert 'theme::kTitle, 910.0f, Align::left, 0.0f, 0.58f);' in home
+assert 'text_block(c, title_label, 90.0f' in home
+assert 'theme::kTitle, 1050.0f, 2, 0.87f);' in home
+assert 'text_block(c, hero_caption, 90.0f' in home
+assert 'label_area.x + label_area.w * 0.5f' in home
 assert 'text_shrink(c, game->name, 558.0f, baseline(574.0f, 52.0f, 40.0f)' in library
 assert 'text_block(c, game->name, 558.0f' not in library
 assert 'kNlibCacheSchema = 2' in services
