@@ -46,6 +46,18 @@ int main() {
         }
         assert(plan.a64[3] == 16u * kMiB);
         assert(plan.a32[3] == 16u * kMiB);
+        if (plan.expanded) {
+            std::size_t total64 = 0;
+            std::size_t total32 = 0;
+            for (std::size_t i = 0; i != 4; ++i) {
+                total64 += plan.a64[i];
+                total32 += plan.a32[i];
+            }
+            // Entire actual per-ISA arenas (including core 3) must fit
+            // inside the admitted budget, not exceed it by 16 MiB.
+            assert(total64 <= plan.admission_budget_bytes);
+            assert(total32 <= plan.admission_budget_bytes);
+        }
         previous = plan;
     }
 
