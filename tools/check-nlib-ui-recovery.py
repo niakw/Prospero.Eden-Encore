@@ -117,6 +117,14 @@ assert "if (scan_cancel_.load(std::memory_order_acquire)) break;" in scan_entry
 assert "if (!scan_cancel_.load(std::memory_order_acquire))" in lib
 assert "scan_cancel_.store(true, std::memory_order_release);" in nav
 assert "auto games = scan_.get();" in lib
+# A failed first scan must not become a valid empty list. Otherwise the
+# delayed Home settings action reports a nonexistent missing ROM.
+finish_entry = lib.split("void Launcher::finish_scan(", 1)[1].split(
+    "void Launcher::start_home_media()", 1)[0]
+assert "games_loaded_ = true;" not in finish_entry
+assert "if (!games_loaded_ && !pending_settings_file_.empty())" in finish_entry
+assert "pending_settings_file_.clear();" in finish_entry
+
 assert "apply_games(std::move(games));" in lib
 
 assert "#include <new>" in lib
