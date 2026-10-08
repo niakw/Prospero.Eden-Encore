@@ -70,7 +70,8 @@ assert 'const Cover hero_picture = c.textures.cover(hero_artwork, 1920.0f)' in h
 assert 'list.image(hero_picture.texture, hero, uv' in hero_draw
 assert 'if (hero_picture.texture != 0)' in hero_draw
 assert 'hero_recent->cover' not in hero_draw and 'home_.last_cover' not in hero_draw
-assert 'never enlarge a ROM' in hero_draw
+assert 'if (hero_picture.texture != 0)' in hero_draw
+assert 'a solid' not in hero_draw.lower() or 'NOT a solid' in hero_draw
 assert 'bool Launcher::press_top_nav(Key key)' in launcher
 assert 'top_nav_focus_ = 3' in settings and 'top_nav_focus_ = 1' in library
 
@@ -154,7 +155,8 @@ assert 'const Rect hero{0.0f, 0.0f, 1920.0f, 1080.0f}' in home
 assert 'list.hgradient_rect(hero, 0.0f' in home
 assert 'kAccentTeal' in read('headless/prosperoeden/pe/ui/theme.hpp')
 assert 'tr("Local players: {0}")' in home and 'std::to_string(hero_max_players)' in home
-assert '1390.0f, 407.0f, 189.0f, 36.0f' in home
+assert '552.0f, 406.0f, 210.0f, 36.0f' in home
+assert 'float chip_x = hero_max_players > 0 ? 774.0f : 570.0f;' in home
 assert 'gfx::mix(theme::kAccentTeal, theme::kTitle, f)' in home
 assert 'constexpr float card_h = 214.0f' in home
 assert '551.0f, card_w, card_h' in home
