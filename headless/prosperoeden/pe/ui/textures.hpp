@@ -77,7 +77,8 @@ class Textures
     {
         std::uint32_t texture = 0;
         float age = 0.0f;
-        bool loaded = false; // false: queued
+        bool loaded = false; // false: queued or decoding
+        std::uint64_t generation = 0;
         unsigned failed_loads = 0; // bounded retry backoff when async Nlib media arrive
         std::uint64_t used = 0;
         std::string path;
@@ -87,6 +88,7 @@ class Textures
 
     struct DecodedCover {
         std::string key;
+        std::uint64_t generation = 0;
         gfx::Image image;
         bool ok = false;
     };
@@ -102,6 +104,7 @@ class Textures
     std::unordered_map<std::string, Entry> covers_;
     std::vector<std::string> queue_;
     std::uint64_t frame_ = 0;
+    std::uint64_t next_generation_ = 0;
     float output_scale_ = 1.0f;
 };
 
