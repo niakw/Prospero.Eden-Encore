@@ -244,10 +244,28 @@ void Launcher::update(float dt)
     intro_ += dt;
     message_age_ += dt;
     backdrop_.update(dt);
+    // When a user holds Down and the highlight appears to lag the panel,
+    // attribute a rare >24 ms UPDATE stall to a specific subsystem instead
+    // of guessing from the frame's draw/present times. No work/logging
+    // beyond a few monotonic reads is added to normal smooth frames.
+    const auto update_stage_begin = std::chrono::steady_clock::now();
+    const auto slow_stage = [this](const char* phase, std::chrono::steady_clock::time_point started) {
+        const auto now = std::chrono::steady_clock::now();
+        if (now - started >= std::chrono::milliseconds(24) &&
+            now - last_ui_hotspot_report_ >= std::chrono::seconds(2)) {
+            last_ui_hotspot_report_ = now;
+            const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - started);
+            sys::log("EDEN_UI_HOTSPOT phase=%s elapsed_ms=%lld",
+                     phase, static_cast<long long>(elapsed.count()));
+        }
+    };
     textures_.pump(dt);
+    slow_stage("texture_upload", update_stage_begin);
+    const auto media_started = std::chrono::steady_clock::now();
     finish_scan(false);
     finish_home_media();
     finish_selected_media();
+    slow_stage("media_merge", media_started);
     media_retry_timer_ += dt;
     if (media_retry_timer_ >= 8.0f) {
         media_retry_timer_ = 0.0f;
@@ -302,7 +320,9 @@ void Launcher::update(float dt)
     if (presence_wait_ >= 2.0f && selected_game_.empty())
     {
         presence_wait_ = 0.0f;
+        const auto presence_started = std::chrono::steady_clock::now();
         check_games_present();
+        slow_stage("game_presence_scan", presence_started);
     }
 
     clock_wait_ += dt;
