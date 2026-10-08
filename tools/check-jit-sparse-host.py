@@ -32,6 +32,8 @@ MOCK = r"""
 #include <sys/mman.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "jit-allocator.h"
+#include "experimental_performance.h"
 
 namespace Common {
 bool ProbeSparseJitAlias() noexcept;
@@ -231,17 +233,62 @@ int main() {
     fail_map_at = 0;
     usage(0, 0);
     assert(owned_fds == 0);
+    // End-to-end host simulation with the REAL Xbyak allocator adapter.
+    // A virtual 64 MiB JIT arena must consume only its 4 MiB bootstrap
+    // physical backing until the code emitter explicitly asks for more.
+    const int alloc_before_adapter = alloc_calls;
+    Eden::Experimental::sparse_jit_cache.store(true);
+    auto* allocator = EdenJitAllocator();
+    auto* executable = allocator->alloc(64 * 1024 * 1024);
+    assert(executable);
+    auto* writable = allocator->writableAddress(executable);
+    assert(writable && writable != executable);
+    assert(Common::IsSparseJitCode(executable));
+    assert(alloc_calls == alloc_before_adapter + 2);
+    usage(64 * 1024 * 1024, 4 * 1024 * 1024);
+    const auto& stats_at_boot = owned_fds;
+    assert(stats_at_boot == 2);
+    writable[0] = 0x51;
+    assert(executable[0] == 0x51);
+    assert(Common::CommitSparseJitCode(executable, 9 * 1024 * 1024));
+    usage(64 * 1024 * 1024, 10 * 1024 * 1024);
+    writable[8 * 1024 * 1024] = 0x42;
+    assert(executable[8 * 1024 * 1024] == 0x42);
+    allocator->free(executable);
+    usage(0, 0);
+    assert(owned_fds == 0);
+    Eden::Experimental::sparse_jit_cache.store(false);
     std::puts("PASS sparse PS5 direct-memory mocks: alias/bootstrap/growth/OOM/partial-map rollback/cleanup");
+    std::puts("PASS actual Xbyak JIT adapter: 64MiB virtual / 4MiB physical at boot, 10MiB after growth, zero after free");
 }
 """;
+
+XBYAK_HEADER = r"""
+#pragma once
+#include <cstddef>
+#include <cstdint>
+namespace Xbyak {
+struct Allocator {
+    virtual ~Allocator() = default;
+    virtual std::uint8_t* alloc(std::size_t) = 0;
+    virtual void free(std::uint8_t*) = 0;
+    virtual std::uint8_t* writableAddress(std::uint8_t* p) { return p; }
+    virtual bool useProtect() const { return true; }
+};
+}
+"""
 
 with tempfile.TemporaryDirectory(prefix="eden-sparse-host-") as temp:
     source = Path(temp) / "sparse.cpp"
     executable = Path(temp) / "sparse-check"
+    (Path(temp) / "xbyak").mkdir()
+    (Path(temp) / "xbyak" / "xbyak.h").write_text(XBYAK_HEADER)
     source.write_text(MOCK)
     linux = sys.platform.startswith("linux")
     subprocess.run([CXX, "-std=c++20", "-O1", "-g0", "-pthread", "-Wall",
                     "-Wextra", "-Werror", "-DPS5_NATIVE=1",
+                    "-DEDEN_JIT_ALIAS_NATIVE=1",
+                    "-I", str(Path(temp)), "-I", str(ROOT / "headless"),
                     *(["-DEDEN_TEST_WRAP_MPROTECT=1", "-Wl,--wrap=mprotect"]
                       if linux else []),
                     str(source), str(ROOT / "src/memory_pages.cpp"),
