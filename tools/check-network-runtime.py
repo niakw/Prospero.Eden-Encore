@@ -45,6 +45,10 @@ assert '--wrap=malloc_usable_size --wrap=fcntl' in native_link
 assert 'link_native "$weak_scan" "$weak_map"' in native_link
 assert 'link_native "$output" "$output.map"' in native_link
 assert "httplib::to_string(result.error())" in patch
+# The launcher's serial artwork downloads must not each wait 15 seconds on an offline Nlib endpoint.
+fast_http = (root / "headless/backports/eden-ps5-launcher-fast-http.patch").read_text()
+assert 'url == "https://api.nlib.cc" ? 3 : 5' in fast_http
+assert "eden-ps5-launcher-fast-http.patch" in apply
 assert 'extern "C" int sceNetInit();' in main
 assert 'const int host_net_result = sceNetInit();' in main
 assert 'host network init result=%d' in main
