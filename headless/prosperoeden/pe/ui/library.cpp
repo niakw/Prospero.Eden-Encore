@@ -60,7 +60,23 @@ std::string controller_profile_name(int layout, const ButtonMapping& mapping)
 void Launcher::start_scan()
 {
     if (!scan_.valid() && home_.setup_ready)
-        scan_ = std::async(std::launch::async, [this] { return services_.games(); });
+        scan_ = std::async(std::launch::async, [this] {
+            std::vector<Game> games = services_.games();
+            // Reading mod folders / disabled-mod settings for each installed
+            // title used to happen inside apply_games() on the UI update
+            // thread, potentially scanning hundreds of directories at once.
+            // Populate the immutable game-list snapshot on this worker instead.
+            for (Game &game : games) {
+                if (game.title_id == 0) continue;
+                const std::vector<Mod> mods = services_.mods(game.title_id);
+                game.mods = static_cast<int>(mods.size());
+                game.mods_enabled = mods.empty() || services_.mods_enabled(game.title_id);
+                game.mods_on = !game.mods_enabled ? 0 : static_cast<int>(
+                    std::count_if(mods.begin(), mods.end(),
+                                  [](const Mod &mod) { return mod.enabled; }));
+            }
+            return games;
+        });
 }
 
 void Launcher::finish_scan(bool wait)
@@ -260,9 +276,8 @@ void Launcher::apply_games(std::vector<Game> games)
                                      std::string{};
     games_ = std::move(games);
     games_loaded_ = true;
-    for (Game &game : games_)
-        if (game.title_id != 0)
-            count_mods(game, services_.mods(game.title_id));
+    // Mod counts were resolved by the background scan; never perform a
+    // second synchronous per-title disk walk while applying the list.
     if (!same)
     {
         int index = 0;
@@ -285,6 +300,8 @@ void Launcher::name_home_games()
     {
         if (game.file == home_.last_file)
         {
+            home_.last_mods = game.mods;
+            home_.last_mods_on = game.mods_on;
             home_.last_title = game.name;
             if (!game.hero.empty()) home_.last_hero = game.hero;
             if (!game.screenshots.empty()) home_.last_screenshot = game.screenshots.front();
