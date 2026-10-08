@@ -699,7 +699,10 @@ void Launcher::draw_home(Canvas &c)
                                   effective_profile < static_cast<int>(profiles.size()) ?
                               profiles[static_cast<std::size_t>(effective_profile)] : "-";
     const std::array<std::string, 4> chips{profile, renderer, output, resolution};
-    float chip_x = 570.0f;
+    // Keep real local-player capacity beside Play/details, then the graphical
+    // profile chips in the same horizontal metadata rail. If Nlib has no
+    // verified capacity, do not reserve space or invent a count.
+    float chip_x = hero_max_players > 0 ? 774.0f : 570.0f;
     for (const auto &chip : chips)
     {
         const float w = std::clamp(text_width(c, chip, 18.0f) + 30.0f, 92.0f, 210.0f);
@@ -710,9 +713,9 @@ void Launcher::draw_home(Canvas &c)
     }
     if (hero_max_players > 0)
     {
-        // Local controller capacity belongs to the same metadata rail as profile / renderer /
-        // output / resolution, anchored at the hero's lower-right edge.
-        const Rect players_chip{1390.0f, 407.0f, 189.0f, 36.0f};
+        // Same row as Play/details, BEFORE the profile/renderer/output chips;
+        // never float this datum alone over the right-hand game illustration.
+        const Rect players_chip{552.0f, 406.0f, 210.0f, 36.0f};
         list.bordered_rect(players_chip, 17.0f, theme::kPanel.with_alpha(0.82f), 1.0f,
                            theme::kPanelEdge.with_alpha(0.58f));
         controller_icon(c, {players_chip.x + 10.0f, players_chip.y + 5.0f, 34.0f, 24.0f}, 1.0f);
