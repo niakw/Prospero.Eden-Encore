@@ -786,6 +786,26 @@ foreach(bits 32 64)
             string(PREPEND wrapper "#include \"${EDEN_PORT_DIR}/watch.h\"\n#include \"core/hle/kernel/k_thread.h\"\n#include \"core/hle/kernel/kernel.h\"\n")
         endif()
     endif()
+    if(PS5_NATIVE)
+        # Do not silently lose a game when a dynamically sized code arena
+        # cannot be allocated contiguously. Retry only allocator errors at
+        # smaller capacities down to the old qualified per-core baseline.
+        # The 8 MiB null-JIT path is intentionally left untouched.
+        set(jit_init_site "    m_jit.emplace(config);")
+        string(FIND "${wrapper}" "${jit_init_site}" jit_init_at)
+        if(jit_init_at LESS 0)
+            message(FATAL_ERROR "Pinned Dynarmic guest JIT construction changed")
+        endif()
+        if(bits EQUAL 64)
+            set(jit_legacy_baseline "::Eden::Experimental::kA64Baseline[m_core_index]")
+        else()
+            set(jit_legacy_baseline "::Eden::Experimental::kA32Baseline[m_core_index]")
+        endif()
+        string(REPLACE "${jit_init_site}"
+            "    ::Eden::JitStartup::ConstructWithCapacityFallback(\\n        config.code_cache_size, ${jit_legacy_baseline}, ${bits}, m_core_index,\\n        [&]() { m_jit.emplace(config); });"
+            wrapper "${wrapper}")
+        string(PREPEND wrapper "#include \"${EDEN_PORT_DIR}/jit-startup-retry.h\"\\n")
+    endif()
     write_derived("${derived}" "#include <bit>\n${wrapper}")
     list(REMOVE_ITEM core_sources "${relative}")
     list(APPEND core_sources "${derived}")
