@@ -91,6 +91,7 @@ struct Recent
     std::string screenshot; // first cached Nlib screenshot
     int max_players = 0; // Nlib maximum local players; 0 when unknown/offline
     std::string intro;
+    std::string description; // detailed, title-keyed Nlib text for the Hero
     std::uint64_t title_id = 0;
     std::string addons;
     std::string language;
@@ -112,6 +113,7 @@ struct Home
     std::string last_screenshot;
     int last_max_players = 0; // Nlib maximum local players; 0 when unknown/offline
     std::string last_intro;
+    std::string last_description;
     // What the last game comes with, when it can be started: its title ID, its update and DLC
     // (as Game::addons) and the language it will use. Its mods are counted by the launcher.
     std::uint64_t last_title_id = 0;
