@@ -783,20 +783,38 @@ int main(int argc, char** argv) {
         bool experimental_logical_cpu = false;
         bool experimental_frame_probe = false;
 #if defined(PS5_NATIVE) && defined(EDEN_DEV_PROFILE)
-        // Completed A/B/C/D test tiers are retired. Debug-only controls
-        // affect mapping probes and trace capture, not normal JIT capacity.
-        if (!safe_launch && launch_title_id) {
+        // Developer experiments support a single all-title default with
+        // optional per-title overrides. No experimental mode is enabled
+        // when experiments.json or the requested field is absent.
+        // Safe Launch always bypasses experiments.
+        if (!safe_launch) {
             std::string source;
             if (Eden::Settings::ReadFile(Eden::ConfigFile("experiments.json"), source)) {
                 using Json = Eden::Settings::Json;
                 const Json doc = Json::parse(source, nullptr, false);
-                const Json::json_pointer at("/games/" + Eden::Settings::TitleKey(launch_title_id));
-                if (doc.is_object() && doc.contains(at) && doc.at(at).is_object()) {
-                    const auto& game_options = doc.at(at);
+                if (doc.is_object()) {
+                    const Json* defaults = nullptr;
+                    const Json* game_options = nullptr;
+                    const auto common = doc.find("defaults");
+                    if (common != doc.end() && common->is_object())
+                        defaults = &*common;
+                    if (launch_title_id) {
+                        const Json::json_pointer at("/games/" + Eden::Settings::TitleKey(launch_title_id));
+                        if (doc.contains(at) && doc.at(at).is_object())
+                            game_options = &doc.at(at);
+                    }
                     const auto get = [&](const char* name) -> std::string {
-                        const auto it = game_options.find(name);
-                        return it != game_options.end() && it->is_string() ?
-                            it->get<std::string>() : "";
+                        if (game_options) {
+                            const auto value = game_options->find(name);
+                            if (value != game_options->end() && value->is_string())
+                                return value->get<std::string>();
+                        }
+                        if (defaults) {
+                            const auto value = defaults->find(name);
+                            if (value != defaults->end() && value->is_string())
+                                return value->get<std::string>();
+                        }
+                        return "";
                     };
 #ifdef EDEN_SPARSE_JIT_DEV
                     experimental_sparse_jit = get("jit_memory") == "sparse";
