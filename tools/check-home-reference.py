@@ -42,6 +42,7 @@ utility_top, utility_bottom = 825, 825 + 96
 assert title_baseline_top + 32 < utility_top  # no overlap
 assert utility_bottom < 940  # footer begins below utilities
 assert "utility_card(3, kHomeFullSettings" in home
+assert "list.push_transform(1.65f, r.x + 41.0f, r.y + r.h * 0.5f" in home
 
 # The reference uses a light cyan focus and a smaller 'eden' wordmark.
 assert 'text(c, "eden", 145.0f' in nav
