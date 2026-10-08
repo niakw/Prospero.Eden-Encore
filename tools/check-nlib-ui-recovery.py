@@ -79,6 +79,10 @@ apply_entry = lib.split("void Launcher::apply_games(", 1)[1].split("void Launche
 assert "std::vector<Game> games = services_.games();" in scan_entry
 assert "services_.mods(game.title_id)" in scan_entry
 assert "services_.mods_enabled(game.title_id)" in scan_entry
+assert "catch (const std::bad_alloc&)" in scan_entry
+assert "catch (const std::exception& error)" in scan_entry
+assert "if (mod_scan_errors++ < 3)" in scan_entry
+assert "#include <new>" in lib
 assert "services_.mods(game.title_id)" not in apply_entry
 assert "home_.last_mods = game.mods;" in lib
 assert "home_.last_mods_on = game.mods_on;" in lib
