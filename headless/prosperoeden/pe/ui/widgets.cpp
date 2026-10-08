@@ -377,8 +377,24 @@ void cover(Canvas &c, const std::string &path, const Rect &r, float radius, floa
         // An absent game image uses a neutral gradient, never the Eden logo.
     }
     if (image.texture != 0)
-        c.list.rounded_image(image.texture, r, {0.0f, 0.0f, 1.0f, 1.0f}, radius,
+    {
+        // Aspect-safe "contain" for standalone icons and logos; never stretch
+        // them. Artwork tiles and banners use the separate object-fit COVER
+        // path in cover_crop() and the Home hero respectively.
+        Rect fitted = r;
+        const float source = std::max(0.01f, image.aspect);
+        const float target = std::max(0.01f, r.w / std::max(r.h, 1.0f));
+        if (source > target) {
+            fitted.h = r.w / source;
+            fitted.y += (r.h - fitted.h) * 0.5f;
+        } else if (source < target) {
+            fitted.w = r.h * source;
+            fitted.x += (r.w - fitted.w) * 0.5f;
+        }
+        c.list.rounded_image(image.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f},
+                             std::min(radius, std::min(fitted.w, fitted.h) * 0.5f),
                              kWhite.with_alpha(fade));
+    }
     c.list.bordered_rect(r, radius, kWhite.with_alpha(0.0f), 1.0f, kWhite.with_alpha(0.10f));
 }
 
