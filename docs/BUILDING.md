@@ -329,6 +329,12 @@ On the feature branch it intentionally runs only for a commit containing
 actual Home screen and focus transitions, plus the renderer log.
 
 The host-render capture is diagnostic and carries no PS5 installable package.
+Brand and selection colors MUST remain Eden Encore's own palette (neon violet,
+pink and lilac), using `assets/icon0.png` -> `ui/art/brand.tga` as the
+transparent header graphic. A cyan flower/wordmark is not an approved logo.
+Verified Nlib local-player capacity appears next to Play and the game metadata,
+never stranded at the far right of the artwork.
+
 The reference audit now verifies all seven recent slots and icon-bearing cyan
 navigation on the real host renderer, not just marker presence in C++ source.
 Its gameplay artwork uses an explicitly **synthetic preview fixture** generated
