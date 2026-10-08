@@ -47,6 +47,7 @@ Launcher::~Launcher()
     // The worker may still be reading files; cancel optional per-game
     // enumeration before joining, then keep Services alive through teardown.
     scan_cancel_.store(true, std::memory_order_release);
+    media_cancel_.store(true, std::memory_order_release);
     if (scan_.valid())
         scan_.wait();
     if (presence_scan_.valid())
@@ -198,6 +199,7 @@ void Launcher::launch(const std::string &file, const std::string &title, const s
     // Avoid wasting direct-memory and filesystem bandwidth on a list that
     // will be destroyed as the emulator takes over the console.
     scan_cancel_.store(true, std::memory_order_release);
+    media_cancel_.store(true, std::memory_order_release);
     selected_game_ = services_.game_path(file);
     launch_title_ = title;
     launch_cover_ = cover;
