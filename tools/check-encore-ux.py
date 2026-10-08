@@ -108,7 +108,7 @@ for rgb in ('0x55b7ff','0xff6b8a','0xe987ff','0x66e6a6'):
 assert 'physical_pad_icon' in mapping and 'draw_pad(c, icon' in mapping
 
 # Micro-DA: glass depth, double edge, focus bloom, active-vs-focus differentiation.
-for marker in ('Two-layer elevation','Inner hairline','Console-style focus','kFocusCore','kFocusBlue'):
+for marker in ('Two-layer elevation','Inner hairline','Eden Encore luminous focus','kFocusCore','kFocusBlue'):
     assert marker in widgets+read('headless/prosperoeden/pe/ui/theme.hpp'), marker
 
 # Nlib rich media: icon + banner + screenshots + metadata.
