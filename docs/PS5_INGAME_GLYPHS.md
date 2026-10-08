@@ -110,3 +110,36 @@ round trip, alongside other JIT/Vulkan regressions.
 
 Work and qualification are tracked in
 [Issue #7](https://github.com/niakw/Prospero.Eden-Encore/issues/7).
+
+### 8 October 2026 — Check installed artwork bytes, not only its filename
+
+The original implementation checked that the pack's manifest declared
+SHA-256 values and that each RomFS graphic file existed. This was
+insufficient: a file overwritten after installation could still be
+selected, even if its bytes no longer matched the verified pack.
+
+The launcher now computes **SHA-256 of each installed replacement file**
+once during game boot in streaming 32 KiB chunks and compares it with
+the pack's recorded `replacement_sha256`. Any mismatched, deleted,
+unreadable, symlinked or oversized asset disables the whole visual pack,
+leaving Nintendo prompts in place. The same admission path also refuses
+case-insensitive duplicate Title ID directories or competing mod names,
+because Eden's original mod loader could otherwise choose and overlay
+an ambiguous folder order.
+
+Strict scan bounds match the offline package tool: up to **128 MiB per
+graphic resource** and **512 MiB total**. No file hashing happens in
+the renderer's per-frame path. Host tests cover independent SHA-256
+vectors (empty, segmented `abc`, 1,000,000 bytes of `a`), actual
+on-disk streaming reads, post-install file tampering, symlink escape
+attempts and case-colliding mod paths.
+
+**Remaining trust boundary:** a malicious actor with write access to
+both the JSON manifest and graphic files can recompute an unsigned
+checksum; SHA-256 here provides corruption/integrity detection against
+the recorded manifest, NOT catalogue provenance authenticity. The
+original graphic file actually loaded from the selected base/update
+RomFS is NOT yet hashed on PS5. Files may also be changed between the
+launch verification and the emulator's later filesystem read; production
+qualification needs a stable filesystem snapshot or guarded asset
+lifecycle. No game-specific PlayStation graphics are bundled yet.
