@@ -19,6 +19,9 @@ void* AllocateMemoryPages(std::size_t) noexcept;
 void FreeMemoryPages(void*) noexcept;
 void* MapExecutableAlias(void*, std::size_t) noexcept;
 #ifdef EDEN_JIT_ALIAS_NATIVE
+void CountDenseJitDirect(void*, bool acquire) noexcept;
+#endif
+#ifdef EDEN_JIT_ALIAS_NATIVE
 void* ReserveSparseJitCode(std::size_t, void**) noexcept;
 bool CommitSparseJitCode(void*, std::size_t) noexcept;
 bool IsSparseJitCode(const void*) noexcept;
@@ -70,6 +73,7 @@ inline Xbyak::Allocator* EdenJitAllocator() {
             }
             writable = Common::AllocateMemoryPages(size);
             if (!writable) return nullptr;
+            Common::CountDenseJitDirect(writable, true);
             executable = Common::MapExecutableAlias(writable, size);
             if (!executable) {
                 std::fprintf(diagnostics, "EDEN_JIT_ALIAS bytes=%zu active=0 errno=%d\n", span, errno);
@@ -96,6 +100,7 @@ inline Xbyak::Allocator* EdenJitAllocator() {
                     // Release both views before reporting allocation failure.
                     if (munmap(executable, span) != 0) std::abort();
 #ifdef EDEN_JIT_ALIAS_NATIVE
+                    Common::CountDenseJitDirect(writable, false);
                     Common::FreeMemoryPages(writable);
 #else
                     if (munmap(writable, span) != 0) std::abort();
@@ -132,6 +137,7 @@ inline Xbyak::Allocator* EdenJitAllocator() {
                     }
                     if (munmap(pointer, mapping.size) != 0) std::abort();
 #ifdef EDEN_JIT_ALIAS_NATIVE
+                    Common::CountDenseJitDirect(mapping.writable, false);
                     Common::FreeMemoryPages(mapping.writable);
 #else
                     if (munmap(mapping.writable, mapping.size) != 0) std::abort();
@@ -140,6 +146,9 @@ inline Xbyak::Allocator* EdenJitAllocator() {
                     return;
                 }
             }
+#ifdef EDEN_JIT_ALIAS_NATIVE
+            Common::CountDenseJitDirect(pointer, false);
+#endif
             Common::FreeMemoryPages(pointer);
         }
         bool useProtect() const override { return false; }
