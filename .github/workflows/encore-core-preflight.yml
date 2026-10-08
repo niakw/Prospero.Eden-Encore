@@ -34,6 +34,7 @@ jobs:
           python3 -B tools/check-universal-emulation-policy.py
           python3 -B tools/check-guest-network-isolation.py
           python3 -B tools/check-fc27-hle-compat.py
+          python3 -B tools/check-game-liveness.py
           python3 -B tools/check-fc27-trace.py
           python3 -B tools/check-experimental-performance.py
           python3 -B tools/check-ps5-architecture.py
