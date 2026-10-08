@@ -36,9 +36,11 @@ for field in ("regs.src.depth", "regs.dst.depth", "regs.src.layer",
 assert "regs.src.depth = 1" not in fermi_new
 assert "regs.dst.depth = 1" not in fermi_new
 assert "src.size.depth = 1" not in fermi_new
-assert "LOG_WARNING(HW_GPU" in fermi_new
+assert "LOG_CRITICAL(Debug" in fermi_new
+assert fermi_new.count("AssertFailSoftImpl();") == 1
+assert fermi_new.index("AssertFailSoftImpl();") > fermi_new.index("if (count < 8)")
 assert "file(READ" in cmake and cmake.count("write_derived(") == 2
 assert 'target_sources(shader_recompiler PRIVATE' in cmake
 assert 'target_sources(video_core PRIVATE' in cmake
-print("PASS pinned GPU diagnostic patch: raw PRMT preserved throw, layered Fermi unchanged, eight bounded samples per opcode/source")
+print("PASS pinned GPU diagnostic patch: raw PRMT preserved throw, layered Fermi assert retained, eight bounded samples per opcode/source")
 print("NOTE graphics correctness and PS5 native CMake build remain to be qualified")
