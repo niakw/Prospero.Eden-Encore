@@ -411,3 +411,35 @@ still follows bounded retries under fragmentation. Monotonicity at
 2 MiB increments, physical budget and per-core address caps are host
 checked across 3–15 GiB input free blocks. PS5 hardware 13.60
 qualification and a real inter-worker JIT growth mechanism remain open.
+
+### Bounded in-game GPU activity evidence — FC27 investigation (8 October 2026)
+
+The previous `Stall::Disarm()` occurred immediately after the guest
+started: its diagnostic watchdog observed **boot**, but not an FC27
+match that later stopped progressing. The developer-only
+`EDEN_DEV_PROFILE && PS5_NATIVE` path now arms a second
+`GameLiveness::Probe` for actual game sessions and disarms it
+on game exit/exception. The existing **1 Hz** watchdog thread
+samples existing GPU dispatch/draw atomic totals; it does not insert
+polling, shader recompilation, locks or logs in the renderer/JIT
+hot path. No extra watchdog work is enabled in normal shipping builds.
+
+After witnessing GPU counters *advance during the current game*,
+30 seconds without further counted work yields an
+`EDEN_GAME_GPU_STALL_SUSPECT` diagnostic containing dispatches,
+draws, queue-full, guest sync and all four guest CPU phases.
+Subsequent reports can repeat every ~30 seconds, with a hard maximum
+of **four per game session**, even after progress resumes. Missing
+GPU instrumentation or a static zero counter produces **no alert**.
+An alert is **only a suspicion**: legitimately paused games, a
+minimized display, an inactive GPU probe or intentional suspend can
+produce the same observation. The collector never kills, restarts
+or changes the game's scheduling.
+
+The portable decision logic has a host C++20 test for unknown
+counters, clock rollback, true counter advancement, bounded reports
+and recovery. The actual developer PS5 watchdog header has a
+separate host-only compilation check using a fake upstream CPU clock.
+Neither source test substitutes for real PS5 firmware 13.60
+diagnostic logs, multi-source guest liveness traces or gameplay
+freeze reproduction. Issue #8 remains OPEN.
