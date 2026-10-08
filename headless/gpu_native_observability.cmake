@@ -152,6 +152,12 @@ set(fermi_layer_new [=[
         regs.src.width != 0 && regs.src.height != 0 &&
         regs.dst.width != 0 && regs.dst.height != 0 &&
         regs.src.format == regs.dst.format &&
+        static_cast<u64>(regs.src.pitch) >=
+            static_cast<u64>(regs.src.width) *
+                BytesPerBlock(PixelFormatFromRenderTargetFormat(regs.src.format)) &&
+        static_cast<u64>(regs.dst.pitch) >=
+            static_cast<u64>(regs.dst.width) *
+                BytesPerBlock(PixelFormatFromRenderTargetFormat(regs.dst.format)) &&
         regs.operation == Operation::SrcCopy && regs.clip_enable == 0;
     UNIMPLEMENTED_IF_MSG(regs.src.layer != 0 && !pitch_layer_copy,
                          "Source layer is not zero");
@@ -167,7 +173,7 @@ set(fermi_new [=[
         regs.src.layer == 0 && regs.dst.layer == 0 &&
         regs.dst.depth >= 1 && regs.operation == Operation::SrcCopy &&
         regs.clip_enable == 0;
-    if (regs.src.depth != 1 && !base_layer_3d_copy) {
+    if (regs.src.depth != 1 && !base_layer_3d_copy && !pitch_layer_copy) {
         static std::atomic<unsigned> depth_reports{0};
         const unsigned count = depth_reports.fetch_add(1, std::memory_order_relaxed);
         // Previously this logged the same generic warning for every
