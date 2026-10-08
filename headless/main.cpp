@@ -1782,7 +1782,9 @@ int main(int argc, char** argv) {
                 }
 #if defined(EDEN_DEV_PROFILE) && defined(PS5_NATIVE)
                 Eden::Stall::Trace("main running");
-                Eden::Stall::Disarm();
+                Eden::Stall::Disarm(); // boot supervision ends
+                Eden::Stall::ArmGame(); // separate bounded in-game GPU progress monitor
+                SCOPE_EXIT { Eden::Stall::DisarmGame(); }; // even when an exception unwinds
 #endif
                 const auto session_start = std::chrono::steady_clock::now();
                 [[maybe_unused]] double session_seconds = 0;  // guest-fault relaunch (PS5 only)
@@ -2003,6 +2005,9 @@ int main(int argc, char** argv) {
                         guest_exited ? "guest_exit_callback" : !completion->guest_fault.empty() ? "guest_fault" :
                         completion->captured ? "game_capture_shutdown" : "game_observation_complete");
                 }
+#if defined(EDEN_DEV_PROFILE) && defined(PS5_NATIVE)
+                Eden::Stall::DisarmGame(); // game wait ended; no false alerts during teardown
+#endif
                 input_worker.request_stop();
                 if (input_worker.joinable()) input_worker.join();
                 if (pad) {
