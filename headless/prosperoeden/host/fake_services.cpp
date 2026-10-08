@@ -253,8 +253,10 @@ ui::Home FakeServices::home()
         home.last_file = last.file;
         home.last_exists = true;
         home.last_title = last.name;
-        home.last_caption = last.language_note;
-        home.last_caption_warning = true;
+        // The normal UI specimen is not a warning state. Separate renders
+        // exercise missing ROM/firmware/errors so the baseline stays legible.
+        home.last_caption = "A world of islands, mysteries and discovery.";
+        home.last_caption_warning = false;
         home.last_cover = last.cover;
         home.last_hero = last.hero;
         home.last_intro = last.intro;
@@ -263,7 +265,7 @@ ui::Home FakeServices::home()
         home.last_addons = last.addons;
         home.last_language = last.language;
         for (const char *name : {"Echoes of the Valley", "Kart Carnival Deluxe", "Starfall Odyssey",
-                                 "Caf\xC3\xA9 Nocturne"})
+                                 "Caf\xC3\xA9 Nocturne", "Moss & Lantern", "Tiny Harbor", "Cloudline"})
         {
             const ui::Game &game = find(name);
             home.recents.push_back({game.file, game.name, game.cover});
