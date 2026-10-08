@@ -26,5 +26,11 @@ v=port.split("lazy_vulkan_cache_replacement = '''",1)[1].split("'''",1)[0]
 assert v.index('LoadVulkanPipelineCache(') < v.index('if (stop_loading.stop_requested())')
 assert v.index('if (stop_loading.stop_requested())') < v.index('    struct {')
 assert 'workers.WaitForRequests' not in v
+assert 'vulkan_cache_create_anchor' in port
+assert 'vulkan_cache_create_replacement' in port
+assert 'if shader_source.count(vulkan_cache_create_anchor) != 1:' in port
+assert 'if (data_size == 0) throw;' in port
+assert 'Ignoring incompatible driver pipeline cache' in port
+assert 'pipeline_cache_ci.initialDataSize = 0;' in port
 print("PASS Vulkan PS5 lazy shader cache lifecycle and non-destructive persistent worker pool")
 print("Driver cache / filesystem correctness on real PS5: NOT TESTED")
