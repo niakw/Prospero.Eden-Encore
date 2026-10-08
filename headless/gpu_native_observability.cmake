@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Native-only pinned Eden shader/GPU diagnostics. Missing Maxwell PRMT and
+# Native-only pinned Eden shader/GPU compatibility/diagnostics. Maxwell PRMT
 # unsupported Fermi2D layers must remain explicit; the existing software
 # swizzler handles only the z=0 base layer for depth>1 surfaces. Capture
 # eight examples before handling any other layer or Maxwell PRMT instruction.
@@ -16,13 +16,47 @@ void TranslatorVisitor::PRMT_imm(u64) {
 ]=])
 set(prmt_new [=[
 void TranslatorVisitor::PRMT_imm(u64 insn) {
-    static std::atomic<unsigned> samples{0};
-    const unsigned index = samples.fetch_add(1, std::memory_order_relaxed);
-    if (index < 8)
-        std::fprintf(stderr, "EDEN_GPU_PRMT_IMM raw=%016llx sample=%u\n",
-                     static_cast<unsigned long long>(insn), index + 1);
-    // Do NOT pretend the NVIDIA Maxwell permutation was implemented.
-    ThrowNotImplemented(Opcode::PRMT_imm);
+    // Maxwell SASS PRMT immediate (0x36c0) uses:
+    // A = R[8:15], B = R[39:46], selector = bits[20:35],
+    // mode = bits[48:50], D = R[0:7].
+    // Only mode 0 (index byte permutation) is translated here.
+    // Each nibble selects one of eight source bytes and its high bit
+    // requests *sign replication* of that byte, not its raw value.
+    const unsigned mode = static_cast<unsigned>((insn >> 48) & 7ULL);
+    if (mode != 0) {
+        static std::atomic<unsigned> unsupported_samples{0};
+        const unsigned index = unsupported_samples.fetch_add(1, std::memory_order_relaxed);
+        if (index < 8)
+            std::fprintf(stderr, "EDEN_GPU_PRMT_IMM raw=%016llx mode=%u sample=%u\n",
+                         static_cast<unsigned long long>(insn), mode, index + 1);
+        ThrowNotImplemented(Opcode::PRMT_imm);
+    }
+
+    const unsigned selector = static_cast<unsigned>((insn >> 20) & 0xffffULL);
+    const IR::U32 a{GetReg8(insn)};
+    const IR::U32 b{GetReg39(insn)};
+    IR::U32 result{ir.Imm32(0)};
+    for (unsigned output_byte = 0; output_byte < 4; ++output_byte) {
+        const unsigned nibble = (selector >> (output_byte * 4)) & 15u;
+        const IR::U32 source = (nibble & 4u) ? b : a;
+        const unsigned src_offset = (nibble & 3u) * 8u;
+        // When nibble[3] is set, the NVIDIA byte sign bit
+        // becomes either 0x00 or 0xff in the output.
+        const IR::U32 extracted = (nibble & 8u)
+            ? ir.BitFieldExtract(source, ir.Imm32(src_offset + 7u), ir.Imm32(1), true)
+            : ir.BitFieldExtract(source, ir.Imm32(src_offset), ir.Imm32(8), false);
+        const IR::U32 value = ir.BitwiseAnd(extracted, ir.Imm32(255));
+        const IR::U32 shifted = output_byte == 0 ? value :
+            ir.ShiftLeftLogical(value, ir.Imm32(output_byte * 8u));
+        result = ir.BitwiseOr(result, shifted);
+    }
+    X(static_cast<IR::Reg>(insn & 255ULL), result);
+
+    static std::atomic<unsigned> implemented_samples{0};
+    const unsigned implemented = implemented_samples.fetch_add(1, std::memory_order_relaxed);
+    if (implemented < 8)
+        std::fprintf(stderr, "EDEN_GPU_PRMT_IMM_INDEX raw=%016llx selector=%04x sample=%u\n",
+                     static_cast<unsigned long long>(insn), selector, implemented + 1);
 }
 ]=])
 string(FIND "${prmt_source}" "${prmt_old}" prmt_at)
