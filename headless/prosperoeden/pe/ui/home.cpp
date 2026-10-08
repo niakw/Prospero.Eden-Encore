@@ -725,7 +725,7 @@ void Launcher::draw_home(Canvas &c)
                            theme::kPanelEdge.with_alpha(0.58f));
         controller_icon(c, {players_chip.x + 10.0f, players_chip.y + 5.0f, 34.0f, 24.0f}, 1.0f);
         const std::string local_players =
-            fill(tr("Local players: {0}"), {std::to_string(hero_max_players)});
+            fill(tr("Max. players: {0}"), {std::to_string(hero_max_players)});
         text_shrink(c, local_players, players_chip.x + 51.0f,
                     baseline(players_chip.y, players_chip.h, 15.0f), 15.0f,
                     theme::kTitle, players_chip.w - 61.0f);
@@ -898,7 +898,7 @@ void Launcher::draw_home(Canvas &c)
     text_shrink(c, home_.system_status, 80.0f,
                 baseline(950.0f, 30.0f, 18.0f), 18.0f,
                 theme::kTitle, 420.0f);
-    text_shrink(c, std::string{tr("SHADER/JIT CACHES")} + ": " +
+    text_shrink(c, std::string{tr("CACHE")} + ": " +
                   (home_diagnostics_.shader_caches.empty() ?
                    std::string{tr("Unknown")} : home_diagnostics_.shader_caches),
                 520.0f, baseline(950.0f, 30.0f, 16.0f),
