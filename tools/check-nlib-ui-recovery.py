@@ -125,6 +125,19 @@ apply_entry = lib.split("void Launcher::apply_games(", 1)[1].split("void Launche
 assert "std::vector<Game> games = services_.games(&scan_cancel_);" in scan_entry
 assert "services_.mods(game.title_id)" in scan_entry
 assert "services_.mods_enabled(game.title_id)" in scan_entry
+# Each completed Nlib request changes one title. Do not execute an O(N*M)
+# full Home/library name/metadata reconciliation on a D-pad frame.
+assert "void sync_home_game(const Game& game);" in hdr
+assert "void Launcher::sync_home_game(const Game& game)" in lib
+selected_media = lib.split("void Launcher::finish_selected_media()", 1)[1].split(
+    "void Launcher::apply_games(", 1)[0]
+assert "sync_home_game(game);" in selected_media
+assert "name_home_games();" not in selected_media
+full_sync = lib.split("void Launcher::name_home_games()", 1)[1].split(
+    "void Launcher::", 1)[0]
+assert "for (const Game& game : games_)" in full_sync
+assert "sync_home_game(game);" in full_sync
+
 assert "catch (const std::bad_alloc&)" in scan_entry
 assert "catch (const std::exception& error)" in scan_entry
 assert "if (mod_scan_errors++ < 3)" in scan_entry
