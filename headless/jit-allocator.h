@@ -21,6 +21,7 @@ void* MapExecutableAlias(void*, std::size_t) noexcept;
 #ifdef EDEN_JIT_ALIAS_NATIVE
 void* ReserveSparseJitCode(std::size_t, void**) noexcept;
 bool CommitSparseJitCode(void*, std::size_t) noexcept;
+bool IsSparseJitCode(const void*) noexcept;
 void ReleaseSparseJitCode(void*) noexcept;
 #endif
 }
@@ -48,22 +49,24 @@ inline Xbyak::Allocator* EdenJitAllocator() {
             // the pages requested by BlockOfCode::EnsureMemoryCommitted.
             if (Eden::Experimental::sparse_jit_cache.load(std::memory_order_relaxed)) {
                 executable = Common::ReserveSparseJitCode(size, &writable);
-                if (!executable) {
-                    std::fprintf(diagnostics, "EDEN_JIT_ALIAS bytes=%zu active=0 sparse=1 errno=%d\n",
-                                 span, errno);
-                    return nullptr;
+                if (executable) {
+                    auto* pointer = static_cast<std::uint8_t*>(executable);
+                    try {
+                        std::lock_guard lock(mutex);
+                        mappings.emplace(pointer, Mapping{writable, span, true});
+                    } catch (...) {
+                        Common::ReleaseSparseJitCode(executable);
+                        return nullptr;
+                    }
+                    std::fprintf(diagnostics, "EDEN_JIT_ALIAS rx=%p rw=%p bytes=%zu active=1 sparse=1\n",
+                                 executable, writable, span);
+                    return pointer;
                 }
-                auto* pointer = static_cast<std::uint8_t*>(executable);
-                try {
-                    std::lock_guard lock(mutex);
-                    mappings.emplace(pointer, Mapping{writable, span, true});
-                } catch (...) {
-                    Common::ReleaseSparseJitCode(executable);
-                    return nullptr;
-                }
-                std::fprintf(diagnostics, "EDEN_JIT_ALIAS rx=%p rw=%p bytes=%zu active=1 sparse=1\n",
-                             executable, writable, span);
-                return pointer;
+                // Reserving two large virtual ranges may fail under address-space
+                // fragmentation. Revert this individual JIT to the already
+                // qualified dense mapper rather than failing game startup.
+                std::fprintf(diagnostics, "EDEN_JIT_SPARSE_FALLBACK bytes=%zu errno=%d mode=dense\n",
+                             span, errno);
             }
             writable = Common::AllocateMemoryPages(size);
             if (!writable) return nullptr;
