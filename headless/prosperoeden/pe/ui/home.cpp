@@ -593,28 +593,36 @@ void Launcher::draw_home(Canvas &c)
     list.gradient_rect({0.0f, 325.0f, 1920.0f, 755.0f}, 0.0f,
                        theme::kScrim.with_alpha(0.0f),
                        theme::kBase.with_alpha(0.96f));
-    list.gradient_rect({0.0f, 0.0f, 1920.0f, 124.0f}, 0.0f,
-                       theme::kBase.with_alpha(0.40f),
+    // The header must survive bright Nlib skies: fade, never an opaque
+    // navigation bar or a game-specific darkness adjustment.
+    list.gradient_rect({0.0f, 0.0f, 1920.0f, 175.0f}, 0.0f,
+                       theme::kBase.with_alpha(0.73f),
                        theme::kBase.with_alpha(0.0f));
 
     text(c, hero_recent != nullptr ? tr("SELECTED GAME") : tr("CONTINUE PLAYING"),
          90.0f, baseline(133.0f, 30.0f, theme::kSmall),
          theme::kSmall, theme::kLimePale, Align::left, 3.0f);
-    // Single line only: game titles may be long and MUST NOT overlap controls.
-    text_shrink(c, hero_file.empty() ? tr("Your next adventure") : hero_title,
-                90.0f, baseline(175.0f, 96.0f, 76.0f), 76.0f,
-                theme::kTitle, 910.0f, Align::left, 0.0f, 0.58f);
+    // Long localized names get two readable lines rather than a forced
+    // "Breath of the W..." ellipsis. All positions stay above Play at y=390.
+    const std::string title_label =
+        hero_file.empty() ? std::string{tr("Your next adventure")} : hero_title;
+    if (text_width(c, title_label, 64.0f) > 1030.0f)
+        text_block(c, title_label, 90.0f, baseline(166.0f, 54.0f, 51.0f),
+                   51.0f, 53.0f, theme::kTitle, 1050.0f, 2, 0.87f);
+    else
+        text_shrink(c, title_label, 90.0f, baseline(175.0f, 96.0f, 76.0f),
+                    76.0f, theme::kTitle, 1030.0f, Align::left, 0.0f, 0.70f);
     const std::string hero_caption =
         hero_file.empty() ? std::string{tr("Choose a game from your library.")} :
         !hero_intro.empty() ? hero_intro :
         hero_recent != nullptr ? std::string{tr("Recently played")} : home_.last_caption;
     const bool hero_caption_warning = hero_recent == nullptr && home_.last_caption_warning;
     if (hero_caption_warning)
-        notice(c, hero_caption, 90.0f, baseline(285.0f, 34.0f, theme::kText24),
-               theme::kText24, theme::kWarning, 870.0f, true);
+        notice_block(c, hero_caption, 90.0f, baseline(280.0f, 27.0f, 21.0f),
+                     21.0f, 25.0f, theme::kWarning, 1030.0f, 2, true);
     else
-        text_shrink(c, hero_caption, 90.0f, baseline(285.0f, 35.0f, 23.0f),
-                    23.0f, theme::kBody, 875.0f);
+        text_block(c, hero_caption, 90.0f, baseline(280.0f, 27.0f, 21.0f),
+                   21.0f, 25.0f, theme::kBody, 1030.0f, 2, 0.86f);
     int hero_mods = hero_recent == nullptr ? home_.last_mods : 0;
     int hero_mods_on = hero_recent == nullptr ? home_.last_mods_on : 0;
     for (const Game &game : games_)
@@ -628,8 +636,8 @@ void Launcher::draw_home(Canvas &c)
         text_shrink(c,
                     fill(tr("Add-ons: {0}  /  Language: {1}"),
                          {addons_line(hero_addons, hero_mods, hero_mods_on), hero_language}),
-                    90.0f, baseline(332.0f, 28.0f, theme::kSmall), theme::kSmall,
-                    theme::kMeta, 875.0f);
+                    90.0f, baseline(341.0f, 25.0f, theme::kSmall), theme::kSmall,
+                    theme::kMeta, 1050.0f);
 
     const char *first = hero_ready ? tr("Play") : tr("Open library");
     const Rect continue_rect{90.0f, 390.0f, 348.0f, 70.0f};
@@ -713,9 +721,13 @@ void Launcher::draw_home(Canvas &c)
         controller_icon(c, {players_chip.x + 10.0f, players_chip.y + 5.0f, 34.0f, 24.0f}, 1.0f);
         const std::string local_players =
             fill(tr("Max. players: {0}"), {std::to_string(hero_max_players)});
-        text_shrink(c, local_players, players_chip.x + 51.0f,
+        // Centre the label within the space *after* its gamepad glyph, not
+        // left-aligned against the badge edge.
+        const Rect label_area{players_chip.x + 48.0f, players_chip.y,
+                              players_chip.w - 56.0f, players_chip.h};
+        text_shrink(c, local_players, label_area.x + label_area.w * 0.5f,
                     baseline(players_chip.y, players_chip.h, 15.0f), 15.0f,
-                    theme::kTitle, players_chip.w - 61.0f);
+                    theme::kTitle, label_area.w - 4.0f, Align::center);
     }
     end_band();
 
