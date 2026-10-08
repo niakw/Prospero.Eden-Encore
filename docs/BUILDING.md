@@ -334,6 +334,9 @@ pink and lilac), using `assets/icon0.png` -> `ui/art/brand.tga` as the
 transparent header graphic. A cyan flower/wordmark is not an approved logo.
 Verified Nlib local-player capacity appears next to Play and the game metadata,
 never stranded at the far right of the artwork.
+The native render check additionally confirms the app logo texture is visibly
+composited in the header and that optional player capacity leaves no empty gap.
+
 
 The reference audit now verifies all seven recent slots and icon-bearing cyan
 navigation on the real host renderer, not just marker presence in C++ source.
