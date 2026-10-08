@@ -7,6 +7,7 @@ lib = src("headless/prosperoeden/pe/ui/library.cpp")
 home = src("headless/prosperoeden/pe/ui/home.cpp")
 hdr = src("headless/prosperoeden/pe/ui/launcher.hpp")
 nav = src("headless/prosperoeden/pe/ui/launcher.cpp")
+settings_src = src("headless/prosperoeden/pe/ui/settings.cpp")
 assert "bool ValidNlibTga(" in svc
 assert "if (!ValidNlibTga(path))" in svc
 assert "const bool sparse_metadata = current_metadata_cache" in svc
@@ -136,6 +137,26 @@ assert "services_.mods_enabled(game.title_id)" in scan_entry
 # Each completed Nlib request changes one title. Do not execute an O(N*M)
 # full Home/library name/metadata reconciliation on a D-pad frame.
 assert "void sync_home_game(const Game& game);" in hdr
+# Regression: diagnostics() recursively counts cache/log files. It once
+# ran on every frame in TWO draw routines, and on initial Home construction.
+assert "services_.diagnostics()" not in settings_src
+assert settings_src.count("const DiagnosticsInfo& info = home_diagnostics_;") == 2
+assert "start_diagnostics();" in settings_src
+assert "std::future<DiagnosticsInfo> diagnostics_scan_;" in hdr
+assert "bool diagnostics_refresh_pending_ = false;" in hdr
+assert "void Launcher::start_diagnostics()" in lib
+assert "void Launcher::finish_diagnostics()" in lib
+assert "diagnostics_scan_ = std::async(std::launch::async" in lib
+assert "diagnostics_scan_.wait_for(std::chrono::seconds(0))" in lib
+assert "if (!diagnostics_refresh_pending_)" in lib
+assert "if (diagnostics_refresh_pending_)" in lib
+read_home_entry = lib.split("void Launcher::read_home()", 1)[1].split(
+    "void Launcher::check_games_present()", 1)[0]
+assert "start_diagnostics();" in read_home_entry
+assert "home_diagnostics_ = services_.diagnostics();" not in read_home_entry
+assert "finish_diagnostics();" in nav
+assert "diagnostics_scan_.wait();" in nav
+
 # Once a user launches a game, native Nlib workers must not start another
 # queued HTTP request or JPEG/TGA conversion. Already in-flight HTTP remains
 # non-preemptive and workers are joined before Launcher/Services destruction.
