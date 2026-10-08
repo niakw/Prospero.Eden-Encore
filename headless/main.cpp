@@ -916,6 +916,10 @@ int main(int argc, char** argv) {
             std::printf("EDEN_STAGE backend=%s phase=%s mono_ns=%lld\n",
                         Eden::BackendName(backend), name, static_cast<long long>(mono_ns));
             ps5_opengl_heap_snapshot(name, 0);
+            // These are lifecycle points, not render-frame callbacks.
+            if (std::string_view{name} == "game_loaded" ||
+                std::string_view{name} == "core_shutdown")
+                Eden::Performance::ReportDirectMemoryState(name);
             std::fflush(stdout);
 #else
             const auto heap = mallinfo2();
