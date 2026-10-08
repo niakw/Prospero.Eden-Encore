@@ -66,6 +66,14 @@ assert "reclaimed < kMaxTextureReclaimsPerFrame" in texture_cpp
 # The old cache collected/sorted a vector of 160+ records every frame and
 # erased the first item from a vector queue. Neither belongs in D-pad input.
 assert "std::deque<std::string> queue_;" in texture_h
+# Home controller *presence* is optional UI metadata; do not poll native
+# device status at 60Hz while held-button/D-pad repeat animations run.
+assert "float controller_poll_elapsed_ = 0.0f;" in hdr
+assert "controller_poll_elapsed_ += dt;" in home
+assert "controller_poll_elapsed_ >= 0.10f" in home
+assert "poll ? (services_.controllers() & 0xfu) : controllers_" in home
+assert "controller_lit_[index].update(dt, 10.0f);" in home
+
 assert "queue_.pop_front();" in texture_cpp
 assert "queue_.erase(queue_.begin());" not in texture_cpp
 assert "std::sort(order.begin(), order.end());" not in texture_cpp
