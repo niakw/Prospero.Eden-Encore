@@ -66,7 +66,7 @@ int main() {
     // is enough memory for BOTH the baseline code and its physical headers.
     constexpr std::size_t baseline = 656ull * kMiB;
     constexpr std::size_t physical_headers = 4 * kLargePage;
-    const auto threshold = (kHostReserve + 2 * (baseline + physical_headers)) / kLargePage * kLargePage;
+    const auto threshold = (kHostReserve + 4 * (baseline + physical_headers)) / kLargePage * kLargePage;
     const auto borderline = ChooseJitMemoryPlan(false, true, threshold);
     assert(!borderline.expanded);
     assert(borderline.a64 == kA64Baseline);
@@ -86,15 +86,37 @@ int main() {
     // Once core 0 hits the single-arena addressing ceiling, guest JIT
     // capacity that would otherwise be wasted goes to cores 1-2. The
     // higher-capacity plan must STILL obey the unchanged physical budget.
+    // Real crash trace, 8 October 2026: 11826 MiB largest free pool at
+    // launch; old half-pool admission 4376 MiB dense JIT; >440 MiB direct
+    // allocation failed later with just 38 MiB contiguous free.
+    constexpr std::size_t crash_free = 11826ull * kMiB;
+    const auto crash_prevention = ChooseJitMemoryPlan(false, true, crash_free);
+    assert(crash_prevention.expanded);
+    assert(crash_prevention.admission_budget_bytes < 2500ull * kMiB);
+    assert(crash_prevention.admission_budget_bytes > 1800ull * kMiB);
+    assert(crash_free - kHostReserve - crash_prevention.admission_budget_bytes >=
+           ((crash_free - kHostReserve) * 3) / 4);
+    for (const auto* arenas : {&crash_prevention.a64, &crash_prevention.a32}) {
+        std::size_t dense = physical_headers;
+        for (auto bytes : *arenas) dense += bytes;
+        assert(dense <= crash_prevention.admission_budget_bytes);
+    }
+    // We still use ALL extra physical JIT capacity proportionally for all
+    // titles rather than retaining an arbitrary per-game A/B/C ceiling.
     const auto ten = ChooseJitMemoryPlan(false, true, 10ull * 1024 * kMiB);
-    assert(ten.a32[0] == kSingleArenaAddressingLimit);
-    const auto ten_growth = ten.admission_budget_bytes - baseline - physical_headers;
-    const auto ten_original_core1 = std::size_t{kA32Baseline[1]} +
-        ((ten_growth / 4) / kLargePage) * kLargePage;
-    assert(ten.a32[1] > ten_original_core1);
     const auto twelve = ChooseJitMemoryPlan(false, true, 12ull * 1024 * kMiB);
-    assert(twelve.a64[0] == kSingleArenaAddressingLimit);
-    assert(twelve.a64[1] == kSingleArenaAddressingLimit);
+    assert(ten.a32[0] > seven.a32[0]);
+    assert(twelve.a64[0] > ten.a64[0]);
+    // Synthetic larger pools still exercise the Xbyak per-arena addressing
+    // limit and redistribution of physical surplus to other guest workers.
+    const auto twenty = ChooseJitMemoryPlan(false, true, 20ull * 1024 * kMiB);
+    assert(twenty.a32[0] == kSingleArenaAddressingLimit);
+    const auto twenty_growth = twenty.admission_budget_bytes - baseline - physical_headers;
+    const auto twenty_original_core1 = std::size_t{kA32Baseline[1]} +
+        ((twenty_growth / 4) / kLargePage) * kLargePage;
+    assert(twenty.a32[1] > twenty_original_core1);
+    assert(twenty.a64[0] == kSingleArenaAddressingLimit);
+    assert(twenty.a64[1] <= kSingleArenaAddressingLimit);
     // Two-megabyte granularity regression: no single worker's allocation
     // may SHRINK because another worker just reached its memory ceiling.
     auto last = ChooseJitMemoryPlan(false, true, kHostReserve);
