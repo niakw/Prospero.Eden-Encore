@@ -74,6 +74,11 @@ The isolated `dev/ps5-sparse-jit` branch now includes:
   so true on-demand multi-arena growth remains separate unfinished work.
 - PS5-native Vulkan shader worker budgeting and one-time worker-count receipt,
   not yet measured on hardware. A smaller pool may slow shader warmup.
+- Global **on-disk shader cache retention**: RADV quota follows its actual
+  backing filesystem's free-space budget rather than 256 MiB; OpenGL cache
+  records are pruned oldest-first only when writable storage is genuinely
+  short, not at an unconditional 64 MiB ceiling. Neither policy changes GPU
+  RAM capacity or guarantees shader warmup improvements.
 - GPU/direct-memory snapshots at core initialization and shutdown, with a conservative
   distinction between largest contiguous block and total-free upper bound.
   No unproven GPU budget increase has been applied.
