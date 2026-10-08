@@ -1,133 +1,112 @@
-# PlayStation glyph artwork *inside games* — verified RomFS route
+# PlayStation-style buttons drawn INSIDE Nintendo Switch games
 
-## Scope — entirely separate from button mapping
+## Same approach as encore-overrides; no Build ID or EdiZon required
 
-The existing controller mapping already translates DualSense buttons to
-emulated Switch actions. **Do not change that mapping.** This work targets
-the Nintendo face-button artwork displayed *inside* games, replacing it
-with compatible PlayStation art where legally supplied, game-specific
-replacement resources exist.
+The user already has DualSense **input mapping**. This project changes
+the **graphics drawn by the game**: Nintendo's A/B/X/Y artwork becomes
+compatible PlayStation Cross/Circle/Square/Triangle artwork when verified
+files exist. It does NOT remap game actions or modify the approved launcher.
 
-Different Switch games render button hints using textures, atlases,
-fonts, layout data or shaders. Merely choosing a controller profile cannot
-rewrite game-owned artwork. There is no trustworthy one-size-fits-all
-A/B/X/Y -> PlayStation transformation at the input layer.
-
-Eden already supports RomFS overlays through its Mods directory:
-mods/<TITLE_ID>/<MOD_NAME>/romfs/<GAME_RESOURCE_PATH>.
-The new installer uses the mod name "Eden Encore PS Glyphs" and never
-distributes an original Nintendo resource.
-
-## What is implemented
-
-tools/ps-glyph-pack.py validates a legal replacement pack whose manifest
-declares exact 16-hex title ID, 40/64-hex program build ID, the author's
-rights declaration, and original + replacement SHA-256 per RomFS asset.
-One possible schema, with **fictional identifiers/hashes, not a real game**:
-
-    {
-      "schema": 1,
-      "title_id": "0100123456789000",
-      "build_id": "0123456789ABCDEF0123456789ABCDEF01234567",
-      "rights": "Original replacement art, redistribution permitted",
-      "files": [{
-        "romfs_path": "UI/Shared/controller_prompt.bntx",
-        "replacement": "files/dual-sense-controller_prompt.bntx",
-        "original_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        "replacement_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-      }]
-    }
-
-Verification, using a legitimately dumped and version-matched original
-RomFS directory for source hashes, plus legally created replacement art:
-
-    python3 tools/ps-glyph-pack.py verify \
-      --pack /path/to/legal-glyph-pack \
-      --original-romfs /path/to/matching-romfs \
-      --title-id 0100123456789000 \
-      --build-id 0123456789ABCDEF0123456789ABCDEF01234567
-
-After independent verification of the selected game's build ID:
-
-    python3 tools/ps-glyph-pack.py install \
-      --pack /path/to/legal-glyph-pack \
-      --original-romfs /path/to/matching-romfs \
-      --mods-root /path/to/game-files/mods \
-      --title-id 0100123456789000 \
-      --build-id 0123456789ABCDEF0123456789ABCDEF01234567
-
-The installer checks all original/replacement hashes and rejects bad
-title IDs, mismatched build IDs, path traversal, symlinks, duplicates,
-unexpected metadata and excessive file sizes. It stages verified
-resources in a temporary sibling directory before renaming to the
-LayeredFS mod. Provenance metadata is stored OUTSIDE the romfs/
-folder. It refuses to overwrite any existing pack. The normal Mods
-switch can disable the pack without altering button semantics.
-
-The installer needs an externally supplied actual build ID and an
-original RomFS tree. It does NOT decrypt the running title, inspect
-the game's live version, or generate a PlayStation prompt atlas
-automatically. Unverified game updates can change files after pack
-installation: disable/remove a stale pack until that version is verified.
-
-## Remaining gates for a production all-games feature
-
-1. Identify and legally source original replacement assets for each
-   game/firmware build; no unlicensed or synthetic claims of real coverage.
-2. Retrieve the actual running program build ID from Eden BEFORE the
-   mod filesystem is composed; fail closed if version is unknown or
-   source asset signature does not match. Do not auto-enable packs merely
-   from title ID or artist-supplied metadata.
-3. Build a verified catalogue, user opt-out, and automatic pack delivery
-   without requiring manual file transfer; clearly expose fallback state.
-4. Test native gameplay, menus, overlays, and button-art correctness across
-   the title's scenes. No input remapping or frame-path OCR/shader interception.
-5. PS5 firmware 13.60 build/game testing, performance, safe rollback,
-   license audit, and actual screenshot evidence before making any claim
-   that in-game PlayStation symbols are active.
-
-Synthetic host-only checks are in tools/check-ps-glyph-packs.py.
-Issue tracking: https://github.com/niakw/Prospero.Eden-Encore/issues/7
-
-## Simpler Encore-overrides integration (2026-10-08)
-
-The catalogue is now maintained alongside the existing profiles in
+The catalogue is maintained in
 [niakw/encore-overrides/glyphs/manifest.json](https://github.com/niakw/encore-overrides/blob/main/glyphs/manifest.json).
-It uses the same authoring model: one versioned JSON, per-title rules, a
-generated C++ snapshot and an optional runtime JSON update.
+It is a **schema_version 2** JSON with a revision and per-game
+`title_id` + `update_version` rules. The same existing
+`tools/sync-encore-overrides.py --source /path/to/encore-overrides`
+command regenerates the C++ snapshot in Eden Encore (and a local JSON
+copy); no second user workflow is necessary. Runtime configurations
+can carry newer revisions at
+`config/encore-glyph-overrides.json`.
 
-The **existing** full profile sync now includes glyph rules automatically:
+### Why not a Build ID?
 
-    python3 tools/sync-encore-overrides.py --source /path/to/encore-overrides
+The Build ID is tied to a game **executable compilation**, and often
+changes after updates. It is important for executable-address-based
+cheats, where EdiZon can display it, but is not appropriate as a mandatory
+identifier for *RomFS graphic assets*. Users are never asked for one.
 
-Or sync only visual rules without changing performance profiles:
+A compatible graphics pack uses the game's Title ID and update display
+version, with SHA-256 fingerprints of the exact **original graphics
+resources** and artist-owned **replacement resources**. Those bytes are
+checked **once at staging**. The live launcher additionally checks that
+the installed pack's declared title/update matches its current known
+title/update before enabling the existing LayeredFS mod.
 
-    python3 tools/sync-glyph-overrides.py --source /path/to/encore-overrides
+### Game assets
 
-This updates data/glyph-overrides.json and
-headless/glyph_overrides_generated.h. The app loads the embedded snapshot,
-or a newer valid config/encore-glyph-overrides.json (never an older revision).
+The existing loader supports:
 
-An installed, verified `Eden Encore PS Glyphs` graphics mod is selected
-*automatically at launch* only if the title ID, **latest scanned update
-display version** and staged pack's asserted build ID match a curated rule.
-Unsupported/mismatched packs are disabled, preserving Nintendo artwork.
-The pack must still exist: the catalogue alone does not create replacement
-textures, and a claimed build ID is **not independently verified from the
-running NSO yet**.
+    mods/<TITLE_ID>/Eden Encore PS Glyphs/romfs/<GAME_RESOURCE_PATH>
 
-Visual style is independent of controller mappings. In
-prosperoeden.json:
+A proposed author/maintainer manifest, with **fictional hashes/IDs**:
 
-    {"appearance":{"ingame_button_glyphs":"playstation"}}
+```json
+{
+  "schema": 2,
+  "title_id": "0100123456789000",
+  "update_version": "v1.2.0",
+  "rights": "Original PlayStation-style artwork with redistribution rights",
+  "files": [{
+    "romfs_path": "UI/Shared/controller_prompt.bntx",
+    "replacement": "files/controller-prompt-ps.bntx",
+    "original_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "replacement_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  }]
+}
+```
 
-Use "switch" for original Nintendo artwork. A single title may override
-that setting under games/TITLE/ingame_button_glyphs. Default is PlayStation
-*preferred*, with Nintendo fallback for unsupported titles. This is a
-configuration-level choice, **not yet a new launcher setting/screen**.
-The approved home design was deliberately not reworked.
+The author supplies already-version-matched original RomFS assets and
+their legally distributable replacements. No Nintendo copyrighted atlas
+is re-shipped. An author/maintainer can verify and stage once with:
 
-Source-only tests compile the actual selector, verify the title/update and
-mod evidence gates, reject unknown versions, check settings persistence and
-prove that no controller mapping changes. No hot-path graphics search or
-OCR is used.
+```sh
+python3 tools/ps-glyph-pack.py verify \
+  --pack /path/to/artist-pack \
+  --original-romfs /path/to/matching-original-romfs \
+  --title-id 0100123456789000
+
+python3 tools/ps-glyph-pack.py install \
+  --pack /path/to/artist-pack \
+  --original-romfs /path/to/matching-original-romfs \
+  --mods-root /path/to/eden-game-files/mods \
+  --title-id 0100123456789000
+```
+
+**These are pack-maintainer actions, not steps the player must perform.**
+The last product step will be verified automatic catalogue + asset delivery.
+
+### Runtime selection
+
+At game boot (never in the per-frame renderer), Eden checks:
+
+1. User visual style preference: PlayStation preferred or Nintendo.
+2. Curated title/update rule (generated snapshot or newer runtime JSON).
+3. Known running title/update display version, installed verified pack and
+   per-title Mods opt-out.
+4. Pack provenance/title/update and the presence of expected graphic files.
+
+Missing, unknown or mismatched means **Nintendo graphics**. Safe Launch
+disables all mods. Global JSON setting
+`appearance/ingame_button_glyphs` accepts `playstation` (preferred,
+default) and `switch`; a per-title key
+`games/<TITLE_ID>/ingame_button_glyphs` can override it.
+
+The host-only CI compiles the real C++ selector and tests synthetic
+RomFS resource verification, compatibility rejections and the settings
+round trip, alongside other JIT/Vulkan regressions.
+
+### Still not qualified
+
+- **Zero verified game-specific PlayStation artwork packs so far.**
+  A central rule is not a resource generator.
+- Exact base-game version detection and some unscanned updates need
+  additional metadata support. An unknown version stays in Nintendo mode.
+- The installer checks original resource hashes at packaging/staging,
+  **not** the active game's decrypted resource bytes at native load.
+  Therefore a similarly labelled but changed RomFS asset is not yet
+  independently attested on console.
+- Real FC27 menu/match graphics, other title scenes, runtime performance,
+  automatic distribution and rollback need PS5 firmware 13.60 testing.
+  No shader/OCR-based universal runtime icon rewriting is implemented.
+
+Work and qualification are tracked in
+[Issue #7](https://github.com/niakw/Prospero.Eden-Encore/issues/7).
