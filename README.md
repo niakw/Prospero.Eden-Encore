@@ -115,6 +115,15 @@ post-destruction leak snapshot. A mocked-kernel host gate is present,
 but actual firmware 13.60 JIT aliasing and OOM recovery remain untested.
 Do not treat this as an installed or completed dynamic multi-arena JIT.
 
+**Further developer-branch improvements — all games, not title-specific:**
+Dynarmic A64/A32 starts can retry smaller code-cache capacities when only
+physical allocation fails, preserving real compiler errors. PS5 Vulkan now
+initializes persistent per-title guest shader and driver pipeline caches
+without blocking on a full shader-rebuild pass or stopping the compiler
+worker pool. A driver-cache blob rejected after a RADV update falls back
+to a fresh cache. These are **source-only**, not in the installed app;
+native PS5 build, shader persistence and gameplay profiling remain necessary.
+
 ## Changes in Encore R1
 
 Prospero.Eden Encore R1 turns the proven ProsperoEden 1.000.040 base into a PS5 13.60-focused release:
