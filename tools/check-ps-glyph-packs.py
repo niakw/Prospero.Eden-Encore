@@ -188,5 +188,5 @@ with tempfile.TemporaryDirectory(prefix="eden-glyph-packs-host-") as folder:
     assert 'Eden::Mods::List(Eden::AssetsPath("mods"), title)' in main
     assert 'Settings::values.disabled_addons[title] = mods_off' in main
 
-print("PASS legal PS glyph pack manifest: verified title/build/original+replacement SHA256, LayeredFS install, atomic stage, refusal/rollback")
-print("IN-GAME artwork support: requires legitimate per-title resources and on-console title/build verification")
+print("PASS legal PS glyph pack manifest: verified title/update/original+replacement SHA256, LayeredFS install, atomic stage, refusal/rollback")
+print("IN-GAME artwork support: requires legitimate per-title resources and console version and active original graphic fingerprint qualification")
