@@ -66,6 +66,10 @@ assert "home_diagnostics_.shader_caches" in home
 assert "home_diagnostics_.storage_root" in home
 for fabricated in ("CPU 17%", "GPU 28%", "60 FPS", "48.0 GB / 64.0 GB"):
     assert fabricated not in home
-assert "hero_file.empty() ? tr(" in home
+assert 'hero_file.empty() ? std::string{tr("Your next adventure")}' in home
+assert 'text_block(c, title_label, 90.0f' in home
+assert 'tr("Max. players: {0}")' in home
+assert 'label_area.w - 4.0f, Align::center' in home
+assert 'theme::kBase.with_alpha(0.73f)' in home
 assert 'if (image.missing && c.textures.brand() != 0)' not in (ui / "widgets.cpp").read_text()
 print("Sole Home screenshot geometry + dynamic media contract: PASS")
