@@ -476,7 +476,15 @@ void Launcher::press_home(Key key)
 
 void Launcher::update_controllers(float dt)
 {
-    const unsigned now = services_.controllers() & 0xfu;
+    // Controller join/leave status is informational, not a game input
+    // sample. Poll its native service at 10 Hz, while all icon springs
+    // and actual controller button input continue at the display rate.
+    // This removes repeated native status calls from most UI frames.
+    controller_poll_elapsed_ += dt;
+    const bool poll = !controllers_known_ || controller_poll_elapsed_ >= 0.10f;
+    const unsigned now = poll ? (services_.controllers() & 0xfu) : controllers_;
+    if (poll)
+        controller_poll_elapsed_ = 0.0f;
     bool joined = false;
     bool left = false;
     for (int player = 0; player < 4; ++player)
