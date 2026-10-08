@@ -45,3 +45,50 @@ FC27 falls to 14–20 FPS, so 60-FPS synthesis is not an appropriate substitute
 for fixing guest stutter. Shared-JIT, compile-ahead, unsafe CPU/DMA and inline
 exclusives are still OFF by default. Require an explicit user-approved build,
 standalone validation, and PS5 hardware A/B before promoting any setting.
+
+## Sparse JIT memory (development branch only — not built or PS5-qualified)
+
+The dense PS5 code allocator used by A/B/C/D commits **all** requested direct
+memory at JIT creation, even when a small game uses only a fraction. This branch
+prototypes a different backing scheme while retaining stable RX and RW views:
+
+- `jit_memory: "sparse"` (explicit opt-in) reserves both virtual views, but
+  commits 2 MiB *physical direct-memory* chunks only when Dynarmic calls
+  `BlockOfCode::EnsureMemoryCommitted` before emitting code. It does not rely
+  on execution-time page faults, change guest timing, or move existing code.
+- `jit_cache: "elastic"` implies sparse memory and reserves a **4 GiB virtual
+  capacity ceiling total** for A64 core 0/1/2 (1536/1280/1280 MiB). This is
+  not 4 GiB of immediately committed physical RAM; unfilled capacity remains
+  virtual. Each cache remains below 2 GiB to preserve x64 rel32 assumptions.
+- The qualified A/B/C/D experiments remain dense and unchanged unless the
+  new `jit_memory` option is explicitly enabled. A32/core3 retain their
+  default capacity sizes, although their direct backing is also incremental
+  while sparse mode is enabled.
+- During a session, committed chunks are retained across cache clears to keep
+  JIT pointers safe. All owned chunks and both reservations are released only
+  when the corresponding JIT is destroyed.
+- Diagnostic records: `EDEN_JIT_SPARSE_RESERVE`, `EDEN_JIT_SPARSE_RELEASE`,
+  `EDEN_JIT_SPARSE_OOM`, and `EDEN_JIT_SPARSE_COMMIT_FAILED`.
+
+**Do not activate the new flags yet on console.** This is source-only work;
+the MAP_FIXED dual-alias path, executable permissions, physical-memory exhaustion,
+fragmentation, teardown and repeated FC27 stress tests still require native
+compilation and real hardware qualification. A failed mid-session direct-memory
+commit deliberately fails closed rather than executing a partially mapped cache;
+it is **not yet** a production-safe auto-sizing policy. 4 GiB is an upper bound,
+not a recommended physical budget.
+
+Example for a future separately qualified build (NOT for the current A/B/C/D app):
+
+```json
+{
+  "games": {
+    "0100C49025D3E000": {
+      "jit_cache": "elastic",
+      "jit_memory": "sparse",
+      "cpu_placement": "off",
+      "vulkan_pacing": "trace"
+    }
+  }
+}
+```
