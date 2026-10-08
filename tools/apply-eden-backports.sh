@@ -323,6 +323,12 @@ PYSM
 
 apply_one "$root/headless/backports/eden-ps5-hid-watchdog.patch" "$eden/.encore-backport-ps5-hid-watchdog.sha256" validate_ps5_hid_watchdog
 apply_one "$root/headless/backports/eden-ps5-net-user-agent.patch" "$eden/.encore-backport-ps5-net-user-agent.sha256" validate_ps5_net_user_agent
+validate_launcher_http_budget() {
+    grep -Fq 'const std::size_t timeout_seconds = url == "https://api.nlib.cc" ? 3 : 5;' "$eden/src/common/net/net.cpp" || {
+        echo "Launcher network response-time budget missing" >&2; return 1;
+    }
+}
+apply_one "$root/headless/backports/eden-ps5-launcher-fast-http.patch" "$eden/.encore-backport-launcher-http.sha256" validate_launcher_http_budget
 apply_one "$root/headless/backports/eden-ps5-bounded-logging.patch" "$eden/.encore-backport-ps5-bounded-logging.sha256" validate_ps5_bounded_logging
 # Citron fixes inform this host-worker SM/audctl proposal. It compiles on the
 # pinned Eden source, but PS5 service-init/shutdown behavior is not yet proven.
