@@ -116,6 +116,47 @@ better performance.
   work until a native compiler, W^X, OOM, relaunch and firmware 13.60
   qualification pass.
 
+## Source audit — PS5 resource ownership and pipeline workers
+
+**2026-10-08 source facts, not PS5 speedup claims**
+
+- Upstream `vk_pipeline_cache.cpp::GetTotalPipelineWorkers` on desktop uses
+  `max(2, hardware_concurrency()) - 1`. In D, 15
+  `VkPipelineBuilder` workers were registered. They are low-priority and
+  may sleep when there is no work; merely counting threads is NOT evidence
+  they were actively using 15 CPUs.
+- On this isolated PS5 branch, the derived source in
+  `tools/prepare-vulkan-port.py` automatically budgets shader workers
+  against guest and GPU threads: for a 16-logical-CPU report,
+  `(16 - 6)/2 = 5` background compiler workers. No user-facing
+  setting, no launcher change. This policy is **NOT** validated for shader
+  loading duration, pipeline readiness, 30 FPS pacing, hardware topology or
+  full hardware utilization. The number of compiled tasks is unchanged;
+  lower parallelism might lengthen cold shader preparation.
+- The PS5 Vulkan runtime's initial `EDEN_VULKAN_MEMORY` D report includes
+  8 GiB of local Vulkan heap, ~6 GiB device-accessible memory and ~6.9 GiB
+  observed direct-memory availability. These are **driver/device budgets**,
+  not proof that PS5 has only 8 GiB physical RAM or that the GPU is idle.
+- In `tools/prepare-vulkan-port.py`, `Device::GetDeviceMemoryUsage`
+  derives a cache-budget usage estimate from the **largest contiguous free
+  direct-memory block**, not the total free bytes. Fragmentation can reduce
+  this number without an equal rise in committed memory. The GPU diagnostics
+  already enumerate `sceKernelDirectMemoryQuery` regions and report
+  `EDEN_PERF_DIRECT total / largest_free / free`, but A/B/C/D release logs
+  do not establish the total-free versus largest-free trend over time.
+  Do **not** blindly expand GPU heap sizes or loosen eviction until actual
+  committed RAM, fragmentation, queue stalls and allocator failures are
+  correlated. A wrong liberal budget could cause out-of-memory crashes.
+- The normal CPU clock self-test reported `valid=0`, so its per-thread
+  utilization estimates cannot justify claims that PS5 CPU/GPU cores are
+  mostly unused. Fan noise or case temperature is not a telemetry reading.
+
+**Direct next engineering step:** give the GPU cache-budget policy a
+fragmentation-aware notion of *total usable bytes* alongside the largest
+available *contiguous* allocation, with bounded sampling cost and a safe
+fallback. Then address measured rendering queue stalls and guest liveness
+before increasing internal resolution. Test load time as well as gameplay.
+
 ## Immediate implementation gates
 
 1. Audit physical memory ownership and executable page-map APIs; do not
