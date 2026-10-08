@@ -760,7 +760,9 @@ int main(int argc, char** argv) {
                     };
                     const std::string jit = get("jit_cache");
                     experimental_jit_cache = jit == "balanced" ? 1u : jit == "expanded" ? 2u : 0u;
+#ifdef EDEN_SPARSE_JIT_DEV
                     experimental_sparse_jit = get("jit_memory") == "sparse";
+#endif
                     experimental_logical_cpu = get("cpu_placement") == "logical";
                     experimental_frame_probe = get("vulkan_pacing") == "trace";
                 }
