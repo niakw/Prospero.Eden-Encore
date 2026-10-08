@@ -397,6 +397,36 @@ inline bool SavePreferences(const Preferences& value, const std::string& file = 
     return Settings::Write(document, file);
 }
 
+// Visual button art in games, independent of the already configured
+// DualSense -> emulated Switch action mapping. PlayStation is the preferred
+// presentation, falling back to the game's native art if no verified rule.
+inline bool LoadInGamePlayStationGlyphs(std::uint64_t title_id,
+                                       const std::string& file = SettingsFile()) {
+    using Settings::Json;
+    const Json document = Settings::Load(file);
+    std::string choice = Settings::String(document,
+        Json::json_pointer("/appearance/ingame_button_glyphs"));
+    if (title_id != 0) {
+        const auto game_choice = Settings::String(document, Json::json_pointer(
+            "/games/" + Settings::TitleKey(title_id) + "/ingame_button_glyphs"));
+        if (game_choice == "playstation" || game_choice == "switch")
+            choice = game_choice;
+    }
+    return choice != "switch";
+}
+inline bool SaveInGameButtonGlyphs(std::uint64_t title_id, bool playstation,
+                                   const std::string& file = SettingsFile()) {
+    using Settings::Json;
+    Json document = Settings::Load(file);
+    if (title_id)
+        document["games"][Settings::TitleKey(title_id)]["ingame_button_glyphs"] =
+            playstation ? "playstation" : "switch";
+    else
+        document["appearance"]["ingame_button_glyphs"] =
+            playstation ? "playstation" : "switch";
+    return Settings::Write(document, file);
+}
+
 // -1 means no explicit per-title console mode; authored Encore profiles then supply the default.
 inline int LoadGameDockedOverride(uint64_t title_id, const std::string& file = SettingsFile()) {
     if (!title_id) return -1;
