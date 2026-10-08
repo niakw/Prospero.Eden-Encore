@@ -3,6 +3,7 @@
 // Common PS5 CPU-code budget, not game-specific C/B/A settings.
 // Dense JIT allocation currently commits this entire budget at launch.
 // Sparse physical backing and multi-arena growth need separate qualification.
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstddef>
@@ -79,6 +80,39 @@ inline constexpr JitMemoryPlan ChooseJitMemoryPlan(
     plan.a32[0] = clamp_arena(std::size_t{kA32Baseline[0]} + growth / 2);
     plan.a32[1] = clamp_arena(std::size_t{kA32Baseline[1]} + growth / 4);
     plan.a32[2] = clamp_arena(std::size_t{kA32Baseline[2]} + growth / 4);
+
+    // A large contiguous free pool can saturate guest core 0's mandatory
+    // x64 relative-branch arena limit before the other workers reach theirs.
+    // Redistribute ONLY the capacity actually lost to clamping, not the
+    // few rounding bytes (which could make a growing budget reduce another
+    // core's arena at a 2 MiB boundary). Keep every plan monotonic, capped,
+    // and bounded by the SAME admitted physical byte budget.
+    const auto redistribute_saturated = [&](auto& arenas, const auto& floor,
+                                            const std::array<std::size_t, 3>& desired) {
+        std::size_t spill = 0;
+        for (std::size_t i = 0; i < 3; ++i) {
+            const std::size_t clamped = arenas[i];
+            if (desired[i] > clamped + kLargePage)
+                spill += (desired[i] - clamped) / kLargePage * kLargePage;
+        }
+        for (std::size_t i = 0; i < 3 && spill >= kLargePage; ++i) {
+            const auto room = std::size_t{kSingleArenaAddressingLimit} - arenas[i];
+            const auto add = (std::min(room, spill) / kLargePage) * kLargePage;
+            arenas[i] += static_cast<std::uint32_t>(add);
+            spill -= add;
+        }
+        (void)floor;
+    };
+    redistribute_saturated(plan.a64, kA64Baseline, {
+        std::size_t{kA64Baseline[0]} + (growth / 10) * 4,
+        std::size_t{kA64Baseline[1]} + (growth / 10) * 3,
+        std::size_t{kA64Baseline[2]} + (growth / 10) * 3
+    });
+    redistribute_saturated(plan.a32, kA32Baseline, {
+        std::size_t{kA32Baseline[0]} + growth / 2,
+        std::size_t{kA32Baseline[1]} + growth / 4,
+        std::size_t{kA32Baseline[2]} + growth / 4
+    });
     plan.admission_budget_bytes = budget;
     plan.expanded = true;
     return plan;
