@@ -96,7 +96,23 @@ int main(int argc, char** argv) {
     for (int i = 0; i < 1000; ++i) million.Update(block.data(), block.size());
     assert(million.FinishHex() ==
         "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0");
+    // The launch integrity scanner must reject oversized or cumulatively
+    // oversized graphic packs BEFORE hashing gigabytes of user-supplied data.
+    using Eden::GlyphOverrides::FitsGraphicPackBudget;
+    constexpr std::uintmax_t mib = 1024ull * 1024ull;
+    static_assert(FitsGraphicPackBudget(0, 128 * mib));
+    static_assert(!FitsGraphicPackBudget(0, 128 * mib + 1));
+    static_assert(FitsGraphicPackBudget(384 * mib, 128 * mib));
+    static_assert(!FitsGraphicPackBudget(384 * mib + 1, 128 * mib));
+    static_assert(!FitsGraphicPackBudget(512 * mib, 1));
+    static_assert(!FitsGraphicPackBudget(~std::uintmax_t{0}, 1));
     const fs::path base = argv[1];
+    const fs::path million_file = base / "sha-test" / "million-a.bin";
+    put(million_file, std::string(1000000, 'a'));
+    assert(Eden::GlyphIntegrity::FileSha256(million_file) ==
+           std::optional<std::string>(
+            "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0"));
+    assert(!Eden::GlyphIntegrity::FileSha256(million_file, 999999));
     const fs::path mods = base / "mods";
     const fs::path title = mods / "0100c49025d3e000"; // existing LOWERCASE
     const fs::path pack = title / "Eden Encore PS Glyphs";
