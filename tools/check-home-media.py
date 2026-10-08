@@ -6,7 +6,7 @@ lib=(root/'headless/prosperoeden/pe/ui/library.cpp').read_text()
 home=(root/'headless/prosperoeden/pe/ui/home.cpp').read_text()
 launch=(root/'headless/prosperoeden/pe/ui/launcher.cpp').read_text()
 svc=(root/'headless/prosperoeden/eden_services.cpp').read_text()
-for needle in ('start_home_media()', 'finish_home_media()', 'home_media_scan_', 'home_media_attempted_'):
+for needle in ('start_home_media()', 'finish_home_media()', 'home_media_scan_', 'home_media_next_retry_'):
     assert needle in hpp, needle
 assert 'start_home_media();\n}' in home
 # All Nlib images are fetched for every installed title; no Home-first subset.
