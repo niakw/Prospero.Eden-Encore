@@ -257,6 +257,20 @@ bool ProbeSparseJitAlias() noexcept {
     return success;
 }
 
+// The console has unified memory, so report separately the space promised
+// to the JIT and the physical direct pages it actually holds. Only snapshots
+// call this, never the frame or code-emission hot paths.
+void SparseJitUsage(std::size_t* virtual_bytes, std::size_t* committed_bytes) noexcept {
+    if (!virtual_bytes || !committed_bytes) return;
+    const std::lock_guard lock{sparse_jit_mutex};
+    std::size_t reserved = 0;
+    for (const auto& [_, region] : sparse_jit_regions) {
+        reserved += region.capacity;
+    }
+    *virtual_bytes = reserved;
+    *committed_bytes = sparse_jit_committed;
+}
+
 // Reserve two VA ranges, but no direct memory. The RX base never changes,
 // so Dynarmic's generated PC-relative branches and published pointers survive
 // incremental commits. This differs from AllocateMemoryPages's dense path.
