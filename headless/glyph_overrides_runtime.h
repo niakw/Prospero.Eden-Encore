@@ -6,6 +6,7 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cstdint>
 #include <cstdio>
@@ -117,8 +118,32 @@ inline bool ReadBounded(const Mods::fs::path& file, std::size_t limit, std::stri
         Mods::fs::file_size(file, ec) > limit || ec) return false;
     std::ifstream input(file, std::ios::binary);
     if (!input) return false;
-    out->assign(std::istreambuf_iterator<char>(input), {});
-    return input.eof() || (input.good() && out->size() <= limit);
+    out->clear();
+    std::array<char, 4096> buffer{};
+    // A pre-open file_size check alone is not a bound. The file could grow
+    // after stat() (or a replace could race the open). Never use an unbounded
+    // istreambuf iterator for external JSON, even on developer builds.
+    for (;;) {
+        input.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+        const auto bytes = input.gcount();
+        if (bytes < 0 || static_cast<std::size_t>(bytes) > limit - out->size()) {
+            out->clear();
+            return false;
+        }
+        if (bytes) out->append(buffer.data(), static_cast<std::size_t>(bytes));
+        if (input.eof()) break;
+        if (!input) {
+            out->clear();
+            return false;
+        }
+    }
+    // Detect truncation/replacement while reading as well as oversize.
+    const auto final_size = Mods::fs::file_size(file, ec);
+    if (ec || final_size != out->size()) {
+        out->clear();
+        return false;
+    }
+    return true;
 }
 inline Catalogue BuiltInCatalogue() {
     Catalogue built_in;
