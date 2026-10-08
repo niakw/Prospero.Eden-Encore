@@ -102,6 +102,9 @@ extern "C" bool eden_jit_shared;  // headless/dynarmic/jit_group_support.inc
 #include "video_core/gpu.h"
 namespace Common {
 bool SparseTablesAvailable() noexcept; // src/memory_pages.cpp
+#ifdef PS5_NATIVE
+bool ProbeSparseJitAlias() noexcept; // development-only validation of fixed RX/RW alias mapping
+#endif
 }
 
 class HeadlessWindow final : public Core::Frontend::EmuWindow {
@@ -772,6 +775,12 @@ int main(int argc, char** argv) {
                 }
             }
         }
+#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)
+        if (experimental_sparse_jit && !Common::ProbeSparseJitAlias()) {
+            std::puts("EDEN_JIT_SPARSE disabled: native alias preflight failed; using dense JIT");
+            experimental_sparse_jit = false;
+        }
+#endif
         Eden::Experimental::jit_cache_tier.store(experimental_jit_cache, std::memory_order_relaxed);
         Eden::Experimental::sparse_jit_cache.store(experimental_sparse_jit, std::memory_order_relaxed);
         Eden::Experimental::vulkan_frame_probe.store(experimental_frame_probe, std::memory_order_relaxed);
