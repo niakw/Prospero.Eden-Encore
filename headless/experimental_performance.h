@@ -60,10 +60,10 @@ inline constexpr JitMemoryPlan ChooseJitMemoryPlan(
     };
     // A64 distributes new code capacity among the three guest workers.
     // A32 gives core 0 more room because its legacy baseline is larger.
-    plan.a64[0] = clamp_arena(std::size_t{kA64Baseline[0]} + growth * 4 / 10);
-    plan.a64[1] = clamp_arena(std::size_t{kA64Baseline[1]} + growth * 3 / 10);
-    plan.a64[2] = clamp_arena(std::size_t{kA64Baseline[2]} + growth * 3 / 10);
-    plan.a32[0] = clamp_arena(std::size_t{kA32Baseline[0]} + growth * 5 / 10);
+    plan.a64[0] = clamp_arena(std::size_t{kA64Baseline[0]} + (growth / 10) * 4);
+    plan.a64[1] = clamp_arena(std::size_t{kA64Baseline[1]} + (growth / 10) * 3);
+    plan.a64[2] = clamp_arena(std::size_t{kA64Baseline[2]} + (growth / 10) * 3);
+    plan.a32[0] = clamp_arena(std::size_t{kA32Baseline[0]} + growth / 2);
     plan.a32[1] = clamp_arena(std::size_t{kA32Baseline[1]} + growth / 4);
     plan.a32[2] = clamp_arena(std::size_t{kA32Baseline[2]} + growth / 4);
     plan.desired_active_jit_bytes = budget;
@@ -99,4 +99,5 @@ static_assert(ChooseJitMemoryPlan(false, true, 8ull * 1024 * kMiB).a64[0] > 320u
 static_assert(ChooseJitMemoryPlan(false, true, 8ull * 1024 * kMiB).a32[1] > 64u*kMiB);
 static_assert(ChooseJitMemoryPlan(false, true, 2ull * 1024 * kMiB).a64 == kA64Baseline);
 static_assert(ChooseJitMemoryPlan(false, true, 8ull * 1024 * kMiB).a64[3] == 16u*kMiB);
+static_assert(ChooseJitMemoryPlan(false, true, std::numeric_limits<std::size_t>::max()).a64[0] <= kSingleArenaAddressingLimit);
 } // namespace Eden::Experimental
