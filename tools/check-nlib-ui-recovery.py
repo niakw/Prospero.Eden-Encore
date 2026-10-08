@@ -91,6 +91,15 @@ assert "finish_scan(false);" in settings_entry
 assert "finish_scan(true);" not in settings_entry
 assert "pending_settings_file_ = file;" in settings_entry
 assert "std::string pending_settings_file_;" in hdr
+# Home recent cards and quick-setting saves reuse a per-title settings
+# snapshot; editing settings in another screen invalidates that snapshot.
+assert "home_settings_cache_;" in hdr
+assert "home_settings_cache_.find(title_id)" in home
+assert "home_settings_cache_.emplace(title_id," in home
+assert "home_settings_cache_[title_id] = {home_game_settings_, home_game_docked_};" in home
+assert "home_settings_cache_.clear();" in nav
+assert "const bool game_settings_closed = modal_ == Modal::game;" in nav
+
 assert "const std::string file = std::move(pending_settings_file_);" in nav
 assert "if (games_loaded_ && !pending_settings_file_.empty())" in nav
 assert "pending_settings_file_.clear();" in nav
