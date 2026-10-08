@@ -4,8 +4,10 @@ on:
   push:
     branches:
       - fix/0.40-zbic-13.60
-  # Feature branch is intentionally manual-only until UI/HLE/runtime audit closes.
-  # workflow_dispatch remains available for the final ready-for-build gate.
+      # Build on the feature branch only when the commit is explicitly marked.
+      # Everyday code edits must NOT retrigger a 4-hour PS5 build.
+      - local/fc27-offline-no-build
+  # workflow_dispatch remains available for deliberate build / stage-resume.
   workflow_dispatch:
     inputs:
       publish:
@@ -34,7 +36,11 @@ concurrency:
 
 jobs:
   build:
-    if: ${{ !contains(github.event.head_commit.message || '', '[publish-existing]') }}
+    if: >-
+      ${{ !contains(github.event.head_commit.message || '', '[publish-existing]') &&
+          (github.ref == 'refs/heads/fix/0.40-zbic-13.60' ||
+           github.event_name == 'workflow_dispatch' ||
+           contains(github.event.head_commit.message || '', '[full-build]')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     env:
