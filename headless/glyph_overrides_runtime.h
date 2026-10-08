@@ -161,7 +161,7 @@ inline Catalogue LoadCatalogue(const Mods::fs::path& path) {
     // source snapshot (same model as encore-overrides video profiles).
     if (ReadBounded(path, kMaxCatalogBytes, &content) &&
         ParseCatalogue(content, &remote) &&
-        remote.revision >= built_in.revision) return remote;
+        remote.revision > built_in.revision) return remote;
     return built_in;
 }
 inline bool EvidenceMatches(const Mods::fs::path& folder, const Rule& rule) {
