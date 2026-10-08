@@ -11,6 +11,7 @@
 #include <mutex>
 #include <new>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 #include <sys/mman.h>
 #include <unistd.h>
