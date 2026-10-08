@@ -248,6 +248,12 @@ void Launcher::update(float dt)
     finish_scan(false);
     finish_home_media();
     finish_selected_media();
+    media_retry_timer_ += dt;
+    if (media_retry_timer_ >= 8.0f) {
+        media_retry_timer_ = 0.0f;
+        if (screen_ == Screen::home) start_home_media();
+        start_selected_media();
+    }
     update_controllers(dt);
     transition_.update(dt);
     press_ = std::max(0.0f, press_ - dt / 0.18f);
