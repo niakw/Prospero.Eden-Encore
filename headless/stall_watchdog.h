@@ -21,6 +21,7 @@ namespace Eden::Stall {
 inline std::atomic<unsigned> progress{0};
 inline std::atomic<bool> armed{false};
 inline std::atomic<bool> game_armed{false};
+inline std::atomic<unsigned> game_session_epoch{0};
 inline std::atomic<const char*> stage{"none"};
 
 inline void Print(const char* line) {
@@ -54,6 +55,7 @@ inline void Loop() {
     unsigned reports = 0;
     GameLiveness::Probe game_probe;
     bool previous_game_active = false;
+    unsigned previous_game_epoch = 0;
     for (;;) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         const unsigned now_progress = progress.load(std::memory_order_relaxed);
@@ -63,7 +65,13 @@ inline void Loop() {
         // GPU operation counters on THIS 1 Hz developer thread only.
         const bool game_active = game_armed.load(std::memory_order_acquire);
         if (game_active) {
-            if (!previous_game_active) game_probe.Reset();
+            // Two title sessions may end and re-arm between 1 Hz probes.
+            // Boolean-only state would re-use the prior title's counts,
+            // spuriously reporting that the next game froze.
+            const unsigned epoch = game_session_epoch.load(std::memory_order_acquire);
+            if (!previous_game_active || epoch != previous_game_epoch)
+                game_probe.Reset();
+            previous_game_epoch = epoch;
             previous_game_active = true;
             const auto wall_second = static_cast<std::uint64_t>(
                 std::chrono::duration_cast<std::chrono::seconds>(
@@ -121,7 +129,10 @@ inline void Arm() {
     armed.store(true, std::memory_order_release);
 }
 inline void Disarm() { armed.store(false, std::memory_order_release); }
-inline void ArmGame() { game_armed.store(true, std::memory_order_release); }
+inline void ArmGame() {
+    game_session_epoch.fetch_add(1, std::memory_order_acq_rel);
+    game_armed.store(true, std::memory_order_release);
+}
 inline void DisarmGame() { game_armed.store(false, std::memory_order_release); }
 }
 #endif
