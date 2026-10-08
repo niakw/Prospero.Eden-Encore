@@ -102,12 +102,26 @@ PY
 apply_one() {
     local patch=$1 receipt=$2 validator=$3
     [[ -s $patch ]] || { echo "Backport patch missing: $patch" >&2; exit 1; }
-    local hash
+    local hash recorded
     hash=$(sha256sum "$patch" | awk '{print $1}')
     if [[ -f $receipt ]]; then
-        [[ $(tr -d '\r\n' < "$receipt") == "$hash" ]] || {
-            echo "Backport changed; reset the Eden source cache: $(basename "$patch")" >&2; exit 1;
-        }
+        recorded=$(tr -d '\r\n' < "$receipt")
+        if [[ $recorded != "$hash" ]]; then
+            # The first Nlib identity patch shipped without an HTTP failure reason.
+            # Its subsequent revision ONLY adds httplib error reporting, so migrate
+            # that single verified old receipt in place. Never reset source or other
+            # cached dependencies for this one-line change; unknown revisions fail.
+            if [[ $(basename "$patch") == eden-ps5-net-user-agent.patch &&
+                  $recorded == 7117c1c3f353157b7fa46a86c6f77226b1183d9b374462cefe8b8dc5f32bf613 ]]; then
+                python3 -B "$root/tools/migrate-net-user-agent-cache.py" "$eden"
+                "$validator"
+                printf '%s\n' "$hash" > "$receipt"
+                echo 'Migrated cached Eden HTTP backport in place (no source-cache reset)'
+                return
+            fi
+            echo "Backport changed; reset the Eden source cache: $(basename "$patch")" >&2
+            exit 1
+        fi
         "$validator"
         return
     fi

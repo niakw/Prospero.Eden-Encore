@@ -108,6 +108,7 @@ jobs:
           python3 -B tools/check-jit-stability.py
           python3 -B tools/check-performance-policy.py
           python3 -B tools/check-network-runtime.py
+          python3 -B tools/check-net-cache-migration.py
           python3 -B tools/check-ps5-net-unit.py
           python3 -B tools/check-home-media.py
           python3 -B tools/check-bounded-logs.py
