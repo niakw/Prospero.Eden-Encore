@@ -433,7 +433,7 @@ void Launcher::draw_top_nav(Canvas &c, int active_tab, int focus_tab, float focu
     // Reference uses large icon+label destinations in the right side of the
     // navigation. Keep the existing functional Recent tab until a real PS5
     // suspend service is verified; never label Exit as "Sleep".
-    static constexpr const char* labels[] = {TR("Home"), TR("Library"), TR("RECENTLY PLAYED"), TR("Settings")};
+    static constexpr const char* labels[] = {TR("Home"), TR("Library"), TR("Recent"), TR("Settings")};
     static constexpr float xs[] = {715.0f, 918.0f, 1152.0f, 1420.0f};
     static constexpr float widths[] = {186.0f, 222.0f, 254.0f, 200.0f};
     for (int i = 0; i < 4; ++i)
