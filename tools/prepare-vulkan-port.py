@@ -774,6 +774,31 @@ shader_costs = [
 # Time both graphics and compute preparation, without modifying the compiler or
 # reading guest state on another thread. These intervals overlap shader_prepare.
 shader_source = (source / 'src/video_core/renderer_vulkan/vk_pipeline_cache.cpp').read_text()
+# PS5 is a dedicated guest-emulation workload, not a desktop host doing
+# arbitrary foreground work. Upstream's hardware_concurrency()-1 launches
+# 12 Vulkan pipeline builders on the observed PS5 process, competing with
+# guest CPU workers, the GPU driver and essential service threads when busy.
+# Retain a proportionate background compile pool with no user-facing toggle.
+# Reserve six logical schedulable slots for four guest cores and two GPU
+# workers, then conservatively count two logical CPUs per background worker
+# when SMT topology is not verified on PS5. This is a scheduling policy,
+# NOT a claim of six physical cores or of already-measured speedups.
+pipeline_worker_anchor = '''    return max_core_threads;
+#endif
+}'''
+pipeline_worker_replacement = '''#ifdef PS5_NATIVE
+    const size_t logical = std::max<size_t>(static_cast<size_t>(std::thread::hardware_concurrency()), 2ULL);
+    constexpr size_t guest_and_gpu_slots = 6;
+    const size_t background_slots = logical > guest_and_gpu_slots ? logical - guest_and_gpu_slots : 1ULL;
+    return std::max<size_t>(1ULL, background_slots / 2ULL);
+#else
+    return max_core_threads;
+#endif
+#endif
+}'''
+if shader_source.count(pipeline_worker_anchor) != 1:
+    raise RuntimeError('Pinned Vulkan pipeline worker policy changed')
+shader_source = shader_source.replace(pipeline_worker_anchor, pipeline_worker_replacement)
 for expression, index, count in (
     ('main_pools.ReleaseContents()', 19, 2),
     ('TranslateProgram(pools.inst, pools.block, env, cfg, host_info)', 21, 3),
