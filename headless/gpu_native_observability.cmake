@@ -123,8 +123,31 @@ if(prmt_reg_at LESS 0)
     message(FATAL_ERROR "Pinned Maxwell PRMT_reg exception anchor changed")
 endif()
 string(REPLACE "${prmt_reg_old}" "${prmt_reg_new}" prmt_source "${prmt_source}")
+# Embed executable-at-compile-time NVIDIA PRMT Index golden vectors
+# into the pinned shader translation TU. This catches byte-order/sign nibble
+# regressions on the next authorized native build (no runtime overhead).
+set(prmt_reference [=[
+namespace {
+constexpr unsigned EdenPrmtIndexReference(unsigned a, unsigned b, unsigned selector) {
+    unsigned result = 0;
+    for (unsigned output = 0; output < 4; ++output) {
+        const unsigned nibble = (selector >> (4u * output)) & 15u;
+        const unsigned source = (nibble & 4u) ? b : a;
+        unsigned byte = (source >> (8u * (nibble & 3u))) & 255u;
+        if (nibble & 8u)
+            byte = (byte & 128u) ? 255u : 0u;
+        result |= byte << (8u * output);
+    }
+    return result;
+}
+static_assert(EdenPrmtIndexReference(0x11223344u, 0x55667788u, 0x3210u) == 0x11223344u);
+static_assert(EdenPrmtIndexReference(0x11223344u, 0x55667788u, 0x7654u) == 0x55667788u);
+static_assert(EdenPrmtIndexReference(0x80abcdefu, 0u, 0xbbbbu) == 0xffffffffu);
+static_assert(EdenPrmtIndexReference(0x11223344u, 0x55667788u, 0xffffu) == 0u);
+}
+]=])
 write_derived("${PORT_BUILD_DIR}/maxwell_prmt_observed.cpp"
-    "#include <atomic>\n#include <cstdio>\n${prmt_source}")
+    "#include <atomic>\n#include <cstdio>\n${prmt_reference}\n${prmt_source}")
 get_target_property(shader_sources shader_recompiler SOURCES)
 list(FILTER shader_sources EXCLUDE REGEX "frontend/maxwell/translate/impl/not_implemented[.]cpp$")
 set_property(TARGET shader_recompiler PROPERTY SOURCES "${shader_sources}")
