@@ -264,6 +264,13 @@ get_target_property(jit_sources dynarmic SOURCES)
 list(FILTER jit_sources EXCLUDE REGEX "(^|/)block_of_code\\.cpp$")
 set_property(TARGET dynarmic PROPERTY SOURCES "${jit_sources}")
 target_sources(dynarmic PRIVATE "${PORT_BUILD_DIR}/block_of_code.cpp")
+# The native PS5 code-commit branch is inside this generated Dynarmic unit.
+# PS5_NATIVE is not inherited from eden-headless/common by this target.
+# Scope the definition to the one source that owns the kernel mapping hook.
+if(PS5_NATIVE)
+    set_property(SOURCE "${PORT_BUILD_DIR}/block_of_code.cpp"
+        TARGET_DIRECTORY dynarmic APPEND PROPERTY COMPILE_DEFINITIONS "PS5_NATIVE=1")
+endif()
 foreach(bits 32 64)
     file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/dynarmic/backend/x64/a${bits}_emit_x64.cpp" emitter)
     if(bits EQUAL 64)
