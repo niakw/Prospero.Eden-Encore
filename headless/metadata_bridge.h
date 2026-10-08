@@ -35,6 +35,11 @@ void eden_scan_addons(const char* updates_dir, const char* keys_dir);
 // For a base game: the newest update's display version (empty without one) and its DLC count.
 // Returns nonzero when either exists.
 int eden_game_addons(uint64_t title_id, char* update_version, size_t capacity, unsigned* dlc_count);
+// Resolved IN-GAME GRAPHICS version: scanned update if present, else base NACP
+// display-version from the selected title. Returns 0 if metadata/scan unknown.
+// Does not read or request a cheat/NSO Build ID.
+int eden_game_glyph_display_version(const char* rom_path, const char* keys_dir,
+                                    uint64_t title_id, char* output, size_t capacity);
 
 // Save transfer for one game (ryujinx_saves.h). Sources, in the game files folder next to roms/:
 // save-import/<title ID>/ (a save folder copied by hand) or ryujinx/ (a Ryujinx data folder).
