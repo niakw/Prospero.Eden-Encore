@@ -19,6 +19,7 @@
 
 #include "mods.h"
 #include "glyph_overrides_generated.h"
+#include "glyph_sha256.h"
 
 namespace Eden::GlyphOverrides {
 inline constexpr std::string_view kModName = "Eden Encore PS Glyphs";
@@ -150,8 +151,9 @@ inline bool EvidenceMatches(const Mods::fs::path& folder, const Rule& rule) {
             evidence_title != rule.title ||
             value["update_version"].get<std::string>() != rule.update_version)
             return false;
-        // Install writes hash-verified graphics into the real RomFS mod dir.
-        // Check their declared paths still exist; do not trust a stale marker.
+        // Installer checks ORIGINAL RomFS bytes at packaging; launch checks
+        // each replacement asset byte-for-byte via SHA-256. The original
+        // file currently mounted by the emulator is still a separate gate.
         for (const auto& item : value["files"]) {
             if (!item.is_object() || !item.contains("romfs_path") ||
                 !item["romfs_path"].is_string() ||
@@ -191,6 +193,14 @@ inline bool EvidenceMatches(const Mods::fs::path& folder, const Rule& rule) {
             }
             if (!Mods::fs::is_regular_file(asset, ec) || ec ||
                 Mods::fs::file_size(asset, ec) > (128u << 20) || ec) return false;
+            const auto actual = GlyphIntegrity::FileSha256(asset);
+            std::string expected = item["replacement_sha256"].get<std::string>();
+            std::transform(expected.begin(), expected.end(), expected.begin(),
+                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            // The previous check only ensured *presence* of artwork; an
+            // altered atlas with the same filename was silently admitted.
+            // Hash the replacement once during launch before loading RomFS.
+            if (!actual || *actual != expected) return false;
         }
         return true;
     } catch (...) { return false; }
