@@ -118,6 +118,8 @@ void Launcher::open(Screen screen, bool forward)
 
 void Launcher::open_modal(Modal modal)
 {
+    if (modal == Modal::diagnostics)
+        start_diagnostics(); // refresh without recursive filesystem I/O in draw()
     modal_ = modal_shown_ = modal;
     option_ = 0;
     option_cursor_.snap(dialog_row_top(modal, 0));
