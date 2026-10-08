@@ -320,9 +320,9 @@ NlibEnrichment CachedNlibEnrichment(std::uint64_t title_id, int language_choice)
 
 // Nlib enriches the launcher only; no game ever depends on the network. The ROM icon stays the
 // offline fallback. Cards prefer Nlib's square icon, Home prefers its 16:9 banner, and Library
-// details use up to three gameplay screenshots. Only Home/recent titles are fetched in parallel.
-NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice,
-                                    bool home_priority) {
+// details use all available gameplay screenshots (up to the current API cap). Every
+// title is queued for complete artwork at startup, not only on Library selection.
+NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice) {
     if (title_id == 0) return {};
 
     // Home and Library can request the same title at the same time. Cache writes use
@@ -410,12 +410,10 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice,
                 result.icon = path;
         }
 
-        // Home's full-bleed art is on the critical visual path. Do not wait
-        // for three gameplay images that only the Library details screen uses.
-        // If no banner exists, allow one first screenshot as a fallback hero.
-        const int wanted_screens = home_priority ?
-            (result.hero.empty() ? std::clamp(screen_count, 0, 1) : 0) :
-            std::clamp(screen_count, 0, 3);
+        // Resolve ALL Nlib media requested for this title in the same enrichment
+        // pass: banner, icon, and every advertised screenshot. No deferred
+        // screenshot fetch when the user opens Library or returns to Home.
+        const int wanted_screens = std::clamp(screen_count, 0, 3);
         for (int index = 1; index <= wanted_screens; ++index) {
             const std::string path = NlibScreenshotPath(title_id, index);
             if (!IsFile(path))
@@ -904,13 +902,9 @@ std::vector<pe::ui::Game> EdenServices::games() {
     if (directory_error) return games;
     eden_scan_addons(Eden::AssetsPath("updates").c_str(), Eden::AssetsPath("keys").c_str());
     const int language_choice = Eden::LoadPreferences().language;
-    // Network artwork is deliberately limited to what Home can display. The library scan stays
-    // bounded even with a very large ROM collection: last played + at most six recent games.
-    std::vector<std::string> artwork_files = Eden::LoadRecentGames();
-    if (artwork_files.size() > 6) artwork_files.resize(6);
-    const std::string last_file = Eden::LoadLastGame();
-    if (!last_file.empty() && std::find(artwork_files.begin(), artwork_files.end(), last_file) == artwork_files.end())
-        artwork_files.insert(artwork_files.begin(), last_file);
+    // Enumerate local assets immediately. Enrichment is independently queued for
+    // all installed titles by Launcher, so even games never selected acquire Nlib
+    // banners/icons/screenshots. Disk scanning itself must stay network-free.
     for (const auto& entry : entries) {
         const std::string file = entry.path().filename().string();
         const std::size_t dot = file.find_last_of('.');
@@ -948,8 +942,7 @@ std::vector<pe::ui::Game> EdenServices::games() {
             else
                 (void)std::remove(staged.c_str());
             game.title_id = ResolveTitleId(path, file);
-            if (game.title_id != 0 &&
-                std::find(artwork_files.begin(), artwork_files.end(), file) != artwork_files.end()) {
+            if (game.title_id != 0) {
                 const NlibEnrichment nlib = CachedNlibEnrichment(game.title_id, language_choice);
                 if (!nlib.icon.empty()) game.cover = nlib.icon;
                 game.hero = nlib.hero;
@@ -974,9 +967,9 @@ std::vector<pe::ui::Game> EdenServices::games() {
         games.push_back(std::move(game));
     }
 
-    // Metadata bridge work is finished. Home and Library issue targeted Nlib enrichment
-    // asynchronously from the launcher. A library enumeration must stay local/cache-only so a
-    // slow or offline network never delays listing games or duplicates the Home request.
+    // Metadata bridge work is finished. Home and Library start complete Nlib
+    // enrichment of every installed title in background, independently of user
+    // selection. A library enumeration itself must remain local/cache-only.
     lock.unlock();
 
     std::sort(games.begin(), games.end(),
@@ -987,8 +980,7 @@ std::vector<pe::ui::Game> EdenServices::games() {
 pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game) {
     if (game.title_id == 0) return game;
     const int language_choice = Eden::LoadPreferences().language;
-    NlibEnrichment enrichment = EnsureNlibEnrichment(game.title_id, language_choice,
-                                                        game.home_media_priority);
+    NlibEnrichment enrichment = EnsureNlibEnrichment(game.title_id, language_choice);
     if (!enrichment.icon.empty()) game.cover = std::move(enrichment.icon);
     if (!enrichment.hero.empty()) game.hero = std::move(enrichment.hero);
     if (!enrichment.screenshots.empty()) game.screenshots = std::move(enrichment.screenshots);
