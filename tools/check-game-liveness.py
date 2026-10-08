@@ -95,19 +95,19 @@ with tempfile.TemporaryDirectory(prefix="eden-game-liveness-host-") as folder:
     clock = root / "common" / "cpu_features.h"
     clock.parent.mkdir()
     clock.write_text(
-        "#pragma once\\n#include <chrono>\\n"
-        "namespace Common {\\n"
-        "struct HostTestClock { std::chrono::nanoseconds GetTimeNS() const { return {}; } };\\n"
-        "inline HostTestClock g_wall_clock{};\\n"
-        "}\\n".replace("\\\\n", "\\n")
+        "#pragma once\n#include <chrono>\n"
+        "namespace Common {\n"
+        "struct HostTestClock { std::chrono::nanoseconds GetTimeNS() const { return {}; } };\n"
+        "inline HostTestClock g_wall_clock{};\n"
+        "}\n"
     )
     native_src = root / "watchdog_native_header.cpp"
     native_obj = root / "watchdog_native_header.o"
     native_src.write_text(
-        '#include "stall_watchdog.h"\\n'
+        '#include "stall_watchdog.h"\n'
         'extern "C" unsigned long eden_heap_create_lock_state(unsigned* waiters) '
-        '{ *waiters = 0; return 0; }\\n'
-        'int main() { Eden::Stall::ArmGame(); Eden::Stall::DisarmGame(); return 0; }\\n'
+        '{ *waiters = 0; return 0; }\n'
+        'int main() { Eden::Stall::ArmGame(); Eden::Stall::DisarmGame(); return 0; }\n'
     )
     subprocess.run([cxx, "-std=c++20", "-O1", "-Wall", "-Wextra", "-Werror",
                     "-pthread", "-DPS5_NATIVE=1", "-DEDEN_DEV_PROFILE=1",
