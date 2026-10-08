@@ -174,7 +174,19 @@ finish_home_entry = lib.split("void Launcher::finish_home_scan()", 1)[1].split(
     "void Launcher::check_games_present()", 1)[0]
 assert "start_diagnostics();" in read_home_entry
 assert "home_scan_ = std::async(std::launch::async" in read_home_entry
-assert "return services_.home();" in read_home_entry
+assert "return services_.home(&home_cancel_);" in read_home_entry
+assert "std::atomic<bool> home_cancel_{false};" in hdr
+assert "home_cancel_.store(true, std::memory_order_release);" in nav
+assert "home_cancel_.load(std::memory_order_acquire)" in finish_home_entry
+assert "virtual Home home(const std::atomic<bool>* cancel)" in hero_types
+assert "pe::ui::Home home(const std::atomic<bool>* cancel) override;" in native_hdr
+native_home = native_svc.split(
+    "pe::ui::Home EdenServices::home(const std::atomic<bool>* cancel)", 1)[1].split(
+    "std::string EdenServices::clock()", 1)[0]
+assert "const auto cancelled = [cancel]" in native_home
+assert "if (cancelled()) return {};" in native_home
+assert "for (const auto& name : history)" in native_home
+assert 'if (cancelled()) return {};\n        const std::string recent_path' in native_home
 assert "services_.home();" not in nav
 assert "std::future<Home> home_scan_;" in hdr
 assert "home_reload_pending_" in hdr
