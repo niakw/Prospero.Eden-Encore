@@ -236,7 +236,6 @@ class Launcher
     std::future<Home> home_scan_; // costly recent-game metadata is read off-thread
     bool home_loaded_ = false; // no game launch or Home actions before snapshot
     bool home_reload_pending_ = false; // don't apply an obsolete in-flight refresh
-    bool home_scan_failed_ = false; // avoid spawning a failed query every frame
     DiagnosticsInfo home_diagnostics_{};
     std::future<DiagnosticsInfo> diagnostics_scan_; // asynchronous cache/log disk inventory
     bool diagnostics_refresh_pending_ = false; // discard an outdated scan after maintenance
