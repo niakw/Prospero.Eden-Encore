@@ -73,6 +73,14 @@ def main() -> None:
     require('EDEN_JIT_SPARSE_FALLBACK bytes=' in native_alloc and
             'writable = Common::AllocateMemoryPages(size)' in native_alloc,
             "Sparse reservation failure must use dense JIT fallback")
+    require('if (!executable) {' in native_alloc and
+            'Common::CountDenseJitDirect(writable, false);' in native_alloc and
+            'Common::FreeMemoryPages(writable);' in native_alloc and
+            'return static_cast<std::uint8_t*>(writable);' not in native_alloc,
+            "Failed native RX alias must release dense direct pages, never return RW/NX as code")
+    require('set_property(SOURCE "${PORT_BUILD_DIR}/block_of_code.cpp"' in cmake and
+            'TARGET_DIRECTORY dynarmic APPEND PROPERTY COMPILE_DEFINITIONS "PS5_NATIVE=1"' in cmake,
+            "Native sparse JIT page commits must be compiled, not excluded by preprocessor")
     require('throw std::bad_alloc{};' in cmake and
             'Pinned A64 JIT commit checkpoint changed' in cmake and
             'Pinned A32 JIT commit checkpoint changed' in cmake,
