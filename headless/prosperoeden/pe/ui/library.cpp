@@ -113,7 +113,14 @@ void Launcher::finish_scan(bool wait)
     catch (const std::exception &error)
     {
         sys::log("game list: %s", error.what());
-        games_loaded_ = true; // the list stays as it was
+        // Preserve an existing list but do not mark an empty first scan as
+        // successfully loaded. Home Triangle may have a deferred request;
+        // report a scan error, not a misleading "ROM missing" result.
+        if (!games_loaded_ && !pending_settings_file_.empty()) {
+            pending_settings_file_.clear();
+            say(tr("Could not load game list. Please try again."), true);
+            cue(Cue::error);
+        }
     }
 }
 
