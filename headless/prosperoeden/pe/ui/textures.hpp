@@ -106,6 +106,7 @@ class Textures
     std::uint32_t controller_ = 0;
     std::unordered_map<std::string, Entry> covers_;
     std::deque<std::string> queue_; // O(1) pop_front during frame updates
+    std::deque<std::uint32_t> pending_deletes_; // invalidated GPU IDs, amortized in pump()
     std::uint64_t frame_ = 0;
     std::uint64_t next_generation_ = 0;
     float output_scale_ = 1.0f;
