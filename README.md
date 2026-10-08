@@ -124,6 +124,14 @@ worker pool. A driver-cache blob rejected after a RADV update falls back
 to a fresh cache. These are **source-only**, not in the installed app;
 native PS5 build, shader persistence and gameplay profiling remain necessary.
 
+**PS5-wide robustness fixes (developer branch, not released):** failed
+Dynarmic executable-alias mapping no longer returns a non-executable
+writable pointer; the generated Dynarmic unit receives its required native
+compile definition; Vulkan driver-cache saves now use staged
+flush-and-rename transactions, preserving the previous cache on an
+interrupted write. All changes are source-level and require native
+build/hardware verification before release.
+
 ## Changes in Encore R1
 
 Prospero.Eden Encore R1 turns the proven ProsperoEden 1.000.040 base into a PS5 13.60-focused release:
