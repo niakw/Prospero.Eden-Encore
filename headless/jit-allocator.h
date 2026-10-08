@@ -20,6 +20,7 @@ void FreeMemoryPages(void*) noexcept;
 void* MapExecutableAlias(void*, std::size_t) noexcept;
 #ifdef EDEN_JIT_ALIAS_NATIVE
 void CountDenseJitDirect(void*, bool acquire) noexcept;
+std::size_t ExecutableAliasSpan(void*) noexcept;
 #endif
 #ifdef EDEN_JIT_ALIAS_NATIVE
 void* ReserveSparseJitCode(std::size_t, void**) noexcept;
@@ -99,16 +100,24 @@ inline Xbyak::Allocator* EdenJitAllocator() {
 #endif
             if (executable != MAP_FAILED && executable && writable != MAP_FAILED && writable && executable != writable) {
                 auto* pointer = static_cast<std::uint8_t*>(executable);
+                // The native direct mapping may round 3 MiB to a 4 MiB
+                // large-page alias. Keep the REAL RX mapping length so free()
+                // cannot leave an orphan executable tail after game exit.
+                std::size_t mapped_span = span;
+#ifdef EDEN_JIT_ALIAS_NATIVE
+                mapped_span = Common::ExecutableAliasSpan(writable);
+                if (mapped_span < span) std::abort();
+#endif
                 try {
                     std::lock_guard lock(mutex);
-                    mappings.emplace(pointer, Mapping{writable, span});
+                    mappings.emplace(pointer, Mapping{writable, mapped_span});
                     std::fprintf(diagnostics,
                                  "EDEN_JIT_ALIAS rx=%p rw=%p bytes=%zu active=1\n",
-                                 static_cast<void*>(pointer), writable, span);
+                                 static_cast<void*>(pointer), writable, mapped_span);
                     return pointer;
                 } catch (...) {
                     // Release both views before reporting allocation failure.
-                    if (munmap(executable, span) != 0) std::abort();
+                    if (munmap(executable, mapped_span) != 0) std::abort();
 #ifdef EDEN_JIT_ALIAS_NATIVE
                     Common::CountDenseJitDirect(writable, false);
                     Common::FreeMemoryPages(writable);
