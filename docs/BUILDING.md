@@ -179,6 +179,23 @@ patches are intentionally disabled by default (`EDEN_EXPERIMENTAL_DUMMY_THREAD_W
 `EDEN_EXPERIMENTAL_ICACHE_COHERENCE`, `EDEN_EXPERIMENTAL_SM_HOST_WAIT`). Toggle only one per
 isolated hardware A/B test and never silently package all three.
 
+## Two-stage experimental-backport validation in CI
+
+The early `Validate startup, elevation and storage contracts` CI job step runs
+*before* `make prepare`, so the runner does **not** have
+`.local/headless-cache` yet. `tools/check-dummy-thread-waits.py` and
+`tools/check-dynarmic-icache.py` validate patch syntax/required invariants at
+that point and defer applying those **disabled-by-default** experimental patches.
+
+After the pinned Eden source has been materialized, the native build preflight
+re-runs both with `--require-pinned-source`, which rejects a missing fixture
+and checks that the patch actually applies to the exact pinned files. Neither
+check opts the experiment into a shipping build.
+
+This corrects CI run [#37709145188](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/37709145188),
+which stopped before native compilation solely because the early static check
+tried to read a not-yet-created local cache-path file.
+
 ## FC27 trace triage (no app build)
 
 Use `python3 -B tools/analyze-fc27-trace.py path/to/session-log.txt --json` on an already
