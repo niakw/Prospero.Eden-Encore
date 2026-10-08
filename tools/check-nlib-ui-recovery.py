@@ -50,5 +50,14 @@ assert "decode_ = std::async(std::launch::async" in texture_cpp
 assert "it->second.generation == result.generation" in texture_cpp
 assert "entry.texture = create(result.image);" in texture_cpp
 assert "decode_.wait_for(std::chrono::seconds(0))" in texture_cpp
+# A rare native frame overrun gets one bounded phase label (no noisy per-frame
+# printf) so the next PS5 test can tell GPU texture upload, cache/media merge,
+# and 2-second game-presence file I/O apart.
+assert "EDEN_UI_HOTSPOT phase=%s elapsed_ms=%lld" in nav
+assert 'slow_stage("texture_upload", update_stage_begin);' in nav
+assert 'slow_stage("media_merge", media_started);' in nav
+assert 'slow_stage("game_presence_scan", presence_started);' in nav
+assert "now - last_ui_hotspot_report_ >= std::chrono::seconds(2)" in nav
+
 
 print("Nlib and four PS5 capture regressions: SOURCE CONTRACT PASS")
