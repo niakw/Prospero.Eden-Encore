@@ -948,3 +948,9 @@ User supplied fresh raw boot traces (current and two prev), heap(6).log, heap.pr
 - User requires implementation work across all games, including experimental options where supportable, before any closure or promotion. No new Actions workflow, CI or PS5 build until explicit authorization. Do not declare tasks implemented if only diagnostic. No premature final signoff.
 - Local Mac Desktop Commander device observed offline. Therefore source changes via GitHub are *uncompiled* and *untested locally*; do not say all gates passed.
 - Async game-presence implementation commits: `7e75cf2a8cc2`, `248a4ae350fb`, `b73e256b38f1`, `5d4753e91603`, all `[skip ci]`. Investigate remaining synchronous `drop_missing_games()` paths and full UI responsiveness in native build when allowed.
+
+### 2026-10-09 — Physical topology failure source root clarified
+
+- `headless/performance.cpp` `PlatformChecks()` reports `EDEN_WORKER_TOPOLOGY ready=0 distinct_cores=1 cpus=0,0,0,0,0` when x2APIC-derived *physical* topology discovery cannot establish five distinct cores. This signal does not measure actual guest scheduling, and zeros are empty candidate placements, not OS binding proof.
+- Actual experimental fallback **already exists**: `EnableExperimentalLogicalPlacementImpl()` picks five allowed logical CPUs, avoiding false claims about physical SMT topology. It is deliberately activated only in `headless/main.cpp` when `PS5_NATIVE && EDEN_DEV_PROFILE` and the per-title `experiments.json` experimental flag is selected; therefore the user's shipping-build logs do not exercise it. Do not promote it blindly to default placement before native A/B testing.
+- Required implementation gate remains: inspect worker startup/thread-affinity application and establish physical vs logical CPU occupancy/counters with a PS5-dev trace; then tune placement based on real latency not arbitrary static distribution. FC27 runtime and menu responsiveness still unvalidated.
