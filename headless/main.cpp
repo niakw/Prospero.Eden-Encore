@@ -966,7 +966,8 @@ int main(int argc, char** argv) {
             ps5_opengl_heap_snapshot(name, 0);
             // These are lifecycle points, not render-frame callbacks.
             if (std::string_view{name} == "core_initialized" ||
-                std::string_view{name} == "core_shutdown")
+                std::string_view{name} == "core_shutdown" ||
+                std::string_view{name} == "core_destroyed")
                 Eden::Performance::ReportDirectMemoryState(name);
             std::fflush(stdout);
 #else
