@@ -995,21 +995,31 @@ std::string EdenServices::version() {
 }
 
 std::vector<pe::ui::Game> EdenServices::games() {
+    return games(nullptr);
+}
+
+std::vector<pe::ui::Game> EdenServices::games(const std::atomic<bool>* cancel) {
     // The launcher reads the list beside its menu (pe/ui/library.cpp), so the metadata reader
-    // is used by one thread at a time.
+    // is used by one thread at a time. Cancellation is sampled between titles,
+    // not in the middle of metadata extraction or an in-flight file operation.
+    if (cancel && cancel->load(std::memory_order_acquire)) return {};
     std::unique_lock lock(bridge_);
     std::vector<pe::ui::Game> games;
     (void)mkdir(Eden::ConfigDir().c_str(), 0777);
     (void)mkdir(Eden::CoversDir().c_str(), 0777);
     std::error_code directory_error;
     const auto entries = Eden::ReadNativeDirectory(Eden::AssetsPath("roms"), directory_error);
-    if (directory_error) return games;
+    if (directory_error || (cancel && cancel->load(std::memory_order_acquire)))
+        return games;
     eden_scan_addons(Eden::AssetsPath("updates").c_str(), Eden::AssetsPath("keys").c_str());
+    if (cancel && cancel->load(std::memory_order_acquire)) return {};
     const int language_choice = Eden::LoadPreferences().language;
     // Enumerate local assets immediately. Enrichment is independently queued for
     // all installed titles by Launcher, so even games never selected acquire Nlib
     // banners/icons/screenshots. Disk scanning itself must stay network-free.
     for (const auto& entry : entries) {
+        if (cancel && cancel->load(std::memory_order_acquire))
+            return {}; // discard partial results and stop per-title disk work
         const std::string file = entry.path().filename().string();
         const std::size_t dot = file.find_last_of('.');
         if (file == "." || file == ".." || dot == std::string::npos) continue;
