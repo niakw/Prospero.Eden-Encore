@@ -144,7 +144,9 @@ assert settings_src.count("const DiagnosticsInfo& info = home_diagnostics_;") ==
 assert "start_diagnostics();" in settings_src
 assert "std::future<DiagnosticsInfo> diagnostics_scan_;" in hdr
 assert "bool diagnostics_refresh_pending_ = false;" in hdr
-assert "void Launcher::start_diagnostics()" in lib
+assert "void Launcher::start_diagnostics(bool force)" in lib
+assert "void start_diagnostics(bool force = false);" in hdr
+assert "start_diagnostics(true); // recount after explicit maintenance" in settings_src
 assert "void Launcher::finish_diagnostics()" in lib
 assert "diagnostics_scan_ = std::async(std::launch::async" in lib
 assert "diagnostics_scan_.wait_for(std::chrono::seconds(0))" in lib
@@ -156,6 +158,25 @@ assert "start_diagnostics();" in read_home_entry
 assert "home_diagnostics_ = services_.diagnostics();" not in read_home_entry
 assert "finish_diagnostics();" in nav
 assert "diagnostics_scan_.wait();" in nav
+# Launcher/game transition cancels even the deep native cache/log inventory.
+# Old code joined a full TreeBytes() walk after launch while the menu was gone.
+assert "std::atomic<bool> diagnostics_cancel_{false};" in hdr
+assert "diagnostics_cancel_.store(true, std::memory_order_release);" in nav
+assert "diagnostics_cancel_.load(std::memory_order_acquire)" in lib
+assert "services_.diagnostics(&diagnostics_cancel_)" in lib
+assert "virtual DiagnosticsInfo diagnostics(const std::atomic<bool>* cancel)" in hero_types
+assert "diagnostics(const std::atomic<bool>* cancel) override;" in native_hdr
+assert "EdenServices::diagnostics(const std::atomic<bool>* cancel)" in native_svc
+assert "TreeBytes(const std::filesystem::path& root," in native_svc
+tree_walk = native_svc.split("std::uintmax_t TreeBytes(", 1)[1].split(
+    "std::string StorageSize(", 1)[0]
+assert "if (cancel && cancel->load(std::memory_order_acquire)) return 0;" in tree_walk
+native_diagnostics = native_svc.split(
+    "EdenServices::diagnostics(const std::atomic<bool>* cancel)", 1)[1].split(
+    "bool EdenServices::clear_shader_caches(", 1)[0]
+assert 'TreeBytes(cache / "shader", cancel)' in native_diagnostics
+assert 'TreeBytes(Eden::LogsDir(), cancel)' in native_diagnostics
+
 
 # Once a user launches a game, native Nlib workers must not start another
 # queued HTTP request or JPEG/TGA conversion. Already in-flight HTTP remains
