@@ -230,7 +230,7 @@ set(fermi_copy_new [=[
         if (pitch_layer_copy) {
             const auto select_pitch_layer = [](Surface& surface) {
                 const u64 plane_bytes = static_cast<u64>(surface.pitch) * surface.height;
-                const u64 last = ~u64{0};
+                const u64 last = ~static_cast<u64>(0);
                 const u64 offset = plane_bytes * surface.layer;
                 if (plane_bytes == 0 || surface.layer >= surface.depth ||
                     (surface.layer != 0 && offset / surface.layer != plane_bytes) ||
