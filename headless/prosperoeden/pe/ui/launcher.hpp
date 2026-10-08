@@ -221,7 +221,7 @@ class Launcher
     bool done_ = false;
     bool restart_requested_ = false;
 
-    // home: 0 hero, 1-3 header, 4 details, 5-10 recent, 11 quick card, 12-18 quick rows, 19 storage, 20 controllers, 21 full settings
+    // home: 0 hero, 1-3 header, 4 details, 5-11 recent, 12 quick card, 13-19 quick rows, 20 storage, 21 controllers, 22 full settings
     Home home_;
     DiagnosticsInfo home_diagnostics_{};
     int home_recent_ = -1; // -1 = last played; otherwise the selected Recent card becomes the hero
@@ -234,7 +234,7 @@ class Launcher
     std::array<float, 4> controller_pop_{}; // 1 when a controller appears, then decays
     int home_focus_ = 0;
     int home_quick_edit_ = -1; // -1 browsing; 0-6 editing one quick-setting row
-    std::array<tween::Spring, 22> home_springs_{};
+    std::array<tween::Spring, 23> home_springs_{};
     float intro_ = 0.0f;
     bool first_start_ = true;
 
