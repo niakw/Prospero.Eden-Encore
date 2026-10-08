@@ -179,6 +179,27 @@ patches are intentionally disabled by default (`EDEN_EXPERIMENTAL_DUMMY_THREAD_W
 `EDEN_EXPERIMENTAL_ICACHE_COHERENCE`, `EDEN_EXPERIMENTAL_SM_HOST_WAIT`). Toggle only one per
 isolated hardware A/B test and never silently package all three.
 
+## Resuming a successfully compiled, failed-packaging PS5 application
+
+CI run [#37710086280](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/37710086280)
+passed native compilation, native package inventory, alignment and imports,
+and uploaded the staged app. It failed solely on the outdated
+`tools/ci/check-staged-app.py` assertion for `kHomeCache`, removed from the
+actual four-action Home utility navigation. The current identifiers are
+`kHomeQuickPanel`, `kHomeQuickFirst`, `kHomeStorage`,
+`kHomeControllers`, and `kHomeFullSettings`.
+
+The staged artifact was downloaded locally and validated in full against the
+corrected checker (**162 files PASS**). `tools/check-encore-ux.py` now rejects
+staged-Home-checker references to missing UI identifiers in early preflight.
+
+The workflow supports `workflow_dispatch` with
+`resume_run_id=37710086280`, `publish=false`: download that already-built
+staged title, revalidate it, assemble the distribution ZIP, FTP ZIP and FFPFSC
+image, and upload the release artifact **without compiling PS5 code again**.
+The commit message marker `[publish-existing]` suppresses a redundant native
+build on the accompanying mainline push; it does not publish a GitHub Release.
+
 ## Preserving a prepared Eden source when a verified patch evolves
 
 GitHub Actions restores the complete pinned Eden source and CMake/FFmpeg caches.
