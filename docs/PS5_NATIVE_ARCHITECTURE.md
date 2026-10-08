@@ -245,9 +245,15 @@ ownership lookup prevents committing sparse pages into dense aliases.
 Once a guest is running, an unfulfilled `sceKernelAllocateDirectMemory`
 request **before page mapping** throws `std::bad_alloc` from the derived
 `EnsureMemoryCommitted`. A64 and A32 attempt the existing Dynarmic cache
-invalidation/rewind, then retry once using physical pages already owned. A
-second failure or partially mapped RX/RW chunk is **not** yet recoverable;
-this is not PS5-qualified or enabled in normal builds. The code must not be
+invalidation/rewind, then retry once using physical pages already owned. A second exhaustion failure still propagates. For an uncommitted chunk,
+failure at RW mapping, RX mapping or executable permission now attempts
+to replace **only the new** RX and RW mappings with anonymous `PROT_NONE`
+guards, releases that chunk's direct memory, and returns failure without
+touching previously committed JIT code. If fixed-address restoration cannot
+be proven, the process aborts rather than reusing an ambiguously mapped
+executable page. This recovery is **source-level / host-mocked only**;
+the firmware 13.60 fixed-map behavior is not qualified, and sparse remains
+disabled in normal builds. The code must not be
 advertised as unconditional OOM safety.
 
 Ordinary dense JIT allocations now keep a separate counter of *physical*
