@@ -49,6 +49,7 @@ Launcher::~Launcher()
 {
     // The worker may still be reading files; cancel optional per-game
     // enumeration before joining, then keep Services alive through teardown.
+    home_cancel_.store(true, std::memory_order_release);
     scan_cancel_.store(true, std::memory_order_release);
     media_cancel_.store(true, std::memory_order_release);
     diagnostics_cancel_.store(true, std::memory_order_release);
@@ -208,6 +209,7 @@ void Launcher::launch(const std::string &file, const std::string &title, const s
     // Home can launch before its background library/mod sweep finishes.
     // Avoid wasting direct-memory and filesystem bandwidth on a list that
     // will be destroyed as the emulator takes over the console.
+    home_cancel_.store(true, std::memory_order_release);
     scan_cancel_.store(true, std::memory_order_release);
     media_cancel_.store(true, std::memory_order_release);
     diagnostics_cancel_.store(true, std::memory_order_release);
