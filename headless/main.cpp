@@ -1347,8 +1347,12 @@ int main(int argc, char** argv) {
             const auto glyph_catalogue = Eden::GlyphOverrides::LoadCatalogue(
                 Eden::ConfigFile("encore-glyph-overrides.json"));
             char glyph_update_version[96]{};
-            (void)eden_game_addons(title, glyph_update_version,
-                                   sizeof(glyph_update_version), nullptr);
+            // The graphics version is read from the scanned effective update
+            // or the game's OWN base NACP, never entered via EdiZon. Unknown
+            // metadata deliberately leaves original Nintendo artwork.
+            (void)eden_game_glyph_display_version(
+                guest, Eden::AssetsPath("keys").c_str(), title,
+                glyph_update_version, sizeof(glyph_update_version));
             const bool glyph_requested = Eden::LoadInGamePlayStationGlyphs(title);
             const auto glyph_state = Eden::GlyphOverrides::Select(
                 glyph_catalogue, title, glyph_update_version,
