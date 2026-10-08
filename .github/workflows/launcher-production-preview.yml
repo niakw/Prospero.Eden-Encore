@@ -1,8 +1,7 @@
 name: Launcher real-render preview — no emulator build
 
 on:
-  push:
-    branches: [local/fc27-offline-no-build]
+  # Legacy preview branch was removed; render only by explicit manual dispatch.
   workflow_dispatch:
 
 permissions:
