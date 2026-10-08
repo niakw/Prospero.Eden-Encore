@@ -661,7 +661,8 @@ foreach(bits 32 64)
       # Only the active architecture allocates these caches; core3/host stay 16 MiB.
       if(PS5_NATIVE)
           if(bits EQUAL 64)
-              # One-time, per-title opt-in A64 cache capacity. Default unchanged.
+              # Universal PS5 A64 JIT capacity from once-per-launch memory admission;
+              # Safe Launch, unknown headroom and A32 retain qualified defaults.
               set(jit_cache_sizes "::Eden::Experimental::A64CacheBytes(m_core_index, m_core_index == 0 ? 256_MiB : m_core_index < 3 ? 192_MiB : 16_MiB)")
           else()
               set(jit_cache_sizes "m_core_index == 0 ? 512_MiB : m_core_index < 3 ? 64_MiB : 16_MiB")
