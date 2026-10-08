@@ -144,6 +144,7 @@ class Launcher
     void finish_selected_media();
     void apply_games(std::vector<Game> games);
     void name_home_games();
+    void sync_home_game(const Game& game); // one Nlib update must not walk every installed title
     // The home screen's content, with its game's mods counted.
     void read_home();
     // Games removed/moved while the launcher is open disappear without a full rescan.
