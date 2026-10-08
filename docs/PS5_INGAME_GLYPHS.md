@@ -88,3 +88,42 @@ installation: disable/remove a stale pack until that version is verified.
 
 Synthetic host-only checks are in tools/check-ps-glyph-packs.py.
 Issue tracking: https://github.com/niakw/Prospero.Eden-Encore/issues/7
+
+## Simpler Encore-overrides integration (2026-10-08)
+
+The catalogue is now maintained alongside the existing profiles in
+[niakw/encore-overrides/glyphs/manifest.json](https://github.com/niakw/encore-overrides/blob/main/glyphs/manifest.json).
+It uses the same authoring model: one versioned JSON, per-title rules, a
+generated C++ snapshot and an optional runtime JSON update.
+
+Sync a reviewed source checkout with:
+
+    python3 tools/sync-glyph-overrides.py --source /path/to/encore-overrides
+
+This updates data/glyph-overrides.json and
+headless/glyph_overrides_generated.h. The app loads the embedded snapshot,
+or a newer valid config/encore-glyph-overrides.json (never an older revision).
+
+An installed, verified `Eden Encore PS Glyphs` graphics mod is selected
+*automatically at launch* only if the title ID, **latest scanned update
+display version** and staged pack's asserted build ID match a curated rule.
+Unsupported/mismatched packs are disabled, preserving Nintendo artwork.
+The pack must still exist: the catalogue alone does not create replacement
+textures, and a claimed build ID is **not independently verified from the
+running NSO yet**.
+
+Visual style is independent of controller mappings. In
+prosperoeden.json:
+
+    {"appearance":{"ingame_button_glyphs":"playstation"}}
+
+Use "switch" for original Nintendo artwork. A single title may override
+that setting under games/TITLE/ingame_button_glyphs. Default is PlayStation
+*preferred*, with Nintendo fallback for unsupported titles. This is a
+configuration-level choice, **not yet a new launcher setting/screen**.
+The approved home design was deliberately not reworked.
+
+Source-only tests compile the actual selector, verify the title/update and
+mod evidence gates, reject unknown versions, check settings persistence and
+prove that no controller mapping changes. No hot-path graphics search or
+OCR is used.
