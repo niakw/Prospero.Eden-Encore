@@ -182,10 +182,19 @@ set(fermi_layer_new [=[
             static_cast<u64>(regs.dst.width) *
                 BytesPerBlock(PixelFormatFromRenderTargetFormat(regs.dst.format)) &&
         regs.operation == Operation::SrcCopy && regs.clip_enable == 0;
-    UNIMPLEMENTED_IF_MSG(regs.src.layer != 0 && !pitch_layer_copy,
-                         "Source layer is not zero");
-    UNIMPLEMENTED_IF_MSG(regs.dst.layer != 0 && !pitch_layer_copy,
-                         "Destination layer is not zero");
+    if ((regs.src.layer != 0 || regs.dst.layer != 0) && !pitch_layer_copy) {
+        static std::atomic<unsigned> unsupported_layer_reports{0};
+        const unsigned count = unsupported_layer_reports.fetch_add(1, std::memory_order_relaxed);
+        if (count < 8)
+            LOG_CRITICAL(Debug,
+                "EDEN_GPU_FERMI2D_UNSUPPORTED_LAYER src_layer={} dst_layer={} "
+                "src_depth={} dst_depth={} src_linear={} dst_linear={} sample={}",
+                regs.src.layer, regs.dst.layer, regs.src.depth, regs.dst.depth,
+                static_cast<unsigned>(regs.src.linear), static_cast<unsigned>(regs.dst.linear),
+                count + 1);
+        AssertFailSoftImpl();
+        return; // unsupported layers must not silently copy the wrong slice
+    }
 ]=])
 set(fermi_new [=[
     // The software swizzler already handles the z=0 subrectangle of
@@ -213,6 +222,7 @@ set(fermi_new [=[
         // Preserve UNIMPLEMENTED_IF_MSG soft-assert / debug-break semantics
         // even after the diagnostic log's bounded eight samples.
         AssertFailSoftImpl();
+        return; // unsupported depth is not a valid copy operation
     }
 ]=])
 string(FIND "${fermi_source}" "${fermi_old}" fermi_at)
