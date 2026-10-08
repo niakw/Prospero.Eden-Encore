@@ -1,6 +1,7 @@
 #include "metadata_bridge.h"
 #include "assets_dir.h"
 #include "diagnostics.h"
+#include "glyph_version.h"
 #include "ryujinx_saves.h"
 #if defined(__PROSPERO__)
 #include "native_directory.h"
@@ -83,14 +84,7 @@ std::string ReadGlyphDisplayVersion(const FileSys::VirtualDir& romfs) {
     if (!nacp) nacp = romfs->GetFile("Control.nacp");
     FileSys::RawNACP raw{};
     if (!nacp || nacp->ReadObject(&raw) != sizeof(raw)) return {};
-    const auto end = std::find(raw.version_string.begin(), raw.version_string.end(), '\0');
-    if (end == raw.version_string.begin()) return {};
-    std::string version(raw.version_string.begin(), end);
-    for (unsigned char c : version)
-        if (!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
-              (c >= '0' && c <= '9') || c == '.' || c == '_' ||
-              c == '+' || c == '-' || c == ' ')) return {};
-    return version;
+    return Eden::GlyphVersion::FromNacp(raw.version_string);
 }
 
 // The supported-language flags of a control RomFS's NACP (bit n is NS ApplicationLanguage n); 0
