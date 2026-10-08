@@ -26,6 +26,9 @@ jobs:
         run: |
           python3 -B tools/check-nlib-media-safety.py
           python3 -B tools/check-universal-emulation-policy.py
+          python3 -B tools/check-home-reference.py
+          python3 -B tools/check-home-media.py
+          python3 -B tools/check-encore-ux.py
 
       - name: Install tiny host-only Mesa renderer
         run: |
