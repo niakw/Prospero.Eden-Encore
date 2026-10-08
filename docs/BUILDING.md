@@ -353,3 +353,18 @@ After examining
 the PNGs against the single screenshot, run the full PS5 build only when
 code quality checks and host visual review are complete.
 
+
+### Focus and full-screen background reference (2026-10-08)
+
+The approved Home background is **object-fit cover** (aspect-preserving centred
+crop), with separate translucent left and bottom fades to keep UI legible; no
+solid letterbox/rectangle behind the game. Interactions share the actual
+Eden Encore violet/pink double-edge, soft bloom, dark-plum gradient and restrained
+picture-dimming focus so recent cover art remains recognisable. Navigation,
+primary actions, game covers, dialogs and quick-action cards all use native
+DrawList, **never an image-generator mock-up**. Icon-only art uses contain.
+
+French user text says **Joueurs max.** and **Cache**. The low-level diagnostics
+and emulator paths may retain technical `shader/JIT` identifiers internally.
+The GitHub native launcher preview exports its true 1920×1080 PNGs; no full
+PS5 build is part of this visual check.
