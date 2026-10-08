@@ -137,6 +137,7 @@ native_scan = native_svc.split(
     "EdenServices::enrich_game_media", 1)[0]
 assert "cancel && cancel->load(std::memory_order_acquire)" in native_scan
 assert "return {}; // discard partial results and stop per-title disk work" in native_scan
+assert "return {}; // extraction finished; skip ID/Nlib/add-on metadata" in native_scan
 
 assert "auto games = scan_.get();" in lib
 # A failed first scan must not become a valid empty list. Otherwise the
