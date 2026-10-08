@@ -411,7 +411,7 @@ bool CommitSparseJitCode(void* executable, std::size_t required) noexcept {
         };
         const auto rollback = [&](const char* stage, int error) noexcept {
             std::fprintf(stderr,
-                         "EDEN_JIT_SPARSE_MAP_FAILED stage=%s committed=%zu errno=%d rollback=guard\\n",
+                         "EDEN_JIT_SPARSE_MAP_FAILED stage=%s committed=%zu errno=%d rollback=guard\n",
                          stage, region.committed, error);
             restore_guard(rx);
             restore_guard(rw);
