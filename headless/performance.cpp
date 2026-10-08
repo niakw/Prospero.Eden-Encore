@@ -39,6 +39,7 @@ namespace Common {
 void SparseUsage(std::size_t* reserved, std::size_t* committed) noexcept;
 #ifdef PS5_NATIVE
 void SparseJitUsage(std::size_t* reserved, std::size_t* committed) noexcept;
+std::size_t DenseJitDirectBytes() noexcept;
 #endif
 } // namespace Common
 
@@ -480,6 +481,8 @@ void ReportDirectMemoryState(const char* phase) {
     ::Common::SparseJitUsage(&jit_reserved, &jit_committed);
     std::printf("EDEN_JIT_SPARSE_MEMORY phase=%s reserved=%zu committed=%zu\n",
                 phase, jit_reserved, jit_committed);
+    std::printf("EDEN_JIT_DENSE_MEMORY phase=%s physically_owned=%zu\n",
+                phase, ::Common::DenseJitDirectBytes());
     std::printf("EDEN_MEMORY_LAYOUT phase=%s largest_rc=%d total=%lld largest=%zu "
                 "largest_start=%lld free_upper=%lld scanned_regions=%u scan_valid=%d short=%d\n",
                 phase, largest_rc, static_cast<long long>(total),
