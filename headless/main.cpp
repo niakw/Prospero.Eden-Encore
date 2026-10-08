@@ -741,6 +741,7 @@ int main(int argc, char** argv) {
         const auto launch_preferences = Eden::LoadPreferences();
         // Per-title opt-in; no experimental setting is enabled automatically.
         unsigned experimental_jit_cache = 0;
+        bool experimental_sparse_jit = false;
         bool experimental_logical_cpu = false;
         bool experimental_frame_probe = false;
 #ifdef PS5_NATIVE
@@ -758,17 +759,21 @@ int main(int argc, char** argv) {
                             it->get<std::string>() : "";
                     };
                     const std::string jit = get("jit_cache");
-                    experimental_jit_cache = jit == "balanced" ? 1u : jit == "expanded" ? 2u : 0u;
+                    experimental_jit_cache = jit == "balanced" ? 1u : jit == "expanded" ? 2u :
+                        jit == "elastic" ? 3u : 0u;
+                    experimental_sparse_jit = get("jit_memory") == "sparse" || experimental_jit_cache == 3u;
                     experimental_logical_cpu = get("cpu_placement") == "logical";
                     experimental_frame_probe = get("vulkan_pacing") == "trace";
                 }
             }
         }
         Eden::Experimental::jit_cache_tier.store(experimental_jit_cache, std::memory_order_relaxed);
+        Eden::Experimental::sparse_jit_cache.store(experimental_sparse_jit, std::memory_order_relaxed);
         Eden::Experimental::vulkan_frame_probe.store(experimental_frame_probe, std::memory_order_relaxed);
-        std::printf("EDEN_EXPERIMENT_CONFIG title=%016llX jit=%u cpu_logical=%u vulkan_trace=%u safe=%u\n",
+        std::printf("EDEN_EXPERIMENT_CONFIG title=%016llX jit=%u cpu_logical=%u vulkan_trace=%u safe=%u jit_sparse=%u\n",
             static_cast<unsigned long long>(launch_title_id), experimental_jit_cache,
-            unsigned(experimental_logical_cpu), unsigned(experimental_frame_probe), unsigned(safe_launch));
+            unsigned(experimental_logical_cpu), unsigned(experimental_frame_probe), unsigned(safe_launch),
+            unsigned(experimental_sparse_jit));
 #endif
         const int global_authored_tier =
             launch_preferences.performance_profile >= 0 &&
