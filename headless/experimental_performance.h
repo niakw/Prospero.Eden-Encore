@@ -87,12 +87,12 @@ inline constexpr JitMemoryPlan ChooseJitMemoryPlan(
     // few rounding bytes (which could make a growing budget reduce another
     // core's arena at a 2 MiB boundary). Keep every plan monotonic, capped,
     // and bounded by the SAME admitted physical byte budget.
-    const auto redistribute_saturated = [&](auto& arenas, const auto& floor,
+    const auto redistribute_saturated = [&](auto& arenas,
                                             const std::array<std::size_t, 3>& desired) {
         std::size_t spill = 0;
         for (std::size_t i = 0; i < 3; ++i) {
             const std::size_t clamped = arenas[i];
-            if (desired[i] > clamped + kLargePage)
+            if (desired[i] >= clamped + kLargePage)
                 spill += (desired[i] - clamped) / kLargePage * kLargePage;
         }
         for (std::size_t i = 0; i < 3 && spill >= kLargePage; ++i) {
@@ -101,14 +101,13 @@ inline constexpr JitMemoryPlan ChooseJitMemoryPlan(
             arenas[i] += static_cast<std::uint32_t>(add);
             spill -= add;
         }
-        (void)floor;
     };
-    redistribute_saturated(plan.a64, kA64Baseline, {
+    redistribute_saturated(plan.a64, {
         std::size_t{kA64Baseline[0]} + (growth / 10) * 4,
         std::size_t{kA64Baseline[1]} + (growth / 10) * 3,
         std::size_t{kA64Baseline[2]} + (growth / 10) * 3
     });
-    redistribute_saturated(plan.a32, kA32Baseline, {
+    redistribute_saturated(plan.a32, {
         std::size_t{kA32Baseline[0]} + growth / 2,
         std::size_t{kA32Baseline[1]} + growth / 4,
         std::size_t{kA32Baseline[2]} + growth / 4
