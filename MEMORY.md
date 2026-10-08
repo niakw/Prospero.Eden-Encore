@@ -598,3 +598,9 @@ or PS5 hardware performance validation.
 - Pending at the moment of this entry: execute the new dense-alias gate on the final HEAD via source-only CI. No application build or console test approved/performed for this feature branch.
 
 - First run of the new dense-alias host fixture, [#37828438442](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/37828438442), **FAILED in the test mock**, not in the production allocator. Its `CountDenseJitDirect` mock wrongly asserted for `nullptr` after `allocator->free(nullptr)`; the real production function has an explicit null no-op. Fixed mock semantics in `79e683233be3`. Re-run the host-only workflow to qualify the corrected fixture; never label the first red run a production JIT regression.
+
+### 2026-10-08 — Final source-only gate after RX-alias mock fix
+
+- [Core source preflight #37828535877](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/37828535877) **SUCCESS** on tested commit `e76a14451a82859365024930361055216aa04f57`. The log contains `PASS real PS5 dense JIT allocator: alias failure is fatal-to-attempt, no RW/NX fallback or owned-memory leak` and `CORE_PREFLIGHT_ALL_PASS`; other JIT/Vulkan and approved UX source gates are also green.
+- This proves the current lightweight host checks, not native PS5 SDK compilation, true direct-memory alias permission mapping, Vulkan driver cache durability on console, full CPU/GPU/RAM utilization or FC27 freeze resolution. Keep sparse JIT disabled in release until those hardware/native qualifications.
+- The only commit after the tested source SHA is this `MEMORY.md` status entry, tagged `[skip ci]` to avoid redundant source CI and any native or UI build.
