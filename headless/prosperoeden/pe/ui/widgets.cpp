@@ -335,12 +335,17 @@ void plate_focus(Canvas &c, const Plate &style, const Rect &r, float amount)
     const float fill_strength = artwork_plate ? 0.06f : 0.82f;
     const float gradient_strength = artwork_plate ? 0.06f : 0.70f;
     const float right_strength = artwork_plate ? 0.06f : 0.34f;
-    c.list.shadow({r.x - 13.0f, r.y - 10.0f, r.w + 26.0f, r.h + 24.0f},
-                  style.radius + 13.0f, 43.0f,
-                  theme::kLime.with_alpha(0.30f * amount * breathe));
-    c.list.shadow({r.x - 5.0f, r.y - 5.0f, r.w + 10.0f, r.h + 10.0f},
-                  style.radius + 6.0f, 19.0f,
-                  theme::kSun.with_alpha(0.29f * amount * breathe));
+    // Shadows fill the interior of rounded shapes in this shader. For cover
+    // tiles the glow is instead emitted BEFORE the image (Home/Library draw
+    // order), otherwise a focused red/green cover becomes an opaque pink card.
+    if (!artwork_plate) {
+        c.list.shadow({r.x - 13.0f, r.y - 10.0f, r.w + 26.0f, r.h + 24.0f},
+                      style.radius + 13.0f, 43.0f,
+                      theme::kLime.with_alpha(0.30f * amount * breathe));
+        c.list.shadow({r.x - 5.0f, r.y - 5.0f, r.w + 10.0f, r.h + 10.0f},
+                      style.radius + 6.0f, 19.0f,
+                      theme::kSun.with_alpha(0.29f * amount * breathe));
+    }
     if (style.focus_base.a > 0.0f)
         c.list.rounded_rect(r, style.radius,
                             style.focus_base.with_alpha(fill_strength * amount));
