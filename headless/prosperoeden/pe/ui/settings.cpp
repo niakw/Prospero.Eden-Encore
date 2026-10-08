@@ -563,7 +563,7 @@ void Launcher::press_dialog(Key key)
             const bool cleared = services_.clear_shader_caches(&result);
             // Refresh only after the explicit maintenance operation, never
             // while the diagnostics overlay is being rendered every frame.
-            start_diagnostics(); // disk recount stays off the UI/input thread
+            start_diagnostics(true); // recount after explicit maintenance, off the UI thread
             say(result, !cleared);
             cue(cleared ? Cue::saved : Cue::error);
             return;
