@@ -567,11 +567,11 @@ int main(int argc, char** argv) {
             // Keep compiled Vulkan/RADV shaders while space exists. The cache
             // ceiling follows *disk* headroom (not CPU/GPU RAM), so a large
             // installed library need not repeatedly rebuild evicted pipelines.
-            // Use the already boot-proven std::filesystem::space on Eden's data
-            // root; never call the unsafe PS5 libc statfs("/user") directly.
+            // Query the cache's actual filesystem, not an optional external
+            // game-assets drive. Do not use raw PS5 libc statfs("/user").
             std::error_code cache_space_error;
-            const auto cache_space = std::filesystem::space(Eden::AssetsDir(), cache_space_error);
-            if (!cache_space_error) {
+            const auto cache_space = std::filesystem::space(cache, cache_space_error);
+            if (!cache_space_error && cache_space.available != std::uintmax_t(-1)) {
                 constexpr std::uintmax_t mib = 1024ull * 1024ull;
                 const auto max_cache_mib =
                     std::max<std::uintmax_t>(64, cache_space.available / (8 * mib));
