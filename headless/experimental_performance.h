@@ -38,9 +38,16 @@ struct JitMemoryPlan {
 
 // A physical admission plan, computed *once per game* for BOTH guest ISAs.
 // Only the active ISA is instantiated, never both full sets simultaneously.
-// Half the post-reserve contiguous free pool may be committed by today's
-// dense JIT; the remaining half stays available for guest/GPU/I/O growth.
-// No hard-coded "C" cache ceiling or title-ID list is involved.
+// Hardware crash evidence (FC27, 2026-10-08): reserving HALF of the
+// post-3-GiB pool as immutable dense RX/RW JIT (4.3 GiB code) left only
+// a 38 MiB largest free direct-memory block when the game later requested
+// 440 MiB. The GPU heap and guest can grow for minutes *after* boot.
+// Until PS5 sparse physical commits are qualified, admit at most ONE
+// QUARTER of the observed post-reserve contiguous pool for dense JIT;
+// keep THREE QUARTERS for runtime GPU/guest/OS allocations. This scales
+// across A32/A64 and all titles: there is no FC27 special case or preset
+// A/B/C limit. Dense JIT is not reclaimable mid-game: allocate for peak
+// runtime demand, not just free RAM at menu exit.
 // Memory rebalancing at runtime requires a separately proven sparse allocator.
 inline constexpr JitMemoryPlan ChooseJitMemoryPlan(
     bool safe_launch, bool memory_query_ok, std::size_t largest_free_block) noexcept {
@@ -58,7 +65,10 @@ inline constexpr JitMemoryPlan ChooseJitMemoryPlan(
     static_assert(native_floor == std::size_t{kA32Baseline[0]} +
                                   kA32Baseline[1] + kA32Baseline[2] +
                                   kA32Baseline[3]);
-    const std::size_t budget = ((largest_free_block - kHostReserve) / 2) / kLargePage * kLargePage;
+    // Maintain at least three quarters of the growth pool uncommitted.
+    // Saturating the JIT at launch was the actual observed reason an
+    // unrelated late 440 MiB request failed in the FC27 crash trace.
+    const std::size_t budget = ((largest_free_block - kHostReserve) / 4) / kLargePage * kLargePage;
     // AllocateMemoryPages gives every dense JIT cache its own 2 MiB direct-
     // memory header/alignment page. Four baseline arenas therefore commit
     // 656 + 8 MiB, not only the advertised 656 MiB code capacity. Account
