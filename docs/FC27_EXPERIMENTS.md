@@ -59,6 +59,42 @@ but does **not** override the code cache capacity. This does not yet provide
 mid-game growth, or prove all games benefit from larger dense allocations.
 The installed PS5 app remains unchanged.
 
+## All-title development experiments (source candidate, not PS5-qualified)
+
+A development build compiled with `EDEN_DEV_PROFILE` can now apply the same
+opt-in experiment to **every game** rather than requiring a manual title entry.
+`defaults` applies to all titles (including ones without a known Nintendo title ID);
+a field supplied in `games.<title-id>` overrides that one global field.
+`"off"` disables an individual field inherited from `defaults`.
+Unknown/missing fields keep the existing production behaviour.
+Safe Launch ignores both the global and per-title values.
+
+Example **for developer source review, not for installing on PS5 yet**:
+
+```json
+{
+  "defaults": {
+    "cpu_placement": "logical",
+    "vulkan_pacing": "trace",
+    "jit_memory": "off"
+  },
+  "games": {
+    "0100C49025D3E000": {
+      "cpu_placement": "off"
+    }
+  }
+}
+```
+
+The all-title CPU setting is **logical-placement experimentation only**:
+the x2APIC hardware report `ready=0` does not prove that the
+guest runs on one CPU, nor that different OS logical IDs are different
+physical cores. Sparse JIT remains additionally gated by
+`EDEN_SPARSE_JIT_DEV=ON` and its live alias preflight. The pacing
+`trace` mode **only measures** frame time and never synthesizes FPS.
+Do not turn these options on in a shipping release without a native PS5
+test and regression comparison.
+
 ## Sparse JIT memory (development branch only — not built or PS5-qualified)
 
 The dense PS5 code allocator used by A/B/C/D commits **all** requested direct
