@@ -219,7 +219,7 @@ if(PS5_NATIVE)
         message(FATAL_ERROR "Pinned Dynarmic JIT commit boundary changed")
     endif()
     string(REPLACE "${jit_commit_anchor}"
-        "${jit_commit_anchor}#ifdef PS5_NATIVE\n    if (::Eden::Experimental::sparse_jit_cache.load(std::memory_order_relaxed) &&\n        ::Common::IsSparseJitCode(getCode())) {\n        const size_t written = getSize();\n        if (written > maxSize_ || codesize > maxSize_ - written ||\n            !::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), written + codesize)) {\n            std::fprintf(stderr, \"EDEN_JIT_SPARSE_COMMIT_FAILED used=%zu next=%zu capacity=%zu\\n\", written, codesize, maxSize_);\n            std::abort();\n        }\n        return;\n    }\n#endif\n"
+        "${jit_commit_anchor}#ifdef PS5_NATIVE\n    if (::Eden::Experimental::sparse_jit_cache.load(std::memory_order_relaxed) &&\n        ::Common::IsSparseJitCode(getCode())) {\n        const size_t written = getSize();\n        if (written > maxSize_ || codesize > maxSize_ - written ||\n            !::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), written + codesize)) {\n            std::fprintf(stderr, \"EDEN_JIT_SPARSE_COMMIT_FAILED used=%zu next=%zu capacity=%zu\\n\", written, codesize, maxSize_);\n            throw std::bad_alloc{};\n        }\n        return;\n    }\n#endif\n"
         code_source "${code_source}")
 endif()
   # ConstantPool has completed construction before this body. Isolate its last
@@ -259,7 +259,7 @@ endif()
       "    ASSERT(size <= 23);\n    size_t current_size = getCurr<const u8*>()" code_source "${code_source}")
 string(REPLACE "    mprotect(reinterpret_cast<void*>(roundAddr), size + (iaddr - roundAddr), mode);"
     "    const size_t span = (size + (iaddr - roundAddr) + pageSize - 1) & ~(pageSize - 1);\n    if (mprotect(reinterpret_cast<void*>(roundAddr), span, mode) != 0) std::abort();" code_source "${code_source}")
-  write_derived("${PORT_BUILD_DIR}/block_of_code.cpp" "#include <algorithm>\n#include <cstdio>\n#include <cstdlib>\n#include <unistd.h>\n${code_source}")
+  write_derived("${PORT_BUILD_DIR}/block_of_code.cpp" "#include <algorithm>\n#include <cstdio>\n#include <cstdlib>\n#include <new>\n#include <unistd.h>\n${code_source}")
 get_target_property(jit_sources dynarmic SOURCES)
 list(FILTER jit_sources EXCLUDE REGEX "(^|/)block_of_code\\.cpp$")
 set_property(TARGET dynarmic PROPERTY SOURCES "${jit_sources}")
