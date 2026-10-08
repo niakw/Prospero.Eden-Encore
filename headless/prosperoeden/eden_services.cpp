@@ -373,14 +373,19 @@ NlibEnrichment CachedNlibEnrichment(std::uint64_t title_id, int language_choice)
 // offline fallback. Cards prefer Nlib's square icon, Home prefers its 16:9 banner, and Library
 // details use all available gameplay screenshots (up to the current API cap). Every
 // title is queued for complete artwork at startup, not only on Library selection.
-NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice) {
-    if (title_id == 0) return {};
+NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice,
+                                       const std::atomic<bool>* cancel = nullptr) {
+    const auto cancelled = [cancel] {
+        return cancel && cancel->load(std::memory_order_acquire);
+    };
+    if (title_id == 0 || cancelled()) return {};
 
     // Home and Library can request the same title at the same time. Cache writes use
     // the same .new staging path, so serialize per hash bucket while leaving other
     // titles free to enrich in parallel.
     static std::array<std::mutex, 16> title_locks;
     std::scoped_lock title_lock{title_locks[title_id % title_locks.size()]};
+    if (cancelled()) return {};
 
     NlibEnrichment result = CachedNlibEnrichment(title_id, language_choice);
     const std::string language = NlibLanguageCode(language_choice);
@@ -449,6 +454,7 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
         if (needs_metadata && !may_request_metadata && !current_metadata_cache)
             return result;
         if (may_request_metadata) {
+            if (cancelled()) return result;
             const std::string metadata_endpoint = std::string{"/nx/"} + id + "?lang=" + language +
                 "&fields=name,intro,description,publisher,developer,releaseDate,category,languages,"
                 "numberOfPlayers,icon,banner,screens";
@@ -481,6 +487,7 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
                 if (!current_metadata_cache) return result;
             }
         }
+        if (cancelled()) return result;
         if (result.max_players > 0) CacheNlibPlayers(title_id, result.max_players);
         const bool refresh_existing_artwork = refreshed_metadata && artwork_expired;
 
@@ -491,9 +498,10 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
         std::vector<std::future<bool>> downloads;
         const auto request_media = [&](std::string endpoint, std::string path,
                                        std::size_t minimum = 1024) {
+            if (cancelled()) return;
             downloads.emplace_back(std::async(std::launch::async,
-                [endpoint = std::move(endpoint), path = std::move(path), minimum] {
-                    return CacheNlibJpeg(endpoint, path, minimum);
+                [endpoint = std::move(endpoint), path = std::move(path), minimum, cancel] {
+                    return CacheNlibJpeg(endpoint, path, minimum, cancel);
                 }));
         };
 
@@ -507,6 +515,7 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
 
         const int wanted_screens = std::clamp(screen_count, 0, 3);
         for (int index = 1; index <= wanted_screens; ++index) {
+            if (cancelled()) break;
             const std::string path = NlibScreenshotPath(title_id, index);
             if (!ValidNlibTga(path) || refresh_existing_artwork)
                 request_media(std::string{"/nx/"} + id + "/screen/" + std::to_string(index),
@@ -519,7 +528,7 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
             if (pending.get()) result.artwork_changed = true;
             else ++failed_media;
         }
-        if (refreshed_metadata && artwork_expired && failed_media == 0) {
+        if (!cancelled() && refreshed_metadata && artwork_expired && failed_media == 0) {
             metadata["_encore_artwork_checked_at"] = now_seconds;
             (void)AtomicWriteText(NlibMetadataPath(title_id, language), metadata.dump());
         }
