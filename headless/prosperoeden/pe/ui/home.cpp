@@ -610,9 +610,11 @@ void Launcher::draw_home(Canvas &c)
     text(c, hero_recent != nullptr ? tr("SELECTED GAME") : tr("CONTINUE PLAYING"),
          104.0f, baseline(178.0f, 28.0f, theme::kSmall),
          theme::kSmall, theme::kLime, Align::left, 3.5f);
-    text_block(c, hero_file.empty() ? tr("Your next adventure") : hero_title,
-               104.0f, baseline(218.0f, 64.0f, theme::kDisplay), theme::kDisplay, 62.0f,
-               theme::kTitle, 760.0f, 2, kShrink);
+    // Single-line title with a generous TV-safe width: long localized names
+    // must never flow over the caption/add-ons/buttons below the hero.
+    text_shrink(c, hero_file.empty() ? tr("Your next adventure") : hero_title,
+                104.0f, baseline(218.0f, 72.0f, 54.0f), 54.0f,
+                theme::kTitle, 1160.0f);
     const std::string hero_caption =
         hero_file.empty() ? std::string{tr("Choose a game from your library.")} :
         !hero_intro.empty() ? hero_intro :
