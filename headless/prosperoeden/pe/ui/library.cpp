@@ -444,6 +444,13 @@ void Launcher::finish_home_scan()
         } else {
             home_recent_ = -1;
         }
+        if (!initial && home_focus_ >= 5 && home_focus_ <= 11) {
+            // The recent list may reorder while its metadata worker runs.
+            // Keep focus on the same game by filename, never on a stale
+            // numerical card index or on a removed tile.
+            home_focus_ = home_recent_ >= 0 ? 5 + home_recent_ :
+                home_.last_exists ? 0 : (home_.setup_ready ? 1 : 2);
+        }
 
         // Mod counts are already calculated by the asynchronous library
         // enumeration. Do not reopen every mod directory on this frame.
