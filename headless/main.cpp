@@ -563,9 +563,27 @@ int main(int argc, char** argv) {
             }
             (void)mkdir(cache.c_str(), 0777);
             setenv("MESA_SHADER_CACHE_DIR", cache.c_str(), 1);
-            // Mesa otherwise allows a cache up to 1 GiB. Bound it on a console app so shader
-            // churn cannot consume a large portion of writable storage over time.
-            setenv("MESA_SHADER_CACHE_MAX_SIZE", "256M", 1);
+            // The PS5 has writable game-data storage, not a desktop temp dir.
+            // Keep compiled Vulkan/RADV shaders while space exists. The cache
+            // ceiling follows *disk* headroom (not CPU/GPU RAM), so a large
+            // installed library need not repeatedly rebuild evicted pipelines.
+            // Use the already boot-proven std::filesystem::space on Eden's data
+            // root; never call the unsafe PS5 libc statfs("/user") directly.
+            std::error_code cache_space_error;
+            const auto cache_space = std::filesystem::space(Eden::AssetsDir(), cache_space_error);
+            if (!cache_space_error) {
+                constexpr std::uintmax_t mib = 1024ull * 1024ull;
+                const auto max_cache_mib =
+                    std::max<std::uintmax_t>(64, cache_space.available / (8 * mib));
+                const auto cache_limit = std::to_string(max_cache_mib) + "M";
+                (void)setenv("MESA_SHADER_CACHE_MAX_SIZE", cache_limit.c_str(), 1);
+                std::printf("EDEN_RADV_DISK_CACHE limit_mib=%llu free_mib=%llu\n",
+                            static_cast<unsigned long long>(max_cache_mib),
+                            static_cast<unsigned long long>(cache_space.available / mib));
+            } else {
+                // Unknown disk availability: retain the already qualified 256 MiB limit.
+                (void)setenv("MESA_SHADER_CACHE_MAX_SIZE", "256M", 1);
+            }
         }
         // Whether Eden's large tables can be sparse on this console (src/memory_pages.cpp),
         // decided now: every session's log says it, with or without a game.
@@ -665,8 +683,14 @@ int main(int argc, char** argv) {
         std::error_code trim_error;
         const auto cache_entries = Eden::ReadNativeDirectory(native_shader_cache, trim_error);
         if (!trim_error) {
-            const auto removed = Eden::TrimShaderCache(cache_entries);
-            if (removed) Eden::Report("cache", "Removed old shader cache records to reserve writable storage");
+            std::error_code free_space_error;
+            const auto disk = std::filesystem::space(native_shader_cache, free_space_error);
+            if (!free_space_error) {
+                const auto removed = Eden::TrimShaderCache(
+                    cache_entries, disk.available, disk.capacity);
+                if (removed)
+                    Eden::Report("cache", "Reclaimed old shader records because storage was low");
+            }
         }
 #endif
         std::string selected_game;
