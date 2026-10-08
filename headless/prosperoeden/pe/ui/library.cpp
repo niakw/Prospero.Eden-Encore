@@ -64,7 +64,7 @@ void Launcher::start_scan()
     if (!scan_cancel_.load(std::memory_order_acquire) &&
         !scan_.valid() && home_.setup_ready)
         scan_ = std::async(std::launch::async, [this] {
-            std::vector<Game> games = services_.games();
+            std::vector<Game> games = services_.games(&scan_cancel_);
             if (scan_cancel_.load(std::memory_order_acquire))
                 return std::vector<Game>{};
             // Reading mod folders / disabled-mod settings for each installed
