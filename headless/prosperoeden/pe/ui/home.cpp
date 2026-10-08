@@ -27,13 +27,13 @@ constexpr int kHomeNavRecent = 2;
 constexpr int kHomeNavSettings = 3;
 constexpr int kHomeDetails = 4;
 constexpr int kHomeRecentFirst = 5;
-constexpr int kHomeRecentMax = 6;
-constexpr int kHomeQuickPanel = kHomeRecentFirst + kHomeRecentMax; // 11
-constexpr int kHomeQuickFirst = kHomeQuickPanel + 1;               // 12
+constexpr int kHomeRecentMax = 7;
+constexpr int kHomeQuickPanel = kHomeRecentFirst + kHomeRecentMax; // 12
+constexpr int kHomeQuickFirst = kHomeQuickPanel + 1;               // 13
 constexpr int kHomeQuickCount = 7;
-constexpr int kHomeStorage = kHomeQuickFirst + kHomeQuickCount;    // 19
-constexpr int kHomeControllers = kHomeStorage + 1;                 // 20
-constexpr int kHomeFullSettings = kHomeControllers + 1;            // 21
+constexpr int kHomeStorage = kHomeQuickFirst + kHomeQuickCount;    // 20
+constexpr int kHomeControllers = kHomeStorage + 1;                 // 21
+constexpr int kHomeFullSettings = kHomeControllers + 1;            // 22
 
 enum class HomeIcon { performance, display, output, mode, resolution, filter, antialias, storage, cache, language, controller, settings };
 
@@ -793,7 +793,7 @@ void Launcher::draw_home(Canvas &c)
         constexpr float gap = 16.0f;
         constexpr float card_h = 214.0f;
         // Real games only; keep cards at console-cover scale even with 1-3 titles.
-        constexpr float card_w = (available - gap * 5.0f) / 6.0f;
+        constexpr float card_w = (available - gap * 6.0f) / 7.0f;
         const float row_x = 76.0f;
         for (int i = 0; i < shown; ++i)
         {
