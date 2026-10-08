@@ -23,12 +23,14 @@ MOCK = r"""
 #endif
 #include <cassert>
 #include <cerrno>
+#include <csignal>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 namespace Common {
@@ -111,6 +113,21 @@ extern "C" std::int32_t sceKernelReleaseDirectMemory(
     return close(static_cast<int>(physical >> 32));
 }
 
+// Failed sparse growth must leave the next, not-yet-owned direct page
+// inaccessible on BOTH aliases. Merely checking accounting misses unsafe
+// partially mapped executable pages.
+void assert_inaccessible(const volatile unsigned char* address) {
+    const pid_t child = fork();
+    assert(child >= 0);
+    if (child == 0) {
+        const auto byte = *address;
+        (void)byte;
+        _exit(0);
+    }
+    int status = 0;
+    assert(waitpid(child, &status, 0) == child);
+    assert(WIFSIGNALED(status) && WTERMSIG(status) == SIGSEGV);
+}
 void usage(std::size_t reserve, std::size_t commit) {
     std::size_t a = 0, b = 0;
     Common::SparseJitUsage(&a, &b);
@@ -167,6 +184,8 @@ int main() {
         usage(64 * 1024 * 1024, 3 * PAGE);
         assert(owned_fds == 3);
         assert(x[0] == 13 && x[2 * PAGE] == 99);
+        assert_inaccessible(w + 3 * PAGE);
+        assert_inaccessible(x + 3 * PAGE);
         fail_map_at = 0;
         fail_after_mapping = false;
         fail_protect_at = 0;
