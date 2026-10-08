@@ -233,6 +233,37 @@ validation has been completed. No general FPS improvement is claimed.
   `tools/check-shader-cache-pressure.py`.
   Code remains uncompiled and untested on PS5 firmware 13.60.
 
+## Sparse JIT recovery and physical usage (source-only, 2026-10-08)
+
+The developer-only sparse JIT now commits a 4 MiB bootstrap before returning
+the two code addresses. This is necessary because upstream Dynarmic's constant
+pool writes approximately 2 MiB before the enclosing `BlockOfCode` constructor
+enters `EnsureMemoryCommitted`. Sparse VA reservation or bootstrap failure
+releases the reservation and attempts the original dense allocator; a per-region
+ownership lookup prevents committing sparse pages into dense aliases.
+
+Once a guest is running, an unfulfilled `sceKernelAllocateDirectMemory`
+request **before page mapping** throws `std::bad_alloc` from the derived
+`EnsureMemoryCommitted`. A64 and A32 attempt the existing Dynarmic cache
+invalidation/rewind, then retry once using physical pages already owned. A
+second failure or partially mapped RX/RW chunk is **not** yet recoverable;
+this is not PS5-qualified or enabled in normal builds. The code must not be
+advertised as unconditional OOM safety.
+
+Ordinary dense JIT allocations now keep a separate counter of *physical*
+direct-memory bytes, including allocator overhead, updated only on
+allocation/deallocation. Lifecycle snapshots print
+`EDEN_JIT_DENSE_MEMORY` and `EDEN_JIT_SPARSE_MEMORY` at
+`core_initialized`, `core_shutdown`, and `core_destroyed`, enabling
+post-session leak detection without per-frame polling.
+
+`tools/check-jit-sparse-host.py` compiles the real PS5 memory source with
+mocked kernel mappings to exercise alias visibility, constructor bootstrap,
+incremental commitment, deliberate OOM and cleanup. This is wired into
+lightweight/release preflights **but not executed in a GitHub runner or on
+PS5 yet**. Existing `tools/check-jit-allocator.py` also asserts dense
+physical-accounting returns to zero after every tested allocation/free.
+
 ## Immediate implementation gates
 
 1. Audit physical memory ownership and executable page-map APIs; do not
