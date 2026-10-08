@@ -21,7 +21,8 @@ class Probe {
     std::uint64_t last_progress_second_ = 0;
     bool initialized_ = false;
     bool witnessed_gpu_progress_ = false;
-    unsigned reports_ = 0;
+    unsigned total_reports_ = 0;
+    unsigned reports_this_stall_ = 0;
 public:
     void Reset() noexcept { *this = Probe{}; }
     Result Observe(Counters now, std::uint64_t second) noexcept {
@@ -36,12 +37,14 @@ public:
             last_progress_second_ = second;
             prior_ = now;
             witnessed_gpu_progress_ = false;
+            reports_this_stall_ = 0;
             return {};
         }
         if (prior_.dispatches != now.dispatches || prior_.draws != now.draws) {
             witnessed_gpu_progress_ = true;
             last_progress_second_ = second;
             prior_ = now;
+            reports_this_stall_ = 0;
         }
         Result result{};
         result.established_gpu_progress = witnessed_gpu_progress_;
@@ -49,9 +52,10 @@ public:
         result.seconds_without_progress = second - last_progress_second_;
         // Max FOUR reports over the entire guest session. A temporary
         // pause may resume; do not flood kernel/SD logs with repeated events.
-        if (reports_ < 4 &&
-            result.seconds_without_progress >= (std::uint64_t{reports_} + 1) * 30) {
-            ++reports_;
+        if (total_reports_ < 4 &&
+            result.seconds_without_progress >= (std::uint64_t{reports_this_stall_} + 1) * 30) {
+            ++total_reports_;
+            ++reports_this_stall_;
             result.suspected = true;
         }
         return result;
