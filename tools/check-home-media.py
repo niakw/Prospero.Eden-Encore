@@ -9,11 +9,14 @@ svc=(root/'headless/prosperoeden/eden_services.cpp').read_text()
 for needle in ('start_home_media()', 'finish_home_media()', 'home_media_scan_', 'home_media_attempted_'):
     assert needle in hpp, needle
 assert 'start_home_media();\n}' in home
-assert 'request.home_media_priority = true;' in lib
-assert 'game.home_media_priority' in svc
-assert 'const int wanted_screens = home_priority ?' in svc
-assert '(result.hero.empty() ? std::clamp(screen_count, 0, 1) : 0)' in svc
-assert 'std::clamp(screen_count, 0, 3)' in svc
+# All Nlib images are fetched for every installed title; no Home-first subset.
+assert 'home_media_priority' not in svc + lib + hpp
+assert 'const int wanted_screens = std::clamp(screen_count, 0, 3);' in svc
+assert 'const int selected = std::clamp(library_.selected' in lib
+assert 'for (std::size_t offset = 0; offset < games_.size(); ++offset)' in lib
+assert 'start_selected_media();' in lib[lib.index('void Launcher::apply_games'):lib.index('void Launcher::name_home_games')]
+assert 'artwork_files.resize(6)' not in svc
+assert 'Only Home/recent titles' not in svc
 assert 'services_.enrich_game_media(std::move(request))' in lib
 assert 'home_.last_hero = enriched.hero' in lib
 assert 'home_.last_max_players = enriched.max_players' in lib
