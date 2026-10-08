@@ -16,6 +16,21 @@ ROOT = Path(__file__).resolve().parents[1]
 video_sync = (ROOT / "tools" / "sync-encore-overrides.py").read_text()
 assert '"sync-glyph-overrides.py"' in video_sync
 assert '"--source", str(source)' in video_sync
+# We cannot compile the complete pinned game container/NACP bridge without
+# the console-port dependency checkout. Protect its real source integration:
+# base games read control.nacp, updates are distinguished from missing scans,
+# and the launch path never requires a manually entered EdiZon Build ID.
+metadata_cpp = (ROOT / "headless" / "metadata_bridge.cpp").read_text()
+metadata_h = (ROOT / "headless" / "metadata_bridge.h").read_text()
+main_cpp = (ROOT / "headless" / "main.cpp").read_text()
+assert "ReadGlyphDisplayVersion(" in metadata_cpp
+assert "raw.version_string" in metadata_cpp
+assert "UpdatesScanCompleted()" in metadata_cpp
+assert "update_present = true" in metadata_cpp
+assert "eden_game_glyph_display_version(" in metadata_cpp
+assert "eden_game_glyph_display_version(" in metadata_h
+assert "eden_game_glyph_display_version(" in main_cpp
+assert "eden_game_addons(title, glyph_update_version" not in main_cpp
 CXX = next((item for item in ("clang++-18", "clang++", "g++") if shutil.which(item)), None)
 if not CXX:
     raise SystemExit("missing host C++20 compiler")
