@@ -655,22 +655,17 @@ foreach(bits 32 64)
         endif()
     endif()
       string(REPLACE "std::uint32_t(512_MiB)" "std::uint32_t(16_MiB)" wrapper "${wrapper}")
-      # Guest cores 0-2 share a 640 MiB code budget. A64: 256/192/192, since a large
-      # open-world game's workers filled 64 MiB on cores 1/2 and evacuated whole caches
-      # while streaming. A32 keeps the qualified 512/64/64.
-      # Only the active architecture allocates these caches; core3/host stay 16 MiB.
+      # The same dynamic physical headroom policy applies to every A64/A32
+      # title. Guest code capacity is chosen once, before core construction.
+      # Core 3/host keep 16 MiB. Both guest ISAs are not active together.
       if(PS5_NATIVE)
           if(bits EQUAL 64)
-              # Universal PS5 A64 JIT capacity from once-per-launch memory admission;
-              # Safe Launch, unknown headroom and A32 retain qualified defaults.
               set(jit_cache_sizes "::Eden::Experimental::A64CacheBytes(m_core_index, m_core_index == 0 ? 256_MiB : m_core_index < 3 ? 192_MiB : 16_MiB)")
           else()
-              set(jit_cache_sizes "m_core_index == 0 ? 512_MiB : m_core_index < 3 ? 64_MiB : 16_MiB")
+              set(jit_cache_sizes "::Eden::Experimental::A32CacheBytes(m_core_index, m_core_index == 0 ? 512_MiB : m_core_index < 3 ? 64_MiB : 16_MiB)")
           endif()
           string(REPLACE "std::uint32_t(16_MiB)" "std::uint32_t(${jit_cache_sizes})" wrapper "${wrapper}")
-          if(bits EQUAL 64)
-              string(PREPEND wrapper "#include \"${EDEN_PORT_DIR}/experimental_performance.h\"\n")
-          endif()
+          string(PREPEND wrapper "#include \"${EDEN_PORT_DIR}/experimental_performance.h\"\n")
       endif()
     set(derived "${PORT_BUILD_DIR}/arm_dynarmic_${bits}.cpp")
     # JIT entry/exit sampling is diagnostic instrumentation, not a shipping feature.
