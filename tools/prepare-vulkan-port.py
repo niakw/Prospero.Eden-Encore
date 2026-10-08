@@ -808,6 +808,30 @@ lazy_vulkan_cache_replacement = '''    if (use_vulkan_pipeline_cache) {
 if shader_source.count(lazy_vulkan_cache_anchor) != 1:
     raise RuntimeError("Pinned Vulkan persistent-cache setup changed")
 shader_source = shader_source.replace(lazy_vulkan_cache_anchor, lazy_vulkan_cache_replacement)
+# A driver's VkPipelineCache blob can become incompatible after a RADV
+# update without changing Eden's guest shader CACHE_VERSION. The SDK may
+# reject initial data. Retry with an empty Vulkan cache instead of aborting
+# the entire game at initialization; retain guest shader disk metadata.
+vulkan_cache_create_anchor = '''        return device.GetLogical().CreatePipelineCache(pipeline_cache_ci);
+    };
+    try {
+        std::ifstream file(filename, std::ios::binary | std::ios::ate);'''
+vulkan_cache_create_replacement = '''        try {
+            return device.GetLogical().CreatePipelineCache(pipeline_cache_ci);
+        } catch (const std::exception& error) {
+            if (data_size == 0) throw;
+            LOG_WARNING(Render_Vulkan,
+                        "Ignoring incompatible driver pipeline cache: {}", error.what());
+            pipeline_cache_ci.initialDataSize = 0;
+            pipeline_cache_ci.pInitialData = nullptr;
+            return device.GetLogical().CreatePipelineCache(pipeline_cache_ci);
+        }
+    };
+    try {
+        std::ifstream file(filename, std::ios::binary | std::ios::ate);'''
+if shader_source.count(vulkan_cache_create_anchor) != 1:
+    raise RuntimeError("Pinned Vulkan pipeline-cache constructor changed")
+shader_source = shader_source.replace(vulkan_cache_create_anchor, vulkan_cache_create_replacement)
 # Native affinity masks describe the CPUs the *process can schedule on*;
 # hardware_concurrency() can report more than the PS5 runtime permits.
 pipeline_ps5_headers = '''#ifdef PS5_NATIVE
