@@ -108,6 +108,41 @@ bool write_cover(const std::string &path, const Sample &sample, int index)
     return ok;
 }
 
+// Production-render test data: a real 16:9 TGA texture rendered by the exact
+// launcher GPU pipeline, but with invented scenery instead of copyrighted game
+// art. This catches full-bleed crop, overlays and header occlusion that a bare
+// layout contract cannot see. Do not ship this texture in the PS5 application.
+bool write_preview_hero(const std::string& path)
+{
+    constexpr int w = 1920;
+    constexpr int h = 1080;
+    std::vector<std::uint8_t> pixels(static_cast<std::size_t>(w) * h * 4);
+    for (int y = 0; y < h; ++y) {
+        const float v = static_cast<float>(y) / h;
+        for (int x = 0; x < w; ++x) {
+            const float u = static_cast<float>(x) / w;
+            // Sky/ocean at sunset, warm scene on the right. The details are
+            // deliberately synthetic: geometry and shader blending are tested.
+            const float glow = std::max(0.0f, 1.0f - std::abs(u - 0.69f) * 1.7f) *
+                               std::max(0.0f, 1.0f - std::abs(v - 0.27f) * 2.0f);
+            const float terrain = v > 0.66f + 0.07f * std::sin(11.0f * u) ? 1.0f : 0.0f;
+            const float haze = (1.0f - v) * 0.35f;
+            put_pixel(pixels, w, x, y,
+                      std::clamp(0.05f + glow * 0.66f + terrain * 0.07f, 0.0f, 1.0f),
+                      std::clamp(0.16f + glow * 0.36f + haze + terrain * 0.03f, 0.0f, 1.0f),
+                      std::clamp(0.31f + glow * 0.22f + haze + terrain * 0.05f, 0.0f, 1.0f));
+        }
+    }
+    std::FILE* file = std::fopen(path.c_str(), "wb");
+    if (!file) return false;
+    const unsigned char header[18] = {0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                      w & 0xff, w >> 8, h & 0xff, h >> 8, 32, 0x28};
+    const bool good = std::fwrite(header, 1, 18, file) == 18 &&
+                      std::fwrite(pixels.data(), 1, pixels.size(), file) == pixels.size();
+    std::fclose(file);
+    return good;
+}
+
 // The same labels as the console's settings (headless/settings_store.h), translated like them.
 constexpr const char *kResolutionLabels[] = {"0.25x (minimum)", "0.5x (fastest, softer)", "0.75x (faster)",
                                              "1x (recommended)", "1.25x (sharper)", "1.5x (sharper)",
@@ -169,6 +204,14 @@ FakeServices::FakeServices(const std::string &covers_directory)
             if (!write_cover(game.cover, sample, index))
                 game.cover.clear();
         }
+        if (std::string_view(sample.name) == "Echoes of the Valley") {
+            const std::string image = covers_directory + "/preview-hero.tga";
+            if (write_preview_hero(image)) {
+                game.hero = image;
+                game.intro = "An atmospheric adventure across lost islands.";
+                game.max_players = 2;
+            }
+        }
         games_.push_back(game);
         ++index;
     }
@@ -213,6 +256,9 @@ ui::Home FakeServices::home()
         home.last_caption = last.language_note;
         home.last_caption_warning = true;
         home.last_cover = last.cover;
+        home.last_hero = last.hero;
+        home.last_intro = last.intro;
+        home.last_max_players = last.max_players;
         home.last_title_id = last.title_id;
         home.last_addons = last.addons;
         home.last_language = last.language;
@@ -221,6 +267,10 @@ ui::Home FakeServices::home()
         {
             const ui::Game &game = find(name);
             home.recents.push_back({game.file, game.name, game.cover});
+            home.recents.back().hero = game.hero;
+            home.recents.back().title_id = game.title_id;
+            home.recents.back().max_players = game.max_players;
+            home.recents.back().intro = game.intro;
         }
     }
     home.system_status = fill(tr("{0} games installed"), {std::to_string(games_.size())}) + "  /  " +
