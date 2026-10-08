@@ -111,6 +111,20 @@ assert "regs.clip_enable == 0" in fermi_new
 assert "regs.src.depth != 1 && !base_layer_3d_copy && !pitch_layer_copy" in fermi_new
 assert "if (!rasterizer->AccelerateSurfaceCopy(src, regs.dst, config))" in fermi_copy_old
 assert "if (base_layer_3d_copy || pitch_layer_copy)" in fermi_copy_new
+# New software layer paths reject negative/overflowed subrects without
+# modifying the historical GPU-accelerated normal-depth path.
+assert "const bool rect_valid =" in fermi_copy_new
+assert "config.src_x0 >= 0 && config.src_y0 >= 0" in fermi_copy_new
+assert "config.dst_x0 >= 0 && config.dst_y0 >= 0" in fermi_copy_new
+assert "config.src_x1 > config.src_x0" in fermi_copy_new
+assert "config.dst_y1 > config.dst_y0" in fermi_copy_new
+assert "static_cast<u64>(config.src_x1) <= src.width" in fermi_copy_new
+assert "static_cast<u64>(config.src_y1) <= src.height" in fermi_copy_new
+assert "static_cast<u64>(config.dst_x1) <= regs.dst.width" in fermi_copy_new
+assert "static_cast<u64>(config.dst_y1) <= regs.dst.height" in fermi_copy_new
+assert "EDEN_GPU_FERMI2D_SOFTWARE_RECT_INVALID" in fermi_copy_new
+assert fermi_copy_new.index("if (!rect_valid)") < fermi_copy_new.index("sw_blitter->Blit(src, dst, config);")
+
 # Nonzero layers are only copied using simple pitch-linear planes.
 # The layer stride is pitch*height; 3D swizzled z>0 remains unsupported.
 assert "regs.src.layer != 0" in fermi_layer_old
