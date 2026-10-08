@@ -438,6 +438,75 @@ void cover_crop(Canvas &c, const std::string &path, const Rect &r, float radius,
     c.list.bordered_rect(r, radius, kWhite.with_alpha(0.0f), 1.0f, kWhite.with_alpha(0.12f));
 }
 
+// Draw the same native settings cog at every size: eight visible teeth,
+// a distinct annular body and an empty central spindle. Avoid a generic ring.
+void settings_gear(Canvas &c, float cx, float cy, float radius, Color ink)
+{
+    const float scale = radius / 12.0f;
+    c.list.ring(cx, cy, radius * 0.72f, std::max(1.5f, 2.9f * scale), ink);
+    for (int spoke = 0; spoke < 8; ++spoke) {
+        const float angle = static_cast<float>(spoke) * 0.7853981634f;
+        const float ux = std::cos(angle);
+        const float uy = std::sin(angle);
+        c.list.line(cx + ux * radius * 0.70f, cy + uy * radius * 0.70f,
+                    cx + ux * radius * 1.12f, cy + uy * radius * 1.12f,
+                    std::max(1.8f, 3.8f * scale), ink);
+    }
+    c.list.ring(cx, cy, radius * 0.24f, std::max(1.0f, 1.9f * scale), ink);
+}
+
+// Outlined DualSense-inspired pad shared by Home, player metadata and status.
+// Geometry is normalized to 72x50; it preserves proportions at badge size.
+void dualsense_icon(Canvas &c, const Rect &r, Color ink, float brightness)
+{
+    if (r.w <= 0.0f || r.h <= 0.0f) return;
+    const float u = std::min(r.w / 72.0f, r.h / 50.0f);
+    const float x = r.x + (r.w - 72.0f * u) * 0.5f;
+    const float y = r.y + (r.h - 50.0f * u) * 0.5f;
+    const Color outline = ink.with_alpha(brightness);
+    const float stroke = std::max(0.9f, 2.1f * u);
+    const auto line = [&](float ax, float ay, float bx, float by, float thick = 1.0f) {
+        c.list.line(x + ax * u, y + ay * u, x + bx * u, y + by * u,
+                    stroke * thick, outline);
+    };
+    // PS-style curved shoulder, wings and long ergonomic handles.
+    line(18, 11, 25, 9);
+    line(25, 9, 47, 9);
+    line(47, 9, 54, 11);
+    line(18, 11, 10, 14);
+    line(10, 14, 6, 20);
+    line(6, 20, 4, 38);
+    line(4, 38, 9, 44);
+    line(9, 44, 16, 42);
+    line(16, 42, 23, 32);
+    line(23, 32, 49, 32);
+    line(49, 32, 56, 42);
+    line(56, 42, 63, 44);
+    line(63, 44, 68, 38);
+    line(68, 38, 66, 20);
+    line(66, 20, 62, 14);
+    line(62, 14, 54, 11);
+    // Characteristic large centre touchpad with illuminated shoulders.
+    c.list.bordered_rect({x + 25 * u, y + 10 * u, 22 * u, 11 * u},
+                         2.5f * u, outline.with_alpha(0.0f), stroke, outline);
+    line(21, 12, 23, 14, 0.75f);
+    line(49, 14, 51, 12, 0.75f);
+    // D-pad cross and PlayStation face-button diamond (not Xbox A/B marks).
+    line(15, 19, 15, 29, 1.2f);
+    line(10, 24, 20, 24, 1.2f);
+    for (const auto& point : {std::pair{57.0f, 18.0f},
+                              std::pair{63.0f, 24.0f},
+                              std::pair{57.0f, 30.0f},
+                              std::pair{51.0f, 24.0f}})
+        c.list.ring(x + point.first * u, y + point.second * u,
+                    std::max(0.7f, 1.55f * u), std::max(0.65f, 1.05f * u), outline);
+    // Two symmetrical sticks and central PlayStation control.
+    for (const float sx : {27.0f, 45.0f})
+        c.list.ring(x + sx * u, y + 29 * u, 3.7f * u,
+                    std::max(0.8f, 1.45f * u), outline);
+    c.list.circle(x + 36 * u, y + 26 * u, std::max(0.65f, 1.35f * u), outline);
+}
+
 void controller_icon(Canvas &c, const Rect &r, float lit)
 {
     const std::uint32_t picture = c.textures.controller();
