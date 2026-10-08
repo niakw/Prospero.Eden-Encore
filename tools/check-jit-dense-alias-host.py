@@ -32,6 +32,7 @@ struct Allocator {
 """
 CPP = r"""
 #include "jit-allocator.h"
+#include <algorithm>
 #include <cassert>
 #include <cerrno>
 #include <cstdint>
@@ -49,9 +50,15 @@ std::size_t frees = 0;
 namespace Common {
 void* AllocateMemoryPages(std::size_t size) noexcept {
     if (fail_direct) { errno = ENOMEM; return nullptr; }
-    const auto actual = size >= (2u << 20)
-                        ? (size + (2u << 20) - 1) / (2u << 20) * (2u << 20)
-                        : size;
+    // A macOS ARM64 host can have 16 KiB pages, unlike a Linux runner's
+    // 4 KiB. Mirror the allocator's sysconf page rounding, otherwise a
+    // 4 KiB request maps 16 KiB but mock ownership claims only 4 KiB,
+    // causing a false "alias span smaller than code" abort.
+    const auto host_page = static_cast<std::size_t>(sysconf(_SC_PAGESIZE));
+    assert(host_page && (host_page & (host_page - 1)) == 0);
+    const auto granularity = size >= (2u << 20)
+        ? std::max<std::size_t>(host_page, 2u << 20) : host_page;
+    const auto actual = ((size + granularity - 1) / granularity) * granularity;
     void* p = mmap(nullptr, actual, PROT_READ | PROT_WRITE,
                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (p == MAP_FAILED) return nullptr;
