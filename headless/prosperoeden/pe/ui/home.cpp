@@ -591,16 +591,21 @@ void Launcher::draw_home(Canvas &c)
                        kWhite.with_alpha(tween::cubic_out(hero_picture.age / 0.30f)));
         }
     }
-    // Game artwork stays legible around the header, name and play controls.
+    // Full-screen object-fit: cover above: image keeps its original ratio and
+    // is centre-cropped, never stretched or confined to a hero "block".
+    // The approved mock-up needs a dark dispersion on BOTH the left and bottom.
+    // Two long translucent fades preserve the full hero scene in the centre.
     list.hgradient_rect(hero, 0.0f,
-                        theme::kScrim.with_alpha(0.90f),
-                        theme::kScrim.with_alpha(0.02f));
-    // Nlib banners are generally 16:9. Preserve their original scene ratio
-    // instead of letterbox-cropping a 1920x1080 scene into a 1920x544 strip.
-    // The lower image softly yields to the rail, tiles and legible status bar.
-    list.gradient_rect({0.0f, 375.0f, 1920.0f, 705.0f}, 0.0f,
-                       theme::kScrim.with_alpha(0.00f),
-                       theme::kBase.with_alpha(0.94f));
+                        theme::kScrim.with_alpha(0.91f),
+                        theme::kScrim.with_alpha(0.025f));
+    list.hgradient_rect({0.0f, 0.0f, 1000.0f, 1080.0f}, 0.0f,
+                        theme::kBase.with_alpha(0.31f),
+                        theme::kBase.with_alpha(0.0f));
+    // A subtle dark lower half keeps recent covers, utilities and status
+    // readable without adding a hard-edged opaque rectangle to the wallpaper.
+    list.gradient_rect({0.0f, 325.0f, 1920.0f, 755.0f}, 0.0f,
+                       theme::kScrim.with_alpha(0.0f),
+                       theme::kBase.with_alpha(0.96f));
     list.gradient_rect({0.0f, 0.0f, 1920.0f, 124.0f}, 0.0f,
                        theme::kBase.with_alpha(0.40f),
                        theme::kBase.with_alpha(0.0f));
