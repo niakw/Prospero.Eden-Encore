@@ -66,6 +66,16 @@ jobs:
                   variation = sum(ImageStat.Stat(rgb.resize((64, 36))).stddev)
                   assert variation > 12, (path, variation)
                   print(path.name, im.size, f"stddev={variation:.1f}", path.stat().st_size)
+          # Verify the selected cover retains its original palette: formerly
+          # a pink shadow was composited OVER the red/orange game art.
+          # Sample a uniform sky patch inside tile #2, away from the edges.
+          with Image.open(paths[1]) as unfocused, Image.open(paths[3]) as focused:
+              sample = (375, 568, 399, 592)
+              rgb_before = ImageStat.Stat(unfocused.convert("RGB").crop(sample)).mean
+              rgb_after = ImageStat.Stat(focused.convert("RGB").crop(sample)).mean
+              shift = [round(abs(x - y), 1) for x, y in zip(rgb_before, rgb_after)]
+              print("focused_tile_rgb_shift", shift)
+              assert max(shift) < 45, ("focus desaturated real artwork", shift)
           print("RENDERED_FROM_REAL_CPP_GL_LAUNCHER: PASS")
           PY
 
