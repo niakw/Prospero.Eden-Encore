@@ -1,0 +1,143 @@
+--- a/src/core/hle/service/acc/acc.h
++++ b/src/core/hle/service/acc/acc.h
+@@ -45,6 +45,7 @@
+         void GetBaasAccountAdministrator(HLERequestContext &ctx);
+         void ListQualifiedUsers(HLERequestContext& ctx);
+         void ListOpenContextStoredUsers(HLERequestContext& ctx);
++        void LoadOpenContext(HLERequestContext& ctx);
+         void StoreSaveDataThumbnailApplication(HLERequestContext& ctx);
+         void GetBaasAccountManagerForSystemService(HLERequestContext& ctx);
+         void StoreSaveDataThumbnailSystem(HLERequestContext& ctx);
+--- a/src/core/hle/service/acc/acc.cpp
++++ b/src/core/hle/service/acc/acc.cpp
+@@ -1114,6 +1114,20 @@
+     LOG_DEBUG(Service_ACC, "called");
+ 
+     ctx.WriteBuffer(profile_manager->GetStoredOpenedUsers());
++    IPC::ResponseBuilder rb{ctx, 2};
++    rb.Push(ResultSuccess);
++}
++
++// Restore only existing profiles from the StoreOpenContext snapshot. Do not invent
++// a new user, select one arbitrarily, or lose currently opened profiles on resume.
++void Module::Interface::LoadOpenContext(HLERequestContext& ctx) {
++    const auto stored = profile_manager->GetStoredOpenedUsers();
++    for (const auto& user_id : stored) {
++        if (user_id.IsValid() && profile_manager->UserExists(user_id)) {
++            profile_manager->OpenUser(user_id);
++        }
++    }
++    LOG_DEBUG(Service_ACC, "LoadOpenContext restored stored account state");
+     IPC::ResponseBuilder rb{ctx, 2};
+     rb.Push(ResultSuccess);
+ }
+@@ -1359,7 +1373,7 @@
+             {110, &ACC_U0::StoreSaveDataThumbnailApplication, "StoreSaveDataThumbnail"},
+             {111, nullptr, "ClearSaveDataThumbnail"},
+             {120, nullptr, "CreateGuestLoginRequest"},
+-            {130, nullptr, "LoadOpenContext"}, // 5.0.0+
++            {130, &ACC_U0::LoadOpenContext, "LoadOpenContext"}, // 5.0.0+
+             {131, &ACC_U0::ListOpenContextStoredUsers, "ListOpenContextStoredUsers"}, // 6.0.0+
+             {140, &ACC_U0::InitializeApplicationInfoRestricted, "InitializeApplicationInfoRestricted"}, // 6.0.0+
+             {141, &ACC_U0::ListQualifiedUsers, "ListQualifiedUsers"}, // 6.0.0+
+--- a/src/core/hle/service/sockets/bsd.h
++++ b/src/core/hle/service/sockets/bsd.h
+@@ -140,6 +140,7 @@
+     void GetSockOpt(HLERequestContext& ctx);
+     void Listen(HLERequestContext& ctx);
+     void Fcntl(HLERequestContext& ctx);
++    void Ioctl(HLERequestContext& ctx);
+     void SetSockOpt(HLERequestContext& ctx);
+     void Shutdown(HLERequestContext& ctx);
+     void Recv(HLERequestContext& ctx);
+--- a/src/core/hle/service/sockets/bsd.cpp
++++ b/src/core/hle/service/sockets/bsd.cpp
+@@ -325,6 +325,43 @@
+     BuildErrnoResponse(ctx, ListenImpl(fd, backlog));
+ }
+ 
++// IPC cmd 19 must always reply with the BSD (ret, errno) tuple. Leaving it
++// unregistered causes a fatal user-process panic when FC27 queries its sockets.
++// FIONBIO is handled through the same socket state as Fcntl(SETFL); unknown
++// requests fail explicitly rather than reporting a fictitious success.
++void BSD_USA::Ioctl(HLERequestContext& ctx) {
++    IPC::RequestParser rp{ctx};
++    const s32 fd = rp.Pop<s32>();
++    const u32 request = rp.Pop<u32>();
++    if (!IsFileDescriptorValid(fd)) {
++        BuildErrnoResponse(ctx, Errno::BADF);
++        return;
++    }
++    if (!file_descriptors[fd]->socket) {
++        BuildErrnoResponse(ctx, Errno::BADF);
++        return;
++    }
++    constexpr u32 kFionbio = 0x8004667e;
++    if (request == kFionbio) {
++        const auto data = ctx.ReadBuffer();
++        if (data.size() < sizeof(u32)) {
++            BuildErrnoResponse(ctx, Errno::INVAL);
++            return;
++        }
++        const u32 nonblocking = GetValue<u32>(data);
++        const Errno result = Translate(file_descriptors[fd]->socket->SetNonBlock(nonblocking != 0));
++        if (result == Errno::SUCCESS) {
++            constexpr s32 nonblock_flag = Network::FLAG_O_NONBLOCK;
++            if (nonblocking) file_descriptors[fd]->flags |= nonblock_flag;
++            else file_descriptors[fd]->flags &= ~nonblock_flag;
++        }
++        BuildErrnoResponse(ctx, result);
++        return;
++    }
++    LOG_DEBUG(Service, "Unsupported BSD Ioctl fd={} request={:#x}", fd, request);
++    BuildErrnoResponse(ctx, Errno::INVAL);
++}
++
+ void BSD_USA::Fcntl(HLERequestContext& ctx) {
+     IPC::RequestParser rp{ctx};
+     const s32 fd = rp.Pop<s32>();
+@@ -714,8 +751,15 @@
+     }
+     const SockAddrIn guest_addrin = Translate(addr_in);
+ 
+-    ASSERT(write_buffer.size() >= sizeof(guest_addrin));
+-    write_buffer.resize(sizeof(guest_addrin));
++    // SockAddrIn includes 248 bytes of reserved space (0x100 total), whereas
++    // the actual IPv4 sockaddr has len=16. Never enlarge a guest's 16-byte
++    // IPC output buffer to 0x100: that used to trigger 28 Critical log pairs
++    // in three FC27 sessions. Preserve the reported logical address length.
++    if (write_buffer.size() < guest_addrin.len) {
++        write_buffer.clear();
++        return Errno::INVAL;
++    }
++    write_buffer.resize(guest_addrin.len);
+     PutValue(write_buffer, guest_addrin);
+     return Translate(bsd_errno);
+ }
+@@ -736,8 +780,15 @@
+     }
+     const SockAddrIn guest_addrin = Translate(addr_in);
+ 
+-    ASSERT(write_buffer.size() >= sizeof(guest_addrin));
+-    write_buffer.resize(sizeof(guest_addrin));
++    // SockAddrIn includes 248 bytes of reserved space (0x100 total), whereas
++    // the actual IPv4 sockaddr has len=16. Never enlarge a guest's 16-byte
++    // IPC output buffer to 0x100: that used to trigger 28 Critical log pairs
++    // in three FC27 sessions. Preserve the reported logical address length.
++    if (write_buffer.size() < guest_addrin.len) {
++        write_buffer.clear();
++        return Errno::INVAL;
++    }
++    write_buffer.resize(guest_addrin.len);
+     PutValue(write_buffer, guest_addrin);
+     return Translate(bsd_errno);
+ }
+@@ -1104,7 +1155,7 @@
+         {16, &BSD_USA::GetSockName, "GetSockName"},
+         {17, &BSD_USA::GetSockOpt, "GetSockOpt"},
+         {18, &BSD_USA::Listen, "Listen"},
+-        {19, nullptr, "Ioctl"},
++        {19, &BSD_USA::Ioctl, "Ioctl"},
+         {20, &BSD_USA::Fcntl, "Fcntl"},
+         {21, &BSD_USA::SetSockOpt, "SetSockOpt"},
+         {22, &BSD_USA::Shutdown, "Shutdown"},

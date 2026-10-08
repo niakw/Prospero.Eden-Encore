@@ -456,6 +456,26 @@ int main(int argc, char** argv) {
         // A crash report the previous run left: that run's logs move beside it, and the launcher
         // says where it is (crash_report.h).
         const Eden::Crash::Last last_crash = Eden::Crash::TakeLast(Eden::LogsDir(), Eden::UserDir() + "/log/eden_log.txt");
+        // Older Eden releases could leave a 100 MiB .old.txt behind. The current
+        // first/recent segments are capped separately, but a stale legacy file can
+        // survive upgrades and needlessly occupy storage. Give crash collection
+        // first access, then discard *only* oversized obsolete backups; never touch
+        // live logs, saves, shader caches, or the current game's diagnostics.
+        {
+            constexpr std::uintmax_t kLegacyBackupLimit = 32u * 1024u * 1024u;
+            const auto old_log = std::filesystem::path{Eden::UserDir()} / "log" /
+                                 "eden_log.txt.old.txt";
+            std::error_code old_error;
+            const auto old_bytes = std::filesystem::file_size(old_log, old_error);
+            if (!old_error && old_bytes > kLegacyBackupLimit) {
+                (void)std::filesystem::remove(old_log, old_error);
+                if (old_error)
+                    Eden::BootTrace::Line("legacy Eden log pruning failed status=%d", old_error.value());
+                else
+                    Eden::BootTrace::Line("legacy Eden log backup removed bytes=%llu",
+                        static_cast<unsigned long long>(old_bytes));
+            }
+        }
 #ifdef EDEN_DEV_PROFILE
         // UI inspection captures are disposable; keep saves, settings and shader caches.
         for (const char* name : {"ui-preview.bmp", "ui-main.bmp", "ui-nav.bmp",
@@ -907,6 +927,10 @@ int main(int argc, char** argv) {
         Settings::values.use_reactive_flushing.SetValue(true);
         Settings::values.skip_cpu_inner_invalidation.SetValue(false);
 #ifdef PS5_NATIVE
+        // Host HTTPS (launcher Nlib/catalog) remains available, but emulated
+        // Switch games are offline-only. The pinned HLE backport separately
+        // rejects guest DNS/socket calls even if a guest toggles NIFM Wi-Fi.
+        Settings::values.airplane_mode.SetValue(true);
         const auto performance_policy = Eden::EncorePerformance::ForTier(runtime_performance_profile);
 #endif
         #ifdef EDEN_PS5_OPENGL
