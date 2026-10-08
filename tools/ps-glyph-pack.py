@@ -153,9 +153,20 @@ def install(pack_root: Path, original_root: Path, mods_root: Path,
     manifest = verify(pack_root, original_root, title_id, build_id)
     require(not mods_root.is_symlink(), "mods folder must not be a symlink")
     require(mods_root.exists() and mods_root.is_dir(), "mods folder must already exist")
-    game_root = mods_root / manifest["title_id"]
+    # Eden's TitleFolder() intentionally finds title directories without
+    # regard to hexadecimal case. Reuse the existing directory instead of
+    # creating a second uppercase title folder that Eden might never read.
+    matches = [p for p in mods_root.iterdir()
+               if p.name.casefold() == manifest["title_id"].casefold()]
+    require(len(matches) <= 1, "ambiguous case-colliding title mod folders")
+    game_root = matches[0] if matches else mods_root / manifest["title_id"]
     require(not game_root.is_symlink(), "title mod folder must not be a symlink")
+    require(not game_root.exists() or game_root.is_dir(),
+            "title mod path is not a folder")
     game_root.mkdir(exist_ok=True)
+    require(not any(p.name.casefold() == MOD_NAME.casefold()
+                    for p in game_root.iterdir()),
+            "glyph mod already exists; do not replace any existing pack")
     target = game_root / MOD_NAME
     require(not target.exists() and not target.is_symlink(),
             "glyph mod already exists; do not replace an existing pack automatically")
