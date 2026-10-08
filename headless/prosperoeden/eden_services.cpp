@@ -329,9 +329,14 @@ bool CacheNlibJpeg(const std::string& endpoint, const std::string& path,
     const auto response = Common::Net::MakeRequest("https://api.nlib.cc", endpoint);
     if (!response) return false;
     const std::string& body = *response;
-    if (body.size() < minimum_bytes || body.size() > (16u << 20) || body.size() < 2 ||
-        static_cast<unsigned char>(body[0]) != 0xff ||
-        static_cast<unsigned char>(body[1]) != 0xd8)
+    const bool jpeg = body.size() >= 2 &&
+        static_cast<unsigned char>(body[0]) == 0xff &&
+        static_cast<unsigned char>(body[1]) == 0xd8;
+    const bool png = body.size() >= 8 &&
+        std::memcmp(body.data(), "\x89PNG\r\n\x1a\n", 8) == 0;
+    // stb_image decodes both; reject unexpected HTML/error responses instead
+    // of persisting them as permanently broken thumbnails.
+    if (body.size() < minimum_bytes || body.size() > (16u << 20) || (!jpeg && !png))
         return false;
     (void)mkdir(Eden::CoversDir().c_str(), 0777);
     const std::string staged = path + ".new";
