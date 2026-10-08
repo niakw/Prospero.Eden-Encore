@@ -133,6 +133,11 @@ void Launcher::finish_home_media()
 
     try {
         Game enriched = home_media_scan_.get();
+        if (enriched.artwork_changed) {
+            textures_.invalidate(enriched.cover);
+            textures_.invalidate(enriched.hero);
+            for (const auto& path : enriched.screenshots) textures_.invalidate(path);
+        }
         if (enriched.title_id == home_.last_title_id) {
             if (!enriched.cover.empty()) home_.last_cover = enriched.cover;
             if (!enriched.hero.empty()) home_.last_hero = enriched.hero;
@@ -209,6 +214,11 @@ void Launcher::finish_selected_media()
         return;
     try {
         Game enriched = media_scan_.get();
+        if (enriched.artwork_changed) {
+            textures_.invalidate(enriched.cover);
+            textures_.invalidate(enriched.hero);
+            for (const auto& path : enriched.screenshots) textures_.invalidate(path);
+        }
         for (Game& game : games_) {
             if (game.title_id != enriched.title_id) continue;
             if (!enriched.cover.empty()) game.cover = std::move(enriched.cover);

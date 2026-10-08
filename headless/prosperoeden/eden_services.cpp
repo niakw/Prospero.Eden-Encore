@@ -19,6 +19,7 @@
 #include <chrono>
 #include <cctype>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
@@ -261,9 +262,10 @@ void CacheNlibPlayers(std::uint64_t title_id, int players) {
         (void)std::remove(staged.c_str());
 }
 
-constexpr int kNlibCacheSchema = 2; // v2 adds banner/screens/numberOfPlayers to launcher enrichment
+constexpr int kNlibCacheSchema = 3; // v3 persists artwork refresh epochs
 
 struct NlibEnrichment {
+    bool artwork_changed = false; // a cached image was replaced
     std::string icon;
     std::string hero;
     std::vector<std::string> screenshots;
@@ -380,6 +382,27 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
     const bool cached_metadata = LoadNlibMetadata(title_id, language, &metadata);
     const bool current_metadata_cache = cached_metadata && metadata.is_object() &&
         metadata.value("_encore_cache_schema", 0) >= kNlibCacheSchema;
+    const auto now_seconds = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    std::int64_t last_metadata_check = 0;
+    std::int64_t last_artwork_check = 0;
+    if (cached_metadata && metadata.is_object()) {
+        const auto checked = metadata.find("_encore_checked_at");
+        if (checked != metadata.end() && checked->is_number_integer())
+            last_metadata_check = checked->get<std::int64_t>();
+        const auto artwork = metadata.find("_encore_artwork_checked_at");
+        if (artwork != metadata.end() && artwork->is_number_integer())
+            last_artwork_check = artwork->get<std::int64_t>();
+    }
+    // Legacy schema-v2 metadata (including negative art results) must expire.
+    // Use persisted timestamps rather than PS5 filesystem mtime syscalls.
+    const bool metadata_expired = !current_metadata_cache ||
+        last_metadata_check <= 0 || now_seconds < last_metadata_check ||
+        now_seconds - last_metadata_check >= 7LL * 24 * 60 * 60;
+    // Valid but outdated images are refreshed monthly, atomically.
+    const bool artwork_expired = last_artwork_check <= 0 ||
+        now_seconds < last_artwork_check ||
+        now_seconds - last_artwork_check >= 30LL * 24 * 60 * 60;
 
     char id[17]{};
     std::snprintf(id, sizeof(id), "%016llX", static_cast<unsigned long long>(title_id));
@@ -395,10 +418,11 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
                  result.screenshots.size(), result.max_players);
 
     try {
+        bool refreshed_metadata = false;
         // One localized metadata request tells us which media exist and fills the selected game's
         // actual title/intro/publisher/etc. The response is cached separately per Nlib language.
-        bool has_icon = cached_metadata && metadata.contains("icon");
-        bool has_banner = cached_metadata && metadata.contains("banner");
+        bool has_icon = cached_metadata && metadata.contains("icon") && metadata["icon"].is_string();
+        bool has_banner = cached_metadata && metadata.contains("banner") && metadata["banner"].is_string();
         int screen_count = static_cast<int>(result.screenshots.size());
         if (cached_metadata && metadata.contains("screens") && metadata["screens"].is_object())
             screen_count = std::max(screen_count, metadata["screens"].value("count", 0));
@@ -408,7 +432,7 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
         // metadata just because a refresh is temporarily rate-limited.
         const bool sparse_metadata = current_metadata_cache &&
                                     (!has_icon || !has_banner || screen_count == 0);
-        const bool needs_metadata = !current_metadata_cache || sparse_metadata;
+        const bool needs_metadata = metadata_expired || sparse_metadata;
         bool may_request_metadata = needs_metadata;
         if (needs_metadata) {
             std::lock_guard lock(retry_guard);
@@ -425,7 +449,10 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
             if (const auto response = Common::Net::MakeRequest("https://api.nlib.cc", metadata_endpoint)) {
                 metadata = nlohmann::json::parse(*response);
                 if (metadata.is_object()) {
+                    refreshed_metadata = true;
                     metadata["_encore_cache_schema"] = kNlibCacheSchema;
+                    metadata["_encore_checked_at"] = now_seconds;
+                    metadata["_encore_artwork_checked_at"] = last_artwork_check;
                     (void)AtomicWriteText(NlibMetadataPath(title_id, language), metadata.dump());
                     ApplyNlibMetadata(metadata, &result);
                     has_icon = metadata.contains("icon") && metadata["icon"].is_string();
@@ -449,6 +476,7 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
             }
         }
         if (result.max_players > 0) CacheNlibPlayers(title_id, result.max_players);
+        const bool refresh_existing_artwork = refreshed_metadata && artwork_expired;
 
         // Nlib banner, icon and every advertised screenshot are fetched in
         // ONE pass for every installed title. Independent HTTPS requests run
@@ -463,25 +491,32 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
                 }));
         };
 
-        if (result.hero.empty() && has_banner)
+        // A screenshot-backed hero does not prove a real banner was cached.
+        if (has_banner && (CachedNlibHero(title_id).empty() || refresh_existing_artwork))
             request_media(std::string{"/nx/"} + id + "/banner/1080p",
                           NlibHeroPath(title_id), 4096);
-        if (result.icon.empty() && has_icon)
+        if (has_icon && (CachedNlibIcon(title_id).empty() || refresh_existing_artwork))
             request_media(std::string{"/nx/"} + id + "/icon/512",
                           NlibIconPath(title_id));
 
         const int wanted_screens = std::clamp(screen_count, 0, 3);
         for (int index = 1; index <= wanted_screens; ++index) {
             const std::string path = NlibScreenshotPath(title_id, index);
-            if (!ValidNlibTga(path))
+            if (!ValidNlibTga(path) || refresh_existing_artwork)
                 request_media(std::string{"/nx/"} + id + "/screen/" + std::to_string(index),
                               path, 4096);
         }
         // Join only in the background enrichment task. The UI thread remains
         // free to render/input; title mutex excludes duplicate .new file writes.
         int failed_media = 0;
-        for (auto& pending : downloads)
-            if (!pending.get()) ++failed_media;
+        for (auto& pending : downloads) {
+            if (pending.get()) result.artwork_changed = true;
+            else ++failed_media;
+        }
+        if (refreshed_metadata && artwork_expired && failed_media == 0) {
+            metadata["_encore_artwork_checked_at"] = now_seconds;
+            (void)AtomicWriteText(NlibMetadataPath(title_id, language), metadata.dump());
+        }
         if (failed_media > 0)
             std::fprintf(stderr, "EDEN_NLIB_ASSETS title_id=%s failed=%d attempted=%zu\n",
                          id, failed_media, downloads.size());
@@ -1048,6 +1083,7 @@ pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game) {
     if (game.title_id == 0) return game;
     const int language_choice = Eden::LoadPreferences().language;
     NlibEnrichment enrichment = EnsureNlibEnrichment(game.title_id, language_choice);
+    game.artwork_changed = enrichment.artwork_changed;
     if (!enrichment.icon.empty()) game.cover = std::move(enrichment.icon);
     if (!enrichment.hero.empty()) game.hero = std::move(enrichment.hero);
     if (!enrichment.screenshots.empty()) game.screenshots = std::move(enrichment.screenshots);

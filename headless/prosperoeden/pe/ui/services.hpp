@@ -60,6 +60,7 @@ struct Game
     std::string hero;   // cached 16:9 Nlib banner; empty => use first screenshot/cover
     std::vector<std::string> screenshots; // up to three cached Nlib gameplay screenshots
     int max_players = 0; // Nlib maximum local players; 0 when unknown/offline
+    bool artwork_changed = false; // async refresh replaced one or more files
     std::string intro;
     std::string description;
     std::string publisher;

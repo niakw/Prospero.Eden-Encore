@@ -97,6 +97,20 @@ Cover Textures::cover(const std::string &path, float size)
             it->second.aspect};
 }
 
+void Textures::invalidate(const std::string &path)
+{
+    if (path.empty()) return;
+    for (auto it = covers_.begin(); it != covers_.end(); )
+    {
+        if (it->second.path == path) {
+            batch_.delete_texture(it->second.texture);
+            it = covers_.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
 void Textures::pump(float dt, int budget)
 {
     ++frame_;
