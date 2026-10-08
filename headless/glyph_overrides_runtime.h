@@ -25,6 +25,14 @@ namespace Eden::GlyphOverrides {
 inline constexpr std::string_view kModName = "Eden Encore PS Glyphs";
 inline constexpr std::size_t kMaxCatalogBytes = 128u * 1024u;
 inline constexpr std::size_t kMaxEvidenceBytes = 128u * 1024u;
+inline constexpr std::uintmax_t kMaxGraphicFileBytes = 128ull * 1024 * 1024;
+inline constexpr std::uintmax_t kMaxGraphicPackBytes = 512ull * 1024 * 1024;
+inline constexpr bool FitsGraphicPackBudget(std::uintmax_t verified,
+                                            std::uintmax_t next) noexcept {
+    return verified <= kMaxGraphicPackBytes &&
+           next <= kMaxGraphicFileBytes &&
+           next <= kMaxGraphicPackBytes - verified;
+}
 
 enum class Style { PlayStation, Nintendo };
 enum class State { Unsupported, Disabled, MissingMod, UnknownVersion, VersionMismatch,
@@ -157,8 +165,6 @@ inline bool EvidenceMatches(const Mods::fs::path& folder, const Rule& rule) {
         // Match the 512 MiB aggregate installer cap, not only the 128 MiB
         // per-file cap: otherwise an edited 64-file manifest could force
         // gigabytes of filesystem reads and freeze the game-launch path.
-        constexpr std::uintmax_t max_pack_bytes = 512ull * 1024 * 1024;
-        constexpr std::uintmax_t max_file_bytes = 128ull * 1024 * 1024;
         std::uintmax_t verified_bytes = 0;
         for (const auto& item : value["files"]) {
             if (!item.is_object() || !item.contains("romfs_path") ||
@@ -199,10 +205,9 @@ inline bool EvidenceMatches(const Mods::fs::path& folder, const Rule& rule) {
             }
             if (!Mods::fs::is_regular_file(asset, ec) || ec) return false;
             const auto bytes = Mods::fs::file_size(asset, ec);
-            if (ec || bytes > max_file_bytes ||
-                bytes > max_pack_bytes - verified_bytes) return false;
+            if (ec || !FitsGraphicPackBudget(verified_bytes, bytes)) return false;
             verified_bytes += bytes;
-            const auto actual = GlyphIntegrity::FileSha256(asset, max_file_bytes);
+            const auto actual = GlyphIntegrity::FileSha256(asset, kMaxGraphicFileBytes);
             std::string expected = item["replacement_sha256"].get<std::string>();
             std::transform(expected.begin(), expected.end(), expected.begin(),
                            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
