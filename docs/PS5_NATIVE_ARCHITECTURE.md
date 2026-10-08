@@ -215,6 +215,24 @@ validation has been completed. No general FPS improvement is claimed.
   PS5 affinity headers and the absence of the old fixed 4 GiB tier.
   This is **not** an emulator test or PS5 hardware qualification.
 
+## Shader compilation persistence (all titles; source only)
+
+- **RADV/Mesa:** `MESA_SHADER_CACHE_MAX_SIZE` scales to the actual cache
+  filesystem's writable free storage (currently one eighth of its available
+  space, fallback 256 MiB if the query fails). The former hard 256 MiB quota
+  repeatedly evicted compiled driver shaders despite free writable storage.
+- **Native OpenGL:** `TrimShaderCache` no longer deletes compiler records
+  whenever its directory grows beyond 64 MiB. Between sessions it retains
+  valid shader records unless filesystem free space falls below a reserve
+  appropriate to the installation (32 MiB to 1 GiB), then removes the oldest
+  eligible cached records first. Failed free-space query => no speculative
+  deletion. These disk policies do not allocate extra VRAM and do not alter
+  the frame hot path.
+- Host-only C++ regression gates:
+  `tools/check-jit-memory-policy.py`,
+  `tools/check-shader-cache-pressure.py`.
+  Code remains uncompiled and untested on PS5 firmware 13.60.
+
 ## Immediate implementation gates
 
 1. Audit physical memory ownership and executable page-map APIs; do not
