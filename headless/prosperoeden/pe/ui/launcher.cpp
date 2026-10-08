@@ -28,18 +28,21 @@ Launcher::Launcher(Services &services, Textures &textures, const Fonts &fonts, b
     clock_ = services_.clock();
     prefs_ = services_.preferences();
     apply_look();
-    read_home();
-    refresh_home_hero();
-    const bool continue_ready = home_.setup_ready && home_.last_exists;
-    home_focus_ = continue_ready ? 0 : home_.setup_ready ? 1 : 2;
+    // Show the existing Home shell immediately; native recent-ROM metadata
+    // comes from one background snapshot. This is NOT a failed setup state.
+    home_.setup_ready = true;
+    home_.status = tr("Loading game library...");
+    home_.system_status = tr("Loading game library...");
+    home_focus_ = 2;
     home_springs_[static_cast<std::size_t>(home_focus_)].snap(1.0f);
+    read_home();
     settings_.visible = 7;
     settings_.pitch = 88.0f;
     settings_.reset(7, 0);
     section_.snap(1.0f);
     detail_.snap(1.0f);
-    cue(home_.launch_failed ? Cue::notify : first_start ? Cue::welcome : Cue::resume);
-    start_scan();
+    // Defer the welcome/recovery cue and ROM enumeration until Home
+    // reports its actual setup status; no visible UI design is altered.
 }
 
 Launcher::~Launcher()
@@ -51,6 +54,8 @@ Launcher::~Launcher()
     diagnostics_cancel_.store(true, std::memory_order_release);
     if (scan_.valid())
         scan_.wait();
+    if (home_scan_.valid())
+        home_scan_.wait();
     if (presence_scan_.valid())
         presence_scan_.wait();
     if (home_media_scan_.valid())
@@ -216,6 +221,10 @@ void Launcher::launch(const std::string &file, const std::string &title, const s
 
 void Launcher::press(Key key)
 {
+    // Avoid opening/launching the placeholder while the initial native
+    // Home snapshot is still being read in the background.
+    if (!home_loaded_)
+        return;
     if (!selected_game_.empty())
         return; // a game is starting
     // A newer user action invalidates an asynchronous Home Triangle request.
@@ -297,6 +306,7 @@ void Launcher::update(float dt)
     textures_.pump(dt);
     slow_stage("texture_upload", update_stage_begin);
     const auto media_started = std::chrono::steady_clock::now();
+    finish_home_scan(); // nonblocking one-time Home application
     finish_scan(false);
     finish_diagnostics(); // nonblocking; heavy cache/log enumeration stays off the UI frame
     if (games_loaded_ && !pending_settings_file_.empty()) {
