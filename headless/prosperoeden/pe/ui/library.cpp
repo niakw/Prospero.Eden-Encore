@@ -358,8 +358,12 @@ void Launcher::name_home_games()
 
 void Launcher::start_diagnostics()
 {
-    if (diagnostics_scan_.valid())
+    if (diagnostics_scan_.valid()) {
+        // Disk cleanup or navigation may invalidate a scan that has already
+        // started. Finish its worker safely, then request a fresh snapshot.
+        diagnostics_refresh_pending_ = true;
         return;
+    }
     diagnostics_scan_ = std::async(std::launch::async,
         [this] { return services_.diagnostics(); });
 }
@@ -370,11 +374,19 @@ void Launcher::finish_diagnostics()
         diagnostics_scan_.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
         return;
     try {
-        home_diagnostics_ = diagnostics_scan_.get();
+        DiagnosticsInfo result = diagnostics_scan_.get();
+        // Never replace post-maintenance UI state with a scan started
+        // before the deletion of stale cache/log files.
+        if (!diagnostics_refresh_pending_)
+            home_diagnostics_ = std::move(result);
     } catch (const std::exception& error) {
         sys::log("diagnostics scan: %s", error.what());
     } catch (...) {
         sys::log("diagnostics scan failed");
+    }
+    if (diagnostics_refresh_pending_) {
+        diagnostics_refresh_pending_ = false;
+        start_diagnostics();
     }
 }
 
