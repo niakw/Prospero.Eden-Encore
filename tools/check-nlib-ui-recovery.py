@@ -72,6 +72,17 @@ assert "finish_scan(true);" not in library_entry
 assert "drop_missing_games();" not in library_entry
 assert "start_scan();" in library_entry
 assert "library_.selected >= 0 &&" in lib
+# Per-title mod directories/config are resolved on the scan worker, not
+# synchronously when finish_scan() updates the visible Library.
+scan_entry = lib.split("void Launcher::start_scan()", 1)[1].split("void Launcher::finish_scan(", 1)[0]
+apply_entry = lib.split("void Launcher::apply_games(", 1)[1].split("void Launcher::name_home_games()", 1)[0]
+assert "std::vector<Game> games = services_.games();" in scan_entry
+assert "services_.mods(game.title_id)" in scan_entry
+assert "services_.mods_enabled(game.title_id)" in scan_entry
+assert "services_.mods(game.title_id)" not in apply_entry
+assert "home_.last_mods = game.mods;" in lib
+assert "home_.last_mods_on = game.mods_on;" in lib
+
 assert "if (presence_scan_.valid())" in nav
 assert "drop_missing_games(&missing);" in lib
 assert "if (known_missing)" in lib
