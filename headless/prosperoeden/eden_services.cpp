@@ -396,33 +396,42 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
         }
         if (result.max_players > 0) CacheNlibPlayers(title_id, result.max_players);
 
-        if (result.hero.empty() && has_banner) {
-            const std::string path = NlibHeroPath(title_id);
-            if (CacheNlibJpeg(std::string{"/nx/"} + id + "/banner/1080p", path, 4096)) {
-                result.hero = path;
-                Eden::Report("artwork", (std::string{"Nlib hero cached for "} + id).c_str());
-            }
-        }
+        // Nlib banner, icon and every advertised screenshot are fetched in
+        // ONE pass for every installed title. Independent HTTPS requests run
+        // concurrently on this background worker, not serially at 3 seconds
+        // each. No hidden "screens later in Library" scheduling.
+        std::vector<std::future<bool>> downloads;
+        const auto request_media = [&](std::string endpoint, std::string path,
+                                       std::size_t minimum = 1024) {
+            downloads.emplace_back(std::async(std::launch::async,
+                [endpoint = std::move(endpoint), path = std::move(path), minimum] {
+                    return CacheNlibJpeg(endpoint, path, minimum);
+                }));
+        };
 
-        if (result.icon.empty() && has_icon) {
-            const std::string path = NlibIconPath(title_id);
-            if (CacheNlibJpeg(std::string{"/nx/"} + id + "/icon/512", path))
-                result.icon = path;
-        }
+        if (result.hero.empty() && has_banner)
+            request_media(std::string{"/nx/"} + id + "/banner/1080p",
+                          NlibHeroPath(title_id), 4096);
+        if (result.icon.empty() && has_icon)
+            request_media(std::string{"/nx/"} + id + "/icon/512",
+                          NlibIconPath(title_id));
 
-        // Resolve ALL Nlib media requested for this title in the same enrichment
-        // pass: banner, icon, and every advertised screenshot. No deferred
-        // screenshot fetch when the user opens Library or returns to Home.
         const int wanted_screens = std::clamp(screen_count, 0, 3);
         for (int index = 1; index <= wanted_screens; ++index) {
             const std::string path = NlibScreenshotPath(title_id, index);
             if (!IsFile(path))
-                (void)CacheNlibJpeg(std::string{"/nx/"} + id + "/screen/" +
-                                        std::to_string(index), path, 4096);
+                request_media(std::string{"/nx/"} + id + "/screen/" + std::to_string(index),
+                              path, 4096);
         }
-        result.screenshots = CachedNlibScreens(title_id);
-        // Some titles have no dedicated banner. A real gameplay screenshot is a much better hero
-        // than stretching the square icon over a TV-sized 16:9 surface.
+        // Join only in the background enrichment task. The UI thread remains
+        // free to render/input; title mutex excludes duplicate .new file writes.
+        for (auto& pending : downloads)
+            (void)pending.get();
+
+        const NlibEnrichment complete = CachedNlibEnrichment(title_id, language_choice);
+        if (!complete.icon.empty()) result.icon = complete.icon;
+        if (!complete.hero.empty()) result.hero = complete.hero;
+        result.screenshots = complete.screenshots;
         if (result.hero.empty() && !result.screenshots.empty())
             result.hero = result.screenshots.front();
     } catch (const std::exception& error) {
