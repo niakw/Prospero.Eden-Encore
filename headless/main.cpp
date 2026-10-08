@@ -742,22 +742,22 @@ int main(int argc, char** argv) {
         const std::uint64_t launch_title_id = eden_game_title_id(selected_game.c_str());
         const auto game_video = Eden::LoadGameSettings(launch_title_id);
         const auto launch_preferences = Eden::LoadPreferences();
-        // One PS5 policy for every game: A64 capacity follows available
-        // direct-memory headroom, never a hardcoded title ID. The guest A32
-        // JIT retains its separate safe size until it is measured on hardware.
+        // PS5-wide code-memory policy, not title-specific or tiered A/B/C.
+        // Query before constructing the emulated CPU. Only the active guest ISA
+        // instantiates its planned code arenas; neither plan owns both at once.
         std::size_t jit_largest_free = 0;
         bool jit_memory_known = false;
 #ifdef PS5_NATIVE
         jit_memory_known = Eden::Performance::QueryLargestDirectMemoryBlock(&jit_largest_free);
 #endif
-        unsigned experimental_jit_cache =
-            Eden::Experimental::ChooseA64CacheTier(safe_launch, jit_memory_known, jit_largest_free);
+        const auto jit_plan = Eden::Experimental::ChooseJitMemoryPlan(
+            safe_launch, jit_memory_known, jit_largest_free);
         bool experimental_sparse_jit = false;
         bool experimental_logical_cpu = false;
         bool experimental_frame_probe = false;
 #if defined(PS5_NATIVE) && defined(EDEN_DEV_PROFILE)
-        // Completed A/B/C/D controls remain developer-only and may override
-        // the shared policy solely in an intentionally instrumented build.
+        // Completed A/B/C/D test tiers are retired. Debug-only controls
+        // affect mapping probes and trace capture, not normal JIT capacity.
         if (!safe_launch && launch_title_id) {
             std::string source;
             if (Eden::Settings::ReadFile(Eden::ConfigFile("experiments.json"), source)) {
@@ -771,9 +771,6 @@ int main(int argc, char** argv) {
                         return it != game_options.end() && it->is_string() ?
                             it->get<std::string>() : "";
                     };
-                    const std::string jit = get("jit_cache");
-                    if (!jit.empty())
-                        experimental_jit_cache = jit == "balanced" ? 1u : jit == "expanded" ? 2u : 0u;
 #ifdef EDEN_SPARSE_JIT_DEV
                     experimental_sparse_jit = get("jit_memory") == "sparse";
 #endif
@@ -789,17 +786,20 @@ int main(int argc, char** argv) {
             experimental_sparse_jit = false;
         }
 #endif
-        // Always reset the global per-process state for the next game,
-        // including shipping builds and repeated launcher sessions.
-        Eden::Experimental::jit_cache_tier.store(experimental_jit_cache, std::memory_order_relaxed);
+        Eden::Experimental::ApplyJitMemoryPlan(jit_plan);
         Eden::Experimental::sparse_jit_cache.store(experimental_sparse_jit, std::memory_order_relaxed);
         Eden::Experimental::vulkan_frame_probe.store(experimental_frame_probe, std::memory_order_relaxed);
-        std::printf("EDEN_PS5_JIT_POLICY scope=all_titles title=%016llX a64_tier=%u "
-                    "memory_known=%u largest_free_mib=%zu safe=%u sparse=%u cpu_logical=%u trace=%u\n",
-                    static_cast<unsigned long long>(launch_title_id), experimental_jit_cache,
+#ifdef PS5_NATIVE
+        std::printf("EDEN_PS5_JIT_POLICY scope=all_titles memory_known=%u free_mib=%zu "
+                    "planned_mib=%zu a64=%u,%u,%u a32=%u,%u,%u safe=%u sparse=%u\n",
                     unsigned(jit_memory_known), jit_largest_free / Eden::Experimental::kMiB,
-                    unsigned(safe_launch), unsigned(experimental_sparse_jit),
-                    unsigned(experimental_logical_cpu), unsigned(experimental_frame_probe));
+                    jit_plan.desired_active_jit_bytes / Eden::Experimental::kMiB,
+                    jit_plan.a64[0] / Eden::Experimental::kMiB, jit_plan.a64[1] / Eden::Experimental::kMiB,
+                    jit_plan.a64[2] / Eden::Experimental::kMiB,
+                    jit_plan.a32[0] / Eden::Experimental::kMiB, jit_plan.a32[1] / Eden::Experimental::kMiB,
+                    jit_plan.a32[2] / Eden::Experimental::kMiB,
+                    unsigned(safe_launch), unsigned(experimental_sparse_jit));
+#endif
         const int global_authored_tier =
             launch_preferences.performance_profile >= 0 &&
             launch_preferences.performance_profile < Eden::EncoreOverrides::kAuthoredProfileCount ?
