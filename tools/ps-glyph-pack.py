@@ -5,7 +5,7 @@ This is a *game-resource* (RomFS) pack installer, NOT a controller remapper.
 It uses the existing Eden mods/<title>/<mod>/romfs LayeredFS override path.
 Only whole, authenticated source-file replacements are accepted. It cannot
 magically turn all Nintendo prompts into PlayStation icons without a game's
-specific legal replacement atlas and independently established build identity.
+specific legal replacement atlas and original resource fingerprint.
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ MAX_FILES = 64
 MAX_FILE_BYTES = 128 * 1024 * 1024
 MAX_TOTAL_BYTES = 512 * 1024 * 1024
 HEX16 = re.compile(r"[0-9a-fA-F]{16}\Z")
-HEX_BUILD = re.compile(r"(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})\Z")
+UPDATE_VERSION = re.compile(r"[a-zA-Z0-9_.+ -]{1,64}\Z")
 HEX_SHA = re.compile(r"[0-9a-fA-F]{64}\Z")
 
 
@@ -83,14 +83,13 @@ def _hex(value: object, pattern: re.Pattern, name: str) -> str:
     return value.upper()
 
 
-def verify(pack_root: Path, original_root: Path, title_id: str, build_id: str) -> dict:
+def verify(pack_root: Path, original_root: Path, title_id: str) -> dict:
     """Validate EVERY replacement against the matching original RomFS file.
 
-    The title/build identity supplied by the caller must come from the actual
-    game/version. This tool cannot independently parse/decrypt NSP/XCI files.
+    This installer checks original graphic bytes; the running emulator separately
+    gates use by the declared title/update version. No NSO Build ID is needed.
     """
     title_id = _hex(title_id, HEX16, "title ID")
-    build_id = _hex(build_id, HEX_BUILD, "program build ID")
     manifest_file = _regular_file(pack_root, Path("manifest.json"))
     require(manifest_file.stat().st_size <= MAX_MANIFEST_BYTES, "manifest is too large")
     try:
@@ -99,14 +98,15 @@ def verify(pack_root: Path, original_root: Path, title_id: str, build_id: str) -
     except (UnicodeError, json.JSONDecodeError) as error:
         raise InvalidPack("invalid manifest JSON") from error
     require(isinstance(manifest, dict) and set(manifest) ==
-            {"schema", "title_id", "build_id", "rights", "files"},
+            {"schema", "title_id", "update_version", "rights", "files"},
             "manifest fields must match the exact v1 schema")
-    require(type(manifest["schema"]) is int and manifest["schema"] == 1,
+    require(type(manifest["schema"]) is int and manifest["schema"] == 2,
             "unknown glyph-pack schema")
     require(_hex(manifest["title_id"], HEX16, "manifest title ID") == title_id,
             "pack title ID does not match the selected game")
-    require(_hex(manifest["build_id"], HEX_BUILD, "manifest build ID") == build_id,
-            "pack build ID does not match the selected game build")
+    require(isinstance(manifest["update_version"], str) and
+            UPDATE_VERSION.fullmatch(manifest["update_version"]) is not None,
+            "invalid pack update version")
     require(isinstance(manifest["rights"], str) and 4 <= len(manifest["rights"]) <= 240,
             "pack author must declare their rights to distribute replacement graphics")
     entries = manifest["files"]
@@ -144,13 +144,14 @@ def verify(pack_root: Path, original_root: Path, title_id: str, build_id: str) -
                            "replacement": replacement.as_posix(),
                            "original_sha256": expected_original,
                            "replacement_sha256": expected_replacement})
-    return {"schema": 1, "title_id": title_id, "build_id": build_id,
+    return {"schema": 2, "title_id": title_id,
+            "update_version": manifest["update_version"],
             "rights": manifest["rights"], "files": normalized}
 
 
 def install(pack_root: Path, original_root: Path, mods_root: Path,
-            title_id: str, build_id: str) -> Path:
-    manifest = verify(pack_root, original_root, title_id, build_id)
+            title_id: str) -> Path:
+    manifest = verify(pack_root, original_root, title_id)
     require(not mods_root.is_symlink(), "mods folder must not be a symlink")
     require(mods_root.exists() and mods_root.is_dir(), "mods folder must already exist")
     # Eden's TitleFolder() intentionally finds title directories without
@@ -200,18 +201,17 @@ def main() -> int:
     parser.add_argument("--original-romfs", type=Path, required=True,
                         help="matching, legally obtained extracted original RomFS tree")
     parser.add_argument("--title-id", required=True, help="exact running game's 16-digit title ID")
-    parser.add_argument("--build-id", required=True, help="actual game's 40/64-digit program build ID")
     parser.add_argument("--mods-root", type=Path, help="existing game files/mods directory (install only)")
     args = parser.parse_args()
     try:
         if args.action == "install":
             require(args.mods_root is not None, "--mods-root required for install")
             result = install(args.pack, args.original_romfs, args.mods_root,
-                             args.title_id, args.build_id)
-            print(f"INSTALLED {result} (existing LayeredFS mod; requires title/version verification on updates)")
+                             args.title_id)
+            print(f"INSTALLED {result} (existing LayeredFS mod; runtime-gated by title/update version)")
         else:
-            manifest = verify(args.pack, args.original_romfs, args.title_id, args.build_id)
-            print(f"VERIFIED {manifest['title_id']} build={manifest['build_id']} files={len(manifest['files'])}")
+            manifest = verify(args.pack, args.original_romfs, args.title_id)
+            print(f"VERIFIED {manifest['title_id']} update={manifest['update_version']} files={len(manifest['files'])}")
         return 0
     except (InvalidPack, OSError) as error:
         print(f"REJECTED glyph pack: {error}", file=sys.stderr)
