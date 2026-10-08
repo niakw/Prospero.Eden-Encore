@@ -127,6 +127,24 @@ assert "offset > last - surface.Address()" in fermi_copy_new
 assert "surface.layer = 0;" in fermi_copy_new
 assert "if (!select_pitch_layer(src) || !select_pitch_layer(dst))" in fermi_copy_new
 assert "EDEN_GPU_FERMI2D_PITCH_LAYER_INVALID" in fermi_copy_new
+# Independent arithmetic model of the linear image-layer address.
+def pitch_layer_address(base: int, pitch: int, height: int, layer: int,
+                        depth: int) -> int | None:
+    max_u64 = (1 << 64) - 1
+    if pitch <= 0 or height <= 0 or layer < 0 or layer >= depth:
+        return None
+    plane_bytes = pitch * height
+    offset = plane_bytes * layer
+    if offset > max_u64 or base > max_u64 - offset:
+        return None
+    return base + offset
+
+assert pitch_layer_address(0x1000, 2048, 1080, 0, 4) == 0x1000
+assert pitch_layer_address(0x1000, 2048, 1080, 2, 4) == 0x1000 + 2 * 2048 * 1080
+assert pitch_layer_address(0x1000, 2048, 1080, 4, 4) is None
+assert pitch_layer_address((1 << 64) - 2, 2048, 1080, 1, 2) is None
+assert pitch_layer_address(0x1000, 0, 1080, 1, 2) is None
+
 assert "return;" in fermi_copy_new
 assert 'message(FATAL_ERROR "Pinned Fermi2D source/destination layer exception anchors changed")' in cmake
 assert "src.depth = 1;" in fermi_copy_new
