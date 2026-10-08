@@ -1331,11 +1331,12 @@ int main(int argc, char** argv) {
             const u64 title = eden_game_title_id(guest);
             const auto all_mods = Eden::Mods::List(Eden::AssetsPath("mods"), title);
             auto mods_off = Eden::LoadDisabledMods(title);
+            const bool all_mods_enabled = Eden::LoadModsEnabled(title);
             if (safe_launch) {
                 for (const auto& mod : all_mods)
                     if (std::find(mods_off.begin(), mods_off.end(), mod.name) == mods_off.end())
                         mods_off.push_back(mod.name);
-            } else if (!Eden::LoadModsEnabled(title)) {
+            } else if (!all_mods_enabled) {
                 for (const auto& mod : all_mods)
                     if (std::find(mods_off.begin(), mods_off.end(), mod.name) == mods_off.end())
                         mods_off.push_back(mod.name);
@@ -1346,18 +1347,26 @@ int main(int argc, char** argv) {
             // original Nintendo artwork. Once per launch; no GPU hot-path scan.
             const auto glyph_catalogue = Eden::GlyphOverrides::LoadCatalogue(
                 Eden::ConfigFile("encore-glyph-overrides.json"));
+            const bool glyph_requested = !safe_launch && all_mods_enabled &&
+                Eden::LoadInGamePlayStationGlyphs(title) &&
+                std::none_of(mods_off.begin(), mods_off.end(), [](const std::string& name) {
+                    return Eden::Mods::Lower(name) == Eden::Mods::Lower(Eden::GlyphOverrides::kModName);
+                });
+            const auto glyph_style = glyph_requested ?
+                Eden::GlyphOverrides::Style::PlayStation :
+                Eden::GlyphOverrides::Style::Nintendo;
             char glyph_update_version[96]{};
-            // The graphics version is read from the scanned effective update
-            // or the game's OWN base NACP, never entered via EdiZon. Unknown
-            // metadata deliberately leaves original Nintendo artwork.
-            (void)eden_game_glyph_display_version(
-                guest, Eden::AssetsPath("keys").c_str(), title,
-                glyph_update_version, sizeof(glyph_update_version));
-            const bool glyph_requested = Eden::LoadInGamePlayStationGlyphs(title);
+            // Opening a game's control RomFS can require additional reads
+            // or decryption. Skip it if no compatible art rule/asset exists:
+            // most titles have no rule, so there is no extra boot-time I/O.
+            if (Eden::GlyphOverrides::NeedsGameVersion(
+                    glyph_catalogue, title, glyph_style, all_mods)) {
+                (void)eden_game_glyph_display_version(
+                    guest, Eden::AssetsPath("keys").c_str(), title,
+                    glyph_update_version, sizeof(glyph_update_version));
+            }
             const auto glyph_state = Eden::GlyphOverrides::Select(
-                glyph_catalogue, title, glyph_update_version,
-                glyph_requested ? Eden::GlyphOverrides::Style::PlayStation :
-                                  Eden::GlyphOverrides::Style::Nintendo,
+                glyph_catalogue, title, glyph_update_version, glyph_style,
                 Eden::AssetsPath("mods"), all_mods);
             for (const auto& mod : all_mods) {
                 if (Eden::Mods::Lower(mod.name) !=
