@@ -1,0 +1,71 @@
+name: Launcher real-render preview — no emulator build
+
+on:
+  push:
+    branches: [local/fc27-offline-no-build]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: encore-launcher-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    # Do not compile while WIP. Only an explicit final ready marker or manual dispatch.
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[preview-ready]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout actual launcher source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install tiny host-only Mesa renderer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential python3-pil libegl1-mesa-dev libgl1-mesa-dev libstb-dev \
+            mesa-utils libgl1-mesa-dri ca-certificates git pkg-config
+
+      - name: Build and capture actual Encore launcher at 1920x1080
+        env:
+          PE_LANG: fr-FR
+          PE_PREVIEW_HOME_ONLY: "1"
+          PE_PREVIEW_JOBS: "2"
+          PROSPEROEDEN_LAUNCHER_BUILD: ${{ runner.temp }}/encore-launcher-only
+        run: |
+          bash tools/launcher/preview.sh build/launcher-production 1920 1080 \
+            2>&1 | tee build-launcher-render.log
+
+      - name: Verify rendered PNGs are real nonempty RGBA images
+        run: |
+          python3 - <<'PY'
+          from PIL import Image, ImageStat
+          from pathlib import Path
+          paths = sorted(Path("build/launcher-production").glob("*.png"))
+          required = ["00-arriving.png", "01-home.png", "02-home-details-focus.png",
+                      "03-home-recent-focus.png", "04-home-settings-focus.png"]
+          assert [p.name for p in paths] == required, [p.name for p in paths]
+          for path in paths:
+              with Image.open(path) as im:
+                  im.load()
+                  assert im.size == (1920, 1080), (path, im.size)
+                  rgb = im.convert("RGB")
+                  variation = sum(ImageStat.Stat(rgb.resize((64, 36))).stddev)
+                  assert variation > 12, (path, variation)
+                  print(path.name, im.size, f"stddev={variation:.1f}", path.stat().st_size)
+          print("RENDERED_FROM_REAL_CPP_GL_LAUNCHER: PASS")
+          PY
+
+      - name: Export full-resolution production-render evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Encore-launcher-native-render-1080p
+          path: |
+            build/launcher-production/*.png
+            build-launcher-render.log
+          if-no-files-found: error
+          retention-days: 14
