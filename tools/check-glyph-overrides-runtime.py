@@ -152,6 +152,13 @@ int main(int argc, char** argv) {
     // Ambiguous case-colliding graphic mods cannot be enabled together:
     // the ordinary Eden loader could otherwise overwrite the correct
     // atlas with a second mod in an unpredictable order.
+    // Two case-colliding Title IDs in the same mods root cannot provide
+    // deterministic artwork selection in the ordinary Eden patch manager.
+    const auto title_duplicate = mods / "0100C49025D3E000";
+    fs::create_directories(title_duplicate);
+    assert(select(data, "v1.2.0", Style::PlayStation) == State::EvidenceMismatch);
+    fs::remove(title_duplicate);
+    assert(select(data, "v1.2.0", Style::PlayStation) == State::Enabled);
     auto duplicate_mods = mods_found;
     duplicate_mods.push_back({"eden encore ps glyphs", Eden::Mods::kFiles});
     assert(Eden::GlyphOverrides::Select(data, GAME, "v1.2.0",
