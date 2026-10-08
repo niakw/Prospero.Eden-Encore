@@ -413,26 +413,16 @@ bool Launcher::press_top_nav(Key key)
 void Launcher::draw_top_nav(Canvas &c, int active_tab, int focus_tab, float focus_amount)
 {
     auto& list = c.list;
-    // Reference header: lightweight cyan four-petal mark and lowercase
-    // eden wordmark. The old oversized tropical palm image was unrelated
-    // to the single approved screenshot (maquetteunique.png).
-    constexpr float cx = 100.0f;
-    constexpr float cy = 62.0f;
-    // DrawList has translation/scale but no rotation transform. Explicit
-    // horizontal/vertical petals keep the mark stable on PS5 Vulkan/OpenGL.
-    list.rounded_rect({cx - 7.0f, cy - 31.0f, 14.0f, 25.0f}, 7.0f,
-                      theme::kFocusCore);
-    list.rounded_rect({cx + 5.0f, cy - 7.0f, 26.0f, 14.0f}, 7.0f,
-                      theme::kFocusBlue);
-    list.rounded_rect({cx - 7.0f, cy + 6.0f, 14.0f, 25.0f}, 7.0f,
-                      theme::kFocusCore);
-    list.rounded_rect({cx - 31.0f, cy - 7.0f, 26.0f, 14.0f}, 7.0f,
-                      theme::kFocusBlue);
-    list.circle(cx, cy, 5.0f, theme::kFocusBlue);
-    text(c, "eden", 145.0f, baseline(29.0f, 49.0f, 39.0f), 39.0f,
-         theme::kTitle, Align::left);
-    text(c, "ENCORE", 147.0f, baseline(77.0f, 16.0f, 13.0f), 13.0f,
-         theme::kCopy, Align::left, 4.5f);
+    // The packaged brand.tga comes from assets/icon0.png: the real
+    // neon palm Eden Encore logo, not a synthetic cyan flower.
+    // Draw the brand texture unmodified; never recolor its authored pixels.
+    if (c.textures.brand() != 0)
+        list.image(c.textures.brand(), {56.0f, 17.0f, 110.0f, 110.0f},
+                   {0.0f, 0.0f, 1.0f, 1.0f}, kWhite);
+    text(c, "EDEN", 175.0f, baseline(31.0f, 39.0f, 30.0f), 30.0f,
+         theme::kTitle, Align::left, 2.3f);
+    text(c, "ENCORE", 176.0f, baseline(76.0f, 21.0f, 17.0f), 17.0f,
+         theme::kLimePale, Align::left, 4.0f);
 
     // Reference uses large icon+label destinations in the right side of the
     // navigation. Keep the existing functional Recent tab until a real PS5
