@@ -854,7 +854,7 @@ pe::ui::Home EdenServices::home() {
             }
         }
         home.recents.push_back(std::move(recent));
-        if (home.recents.size() == 6) break;
+        if (home.recents.size() == 7) break;
     }
     const int installed = CountInstalledGames();
     home.system_status = fill(installed == 1 ? tr("{0} game installed") : tr("{0} games installed"),
