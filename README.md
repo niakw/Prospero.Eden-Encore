@@ -63,13 +63,15 @@ remain, including stretches below 25 FPS without an adjacent JIT-pressure event.
 
 The isolated `dev/ps5-sparse-jit` branch now includes:
 
-- **Global PS5 A64 JIT policy for every game**, using a one-time kernel
-  direct-memory headroom check: expanded C (320/256/256 MiB) if there is
-  sufficient contiguous RAM, balanced B for moderate headroom, otherwise the
-  conservative A baseline. Safe Launch and failed memory queries choose A.
-  This runs in a normal build; completed A/B/C/D file controls are diagnostic-only.
-  A32's separate cache remains unchanged pending A32 evidence. This interim
-  fixed-capacity memory policy is not yet an on-demand multi-segment allocator.
+- **One global PS5 JIT memory budget for all A64 and A32 titles.** At launch,
+  Eden queries the available contiguous direct-memory pool and distributes a
+  continuously sized initial code-cache budget among the guest cores, after
+  leaving physical headroom for system, game and GPU. No FC27 whitelist or
+  A/B/C hard-coded ceiling remains. Safe Launch or a failed memory query
+  reverts to the proven baseline. This policy is present in normal builds and
+  requires no manual performance switch. Each code arena remains constrained
+  by Xbyak/x64 addressing; the current allocator is still physically dense,
+  so true on-demand multi-arena growth remains separate unfinished work.
 - PS5-native Vulkan shader worker budgeting and one-time worker-count receipt,
   not yet measured on hardware. A smaller pool may slow shader warmup.
 - GPU/direct-memory snapshots at core initialization and shutdown, with a conservative
