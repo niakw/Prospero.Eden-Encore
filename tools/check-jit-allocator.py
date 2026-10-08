@@ -117,14 +117,10 @@ int main() {
 #ifdef EDEN_JIT_ALIAS_NATIVE
     for (fail_stage=1; fail_stage<=5; ++fail_stage) {
         stage=0; views.clear(); handles.clear();
-        if (fail_stage<=2 || fail_stage==5) assert(!allocator->alloc(page));
-        else {
-            Xbyak::CodeGenerator code(page,Xbyak::DontSetProtectRWE,allocator);
-            assert(!code.hasWritableAlias());
-            code.mov(code.eax,42); code.ret();
-            assert(mprotect(const_cast<unsigned char*>(code.getCode()),page,PROT_READ|PROT_EXEC)==0);
-            assert(code.getCode<int(*)()>()()==42);
-        }
+        // All five fault stages MUST fail allocation without returning
+        // a RW/NX address as executable code. A previous test explicitly
+        // accepted that unsafe fallback on alias-map/mprotect failure.
+        assert(!allocator->alloc(page));
         for (int fd : handles) { errno=0; assert(fcntl(fd,F_GETFD)==-1 && errno==EBADF); }
         for (void* p : views) { unsigned char state; errno=0; assert(mincore(p,page,&state)==-1 && errno==ENOMEM); }
         assert(Common::DenseJitDirectBytes() == 0);
