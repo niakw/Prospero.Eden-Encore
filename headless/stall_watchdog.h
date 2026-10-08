@@ -77,7 +77,7 @@ inline void Loop() {
                 std::snprintf(line, sizeof(line),
                     "EDEN_GAME_GPU_STALL_SUSPECT idle_s=%llu dispatch=%llu draws=%llu "
                     "gpu_queue_full=%llu guest_sync_wait=%llu cpu_phases=%u,%u,%u,%u "
-                    "note=diagnostic_only\\n",
+                    "note=diagnostic_only\n",
                     static_cast<unsigned long long>(observation.seconds_without_progress),
                     static_cast<unsigned long long>(counters.dispatches),
                     static_cast<unsigned long long>(counters.draws),
