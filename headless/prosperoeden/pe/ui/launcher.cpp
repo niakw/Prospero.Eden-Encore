@@ -83,7 +83,7 @@ bool Launcher::confirm_action(Confirmation action)
         case Confirmation::restore_defaults: question = TR("Restore default settings?"); break;
         case Confirmation::game_overrides: question = TR("Reset this game's custom settings?"); break;
         case Confirmation::mapping_reset: question = TR("Reset controller mapping?"); break;
-        case Confirmation::shader_caches: question = TR("Clear shader/JIT caches?"); break;
+        case Confirmation::shader_caches: question = TR("Clear cache?"); break;
         case Confirmation::console_mode: question = TR("Change console mode for this game?"); break;
         default: break;
         }
