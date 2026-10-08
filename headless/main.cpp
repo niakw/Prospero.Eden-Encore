@@ -41,6 +41,7 @@
 #include "display_refresh.h"
 #include "log_pipe.h"
 #include "mods.h"
+#include "glyph_overrides_runtime.h"
 #include "controller_applet.h"
 #include "error_applet.h"
 #include "preferences.h"
@@ -1339,6 +1340,36 @@ int main(int argc, char** argv) {
                     if (std::find(mods_off.begin(), mods_off.end(), mod.name) == mods_off.end())
                         mods_off.push_back(mod.name);
             }
+            // encore-overrides-style visual in-game glyph rules. This ONLY
+            // enables/disables verified ROMFS *graphic assets*, not pad actions.
+            // Unknown/updated titles, missing manifests and Safe Launch keep
+            // original Nintendo artwork. Once per launch; no GPU hot-path scan.
+            const auto glyph_catalogue = Eden::GlyphOverrides::LoadCatalogue(
+                Eden::ConfigFile("encore-glyph-overrides.json"));
+            char glyph_update_version[96]{};
+            (void)eden_game_addons(title, glyph_update_version,
+                                   sizeof(glyph_update_version), nullptr);
+            const bool glyph_requested = Eden::LoadInGamePlayStationGlyphs(title);
+            const auto glyph_state = Eden::GlyphOverrides::Select(
+                glyph_catalogue, title, glyph_update_version,
+                glyph_requested ? Eden::GlyphOverrides::Style::PlayStation :
+                                  Eden::GlyphOverrides::Style::Nintendo,
+                Eden::AssetsPath("mods"), all_mods);
+            for (const auto& mod : all_mods) {
+                if (Eden::Mods::Lower(mod.name) !=
+                    Eden::Mods::Lower(Eden::GlyphOverrides::kModName)) continue;
+                if (safe_launch || glyph_state != Eden::GlyphOverrides::State::Enabled) {
+                    if (std::find(mods_off.begin(), mods_off.end(), mod.name) == mods_off.end())
+                        mods_off.push_back(mod.name);
+                }
+            }
+            const bool glyph_applied = glyph_state == Eden::GlyphOverrides::State::Enabled &&
+                !safe_launch && std::none_of(mods_off.begin(), mods_off.end(), [](const std::string& name) {
+                    return Eden::Mods::Lower(name) == Eden::Mods::Lower(Eden::GlyphOverrides::kModName);
+                });
+            Eden::Report("glyphs", (std::string("In-game button art: ") +
+                (glyph_applied ? "PlayStation RomFS pack" : "Nintendo original") +
+                " (rule=" + Eden::GlyphOverrides::StateName(glyph_state) + ")").c_str());
             const std::string mods = Eden::Mods::Summary(all_mods, mods_off);
             Settings::values.disabled_addons[title] = mods_off;
             Eden::Report("launch", ("Mods: " + mods).c_str());
