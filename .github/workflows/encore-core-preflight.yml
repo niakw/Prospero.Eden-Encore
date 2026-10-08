@@ -43,7 +43,8 @@ jobs:
           python3 -B tools/check-home-media.py
           python3 -B tools/check-encore-ux.py
 
-      - name: Validate source diffs
+      - name: Validate all feature-branch source diffs
         run: |
-          git diff --check HEAD^ HEAD
+          git fetch --no-tags --depth=1 origin fix/0.40-zbic-13.60
+          git diff --check FETCH_HEAD HEAD
           echo CORE_PREFLIGHT_ALL_PASS
