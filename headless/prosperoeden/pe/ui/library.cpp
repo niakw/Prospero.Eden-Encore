@@ -93,19 +93,10 @@ void Launcher::start_home_media()
         home_media_attempted_.end())
         return;
 
-    const bool rich = recent != nullptr ?
-        ((!recent->hero.empty() || !recent->screenshot.empty()) &&
-         recent->max_players > 0 && !recent->intro.empty()) :
-        ((!home_.last_hero.empty() || !home_.last_screenshot.empty()) &&
-         home_.last_max_players > 0 && !home_.last_intro.empty());
-    if (rich) {
-        home_media_attempted_.push_back(title_id);
-        return;
-    }
-
+    // Do not infer the full Nlib media set from a banner/intro: an otherwise
+    // rich-looking cached title can still be missing all three screenshots.
     Game request;
     request.title_id = title_id;
-    request.home_media_priority = true;
     if (recent != nullptr) {
         request.file = recent->file;
         request.name = recent->title;
@@ -186,22 +177,24 @@ void Launcher::finish_home_media()
 void Launcher::start_selected_media()
 {
     if (media_scan_.valid() || games_.empty()) return;
-    const int index = std::clamp(library_.selected, 0, static_cast<int>(games_.size()) - 1);
-    const Game& game = games_[static_cast<std::size_t>(index)];
-    if (game.title_id == 0) return;
-    if (std::find(media_attempted_.begin(), media_attempted_.end(), game.title_id) != media_attempted_.end())
-        return;
-    // Already-rich cached data needs no network work this session.
-    if (!game.hero.empty() && !game.screenshots.empty() && !game.intro.empty()) {
+    // Prefer the highlighted title but then cover ALL installed titles, even
+    // those never selected. Download the complete Nlib media set per title
+    // without blocking input, drawing or ROM enumeration.
+    const int selected = std::clamp(library_.selected, 0, static_cast<int>(games_.size()) - 1);
+    for (std::size_t offset = 0; offset < games_.size(); ++offset) {
+        const auto index = (static_cast<std::size_t>(selected) + offset) % games_.size();
+        const Game& game = games_[index];
+        if (game.title_id == 0 ||
+            std::find(media_attempted_.begin(), media_attempted_.end(), game.title_id) !=
+                media_attempted_.end()) continue;
         media_attempted_.push_back(game.title_id);
+        media_scan_title_id_ = game.title_id;
+        Game copy = game;
+        media_scan_ = std::async(std::launch::async, [this, copy = std::move(copy)]() mutable {
+            return services_.enrich_game_media(std::move(copy));
+        });
         return;
     }
-    media_attempted_.push_back(game.title_id);
-    media_scan_title_id_ = game.title_id;
-    Game copy = game;
-    media_scan_ = std::async(std::launch::async, [this, copy = std::move(copy)]() mutable {
-        return services_.enrich_game_media(std::move(copy));
-    });
 }
 
 void Launcher::finish_selected_media()
@@ -262,6 +255,8 @@ void Launcher::apply_games(std::vector<Game> games)
         mode_.snap(selected_docked_ ? 0.0f : 1.0f);
     }
     name_home_games();
+    // Start the global artwork queue as soon as game enumeration completes.
+    start_selected_media();
 }
 
 void Launcher::name_home_games()
