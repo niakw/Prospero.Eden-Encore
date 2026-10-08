@@ -219,7 +219,7 @@ if(PS5_NATIVE)
         message(FATAL_ERROR "Pinned Dynarmic JIT commit boundary changed")
     endif()
     string(REPLACE "${jit_commit_anchor}"
-        "${jit_commit_anchor}#ifdef PS5_NATIVE\n    if (::Eden::Experimental::sparse_jit_cache.load(std::memory_order_relaxed)) {\n        const size_t written = getSize();\n        if (written > maxSize_ || codesize > maxSize_ - written ||\n            !::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), written + codesize)) {\n            std::fprintf(stderr, \"EDEN_JIT_SPARSE_COMMIT_FAILED used=%zu next=%zu capacity=%zu\\n\", written, codesize, maxSize_);\n            std::abort();\n        }\n        return;\n    }\n#endif\n"
+        "${jit_commit_anchor}#ifdef PS5_NATIVE\n    if (::Eden::Experimental::sparse_jit_cache.load(std::memory_order_relaxed) &&\n        ::Common::IsSparseJitCode(getCode())) {\n        const size_t written = getSize();\n        if (written > maxSize_ || codesize > maxSize_ - written ||\n            !::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), written + codesize)) {\n            std::fprintf(stderr, \"EDEN_JIT_SPARSE_COMMIT_FAILED used=%zu next=%zu capacity=%zu\\n\", written, codesize, maxSize_);\n            std::abort();\n        }\n        return;\n    }\n#endif\n"
         code_source "${code_source}")
 endif()
   # ConstantPool has completed construction before this body. Isolate its last
