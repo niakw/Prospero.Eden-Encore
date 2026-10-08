@@ -42,6 +42,7 @@ public:
     std::string language_region(int language) override;
     std::string setup_details() override;
     pe::ui::DiagnosticsInfo diagnostics() override;
+    pe::ui::DiagnosticsInfo diagnostics(const std::atomic<bool>* cancel) override;
     bool clear_shader_caches(std::string* message) override;
 
     bool folders(const std::string& directory, std::vector<std::string>* names) override;
