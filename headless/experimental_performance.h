@@ -48,7 +48,15 @@ inline constexpr JitMemoryPlan ChooseJitMemoryPlan(
     if (safe_launch || !memory_query_ok || largest_free_block <= kHostReserve)
         return plan;
 
-    const std::size_t native_floor = std::size_t{640} * kMiB;
+    // Account for ALL four cores, including core 3's 16 MiB. The previous
+    // 640 MiB floor covered only cores 0-2 while each actual baseline totals
+    // 656 MiB, silently admitting 16 MiB beyond the advertised budget.
+    constexpr std::size_t native_floor =
+        std::size_t{kA64Baseline[0]} + kA64Baseline[1] +
+        kA64Baseline[2] + kA64Baseline[3];
+    static_assert(native_floor == std::size_t{kA32Baseline[0]} +
+                                  kA32Baseline[1] + kA32Baseline[2] +
+                                  kA32Baseline[3]);
     const std::size_t budget = ((largest_free_block - kHostReserve) / 2) / kLargePage * kLargePage;
     if (budget <= native_floor) return plan;
     const std::size_t growth = budget - native_floor;
