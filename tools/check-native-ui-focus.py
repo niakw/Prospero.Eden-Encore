@@ -44,6 +44,9 @@ assert "rounded_image(image.texture, fitted" in widgets
 # Shared focus affects *all* relevant interaction surfaces, including tiles,
 # buttons, menus and utility cards. Artwork underneath stays readable.
 assert "const bool artwork_plate = &style == &kTilePlate;" in widgets
+assert "if (!artwork_plate) {" in widgets
+assert "Paint bloom BEFORE the opaque cover" in home
+assert "Only the luminous outline is above the game cover." in home
 assert "const float fill_strength = artwork_plate ? 0.06f : 0.82f;" in widgets
 assert "const float right_strength = artwork_plate ? 0.06f : 0.34f;" in widgets
 assert "theme::kSun.with_alpha(0.29f * amount * breathe)" in widgets
