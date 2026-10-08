@@ -207,6 +207,18 @@ int main() {
     assert(failed_writable == nullptr);
     usage(0, 0);
     assert(owned_fds == 0);
+
+    // The second 2 MiB bootstrap allocation can also fail after the first
+    // chunk has already been installed. Both VA views and the first owned
+    // direct-memory chunk must be released before dense fallback.
+    fail_at_call = alloc_calls + 2;
+    failed_writable = nullptr;
+    assert(Common::ReserveSparseJitCode(32 * 1024 * 1024,
+                                       &failed_writable) == nullptr);
+    assert(failed_writable == nullptr);
+    usage(0, 0);
+    assert(owned_fds == 0);
+
     // A partially mapped bootstrap must also release both VA ranges and
     // physical memory, rather than leaving a dangling constructor pointer.
     fail_at_call = 0;
