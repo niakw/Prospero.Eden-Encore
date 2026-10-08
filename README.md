@@ -105,6 +105,16 @@ separate outstanding issues.
   `python3 tools/check-ps5-architecture.py` (not a substitute for
   a console build or hardware validation).
 
+**Additional PS5-first JIT work, unqualified:** initial physical sparse
+pages now cover Dynarmic's constructor-time constant pool; sparse-reservation
+failure uses the dense JIT path; A64 and A32 attempt a one-time cache
+evacuation when extension fails before mapping. The installed app still
+uses the dense allocator. New physical usage reports distinguish dense
+owned direct-memory bytes from sparse reserved/committed bytes, with a
+post-destruction leak snapshot. A mocked-kernel host gate is present,
+but actual firmware 13.60 JIT aliasing and OOM recovery remain untested.
+Do not treat this as an installed or completed dynamic multi-arena JIT.
+
 ## Changes in Encore R1
 
 Prospero.Eden Encore R1 turns the proven ProsperoEden 1.000.040 base into a PS5 13.60-focused release:
