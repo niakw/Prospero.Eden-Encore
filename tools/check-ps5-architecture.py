@@ -63,11 +63,34 @@ def main() -> None:
     require(perf.index('void SparseJitUsage(') < perf.index('namespace Eden::Performance {'),
             "JIT memory declaration is inside the wrong C++ namespace")
 
-    require('auto_fc27_jit ? 2u : 0u' in app, "FC27 observed-best default C is missing")
-    require('!safe_launch && launch_title_id == 0x0100C49025D3E000ull' in app,
-            "Safe Launch must bypass the FC27 JIT hint")
+    # No title-specific performance path: every A64 guest follows the same
+    # PS5 admission rule, including a normal non-development release.
+    require('auto_fc27_jit' not in app and 'fc27-validated-c' not in app,
+            "Legacy FC27-only JIT selection returned")
+    require('ChooseA64CacheTier(safe_launch, jit_memory_known, jit_largest_free)' in app,
+            "Every game must use the same automatic A64 JIT policy")
+    require('bool QueryLargestDirectMemoryBlock(std::size_t* largest) noexcept' in perf,
+            "PS5 launch-time direct memory query implementation absent")
+    require('QueryLargestDirectMemoryBlock(std::size_t* largest)' in perf_h,
+            "PS5 launch-time memory query declaration absent")
+    require('jit_memory_known = Eden::Performance::QueryLargestDirectMemoryBlock(&jit_largest_free)' in app,
+            "JIT policy does not consult the actual launch-time memory headroom")
+    require('if (safe_launch || !memory_query_succeeded) return 0;' in jit_policy,
+            "Safe Launch / unknown-memory fallback missing")
+    require('largest_free_block >= kExpandedA64Total + kExpandedHeadroom' in jit_policy,
+            "C tier must be admitted against actual available memory")
+    require('largest_free_block >= kBalancedA64Total + kBalancedHeadroom' in jit_policy,
+            "Balanced fallback missing")
     require('if (tier == 2) return (core == 0 ? 320u : 256u) * mib;' in jit_policy,
-            "Observed-best FC27 cache policy changed")
+            "Universal A64 C capacities changed")
+    require(jit_policy.count('static_assert(ChooseA64CacheTier(') >= 5,
+            "Static policy boundary tests missing")
+    dev_start = app.index('#if defined(PS5_NATIVE) && defined(EDEN_DEV_PROFILE)')
+    dev_end = app.index('\\n#endif\\n#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)', dev_start)
+    require(app.index('jit_cache_tier.store(experimental_jit_cache') > dev_end,
+            "JIT policy stores must not be compiled out of normal release builds")
+    require('EDEN_PS5_JIT_POLICY scope=all_titles' in app,
+            "Release build must report the global policy (once per launch)")
     require('jit == "elastic"' not in app and 'tier == 3' not in jit_policy,
             "Arbitrary 4 GiB experiment must not be reintroduced")
 
@@ -84,7 +107,7 @@ def main() -> None:
     print("PASS PS5_NATIVE_ARCHITECTURE_CONTRACTS")
     print(f"  lifecycle points: {', '.join(sorted(memory_stages))}")
     print("  sparse JIT: compile-gated, startup alias preflight, committed-memory accounting")
-    print("  FC27: automatic C / safe fallback; no shipping A/B/C/D file")
+    print("  all titles: headroom-gated A64 C/B, conservative fallback; A32 unchanged")
     print("  Vulkan: available CPU mask, pinned-source transformation, bounded worker budget")
     print("  Native PS5 compile and firmware 13.60 tests: NOT RUN")
 
