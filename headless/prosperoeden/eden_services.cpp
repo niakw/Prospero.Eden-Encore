@@ -397,22 +397,27 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
         int screen_count = static_cast<int>(result.screenshots.size());
         if (cached_metadata && metadata.contains("screens") && metadata["screens"].is_object())
             screen_count = std::max(screen_count, metadata["screens"].value("count", 0));
-        if (!current_metadata_cache) {
-            {
-                std::lock_guard lock(retry_guard);
-                const auto it = next_retry.find(retry_key);
-                if (it != next_retry.end() &&
-                    std::chrono::steady_clock::now() < it->second)
-                    return result;
-            }
+        // A title can acquire Nlib artwork after it was first catalogued.
+        // Refresh sparse metadata periodically without filesystem timestamp
+        // calls, and never suppress downloads already described by cached
+        // metadata just because a refresh is temporarily rate-limited.
+        const bool sparse_metadata = current_metadata_cache &&
+                                    (!has_icon || !has_banner || screen_count == 0);
+        const bool needs_metadata = !current_metadata_cache || sparse_metadata;
+        bool may_request_metadata = needs_metadata;
+        if (needs_metadata) {
+            std::lock_guard lock(retry_guard);
+            const auto it = next_retry.find(retry_key);
+            if (it != next_retry.end() && std::chrono::steady_clock::now() < it->second)
+                may_request_metadata = false;
+        }
+        if (needs_metadata && !may_request_metadata && !current_metadata_cache)
+            return result;
+        if (may_request_metadata) {
             const std::string metadata_endpoint = std::string{"/nx/"} + id + "?lang=" + language +
                 "&fields=name,intro,description,publisher,developer,releaseDate,category,languages,"
                 "numberOfPlayers,icon,banner,screens";
             if (const auto response = Common::Net::MakeRequest("https://api.nlib.cc", metadata_endpoint)) {
-                {
-                    std::lock_guard lock(retry_guard);
-                    next_retry.erase(retry_key);
-                }
                 metadata = nlohmann::json::parse(*response);
                 if (metadata.is_object()) {
                     metadata["_encore_cache_schema"] = kNlibCacheSchema;
@@ -423,13 +428,19 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
                     if (metadata.contains("screens") && metadata["screens"].is_object())
                         screen_count = std::max(screen_count, metadata["screens"].value("count", 0));
                 }
+                std::lock_guard lock(retry_guard);
+                if (!metadata.is_object() || !has_icon || !has_banner || screen_count == 0)
+                    next_retry[retry_key] = std::chrono::steady_clock::now() +
+                                            std::chrono::minutes(30);
+                else
+                    next_retry.erase(retry_key);
             } else {
-                // A missing title/API stays offline for this visit; keep local
-                // ROM artwork and avoid serial HTTP waits on subsequent visits.
+                // Keep previously cached image links on a transient timeout.
+                // A newly discovered title retries in five minutes.
                 std::lock_guard lock(retry_guard);
                 next_retry[retry_key] = std::chrono::steady_clock::now() +
                                         std::chrono::minutes(5);
-                return result;
+                if (!current_metadata_cache) return result;
             }
         }
         if (result.max_players > 0) CacheNlibPlayers(title_id, result.max_players);
