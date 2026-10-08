@@ -365,3 +365,30 @@ exposes `Common::ExecutableAliasSpan(writable)` and records it in
 A host fixture exercises a 3 MiB request with a 4 MiB RX alias and
 checks that the entire tail is unmapped at release. This is a host
 ownership test, **not** a real PS5 SDK/hardware mapping qualification.
+
+### Physical admission accounting and host guard regression (8 October 2026)
+
+The per-ISA four-core JIT baseline is 656 MiB of executable capacity,
+but each of its four **dense** direct allocations also reserves a 2 MiB
+allocator header/alignment page. This is 8 MiB of additional committed
+physical RAM; the all-title launcher admission policy now subtracts that
+exact fixed overhead **only for an expanded dense JIT plan**, rather than
+overstating available capacity. The existing 3 GiB host reserve stays
+unchanged. The source fixture asserts that A64 and A32 total capacities
+*plus* four direct-allocation headers fit the plan's physical admission
+budget. These are capacity and ownership calculations, not FPS measurements
+or proof of accessible GPU/shared-memory headroom.
+
+The host-mocked sparse rollback fixture also forks child processes and
+attempts to read the next uncommitted RW and RX pages after failed mapping.
+Both accesses must signal SIGSEGV, while earlier committed code remains
+accessible and all physical allocations are accounted for. This only
+qualifies the Linux test double and cannot establish PS5 firmware support
+for MAP_FIXED anonymous PROT_NONE guard restoration.
+
+Issue #7 tracks a separate concern: DualSense-to-emulated-Switch **input**
+mapping is not equivalent to replacing the game's native button artwork.
+The new host-only `check-controller-semantic-mapping.py` compiles the real
+`button_mapping.h` and protects PlayStation/Switch defaults, custom swaps,
+bijective assignments and invalid input handling without altering the
+approved launcher or claiming in-game PlayStation glyphs.
