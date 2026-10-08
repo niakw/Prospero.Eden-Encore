@@ -82,7 +82,7 @@ assert "VIEW ALL GAMES" not in home_source, "removed Home pseudo-link returned"
 assert all(marker in home_source for marker in (
     "kHomeQuickPanel", "kHomeQuickFirst", "kHomeStorage", "kHomeControllers", "kHomeFullSettings",
 )), "final Home navigation/utility contract missing"
-assert "const Rect hero{0.0f, 0.0f, 1920.0f, 544.0f}" in home_source, "reference hero is not full bleed"
+assert "const Rect hero{0.0f, 0.0f, 1920.0f, 1080.0f}" in home_source, "reference hero is not full bleed"
 assert "cover_crop(c, hero_artwork, hero, 0.0f, 0.0f)" in home_source, "game artwork is not full bleed"
 assert "utility_card(3" in home_source, "reference four utilities missing"
 assert "Cross launches" not in library_source, "text-only controller hint returned"
