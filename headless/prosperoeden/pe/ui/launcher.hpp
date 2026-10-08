@@ -8,8 +8,10 @@
 #include "pe/ui/widgets.hpp"
 
 #include <array>
+#include <chrono>
 #include <future>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace pe::ui
@@ -245,10 +247,11 @@ class Launcher
     // banner/player metadata as soon as the network/cache can provide it.
     std::future<Game> home_media_scan_;
     std::uint64_t home_media_scan_title_id_ = 0;
-    std::vector<std::uint64_t> home_media_attempted_;
-    std::future<Game> media_scan_; // lazy Nlib enrichment for the highlighted Library title
+    std::unordered_map<std::uint64_t, std::chrono::steady_clock::time_point> home_media_next_retry_;
+    std::future<Game> media_scan_; // Nlib enrichment of every installed title
     std::uint64_t media_scan_title_id_ = 0;
-    std::vector<std::uint64_t> media_attempted_;
+    std::unordered_map<std::uint64_t, std::chrono::steady_clock::time_point> media_next_retry_;
+    float media_retry_timer_ = 0.0f; // only periodically poll for failed/late Nlib artwork
     bool games_loaded_ = false;
     ListView library_;
     bool selected_docked_ = true;
