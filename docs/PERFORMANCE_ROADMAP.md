@@ -181,3 +181,13 @@ Repeated 30 FPS windows do **not** prove smooth per-frame gameplay.
 
 Source and baseline observations only. No PS5 app build or GitHub workflow
 dispatched; no measured improvement claimed.
+
+## Opt-in source experiments (8 October 2026)
+
+The experimental source path is implemented at
+`docs/FC27_EXPERIMENTS.md` with per-title `config/experiments.json`:
+expanded fixed-at-creation A64 Dynarmic caches (to evaluate pressure),
+logical-CPU placement only after a failed physical topology probe, and a
+passive six-bucket Vulkan presentation histogram. Stable and Safe Launch
+settings are unchanged. CPU affinity is restored after a game and on errors.
+No frame-generation implementation or proven FPS improvement is claimed.
