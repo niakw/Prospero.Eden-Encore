@@ -269,29 +269,30 @@ void Launcher::press_home(Key key)
             focus = hero_ready ? kHomeHero : (ready ? kHomeNavLibrary : kHomeNavRecent);
         else if (focus >= kHomeQuickFirst && focus < kHomeQuickFirst + kHomeQuickCount)
             focus = focus > kHomeQuickFirst ? focus - 1 : kHomeQuickPanel;
-        else if (focus == kHomeQuickPanel || focus == kHomeStorage ||
-                 focus == kHomeControllers || focus == kHomeFullSettings)
-            focus = recent_count > 0 ? kHomeRecentFirst : (hero_ready ? kHomeHero : kHomeNavRecent);
+        else if (focus == kHomeQuickPanel)
+            focus = kHomeNavSettings;
+        else if (focus == kHomeStorage)
+            focus = kHomeQuickFirst + kHomeQuickCount - 1;
+        else if (focus == kHomeControllers)
+            focus = kHomeStorage;
+        else if (focus == kHomeFullSettings)
+            focus = kHomeControllers;
         break;
     case Key::down:
         if (focus >= kHomeNavLibrary && focus <= kHomeNavSettings)
-        {
-            if (hero_ready)
-                focus = kHomeHero;
-        }
+            focus = focus == kHomeNavSettings ? kHomeQuickPanel : kHomeHero;
         else if (focus == kHomeHero || focus == kHomeDetails)
-        {
             focus = recent_count > 0 ? kHomeRecentFirst : kHomeQuickPanel;
-        }
         else if (focus >= kHomeRecentFirst && focus < kHomeRecentFirst + recent_count)
-        {
-            focus = kHomeQuickPanel;
-        }
+            focus = kHomeStorage;
+        else if (focus == kHomeQuickPanel)
+            focus = kHomeQuickFirst;
         else if (focus >= kHomeQuickFirst && focus < kHomeQuickFirst + kHomeQuickCount)
-        {
-            if (focus < kHomeQuickFirst + kHomeQuickCount - 1)
-                ++focus;
-        }
+            focus = focus < kHomeQuickFirst + kHomeQuickCount - 1 ? focus + 1 : kHomeStorage;
+        else if (focus == kHomeStorage)
+            focus = kHomeControllers;
+        else if (focus == kHomeControllers)
+            focus = kHomeFullSettings;
         break;
     case Key::left:
     case Key::right:
@@ -305,21 +306,17 @@ void Launcher::press_home(Key key)
         }
         else if (focus == kHomeHero || focus == kHomeDetails)
         {
-            if (hero_ready)
-                focus = focus == kHomeHero ? kHomeDetails : kHomeHero;
+            if (delta > 0)
+                focus = focus == kHomeHero && hero_ready ? kHomeDetails : kHomeQuickPanel;
+            else
+                focus = kHomeHero;
         }
-        else if (focus == kHomeQuickPanel || focus == kHomeStorage ||
-                 focus == kHomeControllers || focus == kHomeFullSettings)
-        {
-            constexpr std::array utility{kHomeQuickPanel, kHomeStorage, kHomeControllers, kHomeFullSettings};
-            const auto it = std::find(utility.begin(), utility.end(), focus);
-            const int position = it == utility.end() ? 0 : static_cast<int>(it - utility.begin());
-            // The first utility is not a navigation trap: Left returns to the
-            // hero actions, even when quick settings have not been opened.
-            focus = position == 0 && delta < 0 ?
-                (hero_ready ? kHomeDetails : (recent_count > 0 ? kHomeRecentFirst : kHomeNavRecent)) :
-                utility[static_cast<std::size_t>((position + delta + 4) % 4)];
-        }
+        else if (focus == kHomeQuickPanel)
+            focus = delta < 0 ? (hero_ready ? kHomeDetails : kHomeHero) : kHomeQuickFirst;
+        else if (focus == kHomeStorage || focus == kHomeControllers || focus == kHomeFullSettings)
+            focus = delta < 0 ?
+                (recent_count > 0 ? kHomeRecentFirst + recent_count - 1 : kHomeHero) :
+                kHomeQuickPanel;
         else if (focus >= kHomeQuickFirst && focus < kHomeQuickFirst + kHomeQuickCount)
         {
             if (home_quick_edit_ == focus - kHomeQuickFirst)
@@ -330,9 +327,11 @@ void Launcher::press_home(Key key)
         }
         else if (focus >= kHomeRecentFirst && focus < kHomeRecentFirst + recent_count && recent_count > 0)
         {
-            int position = focus - kHomeRecentFirst;
-            position = (position + delta + recent_count) % recent_count;
-            focus = position + kHomeRecentFirst;
+            const int position = focus - kHomeRecentFirst;
+            if (delta > 0 && position == recent_count - 1)
+                focus = kHomeQuickPanel;
+            else
+                focus = kHomeRecentFirst + (position + delta + recent_count) % recent_count;
         }
         break;
     }
@@ -837,7 +836,7 @@ void Launcher::draw_home(Canvas &c)
 
     // ---- system status: persistent lower-right glass card from reference ----
     begin_band(4, 12.0f);
-    const Rect system{kRight, 526.0f, kRightWidth, 320.0f};
+    const Rect system{kRight, 526.0f, kRightWidth, 350.0f};
     glass(c, system, 26.0f, theme::kGlass.with_alpha(0.89f),
           theme::kPanelEdge.with_alpha(0.67f), 1.0f);
     text(c, tr("SYSTEM STATUS"), system.x + 27.0f,
@@ -852,8 +851,6 @@ void Launcher::draw_home(Canvas &c)
     // Cache size is read from the selected Eden root; unknown remains unknown.
     const Rect cache_rect{system.x + 20.0f, system.y + 104.0f, system.w - 40.0f, 66.0f};
     plate_rest(c, kRowPlate, cache_rect);
-    if (focus(kHomeControllers) > 0.01f)
-        plate_focus(c, kRowPlate, cache_rect, focus(kHomeControllers));
     home_icon(c, HomeIcon::cache, cache_rect.x + 19.0f, cache_rect.y + 33.0f, theme::kMeta);
     text(c, tr("SHADER/JIT CACHES"), cache_rect.x + 60.0f,
          baseline(cache_rect.y + 7.0f, 23.0f, 15.0f), 15.0f, theme::kMeta);
@@ -887,12 +884,29 @@ void Launcher::draw_home(Canvas &c)
         list.rounded_rect({track.x, track.y, track.w * fill, track.h}, 3.0f,
                           theme::kFocusBlue.with_alpha(0.95f));
     }
-    list.rounded_rect({system.x + 24.0f, system.y + 267.0f, system.w - 48.0f, 1.0f},
+    const Rect controller_row{system.x + 20.0f, system.y + 262.0f,
+                              system.w - 40.0f, 40.0f};
+    if (focus(kHomeControllers) > 0.01f)
+        plate_focus(c, kRowPlate, controller_row, focus(kHomeControllers));
+    unsigned connected = 0;
+    for (unsigned player = 0; player < 4; ++player)
+        connected += (controllers_ >> player) & 1u;
+    home_icon(c, HomeIcon::controller, controller_row.x + 20.0f,
+              controller_row.y + 20.0f, theme::kMeta);
+    text_shrink(c, connected > 0 ? "DualSense ×" + std::to_string(connected) :
+                                   std::string{"DualSense"},
+                controller_row.x + 60.0f, baseline(controller_row.y, 40.0f, 16.0f),
+                16.0f, theme::kTitle, 330.0f);
+    list.rounded_rect({system.x + 24.0f, system.y + 305.0f, system.w - 48.0f, 1.0f},
                       0.0f, theme::kRule.with_alpha(0.56f));
-    const Rect more_settings{system.x + 20.0f, system.y + 277.0f, system.w - 40.0f, 35.0f};
+    const Rect more_settings{system.x + 20.0f, system.y + 307.0f, system.w - 40.0f, 36.0f};
     if (focus(kHomeFullSettings) > 0.01f)
         plate_focus(c, kRowPlate, more_settings, focus(kHomeFullSettings));
-    text_shrink(c, std::string{tr("Language")} + ": " + tr("French"),
+    const auto& language_labels = services_.language_labels();
+    const std::string language_value =
+        prefs_.language >= 0 && prefs_.language < static_cast<int>(language_labels.size()) ?
+            language_labels[static_cast<std::size_t>(prefs_.language)] : tr("Unknown");
+    text_shrink(c, std::string{tr("Language")} + ": " + language_value,
                 more_settings.x + 12.0f, baseline(more_settings.y, 35.0f, 16.0f),
                 16.0f, theme::kMeta, 330.0f);
     text(c, version_, more_settings.x + more_settings.w - 12.0f,
