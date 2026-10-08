@@ -396,24 +396,97 @@ void Launcher::finish_diagnostics()
 
 void Launcher::read_home()
 {
-    home_ = services_.home();
-    // Never recursively enumerate caches/log files during Home construction
-    // or when recovering from a missing game on the UI update thread.
-    // Render the cached/latest result until the background scan completes.
-    if (home_diagnostics_.storage_root.empty())
-        home_diagnostics_.storage_root = services_.files_folder();
+    // The native Home service performs ROM filesystem reads, per-title
+    // metadata, addon scanning and cached Nlib reads. Never run it on the
+    // UI owner thread, including missing-ROM recovery.
     start_diagnostics();
-    if (home_.last_title_id == 0 || !games_loaded_)
+    if (home_scan_.valid()) {
+        home_reload_pending_ = true;
         return;
-    // The asynchronous ROM scan already counted and resolved per-title mods.
-    // A second synchronous service mod enumeration delayed first Home frame
-    // and ROM-missing recovery; borrow its completed snapshot instead.
-    const auto it = std::find_if(games_.begin(), games_.end(), [this](const Game& game) {
-        return game.file == home_.last_file;
+    }
+    home_scan_failed_ = false;
+    home_scan_ = std::async(std::launch::async, [this] {
+        return services_.home();
     });
-    if (it != games_.end()) {
-        home_.last_mods = it->mods;
-        home_.last_mods_on = it->mods_on;
+}
+
+void Launcher::finish_home_scan()
+{
+    if (!home_scan_.valid() ||
+        home_scan_.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+        return;
+
+    try {
+        Home snapshot = home_scan_.get();
+        if (home_reload_pending_) {
+            // A ROM was removed or a fresh state was requested while
+            // the prior snapshot was in flight. Discard it rather than
+            // briefly exposing stale game tiles.
+            home_reload_pending_ = false;
+            read_home();
+            return;
+        }
+        const bool initial = !home_loaded_;
+        const std::string previous_file =
+            home_recent_ >= 0 && home_recent_ < static_cast<int>(home_.recents.size()) ?
+                home_.recents[static_cast<std::size_t>(home_recent_)].file : std::string{};
+        home_ = std::move(snapshot);
+        home_loaded_ = true;
+        home_scan_failed_ = false;
+        if (!previous_file.empty()) {
+            const auto recent = std::find_if(home_.recents.begin(), home_.recents.end(),
+                [&](const Recent& entry) { return entry.file == previous_file; });
+            home_recent_ = recent == home_.recents.end() ? -1 :
+                static_cast<int>(recent - home_.recents.begin());
+        } else {
+            home_recent_ = -1;
+        }
+
+        // Mod counts are already calculated by the asynchronous library
+        // enumeration. Do not reopen every mod directory on this frame.
+        if (home_.last_title_id != 0 && games_loaded_) {
+            const auto game = std::find_if(games_.begin(), games_.end(),
+                [this](const Game& entry) { return entry.file == home_.last_file; });
+            if (game != games_.end()) {
+                home_.last_mods = game->mods;
+                home_.last_mods_on = game->mods_on;
+            }
+        }
+        if (initial) {
+            const bool continue_ready = home_.setup_ready && home_.last_exists;
+            home_focus_ = continue_ready ? 0 : home_.setup_ready ? 1 : 2;
+            for (std::size_t i = 0; i < home_springs_.size(); ++i)
+                home_springs_[i].snap(static_cast<int>(i) == home_focus_ ? 1.0f : 0.0f);
+            cue(home_.launch_failed ? Cue::notify :
+                first_start_ ? Cue::welcome : Cue::resume);
+        } else if (home_focus_ == 4 && !home_.last_exists) {
+            home_focus_ = home_.setup_ready ? 1 : 2;
+        }
+        refresh_home_hero();
+        if (!games_loaded_ && !scan_.valid())
+            start_scan();
+    } catch (const std::exception& error) {
+        home_scan_failed_ = true;
+        home_reload_pending_ = false;
+        if (!home_loaded_) {
+            home_.setup_ready = false;
+            home_.status = tr("Could not load game library. Reopen Encore to retry.");
+            home_.system_status = tr("Game library unavailable");
+            home_focus_ = 2;
+            home_loaded_ = true; // recovery/settings remain accessible
+        }
+        sys::log("Home metadata scan: %s", error.what());
+    } catch (...) {
+        home_scan_failed_ = true;
+        home_reload_pending_ = false;
+        if (!home_loaded_) {
+            home_.setup_ready = false;
+            home_.status = tr("Could not load game library. Reopen Encore to retry.");
+            home_.system_status = tr("Game library unavailable");
+            home_focus_ = 2;
+            home_loaded_ = true;
+        }
+        sys::log("Home metadata scan failed");
     }
 }
 
