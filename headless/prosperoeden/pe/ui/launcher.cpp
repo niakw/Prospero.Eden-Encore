@@ -46,6 +46,8 @@ Launcher::~Launcher()
     // The game list may still be reading; it uses the services this launcher was given.
     if (scan_.valid())
         scan_.wait();
+    if (presence_scan_.valid())
+        presence_scan_.wait();
     if (home_media_scan_.valid())
         home_media_scan_.wait();
     if (media_scan_.valid())
