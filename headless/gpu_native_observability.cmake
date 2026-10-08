@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Native-only pinned Eden shader/GPU compatibility. Maxwell PRMT immediate
-# Index mode (0) translates the NVIDIA byte selector; other modes still throw.
+# Index mode (0), including dynamic register selectors, translates the NVIDIA
+# byte selector; other modes still throw.
 # The Fermi2D software swizzler handles only z=0 on depth>1 surfaces; other
 # layers retain their original unsupported soft-assert semantics.
 # Successful and unsupported cases produce bounded diagnostics.
@@ -65,6 +66,63 @@ if(prmt_at LESS 0)
     message(FATAL_ERROR "Pinned Maxwell PRMT_imm exception anchor changed")
 endif()
 string(REPLACE "${prmt_old}" "${prmt_new}" prmt_source "${prmt_source}")
+
+set(prmt_reg_old [=[
+void TranslatorVisitor::PRMT_reg(u64) {
+    ThrowNotImplemented(Opcode::PRMT_reg);
+}
+]=])
+set(prmt_reg_new [=[
+void TranslatorVisitor::PRMT_reg(u64 insn) {
+    // Maxwell SASS PRMT register selector opcode (0x5bc0).
+    // Dynamic selector is R[20:27]; A=R8, B=R39, mode[48:50].
+    const unsigned mode = static_cast<unsigned>((insn >> 48) & 7ULL);
+    if (mode != 0) {
+        static std::atomic<unsigned> unsupported_samples{0};
+        const unsigned sample = unsupported_samples.fetch_add(1, std::memory_order_relaxed);
+        if (sample < 8)
+            std::fprintf(stderr, "EDEN_GPU_PRMT_REG_UNSUPPORTED raw=%016llx mode=%u sample=%u\n",
+                         static_cast<unsigned long long>(insn), mode, sample + 1);
+        ThrowNotImplemented(Opcode::PRMT_reg);
+    }
+
+    const IR::U32 a{GetReg8(insn)};
+    const IR::U32 b{GetReg39(insn)};
+    const IR::U32 selector{GetReg20(insn)};
+    IR::U32 result{ir.Imm32(0)};
+    for (unsigned i = 0; i < 4; ++i) {
+        const IR::U32 nibble{ir.BitwiseAnd(
+            ir.ShiftRightLogical(selector, ir.Imm32(i * 4u)), ir.Imm32(15))};
+        const IR::U1 from_b{ir.INotEqual(
+            ir.BitwiseAnd(nibble, ir.Imm32(4)), ir.Imm32(0))};
+        const IR::U32 source{ir.Select(from_b, b, a)};
+        const IR::U32 byte_shift{ir.ShiftLeftLogical(
+            ir.BitwiseAnd(nibble, ir.Imm32(3)), ir.Imm32(3))};
+        const IR::U32 selected_byte{ir.BitwiseAnd(
+            ir.ShiftRightLogical(source, byte_shift), ir.Imm32(255))};
+        const IR::U1 signed_replication{ir.INotEqual(
+            ir.BitwiseAnd(nibble, ir.Imm32(8)), ir.Imm32(0))};
+        const IR::U1 negative{ir.INotEqual(
+            ir.BitwiseAnd(selected_byte, ir.Imm32(128)), ir.Imm32(0))};
+        const IR::U32 replicated{ir.Select(negative, ir.Imm32(255), ir.Imm32(0))};
+        const IR::U32 byte{ir.Select(signed_replication, replicated, selected_byte)};
+        const IR::U32 shifted{i == 0 ? byte :
+            ir.ShiftLeftLogical(byte, ir.Imm32(i * 8u))};
+        result = ir.BitwiseOr(result, shifted);
+    }
+    X(static_cast<IR::Reg>(insn & 255ULL), result);
+    static std::atomic<unsigned> successes{0};
+    const unsigned sample = successes.fetch_add(1, std::memory_order_relaxed);
+    if (sample < 8)
+        std::fprintf(stderr, "EDEN_GPU_PRMT_REG_INDEX raw=%016llx sample=%u\n",
+                     static_cast<unsigned long long>(insn), sample + 1);
+}
+]=])
+string(FIND "${prmt_source}" "${prmt_reg_old}" prmt_reg_at)
+if(prmt_reg_at LESS 0)
+    message(FATAL_ERROR "Pinned Maxwell PRMT_reg exception anchor changed")
+endif()
+string(REPLACE "${prmt_reg_old}" "${prmt_reg_new}" prmt_source "${prmt_source}")
 write_derived("${PORT_BUILD_DIR}/maxwell_prmt_observed.cpp"
     "#include <atomic>\n#include <cstdio>\n${prmt_source}")
 get_target_property(shader_sources shader_recompiler SOURCES)
