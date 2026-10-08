@@ -257,6 +257,18 @@ int main() {
     allocator->free(executable);
     usage(0, 0);
     assert(owned_fds == 0);
+    // Explicit sparse selection must NEVER allocate the entire 64 MiB
+    // densely after a 2 MiB bootstrap allocation fails. Historically
+    // EdenJitAllocator silently fell back to dense and defeated demand
+    // paging exactly when late direct-memory pressure was highest.
+    for (int failed_chunk = 1; failed_chunk <= 2; ++failed_chunk) {
+        fail_at_call = alloc_calls + failed_chunk;
+        auto* denied = allocator->alloc(64 * 1024 * 1024);
+        assert(denied == nullptr);
+        assert(owned_fds == 0);
+        usage(0, 0);
+        fail_at_call = 0;
+    }
     Eden::Experimental::sparse_jit_cache.store(false);
     std::puts("PASS sparse PS5 direct-memory mocks: alias/bootstrap/growth/OOM/partial-map rollback/cleanup");
     std::puts("PASS actual Xbyak JIT adapter: 64MiB virtual / 4MiB physical at boot, 10MiB after growth, zero after free");
