@@ -406,7 +406,6 @@ void Launcher::read_home()
         home_reload_pending_ = true;
         return;
     }
-    home_scan_failed_ = false;
     home_scan_ = std::async(std::launch::async, [this] {
         return services_.home(&home_cancel_);
     });
@@ -437,8 +436,7 @@ void Launcher::finish_home_scan()
                 home_.recents[static_cast<std::size_t>(home_recent_)].file : std::string{};
         home_ = std::move(snapshot);
         home_loaded_ = true;
-        home_scan_failed_ = false;
-        if (!previous_file.empty()) {
+            if (!previous_file.empty()) {
             const auto recent = std::find_if(home_.recents.begin(), home_.recents.end(),
                 [&](const Recent& entry) { return entry.file == previous_file; });
             home_recent_ = recent == home_.recents.end() ? -1 :
@@ -471,7 +469,6 @@ void Launcher::finish_home_scan()
         if (!games_loaded_ && !scan_.valid())
             start_scan();
     } catch (const std::exception& error) {
-        home_scan_failed_ = true;
         home_reload_pending_ = false;
         if (!home_loaded_) {
             home_.setup_ready = false;
@@ -482,7 +479,6 @@ void Launcher::finish_home_scan()
         }
         sys::log("Home metadata scan: %s", error.what());
     } catch (...) {
-        home_scan_failed_ = true;
         home_reload_pending_ = false;
         if (!home_loaded_) {
             home_.setup_ready = false;
