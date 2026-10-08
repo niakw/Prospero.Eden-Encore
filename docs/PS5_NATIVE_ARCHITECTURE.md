@@ -264,6 +264,39 @@ lightweight/release preflights **but not executed in a GitHub runner or on
 PS5 yet**. Existing `tools/check-jit-allocator.py` also asserts dense
 physical-accounting returns to zero after every tested allocation/free.
 
+## PS5-first vendor/runtime review — Dynarmic and Vulkan (8 October 2026)
+
+- **Upstream snapshots are not authority.** The pinned Eden tree vendors
+  Dynarmic, with substantial local CMake source transformations. Azahar's
+  fork has commits dated 2026-06-24 and 2026-09-26, but a wholesale swap
+  is **not** safe without comparing translation behavior, JIT pointer
+  ownership, A64/A32 exclusives and Xbyak code-arena semantics.
+- **Global Dynarmic startup recovery:** both 32-bit and 64-bit CPU cores
+  retry a dynamically sized initial code arena when Xbyak reports
+  `ERR_CANT_ALLOC` or C++ reports `bad_alloc`, shrinking only down to
+  the original per-core tested size. Invalid code, protection errors and
+  other unexpected exceptions still abort rather than being misdiagnosed.
+  The 8 MiB null-JIT path is preserved. Host fixture:
+  `tools/check-jit-startup-retry.py`.
+- **Vulkan pipeline persistence:** the earlier PS5 Vulkan startup did not
+  call the renderer's per-title shader cache setup, leaving the guest
+  `pipeline_cache_filename` empty. The source now enables shader disk
+  caching and Vulkan driver pipeline caching for all running games and
+  initializes the per-title filenames **without bulk shader precompile**
+  at launch. Unlike a naive timed cancellation, the lazy setup returns
+  before `workers.WaitForRequests(stop_token)`, which would otherwise
+  permanently request stop on the persistent compiler worker threads.
+  Normal newly compiled shaders can be serialized across sessions.
+  Previously persisted guest pipelines are **not yet prewarmed**.
+- **RADV updates:** incompatible Vulkan driver cache initial data is
+  caught at `CreatePipelineCache` and retried with empty cache data
+  rather than failing game launch. A failure with empty data still
+  propagates; stale data is discarded/replaced on subsequent saves.
+  The pinned source transformation asserts its exact upstream anchor.
+- CI source gates include `tools/check-vulkan-pipeline-persistence.py`
+  and the A64/A32 fallback C++ host mock. **Neither a PS5 build nor
+  firmware-13.60 hardware tests have been run for these changes.**
+
 ## Immediate implementation gates
 
 1. Audit physical memory ownership and executable page-map APIs; do not
