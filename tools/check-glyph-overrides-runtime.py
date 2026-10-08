@@ -196,9 +196,17 @@ int main(int argc, char** argv) {
     // Two case-colliding Title IDs in the same mods root cannot provide
     // deterministic artwork selection in the ordinary Eden patch manager.
     const auto title_duplicate = mods / "0100C49025D3E000";
-    fs::create_directories(title_duplicate);
-    assert(select(data, "v1.2.0", Style::PlayStation) == State::EvidenceMismatch);
-    fs::remove(title_duplicate);
+    if (fs::create_directory(title_duplicate)) {
+        // A case-sensitive volume permits two distinct Title ID entries;
+        // the selector must fail closed until ambiguity is removed.
+        assert(select(data, "v1.2.0", Style::PlayStation) == State::EvidenceMismatch);
+        fs::remove(title_duplicate);
+    } else {
+        // Default macOS APFS may treat both spellings as one directory.
+        // NEVER remove the uppercase alias: it is the actual lowercase
+        // directory containing our staged graphics.
+        assert(fs::equivalent(title_duplicate, title));
+    }
     assert(select(data, "v1.2.0", Style::PlayStation) == State::Enabled);
     auto duplicate_mods = mods_found;
     duplicate_mods.push_back({"eden encore ps glyphs", Eden::Mods::kFiles});
