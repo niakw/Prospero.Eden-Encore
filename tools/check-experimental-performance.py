@@ -52,6 +52,7 @@ present = graphics.split("void GraphicsWindow::OnFrameDisplayed()", 1)[1].split(
 assert "std::this_thread::sleep" not in present
 
 assert "0100C49025D3E000" in guide  # historical benchmark identifier only
-assert "developer-build only" in guide
+assert "EDEN_SPARSE_JIT_DEV=ON" in guide and "EDEN_DEV_PROFILE" in guide
+assert "**Do not activate the new flags yet on console.**" in guide
 assert "Safe Launch" in guide
 print("PS5 universal A64/A32 JIT budget and dev-only trace controls: source contracts PASS")
