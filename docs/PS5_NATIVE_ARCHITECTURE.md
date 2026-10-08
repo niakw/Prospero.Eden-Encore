@@ -159,20 +159,22 @@ before increasing internal resolution. Test load time as well as gameplay.
 
 ## Implementation checkpoint — automatic policy and protected diagnostics
 
-- **Every PS5 game now uses the same JIT launch policy, not an FC27
-  whitelist.** Before initializing a guest, the kernel's largest available
-  contiguous direct-memory block is sampled once. A64 guest caches choose
-  **Expanded/C** (320/256/256 MiB) when that block can hold the 832 MiB
-  cache *plus* 3 GiB conservative headroom, **Balanced/B** (256/224/224 MiB)
-  when it can hold 704 MiB plus 2 GiB headroom, or the safe **baseline/A**
-  (256/192/192 MiB) otherwise. Unknown memory availability and **Safe Launch**
-  always select A. This launch decision is in the **normal release path**;
-  previously it was accidentally inside the profiling-only compile guard.
-  A32 retains its independent cache sizing because FC27's A64 measurements
-  do not establish an A32 speedup. These are **memory-admission floors, not
-  maximum JIT limits**. The fixed-at-creation direct-memory allocations
-  still waste unused RAM until the sparse/multi-segment allocator is safe.
-  No new player-facing performance toggle was added.
+- **All PS5 guests, both A64 and A32, use one continuously sized JIT
+  memory policy**, chosen once before CPU startup from the kernel's largest
+  available contiguous direct-memory block. A 3 GiB physical headroom floor
+  protects shared guest/GPU/system allocations; half the remaining allocatable
+  contiguous pool defines the initially dense code-memory budget, split over
+  guest cores by ISA-dependent workload weights. Unlike the retired A/B/C
+  tiers, usable budgets may exceed FC27's 320/256/256 MiB C sizes. Unknown
+  memory availability and **Safe Launch** revert to A64 256/192/192 and A32
+  512/64/64 MiB. The policy is in the normal release path, independent of
+  ROM ID or user profile and applies only to the **active** guest ISA.
+  Per Xbyak code arena a 1536 MiB branch-addressing guard remains. This is
+  not a global total-JIT ceiling: removing the per-arena constraint requires
+  additional code segments and safe branch trampolines. Physical backing is
+  **still eagerly allocated** by the active allocator. The sparse prototype
+  is developer-only until aliasing, mid-game OOM recovery and code-pointer
+  lifecycle are proven. No new UI performance switch was added.
 - Reading `experiments.json` for A/B/C/D is now restricted to developer
   profiling builds via `EDEN_DEV_PROFILE`. Ordinary app builds ignore the
   now-completed tuning file. The incomplete sparse JIT path additionally
