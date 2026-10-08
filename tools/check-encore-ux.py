@@ -36,14 +36,14 @@ assert 'position == 0 && delta < 0' in home
 assert 'utility[static_cast<std::size_t>((position + delta + 4) % 4)]' in home
 # Regression: the connected-controller icons must not overlap the hero metadata chips.
 assert '410.0f, 72.0f, 50.0f' in home
-assert 'const Rect players_chip{hero.x + hero.w - 208.0f, 506.0f' in home
+assert 'const Rect players_chip{1390.0f, 407.0f, 189.0f, 36.0f}' in home
 # Regression: do not remove the only width-measure helper while rearranging the hero.
 assert 'text_width(c, chip, 18.0f)' in home
 assert 'if (focus == kHomeQuickPanel)' in home and 'focus = kHomeQuickFirst' in home
 assert 'home_quick_edit_' in home and 'Pad::cross, TR("Edit")' in home
 assert 'VIEW ALL GAMES' not in home
 assert 'View all games' not in home
-assert 'const Rect hero{60.0f, 140.0f, 1800.0f, 430.0f}' in home
+assert 'const Rect hero{0.0f, 0.0f, 1920.0f, 544.0f}' in home
 assert 'const Rect quick{' not in home and 'const Rect status{' not in home
 for marker in ('kHomeStorage', 'kHomeControllers', 'kHomeFullSettings', 'quick_sheet',
                'utility_card(0', 'utility_card(1', 'utility_card(2', 'utility_card(3'):
@@ -57,24 +57,24 @@ services_code = re.sub(r'/\*.*?\*/|//[^\n]*', '', services, flags=re.S)
 assert 'statfs(' not in services_code and 'statvfs(' not in services_code
 assert 'std::filesystem::space(Eden::AssetsDir(), error)' not in services
 assert '0xa002030a SYSTEM_ILLEGAL_FUNCTION_CALL' in services
-assert 'home_diagnostics_.used_space + " / " + home_diagnostics_.total_space' not in home
+assert 'home_diagnostics_.free_bytes' not in home  # no invented PS5 total capacity
 assert 'home_diagnostics_.storage_root' in home
 
 assert 'const std::string hero_artwork = !hero_banner.empty() ? hero_banner : hero_screenshot;' in home
 # Hero content is game media only: banner -> screenshot -> opaque neutral fallback.
-hero_draw = home[home.index('// ---- cinematic continue card ----'):home.index('// Effective values:')]
+hero_draw = home[home.index('// ---- full-bleed cinematic game hero'):home.index('// Effective values:')]
+assert 'cover_crop(c, hero_artwork, hero, 0.0f, 0.0f);' in hero_draw
 assert 'hero_recent->cover' not in hero_draw and 'home_.last_cover' not in hero_draw
-assert 'theme::kPanel.with_alpha(0.96f)' in hero_draw
-assert 'shared Encore' in hero_draw
+assert 'never enlarge a ROM' in hero_draw
 assert 'bool Launcher::press_top_nav(Key key)' in launcher
 assert 'top_nav_focus_ = 3' in settings and 'top_nav_focus_ = 1' in library
 
 # Cards: gameplay media first and no ugly language subtitle under recent titles.
 assert 'recent.screenshot' in home
-recent_block=home[home.index('// ---- recently played: full-width visual rail ----'):home.index('// ---- footer ----')]
+recent_block=home[home.index('// ---- recently played: seven-ish large artwork tiles'):home.index('// ---- compact system strip')]
 assert 'recent.language' not in recent_block
 assert 'const int shown = std::min<int>(kHomeRecentMax' in recent_block
-assert 'constexpr float available = 1800.0f' in recent_block
+assert 'constexpr float available = 1770.0f' in recent_block
 assert 'card_w = (available - gap * 5.0f) / 6.0f' in recent_block
 
 # Library/Settings are horizontal TV surfaces, not legacy utility lists.
@@ -116,7 +116,7 @@ assert 'it->second.loaded && it->second.texture == 0 && it->second.age >= 3.0f' 
 # Visual regressions from actual 1920x1080 PS5 captures (2026-10-08): the
 # Zelda title must not occupy the same vertical lines as its description.
 assert 'text_shrink(c, hero_file.empty() ? tr("Your next adventure") : hero_title' in home
-assert 'theme::kTitle, 1160.0f);' in home
+assert 'theme::kTitle, 910.0f, Align::left, 0.0f, 0.58f);' in home
 assert 'text_shrink(c, game->name, 558.0f, baseline(574.0f, 52.0f, 40.0f)' in library
 assert 'text_block(c, game->name, 558.0f' not in library
 assert 'kNlibCacheSchema = 2' in services
@@ -142,15 +142,18 @@ assert 'VideoPresetForTitle' in presets
 
 # Final Home polish contracts: full-bleed banner, explicit violet/teal values, local-player capacity,
 # full-width recent rail, four utility cards and no permanent debug/dashboard column.
-assert 'const Rect hero_art{hero.x + 4.0f, hero.y + 4.0f, hero.w - 8.0f, hero.h - 8.0f}' in home
+assert 'const Rect hero{0.0f, 0.0f, 1920.0f, 544.0f}' in home
+assert 'list.hgradient_rect(hero, 0.0f' in home
 assert 'kAccentTeal' in read('headless/prosperoeden/pe/ui/theme.hpp')
 assert 'tr("Local players: {0}")' in home and 'std::to_string(hero_max_players)' in home
-assert 'hero.x + hero.w - 208.0f, 506.0f, 172.0f, 34.0f' in home
+assert '1390.0f, 407.0f, 189.0f, 36.0f' in home
 assert 'gfx::mix(theme::kAccentTeal, theme::kTitle, f)' in home
-assert 'constexpr float card_h = 166.0f' in home
-assert '622.0f, card_w, card_h' in home
+assert 'constexpr float card_h = 214.0f' in home
+assert '551.0f, card_w, card_h' in home
 assert 'constexpr float utility_w = (1800.0f - utility_gap * 3.0f) / 4.0f' in home
 assert 'const bool quick_open' in home
+assert 'begin_band(0, -16.0f);' in home[home.index('// Header must be composited AFTER'):]
+assert 'fake CPU' not in home and 'Storage' in home
 
 
 # Custom low-cost settings keep the light hidden runtime policy.
