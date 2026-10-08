@@ -26,7 +26,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential python3-pil libegl1-mesa-dev libgl1-mesa-dev libstb-dev \
+            build-essential python3-pil libegl1-mesa-dev libgl1-mesa-dev libstb-dev nlohmann-json3-dev \
             mesa-utils libgl1-mesa-dri ca-certificates git pkg-config
 
       - name: Build and capture actual Encore launcher at 1920x1080
