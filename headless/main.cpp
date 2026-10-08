@@ -1783,7 +1783,7 @@ int main(int argc, char** argv) {
 #if defined(EDEN_DEV_PROFILE) && defined(PS5_NATIVE)
                 Eden::Stall::Trace("main running");
                 Eden::Stall::Disarm(); // boot supervision ends
-                Eden::Stall::ArmGame(); // separate bounded in-game GPU progress monitor
+                if (game) Eden::Stall::ArmGame(); // only an actual game, not device-only probes
                 SCOPE_EXIT { Eden::Stall::DisarmGame(); }; // even when an exception unwinds
 #endif
                 const auto session_start = std::chrono::steady_clock::now();
