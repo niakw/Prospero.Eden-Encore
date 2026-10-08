@@ -27,6 +27,7 @@ public:
 private:
     bool vulkan{};
     bool splash_hidden{};
+    bool splash_hide_attempted{}; // PS5 system service must never be called per frame
     bool first_frame_reported{};
     double frame_sample_start{-1}, frame_sample_last{}, frame_sample_worst{};
     unsigned frame_sample_count{}, frame_total{};
