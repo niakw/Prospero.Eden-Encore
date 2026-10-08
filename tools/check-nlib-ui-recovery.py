@@ -82,6 +82,19 @@ assert "services_.mods_enabled(game.title_id)" in scan_entry
 assert "services_.mods(game.title_id)" not in apply_entry
 assert "home_.last_mods = game.mods;" in lib
 assert "home_.last_mods_on = game.mods_on;" in lib
+# Preserve UI responsiveness without pruning a ROM based on one stale
+# asynchronous filesystem snapshot (e.g. an atomic replacement during scan).
+assert "std::vector<std::string> previous_missing_;" in hdr
+assert "std::set_intersection(observed_missing.begin()" in lib
+assert "previous_missing_ = observed_missing;" in lib
+assert 'previous_missing_.clear();' in lib
+assert "#include <iterator>" in lib
+def stable_absence(previous, observed):
+    return sorted(set(previous) & set(observed))
+assert stable_absence([], ["game.nsp"]) == []
+assert stable_absence(["game.nsp"], []) == []
+assert stable_absence(["game.nsp"], ["game.nsp"]) == ["game.nsp"]
+
 
 assert "if (presence_scan_.valid())" in nav
 assert "drop_missing_games(&missing);" in lib
