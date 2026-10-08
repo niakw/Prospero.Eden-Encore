@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Native-only pinned Eden shader/GPU diagnostics. Missing Maxwell PRMT and
-# multi-layer Fermi2D copies must remain UNIMPLEMENTED: never manufacture
-# incorrect pixels or quietly ignore the error. Capture at most eight real
-# instruction/register sets per process for a hardware-grounded repair.
+# unsupported Fermi2D layers must remain explicit; the existing software
+# swizzler handles only the z=0 base layer for depth>1 surfaces. Capture
+# eight examples before handling any other layer or Maxwell PRMT instruction.
 if(NOT PS5_NATIVE)
     return()
 endif()
@@ -43,7 +43,15 @@ set(fermi_old [=[
     UNIMPLEMENTED_IF_MSG(regs.src.depth != 1, "Source depth is not one");
 ]=])
 set(fermi_new [=[
-    if (regs.src.depth != 1) {
+    // The software swizzler already handles the z=0 subrectangle of
+    // a 3D block-linear/pitch image, provided the source/destination
+    // layers are both zero. Keep nonzero layers explicitly unsupported:
+    // the current UnswizzleSubrect API hardcodes origin_z = 0.
+    const bool base_layer_3d_copy = regs.src.depth > 1 &&
+        regs.src.layer == 0 && regs.dst.layer == 0 &&
+        regs.dst.depth >= 1 && regs.operation == Operation::SrcCopy &&
+        regs.clip_enable == 0;
+    if (regs.src.depth != 1 && !base_layer_3d_copy) {
         static std::atomic<unsigned> depth_reports{0};
         const unsigned count = depth_reports.fetch_add(1, std::memory_order_relaxed);
         // Previously this logged the same generic warning for every
@@ -67,6 +75,53 @@ if(fermi_at LESS 0)
     message(FATAL_ERROR "Pinned Fermi2D source-depth exception anchor changed")
 endif()
 string(REPLACE "${fermi_old}" "${fermi_new}" fermi_source "${fermi_source}")
+
+# The pinned software blitter must really honor 3D block-depth layout and
+# read only the z=0 rectangle. Refuse this compatibility implementation if
+# upstream changes those semantics; never silently copy the wrong slice.
+file(READ "${PROJECT_SOURCE_DIR}/src/video_core/engines/sw_blitter/blitter.cpp" sw_blit_source)
+file(READ "${PROJECT_SOURCE_DIR}/src/video_core/textures/decoders.cpp" swizzle_source)
+string(FIND "${sw_blit_source}" "src.depth, config.src_x0" sw_source_depth_at)
+string(FIND "${sw_blit_source}" "dst.depth, config.dst_x0" sw_dest_depth_at)
+string(FIND "${swizzle_source}" "static constexpr u32 origin_z = 0;" sw_z0_at)
+if(sw_source_depth_at LESS 0 OR sw_dest_depth_at LESS 0 OR sw_z0_at LESS 0)
+    message(FATAL_ERROR "Pinned Fermi2D software base-layer copy contract changed")
+endif()
+
+set(fermi_copy_old [=[
+    if (!rasterizer->AccelerateSurfaceCopy(src, regs.dst, config)) {
+        sw_blitter->Blit(src, regs.dst, config);
+    }
+]=])
+set(fermi_copy_new [=[
+    if (base_layer_3d_copy) {
+        // GPU acceleration is not proven for 3D source copies. Software
+        // decoders handle z=0 using the original block_depth for address
+        // swizzling. Expose depth=1 only to the temporary software
+        // surface descriptors to avoid loading all untouched 3D slices.
+        src.depth = 1;
+        Surface dst = regs.dst;
+        dst.depth = 1;
+        static std::atomic<unsigned> z0_reports{0};
+        const unsigned report = z0_reports.fetch_add(1, std::memory_order_relaxed);
+        if (report < 8) {
+            LOG_INFO(HW_GPU,
+                "EDEN_GPU_FERMI2D_Z0_SOFTWARE src_depth={} dst_depth={} "
+                "src_addr={:#x} dst_addr={:#x} sample={}",
+                regs.src.depth, regs.dst.depth, regs.src.Address(),
+                regs.dst.Address(), report + 1);
+        }
+        sw_blitter->Blit(src, dst, config);
+    } else if (!rasterizer->AccelerateSurfaceCopy(src, regs.dst, config)) {
+        sw_blitter->Blit(src, regs.dst, config);
+    }
+]=])
+string(FIND "${fermi_source}" "${fermi_copy_old}" fermi_copy_at)
+if(fermi_copy_at LESS 0)
+    message(FATAL_ERROR "Pinned Fermi2D copy-acceleration anchor changed")
+endif()
+string(REPLACE "${fermi_copy_old}" "${fermi_copy_new}" fermi_source "${fermi_source}")
+
 write_derived("${PORT_BUILD_DIR}/fermi_2d_observed.cpp"
     "#include <atomic>\n${fermi_source}")
 get_target_property(video_sources video_core SOURCES)
