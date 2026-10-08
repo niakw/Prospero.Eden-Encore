@@ -833,6 +833,17 @@ void Launcher::draw_home(Canvas &c)
             const std::string& art = !recent.cover.empty() ? recent.cover :
                                      (!recent.hero.empty() ? recent.hero : recent.screenshot);
             cover_crop(c, art, {r.x + 4.0f, r.y + 4.0f, r.w - 8.0f, r.h - 8.0f}, 20.0f, 0.32f);
+            const Cover picture = c.textures.cover(art, std::max(card_w - 8.0f, card_h - 8.0f));
+            if (picture.texture == 0) {
+                const bool fetching = recent.title_id != 0 &&
+                    (home_media_scan_title_id_ == recent.title_id ||
+                     media_scan_title_id_ == recent.title_id);
+                text_shrink(c, tr(fetching || !picture.missing ?
+                                      "Loading artwork" : "Artwork unavailable"),
+                            r.x + card_w * 0.5f,
+                            baseline(r.y + 65.0f, 34.0f, 16.0f), 16.0f,
+                            theme::kMuted, card_w - 22.0f, Align::center);
+            }
             // Never bury a game's title inside a dark overlay on its artwork.
             text_shrink(c, recent.title, r.x + card_w * 0.5f,
                         baseline(r.y + r.h + 6.0f, 32.0f, 20.0f), 20.0f,
@@ -881,9 +892,9 @@ void Launcher::draw_home(Canvas &c)
     for (unsigned player = 0; player < 4; ++player)
         connected += (controllers_ >> player) & 1u;
     const std::string quick_value = profile + " · " + renderer + " · " + resolution;
-    const std::string storage_value =
-        home_diagnostics_.storage_root.empty() ? std::string{tr("Unknown")} :
-                                                 home_diagnostics_.storage_root;
+    const std::string storage_value = home_diagnostics_.storage_root.empty() ?
+        std::string{tr("Storage not configured")} :
+        std::string{tr("Games and cache")};
     const std::string controller_value =
         connected > 0 ? "DualSense ×" + std::to_string(connected) : std::string{"DualSense"};
     const std::string settings_value = std::string{tr("Video")} + " · " + tr("Audio") + " · " + tr("System");
@@ -910,7 +921,8 @@ void Launcher::draw_home(Canvas &c)
         !home_diagnostics_.used_space.empty() &&
         !home_diagnostics_.total_space.empty() ?
             home_diagnostics_.used_space + " / " + home_diagnostics_.total_space :
-            home_diagnostics_.storage_root;
+            (home_diagnostics_.storage_root.empty() ?
+                std::string{tr("Unknown")} : std::string{tr("Storage ready")});
     text_shrink(c, std::string{tr("Storage")} + ": " + storage_display,
                 1020.0f, baseline(950.0f, 30.0f, 16.0f), 16.0f,
                 theme::kMeta, 550.0f);
