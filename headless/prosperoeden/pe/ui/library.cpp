@@ -399,6 +399,8 @@ void Launcher::read_home()
     // The native Home service performs ROM filesystem reads, per-title
     // metadata, addon scanning and cached Nlib reads. Never run it on the
     // UI owner thread, including missing-ROM recovery.
+    if (home_cancel_.load(std::memory_order_acquire))
+        return;
     start_diagnostics();
     if (home_scan_.valid()) {
         home_reload_pending_ = true;
@@ -406,7 +408,7 @@ void Launcher::read_home()
     }
     home_scan_failed_ = false;
     home_scan_ = std::async(std::launch::async, [this] {
-        return services_.home();
+        return services_.home(&home_cancel_);
     });
 }
 
@@ -418,6 +420,9 @@ void Launcher::finish_home_scan()
 
     try {
         Home snapshot = home_scan_.get();
+        if (home_cancel_.load(std::memory_order_acquire) ||
+            !selected_game_.empty())
+            return; // never apply results after game launch
         if (home_reload_pending_) {
             // A ROM was removed or a fresh state was requested while
             // the prior snapshot was in flight. Discard it rather than
