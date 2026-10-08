@@ -8,6 +8,7 @@
 #include "pe/ui/services.hpp"
 
 #include <cstdint>
+#include <deque>
 #include <future>
 #include <string>
 #include <unordered_map>
@@ -104,7 +105,7 @@ class Textures
     std::uint32_t brand_ = 0;
     std::uint32_t controller_ = 0;
     std::unordered_map<std::string, Entry> covers_;
-    std::vector<std::string> queue_;
+    std::deque<std::string> queue_; // O(1) pop_front during frame updates
     std::uint64_t frame_ = 0;
     std::uint64_t next_generation_ = 0;
     float output_scale_ = 1.0f;
