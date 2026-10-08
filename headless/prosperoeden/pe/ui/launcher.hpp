@@ -261,6 +261,7 @@ class Launcher
     // library
     std::vector<Game> games_;
     std::string pending_settings_file_; // Home game options requested before async scan completes
+    std::atomic<bool> home_cancel_{false}; // exit stops unfinished native Home metadata work
     std::atomic<bool> scan_cancel_{false}; // game launch/teardown cancels remaining mod enumeration
     std::atomic<bool> media_cancel_{false}; // stop launching new Nlib requests on game start
     std::atomic<bool> diagnostics_cancel_{false}; // stop disk inventory between entries on game start
