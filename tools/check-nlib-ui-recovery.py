@@ -193,6 +193,9 @@ assert "home_reload_pending_" in hdr
 assert "home_scan_.wait_for(std::chrono::seconds(0))" in finish_home_entry
 assert "Home snapshot = home_scan_.get();" in finish_home_entry
 assert "if (home_reload_pending_)" in finish_home_entry
+assert "home_focus_ = home_recent_ >= 0 ? 5 + home_recent_" in finish_home_entry
+assert "const std::string previous_file =" in finish_home_entry
+assert "entry.file == previous_file" in finish_home_entry
 assert "home_ = std::move(snapshot);" in finish_home_entry
 assert "home_loaded_ = true;" in finish_home_entry
 assert "refresh_home_hero();" in finish_home_entry
