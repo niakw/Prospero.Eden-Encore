@@ -244,6 +244,20 @@ inline bool EvidenceMatches(const Mods::fs::path& folder, const Rule& rule) {
         return true;
     } catch (...) { return false; }
 }
+// Version discovery can decrypt/open a game container to inspect NACP.
+// Never do it for games without a published rule, absent graphic mods,
+// or when PlayStation art is disabled. Especially important when the
+// shared catalogue is empty: no all-library metadata penalty at all.
+inline bool NeedsGameVersion(const Catalogue& catalogue, std::uint64_t title,
+                             Style style, const std::vector<Mods::Mod>& mods) {
+    if (!catalogue.valid || style == Style::Nintendo) return false;
+    const bool candidate = std::any_of(catalogue.rules.begin(), catalogue.rules.end(),
+        [&](const Rule& rule) { return rule.title == title; });
+    if (!candidate) return false;
+    return std::any_of(mods.begin(), mods.end(), [](const Mods::Mod& mod) {
+        return Mods::Lower(mod.name) == Mods::Lower(kModName) && (mod.kinds & Mods::kFiles);
+    });
+}
 inline State Select(const Catalogue& catalogue, std::uint64_t title,
                     std::string_view running_update_version, Style style,
                     const std::string& mods_root, const std::vector<Mods::Mod>& mods) {
