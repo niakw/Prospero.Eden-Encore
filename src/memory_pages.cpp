@@ -200,6 +200,63 @@ std::unordered_map<void*, SparseJitRegion> sparse_jit_regions;
 std::size_t sparse_jit_committed = 0;
 }
 
+// Validate the firmware's fixed-address alias contract *before* selecting
+// sparse JIT for a guest. This uses a disposable 2 MiB mapping, performs no
+// execution, and never modifies an active JIT. Failure keeps the dense path.
+bool ProbeSparseJitAlias() noexcept {
+    void* writable = reinterpret_cast<void*>(cpu_mapping_hint);
+    void* executable = reinterpret_cast<void*>(cpu_mapping_hint);
+    bool rw_reserved = false, rx_reserved = false, direct_owned = false;
+    std::int64_t physical = -1;
+    bool success = false;
+    do {
+        (void)sceKernelEnableDmemAliasing();
+        if (sceKernelReserveVirtualRange(&writable, LargePage, 0, LargePage) != 0)
+            break;
+        rw_reserved = true;
+        if (!cpu_mapping_range(writable, LargePage)) break;
+        if (sceKernelReserveVirtualRange(&executable, LargePage, 0, LargePage) != 0)
+            break;
+        rx_reserved = true;
+        if (!cpu_mapping_range(executable, LargePage) || executable == writable) break;
+        if (sceKernelAllocateDirectMemory(0, sceKernelGetDirectMemorySize(),
+                                          LargePage, LargePage, 12, &physical) != 0)
+            break;
+        direct_owned = true;
+        void* actual_rw = writable;
+        void* actual_rx = executable;
+        if (sceKernelMapDirectMemory(&actual_rw, LargePage, PROT_READ | PROT_WRITE,
+                                      MAP_FIXED, physical, LargePage) != 0 ||
+            actual_rw != writable)
+            break;
+        if (sceKernelMapDirectMemory(&actual_rx, LargePage, PROT_READ,
+                                      MAP_FIXED, physical, LargePage) != 0 ||
+            actual_rx != executable ||
+            mprotect(executable, LargePage, PROT_READ | PROT_EXEC) != 0)
+            break;
+        auto* rw = static_cast<volatile std::uint8_t*>(writable);
+        auto* rx = static_cast<volatile std::uint8_t*>(executable);
+        rw[0] = 0xa5;
+        rw[LargePage - 1] = 0x5a;
+        std::atomic_thread_fence(std::memory_order_seq_cst);
+        success = rx[0] == 0xa5 && rx[LargePage - 1] == 0x5a;
+    } while (false);
+
+    // Release the disposable virtual mappings before returning their physical
+    // backing to the system. A failed cleanup is not recoverable ownership.
+    if (rx_reserved && executable != writable &&
+        munmap(executable, LargePage) != 0)
+        std::abort();
+    if (rw_reserved && munmap(writable, LargePage) != 0)
+        std::abort();
+    if (direct_owned && sceKernelReleaseDirectMemory(physical, LargePage) != 0)
+        std::abort();
+
+    std::printf("EDEN_JIT_SPARSE_PROBE available=%u alias_rw_rx=%u\n",
+                unsigned(success), unsigned(rx_reserved && rw_reserved));
+    return success;
+}
+
 // Reserve two VA ranges, but no direct memory. The RX base never changes,
 // so Dynarmic's generated PC-relative branches and published pointers survive
 // incremental commits. This differs from AllocateMemoryPages's dense path.
