@@ -338,6 +338,8 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
 
     char id[17]{};
     std::snprintf(id, sizeof(id), "%016llX", static_cast<unsigned long long>(title_id));
+    // Cache Nlib failure per title; retry after six hours, not every visit.
+    const std::string retry_marker = Eden::CoversDir() + "/nlib-retry-" + id + ".txt";
     std::fprintf(stderr,
                  "EDEN_NLIB_BEGIN title_id=%s lang=%s cached_meta=%d cache_schema=%d cached_icon=%d cached_hero=%d cached_screens=%zu cached_players=%d\n",
                  id, language.c_str(), cached_metadata, current_metadata_cache, !result.icon.empty(), !result.hero.empty(),
@@ -352,10 +354,19 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
         if (cached_metadata && metadata.contains("screens") && metadata["screens"].is_object())
             screen_count = std::max(screen_count, metadata["screens"].value("count", 0));
         if (!current_metadata_cache) {
+            std::error_code retry_error;
+            const auto tried_at = std::filesystem::last_write_time(retry_marker, retry_error);
+            if (!retry_error) {
+                const auto since = std::filesystem::file_time_type::clock::now() - tried_at;
+                if (since >= std::chrono::hours(0) && since < std::chrono::hours(6))
+                    return result;
+            }
             const std::string metadata_endpoint = std::string{"/nx/"} + id + "?lang=" + language +
                 "&fields=name,intro,description,publisher,developer,releaseDate,category,languages,"
                 "numberOfPlayers,icon,banner,screens";
             if (const auto response = Common::Net::MakeRequest("https://api.nlib.cc", metadata_endpoint)) {
+                std::error_code cleanup_error;
+                (void)std::filesystem::remove(retry_marker, cleanup_error);
                 metadata = nlohmann::json::parse(*response);
                 if (metadata.is_object()) {
                     metadata["_encore_cache_schema"] = kNlibCacheSchema;
@@ -366,6 +377,11 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
                     if (metadata.contains("screens") && metadata["screens"].is_object())
                         screen_count = std::max(screen_count, metadata["screens"].value("count", 0));
                 }
+            } else {
+                // A missing title/API stays offline for this visit; keep local
+                // ROM artwork and avoid serial HTTP waits on subsequent visits.
+                (void)AtomicWriteText(retry_marker, "retry_after_six_hours");
+                return result;
             }
         }
         if (result.max_players > 0) CacheNlibPlayers(title_id, result.max_players);
