@@ -145,6 +145,7 @@ void Launcher::finish_home_media()
             if (enriched.max_players > 0) home_.last_max_players = enriched.max_players;
             if (!enriched.name.empty()) home_.last_title = enriched.name;
             if (!enriched.intro.empty()) home_.last_intro = enriched.intro;
+            if (!enriched.description.empty()) home_.last_description = enriched.description;
         }
         for (Recent& recent : home_.recents) {
             if (recent.title_id != enriched.title_id) continue;
@@ -154,6 +155,7 @@ void Launcher::finish_home_media()
             if (enriched.max_players > 0) recent.max_players = enriched.max_players;
             if (!enriched.name.empty()) recent.title = enriched.name;
             if (!enriched.intro.empty()) recent.intro = enriched.intro;
+            if (!enriched.description.empty()) recent.description = enriched.description;
         }
         // If the library scan completed while the Home request was in flight, keep both views
         // on the same cache result without another network request.
@@ -286,6 +288,7 @@ void Launcher::name_home_games()
             if (!game.hero.empty()) home_.last_hero = game.hero;
             if (!game.screenshots.empty()) home_.last_screenshot = game.screenshots.front();
             if (!game.intro.empty()) home_.last_intro = game.intro;
+            if (!game.description.empty()) home_.last_description = game.description;
             if (game.max_players > 0) home_.last_max_players = game.max_players;
         }
         for (Recent &recent : home_.recents)
@@ -295,6 +298,7 @@ void Launcher::name_home_games()
                 if (!game.hero.empty()) recent.hero = game.hero;
                 if (!game.screenshots.empty()) recent.screenshot = game.screenshots.front();
                 if (!game.intro.empty()) recent.intro = game.intro;
+                if (!game.description.empty()) recent.description = game.description;
                 if (game.max_players > 0) recent.max_players = game.max_players;
             }
     }
