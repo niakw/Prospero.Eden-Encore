@@ -58,8 +58,16 @@ int main(int argc, char** argv) {
     put(pack / "romfs" / "ui" / "controller.bntx", "synthetic user-owned PS atlas");
     put(pack / "eden-glyph-pack.json", evidence);
     put(catalogue_path, catalogue());
+    const auto default_built_in = Eden::GlyphOverrides::LoadCatalogue(base / "missing-catalogue.json");
+    assert(default_built_in.valid &&
+           default_built_in.revision == Eden::GlyphOverridesGenerated::kRevision &&
+           default_built_in.rules.empty());
     Catalogue data = Eden::GlyphOverrides::LoadCatalogue(catalogue_path);
     assert(data.valid && data.revision == 7 && data.rules.size() == 1);
+    put(catalogue_path, R"({"schema_version":1,"revision":0,"titles":[]})");
+    const auto stale = Eden::GlyphOverrides::LoadCatalogue(catalogue_path);
+    assert(stale.valid && stale.revision == default_built_in.revision);
+    put(catalogue_path, catalogue());
     auto mods_found = Eden::Mods::List(mods.string(), GAME);
     assert(mods_found.size() == 1 &&
            mods_found[0].name == "Eden Encore PS Glyphs" &&
