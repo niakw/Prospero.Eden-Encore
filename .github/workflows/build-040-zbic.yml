@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/0.40-zbic-13.60
+      - local/fc27-offline-no-build
   workflow_dispatch:
     inputs:
       publish:
@@ -108,6 +109,8 @@ jobs:
           python3 -B tools/check-jit-stability.py
           python3 -B tools/check-performance-policy.py
           python3 -B tools/check-network-runtime.py
+          python3 -B tools/check-guest-network-isolation.py
+          python3 -B tools/check-fc27-hle-compat.py
           python3 -B tools/check-net-cache-migration.py
           python3 -B tools/check-ps5-net-unit.py
           python3 -B tools/check-home-media.py
