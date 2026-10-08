@@ -247,7 +247,16 @@ void eden_scan_addons(const char* updates_dir, const char* keys_dir) {
         Common::FS::SetEdenPath(Common::FS::EdenPath::KeysDir, keys_dir);
         FileSys::RealVfsFilesystem vfs;
         auto directory = vfs.OpenDirectory(updates_dir, FileSys::OpenMode::Read);
-        if (!directory) return;
+        if (!directory) {
+            // A player with no updates/ folder has *zero updates*, not an
+            // unreadable update. Allow verified base-NACP art selection only
+            // if the directory is genuinely ABSENT; permission/I/O failures
+            // remain unknown and fail closed to original Nintendo visuals.
+            std::error_code error;
+            const bool exists = std::filesystem::exists(updates_dir, error);
+            if (!error && !exists) UpdatesScanCompleted() = true;
+            return;
+        }
         const FileSys::ExternalContentProvider provider({std::move(directory)});
         for (const auto& entry : provider.ListEntriesFilter(FileSys::TitleType::Update, std::nullopt, std::nullopt)) {
             auto& addons = scanned[FileSys::GetBaseTitleID(entry.title_id)];
@@ -294,9 +303,10 @@ int eden_game_glyph_display_version(const char* rom_path, const char* keys_dir,
             FileSys::RealVfsFilesystem vfs;
             const auto file = vfs.OpenFile(rom_path, FileSys::OpenMode::Read);
             if (!file) return 0;
-            const std::string path = rom_path;
-            const bool is_xci = path.size() >= 4 &&
-                (path.substr(path.size() - 4) == ".xci" || path.substr(path.size() - 4) == ".XCI");
+            std::string extension = std::filesystem::path(rom_path).extension().string();
+            std::transform(extension.begin(), extension.end(), extension.begin(),
+                [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            const bool is_xci = extension == ".xci";
             const auto control = OpenControlRomFs(file, is_xci);
             version = ReadGlyphDisplayVersion(control);
         }
