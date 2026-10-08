@@ -10,6 +10,8 @@
 #include <limits>
 #include <mutex>
 #include <new>
+#include <unordered_map>
+#include <vector>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -178,6 +180,131 @@ void* MapExecutableAlias(void* pointer, std::size_t size) noexcept {
         return nullptr;
     }
     return alias;
+}
+#endif
+
+#ifdef PS5_NATIVE
+namespace {
+// Unlike AllocateMemoryPages, the JIT stores code in two stable, separately
+// reserved virtual views. Their *physical* backing is committed in 2 MiB
+// chunks, once, before the compiler writes or executes that chunk.
+struct SparseJitRegion {
+    void* writable = nullptr;
+    std::size_t capacity = 0;
+    std::size_t committed = 0;
+    std::vector<std::int64_t> physical;
+};
+std::mutex sparse_jit_mutex;
+std::unordered_map<void*, SparseJitRegion> sparse_jit_regions;
+std::size_t sparse_jit_committed = 0;
+}
+
+// Reserve two VA ranges, but no direct memory. The RX base never changes,
+// so Dynarmic's generated PC-relative branches and published pointers survive
+// incremental commits. This differs from AllocateMemoryPages's dense path.
+void* ReserveSparseJitCode(std::size_t size, void** writable_out) noexcept {
+    if (!writable_out || !size || size % LargePage || !cpu_mapping_range(
+            reinterpret_cast<void*>(cpu_mapping_hint), size)) {
+        errno = EINVAL;
+        return nullptr;
+    }
+    *writable_out = nullptr;
+    void* rw = reinterpret_cast<void*>(cpu_mapping_hint);
+    if (sceKernelReserveVirtualRange(&rw, size, 0, LargePage) != 0)
+        return nullptr;
+    if (!cpu_mapping_range(rw, size)) {
+        if (munmap(rw, size) != 0) std::abort();
+        return nullptr;
+    }
+    void* rx = reinterpret_cast<void*>(cpu_mapping_hint);
+    if (sceKernelReserveVirtualRange(&rx, size, 0, LargePage) != 0 ||
+        !cpu_mapping_range(rx, size)) {
+        if (rx && rx != MAP_FAILED && cpu_mapping_range(rx, size) &&
+            munmap(rx, size) != 0) std::abort();
+        if (munmap(rw, size) != 0) std::abort();
+        return nullptr;
+    }
+    try {
+        SparseJitRegion region;
+        region.writable = rw;
+        region.capacity = size;
+        region.physical.reserve(size / LargePage);
+        const std::lock_guard lock{sparse_jit_mutex};
+        if (!sparse_jit_regions.emplace(rx, std::move(region)).second)
+            std::abort();
+    } catch (...) {
+        if (munmap(rx, size) != 0 || munmap(rw, size) != 0) std::abort();
+        errno = ENOMEM;
+        return nullptr;
+    }
+    // This firmware wrapper reports zero even if it is unsupported; actual
+    // per-chunk MapDirectMemory/mprotect calls below are the qualification.
+    (void)sceKernelEnableDmemAliasing();
+    *writable_out = rw;
+    std::printf("EDEN_JIT_SPARSE_RESERVE rx=%p rw=%p capacity=%zu committed=0\n", rx, rw, size);
+    return rx;
+}
+
+// Called only by BlockOfCode::EnsureMemoryCommitted before emission.
+// Never commit at an asynchronous page fault in executing JIT code.
+bool CommitSparseJitCode(void* executable, std::size_t required) noexcept {
+    const std::lock_guard lock{sparse_jit_mutex};
+    const auto it = sparse_jit_regions.find(executable);
+    if (it == sparse_jit_regions.end() || required > it->second.capacity) return false;
+    auto& region = it->second;
+    const std::size_t target = (required + LargePage - 1) / LargePage * LargePage;
+    while (region.committed < target) {
+        std::int64_t physical = -1;
+        if (sceKernelAllocateDirectMemory(0, sceKernelGetDirectMemorySize(),
+                                           LargePage, LargePage, 12, &physical) != 0) {
+            std::fprintf(stderr, "EDEN_JIT_SPARSE_OOM capacity=%zu committed=%zu required=%zu\n",
+                         region.capacity, region.committed, required);
+            return false;
+        }
+        auto* rw = static_cast<std::uint8_t*>(region.writable) + region.committed;
+        auto* rx = static_cast<std::uint8_t*>(executable) + region.committed;
+        void* actual_rw = rw;
+        void* actual_rx = rx;
+        // MAP_FIXED replaces the unbacked reservation with the *same* direct
+        // allocation in two views. A failed partial mapping is fatal rather
+        // than leaving stale executable pointers in a corrupt JIT region.
+        if (sceKernelMapDirectMemory(&actual_rw, LargePage, PROT_READ | PROT_WRITE,
+                                     MAP_FIXED, physical, LargePage) != 0 || actual_rw != rw) {
+            std::fprintf(stderr, "EDEN_JIT_SPARSE_MAP failed=rw at=%p\n", rw);
+            std::abort();
+        }
+        std::memset(rw, 0, LargePage);
+        if (sceKernelMapDirectMemory(&actual_rx, LargePage, PROT_READ,
+                                     MAP_FIXED, physical, LargePage) != 0 || actual_rx != rx ||
+            mprotect(rx, LargePage, PROT_READ | PROT_EXEC) != 0) {
+            std::fprintf(stderr, "EDEN_JIT_SPARSE_MAP failed=rx at=%p\n", rx);
+            std::abort();
+        }
+        region.physical.push_back(physical); // capacity reserved at region creation
+        region.committed += LargePage;
+        sparse_jit_committed += LargePage;
+    }
+    return true;
+}
+
+// The VA reservation and every physical chunk have one owner. Do not release
+// partial chunks on ClearCache: the region may contain still-executing code.
+void ReleaseSparseJitCode(void* executable) noexcept {
+    SparseJitRegion region;
+    {
+        const std::lock_guard lock{sparse_jit_mutex};
+        const auto it = sparse_jit_regions.find(executable);
+        if (it == sparse_jit_regions.end()) std::abort();
+        region = std::move(it->second);
+        sparse_jit_committed -= region.committed;
+        sparse_jit_regions.erase(it);
+    }
+    if (munmap(executable, region.capacity) != 0 ||
+        munmap(region.writable, region.capacity) != 0) std::abort();
+    for (const auto physical : region.physical)
+        if (sceKernelReleaseDirectMemory(physical, LargePage) != 0) std::abort();
+    std::printf("EDEN_JIT_SPARSE_RELEASE capacity=%zu committed=%zu remaining=%zu\n",
+                region.capacity, region.committed, sparse_jit_committed);
 }
 #endif
 
