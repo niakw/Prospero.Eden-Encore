@@ -334,7 +334,9 @@ navigation on the real host renderer, not just marker presence in C++ source.
 Its gameplay artwork uses an explicitly **synthetic preview fixture** generated
 only by the host runner. This checks layout, clipping, focus and image layering.
 It is not a substitute for a real Nlib/banner screenshot on the console and
-must never be packaged or presented as actual game media. The preview host also installs the public nlohmann JSON development headers used
+must never be packaged or presented as actual game media. The 1080p reference review additionally gates full-size utility icons, all
+seven cover slots, real Nlib media limits and universal HLE settings.
+The preview host also installs the public nlohmann JSON development headers used
 by the shared settings pipeline.
 The preview toolchain now includes the shared headless controller mapping header,
 and its GitHub runner propagates launcher compilation failures through pipefail.
