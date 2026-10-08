@@ -55,10 +55,26 @@ int main() {
             }
             // Entire actual per-ISA arenas (including core 3) must fit
             // inside the admitted budget, not exceed it by 16 MiB.
-            assert(total64 <= plan.admission_budget_bytes);
-            assert(total32 <= plan.admission_budget_bytes);
+            constexpr std::size_t physical_headers = 4 * kLargePage;
+            assert(total64 + physical_headers <= plan.admission_budget_bytes);
+            assert(total32 + physical_headers <= plan.admission_budget_bytes);
         }
         previous = plan;
+    }
+
+    // Near the admission threshold, never claim a grown plan until there
+    // is enough memory for BOTH the baseline code and its physical headers.
+    constexpr std::size_t baseline = 656ull * kMiB;
+    constexpr std::size_t physical_headers = 4 * kLargePage;
+    const auto threshold = (kHostReserve + 2 * (baseline + physical_headers)) / kLargePage * kLargePage;
+    const auto borderline = ChooseJitMemoryPlan(false, true, threshold);
+    assert(!borderline.expanded);
+    assert(borderline.a64 == kA64Baseline);
+    const auto slight_growth = ChooseJitMemoryPlan(false, true, threshold + 4 * kLargePage);
+    if (slight_growth.expanded) {
+        std::size_t total = 0;
+        for (auto size : slight_growth.a64) total += size;
+        assert(total + physical_headers <= slight_growth.admission_budget_bytes);
     }
 
     const auto seven = ChooseJitMemoryPlan(false, true, 7ull * 1024 * kMiB);
