@@ -70,6 +70,11 @@ void Textures::release()
     for (auto &[key, entry] : covers_)
         batch_.delete_texture(entry.texture);
     covers_.clear();
+    // A context is still current during release; drain the bounded-per-frame
+    // invalidation backlog before destroying it to prevent orphaned GL IDs.
+    for (const std::uint32_t texture : pending_deletes_)
+        batch_.delete_texture(texture);
+    pending_deletes_.clear();
     queue_.clear();
 }
 
@@ -118,7 +123,8 @@ void Textures::invalidate(const std::string &path)
     for (auto it = covers_.begin(); it != covers_.end(); )
     {
         if (it->second.path == path) {
-            batch_.delete_texture(it->second.texture);
+            if (it->second.texture != 0)
+                pending_deletes_.push_back(it->second.texture);
             it = covers_.erase(it);
         } else {
             ++it;
@@ -129,6 +135,16 @@ void Textures::invalidate(const std::string &path)
 void Textures::pump(float dt, int budget)
 {
     ++frame_;
+    // Nlib can replace a banner, icon and three screenshots at once.
+    // Invalidation itself performs zero GL calls; retire at most two of
+    // their old textures here, spreading driver cleanup across frames.
+    std::size_t deleted_this_frame = 0;
+    while (deleted_this_frame < kMaxTextureReclaimsPerFrame &&
+           !pending_deletes_.empty()) {
+        batch_.delete_texture(pending_deletes_.front());
+        pending_deletes_.pop_front();
+        ++deleted_this_frame;
+    }
     for (auto &[key, entry] : covers_)
         if (entry.loaded)
             entry.age += dt;
@@ -218,7 +234,7 @@ void Textures::pump(float dt, int budget)
         // Evict at most two stale, completed covers per update: a bounded
         // number of GL deletes and no heap allocation in this hot path.
         for (std::size_t reclaimed = 0;
-             reclaimed < kMaxTextureReclaimsPerFrame &&
+             deleted_this_frame + reclaimed < kMaxTextureReclaimsPerFrame &&
              covers_.size() > kMaxCovers * 3 / 4; ++reclaimed)
         {
             auto oldest = covers_.end();
