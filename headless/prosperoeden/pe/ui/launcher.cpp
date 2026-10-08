@@ -417,12 +417,16 @@ void Launcher::draw_top_nav(Canvas &c, int active_tab, int focus_tab, float focu
     // to the single approved screenshot (maquetteunique.png).
     constexpr float cx = 100.0f;
     constexpr float cy = 62.0f;
-    for (int i = 0; i < 4; ++i) {
-        list.push_transform(1.0f, cx, cy, 0.0f, 90.0f * static_cast<float>(i));
-        list.rounded_rect({cx - 7.0f, cy - 31.0f, 14.0f, 25.0f}, 7.0f,
-                          i % 2 == 0 ? theme::kFocusCore : theme::kFocusBlue);
-        list.pop_transform();
-    }
+    // DrawList has translation/scale but no rotation transform. Explicit
+    // horizontal/vertical petals keep the mark stable on PS5 Vulkan/OpenGL.
+    list.rounded_rect({cx - 7.0f, cy - 31.0f, 14.0f, 25.0f}, 7.0f,
+                      theme::kFocusCore);
+    list.rounded_rect({cx + 5.0f, cy - 7.0f, 26.0f, 14.0f}, 7.0f,
+                      theme::kFocusBlue);
+    list.rounded_rect({cx - 7.0f, cy + 6.0f, 14.0f, 25.0f}, 7.0f,
+                      theme::kFocusCore);
+    list.rounded_rect({cx - 31.0f, cy - 7.0f, 26.0f, 14.0f}, 7.0f,
+                      theme::kFocusBlue);
     list.circle(cx, cy, 5.0f, theme::kFocusBlue);
     text(c, "eden", 145.0f, baseline(29.0f, 49.0f, 39.0f), 39.0f,
          theme::kTitle, Align::left);
