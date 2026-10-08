@@ -29,6 +29,7 @@ source = r'''
 #include <sys/mman.h>
 #include <unistd.h>
 #ifdef EDEN_JIT_ALIAS_NATIVE
+namespace Common { std::size_t DenseJitDirectBytes() noexcept; }
 static unsigned fail_stage, stage;
 static std::vector<void*> views;
 static std::vector<int> handles;
@@ -82,6 +83,9 @@ int main() {
     auto* allocator = EdenJitAllocator();
     assert(!allocator->alloc(std::numeric_limits<std::size_t>::max()));
     allocator->free(nullptr);
+#ifdef EDEN_JIT_ALIAS_NATIVE
+    assert(Common::DenseJitDirectBytes() == 0);
+#endif
     std::vector<std::unique_ptr<Xbyak::CodeGenerator>> caches;
     std::vector<const unsigned char*> pointers;
     const auto page = sysconf(_SC_PAGESIZE);
@@ -97,8 +101,14 @@ int main() {
         code->rewrite(1,84,4);
         assert(code->getCode<int(*)()>()()==84);
         caches.push_back(std::move(code));
+#ifdef EDEN_JIT_ALIAS_NATIVE
+        assert(Common::DenseJitDirectBytes() > 0);
+#endif
     }
     caches.clear();
+#ifdef EDEN_JIT_ALIAS_NATIVE
+    assert(Common::DenseJitDirectBytes() == 0);
+#endif
     for (auto* p : pointers) {
         unsigned char state;
         errno=0;
@@ -117,6 +127,7 @@ int main() {
         }
         for (int fd : handles) { errno=0; assert(fcntl(fd,F_GETFD)==-1 && errno==EBADF); }
         for (void* p : views) { unsigned char state; errno=0; assert(mincore(p,page,&state)==-1 && errno==ENOMEM); }
+        assert(Common::DenseJitDirectBytes() == 0);
     }
 #endif
 }
