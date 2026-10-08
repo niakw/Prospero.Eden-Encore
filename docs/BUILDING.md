@@ -332,7 +332,9 @@ The host-render capture is diagnostic and carries no PS5 installable package.
 Its gameplay artwork uses an explicitly **synthetic preview fixture** generated
 only by the host runner. This checks layout, clipping, focus and image layering.
 It is not a substitute for a real Nlib/banner screenshot on the console and
-must never be packaged or presented as actual game media. After examining
+must never be packaged or presented as actual game media. The preview toolchain now includes the shared headless controller mapping header,
+and its GitHub runner propagates launcher compilation failures through pipefail.
+After examining
 the PNGs against the single screenshot, run the full PS5 build only when
 code quality checks and host visual review are complete.
 
