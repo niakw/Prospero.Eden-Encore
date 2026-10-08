@@ -644,6 +644,12 @@ void GraphicsWindow::OnFrameDisplayed() {
             frame_late_38 += present_interval >= 0.038;
             frame_late_50 += present_interval >= 0.050;
             frame_late_100 += present_interval >= 0.100;
+            frame_late_200 += present_interval >= 0.200;
+            frame_late_500 += present_interval >= 0.500;
+            // Consecutive frames above 50 ms distinguish sustained slowdown
+            // from isolated JIT/shader compilation gaps. No heap/log on hot path.
+            frame_slow_streak = present_interval >= 0.050 ? frame_slow_streak + 1 : 0;
+            frame_max_slow_streak = std::max(frame_max_slow_streak, frame_slow_streak);
 #ifdef EDEN_DEV_PROFILE
             // Present intervals by vsync multiple: a 60 FPS title that misses by a little
             // shows up in the 2-vsync bucket, a slow one across all of them. "half" counts the
@@ -657,12 +663,13 @@ void GraphicsWindow::OnFrameDisplayed() {
             if (now - frame_sample_start >= 5.0) {
                 // The game's frames; the ones a slower display did not show are counted apart.
                 std::printf("EDEN_VULKAN_FRAME frames=%u seconds=%.6f fps=%.3f worst_ms=%.3f total=%u "
-                            "not_shown=%u clock_hz=%.1f late38=%u late50=%u late100=%u\n",
+                            "not_shown=%u clock_hz=%.1f late38=%u late50=%u late100=%u late200=%u late500=%u slow_streak=%u\n",
                     frame_sample_count, now - frame_sample_start,
                     frame_sample_count / (now - frame_sample_start),
                     frame_sample_worst * 1000.0, frame_total, Display::skipped_frames.load(),
                     Display::game_millihertz.load() / 1000.0,
-                    frame_late_38, frame_late_50, frame_late_100);
+                    frame_late_38, frame_late_50, frame_late_100,
+                    frame_late_200, frame_late_500, frame_max_slow_streak);
 #ifdef EDEN_DEV_PROFILE
                 std::printf("EDEN_VULKAN_INTERVALS v1=%u v2=%u v3=%u v4plus=%u half=%u\n", interval_hist[0],
                             interval_hist[1], interval_hist[2], interval_hist[3], interval_hist[4]);
@@ -678,6 +685,8 @@ void GraphicsWindow::OnFrameDisplayed() {
                 frame_sample_count = 0;
                 frame_sample_worst = 0;
                 frame_late_38 = frame_late_50 = frame_late_100 = 0;
+                frame_late_200 = frame_late_500 = 0;
+                frame_slow_streak = frame_max_slow_streak = 0;
             }
         }
     }

@@ -130,21 +130,22 @@ assert 'text_block(c, hero_caption, 90.0f' in home
 assert 'label_area.x + label_area.w * 0.5f' in home
 assert 'text_shrink(c, game->name, 558.0f, baseline(574.0f, 52.0f, 40.0f)' in library
 assert 'text_block(c, game->name, 558.0f' not in library
-assert 'kNlibCacheSchema = 2' in services
+assert 'kNlibCacheSchema = 3' in services
 assert 'current_metadata_cache' in services
 assert 'artwork_files.resize(6)' not in services
 assert 'const int wanted_screens = std::clamp(screen_count, 0, 3);' in services
 assert 'for (std::size_t offset = 0; offset < games_.size(); ++offset)' in library
 assert 'game->screenshots' in library
 
-# Global PlayStation Auto control contract.
-assert 'kPlayStationAutoControls' in generated
-assert 'kPlayStationAutoControls{0.30f, 48, 18, 2, 0.16f, 75, 10, 4, 2, true}' in generated
-assert 'SetAdaptivePlayStation(bool enabled)' in devices
-assert 'mapping_context == MappingContext::gameplay ? kSwitchMapping : mapping' in pad
-assert 'EDEN_PAD_CONTEXT mode=gameplay' in pad and 'EDEN_PAD_CONTEXT mode=ui' in pad
-assert 'pad->SetAdaptivePlayStation(effective_layout == 0 && !custom_mapping);' in main
-assert '"PlayStation Auto"' in main
+# Physical PlayStation mapping must remain fixed for an entire match.
+assert 'SetAdaptivePlayStation(bool enabled)' in devices  # experimental code may remain dormant
+assert 'pad->SetAdaptivePlayStation(false);' in main
+assert 'pad->SetAdaptivePlayStation(effective_layout == 0 && !custom_mapping);' not in main
+assert '"PlayStation Auto"' not in main
+assert '(effective_layout == 1 ? "Switch" : "PlayStation")' in main
+assert '#ifdef EDEN_DEV_PROFILE\n        // Diagnostic input trace only.' in pad
+assert 'frame_late_200' in read('headless/graphics.cpp')
+assert 'frame_max_slow_streak' in read('headless/graphics.h')
 
 # Four authored performance tiers + derived Custom.
 for label in ('"Minimum"','"Recommended"','"High"','"Ultra"','"Custom"'):
