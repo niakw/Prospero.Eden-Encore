@@ -86,7 +86,7 @@ def main() -> None:
     require(jit_policy.count('static_assert(ChooseA64CacheTier(') >= 5,
             "Static policy boundary tests missing")
     dev_start = app.index('#if defined(PS5_NATIVE) && defined(EDEN_DEV_PROFILE)')
-    dev_end = app.index('\\n#endif\\n#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)', dev_start)
+    dev_end = app.index('\n#endif\n#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)', dev_start)
     require(app.index('jit_cache_tier.store(experimental_jit_cache') > dev_end,
             "JIT policy stores must not be compiled out of normal release builds")
     require('EDEN_PS5_JIT_POLICY scope=all_titles' in app,
