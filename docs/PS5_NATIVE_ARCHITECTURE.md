@@ -71,8 +71,8 @@ better performance.
 - Separate **code address-space capacity** from **physically committed RAM**.
 - Stable dual RW/RX views and incremental mapping must preserve executable
   pointer validity, W^X ownership and active-worker safety.
-- **No arbitrary fixed total 4 GiB ceiling**: the branch's current 4 GiB
-  tier is a prototype and cannot be promoted as the architecture.
+- **No arbitrary fixed total 4 GiB ceiling**: the earlier 4 GiB tier has
+  been removed from the branch. Do not promote another fixed ceiling.
   Growth must be demand-driven with multi-segment/far-jump-aware strategies
   when a single x64 rel32-sized code arena is exhausted. Merely raising
   `code_cache_size` infinitely is not viable.
