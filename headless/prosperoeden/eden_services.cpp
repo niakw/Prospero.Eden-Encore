@@ -34,6 +34,7 @@
 #include <stb_image.h>
 #include <sys/stat.h>
 #include <thread>
+#include <unordered_map>
 #include <unistd.h>
 
 namespace {
@@ -338,8 +339,12 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
 
     char id[17]{};
     std::snprintf(id, sizeof(id), "%016llX", static_cast<unsigned long long>(title_id));
-    // Cache Nlib failure per title; retry after six hours, not every visit.
-    const std::string retry_marker = Eden::CoversDir() + "/nlib-retry-" + id + ".txt";
+    // Bounded retry map is launcher-only and independent of PS5 filesystem
+    // timestamps. Old filesystem::last_write_time caused an unnecessary native
+    // syscall on every selection, even for a title absent from Nlib.
+    static std::mutex retry_guard;
+    static std::unordered_map<std::string, std::chrono::steady_clock::time_point> next_retry;
+    const std::string retry_key = std::string{id} + ":" + language;
     std::fprintf(stderr,
                  "EDEN_NLIB_BEGIN title_id=%s lang=%s cached_meta=%d cache_schema=%d cached_icon=%d cached_hero=%d cached_screens=%zu cached_players=%d\n",
                  id, language.c_str(), cached_metadata, current_metadata_cache, !result.icon.empty(), !result.hero.empty(),
@@ -354,19 +359,21 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
         if (cached_metadata && metadata.contains("screens") && metadata["screens"].is_object())
             screen_count = std::max(screen_count, metadata["screens"].value("count", 0));
         if (!current_metadata_cache) {
-            std::error_code retry_error;
-            const auto tried_at = std::filesystem::last_write_time(retry_marker, retry_error);
-            if (!retry_error) {
-                const auto since = std::filesystem::file_time_type::clock::now() - tried_at;
-                if (since >= std::chrono::hours(0) && since < std::chrono::hours(6))
+            {
+                std::lock_guard lock(retry_guard);
+                const auto it = next_retry.find(retry_key);
+                if (it != next_retry.end() &&
+                    std::chrono::steady_clock::now() < it->second)
                     return result;
             }
             const std::string metadata_endpoint = std::string{"/nx/"} + id + "?lang=" + language +
                 "&fields=name,intro,description,publisher,developer,releaseDate,category,languages,"
                 "numberOfPlayers,icon,banner,screens";
             if (const auto response = Common::Net::MakeRequest("https://api.nlib.cc", metadata_endpoint)) {
-                std::error_code cleanup_error;
-                (void)std::filesystem::remove(retry_marker, cleanup_error);
+                {
+                    std::lock_guard lock(retry_guard);
+                    next_retry.erase(retry_key);
+                }
                 metadata = nlohmann::json::parse(*response);
                 if (metadata.is_object()) {
                     metadata["_encore_cache_schema"] = kNlibCacheSchema;
@@ -380,7 +387,9 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
             } else {
                 // A missing title/API stays offline for this visit; keep local
                 // ROM artwork and avoid serial HTTP waits on subsequent visits.
-                (void)AtomicWriteText(retry_marker, "retry_after_six_hours");
+                std::lock_guard lock(retry_guard);
+                next_retry[retry_key] = std::chrono::steady_clock::now() +
+                                        std::chrono::hours(6);
                 return result;
             }
         }
