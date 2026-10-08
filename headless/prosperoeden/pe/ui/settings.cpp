@@ -280,7 +280,7 @@ void Launcher::draw_settings(Canvas &c)
                  {tr("SETUP"), home_.setup_ready ? tr("Ready") : tr("Needs attention")},
                  {tr("FILESYSTEM"), info.filesystem},
                  {tr("ROOT"), short_path(info.storage_root, 34)},
-                 {tr("SHADER/JIT CACHES"), info.shader_caches},
+                 {tr("CACHE"), info.shader_caches},
                  {tr("LOGS"), info.logs},
                  {tr("DATA"), short_path(info.data_path, 34)}};
         break;
@@ -786,13 +786,13 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
             services_.setup_details() + "\n" +
             tr("FILESYSTEM") + ": " + info.filesystem + "  |  " +
             tr("ROOT") + ": " + info.storage_root + "\n" +
-            fill(tr("Shader/JIT caches: {0}  |  Logs: {1}"), {info.shader_caches, info.logs}) + "\n" +
+            fill(tr("Cache: {0}  |  Logs: {1}"), {info.shader_caches, info.logs}) + "\n" +
             fill(tr("Data: {0}"), {info.data_path});
         text_block(c, details, 592.0f, baseline(350.0f, 30.0f, theme::kSmall),
                    theme::kSmall, 30.0f, theme::kBody, 736.0f, 6, kShrink);
         label(0, tr("Detailed logging"), kToggle);
         toggle(c, 1292.0f, row_centre(0), knob);
-        label(1, tr("Clear shader caches"), choice(1, tr("Clear")));
+        label(1, tr("Clear cache"), choice(1, tr("Clear")));
         break;
     }
     default:
