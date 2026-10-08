@@ -328,6 +328,7 @@ On the feature branch it intentionally runs only for a commit containing
 `Encore-launcher-native-render-1080p`: five 1920 × 1080 PNGs covering the
 actual Home screen and focus transitions, plus the renderer log.
 
+The host-render capture is diagnostic and carries no PS5 installable package.
 Its gameplay artwork uses an explicitly **synthetic preview fixture** generated
 only by the host runner. This checks layout, clipping, focus and image layering.
 It is not a substitute for a real Nlib/banner screenshot on the console and
