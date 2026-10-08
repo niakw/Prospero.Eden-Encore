@@ -162,7 +162,9 @@ before increasing internal resolution. Test load time as well as gameplay.
 - **All PS5 guests, both A64 and A32, use one continuously sized JIT
   memory policy**, chosen once before CPU startup from the kernel's largest
   available contiguous direct-memory block. A 3 GiB physical headroom floor
-  protects shared guest/GPU/system allocations; half the remaining allocatable
+  protects shared guest/GPU/system allocations; after the actual October 8
+  FC27 hardware crash caused by late 440-MiB direct allocation failure with
+  only 38 MiB contiguous remaining, a QUARTER (not half) of the remaining
   contiguous pool defines the initially dense code-memory budget, split over
   guest cores by ISA-dependent workload weights. Unlike the retired A/B/C
   tiers, usable budgets may exceed FC27's 320/256/256 MiB C sizes. Unknown
