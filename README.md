@@ -69,7 +69,7 @@ The isolated `dev/ps5-sparse-jit` branch now includes:
   is validated.
 - PS5-native Vulkan shader worker budgeting and one-time worker-count receipt,
   not yet measured on hardware. A smaller pool may slow shader warmup.
-- GPU/direct-memory snapshots at game-load and shutdown, with a conservative
+- GPU/direct-memory snapshots at core initialization and shutdown, with a conservative
   distinction between largest contiguous block and total-free upper bound.
   No unproven GPU budget increase has been applied.
 - A provisional sparse JIT dual-view mapper, opt-in only when the app is
