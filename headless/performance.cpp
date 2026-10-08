@@ -364,6 +364,7 @@ extern "C" unsigned eden_heap_arenas_created(void) __attribute__((weak));
 extern "C" std::size_t eden_heap_committed(void) __attribute__((weak));
 extern "C" std::size_t eden_heap_large_held(unsigned* blocks) __attribute__((weak));
 #ifdef PS5_NATIVE
+namespace Common { void SparseJitUsage(std::size_t*, std::size_t*) noexcept; }
 extern "C" std::int64_t sceKernelGetDirectMemorySize();
 extern "C" std::int32_t sceKernelAvailableDirectMemorySize(std::int64_t, std::int64_t, std::size_t, std::int64_t*,
                                                            std::size_t*);
@@ -457,6 +458,10 @@ void ReportDirectMemoryState(const char* phase) {
         ++regions;
     }
     const long long free_upper = valid ? static_cast<long long>(total - taken_lower) : -1LL;
+    std::size_t jit_reserved = 0, jit_committed = 0;
+    Common::SparseJitUsage(&jit_reserved, &jit_committed);
+    std::printf("EDEN_JIT_MEMORY phase=%s reserved=%zu committed=%zu\n",
+                phase, jit_reserved, jit_committed);
     std::printf("EDEN_MEMORY_LAYOUT phase=%s largest_rc=%d total=%lld largest=%zu "
                 "largest_start=%lld free_upper=%lld scanned_regions=%u scan_valid=%d short=%d\n",
                 phase, largest_rc, static_cast<long long>(total),
