@@ -4,9 +4,7 @@ on:
   push:
     branches:
       - fix/0.40-zbic-13.60
-      # Build on the feature branch only when the commit is explicitly marked.
-      # Everyday code edits must NOT retrigger a 4-hour PS5 build.
-      - local/fc27-offline-no-build
+      # Developer JIT changes use their own host-source preflight, never native CI.
   # workflow_dispatch remains available for deliberate build / stage-resume.
   workflow_dispatch:
     inputs:
