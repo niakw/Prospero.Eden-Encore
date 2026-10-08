@@ -19,6 +19,12 @@ cd "$root"
 bash tools/build-core-fixture.sh
 scratch=$(cat .local/headless-cache)
 [[ "$scratch" == "${XDG_CACHE_HOME:-$HOME/.cache}"/ps5-eden-headless.* && "$(cd -- "$(cat "$scratch/owner")" && pwd -P)" == "$root" ]]
+# Static release preflight has no extracted Eden source yet. At this later
+# native stage, enforce patch applicability to the actual pinned upstream.
+if [[ ${EDEN_SKIP_SOURCE_CHECKS:-0} != 1 && ${EDEN_SKIP_PREBUILD_SOURCE_CHECKS:-0} != 1 ]]; then
+    python3 -B "$root/tools/check-dummy-thread-waits.py" --require-pinned-source
+    python3 -B "$root/tools/check-dynarmic-icache.py" --require-pinned-source
+fi
 # Cache the read-only native dependency trees beside the upstream sources.
 # Repeated header checks across /mnt/c took minutes before compilation began.
 if [[ ! -f "$scratch/sdk/.complete" ]]; then
