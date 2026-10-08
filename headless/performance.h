@@ -17,6 +17,8 @@ void SetSecondaryPlacement(bool enabled);
 // without claiming separate physical cores when firmware CPUID is unreliable.
 void EnableExperimentalLogicalPlacement();
 void PlatformChecks();
+// Startup/shutdown-only snapshot: no direct-memory region scan in the frame loop.
+void ReportDirectMemoryState(const char* phase);
 // Main thread only, between GPU readiness and guest shutdown.
 void Snapshot();
 // GPU worker only: firmware rejects cross-thread CPU-time sampling.
