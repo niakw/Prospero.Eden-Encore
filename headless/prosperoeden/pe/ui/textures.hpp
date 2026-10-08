@@ -25,8 +25,10 @@ struct Cover
     float aspect = 1.0f;       // loaded source width / height, used for CSS-like cover cropping
 };
 
-// Owns every GL texture of the launcher. Covers load a few per frame, at the
-// size they are shown, and the least recently drawn ones are dropped.
+// Owns every GL texture of the launcher. Decoding and geometric scaling are
+// off-thread; the UI thread uploads at most one ready texture per frame.
+// Distinct display-size buckets avoid uploading 1080p artwork for small tiles.
+// The least recently drawn texture variants are discarded.
 class Textures
 {
   public:
@@ -82,7 +84,7 @@ class Textures
         unsigned failed_loads = 0; // bounded retry backoff when async Nlib media arrive
         std::uint64_t used = 0;
         std::string path;
-        int level = 0;
+        int target_pixels = 64; // desired max image dimension, quantized to power of two
         float aspect = 1.0f;
     };
 
