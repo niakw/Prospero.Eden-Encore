@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Check exact pinned GPU instrumentation contracts before native CMake.
+"""Check pinned Maxwell diagnostics and the bounded Fermi2D z=0 copy path.
 
-This is not an implementation of Maxwell PRMT or layered Fermi blits.
+Maxwell PRMT and nonzero Fermi2D layers remain unsupported.
 """
 import re
 from pathlib import Path
@@ -19,6 +19,8 @@ prmt_old = extract("prmt_old")
 prmt_new = extract("prmt_new")
 fermi_old = extract("fermi_old")
 fermi_new = extract("fermi_new")
+fermi_copy_old = extract("fermi_copy_old")
+fermi_copy_new = extract("fermi_copy_new")
 assert prmt_old.count("ThrowNotImplemented(Opcode::PRMT_imm);") == 1
 assert prmt_new.count("ThrowNotImplemented(Opcode::PRMT_imm);") == 1
 assert "u64 insn" in prmt_new
@@ -39,8 +41,28 @@ assert "src.size.depth = 1" not in fermi_new
 assert "LOG_CRITICAL(Debug" in fermi_new
 assert fermi_new.count("AssertFailSoftImpl();") == 1
 assert fermi_new.index("AssertFailSoftImpl();") > fermi_new.index("if (count < 8)")
+# Only layer-0, source depth>1 SrcCopy can use the software blitter.
+# Existing decoding routines preserve block-depth layout and hardcode z=0;
+# all other cases retain the original soft-assert semantics.
+assert "base_layer_3d_copy = regs.src.depth > 1" in fermi_new
+assert "regs.src.layer == 0 && regs.dst.layer == 0" in fermi_new
+assert "regs.operation == Operation::SrcCopy" in fermi_new
+assert "regs.clip_enable == 0" in fermi_new
+assert "regs.src.depth != 1 && !base_layer_3d_copy" in fermi_new
+assert "if (!rasterizer->AccelerateSurfaceCopy(src, regs.dst, config))" in fermi_copy_old
+assert "if (base_layer_3d_copy)" in fermi_copy_new
+assert "src.depth = 1;" in fermi_copy_new
+assert "Surface dst = regs.dst;" in fermi_copy_new
+assert "dst.depth = 1;" in fermi_copy_new
+assert "EDEN_GPU_FERMI2D_Z0_SOFTWARE" in fermi_copy_new
+assert "sw_blitter->Blit(src, dst, config);" in fermi_copy_new
+assert "else if (!rasterizer->AccelerateSurfaceCopy(src, regs.dst, config))" in fermi_copy_new
+assert "regs.src.depth = 1;" not in fermi_copy_new
+assert "regs.dst.depth = 1;" not in fermi_copy_new
+assert "sw_source_depth_at LESS 0 OR sw_dest_depth_at LESS 0 OR sw_z0_at LESS 0" in cmake
+
 assert "file(READ" in cmake and cmake.count("write_derived(") == 2
 assert 'target_sources(shader_recompiler PRIVATE' in cmake
 assert 'target_sources(video_core PRIVATE' in cmake
-print("PASS pinned GPU diagnostic patch: raw PRMT preserved throw, layered Fermi assert retained, eight bounded samples per opcode/source")
+print("GPU SOURCE CONTRACT: PRMT still throws; Fermi2D z=0 depth>1 uses software only; unsupported layers retain soft assert")
 print("NOTE graphics correctness and PS5 native CMake build remain to be qualified")
