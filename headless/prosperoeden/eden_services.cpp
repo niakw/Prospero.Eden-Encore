@@ -553,13 +553,16 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice,
     return result;
 }
 
-std::uintmax_t TreeBytes(const std::filesystem::path& root) {
+std::uintmax_t TreeBytes(const std::filesystem::path& root,
+                        const std::atomic<bool>* cancel = nullptr) {
+    if (cancel && cancel->load(std::memory_order_acquire)) return 0;
     std::error_code error;
     if (!std::filesystem::exists(root, error)) return 0;
     std::uintmax_t bytes = 0;
     std::filesystem::recursive_directory_iterator it(
         root, std::filesystem::directory_options::skip_permission_denied, error), end;
     while (!error && it != end) {
+        if (cancel && cancel->load(std::memory_order_acquire)) return 0;
         std::error_code entry_error;
         if (it->is_regular_file(entry_error)) {
             const auto size = it->file_size(entry_error);
@@ -1295,24 +1298,30 @@ std::string EdenServices::setup_details() {
 }
 
 pe::ui::DiagnosticsInfo EdenServices::diagnostics() {
+    return diagnostics(nullptr);
+}
+
+pe::ui::DiagnosticsInfo EdenServices::diagnostics(const std::atomic<bool>* cancel) {
+    if (cancel && cancel->load(std::memory_order_acquire)) return {};
     pe::ui::DiagnosticsInfo result;
     result.filesystem = Eden::FilesystemAccess() ? tr("Full filesystem") : tr("Sandbox only");
     result.data_path = Eden::FilesystemAccess() ? Eden::kDataDir : Eden::UserDir();
 
-    // RELEASE-SAFETY (FW 13.60): diagnostics runs synchronously from Launcher::Launcher()
-    // before the first UI frame. Build #182 proved that direct libc statfs/statvfs here can kill
-    // the title with 0xa002030a SYSTEM_ILLEGAL_FUNCTION_CALL. std::filesystem::space() on the
-    // selected root is boot-safe, but on this console it reports a 64 GiB filesystem view rather
-    // than the physical PS5 SSD, so Encore deliberately does not present it as storage capacity.
+    // RELEASE-SAFETY (FW 13.60): do not call libc statfs/statvfs, which
+    // previously raised SYSTEM_ILLEGAL_FUNCTION_CALL. This directory inventory
+    // now runs on a cancellable background worker; the console's filesystem
+    // view also does not establish physical SSD capacity.
     result.storage_root = Eden::AssetsDir();
 
     const std::filesystem::path cache = std::filesystem::path{Eden::UserDir()} / "cache";
     const std::uintmax_t shader_bytes =
-        TreeBytes(cache / "shader") + TreeBytes(cache / "radv") +
-        TreeBytes(cache / "native-opengl") + TreeBytes(cache / "jit");
+        TreeBytes(cache / "shader", cancel) + TreeBytes(cache / "radv", cancel) +
+        TreeBytes(cache / "native-opengl", cancel) + TreeBytes(cache / "jit", cancel);
+    if (cancel && cancel->load(std::memory_order_acquire)) return {};
     result.shader_cache_bytes = static_cast<std::uint64_t>(shader_bytes);
     result.shader_caches = StorageSize(shader_bytes);
-    result.logs = StorageSize(TreeBytes(Eden::LogsDir()));
+    result.logs = StorageSize(TreeBytes(Eden::LogsDir(), cancel));
+    if (cancel && cancel->load(std::memory_order_acquire)) return {};
     return result;
 }
 
