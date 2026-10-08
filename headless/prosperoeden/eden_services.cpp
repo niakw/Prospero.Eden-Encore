@@ -321,7 +321,8 @@ NlibEnrichment CachedNlibEnrichment(std::uint64_t title_id, int language_choice)
 // Nlib enriches the launcher only; no game ever depends on the network. The ROM icon stays the
 // offline fallback. Cards prefer Nlib's square icon, Home prefers its 16:9 banner, and Library
 // details use up to three gameplay screenshots. Only Home/recent titles are fetched in parallel.
-NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice) {
+NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice,
+                                    bool home_priority) {
     if (title_id == 0) return {};
 
     // Home and Library can request the same title at the same time. Cache writes use
@@ -395,12 +396,6 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
         }
         if (result.max_players > 0) CacheNlibPlayers(title_id, result.max_players);
 
-        if (result.icon.empty() && has_icon) {
-            const std::string path = NlibIconPath(title_id);
-            if (CacheNlibJpeg(std::string{"/nx/"} + id + "/icon/512", path))
-                result.icon = path;
-        }
-
         if (result.hero.empty() && has_banner) {
             const std::string path = NlibHeroPath(title_id);
             if (CacheNlibJpeg(std::string{"/nx/"} + id + "/banner/1080p", path, 4096)) {
@@ -409,7 +404,18 @@ NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)
             }
         }
 
-        const int wanted_screens = std::clamp(screen_count, 0, 3);
+        if (result.icon.empty() && has_icon) {
+            const std::string path = NlibIconPath(title_id);
+            if (CacheNlibJpeg(std::string{"/nx/"} + id + "/icon/512", path))
+                result.icon = path;
+        }
+
+        // Home's full-bleed art is on the critical visual path. Do not wait
+        // for three gameplay images that only the Library details screen uses.
+        // If no banner exists, allow one first screenshot as a fallback hero.
+        const int wanted_screens = home_priority ?
+            (result.hero.empty() ? std::clamp(screen_count, 0, 1) : 0) :
+            std::clamp(screen_count, 0, 3);
         for (int index = 1; index <= wanted_screens; ++index) {
             const std::string path = NlibScreenshotPath(title_id, index);
             if (!IsFile(path))
@@ -981,7 +987,8 @@ std::vector<pe::ui::Game> EdenServices::games() {
 pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game) {
     if (game.title_id == 0) return game;
     const int language_choice = Eden::LoadPreferences().language;
-    NlibEnrichment enrichment = EnsureNlibEnrichment(game.title_id, language_choice);
+    NlibEnrichment enrichment = EnsureNlibEnrichment(game.title_id, language_choice,
+                                                        game.home_media_priority);
     if (!enrichment.icon.empty()) game.cover = std::move(enrichment.icon);
     if (!enrichment.hero.empty()) game.hero = std::move(enrichment.hero);
     if (!enrichment.screenshots.empty()) game.screenshots = std::move(enrichment.screenshots);
