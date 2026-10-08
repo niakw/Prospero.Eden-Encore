@@ -104,7 +104,8 @@ assert fermi_new.index("AssertFailSoftImpl();") > fermi_new.index("if (count < 8
 # Only layer-0, source depth>1 SrcCopy can use the software blitter.
 # Existing decoding routines preserve block-depth layout and hardcode z=0;
 # all other cases retain the original soft-assert semantics.
-assert "base_layer_3d_copy = regs.src.depth > 1" in fermi_new
+assert "(regs.src.depth > 1 || regs.dst.depth > 1)" in fermi_new
+assert "regs.src.depth >= 1 && regs.dst.depth >= 1" in fermi_new
 assert "regs.src.layer == 0 && regs.dst.layer == 0" in fermi_new
 assert "regs.operation == Operation::SrcCopy" in fermi_new
 assert "regs.clip_enable == 0" in fermi_new
