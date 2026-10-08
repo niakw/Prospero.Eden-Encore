@@ -759,9 +759,8 @@ int main(int argc, char** argv) {
                             it->get<std::string>() : "";
                     };
                     const std::string jit = get("jit_cache");
-                    experimental_jit_cache = jit == "balanced" ? 1u : jit == "expanded" ? 2u :
-                        jit == "elastic" ? 3u : 0u;
-                    experimental_sparse_jit = get("jit_memory") == "sparse" || experimental_jit_cache == 3u;
+                    experimental_jit_cache = jit == "balanced" ? 1u : jit == "expanded" ? 2u : 0u;
+                    experimental_sparse_jit = get("jit_memory") == "sparse";
                     experimental_logical_cpu = get("cpu_placement") == "logical";
                     experimental_frame_probe = get("vulkan_pacing") == "trace";
                 }
