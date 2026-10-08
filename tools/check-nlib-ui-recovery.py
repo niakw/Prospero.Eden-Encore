@@ -155,6 +155,11 @@ assert "if (diagnostics_refresh_pending_)" in lib
 read_home_entry = lib.split("void Launcher::read_home()", 1)[1].split(
     "void Launcher::check_games_present()", 1)[0]
 assert "start_diagnostics();" in read_home_entry
+assert "services_.mods(home_.last_title_id)" not in read_home_entry
+assert "services_.mods_enabled(home_.last_title_id)" not in read_home_entry
+assert "home_.last_title_id == 0 || !games_loaded_" in read_home_entry
+assert "home_.last_mods = it->mods;" in read_home_entry
+assert "home_.last_mods_on = it->mods_on;" in read_home_entry
 assert "home_diagnostics_ = services_.diagnostics();" not in read_home_entry
 assert "finish_diagnostics();" in nav
 assert "diagnostics_scan_.wait();" in nav
