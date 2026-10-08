@@ -159,12 +159,20 @@ before increasing internal resolution. Test load time as well as gameplay.
 
 ## Implementation checkpoint — automatic policy and protected diagnostics
 
-- FC27 is automatically assigned the observed best C *cache capacity*
-  (320/256/256 MiB for A64 cores 0–2) on this branch. No new player-facing
-  A/B/C/D setting is added. It is an interim title-specific capacity hint,
-  not the final demand-driven multi-segment allocator. **Safe Launch** keeps
-  the qualified baseline (256/192/192 MiB). Until an app is compiled and
-  installed, the player's existing PS5 build is unchanged.
+- **Every PS5 game now uses the same JIT launch policy, not an FC27
+  whitelist.** Before initializing a guest, the kernel's largest available
+  contiguous direct-memory block is sampled once. A64 guest caches choose
+  **Expanded/C** (320/256/256 MiB) when that block can hold the 832 MiB
+  cache *plus* 3 GiB conservative headroom, **Balanced/B** (256/224/224 MiB)
+  when it can hold 704 MiB plus 2 GiB headroom, or the safe **baseline/A**
+  (256/192/192 MiB) otherwise. Unknown memory availability and **Safe Launch**
+  always select A. This launch decision is in the **normal release path**;
+  previously it was accidentally inside the profiling-only compile guard.
+  A32 retains its independent cache sizing because FC27's A64 measurements
+  do not establish an A32 speedup. These are **memory-admission floors, not
+  maximum JIT limits**. The fixed-at-creation direct-memory allocations
+  still waste unused RAM until the sparse/multi-segment allocator is safe.
+  No new player-facing performance toggle was added.
 - Reading `experiments.json` for A/B/C/D is now restricted to developer
   profiling builds via `EDEN_DEV_PROFILE`. Ordinary app builds ignore the
   now-completed tuning file. The incomplete sparse JIT path additionally
