@@ -146,9 +146,20 @@ bool AtomicWriteText(const std::string& path, const std::string& body) {
 }
 
 bool WriteJpegTga(const std::string& encoded, const std::string& output) {
+    // Read JPEG dimensions BEFORE allocation. Nlib artwork is fetched in
+    // parallel, so malformed/oversized JPEGs must not cause a multi-image
+    // transient allocation spike on a memory-constrained console.
+    if (encoded.empty() || encoded.size() > (16u << 20)) return false;
     int width = 0;
     int height = 0;
     int channels = 0;
+    if (!stbi_info_from_memory(
+            reinterpret_cast<const unsigned char*>(encoded.data()),
+            static_cast<int>(encoded.size()), &width, &height, &channels) ||
+        width <= 0 || height <= 0 || width > 4096 || height > 2160 ||
+        static_cast<std::uint64_t>(width) * static_cast<std::uint64_t>(height) > 3840u * 2160u)
+        return false;
+
     unsigned char* rgba = stbi_load_from_memory(
         reinterpret_cast<const unsigned char*>(encoded.data()), static_cast<int>(encoded.size()),
         &width, &height, &channels, 4);
