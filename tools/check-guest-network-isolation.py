@@ -25,9 +25,9 @@ assert 'const std::size_t timeout_seconds = url == "https://api.nlib.cc" ? 3 : 5
 assert "std::unordered_map<std::string, std::chrono::steady_clock::time_point> next_retry;" in services
 assert "std::lock_guard lock(retry_guard);" in services
 assert "std::chrono::hours(6)" in services
-assert 'NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice,' in services
-assert 'const int wanted_screens = home_priority ?' in services
-assert 'result.hero.empty() ? std::clamp(screen_count, 0, 1)' in services
+assert 'NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)' in services
+assert 'const int wanted_screens = std::clamp(screen_count, 0, 3);' in services
+assert 'std::vector<std::future<bool>> downloads;' in services
 assert 'std::filesystem::last_write_time(' not in services
 assert "std::filesystem::last_write_time(retry_marker" not in services
 
@@ -35,5 +35,6 @@ assert "std::filesystem::last_write_time(retry_marker" not in services
 widgets = (root / "headless/prosperoeden/pe/ui/widgets.cpp").read_text()
 textures = (root / "headless/prosperoeden/pe/ui/textures.cpp").read_text()
 assert "if (image.missing && c.textures.brand() != 0)" not in widgets
-assert "it->second.age >= 3.0f" in textures
+assert 'it->second.age >= retry_after' in textures
+assert 'retry_after = it->second.failed_loads <= 1 ? 0.45f' in textures
 print("Guest sockets/DNS/NIFM offline, independent launcher HTTPS and media fallback: PASS")
