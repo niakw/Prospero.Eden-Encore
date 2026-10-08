@@ -113,6 +113,26 @@ int main(int argc, char** argv) {
     assert(select(data, "v1.2.0", Style::PlayStation) == State::EvidenceMismatch);
     put(pack / "romfs" / "ui" / "controller.bntx", "restored synthetic PS atlas");
     assert(select(data, "v1.2.0", Style::PlayStation) == State::Enabled);
+    auto mismatched_evidence = evidence;
+    const std::string known_version = "\"update_version\":\"v1.2.0\"";
+    auto version_at = mismatched_evidence.find(known_version);
+    assert(version_at != std::string::npos);
+    mismatched_evidence.replace(version_at, known_version.size(),
+                                "\"update_version\":\"v1.3.0\"");
+    put(pack / "eden-glyph-pack.json", mismatched_evidence);
+    assert(select(data, "v1.2.0", Style::PlayStation) == State::EvidenceMismatch);
+    put(pack / "eden-glyph-pack.json", evidence);
+    // Even if a graphics file exists, a parent-directory symlink must
+    // never turn a title's RomFS replacement into an arbitrary host path.
+    fs::remove(pack / "romfs" / "ui" / "controller.bntx");
+    fs::remove(pack / "romfs" / "ui");
+    const fs::path external = base / "external-not-mod";
+    put(external / "controller.bntx", "unsafe external graphic file");
+    fs::create_directory_symlink(external, pack / "romfs" / "ui");
+    assert(select(data, "v1.2.0", Style::PlayStation) == State::EvidenceMismatch);
+    fs::remove(pack / "romfs" / "ui");
+    put(pack / "romfs" / "ui" / "controller.bntx", "restored synthetic PS atlas");
+    assert(select(data, "v1.2.0", Style::PlayStation) == State::Enabled);
 
     // Stored artist preference never silently modifies effective button mapping.
     assert(Eden::LoadInGamePlayStationGlyphs(GAME, preferences.string()));
