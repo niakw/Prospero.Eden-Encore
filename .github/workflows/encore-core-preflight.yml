@@ -40,6 +40,7 @@ jobs:
           python3 -B tools/check-ps5-architecture.py
           python3 -B tools/sync-glyph-overrides.py --manifest data/glyph-overrides.json --check
           python3 -B tools/check-glyph-overrides-runtime.py
+          python3 -B tools/check-addon-snapshot-host.py
           python3 -B tools/check-ps-glyph-packs.py
           python3 -B tools/check-controller-semantic-mapping.py
           python3 -B tools/check-jit-memory-policy.py
