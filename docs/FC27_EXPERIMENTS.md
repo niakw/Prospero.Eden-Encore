@@ -48,17 +48,16 @@ standalone validation, and PS5 hardware A/B before promoting any setting.
 
 ## End of A/B/C/D campaign
 
-FC27 provided the **A64 evidence**, but the branch no longer contains an
-FC27-specific performance exception. Every PS5 game's A64 JIT follows the
-same launch-time memory-admission policy: C/Expanded when enough contiguous
-direct-memory headroom exists, B/Balanced with intermediate headroom, and
-A/baseline when availability is low or cannot be queried. **Safe Launch
-always uses A.** A32 guest caches retain their separate sizing until their
-behaviour has been validated. The old `experiments.json` controls are
-developer-build only. The policy is automatically selected in **normal build
-code**, requires no player toggle and does not yet support online JIT growth.
-Only FC27 has user-supplied comparative evidence for the C capacity;
-other games have not been benchmarked with it. The installed app is unchanged.
+FC27 supplied the **A64 performance evidence** that a larger code cache
+can reduce eviction, but there is no FC27-specific exception or A/B/C fixed
+ceiling in the current development branch. All PS5 titles, both A64 and A32,
+now receive a continuous launch-time memory-derived code cache budget. Safe
+Launch and unavailable memory measurements use the respective proven
+baselines. The historical A/B/C/D tests remain documented here only;
+`experiments.json` can still control developer-only CPU/frame/sparse tracing
+but does **not** override the code cache capacity. This does not yet provide
+mid-game growth, or prove all games benefit from larger dense allocations.
+The installed PS5 app remains unchanged.
 
 ## Sparse JIT memory (development branch only — not built or PS5-qualified)
 
