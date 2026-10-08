@@ -27,4 +27,28 @@ assert "text_block(c, title_label" in home
 assert "text_block(c, hero_caption" in home
 assert "label_area.w - 4.0f, Align::center" in home
 assert 'TR("Recent")' in nav
+# Regression from FC27 hardware tests: use the matching game's proper Nlib
+# description before a short marketing intro after returning to the Hero.
+# Genuinely missing-ROM/language warnings remain higher priority.
+hero_types = src("headless/prosperoeden/pe/ui/services.hpp")
+assert "std::string last_description;" in hero_types
+assert "std::string description; // detailed, title-keyed Nlib text for the Hero" in hero_types
+assert "home.last_description = nlib.description;" in svc
+assert "recent.description = nlib.description;" in svc
+assert "home_.last_description = enriched.description;" in lib
+assert "recent.description = enriched.description;" in lib
+assert "home_.last_description = game.description;" in lib
+assert "const std::string &hero_description =" in home
+assert "!hero_description.empty() ? hero_description :" in home
+assert "hero_caption_warning ? home_.last_caption :" in home
+# Never decompress or resize Nlib artwork inside the frame update.
+texture_h = src("headless/prosperoeden/pe/ui/textures.hpp")
+texture_cpp = src("headless/prosperoeden/pe/ui/textures.cpp")
+assert "std::future<DecodedCover> decode_;" in texture_h
+assert "decoded.ok = services_.load_image(path, &decoded.image);" in texture_cpp
+assert "decode_ = std::async(std::launch::async" in texture_cpp
+assert "it->second.generation == result.generation" in texture_cpp
+assert "entry.texture = create(result.image);" in texture_cpp
+assert "decode_.wait_for(std::chrono::seconds(0))" in texture_cpp
+
 print("Nlib and four PS5 capture regressions: SOURCE CONTRACT PASS")
