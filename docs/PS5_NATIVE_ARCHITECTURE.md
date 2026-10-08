@@ -297,6 +297,35 @@ physical-accounting returns to zero after every tested allocation/free.
   and the A64/A32 fallback C++ host mock. **Neither a PS5 build nor
   firmware-13.60 hardware tests have been run for these changes.**
 
+## Verified source-level defects corrected — global PS5 port
+
+- **Native dense JIT W^X failure:** the previous allocator could publish a
+  writable RW/NX address after the executable RX alias failed. The corrected
+  code frees the direct allocation, decrements physical-memory ownership and
+  returns null, allowing the existing bounded Xbyak startup retry. The native
+  fault-injection test now rejects all such unsafe fallback paths.
+- **Dynarmic generated translation-unit macro:** the parent CMake
+  `PS5_NATIVE` variable was not necessarily a preprocessor definition for
+  Dynarmic; `eden-headless` and `common` had explicit definitions, while
+  the derived `BlockOfCode::EnsureMemoryCommitted` checked `#ifdef
+  PS5_NATIVE`. The generated JIT source now receives `PS5_NATIVE=1`
+  locally via its own CMake source properties, without redefining it on
+  all vendored Dynarmic objects. Vulkan already defines it on `video_core`.
+- **Vulkan driver binary cache serialization:** the pinned vendor overwrote
+  `vulkan_pipelines.bin` directly, losing the previous good blob if the
+  foreground process stopped mid-save. The native derivative writes a
+  `.new` file, flushes/closes it, renames in the same directory, and
+  serializes concurrent writers with a mutex. Failed saves leave the
+  previous cache intact. This is process-interruption protection, **not
+  guaranteed durability across sudden power loss**.
+- Added an exact generated-function host gate
+  `tools/check-vulkan-cache-atomic.py` to the source and native release
+  preflight lists. Separately, host C++20 counterparts of the startup
+  allocation fallback and transactional Vulkan write compiled and passed
+  on Linux during this development pass. These do not establish native
+  PS5 executable permissions, filesystem rename behavior, or FPS gains.
+- No changes to the approved launcher or per-game A/B/C/D controls.
+
 ## Immediate implementation gates
 
 1. Audit physical memory ownership and executable page-map APIs; do not
