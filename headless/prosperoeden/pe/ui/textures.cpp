@@ -82,10 +82,13 @@ Cover Textures::cover(const std::string &path, float size)
         queue_.push_back(key);
     }
     it->second.used = frame_;
-    // Nlib downloads arrive asynchronously. Retry only a previously missing
-    // texture after three seconds while its card remains visible, so a race
-    // against the final file rename cannot persist until an app restart.
-    if (it->second.loaded && it->second.texture == 0 && it->second.age >= 3.0f) {
+    // Nlib downloads arrive by atomic rename. Poll a missing *visible* cover
+    // once after 450 ms (instead of freezing its placeholder for three seconds),
+    // then back off to 1.5 / 3 s if it is truly absent. No per-frame stat().
+    const float retry_after = it->second.failed_loads <= 1 ? 0.45f :
+                              it->second.failed_loads == 2 ? 1.5f : 3.0f;
+    if (it->second.loaded && it->second.texture == 0 &&
+        it->second.age >= retry_after) {
         it->second.loaded = false;
         it->second.age = 0.0f;
         queue_.push_back(key);
@@ -109,15 +112,22 @@ void Textures::pump(float dt, int budget)
             continue;
         Entry &entry = it->second;
         entry.loaded = true;
+        // Count every attempted disk read against the frame budget, including
+        // missing files. Previously failures did not consume budget; with a
+        // large library this could probe hundreds of absent Nlib files in ONE
+        // UI frame and produce a visible stall.
+        --budget;
         gfx::Image image;
-        if (!services_.load_image(entry.path, &image))
-            continue; // stays without a texture: the placeholder is drawn
+        if (!services_.load_image(entry.path, &image)) {
+            entry.failed_loads = std::min(entry.failed_loads + 1u, 4u);
+            continue; // neutral placeholder; visible tiles retry with backoff
+        }
+        entry.failed_loads = 0;
         for (int level = 0; level < entry.level && image.width > 64; ++level)
             image = gfx::halve(image);
         if (image.height > 0)
             entry.aspect = static_cast<float>(image.width) / static_cast<float>(image.height);
         entry.texture = create(image);
-        --budget;
     }
     if (covers_.size() > kMaxCovers)
     {
