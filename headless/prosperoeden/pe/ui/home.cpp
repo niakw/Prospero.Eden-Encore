@@ -525,6 +525,8 @@ void Launcher::draw_home(Canvas &c)
     const std::string &hero_addons = hero_recent != nullptr ? hero_recent->addons : home_.last_addons;
     const std::string &hero_language = hero_recent != nullptr ? hero_recent->language : home_.last_language;
     const std::string &hero_intro = hero_recent != nullptr ? hero_recent->intro : home_.last_intro;
+    const std::string &hero_description =
+        hero_recent != nullptr ? hero_recent->description : home_.last_description;
     const std::uint64_t hero_title_id = hero_recent != nullptr ? hero_recent->title_id : home_.last_title_id;
     int hero_max_players = hero_recent != nullptr ? hero_recent->max_players : home_.last_max_players;
     const bool hero_ready = ready && !hero_file.empty();
@@ -612,11 +614,17 @@ void Launcher::draw_home(Canvas &c)
     else
         text_shrink(c, title_label, 90.0f, baseline(175.0f, 96.0f, 76.0f),
                     76.0f, theme::kTitle, 1030.0f, Align::left, 0.0f, 0.70f);
+    const bool hero_caption_warning = hero_recent == nullptr && home_.last_caption_warning;
+    // A game-return screen must not silently swap a full Nlib description
+    // for a short English marketing slogan ("The world's game...") merely
+    // because `intro` exists. Prefer the actual localized title description,
+    // but always show a genuine missing-language/ROM warning first.
     const std::string hero_caption =
         hero_file.empty() ? std::string{tr("Choose a game from your library.")} :
+        hero_caption_warning ? home_.last_caption :
+        !hero_description.empty() ? hero_description :
         !hero_intro.empty() ? hero_intro :
         hero_recent != nullptr ? std::string{tr("Recently played")} : home_.last_caption;
-    const bool hero_caption_warning = hero_recent == nullptr && home_.last_caption_warning;
     if (hero_caption_warning)
         notice_block(c, hero_caption, 90.0f, baseline(280.0f, 27.0f, 21.0f),
                      21.0f, 25.0f, theme::kWarning, 1030.0f, 2, true);
