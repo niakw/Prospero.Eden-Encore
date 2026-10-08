@@ -16,9 +16,6 @@ inline std::uint32_t A64CacheBytes(std::size_t core, std::uint32_t baseline) noe
     constexpr std::uint32_t mib = 1024u * 1024u;
     if (tier == 1 && core != 0) return 224u * mib;
     if (tier == 2) return (core == 0 ? 320u : 256u) * mib;
-    // 4 GiB total VA ceiling across the three guest cores. Requires sparse JIT.
-    // 1536 / 1280 / 1280 MiB; each single region stays below x64 rel32 reach.
-    if (tier == 3) return (core == 0 ? 1536u : 1280u) * mib;
     return baseline;
 }
 } // namespace Eden::Experimental
