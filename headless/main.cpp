@@ -1965,6 +1965,9 @@ int main(int argc, char** argv) {
             LOG_INFO(Frontend, "EDEN_DEVICE_FRONTEND_PASS");
         }
 #ifdef PS5_NATIVE
+        // Undo any per-title logical-CPU trial before the next launcher/game.
+        // Guest workers have stopped above; restore the original allowed mask.
+        Eden::Performance::SetSecondaryPlacement(false);
         if (return_to_menu) continue;
 #endif
         passed("HEADLESS_COMPLETE");
@@ -1976,6 +1979,8 @@ int main(int argc, char** argv) {
         return 0;
 #ifdef PS5_NATIVE
         } catch (const std::exception& error) {
+            // An experimental run can fail before normal game teardown.
+            Eden::Performance::SetSecondaryPlacement(false);
             launch_error = error.what();
             Eden::Report("session failed", error.what());
             std::fflush(stderr);
