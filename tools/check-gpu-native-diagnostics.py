@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Check Maxwell PRMT Index translation (immediate and register selector) and Fermi2D z0.
+"""Check Maxwell PRMT Index and bounded Fermi2D software slice support.
 
-Other PRMT addressing/modes and nonzero Fermi2D layers remain unsupported.
+Other PRMT modes and unsupported block-linear layers remain unimplemented.
 This is a source contract, not a native graphics correctness test.
 """
 import re
@@ -22,6 +22,8 @@ prmt_reg_old = extract("prmt_reg_old")
 prmt_reg_new = extract("prmt_reg_new")
 fermi_old = extract("fermi_old")
 fermi_new = extract("fermi_new")
+fermi_layer_old = extract("fermi_layer_old")
+fermi_layer_new = extract("fermi_layer_new")
 fermi_copy_old = extract("fermi_copy_old")
 fermi_copy_new = extract("fermi_copy_new")
 assert prmt_old.count("ThrowNotImplemented(Opcode::PRMT_imm);") == 1
@@ -102,13 +104,35 @@ assert "base_layer_3d_copy = regs.src.depth > 1" in fermi_new
 assert "regs.src.layer == 0 && regs.dst.layer == 0" in fermi_new
 assert "regs.operation == Operation::SrcCopy" in fermi_new
 assert "regs.clip_enable == 0" in fermi_new
-assert "regs.src.depth != 1 && !base_layer_3d_copy" in fermi_new
+assert "regs.src.depth != 1 && !base_layer_3d_copy && !pitch_layer_copy" in fermi_new
 assert "if (!rasterizer->AccelerateSurfaceCopy(src, regs.dst, config))" in fermi_copy_old
-assert "if (base_layer_3d_copy)" in fermi_copy_new
+assert "if (base_layer_3d_copy || pitch_layer_copy)" in fermi_copy_new
+# Nonzero layers are only copied using simple pitch-linear planes.
+# The layer stride is pitch*height; 3D swizzled z>0 remains unsupported.
+assert "regs.src.layer != 0" in fermi_layer_old
+assert "regs.dst.layer != 0" in fermi_layer_old
+assert "const bool pitch_layer_copy =" in fermi_layer_new
+assert "regs.src.linear == MemoryLayout::Pitch" in fermi_layer_new
+assert "regs.dst.linear == MemoryLayout::Pitch" in fermi_layer_new
+assert "regs.src.layer < regs.src.depth && regs.dst.layer < regs.dst.depth" in fermi_layer_new
+assert "regs.src.format == regs.dst.format" in fermi_layer_new
+assert "BytesPerBlock(PixelFormatFromRenderTargetFormat(regs.src.format))" in fermi_layer_new
+assert "BytesPerBlock(PixelFormatFromRenderTargetFormat(regs.dst.format))" in fermi_layer_new
+assert "regs.src.layer != 0 && !pitch_layer_copy" in fermi_layer_new
+assert "regs.dst.layer != 0 && !pitch_layer_copy" in fermi_layer_new
+assert "const u64 plane_bytes = static_cast<u64>(surface.pitch) * surface.height;" in fermi_copy_new
+assert "const u64 offset = plane_bytes * surface.layer;" in fermi_copy_new
+assert "offset / surface.layer != plane_bytes" in fermi_copy_new
+assert "offset > last - surface.Address()" in fermi_copy_new
+assert "surface.layer = 0;" in fermi_copy_new
+assert "if (!select_pitch_layer(src) || !select_pitch_layer(dst))" in fermi_copy_new
+assert "EDEN_GPU_FERMI2D_PITCH_LAYER_INVALID" in fermi_copy_new
+assert "return;" in fermi_copy_new
+assert 'message(FATAL_ERROR "Pinned Fermi2D source/destination layer exception anchors changed")' in cmake
 assert "src.depth = 1;" in fermi_copy_new
 assert "Surface dst = regs.dst;" in fermi_copy_new
 assert "dst.depth = 1;" in fermi_copy_new
-assert "EDEN_GPU_FERMI2D_Z0_SOFTWARE" in fermi_copy_new
+assert "EDEN_GPU_FERMI2D_SOFTWARE" in fermi_copy_new
 assert "sw_blitter->Blit(src, dst, config);" in fermi_copy_new
 assert "else if (!rasterizer->AccelerateSurfaceCopy(src, regs.dst, config))" in fermi_copy_new
 assert "regs.src.depth = 1;" not in fermi_copy_new
@@ -118,5 +142,5 @@ assert "sw_source_depth_at LESS 0 OR sw_dest_depth_at LESS 0 OR sw_z0_at LESS 0"
 assert "file(READ" in cmake and cmake.count("write_derived(") == 2
 assert 'target_sources(shader_recompiler PRIVATE' in cmake
 assert 'target_sources(video_core PRIVATE' in cmake
-print("GPU SOURCE CONTRACT: PRMT immediate and register Index modes implemented, others throw; Fermi2D z=0 software only")
+print("GPU SOURCE CONTRACT: PRMT immediate/register Index implemented, Fermi2D z=0 plus pitch-linear layers; unsupported cases preserved")
 print("NOTE graphics correctness and PS5 native CMake build remain to be qualified")
