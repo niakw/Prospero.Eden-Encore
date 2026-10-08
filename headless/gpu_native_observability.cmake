@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Native-only pinned Eden shader/GPU compatibility/diagnostics. Maxwell PRMT
-# unsupported Fermi2D layers must remain explicit; the existing software
-# swizzler handles only the z=0 base layer for depth>1 surfaces. Capture
-# eight examples before handling any other layer or Maxwell PRMT instruction.
+# Native-only pinned Eden shader/GPU compatibility. Maxwell PRMT immediate
+# Index mode (0) translates the NVIDIA byte selector; other modes still throw.
+# The Fermi2D software swizzler handles only z=0 on depth>1 surfaces; other
+# layers retain their original unsupported soft-assert semantics.
+# Successful and unsupported cases produce bounded diagnostics.
 if(NOT PS5_NATIVE)
     return()
 endif()
