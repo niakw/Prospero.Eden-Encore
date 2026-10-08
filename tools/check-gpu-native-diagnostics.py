@@ -20,6 +20,7 @@ prmt_old = extract("prmt_old")
 prmt_new = extract("prmt_new")
 prmt_reg_old = extract("prmt_reg_old")
 prmt_reg_new = extract("prmt_reg_new")
+prmt_reference = extract("prmt_reference")
 fermi_old = extract("fermi_old")
 fermi_new = extract("fermi_new")
 fermi_layer_old = extract("fermi_layer_old")
@@ -62,6 +63,9 @@ assert prmt_index(0x11223344, 0x55667788, 0x7654) == 0x55667788
 assert prmt_index(0x80abcdef, 0, 0xbbbb) == 0xffffffff
 assert prmt_index(0x11223344, 0x55667788, 0xffff) == 0
 assert prmt_index(0xff000000, 0, 0x000b) == 0xff
+assert "constexpr unsigned EdenPrmtIndexReference(" in prmt_reference
+assert prmt_reference.count("static_assert(EdenPrmtIndexReference(") >= 4
+assert "${prmt_reference}\\n${prmt_source}" in cmake
 # A register selector uses identical nibble semantics, but is evaluated
 # dynamically in the shader IR rather than once at translation time.
 assert prmt_reg_old.count("ThrowNotImplemented(Opcode::PRMT_reg);") == 1
