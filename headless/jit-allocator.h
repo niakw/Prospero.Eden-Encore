@@ -52,18 +52,29 @@ inline Xbyak::Allocator* EdenJitAllocator() {
             // Optional per-title path: stable RX/RW virtual ranges, commit only
             // the pages requested by BlockOfCode::EnsureMemoryCommitted.
             if (Eden::Experimental::sparse_jit_cache.load(std::memory_order_relaxed)) {
-                executable = Common::ReserveSparseJitCode(size, &writable);
+                // Xbyak may request an arena ending between two 2 MiB direct
+                // memory chunks. Reserve whole *virtual* chunks while keeping
+                // physical commits demand-backed; otherwise a valid uneven
+                // request fails ReserveSparseJitCode's alignment contract.
+                constexpr std::size_t kSparseChunk = 2u * 1024u * 1024u;
+                if (size > std::numeric_limits<std::size_t>::max() - (kSparseChunk - 1))
+                    return nullptr;
+                const std::size_t sparse_span =
+                    (size + kSparseChunk - 1) & ~(kSparseChunk - 1);
+                executable = Common::ReserveSparseJitCode(sparse_span, &writable);
                 if (executable) {
                     auto* pointer = static_cast<std::uint8_t*>(executable);
                     try {
                         std::lock_guard lock(mutex);
-                        mappings.emplace(pointer, Mapping{writable, span, true});
+                        if (!mappings.emplace(pointer,
+                                              Mapping{writable, sparse_span, true}).second)
+                            std::abort(); // A live executable VA must be unique
                     } catch (...) {
                         Common::ReleaseSparseJitCode(executable);
                         return nullptr;
                     }
                     std::fprintf(diagnostics, "EDEN_JIT_ALIAS rx=%p rw=%p bytes=%zu active=1 sparse=1\n",
-                                 executable, writable, span);
+                                 executable, writable, sparse_span);
                     return pointer;
                 }
                 // Demand-backed JIT must NOT silently switch to a full
@@ -74,7 +85,7 @@ inline Xbyak::Allocator* EdenJitAllocator() {
                 // baseline fails, surface startup failure instead of
                 // violating the explicitly selected sparse contract.
                 std::fprintf(diagnostics, "EDEN_JIT_SPARSE_RESERVE_FAILED bytes=%zu errno=%d fallback=smaller_virtual_arena\n",
-                             span, errno);
+                             sparse_span, errno);
                 return nullptr;
             }
             writable = Common::AllocateMemoryPages(size);
