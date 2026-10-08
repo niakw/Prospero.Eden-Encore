@@ -739,12 +739,16 @@ int main(int argc, char** argv) {
         const std::uint64_t launch_title_id = eden_game_title_id(selected_game.c_str());
         const auto game_video = Eden::LoadGameSettings(launch_title_id);
         const auto launch_preferences = Eden::LoadPreferences();
-        // Per-title opt-in; no experimental setting is enabled automatically.
-        unsigned experimental_jit_cache = 0;
+        // PS5 gameplay baseline: FC27 C beat A/B/D over the supplied sessions.
+        // Shipping selects that qualified *capacity* automatically for this title;
+        // Safe Launch reverts to the proven ordinary JIT sizes. This is NOT a
+        // claim that the title is stutter-free or that a fixed cache is ideal.
+        const bool auto_fc27_jit = !safe_launch && launch_title_id == 0x0100C49025D3E000ull;
+        unsigned experimental_jit_cache = auto_fc27_jit ? 2u : 0u;
         bool experimental_sparse_jit = false;
         bool experimental_logical_cpu = false;
         bool experimental_frame_probe = false;
-#ifdef PS5_NATIVE
+#if defined(PS5_NATIVE) && defined(EDEN_DEV_PROFILE)
         if (!safe_launch && launch_title_id) {
             std::string source;
             if (Eden::Settings::ReadFile(Eden::ConfigFile("experiments.json"), source)) {
@@ -771,10 +775,10 @@ int main(int argc, char** argv) {
         Eden::Experimental::jit_cache_tier.store(experimental_jit_cache, std::memory_order_relaxed);
         Eden::Experimental::sparse_jit_cache.store(experimental_sparse_jit, std::memory_order_relaxed);
         Eden::Experimental::vulkan_frame_probe.store(experimental_frame_probe, std::memory_order_relaxed);
-        std::printf("EDEN_EXPERIMENT_CONFIG title=%016llX jit=%u cpu_logical=%u vulkan_trace=%u safe=%u jit_sparse=%u\n",
+        std::printf("EDEN_EXPERIMENT_CONFIG title=%016llX jit=%u cpu_logical=%u vulkan_trace=%u safe=%u jit_sparse=%u policy=%s\n",
             static_cast<unsigned long long>(launch_title_id), experimental_jit_cache,
             unsigned(experimental_logical_cpu), unsigned(experimental_frame_probe), unsigned(safe_launch),
-            unsigned(experimental_sparse_jit));
+            unsigned(experimental_sparse_jit), auto_fc27_jit ? "fc27-validated-c" : "default");
 #endif
         const int global_authored_tier =
             launch_preferences.performance_profile >= 0 &&
