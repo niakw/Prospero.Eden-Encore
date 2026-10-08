@@ -18,7 +18,9 @@ pad_runtime = (ROOT / "headless/pad.cpp").read_text()
 assert "pad->SetAdaptivePlayStation(effective_layout == 0 && !custom_mapping);" in launch
 assert "pad->SetAdaptivePlayStation(false);" not in launch
 assert '(effective_layout == 1 ? "Switch" : "PlayStation Auto")' in launch
-assert "adaptive_playstation && mapping_context == MappingContext::gameplay ? kSwitchMapping : mapping" in pad_runtime
+assert "adaptive_playstation && mapping_context.gameplay() ? kSwitchMapping : mapping" in pad_runtime
+assert "mapping_context.observe(" in pad_runtime
+assert "menu_evidence" not in pad_runtime
 CXX = next((x for x in ("clang++-18", "clang++", "g++") if shutil.which(x)), None)
 if not CXX:
     raise SystemExit("C++20 compiler is required for button mapping regression")
