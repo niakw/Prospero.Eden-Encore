@@ -48,13 +48,17 @@ standalone validation, and PS5 hardware A/B before promoting any setting.
 
 ## End of A/B/C/D campaign
 
-The PS5-native branch now automatically selects FC27's observed best C cache
-capacity when launching normally. Safe Launch retains A. The old
-`experiments.json` trial controls are **developer-build only**, so no new
-manual performance profile is required on a future qualified release.
-This does not eliminate all slow frames or replace the planned demand-driven
-multi-segment JIT. Do not confuse these source changes with an installed
-console update.
+FC27 provided the **A64 evidence**, but the branch no longer contains an
+FC27-specific performance exception. Every PS5 game's A64 JIT follows the
+same launch-time memory-admission policy: C/Expanded when enough contiguous
+direct-memory headroom exists, B/Balanced with intermediate headroom, and
+A/baseline when availability is low or cannot be queried. **Safe Launch
+always uses A.** A32 guest caches retain their separate sizing until their
+behaviour has been validated. The old `experiments.json` controls are
+developer-build only. The policy is automatically selected in **normal build
+code**, requires no player toggle and does not yet support online JIT growth.
+Only FC27 has user-supplied comparative evidence for the C capacity;
+other games have not been benchmarked with it. The installed app is unchanged.
 
 ## Sparse JIT memory (development branch only — not built or PS5-qualified)
 
