@@ -356,8 +356,10 @@ void* ReserveSparseJitCode(std::size_t size, void** writable_out) noexcept {
     (void)sceKernelEnableDmemAliasing();
     // The 2 MiB constant pool writes during member construction, so simply
     // reserving zero-backed virtual addresses would immediately fault.
-    // If even the required first 4 MiB are unavailable, drop the reservation;
-    // EdenJitAllocator can transparently try the dense backend instead.
+    // If even the required first 4 MiB are unavailable, drop the reservation.
+    // In explicitly selected sparse mode the allocator MUST NOT silently
+    // fall back to a full physically committed dense JIT: its caller retries
+    // a smaller stable virtual arena, or fails startup without overcommitting.
     const std::size_t bootstrap = std::min<std::size_t>(size, 2 * LargePage);
     if (!CommitSparseJitCode(rx, bootstrap)) {
         ReleaseSparseJitCode(rx);
