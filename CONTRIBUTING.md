@@ -6,6 +6,16 @@ Encore is a focused PS5 homebrew fork of ProsperoEden 1.000.040 whose primary va
 **PS5 firmware 13.60**. Changes should preserve that focus unless a separate firmware has been
 validated on hardware.
 
+## Crediting upstream authors and maintainers
+
+Any added or updated external repository dependency or borrowed implementation must name
+its **author(s), named maintainer(s), or identifiable project team/account** in the
+`README.md` credits; copy the same attribution into `THIRD_PARTY_NOTICES.md` and
+preserve the actual original copyright/license headers and license texts. Never assign
+sole authorship to a repository owner when the code is community-authored.
+Run `python3 -B tools/check-credit-attribution.py` and the license preflight
+before submitting the change. The distributable PS5 legal bundle must retain this credit.
+
 ## Before opening an issue or pull request
 
 - Read the [README](README.md), [technical notes](docs/FORK_NOTES.md) and

@@ -80,6 +80,108 @@ void Launcher::finish_scan(bool wait)
     }
 }
 
+void Launcher::start_home_media()
+{
+    if (home_media_scan_.valid()) return;
+
+    const Recent* recent =
+        home_recent_ >= 0 && home_recent_ < static_cast<int>(home_.recents.size()) ?
+            &home_.recents[static_cast<std::size_t>(home_recent_)] : nullptr;
+    const std::uint64_t title_id = recent != nullptr ? recent->title_id : home_.last_title_id;
+    if (title_id == 0) return;
+    if (std::find(home_media_attempted_.begin(), home_media_attempted_.end(), title_id) !=
+        home_media_attempted_.end())
+        return;
+
+    const bool rich = recent != nullptr ?
+        ((!recent->hero.empty() || !recent->screenshot.empty()) &&
+         recent->max_players > 0 && !recent->intro.empty()) :
+        ((!home_.last_hero.empty() || !home_.last_screenshot.empty()) &&
+         home_.last_max_players > 0 && !home_.last_intro.empty());
+    if (rich) {
+        home_media_attempted_.push_back(title_id);
+        return;
+    }
+
+    Game request;
+    request.title_id = title_id;
+    if (recent != nullptr) {
+        request.file = recent->file;
+        request.name = recent->title;
+        request.cover = recent->cover;
+        request.hero = recent->hero;
+        if (!recent->screenshot.empty()) request.screenshots.push_back(recent->screenshot);
+        request.max_players = recent->max_players;
+        request.intro = recent->intro;
+    } else {
+        request.file = home_.last_file;
+        request.name = home_.last_title;
+        request.cover = home_.last_cover;
+        request.hero = home_.last_hero;
+        if (!home_.last_screenshot.empty()) request.screenshots.push_back(home_.last_screenshot);
+        request.max_players = home_.last_max_players;
+        request.intro = home_.last_intro;
+    }
+
+    home_media_attempted_.push_back(title_id);
+    home_media_scan_title_id_ = title_id;
+    home_media_scan_ = std::async(std::launch::async, [this, request = std::move(request)]() mutable {
+        return services_.enrich_game_media(std::move(request));
+    });
+}
+
+void Launcher::finish_home_media()
+{
+    if (!home_media_scan_.valid() ||
+        home_media_scan_.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+        return;
+
+    try {
+        Game enriched = home_media_scan_.get();
+        if (enriched.title_id == home_.last_title_id) {
+            if (!enriched.cover.empty()) home_.last_cover = enriched.cover;
+            if (!enriched.hero.empty()) home_.last_hero = enriched.hero;
+            if (!enriched.screenshots.empty()) home_.last_screenshot = enriched.screenshots.front();
+            if (enriched.max_players > 0) home_.last_max_players = enriched.max_players;
+            if (!enriched.name.empty()) home_.last_title = enriched.name;
+            if (!enriched.intro.empty()) home_.last_intro = enriched.intro;
+        }
+        for (Recent& recent : home_.recents) {
+            if (recent.title_id != enriched.title_id) continue;
+            if (!enriched.cover.empty()) recent.cover = enriched.cover;
+            if (!enriched.hero.empty()) recent.hero = enriched.hero;
+            if (!enriched.screenshots.empty()) recent.screenshot = enriched.screenshots.front();
+            if (enriched.max_players > 0) recent.max_players = enriched.max_players;
+            if (!enriched.name.empty()) recent.title = enriched.name;
+            if (!enriched.intro.empty()) recent.intro = enriched.intro;
+        }
+        // If the library scan completed while the Home request was in flight, keep both views
+        // on the same cache result without another network request.
+        for (Game& game : games_) {
+            if (game.title_id != enriched.title_id) continue;
+            if (!enriched.cover.empty()) game.cover = enriched.cover;
+            if (!enriched.hero.empty()) game.hero = enriched.hero;
+            if (!enriched.screenshots.empty()) game.screenshots = enriched.screenshots;
+            if (enriched.max_players > 0) game.max_players = enriched.max_players;
+            if (!enriched.name.empty()) game.name = enriched.name;
+            if (!enriched.intro.empty()) game.intro = enriched.intro;
+            if (!enriched.description.empty()) game.description = enriched.description;
+            if (!enriched.publisher.empty()) game.publisher = enriched.publisher;
+            if (!enriched.developer.empty()) game.developer = enriched.developer;
+            if (!enriched.release_date.empty()) game.release_date = enriched.release_date;
+            if (!enriched.categories.empty()) game.categories = enriched.categories;
+            break;
+        }
+    }
+    catch (const std::exception& error)
+    {
+        sys::log("Nlib home media: %s", error.what());
+    }
+    home_media_scan_title_id_ = 0;
+    // If the user selected another Recent card while this request ran, start that title now.
+    start_home_media();
+}
+
 void Launcher::start_selected_media()
 {
     if (media_scan_.valid() || games_.empty()) return;

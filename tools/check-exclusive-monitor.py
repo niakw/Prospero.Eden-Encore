@@ -3,6 +3,7 @@
 from pathlib import Path
 import platform
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -79,11 +80,23 @@ with tempfile.TemporaryDirectory(prefix='eden-monitor-') as tmp:
     subprocess.run([*compile_command, *includes, str(cpp), '-o', str(binary)], check=True)
     subprocess.run([str(binary)], check=True, timeout=20)
 native = cache / 'native-local/bin/eden-headless'
-symbols = subprocess.check_output(['llvm-nm-18', '--defined-only', str(native)], text=True)
+llvm18 = Path('/opt/homebrew/opt/llvm@18/bin')
+def llvm_tool(name):
+    found = shutil.which(name + '-18') or shutil.which(name)
+    if found:
+        return found
+    candidate = llvm18 / name
+    assert candidate.is_file(), f'missing LLVM tool: {name}'
+    return str(candidate)
+
+llvm_nm = llvm_tool('llvm-nm')
+llvm_objdump = llvm_tool('llvm-objdump')
+llvm_readobj = llvm_tool('llvm-readobj')
+symbols = subprocess.check_output([llvm_nm, '--defined-only', str(native)], text=True)
 outlined = '_ZN8Dynarmic8SpinLock4LockEv' in symbols
 names = ('_ZN8Dynarmic8SpinLock4LockEv,_ZN8Dynarmic8SpinLock6UnlockEv' if outlined
          else '_ZN8Dynarmic16ExclusiveMonitor14ClearProcessorEm')
-assembly = subprocess.check_output(['llvm-objdump-18',
+assembly = subprocess.check_output([llvm_objdump,
     '--disassemble-symbols=' + names,
     str(native)], text=True)
 for name in names.split(','):
@@ -99,7 +112,7 @@ if not direct_backoff:
     got_load = re.search(r'movq\s+[^#\n]+%r12\s+#\s+0x([0-9a-f]+)', assembly)
     assert got_load and any('callq\t*%r12' in line for line in calls), (
         'Native monitor backoff is neither a direct nor the expected GOT call: ' + repr(calls))
-    relocations = subprocess.check_output(['llvm-readobj-18', '--relocations', str(native)], text=True)
+    relocations = subprocess.check_output([llvm_readobj, '--relocations', str(native)], text=True)
     slot = '0X' + got_load.group(1).upper()
     assert any(slot in line.upper() and 'SCEKERNELUSLEEP' in line.upper()
                for line in relocations.splitlines()), (

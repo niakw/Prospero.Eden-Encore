@@ -28,6 +28,32 @@ Encore takes the opposite approach: keep the **known-working 1.000.040 filesyste
 
 The result is not a blind downgrade and not a blind merge of newer upstream code. It is a **13.60-specific maintained branch** with its own hardening and release validation.
 
+## Local integration audit — 8 October 2026 (not released)
+
+The latest downloadable build and the current **local audit candidate** are different states.
+The local candidate is on `local/no-build-polish` (base `149df7a`), has **not** been built or booted
+on PS5 and is **not** available in the current downloadable package. Its changes include:
+
+- A wider TV-first Home with Nlib artwork requests decoupled from library enumeration, four utility
+  tiles, and a selected-game Quick Settings overlay. Host static checks do not prove the final PS5 image.
+- Native IPv4 DNS and socket-flag compatibility for Nlib HTTPS, bundled CA verification retained,
+  and additional network ABI/sanitizer tests. Actual PS5 HTTPS and banner retrieval remain untested.
+- Bounded rotating logs (8 MiB first and recent segments per stream), improved failure handling,
+  and a protected release hot path; logs retain useful recent evidence without unbounded growth.
+- An additional package `icon0.dds` candidate for the PS5 system overlay. Its on-console effect
+  remains **unverified**.
+- Three optional **disabled-by-default** kernel/JIT/HLE experiments: dummy host-thread waits,
+  cross-core I-cache coherence and the ServiceManager/audio initialization backport. They are
+  deliberately excluded from the first baseline, pending independent PS5 A/B validation.
+
+**Performance workstream:** see [CPU/HLE stability and 30→60 FPS research](docs/PERFORMANCE_ROADMAP.md). The candidate has an offline analysis tool for identifying repeated guest-PC samples and presentation gaps. **No FPS increase or interpolation feature is shipped yet.**
+
+**Known unresolved problem:** FC27 can keep presenting at about 30 FPS while its guest/gameplay
+stalls. A smooth-looking FPS counter does not prove guest progress; the cause is not yet established.
+Frame generation to 60 FPS would be a separate display feature, **not** a freeze fix. A passing
+native build alone is not sufficient for release: actual boot, network, overlay, UI navigation and
+extended gameplay tests on firmware 13.60 remain mandatory.
+
 ## Changes in Encore R1
 
 Prospero.Eden Encore R1 turns the proven ProsperoEden 1.000.040 base into a PS5 13.60-focused release:
@@ -107,7 +133,7 @@ A title-specific override may adjust those values without changing the global ti
 ### 🧰 Better diagnostics and bounded storage
 
 - Filesystem-access status.
-- Free/total capacity of the **selected Encore storage filesystem** (internal root or configured external root).
+- In the **unreleased local candidate**, diagnostics shows the actual selected Encore storage **root path** rather than pretending that a restricted filesystem view represents the physical PS5 SSD capacity.
 - Shader/JIT cache size.
 - Log size.
 - Safe shader-cache cleanup.
@@ -251,47 +277,50 @@ FPKG/kstuff behavior is a separate jailbreak/runtime concern from the emulator i
 ## Credits
 
 Encore is built from and depends on the work of many upstream projects. The list below covers the
-**direct repositories and pinned build/runtime inputs used by Encore**; transitive dependencies of
+**direct repositories and pinned build/runtime inputs used by Encore**. Each entry identifies
+its upstream author, known contributor or project-maintainer account; a project account is not
+presented as the sole person who wrote its code. This list is not exhaustive; transitive dependencies of
 Eden and the individual licence details are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ### Emulator and launcher foundations
 
-- [ProsperoEden](https://github.com/blackbearreloaded/ProsperoEden) — original PS5 emulator port/fork Encore is based on.
-- [Eden](https://github.com/eden-emulator/mirror) — emulator core used by Encore.
-- [ProsperoPuzzles](https://github.com/blackbearreloaded/ProsperoPuzzles) — origin of the launcher drawing/text/animation/sound framework used by Encore.
+- [ProsperoEden](https://github.com/blackbearreloaded/ProsperoEden) — **Authors / maintainers: BlackBearReloaded (`@blackbearreloaded`)** — original PS5 emulator port/fork Encore is based on.
+- [Eden](https://github.com/eden-emulator/mirror) — **Authors / maintainers: Eden Emulator Project team (`@eden-emulator`) and contributors** — emulator core used by Encore.
+- [Citron Neo emulator](https://github.com/citron-neo/emulator) — **Authors / maintainers: Citron Neo team (`@citron-neo`); SM/audio fixes by `@HopeSuffers`** — upstream HLE ServiceManager/audio initialization fixes referenced by Encore's **disabled-by-default experimental** backport (not part of the current shipping binary).
+- [ProsperoPuzzles](https://github.com/blackbearreloaded/ProsperoPuzzles) — **Authors / maintainers: BlackBearReloaded (`@blackbearreloaded`)** — origin of the launcher drawing/text/animation/sound framework used by Encore.
 
 ### PS5 platform, graphics and packaging
 
-- [PS5 Native App Boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) — native runtime, packaging and base platform integration.
-- [PS5 OpenGL](https://github.com/blackbearreloaded/ps5-opengl) — OpenGL 4.6 runtime used by Encore.
-- [Mihawk's PS5 Mesa](https://github.com/mihawk-99/PS5_Mesa) — Mesa/RADV source used by the Vulkan path.
-- [Mihawk's PS5 Vulkan](https://github.com/mihawk-99/PS5_Vulkan) — PS5 Vulkan/RADV build and link recipes.
-- [Mihawk's PS5 PayloadSDK](https://github.com/mihawk-99/PS5_PayloadSDK) — PayloadSDK fork used by the RADV toolchain.
-- [PS5 Payload SDK](https://github.com/ps5-payload-dev/sdk) — PS5 homebrew SDK used by the native toolchain.
-- [ps5-vulkan](https://github.com/mpereiraesaa/ps5-vulkan) — earlier PS5 Vulkan platform work used by the graphics stack.
-- [PSBrew/MkPFS](https://github.com/PSBrew/MkPFS) — optional reproducible `.ffpfsc` image packaging.
-- [SharpProspero](https://github.com/SvenGDK/SharpProspero) — source/reference used by the native packaging toolchain.
+- [PS5 Native App Boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) — **Authors / maintainers: BlackBearReloaded (`@blackbearreloaded`)** — native runtime, packaging and base platform integration.
+- [PS5 OpenGL](https://github.com/blackbearreloaded/ps5-opengl) — **Authors / maintainers: BlackBearReloaded (`@blackbearreloaded`)** — OpenGL 4.6 runtime used by Encore.
+- [Mihawk's PS5 Mesa](https://github.com/mihawk-99/PS5_Mesa) — **Authors / maintainers: Mihawk (`@mihawk-99`) and Mesa contributors** — Mesa/RADV source used by the Vulkan path.
+- [Mihawk's PS5 Vulkan](https://github.com/mihawk-99/PS5_Vulkan) — **Authors / maintainers: Mihawk (`@mihawk-99`)** — PS5 Vulkan/RADV build and link recipes.
+- [Mihawk's PS5 PayloadSDK](https://github.com/mihawk-99/PS5_PayloadSDK) — **Authors / maintainers: Mihawk (`@mihawk-99`) and upstream SDK authors** — PayloadSDK fork used by the RADV toolchain.
+- [PS5 Payload SDK](https://github.com/ps5-payload-dev/sdk) — **Authors / maintainers: John Törnblom (`@john-tornblom`) and contributors `@ps5-payload-dev`** — PS5 homebrew SDK used by the native toolchain.
+- [ps5-vulkan](https://github.com/mpereiraesaa/ps5-vulkan) — **Authors / maintainers: `@mpereiraesaa` and contributors** — earlier PS5 Vulkan platform work used by the graphics stack.
+- [PSBrew/MkPFS](https://github.com/PSBrew/MkPFS) — **Authors / maintainers: PSBrew team (`@PSBrew`)** — optional reproducible `.ffpfsc` image packaging.
+- [SharpProspero](https://github.com/SvenGDK/SharpProspero) — **Authors / maintainers: SvenGDK (`@SvenGDK`)** — source/reference used by the native packaging toolchain.
 
 ### Compatibility, media, text and build inputs
 
-- [Encore overrides](https://github.com/niakw/encore-overrides) — companion database/source of the four general video tiers, title-specific overrides and the generated PlayStation Auto control profile.
-- [ghost-land/Nlib-API](https://github.com/ghost-land/Nlib-API) — runtime title metadata and rich launcher media source (icons, 1080p banners, screenshots and local-player metadata).
-- [kinnay/zbic](https://github.com/kinnay/zbic) — ZBIC/zstd NSO decompression support.
-- [FFmpeg](https://github.com/FFmpeg/FFmpeg) — H.264/VP8/VP9 decoding in the PS5 build.
-- [HarfBuzz](https://github.com/harfbuzz/harfbuzz) — shaping for Arabic, Thai and other complex scripts in the launcher.
-- [fmt](https://github.com/fmtlib/fmt) — formatting headers used by build/runtime validation paths.
-- [LLVM](https://github.com/llvm/llvm-project) — compiler-rt pieces used by the PS5 cross build.
-- [pacbrew](https://github.com/ps5-payload-dev/pacbrew-repo) — pinned PS5 OpenSSL/zlib packages.
-- [zlib](https://github.com/madler/zlib) — pinned native dependency used by the PS5 toolchain setup.
-- [Boost.Context](https://github.com/boostorg/context) — pinned context runtime source used by Eden's PS5 build.
-- [Xbyak](https://github.com/herumi/xbyak) — x86/x64 JIT assembler used by Dynarmic/Eden and adapted by Encore's JIT allocator path.
-- [SPIRV-LLVM-Translator](https://github.com/KhronosGroup/SPIRV-LLVM-Translator) — macOS host-toolchain support for the graphics build.
-- [stb](https://github.com/nothings/stb) — launcher font baking/system-font loading support.
+- [Encore overrides](https://github.com/niakw/encore-overrides) — **Authors / maintainers: `@niakw`** — companion database/source of the four general video tiers, title-specific overrides and the generated PlayStation Auto control profile.
+- [ghost-land/Nlib-API](https://github.com/ghost-land/Nlib-API) — **Authors / maintainers: ghost-land team (`@ghost-land`) and contributors** — runtime title metadata and rich launcher media source (icons, 1080p banners, screenshots and local-player metadata).
+- [kinnay/zbic](https://github.com/kinnay/zbic) — **Authors / maintainers: `@kinnay`; zstd source files from Atmosphère** — ZBIC/zstd NSO decompression support.
+- [FFmpeg](https://github.com/FFmpeg/FFmpeg) — **Authors / maintainers: Fabrice Bellard (original creator), FFmpeg team and contributors** — H.264/VP8/VP9 decoding in the PS5 build.
+- [HarfBuzz](https://github.com/harfbuzz/harfbuzz) — **Authors / maintainers: Behdad Esfahbod, David Corbett, Khaled Hosny and HarfBuzz contributors** — shaping for Arabic, Thai and other complex scripts in the launcher.
+- [fmt](https://github.com/fmtlib/fmt) — **Authors / maintainers: Victor Zverovich (`@vitaut`) and contributors** — formatting headers used by build/runtime validation paths.
+- [LLVM](https://github.com/llvm/llvm-project) — **Authors / maintainers: LLVM community (`@llvm`) and contributors** — compiler-rt pieces used by the PS5 cross build.
+- [pacbrew](https://github.com/ps5-payload-dev/pacbrew-repo) — **Authors / maintainers: ps5-payload-dev team and contributors** — pinned PS5 OpenSSL/zlib packages.
+- [zlib](https://github.com/madler/zlib) — **Authors / maintainers: Jean-loup Gailly and Mark Adler (`@madler`)** — pinned native dependency used by the PS5 toolchain setup.
+- [Boost.Context](https://github.com/boostorg/context) — **Authors / maintainers: Boost.Context team and Boost contributors** — pinned context runtime source used by Eden's PS5 build.
+- [Xbyak](https://github.com/herumi/xbyak) — **Authors / maintainers: Mitsunari Shigeo (`@herumi`)** — x86/x64 JIT assembler used by Dynarmic/Eden and adapted by Encore's JIT allocator path.
+- [SPIRV-LLVM-Translator](https://github.com/KhronosGroup/SPIRV-LLVM-Translator) — **Authors / maintainers: Khronos Group and SPIRV-LLVM-Translator contributors** — macOS host-toolchain support for the graphics build.
+- [stb](https://github.com/nothings/stb) — **Authors / maintainers: Sean T. Barrett (`@nothings`) and authors of stb components** — launcher font baking/system-font loading support.
 
 ### PS5 input/audio research reused directly
 
-- [ps5-native-gamepad-input-research](https://github.com/blackbearreloaded/ps5-native-gamepad-input-research) — native DualSense/gamepad integration reference/code.
-- [ps5-audio-decoding-research](https://github.com/blackbearreloaded/ps5-audio-decoding-research) — native audio integration reference/code.
+- [ps5-native-gamepad-input-research](https://github.com/blackbearreloaded/ps5-native-gamepad-input-research) — **Authors / maintainers: BlackBearReloaded (`@blackbearreloaded`)** — native DualSense/gamepad integration reference/code.
+- [ps5-audio-decoding-research](https://github.com/blackbearreloaded/ps5-audio-decoding-research) — **Authors / maintainers: BlackBearReloaded (`@blackbearreloaded`)** — native audio integration reference/code.
 
 All credit for the original projects belongs to their respective authors and contributors. Encore's
 changes do not imply endorsement by those projects or their maintainers.

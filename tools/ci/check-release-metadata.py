@@ -68,6 +68,12 @@ assert hashlib.sha256(logo_bytes).hexdigest() == "c79d0295f42efb053be33c6ad59783
     "canonical Encore logo bytes changed unexpectedly"
 assert logo_bytes[:8] == b"\x89PNG\r\n\x1a\n", "Encore logo must remain PNG"
 assert struct.unpack(">II", logo_bytes[16:24]) == (512, 512), "Encore logo must remain 512x512"
+overlay_icon = (root / "assets/icon0.dds").read_bytes()
+assert len(overlay_icon) == 262292 and overlay_icon[:4] == b"DDS ", "overlay icon DDS size/header changed"
+assert struct.unpack_from("<II", overlay_icon, 12) == (512, 512), "overlay icon must remain 512x512"
+assert overlay_icon[84:88] == b"DX10", "overlay icon must remain DX10 DDS"
+assert struct.unpack_from("<5I", overlay_icon, 128) == (98, 3, 0, 1, 0), "overlay icon must remain BC7 2D"
+assert hashlib.sha256(overlay_icon).hexdigest() == "0fd00044910e08a99faa90e3d7eb84aadc70fc78c36edbf5d12ed000f68e7694",     "canonical Encore overlay DDS changed unexpectedly"
 assert not (root / "assets/eden-official.svg").exists(), "obsolete upstream Eden logo must stay removed"
 assert not (root / "assets/prosperoeden-icon-source.png").exists(), "obsolete ProsperoEden logo source must stay removed"
 
@@ -92,7 +98,7 @@ assert "invalid_success_identity" not in startup, "release must not infer filesy
 packager = (root / "tools/package-headless-native.sh").read_text()
 assert "titleId='PPSA99008'" in packager, "packager title ID contract changed"
 assert "PROSPEROEDEN0001" in packager, "packager content ID contract changed"
-assert 'assets/icon0.png' in packager, "packager must use the Encore raster logo"
+assert 'assets/icon0.png' in packager and 'assets/icon0.dds' in packager, "packager must stage both Encore icon formats"
 assert '-flip' in packager and 'brand.tga' in packager, "launcher logo orientation fix missing"
 assert 'encore-background.jpg' in packager and 'backdrop.tga' in packager, "Encore background packaging missing"
 assert 'eden-official.svg' not in packager, "packager must not fall back to the old upstream logo"

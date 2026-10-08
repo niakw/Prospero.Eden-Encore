@@ -653,10 +653,9 @@ foreach(bits 32 64)
           string(REPLACE "std::uint32_t(16_MiB)" "std::uint32_t(${jit_cache_sizes})" wrapper "${wrapper}")
       endif()
     set(derived "${PORT_BUILD_DIR}/arm_dynarmic_${bits}.cpp")
-    # Release soft-hang diagnostics need an owner-written guest snapshot too. Mark the interval
-    # spent inside Dynarmic::Run() as Guest; if Run never returns the watchdog sees Guest plus a
-    # stale sample timestamp, while a core blocked in HLE/kernel code reports Kernel.
-    if(PS5_NATIVE)
+    # JIT entry/exit sampling is diagnostic instrumentation, not a shipping feature.
+    # Keep all atomics, clocks and profiler calls out of the release hot path.
+    if(EDEN_DEV_PROFILE)
         string(PREPEND wrapper "#include \"${EDEN_PORT_DIR}/performance.h\"\n")
         if(bits EQUAL 64)
             set(sample_pc "m_jit->GetPC()")
@@ -770,9 +769,8 @@ string(FIND "${physical_core_source}" "${idle_old}" idle_at)
 if(idle_at LESS 0)
     message(FATAL_ERROR "Pinned PhysicalCore::Idle changed")
 endif()
-# Keep Eden's exact mutex/condition-variable idle path in shipping builds. Only annotate
-# the phase so the release watchdog can distinguish an intentionally sleeping core from a guest
-# or kernel stall. The former pre-lock spin remains development-only until requalified on PS5.
+# Keep Eden's exact mutex/condition-variable idle path in shipping builds.
+# Profiling annotations and experimental spin-before-sleep exist only in diagnostic builds.
 if(EDEN_DEV_PROFILE)
     string(REPLACE "${idle_old}" [=[void PhysicalCore::Idle() {
         const long long start = ::Eden::Performance::NowNs();
@@ -786,15 +784,6 @@ if(EDEN_DEV_PROFILE)
             m_on_interrupt.wait(lk, [this] { return m_is_interrupted; });
         }
         ::Eden::Performance::CountIdle(m_core_index, ::Eden::Performance::NowNs() - start, slept);
-    }]=] physical_core_source "${physical_core_source}")
-elseif(PS5_NATIVE)
-    string(REPLACE "${idle_old}" [=[void PhysicalCore::Idle() {
-        ::Eden::Performance::cpu_state[m_core_index].phase.store(
-            ::Eden::Performance::CpuPhase::Idle, std::memory_order_release);
-        std::unique_lock lk{m_guard};
-        m_on_interrupt.wait(lk, [this] { return m_is_interrupted; });
-        ::Eden::Performance::cpu_state[m_core_index].phase.store(
-            ::Eden::Performance::CpuPhase::Kernel, std::memory_order_release);
     }]=] physical_core_source "${physical_core_source}")
 endif()
 string(REPLACE "${prefetch_old}"
@@ -2176,10 +2165,14 @@ void Initialize() {
     add_executable(eden-headless "${EDEN_PORT_DIR}/main.cpp" "${PORT_ROOT}/src/aligned_alloc.c"
         "${EDEN_PORT_DIR}/heap_pages.cpp" "${EDEN_PORT_DIR}/performance.cpp"
         "${EDEN_PORT_DIR}/crash_report.cpp" "${EDEN_PORT_DIR}/stop_limit.cpp"
-        "${EDEN_PORT_DIR}/elevation/elevation.cpp"
+        "${EDEN_PORT_DIR}/elevation/elevation.cpp" "${EDEN_PORT_DIR}/ps5_net_compat.c"
         "${eden_app_crt}" "${PORT_ROOT}/src/lifecycle.c"
         "${PORT_BUILD_DIR}/app_heap.c")
     target_compile_definitions(eden-headless PRIVATE PS5_NATIVE=1)
+    # Native-title libc rejects socket fcntl and its resolver may depend on an
+    # unloaded WebKit module. ps5_net_compat.c supplies sceNetResolver DNS and
+    # translates only refused socket flags to native SO_NBIO.
+    target_link_options(eden-headless PRIVATE -Wl,--wrap=fcntl)
     set_property(TARGET eden-headless APPEND PROPERTY LINK_DEPENDS
         "${PORT_ROOT}/tools/link-headless-native.sh" "${PORT_ROOT}/tools/unwind.ld"
         "${PORT_ROOT}/tools/app-symbols.map")

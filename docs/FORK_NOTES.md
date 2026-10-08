@@ -318,3 +318,44 @@ separately from that external limitation.
 ## 13.60 startup revalidation
 
 The next stable release is gated on the fast startup/elevation/storage checks plus a successful native build and a hardware smoke test. A green compile alone is not treated as hardware validation.
+
+## Separate CPU/HLE and frame interpolation investigation
+
+The detailed, non-shipping investigation is in [PERFORMANCE_ROADMAP.md](PERFORMANCE_ROADMAP.md). A new offline diagnostic `tools/analyze-fc27-trace.py` reports native present gaps, possible recurring sampled guest PCs and HLE timings without claiming that host FPS equals gameplay progress. The first objective is still to cure FC27 freezes using controlled JIT/HLE A/B sessions. The separate high-impact research goal is a 30-real-to-60-presented-FPS pipeline via optical flow; it cannot repair a halted guest, and no PS5 interpolation implementation is available yet.
+
+## 8 October 2026 — unreleased local post-#186 audit
+
+**Working tree:** `/Users/admin/Downloads/Prospero.Eden-Encore-work`, branch `local/no-build-polish`,
+base commit `149df7a`. This is **source-only work**, not the package available in GitHub Releases.
+There has been no release build, local commit, remote merge, push, CI dispatch or PS5 gameplay test
+of this lot. The confirmed #186 PS5 runtime still freezes/stalls FC27 intermittently.
+
+- **Native source verification:** targeted `x86_64-sie-ps5` Clang `-fsyntax-only -Werror` caught
+  and fixed a Home `const char*` concatenation error and a **PS5 SDK-specific** `getnameinfo`
+  prototype mismatch that passed macOS checks. Home, Library, Settings, Launcher, main,
+  diagnostics/services and performance source-only checks passed after correction.
+- **Network:** PS5 native DNS shim uses `sceNetResolver` and `SO_NBIO` fallback where the native
+  libc refuses `fcntl`. Bounds/overflow cases are covered in a mocked ASan/UBSan host test;
+  `F_DUPFD`, `F_SETFL`, `F_SETFD` promoted `int` forwarding was corrected. PS5 HTTPS, CA-chain
+  verification and real Nlib media retrieval are **not** yet tested.
+- **Logs:** bounded startup stderr/heap and Eden file backend, with rotation, prune, and
+  fault-injected `ftruncate` fallback. Worker-file-descriptor handoff is synchronized; Eden's
+  `IOFile` can itself log failures, so the backend temporarily suppresses recursive logging
+  during rotation. Host tests verify caps, tail retention and the failure path; PS5 remains untested.
+- **HLE:** the service-manager host-worker wait and lazy audio service backport passes patch
+  application and source-only C++ checks, but its shutdown/IPC effects are not qualified.
+  It now joins dummy wait and Dynarmic I-cache proposals behind **OFF-by-default** opt-ins.
+- **Graphics and UX:** the 16:9 hero and asynchronous Nlib enrichment are source-validated,
+  not screenshot-confirmed. The `icon0.dds` is hash- and format-checked locally, but PS5 system
+  overlay behavior is unknown. FC27 guest progress cannot be inferred from ~30 presented FPS;
+  GPU and host-scheduling causality remain hypotheses. Frame interpolation is separate and not a
+  remedy for a stuck guest.
+
+**Additional prevention:** a new eight-translation-unit Clang `-fsyntax-only -Werror` gate
+(`tools/check-native-source-syntax.py`) is wired into the graphical native build path **after
+CMake config, before Ninja**, using the compiler's real PS5 include paths and ABI.
+
+**Remaining release gates:** repeat full Linux/LLVM preflight, native compile and link,
+inspect packaged files and imports, and complete PS5 13.60 boot + network + UI + overlay +
+FC27 extended A/B tests. Do not merge, push or run the shipping workflow unless the remaining
+source and integration issues are closed and the user-requested confidence threshold is met.

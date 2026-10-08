@@ -41,4 +41,8 @@ assert "fork-source-stamps.json" in build
 assert "sha256(path.read_bytes())" in build
 assert "os.utime(path" in build
 assert "-exec touch" not in build
-print("Encore CI incremental-cache contract PASS")
+# Catch PS5 ABI/source errors before spending time on the native Ninja build.
+assert '-DCMAKE_EXPORT_COMPILE_COMMANDS=ON' in build
+assert 'tools/check-native-source-syntax.py' in build
+assert build.index('tools/check-native-source-syntax.py') < build.index('cmake --build "$scratch/native-local"')
+print("Encore CI incremental-cache and early syntax gate contract PASS")

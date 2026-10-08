@@ -46,7 +46,7 @@ link_native() {
         --eh-frame-hdr --gc-sections --version-script "$root/tools/app-symbols.map" -e _start \
         --error-limit=0 -Map="$map" \
         --wrap=aligned_alloc --wrap=malloc --wrap=calloc --wrap=realloc --wrap=free \
-        --wrap=posix_memalign --wrap=malloc_usable_size \
+        --wrap=posix_memalign --wrap=malloc_usable_size --wrap=fcntl \
         -o "$target" --start-group "${libraries[@]}" "${radv_link_inputs[@]}" \
         "$sdk/target/lib/libc++.a" "$sdk/target/lib/libc++abi.a" "$sdk/target/lib/libunwind.a" \
         --end-group --as-needed "$sdk/target/lib/libSceLibcInternal.so" "$sdk/target/lib/libkernel.so" \

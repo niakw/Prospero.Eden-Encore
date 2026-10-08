@@ -31,10 +31,6 @@ msgstr ""
 msgid "1x (native)"
 msgstr ""
 
-#: pe/ui/library.cpp
-msgid "Resolution follows the selected title-aware profile. Lower it for performance or memory; raise it only when the title has headroom."
-msgstr ""
-
 #: settings_store.h
 msgid "2x (high memory)"
 msgstr ""
@@ -110,7 +106,7 @@ msgstr ""
 msgid "Anti-aliasing smooths jagged edges. None is fastest; FXAA is light; SMAA prioritizes image quality."
 msgstr ""
 
-#: pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/settings.cpp
 msgid "Audio"
 msgstr ""
 
@@ -245,10 +241,6 @@ msgstr ""
 msgid "Clear"
 msgstr ""
 
-#: pe/ui/home.cpp
-msgid "Clear caches"
-msgstr ""
-
 #: pe/ui/settings.cpp
 msgid "Clear shader caches"
 msgstr ""
@@ -277,12 +269,20 @@ msgstr ""
 msgid "CONTINUE PLAYING"
 msgstr ""
 
+#: pe/ui/home.cpp
+msgid "Controller mapping"
+msgstr ""
+
 #: pe/ui/settings.cpp
 msgid "Controller profile: {0}"
 msgstr ""
 
 #: pe/ui/home.cpp
 msgid "CONTROLLERS"
+msgstr ""
+
+#: pe/ui/home.cpp
+msgid "Controllers"
 msgstr ""
 
 #: pe/ui/launcher.cpp, pe/ui/settings.cpp
@@ -329,10 +329,6 @@ msgstr ""
 
 #: pe/ui/mapping.cpp
 msgid "Cross"
-msgstr ""
-
-#: pe/ui/home.cpp
-msgid "Cross to clear"
 msgstr ""
 
 #: pe/ui/settings.cpp, settings_store.h
@@ -470,10 +466,6 @@ msgid "FILESYSTEM"
 msgstr ""
 
 #: pe/ui/settings.cpp
-msgid "Filesystem: {0}  |  Free: {1}"
-msgstr ""
-
-#: pe/ui/settings.cpp
 msgid "Final app output size. Choose 1080p for lower memory use, 1440p for balance, or 2160p for maximum output detail."
 msgstr ""
 
@@ -514,10 +506,6 @@ msgstr ""
 msgid "FPS overlay"
 msgstr ""
 
-#: pe/ui/settings.cpp
-msgid "FREE SPACE"
-msgstr ""
-
 #: settings_store.h
 msgid "French"
 msgstr ""
@@ -554,10 +542,6 @@ msgstr ""
 #. {0} is the reason, a sentence in English; {1} is a file.
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Game could not start: {0} Details: {1}"
-msgstr ""
-
-#: pe/ui/home.cpp
-msgid "Game details"
 msgstr ""
 
 #: pe/ui/library.cpp
@@ -713,7 +697,7 @@ msgstr ""
 msgid "Korean"
 msgstr ""
 
-#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/settings.cpp
+#: pe/ui/browse.cpp, pe/ui/settings.cpp
 msgid "Language"
 msgstr ""
 
@@ -739,7 +723,7 @@ msgstr ""
 msgid "Last game opened"
 msgstr ""
 
-#: pe/ui/home.cpp, pe/ui/library.cpp
+#: pe/ui/library.cpp
 msgid "Launch game"
 msgstr ""
 
@@ -753,6 +737,10 @@ msgstr ""
 
 #: pe/ui/launcher.cpp
 msgid "Library"
+msgstr ""
+
+#: pe/ui/home.cpp
+msgid "Local players: {0}"
 msgstr ""
 
 #: pe/ui/settings.cpp
@@ -901,6 +889,10 @@ msgid "Open quick settings"
 msgstr ""
 
 #: pe/ui/home.cpp
+msgid "Open settings"
+msgstr ""
+
+#: pe/ui/home.cpp
 msgid "Open storage"
 msgstr ""
 
@@ -924,6 +916,10 @@ msgstr ""
 #. What a mod is made of: a change to the game's program (not a game update).
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Patch"
+msgstr ""
+
+#: pe/ui/home.cpp
+msgid "Play"
 msgstr ""
 
 #: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
@@ -992,6 +988,10 @@ msgstr ""
 
 #: pe/ui/home.cpp
 msgid "QUICK SETTINGS"
+msgstr ""
+
+#: pe/ui/home.cpp
+msgid "Quick settings"
 msgstr ""
 
 #: pe/ui/settings.cpp
@@ -1063,6 +1063,10 @@ msgstr ""
 
 #: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Resolution"
+msgstr ""
+
+#: pe/ui/library.cpp
+msgid "Resolution follows the selected title-aware profile. Lower it for performance or memory; raise it only when the title has headroom."
 msgstr ""
 
 #: pe/ui/launcher.cpp
@@ -1169,7 +1173,7 @@ msgstr ""
 msgid "Selected ROM is no longer available"
 msgstr ""
 
-#: pe/ui/launcher.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Settings"
 msgstr ""
 
@@ -1194,7 +1198,7 @@ msgstr ""
 msgid "Setup validation failed. Check that firmware and key files are readable and valid."
 msgstr ""
 
-#: pe/ui/home.cpp, pe/ui/settings.cpp
+#: pe/ui/settings.cpp
 msgid "SHADER/JIT CACHES"
 msgstr ""
 
@@ -1252,11 +1256,11 @@ msgstr ""
 msgid "Stops the background drifting and the screens sliding, here and on the loading screen."
 msgstr ""
 
-#: pe/ui/browse.cpp, pe/ui/settings.cpp
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/settings.cpp
 msgid "Storage"
 msgstr ""
 
-#: pe/ui/home.cpp, pe/ui/settings.cpp
+#: pe/ui/settings.cpp
 msgid "STORAGE"
 msgstr ""
 
@@ -1277,7 +1281,7 @@ msgid "Switch card"
 msgstr ""
 
 #: pe/ui/home.cpp
-msgid "SYSTEM STATUS"
+msgid "System"
 msgstr ""
 
 #: eden_services.cpp
@@ -1356,7 +1360,7 @@ msgstr ""
 msgid "Ultra"
 msgstr ""
 
-#: eden_services.cpp, pe/ui/home.cpp, pe/ui/library.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Unknown"
 msgstr ""
 
@@ -1394,10 +1398,6 @@ msgstr ""
 msgid "Use this root"
 msgstr ""
 
-#: pe/ui/home.cpp
-msgid "Version"
-msgstr ""
-
 #: pe/ui/settings.cpp
 msgid "VIBRATION"
 msgstr ""
@@ -1414,7 +1414,7 @@ msgstr ""
 msgid "Vibration strength"
 msgstr ""
 
-#: pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/settings.cpp
 msgid "Video"
 msgstr ""
 

@@ -95,9 +95,10 @@ PY_STAMPS
 
 cmake -S "$scratch/source" -B "$scratch/native-local" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="$root/headless/ps5.cmake" -DPS5_NATIVE=ON -DEDEN_DEVICE_FRONTEND="$devices" \
-    -DCMAKE_BUILD_TYPE=Release -DENABLE_LTO=OFF \
+    -DCMAKE_BUILD_TYPE=Release -DENABLE_LTO=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
     -DEDEN_SHARED_JIT="${EDEN_SHARED_JIT:-OFF}" \
     -DEDEN_JIT_COMPILE_BATCH="${EDEN_JIT_COMPILE_BATCH:-OFF}" \
+    -DEDEN_INLINE_EXCLUSIVES="${EDEN_INLINE_EXCLUSIVES:-OFF}" \
     -DEDEN_PS5_VULKAN="${EDEN_PS5_VULKAN:-OFF}" \
     -DEDEN_VULKAN_DRIVER="${EDEN_VULKAN_DRIVER:-CUSTOM}" \
     -DEDEN_DEV_VULKAN="${EDEN_DEV_VULKAN:-OFF}" \
@@ -126,6 +127,11 @@ python3 -B "$root/headless/check_slab_lifetime.py" \
 # expensive native compile. A stale source extraction should fail in minutes, not after a 40-minute
 # build. Development builds intentionally skip these release-shape checks.
 if [[ ${EDEN_SKIP_SOURCE_CHECKS:-0} != 1 && ${EDEN_SKIP_PREBUILD_SOURCE_CHECKS:-0} != 1 ]]; then
+    # Catch real PS5 ABI and launcher C++ errors before the long Ninja compile.
+    # No object/application binary is produced by this source-only Clang pass.
+    if [[ "$graphics" == ON ]]; then
+        python3 -B "$root/tools/check-native-source-syntax.py" "$scratch/native-local"
+    fi
     python3 -B "$root/headless/check_audio_shutdown.py" "$scratch/native-local/headless/core.cpp" "$scratch/source/src/core/core.cpp"
     python3 -B "$root/tools/check-load-failure.py"
     python3 -B "$root/tools/check-legacy-migration.py"

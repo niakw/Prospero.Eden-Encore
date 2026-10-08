@@ -62,6 +62,7 @@
 #include "prosperoeden/version.h"
 extern "C" void ps5_opengl_heap_snapshot(const char*, unsigned);
 extern "C" std::int64_t sceKernelGetDirectMemorySize();
+extern "C" int sceNetInit();
 #else
 #include <malloc.h>
 #include "mock_devices.h"
@@ -445,8 +446,12 @@ int main(int argc, char** argv) {
         for (const char* base : {"stderr", "heap"}) {
             const std::string current = Eden::LogFile(std::string{base} + ".log");
             const std::string first = Eden::LogFile(std::string{base} + ".first.log");
-            (void)std::rename(current.c_str(), Eden::LogFile(std::string{base} + ".prev.log").c_str());
-            (void)std::rename(first.c_str(), Eden::LogFile(std::string{base} + ".prev.first.log").c_str());
+            const std::string previous = Eden::LogFile(std::string{base} + ".prev.log");
+            const std::string previous_first = Eden::LogFile(std::string{base} + ".prev.first.log");
+            (void)std::remove(previous.c_str());
+            (void)std::remove(previous_first.c_str());
+            (void)std::rename(current.c_str(), previous.c_str());
+            (void)std::rename(first.c_str(), previous_first.c_str());
         }
         // A crash report the previous run left: that run's logs move beside it, and the launcher
         // says where it is (crash_report.h).
@@ -469,12 +474,22 @@ int main(int argc, char** argv) {
         static Eden::LogPipe stderr_pipe, stdout_pipe;
         const std::string stderr_path = Eden::LogFile("stderr.log");
         const std::string heap_path = Eden::LogFile("heap.log");
-        if (!stderr_pipe.Attach(stderr, stderr_path, Eden::LogFile("stderr.first.log")) ||
-            !stdout_pipe.Attach(stdout, heap_path, Eden::LogFile("heap.first.log")))
+        static constexpr std::size_t kReleaseLogSegmentBytes = 8u * 1024u * 1024u;
+        if (!stderr_pipe.Attach(stderr, stderr_path, Eden::LogFile("stderr.first.log"),
+                                kReleaseLogSegmentBytes) ||
+            !stdout_pipe.Attach(stdout, heap_path, Eden::LogFile("heap.first.log"),
+                                kReleaseLogSegmentBytes))
             Eden::Report("logs", "Asynchronous bounded log writing unavailable; writing directly");
         Eden::Crash::Install(Eden::LogsDir(), Eden::kAppVersion, last_crash.restarted);
         Eden::BootTrace::Ready(Eden::LogsDir(), Eden::FilesystemAccess());
         Eden::BootTrace::Line("logs ready; app=%s data=%s", Eden::AppDir().c_str(), Eden::UserDir().c_str());
+        // Host-side HTTPS (Nlib, remote override manifests) uses BSD sockets and the
+        // Payload SDK resolver. Native titles must initialise libSceNet before those calls.
+        // Network failure is non-fatal: the launcher remains fully usable from local caches.
+        const int host_net_result = sceNetInit();
+        Eden::BootTrace::Line("host network init result=%d", host_net_result);
+        if (host_net_result != 0)
+            Eden::Report("network", "Native host network initialization failed; online metadata is unavailable");
         const std::string stop_note = Eden::LogFile("stop-limit.txt");
         if (std::remove(stop_note.c_str()) == 0)
             Eden::Report("exit", "The previous game did not stop within ten seconds; Eden restarted safely");
@@ -876,7 +891,10 @@ int main(int argc, char** argv) {
             Common::Log::Filter filter;
             filter.SetClassLevel(Common::Log::Class::Service_FS, Common::Log::Level::Info);
 #if defined(PS5_NATIVE) && !defined(EDEN_DEV_PROFILE) && !defined(EDEN_DEV_ROM_ID)
-            if (Eden::LoadPreferences().detailed_logging) filter.ParseFilterString("*:Debug");
+            // Never enable global Debug logging in a shipping game. FC27 measured roughly
+            // 1,600 lines/s and two rotating 100 MiB logs with this preference enabled.
+            if (Eden::LoadPreferences().detailed_logging)
+                std::fputs("[ProsperoEden] detailed gameplay logging requires a diagnostic build; release logging unchanged\n", stderr);
 #endif
             Common::Log::SetGlobalFilter(filter);
         }
@@ -1782,17 +1800,9 @@ int main(int argc, char** argv) {
                             lock.lock();
                         }
 #else
-                        // Release watchdog: a soft guest hang can leave presentation and native
-                        // input alive forever, so a crash report never fires. Sample the guest CPU
-                        // state periodically with negligible overhead; if hardware still hangs,
-                        // the persisted log tells us which core/PC stopped progressing.
-                        for (;;) {
-                            if (completion->wake.wait_for(lock, std::chrono::seconds(10), completed))
-                                break;
-                            lock.unlock();
-                            Eden::Performance::Snapshot();
-                            lock.lock();
-                        }
+                        // Shipping path: no periodic profiler/watchdog work while a game runs.
+                        // Diagnostic builds own guest-PC sampling and performance snapshots.
+                        completion->wake.wait(lock, completed);
 #endif
                     } else
 #endif

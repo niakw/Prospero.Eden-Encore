@@ -1,8 +1,6 @@
-diff --git a/src/common/net/net.cpp b/src/common/net/net.cpp
-index 5c45e1370..f9f9e1f0a 100644
 --- a/src/common/net/net.cpp
 +++ b/src/common/net/net.cpp
-@@ -151,6 +151,8 @@ std::optional<std::string> MakeRequest(const std::string& url, const std::string&
+@@ -226,12 +226,15 @@
              .method = "GET",
              .path = path,
          };
@@ -11,3 +9,11 @@ index 5c45e1370..f9f9e1f0a 100644
  
          client->set_follow_location(true);
          httplib::Result result = client->send(request);
+ 
+         if (!result) {
+-            LOG_ERROR(Common, "GET to {}{} returned null", url, path);
++            LOG_ERROR(Common, "GET to {}{} returned null: {}", url, path,
++                      httplib::to_string(result.error()));
+             return {};
+         }
+ 

@@ -108,6 +108,18 @@ jobs:
           python3 -B tools/check-jit-stability.py
           python3 -B tools/check-performance-policy.py
           python3 -B tools/check-network-runtime.py
+          python3 -B tools/check-ps5-net-unit.py
+          python3 -B tools/check-home-media.py
+          python3 -B tools/check-bounded-logs.py
+          python3 -B tools/check-log-budget.py
+          python3 -B tools/check-log-pipe-unit.py
+          python3 -B tools/check-release-hotpath.py
+          python3 -B tools/check-sm-host-wait.py
+          python3 -B tools/check-dummy-thread-waits.py
+          python3 -B tools/check-dynarmic-icache.py
+          python3 -B tools/check-ps5-backport-policy.py
+          python3 -B tools/check-fc27-trace.py
+          python3 -B tools/check-credit-attribution.py
           python3 -B tools/check-ci-cache.py
 
       - name: Preflight release packaging

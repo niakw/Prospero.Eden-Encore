@@ -13,6 +13,41 @@ and `legal/LICENSES/`, so the notices remain available when the installable
 Nothing in an open-source copyright license should be read as a grant of
 trademark rights unless the applicable owner expressly says so.
 
+## Identified upstream authors, maintainers and project teams
+
+The following recognises identified creators, contributors and project team accounts
+in addition to the original license notices. It is not an exhaustive list of all
+authors. Repository links provide provenance and full contributor histories.
+
+- [ProsperoEden](https://github.com/blackbearreloaded/ProsperoEden) — BlackBearReloaded (`@blackbearreloaded`).
+- [Eden](https://github.com/eden-emulator/mirror) — Eden Emulator Project team (`@eden-emulator`) and contributors.
+- [Citron Neo emulator](https://github.com/citron-neo/emulator) — Citron Neo team (`@citron-neo`); SM/audio fixes by `@HopeSuffers`.
+- [ProsperoPuzzles](https://github.com/blackbearreloaded/ProsperoPuzzles) — BlackBearReloaded (`@blackbearreloaded`).
+- [PS5 Native App Boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) — BlackBearReloaded (`@blackbearreloaded`).
+- [PS5 OpenGL](https://github.com/blackbearreloaded/ps5-opengl) — BlackBearReloaded (`@blackbearreloaded`).
+- [Mihawk's PS5 Mesa](https://github.com/mihawk-99/PS5_Mesa) — Mihawk (`@mihawk-99`) and Mesa contributors.
+- [Mihawk's PS5 Vulkan](https://github.com/mihawk-99/PS5_Vulkan) — Mihawk (`@mihawk-99`).
+- [Mihawk's PS5 PayloadSDK](https://github.com/mihawk-99/PS5_PayloadSDK) — Mihawk (`@mihawk-99`) and upstream SDK authors.
+- [PS5 Payload SDK](https://github.com/ps5-payload-dev/sdk) — John Törnblom (`@john-tornblom`) and contributors `@ps5-payload-dev`.
+- [ps5-vulkan](https://github.com/mpereiraesaa/ps5-vulkan) — `@mpereiraesaa` and contributors.
+- [PSBrew/MkPFS](https://github.com/PSBrew/MkPFS) — PSBrew team (`@PSBrew`).
+- [SharpProspero](https://github.com/SvenGDK/SharpProspero) — SvenGDK (`@SvenGDK`).
+- [Encore overrides](https://github.com/niakw/encore-overrides) — `@niakw`.
+- [ghost-land/Nlib-API](https://github.com/ghost-land/Nlib-API) — ghost-land team (`@ghost-land`) and contributors.
+- [kinnay/zbic](https://github.com/kinnay/zbic) — `@kinnay`; zstd source files from Atmosphère.
+- [FFmpeg](https://github.com/FFmpeg/FFmpeg) — Fabrice Bellard (original creator), FFmpeg team and contributors.
+- [HarfBuzz](https://github.com/harfbuzz/harfbuzz) — Behdad Esfahbod, David Corbett, Khaled Hosny and HarfBuzz contributors.
+- [fmt](https://github.com/fmtlib/fmt) — Victor Zverovich (`@vitaut`) and contributors.
+- [LLVM](https://github.com/llvm/llvm-project) — LLVM community (`@llvm`) and contributors.
+- [pacbrew](https://github.com/ps5-payload-dev/pacbrew-repo) — ps5-payload-dev team and contributors.
+- [zlib](https://github.com/madler/zlib) — Jean-loup Gailly and Mark Adler (`@madler`).
+- [Boost.Context](https://github.com/boostorg/context) — Boost.Context team and Boost contributors.
+- [Xbyak](https://github.com/herumi/xbyak) — Mitsunari Shigeo (`@herumi`).
+- [SPIRV-LLVM-Translator](https://github.com/KhronosGroup/SPIRV-LLVM-Translator) — Khronos Group and SPIRV-LLVM-Translator contributors.
+- [stb](https://github.com/nothings/stb) — Sean T. Barrett (`@nothings`) and authors of stb components.
+- [ps5-native-gamepad-input-research](https://github.com/blackbearreloaded/ps5-native-gamepad-input-research) — BlackBearReloaded (`@blackbearreloaded`).
+- [ps5-audio-decoding-research](https://github.com/blackbearreloaded/ps5-audio-decoding-research) — BlackBearReloaded (`@blackbearreloaded`).
+
 ## Emulator and compression
 
 - **[ProsperoEden](https://github.com/blackbearreloaded/ProsperoEden)** —
@@ -20,6 +55,11 @@ trademark rights unless the applicable owner expressly says so.
   native integration and 1.000.040-era filesystem-access path.
 - **[Eden](https://github.com/eden-emulator/mirror)** — GPL-3.0. The emulator
   core is built from the commit pinned in `UPSTREAM.json`.
+- **[Citron Neo emulator](https://github.com/citron-neo/emulator)** — GPL-family
+  Eden/yuzu-derived code. Encore's *experimental, disabled-by-default* ServiceManager
+  and lazy audio backport refers to Citron commits `f07609c52033` and `21813e8cb3ea`.
+  Its source is retained for isolated review; it is not active in the shipping baseline.
+  Original copyright and license notices remain applicable.
 - Eden's pinned dependencies include **Dynarmic (0BSD), Boost, fmt, Xbyak, zstd,
   LZ4, Opus, SDL3, simpleini, sirit, SPIRV-Headers, Vulkan-Headers,
   Vulkan-Utility-Libraries, Vulkan Memory Allocator, ENet, frozen,

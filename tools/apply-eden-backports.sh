@@ -136,20 +136,135 @@ PY
 }
 
 
+validate_ps5_bounded_logging() {
+python3 - "$eden" <<'PYLOG'
+from pathlib import Path
+import sys
+text=(Path(sys.argv[1])/'src/common/logging.cpp').read_text()
+for needle in [
+    'constexpr auto write_limit = 8_MiB;',
+    'void RotatePs5() noexcept',
+    'log tail rotated; storage remains bounded',
+    'first_filename += ".first.txt"',
+    'file->SetSize(0)',
+    'FS::SeekOrigin::SetOrigin',
+]:
+    if needle not in text:
+        raise SystemExit(f'Encore bounded PS5 Eden logging missing: {needle}')
+ps5=text[text.index('#ifdef PS5_NATIVE', text.index('using namespace Common::Literals;')):
+         text.index('#else', text.index('#ifdef PS5_NATIVE', text.index('using namespace Common::Literals;')))]
+if 'enabled = false' in ps5:
+    raise SystemExit('PS5 log cap must rotate, not disable logging')
+print('Encore bounded rotating PS5 Eden logging: PASS')
+PYLOG
+}
+
 validate_ps5_net_user_agent() {
 python3 - "$eden" <<'PYNET'
 from pathlib import Path
 import sys
 text=(Path(sys.argv[1])/'src/common/net/net.cpp').read_text()
-for needle in ['Prospero.Eden-Encore/1', 'request.headers.emplace("User-Agent"', 'request.headers.emplace("Accept"']:
+for needle in ['Prospero.Eden-Encore/1', 'request.headers.emplace("User-Agent"', 'request.headers.emplace("Accept"',
+               'httplib::to_string(result.error())']:
     if needle not in text: raise SystemExit(f'Encore PS5 HTTP identity missing: {needle}')
 print('Encore PS5 HTTP identity backport: PASS')
 PYNET
+}
+
+validate_dummy_thread_waits() {
+python3 - "$eden" <<'PYDW'
+from pathlib import Path
+import sys
+r=Path(sys.argv[1])
+lock=(r/'src/core/hle/kernel/k_light_lock.cpp').read_text()
+thread=(r/'src/core/hle/kernel/k_thread.cpp').read_text()
+for needle in [
+    'cur_thread->RequestDummyThreadWait(m_kernel);',
+    'cur_thread->GetState() != ThreadState::Waiting || cur_thread->IsDummyThread()',
+    'cur_thread->ClearWaitQueue();',
+]:
+    if needle not in lock: raise SystemExit(f'Dummy-thread KLightLock wait fix missing: {needle}')
+for needle in [
+    'if (m_wait_queue != nullptr)',
+    'this->SetWaitResult(wait_result);',
+    'this->SetState(kernel, ThreadState::Runnable);',
+]:
+    if needle not in thread: raise SystemExit(f'Dummy-thread EndWait fix missing: {needle}')
+print('Eden dummy host-thread kernel waits backport: PASS')
+PYDW
+}
+
+validate_dynarmic_icache() {
+python3 - "$eden" <<'PYIC'
+from pathlib import Path
+import sys
+r=Path(sys.argv[1])
+a64=(r/'src/core/arm/dynarmic/arm_dynarmic_64.cpp').read_text()
+a32=(r/'src/core/arm/dynarmic/arm_dynarmic_32.cpp').read_text()
+for needle in [
+    '#include "core/arm/debug.h"',
+    'Core::InvalidateInstructionCacheRange(m_process, cache_line_start, ICACHE_LINE_SIZE);',
+    'case Dynarmic::A64::InstructionCacheOperation::InvalidateAllToPoUInnerSharable:',
+]:
+    if needle not in a64: raise SystemExit(f'Dynarmic A64 i-cache coherence missing: {needle}')
+for text,name in ((a64,'A64'),(a32,'A32')):
+    marker='void ArmDynarmic'+name[1:]+'::InvalidateCacheRange'
+    block=text[text.index(marker):text.index('}', text.index(marker))+1]
+    if 'm_cb->last_code_addr = u64(-1);' not in block:
+        raise SystemExit(f'Dynarmic {name} cached code page survives range invalidation')
+print('Eden Dynarmic cross-core i-cache coherence backport: PASS')
+PYIC
 }
 
 apply_one "$root/headless/backports/eden-4473-4477.patch" "$eden/.encore-backport-gpu.sha256" validate_gpu
 apply_one "$root/headless/backports/eden-4436-spinlock-mutex.patch" "$eden/.encore-backport-4436.sha256" validate_spinlock_mutex
 apply_one "$root/headless/backports/eden-fw23-services.patch" "$eden/.encore-backport-fw23.sha256" validate_fw23
 apply_one "$root/headless/backports/eden-runtime-hid.patch" "$eden/.encore-backport-runtime-hid.sha256" validate_runtime_hid
+# Quarantine: this dummy-thread wait proposal can clear a wait-queue pointer
+# while ThreadState::Waiting still holds. NotifyAvailable/CancelWait in pinned Eden
+# may dereference that pointer. A patch-apply test is NOT a correctness test.
+# Keep the patch for isolated analysis; never ship it automatically.
+if [[ ${EDEN_EXPERIMENTAL_DUMMY_THREAD_WAITS:-OFF} == ON ]]; then
+    apply_one "$root/headless/backports/eden-dummy-thread-waits.patch" "$eden/.encore-backport-dummy-thread-waits.sha256" validate_dummy_thread_waits
+fi
+# Cross-core guest I-cache invalidation is separate from FC27's proven waits.
+# Qualify as its own controlled A/B, not in the first stability baseline.
+if [[ ${EDEN_EXPERIMENTAL_ICACHE_COHERENCE:-OFF} == ON ]]; then
+    apply_one "$root/headless/backports/eden-dynarmic-icache-coherence.patch" "$eden/.encore-backport-dynarmic-icache.sha256" validate_dynarmic_icache
+fi
+validate_sm_host_wait() {
+python3 - "$eden" <<'PYSM'
+from pathlib import Path
+import sys
+r=Path(sys.argv[1])
+sm=(r/'src/core/hle/service/sm/sm.h').read_text()
+audio=(r/'src/core/hle/service/audio/audio_controller.cpp').read_text()
+audio_h=(r/'src/core/hle/service/audio/audio_controller.h').read_text()
+for needle in ['Kernel::GetCurrentThread(kernel).IsDummyThread()', 'std::this_thread::sleep_for(1ms)',
+               'SessionRequestHandlerFactory factory', 'std::scoped_lock']:
+    if needle not in sm:
+        raise SystemExit(f'Eden host-thread-safe blocking GetService missing: {needle}')
+if 'kernel.IsShuttingDown()' in sm:
+    raise SystemExit('blocking GetService must not return nullptr merely because shutdown began')
+if 'm_set_sys =\n        system.ServiceManager().GetService' in audio:
+    raise SystemExit('audctl constructor still blocks on set:sys')
+for needle in ['IAudioController::GetSetSys()', 'std::call_once(m_set_sys_once',
+               'GetSetSys()->GetAudioOutputMode', 'GetSetSys()->SetAudioOutputMode']:
+    if needle not in audio:
+        raise SystemExit(f'lazy audctl set:sys lookup missing: {needle}')
+for needle in ['std::once_flag m_set_sys_once', 'GetSetSys();']:
+    if needle not in audio_h:
+        raise SystemExit(f'lazy audctl declaration missing: {needle}')
+print('Eden host-thread-safe service waits + lazy audctl lookup: PASS')
+PYSM
+}
+
 apply_one "$root/headless/backports/eden-ps5-hid-watchdog.patch" "$eden/.encore-backport-ps5-hid-watchdog.sha256" validate_ps5_hid_watchdog
 apply_one "$root/headless/backports/eden-ps5-net-user-agent.patch" "$eden/.encore-backport-ps5-net-user-agent.sha256" validate_ps5_net_user_agent
+apply_one "$root/headless/backports/eden-ps5-bounded-logging.patch" "$eden/.encore-backport-ps5-bounded-logging.sha256" validate_ps5_bounded_logging
+# Citron fixes inform this host-worker SM/audctl proposal. It compiles on the
+# pinned Eden source, but PS5 service-init/shutdown behavior is not yet proven.
+# Keep it OFF in the baseline; qualify with a separate controlled HLE A/B.
+if [[ ${EDEN_EXPERIMENTAL_SM_HOST_WAIT:-OFF} == ON ]]; then
+    apply_one "$root/headless/backports/eden-sm-host-wait.patch" "$eden/.encore-backport-sm-host-wait.sha256" validate_sm_host_wait
+fi

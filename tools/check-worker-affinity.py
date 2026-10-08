@@ -14,6 +14,8 @@ code=r'''
 #include <stdexcept>
 #include <cassert>
 #include <cstdint>
+#include <chrono>
+#include <thread>
 using cpuset_t=uint64_t;
 #undef CPU_ISSET
 #undef CPU_SET

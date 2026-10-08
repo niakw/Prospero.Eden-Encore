@@ -106,7 +106,7 @@ msgstr "ANTICRÉNELAGE"
 msgid "Anti-aliasing smooths jagged edges. None is fastest; FXAA is light; SMAA prioritizes image quality."
 msgstr "L’anticrénelage lisse les contours. Aucun est le plus rapide ; FXAA est léger ; SMAA privilégie la qualité d’image."
 
-#: pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/settings.cpp
 msgid "Audio"
 msgstr "Audio"
 
@@ -241,10 +241,6 @@ msgstr "Rond"
 msgid "Clear"
 msgstr "Vider"
 
-#: pe/ui/home.cpp
-msgid "Clear caches"
-msgstr "Vider les caches"
-
 #: pe/ui/settings.cpp
 msgid "Clear shader caches"
 msgstr "Vider les caches shaders"
@@ -273,6 +269,10 @@ msgstr "Mode console"
 msgid "CONTINUE PLAYING"
 msgstr "CONTINUER À JOUER"
 
+#: pe/ui/home.cpp
+msgid "Controller mapping"
+msgstr "Attribution des touches"
+
 #: pe/ui/settings.cpp
 msgid "Controller profile: {0}"
 msgstr "Profil de manette : {0}"
@@ -280,6 +280,10 @@ msgstr "Profil de manette : {0}"
 #: pe/ui/home.cpp
 msgid "CONTROLLERS"
 msgstr "MANETTES"
+
+#: pe/ui/home.cpp
+msgid "Controllers"
+msgstr "Manettes"
 
 #: pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Controls"
@@ -326,10 +330,6 @@ msgstr "Crédits et configuration"
 #: pe/ui/mapping.cpp
 msgid "Cross"
 msgstr "Croix"
-
-#: pe/ui/home.cpp
-msgid "Cross to clear"
-msgstr "Croix pour vider"
 
 #: pe/ui/settings.cpp, settings_store.h
 msgid "Custom"
@@ -401,10 +401,6 @@ msgstr "Terminé"
 msgid "Draws the menu's small text larger."
 msgstr "Agrandit les petits textes du menu."
 
-#: pe/ui/home.cpp
-msgid "DualSense"
-msgstr "DualSense"
-
 #: pe/ui/settings.cpp
 msgid "DualSense mapping, calibration, vibration and shortcuts."
 msgstr "Attribution DualSense, calibrage, vibrations et raccourcis."
@@ -470,10 +466,6 @@ msgid "FILESYSTEM"
 msgstr "SYSTÈME DE FICHIERS"
 
 #: pe/ui/settings.cpp
-msgid "Filesystem: {0}  |  Free: {1}"
-msgstr "Système de fichiers : {0}  |  Libre : {1}"
-
-#: pe/ui/settings.cpp
 msgid "Final app output size. Choose 1080p for lower memory use, 1440p for balance, or 2160p for maximum output detail."
 msgstr "Taille finale de l'image envoyée par l'application. Choisissez 1080p pour réduire l'usage mémoire, 1440p pour un bon équilibre ou 2160p pour un maximum de détails en sortie."
 
@@ -513,10 +505,6 @@ msgstr "COMPTEUR DE FPS"
 #: pe/ui/settings.cpp
 msgid "FPS overlay"
 msgstr "Compteur de FPS"
-
-#: pe/ui/settings.cpp
-msgid "FREE SPACE"
-msgstr "ESPACE LIBRE"
 
 #: settings_store.h
 msgid "French"
@@ -713,7 +701,7 @@ msgstr "Corée"
 msgid "Korean"
 msgstr "Coréen"
 
-#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/settings.cpp
+#: pe/ui/browse.cpp, pe/ui/settings.cpp
 msgid "Language"
 msgstr "Langue"
 
@@ -743,6 +731,10 @@ msgstr "Dernier jeu lancé"
 msgid "Launch game"
 msgstr "Lancer le jeu"
 
+#: pe/ui/home.cpp
+msgid "Play"
+msgstr "Jouer"
+
 #: pe/ui/settings.cpp
 msgid "LAYOUT"
 msgstr "STRUCTURE"
@@ -754,6 +746,10 @@ msgstr "Clic stick gauche"
 #: pe/ui/launcher.cpp
 msgid "Library"
 msgstr "Bibliothèque"
+
+#: pe/ui/home.cpp
+msgid "Local players: {0}"
+msgstr "Joueurs locaux : {0}"
 
 #: pe/ui/settings.cpp
 msgid "LOGS"
@@ -901,6 +897,10 @@ msgid "Open quick settings"
 msgstr "Ouvrir les paramètres rapides"
 
 #: pe/ui/home.cpp
+msgid "Open settings"
+msgstr "Ouvrir les paramètres"
+
+#: pe/ui/home.cpp
 msgid "Open storage"
 msgstr "Ouvrir le stockage"
 
@@ -993,6 +993,10 @@ msgstr "L'initialisation de la manette PS5 a échoué."
 #: pe/ui/home.cpp
 msgid "QUICK SETTINGS"
 msgstr "PARAMÈTRES RAPIDES"
+
+#: pe/ui/home.cpp
+msgid "Quick settings"
+msgstr "Paramètres rapides"
 
 #: pe/ui/settings.cpp
 msgid "Ready"
@@ -1173,7 +1177,7 @@ msgstr "JEU SÉLECTIONNÉ"
 msgid "Selected ROM is no longer available"
 msgstr "La ROM sélectionnée n'est plus disponible."
 
-#: pe/ui/launcher.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Settings"
 msgstr "Paramètres"
 
@@ -1198,7 +1202,7 @@ msgstr "Configuration requise : {0} Ouvrez Réglages, Stockage pour choisir la r
 msgid "Setup validation failed. Check that firmware and key files are readable and valid."
 msgstr "La validation de la configuration a échoué. Vérifiez que les fichiers du firmware et des clés sont lisibles et valides."
 
-#: pe/ui/home.cpp, pe/ui/settings.cpp
+#: pe/ui/settings.cpp
 msgid "SHADER/JIT CACHES"
 msgstr "CACHES SHADERS/JIT"
 
@@ -1256,11 +1260,11 @@ msgstr "Zone morte des sticks"
 msgid "Stops the background drifting and the screens sliding, here and on the loading screen."
 msgstr "Arrête le mouvement de l'arrière-plan et le glissement des écrans, ici et sur l'écran de chargement."
 
-#: pe/ui/browse.cpp, pe/ui/settings.cpp
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/settings.cpp
 msgid "Storage"
 msgstr "Stockage"
 
-#: pe/ui/home.cpp, pe/ui/settings.cpp
+#: pe/ui/settings.cpp
 msgid "STORAGE"
 msgstr "STOCKAGE"
 
@@ -1281,8 +1285,8 @@ msgid "Switch card"
 msgstr "Changer de carte"
 
 #: pe/ui/home.cpp
-msgid "SYSTEM STATUS"
-msgstr "ÉTAT DU SYSTÈME"
+msgid "System"
+msgstr "Système"
 
 #: eden_services.cpp
 msgid "Taiwan"
@@ -1360,7 +1364,7 @@ msgstr "SORTIE TV"
 msgid "Ultra"
 msgstr "Ultra"
 
-#: eden_services.cpp, pe/ui/home.cpp, pe/ui/library.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Unknown"
 msgstr "Inconnu"
 
@@ -1398,10 +1402,6 @@ msgstr "Utilisez des fichiers NCA de firmware extraits. Choisissez la racine dan
 msgid "Use this root"
 msgstr "Utiliser cette racine"
 
-#: pe/ui/home.cpp
-msgid "Version"
-msgstr "Version"
-
 #: pe/ui/settings.cpp
 msgid "VIBRATION"
 msgstr "VIBRATION"
@@ -1418,7 +1418,7 @@ msgstr "INTENSITÉ DES VIBRATIONS"
 msgid "Vibration strength"
 msgstr "Intensité des vibrations"
 
-#: pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/settings.cpp
 msgid "Video"
 msgstr "Vidéo"
 
