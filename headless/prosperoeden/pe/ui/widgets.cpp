@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace pe::ui
@@ -509,26 +510,15 @@ void dualsense_icon(Canvas &c, const Rect &r, Color ink, float brightness)
 
 void controller_icon(Canvas &c, const Rect &r, float lit)
 {
-    const std::uint32_t picture = c.textures.controller();
-    if (picture == 0)
-        return;
-    const float u = r.w / 72.0f; // the picture is drawn in a 72x50 box
+    // Both the player badge and Home gamepad use the same recognisable
+    // DualSense-style vector geometry. No blurry/tiny baked mask required.
+    const Color ink = gfx::mix(theme::kMuted, theme::kTitle, lit);
+    dualsense_icon(c, r, ink, 0.40f + 0.60f * lit);
     if (lit > 0.01f)
-    {
-        // The light under a connected controller, breathing slowly.
-        const float breath = 0.85f + 0.15f * std::sin(c.time * 1.7f * motion() + r.x * 0.01f);
-        c.list.shadow({r.x + 8.0f * u, r.y + 8.0f * u, r.w - 16.0f * u, r.h - 14.0f * u},
-                      14.0f * u, 22.0f * u, theme::kLime.with_alpha(0.26f * lit * breath));
-    }
-    c.list.image(picture, r, {0.0f, 0.0f, 1.0f, 1.0f},
-                 gfx::mix(kWhite.with_alpha(0.16f), Color::rgb(0xf4f2f8), lit));
-    if (lit > 0.01f)
-    {
-        // The light bar on either side of the touchpad.
-        const Color bar = theme::kLime.with_alpha(lit);
-        for (const float x : {26.0f, 46.0f})
-            c.list.line(r.x + x * u, r.y + 10.0f * u, r.x + x * u, r.y + 19.0f * u, 1.4f * u, bar);
-    }
+        c.list.line(r.x + r.w * 0.41f, r.y + r.h * 0.23f,
+                    r.x + r.w * 0.59f, r.y + r.h * 0.23f,
+                    std::max(1.0f, r.w * 0.022f),
+                    theme::kLime.with_alpha(0.85f * lit));
 }
 
 void toggle(Canvas &c, float right, float cy, float position)
