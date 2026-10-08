@@ -138,8 +138,21 @@ void Launcher::refresh_home_hero()
     std::uint64_t title_id = home_.last_title_id;
     if (home_recent_ >= 0 && home_recent_ < static_cast<int>(home_.recents.size()))
         title_id = home_.recents[static_cast<std::size_t>(home_recent_)].title_id;
-    home_game_settings_ = title_id != 0 ? services_.game_settings(title_id) : GameSettings{};
-    home_game_docked_ = title_id == 0 || services_.docked(title_id);
+    if (title_id == 0) {
+        home_game_settings_ = GameSettings{};
+        home_game_docked_ = true;
+    } else {
+        const auto cached = home_settings_cache_.find(title_id);
+        if (cached != home_settings_cache_.end()) {
+            home_game_settings_ = cached->second.first;
+            home_game_docked_ = cached->second.second;
+        } else {
+            home_game_settings_ = services_.game_settings(title_id);
+            home_game_docked_ = services_.docked(title_id);
+            home_settings_cache_.emplace(title_id,
+                                         std::make_pair(home_game_settings_, home_game_docked_));
+        }
+    }
     start_home_media();
 }
 
@@ -231,6 +244,9 @@ void Launcher::press_home(Key key)
         if (saved) {
             home_game_settings_ = next;
             home_game_docked_ = next.console_mode >= 0 ? next.console_mode == 1 : services_.docked(title_id);
+            // refresh_home_hero() immediately follows this save. Keep the
+            // cached per-title record coherent to avoid a second disk read.
+            home_settings_cache_[title_id] = {home_game_settings_, home_game_docked_};
         }
 
         if (saved)
