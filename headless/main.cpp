@@ -36,6 +36,7 @@
 #include "encore_overrides_generated.h"
 #include "encore_overrides_runtime.h"
 #include "encore_performance_policy.h"
+#include "experimental_performance.h"
 #include "diagnostics.h"
 #include "display_refresh.h"
 #include "log_pipe.h"
@@ -738,6 +739,37 @@ int main(int argc, char** argv) {
         const std::uint64_t launch_title_id = eden_game_title_id(selected_game.c_str());
         const auto game_video = Eden::LoadGameSettings(launch_title_id);
         const auto launch_preferences = Eden::LoadPreferences();
+        // Per-title opt-in; no experimental setting is enabled automatically.
+        unsigned experimental_jit_cache = 0;
+        bool experimental_logical_cpu = false;
+        bool experimental_frame_probe = false;
+#ifdef PS5_NATIVE
+        if (!safe_launch && launch_title_id) {
+            std::string source;
+            if (Eden::Settings::ReadFile(Eden::ConfigFile("experiments.json"), source)) {
+                using Json = Eden::Settings::Json;
+                const Json doc = Json::parse(source, nullptr, false);
+                const Json::json_pointer at("/games/" + Eden::Settings::TitleKey(launch_title_id));
+                if (doc.is_object() && doc.contains(at) && doc.at(at).is_object()) {
+                    const auto& game_options = doc.at(at);
+                    const auto get = [&](const char* name) -> std::string {
+                        const auto it = game_options.find(name);
+                        return it != game_options.end() && it->is_string() ?
+                            it->get<std::string>() : "";
+                    };
+                    const std::string jit = get("jit_cache");
+                    experimental_jit_cache = jit == "balanced" ? 1u : jit == "expanded" ? 2u : 0u;
+                    experimental_logical_cpu = get("cpu_placement") == "logical";
+                    experimental_frame_probe = get("vulkan_pacing") == "trace";
+                }
+            }
+        }
+        Eden::Experimental::jit_cache_tier.store(experimental_jit_cache, std::memory_order_relaxed);
+        Eden::Experimental::vulkan_frame_probe.store(experimental_frame_probe, std::memory_order_relaxed);
+        std::printf("EDEN_EXPERIMENT_CONFIG title=%016llX jit=%u cpu_logical=%u vulkan_trace=%u safe=%u\n",
+            static_cast<unsigned long long>(launch_title_id), experimental_jit_cache,
+            unsigned(experimental_logical_cpu), unsigned(experimental_frame_probe), unsigned(safe_launch));
+#endif
         const int global_authored_tier =
             launch_preferences.performance_profile >= 0 &&
             launch_preferences.performance_profile < Eden::EncoreOverrides::kAuthoredProfileCount ?
@@ -906,7 +938,11 @@ int main(int argc, char** argv) {
         std::puts("[headless-startup] absolute_paths_ready");
 #endif
 #ifdef PS5_NATIVE
-        if (game) Eden::Performance::PlatformChecks();
+        if (game) {
+            Eden::Performance::PlatformChecks();
+            if (experimental_logical_cpu)
+                Eden::Performance::EnableExperimentalLogicalPlacement();
+        }
 #endif
         Common::Log::Initialize();
         if (game) {
