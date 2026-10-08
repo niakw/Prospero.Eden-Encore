@@ -76,17 +76,21 @@ Cover Textures::cover(const std::string &path, float size)
 {
     if (path.empty())
         return {0, 0.0f, true, 1.0f};
-    // Covers are 256 pixels a side: draw a small one from a halved copy, which
-    // a single-level texture cannot do for itself.
-    const float pixels = size * output_scale_;
-    const int level = pixels > 128.0f ? 0 : pixels > 64.0f ? 1 : 2;
-    const std::string key = path + '#' + static_cast<char>('0' + level);
+    // A 1920px Nlib screenshot used as a 300px library tile must not
+    // upload the full 8 MiB RGBA image on the GL/UI thread. Quantize
+    // requested physical pixels into stable power-of-two buckets, retaining
+    // the unscaled source for the 1920px Home Hero.
+    const float pixels = std::clamp(size * output_scale_, 1.0f, 2048.0f);
+    int target_pixels = 64;
+    while (target_pixels < pixels && target_pixels < 2048)
+        target_pixels *= 2;
+    const std::string key = path + '#' + std::to_string(target_pixels);
     auto it = covers_.find(key);
     if (it == covers_.end())
     {
         Entry entry;
         entry.path = path;
-        entry.level = level;
+        entry.target_pixels = target_pixels;
         entry.generation = ++next_generation_;
         it = covers_.emplace(key, std::move(entry)).first;
         queue_.push_back(key);
@@ -169,20 +173,27 @@ void Textures::pump(float dt, int budget)
             const auto it = covers_.find(key);
             if (it == covers_.end() || it->second.loaded) continue;
             const std::string path = it->second.path;
-            const int level = it->second.level;
+            const int target_pixels = it->second.target_pixels;
             const auto generation = it->second.generation;
             try {
                 decode_ = std::async(std::launch::async,
-                    [this, key = std::move(key), path, level, generation]() mutable {
+                    [this, key = std::move(key), path, target_pixels, generation]() mutable {
                         DecodedCover decoded;
                         decoded.key = std::move(key);
                         decoded.generation = generation;
                         try {
                             decoded.ok = services_.load_image(path, &decoded.image);
                             if (decoded.ok) {
-                                for (int i = 0; i < level &&
-                                     decoded.image.width > 64 &&
-                                     decoded.image.height > 64; ++i)
+                                // Keep the largest dimension near the actual
+                                // rendering footprint. This scaling is CPU-side
+                                // on the decode worker, never in the UI frame.
+                                // The 3/2 threshold avoids uploading a 960px
+                                // image for a 512px tile while respecting the
+                                // original Hero resolution at 2048px.
+                                while (decoded.image.width > 1 &&
+                                       decoded.image.height > 1 &&
+                                       std::max(decoded.image.width, decoded.image.height) >
+                                           target_pixels * 3 / 2)
                                     decoded.image = gfx::halve(decoded.image);
                             }
                         } catch (...) {
