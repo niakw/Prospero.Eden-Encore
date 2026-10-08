@@ -1214,7 +1214,7 @@ bool EdenServices::clear_shader_caches(std::string* message) {
     }
     if (message) {
         if (ok)
-            *message = fill(tr("Cleared {0} of shader/JIT caches."), {StorageSize(before)});
+            *message = fill(tr("Cleared {0} of cache."), {StorageSize(before)});
         else
             *message = tr("Some cache files could not be removed.");
     }
