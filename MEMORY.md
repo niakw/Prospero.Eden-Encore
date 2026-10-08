@@ -473,3 +473,10 @@ Remaining before asking approval for **one** incremental CI build: finish code r
 - Nlib: validate cached uncompressed BGRA/TGA header, dimensions and payload length rather than trusting file existence; bad files can be re-fetched; accept JPEG or PNG from image endpoints; expose aggregate missing-media diagnostics; refresh sparse cached metadata to discover newly available artwork; bounded network retries of missing Home media (2 min), all installed games (5 min), and metadata (5/30 min) with a lightweight 8-second launcher check. Game network is still never required.
 - Visual fallbacks: Library prefers Nlib/ROM square icon over panoramic banner for cards, uses contain for icon-only detail image, shows human-readable loading/unavailable states, hides invalid thumbnail slots. Home recent tiles also show status, no fake media. New French translations in fr-FR and fr-CA, with prior malformed literal newline entries repaired.
 - New source guard `tools/check-nlib-ui-recovery.py`. No workflow run started, no PS5 build or merge; must compile/test before distributing another installable build. FC27 artwork depends on actual ROM extraction and Nlib availability; no hardcoded replacement is promised.
+
+### 2026-10-08 — FC27 Nlib artwork cache audit (source only; no build)
+
+- User reports that FC27 media exists on Nlib. Old complete schema-v2 metadata could persist indefinitely, including outdated artwork absence. Nlib schema v3 adds weekly persisted metadata refresh and monthly refresh of valid image files; retain existing files if downloads fail.
+- A screenshot fallback must not count as an already-cached real banner.
+- When an atomic download replaces a file under the same path, the launcher now invalidates its affected in-memory GL texture, instead of retaining stale artwork until restart.
+- Source-contract guard updated. No native PS5 compilation, workflow dispatch, preview, or hardware validation. Never claim this is in the previously shipped package.

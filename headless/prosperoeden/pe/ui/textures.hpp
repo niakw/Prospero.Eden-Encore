@@ -61,6 +61,8 @@ class Textures
     Cover cover(const std::string &path, float size);
     // Loads up to `budget` queued covers and ages the loaded ones.
     void pump(float dt, int budget = 2);
+    // Called only when Nlib atomically replaces an image with the same path.
+    void invalidate(const std::string &path);
     // Output pixels per virtual pixel: picks how much detail a cover needs.
     void set_output_scale(float scale)
     {
