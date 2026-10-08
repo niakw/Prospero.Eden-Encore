@@ -766,7 +766,8 @@ int main(int argc, char** argv) {
                             it->get<std::string>() : "";
                     };
                     const std::string jit = get("jit_cache");
-                    experimental_jit_cache = jit == "balanced" ? 1u : jit == "expanded" ? 2u : 0u;
+                    if (!jit.empty())
+                        experimental_jit_cache = jit == "balanced" ? 1u : jit == "expanded" ? 2u : 0u;
 #ifdef EDEN_SPARSE_JIT_DEV
                     experimental_sparse_jit = get("jit_memory") == "sparse";
 #endif
