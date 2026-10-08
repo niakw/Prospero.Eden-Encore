@@ -27,6 +27,8 @@ assert "ReadGlyphDisplayVersion(" in metadata_cpp
 assert "raw.version_string" in metadata_cpp
 assert "UpdatesScanCompleted()" in metadata_cpp
 assert "update_present = true" in metadata_cpp
+assert "if (!error && !exists) UpdatesScanCompleted() = true;" in metadata_cpp
+assert 'const bool is_xci = extension == ".xci";' in metadata_cpp
 assert "eden_game_glyph_display_version(" in metadata_cpp
 assert "eden_game_glyph_display_version(" in metadata_h
 assert "eden_game_glyph_display_version(" in main_cpp
