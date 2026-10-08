@@ -509,10 +509,16 @@ void Launcher::enter_library()
 
 bool Launcher::open_game_settings_at_file(const std::string &file)
 {
-    if (!games_loaded_)
-    {
+    if (!games_loaded_) {
         start_scan();
-        finish_scan(true);
+        finish_scan(false);
+        if (!games_loaded_) {
+            // Home Triangle can arrive while first-time game enumeration is
+            // still running. Never block a PS5 UI frame waiting for NACP,
+            // updates, DLC or the mods scan; complete the request in update().
+            pending_settings_file_ = file;
+            return true;
+        }
     }
     for (int i = 0; i < static_cast<int>(games_.size()); ++i)
     {
