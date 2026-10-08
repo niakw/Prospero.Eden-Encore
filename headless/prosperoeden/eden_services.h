@@ -15,6 +15,7 @@ public:
     explicit EdenServices(std::string launch_error);
 
     pe::ui::Home home() override;
+    pe::ui::Home home(const std::atomic<bool>* cancel) override;
     std::string clock() override;
     unsigned controllers() override;
     std::string version() override;
