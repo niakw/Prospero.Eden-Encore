@@ -691,10 +691,13 @@ void GraphicsWindow::OnFrameDisplayed() {
     }
     // Development autoboot bypasses the launcher, which normally hides splash.
     // OpenGL already does this inside EGL; Vulkan uses the shared frame callback.
-    if (vulkan && !splash_hidden) {
+    if (vulkan && !splash_hide_attempted) {
+        // Avoid a native system-service call and a log line on EVERY present
+        // when the firmware rejects HideSplashScreen. A single attempt per
+        // graphics session is enough; retrying at 30/60 FPS can cause stutter.
+        splash_hide_attempted = true;
         const int result = sceSystemServiceHideSplashScreen();
         std::printf("EDEN_VULKAN_HIDE_SPLASH rc=%08x\n", static_cast<unsigned>(result));
-        std::fflush(stdout);
         splash_hidden = result == 0;
     }
 #endif
