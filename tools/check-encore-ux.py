@@ -192,6 +192,12 @@ assert 'Prospero.Eden-Encore/1' in net_patch and 'User-Agent' in net_patch
 # all package inventory, import and compiled-string checks. Validate this contract
 # in the early fast preflight, before consuming hours on another native build.
 staged_check = read('tools/ci/check-staged-app.py')
+# Prevent a multi-hour native package from failing because its final binary
+# checker still demands an unsafe PlayStation Auto UI-mode transition that
+# the reviewed controller implementation explicitly removed.
+assert "EDEN_PAD_CONTEXT mode=gameplay reason=sustained_activity sticky=1" in pad
+assert '"EDEN_PAD_CONTEXT mode=gameplay reason=sustained_activity sticky=1"' in staged_check
+assert '"EDEN_PAD_CONTEXT mode=ui"' not in staged_check
 match = re.search(r'assert all\(marker in home_source for marker in \((.*?)\)\)', staged_check, re.S)
 assert match, 'staged-app Home focus contract has no explicit named marker list'
 for marker in re.findall(r'"(kHome[^\"]+)"', match.group(1)):
