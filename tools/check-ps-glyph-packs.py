@@ -142,6 +142,35 @@ with tempfile.TemporaryDirectory(prefix="eden-glyph-packs-host-") as folder:
     rejected(lambda: gate.install(pack, source, mods, TITLE, BUILD), "silent overwrite")
     assert (result / "romfs" / GAMEFILE).read_bytes() == replacement
 
+    # Eden itself resolves mods/<TITLE> case-insensitively. Preserve an
+    # existing lowercase directory rather than creating a second mod tree.
+    lowercase_mods = root / "mods-lowercase"
+    lowercase_mods.mkdir()
+    lowercase_game = lowercase_mods / TITLE.lower()
+    lowercase_game.mkdir()
+    lowercase_result = gate.install(pack, source, lowercase_mods, TITLE, BUILD)
+    assert lowercase_result.parent == lowercase_game
+    assert not (lowercase_mods / TITLE).exists()
+    assert (lowercase_result / "romfs" / GAMEFILE).read_bytes() == replacement
+
+    # Conflicting case variants are ambiguous to the actual game mod loader.
+    conflicting = root / "mods-conflicting"
+    conflicting.mkdir()
+    (conflicting / TITLE.lower()).mkdir()
+    (conflicting / TITLE).mkdir()
+    rejected(lambda: gate.install(pack, source, conflicting, TITLE, BUILD),
+             "two case-colliding game title folders")
+
+    # Even an incorrectly capitalized pre-existing glyph mod is never
+    # silently overwritten.
+    conflicting_child = root / "mods-colliding-glyph"
+    conflicting_child.mkdir()
+    game_folder = conflicting_child / TITLE
+    game_folder.mkdir()
+    (game_folder / gate.MOD_NAME.lower()).mkdir()
+    rejected(lambda: gate.install(pack, source, conflicting_child, TITLE, BUILD),
+             "existing glyph mod with different capitalization")
+
     cmd = [sys.executable, "-B", str(GATE), "verify", "--pack", str(pack),
            "--original-romfs", str(source), "--title-id", TITLE, "--build-id", BUILD]
     process = subprocess.run(cmd, capture_output=True, text=True, check=True)
