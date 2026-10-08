@@ -153,4 +153,14 @@ net_patch=(root/'headless/backports/eden-ps5-net-user-agent.patch').read_text()
 assert 'eden-ps5-net-user-agent.patch' in apply
 assert 'Prospero.Eden-Encore/1' in net_patch and 'User-Agent' in net_patch
 
+# The final staged-app checker must reference real Home focus identifiers. In
+# run #37710086280 it required removed kHomeCache despite the native app passing
+# all package inventory, import and compiled-string checks. Validate this contract
+# in the early fast preflight, before consuming hours on another native build.
+staged_check = read('tools/ci/check-staged-app.py')
+match = re.search(r'assert all\(marker in home_source for marker in \((.*?)\)\)', staged_check, re.S)
+assert match, 'staged-app Home focus contract has no explicit named marker list'
+for marker in re.findall(r'"(kHome[^\"]+)"', match.group(1)):
+    assert marker in home, f'staged-app checker references missing Home identifier: {marker}'
+
 print('Encore UX/media/profile contracts: PASS')
