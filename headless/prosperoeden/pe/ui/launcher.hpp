@@ -234,6 +234,7 @@ class Launcher
     Home home_;
     DiagnosticsInfo home_diagnostics_{};
     std::future<DiagnosticsInfo> diagnostics_scan_; // asynchronous cache/log disk inventory
+    bool diagnostics_refresh_pending_ = false; // discard an outdated scan after maintenance
     int home_recent_ = -1; // -1 = last played; otherwise the selected Recent card becomes the hero
     GameSettings home_game_settings_{};
     bool home_game_docked_ = true;
