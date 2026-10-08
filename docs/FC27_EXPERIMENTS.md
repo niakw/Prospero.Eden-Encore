@@ -46,13 +46,23 @@ for fixing guest stutter. Shared-JIT, compile-ahead, unsafe CPU/DMA and inline
 exclusives are still OFF by default. Require an explicit user-approved build,
 standalone validation, and PS5 hardware A/B before promoting any setting.
 
+## End of A/B/C/D campaign
+
+The PS5-native branch now automatically selects FC27's observed best C cache
+capacity when launching normally. Safe Launch retains A. The old
+`experiments.json` trial controls are **developer-build only**, so no new
+manual performance profile is required on a future qualified release.
+This does not eliminate all slow frames or replace the planned demand-driven
+multi-segment JIT. Do not confuse these source changes with an installed
+console update.
+
 ## Sparse JIT memory (development branch only — not built or PS5-qualified)
 
 The dense PS5 code allocator used by A/B/C/D commits **all** requested direct
 memory at JIT creation, even when a small game uses only a fraction. This branch
 prototypes a different backing scheme while retaining stable RX and RW views:
 
-- `jit_memory: "sparse"` (explicit opt-in) reserves both virtual views, but
+- `jit_memory: "sparse"` (only when compiled with `EDEN_SPARSE_JIT_DEV=ON`\n  and `EDEN_DEV_PROFILE`) reserves both virtual views, but
   commits 2 MiB *physical direct-memory* chunks only when Dynarmic calls
   `BlockOfCode::EnsureMemoryCommitted` before emitting code. It does not rely
   on execution-time page faults, change guest timing, or move existing code.
