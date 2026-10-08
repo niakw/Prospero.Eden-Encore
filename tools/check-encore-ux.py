@@ -124,7 +124,9 @@ assert 'text_shrink(c, game->name, 558.0f, baseline(574.0f, 52.0f, 40.0f)' in li
 assert 'text_block(c, game->name, 558.0f' not in library
 assert 'kNlibCacheSchema = 2' in services
 assert 'current_metadata_cache' in services
-assert 'artwork_files.resize(6)' in services
+assert 'artwork_files.resize(6)' not in services
+assert 'const int wanted_screens = std::clamp(screen_count, 0, 3);' in services
+assert 'for (std::size_t offset = 0; offset < games_.size(); ++offset)' in library
 assert 'game->screenshots' in library
 
 # Global PlayStation Auto control contract.
