@@ -246,16 +246,16 @@ msgid "Clear"
 msgstr "Vider"
 
 #: pe/ui/settings.cpp
-msgid "Clear shader caches"
-msgstr "Vider les caches shaders"
+msgid "Clear cache"
+msgstr "Vider le cache"
 
 #: pe/ui/launcher.cpp
-msgid "Clear shader/JIT caches?"
-msgstr "Vider les caches shaders/JIT ?"
+msgid "Clear cache?"
+msgstr "Vider le cache ?"
 
 #: eden_services.cpp
-msgid "Cleared {0} of shader/JIT caches."
-msgstr "Caches shaders/JIT supprimés : {0}."
+msgid "Cleared {0} of cache."
+msgstr "Cache vidé : {0}."
 
 #: pe/ui/launcher.cpp
 msgid "Confirm"
@@ -752,8 +752,8 @@ msgid "Library"
 msgstr "Bibliothèque"
 
 #: pe/ui/home.cpp
-msgid "Local players: {0}"
-msgstr "Joueurs locaux : {0}"
+msgid "Max. players: {0}"
+msgstr "Joueurs max. : {0}"
 
 #: pe/ui/settings.cpp
 msgid "LOGS"
@@ -1207,12 +1207,12 @@ msgid "Setup validation failed. Check that firmware and key files are readable a
 msgstr "La validation de la configuration a échoué. Vérifiez que les fichiers du firmware et des clés sont lisibles et valides."
 
 #: pe/ui/settings.cpp
-msgid "SHADER/JIT CACHES"
-msgstr "CACHES SHADERS/JIT"
+msgid "CACHE"
+msgstr "CACHE"
 
 #: pe/ui/settings.cpp
-msgid "Shader/JIT caches: {0}  |  Logs: {1}"
-msgstr "Caches shaders/JIT : {0}  |  Journaux : {1}"
+msgid "Cache: {0}  |  Logs: {1}"
+msgstr "Cache : {0}  |  Journaux : {1}"
 
 #: pe/ui/settings.cpp
 msgid "Shows live FPS while playing. Off is cleaner for normal use; Touchpad + R1 toggles it at any time."
