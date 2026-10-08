@@ -320,6 +320,13 @@ void* ReserveSparseJitCode(std::size_t size, void** writable_out) noexcept {
     return rx;
 }
 
+// Sparse reservation may fail when virtual address space is fragmented.
+// If Xbyak fell back to a dense alias, never try to commit into that mapping.
+bool IsSparseJitCode(const void* executable) noexcept {
+    const std::lock_guard lock{sparse_jit_mutex};
+    return sparse_jit_regions.find(const_cast<void*>(executable)) != sparse_jit_regions.end();
+}
+
 // Called only by BlockOfCode::EnsureMemoryCommitted before emission.
 // Never commit at an asynchronous page fault in executing JIT code.
 bool CommitSparseJitCode(void* executable, std::size_t required) noexcept {
