@@ -234,6 +234,54 @@ apply_one "$root/headless/backports/eden-4473-4477.patch" "$eden/.encore-backpor
 apply_one "$root/headless/backports/eden-4436-spinlock-mutex.patch" "$eden/.encore-backport-4436.sha256" validate_spinlock_mutex
 apply_one "$root/headless/backports/eden-fw23-services.patch" "$eden/.encore-backport-fw23.sha256" validate_fw23
 apply_one "$root/headless/backports/eden-runtime-hid.patch" "$eden/.encore-backport-runtime-hid.sha256" validate_runtime_hid
+# FC27 real-hardware log evidence: account open-context panics, unhandled BSD Ioctl,
+# and 0x100-vs-0x10 IPv4 IPC writes. Ship only on the exact pinned Eden tree.
+validate_fc27_hle_compat() {
+python3 - "$eden" <<'PYFC27'
+from pathlib import Path
+import sys
+r=Path(sys.argv[1]); account=(r/'src/core/hle/service/acc/acc.cpp').read_text()
+bsd=(r/'src/core/hle/service/sockets/bsd.cpp').read_text()
+for marker in ('{130, &ACC_U0::LoadOpenContext, "LoadOpenContext"}',
+               'profile_manager->GetStoredOpenedUsers()', 'profile_manager->OpenUser(user_id)'):
+    if marker not in account: raise SystemExit(f'FC27 account HLE missing: {marker}')
+for marker in ('{19, &BSD_USA::Ioctl, "Ioctl"}',
+               'constexpr u32 kFionbio = 0x8004667e;',
+               'BuildErrnoResponse(ctx, Errno::INVAL)',
+               'write_buffer.resize(guest_addrin.len);'):
+    if marker not in bsd: raise SystemExit(f'FC27 BSD HLE missing: {marker}')
+if bsd.count('write_buffer.resize(guest_addrin.len);') != 2:
+    raise SystemExit('Both getpeername and getsockname require bounded IPv4 writes')
+print('FC27 HLE account/Ioctl/bounded IPv4 backport: PASS')
+PYFC27
+}
+apply_one "$root/headless/backports/eden-fc27-hle-compat.patch" "$eden/.encore-backport-fc27-hle.sha256" validate_fc27_hle_compat
+# The host launcher owns Nlib/catalog HTTPS. The guest Switch network must not
+# resolve or contact EA/Nintendo/any Internet host, including raw-IP traffic.
+validate_guest_offline() {
+python3 - "$eden" <<'PYOFFLINE'
+from pathlib import Path
+import sys
+r = Path(sys.argv[1])
+p = (r / 'src/core/hle/service/sockets/encore_guest_network_policy.h').read_text()
+bsd = (r / 'src/core/hle/service/sockets/bsd.cpp').read_text()
+dns = (r / 'src/core/hle/service/sockets/sfdnsres.cpp').read_text()
+nifm = (r / 'src/core/hle/service/nifm/nifm.cpp').read_text()
+if 'inline constexpr bool kGuestNetworkOffline = true;' not in p:
+    raise SystemExit('Guest network policy must be immutable offline')
+if 'if (Eden::Encore::kGuestNetworkOffline) return {-1, Errno::NOTCONN};' not in bsd:
+    raise SystemExit('Guest BSD socket allocation is not blocked')
+if dns.count('if (Eden::Encore::kGuestNetworkOffline) return {0, GetAddrInfoError::AGAIN};') != 2:
+    raise SystemExit('Both guest DNS entry points must be blocked')
+for key in ('enable == 0 || Eden::Encore::kGuestNetworkOffline',
+            'if (Eden::Encore::kGuestNetworkOffline || !st.connected)',
+            'const auto has_connection = !Eden::Encore::kGuestNetworkOffline'):
+    if key not in nifm:
+        raise SystemExit('Guest NIFM policy missing: ' + key)
+print('Encore guest-only DNS/BSD/NIFM offline isolation: PASS')
+PYOFFLINE
+}
+apply_one "$root/headless/backports/eden-ps5-guest-offline.patch" "$eden/.encore-backport-guest-offline.sha256" validate_guest_offline
 # Quarantine: this dummy-thread wait proposal can clear a wait-queue pointer
 # while ThreadState::Waiting still holds. NotifyAvailable/CancelWait in pinned Eden
 # may dereference that pointer. A patch-apply test is NOT a correctness test.

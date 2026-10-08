@@ -626,7 +626,14 @@ void GraphicsWindow::OnFrameDisplayed() {
             frame_sample_start = frame_sample_last = now;
         } else {
             ++frame_sample_count;
-            frame_sample_worst = std::max(frame_sample_worst, now - frame_sample_last);
+            const double present_interval = now - frame_sample_last;
+            frame_sample_worst = std::max(frame_sample_worst, present_interval);
+            // User-observed FC27 dribble drops: capture how often a nominal 30 FPS
+            // frame exceeds 38/50/100 ms without enabling verbose GPU logs.
+            // This is a presentation signal, NOT proof that the guest game advances.
+            frame_late_38 += present_interval >= 0.038;
+            frame_late_50 += present_interval >= 0.050;
+            frame_late_100 += present_interval >= 0.100;
 #ifdef EDEN_DEV_PROFILE
             // Present intervals by vsync multiple: a 60 FPS title that misses by a little
             // shows up in the 2-vsync bucket, a slow one across all of them. "half" counts the
@@ -640,11 +647,12 @@ void GraphicsWindow::OnFrameDisplayed() {
             if (now - frame_sample_start >= 5.0) {
                 // The game's frames; the ones a slower display did not show are counted apart.
                 std::printf("EDEN_VULKAN_FRAME frames=%u seconds=%.6f fps=%.3f worst_ms=%.3f total=%u "
-                            "not_shown=%u clock_hz=%.1f\n",
+                            "not_shown=%u clock_hz=%.1f late38=%u late50=%u late100=%u\n",
                     frame_sample_count, now - frame_sample_start,
                     frame_sample_count / (now - frame_sample_start),
                     frame_sample_worst * 1000.0, frame_total, Display::skipped_frames.load(),
-                    Display::game_millihertz.load() / 1000.0);
+                    Display::game_millihertz.load() / 1000.0,
+                    frame_late_38, frame_late_50, frame_late_100);
 #ifdef EDEN_DEV_PROFILE
                 std::printf("EDEN_VULKAN_INTERVALS v1=%u v2=%u v3=%u v4plus=%u half=%u\n", interval_hist[0],
                             interval_hist[1], interval_hist[2], interval_hist[3], interval_hist[4]);
@@ -659,6 +667,7 @@ void GraphicsWindow::OnFrameDisplayed() {
                 frame_sample_start = now;
                 frame_sample_count = 0;
                 frame_sample_worst = 0;
+                frame_late_38 = frame_late_50 = frame_late_100 = 0;
             }
         }
     }

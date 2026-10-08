@@ -30,10 +30,13 @@ def analyze(lines: list[str], repeated_pc_seconds: float = 10.0) -> dict:
     hle: list[dict] = []
     queue: list[dict] = []
     for line in lines:
-        if "EDEN_GAME_FRAME " in line or "EDEN_DEV_FRAME " in line:
+        if any(marker in line for marker in (
+            "EDEN_GAME_FRAME ", "EDEN_DEV_FRAME ", "EDEN_VULKAN_FRAME ")):
             f = attributes(line)
             frames.append({"fps": number(f, "fps"), "worst_ms": number(f, "worst_ms"),
-                           "seconds": number(f, "seconds"), "frames": number(f, "frames")})
+                           "seconds": number(f, "seconds"), "frames": number(f, "frames"),
+                           "late38": number(f, "late38"), "late50": number(f, "late50"),
+                           "late100": number(f, "late100")})
         if "EDEN_PERF_CPU_POINT " in line:
             f = attributes(line)
             if "core" in f and "mono_ns" in f and "pc" in f:

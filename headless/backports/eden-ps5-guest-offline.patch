@@ -1,0 +1,131 @@
+--- a/src/core/hle/service/sockets/bsd.cpp
++++ b/src/core/hle/service/sockets/bsd.cpp
+@@ -17,6 +17,7 @@
+ #include "core/hle/kernel/k_thread.h"
+ #include "core/hle/service/ipc_helpers.h"
+ #include "core/hle/service/sockets/bsd.h"
++#include "core/hle/service/sockets/encore_guest_network_policy.h"
+ #include "core/hle/service/sockets/sockets_translate.h"
+ #include "core/internal_network/network.h"
+ #include "core/internal_network/socket_proxy.h"
+@@ -559,6 +560,10 @@
+ }
+ 
+ std::pair<s32, Errno> BSD_USA::SocketImpl(Domain domain, Type type, Protocol protocol) {
++    // Game traffic must NEVER escape to host EA/Nintendo/other Internet servers.
++    // Do not allocate a descriptor, construct a host socket or invoke DNS.
++    // This dedicated policy cannot be overridden by a guest NIFM wifi toggle.
++    if (Eden::Encore::kGuestNetworkOffline) return {-1, Errno::NOTCONN};
+     // user bsd:u has restrictions on SOCK_SEQPACKET and SOCK_RAW
+     if (is_user && (type == Type::SEQPACKET || type == Type::RAW)) {
+         if (type == Type::RAW && domain == Domain::INET && protocol == Protocol::ICMP) {
+--- a/src/core/hle/service/sockets/sfdnsres.cpp
++++ b/src/core/hle/service/sockets/sfdnsres.cpp
+@@ -13,6 +13,7 @@
+ #include "core/core.h"
+ #include "core/hle/service/ipc_helpers.h"
+ #include "core/hle/service/sockets/sfdnsres.h"
++#include "core/hle/service/sockets/encore_guest_network_policy.h"
+ #include "core/hle/service/sockets/sockets.h"
+ #include "core/hle/service/sockets/sockets_translate.h"
+ #include "core/internal_network/network.h"
+@@ -202,6 +203,10 @@
+     const std::string host = Common::StringFromBuffer(host_buffer);
+     // For now, ignore options, which are in input buffer 1 for GetHostByNameRequestWithOptions.
+ 
++    // No host DNS for emulated titles, regardless of destination. The
++    // launcher artwork uses Common::Net::MakeRequest, not this guest IPC.
++    if (Eden::Encore::kGuestNetworkOffline) return {0, GetAddrInfoError::AGAIN};
++
+     // Prevent resolution of Nintendo servers
+     if (IsBlockedHost(host)) {
+         LOG_WARNING(Network, "Resolution of hostname {} requested, returning EAI_AGAIN", host);
+@@ -318,6 +323,10 @@
+     const auto host_buffer = ctx.ReadBuffer(0);
+     const std::string host = Common::StringFromBuffer(host_buffer);
+ 
++    // No host DNS for emulated titles, regardless of destination. The
++    // launcher artwork uses Common::Net::MakeRequest, not this guest IPC.
++    if (Eden::Encore::kGuestNetworkOffline) return {0, GetAddrInfoError::AGAIN};
++
+     // Prevent resolution of Nintendo servers
+     if (IsBlockedHost(host)) {
+         LOG_WARNING(Network, "Resolution of hostname {} requested, returning EAI_AGAIN", host);
+--- a/src/core/hle/service/nifm/nifm.cpp
++++ b/src/core/hle/service/nifm/nifm.cpp
+@@ -11,6 +11,7 @@
+ #include "core/hle/service/ipc_helpers.h"
+ #include "core/hle/service/kernel_helpers.h"
+ #include "core/hle/service/nifm/nifm.h"
++#include "core/hle/service/sockets/encore_guest_network_policy.h"
+ #include "core/hle/service/server_manager.h"
+ #include "core/internal_network/emu_net_state.h"
+ #include "core/internal_network/network.h"
+@@ -430,7 +431,8 @@
+         LOG_DEBUG(Service_NIFM, "(STUBBED) called");
+ 
+         const auto result = [this] {
+-            const auto has_connection = Network::GetHostIPv4Address().has_value() &&
++            const auto has_connection = !Eden::Encore::kGuestNetworkOffline &&
++                                        Network::GetHostIPv4Address().has_value() &&
+                                         !Settings::values.airplane_mode.GetValue();
+             switch (state) {
+             case RequestState::NotSubmitted:
+@@ -919,13 +921,13 @@
+     IPC::RequestParser rp{ctx};
+     const u8 enable = rp.Pop<u8>();
+ 
+-    Settings::values.airplane_mode.SetValue(enable == 0);
++    Settings::values.airplane_mode.SetValue(enable == 0 || Eden::Encore::kGuestNetworkOffline);
+ 
+     IPC::ResponseBuilder{ctx, 2}.Push(ResultSuccess);
+ }
+ 
+ void IGeneralService::IsWirelessCommunicationEnabled(HLERequestContext& ctx) {
+-    const bool en = !Settings::values.airplane_mode.GetValue();
++    const bool en = !Eden::Encore::kGuestNetworkOffline && !Settings::values.airplane_mode.GetValue();
+     IPC::ResponseBuilder rb{ctx, 3};
+     rb.Push(ResultSuccess);
+     rb.Push<u8>(en);
+@@ -943,7 +945,7 @@
+     };
+     Output out{};
+ 
+-    if (!st.connected) {
++    if (Eden::Encore::kGuestNetworkOffline || !st.connected) {
+         out.type = 1;
+         out.bars = 0;
+         out.state = InternetConnectionStatus::ConnectingUnknown1;
+@@ -972,7 +974,8 @@
+ 
+     IPC::ResponseBuilder rb{ctx, 3};
+     rb.Push(ResultSuccess);
+-    if (Network::GetHostIPv4Address().has_value() && !Settings::values.airplane_mode.GetValue()) {
++    if (!Eden::Encore::kGuestNetworkOffline && Network::GetHostIPv4Address().has_value() &&
++        !Settings::values.airplane_mode.GetValue()) {
+         rb.Push<u8>(1);
+     } else {
+         rb.Push<u8>(0);
+@@ -984,7 +987,8 @@
+ 
+     IPC::ResponseBuilder rb{ctx, 3};
+     rb.Push(ResultSuccess);
+-    if (Network::GetHostIPv4Address().has_value() && !Settings::values.airplane_mode.GetValue()) {
++    if (!Eden::Encore::kGuestNetworkOffline && Network::GetHostIPv4Address().has_value() &&
++        !Settings::values.airplane_mode.GetValue()) {
+         rb.Push<u8>(1);
+     } else {
+         rb.Push<u8>(0);
+--- /dev/null
++++ b/src/core/hle/service/sockets/encore_guest_network_policy.h
+@@ -0,0 +1,10 @@
++// SPDX-License-Identifier: GPL-3.0-or-later
++#pragma once
++
++// Encore is an offline-only guest emulator on PS5. The native host launcher
++// alone owns HTTPS (Nlib banners, local catalog updates). Do not use the
++// mutable emulated airplane_mode setting as a security boundary: NIFM IPC can
++// change it. Keep this policy immutable across every emulated title/session.
++namespace Eden::Encore {
++inline constexpr bool kGuestNetworkOffline = true;
++}
