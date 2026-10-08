@@ -169,13 +169,29 @@ assert "diagnostics_scan_.wait_for(std::chrono::seconds(0))" in lib
 assert "if (!diagnostics_refresh_pending_)" in lib
 assert "if (diagnostics_refresh_pending_)" in lib
 read_home_entry = lib.split("void Launcher::read_home()", 1)[1].split(
+    "void Launcher::finish_home_scan()", 1)[0]
+finish_home_entry = lib.split("void Launcher::finish_home_scan()", 1)[1].split(
     "void Launcher::check_games_present()", 1)[0]
 assert "start_diagnostics();" in read_home_entry
+assert "home_scan_ = std::async(std::launch::async" in read_home_entry
+assert "return services_.home();" in read_home_entry
+assert "services_.home();" not in nav
+assert "std::future<Home> home_scan_;" in hdr
+assert "home_reload_pending_" in hdr
+assert "home_scan_.wait_for(std::chrono::seconds(0))" in finish_home_entry
+assert "Home snapshot = home_scan_.get();" in finish_home_entry
+assert "if (home_reload_pending_)" in finish_home_entry
+assert "home_ = std::move(snapshot);" in finish_home_entry
+assert "home_loaded_ = true;" in finish_home_entry
+assert "refresh_home_hero();" in finish_home_entry
+assert "start_scan();" in finish_home_entry
+assert "finish_home_scan();" in nav
+assert "home_scan_.wait();" in nav
+assert "if (!home_loaded_)" in nav
 assert "services_.mods(home_.last_title_id)" not in read_home_entry
 assert "services_.mods_enabled(home_.last_title_id)" not in read_home_entry
-assert "home_.last_title_id == 0 || !games_loaded_" in read_home_entry
-assert "home_.last_mods = it->mods;" in read_home_entry
-assert "home_.last_mods_on = it->mods_on;" in read_home_entry
+assert "home_.last_mods = game->mods;" in finish_home_entry
+assert "home_.last_mods_on = game->mods_on;" in finish_home_entry
 assert "home_diagnostics_ = services_.diagnostics();" not in read_home_entry
 assert "finish_diagnostics();" in nav
 assert "diagnostics_scan_.wait();" in nav
