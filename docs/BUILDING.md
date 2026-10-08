@@ -329,6 +329,8 @@ On the feature branch it intentionally runs only for a commit containing
 actual Home screen and focus transitions, plus the renderer log.
 
 The host-render capture is diagnostic and carries no PS5 installable package.
+The reference audit now verifies all seven recent slots and icon-bearing cyan
+navigation on the real host renderer, not just marker presence in C++ source.
 Its gameplay artwork uses an explicitly **synthetic preview fixture** generated
 only by the host runner. This checks layout, clipping, focus and image layering.
 It is not a substitute for a real Nlib/banner screenshot on the console and
