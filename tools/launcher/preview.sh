@@ -40,7 +40,7 @@ for source in "${sources[@]}"; do
         warnings=(-Wall -Wextra)
         [[ $relative == pe/gfx/harfbuzz.cpp ]] && warnings=(-w)
         "$cxx" -std=c++20 -O2 "${warnings[@]}" -DGL_GLEXT_PROTOTYPES=1 -I"$source_dir" \
-            -I"$source_dir/host" -I"$root/tools/launcher/stb" -I/usr/include/stb -I"$harfbuzz" -c "$source" -o "$object" &
+            -I"$source_dir/host" -I"$root/headless" -I"$root/tools/launcher/stb" -I/usr/include/stb -I"$harfbuzz" -c "$source" -o "$object" &
         pids+=($!)
         if (( ${#pids[@]} >= max_workers )); then
             for pid in "${pids[@]}"; do wait "$pid"; done
