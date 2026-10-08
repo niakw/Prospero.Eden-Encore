@@ -21,6 +21,7 @@
 #include "diagnostics.h"
 #include "display_refresh.h"
 #include "graphics.h"
+#include "experimental_performance.h"
 #include "common/scope_exit.h"
 #include "core/core.h"
 #include "core/frontend/graphics_context.h"
@@ -646,6 +647,14 @@ void GraphicsWindow::OnFrameDisplayed() {
             frame_late_100 += present_interval >= 0.100;
             frame_late_200 += present_interval >= 0.200;
             frame_late_500 += present_interval >= 0.500;
+            if (Experimental::vulkan_frame_probe.load(std::memory_order_relaxed)) {
+                // Opt-in passive pacing histogram: never sleep or synthesize
+                // frames on the guest/compositor hot path.
+                const double ms = present_interval * 1000.0;
+                const unsigned bucket = ms < 20.0 ? 0 : ms < 29.0 ? 1 :
+                    ms < 38.0 ? 2 : ms < 50.0 ? 3 : ms < 100.0 ? 4 : 5;
+                ++experimental_pacing_bins[bucket];
+            }
             // Consecutive frames above 50 ms distinguish sustained slowdown
             // from isolated JIT/shader compilation gaps. No heap/log on hot path.
             frame_slow_streak = present_interval >= 0.050 ? frame_slow_streak + 1 : 0;
@@ -675,6 +684,14 @@ void GraphicsWindow::OnFrameDisplayed() {
                             interval_hist[1], interval_hist[2], interval_hist[3], interval_hist[4]);
                 interval_hist = {};
 #endif
+                if (Experimental::vulkan_frame_probe.load(std::memory_order_relaxed)) {
+                    std::printf("EDEN_EXPERIMENT_PRESENT lt20=%u ms20_29=%u ms29_38=%u "
+                                "ms38_50=%u ms50_100=%u ge100=%u\n",
+                        experimental_pacing_bins[0], experimental_pacing_bins[1],
+                        experimental_pacing_bins[2], experimental_pacing_bins[3],
+                        experimental_pacing_bins[4], experimental_pacing_bins[5]);
+                    experimental_pacing_bins = {};
+                }
                 Eden::Performance::ReportVulkan();
 #ifdef EDEN_DEV_PROFILE
                 // Composite runs on the GPU thread, so its owner CPU clock is valid here.
