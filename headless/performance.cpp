@@ -478,7 +478,7 @@ void ReportDirectMemoryState(const char* phase) {
     const long long free_upper = valid ? static_cast<long long>(total - taken_lower) : -1LL;
     std::size_t jit_reserved = 0, jit_committed = 0;
     ::Common::SparseJitUsage(&jit_reserved, &jit_committed);
-    std::printf("EDEN_JIT_MEMORY phase=%s reserved=%zu committed=%zu\n",
+    std::printf("EDEN_JIT_SPARSE_MEMORY phase=%s reserved=%zu committed=%zu\n",
                 phase, jit_reserved, jit_committed);
     std::printf("EDEN_MEMORY_LAYOUT phase=%s largest_rc=%d total=%lld largest=%zu "
                 "largest_start=%lld free_upper=%lld scanned_regions=%u scan_valid=%d short=%d\n",
