@@ -372,3 +372,18 @@ PS5 build is part of this visual check.
 Focus review: the selected game cover keeps its native colour and recognisable
 art. Reduce translucent colour wash over cover plates; reserve the stronger
 plum fill for primary actions and use pink/violet glow mainly on the edges.
+
+### Reuse a compiled PS5 stage without rebuilding (October 2026)
+
+GitHub Actions run `37728435816` completed its native compile and uploaded
+`Prospero.Eden-Encore-staged-app` (artifact `11529017450`). The subsequent
+validator expected the **removed debug literal** `Nlib hero cached for `;
+the live all-game Nlib flow now reports `EDEN_NLIB_RESULT` and queues banner,
+icon and screenshots concurrently. The validator was updated to check the
+current compiled markers and source contracts instead of obsolete logs.
+
+A one-shot feature-branch push message `[resume-stage:37728435816]` selects
+that exact successful stage. It deliberately skips compiler/toolchain/cache
+preparation and the full native build, then downloads the artifact, validates
+it against this checkout, repacks the FTP/ZIP/FFPFSC and checks the checksums.
+No GitHub Release is published and the default branch is unchanged.
