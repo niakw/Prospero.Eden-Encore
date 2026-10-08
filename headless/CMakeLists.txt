@@ -802,9 +802,9 @@ foreach(bits 32 64)
             set(jit_legacy_baseline "::Eden::Experimental::kA32Baseline[m_core_index]")
         endif()
         string(REPLACE "${jit_init_site}"
-            "    ::Eden::JitStartup::ConstructWithCapacityFallback(\\n        config.code_cache_size, ${jit_legacy_baseline}, ${bits}, m_core_index,\\n        [&]() { m_jit.emplace(config); });"
+            "    ::Eden::JitStartup::ConstructWithCapacityFallback(\n        config.code_cache_size, ${jit_legacy_baseline}, ${bits}, m_core_index,\n        [&]() { m_jit.emplace(config); });"
             wrapper "${wrapper}")
-        string(PREPEND wrapper "#include \"${EDEN_PORT_DIR}/jit-startup-retry.h\"\\n")
+        string(PREPEND wrapper "#include \"${EDEN_PORT_DIR}/jit-startup-retry.h\"\n")
     endif()
     write_derived("${derived}" "#include <bit>\n${wrapper}")
     list(REMOVE_ITEM core_sources "${relative}")
