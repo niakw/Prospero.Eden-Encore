@@ -32,6 +32,19 @@ with tempfile.TemporaryDirectory(prefix="encore-fc27-trace-") as work:
     assert result["repeated_guest_pc_spans"][0]["guest_pc"] == "124aa117a8"
     assert result["repeated_guest_pc_spans"][0]["hypothesis"] == "busy_guest_loop"
     assert result["can_prove_gameplay_liveness"] is False
+    assert result["present_jitter_intervals"]["over_38ms"] == 0
+    assert result["min_window_present_fps"] == 0.167
+    # In release, one inexpensive aggregate every five seconds is enough to
+    # measure 4-6 FPS dribble dips without spam or gameplay log overhead.
+    jitter = Path(work) / "jitter.log"
+    jitter.write_text("EDEN_VULKAN_FRAME frames=126 seconds=5 fps=25.2 worst_ms=140 total=126 late38=15 late50=8 late100=2\\n"
+                      "EDEN_VULKAN_FRAME frames=149 seconds=5 fps=29.8 worst_ms=35 total=275 late38=0 late50=0 late100=0\\n")
+    jitter_result = json.loads(subprocess.check_output(
+        [sys.executable, "-B", str(tool), str(jitter), "--json"], text=True))
+    assert jitter_result["mean_present_fps"] == 27.5
+    assert jitter_result["min_window_present_fps"] == 25.2
+    assert jitter_result["present_jitter_intervals"] == {
+        "over_38ms": 15, "over_50ms": 8, "over_100ms": 2}
     assert len(result["most_expensive_hle_samples"]) == 1
     assert result["queue_samples"][-1]["idle_ns"] == 1000000
     healthy = Path(work) / "quiet.log"
