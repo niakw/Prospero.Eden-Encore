@@ -22,6 +22,11 @@ jobs:
       - name: Checkout actual launcher source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Static Nlib and all-game runtime guard
+        run: |
+          python3 -B tools/check-nlib-media-safety.py
+          python3 -B tools/check-universal-emulation-policy.py
+
       - name: Install tiny host-only Mesa renderer
         run: |
           sudo apt-get update
