@@ -54,6 +54,36 @@ Frame generation to 60 FPS would be a separate display feature, **not** a freeze
 native build alone is not sufficient for release: actual boot, network, overlay, UI navigation and
 extended gameplay tests on firmware 13.60 remain mandatory.
 
+## PS5-first execution architecture — developer branch (not released)
+
+The FC27 A/B/C/D campaign is finished. B and especially C reduced observed
+JIT cache pressure and improved average frame presentation, while CPU logical
+pinning in D did not provide a convincing general benefit. Some gameplay stalls
+remain, including stretches below 25 FPS without an adjacent JIT-pressure event.
+
+The isolated `dev/ps5-sparse-jit` branch now includes:
+
+- FC27's observed best C JIT capacity selected **automatically** at launch,
+  with normal Safe Launch sizes as fallback. Manual A/B/C/D JSON is
+  development-build only; other titles are unchanged until the dynamic allocator
+  is validated.
+- PS5-native Vulkan shader worker budgeting and one-time worker-count receipt,
+  not yet measured on hardware. A smaller pool may slow shader warmup.
+- GPU/direct-memory snapshots at game-load and shutdown, with a conservative
+  distinction between largest contiguous block and total-free upper bound.
+  No unproven GPU budget increase has been applied.
+- A provisional sparse JIT dual-view mapper, opt-in only when the app is
+  compiled with `EDEN_SPARSE_JIT_DEV=ON` and profiling support. This mapper
+  is **not safe for production** until mid-game allocation failures, executable
+  aliasing and teardown are validated. The arbitrary 4 GiB limit was removed;
+  full demand-driven multi-segment JIT growth is still to be implemented.
+
+**No native build or PS5 execution of these branch changes has taken place.**
+See [PS5 architecture and validation gates](docs/PS5_NATIVE_ARCHITECTURE.md).
+The currently installed/downloadable application does **not** include these
+changes. FC27's input mapping and in-game PlayStation glyph replacement remain
+separate outstanding issues.
+
 ## Changes in Encore R1
 
 Prospero.Eden Encore R1 turns the proven ProsperoEden 1.000.040 base into a PS5 13.60-focused release:
@@ -72,7 +102,7 @@ Prospero.Eden Encore R1 turns the proven ProsperoEden 1.000.040 base into a PS5 
 - **Nlib rich-media enrichment** for the launcher: cached title metadata, icons, **1080p banners**, gameplay screenshots and local-player capacity, with versioned cache migration and offline fallbacks.
 - Four authored video profiles — **Minimum / Recommended / High / Ultra** — plus a derived **Custom** state; profiles are generated from `encore-overrides`, remain title-aware, and keep FSR sharpness conservative by default.
 - Global settings reset and per-game override reset now require an explicit second press; mapping reset and shader/JIT cache clearing use the same confirmation rule.
-- DualSense-first controls with four profiles (**PlayStation / Switch / Custom PS5 / Custom Switch**); the stock PlayStation profile adapts menu/gameplay context while fixed/custom mappings are never rewritten, alongside vibration/deadzone controls and multi-controller handling.
+- DualSense-first controls with four profiles (**PlayStation / Switch / Custom PS5 / Custom Switch**), vibration/deadzone controls and multi-controller handling. Automatic menu/gameplay face-button switching was disabled because its heuristic inverted buttons unpredictably; FC27 match mapping is **not yet resolved**. In-game PlayStation glyphs are also not universally supported.
 - Diagnostics, bounded caches/logs and safer save import/export.
 - Reproducible release packaging with ZIP, optional FFPFSC image and SHA-256 checksums.
 - Complete French launcher catalog with **29 packaged language catalogs**, immediate in-app launcher reconstruction for language/font/label changes, release-safe locale detection and hash-verified FTP installation; stale development `language.txt` overrides can no longer force English.
