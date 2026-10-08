@@ -143,6 +143,8 @@ assert 'game->screenshots' in library
 # already-approved launcher or an explicitly custom controller mapping.
 assert 'SetAdaptivePlayStation(bool enabled)' in devices
 assert 'pad->SetAdaptivePlayStation(effective_layout == 0 && !custom_mapping);' in main
+assert 'mapping_context.observe(' in pad
+assert 'menu_evidence' not in pad
 assert 'pad->SetAdaptivePlayStation(false);' not in main
 assert '(effective_layout == 1 ? "Switch" : "PlayStation Auto")' in main
 assert '#ifdef EDEN_DEV_PROFILE\n        // Diagnostic input trace only.' in pad
