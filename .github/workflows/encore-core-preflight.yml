@@ -21,6 +21,11 @@ jobs:
       - name: Checkout source (GitHub only)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Install host-only JSON header for compiling glyph policy
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends nlohmann-json3-dev
+
       - name: Audit generic graphics, JIT, runtime and offline game networking
         run: |
           set -euxo pipefail
@@ -32,6 +37,7 @@ jobs:
           python3 -B tools/check-fc27-trace.py
           python3 -B tools/check-experimental-performance.py
           python3 -B tools/check-ps5-architecture.py
+          python3 -B tools/check-glyph-overrides-runtime.py
           python3 -B tools/check-ps-glyph-packs.py
           python3 -B tools/check-controller-semantic-mapping.py
           python3 -B tools/check-jit-memory-policy.py
