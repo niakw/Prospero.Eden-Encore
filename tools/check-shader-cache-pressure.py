@@ -43,12 +43,12 @@ int main(int argc, char** argv) {
 
     constexpr auto mib = std::uintmax_t{1024} * 1024;
     // Plenty of free disk => no artificial 64 MiB shader cap / pruning.
-    assert(Eden::TrimShaderCache(entries, 1024 * mib, 10 * 1024 * mib) == 0);
+    assert(Eden::TrimShaderCache(entries, 1024 * mib, 40 * 1024 * mib) == 0);
     assert(fs::exists(dir / "abc.bin") && fs::exists(dir / "1234.bin"));
 
     // Full-ish disk: leave 1 GiB free on a large filesystem. Only the
     // oldest cache file should be removed to cover a 4 MiB deficit.
-    assert(Eden::TrimShaderCache(entries, 1020 * mib, 10 * 1024 * mib) == 1);
+    assert(Eden::TrimShaderCache(entries, 1020 * mib, 40 * 1024 * mib) == 1);
     assert(!fs::exists(dir / "abc.bin"));
     assert(fs::exists(dir / "1234.bin"));
     assert(fs::exists(dir / "notes.txt"));
