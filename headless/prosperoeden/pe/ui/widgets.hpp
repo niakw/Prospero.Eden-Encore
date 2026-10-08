@@ -121,6 +121,11 @@ void cover(Canvas &c, const std::string &path, const Rect &r, float radius, floa
 // CSS-like object-fit: cover. Keeps the source aspect ratio and centre-crops overflow.
 void cover_crop(Canvas &c, const std::string &path, const Rect &r, float radius, float shadow = 0.0f);
 
+// Vector symbols shared across header, Home utility cards and local-player badges.
+// These are recognizable without platform-specific icon textures.
+void settings_gear(Canvas &c, float cx, float cy, float radius, Color ink);
+void dualsense_icon(Canvas &c, const Rect &r, Color ink, float brightness = 1.0f);
+
 // A controller r.w wide (r.h is 25/36 of that): a faint outline at lit 0, white with its light
 // bar glowing at lit 1.
 void controller_icon(Canvas &c, const Rect &r, float lit);
