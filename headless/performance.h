@@ -17,6 +17,8 @@ void SetSecondaryPlacement(bool enabled);
 // without claiming separate physical cores when firmware CPUID is unreliable.
 void EnableExperimentalLogicalPlacement();
 void PlatformChecks();
+// One kernel query at guest start, not in the per-frame performance path.
+bool QueryLargestDirectMemoryBlock(std::size_t* largest) noexcept;
 // Startup/shutdown-only snapshot: no direct-memory region scan in the frame loop.
 void ReportDirectMemoryState(const char* phase);
 // Main thread only, between GPU readiness and guest shutdown.
