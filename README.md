@@ -63,10 +63,13 @@ remain, including stretches below 25 FPS without an adjacent JIT-pressure event.
 
 The isolated `dev/ps5-sparse-jit` branch now includes:
 
-- FC27's observed best C JIT capacity selected **automatically** at launch,
-  with normal Safe Launch sizes as fallback. Manual A/B/C/D JSON is
-  development-build only; other titles are unchanged until the dynamic allocator
-  is validated.
+- **Global PS5 A64 JIT policy for every game**, using a one-time kernel
+  direct-memory headroom check: expanded C (320/256/256 MiB) if there is
+  sufficient contiguous RAM, balanced B for moderate headroom, otherwise the
+  conservative A baseline. Safe Launch and failed memory queries choose A.
+  This runs in a normal build; completed A/B/C/D file controls are diagnostic-only.
+  A32's separate cache remains unchanged pending A32 evidence. This interim
+  fixed-capacity memory policy is not yet an on-demand multi-segment allocator.
 - PS5-native Vulkan shader worker budgeting and one-time worker-count receipt,
   not yet measured on hardware. A smaller pool may slow shader warmup.
 - GPU/direct-memory snapshots at core initialization and shutdown, with a conservative
