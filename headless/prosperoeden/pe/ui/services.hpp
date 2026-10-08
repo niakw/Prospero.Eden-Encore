@@ -8,6 +8,7 @@
 #include "button_mapping.h"
 
 #include <array>
+#include <atomic>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -225,6 +226,12 @@ class Services
 
     // ---- library ----
     virtual std::vector<Game> games() = 0; // reads every game file: slow
+    // Optional cooperative cancellation of native metadata enumeration when a
+    // game launches. Other providers keep the original API and behavior.
+    virtual std::vector<Game> games(const std::atomic<bool>* cancel) {
+        if (cancel && cancel->load(std::memory_order_acquire)) return {};
+        return games();
+    }
     // Enrich one already-scanned game lazily (Nlib on native builds). The default is a no-op so
     // host/preview services stay deterministic and offline.
     virtual Game enrich_game_media(Game game) { return game; }
