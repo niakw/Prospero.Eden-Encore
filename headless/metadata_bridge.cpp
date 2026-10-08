@@ -74,6 +74,25 @@ std::string ReadTitle(const FileSys::VirtualDir& romfs) {
     return {};
 }
 
+// Read the source game's own NACP display version; this is game metadata,
+// NOT the executable NSO Build ID used by EdiZon cheat tables. Unknown or
+// unsupported encodings retain original in-game Nintendo artwork.
+std::string ReadGlyphDisplayVersion(const FileSys::VirtualDir& romfs) {
+    if (!romfs) return {};
+    auto nacp = romfs->GetFile("control.nacp");
+    if (!nacp) nacp = romfs->GetFile("Control.nacp");
+    FileSys::RawNACP raw{};
+    if (!nacp || nacp->ReadObject(&raw) != sizeof(raw)) return {};
+    const auto end = std::find(raw.version_string.begin(), raw.version_string.end(), '\0');
+    if (end == raw.version_string.begin()) return {};
+    std::string version(raw.version_string.begin(), end);
+    for (unsigned char c : version)
+        if (!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+              (c >= '0' && c <= '9') || c == '.' || c == '_' ||
+              c == '+' || c == '-' || c == ' ')) return {};
+    return version;
+}
+
 // The supported-language flags of a control RomFS's NACP (bit n is NS ApplicationLanguage n); 0
 // when they cannot be read.
 uint32_t ReadLanguages(const FileSys::VirtualDir& romfs) {
@@ -209,6 +228,7 @@ uint32_t eden_game_supported_languages(const char* rom_path, const char* keys_di
 
 namespace {
 struct AddOns {
+    bool update_present = false;
     std::string update;
     unsigned dlc = 0;
     uint32_t languages = 0;  // the update's own language flags (its control data replaces the game's)
@@ -218,11 +238,16 @@ std::map<uint64_t, AddOns>& ScannedAddOns() {
     static std::map<uint64_t, AddOns> scanned;
     return scanned;
 }
+bool& UpdatesScanCompleted() {
+    static bool completed = false;
+    return completed;
+}
 }
 
 void eden_scan_addons(const char* updates_dir, const char* keys_dir) {
     auto& scanned = ScannedAddOns();
     scanned.clear();
+    UpdatesScanCompleted() = false;
     if (!updates_dir || !keys_dir) return;
     try {
         Common::FS::SetEdenPath(Common::FS::EdenPath::KeysDir, keys_dir);
@@ -232,6 +257,7 @@ void eden_scan_addons(const char* updates_dir, const char* keys_dir) {
         const FileSys::ExternalContentProvider provider({std::move(directory)});
         for (const auto& entry : provider.ListEntriesFilter(FileSys::TitleType::Update, std::nullopt, std::nullopt)) {
             auto& addons = scanned[FileSys::GetBaseTitleID(entry.title_id)];
+            addons.update_present = true;
             if (!addons.update.empty()) continue;
             // Newest first; the display version comes from the update's own control data.
             if (const auto versions = provider.ListUpdateVersions(entry.title_id); !versions.empty()) {
@@ -248,9 +274,44 @@ void eden_scan_addons(const char* updates_dir, const char* keys_dir) {
         std::set<uint64_t> dlc;
         for (const auto& entry : provider.ListEntriesFilter(FileSys::TitleType::AOC, std::nullopt, std::nullopt))
             if (dlc.insert(entry.title_id).second) ++scanned[FileSys::GetBaseTitleID(entry.title_id)].dlc;
+        UpdatesScanCompleted() = true;
     } catch (const std::exception& error) {
         std::fprintf(stderr, "[ProsperoEden] updates: %s\n", error.what());
         scanned.clear();
+    }
+}
+
+// Native launch-time display-art version: take the detected update when one
+// exists, otherwise parse the base game's NACP. A missing/failed updates
+// scan must NOT mistake an updated game for an unpatched base version.
+int eden_game_glyph_display_version(const char* rom_path, const char* keys_dir,
+                                    uint64_t title_id, char* output, size_t capacity) {
+    if (output && capacity) output[0] = '\0';
+    if (!rom_path || !keys_dir || !title_id || !output || capacity == 0 ||
+        !UpdatesScanCompleted()) return 0;
+    try {
+        std::string version;
+        const auto found = ScannedAddOns().find(FileSys::GetBaseTitleID(title_id));
+        if (found != ScannedAddOns().end() && found->second.update_present) {
+            // An installed update with unreadable version must fail closed.
+            version = found->second.update;
+        } else {
+            Common::FS::SetEdenPath(Common::FS::EdenPath::KeysDir, keys_dir);
+            FileSys::RealVfsFilesystem vfs;
+            const auto file = vfs.OpenFile(rom_path, FileSys::OpenMode::Read);
+            if (!file) return 0;
+            const std::string path = rom_path;
+            const bool is_xci = path.size() >= 4 &&
+                (path.substr(path.size() - 4) == ".xci" || path.substr(path.size() - 4) == ".XCI");
+            const auto control = OpenControlRomFs(file, is_xci);
+            version = ReadGlyphDisplayVersion(control);
+        }
+        if (version.empty() || version.size() >= capacity) return 0;
+        std::snprintf(output, capacity, "%s", version.c_str());
+        return 1;
+    } catch (const std::exception& error) {
+        std::fprintf(stderr, "[ProsperoEden] glyph source version: %s\n", error.what());
+        return 0;
     }
 }
 
