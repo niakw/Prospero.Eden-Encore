@@ -77,6 +77,9 @@ struct Game
     int mods = 0;
     int mods_on = 0;
     bool mods_enabled = true;
+    // Launcher media fetch hint only: Home should return with a hero ASAP;
+    // Library may fetch three screenshots. Never forwarded into game runtime.
+    bool home_media_priority = false;
 };
 
 struct Recent
