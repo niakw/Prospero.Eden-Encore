@@ -24,11 +24,11 @@ assert 'recent.max_players = enriched.max_players' in lib
 assert 'finish_home_media();' in launch
 assert 'home_media_scan_.wait();' in launch
 assert 'artwork_tasks' not in svc
-assert 'library enumeration must stay local/cache-only' in svc
+assert 'A library enumeration itself must remain local/cache-only' in svc
 assert 'const Rect hero{0.0f, 0.0f, 1920.0f, 1080.0f};' in home
 for needle in ('quick settings overlay', 'recently played: seven-ish large artwork tiles',
                'utility cards: the four Home actions', 'hero_button(details_rect, "..."'):
     assert needle in home, needle
 assert 'recent.max_players' not in home
 assert 'const Cover hero_picture = c.textures.cover(hero_artwork, 1920.0f)' in home
-print('Targeted asynchronous Home media + TV-first layout PASS')
+print('All-games complete Nlib artwork + TV-first layout PASS')
