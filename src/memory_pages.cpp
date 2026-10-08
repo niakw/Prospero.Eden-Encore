@@ -217,10 +217,13 @@ void* ReserveSparseJitCode(std::size_t size, void** writable_out) noexcept {
         return nullptr;
     }
     void* rx = reinterpret_cast<void*>(cpu_mapping_hint);
-    if (sceKernelReserveVirtualRange(&rx, size, 0, LargePage) != 0 ||
-        !cpu_mapping_range(rx, size)) {
-        if (rx && rx != MAP_FAILED && cpu_mapping_range(rx, size) &&
-            munmap(rx, size) != 0) std::abort();
+    if (sceKernelReserveVirtualRange(&rx, size, 0, LargePage) != 0) {
+        if (munmap(rw, size) != 0) std::abort();
+        return nullptr;
+    }
+    if (!cpu_mapping_range(rx, size) || rx == rw) {
+        if (rx == rw) std::abort(); // Kernel returned overlapping reservations.
+        if (rx && rx != MAP_FAILED && munmap(rx, size) != 0) std::abort();
         if (munmap(rw, size) != 0) std::abort();
         return nullptr;
     }
@@ -291,12 +294,14 @@ bool CommitSparseJitCode(void* executable, std::size_t required) noexcept {
 // partial chunks on ClearCache: the region may contain still-executing code.
 void ReleaseSparseJitCode(void* executable) noexcept {
     SparseJitRegion region;
+    std::size_t remaining = 0;
     {
         const std::lock_guard lock{sparse_jit_mutex};
         const auto it = sparse_jit_regions.find(executable);
         if (it == sparse_jit_regions.end()) std::abort();
         region = std::move(it->second);
         sparse_jit_committed -= region.committed;
+        remaining = sparse_jit_committed;
         sparse_jit_regions.erase(it);
     }
     if (munmap(executable, region.capacity) != 0 ||
@@ -304,7 +309,7 @@ void ReleaseSparseJitCode(void* executable) noexcept {
     for (const auto physical : region.physical)
         if (sceKernelReleaseDirectMemory(physical, LargePage) != 0) std::abort();
     std::printf("EDEN_JIT_SPARSE_RELEASE capacity=%zu committed=%zu remaining=%zu\n",
-                region.capacity, region.committed, sparse_jit_committed);
+                region.capacity, region.committed, remaining);
 }
 #endif
 
