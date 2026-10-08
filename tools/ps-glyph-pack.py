@@ -99,7 +99,7 @@ def verify(pack_root: Path, original_root: Path, title_id: str) -> dict:
         raise InvalidPack("invalid manifest JSON") from error
     require(isinstance(manifest, dict) and set(manifest) ==
             {"schema", "title_id", "update_version", "rights", "files"},
-            "manifest fields must match the exact v1 schema")
+            "manifest fields must match the exact v2 schema")
     require(type(manifest["schema"]) is int and manifest["schema"] == 2,
             "unknown glyph-pack schema")
     require(_hex(manifest["title_id"], HEX16, "manifest title ID") == title_id,
