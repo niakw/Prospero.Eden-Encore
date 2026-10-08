@@ -8,6 +8,7 @@
 #include "pe/ui/services.hpp"
 
 #include <cstdint>
+#include <future>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -59,7 +60,9 @@ class Textures
 
     // The cover drawn `size` virtual pixels wide. Queues it on first use.
     Cover cover(const std::string &path, float size);
-    // Loads up to `budget` queued covers and ages the loaded ones.
+    // Schedules at most one background image decode and uploads at most one
+    // completed texture per frame. Never does file I/O or JPEG/TGA decode
+    // on the input/navigation/render thread.
     void pump(float dt, int budget = 2);
     // Called only when Nlib atomically replaces an image with the same path.
     void invalidate(const std::string &path);
@@ -82,6 +85,12 @@ class Textures
         float aspect = 1.0f;
     };
 
+    struct DecodedCover {
+        std::string key;
+        gfx::Image image;
+        bool ok = false;
+    };
+    std::future<DecodedCover> decode_;
     std::uint32_t create(const gfx::Image &image);
 
     gfx::GlBatch &batch_;
