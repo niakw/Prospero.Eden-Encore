@@ -63,36 +63,37 @@ def main() -> None:
     require(perf.index('void SparseJitUsage(') < perf.index('namespace Eden::Performance {'),
             "JIT memory declaration is inside the wrong C++ namespace")
 
-    # No title-specific performance path: every A64 guest follows the same
-    # PS5 admission rule, including a normal non-development release.
+    # All titles (both guest ISAs) use continuous physical admission.
     require('auto_fc27_jit' not in app and 'fc27-validated-c' not in app,
-            "Legacy FC27-only JIT selection returned")
-    require('ChooseA64CacheTier(safe_launch, jit_memory_known, jit_largest_free)' in app,
-            "Every game must use the same automatic A64 JIT policy")
+            "FC27-only JIT selection must not return")
+    require('ChooseJitMemoryPlan(' in app and 'ApplyJitMemoryPlan(jit_plan);' in app,
+            "Guest launch must select/apply the same JIT memory plan")
     require('bool QueryLargestDirectMemoryBlock(std::size_t* largest) noexcept' in perf,
-            "PS5 launch-time direct memory query implementation absent")
+            "Firmware JIT memory query absent")
     require('QueryLargestDirectMemoryBlock(std::size_t* largest)' in perf_h,
-            "PS5 launch-time memory query declaration absent")
+            "Launch-time direct memory query declaration absent")
     require('jit_memory_known = Eden::Performance::QueryLargestDirectMemoryBlock(&jit_largest_free)' in app,
-            "JIT policy does not consult the actual launch-time memory headroom")
-    require('if (safe_launch || !memory_query_succeeded) return 0;' in jit_policy,
-            "Safe Launch / unknown-memory fallback missing")
-    require('largest_free_block >= kExpandedA64Total + kExpandedHeadroom' in jit_policy,
-            "C tier must be admitted against actual available memory")
-    require('largest_free_block >= kBalancedA64Total + kBalancedHeadroom' in jit_policy,
-            "Balanced fallback missing")
-    require('if (tier == 2) return (core == 0 ? 320u : 256u) * mib;' in jit_policy,
-            "Universal A64 C capacities changed")
-    require(jit_policy.count('static_assert(ChooseA64CacheTier(') >= 5,
-            "Static policy boundary tests missing")
+            "Memory admission is not based on kernel availability")
+    require('if (safe_launch || !memory_query_ok || largest_free_block <= kHostReserve)' in jit_policy,
+            "Safe Launch/unknown memory must use baseline")
+    require('kSingleArenaAddressingLimit' in jit_policy,
+            "Dynarmic per-arena addressing constraint must be documented")
+    require('const std::size_t budget = ((largest_free_block - kHostReserve) / 2)' in jit_policy,
+            "JIT must scale continuously with available resources")
+    require('plan.a64[0] =' in jit_policy and 'plan.a32[0] =' in jit_policy,
+            "Both A64/A32 paths must participate in global budgeting")
+    require(jit_policy.count('static_assert(ChooseJitMemoryPlan(') >= 6,
+            "Guest JIT admission boundary assertions missing")
+    require('A64CacheBytes(m_core_index' in cmake and 'A32CacheBytes(m_core_index' in cmake,
+            "Both Dynarmic core wrappers must consume the runtime memory budget")
     dev_start = app.index('#if defined(PS5_NATIVE) && defined(EDEN_DEV_PROFILE)')
     dev_end = app.index('\n#endif\n#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)', dev_start)
-    require(app.index('jit_cache_tier.store(experimental_jit_cache') > dev_end,
-            "JIT policy stores must not be compiled out of normal release builds")
+    require(app.index('ApplyJitMemoryPlan(jit_plan)') > dev_end,
+            "Release JIT memory policy must be applied outside development guards")
     require('EDEN_PS5_JIT_POLICY scope=all_titles' in app,
-            "Release build must report the global policy (once per launch)")
-    require('jit == "elastic"' not in app and 'tier == 3' not in jit_policy,
-            "Arbitrary 4 GiB experiment must not be reintroduced")
+            "Selected JIT policy should be logged once at launch")
+    require('jit_cache_tier' not in app and 'tier == 3' not in jit_policy,
+            "Retired arbitrary-tier configuration must not return")
 
     ast.parse(worker_script, filename="tools/prepare-vulkan-port.py")
     require('cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, 8, &allowed)' in worker_script,
@@ -107,7 +108,7 @@ def main() -> None:
     print("PASS PS5_NATIVE_ARCHITECTURE_CONTRACTS")
     print(f"  lifecycle points: {', '.join(sorted(memory_stages))}")
     print("  sparse JIT: compile-gated, startup alias preflight, committed-memory accounting")
-    print("  all titles: headroom-gated A64 C/B, conservative fallback; A32 unchanged")
+    print("  all titles: continuous A64/A32 capacities from available direct memory")
     print("  Vulkan: available CPU mask, pinned-source transformation, bounded worker budget")
     print("  Native PS5 compile and firmware 13.60 tests: NOT RUN")
 
