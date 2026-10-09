@@ -1505,3 +1505,10 @@ This commit triggers one isolated PS5 all-on native test pipeline using `[full-b
 ### 2026-10-09 — Isolated all-on native test reattempt after source-gate NameError fix
 
 This commit deliberately requests one `dev/ps5-sparse-jit` all-on PS5 build `[full-build] [test-all-on]`, with release publishing prohibited and source-based tests first. Actual result is not known at trigger time.
+
+### 2026-10-09 — All-on run #37878355536 passed architecture/glyphs; failed stale GPU generated-unit count
+
+- [Run #37878355536](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/37878355536) progressed past `PASS PS5_NATIVE_ARCHITECTURE_CONTRACTS`, real C++ update registry host check, legal glyph pack manifest/sandbox test, controller mapping bijection, and PlayStation Auto C++ test; all reported PASS. No native PS5 app built yet (still inside pre-build host checks).
+- Blocker in `tools/check-gpu-native-diagnostics.py` line 241: stale `cmake.count("write_derived(") == 2` assertion; live `headless/gpu_native_observability.cmake` actually creates THREE derived TUs: `maxwell_prmt_observed.cpp`, `sw_blitter_sized.cpp`, `fermi_2d_observed.cpp`. The extra widened software blitter is a legitimate GPU compatibility correction, not duplicated output.
+- Source contract fixed to require count=3 AND all three names in commit `78eb1305bdf746c0f9a2ee94b9a3839f020de14b` [skip ci]. Existing semantic PRMT/Fermi assertions retained. Source readback matched all three generated unit output paths; GPU rendered pixels/actual PS5 native compile NOT yet verified.
+- No launch UI visual changes, shipping branch/publishing untouched; 26 full hardware qualification criteria remain open. More host regression gates still follow this failure point before native compilation.
