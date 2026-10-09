@@ -186,6 +186,7 @@ jobs:
           python3 -B tools/check-ps5-frame-window-analysis.py
           python3 -B tools/check-universal-emulation-policy.py
           python3 -B tools/check-runtime-frame-budget.py
+          python3 -B tools/check-library-docked-snapshot-host.py
           python3 -B tools/check-fc27-hle-compat.py
           python3 -B tools/check-net-cache-migration.py
           python3 -B tools/check-ps5-net-unit.py

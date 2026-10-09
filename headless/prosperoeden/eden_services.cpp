@@ -1212,32 +1212,35 @@ void EdenServices::arm_safe_launch() {
     Eden::Report("launch", "Safe launch armed for the next game only");
 }
 
+namespace {
+// Share the exact override precedence between live modal reads and the
+// batch catalog snapshot: only the source of the global profile changes.
+bool EffectiveDockedMode(std::uint64_t title_id, const Eden::GameSettings& game,
+                         int global_profile) {
+    if (game.console_mode >= 0) return game.console_mode == 1;
+    const int tier = game.performance_profile >= 0 &&
+                             game.performance_profile < Eden::EncoreOverrides::kAuthoredProfileCount ?
+                         game.performance_profile :
+                     global_profile >= 0 &&
+                             global_profile < Eden::EncoreOverrides::kAuthoredProfileCount ?
+                         global_profile : -1;
+    return tier >= 0 ? Eden::EncoreOverridesRuntime::ProfileForTitle(title_id, tier).docked : true;
+}
+} // namespace
+
 bool EdenServices::docked(std::uint64_t title_id) {
     if (title_id == 0) return true;
     const Eden::GameSettings game = Eden::LoadGameSettings(title_id);
+    // Keep the previous no-global-JSON fastpath for explicit per-title mode.
     if (game.console_mode >= 0) return game.console_mode == 1;
-    const Eden::Preferences global = Eden::LoadPreferences();
-    const int tier = game.performance_profile >= 0 &&
-                             game.performance_profile < Eden::EncoreOverrides::kAuthoredProfileCount ?
-                         game.performance_profile :
-                     global.performance_profile >= 0 &&
-                             global.performance_profile < Eden::EncoreOverrides::kAuthoredProfileCount ?
-                         global.performance_profile : -1;
-    return tier >= 0 ? Eden::EncoreOverridesRuntime::ProfileForTitle(title_id, tier).docked : true;
+    return EffectiveDockedMode(title_id, game, Eden::LoadPreferences().performance_profile);
 }
 
 bool EdenServices::docked_for_scan(std::uint64_t title_id,
-                                    const pe::ui::Preferences& snapshot) {
+                                   const pe::ui::Preferences& snapshot) {
     if (title_id == 0) return true;
     const Eden::GameSettings game = Eden::LoadGameSettings(title_id);
-    if (game.console_mode >= 0) return game.console_mode == 1;
-    const int tier = game.performance_profile >= 0 &&
-                             game.performance_profile < Eden::EncoreOverrides::kAuthoredProfileCount ?
-                         game.performance_profile :
-                     snapshot.performance_profile >= 0 &&
-                             snapshot.performance_profile < Eden::EncoreOverrides::kAuthoredProfileCount ?
-                         snapshot.performance_profile : -1;
-    return tier >= 0 ? Eden::EncoreOverridesRuntime::ProfileForTitle(title_id, tier).docked : true;
+    return EffectiveDockedMode(title_id, game, snapshot.performance_profile);
 }
 
 bool EdenServices::set_docked(std::uint64_t title_id, bool docked) {
