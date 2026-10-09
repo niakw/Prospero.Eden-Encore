@@ -228,3 +228,11 @@ Adaptation: the selected icons are resized and composited into user-local
 button atlas replacements. Any pack containing additional game artwork must
 also respect that game's rights; **CC BY for Zacksly's icons does not
 license Nintendo/publisher-owned image content**.
+
+## Community-mod reverse-engineering references (2026-10-09, source-only)
+
+- [Structured sources: 24 mod references, 16 games](PS_GLYPH_SOURCE_INDEX.json) — technical leads, not activated compatibility.
+- [Game-specific architecture/paths](PS_GLYPH_MOD_TECHNICAL_ATLAS.md) — Unity BALL x PIT `Data/resources.assets/controller_btns_outlined`, Nintendo TOTK compressed BLARC/BNTX texture hierarchy, mapping variants.
+- [End-to-end offline inspection procedures](PS_GLYPH_REVERSE_ENGINEERING_PIPELINE.md) — authorized local ZIP inventory, read-only mod versus original PNG/TGA diff, extracted .7z/.rar folder diff, externally decoded Unity/BNTX texture pair diff, decompressed SARC byte offsets and BNTX mip pointer inventory.
+- New tools: `ps-glyph-mod-inventory.py`, `ps-glyph-mod-diff.py`, `ps-glyph-mod-folder-diff.py`, `ps-glyph-exported-texture-diff.py`, `ps-glyph-sarc-inspect.py`; research validation `check-ps-glyph-community-index.py`.
+- **Do not confuse byte offsets, changed-pixel XYWH boxes, actual icon semantic labels, the controller input mapping or game title/update validity.** They are separate evidence levels. No community archive has been unpacked here, no real atlas position is verified and no code/test/native build was executed.
