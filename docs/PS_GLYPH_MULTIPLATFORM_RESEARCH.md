@@ -206,3 +206,53 @@ python3 tools/ps-glyph-lua-source-inspect.py \
 This is a **heuristic static source reader** rather than a Lua interpreter. It does not resolve computed asset names, execute Lua, know which code is selected at runtime, decode `.tex`, or infer renderer pixel positions. It is designed to prepare reproducible leads for scene-by-scene verification, not to bypass game copyright or place replacement graphics directly.
 
 For DST, the distinct [source-extracted label positions](PS_GLYPH_DST_CONTROL_UI_POSITIONS.json) remain the best-documented current UI positions: 17 PS and 17 NX labels, with explicit per-device parent position and scale from source. The Klei XML parser provides a separate **sprite UV** layer once real `.xml`/`.tex` can be inspected. Companion synthetic fixture `tools/check-ps-glyph-lua-source-inspect.py` has not been run.
+
+
+## 10 October 2026 — Same-game layout reuse without requiring identical textures
+
+The prior pipeline was unnecessarily strict: a Wii U / PS4 / PC edition
+of the **same game** can preserve screen/UI icon placement while exporting
+different art, colors, resolution, swizzle, ASTC/BC format or texture atlases.
+
+**Two independent coordinate systems now have dedicated paths:**
+
+- **Scene/UI positions**, including controller help, pause/menu/tutorial
+  prompts and in-world labels: retain game scene-specific anchors and
+  transform them into the Switch viewport/layout. They do not require
+  identical texture contents. `tools/ps-glyph-scene-positions.py`
+  accepts normalized source/target frames and retains provenance.
+- **Switch texture XYWH**: use a matching original, isolated decoded Switch
+  alpha sprite, not a blindly copied foreign texture offset. The updated
+  `tools/ps-glyph-cross-platform-image.py` can correlate normalized icon
+  placement across *different image dimensions/graphics* and provide a
+  `same_game_layout_prior_only` candidate. Ambiguous candidate placements
+  are refused rather than guessed.
+- `tools/ps-glyph-reconstruct.py spec` may turn the differing-art
+  candidate into a sprite only with an **independent recorded Switch
+  scene review**: same update, exact original SHA-256, scene and action
+  semantics, evidence links and matched alpha-isolated candidate position.
+  The source report itself does not auto-approve anything.
+
+Concrete reused metadata already present:
+`docs/PS_GLYPH_DST_CONTROL_UI_POSITIONS.json` stores **17 named controller
+help anchors for PS4 and Switch** from the same game's public Lua layout.
+Both share the controller widget parent transform (position
+`[65,-50,0]`, scale `0.6`); L2 and R2 have identical local
+positions and other labels have per-console variants. The scanner
+retains the actual differing positions instead of assuming all offsets
+are identical. These are **Lua widget coordinates**, not 1920×1080
+screen pixels or Nintendo texture atlas rectangles.
+
+For BOTW, documented Wii U/PS4, Nintendo Switch and Western layout
+variants define the **same input/help scene families**, and fixed guest
+action **A maps to PS Cross** in Eden's PlayStation profile, whereas
+the **physical right-hand face** of a DualSense shows Circle.
+This semantics and scene placement reuse does not require rebuilding
+all game UI layouts from zero. The exact decoded BOTW Switch texture
+location and compatible repack are still required to ship an actual
+PlayStation glyph pack.
+
+Host tests: `tools/check-ps-glyph-scene-positions.py`,
+`tools/check-ps-glyph-cross-platform-image.py` and
+`tools/check-ps-glyph-reconstruct.py`; do not infer actual game
+compatibility or FC27 performance from these tests.
