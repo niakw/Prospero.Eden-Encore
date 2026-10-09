@@ -52,11 +52,28 @@ def contained(outer: list[int], inner: list[int]) -> bool:
 
 def evidence(original_path: Path, mod_path: Path,
              scene: str, astcenc: str = "astcenc") -> dict:
+    raw_old, _, _ = archive.load_archive(original_path)
+    raw_new, _, _ = archive.load_archive(mod_path)
+    return evidence_bytes(raw_old, raw_new, scene, astcenc)
+
+
+def evidence_bytes(raw_old: bytes, raw_new: bytes, scene: str,
+                   astcenc: str = "astcenc") -> dict:
+    """Diff original and modded SARC/Yaz0 bytes directly, without extraction.
+
+    Used to inspect original RomFS plus ZIP-contained Switch mods. It returns
+    only hashes, sprite coordinates and semantic unknowns, never game bytes.
+    """
     if scene not in ("menu", "gameplay", "hud", "tutorial", "controller_diagram",
                      "world_interaction", "pause", "special_action"):
         raise ValueError("unknown scene context")
-    raw_old, original, source_meta = archive.load_archive(original_path)
-    raw_new, patched, mod_meta = archive.load_archive(mod_path)
+    if (not isinstance(raw_old, bytes) or not isinstance(raw_new, bytes) or
+        len(raw_old) > archive.botw.MAX_INPUT or len(raw_new) > archive.botw.MAX_INPUT):
+        raise ValueError("original/mod UI source exceeds bounded archive budget")
+    original = archive.botw.decode(raw_old) if raw_old.startswith(b"Yaz0") else raw_old
+    patched = archive.botw.decode(raw_new) if raw_new.startswith(b"Yaz0") else raw_new
+    source_meta = archive.botw.sarc.inventory_bytes(original)
+    mod_meta = archive.botw.sarc.inventory_bytes(patched)
     original_members = {x["name"].casefold(): x for x in source_meta["members"] if x["name"]}
     mod_members = {x["name"].casefold(): x for x in mod_meta["members"] if x["name"]}
     if len(original_members) != len([x for x in source_meta["members"] if x["name"]]) or (
