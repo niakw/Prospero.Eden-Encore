@@ -33,6 +33,7 @@ atlas = load_module("eden_ps_glyph_atlas", ROOT / "tools/ps-glyph-atlas.py")
 pack = load_module("eden_ps_glyph_pack", ROOT / "tools/ps-glyph-pack.py")
 catalogue = load_module("eden_ps_glyph_catalogue", ROOT / "tools/ps-glyph-catalogue.py")
 scanner = load_module("eden_ps_glyph_scan", ROOT / "tools/ps-glyph-scan.py")
+reuse = load_module("eden_ps_glyph_reuse", ROOT / "tools/ps-glyph-reuse.py")
 
 
 def must_reject(fn):
@@ -80,8 +81,8 @@ with tempfile.TemporaryDirectory(prefix="eden-ps-glyph-atlas-") as work:
         "atlases": [{
             "romfs_path": "UI/prompts.png", "original_sha256": sha,
             "slots": [
-                {"button": "cross", "rect": [8, 8, 48, 48]},
-                {"button": "circle", "rect": [72, 8, 48, 48]},
+                {"button": "cross", "rect": [4, 4, 52, 52]},
+                {"button": "circle", "rect": [69, 4, 52, 52]},
             ],
         }],
     }
@@ -171,6 +172,16 @@ with tempfile.TemporaryDirectory(prefix="eden-ps-glyph-atlas-") as work:
     atlas.render(other_spec, romfs, icons, other_pack)
     next_catalogue = catalogue.build([other_pack], existing)
     assert len(next_catalogue["titles"]) == 2
+    # Identical atlas bytes permit reusing geometry on another game, but
+    # labels remain null unless semantics were explicitly approved.
+    copied = reuse.suggest(spec, romfs, "0100C49025D3E000", "9.0.0")
+    assert copied["title_id"] == "0100C49025D3E000"
+    assert copied["atlases"][0]["slots"][0]["button"] is None
+    approved = reuse.suggest(spec, romfs, "0100C49025D3E000", "9.0.0", True)
+    assert approved["atlases"][0]["slots"][0]["button"] == "cross"
+    draft = scanner.draft_spec(proposals, "01007EF00011E000", "1.0.0")
+    assert draft["atlases"][0]["slots"][0]["button"] is None
+    assert draft["schema"] == 1
     assert next_catalogue["revision"] == merged["revision"] + 1
 
     # Reject tampering at every boundary, before exposing a fake compatibility.
@@ -184,7 +195,13 @@ with tempfile.TemporaryDirectory(prefix="eden-ps-glyph-atlas-") as work:
     settings["atlases"][0]["slots"][1]["rect"] = [20, 8, 48, 48]
     save_settings()
     must_reject(lambda: atlas.render(spec, romfs, icons, root / "overlap"))
-    settings["atlases"][0]["slots"][1]["rect"] = [72, 8, 48, 48]
+    settings["atlases"][0]["slots"][1]["rect"] = [69, 4, 52, 52]
+    # A slot can contain transparent pixels and STILL cut into its own
+    # nontransparent glyph boundary. Reject it rather than overwriting HUD.
+    settings["atlases"][0]["slots"][0]["rect"] = [8, 8, 48, 48]
+    save_settings()
+    must_reject(lambda: atlas.render(spec, romfs, icons, root / "edge-touch"))
+    settings["atlases"][0]["slots"][0]["rect"] = [4, 4, 52, 52]
     settings["atlases"][0]["romfs_path"] = "UI/prompts.bntx"
     save_settings()
     must_reject(lambda: atlas.render(spec, romfs, icons, root / "bntx"))
