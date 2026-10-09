@@ -1761,3 +1761,7 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 
 - Corrected an API lifecycle overstatement in previous checkpoint: Vulkan VkQueryPool is a device child that must be explicitly destroyed before its VkDevice. Generator now substitutes Scheduler::~Scheduler() only for this dev probe cleanup: if a timestamp pool exists, requests worker stop, wakes it, joins the jthread, waits on device idle and invokes vkDestroyQueryPool while Device remains live, then clears process-global probe. Ordinary probe-OFF path retains standard jthread destructor behavior. Per-title epoch remains to reject stale device state.
 - Added static source assertions (NOT executed). Needs full native PS5 compile/link and explicit FW13.60 cross-title probe before qualifying actual GPU timestamps, user has not authorized a run. No builds, tests, Actions, PS5/Mac/FTP writes or protected branch updates.
+
+### 2026-10-09 — Fix native Vulkan GPU timestamp destructor data race [skip ci]
+
+- Immediate source-review correction of previous GPU timing cleanup: testing process-global `gpu_time.pool` before requesting stop/join raced the Vulkan GPU worker creating that pool. The generated Scheduler::~Scheduler now ALWAYS requests worker stop, notifies, and joins before examining/destroying any query pool; inactive probe still requires normal scheduler jthread termination and does not change per-frame path. Native generator test assertion strengthened. No tests/build/Actions or Mac/FTP access. GPU native timing remains UNQUALIFIED.
