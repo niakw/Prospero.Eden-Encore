@@ -175,6 +175,7 @@ jobs:
           python3 -B tools/check-ps5-sparse-jit-va-lifetime.py
           python3 -B tools/check-shader-cache-pressure.py
           python3 -B tools/check-performance-policy.py
+          python3 -B tools/check-hle-counter-contention.py
           python3 -B tools/check-network-runtime.py
           python3 -B tools/check-guest-network-isolation.py
           python3 -B tools/check-nlib-media-safety.py
