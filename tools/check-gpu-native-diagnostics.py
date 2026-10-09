@@ -123,8 +123,14 @@ assert "static_cast<u64>(config.src_x1) <= src.width" in fermi_copy_new
 assert "static_cast<u64>(config.src_y1) <= src.height" in fermi_copy_new
 assert "static_cast<u64>(config.dst_x1) <= regs.dst.width" in fermi_copy_new
 assert "static_cast<u64>(config.dst_y1) <= regs.dst.height" in fermi_copy_new
-assert "EDEN_GPU_FERMI2D_SOFTWARE_RECT_INVALID" in fermi_copy_new
-assert fermi_copy_new.index("if (!rect_valid)") < fermi_copy_new.index("sw_blitter->Blit(src, dst, config);")
+assert "EDEN_GPU_FERMI2D_SOFTWARE_BOUNDS_INVALID" in fermi_copy_new
+assert "const bool copy_storage_valid =" in fermi_copy_new
+assert "src_bpp != 0 && dst_bpp != 0" in fermi_copy_new
+assert "static_cast<u64>(surface.pitch) * surface.height <= 0xffffffffULL" in fermi_copy_new
+assert "const bool copy_sizes_valid = rect_valid && copy_storage_valid" in fermi_copy_new
+assert "static_cast<u64>(config.src_y1 - config.src_y0) * src_bpp <= 0xffffffffULL" in fermi_copy_new
+assert "static_cast<u64>(config.dst_y1 - config.dst_y0) * dst_bpp <= 0xffffffffULL" in fermi_copy_new
+assert fermi_copy_new.index("if (!copy_sizes_valid)") < fermi_copy_new.index("sw_blitter->Blit(src, dst, config);")
 
 # Nonzero layers are only copied using simple pitch-linear planes.
 # The layer stride is pitch*height; 3D swizzled z>0 remains unsupported.
