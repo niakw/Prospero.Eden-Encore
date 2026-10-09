@@ -47,6 +47,31 @@ assert 'option(EDEN_JIT_COMPILE_BATCH "Compile bounded A64 successor chains on a
 assert "EnableExperimentalLogicalPlacementImpl" in cpu
 assert "if (count < 7)" in cpu and "physical_verified=0" in cpu
 assert "secondary_cpus = secondary;" in cpu
+# AMD Zen2/PS5 firmware can expose extended physical topology even when
+# x2APIC SMT topology is absent or misleading. Do not trust logical IDs.
+topology = cpu.split("void CheckWorkerTopology()", 1)[1].split(
+    "void EnableExperimentalLogicalPlacementImpl()", 1)[0]
+assert "__get_cpuid_max(0x80000000u, nullptr) >= 0x8000001eu" in topology
+assert "vb == 0x68747541u" in topology  # AuthenticAMD
+assert "family >= 0x17u && (vc & (1u << 22)) != 0" in topology
+assert "__cpuid_count(0x8000001eu, 0, a, b, c, d)" in topology
+assert "const unsigned threads_per_core = ((b >> 8) & 255u) + 1u;" in topology
+assert "core = ((c & 255u) << 8) | (b & 255u);" in topology
+assert "cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, 8, &verified)" in topology
+assert "std::memcmp(&one, &verified, 8)" in topology
+assert "if (!decoded && has_x2apic)" in topology
+assert "topology_allowed_valid = true;" in topology
+assert "amd_ext=%u x2apic=%u" in topology
+# Documented AMD family17h EBX CoreId (same for two SMT siblings), ECX NodeId.
+def amd_physical_core(ebx, ecx):
+    threads_per_core = ((ebx >> 8) & 255) + 1
+    if not 1 <= threads_per_core <= 8:
+        return None
+    return ((ecx & 255) << 8) | (ebx & 255)
+assert amd_physical_core(0x0102, 0) == amd_physical_core(0x0102, 0)  # SMT siblings
+assert amd_physical_core(0x0102, 0) != amd_physical_core(0x0103, 0)  # distinct cores
+assert amd_physical_core(0x0102, 0) != amd_physical_core(0x0102, 1)  # distinct nodes
+assert amd_physical_core(0xff00, 0) is None  # improbable threads/core: fail closed
 
 assert 'EDEN_EXPERIMENT_PRESENT' in graphics
 assert "vulkan_frame_probe.load(std::memory_order_relaxed)" in graphics
