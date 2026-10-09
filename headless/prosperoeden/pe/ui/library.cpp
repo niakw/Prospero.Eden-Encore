@@ -897,8 +897,11 @@ void Launcher::draw_library(Canvas &c)
                             baseline(card.y + 78.0f, 35.0f, 16.0f), 16.0f,
                             theme::kMuted, card.w - 22.0f, Align::center);
             }
-            list.gradient_rect({card.x + 4.0f, card.y + card.h * 0.43f, card.w - 8.0f,
-                                card.h * 0.53f}, 20.0f,
+            // The scrim must meet the BOTTOM edge of the art exactly. The
+            // previous .43/.53 ratios ended 4% above the card bottom, leaving
+            // an unnatural bright strip under the title and player badge.
+            list.gradient_rect({tile_art.x, tile_art.y + tile_art.h * 0.43f,
+                                tile_art.w, tile_art.h * 0.57f}, 20.0f,
                                theme::kScrim.with_alpha(0.0f), theme::kScrim.with_alpha(0.94f));
             if (selected)
                 plate_focus(c, kTilePlate, card, lift);
@@ -1095,8 +1098,31 @@ void Launcher::press_game(Key key)
     }
     if (option_ == row_controls)
     {
-        if (key == Key::cross)
+        if (key == Key::cross) {
+            // Cross opens the full button-by-button editor; arrows set a
+            // standard title-only profile as on PC emulators.
             open_mapping(true);
+            return;
+        }
+        if (key == Key::left || key == Key::right) {
+            GameSettings next = game_settings_;
+            // -1 = inherit global; 0 = PlayStation fixed; 1 = Nintendo
+            // physical positions. Cycling to a base profile discards only
+            // this title's old custom mapping; all global settings stay.
+            constexpr std::array profiles{-1, 0, 1};
+            const int index = next.controller_layout < 0 ? 0 :
+                next.controller_layout == 0 ? 1 : 2;
+            const int delta = key == Key::right ? 1 : 2;
+            next.controller_layout = profiles[static_cast<std::size_t>((index + delta) % 3)];
+            next.own_mapping = false;
+            next.mapping = next.controller_layout >= 0 ?
+                Eden::BaseMappingForLayout(next.controller_layout) : prefs_.mapping;
+            const bool saved = services_.set_game_settings(game.title_id, next);
+            if (saved) game_settings_ = next;
+            say(saved ? tr("Saved for this game. Applies on next launch.") :
+                        tr("Could not save. Please try again."), !saved);
+            cue(saved ? Cue::toggle : Cue::error);
+        }
         return;
     }
     if (option_ == row_mods)
@@ -1307,6 +1333,9 @@ void Launcher::draw_game(Canvas &c, float open)
             controller_profile_name(game_settings_.controller_layout >= 0 ?
                                         game_settings_.controller_layout : prefs_.controller_layout,
                                     game_settings_.mapping) :
+        game_settings_.controller_layout >= 0 ?
+            controller_profile_name(game_settings_.controller_layout,
+                                    Eden::BaseMappingForLayout(game_settings_.controller_layout)) :
             fill(tr("Global ({0})"),
                  {controller_profile_name(prefs_.controller_layout, prefs_.mapping)}),
         // With the game's Mods switch off (the Library's), none of them is on.
@@ -1375,7 +1404,17 @@ void Launcher::draw_game(Canvas &c, float open)
                                              {Pad::circle, TR("Back")}};
         draw_hints(c, kTransfer, 3, 592.0f, kDialogHints, theme::kCopy, 736.0f);
     }
-    else if (option_ == row_mods || option_ == row_controls)
+    else if (option_ == row_controls)
+    {
+        text_shrink(c, tr("Left/right: Global, PlayStation or Switch for this game; Cross: edit individual buttons."),
+                    592.0f, baseline(kDialogHints - 35.0f, 22.0f, 16.0f), 16.0f,
+                    theme::kMeta, 736.0f);
+        static constexpr Hint kControls[] = {
+            {Pad::leftright, TR("Change")}, {Pad::cross, TR("Open")},
+            {Pad::circle, TR("Back")}};
+        draw_hints(c, kControls, 3, 592.0f, kDialogHints + 12.0f, theme::kCopy, 736.0f);
+    }
+    else if (option_ == row_mods)
     {
         static constexpr Hint kOpen[] = {{Pad::cross, TR("Open")}, {Pad::circle, TR("Back")}};
         draw_hints(c, kOpen, 2, 592.0f, kDialogHints, theme::kCopy, 736.0f);
