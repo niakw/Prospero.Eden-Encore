@@ -1,6 +1,6 @@
 # Eden Encore — Clôture complète PS5, FC27, JIT sparse, GPU et glyphes
 
-**État au 9 octobre 2026 : NON TERMINÉ.** Développement : \`dev/ps5-sparse-jit\`; livraison protégée : \`fix/0.40-zbic-13.60\`. Maquette violette approuvée à préserver. Aucun lancement CI ou compilation PS5 n'est autorisé dans cette passe : l'utilisateur a demandé l'arrêt des runs tant qu'un feu vert explicite n'a pas été donné.
+**État au 9 octobre 2026 : NON TERMINÉ.** Développement : \`dev/ps5-sparse-jit\`; livraison protégée : \`fix/0.40-zbic-13.60\`. Maquette violette approuvée à préserver. Après accord explicite de l'utilisateur pour un **run de test toutes fonctions activées**, un build isolé sur `dev/ps5-sparse-jit` est permis, sans publication ni modification de la branche de livraison. Cela ne constitue pas une qualification matérielle.
 
 Cette page et [PS5_CLOSURE_MATRIX.json](PS5_CLOSURE_MATRIX.json) couvrent **26 preuves nécessaires réparties en cinq axes**. Le contrôle local \`python3 tools/check-ps5-closure.py --require-ready\` **doit refuser la clôture** tant que des éléments manquent. Ce vérificateur ne lance aucune tâche GitHub et ne valide pas lui-même l'authenticité d'une preuve matérielle : une revue humaine des captures/logs, droits et conditions est obligatoire.
 
@@ -39,3 +39,7 @@ La compilation du vrai SDK et le redémarrage/fermeture/re-lancement sur firmwar
 ## Règle de fermeture
 
 Les issues [#7](https://github.com/niakw/Prospero.Eden-Encore/issues/7) et [#8](https://github.com/niakw/Prospero.Eden-Encore/issues/8) doivent rester **ouvertes** jusqu'à ce que les 26 vérifications aient de véritables preuves examinées et que la nouvelle version passe le firmware et des jeux réels. Des tests source/CI verts n'équivalent pas à une preuve PS5. Le lien d'un ancien run et l'existence de fichiers de mod ne suffisent pas. Ne jamais fermer administrativement pour satisfaire une demande de suivi sans corriger et qualifier le problème.
+
+## Mise à jour : test unifié tout activé
+
+Le profil de test est décrit dans [PS5_ALL_ON_TEST_BUILD.md](PS5_ALL_ON_TEST_BUILD.md). Le build dev active automatiquement JIT sparse (sous probe RW/RX), placement CPU logique et trace Vulkan sans bascule expérimentale dans les paramètres. Il ignore l'ancien `experiments.json` ; Safe Launch et les protections contre les GPU/JIT non pris en charge restent en place. Les 26 critères physiques sont toujours nécessaires avant de considérer FC27, GPU, JIT sparse et glyphes PlayStation comme terminés.
