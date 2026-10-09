@@ -323,7 +323,8 @@ void Launcher::apply_games(std::vector<Game> games)
     games_loaded_ = true;
     // Even if file order stayed identical, a preferences refresh may
     // have changed the selected game's effective docked mode.
-    if (same && !games_.empty())
+    if (same && library_.selected >= 0 &&
+        library_.selected < static_cast<int>(games_.size()))
         selected_docked_ = games_[static_cast<std::size_t>(library_.selected)].docked;
     // Mod counts were resolved by the background scan; never perform a
     // second synchronous per-title disk walk while applying the list.
@@ -753,10 +754,16 @@ void Launcher::refresh_selected_game()
 {
     // Library selection can repeat at 9+ Hz. Never touch per-title/global
     // JSON files on the UI/input thread: the worker owns that snapshot.
-    selected_docked_ = games_.empty() ||
+    // The library scanner can complete while the selection is transitioning
+    // from an empty/removed list. Invalid indices mean no active title, not
+    // an unchecked vector access (especially -1 cast to a huge size_t).
+    const bool has_selected = library_.selected >= 0 &&
+        library_.selected < static_cast<int>(games_.size());
+    selected_docked_ = !has_selected ||
         games_[static_cast<std::size_t>(library_.selected)].docked;
     // Its Mods switch shows its state at once; it only animates when changed.
-    mods_switch_.snap(!games_.empty() && games_[static_cast<std::size_t>(library_.selected)].mods_enabled ?
+    mods_switch_.snap(has_selected &&
+                      games_[static_cast<std::size_t>(library_.selected)].mods_enabled ?
                           1.0f : 0.0f);
     detail_.value = 0.0f;
     detail_.velocity = 0.0f;
@@ -768,7 +775,8 @@ void Launcher::press_library(Key key)
     if (key != Key::left && key != Key::right && key != Key::cross && key != Key::options)
         clear_confirmation();
     const int count = static_cast<int>(games_.size());
-    const Game *game = count > 0 ? &games_[static_cast<std::size_t>(library_.selected)] : nullptr;
+    const Game *game = library_.selected >= 0 && library_.selected < count ?
+        &games_[static_cast<std::size_t>(library_.selected)] : nullptr;
     switch (key)
     {
     case Key::circle:
