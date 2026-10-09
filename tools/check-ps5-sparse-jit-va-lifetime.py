@@ -47,7 +47,7 @@ assert "void* rw = ReserveCpuVirtualRange(size, LargePage);" in ps5
 assert "void* rx = ReserveCpuVirtualRange(size, LargePage);" in ps5
 assert "void* address = ReserveCpuVirtualRange(span, SparseSlot);" in ps5
 assert "return ReserveCpuVirtualRange(size, LargePage);" in ps5
-assert ps5.count("sceKernelReserveVirtualRange(&") == 2  # extern declaration + helper
+assert ps5.count("sceKernelReserveVirtualRange(&") == 1  # exactly the shared helper call
 
 # A positive-only cached kernel total reduces syscall overhead on each JIT
 # 2 MiB physical commit. It is a fixed extent, NOT a substitute for the
