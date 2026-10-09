@@ -57,6 +57,7 @@ def rule(title: object, version: object) -> tuple[str, str]:
 def check_replacement_files(folder: Path, entries: list) -> None:
     require(0 < len(entries) <= 64, "invalid glyph pack file list")
     seen = set()
+    seen_original = set()
     total = 0
     for item in entries:
         require(isinstance(item, dict) and set(item) ==
@@ -69,10 +70,15 @@ def check_replacement_files(folder: Path, entries: list) -> None:
         original = item["romfs_path"]
         require(isinstance(original, str) and 0 < len(original) <= 240 and
                 "\\" not in original and ":" not in original and
-                not original.startswith("/"), "unsafe original RomFS path")
+                "\\x00" not in original and not original.startswith("/"),
+                "unsafe original RomFS path")
         original_parts = original.split("/")
         require(all(part and part not in (".", "..") and not part.startswith(".")
                     for part in original_parts), "invalid original RomFS components")
+        original_key = original.casefold()
+        require(original_key not in seen_original,
+                "duplicate/case-colliding original RomFS path")
+        seen_original.add(original_key)
         name = item["replacement"]
         require(isinstance(name, str) and 0 < len(name) <= 240 and
                 "\\" not in name and ":" not in name and not name.startswith("/"),
