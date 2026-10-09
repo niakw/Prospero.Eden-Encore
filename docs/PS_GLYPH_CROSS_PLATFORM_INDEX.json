@@ -4,8 +4,8 @@
   "purpose": "Only technical observations from other-platform releases to guide inspection of Switch 1 originals; never direct emulator compatibility.",
   "switch_index": "docs/PS_GLYPH_SOURCE_INDEX.json",
   "statistics": {
-    "sources": 17,
-    "switch_games_referenced": 12,
+    "sources": 20,
+    "switch_games_referenced": 14,
     "source_platforms": [
       "PC",
       "PC (Shin Megami Tensei V: Vengeance)",
@@ -477,6 +477,86 @@
       ],
       "transfer_scope": "Shows why converted glyph sprite rectangle bounds differ per platform; PC mod/runtime hook cannot be directly loaded by Switch.",
       "confidence": "mod_documentation",
+      "version_claims": null,
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-018",
+      "switch_game": "Sonic Mania",
+      "platform": "PC",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://gamebanana.com/mods/31279",
+      "source_type": "game_ui_mod",
+      "mod": "Playstation Buttons over Xbox & Keyboard",
+      "engine_family": "Retro Engine / Sonic Mania UI",
+      "asset_path": null,
+      "asset_container_family": [
+        "RSDK Mod Manager",
+        "Sonic Mania Mod Loader",
+        "embedded platform glyph assets"
+      ],
+      "features": [
+        "PC mod author reports PlayStation icons already unused in game data; no new artwork needed",
+        "keyboard and controller prompt variants",
+        "super move button prompts and controller menu remain context limitations"
+      ],
+      "transfer_scope": "Investigate dormant PlayStation art in Switch Sonic Mania's original data; PC asset selection and keyboard mod cannot be assumed to work in Switch.",
+      "confidence": "mod_documentation",
+      "version_claims": null,
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-019",
+      "switch_game": "Stardew Valley",
+      "platform": "PC",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://www.nexusmods.com/stardewvalley/mods/25148",
+      "source_type": "game_ui_mod",
+      "mod": "Controller Icons Pack (CP)",
+      "engine_family": "Stardew Valley UI/XNB sprite content",
+      "asset_path": null,
+      "asset_container_family": [
+        "SMAPI",
+        "Content Patcher",
+        "controller icon sprites"
+      ],
+      "features": [
+        "PC Content Patcher pack includes Xbox, PlayStation and Switch button art",
+        "requires SMAPI Content Patcher, not compatible with Switch executable"
+      ],
+      "transfer_scope": "Identify sprite-sheet layout and PC content patch target names; original Switch textures/engine version must be separately checked.",
+      "confidence": "mod_documentation",
+      "version_claims": null,
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-020",
+      "switch_game": "Stardew Valley",
+      "platform": "PC",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://www.nexusmods.com/stardewvalley/mods/40470",
+      "source_type": "game_ui_mod",
+      "mod": "Star Control CustomisationPlus",
+      "engine_family": "Stardew Valley PC SMAPI UI",
+      "asset_path": null,
+      "asset_container_family": [
+        "SMAPI",
+        "runtime spritemap",
+        "controller prompt sprite sheet"
+      ],
+      "features": [
+        "v1.1.7 added PlayStation prompt spritemap and switchable icon sheets",
+        "UI sprites reload in game when selected",
+        "controls and keybind editor track selected controller style"
+      ],
+      "transfer_scope": "Good scene/context switching and sprite-sheet variants model, but the PC SMAPI runtime mod cannot be loaded directly by Switch.",
+      "confidence": "mod_changelog",
       "version_claims": null,
       "mod_archive_inspected": false,
       "original_switch_texture_sha256": null,
