@@ -2093,6 +2093,12 @@ int main(int argc, char** argv) {
                 passed("core_shutdown");
                 if (completion->failure) {
                     try { std::rethrow_exception(completion->failure); }
+                    catch (const std::bad_alloc&) {
+                        // Renderer/GPU worker OOM is not necessarily a Vulkan
+                        // device allocation. Preserve its type so the native
+                        // outer recovery handler gives actionable guidance.
+                        throw;
+                    }
                     catch (const std::exception& error) {
                         // Out of graphics memory: seen with the resolution above 1x in a game that
                         // runs at 1x. The launcher shows this sentence in the player's language
