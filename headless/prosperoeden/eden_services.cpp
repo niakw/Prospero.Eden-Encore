@@ -1041,11 +1041,20 @@ std::vector<pe::ui::Game> EdenServices::games(const std::atomic<bool>* cancel) {
     (void)mkdir(Eden::CoversDir().c_str(), 0777);
     std::error_code directory_error;
     const auto entries = Eden::ReadNativeDirectory(Eden::AssetsPath("roms"), directory_error);
-    if (directory_error || (cancel && cancel->load(std::memory_order_acquire)))
+    if (directory_error) {
+        Eden::Report("library", ("EDEN_ROM_SCAN directory_error=" +
+                                 directory_error.message()).c_str());
         return games;
+    }
+    if (cancel && cancel->load(std::memory_order_acquire)) return games;
     eden_scan_addons(Eden::AssetsPath("updates").c_str(), Eden::AssetsPath("keys").c_str());
     if (cancel && cancel->load(std::memory_order_acquire)) return {};
     const int language_choice = Eden::LoadPreferences().language;
+    // A failed stat or unexpected file type previously hid a title with no
+    // diagnostic. Keep the UI thread free of IO: report only on this worker.
+    std::size_t rom_candidates = 0;
+    std::size_t stat_failures = 0;
+    std::size_t non_regular = 0;
     // Enumerate local assets immediately. Enrichment is independently queued for
     // all installed titles by Launcher, so even games never selected acquire Nlib
     // banners/icons/screenshots. Disk scanning itself must stay network-free.
@@ -1059,9 +1068,20 @@ std::vector<pe::ui::Game> EdenServices::games(const std::atomic<bool>* cancel) {
         std::transform(format.begin(), format.end(), format.begin(),
                        [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
         if (format != "NSP" && format != "XCI") continue;
+        ++rom_candidates;
         const std::string path = Eden::AssetsPath("roms/" + file);
         struct stat info {};
-        if (stat(path.c_str(), &info) != 0 || !S_ISREG(info.st_mode)) continue;
+        if (stat(path.c_str(), &info) != 0) {
+            ++stat_failures;
+            if (stat_failures <= 3)
+                Eden::Report("library", ("EDEN_ROM_SCAN stat_failed=" + file +
+                                         " errno=" + std::to_string(errno)).c_str());
+            continue;
+        }
+        if (!S_ISREG(info.st_mode)) {
+            ++non_regular;
+            continue;
+        }
         char size[32];
         const double bytes = static_cast<double>(info.st_size);
         if (bytes >= 1073741824.0) std::snprintf(size, sizeof(size), "%.1f GB", bytes / 1073741824.0);
@@ -1119,6 +1139,11 @@ std::vector<pe::ui::Game> EdenServices::games(const std::atomic<bool>* cancel) {
     // enrichment of every installed title in background, independently of user
     // selection. A library enumeration itself must remain local/cache-only.
     lock.unlock();
+    Eden::Report("library", ("EDEN_ROM_SCAN entries=" + std::to_string(entries.size()) +
+                             " candidates=" + std::to_string(rom_candidates) +
+                             " visible=" + std::to_string(games.size()) +
+                             " stat_failures=" + std::to_string(stat_failures) +
+                             " non_regular=" + std::to_string(non_regular)).c_str());
 
     std::sort(games.begin(), games.end(),
               [](const pe::ui::Game& a, const pe::ui::Game& b) { return a.name < b.name; });
