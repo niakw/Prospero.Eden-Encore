@@ -35,6 +35,16 @@ assert "tile_art.y + tile_art.h * 0.43f" in library
 assert "tile_art.w, tile_art.h * 0.57f" in library
 assert "card.h * 0.53f" not in library
 
+# The user-supplied mask is 96% transparent, and the actual visible
+# strokes were 33%-alpha on dark panels. Whiten nontransparent samples
+# before tinting, otherwise the "white" icon still renders black on PS5.
+mask = (root / "headless/prosperoeden/pe/ui/dualsense_mask_asset.hpp").read_text()
+textures = (root / "headless/prosperoeden/pe/ui/textures.cpp").read_text()
+assert 'color[0] = color[1] = color[2] = 255;' in textures
+assert 'color[3] = level == 0 ? 0 : (level == 1 ? 240 : 255);' in textures
+assert 'kDualSenseAlphaRuns' in mask
+assert 'controller_ = create(pad_image);' in textures
+assert 'dualsense_icon(c, r, ink, 0.40f + 0.60f * lit);' in (root / "headless/prosperoeden/pe/ui/widgets.cpp").read_text()
 # Controller icon is licensed DualSense image; keep the settings cog unchanged.
 assert "dualsense_icon(c, {left - 10.0f, cy - 15.0f, 44.0f, 30.0f}, theme::kTitle, 1.0f);" in home
 assert "theme::kTitle, 1.0f);" in home
