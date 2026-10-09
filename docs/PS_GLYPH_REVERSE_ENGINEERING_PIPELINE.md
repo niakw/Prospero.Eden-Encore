@@ -157,3 +157,7 @@ python3 tools/ps-glyph-platform-coverage.py --out /tmp/switch-cross-platform-wor
 Only exact same-size and same rendered-pixel original textures produce **candidate** Switch rectangle transfer. A renamed texture or shared game engine never qualifies an offset. The output never proves correct button semantics, original Switch container binding, original game update or PS5 gameplay.
 
 The check scripts `tools/check-ps-glyph-cross-platform-index.py`, `tools/check-ps-glyph-cross-platform-image.py` and `tools/check-ps-glyph-platform-coverage.py` are source-only and have NOT been executed. No GitHub Actions/native builds have been triggered.
+
+### Cross-platform coverage beyond known Switch mods
+
+[Six independently listed Switch 1 games](PS_GLYPH_SWITCH1_GAME_SEEDS.json) can be researched from external PC glyph mods even though no Switch-specific mod has been confirmed. The joint [17-source cross-platform register](PS_GLYPH_CROSS_PLATFORM_INDEX.json) now covers 12 target games, and the worklist generator includes 18 games with Switch mods plus six seeded games. For different atlas arrangements, `tools/ps-glyph-relocated-sprite.py` compares each exact original sprite rectangle against candidate Switch texture regions and rejects every absent or ambiguous match. This does NOT perform platform resource repacking or semantic button verification. Low-opacity RGB differences are detected exactly rather than rounded away.
