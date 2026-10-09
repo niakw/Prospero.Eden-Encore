@@ -76,6 +76,12 @@ assert "poll ? (services_.controllers() & 0xfu) : controllers_" in home
 assert "controller_lit_[index].update(dt, 10.0f);" in home
 
 assert "queue_.pop_front();" in texture_cpp
+# Repeated Nlib cover invalidations may accumulate stale FIFO requests.
+# Limit the total dictionary lookups in a UI frame as well as GL deletes.
+assert "constexpr std::size_t kMaxCoverQueueLookupsPerFrame = 24;" in texture_cpp
+assert "std::size_t inspected = 0;" in texture_cpp
+assert "while (!queue_.empty() && inspected < kMaxCoverQueueLookupsPerFrame)" in texture_cpp
+assert "++inspected;" in texture_cpp
 assert "queue_.erase(queue_.begin());" not in texture_cpp
 assert "std::sort(order.begin(), order.end());" not in texture_cpp
 assert "auto oldest = covers_.end();" in texture_cpp
