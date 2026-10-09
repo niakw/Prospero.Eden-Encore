@@ -213,13 +213,17 @@ if(PS5_NATIVE)
         "    std::printf(\"EDEN_JIT_FEATURES mask=%x cache_bytes=%zu\\n\", unsigned(GetHostFeatures()), total_code_size);\n    GenRunCode(rcp);" code_source "${code_source}")
     # Unix Dynarmic assumes memory is eagerly backed. The PS5 sparse path
     # commits each new executable chunk at its existing virtual address.
+    # A selected sparse allocator NEVER falls back to dense RX; the commit
+    # implementation already checks region ownership/capacity under its lock.
+    # Skip the earlier redundant IsSparseJitCode() map lookup and mutex lock
+    # for each compiled guest block (4 guest workers compete otherwise).
     set(jit_commit_anchor "void BlockOfCode::EnsureMemoryCommitted([[maybe_unused]] size_t codesize) {\n")
     string(FIND "${code_source}" "${jit_commit_anchor}" jit_commit_at)
     if(jit_commit_at LESS 0)
         message(FATAL_ERROR "Pinned Dynarmic JIT commit boundary changed")
     endif()
     string(REPLACE "${jit_commit_anchor}"
-        "${jit_commit_anchor}#ifdef PS5_NATIVE\n    if (::Eden::Experimental::sparse_jit_cache.load(std::memory_order_relaxed) &&\n        ::Common::IsSparseJitCode(getCode())) {\n        const size_t written = getSize();\n        if (written > maxSize_ || codesize > maxSize_ - written ||\n            !::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), written + codesize)) {\n            std::fprintf(stderr, \"EDEN_JIT_SPARSE_COMMIT_FAILED used=%zu next=%zu capacity=%zu\\n\", written, codesize, maxSize_);\n            throw std::bad_alloc{};\n        }\n        return;\n    }\n#endif\n"
+        "${jit_commit_anchor}#ifdef PS5_NATIVE\n    if (::Eden::Experimental::sparse_jit_cache.load(std::memory_order_relaxed)) {\n        const size_t written = getSize();\n        if (written > maxSize_ || codesize > maxSize_ - written ||\n            !::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), written + codesize)) {\n            std::fprintf(stderr, \"EDEN_JIT_SPARSE_COMMIT_FAILED used=%zu next=%zu capacity=%zu\\n\", written, codesize, maxSize_);\n            throw std::bad_alloc{};\n        }\n        return;\n    }\n#endif\n"
         code_source "${code_source}")
 endif()
   # ConstantPool has completed construction before this body. Isolate its last
