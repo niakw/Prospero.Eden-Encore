@@ -91,7 +91,9 @@ def main() -> None:
     # actual sparse mapping and fails closed if not.
     require('bool IsSparseJitCode(const void* executable) noexcept' in native and
             'if (::Eden::Experimental::sparse_jit_cache.load(std::memory_order_relaxed))' in cmake and
-            '::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), written + codesize)' in cmake and
+            '::Eden::Jit::PlanSparseCommit(written, codesize, maxSize_)' in cmake and
+            '::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), target.bytes)' in cmake and
+            'jit-sparse-commit.h' in cmake and
             '::Common::IsSparseJitCode(getCode())' not in cmake,
             "Sparse translated-code commits must validate mapping ownership without per-block duplicate locks")
     require('std::size_t ExecutableAliasSpan(void* writable) noexcept' in native and
