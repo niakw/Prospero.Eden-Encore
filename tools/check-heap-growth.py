@@ -197,6 +197,7 @@ size_t __real_malloc_usable_size(const void *address) { return malloc_usable_siz
 // The range the heap grows in: unreadable until committed, so a piece used early faults.
 static int refuse_range, refuse_first_commit;
 static int abandoned_initial_mspace;
+static unsigned rolled_back_growth;
 static unsigned dense_fallback_attempts;
 static void *last_reserved_base;
 static size_t last_reserved_size;
@@ -213,6 +214,20 @@ int eden_heap_commit(void *address, size_t size) {
     if (mprotect(address, size, PROT_READ | PROT_WRITE) != 0) return -1;
     atomic_fetch_add(&committed_bytes, size);
     return 0;
+}
+int eden_heap_commit_growth(void *address, size_t size, int64_t *physical) {
+    assert(physical != NULL);
+    *physical = -1; // host anonymous commit has no direct physical owner
+    return eden_heap_commit(address, size);
+}
+void eden_heap_rollback_growth(void *address, size_t size, int64_t physical) {
+    assert(physical == -1);
+    void *guard = mmap(address, size, PROT_NONE,
+                       MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    assert(guard == address);
+    const size_t committed = atomic_fetch_sub(&committed_bytes, size);
+    assert(committed >= size);
+    ++rolled_back_growth;
 }
 static int refuse_pages;   // the console has no memory left for a block of its own
 void *eden_heap_pages(size_t size) {
@@ -362,22 +377,30 @@ int main(int argc, char **argv) {
         refuse_growth_mspace = 1;
         assert(__wrap_malloc((size_t)30 << 20) == NULL);
         assert(growth_mspace_attempts == 1);
-        assert(eden_heap_committed() == piece * 2);
+        assert(rolled_back_growth == 1);
+        assert(eden_heap_committed() == piece);
+        assert(atomic_load(&committed_bytes) == piece);
+        // MAP_FIXED restored a guard without breaking the surrounding 3 GiB VA.
+        // It must also discard the failed page's previously touched residency.
+        unsigned char residency = 0xff;
+        assert(mincore((char *)last_reserved_base + piece, 4096, &residency) == 0);
+        assert((residency & 1) == 0);
         for (int i = 0; i < 12; ++i) {
             // No second mspace attempt/committed piece, even after a
             // transient failure flag is cleared by the mock.
             assert(__wrap_malloc((size_t)30 << 20) == NULL);
-            assert(eden_heap_committed() == piece * 2);
+            assert(eden_heap_committed() == piece);
         }
         assert(growth_mspace_attempts == 1);
-        assert(atomic_load(&committed_bytes) == piece * 2);
+        assert(rolled_back_growth == 1);
+        assert(atomic_load(&committed_bytes) == piece);
         // All healthy older mspaces still serve small allocations.
         void *small = __wrap_malloc(1024);
         assert(small != NULL);
         __wrap_free(small);
         for (int i = 0; i < 3; ++i) __wrap_free(retained[i]);
         __wrap_free(first);
-        puts("growth-mspace-fail: fail-closed, no repeat 128 MiB loss, old mspace usable PASS");
+        puts("growth-mspace-fail: failed 128 MiB backing returned, VA guarded, no repeat, old mspace usable PASS");
         return 0;
     }
     // A single thread frees ~4 MiB in many size classes. Its private

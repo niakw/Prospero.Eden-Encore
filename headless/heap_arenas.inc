@@ -38,7 +38,9 @@
 #define EDEN_HEAP_PIECES (PS5_OPENGL_HEAP_SIZE >> EDEN_HEAP_PIECE_SHIFT)
 
 void *eden_heap_reserve(size_t size);             /* address space only; NULL when refused */
-int eden_heap_commit(void *address, size_t size); /* zeroed memory for a part of it; 0 when done */
+int eden_heap_commit(void *address, size_t size); /* initial backing, with startup owner */
+int eden_heap_commit_growth(void *address, size_t size, int64_t *physical); /* growth lock held */
+void eden_heap_rollback_growth(void *address, size_t size, int64_t physical); /* no mspace published */
 void eden_heap_abandon_initial(void *address, size_t reserved); /* only if first mspace create failed */
 
 static void *_Atomic eden_heap_slots[EDEN_HEAP_SLOTS]; /* arena mspace owning each slot */
@@ -63,9 +65,10 @@ static atomic_uint eden_heap_pieces_used;
 static int eden_heap_grows;
 static atomic_uint eden_heap_space_hint; /* where the last allocation from the spaces succeeded */
 static atomic_flag eden_heap_grow_lock = ATOMIC_FLAG_INIT;
-/* The growth lock owns this flag. An unregistered committed piece cannot
- * be reused by callers, and repeatedly committing new 128 MiB pieces after
- * mspace creation fails would progressively exhaust the unified PS5 RAM. */
+/* The growth lock owns this flag. A failed mspace construction now rolls
+ * its just-mapped physical pages back to a PROT_NONE reservation, but retrying
+ * that rare failure on each malloc could repeatedly commit+zero 128 MiB on a
+ * real-time guest thread. Reject subsequent growth while existing spaces work. */
 static int eden_heap_growth_mspace_failed;
 
 /* Requests of this size or more get memory of their own (eden_heap_pages), freed with them. */
@@ -399,30 +402,34 @@ static int eden_heap_grow(size_t bytes, unsigned seen) {
   if (count != seen) {
     grown = 1;
   } else if (eden_heap_growth_mspace_failed) {
-    /* The previous failed mspace still occupies direct memory without an
-     * owner. Keep using every healthy space, but never silently commit more
-     * orphaned 128 MiB pieces for subsequent allocation requests. Releasing
-     * the orphan needs a separately proven per-piece physical ownership path. */
+    /* Previous growth pages were already rolled back. Avoid stalling a guest
+     * frame with repeated 128 MiB commit+zero+rollback attempts. */
     eden_heap_grow_refused("EDEN_HEAP_GROW refused: earlier mspace creation failed; growth disabled\n");
   } else if (eden_heap_grows && pieces && used <= EDEN_HEAP_PIECES &&
              pieces <= EDEN_HEAP_PIECES - used) {
     void *start = (char *)ps5_heap_base + ((size_t)used << EDEN_HEAP_PIECE_SHIFT);
     const size_t size = pieces << EDEN_HEAP_PIECE_SHIFT;
-    if (eden_heap_commit(start, size) == 0) {
+    int64_t physical = -1;
+    if (eden_heap_commit_growth(start, size, &physical) == 0) {
+      /* Only this growth lock sees the new pages. Do NOT publish the piece
+       * count or any owner until Sony mspace construction has succeeded. */
       void *space = sceLibcMspaceCreate("Eden-heap", start, size, 0);
-      /* The pieces are taken either way: memory is not given back. */
-      atomic_store_explicit(&eden_heap_pieces_used, used + (unsigned)pieces, memory_order_relaxed);
       if (space != NULL) {
         for (size_t piece = 0; piece < pieces; ++piece)
           atomic_store_explicit(&eden_heap_piece_space[used + piece], space, memory_order_release);
         eden_heap_spaces[count] = space;
+        atomic_store_explicit(&eden_heap_pieces_used, used + (unsigned)pieces, memory_order_release);
         atomic_store_explicit(&eden_heap_space_count, count + 1, memory_order_release);
         grown = 1;
       } else {
-        /* Do not reattempt new physical pieces on future mallocs if the
-         * platform cannot construct an mspace for a committed chunk. */
+        /* No block from the new piece was ever issued, and no slot/space
+         * refers to it. Restore a PROT_NONE virtual guard BEFORE returning
+         * its exact direct physical owner to the kernel. */
+        eden_heap_rollback_growth(start, size, physical);
+        /* Fail closed on future new-piece attempts, not on existing spaces.
+         * Prevent repeated expensive zeroing if mspace creation is broken. */
         eden_heap_growth_mspace_failed = 1;
-        eden_heap_grow_refused("EDEN_HEAP_GROW refused: no allocator for a new piece; growth disabled\n");
+        eden_heap_grow_refused("EDEN_HEAP_GROW refused: mspace failed; physical piece rolled back; growth disabled\n");
       }
     } else {
       eden_heap_grow_refused("EDEN_HEAP_GROW refused: the console has no memory for a new piece\n");

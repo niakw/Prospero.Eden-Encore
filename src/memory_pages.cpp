@@ -965,6 +965,28 @@ bool CommitMemoryRange(void* address, std::size_t size) noexcept {
     return CommitMemoryRange(address, size, nullptr);
 }
 
+// A just-committed heap growth segment whose mspace constructor returned
+// NULL has no published owner and no live pointers. Replace ONLY that whole
+// piece with an inaccessible guard and free its exact direct backing. The
+// rest of the 3 GiB reservation remains untouched for existing mspaces.
+// JIT sparse rollback already uses this same fixed PROT_NONE mapping pattern.
+void RollbackUnpublishedHeapGrowth(void* address, std::size_t size,
+                                   std::int64_t physical) noexcept {
+    if (!address || size == 0 || size % LargePage != 0 ||
+        reinterpret_cast<std::uintptr_t>(address) % LargePage != 0)
+        std::abort();
+#ifdef PS5_NATIVE
+    if (physical < 0 || !cpu_mapping_range(address, size)) std::abort();
+#else
+    (void)physical;
+#endif
+    void* guard = mmap(address, size, PROT_NONE, MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (guard != address) std::abort();
+#ifdef PS5_NATIVE
+    if (sceKernelReleaseDirectMemory(physical, size) != 0) std::abort();
+#endif
+}
+
 void AbandonInitialHeapReservation(void* base, std::size_t reserved,
                                    std::int64_t first_physical, std::size_t committed) noexcept {
     // Called ONLY when creating the very first mspace failed. There are no
