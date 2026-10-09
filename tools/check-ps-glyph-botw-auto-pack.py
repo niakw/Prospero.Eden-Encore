@@ -27,6 +27,7 @@ def module(name, file):
 fixtures = module("eden_astc_example_fixture", "check-ps-glyph-bntx-astc.py")
 sarc = module("eden_sarc_example_fixture", "check-ps-glyph-botw-archive-diff.py")
 automate = module("eden_full_ps5_glyph_assembler", "ps-glyph-botw-auto-pack.py")
+stage = module("eden_botw_stage_test", "ps-glyph-botw-stage-pack.py")
 
 
 def refuse(f, name):
@@ -92,6 +93,27 @@ with tempfile.TemporaryDirectory(prefix="eden-independent-ps-asset-test-") as ro
     assert old_image.getpixel((3, 3)) != new_image.getpixel((3, 3))
     # On-console-compatible graphics NOT assumed from host tests.
     assert new_image.getpixel((12, 12)) == old_image.getpixel((12, 12))
+
+    # Stage an installer-compatible, checksum-verified local LayeredFS
+    # candidate from these synthetic game archives. Nothing gets installed.
+    romfs = base / "original-romfs"
+    original_resource = romfs / "Layout" / "Controller.sblarc"
+    original_resource.parent.mkdir(parents=True)
+    original_resource.write_bytes(game_original)
+    modified_resource = base / "Controller-edited.sblarc"
+    modified_resource.write_bytes(assembled)
+    pack_root = base / "local-glyph-test-pack"
+    candidate = stage.stage(romfs, modified_resource, receipt,
+                            "Layout/Controller.sblarc", manifest["title_id"],
+                            manifest["update_version"], pack_root)
+    assert candidate == pack_root
+    assert (pack_root / "replacement/Layout/Controller.sblarc").read_bytes() == assembled
+    approved = stage.pack.verify(pack_root, romfs, manifest["title_id"])
+    assert approved["files"][0]["romfs_path"] == "Layout/Controller.sblarc"
+    refuse(lambda: stage.stage(romfs, modified_resource, receipt,
+                               "Layout/Controller.sblarc", manifest["title_id"],
+                               manifest["update_version"], pack_root),
+           "overwriting existing local pack")
 
     wrong = dict(manifest, original_archive_sha256="0" * 64)
     refuse(lambda: automate.assemble(game_original, wrong, icon_zip),
