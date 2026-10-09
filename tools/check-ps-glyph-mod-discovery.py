@@ -105,7 +105,8 @@ with tempfile.TemporaryDirectory(prefix="eden-glyph-web-discovery-") as root:
     assert again["games"][0]["title_id"] != full["games"][0]["title_id"]
     changed_live = json.loads(json.dumps(full))
     changed_live["games"].reverse()
-    updated, carried = search.discover(changed_live, newst, 2, network=False)
+    updated, carried = search.discover(changed_live, newst, 2,
+                                       provider="duckduckgo", network=False)
     assert carried["catalog_changed_since_last_batch"]
     assert carried["completed_title_ids"] == newst["completed_title_ids"]
     assert updated["games_examined"] == 1
