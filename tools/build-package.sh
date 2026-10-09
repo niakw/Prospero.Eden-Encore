@@ -20,7 +20,7 @@ release|release-stage)
     export EDEN_DEV_VULKAN=OFF EDEN_DEV_ROM_ID= EDEN_DEV_PROFILE=OFF EDEN_DEV_WAIT_CALLERS=OFF
     # Shipping stability contract: experimental cross-core JIT and successor batching never
     # inherit an operator's shell environment or a reused CMake cache.
-    export EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF
+    export EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF EDEN_SPARSE_JIT_DEV=OFF
     export EDEN_PACKAGE_DIR="$root/build/release/PPSA99008"
     ;;
 dev)
