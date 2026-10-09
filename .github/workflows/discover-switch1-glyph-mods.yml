@@ -1,0 +1,123 @@
+name: Discover Switch 1 controller UI mods (metadata only)
+
+# GitHub schedules run on the default branch ONLY. Do not modify release
+# branch; use workflow_dispatch on dev/ps5-sparse-jit for live incremental scans.
+on:
+  push:
+    branches: [dev/ps5-sparse-jit]
+    paths:
+      - .github/workflows/discover-switch1-glyph-mods.yml
+      - tools/ps-glyph-switch1-corpus.py
+      - tools/check-ps-glyph-mod-discovery.py
+      - tools/ps-glyph-mod-discovery.py
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: "Source; none = offline links, Yandex requires paid API credentials"
+        required: true
+        type: choice
+        options: [none, github, duckduckgo, yandex]
+        default: github
+      max_games:
+        description: "Next 1-250 Switch titles"
+        required: true
+        type: number
+        default: 20
+      query_variant:
+        description: "0=Switch; 1=multiplatform; 2=GameBanana; 3=Russian"
+        required: true
+        type: choice
+        options: ["0", "1", "2", "3"]
+        default: "0"
+
+permissions:
+  contents: read
+concurrency:
+  group: eden-ps-glyph-discovery-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  metadata-source-discovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate sources, parsers, state and billing boundaries
+        run: python3 -B tools/check-ps-glyph-mod-discovery.py
+      - name: Load public Switch 1 game title metadata
+        run: |
+          mkdir -p /tmp/eden-title-catalog /tmp/eden-glyph-discovery
+          succeeded=0
+          for region in US.en GB.en JP.ja FR.fr; do
+            if curl --fail --location --silent --show-error --retry 2 \
+                --connect-timeout 10 --max-time 50 \
+                "https://raw.githubusercontent.com/blawar/titledb/master/${region}.json" \
+                -o "/tmp/eden-title-catalog/${region}.json"; then
+              succeeded=$((succeeded+1))
+            else
+              rm -f "/tmp/eden-title-catalog/${region}.json"
+              echo "::warning::No public Switch1 metadata for ${region}"
+            fi
+          done
+          if (( succeeded == 0 )); then
+            echo "::error::Cannot construct catalog from zero verified data sources"
+            exit 1
+          fi
+          python3 -B tools/ps-glyph-switch1-corpus.py \
+            --regions /tmp/eden-title-catalog/*.json \
+            --out /tmp/eden-glyph-discovery/catalog.json
+      - name: Restore last completed Switch game Title IDs
+        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: .cache/eden-glyph-mods/progress.json
+          key: eden-glyph-cursor-${{ github.run_id }}
+          restore-keys: |
+            eden-glyph-cursor-
+      - name: Incremental source discovery without mod downloads
+        env:
+          SELECTED: ${{ inputs.provider || 'none' }}
+          LIMIT: ${{ inputs.max_games || '20' }}
+          VARIANT: ${{ inputs.query_variant || '0' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          YANDEX_SEARCH_API_KEY: ${{ secrets.YANDEX_SEARCH_API_KEY }}
+          YANDEX_SEARCH_FOLDER_ID: ${{ secrets.YANDEX_SEARCH_FOLDER_ID }}
+        run: |
+          args=(--catalog /tmp/eden-glyph-discovery/catalog.json
+                --state-out /tmp/eden-glyph-discovery/state-next.json
+                --report /tmp/eden-glyph-discovery/source-links.json
+                --provider "$SELECTED" --max-games "$LIMIT"
+                --query-variant "$VARIANT" --interval 2)
+          if test -f .cache/eden-glyph-mods/progress.json; then
+            args+=(--state-in .cache/eden-glyph-mods/progress.json)
+          fi
+          if test "$SELECTED" != none; then
+            if test "$SELECTED" = yandex && \
+               { test -z "$YANDEX_SEARCH_API_KEY" || test -z "$YANDEX_SEARCH_FOLDER_ID"; }; then
+              echo "::error::Yandex Search is billed; explicit API credentials required"
+              exit 1
+            fi
+            args+=(--network)
+          fi
+          python3 -B tools/ps-glyph-mod-discovery.py "${args[@]}"
+          if test "$SELECTED" != none; then
+            mkdir -p .cache/eden-glyph-mods
+            cp /tmp/eden-glyph-discovery/state-next.json .cache/eden-glyph-mods/progress.json
+          fi
+      - name: Save progress for the next manual search batch
+        if: success() && github.event_name == 'workflow_dispatch' && inputs.provider != 'none'
+        uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: .cache/eden-glyph-mods/progress.json
+          key: eden-glyph-cursor-${{ github.run_id }}
+      - name: Preserve source links as a browsable report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Switch1-Controller-Glyph-Mod-Sources
+          path: |
+            /tmp/eden-glyph-discovery/source-links.json
+            /tmp/eden-glyph-discovery/state-next.json
+          if-no-files-found: warn
+          retention-days: 30
