@@ -238,3 +238,37 @@ Both automation bridges are covered by host-only synthetic CI
 `.github/workflows/check-ps-glyph-reconstruct.yml`. A green run validates
 the bridge and parser, **not** real-game graphic output, compatibility, legal
 redistribution or playable FC27/BOTW framerate.
+
+
+### Compare BOTW's actual compressed original and modded UI archives
+
+The decode-only reader can now be used as a **paired diff**: it locates
+precisely which SARC member and which named BNTX encoded texture bytes
+changed between two authorized copies of the same Switch UI resource.
+No mod sprite or game-owned graphics are copied into Eden's repository.
+
+```sh
+python3 tools/ps-glyph-botw-archive-diff.py \
+  --original /authorized/Switch/original/Layout/SomeOriginal.sblarc \
+  --modded /authorized/Switch/modded/Layout/SomeOriginal.sblarc \
+  --out /work/botw-ui-member-encoded-diff.json
+```
+
+`SomeOriginal.sblarc` is an illustrative name; choose a real matching
+original/mod RomFS resource using the actual mod archive inventory. The
+output has original/mod container SHA-256, changed member names, embedded
+BNTX texture name/format/mip data fingerprints when verifiably bounded, and
+**null pixel rectangle geometry**. Structural changes, unsupported formats,
+unknown texture regions and changed containers cannot be promoted as
+playable icons.
+
+This identifies *where to focus* a legal, independent Switch Toolbox/Hyrule
+Builder export/edit/repack with the existing Zacksly art. The next strict
+gate is actual decoded original texture pixel geometry and action semantics;
+`ps-glyph-diff-to-evidence.py` does that only for genuine original
+RGBA PNG/TGA RomFS atlases, not BNTX binary offsets. Any changed modded
+archive must still pass game/update matching, repack equivalence,
+controller-session mapping and on-console screenshots.
+
+No native PS5 run, gameplay benchmark or 28-title compatibility claim is
+inferred from these host tests.
