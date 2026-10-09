@@ -32,10 +32,28 @@ def main() -> None:
     worker_script = read("tools/prepare-vulkan-port.py")
     jit_policy = read("headless/experimental_performance.h")
 
+    # Distinguish kernel direct-memory enumeration from the newer JIT-owned
+    # memory snapshots. The two diagnostics deliberately use different
+    # lifecycle hooks; conflating them used to make this guard fail even
+    # though all current hooks were wired into real title execution.
     stages = set(re.findall(r'passed\("([A-Za-z_]+)"\)', app))
-    memory_stages = set(re.findall(r'std::string_view\{name\} == "([A-Za-z_]+)"', app))
-    require(memory_stages == {"core_initialized", "core_shutdown", "core_destroyed"}, "Wrong memory snapshot stages")
-    require(memory_stages.issubset(stages), "Memory snapshot references an unreachable lifecycle stage")
+    stages.update(re.findall(r'passed\(game\s*\?\s*"([A-Za-z_]+)"\s*:\s*"([A-Za-z_]+)"\)', app)[0]
+                  if 'passed(game ? "game_loaded" : "nro_loaded")' in app else ())
+    direct_marker = 'Eden::Performance::ReportDirectMemoryState(name);'
+    jit_marker = 'Eden::Performance::ReportJitCodeState(name);'
+    require(direct_marker in app and jit_marker in app, "Missing native memory diagnostics")
+    direct_begin = app.rfind('if (std::string_view{name} ==', 0, app.index(direct_marker))
+    jit_begin = app.rfind('if (std::string_view{name} ==', 0, app.index(jit_marker))
+    direct_stages = set(re.findall(r'std::string_view\{name\} == "([A-Za-z_]+)"',
+                                   app[direct_begin:app.index(direct_marker)]))
+    jit_stages = set(re.findall(r'std::string_view\{name\} == "([A-Za-z_]+)"',
+                                app[jit_begin:app.index(jit_marker)]))
+    require(direct_stages == {"core_initialized", "core_shutdown", "core_destroyed"},
+            "Wrong direct-memory snapshot stages")
+    require(jit_stages == {"game_loaded", "nro_loaded", "cpu_manager_ready", "core_shutdown"},
+            "Wrong JIT-owned memory snapshot stages")
+    require((direct_stages | jit_stages).issubset(stages),
+            "Native memory snapshot references an unreachable lifecycle stage")
     require('Eden::Performance::ReportDirectMemoryState(name);' in app, "Lifecycle call absent")
     require('void ReportDirectMemoryState(const char* phase);' in perf_h, "Lifecycle API declaration absent")
     require('regions < 8192' in perf, "Direct memory traversal is not bounded")
