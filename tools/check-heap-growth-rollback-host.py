@@ -23,7 +23,9 @@ compiler = next((item for item in ("clang++-18", "clang++", "g++") if shutil.whi
 if not compiler:
     raise SystemExit("C++20 compiler required for real heap rollback helper host preflight")
 prefix = r"""
-#define _GNU_SOURCE
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE 1
+#endif
 #include <cassert>
 #include <cerrno>
 #include <cstddef>
@@ -32,6 +34,7 @@ prefix = r"""
 #include <sys/mman.h>
 #include <unistd.h>
 #include <cstdio>
+#include <initializer_list>
 
 namespace Common {
 static constexpr std::size_t LargePage = 2u << 20;
