@@ -71,5 +71,10 @@ assert "Eden::DevVulkan::gpu_time_session.fetch_add(1, std::memory_order_release
 assert "const u64 session = ::Eden::DevVulkan::gpu_time_session.load(std::memory_order_acquire);" in generator
 assert "gpu_time = GpuTimeProbe{};" in generator
 assert generator.index("gpu_time = GpuTimeProbe{};") < generator.index("if (gpu_time.failed) return;")
+assert "void GpuTimeDestroy(const Device& device)" in generator
+assert "dld.vkDestroyQueryPool(handle, *gpu_time.pool, nullptr);" in generator
+assert "worker_thread.request_stop();" in generator
+assert "if (worker_thread.joinable()) worker_thread.join();" in generator
+assert "GpuTimeDestroy(device);" in generator
 print("Encore automatic performance policy: 7/7 controls owned by 4 tiers + Custom derivation PASS")
 print("GPU timing device lifecycle: explicit opt-in, per-title query reset contract PASS")
