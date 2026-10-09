@@ -4,7 +4,7 @@ Status 2026-10-09: **source-only implementation, not executed or PS5-qualified**
 
 ## Inputs and evidence levels
 
-* `docs/PS_GLYPH_SOURCE_INDEX.json` is a list of **24 community mod references across 16 games**. These are leads, NOT installed assets, verified compatible titles, image rectangles, or proof that source files were fetched.
+* `docs/PS_GLYPH_SOURCE_INDEX.json` is a list of **26 community mod references across 18 games**. These are leads, NOT installed assets, verified compatible titles, image rectangles, or proof that source files were fetched.
 * Obtain legally usable original extracted game RomFS and a community mod ZIP or separately extracted folder. Do not include original Nintendo-owned bytes or unlicensed mod payloads in git.
 * Keep distinct IDs: game **Title ID**, game **update version**, mod release version, ROMFS relative path, archive internal member, original/replacement SHA-256, and the screen-specific button semantics.
 * Treat three positions separately: the **file/container offset in bytes**, the **texture/atlas rectangle in pixels**, and the **control action or prompt location in the game's UI context**. None implies the other automatically.
@@ -129,6 +129,12 @@ Installed-pack permission/attribution applies to adapted PlayStation source art 
 ### Explicit remaining gaps
 
 * No third-party mod archive was downloaded/unpacked during this source-only pass.
-* Pixel rectangles are only generated **when matching original PNG/TGA and mod bytes are provided**. The 24 source index entries intentionally have `rect_xywh: null`.
+* Pixel rectangles are only generated **when matching original PNG/TGA and mod bytes are provided**. The 26 source index entries intentionally have `rect_xywh: null`.
 * Direct editing/injection of BNTX, BFRES, BF(L)YT, BF(L)AN, fonts, ASTC/BC or dictionary compressed `.zs` remains unimplemented in this pass.
 * Synthetic Python fixture scripts were created but **not executed** by request; no GitHub Actions, PS5 build or firmware runtime tests were invoked. Issues #7 (glyphs) and #8 (performance/JIT/GPU) remain open.
+
+### 2026-10-09 — Additional proprietary container and nontexture cases
+
+* **Persona 3 Portable (Switch)**: actual nested path from the mod author's published process: `data_EN/umd0.cpk` → `init_free.bin` → `init/camp.bin` → `pc_button.spr`, using CPK File Builder / Amicitia. A direct RomFS PNG patch cannot rebuild this proprietary packaging. Standard documented mapping is A→Circle, B→Cross.
+* **Tokyo Mirage Sessions #FE Encore**: its author reports a world `Check` prompt that is **not texture-backed** and Start/Select/PS whose sprite slots do not fit. These must remain unsupported by an atlas-only path, even if all texture swaps succeed.
+* Technical index now covers **26 community sources / 18 games**, while keeping every unverified XYWH as null and requiring per-version hardware evidence.
