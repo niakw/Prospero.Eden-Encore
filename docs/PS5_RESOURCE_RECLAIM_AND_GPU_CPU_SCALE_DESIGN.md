@@ -65,6 +65,11 @@ This is more actionable than blindly increasing texture/JIT budgets. The launche
 - Source now captures the first `CommitMemoryRange` kernel physical allocation without dynamic allocation, and `eden_heap_abandon_initial` unmaps its entire unused reservation before releasing its exact 128 MiB direct physical allocation. This is permissible only *before* mspace creation succeeds: no live blocks, TLS arenas or code links exist. Dense reservation failure still uses its old matched FreeMemoryPages path. New host heap `first-mspace-fail` fixture checks both rollback and libc fallback; native firmware and harness tests remain unexecuted.
 - This is NOT a mechanism to decommit mspaces after games have run, and must never be called when any heap allocation is live. Fail-hard on ownership mismatch/release failure rather than silently reuse an aliased physical block.
 
+### Full probe single-flight and slow-kernel telemetry
+
+- A compare/exchange timestamp prevents simultaneous readers at one 100 ms boundary, but it alone cannot prevent an older `sceKernelAvailableDirectMemorySize` call that stalls for **more than 100 ms** from overlapping with a newer query and overwriting the more recent result when it returns. The probe now has an atomic nonblocking *single-flight* flag acquired only by the timestamp winner. Concurrent callers continue rendering with the last published measurement. It is cleared after both success and failure paths, with no mutex acquisition on hot cache accesses.
+- The all-on dev build records at most 16 `EDEN_PS5_DMEM_PROBE_SLOW` entries when the OS query path takes >=2 ms (monotonic wall clock). This distinguishes kernel-memory-enumeration spikes from GPU frame execution; the tracing is disabled in shipping and never logs on every frame. Hardware evidence remains pending.
+
 ## 2. JIT cache growth and safe reclamation
 
 - Current `EDEN_PS5_JIT_POLICY` per-run virtual A64 capacities: first cold title **864+648+648+16 = 2,176 MiB**; return to library then second title **256+192+192+16 = 656 MiB** (because largest free is no longer 11,824 MiB but 4,128 MiB; dense admission formula gave no growth). The virtual shrink is unrelated to loss of executable JIT code when previous JIT shutdown: each old JIT sparse region releases physically to **remaining=0**.

@@ -541,6 +541,16 @@ static void RefreshFreeMemory() {
     if (!checked_ns.compare_exchange_strong(last, now, std::memory_order_acq_rel,
                                             std::memory_order_relaxed))
         return;
+    // If a kernel query itself takes >100 ms, a later timestamp claimant
+    // must not overtake it and publish a newer measurement before the older
+    // query eventually returns. One in-flight query at a time, without
+    // blocking any renderer caller on the query owner's kernel syscall.
+    static std::atomic<bool> query_in_flight{false};
+    if (query_in_flight.exchange(true, std::memory_order_acq_rel))
+        return;
+#if defined(EDEN_DEV_PROFILE)
+    const long long query_start_ns = ClockNs(CLOCK_MONOTONIC);
+#endif
     std::int64_t start = 0;
     std::size_t largest = 0;
     const std::int64_t total = sceKernelGetDirectMemorySize();
@@ -571,6 +581,17 @@ static void RefreshFreeMemory() {
                         failed == 1 && has_valid_sample.load(std::memory_order_relaxed)
                             ? "last_confirmed" : "conservative");
     }
+#if defined(EDEN_DEV_PROFILE)
+    const long long query_end_ns = ClockNs(CLOCK_MONOTONIC);
+    if (query_start_ns > 0 && query_end_ns > query_start_ns &&
+        query_end_ns - query_start_ns >= 2'000'000) {
+        static std::atomic<unsigned> slow_queries_logged{0};
+        if (slow_queries_logged.fetch_add(1, std::memory_order_relaxed) < 16)
+            std::printf("EDEN_PS5_DMEM_PROBE_SLOW latency_ns=%lld known=%u\n",
+                        query_end_ns - query_start_ns, unsigned(known));
+    }
+#endif
+    query_in_flight.store(false, std::memory_order_release);
 }
 static bool GraphicsMemoryShort() {
     RefreshFreeMemory();
