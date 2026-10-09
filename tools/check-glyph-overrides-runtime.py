@@ -262,6 +262,25 @@ int main(int argc, char** argv) {
     assert(select(data, "v1.2.0", Style::PlayStation) == State::EvidenceMismatch);
     put(atlas, original_asset);
     assert(select(data, "v1.2.0", Style::PlayStation) == State::Enabled);
+    // Case-insensitive duplicate overlays and file/directory overlaps
+    // must fail even if every individual replacement digest is valid.
+    // This is particularly important across APFS and Linux mounts.
+    auto ambiguous_pack = nlohmann::json::parse(evidence);
+    ambiguous_pack["files"].push_back(ambiguous_pack["files"][0]);
+    put(pack / "eden-glyph-pack.json", ambiguous_pack.dump());
+    assert(select(data, "v1.2.0", Style::PlayStation) == State::EvidenceMismatch);
+    ambiguous_pack["files"][1]["romfs_path"] = "UI/CONTROLLER.BNTX";
+    put(pack / "eden-glyph-pack.json", ambiguous_pack.dump());
+    assert(select(data, "v1.2.0", Style::PlayStation) == State::EvidenceMismatch);
+    ambiguous_pack["files"][1]["romfs_path"] = "ui/controller.bntx/child";
+    put(pack / "eden-glyph-pack.json", ambiguous_pack.dump());
+    assert(select(data, "v1.2.0", Style::PlayStation) == State::EvidenceMismatch);
+    ambiguous_pack = nlohmann::json::parse(evidence);
+    ambiguous_pack["files"][0]["romfs_path"] = "ui//controller.bntx";
+    put(pack / "eden-glyph-pack.json", ambiguous_pack.dump());
+    assert(select(data, "v1.2.0", Style::PlayStation) == State::EvidenceMismatch);
+    put(pack / "eden-glyph-pack.json", evidence);
+    assert(select(data, "v1.2.0", Style::PlayStation) == State::Enabled);
     auto mismatched_evidence = evidence;
     const std::string known_version = "\"update_version\":\"v1.2.0\"";
     auto version_at = mismatched_evidence.find(known_version);
