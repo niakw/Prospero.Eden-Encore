@@ -63,3 +63,5 @@ assert workers(16, set(), primary) == 2  # successful empty affinity: fallback 4
 assert workers(16, set(), None) == 1  # unavailable/unverified affinity: reserve 7
 print("SOURCE POLICY: verified PS5 8-slot secondary affinity uses 6 shader workers, keeps 2 for services")
 print("R237 test result still unknown: no build without user authorization")
+
+# Trigger unified PS5 validation/build after the corrected shader worker fallback regression.
