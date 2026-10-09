@@ -20,6 +20,10 @@ namespace
 
 constexpr std::size_t kMaxCovers = 160;
 constexpr std::size_t kMaxTextureReclaimsPerFrame = 2;
+// Nlib replaces images by atomic rename. Multiple invalidations can leave
+// stale decode requests in the FIFO. Never drain an unbounded number of
+// invalid keys in one held-D-pad UI frame; finish the backlog next frame.
+constexpr std::size_t kMaxCoverQueueLookupsPerFrame = 24;
 
 } // namespace
 
@@ -212,7 +216,9 @@ void Textures::pump(float dt, int budget)
     }
 
     if (budget > 0 && !decode_.valid()) {
-        while (!queue_.empty()) {
+        std::size_t inspected = 0;
+        while (!queue_.empty() && inspected < kMaxCoverQueueLookupsPerFrame) {
+            ++inspected;
             std::string key = std::move(queue_.front());
             queue_.pop_front();
             const auto it = covers_.find(key);
