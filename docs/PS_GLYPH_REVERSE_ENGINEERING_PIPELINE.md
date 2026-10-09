@@ -161,3 +161,80 @@ The check scripts `tools/check-ps-glyph-cross-platform-index.py`, `tools/check-p
 ### Cross-platform coverage beyond known Switch mods
 
 [Ten independently listed Switch 1 games](PS_GLYPH_SWITCH1_GAME_SEEDS.json) can be researched from external PC glyph mods even though no Switch-specific mod has been confirmed. The joint [22-source cross-platform register](PS_GLYPH_CROSS_PLATFORM_INDEX.json) now covers 16 target games, and the worklist generator includes 18 games with Switch mods plus ten seeded games. For different atlas arrangements, `tools/ps-glyph-relocated-sprite.py` compares each exact original sprite rectangle against candidate Switch texture regions and rejects every absent or ambiguous match. This does NOT perform platform resource repacking or semantic button verification. Low-opacity RGB differences are detected exactly rather than rounded away.
+
+
+## 10 October 2026 — Automated mod-diff → independent glyph sprite draft
+
+The source index now covers **28 distinct Switch game families**, with 26
+community-Switch references and 22 cross-platform references. These are
+**technical candidates**, not 28 working PS5 glyph packs.
+
+There is a new real-data handoff that removes much of the manual XYWH work
+for *decoded, isolated RGBA* prompt sheets, without importing a mod's artwork:
+
+1. Compare the legally obtained matching Switch original RomFS against an
+   existing Switch PNG/TGA mod ZIP or installed mod folder:
+
+   ```sh
+   python3 tools/ps-glyph-mod-diff.py \
+     --mod-zip /authorized/switch-ui-mod.zip \
+     --original-romfs /authorized/extracted-switch-romfs \
+     --out /work/verified-image-differences.json
+   ```
+
+2. Reconcile changed-pixel components against independently scanned
+   **original** alpha-isolated Switch sprites. A changed pixel is not
+   automatically a complete button sprite. This step assigns **no** actions:
+
+   ```sh
+   python3 tools/ps-glyph-diff-to-evidence.py \
+     --diff-report /work/verified-image-differences.json \
+     --original-romfs /authorized/extracted-switch-romfs \
+     --title-id 01007EF00011E000 \
+     --update-version 1.6.0 \
+     --profile playstation --scene world_interaction \
+     --out /work/botw-world-interaction-UNAPPROVED.json
+   ```
+
+   The above BOTW parameters are **only an example of CLI invocation**.
+   Public source material does not prove that BOTW has PNG/TGA UI resources
+   ready for the scanner. It typically uses Nintendo compressed containers;
+   it cannot be qualified with this PNG-only command unless an independently
+   compatible decoded/assembled source is available.
+
+3. For each unapproved slot, confirm the semantic **guest action** versus
+   **physical controller face position** using actual game scene behavior;
+   reject ambiguous/unmatched regions. Only after checking original version,
+   PS5 static input profile, ownership/rights and the output renderer may
+   the approved records enter `tools/ps-glyph-reconstruct.py spec`, then
+   `tools/ps-glyph-atlas.py render`, pack verification and runtime catalogue.
+   It is intentional that the draft's null `kind` is rejected by `spec`.
+
+### BOTW Switch Yaz0/BLARC/BNTX inventory without extracting original bytes
+
+BOTW packs often use Yaz0-wrapped SARC archives (`.sblarc`, `.ssarc`),
+including original UI layouts and texture containers:
+
+```sh
+python3 tools/ps-glyph-botw-yaz0.py \
+  /authorized/extracted-switch-romfs/Layout/Example.sblarc \
+  --out /work/botw-ui-archive-inventory.json
+```
+
+The example archive basename is intentionally **not** presented as a
+verified BOTW resource path. The tool accepts either actual Yaz0-wrapped
+or plain SARC data, bounds the decompressed output to 128 MiB, inspects
+internal named members, and traverses embedded BNTX/BRTI metadata
+without staging original assets. Nintendo SARC offsets, BRTI pointers and
+compressed file byte positions are **not glyph XYWH pixel coordinates**.
+
+For compressed BNTX/BFRES texture content, a independently qualified
+decode + ASTC/BC block and swizzle-compatible repack is still needed before
+claiming a playable original PlayStation UI port. Using a Wii U byte offset
+directly on Switch assets or copying a CC BY-NC-ND mod's binary game resources
+would be an unsupported and legally problematic shortcut.
+
+Both automation bridges are covered by host-only synthetic CI
+`.github/workflows/check-ps-glyph-reconstruct.yml`. A green run validates
+the bridge and parser, **not** real-game graphic output, compatibility, legal
+redistribution or playable FC27/BOTW framerate.
