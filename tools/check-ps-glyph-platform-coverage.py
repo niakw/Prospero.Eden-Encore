@@ -24,25 +24,28 @@ gate = module("eden_cross_gate", "check-ps-glyph-cross-platform-index.py")
 coverage = module("eden_cross_coverage", "ps-glyph-platform-coverage.py")
 switch = gate.read(gate.SWITCH_INDEX)
 cross = gate.read(gate.CROSS_INDEX)
-summary = gate.validate(cross, switch)
-assert summary["cross_platform_sources"] == 10
-assert summary["switch_games_referenced"] == 6
+seeds = gate.read(gate.SEEDS_INDEX)
+summary = gate.validate(cross, switch, seeds)
+assert summary["cross_platform_sources"] == 17
+assert summary["switch_games_referenced"] == 12
+assert summary["switch1_seed_games"] == 6
 assert summary["verified_switch_rectangles"] == 0
 
-report = coverage.worklist(switch, cross)
-assert report["games"] == 18
-assert report["games_with_other_platform_leads"] == 6
+report = coverage.worklist(switch, cross, seeds)
+assert report["games"] == 24
+assert report["switch1_seed_only_games"] == 6
+assert report["games_with_other_platform_leads"] == 12
 assert report["verified_switch_atlas_rectangles"] == 0
 assert all(item["requires_matching_game_romfs"] for item in report["worklist"])
 assert all(item["requires_scene_semantics_and_native_ps5_test"] for item in report["worklist"])
 assert {x["switch_title"] for x in report["worklist"]} == {
     item["title"] for item in switch["mods"]
-}
+} | {item["switch_game"] for item in seeds["games"]}
 
 
 def must_reject(cross_data: dict):
     try:
-        gate.validate(cross_data, switch)
+        gate.validate(cross_data, switch, seeds)
     except ValueError:
         return
     raise AssertionError("bad cross-platform claim passed source-only evidence gate")
@@ -65,5 +68,5 @@ tamper = copy.deepcopy(cross)
 tamper["sources"][1]["id"] = tamper["sources"][0]["id"]
 must_reject(tamper)
 
-print("HOST FIXTURE PASS: 10 cross-platform leads, 6 matching Switch games, 18-title research worklist")
+print("HOST FIXTURE PASS: 17 cross-platform leads, 12 matched Switch games, 24-title research worklist")
 print("No binary atlas coordinates, mod-install permissions or PS5 operation implied")
