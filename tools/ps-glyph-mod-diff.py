@@ -94,12 +94,12 @@ def connected_rects(mask: Image.Image) -> tuple[list[list[int]], int]:
             idx = len(parent)
             parent.append(idx)
             bounds.append([lo, y, hi, y + 1])
-            while pi < len(previous) and previous[pi][1] < lo - 1:
+            while pi < len(previous) and previous[pi][1] < lo:
                 pi += 1
             j = pi
             while j < len(previous) and previous[j][0] <= hi:
                 before_lo, before_hi, before_idx = previous[j]
-                if before_hi >= lo - 1 and before_lo <= hi:
+                if before_hi >= lo and before_lo <= hi:
                     join(idx, before_idx)
                 j += 1
             current.append((lo, hi, idx))
