@@ -110,7 +110,7 @@ def digest(path: Path) -> str:
 
 def read_icon(z: zipfile.ZipFile, variant: str, icon: str) -> Image.Image:
     require(variant in VARIANTS, f"unknown icon style: {variant}")
-    require(icon in ICONS, f"unknown PlayStation button: {icon}")
+    require(isinstance(icon, str) and icon in ICONS, f"unknown PlayStation button: {icon}")
     name = ROOT_MARKER + VARIANTS[variant] + ICONS[icon] + ".png"
     try:
         info = z.getinfo(name)
@@ -159,7 +159,7 @@ def render(spec: Path, original_root: Path, icons_zip: Path, output: Path) -> Pa
             int(title, 16) != 0, "invalid title ID")
     require(isinstance(version, str) and VERSION.fullmatch(version) is not None,
             "invalid title update version")
-    require(variant in VARIANTS, "unsupported button icon style")
+    require(isinstance(variant, str) and variant in VARIANTS, "unsupported button icon style")
     atlases = data["atlases"]
     require(isinstance(atlases, list) and 0 < len(atlases) <= MAX_ATLASES,
             "one to 64 source atlas entries required")
@@ -202,17 +202,24 @@ def render(spec: Path, original_root: Path, icons_zip: Path, output: Path) -> Pa
                     require(isinstance(slot, dict) and set(slot) == {"button", "rect"},
                             "each slot requires explicit PlayStation button and rectangle")
                     button = slot["button"]
-                    require(button in ICONS, "unsupported PlayStation button name")
+                    require(isinstance(button, str) and button in ICONS,
+                            "unsupported PlayStation button name")
                     x, y, w, h = rectangle(slot["rect"], base.width, base.height)
                     box = (x, y, w, h)
                     require(not any(overlaps(box, prev) for prev in rects),
                             "overlapping glyph rectangles rejected")
                     rects.append(box)
-                    # Do not guess that a game uses transparent artwork: if
-                    # not, clearing this rectangle could destroy a background.
+                    # Clearing one arbitrary rectangle can erase UI art
+                    # even if it contains ONE transparent pixel. Require an
+                    # isolated nonempty sprite with a fully transparent outer
+                    # border. This prevents overlap into neighboring HUD art
+                    # on atlases whose source layout was only partly studied.
                     sample = base.crop((x, y, x + w, y + h))
-                    require(any(a == 0 for a in sample.getchannel("A").getdata()),
-                            "slot has no transparency; unsafe to clear/repaint")
+                    alpha_box = sample.getchannel("A").getbbox()
+                    require(alpha_box is not None, "empty sprite rectangle")
+                    require(alpha_box[0] >= 1 and alpha_box[1] >= 1 and
+                            alpha_box[2] <= w - 1 and alpha_box[3] <= h - 1,
+                            "sprite touches slot boundary; require 1px transparent margin")
                     icon = read_icon(zipped, variant, button)
                     contained = ImageOps.contain(icon, (w, h), Image.Resampling.LANCZOS)
                     tile = Image.new("RGBA", (w, h), (0, 0, 0, 0))
