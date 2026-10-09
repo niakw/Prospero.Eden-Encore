@@ -238,7 +238,12 @@ assert safe_product(65536, 65536, 4) == 1 << 34  # not 32-bit-wrapped
 assert safe_product(65536, 65536, 4) != (safe_product(65536, 65536, 4) & 0xffffffff)
 
 
-assert "file(READ" in cmake and cmake.count("write_derived(") == 2
+# Three generated translation units: Maxwell PRMT, widened software blitter,
+# and Fermi2D. The extra blitter is intentional, not a duplicate generated
+# file or a lost GPU compatibility path.
+assert "file(READ" in cmake and cmake.count("write_derived(") == 3
+for output in ("maxwell_prmt_observed.cpp", "sw_blitter_sized.cpp", "fermi_2d_observed.cpp"):
+    assert 'write_derived("${PORT_BUILD_DIR}/' + output + '"' in cmake
 assert 'target_sources(shader_recompiler PRIVATE' in cmake
 assert 'target_sources(video_core PRIVATE' in cmake
 print("GPU SOURCE CONTRACT: PRMT immediate/register Index implemented, Fermi2D z=0 plus pitch-linear layers; unsupported cases preserved")
