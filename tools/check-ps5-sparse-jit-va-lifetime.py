@@ -33,6 +33,22 @@ assert "region.committed += LargePage;" in ps5
 assert "sparse_jit_committed += LargePage;" in ps5
 assert "sparse_jit_committed -= region.committed;" in ps5
 assert "void SparseJitUsageFast(" in ps5
+# All sparse table, heap and executable reservations must share identical
+# out-of-window and error-mutated output-pointer ownership rules.
+reserve_qualified = ps5.split("void* ReserveCpuVirtualRange(", 1)[1].split(
+    "} // namespace", 1)[0]
+assert "sceKernelReserveVirtualRange(&address, bytes, 0, alignment)" in reserve_qualified
+assert "if (address != reinterpret_cast<void*>(cpu_mapping_hint)) std::abort();" in reserve_qualified
+assert "if (!cpu_mapping_range(address, bytes))" in reserve_qualified
+assert "munmap(address, bytes) != 0" in reserve_qualified
+assert "writable = ReserveCpuVirtualRange(LargePage, LargePage);" in ps5
+assert "executable = ReserveCpuVirtualRange(LargePage, LargePage);" in ps5
+assert "void* rw = ReserveCpuVirtualRange(size, LargePage);" in ps5
+assert "void* rx = ReserveCpuVirtualRange(size, LargePage);" in ps5
+assert "void* address = ReserveCpuVirtualRange(span, SparseSlot);" in ps5
+assert "return ReserveCpuVirtualRange(size, LargePage);" in ps5
+assert ps5.count("sceKernelReserveVirtualRange(&") == 2  # extern declaration + helper
+
 # A positive-only cached kernel total reduces syscall overhead on each JIT
 # 2 MiB physical commit. It is a fixed extent, NOT a substitute for the
 # separate current largest-free direct-memory pressure query.
