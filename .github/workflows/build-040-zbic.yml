@@ -56,15 +56,15 @@ jobs:
     timeout-minutes: 240
     env:
       PROSPEROEDEN_GIT_DEPS_ROOT: .deps/repos
-      EDEN_TEST_ALL_ON: ${{ inputs.test_all_on && '1' || '0' }}
+      EDEN_TEST_ALL_ON: ${{ (inputs.test_all_on || (github.ref == 'refs/heads/dev/ps5-sparse-jit' && contains(github.event.head_commit.message || '', '[test-all-on]'))) && '1' || '0' }}
       EDEN_TEST_TITLE_ID: ${{ inputs.test_title_id || '0100C49025D3E000' }}
-      EDEN_STAGE_DIR: ${{ inputs.test_all_on && 'build/dev/PPSA99008' || 'build/release/PPSA99008' }}
+      EDEN_STAGE_DIR: ${{ (inputs.test_all_on || (github.ref == 'refs/heads/dev/ps5-sparse-jit' && contains(github.event.head_commit.message || '', '[test-all-on]'))) && 'build/dev/PPSA99008' || 'build/release/PPSA99008' }}
       # GitHub-only push resume for an already compiled staged app. This marker
       # is one-shot and cannot alter the downloaded binary or publish a release.
       RESUME_STAGE_RUN_ID: ${{ contains(github.event.head_commit.message || '', '[resume-stage:37728435816]') && '37728435816' || inputs.resume_run_id || '' }}
     steps:
       - name: Refuse test profile on release branch or unsafe bypass
-        if: ${{ inputs.test_all_on }}
+        if: ${{ (inputs.test_all_on || (github.ref == 'refs/heads/dev/ps5-sparse-jit' && contains(github.event.head_commit.message || '', '[test-all-on]'))) }}
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = refs/heads/dev/ps5-sparse-jit
@@ -232,7 +232,7 @@ jobs:
         if: ${{ steps.stage.outcome == 'success' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ${{ inputs.test_all_on && 'Prospero.Eden-Encore-PS5-all-on-test' || 'Prospero.Eden-Encore-staged-app' }}
+          name: ${{ env.EDEN_TEST_ALL_ON == '1' && 'Prospero.Eden-Encore-PS5-all-on-test' || 'Prospero.Eden-Encore-staged-app' }}
           path: ${{ env.EDEN_STAGE_DIR }}/
           retention-days: 7
           if-no-files-found: error
@@ -253,11 +253,11 @@ jobs:
         run: python3 -B tools/ci/check-staged-app.py build/release/PPSA99008
 
       - name: Assemble release files
-        if: ${{ !inputs.test_all_on }}
+        if: ${{ env.EDEN_TEST_ALL_ON != '1' }}
         run: python3 -B tools/ci/make-dist.py build/release/PPSA99008
 
       - name: Upload compiled release bundle
-        if: ${{ success() && !inputs.test_all_on }}
+        if: ${{ success() && env.EDEN_TEST_ALL_ON != '1' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Prospero.Eden-Encore-release
