@@ -272,3 +272,108 @@ controller-session mapping and on-console screenshots.
 
 No native PS5 run, gameplay benchmark or 28-title compatibility claim is
 inferred from these host tests.
+
+
+## October 10: direct Switch mod ZIP → actual glyph XYWH → independently authored PS art
+
+**Important progress:** for existing Switch RomFS controller-UI mods such as
+[BOTW DS4 UI Western Layout v2](https://gamebanana.com/mods/659253),
+the MOD ITSELF already includes the modified texture resources and,
+when compared with an original matching game/update, identifies the exact
+source sprite positions. There is no reason to hand-transcribe every
+PS4/Wii U game-screen anchor. The new tools use real decoded Switch
+mod/image differences instead:
+
+```sh
+# No extraction and no mod graphic data is checked into GitHub.
+python3 tools/ps-glyph-mod-zip-positions.py \
+  --mod-zip /authorized/BOTW_DS4_UI_Western_standalone.zip \
+  --original-romfs /authorized/Switch/BOTW_matching_original_RomFS \
+  --scene world_interaction \
+  --out /work/botw-mod-texture-positions.json
+
+# Produce per-resource build plans using those original Switch pixels.
+# Do NOT manually invent atlas texture coordinates.
+python3 tools/ps-glyph-mod-auto-plan.py \
+  --zip-positions /work/botw-mod-texture-positions.json \
+  --title-id 01007EF00011E000 --update-version 1.6.0 \
+  --out /work/botw-glyph-plans-unapproved.json
+```
+
+The names above illustrate locations, not downloaded files or confirmed
+resource names/version in the actual release. The Standalone RomFS and
+UKMM distributions have different containers and may expose resource
+paths differently; unknown `.sbactorpack` / `.bfres` etc are reported
+rather than silently skipped.
+
+A changed modded ASTC texture is decompressed and compared with the decoded
+original in-game UI texture. `ps-glyph-botw-mod-texture-positions.py`
+reports actual pixel-difference components and alpha-isolated candidate
+original Switch glyph rectangles. These are true original-texture XYWH,
+not byte offsets, screen coordinates, or guesses from a PC screenshot.
+Each unchanged texture is omitted. Unsupported ASTC layouts and non-SARC
+formats are logged as unresolved with filenames.
+
+The *action semantics* are separate: Nintendo game action A→PS Cross,
+B→Circle, X→Square, Y→Triangle in Eden's fixed PlayStation session.
+A controller drawing's physical right position is **Circle**, not "action
+A" unless its own scene confirms that relation. Clearly named
+`control_a_prompt`/ `button_b` textures supply a tentative label; other
+sprites remain unlabeled. Human/independent game-scene confirmation of
+this label is the last safety boundary, **not** a request to remeasure
+the texture coordinates.
+
+When explicit scene bindings have been checked, place their keyed records
+in a small JSON file, for example:
+
+```json
+{
+  "Layout/SomeUI.sblarc|__Combined.bntx|control_a_prompt|0": {
+    "reviewed": true, "kind": "guest_action", "guest_button": "a"
+  }
+}
+```
+
+Only keys returned by the *actual original/mod ZIP* are valid, so
+`SomeUI.sblarc` is not asserted to be a real BOTW path.
+
+```sh
+python3 tools/ps-glyph-mod-auto-plan.py \
+  --zip-positions /work/botw-mod-texture-positions.json \
+  --title-id 01007EF00011E000 --update-version 1.6.0 \
+  --bindings /work/reviewed-action-bindings.json \
+  --emit-approved-index 0 \
+  --approved-out /work/botw-specific-reviewed-glyphs.json \
+  --out /work/botw-reviewed-glyph-plans.json
+
+python3 tools/ps-glyph-botw-auto-pack.py \
+  --original /authorized/Switch/BOTW_matching_original_RomFS/Layout/SomeUI.sblarc \
+  --spec /work/botw-specific-reviewed-glyphs.json \
+  --icons-zip /authorized/PS5_Button_Icons_and_Controls.zip \
+  --out /work/SomeUI.modified.sblarc \
+  --report /work/SomeUI.receipt.json
+
+python3 tools/ps-glyph-botw-stage-pack.py \
+  --original-romfs /authorized/Switch/BOTW_matching_original_RomFS \
+  --modified-archive /work/SomeUI.modified.sblarc \
+  --receipt /work/SomeUI.receipt.json \
+  --romfs-path Layout/SomeUI.sblarc \
+  --title-id 01007EF00011E000 --update-version 1.6.0 \
+  --pack-out /work/BOTW-Glyphs-STAGED-NOT-INSTALLED
+```
+
+The regenerated Yaz0/SARC archive changes only intended BNTX ASTC
+128-bit compressed blocks, preserving the other SARC members and
+unmodified texture bytes. Validated local pack manifests carry original
+and replacement SHA-256, game title/update, and CC BY icon attribution.
+The runtime still has **zero built-in published title rules**:
+these are offline candidate packs, never automatically installed and
+never declared usable without evidence on a real Switch title/update
+and PS5 screenshot. Mod reference art is analyzed locally, **not
+redistributed or copied** (Western Layout mod CC BY-NC-ND).
+
+Testing:
+`.github/workflows/check-ps-glyph-reconstruct.yml` checks the entire
+synthetic original/modded ASTC→Yaz0/SARC→independent PlayStation art→
+local LayeredFS pack path, including ZIP intake and normalized mappings.
+None of that is a native PS5 FPS, visual-quality, or controller test.
