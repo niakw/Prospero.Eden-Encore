@@ -27,6 +27,10 @@ dev)
     title=${2:?a development build boots one title: tools/build-package.sh dev TITLE_ID}
     [[ $title =~ ^[0-9A-Fa-f]{16}$ ]] || { echo "Invalid title ID: $title" >&2; exit 1; }
     export EDEN_DEV_VULKAN=ON EDEN_DEV_ROM_ID="$title" EDEN_DEV_PROFILE=ON EDEN_DEV_PROFILE_TITLE="$title"
+    # This IS the unified PS5 test build: sparse executable backing is compiled
+    # in without a separate user-facing Experimental toggle or JSON opt-in.
+    # Production release/release-stage forcibly set this OFF above.
+    export EDEN_SPARSE_JIT_DEV=ON
     # The release-configuration source checks do not apply to development instrumentation.
     export EDEN_SKIP_SOURCE_CHECKS=1
     export EDEN_PACKAGE_DIR="${EDEN_DEV_PACKAGE_DIR:-$root/build/dev/PPSA99008}"
