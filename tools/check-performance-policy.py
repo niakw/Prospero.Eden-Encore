@@ -76,5 +76,7 @@ assert "dld.vkDestroyQueryPool(handle, *gpu_time.pool, nullptr);" in generator
 assert "worker_thread.request_stop();" in generator
 assert "if (worker_thread.joinable()) worker_thread.join();" in generator
 assert "GpuTimeDestroy(device);" in generator
+assert "if (gpu_time.pool) GpuTimeDestroy(device);" in generator
+assert generator.index("if (worker_thread.joinable()) worker_thread.join();") < generator.index("if (gpu_time.pool) GpuTimeDestroy(device);")
 print("Encore automatic performance policy: 7/7 controls owned by 4 tiers + Custom derivation PASS")
 print("GPU timing device lifecycle: explicit opt-in, per-title query reset contract PASS")

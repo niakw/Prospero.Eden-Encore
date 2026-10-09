@@ -527,12 +527,13 @@ adapt('src/video_core/renderer_vulkan/vk_scheduler.cpp', 'vulkan_scheduler.cpp',
     // dev timestamp probe created a query pool, join before destroying it.
     ('Scheduler::~Scheduler() = default;',
      '''Scheduler::~Scheduler() {
-    if (gpu_time.pool) {
-        worker_thread.request_stop();
-        event_cv.notify_all();
-        if (worker_thread.joinable()) worker_thread.join();
-        GpuTimeDestroy(device);
-    }
+    // The worker writes gpu_time.pool. Do not test that field until the
+    // worker has stopped: the old conditional check raced with its first
+    // CreateQueryPool on a quick title exit, risking use-after-free.
+    worker_thread.request_stop();
+    event_cv.notify_all();
+    if (worker_thread.joinable()) worker_thread.join();
+    if (gpu_time.pool) GpuTimeDestroy(device);
 }'''),
     ('        .pInheritanceInfo = nullptr,\n    });\n    current_upload_cmdbuf = vk::CommandBuffer(command_pool->Commit(), device.GetDispatchLoader());',
      '        .pInheritanceInfo = nullptr,\n    });\n    GpuTimeBegin(device, current_cmdbuf);\n'
