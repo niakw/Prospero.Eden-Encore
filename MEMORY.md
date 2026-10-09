@@ -1537,3 +1537,11 @@ Explicit one-shot `[full-build] [test-all-on]` on the dev branch, full preflight
 ### 2026-10-09 — PS5 all-on CI retry after cancellable Nlib contract update
 
 One explicitly authorized test compilation attempt `[full-build] [test-all-on]` on development branch, no shipping changes or publish. Check actual run result before declaring qualification.
+
+### 2026-10-09 — Latest PS5 all-on red runs and Nlib UI validator repair
+
+- Run [#37878821069](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/37878821069) failed in host source preflight on stale `check-guest-network-isolation.py` Nlib API signature (already updated in separate commits by the time of this checkpoint).
+- Run [#37879082535](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/37879082535) later passed source GPU and JIT memory mocks, shader pressure, guest networking, and full Nlib media-safety checks, but failed at `tools/check-nlib-ui-recovery.py` expecting obsolete literal `if (!ValidNlibTga(path))`.
+- Current `headless/prosperoeden/eden_services.cpp` validates TGA header, dimensions and full byte length using `ValidNlibTga`, rejects damaged cached Hero and Icon via ternary, omits invalid screenshot via `if (ValidNlibTga(path))`, and correctly allows scheduled refresh with `if (!ValidNlibTga(path) || refresh_existing_artwork)`. The old source assertion was false despite correct behavior. Replaced it with positive exact assertions on all these safety behaviors in `tools/check-nlib-ui-recovery.py`, commit `6afa12a363e02bb3788aacce114bea6f3453b2d7` [skip ci].
+- A GitHub source readback crosschecked simple literal contracts for the other Nlib/UI source strings and found no obvious mismatches; this is NOT a substitute for executing the remaining multi-stage host tests.
+- At this point **NO native PS5 SDK compile yet** because CI stopped at host preflight. 26 hardware acceptance checks pending. No approved launcher style or delivery branch edits. Issues #7 (graphic art) and #8 (FC27/JIT/GPU) remain open.
