@@ -1,5 +1,16 @@
 # FC27 — experimental performance A/B (PS5 firmware 13.60)
 
+> **Current 2026-10-09 test policy overrides the historical examples below.**
+> `bash tools/build-package.sh dev <TITLE_ID>` now compiles the sparse page mapper and enables
+> sparse JIT, logical CPU selection and Vulkan pacing diagnostics automatically
+> for every title, without an Experimental menu switch or `experiments.json`.
+> Safe Launch disables the extra test modes. Sparse additionally probes PS5 RW/RX
+> alias support at runtime and reverts to dense if the probe fails.
+> `release` and `release-stage` force sparse **OFF**; none of this
+> creates or verifies PlayStation glyph artwork or unimplemented GPU operations.
+> The source has not yet been built/qualified on firmware 13.60.
+>
+
 **Archive of the completed A/B/C/D campaign. Historical JIT tiers are retired; developer sparse mode remains unbuilt and unqualified on PS5.**
 
 Historical `experiments.json` example from that campaign (not a recommendation for current builds):
@@ -54,7 +65,7 @@ ceiling in the current development branch. All PS5 titles, both A64 and A32,
 now receive a continuous launch-time memory-derived code cache budget. Safe
 Launch and unavailable memory measurements use the respective proven
 baselines. The historical A/B/C/D tests remain documented here only;
-`experiments.json` can still control developer-only CPU/frame/sparse tracing
+The unified development test build automatically enables CPU/frame/sparse tracing; legacy `experiments.json` is ignored
 but does **not** override the code cache capacity. This does not yet provide
 mid-game growth, or prove all games benefit from larger dense allocations.
 The installed PS5 app remains unchanged.
@@ -89,8 +100,8 @@ Example **for developer source review, not for installing on PS5 yet**:
 The all-title CPU setting is **logical-placement experimentation only**:
 the x2APIC hardware report `ready=0` does not prove that the
 guest runs on one CPU, nor that different OS logical IDs are different
-physical cores. Sparse JIT remains additionally gated by
-`EDEN_SPARSE_JIT_DEV=ON` and its live alias preflight. The pacing
+physical cores. Sparse JIT is enabled automatically in the unified test package when compiled with
+`EDEN_SPARSE_JIT_DEV=ON`, and it still requires the native alias preflight. The pacing
 `trace` mode **only measures** frame time and never synthesizes FPS.
 Do not turn these options on in a shipping release without a native PS5
 test and regression comparison.
@@ -101,7 +112,7 @@ The dense PS5 code allocator used by A/B/C/D commits **all** requested direct
 memory at JIT creation, even when a small game uses only a fraction. This branch
 prototypes a different backing scheme while retaining stable RX and RW views:
 
-- `jit_memory: "sparse"` (only when compiled with `EDEN_SPARSE_JIT_DEV=ON`
+- Sparse JIT (only when compiled with `EDEN_SPARSE_JIT_DEV=ON`
   and `EDEN_DEV_PROFILE`) reserves both virtual views. It commits an initial
   4 MiB bootstrap before Dynarmic construction (constant-pool initialization),
   then commits further 2 MiB *physical direct-memory* chunks on
@@ -121,7 +132,7 @@ prototypes a different backing scheme while retaining stable RX and RW views:
 - Diagnostic records: `EDEN_JIT_SPARSE_RESERVE`, `EDEN_JIT_SPARSE_RELEASE`,
   `EDEN_JIT_SPARSE_OOM`, and `EDEN_JIT_SPARSE_COMMIT_FAILED`.
 
-**Do not activate the new flags yet on console.** This is source-only work;
+**The unified test build requires no experimental options in Settings.** This is source-only work;
 the MAP_FIXED dual-alias path, executable permissions, physical-memory exhaustion,
 fragmentation, teardown and repeated FC27 stress tests still require native
 compilation and real hardware qualification. A failed mid-session direct-memory
