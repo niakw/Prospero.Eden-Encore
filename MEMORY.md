@@ -1943,3 +1943,7 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 
 - Updated `tools/analyze-ps5-frame-windows.py` to parse new low-overhead `EDEN_MEMORY_LIVE` samples and preserved `EDEN_JIT_SPARSE_MEMORY phase=dev-profile` receipts, display the smallest confirmed largest-free direct-memory extent and last confirmed headroom, and attach available per-window direct-memory pressure to slow/fast FPS windows. Missing/zero measurements remain explicitly unknown rather than fabricated zero MiB free.
 - Added `tools/check-ps5-frame-window-analysis.py` synthetic host regression covering old logs (no new measurements) and the extended 5-second log format (JIT, GPU, HLE/guest IPC and pressure flags), wired to the next explicit build preflight. No native performance or build validated.
+
+### 2026-10-09 — Sync next-test observability checklist to new no-stall telemetry [skip ci]
+
+- Updated `docs/PS5_ALL_ON_TEST_BUILD.md` with the exact intended five-second HLE, GPU worker, direct-memory and sparse JIT receipts, the backward-compatible parser, and comparison requirements for FC27/Zelda. Distinguishes unknown largest-free samples from zero RAM and live atomic estimates from exact stopped-title kernel ownership scans. No GitHub Actions/test/build initiated; shipping branch and local PS5/Mac untouched.
