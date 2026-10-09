@@ -33,14 +33,23 @@ assert "if (vulkan && !splash_hide_attempted)" in graphics
 assert "splash_hide_attempted = true;" in graphics
 assert "if (vulkan && !splash_hidden)" not in graphics
 
-# Every image load attempt spends budget, even missing downloads/invalid files.
-# This prevents an arbitrary number of file probes in one Home frame.
+# Async Nlib cover pipeline: never decode or scale on the navigation thread.
+# One in-flight worker, at most one completed upload, bounded queue probes
+# and bounded GPU texture reclamation on each frame.
 pump = textures[textures.index("void Textures::pump("):]
-assert pump.index("--budget;") < pump.index("services_.load_image(entry.path, &image)")
-assert pump.count("--budget;") == 1
+assert "if (decode_.valid() &&" in pump
+assert "decode_.wait_for(std::chrono::seconds(0)) == std::future_status::ready" in pump
+assert "DecodedCover result = decode_.get();" in pump
+assert "if (budget > 0 && !decode_.valid())" in pump
+assert "inspected < kMaxCoverQueueLookupsPerFrame" in pump
+assert "std::async(std::launch::async," in pump
+assert "decoded.ok = services_.load_image(path, &decoded.image);" in pump
+assert pump.index("std::async(std::launch::async,") < pump.index("decoded.ok = services_.load_image(path, &decoded.image);")
+assert "entry.texture = create(result.image);" in pump
+assert "deleted_this_frame < kMaxTextureReclaimsPerFrame" in pump
 assert "failed_loads = std::min(entry.failed_loads + 1u, 4u)" in textures
-assert "retry_after = it->second.failed_loads <= 1 ? 0.45f" in textures
 assert "unsigned failed_loads = 0;" in texture_header
+assert "std::future<DecodedCover> decode_;" in texture_header
 
 # Both controller symbols use the same PS5-inspired shape; settings is a cog
 # in the Home utility card and the top navigation.
