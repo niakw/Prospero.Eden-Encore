@@ -1263,3 +1263,13 @@ Source-only commits on `dev/ps5-sparse-jit`, with `[skip ci]`; approved UI/brand
 - Documented nested scan in `docs/PS_GLYPH_REVERSE_ENGINEERING_PIPELINE.md`, commit `358c0e245a5b6ddfe830d41dd08e6bb0db5b65df`.
 - User no-build gate holds: no Github Actions, host Python fixtures, PS5 SDK compile or hardware runs. Do not update shipping branch `fix/0.40-zbic-13.60` or modify the approved violet UI. Issues #7 and #8 remain OPEN; compatible in-game glyph packs remain zero until real sources and hardware visuals are qualified.
 
+
+
+### 2026-10-09 — Expanded to 26 public mod references / 18 games; non-texture limitations
+
+- Further community mod source pages uncovered **Persona 3 Portable (Switch)** at https://gamebanana.com/mods/461733 and **Tokyo Mirage Sessions #FE Encore** at https://gamebanana.com/mods/367516. The technical index now has **26 sources across 18 games**, commit `a7c1e4a9342f9638ae525016fb4b0ae864b4da5b`; all real atlas rectangles still NULL/unverified.
+- Persona 3 Portable Switch published actual proprietary nesting: **Title ID 0100DCD01525A000**, `romfs/data_EN/umd0.cpk` → `init_free.bin` → `init/camp.bin` → `pc_button.spr`, using CPK File Builder and Amicitia. Its author's STANDARD PS mapping is **Nintendo A→Circle, B→Cross**. A native PNG/TGA sprite swap cannot rebuild CPK/SPR without a verified decoder/repacker.
+- Tokyo Mirage Sessions author says ABXY and L/R/ZL/ZR art replaced, but Start/Select/PS art has incompatible sprite bounds and in-world `Check` prompt is **NOT texture-backed**. This is a positive example of an unsupported procedural/text/layout glyph category, so claiming universal runtime replacement from an atlas alone would be false.
+- Guide and technical atlas updated with these requirements, commits `d01d0e1985100247f48fe27a31b6a7edba8daa3c`, `47be49459f6b52031e48cf29c150c188cb8aa7df`, `67045dc75dd07f1a8af4bcf7f1c07780910a6ede`, `974711f071cd45caa7c9b7713be3cdf99fcaa471`.
+- All source-only `[skip ci]`, no tests/host scripts actually run, no mod archive or user game files fetched, no native PS5 compile/hardware runs. Approved UI and shipping branch intact. Issue #7 graphical assets and #8 JIT/GPU/FC27 remain OPEN until their actual hardware and content gates are met.
+
