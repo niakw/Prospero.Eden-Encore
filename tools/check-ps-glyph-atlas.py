@@ -115,6 +115,8 @@ with tempfile.TemporaryDirectory(prefix="eden-ps-glyph-atlas-") as work:
     struct.pack_into("<I", nx, 0xA0 + 0x50, 1024)
     nx[0xA0 + 0x5C] = 1  # 2D
     struct.pack_into("<Q", nx, 0xA0 + 0x60, 0x160)
+    struct.pack_into("<Q", nx, 0xA0 + 0x70, 0x200)  # mip pointer table
+    struct.pack_into("<Q", nx, 0x200, 0x240)  # image data location
     label = b"ui_button_cross"
     struct.pack_into("<H", nx, 0x160, len(label))
     nx[0x162:0x162 + len(label)] = label
@@ -126,6 +128,9 @@ with tempfile.TemporaryDirectory(prefix="eden-ps-glyph-atlas-") as work:
     assert metadata["textures"][0]["width"] == 128
     assert metadata["textures"][0]["candidate_name"] is True
     assert metadata["textures"][0]["read_only"] is True
+    assert metadata["textures"][0]["brti_offset"] == 0xA0
+    assert metadata["textures"][0]["mip_pointer_table_offset"] == 0x200
+    assert metadata["textures"][0]["mip_data_offsets"] == [0x240]
 
     proposals = scanner.scan(romfs)
     assert proposals["candidate_atlases"]
@@ -238,6 +243,16 @@ with tempfile.TemporaryDirectory(prefix="eden-ps-glyph-atlas-") as work:
     assert len(png_candidates) == 1
     assert png_candidates[0]["original_sha256"] == sha
     # Corrupt header count/pointers must fail closed, not seek outside ROMFS.
+    bad_mip = bytearray(nx)
+    struct.pack_into("<Q", bad_mip, 0x200, len(bad_mip) + 1)
+    nx_file.write_bytes(bad_mip)
+    try:
+        scanner.bntx.inspect(nx_file)
+    except scanner.bntx.InvalidBntx:
+        pass
+    else:
+        raise AssertionError("accepted out-of-file BNTX mip data offset")
+    nx_file.write_bytes(nx)
     corrupted = bytearray(nx)
     struct.pack_into("<Q", corrupted, 0x80, len(corrupted) + 1)
     nx_file.write_bytes(corrupted)
