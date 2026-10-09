@@ -28,8 +28,15 @@ if SPEC is None or SPEC.loader is None:
     raise SystemExit("Cannot locate ps-glyph-atlas.py")
 atlas = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(atlas)
+BNTX_SPEC = importlib.util.spec_from_file_location(
+    "eden_ps_glyph_bntx", ROOT / "tools/ps-glyph-bntx-inspect.py")
+if BNTX_SPEC is None or BNTX_SPEC.loader is None:
+    raise SystemExit("Cannot locate ps-glyph-bntx-inspect.py")
+bntx = importlib.util.module_from_spec(BNTX_SPEC)
+BNTX_SPEC.loader.exec_module(bntx)
 
 MAX_SCANNED_FILES = 64
+MAX_BNTX_CONTAINERS = 32
 MAX_SCAN_PIXELS = 4_000_000
 MAX_RECTS = 512
 ALPHA_THRESHOLD = 16
@@ -142,12 +149,39 @@ def scan(root: Path, limit: int = MAX_SCANNED_FILES) -> dict:
             "slots": [{"button": None, "rect": rect} for rect in glyphs],
             "status": "geometry_only_requires_button_identification",
         })
+    # BNTX is the dominant compressed/tiling container in many titles.
+    # Inspect a bounded number of file headers and internal BRTI records.
+    # NO graphics decoding, atlas extraction or mutation occurs here.
+    bntx_reports = []
+    for source in source_items:
+        if len(bntx_reports) >= MAX_BNTX_CONTAINERS:
+            break
+        if not source["romfs_path"].lower().endswith(".bntx"):
+            continue
+        relative = atlas.safe_path(source["romfs_path"])
+        file = atlas.regular(root, relative)
+        try:
+            metadata = bntx.inspect(file)
+            selected = [t for t in metadata["textures"] if t["candidate_name"]]
+            bntx_reports.append({
+                "romfs_path": relative.as_posix(),
+                "texture_count": metadata["texture_count"],
+                "candidate_texture_count": len(selected),
+                "textures": selected[:32],
+                "state": "requires_BNTX_deswizzle_and_format_aware_repacker",
+            })
+        except (bntx.InvalidBntx, OSError, ValueError):
+            bntx_reports.append({
+                "romfs_path": relative.as_posix(),
+                "state": "unrecognized_or_incompatible_BNTX_header",
+            })
     return {
         "schema": 1,
-        "source_type": "read_only_rgba_sprite_proposals",
+        "source_type": "read_only_rgba_and_BNTX_texture_proposals",
         "total_discovered": len(source_items),
         "files_inspected": inspected,
         "candidate_atlases": results,
+        "bntx_containers": bntx_reports,
         "safety": "NO ART MODIFIED; no Nintendo->PlayStation mapping inferred",
     }
 
@@ -167,7 +201,8 @@ def main() -> int:
                           args.out.parent.is_dir() and not args.out.parent.is_symlink(),
                           "output already exists or output parent invalid")
             args.out.write_text(result, encoding="utf-8")
-            print(f"CANDIDATES {args.out}: {len(report['candidate_atlases'])} atlas sheets (UNVERIFIED)")
+            print(f"CANDIDATES {args.out}: {len(report['candidate_atlases'])} RGBA atlas sheets, "
+                  f"{len(report['bntx_containers'])} BNTX inventories (ALL UNVERIFIED)")
         else:
             print(result, end="")
         return 0
