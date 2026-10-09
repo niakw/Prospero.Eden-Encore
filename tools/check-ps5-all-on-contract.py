@@ -18,10 +18,10 @@ assert "test_title_id:" in workflow
 assert "test \"$GITHUB_REF\" = refs/heads/dev/ps5-sparse-jit" in workflow
 assert 'test "${{ inputs.publish }}" != true' in workflow
 assert 'bash tools/build-package.sh dev "$EDEN_TEST_TITLE_ID"' in workflow
-assert "EDEN_TEST_ALL_ON: ${{ inputs.test_all_on && '1' || '0' }}" in workflow
-assert "EDEN_STAGE_DIR: ${{ inputs.test_all_on && 'build/dev/PPSA99008' || 'build/release/PPSA99008' }}" in workflow
-assert "if: ${{ !inputs.test_all_on }}" in workflow
-assert "if: ${{ success() && !inputs.test_all_on }}" in workflow
+assert "EDEN_TEST_ALL_ON: ${{ (inputs.test_all_on || (github.ref == 'refs/heads/dev/ps5-sparse-jit' && contains(github.event.head_commit.message || '', '[test-all-on]'))) && '1' || '0' }}" in workflow
+assert "EDEN_STAGE_DIR: ${{ (inputs.test_all_on || (github.ref == 'refs/heads/dev/ps5-sparse-jit' && contains(github.event.head_commit.message || '', '[test-all-on]'))) && 'build/dev/PPSA99008' || 'build/release/PPSA99008' }}" in workflow
+assert "if: ${{ env.EDEN_TEST_ALL_ON != '1' }}" in workflow
+assert "if: ${{ success() && env.EDEN_TEST_ALL_ON != '1' }}" in workflow
 assert "!inputs.test_all_on &&" in workflow
 assert 'Prospero.Eden-Encore-PS5-all-on-test' in workflow
 assert 'python3 -B tools/ci/check-all-on-test-binary.py "$EDEN_STAGE_DIR" "$EDEN_TEST_TITLE_ID"' in workflow
