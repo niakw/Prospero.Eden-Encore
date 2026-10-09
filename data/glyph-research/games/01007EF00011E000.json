@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "title_id": "01007EF00011E000",
+  "switch_title": "The Legend of Zelda: Breath of the Wild",
+  "short_title": "BOTW",
+  "game_platform": "Nintendo Switch 1",
+  "reviewed_at": "2026-10-10",
+  "status": "documented_mod_sources_only",
+  "sony_action_profile": {
+    "guest_a": "cross",
+    "guest_b": "circle",
+    "guest_x": "square",
+    "guest_y": "triangle",
+    "physical_pad_right": "circle",
+    "physical_pad_bottom": "cross",
+    "mapping_validation": "fixed PlayStation guest session required"
+  },
+  "sources": [
+    {
+      "source_id": "community-001",
+      "source_platform": "Switch",
+      "style": "PlayStation",
+      "source_url": "https://gamebanana.com/mods/659253",
+      "mod_name": "DS4 UI Western Layout v2",
+      "reported_mod_version": "2.0",
+      "scenes": [
+        "menu",
+        "tutorial",
+        "world_interaction"
+      ],
+      "original_mod_archive_inspected": false
+    },
+    {
+      "source_id": "community-002",
+      "source_platform": "Switch",
+      "style": "Xbox",
+      "source_url": "https://gamebanana.com/mods/33340",
+      "scenes": [
+        "gameplay",
+        "menu"
+      ],
+      "original_mod_archive_inspected": false
+    },
+    {
+      "source_id": "cross-001",
+      "source_platform": "Wii U",
+      "style": "PlayStation",
+      "source_url": "https://gamebanana.com/mods/33531",
+      "mod_name": "PS4 UI Complete 1.4.1",
+      "scenes": [
+        "pause",
+        "tutorial",
+        "in_game_hints"
+      ],
+      "variants": [
+        "Standard",
+        "Western",
+        "PE"
+      ],
+      "original_mod_archive_inspected": false
+    }
+  ],
+  "verified_assets": {
+    "switch_original_romfs_sha256": null,
+    "mod_zip_sha256": null,
+    "game_update_version": null,
+    "romfs_path": null,
+    "sarc_member": null,
+    "bntx_texture_name": null,
+    "atlas_rectangles_xywh": null,
+    "actual_texture_binary_inspected": false,
+    "ps5_glyph_pack_assembled": false,
+    "on_console_rendering_validated": false
+  },
+  "existing_tools": [
+    "tools/ps-glyph-mod-zip-positions.py",
+    "tools/ps-glyph-mod-auto-plan.py",
+    "tools/ps-glyph-botw-auto-pack.py",
+    "tools/ps-glyph-botw-stage-pack.py",
+    "tools/ps-glyph-multiplatform-image-port.py"
+  ],
+  "provenance_paths": [
+    "docs/PS_GLYPH_SOURCE_INDEX.json",
+    "docs/PS_GLYPH_CROSS_PLATFORM_INDEX.json",
+    "docs/PS_GLYPH_MOD_TECHNICAL_ATLAS.md"
+  ],
+  "note": "Source URLs and claims are stored here. No copyrighted Nintendo/game/mod graphics, verified sprite coordinates or functional BOTW LayeredFS patch have been deposited."
+}
