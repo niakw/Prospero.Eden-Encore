@@ -11,3 +11,4 @@ assert 'std::string relaunch_game;' not in s
 assert 'guest_fault_retries' not in s
 assert 'EDEN_GUEST_FAULT_RETRY' not in s
 print("PASS PS5 guest fault returns to library without automatic restart")
+print("CI is source evidence only; FC27 on-console GPU and launcher tests still required")
