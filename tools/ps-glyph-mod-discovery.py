@@ -43,7 +43,7 @@ TERMS = (
     "dualsense", "dualshock", "xbox", "ps4", "ps5", "ui", "layout",
     "buttons", "текстуры", "кнопки", "иконки", "gamepad"
 )
-PROVIDERS = ("duckduckgo", "github", "yandex", "firefox_duckduckgo", "firefox_yandex")
+PROVIDERS = ("duckduckgo", "github", "yandex", "curl_duckduckgo", "curl_yandex", "firefox_duckduckgo", "firefox_yandex")
 HTTP_TIMEOUT = 16
 
 class DiscoveryError(ValueError):
@@ -281,9 +281,9 @@ def discover(catalog: dict, state: dict, limit: int,
         status = "query_prepared_not_executed"
         if network:
             try:
-                if provider.startswith("firefox_"):
+                if provider.startswith(("firefox_", "curl_")):
                     require(browser_search is not None,
-                            "Firefox must be explicitly initialized")
+                            "browser/curl search must be explicitly initialized")
                     found = browser_search(provider, query)
                 else:
                     found = {"duckduckgo": ddg, "github": github,
@@ -372,6 +372,24 @@ def main():
                         browser_search=run_browser)
             except module.FirefoxSearchPaused as exc:
                 raise DiscoveryError(str(exc)) from exc
+        elif args.network and args.provider.startswith("curl_"):
+            import importlib.util
+            spec = importlib.util.spec_from_file_location(
+                "eden_curl_mod_search",
+                Path(__file__).with_name("ps-glyph-curl-search.py"))
+            require(spec is not None and spec.loader is not None,
+                    "curl search helper missing")
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            def run_curl(provider, query):
+                try:
+                    return module.search(provider, query)
+                except module.CurlSearchPaused as exc:
+                    raise ProviderPaused(str(exc)) from exc
+            report, progress = discover(
+                catalog, state, args.max_games, args.provider,
+                args.network, args.query_variant, args.interval,
+                browser_search=run_curl)
         else:
             report, progress = discover(catalog, state, args.max_games,
                                         args.provider, args.network,
