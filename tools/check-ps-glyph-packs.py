@@ -116,6 +116,22 @@ with tempfile.TemporaryDirectory(prefix="eden-glyph-packs-host-") as folder:
     bad["files"][1]["romfs_path"] = GAMEFILE.swapcase()
     store(bad)
     rejected(lambda: gate.verify(pack, source, TITLE), "case collision")
+    # File/directory prefix conflicts are unsafe even when names are
+    # different (LayeredFS cannot mount one filename as a parent folder).
+    bad = json.loads(json.dumps(manifest))
+    child = dict(bad["files"][0])
+    child["romfs_path"] = GAMEFILE + "/nested_sprite.bntx"
+    child["replacement"] = "replacement/nested_sprite.bntx"
+    bad["files"].append(child)
+    store(bad)
+    rejected(lambda: gate.verify(pack, source, TITLE), "RomFS file-as-directory collision")
+    bad = json.loads(json.dumps(manifest))
+    child = dict(bad["files"][0])
+    child["romfs_path"] = "UI/Shared/other_sprite.bntx"
+    child["replacement"] = SOURCE_FILE + "/nested_sprite.bntx"
+    bad["files"].append(child)
+    store(bad)
+    rejected(lambda: gate.verify(pack, source, TITLE), "replacement file-as-directory collision")
     bad = json.loads(json.dumps(manifest))
     bad["rights"] = ""
     store(bad)
