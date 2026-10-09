@@ -17,6 +17,8 @@ on:
       - tools/ps-glyph-botw-yaz0.py
       - tools/check-ps-glyph-botw-yaz0.py
       - tools/ps-glyph-botw-stage-pack.py
+      - tools/ps-glyph-mod-auto-plan.py
+      - tools/check-ps-glyph-mod-auto-plan.py
       - tools/ps-glyph-mod-zip-positions.py
       - tools/check-ps-glyph-mod-zip-positions.py
       - tools/ps-glyph-botw-mod-texture-positions.py
@@ -78,6 +80,7 @@ jobs:
           python3 -B tools/check-ps-glyph-botw-auto-pack.py
           python3 -B tools/check-ps-glyph-botw-mod-texture-positions.py
           python3 -B tools/check-ps-glyph-mod-zip-positions.py
+          python3 -B tools/check-ps-glyph-mod-auto-plan.py
           # Includes exact-hash local-only LayeredFS staging + verifier
           python3 -B tools/check-ps-glyph-sarc-inspect.py
       - name: Verify action glyphs match physical-to-guest HID mappings
