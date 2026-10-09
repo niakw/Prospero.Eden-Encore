@@ -402,13 +402,13 @@ std::string RunApp(const std::string& launch_error, bool first_start, bool* rest
                 }
 #ifdef EDEN_DEV_ROM_ID
                 if (!captured) {
-                    const auto update_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                    const long long update_us = std::chrono::duration_cast<std::chrono::microseconds>(
                         updated - frame_start).count();
-                    const auto draw_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                    const long long draw_us = std::chrono::duration_cast<std::chrono::microseconds>(
                         drawn - updated).count();
-                    const auto present_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                    const long long present_us = std::chrono::duration_cast<std::chrono::microseconds>(
                         done - drawn).count();
-                    const auto whole_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                    const long long whole_us = std::chrono::duration_cast<std::chrono::microseconds>(
                         done - frame_start).count();
                     ++ui_frames;
                     ui_late_20 += whole_us >= 20000;
