@@ -488,6 +488,19 @@ void RecordHle(const char* service, unsigned command, long long ns) {
     entry.second += static_cast<unsigned long long>(ns > 0 ? ns : 0);
 }
 
+// Report true JIT ownership once at meaningful lifecycle stages; this
+// does not enumerate all kernel direct-memory ranges or run on a frame.
+void ReportJitCodeState(const char* phase) {
+#ifdef PS5_NATIVE
+    std::size_t reserved = 0, committed = 0;
+    ::Common::SparseJitUsage(&reserved, &committed);
+    std::printf("EDEN_JIT_MEMORY phase=%s sparse_reserved=%zu sparse_committed=%zu dense_direct=%zu\n",
+                phase, reserved, committed, ::Common::DenseJitDirectBytes());
+#else
+    (void)phase;
+#endif
+}
+
 // Samples are restricted to lifecycle and explicit development snapshots.
 // Vulkan's hot texture collector only uses the kernel's bounded largest-free
 // query; a potentially long region enumeration never belongs in that path.
