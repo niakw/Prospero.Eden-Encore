@@ -31,10 +31,10 @@ sarc = load_module("eden_glyph_sarc", "ps-glyph-sarc-inspect.py")
 bntx = load_module("eden_glyph_bntx", "ps-glyph-bntx-inspect.py")
 
 
-def inspect_chain(source: Path) -> dict:
-    outer = sarc.inventory(source)
-    # SARC inspector already enforces file bounds and never extracts members.
-    raw = source.read_bytes()
+def inspect_chain_bytes(raw: bytes) -> dict:
+    outer = sarc.inventory_bytes(raw)
+    # SARC inspector bounds-checks all table/member pointers; no member is
+    # written or loaded into guest memory. Input may come from Yaz0 decode.
     found = []
     bntx_count = 0
     for member in outer["members"]:
@@ -75,6 +75,13 @@ def inspect_chain(source: Path) -> dict:
         "ps5_runtime_test": None,
         "warning": "SARC/BRTI/mip offsets are bytes in a decompressed container, NOT on-screen glyph pixel positions.",
     }
+
+
+def inspect_chain(source: Path) -> dict:
+    # Preserve strict original on-disk file checks for the standalone CLI.
+    sarc.inventory(source)
+    return inspect_chain_bytes(source.read_bytes())
+
 
 
 def main() -> int:
