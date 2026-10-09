@@ -40,4 +40,23 @@ inline bool compute_barriers = true;
 // 1/60 of conditions that should skip. 2 (hcr=cpu): every condition evaluated on the CPU and the
 // driver predicates the draws from constant 0/1 buffers (the driver check with exact inputs).
 inline int hcr_mode = 1;
+
+// Development-only per-title A/B overrides are globals because generated
+// Vulkan source refers to them directly, but their lifetime is NOT a whole
+// multi-game process. Reset before reading the NEXT title's dev-settings.txt,
+// while the previous VkDevice and its worker threads are already destroyed.
+inline void ResetForTitle() noexcept {
+    disable_null_descriptor = false;
+    disable_descriptor_buffer = false;
+    robustness2 = false;
+    trace_pipelines = false;
+    disable_sparse = false;
+    disable_multi_range = false;
+    disable_custom_border = true;
+    sync_submissions = false;
+    gpu_time = false;
+    disable_conditional_rendering = false;
+    compute_barriers = true;
+    hcr_mode = 1;
+}
 } // namespace Eden::DevVulkan
