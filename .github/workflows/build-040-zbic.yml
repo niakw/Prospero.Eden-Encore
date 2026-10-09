@@ -25,6 +25,16 @@ on:
         required: false
         type: boolean
         default: false
+      test_all_on:
+        description: Unified PS5 test app (sparse JIT, CPU placement, frame diagnostics ON; never publish)
+        required: false
+        type: boolean
+        default: false
+      test_title_id:
+        description: Nintendo Switch game title ID for test autoboot (default FC27)
+        required: false
+        type: string
+        default: "0100C49025D3E000"
 
 permissions:
   contents: read
@@ -46,10 +56,24 @@ jobs:
     timeout-minutes: 240
     env:
       PROSPEROEDEN_GIT_DEPS_ROOT: .deps/repos
+      EDEN_TEST_ALL_ON: ${{ inputs.test_all_on && '1' || '0' }}
+      EDEN_TEST_TITLE_ID: ${{ inputs.test_title_id || '0100C49025D3E000' }}
+      EDEN_STAGE_DIR: ${{ inputs.test_all_on && 'build/dev/PPSA99008' || 'build/release/PPSA99008' }}
       # GitHub-only push resume for an already compiled staged app. This marker
       # is one-shot and cannot alter the downloaded binary or publish a release.
       RESUME_STAGE_RUN_ID: ${{ contains(github.event.head_commit.message || '', '[resume-stage:37728435816]') && '37728435816' || inputs.resume_run_id || '' }}
     steps:
+      - name: Refuse test profile on release branch or unsafe bypass
+        if: ${{ inputs.test_all_on }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/dev/ps5-sparse-jit
+          test "$EDEN_TEST_ALL_ON" = 1
+          [[ "$EDEN_TEST_TITLE_ID" =~ ^[0-9A-Fa-f]{16}$ ]]
+          test "${{ inputs.build_only }}" != true
+          test -z "${{ inputs.resume_run_id }}"
+          test "${{ inputs.publish }}" != true
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -178,12 +202,18 @@ jobs:
         if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
         run: make prepare JOBS=4
 
-      - name: Build and stage shipping app
+      - name: Build and stage PS5 app (release OR all-on test)
         id: stage
         if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
         env:
           EDEN_SKIP_PREBUILD_SOURCE_CHECKS: ${{ inputs.build_only && '1' || '0' }}
-        run: bash tools/build-package.sh release-stage
+        run: |
+          set -euo pipefail
+          if [[ "$EDEN_TEST_ALL_ON" == 1 ]]; then
+            bash tools/build-package.sh dev "$EDEN_TEST_TITLE_ID"
+          else
+            bash tools/build-package.sh release-stage
+          fi
 
       - name: Save build caches immediately after staging
         if: ${{ !cancelled() && steps.stage.outcome != 'skipped' }}
@@ -201,28 +231,32 @@ jobs:
         if: ${{ steps.stage.outcome == 'success' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: Prospero.Eden-Encore-staged-app
-          path: build/release/PPSA99008/
+          name: ${{ inputs.test_all_on && 'Prospero.Eden-Encore-PS5-all-on-test' || 'Prospero.Eden-Encore-staged-app' }}
+          path: ${{ env.EDEN_STAGE_DIR }}/
           retention-days: 7
           if-no-files-found: error
 
       - name: Validate freshly built staged app
         if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
         env:
-          EDEN_PACKAGE_DIR: build/release/PPSA99008
+          EDEN_PACKAGE_DIR: ${{ env.EDEN_STAGE_DIR }}
         run: |
           python3 -B headless/check_package.py --check
-          python3 -B tools/ci/check-staged-app.py build/release/PPSA99008
+          python3 -B tools/ci/check-staged-app.py "$EDEN_STAGE_DIR"
+          if [[ "$EDEN_TEST_ALL_ON" == 1 ]]; then
+            python3 -B tools/ci/check-all-on-test-binary.py "$EDEN_STAGE_DIR"
+          fi
 
       - name: Validate resumed staged app
         if: ${{ env.RESUME_STAGE_RUN_ID != '' }}
         run: python3 -B tools/ci/check-staged-app.py build/release/PPSA99008
 
       - name: Assemble release files
+        if: ${{ !inputs.test_all_on }}
         run: python3 -B tools/ci/make-dist.py build/release/PPSA99008
 
       - name: Upload compiled release bundle
-        if: success()
+        if: ${{ success() && !inputs.test_all_on }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Prospero.Eden-Encore-release
@@ -236,7 +270,7 @@ jobs:
   release:
     needs: build
     if: >-
-      ${{ needs.build.result == 'success' &&
+      ${{ needs.build.result == 'success' && !inputs.test_all_on &&
           github.ref == 'refs/heads/fix/0.40-zbic-13.60' &&
           ((github.event_name == 'push' && contains(github.event.head_commit.message, '[release]')) ||
            (github.event_name == 'workflow_dispatch' && inputs.publish)) }}
