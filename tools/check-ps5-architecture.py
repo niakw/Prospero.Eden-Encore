@@ -57,6 +57,8 @@ def main() -> None:
     require('Eden::Performance::ReportDirectMemoryState(name);' in app, "Lifecycle call absent")
     require('void ReportDirectMemoryState(const char* phase);' in perf_h, "Lifecycle API declaration absent")
     require('regions < 8192' in perf, "Direct memory traversal is not bounded")
+    require('EDEN_HEAP_LIFETIME phase=%s pieces=%zu large=%zu large_blocks=%u tcache=%zu' in perf,
+            "Per-title teardown heap retained backing and private-cache snapshots missing")
     require('EDEN_HEAP_PIECE bytes=%zu va=%p pa=%llx alloc_ns=%llu map_ns=%llu zero_ns=%llu' in native,
             "Native heap-piece commit must report OS alloc, map and zeroing costs")
     require('const auto map_rc = sceKernelMapDirectMemory(&at, size,' in native and
