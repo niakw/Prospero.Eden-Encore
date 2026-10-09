@@ -7,9 +7,14 @@ workers that were ALREADY removed from its inherited secondary mask.
 This stages host/source tests only. DO NOT run until user explicitly says GO.
 """
 from pathlib import Path
+import ast
 port = (Path(__file__).resolve().parents[0] / "prepare-vulkan-port.py").read_text()
 performance = (Path(__file__).resolve().parents[1] / "headless/performance.cpp").read_text()
 header = (Path(__file__).resolve().parents[1] / "headless/performance.h").read_text()
+# Source-text contracts are useless if the Python generator itself cannot
+# parse. This caught accidental C++ // comments inserted outside a C++
+# triple-quoted replacement on the dev branch before a PS5 build.
+ast.parse(port, filename="tools/prepare-vulkan-port.py")
 begin = port.index("pipeline_worker_replacement = '''")
 end = port.index("if shader_source.count(pipeline_worker_anchor)", begin)
 policy = port[begin:end]
