@@ -914,7 +914,10 @@ void Launcher::draw_library(Canvas &c)
                         theme::kMeta, 90.0f);
             if (game.max_players > 0)
             {
-                controller_icon(c, {card.x + card.w - 74.0f, card.y + card.h - 37.0f, 30.0f, 21.0f}, 0.9f);
+                // Full-white DualSense at TV distance; the former 30x21
+                // image mask was barely visible against the black scrim.
+                dualsense_icon(c, {card.x + card.w - 87.0f, card.y + card.h - 41.0f,
+                                   42.0f, 29.0f}, theme::kTitle, 1.0f);
                 text(c, "×" + std::to_string(game.max_players), card.x + card.w - 16.0f,
                      baseline(card.y + card.h - 36.0f, 22.0f, 15.0f), 15.0f,
                      theme::kTitle, Align::right);
