@@ -10,6 +10,11 @@ on:
       - tools/check-ps-glyph-diff-to-evidence.py
       - tools/ps-glyph-mod-diff.py
       - tools/ps-glyph-scan.py
+      - tools/ps-glyph-botw-yaz0.py
+      - tools/check-ps-glyph-botw-yaz0.py
+      - tools/ps-glyph-sarc-inspect.py
+      - tools/ps-glyph-sarc-bntx-chain.py
+      - tools/check-ps-glyph-sarc-inspect.py
       - headless/button_mapping.h
       - headless/main.cpp
       - tools/check-controller-semantic-mapping.py
@@ -37,6 +42,10 @@ jobs:
       - name: Verify mod pixel differences reconstruct safe, unapproved Switch sprite candidates
         run: |
           python3 -B tools/check-ps-glyph-diff-to-evidence.py
+      - name: Verify BOTW Yaz0 to SARC/BNTX resource discovery and parser guards
+        run: |
+          python3 -B tools/check-ps-glyph-botw-yaz0.py
+          python3 -B tools/check-ps-glyph-sarc-inspect.py
       - name: Verify action glyphs match physical-to-guest HID mappings
         run: |
           python3 -B tools/check-controller-semantic-mapping.py
