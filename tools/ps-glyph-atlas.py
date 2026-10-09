@@ -163,8 +163,9 @@ def render(spec: Path, original_root: Path, icons_zip: Path, output: Path) -> Pa
     atlases = data["atlases"]
     require(isinstance(atlases, list) and 0 < len(atlases) <= MAX_ATLASES,
             "one to 64 source atlas entries required")
-    require(not output.exists() and output.parent.is_dir() and
-            not output.parent.is_symlink(), "destination must not yet exist")
+    require(not output.exists() and not output.is_symlink() and
+            output.parent.is_dir() and not output.parent.is_symlink(),
+            "destination must not yet exist")
     require(icons_zip.is_file() and not icons_zip.is_symlink(), "licensed ZIP not found")
 
     stage = Path(tempfile.mkdtemp(prefix=".eden-glyph-atlas-", dir=output.parent))
@@ -227,7 +228,9 @@ def render(spec: Path, original_root: Path, icons_zip: Path, output: Path) -> Pa
                 with Image.open(target) as encoded:
                     require(encoded.mode == "RGBA" and encoded.size == base.size,
                             "output game atlas layout changed unexpectedly")
-                total += target.stat().st_size
+                size = target.stat().st_size
+                require(size <= MAX_ATLAS_BYTES, "generated atlas exceeds 128 MiB single-file cap")
+                total += size
                 require(total <= MAX_PACK_BYTES, "generated graphics exceed 512 MiB")
                 entries.append({
                     "romfs_path": relative.as_posix(),
@@ -271,9 +274,21 @@ def discover(root: Path, limit: int = 200) -> list[dict]:
             rel = source.relative_to(root).as_posix()
             if not any(word in rel.lower() for word in hints):
                 continue
-            found.append({"romfs_path": rel,
-                          "kind": "RGBA image candidate" if source.suffix.lower() in (".png", ".tga")
-                          else "PROPRIETARY: decoder/encoder required"})
+            item = {"romfs_path": rel,
+                    "kind": "RGBA image candidate" if source.suffix.lower() in (".png", ".tga")
+                    else "PROPRIETARY: decoder/encoder required"}
+            if source.suffix.lower() in (".png", ".tga"):
+                try:
+                    if source.stat().st_size <= MAX_ATLAS_BYTES:
+                        with Image.open(source) as candidate:
+                            item["dimensions"] = [candidate.width, candidate.height]
+                            item["mode"] = candidate.mode
+                        if item["mode"] == "RGBA":
+                            item["original_sha256"] = digest(source)
+                except (OSError, ValueError, Image.DecompressionBombError,
+                        UnidentifiedImageError):
+                    item["kind"] = "INVALID: image decoder failed"
+            found.append(item)
             if len(found) >= limit:
                 return found
     return found
