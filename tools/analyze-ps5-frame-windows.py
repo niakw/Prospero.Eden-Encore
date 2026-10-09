@@ -33,6 +33,7 @@ class Trace:
     budget: list[dict[str, float]]
     sparse: list[dict[str, float]]
     memory_live: list[dict[str, float]]
+    snapshot_cost: list[dict[str, float]]
     owner_clock_valid: bool
     cross_thread_clock_valid: bool
 
@@ -47,6 +48,7 @@ class Trace:
         budget: list[dict[str, float]] = []
         sparse: list[dict[str, float]] = []
         memory_live: list[dict[str, float]] = []
+        snapshot_cost: list[dict[str, float]] = []
         for line in lines:
             if line.startswith("EDEN_VULKAN_FRAME frames="):
                 frames.append(read_values(line))
@@ -66,8 +68,10 @@ class Trace:
                 sparse.append(read_values(line))
             elif line.startswith("EDEN_MEMORY_LIVE frame="):
                 memory_live.append(read_values(line))
+            elif line.startswith("EDEN_DEV_SNAPSHOT_COST mono_ns="):
+                snapshot_cost.append(read_values(line))
         return cls(
-            filename, frames, gpu, guest, cpu, jit, budget, sparse, memory_live,
+            filename, frames, gpu, guest, cpu, jit, budget, sparse, memory_live, snapshot_cost,
             any(line.startswith("EDEN_PERF_OWNER_CLOCK_CHECK valid=1 ") for line in lines),
             any(line.startswith("EDEN_PERF_CPU_CLOCK_CHECK valid=1 ") for line in lines),
         )
@@ -106,6 +110,9 @@ class Trace:
                                 and self.memory_live[index].get("largest_last_confirmed", 0) > 0 else -1),
             "direct_memory_short": (self.memory_live[index].get("short", -1)
                                     if index < len(self.memory_live) else -1),
+            # Development sampling observer cost is NOT automatically a game
+            # frame interval. Extra explicit/manual snapshots can break the
+            # index alignment; report it separately in the trace overview.
         }
 
 def print_trace(trace: Trace, prefix: int | None) -> None:
@@ -138,6 +145,12 @@ def print_trace(trace: Trace, prefix: int | None) -> None:
     if confirmed:
         print("  direct memory largest-free confirmed: min_MiB={:.1f} last_MiB={:.1f}".format(
             min(confirmed)/(1024**2), confirmed[-1]/(1024**2)))
+    if trace.snapshot_cost:
+        costs = [x.get("elapsed_ns", 0)/1e6 for x in trace.snapshot_cost if x.get("elapsed_ns", 0) >= 0]
+        if costs:
+            print("  diagnostic Snapshot() observer cost (NOT FPS): "
+                  "count={} worst_ms={:.2f} median_ms={:.2f}".format(
+                      len(costs), max(costs), statistics.median(costs)))
     print(f"  owner_thread_cpu_clock_valid={trace.owner_clock_valid}"
           f" cross_thread_clock_valid={trace.cross_thread_clock_valid}")
     n = min(trace.windows(), limit)

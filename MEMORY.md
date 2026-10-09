@@ -2003,3 +2003,8 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 
 - Static review found the library's `refresh_selected_game()` and `press_library()` dereferenced `games_[static_cast<size_t>(library_.selected)]` based solely on a **nonempty list**; `apply_games()` same-order settings refresh made the same assumption. If asynchronous initial scan/removed title transitions left an index at -1 or out of range, the cast could index a huge offset and crash the shell while scrolling.
 - Added explicit `0 <= selected < games_.size()` guards in all three paths. Absent selection now defaults to docked/no mods UI until the current valid index is established; otherwise unchanged. Does not alter approved design, library animation or disk I/O behavior. Source assertion staged; no compile/test/PS5 validation.
+
+### 2026-10-09 — Show profiler observer effect alongside FC27 frame windows [skip ci]
+
+- Updated the backward-compatible read-only `tools/analyze-ps5-frame-windows.py` to parse `EDEN_DEV_SNAPSHOT_COST` and display its **sample count, worst and median wall-clock milliseconds** as a separate diagnostic line. Do not align the cost by ordinal frame index: manual captures can add snapshots and their duration is not proof that one measured game frame suffered that exact latency.
+- Extended the synthetic old/new frame log fixture to accept missing old telemetry and check new 3.5/7ms sample costs. The future test can now distinguish costly diagnostics from measured render frame intervals without losing GPU/JIT/IPC/pressure evidence. Preflight remains unexecuted.
