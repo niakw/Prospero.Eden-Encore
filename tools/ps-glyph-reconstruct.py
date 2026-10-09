@@ -215,6 +215,7 @@ def build_spec(evidence: dict, romfs: Path, evidence_base: Path) -> dict:
             require(pixels.mode == "RGBA" and pixels.width * pixels.height <= 25_000_000,
                     "only decoded original RGBA Switch texture with valid dimensions")
             for slot in slots:
+                require(isinstance(slot, dict), "each sprite slot must be an object")
                 rect = slot.get("rect")
                 require(isinstance(rect, list) and len(rect) == 4 and
                         all(type(n) is int for n in rect), "measured pixel XYWH required")
