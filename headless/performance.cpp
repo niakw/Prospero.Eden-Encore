@@ -59,6 +59,11 @@ struct Worker {
 };
 std::mutex workers_mutex;
 std::array<Worker, names.size()> workers;
+// Periodic native GPU and optional host-thread capture must not concurrently
+// consume the same PC sample cursors. Keep this lock DISTINCT from the
+// owner-written worker mutex so costly diagnostic maps/hex never stop cores
+// from publishing CPU samples or frontends from polling development PCs.
+std::mutex snapshot_mutex;
 #ifdef EDEN_DEV_PROFILE
 static_assert(std::atomic<uintptr_t>::is_always_lock_free);
 std::array<uintptr_t, 8192> sampled_pcs{};
@@ -936,6 +941,9 @@ void SampleCpu(unsigned core, unsigned long long thread, unsigned long long pc, 
 }
 
 void Snapshot() {
+    // PC sample cursors and one-shot block dumps require serialized consumers,
+    // but MUST NOT hold workers_mutex while formatting a large snapshot.
+    const std::lock_guard snapshot_guard(snapshot_mutex);
     // Request a fresh owner-written sample; report the last completed sample with
     // its own timestamp. An idle core may remain stale; never infer zero CPU use.
     sample_epoch.fetch_add(1, std::memory_order_relaxed);
@@ -943,7 +951,6 @@ void Snapshot() {
     std::printf("EDEN_PERF_SAMPLE mono_ns=%lld process_cpu_ns=%lld wall_ns=%lld\n",
                 mono, cpu_clocks_valid ? ClockNs(process_clock) : -static_cast<long long>(ENOTSUP),
                 static_cast<long long>(Common::g_wall_clock.GetTimeNS().count()));
-    std::lock_guard lock(workers_mutex);
 #ifdef EDEN_DEV_PROFILE
     std::map<uintptr_t, unsigned> counts;
     const unsigned end = pc_count.load(std::memory_order_acquire);
@@ -1041,8 +1048,18 @@ void Snapshot() {
         }
     }
 #endif
-    for (unsigned i = 0; i < workers.size(); ++i) {
-        const auto& worker = workers[i];
+    // Take an immutable owner-written copy; priority/CPU-clock syscalls,
+    // formatting, and stdout flushes must NOT hold workers_mutex. Otherwise
+    // all guest CPU workers can block in SampleCpu() on this GPU report.
+    std::array<Worker, names.size()> worker_snapshot{};
+    std::array<CpuSample, 4> cpu_snapshot{};
+    {
+        const std::lock_guard worker_guard(workers_mutex);
+        worker_snapshot = workers;
+        cpu_snapshot = cpu_samples;
+    }
+    for (unsigned i = 0; i < worker_snapshot.size(); ++i) {
+        const auto& worker = worker_snapshot[i];
         sched_param priority{};
         int policy = -1;
         const int priority_error = worker.registered ?
@@ -1056,7 +1073,7 @@ void Snapshot() {
                     mono, names[i], cpu, int(worker.clock), worker.affinity_error, worker.allowed, worker.mask,
                     priority_error, policy, priority.sched_priority, worker.wall_ns, worker.mono_ns);
         if (i < compilation.size()) {
-            const auto& sample = cpu_samples[i];
+            const auto& sample = cpu_snapshot[i];
             std::printf("EDEN_PERF_CPU_POINT core=%u phase=%u epoch=%u mono_ns=%lld cpu_ns=%lld thread=%llu pc=%llx svc=%x fpcr=%u compilations=%llu compile_ns=%llu\n",
                         i, unsigned(cpu_state[i].phase.load(std::memory_order_relaxed)), sample.epoch,
                         sample.mono_ns, sample.cpu_ns, sample.thread, sample.pc, sample.svc, sample.fpcr,
@@ -1092,6 +1109,14 @@ void Snapshot() {
         }
     }
     std::fflush(stdout);
+#ifdef EDEN_DEV_PROFILE
+    // A late diagnostic cost measurement is not included in the reported
+    // game's five-second frame interval; make this observer effect explicit.
+    const long long snapshot_end = ClockNs(CLOCK_MONOTONIC);
+    if (mono > 0 && snapshot_end >= mono)
+        std::printf("EDEN_DEV_SNAPSHOT_COST mono_ns=%lld elapsed_ns=%lld\n",
+                    mono, snapshot_end - mono);
+#endif
 }
 
 #ifndef EDEN_DEV_PROFILE
