@@ -57,6 +57,10 @@ def main() -> None:
     require('Eden::Performance::ReportDirectMemoryState(name);' in app, "Lifecycle call absent")
     require('void ReportDirectMemoryState(const char* phase);' in perf_h, "Lifecycle API declaration absent")
     require('regions < 8192' in perf, "Direct memory traversal is not bounded")
+    require('EDEN_HEAP_PIECE bytes=%zu va=%p pa=%llx alloc_ns=%llu map_ns=%llu zero_ns=%llu' in native,
+            "Native heap-piece commit must report OS alloc, map and zeroing costs")
+    require('clock_gettime(CLOCK_MONOTONIC' in native and 'std::memset(address, 0, size);' in native,
+            "Native heap timing must preserve mandatory zeroed memory")
 
     require('option(EDEN_SPARSE_JIT_DEV "Allow developer-only PS5 sparse JIT cache experiments" OFF)' in cmake,
             "Sparse JIT must not be a shipping build default")
