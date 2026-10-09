@@ -96,6 +96,7 @@ jobs:
           assert 'std::any_of(glyph_catalogue.rules.begin(), glyph_catalogue.rules.end()' in main
           print('PASS: glyph admission matches fixed session profile, unsupported games do not reread preferences')
           PY
+      # Final gate: approve manifests only with exact matched original and reviewed button semantics.
       - name: Aggregate all game/mod candidates without enabling unknown ones
         run: |
           python3 -B tools/ps-glyph-reconstruct.py index > /tmp/eden-glyph-leads.json
