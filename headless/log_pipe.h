@@ -55,7 +55,21 @@ public:
         limit = segment_limit;
         bytes = 0;
         rotated = false;
-        worker = std::thread([this] { Drain(); });
+        try {
+            worker = std::thread([this] { Drain(); });
+        } catch (...) {
+            // dup2 already points the user's FILE stream at this pipe.
+            // A thread-creation failure without restoring that descriptor
+            // would leave stderr/stdout with no reader and freeze producers.
+            (void)dup2(file_fd, stream_fd);
+            close(read_fd);
+            close(file_fd);
+            read_fd = file_fd = -1;
+            stream = nullptr;
+            log_path.clear();
+            first_log_path.clear();
+            return false;
+        }
         return true;
     }
 
@@ -95,19 +109,18 @@ private:
             file_fd = next;
             rotated = true;
         } else {
-            // Keep the very first segment, recycle only the current one to retain the newest tail.
-            // Some native runtimes refuse ftruncate even when O_TRUNC on open is supported.
-            // Reopening safely covers this case without growing the previous segment forever.
-            if (ftruncate(file_fd, 0) != 0 || lseek(file_fd, 0, SEEK_SET) < 0) {
-                const int next = open(log_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
-                if (next < 0) return false;
-                close(file_fd);
-                file_fd = next;
-            }
+            // Keep the first segment, recycle only the current tail.
+            // On PS5 ftruncate/lseek wrappers have inconsistent support:
+            // always reopen with O_TRUNC before closing the old descriptor.
+            // That guarantees the next write starts at byte zero.
+            const int next = open(log_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
+            if (next < 0) return false;
+            close(file_fd);
+            file_fd = next;
         }
         bytes = 0;
         static constexpr char marker[] =
-            "[Eden 0.40 Improved] log segment rotated to keep storage bounded\n";
+            "[Eden Encore] log segment rotated to keep storage bounded\n";
         const ssize_t wrote = write(file_fd, marker, sizeof(marker) - 1);
         if (wrote > 0) bytes = static_cast<std::size_t>(wrote);
         return true;
