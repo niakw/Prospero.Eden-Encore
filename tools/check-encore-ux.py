@@ -142,16 +142,22 @@ assert 'const int wanted_screens = std::clamp(screen_count, 0, 3);' in services
 assert 'for (std::size_t offset = 0; offset < games_.size(); ++offset)' in library
 assert 'game->screenshots' in library
 
-# FC27 hardware feedback (Oct 8, 2026): the fixed mapping REGRESSED
-# the previously qualified in-match behavior. Restore the shipping
-# PlayStation Auto contract for default PS layout without changing the
-# already-approved launcher or an explicitly custom controller mapping.
-assert 'SetAdaptivePlayStation(bool enabled)' in devices
-assert 'pad->SetAdaptivePlayStation(effective_layout == 0 && !custom_mapping);' in main
-assert 'mapping_context.observe(' in pad
+# Controller contract after investigation of oscillating glyph/face-button
+# contexts: select ONE effective per-title/global mapping before guest HID.
+# The emulator cannot reliably infer in-game menu vs gameplay from HID and
+# must not silently swap A/B/X/Y during cutscenes or popup transitions.
+# Assert the actual fixed mapping, not the removed auto-context implementation.
+assert 'void SetMapping(const ButtonMapping& value)' in devices
+assert 'if (slots[0].handle >= 0) return;' in devices
+assert 'pad->SetMapping(mapping);' in main
+assert 'pad->Open()' in main
+assert main.index('pad->SetMapping(mapping);') < main.index('if (!pad->Open())')
+assert 'EDEN_PAD_MAPPING_FIXED title=%016llx' in main
+assert 'EDEN_PAD_MAPPING_LOCKED scope=session mode=static' in main
+assert '(effective_layout == 1 ? "Switch" : "PlayStation")' in main
+assert 'SetAdaptivePlayStation' not in devices + main + pad
+assert 'mapping_context.observe(' not in pad
 assert 'menu_evidence' not in pad
-assert 'pad->SetAdaptivePlayStation(false);' not in main
-assert '(effective_layout == 1 ? "Switch" : "PlayStation Auto")' in main
 assert '#ifdef EDEN_DEV_PROFILE\n        // Diagnostic input trace only.' in pad
 assert 'frame_late_200' in read('headless/graphics.cpp')
 assert 'frame_max_slow_streak' in read('headless/graphics.h')
@@ -197,12 +203,13 @@ assert 'Prospero.Eden-Encore/1' in net_patch and 'User-Agent' in net_patch
 # all package inventory, import and compiled-string checks. Validate this contract
 # in the early fast preflight, before consuming hours on another native build.
 staged_check = read('tools/ci/check-staged-app.py')
-# Prevent a multi-hour native package from failing because its final binary
-# checker still demands an unsafe PlayStation Auto UI-mode transition that
-# the reviewed controller implementation explicitly removed.
-assert "EDEN_PAD_CONTEXT mode=gameplay reason=sustained_activity sticky=1" in pad
-assert '"EDEN_PAD_CONTEXT mode=gameplay reason=sustained_activity sticky=1"' in staged_check
-assert '"EDEN_PAD_CONTEXT mode=ui"' not in staged_check
+# Avoid another multi-hour native build failing on stale controller markers:
+# the staged eboot must expose the fixed mapping diagnostics from main.cpp,
+# not old PlayStation Auto / EDEN_PAD_CONTEXT strings removed from source.
+assert '"EDEN_PAD_MAPPING_FIXED title="' in staged_check
+assert '"EDEN_PAD_MAPPING_LOCKED scope=session mode=static"' in staged_check
+assert '"PlayStation Auto"' not in staged_check
+assert '"EDEN_PAD_CONTEXT mode=gameplay reason=sustained_activity sticky=1"' not in staged_check
 match = re.search(r'assert all\(marker in home_source for marker in \((.*?)\)\)', staged_check, re.S)
 assert match, 'staged-app Home focus contract has no explicit named marker list'
 for marker in re.findall(r'"(kHome[^\"]+)"', match.group(1)):
