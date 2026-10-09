@@ -244,7 +244,7 @@ jobs:
           python3 -B headless/check_package.py --check
           python3 -B tools/ci/check-staged-app.py "$EDEN_STAGE_DIR"
           if [[ "$EDEN_TEST_ALL_ON" == 1 ]]; then
-            python3 -B tools/ci/check-all-on-test-binary.py "$EDEN_STAGE_DIR"
+            python3 -B tools/ci/check-all-on-test-binary.py "$EDEN_STAGE_DIR" "$EDEN_TEST_TITLE_ID"
           fi
 
       - name: Validate resumed staged app
