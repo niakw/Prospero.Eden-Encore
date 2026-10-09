@@ -191,6 +191,12 @@ inline bool EvidenceMatches(const Mods::fs::path& folder, const Rule& rule) {
         // per-file cap: otherwise an edited 64-file manifest could force
         // gigabytes of filesystem reads and freeze the game-launch path.
         std::uintmax_t verified_bytes = 0;
+        // LayeredFS path names must be unambiguous regardless of a target
+        // filesystem's case sensitivity. Two manifest rows for the same
+        // lowercased path (or a file also acting as a parent directory)
+        // could pass individual SHA checks but resolve to different bytes
+        // depending on extraction order or host OS.
+        std::vector<std::string> claimed_romfs_paths;
         for (const auto& item : value["files"]) {
             if (!item.is_object() || !item.contains("romfs_path") ||
                 !item["romfs_path"].is_string() ||
@@ -218,6 +224,21 @@ inline bool EvidenceMatches(const Mods::fs::path& folder, const Rule& rule) {
                 if (segment == "." || segment == ".." || segment.empty()) return false;
                 safe /= segment;
             }
+            // Refuse aliases via doubled separators, dot segments or
+            // host-dependent path normalization before checking file hashes.
+            if (safe.generic_string() != relative) return false;
+            const std::string folded = Mods::Lower(relative);
+            for (const auto& prior : claimed_romfs_paths) {
+                if (folded == prior ||
+                    (folded.size() > prior.size() &&
+                     folded.compare(0, prior.size(), prior) == 0 &&
+                     folded[prior.size()] == '/') ||
+                    (prior.size() > folded.size() &&
+                     prior.compare(0, folded.size(), folded) == 0 &&
+                     prior[folded.size()] == '/'))
+                    return false;
+            }
+            claimed_romfs_paths.push_back(folded);
             // Reject symlinks in any component, not only at the leaf.
             // These graphics are injected into the guest's RomFS and must
             // not escape the installed pack or point to executable mods.
