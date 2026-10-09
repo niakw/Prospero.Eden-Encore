@@ -26,6 +26,11 @@ FOLDER_SPEC = importlib.util.spec_from_file_location(
 assert FOLDER_SPEC is not None and FOLDER_SPEC.loader is not None
 folder_module = importlib.util.module_from_spec(FOLDER_SPEC)
 FOLDER_SPEC.loader.exec_module(folder_module)
+TEXTURE_SPEC = importlib.util.spec_from_file_location(
+    "eden_exported_texture_diff", ROOT / "tools/ps-glyph-exported-texture-diff.py")
+assert TEXTURE_SPEC is not None and TEXTURE_SPEC.loader is not None
+texture_module = importlib.util.module_from_spec(TEXTURE_SPEC)
+TEXTURE_SPEC.loader.exec_module(texture_module)
 
 
 def png(im: Image.Image) -> bytes:
@@ -68,6 +73,16 @@ with tempfile.TemporaryDirectory(prefix="eden-glyph-mod-diff-") as tmp:
     romfs = base / "romfs"
     (romfs / "UI").mkdir(parents=True)
     (romfs / "UI" / "atlas.png").write_bytes(png(source))
+    original_export = base / "original-Texture2D.png"
+    modified_export = base / "patched-Texture2D.png"
+    original_export.write_bytes(png(source))
+    modified_export.write_bytes(png(revised))
+    unity = texture_module.compare(original_export, modified_export,
+                                   "controller_btns_outlined", "Data/resources.assets")
+    assert unity["image_difference"]["changed_rects_xywh"] == [
+        [4, 4, 8, 8], [28, 5, 9, 9]]
+    assert unity["container_original_sha256"] is None
+    assert unity["game_update_and_title_qualified"] is False
     archive = base / "ui-mod.zip"
     with zipfile.ZipFile(archive, "w") as z:
         z.writestr("PlayStationUI/romfs/UI/atlas.png", png(revised))
