@@ -4,36 +4,18 @@
   "purpose": "Games verifiably released for Switch 1, with non-Switch glyph-source discovery but no verified Switch mod or original asset",
   "games": [
     {
-      "switch_game": "Sonic Superstars",
-      "official_switch_listing": "https://www.nintendo.com/fr-fr/Jeux/Jeux-Nintendo-Switch/Sonic-Superstars-2401782.html",
-      "release_date": "2023-10-17",
-      "source_provenance": "Nintendo FR",
-      "game_update": null,
-      "title_id": null,
-      "original_romfs_verified": false
-    },
-    {
-      "switch_game": "Sonic Frontiers",
-      "official_switch_listing": "https://www.nintendo.com/fr-fr/Jeux/Jeux-a-telecharger-sur-Nintendo-Switch/Sonic-Frontiers-2233221.html",
-      "release_date": "2022-11-08",
-      "source_provenance": "Nintendo FR",
-      "game_update": null,
-      "title_id": null,
-      "original_romfs_verified": false
-    },
-    {
-      "switch_game": "Overcooked! 2",
-      "official_switch_listing": "https://www.nintendo.com/fr-fr/Jeux/Jeux-Nintendo-Switch/Overcooked-2-1388792.html",
-      "release_date": "2018-08-07",
-      "source_provenance": "Nintendo FR",
-      "game_update": null,
-      "title_id": null,
-      "original_romfs_verified": false
-    },
-    {
       "switch_game": "Atelier Ryza: Ever Darkness & the Secret Hideout",
       "official_switch_listing": "https://www.nintendo.com/fr-fr/Jeux/Jeux-Nintendo-Switch/Atelier-Ryza-Ever-Darkness-the-Secret-Hideout-1651289.html",
       "release_date": "2019-11-01",
+      "source_provenance": "Nintendo FR",
+      "game_update": null,
+      "title_id": null,
+      "original_romfs_verified": false
+    },
+    {
+      "switch_game": "Enter the Gungeon",
+      "official_switch_listing": "https://www.nintendo.com/fr-fr/Jeux/Jeux-a-telecharger-sur-Nintendo-Switch/Enter-the-Gungeon-1320155.html",
+      "release_date": "2017-12-18",
       "source_provenance": "Nintendo FR",
       "game_update": null,
       "title_id": null,
@@ -49,9 +31,45 @@
       "original_romfs_verified": false
     },
     {
-      "switch_game": "Enter the Gungeon",
-      "official_switch_listing": "https://www.nintendo.com/fr-fr/Jeux/Jeux-a-telecharger-sur-Nintendo-Switch/Enter-the-Gungeon-1320155.html",
-      "release_date": "2017-12-18",
+      "switch_game": "Overcooked! 2",
+      "official_switch_listing": "https://www.nintendo.com/fr-fr/Jeux/Jeux-Nintendo-Switch/Overcooked-2-1388792.html",
+      "release_date": "2018-08-07",
+      "source_provenance": "Nintendo FR",
+      "game_update": null,
+      "title_id": null,
+      "original_romfs_verified": false
+    },
+    {
+      "switch_game": "Sonic Frontiers",
+      "official_switch_listing": "https://www.nintendo.com/fr-fr/Jeux/Jeux-a-telecharger-sur-Nintendo-Switch/Sonic-Frontiers-2233221.html",
+      "release_date": "2022-11-08",
+      "source_provenance": "Nintendo FR",
+      "game_update": null,
+      "title_id": null,
+      "original_romfs_verified": false
+    },
+    {
+      "switch_game": "Sonic Mania",
+      "official_switch_listing": "https://www.nintendo.com/fr-fr/Jeux/Jeux-a-telecharger-sur-Nintendo-Switch/Sonic-Mania-1174779.html",
+      "release_date": "2017-08-15",
+      "source_provenance": "Nintendo FR",
+      "game_update": null,
+      "title_id": null,
+      "original_romfs_verified": false
+    },
+    {
+      "switch_game": "Sonic Superstars",
+      "official_switch_listing": "https://www.nintendo.com/fr-fr/Jeux/Jeux-Nintendo-Switch/Sonic-Superstars-2401782.html",
+      "release_date": "2023-10-17",
+      "source_provenance": "Nintendo FR",
+      "game_update": null,
+      "title_id": null,
+      "original_romfs_verified": false
+    },
+    {
+      "switch_game": "Stardew Valley",
+      "official_switch_listing": "https://www.nintendo.com/fr-fr/Jeux/Jeux-a-telecharger-sur-Nintendo-Switch/Stardew-Valley-1287587.html",
+      "release_date": "2017-10-05",
       "source_provenance": "Nintendo FR",
       "game_update": null,
       "title_id": null,
