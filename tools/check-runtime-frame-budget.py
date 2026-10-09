@@ -115,6 +115,11 @@ assert "docked_for_scan(std::uint64_t title_id, const Preferences&)" in read("he
 selected = library.split("void Launcher::refresh_selected_game()", 1)[1].split("void Launcher::press_library(", 1)[0]
 assert "games_[static_cast<std::size_t>(library_.selected)].docked" in selected
 assert "services_.docked(" not in selected
+assert "const bool has_selected = library_.selected >= 0 &&" in selected
+assert "library_.selected < static_cast<int>(games_.size());" in selected
+assert "selected_docked_ = !has_selected ||" in selected
+assert "mods_switch_.snap(has_selected &&" in selected
+assert "const Game *game = library_.selected >= 0 && library_.selected < count ?" in library
 assert "docked_refresh_after_scan_" in library
 assert "docked_refresh_after_scan_" in nav
 assert "if (scan_.valid()) docked_refresh_after_scan_ = true;" in library
