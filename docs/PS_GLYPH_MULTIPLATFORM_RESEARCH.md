@@ -5,7 +5,7 @@ Last research update: 2026-10-09. The Switch game stays the authority for **Titl
 ## Source registers
 
 * Main Switch-only corpus: [PS_GLYPH_SOURCE_INDEX.json](PS_GLYPH_SOURCE_INDEX.json) — 26 community references / 18 games, zero verified atlas positions.
-* Additional cross-platform corpus: [PS_GLYPH_CROSS_PLATFORM_INDEX.json](PS_GLYPH_CROSS_PLATFORM_INDEX.json) — 17 other-platform sources linked to 12 Switch 1 games (including six Nintendo-confirmed seeds), zero verified Switch rectangles.
+* Additional cross-platform corpus: [PS_GLYPH_CROSS_PLATFORM_INDEX.json](PS_GLYPH_CROSS_PLATFORM_INDEX.json) — 20 other-platform sources linked to 14 Switch 1 games (including eight Nintendo-confirmed seeds), zero verified Switch rectangles.
 * Integrity gates (source-only, **not executed**): `tools/check-ps-glyph-community-index.py`, `tools/check-ps-glyph-cross-platform-index.py`.
 
 ## Highest-value cross-platform relationships
@@ -71,9 +71,9 @@ The tool groups names such as `UI/controller_buttons_ps4.png`, `UI/controller_bu
 
 **Priority route:** First discover embedded native art, next research existing other-platform mod and actual name/path, and finally compare original image geometry with the matching Switch original. Until then native glyph art remains unverified.
 
-## 2026-10-09 — Six more Nintendo-confirmed Switch 1 titles
+## 2026-10-09 — Eight more Nintendo-confirmed Switch 1 titles
 
-Six official Switch game listings are preserved in [PS_GLYPH_SWITCH1_GAME_SEEDS.json](PS_GLYPH_SWITCH1_GAME_SEEDS.json). They have PC glyph mods but no verified Switch glyph pack: **Sonic Frontiers**, **Sonic Superstars**, **Overcooked! 2**, **Atelier Ryza**, **NieR:Automata The End of YoRHa Edition** and **Enter the Gungeon**.
+Eight official Switch game listings are preserved in [PS_GLYPH_SWITCH1_GAME_SEEDS.json](PS_GLYPH_SWITCH1_GAME_SEEDS.json). They have PC glyph mods but no verified Switch glyph pack: **Sonic Frontiers**, **Sonic Superstars**, **Overcooked! 2**, **Atelier Ryza**, **NieR:Automata The End of YoRHa Edition**, **Enter the Gungeon**, **Sonic Mania** and **Stardew Valley**.
 
 | Switch 1 game | External source | Mechanism and qualification need |
 | --- | --- | --- |
@@ -85,7 +85,7 @@ Six official Switch game listings are preserved in [PS_GLYPH_SWITCH1_GAME_SEEDS.
 | NieR:Automata | https://steamcommunity.com/sharedfiles/filedetails/?id=1368483795 | PC data/ui custom Nintendo artwork resizes existing Xbox UI sprites; Switch assets differ until compared |
 | Enter the Gungeon | https://modworkshop.net/mod/25536 | PC sprite folders and SREM/DFSprite dependency; cropped/resized art; no inferred Switch offset |
 
-**Revised research scope:** 26 Switch-mod references / 18 directly indexed games, plus 17 cross-platform sources touching 12 Switch titles; six newly seeded titles bring the union to **24 unique Switch 1 games**. All real verified per-game art counts remain ZERO.
+**Revised research scope:** 26 Switch-mod references / 18 directly indexed games, plus 20 cross-platform sources touching 14 Switch titles; eight newly seeded titles bring the union to **26 unique Switch 1 games**. All real verified per-game art counts remain ZERO.
 
 ### Relocated original sprites: strict matching despite atlas rearrangement
 
@@ -120,3 +120,10 @@ python3 tools/ps-glyph-unity-pair.py --pc-report /tmp/pc-ui-objects.json --switc
 The `/switch/romfs/Data/resources.assets` path is **an illustrative placeholder**, NOT a verified Overcooked! 2 Switch file. Find the real file in an authorized extracted game first. The inventory records actual Unity object names, path IDs, Texture2D dimensions, and, when its Unity version exposes them, serialized Sprite rects. Matching object names or rect dimensions do **not** prove equal RGBA, normalised texture UVs, title/version or in-game semantic action.
 
 The pair tool records PC and Switch Sprite geometry side by side and lists potential PlayStation-named source textures absent from the target inventory, as a **missing-source hint only**. Both tools are read-only: no .assets rewriting, no game binaries committed, and no source archive bytes redistributed. Synthetic tests `check-ps-glyph-unity-inventory.py` and `check-ps-glyph-unity-pair.py` were added but **not executed**.
+
+### Two further Switch 1 titles discovered through PC modding
+
+- **Sonic Mania** (Nintendo Switch 1 confirmed by Nintendo): [PC PlayStation glyph mod](https://gamebanana.com/mods/31279) author states unused PlayStation icons **already in original PC game data**. Investigate the original Switch Retro Engine resources for identical icons; author's keyboard mappings and context limitations cannot automatically become Switch semantics.
+- **Stardew Valley** (Nintendo Switch 1 confirmed by Nintendo): [PC Content Patcher controller icon pack](https://www.nexusmods.com/stardewvalley/mods/25148) includes PlayStation/Xbox/Switch variants, and [Star Control - CustomisationPlus](https://www.nexusmods.com/stardewvalley/mods/40470) v1.1.7 adds a hot-reloadable PS spritemap. Those are **SMAPI/Content Patcher PC mechanisms**, not valid Switch runtime injection without separate evidence.
+
+Both are research-only seed games. Their Nintendo release proof is in [PS_GLYPH_SWITCH1_GAME_SEEDS.json](PS_GLYPH_SWITCH1_GAME_SEEDS.json). The index now holds **20** other-platform sources and **26** total distinct researched Switch 1 games; no new real atlas has been qualified.
