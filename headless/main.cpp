@@ -2106,7 +2106,10 @@ int main(int argc, char** argv) {
                             ". Try another graphics backend in Settings, then reopen the game.");
                     }
                 }
-                if (!completion->guest_fault.empty()) {
+                // A voluntary PS / touchpad+L1 return may race a guest-fault
+                // report during shutdown. The user's return-to-library wins:
+                // never re-autoboot that game after an explicit quit.
+                if (!completion->guest_fault.empty() && !return_to_menu) {
 #ifdef PS5_NATIVE
                     // A game can run its save-load completion before its own callback exists
                     // (a boot race between two guest threads); a fresh boot normally passes. Retry early faults, report others.

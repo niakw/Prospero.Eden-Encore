@@ -28,6 +28,8 @@ assert 'constexpr ButtonMask menu_chord = kButtonTouchPad | kButtonL1;' in pad
 assert 'return_to_menu = true;' in pad
 assert 'if (pad->TakeReturnToMenu()) {' in src
 assert 'completion->return_to_menu = true;' in src
+assert 'if (!completion->guest_fault.empty() && !return_to_menu) {' in src
+assert 'if (return_to_menu) continue;' in src
 assert 'if (token == "replay=on") return true;' in header
 assert 'if (token == "replay=off") return false;' in header
 
