@@ -132,12 +132,24 @@ rectangle. It is *not* inferred from Nintendo A/B labels. For example:
 | **Physical-position** Switch-to-DualSense | Circle (right) | Cross (bottom) | Triangle (top) | Square (left) |
 | **Cross-confirm PlayStation menus** | Cross (confirm) | Circle (cancel) | Depends on game | Depends on game |
 
-**PlayStation Auto** in Eden can switch its face-button interpretation
-after sufficient gameplay motion. A *static RomFS image atlas* cannot
-adapt to that menu→gameplay state automatically. One static symbol map
-must not be asserted valid across both scenes without title-specific
-verification; separate menu/gameplay atlases or a safe context-aware
-replacement mechanism may be needed.
+**Current Eden PS5 controller policy is static for each game session**:
+the default PlayStation profile maps the Switch guest **A to Cross (bottom)**,
+**B to Circle (right)**, **X to Square (left)** and **Y to Triangle (top)**.
+The separate Switch-position profile maps guest A to Circle, B to Cross,
+X to Triangle and Y to Square. No runtime PlayStation Auto layout switching
+exists; a visual glyph pack must match the *selected session input mapping*.
+Drawing a Nintendo A prompt on the right when the corresponding action is
+physically on Cross is misleading even when guest controls technically work.
+
+**BOTW Switch-specific lead:** [DS4 UI Mod v2 Western Layout](https://gamebanana.com/mods/659253)
+reports both in-world interaction-prompt corrections and menu/tutorial art,
+including Cross↔Circle and Square↔Triangle graphic swaps. The author's
+Western layout is a useful reference for the PS5 Cross-confirm profile,
+not proof of compatibility with the current Eden build. License CC BY-NC-ND:
+do not import or redistribute those mod bytes without adequate permission.
+The original matching Switch game assets, update version and measured
+changed glyph regions remain unverified. Record the source as a lead;
+do not add a fake active rule to the built-in catalogue.
 
 ### 3. Build and verify (offline)
 
