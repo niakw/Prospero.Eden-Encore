@@ -15,6 +15,7 @@ cmake = read("headless/CMakeLists.txt")
 cpu = read("headless/performance.cpp")
 graphics = read("headless/graphics.cpp")
 graphics_h = read("headless/graphics.h")
+performance_h = read("headless/performance.h")
 guide = read("docs/FC27_EXPERIMENTS.md")
 
 assert "ChooseJitMemoryPlan(" in header
@@ -36,6 +37,22 @@ assert 'get("vulkan_pacing") == "trace"' in main
 assert "EnableExperimentalLogicalPlacement();" in main
 assert 'jit == "balanced"' not in main and 'jit == "expanded"' not in main
 assert "ChooseJitMemoryPlan(" in main and "ApplyJitMemoryPlan(" in main
+# core_initialized precedes title JIT construction; the first useful
+# owned-code sample is game_loaded / cpu_manager_ready, never infer 0 RAM
+# from a startup-only snapshot. Keep expensive kernel memory enumeration
+# away from graphics/present intervals.
+assert "void ReportJitCodeState(const char* phase);" in performance_h
+assert "void ReportJitCodeState(const char* phase)" in cpu
+assert "EDEN_JIT_MEMORY phase=%s sparse_reserved=%zu" in cpu
+jit_stage = cpu.split("void ReportJitCodeState(const char* phase)", 1)[1].split(
+    "void ReportDirectMemoryState(", 1)[0]
+assert "::Common::SparseJitUsage(&reserved, &committed);" in jit_stage
+assert "::Common::DenseJitDirectBytes()" in jit_stage
+assert "sceKernelDirectMemoryQuery(" not in jit_stage
+assert 'std::string_view{name} == "game_loaded"' in main
+assert 'std::string_view{name} == "nro_loaded"' in main
+assert 'std::string_view{name} == "cpu_manager_ready"' in main
+assert "Eden::Performance::ReportJitCodeState(name);" in main
 
 assert "A64CacheBytes(m_core_index" in cmake
 assert "A32CacheBytes(m_core_index" in cmake
