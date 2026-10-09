@@ -40,6 +40,7 @@ namespace Common {
 void SparseUsage(std::size_t* reserved, std::size_t* committed) noexcept;
 #ifdef PS5_NATIVE
 void SparseJitUsage(std::size_t* reserved, std::size_t* committed) noexcept;
+void SparseJitUsageFast(std::size_t* reserved, std::size_t* committed) noexcept;
 std::size_t DenseJitDirectBytes() noexcept;
 #endif
 } // namespace Common
@@ -795,6 +796,12 @@ void ReportGpuThread(unsigned frame) {
     std::printf("EDEN_MEMORY_LIVE frame=%u largest_last_confirmed=%llu short=%u\n",
                 frame, largest_free_block.load(std::memory_order_relaxed),
                 unsigned(graphics_memory_short.load(std::memory_order_relaxed)));
+    // Preserve the existing five-second parser's sparse JIT time series
+    // without reintroducing a contended mutex or 8192 kernel queries.
+    std::size_t jit_reserved_live = 0, jit_committed_live = 0;
+    ::Common::SparseJitUsageFast(&jit_reserved_live, &jit_committed_live);
+    std::printf("EDEN_JIT_SPARSE_MEMORY phase=dev-profile reserved=%zu committed=%zu\n",
+                jit_reserved_live, jit_committed_live);
 #endif
     const auto load = [](const Totals& totals, bool calls) {
         return (calls ? totals.calls : totals.nanoseconds).load(std::memory_order_relaxed);

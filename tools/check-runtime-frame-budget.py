@@ -112,6 +112,9 @@ assert 'ReportDirectMemoryState("dev-profile")' not in gpu_periodic
 assert "EDEN_MEMORY_LIVE frame=%u largest_last_confirmed=" in gpu_periodic
 assert "largest_free_block.load(std::memory_order_relaxed)" in gpu_periodic
 assert "sceKernelDirectMemoryQuery" not in gpu_periodic
+assert "::Common::SparseJitUsageFast(&jit_reserved_live, &jit_committed_live);" in gpu_periodic
+assert "EDEN_JIT_SPARSE_MEMORY phase=dev-profile reserved=%zu committed=%zu" in gpu_periodic
+assert "SparseJitUsage(&" not in gpu_periodic
 assert 'ReportDirectMemoryState(name);' in read("headless/main.cpp")
 assert "regions < 8192" in gpu_performance
 
