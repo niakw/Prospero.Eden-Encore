@@ -53,6 +53,18 @@ int main() {
     static_assert(kSwitchMapping[game_b] == pad_cross);
     static_assert(kSwitchMapping[game_x] == pad_triangle);
     static_assert(kSwitchMapping[game_y] == pad_square);
+    // In-game visual packs carry guest-action art, not hardware pin positions.
+    // Only a fixed Cross-confirm session admits PS action glyphs.
+    const auto ps_session = ResolveSessionButtonMapping(0, kPlayStationMapping, -1, false, kPlayStationMapping);
+    const auto switch_session = ResolveSessionButtonMapping(1, kSwitchMapping, -1, false, kSwitchMapping);
+    const auto switch_title = ResolveSessionButtonMapping(0, kPlayStationMapping, 1, false, kSwitchMapping);
+    auto custom_buttons = kPlayStationMapping;
+    custom_buttons = Assign(custom_buttons, game_a, pad_circle);
+    const auto custom_session = ResolveSessionButtonMapping(0, kPlayStationMapping, 0, true, custom_buttons);
+    assert(CompatibleWithPlayStationActionGlyphs(ps_session));
+    assert(!CompatibleWithPlayStationActionGlyphs(switch_session));
+    assert(!CompatibleWithPlayStationActionGlyphs(switch_title));
+    assert(!CompatibleWithPlayStationActionGlyphs(custom_session));
     assert(BaseMappingForLayout(0) == kPlayStationMapping);
     assert(BaseMappingForLayout(1) == kSwitchMapping);
     assert(!MappingIsCustom(kPlayStationMapping, 0));
