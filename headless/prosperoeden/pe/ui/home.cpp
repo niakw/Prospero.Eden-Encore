@@ -250,6 +250,11 @@ void Launcher::press_home(Key key)
             // refresh_home_hero() immediately follows this save. Keep the
             // cached per-title record coherent to avoid a second disk read.
             home_settings_cache_[title_id] = {home_game_settings_, home_game_docked_};
+            // Same title may also be in the Library. Keep its worker-owned
+            // display snapshot consistent with the explicit Home edit.
+            for (Game& installed : games_)
+                if (installed.title_id == title_id)
+                    installed.docked = home_game_docked_;
         }
 
         if (saved)

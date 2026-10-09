@@ -265,6 +265,7 @@ class Launcher
     std::atomic<bool> media_cancel_{false}; // stop launching new Nlib requests on game start
     std::atomic<bool> diagnostics_cancel_{false}; // stop disk inventory between entries on game start
     std::future<std::vector<Game>> scan_; // the list being read
+    bool docked_refresh_after_scan_ = false; // global settings saved during an in-flight scan
     std::future<std::vector<std::string>> presence_scan_; // nonblocking filesystem presence results
     std::vector<std::string> previous_missing_; // sorted previous poll; two-scan absence confirmation
     std::vector<std::string> home_missing_refresh_; // refresh once per confirmed missing-Home set

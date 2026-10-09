@@ -185,6 +185,13 @@ bool Launcher::save_preferences(bool quiet)
         // Global defaults can change whether an uncustomized title is
         // docked. Don't keep a stale per-title Home profile across saves.
         home_settings_cache_.clear();
+        // A full-library scan is already a background job. Reuse it to
+        // recalculate effective docked modes after global changes without
+        // introducing per-selection JSON reads or stalling the Save key.
+        if (scan_.valid())
+            docked_refresh_after_scan_ = true;
+        else
+            start_scan();
         if (screen_ == Screen::home)
             refresh_home_hero();
     }
