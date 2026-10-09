@@ -40,7 +40,12 @@ jobs:
           test -s build/dev/PPSA99008/eboot.bin
           test -s build/dev/PPSA99008/sce_sys/param.json
           python3 -B tools/ci/check-staged-app.py build/dev/PPSA99008
-          python3 -B tools/ci/check-all-on-test-binary.py build/dev/PPSA99008 0100C49025D3E000
+          # The source run already passed check-all-on-test-binary.py using
+          # ephemeral build/headless-native/{CMakeCache.txt,frontend.json}.
+          # Those receipts are not shipped; cryptographically bind this
+          # packaging job to the exact previously verified app instead.
+          echo 'a77628bc4c09e2258d46cc6fc411c40305a43eaa30393f68ac51b0aad3cdc562  build/dev/PPSA99008/eboot.bin' | sha256sum -c -
+          echo '7290aa603cad965061c2c60db7b02f302f2d9df7cbf414dad726a39ee66aba8b  build/dev/PPSA99008/sce_sys/param.json' | sha256sum -c -
       - name: Package installable ShadowMountPlus image
         run: |
           mkdir -p dist
