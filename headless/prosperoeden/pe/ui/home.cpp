@@ -192,6 +192,18 @@ void Launcher::press_home(Key key)
 
         bool saved = false;
         GameSettings next = home_game_settings_;
+        // Match the actual effective per-title preset displayed by the
+        // Home chips. Falling back to raw global values here made the first
+        // quick-setting arrow appear to do nothing on authored profiles.
+        const bool authored_global = prefs_.performance_profile >= 0 &&
+                                     prefs_.performance_profile < kAuthoredVideoProfiles;
+        const auto base = VideoPresetForTitle(title_id,
+            authored_global ? prefs_.performance_profile : 1);
+        const int base_renderer = authored_global ? base.renderer : prefs_.renderer;
+        const int base_output = authored_global ? base.output : prefs_.output;
+        const int base_resolution = authored_global ? base.resolution : prefs_.resolution;
+        const int base_filter = authored_global ? base.filter : prefs_.filter;
+        const int base_aa = authored_global ? base.anti_aliasing : prefs_.anti_aliasing;
         if (row == 6)
         {
             next.console_mode = home_game_docked_ ? 0 : 1;
@@ -202,18 +214,18 @@ void Launcher::press_home(Key key)
             if (row == 0)
             {
                 const int current = next.performance_profile >= 0 ?
-                    next.performance_profile : DetectVideoProfile(next, prefs_, title_id);
+                    next.performance_profile : prefs_.performance_profile;
                 ApplyVideoPreset(next, CycleVideoPreset(current, step), title_id);
             }
             else if (row == 1)
             {
-                const int current = next.renderer >= 0 ? next.renderer : prefs_.renderer;
+                const int current = next.renderer >= 0 ? next.renderer : base_renderer;
                 next.renderer = current == 0 ? 1 : 0;
                 RefreshVideoProfile(next, prefs_, title_id);
             }
             else if (row == 2)
             {
-                const int current = next.output >= 0 ? next.output : prefs_.output;
+                const int current = next.output >= 0 ? next.output : base_output;
                 next.output = (current + step + 3) % 3;
                 RefreshVideoProfile(next, prefs_, title_id);
             }
@@ -221,7 +233,7 @@ void Launcher::press_home(Key key)
             {
                 const int count = static_cast<int>(services_.resolution_labels().size());
                 if (count <= 0) return;
-                const int current = next.resolution >= 0 ? next.resolution : prefs_.resolution;
+                const int current = next.resolution >= 0 ? next.resolution : base_resolution;
                 next.resolution = (current + step + count) % count;
                 RefreshVideoProfile(next, prefs_, title_id);
             }
@@ -229,7 +241,7 @@ void Launcher::press_home(Key key)
             {
                 const int count = static_cast<int>(services_.filter_labels().size());
                 if (count <= 0) return;
-                const int current = next.filter >= 0 ? next.filter : prefs_.filter;
+                const int current = next.filter >= 0 ? next.filter : base_filter;
                 next.filter = (current + step + count) % count;
                 RefreshVideoProfile(next, prefs_, title_id);
             }
@@ -238,7 +250,7 @@ void Launcher::press_home(Key key)
                 const int count = static_cast<int>(services_.anti_aliasing_labels().size());
                 if (count <= 0) return;
                 const int current = next.anti_aliasing >= 0 ?
-                    next.anti_aliasing : prefs_.anti_aliasing;
+                    next.anti_aliasing : base_aa;
                 next.anti_aliasing = (current + step + count) % count;
                 RefreshVideoProfile(next, prefs_, title_id);
             }
