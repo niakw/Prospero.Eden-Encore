@@ -627,6 +627,7 @@ GameLanguage LanguageFor(const std::string& path, uint64_t title_id, int choice)
 constexpr const char* kLaunchErrors[] = {
     TR("Selected ROM is no longer available"),
     TR("PS5 controller initialization failed"),
+    TR("The game could not allocate PS5 memory. Close Eden Encore completely before retrying to release memory retained between games."),
     TR("Graphics backend initialization failed. Try another backend in Settings; see stderr.log and eden_log.txt for "
        "driver details."),
     TR("The game ran out of graphics memory. Lower the resolution in Settings, Video (or in the game's own settings) "

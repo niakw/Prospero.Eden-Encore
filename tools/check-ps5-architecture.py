@@ -57,6 +57,9 @@ def main() -> None:
     require('Eden::Performance::ReportDirectMemoryState(name);' in app, "Lifecycle call absent")
     require('void ReportDirectMemoryState(const char* phase);' in perf_h, "Lifecycle API declaration absent")
     require('regions < 8192' in perf, "Direct memory traversal is not bounded")
+    require('} catch (const std::bad_alloc&) {' in app and
+            'launch_error = "The game could not allocate PS5 memory. Close Eden Encore completely before retrying to release memory retained between games.";' in app,
+            "All-title JIT/VA/heap std::bad_alloc must surface memory recovery hint in the launcher")
     require('EDEN_HEAP_LIFETIME phase=%s pieces=%zu large=%zu large_blocks=%u tcache=%zu' in perf,
             "Per-title teardown heap retained backing and private-cache snapshots missing")
     require('EDEN_HEAP_PIECE bytes=%zu va=%p pa=%llx alloc_ns=%llu map_ns=%llu zero_ns=%llu' in native,
