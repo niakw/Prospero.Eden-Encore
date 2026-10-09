@@ -624,6 +624,14 @@ void ReportDirectMemoryState(const char* phase) {
     const long long free_upper = valid ? static_cast<long long>(total - taken_lower) : -1LL;
     std::size_t jit_reserved = 0, jit_committed = 0;
     ::Common::SparseJitUsage(&jit_reserved, &jit_committed);
+    // Native GPU/guest/CPU use ONE 12 GiB pool. Report the heap's physically
+    // committed backing at each teardown phase, not only during a live Vulkan
+    // 5-second window; this identifies retained memory across title launches.
+    unsigned large_blocks = 0;
+    const std::size_t heap_large = eden_heap_large_held ? eden_heap_large_held(&large_blocks) : 0;
+    std::printf("EDEN_HEAP_LIFETIME phase=%s pieces=%zu large=%zu large_blocks=%u tcache=%zu\n",
+                phase, eden_heap_committed ? eden_heap_committed() : std::size_t{0},
+                heap_large, large_blocks, eden_heap_tcache_held ? eden_heap_tcache_held() : std::size_t{0});
     std::printf("EDEN_JIT_SPARSE_MEMORY phase=%s reserved=%zu committed=%zu\n",
                 phase, jit_reserved, jit_committed);
     std::printf("EDEN_JIT_DENSE_MEMORY phase=%s physically_owned=%zu\n",

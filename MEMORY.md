@@ -1777,3 +1777,7 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — PS5 direct-memory map rollback ownership hardening [skip ci]
 
 - `Common::CommitMemoryRange` used MAP_FIXED for each heap piece. On unexpected success at a different VA it previously called `sceKernelReleaseDirectMemory` without first unmapping the newly created foreign VA, risking stale mapping/PA lifetime violation. Now return code is captured, successful but unexpected alias is munmapped before physically releasing its direct memory, and physical release failure is fatal (ownership cannot be safely continued). Existing correct fixed-map path and full zeroing preserved. Source assertion added to architecture checker, not executed; firmware behavior is still unverified. No build/test/Actions/Mac/FTP.
+
+### 2026-10-09 — Lifecycle heap physical-retention receipts [skip ci]
+
+- ReportDirectMemoryState already runs only at core_initialized, core_shutdown, core_destroyed; now also emits EDEN_HEAP_LIFETIME phase=... pieces=... large=... large_blocks=... tcache=... there, using existing weak native heap counters. This allows comparing heap's physically retained 128MiB pieces vs live / cached and separately freed >=32MiB blocks across successive games. Does not enumerate GPU memory per frame or reclaim invalid live mspaces. Added source assertion; no build/test/Actions/Mac/FTP.
