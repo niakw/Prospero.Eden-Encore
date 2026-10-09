@@ -141,8 +141,34 @@ std::atomic<bool> placement_secondary{false};
 std::atomic<unsigned> secondary_reports{};
 void CheckWorkerTopology() {
     cpuset_t original{};
-    if (__get_cpuid_max(0, nullptr) < 0xb ||
-        cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, 8, &original)) return;
+    if (cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, 8, &original)) {
+        std::printf("EDEN_WORKER_TOPOLOGY ready=0 reason=affinity_unavailable errno=%d\n", errno);
+        return;
+    }
+    // AMD family 17h+ can expose physical topology via the extended leaf
+    // even if x2APIC leaf 0xB is missing/unusable on this firmware.
+    unsigned va{}, vb{}, vc{}, vd{};
+    __cpuid(0, va, vb, vc, vd);
+    const bool amd_vendor = vb == 0x68747541u &&
+        vd == 0x69746e65u && vc == 0x444d4163u;
+    const bool has_x2apic = __get_cpuid_max(0, nullptr) >= 0xbu;
+    bool has_amd_topology = false;
+    if (amd_vendor && __get_cpuid_max(0x80000000u, nullptr) >= 0x8000001eu) {
+        __cpuid(1, va, vb, vc, vd);
+        const unsigned base_family = (va >> 8) & 15u;
+        const unsigned family = base_family == 15u ?
+            base_family + ((va >> 20) & 255u) : base_family;
+        __cpuid(0x80000001u, va, vb, vc, vd);
+        has_amd_topology = family >= 0x17u && (vc & (1u << 22)) != 0;
+    }
+    // Even when CPUID is unusable retain a valid OS affinity mask for
+    // the explicit *logical-only* trial; that trial is not physical proof.
+    topology_allowed = original;
+    topology_allowed_valid = true;
+    if (!has_x2apic && !has_amd_topology) {
+        std::printf("EDEN_WORKER_TOPOLOGY ready=0 reason=no_supported_physical_cpuid\n");
+        return;
+    }
     secondary_cpus = 0;
     worker_cpus.fill(0);
     cpu_core.fill(-1);
@@ -162,10 +188,31 @@ void CheckWorkerTopology() {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         unsigned a, b, c, d;
         __cpuid_count(0xb, 0, a, b, c, d);
-        // Architectural SMT level: x2APIC ID above the SMT shift identifies
-        // the physical core. Do not assume OS CPU numbering matches APIC IDs.
-        if (!b || ((c >> 8) & 0xff) != 1 || (a & 31) >= 16) break;
-        const unsigned core = d >> (a & 31);
+        // Accept a physical core only when the requested single-CPU mask
+        // is observed after rescheduling; setaffinity success is insufficient.
+        cpuset_t verified{};
+        if (cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, 8, &verified) ||
+            std::memcmp(&one, &verified, 8)) break;
+        unsigned core = 0;
+        bool decoded = false;
+        if (has_x2apic) {
+            __cpuid_count(0xb, 0, a, b, c, d);
+            if (b && ((c >> 8) & 0xffu) == 1u && (a & 31u) < 16u) {
+                core = d >> (a & 31u);
+                decoded = true;
+            }
+        }
+        // AMD TopologyExtensions 0x8000001E: EBX[7:0] CoreId,
+        // EBX[15:8] threads/core - 1, ECX[7:0] NUMA node ID.
+        if (!decoded && has_amd_topology) {
+            __cpuid_count(0x8000001eu, 0, a, b, c, d);
+            const unsigned threads_per_core = ((b >> 8) & 255u) + 1u;
+            if (threads_per_core >= 1u && threads_per_core <= 8u) {
+                core = ((c & 255u) << 8) | (b & 255u);
+                decoded = true;
+            }
+        }
+        if (!decoded) break;
         cpu_core[cpu] = static_cast<int>(core);
         if (count == cores.size() ||
             std::find(cores.begin(), cores.begin() + count, core) != cores.begin() + count) continue;
@@ -180,8 +227,6 @@ void CheckWorkerTopology() {
             throw std::runtime_error("Cannot restore topology-probe thread affinity");
     }
     worker_topology_ready = count == cores.size();
-    topology_allowed = original;
-    topology_allowed_valid = true;
     if (worker_topology_ready) {
         for (unsigned cpu = 0; cpu < 64; ++cpu) {
             if (!CPU_ISSET(cpu, &original) || cpu_core[cpu] < 0) continue;
@@ -191,8 +236,9 @@ void CheckWorkerTopology() {
         }
         std::printf("EDEN_WORKER_SECONDARY mask=%llx\n", secondary_cpus);
     }
-    std::printf("EDEN_WORKER_TOPOLOGY ready=%d distinct_cores=%u cpus=%u,%u,%u,%u,%u\n",
-        worker_topology_ready, count, worker_cpus[0], worker_cpus[1], worker_cpus[2], worker_cpus[3], worker_cpus[4]);
+    std::printf("EDEN_WORKER_TOPOLOGY ready=%d distinct_cores=%u cpus=%u,%u,%u,%u,%u amd_ext=%u x2apic=%u\n",
+        worker_topology_ready, count, worker_cpus[0], worker_cpus[1], worker_cpus[2],
+        worker_cpus[3], worker_cpus[4], unsigned(has_amd_topology), unsigned(has_x2apic));
 }
 // Explicit logical-CPU A/B trial when x2APIC topology is unverifiable.
 // Different OS logical CPU IDs do NOT establish distinct physical cores.
