@@ -783,53 +783,17 @@ int main(int argc, char** argv) {
         bool experimental_logical_cpu = false;
         bool experimental_frame_probe = false;
 #if defined(PS5_NATIVE) && defined(EDEN_DEV_PROFILE)
-        // PS5 unified test profile: enable available CPU placement and frame
-        // tracing for every game by default. When sparse JIT is compiled into
-        // the dev executable it is ON as well, subject to the real firmware
-        // RW/RX alias probe below. No player-facing "Experimental" toggle
-        // or experiments.json opt-in is needed. Safe Launch remains a clean
-        // fallback; explicit existing JSON "off" entries can opt out.
+        // One test profile for all titles. These are automatically enabled by
+        // the dedicated native DEV build, not by a settings-menu toggle or
+        // stale experiments.json from an earlier A/B/C/D campaign.
+        // Safe Launch is the only runtime opt-out. Sparse still requires
+        // a successful real native RW/RX alias probe below.
         if (!safe_launch) {
 #ifdef EDEN_SPARSE_JIT_DEV
             experimental_sparse_jit = true;
 #endif
             experimental_logical_cpu = true;
             experimental_frame_probe = true;
-            std::string source;
-            if (Eden::Settings::ReadFile(Eden::ConfigFile("experiments.json"), source)) {
-                using Json = Eden::Settings::Json;
-                const Json doc = Json::parse(source, nullptr, false);
-                if (doc.is_object()) {
-                    const Json* defaults = nullptr;
-                    const Json* game_options = nullptr;
-                    const auto common = doc.find("defaults");
-                    if (common != doc.end() && common->is_object())
-                        defaults = &*common;
-                    if (launch_title_id) {
-                        const Json::json_pointer at("/games/" + Eden::Settings::TitleKey(launch_title_id));
-                        if (doc.contains(at) && doc.at(at).is_object())
-                            game_options = &doc.at(at);
-                    }
-                    const auto get = [&](const char* name) -> std::string {
-                        if (game_options) {
-                            const auto value = game_options->find(name);
-                            if (value != game_options->end() && value->is_string())
-                                return value->get<std::string>();
-                        }
-                        if (defaults) {
-                            const auto value = defaults->find(name);
-                            if (value != defaults->end() && value->is_string())
-                                return value->get<std::string>();
-                        }
-                        return "";
-                    };
-#ifdef EDEN_SPARSE_JIT_DEV
-                    if (get("jit_memory") == "off") experimental_sparse_jit = false;
-#endif
-                    if (get("cpu_placement") == "off") experimental_logical_cpu = false;
-                    if (get("vulkan_pacing") == "off") experimental_frame_probe = false;
-                }
-            }
         }
 #endif
 #if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)
