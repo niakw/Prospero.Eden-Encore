@@ -118,7 +118,10 @@ def analyze(paths: list[Path]) -> dict:
     for file in paths:
         if not file.is_file() or file.is_symlink() or not 1 <= file.stat().st_size <= MAX_LOG_BYTES:
             raise ValueError(f"missing, unsafe or oversized input: {file.name}")
-        raw = file.read_bytes()
+        # A pre-open stat is not a memory limit: the log writer could
+        # append concurrently. Bound the actual read too.
+        with file.open("rb") as source:
+            raw = source.read(MAX_LOG_BYTES + 1)
         if len(raw) > MAX_LOG_BYTES:
             raise ValueError("input grew beyond size guard")
         digest = hashlib.sha256(raw).hexdigest()
