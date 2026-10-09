@@ -71,6 +71,10 @@ void Launcher::start_scan()
             // title used to happen inside apply_games() on the UI update
             // thread, potentially scanning hundreds of directories at once.
             // Populate the immutable game-list snapshot on this worker instead.
+            // One immutable global preference snapshot for the whole worker
+            // pass. The native service still reads per-game override JSON
+            // independently, but never rereads the global JSON for each ROM.
+            const Preferences docked_preferences = services_.preferences();
             unsigned mod_scan_errors = 0;
             for (Game &game : games) {
                 if (scan_cancel_.load(std::memory_order_acquire)) break;
@@ -79,7 +83,7 @@ void Launcher::start_scan()
                     // The UI used to reload both per-game and global JSON
                     // settings in refresh_selected_game() on EVERY D-pad move.
                     // Resolve the effective mode once on this worker instead.
-                    game.docked = services_.docked(game.title_id);
+                    game.docked = services_.docked_for_scan(game.title_id, docked_preferences);
                     const std::vector<Mod> mods = services_.mods(game.title_id);
                     game.mods = static_cast<int>(mods.size());
                     game.mods_enabled = mods.empty() || services_.mods_enabled(game.title_id);

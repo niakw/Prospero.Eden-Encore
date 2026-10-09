@@ -259,6 +259,12 @@ class Services
     // services may safely leave it as a no-op.
     virtual void arm_safe_launch() {}
     virtual bool docked(std::uint64_t title_id) = 0;
+    // Called only by the asynchronous catalog worker. Its preference snapshot
+    // is read ONCE for the library, not once per highlighted/installed game.
+    // Host previews that do not override this retain their existing behavior.
+    virtual bool docked_for_scan(std::uint64_t title_id, const Preferences&) {
+        return docked(title_id);
+    }
     virtual bool set_docked(std::uint64_t title_id, bool docked) = 0;
     virtual GameSettings game_settings(std::uint64_t title_id) = 0;
     virtual bool set_game_settings(std::uint64_t title_id, const GameSettings &settings) = 0;
