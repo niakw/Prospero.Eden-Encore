@@ -40,6 +40,14 @@ Dans le **prochain** artefact PS5 de test (après compilation explicitement auto
 
 L'outil en lecture seule `tools/analyze-ps5-frame-windows.py` sait afficher ces fenêtres, la pression mémoire directe et le JIT sparse, y compris avec les anciens logs ne possédant pas les nouveaux champs. Les nouveaux préflights `tools/check-hle-counter-contention.py` et `tools/check-ps5-frame-window-analysis.py` sont configurés dans GitHub Actions mais ne constituent pas encore des validations exécutées. Pour une mesure honnête, comparer les **mêmes scènes, paramètres vidéo et durées**, séparément entre premier démarrage et relancement avec caches.
 
+## Vérification du profiler CPU/GPU sur une session longue
+
+- `EDEN_DEV_SNAPSHOT_COST mono_ns=… elapsed_ns=…` mesure le coût du relevé PC en développement. Il est analysé **séparément** des vrais `EDEN_VULKAN_FRAME` ; ce coût peut lui-même retarder des images, sans prouver qu'il explique à lui seul un hitch donné.
+- Le mode `pc_fast=on` à ~500 Hz attend 45 secondes avant de commencer ; il est maintenant lié au cœur invité par un `std::jthread` à arrêt borné. Pour valider réellement le changement, quitter le jeu, revenir à la bibliothèque puis lancer un autre jeu dans **le même processus**, en recherchant l'absence de signaux adressés à un vieux thread.
+- Les deux tampons de PC normaux enregistrent désormais en continu jusqu'à la fin du jeu, avec remplacement circulaire des anciennes entrées. `EDEN_PERF_PC_SAMPLES_LOST source=gpu|guest count=…` annonce un éventuel retard du consommateur ; il ne faut pas interpréter ces fenêtres comme exhaustives.
+- Le mode spécial `EDEN_DEV_WAIT_CALLERS`, qui capture également huit pointeurs de pile **non atomiques**, reste plafonné à son ancien volume : il n'hérite pas du mécanisme circulaire GPU tant que la protection des chaînes d'appels n'est pas qualifiée.
+- Les tests hôtes à lancer dans les preflights incluent `tools/check-ps5-pc-ring-host.py`, `tools/check-hle-counter-contention.py`, `tools/check-heap-growth-rollback-host.py`, `tools/check-ps5-direct-limit-host.py` et `tools/check-library-docked-snapshot-host.py`. Aucun de ces tests ne remplace une compilation SDK 13.60 ni un retour PS5 après plusieurs jeux.
+
 ## Ce qu'un run vert ne prouve pas
 
 Il reste à installer l'artefact sur PS5 FW13.60, comparer FC27 premier/deuxième lancement sans purger les caches, contrôler l'absence de `std::bad_alloc`, les mesures de frame time et Home/Library, la bonne activation sparse (probe et commit physique), les rendus PRMT/Fermi2D et les glyphes graphiques effectivement affichés. Les issues #7 et #8 ainsi que les 26 preuves de clôture matérielle restent ouverts jusqu'à ces tests.
