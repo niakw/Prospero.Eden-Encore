@@ -130,18 +130,26 @@ def image_diff(original_bytes: bytes, replacement_bytes: bytes) -> dict:
         if width <= 0 or height <= 0 or width * height > MAX_IMAGE_PIXELS:
             raise ValueError("image pixel count outside bounds")
         old, new = im_original.convert("RGBA"), im_patch.convert("RGBA")
-        channels = ImageChops.difference(old, new).split()
-        diff = channels[0]
-        for channel in channels[1:]:
-            diff = ImageChops.lighter(diff, channel)
-        mask = diff.point(lambda value: 1 if value else 0)
+        old_r, old_g, old_b, old_a = old.split()
+        new_r, new_g, new_b, new_a = new.split()
+        # Transparent PNG/TGA padding often differs in RGB while staying
+        # alpha=0: those differences must NOT masquerade as visible glyphs.
+        # Compare premultiplied color channels plus exact alpha difference.
+        visible_diff = ImageChops.difference(old_a, new_a)
+        for before_color, after_color in ((old_r, new_r),
+                                          (old_g, new_g), (old_b, new_b)):
+            before_visible = ImageChops.multiply(before_color, old_a)
+            after_visible = ImageChops.multiply(after_color, new_a)
+            visible_diff = ImageChops.lighter(
+                visible_diff, ImageChops.difference(before_visible, after_visible))
+        mask = visible_diff.point(lambda value: 1 if value else 0)
         rects, changed = connected_rects(mask)
         return {
             "status": "pixels_differ" if changed else "pixel_identical",
             "dimensions": [width, height],
             "changed_pixels": changed,
             "changed_rects_xywh": rects,
-            "positions_meaning": "exact changed-pixel components only; not sprite slots, labels or proof of safe patch",
+            "positions_meaning": "visible rendered-pixel change components (alpha-aware), not sprite slots, labels or proof of safe patch",
         }
 
 
