@@ -5,7 +5,7 @@ Last research update: 2026-10-09. The Switch game stays the authority for **Titl
 ## Source registers
 
 * Main Switch-only corpus: [PS_GLYPH_SOURCE_INDEX.json](PS_GLYPH_SOURCE_INDEX.json) — 26 community references / 18 games, zero verified atlas positions.
-* Additional cross-platform corpus: [PS_GLYPH_CROSS_PLATFORM_INDEX.json](PS_GLYPH_CROSS_PLATFORM_INDEX.json) — 20 other-platform sources linked to 14 Switch 1 games (including eight Nintendo-confirmed seeds), zero verified Switch rectangles.
+* Additional cross-platform corpus: [PS_GLYPH_CROSS_PLATFORM_INDEX.json](PS_GLYPH_CROSS_PLATFORM_INDEX.json) — 22 other-platform sources linked to 16 Switch 1 games (including ten Nintendo-confirmed seeds), zero verified Switch rectangles.
 * Integrity gates (source-only, **not executed**): `tools/check-ps-glyph-community-index.py`, `tools/check-ps-glyph-cross-platform-index.py`.
 
 ## Highest-value cross-platform relationships
@@ -126,7 +126,7 @@ The pair tool records PC and Switch Sprite geometry side by side and lists poten
 - **Sonic Mania** (Nintendo Switch 1 confirmed by Nintendo): [PC PlayStation glyph mod](https://gamebanana.com/mods/31279) author states unused PlayStation icons **already in original PC game data**. Investigate the original Switch Retro Engine resources for identical icons; author's keyboard mappings and context limitations cannot automatically become Switch semantics.
 - **Stardew Valley** (Nintendo Switch 1 confirmed by Nintendo): [PC Content Patcher controller icon pack](https://www.nexusmods.com/stardewvalley/mods/25148) includes PlayStation/Xbox/Switch variants, and [Star Control - CustomisationPlus](https://www.nexusmods.com/stardewvalley/mods/40470) v1.1.7 adds a hot-reloadable PS spritemap. Those are **SMAPI/Content Patcher PC mechanisms**, not valid Switch runtime injection without separate evidence.
 
-Both are research-only seed games. Their Nintendo release proof is in [PS_GLYPH_SWITCH1_GAME_SEEDS.json](PS_GLYPH_SWITCH1_GAME_SEEDS.json). The index now holds **20** other-platform sources and **26** total distinct researched Switch 1 games; no new real atlas has been qualified.
+Both are research-only seed games. Their Nintendo release proof is in [PS_GLYPH_SWITCH1_GAME_SEEDS.json](PS_GLYPH_SWITCH1_GAME_SEEDS.json). The index now holds **22** other-platform sources and **28** total distinct researched Switch 1 games; no new real atlas has been qualified.
 
 ## From 26 researched games toward the full Switch 1 Title ID catalogue
 
@@ -159,3 +159,36 @@ python3 tools/ps-glyph-mod-inventory.py \
 ```
 
 The CLI rejects mismatched ZIP bytes, dangerous member paths, duplicate/case-colliding entries and oversized files; it does not extract Unity resources or reproduce game artwork. **Important:** this session was able to read the authoritative GitHub release asset metadata but could NOT download the ZIP's actual bytes in the available environment. Therefore the archive content/Texture2D positions have not been inspected and remain unverified. Do not mark BALL x PIT as verified for Eden Encore.
+
+## 2026-10-09 — Read actual controller UI layout code in Switch-1 games
+
+Two more *confirmed Nintendo Switch 1 game titles*, **Balatro** and **Don't Starve Together**, have been added to the official title seed register, expanding the combined index to **28 Switch 1 research targets**, with **22 cross-platform technical sources covering 16 games** (and still zero qualifying Switch in-game mod packs).
+
+### Don't Starve Together: concrete controller asset names AND UI label coordinates
+
+A public Lua game script dump provides a complete platform-dependent art lookup, independently of mod packaging:
+
+* [frontend.lua](https://github.com/taichunmin/dont-starve-together-game-scripts/blob/main/prefabs/frontend.lua): PS4 `images/ps4_controllers.xml` and `.tex`, Switch `images/nx_controllers.xml` and `.tex`, Xbox `images/xb1_controllers.xml` and `.tex`.
+* [optionsscreen.lua](https://github.com/taichunmin/dont-starve-together-game-scripts/blob/main/screens/redux/optionsscreen.lua): `CONTROLLER_IMAGES[DEVICE_DUALSHOCK4] = controls_image_ds4.tex`, `[DEVICE_SWITCH] = controls_image_nx.tex`; menu-help labels refer to `STRINGS.UI.CONTROLSSCREEN` keys.
+* [Extracted, indexed menu label positions](PS_GLYPH_DST_CONTROL_UI_POSITIONS.json) from that **public Lua script**: **17 PlayStation controller labels + 17 Switch controller labels** with actual `(x,y)` anchor coordinates, alignment, semantic string keys and source blob SHA. Example from code: DualShock4 `TOUCHPAD` label anchor `(20,275)`; `LEFT_SIDE=-415`, `RIGHT_SIDE=415`, `LABEL_WIDTH=320`, `LABEL_HEIGHT=50`.
+
+**Critical distinction:** the Lua `(x,y)` are **menu text-label layout coordinates, NOT texture sprite pixel rectangles**. They may not apply to a particular Switch executable/update. Do not feed these screen positions into the ROMFS glyph atlas generator.
+
+To inspect a legally extracted matching Klei XML atlas without running game code or decoding proprietary `.tex`:
+
+```bash
+python3 tools/ps-glyph-klei-atlas.py \
+  --atlas-xml /path/legitimate/romfs/images/nx_controllers.xml \
+  --texture-width 512 --texture-height 512 \
+  --out /tmp/dst-switch-atlas-uv.json
+```
+
+The `512×512` dimensions above are a **synthetic example** and must first be measured from the actual game texture. The parser stores named **normalized UVs** from real XML and computes two distinct texel coordinate candidates (bottom-origin and top-origin), or NULL if UVs are not texel-aligned. It does **not** decide image orientation, verify `.tex` hashes or claim semantic button glyphs. Parser and regression fixture `check-ps-glyph-klei-atlas.py` have been added but **not executed**.
+
+### Balatro: runtime glyph style rather than modified sprite art
+
+[Mod Lua source](https://github.com/NopoTheGamer/BalatroControllerGlyphs/blob/main/ControllerGlyphs.lua) overrides `G.CONTROLLER.get_console_from_gamepad` so the PC game chooses `Playstation` rather than `Xbox` or `Nintendo`; the source also mentions `G.F_PS4_PLAYSTATION_GLYPHS`. This confirms one **PC runtime style-selector technique**, not the availability of the same hook or artwork in the Switch build.
+
+[Provenance-locked selector evidence](PS_GLYPH_BALATRO_RUNTIME_SELECTOR.json) stores exact hook name, public source blob SHA, expected behavior and negative qualification flags. No Lua changes or binary patches were made to the user's original game.
+
+Both games show why universal replacements must support **texture atlases, screen-layout components, per-platform asset selection, and context-sensitive runtime logic**, with separate evidence for every game version and original file.
