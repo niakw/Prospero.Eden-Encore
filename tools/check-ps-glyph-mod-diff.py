@@ -57,6 +57,10 @@ assert changed["changed_rects_xywh"] == [[4, 4, 8, 8], [28, 5, 9, 9]], changed
 alpha = source.copy()
 alpha.putpixel((1, 1), (0, 0, 0, 255))
 assert module.image_diff(png(source), png(alpha))["changed_rects_xywh"] == [[1, 1, 1, 1]]
+# Invisible RGB padding changes must not create false glyph rectangles.
+hidden = source.copy()
+hidden.putpixel((0, 0), (127, 99, 41, 0))
+assert module.image_diff(png(source), png(hidden))["changed_rects_xywh"] == []
 assert module.image_diff(png(source), png(Image.new("RGBA", (64, 32))))["status"] == "dimensions_changed"
 
 with tempfile.TemporaryDirectory(prefix="eden-glyph-mod-diff-") as tmp:
