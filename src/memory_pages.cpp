@@ -15,6 +15,7 @@
 #include <utility>
 #include <vector>
 #include <sys/mman.h>
+#include <time.h>
 #include <unistd.h>
 
 #ifdef PS5_NATIVE
@@ -807,21 +808,35 @@ bool CommitMemoryRange(void* address, std::size_t size) noexcept {
         reinterpret_cast<std::uintptr_t>(address) % LargePage != 0)
         return false;
 #ifdef PS5_NATIVE
+    // New backing pieces are allocated, mapped and cleared synchronously.
+    // Measure ONLY heap growth (not the per-malloc or per-frame hot path).
+    timespec started{}, allocated{}, mapped{}, zeroed{};
+    (void)clock_gettime(CLOCK_MONOTONIC, &started);
     std::int64_t physical = -1;
     if (sceKernelAllocateDirectMemory(0, sceKernelGetDirectMemorySize(), size, LargePage, 12, &physical) != 0)
         return false;
+    (void)clock_gettime(CLOCK_MONOTONIC, &allocated);
     void* at = address;
     if (sceKernelMapDirectMemory(&at, size, PROT_READ | PROT_WRITE, MAP_FIXED, physical, LargePage) != 0 ||
         at != address) {
         (void)sceKernelReleaseDirectMemory(physical, size);
         return false;
     }
-    // The heap grows through here: no stdio (it may allocate).
-    char line[96];
-    const int length = std::snprintf(line, sizeof(line), "EDEN_HEAP_PIECE bytes=%zu va=%p pa=%llx\n", size, address,
-                                     static_cast<unsigned long long>(physical));
-    if (length > 0) Note(line);
+    (void)clock_gettime(CLOCK_MONOTONIC, &mapped);
     std::memset(address, 0, size);
+    (void)clock_gettime(CLOCK_MONOTONIC, &zeroed);
+    const auto delta_ns = [](const timespec& a, const timespec& b) noexcept -> unsigned long long {
+        const auto elapsed = (static_cast<long long>(b.tv_sec) - static_cast<long long>(a.tv_sec)) *
+                                 1000000000LL + (b.tv_nsec - a.tv_nsec);
+        return elapsed > 0 ? static_cast<unsigned long long>(elapsed) : 0ULL;
+    };
+    // The heap grows through here: no stdio that may recurse into malloc.
+    char line[192];
+    const int length = std::snprintf(line, sizeof(line),
+        "EDEN_HEAP_PIECE bytes=%zu va=%p pa=%llx alloc_ns=%llu map_ns=%llu zero_ns=%llu\n",
+        size, address, static_cast<unsigned long long>(physical),
+        delta_ns(started, allocated), delta_ns(allocated, mapped), delta_ns(mapped, zeroed));
+    if (length > 0) Note(line);
     return true;
 #else
     return mprotect(address, size, PROT_READ | PROT_WRITE) == 0;
