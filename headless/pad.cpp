@@ -104,14 +104,22 @@ Common::Input::DriverResult PadEngine::SetVibration(const PadIdentifier& identif
     auto& sides = rumble[player];
     (identifier.pad == 2 ? sides.right : sides.left) = vibration;
     sides.changed = true;
+    rumble_pending[player].store(true, std::memory_order_release);
     return Common::Input::DriverResult::Success;
 }
 bool PadEngine::TakeRumble(std::size_t player, Rumble& out) {
     if (player >= kPlayers) return false;
+    // A guest rumble request may originate on a CPU/HID worker. This acquire
+    // pairs with its release store, avoiding the mutex on silent polls.
+    if (!rumble_pending[player].load(std::memory_order_acquire))
+        return false;
     std::scoped_lock lock(rumble_mutex);
     auto& sides = rumble[player];
     if (!sides.changed) return false;
     sides.changed = false;
+    // Protected by the same mutex as SetVibration; a concurrent new command
+    // cannot be lost between examining 'changed' and clearing the hint.
+    rumble_pending[player].store(false, std::memory_order_release);
     // The console's HD rumble per side -> one DualSense: the low band drives the large motor and the
     // high band the small one, with the amplitude curves of Eden's SDL driver.
     const auto level = [](float amplitude, Common::Input::VibrationAmplificationType type) {
