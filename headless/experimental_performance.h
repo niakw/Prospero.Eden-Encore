@@ -127,6 +127,37 @@ inline constexpr JitMemoryPlan ChooseJitMemoryPlan(
     return plan;
 }
 
+// A sparse JIT reservation is virtual address space only. An earlier title
+// may fragment the largest free DIRECT-memory extent (the PS5 measured 11,824
+// MiB before the first title and 4,128 MiB on the next one). Feeding that
+// reduced single extent into the DENSE admission policy shrank the next game's
+// virtual code caches from 2,176 MiB to the 656 MiB baseline, even though
+// sparse JIT only commits the pages actually written. This is not a signal
+// that the physical RAM is exhausted or that 2+ GiB must be committed.
+//
+// For sparse mode ONLY, keep the highest verified process-lifetime extent to
+// size stable *virtual* JIT arenas across successive titles. Demand commits
+// remain separately handled by CommitSparseJitCode and can fail safely.
+// If the current probe is unknown or the current extent is below 3 GiB,
+// revert to baseline rather than pretending prior headroom is still physical.
+// The DENSE plan NEVER uses an old peak: dense backing is immediate.
+inline constexpr JitMemoryPlan ChooseSparseVirtualJitPlan(
+    bool safe_launch, bool memory_known,
+    std::size_t current_largest_free, std::size_t verified_lifetime_peak) noexcept {
+    if (safe_launch || !memory_known ||
+        current_largest_free <= kHostReserve || verified_lifetime_peak < current_largest_free)
+        return ChooseJitMemoryPlan(safe_launch, memory_known, current_largest_free);
+    return ChooseJitMemoryPlan(false, true, verified_lifetime_peak);
+}
+static_assert(ChooseSparseVirtualJitPlan(false, true, 4128ull*kMiB, 11824ull*kMiB).a64[0] >
+              ChooseJitMemoryPlan(false, true, 4128ull*kMiB).a64[0]);
+static_assert(ChooseSparseVirtualJitPlan(true, true, 4128ull*kMiB, 11824ull*kMiB).a64 ==
+              kA64Baseline);
+static_assert(ChooseSparseVirtualJitPlan(false, false, 4128ull*kMiB, 11824ull*kMiB).a64 ==
+              kA64Baseline);
+static_assert(ChooseSparseVirtualJitPlan(false, true, 2500ull*kMiB, 11824ull*kMiB).a64 ==
+              kA64Baseline);
+
 // These stores happen after the previous title has shut down and before new
 // Dynarmic JIT instances are constructed. Cache sizes remain immutable while
 // guest worker threads execute (no per-frame atomic reads).
