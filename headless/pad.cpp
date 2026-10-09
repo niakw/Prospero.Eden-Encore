@@ -329,10 +329,11 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
         constexpr ButtonMask layout_chord = kButtonTouchPad | kButtonSquare;
         const auto pressed = sample.buttons;
         const bool layout_down = player == 0 && adaptive_playstation && is_usable(raw) &&
-            (pressed & layout_chord) == layout_chord;
+            (pressed & layout_chord) == layout_chord &&
+            (pressed & (kButtonL1 | kButtonR1 | kButtonCross | kButtonCircle | kButtonTriangle)) == 0;
         if (layout_down && (last_buttons & layout_chord) != layout_chord) {
             const auto selected = mapping_context.manual_toggle();
-            std::fprintf(stderr, "EDEN_PAD_CONTEXT mode=%s reason=manual_chord sticky=1\\n",
+            std::fprintf(stderr, "EDEN_PAD_CONTEXT mode=%s reason=manual_chord sticky=1\n",
                 selected == Controls::PlayStationAutoContext::Transition::to_menu ?
                     "menu" : "gameplay");
         }
@@ -363,7 +364,7 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
                 kAutoControls.menu_evidence_enter,
                 kAutoControls.dpad_weight, kAutoControls.options_touchpad_weight);
             if (transition != Controls::PlayStationAutoContext::Transition::none)
-                std::fprintf(stderr, "EDEN_PAD_CONTEXT mode=%s reason=%s sticky=0\\n",
+                std::fprintf(stderr, "EDEN_PAD_CONTEXT mode=%s reason=%s sticky=0\n",
                     mapping_context.gameplay() ? "gameplay" : "menu",
                     mapping_context.gameplay() ? "sustained_activity" : "quiet_navigation");
         }
