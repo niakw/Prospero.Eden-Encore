@@ -56,8 +56,14 @@ void Launcher::press_mapping(Key key)
 {
     if (key != Key::square)
         clear_confirmation();
+    // Mirror main.cpp's prelaunch resolution exactly: a per-game layout
+    // override without custom button edits still owns the game's base map.
+    // Previously this dialog edited prefs_.mapping while main.cpp launched
+    // the game with BaseMappingForLayout(game_settings_.controller_layout).
     const ButtonMapping effective =
-        mapping_for_game_ && game_settings_.own_mapping ? game_settings_.mapping : prefs_.mapping;
+        mapping_for_game_ && game_settings_.own_mapping ? game_settings_.mapping :
+        mapping_for_game_ && game_settings_.controller_layout >= 0 ?
+            base_mapping_for_layout(game_settings_.controller_layout) : prefs_.mapping;
     ButtonMapping mapping = effective;
     const int row = std::clamp(mapping_rows_.selected, 0, kGameButtons - 1);
 
@@ -144,8 +150,10 @@ void Launcher::draw_mapping(Canvas& c, float open)
     const int effective_layout =
         mapping_for_game_ && game_settings_.controller_layout >= 0 ?
             game_settings_.controller_layout : prefs_.controller_layout;
-    const ButtonMapping& mapping =
-        mapping_for_game_ && game_settings_.own_mapping ? game_settings_.mapping : prefs_.mapping;
+    const ButtonMapping mapping =
+        mapping_for_game_ && game_settings_.own_mapping ? game_settings_.mapping :
+        mapping_for_game_ && game_settings_.controller_layout >= 0 ?
+            base_mapping_for_layout(game_settings_.controller_layout) : prefs_.mapping;
     const std::string active_profile = profile_name(effective_layout, mapping);
     const std::string subtitle = game ?
         game->name + " · " +
