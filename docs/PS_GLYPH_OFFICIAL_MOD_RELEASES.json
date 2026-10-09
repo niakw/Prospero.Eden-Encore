@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "updated": "2026-10-09",
+  "purpose": "Official public GitHub release asset metadata for local offline forensic inspection; NOT included copyrighted game assets or proof of bytes examined",
+  "assets": [
+    {
+      "id": "asset-ball-x-pit-2",
+      "switch_game": "BALL x PIT",
+      "source_platform": "Switch",
+      "source_repository": "mircowuffwuff/ball-x-pit-nsw-ver-playstation-button-prompts",
+      "release_tag": "2",
+      "release_url": "https://github.com/mircowuffwuff/ball-x-pit-nsw-ver-playstation-button-prompts/releases/tag/2",
+      "asset_filename": "ball-x-pit-nsw-ver-playstation-prompts-2-1.251.zip",
+      "browser_download_url": "https://github.com/mircowuffwuff/ball-x-pit-nsw-ver-playstation-button-prompts/releases/download/2/ball-x-pit-nsw-ver-playstation-prompts-2-1.251.zip",
+      "expected_zip_bytes": 3131472,
+      "expected_zip_sha256": "44a99655acdccbef885fa25568dcc6c462264ae007653baa24095c2d83f0b9f5",
+      "title_id": "010086A022444000",
+      "game_version_reported": "1.251",
+      "known_romfs_path_from_readme": "Data/resources.assets",
+      "known_unity_texture_from_readme": "controller_btns_outlined",
+      "asset_downloaded_or_inspected": false,
+      "byte_offset_or_pixel_rect_verified": false
+    },
+    {
+      "id": "asset-atelier-ryza-1-6",
+      "switch_game": "Atelier Ryza: Ever Darkness & the Secret Hideout",
+      "source_platform": "PC",
+      "source_repository": "Skyyblaze/Atelier-Ryza-PS4-Switch-Button-Replacement",
+      "release_tag": "1.6",
+      "release_url": "https://github.com/Skyyblaze/Atelier-Ryza-PS4-Switch-Button-Replacement/releases/tag/1.6",
+      "asset_filename": "Atelier.Ryza.PS4.-.Switch.Icon.Mod.v1.6.SK.zip",
+      "browser_download_url": "https://github.com/Skyyblaze/Atelier-Ryza-PS4-Switch-Button-Replacement/releases/download/1.6/Atelier.Ryza.PS4.-.Switch.Icon.Mod.v1.6.SK.zip",
+      "expected_zip_bytes": 118893347,
+      "expected_zip_sha256": null,
+      "title_id": null,
+      "game_version_reported": null,
+      "known_romfs_path_from_readme": null,
+      "known_unity_texture_from_readme": null,
+      "asset_downloaded_or_inspected": false,
+      "byte_offset_or_pixel_rect_verified": false
+    }
+  ]
+}
