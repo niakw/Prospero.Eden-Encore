@@ -973,9 +973,13 @@ pipeline_worker_replacement = '''#ifdef PS5_NATIVE
     cpuset_t allowed{};
     const int affinity_rc = cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, 8, &allowed);
     size_t available = 0;
+    std::uint64_t allowed_mask = 0;
     if (affinity_rc == 0) {
         for (unsigned cpu = 0; cpu < 64; ++cpu) {
-            if (CPU_ISSET(cpu, &allowed)) ++available;
+            if (CPU_ISSET(cpu, &allowed)) {
+                ++available;
+                allowed_mask |= std::uint64_t{1} << cpu;
+            }
         }
     }
     // Reserve only what is REALLY shared with guest/GPU workers in the
@@ -997,9 +1001,12 @@ pipeline_worker_replacement = '''#ifdef PS5_NATIVE
     const size_t spare = schedulable > reserved ? schedulable - reserved : 0ULL;
     const size_t selected = std::max<size_t>(1ULL, std::min(spare, max_pipeline_workers));
     std::printf("EDEN_PS5_SHADER_WORKERS reported=%zu available=%zu workers=%zu "
-                "reserved=%zu primary_in_mask=%zu physical_verified=%u affinity_rc=%d\\n",
+                "reserved=%zu primary_in_mask=%zu physical_verified=%u affinity_rc=%d "
+                "allowed_mask=0x%llx primary_mask=0x%llx\\n",
                 reported, available, selected, reserved, primary_in_mask,
-                unsigned(primary_mask != 0), affinity_rc);
+                unsigned(primary_mask != 0), affinity_rc,
+                static_cast<unsigned long long>(allowed_mask),
+                static_cast<unsigned long long>(primary_mask));
     return selected;
 #else
     return max_core_threads;

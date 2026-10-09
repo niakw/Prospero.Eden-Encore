@@ -159,6 +159,19 @@ void CheckWorkerTopology() {
         std::printf("EDEN_WORKER_TOPOLOGY ready=0 reason=affinity_unavailable errno=%d\n", errno);
         return;
     }
+    // This is the probe thread's permitted set, not the number of hardware
+    // threads on the PS5. Shader workers can inherit a narrower affinity.
+    std::uint64_t allowed_mask = 0;
+    unsigned allowed_count = 0;
+    for (unsigned cpu = 0; cpu < 64; ++cpu) {
+        if (CPU_ISSET(cpu, &original)) {
+            allowed_mask |= std::uint64_t{1} << cpu;
+            ++allowed_count;
+        }
+    }
+    std::printf("EDEN_PS5_CPU_ACCESS hardware_reported=%u affinity_allowed=%u allowed_mask=0x%llx scope=probe_thread\n",
+                std::thread::hardware_concurrency(), allowed_count,
+                static_cast<unsigned long long>(allowed_mask));
     // AMD family 17h+ can expose physical topology via the extended leaf
     // even if x2APIC leaf 0xB is missing/unusable on this firmware.
     unsigned va{}, vb{}, vc{}, vd{};
@@ -238,8 +251,31 @@ void CheckWorkerTopology() {
             std::memcmp(&original, &restored, 8))
             throw std::runtime_error("Cannot restore topology-probe thread affinity");
     }
-    worker_topology_ready = count == cores.size();
+    // Classify the actual allowed logical processors by the observed physical
+    // core identifier, including SMT siblings. Reject physically impossible
+    // topology reports (>8 physical cores on this Zen 2 PS5).
+    std::array<int, 64> physical_ids{};
+    std::array<std::uint64_t, 64> physical_masks{};
+    unsigned physical_count = 0, classified = 0;
+    for (unsigned cpu = 0; cpu < 64; ++cpu) {
+        if (!CPU_ISSET(cpu, &original) || cpu_core[cpu] < 0) continue;
+        ++classified;
+        unsigned group = 0;
+        while (group < physical_count && physical_ids[group] != cpu_core[cpu]) ++group;
+        if (group == physical_count) physical_ids[physical_count++] = cpu_core[cpu];
+        physical_masks[group] |= std::uint64_t{1} << cpu;
+    }
+    const bool physical_ids_plausible = physical_count <= 8;
+    worker_topology_ready = count == cores.size() && physical_ids_plausible;
+    if (!physical_ids_plausible)
+        std::printf("EDEN_PS5_CPU_TOPOLOGY_REJECT reason=more_than_8_physical_ids observed=%u\n",
+                    physical_count);
+    std::printf("EDEN_PS5_CPU_PHYSICAL_SUMMARY classified=%u of=%u distinct_physical=%u valid=%u\n",
+                classified, allowed_count, physical_count, unsigned(physical_ids_plausible));
     if (worker_topology_ready) {
+        for (unsigned group = 0; group < physical_count; ++group)
+            std::printf("EDEN_PS5_CPU_PHYSICAL core_id=%d logical_mask=0x%llx\n",
+                        physical_ids[group], static_cast<unsigned long long>(physical_masks[group]));
         for (unsigned cpu = 0; cpu < 64; ++cpu) {
             if (!CPU_ISSET(cpu, &original) || cpu_core[cpu] < 0) continue;
             const bool guest_core = cpu_core[cpu] == static_cast<int>(cores[0]) ||
@@ -254,6 +290,24 @@ void CheckWorkerTopology() {
         for (unsigned cpu : worker_cpus)
             if (cpu < 64) verified_mask |= std::uint64_t{1} << cpu;
         verified_physical_worker_mask.store(verified_mask, std::memory_order_release);
+        // CPU slots withheld from the shader pool are NOT necessarily OS
+        // reserved: protect hot guest JIT cores from SMT sibling contention.
+        const std::uint64_t excluded = allowed_mask & ~(verified_mask | secondary_cpus);
+        std::uint64_t guest_smt_protected = 0;
+        for (unsigned cpu = 0; cpu < 64; ++cpu) {
+            if (!(excluded & (std::uint64_t{1} << cpu))) continue;
+            const bool guest_sibling = cpu_core[cpu] == static_cast<int>(cores[0]) ||
+                cpu_core[cpu] == static_cast<int>(cores[1]) ||
+                cpu_core[cpu] == static_cast<int>(cores[2]);
+            if (guest_sibling) guest_smt_protected |= std::uint64_t{1} << cpu;
+        }
+        std::printf("EDEN_PS5_CPU_SPLIT allowed=0x%llx primary=0x%llx secondary=0x%llx "
+                    "guest_smt_protected=0x%llx other_allowed=0x%llx\n",
+                    static_cast<unsigned long long>(allowed_mask),
+                    static_cast<unsigned long long>(verified_mask),
+                    secondary_cpus,
+                    static_cast<unsigned long long>(guest_smt_protected),
+                    static_cast<unsigned long long>(excluded & ~guest_smt_protected));
     }
     std::printf("EDEN_WORKER_TOPOLOGY ready=%d distinct_cores=%u cpus=%u,%u,%u,%u,%u amd_ext=%u x2apic=%u\n",
         worker_topology_ready, count, worker_cpus[0], worker_cpus[1], worker_cpus[2],
