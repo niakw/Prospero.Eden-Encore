@@ -26,15 +26,15 @@ switch = gate.read(gate.SWITCH_INDEX)
 cross = gate.read(gate.CROSS_INDEX)
 seeds = gate.read(gate.SEEDS_INDEX)
 summary = gate.validate(cross, switch, seeds)
-assert summary["cross_platform_sources"] == 20
-assert summary["switch_games_referenced"] == 14
-assert summary["switch1_seed_games"] == 8
+assert summary["cross_platform_sources"] == 22
+assert summary["switch_games_referenced"] == 16
+assert summary["switch1_seed_games"] == 10
 assert summary["verified_switch_rectangles"] == 0
 
 report = coverage.worklist(switch, cross, seeds)
-assert report["games"] == 26
-assert report["switch1_seed_only_games"] == 8
-assert report["games_with_other_platform_leads"] == 14
+assert report["games"] == 28
+assert report["switch1_seed_only_games"] == 10
+assert report["games_with_other_platform_leads"] == 16
 assert report["verified_switch_atlas_rectangles"] == 0
 assert all(item["requires_matching_game_romfs"] for item in report["worklist"])
 assert all(item["requires_scene_semantics_and_native_ps5_test"] for item in report["worklist"])
@@ -68,5 +68,5 @@ tamper = copy.deepcopy(cross)
 tamper["sources"][1]["id"] = tamper["sources"][0]["id"]
 must_reject(tamper)
 
-print("HOST FIXTURE PASS: 20 cross-platform leads, 14 matched Switch games, 26-title research worklist")
+print("HOST FIXTURE PASS: 22 cross-platform leads, 16 matched Switch games, 28-title research worklist")
 print("No binary atlas coordinates, mod-install permissions or PS5 operation implied")
