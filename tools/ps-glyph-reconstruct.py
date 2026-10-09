@@ -149,25 +149,63 @@ def glyph_for_slot(slot: dict, profile: str) -> str:
 
 
 def verified_cross_platform(report_path: Path, switch_sha: str,
-                            rectangle: list[int]) -> None:
+                            rectangle: list[int], slot: dict,
+                            update_version: str, scene: str) -> None:
     report = json_file(report_path)
     require(report.get("schema") == 1 and
-            report.get("original_texture_comparison") == "rendered_pixels_identical" and
             report.get("switch_original_image_sha256") == switch_sha,
-            "other-platform atlas not pixel-equivalent to this Switch original")
-    candidates = report.get("switch_candidate_rects_xywh")
-    require(isinstance(candidates, list) and candidates,
-            "no pixel-difference coordinates transferable to Switch")
+            "cross-platform evidence not bound to the original Switch image")
     x, y, w, h = rectangle
-    # The changed-pixel rectangle may be smaller than the isolated slot,
-    # but MUST be fully included in the explicitly measured slot.
-    require(any(isinstance(candidate, list) and len(candidate) == 4 and
-                all(type(n) is int for n in candidate) and
-                x <= candidate[0] and y <= candidate[1] and
-                candidate[0] + candidate[2] <= x + w and
-                candidate[1] + candidate[3] <= y + h
-                for candidate in candidates),
-            "proposed slot does not contain any byte-verified transferred region")
+    require(report.get("ui_scene_context", scene) == scene,
+            "cross-platform scene does not match this game atlas")
+    if report.get("original_texture_comparison") == "rendered_pixels_identical":
+        candidates = report.get("switch_candidate_rects_xywh")
+        require(isinstance(candidates, list) and candidates,
+                "no pixel-difference coordinates transferable to Switch")
+        # Exact equal-art source modified-pixel regions may be smaller
+        # than the original Switch alpha-isolated glyph slot.
+        require(any(isinstance(candidate, list) and len(candidate) == 4 and
+                    all(type(n) is int for n in candidate) and
+                    x <= candidate[0] and y <= candidate[1] and
+                    candidate[0] + candidate[2] <= x + w and
+                    candidate[1] + candidate[3] <= y + h
+                    for candidate in candidates),
+                "exact-art source change not contained in Switch glyph slot")
+        return
+
+    # DIFFERENT CONSOLE TEXTURES: the same game often keeps the *placement*
+    # while repainting or rescaling the artwork. Reuse a matched independently
+    # isolated Switch alpha sprite after EXPLICIT scene+symbol review.
+    # It is never enough to trust source art or a nearby source pixel region.
+    candidates = report.get("source_ui_layout_position_candidates")
+    require(isinstance(candidates, list) and candidates,
+            "no usable same-game cross-console layout candidates")
+    require(any(isinstance(item, dict) and
+                item.get("switch_alpha_sprite_candidate_xywh") == rectangle and
+                item.get("evidence") == "same_game_layout_prior_only" and
+                item.get("symbol_identity_verified") is False
+                for item in candidates),
+            "cross-console layout candidate not measured in original Switch image")
+    review = report.get("independent_switch_scene_review")
+    require(isinstance(review, dict) and review.get("approved") is True and
+            review.get("update_version") == update_version and
+            review.get("scene") == scene and
+            review.get("original_switch_sha256") == switch_sha and
+            report.get("source_ui_layout_position_is_atlas_write_proof") is False,
+            "independent Switch scene+update/sprite review required")
+    for name in ("switch_scene_evidence_url", "source_scene_evidence_url"):
+        proof = review.get(name)
+        require(isinstance(proof, str) and 10 <= len(proof) <= 512 and
+                proof.startswith("https://"),
+                "traceable same-game Switch and source scene proofs required")
+    slots = review.get("slots")
+    require(isinstance(slots, list), "reviewed scene sprite semantics absent")
+    semantic_key = "guest_button" if slot.get("kind") == "guest_action" else "face"
+    require(any(isinstance(entry, dict) and entry.get("rect") == rectangle and
+                entry.get("kind") == slot.get("kind") and
+                entry.get(semantic_key) == slot.get(semantic_key)
+                for entry in slots),
+            "Switch action/physical position not independently confirmed")
 
 
 def build_spec(evidence: dict, romfs: Path, evidence_base: Path) -> dict:
@@ -237,7 +275,8 @@ def build_spec(evidence: dict, romfs: Path, evidence_base: Path) -> dict:
                     require(isinstance(report, str) and
                             report == Path(report).name and not report.startswith("."),
                             "cross-platform proof report basename required")
-                    verified_cross_platform(evidence_base / report, sha.lower(), rect)
+                    verified_cross_platform(evidence_base / report, sha.lower(),
+                                            rect, slot, version, scene)
                 verified.append({"button": glyph_for_slot(slot, profile), "rect": rect})
         result.append({"romfs_path": relative, "original_sha256": sha.lower(),
                        "slots": verified})
