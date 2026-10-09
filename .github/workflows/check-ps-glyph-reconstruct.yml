@@ -16,6 +16,8 @@ on:
       - tools/ps-glyph-scan.py
       - tools/ps-glyph-botw-yaz0.py
       - tools/check-ps-glyph-botw-yaz0.py
+      - tools/ps-glyph-bntx-astc.py
+      - tools/check-ps-glyph-bntx-astc.py
       - tools/ps-glyph-bntx-rgba.py
       - tools/check-ps-glyph-bntx-rgba.py
       - tools/ps-glyph-botw-archive-diff.py
@@ -44,6 +46,8 @@ jobs:
       - name: Host fixture dependencies (not a PS5 build)
         run: |
           python3 -m pip install --user --break-system-packages Pillow
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends astcenc
       # Host-only cross-console source layout regression; deliberately no native PS5 compile.
       - name: Verify same-game PS4/Switch positions across layout/scaled art
         run: |
@@ -60,6 +64,7 @@ jobs:
           python3 -B tools/check-ps-glyph-botw-yaz0.py
           python3 -B tools/check-ps-glyph-botw-archive-diff.py
           python3 -B tools/check-ps-glyph-bntx-rgba.py
+          python3 -B tools/check-ps-glyph-bntx-astc.py
           python3 -B tools/check-ps-glyph-sarc-inspect.py
       - name: Verify action glyphs match physical-to-guest HID mappings
         run: |
