@@ -69,6 +69,26 @@ assert checked["plans"][0]["ready_for_assembler_after_review"]
 assert checked["plans"][1]["ready_for_assembler_after_review"]
 assert checked["plans"][1]["manifest"]["slots"][0]["face"] == "right"
 assert checked["plans"][1]["manifest"]["slots"][1]["face"] == "bottom"
+assembly = auto.reviewed_manifest(checked, 0)
+assert set(assembly) == {"schema", "title_id", "update_version", "profile",
+                         "original_archive_sha256", "original_member_sha256",
+                         "member", "texture", "scene", "variant", "slots"}
+assert assembly["slots"] == [{"kind": "guest_action", "guest_button": "a",
+                              "rect": [1, 2, 20, 20]}]
+assert auto.reviewed_manifest(checked, 1)["slots"] == [
+    {"kind": "controller_position", "face": "right", "rect": [30, 2, 20, 20]},
+    {"kind": "controller_position", "face": "bottom", "rect": [53, 2, 20, 20]},
+]
+refuse(lambda: auto.reviewed_manifest(preview, 0),
+       "guessed A label exported as already approved glyph")
+refuse(lambda: auto.reviewed_manifest(checked, 9),
+       "nonexistent sprite plan selected for output")
+refuse(lambda: auto.make(report, "01007EF00011E000", "1.6.0",
+                         {"romfs/WRONG/unknown/1": {
+                             "reviewed": True, "kind": "guest_action",
+                             "guest_button": "a"}}),
+       "silently ignored a review binding that matches no mod-provided sprite")
+
 # The original mod's input labels are not blindly translated into
 # rectangle semantics of a PlayStation-shaped controller diagram.
 bad = dict(bindings)
