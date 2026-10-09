@@ -1373,3 +1373,23 @@ Source-only commits on `dev/ps5-sparse-jit`, with `[skip ci]`; approved UI/brand
 - Follow-up Klei atlas inspector hardening: `tools/ps-glyph-klei-atlas.py` now rejects texture references with directory traversal, absolute/Windows-style paths, invalid extension or hidden/empty path elements (commit `7039663e6ba9e23a90c053fd4e56d80696c6ef3d`). Synthetic rejection fixtures updated in `tools/check-ps-glyph-klei-atlas.py` commit `29d20cff7b1128c7456be464213cda7016001abf`; fixtures **not run**. These are defensive source changes, not native PS5 execution.
 
 - Added read-only, bounded, heuristic **Lua source inspector** `tools/ps-glyph-lua-source-inspect.py`, commit `ecb0a0d0819462e79274ea2c934c7b214008bffc`: scans authorized local Lua text for literal `Asset("ATLAS"/"IMAGE", "...")` paths, `IsPS4`/`IsSWITCH` platform branches (as explicitly uncertain nearest-branch hints), and controller help label `(x,y)` rows plus code-defined widget X formula. It does not evaluate Lua, resolve dynamic paths, decode images, decide actual loaded content, or claim Switch/PS5 runtime support. Source-only synthetic fixture `tools/check-ps-glyph-lua-source-inspect.py` commit `68a369bdd9ca7d6d0caee5cf209caef184a85265`, **not run**. Documented at `docs/PS_GLYPH_MULTIPLATFORM_RESEARCH.md` commit `1c441f1738b0b57651186922627905ee17c085ff`. No CI/SDK compilation/hardware runs.
+
+### 2026-10-09 — User requires genuine closure of ALL remaining Eden Encore pillars
+
+**MANDATORY scope for eventual release signoff (not currently achieved):**
+1. FC27 real gameplay stutter/frame times, first-run versus warm-cache, physical memory/bad_alloc pressure, Home/Library held-navigation hitch, and in-match popup controller remapping.
+2. Sparse JIT and Dynarmic A64/A32 on PS5 firmware 13.60: actual executable dual RW/RX mapping and 2 MiB incremental physical commitment, 4-core and multi-game test, correct fallback and rollback. Host proof of 64 MiB virtual/4 MiB physical bootstrap is NOT firmware proof. Last native playable #37850528993 uses dense quarter-pool, not sparse.
+3. GPU: PRMT immediate/register Index implementations and limited Fermi2D z0/pitch software paths are source candidates; require real SDK compile, golden shader/copy visuals and frame timing. Remaining modes cannot be swept under the carpet.
+4. Actual PlayStation ART **inside games**: first FC27 menu/match/HUD with real approved RomFS asset/version/SHA, second title, reversible delivery, rights and authentic package integrity. DualSense controls are not a graphical art replacement; source catalog rule count remains zero.
+5. Approved purple Home/Library visual design unchanged; protected shipping branch fix/0.40-zbic-13.60 unchanged until firmware/rights/release review.
+
+**New permanent closeout tracking on development branch, [skip ci]:**
+- docs/PS5_CLOSURE_MATRIX.json commit b66543051a4656d5a101fdbe1355a3895141bd25: 5 workstreams and **26 distinct required acceptance checks**, none currently marked passed or assigned fabricated evidence.
+- tools/check-ps5-closure.py commits c46a7d2076f974eefb43cad944cc5c66c1ba57ce and d17a09c30225fb54ff918ba793db38e810829df2: fail-closed source-only local audit, pins exact 26 acceptance IDs and requires evidence for any claimed pass; --require-ready exits nonzero until all have been reviewed. No CI or release automation triggered by this script. Not executed yet.
+- docs/PS5_CLOSURE_CRITERIA.md commit e50ad9cddd5ccd047b4b7f1abf5e6679700db19e documents full technical/firmware verification and no fake closure.
+
+**Verified latest native workflow status**: run #37853342541 build job completed with FAILURE at Validate freshly built staged app; release skipped. According to #8, an obsolete EDEN_PAD_CONTEXT mode=ui checker was corrected afterward but no native rerun has verified it. No new build on this turn under the explicit user STOP BUILDS gate.
+
+**Hard blocked in session**: Mac remote connection OFFLINE; public GitHub release download unavailable due DNS; no PS5 native hardware runtime or fresh FC27 frame captures. Thus the issues #7 and #8 must remain OPEN and no FPS improvement, real JIT performance, GPU compatibility or graphic glyph replacements can be claimed verified.
+
+**User directive**: do not end with partial research as if feature complete; when hardware access and explicit native build authorization are available, actually implement/review/verify all four areas and only then close administrative tracking. Avoid further launcher redesign, keep shipping branch intact. Do not ask to repeat already known log/test symptoms.
