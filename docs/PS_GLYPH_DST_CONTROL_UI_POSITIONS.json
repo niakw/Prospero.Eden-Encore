@@ -33,7 +33,9 @@
         "label_anchor_x": 20,
         "label_anchor_y": 275,
         "horizontal_alignment": "ANCHOR_RIGHT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": -148,
+        "label_widget_local_y": 275
       },
       {
         "string_identifier": "OPTIONS",
@@ -42,7 +44,9 @@
         "label_anchor_x": 80,
         "label_anchor_y": 275,
         "horizontal_alignment": "ANCHOR_LEFT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": 240,
+        "label_widget_local_y": 275
       },
       {
         "string_identifier": "L2",
@@ -51,7 +55,9 @@
         "label_anchor_x": -415,
         "label_anchor_y": 255,
         "horizontal_alignment": "ANCHOR_RIGHT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": -583,
+        "label_widget_local_y": 255
       },
       {
         "string_identifier": "L1",
@@ -60,7 +66,9 @@
         "label_anchor_x": -415,
         "label_anchor_y": 155,
         "horizontal_alignment": "ANCHOR_RIGHT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": -583,
+        "label_widget_local_y": 155
       },
       {
         "string_identifier": "DPAD_UP",
@@ -69,7 +77,9 @@
         "label_anchor_x": -415,
         "label_anchor_y": 55,
         "horizontal_alignment": "ANCHOR_RIGHT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": -583,
+        "label_widget_local_y": 55
       },
       {
         "string_identifier": "DPAD_LEFT",
@@ -78,7 +88,9 @@
         "label_anchor_x": -415,
         "label_anchor_y": 15,
         "horizontal_alignment": "ANCHOR_RIGHT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": -583,
+        "label_widget_local_y": 15
       },
       {
         "string_identifier": "DPAD_BOTTOM",
@@ -87,7 +99,9 @@
         "label_anchor_x": -415,
         "label_anchor_y": -20,
         "horizontal_alignment": "ANCHOR_RIGHT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": -583,
+        "label_widget_local_y": -20
       },
       {
         "string_identifier": "DPAD_RIGHT",
@@ -96,7 +110,9 @@
         "label_anchor_x": -415,
         "label_anchor_y": -65,
         "horizontal_alignment": "ANCHOR_RIGHT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": -583,
+        "label_widget_local_y": -65
       },
       {
         "string_identifier": "LSTICK",
@@ -105,7 +121,9 @@
         "label_anchor_x": -415,
         "label_anchor_y": -210,
         "horizontal_alignment": "ANCHOR_RIGHT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": -583,
+        "label_widget_local_y": -210
       },
       {
         "string_identifier": "R2",
@@ -114,7 +132,9 @@
         "label_anchor_x": 415,
         "label_anchor_y": 255,
         "horizontal_alignment": "ANCHOR_LEFT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": 575,
+        "label_widget_local_y": 255
       },
       {
         "string_identifier": "R1",
@@ -123,7 +143,9 @@
         "label_anchor_x": 415,
         "label_anchor_y": 155,
         "horizontal_alignment": "ANCHOR_LEFT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": 575,
+        "label_widget_local_y": 155
       },
       {
         "string_identifier": "TRIANGLE",
@@ -132,7 +154,9 @@
         "label_anchor_x": 415,
         "label_anchor_y": 65,
         "horizontal_alignment": "ANCHOR_LEFT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": 575,
+        "label_widget_local_y": 65
       },
       {
         "string_identifier": "CIRCLE",
@@ -141,7 +165,9 @@
         "label_anchor_x": 415,
         "label_anchor_y": 20,
         "horizontal_alignment": "ANCHOR_LEFT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": 575,
+        "label_widget_local_y": 20
       },
       {
         "string_identifier": "CROSS",
@@ -150,7 +176,9 @@
         "label_anchor_x": 415,
         "label_anchor_y": -20,
         "horizontal_alignment": "ANCHOR_LEFT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": 575,
+        "label_widget_local_y": -20
       },
       {
         "string_identifier": "SQUARE",
@@ -159,7 +187,9 @@
         "label_anchor_x": 415,
         "label_anchor_y": -65,
         "horizontal_alignment": "ANCHOR_LEFT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": 575,
+        "label_widget_local_y": -65
       },
       {
         "string_identifier": "RSTICK",
@@ -168,7 +198,9 @@
         "label_anchor_x": 415,
         "label_anchor_y": -210,
         "horizontal_alignment": "ANCHOR_LEFT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": 575,
+        "label_widget_local_y": -210
       },
       {
         "string_identifier": "R3",
@@ -177,7 +209,9 @@
         "label_anchor_x": 415,
         "label_anchor_y": -165,
         "horizontal_alignment": "ANCHOR_LEFT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": 575,
+        "label_widget_local_y": -165
       }
     ],
     "SWITCH": [
@@ -188,7 +222,9 @@
         "label_anchor_x": -20,
         "label_anchor_y": 275,
         "horizontal_alignment": "ANCHOR_RIGHT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": -188,
+        "label_widget_local_y": 275
       },
       {
         "string_identifier": "OPTIONS",
@@ -197,7 +233,9 @@
         "label_anchor_x": 30,
         "label_anchor_y": 275,
         "horizontal_alignment": "ANCHOR_LEFT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": 190,
+        "label_widget_local_y": 275
       },
       {
         "string_identifier": "L2",
@@ -206,7 +244,9 @@
         "label_anchor_x": -415,
         "label_anchor_y": 255,
         "horizontal_alignment": "ANCHOR_RIGHT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": -583,
+        "label_widget_local_y": 255
       },
       {
         "string_identifier": "L1",
@@ -215,7 +255,9 @@
         "label_anchor_x": -415,
         "label_anchor_y": 205,
         "horizontal_alignment": "ANCHOR_RIGHT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": -583,
+        "label_widget_local_y": 205
       },
       {
         "string_identifier": "DPAD_UP",
@@ -224,7 +266,9 @@
         "label_anchor_x": -415,
         "label_anchor_y": 30,
         "horizontal_alignment": "ANCHOR_RIGHT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": -583,
+        "label_widget_local_y": 30
       },
       {
         "string_identifier": "DPAD_LEFT",
@@ -233,7 +277,9 @@
         "label_anchor_x": -415,
         "label_anchor_y": -7,
         "horizontal_alignment": "ANCHOR_RIGHT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": -583,
+        "label_widget_local_y": -7
       },
       {
         "string_identifier": "DPAD_BOTTOM",
@@ -242,7 +288,9 @@
         "label_anchor_x": -415,
         "label_anchor_y": -42,
         "horizontal_alignment": "ANCHOR_RIGHT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": -583,
+        "label_widget_local_y": -42
       },
       {
         "string_identifier": "DPAD_RIGHT",
@@ -251,7 +299,9 @@
         "label_anchor_x": -415,
         "label_anchor_y": -90,
         "horizontal_alignment": "ANCHOR_RIGHT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": -583,
+        "label_widget_local_y": -90
       },
       {
         "string_identifier": "LSTICK",
@@ -260,7 +310,9 @@
         "label_anchor_x": -415,
         "label_anchor_y": 100,
         "horizontal_alignment": "ANCHOR_RIGHT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": -583,
+        "label_widget_local_y": 100
       },
       {
         "string_identifier": "R2",
@@ -269,7 +321,9 @@
         "label_anchor_x": 415,
         "label_anchor_y": 255,
         "horizontal_alignment": "ANCHOR_LEFT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": 575,
+        "label_widget_local_y": 255
       },
       {
         "string_identifier": "R1",
@@ -278,7 +332,9 @@
         "label_anchor_x": 415,
         "label_anchor_y": 205,
         "horizontal_alignment": "ANCHOR_LEFT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": 575,
+        "label_widget_local_y": 205
       },
       {
         "string_identifier": "TRIANGLE",
@@ -287,7 +343,9 @@
         "label_anchor_x": 415,
         "label_anchor_y": 140,
         "horizontal_alignment": "ANCHOR_LEFT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": 575,
+        "label_widget_local_y": 140
       },
       {
         "string_identifier": "CIRCLE",
@@ -296,7 +354,9 @@
         "label_anchor_x": 415,
         "label_anchor_y": 100,
         "horizontal_alignment": "ANCHOR_LEFT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": 575,
+        "label_widget_local_y": 100
       },
       {
         "string_identifier": "CROSS",
@@ -305,7 +365,9 @@
         "label_anchor_x": 415,
         "label_anchor_y": 55,
         "horizontal_alignment": "ANCHOR_LEFT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": 575,
+        "label_widget_local_y": 55
       },
       {
         "string_identifier": "SQUARE",
@@ -314,7 +376,9 @@
         "label_anchor_x": 415,
         "label_anchor_y": 0,
         "horizontal_alignment": "ANCHOR_LEFT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": 575,
+        "label_widget_local_y": 0
       },
       {
         "string_identifier": "RSTICK",
@@ -323,7 +387,9 @@
         "label_anchor_x": 415,
         "label_anchor_y": -185,
         "horizontal_alignment": "ANCHOR_LEFT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": 575,
+        "label_widget_local_y": -185
       },
       {
         "string_identifier": "R3",
@@ -332,8 +398,36 @@
         "label_anchor_x": 415,
         "label_anchor_y": -130,
         "horizontal_alignment": "ANCHOR_LEFT",
-        "ui_coordinate_not_texture_pixel": true
+        "ui_coordinate_not_texture_pixel": true,
+        "label_widget_local_x": 575,
+        "label_widget_local_y": -130
       }
     ]
+  },
+  "parent_controller_widget_transform": {
+    "DUALSHOCK4": {
+      "position_xyz": [
+        65,
+        -50,
+        0
+      ],
+      "scale": 0.6
+    },
+    "SWITCH": {
+      "position_xyz": [
+        65,
+        -50,
+        0
+      ],
+      "scale": 0.6
+    },
+    "source_code_verified": true,
+    "fully_composed_screen_pixel_position_not_verified": true
+  },
+  "local_label_render_formula": {
+    "ANCHOR_RIGHT": "v.x - LABEL_WIDTH/2 - 8",
+    "ANCHOR_LEFT": "v.x + LABEL_WIDTH/2",
+    "y": "v.y",
+    "unit": "Lua UI local units, not texture pixel positions"
   }
 }
