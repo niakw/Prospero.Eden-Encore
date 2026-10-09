@@ -91,6 +91,21 @@ with tempfile.TemporaryDirectory() as tmp:
     assert run_gate("1", "1", "ON")==[]
     assert run_gate("0", "1", "ON")==[]
     assert run_gate("1", "0", "OFF")==[]
+# A real regression check for the argument-vector bug in run #231. The
+# upstream-generated units inherit a Clang-18-unsupported -Wno-error-all;
+# dropping it in this preflight cannot suppress actual syntax errors.
+import runpy
+syntax_flags=runpy.run_path(str(root / "tools/check-native-source-syntax.py"))["syntax_check_flags"]
+input_flags=["clang++-18", "-std=gnu++20", "-Wno-error-all", "-Wall"]
+for generated in (False, True):
+    flags=syntax_flags(input_flags, generated=generated)
+    assert "-Wno-error-all" not in flags, flags
+    assert "-std=gnu++20" in flags and "-Wall" in flags, flags
+    assert "-fsyntax-only" in flags and "-ferror-limit=8" in flags, flags
+    assert ("-Werror" in flags) == (not generated), flags
+assert input_flags == ["clang++-18", "-std=gnu++20", "-Wno-error-all", "-Wall"]
+print("PASS: native Clang syntax flags reject invalid upstream alias and preserve compiler error checks")
+
 print("PASS: PS5 native syntax gate runs in dev/release, honors prebuild bypass, keeps release-only checks isolated")
 
 print("PASS ALL_ON_PS5_TEST_CONTRACT: compiled dev profile with sparse + RADV + diagnostics; shipping remains OFF")
