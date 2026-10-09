@@ -84,6 +84,21 @@ assert "if(now < connection_scan_at) return;" in connection_status
 assert connection_status.index("if(now < connection_scan_at) return;") < connection_status.index("scePadReadState(")
 assert "connection_scan_at = 0;" in radio
 
+# A held D-pad must not synchronously read game+global preferences JSON
+# for every newly highlighted ROM. Worker snapshots are refreshed after
+# preferences changes or an explicit title-mode save.
+services_h = read("headless/prosperoeden/pe/ui/services.hpp")
+library = read("headless/prosperoeden/pe/ui/library.cpp")
+assert "bool docked = true; // effective mode precomputed on library worker" in services_h
+worker = library.split("void Launcher::start_scan()", 1)[1].split("void Launcher::finish_scan(", 1)[0]
+assert "game.docked = services_.docked(game.title_id);" in worker
+selected = library.split("void Launcher::refresh_selected_game()", 1)[1].split("void Launcher::press_library(", 1)[0]
+assert "games_[static_cast<std::size_t>(library_.selected)].docked" in selected
+assert "services_.docked(" not in selected
+assert "docked_refresh_after_scan_" in library
+assert "docked_refresh_after_scan_" in nav
+assert "installed.docked = home_game_docked_;" in home
+
 # Repeated D-pad input must not let the highlight fall several rows behind
 # the selected item, but single-step springs and approved artwork stay intact.
 assert "const float scroll_backlog = std::fabs(scroll_.target - scroll_.value);" in widgets

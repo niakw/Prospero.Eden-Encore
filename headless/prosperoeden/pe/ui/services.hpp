@@ -63,6 +63,7 @@ struct Game
     std::vector<std::string> screenshots; // up to three cached Nlib gameplay screenshots
     int max_players = 0; // Nlib maximum local players; 0 when unknown/offline
     bool artwork_changed = false; // async refresh replaced one or more files
+    bool docked = true; // effective mode precomputed on library worker; no settings I/O on D-pad
     std::string intro;
     std::string description;
     std::string publisher;

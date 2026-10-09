@@ -76,6 +76,10 @@ void Launcher::start_scan()
                 if (scan_cancel_.load(std::memory_order_acquire)) break;
                 if (game.title_id == 0) continue;
                 try {
+                    // The UI used to reload both per-game and global JSON
+                    // settings in refresh_selected_game() on EVERY D-pad move.
+                    // Resolve the effective mode once on this worker instead.
+                    game.docked = services_.docked(game.title_id);
                     const std::vector<Mod> mods = services_.mods(game.title_id);
                     game.mods = static_cast<int>(mods.size());
                     game.mods_enabled = mods.empty() || services_.mods_enabled(game.title_id);
@@ -121,6 +125,14 @@ void Launcher::finish_scan(bool wait)
             say(tr("Could not load game list. Please try again."), true);
             cue(Cue::error);
         }
+    }
+    // A preferences save could overlap the previous worker's settings
+    // reads. Rescan once after it completes so docked values come from
+    // the new global profile, not the old in-flight snapshot.
+    if (docked_refresh_after_scan_) {
+        docked_refresh_after_scan_ = false;
+        if (!scan_cancel_.load(std::memory_order_acquire))
+            start_scan();
     }
 }
 
@@ -305,6 +317,10 @@ void Launcher::apply_games(std::vector<Game> games)
                                      std::string{};
     games_ = std::move(games);
     games_loaded_ = true;
+    // Even if file order stayed identical, a preferences refresh may
+    // have changed the selected game's effective docked mode.
+    if (same && !games_.empty())
+        selected_docked_ = games_[static_cast<std::size_t>(library_.selected)].docked;
     // Mod counts were resolved by the background scan; never perform a
     // second synchronous per-title disk walk while applying the list.
     if (!same)
@@ -731,9 +747,10 @@ bool Launcher::open_game_settings_at_file(const std::string &file)
 
 void Launcher::refresh_selected_game()
 {
-    const std::uint64_t id =
-        games_.empty() ? 0 : games_[static_cast<std::size_t>(library_.selected)].title_id;
-    selected_docked_ = id == 0 || services_.docked(id);
+    // Library selection can repeat at 9+ Hz. Never touch per-title/global
+    // JSON files on the UI/input thread: the worker owns that snapshot.
+    selected_docked_ = games_.empty() ||
+        games_[static_cast<std::size_t>(library_.selected)].docked;
     // Its Mods switch shows its state at once; it only animates when changed.
     mods_switch_.snap(!games_.empty() && games_[static_cast<std::size_t>(library_.selected)].mods_enabled ?
                           1.0f : 0.0f);
@@ -1075,7 +1092,12 @@ void Launcher::press_game(Key key)
             return;
         const GameSettings reset{};
         const bool saved = services_.set_game_settings(game.title_id, reset);
-        if (saved) game_settings_ = reset;
+        if (saved) {
+            game_settings_ = reset;
+            game_docked_ = services_.docked(game.title_id);
+            game.docked = game_docked_;
+            selected_docked_ = game_docked_;
+        }
         say(saved ? tr("Game overrides reset to global defaults.") :
                     tr("Could not save. Please try again."),
             !saved);
@@ -1199,6 +1221,7 @@ void Launcher::press_game(Key key)
         if (saved) {
             game_settings_ = next;
             game_docked_ = next.console_mode == 1;
+            game.docked = game_docked_;
         }
     }
     else
@@ -1270,6 +1293,7 @@ void Launcher::press_game(Key key)
         if (saved) {
             game_settings_ = next;
             game_docked_ = next.console_mode >= 0 ? next.console_mode == 1 : services_.docked(game.title_id);
+            game.docked = game_docked_;
         }
     }
     // 120 Hz is a request: the display has the last word.
