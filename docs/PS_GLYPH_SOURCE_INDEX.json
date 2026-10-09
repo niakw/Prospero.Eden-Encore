@@ -3,8 +3,8 @@
   "updated": "2026-10-09",
   "purpose": "technical reverse-engineering leads only; not activatable game compatibility",
   "coverage": {
-    "mod_pages": 24,
-    "unique_games": 16,
+    "mod_pages": 26,
+    "unique_games": 18,
     "verified_game_atlases": 0
   },
   "mods": [
@@ -562,6 +562,67 @@
           "rect_xywh": null
         }
       ]
+    },
+    {
+      "id": "community-025",
+      "title": "Persona 3 Portable (Switch)",
+      "source_url": "https://gamebanana.com/mods/461733",
+      "style": "PlayStation standard",
+      "mod_version_reported": null,
+      "game_update_reported": null,
+      "contexts": [
+        "interface button sprite"
+      ],
+      "format_or_tool_leads": [
+        "CPK",
+        "init_free.bin",
+        "camp.bin",
+        "SPR",
+        "Amicitia",
+        "CPK File Builder"
+      ],
+      "observed_behavior": "Standard PlayStation mapping from author: Nintendo A -> Circle and Nintendo B -> Cross. Packed CPK must be rebuilt from nested init_free.bin / camp.bin / pc_button.spr, not a plain BNTX atlas.",
+      "title_id": "0100DCD01525A000",
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false,
+      "resource_leads": [
+        {
+          "romfs_archive": "data_EN/umd0.cpk",
+          "inside_archive": "init_free.bin → init/camp.bin",
+          "texture": "pc_button.spr",
+          "source": "author mod installation instructions",
+          "binary_verified": false,
+          "rect_xywh": null
+        }
+      ]
+    },
+    {
+      "id": "community-026",
+      "title": "Tokyo Mirage Sessions #FE Encore",
+      "source_url": "https://gamebanana.com/mods/367516",
+      "style": "PlayStation",
+      "mod_version_reported": null,
+      "game_update_reported": null,
+      "contexts": [
+        "ABXY",
+        "L/R",
+        "ZL/ZR",
+        "door interaction"
+      ],
+      "format_or_tool_leads": [
+        "sprite bounds",
+        "nontexture prompts"
+      ],
+      "observed_behavior": "Face and shoulder PlayStation prompts; Start/Select/PS retained because sprite bounds incompatible. Door Check prompt cannot be modified as an image because source is not a texture; requires separate UI/code mechanism.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
     }
   ]
 }
