@@ -35,6 +35,7 @@ def load_spec(path: Path) -> dict:
                   atlas.HEX16.fullmatch(doc["title_id"]) is not None and
                   isinstance(doc["update_version"], str) and
                   atlas.VERSION.fullmatch(doc["update_version"]) is not None and
+                  isinstance(doc["variant"], str) and
                   doc["variant"] in atlas.VARIANTS and
                   isinstance(doc["atlases"], list) and 0 < len(doc["atlases"]) <= 64,
                   "invalid known graphic atlas spec")
@@ -54,6 +55,7 @@ def load_spec(path: Path) -> dict:
                       "invalid known sprite slot list")
         for sprite in slots:
             atlas.require(isinstance(sprite, dict) and set(sprite) == {"button", "rect"} and
+                          isinstance(sprite["button"], str) and
                           sprite["button"] in atlas.ICONS and
                           isinstance(sprite["rect"], list) and
                           len(sprite["rect"]) == 4 and
