@@ -50,9 +50,10 @@ with tempfile.TemporaryDirectory(prefix="eden-glyph-web-discovery-") as root:
 
     changed = json.loads(json.dumps(full))
     changed["games"].reverse()
-    try: search.discover(changed, st, 1)
-    except search.DiscoveryError: pass
-    else: raise AssertionError("state replay accepted wrong source catalog")
+    redone, migrated = search.discover(changed, st, 1)
+    assert migrated["catalog_changed_since_last_batch"]
+    assert migrated["next_offset"] == 1
+    assert redone["games"][0]["title_id"] == changed["games"][0]["title_id"]
     assert search.canonical_link(
         "/l/?uddg=https%3A%2F%2Fgamebanana.com%2Fmods%2F659253&rut=track") == (
         "https://gamebanana.com/mods/659253")
@@ -82,6 +83,14 @@ with tempfile.TemporaryDirectory(prefix="eden-glyph-web-discovery-") as root:
     assert online["source_leads"] == 1
     assert online["mod_asset_downloads"] == 0
     assert newst["next_offset"] == 1
+    assert newst["completed_title_ids"] == [full["games"][0]["title_id"]]
+    changed_live = json.loads(json.dumps(full))
+    changed_live["games"].reverse()
+    updated, carried = search.discover(changed_live, newst, 2, network=False)
+    assert carried["catalog_changed_since_last_batch"]
+    assert carried["completed_title_ids"] == newst["completed_title_ids"]
+    assert updated["games_examined"] == 1
+    assert updated["games"][0]["title_id"] != newst["completed_title_ids"][0]
     with patch.object(search, "ddg", side_effect=search.ProviderPaused("rate limit")):
         blocked, newstate = search.discover(full, {}, 1, "duckduckgo", True, interval=0)
     assert blocked["games_examined"] == 0 and blocked["errors"]
@@ -92,9 +101,11 @@ with tempfile.TemporaryDirectory(prefix="eden-glyph-web-discovery-") as root:
                           "full_name": "test/controller-ui-glyphs",
                           "html_url": "https://github.com/test/controller-ui-glyphs"}]}).encode()):
         assert search.github('"Zelda BOTW" controller mod')
-    try: search.yandex("game PS5 icons")
-    except search.DiscoveryError: pass
-    else: raise AssertionError("Yandex charged request attempted without consent/key")
+    with patch.dict("os.environ", {"YANDEX_SEARCH_API_KEY": "",
+                                    "YANDEX_SEARCH_FOLDER_ID": ""}):
+        try: search.yandex("game PS5 icons")
+        except search.DiscoveryError: pass
+        else: raise AssertionError("Yandex charged request attempted without consent/key")
 
     # Official Yandex API returns base64-encoded XML with results, not
     # an HTML page. Use a fully synthetic response, no paid calls.
