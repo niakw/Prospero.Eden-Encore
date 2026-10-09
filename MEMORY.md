@@ -1887,3 +1887,7 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — C++ Game aggregate compatibility before first compile [skip ci]
 
 - Moved the new `Game::docked` cached flag to the end of existing data fields instead of inserting it among the artwork strings. This preserves the order/types of all pre-existing aggregate-initializer positions in derived PS5 host code, while retaining the same default and async update semantics. Source readback checked, still no native build/test run.
+
+### 2026-10-09 — Correct deterministic heap failure harness arithmetic [skip ci]
+
+- Corrected staged `growth-mspace-fail` host harness precondition: the very first 100-byte allocation had already created an aligned 8 MiB per-thread arena inside the initial 128 MiB mspace, so four retained 30 MiB blocks could not fit without growing prematurely. The fixture now retains **three** 30 MiB blocks, then injects the mock mspace failure on the **fourth**, asserting no subsequent physical commit after repeated failures and continued availability of the first mspace. Source-only change; run remains unexecuted.
