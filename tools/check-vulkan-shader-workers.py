@@ -1,40 +1,47 @@
 #!/usr/bin/env python3
-"""Source-only PS5 Vulkan pipeline builder admission policy.
+"""Source-only regression: shader pool must not double-reserve CPU slots.
 
-The OS-logical CPU mask is not a physical-core map. These checks keep guest,
-GPU and audio/service scheduling headroom without silently halving all spare
-logical slots a second time. Hardware FPS, heat and shader timings remain
-unverified until an explicitly authorized native build.
+R237 recorded 16 hardware concurrency, 8 allowed secondary CPU slots,
+but only ONE shader builder because the old pool deducted seven primary
+workers that were ALREADY removed from its inherited secondary mask.
+This stages host/source tests only. DO NOT run until user explicitly says GO.
 """
 from pathlib import Path
-
 port = (Path(__file__).resolve().parents[0] / "prepare-vulkan-port.py").read_text()
+performance = (Path(__file__).resolve().parents[1] / "headless/performance.cpp").read_text()
+header = (Path(__file__).resolve().parents[1] / "headless/performance.h").read_text()
 begin = port.index("pipeline_worker_replacement = '''")
 end = port.index("if shader_source.count(pipeline_worker_anchor)", begin)
 policy = port[begin:end]
-
+assert 'pipeline_ps5_headers = f\'\'\'' in port
+assert '"{port / \'performance.h\'}"' in port
 assert "cpuset_getaffinity(" in policy
-assert "constexpr size_t guest_and_gpu_slots = 6;" in policy
-assert "constexpr size_t audio_and_service_slots = 1;" in policy
+assert "::Eden::Performance::PinnedWorkerMask()" in policy
+assert "primary_in_mask" in policy
+assert "const size_t reserved = affinity_rc == 0 && primary_mask ?" in policy
+assert "primary_in_mask + secondary_headroom : unverified_reserved" in policy
+assert "constexpr size_t secondary_headroom = 2;" in policy
+assert "constexpr size_t unverified_reserved = 7;" in policy
 assert "constexpr size_t max_pipeline_workers = 6;" in policy
-assert "schedulable > reserved ? schedulable - reserved : 0ULL" in policy
 assert "std::min(spare, max_pipeline_workers)" in policy
 assert "spare / 2ULL" not in policy
 assert "EDEN_PS5_SHADER_WORKERS reported=" in policy
-assert "reserved=%zu affinity_rc=%d" in policy
+assert "physical_verified=%u" in policy
+assert "std::uint64_t PinnedWorkerMask() noexcept;" in header
+assert "if (!worker_topology_ready) return 0;" in performance
 
-def workers(reported: int, available: int) -> int:
-    schedulable = min(available, reported) if available else min(reported, 4)
-    spare = max(0, schedulable - 7)
-    return max(1, min(spare, 6))
+def workers(reported: int, allowed: set[int], primary: set[int] | None) -> int:
+    schedulable = min(len(allowed), reported) if allowed else min(reported, 4)
+    reserved = len(allowed.intersection(primary)) + 2 if primary is not None else 7
+    return max(1, min(max(0, schedulable - reserved), 6))
 
-assert workers(16, 13) == 6  # FW13.60 captured topology
-assert workers(16, 16) == 6  # never schedule 15 builders
-assert workers(16, 10) == 3
-assert workers(8, 8) == 1
-assert workers(16, 0) == 1  # unavailable affinity: no aggressive guess
-assert workers(2, 2) == 1
-assert workers(16, 13) + 7 <= 13
-assert workers(16, 16) + 7 <= 16
-
-print("SOURCE POLICY: native Vulkan shader pool uses available logical CPU slots (13 => 6 workers); SDK/PS5 untested")
+primary = set(range(5))
+assert workers(16, set(range(13)), primary) == 6   # full app mask
+assert workers(16, set(range(5, 13)), primary) == 6  # PS5 R237 secondary mask
+assert workers(16, set(range(5, 13)), None) == 1  # fail-closed unverified
+assert workers(16, set(range(10)), primary) == 3
+assert workers(16, set(range(13)), None) == 6
+assert workers(16, set(range(1, 7)), primary) == 1
+assert workers(16, set(), primary) == 1
+print("SOURCE POLICY: verified PS5 8-slot secondary affinity uses 6 shader workers, keeps 2 for services")
+print("R237 test result still unknown: no build without user authorization")
