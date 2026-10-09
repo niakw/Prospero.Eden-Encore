@@ -236,3 +236,15 @@ license Nintendo/publisher-owned image content**.
 - [End-to-end offline inspection procedures](PS_GLYPH_REVERSE_ENGINEERING_PIPELINE.md) — authorized local ZIP inventory, read-only mod versus original PNG/TGA diff, extracted .7z/.rar folder diff, externally decoded Unity/BNTX texture pair diff, decompressed SARC byte offsets and BNTX mip pointer inventory.
 - New tools: `ps-glyph-mod-inventory.py`, `ps-glyph-mod-diff.py`, `ps-glyph-mod-folder-diff.py`, `ps-glyph-exported-texture-diff.py`, `ps-glyph-sarc-inspect.py`; research validation `check-ps-glyph-community-index.py`.
 - **Do not confuse byte offsets, changed-pixel XYWH boxes, actual icon semantic labels, the controller input mapping or game title/update validity.** They are separate evidence levels. No community archive has been unpacked here, no real atlas position is verified and no code/test/native build was executed.
+
+## Same-title PC / Wii U / PSP source discovery (2026-10-09)
+
+The Switch game/version and its original RomFS remain authoritative. Cross-platform art is discovery data until pixel or sprite/container equivalence is measured on the Switch version. See:
+- [Cross-platform source index](PS_GLYPH_CROSS_PLATFORM_INDEX.json): 10 additional publicly documented source references for six titles in the Switch corpus.
+- [Multiplatform research guide](PS_GLYPH_MULTIPLATFORM_RESEARCH.md): BOTW Wii U layout variants, P3P PC/PSP sprites, P4AU four-controller variants, P5R PC L3/R3 bounding-box fix, Bravely Default II PC Unreal PAK Start/Select variants, SMTV edition mismatch caution.
+- `tools/ps-glyph-cross-platform-image.py`: read-only three-input compare (other-platform original, other-platform mod, original Switch) returning tentative XYWH **only when the two original decoded images have identical rendered pixels/dimensions**.
+- `tools/ps-glyph-platform-coverage.py`: generates research queue for every game in the Switch index, not just games with PC mods.
+- `tools/ps-glyph-mod-inventory.py --platform PC ...`: source-path format hints for Unity/Unreal/CRI/Atlus/Nintendo family. These are names/extensions only, NOT decoded binary proof.
+- Synthetic future checks `tools/check-ps-glyph-cross-platform-image.py`, `tools/check-ps-glyph-platform-coverage.py` not executed under no-build/run gate.
+
+**Never directly import an original PC/Wii U/PSP replacement pack as a verified Switch/PS5 runtime rule.** The title ID, game update, original file SHA, per-screen button meaning and executable PS5 output must still be validated.
