@@ -99,8 +99,8 @@ with tempfile.TemporaryDirectory(prefix="eden-ps-glyph-atlas-") as work:
     # These are invented bytes, not actual game-owned artwork.
     nx_file = romfs / "UI" / "button_icons.bntx"
     nx = bytearray(0x300)
-    nx[:8] = b"BNTX\\0\\0\\0\\0"
-    nx[0x0C:0x0E] = b"\\xff\\xfe"
+    nx[:8] = b"BNTX\0\0\0\0"
+    nx[0x0C:0x0E] = b"\xff\xfe"
     nx[0x20:0x24] = b"NX  "
     struct.pack_into("<I", nx, 0x1C, len(nx))
     struct.pack_into("<I", nx, 0x24, 1)
