@@ -16,6 +16,8 @@ assert "bool game_storage_available() override;" in svc_h
 assert "bool EdenServices::game_storage_available()" in svc
 assert 'std::filesystem::is_directory(Eden::AssetsPath("roms"), error)' in svc
 assert "if (!services_.game_storage_available())" in lib
+assert lib.count('if (!services_.game_storage_available())') == 2
+assert 'missing.clear();' in lib
 assert "bool ValidNlibTga(" in svc
 # Cached media must be rejected if the full TGA header/payload is invalid,
 # while an already valid image may still be refreshed when its TTL expires.

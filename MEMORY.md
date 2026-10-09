@@ -1793,3 +1793,7 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — Game-library tiles survive transient ROM mount/storage failures [skip ci]
 
 - Launcher check_games_present previously regarded every false game_exists result as deleted ROM after two polls. When the entire configured roms/ folder became unreadable for >4 seconds, FC27/other titles could all vanish from the library after a game crash. A new Services::game_storage_available (default true for mock services), overridden by EdenServices using error_code is_directory(AssetsPath('roms')), is checked on existing background filesystem worker BEFORE individual file checks. Missing root yields empty missing results, resetting prior confirmation without touching installed tiles; individual genuinely absent ROMs still require two independent checks. No main-thread disk IO, no storage mutation. Source test contracts added but NOT run, no build/Actions/Mac/FTP. This is plausible contributor to reported FC27 disappearance, not verified hardware root.
+
+### 2026-10-09 — ROM storage presence scanner race closure [skip ci]
+
+- The ROM directory can unmount AFTER the worker's initial `game_storage_available()` check but before all per-game exists probes finish. Check root availability again before delivering results; if lost, discard the partially missing batch. Same asynchronous worker; no per-frame stat, no ROM deletion, no UI design change. Source check requires both guards (not executed); hardware root-loss simulation pending approval.
