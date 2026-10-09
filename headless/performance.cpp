@@ -497,6 +497,7 @@ void SampleGpuFrame(unsigned frame) {
 extern "C" void ps5_opengl_heap_snapshot(const char* phase, unsigned iteration);
 extern "C" unsigned eden_heap_arenas_created(void) __attribute__((weak));
 extern "C" std::size_t eden_heap_committed(void) __attribute__((weak));
+extern "C" std::size_t eden_heap_tcache_held(void) __attribute__((weak));
 extern "C" std::size_t eden_heap_large_held(unsigned* blocks) __attribute__((weak));
 #ifdef PS5_NATIVE
 extern "C" std::int64_t sceKernelGetDirectMemorySize();
@@ -649,10 +650,10 @@ void ReportGpuThread(unsigned frame) {
         const std::size_t large = eden_heap_large_held ? eden_heap_large_held(&large_blocks) : 0;
         std::size_t table_span = 0, table_held = 0;
         ::Common::SparseUsage(&table_span, &table_held);
-        std::printf("EDEN_PERF_HEAP arenas=%u pieces=%zu large=%zu large_blocks=%u tables=%zu table_span=%zu\n",
+        std::printf("EDEN_PERF_HEAP arenas=%u pieces=%zu large=%zu large_blocks=%u tables=%zu table_span=%zu tcache_bytes=%zu\n",
                     eden_heap_arenas_created ? eden_heap_arenas_created() : 1u,
                     eden_heap_committed ? eden_heap_committed() : std::size_t{0}, large, large_blocks, table_held,
-                    table_span);
+                    table_span, eden_heap_tcache_held ? eden_heap_tcache_held() : std::size_t{0});
     }
     {
         // Cumulative HLE handling time of every service command that has cost at least 1 ms.

@@ -32,7 +32,9 @@ end = heap.index('void ps5_opengl_heap_stats_print(unsigned iteration) {')
 heap = heap[:begin] + (root / 'headless/heap_arenas.inc').read_text() + heap[end:]
 for required in (
     '3072 MiB', 'eden_heap_commit', 'eden_heap_pages', 'eden_heap_pages_free',
-    'eden_heap_arenas_created', 'eden_heap_committed', '__builtin_ia32_pause',
+    'eden_heap_arenas_created', 'eden_heap_committed',
+    'eden_heap_tcache_held', 'EDEN_TCACHE_TOTAL_LIMIT',
+    '__builtin_ia32_pause',
 ):
     assert required in heap, f'heap derivation contract changed: {required}'
 if platform.machine().lower() not in ('x86_64', 'amd64'):
@@ -295,9 +297,30 @@ int main(int argc, char **argv) {
     } else {
         assert(eden_heap_committed() == heap && atomic_load(&committed_bytes) == 0);
     }
+    // A single thread frees ~4 MiB in many size classes. Its private
+    // free-list must keep <=1 MiB; the excess goes back to the mspaces.
+    enum { TCACHE_PRESSURE = 4096 };
+    void *cache_pressure[TCACHE_PRESSURE];
+    for (int i = 0; i < TCACHE_PRESSURE; ++i) {
+        cache_pressure[i] = __wrap_malloc(16u * (1u + (unsigned)i % 127u));
+        assert(cache_pressure[i] != NULL);
+    }
+    for (int i = 0; i < TCACHE_PRESSURE; ++i)
+        __wrap_free(cache_pressure[i]);
+    assert(eden_heap_tcache_held() <= ((size_t)1 << 20));
+    // Reuse the surviving hot cache; the bounded accounting must never underflow.
+    for (int i = 0; i < TCACHE_PRESSURE; ++i) {
+        void *block = __wrap_malloc(16u * (1u + (unsigned)i % 127u));
+        assert(block != NULL);
+        __wrap_free(block);
+    }
+    assert(eden_heap_tcache_held() <= ((size_t)1 << 20));
     pthread_t threads[8];
     for (uintptr_t i = 0; i < 8; ++i) assert(pthread_create(&threads[i], NULL, worker, (void *)(i + 1)) == 0);
     for (int i = 0; i < 8; ++i) pthread_join(threads[i], NULL);
+    // Joined workers have flushed their private caches at TLS destruction.
+    // Only this main thread can still retain its <=1 MiB hot free-list.
+    assert(eden_heap_tcache_held() <= ((size_t)1 << 20));
     const size_t after_threads = eden_heap_committed();
     const size_t peak = atomic_load(&ps5_heap_peak_bytes);
     assert(eden_heap_arenas_created() >= 8);
