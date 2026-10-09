@@ -1516,3 +1516,10 @@ This commit deliberately requests one `dev/ps5-sparse-jit` all-on PS5 build `[fu
 ### 2026-10-09 — PS5 all-on native CI after GPU generated-unit assertion fix
 
 Explicit, isolated dev/test retry `[full-build] [test-all-on]`. No release publish, no design changes; current run status to be verified separately. While running, avoid commits on the same dev branch because GitHub cancels prior work.
+
+### 2026-10-09 — All-on CI #37878603774 passed GPU/glyph/controller host checks, A32 JIT fixture falsely assumed 128 MiB
+
+- [Run #37878603774](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/37878603774) progressed beyond PS5 architecture/PRMT-Fermi GPU source contract and real glyph installer/PlayStation Auto mapping C++ host checks; FAILED in `tools/check-jit-startup-retry.py` C++ host mock, within "Validate startup, elevation and storage contracts".
+- Header `headless/jit-startup-retry.h` intentionally reduces failed JIT arena by 25% each iteration, 2MiB-aligned, converging to baseline. Observed A32 mock startup attempts: **512 → 384 → 288 → 216 → 162 → 120 MiB**, with 5 retries, 6 construction attempts, threshold at most 128 MiB. Prior fixture incorrectly asserted final capacity ==128 MiB, which cannot occur under that geometric strategy, and C++ abort was its erroneous assert; not an actual PS5 runtime crash.
+- Fixed test `tools/check-jit-startup-retry.py` to assert complete six-element capacity trajectory and bound 64 MiB <=120 MiB <=128 MiB, n==6, commit `94797ca939f3a7fe019cde5d4c3d4f6d552f9a33` [skip ci]. Did NOT suppress native allocator failure and did NOT modify correct alloc algorithm to game-specific magic target. Requires fresh CI verification.
+- No PS5 SDK-native compile or FW13.60 proof yet. All-on dev branch only, launcher design unchanged, protected shipping branch unchanged, GitHub issue #7/#8 and 26 firmware acceptance gates remain open.
