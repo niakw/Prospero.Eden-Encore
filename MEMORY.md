@@ -1491,3 +1491,7 @@ Trigger `[full-build] [test-all-on]` on dev after correcting the obsolete storag
 - Actual app source `headless/main.cpp` reports direct memory ONLY on `core_initialized`, `core_shutdown`, `core_destroyed`, and JIT ownership on `game_loaded`, `nro_loaded`, `cpu_manager_ready`, `core_shutdown`. Old checker incorrectly required ALL six combined `std::string_view{name}` test expressions to equal only three.
 - Fixed checker to extract + verify direct and JIT lifecycle hooks independently, and recognize the actual conditional `passed(game ? "game_loaded" : "nro_loaded")` stages. Source commit `f8487286a22fab31fddbae3af1d0ccbd8a5dc5ed` [skip ci]. GitHub source readback independently confirmed exact stage sets, their call sites and both guest paths. Additional JS literal-assert scan across nine live contract inputs found zero obvious stale `in`/ `not in` expressions; NOT equivalent to executing all host regressions.
 - No release/ship branch changes, user-approved purple UI unchanged, sparse JIT/FC27/GPU/actual PS button art still not firmware-qualified. The first failing run is red for a stale *host source assertion*, not native code compilation.
+
+### 2026-10-09 — CI retest after fixing split direct/JIT memory stage contract
+
+This commit triggers one isolated PS5 all-on native test pipeline using `[full-build] [test-all-on]`. No publish, protected shipping branch change, source UI redesign or firmware-success claim. Do not push other dev commits while test running.
