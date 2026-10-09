@@ -65,8 +65,10 @@ def read_json(path: Path, bound: int = MAX_REPORT):
     return json.loads(path.read_text("utf-8"))
 
 def game_query(name: str, variant: int) -> str:
-    safe = re.sub(r"[\x00-\x1f\x7f\"<>]", " ", name).strip()
-    require(2 <= len(safe) <= 260, "unsafe game title")
+    # Regional TitleDB has short names ("A") and 300-character storefront
+    # editions. They should not block a 24k-title discovery queue.
+    safe = re.sub(r"[\x00-\x1f\x7f\"<>]", " ", name).strip()[:240]
+    require(1 <= len(safe) <= 240, "unsafe game title")
     if variant == 0:
         return f'"{safe}" Switch PlayStation PS4 PS5 controller buttons UI mod'
     if variant == 1:
