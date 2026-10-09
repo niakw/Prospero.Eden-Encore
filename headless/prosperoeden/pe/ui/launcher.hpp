@@ -267,6 +267,7 @@ class Launcher
     std::future<std::vector<Game>> scan_; // the list being read
     std::future<std::vector<std::string>> presence_scan_; // nonblocking filesystem presence results
     std::vector<std::string> previous_missing_; // sorted previous poll; two-scan absence confirmation
+    std::vector<std::string> home_missing_refresh_; // refresh once per confirmed missing-Home set
     // Home enrichment is independent of the full library scan: the hero should get its
     // banner/player metadata as soon as the network/cache can provide it.
     std::future<Game> home_media_scan_;
