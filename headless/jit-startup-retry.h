@@ -37,20 +37,32 @@ constexpr std::uint32_t NextCapacity(std::uint32_t previous,
 template<class Construct>
 void ConstructWithCapacityFallback(std::uint32_t& capacity, std::uint32_t baseline,
                                    unsigned bits, std::size_t core, Construct&& construct) {
+    unsigned retries = 0;
     for (;;) {
+        const char* reason = "unknown";
         try {
-            std::forward<Construct>(construct)();
+            // Keep the callable as an lvalue: a single reusable construction
+            // closure must survive each failed allocation attempt.
+            construct();
+            if (retries)
+                std::fprintf(stderr,
+                             "EDEN_JIT_STARTUP_RECOVERED bits=%u core=%zu bytes=%u retries=%u\n",
+                             bits, core, capacity, retries);
             return;
         } catch (const Xbyak::Error& error) {
             if (static_cast<int>(error) != Xbyak::ERR_CANT_ALLOC || capacity <= baseline)
                 throw;
+            reason = "xbyak_alloc";
         } catch (const std::bad_alloc&) {
             if (capacity <= baseline) throw;
+            reason = "host_alloc";
         }
         const std::uint32_t next = NextCapacity(capacity, baseline);
         if (next == capacity) throw std::bad_alloc{};
-        std::fprintf(stderr, "EDEN_JIT_STARTUP_RETRY bits=%u core=%zu from=%u to=%u\n",
-                     bits, core, capacity, next);
+        ++retries;
+        std::fprintf(stderr,
+                     "EDEN_JIT_STARTUP_RETRY bits=%u core=%zu from=%u to=%u reason=%s attempt=%u\n",
+                     bits, core, capacity, next, reason, retries);
         capacity = next;
     }
 }
