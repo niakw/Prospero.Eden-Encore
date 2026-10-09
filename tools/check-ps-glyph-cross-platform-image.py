@@ -110,8 +110,8 @@ with tempfile.TemporaryDirectory(prefix="eden-cross-platform-glyph-") as temp:
     # Multiple nearby alpha sprites are ambiguous and must not be guessed.
     ambiguous = Image.new("RGBA", (160, 128), (0, 0, 0, 0))
     draw = ImageDraw.Draw(ambiguous)
-    draw.rectangle((34, 30, 52, 50), fill=(225, 0, 0, 255))
-    draw.rectangle((60, 30, 78, 50), fill=(0, 225, 0, 255))
+    draw.rectangle((47, 43, 58, 56), fill=(225, 0, 0, 255))
+    draw.rectangle((63, 43, 74, 56), fill=(0, 225, 0, 255))
     switch.write_bytes(png(ambiguous))
     assert test.propose(pc, pc_mod, switch, "Synthetic Game", "Wii U", "gameplay")[
         "source_ui_layout_position_candidates"] == []
