@@ -4,6 +4,7 @@
 
 #include "pe/ui/textures.hpp"
 
+#include "pe/ui/dualsense_mask_asset.hpp"
 #include "pe/core/log.hpp"
 
 #include <algorithm>
@@ -49,8 +50,35 @@ bool Textures::load_art(const std::string &directory)
     // released before a game starts, so it does not consume gameplay VRAM.
     (void)load("art/backdrop.tga", &backdrop_);
     const bool brand = load("art/brand.tga", &brand_);
-    // Only the home screen's controller display needs this one.
-    (void)load("art/controller.tga", &controller_);
+    // Licensed DualSense artwork is a compact 144x100 mask embedded in the
+    // launcher. Decode it ONCE before any frame; no SVG parser, PNG I/O or
+    // texture upload inside navigation/gameplay. Fall back to the old local
+    // controller TGA if an asset revision is ever malformed.
+    gfx::Image pad_image;
+    pad_image.width = art::kDualSenseWidth;
+    pad_image.height = art::kDualSenseHeight;
+    constexpr std::size_t kPixels =
+        static_cast<std::size_t>(art::kDualSenseWidth) * art::kDualSenseHeight;
+    pad_image.rgba.resize(kPixels * 4u);
+    std::size_t pixel = 0;
+    bool valid = true;
+    for (std::size_t i = 0; i < art::kDualSenseRunsCount; i += 2) {
+        const std::size_t length = art::kDualSenseAlphaRuns[i];
+        const auto level = art::kDualSenseAlphaRuns[i + 1];
+        if (length == 0 || level > 3 || length > kPixels - pixel) {
+            valid = false;
+            break;
+        }
+        for (std::size_t n = 0; n < length; ++n, ++pixel) {
+            auto* color = pad_image.rgba.data() + pixel * 4u;
+            color[0] = color[1] = color[2] = 255;
+            color[3] = static_cast<std::uint8_t>(level * 85u);
+        }
+    }
+    if (valid && pixel == kPixels)
+        controller_ = create(pad_image);
+    if (!controller_)
+        (void)load("art/controller.tga", &controller_);
     return brand;
 }
 
