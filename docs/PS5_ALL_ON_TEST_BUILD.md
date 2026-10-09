@@ -28,6 +28,18 @@ Une alternative automatique, utilisée uniquement sur la branche de développeme
 - `tools/ci/check-all-on-test-binary.py` : après compilation, inspecte le CMakeCache réel, le frontend.json, le binaire de PS5, l'identifiant FC27 et l'activation effective des indicateurs de compilation. Ces données ne prouvent **pas** que l'exécutable sait utiliser les mappings du firmware.
 - Nlib navigation, analyse dédupliquée des logs FC27, architecture PS5, GPU, jeux de glyphes, JIT mémoire et règle de livraison sont vérifiés par les tests hôtes préparatoires.
 
+## Diagnostics et comparaison FC27 / Zelda
+
+Dans le **prochain** artefact PS5 de test (après compilation explicitement autorisée), les logs sur fenêtres de 5 secondes distingueront :
+
+- `EDEN_VULKAN_FRAME` : FPS, pire frame, nombre de frames au-delà de 38/50/100/200 ms.
+- `EDEN_DEV_GPU`, `EDEN_DEV_GUEST`, `EDEN_PERF_CPU_POINT` : GPU-worker, file GPU, IPC et temps des guest-cores. Ce ne sont pas des pourcentages d'utilisation réels de la puce GPU.
+- `EDEN_MEMORY_LIVE` : dernière **mesure noyau confirmée** du plus grand bloc de mémoire directe libre, sans nouvelle interrogation système depuis le rapport vidéo. Zéro avant un premier probe réussi signifie « inconnu », pas « épuisé ».
+- `EDEN_JIT_SPARSE_MEMORY phase=dev-profile` : réservation virtuelle JIT et pages physiques engagées, obtenues par atomiques, sans verrou du JIT sur la frame. Les étapes `core_initialized`, `core_shutdown`, `core_destroyed` conservent les états de mémoire physique détaillés.
+- `EDEN_DEV_HLE` : au plus 32 commandes HLE cumulativement les plus coûteuses sur le rapport GPU. `EDEN_DEV_HLE_SUMMARY` et `EDEN_DEV_HLE_OVERFLOW` conservent la comptabilité des commandes non détaillées.
+
+L'outil en lecture seule `tools/analyze-ps5-frame-windows.py` sait afficher ces fenêtres, la pression mémoire directe et le JIT sparse, y compris avec les anciens logs ne possédant pas les nouveaux champs. Les nouveaux préflights `tools/check-hle-counter-contention.py` et `tools/check-ps5-frame-window-analysis.py` sont configurés dans GitHub Actions mais ne constituent pas encore des validations exécutées. Pour une mesure honnête, comparer les **mêmes scènes, paramètres vidéo et durées**, séparément entre premier démarrage et relancement avec caches.
+
 ## Ce qu'un run vert ne prouve pas
 
 Il reste à installer l'artefact sur PS5 FW13.60, comparer FC27 premier/deuxième lancement sans purger les caches, contrôler l'absence de `std::bad_alloc`, les mesures de frame time et Home/Library, la bonne activation sparse (probe et commit physique), les rendus PRMT/Fermi2D et les glyphes graphiques effectivement affichés. Les issues #7 et #8 ainsi que les 26 preuves de clôture matérielle restent ouverts jusqu'à ces tests.
