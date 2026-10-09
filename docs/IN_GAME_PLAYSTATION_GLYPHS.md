@@ -248,3 +248,7 @@ The Switch game/version and its original RomFS remain authoritative. Cross-platf
 - Synthetic future checks `tools/check-ps-glyph-cross-platform-image.py`, `tools/check-ps-glyph-platform-coverage.py` not executed under no-build/run gate.
 
 **Never directly import an original PC/Wii U/PSP replacement pack as a verified Switch/PS5 runtime rule.** The title ID, game update, original file SHA, per-screen button meaning and executable PS5 output must still be validated.
+
+### Multiplatform original artwork inventory
+
+The new `tools/ps-glyph-builtin-platform-assets.py` can group **candidate** PS/Xbox/Switch artwork names already embedded in a locally extracted game RomFS (no extraction/texture decoding or writes). When an identical UI asset exists on another platform, `tools/ps-glyph-cross-platform-image.py` can propose coordinate rectangles *only after* exact decoded rendered-image equivalence. These steps expand discovery, **not** the number of supported Switch games. See [multiplatform guide](PS_GLYPH_MULTIPLATFORM_RESEARCH.md). Synthetic tests `tools/check-ps-glyph-builtin-platform-assets.py` were added but not executed.
