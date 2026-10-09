@@ -67,7 +67,7 @@ void TranslatorVisitor::PRMT_imm(u64 insn) {
             : ir.BitFieldExtract(source, ir.Imm32(src_offset), ir.Imm32(8), false);
         const IR::U32 value = ir.BitwiseAnd(extracted, ir.Imm32(255));
         const IR::U32 shifted = output_byte == 0 ? value :
-            ir.ShiftLeftLogical(value, ir.Imm32(output_byte * 8u));
+            IR::U32{ir.ShiftLeftLogical(value, ir.Imm32(output_byte * 8u))};
         result = ir.BitwiseOr(result, shifted);
     }
     X(static_cast<IR::Reg>(insn & 255ULL), result);
@@ -125,7 +125,7 @@ void TranslatorVisitor::PRMT_reg(u64 insn) {
         const IR::U32 replicated{ir.Select(negative, ir.Imm32(255), ir.Imm32(0))};
         const IR::U32 byte{ir.Select(signed_replication, replicated, selected_byte)};
         const IR::U32 shifted{i == 0 ? byte :
-            ir.ShiftLeftLogical(byte, ir.Imm32(i * 8u))};
+            IR::U32{ir.ShiftLeftLogical(byte, ir.Imm32(i * 8u))}};
         result = ir.BitwiseOr(result, shifted);
     }
     X(static_cast<IR::Reg>(insn & 255ULL), result);
