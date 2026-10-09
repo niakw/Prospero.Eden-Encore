@@ -48,10 +48,19 @@ def merge(reports:list[dict]) -> dict:
                 count+=1
                 if count>MAX_LEADS:
                     raise ValueError("too many source leads")
+            # Historical merged data stores multiple queries[] per game;
+            # do not discard their provenance on the next incremental run.
+            query_entries=list(row.get("queries",[]))
             if row.get("query"):
-                v={"q":row["query"],"status":row.get("discovery_status","unknown")}
-                if v not in obj["queries"] and len(obj["queries"])<20:
-                    obj["queries"].append(v)
+                query_entries.append({"q":row["query"],
+                                      "status":row.get("discovery_status","unknown")})
+            for v in query_entries:
+                if (isinstance(v,dict) and
+                    isinstance(v.get("q"),str) and
+                    isinstance(v.get("status"),str) and
+                    v not in obj["queries"] and len(obj["queries"])<80):
+                    obj["queries"].append({"q":v["q"][:600],
+                                           "status":v["status"][:120]})
             links=row.get("search_links") or {}
             for k,v in links.items():
                 if isinstance(k,str) and isinstance(v,str):
