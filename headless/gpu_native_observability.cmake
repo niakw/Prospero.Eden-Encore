@@ -244,8 +244,13 @@ file(READ "${PROJECT_SOURCE_DIR}/src/video_core/engines/sw_blitter/blitter.cpp" 
 file(READ "${PROJECT_SOURCE_DIR}/src/video_core/textures/decoders.cpp" swizzle_source)
 string(FIND "${sw_blit_source}" "src.depth, config.src_x0" sw_source_depth_at)
 string(FIND "${sw_blit_source}" "dst.depth, config.dst_x0" sw_dest_depth_at)
+string(FIND "${sw_blit_source}" "static_cast<size_t>(surface.pitch * surface.height)" sw_pitch_arithmetic_at)
+string(FIND "${sw_blit_source}" "const size_t src_copy_size = src_extent_x * src_extent_y * src_bytes_per_pixel;" sw_src_copy_arithmetic_at)
+string(FIND "${sw_blit_source}" "const size_t dst_copy_size = dst_extent_x * dst_extent_y * dst_bytes_per_pixel;" sw_dst_copy_arithmetic_at)
 string(FIND "${swizzle_source}" "static constexpr u32 origin_z = 0;" sw_z0_at)
-if(sw_source_depth_at LESS 0 OR sw_dest_depth_at LESS 0 OR sw_z0_at LESS 0)
+if(sw_source_depth_at LESS 0 OR sw_dest_depth_at LESS 0 OR
+   sw_pitch_arithmetic_at LESS 0 OR sw_src_copy_arithmetic_at LESS 0 OR
+   sw_dst_copy_arithmetic_at LESS 0 OR sw_z0_at LESS 0)
     message(FATAL_ERROR "Pinned Fermi2D software base-layer copy contract changed")
 endif()
 
