@@ -301,7 +301,11 @@ std::string RunApp(const std::string& launch_error, bool first_start, bool* rest
 
 #ifdef EDEN_DEV_ROM_ID
             const auto now = static_cast<std::uint64_t>(Milliseconds(frame_start.time_since_epoch()));
-            if (++development_poll >= 10) {
+            // Manual DualSense sessions do not need six blocking file probes
+            // per second to search for absent unattended-test command files.
+            // After scripted replay starts, restore the fast 10-frame cadence.
+            const unsigned command_poll_period = development_input.active ? 10u : 60u;
+            if (++development_poll >= command_poll_period) {
                 development_poll = 0;
                 std::ifstream command(Eden::AppFile("compat-input.txt"));
                 if (development_input.Read(command, now)) {
