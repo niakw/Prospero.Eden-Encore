@@ -60,7 +60,7 @@ assert "void dualsense_icon(" in widgets_header
 assert "void settings_gear(Canvas &c" in widgets
 assert "void dualsense_icon(Canvas &c" in widgets
 assert "dualsense_icon(c, r, ink" in widgets
-assert "dualsense_icon(c, {left - 2.0f" in home
+assert "dualsense_icon(c, {left - 10.0f, cy - 15.0f, 44.0f, 30.0f}, theme::kTitle, 1.0f);" in home
 assert "settings_gear(c, left + 12.0f" in home
 assert "settings_gear(c, gx, gy" in nav
 
