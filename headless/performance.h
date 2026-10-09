@@ -13,6 +13,10 @@ namespace Eden::Performance {
 void RegisterWorker(const char* name);
 // Development: keep other named threads off guest cores 0-2 and their SMT siblings.
 void SetSecondaryPlacement(bool enabled);
+// Which logical slots are already dedicated to guest CPU/GPU workers.
+// Zero means topology is unproven; shader scheduling must reserve
+// conservatively instead of assuming that an affinity mask is secondary.
+std::uint64_t PinnedWorkerMask() noexcept;
 // Explicit PS5 diagnostic A/B: spread workers across distinct OS logical CPUs,
 // without claiming separate physical cores when firmware CPUID is unreliable.
 void EnableExperimentalLogicalPlacement();
