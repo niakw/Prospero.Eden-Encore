@@ -200,7 +200,13 @@ jobs:
         if: success()
         run: |
           set -euo pipefail
-          mkdir -p data/glyph-research/discovery
+          mkdir -p data/glyph-research/discovery data/glyph-research/catalog
+          # Compressed, deterministic snapshots preserve the WHOLE regional
+          # Switch game catalog and 4 queries/title without 100k loose files.
+          gzip -9 -n -c /tmp/eden-glyph-discovery/catalog.json \
+            > data/glyph-research/catalog/switch1-titles.json.gz
+          gzip -9 -n -c /tmp/eden-glyph-discovery/all-switch1-search-queue.json \
+            > data/glyph-research/catalog/source-queries.json.gz
           cp /tmp/eden-glyph-discovery/source-links.json \
             data/glyph-research/discovery/leads.json
           cp /tmp/eden-glyph-discovery/state-next.json \
@@ -219,8 +225,23 @@ jobs:
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python3 - <<'PY'
+          import gzip, json
+          from pathlib import Path
+          for filename in ("switch1-titles.json.gz", "source-queries.json.gz"):
+              file = Path("data/glyph-research/catalog") / filename
+              assert file.stat().st_size < 32 * 1024 * 1024
+              with gzip.open(file, "rt", encoding="utf-8") as stream:
+                  data = json.load(stream)
+              assert data["schema"] == 1
+              if filename.startswith("source-"):
+                  assert data["total_search_tasks"] == 4 * data["distinct_game_title_ids"]
+          print("Validated lossless 24k-title catalog and four-way source query archive")
+          PY
           git add data/glyph-research/discovery/leads.json \
-                  data/glyph-research/discovery/progress.json
+                  data/glyph-research/discovery/progress.json \
+                  data/glyph-research/catalog/switch1-titles.json.gz \
+                  data/glyph-research/catalog/source-queries.json.gz
           if ! git diff --cached --quiet; then
             git commit -m "data(glyphs): persist public Switch/PC mod references and cursor [skip ci]"
             if ! git push origin HEAD:dev/ps5-sparse-jit; then
