@@ -6,6 +6,8 @@ on:
       - .github/workflows/check-ps-glyph-reconstruct.yml
       - tools/ps-glyph-scene-positions.py
       - tools/check-ps-glyph-scene-positions.py
+      - tools/ps-glyph-multiplatform-image-port.py
+      - tools/check-ps-glyph-multiplatform-image-port.py
       - tools/ps-glyph-cross-platform-image.py
       - tools/check-ps-glyph-cross-platform-image.py
       - tools/ps-glyph-reconstruct.py
@@ -64,6 +66,7 @@ jobs:
         run: |
           python3 -B tools/check-ps-glyph-scene-positions.py
           python3 -B tools/check-ps-glyph-cross-platform-image.py
+          python3 -B tools/check-ps-glyph-multiplatform-image-port.py
       - name: Verify per-game input semantics and independently approved cross-console scene geometry
         run: |
           python3 -B tools/check-ps-glyph-reconstruct.py
