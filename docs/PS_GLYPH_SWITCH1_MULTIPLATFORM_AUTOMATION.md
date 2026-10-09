@@ -93,3 +93,31 @@ the per-game version, exact Switch original SHA-256, atlas/scene/symbol
 mapping, permitted artwork and real PS5 rendering are separately tracked.
 The native glyph catalogue still reports zero publicly qualified built-in
 packs. This work never validates FC27 frame times/VRAM/JIT.
+
+## 10 October — Stable storage and Firefox-style public search
+
+- **Simple client first:** `tools/ps-glyph-curl-search.py` runs public
+  DuckDuckGo/Yandex HTML searches with `curl --user-agent
+  "Mozilla/5.0 ... Firefox/140.0"`. This is an HTTP User-Agent, **not
+  a full Firefox browser**. If content needs JavaScript, explicitly use
+  `tools/ps-glyph-firefox-search.py` (Playwright's actual Firefox), installed
+  only for manually selected browser jobs. Neither path solves a CAPTCHA
+  or impersonates an authorized logged-in user.
+- **No paid Yandex API by default.** `curl_yandex` and
+  `firefox_yandex` navigate publicly available Yandex search pages;
+  `yandex` remains the separate credentialed, metered official API.
+  Public search engines may still refuse requests from GitHub datacenters.
+  A 403/429/challenge is a failed/unprocessed query, never a successful scan.
+- **Persistent GitHub store:** [`data/glyph-research/README.md`](../data/glyph-research/README.md)
+  and [BOTW `01007EF00011E000.json`](../data/glyph-research/games/01007EF00011E000.json).
+  `discovery/leads.json` retains checked public source links per game,
+  `discovery/progress.json` persists provider/variant Title ID checkpoints,
+  `catalog/switch1-titles.json.gz` and `catalog/source-queries.json.gz`
+  preserve the entire 24,205-title snapshot and 96,820 prepared searches
+  without keeping 100k loose files. **Do not infer 96,820 actual searches.**
+- GitHub Actions merges discoveries with existing git data, refetches the
+  latest `dev/ps5-sparse-jit` before committing, and retries on concurrent
+  source commits; it never force-pushes and never writes the main/release
+  branch. A denied push remains a warning and the downloadable workflow
+  artifact is only a temporary fallback. No Nintendo game assets, mods,
+  cookies or raw search-result HTML belong in the repository.
