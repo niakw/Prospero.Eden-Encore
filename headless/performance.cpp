@@ -64,6 +64,23 @@ std::array<Worker, names.size()> workers;
 // owner-written worker mutex so costly diagnostic maps/hex never stop cores
 // from publishing CPU samples or frontends from polling development PCs.
 std::mutex snapshot_mutex;
+// A GPU/guest worker is normally created again for the next title inside
+// the same process. Registration is NOT a permanent OS thread identity:
+// clear it on owner-thread exit before a later profiler tries to signal a
+// recycled pthread_t. Thread-local declaration is touched before starting
+// the optional fast sampler, so the fast sampler's jthread is joined FIRST.
+struct WorkerRegistration {
+    unsigned index = unsigned(names.size());
+    pthread_t owner{};
+    ~WorkerRegistration() {
+        if (index >= names.size()) return;
+        const std::lock_guard lock(workers_mutex);
+        auto& entry = workers[index];
+        if (entry.registered && pthread_equal(entry.thread, owner))
+            entry.registered = false;
+    }
+};
+thread_local WorkerRegistration owned_worker;
 #ifdef EDEN_DEV_PROFILE
 static_assert(std::atomic<uintptr_t>::is_always_lock_free);
 // Lock-free signal-handler samples: use ring slots so the 500 Hz fast
@@ -889,6 +906,10 @@ void RegisterWorker(const char* name) {
         if (std::strcmp(name, names[i])) continue;
         Worker worker;
         worker.thread = pthread_self();
+        // Construct this thread's exit hook BEFORE pc_core_registration and
+        // the optional jthread sampler. TLS destruction will therefore stop
+        // the producer, clear core readiness, and finally unregister worker.
+        owned_worker.owner = worker.thread;
 #ifdef EDEN_DEV_PROFILE
         if (pc_sampling && (i == 4 || i == pc_sample_core.load())) {
             sigset_t mask;
@@ -944,8 +965,11 @@ void RegisterWorker(const char* name) {
             }
         }
         worker.registered = true;
-        std::lock_guard lock(workers_mutex);
-        workers[i] = worker;
+        {
+            const std::lock_guard lock(workers_mutex);
+            workers[i] = worker;
+        }
+        owned_worker.index = i;
         return;
     }
 #ifdef PS5_NATIVE

@@ -51,3 +51,7 @@ L'outil en lecture seule `tools/analyze-ps5-frame-windows.py` sait afficher ces 
 ## Ce qu'un run vert ne prouve pas
 
 Il reste à installer l'artefact sur PS5 FW13.60, comparer FC27 premier/deuxième lancement sans purger les caches, contrôler l'absence de `std::bad_alloc`, les mesures de frame time et Home/Library, la bonne activation sparse (probe et commit physique), les rendus PRMT/Fermi2D et les glyphes graphiques effectivement affichés. Les issues #7 et #8 ainsi que les 26 preuves de clôture matérielle restent ouverts jusqu'à ces tests.
+
+### Identifiants de workers réutilisés au retour du jeu
+
+- L'enregistrement d'un worker CPU/GPU est maintenant supprimé quand **son propre thread** s'arrête. La tâche de profilage qui demande un PC ne doit donc pas retrouver un ancien `pthread_t` encore marqué vivant au démarrage du prochain titre. Cela ne remplace pas le test firmware d'une course exceptionnelle entre une demande de signal déjà en cours et la fin du thread.
