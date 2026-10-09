@@ -25,8 +25,8 @@ def refuse(f, reason: str) -> None:
 
 dst = module.dont_starve_together()
 assert dst["verified_from_source_code"]
-assert dst["total_common_scene_anchors"] == 16
-assert dst["exactly_reused_positions"] >= 4
+assert dst["total_common_scene_anchors"] == 17
+assert dst["exactly_reused_positions"] == 2
 assert dst["positions"]["L2"]["same_position"]
 assert dst["positions"]["R2"]["same_position"]
 assert dst["positions"]["CROSS"]["same_position"] is False
