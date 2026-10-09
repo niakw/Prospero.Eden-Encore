@@ -24,11 +24,39 @@ using cpuset_t=uint64_t;
 #define CPU_LEVEL_WHICH 1
 #define CPU_WHICH_TID 1
 static uint64_t current=0x1fff, fail_mask=0;
-static unsigned max_leaf=0xb, level_type=1, apics[64];
-static bool fail_restore=false;
+static unsigned max_leaf=0xb, level_type=1, apics[64], amd_cores[64];
+static bool fail_restore=false, amd_vendor=false, amd_ext_feature=false;
 static constexpr std::array names{"CPUCore_0","CPUCore_1","CPUCore_2","CPUCore_3","GPU"};
-static unsigned __get_cpuid_max(unsigned,void*) {return max_leaf;}
-#define __cpuid_count(l,s,a,b,c,d) do {a=1;b=2;c=level_type<<8;d=apics[__builtin_ctzll(current)];} while(0)
+static unsigned __get_cpuid_max(unsigned base, void*) {
+ return base >= 0x80000000u ? (amd_vendor ? 0x8000001eu : 0x80000000u) : max_leaf;
+}
+static void mock_cpuid(unsigned leaf,unsigned& a,unsigned& b,unsigned& c,unsigned& d) {
+ a=b=c=d=0;
+ if(leaf==0) {
+  a=max_leaf;
+  b=amd_vendor ? 0x68747541u : 0x756e6547u;
+  d=amd_vendor ? 0x69746e65u : 0x49656e69u;
+  c=amd_vendor ? 0x444d4163u : 0x6c65746eu;
+ } else if(leaf==1) {
+  a=amd_vendor ? ((8u<<20)|(15u<<8)) : (6u<<8);
+ } else if(leaf==0x80000001u) {
+  c=amd_ext_feature ? (1u<<22) : 0;
+ }
+}
+static void mock_cpuid_count(unsigned leaf,unsigned subleaf,
+                             unsigned& a,unsigned& b,unsigned& c,unsigned& d) {
+ (void)subleaf;
+ a=b=c=d=0;
+ const unsigned cpu=static_cast<unsigned>(__builtin_ctzll(current));
+ if(leaf==0x8000001eu) {
+  b=(amd_cores[cpu]&255u)|(1u<<8); // two SMT siblings per CoreId
+  c=0; // one NUMA node
+ } else if(leaf==0xbu) {
+  a=1;b=2;c=level_type<<8;d=apics[cpu];
+ }
+}
+#define __cpuid(l,a,b,c,d) mock_cpuid((l),(a),(b),(c),(d))
+#define __cpuid_count(l,s,a,b,c,d) mock_cpuid_count((l),(s),(a),(b),(c),(d))
 static int cpuset_getaffinity(int,int,int,size_t n,cpuset_t* out){assert(n==8);*out=current;return 0;}
 static int cpuset_setaffinity(int,int,int,size_t n,const cpuset_t* in){
  assert(n==8 && *in && !(*in&~0x1fffULL));
@@ -56,6 +84,22 @@ int main(){
  fail_mask=0;fail_restore=true;bool threw=false;
  try{CheckWorkerTopology();}catch(const std::runtime_error&){threw=true;}
  assert(threw);
+
+ // PS5 Zen-family extended-topology path: x2APIC is unavailable, but
+ // authenticated AMD vendor/family/TopologyExtensions still prove distinct
+ // physical cores. Two sibling logical CPUs share the same physical CoreId.
+ fail_restore=false;current=0x1fff;max_leaf=0xa;
+ amd_vendor=true;amd_ext_feature=true;
+ for(unsigned i=0;i<13;++i) amd_cores[i]=i/2;
+ CheckWorkerTopology();
+ assert(worker_topology_ready && current==0x1fff);
+ assert((worker_cpus==std::array<unsigned,5>{0,2,4,6,8}));
+ // TopologyExtensions absent: do not claim proof from logical IDs alone.
+ amd_ext_feature=false;
+ CheckWorkerTopology();
+ assert(!worker_topology_ready && topology_allowed_valid);
+ assert(current==0x1fff);
+ assert((worker_cpus==std::array<unsigned,5>{0,0,0,0,0}));
  return 0;
 }
 '''
@@ -63,4 +107,4 @@ with tempfile.TemporaryDirectory() as tmp:
     exe=Path(tmp)/'affinity'
     subprocess.run(['c++','-std=c++20','-Wall','-Wextra','-Werror','-fsanitize=address,undefined','-x','c++','-','-o',str(exe)],input=code,text=True,check=True)
     subprocess.run([str(exe)],check=True)
-print('Worker topology: PASS physical sibling exclusion, OS/APIC permutations, allowed masks, fallback and restoration failures')
+print('Worker topology: PASS x2APIC/Zen physical siblings, missing-topology fallback, readback masks and restoration (host only)')
