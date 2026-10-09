@@ -23,7 +23,7 @@ import json
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageChops, UnidentifiedImageError
+from PIL import Image, UnidentifiedImageError
 
 ROOT = Path(__file__).resolve().parent
 SPEC = importlib.util.spec_from_file_location("eden_cross_platform_diff", ROOT / "ps-glyph-mod-diff.py")
@@ -55,18 +55,9 @@ def comparable_pixels(source_bytes: bytes, switch_bytes: bytes) -> tuple[str, bo
         if not (0 < width and 0 < height and width * height <= diff.MAX_IMAGE_PIXELS):
             raise ValueError("image outside pixel bound")
         old, new = a.convert("RGBA"), b.convert("RGBA")
-        old_c = old.split()
-        new_c = new.split()
-        # Compare exact ALPHA and premultiplied RGB to avoid matching
-        # invisible padding that has no impact on displayed glyphs.
-        discrepancy = ImageChops.difference(old_c[3], new_c[3])
-        for i in range(3):
-            discrepancy = ImageChops.lighter(
-                discrepancy,
-                ImageChops.difference(
-                    ImageChops.multiply(old_c[i], old_c[3]),
-                    ImageChops.multiply(new_c[i], new_c[3])))
-        same = discrepancy.getbbox() is None
+        # Strict equivalence wherever either original has alpha > 0.
+        # Rounded 8-bit premultiplication could miss low-alpha RGB changes.
+        same = diff.visible_change_mask(old, new).getbbox() is None
         return ("rendered_pixels_identical" if same else "visible_pixels_differ",
                 same, [width, height])
 
