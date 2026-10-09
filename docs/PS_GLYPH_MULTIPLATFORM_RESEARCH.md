@@ -127,3 +127,16 @@ The pair tool records PC and Switch Sprite geometry side by side and lists poten
 - **Stardew Valley** (Nintendo Switch 1 confirmed by Nintendo): [PC Content Patcher controller icon pack](https://www.nexusmods.com/stardewvalley/mods/25148) includes PlayStation/Xbox/Switch variants, and [Star Control - CustomisationPlus](https://www.nexusmods.com/stardewvalley/mods/40470) v1.1.7 adds a hot-reloadable PS spritemap. Those are **SMAPI/Content Patcher PC mechanisms**, not valid Switch runtime injection without separate evidence.
 
 Both are research-only seed games. Their Nintendo release proof is in [PS_GLYPH_SWITCH1_GAME_SEEDS.json](PS_GLYPH_SWITCH1_GAME_SEEDS.json). The index now holds **20** other-platform sources and **26** total distinct researched Switch 1 games; no new real atlas has been qualified.
+
+## From 26 researched games toward the full Switch 1 Title ID catalogue
+
+The existing 26 titles are **research candidates**, not the size of the actual Nintendo Switch 1 library. Public metadata-only databases such as [blawar/titledb](https://github.com/blawar/titledb) (multi-region JSON metadata, Title IDs, version history) and [ch0c01dxyz/nsw-titledb](https://github.com/ch0c01dxyz/nsw-titledb) contain the necessary starting vocabulary. Their listings are not in-game texture resources.
+
+New local, read-only importer: `tools/ps-glyph-switch1-titledb.py`. Supply a separately obtained TitleDB JSON file (Title ID to title dictionary, title-object list, or region/NSUID to title object). It only considers **Switch 1 base application-shaped** IDs beginning 0100 and ending 000. Ambiguous titles sharing a name retain `candidate_title_id: null`; fuzzy matches, updates, DLC and Switch 2 title prefixes are not upgraded into a guess. An actual installed game's Title ID and update still have to be checked against game data.
+
+```bash
+python3 tools/ps-glyph-switch1-titledb.py --title-db /path/authorized/titledb/titles.json --out /tmp/switch1-existing-research-ids.json
+python3 tools/ps-glyph-switch1-titledb.py --title-db /path/authorized/titledb/titles.json --all-base-games --out /tmp/switch1-entire-base-title-research-backlog.json
+```
+
+The importer does not download the database automatically, does not change the runtime glyph catalogue, and never marks a title/version supported based on its name or ID. It can produce a backlog of candidate Switch 1 titles for future public mod discovery. The script accepts bounded external metadata and is **not executed** in this source-only pass; `tools/check-ps-glyph-switch1-titledb.py` adds synthetic assertions for ambiguity, update IDs, Switch 2 exclusions and regional duplicates.
