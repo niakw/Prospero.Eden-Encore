@@ -523,8 +523,8 @@ void GpuTimeDestroy(const Device& device) {
 adapt('src/video_core/renderer_vulkan/vk_scheduler.cpp', 'vulkan_scheduler.cpp', [
     ('#include <memory>', '#include <memory>\n#include <array>\n#include <chrono>\n#include <cstdio>\n#include "dev_vulkan.h"'),
     ('namespace Vulkan {\n', 'namespace Vulkan {\n' + GPU_TIME_HELPERS),
-    // The default destructor joins worker_thread only AFTER its body. If a
-    // dev timestamp probe created a query pool, join before destroying it.
+    # The default destructor joins worker_thread only AFTER its body. If a
+    # dev timestamp probe created a query pool, join before destroying it.
     ('Scheduler::~Scheduler() = default;',
      '''Scheduler::~Scheduler() {
     // The worker writes gpu_time.pool. Do not test that field until the
