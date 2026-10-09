@@ -9,6 +9,7 @@ This tool does not validate installed RomFS bytes; ps-glyph-pack.py does.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -53,6 +54,44 @@ def rule(title: object, version: object) -> tuple[str, str]:
     return title.upper(), version
 
 
+def check_replacement_files(folder: Path, entries: list) -> None:
+    require(0 < len(entries) <= 64, "invalid glyph pack file list")
+    seen = set()
+    total = 0
+    for item in entries:
+        require(isinstance(item, dict) and set(item) ==
+                {"romfs_path", "replacement", "original_sha256", "replacement_sha256"},
+                "invalid glyph pack replacement entry")
+        for key in ("original_sha256", "replacement_sha256"):
+            value = item[key]
+            require(isinstance(value, str) and re.fullmatch(r"[0-9a-fA-F]{64}", value),
+                    f"invalid {key}")
+        name = item["replacement"]
+        require(isinstance(name, str) and 0 < len(name) <= 240 and
+                "\\" not in name and ":" not in name and not name.startswith("/"),
+                "unsafe replacement resource path")
+        parts = name.split("/")
+        require(all(part and part not in (".", "..") and not part.startswith(".")
+                    for part in parts), "invalid replacement components")
+        key = name.casefold()
+        require(key not in seen, "duplicate replacement asset path")
+        seen.add(key)
+        file = folder
+        for part in parts:
+            file = file / part
+            require(not file.is_symlink(), "replacement symlink forbidden")
+        require(file.is_file() and file.stat().st_size <= 128 * 1024 * 1024,
+                f"replacement resource missing/too large: {name}")
+        total += file.stat().st_size
+        require(total <= 512 * 1024 * 1024, "glyph pack exceeds total size cap")
+        digest = hashlib.sha256()
+        with file.open("rb") as inp:
+            for chunk in iter(lambda: inp.read(1024 * 1024), b""):
+                digest.update(chunk)
+        require(digest.hexdigest() == item["replacement_sha256"].lower(),
+                f"modified replacement graphic: {name}")
+
+
 def build(packs: list[Path], existing: Path | None = None,
           minimum_revision: int = 2) -> dict:
     require(0 <= minimum_revision < 2**31-2, "invalid embedded revision floor")
@@ -83,6 +122,7 @@ def build(packs: list[Path], existing: Path | None = None,
                 isinstance(manifest["rights"], str) and len(manifest["rights"]) >= 4 and
                 isinstance(manifest["files"], list) and bool(manifest["files"]),
                 "invalid/empty glyph pack manifest")
+        check_replacement_files(directory, manifest["files"])
         r = rule(manifest["title_id"], manifest["update_version"])
         require(r not in versions, f"catalogue already has game/version {r}")
         versions.add(r)
@@ -107,8 +147,9 @@ def main() -> int:
                    help="revision embedded in emulator source; default 2")
     args = p.parse_args()
     try:
-        require(not args.out.exists() and args.out.parent.is_dir() and
-                not args.out.parent.is_symlink(), "output already exists or parent invalid")
+        require(not args.out.exists() and not args.out.is_symlink() and
+                args.out.parent.is_dir() and not args.out.parent.is_symlink(),
+                "output already exists or parent invalid")
         data = build(args.pack, args.existing, args.minimum_revision)
         serial = json.dumps(data, ensure_ascii=True, indent=2) + "\n"
         require(len(serial.encode("utf-8")) <= MAX, "catalogue exceeds native limit")
