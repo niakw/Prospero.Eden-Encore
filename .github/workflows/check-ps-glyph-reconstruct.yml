@@ -6,6 +6,10 @@ on:
       - .github/workflows/check-ps-glyph-reconstruct.yml
       - tools/ps-glyph-reconstruct.py
       - tools/check-ps-glyph-reconstruct.py
+      - tools/ps-glyph-diff-to-evidence.py
+      - tools/check-ps-glyph-diff-to-evidence.py
+      - tools/ps-glyph-mod-diff.py
+      - tools/ps-glyph-scan.py
       - headless/button_mapping.h
       - headless/main.cpp
       - tools/check-controller-semantic-mapping.py
@@ -30,6 +34,9 @@ jobs:
       - name: Verify cross-platform semantics and strict pixel provenance
         run: |
           python3 -B tools/check-ps-glyph-reconstruct.py
+      - name: Verify mod pixel differences reconstruct safe, unapproved Switch sprite candidates
+        run: |
+          python3 -B tools/check-ps-glyph-diff-to-evidence.py
       - name: Verify action glyphs match physical-to-guest HID mappings
         run: |
           python3 -B tools/check-controller-semantic-mapping.py
