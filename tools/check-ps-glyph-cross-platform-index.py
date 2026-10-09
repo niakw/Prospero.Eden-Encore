@@ -16,6 +16,7 @@ from urllib.parse import urlsplit
 BASE = Path(__file__).resolve().parents[1]
 SWITCH_INDEX = BASE / "docs/PS_GLYPH_SOURCE_INDEX.json"
 CROSS_INDEX = BASE / "docs/PS_GLYPH_CROSS_PLATFORM_INDEX.json"
+SEEDS_INDEX = BASE / "docs/PS_GLYPH_SWITCH1_GAME_SEEDS.json"
 SHA = re.compile(r"[0-9a-fA-F]{64}\Z")
 ID = re.compile(r"cross-[0-9]{3}\Z")
 VALID_RELATIONSHIPS = {
@@ -44,7 +45,7 @@ def read(path: Path) -> dict:
     return result
 
 
-def validate(cross: dict, switch: dict) -> dict:
+def validate(cross: dict, switch: dict, seeds: dict | None = None) -> dict:
     reject_unless(cross.get("schema") == 1 and switch.get("schema") == 1,
                   "unsupported source index schema")
     original = switch.get("mods")
@@ -53,6 +54,25 @@ def validate(cross: dict, switch: dict) -> dict:
                   1 <= len(sources) <= 512, "invalid source lists")
     switch_titles = {entry.get("title") for entry in original
                      if isinstance(entry, dict)}
+    seeded_titles: set[str] = set()
+    if seeds is not None:
+        reject_unless(seeds.get("schema") == 1 and isinstance(seeds.get("games"), list),
+                      "invalid Switch 1 title seed schema")
+        for entry in seeds["games"]:
+            reject_unless(isinstance(entry, dict) and isinstance(entry.get("switch_game"), str),
+                          "invalid Switch title seed")
+            title = entry["switch_game"]
+            reject_unless(bool(title) and title not in switch_titles and
+                          title not in seeded_titles,
+                          "duplicate or empty Switch 1 title seed")
+            listing = entry.get("official_switch_listing")
+            reject_unless(isinstance(listing, str), "missing official Switch listing")
+            listed = urlsplit(listing)
+            reject_unless(listed.scheme == "https" and listed.hostname == "www.nintendo.com" and
+                          not listed.username and not listed.password,
+                          "Switch 1 title seed requires Nintendo's own listing")
+            seeded_titles.add(title)
+    switch_titles.update(seeded_titles)
     unique_ids: set[str] = set()
     games: set[str] = set()
     platforms: set[str] = set()
@@ -128,12 +148,13 @@ def validate(cross: dict, switch: dict) -> dict:
     return {"cross_platform_sources":len(sources),
             "switch_games_referenced":len(games),
             "verified_switch_rectangles":verified,
-            "platforms":sorted(platforms)}
+            "platforms":sorted(platforms),
+            "switch1_seed_games":len(seeded_titles)}
 
 
 def main() -> int:
     try:
-        report = validate(read(CROSS_INDEX), read(SWITCH_INDEX))
+        report = validate(read(CROSS_INDEX), read(SWITCH_INDEX), read(SEEDS_INDEX))
         print("CROSS_PLATFORM_RESEARCH_INDEX_VALID " + json.dumps(report, sort_keys=True))
         return 0
     except (ValueError, OSError, UnicodeError) as exc:
