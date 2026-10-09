@@ -1495,3 +1495,9 @@ Trigger `[full-build] [test-all-on]` on dev after correcting the obsolete storag
 ### 2026-10-09 — CI retest after fixing split direct/JIT memory stage contract
 
 This commit triggers one isolated PS5 all-on native test pipeline using `[full-build] [test-all-on]`. No publish, protected shipping branch change, source UI redesign or firmware-success claim. Do not push other dev commits while test running.
+
+### 2026-10-09 — All-on run #37878158308 architecture gate passed assertions; summary-print variable fixed
+
+- [Run #37878158308](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/37878158308) FAILED at the same "Validate startup, elevation and storage contracts" CI stage, but **printed `PASS PS5_NATIVE_ARCHITECTURE_CONTRACTS` before failure**. Actual failure: `NameError: name 'memory_stages' is not defined` in final print line of `tools/check-ps5-architecture.py`. The preceding source gate was refactored into `direct_stages` and `jit_stages`, but its informational `print` still used deleted `memory_stages`.
+- Updated both summary lines to independently print defined `direct_stages` / `jit_stages` in commit `0a5919a25088cd363c3a46a03287cd316df17f25` [skip ci]. Source readback confirms `memory_stages` no longer appears; prior CI run proved all substantive assertions pass. No native SDK compile occurred in red run.
+- Protected release branch unchanged; approved purple launcher UI unchanged, no real game art packs have been validated. GitHub runs are tests only; 26 hardware criteria still pending.
