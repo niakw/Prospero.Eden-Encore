@@ -37,6 +37,15 @@ assert 'get("vulkan_pacing") == "trace"' in main
 assert "EnableExperimentalLogicalPlacement();" in main
 assert 'jit == "balanced"' not in main and 'jit == "expanded"' not in main
 assert "ChooseJitMemoryPlan(" in main and "ApplyJitMemoryPlan(" in main
+# Every explicit sparse JIT allocation is sparse-or-fail, never dense.
+# CommitSparseJitCode itself verifies the region with the native mutex;
+# do not lock/lookup the same code pointer twice for each compiled block.
+assert "IsSparseJitCode(getCode())" not in cmake
+assert "::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), written + codesize)" in cmake
+jit_alloc = read("headless/jit-allocator.h")
+assert "fallback=smaller_virtual_arena" in jit_alloc
+assert "Common::ReserveSparseJitCode(sparse_span, &writable)" in jit_alloc
+assert "if (!mappings.emplace(pointer," in jit_alloc
 # core_initialized precedes title JIT construction; the first useful
 # owned-code sample is game_loaded / cpu_manager_ready, never infer 0 RAM
 # from a startup-only snapshot. Keep expensive kernel memory enumeration
