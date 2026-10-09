@@ -1,0 +1,61 @@
+# PS5 resource maximization: allocator reclamation and adaptive CPU/GPU/JIT
+
+*2026-10-09. Development design and verified observations, not a claim of a working reclaimer. **Do not trigger Actions/compile/test** without the user's explicit run authorization. Only `dev/ps5-sparse-jit`.*
+
+## 1. Most important NEW memory finding: heap retention dominates game-to-game headroom
+
+R237 PS5 `heap.log` recorded four successive sessions in the same application process. The native PS5 allocator is `headless/heap_arenas.inc` and the wrapper reports exact `[ps5-opengl-heap]` stage snapshots.
+
+| Stage | Heap live allocations | Retained committed heap |
+| --- | ---: | ---: |
+| Game 1 immediately before return | 2,635,178,995 bytes | up to ~1.4 GiB |
+| Game 1 `core_destroyed` | **5,077,110 bytes** | **1,476,395,008 bytes** (~1.375 GiB) |
+| Game 2 `core_destroyed` | **6,171,019 bytes** | unchanged ~1.375 GiB |
+| Game 3 `core_destroyed` | **6,865,599 bytes** | unchanged |
+| Game 4 `core_destroyed` | **7,371,513 bytes** | unchanged |
+
+(The live count includes allocation bookkeeping and is not the same as every owned chunk in the page table/GPU cache; their owners must be counted independently.) `heap_arenas.inc` documents: `Memory is not given back: a piece stays for the next game.` Pieces are **128 MiB** in the Sony mspace allocator, 29 thread arenas were created. Large requests >=32 MiB get their own memory and return it when free.
+
+Between game 1 and game 2 the largest **contiguous direct-memory block** seen at launch decreased from **11,824 MiB** to **4,128 MiB**. `EDEN_MEMORY_LAYOUT phase=core_destroyed free_upper=-1 scan_valid=0`: this is NOT a proven whole-system leak nor a validated global free-byte count. The exact location of PS5 system/driver allocations is still partly opaque. But an apparently enormous proportion of the committed native heap is idle between titles: its ~1.37 GiB backing does not return automatically and this is a concrete memory-reuse problem.
+
+This is more actionable than blindly increasing texture/JIT budgets. The launcher still has 5–7 MiB of live allocations, other threads and some persistent driver resources. **NEVER destroy a global mspace or unmap a live/tcached/arena-owned block.**
+
+### Implementation required for safe heap trimming (not yet implemented)
+
+- **Owner accounting:** each 128 MiB mspace piece must have an exact, integer live allocation count and/or a verified `sceLibcMspaceIsHeapEmpty(space)` API, plus an independent count of embedded 8 MiB per-thread arena mspaces. The existing global batched live-bytes counter is **insufficient** to prove individual pieces empty. Check PS5 firmware 13.60 availability and return semantics of `sceLibcMspaceIsHeapEmpty`, `sceLibcMspaceDestroy`, `sceLibcMspaceMallocStats` before using (PS4/Vita docs alone do not establish PS5 ABI or linker exports).
+- **Quiescence gate:** only after game shutdown has terminated GPU workers, guest cores, file I/O and game services, stop mspace allocations from any live launcher thread and flush all inactive/live per-thread small-object caches. Tricky: `eden_heap_thread_exit` caches are currently freed only on thread exit. Do not traverse a live thread's TLS bin from an arbitrary caller.
+- **Tail reclamation only at first:** inspect the final N 128 MiB spaces to avoid holes in the monotonic virtual heap range. Verify the candidate mspace has no user allocations or child arenas, no outstanding tcache/free-lists and no pointers named by persistent services. Remove owner mapping/space before unmap; synchronize all allocators. Only then call a PS5-verified mspace destroy, restore virtual range to `PROT_NONE`, release each associated direct-memory physical piece, decrement committed count and permit future re-commit at identical VA. The current `CommitMemoryRange` ownership is not tracked per heap piece; it must retain the direct physical address to decommit correctly. Failure anywhere aborts reclamation; never decommit half a live mspace.
+- **Hysteresis and runtime pressure:** don't trim on every home screen frame. Initial *proposed*, NOT qualified thresholds: warm heap floor 256 MiB at game boundary, trim only when >512 MiB idle and largest-free block is below 4 GiB or needed by next title; aggressive trim to 256–384 MiB only after proof the surviving launcher allocations fit. Retain fast warm heap when free space healthy. Explicitly measure kernel calls, FPS, and relaunch responsiveness before tuning.
+- **Tests:** C host fake mspace/virtual allocator stress (8+ threads, realloc, child arenas and live TLS tcache), quarantine and unmapped access checks under ASAN/UBSAN, deterministic tests with mock kernel release/failure, PS5 3+ relaunch cycles in various game order. No unsafe allocator surgery based solely on aggregate live bytes.
+
+## 2. JIT cache growth and safe reclamation
+
+- Current `EDEN_PS5_JIT_POLICY` per-run virtual A64 capacities: first cold title **864+648+648+16 = 2,176 MiB**; return to library then second title **256+192+192+16 = 656 MiB** (because largest free is no longer 11,824 MiB but 4,128 MiB; dense admission formula gave no growth). The virtual shrink is unrelated to loss of executable JIT code when previous JIT shutdown: each old JIT sparse region releases physically to **remaining=0**.
+- Real physical sparse commits grew as needed to **~1.45 GiB** in a long session. RX and RW virtual aliases map the SAME 2 MiB physical direct-memory page; virtual reserved is not the same as physical usage. There is a hard **per-core JIT virtual limit** (code-region addressing limit 1.5 GiB per arena and full all-core plan); but NOT a global physical runtime reclamation cap. It can exhaust free direct memory if active code keeps growing.
+- Implemented **dev-source-only** a lifetime-*verified largest-free* virtual peak plan for sparse mode in `ChooseSparseVirtualJitPlan` called only after real `ProbeSparseJitAlias`; dense JIT and safe launch still depend on current memory, sparse demand-commit remains unchanged. This preserves **virtual code headroom**, not extra physical pages; no FPS/safety claim without authorized PS5 build.
+- For true physical cap **must** quiesce every Dynarmic guest core and GPU state that might enter generated code, clear linked calls/far-branch sites and fast lookup caches, invalidate JIT code metadata/blocks, drop RX/RW pages that no longer contain reachable executable code, verify W^X and relink dispatch. Partial decommit during active code execution is dangerous: `src/memory_pages.cpp` explicitly forbids releasing partial chunks on `ClearCache`. Do **not** turn the 1.3 GiB suggested threshold into a hard `throw std::bad_alloc`; that recreates the crash we already fixed.
+- Proposed **adaptive** pressure targets for later qualification: normal working-set ~1.0–1.3 GiB, soft warning at 1.3 GiB, high-pressure trim only at a verified whole-JIT safe point under the shared direct-memory pressure signal, final emergency limit conditioned on 2 MiB commit allocation outcomes, and a reserve kept for GPU/guest heap. None of these targets is an approved hard cap yet. Compile performance/steady hot code must be evaluated against pressure; unnecessary clears reintroduce massive game stutter.
+
+## 3. CPU exploitation: real scheduling rather than invented cores
+
+- PS5 offers Zen 2 host CPU cores/SMT and a firmware-controlled process CPU mask. R237: `EDEN_WORKER_TOPOLOGY ready=1 distinct_cores=5 cpus=0,1,2,3,4`; CPUCore0–3 and GPU each pinned to unique verified physical core. `secondary_cpus=0x1fe0` means 8 **logical** slots for other Vulkan/loader/audio etc. Host cannot force a Switch guest to run its inherently sequential code on eight guest CPUs, and an inactive guest core #3 is not evidence a PS5 physical core is unused globally.
+- Hard source-proven under-utilization: Vulkan shader pool sees `reported=16 available=8 workers=1 reserved=7`. Existing code subtracts 7 **again** even though guest/GPU primary five cores are already absent from the thread's secondary affinity. Modified `tools/prepare-vulkan-port.py` to intersect shader thread's mask with `PinnedWorkerMask` from the validated physical-topology probe; reserve `primary_in_mask + 2` and admit up to 6 compilers, unknown topology fallback to conservative 7. This is staging only; actual shader compilation pressure, pool efficiency and stability must be tested on hardware.
+- Other per-title CPU gains require *guest hot-path* PC samples on the actual firmware ABI, JIT emitter/lookup efficiency, guest interrupt scheduling and the kernel service/HLE cost around 12–16 FPS versus 30 FPS windows. Do not claim higher host thread priority is an automatic boost; owner CPU timers are saturated at both fast and slow scenes.
+
+## 4. GPU exploitation: distinguish emulator dispatcher, driver and silicon
+
+- Vulkan native GPU worker waits ~4s/5s while host CPU clocks active ~1s/5s during bad match windows. This proves only its work queue isn't always full; it says **nothing** about actual GPU hardware busy/idle. Collect trustworthy timestamps/AGC driver queue completion or Vulkan device timestamp queries (verify API support) to determine bottlenecks.
+- Renderer currently enables async shaders in Recommended but **Ultra disables them**, which may cause first-time shader creation to block the game; Ultra also increases internal resolution to **2x** (4x pixels) and 2160p output, markedly more GPU work. Lower settings are not an admission of underusing the PS5: fast smooth rendering requires balanced CPU+GPU. R237 screen `EDEN_VULKAN_FRAME_SIZE 3840x2160` observed for Ultra subsequent sessions, separate from 2560x1440 initial test; do NOT compare raw FPS across presets as if workloads equivalent. BOTW scene-specific diagnosis needs its title-bound logs.
+- Vulkan texture cache already grows and collects under budget: expected ~4.7GB decimal, critical ~5.6GB, `memory_short=0`. Peak observed usage ~4.4GB decimal. This count is not entire hardware VRAM allocation. Do not blindly grow over the kernel contiguous-free pressure and the heap retention identified above.
+- Candidate GPU optimizations after measurements: reduce redundant CPU→GPU queue drain, group compatible raster submissions, asynchronous GPU timeline semaphores if reliable, avoid repeated pipeline compilation and expensive ownership transfers; judge by *worst frametime*, not average FPS alone.
+
+## 5. User-visible UI and game compatibility status
+
+- Fixed Library icon title shadow to gradient fully down to the art bottom; larger full-white DualSense icons on Home utility, Home max-player chip, Library player badge, preserving approved purple UI layout.
+- Fixed game Button mapping row: Left/Right now cycles **Global → PlayStation → Switch** for this title; Cross opens advanced per-button editor; effective label shows chosen layout. Together with existing prelaunch static mapping, no mid-match changes. Not yet built or tested.
+- **BOTW Switch-native art candidate exists**: `BOTW DS4 UI Mod v2 – Western Layout`, https://www.nexusmods.com/legendofzeldabreathofthewild/mods/98 and https://gamebanana.com/mods/659253. Reports Yuzu/Citron Switch RomFS prompts/tutorials, with CC BY-NC-ND page licensing. Candidate needs legal/user-provided packaging and compatibility verification; not bundled or auto-enabled. Other original-WiiU PS4 UI mods are NOT automatically Switch compatible.
+- FC27 artwork still `rule=unsupported`, and glyphs in both games are separate from virtual button mapping. Do not claim done until verified per-title RomFS art and physical mapping coincide.
+
+## Acceptance gates
+
+At any future **explicitly user-approved** run: pass static tests, native PS5 syntax+link, package CRC/hash, launch+return+relaunch at least 3 titles, quantitative largest-free/direct-memory/heap committed vs live/JIT physical before and after, worker counts and shader build times (1 vs ~6), 30FPS vs 12FPS host hot PC samples and GPU real timeline, controller PlayStation-vs-Switch static selection, launcher controller icons/full title-gradient, BOTW Ultra actual scene-aligned graphics frame measurements. No run was performed while preparing this design.
