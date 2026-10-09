@@ -631,11 +631,13 @@ void Launcher::draw_home(Canvas &c)
     text(c, hero_recent != nullptr ? tr("SELECTED GAME") : tr("CONTINUE PLAYING"),
          90.0f, baseline(133.0f, 30.0f, theme::kSmall),
          theme::kSmall, theme::kLimePale, Align::left, 3.0f);
-    // Long localized names get two readable lines rather than a forced
-    // "Breath of the W..." ellipsis. All positions stay above Play at y=390.
+    // Decide single vs two lines at the SAME 76px font as the single-line
+    // renderer. The previous 64px threshold could choose an undersized
+    // one-line box for BOTW-length names and trigger premature ellipsis.
+    // All positions stay above Play at y=390.
     const std::string title_label =
         hero_file.empty() ? std::string{tr("Your next adventure")} : hero_title;
-    if (text_width(c, title_label, 64.0f) > 1030.0f)
+    if (text_width(c, title_label, 76.0f) > 1030.0f)
         text_block(c, title_label, 90.0f, baseline(166.0f, 54.0f, 51.0f),
                    51.0f, 53.0f, theme::kTitle, 1050.0f, 2, 0.87f);
     else
