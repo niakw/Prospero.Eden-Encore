@@ -36,6 +36,22 @@ extern "C" int eden_heap_commit(void* address, std::size_t size) {
     }
     return 0;
 }
+// The C heap serializes every post-init growth through eden_heap_grow_lock.
+// Physical backing ownership is returned directly, never stored in a
+ // process-global "last commit" that could be overwritten by another caller.
+namespace Common {
+void RollbackUnpublishedHeapGrowth(void* address, std::size_t size,
+                                   std::int64_t physical) noexcept;
+}
+extern "C" int eden_heap_commit_growth(void* address, std::size_t size,
+                                       std::int64_t* physical) {
+    if (!physical) std::abort();
+    return Common::CommitMemoryRange(address, size, physical) ? 0 : -1;
+}
+extern "C" void eden_heap_rollback_growth(void* address, std::size_t size,
+                                           std::int64_t physical) {
+    Common::RollbackUnpublishedHeapGrowth(address, size, physical);
+}
 extern "C" void eden_heap_abandon_initial(void* base, std::size_t reserved) {
     // The initial mspace creation is the sole rollback caller. It must own
     // the first direct mapping, not an arbitrary later growth piece.
