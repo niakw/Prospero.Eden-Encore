@@ -21,6 +21,10 @@ assert "(void)service;" in hot and "(void)command;" in hot and "(void)ns;" in ho
 assert "hle_mutex" not in hot and "std::map<" not in hot
 assert "hle_calls.ForEach(" in source
 assert "EDEN_DEV_HLE_OVERFLOW" in source
+telemetry = (root / "headless/hle_counters.h").read_text()
+assert "static constexpr std::size_t kMaxProbes = 64;" in telemetry
+assert "probe < kMaxProbes" in telemetry
+assert "probe < kCapacity" not in telemetry
 
 compiler = next((c for c in ("clang++-18", "clang++", "g++") if shutil.which(c)), None)
 if not compiler:
@@ -85,13 +89,16 @@ int main() {
         std::snprintf(name, sizeof(name), "unique-service-%u", n);
         saturated.Record(name, n, 5);
     }
-    assert(saturated.OverflowCalls() == 3);
-    assert(saturated.OverflowNs() == 15);
+    // Probe chains stop at 64. Hash clusters can reach that safety limit
+    // before every table slot is occupied; do NOT demand exact capacity.
+    assert(HleCounters::kMaxProbes == 64);
+    assert(saturated.OverflowCalls() >= 3);
+    assert(saturated.OverflowNs() == saturated.OverflowCalls() * 5);
     std::uint64_t admitted = 0;
     saturated.ForEach([&](const char*, unsigned, std::uint64_t c, std::uint64_t) {
         admitted += c;
     });
-    assert(admitted == HleCounters::kCapacity);
+    assert(admitted + saturated.OverflowCalls() == HleCounters::kCapacity + 3);
 }
 """
 with tempfile.TemporaryDirectory(prefix="eden-hle-counters-") as folder:
