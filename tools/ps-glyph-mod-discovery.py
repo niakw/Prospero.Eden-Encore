@@ -153,8 +153,12 @@ def ddg(query: str) -> list[tuple[str,str]]:
 def github(query: str) -> list[tuple[str,str]]:
     # GitHub REST searches REPOSITORY NAMES/DESCRIPTIONS, not hidden code,
     # ZIPs, executable mods or private repositories.
-    words = [x for x in re.split(r"\W+", query) if len(x) > 2]
-    q = " ".join(words[:9]) + " in:name,description"
+    # Search GitHub title/description with the GAME title first. Requiring
+    # every word of the long web query ("Switch PS5 DualSense controller UI")
+    # gave zero results for real game repos even when relevant forks existed.
+    named = re.search(r'^"([^"]{2,260})"', query)
+    title = named.group(1) if named else " ".join(query.split()[:4])
+    q = '"' + title.replace('"', "")[:180] + '" in:name,description'
     endpoint = ("https://api.github.com/search/repositories?q=" + quote(q) +
                 "&per_page=10")
     headers = {"Accept": "application/vnd.github+json",
@@ -162,7 +166,9 @@ def github(query: str) -> list[tuple[str,str]]:
     token = os.getenv("GITHUB_TOKEN", "").strip()
     if token: headers["Authorization"] = "Bearer " + token
     result = json.loads(request_bytes(endpoint, headers=headers))
-    return [(x.get("full_name", ""), x.get("html_url", ""))
+    return [(str(x.get("full_name", "")) + " " +
+             str(x.get("description") or "")[:300],
+             x.get("html_url", ""))
             for x in result.get("items", [])[:10] if isinstance(x, dict)]
 
 def yandex(query: str) -> list[tuple[str,str]]:
