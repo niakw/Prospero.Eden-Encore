@@ -24,6 +24,17 @@ assert final["source_lead_count"]==2
 assert len(final["games"][0]["queries"])==2
 assert final["games"][0]["mod_pack_ready"] is False
 assert final["gameplay_glyphs_autoenabled"]==0
+# A second pass reading the already merged GitHub JSON must preserve the
+# earlier Switch AND PC variants, not drop queries[] from prior runs.
+second=m.merge([final,{"schema":1,"games":[{
+    "title_id":"01007EF00011E000","game":"BOTW",
+    "query":"Russian PlayStation кнопки мод","discovery_status":"searched_no_matching_links",
+    "leads":[]}]}])
+assert second["source_lead_count"]==2
+assert len(second["games"][0]["queries"])==3
+assert second["games"][0]["queries"][0]["q"]=="Switch PlayStation mod"
+assert second["games"][0]["queries"][1]["q"]=="PC PS4 controller mod"
+assert second["games"][0]["queries"][2]["q"]=="Russian PlayStation кнопки мод"
 assert final["assets_downloaded"]==0
 try:
     m.merge([{"schema":7,"games":[]}])
