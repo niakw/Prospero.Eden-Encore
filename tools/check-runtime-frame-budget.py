@@ -18,6 +18,7 @@ widgets = read("headless/prosperoeden/pe/ui/widgets.cpp")
 home = read("headless/prosperoeden/pe/ui/home.cpp")
 nav = read("headless/prosperoeden/pe/ui/launcher.cpp")
 widgets_header = read("headless/prosperoeden/pe/ui/widgets.hpp")
+frontend = read("headless/prosperoeden/frontend.cpp")
 
 # Both renderers only query system perf statistics and format HUD glyphs when
 # users actually turned on the FPS overlay. Game presentation still counts.
@@ -73,4 +74,16 @@ assert "static long long last_shown_ns" not in display
 assert "Eden::Display::ResetSkipFrameTracking();" in main
 assert "Eden::Display::skipped_frames.store(0);" not in main
 
+# Repeated D-pad input must not let the highlight fall several rows behind
+# the selected item, but single-step springs and approved artwork stay intact.
+assert "const float scroll_backlog = std::fabs(scroll_.target - scroll_.value);" in widgets
+assert "const float cursor_backlog = std::fabs(cursor_.target - cursor_.value);" in widgets
+assert "theme::kScrollSpring * 2.0f" in widgets
+assert "theme::kCursorSpring * 1.5f" in widgets
+assert "scroll_.update(dt, scroll_omega);" in widgets
+assert "cursor_.update(dt, cursor_omega);" in widgets
+# One line per 5s in development, never per-frame debug logging in shipping.
+assert "EDEN_UI_FRAMES frames=%u elapsed_ms=%lld late_20=%u late_33=%u late_50=%u" in frontend
+assert "max_update_us=%lld max_draw_us=%lld max_present_us=%lld" in frontend
+assert "#ifdef EDEN_DEV_ROM_ID" in frontend
 print("All-game GPU/HUD hotpath, PS5 splash one-shot, Nlib frame budget, native icons and atomic frame-skip tracking: SOURCE PASS")

@@ -61,6 +61,11 @@ This is more actionable than blindly increasing texture/JIT budgets. The launche
 - Vulkan texture cache already grows and collects under budget: expected ~4.7GB decimal, critical ~5.6GB, `memory_short=0`. Peak observed usage ~4.4GB decimal. This count is not entire hardware VRAM allocation. Do not blindly grow over the kernel contiguous-free pressure and the heap retention identified above.
 - Candidate GPU optimizations after measurements: reduce redundant CPU→GPU queue drain, group compatible raster submissions, asynchronous GPU timeline semaphores if reliable, avoid repeated pipeline compilation and expensive ownership transfers; judge by *worst frametime*, not average FPS alone.
 
+### Library scrolling: decouple animation latency from dropped frames
+
+- Earlier user observed visual backlog when holding Down even in the launcher. Source inspection shows the normal ListView uses critically damped scroll/cursor springs (omega=16 and 26), with an approximately 300 ms / 180 ms 95%-response to a step. Consecutive D-pad repeats can outrun the animation at otherwise normal 60 Hz. The source-only change retains the approved smooth single-step styling but accelerates spring recovery when the scroll or cursor is more than 1.25 row-pitches behind (2.0x scroll/1.5x cursor). It never changes the actual selected row or snaps focus across multiple rows.
+- Existing launcher log only named frames >100 ms; repeated 20–50 ms misses could escape diagnosis. Dev builds now aggregate EDEN_UI_FRAMES once every five seconds, with count of frames >=20/33/50 ms and maximum update/draw/present time. Capturing screenshots is excluded from the sample. This instrumentation cannot itself prove the console is 60 Hz; PS5 hardware replay and matched video are required. No production per-frame logging or UI design redesign.
+
 ## 5. User-visible UI and game compatibility status
 
 - Fixed Library icon title shadow to gradient fully down to the art bottom; larger full-white DualSense icons on Home utility, Home max-player chip, Library player badge, preserving approved purple UI layout.
