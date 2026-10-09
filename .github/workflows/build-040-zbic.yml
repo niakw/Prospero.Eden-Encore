@@ -154,6 +154,7 @@ jobs:
           python3 -B tools/check-ps-glyph-packs.py
           python3 -B tools/check-controller-semantic-mapping.py
           python3 -B tools/check-ps5-autocontrol-context.py
+          python3 -B tools/check-ps5-live-input.py
           python3 -B tools/check-gpu-native-diagnostics.py
           python3 -B tools/check-jit-memory-policy.py
           python3 -B tools/check-jit-startup-retry.py
