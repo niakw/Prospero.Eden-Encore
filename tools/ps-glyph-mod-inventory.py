@@ -33,6 +33,10 @@ def format_family_hint(name: str) -> str:
         return "nintendo_resource_candidate"
     if lower.endswith("/data/resources.assets") or ext in (".assets", ".unity3d", ".bundle"):
         return "unity_asset_candidate"
+    if "/images/" in "/" + lower and ext == ".xml":
+        return "klei_or_other_xml_atlas_candidate"
+    if "/images/" in "/" + lower and ext == ".tex":
+        return "klei_or_other_tex_texture_candidate"
     if ext == ".cpk":
         return "criware_cpk_candidate"
     if ext in (".spr", ".spd"):
