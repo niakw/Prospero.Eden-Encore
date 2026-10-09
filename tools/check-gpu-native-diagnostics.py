@@ -128,8 +128,25 @@ assert "const bool copy_storage_valid =" in fermi_copy_new
 assert "src_bpp != 0 && dst_bpp != 0" in fermi_copy_new
 assert "static_cast<u64>(surface.pitch) * surface.height <= 0xffffffffULL" in fermi_copy_new
 assert "const bool copy_sizes_valid = rect_valid && copy_storage_valid" in fermi_copy_new
-assert "static_cast<u64>(config.src_y1 - config.src_y0) * src_bpp <= 0xffffffffULL" in fermi_copy_new
-assert "static_cast<u64>(config.dst_y1 - config.dst_y0) * dst_bpp <= 0xffffffffULL" in fermi_copy_new
+assert "const auto valid_byte_count =" in fermi_copy_new
+assert "bpp == 0 || bpp > 0xffffffffULL" in fermi_copy_new
+assert "width <= max / bpp" in fermi_copy_new
+assert "height <= max / (width * bpp)" in fermi_copy_new
+assert "valid_byte_count(config.src_x0, config.src_x1," in fermi_copy_new
+assert "valid_byte_count(config.dst_x0, config.dst_x1," in fermi_copy_new
+
+# The admissible decoded byte count is bounded without first evaluating
+# width*height*bpp. This matters even for intentionally malformed guest regs.
+def valid_byte_count(width: int, height: int, bpp: int) -> bool:
+    cap = (1 << 32) - 1
+    return (width > 0 and height > 0 and 0 < bpp <= cap
+            and width <= cap // bpp and height <= cap // (width * bpp))
+assert valid_byte_count(1920, 1080, 4)
+assert valid_byte_count(65535, 65535, 1)
+assert not valid_byte_count(65536, 65536, 1)
+assert not valid_byte_count((1 << 31) - 1, (1 << 31) - 1, 16)
+assert not valid_byte_count(1920, 1080, 0)
+assert not valid_byte_count(1, 1, (1 << 32))
 assert fermi_copy_new.index("if (!copy_sizes_valid)") < fermi_copy_new.index("sw_blitter->Blit(src, dst, config);")
 
 # Nonzero layers are only copied using simple pitch-linear planes.
