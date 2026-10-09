@@ -32,12 +32,15 @@ def require(valid: bool, message: str) -> None:
         raise InvalidSarc(message)
 
 
-def inventory(file: Path) -> dict:
-    require(file.is_file() and not file.is_symlink(), "not a regular archive")
-    size = file.stat().st_size
+def inventory_bytes(data: bytes) -> dict:
+    """Inspect an in-memory, bounded, already-decompressed SARC safely.
+
+    Allows BOTW Yaz0 and other separate decompression bridges to inspect
+    archive structure without ever staging an extracted Nintendo file.
+    """
+    require(isinstance(data, bytes), "archive source must be bytes")
+    size = len(data)
     require(0x20 <= size <= MAX_BYTES, "archive size outside bounds")
-    data = file.read_bytes()
-    require(len(data) == size, "incomplete archive read")
     require(data[:4] == b"SARC",
             "not an uncompressed SARC (a .zs file needs dictionary-aware decompression first)")
     bom = data[6:8]
@@ -115,6 +118,16 @@ def inventory(file: Path) -> dict:
         "members": entries,
         "warning": "Offsets are byte locations within decompressed SARC, NOT pixel coordinates. Never use as renderer glyph slots.",
     }
+
+
+def inventory(file: Path) -> dict:
+    require(file.is_file() and not file.is_symlink(), "not a regular archive")
+    size = file.stat().st_size
+    require(0x20 <= size <= MAX_BYTES, "archive size outside bounds")
+    data = file.read_bytes()
+    require(len(data) == size, "incomplete archive read")
+    return inventory_bytes(data)
+
 
 
 def main() -> int:
