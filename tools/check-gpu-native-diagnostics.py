@@ -185,7 +185,28 @@ assert "sw_blitter->Blit(src, dst, config);" in fermi_copy_new
 assert "else if (!rasterizer->AccelerateSurfaceCopy(src, regs.dst, config))" in fermi_copy_new
 assert "regs.src.depth = 1;" not in fermi_copy_new
 assert "regs.dst.depth = 1;" not in fermi_copy_new
-assert "sw_source_depth_at LESS 0 OR sw_dest_depth_at LESS 0 OR sw_z0_at LESS 0" in cmake
+assert "sw_source_depth_at LESS 0 OR sw_dest_depth_at LESS 0 OR" in cmake
+assert "sw_pitch_arithmetic_at LESS 0 OR sw_src_copy_arithmetic_at LESS 0 OR" in cmake
+assert "sw_dst_copy_arithmetic_at LESS 0 OR sw_z0_at LESS 0" in cmake
+assert '"static_cast<size_t>(surface.pitch) * surface.height"' in cmake
+assert '"const size_t src_copy_size = static_cast<size_t>(src_extent_x) * src_extent_y * src_bytes_per_pixel;"' in cmake
+assert '"const size_t dst_copy_size = static_cast<size_t>(dst_extent_x) * dst_extent_y * dst_bytes_per_pixel;"' in cmake
+assert 'write_derived("${PORT_BUILD_DIR}/sw_blitter_sized.cpp"' in cmake
+assert 'list(FILTER sw_blitter_sources EXCLUDE REGEX "engines/sw_blitter/blitter[.]cpp$")' in cmake
+assert 'target_sources(video_core PRIVATE "${PORT_BUILD_DIR}/sw_blitter_sized.cpp")' in cmake
+
+# Regressions that were once silent truncation in the pinned software blitter.
+# The widened intermediate must match arbitrary-precision math for these cases.
+def safe_product(*values):
+    result = 1
+    for value in values:
+        result *= value
+    return result
+assert safe_product(65536, 65536) == 1 << 32  # pitch x height
+assert safe_product(8192, 8192, 16) == 1 << 30  # source/destination rect
+assert safe_product(65536, 65536, 4) == 1 << 34  # not 32-bit-wrapped
+assert safe_product(65536, 65536, 4) != (safe_product(65536, 65536, 4) & 0xffffffff)
+
 
 assert "file(READ" in cmake and cmake.count("write_derived(") == 2
 assert 'target_sources(shader_recompiler PRIVATE' in cmake
