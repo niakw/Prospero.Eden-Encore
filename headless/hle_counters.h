@@ -33,8 +33,20 @@ public:
                 // Unseen commands are infrequent. Serialize registration only;
                 // all already-published entries remain lock-free for readers.
                 const std::lock_guard lock(register_mutex_);
-                if (entry.key.load(std::memory_order_acquire) != 0)
+                const std::uint64_t registered =
+                    entry.key.load(std::memory_order_acquire);
+                if (registered != 0) {
+                    // Another thread can publish THIS VERY SAME command
+                    // while we wait for registration. Reuse that counter,
+                    // not a duplicate slot later in the probe sequence.
+                    if (registered == key && entry.command == command &&
+                        std::strncmp(entry.name, service, kNameBytes - 1) == 0) {
+                        entry.calls.fetch_add(1, std::memory_order_relaxed);
+                        entry.nanoseconds.fetch_add(elapsed, std::memory_order_relaxed);
+                        return;
+                    }
                     continue;
+                }
                 entry.command = command;
                 std::strncpy(entry.name, service, kNameBytes - 1);
                 entry.name[kNameBytes - 1] = '\0';

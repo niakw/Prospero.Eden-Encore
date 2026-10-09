@@ -32,6 +32,7 @@ fixture = r"""
 #include <cstring>
 #include <latch>
 #include <string>
+#include <unordered_set>
 #include <thread>
 #include <vector>
 
@@ -57,7 +58,9 @@ int main() {
     counters.Record(recycled, 123u, 1000000);
     std::uint64_t calls = 0, ns = 0;
     unsigned old_names = 0, new_names = 0;
+    std::unordered_set<std::string> identities;
     counters.ForEach([&](const char* name, unsigned cmd, std::uint64_t c, std::uint64_t duration) {
+        assert(identities.insert(std::string(name) + "#" + std::to_string(cmd)).second);
         calls += c; ns += duration;
         if (std::strcmp(name, "old-session-service") == 0 && cmd == 123u) {
             assert(c == 1); ++old_names;
@@ -69,6 +72,7 @@ int main() {
     assert(calls == threads * operations + 2);
     assert(ns == threads * operations * 2500ull + 2000000ull);
     assert(old_names == 1 && new_names == 1);
+    assert(identities.size() == 35); // 3 service names x 11 commands, plus 2 recycled names
     assert(counters.OverflowCalls() == 0);
 
     // A flooded table must not allocate memory or spin forever.
