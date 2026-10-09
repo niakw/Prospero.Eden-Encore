@@ -33,6 +33,7 @@ MOCK = r"""
 #include <sys/wait.h>
 #include <unistd.h>
 #include "jit-allocator.h"
+#include "jit-sparse-commit.h"
 #include "experimental_performance.h"
 
 namespace Common {
@@ -197,6 +198,41 @@ int main() {
     w[3 * PAGE] = 0x77;
     assert(x[3 * PAGE] == 0x77);
     Common::ReleaseSparseJitCode(rx);
+    usage(0, 0);
+    assert(owned_fds == 0);
+
+    // Reproduce real FW 13.60 BOTW + second-title failure: the final core
+    // reserves 16 MiB, its constant pool already occupies 2,113,536 bytes,
+    // and Dynarmic asks for a 16 MiB PRELUDE_COMMIT_SIZE hint. A physical
+    // precommit must be clipped to the stable virtual capacity, not rejected.
+    constexpr std::size_t final_core_capacity = 16 * 1024 * 1024;
+    constexpr std::size_t used_at_failure = 2113536;
+    constexpr auto final_core = Eden::Jit::PlanSparseCommit(
+        used_at_failure, final_core_capacity, final_core_capacity);
+    static_assert(final_core.valid && final_core.clamped &&
+                  final_core.bytes == final_core_capacity);
+    static_assert(Eden::Jit::PlanSparseCommit(0, final_core_capacity,
+                                             final_core_capacity).bytes == final_core_capacity);
+    static_assert(!Eden::Jit::PlanSparseCommit(
+        final_core_capacity + 1, 0, final_core_capacity).valid);
+    static_assert(Eden::Jit::PlanSparseCommit(
+        final_core_capacity, 1, final_core_capacity).bytes == final_core_capacity);
+    static_assert(Eden::Jit::PlanSparseCommit(
+        used_at_failure, SIZE_MAX, final_core_capacity).bytes == final_core_capacity);
+    const auto normal = Eden::Jit::PlanSparseCommit(
+        used_at_failure, 1024 * 1024, 64 * 1024 * 1024);
+    assert(normal.valid && !normal.clamped &&
+           normal.bytes == used_at_failure + 1024 * 1024);
+    void* short_rw = nullptr;
+    void* short_rx = Common::ReserveSparseJitCode(final_core_capacity, &short_rw);
+    assert(short_rx && short_rw);
+    usage(final_core_capacity, 2 * PAGE);
+    assert(Common::CommitSparseJitCode(short_rx, final_core.bytes));
+    usage(final_core_capacity, final_core_capacity);
+    assert(!Common::CommitSparseJitCode(short_rx, final_core_capacity + 1));
+    static_cast<volatile unsigned char*>(short_rw)[used_at_failure] = 0x3f;
+    assert(static_cast<volatile unsigned char*>(short_rx)[used_at_failure] == 0x3f);
+    Common::ReleaseSparseJitCode(short_rx);
     usage(0, 0);
     assert(owned_fds == 0);
 
