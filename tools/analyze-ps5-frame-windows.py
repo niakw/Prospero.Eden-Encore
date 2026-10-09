@@ -32,6 +32,7 @@ class Trace:
     jit: dict[int, list[dict[str, float]]]
     budget: list[dict[str, float]]
     sparse: list[dict[str, float]]
+    memory_live: list[dict[str, float]]
     owner_clock_valid: bool
     cross_thread_clock_valid: bool
 
@@ -45,6 +46,7 @@ class Trace:
         jit = {n: [] for n in range(4)}
         budget: list[dict[str, float]] = []
         sparse: list[dict[str, float]] = []
+        memory_live: list[dict[str, float]] = []
         for line in lines:
             if line.startswith("EDEN_VULKAN_FRAME frames="):
                 frames.append(read_values(line))
@@ -62,8 +64,10 @@ class Trace:
                 budget.append(read_values(line))
             elif line.startswith("EDEN_JIT_SPARSE_MEMORY phase=dev-profile"):
                 sparse.append(read_values(line))
+            elif line.startswith("EDEN_MEMORY_LIVE frame="):
+                memory_live.append(read_values(line))
         return cls(
-            filename, frames, gpu, guest, cpu, jit, budget, sparse,
+            filename, frames, gpu, guest, cpu, jit, budget, sparse, memory_live,
             any(line.startswith("EDEN_PERF_OWNER_CLOCK_CHECK valid=1 ") for line in lines),
             any(line.startswith("EDEN_PERF_CPU_CLOCK_CHECK valid=1 ") for line in lines),
         )
@@ -95,6 +99,13 @@ class Trace:
             "guest_dequeue_ms": delta(self.guest, "dequeue_ns") / 1e6,
             "cache_blocked": delta(self.guest, "cache_lock_blocked"),
             "cache_contended": delta(self.guest, "cache_lock_contended"),
+            # 0 can mean no successful kernel pressure probe yet; never
+            # present an unqualified zero as measured free direct RAM.
+            "direct_free_mib": (self.memory_live[index].get("largest_last_confirmed", 0)
+                                / (1024**2) if index < len(self.memory_live)
+                                and self.memory_live[index].get("largest_last_confirmed", 0) > 0 else -1),
+            "direct_memory_short": (self.memory_live[index].get("short", -1)
+                                    if index < len(self.memory_live) else -1),
         }
 
 def print_trace(trace: Trace, prefix: int | None) -> None:
@@ -122,6 +133,11 @@ def print_trace(trace: Trace, prefix: int | None) -> None:
         print("  sparse JIT: committed_peak_MiB={:.1f} virtual_reserved_MiB={:.1f}".format(
             max(x.get("committed", 0) for x in trace.sparse)/(1024**2),
             trace.sparse[-1].get("reserved", 0)/(1024**2)))
+    confirmed = [x["largest_last_confirmed"] for x in trace.memory_live
+                 if x.get("largest_last_confirmed", 0) > 0]
+    if confirmed:
+        print("  direct memory largest-free confirmed: min_MiB={:.1f} last_MiB={:.1f}".format(
+            min(confirmed)/(1024**2), confirmed[-1]/(1024**2)))
     print(f"  owner_thread_cpu_clock_valid={trace.owner_clock_valid}"
           f" cross_thread_clock_valid={trace.cross_thread_clock_valid}")
     n = min(trace.windows(), limit)
@@ -140,7 +156,10 @@ def print_trace(trace: Trace, prefix: int | None) -> None:
                 f" gpu_worker_wait_ms={w['gpu_worker_wait_ms']:.0f}"
                 f" gpu_queue_full_ms={w['gpu_full_queue_ms']:.0f}"
                 f" ipc_ms={w['guest_ipc_ms']:.0f}"
-                f" cache_blocked={int(w['cache_blocked'])}")
+                f" cache_blocked={int(w['cache_blocked'])}"
+                + (f" direct_free_MiB={w['direct_free_mib']:.1f}"
+                   f" pressure_short={int(w['direct_memory_short'])}"
+                   if w["direct_free_mib"] >= 0 else ""))
     print("  Interpretation: device GPU occupancy is unmeasured; full guest CPU"
           " threads alone do not prove why one scene falls from 30 to 12 FPS.")
 
