@@ -21,6 +21,11 @@ SPEC = importlib.util.spec_from_file_location("eden_mod_diff", ROOT / "tools/ps-
 assert SPEC is not None and SPEC.loader is not None
 module = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(module)
+FOLDER_SPEC = importlib.util.spec_from_file_location(
+    "eden_folder_mod_diff", ROOT / "tools/ps-glyph-mod-folder-diff.py")
+assert FOLDER_SPEC is not None and FOLDER_SPEC.loader is not None
+folder_module = importlib.util.module_from_spec(FOLDER_SPEC)
+FOLDER_SPEC.loader.exec_module(folder_module)
 
 
 def png(im: Image.Image) -> bytes:
@@ -72,6 +77,15 @@ with tempfile.TemporaryDirectory(prefix="eden-glyph-mod-diff-") as tmp:
     assert evidence["verified_title_update"] is None
     assert evidence["semantic_button_identity"] is None
 
+    # Equivalent inspection for mods distributed as 7z/RAR and extracted by
+    # an authorized user: reuse pixel geometry engine, never write to RomFS.
+    unpacked = base / "unpacked-mod"
+    (unpacked / "PS5" / "romfs" / "UI").mkdir(parents=True)
+    (unpacked / "PS5" / "romfs" / "UI" / "atlas.png").write_bytes(png(revised))
+    folder_evidence = folder_module.compare(unpacked, romfs)
+    assert folder_evidence["source_kind"] == "already_extracted_mod_folder"
+    assert folder_evidence["resources"][0]["changed_rects_xywh"] == [
+        [4, 4, 8, 8], [28, 5, 9, 9]]
     bad_archive = base / "path-traversal.zip"
     with zipfile.ZipFile(bad_archive, "w") as z:
         z.writestr("romfs/../../escape.png", png(revised))
