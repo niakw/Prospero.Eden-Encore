@@ -1,0 +1,200 @@
+{
+  "schema": 1,
+  "checked_date": "2026-10-09",
+  "target": "Eden Encore native PS5 FW 13.60; all-game robust operation incl. FC27",
+  "development_branch": "dev/ps5-sparse-jit",
+  "shipping_branch": "fix/0.40-zbic-13.60",
+  "shipping_unchanged_required": true,
+  "approved_purple_launcher_unchanged_required": true,
+  "status": "blocked",
+  "caution": "Do not mark ready, close issues #7/#8, move shipping branch or publish a build from this file alone. A human must verify referenced logs/artifacts against real firmware hardware and legal glyph licensing.",
+  "latest_known_native_run": {
+    "id": 37853342541,
+    "conclusion": "failure",
+    "failed_step": "Validate freshly built staged app",
+    "note": "Stale controller context log-string checker reportedly corrected in dev after failed run; source correction still needs validation under explicit user authorization."
+  },
+  "latest_known_playable_build": {
+    "id": 37850528993,
+    "description": "Dense quarter-pool JIT PS5 build, NOT sparse JIT; FC27 continues to stutter and menu navigation jitters"
+  },
+  "source_only_status": {
+    "sparse_64m_virtual_bootstrap_4m_physical_and_growth_to_10m": true,
+    "gpu_PRMT_index_immediate_and_register_code_added": true,
+    "fermi_z0_pitch_limited_software_paths_added": true,
+    "playstation_auto_sticky_context_source_code_added": true,
+    "in_game_graphics_catalogue_has_zero_qualified_rules": true
+  },
+  "workstreams": [
+    {
+      "id": "fc27_and_launcher_frametime",
+      "issue": 8,
+      "status": "blocked",
+      "scope": "FC27 first-run and warm-cache frame pacing plus held navigation launcher hitch; no fabricated FPS gain",
+      "acceptance": [
+        {
+          "id": "fc27_boots_two_sessions_fw1360",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "fc27_first_warm_same_match_frame_time_traces",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "fc27_no_late_oom_or_bad_alloc_under_memory_pressure",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "fc27_stalls_shaders_cache_measured_before_after",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "launcher_held_navigation_no_122_175ms_decode_hitches",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "playstation_auto_popup_and_true_menu_scene_behaviour",
+          "passed": false,
+          "evidence_ref": null
+        }
+      ]
+    },
+    {
+      "id": "sparse_JIT_dynarmic_a64_a32",
+      "issue": 8,
+      "status": "blocked",
+      "scope": "4 guest cores, A64/A32, 2MiB on-demand RW/RX pages without 2-4GiB upfront allocation",
+      "acceptance": [
+        {
+          "id": "native_sdk_build_link_sparse_enabled_for_dev_experiment",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "fw1360_executable_rw_rx_alias_4m_bootstrap_and_increment",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "fw1360_sparse_rollback_unmap_and_memory_pressure",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "fw1360_a64_a32_4core_real_game_execution_and_cache_flush",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "sparse_off_fallback_and_no_regression_on_second_game",
+          "passed": false,
+          "evidence_ref": null
+        }
+      ]
+    },
+    {
+      "id": "gpu_vulkan_and_compatibility",
+      "issue": 8,
+      "status": "blocked",
+      "scope": "Native PS5 rendering of PRMT Index and supported Fermi2D software blits, other modes fail transparently",
+      "acceptance": [
+        {
+          "id": "native_sdk_prmt_imm_reg_compiles_and_executes",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "prmt_pixel_correct_golden_shader_capture",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "fermi_z0_pitch_multilayer_golden_copy_capture",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "unsupported_prmt_fermi_semantics_not_silently_masked",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "no_gpu_sync_queue_regression_multi_game",
+          "passed": false,
+          "evidence_ref": null
+        }
+      ]
+    },
+    {
+      "id": "playstation_glyphs_inside_games",
+      "issue": 7,
+      "status": "blocked",
+      "scope": "Native Switch 1 game art PS5 glyphs, independent from controller semantics and menu UX",
+      "acceptance": [
+        {
+          "id": "legitimate_original_mod_pack_binary_source_verified",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "title_update_romfs_sha_and_layout_qualified",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "format_safe_BNTX_Unity_CPK_or_other_repack_roundtrip",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "playstation_ps5_game_art_in_match_menu_hud_fc27",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "playstation_ps5_game_art_second_game_coverage",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "signed_versioned_opt_in_pack_delivery_and_fallback",
+          "passed": false,
+          "evidence_ref": null
+        }
+      ]
+    },
+    {
+      "id": "release_integrity_and_ux",
+      "issue": 8,
+      "status": "blocked",
+      "scope": "No unintended launcher design change, preserved legal package/shipping branch; PS5 boot/reinstall",
+      "acceptance": [
+        {
+          "id": "complete_early_source_and_native_build_after_final_diff",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "fw1360_reinstall_launch_exit_relaunch",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "approved_purple_launcher_visual_review",
+          "passed": false,
+          "evidence_ref": null
+        },
+        {
+          "id": "release_shipping_branch_and_rights_review",
+          "passed": false,
+          "evidence_ref": null
+        }
+      ]
+    }
+  ]
+}
