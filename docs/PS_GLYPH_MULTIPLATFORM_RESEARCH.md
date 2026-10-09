@@ -56,3 +56,17 @@ See the synthetic-only regression files `tools/check-ps-glyph-cross-platform-ima
 * Rights still constrain redistributing third-party art; technical knowledge and locally performed comparisons need no rehosting of game-owned asset bytes.
 
 **Current status: 0 verified per-game in-game PlayStation art packs and 0 native PS5 glyph qualifications. Issues #7 and #8 remain open.**
+
+## Bonus: detect pre-embedded PlayStation artwork in Switch games
+
+Some multiplatform ports include **unused PS/Xbox/Nintendo texture variants already in their Switch asset files**. Their presence is game-specific and cannot be presumed. Before downloading unrelated mods, run the new offline read-only filename-family inventory on an authorized local RomFS:
+
+```bash
+python3 tools/ps-glyph-builtin-platform-assets.py \
+  --romfs /path/own-game/extracted/romfs \
+  --out /tmp/builtin-platform-ui.json
+```
+
+The tool groups names such as `UI/controller_buttons_ps4.png`, `UI/controller_buttons_switch.png` and `UI/controller_buttons_xbox.png` **only as possible related UI resources**, with no pixel/read-time/semantic claims. It rejects unsafe symlinks, limits enumeration to 100,000 files, and never opens/decompresses asset bytes. Some games hide these names **inside BNTX/Unity/Unreal archives**; their corresponding metadata scanners are needed for deeper discovery.
+
+**Priority route:** First discover embedded native art, next research existing other-platform mod and actual name/path, and finally compare original image geometry with the matching Switch original. Until then native glyph art remains unverified.
