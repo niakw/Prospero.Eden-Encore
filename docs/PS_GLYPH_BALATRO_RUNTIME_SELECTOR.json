@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "game": "Balatro",
+  "source_platform": "PC",
+  "source_url": "https://github.com/NopoTheGamer/BalatroControllerGlyphs/blob/main/ControllerGlyphs.lua",
+  "source_blob_sha": "5c3ad47f019d5e742d73c0eb7860738830b3f9cf",
+  "mod_strategy": "runtime_style_selector_override",
+  "hook_name": "G.CONTROLLER.get_console_from_gamepad",
+  "observed_selection": "Playstation",
+  "documented_comment_alternatives": [
+    "Nintendo",
+    "Xbox"
+  ],
+  "ps4_style_flag": "G.F_PS4_PLAYSTATION_GLYPHS",
+  "switch1_game_update_verified": false,
+  "actual_nintendo_switch_scripts_verified": false,
+  "playstation_assets_present_on_switch_verified": false,
+  "texture_rect_xywh": null,
+  "gameplay_test_on_ps5": false,
+  "note": "Public Steamodded PC Lua source only. Hook availability and bundled glyph art in Switch 1 executable/data remain unknown."
+}
