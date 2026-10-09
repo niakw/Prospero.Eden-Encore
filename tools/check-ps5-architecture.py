@@ -85,6 +85,13 @@ def main() -> None:
             "Alias coherency check is absent")
     require('sceKernelReleaseDirectMemory(physical, LargePage)' in native,
             "Alias probe cleanup is missing")
+    require('std::atomic<std::uint64_t> sparse_jit_generation{1};' in native and
+            'static thread_local CachedCommit local;' in native and
+            'local.generation == generation && local.executable == executable' in native and
+            'required <= local.committed' in native and
+            'local.committed = region.committed;' in native and
+            native.count('sparse_jit_generation.fetch_add(1, std::memory_order_acq_rel);') == 2,
+            "Sparse JIT per-thread committed-page hint must invalidate on region create/release")
     require('::Common::SparseJitUsage(&jit_reserved, &jit_committed)' in perf,
             "Physical JIT memory accounting must target global Common")
     native_alloc = read("headless/jit-allocator.h")
