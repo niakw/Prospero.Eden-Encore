@@ -52,7 +52,15 @@ with tempfile.TemporaryDirectory(prefix="eden-cross-platform-glyph-") as temp:
     switch.write_bytes(png(transparent))
     report = test.propose(pc, pc_mod, switch, "Synthetic Test", "PC", "menu")
     assert report["original_texture_comparison"] == "rendered_pixels_identical"
-    assert report["switch_candidate_rects_xywh"] == [[4, 4, 8, 8]]
+    # RGB differences at alpha=1 are real and must NOT be suppressed by
+    # 8-bit premultiply rounding (prior implementation missed this case).
+    semi = original.copy()
+    semi.putpixel((4, 4), (254, 0, 0, 1))
+    switch.write_bytes(png(semi))
+    report = test.propose(pc, pc_mod, switch, "Synthetic Test", "PC", "menu")
+    assert report["original_texture_comparison"] == "visible_pixels_differ"
+    assert report["switch_candidate_rects_xywh"] is None
+    switch.write_bytes(png(original))
 
     # One genuinely different source icon means no coordinate transfer.
     different = original.copy()
