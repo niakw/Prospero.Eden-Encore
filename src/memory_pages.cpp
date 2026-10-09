@@ -817,9 +817,15 @@ bool CommitMemoryRange(void* address, std::size_t size) noexcept {
         return false;
     (void)clock_gettime(CLOCK_MONOTONIC, &allocated);
     void* at = address;
-    if (sceKernelMapDirectMemory(&at, size, PROT_READ | PROT_WRITE, MAP_FIXED, physical, LargePage) != 0 ||
-        at != address) {
-        (void)sceKernelReleaseDirectMemory(physical, size);
+    const auto map_rc = sceKernelMapDirectMemory(&at, size, PROT_READ | PROT_WRITE,
+                                                MAP_FIXED, physical, LargePage);
+    if (map_rc != 0 || at != address) {
+        // MAP_FIXED should not return a different VA, but on success it owns
+        // that mapping. Unmap the unexpected alias BEFORE releasing its direct
+        // physical backing; otherwise a live mapping could retain stale PA.
+        if (map_rc == 0 && at != address && at && at != MAP_FAILED &&
+            munmap(at, size) != 0) std::abort();
+        if (sceKernelReleaseDirectMemory(physical, size) != 0) std::abort();
         return false;
     }
     (void)clock_gettime(CLOCK_MONOTONIC, &mapped);

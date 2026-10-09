@@ -1773,3 +1773,7 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — User PS quit wins over racing guest fault / retry [skip ci]
 
 - Live game shortcut `pad->TakeReturnToMenu()` sets completion->return_to_menu; if a guest fault is simultaneously reported before shutdown, old `if (!completion->guest_fault.empty())` could schedule immediate automatic same-title retry even as user exited to Library. Now guest-fault retry/exception handling runs ONLY when `!return_to_menu`; user-initiated exit always wins and reaches existing `if (return_to_menu) continue`. Other early-boot fault retries remain as before. Static check-ps5-live-input contract extended, not executed. This is NOT a blanket auto-restart disable and must be tested on device. No builds/Actions/Mac/FTP.
+
+### 2026-10-09 — PS5 direct-memory map rollback ownership hardening [skip ci]
+
+- `Common::CommitMemoryRange` used MAP_FIXED for each heap piece. On unexpected success at a different VA it previously called `sceKernelReleaseDirectMemory` without first unmapping the newly created foreign VA, risking stale mapping/PA lifetime violation. Now return code is captured, successful but unexpected alias is munmapped before physically releasing its direct memory, and physical release failure is fatal (ownership cannot be safely continued). Existing correct fixed-map path and full zeroing preserved. Source assertion added to architecture checker, not executed; firmware behavior is still unverified. No build/test/Actions/Mac/FTP.
