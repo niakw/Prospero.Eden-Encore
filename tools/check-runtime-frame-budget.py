@@ -9,6 +9,8 @@ root = Path(__file__).resolve().parents[1]
 def read(p): return (root / p).read_text()
 
 graphics = read("headless/graphics.cpp")
+display = read("headless/display_refresh.h")
+main = read("headless/main.cpp")
 header = read("headless/graphics.h")
 textures = read("headless/prosperoeden/pe/ui/textures.cpp")
 texture_header = read("headless/prosperoeden/pe/ui/textures.hpp")
@@ -51,4 +53,15 @@ assert "dualsense_icon(c, {left - 2.0f" in home
 assert "settings_gear(c, left + 12.0f" in home
 assert "settings_gear(c, gx, gy" in nav
 
-print("All-game GPU/HUD hotpath, PS5 splash one-shot, Nlib frame budget and native icons: PASS")
+# A 120/240fps game on a 60/120Hz PS5 output may skip a frame, but
+# that timestamp must be per-session and safe across renderer workers.
+assert "inline std::atomic<long long> last_shown_frame_ns{0};" in display
+assert "inline void ResetSkipFrameTracking() noexcept" in display
+assert "last_shown_frame_ns.store(0, std::memory_order_relaxed);" in display
+assert "last_shown_frame_ns.compare_exchange_weak(" in display
+assert "previous > now_ns" in display
+assert "static long long last_shown_ns" not in display
+assert "Eden::Display::ResetSkipFrameTracking();" in main
+assert "Eden::Display::skipped_frames.store(0);" not in main
+
+print("All-game GPU/HUD hotpath, PS5 splash one-shot, Nlib frame budget, native icons and atomic frame-skip tracking: SOURCE PASS")
