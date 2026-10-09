@@ -1805,3 +1805,7 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — Preserve rendering worker bad_alloc exception category [skip ci]
 
 - The native all-game outer session catch already presents a localizable, actionable PS5 memory error for `std::bad_alloc`, but GPU/renderer worker exceptions travel via `completion->failure`: its `catch (const std::exception&)` previously wrapped bad_alloc into `runtime_error("Rendering failed: std::bad_alloc...")`, so they bypassed the new recovery message. Catch `std::bad_alloc` FIRST at this rethrow site and `throw;` intact; device/host Vulkan OOM handling and ordinary exceptions unchanged. Static source assertion staged, no build or tests, no Mac/FTP. FW13.60 testing required.
+
+### 2026-10-09 — Last contiguous direct-memory size at actual bad_alloc [skip ci]
+
+- In native per-title std::bad_alloc recovery, call the preexisting bounded one-shot sceKernelAvailableDirectMemorySize wrapper (QueryLargestDirectMemoryBlock) and emit EDEN_PS5_OOM largest_query_ok=... largest_free_mib=... before launcher recovery. This is largest contiguous PA, not total unused RAM; don't infer direct cause solely from it. No allocation, full region scan or per-frame work on the failure path. Regression source assertion staged, no tests/build/Actions/Mac/FTP; FW13.60 qualification needed.
