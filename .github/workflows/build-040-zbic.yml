@@ -156,6 +156,7 @@ jobs:
           python3 -B tools/check-ps5-autocontrol-context.py
           python3 -B tools/check-ps5-live-input.py
           python3 -B tools/check-ps5-interactive-boot.py
+          python3 -B tools/check-ps5-ui-stream-buffer.py
           python3 -B tools/check-gpu-native-diagnostics.py
           python3 -B tools/check-jit-memory-policy.py
           python3 -B tools/check-jit-startup-retry.py
