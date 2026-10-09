@@ -66,15 +66,25 @@ std::array<Worker, names.size()> workers;
 std::mutex snapshot_mutex;
 #ifdef EDEN_DEV_PROFILE
 static_assert(std::atomic<uintptr_t>::is_always_lock_free);
-std::array<uintptr_t, 8192> sampled_pcs{};
+// Lock-free signal-handler samples: use ring slots so the 500 Hz fast
+// sampler does not silently stop after 8192 (~16 seconds) GPU samples.
+std::array<std::atomic<uintptr_t>, 8192> sampled_pcs{};
 std::atomic<unsigned> pc_count{};
 // Guest core 0 host PCs (JIT code, HLE, memory callbacks), sampled with the GPU thread.
-std::array<uintptr_t, 65536> sampled_core_pcs{};
+std::array<std::atomic<uintptr_t>, 65536> sampled_core_pcs{};
 std::atomic<unsigned> core_pc_count{};
 unsigned core_pc_reported{};
 pthread_t core_sample_thread{};
 std::atomic<bool> core_sample_ready{};
 unsigned pc_reported{};
+// Unlike a detached 500 Hz sampler, this thread-local worker registration
+// clears readiness at guest-core exit. Do not signal a stale pthread_t after
+// return to the library, nor leave detached samplers across title launches.
+struct PcCoreRegistration {
+    ~PcCoreRegistration() { if (active) core_sample_ready.store(false, std::memory_order_release); }
+    bool active = false;
+};
+thread_local PcCoreRegistration pc_core_registration;
 bool pc_sampling{};
 #if defined(EDEN_DEV_WAIT_CALLERS) && defined(PS5_NATIVE)
 // Same firmware6.02 register offsets qualified by the C46 caller sampler.
@@ -114,21 +124,28 @@ void PcSignal(int, siginfo_t*, void* context) {
     if (core_sample_ready.load(std::memory_order_acquire) &&
         pthread_equal(pthread_self(), core_sample_thread)) {
         const unsigned core_index = core_pc_count.load(std::memory_order_relaxed);
-        if (core_index < sampled_core_pcs.size()) {
-            sampled_core_pcs[core_index] = static_cast<const uintptr_t*>(context)[224 / sizeof(uintptr_t)];
-            core_pc_count.store(core_index + 1, std::memory_order_release);
-        }
+        sampled_core_pcs[core_index % sampled_core_pcs.size()].store(
+            static_cast<const uintptr_t*>(context)[224 / sizeof(uintptr_t)],
+            std::memory_order_relaxed);
+        core_pc_count.store(core_index + 1, std::memory_order_release);
         return;
     }
     const unsigned index = pc_count.load(std::memory_order_relaxed);
+#if defined(EDEN_DEV_WAIT_CALLERS) && defined(PS5_NATIVE)
+    // Caller-chain slots contain eight non-atomic words. Keep this special
+    // firmware oracle bounded until its lifetime and concurrency are proven:
+    // only the normal GPU/core PC-only samplers are cyclic.
     if (index >= sampled_pcs.size()) return;
+#endif
+    const unsigned slot = index % sampled_pcs.size();
     // Native firmware 6.02 ABI, qualified by the standalone PC-sampling oracle.
     // SDK FreeBSD ucontext.mc_rip points at the wrong field on this firmware.
-    sampled_pcs[index] = static_cast<const uintptr_t*>(context)[224 / sizeof(uintptr_t)];
+    sampled_pcs[slot].store(static_cast<const uintptr_t*>(context)[224 / sizeof(uintptr_t)],
+                            std::memory_order_relaxed);
 #if defined(EDEN_DEV_WAIT_CALLERS) && defined(PS5_NATIVE)
     const auto* words = static_cast<const uintptr_t*>(context);
     char handler_stack_marker;
-    sampled_callers[index] = CaptureCallerChain(words[runtime_rsp_offset / sizeof(uintptr_t)],
+    sampled_callers[slot] = CaptureCallerChain(words[runtime_rsp_offset / sizeof(uintptr_t)],
         words[runtime_rbp_offset / sizeof(uintptr_t)], reinterpret_cast<uintptr_t>(&handler_stack_marker));
 #endif
     pc_count.store(index + 1, std::memory_order_release);
@@ -881,17 +898,25 @@ void RegisterWorker(const char* name) {
                 throw std::runtime_error("Cannot enable development PC sampler");
             if (i == pc_sample_core.load()) {
                 core_sample_thread = pthread_self();
+                pc_core_registration.active = true;
                 core_sample_ready.store(true, std::memory_order_release);
-                // dev-settings pc_fast=on: ~500 Hz from 45 s after registration instead of the
-                // frontend's 20 Hz polls (from 90 s), for compilation bursts at load. Signals during
-                // the boot's first seconds hung it (run radv-zb5-20260930-015220).
+                // dev-settings pc_fast=on: 500 Hz from 45s after registration.
+                // Unlike detached threads, a thread-local jthread requests
+                // stop and joins when its owning guest CPU worker exits. Bound
+                // the boot delay in 200ms stop-aware steps, so game teardown
+                // never waits another 45 seconds for an abandoned sampler.
                 if (pc_fast.load()) {
-                    std::thread([] {
-                        std::this_thread::sleep_for(std::chrono::seconds(45));
-                        while (core_pc_count.load() < sampled_core_pcs.size() &&
-                               pthread_kill(core_sample_thread, SIGUSR2) == 0)
+                    static thread_local std::jthread fast_sampler;
+                    const pthread_t target = pthread_self();
+                    fast_sampler = std::jthread([target](std::stop_token stop) {
+#ifdef PS5_NATIVE
+                        PlaceSecondary("pc_sampler");
+#endif
+                        for (unsigned tick = 0; tick < 225 && !stop.stop_requested(); ++tick)
+                            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                        while (!stop.stop_requested() && pthread_kill(target, SIGUSR2) == 0)
                             std::this_thread::sleep_for(std::chrono::milliseconds(2));
-                    }).detach();
+                    });
                 }
             }
         }
@@ -954,15 +979,23 @@ void Snapshot() {
 #ifdef EDEN_DEV_PROFILE
     std::map<uintptr_t, unsigned> counts;
     const unsigned end = pc_count.load(std::memory_order_acquire);
+    if (end < pc_reported) pc_reported = end; // wrap/reset safety
+    if (end - pc_reported > sampled_pcs.size()) {
+        const auto lost = end - pc_reported - sampled_pcs.size();
+        pc_reported = end - sampled_pcs.size();
+        std::printf("EDEN_PERF_PC_SAMPLES_LOST source=gpu count=%u\n", lost);
+    }
 #if defined(EDEN_DEV_WAIT_CALLERS) && defined(PS5_NATIVE)
     std::map<std::array<uintptr_t, 9>, unsigned> caller_counts;
 #endif
     while (pc_reported < end) {
         const unsigned index = pc_reported++;
-        ++counts[sampled_pcs[index]];
+        ++counts[sampled_pcs[index % sampled_pcs.size()].load(std::memory_order_relaxed)];
 #if defined(EDEN_DEV_WAIT_CALLERS) && defined(PS5_NATIVE)
-        std::array<uintptr_t, 9> key{sampled_pcs[index]};
-        std::copy(sampled_callers[index].begin(), sampled_callers[index].end(), key.begin() + 1);
+        std::array<uintptr_t, 9> key{
+            sampled_pcs[index % sampled_pcs.size()].load(std::memory_order_relaxed)};
+        std::copy(sampled_callers[index % sampled_callers.size()].begin(),
+                  sampled_callers[index % sampled_callers.size()].end(), key.begin() + 1);
         ++caller_counts[key];
 #endif
     }
@@ -980,7 +1013,16 @@ void Snapshot() {
                     static_cast<unsigned long long>(pc), count);
     std::map<uintptr_t, unsigned> core_counts;
     const unsigned core_end = core_pc_count.load(std::memory_order_acquire);
-    while (core_pc_reported < core_end) ++core_counts[sampled_core_pcs[core_pc_reported++]];
+    if (core_end < core_pc_reported) core_pc_reported = core_end;
+    if (core_end - core_pc_reported > sampled_core_pcs.size()) {
+        const auto lost = core_end - core_pc_reported - sampled_core_pcs.size();
+        core_pc_reported = core_end - sampled_core_pcs.size();
+        std::printf("EDEN_PERF_PC_SAMPLES_LOST source=guest count=%u\n", lost);
+    }
+    while (core_pc_reported < core_end) {
+        const auto index = core_pc_reported++;
+        ++core_counts[sampled_core_pcs[index % sampled_core_pcs.size()].load(std::memory_order_relaxed)];
+    }
     for (const auto& [pc, count] : core_counts)
         std::printf("EDEN_PERF_CORE_PC mono_ns=%lld pc=%llx count=%u\n", mono,
                     static_cast<unsigned long long>(pc), count);
@@ -1164,12 +1206,16 @@ void BeginPcSampling() {
 
 void PollGpuPc() {
     std::lock_guard lock(workers_mutex);
-    if (pc_sampling && workers[4].registered && pc_count.load() < sampled_pcs.size()) {
+#if defined(EDEN_DEV_WAIT_CALLERS) && defined(PS5_NATIVE)
+    const bool gpu_capacity = pc_count.load() < sampled_pcs.size();
+#else
+    const bool gpu_capacity = true; // bounded ring; retain recent samples
+#endif
+    if (pc_sampling && workers[4].registered && gpu_capacity) {
         const int error = pthread_kill(workers[4].thread, SIGUSR2);
         if (error) throw std::runtime_error("Cannot sample development render thread");
     }
-    if (pc_sampling && core_sample_ready.load(std::memory_order_acquire) &&
-        core_pc_count.load() < sampled_core_pcs.size())
+    if (pc_sampling && core_sample_ready.load(std::memory_order_acquire))
         pthread_kill(core_sample_thread, SIGUSR2);
 }
 #endif
