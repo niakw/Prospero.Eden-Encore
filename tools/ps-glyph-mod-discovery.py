@@ -87,7 +87,7 @@ def canonical_link(href: str) -> str | None:
     href = html.unescape(href).strip()
     if href.startswith("//"): href = "https:" + href
     parsed = urlparse(href)
-    if parsed.netloc.lower().endswith("duckduckgo.com") or parsed.path.startswith("/l/"):
+    if ((parsed.hostname or "").lower().endswith("duckduckgo.com") or\n        (not parsed.netloc and parsed.path.startswith("/l/"))):
         url = parse_qs(parsed.query).get("uddg")
         if url:
             href = url[0]
@@ -177,7 +177,7 @@ def yandex(query: str) -> list[tuple[str,str]]:
                       "docsInGroup": "1"},
     }).encode()
     data = request_bytes("https://searchapi.api.cloud.yandex.net/v2/web/search",
-                         {"Api-Key": token, "Content-Type": "application/json",
+                         {"Authorization": "Api-Key " + token, "Content-Type": "application/json",
                           "User-Agent": "EdenEncore-Mod-Discovery"}, body)
     response = json.loads(data)
     raw = base64.b64decode(response["rawData"], validate=True)
