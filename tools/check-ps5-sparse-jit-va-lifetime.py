@@ -55,6 +55,12 @@ assert "if (rc != 0 && base != reinterpret_cast<void*>(cpu_mapping_hint))" in de
 assert "if (rc != 0 && alias != reinterpret_cast<void*>(cpu_mapping_hint))" in dense_alias
 heap_map = ps5.split("bool CommitMemoryRange(", 1)[1].split("bool CommitMemoryRange(", 1)[0]
 assert "if (map_rc != 0 && at != address) std::abort();" in heap_map
+assert "void RollbackUnpublishedHeapGrowth(" in ps5
+rollback = ps5.split("void RollbackUnpublishedHeapGrowth(", 1)[1].split(
+    "void AbandonInitialHeapReservation(", 1)[0]
+assert "mmap(address, size, PROT_NONE, MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS" in rollback
+assert rollback.index("if (guard != address) std::abort();") < rollback.index(
+    "sceKernelReleaseDirectMemory(physical, size)")
 table_slot = ps5.split("bool MapSlot(", 1)[1].split("#endif", 1)[0]
 assert "const auto rc = sceKernelMapDirectMemory(&address, SparseSlot, protection," in table_slot
 assert "if (address != reinterpret_cast<void*>(at))" in table_slot
