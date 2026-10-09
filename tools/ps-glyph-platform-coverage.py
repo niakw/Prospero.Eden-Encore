@@ -17,6 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SWITCH = ROOT / "docs/PS_GLYPH_SOURCE_INDEX.json"
 OTHER = ROOT / "docs/PS_GLYPH_CROSS_PLATFORM_INDEX.json"
+SEEDS = ROOT / "docs/PS_GLYPH_SWITCH1_GAME_SEEDS.json"
 MAX_SIZE = 512 * 1024
 
 
@@ -29,7 +30,7 @@ def read_json(file: Path) -> dict:
     return data
 
 
-def worklist(switch: dict, other: dict) -> dict:
+def worklist(switch: dict, other: dict, seeds: dict | None = None) -> dict:
     native = switch.get("mods")
     external = other.get("sources")
     if not isinstance(native, list) or not isinstance(external, list):
@@ -40,6 +41,20 @@ def worklist(switch: dict, other: dict) -> dict:
         if not isinstance(item, dict) or not isinstance(item.get("title"), str):
             raise ValueError("invalid Switch source")
         switch_by_game[item["title"]].append(item)
+    seed_titles: set[str] = set()
+    if seeds is not None:
+        if seeds.get("schema") != 1 or not isinstance(seeds.get("games"), list):
+            raise ValueError("bad Switch 1 seed schema")
+        for item in seeds["games"]:
+            if not isinstance(item, dict) or not isinstance(item.get("switch_game"), str):
+                raise ValueError("bad verified Switch 1 title seed")
+            title = item["switch_game"]
+            if not title or title in switch_by_game:
+                raise ValueError("duplicate or unverified Switch 1 seed")
+            if title in seed_titles:
+                raise ValueError("repeated Switch 1 title seed")
+            seed_titles.add(title)
+            switch_by_game[title] = []
     for item in external:
         if not isinstance(item, dict) or item.get("switch_game") not in switch_by_game:
             raise ValueError("orphan cross-platform source")
@@ -64,6 +79,7 @@ def worklist(switch: dict, other: dict) -> dict:
         tasks.append({
             "switch_title": title,
             "switch_mod_references": len(records),
+            "officially_listed_switch1_seed_only": title in seed_titles,
             "additional_other_platform_references": len(cross),
             "other_platforms": sorted({x["platform"] for x in cross}),
             "known_switch_romfs_archive_hints": known_switch_paths,
@@ -82,8 +98,9 @@ def worklist(switch: dict, other: dict) -> dict:
     tasks.sort(key=lambda r: (-r["priority_for_research_only"], r["switch_title"]))
     return {
         "schema": 1,
-        "scope": "all games already present in Switch 1 PS glyph research index",
+        "scope": "Switch mod index plus independently listed Nintendo Switch 1 seed titles",
         "games": len(tasks),
+        "switch1_seed_only_games": len(seed_titles),
         "games_with_other_platform_leads": sum(x["additional_other_platform_references"] > 0 for x in tasks),
         "verified_switch_atlas_rectangles": sum(x["geometry_verified"] for x in tasks),
         "worklist": tasks,
@@ -99,7 +116,7 @@ def main() -> int:
         if args.out and (args.out.exists() or args.out.is_symlink() or
                          not args.out.parent.is_dir() or args.out.parent.is_symlink()):
             raise ValueError("unsafe output")
-        result = json.dumps(worklist(read_json(SWITCH), read_json(OTHER)),
+        result = json.dumps(worklist(read_json(SWITCH), read_json(OTHER), read_json(SEEDS)),
                             indent=2, ensure_ascii=False) + "\n"
         if args.out:
             args.out.write_text(result, "utf-8")
