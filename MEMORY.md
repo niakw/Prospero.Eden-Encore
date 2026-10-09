@@ -1549,3 +1549,10 @@ One explicitly authorized test compilation attempt `[full-build] [test-all-on]` 
 ### 2026-10-09 — Next isolated all-on PS5 preflight/build attempt
 
 This commit deliberately triggers ONE test-only GitHub Actions run via `[full-build] [test-all-on]` after repairing the obsolete Nlib TGA source check. Publishing and shipping branch changes remain forbidden; observed CI result must be fetched before any success assertion.
+
+### 2026-10-09 — Current red CI #37891159708 Nlib test NameError fixed; trigger isolated recheck
+
+- User reported red latest full all-on PS5 dev run [#37891159708](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/37891159708) on commit `a100724ab4c5`. Last job failure: `tools/check-nlib-ui-recovery.py` line 194 `NameError: name 'native_hdr' is not defined`; native source verifications up to this point, including real hosted sparse-mapping allocator mocks, shader cache policy, network/Nlib read tests, PASSED; native PS5 compilation was **not reached**.
+- Root cause: script *already had* `native_svc = src(...eden_services.cpp)` / `native_hdr = src(...eden_services.h)` at lines 286-287, **after first usage at line 194**. The fix commit `3faebcedfe72501bbb2e84fae29c624bdfcb72d2` moved both definitions directly after `hero_types` at lines 41-42, retaining all existing assertions.
+- Static inspection (NOT executing Python) evaluated 221 source-string `assert 'literal' in/not in variable` checks against the live correct source and extracted function slices; 221/221 matched. The other paired function-split delimiters also exist in their proper files; actual CI and PS5 runtime validation remain pending.
+- This follow-up commit deliberately triggers **one** `[full-build] [test-all-on]` PS5 dev CI reattempt; no GitHub Release, no protected delivery-branch changes, no approved purple UI redesign. Test JIT sparse/PRMT-Fermi/FC27 glyph ART remains hardware/unverified; issue #7/#8 OPEN, the 26 final gates unpassed. Do not push further dev commits while CI is running because workflow cancels earlier runs on that branch.
