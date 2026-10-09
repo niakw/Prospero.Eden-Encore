@@ -62,6 +62,9 @@ def main() -> None:
     require('} catch (const std::bad_alloc&) {' in app and
             'launch_error = "The game could not allocate PS5 memory. Close Eden Encore completely before retrying to release memory retained between games.";' in app,
             "All-title JIT/VA/heap std::bad_alloc must surface memory recovery hint in the launcher")
+    require('EDEN_PS5_OOM largest_query_ok=%u largest_free_mib=%zu' in app and
+            'Eden::Performance::QueryLargestDirectMemoryBlock(&oom_largest_free)' in app,
+            "Native OOM must record bounded contiguous-direct-memory headroom on failure")
     require('EDEN_HEAP_LIFETIME phase=%s pieces=%zu large=%zu large_blocks=%u tcache=%zu' in perf,
             "Per-title teardown heap retained backing and private-cache snapshots missing")
     require('EDEN_HEAP_PIECE bytes=%zu va=%p pa=%llx alloc_ns=%llu map_ns=%llu zero_ns=%llu' in native,

@@ -2178,6 +2178,12 @@ int main(int argc, char** argv) {
             // Return to the launcher instead of propagating an opaque
             // std::bad_alloc; only a full app exit reclaims warm mspaces.
             Eden::Performance::SetSecondaryPlacement(false);
+            // Snapshot a single firmware headroom query only on failure.
+            // Largest contiguous free PA is NOT the system's total free RAM.
+            std::size_t oom_largest_free = 0;
+            const bool oom_query_ok = Eden::Performance::QueryLargestDirectMemoryBlock(&oom_largest_free);
+            std::printf("EDEN_PS5_OOM largest_query_ok=%u largest_free_mib=%zu\n",
+                        unsigned(oom_query_ok), oom_largest_free / Eden::Experimental::kMiB);
             launch_error = "The game could not allocate PS5 memory. Close Eden Encore completely before retrying to release memory retained between games.";
             Eden::Report("session failed", "std::bad_alloc: native memory allocation");
             std::fflush(stderr);
