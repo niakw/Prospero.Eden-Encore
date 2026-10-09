@@ -124,8 +124,15 @@ def verify(pack_root: Path, original_root: Path, title_id: str) -> dict:
         replacement = _path(entry["replacement"])
         key = game_file.as_posix().casefold()
         source_key = replacement.as_posix().casefold()
-        require(key not in seen_game and source_key not in seen_source,
-                "duplicate/case-colliding RomFS or replacement file")
+        # A file cannot be a directory for another file, even if each
+        # manifest entry has a legitimate digest. Keep installer and native
+        # LayeredFS runtime in agreement across Linux/case-folding APFS.
+        def conflicts(candidate: str, names: set[str]) -> bool:
+            return any(candidate == old or candidate.startswith(old + "/") or
+                       old.startswith(candidate + "/") for old in names)
+        require(not conflicts(key, seen_game) and
+                not conflicts(source_key, seen_source),
+                "duplicate/case-colliding or parent-overlapping RomFS/replacement path")
         seen_game.add(key)
         seen_source.add(source_key)
         expected_original = _hex(entry["original_sha256"], HEX_SHA, "original SHA-256").lower()
