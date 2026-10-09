@@ -204,7 +204,7 @@ target_include_directories(dynarmic BEFORE PUBLIC "${PORT_BUILD_DIR}/include")
 file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/${code_relative}.cpp" code_source)
 include("${EDEN_PORT_DIR}/jit-alias.cmake")
     string(REPLACE "#include \"dynarmic/backend/x64/block_of_code.h\""
-        "#include \"dynarmic/backend/x64/block_of_code.h\"\n#include \"${EDEN_PORT_DIR}/jit-allocator.h\"" code_source "${code_source}")
+        "#include \"dynarmic/backend/x64/block_of_code.h\"\n#include \"${EDEN_PORT_DIR}/jit-allocator.h\"\n#include \"${EDEN_PORT_DIR}/jit-sparse-commit.h\"" code_source "${code_source}")
     string(REPLACE "        , nullptr)\n    , constant_pool"
         "        , EdenJitAllocator())\n    , constant_pool" code_source "${code_source}")
 if(PS5_NATIVE)
@@ -223,7 +223,7 @@ if(PS5_NATIVE)
         message(FATAL_ERROR "Pinned Dynarmic JIT commit boundary changed")
     endif()
     string(REPLACE "${jit_commit_anchor}"
-        "${jit_commit_anchor}#ifdef PS5_NATIVE\n    if (::Eden::Experimental::sparse_jit_cache.load(std::memory_order_relaxed)) {\n        const size_t written = getSize();\n        if (written > maxSize_ || codesize > maxSize_ - written ||\n            !::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), written + codesize)) {\n            std::fprintf(stderr, \"EDEN_JIT_SPARSE_COMMIT_FAILED used=%zu next=%zu capacity=%zu\\n\", written, codesize, maxSize_);\n            throw std::bad_alloc{};\n        }\n        return;\n    }\n#endif\n"
+        "${jit_commit_anchor}#ifdef PS5_NATIVE\n    if (::Eden::Experimental::sparse_jit_cache.load(std::memory_order_relaxed)) {\n        const size_t written = getSize();\n        const auto target = ::Eden::Jit::PlanSparseCommit(written, codesize, maxSize_);\n        if (!target.valid ||\n            !::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), target.bytes)) {\n            std::fprintf(stderr, \"EDEN_JIT_SPARSE_COMMIT_FAILED used=%zu next=%zu capacity=%zu\\n\", written, codesize, maxSize_);\n            throw std::bad_alloc{};\n        }\n        if (target.clamped)\n            std::fprintf(stderr, \"EDEN_JIT_SPARSE_PRECOMMIT_CLAMPED used=%zu hint=%zu target=%zu capacity=%zu\\n\",\n                         written, codesize, target.bytes, maxSize_);\n        return;\n    }\n#endif\n"
         code_source "${code_source}")
 endif()
   # ConstantPool has completed construction before this body. Isolate its last
