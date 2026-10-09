@@ -78,7 +78,17 @@ def main() -> int:
             argv[1:1] = ["-I" + str(ROOT / "headless/prosperoeden"),
                          "-I" + str(ROOT / "headless"),
                          "-I" + str(ROOT / "src")]
-        argv += ["-fsyntax-only", "-Werror", "-ferror-limit=8"]
+        # The pinned Eden CMake flags contain "-Wno-error-all", which Clang 18
+        # does not recognize. Ninja tolerates that diagnostic, but this
+        # standalone preflight deliberately adds -Werror and would fail before
+        # checking any generated GPU code. Drop only that unsupported flag.
+        argv = [flag for flag in argv if flag != "-Wno-error-all"]
+        argv += ["-fsyntax-only", "-ferror-limit=8"]
+        # Match real native targets: the fork launcher builds with -Werror,
+        # while upstream-generated shader/Fermi targets do not. Real C++
+        # errors stay fatal in both cases.
+        if relative not in GENERATED_TARGETS:
+            argv.append("-Werror")
         try:
             check = subprocess.run(argv, cwd=entry["directory"], text=True,
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
