@@ -1097,6 +1097,7 @@ void Launcher::press_game(Key key)
             game_docked_ = services_.docked(game.title_id);
             game.docked = game_docked_;
             selected_docked_ = game_docked_;
+            if (scan_.valid()) docked_refresh_after_scan_ = true;
         }
         say(saved ? tr("Game overrides reset to global defaults.") :
                     tr("Could not save. Please try again."),
@@ -1222,6 +1223,7 @@ void Launcher::press_game(Key key)
             game_settings_ = next;
             game_docked_ = next.console_mode == 1;
             game.docked = game_docked_;
+            if (scan_.valid()) docked_refresh_after_scan_ = true;
         }
     }
     else
@@ -1294,6 +1296,7 @@ void Launcher::press_game(Key key)
             game_settings_ = next;
             game_docked_ = next.console_mode >= 0 ? next.console_mode == 1 : services_.docked(game.title_id);
             game.docked = game_docked_;
+            if (scan_.valid()) docked_refresh_after_scan_ = true;
         }
     }
     // 120 Hz is a request: the display has the last word.

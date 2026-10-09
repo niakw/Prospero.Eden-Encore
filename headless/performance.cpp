@@ -553,8 +553,19 @@ static void RefreshFreeMemory() {
 #endif
     std::int64_t start = 0;
     std::size_t largest = 0;
-    const std::int64_t total = sceKernelGetDirectMemorySize();
-    const bool known = total > 0 && sceKernelAvailableDirectMemorySize(0, total, 0x4000, &start, &largest) == 0;
+    // The physical direct-memory address-space bound is constant for this
+    // PS5 process. Re-reading it at each 100 ms GPU pressure check wastes
+    // an independent kernel call. Only cache a successful positive result:
+    // startup errors still retry and remain fail-closed as before.
+    // This variable is accessed exclusively by the elected single-flight
+    // query owner above; all other renderer callers return before it.
+    static std::int64_t cached_direct_total = 0;
+    if (cached_direct_total <= 0) {
+        const std::int64_t observed_total = sceKernelGetDirectMemorySize();
+        if (observed_total > 0) cached_direct_total = observed_total;
+    }
+    const bool known = cached_direct_total > 0 &&
+        sceKernelAvailableDirectMemorySize(0, cached_direct_total, 0x4000, &start, &largest) == 0;
     // Unknown is not the same as an observed low-memory condition. A single
     // transient failed query previously flipped memory_short to true and
     // immediately enabled expensive dirty-texture download/eviction. Keep
