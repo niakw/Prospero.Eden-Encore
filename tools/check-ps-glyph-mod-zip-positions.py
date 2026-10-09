@@ -69,6 +69,19 @@ with tempfile.TemporaryDirectory(prefix="eden-source-mod-zip-") as base:
     assert all(x["kind"] is None for x in detected["detected_original_switch_slots"])
     # Whole ZIP indexes do not infer active game support or change mod files.
     assert (romfs / "Layout" / "Buttons.sblarc").read_bytes() == raw_original
+    # Full mod packs can carry >96 unrelated layout/language files.
+    # Budget expensive SARC image decodes, never reject whole ZIP for that.
+    expanded_zip = root / "large-ui-mod.zip"
+    with zipfile.ZipFile(expanded_zip, "w") as z:
+        for n in range(105):
+            z.writestr(f"romfs/Message/Menu_{n:03d}.msbt", b"SYNTHETIC")
+        z.writestr("romfs/Layout/Buttons.sblarc", raw_modified)
+    expanded = zipscan.gather(expanded_zip, romfs, "world_interaction")
+    assert expanded["scanned_romfs_entries"] == 106
+    assert expanded["matched_native_ui_archives"] == 1
+    assert expanded["glyph_position_candidates"] >= 1
+    assert len(expanded["unresolved"]) == 105
+
     bad_zip = root / "modified-unmatched.zip"
     with zipfile.ZipFile(bad_zip, "w") as z:
         z.writestr("romfs/Layout/Missing.sblarc", raw_modified)
