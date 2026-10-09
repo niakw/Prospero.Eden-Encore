@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Host-compile the actual controller mapping contract, with no PS5 app build.
 
-Protects emulator-input semantics independently of in-game glyph artwork.
+Protects immutable global/game-specific emulator-input semantics independently of in-game glyph artwork.
 This cannot fix a game's own Nintendo prompt textures or applet UI.
 """
 from pathlib import Path
@@ -15,16 +15,16 @@ ROOT = Path(__file__).resolve().parents[1]
 # launch-time SetAdaptivePlayStation(false) despite a PlayStation profile.
 launch = (ROOT / "headless/main.cpp").read_text()
 pad_runtime = (ROOT / "headless/pad.cpp").read_text()
-assert "pad->SetAdaptivePlayStation(effective_layout == 0 && !custom_mapping);" in launch
-assert "pad->SetAdaptivePlayStation(false);" not in launch
-assert '(effective_layout == 1 ? "Switch" : "PlayStation Auto")' in launch
-assert "adaptive_playstation && mapping_context.gameplay() ? kSwitchMapping : mapping" in pad_runtime
-assert "mapping_context.observe(" in pad_runtime
-# A qualified menu recovery must not alter the physical in-match mapping.
-assert "kAutoControls.menu_evidence_enter" in pad_runtime
-assert "mapping_context.manual_toggle()" in pad_runtime
-assert "kButtonTouchPad | kButtonSquare" in pad_runtime
-assert "sample.buttons &= ~(kButtonTouchPad | kButtonSquare);" in pad_runtime
+assert "pad->SetAdaptivePlayStation" not in launch
+assert "mapping_context" not in pad_runtime
+assert "adaptive_playstation" not in pad_runtime
+assert '(effective_layout == 1 ? "Switch" : "PlayStation")' in launch
+assert "Eden::ResolveSessionButtonMapping(" in launch
+assert "const int pad = mapping[game];" in pad_runtime
+# A session's guest face buttons are no longer reinterpreted after menu
+# navigation, stick motion, cutscenes or a match starts.
+assert "kButtonTouchPad | kButtonSquare" not in pad_runtime
+assert "kSwitchMapping" not in pad_runtime
 CXX = next((x for x in ("clang++-18", "clang++", "g++") if shutil.which(x)), None)
 if not CXX:
     raise SystemExit("C++20 compiler is required for button mapping regression")
