@@ -55,6 +55,14 @@ python3 tools/ps-glyph-sarc-inspect.py /path/decompressed/Common.blarc --out /tm
 
 The tool reads the SARC/SFAT/SFNT archive structure to enumerate internal names, absolute byte offsets and lengths without extracting files.
 
+When the decompressed archive embeds `__Combined.bntx` or other named BNTX files, perform a **nested read-only scan without writing/extracting members**:
+
+```bash
+python3 tools/ps-glyph-sarc-bntx-chain.py /path/decompressed/Common.blarc --out /tmp/combined-texture-chain.json
+```
+
+This reports both the SARC member's absolute byte offset and each embedded BRTI texture's name, dimensions, format and mip byte pointers translated into positions within the outer decompressed SARC. **All offsets remain byte offsets, not XYWH texture pixel coordinates.** BNTX decode/repack/ASTC/BC/mip stability is still outside this source-only implementation.
+
 **Known public TOTK research lead:**
 
 ```text
@@ -65,7 +73,7 @@ RomFS/UI/LayoutArchive/Common.Product.110.Nin_NX_NVN.blarc.zs
           Nt_KeyTexA_00^d.bftex   (community-reported texture)
 ```
 
-This location was published in a comment on https://gamebanana.com/mods/443260 ; it has **not** been verified byte-for-byte in Eden. The `.zs` decompression may require the game dictionary from `romfs/Pack/ZsDic.pack.zs` (https://github.com/TotkMods/Research). External TkZstd provides a dictionary-aware tool (https://github.com/TotkMods/TkZstd). Do not assume all `.zs` files use the same dictionary. The SARC reader must receive an already decompressed archive, and BNTX must first be identified/extracted with an independently validated parser.
+This location was published in a comment on https://gamebanana.com/mods/443260 ; it has **not** been verified byte-for-byte in Eden. The `.zs` decompression may require the game dictionary from `romfs/Pack/ZsDic.pack.zs` (https://github.com/TotkMods/Research). External TkZstd provides a dictionary-aware tool (https://github.com/TotkMods/TkZstd). Do not assume all `.zs` files use the same dictionary. The SARC reader must receive an already decompressed archive, and embedded BNTX may be inventoried directly with the bounded read-only SARC-BNTX chain parser.
 
 ### 4b. Unity/other proprietary containers with external texture export
 
