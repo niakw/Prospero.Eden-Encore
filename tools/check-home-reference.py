@@ -68,6 +68,8 @@ for fabricated in ("CPU 17%", "GPU 28%", "60 FPS", "48.0 GB / 64.0 GB"):
     assert fabricated not in home
 assert 'hero_file.empty() ? std::string{tr("Your next adventure")}' in home
 assert 'text_block(c, title_label, 90.0f' in home
+assert 'if (text_width(c, title_label, 76.0f) > 1030.0f)' in home
+assert 'if (text_width(c, title_label, 64.0f)' not in home
 assert 'tr("Max. players: {0}")' in home
 assert 'label_area.w - 4.0f, Align::center' in home
 assert 'theme::kBase.with_alpha(0.73f)' in home

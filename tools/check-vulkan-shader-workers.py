@@ -28,7 +28,13 @@ assert "spare / 2ULL" not in policy
 assert "EDEN_PS5_SHADER_WORKERS reported=" in policy
 assert "physical_verified=%u" in policy
 assert "std::uint64_t PinnedWorkerMask() noexcept;" in header
-assert "if (!worker_topology_ready) return 0;" in performance
+assert "std::atomic<std::uint64_t> verified_physical_worker_mask{0};" in performance
+assert "verified_physical_worker_mask.store(0, std::memory_order_release);" in performance
+assert "verified_physical_worker_mask.store(verified_mask, std::memory_order_release);" in performance
+assert "verified_physical_worker_mask.load(std::memory_order_acquire)" in performance
+assert "if (!worker_topology_ready) return 0;" not in performance
+assert performance.index("verified_physical_worker_mask.store(verified_mask, std::memory_order_release);") < performance.index("void EnableExperimentalLogicalPlacementImpl()")
+assert "worker_topology_ready = true;" in performance  # logical trial is intentionally NOT physical proof
 
 def workers(reported: int, allowed: set[int], primary: set[int] | None) -> int:
     schedulable = min(len(allowed), reported) if allowed else min(reported, 4)

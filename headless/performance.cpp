@@ -130,6 +130,11 @@ void PcSignal(int, siginfo_t*, void* context) {
 #ifdef PS5_NATIVE
 std::array<unsigned, 5> worker_cpus{};
 bool worker_topology_ready = false;
+// Published as ONE atomic snapshot only after a physically verified probe.
+// Shader-pool setup must never read worker_cpus while the next title is
+// rebuilding the mutable topology, nor mistake logical-only placement
+// (physical_verified=0) for measured cores.
+std::atomic<std::uint64_t> verified_physical_worker_mask{0};
 // Physical core (x2APIC above the SMT shift) of each allowed CPU, -1 if unknown.
 std::array<int, 64> cpu_core = [] { std::array<int, 64> c{}; c.fill(-1); return c; }();
 // CPUs outside guest cores 0-2 and their SMT siblings, and not the GPU thread CPU.
@@ -142,6 +147,7 @@ std::atomic<unsigned> secondary_reports{};
 void CheckWorkerTopology() {
     // A new title/firmware check may fail before CPUID probing begins.
     // Never reuse a previous game's affinity decision in that case.
+    verified_physical_worker_mask.store(0, std::memory_order_release);
     worker_topology_ready = false;
     secondary_cpus = 0;
     worker_cpus.fill(0);
@@ -241,6 +247,13 @@ void CheckWorkerTopology() {
             if (!guest_core && cpu != worker_cpus[3] && cpu != worker_cpus[4]) secondary_cpus |= 1ULL << cpu;
         }
         std::printf("EDEN_WORKER_SECONDARY mask=%llx\n", secondary_cpus);
+        // Publish only after all CPU IDs and affinity/topology checks complete.
+        // Logical-only experimental placement deliberately never publishes
+        // this snapshot: a logical CPU ID is not physical-core evidence.
+        std::uint64_t verified_mask = 0;
+        for (unsigned cpu : worker_cpus)
+            if (cpu < 64) verified_mask |= std::uint64_t{1} << cpu;
+        verified_physical_worker_mask.store(verified_mask, std::memory_order_release);
     }
     std::printf("EDEN_WORKER_TOPOLOGY ready=%d distinct_cores=%u cpus=%u,%u,%u,%u,%u amd_ext=%u x2apic=%u\n",
         worker_topology_ready, count, worker_cpus[0], worker_cpus[1], worker_cpus[2],
@@ -392,14 +405,11 @@ void EnableExperimentalLogicalPlacement() {
 
 std::uint64_t PinnedWorkerMask() noexcept {
 #ifdef PS5_NATIVE
-    // Only expose topology-qualified slots, never arbitrary CPU indices or
-    // unverified firmware logical/SMT pairs. Called when the Vulkan shader
-    // pipeline pool is constructed, after main's topology initialization.
-    if (!worker_topology_ready) return 0;
-    std::uint64_t mask = 0;
-    for (unsigned cpu : worker_cpus)
-        if (cpu < 64) mask |= std::uint64_t{1} << cpu;
-    return mask;
+    // Atomic generation snapshot: PS5 pipeline workers are constructed on
+    // different threads, sometimes as the previous title is shutting down.
+    // Unknown / logical-only topology returns zero and keeps admission
+    // conservative, rather than double-counting unverified host cores.
+    return verified_physical_worker_mask.load(std::memory_order_acquire);
 #else
     return 0;
 #endif
