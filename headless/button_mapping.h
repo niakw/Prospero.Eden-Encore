@@ -39,8 +39,25 @@ inline constexpr ButtonMapping kSwitchMapping = {
 
 inline constexpr ButtonMapping kDefaultMapping = kPlayStationMapping;
 
-inline const ButtonMapping& BaseMappingForLayout(int layout) {
+inline constexpr const ButtonMapping& BaseMappingForLayout(int layout) {
     return layout == 1 ? kSwitchMapping : kPlayStationMapping;
+}
+
+// The one input profile resolved in the launcher before guest HID starts.
+// A per-title layout override uses its own default button map even if
+// it has no custom edits. Otherwise the global mapping is inherited.
+struct SessionButtonMapping {
+    int layout;
+    ButtonMapping buttons;
+};
+inline constexpr SessionButtonMapping ResolveSessionButtonMapping(
+    int global_layout, const ButtonMapping& global_buttons,
+    int title_layout, bool title_has_custom_buttons,
+    const ButtonMapping& title_buttons) {
+    const int layout = title_layout >= 0 ? title_layout : global_layout;
+    return {layout,
+            title_has_custom_buttons ? title_buttons :
+            title_layout >= 0 ? BaseMappingForLayout(title_layout) : global_buttons};
 }
 
 inline bool MappingIsCustom(const ButtonMapping& mapping, int layout) {
