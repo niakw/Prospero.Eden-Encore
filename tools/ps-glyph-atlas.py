@@ -261,36 +261,65 @@ def render(spec: Path, original_root: Path, icons_zip: Path, output: Path) -> Pa
 
 
 def discover(root: Path, limit: int = 200) -> list[dict]:
+    """Rank likely UI inputs before opening/hashing graphics.
+
+    Previous traversal stopped at the first 200 filesystem entries, which
+    could be arbitrary landscape textures on one title and all controller
+    icons on another. Score ALL matching names first, then open only the
+    best-ranked bounded number of files. Deterministic across host FS order.
+    """
     require(root.is_dir() and not root.is_symlink(), "RomFS root invalid")
-    found = []
+    require(1 <= limit <= 200, "discovery limit must be 1-200")
     suffixes = {".png", ".tga", ".bntx", ".dds", ".szs", ".bfres", ".nxtx"}
-    hints = ("ui", "button", "control", "hud", "prompt", "icon", "input", "gamepad")
+    priority = (
+        ("controller", 24), ("gamepad", 24), ("button", 20),
+        ("prompt", 20), ("input", 14), ("hud", 12), ("icon", 10),
+        ("ui/", 9), ("/ui", 9), ("menu", 7), ("layout", 6),
+        ("texture", 3), ("atlas", 3), ("sprite", 3), ("font", 2),
+        ("common", 1), ("shared", 1),
+    )
+    candidates: list[tuple[int, str]] = []
     for directory, dirs, files in os.walk(root, followlinks=False):
-        dirs[:] = [d for d in dirs if not (Path(directory) / d).is_symlink()]
+        dirs[:] = sorted(d for d in dirs if not (Path(directory) / d).is_symlink())
         for name in sorted(files):
             source = Path(directory) / name
             if source.is_symlink() or source.suffix.lower() not in suffixes:
                 continue
             rel = source.relative_to(root).as_posix()
-            if not any(word in rel.lower() for word in hints):
+            lower = rel.lower()
+            score = sum(weight for token, weight in priority if token in lower)
+            if not score:
                 continue
-            item = {"romfs_path": rel,
-                    "kind": "RGBA image candidate" if source.suffix.lower() in (".png", ".tga")
-                    else "PROPRIETARY: decoder/encoder required"}
-            if source.suffix.lower() in (".png", ".tga"):
-                try:
-                    if source.stat().st_size <= MAX_ATLAS_BYTES:
-                        with Image.open(source) as candidate:
-                            item["dimensions"] = [candidate.width, candidate.height]
-                            item["mode"] = candidate.mode
-                        if item["mode"] == "RGBA":
-                            item["original_sha256"] = digest(source)
-                except (OSError, ValueError, Image.DecompressionBombError,
-                        UnidentifiedImageError):
-                    item["kind"] = "INVALID: image decoder failed"
-            found.append(item)
-            if len(found) >= limit:
-                return found
+            candidates.append((score, rel))
+    # Prioritize direct button-prompt resources before generic texture banks.
+    # Metadata/hash I/O is done only for the selected 200 best names.
+    candidates.sort(key=lambda entry: (-entry[0], entry[1].casefold(), entry[1]))
+    found: list[dict] = []
+    for score, name in candidates[:limit]:
+        try:
+            relative = safe_path(name)
+            source = regular(root, relative)
+        except (OSError, InvalidAtlas):
+            continue
+        item = {
+            "romfs_path": name, "priority": score,
+            "kind": ("RGBA image candidate"
+                     if source.suffix.lower() in (".png", ".tga")
+                     else "PROPRIETARY: decoder/encoder required"),
+        }
+        if source.suffix.lower() in (".png", ".tga"):
+            try:
+                with Image.open(source) as image:
+                    item["dimensions"] = [image.width, image.height]
+                    item["mode"] = image.mode
+                if item["mode"] == "RGBA":
+                    item["original_sha256"] = digest(source)
+                else:
+                    item["kind"] = "UNSUPPORTED: only RGBA image atlas accepted"
+            except (OSError, ValueError, Image.DecompressionBombError,
+                    UnidentifiedImageError):
+                item["kind"] = "INVALID: image decoder failed"
+        found.append(item)
     return found
 
 
