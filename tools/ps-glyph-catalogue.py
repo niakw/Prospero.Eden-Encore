@@ -68,7 +68,7 @@ def check_replacement_files(folder: Path, entries: list) -> None:
                     f"invalid {key}")
         original = item["romfs_path"]
         require(isinstance(original, str) and 0 < len(original) <= 240 and
-                "\\\\" not in original and ":" not in original and
+                "\\" not in original and ":" not in original and
                 not original.startswith("/"), "unsafe original RomFS path")
         original_parts = original.split("/")
         require(all(part and part not in (".", "..") and not part.startswith(".")
