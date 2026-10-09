@@ -23,6 +23,35 @@ SUSPICIOUS = ("btn", "button", "controller", "input", "prompt", "glyph",
               "layout", "hud", "icon", "ui", "font", "common", "tutorial")
 
 
+def format_family_hint(name: str) -> str:
+    """Path/extension heuristic ONLY; never a decoded asset or compatibility proof."""
+    lower = name.casefold()
+    ext = Path(lower).suffix
+    if lower.endswith((".blarc.zs", ".sarc.zs", ".sarc", ".blarc")):
+        return "nintendo_sarc_or_compressed_sarc_candidate"
+    if ext in (".bntx", ".bfres", ".bflyt", ".bflan", ".bftex"):
+        return "nintendo_resource_candidate"
+    if lower.endswith("/data/resources.assets") or ext in (".assets", ".unity3d", ".bundle"):
+        return "unity_asset_candidate"
+    if ext == ".cpk":
+        return "criware_cpk_candidate"
+    if ext in (".spr", ".spd"):
+        return "atlus_sprite_archive_candidate"
+    if ext == ".pak":
+        if "/content/paks/" in lower or lower.endswith("_p.pak"):
+            return "unreal_pak_candidate"
+        return "pak_format_ambiguous"
+    if ext in (".uasset", ".uexp", ".ubulk", ".utoc", ".ucas"):
+        return "unreal_package_candidate"
+    if ext in (".png", ".tga"):
+        return "decoded_image_candidate"
+    if ext == ".bnp":
+        return "bcml_patch_bundle_candidate"
+    if ext in (".7z", ".rar"):
+        return "nested_archive_unexamined"
+    return "unknown_format"
+
+
 def check_member(info: zipfile.ZipInfo) -> str:
     name = info.filename
     if not name or len(name) > 512 or "\x00" in name or "\\" in name or ":" in name or name.startswith("/"):
@@ -73,6 +102,8 @@ def inventory(archive: Path) -> dict:
             rel = "/".join(chunks[romfs_index + 1:]) if romfs_index is not None else None
             hint = any(term in name.lower() for term in SUSPICIOUS)
             found.append({"archive_path": name, "romfs_path": rel or None,
+                          "container_format_hint": format_family_hint(name),
+                          "hint_is_binary_verified": False,
                           "extension": Path(name).suffix.lower(),
                           "uncompressed_bytes": info.file_size,
                           "compressed_bytes": info.compress_size,
@@ -88,12 +119,16 @@ def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("archives", nargs="+", type=Path, help="local, authorized ZIP files")
     p.add_argument("--out", type=Path, help="new JSON report path, never overwrite")
+    p.add_argument("--platform", default="unverified", help="declared source platform label; not auto-detected")
     args = p.parse_args()
     try:
         if args.out and (args.out.exists() or args.out.is_symlink() or
                          not args.out.parent.is_dir() or args.out.parent.is_symlink()):
             raise ValueError("invalid report destination")
-        data = {"schema": 1, "mods": [inventory(path) for path in args.archives]}
+        if not args.platform or len(args.platform) > 80 or any(c in args.platform for c in "\\r\\n\\x00"):
+            raise ValueError("invalid platform label")
+        data = {"schema": 1, "declared_source_platform": args.platform,
+                "mods": [inventory(path) for path in args.archives]}
         result = json.dumps(data, ensure_ascii=True, indent=2) + "\n"
         if args.out:
             args.out.write_text(result, encoding="utf-8")
