@@ -58,7 +58,7 @@ void Launcher::press_mapping(Key key)
         clear_confirmation();
     // Exactly the same prelaunch resolution policy used by main.cpp.
     const ButtonMapping effective = mapping_for_game_ ?
-        ResolveSessionButtonMapping(prefs_.controller_layout, prefs_.mapping,
+        Eden::ResolveSessionButtonMapping(prefs_.controller_layout, prefs_.mapping,
             game_settings_.controller_layout, game_settings_.own_mapping,
             game_settings_.mapping).buttons : prefs_.mapping;
     ButtonMapping mapping = effective;
@@ -148,7 +148,7 @@ void Launcher::draw_mapping(Canvas& c, float open)
         mapping_for_game_ && game_settings_.controller_layout >= 0 ?
             game_settings_.controller_layout : prefs_.controller_layout;
     const ButtonMapping mapping = mapping_for_game_ ?
-        ResolveSessionButtonMapping(prefs_.controller_layout, prefs_.mapping,
+        Eden::ResolveSessionButtonMapping(prefs_.controller_layout, prefs_.mapping,
             game_settings_.controller_layout, game_settings_.own_mapping,
             game_settings_.mapping).buttons : prefs_.mapping;
     const std::string active_profile = profile_name(effective_layout, mapping);
