@@ -126,6 +126,24 @@ assert "if (scan_.valid()) docked_refresh_after_scan_ = true;" in library
 assert "if (scan_.valid()) docked_refresh_after_scan_ = true;" in home
 assert "installed.docked = home_game_docked_;" in home
 
+# The 500 Hz guest PC sampler formerly exhausted its 65536 slots,
+# stopped forever, and used a detached sampling thread across title exit.
+# Ring entries are atomic (signal-safe, concurrent GPU reader), snapshots
+# account explicitly for overwritten samples, caller-chain special mode
+# remains bounded, and fast worker ends with its guest CPU thread.
+pc_source = read("headless/performance.cpp")
+assert "std::array<std::atomic<uintptr_t>, 8192> sampled_pcs{};" in pc_source
+assert "std::array<std::atomic<uintptr_t>, 65536> sampled_core_pcs{};" in pc_source
+assert "sampled_core_pcs[core_index % sampled_core_pcs.size()].store(" in pc_source
+assert "sampled_pcs[slot].store(" in pc_source
+assert "EDEN_PERF_PC_SAMPLES_LOST source=gpu count=%u" in pc_source
+assert "EDEN_PERF_PC_SAMPLES_LOST source=guest count=%u" in pc_source
+assert "static thread_local std::jthread fast_sampler;" in pc_source
+assert "std::thread([] {" not in pc_source.split('dev-settings pc_fast=on', 1)[1].split("worker.clock_error", 1)[0]
+assert "core_pc_count.load() < sampled_core_pcs.size()" not in pc_source
+assert "pc_core_registration.active = true;" in pc_source
+assert "const bool gpu_capacity = true;" in pc_source
+
 # Native GPU Snapshot() may process thousands of development PC samples.
 # The CPU cores' SampleCpu() publication mutex must be held only for an
 # immutable snapshot COPY, not the map/hex/printf/syscall reporting itself.
