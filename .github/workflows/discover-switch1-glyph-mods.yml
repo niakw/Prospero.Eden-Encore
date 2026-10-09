@@ -9,6 +9,8 @@ on:
       - .github/workflows/discover-switch1-glyph-mods.yml
       - tools/ps-glyph-switch1-corpus.py
       - tools/check-ps-glyph-mod-discovery.py
+      - tools/ps-glyph-switch1-search-queue.py
+      - tools/check-ps-glyph-switch1-search-queue.py
       - tools/ps-glyph-mod-discovery.py
       - tools/ps-glyph-multiplatform-adapt.py
       - tools/check-ps-glyph-multiplatform-adapt.py
@@ -53,6 +55,7 @@ jobs:
           python3 -B tools/check-ps-glyph-mod-discovery.py
           python3 -B tools/check-ps-glyph-multiplatform-adapt.py
           python3 -B tools/check-ps-glyph-mod-results-merge.py
+          python3 -B tools/check-ps-glyph-switch1-search-queue.py
       - name: Load public Switch 1 game title metadata
         run: |
           mkdir -p /tmp/eden-title-catalog /tmp/eden-glyph-discovery
@@ -75,6 +78,9 @@ jobs:
           python3 -B tools/ps-glyph-switch1-corpus.py \
             --regions /tmp/eden-title-catalog/*.json \
             --out /tmp/eden-glyph-discovery/catalog.json
+          python3 -B tools/ps-glyph-switch1-search-queue.py \
+            --catalog /tmp/eden-glyph-discovery/catalog.json \
+            --out /tmp/eden-glyph-discovery/all-switch1-search-queue.json
       - name: Restore last completed Switch game Title IDs
         uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
@@ -186,5 +192,6 @@ jobs:
             /tmp/eden-glyph-discovery/source-links.json
             /tmp/eden-glyph-discovery/state-next.json
             /tmp/eden-glyph-discovery/multiplatform-adaptation-plans.json
+            /tmp/eden-glyph-discovery/all-switch1-search-queue.json
           if-no-files-found: warn
           retention-days: 30
