@@ -39,6 +39,22 @@ assert "publish(base, x);" in sticks and "publish(base + 1, y);" in sticks
 motion = source.split("void PadEngine::SetMotionState(", 1)[1].split(
     "void PadEngine::ResetControllers()", 1)[0]
 assert "SetMotion(Identifier(player), 0," in motion
+# A no-rumble poll should not take the same mutex used by guest
+# vibration requests. Acquire/release ordering and the producer mutex
+# ensure that a concurrent command is never cleared after being written.
+assert "std::array<std::atomic<bool>, kPlayers> rumble_pending{};" in header
+producer = source.split("PadEngine::SetVibration(", 1)[1].split(
+    "bool PadEngine::TakeRumble(", 1)[0]
+consumer = source.split("bool PadEngine::TakeRumble(", 1)[1].split(
+    "Pad::Pad(", 1)[0]
+assert "rumble_pending[player].store(true, std::memory_order_release);" in producer
+assert producer.index("sides.changed = true;") < producer.index("rumble_pending[player].store(true")
+assert "if (!rumble_pending[player].load(std::memory_order_acquire))" in consumer
+assert consumer.index("rumble_pending[player].load(") < consumer.index("std::scoped_lock lock(rumble_mutex);")
+assert "rumble_pending[player].store(false, std::memory_order_release);" in consumer
+assert consumer.index("sides.changed = false;") < consumer.index("rumble_pending[player].store(false")
+assert "std::scoped_lock lock(rumble_mutex);" in producer
+assert "std::scoped_lock lock(rumble_mutex);" in consumer
 assert "SetMotionAtRest(player);" in source
 assert "engine->ResetControllers();" in source
 assert "if (!is_usable(raw))" in source
