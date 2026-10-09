@@ -13,6 +13,24 @@
       "original_romfs_verified": false
     },
     {
+      "switch_game": "Balatro",
+      "official_switch_listing": "https://www.nintendo.com/fr-fr/Jeux/Jeux-a-telecharger-sur-Nintendo-Switch/Balatro-2522567.html",
+      "release_date": "2024-02-20",
+      "source_provenance": "Nintendo FR official Switch 1 game page",
+      "game_update": null,
+      "title_id": null,
+      "original_romfs_verified": false
+    },
+    {
+      "switch_game": "Don't Starve Together",
+      "official_switch_listing": "https://www.nintendo.com/fr-fr/Jeux/Jeux-a-telecharger-sur-Nintendo-Switch/Don-t-Starve-Together-2090479.html",
+      "release_date": "2022-04-12",
+      "source_provenance": "Nintendo FR official Switch 1 game page",
+      "game_update": null,
+      "title_id": null,
+      "original_romfs_verified": false
+    },
+    {
       "switch_game": "Enter the Gungeon",
       "official_switch_listing": "https://www.nintendo.com/fr-fr/Jeux/Jeux-a-telecharger-sur-Nintendo-Switch/Enter-the-Gungeon-1320155.html",
       "release_date": "2017-12-18",
