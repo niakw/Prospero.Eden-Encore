@@ -478,6 +478,10 @@ void Launcher::draw_about(Canvas &c)
                748.0f, 2, kShrink);
     text_shrink(c, "GPL-3.0-or-later  /  no warranty  /  source + licenses: github.com/niakw/Prospero.Eden-Encore", 144.0f,
                 baseline(788.0f, 30.0f, theme::kSmall), theme::kSmall, theme::kMeta, 748.0f);
+    // User-provided controller illustration, raster-resized for Home.
+    // Mandatory attribution from PS5 Button Icons and Controls / CC BY 3.0.
+    text_shrink(c, "DualSense icon: Zacksly (CC BY 3.0) - zacksly.itch.io", 144.0f,
+                baseline(826.0f, 26.0f, theme::kSmall), theme::kSmall, theme::kMeta, 748.0f);
     text(c, version_, 892.0f, baseline(866.0f, 28.0f, theme::kSmall), theme::kSmall,
          theme::kLimePale, Align::right);
 
