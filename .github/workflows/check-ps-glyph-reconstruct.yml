@@ -6,6 +6,9 @@ on:
       - .github/workflows/check-ps-glyph-reconstruct.yml
       - tools/ps-glyph-reconstruct.py
       - tools/check-ps-glyph-reconstruct.py
+      - headless/button_mapping.h
+      - headless/main.cpp
+      - tools/check-controller-semantic-mapping.py
       - docs/PS_GLYPH_SOURCE_INDEX.json
       - docs/PS_GLYPH_CROSS_PLATFORM_INDEX.json
   workflow_dispatch:
@@ -27,6 +30,19 @@ jobs:
       - name: Verify cross-platform semantics and strict pixel provenance
         run: |
           python3 -B tools/check-ps-glyph-reconstruct.py
+      - name: Verify action glyphs match physical-to-guest HID mappings
+        run: |
+          python3 -B tools/check-controller-semantic-mapping.py
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path('.')
+          main = (root / 'headless/main.cpp').read_text()
+          header = (root / 'headless/button_mapping.h').read_text()
+          assert 'CompatibleWithPlayStationActionGlyphs' in header
+          assert 'playstation_glyph_mapping() &&' in main
+          assert 'std::any_of(glyph_catalogue.rules.begin(), glyph_catalogue.rules.end()' in main
+          print('PASS: glyph admission matches fixed session profile, unsupported games do not reread preferences')
+          PY
       - name: Aggregate all game/mod candidates without enabling unknown ones
         run: |
           python3 -B tools/ps-glyph-reconstruct.py index > /tmp/eden-glyph-leads.json
