@@ -72,8 +72,13 @@ def read(filename: Path, width: int, height: int) -> dict:
     require(len(textures) == 1, "require exactly one atlas texture")
     texture_name = textures[0].get("filename")
     require(bool(texture_name) and len(texture_name) <= MAX_NAME and
-            all(c.isprintable() for c in texture_name),
-            "invalid Klei .tex reference")
+            all(c.isprintable() for c in texture_name) and
+            texture_name.lower().endswith(".tex") and
+            not texture_name.startswith("/") and
+            "\\" not in texture_name and ":" not in texture_name and
+            all(part not in ("", ".", "..") and not part.startswith(".")
+                for part in texture_name.split("/")),
+            "invalid or unsafe Klei .tex reference")
     layout = root.find("Elements")
     require(layout is not None and len(layout) <= MAX_ELEMENTS,
             "missing/excessive Klei XML Elements")
