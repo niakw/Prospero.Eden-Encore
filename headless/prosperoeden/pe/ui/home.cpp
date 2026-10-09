@@ -101,7 +101,10 @@ void home_icon(Canvas& c, HomeIcon icon, float x, float cy, Color ink)
         list.line(left + 12.0f, cy - 10.0f, left + 12.0f, cy + 10.0f, 1.4f, ink);
         break;
     case HomeIcon::controller:
-        dualsense_icon(c, {left - 2.0f, cy - 12.0f, 29.0f, 24.0f}, ink);
+        // Larger white DualSense; keep the utility-card's label untouched.
+        // The icon is inside a 1.65x transform, so its actual visible size
+        // becomes about 73x50 in the 96px-high home card.
+        dualsense_icon(c, {left - 10.0f, cy - 15.0f, 44.0f, 30.0f}, theme::kTitle, 1.0f);
         break;
     case HomeIcon::settings:
         settings_gear(c, left + 12.0f, cy, 10.0f, ink);
@@ -750,13 +753,14 @@ void Launcher::draw_home(Canvas &c)
         const Rect players_chip{552.0f, 406.0f, 210.0f, 36.0f};
         list.bordered_rect(players_chip, 17.0f, theme::kPanel.with_alpha(0.82f), 1.0f,
                            theme::kPanelEdge.with_alpha(0.58f));
-        controller_icon(c, {players_chip.x + 10.0f, players_chip.y + 5.0f, 34.0f, 24.0f}, 1.0f);
+        dualsense_icon(c, {players_chip.x + 8.0f, players_chip.y + 3.0f, 45.0f, 30.0f},
+                       theme::kTitle, 1.0f);
         const std::string local_players =
             fill(tr("Max. players: {0}"), {std::to_string(hero_max_players)});
         // Centre the label within the space *after* its gamepad glyph, not
         // left-aligned against the badge edge.
-        const Rect label_area{players_chip.x + 48.0f, players_chip.y,
-                              players_chip.w - 56.0f, players_chip.h};
+        const Rect label_area{players_chip.x + 56.0f, players_chip.y,
+                              players_chip.w - 64.0f, players_chip.h};
         text_shrink(c, local_players, label_area.x + label_area.w * 0.5f,
                     baseline(players_chip.y, players_chip.h, 15.0f), 15.0f,
                     theme::kTitle, label_area.w - 4.0f, Align::center);
@@ -911,6 +915,7 @@ void Launcher::draw_home(Canvas &c)
         // Scale only the vector icon (never the text or hit target).
         list.push_transform(1.65f, r.x + 41.0f, r.y + r.h * 0.5f, 0.0f, 0.0f);
         home_icon(c, icon, r.x + 29.0f, r.y + r.h * 0.5f,
+                  icon == HomeIcon::controller ? theme::kTitle :
                   gfx::mix(theme::kMeta, theme::kLimePale, f));
         list.pop_transform();
         text_shrink(c, label, r.x + 108.0f, baseline(r.y + 20.0f, 30.0f, 20.0f),
