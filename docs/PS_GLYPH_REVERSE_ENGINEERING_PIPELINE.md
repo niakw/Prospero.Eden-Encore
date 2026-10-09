@@ -138,3 +138,22 @@ Installed-pack permission/attribution applies to adapted PlayStation source art 
 * **Persona 3 Portable (Switch)**: actual nested path from the mod author's published process: `data_EN/umd0.cpk` → `init_free.bin` → `init/camp.bin` → `pc_button.spr`, using CPK File Builder / Amicitia. A direct RomFS PNG patch cannot rebuild this proprietary packaging. Standard documented mapping is A→Circle, B→Cross.
 * **Tokyo Mirage Sessions #FE Encore**: its author reports a world `Check` prompt that is **not texture-backed** and Start/Select/PS whose sprite slots do not fit. These must remain unsupported by an atlas-only path, even if all texture swaps succeed.
 * Technical index now covers **26 community sources / 18 games**, while keeping every unverified XYWH as null and requiring per-version hardware evidence.
+
+## 6. Expand the exact Switch title with PC/Wii U/PSP remakes or ports
+
+Use [cross-platform index](PS_GLYPH_CROSS_PLATFORM_INDEX.json) and [multiplatform guide](PS_GLYPH_MULTIPLATFORM_RESEARCH.md). Particularly useful: BOTW Wii U layout differences, P3P PC original of the Switch mod, P4AU PS/Switch/Arcade variants, P5R PC L3/R3 bounding box bug fix and Bravely Default II PC Unreal PAK icon variants.
+
+```bash
+python3 tools/ps-glyph-mod-inventory.py --platform PC /path/authorized-pc-mod.zip --out /tmp/pc-mod-contents.json
+python3 tools/ps-glyph-cross-platform-image.py \
+  --source-original /path/pc/original-texture.png \
+  --source-modified /path/pc/modded-texture.png \
+  --switch-original /path/switch/original-texture.png \
+  --switch-game 'Persona 5 Royal (Switch)' \
+  --source-platform PC --scene menu --out /tmp/cross-platform.json
+python3 tools/ps-glyph-platform-coverage.py --out /tmp/switch-cross-platform-worklist.json
+```
+
+Only exact same-size and same rendered-pixel original textures produce **candidate** Switch rectangle transfer. A renamed texture or shared game engine never qualifies an offset. The output never proves correct button semantics, original Switch container binding, original game update or PS5 gameplay.
+
+The check scripts `tools/check-ps-glyph-cross-platform-index.py`, `tools/check-ps-glyph-cross-platform-image.py` and `tools/check-ps-glyph-platform-coverage.py` are source-only and have NOT been executed. No GitHub Actions/native builds have been triggered.
