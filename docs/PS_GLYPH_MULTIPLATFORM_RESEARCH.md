@@ -5,7 +5,7 @@ Last research update: 2026-10-09. The Switch game stays the authority for **Titl
 ## Source registers
 
 * Main Switch-only corpus: [PS_GLYPH_SOURCE_INDEX.json](PS_GLYPH_SOURCE_INDEX.json) — 26 community references / 18 games, zero verified atlas positions.
-* Additional cross-platform corpus: [PS_GLYPH_CROSS_PLATFORM_INDEX.json](PS_GLYPH_CROSS_PLATFORM_INDEX.json) — 10 additional sources linked to 6 games already in the Switch corpus, zero verified Switch rectangles.
+* Additional cross-platform corpus: [PS_GLYPH_CROSS_PLATFORM_INDEX.json](PS_GLYPH_CROSS_PLATFORM_INDEX.json) — 17 other-platform sources linked to 12 Switch 1 games (including six Nintendo-confirmed seeds), zero verified Switch rectangles.
 * Integrity gates (source-only, **not executed**): `tools/check-ps-glyph-community-index.py`, `tools/check-ps-glyph-cross-platform-index.py`.
 
 ## Highest-value cross-platform relationships
@@ -70,3 +70,37 @@ python3 tools/ps-glyph-builtin-platform-assets.py \
 The tool groups names such as `UI/controller_buttons_ps4.png`, `UI/controller_buttons_switch.png` and `UI/controller_buttons_xbox.png` **only as possible related UI resources**, with no pixel/read-time/semantic claims. It rejects unsafe symlinks, limits enumeration to 100,000 files, and never opens/decompresses asset bytes. Some games hide these names **inside BNTX/Unity/Unreal archives**; their corresponding metadata scanners are needed for deeper discovery.
 
 **Priority route:** First discover embedded native art, next research existing other-platform mod and actual name/path, and finally compare original image geometry with the matching Switch original. Until then native glyph art remains unverified.
+
+## 2026-10-09 — Six more Nintendo-confirmed Switch 1 titles
+
+Six official Switch game listings are preserved in [PS_GLYPH_SWITCH1_GAME_SEEDS.json](PS_GLYPH_SWITCH1_GAME_SEEDS.json). They have PC glyph mods but no verified Switch glyph pack: **Sonic Frontiers**, **Sonic Superstars**, **Overcooked! 2**, **Atelier Ryza**, **NieR:Automata The End of YoRHa Edition** and **Enter the Gungeon**.
+
+| Switch 1 game | External source | Mechanism and qualification need |
+| --- | --- | --- |
+| Sonic Frontiers | https://gamebanana.com/mods/412767 | PC v1.5.1 fixes Nintendo A/B and X/Y swaps; v1.5 adds edge padding to prevent bleed; actual Switch atlas paths unknown |
+| Sonic Superstars | https://gamebanana.com/mods/474430 | PC-only controller palette/contrast and PS5/PS4/Switch prompt variants; must identify Switch files separately |
+| Overcooked! 2 | https://www.nexusmods.com/overcooked2/mods/8 | PC UnityPy installer replaces 35 textures by **existing native PlayStation art in PC files**, retaining dimensions and names; 847 other textures preserved per author. No guarantee these PS art files ship on Switch |
+| Overcooked! 2 | https://www.nexusmods.com/overcooked2/mods/9 | PC BepInEx dynamic player/scene UI glyph binding; conceptual model for shared and per-player prompts, not portable plugin code |
+| Atelier Ryza | https://github.com/Skyyblaze/Atelier-Ryza-PS4-Switch-Button-Replacement | PC Special K DDS overrides; input touchpad/share behavior may also require Steam Input, not a simple sprite change |
+| NieR:Automata | https://steamcommunity.com/sharedfiles/filedetails/?id=1368483795 | PC data/ui custom Nintendo artwork resizes existing Xbox UI sprites; Switch assets differ until compared |
+| Enter the Gungeon | https://modworkshop.net/mod/25536 | PC sprite folders and SREM/DFSprite dependency; cropped/resized art; no inferred Switch offset |
+
+**Revised research scope:** 26 Switch-mod references / 18 directly indexed games, plus 17 cross-platform sources touching 12 Switch titles; six newly seeded titles bring the union to **24 unique Switch 1 games**. All real verified per-game art counts remain ZERO.
+
+### Relocated original sprites: strict matching despite atlas rearrangement
+
+The new `tools/ps-glyph-relocated-sprite.py` accepts user-reviewed sprite rectangles from a modified PC/Wii U/PSP texture pair and searches the original Switch atlas for a **unique, exact, visible-pixel identical** original sprite. This can find the same icon where source and target atlases have different dimensions and layout. Duplicate matches, invisible-only originals, weak anchors or changed pixels cause a refusal, not an automated mod.
+
+```bash
+python3 tools/ps-glyph-relocated-sprite.py \
+  --source-original /path/pc/original.png \
+  --source-modified /path/pc/modified.png \
+  --switch-original /path/switch/original.png \
+  --source-rect 24,48,48,48 \
+  --switch-game 'Overcooked! 2' --source-platform PC --scene tutorial \
+  --out /tmp/relocated-proposals.json
+```
+
+The `24,48,48,48` rectangle is **only an illustrative example**, NOT a measured coordinate from Overcooked. A real successful match still does not prove icon meaning, title/update, RomFS container equivalence, legal redistribution or PS5 rendering. `check-ps-glyph-relocated-sprite.py` adds synthetic tests but was not run.
+
+The shared pixel comparator also now protects low-opacity differences: a source/target with alpha=1 and even a single RGB unit changed is NOT treated as identical. Invisible RGB differences at alpha=0 are allowed because they are not drawn.
