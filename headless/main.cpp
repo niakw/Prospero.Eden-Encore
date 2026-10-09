@@ -1335,7 +1335,10 @@ int main(int argc, char** argv) {
             Eden::Display::output_millihertz.store(0);
             setenv(Eden::Display::kVulkanSwitch, refresh ? "1" : "0", 1);
             Eden::Display::game_millihertz.store(60000);
-            Eden::Display::skipped_frames.store(0);
+            // No 120/240-FPS skip timestamp may survive the previous game.
+            // Called after the prior renderer has shut down, before this
+            // session starts producing frames.
+            Eden::Display::ResetSkipFrameTracking();
             // The size of the picture the session puts out (Settings > Video > Output resolution).
             const int output = safe_launch ? 0 :
                 (game_video.output >= 0 ? game_video.output : profile_output);
