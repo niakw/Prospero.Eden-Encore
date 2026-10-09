@@ -233,14 +233,21 @@ def discover(catalog: dict, state: dict, limit: int,
     # DB metadata is updated frequently. Continue using completed title IDs
     # even if titles are inserted/reordered by a regional metadata update.
     updated_db = bool(state and state.get("catalog_sha256") != fingerprint)
-    offset = 0 if updated_db else state.get("next_offset", 0)
-    require(type(offset) is int and 0 <= offset <= len(games), "bad resume offset")
     require(type(limit) is int and 1 <= limit <= 250, "batch must contain 1-250 games")
-    completed = set(state.get("completed_title_ids", []))
     require(provider in PROVIDERS + ("none",), "unknown discovery provider")
     require(variant in (0,1,2,3), "unsupported query variant")
     if network:
         require(provider in PROVIDERS, "network mode requires explicit provider")
+    # Each title needs separate Switch, multiplatform, mod-site and localized
+    # probes. A prior Switch-only search MUST NOT suppress a PC/Wii U query.
+    changed_route = bool(state and (state.get("last_provider") != provider or
+                                    state.get("search_variant") != variant))
+    offset = 0 if updated_db or changed_route else state.get("next_offset", 0)
+    require(type(offset) is int and 0 <= offset <= len(games), "bad resume offset")
+    completed = set(state.get("completed_title_ids", []))
+    completed_tasks = set(state.get("completed_query_keys", []))
+    require(len(completed_tasks) <= MAX_CATALOG * 12,
+            "too many completed search entries")
     rows, errors = [], []
     cursor = offset
     for game in games[offset:]:
@@ -248,7 +255,8 @@ def discover(catalog: dict, state: dict, limit: int,
             break
         # Cursors are for efficiency only; title IDs are durable identities.
         # Database updates may add/reorder names without losing progress.
-        if game.get("title_id") in completed:
+        task = f"{provider}|{variant}|{game.get('title_id', '')}"
+        if task in completed_tasks:
             cursor += 1
             continue
         title = game["title"]
@@ -284,11 +292,13 @@ def discover(catalog: dict, state: dict, limit: int,
         cursor += 1
         if network:
             completed.add(tid)
+            completed_tasks.add(task)
         if network and interval > 0 and len(rows) < limit:
             time.sleep(interval)
     new_state = {"schema": 1, "catalog_sha256": fingerprint,
                  "next_offset": cursor, "catalog_total": len(games),
                  "completed_title_ids": sorted(completed),
+                 "completed_query_keys": sorted(completed_tasks),
                  "search_variant": variant, "last_provider": provider,
                  "completed_catalog_scan": cursor == len(games),
                  "catalog_changed_since_last_batch": updated_db}
