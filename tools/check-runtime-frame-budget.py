@@ -101,9 +101,16 @@ native_docked = read("headless/prosperoeden/eden_services.cpp").split(
 assert "Eden::LoadGameSettings(title_id)" in native_docked
 assert "Eden::LoadPreferences()" not in native_docked
 assert "snapshot.performance_profile" in native_docked
-assert "game.console_mode >= 0" in native_docked
-assert "game.performance_profile >= 0" in native_docked
-assert "EncoreOverridesRuntime::ProfileForTitle(title_id, tier).docked" in native_docked
+assert "EffectiveDockedMode(title_id, game, snapshot.performance_profile)" in native_docked
+live_docked = read("headless/prosperoeden/eden_services.cpp").split(
+    "bool EdenServices::docked(std::uint64_t title_id)", 1)[1].split(
+    "bool EdenServices::docked_for_scan(", 1)[0]
+assert "EffectiveDockedMode(title_id, game, Eden::LoadPreferences().performance_profile)" in live_docked
+effective = read("headless/prosperoeden/eden_services.cpp").split(
+    "bool EffectiveDockedMode(", 1)[1].split("} // namespace", 1)[0]
+assert "game.console_mode >= 0" in effective
+assert "game.performance_profile >= 0" in effective
+assert "EncoreOverridesRuntime::ProfileForTitle(title_id, tier).docked" in effective
 assert "docked_for_scan(std::uint64_t title_id, const Preferences&)" in read("headless/prosperoeden/pe/ui/services.hpp")
 selected = library.split("void Launcher::refresh_selected_game()", 1)[1].split("void Launcher::press_library(", 1)[0]
 assert "games_[static_cast<std::size_t>(library_.selected)].docked" in selected
