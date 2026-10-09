@@ -42,6 +42,10 @@ assert "const IR::U32 source = (nibble & 4u) ? b : a;" in prmt_new
 assert "ir.BitFieldExtract(source, ir.Imm32(src_offset + 7u), ir.Imm32(1), true)" in prmt_new
 assert "ir.BitwiseAnd(extracted, ir.Imm32(255))" in prmt_new
 assert "ir.ShiftLeftLogical(value, ir.Imm32(output_byte * 8u))" in prmt_new
+# ShiftLeftLogical returns the union U32|U64 IR type; a ternary against U32
+# is ambiguous in Clang 18 unless the shifted arm is normalized explicitly.
+assert "IR::U32{ir.ShiftLeftLogical(value, ir.Imm32(output_byte * 8u))}" in prmt_new
+assert "IR::U32{ir.ShiftLeftLogical(byte, ir.Imm32(i * 8u))}" in prmt_reg_new
 assert "X(static_cast<IR::Reg>(insn & 255ULL), result);" in prmt_new
 assert prmt_new.index("if (mode != 0)") < prmt_new.index("ThrowNotImplemented(Opcode::PRMT_imm);")
 assert prmt_new.index("ThrowNotImplemented(Opcode::PRMT_imm);") < prmt_new.index("const unsigned selector")
