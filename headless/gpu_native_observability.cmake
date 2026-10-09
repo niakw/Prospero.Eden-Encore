@@ -173,6 +173,8 @@ target_sources(shader_recompiler PRIVATE "${PORT_BUILD_DIR}/maxwell_prmt_observe
 
 set(fermi_relative "engines/fermi_2d.cpp")
 file(READ "${PROJECT_SOURCE_DIR}/src/video_core/${fermi_relative}" fermi_source)
+option(EDEN_UNQUALIFIED_FERMI2D_COPY "3D software blit experiments" OFF)
+if(EDEN_UNQUALIFIED_FERMI2D_COPY)
 set(fermi_old [=[
     UNIMPLEMENTED_IF_MSG(regs.src.depth != 1, "Source depth is not one");
 ]=])
