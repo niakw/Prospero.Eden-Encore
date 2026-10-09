@@ -85,5 +85,7 @@ assert "cursor_.update(dt, cursor_omega);" in widgets
 # One line per 5s in development, never per-frame debug logging in shipping.
 assert "EDEN_UI_FRAMES frames=%u elapsed_ms=%lld late_20=%u late_33=%u late_50=%u" in frontend
 assert "max_update_us=%lld max_draw_us=%lld max_present_us=%lld" in frontend
+assert "const long long update_us = std::chrono::duration_cast<std::chrono::microseconds>" in frontend
+assert "const long long draw_us = std::chrono::duration_cast<std::chrono::microseconds>" in frontend
 assert "#ifdef EDEN_DEV_ROM_ID" in frontend
 print("All-game GPU/HUD hotpath, PS5 splash one-shot, Nlib frame budget, native icons and atomic frame-skip tracking: SOURCE PASS")
