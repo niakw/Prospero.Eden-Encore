@@ -121,6 +121,21 @@ assert "if (scan_.valid()) docked_refresh_after_scan_ = true;" in library
 assert "if (scan_.valid()) docked_refresh_after_scan_ = true;" in home
 assert "installed.docked = home_game_docked_;" in home
 
+# Native GPU Snapshot() may process thousands of development PC samples.
+# The CPU cores' SampleCpu() publication mutex must be held only for an
+# immutable snapshot COPY, not the map/hex/printf/syscall reporting itself.
+perf_snapshot = read("headless/performance.cpp").split("void Snapshot()", 1)[1].split(
+    '#ifndef EDEN_DEV_PROFILE\n// Release builds:', 1)[0]
+assert "const std::lock_guard snapshot_guard(snapshot_mutex);" in perf_snapshot
+assert "const std::lock_guard worker_guard(workers_mutex);" in perf_snapshot
+assert perf_snapshot.index("const std::lock_guard worker_guard(workers_mutex);") > perf_snapshot.index(
+    "std::array<Worker, names.size()> worker_snapshot{};")
+assert "worker_snapshot = workers;" in perf_snapshot
+assert "cpu_snapshot = cpu_samples;" in perf_snapshot
+assert "const auto& sample = cpu_snapshot[i];" in perf_snapshot
+assert "EDEN_DEV_SNAPSHOT_COST mono_ns=%lld elapsed_ns=%lld" in perf_snapshot
+assert perf_snapshot.count("worker_guard(workers_mutex)") == 1
+
 # Development PC sampler may dump six new guest+host blocks per 5s
 # while the GPU thread is presenting. Eliminate thousands of snprintf calls
 # and repeated std::string reallocations WITHOUT changing existing log fields.

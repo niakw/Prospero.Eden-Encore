@@ -28,7 +28,8 @@ void ReportDirectMemoryState(const char* phase);
 // Lightweight per-stage actual Dynarmic RX/RW ownership; no kernel VA
 // enumeration or GPU frame-loop work.
 void ReportJitCodeState(const char* phase);
-// Main thread only, between GPU readiness and guest shutdown.
+// Serialized main-thread capture or five-second GPU diagnostic snapshot.
+// Costly PC processing must never hold the guest CPU worker publication mutex.
 void Snapshot();
 // GPU worker only: firmware rejects cross-thread CPU-time sampling.
 void SampleGpuFrame(unsigned frame);
