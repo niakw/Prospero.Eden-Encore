@@ -1970,3 +1970,9 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — Concurrent host preflight for positive-only direct-memory extent cache [skip ci]
 
 - Added `tools/check-ps5-direct-limit-host.py` extracting and compiling the real `DirectMemoryExtent()/AllocateDirectOwned()` helper from `src/memory_pages.cpp`. C++20 test injects a first failed kernel-size query (must not allocate), verifies the next success, then issues 160,000 owned physical-allocation mock requests from eight threads while asserting total-size syscall count stays at two. Wired into next explicit GitHub source preflight. No Actions, host test, SDK build or console execution run yet.
+
+### 2026-10-09 — Fast negative ownership filter for direct large malloc/free [skip ci]
+
+- Audited the heap's per-call ownership dispatch: when **any** >=32 MiB direct-owned allocation was alive, `eden_heap_large_find()` previously scanned up to **256 atomic address slots** for every foreign `free`, `realloc`, or `malloc_usable_size`, even though almost all libc pointers have never belonged to an owned direct block. This is avoidable guest CPU cache/memory contention.
+- Added a **4 KiB monotonic two-hash Bloom filter** in `headless/heap_arenas.inc`, populated **before** publishing each successfully allocated large block. The lookup skips all 256 slots when either membership bit is absent; positive pointers still use the exact original address comparison, and past bits never clear (so stale positives may cost work but may NEVER wrongly route an owned block to libc). No new dynamic allocation, mutex, physical backing or change to direct ownership/free semantics.
+- Host growth fixture now keeps a real large block live while it exercises foreign libc allocation → wrap realloc → wrap free 1000 times, asserting the owned block remains Bloom-positive and at least one foreign pointer is filtered. **Not run**, not native-qualified, no claimed FC27 FPS boost.
