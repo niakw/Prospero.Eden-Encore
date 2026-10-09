@@ -225,19 +225,31 @@ def discover(catalog: dict, state: dict, limit: int,
     fingerprint = hashlib.sha256(json.dumps(games, sort_keys=True,
                                              ensure_ascii=False).encode()).hexdigest()
     if state:
-        require(state.get("schema") == 1 and state.get("catalog_sha256") == fingerprint,
-                "catalog changed: explicit rescan/state migration required")
-    offset = state.get("next_offset", 0)
+        require(state.get("schema") == 1 and
+                isinstance(state.get("completed_title_ids", []), list) and
+                len(state.get("completed_title_ids", [])) <= MAX_CATALOG,
+                "malformed resume state")
+    # DB metadata is updated frequently. Continue using completed title IDs
+    # even if titles are inserted/reordered by a regional metadata update.
+    updated_db = bool(state and state.get("catalog_sha256") != fingerprint)
+    offset = 0 if updated_db else state.get("next_offset", 0)
     require(type(offset) is int and 0 <= offset <= len(games), "bad resume offset")
     require(type(limit) is int and 1 <= limit <= 250, "batch must contain 1-250 games")
+    completed = set(state.get("completed_title_ids", []))
     require(provider in PROVIDERS + ("none",), "unknown discovery provider")
     require(variant in (0,1,2,3), "unsupported query variant")
     if network:
         require(provider in PROVIDERS, "network mode requires explicit provider")
-    todo = games[offset:min(len(games),offset+limit)]
     rows, errors = [], []
     cursor = offset
-    for game in todo:
+    for game in games[offset:]:
+        if len(rows) >= limit:
+            break
+        # Cursors are for efficiency only; title IDs are durable identities.
+        # Database updates may add/reorder names without losing progress.
+        if game.get("title_id") in completed:
+            cursor += 1
+            continue
         title = game["title"]
         tid = game["title_id"]
         require(isinstance(title, str) and isinstance(tid, str) and
@@ -269,12 +281,16 @@ def discover(catalog: dict, state: dict, limit: int,
                      "discovery_status": status, "leads": discovered,
                      "mod_pack_ready": False, "title_update_romfs_verified": False})
         cursor += 1
-        if network and interval > 0 and cursor < offset + len(todo):
+        if network:
+            completed.add(tid)
+        if network and interval > 0 and len(rows) < limit:
             time.sleep(interval)
     new_state = {"schema": 1, "catalog_sha256": fingerprint,
                  "next_offset": cursor, "catalog_total": len(games),
+                 "completed_title_ids": sorted(completed),
                  "search_variant": variant, "last_provider": provider,
-                 "completed_catalog_scan": cursor == len(games)}
+                 "completed_catalog_scan": cursor == len(games),
+                 "catalog_changed_since_last_batch": updated_db}
     report = {"schema": 1, "catalog_total": len(games),
               "batch_offset": offset, "next_offset": cursor,
               "provider": provider, "network_queries_enabled": network,
