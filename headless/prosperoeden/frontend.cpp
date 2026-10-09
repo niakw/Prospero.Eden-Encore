@@ -274,7 +274,7 @@ std::string RunApp(const std::string& launch_error, bool first_start, bool* rest
         bool running = input_ready;
 #ifdef EDEN_DEV_ROM_ID
         static Eden::DevelopmentInput development_input;
-        unsigned development_poll = 0;
+        auto next_development_poll = Clock::now();
         // A capture waits for the screen to settle after the input that asked for it.
         int capture_wait = 60;
         std::fprintf(stderr, "EDEN_DEV_LAUNCHER_READY ready=%d\n", running);
@@ -301,12 +301,15 @@ std::string RunApp(const std::string& launch_error, bool first_start, bool* rest
 
 #ifdef EDEN_DEV_ROM_ID
             const auto now = static_cast<std::uint64_t>(Milliseconds(frame_start.time_since_epoch()));
-            // Manual DualSense sessions do not need six blocking file probes
-            // per second to search for absent unattended-test command files.
-            // After scripted replay starts, restore the fast 10-frame cadence.
-            const unsigned command_poll_period = development_input.active ? 10u : 60u;
-            if (++development_poll >= command_poll_period) {
-                development_poll = 0;
+            // Manual DualSense use needs at most one synchronous filesystem
+            // command sweep per real second. Script replay gets ~6Hz even
+            // when menu FPS falls: a frame-count timer would become slower
+            // precisely while diagnosing a stuttering launcher. Do not catch
+            // up missed polls in a burst after a slow EGL swap.
+            if (frame_start >= next_development_poll) {
+                next_development_poll = frame_start +
+                    (development_input.active ? std::chrono::milliseconds(160)
+                                              : std::chrono::seconds(1));
                 std::ifstream command(Eden::AppFile("compat-input.txt"));
                 if (development_input.Read(command, now)) {
                     capture_wait = 60;
