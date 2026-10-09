@@ -1512,3 +1512,7 @@ This commit deliberately requests one `dev/ps5-sparse-jit` all-on PS5 build `[fu
 - Blocker in `tools/check-gpu-native-diagnostics.py` line 241: stale `cmake.count("write_derived(") == 2` assertion; live `headless/gpu_native_observability.cmake` actually creates THREE derived TUs: `maxwell_prmt_observed.cpp`, `sw_blitter_sized.cpp`, `fermi_2d_observed.cpp`. The extra widened software blitter is a legitimate GPU compatibility correction, not duplicated output.
 - Source contract fixed to require count=3 AND all three names in commit `78eb1305bdf746c0f9a2ee94b9a3839f020de14b` [skip ci]. Existing semantic PRMT/Fermi assertions retained. Source readback matched all three generated unit output paths; GPU rendered pixels/actual PS5 native compile NOT yet verified.
 - No launch UI visual changes, shipping branch/publishing untouched; 26 full hardware qualification criteria remain open. More host regression gates still follow this failure point before native compilation.
+
+### 2026-10-09 — PS5 all-on native CI after GPU generated-unit assertion fix
+
+Explicit, isolated dev/test retry `[full-build] [test-all-on]`. No release publish, no design changes; current run status to be verified separately. While running, avoid commits on the same dev branch because GitHub cancels prior work.
