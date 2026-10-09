@@ -1480,3 +1480,7 @@ Explicit source-only compile+stage reattempt requested through `[full-build] [te
 - `headless/prosperoeden/eden_services.cpp` now correctly uses cancelable asynchronous directory `TreeBytes(...)` for storage/logs and deliberately avoids dangerous native libc statfs/statvfs on firmware 13.60. Old numeric error string was removed; checker out of date. No evidence of regression in that storage code from this fail.
 - Fixed checker to verify actual `previously raised SYSTEM_ILLEGAL_FUNCTION_CALL` safety comment, exact storage root call and `TreeBytes(cache / "shader", cancel)` + `TreeBytes(Eden::LogsDir(), cancel)`. Commit `111abcc344d4f519fddf633515753829a57e45f3` `[skip ci]`. A separate JS source readback found no other simple missing literal in same `check-encore-ux.py` after correction.
 - NO native PS5 SDK compilation yet. Test run remains failed and all 26 hardware qualification checks open; shipping branch/approved UI unchanged. CI retry needs a new authorized dev marker and no midrun writes.
+
+### 2026-10-09 — Fifth native all-on test attempt
+
+Trigger `[full-build] [test-all-on]` on dev after correcting the obsolete storage contract. The CI test remains isolated from shipping and publication; verify real result before claiming success.
