@@ -1452,3 +1452,10 @@ This checkpoint commit deliberately contains `[full-build] [test-all-on]` withou
 ### 2026-10-09 — Retry all-on test after runner-action SHA fix
 
 This commit deliberately triggers exactly one new `dev/ps5-sparse-jit` native workflow using `[full-build] [test-all-on]`, after verifying the pinned GitHub Action references. This is a TEST build; no release. Its native result and firmware qualification remain unknown until independently checked.
+
+### 2026-10-09 — Unified PS5 all-on run #37877295311 blocked by four French locale gaps
+
+- After correcting 40-hex pinned upload-artifact SHA, native dev workflow **#37877295311** started and passed runner setup / guard / checkout / toolchain. It **FAILED** at `Validate launcher translations and locale runtime`, before dependency build or PS5 compile.
+- GitHub job #113648696823 logs: `fr-FR.po: 370 texts, 4 problems, 8 warnings`, 4 fatal untranslated message keys: `Loading game library...`, `Could not load game list. Please try again.`, `Could not load game library. Reopen Encore to retry.`, `Game library unavailable`. 29 catalogs total; other locales reported warnings only. French translation failure was unrelated to sparse JIT/experimental settings.
+- Added four faithful FR strings in `headless/prosperoeden/ui/lang/fr-FR.po`, commit `696f10227b3c5da2e53b1b89e7a3f91ea1d281db` `[skip ci]`. Did NOT modify UI design, shell art or protected delivery branch. Next retry can reach subsequent source checks.
+- Run was FAILURE, not a compiled native test and not firmware qualified. 26 hardware checks and in-game glyph source artwork remain OPEN.
