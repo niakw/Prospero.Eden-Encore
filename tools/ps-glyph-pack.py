@@ -184,6 +184,18 @@ def install(pack_root: Path, original_root: Path, mods_root: Path,
         (stage / "eden-glyph-pack.json").write_text(
             json.dumps(manifest, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
             encoding="utf-8")
+        # A generated PS icon atlas contains CC BY 3.0 adapted art. Keep
+        # attribution alongside the installed mod, OUTSIDE guest RomFS.
+        # No implicit glob/copy of other untrusted files in the source pack.
+        credit = pack_root / "ARTWORK_ATTRIBUTION.txt"
+        if credit.exists() or credit.is_symlink():
+            require(credit.is_file() and not credit.is_symlink() and
+                    credit.stat().st_size <= 16 * 1024,
+                    "unsafe or oversized artwork attribution")
+            content = credit.read_text(encoding="utf-8")
+            require("Zacksly" in content and "CC BY 3.0" in content,
+                    "PlayStation source credit missing")
+            (stage / "ARTWORK_ATTRIBUTION.txt").write_text(content, encoding="utf-8")
         require(not target.exists() and not target.is_symlink(),
                 "another process installed a glyph pack")
         stage.rename(target)  # same filesystem; no partial mod directory on failure
