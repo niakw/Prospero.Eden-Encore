@@ -990,6 +990,14 @@ int main(int argc, char** argv) {
                 std::string_view{name} == "core_shutdown" ||
                 std::string_view{name} == "core_destroyed")
                 Eden::Performance::ReportDirectMemoryState(name);
+            // core_initialized occurs BEFORE actual guest JIT construction.
+            // Attribute code ownership to loaded/CPU-ready stages instead of
+            // mistaking its expected zero counts for missing emulator RAM.
+            if (std::string_view{name} == "game_loaded" ||
+                std::string_view{name} == "nro_loaded" ||
+                std::string_view{name} == "cpu_manager_ready" ||
+                std::string_view{name} == "core_shutdown")
+                Eden::Performance::ReportJitCodeState(name);
             std::fflush(stdout);
 #else
             const auto heap = mallinfo2();
