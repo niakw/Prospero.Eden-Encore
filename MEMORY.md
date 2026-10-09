@@ -1914,3 +1914,7 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — Keep HLE telemetry allocation entirely out of shipping builds [skip ci]
 
 - The new ~400 KiB fixed HLE counters table is now compiled into `performance.cpp` only under `EDEN_DEV_PROFILE`, with the service-hook symbol staying a no-op in shipping. Diagnostic report traversal is likewise development-only. The all-on PS5 test still gets the bounded concurrent counters; normal release has no new profiler memory overhead. Extended source gate. No build/tests/actions performed.
+
+### 2026-10-09 — Hard bound per-command HLE diagnostic probe depth [skip ci]
+
+- Prevented a diagnostic self-inflicted worst-case: with 4,096 hash slots, a game with thousands of distinct service/command pairs could make **every subsequent hot HLE call scan thousands of slots** before incrementing its overflow counter. Each call now probes at most 64 consecutive slots; collisions/near-full clusters spill into atomic aggregate overflow. The source host fixture explicitly accepts overflow before complete table occupancy but requires `attributed_calls + overflow_calls == total_calls` and matching nanoseconds, and retains exact 35-key multithread attribution at normal occupancy. Bounded runtime overhead takes priority over per-command detail when saturated. No test run.

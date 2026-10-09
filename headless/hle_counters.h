@@ -14,13 +14,15 @@ namespace Eden::Performance {
 class HleCounters {
 public:
     static constexpr std::size_t kCapacity = 4096;
+    // Never turn instrumentation into a many-thousand-slot scan when full.
+    static constexpr std::size_t kMaxProbes = 64;
     static constexpr std::size_t kNameBytes = 80;
 
     void Record(const char* service, unsigned command, long long elapsed_ns) noexcept {
         if (!service) service = "?";
         const std::uint64_t key = Hash(service, command);
         const std::uint64_t elapsed = elapsed_ns > 0 ? static_cast<std::uint64_t>(elapsed_ns) : 0;
-        for (std::size_t probe = 0; probe < kCapacity; ++probe) {
+        for (std::size_t probe = 0; probe < kMaxProbes; ++probe) {
             Counter& entry = counters_[(key + probe) & (kCapacity - 1)];
             const std::uint64_t published = entry.key.load(std::memory_order_acquire);
             if (published == key && entry.command == command &&
@@ -57,8 +59,9 @@ public:
                 return;
             }
         }
-        // If unusual software floods the diagnostic table, accounting is
-        // bounded: gameplay is never blocked or made to allocate new entries.
+        // If unusual software floods a hash cluster, bound its search cost:
+        // gameplay is never blocked or made to allocate new entries. Detailed
+        // attribution may overflow BEFORE the whole 4096-slot table fills.
         overflow_calls_.fetch_add(1, std::memory_order_relaxed);
         overflow_ns_.fetch_add(elapsed, std::memory_order_relaxed);
     }
