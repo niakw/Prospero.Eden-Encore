@@ -21,6 +21,13 @@ SPEC = importlib.util.spec_from_file_location("eden_mod_diff", ROOT / "tools/ps-
 assert SPEC is not None and SPEC.loader is not None
 module = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(module)
+# Cross-platform ZIP inventories must classify only probable container families.
+assert module.inventory_helper.format_family_hint("PlayStation/romfs/Data/resources.assets") == "unity_asset_candidate"
+assert module.inventory_helper.format_family_hint("Bravely_Default_II/Content/Paks/~mods/ps_prompts_P.pak") == "unreal_pak_candidate"
+assert module.inventory_helper.format_family_hint("data_EN/umd0.cpk") == "criware_cpk_candidate"
+assert module.inventory_helper.format_family_hint("UI/LayoutArchive/Common.blarc.zs") == "nintendo_sarc_or_compressed_sarc_candidate"
+assert module.inventory_helper.format_family_hint("some/unknown.pak") == "pak_format_ambiguous"
+assert module.inventory_helper.format_family_hint("init/camp.bin/pc_button.spr") == "atlus_sprite_archive_candidate"
 FOLDER_SPEC = importlib.util.spec_from_file_location(
     "eden_folder_mod_diff", ROOT / "tools/ps-glyph-mod-folder-diff.py")
 assert FOLDER_SPEC is not None and FOLDER_SPEC.loader is not None
