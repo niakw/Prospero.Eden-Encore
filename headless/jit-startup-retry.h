@@ -17,8 +17,16 @@ constexpr std::uint32_t kAlignment = 2u * 1024u * 1024u;
 constexpr std::uint32_t NextCapacity(std::uint32_t previous,
                                      std::uint32_t baseline) noexcept {
     if (previous <= baseline) return previous;
-    std::uint32_t candidate = (previous / 2 / kAlignment) * kAlignment;
+    // Halving a failed 1 GiB arena immediately throws away 512 MiB of
+    // possible JIT capacity even when only a small amount is unavailable.
+    // Step down by 25% (2 MiB aligned), preserving more guest code cache,
+    // while still converging geometrically to the known-good baseline.
+    // Subtraction avoids overflow near UINT32_MAX.
+    std::uint32_t candidate =
+        ((previous - previous / 4) / kAlignment) * kAlignment;
     if (candidate < baseline) candidate = baseline;
+    // Any accepted retry must be strictly smaller; callers never spin.
+    if (candidate >= previous) candidate = baseline;
     return candidate;
 }
 
@@ -48,9 +56,11 @@ void ConstructWithCapacityFallback(std::uint32_t& capacity, std::uint32_t baseli
 }
 
 static_assert(NextCapacity(128u * 1024u * 1024u, 64u * 1024u * 1024u) ==
-              64u * 1024u * 1024u);
+              96u * 1024u * 1024u);
 static_assert(NextCapacity(320u * 1024u * 1024u, 192u * 1024u * 1024u) ==
-              192u * 1024u * 1024u);
+              240u * 1024u * 1024u);
+static_assert(NextCapacity(258u * 1024u * 1024u, 256u * 1024u * 1024u) ==
+              256u * 1024u * 1024u);
 static_assert(NextCapacity(16u * 1024u * 1024u, 16u * 1024u * 1024u) ==
               16u * 1024u * 1024u);
 } // namespace Eden::JitStartup
