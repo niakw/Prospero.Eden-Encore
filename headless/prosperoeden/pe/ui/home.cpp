@@ -255,6 +255,9 @@ void Launcher::press_home(Key key)
             for (Game& installed : games_)
                 if (installed.title_id == title_id)
                     installed.docked = home_game_docked_;
+            // An older in-flight library scan may otherwise overwrite this
+            // freshly saved mode after it finishes.
+            if (scan_.valid()) docked_refresh_after_scan_ = true;
         }
 
         if (saved)

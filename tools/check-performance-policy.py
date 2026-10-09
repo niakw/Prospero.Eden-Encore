@@ -98,6 +98,9 @@ perf = (root / "headless/performance.cpp").read_text()
 assert "static std::atomic<unsigned> consecutive_failures{0};" in perf
 assert "checked_ns.compare_exchange_strong(last, now, std::memory_order_acq_rel," in perf
 assert "query_in_flight.exchange(true, std::memory_order_acq_rel)" in perf
+assert "static std::int64_t cached_direct_total = 0;" in perf
+assert "if (observed_total > 0) cached_direct_total = observed_total;" in perf
+assert "sceKernelAvailableDirectMemorySize(0, cached_direct_total, 0x4000" in perf
 assert "query_in_flight.store(false, std::memory_order_release);" in perf
 assert "EDEN_PS5_DMEM_PROBE_SLOW latency_ns=%lld known=%u" in perf
 assert "now <= last || now - last < 100'000'000" in perf

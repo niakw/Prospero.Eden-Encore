@@ -97,6 +97,8 @@ assert "games_[static_cast<std::size_t>(library_.selected)].docked" in selected
 assert "services_.docked(" not in selected
 assert "docked_refresh_after_scan_" in library
 assert "docked_refresh_after_scan_" in nav
+assert "if (scan_.valid()) docked_refresh_after_scan_ = true;" in library
+assert "if (scan_.valid()) docked_refresh_after_scan_ = true;" in home
 assert "installed.docked = home_game_docked_;" in home
 
 # Repeated D-pad input must not let the highlight fall several rows behind
