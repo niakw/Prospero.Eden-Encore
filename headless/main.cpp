@@ -783,11 +783,18 @@ int main(int argc, char** argv) {
         bool experimental_logical_cpu = false;
         bool experimental_frame_probe = false;
 #if defined(PS5_NATIVE) && defined(EDEN_DEV_PROFILE)
-        // Developer experiments support a single all-title default with
-        // optional per-title overrides. No experimental mode is enabled
-        // when experiments.json or the requested field is absent.
-        // Safe Launch always bypasses experiments.
+        // PS5 unified test profile: enable available CPU placement and frame
+        // tracing for every game by default. When sparse JIT is compiled into
+        // the dev executable it is ON as well, subject to the real firmware
+        // RW/RX alias probe below. No player-facing "Experimental" toggle
+        // or experiments.json opt-in is needed. Safe Launch remains a clean
+        // fallback; explicit existing JSON "off" entries can opt out.
         if (!safe_launch) {
+#ifdef EDEN_SPARSE_JIT_DEV
+            experimental_sparse_jit = true;
+#endif
+            experimental_logical_cpu = true;
+            experimental_frame_probe = true;
             std::string source;
             if (Eden::Settings::ReadFile(Eden::ConfigFile("experiments.json"), source)) {
                 using Json = Eden::Settings::Json;
@@ -817,10 +824,10 @@ int main(int argc, char** argv) {
                         return "";
                     };
 #ifdef EDEN_SPARSE_JIT_DEV
-                    experimental_sparse_jit = get("jit_memory") == "sparse";
+                    if (get("jit_memory") == "off") experimental_sparse_jit = false;
 #endif
-                    experimental_logical_cpu = get("cpu_placement") == "logical";
-                    experimental_frame_probe = get("vulkan_pacing") == "trace";
+                    if (get("cpu_placement") == "off") experimental_logical_cpu = false;
+                    if (get("vulkan_pacing") == "off") experimental_frame_probe = false;
                 }
             }
         }
