@@ -98,7 +98,9 @@ with tempfile.TemporaryDirectory(prefix="eden-glyph-web-discovery-") as root:
     with patch.object(search, "ddg", return_value=raw):
         again, already = search.discover(full, otherstate, 1, "duckduckgo",
                                          network=True, variant=0, interval=0)
-    assert already["completed_query_keys"] == otherstate["completed_query_keys"]
+    assert set(otherstate["completed_query_keys"]).issubset(
+        set(already["completed_query_keys"]))
+    assert len(already["completed_query_keys"]) == 3
     assert again["games_examined"] == 1
     assert again["games"][0]["title_id"] != full["games"][0]["title_id"]
     changed_live = json.loads(json.dumps(full))
