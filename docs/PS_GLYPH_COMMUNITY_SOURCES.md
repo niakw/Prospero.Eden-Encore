@@ -4,6 +4,7 @@ This is a source catalogue, NOT an Eden compatibility manifest or permission to 
 
 | Title / tool | Upstream page | Qualification | Distribution caution |
 | --- | --- | --- | --- |
+| Zelda: Breath of the Wild **(Switch RomFS)** | https://gamebanana.com/mods/659253 | DS4 UI Mod v2 Western Layout; explicitly reports Cross/Circle + Square/Triangle swaps for interaction prompts, tutorials, and menus; fixes the previous mismatch between action prompts and a bottom-Cross PlayStation mapping. Game update/asset hashes and PS5 compatibility remain unverified | CC BY-NC-ND 4.0: link only; no automatic adaptation or bundling |
 | Zelda: Tears of the Kingdom | https://gamebanana.com/mods/445517 | StavaasEVG DualSense UI v1.4.1; page lists game updates 1.1.0–1.1.2; changes controller layout, UI prompts and fonts; no Eden Encore runtime verification | CC BY-NC-ND 4.0: link only; no automatic adaptation |
 | Metroid Dread | https://gamebanana.com/mods/330216 | Switch to PS5 Layout v3; replaces game-native prompts; game update unspecified and Eden Encore untested | CC BY-NC-ND 4.0: link only |
 | Metroid Dread (PS4 alternative) | https://gamebanana.com/mods/330775 | Switch to PS4 Layout; page identifies Title ID 010093801237C000; not PS5 compatibility evidence | CC BY-NC-ND 4.0: link only |
