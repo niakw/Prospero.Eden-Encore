@@ -60,7 +60,12 @@ assert 'Ps5ConsoleStorage' not in services
 services_code = re.sub(r'/\*.*?\*/|//[^\n]*', '', services, flags=re.S)
 assert 'statfs(' not in services_code and 'statvfs(' not in services_code
 assert 'std::filesystem::space(Eden::AssetsDir(), error)' not in services
-assert '0xa002030a SYSTEM_ILLEGAL_FUNCTION_CALL' in services
+# Current async directory inventory retains the substantive FW13.60 fix,
+# not an obsolete diagnostic's numeric error-code wording.
+assert 'previously raised SYSTEM_ILLEGAL_FUNCTION_CALL' in services
+assert 'result.storage_root = Eden::AssetsDir();' in services
+assert 'TreeBytes(cache / "shader", cancel)' in services
+assert 'TreeBytes(Eden::LogsDir(), cancel)' in services
 assert 'home_diagnostics_.free_bytes' not in home  # no invented PS5 total capacity
 assert 'home_diagnostics_.storage_root' in home
 
