@@ -231,10 +231,10 @@ jobs:
           key: prospero-eden-encore-040-${{ runner.os }}-${{ hashFiles('tools/deps.json') }}-${{ github.run_id }}
 
       - name: Upload resumable staged app
-        if: ${{ steps.stage.outcome == 'success' }}
+        if: ${{ steps.stage.outcome == 'success' && env.EDEN_TEST_ALL_ON != '1' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ${{ env.EDEN_TEST_ALL_ON == '1' && 'Prospero.Eden-Encore-PS5-all-on-test' || 'Prospero.Eden-Encore-staged-app' }}
+          name: Prospero.Eden-Encore-staged-app
           path: ${{ env.EDEN_STAGE_DIR }}/
           retention-days: 7
           if-no-files-found: error
@@ -249,6 +249,15 @@ jobs:
           if [[ "$EDEN_TEST_ALL_ON" == 1 ]]; then
             python3 -B tools/ci/check-all-on-test-binary.py "$EDEN_STAGE_DIR" "$EDEN_TEST_TITLE_ID"
           fi
+
+      - name: Upload checked all-on PS5 test app
+        if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a8751fc6a0a # v7.0.1
+        with:
+          name: Prospero.Eden-Encore-PS5-all-on-test
+          path: build/dev/PPSA99008/
+          retention-days: 14
+          if-no-files-found: error
 
       - name: Validate resumed staged app
         if: ${{ env.RESUME_STAGE_RUN_ID != '' }}
