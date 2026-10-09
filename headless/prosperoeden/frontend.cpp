@@ -283,6 +283,14 @@ std::string RunApp(const std::string& launch_error, bool first_start, bool* rest
         pe::gfx::Viewport viewport = pe::gfx::fit_viewport(display.width(), display.height());
         auto previous = Clock::now();
         bool first_frame = true;
+#ifdef EDEN_DEV_ROM_ID
+        // Five-second aggregate only; no text formatting or filesystem I/O
+        // inside a normal menu frame. Distinguish delayed animation from
+        // real input/update, GL draw and swap/presentation frame stalls.
+        auto ui_sample_begin = previous;
+        unsigned ui_frames = 0, ui_late_20 = 0, ui_late_33 = 0, ui_late_50 = 0;
+        long long ui_max_update_us = 0, ui_max_draw_us = 0, ui_max_present_us = 0;
+#endif
         while (running && !launcher.done() && !launcher.restart_requested()) {
             const auto frame_start = Clock::now();
             // Start-to-start frame time; a long frame does not make the animations jump.
@@ -392,6 +400,36 @@ std::string RunApp(const std::string& launch_error, bool first_start, bool* rest
                         " ms, present " + std::to_string(Milliseconds(done - drawn)) + " ms";
                     Eden::Report("slow frame", detail.c_str());
                 }
+#ifdef EDEN_DEV_ROM_ID
+                if (!captured) {
+                    const auto update_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                        updated - frame_start).count();
+                    const auto draw_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                        drawn - updated).count();
+                    const auto present_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                        done - drawn).count();
+                    const auto whole_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                        done - frame_start).count();
+                    ++ui_frames;
+                    ui_late_20 += whole_us >= 20000;
+                    ui_late_33 += whole_us >= 33000;
+                    ui_late_50 += whole_us >= 50000;
+                    ui_max_update_us = std::max(ui_max_update_us, update_us);
+                    ui_max_draw_us = std::max(ui_max_draw_us, draw_us);
+                    ui_max_present_us = std::max(ui_max_present_us, present_us);
+                }
+                if (done - ui_sample_begin >= std::chrono::seconds(5)) {
+                    std::fprintf(stderr,
+                        "EDEN_UI_FRAMES frames=%u elapsed_ms=%lld late_20=%u late_33=%u late_50=%u "
+                        "max_update_us=%lld max_draw_us=%lld max_present_us=%lld\n",
+                        ui_frames, Milliseconds(done - ui_sample_begin),
+                        ui_late_20, ui_late_33, ui_late_50,
+                        ui_max_update_us, ui_max_draw_us, ui_max_present_us);
+                    ui_sample_begin = done;
+                    ui_frames = ui_late_20 = ui_late_33 = ui_late_50 = 0;
+                    ui_max_update_us = ui_max_draw_us = ui_max_present_us = 0;
+                }
+#endif
             }
         }
 

@@ -845,8 +845,19 @@ bool ListView::page(int delta)
 
 void ListView::update(float dt)
 {
-    scroll_.update(dt, theme::kScrollSpring);
-    cursor_.update(dt, theme::kCursorSpring);
+    // Normal single-step motion keeps the approved spring design. Held D-pad
+    // input can advance several rows faster than a critically damped spring
+    // settles, making the highlight appear to lag a responsive controller.
+    // Recover more quickly only when the visible highlight is over one row
+    // behind its target; never teleport or re-order the selected item.
+    const float scroll_backlog = std::fabs(scroll_.target - scroll_.value);
+    const float cursor_backlog = std::fabs(cursor_.target - cursor_.value);
+    const float scroll_omega = scroll_backlog > pitch * 1.25f ?
+        theme::kScrollSpring * 2.0f : theme::kScrollSpring;
+    const float cursor_omega = cursor_backlog > pitch * 1.25f ?
+        theme::kCursorSpring * 1.5f : theme::kCursorSpring;
+    scroll_.update(dt, scroll_omega);
+    cursor_.update(dt, cursor_omega);
 }
 
 int ListView::first_row() const
