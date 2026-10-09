@@ -76,7 +76,11 @@ bool Textures::load_art(const std::string &directory)
         for (std::size_t n = 0; n < length; ++n, ++pixel) {
             auto* color = pad_image.rgba.data() + pixel * 4u;
             color[0] = color[1] = color[2] = 255;
-            color[3] = static_cast<std::uint8_t>(level * 85u);
+            // The supplied outline uses predominantly alpha level 1
+            // (85/255). On Eden's near-black TV panels this looks BLACK,
+            // even when the RGB tint is white. Preserve transparent pixels
+            // but render nonzero outline samples as opaque white.
+            color[3] = level == 0 ? 0 : (level == 1 ? 240 : 255);
         }
     }
     if (valid && pixel == kPixels)
