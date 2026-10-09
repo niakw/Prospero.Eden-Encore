@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "performance.h"
+#include "hle_counters.h"
 #include "crash_report.h"
 #include "stall_watchdog.h"
 #include "../src/fastmem.h"
@@ -619,16 +620,13 @@ static unsigned long long GraphicsMemoryFree() {
 #endif
 
 namespace {
-std::mutex hle_mutex;
-// Keyed by the service's name pointer (one per service object) and command id.
-std::map<std::pair<const char*, unsigned>, std::pair<unsigned long long, unsigned long long>> hle_calls;
+// Fixed-size, owned-name counters: no per-request allocator/mutex contention
+// between the four guest CPUs during the development all-on profiling pass.
+HleCounters hle_calls;
 } // namespace
 
 void RecordHle(const char* service, unsigned command, long long ns) {
-    std::lock_guard lock(hle_mutex);
-    auto& entry = hle_calls[{service, command}];
-    ++entry.first;
-    entry.second += static_cast<unsigned long long>(ns > 0 ? ns : 0);
+    hle_calls.Record(service, command, ns);
 }
 
 // Report true JIT ownership once at meaningful lifecycle stages; this
@@ -726,14 +724,19 @@ void ReportGpuThread(unsigned frame) {
                     eden_heap_committed ? eden_heap_committed() : std::size_t{0}, large, large_blocks, table_held,
                     table_span, eden_heap_tcache_held ? eden_heap_tcache_held() : std::size_t{0});
     }
-    {
-        // Cumulative HLE handling time of every service command that has cost at least 1 ms.
-        std::lock_guard lock(hle_mutex);
-        for (const auto& [key, value] : hle_calls)
-            if (value.second >= 1'000'000)
-                std::printf("EDEN_DEV_HLE service=%s cmd=%u calls=%llu ns=%llu\n", key.first ? key.first : "?",
-                            key.second, value.first, value.second);
-    }
+    // Immutable service names, atomic cumulative counters and no snapshot
+    // lock: a dev sample must not stall concurrent guest HLE dispatch.
+    hle_calls.ForEach([](const char* name, unsigned command, std::uint64_t calls,
+                         std::uint64_t ns) {
+        if (ns >= 1'000'000)
+            std::printf("EDEN_DEV_HLE service=%s cmd=%u calls=%llu ns=%llu\n",
+                        name, command, static_cast<unsigned long long>(calls),
+                        static_cast<unsigned long long>(ns));
+    });
+    if (const auto overflow = hle_calls.OverflowCalls(); overflow)
+        std::printf("EDEN_DEV_HLE_OVERFLOW calls=%llu ns=%llu\n",
+                    static_cast<unsigned long long>(overflow),
+                    static_cast<unsigned long long>(hle_calls.OverflowNs()));
 #ifdef PS5_NATIVE
     ReportDirectMemoryState("dev-profile");
 #endif
