@@ -42,6 +42,30 @@ int sceKernelDebugOutText(int, const char*);
 }
 #endif
 
+#ifdef PS5_NATIVE
+namespace {
+// This is the fixed addressable direct-memory EXTENT, not available RAM.
+// Demand-backed sparse JIT previously asked the kernel for it for EVERY
+// newly committed 2 MiB page; CPU heap and zero-table allocations did too.
+// Cache only a positive successful answer, so transient early errors retry.
+std::atomic<std::int64_t> cached_direct_memory_extent{0};
+std::int64_t DirectMemoryExtent() noexcept {
+    const auto cached = cached_direct_memory_extent.load(std::memory_order_acquire);
+    if (cached > 0) return cached;
+    const auto current = sceKernelGetDirectMemorySize();
+    if (current > 0)
+        cached_direct_memory_extent.store(current, std::memory_order_release);
+    return current > 0 ? current : 0;
+}
+std::int32_t AllocateDirectOwned(std::size_t bytes, std::size_t align,
+                                  std::int64_t* physical) noexcept {
+    const auto extent = DirectMemoryExtent();
+    // No allocator can recover by passing a negative/zero extent to Sony.
+    return extent > 0 ? sceKernelAllocateDirectMemory(0, extent, bytes, align, 12, physical) : -1;
+}
+} // namespace
+#endif
+
 namespace Common {
 namespace {
 // The header sits in the page before the data. Blocks of at least LargePage start their data
@@ -112,8 +136,8 @@ void* AllocateMemoryPages(std::size_t size) noexcept {
     std::int64_t physical = -1;
 #ifdef PS5_NATIVE
     base = reinterpret_cast<void*>(cpu_mapping_hint);
-    const auto limit = sceKernelGetDirectMemorySize();
-    auto rc = sceKernelAllocateDirectMemory(0, limit, total, lead, 12, &physical);
+    const auto limit = DirectMemoryExtent();
+    auto rc = limit > 0 ? sceKernelAllocateDirectMemory(0, limit, total, lead, 12, &physical) : -1;
     if (rc != 0) {
         std::fprintf(stderr, "Direct allocation failed: rc=%08x bytes=%zu limit=%lld\n",
                      unsigned(rc), total, static_cast<long long>(limit));
@@ -280,8 +304,7 @@ bool ProbeSparseJitAlias() noexcept {
             break;
         rx_reserved = true;
         if (!cpu_mapping_range(executable, LargePage) || executable == writable) break;
-        if (sceKernelAllocateDirectMemory(0, sceKernelGetDirectMemorySize(),
-                                          LargePage, LargePage, 12, &physical) != 0)
+        if (AllocateDirectOwned(LargePage, LargePage, &physical) != 0)
             break;
         direct_owned = true;
         void* actual_rw = writable;
@@ -465,8 +488,7 @@ bool CommitSparseJitCode(void* executable, std::size_t required) noexcept {
     const std::size_t target = (required + LargePage - 1) / LargePage * LargePage;
     while (region.committed < target) {
         std::int64_t physical = -1;
-        if (sceKernelAllocateDirectMemory(0, sceKernelGetDirectMemorySize(),
-                                           LargePage, LargePage, 12, &physical) != 0) {
+        if (AllocateDirectOwned(LargePage, LargePage, &physical) != 0) {
             std::fprintf(stderr, "EDEN_JIT_SPARSE_OOM capacity=%zu committed=%zu required=%zu\n",
                          region.capacity, region.committed, required);
             return false;
@@ -616,7 +638,7 @@ std::int64_t zero_block = -1;
 
 // A 2 MiB block of direct memory, zeroed through a mapping of its own that is gone again.
 bool ZeroedBlock(std::int64_t* physical) {
-    if (sceKernelAllocateDirectMemory(0, sceKernelGetDirectMemorySize(), SparseSlot, SparseSlot, 12, physical) != 0)
+    if (AllocateDirectOwned(SparseSlot, SparseSlot, physical) != 0)
         return false;
     void* view = reinterpret_cast<void*>(cpu_mapping_hint);
     const auto rc = sceKernelMapDirectMemory(&view, SparseSlot, PROT_READ | PROT_WRITE,
@@ -919,7 +941,7 @@ bool CommitMemoryRange(void* address, std::size_t size, std::int64_t* physical_o
     timespec started{}, allocated{}, mapped{}, zeroed{};
     (void)clock_gettime(CLOCK_MONOTONIC, &started);
     std::int64_t physical = -1;
-    if (sceKernelAllocateDirectMemory(0, sceKernelGetDirectMemorySize(), size, LargePage, 12, &physical) != 0)
+    if (AllocateDirectOwned(size, LargePage, &physical) != 0)
         return false;
     (void)clock_gettime(CLOCK_MONOTONIC, &allocated);
     void* at = address;

@@ -1957,3 +1957,8 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — Real C++ failed-growth physical ownership regression added to preflight [skip ci]
 
 - Added `tools/check-heap-growth-rollback-host.py` to extract and compile the actual `Common::RollbackUnpublishedHeapGrowth` implementation against a Linux C++20 test double (2 MiB direct-owned span, 6 MiB surrounding reservation), proving the guard is restored before the mocked physical owner is released and the surrounding virtual reservations persist. Complementary 8-thread C allocator fixture checks 128 MiB accounting after mspace-creation failure. The new native-source host regression is wired into the next explicit GitHub Actions source preflight; neither test nor PS5 compilation has been run yet.
+
+### 2026-10-09 — Cache PS5 constant direct-memory extent across JIT/heap physical commits [skip ci]
+
+- `src/memory_pages.cpp` repeatedly called `sceKernelGetDirectMemorySize()` during physical allocation of **every new sparse 2 MiB JIT chunk**, the 2 MiB zero-table scratch, alias qualification and heap growth (including large-page allocs). This reports the process's fixed direct-memory EXTENT, not free headroom; repeatedly querying it adds avoidable kernel work on code compilation and heap growth.
+- `DirectMemoryExtent()` caches only a positive answer in one process-wide atomic; unknown/failed boot queries remain retryable and fail closed without issuing a physical allocation with a nonpositive range. `AllocateDirectOwned()` reuses it for owned physical chunks. Does NOT replace the separate largest-free query, memory pressure budgeting, alignment or full ownership checks. Source preflight extended. No compiled native FPS/CPU measurement or CI action triggered.

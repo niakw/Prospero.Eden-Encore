@@ -33,6 +33,18 @@ assert "region.committed += LargePage;" in ps5
 assert "sparse_jit_committed += LargePage;" in ps5
 assert "sparse_jit_committed -= region.committed;" in ps5
 assert "void SparseJitUsageFast(" in ps5
+# A positive-only cached kernel total reduces syscall overhead on each JIT
+# 2 MiB physical commit. It is a fixed extent, NOT a substitute for the
+# separate current largest-free direct-memory pressure query.
+assert "cached_direct_memory_extent{0}" in ps5
+assert "if (current > 0)" in ps5
+assert "const auto current = sceKernelGetDirectMemorySize();" in ps5
+assert "return current > 0 ? current : 0;" in ps5
+assert "AllocateDirectOwned(LargePage, LargePage, &physical)" in ps5
+assert "AllocateDirectOwned(SparseSlot, SparseSlot, physical)" in ps5
+assert "AllocateDirectOwned(size, LargePage, &physical)" in ps5
+assert ps5.count("sceKernelGetDirectMemorySize()") == 2  # extern declaration + one cache miss
+
 assert "sparse_jit_reserved_live.fetch_add(size," in ps5
 assert "sparse_jit_reserved_live.fetch_sub(region.capacity," in ps5
 assert "sparse_jit_committed_live.fetch_add(LargePage," in ps5
