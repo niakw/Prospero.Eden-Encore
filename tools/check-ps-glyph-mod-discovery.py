@@ -46,7 +46,9 @@ with tempfile.TemporaryDirectory(prefix="eden-glyph-web-discovery-") as root:
         "https://yandex.com/search/?text=")
     result2, st2 = search.discover(full, st, 2, network=False, variant=1)
     assert st2["next_offset"] == 2 and st2["completed_catalog_scan"]
-    assert result2["games_examined"] == 1
+    # A new multiplatform query variant starts its own sweep, rather than
+    # skipping the first Switch-only title as already searched.
+    assert result2["games_examined"] == 2
 
     changed = json.loads(json.dumps(full))
     changed["games"].reverse()
