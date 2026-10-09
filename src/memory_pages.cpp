@@ -833,7 +833,8 @@ void* ReserveMemoryRange(std::size_t size) noexcept {
 #endif
 }
 
-bool CommitMemoryRange(void* address, std::size_t size) noexcept {
+bool CommitMemoryRange(void* address, std::size_t size, std::int64_t* physical_out) noexcept {
+    if (physical_out) *physical_out = -1;
     if (address == nullptr || size == 0 || size % LargePage != 0 ||
         reinterpret_cast<std::uintptr_t>(address) % LargePage != 0)
         return false;
@@ -873,9 +874,34 @@ bool CommitMemoryRange(void* address, std::size_t size) noexcept {
         size, address, static_cast<unsigned long long>(physical),
         delta_ns(started, allocated), delta_ns(allocated, mapped), delta_ns(mapped, zeroed));
     if (length > 0) Note(line);
+    // The 128 MiB initial heap backing has a specific physical owner. Return
+    // it without any dynamic bookkeeping, so failed mspace initialization
+    // can release PA as well as the 3 GiB virtual reservation.
+    if (physical_out) *physical_out = physical;
     return true;
 #else
     return mprotect(address, size, PROT_READ | PROT_WRITE) == 0;
+#endif
+}
+bool CommitMemoryRange(void* address, std::size_t size) noexcept {
+    return CommitMemoryRange(address, size, nullptr);
+}
+
+void AbandonInitialHeapReservation(void* base, std::size_t reserved,
+                                   std::int64_t first_physical, std::size_t committed) noexcept {
+    // Called ONLY when creating the very first mspace failed. There are no
+    // live allocations or mspace descendants, and heap state is unpublished.
+    if (!base || !reserved || !committed || committed > reserved)
+        std::abort();
+#ifdef PS5_NATIVE
+    if (first_physical < 0) std::abort();
+#else
+    (void)first_physical;
+#endif
+    // Every direct-memory mapping must be unmapped before releasing its PA.
+    if (munmap(base, reserved) != 0) std::abort();
+#ifdef PS5_NATIVE
+    if (sceKernelReleaseDirectMemory(first_physical, committed) != 0) std::abort();
 #endif
 }
 } // namespace Common
