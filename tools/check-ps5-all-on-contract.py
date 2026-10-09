@@ -67,9 +67,9 @@ assert 'check-dummy-thread-waits.py' not in gate_shell  # earlier pinned-source 
 with tempfile.TemporaryDirectory() as tmp:
     calls=Path(tmp)/"calls.txt"
     harness=(
-        'set -euo pipefail\\n'
-        'root=/ci-mock; scratch=/ci-mock; probe=OFF\\n'
-        'python3() { printf "%s\\\\n" "$*" >> "$EDEN_GATE_CALLS"; }\\n'
+        'set -euo pipefail\n'
+        'root=/ci-mock; scratch=/ci-mock; probe=OFF\n'
+        'python3() { printf "%s\\n" "$*" >> "$EDEN_GATE_CALLS"; }\n'
         + gate_shell
     )
     def run_gate(skip_source: str, skip_prebuild: str, graphics: str) -> list[str]:
