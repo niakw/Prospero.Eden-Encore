@@ -30,13 +30,16 @@ struct Policy {
 //
 // The three unsafe/correctness switches stay conservative in all normal tiers. Minimum gains speed
 // through lower render cost + asynchronous shaders + low GPU accuracy, rather than silently risking
-// CPU/DMA correctness or stale GPU memory. This is an automatic decision, not an unimplemented one.
+// CPU/DMA correctness or stale GPU memory. All Vulkan tiers now enable asynchronous shader
+// compilation: a first-use effect may appear a moment late instead of blocking a frame, even
+// in High/Ultra. The image-quality tier still controls resolution, AA and accuracy; shader
+// compilation completion (not shader omission) remains the target.
 inline constexpr Policy kPolicies[EncoreOverrides::kAuthoredProfileCount] = {
     // compile  async  fastGPU unsafeCPU unsafeDMA reactive skipInv
     {false,    true,  true,   false,    false,    true,    false}, // Minimum
     {false,    true,  false,  false,    false,    true,    false}, // Recommended
-    {false,    false, false,  false,    false,    true,    false}, // High
-    {false,    false, false,  false,    false,    true,    false}, // Ultra
+    {false,    true,  false,  false,    false,    true,    false}, // High
+    {false,    true,  false,  false,    false,    true,    false}, // Ultra
 };
 
 inline constexpr Policy ForTier(int tier) {
