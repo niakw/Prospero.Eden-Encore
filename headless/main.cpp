@@ -1800,14 +1800,22 @@ int main(int argc, char** argv) {
                 std::jthread input_worker;
                 if (pad) input_worker = std::jthread([&](std::stop_token stop) {
 #ifdef EDEN_DEV_PROFILE
-                    // The timed input replay drives the profile's own title (EDEN_DEV_PROFILE_TITLE);
-                    // other development titles take runner commands (compat-input.txt).
-                    bool replay_off = false;
+                    // Live DualSense is ALWAYS the default, including the all-on
+                    // FC27 development build. A title ID is only a boot target;
+                    // it must never silently switch off physical button polling.
+                    // Automated replay is opt-in for unattended bench runs only.
+                    bool replay_requested = false;
                     {
                         std::ifstream dev_settings(Eden::AppFile("dev-settings.txt"));
-                        for (std::string entry; dev_settings >> entry;) replay_off |= entry == "replay=off";
+                        for (std::string entry; dev_settings >> entry;) {
+                            if (entry == "replay=on") replay_requested = true;
+                            if (entry == "replay=off") replay_requested = false;
+                        }
                     }
-                    const bool timed_replay = development_id == EDEN_DEV_PROFILE_TITLE && !replay_off;
+                    const bool timed_replay = development_id == EDEN_DEV_PROFILE_TITLE && replay_requested;
+                    std::fprintf(stderr, "EDEN_PAD_INPUT mode=%s replay_requested=%d title=%s\\n",
+                                 timed_replay ? "scripted" : "dualsense", int(replay_requested),
+                                 development_id.c_str());
                     const auto replay_start = std::chrono::steady_clock::now();
 #endif
 #ifdef EDEN_DEV_ROM_ID
