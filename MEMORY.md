@@ -1966,3 +1966,7 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — Harden rollback host fixture C++ source portability [skip ci]
 
 - Static review before the first run: guard `_GNU_SOURCE` in the new extracted C++ rollback fixture (GCC may predefine it; `-Werror` otherwise rejects a macro redefinition), explicitly include `<initializer_list>` for the guard-page loop, and normalize the native heap bridge comment. No production semantics changed. CI/native compile still not run.
+
+### 2026-10-09 — Concurrent host preflight for positive-only direct-memory extent cache [skip ci]
+
+- Added `tools/check-ps5-direct-limit-host.py` extracting and compiling the real `DirectMemoryExtent()/AllocateDirectOwned()` helper from `src/memory_pages.cpp`. C++20 test injects a first failed kernel-size query (must not allocate), verifies the next success, then issues 160,000 owned physical-allocation mock requests from eight threads while asserting total-size syscall count stays at two. Wired into next explicit GitHub source preflight. No Actions, host test, SDK build or console execution run yet.
