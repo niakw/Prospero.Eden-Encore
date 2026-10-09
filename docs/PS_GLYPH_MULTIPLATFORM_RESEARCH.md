@@ -71,7 +71,7 @@ The tool groups names such as `UI/controller_buttons_ps4.png`, `UI/controller_bu
 
 **Priority route:** First discover embedded native art, next research existing other-platform mod and actual name/path, and finally compare original image geometry with the matching Switch original. Until then native glyph art remains unverified.
 
-## 2026-10-09 — Eight more Nintendo-confirmed Switch 1 titles
+## 2026-10-09 — Initial eight Nintendo-confirmed Switch 1 titles
 
 Eight official Switch game listings are preserved in [PS_GLYPH_SWITCH1_GAME_SEEDS.json](PS_GLYPH_SWITCH1_GAME_SEEDS.json). They have PC glyph mods but no verified Switch glyph pack: **Sonic Frontiers**, **Sonic Superstars**, **Overcooked! 2**, **Atelier Ryza**, **NieR:Automata The End of YoRHa Edition**, **Enter the Gungeon**, **Sonic Mania** and **Stardew Valley**.
 
@@ -85,7 +85,7 @@ Eight official Switch game listings are preserved in [PS_GLYPH_SWITCH1_GAME_SEED
 | NieR:Automata | https://steamcommunity.com/sharedfiles/filedetails/?id=1368483795 | PC data/ui custom Nintendo artwork resizes existing Xbox UI sprites; Switch assets differ until compared |
 | Enter the Gungeon | https://modworkshop.net/mod/25536 | PC sprite folders and SREM/DFSprite dependency; cropped/resized art; no inferred Switch offset |
 
-**Revised research scope:** 26 Switch-mod references / 18 directly indexed games, plus 20 cross-platform sources touching 14 Switch titles; eight newly seeded titles bring the union to **26 unique Switch 1 games**. All real verified per-game art counts remain ZERO.
+**Initial scope at this stage:** 26 Switch-mod references / 18 directly indexed games, plus 20 cross-platform sources touching 14 Switch titles; eight initial title seeds brought the union to **26 unique Switch 1 games**. See the newer 28-title update below. No real game packs qualified. All real verified per-game art counts remain ZERO.
 
 ### Relocated original sprites: strict matching despite atlas rearrangement
 
@@ -128,9 +128,9 @@ The pair tool records PC and Switch Sprite geometry side by side and lists poten
 
 Both are research-only seed games. Their Nintendo release proof is in [PS_GLYPH_SWITCH1_GAME_SEEDS.json](PS_GLYPH_SWITCH1_GAME_SEEDS.json). The index now holds **22** other-platform sources and **28** total distinct researched Switch 1 games; no new real atlas has been qualified.
 
-## From 26 researched games toward the full Switch 1 Title ID catalogue
+## From the researched title set toward the full Switch 1 Title ID catalogue
 
-The existing 26 titles are **research candidates**, not the size of the actual Nintendo Switch 1 library. Public metadata-only databases such as [blawar/titledb](https://github.com/blawar/titledb) (multi-region JSON metadata, Title IDs, version history) and [ch0c01dxyz/nsw-titledb](https://github.com/ch0c01dxyz/nsw-titledb) contain the necessary starting vocabulary. Their listings are not in-game texture resources.
+The researched titles are **research candidates**, not the size of the actual Nintendo Switch 1 library. Public metadata-only databases such as [blawar/titledb](https://github.com/blawar/titledb) (multi-region JSON metadata, Title IDs, version history) and [ch0c01dxyz/nsw-titledb](https://github.com/ch0c01dxyz/nsw-titledb) contain the necessary starting vocabulary. Their listings are not in-game texture resources.
 
 New local, read-only importer: `tools/ps-glyph-switch1-titledb.py`. Supply a separately obtained TitleDB JSON file (Title ID to title dictionary, title-object list, or region/NSUID to title object). It only considers **Switch 1 base application-shaped** IDs beginning 0100 and ending 000. Ambiguous titles sharing a name retain `candidate_title_id: null`; fuzzy matches, updates, DLC and Switch 2 title prefixes are not upgraded into a guess. An actual installed game's Title ID and update still have to be checked against game data.
 
