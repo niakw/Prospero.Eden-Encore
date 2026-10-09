@@ -29,6 +29,11 @@ assert 'finish_home_media();' in launch
 assert 'home_media_scan_.wait();' in launch
 assert 'artwork_tasks' not in svc
 assert 'A library enumeration itself must remain local/cache-only' in svc
+# A damaged/unavailable native ROM directory must not replace an existing
+# title snapshot with an empty result; the scan worker reports and throws.
+assert 'EDEN_ROM_SCAN entries=' in svc
+assert 'EDEN_ROM_SCAN stat_failed=' in svc
+assert 'throw std::system_error(directory_error, "ROM directory scan failed")' in svc
 assert 'const Rect hero{0.0f, 0.0f, 1920.0f, 1080.0f};' in home
 for needle in ('quick settings overlay', 'recently played: seven-ish large artwork tiles',
                'utility cards: the four Home actions', 'hero_button(details_rect, "..."'):
