@@ -3,6 +3,7 @@
 #include <array>
 #include <atomic>
 #include <condition_variable>
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <span>
@@ -43,6 +44,14 @@ public:
     };
     bool TakeRumble(std::size_t player, Rumble& rumble);
 private:
+    // The virtual input engine takes a mutex and emits a callback on every
+    // SetButton/SetAxis call, including identical values. Polling physical
+    // DualSense samples ~250 times/s should only publish actual changes.
+    // The game poll and teardown/reset paths are serialized by main.cpp.
+    static constexpr int kTrackedButtons = 22; // virtual buttons 0..21 (right Joy-Con SR)
+    std::array<std::array<std::uint8_t, kTrackedButtons>, kPlayers> button_cache{};
+    std::array<std::array<float, 4>, kPlayers> axis_cache{};
+    std::array<std::array<bool, 4>, kPlayers> axis_known{};
     PadIdentifier Identifier(std::size_t player) const;
     struct Sides {
         Common::Input::VibrationStatus left{};
