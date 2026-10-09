@@ -93,7 +93,7 @@ jobs:
           YANDEX_SEARCH_API_KEY: ${{ secrets.YANDEX_SEARCH_API_KEY }}
           YANDEX_SEARCH_FOLDER_ID: ${{ secrets.YANDEX_SEARCH_FOLDER_ID }}
         run: |
-          # Every dev push: bounded no-cost queries, including same-game PC/Wii U.
+          # Every dev push: free GitHub + DuckDuckGo queries in distinct Switch/PC sweeps.
           # Metered Yandex requires explicitly configured credentials.
           if test "$GITHUB_EVENT_NAME" = push; then
             SELECTED=github
@@ -112,22 +112,32 @@ jobs:
             previous=(--state-in .cache/eden-glyph-mods/progress.json)
           fi
           if test "$GITHUB_EVENT_NAME" = push; then
-            for variant in 0 1; do
-              label=switch
-              if test "$variant" = 1; then label=multiplatform; fi
-              args=( "${previous[@]}" )
-              if test "$variant" = 1; then
-                args=(--state-in /tmp/eden-glyph-discovery/state-switch.json)
-              fi
-              if ! python3 -B tools/ps-glyph-mod-discovery.py \
-                "${common[@]}" "${args[@]}" --query-variant "$variant" \
-                --state-out "/tmp/eden-glyph-discovery/state-${label}.json" \
-                --report "/tmp/eden-glyph-discovery/leads-${label}.json"; then
-                echo "::warning::Search provider throttled; preserve partial source links"
-              fi
+            # Broad coverage: the same title may have ONLY a PC controller
+            # mod on Nexus/ModDB/GameBanana. Query both free providers and
+            # both Switch/native and PC/multiplatform variants each push.
+            last_state=""
+            for engine in github duckduckgo; do
+              for variant in 0 1; do
+                label="${engine}-switch"
+                if test "$variant" = 1; then label="${engine}-multiplatform"; fi
+                args=( "${previous[@]}" )
+                if test -n "$last_state"; then
+                  args=(--state-in "$last_state")
+                fi
+                batch=5
+                if test "$engine" = duckduckgo; then batch=2; fi
+                if ! python3 -B tools/ps-glyph-mod-discovery.py \
+                  --catalog /tmp/eden-glyph-discovery/catalog.json \
+                  --provider "$engine" --network --max-games "$batch" \
+                  --interval 2 "${args[@]}" --query-variant "$variant" \
+                  --state-out "/tmp/eden-glyph-discovery/state-${label}.json" \
+                  --report "/tmp/eden-glyph-discovery/leads-${label}.json"; then
+                  echo "::warning::${engine} was throttled or rejected a query; keep partial search results"
+                fi
+                last_state="/tmp/eden-glyph-discovery/state-${label}.json"
+              done
             done
-            cp /tmp/eden-glyph-discovery/state-multiplatform.json \
-               /tmp/eden-glyph-discovery/state-next.json
+            cp "$last_state" /tmp/eden-glyph-discovery/state-next.json
           else
             if ! python3 -B tools/ps-glyph-mod-discovery.py \
               "${common[@]}" "${previous[@]}" --query-variant "$VARIANT" \
