@@ -23,7 +23,8 @@ def read(file: Path) -> dict:
     if not file.is_file() or file.is_symlink() or not 1 <= file.stat().st_size <= MAX_JSON_BYTES:
         raise ValueError("invalid Unity inventory report")
     data = json.loads(file.read_text("utf-8"))
-    if data.get("schema") != 1 or data.get("source") != "unity_serialized_asset_metadata" or \
+    if not isinstance(data, dict) or data.get("schema") != 1 or \
+            data.get("source") != "unity_serialized_asset_metadata" or \
             not isinstance(data.get("objects"), list) or len(data["objects"]) > MAX_REPORT:
         raise ValueError("not a bounded Unity sprite/texture inventory")
     sha = data.get("container_sha256")
@@ -47,9 +48,11 @@ def group(records: list) -> dict[tuple[str, str], list]:
 
 
 def compare(pc: dict, switch: dict) -> dict:
-    if pc.get("source_platform_declared", "").lower() not in ("pc", "windows", "steam", "game pass"):
+    if not isinstance(pc.get("source_platform_declared"), str) or \
+            pc["source_platform_declared"].lower() not in ("pc", "windows", "steam", "game pass"):
         raise ValueError("first report must explicitly declare PC source platform")
-    if switch.get("source_platform_declared", "").lower() not in ("switch", "nintendo switch"):
+    if not isinstance(switch.get("source_platform_declared"), str) or \
+            switch["source_platform_declared"].lower() not in ("switch", "nintendo switch"):
         raise ValueError("second report must explicitly declare Switch source platform")
     pc_items, sw_items = group(pc["objects"]), group(switch["objects"])
     overlapping = []
