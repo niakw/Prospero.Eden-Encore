@@ -256,6 +256,7 @@ if(fermi_layer_at LESS 0)
     message(FATAL_ERROR "Pinned Fermi2D source/destination layer exception anchors changed")
 endif()
 string(REPLACE "${fermi_layer_old}" "${fermi_layer_new}" fermi_source "${fermi_source}")
+endif()
 
 # The pinned software blitter must really honor 3D block-depth layout and
 # read only the z=0 rectangle. Refuse this compatibility implementation if
@@ -293,6 +294,7 @@ list(FILTER sw_blitter_sources EXCLUDE REGEX "engines/sw_blitter/blitter[.]cpp$"
 set_property(TARGET video_core PROPERTY SOURCES "${sw_blitter_sources}")
 target_sources(video_core PRIVATE "${PORT_BUILD_DIR}/sw_blitter_sized.cpp")
 
+if(EDEN_UNQUALIFIED_FERMI2D_COPY)
 set(fermi_copy_old [=[
     if (!rasterizer->AccelerateSurfaceCopy(src, regs.dst, config)) {
         sw_blitter->Blit(src, regs.dst, config);
@@ -409,6 +411,7 @@ if(fermi_copy_at LESS 0)
     message(FATAL_ERROR "Pinned Fermi2D copy-acceleration anchor changed")
 endif()
 string(REPLACE "${fermi_copy_old}" "${fermi_copy_new}" fermi_source "${fermi_source}")
+endif()
 
 write_derived("${PORT_BUILD_DIR}/fermi_2d_observed.cpp"
     "#include <atomic>\n${gpu_bounded_sample_helper}\n${fermi_source}")
