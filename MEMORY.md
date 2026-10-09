@@ -7,7 +7,7 @@
 ## Repository / branch
 
 - Repository: `niakw/Prospero.Eden-Encore`
-- Remote release line: `fix/0.40-zbic-13.60`; active **local audit** branch: `local/no-build-polish` (HEAD `149df7a`).
+- Remote release line: `fix/0.40-zbic-13.60` (untouched); active **GitHub-only PS5 test** branch: `dev/ps5-sparse-jit`. Old local audit branches mentioned below are historical, not the current edit target.
 - PS5 title ID: `PPSA99008`
 - Current release line: Encore R1 / package `01.000.041`
 - Active Mac worktree: `/Users/admin/Downloads/Prospero.Eden-Encore-work` (the former `...-legal-pass` path is no longer present).
@@ -1857,3 +1857,10 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — Development launcher command polling uses wall-clock, not menu FPS [skip ci]
 
 - Refined prior dev-script disk probe throttle: counting 60 UI frames at 20FPS delayed script quit/replay discovery to 3s, and 10 frames during active replay also slowed as launcher FPS fell. Now `next_development_poll` from Clock::now gates one filesystem sweep per real second for manual DualSense sessions or one every ~160ms during active scripted replay; no catch-up burst after long EGL swap. Input radio polling remains every frame with identical controller mapping; no change to approved art. Existing `tools/check-runtime-frame-budget.py` static assertions updated. No test/build/Actions or Mac/FTP writes. Native menu 5s frame-stage receipts still required to verify smoother scrolling.
+
+### 2026-10-09 — Prebuild code review: lower menu connection-state polling [skip ci]
+
+- Current GitHub test branch audited after `0c911e7`. Latest green workflow on an older commit does not validate new source. No Actions build, CI, SDK test, firmware measurement, Mac or PS5 file edit, or FTP modification executed.
+- Found live `scePadRead` each menu frame plus a redundant `scePadReadState` for each connected player on every frame inside `poll_players()`. Limited cosmetic connection-status checks to 100 ms intervals, leaving real DualSense button reads unchanged on every frame, 500 ms signed-in-user discovery, and existing glyph/mapping logic untouched. Added a static source hot-path regression contract. PS5 frame-time benefit and reconnect latency must be verified after explicit build permission.
+- Updated all-on test instructions: test_title_id denotes the FC27 diagnostic title, not mandatory autoboot. Interactive launcher remains the default; `autoboot=on` is explicit opt-in.
+- Important outstanding features: safe reclaim of retained 128 MiB native heap pieces (~1.375 GiB committed at game shutdown in previous PS5 traces), in-game sparse JIT physical decommit at whole-JIT safe points, PS5 physical/SMT CPU load verification, GPU queue/synchronization and shader frame-time profiling, outstanding PRMT/Fermi2D modes, and genuinely qualified per-game PlayStation glyph artwork. Do not fake memory free, suppress diagnostics, change approved purple UI or claim native qualification before PS5 proof.

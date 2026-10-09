@@ -19,6 +19,7 @@ home = read("headless/prosperoeden/pe/ui/home.cpp")
 nav = read("headless/prosperoeden/pe/ui/launcher.cpp")
 widgets_header = read("headless/prosperoeden/pe/ui/widgets.hpp")
 frontend = read("headless/prosperoeden/frontend.cpp")
+radio = read("headless/prosperoeden/radio_input.c")
 
 # Both renderers only query system perf statistics and format HUD glyphs when
 # users actually turned on the FPS overlay. Game presentation still counts.
@@ -73,6 +74,15 @@ assert "previous > now_ns" in display
 assert "static long long last_shown_ns" not in display
 assert "Eden::Display::ResetSkipFrameTracking();" in main
 assert "Eden::Display::skipped_frames.store(0);" not in main
+
+# Native menu button events remain per-frame, but decorative controller
+# connection probes are no longer repeated 60+ times per second.
+assert "const int count = scePadRead(pad_handle, samples, PAD_SAMPLE_CAPACITY);" in radio
+assert "#define CONNECTION_SCAN_MS UINT64_C(100)" in radio
+connection_status = radio.split("static void poll_players(void)", 1)[1].split("#ifdef EDEN_DEV_ROM_ID", 1)[0]
+assert "if(now < connection_scan_at) return;" in connection_status
+assert connection_status.index("if(now < connection_scan_at) return;") < connection_status.index("scePadReadState(")
+assert "connection_scan_at = 0;" in radio
 
 # Repeated D-pad input must not let the highlight fall several rows behind
 # the selected item, but single-step springs and approved artwork stay intact.

@@ -16,7 +16,7 @@
 Workflow existant : [Build and release Prospero.Eden Encore](https://github.com/niakw/Prospero.Eden-Encore/actions/workflows/build-040-zbic.yml). Sur `dev/ps5-sparse-jit`, `workflow_dispatch` accepte :
 
 - `test_all_on = true` : construit `tools/build-package.sh dev`, avec `EDEN_DEV_PROFILE=ON`, `EDEN_SPARSE_JIT_DEV=ON`, `EDEN_DEV_VULKAN=ON`, renderer RADV et source preflights ; produit **Prospero.Eden-Encore-PS5-all-on-test** uniquement après validation du staged app.
-- `test_title_id = 0100C49025D3E000` : FC27, titre autobooté dans le build de test. Un autre identifiant Switch 1 vérifié permet de changer de jeu au build suivant.
+- `test_title_id = 0100C49025D3E000` : FC27 est l'identifiant de développement/diagnostic, **pas un autoboot implicite**. Le build de test ouvre le launcher avec le DualSense réel ; lancer FC27 ou Zelda manuellement depuis la bibliothèque. Seul `dev-settings.txt autoboot=on` demande explicitement un démarrage automatique unique. Un autre identifiant Switch 1 vérifié peut servir aux diagnostics du build suivant.
 - `build_only = false` : ne jamais sauter les gates pré-compilation après modifications récentes.
 - `publish = false`, `resume_run_id` vide. Le flux de test refuse toute invocation sur `fix/0.40-zbic-13.60` et n'entre jamais dans `make-dist.py` ou la publication GitHub Release.
 

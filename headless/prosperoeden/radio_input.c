@@ -15,6 +15,8 @@
 #define STICK_REPEAT_MS UINT64_C(110)
 #define MAX_PLAYERS 4U
 #define USER_SCAN_MS UINT64_C(500)
+/* Connection indicators refresh at 10 Hz; live buttons still poll each frame. */
+#define CONNECTION_SCAN_MS UINT64_C(100)
 
 typedef struct {
     uint32_t button;
@@ -74,6 +76,7 @@ static int32_t player_user[MAX_PLAYERS] = {-1, -1, -1, -1};
 static int32_t player_handle[MAX_PLAYERS] = {-1, -1, -1, -1};
 static unsigned connected_players;
 static uint64_t user_scan_at;
+static uint64_t connection_scan_at;
 
 static uint64_t monotonic_milliseconds(void)
 {
@@ -201,6 +204,10 @@ static void scan_users(void)
 static void poll_players(void)
 {
     const uint64_t now = monotonic_milliseconds();
+    /* Connection icons do not need separate state syscalls on every UI frame.
+       The primary scePadRead above still handles buttons on every frame. */
+    if(now < connection_scan_at) return;
+    connection_scan_at = now + CONNECTION_SCAN_MS;
     if(now >= user_scan_at) {
         user_scan_at = now + USER_SCAN_MS;
         scan_users();
@@ -253,6 +260,7 @@ bool radio_input_init(void)
     player_handle[0] = pad_handle;
     connected_players = 0;
     user_scan_at = 0;
+    connection_scan_at = 0;
     return true;
 }
 
@@ -325,4 +333,5 @@ void radio_input_shutdown(void)
     analog_repeat_at = 0;
     shoulder_key = -1;
     dpad_key = -1;
+    connection_scan_at = 0;
 }
