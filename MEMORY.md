@@ -2057,3 +2057,9 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 
 - Added `tools/check-ps5-virtual-reservation-host.py` to compile production `ReserveCpuVirtualRange()` against a host mock of `sceKernelReserveVirtualRange`: tests successful owned VA, ordinary unchanged-hint rejection, successful out-of-window reservation followed by exact `munmap`, and `fork`-isolated abort on an error with mutated output pointer. Uses real anonymous host `mmap`, no PS5 ABI claims.
 - Wired into the next explicitly authorized GitHub source preflight. No test/compiler invoked in this conversation. The fixture demonstrates exception-path behavior only, not firmware allocation performance or FPS.
+
+### 2026-10-09 — Reprise du build all-on après préflight de traductions bloquant [full-build] [test-all-on]
+
+- Le run #37991618191 de compilation complète all-on sur `0c488552a32107d95f55db5050f49b1be2e5d707` a échoué *avant compilation native*, à l'étape `Validate launcher translations and locale runtime`. Les logs donnent **fr-FR.po : 1 problème** (chaîne `Left/right: Global, PlayStation or Switch for this game; Cross: edit individual buttons.` manquante); les autres catalogues affichent des avertissements de textes non traduits, mais zéro problème.
+- Ajout de sa traduction FR sans changement au texte source ni au design, et synchronisation à l'identique de `headless/prosperoeden/fr_fr_embedded.h` à partir du nouveau `fr-FR.po`. Le commit `[full-build] [test-all-on]` déclenche le job sur `dev/ps5-sparse-jit` pour compiler la version complète de test, sans publication/release.
+- Aucun changement local Mac/FTP. L'état de compilation sera considéré inconnu jusqu'à preuve d'un nouveau run GitHub vert ; un ancien CI vert n'est pas la preuve de cette branche.
