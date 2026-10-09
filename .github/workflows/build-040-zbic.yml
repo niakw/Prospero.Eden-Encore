@@ -175,6 +175,7 @@ jobs:
           python3 -B tools/check-jit-sparse-host.py
           python3 -B tools/check-ps5-sparse-jit-va-lifetime.py
           python3 -B tools/check-ps5-direct-limit-host.py
+          python3 -B tools/check-ps5-virtual-reservation-host.py
           python3 -B tools/check-shader-cache-pressure.py
           python3 -B tools/check-performance-policy.py
           python3 -B tools/check-ps5-pc-ring-host.py

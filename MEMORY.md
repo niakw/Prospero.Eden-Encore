@@ -2052,3 +2052,8 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — Correct VA reservation single-owner source assertion [skip ci]
 
 - Fixed `tools/check-ps5-sparse-jit-va-lifetime.py` to require **one** `sceKernelReserveVirtualRange(&` call (the shared wrapper). The extern declaration takes `void**` and has no ampersand, so counting it as a second call would falsely reject the next CI preflight. No native code changed; still unexecuted.
+
+### 2026-10-09 — Source-extracted PS5 virtual-range ownership fixture staged [skip ci]
+
+- Added `tools/check-ps5-virtual-reservation-host.py` to compile production `ReserveCpuVirtualRange()` against a host mock of `sceKernelReserveVirtualRange`: tests successful owned VA, ordinary unchanged-hint rejection, successful out-of-window reservation followed by exact `munmap`, and `fork`-isolated abort on an error with mutated output pointer. Uses real anonymous host `mmap`, no PS5 ABI claims.
+- Wired into the next explicitly authorized GitHub source preflight. No test/compiler invoked in this conversation. The fixture demonstrates exception-path behavior only, not firmware allocation performance or FPS.
