@@ -182,6 +182,11 @@ with tempfile.TemporaryDirectory(prefix="eden-ps-glyph-atlas-") as work:
     draft = scanner.draft_spec(proposals, "01007EF00011E000", "1.0.0")
     assert draft["atlases"][0]["slots"][0]["button"] is None
     assert draft["schema"] == 1
+    draft_file = root / "unapproved-draft.json"
+    draft_file.write_text(json.dumps(draft), encoding="utf-8")
+    must_reject(lambda: atlas.render(draft_file, romfs, icons, root / "unapproved-output"))
+    assert scanner.alpha_candidates(Image.new("RGBA", (64, 64), (0, 0, 0, 0))) == []
+    assert scanner.alpha_candidates(Image.new("RGBA", (64, 64), (10, 20, 30, 255))) == []
     assert next_catalogue["revision"] == merged["revision"] + 1
 
     # Reject tampering at every boundary, before exposing a fake compatibility.
