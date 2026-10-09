@@ -29,6 +29,7 @@ public:
     bool game_storage_available() override;
     void arm_safe_launch() override;
     bool docked(std::uint64_t title_id) override;
+    bool docked_for_scan(std::uint64_t title_id, const pe::ui::Preferences& snapshot) override;
     bool set_docked(std::uint64_t title_id, bool docked) override;
     pe::ui::GameSettings game_settings(std::uint64_t title_id) override;
     bool set_game_settings(std::uint64_t title_id, const pe::ui::GameSettings& settings) override;

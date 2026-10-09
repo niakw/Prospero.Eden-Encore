@@ -1226,6 +1226,20 @@ bool EdenServices::docked(std::uint64_t title_id) {
     return tier >= 0 ? Eden::EncoreOverridesRuntime::ProfileForTitle(title_id, tier).docked : true;
 }
 
+bool EdenServices::docked_for_scan(std::uint64_t title_id,
+                                    const pe::ui::Preferences& snapshot) {
+    if (title_id == 0) return true;
+    const Eden::GameSettings game = Eden::LoadGameSettings(title_id);
+    if (game.console_mode >= 0) return game.console_mode == 1;
+    const int tier = game.performance_profile >= 0 &&
+                             game.performance_profile < Eden::EncoreOverrides::kAuthoredProfileCount ?
+                         game.performance_profile :
+                     snapshot.performance_profile >= 0 &&
+                             snapshot.performance_profile < Eden::EncoreOverrides::kAuthoredProfileCount ?
+                         snapshot.performance_profile : -1;
+    return tier >= 0 ? Eden::EncoreOverridesRuntime::ProfileForTitle(title_id, tier).docked : true;
+}
+
 bool EdenServices::set_docked(std::uint64_t title_id, bool docked) {
     Eden::GameSettings settings = Eden::LoadGameSettings(title_id);
     settings.console_mode = docked ? 1 : 0;
