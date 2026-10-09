@@ -16,18 +16,18 @@ binary_gate=read("tools/ci/check-all-on-test-binary.py")
 assert "test_all_on:" in workflow
 assert "test_title_id:" in workflow
 assert "test \"$GITHUB_REF\" = refs/heads/dev/ps5-sparse-jit" in workflow
-assert 'test "\${{ inputs.publish }}" != true' in workflow
+assert 'test "${{ inputs.publish }}" != true' in workflow
 assert 'bash tools/build-package.sh dev "$EDEN_TEST_TITLE_ID"' in workflow
-assert "EDEN_TEST_ALL_ON: \${{ inputs.test_all_on && '1' || '0' }}" in workflow
-assert "EDEN_STAGE_DIR: \${{ inputs.test_all_on && 'build/dev/PPSA99008' || 'build/release/PPSA99008' }}" in workflow
-assert "if: \${{ !inputs.test_all_on }}" in workflow
-assert "if: \${{ success() && !inputs.test_all_on }}" in workflow
+assert "EDEN_TEST_ALL_ON: ${{ inputs.test_all_on && '1' || '0' }}" in workflow
+assert "EDEN_STAGE_DIR: ${{ inputs.test_all_on && 'build/dev/PPSA99008' || 'build/release/PPSA99008' }}" in workflow
+assert "if: ${{ !inputs.test_all_on }}" in workflow
+assert "if: ${{ success() && !inputs.test_all_on }}" in workflow
 assert "!inputs.test_all_on &&" in workflow
 assert 'Prospero.Eden-Encore-PS5-all-on-test' in workflow
 assert 'python3 -B tools/ci/check-all-on-test-binary.py "$EDEN_STAGE_DIR" "$EDEN_TEST_TITLE_ID"' in workflow
 assert 'export EDEN_SPARSE_JIT_DEV=ON' in builder
 assert 'export EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF EDEN_SPARSE_JIT_DEV=OFF' in builder
-assert '-DEDEN_SPARSE_JIT_DEV="\${EDEN_SPARSE_JIT_DEV:-OFF}"' in native
+assert '-DEDEN_SPARSE_JIT_DEV="${EDEN_SPARSE_JIT_DEV:-OFF}"' in native
 assert 'option(EDEN_SPARSE_JIT_DEV "Allow developer-only PS5 sparse JIT cache experiments" OFF)' in cmake
 assert 'target_compile_definitions(eden-headless PRIVATE EDEN_SPARSE_JIT_DEV=1)' in cmake
 assert 'experimental_sparse_jit = true;' in source
