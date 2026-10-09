@@ -25,9 +25,19 @@ does not change this count.
 
 ## Shared offline tools
 
-- `tools/ps-glyph-atlas.py discover`: lists candidate image/texture files
-  in a local, extracted RomFS and identifies formats needing a separate
-  decoder/encoder (BNTX, BFRES, SZS, DDS).
+- `tools/ps-glyph-atlas.py discover`: ranks likely input/UI/HD button
+  atlas resources across a local extracted RomFS, and returns exact SHA-256
+  for compatible RGBA images. Discovery is ranked by button/controller/prompt
+  names **before** the top-200 cap: it no longer depends on filesystem order.
+- `tools/ps-glyph-scan.py`: finds transparent, isolated potential glyph
+  rectangles in RGBA atlases, outputs a read-only JSON report and optionally
+  an intentionally **unapproved** render-spec draft with `"button": null`.
+  The scanner does not identify the Nintendo glyph or choose a PlayStation
+  button. A person or separately qualified recognizer must fill each slot.
+- `tools/ps-glyph-bntx-inspect.py`: reads Nintendo BNTX/NX container texture
+  tables and bounded BRTI headers (texture name, width/height, format, mip
+  count, tile mode); integrated into scanner reports. **Inspection only:**
+  this does not unswizzle, decompress or repack BNTX, BFRES, SZS or DDS.
 - `tools/ps-glyph-atlas.py render`: reads **the exact user-supplied ZIP**
   locally, validates original RGBA PNG/TGA image SHA-256 and explicit,
   non-overlapping sprite rectangles; composites licensed PlayStation icons;
@@ -52,6 +62,34 @@ python tools/ps-glyph-atlas.py discover --original-romfs /local/FC27-romfs
 An entry marked `PROPRIETARY` requires a qualified texture-format-specific
 decoder/repacker before it can join this pipeline. Merely finding a BNTX
 filename does not mean the game displays a Nintendo button atlas.
+
+For the common RGBA sprite-sheet case, generate a **read-only candidate
+inventory** and a deliberately incomplete spec containing the exact
+coordinates. The title ID and version below are **illustrative**, not FC27:
+
+```sh
+python tools/ps-glyph-scan.py \
+  --original-romfs /local/game-romfs \
+  --title-id 0100000000000001 --update-version 1.0.0 \
+  --out /local/glyph-candidates.json \
+  --spec-out /local/glyph-map-UNAPPROVED.json
+```
+
+The scanner reports both `candidate_atlases` and `bntx_containers`.
+Open the candidate atlas images yourself, identify the actual Nintendo
+buttons and choose the correct PlayStation symbols. Every proposed sprite's
+`button` is `null` until that step. `render` rejects such null buttons.
+
+To inspect one BNTX texture table directly, without modifying it:
+
+```sh
+python tools/ps-glyph-bntx-inspect.py /local/game-romfs/UI/button_textures.bntx
+```
+
+Only recognized and structurally valid NX/BRTI containers are reported.
+The BNTX inventory is based on public BNTX documentation (3DSkit and
+BNTX-Injector) and is not a promise that every proprietary format, swizzle,
+compression mode or internal asset name is understood.
 
 ### 2. Declare game/update-specific graphic replacements
 
@@ -78,7 +116,9 @@ confirmed FC27 rule:
 ```
 
 A real pack **must** use a game title ID, exact game update version,
-actual file hash and measured, non-overlapping **isolated glyph rectangles**.
+actual file hash and measured, non-overlapping **isolated glyph rectangles**,
+including at least a **one-pixel fully transparent margin** around each
+sprite within its rectangle. This prevents trimming neighboring artwork.
 The generator rejects an atlas which changed after its hash was recorded.
 Only plain RGBA PNG/TGA graphics with transparency in each glyph region are
 accepted. It does **not** convert arbitrary formats, strip a texture
@@ -123,6 +163,26 @@ The installer copies a replacement atlas and `eden-glyph-pack.json`
 outside the game's `romfs` directory, plus the Zacksly attribution if
 present. The original game image remains owned by the user and is **not**
 published or uploaded.
+
+### Reuse identical UI atlases in another game/update
+
+When two titles share the **identical original atlas bytes**, copy the
+measured sprite coordinates without redrawing all rectangles:
+
+```sh
+python tools/ps-glyph-reuse.py \
+  --source-spec /local/verified-original-game-spec.json \
+  --target-romfs /local/other-game-romfs \
+  --title-id 0100000000000002 --update-version 2.0.0 \
+  --out /local/reused-UNAPPROVED.json
+```
+
+Every reused slot is unassigned by default. Only after checking the target
+title's **actual menu and gameplay semantics** may you add
+`--approve-same-semantics` to carry over its PS button labels. Reuse refuses
+changed texture hashes and ambiguous duplicate matches; it never copies
+game-owned texture bytes. Cross-title reuse is an optimization, **not**
+evidence of universal glyph compatibility.
 
 ### 4. Activate the installed packs for multiple games
 
