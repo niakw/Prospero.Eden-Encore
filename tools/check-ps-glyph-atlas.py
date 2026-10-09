@@ -189,6 +189,21 @@ with tempfile.TemporaryDirectory(prefix="eden-ps-glyph-atlas-") as work:
     assert scanner.alpha_candidates(Image.new("RGBA", (64, 64), (10, 20, 30, 255))) == []
     assert next_catalogue["revision"] == merged["revision"] + 1
 
+    # A malicious manifest must not sneak a traversal path into the native
+    # catalogue even if its replacement bytes and hashes are valid.
+    manifest_path = dest / "manifest.json"
+    untouched_manifest = manifest_path.read_bytes()
+    try:
+        for unsafe in ("../UI/prompts.png", "UI/../prompts.png",
+                       "/UI/prompts.png", "UI\\prompts.png", "UI//prompts.png"):
+            modified = json.loads(untouched_manifest)
+            modified["files"][0]["romfs_path"] = unsafe
+            manifest_path.write_text(json.dumps(modified), encoding="utf-8")
+            must_reject(lambda: catalogue.build([dest]))
+    finally:
+        manifest_path.write_bytes(untouched_manifest)
+    assert catalogue.build([dest])["titles"] == merged["titles"]
+
     # Reject tampering at every boundary, before exposing a fake compatibility.
     replacement.write_bytes(b"modified after glyph generation")
     must_reject(lambda: catalogue.build([dest]))
