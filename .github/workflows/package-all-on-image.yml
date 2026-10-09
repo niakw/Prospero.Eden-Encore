@@ -1,0 +1,59 @@
+name: Package existing PS5 All-On test image
+on:
+  push:
+    branches: [dev/ps5-sparse-jit]
+    paths: [.github/workflows/package-all-on-image.yml]
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Existing successful PS5 all-on build run ID
+        required: true
+        type: string
+        default: "37996073674"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  image:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message || '', '[package-all-on:37996073674]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install packaging dependencies (no native compile)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends python3-venv python3-pip git
+      - name: Download validated compiled PS5 app
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: Prospero.Eden-Encore-PS5-all-on-test
+          path: build/dev/PPSA99008
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.source_run_id || '37996073674' }}
+      - name: Verify native build before packaging
+        run: |
+          test -s build/dev/PPSA99008/eboot.bin
+          test -s build/dev/PPSA99008/sce_sys/param.json
+          python3 -B tools/ci/check-staged-app.py build/dev/PPSA99008
+          python3 -B tools/ci/check-all-on-test-binary.py build/dev/PPSA99008 0100C49025D3E000
+      - name: Package installable ShadowMountPlus image
+        run: |
+          mkdir -p dist
+          bash tools/ci/package-image.sh --prepare
+          bash tools/ci/package-image.sh build/dev/PPSA99008 dist/Eden-Encore-PS5-All-On.ffpfsc
+          (cd dist && sha256sum Eden-Encore-PS5-All-On.ffpfsc > SHA256SUMS && sha256sum -c SHA256SUMS)
+          ls -lh dist/Eden-Encore-PS5-All-On.ffpfsc
+      - name: Upload installable image
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Eden-Encore-PS5-All-On-FFPFSC
+          path: |
+            dist/Eden-Encore-PS5-All-On.ffpfsc
+            dist/SHA256SUMS
+          retention-days: 14
+          if-no-files-found: error
