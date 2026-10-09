@@ -167,6 +167,7 @@ jobs:
           python3 -B tools/check-vulkan-cache-atomic.py
           python3 -B tools/check-jit-dense-alias-host.py
           python3 -B tools/check-jit-sparse-host.py
+          python3 -B tools/check-ps5-sparse-jit-va-lifetime.py
           python3 -B tools/check-shader-cache-pressure.py
           python3 -B tools/check-performance-policy.py
           python3 -B tools/check-network-runtime.py
