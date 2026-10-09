@@ -1797,3 +1797,7 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — ROM storage presence scanner race closure [skip ci]
 
 - The ROM directory can unmount AFTER the worker's initial `game_storage_available()` check but before all per-game exists probes finish. Check root availability again before delivering results; if lost, discard the partially missing batch. Same asynchronous worker; no per-frame stat, no ROM deletion, no UI design change. Source check requires both guards (not executed); hardware root-loss simulation pending approval.
+
+### 2026-10-09 — Sync built-in French catalogue for native bad_alloc recovery [skip ci]
+
+- Source audit found `fr-FR.po` translated the new all-title native PS5 bad_alloc recovery message but the bundled `fr_fr_embedded.h` still held the prior catalog. Without synchronization, `tools/launcher/strings.py check` fails and installed French UI lacks this message. Regenerated exact raw-string wrapper from current fr-FR.po (same deterministic layout as strings.py embed-fr), with byte-identical embedded content. No script execution, test, build, Actions, Mac or FTP. Final all-on package still requires native CI and hardware validation.

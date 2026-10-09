@@ -1588,5 +1588,9 @@ msgstr "Impossible de charger la bibliothèque de jeux. Relancez Encore pour ré
 #: pe/ui/library.cpp
 msgid "Game library unavailable"
 msgstr "Bibliothèque de jeux indisponible"
+
+#: eden_services.cpp
+msgid "The game could not allocate PS5 memory. Close Eden Encore completely before retrying to release memory retained between games."
+msgstr "Le jeu n'a pas pu allouer de mémoire sur la PS5. Fermez complètement Eden Encore avant de réessayer pour libérer la mémoire conservée entre les jeux."
 )FRPO";
 }
