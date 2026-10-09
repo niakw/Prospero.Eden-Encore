@@ -43,7 +43,7 @@ TERMS = (
     "dualsense", "dualshock", "xbox", "ps4", "ps5", "ui", "layout",
     "buttons", "текстуры", "кнопки", "иконки", "gamepad"
 )
-PROVIDERS = ("duckduckgo", "github", "yandex")
+PROVIDERS = ("duckduckgo", "github", "yandex", "firefox_duckduckgo", "firefox_yandex")
 HTTP_TIMEOUT = 16
 
 class DiscoveryError(ValueError):
@@ -227,7 +227,8 @@ def candidates_for(title: str, query: str, results: list[tuple[str,str]],
 
 def discover(catalog: dict, state: dict, limit: int,
              provider: str = "none", network: bool = False,
-             variant: int = 0, interval: float = 2.) -> tuple[dict,dict]:
+             variant: int = 0, interval: float = 2.,
+             browser_search=None) -> tuple[dict,dict]:
     require(catalog.get("schema") == 1 and isinstance(catalog.get("games"), list) and
             0 < len(catalog["games"]) <= MAX_CATALOG, "invalid Switch1 catalog")
     games = catalog["games"]
@@ -280,13 +281,19 @@ def discover(catalog: dict, state: dict, limit: int,
         status = "query_prepared_not_executed"
         if network:
             try:
-                found = {"duckduckgo": ddg, "github": github, "yandex": yandex}[provider](query)
+                if provider.startswith("firefox_"):
+                    require(browser_search is not None,
+                            "Firefox must be explicitly initialized")
+                    found = browser_search(provider, query)
+                else:
+                    found = {"duckduckgo": ddg, "github": github,
+                             "yandex": yandex}[provider](query)
                 discovered = candidates_for(title, query, found, provider)
                 status = "searched_links_found" if discovered else "searched_no_matching_links"
             except ProviderPaused as exc:
                 errors.append({"game_title": title, "provider": provider,
                                "reason": str(exc)})
-                # Never mark the rate-limited title as fully processed.
+                # Never mark a refused search title as completed.
                 break
             except (DiscoveryError, ValueError, ET.ParseError, KeyError,
                     TypeError, json.JSONDecodeError) as exc:
@@ -343,9 +350,32 @@ def main():
         require(0 <= args.interval <= 30, "invalid polite search interval")
         catalog = read_json(args.catalog, 128*1024*1024)
         state = read_json(args.state_in) if args.state_in and args.state_in.exists() else {}
-        report, progress = discover(catalog, state, args.max_games,
-                                    args.provider, args.network,
-                                    args.query_variant, args.interval)
+        if args.network and args.provider.startswith("firefox_"):
+            import importlib.util
+            spec = importlib.util.spec_from_file_location(
+                "eden_firefox_mod_search",
+                Path(__file__).with_name("ps-glyph-firefox-search.py"))
+            require(spec is not None and spec.loader is not None,
+                    "Firefox search module absent")
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            try:
+                with module.FirefoxSearcher() as session:
+                    def run_browser(provider, query):
+                        try:
+                            return session.search(provider, query)
+                        except module.FirefoxSearchPaused as exc:
+                            raise ProviderPaused(str(exc)) from exc
+                    report, progress = discover(
+                        catalog, state, args.max_games, args.provider,
+                        args.network, args.query_variant, args.interval,
+                        browser_search=run_browser)
+            except module.FirefoxSearchPaused as exc:
+                raise DiscoveryError(str(exc)) from exc
+        else:
+            report, progress = discover(catalog, state, args.max_games,
+                                        args.provider, args.network,
+                                        args.query_variant, args.interval)
         new_file(args.report, report)
         new_file(args.state_out, progress)
         print("GLYPH MOD SEARCH:", report["games_examined"], "Switch1 titles,",
