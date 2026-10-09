@@ -31,6 +31,7 @@ def load_module(name: str, source: Path):
 atlas = load_module("eden_ps_glyph_atlas", ROOT / "tools/ps-glyph-atlas.py")
 pack = load_module("eden_ps_glyph_pack", ROOT / "tools/ps-glyph-pack.py")
 catalogue = load_module("eden_ps_glyph_catalogue", ROOT / "tools/ps-glyph-catalogue.py")
+scanner = load_module("eden_ps_glyph_scan", ROOT / "tools/ps-glyph-scan.py")
 
 
 def must_reject(fn):
@@ -89,6 +90,20 @@ with tempfile.TemporaryDirectory(prefix="eden-ps-glyph-atlas-") as work:
         spec.write_text(json.dumps(settings), "utf-8")
 
     save_settings()
+    # Offline geometry-first discovery sees the two isolated button regions.
+    # The user must *still* identify their semantics; no AI guess or
+    # fabricated Cross/Circle mapping may enter the renderer automatically.
+    proposals = scanner.scan(romfs)
+    assert proposals["candidate_atlases"]
+    proposed = proposals["candidate_atlases"][0]
+    assert proposed["original_sha256"] == sha
+    assert proposed["candidate_count"] == 2
+    assert all(slot["button"] is None for slot in proposed["slots"])
+    rects = [tuple(slot["rect"]) for slot in proposed["slots"]]
+    assert not atlas.overlaps(rects[0], rects[1])
+    assert all(x >= 0 and y >= 0 and w > 0 and h > 0 for x, y, w, h in rects)
+    # No game bytes are changed by candidate extraction.
+    assert hashlib.sha256(original.read_bytes()).hexdigest() == sha
     dest = root / "generated"
     atlas.render(spec, romfs, icons, dest)
     assert hashlib.sha256(original.read_bytes()).hexdigest() == sha
@@ -142,5 +157,5 @@ with tempfile.TemporaryDirectory(prefix="eden-ps-glyph-atlas-") as work:
     assert candidates[0]["romfs_path"] == "UI/prompts.png"
     assert candidates[0]["original_sha256"] == sha
 
-print("HOST FIXTURE PASS: shared PS icons to two atlas slots, source SHA, mod installer, rights, catalogue merge")
+print("HOST FIXTURE PASS: shared PS icons, read-only glyph candidates, source SHA, atlas conversion, catalogue merge")
 print("Universal game coverage / PS5 visual correctness: NOT CLAIMED")
