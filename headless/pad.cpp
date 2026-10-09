@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "devices.h"
-#include "encore_overrides_generated.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -31,7 +30,6 @@ constexpr unsigned kSelectHoldPolls = 60;
 // (hid_core, emulated_controller.cpp: virtual_button_params).
 constexpr int kRightSL = 20;
 constexpr int kRightSR = 21;
-inline constexpr const auto& kAutoControls = EncoreOverrides::kPlayStationAutoControls;
 
 PadEngine::PadEngine(std::string name) : InputEngine(std::move(name)) {
     // 2 means no value has been published yet, so even the first neutral
@@ -304,10 +302,8 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
     // The game button the touchpad presses (tap or hold, see kSelectTapPolls); the Create button
     // presses it too while it has no game button of its own.
     const auto set_touch = [&](u32 pressed) {
-        const ButtonMapping& active =
-            adaptive_playstation && mapping_context.gameplay() ? kSwitchMapping : mapping;
-        const int touch_button = MappedTo(active, pad_touchpad);
-        const bool create_free = MappedTo(active, pad_create) < 0;
+        const int touch_button = MappedTo(mapping, pad_touchpad);
+        const bool create_free = MappedTo(mapping, pad_create) < 0;
         if (touch_button < 0) return;
         engine->SetButtonState(player, kGame[touch_button],
             (create_free && (pressed & kButtonCreate) != 0) || slot.select_held || slot.select_pulse > 0);
@@ -321,53 +317,12 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
     for (const auto& raw : samples) {
         auto sample = is_usable(raw) ? raw : neutral_data(raw.timestamp_us);
 
-        // Shortcuts are intercepted before the guest mapping. The dedicated
-        // Touchpad+Square mapping chord is the fallback for titles whose menu
-        // scene cannot be inferred reliably from HID data.
+        // Keep the game's selected mapping fixed throughout menus,
+        // cutscenes, dialogue and gameplay. Emulated HID cannot infer the
+        // game's scene reliably, and input-dependent swaps break prompts.
         constexpr ButtonMask menu_chord = kButtonTouchPad | kButtonL1;
         constexpr ButtonMask hud_chord = kButtonTouchPad | kButtonR1;
-        constexpr ButtonMask layout_chord = kButtonTouchPad | kButtonSquare;
         const auto pressed = sample.buttons;
-        const bool layout_down = player == 0 && adaptive_playstation && is_usable(raw) &&
-            (pressed & layout_chord) == layout_chord &&
-            (pressed & (kButtonL1 | kButtonR1 | kButtonCross | kButtonCircle | kButtonTriangle)) == 0;
-        if (layout_down && (last_buttons & layout_chord) != layout_chord) {
-            const auto selected = mapping_context.manual_toggle();
-            std::fprintf(stderr, "EDEN_PAD_CONTEXT mode=%s reason=manual_chord sticky=1\n",
-                selected == Controls::PlayStationAutoContext::Transition::to_menu ?
-                    "menu" : "gameplay");
-        }
-        if (player == 0 && adaptive_playstation && is_usable(raw) && !layout_down) {
-            const auto centered = [](u8 value) {
-                return std::abs(static_cast<float>(static_cast<int>(value) - 128)) / 128.0f;
-            };
-            const float stick_peak = std::max({centered(sample.left_stick.x), centered(sample.left_stick.y),
-                                               centered(sample.right_stick.x), centered(sample.right_stick.y)});
-            const bool trigger_active =
-                sample.triggers.l2 >= kAutoControls.trigger_threshold_raw ||
-                sample.triggers.r2 >= kAutoControls.trigger_threshold_raw;
-            const bool gameplay_motion =
-                stick_peak >= kAutoControls.gameplay_stick_threshold || trigger_active;
-            const auto face = pressed & (kButtonCross | kButtonCircle |
-                                         kButtonSquare | kButtonTriangle);
-            const ButtonMask directions = kButtonUp | kButtonDown | kButtonLeft | kButtonRight;
-            const bool navigation_edge = ((pressed & directions) & ~(last_buttons & directions)) != 0;
-            const bool options_edge = (pressed & kButtonOptions) != 0 &&
-                                      (last_buttons & kButtonOptions) == 0;
-            // 75*8 successive non-gameplay samples (~2.4s at a 4 ms poll)
-            // before even considering navigation as evidence of a menu.
-            const auto transition = mapping_context.observe(
-                gameplay_motion, face != 0, navigation_edge, options_edge,
-                kAutoControls.gameplay_evidence_per_active_poll,
-                kAutoControls.gameplay_evidence_enter,
-                kAutoControls.quiet_polls_before_dpad * 8u,
-                kAutoControls.menu_evidence_enter,
-                kAutoControls.dpad_weight, kAutoControls.options_touchpad_weight);
-            if (transition != Controls::PlayStationAutoContext::Transition::none)
-                std::fprintf(stderr, "EDEN_PAD_CONTEXT mode=%s reason=%s sticky=0\n",
-                    mapping_context.gameplay() ? "gameplay" : "menu",
-                    mapping_context.gameplay() ? "sustained_activity" : "quiet_navigation");
-        }
 
         // The launcher/menu and HUD shortcuts still work from every controller.
         if ((pressed & menu_chord) == menu_chord &&
@@ -378,8 +333,6 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
             hud_toggle = true;
         if ((pressed & menu_chord) == menu_chord || (pressed & hud_chord) == hud_chord)
             sample.buttons &= ~(kButtonTouchPad | kButtonL1 | kButtonR1);
-        if (layout_down)
-            sample.buttons &= ~(kButtonTouchPad | kButtonSquare);
         // The touchpad on its own: see kSelectTapPolls.
         const bool touch = (pressed & kButtonTouchPad) != 0;
         const bool touched = (last_buttons & kButtonTouchPad) != 0;
@@ -387,7 +340,7 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
             slot.touch_chord = false;
             slot.touch_polls = 0;
         }
-        if (touch && (pressed & (kButtonL1 | kButtonR1 | (layout_down ? kButtonSquare : 0))) != 0) {
+        if (touch && (pressed & (kButtonL1 | kButtonR1)) != 0) {
             slot.touch_chord = true;
             slot.select_held = false;
         }
@@ -416,10 +369,8 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
         // The game's buttons are digital: the analog triggers count from the threshold.
         const bool left = sample.triggers.l2 / 255.0f >= trigger_threshold;
         const bool right = sample.triggers.r2 / 255.0f >= trigger_threshold;
-        const ButtonMapping& active_mapping =
-            adaptive_playstation && mapping_context.gameplay() ? kSwitchMapping : mapping;
         for (int game = 0; game < kGameButtons; ++game) {
-            const int pad = active_mapping[game];
+            const int pad = mapping[game];
             if (pad == pad_touchpad) continue;  // set_touch
             engine->SetButtonState(player, kGame[game], (sample.buttons & kPad[pad]) != 0 ||
                                                         (pad == pad_l2 && left) || (pad == pad_r2 && right));
