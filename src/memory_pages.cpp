@@ -244,6 +244,11 @@ bool ProbeSparseJitAlias() noexcept {
     void* writable = reinterpret_cast<void*>(cpu_mapping_hint);
     void* executable = reinterpret_cast<void*>(cpu_mapping_hint);
     bool rw_reserved = false, rx_reserved = false, direct_owned = false;
+    // MAP_FIXED should never return another address. If it does, retain
+    // that successful mapping's ownership until it has been unmapped, rather
+    // than releasing its physical backing with an orphaned virtual alias.
+    void* unexpected_rw = nullptr;
+    void* unexpected_rx = nullptr;
     std::int64_t physical = -1;
     bool success = false;
     do {
@@ -262,14 +267,28 @@ bool ProbeSparseJitAlias() noexcept {
         direct_owned = true;
         void* actual_rw = writable;
         void* actual_rx = executable;
-        if (sceKernelMapDirectMemory(&actual_rw, LargePage, PROT_READ | PROT_WRITE,
-                                      MAP_FIXED, physical, LargePage) != 0 ||
-            actual_rw != writable)
+        const auto rw_rc = sceKernelMapDirectMemory(&actual_rw, LargePage,
+                                                     PROT_READ | PROT_WRITE,
+                                                     MAP_FIXED, physical, LargePage);
+        if (actual_rw != writable) {
+            // A failed syscall with a mutated output has unknowable mapping
+            // ownership. Also reject aliases over our other reserved view.
+            if (rw_rc != 0 || !actual_rw || actual_rw == MAP_FAILED ||
+                actual_rw == executable) std::abort();
+            unexpected_rw = actual_rw;
             break;
-        if (sceKernelMapDirectMemory(&actual_rx, LargePage, PROT_READ,
-                                      MAP_FIXED, physical, LargePage) != 0 ||
-            actual_rx != executable ||
-            mprotect(executable, LargePage, PROT_READ | PROT_EXEC) != 0)
+        }
+        if (rw_rc != 0) break;
+        const auto rx_rc = sceKernelMapDirectMemory(&actual_rx, LargePage,
+                                                    PROT_READ, MAP_FIXED,
+                                                    physical, LargePage);
+        if (actual_rx != executable) {
+            if (rx_rc != 0 || !actual_rx || actual_rx == MAP_FAILED ||
+                actual_rx == writable) std::abort();
+            unexpected_rx = actual_rx;
+            break;
+        }
+        if (rx_rc != 0 || mprotect(executable, LargePage, PROT_READ | PROT_EXEC) != 0)
             break;
         auto* rw = static_cast<volatile std::uint8_t*>(writable);
         auto* rx = static_cast<volatile std::uint8_t*>(executable);
@@ -279,6 +298,11 @@ bool ProbeSparseJitAlias() noexcept {
         success = rx[0] == 0xa5 && rx[LargePage - 1] == 0x5a;
     } while (false);
 
+    // Release unexpected successful fixed-map aliases FIRST, then both
+    // reserved views and their direct backing. Never leave a live foreign VA
+    // referencing physical memory handed back to the kernel.
+    if (unexpected_rx && munmap(unexpected_rx, LargePage) != 0) std::abort();
+    if (unexpected_rw && munmap(unexpected_rw, LargePage) != 0) std::abort();
     // Release the disposable virtual mappings before returning their physical
     // backing to the system. A failed cleanup is not recoverable ownership.
     if (rx_reserved && executable != writable &&

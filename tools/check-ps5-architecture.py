@@ -89,6 +89,11 @@ def main() -> None:
             "Sparse JIT failure must retain the dense fallback")
     require('bool ProbeSparseJitAlias() noexcept' in native,
             "Native sparse mapping preflight is missing")
+    require('void* unexpected_rw = nullptr;' in native and
+            'void* unexpected_rx = nullptr;' in native and
+            'if (unexpected_rw && munmap(unexpected_rw, LargePage) != 0)' in native and
+            'if (unexpected_rx && munmap(unexpected_rx, LargePage) != 0)' in native,
+            "JIT preflight must release unexpected successful VA aliases before physical backing")
     require('std::atomic_thread_fence(std::memory_order_seq_cst);' in native,
             "Alias coherency check is absent")
     require('sceKernelReleaseDirectMemory(physical, LargePage)' in native,
