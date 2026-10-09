@@ -60,6 +60,14 @@ inline constexpr SessionButtonMapping ResolveSessionButtonMapping(
             title_layout >= 0 ? BaseMappingForLayout(title_layout) : global_buttons};
 }
 
+// A static PlayStation RomFS glyph atlas assumes A=Cross/B=Circle/X=Square/Y=Triangle.
+// A custom or Switch-position profile must not silently activate art bound
+// to those action labels. This check is independent of the physical pad image.
+inline constexpr bool CompatibleWithPlayStationActionGlyphs(
+    const SessionButtonMapping& session) noexcept {
+    return session.layout == 0 && session.buttons == kPlayStationMapping;
+}
+
 inline bool MappingIsCustom(const ButtonMapping& mapping, int layout) {
     return mapping != BaseMappingForLayout(layout);
 }
