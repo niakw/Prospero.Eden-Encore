@@ -1441,3 +1441,10 @@ User clarified: **Eden Encore is already a test app; enable available improvemen
 ### 2026-10-09 — Explicit PS5 test build dispatch marker
 
 This checkpoint commit deliberately contains `[full-build] [test-all-on]` without `[skip ci]` to request exactly one GitHub native dev-profile run with FC27 autoboot, JIT sparse ON, RADV, logical CPU and frame diagnostics; full preflights and staged binary assertions apply. Artifact is test-only, no publication. Do not push another commit while Actions concurrency is in progress. Run success/hardware results are **unknown** until verified.
+
+### 2026-10-09 — All-on PS5 CI run #37877104436 failed in runner setup, fixed without recompilation
+
+- Deliberate `[full-build] [test-all-on]` push commit `41fa38af74b5e25261359739da177b5f00a6e0e4` triggered Actions run **37877104436** at 2026-10-09T02:58:32Z.
+- **FAILED at `Set up job` before ANY source tests/toolchain/native compilation**: newly inserted `actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a8751fc6a0a` had **39 instead of 40 hex characters** (missing `d`). Job log explicitly: `Unable to resolve action ... unable to find version`.
+- Workflow fixed to the same pinned valid 40-hex SHA used by existing upload steps (`043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`), commit `f634c57ed25574c666615e5dd5ef5bb0331d7a11` `[skip ci]`. Verified all eight workflow `uses` refs are 40 hex. This fix alone has NOT compiled anything.
+- User-approved all-on test run remains the objective; no shipping, publish, UI edits, or PS5 claims. If retry is triggered from a new dev commit, wait for actual logs before qualification; don't touch dev branch midrun due cancel-in-progress.
