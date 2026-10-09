@@ -781,7 +781,7 @@ int main(int argc, char** argv) {
 #ifdef PS5_NATIVE
         jit_memory_known = Eden::Performance::QueryLargestDirectMemoryBlock(&jit_largest_free);
 #endif
-        const auto jit_plan = Eden::Experimental::ChooseJitMemoryPlan(
+        auto jit_plan = Eden::Experimental::ChooseJitMemoryPlan(
             safe_launch, jit_memory_known, jit_largest_free);
         bool experimental_sparse_jit = false;
         bool experimental_logical_cpu = false;
@@ -804,6 +804,27 @@ int main(int argc, char** argv) {
         if (experimental_sparse_jit && !Common::ProbeSparseJitAlias()) {
             std::puts("EDEN_JIT_SPARSE disabled: native alias preflight failed; using dense JIT");
             experimental_sparse_jit = false;
+        }
+#endif
+#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV) && defined(EDEN_DEV_PROFILE)
+        // Native evidence: four consecutive starts went from 11,824 MiB to
+        // 4,128 MiB *largest contiguous block*. The dense allocator must use
+        // CURRENT headroom. Sparse only reserves virtual address space, so
+        // preserve the greatest VERIFIED earlier headroom for virtual arena
+        // sizing; actual JIT memory still commits in 2 MiB pages on demand.
+        // This avoids shrinking from ~2.13 GiB VA to ~656 MiB VA after the
+        // first return to library. No denser physical allocation is enabled.
+        static std::size_t verified_sparse_peak_extent = 0;
+        if (experimental_sparse_jit && jit_memory_known && !safe_launch) {
+            verified_sparse_peak_extent = std::max(verified_sparse_peak_extent, jit_largest_free);
+            jit_plan = Eden::Experimental::ChooseSparseVirtualJitPlan(
+                safe_launch, jit_memory_known, jit_largest_free, verified_sparse_peak_extent);
+            std::printf("EDEN_JIT_SPARSE_VA_PLAN current_largest_mib=%zu peak_seen_mib=%zu "
+                        "a64_virtual_mib=%zu physical_policy=demand_pages\n",
+                        jit_largest_free / Eden::Experimental::kMiB,
+                        verified_sparse_peak_extent / Eden::Experimental::kMiB,
+                        (std::size_t{jit_plan.a64[0]} + jit_plan.a64[1] +
+                         jit_plan.a64[2] + jit_plan.a64[3]) / Eden::Experimental::kMiB);
         }
 #endif
         Eden::Experimental::ApplyJitMemoryPlan(jit_plan);
