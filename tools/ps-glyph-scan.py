@@ -231,22 +231,30 @@ def main() -> int:
                    help="maximum RGBA source images inspected (1-64)")
     args = p.parse_args()
     try:
-        report = scan(args.original_romfs, args.limit)
+        if args.out and args.spec_out:
+            atlas.require(args.out.resolve() != args.spec_out.resolve(),
+                          "report and render draft must use DIFFERENT file paths")
+        for target in (args.out, args.spec_out):
+            if target is None:
+                continue
+            atlas.require(not target.exists() and not target.is_symlink() and
+                          target.parent.is_dir() and not target.parent.is_symlink(),
+                          "target report/draft already exists or parent invalid")
         if args.spec_out:
             atlas.require(bool(args.title_id) and bool(args.update_version),
                           "--spec-out requires --title-id and --update-version")
-            atlas.require(not args.spec_out.exists() and not args.spec_out.is_symlink() and
-                          args.spec_out.parent.is_dir() and not args.spec_out.parent.is_symlink(),
-                          "draft output already exists or parent invalid")
-            draft = draft_spec(report, args.title_id, args.update_version, args.variant)
+        report = scan(args.original_romfs, args.limit)
+        draft = (draft_spec(report, args.title_id, args.update_version, args.variant)
+                 if args.spec_out else None)
+        # Validate BOTH outputs and the draft before creating either file:
+        # reject malformed/missing title identity without leaving a partial
+        # proposal file that might be mistaken for an approved artefact.
+        if args.spec_out:
             args.spec_out.write_text(json.dumps(draft, indent=2) + "\n",
                                      encoding="utf-8")
             print(f"UNVERIFIED DRAFT {args.spec_out}: assign each null button before render")
         result = json.dumps(report, indent=2) + "\n"
         if args.out:
-            atlas.require(not args.out.exists() and not args.out.is_symlink() and
-                          args.out.parent.is_dir() and not args.out.parent.is_symlink(),
-                          "output already exists or output parent invalid")
             args.out.write_text(result, encoding="utf-8")
             print(f"CANDIDATES {args.out}: {len(report['candidate_atlases'])} RGBA atlas sheets, "
                   f"{len(report['bntx_containers'])} BNTX inventories (ALL UNVERIFIED)")
