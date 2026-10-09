@@ -531,9 +531,16 @@ static std::atomic<unsigned long long> largest_free_block{0};
 static void RefreshFreeMemory() {
     static std::atomic<long long> checked_ns{0};
     const long long now = NowNs();
-    if (const long long last = checked_ns.load(std::memory_order_relaxed); last != 0 && now - last < 100'000'000)
+    long long last = checked_ns.load(std::memory_order_relaxed);
+    if (last != 0 && (now <= last || now - last < 100'000'000))
         return;
-    checked_ns.store(now, std::memory_order_relaxed);
+    // Two GPU/cache clients can hit this on the same refresh boundary.
+    // The old separate load/store let BOTH perform a synchronous kernel
+    // largest-free-range query, and counted two concurrent errors as two
+    // consecutive misses. Elect exactly one refresh owner every >=100ms.
+    if (!checked_ns.compare_exchange_strong(last, now, std::memory_order_acq_rel,
+                                            std::memory_order_relaxed))
+        return;
     std::int64_t start = 0;
     std::size_t largest = 0;
     const std::int64_t total = sceKernelGetDirectMemorySize();

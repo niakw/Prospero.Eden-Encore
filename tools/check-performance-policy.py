@@ -96,6 +96,8 @@ assert generator.index("if (worker_thread.joinable()) worker_thread.join();") < 
 # Zero previous observations, or two consecutive misses, stay conservative.
 perf = (root / "headless/performance.cpp").read_text()
 assert "static std::atomic<unsigned> consecutive_failures{0};" in perf
+assert "checked_ns.compare_exchange_strong(last, now, std::memory_order_acq_rel," in perf
+assert "now <= last || now - last < 100'000'000" in perf
 assert "static std::atomic<bool> has_valid_sample{false};" in perf
 assert "if (!has_valid_sample.load(std::memory_order_acquire) || failed >= 2)" in perf
 assert 'EDEN_PS5_DMEM_PROBE_FAILED consecutive=%u fallback=%s' in perf
