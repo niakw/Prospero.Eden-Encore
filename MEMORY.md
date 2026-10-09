@@ -1448,3 +1448,7 @@ This checkpoint commit deliberately contains `[full-build] [test-all-on]` withou
 - **FAILED at `Set up job` before ANY source tests/toolchain/native compilation**: newly inserted `actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a8751fc6a0a` had **39 instead of 40 hex characters** (missing `d`). Job log explicitly: `Unable to resolve action ... unable to find version`.
 - Workflow fixed to the same pinned valid 40-hex SHA used by existing upload steps (`043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`), commit `f634c57ed25574c666615e5dd5ef5bb0331d7a11` `[skip ci]`. Verified all eight workflow `uses` refs are 40 hex. This fix alone has NOT compiled anything.
 - User-approved all-on test run remains the objective; no shipping, publish, UI edits, or PS5 claims. If retry is triggered from a new dev commit, wait for actual logs before qualification; don't touch dev branch midrun due cancel-in-progress.
+
+### 2026-10-09 — Retry all-on test after runner-action SHA fix
+
+This commit deliberately triggers exactly one new `dev/ps5-sparse-jit` native workflow using `[full-build] [test-all-on]`, after verifying the pinned GitHub Action references. This is a TEST build; no release. Its native result and firmware qualification remain unknown until independently checked.
