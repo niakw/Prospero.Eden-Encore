@@ -186,15 +186,62 @@ def scan(root: Path, limit: int = MAX_SCANNED_FILES) -> dict:
     }
 
 
+def draft_spec(report: dict, title_id: str, update_version: str,
+               variant: str = "outline-white") -> dict:
+    """Prepare an intentionally INCOMPLETE renderer spec for review.
+
+    Every inferred glyph's 'button' stays null. ps-glyph-atlas.py render
+    refuses this draft until each candidate is manually/semantically
+    identified as an actual visible PlayStation button.
+    """
+    atlas.require(atlas.HEX16.fullmatch(title_id) is not None and
+                  int(title_id, 16) != 0, "invalid title ID for draft")
+    atlas.require(atlas.VERSION.fullmatch(update_version) is not None,
+                  "invalid update version for draft")
+    atlas.require(variant in atlas.VARIANTS, "invalid PlayStation icon variant")
+    atlases = []
+    for entry in report["candidate_atlases"]:
+        if len(atlases) >= atlas.MAX_ATLASES:
+            break
+        slots = entry["slots"]
+        if not slots or len(slots) > atlas.MAX_SLOTS:
+            continue
+        atlases.append({
+            "romfs_path": entry["romfs_path"],
+            "original_sha256": entry["original_sha256"],
+            "slots": [{"button": None, "rect": item["rect"]} for item in slots],
+        })
+    atlas.require(bool(atlases), "no isolated RGBA candidate slots for a draft")
+    return {
+        "schema": 1, "title_id": title_id.upper(),
+        "update_version": update_version,
+        "variant": variant, "atlases": atlases,
+    }
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--original-romfs", type=Path, required=True)
     p.add_argument("--out", type=Path, help="new JSON report; stdout if omitted")
+    p.add_argument("--spec-out", type=Path, help="new renderer draft with all buttons UNASSIGNED")
+    p.add_argument("--title-id", help="required with --spec-out")
+    p.add_argument("--update-version", help="required with --spec-out")
+    p.add_argument("--variant", default="outline-white", choices=tuple(atlas.VARIANTS))
     p.add_argument("--limit", type=int, default=MAX_SCANNED_FILES,
                    help="maximum RGBA source images inspected (1-64)")
     args = p.parse_args()
     try:
         report = scan(args.original_romfs, args.limit)
+        if args.spec_out:
+            atlas.require(bool(args.title_id) and bool(args.update_version),
+                          "--spec-out requires --title-id and --update-version")
+            atlas.require(not args.spec_out.exists() and not args.spec_out.is_symlink() and
+                          args.spec_out.parent.is_dir() and not args.spec_out.parent.is_symlink(),
+                          "draft output already exists or parent invalid")
+            draft = draft_spec(report, args.title_id, args.update_version, args.variant)
+            args.spec_out.write_text(json.dumps(draft, indent=2) + "\n",
+                                     encoding="utf-8")
+            print(f"UNVERIFIED DRAFT {args.spec_out}: assign each null button before render")
         result = json.dumps(report, indent=2) + "\n"
         if args.out:
             atlas.require(not args.out.exists() and not args.out.is_symlink() and
