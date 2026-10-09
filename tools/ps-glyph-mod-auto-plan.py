@@ -57,6 +57,7 @@ def make(report: dict, title_id: str, update: str, binding: dict | None = None) 
     require(isinstance(binding, dict) and len(binding) <= MAX_BINDINGS,
             "invalid semantic bindings")
     plans, unresolved = [], []
+    used_bindings = set()
     for item in report["matched_archives"]:
         relative = item["romfs_path"]
         underlying = item.get("positions", {})
@@ -78,6 +79,7 @@ def make(report: dict, title_id: str, update: str, binding: dict | None = None) 
                 address = f"{relative}|{image['member']}|{image['texture']}|{ordinal}"
                 approved = binding.get(address)
                 if approved is not None:
+                    used_bindings.add(address)
                     require(isinstance(approved, dict) and approved.get("reviewed") is True,
                             "semantic binding requires explicit independent review")
                     kind = approved.get("kind")
@@ -112,6 +114,8 @@ def make(report: dict, title_id: str, update: str, binding: dict | None = None) 
                 "recognized_from_exact_mod_original_pixel_diff": True,
             })
             require(len(plans) <= MAX_OPERATIONS, "too many candidate sprite operations")
+    require(used_bindings == set(binding),
+            "semantic binding did not match an exact measured mod sprite slot")
     return {
         "schema": 1,
         "title_id": title_id.upper(), "update_version": update,
@@ -127,6 +131,39 @@ def make(report: dict, title_id: str, update: str, binding: dict | None = None) 
     }
 
 
+def reviewed_manifest(data: dict, index: int) -> dict:
+    """Strip review metadata and emit a strict auto-pack manifest for one
+    EXACT original-asset-referenced archive/member/texture entry.
+    This does not install or publish a game-owned resource.
+    """
+    require(isinstance(data, dict) and isinstance(data.get("plans"), list) and
+            type(index) is int and 0 <= index < len(data["plans"]),
+            "source candidate index missing")
+    proposal = data["plans"][index]
+    require(proposal.get("ready_for_assembler_after_review") is True,
+            "unknown scene or controller semantics cannot be auto-applied")
+    draft = proposal.get("manifest")
+    require(isinstance(draft, dict) and
+            isinstance(draft.get("slots"), list) and draft["slots"],
+            "invalid ready plan")
+    values = []
+    for item in draft["slots"]:
+        require(item.get("reviewed") is True and
+                item.get("source") == "explicit_scene_review",
+                "all symbol assignments require explicit scene review")
+        kind = item["kind"]
+        require(kind in ("guest_action", "controller_position"), "invalid slot kind")
+        tag = "guest_button" if kind == "guest_action" else "face"
+        values.append({"kind": kind, tag: item[tag], "rect": item["rect"]})
+    emitted = {key: val for key, val in draft.items() if key != "slots"}
+    emitted["slots"] = values
+    required = {"schema", "title_id", "update_version", "profile",
+                "original_archive_sha256", "original_member_sha256",
+                "member", "texture", "scene", "variant", "slots"}
+    require(set(emitted) == required, "game runtime manifest missing original resource proof")
+    return emitted
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--zip-positions", type=Path, required=True)
@@ -134,6 +171,10 @@ def main() -> int:
     p.add_argument("--update-version", required=True)
     p.add_argument("--bindings", type=Path,
                    help="optional exact slot keys and independently reviewed labels")
+    p.add_argument("--emit-approved-index", type=int,
+                   help="emit approved strict auto-pack manifest for candidate at index")
+    p.add_argument("--approved-out", type=Path,
+                   help="new output file for approved per-texture manifest")
     p.add_argument("--out", type=Path, required=True)
     a = p.parse_args()
     try:
@@ -149,7 +190,21 @@ def main() -> int:
         binds = (json.loads(a.bindings.read_text("utf-8"))
                  if a.bindings is not None else None)
         data = make(original, a.title_id, a.update_version, binds)
+        if a.emit_approved_index is not None:
+            require(a.approved_out is not None and
+                    a.approved_out != a.out and
+                    not a.approved_out.exists() and
+                    not a.approved_out.is_symlink() and
+                    a.approved_out.parent.is_dir() and
+                    not a.approved_out.parent.is_symlink(),
+                    "approved manifest must be a distinct new output")
+            validated = reviewed_manifest(data, a.emit_approved_index)
+        else:
+            require(a.approved_out is None, "approved output requires plan index")
+            validated = None
         a.out.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+        if validated is not None:
+            a.approved_out.write_text(json.dumps(validated, indent=2) + "\n")
         print("MOD-DERIVED GLYPH DRAFTS:", len(data["plans"]),
               "candidate textures;", data["approved_operation_count"],
               "independently reviewed")
