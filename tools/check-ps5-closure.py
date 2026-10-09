@@ -16,11 +16,42 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 DEFAULT=ROOT/"docs/PS5_CLOSURE_MATRIX.json"
 EXPECTED={
-    "fc27_and_launcher_frametime":6,
-    "sparse_JIT_dynarmic_a64_a32":5,
-    "gpu_vulkan_and_compatibility":5,
-    "playstation_glyphs_inside_games":6,
-    "release_integrity_and_ux":4,
+    "fc27_and_launcher_frametime":(
+        "fc27_boots_two_sessions_fw1360",
+        "fc27_first_warm_same_match_frame_time_traces",
+        "fc27_no_late_oom_or_bad_alloc_under_memory_pressure",
+        "fc27_stalls_shaders_cache_measured_before_after",
+        "launcher_held_navigation_no_122_175ms_decode_hitches",
+        "playstation_auto_popup_and_true_menu_scene_behaviour",
+    ),
+    "sparse_JIT_dynarmic_a64_a32":(
+        "native_sdk_build_link_sparse_enabled_for_dev_experiment",
+        "fw1360_executable_rw_rx_alias_4m_bootstrap_and_increment",
+        "fw1360_sparse_rollback_unmap_and_memory_pressure",
+        "fw1360_a64_a32_4core_real_game_execution_and_cache_flush",
+        "sparse_off_fallback_and_no_regression_on_second_game",
+    ),
+    "gpu_vulkan_and_compatibility":(
+        "native_sdk_prmt_imm_reg_compiles_and_executes",
+        "prmt_pixel_correct_golden_shader_capture",
+        "fermi_z0_pitch_multilayer_golden_copy_capture",
+        "unsupported_prmt_fermi_semantics_not_silently_masked",
+        "no_gpu_sync_queue_regression_multi_game",
+    ),
+    "playstation_glyphs_inside_games":(
+        "legitimate_original_mod_pack_binary_source_verified",
+        "title_update_romfs_sha_and_layout_qualified",
+        "format_safe_BNTX_Unity_CPK_or_other_repack_roundtrip",
+        "playstation_ps5_game_art_in_match_menu_hud_fc27",
+        "playstation_ps5_game_art_second_game_coverage",
+        "signed_versioned_opt_in_pack_delivery_and_fallback",
+    ),
+    "release_integrity_and_ux":(
+        "complete_early_source_and_native_build_after_final_diff",
+        "fw1360_reinstall_launch_exit_relaunch",
+        "approved_purple_launcher_visual_review",
+        "release_shipping_branch_and_rights_review",
+    ),
 }
 TITLE_ISSUES={"playstation_glyphs_inside_games":7}
 REFERENCE=re.compile(r"(?:https://github\.com/niakw/Prospero\.Eden-Encore/(?:issues|actions|commit|blob)/\S+|sha256:[0-9a-f]{64})\Z")
@@ -51,7 +82,7 @@ def audit(data: dict) -> dict:
         if group.get("issue") != TITLE_ISSUES.get(gid,8):
             raise ValueError("issue is improperly detached from required workstream")
         checks=group.get("acceptance")
-        if not isinstance(checks,list) or len(checks)!=EXPECTED[gid]:
+        if not isinstance(checks,list) or len(checks)!=len(EXPECTED[gid]):
             raise ValueError("missing or extra acceptance evidence")
         ids=set()
         for check in checks:
@@ -74,6 +105,8 @@ def audit(data: dict) -> dict:
                 if evidence is not None:
                     raise ValueError("failed/untested acceptance must have no passing evidence")
                 blocked.append(key)
+        if ids != set(EXPECTED[gid]):
+            raise ValueError("required acceptance IDs changed or an essential test removed")
         if group.get("status") not in ("blocked","ready_for_review"):
             raise ValueError("invalid workstream status")
         if any(not c["passed"] for c in checks) and group["status"]!="blocked":
