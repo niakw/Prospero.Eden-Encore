@@ -12,6 +12,14 @@ cmake = (ROOT / "headless/gpu_native_observability.cmake").read_text()
 launcher = (ROOT / "headless/CMakeLists.txt").read_text()
 assert 'include("${CMAKE_CURRENT_LIST_DIR}/gpu_native_observability.cmake")' in launcher
 assert cmake.count('if(NOT PS5_NATIVE)') == 1
+# FC27 hardware regression: unqualified 3D/pitch software blits can skip
+# texture writes and stall the GPU frame. They must not be compiled by default.
+assert 'option(EDEN_UNQUALIFIED_FERMI2D_COPY "3D software blit experiments" OFF)' in cmake
+assert cmake.count('if(EDEN_UNQUALIFIED_FERMI2D_COPY)') == 2
+assert 'if(EDEN_UNQUALIFIED_FERMI2D_COPY)\nset(fermi_old' in cmake
+assert 'if(EDEN_UNQUALIFIED_FERMI2D_COPY)\nset(fermi_copy_old' in cmake
+assert 'string(REPLACE "${fermi_layer_old}" "${fermi_layer_new}" fermi_source "${fermi_source}")\nendif()' in cmake
+assert 'string(REPLACE "${fermi_copy_old}" "${fermi_copy_new}" fermi_source "${fermi_source}")\nendif()' in cmake
 def extract(name: str):
     m = re.search(r"set\(" + name + r" \[=\[(.*?)\]=\]\)", cmake, re.S)
     assert m, name
@@ -250,5 +258,5 @@ for output in ("maxwell_prmt_observed.cpp", "sw_blitter_sized.cpp", "fermi_2d_ob
     assert 'write_derived("${PORT_BUILD_DIR}/' + output + '"' in cmake
 assert 'target_sources(shader_recompiler PRIVATE' in cmake
 assert 'target_sources(video_core PRIVATE' in cmake
-print("GPU SOURCE CONTRACT: PRMT immediate/register Index implemented, Fermi2D z=0 plus pitch-linear layers; unsupported cases preserved")
+print("GPU SOURCE CONTRACT: PRMT immediate/register Index implemented; original Fermi2D transfer path restored by default; extended software copies unqualified and gated")
 print("NOTE graphics correctness and PS5 native CMake build remain to be qualified")
