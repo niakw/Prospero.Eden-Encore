@@ -126,7 +126,8 @@ inline Xbyak::Allocator* EdenJitAllocator() {
 #endif
                 try {
                     std::lock_guard lock(mutex);
-                    mappings.emplace(pointer, Mapping{writable, mapped_span});
+                    if (!mappings.emplace(pointer, Mapping{writable, mapped_span}).second)
+                        std::abort(); // never alias two live code arenas at one RX VA
                     std::fprintf(diagnostics,
                                  "EDEN_JIT_ALIAS rx=%p rw=%p bytes=%zu active=1\n",
                                  static_cast<void*>(pointer), writable, mapped_span);
