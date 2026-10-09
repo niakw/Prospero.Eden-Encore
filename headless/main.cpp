@@ -646,9 +646,7 @@ int main(int argc, char** argv) {
         std::string launch_error;
         // The previous run crashed: the launcher says where its report is.
         if (!last_crash.report.empty()) launch_error = std::string{Eden::Crash::kNotice} + last_crash.report;
-        // A game that faulted early in its boot is restarted (at most four times per launch).
-        std::string relaunch_game;
-        unsigned guest_fault_retries = 0;
+        // Guest faults are never silently retried: preserve the failure and return to the launcher.
 #ifdef EDEN_DEV_VULKAN
         std::string recovery_mode;
         std::ifstream(Eden::AppFile("backend-recovery.txt")) >> recovery_mode;
@@ -718,10 +716,6 @@ int main(int argc, char** argv) {
         }
         const bool automatic_launch = autoboot_pending;
 #endif
-        if (!relaunch_game.empty()) {
-            selected_game = std::exchange(relaunch_game, {});
-        } else {
-        guest_fault_retries = 0;
 #if defined(EDEN_DEV_PROFILE) || defined(EDEN_DEV_ROM_ID)
         if (std::exchange(autoboot_pending, false)) {
         // Match the title ID in the file name, else in the ROM's own metadata; the game files
@@ -754,7 +748,6 @@ int main(int argc, char** argv) {
         selected_game = SelectProsperoEdenGame(launch_error);
         Eden::BootTrace::Line("launcher closed: %s", selected_game.empty() ? "quit" : "game selected");
 #endif
-        }
         if (selected_game.empty()) {
             Eden::Report("exit", "Launcher closed");
 #ifdef EDEN_DEV_ROM_ID
@@ -2125,28 +2118,13 @@ int main(int argc, char** argv) {
                             ". Try another graphics backend in Settings, then reopen the game.");
                     }
                 }
-                // A voluntary PS / touchpad+L1 return may race a guest-fault
-                // report during shutdown. The user's return-to-library wins:
-                // never re-autoboot that game after an explicit quit.
+                // Never retry a guest fault automatically. Retrying an unmapped guest
+                // jump repeatedly masks the first failure and can leave players in a
+                // renderer/JIT restart loop. An explicit PS quit still wins the race.
                 if (!completion->guest_fault.empty() && !return_to_menu) {
-#ifdef PS5_NATIVE
-                    // A game can run its save-load completion before its own callback exists
-                    // (a boot race between two guest threads); a fresh boot normally passes. Retry early faults, report others.
-                    // Four retries: two faults in a row were seen with slower GPU synchronization
-                    // (RADV_DEBUG=syncshaders), so the per-boot rate can exceed the usual ~1 in 5.
-                    if (game && session_seconds < 60 && guest_fault_retries < 4) {
-                        ++guest_fault_retries;
-                        relaunch_game = selected_game;
-                        return_to_menu = true;
-                        LOG_WARNING(Frontend, "EDEN_GUEST_FAULT_RETRY {} after {:.1f} s: {}", guest_fault_retries,
-                                    session_seconds, completion->guest_fault);
-                        Eden::Report("guest fault", ("Restarting the game: " + completion->guest_fault).c_str());
-                    } else
-#endif
-                    {
-                        throw std::runtime_error("The game stopped: " + completion->guest_fault +
-                            ". Reopen it from the launcher.");
-                    }
+                    Eden::Report("guest fault", completion->guest_fault.c_str());
+                    throw std::runtime_error("The game stopped: " + completion->guest_fault +
+                        ". Reopen it from the launcher.");
                 }
 #ifdef EDEN_PS5_OPENGL
                 if (graphics_error) std::rethrow_exception(graphics_error);
