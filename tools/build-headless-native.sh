@@ -130,6 +130,10 @@ python3 -B "$root/headless/check_slab_lifetime.py" \
     "$scratch/native-local/headless/include/core/hle/kernel/slab_helpers.h" \
     "$scratch/source/src/core/hle/kernel/slab_helpers.h"
 
+# All authored Python generators must parse before expensive native translation.
+# This does not run tests or execute any generator side effects.
+python3 -B "$root/tools/check-python-source-syntax.py"
+
 # Native PS5 syntax gate: both all-on dev and release compile the same launcher
 # and shader translation units. Dev skips release-only source contracts, NOT this
 # compiler check. The explicit prebuild bypass still disables it.
