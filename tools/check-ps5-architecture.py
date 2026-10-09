@@ -59,6 +59,9 @@ def main() -> None:
     require('regions < 8192' in perf, "Direct memory traversal is not bounded")
     require('EDEN_HEAP_PIECE bytes=%zu va=%p pa=%llx alloc_ns=%llu map_ns=%llu zero_ns=%llu' in native,
             "Native heap-piece commit must report OS alloc, map and zeroing costs")
+    require('const auto map_rc = sceKernelMapDirectMemory(&at, size,' in native and
+            'if (map_rc == 0 && at != address && at && at != MAP_FAILED &&' in native,
+            "Native heap mapping mismatch must unmap unexpected owned VA before physical release")
     require('clock_gettime(CLOCK_MONOTONIC' in native and 'std::memset(address, 0, size);' in native,
             "Native heap timing must preserve mandatory zeroed memory")
 
