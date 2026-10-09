@@ -192,3 +192,17 @@ The `512×512` dimensions above are a **synthetic example** and must first be me
 [Provenance-locked selector evidence](PS_GLYPH_BALATRO_RUNTIME_SELECTOR.json) stores exact hook name, public source blob SHA, expected behavior and negative qualification flags. No Lua changes or binary patches were made to the user's original game.
 
 Both games show why universal replacements must support **texture atlases, screen-layout components, per-platform asset selection, and context-sensitive runtime logic**, with separate evidence for every game version and original file.
+
+### Reproducible static Lua UI source scan (without executing mod scripts)
+
+For another Klei/Lua game or a Balatro-style button mode selector, the new read-only `tools/ps-glyph-lua-source-inspect.py` can enumerate literal `Asset("ATLAS", ...)`, `Asset("IMAGE", ...)` paths, nearby `IsPS4` / `IsSWITCH` / `PLATFORM_LAYOUT` conditions, specific controller-help rows with numeric anchor coordinates, and names of glyph selection functions.
+
+```bash
+python3 tools/ps-glyph-lua-source-inspect.py \
+  --lua-file /path/to/legitimately-obtained/optionsscreen.lua \
+  --out /tmp/dst-ui-source-evidence.json
+```
+
+This is a **heuristic static source reader** rather than a Lua interpreter. It does not resolve computed asset names, execute Lua, know which code is selected at runtime, decode `.tex`, or infer renderer pixel positions. It is designed to prepare reproducible leads for scene-by-scene verification, not to bypass game copyright or place replacement graphics directly.
+
+For DST, the distinct [source-extracted label positions](PS_GLYPH_DST_CONTROL_UI_POSITIONS.json) remain the best-documented current UI positions: 17 PS and 17 NX labels, with explicit per-device parent position and scale from source. The Klei XML parser provides a separate **sprite UV** layer once real `.xml`/`.tex` can be inspected. Companion synthetic fixture `tools/check-ps-glyph-lua-source-inspect.py` has not been run.
