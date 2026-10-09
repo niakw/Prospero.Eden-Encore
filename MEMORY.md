@@ -1484,3 +1484,10 @@ Explicit source-only compile+stage reattempt requested through `[full-build] [te
 ### 2026-10-09 — Fifth native all-on test attempt
 
 Trigger `[full-build] [test-all-on]` on dev after correcting the obsolete storage contract. The CI test remains isolated from shipping and publication; verify real result before claiming success.
+
+### 2026-10-09 — All-on run #37877876185 failure diagnosed and source gate fixed
+
+- Run [#37877876185](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/37877876185), source commit 6bbeea53ecf7, FAILED on **Validate startup, elevation and storage contracts**, in tools/check-ps5-architecture.py line 37, assertion `Wrong memory snapshot stages`. Prior stages incl. translation, storage migration, launch UX, graphic branding, perf policy, and all-on contract PASSED. No native SDK build yet.
+- Actual app source `headless/main.cpp` reports direct memory ONLY on `core_initialized`, `core_shutdown`, `core_destroyed`, and JIT ownership on `game_loaded`, `nro_loaded`, `cpu_manager_ready`, `core_shutdown`. Old checker incorrectly required ALL six combined `std::string_view{name}` test expressions to equal only three.
+- Fixed checker to extract + verify direct and JIT lifecycle hooks independently, and recognize the actual conditional `passed(game ? "game_loaded" : "nro_loaded")` stages. Source commit `f8487286a22fab31fddbae3af1d0ccbd8a5dc5ed` [skip ci]. GitHub source readback independently confirmed exact stage sets, their call sites and both guest paths. Additional JS literal-assert scan across nine live contract inputs found zero obvious stale `in`/ `not in` expressions; NOT equivalent to executing all host regressions.
+- No release/ship branch changes, user-approved purple UI unchanged, sparse JIT/FC27/GPU/actual PS button art still not firmware-qualified. The first failing run is red for a stale *host source assertion*, not native code compilation.
