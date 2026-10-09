@@ -16,6 +16,8 @@ on:
       - tools/ps-glyph-scan.py
       - tools/ps-glyph-botw-yaz0.py
       - tools/check-ps-glyph-botw-yaz0.py
+      - tools/ps-glyph-bntx-rgba.py
+      - tools/check-ps-glyph-bntx-rgba.py
       - tools/ps-glyph-botw-archive-diff.py
       - tools/check-ps-glyph-botw-archive-diff.py
       - tools/ps-glyph-sarc-inspect.py
@@ -57,6 +59,7 @@ jobs:
         run: |
           python3 -B tools/check-ps-glyph-botw-yaz0.py
           python3 -B tools/check-ps-glyph-botw-archive-diff.py
+          python3 -B tools/check-ps-glyph-bntx-rgba.py
           python3 -B tools/check-ps-glyph-sarc-inspect.py
       - name: Verify action glyphs match physical-to-guest HID mappings
         run: |
