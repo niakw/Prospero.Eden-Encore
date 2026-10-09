@@ -1027,6 +1027,14 @@ int main(int argc, char** argv) {
         Settings::values.dma_accuracy.SetValue(Settings::DmaAccuracy::Default);
         Settings::values.use_reactive_flushing.SetValue(true);
         Settings::values.skip_cpu_inner_invalidation.SetValue(false);
+#if defined(PS5_NATIVE) && defined(EDEN_DEV_PROFILE)
+        // Field evidence: FC27 had ~460k guest GPU-cache lock contentions
+        // across 13 minutes. All-on only: retry for ~32 PAUSE instructions
+        // before falling back to the same blocking mutex.lock() as upstream.
+        // Never remove the lock or busy-spin indefinitely. Shipping stays 0.
+        constexpr unsigned kTestCacheLockSpins = 8;
+        Eden::Performance::cache_lock_spins.store(kTestCacheLockSpins, std::memory_order_relaxed);
+#endif
 #ifdef PS5_NATIVE
         // Host HTTPS (launcher Nlib/catalog) remains available, but emulated
         // Switch games are offline-only. The pinned HLE backport separately
