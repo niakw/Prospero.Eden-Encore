@@ -75,11 +75,52 @@ with tempfile.TemporaryDirectory(prefix="eden-cross-platform-glyph-") as temp:
     assert report["original_texture_comparison"] == "dimensions_differ"
     assert report["switch_candidate_rects_xywh"] is None
 
+    # SAME game, different art AND resolution: source changed icon position
+    # should still match a separately isolated Switch alpha sprite at its
+    # normalized coordinates. Unlike exact pixels, this is ONLY a layout
+    # candidate and cannot be used as an installed RomFS rectangle.
+    other = Image.new("RGBA", (80, 64), (0, 0, 0, 0))
+    ImageDraw.Draw(other).rectangle((20, 15, 39, 34), fill=(255, 0, 0, 255))
+    altered = other.copy()
+    ImageDraw.Draw(altered).rectangle((22, 17, 37, 32), fill=(5, 199, 210, 255))
+    nx = Image.new("RGBA", (160, 128), (0, 0, 0, 0))
+    ImageDraw.Draw(nx).ellipse((40, 30, 79, 69), fill=(20, 240, 30, 255))
+    pc.write_bytes(png(other))
+    pc_mod.write_bytes(png(altered))
+    switch.write_bytes(png(nx))
+    report = test.propose(pc, pc_mod, switch, "Synthetic Game", "Wii U", "gameplay")
+    assert report["original_texture_comparison"] == "dimensions_differ"
+    assert report["switch_candidate_rects_xywh"] is None
+    layout = report["source_ui_layout_position_candidates"]
+    assert len(layout) == 1, layout
+    assert layout[0]["evidence"] == "same_game_layout_prior_only"
+    assert layout[0]["symbol_identity_verified"] is False
+    assert layout[0]["verified_switch_sprite_for_installation"] is False
+    assert report["source_ui_layout_position_is_atlas_write_proof"] is False
+    assert layout[0]["switch_alpha_sprite_candidate_xywh"] == [38, 28, 44, 44]
+
+    # The same scene with a moved Nintendo icon must NOT be auto-linked
+    # just because some texture changed on another platform.
+    moved = Image.new("RGBA", (160, 128), (0, 0, 0, 0))
+    ImageDraw.Draw(moved).ellipse((105, 80, 144, 119), fill=(20, 240, 30, 255))
+    switch.write_bytes(png(moved))
+    assert test.propose(pc, pc_mod, switch, "Synthetic Game", "Wii U", "gameplay")[
+        "source_ui_layout_position_candidates"] == []
+
+    # Multiple nearby alpha sprites are ambiguous and must not be guessed.
+    ambiguous = Image.new("RGBA", (160, 128), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(ambiguous)
+    draw.rectangle((34, 30, 52, 50), fill=(225, 0, 0, 255))
+    draw.rectangle((60, 30, 78, 50), fill=(0, 225, 0, 255))
+    switch.write_bytes(png(ambiguous))
+    assert test.propose(pc, pc_mod, switch, "Synthetic Game", "Wii U", "gameplay")[
+        "source_ui_layout_position_candidates"] == []
+
     pc_mod.write_bytes(png(original))
     switch.write_bytes(png(original))
     report = test.propose(pc, pc_mod, switch, "Synthetic Test", "PC", "menu")
     assert report["source_mod_pixel_differences"]["status"] == "pixel_identical"
     assert report["switch_candidate_rects_xywh"] is None
 
-print("HOST FIXTURE PASS: exact rendered image match, transparent RGB tolerance, no guesses on mismatches")
+print("HOST FIXTURE PASS: exact art and layout-prior matching across different console resolutions")
 print("Real game assets, cross-port correctness and PS5 firmware NOT tested")
