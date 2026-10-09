@@ -63,7 +63,6 @@ struct Game
     std::vector<std::string> screenshots; // up to three cached Nlib gameplay screenshots
     int max_players = 0; // Nlib maximum local players; 0 when unknown/offline
     bool artwork_changed = false; // async refresh replaced one or more files
-    bool docked = true; // effective mode precomputed on library worker; no settings I/O on D-pad
     std::string intro;
     std::string description;
     std::string publisher;
@@ -81,6 +80,7 @@ struct Game
     int mods = 0;
     int mods_on = 0;
     bool mods_enabled = true;
+    bool docked = true; // effective mode precomputed on library worker; no settings I/O on D-pad
     // Nlib artwork is complete per title (icon, banner, all advertised screens).
     // No title-specific source or performance override is attached to Game.
 };
