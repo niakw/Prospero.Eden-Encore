@@ -1501,3 +1501,7 @@ This commit triggers one isolated PS5 all-on native test pipeline using `[full-b
 - [Run #37878158308](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/37878158308) FAILED at the same "Validate startup, elevation and storage contracts" CI stage, but **printed `PASS PS5_NATIVE_ARCHITECTURE_CONTRACTS` before failure**. Actual failure: `NameError: name 'memory_stages' is not defined` in final print line of `tools/check-ps5-architecture.py`. The preceding source gate was refactored into `direct_stages` and `jit_stages`, but its informational `print` still used deleted `memory_stages`.
 - Updated both summary lines to independently print defined `direct_stages` / `jit_stages` in commit `0a5919a25088cd363c3a46a03287cd316df17f25` [skip ci]. Source readback confirms `memory_stages` no longer appears; prior CI run proved all substantive assertions pass. No native SDK compile occurred in red run.
 - Protected release branch unchanged; approved purple launcher UI unchanged, no real game art packs have been validated. GitHub runs are tests only; 26 hardware criteria still pending.
+
+### 2026-10-09 — Isolated all-on native test reattempt after source-gate NameError fix
+
+This commit deliberately requests one `dev/ps5-sparse-jit` all-on PS5 build `[full-build] [test-all-on]`, with release publishing prohibited and source-based tests first. Actual result is not known at trigger time.
