@@ -177,6 +177,7 @@ jobs:
           python3 -B tools/check-ps5-direct-limit-host.py
           python3 -B tools/check-shader-cache-pressure.py
           python3 -B tools/check-performance-policy.py
+          python3 -B tools/check-ps5-pc-ring-host.py
           python3 -B tools/check-hle-counter-contention.py
           python3 -B tools/check-network-runtime.py
           python3 -B tools/check-guest-network-isolation.py
