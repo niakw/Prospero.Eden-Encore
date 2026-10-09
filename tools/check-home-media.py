@@ -17,7 +17,11 @@ assert 'for (std::size_t offset = 0; offset < games_.size(); ++offset)' in lib
 assert 'start_selected_media();' in lib[lib.index('void Launcher::apply_games'):lib.index('void Launcher::name_home_games')]
 assert 'artwork_files.resize(6)' not in svc
 assert 'Only Home/recent titles' not in svc
-assert 'services_.enrich_game_media(std::move(request))' in lib
+# Both Nlib workers must propagate the session cancellation token. An old
+# single-argument check rejected the correct cancellation-aware code.
+assert 'services_.enrich_game_media(std::move(request), &media_cancel_)' in lib
+assert 'services_.enrich_game_media(std::move(copy), &media_cancel_)' in lib
+assert 'if (media_cancel_.load(std::memory_order_acquire)' in lib
 assert 'home_.last_hero = enriched.hero' in lib
 assert 'home_.last_max_players = enriched.max_players' in lib
 assert 'recent.max_players = enriched.max_players' in lib
