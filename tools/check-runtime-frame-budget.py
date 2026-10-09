@@ -150,6 +150,16 @@ assert "const std::lock_guard lock(workers_mutex);" in pc_poll
 assert pc_poll.index("const std::lock_guard lock(workers_mutex);") < pc_poll.index(
     "if (gpu_ready && pthread_kill(gpu_target, SIGUSR2))")
 assert "pthread_kill(workers[4].thread, SIGUSR2)" not in pc_source
+assert "struct WorkerRegistration {" in pc_source
+assert "thread_local WorkerRegistration owned_worker;" in pc_source
+assert "if (entry.registered && pthread_equal(entry.thread, owner))" in pc_source
+assert "entry.registered = false;" in pc_source
+assert "owned_worker.owner = worker.thread;" in pc_source
+assert "owned_worker.index = i;" in pc_source
+assert pc_source.index("owned_worker.owner = worker.thread;") < pc_source.index(
+    "pc_core_registration.active = true;")
+assert pc_source.index("pc_core_registration.active = true;") < pc_source.index(
+    "static thread_local std::jthread fast_sampler;")
 
 
 # Native GPU Snapshot() may process thousands of development PC samples.

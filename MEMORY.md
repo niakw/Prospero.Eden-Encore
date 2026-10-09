@@ -2032,3 +2032,9 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — Fix hotpath static assertion extraction around conditional #endif [skip ci]
 
 - Corrected the new `PollGpuPc()` source guard: splitting on the two nearby `#endif` tokens discarded the very function body being tested and could falsely fail a later preflight. Now extract from the function signature to the next exported heap declaration, retaining both conditional branches for lock-release assertions. No functional C++ source change and no build/CI run.
+
+### 2026-10-09 — Clear stale GPU/CPU thread registrations at owner exit [skip ci]
+
+- An in-process return to Library followed by another title destroys/recreates native GPU and guest CPU workers. Previous `RegisterWorker()` wrote `workers[i].registered=true` but never cleared it on thread exit; `PollGpuPc()` could target an exited/recycled GPU `pthread_t`, and periodic worker snapshots could report stale CPU clocks/affinity as current.
+- Added a tiny `thread_local WorkerRegistration` owner hook that locks `workers_mutex` only **on thread exit**, verifies the recorded `pthread_t` still matches the slot and marks the slot unregistered. TLS hook is touched before the PC sampler objects so C++ reverse destruction joins the fast `std::jthread` first, then clears core readiness, then unregisters the worker. No new GPU/guest hotpath lock and no false claim that a kill begun before teardown can be canceled retroactively.
+- Existing `PollGpuPc()` now copies the registered GPU target under the mutex and sends only after unlock. Source contract checks identity, registration and construction order. No native execution, thread lifecycle test or GitHub Actions triggered.
