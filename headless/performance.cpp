@@ -734,15 +734,53 @@ void ReportGpuThread(unsigned frame) {
                     table_span, eden_heap_tcache_held ? eden_heap_tcache_held() : std::size_t{0});
     }
 #ifdef EDEN_DEV_PROFILE
-    // Immutable service names, atomic cumulative counters and no snapshot
-    // lock: a dev sample must not stall concurrent guest HLE dispatch.
-    hle_calls.ForEach([](const char* name, unsigned command, std::uint64_t calls,
-                         std::uint64_t ns) {
-        if (ns >= 1'000'000)
-            std::printf("EDEN_DEV_HLE service=%s cmd=%u calls=%llu ns=%llu\n",
-                        name, command, static_cast<unsigned long long>(calls),
-                        static_cast<unsigned long long>(ns));
+    // A game can use thousands of distinct service/command pairs.
+    // Printing one line per pair ON THE GPU THREAD every five seconds
+    // creates another avoidable frame hitch even without an HLE mutex.
+    // Scan the atomic counters without locks or allocations, but report
+    // only the 32 heaviest cumulative service commands plus totals.
+    struct HleReportRow {
+        const char* name{};
+        unsigned command{};
+        std::uint64_t calls{};
+        std::uint64_t ns{};
+    };
+    std::array<HleReportRow, 32> heaviest{};
+    std::size_t heavy_count = 0;
+    std::size_t active_keys = 0;
+    std::uint64_t total_hle_calls = 0, total_hle_ns = 0;
+    hle_calls.ForEach([&](const char* name, unsigned command, std::uint64_t calls,
+                          std::uint64_t ns) {
+        ++active_keys;
+        total_hle_calls += calls;
+        total_hle_ns += ns;
+        if (ns < 1'000'000) return;
+        const HleReportRow candidate{name, command, calls, ns};
+        if (heavy_count < heaviest.size()) {
+            heaviest[heavy_count++] = candidate;
+            return;
+        }
+        std::size_t least = 0;
+        for (std::size_t i = 1; i < heaviest.size(); ++i)
+            if (heaviest[i].ns < heaviest[least].ns) least = i;
+        if (candidate.ns > heaviest[least].ns)
+            heaviest[least] = candidate;
     });
+    std::sort(heaviest.begin(), heaviest.begin() + heavy_count,
+              [](const HleReportRow& a, const HleReportRow& b) {
+                  return a.ns > b.ns;
+              });
+    for (std::size_t i = 0; i < heavy_count; ++i) {
+        const auto& row = heaviest[i];
+        std::printf("EDEN_DEV_HLE service=%s cmd=%u calls=%llu ns=%llu\n",
+                    row.name, row.command,
+                    static_cast<unsigned long long>(row.calls),
+                    static_cast<unsigned long long>(row.ns));
+    }
+    std::printf("EDEN_DEV_HLE_SUMMARY keys=%zu reported=%zu calls=%llu ns=%llu\n",
+                active_keys, heavy_count,
+                static_cast<unsigned long long>(total_hle_calls),
+                static_cast<unsigned long long>(total_hle_ns));
     if (const auto overflow = hle_calls.OverflowCalls(); overflow)
         std::printf("EDEN_DEV_HLE_OVERFLOW calls=%llu ns=%llu\n",
                     static_cast<unsigned long long>(overflow),

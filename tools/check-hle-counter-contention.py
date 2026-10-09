@@ -21,6 +21,9 @@ assert "(void)service;" in hot and "(void)command;" in hot and "(void)ns;" in ho
 assert "hle_mutex" not in hot and "std::map<" not in hot
 assert "hle_calls.ForEach(" in source
 assert "EDEN_DEV_HLE_OVERFLOW" in source
+assert "std::array<HleReportRow, 32> heaviest{};" in source
+assert "EDEN_DEV_HLE_SUMMARY keys=%zu reported=%zu calls=%llu ns=%llu" in source
+assert "std::sort(heaviest.begin(), heaviest.begin() + heavy_count," in source
 telemetry = (root / "headless/hle_counters.h").read_text()
 assert "static constexpr std::size_t kMaxProbes = 64;" in telemetry
 assert "probe < kMaxProbes" in telemetry
