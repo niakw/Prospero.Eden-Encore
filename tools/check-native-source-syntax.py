@@ -25,6 +25,13 @@ TARGETS = (
     "headless/prosperoeden/pe/ui/launcher.cpp",
     "headless/prosperoeden/pe/ui/settings.cpp",
 )
+# CMake derives these translation units from pinned Eden sources. Compile them
+# before Ninja to reject cross-type shader IR and Fermi2D ABI errors early.
+GENERATED_TARGETS = (
+    "headless/maxwell_prmt_observed.cpp",
+    "headless/fermi_2d_observed.cpp",
+    "headless/sw_blitter_sized.cpp",
+)
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -37,8 +44,8 @@ def main() -> int:
         parser.error(f"native CMake compile database missing: {db}")
     records = json.loads(db.read_text())
     failures = []
-    for relative in TARGETS:
-        source = ROOT / relative
+    for relative in (*TARGETS, *GENERATED_TARGETS):
+        source = (args.native_build_dir.resolve() if relative in GENERATED_TARGETS else ROOT) / relative
         entries = [row for row in records if Path(row["file"]).as_posix().endswith("/" + relative)]
         if not entries and args.allow_stale and relative.endswith(".c"):
             # Older cached CMake configuration predates the newly added native C unit.
@@ -85,7 +92,7 @@ def main() -> int:
     if failures:
         print("\n".join(failures), file=sys.stderr, flush=True)
         return 1
-    print(f"PS5 native syntax preflight PASS ({len(TARGETS)} translation units; no app build)")
+    print(f"PS5 native syntax preflight PASS ({len(TARGETS) + len(GENERATED_TARGETS)} translation units; no app build)")
     return 0
 
 if __name__ == "__main__":
