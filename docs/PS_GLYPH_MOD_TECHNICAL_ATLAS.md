@@ -53,7 +53,7 @@ This is a **community-supplied lead**, not a decoded binary observation. Accordi
 
 ### Source volume and evidence guard
 
-The machine-readable `docs/PS_GLYPH_SOURCE_INDEX.json` now holds **24 community references across 16 games**. The `tools/check-ps-glyph-community-index.py` source gate refuses to mark a rectangle verified without inspected archive, title/update, original/replacement SHA and a sane XYWH rectangle. It also requires explicit native PS5 test evidence for a compatibility claim. Both the indexing and gate are **source-only; the checker has not been executed**.
+The machine-readable `docs/PS_GLYPH_SOURCE_INDEX.json` now holds **26 community references across 18 games**. The `tools/check-ps-glyph-community-index.py` source gate refuses to mark a rectangle verified without inspected archive, title/update, original/replacement SHA and a sane XYWH rectangle. It also requires explicit native PS5 test evidence for a compatibility claim. Both the indexing and gate are **source-only; the checker has not been executed**.
 
 ### Persona 3 Portable (Switch) — nested non-BNTX resource chain
 
