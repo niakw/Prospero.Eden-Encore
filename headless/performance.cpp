@@ -1205,17 +1205,28 @@ void BeginPcSampling() {
 }
 
 void PollGpuPc() {
-    std::lock_guard lock(workers_mutex);
+    if (!pc_sampling) return;
 #if defined(EDEN_DEV_WAIT_CALLERS) && defined(PS5_NATIVE)
-    const bool gpu_capacity = pc_count.load() < sampled_pcs.size();
+    const bool gpu_capacity = pc_count.load(std::memory_order_acquire) < sampled_pcs.size();
 #else
     const bool gpu_capacity = true; // bounded ring; retain recent samples
 #endif
-    if (pc_sampling && workers[4].registered && gpu_capacity) {
-        const int error = pthread_kill(workers[4].thread, SIGUSR2);
-        if (error) throw std::runtime_error("Cannot sample development render thread");
+    // SampleCpu() needs workers_mutex to publish guest progress. Do not hold
+    // it across a possibly blocking pthread_kill kernel call at 20 Hz.
+    // The already-existing worker registration is process-lifetime; the
+    // snapshot lock only protects copying its pthread_t, not OS liveness.
+    pthread_t gpu_target{};
+    bool gpu_ready = false;
+    if (gpu_capacity) {
+        const std::lock_guard lock(workers_mutex);
+        if (workers[4].registered) {
+            gpu_target = workers[4].thread;
+            gpu_ready = true;
+        }
     }
-    if (pc_sampling && core_sample_ready.load(std::memory_order_acquire))
+    if (gpu_ready && pthread_kill(gpu_target, SIGUSR2))
+        throw std::runtime_error("Cannot sample development render thread");
+    if (core_sample_ready.load(std::memory_order_acquire))
         pthread_kill(core_sample_thread, SIGUSR2);
 }
 #endif

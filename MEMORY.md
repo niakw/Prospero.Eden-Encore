@@ -2023,3 +2023,8 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — Sync all-on long-session PC sampler and own-profiler cost test [skip ci]
 
 - Updated `docs/PS5_ALL_ON_TEST_BUILD.md` for next authorized console validation: `EDEN_DEV_SNAPSHOT_COST` observer effect, GPU/guest circular PC buffer overwrite counters, 45-second delayed fast sampler with owner-thread `jthread` teardown, special bounded caller-chain capture, and a required **second-title in-process relaunch** check for stale thread IDs. Lists new source-extracted host regression gates, all still unexecuted; neither local Mac nor release branch touched.
+
+### 2026-10-09 — Keep sampling pthread_kill out of guest CPU publication mutex [skip ci]
+
+- `PollGpuPc()` was still holding `workers_mutex` throughout `pthread_kill(workers[4].thread, SIGUSR2)` and `pthread_kill(core_sample_thread, SIGUSR2)`. `SampleCpu()` uses this mutex to publish guest core progress; kernel signal delivery under the lock creates avoidable contention and can contribute to profile-induced stutters.
+- The poller now returns immediately when PC sampling is off, snapshots the registered GPU `pthread_t` inside a short `workers_mutex` critical section, and issues both signals **after unlocking**. Caller-chain mode retains its GPU capacity gate; normal PC-only mode remains a ring. This does not change the fact that a stale thread ID is an external lifecycle race needing native stop-order validation; merely holding the old mutex did not protect thread teardown. Extended source-only hotpath contracts. No compilation, CI or console profiling was run.
