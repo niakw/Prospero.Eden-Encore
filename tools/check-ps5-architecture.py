@@ -67,9 +67,15 @@ def main() -> None:
     require('if (!CommitSparseJitCode(rx, bootstrap))' in native and
             'ReleaseSparseJitCode(rx);' in native,
             "Startup bootstrap must clean up failed sparse reservation")
+    # Avoid a second global sparse-memory map lock on every translated block.
+    # The process-wide selected sparse path is stable for the running title;
+    # CommitSparseJitCode itself verifies that the RX address belongs to an
+    # actual sparse mapping and fails closed if not.
     require('bool IsSparseJitCode(const void* executable) noexcept' in native and
-            '::Common::IsSparseJitCode(getCode())' in cmake,
-            "Dense JIT fallback must not enter sparse physical commits")
+            'if (::Eden::Experimental::sparse_jit_cache.load(std::memory_order_relaxed))' in cmake and
+            '::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), written + codesize)' in cmake and
+            '::Common::IsSparseJitCode(getCode())' not in cmake,
+            "Sparse translated-code commits must validate mapping ownership without per-block duplicate locks")
     require('std::size_t ExecutableAliasSpan(void* writable) noexcept' in native and
             'Common::ExecutableAliasSpan(writable)' in native_alloc and
             'mappings.emplace(pointer, Mapping{writable, mapped_span})' in native_alloc and
