@@ -97,6 +97,9 @@ assert generator.index("if (worker_thread.joinable()) worker_thread.join();") < 
 perf = (root / "headless/performance.cpp").read_text()
 assert "static std::atomic<unsigned> consecutive_failures{0};" in perf
 assert "checked_ns.compare_exchange_strong(last, now, std::memory_order_acq_rel," in perf
+assert "query_in_flight.exchange(true, std::memory_order_acq_rel)" in perf
+assert "query_in_flight.store(false, std::memory_order_release);" in perf
+assert "EDEN_PS5_DMEM_PROBE_SLOW latency_ns=%lld known=%u" in perf
 assert "now <= last || now - last < 100'000'000" in perf
 assert "static std::atomic<bool> has_valid_sample{false};" in perf
 assert "if (!has_valid_sample.load(std::memory_order_acquire) || failed >= 2)" in perf
