@@ -63,6 +63,25 @@ std::int32_t AllocateDirectOwned(std::size_t bytes, std::size_t align,
     // No allocator can recover by passing a negative/zero extent to Sony.
     return extent > 0 ? sceKernelAllocateDirectMemory(0, extent, bytes, align, 12, physical) : -1;
 }
+// One ownership contract for sparse JIT, sparse page tables and growing
+// native heap reservations. Refuse any mapping outside the full CPU window.
+// A failed syscall that mutated the output VA might still own a reservation;
+// do not silently lose track of it and proceed to reserve another region.
+void* ReserveCpuVirtualRange(std::size_t bytes, std::size_t alignment) noexcept {
+    if (!bytes || !alignment) return nullptr;
+    void* address = reinterpret_cast<void*>(cpu_mapping_hint);
+    const auto rc = sceKernelReserveVirtualRange(&address, bytes, 0, alignment);
+    if (rc != 0) {
+        if (address != reinterpret_cast<void*>(cpu_mapping_hint)) std::abort();
+        return nullptr;
+    }
+    if (!cpu_mapping_range(address, bytes)) {
+        if (!address || address == MAP_FAILED || munmap(address, bytes) != 0)
+            std::abort();
+        return nullptr;
+    }
+    return address;
+}
 } // namespace
 #endif
 
@@ -296,14 +315,13 @@ bool ProbeSparseJitAlias() noexcept {
     bool success = false;
     do {
         (void)sceKernelEnableDmemAliasing();
-        if (sceKernelReserveVirtualRange(&writable, LargePage, 0, LargePage) != 0)
-            break;
+        writable = ReserveCpuVirtualRange(LargePage, LargePage);
+        if (!writable) break;
         rw_reserved = true;
-        if (!cpu_mapping_range(writable, LargePage)) break;
-        if (sceKernelReserveVirtualRange(&executable, LargePage, 0, LargePage) != 0)
-            break;
+        executable = ReserveCpuVirtualRange(LargePage, LargePage);
+        if (!executable) break;
         rx_reserved = true;
-        if (!cpu_mapping_range(executable, LargePage) || executable == writable) break;
+        if (executable == writable) std::abort();
         if (AllocateDirectOwned(LargePage, LargePage, &physical) != 0)
             break;
         direct_owned = true;
@@ -401,24 +419,14 @@ void* ReserveSparseJitCode(std::size_t size, void** writable_out) noexcept {
         return nullptr;
     }
     *writable_out = nullptr;
-    void* rw = reinterpret_cast<void*>(cpu_mapping_hint);
-    if (sceKernelReserveVirtualRange(&rw, size, 0, LargePage) != 0)
-        return nullptr;
-    if (!cpu_mapping_range(rw, size)) {
+    void* rw = ReserveCpuVirtualRange(size, LargePage);
+    if (!rw) return nullptr;
+    void* rx = ReserveCpuVirtualRange(size, LargePage);
+    if (!rx) {
         if (munmap(rw, size) != 0) std::abort();
         return nullptr;
     }
-    void* rx = reinterpret_cast<void*>(cpu_mapping_hint);
-    if (sceKernelReserveVirtualRange(&rx, size, 0, LargePage) != 0) {
-        if (munmap(rw, size) != 0) std::abort();
-        return nullptr;
-    }
-    if (!cpu_mapping_range(rx, size) || rx == rw) {
-        if (rx == rw) std::abort(); // Kernel returned overlapping reservations.
-        if (rx && rx != MAP_FAILED && munmap(rx, size) != 0) std::abort();
-        if (munmap(rw, size) != 0) std::abort();
-        return nullptr;
-    }
+    if (rx == rw) std::abort(); // Kernel returned overlapping reservations.
     try {
         SparseJitRegion region;
         region.writable = rw;
@@ -678,16 +686,12 @@ bool MapSlot(std::uintptr_t at, int protection, std::int64_t physical) {
 // Reserves `span` bytes whose every slot reads as zeroes. Null when the platform refuses.
 void* ReserveSparse(std::size_t span) {
 #ifdef PS5_NATIVE
-    void* address = reinterpret_cast<void*>(cpu_mapping_hint);
-    if (sceKernelReserveVirtualRange(&address, span, 0, SparseSlot) != 0) return nullptr;
-    if (!cpu_mapping_range(address, span)) {
-        (void)munmap(address, span);
-        return nullptr;
-    }
+    void* address = ReserveCpuVirtualRange(span, SparseSlot);
+    if (!address) return nullptr;
     const auto start = reinterpret_cast<std::uintptr_t>(address);
     for (std::size_t offset = 0; offset < span; offset += SparseSlot) {
         if (!MapSlot(start + offset, PROT_READ, zero_block)) {
-            (void)munmap(address, span);
+            if (munmap(address, span) != 0) std::abort();
             return nullptr;
         }
     }
@@ -917,13 +921,7 @@ void* ReserveMemoryRange(std::size_t size) noexcept {
 #ifdef PS5_NATIVE
     // Development A/B: dev-settings heap=whole takes the heap's memory at start, as before.
     if (DevSetting("heap=whole")) return nullptr;
-    void* address = reinterpret_cast<void*>(cpu_mapping_hint);
-    if (sceKernelReserveVirtualRange(&address, size, 0, LargePage) != 0) return nullptr;
-    if (!cpu_mapping_range(address, size)) {
-        (void)munmap(address, size);
-        return nullptr;
-    }
-    return address;
+    return ReserveCpuVirtualRange(size, LargePage);
 #else
     void* address = mmap(nullptr, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
     return address == MAP_FAILED ? nullptr : address;
