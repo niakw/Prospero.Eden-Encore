@@ -3,8 +3,8 @@
   "updated": "2026-10-09",
   "purpose": "technical reverse-engineering leads only; not activatable game compatibility",
   "coverage": {
-    "mod_pages": 23,
-    "unique_games": 15,
+    "mod_pages": 24,
+    "unique_games": 16,
     "verified_game_atlases": 0
   },
   "mods": [
@@ -527,6 +527,41 @@
       "verified_replacement_sha256": null,
       "rect_xywh": null,
       "ps5_qualified": false
+    },
+    {
+      "id": "community-024",
+      "title": "BALL x PIT",
+      "source_url": "https://github.com/mircowuffwuff/ball-x-pit-nsw-ver-playstation-button-prompts",
+      "style": "PlayStation",
+      "mod_version_reported": "release 2",
+      "game_update_reported": "1.251",
+      "contexts": [
+        "Unity controller prompt sprite atlas"
+      ],
+      "format_or_tool_leads": [
+        "Unity resources.assets",
+        "Texture2D",
+        "AssetStudioMod",
+        "UABEA"
+      ],
+      "observed_behavior": "Author identifies the bundled original controller_btns_outlined texture. Face/shoulder/trigger/dpad icon swaps; PS start/share omitted due to unequal source rectangles. Mod tested in Eden Android 0.1.1; no PS5 evidence.",
+      "title_id": "010086A022444000",
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false,
+      "resource_leads": [
+        {
+          "romfs_archive": "Data/resources.assets",
+          "inside_archive": null,
+          "texture": "controller_btns_outlined",
+          "asset_type": "Unity Texture2D",
+          "source": "author README procedure",
+          "binary_verified": false,
+          "rect_xywh": null
+        }
+      ]
     }
   ]
 }
