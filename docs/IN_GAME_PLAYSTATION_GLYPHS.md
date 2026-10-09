@@ -231,7 +231,7 @@ license Nintendo/publisher-owned image content**.
 
 ## Community-mod reverse-engineering references (2026-10-09, source-only)
 
-- [Structured sources: 24 mod references, 16 games](PS_GLYPH_SOURCE_INDEX.json) — technical leads, not activated compatibility.
+- [Structured sources: 26 mod references, 18 games](PS_GLYPH_SOURCE_INDEX.json) — technical leads, not activated compatibility.
 - [Game-specific architecture/paths](PS_GLYPH_MOD_TECHNICAL_ATLAS.md) — Unity BALL x PIT `Data/resources.assets/controller_btns_outlined`, Nintendo TOTK compressed BLARC/BNTX texture hierarchy, mapping variants.
 - [End-to-end offline inspection procedures](PS_GLYPH_REVERSE_ENGINEERING_PIPELINE.md) — authorized local ZIP inventory, read-only mod versus original PNG/TGA diff, extracted .7z/.rar folder diff, externally decoded Unity/BNTX texture pair diff, decompressed SARC byte offsets and BNTX mip pointer inventory.
 - New tools: `ps-glyph-mod-inventory.py`, `ps-glyph-mod-diff.py`, `ps-glyph-mod-folder-diff.py`, `ps-glyph-exported-texture-diff.py`, `ps-glyph-sarc-inspect.py`; research validation `check-ps-glyph-community-index.py`.
