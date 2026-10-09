@@ -22,10 +22,10 @@ assert "cache_lock_blocked.fetch_add(1" in locks
 setup = main.split("Settings::values.skip_cpu_inner_invalidation.SetValue(false);", 1)[1]
 assert "#if defined(PS5_NATIVE) && defined(EDEN_DEV_PROFILE)" in setup
 dev = setup.split("#if defined(PS5_NATIVE) && defined(EDEN_DEV_PROFILE)", 1)[1].split("#endif", 1)[0]
-assert "constexpr unsigned kTestCacheLockSpins = 8;" in dev
-assert "Eden::Performance::cache_lock_spins.store(kTestCacheLockSpins, std::memory_order_relaxed);" in dev
+assert "Eden::Performance::cache_lock_spins.store(0, std::memory_order_relaxed);" in dev
+assert "kTestCacheLockSpins = 8" not in main
 assert "std::min(requested, 32ul)" in main
-assert "Shipping stays 0" in dev
+assert "max 32" in dev
 assert "kTestCacheLockSpins" not in policy
 
 # Model exact retry count: eight bounded tries never become an unbounded
@@ -45,5 +45,5 @@ assert acquire(1, 8) == (2, False)
 assert acquire(8, 8) == (9, False)
 assert acquire(None, 8) == (9, True)
 assert acquire(None, 0) == (1, True)
-print("PASS: 8 limited GPU cache-lock retries in PS5 test build only; blocking mutex preserved")
+print("PASS: conservative 0-spin default after matched FC27 A/B; optional capped <=32 trials, blocking mutex preserved")
 print("PS5 performance improvement and soft-hang safety must still be measured on hardware")
