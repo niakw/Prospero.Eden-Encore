@@ -1891,3 +1891,8 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — Correct deterministic heap failure harness arithmetic [skip ci]
 
 - Corrected staged `growth-mspace-fail` host harness precondition: the very first 100-byte allocation had already created an aligned 8 MiB per-thread arena inside the initial 128 MiB mspace, so four retained 30 MiB blocks could not fit without growing prematurely. The fixture now retains **three** 30 MiB blocks, then injects the mock mspace failure on the **fourth**, asserting no subsequent physical commit after repeated failures and continued availability of the first mspace. Source-only change; run remains unexecuted.
+
+### 2026-10-09 — Complete mapped-VA extent check before PS5 JIT and CPU direct backing [skip ci]
+
+- `src/memory_pages.cpp` already declared a checked CPU mapping window `cpu_mapping_range(base, size)`, but `AllocateMemoryPages` and the dense JIT's `MapExecutableAlias` validated only the **first address** with `cpu_mapping_address()`. A positive kernel mapping that starts inside the allowed region yet extends into the high GPU/device VA range was accepted. Now validate the **whole span**, unmap any successful out-of-window alias before releasing owned physical direct RAM, and return allocation failure cleanly. The sparse page-table zero-block scratch alias also validates the complete 2 MiB extent before zeroing, with explicit ordered cleanup on rejected success.
+- Added source contracts to the existing JIT/VA preflight. This narrows anomalous PS5 kernel mapping acceptance; it is **not** evidence that an actual address collision occurred in FC27, nor an FPS optimization. No build/CI/SDK/runtime performed.

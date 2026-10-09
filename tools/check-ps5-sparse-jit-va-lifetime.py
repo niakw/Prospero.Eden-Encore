@@ -32,6 +32,19 @@ assert "return nullptr;" in allocator.split("EDEN_JIT_SPARSE_RESERVE_FAILED", 1)
 assert "region.committed += LargePage;" in ps5
 assert "sparse_jit_committed += LargePage;" in ps5
 assert "sparse_jit_committed -= region.committed;" in ps5
+# PS5 native kernel APIs can return a mapping whose first address is inside
+# the CPU window while the complete range crosses the GPU-reserved high VA.
+# All dense pages, dense executable aliases and sparse zero-page scratch
+# must validate the whole mapped extent, then relinquish valid unexpected
+# aliases BEFORE releasing direct physical backing.
+dense_pages = ps5.split("void* AllocateMemoryPages(", 1)[1].split("#ifdef PS5_NATIVE\n// Direct-memory start", 1)[0]
+dense_alias = ps5.split("void* MapExecutableAlias(", 1)[1].split("#endif", 1)[0]
+zero_page = ps5.split("bool ZeroedBlock(", 1)[1].split("bool MapSlot(", 1)[0]
+assert "cpu_mapping_range(base, total)" in dense_pages
+assert "cpu_mapping_range(alias, span)" in dense_alias
+assert "cpu_mapping_range(view, SparseSlot)" in zero_page
+assert "munmap(view, SparseSlot)" in zero_page
+assert "sceKernelReleaseDirectMemory(*physical, SparseSlot)" in zero_page
 
 cxx = next((e for e in ("clang++-18", "clang++", "g++") if shutil.which(e)), None)
 if not cxx: raise SystemExit("Need C++20 compiler for sparse policy test")

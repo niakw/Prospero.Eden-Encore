@@ -121,7 +121,9 @@ void* AllocateMemoryPages(std::size_t size) noexcept {
         return nullptr;
     }
     rc = sceKernelMapDirectMemory(&base, total, PROT_READ | PROT_WRITE, 0, physical, lead);
-    if (rc != 0 || !cpu_mapping_address(base)) {
+    // Reject a kernel-chosen CPU mapping whose START is legal but whose
+    // final page crosses into RADV's protected high VA/device-memory window.
+    if (rc != 0 || !cpu_mapping_range(base, total)) {
         std::fprintf(stderr, "Direct mapping failed: rc=%08x bytes=%zu\n", unsigned(rc), total);
         if (rc == 0 && base && base != MAP_FAILED && munmap(base, total) != 0) std::abort();
         if (sceKernelReleaseDirectMemory(physical, total) != 0) std::abort();
@@ -198,7 +200,9 @@ void* MapExecutableAlias(void* pointer, std::size_t size) noexcept {
     const auto rc = sceKernelMapDirectMemory(&alias, span, PROT_READ, 0,
                                               header.physical + static_cast<std::int64_t>(header.lead),
                                               header.lead);
-    if (rc != 0 || !cpu_mapping_address(alias)) {
+    // The RX alias must fit entirely inside the host CPU VA window;
+    // validating only its first byte could admit a cross-window mapping.
+    if (rc != 0 || !cpu_mapping_range(alias, span)) {
         std::printf("EDEN_JIT_ALIAS_MAP rc=%08x bytes=%zu\n", unsigned(rc), span);
         if (rc == 0 && alias && alias != MAP_FAILED && munmap(alias, span) != 0) std::abort();
         errno = rc ? unsigned(rc) & 0xffff : ENOMEM;
@@ -587,8 +591,14 @@ bool ZeroedBlock(std::int64_t* physical) {
     if (sceKernelAllocateDirectMemory(0, sceKernelGetDirectMemorySize(), SparseSlot, SparseSlot, 12, physical) != 0)
         return false;
     void* view = reinterpret_cast<void*>(cpu_mapping_hint);
-    if (sceKernelMapDirectMemory(&view, SparseSlot, PROT_READ | PROT_WRITE, 0, *physical, SparseSlot) != 0) {
-        (void)sceKernelReleaseDirectMemory(*physical, SparseSlot);
+    const auto rc = sceKernelMapDirectMemory(&view, SparseSlot, PROT_READ | PROT_WRITE,
+                                             0, *physical, SparseSlot);
+    if (rc != 0 || !cpu_mapping_range(view, SparseSlot)) {
+        // Never release backing while a successful but out-of-range alias
+        // still maps it. The zero page has no published readers yet.
+        if (rc == 0 && view && view != MAP_FAILED &&
+            munmap(view, SparseSlot) != 0) std::abort();
+        if (sceKernelReleaseDirectMemory(*physical, SparseSlot) != 0) std::abort();
         return false;
     }
     std::memset(view, 0, SparseSlot);
