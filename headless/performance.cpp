@@ -140,6 +140,14 @@ bool topology_allowed_valid = false;
 std::atomic<bool> placement_secondary{false};
 std::atomic<unsigned> secondary_reports{};
 void CheckWorkerTopology() {
+    // A new title/firmware check may fail before CPUID probing begins.
+    // Never reuse a previous game's affinity decision in that case.
+    worker_topology_ready = false;
+    secondary_cpus = 0;
+    worker_cpus.fill(0);
+    cpu_core.fill(-1);
+    topology_allowed = {};
+    topology_allowed_valid = false;
     cpuset_t original{};
     if (cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, 8, &original)) {
         std::printf("EDEN_WORKER_TOPOLOGY ready=0 reason=affinity_unavailable errno=%d\n", errno);
@@ -169,9 +177,6 @@ void CheckWorkerTopology() {
         std::printf("EDEN_WORKER_TOPOLOGY ready=0 reason=no_supported_physical_cpuid\n");
         return;
     }
-    secondary_cpus = 0;
-    worker_cpus.fill(0);
-    cpu_core.fill(-1);
     std::array<unsigned, 5> cores{};
     unsigned count = 0;
     bool changed = false;
