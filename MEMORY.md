@@ -1756,3 +1756,8 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — Native UI histogram C++ counter type hardening [skip ci]
 
 - Source review after UI timing instrumentation identified a C++ overload mismatch: chrono microseconds::count() is long on x86_64 while the aggregation maxima use long long; std::max requires same type. Declare update_us, draw_us, present_us and whole_us explicitly long long before comparisons/aggregation. Added source contract, no build/tests/Actions. This is an uncompiled correction to the immediately preceding dev-only instrumentation, not proof of hardware behavior.
+
+### 2026-10-09 — Development GPU timestamp query-pool explicit destruction [skip ci]
+
+- Corrected an API lifecycle overstatement in previous checkpoint: Vulkan VkQueryPool is a device child that must be explicitly destroyed before its VkDevice. Generator now substitutes Scheduler::~Scheduler() only for this dev probe cleanup: if a timestamp pool exists, requests worker stop, wakes it, joins the jthread, waits on device idle and invokes vkDestroyQueryPool while Device remains live, then clears process-global probe. Ordinary probe-OFF path retains standard jthread destructor behavior. Per-title epoch remains to reject stale device state.
+- Added static source assertions (NOT executed). Needs full native PS5 compile/link and explicit FW13.60 cross-title probe before qualifying actual GPU timestamps, user has not authorized a run. No builds, tests, Actions, PS5/Mac/FTP writes or protected branch updates.

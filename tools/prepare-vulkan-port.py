@@ -507,11 +507,33 @@ void GpuTimeCollect(const Device& device) {
         gpu_time.report = now;
     }
 }
+
+// VkQueryPool is a device child. It must be destroyed explicitly while the
+// owner VkDevice remains live (not forgotten when the next title begins).
+void GpuTimeDestroy(const Device& device) {
+    if (!gpu_time.pool) return;
+    const auto& dld = device.GetDispatchLoader();
+    const VkDevice handle = *device.GetLogical();
+    (void)dld.vkDeviceWaitIdle(handle);
+    dld.vkDestroyQueryPool(handle, *gpu_time.pool, nullptr);
+    gpu_time = GpuTimeProbe{};
+}
 } // namespace
 '''
 adapt('src/video_core/renderer_vulkan/vk_scheduler.cpp', 'vulkan_scheduler.cpp', [
     ('#include <memory>', '#include <memory>\n#include <array>\n#include <chrono>\n#include <cstdio>\n#include "dev_vulkan.h"'),
     ('namespace Vulkan {\n', 'namespace Vulkan {\n' + GPU_TIME_HELPERS),
+    // The default destructor joins worker_thread only AFTER its body. If a
+    // dev timestamp probe created a query pool, join before destroying it.
+    ('Scheduler::~Scheduler() = default;',
+     '''Scheduler::~Scheduler() {
+    if (gpu_time.pool) {
+        worker_thread.request_stop();
+        event_cv.notify_all();
+        if (worker_thread.joinable()) worker_thread.join();
+        GpuTimeDestroy(device);
+    }
+}'''),
     ('        .pInheritanceInfo = nullptr,\n    });\n    current_upload_cmdbuf = vk::CommandBuffer(command_pool->Commit(), device.GetDispatchLoader());',
      '        .pInheritanceInfo = nullptr,\n    });\n    GpuTimeBegin(device, current_cmdbuf);\n'
      '    current_upload_cmdbuf = vk::CommandBuffer(command_pool->Commit(), device.GetDispatchLoader());'),
