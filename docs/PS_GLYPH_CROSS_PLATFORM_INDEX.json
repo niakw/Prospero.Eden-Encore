@@ -4,12 +4,13 @@
   "purpose": "Only technical observations from other-platform releases to guide inspection of Switch 1 originals; never direct emulator compatibility.",
   "switch_index": "docs/PS_GLYPH_SOURCE_INDEX.json",
   "statistics": {
-    "sources": 20,
-    "switch_games_referenced": 14,
+    "sources": 22,
+    "switch_games_referenced": 16,
     "source_platforms": [
       "PC",
       "PC (Shin Megami Tensei V: Vengeance)",
       "PC Game Pass",
+      "PC/console Lua mod scripts",
       "PSP",
       "Wii U"
     ],
@@ -557,6 +558,60 @@
       ],
       "transfer_scope": "Good scene/context switching and sprite-sheet variants model, but the PC SMAPI runtime mod cannot be loaded directly by Switch.",
       "confidence": "mod_changelog",
+      "version_claims": null,
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-021",
+      "switch_game": "Balatro",
+      "platform": "PC",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://github.com/NopoTheGamer/BalatroControllerGlyphs/blob/main/ControllerGlyphs.lua",
+      "source_type": "game_ui_mod_source_code",
+      "mod": "BalatroControllerGlyphs Lua runtime style switch",
+      "engine_family": "Balatro Lua/LÖVE/Steamodded",
+      "asset_path": "ControllerGlyphs.lua",
+      "asset_container_family": [
+        "Lua",
+        "runtime controller style API"
+      ],
+      "features": [
+        "G.CONTROLLER.get_console_from_gamepad returns Playstation, Nintendo or Xbox",
+        "PS4 glyph flag G.F_PS4_PLAYSTATION_GLYPHS",
+        "uses a runtime style selector, no modded texture atlas necessary in this PC source"
+      ],
+      "transfer_scope": "Source proves a PC mod can select a built-in prompt family; verify game edition's on-Switch Lua runtime and bundled assets first, not a ready emulator switch.",
+      "confidence": "mod_documentation",
+      "version_claims": null,
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-022",
+      "switch_game": "Don't Starve Together",
+      "platform": "PC/console Lua mod scripts",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://github.com/vietnd69/dst-scripts/blob/main/prefabs/frontend.lua",
+      "source_type": "runtime_source_code_reference",
+      "mod": "Don't Starve Together frontend platform UI asset selection",
+      "engine_family": "Klei Don't Starve Together Lua / ATLAS XML / TEX",
+      "asset_path": "prefabs/frontend.lua",
+      "asset_container_family": [
+        "Lua",
+        "Klei texture atlas XML",
+        "Klei TEX"
+      ],
+      "features": [
+        "IsPS4 branch images/ps4_controllers.xml and images/ps4_controllers.tex",
+        "IsSWITCH branch images/nx_controllers.xml and images/nx_controllers.tex",
+        "IsXB1 branch images/xb1_controllers.xml and images/xb1_controllers.tex",
+        "platform-conditional asset declarations demonstrate context selection"
+      ],
+      "transfer_scope": "Game Lua source exposes intended platform-specific asset names, NOT proof the full set ships in Switch RomFS or shares sprite UV positions. Compare exact extracted game version first.",
+      "confidence": "mod_documentation",
       "version_claims": null,
       "mod_archive_inspected": false,
       "original_switch_texture_sha256": null,
