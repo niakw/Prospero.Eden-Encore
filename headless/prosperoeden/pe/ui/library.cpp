@@ -587,6 +587,11 @@ void Launcher::check_games_present()
             for (const std::string &path : paths)
                 if (!services_.game_exists(path))
                     missing.push_back(path);
+            // The volume may unmount midway through this batch. A second
+            // root check prevents a partial-I/O failure from evicting every
+            // title even when the directory was accessible at the start.
+            if (!services_.game_storage_available())
+                missing.clear();
             return missing;
         });
 }
