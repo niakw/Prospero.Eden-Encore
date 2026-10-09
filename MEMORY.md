@@ -1809,3 +1809,7 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — Last contiguous direct-memory size at actual bad_alloc [skip ci]
 
 - In native per-title std::bad_alloc recovery, call the preexisting bounded one-shot sceKernelAvailableDirectMemorySize wrapper (QueryLargestDirectMemoryBlock) and emit EDEN_PS5_OOM largest_query_ok=... largest_free_mib=... before launcher recovery. This is largest contiguous PA, not total unused RAM; don't infer direct cause solely from it. No allocation, full region scan or per-frame work on the failure path. Regression source assertion staged, no tests/build/Actions/Mac/FTP; FW13.60 qualification needed.
+
+### 2026-10-09 — Distinguish per-ROM I/O errors from deleted games [skip ci]
+
+- Native `EdenServices::game_exists` previously delegated to IsFile and treated all lstat failures (EIO, intermittent external storage, permissions) as missing ROM. With two periodic background scans, even one intact FC27 file could vanish from library despite the roms root still existing. Now validate filename, use lstat directly, preserve prior regular-file/symlink behavior for denied lstat via stat, and return ABSENT only for ENOENT/ENOTDIR or a known nonregular file; indeterminate per-file errors return 'assume existing' to defer UI deletion. `game_storage_available` protects entire root before and after the batch. This is a presence-display resilience rule, not permission bypass or executable file verification. Source tests added, not run; no build/Actions/Mac/FTP.

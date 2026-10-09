@@ -1183,7 +1183,22 @@ pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game,
 std::string EdenServices::game_path(const std::string& file) { return Eden::AssetsPath("roms/" + file); }
 
 bool EdenServices::game_exists(const std::string& file) {
-    return Eden::ValidRomFilename(file) && IsFile(Eden::AssetsPath("roms/" + file));
+    if (!Eden::ValidRomFilename(file)) return false;
+    // A failed lstat can mean an I/O error on mounted external storage,
+    // not a deleted ROM. The background presence scanner must distinguish
+    // ENOENT/ENOTDIR from an indeterminate mount/EIO/permission failure,
+    // otherwise two transient polls remove a valid FC27/BOTW tile.
+    const std::string path = Eden::AssetsPath("roms/" + file);
+    struct stat info{};
+    if (lstat(path.c_str(), &info) == 0)
+        return S_ISREG(info.st_mode);
+    if (errno == EPERM || errno == EACCES) {
+        if (stat(path.c_str(), &info) == 0)
+            return S_ISREG(info.st_mode);
+    }
+    // Unknown != removed: keep the previous library snapshot, and let
+    // subsequent polls or an explicit launch establish real file status.
+    return errno != ENOENT && errno != ENOTDIR;
 }
 
 bool EdenServices::game_storage_available() {

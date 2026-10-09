@@ -16,6 +16,8 @@ assert "bool game_storage_available() override;" in svc_h
 assert "bool EdenServices::game_storage_available()" in svc
 assert 'std::filesystem::is_directory(Eden::AssetsPath("roms"), error)' in svc
 assert "if (!services_.game_storage_available())" in lib
+assert "return errno != ENOENT && errno != ENOTDIR;" in svc
+assert "if (lstat(path.c_str(), &info) == 0)" in svc
 assert lib.count('if (!services_.game_storage_available())') == 2
 assert 'missing.clear();' in lib
 assert "bool ValidNlibTga(" in svc
