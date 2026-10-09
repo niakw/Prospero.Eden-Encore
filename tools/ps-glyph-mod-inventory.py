@@ -11,7 +11,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import re
 import sys
 import zipfile
 from pathlib import Path, PurePosixPath
@@ -22,12 +21,11 @@ MAX_MEMBER_SIZE = 256 * 1024 * 1024
 MAX_TOTAL_UNCOMPRESSED = 2 * 1024 * 1024 * 1024
 SUSPICIOUS = ("btn", "button", "controller", "input", "prompt", "glyph",
               "layout", "hud", "icon", "ui", "font", "common", "tutorial")
-TITLE_ID = re.compile(r"^[0-9a-fA-F]{16}$")
 
 
 def check_member(info: zipfile.ZipInfo) -> str:
     name = info.filename
-    if not name or len(name) > 512 or "\\x00" in name or "\\\\" in name or ":" in name or name.startswith("/"):
+    if not name or len(name) > 512 or "\x00" in name or "\\" in name or ":" in name or name.startswith("/"):
         raise ValueError("unsafe ZIP member name")
     if info.flag_bits & 1:
         raise ValueError("encrypted ZIP member")
