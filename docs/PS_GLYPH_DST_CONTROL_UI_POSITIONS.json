@@ -1,0 +1,339 @@
+{
+  "schema": 1,
+  "reference_only": true,
+  "source_repository": "taichunmin/dont-starve-together-game-scripts",
+  "source_path": "screens/redux/optionsscreen.lua",
+  "source_blob_sha": "b2fc50965b4aa3eb33d41d847794070f5efe8aef",
+  "source_url": "https://github.com/taichunmin/dont-starve-together-game-scripts/blob/main/screens/redux/optionsscreen.lua",
+  "source_kind": "public_game_Lua_UI_layout_script_reference",
+  "code_ui_coordinates_not_atlas_pixels": true,
+  "verified_switch_binary": false,
+  "atlas_reference_paths": {
+    "DUALSHOCK4": "images/ps4_controllers.xml",
+    "SWITCH": "images/nx_controllers.xml",
+    "XBONE": "images/xb1_controllers.xml"
+  },
+  "texture_sprite_references": {
+    "DUALSHOCK4": "controls_image_ds4.tex",
+    "SWITCH": "controls_image_nx.tex",
+    "XBONE": "controls_image_xb1.tex"
+  },
+  "layout_constants": {
+    "LEFT_SIDE": -415,
+    "RIGHT_SIDE": 415,
+    "LABEL_WIDTH": 320,
+    "LABEL_HEIGHT": 50
+  },
+  "menu_controller_help_labels": {
+    "DUALSHOCK4": [
+      {
+        "string_identifier": "TOUCHPAD",
+        "string_namespace": "PS4",
+        "x_expression": "20",
+        "label_anchor_x": 20,
+        "label_anchor_y": 275,
+        "horizontal_alignment": "ANCHOR_RIGHT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "OPTIONS",
+        "string_namespace": "PS4",
+        "x_expression": "80",
+        "label_anchor_x": 80,
+        "label_anchor_y": 275,
+        "horizontal_alignment": "ANCHOR_LEFT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "L2",
+        "string_namespace": "PS4",
+        "x_expression": "LEFT_SIDE",
+        "label_anchor_x": -415,
+        "label_anchor_y": 255,
+        "horizontal_alignment": "ANCHOR_RIGHT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "L1",
+        "string_namespace": "PS4",
+        "x_expression": "LEFT_SIDE",
+        "label_anchor_x": -415,
+        "label_anchor_y": 155,
+        "horizontal_alignment": "ANCHOR_RIGHT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "DPAD_UP",
+        "string_namespace": "PS4",
+        "x_expression": "LEFT_SIDE",
+        "label_anchor_x": -415,
+        "label_anchor_y": 55,
+        "horizontal_alignment": "ANCHOR_RIGHT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "DPAD_LEFT",
+        "string_namespace": "PS4",
+        "x_expression": "LEFT_SIDE",
+        "label_anchor_x": -415,
+        "label_anchor_y": 15,
+        "horizontal_alignment": "ANCHOR_RIGHT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "DPAD_BOTTOM",
+        "string_namespace": "PS4",
+        "x_expression": "LEFT_SIDE",
+        "label_anchor_x": -415,
+        "label_anchor_y": -20,
+        "horizontal_alignment": "ANCHOR_RIGHT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "DPAD_RIGHT",
+        "string_namespace": "PS4",
+        "x_expression": "LEFT_SIDE",
+        "label_anchor_x": -415,
+        "label_anchor_y": -65,
+        "horizontal_alignment": "ANCHOR_RIGHT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "LSTICK",
+        "string_namespace": "PS4",
+        "x_expression": "LEFT_SIDE",
+        "label_anchor_x": -415,
+        "label_anchor_y": -210,
+        "horizontal_alignment": "ANCHOR_RIGHT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "R2",
+        "string_namespace": "PS4",
+        "x_expression": "RIGHT_SIDE",
+        "label_anchor_x": 415,
+        "label_anchor_y": 255,
+        "horizontal_alignment": "ANCHOR_LEFT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "R1",
+        "string_namespace": "PS4",
+        "x_expression": "RIGHT_SIDE",
+        "label_anchor_x": 415,
+        "label_anchor_y": 155,
+        "horizontal_alignment": "ANCHOR_LEFT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "TRIANGLE",
+        "string_namespace": "PS4",
+        "x_expression": "RIGHT_SIDE",
+        "label_anchor_x": 415,
+        "label_anchor_y": 65,
+        "horizontal_alignment": "ANCHOR_LEFT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "CIRCLE",
+        "string_namespace": "PS4",
+        "x_expression": "RIGHT_SIDE",
+        "label_anchor_x": 415,
+        "label_anchor_y": 20,
+        "horizontal_alignment": "ANCHOR_LEFT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "CROSS",
+        "string_namespace": "PS4",
+        "x_expression": "RIGHT_SIDE",
+        "label_anchor_x": 415,
+        "label_anchor_y": -20,
+        "horizontal_alignment": "ANCHOR_LEFT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "SQUARE",
+        "string_namespace": "PS4",
+        "x_expression": "RIGHT_SIDE",
+        "label_anchor_x": 415,
+        "label_anchor_y": -65,
+        "horizontal_alignment": "ANCHOR_LEFT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "RSTICK",
+        "string_namespace": "PS4",
+        "x_expression": "RIGHT_SIDE",
+        "label_anchor_x": 415,
+        "label_anchor_y": -210,
+        "horizontal_alignment": "ANCHOR_LEFT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "R3",
+        "string_namespace": "PS4",
+        "x_expression": "RIGHT_SIDE",
+        "label_anchor_x": 415,
+        "label_anchor_y": -165,
+        "horizontal_alignment": "ANCHOR_LEFT",
+        "ui_coordinate_not_texture_pixel": true
+      }
+    ],
+    "SWITCH": [
+      {
+        "string_identifier": "TOUCHPAD",
+        "string_namespace": "PS4",
+        "x_expression": "-20",
+        "label_anchor_x": -20,
+        "label_anchor_y": 275,
+        "horizontal_alignment": "ANCHOR_RIGHT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "OPTIONS",
+        "string_namespace": "PS4",
+        "x_expression": "30",
+        "label_anchor_x": 30,
+        "label_anchor_y": 275,
+        "horizontal_alignment": "ANCHOR_LEFT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "L2",
+        "string_namespace": "PS4",
+        "x_expression": "LEFT_SIDE",
+        "label_anchor_x": -415,
+        "label_anchor_y": 255,
+        "horizontal_alignment": "ANCHOR_RIGHT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "L1",
+        "string_namespace": "PS4",
+        "x_expression": "LEFT_SIDE",
+        "label_anchor_x": -415,
+        "label_anchor_y": 205,
+        "horizontal_alignment": "ANCHOR_RIGHT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "DPAD_UP",
+        "string_namespace": "PS4",
+        "x_expression": "LEFT_SIDE",
+        "label_anchor_x": -415,
+        "label_anchor_y": 30,
+        "horizontal_alignment": "ANCHOR_RIGHT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "DPAD_LEFT",
+        "string_namespace": "PS4",
+        "x_expression": "LEFT_SIDE",
+        "label_anchor_x": -415,
+        "label_anchor_y": -7,
+        "horizontal_alignment": "ANCHOR_RIGHT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "DPAD_BOTTOM",
+        "string_namespace": "PS4",
+        "x_expression": "LEFT_SIDE",
+        "label_anchor_x": -415,
+        "label_anchor_y": -42,
+        "horizontal_alignment": "ANCHOR_RIGHT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "DPAD_RIGHT",
+        "string_namespace": "PS4",
+        "x_expression": "LEFT_SIDE",
+        "label_anchor_x": -415,
+        "label_anchor_y": -90,
+        "horizontal_alignment": "ANCHOR_RIGHT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "LSTICK",
+        "string_namespace": "PS4",
+        "x_expression": "LEFT_SIDE",
+        "label_anchor_x": -415,
+        "label_anchor_y": 100,
+        "horizontal_alignment": "ANCHOR_RIGHT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "R2",
+        "string_namespace": "PS4",
+        "x_expression": "RIGHT_SIDE",
+        "label_anchor_x": 415,
+        "label_anchor_y": 255,
+        "horizontal_alignment": "ANCHOR_LEFT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "R1",
+        "string_namespace": "PS4",
+        "x_expression": "RIGHT_SIDE",
+        "label_anchor_x": 415,
+        "label_anchor_y": 205,
+        "horizontal_alignment": "ANCHOR_LEFT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "TRIANGLE",
+        "string_namespace": "PS4",
+        "x_expression": "RIGHT_SIDE",
+        "label_anchor_x": 415,
+        "label_anchor_y": 140,
+        "horizontal_alignment": "ANCHOR_LEFT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "CIRCLE",
+        "string_namespace": "PS4",
+        "x_expression": "RIGHT_SIDE",
+        "label_anchor_x": 415,
+        "label_anchor_y": 100,
+        "horizontal_alignment": "ANCHOR_LEFT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "CROSS",
+        "string_namespace": "PS4",
+        "x_expression": "RIGHT_SIDE",
+        "label_anchor_x": 415,
+        "label_anchor_y": 55,
+        "horizontal_alignment": "ANCHOR_LEFT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "SQUARE",
+        "string_namespace": "PS4",
+        "x_expression": "RIGHT_SIDE",
+        "label_anchor_x": 415,
+        "label_anchor_y": 0,
+        "horizontal_alignment": "ANCHOR_LEFT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "RSTICK",
+        "string_namespace": "PS4",
+        "x_expression": "RIGHT_SIDE",
+        "label_anchor_x": 415,
+        "label_anchor_y": -185,
+        "horizontal_alignment": "ANCHOR_LEFT",
+        "ui_coordinate_not_texture_pixel": true
+      },
+      {
+        "string_identifier": "R3",
+        "string_namespace": "PS4",
+        "x_expression": "RIGHT_SIDE",
+        "label_anchor_x": 415,
+        "label_anchor_y": -130,
+        "horizontal_alignment": "ANCHOR_LEFT",
+        "ui_coordinate_not_texture_pixel": true
+      }
+    ]
+  }
+}
