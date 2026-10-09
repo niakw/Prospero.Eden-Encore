@@ -90,7 +90,9 @@ with tempfile.TemporaryDirectory(prefix="eden-botw-yaz0-test-") as tmp:
     assert report["compression"] == "Yaz0"
     assert report["sarc"]["member_count"] == 1
     assert report["sarc"]["members"][0]["name"] == "__Combined.bntx"
-    assert report["bntx_chain"]["embedded_bntx_candidates"][0]["status"] == "nested_bntx_unreadable"
+    # The synthetic 8-byte BNTX marker is below the 64-byte nested-parser
+    # safety bound. It must be skipped rather than parsed as a real texture.
+    assert report["bntx_chain"]["embedded_bntx_candidates"][0]["status"] == "bounded_skip"
     assert report["sprite_pixel_rectangles"] is None
     assert report["ps5_art_qualified"] is False
     source.write_bytes(raw)
