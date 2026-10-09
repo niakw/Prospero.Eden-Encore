@@ -196,5 +196,43 @@
         }
       ]
     }
+  ],
+  "source_only_updates_2026_10_09": [
+    {
+      "workstream": "fc27_and_launcher_frametime",
+      "source_commit": "8b3326d6f25a33fc77593b4686457ef747ba56c3",
+      "change": "Bound stale Nlib cover queue lookups to 24 per launcher frame",
+      "native_ps5_verified": false
+    },
+    {
+      "workstream": "fc27_and_launcher_frametime",
+      "source_commit": "3bfe7d503b09dd06ff71a7a612766404b0e2a095",
+      "change": "Offline PS5 log tool: avoids double-counting identical stderr files, reports measured frame windows and UI stalls",
+      "native_ps5_verified": false
+    },
+    {
+      "workstream": "sparse_JIT_dynarmic_a64_a32",
+      "source_commit": null,
+      "change": "No new sparse allocator firmware qualification this pass; previous host-only 64 MiB virtual/4 MiB physical/10 MiB growth remains unvalidated on FW13.60",
+      "native_ps5_verified": false
+    },
+    {
+      "workstream": "gpu_vulkan_and_compatibility",
+      "source_commit": "c75b566a66e2e5b7f5604c103db422496c1d32a8",
+      "change": "Eight diagnostic counter sites now stop atomic RMW after eight samples, preserving shader/engine behavior",
+      "native_ps5_verified": false
+    },
+    {
+      "workstream": "playstation_glyphs_inside_games",
+      "source_commit": "c65ff39106869a8edda4c77ae05414ccb776a617",
+      "change": "Runtime refuses alias/casefold/overlapping RomFS graphic-pack file paths",
+      "native_ps5_verified": false
+    },
+    {
+      "workstream": "playstation_glyphs_inside_games",
+      "source_commit": "c00dd314e95c22b36c46ccfea665b550b3a74333",
+      "change": "Pack installer refuses file/directory overlaps in both original RomFS and art source paths",
+      "native_ps5_verified": false
+    }
   ]
 }
