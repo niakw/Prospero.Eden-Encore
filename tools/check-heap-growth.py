@@ -61,10 +61,15 @@ struct block { size_t size; uint64_t magic; struct block *next_free; uint64_t us
 struct space { pthread_mutex_t lock; struct block *free_list; char *start, *end; uint64_t magic; };
 _Static_assert(sizeof(struct block) == 32, "header");
 
-static int refuse_first_mspace;
+static int refuse_first_mspace, refuse_growth_mspace;
+static unsigned growth_mspace_attempts;
 void *sceLibcMspaceCreate(const char *name, void *base, size_t size, unsigned flags) {
     (void)name; (void)flags;
     if (refuse_first_mspace) { refuse_first_mspace = 0; return NULL; }
+    if (strcmp(name, "Eden-heap") == 0) {
+        ++growth_mspace_attempts;
+        if (refuse_growth_mspace) { refuse_growth_mspace = 0; return NULL; }
+    }
     assert(size >= 4096 && ((uintptr_t)base & 15) == 0);
     struct space *space = base;
     pthread_mutex_init(&space->lock, NULL);
@@ -342,6 +347,37 @@ int main(int argc, char **argv) {
     } else {
         assert(eden_heap_committed() == heap && atomic_load(&committed_bytes) == 0);
     }
+    if (argc > 1 && strcmp(argv[1], "growth-mspace-fail") == 0) {
+        // Fill most of the first 128 MiB while avoiding the >=32 MiB
+        // separate direct-allocation path. The fifth 30 MiB request
+        // forces a new physical piece, whose mspace is deliberately refused.
+        void *retained[4];
+        for (int i = 0; i < 4; ++i) {
+            retained[i] = __wrap_malloc((size_t)30 << 20);
+            assert(retained[i] != NULL);
+        }
+        assert(eden_heap_committed() == piece);
+        refuse_growth_mspace = 1;
+        assert(__wrap_malloc((size_t)30 << 20) == NULL);
+        assert(growth_mspace_attempts == 1);
+        assert(eden_heap_committed() == piece * 2);
+        for (int i = 0; i < 12; ++i) {
+            // No second mspace attempt/committed piece, even after a
+            // transient failure flag is cleared by the mock.
+            assert(__wrap_malloc((size_t)30 << 20) == NULL);
+            assert(eden_heap_committed() == piece * 2);
+        }
+        assert(growth_mspace_attempts == 1);
+        assert(atomic_load(&committed_bytes) == piece * 2);
+        // All healthy older mspaces still serve small allocations.
+        void *small = __wrap_malloc(1024);
+        assert(small != NULL);
+        __wrap_free(small);
+        for (int i = 0; i < 4; ++i) __wrap_free(retained[i]);
+        __wrap_free(first);
+        puts("growth-mspace-fail: fail-closed, no repeat 128 MiB loss, old mspace usable PASS");
+        return 0;
+    }
     // A single thread frees ~4 MiB in many size classes. Its private
     // free-list must keep <=1 MiB; the excess goes back to the mspaces.
     enum { TCACHE_PRESSURE = 4096 };
@@ -462,7 +498,7 @@ with tempfile.TemporaryDirectory(prefix='eden-heap-') as work:
         binary = work / ('heap-' + label.split()[0])
         subprocess.run(['clang-18', '-std=gnu11', '-pthread', '-Wall', '-Wextra', '-Wno-unused-function',
                         '-Wno-unused-parameter', *flags, str(source), '-o', str(binary)], check=True)
-        for mode in ((), ('whole',), ('first-commit-fail',), ('first-mspace-fail',)):
+        for mode in ((), ('whole',), ('first-commit-fail',), ('first-mspace-fail',), ('growth-mspace-fail',)):
             if label != 'checked' and mode:
                 continue
             result = subprocess.run([str(binary), *mode], capture_output=True, text=True, timeout=900)
