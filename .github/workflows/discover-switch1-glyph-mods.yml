@@ -12,6 +12,10 @@ on:
       - tools/ps-glyph-switch1-search-queue.py
       - tools/check-ps-glyph-switch1-search-queue.py
       - tools/ps-glyph-mod-discovery.py
+      - tools/ps-glyph-curl-search.py
+      - tools/check-ps-glyph-curl-search.py
+      - tools/ps-glyph-firefox-search.py
+      - tools/check-ps-glyph-firefox-search.py
       - tools/ps-glyph-multiplatform-adapt.py
       - tools/check-ps-glyph-multiplatform-adapt.py
       - tools/ps-glyph-mod-results-merge.py
@@ -22,7 +26,7 @@ on:
         description: "Source; none = offline links, Yandex requires paid API credentials"
         required: true
         type: choice
-        options: [none, github, duckduckgo, yandex]
+        options: [none, github, curl_duckduckgo, curl_yandex, firefox_duckduckgo, firefox_yandex, duckduckgo, yandex]
         default: github
       max_games:
         description: "Next 1-250 Switch titles"
@@ -37,7 +41,7 @@ on:
         default: "0"
 
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: eden-ps-glyph-discovery-${{ github.ref }}
   cancel-in-progress: false
@@ -49,13 +53,15 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          persist-credentials: true
       - name: Validate sources, parsers, state and billing boundaries
         run: |
           python3 -B tools/check-ps-glyph-mod-discovery.py
           python3 -B tools/check-ps-glyph-multiplatform-adapt.py
           python3 -B tools/check-ps-glyph-mod-results-merge.py
           python3 -B tools/check-ps-glyph-switch1-search-queue.py
+          python3 -B tools/check-ps-glyph-curl-search.py
+          python3 -B tools/check-ps-glyph-firefox-search.py
       - name: Load public Switch 1 game title metadata
         run: |
           mkdir -p /tmp/eden-title-catalog /tmp/eden-glyph-discovery
@@ -90,6 +96,11 @@ jobs:
           key: eden-glyph-cursor-${{ github.run_id }}
           restore-keys: |
             eden-glyph-cursor-
+      - name: Install Firefox only when explicitly selected
+        if: github.event_name == 'workflow_dispatch' && (inputs.provider == 'firefox_duckduckgo' || inputs.provider == 'firefox_yandex')
+        run: |
+          python3 -m pip install --user --break-system-packages playwright
+          python3 -m playwright install --with-deps firefox
       - name: Incremental source discovery without mod downloads
         env:
           SELECTED: ${{ inputs.provider || 'github' }}
@@ -113,6 +124,16 @@ jobs:
           common=(--catalog /tmp/eden-glyph-discovery/catalog.json
                   --provider "$SELECTED" --max-games "$LIMIT" --interval 2)
           if test "$SELECTED" != none; then common+=(--network); fi
+          # The committed repository data takes precedence when Action cache
+          # has expired, been evicted, or is inaccessible on a fresh runner.
+          mkdir -p .cache/eden-glyph-mods
+          for file in progress leads; do
+            if test ! -s ".cache/eden-glyph-mods/${file}.json" &&
+               test -s "data/glyph-research/discovery/${file}.json"; then
+              cp "data/glyph-research/discovery/${file}.json" \
+                 ".cache/eden-glyph-mods/${file}.json"
+            fi
+          done
           previous=()
           if test -s .cache/eden-glyph-mods/progress.json; then
             previous=(--state-in .cache/eden-glyph-mods/progress.json)
@@ -122,7 +143,7 @@ jobs:
             # mod on Nexus/ModDB/GameBanana. Query both free providers and
             # both Switch/native and PC/multiplatform variants each push.
             last_state=""
-            for engine in github duckduckgo; do
+            for engine in github curl_duckduckgo curl_yandex; do
               for variant in 0 1; do
                 label="${engine}-switch"
                 if test "$variant" = 1; then label="${engine}-multiplatform"; fi
@@ -131,7 +152,7 @@ jobs:
                   args=(--state-in "$last_state")
                 fi
                 batch=5
-                if test "$engine" = duckduckgo; then batch=2; fi
+                if test "$engine" = curl_duckduckgo || test "$engine" = curl_yandex; then batch=2; fi
                 if ! python3 -B tools/ps-glyph-mod-discovery.py \
                   --catalog /tmp/eden-glyph-discovery/catalog.json \
                   --provider "$engine" --network --max-games "$batch" \
@@ -175,6 +196,37 @@ jobs:
              .cache/eden-glyph-mods/progress.json
           cp /tmp/eden-glyph-discovery/source-links.json \
              .cache/eden-glyph-mods/leads.json
+      - name: Commit durable source links and progress to the development repository
+        if: success()
+        run: |
+          set -euo pipefail
+          mkdir -p data/glyph-research/discovery
+          cp /tmp/eden-glyph-discovery/source-links.json \
+            data/glyph-research/discovery/leads.json
+          cp /tmp/eden-glyph-discovery/state-next.json \
+            data/glyph-research/discovery/progress.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          folder = Path("data/glyph-research/discovery")
+          for name in ("leads.json", "progress.json"):
+              p = folder / name
+              assert p.is_file() and p.stat().st_size < 16 * 1024 * 1024
+              obj = json.loads(p.read_text())
+              assert obj["schema"] == 1
+              assert "rawData" not in p.read_text() and "YANDEX_SEARCH_API_KEY" not in p.read_text()
+          print("Validated link-only stable repository metadata; no browser cookies/raw HTML/assets")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/glyph-research/discovery/leads.json \
+                  data/glyph-research/discovery/progress.json
+          if ! git diff --cached --quiet; then
+            git commit -m "data(glyphs): persist public Switch/PC mod references and cursor [skip ci]"
+            if ! git push origin HEAD:dev/ps5-sparse-jit; then
+              echo "::warning::Repository branch changed or push denied. Artifacts still preserve this run's evidence."
+            fi
+          fi
       - name: Save durable Switch Title ID and per-console mod search cursor
         if: success()
         uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
