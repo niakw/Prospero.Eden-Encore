@@ -1801,3 +1801,7 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — Sync built-in French catalogue for native bad_alloc recovery [skip ci]
 
 - Source audit found `fr-FR.po` translated the new all-title native PS5 bad_alloc recovery message but the bundled `fr_fr_embedded.h` still held the prior catalog. Without synchronization, `tools/launcher/strings.py check` fails and installed French UI lacks this message. Regenerated exact raw-string wrapper from current fr-FR.po (same deterministic layout as strings.py embed-fr), with byte-identical embedded content. No script execution, test, build, Actions, Mac or FTP. Final all-on package still requires native CI and hardware validation.
+
+### 2026-10-09 — Preserve rendering worker bad_alloc exception category [skip ci]
+
+- The native all-game outer session catch already presents a localizable, actionable PS5 memory error for `std::bad_alloc`, but GPU/renderer worker exceptions travel via `completion->failure`: its `catch (const std::exception&)` previously wrapped bad_alloc into `runtime_error("Rendering failed: std::bad_alloc...")`, so they bypassed the new recovery message. Catch `std::bad_alloc` FIRST at this rethrow site and `throw;` intact; device/host Vulkan OOM handling and ordinary exceptions unchanged. Static source assertion staged, no build or tests, no Mac/FTP. FW13.60 testing required.
