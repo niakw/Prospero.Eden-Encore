@@ -651,9 +651,9 @@ void ReportJitCodeState(const char* phase) {
 #endif
 }
 
-// Samples are restricted to lifecycle and explicit development snapshots.
-// Vulkan's hot texture collector only uses the kernel's bounded largest-free
-// query; a potentially long region enumeration never belongs in that path.
+// Full kernel region enumeration is restricted to explicit lifecycle checkpoints.
+// GPU frame reports use the last already-confirmed largest-free measurement,
+// never a synchronous walk of potentially 8192 direct-memory regions.
 void ReportDirectMemoryState(const char* phase) {
 #ifdef PS5_NATIVE
     const std::int64_t total = sceKernelGetDirectMemorySize();
@@ -749,7 +749,14 @@ void ReportGpuThread(unsigned frame) {
                     static_cast<unsigned long long>(hle_calls.OverflowNs()));
 #endif
 #ifdef PS5_NATIVE
-    ReportDirectMemoryState("dev-profile");
+    // Called on the native GPU thread inside its periodic frame-report branch.
+    // A complete sceKernelDirectMemoryQuery region walk (up to 8192 syscalls)
+    // here stalls actual rendering and can imitate the FC27 hitch under study.
+    // The 100ms collector already publishes the confirmed largest free block;
+    // reading its atomics requires ZERO additional firmware syscalls.
+    std::printf("EDEN_MEMORY_LIVE frame=%u largest_last_confirmed=%llu short=%u\n",
+                frame, largest_free_block.load(std::memory_order_relaxed),
+                unsigned(graphics_memory_short.load(std::memory_order_relaxed)));
 #endif
     const auto load = [](const Totals& totals, bool calls) {
         return (calls ? totals.calls : totals.nanoseconds).load(std::memory_order_relaxed);

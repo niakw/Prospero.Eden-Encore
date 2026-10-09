@@ -101,6 +101,20 @@ assert "if (scan_.valid()) docked_refresh_after_scan_ = true;" in library
 assert "if (scan_.valid()) docked_refresh_after_scan_ = true;" in home
 assert "installed.docked = home_game_docked_;" in home
 
+# Native five-second frame reports execute inside graphics.cpp's render worker.
+# An expensive sceKernelDirectMemoryQuery full ownership walk in this callback
+# is itself a recurrent hitch. Preserve that work only at explicit lifecycle
+# checkpoints in main.cpp, and read the cached direct-memory headroom here.
+gpu_performance = read("headless/performance.cpp")
+gpu_periodic = gpu_performance.split("void ReportGpuThread(unsigned frame)", 1)[1].split(
+    "const auto load = [](const Totals& totals, bool calls)", 1)[0]
+assert 'ReportDirectMemoryState("dev-profile")' not in gpu_periodic
+assert "EDEN_MEMORY_LIVE frame=%u largest_last_confirmed=" in gpu_periodic
+assert "largest_free_block.load(std::memory_order_relaxed)" in gpu_periodic
+assert "sceKernelDirectMemoryQuery" not in gpu_periodic
+assert 'ReportDirectMemoryState(name);' in read("headless/main.cpp")
+assert "regions < 8192" in gpu_performance
+
 # Repeated D-pad input must not let the highlight fall several rows behind
 # the selected item, but single-step springs and approved artwork stay intact.
 assert "const float scroll_backlog = std::fabs(scroll_.target - scroll_.value);" in widgets
