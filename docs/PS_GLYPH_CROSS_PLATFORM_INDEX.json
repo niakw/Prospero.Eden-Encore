@@ -4,8 +4,8 @@
   "purpose": "Only technical observations from other-platform releases to guide inspection of Switch 1 originals; never direct emulator compatibility.",
   "switch_index": "docs/PS_GLYPH_SOURCE_INDEX.json",
   "statistics": {
-    "sources": 10,
-    "switch_games_referenced": 6,
+    "sources": 17,
+    "switch_games_referenced": 12,
     "source_platforms": [
       "PC",
       "PC (Shin Megami Tensei V: Vengeance)",
@@ -294,6 +294,189 @@
       ],
       "transfer_scope": "Shows art/control prompts can be mixed when assets migrate across platforms; NOT proof SMT V and SMT V: Vengeance share offsets or ROMFS.",
       "confidence": "mod_author_report",
+      "version_claims": null,
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-011",
+      "switch_game": "Sonic Frontiers",
+      "platform": "PC",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://gamebanana.com/mods/412767",
+      "source_type": "game_ui_mod",
+      "mod": "Controller UI Overhaul",
+      "engine_family": "Sonic Frontiers UI file patching",
+      "asset_path": null,
+      "asset_container_family": [
+        "Hedge Mod Manager",
+        "UI textures"
+      ],
+      "features": [
+        "v1.5.1 fixes inverted A/B and X/Y glyphs on Nintendo variant",
+        "v1.5 adds edge padding against texture color bleed",
+        "v2.1 includes multiple controller variants"
+      ],
+      "transfer_scope": "Mod revision notes expose concrete glyph-order regressions and texture edge padding; PC mod cannot be applied as Nintendo Switch assets.",
+      "confidence": "mod_changelog",
+      "version_claims": null,
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-012",
+      "switch_game": "Sonic Superstars",
+      "platform": "PC",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://gamebanana.com/mods/474430",
+      "source_type": "game_ui_mod",
+      "mod": "Controller UI Overhaul",
+      "engine_family": "Sonic Superstars UI",
+      "asset_path": null,
+      "asset_container_family": [
+        "PC UI texture mods"
+      ],
+      "features": [
+        "PS5, PS4, Xbox and Nintendo face button color variants",
+        "modified prompt contrast/translucency",
+        "stick L/R legibility",
+        "PC version only"
+      ],
+      "transfer_scope": "Compare icon palettes and semantic mapping variants; actual Switch texture names, offsets and engine packer still unverified.",
+      "confidence": "mod_documentation",
+      "version_claims": null,
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-013",
+      "switch_game": "Overcooked! 2",
+      "platform": "PC",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://www.nexusmods.com/overcooked2/mods/8",
+      "source_type": "game_ui_mod",
+      "mod": "PlayStation Layout",
+      "engine_family": "Unity",
+      "asset_path": null,
+      "asset_container_family": [
+        "UnityPy",
+        "Unity texture resources"
+      ],
+      "features": [
+        "35 target textures replaced by existing native PlayStation art; 847 others preserved according to author",
+        "maintains original names, dimensions and on-disk backup",
+        "both controller silhouettes and static menu/gameplay icons"
+      ],
+      "transfer_scope": "Strong research case for identifying already-embedded original PlayStation textures and corresponding Xbox slots. Must find the same Unity assets in Switch version and compare their image geometry.",
+      "confidence": "mod_documentation",
+      "version_claims": null,
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-014",
+      "switch_game": "Overcooked! 2",
+      "platform": "PC",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://www.nexusmods.com/overcooked2/mods/9",
+      "source_type": "game_ui_mod",
+      "mod": "OC2 Controller Icons - Universal and Per-Player Button Prompts",
+      "engine_family": "Unity UI runtime",
+      "asset_path": null,
+      "asset_container_family": [
+        "BepInEx",
+        "Unity runtime asset enumeration"
+      ],
+      "features": [
+        "per-player Xbox, PlayStation, Nintendo or generic prompts",
+        "per-scene menu, tutorial, dynamic kitchen and shared prompts",
+        "uses original in-game icon textures read at runtime, no game art redistributed"
+      ],
+      "transfer_scope": "Demonstrates need for scene/player-specific semantic prompt selection, beyond one texture swap. PC BepInEx runtime logic is not native Switch emulator compatible.",
+      "confidence": "mod_documentation",
+      "version_claims": null,
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-015",
+      "switch_game": "Atelier Ryza: Ever Darkness & the Secret Hideout",
+      "platform": "PC",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://github.com/Skyyblaze/Atelier-Ryza-PS4-Switch-Button-Replacement",
+      "source_type": "game_ui_mod",
+      "mod": "Atelier Ryza PS4/DualSense/Switch Button Replacement",
+      "engine_family": "Gust Atelier UI",
+      "asset_path": null,
+      "asset_container_family": [
+        "Special K",
+        "DDS texture overrides"
+      ],
+      "features": [
+        "replaces PC Xbox button DDS through Special K",
+        "PlayStation and Nintendo alternatives",
+        "touchpad/share differences partly solved through Steam Input"
+      ],
+      "transfer_scope": "DDS override hashes and alternative prompt textures are research input, not original Switch RomFS locations or automatic console layout change.",
+      "confidence": "mod_documentation",
+      "version_claims": null,
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-016",
+      "switch_game": "NieR:Automata The End of YoRHa Edition",
+      "platform": "PC",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://steamcommunity.com/sharedfiles/filedetails/?id=1368483795",
+      "source_type": "game_ui_mod",
+      "mod": "Switch Pro Controller Button Prompts PC",
+      "engine_family": "NieR Automata UI",
+      "asset_path": null,
+      "asset_container_family": [
+        "data/ui",
+        "resource texture replacements"
+      ],
+      "features": [
+        "renamed/resized Nintendo glyph sprites to fit the PC Xbox UI layout",
+        "notes button back icon left unchanged",
+        "real file folder data/ui in PC build"
+      ],
+      "transfer_scope": "Reverse-direction art port provides bounding-box/resizing examples; PC data/ui paths and dimensions must not be assumed to exist on Switch.",
+      "confidence": "mod_documentation",
+      "version_claims": null,
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-017",
+      "switch_game": "Enter the Gungeon",
+      "platform": "PC",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://modworkshop.net/mod/25536",
+      "source_type": "game_ui_mod",
+      "mod": "Nintendo Switch Button UI for PC",
+      "engine_family": "Enter the Gungeon UI",
+      "asset_path": null,
+      "asset_container_family": [
+        "sprites",
+        "dfsprites",
+        "SREM/DFSprite"
+      ],
+      "features": [
+        "all Nintendo controller prompt art resized/cropped to match PC Xbox sprite geometry",
+        "depends on SREM/DFSprite to change screens beyond tutorial",
+        "separate folders sprites/ and dfsprites/"
+      ],
+      "transfer_scope": "Shows why converted glyph sprite rectangle bounds differ per platform; PC mod/runtime hook cannot be directly loaded by Switch.",
+      "confidence": "mod_documentation",
       "version_claims": null,
       "mod_archive_inspected": false,
       "original_switch_texture_sha256": null,
