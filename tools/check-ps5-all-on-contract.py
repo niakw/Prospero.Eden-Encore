@@ -34,7 +34,9 @@ assert 'experimental_sparse_jit = true;' in source
 assert 'experimental_logical_cpu = true;' in source
 assert 'experimental_frame_probe = true;' in source
 assert 'if (experimental_sparse_jit && !Common::ProbeSparseJitAlias())' in source
-assert 'if (get("jit_memory") == "off") experimental_sparse_jit = false;' in source
+assert 'ConfigFile("experiments.json")' not in source
+assert 'if (!safe_launch)' in source
+assert 'experimental_sparse_jit = false;' in source  # alias probe
 assert '"EDEN_SPARSE_JIT_DEV:BOOL": "ON"' in binary_gate
 assert '"EDEN_DEV_PROFILE:BOOL": "ON"' in binary_gate
 assert '"EDEN_PS5_VULKAN:BOOL": "ON"' in binary_gate
