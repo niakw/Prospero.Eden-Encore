@@ -27,6 +27,7 @@ def window(n: int, new: bool) -> str:
     if new:
         items.append(f"EDEN_MEMORY_LIVE frame={20+n} largest_last_confirmed={33554432*n} short={int(n==2)}")
         items.append(f"EDEN_JIT_SPARSE_MEMORY phase=dev-profile reserved={134217728} committed={2097152*n}")
+        items.append(f"EDEN_DEV_SNAPSHOT_COST mono_ns={123456789*n} elapsed_ns={3500000*n}")
     return "\n".join(items) + "\n"
 
 with tempfile.TemporaryDirectory(prefix="eden-ps5-window-test-") as directory:
@@ -36,8 +37,9 @@ with tempfile.TemporaryDirectory(prefix="eden-ps5-window-test-") as directory:
     updated.write_text(window(1, True)+window(2, True), encoding="utf-8")
     old, new = module.Trace.load(original), module.Trace.load(updated)
     assert old.windows() == new.windows() == 2
-    assert not old.memory_live and not old.sparse
-    assert len(new.memory_live) == len(new.sparse) == 2
+    assert not old.memory_live and not old.sparse and not old.snapshot_cost
+    assert len(new.memory_live) == len(new.sparse) == len(new.snapshot_cost) == 2
+    assert max(item["elapsed_ns"] for item in new.snapshot_cost) == 7000000
     assert old.report_window(1)["direct_free_mib"] == -1
     sample = new.report_window(1)
     assert sample["direct_free_mib"] == 64
