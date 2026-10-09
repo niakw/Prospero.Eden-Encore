@@ -38,6 +38,8 @@ assert 'TR("Recent")' in nav
 # description before a short marketing intro after returning to the Hero.
 # Genuinely missing-ROM/language warnings remain higher priority.
 hero_types = src("headless/prosperoeden/pe/ui/services.hpp")
+native_svc = src("headless/prosperoeden/eden_services.cpp")
+native_hdr = src("headless/prosperoeden/eden_services.h")
 assert "std::string last_description;" in hero_types
 assert "std::string description; // detailed, title-keyed Nlib text for the Hero" in hero_types
 assert "home.last_description = nlib.description;" in svc
@@ -283,8 +285,6 @@ assert "if (!scan_cancel_.load(std::memory_order_acquire))" in lib
 assert "scan_cancel_.store(true, std::memory_order_release);" in nav
 # Native game enumeration must itself honor cancellation between ROMs,
 # not merely skip the follow-up mod scan in the Launcher wrapper.
-native_svc = src("headless/prosperoeden/eden_services.cpp")
-native_hdr = src("headless/prosperoeden/eden_services.h")
 assert "virtual std::vector<Game> games(const std::atomic<bool>* cancel)" in hero_types
 assert "games(const std::atomic<bool>* cancel) override;" in native_hdr
 assert "EdenServices::games(const std::atomic<bool>* cancel)" in native_svc
