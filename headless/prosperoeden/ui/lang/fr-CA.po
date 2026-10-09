@@ -1290,3 +1290,7 @@ msgstr "Stockage non configuré"
 #: pe/ui/home.cpp pe/ui/library.cpp pe/ui/launcher.cpp
 msgid "Storage ready"
 msgstr "Stockage configuré"
+
+#: eden_services.cpp
+msgid "The game could not allocate PS5 memory. Close Eden Encore completely before retrying to release memory retained between games."
+msgstr "Le jeu n'a pas pu allouer de mémoire sur la PS5. Fermez complètement Eden Encore avant de réessayer afin de libérer la mémoire conservée entre les jeux."

@@ -2166,6 +2166,16 @@ int main(int argc, char** argv) {
 #endif
         return 0;
 #ifdef PS5_NATIVE
+        } catch (const std::bad_alloc&) {
+            // Unlike a native GPU OOM error, this can be physical RAM,
+            // fragmented VA, JIT or a C++ heap failure. Do not guess.
+            // Return to the launcher instead of propagating an opaque
+            // std::bad_alloc; only a full app exit reclaims warm mspaces.
+            Eden::Performance::SetSecondaryPlacement(false);
+            launch_error = "The game could not allocate PS5 memory. Close Eden Encore completely before retrying to release memory retained between games.";
+            Eden::Report("session failed", "std::bad_alloc: native memory allocation");
+            std::fflush(stderr);
+            std::fflush(stdout);
         } catch (const std::exception& error) {
             // An experimental run can fail before normal game teardown.
             Eden::Performance::SetSecondaryPlacement(false);
