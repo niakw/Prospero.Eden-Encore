@@ -1769,3 +1769,7 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — Native heap first-piece OOM unreserves VA [skip ci]
 
 - `ps5_heap_ready`: previously reserving 3 GiB VA successfully but failing physical commit of first 128 MiB retried impossible dense 3 GiB memory while leaving the VA behind. Fixed: munmap unused reserved VA and set failed heap init for existing libc fallback; dense 3 GiB fallback remains if firmware's reserve syscall itself fails. `tools/check-heap-growth.py` now models failed first commit and asserts mincore says original VA unmapped with zero dense retry. Test NOT run; no build/Actions/Mac/FTP, no performance claim. Still need real JIT/mspace physical reclaim and native multi-game qualification.
+
+### 2026-10-09 — User PS quit wins over racing guest fault / retry [skip ci]
+
+- Live game shortcut `pad->TakeReturnToMenu()` sets completion->return_to_menu; if a guest fault is simultaneously reported before shutdown, old `if (!completion->guest_fault.empty())` could schedule immediate automatic same-title retry even as user exited to Library. Now guest-fault retry/exception handling runs ONLY when `!return_to_menu`; user-initiated exit always wins and reaches existing `if (return_to_menu) continue`. Other early-boot fault retries remain as before. Static check-ps5-live-input contract extended, not executed. This is NOT a blanket auto-restart disable and must be tested on device. No builds/Actions/Mac/FTP.
