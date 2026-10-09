@@ -45,6 +45,11 @@ assert "cpu_mapping_range(alias, span)" in dense_alias
 assert "cpu_mapping_range(view, SparseSlot)" in zero_page
 assert "munmap(view, SparseSlot)" in zero_page
 assert "sceKernelReleaseDirectMemory(*physical, SparseSlot)" in zero_page
+assert "if (rc != 0 && view != reinterpret_cast<void*>(cpu_mapping_hint))" in zero_page
+assert "if (rc != 0 && base != reinterpret_cast<void*>(cpu_mapping_hint))" in dense_pages
+assert "if (rc != 0 && alias != reinterpret_cast<void*>(cpu_mapping_hint))" in dense_alias
+heap_map = ps5.split("bool CommitMemoryRange(", 1)[1].split("bool CommitMemoryRange(", 1)[0]
+assert "if (map_rc != 0 && at != address) std::abort();" in heap_map
 table_slot = ps5.split("bool MapSlot(", 1)[1].split("#endif", 1)[0]
 assert "const auto rc = sceKernelMapDirectMemory(&address, SparseSlot, protection," in table_slot
 assert "if (address != reinterpret_cast<void*>(at))" in table_slot

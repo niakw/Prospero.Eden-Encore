@@ -125,6 +125,11 @@ void* AllocateMemoryPages(std::size_t size) noexcept {
     // final page crosses into RADV's protected high VA/device-memory window.
     if (rc != 0 || !cpu_mapping_range(base, total)) {
         std::fprintf(stderr, "Direct mapping failed: rc=%08x bytes=%zu\n", unsigned(rc), total);
+        // A failed non-fixed mapping must not change its output pointer:
+        // the kernel may have created an alias before returning an error.
+        // Ownership is then ambiguous; returning physical RAM is unsafe.
+        if (rc != 0 && base != reinterpret_cast<void*>(cpu_mapping_hint))
+            std::abort();
         if (rc == 0 && base && base != MAP_FAILED && munmap(base, total) != 0) std::abort();
         if (sceKernelReleaseDirectMemory(physical, total) != 0) std::abort();
         errno = ENOMEM;
@@ -204,6 +209,11 @@ void* MapExecutableAlias(void* pointer, std::size_t size) noexcept {
     // validating only its first byte could admit a cross-window mapping.
     if (rc != 0 || !cpu_mapping_range(alias, span)) {
         std::printf("EDEN_JIT_ALIAS_MAP rc=%08x bytes=%zu\n", unsigned(rc), span);
+        // If a non-fixed syscall returned an error but changed its output
+        // address, we cannot prove whether it retained a mapping. The owner
+        // must not release physical backing through the allocator fallback.
+        if (rc != 0 && alias != reinterpret_cast<void*>(cpu_mapping_hint))
+            std::abort();
         if (rc == 0 && alias && alias != MAP_FAILED && munmap(alias, span) != 0) std::abort();
         errno = rc ? unsigned(rc) & 0xffff : ENOMEM;
         return nullptr;
@@ -596,6 +606,9 @@ bool ZeroedBlock(std::int64_t* physical) {
     if (rc != 0 || !cpu_mapping_range(view, SparseSlot)) {
         // Never release backing while a successful but out-of-range alias
         // still maps it. The zero page has no published readers yet.
+        // An error with a changed output VA has unknown alias ownership.
+        if (rc != 0 && view != reinterpret_cast<void*>(cpu_mapping_hint))
+            std::abort();
         if (rc == 0 && view && view != MAP_FAILED &&
             munmap(view, SparseSlot) != 0) std::abort();
         if (sceKernelReleaseDirectMemory(*physical, SparseSlot) != 0) std::abort();
@@ -898,6 +911,9 @@ bool CommitMemoryRange(void* address, std::size_t size, std::int64_t* physical_o
         // MAP_FIXED should not return a different VA, but on success it owns
         // that mapping. Unmap the unexpected alias BEFORE releasing its direct
         // physical backing; otherwise a live mapping could retain stale PA.
+        // A failed fixed-map that mutates its output gives no reliable
+        // ownership information. Do not free the direct memory in that case.
+        if (map_rc != 0 && at != address) std::abort();
         if (map_rc == 0 && at != address && at && at != MAP_FAILED &&
             munmap(at, size) != 0) std::abort();
         if (sceKernelReleaseDirectMemory(physical, size) != 0) std::abort();
