@@ -114,6 +114,27 @@ def connected_rects(mask: Image.Image) -> tuple[list[list[int]], int]:
     return result, changed
 
 
+def visible_change_mask(original: Image.Image, replacement: Image.Image) -> Image.Image:
+    """Exact RGBA differences where at least one pixel has nonzero alpha.
+
+    Avoid 8-bit premultiplication here: a one-unit RGB change at alpha=1
+    can round to zero and falsely qualify a cross-platform sprite. RGB
+    padding is ignored ONLY where both alpha channels are exactly zero.
+    """
+    if original.mode != "RGBA" or replacement.mode != "RGBA" or original.size != replacement.size:
+        raise ValueError("visible difference requires same-sized RGBA images")
+    old_r, old_g, old_b, old_a = original.split()
+    new_r, new_g, new_b, new_a = replacement.split()
+    alpha_changed = ImageChops.difference(old_a, new_a).point(
+        lambda value: 255 if value else 0)
+    rgb_changed = ImageChops.difference(old_r, new_r)
+    for first, second in ((old_g, new_g), (old_b, new_b)):
+        rgb_changed = ImageChops.lighter(rgb_changed, ImageChops.difference(first, second))
+    rgb_changed = rgb_changed.point(lambda value: 255 if value else 0)
+    visible = ImageChops.lighter(old_a, new_a).point(lambda value: 255 if value else 0)
+    return ImageChops.lighter(alpha_changed, ImageChops.multiply(rgb_changed, visible))
+
+
 def image_diff(original_bytes: bytes, replacement_bytes: bytes) -> dict:
     if (len(original_bytes) > MAX_IMAGE_BYTES or
             len(replacement_bytes) > MAX_IMAGE_BYTES):
@@ -130,19 +151,7 @@ def image_diff(original_bytes: bytes, replacement_bytes: bytes) -> dict:
         if width <= 0 or height <= 0 or width * height > MAX_IMAGE_PIXELS:
             raise ValueError("image pixel count outside bounds")
         old, new = im_original.convert("RGBA"), im_patch.convert("RGBA")
-        old_r, old_g, old_b, old_a = old.split()
-        new_r, new_g, new_b, new_a = new.split()
-        # Transparent PNG/TGA padding often differs in RGB while staying
-        # alpha=0: those differences must NOT masquerade as visible glyphs.
-        # Compare premultiplied color channels plus exact alpha difference.
-        visible_diff = ImageChops.difference(old_a, new_a)
-        for before_color, after_color in ((old_r, new_r),
-                                          (old_g, new_g), (old_b, new_b)):
-            before_visible = ImageChops.multiply(before_color, old_a)
-            after_visible = ImageChops.multiply(after_color, new_a)
-            visible_diff = ImageChops.lighter(
-                visible_diff, ImageChops.difference(before_visible, after_visible))
-        mask = visible_diff.point(lambda value: 1 if value else 0)
+        mask = visible_change_mask(old, new)
         rects, changed = connected_rects(mask)
         return {
             "status": "pixels_differ" if changed else "pixel_identical",
