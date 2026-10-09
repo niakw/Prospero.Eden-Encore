@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import io
 import struct
 import sys
 from pathlib import Path
@@ -45,11 +46,17 @@ def require(ok: bool, reason: str) -> None:
         raise InvalidBntx(reason)
 
 
-def inspect(file: Path) -> dict:
-    require(file.is_file() and not file.is_symlink(), "not an ordinary BNTX file")
-    size = file.stat().st_size
+def inspect(file: Path | bytes) -> dict:
+    # Also accept a bounded in-memory BNTX member for read-only inspection
+    # inside a decompressed SARC without extracting it to disk.
+    if isinstance(file, bytes):
+        size = len(file)
+    else:
+        require(file.is_file() and not file.is_symlink(), "not an ordinary BNTX file")
+        size = file.stat().st_size
     require(0x40 <= size <= MAX_FILE_BYTES, "BNTX size outside allowed bounds")
-    with file.open("rb") as stream:
+    stream = io.BytesIO(file) if isinstance(file, bytes) else file.open("rb")
+    with stream:
         def read_at(offset: int, length: int) -> bytes:
             require(0 <= offset <= size and 0 <= length <= size - offset,
                     "invalid BNTX offset/size")
