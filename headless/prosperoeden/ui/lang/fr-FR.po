@@ -1568,3 +1568,19 @@ msgstr "Stockage non configuré"
 #: pe/ui/home.cpp pe/ui/library.cpp pe/ui/launcher.cpp
 msgid "Storage ready"
 msgstr "Stockage configuré"
+
+#: pe/ui/library.cpp
+msgid "Loading game library..."
+msgstr "Chargement de la bibliothèque de jeux..."
+
+#: pe/ui/library.cpp
+msgid "Could not load game list. Please try again."
+msgstr "Impossible de charger la liste des jeux. Réessayez."
+
+#: pe/ui/library.cpp
+msgid "Could not load game library. Reopen Encore to retry."
+msgstr "Impossible de charger la bibliothèque de jeux. Relancez Encore pour réessayer."
+
+#: pe/ui/library.cpp
+msgid "Game library unavailable"
+msgstr "Bibliothèque de jeux indisponible"
