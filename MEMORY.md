@@ -2019,3 +2019,7 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 
 - Added `tools/check-ps5-pc-ring-host.py` to extract the actual `PcSignal` C++ implementation from `headless/performance.cpp`, compile it under C++20 against synthetic register contexts and fake Pthreads, and verify 10,000 GPU and 90,000 guest samples wrap the atomic 8192/65536 rings while retaining the most recent PC sequence. Special non-atomic caller-chain mode remains source-guarded and excluded from this PC-only host replay.
 - Wired the test to the next explicit GitHub Actions source preflight. No tests or Actions triggered. Native firmware signal-handler ABI and guest lifetime behavior untested; test executable existence is not evidence of production performance.
+
+### 2026-10-09 — Sync all-on long-session PC sampler and own-profiler cost test [skip ci]
+
+- Updated `docs/PS5_ALL_ON_TEST_BUILD.md` for next authorized console validation: `EDEN_DEV_SNAPSHOT_COST` observer effect, GPU/guest circular PC buffer overwrite counters, 45-second delayed fast sampler with owner-thread `jthread` teardown, special bounded caller-chain capture, and a required **second-title in-process relaunch** check for stale thread IDs. Lists new source-extracted host regression gates, all still unexecuted; neither local Mac nor release branch touched.
