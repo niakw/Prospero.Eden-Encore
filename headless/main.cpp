@@ -1,6 +1,7 @@
 #ifdef EDEN_DEV_ROM_ID
 #include "development_input.h"
 #include "dev_replay_policy.h"
+#include "dev_launch_policy.h"
 #endif
 #include <utility>
 #include <vector>
@@ -655,24 +656,27 @@ int main(int argc, char** argv) {
         bool recovery_opengl = false;
 #endif
 #if defined(EDEN_DEV_PROFILE) || defined(EDEN_DEV_ROM_ID)
-        bool autoboot_pending = true;
-        // dev-settings rom=TITLEID boots another title with the same development package
-        // (tests on two consoles); the build's development title is the default.
+        bool autoboot_pending = false;
+        // Interactive launcher is always the startup default, including FC27
+        // all-on diagnostic builds. A build's dev title is not permission to
+        // bypass the library after the user closes or restarts the application.
 #ifdef EDEN_DEV_ROM_ID
         std::string development_id = EDEN_DEV_ROM_ID;
 #else
         std::string development_id = EDEN_DEV_PROFILE_TITLE;
 #endif
         {
+            Eden::DevLaunch::BootIntent boot;
             std::ifstream dev_settings(Eden::AppFile("dev-settings.txt"));
             for (std::string entry; dev_settings >> entry;) {
                 if (entry.starts_with("rom=") && entry.size() == 20) development_id = entry.substr(4);
-                // dev-settings launcher=first opens the launcher instead of the development title
-                // (launcher work: its captures and file-driven input need a development build).
-                if (entry == "launcher=first") autoboot_pending = false;
+                boot.Observe(entry);
             }
-            // After a crash the launcher opens with its notice, not the development title again.
-            if (!last_crash.report.empty()) autoboot_pending = false;
+            // Crash notices and an explicit launcher override always open
+            // the library; only autoboot=on enables one unattended title boot.
+            autoboot_pending = boot.ShouldAutoboot(!last_crash.report.empty());
+            std::fprintf(stderr, "EDEN_DEV_BOOT mode=%s title=%s\n",
+                         autoboot_pending ? "autoboot" : "launcher", development_id.c_str());
         }
 #ifdef EDEN_DEV_ROM_ID
         {
@@ -708,9 +712,8 @@ int main(int argc, char** argv) {
         }
 #endif
 #ifdef EDEN_DEV_VULKAN
-        if (check_backend_recovery && !recovery_opengl && !launch_error.empty()) {
+        if (autoboot_pending && check_backend_recovery && !recovery_opengl && !launch_error.empty()) {
             recovery_opengl = true;
-            autoboot_pending = true;
             Eden::Report("recovery check", "Starting OpenGL after Vulkan session failure");
         }
         const bool automatic_launch = autoboot_pending;
