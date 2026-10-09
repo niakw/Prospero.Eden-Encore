@@ -461,6 +461,14 @@ void settings_gear(Canvas &c, float cx, float cy, float radius, Color ink)
 void dualsense_icon(Canvas &c, const Rect &r, Color ink, float brightness)
 {
     if (r.w <= 0.0f || r.h <= 0.0f) return;
+    // Same coordinates, existing animation and theme colors. Only the
+    // silhouette is replaced with the licensed, recognizable PS5 DualSense
+    // drawing supplied by the user; no UI layout or screen rework.
+    if (const std::uint32_t image = c.textures.controller(); image != 0) {
+        c.list.image(image, r, {0.0f, 0.0f, 1.0f, 1.0f}, ink.with_alpha(brightness));
+        return;
+    }
+    // Original vector fallback remains for missing/corrupted controller art.
     const float u = std::min(r.w / 72.0f, r.h / 50.0f);
     const float x = r.x + (r.w - 72.0f * u) * 0.5f;
     const float y = r.y + (r.h - 50.0f * u) * 0.5f;
