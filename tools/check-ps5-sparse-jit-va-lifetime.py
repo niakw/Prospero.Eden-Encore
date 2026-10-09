@@ -45,6 +45,12 @@ assert "cpu_mapping_range(alias, span)" in dense_alias
 assert "cpu_mapping_range(view, SparseSlot)" in zero_page
 assert "munmap(view, SparseSlot)" in zero_page
 assert "sceKernelReleaseDirectMemory(*physical, SparseSlot)" in zero_page
+table_slot = ps5.split("bool MapSlot(", 1)[1].split("#endif", 1)[0]
+assert "const auto rc = sceKernelMapDirectMemory(&address, SparseSlot, protection," in table_slot
+assert "if (address != reinterpret_cast<void*>(at))" in table_slot
+assert "if (rc != 0 || !address || address == MAP_FAILED) std::abort();" in table_slot
+assert "if (munmap(address, SparseSlot) != 0) std::abort();" in table_slot
+assert "return rc == 0;" in table_slot
 
 cxx = next((e for e in ("clang++-18", "clang++", "g++") if shutil.which(e)), None)
 if not cxx: raise SystemExit("Need C++20 compiler for sparse policy test")

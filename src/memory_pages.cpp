@@ -607,8 +607,18 @@ bool ZeroedBlock(std::int64_t* physical) {
 }
 bool MapSlot(std::uintptr_t at, int protection, std::int64_t physical) {
     void* address = reinterpret_cast<void*>(at);
-    return sceKernelMapDirectMemory(&address, SparseSlot, protection, MAP_FIXED, physical, SparseSlot) == 0 &&
-           address == reinterpret_cast<void*>(at);
+    const auto rc = sceKernelMapDirectMemory(&address, SparseSlot, protection,
+                                             MAP_FIXED, physical, SparseSlot);
+    if (address != reinterpret_cast<void*>(at)) {
+        // A surprising successful MAP_FIXED response owns a FOREIGN alias.
+        // It is unsafe to drop the physical page while this alias remains
+        // mapped. Unlike the ordinary fixed-address failure (same pointer),
+        // a mutated output on error has unknown ownership: fail closed.
+        if (rc != 0 || !address || address == MAP_FAILED) std::abort();
+        if (munmap(address, SparseSlot) != 0) std::abort();
+        return false;
+    }
+    return rc == 0;
 }
 #endif
 
