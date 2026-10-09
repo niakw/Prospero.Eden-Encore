@@ -259,6 +259,21 @@ set(fermi_copy_new [=[
         // These new software-only paths must not turn negative or
         // out-of-bounds subrectangles into oversized unsigned copies.
         // The existing general Fermi copy path is unchanged.
+        const u64 src_bpp = BytesPerBlock(
+            PixelFormatFromRenderTargetFormat(src.format));
+        const u64 dst_bpp = BytesPerBlock(
+            PixelFormatFromRenderTargetFormat(regs.dst.format));
+        // The pinned blitter evaluates pitch*height and x_extent*y_extent
+        // in u32 before promotion to size_t. Never feed it operands that
+        // overflow those intermediate products, nor zero-byte formats.
+        const auto safe_plane = [](const Surface& surface) {
+            return surface.linear != MemoryLayout::Pitch ||
+                (surface.pitch != 0 && surface.height != 0 &&
+                 static_cast<u64>(surface.pitch) * surface.height <= 0xffffffffULL);
+        };
+        const bool copy_storage_valid =
+            src_bpp != 0 && dst_bpp != 0 &&
+            safe_plane(src) && safe_plane(regs.dst);
         const bool rect_valid =
             config.src_x0 >= 0 && config.src_y0 >= 0 &&
             config.dst_x0 >= 0 && config.dst_y0 >= 0 &&
@@ -268,12 +283,17 @@ set(fermi_copy_new [=[
             static_cast<u64>(config.src_y1) <= src.height &&
             static_cast<u64>(config.dst_x1) <= regs.dst.width &&
             static_cast<u64>(config.dst_y1) <= regs.dst.height;
-        if (!rect_valid) {
+        const bool copy_sizes_valid = rect_valid && copy_storage_valid &&
+            static_cast<u64>(config.src_x1 - config.src_x0) *
+                static_cast<u64>(config.src_y1 - config.src_y0) * src_bpp <= 0xffffffffULL &&
+            static_cast<u64>(config.dst_x1 - config.dst_x0) *
+                static_cast<u64>(config.dst_y1 - config.dst_y0) * dst_bpp <= 0xffffffffULL;
+        if (!copy_sizes_valid) {
             static std::atomic<unsigned> rect_reports{0};
             const unsigned count = rect_reports.fetch_add(1, std::memory_order_relaxed);
             if (count < 8)
                 LOG_CRITICAL(Debug,
-                    "EDEN_GPU_FERMI2D_SOFTWARE_RECT_INVALID src={}..{},{}..{} "
+                    "EDEN_GPU_FERMI2D_SOFTWARE_BOUNDS_INVALID src={}..{},{}..{} "
                     "dst={}..{},{}..{} sample={}",
                     config.src_x0, config.src_x1, config.src_y0, config.src_y1,
                     config.dst_x0, config.dst_x1, config.dst_y0, config.dst_y1,
