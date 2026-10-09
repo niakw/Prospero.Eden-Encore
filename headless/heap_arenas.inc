@@ -124,11 +124,17 @@ static void *eden_heap_owner(const void *address);
  * and an exiting thread returns its blocks to their mspaces. */
 #define EDEN_TCACHE_BINS 128u
 #define EDEN_TCACHE_LIMIT 64u
+/* One thread used to retain up to ~8 MiB across its 127 small-object bins,
+ * even after every allocation was freed. Keep 1 MiB of fast warm reuse per
+ * thread, and return the rest to its owning mspace for other threads/titles.
+ * This does NOT physically unmap the heap's 128 MiB backing pieces. */
+#define EDEN_TCACHE_TOTAL_LIMIT ((size_t)1 << 20)
 struct eden_heap_thread {
   void *arena;
   long live;
   long blocks;
   unsigned pending;
+  atomic_size_t cached_bytes; /* only the owning thread writes; snapshots may read */
   void *bins[EDEN_TCACHE_BINS];
   unsigned char counts[EDEN_TCACHE_BINS];
 };
@@ -162,12 +168,22 @@ static void eden_heap_thread_exit(void *value) {
     }
     self->counts[bin] = 0;
   }
+  atomic_store_explicit(&self->cached_bytes, 0, memory_order_relaxed);
   eden_heap_flush(self);
   atomic_store_explicit(&eden_heap_thread_used[self - eden_heap_threads], 0, memory_order_release);
 }
 
 unsigned eden_heap_arenas_created(void) {
   return atomic_load_explicit(&eden_heap_arena_count, memory_order_relaxed);
+}
+
+/* Reporting only: a relaxed sum of private thread caches, never an exact
+ * allocator quiescence guarantee and never used to decide whether to unmap. */
+size_t eden_heap_tcache_held(void) {
+  size_t total = 0;
+  for (unsigned i = 0; i < EDEN_HEAP_THREADS; ++i)
+    total += atomic_load_explicit(&eden_heap_threads[i].cached_bytes, memory_order_relaxed);
+  return total;
 }
 
 /* Memory the heap's pieces hold now: this part only grows. */
@@ -447,6 +463,7 @@ static struct eden_heap_thread *eden_heap_self(void) {
     self->live = 0;
     self->blocks = 0;
     self->pending = 0;
+    atomic_store_explicit(&self->cached_bytes, 0, memory_order_relaxed);
     if (pthread_setspecific(eden_heap_arena_key, self) != 0) {
       atomic_store_explicit(&eden_heap_thread_used[i], 0, memory_order_release);
       return NULL;
@@ -508,7 +525,11 @@ static void *eden_tcache_take(size_t bytes) {
   void *block = self->bins[bin];
   self->bins[bin] = ((void **)block)[0];
   self->counts[bin]--;
-  eden_heap_charge(self, (long)((size_t *)block)[1], 1);
+  const size_t usable = ((size_t *)block)[1];
+  const size_t cached = atomic_load_explicit(&self->cached_bytes, memory_order_relaxed);
+  if (cached < usable) __builtin_trap(); /* corrupt free-list / accounting */
+  atomic_store_explicit(&self->cached_bytes, cached - usable, memory_order_relaxed);
+  eden_heap_charge(self, (long)usable, 1);
   return block;
 }
 
@@ -520,10 +541,15 @@ static int eden_tcache_keep(void *address, size_t usable) {
   struct eden_heap_thread *self = eden_heap_self();
   if (self == NULL || self->counts[bin] >= EDEN_TCACHE_LIMIT)
     return 0;
+  const size_t cached = atomic_load_explicit(&self->cached_bytes, memory_order_relaxed);
+  if (usable > EDEN_TCACHE_TOTAL_LIMIT ||
+      cached > EDEN_TCACHE_TOTAL_LIMIT - usable)
+    return 0;
   ((void **)address)[0] = self->bins[bin];
   ((size_t *)address)[1] = usable;
   self->bins[bin] = address;
   self->counts[bin]++;
+  atomic_store_explicit(&self->cached_bytes, cached + usable, memory_order_relaxed);
   eden_heap_charge(self, -(long)usable, -1);
   return 1;
 }
