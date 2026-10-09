@@ -34,21 +34,46 @@ constexpr int kRightSR = 21;
 inline constexpr const auto& kAutoControls = EncoreOverrides::kPlayStationAutoControls;
 
 PadEngine::PadEngine(std::string name) : InputEngine(std::move(name)) {
-    for (std::size_t player = 0; player < kPlayers; ++player) PreSetController(Identifier(player));
+    // 2 means no value has been published yet, so even the first neutral
+    // state propagates to Eden; later identical 4 ms samples are suppressed.
+    for (auto& buttons : button_cache)
+        buttons.fill(2);
+    for (std::size_t player = 0; player < kPlayers; ++player)
+        PreSetController(Identifier(player));
 }
 PadIdentifier PadEngine::Identifier(std::size_t player) const {
     return {.guid = Common::UUID{}, .port = player, .pad = 0};
 }
 void PadEngine::SetButtonState(std::size_t player, int button, bool value) {
-    if (player < kPlayers) SetButton(Identifier(player), button, value);
+    if (player >= kPlayers) return;
+    if (button >= 0 && button < kTrackedButtons) {
+        const auto state = static_cast<std::uint8_t>(value ? 1 : 0);
+        auto& previous = button_cache[player][static_cast<std::size_t>(button)];
+        if (previous == state) return;
+        previous = state;
+    }
+    // Inputs outside the known virtual-button subset remain visible to
+    // the underlying engine rather than silently losing a future mapping.
+    SetButton(Identifier(player), button, value);
 }
 void PadEngine::SetButtonState(std::size_t player, VirtualButton button, bool value) {
     SetButtonState(player, static_cast<int>(button), value);
 }
 void PadEngine::SetStickPosition(std::size_t player, int axis, float x, float y) {
     if (player >= kPlayers) return;
-    SetAxis(Identifier(player), axis * 2, x);
-    SetAxis(Identifier(player), axis * 2 + 1, y);
+    const int base = axis * 2;
+    const auto publish = [&](int physical_axis, float value) {
+        if (physical_axis >= 0 && physical_axis < 4) {
+            const auto index = static_cast<std::size_t>(physical_axis);
+            if (axis_known[player][index] && axis_cache[player][index] == value)
+                return;
+            axis_cache[player][index] = value;
+            axis_known[player][index] = true;
+        }
+        SetAxis(Identifier(player), physical_axis, value);
+    };
+    publish(base, x);
+    publish(base + 1, y);
 }
 void PadEngine::SetMotionState(std::size_t player, u64 delta_us, float gyro_x, float gyro_y, float gyro_z,
                                float accel_x, float accel_y, float accel_z) {
