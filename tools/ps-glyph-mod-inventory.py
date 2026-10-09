@@ -125,7 +125,7 @@ def main() -> int:
         if args.out and (args.out.exists() or args.out.is_symlink() or
                          not args.out.parent.is_dir() or args.out.parent.is_symlink()):
             raise ValueError("invalid report destination")
-        if not args.platform or len(args.platform) > 80 or any(c in args.platform for c in "\\r\\n\\x00"):
+        if not args.platform or len(args.platform) > 80 or any(c in args.platform for c in "\r\n\x00"):
             raise ValueError("invalid platform label")
         data = {"schema": 1, "declared_source_platform": args.platform,
                 "mods": [inventory(path) for path in args.archives]}
