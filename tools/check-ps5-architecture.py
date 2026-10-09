@@ -188,7 +188,8 @@ def main() -> None:
             "PS5 shader worker selection diagnostics missing")
 
     print("PASS PS5_NATIVE_ARCHITECTURE_CONTRACTS")
-    print(f"  lifecycle points: {', '.join(sorted(memory_stages))}")
+    print(f"  direct-memory lifecycle: {', '.join(sorted(direct_stages))}")
+    print(f"  JIT ownership lifecycle: {', '.join(sorted(jit_stages))}")
     print("  JIT memory: dense physical accounting + developer sparse bootstrap, alias and OOM retry")
     print("  all titles: continuous A64/A32 capacities from available direct memory")
     print("  Vulkan: available CPU mask, pinned-source transformation, bounded worker budget")
