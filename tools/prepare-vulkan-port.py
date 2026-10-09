@@ -955,15 +955,14 @@ pipeline_ps5_headers = '''#ifdef PS5_NATIVE
 if shader_source.count('#include <thread>') != 1:
     raise RuntimeError('Pinned Vulkan pipeline header changed')
 shader_source = shader_source.replace('#include <thread>', '#include <thread>\n' + pipeline_ps5_headers)
-# PS5 is a dedicated guest-emulation workload, not a desktop host doing
-# arbitrary foreground work. Upstream's hardware_concurrency()-1 launches
-# 15 Vulkan pipeline builders in observed FC27 test D, potentially competing with
-# guest CPU workers, the GPU driver and essential service threads when busy.
-# Retain a proportionate background compile pool with no user-facing toggle.
-# Reserve six logical schedulable slots for four guest cores and two GPU
-# workers, then conservatively count two logical CPUs per background worker
-# when SMT topology is not verified on PS5. This is a scheduling policy,
-# NOT a claim of six physical cores or of already-measured speedups.
+# PS5 runs one foreground emulated game. Reserve SIX OS-logical scheduler
+# slots for four guest cores and the two GPU/presentation workers, plus ONE
+# for audio/services. A shader worker occupies one OS-logical slot, not two:
+# the previous spare/2 double-discounted SMT and used just 3 of 13 available
+# logical CPUs on hardware, leaving usable compilation capacity idle.
+# Limit the resulting concurrent pipeline builders to six regardless of
+# hardware_concurrency(), so CPU scheduling never launches 15 builders.
+# Not physical-core proof; frame-time impact still requires PS5 measurements.
 pipeline_worker_anchor = '''    return max_core_threads;
 #endif
 }'''
@@ -977,15 +976,20 @@ pipeline_worker_replacement = '''#ifdef PS5_NATIVE
             if (CPU_ISSET(cpu, &allowed)) ++available;
         }
     }
-    // If the firmware's affinity API fails, keep background concurrency low,
-    // rather than oversubscribe a console with an unknown allowed CPU mask.
+    // Never fill the OS affinity set with pipeline compilers alone:
+    // four guest cores, GPU/presentation and audio/services have priority.
+    // Count *logical threads* once (not spare/2) and cap active builders
+    // to six; with 13 allowed logical CPUs this is 6 + 1 + 6.
     const size_t schedulable = available ? std::min(available, reported) : std::min<size_t>(reported, 4);
     constexpr size_t guest_and_gpu_slots = 6;
-    const size_t spare = schedulable > guest_and_gpu_slots ?
-                         schedulable - guest_and_gpu_slots : 0ULL;
-    const size_t selected = std::max<size_t>(1ULL, spare / 2ULL);
-    std::printf("EDEN_PS5_SHADER_WORKERS reported=%zu available=%zu workers=%zu affinity_rc=%d\\n",
-                reported, available, selected, affinity_rc);
+    constexpr size_t audio_and_service_slots = 1;
+    constexpr size_t max_pipeline_workers = 6;
+    const size_t reserved = guest_and_gpu_slots + audio_and_service_slots;
+    const size_t spare = schedulable > reserved ? schedulable - reserved : 0ULL;
+    const size_t selected = std::max<size_t>(1ULL, std::min(spare, max_pipeline_workers));
+    std::printf("EDEN_PS5_SHADER_WORKERS reported=%zu available=%zu workers=%zu "
+                "reserved=%zu affinity_rc=%d\\n",
+                reported, available, selected, reserved, affinity_rc);
     return selected;
 #else
     return max_core_threads;
