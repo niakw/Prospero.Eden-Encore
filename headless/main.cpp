@@ -1478,12 +1478,11 @@ int main(int argc, char** argv) {
         bool return_to_menu = false;
         if (devices || game) {
             const auto controls = Eden::LoadPreferences();
-            const int effective_layout =
-                game_video.controller_layout >= 0 ? game_video.controller_layout : controls.controller_layout;
-            const auto mapping =
-                game_video.own_mapping ? game_video.mapping :
-                game_video.controller_layout >= 0 ? Eden::BaseMappingForLayout(effective_layout) :
-                                                    controls.mapping;
+            const auto session_controls = Eden::ResolveSessionButtonMapping(
+                controls.controller_layout, controls.mapping,
+                game_video.controller_layout, game_video.own_mapping, game_video.mapping);
+            const int effective_layout = session_controls.layout;
+            const auto mapping = session_controls.buttons;
             const bool custom_mapping = Eden::MappingIsCustom(mapping, effective_layout);
             pad = std::make_unique<Eden::Pad>(
                 static_cast<float>(controls.stick_deadzone) / 100.0f, 0.5f);
