@@ -1,0 +1,326 @@
+{
+  "schema": 1,
+  "updated": "2026-10-09",
+  "purpose": "Only technical observations from other-platform releases to guide inspection of Switch 1 originals; never direct emulator compatibility.",
+  "switch_index": "docs/PS_GLYPH_SOURCE_INDEX.json",
+  "statistics": {
+    "sources": 11,
+    "switch_games_referenced": 6,
+    "source_platforms": [
+      "PC",
+      "PC (Shin Megami Tensei V: Vengeance)",
+      "PC Game Pass",
+      "PSP",
+      "Wii U"
+    ],
+    "verified_cross_platform_pixel_rects": 0
+  },
+  "sources": [
+    {
+      "id": "cross-001",
+      "switch_game": "Zelda: Breath of the Wild",
+      "platform": "Wii U",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://gamebanana.com/mods/33531",
+      "source_type": "game_ui_mod",
+      "mod": "PS4 UI Complete 1.4.1",
+      "engine_family": "Nintendo BOTW UI",
+      "asset_path": null,
+      "asset_container_family": [
+        "Wii U game UI",
+        "BNP/BCML"
+      ],
+      "features": [
+        "pause controller display",
+        "tutorial prompts",
+        "in-game hints",
+        "Standard/Western/PE layout variants"
+      ],
+      "layout_mapping_evidence": [
+        {
+          "layout": "Standard",
+          "source_statement": "A->B B->A X->Y Y->X",
+          "interpretation": "controller mapping instructions, not atlas coordinates"
+        },
+        {
+          "layout": "Western",
+          "source_statement": "A->A B->B X->Y Y->X",
+          "interpretation": "controller mapping instructions, not atlas coordinates"
+        },
+        {
+          "layout": "PE",
+          "source_statement": "A->A B->B X->X Y->Y",
+          "interpretation": "controller mapping instructions, not atlas coordinates"
+        }
+      ],
+      "transfer_scope": "UI context coverage and explicit controller layouts; inspect Wii U vs Switch serialized resources separately",
+      "confidence": "mod_documentation",
+      "version_claims": "Author reports third-party confirmations for game v1.5.0; not author-tested",
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-002",
+      "switch_game": "Persona 3 Portable (Switch)",
+      "platform": "PC",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://gamebanana.com/mods/423178",
+      "source_type": "game_ui_mod",
+      "mod": "Controller UI Overhaul (PC)",
+      "engine_family": "Atlus Persona portable",
+      "asset_path": "init_free.bin/init/camp.bin/pc_button.spr",
+      "asset_container_family": [
+        "CPK",
+        "BIN",
+        "SPR"
+      ],
+      "features": [
+        "button prompt replacements",
+        "original source of Switch PlayStation port"
+      ],
+      "transfer_scope": "Compare sprite identity, ordering, geometry across PC/Switch. Switch mod publicly states it ports/changes PC mod.",
+      "confidence": "cross_port_explicit_in_switch_mod",
+      "version_claims": null,
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-003",
+      "switch_game": "Persona 3 Portable (Switch)",
+      "platform": "PSP",
+      "relationship": "same_title_earlier_port",
+      "source_url": "https://gamebanana.com/mods/354109",
+      "source_type": "game_ui_mod",
+      "mod": "P3P Button Prompt Replacements",
+      "engine_family": "Atlus Persona portable",
+      "asset_path": null,
+      "asset_container_family": [
+        "Aemulus",
+        "texture replacement"
+      ],
+      "features": [
+        "PS",
+        "Switch",
+        "Xbox",
+        "keyboard",
+        "HD and native resolution",
+        "L1/R1 and L/R variants"
+      ],
+      "transfer_scope": "Semantic/icon variant reference, sprite ordering candidates only; remaster file geometry not assumed equal.",
+      "confidence": "mod_documentation",
+      "version_claims": "HD Aem package 2.2; mod release is not game update",
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-004",
+      "switch_game": "Persona 4 Arena Ultimax (Switch)",
+      "platform": "PC",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://gamebanana.com/mods/385908",
+      "source_type": "game_ui_mod",
+      "mod": "Controller UI Overhaul 2.1",
+      "engine_family": "Arc System Works / Atlus P4AU",
+      "asset_path": null,
+      "asset_container_family": [
+        "Reloaded II",
+        "Universal Redirector"
+      ],
+      "features": [
+        "PS4/Xbox/Switch/Arcade variants",
+        "fight-input diagrams",
+        "menu prompts",
+        "optional ABXY inversion"
+      ],
+      "transfer_scope": "Compare PS4 and Nintendo variants to identify same logical glyph slot and scene; PC assets cannot be injected directly in Switch.",
+      "confidence": "mod_documentation",
+      "version_claims": "Mod version 2.1, not Switch game update",
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-005",
+      "switch_game": "Persona 5 Royal (Switch)",
+      "platform": "PC Game Pass",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://gamebanana.com/mods/408074",
+      "source_type": "game_ui_mod",
+      "mod": "DS4 Button Prompts for Game Pass 1.0.2",
+      "engine_family": "Atlus Persona 5 Royal",
+      "asset_path": null,
+      "asset_container_family": [
+        "Reloaded II",
+        "Persona Essentials"
+      ],
+      "features": [
+        "Xbox source art replaced by DS4",
+        "L3/R3 bounding box fix"
+      ],
+      "transfer_scope": "Target L3/R3 rectangles and sprite boundaries for comparison; source PC Game Pass variant differs from Switch.",
+      "confidence": "mod_changelog",
+      "version_claims": "Mod version 1.0.2, not game update",
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-006",
+      "switch_game": "Persona 5 Royal (Switch)",
+      "platform": "PC",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://gamebanana.com/mods/408571",
+      "source_type": "game_ui_mod",
+      "mod": "Colourful Face Buttons",
+      "engine_family": "Atlus Persona 5 Royal",
+      "asset_path": null,
+      "asset_container_family": [
+        "Reloaded II",
+        "texture UI"
+      ],
+      "features": [
+        "PS4/PS5 color palette",
+        "Xbox palette",
+        "Nintendo Super Famicom palette"
+      ],
+      "transfer_scope": "Color/palette/layout variants can inform semantic slot identity only; do not copy PC texture UV coordinates.",
+      "confidence": "mod_documentation",
+      "version_claims": "Mod version 1.0.0",
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-007",
+      "switch_game": "Persona 5 Royal (Switch)",
+      "platform": "PC",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://docs.shrinefox.com/getting-started/persona-5-royal-pc-mod-support",
+      "source_type": "format_documentation",
+      "mod": null,
+      "engine_family": "Atlus Persona 5 Royal",
+      "asset_path": "BASE.CPK / EN.CPK",
+      "asset_container_family": [
+        "CPK",
+        "SPD",
+        "AWB",
+        "PAK",
+        "BF",
+        "BMD"
+      ],
+      "features": [
+        "PC asset extraction paths",
+        "Reloaded-II/Persona Essentials replacement pipeline",
+        "file-emulation formats"
+      ],
+      "transfer_scope": "Format/tool vocabulary for asset inspection; no title-specific texture offset or compatibility proven.",
+      "confidence": "tool_documentation",
+      "version_claims": null,
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-008",
+      "switch_game": "Bravely Default II",
+      "platform": "PC",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://www.nexusmods.com/bravelydefault2/mods/14",
+      "source_type": "game_ui_mod",
+      "mod": "Playstation Button Prompts 1.0",
+      "engine_family": "Unreal Engine",
+      "asset_path": "Bravely_Default_II/Content/Paks/~mods/",
+      "asset_container_family": [
+        "Unreal PAK"
+      ],
+      "features": [
+        "5 variants for Start/Select touchpad halves",
+        "arrows overlay",
+        "L/R overlay",
+        "Options/Share variant"
+      ],
+      "transfer_scope": "Search Unreal package/object paths and glyph maps then compare platform assets; raw PC .pak cannot be assumed compatible with Switch.",
+      "confidence": "mod_installation_instructions",
+      "version_claims": "Mod version 1.0, not game update",
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-009",
+      "switch_game": "Persona 3 Portable (Switch)",
+      "platform": "PC",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://gamebanana.com/mods/423473",
+      "source_type": "mod_conflict_example",
+      "mod": "Colorful Skills+",
+      "engine_family": "Atlus Persona portable",
+      "asset_path": "init_free.bin/init/camp.bin/c_main01.spr",
+      "asset_container_family": [
+        "BIN",
+        "SPR",
+        "Reloaded II"
+      ],
+      "features": [
+        "collides with Controller UI Overhaul on init_free.bin",
+        "language-sensitive UI edits"
+      ],
+      "transfer_scope": "Conflict graph and archive merge requirements; unrelated texture sprites can still collide at parent archive path.",
+      "confidence": "mod_documentation",
+      "version_claims": "Mod version 2.1, not game update",
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-010",
+      "switch_game": "Shin Megami Tensei V",
+      "platform": "PC (Shin Megami Tensei V: Vengeance)",
+      "relationship": "related_sequel_edition_not_same_title",
+      "source_url": "https://gamebanana.com/mods/533409",
+      "source_type": "cross_platform_asset_caution",
+      "mod": "Polish localisation Switch from Steam",
+      "engine_family": "Unreal Engine",
+      "asset_path": null,
+      "asset_container_family": [
+        "Unreal content"
+      ],
+      "features": [
+        "Steam-to-Switch localization source import",
+        "Xbox/Switch prompt icons mixed"
+      ],
+      "transfer_scope": "Shows art/control prompts can be mixed when assets migrate across platforms; NOT proof SMT V and SMT V: Vengeance share offsets or ROMFS.",
+      "confidence": "mod_author_report",
+      "version_claims": null,
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    },
+    {
+      "id": "cross-011",
+      "switch_game": "Persona 4 Arena Ultimax (Switch)",
+      "platform": "PC",
+      "relationship": "same_title_different_platform",
+      "source_url": "https://gamebanana.com/mods/378319",
+      "source_type": "switch_mod_reference",
+      "mod": "PlayStation button prompts for Switch",
+      "engine_family": "Arc System Works / Atlus P4AU",
+      "asset_path": null,
+      "asset_container_family": [
+        "Switch UI texture"
+      ],
+      "features": [
+        "Switch-specific PlayStation prompt replacement"
+      ],
+      "transfer_scope": "Existing Switch baseline to compare PC overhaul variants; no binary fingerprints yet.",
+      "confidence": "mod_listing",
+      "version_claims": null,
+      "mod_archive_inspected": false,
+      "original_switch_texture_sha256": null,
+      "exact_switch_rect_xywh": null
+    }
+  ]
+}
