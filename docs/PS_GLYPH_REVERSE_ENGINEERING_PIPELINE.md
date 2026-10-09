@@ -4,7 +4,7 @@ Status 2026-10-09: **source-only implementation, not executed or PS5-qualified**
 
 ## Inputs and evidence levels
 
-* `docs/PS_GLYPH_SOURCE_INDEX.json` is a list of **23 community mod references across 15 games**. These are leads, NOT installed assets, verified compatible titles, image rectangles, or proof that source files were fetched.
+* `docs/PS_GLYPH_SOURCE_INDEX.json` is a list of **24 community mod references across 16 games**. These are leads, NOT installed assets, verified compatible titles, image rectangles, or proof that source files were fetched.
 * Obtain legally usable original extracted game RomFS and a community mod ZIP or separately extracted folder. Do not include original Nintendo-owned bytes or unlicensed mod payloads in git.
 * Keep distinct IDs: game **Title ID**, game **update version**, mod release version, ROMFS relative path, archive internal member, original/replacement SHA-256, and the screen-specific button semantics.
 * Treat three positions separately: the **file/container offset in bytes**, the **texture/atlas rectangle in pixels**, and the **control action or prompt location in the game's UI context**. None implies the other automatically.
@@ -25,7 +25,7 @@ The ZIP archive is checked for path traversal, symlinks, duplicate paths, member
 python3 tools/ps-glyph-mod-diff.py --mod-zip /path/authorized-ps5-ui-mod.zip --original-romfs /path/extracted-match/romfs --out /tmp/atlas-diff.json
 ```
 
-The comparison opens both images in memory, hashes their exact file bytes and computes disconnected changed-pixel bounding boxes as `[x, y, width, height]` in **decoded** PNG/TGA pixels. It includes transparency-only changes, recognizes size changes, and reports proprietary/other formats as unsupported. The bounding boxes are **differences**, not yet renderer-ready rectangles or confirmed PS button names.
+The comparison opens both images in memory, hashes their exact file bytes and computes disconnected alpha-aware visible changed-pixel bounding boxes as `[x, y, width, height]` in **decoded** PNG/TGA pixels. It includes transparency-only changes, recognizes size changes, and reports proprietary/other formats as unsupported. The bounding boxes are **differences**, not yet renderer-ready rectangles or confirmed PS button names.
 
 ### 3. For .7z/.rar or mods installed as folders
 
@@ -67,6 +67,34 @@ RomFS/UI/LayoutArchive/Common.Product.110.Nin_NX_NVN.blarc.zs
 
 This location was published in a comment on https://gamebanana.com/mods/443260 ; it has **not** been verified byte-for-byte in Eden. The `.zs` decompression may require the game dictionary from `romfs/Pack/ZsDic.pack.zs` (https://github.com/TotkMods/Research). External TkZstd provides a dictionary-aware tool (https://github.com/TotkMods/TkZstd). Do not assume all `.zs` files use the same dictionary. The SARC reader must receive an already decompressed archive, and BNTX must first be identified/extracted with an independently validated parser.
 
+### 4b. Unity/other proprietary containers with external texture export
+
+A documented BALL x PIT mod gives a useful exact **Unity asset identity**:
+
+```text
+Title ID: 010086A022444000
+Game version reported by author: 1.251
+RomFS container: Data/resources.assets
+Unity Texture2D: controller_btns_outlined
+Tools: AssetStudioMod (original texture export), UABEA (edited Texture2D)
+Mod: https://github.com/mircowuffwuff/ball-x-pit-nsw-ver-playstation-button-prompts
+```
+
+The author describes replacing face buttons, L1/R1, L2/R2 and D-pad, while *not* replacing Start/Share because their atlas rectangles fit differently. They tested Eden Android 0.1.1, **not PS5/Eden Encore**. The original game reportedly already includes official PlayStation prompts; this is **author testimony only**, not proof those textures can be automatically selected at runtime on Switch.
+
+Once both original and patched `Texture2D` have been legitimately exported as matching PNG files:
+
+```bash
+python3 tools/ps-glyph-exported-texture-diff.py \
+  --original-image /path/original/controller_btns_outlined.png \
+  --modified-image /path/modded/controller_btns_outlined.png \
+  --texture-name controller_btns_outlined \
+  --container Data/resources.assets \
+  --out /tmp/ball-x-pit-texture-regions.json
+```
+
+The output provides visible changed-pixel bounding boxes and export image SHA-256. **It does not establish hashes of original/patched Unity resource containers, nor safely rebuild them.** This externally decoded approach also works with texture pairs exported from BNTX/BFRES by a separate licensed tool. Never mistake changed pixel rectangles for named glyph identities until each is visually identified and checked in context.
+
 ### 5. Identify semantics and generate a reversible game-specific pack
 
 Only after the exact source atlas, game/update, intended context and Nintendo-to-PlayStation glyph identity are verified:
@@ -93,6 +121,6 @@ Installed-pack permission/attribution applies to adapted PlayStation source art 
 ### Explicit remaining gaps
 
 * No third-party mod archive was downloaded/unpacked during this source-only pass.
-* Pixel rectangles are only generated **when matching original PNG/TGA and mod bytes are provided**. The 23 source index entries intentionally have `rect_xywh: null`.
+* Pixel rectangles are only generated **when matching original PNG/TGA and mod bytes are provided**. The 24 source index entries intentionally have `rect_xywh: null`.
 * Direct editing/injection of BNTX, BFRES, BF(L)YT, BF(L)AN, fonts, ASTC/BC or dictionary compressed `.zs` remains unimplemented in this pass.
 * Synthetic Python fixture scripts were created but **not executed** by request; no GitHub Actions, PS5 build or firmware runtime tests were invoked. Issues #7 (glyphs) and #8 (performance/JIT/GPU) remain open.
