@@ -31,3 +31,26 @@ Updated 2026-10-09. **No game/mod archives were unpacked during this survey**. D
 Per mod candidate: `source_url`, `mod_version`, `license`, `game_title`, `title_id`, `game_update`, `romfs_path`, `container`, `texture_name`, `original_sha256`, `replacement_sha256`, `rect_xywh`, `original_button`, `ps_button`, `scene_context`, `confidence`, `test_proof`. Unknowns are null, not inferred from screenshots or filenames.
 
 This research catalogue does not imply actual game files were fetched or processed.
+
+## 2026-10-09 — New high-value exact resource leads
+
+### BALL x PIT (Unity)
+
+Author's public [mod source](https://github.com/mircowuffwuff/ball-x-pit-nsw-ver-playstation-button-prompts) identifies:
+- **Title ID** `010086A022444000`; **game version** 1.251 (author tested).
+- **RomFS** `Data/resources.assets`; Unity **Texture2D** `controller_btns_outlined`.
+- **Procedure**: AssetStudioMod export original Texture2D PNG, overlay PS button icons, UABEA `Edit texture` and `Load` new RGBA32 PNG, save patched whole `resources.assets`, install under `PlayStation prompts/romfs/Data/`.
+- **Functional coverage**: face buttons, L/R→L1/R1, ZL/ZR→L2/R2 (1 pixel shorter), and DualSense-style D-pad; plus/minus→PS Start/Share **not converted** because source rectangles have incompatible sizing.
+- **Environment**: tested in Eden Android 0.1.1; **not** qualified on PS5. The author's documentation mentions official PS4 prompt art bundled in the Switch game. This does not establish a universal run-time switcher in Eden.
+- Our generic `ps-glyph-exported-texture-diff.py` accepts the original/modded texture PNG exports and calculates actual visible changed-pixel bounding boxes. Those exported texture bytes and the authored mod release ZIP have **not** been acquired/analyzed by Eden yet.
+
+### Zelda: Tears of the Kingdom (compressed Nintendo UI)
+
+A comment on the [Simple Xbox Mod](https://gamebanana.com/mods/443260) identifies a specific candidate resource hierarchy:
+`UI/LayoutArchive/Common.Product.110.Nin_NX_NVN.blarc.zs` → `__Combined.bntx` → `Nt_KeyTexA_00^d.bftex` (B/X/Y icons reported in the same texture family).
+
+This is a **community-supplied lead**, not a decoded binary observation. According to [TotK research](https://github.com/TotkMods/Research), `.zs` archives may need dictionary-aware ZSTD with dictionaries extracted from the user's `Pack/ZsDic.pack.zs`; see [TkZstd](https://github.com/TotkMods/TkZstd). A decompressed BLARC/SARC can be indexed byte-for-byte using `ps-glyph-sarc-inspect.py`. Contained BNTX texture/mipmap **byte offsets** can then be inventoried using `ps-glyph-bntx-inspect.py` once safely extracted. Actual texture swizzle/decompression and pixel rectangles remain unqualified.
+
+### Source volume and evidence guard
+
+The machine-readable `docs/PS_GLYPH_SOURCE_INDEX.json` now holds **24 community references across 16 games**. The `tools/check-ps-glyph-community-index.py` source gate refuses to mark a rectangle verified without inspected archive, title/update, original/replacement SHA and a sane XYWH rectangle. It also requires explicit native PS5 test evidence for a compatibility claim. Both the indexing and gate are **source-only; the checker has not been executed**.
