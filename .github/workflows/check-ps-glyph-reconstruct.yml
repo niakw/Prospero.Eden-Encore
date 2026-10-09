@@ -1,0 +1,40 @@
+name: Verify PS Glyph Reconstruction (host only)
+on:
+  push:
+    branches: [dev/ps5-sparse-jit]
+    paths:
+      - .github/workflows/check-ps-glyph-reconstruct.yml
+      - tools/ps-glyph-reconstruct.py
+      - tools/check-ps-glyph-reconstruct.py
+      - docs/PS_GLYPH_SOURCE_INDEX.json
+      - docs/PS_GLYPH_CROSS_PLATFORM_INDEX.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  glyph-host-fixtures:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Host fixture dependencies (not a PS5 build)
+        run: |
+          python3 -m pip install --user --break-system-packages Pillow
+      - name: Verify cross-platform semantics and strict pixel provenance
+        run: |
+          python3 -B tools/check-ps-glyph-reconstruct.py
+      - name: Aggregate all game/mod candidates without enabling unknown ones
+        run: |
+          python3 -B tools/ps-glyph-reconstruct.py index > /tmp/eden-glyph-leads.json
+          python3 - <<'PY'
+          import json
+          with open('/tmp/eden-glyph-leads.json', encoding='utf-8') as stream:
+              data = json.load(stream)
+          assert data['game_count'] >= 18
+          assert data['verified_reconstruction_specs_from_public_indices'] == 0
+          print('SOURCE INDEX', data['game_count'], 'Switch game families')
+          PY
