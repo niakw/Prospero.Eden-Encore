@@ -518,14 +518,26 @@ void Launcher::check_games_present()
                                   previous_missing_.begin(), previous_missing_.end(),
                                   std::back_inserter(missing));
             previous_missing_ = observed_missing;
+            if (observed_missing.empty())
+                home_missing_refresh_.clear(); // future removal is a NEW transition
             if (missing.empty())
                 return;
-            const bool home_affected = (home_.last_exists &&
-                std::find(missing.begin(), missing.end(), home_.last_file) != missing.end()) ||
-                std::any_of(home_.recents.begin(), home_.recents.end(), [&](const Recent &recent) {
-                    return std::find(missing.begin(), missing.end(), recent.file) != missing.end();
-                });
-            if (screen_ == Screen::home && modal_ == Modal::none && home_affected) {
+            // Refresh Home once for a confirmed group of absent tiles.
+            // Reissuing read_home() for the same missing path every two
+            // seconds could repeatedly mark the next async scan stale,
+            // starving its snapshot indefinitely on a slow PS5 filesystem.
+            std::vector<std::string> home_missing;
+            for (const std::string& file : missing) {
+                const bool is_home = (home_.last_exists && file == home_.last_file) ||
+                    std::any_of(home_.recents.begin(), home_.recents.end(),
+                        [&](const Recent& recent) { return recent.file == file; });
+                if (is_home) home_missing.push_back(file);
+            }
+            if (home_missing.empty())
+                home_missing_refresh_.clear();
+            if (screen_ == Screen::home && modal_ == Modal::none &&
+                !home_missing.empty() && home_missing != home_missing_refresh_) {
+                home_missing_refresh_ = home_missing;
                 read_home();
                 const int recents = std::min<int>(7, static_cast<int>(home_.recents.size()));
                 if (home_focus_ >= 5 && home_focus_ < 11 && home_focus_ - 5 >= recents)
@@ -559,6 +571,7 @@ void Launcher::check_games_present()
                 paths.push_back(game.file);
     if (paths.empty()) {
         previous_missing_.clear();
+        home_missing_refresh_.clear();
         return;
     }
     std::sort(paths.begin(), paths.end());
