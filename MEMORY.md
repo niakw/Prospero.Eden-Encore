@@ -1473,3 +1473,10 @@ Push with `[full-build] [test-all-on]` after correcting exactly four missing Fre
 ### 2026-10-09 — Native PS5 all-on CI retry after embedded FR catalog sync
 
 Explicit source-only compile+stage reattempt requested through `[full-build] [test-all-on]`; real Actions status must be read back. Preserve `dev` branch unchanged during run to prevent concurrency cancellation.
+
+### 2026-10-09 — Fourth all-on run #37877625109 reaches architecture preflight, stopped by obsolete launcher checker
+
+- [Actions run 37877625109](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/37877625109) passed valid launcher translations, toolchain, version/legal package checks, storage startup, migration and video presets, then FAILED at `Validate startup, elevation and storage contracts` due source contract **`tools/check-encore-ux.py:63 assert '0xa002030a SYSTEM_ILLEGAL_FUNCTION_CALL' in services`**.
+- `headless/prosperoeden/eden_services.cpp` now correctly uses cancelable asynchronous directory `TreeBytes(...)` for storage/logs and deliberately avoids dangerous native libc statfs/statvfs on firmware 13.60. Old numeric error string was removed; checker out of date. No evidence of regression in that storage code from this fail.
+- Fixed checker to verify actual `previously raised SYSTEM_ILLEGAL_FUNCTION_CALL` safety comment, exact storage root call and `TreeBytes(cache / "shader", cancel)` + `TreeBytes(Eden::LogsDir(), cancel)`. Commit `111abcc344d4f519fddf633515753829a57e45f3` `[skip ci]`. A separate JS source readback found no other simple missing literal in same `check-encore-ux.py` after correction.
+- NO native PS5 SDK compilation yet. Test run remains failed and all 26 hardware qualification checks open; shipping branch/approved UI unchanged. CI retry needs a new authorized dev marker and no midrun writes.
