@@ -21,6 +21,9 @@ void PlatformChecks();
 bool QueryLargestDirectMemoryBlock(std::size_t* largest) noexcept;
 // Startup/shutdown-only snapshot: no direct-memory region scan in the frame loop.
 void ReportDirectMemoryState(const char* phase);
+// Lightweight per-stage actual Dynarmic RX/RW ownership; no kernel VA
+// enumeration or GPU frame-loop work.
+void ReportJitCodeState(const char* phase);
 // Main thread only, between GPU readiness and guest shutdown.
 void Snapshot();
 // GPU worker only: firmware rejects cross-thread CPU-time sampling.
