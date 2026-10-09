@@ -60,6 +60,9 @@ private:
     };
     std::mutex rumble_mutex;
     std::array<Sides, kPlayers> rumble{};
+    // Most 4 ms DualSense polls have no new rumble command. A cheap atomic
+    // check avoids contending with guest HID's rumble producer in that case.
+    std::array<std::atomic<bool>, kPlayers> rumble_pending{};
 };
 
 // DualSense controllers as guest Pro Controllers. Player 1 is the controller of the user who
