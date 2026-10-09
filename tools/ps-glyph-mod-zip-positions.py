@@ -47,9 +47,10 @@ def gather(mod_zip: Path, original_romfs: Path, scene: str,
         raise ValueError("original matching RomFS folder absent or symlink")
     inspected, unresolved = [], []
     selected = [x for x in report["files"] if x.get("romfs_path")]
-    if len(selected) > MAX_ARCHIVES:
-        # Never silently skip the rest of a huge mod file.
-        raise ValueError("archive contains too many RomFS replacement resources")
+    # A real UI mod can contain hundreds of layouts, icons and language
+    # files, even if only a few are ASTC SARC archives. Bound the expensive
+    # decoded scans, not the total number of ZIP entries.
+    archive_budget = MAX_ARCHIVES
     seen = set()
     with zipfile.ZipFile(mod_zip) as z:
         for member in selected:
@@ -63,6 +64,11 @@ def gather(mod_zip: Path, original_romfs: Path, scene: str,
                                    "status": "different_resource_format_not_ignored",
                                    "format": member["extension"]})
                 continue
+            if archive_budget <= 0:
+                unresolved.append({"romfs_path": relative,
+                                   "status": "bounded_native_ui_scan_budget_exhausted"})
+                continue
+            archive_budget -= 1
             if member["uncompressed_bytes"] > MAX_ENTRY_BYTES:
                 unresolved.append({"romfs_path": relative,
                                    "status": "large_archive_skipped"})
