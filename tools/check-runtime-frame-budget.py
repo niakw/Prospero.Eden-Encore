@@ -143,6 +143,14 @@ assert "std::thread([] {" not in pc_source.split('dev-settings pc_fast=on', 1)[1
 assert "core_pc_count.load() < sampled_core_pcs.size()" not in pc_source
 assert "pc_core_registration.active = true;" in pc_source
 assert "const bool gpu_capacity = true;" in pc_source
+pc_poll = pc_source.split("void PollGpuPc() {", 1)[1].split("#endif", 2)[-1].split(
+    'extern "C" unsigned eden_heap_arenas_created', 1)[0]
+assert "pthread_t gpu_target{};" in pc_poll
+assert "const std::lock_guard lock(workers_mutex);" in pc_poll
+assert pc_poll.index("const std::lock_guard lock(workers_mutex);") < pc_poll.index(
+    "if (gpu_ready && pthread_kill(gpu_target, SIGUSR2))")
+assert "pthread_kill(workers[4].thread, SIGUSR2)" not in pc_source
+
 
 # Native GPU Snapshot() may process thousands of development PC samples.
 # The CPU cores' SampleCpu() publication mutex must be held only for an
