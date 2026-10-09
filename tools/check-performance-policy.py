@@ -24,6 +24,9 @@ for field in fields:
 # Every authored video tier has an explicit seven-switch policy.
 rows = re.findall(r"\{false,\s*(?:true|false),\s*(?:true|false),\s*(?:true|false),\s*(?:true|false),\s*(?:true|false),\s*(?:true|false)\}", policy)
 assert len(rows) == 4, rows
+# Async shader compilation applies to ALL quality tiers, including Ultra.
+# It may defer a new effect, but must not block the whole render pipeline.
+assert all(re.search(r"\{false,\s*true,", row) for row in rows), rows
 assert "There is no manual" not in policy  # policy is generic, not whitelist-driven
 
 checks = (
@@ -56,4 +59,17 @@ assert "saved-block compile-ahead disabled" in main
 assert "runtime_performance_profile" in main
 assert "effective_resolution_for_tuning" in main
 assert "effective_output_for_tuning" in main
+
+# The development GPU timestamp recorder has a process-global query handle.
+# On PS5 the Vulkan logical device is rebuilt for each game in one process.
+# Never reuse old-device query pools or a prior title's failed/ring state.
+vulkan_dev = (root / "headless/dev_vulkan.h").read_text()
+generator = (root / "tools/prepare-vulkan-port.py").read_text()
+assert "std::atomic<std::uint64_t> gpu_time_session{0};" in vulkan_dev
+assert "Eden::DevVulkan::gpu_time = false;" in main
+assert "Eden::DevVulkan::gpu_time_session.fetch_add(1, std::memory_order_release);" in main
+assert "const u64 session = ::Eden::DevVulkan::gpu_time_session.load(std::memory_order_acquire);" in generator
+assert "gpu_time = GpuTimeProbe{};" in generator
+assert generator.index("gpu_time = GpuTimeProbe{};") < generator.index("if (gpu_time.failed) return;")
 print("Encore automatic performance policy: 7/7 controls owned by 4 tiers + Custom derivation PASS")
+print("GPU timing device lifecycle: explicit opt-in, per-title query reset contract PASS")

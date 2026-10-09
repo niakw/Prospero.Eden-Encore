@@ -861,6 +861,10 @@ int main(int argc, char** argv) {
         const int profile_aa = effective_authored_tier >= 0 ? title_profile.anti_aliasing : launch_preferences.anti_aliasing;
         const int profile_refresh = effective_authored_tier >= 0 ? title_profile.refresh : launch_preferences.refresh;
 #ifdef EDEN_DEV_VULKAN
+        // New game session: old Vulkan timestamp query pools are tied to a
+        // destroyed VkDevice. Reset even when the dev probe is off now.
+        Eden::DevVulkan::gpu_time = false;  // only explicit gpu_time=on opts in
+        Eden::DevVulkan::gpu_time_session.fetch_add(1, std::memory_order_release);
         Eden::Performance::vulkan_cost_enabled = std::filesystem::exists(Eden::AppFile("cost-run.txt"));
         const bool performance_run = std::filesystem::exists(Eden::AppFile("performance-run.txt"));
 #ifdef EDEN_DEV_PROFILE

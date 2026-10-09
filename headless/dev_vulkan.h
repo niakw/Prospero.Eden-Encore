@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
+#include <atomic>
+#include <cstdint>
 // Development A/B switches for Vulkan device features, set from /app0/dev-settings.txt
 // before the renderer creates its device (tools/prepare-vulkan-port.py applies them).
 namespace Eden::DevVulkan {
@@ -17,6 +19,10 @@ inline bool disable_multi_range = false; // bind multi-range SSBOs the pre-2026 
 inline bool disable_custom_border = true;
 inline bool sync_submissions = false; // wait for the GPU after every scheduler flush
 inline bool gpu_time = false; // EDEN_GPU_TIME: GPU execution time of scheduler submissions
+// PS5 launches multiple titles in one process. A VkQueryPool belongs to the
+// old VkDevice after title teardown and MUST NOT be reused by the next title.
+// This epoch changes once before each title's GPU workers start.
+inline std::atomic<std::uint64_t> gpu_time_session{0};
 // No VK_EXT_conditional_rendering (dev-settings conditional_rendering=off). The extension is on:
 // RADV's predication is correct on the console (2.7M predicated conditions in one game, 45k
 // skipped, correct output). LOD swaps and wrong draws blamed on it came from compute

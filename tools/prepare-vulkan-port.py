@@ -434,6 +434,7 @@ struct GpuTimeProbe {
     PFN_vkCmdWriteTimestamp write{};
     double period_ns{};
     u64 next{}, first_pending{};
+    u64 session{};  // reset before first command of a new VkDevice/title
     u32 current{};
     u64 busy_ns{}, max_ns{}, submissions{};
     std::chrono::steady_clock::time_point report{};
@@ -441,7 +442,16 @@ struct GpuTimeProbe {
 } gpu_time;
 
 void GpuTimeBegin(const Device& device, vk::CommandBuffer cmdbuf) {
-    if (!::Eden::DevVulkan::gpu_time || gpu_time.failed) return;
+    if (!::Eden::DevVulkan::gpu_time) return;
+    const u64 session = ::Eden::DevVulkan::gpu_time_session.load(std::memory_order_acquire);
+    if (gpu_time.session != session) {
+        // Previous VkDevice teardown implicitly destroyed its query pool.
+        // The process-global probe must discard that device's handle, counters
+        // and failures before any query on the next title can be recorded.
+        gpu_time = GpuTimeProbe{};
+        gpu_time.session = session;
+    }
+    if (gpu_time.failed) return;
     if (!gpu_time.write) {
         const auto& dld = device.GetDispatchLoader();
         gpu_time.write = reinterpret_cast<PFN_vkCmdWriteTimestamp>(
