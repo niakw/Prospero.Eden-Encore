@@ -61,7 +61,7 @@ int main() {
     }
     // For 18 frames on 3 buffers only initial allocation and genuine
     // capacity upgrades cause GL storage reallocation.
-    assert(allocations == 9);
+    assert(allocations == 6);
 }
 """
 with tempfile.TemporaryDirectory(prefix="eden-ps5-gl-ring-") as d:
