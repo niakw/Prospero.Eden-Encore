@@ -84,6 +84,21 @@ with tempfile.TemporaryDirectory(prefix="eden-glyph-web-discovery-") as root:
     assert online["mod_asset_downloads"] == 0
     assert newst["next_offset"] == 1
     assert newst["completed_title_ids"] == [full["games"][0]["title_id"]]
+    assert newst["completed_query_keys"] == [
+        "duckduckgo|0|" + full["games"][0]["title_id"]]
+    # The same Switch1 title MUST be revisited for PC/Wii U/Xbox mods.
+    with patch.object(search, "ddg", return_value=raw):
+        other, otherstate = search.discover(full, newst, 1, "duckduckgo",
+                                           network=True, variant=1, interval=0)
+    assert other["games_examined"] == 1
+    assert other["games"][0]["title_id"] == full["games"][0]["title_id"]
+    assert len(otherstate["completed_query_keys"]) == 2
+    with patch.object(search, "ddg", return_value=raw):
+        again, already = search.discover(full, otherstate, 1, "duckduckgo",
+                                         network=True, variant=0, interval=0)
+    assert already["completed_query_keys"] == otherstate["completed_query_keys"]
+    assert again["games_examined"] == 1
+    assert again["games"][0]["title_id"] != full["games"][0]["title_id"]
     changed_live = json.loads(json.dumps(full))
     changed_live["games"].reverse()
     updated, carried = search.discover(changed_live, newst, 2, network=False)
