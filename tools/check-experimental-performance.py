@@ -32,8 +32,18 @@ assert 'doc.find("defaults")' in main
 assert 'doc.contains(at) && doc.at(at).is_object()' in main
 assert 'if (game_options)' in main and 'if (defaults)' in main
 assert main.index('if (game_options)') < main.index('if (defaults)')
-assert 'get("cpu_placement") == "logical"' in main
-assert 'get("vulkan_pacing") == "trace"' in main
+# The native DEV build now enables sparse-JIT / logical CPU / frame
+# telemetry without player-side experimental toggles or JSON opt-in.
+# Explicit "off" entries and Safe Launch remain supported fallback paths.
+assert 'experimental_sparse_jit = true;' in main
+assert 'experimental_logical_cpu = true;' in main
+assert 'experimental_frame_probe = true;' in main
+assert 'if (get("jit_memory") == "off") experimental_sparse_jit = false;' in main
+assert 'if (get("cpu_placement") == "off") experimental_logical_cpu = false;' in main
+assert 'if (get("vulkan_pacing") == "off") experimental_frame_probe = false;' in main
+assert 'export EDEN_SPARSE_JIT_DEV=ON' in read("tools/build-package.sh")
+assert 'export EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF EDEN_SPARSE_JIT_DEV=OFF' in read("tools/build-package.sh")
+assert '-DEDEN_SPARSE_JIT_DEV="${EDEN_SPARSE_JIT_DEV:-OFF}"' in read("tools/build-headless-native.sh")
 assert "EnableExperimentalLogicalPlacement();" in main
 assert 'jit == "balanced"' not in main and 'jit == "expanded"' not in main
 assert "ChooseJitMemoryPlan(" in main and "ApplyJitMemoryPlan(" in main
