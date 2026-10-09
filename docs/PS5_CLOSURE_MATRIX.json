@@ -234,5 +234,32 @@
       "change": "Pack installer refuses file/directory overlaps in both original RomFS and art source paths",
       "native_ps5_verified": false
     }
-  ]
+  ],
+  "test_build_configuration_2026_10_09": {
+    "profile": "all_on_native_dev_not_hardware_qualified",
+    "development_branch": "dev/ps5-sparse-jit",
+    "compile_flags": {
+      "EDEN_SPARSE_JIT_DEV": "ON",
+      "EDEN_DEV_PROFILE": "ON",
+      "EDEN_DEV_VULKAN": "ON",
+      "EDEN_PS5_VULKAN": "ON",
+      "EDEN_VULKAN_DRIVER": "RADV",
+      "EDEN_SHARED_JIT": "OFF",
+      "EDEN_JIT_COMPILE_BATCH": "OFF"
+    },
+    "test_runtimes_by_default": {
+      "jit_sparse_with_fw_rw_rx_probe": true,
+      "cpu_logical_placement": true,
+      "frame_pacing_diagnostics": true,
+      "gpu_PRMT_index_software_fermi_paths_compiled": true,
+      "all_game_ps_glyph_art_qualified": false
+    },
+    "legacy_experiments_json_ignored": true,
+    "safe_launch_fallback": true,
+    "test_artifact_name": "Prospero.Eden-Encore-PS5-all-on-test",
+    "native_run_id": null,
+    "native_build_conclusion": null,
+    "native_ps5_qualified": false,
+    "note": "All-on means all selected currently supported test paths on the dev build. Not unimplemented GPU modes, game-owned art not supplied, or source-only unqualified shared-JIT mode."
+  }
 }
