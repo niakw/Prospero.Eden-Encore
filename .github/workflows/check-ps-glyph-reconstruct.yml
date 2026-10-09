@@ -42,6 +42,7 @@ jobs:
       - name: Host fixture dependencies (not a PS5 build)
         run: |
           python3 -m pip install --user --break-system-packages Pillow
+      # Host-only cross-console source layout regression; deliberately no native PS5 compile.
       - name: Verify same-game PS4/Switch positions across layout/scaled art
         run: |
           python3 -B tools/check-ps-glyph-scene-positions.py
