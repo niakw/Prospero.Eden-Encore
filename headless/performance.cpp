@@ -186,8 +186,7 @@ void CheckWorkerTopology() {
         // the old probe observed the same physical core for every allowed CPU on hardware.
         sched_yield();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        unsigned a, b, c, d;
-        __cpuid_count(0xb, 0, a, b, c, d);
+        unsigned a{}, b{}, c{}, d{};
         // Accept a physical core only when the requested single-CPU mask
         // is observed after rescheduling; setaffinity success is insufficient.
         cpuset_t verified{};
@@ -195,20 +194,22 @@ void CheckWorkerTopology() {
             std::memcmp(&one, &verified, 8)) break;
         unsigned core = 0;
         bool decoded = false;
-        if (has_x2apic) {
-            __cpuid_count(0xb, 0, a, b, c, d);
-            if (b && ((c >> 8) & 0xffu) == 1u && (a & 31u) < 16u) {
-                core = d >> (a & 31u);
+        // On AMD family 17h+, use its verified TopologyExtensions first:
+        // some PS5 firmware reports an unusable x2APIC SMT/core partition.
+        // EBX[7:0] CoreId, EBX[15:8] threads/core - 1,
+        // ECX[7:0] NUMA node ID. Never treat sibling logical IDs as cores.
+        if (has_amd_topology) {
+            __cpuid_count(0x8000001eu, 0, a, b, c, d);
+            const unsigned threads_per_core = ((b >> 8) & 255u) + 1u;
+            if (threads_per_core <= 8u) {
+                core = ((c & 255u) << 8) | (b & 255u);
                 decoded = true;
             }
         }
-        // AMD TopologyExtensions 0x8000001E: EBX[7:0] CoreId,
-        // EBX[15:8] threads/core - 1, ECX[7:0] NUMA node ID.
-        if (!decoded && has_amd_topology) {
-            __cpuid_count(0x8000001eu, 0, a, b, c, d);
-            const unsigned threads_per_core = ((b >> 8) & 255u) + 1u;
-            if (threads_per_core >= 1u && threads_per_core <= 8u) {
-                core = ((c & 255u) << 8) | (b & 255u);
+        if (!decoded && has_x2apic) {
+            __cpuid_count(0xb, 0, a, b, c, d);
+            if (b && ((c >> 8) & 0xffu) == 1u && (a & 31u) < 16u) {
+                core = d >> (a & 31u);
                 decoded = true;
             }
         }
