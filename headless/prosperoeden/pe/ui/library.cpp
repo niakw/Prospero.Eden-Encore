@@ -579,6 +579,11 @@ void Launcher::check_games_present()
     presence_scan_ = std::async(std::launch::async,
         [this, paths = std::move(paths)] {
             std::vector<std::string> missing;
+            // A temporarily unavailable ROM root (e.g. after a crash) must
+            // not make every game appear deleted on two successive polls.
+            // Check on this filesystem worker only, never on the UI frame.
+            if (!services_.game_storage_available())
+                return missing;
             for (const std::string &path : paths)
                 if (!services_.game_exists(path))
                     missing.push_back(path);
