@@ -59,6 +59,7 @@ assert workers(16, set(range(5, 13)), None) == 1  # fail-closed unverified
 assert workers(16, set(range(10)), primary) == 3
 assert workers(16, set(range(13)), None) == 6
 assert workers(16, set(range(1, 7)), primary) == 1
-assert workers(16, set(), primary) == 1
+assert workers(16, set(), primary) == 2  # successful empty affinity: fallback 4 slots minus 2 headroom
+assert workers(16, set(), None) == 1  # unavailable/unverified affinity: reserve 7
 print("SOURCE POLICY: verified PS5 8-slot secondary affinity uses 6 shader workers, keeps 2 for services")
 print("R237 test result still unknown: no build without user authorization")
