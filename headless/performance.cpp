@@ -538,8 +538,32 @@ static void RefreshFreeMemory() {
     std::size_t largest = 0;
     const std::int64_t total = sceKernelGetDirectMemorySize();
     const bool known = total > 0 && sceKernelAvailableDirectMemorySize(0, total, 0x4000, &start, &largest) == 0;
-    largest_free_block.store(known ? largest : 0, std::memory_order_relaxed);
-    graphics_memory_short.store(!known || largest < kShortMemory, std::memory_order_relaxed);
+    // Unknown is not the same as an observed low-memory condition. A single
+    // transient failed query previously flipped memory_short to true and
+    // immediately enabled expensive dirty-texture download/eviction. Keep
+    // the last kernel-confirmed headroom for ONE missed 100ms refresh only.
+    // First-ever failure and consecutive failures fail safely to "short".
+    static std::atomic<unsigned> consecutive_failures{0};
+    static std::atomic<bool> has_valid_sample{false};
+    if (known) {
+        largest_free_block.store(largest, std::memory_order_relaxed);
+        graphics_memory_short.store(largest < kShortMemory, std::memory_order_relaxed);
+        consecutive_failures.store(0, std::memory_order_relaxed);
+        has_valid_sample.store(true, std::memory_order_release);
+    } else {
+        const unsigned failed = consecutive_failures.fetch_add(1, std::memory_order_relaxed) + 1;
+        if (!has_valid_sample.load(std::memory_order_acquire) || failed >= 2) {
+            largest_free_block.store(0, std::memory_order_relaxed);
+            graphics_memory_short.store(true, std::memory_order_relaxed);
+        }
+        // Only two lines per failure streak, no per-frame or allocator logging.
+        static std::atomic<unsigned> reported{0};
+        if ((failed == 1 || failed == 2) &&
+            reported.fetch_add(1, std::memory_order_relaxed) < 16)
+            std::printf("EDEN_PS5_DMEM_PROBE_FAILED consecutive=%u fallback=%s\n", failed,
+                        failed == 1 && has_valid_sample.load(std::memory_order_relaxed)
+                            ? "last_confirmed" : "conservative");
+    }
 }
 static bool GraphicsMemoryShort() {
     RefreshFreeMemory();

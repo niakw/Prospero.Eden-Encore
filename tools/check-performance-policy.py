@@ -91,5 +91,14 @@ assert "if (worker_thread.joinable()) worker_thread.join();" in generator
 assert "GpuTimeDestroy(device);" in generator
 assert "if (gpu_time.pool) GpuTimeDestroy(device);" in generator
 assert generator.index("if (worker_thread.joinable()) worker_thread.join();") < generator.index("if (gpu_time.pool) GpuTimeDestroy(device);")
+# One failed 100ms PS5 direct-memory query must not be treated as a
+# confirmed low-memory event and trigger huge dirty texture downloads.
+# Zero previous observations, or two consecutive misses, stay conservative.
+perf = (root / "headless/performance.cpp").read_text()
+assert "static std::atomic<unsigned> consecutive_failures{0};" in perf
+assert "static std::atomic<bool> has_valid_sample{false};" in perf
+assert "if (!has_valid_sample.load(std::memory_order_acquire) || failed >= 2)" in perf
+assert 'EDEN_PS5_DMEM_PROBE_FAILED consecutive=%u fallback=%s' in perf
+assert "graphics_memory_short.store(largest < kShortMemory" in perf
 print("Encore automatic performance policy: 7/7 controls owned by 4 tiers + Custom derivation PASS")
 print("GPU timing device lifecycle: explicit opt-in, per-title query reset contract PASS")
