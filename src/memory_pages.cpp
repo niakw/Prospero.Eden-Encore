@@ -244,6 +244,11 @@ struct SparseJitRegion {
 std::mutex sparse_jit_mutex;
 std::unordered_map<void*, SparseJitRegion> sparse_jit_regions;
 std::size_t sparse_jit_committed = 0;
+// The GPU frame reporter MUST NOT take sparse_jit_mutex while Dynarmic
+// commits 2 MiB code chunks. Keep cheap snapshots atomically alongside the
+// owner-locked exact counters. Both are updated only after ownership changes.
+std::atomic<std::size_t> sparse_jit_reserved_live{0};
+std::atomic<std::size_t> sparse_jit_committed_live{0};
 // JIT executable aliases are immutable during an active title. The epoch
 // invalidates per-thread "already committed" hints whenever a region is
 // created or released, preventing an old pointer/VA from being mistaken for
@@ -349,6 +354,15 @@ void SparseJitUsage(std::size_t* virtual_bytes, std::size_t* committed_bytes) no
     *committed_bytes = sparse_jit_committed;
 }
 
+// No mutex, no physical query, no allocator traversal: safe for the five-second
+// native graphics frame reporter. Values may span an in-progress reservation
+// update, so use lifecycle SparseJitUsage() for exact stopped-title receipts.
+void SparseJitUsageFast(std::size_t* virtual_bytes, std::size_t* committed_bytes) noexcept {
+    if (!virtual_bytes || !committed_bytes) return;
+    *virtual_bytes = sparse_jit_reserved_live.load(std::memory_order_relaxed);
+    *committed_bytes = sparse_jit_committed_live.load(std::memory_order_relaxed);
+}
+
 // The upstream ConstantPool constructor writes ~2 MiB (plus alignment) before
 // BlockOfCode's constructor body calls EnsureMemoryCommitted. Provision 4 MiB
 // before returning RX/RW pointers; later code commits stay demand-driven.
@@ -390,6 +404,7 @@ void* ReserveSparseJitCode(std::size_t size, void** writable_out) noexcept {
         const std::lock_guard lock{sparse_jit_mutex};
         if (!sparse_jit_regions.emplace(rx, std::move(region)).second)
             std::abort();
+        sparse_jit_reserved_live.fetch_add(size, std::memory_order_relaxed);
         sparse_jit_generation.fetch_add(1, std::memory_order_acq_rel);
     } catch (...) {
         if (munmap(rx, size) != 0 || munmap(rw, size) != 0) std::abort();
@@ -499,6 +514,7 @@ bool CommitSparseJitCode(void* executable, std::size_t required) noexcept {
         region.physical.push_back(physical); // capacity reserved at region creation
         region.committed += LargePage;
         sparse_jit_committed += LargePage;
+        sparse_jit_committed_live.fetch_add(LargePage, std::memory_order_relaxed);
     }
     // The page protection/mapping writes above happen before publishing a
     // positive hint. No unvalidated amount is ever returned from fastpath.
@@ -519,6 +535,8 @@ void ReleaseSparseJitCode(void* executable) noexcept {
         if (it == sparse_jit_regions.end()) std::abort();
         region = std::move(it->second);
         sparse_jit_committed -= region.committed;
+        sparse_jit_committed_live.fetch_sub(region.committed, std::memory_order_relaxed);
+        sparse_jit_reserved_live.fetch_sub(region.capacity, std::memory_order_relaxed);
         remaining = sparse_jit_committed;
         // Guest workers must already be quiescent before BlockOfCode releases
         // its executable view; invalidate all per-thread positive hints now.

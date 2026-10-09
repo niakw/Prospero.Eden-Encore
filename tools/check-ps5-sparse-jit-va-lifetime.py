@@ -32,6 +32,11 @@ assert "return nullptr;" in allocator.split("EDEN_JIT_SPARSE_RESERVE_FAILED", 1)
 assert "region.committed += LargePage;" in ps5
 assert "sparse_jit_committed += LargePage;" in ps5
 assert "sparse_jit_committed -= region.committed;" in ps5
+assert "void SparseJitUsageFast(" in ps5
+assert "sparse_jit_reserved_live.fetch_add(size," in ps5
+assert "sparse_jit_reserved_live.fetch_sub(region.capacity," in ps5
+assert "sparse_jit_committed_live.fetch_add(LargePage," in ps5
+assert "sparse_jit_committed_live.fetch_sub(region.committed," in ps5
 # PS5 native kernel APIs can return a mapping whose first address is inside
 # the CPU window while the complete range crosses the GPU-reserved high VA.
 # All dense pages, dense executable aliases and sparse zero-page scratch
