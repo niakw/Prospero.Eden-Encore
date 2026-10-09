@@ -1394,8 +1394,26 @@ int main(int argc, char** argv) {
             // original Nintendo artwork. Once per launch; no GPU hot-path scan.
             const auto glyph_catalogue = Eden::GlyphOverrides::LoadCatalogue(
                 Eden::ConfigFile("encore-glyph-overrides.json"));
+            // sys-con-like separation of physical pad, normalized guest HID,
+            // and the game's art: a PlayStation texture pack is valid only
+            // for the actual fixed Cross=A input profile. Custom/physical-
+            // Switch mapping can require different game-native artwork.
+            // Do not reread controller preferences for unsupported titles.
+            const auto playstation_glyph_mapping = [&] {
+                const auto controls = Eden::LoadPreferences();
+                return Eden::CompatibleWithPlayStationActionGlyphs(
+                    Eden::ResolveSessionButtonMapping(
+                        controls.controller_layout, controls.mapping,
+                        game_video.controller_layout, game_video.own_mapping,
+                        game_video.mapping));
+            };
             const bool glyph_requested = !safe_launch && all_mods_enabled &&
                 Eden::LoadInGamePlayStationGlyphs(title) &&
+                std::any_of(glyph_catalogue.rules.begin(), glyph_catalogue.rules.end(),
+                    [title](const Eden::GlyphOverrides::Rule& rule) {
+                        return rule.title == title;
+                    }) &&
+                playstation_glyph_mapping() &&
                 std::none_of(mods_off.begin(), mods_off.end(), [](const std::string& name) {
                     return Eden::Mods::Lower(name) == Eden::Mods::Lower(Eden::GlyphOverrides::kModName);
                 });
