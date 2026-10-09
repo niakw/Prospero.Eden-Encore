@@ -1469,3 +1469,7 @@ Push with `[full-build] [test-all-on]` after correcting exactly four missing Fre
 - Native all-on workflow run [37877447555](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/37877447555) reached translations and failed **before source validation/native build**. The four newly added fr-FR strings are now present (`fr-FR.po: 374 texts, 0 problems`), but GitHub log explicitly showed `fr_fr_embedded.h is stale; run tools/launcher/strings.py embed-fr`, hence `29 catalogs FAIL` even though the locale catalogs themselves had zero problems.
 - Regenerated `headless/prosperoeden/fr_fr_embedded.h` byte-for-byte from the current `headless/prosperoeden/ui/lang/fr-FR.po` using the exact documented `write_embedded_fr` code template; commit `0fe70afd0867e7c898dbcabc0603231550caac09` `[skip ci]`. Valid raw delimiter `)FRPO"` cannot collide with the PO content. UI design and localization format unchanged.
 - No native PS5 code compilation had occurred at this point. 26 hardware criteria, FC27 JIT, GPU and real in-game glyph artwork still unqualified. Any subsequent action must be re-evaluated from the new commit without confusing older setup/translation failures with hardware issues.
+
+### 2026-10-09 — Native PS5 all-on CI retry after embedded FR catalog sync
+
+Explicit source-only compile+stage reattempt requested through `[full-build] [test-all-on]`; real Actions status must be read back. Preserve `dev` branch unchanged during run to prevent concurrency cancellation.
