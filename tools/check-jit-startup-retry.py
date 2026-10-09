@@ -44,14 +44,18 @@ int main() {
         attempts.push_back(size);
         if(size>256u*mib) throw Xbyak::Error(Xbyak::ERR_CANT_ALLOC);
     });
-    assert((attempts==std::vector<std::uint32_t>{1024u*mib,512u*mib,256u*mib}));
+    assert((attempts==std::vector<std::uint32_t>{
+        1024u*mib,768u*mib,576u*mib,432u*mib,324u*mib,256u*mib}));
     assert(size==256u*mib);
     std::uint32_t a32=512u*mib;
     int n=0;
     ConstructWithCapacityFallback(a32,64u*mib,32,1,[&] {
         ++n; if(a32>128u*mib) throw std::bad_alloc{};
     });
-    assert(a32==128u*mib && n==3);
+    assert(a32==128u*mib && n==6);
+    // Close-to-baseline failure cannot loop or shrink below 2MiB floor.
+    assert(NextCapacity(258u*mib,256u*mib)==256u*mib);
+    assert(NextCapacity(320u*mib,192u*mib)==240u*mib);
     std::uint32_t unrelated=512u*mib;
     n=0;
     bool caught=false;
@@ -91,5 +95,5 @@ with tempfile.TemporaryDirectory(prefix="eden-jit-startup-") as directory:
                     "-I",str(tmp),"-I",str(ROOT/"headless"),
                     str(cpp),"-o",str(exe)], check=True)
     subprocess.run([str(exe)], check=True)
-print("PASS Dynarmic JIT startup: A64/A32 allocation fallback, fatal error propagation, null-JIT")
+print("PASS Dynarmic JIT startup: quarter-step A64/A32 allocation fallback, fatal errors, null-JIT")
 print("Full PS5 native build/hardware: NOT RUN")
