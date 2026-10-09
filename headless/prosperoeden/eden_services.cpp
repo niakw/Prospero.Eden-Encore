@@ -34,6 +34,7 @@
 #include <nlohmann/json.hpp>
 #include <stb_image.h>
 #include <sys/stat.h>
+#include <system_error>
 #include <thread>
 #include <unordered_map>
 #include <unistd.h>
@@ -1044,7 +1045,10 @@ std::vector<pe::ui::Game> EdenServices::games(const std::atomic<bool>* cancel) {
     if (directory_error) {
         Eden::Report("library", ("EDEN_ROM_SCAN directory_error=" +
                                  directory_error.message()).c_str());
-        return games;
+        // Do not publish a spurious empty library on a transient PS5 mount/
+        // getdents failure. Launcher::finish_scan catches the exception and
+        // preserves the previous complete snapshot.
+        throw std::system_error(directory_error, "ROM directory scan failed");
     }
     if (cancel && cancel->load(std::memory_order_acquire)) return games;
     eden_scan_addons(Eden::AssetsPath("updates").c_str(), Eden::AssetsPath("keys").c_str());
