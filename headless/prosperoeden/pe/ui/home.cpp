@@ -639,18 +639,22 @@ void Launcher::draw_home(Canvas &c)
     text(c, hero_recent != nullptr ? tr("SELECTED GAME") : tr("CONTINUE PLAYING"),
          90.0f, baseline(133.0f, 30.0f, theme::kSmall),
          theme::kSmall, theme::kLimePale, Align::left, 3.0f);
-    // Decide single vs two lines at the SAME 76px font as the single-line
-    // renderer. The previous 64px threshold could choose an undersized
-    // one-line box for BOTW-length names and trigger premature ellipsis.
-    // All positions stay above Play at y=390.
+    // One shared left-aligned content span for title, description and
+    // action/chip rail. Never wrap a title at 1030px when the hero has
+    // enough horizontal room for an intact one-line title (e.g. BOTW).
+    // Keep 150px for the TV safe area at the right edge.
+    constexpr float kHeroContentWidth = 1680.0f; // x=90 .. 1770
     const std::string title_label =
         hero_file.empty() ? std::string{tr("Your next adventure")} : hero_title;
-    if (text_width(c, title_label, 76.0f) > 1030.0f)
-        text_block(c, title_label, 90.0f, baseline(166.0f, 54.0f, 51.0f),
-                   51.0f, 53.0f, theme::kTitle, 1050.0f, 2, 0.87f);
+    constexpr float kTitleSize = 76.0f;
+    constexpr float kMinOneLineScale = 0.72f;
+    if (text_width(c, title_label, kTitleSize) <= kHeroContentWidth / kMinOneLineScale)
+        text_shrink(c, title_label, 90.0f, baseline(175.0f, 96.0f, kTitleSize),
+                    kTitleSize, theme::kTitle, kHeroContentWidth, Align::left,
+                    0.0f, kMinOneLineScale);
     else
-        text_shrink(c, title_label, 90.0f, baseline(175.0f, 96.0f, 76.0f),
-                    76.0f, theme::kTitle, 1030.0f, Align::left, 0.0f, 0.70f);
+        text_block(c, title_label, 90.0f, baseline(166.0f, 54.0f, 51.0f),
+                   51.0f, 53.0f, theme::kTitle, kHeroContentWidth, 2, 0.87f);
     const bool hero_caption_warning = hero_recent == nullptr && home_.last_caption_warning;
     // A game-return screen must not silently swap a full Nlib description
     // for a short English marketing slogan ("The world's game...") merely
@@ -664,10 +668,10 @@ void Launcher::draw_home(Canvas &c)
         hero_recent != nullptr ? std::string{tr("Recently played")} : home_.last_caption;
     if (hero_caption_warning)
         notice_block(c, hero_caption, 90.0f, baseline(280.0f, 27.0f, 21.0f),
-                     21.0f, 25.0f, theme::kWarning, 1030.0f, 2, true);
+                     21.0f, 25.0f, theme::kWarning, kHeroContentWidth, 2, true);
     else
         text_block(c, hero_caption, 90.0f, baseline(280.0f, 27.0f, 21.0f),
-                   21.0f, 25.0f, theme::kBody, 1030.0f, 2, 0.86f);
+                   21.0f, 25.0f, theme::kBody, kHeroContentWidth, 2, 0.86f);
     int hero_mods = hero_recent == nullptr ? home_.last_mods : 0;
     int hero_mods_on = hero_recent == nullptr ? home_.last_mods_on : 0;
     for (const Game &game : games_)
@@ -682,7 +686,7 @@ void Launcher::draw_home(Canvas &c)
                     fill(tr("Add-ons: {0}  /  Language: {1}"),
                          {addons_line(hero_addons, hero_mods, hero_mods_on), hero_language}),
                     90.0f, baseline(341.0f, 25.0f, theme::kSmall), theme::kSmall,
-                    theme::kMeta, 1050.0f);
+                    theme::kMeta, kHeroContentWidth);
 
     const char *first = hero_ready ? tr("Play") : tr("Open library");
     const Rect continue_rect{90.0f, 390.0f, 348.0f, 70.0f};
