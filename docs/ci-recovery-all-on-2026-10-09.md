@@ -1,0 +1,3 @@
+# PS5 all-on CI validation — 2026-10-09
+
+Development branch `dev/ps5-sparse-jit` only. The previous all-on run #37899025569 failed in `tools/check-ps5-all-on-contract.py` because the Bash test harness received literal newline escapes. Commit `b21ad682` corrected the Python harness escapes. The native PS5 Clang syntax gate remains independent of `EDEN_SKIP_SOURCE_CHECKS` and respects `EDEN_SKIP_PREBUILD_SOURCE_CHECKS`; release-only checks remain gated in dev. This commit requests one full all-on validation of the corrected regression, native compilation, and package artifact. It does not publish, modify the approved launcher UI, or certify PS5 FW13.60 hardware behavior.
