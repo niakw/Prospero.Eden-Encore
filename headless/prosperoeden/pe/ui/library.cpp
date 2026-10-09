@@ -1106,6 +1106,7 @@ void Launcher::press_game(Key key)
         const bool saved = services_.set_game_settings(game.title_id, reset);
         if (saved) {
             game_settings_ = reset;
+            home_settings_cache_.erase(game.title_id);
             game_docked_ = services_.docked(game.title_id);
             game.docked = game_docked_;
             selected_docked_ = game_docked_;
@@ -1166,7 +1167,10 @@ void Launcher::press_game(Key key)
             next.mapping = next.controller_layout >= 0 ?
                 Eden::BaseMappingForLayout(next.controller_layout) : prefs_.mapping;
             const bool saved = services_.set_game_settings(game.title_id, next);
-            if (saved) game_settings_ = next;
+            if (saved) {
+                game_settings_ = next;
+                home_settings_cache_.erase(game.title_id);
+            }
             say(saved ? tr("Saved for this game. Applies on next launch.") :
                         tr("Could not save. Please try again."), !saved);
             cue(saved ? Cue::toggle : Cue::error);
@@ -1233,6 +1237,7 @@ void Launcher::press_game(Key key)
         saved = services_.set_game_settings(game.title_id, next);
         if (saved) {
             game_settings_ = next;
+            home_settings_cache_.erase(game.title_id);
             game_docked_ = next.console_mode == 1;
             game.docked = game_docked_;
             if (scan_.valid()) docked_refresh_after_scan_ = true;
@@ -1306,6 +1311,7 @@ void Launcher::press_game(Key key)
         saved = services_.set_game_settings(game.title_id, next);
         if (saved) {
             game_settings_ = next;
+            home_settings_cache_.erase(game.title_id);
             game_docked_ = next.console_mode >= 0 ? next.console_mode == 1 : services_.docked(game.title_id);
             game.docked = game_docked_;
             if (scan_.valid()) docked_refresh_after_scan_ = true;
