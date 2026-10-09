@@ -1813,7 +1813,7 @@ int main(int argc, char** argv) {
                     }
                     const bool timed_replay = Eden::DevInput::ScriptedReplayEnabled(
                         replay_requested, development_id, EDEN_DEV_PROFILE_TITLE);
-                    std::fprintf(stderr, "EDEN_PAD_INPUT mode=%s replay_requested=%d title=%s\\n",
+                    std::fprintf(stderr, "EDEN_PAD_INPUT mode=%s replay_requested=%d title=%s\n",
                                  timed_replay ? "scripted" : "dualsense", int(replay_requested),
                                  development_id.c_str());
                     const auto replay_start = std::chrono::steady_clock::now();
