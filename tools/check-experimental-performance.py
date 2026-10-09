@@ -26,21 +26,14 @@ assert "kHostReserve" in header
 assert "std::array<std::atomic<std::uint32_t>,4>" in header
 assert "jit_cache_tier{0}" not in header
 
-assert 'ConfigFile("experiments.json")' in main
+# One test profile for all games. Legacy per-game experiments.json
+# switches must not silently turn off sparse and diagnostic features.
+assert 'ConfigFile("experiments.json")' not in main
 assert "if (!safe_launch)" in main
-assert 'doc.find("defaults")' in main
-assert 'doc.contains(at) && doc.at(at).is_object()' in main
-assert 'if (game_options)' in main and 'if (defaults)' in main
-assert main.index('if (game_options)') < main.index('if (defaults)')
-# The native DEV build now enables sparse-JIT / logical CPU / frame
-# telemetry without player-side experimental toggles or JSON opt-in.
-# Explicit "off" entries and Safe Launch remain supported fallback paths.
-assert 'experimental_sparse_jit = true;' in main
-assert 'experimental_logical_cpu = true;' in main
-assert 'experimental_frame_probe = true;' in main
-assert 'if (get("jit_memory") == "off") experimental_sparse_jit = false;' in main
-assert 'if (get("cpu_placement") == "off") experimental_logical_cpu = false;' in main
-assert 'if (get("vulkan_pacing") == "off") experimental_frame_probe = false;' in main
+assert "experimental_sparse_jit = true;" in main
+assert "experimental_logical_cpu = true;" in main
+assert "experimental_frame_probe = true;" in main
+assert 'experimental_sparse_jit = false;' in main  # alias preflight
 assert 'export EDEN_SPARSE_JIT_DEV=ON' in read("tools/build-package.sh")
 assert 'export EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF EDEN_SPARSE_JIT_DEV=OFF' in read("tools/build-package.sh")
 assert '-DEDEN_SPARSE_JIT_DEV="${EDEN_SPARSE_JIT_DEV:-OFF}"' in read("tools/build-headless-native.sh")
@@ -125,6 +118,6 @@ assert "std::this_thread::sleep" not in present
 
 assert "0100C49025D3E000" in guide  # historical benchmark identifier only
 assert "EDEN_SPARSE_JIT_DEV=ON" in guide and "EDEN_DEV_PROFILE" in guide
-assert "**Do not activate the new flags yet on console.**" in guide
+assert "**The unified test build requires no experimental options in Settings.**" in guide
 assert "Safe Launch" in guide
 print("PS5 universal A64/A32 JIT budget and dev-only trace controls: source contracts PASS")
