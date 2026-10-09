@@ -54,3 +54,11 @@ This is a **community-supplied lead**, not a decoded binary observation. Accordi
 ### Source volume and evidence guard
 
 The machine-readable `docs/PS_GLYPH_SOURCE_INDEX.json` now holds **24 community references across 16 games**. The `tools/check-ps-glyph-community-index.py` source gate refuses to mark a rectangle verified without inspected archive, title/update, original/replacement SHA and a sane XYWH rectangle. It also requires explicit native PS5 test evidence for a compatibility claim. Both the indexing and gate are **source-only; the checker has not been executed**.
+
+### Persona 3 Portable (Switch) — nested non-BNTX resource chain
+
+[Mod author instructions](https://gamebanana.com/mods/461733) identify an actual packaging chain: Title ID `0100DCD01525A000`, `romfs/data_EN/umd0.cpk` → `init_free.bin` → `init/camp.bin` → `pc_button.spr`. It uses CPK File Builder and Amicitia, NOT a PNG/TGA RomFS direct replacement. The author states Standard mapping **Nintendo A → Circle** and **Nintendo B → Cross**. This is an extraction/injection **lead**, not validated source bytes or pixel positions.
+
+### Tokyo Mirage Sessions #FE Encore — glyphs that are not textures
+
+[Mod documentation](https://gamebanana.com/mods/367516) says PlayStation ABXY and shoulder prompts were replaced; Start/Select/PS were left original due to sprite rectangle limits, and the world **Check** prompt is not a texture at all. This falsifies any plan to claim that a pixel atlas engine alone can replace every button in every game. Requires an unsupported/procedural UI classification and possibly a separate text/layout renderer adapter after real evidence.
