@@ -38,6 +38,11 @@ This is more actionable than blindly increasing texture/JIT budgets. The launche
 
 - Each new native heap backing piece is 128 MiB of physically allocated PS5 direct memory. It is mapped and fully zeroed synchronously, potentially on the caller of an allocation during gameplay. The EDEN_HEAP_PIECE log now provides alloc_ns, map_ns, zero_ns (CLOCK_MONOTONIC). No per-malloc or per-frame timing added; zeroing and memory ownership unchanged. Use field logs to determine whether these rare growth operations correlate with frame spikes, rather than assuming an allocator stall explains sustained 12 FPS. No native build yet.
 
+### First heap-piece OOM: release 3 GiB reserved virtual range
+
+- The previous path could reserve the 3 GiB heap VA successfully, fail to commit its first 128 MiB of physical backing, then immediately attempt a dense **3 GiB** physical allocation while leaving the original virtual reservation mapped. On physical OOM this was an impossible escalation and stranded VA.
+- The source now unmaps the unused 3 GiB VA when that first physical commit fails and leaves the allocator in its existing system-libc fallback state. Legacy 3 GiB dense fallback remains only when virtual reservation itself is unavailable (firmware compatibility). Host heap harness adds a first-commit failure replay requiring the old mapping to be absent and no full dense retry. No tests run.
+
 ## 2. JIT cache growth and safe reclamation
 
 - Current `EDEN_PS5_JIT_POLICY` per-run virtual A64 capacities: first cold title **864+648+648+16 = 2,176 MiB**; return to library then second title **256+192+192+16 = 656 MiB** (because largest free is no longer 11,824 MiB but 4,128 MiB; dense admission formula gave no growth). The virtual shrink is unrelated to loss of executable JIT code when previous JIT shutdown: each old JIT sparse region releases physically to **remaining=0**.

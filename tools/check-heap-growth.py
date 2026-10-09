@@ -188,14 +188,19 @@ size_t malloc_usable_size(void *);
 size_t __real_malloc_usable_size(const void *address) { return malloc_usable_size((void *)address); }
 
 // The range the heap grows in: unreadable until committed, so a piece used early faults.
-static int refuse_range;
+static int refuse_range, refuse_first_commit;
+static unsigned dense_fallback_attempts;
+static void *last_reserved_base;
+static size_t last_reserved_size;
 static atomic_size_t committed_bytes;
 void *eden_heap_reserve(size_t size) {
     if (refuse_range) return NULL;
     void *address = mmap(NULL, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+    if (address != MAP_FAILED) { last_reserved_base = address; last_reserved_size = size; }
     return address == MAP_FAILED ? NULL : address;
 }
 int eden_heap_commit(void *address, size_t size) {
+    if (refuse_first_commit) { refuse_first_commit = 0; return -1; }
     assert(((uintptr_t)address & 0x1fffff) == 0 && (size & 0x1fffff) == 0);
     if (mprotect(address, size, PROT_READ | PROT_WRITE) != 0) return -1;
     atomic_fetch_add(&committed_bytes, size);
@@ -203,6 +208,7 @@ int eden_heap_commit(void *address, size_t size) {
 }
 static int refuse_pages;   // the console has no memory left for a block of its own
 void *eden_heap_pages(size_t size) {
+    if (size == ((size_t)3072 << 20)) ++dense_fallback_attempts;
     if (refuse_pages) return NULL;
     void *address = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
     return address == MAP_FAILED ? NULL : address;
@@ -288,6 +294,21 @@ static void *worker(void *argument) {
 int main(int argc, char **argv) {
     refuse_range = argc > 1 && strcmp(argv[1], "whole") == 0;
     const size_t piece = (size_t)128 << 20, heap = (size_t)3072 << 20;
+    if (argc > 1 && strcmp(argv[1], "first-commit-fail") == 0) {
+        refuse_first_commit = 1;
+        void *fallback = __wrap_malloc(100);
+        assert(fallback != NULL);
+        assert(atomic_load(&ps5_heap_state) == -1);
+        assert(eden_heap_committed() == 0);
+        assert(dense_fallback_attempts == 0);
+        assert(last_reserved_base != NULL && last_reserved_size == heap);
+        unsigned char residency = 0;
+        errno = 0;
+        assert(mincore(last_reserved_base, 4096, &residency) == -1 && errno == ENOMEM);
+        __wrap_free(fallback);
+        puts("first-commit-fail: reserved VA released, no dense retry PASS");
+        return 0;
+    }
     void *first = __wrap_malloc(100);
     assert(first != NULL);
     if (!refuse_range) {
@@ -417,7 +438,7 @@ with tempfile.TemporaryDirectory(prefix='eden-heap-') as work:
         binary = work / ('heap-' + label.split()[0])
         subprocess.run(['clang-18', '-std=gnu11', '-pthread', '-Wall', '-Wextra', '-Wno-unused-function',
                         '-Wno-unused-parameter', *flags, str(source), '-o', str(binary)], check=True)
-        for mode in ((), ('whole',)):
+        for mode in ((), ('whole',), ('first-commit-fail',)):
             if label != 'checked' and mode:
                 continue
             result = subprocess.run([str(binary), *mode], capture_output=True, text=True, timeout=900)
@@ -426,4 +447,4 @@ with tempfile.TemporaryDirectory(prefix='eden-heap-') as work:
                 sys.stderr.write(result.stderr[-3000:])
                 sys.exit(f'heap check failed ({label} {" ".join(mode)}): exit {result.returncode}')
 print('Heap by pieces: growth on demand, owners by address, requests larger than a piece, the 3 GiB limit, '
-      'the whole-heap fallback and eight threads under the thread sanitizer PASS')
+      'the whole-heap fallback, first-piece OOM rollback, and eight threads under the thread sanitizer PASS')
