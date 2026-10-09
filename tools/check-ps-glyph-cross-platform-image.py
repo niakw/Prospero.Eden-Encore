@@ -116,6 +116,9 @@ with tempfile.TemporaryDirectory(prefix="eden-cross-platform-glyph-") as temp:
     assert test.propose(pc, pc_mod, switch, "Synthetic Game", "Wii U", "gameplay")[
         "source_ui_layout_position_candidates"] == []
 
+    # Restore the original equal-art fixture after the scaling/ambiguity
+    # cases; otherwise the prior PC source is still 'other'.
+    pc.write_bytes(png(original))
     pc_mod.write_bytes(png(original))
     switch.write_bytes(png(original))
     report = test.propose(pc, pc_mod, switch, "Synthetic Test", "PC", "menu")
