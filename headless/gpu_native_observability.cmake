@@ -307,11 +307,24 @@ set(fermi_copy_new [=[
             static_cast<u64>(config.src_y1) <= src.height &&
             static_cast<u64>(config.dst_x1) <= regs.dst.width &&
             static_cast<u64>(config.dst_y1) <= regs.dst.height;
+        // Multiply-free 32-bit allocation boundary: (width * height * bpp)
+        // may itself overflow u64 for malicious guest surface dimensions.
+        // The pinned sw_blitter allocates exactly this many decoded bytes.
+        const auto valid_byte_count = [](s32 x0, s32 x1, s32 y0, s32 y1, u64 bpp) {
+            if (x0 < 0 || y0 < 0 || x1 <= x0 || y1 <= y0 ||
+                bpp == 0 || bpp > 0xffffffffULL)
+                return false;
+            const u64 width = static_cast<u64>(x1) - static_cast<u64>(x0);
+            const u64 height = static_cast<u64>(y1) - static_cast<u64>(y0);
+            const u64 max = 0xffffffffULL;
+            return width <= max / bpp &&
+                height <= max / (width * bpp);
+        };
         const bool copy_sizes_valid = rect_valid && copy_storage_valid &&
-            static_cast<u64>(config.src_x1 - config.src_x0) *
-                static_cast<u64>(config.src_y1 - config.src_y0) * src_bpp <= 0xffffffffULL &&
-            static_cast<u64>(config.dst_x1 - config.dst_x0) *
-                static_cast<u64>(config.dst_y1 - config.dst_y0) * dst_bpp <= 0xffffffffULL;
+            valid_byte_count(config.src_x0, config.src_x1,
+                             config.src_y0, config.src_y1, src_bpp) &&
+            valid_byte_count(config.dst_x0, config.dst_x1,
+                             config.dst_y0, config.dst_y1, dst_bpp);
         if (!copy_sizes_valid) {
             static std::atomic<unsigned> rect_reports{0};
             const unsigned count = rect_reports.fetch_add(1, std::memory_order_relaxed);
