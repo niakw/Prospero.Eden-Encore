@@ -254,6 +254,25 @@ if(sw_source_depth_at LESS 0 OR sw_dest_depth_at LESS 0 OR
     message(FATAL_ERROR "Pinned Fermi2D software base-layer copy contract changed")
 endif()
 
+# The shared software blitter silently overflowed 32-bit source/destination
+# rectangle byte counts and pitch * height before casting to size_t.
+# Widen the FIRST multiplier. This applies to every native Fermi fallback,
+# not only to the new 3D base-layer/pitch copy subset above.
+string(REPLACE "static_cast<size_t>(surface.pitch * surface.height)"
+               "static_cast<size_t>(surface.pitch) * surface.height"
+               sw_blit_source "${sw_blit_source}")
+string(REPLACE "const size_t src_copy_size = src_extent_x * src_extent_y * src_bytes_per_pixel;"
+               "const size_t src_copy_size = static_cast<size_t>(src_extent_x) * src_extent_y * src_bytes_per_pixel;"
+               sw_blit_source "${sw_blit_source}")
+string(REPLACE "const size_t dst_copy_size = dst_extent_x * dst_extent_y * dst_bytes_per_pixel;"
+               "const size_t dst_copy_size = static_cast<size_t>(dst_extent_x) * dst_extent_y * dst_bytes_per_pixel;"
+               sw_blit_source "${sw_blit_source}")
+write_derived("${PORT_BUILD_DIR}/sw_blitter_sized.cpp" "${sw_blit_source}")
+get_target_property(sw_blitter_sources video_core SOURCES)
+list(FILTER sw_blitter_sources EXCLUDE REGEX "engines/sw_blitter/blitter[.]cpp$")
+set_property(TARGET video_core PROPERTY SOURCES "${sw_blitter_sources}")
+target_sources(video_core PRIVATE "${PORT_BUILD_DIR}/sw_blitter_sized.cpp")
+
 set(fermi_copy_old [=[
     if (!rasterizer->AccelerateSurfaceCopy(src, regs.dst, config)) {
         sw_blitter->Blit(src, regs.dst, config);
