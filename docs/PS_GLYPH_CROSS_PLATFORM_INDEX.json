@@ -4,7 +4,7 @@
   "purpose": "Only technical observations from other-platform releases to guide inspection of Switch 1 originals; never direct emulator compatibility.",
   "switch_index": "docs/PS_GLYPH_SOURCE_INDEX.json",
   "statistics": {
-    "sources": 11,
+    "sources": 10,
     "switch_games_referenced": 6,
     "source_platforms": [
       "PC",
@@ -69,7 +69,7 @@
       "source_type": "game_ui_mod",
       "mod": "Controller UI Overhaul (PC)",
       "engine_family": "Atlus Persona portable",
-      "asset_path": "init_free.bin/init/camp.bin/pc_button.spr",
+      "asset_path": null,
       "asset_container_family": [
         "CPK",
         "BIN",
@@ -79,7 +79,7 @@
         "button prompt replacements",
         "original source of Switch PlayStation port"
       ],
-      "transfer_scope": "Compare sprite identity, ordering, geometry across PC/Switch. Switch mod publicly states it ports/changes PC mod.",
+      "transfer_scope": "Switch mod confirms it was ported from the PC Controller UI Overhaul; Switch SPR path init_free.bin/init/camp.bin/pc_button.spr is known from Switch mod, but exact corresponding PC archive path remains unverified.",
       "confidence": "cross_port_explicit_in_switch_mod",
       "version_claims": null,
       "mod_archive_inspected": false,
@@ -294,29 +294,6 @@
       ],
       "transfer_scope": "Shows art/control prompts can be mixed when assets migrate across platforms; NOT proof SMT V and SMT V: Vengeance share offsets or ROMFS.",
       "confidence": "mod_author_report",
-      "version_claims": null,
-      "mod_archive_inspected": false,
-      "original_switch_texture_sha256": null,
-      "exact_switch_rect_xywh": null
-    },
-    {
-      "id": "cross-011",
-      "switch_game": "Persona 4 Arena Ultimax (Switch)",
-      "platform": "PC",
-      "relationship": "same_title_different_platform",
-      "source_url": "https://gamebanana.com/mods/378319",
-      "source_type": "switch_mod_reference",
-      "mod": "PlayStation button prompts for Switch",
-      "engine_family": "Arc System Works / Atlus P4AU",
-      "asset_path": null,
-      "asset_container_family": [
-        "Switch UI texture"
-      ],
-      "features": [
-        "Switch-specific PlayStation prompt replacement"
-      ],
-      "transfer_scope": "Existing Switch baseline to compare PC overhaul variants; no binary fingerprints yet.",
-      "confidence": "mod_listing",
       "version_claims": null,
       "mod_archive_inspected": false,
       "original_switch_texture_sha256": null,
