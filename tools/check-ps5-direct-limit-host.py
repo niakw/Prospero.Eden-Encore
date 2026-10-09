@@ -13,8 +13,13 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 s = (root / "src/memory_pages.cpp").read_text()
 begin = s.index("namespace {\n// This is the fixed addressable direct-memory EXTENT")
-end = s.index("} // namespace\n#endif", begin) + len("} // namespace")
-helper = s[begin:end]
+# The original anonymous namespace also contains the independent CPU VA
+# reservation wrapper, which needs Sony/mmap mocks from another harness.
+# Extract only the direct-extent cache and allocator exercised here.
+reservation_begin = s.index("void* ReserveCpuVirtualRange(", begin)
+namespace_end = s.index("} // namespace\n#endif", begin)
+assert reservation_begin < namespace_end
+helper = s[begin:reservation_begin] + "} // namespace\n"
 assert helper.count("sceKernelGetDirectMemorySize()") == 1
 assert "cached_direct_memory_extent.store(current, std::memory_order_release)" in helper
 assert "return extent > 0 ? sceKernelAllocateDirectMemory(" in helper
