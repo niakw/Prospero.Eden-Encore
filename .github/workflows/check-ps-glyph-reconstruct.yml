@@ -47,7 +47,7 @@ jobs:
         run: |
           python3 -B tools/check-ps-glyph-scene-positions.py
           python3 -B tools/check-ps-glyph-cross-platform-image.py
-      - name: Verify cross-platform semantics and strict pixel provenance
+      - name: Verify per-game input semantics and independently approved cross-console scene geometry
         run: |
           python3 -B tools/check-ps-glyph-reconstruct.py
       - name: Verify mod pixel differences reconstruct safe, unapproved Switch sprite candidates
