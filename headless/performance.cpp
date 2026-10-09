@@ -1005,7 +1005,7 @@ void Snapshot() {
     const unsigned end = pc_count.load(std::memory_order_acquire);
     if (end < pc_reported) pc_reported = end; // wrap/reset safety
     if (end - pc_reported > sampled_pcs.size()) {
-        const auto lost = end - pc_reported - sampled_pcs.size();
+        const unsigned lost = end - pc_reported - static_cast<unsigned>(sampled_pcs.size());
         pc_reported = end - sampled_pcs.size();
         std::printf("EDEN_PERF_PC_SAMPLES_LOST source=gpu count=%u\n", lost);
     }
@@ -1039,7 +1039,7 @@ void Snapshot() {
     const unsigned core_end = core_pc_count.load(std::memory_order_acquire);
     if (core_end < core_pc_reported) core_pc_reported = core_end;
     if (core_end - core_pc_reported > sampled_core_pcs.size()) {
-        const auto lost = core_end - core_pc_reported - sampled_core_pcs.size();
+        const unsigned lost = core_end - core_pc_reported - static_cast<unsigned>(sampled_core_pcs.size());
         core_pc_reported = core_end - sampled_core_pcs.size();
         std::printf("EDEN_PERF_PC_SAMPLES_LOST source=guest count=%u\n", lost);
     }
