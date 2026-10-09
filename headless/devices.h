@@ -13,7 +13,6 @@
 #include "input_common/drivers/virtual_gamepad.h"
 #include "input_common/input_engine.h"
 #include "button_mapping.h"
-#include "playstation_auto_context.h"
 #include "ps5_pad.hpp"
 
 namespace Eden {
@@ -82,12 +81,13 @@ public:
     unsigned ConnectedPlayers() const { return connected_players.load(); }
     unsigned TakeConnectionChanges() { return connection_changes.exchange(0); }
     void Close();
-    // Which DualSense button presses each guest button. PlayStation Auto
-    // enters the user-qualified gameplay layout only on sustained motion,
-    // and does NOT revert for temporary in-match dialogs or D-pad input.
-    // Switch/custom mappings never change themselves.
-    void SetMapping(const ButtonMapping& value) { mapping = ValidMapping(value) ? value : kDefaultMapping; }
-    void SetAdaptivePlayStation(bool enabled) { adaptive_playstation = enabled; }
+    // The mapping is selected before Pad::Open, as on desktop emulators,
+    // and remains the same for the WHOLE guest session (menus and gameplay).
+    // After the device opens no guest activity may mutate face-button semantics.
+    void SetMapping(const ButtonMapping& value) {
+        if (slots[0].handle >= 0) return; // immutable while a title is running
+        mapping = ValidMapping(value) ? value : kDefaultMapping;
+    }
     void Consume(std::span<const ps5::pad::Data> samples) { Consume(0, samples); }
     void Consume(std::size_t player, std::span<const ps5::pad::Data> samples);
     PadEngine& Engine() { return *engine; }
@@ -110,8 +110,6 @@ private:
     float deadzone;
     float trigger_threshold;
     ButtonMapping mapping = kDefaultMapping;
-    Controls::PlayStationAutoContext mapping_context;
-    bool adaptive_playstation = false;
     std::array<Slot, kMaxPlayers> slots{};
     bool owns_user_service = false;
     std::atomic<bool> return_to_menu = false;
