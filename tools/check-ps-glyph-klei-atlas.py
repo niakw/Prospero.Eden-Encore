@@ -45,6 +45,12 @@ with tempfile.TemporaryDirectory(prefix="eden-klei-glyph-uv-fixture-") as folder
     assert found["game_title_update_verified"] is False
 
     rejects(path, '<!DOCTYPE Atlas [ <!ENTITY x "dummy"> ]><Atlas/>')
+    rejects(path, '<Atlas><Texture filename="../outside.tex"/>'
+                  '<Elements></Elements></Atlas>')
+    rejects(path, '<Atlas><Texture filename="C:evil.tex"/>'
+                  '<Elements></Elements></Atlas>')
+    rejects(path, '<Atlas><Texture filename="icon.png"/>'
+                  '<Elements></Elements></Atlas>')
     rejects(path, '<Atlas><Texture filename="one.tex"/>'
                   '<Elements><Element name="bad" u1="0.5" u2="0.4" '
                   'v1="0" v2="1"/></Elements></Atlas>')
