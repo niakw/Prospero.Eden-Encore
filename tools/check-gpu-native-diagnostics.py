@@ -86,7 +86,20 @@ assert 'message(FATAL_ERROR "Pinned Maxwell PRMT_reg exception anchor changed")'
 assert prmt_index(0x01234567, 0x89abcdef, 0x1111) == 0x45454545
 
 assert "if (index < 8)" in prmt_new
-assert "fetch_add(1, std::memory_order_relaxed)" in prmt_new
+# Diagnostic counters must saturate at eight instead of performing atomic
+# read-modify-write on every repeated shader translation or Fermi blit.
+assert "unsigned EdenGpuBoundedSample(std::atomic<unsigned>& samples) noexcept" in cmake
+assert "compare_exchange_weak(current, current + 1u," in cmake
+assert "while (current < 8u)" in cmake
+assert "return 8u;" in cmake
+assert cmake.count("${gpu_bounded_sample_helper}") == 2
+for part in (prmt_new, prmt_reg_new, fermi_new, fermi_layer_new, fermi_copy_new):
+    assert ".fetch_add(1, std::memory_order_relaxed)" not in part
+assert prmt_new.count("EdenGpuBoundedSample(") == 2
+assert prmt_reg_new.count("EdenGpuBoundedSample(") == 2
+assert fermi_new.count("EdenGpuBoundedSample(") == 1
+assert fermi_layer_new.count("EdenGpuBoundedSample(") == 1
+assert fermi_copy_new.count("EdenGpuBoundedSample(") == 2
 assert 'UNIMPLEMENTED_IF_MSG(regs.src.depth != 1, "Source depth is not one")' in fermi_old
 assert "regs.src.depth != 1" in fermi_new
 assert "EDEN_GPU_FERMI2D_UNSUPPORTED" in fermi_new
