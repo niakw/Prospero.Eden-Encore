@@ -85,6 +85,18 @@ def inspect(file: Path) -> dict:
             image_bytes = struct.unpack_from(endian + "I", brti, 0x50)[0]
             dimension = brti[0x5C]
             name_ptr = struct.unpack_from(endian + "Q", brti, 0x60)[0]
+            # BRTI stores the absolute pointer to a table of 64-bit mip
+            # data offsets at +0x70 (3DSkit BNTX layout). These are byte
+            # positions in this container, never icon pixel positions.
+            mip_table_ptr = struct.unpack_from(endian + "Q", brti, 0x70)[0]
+            mip_data_offsets = None
+            if mip_table_ptr:
+                raw_mips = read_at(mip_table_ptr, mipmaps * 8)
+                mip_data_offsets = []
+                for mip_index in range(mipmaps):
+                    pos = struct.unpack_from(endian + "Q", raw_mips, mip_index * 8)[0]
+                    require(pos < size, f"texture {index}: invalid mip data offset")
+                    mip_data_offsets.append(pos)
             require(0 < width <= 16384 and 0 < height <= 16384 and
                     0 < depth <= 2048 and 0 < array_len <= 2048 and
                     1 <= mipmaps <= 16 and 0 < image_bytes <= MAX_FILE_BYTES,
@@ -108,6 +120,11 @@ def inspect(file: Path) -> dict:
                 "tile_mode": tile_mode, "mip_count": mipmaps,
                 "depth": depth, "array_length": array_len,
                 "dimension": dimension, "encoded_image_bytes": image_bytes,
+                "brti_offset": pointer, "texture_name_offset": name_ptr,
+                "mip_pointer_table_offset": mip_table_ptr if mip_table_ptr else None,
+                "mip_data_offsets": mip_data_offsets,
+                "tile_layout": "block_linear" if tile_mode == 0 else
+                               "pitch_linear" if tile_mode == 1 else "unclassified",
                 "candidate_name": any(hint in name.lower() for hint in HINTS),
                 "read_only": True,
             })
