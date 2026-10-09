@@ -104,3 +104,19 @@ python3 tools/ps-glyph-relocated-sprite.py \
 The `24,48,48,48` rectangle is **only an illustrative example**, NOT a measured coordinate from Overcooked. A real successful match still does not prove icon meaning, title/update, RomFS container equivalence, legal redistribution or PS5 rendering. `check-ps-glyph-relocated-sprite.py` adds synthetic tests but was not run.
 
 The shared pixel comparator also now protects low-opacity differences: a source/target with alpha=1 and even a single RGB unit changed is NOT treated as identical. Invisible RGB differences at alpha=0 are allowed because they are not drawn.
+
+## 2026-10-09 — Unity Sprite coordinates directly from serialized metadata
+
+Some Unity games have explicit `Sprite.m_Rect` and `Sprite.m_RD.textureRect` fields. These provide **engine-serialized candidate texture rectangle coordinates**, a stronger lead than guessing pixel positions from a mod description. The rectangle orientation and packed/sliced sprite mapping must still be validated against a decoded texture and actual frame. The method applies to Unity titles such as BALL x PIT and Overcooked! 2.
+
+Using the independently maintained [UnityPy](https://github.com/K0lb3/UnityPy) package (optional dependency, inspect the project/release before local installation), read **authorized local** game assets without exporting or modifying textures:
+
+```bash
+python3 tools/ps-glyph-unity-inventory.py --asset-file /pc/Overcooked2_Data/resources.assets --platform PC --out /tmp/pc-ui-objects.json
+python3 tools/ps-glyph-unity-inventory.py --asset-file /switch/romfs/Data/resources.assets --platform Switch --out /tmp/switch-ui-objects.json
+python3 tools/ps-glyph-unity-pair.py --pc-report /tmp/pc-ui-objects.json --switch-report /tmp/switch-ui-objects.json --out /tmp/pc-switch-sprites.json
+```
+
+The `/switch/romfs/Data/resources.assets` path is **an illustrative placeholder**, NOT a verified Overcooked! 2 Switch file. Find the real file in an authorized extracted game first. The inventory records actual Unity object names, path IDs, Texture2D dimensions, and, when its Unity version exposes them, serialized Sprite rects. Matching object names or rect dimensions do **not** prove equal RGBA, normalised texture UVs, title/version or in-game semantic action.
+
+The pair tool records PC and Switch Sprite geometry side by side and lists potential PlayStation-named source textures absent from the target inventory, as a **missing-source hint only**. Both tools are read-only: no .assets rewriting, no game binaries committed, and no source archive bytes redistributed. Synthetic tests `check-ps-glyph-unity-inventory.py` and `check-ps-glyph-unity-pair.py` were added but **not executed**.
