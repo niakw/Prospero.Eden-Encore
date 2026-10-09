@@ -28,7 +28,14 @@ assert "std::lock_guard lock(retry_guard);" in services
 # 5 minutes for transient network errors. The old six-hour policy was removed.
 assert "std::chrono::minutes(30)" in services
 assert "std::chrono::minutes(5)" in services
-assert 'NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)' in services
+# Launcher Nlib remains separate from guest networking. The latest
+# enrichment path supports cancelling pending jobs when Library changes or
+# the application closes; do not require the obsolete 2-argument signature.
+assert 'NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice,' in services
+assert 'const std::atomic<bool>* cancel = nullptr)' in services
+assert 'return cancel && cancel->load(std::memory_order_acquire);' in services
+assert 'if (title_id == 0 || cancelled()) return {};' in services
+assert 'EnsureNlibEnrichment(game.title_id, language_choice, cancel)' in services
 assert 'const int wanted_screens = std::clamp(screen_count, 0, 3);' in services
 assert 'std::vector<std::future<bool>> downloads;' in services
 assert 'std::filesystem::last_write_time(' not in services
