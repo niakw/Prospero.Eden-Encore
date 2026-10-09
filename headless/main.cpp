@@ -1119,7 +1119,11 @@ int main(int argc, char** argv) {
                     Eden::Fastmem::Request(entry.ends_with("on"));
                 } else if (entry.starts_with("cache_spin=")) {
                     // try_lock retries before a guest core sleeps on a GPU cache lock (0 = upstream).
-                    Eden::Performance::cache_lock_spins = static_cast<unsigned>(std::strtoul(entry.c_str() + 11, nullptr, 10));
+                    const auto requested = std::strtoul(entry.c_str() + 11, nullptr, 10);
+                    // Keep test overrides bounded: unlimited spinning can starve
+                    // the native GPU worker under the three busy guest cores.
+                    Eden::Performance::cache_lock_spins.store(
+                        static_cast<unsigned>(std::min(requested, 32ul)), std::memory_order_relaxed);
                 } else if (entry == "gc_dirty=upstream") {
                     // Eden's rule: evict GPU-written textures from the "expected" memory mark on.
                     Eden::Performance::gc_keep_dirty = false;
