@@ -27,6 +27,12 @@ assert "std::min(spare, max_pipeline_workers)" in policy
 assert "spare / 2ULL" not in policy
 assert "EDEN_PS5_SHADER_WORKERS reported=" in policy
 assert "physical_verified=%u" in policy
+assert "allowed_mask=0x%llx primary_mask=0x%llx" in policy
+assert "EDEN_PS5_CPU_ACCESS hardware_reported=" in performance
+assert "EDEN_PS5_CPU_PHYSICAL_SUMMARY classified=" in performance
+assert "EDEN_PS5_CPU_SPLIT allowed=" in performance
+assert "EDEN_PS5_CPU_TOPOLOGY_REJECT reason=more_than_8_physical_ids" in performance
+assert "worker_topology_ready = count == cores.size() && physical_ids_plausible;" in performance
 assert "std::uint64_t PinnedWorkerMask() noexcept;" in header
 assert "std::atomic<std::uint64_t> verified_physical_worker_mask{0};" in performance
 assert "verified_physical_worker_mask.store(0, std::memory_order_release);" in performance
