@@ -1545,3 +1545,7 @@ One explicitly authorized test compilation attempt `[full-build] [test-all-on]` 
 - Current `headless/prosperoeden/eden_services.cpp` validates TGA header, dimensions and full byte length using `ValidNlibTga`, rejects damaged cached Hero and Icon via ternary, omits invalid screenshot via `if (ValidNlibTga(path))`, and correctly allows scheduled refresh with `if (!ValidNlibTga(path) || refresh_existing_artwork)`. The old source assertion was false despite correct behavior. Replaced it with positive exact assertions on all these safety behaviors in `tools/check-nlib-ui-recovery.py`, commit `6afa12a363e02bb3788aacce114bea6f3453b2d7` [skip ci].
 - A GitHub source readback crosschecked simple literal contracts for the other Nlib/UI source strings and found no obvious mismatches; this is NOT a substitute for executing the remaining multi-stage host tests.
 - At this point **NO native PS5 SDK compile yet** because CI stopped at host preflight. 26 hardware acceptance checks pending. No approved launcher style or delivery branch edits. Issues #7 (graphic art) and #8 (FC27/JIT/GPU) remain open.
+
+### 2026-10-09 — Next isolated all-on PS5 preflight/build attempt
+
+This commit deliberately triggers ONE test-only GitHub Actions run via `[full-build] [test-all-on]` after repairing the obsolete Nlib TGA source check. Publishing and shipping branch changes remain forbidden; observed CI result must be fetched before any success assertion.
