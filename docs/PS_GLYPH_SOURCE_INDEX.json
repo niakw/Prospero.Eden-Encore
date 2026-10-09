@@ -1,0 +1,532 @@
+{
+  "schema": 1,
+  "updated": "2026-10-09",
+  "purpose": "technical reverse-engineering leads only; not activatable game compatibility",
+  "coverage": {
+    "mod_pages": 23,
+    "unique_games": 15,
+    "verified_game_atlases": 0
+  },
+  "mods": [
+    {
+      "id": "community-001",
+      "title": "Zelda: Breath of the Wild",
+      "source_url": "https://gamebanana.com/mods/659253",
+      "style": "PlayStation",
+      "mod_version_reported": "2.0",
+      "game_update_reported": null,
+      "contexts": [
+        "menu",
+        "tutorial",
+        "world interaction"
+      ],
+      "format_or_tool_leads": [
+        "Switch Toolbox"
+      ],
+      "observed_behavior": "World interaction prompts required separate layout fix; reported Cross/Circle and Square/Triangle changes.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-002",
+      "title": "Zelda: Breath of the Wild",
+      "source_url": "https://gamebanana.com/mods/33340",
+      "style": "Xbox",
+      "mod_version_reported": null,
+      "game_update_reported": null,
+      "contexts": [
+        "gameplay",
+        "menu"
+      ],
+      "format_or_tool_leads": [
+        "RomFS"
+      ],
+      "observed_behavior": "Standard, Western and PE gameplay mapping differ.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-003",
+      "title": "Zelda: Tears of the Kingdom",
+      "source_url": "https://gamebanana.com/mods/445517",
+      "style": "DualSense",
+      "mod_version_reported": "1.4",
+      "game_update_reported": null,
+      "contexts": [
+        "HUD",
+        "special hints",
+        "pause",
+        "font"
+      ],
+      "format_or_tool_leads": [
+        "BFLYT",
+        "BFLAN",
+        "font"
+      ],
+      "observed_behavior": "Inactive button labels and scene-specific hints require font/layout edits; Pro Controller context.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-004",
+      "title": "Zelda: Tears of the Kingdom",
+      "source_url": "https://gamebanana.com/mods/443336",
+      "style": "Xbox",
+      "mod_version_reported": "0.8.2",
+      "game_update_reported": null,
+      "contexts": [
+        "special action screens",
+        "tutorial"
+      ],
+      "format_or_tool_leads": [
+        "astcenc",
+        "font",
+        "layout"
+      ],
+      "observed_behavior": "Seven special-action screens and button action variants described.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-005",
+      "title": "Zelda: Tears of the Kingdom",
+      "source_url": "https://gamebanana.com/mods/443260",
+      "style": "Xbox",
+      "mod_version_reported": "0.69",
+      "game_update_reported": null,
+      "contexts": [
+        "grab",
+        "paraglider",
+        "inactive hints"
+      ],
+      "format_or_tool_leads": [
+        "BLARC.ZS",
+        "BNTX",
+        "BFTEX"
+      ],
+      "observed_behavior": "Community comment identifies nested internal combined texture for interaction glyphs.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false,
+      "resource_leads": [
+        {
+          "romfs_archive": "UI/LayoutArchive/Common.Product.110.Nin_NX_NVN.blarc.zs",
+          "inside_archive": "__Combined.bntx",
+          "texture": "Nt_KeyTexA_00^d.bftex",
+          "source": "public community comment",
+          "binary_verified": false,
+          "rect_xywh": null
+        }
+      ]
+    },
+    {
+      "id": "community-006",
+      "title": "Metroid Dread",
+      "source_url": "https://gamebanana.com/mods/330216",
+      "style": "PlayStation 5",
+      "mod_version_reported": "3",
+      "game_update_reported": null,
+      "contexts": [
+        "gameplay",
+        "menu"
+      ],
+      "format_or_tool_leads": [
+        "RomFS"
+      ],
+      "observed_behavior": "Triangle/Square art mapping was corrected in mod revisions.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-007",
+      "title": "Metroid Dread",
+      "source_url": "https://gamebanana.com/mods/330775",
+      "style": "PlayStation 4",
+      "mod_version_reported": null,
+      "game_update_reported": null,
+      "contexts": [
+        "controller help"
+      ],
+      "format_or_tool_leads": [
+        "RomFS"
+      ],
+      "observed_behavior": "Atmosphere title path reported as 010093801237C000.",
+      "title_id": "010093801237C000",
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-008",
+      "title": "Paper Mario: The Thousand-Year Door",
+      "source_url": "https://gamebanana.com/mods/515629",
+      "style": "PlayStation",
+      "mod_version_reported": null,
+      "game_update_reported": null,
+      "contexts": [
+        "dialogue",
+        "button prompts"
+      ],
+      "format_or_tool_leads": [
+        "RomFS"
+      ],
+      "observed_behavior": "Designed for A/B and X/Y switched controller profile.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-009",
+      "title": "Paper Mario: The Thousand-Year Door",
+      "source_url": "https://gamebanana.com/mods/518079",
+      "style": "GameCube",
+      "mod_version_reported": null,
+      "game_update_reported": null,
+      "contexts": [
+        "battle",
+        "dialogue"
+      ],
+      "format_or_tool_leads": [
+        "RomFS"
+      ],
+      "observed_behavior": "Different icon style on overlapping prompt surfaces; good mod-tree comparison candidate.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-010",
+      "title": "Zelda: Echoes of Wisdom",
+      "source_url": "https://gamebanana.com/mods/544776",
+      "style": "DualSense",
+      "mod_version_reported": null,
+      "game_update_reported": null,
+      "contexts": [
+        "in-game prompts"
+      ],
+      "format_or_tool_leads": [
+        "RomFS"
+      ],
+      "observed_behavior": "Standalone DualSense UI folder overlay.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-011",
+      "title": "Zelda: Echoes of Wisdom",
+      "source_url": "https://gamebanana.com/mods/544503",
+      "style": "Xbox",
+      "mod_version_reported": "1.1",
+      "game_update_reported": "1.0.1",
+      "contexts": [
+        "dpad",
+        "menus"
+      ],
+      "format_or_tool_leads": [
+        "RomFS"
+      ],
+      "observed_behavior": "Standard and Western variants; author reports original file version 1.0.1.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-012",
+      "title": "Zelda: Link's Awakening",
+      "source_url": "https://gamebanana.com/mods/540069",
+      "style": "Xbox",
+      "mod_version_reported": null,
+      "game_update_reported": "1.0.1",
+      "contexts": [
+        "gameplay",
+        "menus"
+      ],
+      "format_or_tool_leads": [
+        "RomFS"
+      ],
+      "observed_behavior": "Three control semantic variants: Standard/Western/Alternative.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-013",
+      "title": "Super Mario 3D World + Bowser's Fury",
+      "source_url": "https://gamebanana.com/mods/34284",
+      "style": "PlayStation",
+      "mod_version_reported": "1.4",
+      "game_update_reported": null,
+      "contexts": [
+        "dpad",
+        "power-up",
+        "special actions"
+      ],
+      "format_or_tool_leads": [
+        "Switch Toolbox"
+      ],
+      "observed_behavior": "D-pad, Bowser's Fury power-up, minus/touchpad, capture/create variants.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-014",
+      "title": "Shin Megami Tensei V",
+      "source_url": "https://gamebanana.com/mods/350105",
+      "style": "PlayStation",
+      "mod_version_reported": null,
+      "game_update_reported": null,
+      "contexts": [
+        "prompt art"
+      ],
+      "format_or_tool_leads": [
+        "RomFS"
+      ],
+      "observed_behavior": "PS button prompts; swapped control semantics version not independently validated.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-015",
+      "title": "Xenoblade Chronicles 3",
+      "source_url": "https://gamebanana.com/mods/645044",
+      "style": "PlayStation 4/5",
+      "mod_version_reported": "1.0",
+      "game_update_reported": null,
+      "contexts": [
+        "button prompts"
+      ],
+      "format_or_tool_leads": [
+        "xc3_lib",
+        "xcnx-file-loader"
+      ],
+      "observed_behavior": "Requires custom file loader; installation not equivalent to generic LayeredFS.",
+      "title_id": "010074F013262000",
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-016",
+      "title": "Pokémon Legends: Arceus",
+      "source_url": "https://gamebanana.com/mods/497289",
+      "style": "PlayStation Western",
+      "mod_version_reported": "1.1",
+      "game_update_reported": "1.1.1",
+      "contexts": [
+        "gameplay",
+        "menus",
+        "options"
+      ],
+      "format_or_tool_leads": [
+        "BFLYT"
+      ],
+      "observed_behavior": "BFLYT can recolor sprites; some modifications reportedly crash; options Triangle/Square previously swapped.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-017",
+      "title": "Pokémon Legends: Arceus",
+      "source_url": "https://gamebanana.com/mods/360592",
+      "style": "PlayStation",
+      "mod_version_reported": null,
+      "game_update_reported": null,
+      "contexts": [
+        "gameplay",
+        "quests",
+        "menus"
+      ],
+      "format_or_tool_leads": [
+        "RomFS"
+      ],
+      "observed_behavior": "Author notes missing L/R/ZL/ZR; community notes quests and mod conflicts.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-018",
+      "title": "Pokémon Legends: Arceus",
+      "source_url": "https://gamebanana.com/mods/360315",
+      "style": "Xbox",
+      "mod_version_reported": null,
+      "game_update_reported": null,
+      "contexts": [
+        "gameplay",
+        "menus"
+      ],
+      "format_or_tool_leads": [
+        "RomFS"
+      ],
+      "observed_behavior": "Alternative X/Y-only layout; missing Pokédex action prompts reported.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-019",
+      "title": "Pokémon Legends: Z-A",
+      "source_url": "https://gamebanana.com/mods/634165",
+      "style": "DualSense",
+      "mod_version_reported": null,
+      "game_update_reported": null,
+      "contexts": [
+        "menus",
+        "gameplay",
+        "name entry"
+      ],
+      "format_or_tool_leads": [
+        "DDS",
+        "Trinity"
+      ],
+      "observed_behavior": "Public mod author says some Switch prompts remain and update 2.0.0 may break name entry.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-020",
+      "title": "Persona 5 Royal (Switch)",
+      "source_url": "https://gamebanana.com/mods/408418",
+      "style": "PlayStation color variants",
+      "mod_version_reported": "1.2",
+      "game_update_reported": null,
+      "contexts": [
+        "face-button colors"
+      ],
+      "format_or_tool_leads": [
+        "Aemulus"
+      ],
+      "observed_behavior": "Visual recoloring has multiple variants, does not prove semantic mapping.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-021",
+      "title": "Persona 4 Arena Ultimax (Switch)",
+      "source_url": "https://gamebanana.com/mods/378319",
+      "style": "PlayStation",
+      "mod_version_reported": null,
+      "game_update_reported": null,
+      "contexts": [
+        "UI prompts"
+      ],
+      "format_or_tool_leads": [
+        "texture"
+      ],
+      "observed_behavior": "Prompt texture replacement advertised; internal files unknown.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-022",
+      "title": "Bravely Default II",
+      "source_url": "https://gamebanana.com/mods/361199",
+      "style": "PlayStation",
+      "mod_version_reported": null,
+      "game_update_reported": null,
+      "contexts": [
+        "UI prompts"
+      ],
+      "format_or_tool_leads": [],
+      "observed_behavior": "Mod page confirms PS button prompts; implementation unknown.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    },
+    {
+      "id": "community-023",
+      "title": "Super Mario Odyssey",
+      "source_url": "https://gamebanana.com/mods/cats/2072",
+      "style": "PlayStation",
+      "mod_version_reported": null,
+      "game_update_reported": null,
+      "contexts": [
+        "button prompts"
+      ],
+      "format_or_tool_leads": [],
+      "observed_behavior": "Category indexes PlayStation Prompts and Xbox UI; exact mod page not resolved.",
+      "title_id": null,
+      "archive_inspected": false,
+      "verified_original_sha256": null,
+      "verified_replacement_sha256": null,
+      "rect_xywh": null,
+      "ps5_qualified": false
+    }
+  ]
+}
