@@ -67,6 +67,7 @@ int main() {
                Transition::none);
         assert(ctx.gameplay());
     }
+    assert(observe(ctx, true) == Transition::none); // Reset quiet accumulator.
     for (unsigned i=0; i<quiet-1; ++i)
         assert(observe(ctx, false, false, i%15 == 0) == Transition::none);
     assert(ctx.gameplay());
