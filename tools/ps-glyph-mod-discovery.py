@@ -87,7 +87,8 @@ def canonical_link(href: str) -> str | None:
     href = html.unescape(href).strip()
     if href.startswith("//"): href = "https:" + href
     parsed = urlparse(href)
-    if ((parsed.hostname or "").lower().endswith("duckduckgo.com") or\n        (not parsed.netloc and parsed.path.startswith("/l/"))):
+    if ((parsed.hostname or "").lower().endswith("duckduckgo.com") or
+        (not parsed.netloc and parsed.path.startswith("/l/"))):
         url = parse_qs(parsed.query).get("uddg")
         if url:
             href = url[0]
