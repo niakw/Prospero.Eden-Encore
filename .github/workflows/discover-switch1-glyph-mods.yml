@@ -19,6 +19,8 @@ on:
       - tools/ps-glyph-multiplatform-adapt.py
       - tools/check-ps-glyph-multiplatform-adapt.py
       - tools/ps-glyph-mod-results-merge.py
+      - tools/ps-glyph-store-research.py
+      - tools/check-ps-glyph-store-research.py
       - tools/check-ps-glyph-mod-results-merge.py
   workflow_dispatch:
     inputs:
@@ -59,6 +61,7 @@ jobs:
           python3 -B tools/check-ps-glyph-mod-discovery.py
           python3 -B tools/check-ps-glyph-multiplatform-adapt.py
           python3 -B tools/check-ps-glyph-mod-results-merge.py
+          python3 -B tools/check-ps-glyph-store-research.py
           python3 -B tools/check-ps-glyph-switch1-search-queue.py
           python3 -B tools/check-ps-glyph-curl-search.py
           python3 -B tools/check-ps-glyph-firefox-search.py
@@ -196,57 +199,45 @@ jobs:
              .cache/eden-glyph-mods/progress.json
           cp /tmp/eden-glyph-discovery/source-links.json \
              .cache/eden-glyph-mods/leads.json
-      - name: Commit durable source links and progress to the development repository
+      - name: Commit complete source catalog, links and progress to the dev repo
         if: success()
         run: |
           set -euo pipefail
-          mkdir -p data/glyph-research/discovery data/glyph-research/catalog
-          # Compressed, deterministic snapshots preserve the WHOLE regional
-          # Switch game catalog and 4 queries/title without 100k loose files.
-          gzip -9 -n -c /tmp/eden-glyph-discovery/catalog.json \
-            > data/glyph-research/catalog/switch1-titles.json.gz
-          gzip -9 -n -c /tmp/eden-glyph-discovery/all-switch1-search-queue.json \
-            > data/glyph-research/catalog/source-queries.json.gz
-          cp /tmp/eden-glyph-discovery/source-links.json \
-            data/glyph-research/discovery/leads.json
-          cp /tmp/eden-glyph-discovery/state-next.json \
-            data/glyph-research/discovery/progress.json
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          folder = Path("data/glyph-research/discovery")
-          for name in ("leads.json", "progress.json"):
-              p = folder / name
-              assert p.is_file() and p.stat().st_size < 16 * 1024 * 1024
-              obj = json.loads(p.read_text())
-              assert obj["schema"] == 1
-              assert "rawData" not in p.read_text() and "YANDEX_SEARCH_API_KEY" not in p.read_text()
-          print("Validated link-only stable repository metadata; no browser cookies/raw HTML/assets")
-          PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          python3 - <<'PY'
-          import gzip, json
-          from pathlib import Path
-          for filename in ("switch1-titles.json.gz", "source-queries.json.gz"):
-              file = Path("data/glyph-research/catalog") / filename
-              assert file.stat().st_size < 32 * 1024 * 1024
-              with gzip.open(file, "rt", encoding="utf-8") as stream:
-                  data = json.load(stream)
-              assert data["schema"] == 1
-              if filename.startswith("source-"):
-                  assert data["total_search_tasks"] == 4 * data["distinct_game_title_ids"]
-          print("Validated lossless 24k-title catalog and four-way source query archive")
-          PY
-          git add data/glyph-research/discovery/leads.json \
-                  data/glyph-research/discovery/progress.json \
-                  data/glyph-research/catalog/switch1-titles.json.gz \
-                  data/glyph-research/catalog/source-queries.json.gz
-          if ! git diff --cached --quiet; then
-            git commit -m "data(glyphs): persist public Switch/PC mod references and cursor [skip ci]"
-            if ! git push origin HEAD:dev/ps5-sparse-jit; then
-              echo "::warning::Repository branch changed or push denied. Artifacts still preserve this run's evidence."
+          # The long search may overlap with source commits. Always refresh
+          # the target branch, merge NEW+EXISTING link records, and retry on
+          # non-fast-forward; never force-push, never reset main.
+          saved=0
+          for attempt in 1 2 3; do
+            git fetch origin dev/ps5-sparse-jit
+            git checkout -B eden-glyph-data FETCH_HEAD
+            mkdir -p data/glyph-research
+            python3 -B tools/ps-glyph-store-research.py \
+              --out-root data/glyph-research \
+              --fresh-leads /tmp/eden-glyph-discovery/source-links.json \
+              --fresh-state /tmp/eden-glyph-discovery/state-next.json \
+              --catalog /tmp/eden-glyph-discovery/catalog.json \
+              --search-queue /tmp/eden-glyph-discovery/all-switch1-search-queue.json
+            git add data/glyph-research/discovery/leads.json \
+                    data/glyph-research/discovery/progress.json \
+                    data/glyph-research/catalog/switch1-titles.json.gz \
+                    data/glyph-research/catalog/source-queries.json.gz
+            if git diff --cached --quiet; then
+              saved=1
+              echo "Repository already contains up-to-date metadata"
+              break
             fi
+            git commit -m "data(glyphs): checkpoint Switch1 cross-console public mod metadata [skip ci]"
+            if git push origin HEAD:dev/ps5-sparse-jit; then
+              saved=1
+              echo "Committed public mod research on dev/ps5-sparse-jit"
+              break
+            fi
+            echo "::warning::Research push raced another commit; will merge and retry"
+          done
+          if test "$saved" -ne 1; then
+            echo "::warning::Durable branch update was denied; GH Actions artifacts retain a temporary backup."
           fi
       - name: Save durable Switch Title ID and per-console mod search cursor
         if: success()
