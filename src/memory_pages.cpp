@@ -230,6 +230,11 @@ struct SparseJitRegion {
 std::mutex sparse_jit_mutex;
 std::unordered_map<void*, SparseJitRegion> sparse_jit_regions;
 std::size_t sparse_jit_committed = 0;
+// JIT executable aliases are immutable during an active title. The epoch
+// invalidates per-thread "already committed" hints whenever a region is
+// created or released, preventing an old pointer/VA from being mistaken for
+// a new code cache in a subsequent title.
+std::atomic<std::uint64_t> sparse_jit_generation{1};
 }
 
 // Validate the firmware's fixed-address alias contract *before* selecting
@@ -347,6 +352,7 @@ void* ReserveSparseJitCode(std::size_t size, void** writable_out) noexcept {
         const std::lock_guard lock{sparse_jit_mutex};
         if (!sparse_jit_regions.emplace(rx, std::move(region)).second)
             std::abort();
+        sparse_jit_generation.fetch_add(1, std::memory_order_acq_rel);
     } catch (...) {
         if (munmap(rx, size) != 0 || munmap(rw, size) != 0) std::abort();
         errno = ENOMEM;
@@ -383,6 +389,22 @@ bool IsSparseJitCode(const void* executable) noexcept {
 // Called only by BlockOfCode::EnsureMemoryCommitted before emission.
 // Never commit at an asynchronous page fault in executing JIT code.
 bool CommitSparseJitCode(void* executable, std::size_t required) noexcept {
+    // Dynarmic calls EnsureMemoryCommitted on EVERY compiled guest block,
+    // but a physical 2 MiB direct-memory page is committed only occasionally.
+    // Avoid 3 guest JIT workers contending on one global mutex for pages
+    // already known to be committed by this same worker. Cache only positive
+    // answers, qualified by reservation epoch; a larger required span takes
+    // the original locked ownership+allocation path.
+    struct CachedCommit {
+        void* executable{};
+        std::size_t committed{};
+        std::uint64_t generation{};
+    };
+    static thread_local CachedCommit local;
+    const std::uint64_t generation = sparse_jit_generation.load(std::memory_order_acquire);
+    if (local.generation == generation && local.executable == executable &&
+        required <= local.committed)
+        return true;
     const std::lock_guard lock{sparse_jit_mutex};
     const auto it = sparse_jit_regions.find(executable);
     if (it == sparse_jit_regions.end() || required > it->second.capacity) return false;
@@ -440,6 +462,11 @@ bool CommitSparseJitCode(void* executable, std::size_t required) noexcept {
         region.committed += LargePage;
         sparse_jit_committed += LargePage;
     }
+    // The page protection/mapping writes above happen before publishing a
+    // positive hint. No unvalidated amount is ever returned from fastpath.
+    local.executable = executable;
+    local.committed = region.committed;
+    local.generation = sparse_jit_generation.load(std::memory_order_relaxed);
     return true;
 }
 
@@ -455,6 +482,9 @@ void ReleaseSparseJitCode(void* executable) noexcept {
         region = std::move(it->second);
         sparse_jit_committed -= region.committed;
         remaining = sparse_jit_committed;
+        // Guest workers must already be quiescent before BlockOfCode releases
+        // its executable view; invalidate all per-thread positive hints now.
+        sparse_jit_generation.fetch_add(1, std::memory_order_acq_rel);
         sparse_jit_regions.erase(it);
     }
     if (munmap(executable, region.capacity) != 0 ||
