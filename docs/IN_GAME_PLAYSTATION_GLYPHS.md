@@ -258,3 +258,7 @@ The exact-match relocation tool `tools/ps-glyph-relocated-sprite.py` searches fo
 ### Unity engine UI sprites and true serialized geometry (source-only)
 
 New read-only inspector `tools/ps-glyph-unity-inventory.py` optionally uses UnityPy to enumerate actual `Texture2D` and `Sprite` objects in locally provided authorized .assets files. It reports **engine-serialized** `Sprite.m_Rect` / `m_RD.textureRect` when available, not guessed screenshots. `tools/ps-glyph-unity-pair.py` matches PC and Switch object names and presents their own rectangle coordinates, without assuming the original atlases share positions. See [multiplatform guide](PS_GLYPH_MULTIPLATFORM_RESEARCH.md) for source commands, version/coordinate-origin warnings and the Overcooked/BALL x PIT research path. No actual Unity .assets file has been inspected or qualified in this session, and corresponding host checkers have not been executed.
+
+### Full Nintendo Switch 1 Title ID metadata discovery
+
+New `tools/ps-glyph-switch1-titledb.py` accepts a **user-supplied local TitleDB JSON export** to resolve the 26 researched Switch 1 game names by strict non-ambiguous matching. Its optional `--all-base-games` mode generates a metadata-only backlog to expand mod discovery across the broader Switch 1 catalogue without including ROMs or image assets. Base-title ID candidates remain unverified until checked against an actual installed game and update. See [multiplatform research](PS_GLYPH_MULTIPLATFORM_RESEARCH.md). The matching/ambiguity synthetic tests have been added but not executed.
