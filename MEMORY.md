@@ -1527,3 +1527,9 @@ Explicit, isolated dev/test retry `[full-build] [test-all-on]`. No release publi
 ### 2026-10-09 — All-on PS5 test retry after exact A32 JIT mock contract correction
 
 Explicit one-shot `[full-build] [test-all-on]` on the dev branch, full preflights, isolated test artifact, no release/ship branch/UI changes. Build outcome unverified at trigger time.
+
+### 2026-10-09 — All-on run #37878821069 passed sparse JIT host-native mocks; obsolete Nlib function signature checker fixed
+
+- [Run #37878821069](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/37878821069) FAILED later in "Validate startup, elevation and storage contracts" at `tools/check-guest-network-isolation.py:31`. Before failing, CI explicitly passed **actual Xbyak sparse JIT host mock**, alias dual mapping/bootstrap/physical 2MiB page growth/rollback/OOM/cleanup, shader cache pressure, performance policy and native HTTPS/CA/DNS test. These are HOST mocks and checks, NOT firmware 13.60 confirmation. No PS5 native SDK build in this run.
+- Obsolete checker expected two-argument `NlibEnrichment EnsureNlibEnrichment(std::uint64_t title_id, int language_choice)`. Actual current function adds `const std::atomic<bool>* cancel = nullptr`, and `cancelled()` guard to stop expensive Nlib work when the screen/session is ending. Changed only source checker to assert exact cancellation-aware signature, acquire-load cancellation test and call site `EnsureNlibEnrichment(game.title_id, language_choice, cancel)`, commit `a73e92785189915521a6ae5a4ba384bd8375ef70` [skip ci]. Guest sockets/DNS/NIFM remain offline, while the launcher uses native HTTPS independently.
+- Remote Desktop Commander MacBook Pro is currently OFFLINE (last seen ~7h ago), cannot execute local host fixtures there. Container DNS also lacks GitHub; GitHub CI is current usable test runner. No source/vendor files, launcher design, or protected shipping branch modified in this fix; 26 firmware hardware gates still open.
