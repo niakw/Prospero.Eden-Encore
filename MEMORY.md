@@ -1459,3 +1459,7 @@ This commit deliberately triggers exactly one new `dev/ps5-sparse-jit` native wo
 - GitHub job #113648696823 logs: `fr-FR.po: 370 texts, 4 problems, 8 warnings`, 4 fatal untranslated message keys: `Loading game library...`, `Could not load game list. Please try again.`, `Could not load game library. Reopen Encore to retry.`, `Game library unavailable`. 29 catalogs total; other locales reported warnings only. French translation failure was unrelated to sparse JIT/experimental settings.
 - Added four faithful FR strings in `headless/prosperoeden/ui/lang/fr-FR.po`, commit `696f10227b3c5da2e53b1b89e7a3f91ea1d281db` `[skip ci]`. Did NOT modify UI design, shell art or protected delivery branch. Next retry can reach subsequent source checks.
 - Run was FAILURE, not a compiled native test and not firmware qualified. 26 hardware checks and in-game glyph source artwork remain OPEN.
+
+### 2026-10-09 — Third isolated all-on CI attempt
+
+Push with `[full-build] [test-all-on]` after correcting exactly four missing French locale keys. Await real workflow status. No other dev commits while native run active due cancel-in-progress.
