@@ -260,9 +260,19 @@ static int ps5_heap_ready(void) {
   void *base = eden_heap_reserve(PS5_OPENGL_HEAP_SIZE);
   size_t first_size = EDEN_HEAP_PIECE_SIZE;
   unsigned first_pieces = 1;
-  if (base != NULL && eden_heap_commit(base, EDEN_HEAP_PIECE_SIZE) == 0) {
-    eden_heap_grows = 1;
+  if (base != NULL) {
+    if (eden_heap_commit(base, EDEN_HEAP_PIECE_SIZE) == 0) {
+      eden_heap_grows = 1;
+    } else {
+      /* A 3 GiB virtual reservation succeeded, but its first 128 MiB
+       * physical allocation failed. Retrying a dense 3 GiB block cannot
+       * recover from that OOM and used to strand the reserved VA. */
+      if (munmap(base, PS5_OPENGL_HEAP_SIZE) != 0) __builtin_trap();
+      atomic_store_explicit(&ps5_heap_state, -1, memory_order_release);
+      return 0; /* existing libc fallback */
+    }
   } else {
+    /* Only missing VA reservation permits the legacy dense fallback. */
     base = eden_heap_pages(PS5_OPENGL_HEAP_SIZE);
     first_size = PS5_OPENGL_HEAP_SIZE;
     first_pieces = EDEN_HEAP_PIECES;

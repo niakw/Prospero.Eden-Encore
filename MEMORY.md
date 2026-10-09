@@ -1765,3 +1765,7 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — Fix native Vulkan GPU timestamp destructor data race [skip ci]
 
 - Immediate source-review correction of previous GPU timing cleanup: testing process-global `gpu_time.pool` before requesting stop/join raced the Vulkan GPU worker creating that pool. The generated Scheduler::~Scheduler now ALWAYS requests worker stop, notifies, and joins before examining/destroying any query pool; inactive probe still requires normal scheduler jthread termination and does not change per-frame path. Native generator test assertion strengthened. No tests/build/Actions or Mac/FTP access. GPU native timing remains UNQUALIFIED.
+
+### 2026-10-09 — Native heap first-piece OOM unreserves VA [skip ci]
+
+- `ps5_heap_ready`: previously reserving 3 GiB VA successfully but failing physical commit of first 128 MiB retried impossible dense 3 GiB memory while leaving the VA behind. Fixed: munmap unused reserved VA and set failed heap init for existing libc fallback; dense 3 GiB fallback remains if firmware's reserve syscall itself fails. `tools/check-heap-growth.py` now models failed first commit and asserts mincore says original VA unmapped with zero dense retry. Test NOT run; no build/Actions/Mac/FTP, no performance claim. Still need real JIT/mspace physical reclaim and native multi-game qualification.
