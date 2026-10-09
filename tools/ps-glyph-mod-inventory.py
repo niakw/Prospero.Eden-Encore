@@ -120,6 +120,7 @@ def main() -> int:
     p.add_argument("archives", nargs="+", type=Path, help="local, authorized ZIP files")
     p.add_argument("--out", type=Path, help="new JSON report path, never overwrite")
     p.add_argument("--platform", default="unverified", help="declared source platform label; not auto-detected")
+    p.add_argument("--expect-sha256", help="optional published release SHA-256, single archive only")
     args = p.parse_args()
     try:
         if args.out and (args.out.exists() or args.out.is_symlink() or
@@ -129,6 +130,13 @@ def main() -> int:
             raise ValueError("invalid platform label")
         data = {"schema": 1, "declared_source_platform": args.platform,
                 "mods": [inventory(path) for path in args.archives]}
+        if args.expect_sha256 is not None:
+            expected = args.expect_sha256.lower()
+            if len(args.archives) != 1 or len(expected) != 64 or any(
+                    digit not in "0123456789abcdef" for digit in expected):
+                raise ValueError("expected SHA-256 requires one archive and 64 hexadecimal digits")
+            if data["mods"][0]["archive_sha256"] != expected:
+                raise ValueError("mod archive differs from published release SHA-256")
         result = json.dumps(data, ensure_ascii=True, indent=2) + "\n"
         if args.out:
             args.out.write_text(result, encoding="utf-8")
