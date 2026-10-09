@@ -1,0 +1,91 @@
+#!/usr/bin/env python3
+"""Synthetic, local-only regression fixtures for ps-glyph-mod-diff.py.
+
+Run only when tests are authorized; no Nintendo images and no mod archives
+downloaded. Verifies coordinates, transparent alpha changes and rejection
+of invalid ZIP members.
+"""
+from __future__ import annotations
+
+import importlib.util
+import io
+import json
+import tempfile
+import zipfile
+from pathlib import Path
+
+from PIL import Image, ImageDraw
+
+ROOT = Path(__file__).resolve().parents[1]
+SPEC = importlib.util.spec_from_file_location("eden_mod_diff", ROOT / "tools/ps-glyph-mod-diff.py")
+assert SPEC is not None and SPEC.loader is not None
+module = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(module)
+
+
+def png(im: Image.Image) -> bytes:
+    stream = io.BytesIO()
+    im.save(stream, format="PNG")
+    return stream.getvalue()
+
+
+mask = Image.new("L", (8, 6), 0)
+for pos in ((0, 0), (1, 1), (4, 1), (6, 1)):
+    mask.putpixel(pos, 1)
+boxes, pixels = module.connected_rects(mask)
+assert pixels == 4
+assert boxes == [[0, 0, 2, 2], [4, 1, 1, 1], [6, 1, 1, 1]], boxes
+
+source = Image.new("RGBA", (48, 32), (0, 0, 0, 0))
+d = ImageDraw.Draw(source)
+d.rectangle((4, 4, 11, 11), fill=(255, 0, 0, 255))
+d.rectangle((28, 5, 36, 13), fill=(0, 0, 255, 255))
+revised = source.copy()
+draw = ImageDraw.Draw(revised)
+draw.rectangle((4, 4, 11, 11), fill=(0, 255, 0, 255))
+draw.rectangle((28, 5, 36, 13), fill=(255, 255, 0, 255))
+same = module.image_diff(png(source), png(source))
+assert same["status"] == "pixel_identical" and same["changed_rects_xywh"] == []
+changed = module.image_diff(png(source), png(revised))
+assert changed["changed_pixels"] == 64 + 81
+assert changed["changed_rects_xywh"] == [[4, 4, 8, 8], [28, 5, 9, 9]], changed
+alpha = source.copy()
+alpha.putpixel((1, 1), (0, 0, 0, 255))
+assert module.image_diff(png(source), png(alpha))["changed_rects_xywh"] == [[1, 1, 1, 1]]
+assert module.image_diff(png(source), png(Image.new("RGBA", (64, 32))))["status"] == "dimensions_changed"
+
+with tempfile.TemporaryDirectory(prefix="eden-glyph-mod-diff-") as tmp:
+    base = Path(tmp)
+    romfs = base / "romfs"
+    (romfs / "UI").mkdir(parents=True)
+    (romfs / "UI" / "atlas.png").write_bytes(png(source))
+    archive = base / "ui-mod.zip"
+    with zipfile.ZipFile(archive, "w") as z:
+        z.writestr("PlayStationUI/romfs/UI/atlas.png", png(revised))
+        z.writestr("PlayStationUI/romfs/UI/other.bntx", b"fake metadata")
+    evidence = module.diff_mod(archive, romfs)
+    relevant = {item["romfs_path"]: item for item in evidence["resources"]}
+    assert relevant["UI/atlas.png"]["changed_rects_xywh"] == [[4, 4, 8, 8], [28, 5, 9, 9]]
+    assert relevant["UI/atlas.png"]["original_sha256"]
+    assert relevant["UI/atlas.png"]["replacement_sha256"]
+    assert relevant["UI/other.bntx"]["status"] == "proprietary_or_other_format_unexamined"
+    assert evidence["verified_title_update"] is None
+    assert evidence["semantic_button_identity"] is None
+
+    bad_archive = base / "path-traversal.zip"
+    with zipfile.ZipFile(bad_archive, "w") as z:
+        z.writestr("romfs/../../escape.png", png(revised))
+    try:
+        module.diff_mod(bad_archive, romfs)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("ZIP traversal path passed fail-closed inventory")
+    missing = base / "missing"
+    missing.mkdir()
+    missing_result = module.diff_mod(archive, missing)
+    assert missing_result["resources"][0]["status"] == "unverified_or_unsupported"
+    assert missing_result["resources"][0]["changed_rects_xywh"] is None
+
+print("HOST FIXTURE PASS: exact pixel changes, independent regions, alpha, safe mod ZIP inventory")
+print("Real title assets and PS5 game compatibility NOT tested")
