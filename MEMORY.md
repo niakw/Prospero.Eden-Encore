@@ -1962,3 +1962,7 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 
 - `src/memory_pages.cpp` repeatedly called `sceKernelGetDirectMemorySize()` during physical allocation of **every new sparse 2 MiB JIT chunk**, the 2 MiB zero-table scratch, alias qualification and heap growth (including large-page allocs). This reports the process's fixed direct-memory EXTENT, not free headroom; repeatedly querying it adds avoidable kernel work on code compilation and heap growth.
 - `DirectMemoryExtent()` caches only a positive answer in one process-wide atomic; unknown/failed boot queries remain retryable and fail closed without issuing a physical allocation with a nonpositive range. `AllocateDirectOwned()` reuses it for owned physical chunks. Does NOT replace the separate largest-free query, memory pressure budgeting, alignment or full ownership checks. Source preflight extended. No compiled native FPS/CPU measurement or CI action triggered.
+
+### 2026-10-09 — Harden rollback host fixture C++ source portability [skip ci]
+
+- Static review before the first run: guard `_GNU_SOURCE` in the new extracted C++ rollback fixture (GCC may predefine it; `-Werror` otherwise rejects a macro redefinition), explicitly include `<initializer_list>` for the guard-page loop, and normalize the native heap bridge comment. No production semantics changed. CI/native compile still not run.

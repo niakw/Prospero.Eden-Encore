@@ -38,7 +38,7 @@ extern "C" int eden_heap_commit(void* address, std::size_t size) {
 }
 // The C heap serializes every post-init growth through eden_heap_grow_lock.
 // Physical backing ownership is returned directly, never stored in a
- // process-global "last commit" that could be overwritten by another caller.
+// process-global "last commit" that could be overwritten by another caller.
 namespace Common {
 void RollbackUnpublishedHeapGrowth(void* address, std::size_t size,
                                    std::int64_t physical) noexcept;
