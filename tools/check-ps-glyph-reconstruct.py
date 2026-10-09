@@ -109,6 +109,50 @@ with tempfile.TemporaryDirectory(prefix="eden-reconstruct-test-") as base:
     report["switch_candidate_rects_xywh"] = [[100, 90, 2, 2]]
     path.write_text(json.dumps(report))
     blocked(lambda: recon.build_spec(evidence, romfs, root), "other-game coordinates")
+    # A console port can change art size/color but retain a game scene.
+    # Propose Switch alpha sprites by UI placement, then require a
+    # separate verified game-scene+button review before rendering.
+    switch_slots = evidence["atlases"][0]["slots"]
+    cross_layout = {
+        "schema": 1, "original_texture_comparison": "visible_pixels_differ",
+        "switch_original_image_sha256": sha,
+        "ui_scene_context": "controller_diagram",
+        "source_ui_layout_position_is_atlas_write_proof": False,
+        "source_ui_layout_position_candidates": [
+            {"switch_alpha_sprite_candidate_xywh": slot["rect"],
+             "evidence": "same_game_layout_prior_only",
+             "symbol_identity_verified": False}
+            for slot in switch_slots
+        ],
+    }
+    path.write_text(json.dumps(cross_layout))
+    blocked(lambda: recon.build_spec(evidence, romfs, root),
+            "unreviewed differently rendered console art")
+    approved = {
+        "approved": True, "update_version": "1.6.0",
+        "scene": "controller_diagram", "original_switch_sha256": sha,
+        "switch_scene_evidence_url": "https://example.org/synthetic/switch-scene",
+        "source_scene_evidence_url": "https://example.org/synthetic/other-platform-scene",
+        "slots": switch_slots,
+    }
+    cross_layout["independent_switch_scene_review"] = approved
+    path.write_text(json.dumps(cross_layout))
+    assert recon.build_spec(evidence, romfs, root) == built
+    approved["slots"] = [dict(item) for item in switch_slots]
+    approved["slots"][0]["guest_button"] = "b"
+    path.write_text(json.dumps(cross_layout))
+    blocked(lambda: recon.build_spec(evidence, romfs, root),
+            "wrong matched action semantics")
+    approved["slots"] = switch_slots
+    approved["update_version"] = "1.5.0"
+    path.write_text(json.dumps(cross_layout))
+    blocked(lambda: recon.build_spec(evidence, romfs, root),
+            "different Switch update")
+    approved["update_version"] = "1.6.0"
+    approved["original_switch_sha256"] = "0" * 64
+    path.write_text(json.dumps(cross_layout))
+    blocked(lambda: recon.build_spec(evidence, romfs, root),
+            "independent original asset mismatch")
     evidence["atlases"][0]["geometry_evidence"] = "switch_inspected"
     evidence["atlases"][0].pop("cross_platform_report")
 
