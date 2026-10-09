@@ -240,7 +240,7 @@ license Nintendo/publisher-owned image content**.
 ## Same-title PC / Wii U / PSP source discovery (2026-10-09)
 
 The Switch game/version and its original RomFS remain authoritative. Cross-platform art is discovery data until pixel or sprite/container equivalence is measured on the Switch version. See:
-- [Cross-platform source index](PS_GLYPH_CROSS_PLATFORM_INDEX.json): 20 other-platform references for 14 relevant Switch 1 titles, including eight Nintendo-confirmed seeds absent from the Switch-mod index.
+- [Cross-platform source index](PS_GLYPH_CROSS_PLATFORM_INDEX.json): 22 other-platform references for 16 relevant Switch 1 titles, including ten Nintendo-confirmed seeds absent from the Switch-mod index.
 - [Multiplatform research guide](PS_GLYPH_MULTIPLATFORM_RESEARCH.md): BOTW Wii U layout variants, P3P PC/PSP sprites, P4AU four-controller variants, P5R PC L3/R3 bounding-box fix, Bravely Default II PC Unreal PAK Start/Select variants, SMTV edition mismatch caution.
 - `tools/ps-glyph-cross-platform-image.py`: read-only three-input compare (other-platform original, other-platform mod, original Switch) returning tentative XYWH **only when the two original decoded images have identical rendered pixels/dimensions**.
 - `tools/ps-glyph-platform-coverage.py`: generates research queue for every game in the Switch index, not just games with PC mods.
@@ -253,7 +253,7 @@ The Switch game/version and its original RomFS remain authoritative. Cross-platf
 
 The new `tools/ps-glyph-builtin-platform-assets.py` can group **candidate** PS/Xbox/Switch artwork names already embedded in a locally extracted game RomFS (no extraction/texture decoding or writes). When an identical UI asset exists on another platform, `tools/ps-glyph-cross-platform-image.py` can propose coordinate rectangles *only after* exact decoded rendered-image equivalence. These steps expand discovery, **not** the number of supported Switch games. See [multiplatform guide](PS_GLYPH_MULTIPLATFORM_RESEARCH.md). Synthetic tests `tools/check-ps-glyph-builtin-platform-assets.py` were added but not executed.
 
-The exact-match relocation tool `tools/ps-glyph-relocated-sprite.py` searches for one uniquely matching original sprite in a rearranged Switch atlas, retaining null positions when nothing matches or multiple occurrences match. Eight additional officially listed Nintendo Switch 1 games are indexed separately in [PS_GLYPH_SWITCH1_GAME_SEEDS.json](PS_GLYPH_SWITCH1_GAME_SEEDS.json), without falsely inventing Switch glyph mods. Synthetic source fixtures were added, not executed.
+The exact-match relocation tool `tools/ps-glyph-relocated-sprite.py` searches for one uniquely matching original sprite in a rearranged Switch atlas, retaining null positions when nothing matches or multiple occurrences match. Ten additional officially listed Nintendo Switch 1 games are indexed separately in [PS_GLYPH_SWITCH1_GAME_SEEDS.json](PS_GLYPH_SWITCH1_GAME_SEEDS.json), without falsely inventing Switch glyph mods. Synthetic source fixtures were added, not executed.
 
 ### Unity engine UI sprites and true serialized geometry (source-only)
 
@@ -261,4 +261,11 @@ New read-only inspector `tools/ps-glyph-unity-inventory.py` optionally uses Unit
 
 ### Full Nintendo Switch 1 Title ID metadata discovery
 
-New `tools/ps-glyph-switch1-titledb.py` accepts a **user-supplied local TitleDB JSON export** to resolve the 26 researched Switch 1 game names by strict non-ambiguous matching. Its optional `--all-base-games` mode generates a metadata-only backlog to expand mod discovery across the broader Switch 1 catalogue without including ROMs or image assets. Base-title ID candidates remain unverified until checked against an actual installed game and update. See [multiplatform research](PS_GLYPH_MULTIPLATFORM_RESEARCH.md). The matching/ambiguity synthetic tests have been added but not executed.
+New `tools/ps-glyph-switch1-titledb.py` accepts a **user-supplied local TitleDB JSON export** to resolve the 28 researched Switch 1 game names by strict non-ambiguous matching. Its optional `--all-base-games` mode generates a metadata-only backlog to expand mod discovery across the broader Switch 1 catalogue without including ROMs or image assets. Base-title ID candidates remain unverified until checked against an actual installed game and update. See [multiplatform research](PS_GLYPH_MULTIPLATFORM_RESEARCH.md). The matching/ambiguity synthetic tests have been added but not executed.
+
+### Latest 2026-10-09 source-verified controller layout and native atlas parsing
+
+- **28 researched Switch 1 titles, 22 multiplatform references** across 16 of the researched games; still 0 native validated PS5 glyph packs. The [Nintendo-certified title seed list](PS_GLYPH_SWITCH1_GAME_SEEDS.json) now includes **Balatro** and **Don't Starve Together**.
+- [DST public script coordinates](PS_GLYPH_DST_CONTROL_UI_POSITIONS.json): 17 DualShock4 and 17 Switch menu-help label coordinate records, text semantic identifiers, labels' local X/Y rendering formula, and source screen parent transform. These are actual **Lua UI-layout positions** from a public script dump, never claimed to be texture XYWH nor confirmed Switch executable positions.
+- [Balatro public runtime glyph selection](PS_GLYPH_BALATRO_RUNTIME_SELECTOR.json): the Steamodded PC code overrides `G.CONTROLLER.get_console_from_gamepad()` with a `Playstation` style. The Switch version still needs binary/version evidence.
+- `tools/ps-glyph-klei-atlas.py`: read a real authorized Klei XML atlas and preserve UV normalized coordinates plus both top-/bottom-origin XYWH candidates with externally measured .tex dimensions. `tools/ps-glyph-klei-atlas-pair.py`: join PS4 and NX XML reports by exact element name; this is metadata-only, not confirmed pixel identity or installability. Fixture sources added but not executed.
