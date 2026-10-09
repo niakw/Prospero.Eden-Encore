@@ -61,8 +61,10 @@ struct block { size_t size; uint64_t magic; struct block *next_free; uint64_t us
 struct space { pthread_mutex_t lock; struct block *free_list; char *start, *end; uint64_t magic; };
 _Static_assert(sizeof(struct block) == 32, "header");
 
+static int refuse_first_mspace;
 void *sceLibcMspaceCreate(const char *name, void *base, size_t size, unsigned flags) {
     (void)name; (void)flags;
+    if (refuse_first_mspace) { refuse_first_mspace = 0; return NULL; }
     assert(size >= 4096 && ((uintptr_t)base & 15) == 0);
     struct space *space = base;
     pthread_mutex_init(&space->lock, NULL);
@@ -189,6 +191,7 @@ size_t __real_malloc_usable_size(const void *address) { return malloc_usable_siz
 
 // The range the heap grows in: unreadable until committed, so a piece used early faults.
 static int refuse_range, refuse_first_commit;
+static int abandoned_initial_mspace;
 static unsigned dense_fallback_attempts;
 static void *last_reserved_base;
 static size_t last_reserved_size;
@@ -214,6 +217,12 @@ void *eden_heap_pages(size_t size) {
     return address == MAP_FAILED ? NULL : address;
 }
 void eden_heap_pages_free(void *address, size_t size) { munmap(address, size); }
+void eden_heap_abandon_initial(void *address, size_t reserved) {
+    assert(address == last_reserved_base && reserved == last_reserved_size);
+    assert(munmap(address, reserved) == 0);
+    atomic_fetch_sub(&committed_bytes, (size_t)128 << 20);
+    abandoned_initial_mspace = 1;
+}
 '''
 
 TEST = r'''
@@ -294,6 +303,21 @@ static void *worker(void *argument) {
 int main(int argc, char **argv) {
     refuse_range = argc > 1 && strcmp(argv[1], "whole") == 0;
     const size_t piece = (size_t)128 << 20, heap = (size_t)3072 << 20;
+    if (argc > 1 && strcmp(argv[1], "first-mspace-fail") == 0) {
+        refuse_first_mspace = 1;
+        void *fallback = __wrap_malloc(100);
+        assert(fallback != NULL);
+        assert(atomic_load(&ps5_heap_state) == -1);
+        assert(abandoned_initial_mspace == 1);
+        assert(eden_heap_committed() == 0 && atomic_load(&committed_bytes) == 0);
+        assert(dense_fallback_attempts == 0);
+        unsigned char residency = 0;
+        errno = 0;
+        assert(mincore(last_reserved_base, 4096, &residency) == -1 && errno == ENOMEM);
+        __wrap_free(fallback);
+        puts("first-mspace-fail: initial physical backing + VA released PASS");
+        return 0;
+    }
     if (argc > 1 && strcmp(argv[1], "first-commit-fail") == 0) {
         refuse_first_commit = 1;
         void *fallback = __wrap_malloc(100);
@@ -438,7 +462,7 @@ with tempfile.TemporaryDirectory(prefix='eden-heap-') as work:
         binary = work / ('heap-' + label.split()[0])
         subprocess.run(['clang-18', '-std=gnu11', '-pthread', '-Wall', '-Wextra', '-Wno-unused-function',
                         '-Wno-unused-parameter', *flags, str(source), '-o', str(binary)], check=True)
-        for mode in ((), ('whole',), ('first-commit-fail',)):
+        for mode in ((), ('whole',), ('first-commit-fail',), ('first-mspace-fail',)):
             if label != 'checked' and mode:
                 continue
             result = subprocess.run([str(binary), *mode], capture_output=True, text=True, timeout=900)

@@ -39,6 +39,7 @@
 
 void *eden_heap_reserve(size_t size);             /* address space only; NULL when refused */
 int eden_heap_commit(void *address, size_t size); /* zeroed memory for a part of it; 0 when done */
+void eden_heap_abandon_initial(void *address, size_t reserved); /* only if first mspace create failed */
 
 static void *_Atomic eden_heap_slots[EDEN_HEAP_SLOTS]; /* arena mspace owning each slot */
 static void *eden_heap_arena_list[EDEN_HEAP_MAX_ARENAS];
@@ -286,8 +287,13 @@ static int ps5_heap_ready(void) {
   ps5_heap_mspace = sceLibcMspaceCreate("Eden-headless", base, first_size, 0);
   if (ps5_heap_mspace == NULL) {
     ps5_heap_base = NULL;
-    if (!eden_heap_grows)
+    if (eden_heap_grows) {
+      /* No live allocations exist yet. Previously this error leaked the
+       * 128 MiB direct backing and all 3 GiB reserved VA for app lifetime. */
+      eden_heap_abandon_initial(base, PS5_OPENGL_HEAP_SIZE);
+    } else {
       eden_heap_pages_free(base, PS5_OPENGL_HEAP_SIZE);
+    }
     atomic_store_explicit(&ps5_heap_state, -1, memory_order_release);
     return 0;
   }
