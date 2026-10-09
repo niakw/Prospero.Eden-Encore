@@ -61,6 +61,13 @@ assert "cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, 8, &verified)" in
 assert "std::memcmp(&one, &verified, 8)" in topology
 assert "if (!decoded && has_x2apic)" in topology
 assert "topology_allowed_valid = true;" in topology
+# A failed probe on title B must never inherit pinned workers from title A.
+for reset in ("worker_topology_ready = false;", "secondary_cpus = 0;",
+              "worker_cpus.fill(0);", "cpu_core.fill(-1);",
+              "topology_allowed_valid = false;"):
+    assert reset in topology
+assert topology.index("worker_topology_ready = false;") < topology.index("cpuset_getaffinity(")
+assert topology.index("topology_allowed_valid = false;") < topology.index("cpuset_getaffinity(")
 assert "amd_ext=%u x2apic=%u" in topology
 # Documented AMD family17h EBX CoreId (same for two SMT siblings), ECX NodeId.
 def amd_physical_core(ebx, ecx):
