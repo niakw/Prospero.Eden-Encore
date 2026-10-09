@@ -3,11 +3,19 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 def src(name): return (root / name).read_text()
 svc = src("headless/prosperoeden/eden_services.cpp")
+svc_h = src("headless/prosperoeden/eden_services.h")
+svc_base = src("headless/prosperoeden/pe/ui/services.hpp")
 lib = src("headless/prosperoeden/pe/ui/library.cpp")
 home = src("headless/prosperoeden/pe/ui/home.cpp")
 hdr = src("headless/prosperoeden/pe/ui/launcher.hpp")
 nav = src("headless/prosperoeden/pe/ui/launcher.cpp")
 settings_src = src("headless/prosperoeden/pe/ui/settings.cpp")
+# Transient unavailability of the whole ROM directory cannot delete every title.
+assert "virtual bool game_storage_available() { return true; }" in svc_base
+assert "bool game_storage_available() override;" in svc_h
+assert "bool EdenServices::game_storage_available()" in svc
+assert 'std::filesystem::is_directory(Eden::AssetsPath("roms"), error)' in svc
+assert "if (!services_.game_storage_available())" in lib
 assert "bool ValidNlibTga(" in svc
 # Cached media must be rejected if the full TGA header/payload is invalid,
 # while an already valid image may still be refreshed when its TTL expires.

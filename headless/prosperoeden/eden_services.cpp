@@ -1186,6 +1186,11 @@ bool EdenServices::game_exists(const std::string& file) {
     return Eden::ValidRomFilename(file) && IsFile(Eden::AssetsPath("roms/" + file));
 }
 
+bool EdenServices::game_storage_available() {
+    std::error_code error;
+    return std::filesystem::is_directory(Eden::AssetsPath("roms"), error) && !error;
+}
+
 void EdenServices::arm_safe_launch() {
     // Same process: main.cpp consumes and unsets this before applying the game's settings.
     setenv("EDEN_SAFE_LAUNCH", "1", 1);

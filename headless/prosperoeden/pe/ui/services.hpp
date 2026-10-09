@@ -252,6 +252,8 @@ class Services
     virtual std::string game_path(const std::string &file) = 0;
     // Cheap presence check used while the launcher is open.
     virtual bool game_exists(const std::string &) { return true; }
+    // Keep cached titles when the ROM storage root itself is unavailable.
+    virtual bool game_storage_available() { return true; }
     // Arms a one-shot conservative launch profile. Native builds override this; host/preview
     // services may safely leave it as a no-op.
     virtual void arm_safe_launch() {}
