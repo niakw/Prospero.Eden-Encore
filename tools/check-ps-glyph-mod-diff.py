@@ -73,6 +73,14 @@ assert module.image_diff(png(source), png(alpha))["changed_rects_xywh"] == [[1, 
 hidden = source.copy()
 hidden.putpixel((0, 0), (127, 99, 41, 0))
 assert module.image_diff(png(source), png(hidden))["changed_rects_xywh"] == []
+# Low-alpha pixels still carry real color information; an RGB change of
+# one unit must never vanish through premultiplication/8-bit rounding.
+low_alpha_a = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+low_alpha_a.putpixel((3, 5), (10, 20, 30, 1))
+low_alpha_b = low_alpha_a.copy()
+low_alpha_b.putpixel((3, 5), (11, 20, 30, 1))
+assert module.image_diff(png(low_alpha_a), png(low_alpha_b))[
+    "changed_rects_xywh"] == [[3, 5, 1, 1]]
 assert module.image_diff(png(source), png(Image.new("RGBA", (64, 32))))["status"] == "dimensions_changed"
 
 with tempfile.TemporaryDirectory(prefix="eden-glyph-mod-diff-") as tmp:
