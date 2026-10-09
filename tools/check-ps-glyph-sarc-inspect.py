@@ -14,7 +14,7 @@ sarc = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(sarc)
 
 
-def sarc_bytes(endian: str, payload: bytes = b"BNTX\\0\\0\\0\\0") -> bytes:
+def sarc_bytes(endian: str, payload: bytes = b"BNTX\0\0\0\0") -> bytes:
     blob = bytearray(0x50 + len(payload))
     blob[:4] = b"SARC"
     blob[6:8] = b"\xff\xfe" if endian == "<" else b"\xfe\xff"
