@@ -370,11 +370,16 @@ static int eden_heap_grow(size_t bytes, unsigned seen) {
   const unsigned count = atomic_load_explicit(&eden_heap_space_count, memory_order_relaxed);
   const unsigned used = atomic_load_explicit(&eden_heap_pieces_used, memory_order_relaxed);
   /* Room for the request and for the mspace's own records. */
-  const size_t need = bytes + ((size_t)1 << 20);
-  const size_t pieces = (need + EDEN_HEAP_PIECE_SIZE - 1) >> EDEN_HEAP_PIECE_SHIFT;
+  const size_t overhead = (size_t)1 << 20;
+  /* Both additions can overflow independently; an overflowing rounded piece
+   * count used to become zero and enter the new-mspace path with size zero. */
+  const size_t need = bytes <= (size_t)-1 - overhead ? bytes + overhead : 0;
+  const size_t pieces = need && need <= (size_t)-1 - (EDEN_HEAP_PIECE_SIZE - 1)
+      ? (need + EDEN_HEAP_PIECE_SIZE - 1) >> EDEN_HEAP_PIECE_SHIFT : 0;
   if (count != seen) {
     grown = 1;
-  } else if (eden_heap_grows && need > bytes && pieces <= EDEN_HEAP_PIECES - used) {
+  } else if (eden_heap_grows && pieces && used <= EDEN_HEAP_PIECES &&
+             pieces <= EDEN_HEAP_PIECES - used) {
     void *start = (char *)ps5_heap_base + ((size_t)used << EDEN_HEAP_PIECE_SHIFT);
     const size_t size = pieces << EDEN_HEAP_PIECE_SHIFT;
     if (eden_heap_commit(start, size) == 0) {
@@ -405,6 +410,10 @@ static int eden_heap_grow(size_t bytes, unsigned seen) {
  * 1 MiB or more starts at the first space, which keeps the later ones free of long-lived blocks
  * and able to take the next large request. */
 static void *eden_heap_main(int kind, size_t a, size_t b) {
+  /* Caller normally validates calloc, but the shared mspace helper must
+   * never calculate a wrapped request (especially aligned a + b). */
+  if (kind == EDEN_HEAP_CALLOC && b && a > (size_t)-1 / b) return NULL;
+  if (kind == EDEN_HEAP_ALIGNED && a > (size_t)-1 - b) return NULL;
   const size_t bytes = kind == EDEN_HEAP_MALLOC ? a : kind == EDEN_HEAP_CALLOC ? a * b : a + b;
   for (;;) {
     const unsigned count = atomic_load_explicit(&eden_heap_space_count, memory_order_acquire);

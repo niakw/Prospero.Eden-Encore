@@ -385,8 +385,14 @@ int main(int argc, char **argv) {
     }
     assert(count > 20 && count < MANY && eden_heap_committed() <= heap);
     assert(__wrap_malloc((size_t)-1 - 4096) == NULL);
+    // If adding mspace metadata fits but rounding to 128 MiB overflows,
+    // no zero-piece heap growth is allowed.
+    assert(__wrap_malloc((size_t)-1 - ((size_t)64 << 20)) == NULL);
     void *unaligned = NULL;
     assert(__wrap_posix_memalign(&unaligned, 4096, (size_t)-1 - 8192) != 0);
+    // Alignment + request overflow must be rejected before calling mspace.
+    assert(__wrap_posix_memalign(&unaligned, (size_t)1 << (sizeof(size_t) * 8 - 1),
+                                (size_t)-1 - 1) == ENOMEM);
     for (int i = 0; i < count; ++i) { verify(blocks[i], (size_t)24 << 20, (unsigned)i); __wrap_free(blocks[i]); }
     // After that, everything still works.
     unsigned char *again = __wrap_malloc(1000);
