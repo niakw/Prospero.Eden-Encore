@@ -65,7 +65,7 @@ assert prmt_index(0x11223344, 0x55667788, 0xffff) == 0
 assert prmt_index(0xff000000, 0, 0x000b) == 0xff
 assert "constexpr unsigned EdenPrmtIndexReference(" in prmt_reference
 assert prmt_reference.count("static_assert(EdenPrmtIndexReference(") >= 4
-assert "${prmt_reference}\\n${prmt_source}" in cmake
+assert "${gpu_bounded_sample_helper}\\n${prmt_reference}\\n${prmt_source}" in cmake
 # A register selector uses identical nibble semantics, but is evaluated
 # dynamically in the shader IR rather than once at translation time.
 assert prmt_reg_old.count("ThrowNotImplemented(Opcode::PRMT_reg);") == 1
