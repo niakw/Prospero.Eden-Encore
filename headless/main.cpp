@@ -863,7 +863,7 @@ int main(int argc, char** argv) {
 #ifdef EDEN_DEV_VULKAN
         // New game session: old Vulkan timestamp query pools are tied to a
         // destroyed VkDevice. Reset even when the dev probe is off now.
-        Eden::DevVulkan::gpu_time = false;  // only explicit gpu_time=on opts in
+        Eden::DevVulkan::ResetForTitle();  // all developer Vulkan A/B switches
         Eden::DevVulkan::gpu_time_session.fetch_add(1, std::memory_order_release);
         Eden::Performance::vulkan_cost_enabled = std::filesystem::exists(Eden::AppFile("cost-run.txt"));
         const bool performance_run = std::filesystem::exists(Eden::AppFile("performance-run.txt"));
@@ -1132,6 +1132,19 @@ int main(int argc, char** argv) {
 #endif
         Settings::values.memory_layout_mode = Settings::MemoryLayout::Memory_4Gb;
 #ifdef EDEN_DEV_PROFILE
+        // A one-game A/B override must NEVER silently become the next game's
+        // effective performance policy. Reset the other development-only
+        // globals before reading the current game's dev-settings.txt.
+        Eden::Performance::graphics_usage_from_pool.store(true, std::memory_order_relaxed);
+        Eden::Performance::gc_keep_dirty.store(true, std::memory_order_relaxed);
+        Eden::Performance::dispatch_mask.store(7, std::memory_order_relaxed);
+        Eden::Performance::idle_spin_iterations.store(5000, std::memory_order_relaxed);
+        Eden::Performance::jit_duplicate_tracking.store(false, std::memory_order_relaxed);
+        Eden::Performance::pc_sample_core.store(0, std::memory_order_relaxed);
+        Eden::Performance::pc_fast.store(false, std::memory_order_relaxed);
+        Eden::Performance::capture_early.store(false, std::memory_order_relaxed);
+        Eden::Performance::firmware_applets.store(false, std::memory_order_relaxed);
+        Eden::Performance::trace_fs_callers.store(false, std::memory_order_relaxed);
         // One-run A/B switches written by the development runner; absent = defaults.
         {
             std::ifstream dev_settings(Eden::AppFile("dev-settings.txt"));

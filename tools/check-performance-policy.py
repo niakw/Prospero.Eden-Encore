@@ -66,7 +66,20 @@ assert "effective_output_for_tuning" in main
 vulkan_dev = (root / "headless/dev_vulkan.h").read_text()
 generator = (root / "tools/prepare-vulkan-port.py").read_text()
 assert "std::atomic<std::uint64_t> gpu_time_session{0};" in vulkan_dev
-assert "Eden::DevVulkan::gpu_time = false;" in main
+assert "Eden::DevVulkan::ResetForTitle();" in main
+for token in ("disable_null_descriptor = false;", "disable_descriptor_buffer = false;",
+              "robustness2 = false;", "disable_sparse = false;",
+              "disable_multi_range = false;", "disable_custom_border = true;",
+              "sync_submissions = false;", "gpu_time = false;",
+              "disable_conditional_rendering = false;", "compute_barriers = true;",
+              "hcr_mode = 1;"):
+    assert token in vulkan_dev[vulkan_dev.index("inline void ResetForTitle()"):], token
+for marker in ("graphics_usage_from_pool.store(true", "gc_keep_dirty.store(true",
+               "dispatch_mask.store(7", "idle_spin_iterations.store(5000",
+               "jit_duplicate_tracking.store(false", "pc_sample_core.store(0",
+               "pc_fast.store(false", "capture_early.store(false",
+               "firmware_applets.store(false", "trace_fs_callers.store(false"):
+    assert marker in main, marker
 assert "Eden::DevVulkan::gpu_time_session.fetch_add(1, std::memory_order_release);" in main
 assert "const u64 session = ::Eden::DevVulkan::gpu_time_session.load(std::memory_order_acquire);" in generator
 assert "gpu_time = GpuTimeProbe{};" in generator
