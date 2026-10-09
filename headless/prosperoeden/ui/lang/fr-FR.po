@@ -739,6 +739,10 @@ msgstr "Jouer"
 msgid "LAYOUT"
 msgstr "STRUCTURE"
 
+#: pe/ui/library.cpp
+msgid "Left/right: Global, PlayStation or Switch for this game; Cross: edit individual buttons."
+msgstr "Gauche/droite : global, PlayStation ou Switch pour ce jeu ; Croix : personnaliser les touches."
+
 #: pe/ui/mapping.cpp
 msgid "Left stick press"
 msgstr "Clic stick gauche"
