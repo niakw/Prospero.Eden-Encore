@@ -170,14 +170,15 @@ GlBatch::~GlBatch()
 
 void GlBatch::release()
 {
-    if (buffer_ != 0)
-        glDeleteBuffers(1, &buffer_);
-    if (vao_ != 0)
-        glDeleteVertexArrays(1, &vao_);
+    glDeleteBuffers(static_cast<GLsizei>(buffers_.size()), buffers_.data());
+    glDeleteVertexArrays(static_cast<GLsizei>(vaos_.size()), vaos_.data());
     if (program_ != 0)
         glDeleteProgram(program_);
-    buffer_ = vao_ = program_ = 0;
-    capacity_ = 0;
+    buffers_.fill(0);
+    vaos_.fill(0);
+    capacities_.fill(0);
+    next_slot_ = 0;
+    program_ = 0;
 }
 
 bool GlBatch::init()
@@ -185,20 +186,26 @@ bool GlBatch::init()
     program_ = build_program("batch2d", kVertex, kFragment);
     if (program_ == 0)
         return false;
-    glGenVertexArrays(1, &vao_);
-    glGenBuffers(1, &buffer_);
-    glBindVertexArray(vao_);
-    glBindBuffer(GL_ARRAY_BUFFER, buffer_);
+    glGenVertexArrays(static_cast<GLsizei>(vaos_.size()), vaos_.data());
+    glGenBuffers(static_cast<GLsizei>(buffers_.size()), buffers_.data());
     constexpr GLsizei stride = sizeof(Instance);
-    for (GLuint attribute = 0; attribute < 6; ++attribute)
+    // Each VAO remembers its own VBO. Rotating both prevents a stalled
+    // read of the previous frame's same-size storage in the PS5 GL driver.
+    for (std::size_t slot = 0; slot < buffers_.size(); ++slot)
     {
-        glEnableVertexAttribArray(attribute);
-        glVertexAttribPointer(
-            attribute, 4, GL_FLOAT, GL_FALSE, stride,
-            reinterpret_cast<const void *>(static_cast<std::uintptr_t>(attribute * 16)));
-        glVertexAttribDivisor(attribute, 1);
+        glBindVertexArray(vaos_[slot]);
+        glBindBuffer(GL_ARRAY_BUFFER, buffers_[slot]);
+        for (GLuint attribute = 0; attribute < 6; ++attribute)
+        {
+            glEnableVertexAttribArray(attribute);
+            glVertexAttribPointer(
+                attribute, 4, GL_FLOAT, GL_FALSE, stride,
+                reinterpret_cast<const void *>(static_cast<std::uintptr_t>(attribute * 16)));
+            glVertexAttribDivisor(attribute, 1);
+        }
     }
     glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
     return true;
 }
 
@@ -259,12 +266,18 @@ void GlBatch::draw(const DrawList &list, const Viewport &viewport, int surface_w
     const auto &instances = list.instances();
     if (instances.empty())
         return;
-    // Orphan, then fill: re-specifying storage avoids waiting on the GPU's
-    // reads of the previous frame (ps5-opengl drains on same-size reuse).
-    glBindBuffer(GL_ARRAY_BUFFER, buffer_);
-    capacity_ = std::max(capacity_, instances.size());
-    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(capacity_ * sizeof(Instance)), nullptr,
-                 GL_STREAM_DRAW);
+    // The old path orphaned the SAME GL store every frame. PS5 OpenGL can
+    // drain on that operation, making held-D-pad navigation stutter.
+    // Rotate three VBOs, and resize a store only when it actually grows.
+    const std::size_t slot = next_slot_++ % kStreamBufferSlots;
+    glBindBuffer(GL_ARRAY_BUFFER, buffers_[slot]);
+    const auto capacity = StreamCapacity(capacities_[slot], instances.size());
+    if (capacity != capacities_[slot])
+    {
+        glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(capacity * sizeof(Instance)), nullptr,
+                     GL_STREAM_DRAW);
+        capacities_[slot] = capacity;
+    }
     glBufferSubData(GL_ARRAY_BUFFER, 0,
                     static_cast<GLsizeiptr>(instances.size() * sizeof(Instance)),
                     instances.data());
@@ -282,7 +295,7 @@ void GlBatch::draw(const DrawList &list, const Viewport &viewport, int surface_w
 
     GLuint bound_texture = 0;
     bool scissor = false;
-    glBindVertexArray(vao_);
+    glBindVertexArray(vaos_[slot]);
     for (const Run &run : list.runs())
     {
         if (run.count == 0)
