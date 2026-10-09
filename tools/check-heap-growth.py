@@ -348,11 +348,13 @@ int main(int argc, char **argv) {
         assert(eden_heap_committed() == heap && atomic_load(&committed_bytes) == 0);
     }
     if (argc > 1 && strcmp(argv[1], "growth-mspace-fail") == 0) {
-        // Fill most of the first 128 MiB while avoiding the >=32 MiB
-        // separate direct-allocation path. The fifth 30 MiB request
-        // forces a new physical piece, whose mspace is deliberately refused.
-        void *retained[4];
-        for (int i = 0; i < 4; ++i) {
+        // The main thread's small allocation first creates an 8 MiB
+        // aligned arena in the same 128 MiB piece. The alignment and
+        // allocator metadata mean FOUR 30 MiB blocks cannot fit there.
+        // Keep three 30 MiB allocations in the initial piece, then make
+        // the fourth trigger growth with a deliberate mspace failure.
+        void *retained[3];
+        for (int i = 0; i < 3; ++i) {
             retained[i] = __wrap_malloc((size_t)30 << 20);
             assert(retained[i] != NULL);
         }
@@ -373,7 +375,7 @@ int main(int argc, char **argv) {
         void *small = __wrap_malloc(1024);
         assert(small != NULL);
         __wrap_free(small);
-        for (int i = 0; i < 4; ++i) __wrap_free(retained[i]);
+        for (int i = 0; i < 3; ++i) __wrap_free(retained[i]);
         __wrap_free(first);
         puts("growth-mspace-fail: fail-closed, no repeat 128 MiB loss, old mspace usable PASS");
         return 0;
