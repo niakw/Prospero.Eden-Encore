@@ -944,25 +944,27 @@ if shader_source.count(vulkan_cache_save_anchor) != 1:
 shader_source = shader_source.replace(vulkan_cache_save_anchor, vulkan_cache_save_replacement)
 # Native affinity masks describe the CPUs the *process can schedule on*;
 # hardware_concurrency() can report more than the PS5 runtime permits.
-pipeline_ps5_headers = '''#ifdef PS5_NATIVE
+pipeline_ps5_headers = f'''#ifdef PS5_NATIVE
 #include <pthread.h>
 #include <sched.h>
 #include <sys/param.h>
 #include <sys/cpuset.h>
 #include <cstdio>
+#include "{port / 'performance.h'}"
 #endif
 '''
 if shader_source.count('#include <thread>') != 1:
     raise RuntimeError('Pinned Vulkan pipeline header changed')
 shader_source = shader_source.replace('#include <thread>', '#include <thread>\n' + pipeline_ps5_headers)
-# PS5 runs one foreground emulated game. Reserve SIX OS-logical scheduler
-# slots for four guest cores and the two GPU/presentation workers, plus ONE
-# for audio/services. A shader worker occupies one OS-logical slot, not two:
-# the previous spare/2 double-discounted SMT and used just 3 of 13 available
-# logical CPUs on hardware, leaving usable compilation capacity idle.
-# Limit the resulting concurrent pipeline builders to six regardless of
-# hardware_concurrency(), so CPU scheduling never launches 15 builders.
-# Not physical-core proof; frame-time impact still requires PS5 measurements.
+# PS5 shader worker occupancy must use the affinity of THIS thread,
+# not a global count or a guess that every affinity mask still includes the
+# guest/GPU primary cores. On R237 the native shader thread inherited an
+# 8-logical-CPU secondary mask 0x1fe0, but this policy reserved 7 primary
+# slots a SECOND time and launched ONE shader compiler. Compare the thread's
+# actual affinity with the verified primary worker mask and reserve those
+# primary slots only when they are actually in this mask. Keep two secondary
+# logical slots for audio/presentation/services. Topology-unknown falls back
+# to the original conservative 7-slot reservation. Cap builders at six.
 pipeline_worker_anchor = '''    return max_core_threads;
 #endif
 }'''
@@ -976,20 +978,28 @@ pipeline_worker_replacement = '''#ifdef PS5_NATIVE
             if (CPU_ISSET(cpu, &allowed)) ++available;
         }
     }
-    // Never fill the OS affinity set with pipeline compilers alone:
-    // four guest cores, GPU/presentation and audio/services have priority.
-    // Count *logical threads* once (not spare/2) and cap active builders
-    // to six; with 13 allowed logical CPUs this is 6 + 1 + 6.
+    // Reserve only what is REALLY shared with guest/GPU workers in the
+    // CURRENT thread's allowed mask. The masked-off primaries have already
+    // been excluded by SetSecondaryPlacement: do NOT subtract them again.
     const size_t schedulable = available ? std::min(available, reported) : std::min<size_t>(reported, 4);
-    constexpr size_t guest_and_gpu_slots = 6;
-    constexpr size_t audio_and_service_slots = 1;
+    const std::uint64_t primary_mask = ::Eden::Performance::PinnedWorkerMask();
+    size_t primary_in_mask = 0;
+    if (affinity_rc == 0 && primary_mask) {
+        for (unsigned cpu = 0; cpu < 64; ++cpu)
+            if (CPU_ISSET(cpu, &allowed) && (primary_mask & (std::uint64_t{1} << cpu)))
+                ++primary_in_mask;
+    }
+    constexpr size_t secondary_headroom = 2;
+    constexpr size_t unverified_reserved = 7;
     constexpr size_t max_pipeline_workers = 6;
-    const size_t reserved = guest_and_gpu_slots + audio_and_service_slots;
+    const size_t reserved = affinity_rc == 0 && primary_mask ?
+        primary_in_mask + secondary_headroom : unverified_reserved;
     const size_t spare = schedulable > reserved ? schedulable - reserved : 0ULL;
     const size_t selected = std::max<size_t>(1ULL, std::min(spare, max_pipeline_workers));
     std::printf("EDEN_PS5_SHADER_WORKERS reported=%zu available=%zu workers=%zu "
-                "reserved=%zu affinity_rc=%d\\n",
-                reported, available, selected, reserved, affinity_rc);
+                "reserved=%zu primary_in_mask=%zu physical_verified=%u affinity_rc=%d\\n",
+                reported, available, selected, reserved, primary_in_mask,
+                unsigned(primary_mask != 0), affinity_rc);
     return selected;
 #else
     return max_core_threads;
