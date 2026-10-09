@@ -1910,3 +1910,7 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 ### 2026-10-09 — HLE first-registration race closed before native compile [skip ci]
 
 - Review identified a publication race in the new fixed HLE profiler: if two workers first saw the same empty hash slot, the second waited for the registration mutex; after the first published the same service/command, the second could skip that slot and insert a duplicate farther in the table. Corrected the under-lock recheck to merge into the newly published **same** entry, not skip it. Host eight-thread fixture now explicitly requires all 35 unique service/command identities, each reported once, with unchanged exact aggregate counts and no overflow for the normal stress case. No CI/test execution.
+
+### 2026-10-09 — Keep HLE telemetry allocation entirely out of shipping builds [skip ci]
+
+- The new ~400 KiB fixed HLE counters table is now compiled into `performance.cpp` only under `EDEN_DEV_PROFILE`, with the service-hook symbol staying a no-op in shipping. Diagnostic report traversal is likewise development-only. The all-on PS5 test still gets the bounded concurrent counters; normal release has no new profiler memory overhead. Extended source gate. No build/tests/actions performed.

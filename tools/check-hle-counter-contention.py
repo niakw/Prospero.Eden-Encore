@@ -15,6 +15,9 @@ source = (root / "headless/performance.cpp").read_text()
 assert '#include "hle_counters.h"' in source
 hot = source.split("void RecordHle(", 1)[1].split("void ReportJitCodeState(", 1)[0]
 assert "hle_calls.Record(service, command, ns);" in hot
+assert "#ifdef EDEN_DEV_PROFILE" in hot
+assert "HleCounters hle_calls;" in source.split("#ifdef EDEN_DEV_PROFILE", 1)[1]
+assert "(void)service;" in hot and "(void)command;" in hot and "(void)ns;" in hot
 assert "hle_mutex" not in hot and "std::map<" not in hot
 assert "hle_calls.ForEach(" in source
 assert "EDEN_DEV_HLE_OVERFLOW" in source

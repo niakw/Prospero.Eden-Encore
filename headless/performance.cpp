@@ -619,14 +619,23 @@ static unsigned long long GraphicsMemoryFree() {
      graphics_memory_free.store(&GraphicsMemoryFree, std::memory_order_relaxed), true);
 #endif
 
+#ifdef EDEN_DEV_PROFILE
 namespace {
 // Fixed-size, owned-name counters: no per-request allocator/mutex contention
 // between the four guest CPUs during the development all-on profiling pass.
+// Shipping neither constructs nor retains this ~400 KiB profiling table.
 HleCounters hle_calls;
 } // namespace
+#endif
 
 void RecordHle(const char* service, unsigned command, long long ns) {
+#ifdef EDEN_DEV_PROFILE
     hle_calls.Record(service, command, ns);
+#else
+    (void)service;
+    (void)command;
+    (void)ns;
+#endif
 }
 
 // Report true JIT ownership once at meaningful lifecycle stages; this
@@ -724,6 +733,7 @@ void ReportGpuThread(unsigned frame) {
                     eden_heap_committed ? eden_heap_committed() : std::size_t{0}, large, large_blocks, table_held,
                     table_span, eden_heap_tcache_held ? eden_heap_tcache_held() : std::size_t{0});
     }
+#ifdef EDEN_DEV_PROFILE
     // Immutable service names, atomic cumulative counters and no snapshot
     // lock: a dev sample must not stall concurrent guest HLE dispatch.
     hle_calls.ForEach([](const char* name, unsigned command, std::uint64_t calls,
@@ -737,6 +747,7 @@ void ReportGpuThread(unsigned frame) {
         std::printf("EDEN_DEV_HLE_OVERFLOW calls=%llu ns=%llu\n",
                     static_cast<unsigned long long>(overflow),
                     static_cast<unsigned long long>(hle_calls.OverflowNs()));
+#endif
 #ifdef PS5_NATIVE
     ReportDirectMemoryState("dev-profile");
 #endif
