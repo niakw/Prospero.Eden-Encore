@@ -121,6 +121,22 @@ assert "if (scan_.valid()) docked_refresh_after_scan_ = true;" in library
 assert "if (scan_.valid()) docked_refresh_after_scan_ = true;" in home
 assert "installed.docked = home_game_docked_;" in home
 
+# Development PC sampler may dump six new guest+host blocks per 5s
+# while the GPU thread is presenting. Eliminate thousands of snprintf calls
+# and repeated std::string reallocations WITHOUT changing existing log fields.
+perf_dump = read("headless/performance.cpp").split(
+    'std::printf("EDEN_PERF_BLOCK_GUEST', 1)[0].split(
+    'constexpr char hex[] = "0123456789abcdef";', 1)[1]
+assert "std::array<char, 64 * 8 + 1> guest{};" in perf_dump
+assert "std::snprintf(" not in perf_dump
+assert "std::string guest" not in perf_dump
+gpu_dump = read("headless/performance.cpp").split(
+    'std::printf("EDEN_PERF_BLOCK_HOST', 1)[0].split(
+    'std::array<char, 4096 * 2 + 1> host{};', 1)[1]
+assert "std::snprintf(" not in gpu_dump
+assert "std::string host" not in gpu_dump
+assert "host[2 * byte_count] = '\\0';" in gpu_dump
+
 # Native five-second frame reports execute inside graphics.cpp's render worker.
 # An expensive sceKernelDirectMemoryQuery full ownership walk in this callback
 # is itself a recurrent hitch. Preserve that work only at explicit lifecycle

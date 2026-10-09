@@ -1006,26 +1006,37 @@ void Snapshot() {
             const JitBlock* block = nullptr;
             for (std::size_t i = blocks; i-- > 0;)
                 if (core0_blocks[i].location == location) { block = &core0_blocks[i]; break; }
-            std::string guest;
+            // A report runs on the native GPU render thread. Formatting
+            // each 4 KiB code block with 4096 separate snprintf calls and
+            // growing std::strings could visibly stall FC27 every five
+            // seconds. Use bounded stack buffers and direct hex digits:
+            // byte-for-byte identical guest/host diagnostic log format.
+            constexpr char hex[] = "0123456789abcdef";
+            std::array<char, 64 * 8 + 1> guest{};
+            std::size_t guest_written = 0;
             const unsigned long long pc = location & 0xffffffffull;
             for (unsigned long long at = pc; at < pc + 256 && guest_read32; at += 4) {
                 unsigned word = 0;
                 if (!guest_read32(at, word)) break;
-                char text[12];
-                std::snprintf(text, sizeof(text), "%08x", word);
-                guest += text;
+                for (int nibble = 7; nibble >= 0; --nibble)
+                    guest[guest_written++] = hex[(word >> (nibble * 4)) & 0xfu];
             }
-            std::printf("EDEN_PERF_BLOCK_GUEST location=%llx count=%u words=%s\n", location, count, guest.c_str());
+            guest[guest_written] = '\0';
+            std::printf("EDEN_PERF_BLOCK_GUEST location=%llx count=%u words=%s\n",
+                        location, count, guest.data());
             if (block) {
-                std::string host;
+                std::array<char, 4096 * 2 + 1> host{};
                 const auto* bytes = reinterpret_cast<const unsigned char*>(block->entry);
-                for (unsigned long long i = 0; i < block->size && i < 4096; ++i) {
-                    char text[4];
-                    std::snprintf(text, sizeof(text), "%02x", bytes[i]);
-                    host += text;
+                const auto byte_count = std::min<unsigned long long>(block->size, 4096);
+                for (unsigned long long i = 0; i < byte_count; ++i) {
+                    const unsigned char value = bytes[i];
+                    host[2 * i] = hex[value >> 4];
+                    host[2 * i + 1] = hex[value & 0xfu];
                 }
-                std::printf("EDEN_PERF_BLOCK_HOST location=%llx entry=%llx size=%llu bytes=%s\n", location,
-                            static_cast<unsigned long long>(block->entry), block->size, host.c_str());
+                host[2 * byte_count] = '\0';
+                std::printf("EDEN_PERF_BLOCK_HOST location=%llx entry=%llx size=%llu bytes=%s\n",
+                            location, static_cast<unsigned long long>(block->entry),
+                            block->size, host.data());
             }
         }
     }
