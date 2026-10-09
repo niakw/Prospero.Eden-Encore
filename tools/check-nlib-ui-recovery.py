@@ -9,7 +9,13 @@ hdr = src("headless/prosperoeden/pe/ui/launcher.hpp")
 nav = src("headless/prosperoeden/pe/ui/launcher.cpp")
 settings_src = src("headless/prosperoeden/pe/ui/settings.cpp")
 assert "bool ValidNlibTga(" in svc
-assert "if (!ValidNlibTga(path))" in svc
+# Cached media must be rejected if the full TGA header/payload is invalid,
+# while an already valid image may still be refreshed when its TTL expires.
+assert "return ValidNlibTga(path) ? path : std::string{};" in svc
+assert "if (ValidNlibTga(path)) screens.push_back(path);" in svc
+assert "if (!ValidNlibTga(path) || refresh_existing_artwork)" in svc
+assert "info.st_size < 18" in svc
+assert "info.st_size) >= bytes" in svc
 assert "const bool sparse_metadata = current_metadata_cache" in svc
 assert "metadata_expired || sparse_metadata" in svc
 assert 'metadata["_encore_checked_at"] = now_seconds' in svc
