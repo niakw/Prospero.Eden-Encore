@@ -140,3 +140,22 @@ python3 tools/ps-glyph-switch1-titledb.py --title-db /path/authorized/titledb/ti
 ```
 
 The importer does not download the database automatically, does not change the runtime glyph catalogue, and never marks a title/version supported based on its name or ID. It can produce a backlog of candidate Switch 1 titles for future public mod discovery. The script accepts bounded external metadata and is **not executed** in this source-only pass; `tools/check-ps-glyph-switch1-titledb.py` adds synthetic assertions for ambiguity, update IDs, Switch 2 exclusions and regional duplicates.
+
+## Real public GitHub mod release assets: reproducible forensic intake
+
+The [official GitHub release metadata register](PS_GLYPH_OFFICIAL_MOD_RELEASES.json) now records TWO exact release assets, their release tag and size, and SHA-256 when provided by GitHub:
+
+* BALL x PIT Switch mod release **2**, game version **1.251**, ZIP **3,131,472 bytes**, GitHub-published SHA-256 `44a99655acdccbef885fa25568dcc6c462264ae007653baa24095c2d83f0b9f5`. The author documents `Data/resources.assets`, Unity `controller_btns_outlined` Texture2D and Switch Title ID `010086A022444000`.
+* Atelier Ryza PC icon release **1.6**, ZIP **118,893,347 bytes**. GitHub metadata does not provide a digest, so none is claimed.
+
+Use the exact official [BALL x PIT asset URL](https://github.com/mircowuffwuff/ball-x-pit-nsw-ver-playstation-button-prompts/releases/download/2/ball-x-pit-nsw-ver-playstation-prompts-2-1.251.zip) only as input to a local, authorized ZIP inventory:
+
+```bash
+python3 tools/ps-glyph-mod-inventory.py \
+  /path/ball-x-pit-nsw-ver-playstation-prompts-2-1.251.zip \
+  --platform Switch \
+  --expect-sha256 44a99655acdccbef885fa25568dcc6c462264ae007653baa24095c2d83f0b9f5 \
+  --out /tmp/ball-x-pit-mod-zip-index.json
+```
+
+The CLI rejects mismatched ZIP bytes, dangerous member paths, duplicate/case-colliding entries and oversized files; it does not extract Unity resources or reproduce game artwork. **Important:** this session was able to read the authoritative GitHub release asset metadata but could NOT download the ZIP's actual bytes in the available environment. Therefore the archive content/Texture2D positions have not been inspected and remain unverified. Do not mark BALL x PIT as verified for Eden Encore.
