@@ -130,15 +130,17 @@ python3 -B "$root/headless/check_slab_lifetime.py" \
     "$scratch/native-local/headless/include/core/hle/kernel/slab_helpers.h" \
     "$scratch/source/src/core/hle/kernel/slab_helpers.h"
 
+# Native PS5 syntax gate: both all-on dev and release compile the same launcher
+# and shader translation units. Dev skips release-only source contracts, NOT this
+# compiler check. The explicit prebuild bypass still disables it.
+if [[ "$graphics" == ON && ${EDEN_SKIP_PREBUILD_SOURCE_CHECKS:-0} != 1 ]]; then
+    python3 -B "$root/tools/check-native-source-syntax.py" "$scratch/native-local"
+fi
+
 # Run every source/harness check that only needs the configured/generated source tree BEFORE the
 # expensive native compile. A stale source extraction should fail in minutes, not after a 40-minute
 # build. Development builds intentionally skip these release-shape checks.
 if [[ ${EDEN_SKIP_SOURCE_CHECKS:-0} != 1 && ${EDEN_SKIP_PREBUILD_SOURCE_CHECKS:-0} != 1 ]]; then
-    # Catch real PS5 ABI and launcher C++ errors before the long Ninja compile.
-    # No object/application binary is produced by this source-only Clang pass.
-    if [[ "$graphics" == ON ]]; then
-        python3 -B "$root/tools/check-native-source-syntax.py" "$scratch/native-local"
-    fi
     python3 -B "$root/headless/check_audio_shutdown.py" "$scratch/native-local/headless/core.cpp" "$scratch/source/src/core/core.cpp"
     python3 -B "$root/tools/check-load-failure.py"
     python3 -B "$root/tools/check-legacy-migration.py"
