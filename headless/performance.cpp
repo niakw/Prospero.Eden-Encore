@@ -390,6 +390,21 @@ void EnableExperimentalLogicalPlacement() {
 #endif
 }
 
+std::uint64_t PinnedWorkerMask() noexcept {
+#ifdef PS5_NATIVE
+    // Only expose topology-qualified slots, never arbitrary CPU indices or
+    // unverified firmware logical/SMT pairs. Called when the Vulkan shader
+    // pipeline pool is constructed, after main's topology initialization.
+    if (!worker_topology_ready) return 0;
+    std::uint64_t mask = 0;
+    for (unsigned cpu : worker_cpus)
+        if (cpu < 64) mask |= std::uint64_t{1} << cpu;
+    return mask;
+#else
+    return 0;
+#endif
+}
+
 void SetSecondaryPlacement(bool enabled) {
 #ifdef PS5_NATIVE
     placement_secondary.store(enabled, std::memory_order_relaxed);
