@@ -1,5 +1,6 @@
 #ifdef EDEN_DEV_ROM_ID
 #include "development_input.h"
+#include "dev_replay_policy.h"
 #endif
 #include <utility>
 #include <vector>
@@ -1807,12 +1808,11 @@ int main(int argc, char** argv) {
                     bool replay_requested = false;
                     {
                         std::ifstream dev_settings(Eden::AppFile("dev-settings.txt"));
-                        for (std::string entry; dev_settings >> entry;) {
-                            if (entry == "replay=on") replay_requested = true;
-                            if (entry == "replay=off") replay_requested = false;
-                        }
+                        for (std::string entry; dev_settings >> entry;)
+                            replay_requested = Eden::DevInput::ReplayRequestedAfter(replay_requested, entry);
                     }
-                    const bool timed_replay = development_id == EDEN_DEV_PROFILE_TITLE && replay_requested;
+                    const bool timed_replay = Eden::DevInput::ScriptedReplayEnabled(
+                        replay_requested, development_id, EDEN_DEV_PROFILE_TITLE);
                     std::fprintf(stderr, "EDEN_PAD_INPUT mode=%s replay_requested=%d title=%s\\n",
                                  timed_replay ? "scripted" : "dualsense", int(replay_requested),
                                  development_id.c_str());
