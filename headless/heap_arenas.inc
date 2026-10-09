@@ -63,6 +63,10 @@ static atomic_uint eden_heap_pieces_used;
 static int eden_heap_grows;
 static atomic_uint eden_heap_space_hint; /* where the last allocation from the spaces succeeded */
 static atomic_flag eden_heap_grow_lock = ATOMIC_FLAG_INIT;
+/* The growth lock owns this flag. An unregistered committed piece cannot
+ * be reused by callers, and repeatedly committing new 128 MiB pieces after
+ * mspace creation fails would progressively exhaust the unified PS5 RAM. */
+static int eden_heap_growth_mspace_failed;
 
 /* Requests of this size or more get memory of their own (eden_heap_pages), freed with them. */
 #define EDEN_HEAP_LARGE_REQUEST ((size_t)32 << 20)
@@ -394,6 +398,12 @@ static int eden_heap_grow(size_t bytes, unsigned seen) {
       ? (need + EDEN_HEAP_PIECE_SIZE - 1) >> EDEN_HEAP_PIECE_SHIFT : 0;
   if (count != seen) {
     grown = 1;
+  } else if (eden_heap_growth_mspace_failed) {
+    /* The previous failed mspace still occupies direct memory without an
+     * owner. Keep using every healthy space, but never silently commit more
+     * orphaned 128 MiB pieces for subsequent allocation requests. Releasing
+     * the orphan needs a separately proven per-piece physical ownership path. */
+    eden_heap_grow_refused("EDEN_HEAP_GROW refused: earlier mspace creation failed; growth disabled\n");
   } else if (eden_heap_grows && pieces && used <= EDEN_HEAP_PIECES &&
              pieces <= EDEN_HEAP_PIECES - used) {
     void *start = (char *)ps5_heap_base + ((size_t)used << EDEN_HEAP_PIECE_SHIFT);
@@ -409,7 +419,10 @@ static int eden_heap_grow(size_t bytes, unsigned seen) {
         atomic_store_explicit(&eden_heap_space_count, count + 1, memory_order_release);
         grown = 1;
       } else {
-        eden_heap_grow_refused("EDEN_HEAP_GROW refused: no allocator for a new piece\n");
+        /* Do not reattempt new physical pieces on future mallocs if the
+         * platform cannot construct an mspace for a committed chunk. */
+        eden_heap_growth_mspace_failed = 1;
+        eden_heap_grow_refused("EDEN_HEAP_GROW refused: no allocator for a new piece; growth disabled\n");
       }
     } else {
       eden_heap_grow_refused("EDEN_HEAP_GROW refused: the console has no memory for a new piece\n");
