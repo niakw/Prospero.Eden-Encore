@@ -6,12 +6,14 @@ Requires user-authorized *decoded images* from:
   2. modified other-platform UI texture,
   3. unmodified same-name Switch UI texture.
 
-A rectangle can only be proposed for cross-platform transfer if the two
-ORIGINAL textures have identical size and identical rendered RGBA pixels.
-Fully transparent RGB padding is ignored, as it cannot produce a glyph.
-Any different layout, scaling, compression, colors, original buttons or font
-pixels refuses coordinate transfer. Even exact matches MUST have per-screen
-semantic checks and original Switch resource/pack hashes before install.
+Two separate kinds of evidence are supported:
+  (1) Exact decoded source/Switch original pixels: pixel candidate rectangles.
+  (2) Different source/Switch original pixels but matching normalized UI
+      anchor and one isolated Switch alpha sprite: layout POSITION PRIOR only.
+      This is never a qualified atlas slot; a human still checks the scene
+      and action before approving any game resource writes.
+Fully transparent RGB padding is ignored. Even exact matches MUST have
+semantic checks and verified original Switch resource/update before install.
 Does not modify game files or claim engine packer compatibility.
 """
 from __future__ import annotations
@@ -19,7 +21,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import importlib.util
+import io
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -31,6 +35,82 @@ if SPEC is None or SPEC.loader is None:
     raise SystemExit("missing local ps-glyph-mod-diff.py")
 diff = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(diff)
+
+SCAN_SPEC = importlib.util.spec_from_file_location("eden_cross_platform_alpha_scan",
+                                                   ROOT / "ps-glyph-scan.py")
+if SCAN_SPEC is None or SCAN_SPEC.loader is None:
+    raise SystemExit("missing ps-glyph-scan.py")
+scan = importlib.util.module_from_spec(SCAN_SPEC)
+SCAN_SPEC.loader.exec_module(scan)
+
+# Screen-space / atlas-normalized position correlation, *never a content
+# identity assertion*. UI screen anchors should instead use
+# ps-glyph-scene-positions.py. PNG atlas candidates stay unapproved.
+MAX_ANCHOR_DISTANCE = 0.075
+MIN_DIMENSION_RATIO = 0.45
+MAX_DIMENSION_RATIO = 2.25
+
+
+def candidate_scene_layout_positions(source_bytes: bytes, source_mod_bytes: bytes,
+                                     switch_bytes: bytes) -> list[dict]:
+    changes = diff.image_diff(source_bytes, source_mod_bytes)
+    if changes.get("status") != "pixels_differ":
+        return []
+    rects = changes.get("changed_rects_xywh")
+    if not isinstance(rects, list) or len(rects) > 512:
+        return []
+    with Image.open(io.BytesIO(source_bytes)) as source, Image.open(io.BytesIO(switch_bytes)) as nx:
+        if source.format not in ("PNG", "TGA") or nx.format not in ("PNG", "TGA"):
+            return []
+        if source.width * source.height > diff.MAX_IMAGE_PIXELS or nx.width * nx.height > diff.MAX_IMAGE_PIXELS:
+            return []
+        # Only isolated original Switch sprites may become candidate
+        # regions; opaque backgrounds and fonts inside complex sheets are
+        # intentionally NOT guessed. Pixel/raster art may differ.
+        nx_slots = scan.alpha_candidates(nx.convert("RGBA"))
+        if not nx_slots:
+            return []
+        output, used = [], set()
+        for changed in rects:
+            if (not isinstance(changed, list) or len(changed) != 4 or
+                any(type(n) is not int for n in changed)):
+                continue
+            x, y, w, h = changed
+            if w <= 0 or h <= 0:
+                continue
+            source_center = ((x + w / 2) / source.width, (y + h / 2) / source.height)
+            proposed = []
+            for idx, slot in enumerate(nx_slots):
+                a, b, sw, sh = slot
+                center = ((a + sw / 2) / nx.width, (b + sh / 2) / nx.height)
+                distance = math.hypot(center[0] - source_center[0],
+                                      center[1] - source_center[1])
+                expected_w, expected_h = w * nx.width / source.width, h * nx.height / source.height
+                rw, rh = sw / expected_w, sh / expected_h
+                if (distance <= MAX_ANCHOR_DISTANCE and
+                    MIN_DIMENSION_RATIO <= rw <= MAX_DIMENSION_RATIO and
+                    MIN_DIMENSION_RATIO <= rh <= MAX_DIMENSION_RATIO):
+                    proposed.append((idx, slot, distance))
+            # Do not select a nearby button arbitrarily if multiple
+            # independent candidate sprites are plausible.
+            if len(proposed) != 1 or proposed[0][0] in used:
+                continue
+            idx, slot, distance = proposed[0]
+            used.add(idx)
+            output.append({
+                "source_changed_rect_xywh": changed,
+                "switch_alpha_sprite_candidate_xywh": slot,
+                "source_normalized_center_xy": [round(x, 8) for x in source_center],
+                "switch_normalized_center_xy":
+                    [round((slot[0] + slot[2] / 2) / nx.width, 8),
+                     round((slot[1] + slot[3] / 2) / nx.height, 8)],
+                "normalized_anchor_distance": round(distance, 8),
+                "evidence": "same_game_layout_prior_only",
+                "symbol_identity_verified": False,
+                "verified_switch_sprite_for_installation": False,
+            })
+        return output
+
 
 
 def read(path: Path) -> tuple[bytes, str]:
@@ -75,6 +155,10 @@ def propose(source_original: Path, source_mod: Path, switch_original: Path,
     source_rects = modified.get("changed_rects_xywh")
     proposal = (source_rects if compatible and
                 modified["status"] == "pixels_differ" else None)
+    # Source images often differ between platforms despite preserving
+    # the same game UI positions. Reuse normalized placement separately
+    # from pixel-identical candidate atlas rectangles. NOT install-ready.
+    layout_candidates = candidate_scene_layout_positions(pc_data, patched_data, nx_data)
     return {
         "schema": 1,
         "switch_title": title,
@@ -87,12 +171,14 @@ def propose(source_original: Path, source_mod: Path, switch_original: Path,
         "original_dimensions_xy": size,
         "source_mod_pixel_differences": modified,
         "switch_candidate_rects_xywh": proposal,
+        "source_ui_layout_position_candidates": layout_candidates,
+        "source_ui_layout_position_is_atlas_write_proof": False,
         "candidate_is_installed_or_semantically_approved": False,
         "source_container_binary_equivalence_verified": False,
         "switch_original_container_binary_verified": False,
         "switch_game_update_verified": False,
         "ps5_qualified": False,
-        "warning": "Rendered image equivalence permits a geometry proposal ONLY. Container offset, texture identity, semantic button map, update compatibility, rights and console rendering require separate evidence.",
+        "warning": "Same-game UI anchors can be reused even when platform art differs; matching scene positions are layout priors only, NOT Switch texture-write coordinates. Container identity, icon semantics, version, rights and console testing remain separate.",
     }
 
 
