@@ -44,7 +44,10 @@ assert "ChooseJitMemoryPlan(" in main and "ApplyJitMemoryPlan(" in main
 # CommitSparseJitCode itself verifies the region with the native mutex;
 # do not lock/lookup the same code pointer twice for each compiled block.
 assert "IsSparseJitCode(getCode())" not in cmake
-assert "::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), written + codesize)" in cmake
+assert "::Eden::Jit::PlanSparseCommit(written, codesize, maxSize_)" in cmake
+assert "::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), target.bytes)" in cmake
+assert "EDEN_JIT_SPARSE_PRECOMMIT_CLAMPED" in cmake
+assert "written > maxSize_ || codesize > maxSize_ - written" not in cmake
 jit_alloc = read("headless/jit-allocator.h")
 assert "fallback=smaller_virtual_arena" in jit_alloc
 assert "Common::ReserveSparseJitCode(sparse_span, &writable)" in jit_alloc
