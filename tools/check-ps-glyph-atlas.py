@@ -11,6 +11,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import struct
 import tempfile
 import zipfile
 from pathlib import Path
@@ -93,8 +94,42 @@ with tempfile.TemporaryDirectory(prefix="eden-ps-glyph-atlas-") as work:
     # Offline geometry-first discovery sees the two isolated button regions.
     # The user must *still* identify their semantics; no AI guess or
     # fabricated Cross/Circle mapping may enter the renderer automatically.
+    # Synthetic Switch BNTX container: only the header/texture table/one
+    # BRTI and UTF-8 name are materialized. Never decode or inject textures.
+    # These are invented bytes, not actual game-owned artwork.
+    nx_file = romfs / "UI" / "button_icons.bntx"
+    nx = bytearray(0x300)
+    nx[:8] = b"BNTX\\0\\0\\0\\0"
+    nx[0x0C:0x0E] = b"\\xff\\xfe"
+    nx[0x20:0x24] = b"NX  "
+    struct.pack_into("<I", nx, 0x1C, len(nx))
+    struct.pack_into("<I", nx, 0x24, 1)
+    struct.pack_into("<Q", nx, 0x28, 0x80)
+    struct.pack_into("<Q", nx, 0x80, 0xA0)
+    nx[0xA0:0xA4] = b"BRTI"
+    struct.pack_into("<H", nx, 0xA0 + 0x12, 1)  # linear mode
+    struct.pack_into("<H", nx, 0xA0 + 0x16, 1)  # 1 mip
+    struct.pack_into("<I", nx, 0xA0 + 0x1C, 0x0B01)  # RGBA8 UNORM
+    struct.pack_into("<IIII", nx, 0xA0 + 0x24, 128, 64, 1, 1)
+    struct.pack_into("<I", nx, 0xA0 + 0x50, 1024)
+    nx[0xA0 + 0x5C] = 1  # 2D
+    struct.pack_into("<Q", nx, 0xA0 + 0x60, 0x160)
+    label = b"ui_button_cross"
+    struct.pack_into("<H", nx, 0x160, len(label))
+    nx[0x162:0x162 + len(label)] = label
+    nx_file.write_bytes(nx)
+    metadata = scanner.bntx.inspect(nx_file)
+    assert metadata["texture_count"] == 1
+    assert metadata["textures"][0]["name"] == "ui_button_cross"
+    assert metadata["textures"][0]["format"] == "RGBA8"
+    assert metadata["textures"][0]["width"] == 128
+    assert metadata["textures"][0]["candidate_name"] is True
+    assert metadata["textures"][0]["read_only"] is True
+
     proposals = scanner.scan(romfs)
     assert proposals["candidate_atlases"]
+    assert len(proposals["bntx_containers"]) == 1
+    assert proposals["bntx_containers"][0]["candidate_texture_count"] == 1
     proposed = proposals["candidate_atlases"][0]
     assert proposed["original_sha256"] == sha
     assert proposed["candidate_count"] == 2
@@ -154,8 +189,19 @@ with tempfile.TemporaryDirectory(prefix="eden-ps-glyph-atlas-") as work:
     save_settings()
     must_reject(lambda: atlas.render(spec, romfs, icons, root / "bntx"))
     candidates = atlas.discover(romfs)
-    assert candidates[0]["romfs_path"] == "UI/prompts.png"
-    assert candidates[0]["original_sha256"] == sha
+    png_candidates = [x for x in candidates if x["romfs_path"] == "UI/prompts.png"]
+    assert len(png_candidates) == 1
+    assert png_candidates[0]["original_sha256"] == sha
+    # Corrupt header count/pointers must fail closed, not seek outside ROMFS.
+    corrupted = bytearray(nx)
+    struct.pack_into("<Q", corrupted, 0x80, len(corrupted) + 1)
+    nx_file.write_bytes(corrupted)
+    try:
+        scanner.bntx.inspect(nx_file)
+    except scanner.bntx.InvalidBntx:
+        pass
+    else:
+        raise AssertionError("accepted out-of-file BRTI pointer")
 
 print("HOST FIXTURE PASS: shared PS icons, read-only glyph candidates, source SHA, atlas conversion, catalogue merge")
 print("Universal game coverage / PS5 visual correctness: NOT CLAIMED")
