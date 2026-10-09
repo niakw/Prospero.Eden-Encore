@@ -122,8 +122,13 @@ def resolve(source_db: object, db_sha256: str, switch: dict,
         "warning": "A Title ID inferred from a name in external metadata is only a candidate, never a validated user game version or glyph compatibility.",
     }
     if all_base_games:
-        pairs = sorted((tid, display[(label, tid)])
-                       for label, ids in known.items() for tid in ids)
+        # Same Title ID can appear in several regional/language records.
+        # Do not duplicate its backlog row or imply different regional IDs.
+        title_by_id = {}
+        for label, ids in sorted(known.items()):
+            for tid in sorted(ids):
+                title_by_id.setdefault(tid, display[(label, tid)])
+        pairs = sorted(title_by_id.items())
         output["all_switch1_base_title_candidates"] = [
             {"title_id": tid, "title": name, "glyph_art_compatible": False,
              "update_and_installed_romfs_unverified": True}
