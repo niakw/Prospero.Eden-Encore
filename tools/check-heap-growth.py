@@ -446,6 +446,21 @@ int main(int argc, char **argv) {
         unsigned char *large = __wrap_malloc(5 * piece / 2);
         assert(large != NULL && eden_heap_committed() == after_threads);
         assert(eden_heap_large_held(&blocks_alive) == 5 * piece / 2 && blocks_alive == 1);
+        // A live direct-owned large block must always remain Bloom-positive.
+        // Other libc objects must continue to route to libc without scanning
+        // all 256 direct-block slots on every foreign free/realloc.
+        assert(eden_heap_large_maybe((uintptr_t)large));
+        unsigned definitely_foreign = 0;
+        for (unsigned attempt = 0; attempt < 1000; ++attempt) {
+            void *foreign = __real_malloc(1024 + attempt % 64);
+            assert(foreign != NULL);
+            if (!eden_heap_large_maybe((uintptr_t)foreign)) ++definitely_foreign;
+            foreign = __wrap_realloc(foreign, 2048 + attempt % 128);
+            assert(foreign != NULL);
+            __wrap_free(foreign);
+            assert(eden_heap_large_maybe((uintptr_t)large));
+        }
+        assert(definitely_foreign > 0);
         assert(__wrap_malloc_usable_size(large) == 5 * piece / 2);
         fill(large, 5 * piece / 2, 7);
         verify(large, 5 * piece / 2, 7);

@@ -81,6 +81,45 @@ static struct {
 } eden_heap_large[EDEN_HEAP_LARGE_BLOCKS];
 static atomic_uint eden_heap_large_count;
 static atomic_size_t eden_heap_large_bytes;
+/* Every foreign/real-libc free or realloc would scan 256 entries while ANY
+ * large direct-owned block lived. This monotonic Bloom filter rules out the
+ * overwhelmingly common negative case using only two atomic bit checks.
+ * Never clear a published bit: stale positives are harmless, false negatives
+ * would misroute a direct-owned block to libc and corrupt physical ownership.
+ * Four KiB for the process lifetime, allocation-free on every path. */
+#define EDEN_HEAP_LARGE_FILTER_WORDS 512u
+#define EDEN_HEAP_LARGE_FILTER_MASK (EDEN_HEAP_LARGE_FILTER_WORDS * 64u - 1u)
+static _Atomic uint64_t eden_heap_large_filter[EDEN_HEAP_LARGE_FILTER_WORDS];
+
+static uint64_t eden_heap_large_hash(uintptr_t address) {
+  /* Data pointers are page-aligned or higher: hash away alignment zeros. */
+  uint64_t value = (uint64_t)address >> 12;
+  value ^= value >> 33;
+  value *= UINT64_C(0xff51afd7ed558ccd);
+  value ^= value >> 33;
+  value *= UINT64_C(0xc4ceb9fe1a85ec53);
+  return value ^ (value >> 33);
+}
+
+static void eden_heap_large_note(uintptr_t address) {
+  const uint64_t hash = eden_heap_large_hash(address);
+  const unsigned first = (unsigned)hash & EDEN_HEAP_LARGE_FILTER_MASK;
+  const unsigned second = (unsigned)(hash >> 32) & EDEN_HEAP_LARGE_FILTER_MASK;
+  atomic_fetch_or_explicit(&eden_heap_large_filter[first >> 6],
+                           UINT64_C(1) << (first & 63), memory_order_relaxed);
+  atomic_fetch_or_explicit(&eden_heap_large_filter[second >> 6],
+                           UINT64_C(1) << (second & 63), memory_order_relaxed);
+}
+
+static int eden_heap_large_maybe(uintptr_t address) {
+  const uint64_t hash = eden_heap_large_hash(address);
+  const unsigned first = (unsigned)hash & EDEN_HEAP_LARGE_FILTER_MASK;
+  const unsigned second = (unsigned)(hash >> 32) & EDEN_HEAP_LARGE_FILTER_MASK;
+  return (atomic_load_explicit(&eden_heap_large_filter[first >> 6], memory_order_relaxed) &
+          (UINT64_C(1) << (first & 63))) != 0 &&
+         (atomic_load_explicit(&eden_heap_large_filter[second >> 6], memory_order_relaxed) &
+          (UINT64_C(1) << (second & 63))) != 0;
+}
 
 int sceKernelUsleep(unsigned int microseconds);
 
@@ -209,7 +248,9 @@ size_t eden_heap_large_held(unsigned *blocks) {
 /* The entry of a large block, or NULL: most addresses are not one, and with none alive
  * nothing is searched. */
 static int eden_heap_large_find(const void *address) {
-  if (atomic_load_explicit(&eden_heap_large_count, memory_order_acquire) == 0 || address == NULL)
+  if (address == NULL ||
+      atomic_load_explicit(&eden_heap_large_count, memory_order_acquire) == 0 ||
+      !eden_heap_large_maybe((uintptr_t)address))
     return -1;
   for (unsigned i = 0; i < EDEN_HEAP_LARGE_BLOCKS; ++i)
     if (atomic_load_explicit(&eden_heap_large[i].address, memory_order_acquire) == (uintptr_t)address)
@@ -230,6 +271,9 @@ static void *eden_heap_large_allocate(size_t bytes) {
       return NULL;
     }
     eden_heap_large[i].size = bytes;
+    /* Publish both bits BEFORE the count/address become visible to any
+     * receiving thread. A miss may return only for never-owned pointers. */
+    eden_heap_large_note((uintptr_t)block);
     atomic_fetch_add_explicit(&eden_heap_large_bytes, bytes, memory_order_relaxed);
     atomic_fetch_add_explicit(&eden_heap_large_count, 1, memory_order_release);
     atomic_store_explicit(&eden_heap_large[i].address, (uintptr_t)block, memory_order_release);
