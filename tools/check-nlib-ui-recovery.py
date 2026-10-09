@@ -303,6 +303,22 @@ assert "home_.last_mods_on = game.mods_on;" in lib
 assert "std::vector<std::string> previous_missing_;" in hdr
 assert "std::set_intersection(observed_missing.begin()" in lib
 assert "previous_missing_ = observed_missing;" in lib
+assert "std::vector<std::string> home_missing_refresh_;" in hdr
+assert "if (observed_missing.empty())" in lib
+assert "home_missing_refresh_.clear();" in lib
+assert "home_missing != home_missing_refresh_" in lib
+assert "home_missing_refresh_ = home_missing;" in lib
+assert lib.index("home_missing_refresh_ = home_missing;") < lib.index(
+    "read_home();", lib.index("home_missing_refresh_ = home_missing;"))
+# Repeating a confirmed disappearance must not invalidate a newly queued
+# Home snapshot over and over; a newly missing file/reappeared file is new.
+def should_refresh_home(previous, missing):
+    return bool(missing) and missing != previous
+assert should_refresh_home([], ["last.nsp"])
+assert not should_refresh_home(["last.nsp"], ["last.nsp"])
+assert should_refresh_home(["last.nsp"], ["last.nsp", "recent.nsp"])
+assert not should_refresh_home(["last.nsp"], [])
+
 assert 'previous_missing_.clear();' in lib
 assert "#include <iterator>" in lib
 def stable_absence(previous, observed):
