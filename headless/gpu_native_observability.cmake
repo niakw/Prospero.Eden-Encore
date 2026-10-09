@@ -9,6 +9,24 @@ if(NOT PS5_NATIVE)
     return()
 endif()
 
+# After the first eight diagnostics, stop dirtying a shared atomic cache
+# line for every PRMT translation or unsupported Fermi copy. Preserve the
+# eight real samples, but never let the telemetry counter wrap or grow
+# without bound in long shader-heavy game sessions.
+set(gpu_bounded_sample_helper [=[
+namespace {
+unsigned EdenGpuBoundedSample(std::atomic<unsigned>& samples) noexcept {
+    unsigned current = samples.load(std::memory_order_relaxed);
+    while (current < 8u) {
+        if (samples.compare_exchange_weak(current, current + 1u,
+                                          std::memory_order_relaxed))
+            return current;
+    }
+    return 8u;
+}
+}
+]=])
+
 set(prmt_relative "frontend/maxwell/translate/impl/not_implemented.cpp")
 file(READ "${PROJECT_SOURCE_DIR}/src/shader_recompiler/${prmt_relative}" prmt_source)
 set(prmt_old [=[
@@ -27,7 +45,7 @@ void TranslatorVisitor::PRMT_imm(u64 insn) {
     const unsigned mode = static_cast<unsigned>((insn >> 48) & 7ULL);
     if (mode != 0) {
         static std::atomic<unsigned> unsupported_samples{0};
-        const unsigned index = unsupported_samples.fetch_add(1, std::memory_order_relaxed);
+        const unsigned index = EdenGpuBoundedSample(unsupported_samples);
         if (index < 8)
             std::fprintf(stderr, "EDEN_GPU_PRMT_IMM raw=%016llx mode=%u sample=%u\n",
                          static_cast<unsigned long long>(insn), mode, index + 1);
@@ -55,7 +73,7 @@ void TranslatorVisitor::PRMT_imm(u64 insn) {
     X(static_cast<IR::Reg>(insn & 255ULL), result);
 
     static std::atomic<unsigned> implemented_samples{0};
-    const unsigned implemented = implemented_samples.fetch_add(1, std::memory_order_relaxed);
+    const unsigned implemented = EdenGpuBoundedSample(implemented_samples);
     if (implemented < 8)
         std::fprintf(stderr, "EDEN_GPU_PRMT_IMM_INDEX raw=%016llx selector=%04x sample=%u\n",
                      static_cast<unsigned long long>(insn), selector, implemented + 1);
@@ -79,7 +97,7 @@ void TranslatorVisitor::PRMT_reg(u64 insn) {
     const unsigned mode = static_cast<unsigned>((insn >> 48) & 7ULL);
     if (mode != 0) {
         static std::atomic<unsigned> unsupported_samples{0};
-        const unsigned sample = unsupported_samples.fetch_add(1, std::memory_order_relaxed);
+        const unsigned sample = EdenGpuBoundedSample(unsupported_samples);
         if (sample < 8)
             std::fprintf(stderr, "EDEN_GPU_PRMT_REG_UNSUPPORTED raw=%016llx mode=%u sample=%u\n",
                          static_cast<unsigned long long>(insn), mode, sample + 1);
@@ -112,7 +130,7 @@ void TranslatorVisitor::PRMT_reg(u64 insn) {
     }
     X(static_cast<IR::Reg>(insn & 255ULL), result);
     static std::atomic<unsigned> successes{0};
-    const unsigned sample = successes.fetch_add(1, std::memory_order_relaxed);
+    const unsigned sample = EdenGpuBoundedSample(successes);
     if (sample < 8)
         std::fprintf(stderr, "EDEN_GPU_PRMT_REG_INDEX raw=%016llx sample=%u\n",
                      static_cast<unsigned long long>(insn), sample + 1);
@@ -147,7 +165,7 @@ static_assert(EdenPrmtIndexReference(0x11223344u, 0x55667788u, 0xffffu) == 0u);
 }
 ]=])
 write_derived("${PORT_BUILD_DIR}/maxwell_prmt_observed.cpp"
-    "#include <atomic>\n#include <cstdio>\n${prmt_reference}\n${prmt_source}")
+    "#include <atomic>\n#include <cstdio>\n${gpu_bounded_sample_helper}\n${prmt_reference}\n${prmt_source}")
 get_target_property(shader_sources shader_recompiler SOURCES)
 list(FILTER shader_sources EXCLUDE REGEX "frontend/maxwell/translate/impl/not_implemented[.]cpp$")
 set_property(TARGET shader_recompiler PROPERTY SOURCES "${shader_sources}")
@@ -184,7 +202,7 @@ set(fermi_layer_new [=[
         regs.operation == Operation::SrcCopy && regs.clip_enable == 0;
     if ((regs.src.layer != 0 || regs.dst.layer != 0) && !pitch_layer_copy) {
         static std::atomic<unsigned> unsupported_layer_reports{0};
-        const unsigned count = unsupported_layer_reports.fetch_add(1, std::memory_order_relaxed);
+        const unsigned count = EdenGpuBoundedSample(unsupported_layer_reports);
         if (count < 8)
             LOG_CRITICAL(Debug,
                 "EDEN_GPU_FERMI2D_UNSUPPORTED_LAYER src_layer={} dst_layer={} "
@@ -208,7 +226,7 @@ set(fermi_new [=[
         regs.operation == Operation::SrcCopy && regs.clip_enable == 0;
     if (regs.src.depth != 1 && !base_layer_3d_copy && !pitch_layer_copy) {
         static std::atomic<unsigned> depth_reports{0};
-        const unsigned count = depth_reports.fetch_add(1, std::memory_order_relaxed);
+        const unsigned count = EdenGpuBoundedSample(depth_reports);
         // Previously this logged the same generic warning for every
         // Fermi2D blit. Do not normalize depth to one: the texture-cache
         // source currently cannot represent arbitrary 3D slices.
@@ -327,7 +345,7 @@ set(fermi_copy_new [=[
                              config.dst_y0, config.dst_y1, dst_bpp);
         if (!copy_sizes_valid) {
             static std::atomic<unsigned> rect_reports{0};
-            const unsigned count = rect_reports.fetch_add(1, std::memory_order_relaxed);
+            const unsigned count = EdenGpuBoundedSample(rect_reports);
             if (count < 8)
                 LOG_CRITICAL(Debug,
                     "EDEN_GPU_FERMI2D_SOFTWARE_BOUNDS_INVALID src={}..{},{}..{} "
@@ -371,7 +389,7 @@ set(fermi_copy_new [=[
         src.depth = 1;
         dst.depth = 1;
         static std::atomic<unsigned> software_reports{0};
-        const unsigned report = software_reports.fetch_add(1, std::memory_order_relaxed);
+        const unsigned report = EdenGpuBoundedSample(software_reports);
         if (report < 8) {
             LOG_INFO(HW_GPU,
                 "EDEN_GPU_FERMI2D_SOFTWARE mode={} src_depth={} dst_depth={} "
@@ -391,7 +409,7 @@ endif()
 string(REPLACE "${fermi_copy_old}" "${fermi_copy_new}" fermi_source "${fermi_source}")
 
 write_derived("${PORT_BUILD_DIR}/fermi_2d_observed.cpp"
-    "#include <atomic>\n${fermi_source}")
+    "#include <atomic>\n${gpu_bounded_sample_helper}\n${fermi_source}")
 get_target_property(video_sources video_core SOURCES)
 list(FILTER video_sources EXCLUDE REGEX "engines/fermi_2d[.]cpp$")
 set_property(TARGET video_core PROPERTY SOURCES "${video_sources}")
