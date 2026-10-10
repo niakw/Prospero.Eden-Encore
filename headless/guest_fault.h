@@ -3,7 +3,7 @@
 // A guest thread that jumps to an unmapped address takes a prefetch abort, which Eden answers
 // by parking that thread for a debugger; without one the game sits on a black screen. The
 // first such fault of a session is recorded here so the frontend can end the session like a
-// GPU failure (and retry a fault early in the boot).
+// GPU failure (never automatically relaunch the faulted title).
 #include <mutex>
 #include <string>
 #include <utility>

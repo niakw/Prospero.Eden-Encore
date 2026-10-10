@@ -15,6 +15,14 @@ for needle in (
 ):
     assert needle in patch, needle
 assert 'validate_ps5_bounded_logging' in apply
+# A fatal or first Error sample is durable immediately, but a storm does not
+# synchronously flush each one of the ~31k missing GPU-page errors observed
+# in the October 10 PS5 crash log (some were separated by ~1.4 ms).
+assert '++error_events;' in patch
+assert 'error_events == 1 || error_events % 64 == 0' in patch
+assert 'entry.log_level >= Level::Critical' in patch
+assert '+    std::size_t error_events = 0;' in patch
+assert 'if (entry.log_level >= Level::Error)\n+            file->Flush();' not in patch
 assert 'eden-ps5-bounded-logging.patch' in apply
 # FS::IOFile logs its own errors; it must not recurse into this file backend
 # if a disk-full / refused-truncate error occurs mid-rotation.
