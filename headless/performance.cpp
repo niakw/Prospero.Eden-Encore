@@ -591,11 +591,34 @@ bool QueryLargestDirectMemoryBlock(std::size_t* largest) noexcept {
 }
 
 #ifdef PS5_NATIVE
-// The largest free block of direct memory is what the next graphics allocation needs. Looked at
-// again every 100 ms; called on the GPU thread by the texture collector (KeepDirtyTextures).
+// Native process-global observations must be reset between games: the next
+// title can reserve a completely different amount of physical GPU memory.
 static std::atomic<unsigned long long> largest_free_block{0};
+static std::atomic<long long> checked_ns{0};
+static std::atomic<bool> query_in_flight{false};
+static std::atomic<unsigned> consecutive_failures{0};
+static std::atomic<bool> has_valid_sample{false};
+#endif
+
+void ResetDirectMemoryProbeForTitle() noexcept {
+#ifdef PS5_NATIVE
+    // The caller must have joined all GPU/renderer workers. Refuse to erase
+    // a still-running kernel probe, which could publish stale data afterward.
+    if (query_in_flight.load(std::memory_order_acquire)) std::abort();
+    has_valid_sample.store(false, std::memory_order_release);
+    consecutive_failures.store(0, std::memory_order_relaxed);
+    largest_free_block.store(0, std::memory_order_relaxed);
+    graphics_memory_short.store(true, std::memory_order_relaxed);
+    // Zero timestamp forces the new title's first probe immediately, rather
+    // than reusing the prior title's result for up to 100 ms.
+    checked_ns.store(0, std::memory_order_release);
+#endif
+}
+
+#ifdef PS5_NATIVE
+// The largest free block of direct memory is what the next graphics allocation needs.
+// Looked at every >=100 ms; called on the GPU thread by the texture collector.
 static void RefreshFreeMemory() {
-    static std::atomic<long long> checked_ns{0};
     const long long now = NowNs();
     long long last = checked_ns.load(std::memory_order_relaxed);
     if (last != 0 && (now <= last || now - last < 100'000'000))
@@ -611,7 +634,6 @@ static void RefreshFreeMemory() {
     // must not overtake it and publish a newer measurement before the older
     // query eventually returns. One in-flight query at a time, without
     // blocking any renderer caller on the query owner's kernel syscall.
-    static std::atomic<bool> query_in_flight{false};
     if (query_in_flight.exchange(true, std::memory_order_acq_rel))
         return;
 #if defined(EDEN_DEV_PROFILE)
@@ -637,8 +659,6 @@ static void RefreshFreeMemory() {
     // immediately enabled expensive dirty-texture download/eviction. Keep
     // the last kernel-confirmed headroom for ONE missed 100ms refresh only.
     // First-ever failure and consecutive failures fail safely to "short".
-    static std::atomic<unsigned> consecutive_failures{0};
-    static std::atomic<bool> has_valid_sample{false};
     if (known) {
         largest_free_block.store(largest, std::memory_order_relaxed);
         graphics_memory_short.store(largest < kShortMemory, std::memory_order_relaxed);

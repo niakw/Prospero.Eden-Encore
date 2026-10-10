@@ -35,6 +35,11 @@ assert "std::numeric_limits<std::uint64_t>::max()" in header
 assert "return {extent, used, 0, true, false};" in header
 assert "return {extent, used, extent - used, true, true};" in header
 assert "untracked is not free" in perf.lower(), "Do not present unclassified as free"
+assert 'void ResetDirectMemoryProbeForTitle() noexcept' in perf
+assert 'if (query_in_flight.load(std::memory_order_acquire)) std::abort();' in perf
+assert 'largest_free_block.store(0, std::memory_order_relaxed);' in perf
+assert 'has_valid_sample.store(false, std::memory_order_release);' in perf
+assert 'checked_ns.store(0, std::memory_order_release);' in perf
 assert 'heap_large_requested=%zu' in perf
 assert 'eden_heap_large_physical_held' in heap
 assert 'atomic_fetch_add_explicit(&eden_heap_large_physical_bytes, physical_bytes' in heap
