@@ -1,0 +1,48 @@
+--- a/src/core/device_memory_manager.inc
++++ b/src/core/device_memory_manager.inc
+@@ -217,6 +217,45 @@
+     for (size_t i = 0; i < num_pages; i++) {
+         const VAddr new_vaddress = virtual_address + i * Memory::YUZU_PAGESIZE;
+         auto* ptr = process_memory->GetPointerSilent(Common::ProcessAddress(new_vaddress));
++#ifdef PS5_NATIVE
++        // Map may replace an existing GPU-page mapping without an Unmap call.
++        // The previous forward page is NOT sufficient: unlink its reverse
++        // physical->GPU association before installing the replacement.
++        const u32 device_page = static_cast<u32>(start_page_d + i);
++        auto& old_entry = tracked_entries.GetUnchecked(start_page_d + i);
++        const u32 previous_physical = old_entry.compressed_physical_ptr;
++        const u32 replacement_physical = ptr
++            ? static_cast<u32>(GetRawPhysicalAddr(ptr) >> Memory::YUZU_PAGEBITS) + 1U : 0U;
++        if (previous_physical != 0 && previous_physical == replacement_physical) {
++            // Re-registering the same backing must not add a second reverse
++            // address to MultiAddressContainer. Refresh its CPU-side alias.
++            old_entry.continuity_tracker = 0;
++            old_entry.cpu_backing_address = 0;
++            InsertCPUBacking(start_page_d + i, new_vaddress, asid);
++            continue;
++        }
++        if (previous_physical != 0) {
++            u32& reverse = compressed_device_addr.GetAndFault(previous_physical - 1U);
++            if ((reverse >> MULTI_FLAG_BITS) == 0) {
++                if (reverse == device_page) {
++                    reverse = 0;
++                    ::Eden::GpuFault::remap_replaced.fetch_add(1, std::memory_order_relaxed);
++                } else if (::Eden::GpuFault::ShouldReportRemapMismatch()) {
++                    LOG_WARNING(HW_Memory,
++                        "EDEN_GPU_REMAP_REVERSE_MISMATCH guest={:#x} old_phys_page={:#x} reverse={:#x}",
++                        device_page, previous_physical - 1U, reverse);
++                }
++            } else {
++                const auto [multiple, first] = impl->multi_dev_address.Unregister(
++                    device_page, reverse & MULTI_MASK);
++                if (!multiple)
++                    reverse = impl->multi_dev_address.ReleaseEntry(first);
++                else
++                    reverse = first | MULTI_FLAG;
++                ::Eden::GpuFault::remap_replaced.fetch_add(1, std::memory_order_relaxed);
++            }
++        }
++#endif
+         if (ptr == nullptr) [[unlikely]] {
+             auto& invalid = tracked_entries.GetUnchecked(start_page_d + i);
+             invalid.compressed_physical_ptr = 0;

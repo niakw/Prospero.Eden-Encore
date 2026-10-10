@@ -358,6 +358,20 @@ print('PS5 GPU remap/continuity backport: PASS')
 PYGPU
 }
 apply_one "$root/headless/backports/eden-ps5-gpu-memory-mapping.patch" "$eden/.encore-backport-ps5-gpu-memory-mapping.sha256" validate_ps5_gpu_memory_mapping
+validate_ps5_gpu_remap_reverse() {
+python3 - "$eden" <<'PYREMAP'
+from pathlib import Path
+import sys
+code=(Path(sys.argv[1])/'src/core/device_memory_manager.inc').read_text()
+for token in ('previous_physical == replacement_physical',
+              'compressed_device_addr.GetAndFault(previous_physical - 1U)',
+              'impl->multi_dev_address.Unregister(', '::Eden::GpuFault::remap_replaced.fetch_add',
+              'EDEN_GPU_REMAP_REVERSE_MISMATCH'):
+    if token not in code: raise SystemExit('GPU remap reverse-index fix missing: '+token)
+print('PS5 GPU Map reverse-mapping replacement: PASS')
+PYREMAP
+}
+apply_one "$root/headless/backports/eden-ps5-gpu-remap-reverse.patch" "$eden/.encore-backport-ps5-gpu-remap-reverse.sha256" validate_ps5_gpu_remap_reverse
 validate_ps5_guest_mapping_diagnostics() {
 python3 - "$eden" <<'PYMAP'
 from pathlib import Path
