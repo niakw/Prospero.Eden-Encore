@@ -26,6 +26,25 @@ for token in (
 ):
     assert token in cmake, token
 assert cmake.count('mutation_lock{sparse_mutation_mutex}') == 2
+# An unmap that clears just one 16 KiB host page inside an owned 2 MiB
+# slot must zero its bytes, not only the committed-page bitmap. Otherwise
+# subsequent reuse treats stale mappings as fresh; dense fallback needs it too.
+section = cmake.split('set(sparse_private_replacement [=[', 1)[1].split(']=])', 1)[0]
+zero = 'std::memset(reinterpret_cast<void*>(page_address), 0, HostPageSize);'
+clear = 'committed_pages[page_index >> 6].fetch_and('
+decommit = 'DecommitSparsePage(vector_base + slot_offset);'
+assert section.count(zero) == 1
+assert section.index(zero) < section.index(clear) < section.index(decommit)
+assert 'only calls here for a' in section
+# Model the multi-page slot lifetime: removing A with B still live must
+# make A's previously set bytes zero before an A re-commit.
+pages = {0: bytearray(b'ABCD'), 1: bytearray(b'WXYZ')}
+committed = {0, 1}
+pages[0][:] = b'\\x00' * len(pages[0])
+committed.remove(0)
+assert 1 in committed and bytes(pages[0]) == bytes(4)
+committed.add(0)
+assert bytes(pages[0]) == bytes(4)
 native = (root / "src/memory_pages.cpp").read_text()
 commit_source = native.split("void CommitSparsePage(std::uintptr_t page) noexcept {", 1)[1].split(
     "std::size_t SparseCommitSpan()", 1

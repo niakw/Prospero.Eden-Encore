@@ -157,11 +157,20 @@ set(sparse_private_anchor [=[    constexpr void CommitPage(std::size_t index) no
         auto page_index = (index * sizeof(T)) >> HostPageBits;]=])
 set(sparse_private_replacement [=[    void DecommitPage(std::size_t index) noexcept {
         const auto page_index = (index * sizeof(T)) >> HostPageBits;
+        const auto vector_base = reinterpret_cast<std::uintptr_t>(base_ptr);
+        const auto page_address = reinterpret_cast<std::uintptr_t>(base_ptr + index) & HostPageMask;
+        // A host page may be cleared while *other* pages in its 2 MiB
+        // physical slot remain in use. Clearing only the commit bitmap then
+        // retains stale PageEntryData in the still-writable private backing.
+        // CommitSparsePage does not re-zero an already owned slot, so remap
+        // would resurrect old CPU/GPU address translations. Also zero the
+        // dense fallback, where DecommitSparsePage intentionally does nothing.
+        // ZeroRegion holds sparse_mutation_mutex and only calls here for a
+        // committed/writable host page.
+        std::memset(reinterpret_cast<void*>(page_address), 0, HostPageSize);
         committed_pages[page_index >> 6].fetch_and(~(1ULL << (page_index & 63)), std::memory_order_acq_rel);
 
         const std::size_t span = SparseCommitSpan();
-        const auto vector_base = reinterpret_cast<std::uintptr_t>(base_ptr);
-        const auto page_address = reinterpret_cast<std::uintptr_t>(base_ptr + index) & HostPageMask;
         const std::size_t slot_offset = ((page_address - vector_base) / span) * span;
         const std::size_t first_page = slot_offset / HostPageSize;
         const std::size_t last_page = (std::min)(first_page + span / HostPageSize,
