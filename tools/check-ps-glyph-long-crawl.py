@@ -77,7 +77,11 @@ for name in ("leads.json","progress.json","metrics.json"):
     assert f"/tmp/eden-shard/{name}" in workflow
 assert "if: always()" in workflow and "actions/upload-artifact@" in workflow
 assert "--run-metrics /tmp/eden-shard/metrics.json" in workflow
-assert "workflow_dispatch:" in workflow and "  push:" not in workflow
+assert "workflow_dispatch:" in workflow and "  push:" in workflow
+assert "[glyph-crawl-run]" in workflow
+assert "github.event.head_commit.message" in workflow
+assert "  prepare:\\n    if:" not in workflow  # never inject escaped control characters into YAML
+assert "  prepare:\n    if:" in workflow
 print("PASS: shard data survives safe checkout; cumulative run metrics accepted; no throttle-triggered automatic restart")
 print("PASS: serial long crawl resumes from stored Title ID and provider/variant keys")
 print("PASS: two Switch/PC batches cover all games; blocked provider fails without losing evidence")

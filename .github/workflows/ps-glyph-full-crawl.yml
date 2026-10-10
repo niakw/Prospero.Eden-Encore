@@ -12,10 +12,16 @@ name: Full Switch 1 controller glyph source crawl (read-only mod research)
 # On 403/429/abuse
 # errors: rest then HALT, do not evade. Failed shard stops the matrix.
 # Game art/ZIPs are never downloaded or inserted in the emulation runtime.
-# Deliberate manual start only: changing the workflow code or persisting
-# checkpoints cannot restart thousands of queries after an HTTP 403 throttle.
-# Resume with workflow_dispatch once the upstream rate limit has recovered.
+# This workflow exists only on the development branch, NOT the repository's
+# default branch. GitHub's UI workflow_dispatch cannot reliably start it.
+# A dev-only push touching THIS workflow may opt into the long run, but only
+# when the commit message explicitly includes [glyph-crawl-run]. Routine
+# updates and checkpoint commits must not restart a blocked search provider.
 on:
+  push:
+    branches: [dev/ps5-sparse-jit]
+    paths:
+      - .github/workflows/ps-glyph-full-crawl.yml
   workflow_dispatch:
 
 permissions:
@@ -27,6 +33,7 @@ concurrency:
 
 jobs:
   prepare:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[glyph-crawl-run]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 6
     outputs:
