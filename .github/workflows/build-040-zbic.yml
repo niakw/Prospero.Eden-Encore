@@ -284,6 +284,15 @@ jobs:
             python3 -B tools/ci/check-all-on-test-binary.py "$EDEN_STAGE_DIR" "$EDEN_TEST_TITLE_ID"
           fi
 
+      - name: Record matching unstripped ELF and staged PS5 binary SHA256
+        if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
+        run: |
+          python3 -B tools/ci/write-crash-provenance.py \
+            --app build/dev/PPSA99008 \
+            --native build/headless-native \
+            --output build/headless-native/crash-provenance.json \
+            --test-title "$EDEN_TEST_TITLE_ID"
+
       - name: Upload checked all-on PS5 test app
         if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -301,6 +310,7 @@ jobs:
           path: |
             build/headless-native/llvm-pie.elf
             build/headless-native/link.map
+            build/headless-native/crash-provenance.json
           retention-days: 14
           if-no-files-found: error
 
