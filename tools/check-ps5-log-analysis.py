@@ -22,6 +22,7 @@ CreateGraphicsPipeline: Instruction PRMT (imm) is not implemented
 Direct allocation failed: rc=80020023 bytes=461373440 limit=12884901888
 EDEN_HEAP_PIECE bytes=134217728 va=0x100000000 pa=abc123 alloc_ns=3000000 map_ns=6000000 zero_ns=15000000
 EDEN_HEAP_LIFETIME phase=core_destroyed pieces=1476395008 large=0 large_blocks=0 tcache=1048576
+EDEN_HEAP_GROW req_bytes=201326592 root=1 pieces=2 spaces=2 committed_mib=384
 EDEN_HEAP_ROOT phase=core_destroyed root=0 pieces=1 held_bytes=2233 held_blocks=4 arena_pins=3 physical_owner=1 reclaim=disabled
 EDEN_HEAP_ROOT phase=core_destroyed root=1 pieces=2 held_bytes=0 held_blocks=0 arena_pins=0 physical_owner=1 reclaim=disabled
 EDEN_HEAP_ROOT phase=core_destroyed root=3 pieces=1 held_bytes=0 held_blocks=0 arena_pins=0 physical_owner=0 reclaim=disabled
@@ -59,6 +60,11 @@ with tempfile.TemporaryDirectory(prefix="eden-ps5-log-triage-") as folder:
     assert pressure["heap_piece_commit_samples"][0]["total_ms"] == 24.0
     assert pressure["heap_lifetime_samples"][0]["committed_heap_bytes"] == 1476395008
     assert pressure["heap_lifetime_samples"][0]["phase"] == "core_destroyed"
+    growth = pressure["heap_growth_events"]
+    assert len(growth) == 1
+    assert growth[0]["request_bytes"] == 201326592
+    assert growth[0]["new_physical_extent_mib"] == 256
+    assert growth[0]["committed_total_mib"] == 384
     roots = pressure["heap_root_snapshots"]
     assert len(roots) == 3
     assert roots[0]["diagnostic_reason"] == "pinned_child_arenas"
@@ -88,6 +94,9 @@ with tempfile.TemporaryDirectory(prefix="eden-ps5-log-triage-") as folder:
     assert pressure["worker_topology_samples"][0]["ready"] is False
     # Malformed root ownership indexes may never become a false green
     # candidate: even a seemingly empty root cannot bypass the 3-GiB limit.
+    bad_growth = TEXT.replace("committed_mib=384", "committed_mib=256")
+    assert not m.parse_log(bad_growth.encode("utf-8"))[
+        "resource_pressure"]["heap_growth_events"]
     bad = TEXT.replace("root=1 pieces=2", "root=24 pieces=2")
     try:
         m.parse_log(bad.encode("utf-8"))
@@ -102,5 +111,5 @@ with tempfile.TemporaryDirectory(prefix="eden-ps5-log-triage-") as folder:
         pass
     else:
         raise AssertionError("NUL log falsely treated as telemetry")
-print("HOST FIXTURE PASS: FPS/late frames, heap-root ownership/quiescence, commit latency, memory probe, lifetime, worker topology, duplicate logs")
+print("HOST FIXTURE PASS: FPS/late frames, heap-growth cause, root ownership/quiescence, commit latency, memory probe, lifetime, worker topology, duplicate logs")
 print("No FC27 rerun, host native build, GitHub Actions or PS5 SDK compilation performed")
