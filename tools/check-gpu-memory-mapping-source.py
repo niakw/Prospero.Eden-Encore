@@ -65,6 +65,18 @@ empty_multi=(r/'headless/backports/eden-ps5-gpu-empty-multi-head.patch').read_te
 assert 'first != 0 ? impl->multi_dev_address.ReleaseEntry(first) : 0' in empty_multi
 assert 'new_start != 0 ? impl->multi_dev_address.ReleaseEntry(new_start) : 0' in empty_multi
 assert 'validate_ps5_gpu_empty_multi_head' in apply
+physical_copy=(r/'headless/backports/eden-ps5-gpu-physical-read-bounds.patch').read_text()
+for token in ('EDEN_GPU_READ_WRITE_PHYS_OOB',
+              'first_phys >= compressed_device_addr.size()',
+              'compressed_device_addr.size() - first_phys',
+              'static_cast<size_t>(phys_addr - 1U) >= compressed_device_addr.size()',
+              'static_cast<size_t>(phys_addr - 1U) < compressed_device_addr.size()'):
+    assert token in physical_copy, token
+assert physical_copy.count('static_cast<size_t>(phys_addr - 1U) < compressed_device_addr.size()') == 2
+assert 'validate_ps5_gpu_physical_read_bounds' in apply
+assert apply.index('eden-ps5-gpu-empty-multi-head.patch') < apply.index(
+    'eden-ps5-gpu-physical-read-bounds.patch') < apply.index(
+    'eden-ps5-gpu-reverse-inline-bounds.patch')
 inline_bounds=(r/'headless/backports/eden-ps5-gpu-reverse-inline-bounds.patch').read_text()
 for token in ('if ((address >> page_bits) >= compressed_device_addr.size()) return;',
               'if (base == 0) return;', 'if (host < physical_base ||',
