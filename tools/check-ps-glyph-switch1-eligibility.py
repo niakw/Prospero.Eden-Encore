@@ -35,6 +35,10 @@ assert gate.classify(nx1,"No Native Switch1 Edition",
                      {"platforms":["Nintendo Switch 2"],"type":"Game"},
                      today)["decision"]=="exclude"
 assert gate.classify(demo,"Game (Demo Version)",{},today)["reason"]=="named_demo_or_trial"
+assert gate.classify(demo,"Game: Demo!",{},today)["decision"]=="exclude"
+assert gate.classify(demo,"Game — Démo.",{},today)["decision"]=="exclude"
+assert gate.classify(demo,"Game 体験版",{},today)["decision"]=="exclude"
+assert gate.classify(demo,"Democracy Simulator",{},today)["decision"]=="candidate"
 assert gate.classify(cloud,"Cloudy Game - Cloud Version",{},today)["reason"]=="streaming_only_cloud_edition"
 assert gate.classify(dlc,"Game DLC",{"type":"DLC"},today)["decision"]=="exclude"
 assert gate.classify(future,"Coming Soon",

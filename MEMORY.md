@@ -2150,3 +2150,5 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 - The separate discovery workflow run `38008270749` failed early on an outdated `check-ps-glyph-switch1-corpus.py` scope string (not a search failure). Fix that gate; require strict catalog when persisting and accept stale numeric cursors across catalog shrinkage without ever treating an unqueried ID as finished.
 - Keep Switch 1 versions shared with Switch 2, exclude Switch 2-only/DLC/demo/cloud-only, defer future releases; 23,997 remains candidate IDs, not official verified game count. Source-lead evidence is NOT installed or game-patch-ready.
 - Do not change release branch, purple launcher design, or launch PS5 native build in response to metadata-only adjustments.
+
+- 2026-10-10 additional metadata repair: classify EACH regional alias with its own title/platform/date/type, not a single arbitrarily chosen display name; recognize punctuation and CJK demo/playtest suffixes while preserving a genuine full Switch1 edition when a regional demo alias coexists. Regression fixtures for both cases added. Crawl queries remain candidates, never per-game compatibility proof.
