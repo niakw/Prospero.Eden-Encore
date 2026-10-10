@@ -52,6 +52,11 @@ assert 'if (p != delta || t != type || b != block) return nullptr;' in span
 assert 'static_cast<const Impl&>(*this).GetSpan(addr, size)' in span
 assert 'validate_ps5_guest_span' in apply
 assert 'guest_alias_mapped=%llu guest_alias_access=%llu' in perf
+main=(r/'headless/main.cpp').read_text()
+assert '#include "gpu_fault_rate_limit.h"' in main
+assert '::Eden::GpuFault::ResetTitleCounters();' in main
+assert 'inline void ResetTitleCounters() noexcept' in h
+assert h.count('.store(0, std::memory_order_relaxed);') >= 6
 def sample(i): return i<=8 or i&(i-1)==0
 assert [i for i in range(1,129) if sample(i)] == [1,2,3,4,5,6,7,8,16,32,64,128]
 print('PASS source: physical continuity, PS5 shared-cache bypass, bounded fault logs')
