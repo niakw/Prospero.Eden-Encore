@@ -482,7 +482,11 @@ int main(int argc, char **argv) {
     long phys_before_drain = 0;
     for (unsigned root=0; root<EDEN_HEAP_PIECES; ++root)
         phys_before_drain += atomic_load(&eden_heap_root_held_bytes[root]);
+    // The old title's hot-space hint must not scatter the next title into
+    // a later mspace when earlier committed spaces can be reused.
+    atomic_store(&eden_heap_space_hint, EDEN_HEAP_PIECES - 1);
     const size_t freed_cache = eden_heap_release_current_tcache();
+    assert(atomic_load(&eden_heap_space_hint) == 0);
     long phys_after_drain = 0;
     for (unsigned root=0; root<EDEN_HEAP_PIECES; ++root)
         phys_after_drain += atomic_load(&eden_heap_root_held_bytes[root]);
