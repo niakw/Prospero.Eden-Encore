@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Host-only fixture for exact ELF .text-size provenance, no PS5 build."""
+import hashlib
 import importlib.util
 from pathlib import Path
 import struct
@@ -51,10 +52,29 @@ else:
 
 # The authoritative symbolizer must still fail closed on mismatched ELF code
 # size; the receipt alone never blesses a crash RIP against a different build.
-symbolizer = (root / "tools/symbolize-crash.py").read_text()
+symbolizer_path = root / "tools/symbolize-crash.py"
+symbolizer = symbolizer_path.read_text()
 assert "REFUSED symbolization:" in symbolizer and "!= size" in symbolizer
+spec_symbols = importlib.util.spec_from_file_location("eden_symbolizer", symbolizer_path)
+assert spec_symbols and spec_symbols.loader
+sym = importlib.util.module_from_spec(spec_symbols)
+spec_symbols.loader.exec_module(sym)
+valid = {"schema": 1, "elf_text_size_hex": "0x40",
+         "files": {"unstripped_elf": {"sha256": hashlib.sha256(buf).hexdigest()}}}
+sym.verify_elf_receipt(bytes(buf), 64, valid)
+for wrong in (
+    {"schema": 1, "elf_text_size_hex": "0x40", "files": {"unstripped_elf": {"sha256": "0" * 64}}},
+    {"schema": 1, "elf_text_size_hex": "0x41", "files": valid["files"]},
+    {"schema": 0, "elf_text_size_hex": "0x40", "files": valid["files"]},
+):
+    try:
+        sym.verify_elf_receipt(bytes(buf), 64, wrong)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("mismatched ELF receipt passed symbolizer")
 workflow = (root / ".github/workflows/build-040-zbic.yml").read_text()
 assert "tools/ci/write-crash-provenance.py" in workflow
 assert "build/headless-native/crash-provenance.json" in workflow
 assert "env.EDEN_TEST_ALL_ON == '1'" in workflow
-print("PASS host-only PS5 crash-provenance ELF parser, negative bounds and gated artifact")
+print("PASS host-only PS5 crash provenance: ELF bounds, SHA256 receipt binding and build gate")
