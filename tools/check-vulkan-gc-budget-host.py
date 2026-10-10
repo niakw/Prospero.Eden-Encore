@@ -61,6 +61,7 @@ if compiler is None:
 source = r"""
 #include <cassert>
 #include <cstdint>
+#include <initializer_list>
 #include <limits>
 #include "vulkan_gc_budget.h"
 using Eden::VulkanMemory::AfterProjectedEviction;
