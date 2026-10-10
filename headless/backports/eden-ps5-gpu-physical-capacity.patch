@@ -1,0 +1,87 @@
+--- a/src/core/device_memory_manager.inc
++++ b/src/core/device_memory_manager.inc
+@@ -24,6 +24,7 @@
+ #include "core/device_memory_manager.h"
+ #include "core/memory.h"
+ #ifdef PS5_NATIVE
++#include "core/hle/kernel/board/nintendo/nx/k_system_control.h"
+ #include "gpu_fault_rate_limit.h"
+ #endif
+ 
+@@ -190,7 +191,15 @@
+ DeviceMemoryManager<Traits>::DeviceMemoryManager(const DeviceMemory& device_memory_)
+     : physical_base{uintptr_t(device_memory_.buffer.BackingBasePointer())}
+     , device_inter{nullptr}
++    , compressed_device_addr(
++#ifdef PS5_NATIVE
++        // Reverse mappings need actual configured 4/6/8/10/12 GiB DRAM.
++        // SparseLargeVector reserves virtual space; it does not commit it.
++        Kernel::Board::Nintendo::Nx::KSystemControl::Init::GetIntendedMemorySize() >> Memory::YUZU_PAGEBITS
++#else
++        1ULL << ((Settings::values.memory_layout_mode.GetValue() == Settings::MemoryLayout::Memory_4Gb ? physical_min_bits : physical_max_bits) - Memory::YUZU_PAGEBITS)
++#endif
++    )
+-    , compressed_device_addr(1ULL << ((Settings::values.memory_layout_mode.GetValue() == Settings::MemoryLayout::Memory_4Gb ? physical_min_bits : physical_max_bits) - Memory::YUZU_PAGEBITS))
+     , tracked_entries(device_as_size >> Memory::YUZU_PAGEBITS)
+ {
+     impl = std::make_unique<DeviceMemoryManagerAllocator<Traits>>();
+@@ -243,6 +252,16 @@
+         const VAddr new_vaddress = virtual_address + i * Memory::YUZU_PAGESIZE;
+         auto* ptr = process_memory->GetPointerSilent(Common::ProcessAddress(new_vaddress));
+ #ifdef PS5_NATIVE
++        const auto host = reinterpret_cast<std::uintptr_t>(ptr);
++        const auto physical_size = compressed_device_addr.size() << Memory::YUZU_PAGEBITS;
++        if (ptr && (host < physical_base || host - physical_base >= physical_size)) {
++            if (::Eden::GpuFault::ShouldReportBadPhysical())
++                LOG_WARNING(HW_Memory, "EDEN_GPU_MAP_OUTSIDE_DRAM guest={:#x} host={:#x}",
++                            new_vaddress, host);
++            ptr = nullptr;
++        }
++#endif
++#ifdef PS5_NATIVE
+         // Map may replace an existing GPU-page mapping without an Unmap call.
+         // The previous forward page is NOT sufficient: unlink its reverse
+         // physical->GPU association before installing the replacement.
+@@ -443,6 +462,14 @@
+ void DeviceMemoryManager<Traits>::InnerGatherDeviceAddresses(Common::ScratchBuffer<u32>& buffer,
+                                                              PAddr address) {
+     size_t phys_addr = address >> page_bits;
++#ifdef PS5_NATIVE
++    if (phys_addr >= compressed_device_addr.size()) {
++        if (::Eden::GpuFault::ShouldReportBadPhysical())
++            LOG_WARNING(HW_Memory, "EDEN_GPU_REVERSE_PHYS_OOB phys={:#x}", address);
++        buffer.resize(0);
++        return;
++    }
++#endif
+     std::scoped_lock lk(mapping_guard);
+     u32 backing = compressed_device_addr[phys_addr];
+     if ((backing >> MULTI_FLAG_BITS) != 0) {
+@@ -462,6 +489,13 @@
+     const size_t index = address >> Memory::YUZU_PAGEBITS;
+     const size_t offset = address & Memory::YUZU_PAGEMASK;
+     auto phys_addr = tracked_entries[index].compressed_physical_ptr;
++#ifdef PS5_NATIVE
++    if (phys_addr == 0 || static_cast<size_t>(phys_addr - 1U) >= compressed_device_addr.size())
++        return nullptr;
++    const auto raw = (static_cast<PAddr>(phys_addr - 1U) << Memory::YUZU_PAGEBITS) + offset;
++    const auto backing_size = compressed_device_addr.size() << Memory::YUZU_PAGEBITS;
++    if (raw >= backing_size || sizeof(T) > backing_size - raw) return nullptr;
++#endif
+     if (phys_addr == 0) [[unlikely]]
+         return nullptr;
+     return GetPointerFromRaw<T>((PAddr(phys_addr - 1) << Memory::YUZU_PAGEBITS) + offset);
+@@ -476,6 +510,13 @@
+     const size_t index = address >> Memory::YUZU_PAGEBITS;
+     const size_t offset = address & Memory::YUZU_PAGEMASK;
+     auto phys_addr = tracked_entries[index].compressed_physical_ptr;
++#ifdef PS5_NATIVE
++    if (phys_addr == 0 || static_cast<size_t>(phys_addr - 1U) >= compressed_device_addr.size())
++        return nullptr;
++    const auto raw = (static_cast<PAddr>(phys_addr - 1U) << Memory::YUZU_PAGEBITS) + offset;
++    const auto backing_size = compressed_device_addr.size() << Memory::YUZU_PAGEBITS;
++    if (raw >= backing_size || sizeof(T) > backing_size - raw) return nullptr;
++#endif
+     if (phys_addr == 0)
+         return nullptr;
+     return GetPointerFromRaw<T>((PAddr(phys_addr - 1) << Memory::YUZU_PAGEBITS) + offset);
