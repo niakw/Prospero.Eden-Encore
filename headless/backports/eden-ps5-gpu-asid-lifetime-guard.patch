@@ -127,7 +127,7 @@
      }
 +    // Reject malformed GPU ranges before any lock or wrapped addr+size.
 +    for (const auto& [start, length] : ranges)
-+        if (length && (start >= device_as_size || length > device_as_size - start))
++        if (start >= device_as_size || length > device_as_size - start)
 +            return;
 +    std::shared_lock registry_lk(process_registry_guard);
      // Make a local copy and sort by address
