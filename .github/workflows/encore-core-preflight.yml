@@ -16,7 +16,7 @@ jobs:
   core-tests:
     if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[core-ready]') }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 25
     steps:
       - name: Checkout source (GitHub only)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -24,7 +24,7 @@ jobs:
       - name: Install host-only JSON header for compiling glyph policy
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends nlohmann-json3-dev
+          sudo apt-get install -y --no-install-recommends nlohmann-json3-dev clang-18
 
       - name: Audit generic graphics, JIT, runtime and offline game networking
         run: |
@@ -60,6 +60,12 @@ jobs:
           python3 -B tools/check-bounded-logs.py
           python3 -B tools/check-nlib-media-safety.py
           python3 -B tools/check-ci-cache.py
+
+      - name: Exercise Sony mspace ownership via host UBSan/TSan (no PS5 SDK)
+        run: |
+          set -euxo pipefail
+          python3 -B tools/check-heap-growth.py
+          python3 -B tools/check-heap-growth-rollback-host.py
 
       - name: Check approved user-facing UX invariants (no graphics compilation)
         run: |
