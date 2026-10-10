@@ -12,6 +12,7 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 header = (root / "headless/direct_pool_accounting.h").read_text()
+probe_policy = (root / "headless/direct_pool_probe_policy.h").read_text()
 perf = (root / "headless/performance.cpp").read_text()
 heap = (root / "headless/heap_arenas.inc").read_text()
 pages = (root / "src/memory_pages.cpp").read_text()
@@ -31,6 +32,9 @@ for token in (
 ):
     assert token in perf, f"Missing physical pool provenance: {token}"
 assert "SaturatingAdd" in header
+assert '#include "direct_pool_probe_policy.h"' in perf
+assert '::Eden::DirectPool::ProbeIntervalNs(' in perf
+assert 'kProbeHighHeadroomBytes = 4ULL << 30' in probe_policy
 assert "std::numeric_limits<std::uint64_t>::max()" in header
 assert "return {extent, used, 0, true, false};" in header
 assert "return {extent, used, extent - used, true, true};" in header
@@ -60,10 +64,19 @@ code = r"""
 #include <cstdint>
 #include <limits>
 #include "direct_pool_accounting.h"
+#include "direct_pool_probe_policy.h"
 int main() {
     using namespace Eden::DirectPool;
     constexpr std::uint64_t MiB = 1024ULL * 1024;
     constexpr std::uint64_t GiB = 1024ULL * MiB;
+    // Probe cadence must not ignore a missed sample or pressure; only the
+    // kernel-confirmed high-headroom path may skip 100-ms/200-ms queries.
+    static_assert(ProbeIntervalNs(false, 0, 12*GiB) == kProbeFastNs);
+    static_assert(ProbeIntervalNs(true, 1, 12*GiB) == kProbeFastNs);
+    static_assert(ProbeIntervalNs(true, 2, 12*GiB) == kProbeFastNs);
+    static_assert(ProbeIntervalNs(true, 0, 4*GiB-MiB) == kProbeFastNs);
+    static_assert(ProbeIntervalNs(true, 0, 4*GiB) == kProbeHighHeadroomNs);
+    static_assert(ProbeIntervalNs(true, 0, 8*GiB) == kProbeHighHeadroomNs);
     // 16 GiB physically installed in PS5 is NOT what firmware gives Encore.
     // Old real FW 13.60 console directly exposed 12 GiB, and its Encore
     // heap committed 1280 MiB after game exit. Not Sony OS-reserved memory.
@@ -111,3 +124,4 @@ with tempfile.TemporaryDirectory(prefix="eden-direct-pool-") as work:
     subprocess.run([str(exe)], check=True, timeout=120)
 print("PASS kernel 12-GiB direct pool vs installed 16-GiB distinction, 1280-MiB Encore heap ledger, ASan/UBSan")
 print("Unclassified bytes are NOT confirmed free RAM; no physical Sony mspace unmapping")
+print("PASS 100-ms pressure/unknown probe cadence, 250-ms only for >=4 GiB confirmed contiguous headroom")
