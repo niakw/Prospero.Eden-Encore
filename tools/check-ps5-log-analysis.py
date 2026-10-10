@@ -66,6 +66,20 @@ with tempfile.TemporaryDirectory(prefix="eden-ps5-log-triage-") as folder:
     assert roots[1]["diagnostic_reason"] == "zero_reported_but_quiescence_unproven"
     assert roots[1]["reclaim"] == "disabled"
     assert roots[2]["diagnostic_reason"] == "missing_direct_owner"
+    transient = TEXT.replace(
+        "held_bytes=0 held_blocks=0 arena_pins=0 physical_owner=1",
+        "held_bytes=-256 held_blocks=0 arena_pins=0 physical_owner=1",
+    )
+    shifted = m.parse_log(transient.encode("utf-8"))
+    assert shifted["resource_pressure"]["heap_root_snapshots"][1][
+        "diagnostic_reason"] == "inconsistent_or_transient_ledger"
+    assert shifted["resource_pressure"]["heap_root_snapshots"][1]["reclaim"] == "disabled"
+    mismatched = TEXT.replace(
+        "held_bytes=0 held_blocks=0 arena_pins=0 physical_owner=1",
+        "held_bytes=0 held_blocks=3 arena_pins=0 physical_owner=1",
+    )
+    assert m.parse_log(mismatched.encode("utf-8"))["resource_pressure"][
+        "heap_root_snapshots"][1]["diagnostic_reason"] == "inconsistent_or_transient_ledger"
     assert [x["fallback"] for x in pressure["direct_memory_probe_failures"]] == [
         "last_confirmed", "conservative"]
     assert pressure["direct_memory_slow_probe_samples"][0]["latency_ms"] == 3.5
