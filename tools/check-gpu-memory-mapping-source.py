@@ -94,6 +94,23 @@ assert 'validate_ps5_gpu_span_physical_bounds' in apply
 assert apply.index('eden-ps5-gpu-block-flush-bounds.patch') < apply.index(
     'eden-ps5-gpu-span-physical-bounds.patch') < apply.index(
     'eden-ps5-gpu-reverse-inline-bounds.patch')
+atomic_forward=(r/'headless/backports/eden-ps5-gpu-atomic-forward-table.patch').read_text()
+for token in ('static u32 AtomicLoadPhysical(', 'static void AtomicStorePhysical(',
+              'static u32 AtomicLoadContinuity(', 'static void AtomicStoreContinuity(',
+              'static VAddr AtomicLoadBacking(', 'static void AtomicStoreBacking(',
+              'std::atomic_ref<const u32>', 'std::atomic_ref<u32>',
+              'std::atomic_ref<const VAddr>', 'std::atomic_ref<VAddr>',
+              'void InsertCPUBacking(size_t page_index'):
+    assert token in atomic_forward, token
+assert 'constexpr void InsertCPUBacking' in atomic_forward  # removed by this overlay
+assert '+    void InsertCPUBacking(size_t page_index' in atomic_forward
+assert 'validate_ps5_gpu_atomic_forward_table' in apply
+assert apply.index('eden-ps5-gpu-reverse-inline-bounds.patch') < apply.index(
+    'eden-ps5-gpu-atomic-forward-table.patch')
+cpp_host=(r/'tools/check-gpu-atomic-forward-cpp-host.py').read_text()
+assert 'std::atomic_ref<' in cpp_host
+assert '-fsanitize=address,undefined' in cpp_host
+assert '-fsanitize=thread' in cpp_host
 inline_bounds=(r/'headless/backports/eden-ps5-gpu-reverse-inline-bounds.patch').read_text()
 for token in ('if ((address >> page_bits) >= compressed_device_addr.size()) return;',
               'if (base == 0) return;', 'if (host < physical_base ||',
