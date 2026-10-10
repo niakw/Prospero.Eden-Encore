@@ -700,6 +700,28 @@ print('Pinned PS5 guest delta-zero pointer alias guard: PASS')
 PYALIAS
 }
 apply_one "$root/headless/backports/eden-ps5-guest-zero-alias.patch" "$eden/.encore-backport-ps5-guest-zero-alias.sha256" validate_ps5_guest_zero_alias
+validate_ps5_guest_null_backing() {
+python3 - "$eden" <<'PYNULLBACK'
+from pathlib import Path
+import sys
+source=(Path(sys.argv[1])/'src/core/memory.cpp').read_text()
+begin=source.index('void MapPages(Common::PageTable&')
+end=source.index('    template<typename F, typename G>',begin)
+mapping=source[begin:end]
+for required in ('auto* backing = system.DeviceMemory().GetPointer<u8>(target);',
+                 'if (backing == nullptr) {',
+                 'invalid.Store(false, Common::PageType::Unmapped, current_block, 0);',
+                 'EDEN_GUEST_MAP_NO_BACKING',
+                 'auto host_ptr = reinterpret_cast<u64>(backing) - (base << YUZU_PAGEBITS);',
+                 'IsDirectBackingAlias(base << YUZU_PAGEBITS, YUZU_PAGESIZE)'):
+    if required not in mapping:
+        raise SystemExit('PS5 guest page null physical backing guard missing: '+required)
+assert mapping.index('if (backing == nullptr)') < mapping.index('entry.Store(false, type, current_block, host_ptr)')
+assert mapping.count('if (backing == nullptr) {') == 1
+print('Pinned PS5 guest MapPages no physical backing: explicit Unmapped, zero-delta alias preserved PASS')
+PYNULLBACK
+}
+apply_one "$root/headless/backports/eden-ps5-guest-map-null-backing.patch" "$eden/.encore-backport-ps5-guest-map-null-backing.sha256" validate_ps5_guest_null_backing
 validate_ps5_guest_span() {
 python3 - "$eden" <<'PYSPAN'
 from pathlib import Path
