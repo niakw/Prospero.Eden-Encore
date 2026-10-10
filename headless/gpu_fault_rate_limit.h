@@ -12,6 +12,14 @@ inline bool ShouldReport(std::atomic<std::uint64_t>& counter) noexcept {
     const std::uint64_t n = counter.fetch_add(1, std::memory_order_relaxed) + 1;
     return n <= 8 || (n & (n - 1)) == 0;
 }
+inline void ResetTitleCounters() noexcept {
+    reads.store(0, std::memory_order_relaxed);
+    writes.store(0, std::memory_order_relaxed);
+    guest_map_zero.store(0, std::memory_order_relaxed);
+    guest_null_mapped.store(0, std::memory_order_relaxed);
+    guest_alias_mapped.store(0, std::memory_order_relaxed);
+    guest_alias_access.store(0, std::memory_order_relaxed);
+}
 inline bool ShouldReportRead() noexcept { return ShouldReport(reads); }
 inline bool ShouldReportWrite() noexcept { return ShouldReport(writes); }
 inline bool ShouldReportGuestMapZero() noexcept { return ShouldReport(guest_map_zero); }

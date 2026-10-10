@@ -1593,6 +1593,11 @@ int main(int argc, char** argv) {
             if (system.IsPoweredOn()) return 1;
             passed("core_initialized");
             for (unsigned cycle = 0; guest && cycle < cycles; ++cycle) {
+#ifdef PS5_NATIVE
+                // The previous title's GPU owners have already finished
+                // teardown. Keep the next title's faults independently counted.
+                ::Eden::GpuFault::ResetTitleCounters();
+#endif
                 if (game) LOG_INFO(Frontend, "EDEN_GAME_SESSION_BEGIN {}", cycle + 1);
                 struct Completion {
                     std::mutex mutex;
