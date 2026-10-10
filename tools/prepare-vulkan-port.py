@@ -703,6 +703,15 @@ for old, new in [
     if gc.count(old) != 1:
         raise RuntimeError(f'Pinned GC anchor changed: {old}')
     gc = gc.replace(old, new)
+# Upstream's u64 frame_tick starts at 0, but GC subtracts 10/25/50
+# without checking: early memory pressure wraps the LRU cutoff to UINT64_MAX
+# and can evict just-created textures. Preserve a zero lower bound for BOTH
+# normal and aggressive passes, including OpenGL, with no GPU syscall/heap work.
+unsafe_cutoff = "frame_tick - ticks_to_destroy"
+if gc.count(unsafe_cutoff) != 2:
+    raise RuntimeError("Pinned GC must contain exactly two unsigned LRU eviction cutoffs")
+gc = gc.replace(unsafe_cutoff,
+                "::Eden::VulkanMemory::OldestEvictionTick(frame_tick, ticks_to_destroy)")
 texture_costs = []
 for signature, index in (
     ('RunGarbageCollector()', 13), ('DownloadMemory(DAddr cpu_addr, size_t size)', 14),
