@@ -17,6 +17,9 @@ void SetSecondaryPlacement(bool enabled);
 // Zero means topology is unproven; shader scheduling must reserve
 // conservatively instead of assuming that an affinity mask is secondary.
 std::uint64_t PinnedWorkerMask() noexcept;
+// Actual kernel-verified logical-secondary affinity inherited by shader
+// compiler threads. This is NOT proof of distinct physical/SMT cores.
+std::uint64_t VerifiedSecondaryPlacementMask() noexcept;
 // Explicit PS5 diagnostic A/B: spread workers across distinct OS logical CPUs,
 // without claiming separate physical cores when firmware CPUID is unreliable.
 void EnableExperimentalLogicalPlacement();

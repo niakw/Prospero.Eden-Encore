@@ -1026,20 +1026,29 @@ pipeline_worker_replacement = '''#ifdef PS5_NATIVE
             if (CPU_ISSET(cpu, &allowed) && (primary_mask & (std::uint64_t{1} << cpu)))
                 ++primary_in_mask;
     }
+    // A logical-only dev A/B trial may have already pinned the SHADER
+    // parent to a kernel-verified secondary mask. It is then wrong to
+    // subtract the seven primary CPU/GPU services AGAIN. Do not equate
+    // this proof of LOGICAL nonoverlap with physical/SMT core identity.
+    const std::uint64_t secondary_mask = ::Eden::Performance::VerifiedSecondaryPlacementMask();
+    const bool secondary_isolated = affinity_rc == 0 && allowed_mask != 0 &&
+        secondary_mask != 0 && (allowed_mask & ~secondary_mask) == 0;
     constexpr size_t secondary_headroom = 2;
     constexpr size_t unverified_reserved = 7;
     constexpr size_t max_pipeline_workers = 6;
     const size_t reserved = affinity_rc == 0 && primary_mask ?
-        primary_in_mask + secondary_headroom : unverified_reserved;
+        primary_in_mask + secondary_headroom :
+        secondary_isolated ? secondary_headroom : unverified_reserved;
     const size_t spare = schedulable > reserved ? schedulable - reserved : 0ULL;
     const size_t selected = std::max<size_t>(1ULL, std::min(spare, max_pipeline_workers));
     std::printf("EDEN_PS5_SHADER_WORKERS reported=%zu available=%zu workers=%zu "
-                "reserved=%zu primary_in_mask=%zu physical_verified=%u affinity_rc=%d "
-                "allowed_mask=0x%llx primary_mask=0x%llx\\n",
+                "reserved=%zu primary_in_mask=%zu physical_verified=%u logical_isolated=%u affinity_rc=%d "
+                "allowed_mask=0x%llx primary_mask=0x%llx secondary_mask=0x%llx\\n",
                 reported, available, selected, reserved, primary_in_mask,
-                unsigned(primary_mask != 0), affinity_rc,
+                unsigned(primary_mask != 0), unsigned(secondary_isolated), affinity_rc,
                 static_cast<unsigned long long>(allowed_mask),
-                static_cast<unsigned long long>(primary_mask));
+                static_cast<unsigned long long>(primary_mask),
+                static_cast<unsigned long long>(secondary_mask));
     return selected;
 #else
     return max_core_threads;
