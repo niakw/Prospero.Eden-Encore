@@ -128,6 +128,12 @@ eden_sparse_replace("mprotect(reinterpret_cast<void*>(page), HostPageSize, PROT_
 # was ever written to: harmless in a dense table, a fault in a read-only one. A wrong "no" leaves
 # the first entries of the unmapped range as they were.
 eden_sparse_replace("if (IsCommittedPage(start / sizeof(T))) {" "if (IsCommittedPage(start)) {" 1)
+# Upstream SparseLargeVector uses > instead of >= for element count (three
+# places). Index exactly count is outside the array and must not dereference
+# or attempt to commit an extra 2-MiB sparse PS5 table slot. Preserve the
+# original zero/last valid element fast paths.
+eden_sparse_replace("if (index > alloc_size / sizeof(T)) {"
+    "if (index >= alloc_size / sizeof(T)) {" 3)
 eden_sparse_replace("void FreeMemoryPages(void* base, std::size_t size) noexcept;"
     "void FreeMemoryPages(void* base, std::size_t size) noexcept;\nvoid* AllocateSparsePages(std::size_t size) noexcept;\nvoid FreeSparsePages(void* base, std::size_t size) noexcept;\nvoid CommitSparsePage(std::uintptr_t page) noexcept;\nvoid DecommitSparsePage(std::uintptr_t page) noexcept;\nstd::size_t SparseCommitSpan() noexcept;" 1)
 # Upstream #4471 decommits complete host pages. Encore's PS5 sparse backing is coarser (2 MiB),
