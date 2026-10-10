@@ -1,0 +1,71 @@
+--- a/src/core/device_memory_manager.inc
++++ b/src/core/device_memory_manager.inc
+@@ -72,6 +72,21 @@
+         current->next_entry = entry_id;
+     }
+ 
++
++#ifdef PS5_NATIVE
++    // The old Unregister assumes its value is always present. A stale/cyclic
++    // reverse map must never walk past the end of storage into an invalid node.
++    [[nodiscard]] bool Contains(u32 value, u32 start_entry) const noexcept {
++        for (size_t steps = 0; start_entry && steps < storage.size(); ++steps) {
++            if (start_entry > storage.size()) return false;
++            const auto& node = storage[start_entry - 1];
++            if (node.value == value) return true;
++            start_entry = node.next_entry;
++        }
++        return false;
++    }
++#endif
++
+     std::pair<bool, u32> Unregister(u32 value, u32 start_entry) {
+         u32 iter_entry = start_entry;
+         Entry* previous{};
+@@ -246,13 +261,20 @@
+                         device_page, previous_physical - 1U, reverse);
+                 }
+             } else {
++                if (!impl->multi_dev_address.Contains(device_page, reverse & MULTI_MASK)) {
++                    if (::Eden::GpuFault::ShouldReportRemapMismatch())
++                        LOG_WARNING(HW_Memory,
++                            "EDEN_GPU_REMAP_MULTI_MISSING guest={:#x} old_phys_page={:#x} head={:#x}",
++                            device_page, previous_physical - 1U, reverse & MULTI_MASK);
++                } else {
++                    const auto [multiple, first] = impl->multi_dev_address.Unregister(
++                        device_page, reverse & MULTI_MASK);
++                    if (!multiple)
++                        reverse = impl->multi_dev_address.ReleaseEntry(first);
++                    else
++                        reverse = first | MULTI_FLAG;
++                    ::Eden::GpuFault::remap_replaced.fetch_add(1, std::memory_order_relaxed);
++                }
+-                const auto [multiple, first] = impl->multi_dev_address.Unregister(
+-                    device_page, reverse & MULTI_MASK);
+-                if (!multiple)
+-                    reverse = impl->multi_dev_address.ReleaseEntry(first);
+-                else
+-                    reverse = first | MULTI_FLAG;
+-                ::Eden::GpuFault::remap_replaced.fetch_add(1, std::memory_order_relaxed);
+             }
+         }
+ #endif
+@@ -320,6 +342,18 @@
+                 base_dev = 0;
+                 continue;
+             }
++#ifdef PS5_NATIVE
++            // An invalid stale multi-list used to index storage[-1] and crash
++            // in Unregister(). Preserve the unrelated reverse association.
++            if (!impl->multi_dev_address.Contains(static_cast<u32>(start_page_d + i),
++                                                    base_dev & MULTI_MASK)) {
++                if (::Eden::GpuFault::ShouldReportRemapMismatch())
++                    LOG_WARNING(HW_Memory,
++                        "EDEN_GPU_UNMAP_MULTI_MISSING guest={:#x} old_phys_page={:#x} head={:#x}",
++                        static_cast<u32>(start_page_d + i), phys_addr - 1U, base_dev & MULTI_MASK);
++                continue;
++            }
++#endif
+             const auto [more_entries, new_start] = impl->multi_dev_address.Unregister(
+                 static_cast<u32>(start_page_d + i), base_dev & MULTI_MASK);
+             if (!more_entries) {
