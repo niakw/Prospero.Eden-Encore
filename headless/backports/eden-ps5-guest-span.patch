@@ -23,7 +23,7 @@
      }
      [[nodiscard]] inline u8* GetSpan(const VAddr addr, const std::size_t size) noexcept {
 +#ifdef PS5_NATIVE
-+        return const_cast<u8*>(std::as_const(*this).GetSpan(addr, size));
++        return const_cast<u8*>(static_cast<const Impl&>(*this).GetSpan(addr, size));
 +#else
          return (current_page_table->entries[addr >> YUZU_PAGEBITS].Block() == current_page_table->entries[(addr + size) >> YUZU_PAGEBITS].Block()) ? GetPointerSilent(addr) : nullptr;
 +#endif

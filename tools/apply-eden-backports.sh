@@ -407,7 +407,7 @@ source=(Path(sys.argv[1])/'src/core/memory.cpp').read_text()
 for needed in ('(addr + size - 1) >> YUZU_PAGEBITS',
                'if (!size || !AddressSpaceContains(*current_page_table, addr, size))',
                'if (p != delta || t != type || b != block) return nullptr;',
-               'std::as_const(*this).GetSpan(addr, size)'):
+               'static_cast<const Impl&>(*this).GetSpan(addr, size)'):
     if needed not in source: raise SystemExit('PS5 guest span validation missing: '+needed)
 print('Pinned PS5 GetSpan correct end page and contiguous page guard PASS')
 PYSPAN
