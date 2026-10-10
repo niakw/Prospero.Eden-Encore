@@ -71,6 +71,27 @@ with tempfile.TemporaryDirectory(prefix="eden-mod-research-store-") as t:
         with gzip.open(root/"catalog"/f,"rt") as stream:
             assert json.load(stream)["schema"]==1
     first=(root/"catalog"/"source-queries.json.gz").read_bytes()
+    raw_run={"schema":1,"run_id":"test-github-shard-0",
+             "providers":[{"provider":"github","completed":3,"attempted":4,
+                           "blocked_or_failed":1,"source_leads":1}],
+             "total_attempts":4,"total_completed":3,
+             "total_blocked_or_failed":1,"source_leads_observed":1}
+    cumulative={"schema":1,"latest_run_id":raw_run["run_id"],
+                "recent_runs":[{"schema":1,"run_id":"older-shard","providers":[],
+                                "total_attempts":1,"total_completed":1,
+                                "total_blocked_or_failed":0},raw_run]}
+    assert store.latest_run_metrics(cumulative)==raw_run
+    stats=store.persist(root,current,newstate,catalog,queue,cumulative)
+    metrics=json.loads((root/"discovery/metrics.json").read_text())
+    assert metrics["latest_run_id"]=="test-github-shard-0"
+    assert metrics["latest_run_completed"]==3
+    assert metrics["latest_run_blocked"]==1
+    assert metrics["completed_distinct_query_keys"]==2
+    assert stats["accumulated_mod_leads"]==2
+    try:
+        store.latest_run_metrics(dict(cumulative,latest_run_id="lost-run"))
+    except ValueError:pass
+    else:raise AssertionError("missing latest run must be rejected")
     store.persist(root,current,newstate,catalog,queue)
     assert (root/"catalog"/"source-queries.json.gz").read_bytes()==first
     another=dict(newstate,last_provider="firefox_yandex")

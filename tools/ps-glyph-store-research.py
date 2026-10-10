@@ -37,6 +37,25 @@ def read(path:Path|None)->dict:
     return value
 
 
+def latest_run_metrics(doc:dict)->dict:
+    """A long worker writes a *cumulative* metrics snapshot; persist expects
+    exactly the current run's raw request stats. Do not treat its wrapper
+    as a provider report or silently lose successful searches on throttle.
+    """
+    if doc.get("schema")!=1:
+        raise ValueError("invalid live request metrics schema")
+    if "recent_runs" not in doc:
+        return doc
+    runs=doc.get("recent_runs")
+    wanted=doc.get("latest_run_id")
+    if not isinstance(runs,list) or len(runs)>150 or not isinstance(wanted,str):
+        raise ValueError("invalid cumulative worker metrics")
+    matching=[x for x in runs if isinstance(x,dict) and x.get("run_id")==wanted]
+    if len(matching)!=1:
+        raise ValueError("missing or ambiguous current worker metrics")
+    return matching[0]
+
+
 def state(old:dict,new:dict)->dict:
     if new.get("schema")!=1 or not isinstance(new.get("completed_query_keys"),list):
         raise ValueError("new research search progress is invalid")
@@ -139,6 +158,7 @@ def persist(root:Path, fresh_leads:dict, fresh_progress:dict,
     progress=state(previous_progress,fresh_progress)
     data={"leads.json":merged,"progress.json":progress}
     if run_metrics is not None:
+        run_metrics=latest_run_metrics(run_metrics)
         if (run_metrics.get("schema")!=1 or
             not isinstance(run_metrics.get("providers"),list) or
             not isinstance(run_metrics.get("run_id"),str) or
