@@ -94,6 +94,7 @@ if(PS5_NATIVE)
     set_source_files_properties("${EDEN_PORT_DIR}/zbic_compression.cpp" PROPERTIES
         COMPILE_OPTIONS "-Wno-unused-function;-Wno-missing-declarations;-Wno-shadow")
     target_include_directories(core PRIVATE "${EDEN_PORT_DIR}")
+    target_include_directories(video_core PRIVATE "${EDEN_PORT_DIR}")
 endif()
 # Use the already-qualified no-arena allocation contract in the full core.
 get_target_property(common_sources common SOURCES)
