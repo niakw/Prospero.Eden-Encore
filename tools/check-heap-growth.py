@@ -382,6 +382,31 @@ int main(int argc, char **argv) {
         assert(eden_heap_large_held(&big_blocks) == 0 && big_blocks == 0);
         assert(atomic_load(&ps5_heap_ambiguous_zero_reallocs) == 0);
     }
+    if (argc > 1 && strcmp(argv[1], "root-span") == 0) {
+        // If a direct large allocation cannot be admitted, a request larger
+        // than one piece must create ONE root mspace across multiple pieces.
+        refuse_pages = 1;
+        unsigned char *block = __wrap_malloc(piece + piece / 2);
+        refuse_pages = 0;
+        assert(block != NULL);
+        assert(eden_heap_committed() == 3 * piece);
+        assert(eden_heap_root_span[1] == 2);
+        assert(atomic_load(&eden_heap_piece_root[1]) == 1);
+        assert(atomic_load(&eden_heap_piece_root[2]) == 1);
+        assert(eden_heap_root_direct_owner[1] == -1);
+        eden_heap_flush(eden_heap_self());
+        assert(atomic_load(&eden_heap_root_held_blocks[1]) == 1);
+        assert(atomic_load(&eden_heap_root_held_bytes[1]) >= (long)(piece + piece / 2));
+        __wrap_free(block);
+        __wrap_free(first);
+        (void)eden_heap_release_current_tcache();
+        assert(atomic_load(&eden_heap_root_held_blocks[1]) == 0);
+        assert(atomic_load(&eden_heap_root_held_bytes[1]) == 0);
+        assert(eden_heap_committed() == 3 * piece); // NEVER unmap a root from a counter
+        assert(atomic_load(&eden_heap_root_arena_pins[0]) >= 1);
+        puts("root-span: multi-piece PA owner, physical counters and no unsafe release PASS");
+        return 0;
+    }
     if (argc > 1 && strcmp(argv[1], "growth-mspace-fail") == 0) {
         // The main thread's small allocation first creates an 8 MiB
         // aligned arena in the same 128 MiB piece. The alignment and
@@ -600,7 +625,7 @@ with tempfile.TemporaryDirectory(prefix='eden-heap-') as work:
         binary = work / ('heap-' + label.split()[0])
         subprocess.run(['clang-18', '-std=gnu11', '-pthread', '-Wall', '-Wextra', '-Wno-unused-function',
                         '-Wno-unused-parameter', *flags, str(source), '-o', str(binary)], check=True)
-        for mode in ((), ('whole',), ('first-commit-fail',), ('first-mspace-fail',), ('growth-mspace-fail',)):
+        for mode in ((), ('whole',), ('first-commit-fail',), ('first-mspace-fail',), ('growth-mspace-fail',), ('root-span',)):
             if label != 'checked' and mode:
                 continue
             result = subprocess.run([str(binary), *mode], capture_output=True, text=True, timeout=900)
