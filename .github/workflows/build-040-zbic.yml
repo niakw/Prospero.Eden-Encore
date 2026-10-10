@@ -173,6 +173,8 @@ jobs:
           python3 -B tools/check-ps5-ui-controls-per-game.py
           python3 -B tools/check-vulkan-shader-workers.py
           python3 -B tools/check-vulkan-shader-workers-cpp-host.py
+          python3 -B tools/check-worker-topology.py
+          python3 -B tools/check-worker-affinity.py
           python3 -B tools/check-ps5-dev-cache-contention.py
           python3 -B tools/check-gpu-native-diagnostics.py
           python3 -B tools/check-gpu-physical-copy-bounds-host.py
