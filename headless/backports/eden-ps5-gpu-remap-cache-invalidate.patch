@@ -1,0 +1,40 @@
+--- a/src/core/device_memory_manager.inc
++++ b/src/core/device_memory_manager.inc
+@@ -245,7 +245,12 @@
+     Core::Memory::Memory* process_memory = registered_processes[asid.id];
+     size_t start_page_d = address >> Memory::YUZU_PAGEBITS;
+     size_t num_pages = Common::AlignUp(size, Memory::YUZU_PAGESIZE) >> Memory::YUZU_PAGEBITS;
++#ifdef PS5_NATIVE
++    bool replaced_gpu_mapping = false;
++    std::unique_lock lk(mapping_guard);
++#else
+     std::scoped_lock lk(mapping_guard);
++#endif
+ 
+     tracked_entries.CommitRegion(start_page_d, start_page_d + num_pages);
+     for (size_t i = 0; i < num_pages; i++) {
+@@ -270,6 +275,8 @@
+         const u32 previous_physical = old_entry.compressed_physical_ptr;
+         const u32 replacement_physical = ptr
+             ? static_cast<u32>(GetRawPhysicalAddr(ptr) >> Memory::YUZU_PAGEBITS) + 1U : 0U;
++        if (previous_physical != 0 && previous_physical != replacement_physical)
++            replaced_gpu_mapping = true;
+         if (previous_physical != 0 && previous_physical == replacement_physical) {
+             // Re-registering the same backing must not add a second reverse
+             // address to MultiAddressContainer. Refresh its CPU-side alias.
+@@ -337,6 +344,15 @@
+     if (track) {
+         TrackContinuityImpl(address, virtual_address, size, asid);
+     }
++#ifdef PS5_NATIVE
++    // Invalidate only real remaps, outside mapping_guard because the
++    // renderer callback may itself gather translated GPU addresses.
++    lk.unlock();
++    if (replaced_gpu_mapping && device_inter != nullptr) {
++        device_inter->InvalidateRegion(address, size);
++        ::Eden::GpuFault::remap_cache_evictions.fetch_add(1, std::memory_order_relaxed);
++    }
++#endif
+ }
+ 
+ template <typename Traits>
