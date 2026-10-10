@@ -175,6 +175,7 @@ jobs:
           python3 -B tools/check-ps5-dev-cache-contention.py
           python3 -B tools/check-gpu-native-diagnostics.py
           python3 -B tools/check-gpu-physical-copy-bounds-host.py
+          python3 -B tools/check-gpu-physical-copy-cpp-host.py
           python3 -B tools/check-gpu-memory-mapping-source.py
           python3 -B tools/check-sparse-index-boundary.py
           python3 -B tools/check-sparse-slot-reuse-host.py
