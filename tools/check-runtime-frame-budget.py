@@ -132,6 +132,13 @@ assert "installed.docked = home_game_docked_;" in home
 # account explicitly for overwritten samples, caller-chain special mode
 # remains bounded, and fast worker ends with its guest CPU thread.
 pc_source = read("headless/performance.cpp")
+# A full Sony region walk can issue up to 8192 synchronous syscalls per
+# lifecycle snapshot. It is not needed for the runtime JIT/GPU budget.
+assert "static std::atomic<bool> direct_region_scan_enabled{false};" in pc_source
+assert "unsigned scan_stop = scan_requested ? 0u : 4u;" in pc_source
+assert "if (scan_requested) {" in pc_source
+assert "sceKernelDirectMemoryQuery(scan.cursor" in pc_source
+assert "memory-region-scan.txt" in main
 assert "std::array<std::atomic<uintptr_t>, 8192> sampled_pcs{};" in pc_source
 assert "std::array<std::atomic<uintptr_t>, 65536> sampled_core_pcs{};" in pc_source
 assert "sampled_core_pcs[core_index % sampled_core_pcs.size()].store(" in pc_source

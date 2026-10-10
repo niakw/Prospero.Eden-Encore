@@ -932,6 +932,14 @@ int main(int argc, char** argv) {
             throw std::runtime_error("Vulkan is not available in this build yet. Select OpenGL in Settings > Video to play.");
 #endif
         Eden::Report("launch", Eden::BackendName(backend));
+#ifdef PS5_NATIVE
+        // The full diagnostic enumerates up to 8192 Sony regions at EACH
+        // lifecycle checkpoint. Opt in once per title with this marker;
+        // leaving it absent keeps the largest-free and owner accounting but
+        // eliminates the slow, unused synchronous kernel walk.
+        Eden::Performance::SetDirectMemoryRegionScanEnabled(
+            std::filesystem::exists(Eden::AppFile("memory-region-scan.txt")));
+#endif
         if (safe_launch) Eden::Report("launch", "Safe launch active: OpenGL, Handheld, 1x, Bilinear, 60 Hz, 1080p, mods off");
         const bool game = std::filesystem::is_regular_file(selected_game);
         if (!game) throw std::runtime_error("Selected ROM is no longer available");

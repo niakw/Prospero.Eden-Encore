@@ -43,6 +43,16 @@ assert 'largest_start=%lld largest_valid=%u free_upper=' in perf
 assert '#include "direct_pool_probe_policy.h"' in perf
 assert '#include "direct_pool_region_scan.h"' in perf
 assert '::Eden::DirectPool::RegionScan scan{total};' in perf
+assert 'static std::atomic<bool> direct_region_scan_enabled{false};' in perf
+assert 'direct_region_scan_enabled.load(std::memory_order_acquire)' in perf
+assert 'if (scan_requested) {' in perf
+assert 'unsigned scan_stop = scan_requested ? 0u : 4u;' in perf
+assert 'scan_requested && scan.valid' in perf
+assert '? static_cast<long long>(scan.FreeUpperBound()) : -1LL;' in perf
+assert 'memory-region-scan.txt' in (root / "headless/main.cpp").read_text()
+assert 'SetDirectMemoryRegionScanEnabled(' in (root / "headless/main.cpp").read_text()
+assert 'SetDirectMemoryRegionScanEnabled(bool enabled) noexcept;' in (root / "headless/performance.h").read_text()
+assert perf.index('if (scan_requested) {') < perf.index('sceKernelDirectMemoryQuery(scan.cursor')
 assert 'scan.Include(region.start, region.end)' in perf
 assert 'const long long free_upper = static_cast<long long>(scan.FreeUpperBound());' in perf
 assert 'scan_reached_extent=%u scan_stop=%u query_rc=%d short=%d' in perf
