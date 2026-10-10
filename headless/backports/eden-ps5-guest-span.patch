@@ -1,0 +1,32 @@
+--- a/src/core/memory.cpp
++++ b/src/core/memory.cpp
+@@ -339,10 +339,29 @@
+     }
+ 
+     [[nodiscard]] inline const u8* GetSpan(const VAddr addr, const std::size_t size) const noexcept {
++#ifdef PS5_NATIVE
++        if (!size || !AddressSpaceContains(*current_page_table, addr, size)) return nullptr;
++        const auto first = addr >> YUZU_PAGEBITS;
++        const auto last = (addr + size - 1) >> YUZU_PAGEBITS;
++        if (last != first) {
++            const auto [delta, type, block] = current_page_table->entries[first].PointerTypeBlock();
++            if (type != Common::PageType::Memory) return nullptr;
++            for (std::size_t page = first + 1; page <= last; ++page) {
++                const auto [p, t, b] = current_page_table->entries[page].PointerTypeBlock();
++                if (p != delta || t != type || b != block) return nullptr;
++            }
++        }
++        return GetPointerSilent(addr);
++#else
+         return (current_page_table->entries[addr >> YUZU_PAGEBITS].Block() == current_page_table->entries[(addr + size) >> YUZU_PAGEBITS].Block()) ? GetPointerSilent(addr) : nullptr;
++#endif
+     }
+     [[nodiscard]] inline u8* GetSpan(const VAddr addr, const std::size_t size) noexcept {
++#ifdef PS5_NATIVE
++        return const_cast<u8*>(std::as_const(*this).GetSpan(addr, size));
++#else
+         return (current_page_table->entries[addr >> YUZU_PAGEBITS].Block() == current_page_table->entries[(addr + size) >> YUZU_PAGEBITS].Block()) ? GetPointerSilent(addr) : nullptr;
++#endif
+     }
+ 
+     bool WriteBlockImpl(const Common::ProcessAddress addr, const void* buffer, const std::size_t size, bool unsafe) {
