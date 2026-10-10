@@ -22,9 +22,15 @@ assert "constexpr size_t gc_prefetch_limit = 40;" in declaration
 start = gc.index("                if (!dirty || !image.aliased_images.empty()")
 stop = gc.index("                bytes += image.unswizzled_size_bytes;", start)
 record = gc[start:stop + len("                bytes += image.unswizzled_size_bytes;")]
-assert record.count("return false;") == 1
+project_begin = gc.index("            const auto NoteProjectedEviction = [&]")
+project_end = gc.index("\n            };", project_begin) + len("\n            };")
+projected = gc[project_begin:project_end]
+assert "usage, ReclaimedBytes(image)" in projected
+assert "critical_memory : expected_memory" in projected
+assert "return NoteProjectedEviction(image);" in record
 assert record.count("return true;") == 1
-assert record.index("return false;") < record.index("return true;")
+assert record.index("return NoteProjectedEviction(image);") < record.index("return true;")
+assert gc.count("return NoteProjectedEviction(image);") == 2
 assert "gc_downloads.size() == gc_prefetch_limit" in record
 assert "image.unswizzled_size_bytes > 32_MiB - bytes" in record
 assert "image.unswizzled_size_bytes > 32_MiB) return false;" in record
@@ -52,8 +58,13 @@ cpp = r"""
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include "vulkan_gc_budget.h"
 
 using ImageId = std::size_t;
+using u64 = std::uint64_t;
+namespace Eden::Performance {
+bool KeepDirtyTextures() { return true; }
+}
 constexpr std::size_t operator""_MiB(unsigned long long size) {
     return static_cast<std::size_t>(size) * 1024 * 1024;
 }
@@ -98,6 +109,7 @@ struct Image {
     bool scaled = false;
     std::vector<ImageId> aliased_images;
     std::vector<ImageId> overlapping_images;
+    u64 reclaimed_bytes{};
     bool HasScaled() const { return scaled; }
     void DownloadMemory(Vulkan::StagingBufferRef& map,
                         const std::vector<ImageId>& copies) {
@@ -109,14 +121,25 @@ struct Image {
         }
     }
 };
+using ImageBase = Image;
 struct Scenario {
     std::vector<Image> images;
     explicit Scenario(std::vector<Image> values) : images(std::move(values)) {}
     void Test(std::size_t expected, std::vector<ImageId> ids,
-              std::size_t max_scanned = 40) {
+              std::size_t max_scanned = 40,
+              u64 initial_usage = 1000_MiB,
+              std::size_t expected_scanned = 0) {
         Vulkan::TextureCacheRuntime runtime;
 __PRODUCTION_DECLARATION__
         std::size_t bytes = 0;
+        u64 usage = initial_usage;
+        constexpr u64 critical_memory = 100_MiB;
+        constexpr u64 expected_memory = 80_MiB;
+        const bool aggressive_mode = true;
+        const auto ReclaimedBytes = [](const ImageBase& image) -> u64 {
+            return image.reclaimed_bytes;
+        };
+__PRODUCTION_PROJECTION__
         std::size_t scanned = 0;
         std::size_t remaining = max_scanned;
         for (ImageId id = 0; id < images.size(); ++id) {
@@ -127,7 +150,7 @@ __PRODUCTION_DECLARATION__
             const bool dirty = image.dirty;
             const auto scan_one = [&]() -> bool {
 __PRODUCTION_RECORD__
-                return false;
+                return NoteProjectedEviction(image);
             };
             if (scan_one()) break;
             assert(bytes <= 32_MiB);
@@ -135,6 +158,7 @@ __PRODUCTION_RECORD__
             assert(runtime.freed == 0);
         }
         assert(scanned <= max_scanned);
+        if (expected_scanned != 0) assert(scanned == expected_scanned);
         assert(gc_downloads.size() == expected);
         std::vector<ImageId> actual;
         for (auto& entry : gc_downloads) actual.push_back(entry.first);
@@ -210,6 +234,30 @@ int main() {
         Scenario(std::move(images)).Test(39, std::move(ids));
     }
     {
+        // The clean LRU image is deleted by Cleanup, reclaiming enough
+        // projected memory to remove pressure. No later dirty readback
+        // should be submitted speculatively.
+        std::vector<Image> images;
+        images.push_back(ImageFor(0, false));
+        images[0].reclaimed_bytes = 31_MiB;
+        for (ImageId i = 1; i < 10; ++i)
+            images.push_back(ImageFor(i, true));
+        Scenario(std::move(images)).Test(0, {}, 40, 130_MiB, 1);
+    }
+    {
+        // Two stages of pressure reduction: a clean eviction, then three
+        // eligible dirty readbacks. Stop at the third, before queuing a
+        // fourth readback that Cleanup need not execute.
+        std::vector<Image> images;
+        images.push_back(ImageFor(0, false));
+        images[0].reclaimed_bytes = 20_MiB;
+        for (ImageId i = 1; i <= 10; ++i) {
+            images.push_back(ImageFor(i, true));
+            images.back().reclaimed_bytes = 5_MiB;
+        }
+        Scenario(std::move(images)).Test(3, {1, 2, 3}, 40, 130_MiB, 4);
+    }
+    {
         std::vector<Image> images;
         std::vector<ImageId> ids;
         for (ImageId i = 0; i < 41; ++i) {
@@ -231,14 +279,16 @@ int main() {
 """
 cpp = cpp.replace("__PRODUCTION_DECLARATION__", declaration)
 cpp = cpp.replace("__PRODUCTION_RECORD__", record)
+cpp = cpp.replace("__PRODUCTION_PROJECTION__", projected)
 with tempfile.TemporaryDirectory(prefix="eden-vulkan-mixed-gc-") as temp:
     path = Path(temp) / "gc.cpp"
     executable = Path(temp) / "gc"
     path.write_text(cpp, encoding="utf-8")
     subprocess.run([compiler, "-std=c++20", "-O1", "-g", "-Wall", "-Wextra",
                     "-Werror", "-fsanitize=address,undefined",
-                    "-fno-sanitize-recover=all", str(path), "-o", str(executable)],
+                    "-fno-sanitize-recover=all", "-I", str(root / "headless"),
+                    str(path), "-o", str(executable)],
                    check=True, timeout=120)
     subprocess.run([str(executable)], check=True, timeout=180)
-print("PASS literal Vulkan mixed-GC scan: clean/alias/scaled/multisample/oversize skip, 20/40 batch, 32MiB, fenced release ASan/UBSan")
+print("PASS literal Vulkan mixed-GC scan: clean pressure projection, skips, 20/40 batch, 32MiB, fenced release ASan/UBSan")
 print("No Sony PS5 SDK, driver or frame-time measurements")
