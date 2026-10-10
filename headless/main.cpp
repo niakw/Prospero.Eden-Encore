@@ -67,6 +67,7 @@
 #include "prosperoeden/frontend.h"
 #include "prosperoeden/version.h"
 extern "C" void ps5_opengl_heap_snapshot(const char*, unsigned);
+extern "C" std::size_t eden_heap_release_current_tcache(void);
 extern "C" std::int64_t sceKernelGetDirectMemorySize();
 extern "C" int sceNetInit();
 #else
@@ -2168,6 +2169,13 @@ int main(int argc, char** argv) {
             }
         }
         passed("core_destroyed");
+#ifdef PS5_NATIVE
+        // This thread is the only owner of its TLS allocation cache. Guest
+        // workers have already joined and returned THEIR private cached blocks.
+        // Drain solely the already-freed small blocks; do not unmap Sony mspaces.
+        const std::size_t tcache_drained = eden_heap_release_current_tcache();
+        std::printf("EDEN_HEAP_TITLE_CACHE_DRAIN bytes=%zu\n", tcache_drained);
+#endif
         if (devices && pad) {
             pad.reset();
             LOG_INFO(Frontend, "EDEN_DEVICE_FRONTEND_PASS");

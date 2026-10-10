@@ -205,8 +205,11 @@ static void eden_heap_flush(struct eden_heap_thread *self) {
   self->pending = 0;
 }
 
-static void eden_heap_thread_exit(void *value) {
-  struct eden_heap_thread *self = value;
+/* Owner-thread only. Cache entries are ALREADY freed to the application;
+ * drain makes their space reusable by other guest/game threads without
+ * releasing any live allocation, mspace or direct physical backing. */
+static size_t eden_heap_drain_thread_cache(struct eden_heap_thread *self) {
+  const size_t drained = atomic_load_explicit(&self->cached_bytes, memory_order_relaxed);
   for (unsigned bin = 0; bin < EDEN_TCACHE_BINS; ++bin) {
     while (self->bins[bin] != NULL) {
       void *block = self->bins[bin];
@@ -216,8 +219,23 @@ static void eden_heap_thread_exit(void *value) {
     self->counts[bin] = 0;
   }
   atomic_store_explicit(&self->cached_bytes, 0, memory_order_relaxed);
+  return drained;
+}
+
+static void eden_heap_thread_exit(void *value) {
+  struct eden_heap_thread *self = value;
+  (void)eden_heap_drain_thread_cache(self);
   eden_heap_flush(self);
   atomic_store_explicit(&eden_heap_thread_used[self - eden_heap_threads], 0, memory_order_release);
+}
+
+/* Called only by the surviving runner/launcher thread after guest teardown.
+ * Workers drain through their TLS destructor; never inspect their private
+ * free-lists from another thread, and never unmap their backing. */
+size_t eden_heap_release_current_tcache(void) {
+  if (!eden_heap_arena_key_valid) return 0;
+  struct eden_heap_thread *self = pthread_getspecific(eden_heap_arena_key);
+  return self != NULL ? eden_heap_drain_thread_cache(self) : 0;
 }
 
 unsigned eden_heap_arenas_created(void) {
