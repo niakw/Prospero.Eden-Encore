@@ -98,24 +98,33 @@ atomic_forward=(r/'headless/backports/eden-ps5-gpu-atomic-forward-table.patch').
 for token in ('static u32 AtomicLoadPhysical(', 'static void AtomicStorePhysical(',
               'static u32 AtomicLoadContinuity(', 'static void AtomicStoreContinuity(',
               'static VAddr AtomicLoadBacking(', 'static void AtomicStoreBacking(',
-              'std::atomic_ref<const u32>', 'std::atomic_ref<u32>',
-              'std::atomic_ref<const VAddr>', 'std::atomic_ref<VAddr>',
+              '__atomic_load_n(&page.compressed_physical_ptr, __ATOMIC_ACQUIRE)',
+              '__atomic_store_n(&page.compressed_physical_ptr, value, __ATOMIC_RELEASE)',
+              '__atomic_load_n(&page.continuity_tracker, __ATOMIC_RELAXED)',
+              '__atomic_store_n(&page.continuity_tracker, value, __ATOMIC_RELAXED)',
+              '__atomic_load_n(&page.cpu_backing_address, __ATOMIC_ACQUIRE)',
+              '__atomic_store_n(&page.cpu_backing_address, value, __ATOMIC_RELEASE)',
               'void InsertCPUBacking(size_t page_index'):
     assert token in atomic_forward, token
 assert 'constexpr void InsertCPUBacking' in atomic_forward  # removed by this overlay
 assert '+    void InsertCPUBacking(size_t page_index' in atomic_forward
 assert '+#ifdef PS5_NATIVE' not in atomic_forward  # all including header inliners must be atomic
-assert atomic_forward.count('std::atomic_ref<') == 6
+assert atomic_forward.count('__atomic_load_n(') == 3
+assert atomic_forward.count('__atomic_store_n(') == 3
+assert 'std::atomic_ref' not in atomic_forward
 assert 'validate_ps5_gpu_atomic_forward_table' in apply
 assert apply.index('eden-ps5-gpu-reverse-inline-bounds.patch') < apply.index(
     'eden-ps5-gpu-atomic-forward-table.patch')
 reverse_atomic=(r/'headless/backports/eden-ps5-gpu-atomic-reverse-table.patch').read_text()
 for token in ('static u32 AtomicLoadReverse(', 'static void AtomicStoreReverse(',
-              'std::atomic_ref<const u32>(slot).load(std::memory_order_acquire)',
-              'std::atomic_ref<u32>(slot).store(value, std::memory_order_release)',
+              '__atomic_load_n(&slot, __ATOMIC_ACQUIRE)',
+              '__atomic_store_n(&slot, value, __ATOMIC_RELEASE)',
               'AtomicStoreReverse(base_dev, 0)',
               'AtomicLoadReverse(compressed_device_addr[(address >> page_bits)])'):
     assert token in reverse_atomic, token
+assert reverse_atomic.count('__atomic_load_n(') == 1
+assert reverse_atomic.count('__atomic_store_n(') == 2  # Includes AtomicStoreBacking context from forward patch
+assert 'std::atomic_ref' not in reverse_atomic
 assert 'validate_ps5_gpu_atomic_reverse_table' in apply
 assert apply.index('eden-ps5-gpu-atomic-forward-table.patch') < apply.index(
     'eden-ps5-gpu-atomic-reverse-table.patch')
