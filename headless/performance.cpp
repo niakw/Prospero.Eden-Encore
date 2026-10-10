@@ -755,9 +755,14 @@ void ReportJitCodeState(const char* phase) {
 #endif
 }
 
-// Full kernel region enumeration is restricted to explicit lifecycle checkpoints.
-// GPU frame reports use the last already-confirmed largest-free measurement,
-// never a synchronous walk of potentially 8192 direct-memory regions.
+// A Sony region enumeration may cost up to 8192 synchronous kernel calls.
+// Do not make every menu -> game -> menu cycle pay for developer diagnostics.
+// Explicit opt-in is checked once at title launch; never from a frame callback.
+static std::atomic<bool> direct_region_scan_enabled{false};
+void SetDirectMemoryRegionScanEnabled(bool enabled) noexcept {
+    direct_region_scan_enabled.store(enabled, std::memory_order_release);
+}
+// GPU frame reports never enumerate kernel direct-memory regions.
 void ReportDirectMemoryState(const char* phase) {
 #ifdef PS5_NATIVE
     const std::int64_t total = sceKernelGetDirectMemorySize();
@@ -777,21 +782,27 @@ void ReportDirectMemoryState(const char* phase) {
     // an upper bound, NOT allocatable RAM or a GPU/JIT admission value.
     ::Eden::DirectPool::RegionScan scan{total};
     int query_rc = 0;
-    unsigned scan_stop = 0; // 0=end-of-extent, 1=query-stop, 2=invalid, 3=record-cap
-    while (scan.cursor < total && scan.regions < 8192) {
-        DirectMemoryRegion region{};
-        query_rc = sceKernelDirectMemoryQuery(scan.cursor, 1, &region, sizeof(region));
-        if (query_rc != 0) {
-            scan_stop = 1;
-            break;
+    const bool scan_requested = direct_region_scan_enabled.load(std::memory_order_acquire);
+    // 4=disabled by default; owner ledger and largest free are still reported.
+    unsigned scan_stop = scan_requested ? 0u : 4u;
+    if (scan_requested) {
+        // 0=end-of-extent, 1=query-stop, 2=invalid, 3=record-cap.
+        while (scan.cursor < total && scan.regions < 8192) {
+            DirectMemoryRegion region{};
+            query_rc = sceKernelDirectMemoryQuery(scan.cursor, 1, &region, sizeof(region));
+            if (query_rc != 0) {
+                scan_stop = 1;
+                break;
+            }
+            if (!scan.Include(region.start, region.end)) {
+                scan_stop = 2;
+                break;
+            }
         }
-        if (!scan.Include(region.start, region.end)) {
-            scan_stop = 2;
-            break;
-        }
+        if (!scan_stop && !scan.ReachedExtent()) scan_stop = 3;
     }
-    if (!scan_stop && !scan.ReachedExtent()) scan_stop = 3;
-    const long long free_upper = static_cast<long long>(scan.FreeUpperBound());
+    const long long free_upper = scan_requested
+        ? static_cast<long long>(scan.FreeUpperBound()) : -1LL;
     std::size_t jit_reserved = 0, jit_committed = 0;
     ::Common::SparseJitUsage(&jit_reserved, &jit_committed);
     // Native GPU/guest/CPU use the SAME kernel-exposed direct pool (12 GiB
@@ -843,7 +854,8 @@ void ReportDirectMemoryState(const char* phase) {
                 phase, largest_rc, static_cast<long long>(total),
                 largest_valid ? largest : size_t{0},
                 static_cast<long long>(largest_start), unsigned(largest_valid), free_upper,
-                scan.regions, int(scan.valid), unsigned(scan.ReachedExtent()),
+                scan.regions, int(scan_requested && scan.valid),
+                unsigned(scan_requested && scan.ReachedExtent()),
                 scan_stop, query_rc, int(graphics_memory_short.load(std::memory_order_relaxed)));
 #else
     (void)phase;

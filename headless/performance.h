@@ -32,6 +32,9 @@ bool QueryLargestDirectMemoryBlock(std::size_t* largest) noexcept;
 void ResetDirectMemoryProbeForTitle() noexcept;
 // Startup/shutdown-only snapshot: no direct-memory region scan in the frame loop.
 void ReportDirectMemoryState(const char* phase);
+// The 8192-call native kernel region walk is expensive and diagnostic-only.
+// Opt in with memory-region-scan.txt; always keep cheap owner/largest-free data.
+void SetDirectMemoryRegionScanEnabled(bool enabled) noexcept;
 // Lightweight per-stage actual Dynarmic RX/RW ownership; no kernel VA
 // enumeration or GPU frame-loop work.
 void ReportJitCodeState(const char* phase);
