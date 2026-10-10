@@ -46,5 +46,44 @@ with tempfile.TemporaryDirectory(prefix="eden-ps5-window-test-") as directory:
     assert sample["direct_memory_short"] == 1
     assert sample["jit_ms"] > 0 and sample["guest_ipc_ms"] > 0
     assert max(x["committed"] for x in new.sparse) == 4194304
+    # Actual archived PS5 stderr often prepends logger/timestamp metadata
+    # to each native stdout marker. It must still parse all nine streams.
+    prefixed = Path(directory)/"timestamped.log"
+    prefixed.write_text("".join(
+        f"2026-10-10T19:04:05.002Z [ProsperoEden] {line}\n"
+        for line in (window(1, True)+window(2, True)).splitlines()
+    ), encoding="utf-8")
+    wrapped = module.Trace.load(prefixed)
+    assert wrapped.windows() == 2
+    assert wrapped.report_window(1)["jit_blocks"] == sample["jit_blocks"]
+    # One missing CPU point cannot be shifted onto the next video sample;
+    # summary FPS remains available without fabricated attribution.
+    missing = Path(directory)/"missing-cpu.log"
+    missing.write_text((window(1, True)+window(2, True)).replace(
+        "EDEN_PERF_CPU_POINT core=2 cpu_ns=2000000", "DROPPED_SNAPSHOT"
+    ), encoding="utf-8")
+    incomplete = module.Trace.load(missing)
+    assert len(incomplete.frames) == 2 and incomplete.windows() == 0
+    # An optional memory probe is NOT necessarily frame-aligned if sparse.
+    partial = Path(directory)/"partial-memory.log"
+    partial.write_text((window(1, True)+window(2, True)).replace(
+        "EDEN_MEMORY_LIVE frame=22 largest_last_confirmed=67108864 short=1", ""
+    ), encoding="utf-8")
+    unaligned = module.Trace.load(partial)
+    assert unaligned.windows() == 2
+    assert unaligned.report_window(1)["direct_free_mib"] == -1
+    assert unaligned.report_window(1)["direct_memory_short"] == -1
+    # A worker restarting between titles resets cumulative counters:
+    # do not turn a negative CPU/GPU delta into a zero-time hypothesis.
+    reset = Path(directory)/"reset-gpu.log"
+    reset.write_text((window(1, True)+window(2, True)).replace(
+        "EDEN_DEV_GPU frame=22 cpu_ns=200000000", "EDEN_DEV_GPU frame=22 cpu_ns=100000"
+    ), encoding="utf-8")
+    try:
+        module.Trace.load(reset).report_window(1)
+    except ValueError as error:
+        assert "reset" in str(error)
+    else:
+        raise AssertionError("Reset across game session was treated as valid timing")
 print("PASS: backward-compatible 5s PS5 GPU/guest/JIT metrics and confirmed pressure headroom")
 print("NO PS5 firmware execution, SDK build or measured FPS gain")
