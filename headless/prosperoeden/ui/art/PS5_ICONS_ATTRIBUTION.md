@@ -1,8 +1,8 @@
 # Third-party DualSense controller artwork
 
-**Product:** PS5 Button Icons and Controls  
-**Creator:** Zacksly  
-**Source:** https://zacksly.itch.io  
+- **Product:** PS5 Button Icons and Controls
+- **Creator:** Zacksly
+- **Source:** https://zacksly.itch.io
 **License:** [Creative Commons Attribution 3.0 Unported (CC BY 3.0)](https://creativecommons.org/licenses/by/3.0/)
 
 The user-supplied archive's `LICENSE.txt` permits redistribution and
