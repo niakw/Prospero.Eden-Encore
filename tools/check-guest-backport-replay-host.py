@@ -65,11 +65,11 @@ with tempfile.TemporaryDirectory(prefix="eden-pinned-guest-replay-") as work:
     for name in patch_names:
         patch = root / "headless/backports" / name
         subprocess.run(
-            ["git", "apply", "--check", "--no-ext-diff", str(patch)],
+            ["git", "apply", "--check", str(patch)],
             cwd=base, check=True, timeout=20,
         )
         subprocess.run(
-            ["git", "apply", "--no-ext-diff", str(patch)],
+            ["git", "apply", str(patch)],
             cwd=base, check=True, timeout=20,
         )
     rewritten = path.read_text()
