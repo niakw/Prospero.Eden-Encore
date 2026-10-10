@@ -188,8 +188,8 @@
 +    };
 +    // On PS5, GPU remap writers publish field changes concurrently with
 +    // renderer reads. atomic_ref leaves SparseLargeVector's trivially-copyable
-+    // 16-byte record and its native physical layout unchanged. On other
-+    // platforms the accessors optimize to the original scalar reads/writes.
++    // 16-byte record and its native physical layout unchanged. All C++
++    // translation units use the same atomic publication protocol.
 +    static u32 AtomicLoadPhysical(const TrackedEntry& page) noexcept {
 +        return std::atomic_ref<const u32>(page.compressed_physical_ptr).load(std::memory_order_acquire);
 +    }
