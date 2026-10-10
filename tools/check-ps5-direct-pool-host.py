@@ -13,6 +13,7 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 header = (root / "headless/direct_pool_accounting.h").read_text()
 probe_policy = (root / "headless/direct_pool_probe_policy.h").read_text()
+region_policy = (root / "headless/direct_pool_region_scan.h").read_text()
 perf = (root / "headless/performance.cpp").read_text()
 heap = (root / "headless/heap_arenas.inc").read_text()
 pages = (root / "src/memory_pages.cpp").read_text()
@@ -33,6 +34,13 @@ for token in (
     assert token in perf, f"Missing physical pool provenance: {token}"
 assert "SaturatingAdd" in header
 assert '#include "direct_pool_probe_policy.h"' in perf
+assert '#include "direct_pool_region_scan.h"' in perf
+assert '::Eden::DirectPool::RegionScan scan{total};' in perf
+assert 'scan.Include(region.start, region.end)' in perf
+assert 'const long long free_upper = static_cast<long long>(scan.FreeUpperBound());' in perf
+assert 'scan_reached_extent=%u scan_stop=%u query_rc=%d short=%d' in perf
+assert 'scan.ReachedExtent()' in perf
+assert 'NEVER allocatable' not in region_policy or 'NEVER allocatable' in region_policy
 assert '::Eden::DirectPool::ProbeIntervalNs(' in perf
 assert 'kProbeHighHeadroomBytes = 4ULL << 30' in probe_policy
 assert "std::numeric_limits<std::uint64_t>::max()" in header
@@ -65,6 +73,7 @@ code = r"""
 #include <limits>
 #include "direct_pool_accounting.h"
 #include "direct_pool_probe_policy.h"
+#include "direct_pool_region_scan.h"
 int main() {
     using namespace Eden::DirectPool;
     constexpr std::uint64_t MiB = 1024ULL * 1024;
@@ -77,6 +86,25 @@ int main() {
     static_assert(ProbeIntervalNs(true, 0, 4*GiB-MiB) == kProbeFastNs);
     static_assert(ProbeIntervalNs(true, 0, 4*GiB) == kProbeHighHeadroomNs);
     static_assert(ProbeIntervalNs(true, 0, 8*GiB) == kProbeHighHeadroomNs);
+    // Interrupted enumeration must not become a fictional pool budget.
+    RegionScan partial{12*GiB};
+    assert(partial.Include(1*GiB, 2*GiB));
+    assert(partial.Include(4*GiB, 5*GiB));
+    assert(partial.regions == 2);
+    assert(partial.FreeUpperBound() == 10*GiB);
+    assert(!partial.ReachedExtent()); // query stopped in an unmapped tail
+    RegionScan overlap{12*GiB};
+    assert(overlap.Include(1*GiB, 2*GiB));
+    assert(!overlap.Include(1*GiB, 3*GiB));
+    assert(!overlap.valid && overlap.FreeUpperBound() == -1);
+    RegionScan bad_extent{12*GiB};
+    assert(!bad_extent.Include(11*GiB, 13*GiB));
+    assert(bad_extent.FreeUpperBound() == -1);
+    RegionScan monotone{12*GiB};
+    assert(monotone.Include(0, 2*GiB));
+    assert(monotone.Include(3*GiB, 12*GiB));
+    assert(monotone.ReachedExtent());
+    assert(monotone.FreeUpperBound() == 1*GiB);
     // 16 GiB physically installed in PS5 is NOT what firmware gives Encore.
     // Old real FW 13.60 console directly exposed 12 GiB, and its Encore
     // heap committed 1280 MiB after game exit. Not Sony OS-reserved memory.
@@ -124,4 +152,5 @@ with tempfile.TemporaryDirectory(prefix="eden-direct-pool-") as work:
     subprocess.run([str(exe)], check=True, timeout=120)
 print("PASS kernel 12-GiB direct pool vs installed 16-GiB distinction, 1280-MiB Encore heap ledger, ASan/UBSan")
 print("Unclassified bytes are NOT confirmed free RAM; no physical Sony mspace unmapping")
+print("PASS kernel direct-memory region scan: incomplete enumeration cannot claim full physical pool")
 print("PASS 100-ms pressure/unknown probe cadence, 250-ms only for >=4 GiB confirmed contiguous headroom")

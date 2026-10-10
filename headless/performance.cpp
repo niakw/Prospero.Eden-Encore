@@ -2,6 +2,7 @@
 #include "performance.h"
 #include "direct_pool_accounting.h"
 #include "direct_pool_probe_policy.h"
+#include "direct_pool_region_scan.h"
 #include "hle_counters.h"
 #include "gpu_fault_rate_limit.h"
 #include "crash_report.h"
@@ -763,32 +764,26 @@ void ReportDirectMemoryState(const char* phase) {
     const int largest_rc = sceKernelAvailableDirectMemorySize(
         0, total, 0x4000, &largest_start, &largest);
 
-    // This list can be incomplete if the kernel refuses enumeration. Therefore
-    // taken is only a lower bound and total-taken only an UPPER bound on free RAM;
-    // never feed that diagnostic estimate back into the allocator or renderer.
-    std::int64_t taken_lower = 0;
-    std::int64_t cursor = 0;
-    unsigned regions = 0;
-    bool valid = true;
-    while (cursor < total && regions < 8192) {
+    // An early kernel stop can mean EOF or error; never equate structurally
+    // valid records with a complete scan. Even a valid free_upper is only
+    // an upper bound, NOT allocatable RAM or a GPU/JIT admission value.
+    ::Eden::DirectPool::RegionScan scan{total};
+    int query_rc = 0;
+    unsigned scan_stop = 0; // 0=end-of-extent, 1=query-stop, 2=invalid, 3=record-cap
+    while (scan.cursor < total && scan.regions < 8192) {
         DirectMemoryRegion region{};
-        if (sceKernelDirectMemoryQuery(cursor, 1, &region, sizeof(region)) != 0)
-            break;
-        if (region.start < 0 || region.start < cursor || region.end <= region.start ||
-            region.end > total) {
-            valid = false;
+        query_rc = sceKernelDirectMemoryQuery(scan.cursor, 1, &region, sizeof(region));
+        if (query_rc != 0) {
+            scan_stop = 1;
             break;
         }
-        const std::int64_t span = region.end - region.start;
-        if (taken_lower > total - span) {
-            valid = false;
+        if (!scan.Include(region.start, region.end)) {
+            scan_stop = 2;
             break;
         }
-        taken_lower += span;
-        cursor = region.end;
-        ++regions;
     }
-    const long long free_upper = valid ? static_cast<long long>(total - taken_lower) : -1LL;
+    if (!scan_stop && !scan.ReachedExtent()) scan_stop = 3;
+    const long long free_upper = static_cast<long long>(scan.FreeUpperBound());
     std::size_t jit_reserved = 0, jit_committed = 0;
     ::Common::SparseJitUsage(&jit_reserved, &jit_committed);
     // Native GPU/guest/CPU use the SAME kernel-exposed direct pool (12 GiB
@@ -835,11 +830,13 @@ void ReportDirectMemoryState(const char* phase) {
                 unsigned(account.within_extent), unsigned(largest_rc == 0),
                 largest_rc == 0 ? largest : std::size_t{0});
     std::printf("EDEN_MEMORY_LAYOUT phase=%s largest_rc=%d total=%lld largest=%zu "
-                "largest_start=%lld free_upper=%lld scanned_regions=%u scan_valid=%d short=%d\n",
+                "largest_start=%lld free_upper=%lld scanned_regions=%u scan_valid=%d "
+                "scan_reached_extent=%u scan_stop=%u query_rc=%d short=%d\n",
                 phase, largest_rc, static_cast<long long>(total),
                 largest_rc == 0 ? largest : size_t{0},
                 static_cast<long long>(largest_start), free_upper,
-                regions, int(valid), int(graphics_memory_short.load(std::memory_order_relaxed)));
+                scan.regions, int(scan.valid), unsigned(scan.ReachedExtent()),
+                scan_stop, query_rc, int(graphics_memory_short.load(std::memory_order_relaxed)));
 #else
     (void)phase;
 #endif
