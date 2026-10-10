@@ -56,6 +56,10 @@
 #include "video_core/rasterizer_interface.h"
 #endif
 #ifdef PS5_NATIVE
+// ResetTitleCounters is defined here, not in gpu_failure.h. Keep its
+// declaration explicit so the next native build does not depend on an
+// accidental transitive include from another frontend header.
+#include "gpu_fault_rate_limit.h"
 #include "native_directory.h"
 #include "cache_budget.h"
 #include "performance.h"
