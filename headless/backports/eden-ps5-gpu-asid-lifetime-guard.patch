@@ -1,0 +1,165 @@
+--- a/src/core/device_memory_manager.inc
++++ b/src/core/device_memory_manager.inc
+@@ -242,6 +242,18 @@
+         return;
+     }
+ #endif
++    // Keep the process alive in this registry during GPU map publication.
++    // Lock order: registry (shared) before mapping_guard. Registration and
++    // unregister use the registry's exclusive lock, never mapping_guard.
++    std::shared_lock registry_lk(process_registry_guard);
++    if (asid.id >= registered_processes.size() || registered_processes[asid.id] == nullptr) {
++#ifdef PS5_NATIVE
++        if (::Eden::GpuFault::ShouldReportBadMapRange())
++            LOG_WARNING(HW_Memory, "EDEN_GPU_MAP_BAD_ASID id={} registered={}",
++                        asid.id, registered_processes.size());
++#endif
++        return;
++    }
+     Core::Memory::Memory* process_memory = registered_processes[asid.id];
+     size_t start_page_d = address >> Memory::YUZU_PAGEBITS;
+     size_t num_pages = Common::AlignUp(size, Memory::YUZU_PAGESIZE) >> Memory::YUZU_PAGEBITS;
+@@ -421,6 +433,12 @@
+ template <typename Traits>
+ void DeviceMemoryManager<Traits>::TrackContinuityImpl(DAddr address, VAddr virtual_address,
+                                                       size_t size, Asid asid) {
++    // Called with process_registry_guard held by Map or TrackContinuity.
++    // Do not decode stale ASIDs or underflow/overflow page intervals.
++    if (size == 0 || address >= device_as_size || size > device_as_size - address ||
++        virtual_address >= guest_as_size || size > guest_as_size - virtual_address ||
++        asid.id >= registered_processes.size() || registered_processes[asid.id] == nullptr)
++        return;
+     Core::Memory::Memory* process_memory = registered_processes[asid.id];
+     size_t start_page_d = address >> Memory::YUZU_PAGEBITS;
+     size_t num_pages = Common::AlignUp(size, Memory::YUZU_PAGESIZE) >> Memory::YUZU_PAGEBITS;
+@@ -815,6 +833,7 @@
+ 
+ template <typename Traits>
+ Asid DeviceMemoryManager<Traits>::RegisterProcess(Memory::Memory* memory_device_inter) {
++    std::unique_lock registry_lk(process_registry_guard);
+     size_t new_id{};
+     if (!id_pool.empty()) {
+         new_id = id_pool.front();
+@@ -829,12 +848,19 @@
+ 
+ template <typename Traits>
+ void DeviceMemoryManager<Traits>::UnregisterProcess(Asid asid) {
++    std::unique_lock registry_lk(process_registry_guard);
++    // A duplicated unregister previously enqueued the same ASID twice,
++    // permitting two live processes to share one registry index.
++    if (asid.id >= registered_processes.size() || registered_processes[asid.id] == nullptr)
++        return;
+     registered_processes[asid.id] = nullptr;
+     id_pool.push_front(asid.id);
+ }
+ 
+ template <typename Traits>
+ void DeviceMemoryManager<Traits>::UpdatePagesCachedCountNoLock(DAddr addr, size_t size, s32 delta) {
++    if (size == 0 || addr >= device_as_size || size > device_as_size - addr)
++        return;
+     u64 uncache_begin = 0;
+     u64 cache_begin = 0;
+     u64 uncache_bytes = 0;
+@@ -845,7 +871,8 @@
+     const size_t page_end = Common::DivCeil(addr + size, Memory::YUZU_PAGESIZE);
+     size_t page = addr >> Memory::YUZU_PAGEBITS;
+     auto [asid, base_vaddress] = ExtractCPUBacking(page);
+-    auto* memory_device_inter = registered_processes[asid.id];
++    auto* memory_device_inter = asid.id < registered_processes.size()
++        ? registered_processes[asid.id] : nullptr;
+     const auto release_pending = [&] {
+         if (uncache_bytes > 0) {
+             if (memory_device_inter != nullptr) {
+@@ -868,13 +895,15 @@
+         auto [asid_2, vpage] = ExtractCPUBacking(page);
+         vpage >>= Memory::YUZU_PAGEBITS;
+ 
+-        if (vpage == 0) [[unlikely]] {
++        if (vpage == 0 || asid_2.id >= registered_processes.size() ||
++            registered_processes[asid_2.id] == nullptr) [[unlikely]] {
+             release_pending();
+             continue;
+         }
+ 
+         if (asid.id != asid_2.id) [[unlikely]] {
+             release_pending();
++            asid = asid_2;
+             memory_device_inter = registered_processes[asid_2.id];
+         }
+ 
+@@ -894,8 +923,9 @@
+             }
+             uncache_bytes += Memory::YUZU_PAGESIZE;
+         } else if (uncache_bytes > 0) {
+-            MarkRegionCaching(memory_device_inter, uncache_begin << Memory::YUZU_PAGEBITS,
+-                              uncache_bytes, false);
++            if (memory_device_inter != nullptr)
++                MarkRegionCaching(memory_device_inter, uncache_begin << Memory::YUZU_PAGEBITS,
++                                  uncache_bytes, false);
+             uncache_bytes = 0;
+         }
+         if (count.load(std::memory_order::relaxed) == 1 && delta > 0) {
+@@ -904,8 +934,9 @@
+             }
+             cache_bytes += Memory::YUZU_PAGESIZE;
+         } else if (cache_bytes > 0) {
+-            MarkRegionCaching(memory_device_inter, cache_begin << Memory::YUZU_PAGEBITS,
+-                              cache_bytes, true);
++            if (memory_device_inter != nullptr)
++                MarkRegionCaching(memory_device_inter, cache_begin << Memory::YUZU_PAGEBITS,
++                                  cache_bytes, true);
+             cache_bytes = 0;
+         }
+     }
+@@ -914,6 +945,9 @@
+ 
+ template <typename Traits>
+ void DeviceMemoryManager<Traits>::UpdatePagesCachedCount(DAddr addr, size_t size, s32 delta) {
++    if (size == 0 || addr >= device_as_size || size > device_as_size - addr)
++        return;
++    std::shared_lock registry_lk(process_registry_guard);
+     Common::ScopedRangeLock lk(counter_guard, addr, size);
+     UpdatePagesCachedCountNoLock(addr, size, delta);
+ }
+@@ -923,6 +957,11 @@
+     if (ranges.empty()) {
+         return;
+     }
++    // Reject malformed GPU ranges before any lock or wrapped addr+size.
++    for (const auto& [start, length] : ranges)
++        if (length && (start >= device_as_size || length > device_as_size - start))
++            return;
++    std::shared_lock registry_lk(process_registry_guard);
+     // Make a local copy and sort by address
+     std::vector<std::pair<DAddr, size_t>> tmp(ranges.begin(), ranges.end());
+     std::sort(tmp.begin(), tmp.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+--- a/src/core/device_memory_manager.h
++++ b/src/core/device_memory_manager.h
+@@ -12,6 +12,7 @@
+ #include <deque>
+ #include <memory>
+ #include <mutex>
++#include <shared_mutex>
+ #include <vector>
+ #include <span>
+ 
+@@ -63,6 +64,8 @@
+ 
+     void TrackContinuityImpl(DAddr address, VAddr virtual_address, size_t size, Asid asid);
+     void TrackContinuity(DAddr address, VAddr virtual_address, size_t size, Asid asid) {
++        // Stable registered process across the whole continuity update.
++        std::shared_lock registry_lk(process_registry_guard);
+         std::scoped_lock lk(mapping_guard);
+         TrackContinuityImpl(address, virtual_address, size, asid);
+     }
+@@ -226,6 +229,10 @@
+ 
+     // Process memory interfaces
+ 
++    // Registration is infrequent. A shared lock protects Map/continuity
++    // and cache bookkeeping against an ASID being unregistered/reused.
++    // None of the hot GPU ReadBlock/WriteBlock/GetSpan paths acquire it.
++    mutable std::shared_mutex process_registry_guard;
+     std::deque<size_t> id_pool;
+     std::deque<Memory::Memory*> registered_processes;
+ 
