@@ -1,0 +1,169 @@
+--- a/src/core/device_memory_manager.inc
++++ b/src/core/device_memory_manager.inc
+@@ -268,7 +268,7 @@
+ #endif
+ #ifdef PS5_NATIVE
+         // Map may replace an existing GPU-page mapping without an Unmap call.
+-        // The previous forward page is NOT sufficient: unlink its reverse
++        // The previous forward page is NOT sufficient: unlink its AtomicLoadReverse(reverse)
+         // physical->GPU association before installing the replacement.
+         const u32 device_page = static_cast<u32>(start_page_d + i);
+         auto& old_entry = tracked_entries.GetUnchecked(start_page_d + i);
+@@ -278,7 +278,7 @@
+         if (previous_physical != 0 && previous_physical != replacement_physical)
+             replaced_gpu_mapping = true;
+         if (previous_physical != 0 && previous_physical == replacement_physical) {
+-            // Re-registering the same backing must not add a second reverse
++            // Re-registering the same backing must not add a second AtomicLoadReverse(reverse)
+             // address to MultiAddressContainer. Refresh its CPU-side alias.
+             AtomicStoreContinuity(old_entry, 0);
+             AtomicStoreBacking(old_entry, 0);
+@@ -287,28 +287,28 @@
+         }
+         if (previous_physical != 0) {
+             u32& reverse = compressed_device_addr.GetAndFault(previous_physical - 1U);
+-            if ((reverse >> MULTI_FLAG_BITS) == 0) {
++            if ((AtomicLoadReverse(reverse) >> MULTI_FLAG_BITS) == 0) {
+-                if (reverse == device_page) {
++                if (AtomicLoadReverse(reverse) == device_page) {
+-                    reverse = 0;
++                    AtomicStoreReverse(reverse, 0);
+                     ::Eden::GpuFault::remap_replaced.fetch_add(1, std::memory_order_relaxed);
+                 } else if (::Eden::GpuFault::ShouldReportRemapMismatch()) {
+                     LOG_WARNING(HW_Memory,
+                         "EDEN_GPU_REMAP_REVERSE_MISMATCH guest={:#x} old_phys_page={:#x} reverse={:#x}",
+-                        device_page, previous_physical - 1U, reverse);
++                        device_page, previous_physical - 1U, AtomicLoadReverse(reverse));
+                 }
+             } else {
+-                if (!impl->multi_dev_address.Contains(device_page, reverse & MULTI_MASK)) {
++                if (!impl->multi_dev_address.Contains(device_page, AtomicLoadReverse(reverse) & MULTI_MASK)) {
+                     if (::Eden::GpuFault::ShouldReportRemapMismatch())
+                         LOG_WARNING(HW_Memory,
+                             "EDEN_GPU_REMAP_MULTI_MISSING guest={:#x} old_phys_page={:#x} head={:#x}",
+-                            device_page, previous_physical - 1U, reverse & MULTI_MASK);
++                            device_page, previous_physical - 1U, AtomicLoadReverse(reverse) & MULTI_MASK);
+                 } else {
+                     const auto [multiple, first] = impl->multi_dev_address.Unregister(
+-                        device_page, reverse & MULTI_MASK);
++                        device_page, AtomicLoadReverse(reverse) & MULTI_MASK);
+                     if (!multiple)
+-                        reverse = first != 0 ? impl->multi_dev_address.ReleaseEntry(first) : 0;
++                        AtomicStoreReverse(reverse, first != 0 ? impl->multi_dev_address.ReleaseEntry(first) : 0);
+                     else
+-                        reverse = first | MULTI_FLAG;
++                        AtomicStoreReverse(reverse, first | MULTI_FLAG);
+                     ::Eden::GpuFault::remap_replaced.fetch_add(1, std::memory_order_relaxed);
+                 }
+             }
+@@ -327,16 +327,16 @@
+         AtomicStoreBacking(valid, 0);
+         AtomicStorePhysical(valid, phys_addr);
+         InsertCPUBacking(start_page_d + i, new_vaddress, asid);
+-        const u32 base_dev = compressed_device_addr[phys_addr - 1U];
++        const u32 base_dev = AtomicLoadReverse(compressed_device_addr[phys_addr - 1U]);
+         const u32 new_dev = static_cast<u32>(start_page_d + i);
+         if (base_dev == 0) [[likely]] {
+-            compressed_device_addr.GetAndFault(phys_addr - 1U) = new_dev;
++            AtomicStoreReverse(compressed_device_addr.GetAndFault(phys_addr - 1U), new_dev);
+             continue;
+         }
+         u32 start_id = base_dev & MULTI_MASK;
+         if ((base_dev >> MULTI_FLAG_BITS) == 0) {
+             start_id = impl->multi_dev_address.Register(base_dev);
+-            compressed_device_addr.GetAndFault(phys_addr - 1U) = MULTI_FLAG | start_id;
++            AtomicStoreReverse(compressed_device_addr.GetAndFault(phys_addr - 1U), MULTI_FLAG | start_id);
+         }
+         impl->multi_dev_address.Register(new_dev, start_id);
+     }
+@@ -379,20 +379,20 @@
+         AtomicStoreContinuity(entry, 0);
+         if (phys_addr != 0) [[likely]] {
+             u32& base_dev = compressed_device_addr.GetAndFault(phys_addr - 1U);
+-            if ((base_dev >> MULTI_FLAG_BITS) == 0) [[likely]] {
++            if ((AtomicLoadReverse(base_dev) >> MULTI_FLAG_BITS) == 0) [[likely]] {
+ #ifdef PS5_NATIVE
+                 // Never erase a different GPU page's reverse mapping.
+                 // This can occur after malformed or repeated guest remaps.
+                 const u32 retiring_page = static_cast<u32>(start_page_d + i);
+-                if (base_dev != retiring_page) {
++                if (AtomicLoadReverse(base_dev) != retiring_page) {
+                     if (::Eden::GpuFault::ShouldReportRemapMismatch())
+                         LOG_WARNING(HW_Memory,
+                             "EDEN_GPU_UNMAP_REVERSE_MISMATCH guest={:#x} old_phys_page={:#x} reverse={:#x}",
+-                            retiring_page, phys_addr - 1U, base_dev);
++                            retiring_page, phys_addr - 1U, AtomicLoadReverse(base_dev));
+                     continue;
+                 }
+ #endif
+-                base_dev = 0;
++                AtomicStoreReverse(base_dev, 0);
+                 continue;
+             }
+ #ifdef PS5_NATIVE
+@@ -399,21 +399,21 @@
+             // An invalid stale multi-list used to index storage[-1] and crash
+             // in Unregister(). Preserve the unrelated reverse association.
+             if (!impl->multi_dev_address.Contains(static_cast<u32>(start_page_d + i),
+-                                                    base_dev & MULTI_MASK)) {
++                                                    AtomicLoadReverse(base_dev) & MULTI_MASK)) {
+                 if (::Eden::GpuFault::ShouldReportRemapMismatch())
+                     LOG_WARNING(HW_Memory,
+                         "EDEN_GPU_UNMAP_MULTI_MISSING guest={:#x} old_phys_page={:#x} head={:#x}",
+-                        static_cast<u32>(start_page_d + i), phys_addr - 1U, base_dev & MULTI_MASK);
++                        static_cast<u32>(start_page_d + i), phys_addr - 1U, AtomicLoadReverse(base_dev) & MULTI_MASK);
+                 continue;
+             }
+ #endif
+             const auto [more_entries, new_start] = impl->multi_dev_address.Unregister(
+-                static_cast<u32>(start_page_d + i), base_dev & MULTI_MASK);
++                static_cast<u32>(start_page_d + i), AtomicLoadReverse(base_dev) & MULTI_MASK);
+             if (!more_entries) {
+-                base_dev = new_start != 0 ? impl->multi_dev_address.ReleaseEntry(new_start) : 0;
++                AtomicStoreReverse(base_dev, new_start != 0 ? impl->multi_dev_address.ReleaseEntry(new_start) : 0);
+                 continue;
+             }
+-            base_dev = new_start | MULTI_FLAG;
++            AtomicStoreReverse(base_dev, new_start | MULTI_FLAG);
+         }
+     }
+     t_slot = {};
+@@ -503,7 +503,7 @@
+     }
+ #endif
+     std::scoped_lock lk(mapping_guard);
+-    u32 backing = compressed_device_addr[phys_addr];
++    u32 backing = AtomicLoadReverse(compressed_device_addr[phys_addr]);
+     if ((backing >> MULTI_FLAG_BITS) != 0) {
+         impl->multi_dev_address.GatherValues(backing & MULTI_MASK, buffer);
+         return;
+--- a/src/core/device_memory_manager.h
++++ b/src/core/device_memory_manager.h
+@@ -80,7 +80,7 @@
+         // GPU table. Zero is the "no reverse mapping" sentinel, not GPU VA 0.
+         if ((address >> page_bits) >= compressed_device_addr.size()) return;
+         DAddr subbits = DAddr(address & page_mask);
+-        const u32 base = compressed_device_addr[(address >> page_bits)];
++        const u32 base = AtomicLoadReverse(compressed_device_addr[(address >> page_bits)]);
+         if (base == 0) return;
+         if ((base >> MULTI_FLAG_BITS) == 0) [[likely]] {
+             const DAddr d_address = (DAddr(base) << page_bits) + subbits;
+@@ -210,7 +210,17 @@
+     }
+     static void AtomicStoreBacking(TrackedEntry& page, VAddr value) noexcept {
+         std::atomic_ref<VAddr>(page.cpu_backing_address).store(value, std::memory_order_release);
+-    }
++    }
++    // Scalar reverse physical-to-GPU slots are also read by header-inline
++    // renderer callers. Both readers and writers use atomic_ref so those
++    // calls do not race with Map/Unmap. MultiAddressContainer operations
++    // still rely on the existing mapping_guard.
++    static u32 AtomicLoadReverse(const u32& slot) noexcept {
++        return std::atomic_ref<const u32>(slot).load(std::memory_order_acquire);
++    }
++    static void AtomicStoreReverse(u32& slot, u32 value) noexcept {
++        std::atomic_ref<u32>(slot).store(value, std::memory_order_release);
++    }
+     Common::SparseLargeVector<u32> compressed_device_addr;
+     Common::SparseLargeVector<TrackedEntry> tracked_entries;
+ 
