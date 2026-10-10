@@ -1,0 +1,30 @@
+--- a/src/core/memory.cpp
++++ b/src/core/memory.cpp
+@@ -553,6 +553,26 @@
+              page_table.entries.CommitRegion(base, end);
+              while (base != end) {
+-                 auto host_ptr = reinterpret_cast<u64>(system.DeviceMemory().GetPointer<u8>(target)) - (base << YUZU_PAGEBITS);;
++#ifdef PS5_NATIVE
++                // Never publish a guest Memory page whose actual physical
++                // backing lookup failed. A valid zero-delta host/guest alias
++                // has a NON-NULL backing pointer and still follows the usual
++                // Store+IsDirectBackingAlias path below.
++                auto* backing = system.DeviceMemory().GetPointer<u8>(target);
++                if (backing == nullptr) {
++                    auto& invalid = page_table.entries.GetUnchecked(base);
++                    invalid.Store(false, Common::PageType::Unmapped, current_block, 0);
++                    if (::Eden::GpuFault::ShouldReportGuestMapZero())
++                        LOG_CRITICAL(HW_Memory,
++                            "EDEN_GUEST_MAP_NO_BACKING guest={:#016x} target={:#016x}",
++                            base << YUZU_PAGEBITS, GetInteger(target));
++                    base += 1;
++                    target += YUZU_PAGESIZE;
++                    continue;
++                }
++                auto host_ptr = reinterpret_cast<u64>(backing) - (base << YUZU_PAGEBITS);
++#else
++                auto host_ptr = reinterpret_cast<u64>(system.DeviceMemory().GetPointer<u8>(target)) - (base << YUZU_PAGEBITS);;
++#endif
+                  auto& entry = page_table.entries.GetUnchecked(base);
+ 
+                  entry.Store(false, type, current_block, host_ptr);
