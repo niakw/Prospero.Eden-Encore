@@ -2152,3 +2152,5 @@ This commit deliberately triggers ONE test-only GitHub Actions run via `[full-bu
 - Do not change release branch, purple launcher design, or launch PS5 native build in response to metadata-only adjustments.
 
 - 2026-10-10 additional metadata repair: classify EACH regional alias with its own title/platform/date/type, not a single arbitrarily chosen display name; recognize punctuation and CJK demo/playtest suffixes while preserving a genuine full Switch1 edition when a regional demo alias coexists. Regression fixtures for both cases added. Crawl queries remain candidates, never per-game compatibility proof.
+
+- Offline native-log triage extended (no PS5 build): `tools/analyze-ps5-logs.py` now captures bounded `EDEN_HEAP_PIECE`, `EDEN_HEAP_LIFETIME`, `EDEN_PS5_DMEM_PROBE_FAILED`, `EDEN_PS5_DMEM_PROBE_SLOW`, `EDEN_MEMORY_LIVE`, and `EDEN_WORKER_TOPOLOGY` samples. The new fixture in `tools/check-ps5-log-analysis.py` checks 24ms heap growth, retained heap vs live memory, failed kernel probes and unverified CPU topology. These are diagnostic evidence only, not FPS gains, proof of a leak, or total VRAM measurements.
