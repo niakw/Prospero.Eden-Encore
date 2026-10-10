@@ -66,7 +66,7 @@ struct TextureCacheRuntime {
     std::size_t issued{}, completed{}, finishes{}, freed{};
     std::vector<std::unique_ptr<std::uint8_t[]>> storage;
     std::vector<bool> deferred;
-    StagingBufferRef DownloadStagingBuffer(std::size_t size, bool is_deferred) {
+    StagingBufferRef DownloadStagingBuffer(std::size_t size, bool is_deferred = false) {
         assert(is_deferred);
         storage.push_back(std::make_unique<std::uint8_t[]>(size));
         deferred.push_back(true);
