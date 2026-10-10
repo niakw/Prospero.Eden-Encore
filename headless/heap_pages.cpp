@@ -5,6 +5,7 @@
 
 namespace Common {
 void* ReserveMemoryRange(std::size_t size) noexcept;
+std::size_t AllocatedMemoryPagesSpan(const void* pointer) noexcept;
 bool CommitMemoryRange(void* address, std::size_t size, std::int64_t* physical_out) noexcept;
 void AbandonInitialHeapReservation(void* base, std::size_t reserved,
                                    std::int64_t first_physical, std::size_t committed) noexcept;
@@ -16,6 +17,10 @@ extern "C" void* eden_heap_pages(std::size_t size) {
 }
 extern "C" void eden_heap_pages_free(void* base, std::size_t size) {
     Common::FreeMemoryPages(base, size);
+}
+// Observe direct bytes from the existing allocator-owned header.
+extern "C" std::size_t eden_heap_pages_physical_size(void* base) {
+    return Common::AllocatedMemoryPagesSpan(base);
 }
 // The heap that grows (headless/heap_arenas.inc): address space first, memory piece by piece.
 extern "C" void* eden_heap_reserve(std::size_t size) {

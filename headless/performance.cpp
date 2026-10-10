@@ -564,6 +564,7 @@ extern "C" unsigned eden_heap_arenas_created(void) __attribute__((weak));
 extern "C" std::size_t eden_heap_committed(void) __attribute__((weak));
 extern "C" std::size_t eden_heap_tcache_held(void) __attribute__((weak));
 extern "C" std::size_t eden_heap_large_held(unsigned* blocks) __attribute__((weak));
+extern "C" std::size_t eden_heap_large_physical_held(void) __attribute__((weak));
 #ifdef PS5_NATIVE
 extern "C" std::int64_t sceKernelGetDirectMemorySize();
 extern "C" std::int32_t sceKernelAvailableDirectMemorySize(std::int64_t, std::int64_t, std::size_t, std::int64_t*,
@@ -764,9 +765,13 @@ void ReportDirectMemoryState(const char* phase) {
     // system's own reservation must never be counted as an Encore heap.
     unsigned large_blocks = 0;
     const std::size_t heap_large = eden_heap_large_held ? eden_heap_large_held(&large_blocks) : 0;
-    std::printf("EDEN_HEAP_LIFETIME phase=%s pieces=%zu large=%zu large_blocks=%u tcache=%zu\n",
+    const bool heap_large_physical_known = eden_heap_large_physical_held != nullptr;
+    const std::size_t heap_large_physical =
+        heap_large_physical_known ? eden_heap_large_physical_held() : 0;
+    std::printf("EDEN_HEAP_LIFETIME phase=%s pieces=%zu large=%zu large_blocks=%u tcache=%zu large_physical=%zu physical_known=%u\n",
                 phase, eden_heap_committed ? eden_heap_committed() : std::size_t{0},
-                heap_large, large_blocks, eden_heap_tcache_held ? eden_heap_tcache_held() : std::size_t{0});
+                heap_large, large_blocks, eden_heap_tcache_held ? eden_heap_tcache_held() : std::size_t{0},
+                heap_large_physical, unsigned(heap_large_physical_known));
     std::printf("EDEN_JIT_SPARSE_MEMORY phase=%s reserved=%zu committed=%zu\n",
                 phase, jit_reserved, jit_committed);
     const std::size_t jit_dense = ::Common::DenseJitDirectBytes();
@@ -777,7 +782,7 @@ void ReportDirectMemoryState(const char* phase) {
     const std::size_t heap_roots = eden_heap_committed ? eden_heap_committed() : std::size_t{0};
     const auto account = ::Eden::DirectPool::Summarize(total, {
         .heap_roots = heap_roots,
-        .heap_large = heap_large,
+        .heap_large = heap_large_physical,
         .sparse_tables = sparse_physical,
         .jit_sparse = jit_committed,
         .jit_dense = jit_dense,
@@ -787,11 +792,12 @@ void ReportDirectMemoryState(const char* phase) {
     // The largest contiguous free block comes exclusively from a kernel query.
     // Lifecycle checkpoints only: no per-frame region enumeration or logging.
     std::printf("EDEN_DIRECT_POOL_OWNERS phase=%s extent=%llu heap_roots=%zu "
-                "heap_large=%zu sparse_tables=%zu jit_sparse=%zu jit_dense=%zu "
+                "heap_large=%zu heap_large_requested=%zu large_owner_known=%u sparse_tables=%zu jit_sparse=%zu jit_dense=%zu "
                 "tracked=%llu unclassified=%llu tracked_within_extent=%u "
                 "largest_free_known=%u largest_free=%zu\n",
                 phase, static_cast<unsigned long long>(account.extent_bytes),
-                heap_roots, heap_large, sparse_physical, jit_committed, jit_dense,
+                heap_roots, heap_large_physical, heap_large, unsigned(heap_large_physical_known),
+                sparse_physical, jit_committed, jit_dense,
                 static_cast<unsigned long long>(account.tracked_bytes),
                 static_cast<unsigned long long>(account.not_tracked_bytes),
                 unsigned(account.within_extent), unsigned(largest_rc == 0),

@@ -195,6 +195,15 @@ void* AllocateMemoryPages(std::size_t size) noexcept {
     return data;
 }
 
+// Exact direct allocation span including metadata and large-page rounding.
+// The caller's payload size is not a physical ownership measurement.
+std::size_t AllocatedMemoryPagesSpan(const void* pointer) noexcept {
+    if (!pointer) return 0;
+    const long page = sysconf(_SC_PAGESIZE);
+    if (page <= 0) std::abort();
+    return header_of(pointer, static_cast<std::size_t>(page)).total;
+}
+
 #ifdef PS5_NATIVE
 // Direct-memory start of an AllocateMemoryPages block's first data byte.
 std::int64_t DirectMemoryStart(const void* pointer) noexcept {
