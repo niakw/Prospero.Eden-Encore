@@ -47,13 +47,17 @@ def _platforms(raw:dict)->tuple[bool,bool,bool]:
     if not records:return False,False,False
     one=two=False
     for label in records:
-        normalized=re.sub(r"[\s\-]+"," ",label.casefold()).strip()
-        if (re.search(r"\b(nintendo )?switch 2\b|\bns2\b",normalized)
-            or "switch2" in normalized):
-            two=True
-        elif (re.search(r"\b(nintendo )?switch\b|\bnsw\b",normalized)
-              or normalized in ("nx","hac")):
-            one=True
+        # Some regional feeds encode multiple platforms as ONE comma/semicolon
+        # separated string ("Switch2, Switch"). Check each platform separately
+        # so a genuine NX1 release isn't suppressed by its NX2 port.
+        for item in re.split(r"[,;/|]+",label):
+            normalized=re.sub(r"[\s\-]+"," ",item.casefold()).strip()
+            if (re.search(r"\b(nintendo )?switch 2\b|\bns2\b",normalized)
+                or "switch2" in normalized):
+                two=True
+            elif (re.search(r"\b(nintendo )?switch\b|\bnsw\b",normalized)
+                  or normalized in ("nx","hac")):
+                one=True
     return True,one,two
 
 def _type_value(raw:dict)->str|None:
