@@ -11,6 +11,8 @@ import argparse
 import gzip
 import importlib.util
 import json
+import re
+from collections import defaultdict
 from pathlib import Path
 import sys
 
@@ -61,6 +63,59 @@ def state(old:dict,new:dict)->dict:
     return out
 
 
+def switch1_scope_audit(catalog:dict)->dict:
+    """Audit candidate IDs and suspicious non-game storefront listings.
+
+    Nintendo Switch 1 game/application IDs are 0100...000. Native
+    Switch 2-only games use platform prefix 0400 and must never be
+    auto-admitted. BOTW / other games WITH Switch 1 and Switch 2
+    editions stay eligible via their existing Switch 1 0100 ID.
+    Name heuristics are diagnostics only, not grounds to delete games.
+    """
+    games=catalog.get("games")
+    if catalog.get("schema")!=1 or not isinstance(games,list):
+        raise ValueError("invalid source catalog")
+    title_names=defaultdict(list)
+    suspected_demo, suspected_cloud=[],[]
+    bad_ids=[]
+    for game in games:
+        tid=game.get("title_id")
+        title=game.get("title")
+        if (not isinstance(tid,str) or
+            re.fullmatch(r"0100[0-9A-Fa-f]{9}000",tid) is None):
+            bad_ids.append(tid)
+        if not isinstance(title,str) or not title.strip():
+            raise ValueError("source game title missing")
+        title_names[re.sub(r"[^\\w]+"," ",title.casefold()).strip()].append(tid)
+        if re.search(r"(?i)\\b(?:demo|trial version|playtest)\\b|体験版|试玩版",title):
+            suspected_demo.append(tid)
+        if re.search(r"(?i)\\bcloud version\\b|クラウド",title):
+            suspected_cloud.append(tid)
+    if bad_ids:
+        raise ValueError("catalog includes Nintendo Switch 2-only or invalid base title IDs")
+    duplicated=sum(len(ids)-1 for ids in title_names.values() if len(ids)>1)
+    return {
+        "schema":1,
+        "platform":"Nintendo Switch 1 software (0100 application IDs)",
+        "includes_titles_also_released_for_switch2":True,
+        "excludes_switch2_only_0400":True,
+        "count_unit":"candidate title IDs, NOT distinct fully released commercial games",
+        "switch1_candidate_title_ids":len(games),
+        "different_preferred_display_names":len(title_names),
+        "repeated_identical_display_names_across_title_ids":duplicated,
+        "suspected_demo_or_trial_title_ids":len(suspected_demo),
+        "suspected_cloud_only_title_ids":len(suspected_cloud),
+        "demonstration": {
+            "switch1_plus_switch2_editions_stay_in_scope":"01007EF00011E000",
+            "switch2_only_game_does_not_enter_scope":"0400C3F00006E000"
+        },
+        "warning": ("Demo/cloud name hints are diagnostics only; no game is "
+                    "automatically removed by a text heuristic. Availability, "
+                    "retail/release status, and per-game ROMFS eligibility are "
+                    "not certified by TitleDB metadata.")
+    }
+
+
 def persist(root:Path, fresh_leads:dict, fresh_progress:dict,
             catalog:dict, queue:dict, run_metrics:dict|None=None)->dict:
     if any(x.get("schema")!=1 for x in (fresh_leads,fresh_progress,catalog,queue)):
@@ -69,6 +124,9 @@ def persist(root:Path, fresh_leads:dict, fresh_progress:dict,
         raise ValueError("wrong 4-platform whole-catalog queries")
     if catalog.get("game_count")!=queue.get("distinct_game_title_ids"):
         raise ValueError("queue and catalog game count disagree")
+    audit=switch1_scope_audit(catalog)
+    if audit["switch1_candidate_title_ids"]!=catalog["game_count"]:
+        raise ValueError("catalog title ID count mismatch")
     research=root/"discovery"
     store=root/"catalog"
     research.mkdir(parents=True,exist_ok=True)
@@ -110,6 +168,8 @@ def persist(root:Path, fresh_leads:dict, fresh_progress:dict,
         (research/file).write_text(
             json.dumps(content,ensure_ascii=False,separators=(",",":"))+"\n",
             encoding="utf-8")
+    (store/"scope-audit.json").write_text(
+        json.dumps(audit,ensure_ascii=False,indent=2)+"\\n",encoding="utf-8")
     for file,doc in (("switch1-titles.json.gz",catalog),
                      ("source-queries.json.gz",queue)):
         encoded=json.dumps(doc,ensure_ascii=False,
