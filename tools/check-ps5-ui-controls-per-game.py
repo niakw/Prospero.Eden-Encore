@@ -29,6 +29,22 @@ assert "SetAdaptivePlayStation(" not in inputs
 assert "adaptive_playstation" not in inputs
 assert "mapping_context" not in inputs
 
+# Triangle game settings: ten editable rows before Mods. Seven hints
+# previously indexed through row_controls (9) caused an OOB read.
+import re
+rows = library.split("enum GameRow : int", 1)[1].split("};", 1)[0]
+editable = re.findall(r"^\\s*(row_\\w+),", rows, flags=re.MULTILINE)
+assert len(editable) == 10 and editable[-1] == "row_controls"
+help_text = library.split("kGameAbout = {{", 1)[1].split("}};", 1)[0]
+assert len(re.findall(r'TR\\("', help_text)) == len(editable)
+assert "kGameAbout.size() == static_cast<std::size_t>(row_mods)" in library
+assert "option_ < static_cast<int>(kGameAbout.size())" in library
+assert "library_.selected < 0 ||" in library
+assert "static_cast<std::size_t>(library_.selected) >= games_.size()" in library
+# Driver traces are opt-in; disabling UI detailed logging also silences RADV.
+assert "performance_run || !launch_preferences.detailed_logging" in launch
+assert 'setenv("PS5VK_QUIET_LOG", quiet_driver ? "1" : "0", 1);' in launch
+
 # The Library title scrim now actually extends to the bottom of the cover
 # interior, rather than leaving a four-percent bright strip under the text.
 assert "tile_art.y + tile_art.h * 0.43f" in library
@@ -51,5 +67,5 @@ assert "theme::kTitle, 1.0f);" in home
 assert "players_chip.x + 8.0f, players_chip.y + 3.0f, 45.0f, 30.0f" in home
 assert "controller_icon(c, {card.x + card.w - 74.0f" not in library
 assert "42.0f, 29.0f}, theme::kTitle, 1.0f);" in library
-print("SOURCE CHECK ONLY: per-game Global/PlayStation/Switch + white DualSense + complete cover scrim")
+print("SOURCE CHECK ONLY: Triangle bounds + per-game controls + quiet Vulkan driver + white DualSense")
 print("REQUIRES USER RUN AUTHORIZATION: compiled PS5 UI rendering and controller effects NOT VERIFIED")
