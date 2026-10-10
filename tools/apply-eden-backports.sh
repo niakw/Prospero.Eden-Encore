@@ -535,6 +535,38 @@ print('PS5 inline CPU->GPU reverse lookup capacity and missing-mapping guard: PA
 PYGPUINLINE
 }
 apply_one "$root/headless/backports/eden-ps5-gpu-reverse-inline-bounds.patch" "$eden/.encore-backport-ps5-gpu-reverse-inline-bounds.sha256" validate_ps5_gpu_reverse_inline
+validate_ps5_gpu_atomic_forward_table() {
+python3 - "$eden" <<'PYGPUATOMIC'
+from pathlib import Path
+import sys
+root=Path(sys.argv[1])/'src/core'
+h=(root/'device_memory_manager.h').read_text()
+c=(root/'device_memory_manager.inc').read_text()
+for token in ('std::atomic_ref<const u32>(page.compressed_physical_ptr).load(std::memory_order_acquire)',
+              'std::atomic_ref<u32>(page.compressed_physical_ptr).store(value, std::memory_order_release)',
+              'std::atomic_ref<const u32>(page.continuity_tracker).load(std::memory_order_relaxed)',
+              'std::atomic_ref<u32>(page.continuity_tracker).store(value, std::memory_order_relaxed)',
+              'std::atomic_ref<const VAddr>(page.cpu_backing_address).load(std::memory_order_acquire)',
+              'std::atomic_ref<VAddr>(page.cpu_backing_address).store(value, std::memory_order_release)',
+              'void InsertCPUBacking(size_t page_index, VAddr address, Asid asid)'):
+    if token not in h:
+        raise SystemExit('GPU atomic page publication missing: '+token)
+if 'constexpr void InsertCPUBacking' in h:
+    raise SystemExit('non-constexpr GPU atomic publisher called from constexpr method')
+for field in ('.compressed_physical_ptr', '.continuity_tracker', '.cpu_backing_address'):
+    if field in c:
+        raise SystemExit('data-racy GPU read/write bypasses atomic helper: '+field)
+for token in ('AtomicStorePhysical(valid, phys_addr)',
+              'AtomicStorePhysical(entry, 0)',
+              'AtomicLoadPhysical(tracked_entries[page_index])',
+              'AtomicLoadContinuity(tracked_entries[page_index])',
+              'AtomicLoadPhysical(tracked_entries[first_page + i])'):
+    if token not in c:
+        raise SystemExit('GPU atomic writer/reader missing: '+token)
+print('PS5 GPU forward-page atomic publication; no coarse hot-path mutex: PASS')
+PYGPUATOMIC
+}
+apply_one "$root/headless/backports/eden-ps5-gpu-atomic-forward-table.patch" "$eden/.encore-backport-ps5-gpu-atomic-forward-table.sha256" validate_ps5_gpu_atomic_forward_table
 validate_ps5_guest_mapping_diagnostics() {
 python3 - "$eden" <<'PYMAP'
 from pathlib import Path
