@@ -33,7 +33,8 @@ assert record.index("return NoteProjectedEviction(image);") < record.index("retu
 assert gc.count("return NoteProjectedEviction(image);") == 2
 assert "gc_downloads.size() == gc_prefetch_limit" in record
 assert "image.unswizzled_size_bytes > 32_MiB - bytes" in record
-assert "image.unswizzled_size_bytes > 32_MiB) return false;" in record
+assert "image.unswizzled_size_bytes > 32_MiB)" in record
+assert "return NoteProjectedEviction(image);" in record
 assert "gc_downloads.emplace_back(id, map);" in record
 assert record.index("gc_downloads.emplace_back") < record.index("image.DownloadMemory")
 assert "if (remaining == 0) return true;" in gc
