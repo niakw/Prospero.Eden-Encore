@@ -24,6 +24,8 @@ for token in (
 assert physical_patch.count("static_cast<size_t>(phys_addr - 1U) < compressed_device_addr.size()") == 2
 assert "std::memset(dest_pointer, 0, size);" in flush_patch
 assert "size <= device_as_size - address" in flush_patch
+span_patch = (root / "headless/backports/eden-ps5-gpu-span-physical-bounds.patch").read_text()
+assert span_patch.count("page_count > compressed_device_addr.size() - first_phys") == 2
 
 PAGE = 4096
 
@@ -83,6 +85,34 @@ def reference(mapping: list[int], physical: bytes, addr: int, size: int) -> byte
     return bytes(result)
 
 
+def checked_span(mapping: list[int], capacity: int, addr: int, size: int) -> bool:
+    # Source-backed GetSpan guard: all physical pages must be adjacent and
+    # the LAST page must fit in the physical backing too.
+    if size == 0 or addr >= len(mapping) * PAGE or size > len(mapping) * PAGE - addr:
+        return False
+    start_page = addr // PAGE
+    page_count = 1 + ((size - 1 + addr % PAGE) // PAGE)
+    backing = mapping[start_page]
+    if backing == 0:
+        return False
+    first_phys = backing - 1
+    if first_phys >= capacity or page_count > capacity - first_phys:
+        return False
+    return all(mapping[start_page + i] == backing + i for i in range(1, page_count))
+
+
+def reference_span(mapping: list[int], capacity: int, addr: int, size: int) -> bool:
+    if size < 1 or addr + size > len(mapping) * PAGE:
+        return False
+    first = addr // PAGE
+    last = (addr + size - 1) // PAGE
+    phys = mapping[first]
+    return phys > 0 and all(
+        1 <= mapping[i] <= capacity and mapping[i] == phys + i - first
+        for i in range(first, last + 1)
+    )
+
+
 rng = random.Random(0xEDE9)
 for capacity in (1, 2, 4, 8, 12):
     # Include invalid page zero (unmapped), exact last page and stale
@@ -96,6 +126,8 @@ for capacity in (1, 2, 4, 8, 12):
             size = rng.choice((0, 1, 2, 16, PAGE-1, PAGE, PAGE+1, 2*PAGE, 4*PAGE))
             actual, checks = checked_block(mapping, physical, addr, size, hints)
             assert actual == reference(mapping, physical, addr, size)
+            assert checked_span(mapping, capacity, addr, size) == reference_span(
+                mapping, capacity, addr, size)
             if size and addr // PAGE == (addr + size - 1) // PAGE:
                 assert checks == 0  # the O(1) hot-path guarantee
 
@@ -107,5 +139,5 @@ for capacity in (1, 2, 4, 8, 12):
     result, _ = checked_block(mapping, physical, 0, PAGE * 3, [200] * 3)
     assert result == bytes([0xCA]) * PAGE + bytes(PAGE * 2)
 
-print("PASS host GPU DRAM-boundary model: valid page, OOB, stale span, zero read, no cross-boundary deref")
+print("PASS host GPU DRAM-boundary model: valid page, OOB, stale span, zero read, no cross-boundary deref, const/mutable GetSpan")
 print("GPU native mapping synchronization / FC27 texture correctness NOT hardware qualified")
