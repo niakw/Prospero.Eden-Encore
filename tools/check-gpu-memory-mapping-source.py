@@ -15,6 +15,9 @@ assert p.count('#ifndef PS5_NATIVE') == 4
 assert p.count('::Eden::GpuFault::ShouldReportRead()') == 2
 assert p.count('::Eden::GpuFault::ShouldReportWrite()') == 2
 assert 'const size_t remaining_pages = 1 + ((remaining_size - 1 + page_offset) >> Memory::YUZU_PAGEBITS);' in p
+assert 'if (addr >= device_as_size || size > device_as_size - addr)' in p
+assert p.count('if (address >= device_as_size) return nullptr;') == 2
+assert p.count('&& address < device_as_size && size <= device_as_size - address') == 2
 assert '({hint, remaining_pages, tracked_entries.size() - page_index})' in p
 assert 'std::atomic<std::uint64_t> reads{0}, writes{0}' in h
 assert 'return n <= 8 || (n & (n - 1)) == 0;' in h
