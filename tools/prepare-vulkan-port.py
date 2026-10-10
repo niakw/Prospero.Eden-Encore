@@ -720,9 +720,9 @@ cleanup_cutoff = ("    lru_cache.ForEachItemBelow("
 if gc.count(cleanup_cutoff) != 2:
     raise RuntimeError("Pinned GC must preserve both cleanup passes")
 gc = gc.replace(cleanup_cutoff,
-                "    if (frame_tick >= ticks_to_destroy) {\\n"
+                "    if (frame_tick >= ticks_to_destroy) {\n"
                 "        lru_cache.ForEachItemBelow("
-                "::Eden::VulkanMemory::OldestEvictionTick(frame_tick, ticks_to_destroy), Cleanup);\\n"
+                "::Eden::VulkanMemory::OldestEvictionTick(frame_tick, ticks_to_destroy), Cleanup);\n"
                 "    }")
 texture_costs = []
 for signature, index in (
