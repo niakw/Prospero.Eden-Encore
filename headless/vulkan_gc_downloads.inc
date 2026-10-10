@@ -40,7 +40,11 @@
                 const auto copies = FixSmallVectorADL(FullDownloadCopies(image.info));
                 image.DownloadMemory(map, copies);
                 bytes += image.unswizzled_size_bytes;
-                usage -= ReclaimedBytes(image);
+                // The driver's sampled total and logical per-image
+                // reclamation can diverge during alias/deferred cleanup.
+                // Saturate instead of wrapping u64 and over-prefetching.
+                usage = ::Eden::VulkanMemory::AfterProjectedEviction(
+                    usage, ReclaimedBytes(image));
                 // The original policy changes at these thresholds. Stop looking
                 // ahead here so we never copy a texture that it would retain.
                 return usage < (aggressive_mode || ::Eden::Performance::KeepDirtyTextures() ? critical_memory
