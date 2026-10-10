@@ -103,7 +103,10 @@ def execute(root:Path,batch_size:int=128,interval:float=4.1,
         if failure:
             break
     if not reports:
-        return {"complete":True,"remaining":0,"completed":0,"attempted":0},0
+        # Zero requests may mean a fully searched catalog OR an unexpected
+        # early exit. Never claim successful completion while keys remain.
+        return {"complete":missing==0,"remaining":missing,
+                "completed":0,"attempted":0,"provider":"github"},(0 if missing==0 else 2)
     fresh=joiner.merge(reports)
     summary=metrics.summarize(reports,run_id)
     data=collector.persist(research,fresh,current,catalog,queue,summary)
