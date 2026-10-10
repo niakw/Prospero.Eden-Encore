@@ -1,0 +1,42 @@
+--- a/src/core/device_memory_manager.inc
++++ b/src/core/device_memory_manager.inc
+@@ -627,8 +627,21 @@
+ }
+ 
+ template <typename Traits>
+-void DeviceMemoryManager<Traits>::ReadBlock(DAddr address, void* dest_pointer, size_t size) {
+-    device_inter->FlushRegion(address, size);
++void DeviceMemoryManager<Traits>::ReadBlock(DAddr address, void* dest_pointer, size_t size) {
++#ifdef PS5_NATIVE
++    if (size == 0) return;
++    // Do not flush an invalid GPU virtual extent through the renderer.
++    // The ordinary unmapped path zero-fills destination without a GPU fetch.
++    if (address >= device_as_size || size > device_as_size - address) {
++        if (::Eden::GpuFault::ShouldReportRead())
++            LOG_ERROR(HW_Memory,
++                      "Unmapped Device ReadBlock @ {:#016x} (start address = {:#016x}, size = {})",
++                      address, address, size);
++        std::memset(dest_pointer, 0, size);
++        return;
++    }
++#endif
++    device_inter->FlushRegion(address, size);
+     const std::size_t page_offset = address & Memory::YUZU_PAGEMASK;
+     if (size <= Memory::YUZU_PAGESIZE - page_offset
+ #ifdef PS5_NATIVE
+@@ -700,8 +713,13 @@
+         [&](const std::size_t copy_amount) {
+             src_pointer = static_cast<const u8*>(src_pointer) + copy_amount;
+         });
+-    device_inter->InvalidateRegion(address, size);
+-}
++#ifdef PS5_NATIVE
++    // WalkBlock already dropped and counted invalid writes. Do not pass the
++    // rejected virtual range into renderer cache invalidation afterwards.
++    if (size != 0 && address < device_as_size && size <= device_as_size - address)
++#endif
++        device_inter->InvalidateRegion(address, size);
++}
+ 
+ template <typename Traits>
+ void DeviceMemoryManager<Traits>::ReadBlockUnsafe(DAddr address, void* dest_pointer, size_t size) {
