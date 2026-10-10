@@ -1,6 +1,6 @@
 # Eden Encore — Build PS5 de test unifié, fonctions activées
 
-**9 octobre 2026 — configuration source prête pour un essai de compilation, non encore qualifiée sur PS5.**
+**État vérifié le 10 octobre 2026 : compilation PS5 All-On réussie sur GitHub, validation réelle sur console encore en cours.**
 
 ## Règle fondamentale
 
@@ -55,3 +55,25 @@ Il reste à installer l'artefact sur PS5 FW13.60, comparer FC27 premier/deuxièm
 ### Identifiants de workers réutilisés au retour du jeu
 
 - L'enregistrement d'un worker CPU/GPU est maintenant supprimé quand **son propre thread** s'arrête. La tâche de profilage qui demande un PC ne doit donc pas retrouver un ancien `pthread_t` encore marqué vivant au démarrage du prochain titre. Cela ne remplace pas le test firmware d'une course exceptionnelle entre une demande de signal déjà en cours et la fin du thread.
+
+
+## Build natif réellement validé le 10 octobre 2026
+
+- **Run natif terminé SUCCESS :** [#38075096900](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38075096900), branche `dev/ps5-sparse-jit`, commit exact `588cbf1bb92500e14d79412a07164e28edf60ad4` (R289). Tous les précontrôles, la compilation native, l'inspection de l'application et les deux uploads d'artefacts ont réussi.
+- **Application de test :** [Prospero.Eden-Encore-PS5-all-on-test](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38075096900/artifacts/11677634930), artefact ID `11677634930`.
+- **Symboles de crash correspondants :** [Prospero.Eden-Encore-PS5-all-on-symbols](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38075096900/artifacts/11678590368), ID `11678590368`.
+- **Ne pas confondre les versions :** les commits `67518689` et suivants améliorant les analyseurs de logs dans le dépôt ne sont **pas inclus** dans le binaire `588cbf1`. Inutile de recompiler pour utiliser ces scripts en lecture seule.
+- **Preuve limitée :** un workflow `SUCCESS` prouve la génération et la validation du package PS5, **pas** le bon fonctionnement des textures, les FPS ou la stabilité sur firmware 13.60.
+
+### Éléments à conserver pendant les essais sur console
+
+Pour FC27 et BOTW, noter le jeu/scène, les paramètres graphiques, l'heure approximative de lancement, si le démarrage est à froid ou avec cache, la fluidité en défilement des menus, les FPS habituellement affichés, la pire chute observée, les textures manquantes et les freezes/crashs.
+
+Conserver ensemble les fichiers **boot trace, stderr, heap.log, eden_log et éventuels crash logs** associés au **même run**. Avant la comparaison, utiliser les scripts existants en lecture seule, par exemple :
+
+```bash
+python3 -B tools/analyze-ps5-logs.py chemin/vers/heap.log chemin/vers/stderr.log --out rapport-console.json
+python3 -B tools/analyze-ps5-frame-windows.py chemin/vers/heap.log
+```
+
+`analyze-ps5-logs.py` dédoublonne les fichiers identiques et ne fusionne pas leurs FPS. `analyze-ps5-frame-windows.py` (amélioré après le build natif) refuse désormais les rapprochements trompeurs si des échantillons CPU/GPU sont manquants, décalés ou réinitialisés. Les fenêtres de cinq secondes **ne remplacent pas** un chronométrage de la même scène sur plusieurs essais, et aucun de ces analyseurs ne mesure le pourcentage d'utilisation matérielle réel du GPU.
