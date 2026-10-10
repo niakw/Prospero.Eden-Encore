@@ -71,8 +71,9 @@ def main():
     if not said:
         sys.exit('not a ProsperoEden crash report: ' + sys.argv[1])
     if int(said.group(1), 16) != size:
-        print(f'WARNING: the report is from a build with 0x{said.group(1)} bytes of code; this ELF has 0x{size:x}. '
-              'The names below are wrong unless it is the same build.\n')
+        sys.exit(f'REFUSED symbolization: crash code size 0x{said.group(1)} != '
+                 f'ELF .text size 0x{size:x}. Supply the exact ELF from the same build; '
+                 'stack candidates from a different build are misleading.')
     lines = report.splitlines()
     in_calls = False
     dropped = 0
