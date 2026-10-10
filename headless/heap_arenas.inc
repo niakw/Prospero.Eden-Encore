@@ -516,6 +516,10 @@ static void eden_heap_grow_refused(const char *line) {
  * locking, and rejects truncation instead of emitting misleading telemetry. */
 static int eden_heap_append_decimal(char *out, size_t capacity, size_t *length,
                                     const char *prefix, size_t number) {
+  /* Reject a zero-capacity or invalid cursor before capacity - 1 arithmetic.
+   * All production call sites use a local 176-byte buffer, but the helper
+   * itself must be safe under isolated edge-case tests. */
+  if (!out || !length || !prefix || !capacity || *length >= capacity) return 0;
   while (*prefix) {
     if (*length >= capacity - 1) return 0;
     out[(*length)++] = *prefix++;
