@@ -438,6 +438,22 @@ print('PS5 GPU changed physical map invalidation outside mapping mutex: PASS')
 PYREMAPCACHE
 }
 apply_one "$root/headless/backports/eden-ps5-gpu-remap-cache-invalidate.patch" "$eden/.encore-backport-ps5-gpu-remap-cache-invalidate.sha256" validate_ps5_gpu_remap_invalidation
+validate_ps5_gpu_reverse_inline() {
+python3 - "$eden" <<'PYGPUINLINE'
+from pathlib import Path
+import sys
+s=(Path(sys.argv[1])/'src/core/device_memory_manager.h').read_text()
+for token in ('if ((address >> page_bits) >= compressed_device_addr.size()) return;',
+              'if (base == 0) return;',
+              'if (host < physical_base ||',
+              'host - physical_base >= (compressed_device_addr.size() << page_bits)',
+              'if (address >= device_as_size) return 0;',
+              'static_cast<size_t>(paddr - 1) >= compressed_device_addr.size()'):
+    if token not in s: raise SystemExit('GPU inline reverse lookup guard missing: '+token)
+print('PS5 inline CPU->GPU reverse lookup capacity and missing-mapping guard: PASS')
+PYGPUINLINE
+}
+apply_one "$root/headless/backports/eden-ps5-gpu-reverse-inline-bounds.patch" "$eden/.encore-backport-ps5-gpu-reverse-inline-bounds.sha256" validate_ps5_gpu_reverse_inline
 validate_ps5_guest_mapping_diagnostics() {
 python3 - "$eden" <<'PYMAP'
 from pathlib import Path
