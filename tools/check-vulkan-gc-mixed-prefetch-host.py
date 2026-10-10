@@ -32,7 +32,7 @@ assert record.index("gc_downloads.emplace_back") < record.index("image.DownloadM
 assert "if (remaining == 0) return true;" in gc
 assert "--remaining;" in gc
 assert "if (frame_tick < ticks_to_destroy) return;" in gc
-assert "if (!DirtyEvictions() && dirty)" in gc
+assert "(!DirtyEvictions() && dirty)) return false;" in gc
 assert "if (!dirty || !image.aliased_images.empty()" in gc
 
 compiler = next((name for name in ("clang++-18", "clang++", "g++")
