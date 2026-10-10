@@ -67,6 +67,7 @@ jobs:
           python3 -B tools/check-heap-growth.py
           python3 -B tools/check-heap-growth-rollback-host.py
           python3 -B tools/check-heap-growth-diagnostics-host.py
+          python3 -B tools/check-crash-provenance-host.py
 
       - name: Check approved user-facing UX invariants (no graphics compilation)
         run: |
