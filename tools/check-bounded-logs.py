@@ -15,6 +15,8 @@ for needle in (
 ):
     assert needle in patch, needle
 assert 'validate_ps5_bounded_logging' in apply
+assert 'migrate-bounded-logging-cache.py' in apply
+assert (root/'tools/migrate-bounded-logging-cache.py').exists()
 # A fatal or first Error sample is durable immediately, but a storm does not
 # synchronously flush each one of the ~31k missing GPU-page errors observed
 # in the October 10 PS5 crash log (some were separated by ~1.4 ms).
