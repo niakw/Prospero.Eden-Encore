@@ -62,7 +62,7 @@ def state(old:dict,new:dict)->dict:
 
 
 def persist(root:Path, fresh_leads:dict, fresh_progress:dict,
-            catalog:dict, queue:dict)->dict:
+            catalog:dict, queue:dict, run_metrics:dict|None=None)->dict:
     if any(x.get("schema")!=1 for x in (fresh_leads,fresh_progress,catalog,queue)):
         raise ValueError("unrecognized research format")
     if queue.get("total_search_tasks")!=4*queue.get("distinct_game_title_ids",0):
@@ -78,6 +78,34 @@ def persist(root:Path, fresh_leads:dict, fresh_progress:dict,
     merged=modmerge.merge([x for x in (previous_leads,fresh_leads) if x])
     progress=state(previous_progress,fresh_progress)
     data={"leads.json":merged,"progress.json":progress}
+    if run_metrics is not None:
+        if (run_metrics.get("schema")!=1 or
+            not isinstance(run_metrics.get("providers"),list) or
+            not isinstance(run_metrics.get("run_id"),str) or
+            not all(type(run_metrics.get(k)) is int
+                for k in ("total_attempts","total_completed","total_blocked_or_failed"))):
+            raise ValueError("invalid live request results")
+        previous = read(research/"metrics.json")
+        recent = previous.get("recent_runs",[]) if previous else []
+        if not isinstance(recent,list) or len(recent)>150:
+            raise ValueError("unbounded previous run evidence")
+        merged_runs={v["run_id"]:v for v in recent if isinstance(v,dict)
+                     and isinstance(v.get("run_id"),str)}
+        merged_runs[run_metrics["run_id"]]=run_metrics
+        # Ordered insertions: keep up to 50 prior+new authenticated
+        # runs so numbers are inspectable after Actions artifacts expire.
+        runs=list(merged_runs.values())[-50:]
+        data["metrics.json"]={
+            "schema":1, "run_count_retained":len(runs),
+            "latest_run_id":run_metrics["run_id"],
+            "latest_run_completed":run_metrics["total_completed"],
+            "latest_run_attempted":run_metrics["total_attempts"],
+            "latest_run_blocked":run_metrics["total_blocked_or_failed"],
+            "cumulative_retained_completed":sum(v.get("total_completed",0) for v in runs),
+            "completed_distinct_query_keys":len(progress["completed_query_keys"]),
+            "unique_mod_source_leads":merged["source_lead_count"],
+            "recent_runs":runs,
+        }
     for file,content in data.items():
         (research/file).write_text(
             json.dumps(content,ensure_ascii=False,separators=(",",":"))+"\n",
@@ -103,12 +131,14 @@ def main()->int:
     p.add_argument("--fresh-state",type=Path,required=True)
     p.add_argument("--catalog",type=Path,required=True)
     p.add_argument("--search-queue",type=Path,required=True)
+    p.add_argument("--run-metrics",type=Path)
     a=p.parse_args()
     try:
         if not a.out_root.is_dir() or a.out_root.is_symlink():
             raise ValueError("unsafe metadata repository root")
         stats=persist(a.out_root,read(a.fresh_leads),read(a.fresh_state),
-                      read(a.catalog),read(a.search_queue))
+                      read(a.catalog),read(a.search_queue),
+                      read(a.run_metrics) if a.run_metrics else None)
         print("GITHUB RESEARCH CHECKPOINT:",stats)
         return 0
     except (OSError,ValueError,TypeError,KeyError) as error:
