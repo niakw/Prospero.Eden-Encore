@@ -37,6 +37,13 @@ for required in (
     '__builtin_ia32_pause',
 ):
     assert required in heap, f'heap derivation contract changed: {required}'
+# Kernel logging is not allowed inside the serial physical-memory growth
+# critical section, even on hosts where the logger stub is nonblocking.
+growth = heap[heap.index('static int eden_heap_grow(size_t bytes, unsigned seen) {'):
+              heap.index('/* A block from the heap', heap.index('static int eden_heap_grow(size_t bytes, unsigned seen) {'))]
+assert growth.index('atomic_flag_clear_explicit(&eden_heap_grow_lock, memory_order_release)') < (
+    growth.index('eden_heap_log_growth(report_request, report_root'))
+assert 'snprintf(' not in growth and 'printf(' not in growth
 if platform.machine().lower() not in ('x86_64', 'amd64'):
     print('Heap growth source/derivation contract PASS (x86 UBSan/TSan runtime harness deferred to CI)')
     raise SystemExit(0)
