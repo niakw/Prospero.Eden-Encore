@@ -26,6 +26,10 @@ void EnableExperimentalLogicalPlacement();
 void PlatformChecks();
 // One kernel query at guest start, not in the per-frame performance path.
 bool QueryLargestDirectMemoryBlock(std::size_t* largest) noexcept;
+// A PS5 app hosts many titles in one process. After all renderer workers
+// have joined, invalidate kernel free-block observations from the old title.
+// This does NOT free direct memory or change its kernel-exposed extent.
+void ResetDirectMemoryProbeForTitle() noexcept;
 // Startup/shutdown-only snapshot: no direct-memory region scan in the frame loop.
 void ReportDirectMemoryState(const char* phase);
 // Lightweight per-stage actual Dynarmic RX/RW ownership; no kernel VA

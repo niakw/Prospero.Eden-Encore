@@ -108,5 +108,18 @@ assert "static std::atomic<bool> has_valid_sample{false};" in perf
 assert "if (!has_valid_sample.load(std::memory_order_acquire) || failed >= 2)" in perf
 assert 'EDEN_PS5_DMEM_PROBE_FAILED consecutive=%u fallback=%s' in perf
 assert "graphics_memory_short.store(largest < kShortMemory" in perf
+# A new title starts with NO trusted previous-title memory sample. Reset only
+# after the prior renderer has stopped, before the next game's first frame.
+main_reset = main.index("Eden::Performance::ResetDirectMemoryProbeForTitle();")
+assert main.index("Eden::Display::ResetSkipFrameTracking();") < main_reset
+assert "void ResetDirectMemoryProbeForTitle() noexcept" in perf
+reset = perf.split("void ResetDirectMemoryProbeForTitle() noexcept", 1)[1].split("static void RefreshFreeMemory()", 1)[0]
+assert "if (query_in_flight.load(std::memory_order_acquire)) std::abort();" in reset
+assert "has_valid_sample.store(false" in reset
+assert "consecutive_failures.store(0" in reset
+assert "largest_free_block.store(0" in reset
+assert "graphics_memory_short.store(true" in reset
+assert "checked_ns.store(0" in reset
+assert "ResetDirectMemoryProbeForTitle() noexcept;" in (root / "headless/performance.h").read_text()
 print("Encore automatic performance policy: 7/7 controls owned by 4 tiers + Custom derivation PASS")
 print("GPU timing device lifecycle: explicit opt-in, per-title query reset contract PASS")
