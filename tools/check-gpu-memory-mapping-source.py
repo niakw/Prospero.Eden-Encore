@@ -147,7 +147,10 @@ assert apply.index('eden-ps5-gpu-atomic-reverse-table.patch') < apply.index(
     'eden-ps5-gpu-asid-lifetime-guard.patch') < apply.index(
     'eden-ps5-gpu-asid-no-reuse.patch')
 cpp_host=(r/'tools/check-gpu-atomic-forward-cpp-host.py').read_text()
-assert 'std::atomic_ref<' in cpp_host
+assert 'std::atomic_ref<' not in cpp_host
+assert '"-std=c++17"' in cpp_host
+assert '__atomic_load_n(' in cpp_host and '__atomic_store_n(' in cpp_host
+assert 'source-only PASS' in cpp_host
 assert '-fsanitize=address,undefined' in cpp_host
 assert '-fsanitize=thread' in cpp_host
 inline_bounds=(r/'headless/backports/eden-ps5-gpu-reverse-inline-bounds.patch').read_text()
