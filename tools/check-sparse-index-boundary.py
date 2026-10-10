@@ -28,7 +28,7 @@ for token in (
 assert cmake.count('mutation_lock{sparse_mutation_mutex}') == 2
 native = (root / "src/memory_pages.cpp").read_text()
 commit_source = native.split("void CommitSparsePage(std::uintptr_t page) noexcept {", 1)[1].split(
-    "\\nstd::size_t SparseCommitSpan()", 1
+    "std::size_t SparseCommitSpan()", 1
 )[0]
 # The global owner lock must protect SparseRangeOf and the first owned[slot]
 # dereference; otherwise concurrent FreeSparsePages can free the bitmap.
