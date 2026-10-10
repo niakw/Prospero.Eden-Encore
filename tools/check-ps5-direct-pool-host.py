@@ -13,6 +13,10 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 header = (root / "headless/direct_pool_accounting.h").read_text()
 perf = (root / "headless/performance.cpp").read_text()
+heap = (root / "headless/heap_arenas.inc").read_text()
+pages = (root / "src/memory_pages.cpp").read_text()
+bridge = (root / "headless/heap_pages.cpp").read_text()
+cmake = (root / "headless/CMakeLists.txt").read_text()
 for token in (
     '#include "direct_pool_accounting.h"',
     '::Common::SparseUsage(&sparse_virtual, &sparse_physical);',
@@ -22,6 +26,8 @@ for token in (
     'EDEN_DIRECT_POOL_OWNERS phase=%s extent=%llu heap_roots=%zu',
     'unclassified=%llu tracked_within_extent=%u',
     'largest_free_known=%u largest_free=%zu',
+    '.heap_large = heap_large_physical,',
+    'large_owner_known=%u',
 ):
     assert token in perf, f"Missing physical pool provenance: {token}"
 assert "SaturatingAdd" in header
@@ -29,6 +35,15 @@ assert "std::numeric_limits<std::uint64_t>::max()" in header
 assert "return {extent, used, 0, true, false};" in header
 assert "return {extent, used, extent - used, true, true};" in header
 assert "untracked is not free" in perf.lower(), "Do not present unclassified as free"
+assert 'heap_large_requested=%zu' in perf
+assert 'eden_heap_large_physical_held' in heap
+assert 'atomic_fetch_add_explicit(&eden_heap_large_physical_bytes, physical_bytes' in heap
+assert 'atomic_fetch_sub_explicit(&eden_heap_large_physical_bytes,' in heap
+assert 'eden_heap_pages_physical_size(block)' in heap
+assert 'AllocatedMemoryPagesSpan(const void* pointer)' in pages
+assert 'header_of(pointer, static_cast<std::size_t>(page)).total' in pages
+assert 'Common::AllocatedMemoryPagesSpan(base)' in bridge
+assert 'size_t eden_heap_pages_physical_size(void *);' in cmake
 assert perf.index("void ReportDirectMemoryState(") < perf.index("EDEN_DIRECT_POOL_OWNERS")
 assert perf.index("EDEN_DIRECT_POOL_OWNERS") < perf.index("void ReportGpuThread(")
 compiler = next((name for name in ("clang++-18", "clang++", "g++")

@@ -2238,7 +2238,7 @@ void Initialize() {
     file(READ "${heap_source}" heap)
     string(REPLACE "128 MiB" "3072 MiB" heap "${heap}")
     string(REPLACE "(128u * 1024u * 1024u)" "(3072u * 1024u * 1024u)" heap "${heap}")
-    string(REPLACE "#include <sys/mman.h>" "#include <sys/mman.h>\nvoid *eden_heap_pages(size_t);\nvoid eden_heap_pages_free(void *, size_t);" heap "${heap}")
+    string(REPLACE "#include <sys/mman.h>" "#include <sys/mman.h>\nvoid *eden_heap_pages(size_t);\nvoid eden_heap_pages_free(void *, size_t);\nsize_t eden_heap_pages_physical_size(void *);" heap "${heap}")
     string(REPLACE "mmap(NULL, PS5_OPENGL_HEAP_SIZE, PROT_READ | PROT_WRITE,\n                    MAP_PRIVATE | MAP_ANON, -1, 0)" "eden_heap_pages(PS5_OPENGL_HEAP_SIZE)" heap "${heap}")
     string(REPLACE "if (base == MAP_FAILED)" "if (base == NULL)" heap "${heap}")
     string(REPLACE "munmap(base, PS5_OPENGL_HEAP_SIZE)" "eden_heap_pages_free(base, PS5_OPENGL_HEAP_SIZE)" heap "${heap}")

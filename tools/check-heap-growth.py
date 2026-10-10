@@ -22,7 +22,7 @@ heap = (root / 'third_party/app_heap.c').read_text()
 for old, new in (
     ('128 MiB', '3072 MiB'),
     ('(128u * 1024u * 1024u)', '(3072u * 1024u * 1024u)'),
-    ('#include <sys/mman.h>', '#include <sys/mman.h>\nvoid *eden_heap_pages(size_t);\nvoid eden_heap_pages_free(void *, size_t);'),
+    ('#include <sys/mman.h>', '#include <sys/mman.h>\nvoid *eden_heap_pages(size_t);\nvoid eden_heap_pages_free(void *, size_t);\nsize_t eden_heap_pages_physical_size(void *);'),
     ('"PS5-OpenGL"', '"Eden-headless"'),
 ):
     assert old in heap, old
@@ -34,6 +34,7 @@ for required in (
     '3072 MiB', 'eden_heap_commit', 'eden_heap_pages', 'eden_heap_pages_free',
     'eden_heap_arenas_created', 'eden_heap_committed',
     'eden_heap_tcache_held', 'EDEN_TCACHE_TOTAL_LIMIT',
+    'eden_heap_large_physical_held', 'eden_heap_pages_physical_size',
     '__builtin_ia32_pause',
 ):
     assert required in heap, f'heap derivation contract changed: {required}'
@@ -262,13 +263,31 @@ void eden_heap_rollback_growth(void *address, size_t size, int64_t physical) {
     ++rolled_back_growth;
 }
 static int refuse_pages;   // the console has no memory left for a block of its own
+// Full-span mock for Sony pages: payload rounded to 2 MiB plus 2 MiB lead.
+#define MOCK_DIRECT_PAGE ((size_t)2 << 20)
+static size_t direct_span(size_t size) {
+    if (size > SIZE_MAX - 2 * MOCK_DIRECT_PAGE) return 0;
+    return ((size + MOCK_DIRECT_PAGE - 1) / MOCK_DIRECT_PAGE + 1) * MOCK_DIRECT_PAGE;
+}
 void *eden_heap_pages(size_t size) {
     if (size == ((size_t)3072 << 20)) ++dense_fallback_attempts;
     if (refuse_pages) return NULL;
-    void *address = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
-    return address == MAP_FAILED ? NULL : address;
+    const size_t physical = direct_span(size);
+    if (!physical) return NULL;
+    void *base = mmap(NULL, physical, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+    if (base == MAP_FAILED) return NULL;
+    char *data = (char *)base + MOCK_DIRECT_PAGE;
+    ((size_t *)data)[-1] = physical;
+    return data;
 }
-void eden_heap_pages_free(void *address, size_t size) { munmap(address, size); }
+size_t eden_heap_pages_physical_size(void *address) {
+    assert(address != NULL);
+    return ((size_t *)address)[-1];
+}
+void eden_heap_pages_free(void *address, size_t size) {
+    assert(eden_heap_pages_physical_size(address) == direct_span(size));
+    assert(munmap((char *)address - MOCK_DIRECT_PAGE, direct_span(size)) == 0);
+}
 int64_t eden_heap_first_direct_owner(void) { return -1; }
 void eden_heap_abandon_initial(void *address, size_t reserved) {
     assert(address == last_reserved_base && reserved == last_reserved_size);
@@ -288,6 +307,7 @@ size_t __wrap_malloc_usable_size(const void *);
 unsigned eden_heap_arenas_created(void);
 size_t eden_heap_committed(void);
 size_t eden_heap_large_held(unsigned *blocks);
+size_t eden_heap_large_physical_held(void);
 
 static void fill(unsigned char *block, size_t size, unsigned seed) {
     // The start and the end of a large block are enough to see another owner writing into it.
@@ -410,8 +430,10 @@ int main(int argc, char **argv) {
         void *large_zero = __wrap_malloc(big_bytes);
         assert(large_zero != NULL);
         assert(eden_heap_large_held(&big_blocks) >= big_bytes && big_blocks >= 1);
+        assert(eden_heap_large_physical_held() == direct_span(big_bytes));
         assert(__wrap_realloc(large_zero, 0) == NULL);
         assert(eden_heap_large_held(&big_blocks) == 0 && big_blocks == 0);
+        assert(eden_heap_large_physical_held() == 0);
         assert(atomic_load(&ps5_heap_ambiguous_zero_reallocs) == 0);
     }
     if (argc > 1 && strcmp(argv[1], "title-cycles") == 0) {
@@ -600,6 +622,7 @@ int main(int argc, char **argv) {
         unsigned char *large = __wrap_malloc(5 * piece / 2);
         assert(large != NULL && eden_heap_committed() == after_threads);
         assert(eden_heap_large_held(&blocks_alive) == 5 * piece / 2 && blocks_alive == 1);
+        assert(eden_heap_large_physical_held() == direct_span(5 * piece / 2));
         // A live direct-owned large block must always remain Bloom-positive.
         // Other libc objects must continue to route to libc without scanning
         // all 256 direct-block slots on every foreign free/realloc.
@@ -624,12 +647,15 @@ int main(int argc, char **argv) {
         verify(grown, 4096, 7);
         unsigned char *shrunk = __wrap_realloc(grown, 1000);          // small again: into an arena
         assert(shrunk != NULL && eden_heap_large_held(&blocks_alive) == 0 && blocks_alive == 0);
+        assert(eden_heap_large_physical_held() == 0);
         verify(shrunk, 1000 < 4096 ? 1000 : 4096, 7);
         unsigned char *back = __wrap_realloc(shrunk, (size_t)40 << 20); // and out of the range again
         assert(back != NULL && eden_heap_large_held(&blocks_alive) == ((size_t)40 << 20));
+        assert(eden_heap_large_physical_held() == direct_span((size_t)40 << 20));
         verify(back, 1000, 7);
         __wrap_free(back);
         assert(eden_heap_large_held(&blocks_alive) == 0 && eden_heap_committed() == after_threads);
+        assert(eden_heap_large_physical_held() == 0);
         void *aligned = NULL;
         assert(__wrap_posix_memalign(&aligned, 4096, (size_t)33 << 20) == 0 && ((uintptr_t)aligned & 4095) == 0);
         assert(eden_heap_large_held(&blocks_alive) == ((size_t)33 << 20));

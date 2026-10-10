@@ -89,10 +89,12 @@ static int eden_heap_growth_mspace_failed;
 /* The large blocks alive: address 0 marks a free entry, 1 one being filled in. */
 static struct {
   _Atomic uintptr_t address;
-  size_t size;
+  size_t size; /* requested payload */
+  size_t physical_size; /* Sony direct bytes incl. leading page and rounding */
 } eden_heap_large[EDEN_HEAP_LARGE_BLOCKS];
 static atomic_uint eden_heap_large_count;
 static atomic_size_t eden_heap_large_bytes;
+static atomic_size_t eden_heap_large_physical_bytes;
 /* Every foreign/real-libc free or realloc would scan 256 entries while ANY
  * large direct-owned block lived. This monotonic Bloom filter rules out the
  * overwhelmingly common negative case using only two atomic bit checks.
@@ -326,6 +328,10 @@ size_t eden_heap_large_held(unsigned *blocks) {
     *blocks = atomic_load_explicit(&eden_heap_large_count, memory_order_relaxed);
   return atomic_load_explicit(&eden_heap_large_bytes, memory_order_relaxed);
 }
+/* Reporting only, NOT permission to reclaim underlying Sony allocations. */
+size_t eden_heap_large_physical_held(void) {
+  return atomic_load_explicit(&eden_heap_large_physical_bytes, memory_order_relaxed);
+}
 
 /* The entry of a large block, or NULL: most addresses are not one, and with none alive
  * nothing is searched. */
@@ -352,11 +358,15 @@ static void *eden_heap_large_allocate(size_t bytes) {
       atomic_store_explicit(&eden_heap_large[i].address, 0, memory_order_release);
       return NULL;
     }
+    const size_t physical_bytes = eden_heap_pages_physical_size(block);
+    if (physical_bytes < bytes) abort();
     eden_heap_large[i].size = bytes;
+    eden_heap_large[i].physical_size = physical_bytes;
     /* Publish both bits BEFORE the count/address become visible to any
      * receiving thread. A miss may return only for never-owned pointers. */
     eden_heap_large_note((uintptr_t)block);
     atomic_fetch_add_explicit(&eden_heap_large_bytes, bytes, memory_order_relaxed);
+    atomic_fetch_add_explicit(&eden_heap_large_physical_bytes, physical_bytes, memory_order_relaxed);
     atomic_fetch_add_explicit(&eden_heap_large_count, 1, memory_order_release);
     atomic_store_explicit(&eden_heap_large[i].address, (uintptr_t)block, memory_order_release);
     return block;
@@ -367,11 +377,15 @@ static void *eden_heap_large_allocate(size_t bytes) {
 static void eden_heap_large_free(int entry) {
   void *block = (void *)atomic_load_explicit(&eden_heap_large[entry].address, memory_order_relaxed);
   const size_t bytes = eden_heap_large[entry].size;
+  const size_t physical_bytes = eden_heap_large[entry].physical_size;
   /* The entry stops naming the address before the memory goes: the next large block may be
    * given the same address at once. */
   atomic_store_explicit(&eden_heap_large[entry].address, 1, memory_order_release);
   eden_heap_pages_free(block, bytes);
   atomic_fetch_sub_explicit(&eden_heap_large_bytes, bytes, memory_order_relaxed);
+  const size_t old_physical = atomic_fetch_sub_explicit(&eden_heap_large_physical_bytes,
+                                                        physical_bytes, memory_order_relaxed);
+  if (old_physical < physical_bytes) abort();
   atomic_fetch_sub_explicit(&eden_heap_large_count, 1, memory_order_release);
   atomic_store_explicit(&eden_heap_large[entry].address, 0, memory_order_release);
 }
