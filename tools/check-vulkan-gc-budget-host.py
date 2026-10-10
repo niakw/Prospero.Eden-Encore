@@ -18,6 +18,14 @@ assert "constexpr std::uint64_t AfterProjectedEviction(" in header
 assert "return reclaimed >= used ? 0 : used - reclaimed;" in header
 assert "usage = ::Eden::VulkanMemory::AfterProjectedEviction(" in gc
 assert "usage -= ReclaimedBytes(image);" not in gc
+# Extract the pinned GC rewrite instead of trusting a standalone math model.
+# This source originally contains TWO unchecked unsigned LRU age cutoffs.
+assert 'unsafe_cutoff = "frame_tick - ticks_to_destroy"' in generator
+assert 'if gc.count(unsafe_cutoff) != 2:' in generator
+assert 'gc = gc.replace(unsafe_cutoff,' in generator
+assert '"::Eden::VulkanMemory::OldestEvictionTick(frame_tick, ticks_to_destroy)"' in generator
+assert "constexpr std::uint64_t OldestEvictionTick(" in header
+assert "return frame_tick >= min_age ? frame_tick - min_age : 0;" in header
 assert '#include "vulkan_gc_budget.h"' in generator
 assert generator.count("(gc_original, gc)") == 1
 # Extract real Python replacement templates; literal backslash-n would emit
@@ -59,7 +67,34 @@ static_assert(AfterProjectedEviction(100, 99) == 1);
 static_assert(AfterProjectedEviction(UINT64_MAX, UINT64_MAX) == 0);
 static_assert(AfterProjectedEviction(UINT64_MAX, 1) == UINT64_MAX - 1);
 static_assert(AfterProjectedEviction(1, UINT64_MAX) == 0);
+using Eden::VulkanMemory::OldestEvictionTick;
+static_assert(OldestEvictionTick(0, 10) == 0);
+static_assert(OldestEvictionTick(9, 10) == 0);
+static_assert(OldestEvictionTick(10, 10) == 0);
+static_assert(OldestEvictionTick(11, 10) == 1);
+static_assert(OldestEvictionTick(24, 25) == 0);
+static_assert(OldestEvictionTick(49, 50) == 0);
+static_assert(OldestEvictionTick(50, 50) == 0);
+static_assert(OldestEvictionTick(51, 50) == 1);
+static_assert(OldestEvictionTick(UINT64_MAX, UINT64_MAX) == 0);
+static_assert(OldestEvictionTick(UINT64_MAX, 10) == UINT64_MAX - 10);
 int main() {
+    // Reproduce the actual startup path: frame_tick begins at zero, while
+    // immediate VRAM pressure can enter the texture collector before frame 50.
+    // For a new image touched on this frame, the cutoff must NEVER select it
+    // as older than any age; the old wrap made cutoff enormous.
+    for (std::uint64_t frame = 0; frame < 110; ++frame)
+    for (std::uint64_t age : {10ULL, 25ULL, 50ULL}) {
+        const auto cutoff = OldestEvictionTick(frame, age);
+        const auto expected = frame >= age ? frame - age : 0;
+        assert(cutoff == expected);
+        assert(cutoff <= frame);
+        if (frame < age)
+            assert(cutoff == 0);
+        if (frame > age)
+            assert(cutoff < frame);
+    }
+
     std::uint64_t state = 0x534F4E5950533530ULL;
     constexpr auto next = [](std::uint64_t& x) {
         x ^= x << 13; x ^= x >> 7; x ^= x << 17;
@@ -72,6 +107,10 @@ int main() {
         assert(got == reference);
         assert(got <= used);
         assert(AfterProjectedEviction(got, reclaimed) <= got);
+        const auto frame = next(state), age = next(state);
+        const auto cutoff = OldestEvictionTick(frame, age);
+        assert(cutoff == (frame >= age ? frame - age : 0));
+        assert(cutoff <= frame);
     }
 }
 """
@@ -84,5 +123,5 @@ with tempfile.TemporaryDirectory(prefix="eden-vulkan-gc-budget-") as temp:
                     "-fno-sanitize-recover=all", "-I", str(root / "headless"),
                     str(source_path), "-o", str(executable)], check=True, timeout=90)
     subprocess.run([str(executable)], check=True, timeout=90)
-print("PASS production Vulkan texture GC projected pressure: 200000 bounded cases ASan/UBSan")
+print("PASS actual Vulkan GC budget + both LRU cutoffs: 200000 saturation cases and early-frame eviction gates ASan/UBSan")
 print("GPU driver, real VRAM headroom, FC27 textures/FPS: not console qualified")
