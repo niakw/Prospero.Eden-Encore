@@ -18,6 +18,10 @@
     const auto PrefetchDownloads = [&] {
         if constexpr (std::is_same_v<Runtime, Vulkan::TextureCacheRuntime>) {
             ReleaseDownloads();
+            // No texture can be old enough before this title's first
+            // age threshold. In particular, a zero cutoff would include
+            // images first used at frame zero (LRU comparison is inclusive).
+            if (frame_tick < ticks_to_destroy) return;
             size_t remaining = num_iterations;
             size_t bytes = 0;
             u64 usage = total_used_memory;
