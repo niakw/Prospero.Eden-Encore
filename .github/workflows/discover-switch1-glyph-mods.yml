@@ -8,6 +8,7 @@ on:
     paths:
       - .github/workflows/discover-switch1-glyph-mods.yml
       - tools/ps-glyph-switch1-corpus.py
+      - tools/check-ps-glyph-switch1-corpus.py
       - tools/check-ps-glyph-mod-discovery.py
       - tools/ps-glyph-switch1-search-queue.py
       - tools/check-ps-glyph-switch1-search-queue.py
@@ -60,6 +61,7 @@ jobs:
           persist-credentials: true
       - name: Validate sources, parsers, state and billing boundaries
         run: |
+          python3 -B tools/check-ps-glyph-switch1-corpus.py
           python3 -B tools/check-ps-glyph-mod-discovery.py
           python3 -B tools/check-ps-glyph-multiplatform-adapt.py
           python3 -B tools/check-ps-glyph-mod-results-merge.py
