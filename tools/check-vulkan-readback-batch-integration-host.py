@@ -3,7 +3,7 @@
 
 Unlike the small_vector-only check, this includes the actual source snippet
 from headless/vulkan_download_batch.inc inside a mocked texture cache and
-checks GPU Finish ordering, image byte integrity, 16-map/32-MiB batching,
+checks GPU Finish ordering, image byte integrity, 40-map/32-MiB batching,
 zero-sized images, and oversized standalone transfers. Not a native PS5 run.
 """
 from pathlib import Path
@@ -14,10 +14,11 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 snippet = (root / "headless/vulkan_download_batch.inc").read_text()
 generator = (root / "tools/prepare-vulkan-port.py").read_text()
-assert "boost::container::small_vector<std::pair<ImageId, Map>, 16> pending;" in snippet
+assert "boost::container::small_vector<std::pair<ImageId, Map>, readback_batch_limit> pending;" in snippet
+assert "constexpr size_t readback_batch_limit = 40;" in snippet
 assert "runtime.Finish();" in snippet
 assert "bytes > batch_limit - batch_bytes" in snippet
-assert "pending.size() == 16" in snippet
+assert "pending.size() == readback_batch_limit" in snippet
 assert "(port / 'vulkan_download_batch.inc').read_text()" in generator
 compiler = next((c for c in ("clang++-18", "clang++", "g++")
                  if shutil.which(c)), None)
@@ -51,22 +52,20 @@ struct Monitor {
 namespace Vulkan {
 struct TextureCacheRuntime {
     std::shared_ptr<Monitor> monitor;
+    // Pinned vk_staging_buffer_pool.h defines a trivially-copyable
+    // non-owning StagingBufferRef; the runtime's pool owns each allocation.
     struct Map {
-        std::unique_ptr<std::vector<std::uint8_t>> bytes;
-        std::span<const std::uint8_t> mapped_span;
-        explicit Map(std::size_t n)
-            : bytes(std::make_unique<std::vector<std::uint8_t>>(n)),
-              mapped_span(*bytes) {}
-        Map(Map&&) noexcept = default;
-        Map& operator=(Map&&) noexcept = default;
-        Map(const Map&) = delete;
-        Map& operator=(const Map&) = delete;
+        std::size_t index;
+        std::span<std::uint8_t> mapped_span;
     };
+    static_assert(std::is_trivially_copyable_v<Map>);
+    std::vector<std::unique_ptr<std::vector<std::uint8_t>>> backing;
     Map DownloadStagingBuffer(std::size_t n) {
         monitor->batch_bytes += n;
         monitor->max_batch_bytes = std::max(monitor->max_batch_bytes,
                                             monitor->batch_bytes);
-        return Map{n};
+        backing.push_back(std::make_unique<std::vector<std::uint8_t>>(n));
+        return Map{backing.size(), *backing.back()};
     }
     void Finish() {
         monitor->completed = monitor->issued;
@@ -90,8 +89,9 @@ struct Image {
     void DownloadMemory(Vulkan::TextureCacheRuntime::Map& map,
                         const std::vector<std::size_t>& copies) const {
         assert(copies.size() == 1 && copies[0] == info.id);
-        assert(map.bytes->size() == unswizzled_size_bytes);
-        auto& bytes = *map.bytes;
+        assert(map.index != 0);
+        assert(map.mapped_span.size() == unswizzled_size_bytes);
+        auto bytes = map.mapped_span;
         for (std::size_t i = 0; i < bytes.size(); ++i) {
             bytes[i] = static_cast<std::uint8_t>((info.id * 13 + i) % 251);
         }
@@ -160,7 +160,9 @@ void Test(std::vector<std::size_t> bytes, std::size_t expected_finishes) {
 int main() {
     Test({}, 0);
     Test({1, 2, 3}, 1);
-    Test(std::vector<std::size_t>(17, 1), 2);
+    Test(std::vector<std::size_t>(17, 1), 1);
+    Test(std::vector<std::size_t>(40, 1), 1);
+    Test(std::vector<std::size_t>(41, 1), 2);
     Test({20_MiB, 14_MiB, 1}, 2); // 32-MiB staging boundary
     Test({33_MiB, 1}, 2); // large texture is standalone
     Test({32_MiB, 1}, 2); // exact cap, then next submission
@@ -177,5 +179,5 @@ with tempfile.TemporaryDirectory(prefix="eden-gpu-readback-batch-") as temp:
                     "-I", str(root / "headless"), str(src), "-o", str(exe)],
                    check=True, timeout=120)
     subprocess.run([str(exe)], check=True, timeout=180)
-print("PASS actual PS5 Vulkan batch C++: ordering, Finish fences, 16 maps, 32 MiB, oversized textures")
+print("PASS production Vulkan guest readback batch C++: ordered publication, 40 POD maps, 32MiB, Finish fences, oversized cases")
 print("The GPU implementation and PS5 firmware transfer paths remain unqualified")
