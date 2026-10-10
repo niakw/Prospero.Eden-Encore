@@ -50,6 +50,7 @@ jobs:
           python3 -B tools/check-gpu-physical-copy-bounds-host.py
           python3 -B tools/check-gpu-physical-copy-cpp-host.py
           python3 -B tools/check-gpu-atomic-forward-cpp-host.py
+          python3 -B tools/check-gpu-asid-lifetime-cpp-host.py
           python3 -B tools/check-jit-memory-policy.py
           python3 -B tools/check-jit-startup-retry.py
           python3 -B tools/check-vulkan-pipeline-persistence.py
