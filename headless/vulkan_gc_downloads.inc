@@ -29,8 +29,19 @@
             size_t remaining = num_iterations;
             size_t bytes = 0;
             u64 usage = total_used_memory;
-            // Only look ahead through independent dirty evictions. Leave all
-            // deletion, alias updates and pressure-policy decisions to Cleanup.
+            // Cleanup reclaims clean AND dirty images. Model both kinds of
+            // evictions while looking ahead: otherwise a run of clean images
+            // can already end memory pressure but we still submit needless
+            // dirty-image downloads and a GPU Finish() for images retained.
+            // This is a conservative estimate, not actual image deletion.
+            const auto NoteProjectedEviction = [&](const ImageBase& image) {
+                usage = ::Eden::VulkanMemory::AfterProjectedEviction(
+                    usage, ReclaimedBytes(image));
+                return usage < (aggressive_mode || ::Eden::Performance::KeepDirtyTextures()
+                                    ? critical_memory : expected_memory);
+            };
+            // Only look ahead through eligible evictions. Leave actual
+            // deletion, alias updates and guest writes to Cleanup.
             lru_cache.ForEachItemBelow(frame_tick - ticks_to_destroy, [&](ImageId id) {
                 if (remaining == 0) return true;
                 --remaining;
@@ -49,7 +60,8 @@
                 // sharing the same GPU completion fence.
                 if (!dirty || !image.aliased_images.empty() || !image.overlapping_images.empty() ||
                     image.HasScaled() || image.info.num_samples != 1 ||
-                    image.unswizzled_size_bytes > 32_MiB) return false;
+                    image.unswizzled_size_bytes > 32_MiB)
+                    return NoteProjectedEviction(image);
                 // Full descriptor/byte capacity is a true batch boundary.
                 if (gc_downloads.size() == gc_prefetch_limit ||
                     image.unswizzled_size_bytes > 32_MiB - bytes) return true;
@@ -60,15 +72,9 @@
                 const auto copies = FixSmallVectorADL(FullDownloadCopies(image.info));
                 image.DownloadMemory(map, copies);
                 bytes += image.unswizzled_size_bytes;
-                // The driver's sampled total and logical per-image
-                // reclamation can diverge during alias/deferred cleanup.
-                // Saturate instead of wrapping u64 and over-prefetching.
-                usage = ::Eden::VulkanMemory::AfterProjectedEviction(
-                    usage, ReclaimedBytes(image));
-                // The original policy changes at these thresholds. Stop looking
-                // ahead here so we never copy a texture that it would retain.
-                return usage < (aggressive_mode || ::Eden::Performance::KeepDirtyTextures() ? critical_memory
-                                                                                           : expected_memory);
+                // Same projected accounting for the staged dirty image,
+                // including saturation when tracked and driver usage differ.
+                return NoteProjectedEviction(image);
             });
             if (!gc_downloads.empty()) runtime.Finish();
         }
