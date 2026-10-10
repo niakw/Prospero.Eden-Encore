@@ -195,6 +195,7 @@ jobs:
           python3 -B tools/check-ps5-virtual-reservation-host.py
           python3 -B tools/check-shader-cache-pressure.py
           python3 -B tools/check-vulkan-gc-budget-host.py
+          python3 -B tools/check-vulkan-readback-small-vector-host.py
           python3 -B tools/check-performance-policy.py
           python3 -B tools/check-ps5-pc-ring-host.py
           python3 -B tools/check-ps5-worker-lifetime-host.py
