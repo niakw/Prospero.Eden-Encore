@@ -384,6 +384,21 @@ print('Pinned PS5 guest memory walker: read-only lookup and invalid-pointer guar
 PYWALK
 }
 apply_one "$root/headless/backports/eden-ps5-guest-walk.patch" "$eden/.encore-backport-ps5-guest-walk.sha256" validate_ps5_guest_walk_memory
+validate_ps5_guest_zero_alias() {
+python3 - "$eden" <<'PYALIAS'
+from pathlib import Path
+import sys
+s=(Path(sys.argv[1])/'src/core/memory.cpp').read_text()
+for token in ('IsDirectBackingAlias(u64 address, std::size_t bytes) const',
+              'GetIntendedMemorySize()', 'guest_alias_mapped.fetch_add',
+              'guest_alias_access.fetch_add', 'return reinterpret_cast<u8*>(vaddr)',
+              'on_memory(offset, copy_amount, reinterpret_cast<u8*>(current_vaddr))'):
+    if token not in s:
+        raise SystemExit(f'PS5 delta-zero guest pointer alias recovery missing: {token}')
+print('Pinned PS5 guest delta-zero pointer alias guard: PASS')
+PYALIAS
+}
+apply_one "$root/headless/backports/eden-ps5-guest-zero-alias.patch" "$eden/.encore-backport-ps5-guest-zero-alias.sha256" validate_ps5_guest_zero_alias
 # Citron fixes inform this host-worker SM/audctl proposal. It compiles on the
 # pinned Eden source, but PS5 service-init/shutdown behavior is not yet proven.
 # Keep it OFF in the baseline; qualify with a separate controlled HLE A/B.

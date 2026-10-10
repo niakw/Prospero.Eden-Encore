@@ -7,6 +7,7 @@
 namespace Eden::GpuFault {
 inline std::atomic<std::uint64_t> reads{0}, writes{0};
 inline std::atomic<std::uint64_t> guest_map_zero{0}, guest_null_mapped{0};
+inline std::atomic<std::uint64_t> guest_alias_mapped{0}, guest_alias_access{0};
 inline bool ShouldReport(std::atomic<std::uint64_t>& counter) noexcept {
     const std::uint64_t n = counter.fetch_add(1, std::memory_order_relaxed) + 1;
     return n <= 8 || (n & (n - 1)) == 0;
