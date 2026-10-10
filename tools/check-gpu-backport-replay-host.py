@@ -7,6 +7,8 @@ no user machine files, no GPU runtime and no source modifications outside the
 ephemeral CI worker.
 """
 import hashlib
+import re
+import sys
 from pathlib import Path
 import subprocess
 import tempfile
@@ -126,6 +128,26 @@ with tempfile.TemporaryDirectory(prefix="eden-pinned-gpu-replay-") as tmp:
     assert apply_source_guard not in apply_source
     assert "tracked_entries[first_page + i].compressed_physical_ptr != backing + i" not in merged_inc, (
         "A pinned physical-page patch must update raw table access to atomic helpers")
+    # Prove production cache-resume behavior, not merely the 16 git apply hunks:
+    # apply_one() reruns each early-stage validator against a FULLY patched
+    # cached Eden tree, which must accept later security-hardening edits.
+    replay_count = 0
+    for name in patch_names:
+        binding = re.search(
+            r'(?m)^apply_one "\$root/headless/backports/' + re.escape(name) +
+            r'" "[^"]+" (validate_ps5_gpu_\w+)$', apply_source)
+        assert binding, "Missing production GPU validator binding: " + name
+        validator_name = binding.group(1)
+        script = re.search(
+            r"(?ms)^" + re.escape(validator_name) +
+            r"\(\) \{\npython3 - \"\$eden\" <<'(\w+)'\n(.*?)\n\1\n\}",
+            apply_source)
+        assert script, "Cannot extract production validator: " + validator_name
+        subprocess.run([sys.executable, "-c", script.group(2), str(checkout)],
+                       cwd=checkout, check=True, timeout=20)
+        replay_count += 1
+    assert replay_count == len(patch_names)
+    print(f"PASS cached fully-patched Eden GPU: {replay_count} actual stage validators", flush=True)
 
 print("PASS two exact pinned GPU sources, all 16 production-ordered git apply patches")
 print("No PS5 native compilation, shader/framebuffer output or runtime performance proof")
