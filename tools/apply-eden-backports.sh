@@ -474,6 +474,28 @@ print('PS5 GPU bounded physical block readers, no invalid page dereference: PASS
 PYPHYSREAD
 }
 apply_one "$root/headless/backports/eden-ps5-gpu-physical-read-bounds.patch" "$eden/.encore-backport-ps5-gpu-physical-read-bounds.sha256" validate_ps5_gpu_physical_read_bounds
+validate_ps5_gpu_block_flush_bounds() {
+python3 - "$eden" <<'PYBLOCKFLUSH'
+from pathlib import Path
+import sys
+s=(Path(sys.argv[1])/'src/core/device_memory_manager.inc').read_text()
+read=s[s.index('void DeviceMemoryManager<Traits>::ReadBlock('):
+       s.index('void DeviceMemoryManager<Traits>::WriteBlock(')]
+write=s[s.index('void DeviceMemoryManager<Traits>::WriteBlock('):
+        s.index('void DeviceMemoryManager<Traits>::ReadBlockUnsafe(')]
+for token in ('if (size == 0) return;',
+              'if (address >= device_as_size || size > device_as_size - address)',
+              'std::memset(dest_pointer, 0, size);'):
+    if token not in read:
+        raise SystemExit('missing fail-closed GPU invalid-block read guard: '+token)
+if read.index('std::memset(dest_pointer, 0, size);') > read.index('device_inter->FlushRegion(address, size);'):
+    raise SystemExit('invalid GPU read flushed before its range was checked')
+if 'if (size != 0 && address < device_as_size && size <= device_as_size - address)' not in write:
+    raise SystemExit('invalid GPU block write still invalidates renderer region')
+print('PS5 GPU reject invalid flush/write-invalidation extents: PASS')
+PYBLOCKFLUSH
+}
+apply_one "$root/headless/backports/eden-ps5-gpu-block-flush-bounds.patch" "$eden/.encore-backport-ps5-gpu-block-flush-bounds.sha256" validate_ps5_gpu_block_flush_bounds
 validate_ps5_gpu_reverse_inline() {
 python3 - "$eden" <<'PYGPUINLINE'
 from pathlib import Path
