@@ -19,7 +19,7 @@
          // Existence checks are done within the functions themselves.
          // We don't particularly care if these succeed or not.
          void(FS::RemoveFile(old_filename));
-@@ -279,6 +287,26 @@
+@@ -279,6 +287,27 @@
              file->Flush();
  
          using namespace Common::Literals;
@@ -47,7 +47,7 @@
          // Prevent logs from exceeding a set maximum size in the event that log entries are spammed.
          const auto write_limit = Settings::values.extended_logging.GetValue() ? 1_GiB : 100_MiB;
          const bool write_limit_exceeded = bytes_written > write_limit;
-@@ -289,12 +317,54 @@
+@@ -289,12 +318,54 @@
                  enabled = false;
              file->Flush();
          }
