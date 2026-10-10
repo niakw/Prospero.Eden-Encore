@@ -570,6 +570,7 @@ static int eden_heap_grow(size_t bytes, unsigned seen) {
   /* Capture immutable ownership metadata under the growth lock. Emit the
    * kernel record only AFTER unlocking: a slow system logger must never
    * extend the allocator's serialized 128-MiB commit critical section. */
+  const char *report_refusal = NULL;
   size_t report_request = 0, report_pieces = 0;
   unsigned report_root = 0, report_spaces = 0;
   const unsigned count = atomic_load_explicit(&eden_heap_space_count, memory_order_relaxed);
@@ -586,7 +587,7 @@ static int eden_heap_grow(size_t bytes, unsigned seen) {
   } else if (eden_heap_growth_mspace_failed) {
     /* Previous growth pages were already rolled back. Avoid stalling a guest
      * frame with repeated 128 MiB commit+zero+rollback attempts. */
-    eden_heap_grow_refused("EDEN_HEAP_GROW refused: earlier mspace creation failed; growth disabled\n");
+    report_refusal = ("EDEN_HEAP_GROW refused: earlier mspace creation failed; growth disabled\n");
   } else if (eden_heap_grows && pieces && used <= EDEN_HEAP_PIECES &&
              pieces <= EDEN_HEAP_PIECES - used) {
     void *start = (char *)ps5_heap_base + ((size_t)used << EDEN_HEAP_PIECE_SHIFT);
@@ -621,19 +622,21 @@ static int eden_heap_grow(size_t bytes, unsigned seen) {
         /* Fail closed on future new-piece attempts, not on existing spaces.
          * Prevent repeated expensive zeroing if mspace creation is broken. */
         eden_heap_growth_mspace_failed = 1;
-        eden_heap_grow_refused("EDEN_HEAP_GROW refused: mspace failed; physical piece rolled back; growth disabled\n");
+        report_refusal = ("EDEN_HEAP_GROW refused: mspace failed; physical piece rolled back; growth disabled\n");
       }
     } else {
-      eden_heap_grow_refused("EDEN_HEAP_GROW refused: the console has no memory for a new piece\n");
+      report_refusal = ("EDEN_HEAP_GROW refused: the console has no memory for a new piece\n");
     }
   } else {
-    eden_heap_grow_refused("EDEN_HEAP_GROW refused: the heap is at its limit\n");
+    report_refusal = ("EDEN_HEAP_GROW refused: the heap is at its limit\n");
   }
   atomic_flag_clear_explicit(&eden_heap_grow_lock, memory_order_release);
   /* May be reordered against another thread's later growth record. The
    * logged root/extent/count are captured under the lock, not re-read. */
   if (report_pieces)
     eden_heap_log_growth(report_request, report_root, report_pieces, report_spaces);
+  if (report_refusal)
+    eden_heap_grow_refused(report_refusal);
   return grown;
 }
 
