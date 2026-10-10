@@ -877,13 +877,17 @@ int main(int argc, char** argv) {
             pc_sampler_installed = true;
         }
 #endif
-        setenv("PS5VK_QUIET_LOG", performance_run ? "1" : "0", 1);
+        // A normal game session does not need synchronous driver debug
+        // output, even in a native DEV build. The user may opt back in
+        // with Detailed Logging; performance-run always remains quiet.
+        const bool quiet_driver = performance_run || !launch_preferences.detailed_logging;
+        setenv("PS5VK_QUIET_LOG", quiet_driver ? "1" : "0", 1);
         // Bounded development cost breakdowns; never enable per-draw tracing.
         setenv("PS5VK_COST_LOG", std::filesystem::exists(Eden::AppFile("cost-run.txt")) ? "1" : "0", 1);
         if (performance_run) unsetenv("PS5VK_CAPTURE_SCANOUT");
         else setenv("PS5VK_CAPTURE_SCANOUT", "1", 1);
         std::printf("EDEN_VULKAN_MEASUREMENT quiet=%d captures=%d\n",
-                    performance_run, !performance_run);
+                    quiet_driver, !performance_run);
         const auto backend = safe_launch ? Eden::GraphicsBackend::OpenGL : automatic_launch ?
             (recovery_opengl ? Eden::GraphicsBackend::OpenGL : Eden::GraphicsBackend::Vulkan) :
             game_video.renderer >= 0 ?
