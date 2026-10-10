@@ -1,0 +1,73 @@
+--- a/src/core/device_memory_manager.inc
++++ b/src/core/device_memory_manager.inc
+@@ -580,7 +580,17 @@
+         // A remap can invalidate continuity even on a preceding page.
+         const size_t hint = static_cast<size_t>(tracked_entries[page_index].continuity_tracker) + 1;
+         const size_t remaining_pages = 1 + ((remaining_size - 1 + page_offset) >> Memory::YUZU_PAGEBITS);
+-        size_t next_pages = (std::min)({hint, remaining_pages, tracked_entries.size() - page_index});
++        size_t next_pages = (std::min)({hint, remaining_pages, tracked_entries.size() - page_index});
++#ifdef PS5_NATIVE
++        // A continuity hint does not prove that all decoded physical pages
++        // fit inside the configured 4/6/8/10/12-GiB backing allocation.
++        // Split exactly at the physical boundary; keep the single-page path O(1).
++        if (first_backing != 0) {
++            const size_t first_phys = static_cast<size_t>(first_backing - 1U);
++            next_pages = first_phys >= compressed_device_addr.size()
++                ? 1 : (std::min)(next_pages, compressed_device_addr.size() - first_phys);
++        }
++#endif
+         for (size_t n = 1; n < next_pages; ++n) {
+             const auto observed = tracked_entries[page_index + n].compressed_physical_ptr;
+             const bool contiguous = first_backing == 0 ? observed == 0 : observed == first_backing + n;
+@@ -595,8 +605,19 @@
+             remaining_size -= copy_amount;
+         };
+ 
+-        auto phys_addr = tracked_entries[page_index].compressed_physical_ptr;
+-        if (phys_addr == 0) {
++        auto phys_addr = tracked_entries[page_index].compressed_physical_ptr;
++#ifdef PS5_NATIVE
++        if (phys_addr != 0 &&
++            static_cast<size_t>(phys_addr - 1U) >= compressed_device_addr.size()) {
++            if (::Eden::GpuFault::ShouldReportBadPhysical())
++                LOG_WARNING(HW_Memory,
++                    "EDEN_GPU_READ_WRITE_PHYS_OOB gpu={:#x} phys_page={:#x}",
++                    current_vaddr, phys_addr - 1U);
++            on_unmapped(copy_amount, current_vaddr);
++            continue;
++        }
++#endif
++        if (phys_addr == 0) {
+             on_unmapped(copy_amount, current_vaddr);
+             continue;
+         }
+@@ -625,8 +646,12 @@
+ #endif
+ 
+         const std::size_t page_index = address >> Memory::YUZU_PAGEBITS;
+-        const auto phys_addr = tracked_entries[page_index].compressed_physical_ptr;
+-        if (phys_addr != 0) {
++        const auto phys_addr = tracked_entries[page_index].compressed_physical_ptr;
++        if (phys_addr != 0
++#ifdef PS5_NATIVE
++            && static_cast<size_t>(phys_addr - 1U) < compressed_device_addr.size()
++#endif
++        ) {
+             auto* const mem_ptr = GetPointerFromRaw<u8>((PAddr(phys_addr - 1) << Memory::YUZU_PAGEBITS));
+ #ifndef PS5_NATIVE
+             t_slot[cache_cursor % t_slot.size()] = TranslationEntry{.guest_page = guest_page, .host_ptr = mem_ptr};
+@@ -697,8 +722,12 @@
+ #endif
+ 
+         const std::size_t page_index = address >> Memory::YUZU_PAGEBITS;
+-        const auto phys_addr = tracked_entries[page_index].compressed_physical_ptr;
+-        if (phys_addr != 0) {
++        const auto phys_addr = tracked_entries[page_index].compressed_physical_ptr;
++        if (phys_addr != 0
++#ifdef PS5_NATIVE
++            && static_cast<size_t>(phys_addr - 1U) < compressed_device_addr.size()
++#endif
++        ) {
+             auto* const mem_ptr = GetPointerFromRaw<u8>((PAddr(phys_addr - 1) << Memory::YUZU_PAGEBITS));
+ #ifndef PS5_NATIVE
+             t_slot[cache_cursor % t_slot.size()] = TranslationEntry{.guest_page = guest_page, .host_ptr = mem_ptr};
