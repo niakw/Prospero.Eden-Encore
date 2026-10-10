@@ -109,6 +109,16 @@ assert atomic_forward.count('std::atomic_ref<') == 6
 assert 'validate_ps5_gpu_atomic_forward_table' in apply
 assert apply.index('eden-ps5-gpu-reverse-inline-bounds.patch') < apply.index(
     'eden-ps5-gpu-atomic-forward-table.patch')
+reverse_atomic=(r/'headless/backports/eden-ps5-gpu-atomic-reverse-table.patch').read_text()
+for token in ('static u32 AtomicLoadReverse(', 'static void AtomicStoreReverse(',
+              'std::atomic_ref<const u32>(slot).load(std::memory_order_acquire)',
+              'std::atomic_ref<u32>(slot).store(value, std::memory_order_release)',
+              'AtomicStoreReverse(base_dev, 0)',
+              'AtomicLoadReverse(compressed_device_addr[(address >> page_bits)])'):
+    assert token in reverse_atomic, token
+assert 'validate_ps5_gpu_atomic_reverse_table' in apply
+assert apply.index('eden-ps5-gpu-atomic-forward-table.patch') < apply.index(
+    'eden-ps5-gpu-atomic-reverse-table.patch')
 cpp_host=(r/'tools/check-gpu-atomic-forward-cpp-host.py').read_text()
 assert 'std::atomic_ref<' in cpp_host
 assert '-fsanitize=address,undefined' in cpp_host
