@@ -40,7 +40,8 @@ assert body.count("#ifdef PS5_NATIVE") == 6
 assert body.count("#else") == 6
 assert body.count("#endif") == 6
 assert body.rstrip().endswith("}")
-assert "constexpr void InsertCPUBacking" not in patch
+assert "+    void InsertCPUBacking(size_t page_index" in patch
+assert "+    constexpr void InsertCPUBacking" not in patch
 source = """\
 #include <atomic>
 #include <cassert>
