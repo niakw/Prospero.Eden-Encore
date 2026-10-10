@@ -53,6 +53,8 @@ jobs:
           python3 -B tools/check-vulkan-cache-atomic.py
           python3 -B tools/check-jit-dense-alias-host.py
           python3 -B tools/check-jit-sparse-host.py
+          python3 -B tools/check-sparse-index-boundary.py
+          python3 -B tools/check-sparse-slot-reuse-host.py
           python3 -B tools/check-shader-cache-pressure.py
           python3 -B tools/check-log-budget.py
           python3 -B tools/check-bounded-logs.py
