@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "performance.h"
+#include "direct_pool_accounting.h"
 #include "hle_counters.h"
 #include "gpu_fault_rate_limit.h"
 #include "crash_report.h"
@@ -757,9 +758,10 @@ void ReportDirectMemoryState(const char* phase) {
     const long long free_upper = valid ? static_cast<long long>(total - taken_lower) : -1LL;
     std::size_t jit_reserved = 0, jit_committed = 0;
     ::Common::SparseJitUsage(&jit_reserved, &jit_committed);
-    // Native GPU/guest/CPU use ONE 12 GiB pool. Report the heap's physically
-    // committed backing at each teardown phase, not only during a live Vulkan
-    // 5-second window; this identifies retained memory across title launches.
+    // Native GPU/guest/CPU use the SAME kernel-exposed direct pool (12 GiB
+    // observed on FW 13.60, not the full installed 16 GiB GDDR6). Report
+    // physical owners, not uncommitted virtual VA reservations. The Sony
+    // system's own reservation must never be counted as an Encore heap.
     unsigned large_blocks = 0;
     const std::size_t heap_large = eden_heap_large_held ? eden_heap_large_held(&large_blocks) : 0;
     std::printf("EDEN_HEAP_LIFETIME phase=%s pieces=%zu large=%zu large_blocks=%u tcache=%zu\n",
@@ -767,8 +769,33 @@ void ReportDirectMemoryState(const char* phase) {
                 heap_large, large_blocks, eden_heap_tcache_held ? eden_heap_tcache_held() : std::size_t{0});
     std::printf("EDEN_JIT_SPARSE_MEMORY phase=%s reserved=%zu committed=%zu\n",
                 phase, jit_reserved, jit_committed);
+    const std::size_t jit_dense = ::Common::DenseJitDirectBytes();
     std::printf("EDEN_JIT_DENSE_MEMORY phase=%s physically_owned=%zu\n",
-                phase, ::Common::DenseJitDirectBytes());
+                phase, jit_dense);
+    std::size_t sparse_virtual = 0, sparse_physical = 0;
+    ::Common::SparseUsage(&sparse_virtual, &sparse_physical);
+    const std::size_t heap_roots = eden_heap_committed ? eden_heap_committed() : std::size_t{0};
+    const auto account = ::Eden::DirectPool::Summarize(total, {
+        .heap_roots = heap_roots,
+        .heap_large = heap_large,
+        .sparse_tables = sparse_physical,
+        .jit_sparse = jit_committed,
+        .jit_dense = jit_dense,
+    });
+    // These five tracked owner sets are distinct direct-memory allocations.
+    // Untracked is NOT free: the renderer, guest and firmware may own it.
+    // The largest contiguous free block comes exclusively from a kernel query.
+    // Lifecycle checkpoints only: no per-frame region enumeration or logging.
+    std::printf("EDEN_DIRECT_POOL_OWNERS phase=%s extent=%llu heap_roots=%zu "
+                "heap_large=%zu sparse_tables=%zu jit_sparse=%zu jit_dense=%zu "
+                "tracked=%llu untracked_not_free=%llu tracked_within_extent=%u "
+                "largest_free_known=%u largest_free=%zu\n",
+                phase, static_cast<unsigned long long>(account.extent_bytes),
+                heap_roots, heap_large, sparse_physical, jit_committed, jit_dense,
+                static_cast<unsigned long long>(account.tracked_bytes),
+                static_cast<unsigned long long>(account.not_tracked_bytes),
+                unsigned(account.within_extent), unsigned(largest_rc == 0),
+                largest_rc == 0 ? largest : std::size_t{0});
     std::printf("EDEN_MEMORY_LAYOUT phase=%s largest_rc=%d total=%lld largest=%zu "
                 "largest_start=%lld free_upper=%lld scanned_regions=%u scan_valid=%d short=%d\n",
                 phase, largest_rc, static_cast<long long>(total),
