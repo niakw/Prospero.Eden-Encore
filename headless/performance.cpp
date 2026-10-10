@@ -1137,7 +1137,7 @@ void Snapshot() {
         }
     }
 #endif
-    std::printf("EDEN_GPU_UNMAPPED_COUNTERS read=%llu write=%llu guest_map_zero=%llu guest_null_mapped=%llu guest_alias_mapped=%llu guest_alias_access=%llu remap_replaced=%llu remap_mismatch=%llu bad_map_range=%llu bad_unmap_range=%llu bad_physical=%llu\n",
+    std::printf("EDEN_GPU_UNMAPPED_COUNTERS read=%llu write=%llu guest_map_zero=%llu guest_null_mapped=%llu guest_alias_mapped=%llu guest_alias_access=%llu remap_replaced=%llu remap_mismatch=%llu bad_map_range=%llu bad_unmap_range=%llu bad_physical=%llu remap_cache_evictions=%llu\n",
                 static_cast<unsigned long long>(::Eden::GpuFault::reads.load(std::memory_order_relaxed)),
                 static_cast<unsigned long long>(::Eden::GpuFault::writes.load(std::memory_order_relaxed)),
                 static_cast<unsigned long long>(::Eden::GpuFault::guest_map_zero.load(std::memory_order_relaxed)),
@@ -1148,7 +1148,8 @@ void Snapshot() {
                 static_cast<unsigned long long>(::Eden::GpuFault::remap_mismatch.load(std::memory_order_relaxed)),
                 static_cast<unsigned long long>(::Eden::GpuFault::bad_map_range.load(std::memory_order_relaxed)),
                 static_cast<unsigned long long>(::Eden::GpuFault::bad_unmap_range.load(std::memory_order_relaxed)),
-                static_cast<unsigned long long>(::Eden::GpuFault::bad_physical.load(std::memory_order_relaxed)));
+                static_cast<unsigned long long>(::Eden::GpuFault::bad_physical.load(std::memory_order_relaxed)),
+                static_cast<unsigned long long>(::Eden::GpuFault::remap_cache_evictions.load(std::memory_order_relaxed)));
     // Take an immutable owner-written copy; priority/CPU-clock syscalls,
     // formatting, and stdout flushes must NOT hold workers_mutex. Otherwise
     // all guest CPU workers can block in SampleCpu() on this GPU report.
