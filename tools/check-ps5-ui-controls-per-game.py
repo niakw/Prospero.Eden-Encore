@@ -33,10 +33,11 @@ assert "mapping_context" not in inputs
 # previously indexed through row_controls (9) caused an OOB read.
 import re
 rows = library.split("enum GameRow : int", 1)[1].split("};", 1)[0]
-editable = re.findall(r"^\\s*(row_\\w+),", rows, flags=re.MULTILINE)
+editable = re.findall(r"^\s*(row_\w+),", rows, flags=re.MULTILINE)
+editable = editable[:editable.index("row_mods")]
 assert len(editable) == 10 and editable[-1] == "row_controls"
 help_text = library.split("kGameAbout = {{", 1)[1].split("}};", 1)[0]
-assert len(re.findall(r'TR\\("', help_text)) == len(editable)
+assert len(re.findall(r'TR\("', help_text)) == len(editable)
 assert "kGameAbout.size() == static_cast<std::size_t>(row_mods)" in library
 assert "option_ < static_cast<int>(kGameAbout.size())" in library
 assert "library_.selected < 0 ||" in library
