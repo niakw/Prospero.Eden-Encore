@@ -1,0 +1,66 @@
+name: Audit Switch 1-only eligible game corpus (no PS5 build)
+
+on:
+  push:
+    branches: [dev/ps5-sparse-jit]
+    paths:
+      - .github/workflows/check-switch1-eligibility.yml
+      - tools/ps-glyph-switch1-eligibility.py
+      - tools/ps-glyph-switch1-corpus.py
+      - tools/check-ps-glyph-switch1-eligibility.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify-nx1-catalog:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify Switch1 base game, cross-generation and Switch2-only filters
+        run: |
+          python3 -B tools/check-ps-glyph-switch1-eligibility.py
+          python3 -B tools/check-ps-glyph-mod-discovery.py
+      - name: Audit public regional title metadata without games or assets
+        run: |
+          mkdir -p /tmp/nx1-eligibility/regions
+          count=0
+          for region in US.en GB.en JP.ja FR.fr; do
+            if curl -fsSL --max-time 45 --retry 2 \
+                 "https://raw.githubusercontent.com/blawar/titledb/master/${region}.json" \
+                 -o "/tmp/nx1-eligibility/regions/${region}.json"; then
+              count=$((count+1))
+            fi
+          done
+          if (( count == 0 )); then
+            echo "::error::No reliable original TitleDB metadata available"
+            exit 1
+          fi
+          python3 -B tools/ps-glyph-switch1-corpus.py \
+            --regions /tmp/nx1-eligibility/regions/*.json \
+            --out /tmp/nx1-eligibility/strict-switch1-candidates.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path("/tmp/nx1-eligibility/strict-switch1-candidates.json").read_text())
+          assert d["scope"]=="switch1_base_game_research_candidates_only"
+          assert d["officially_verified_switch1_game_count"]==0
+          assert d["switch2_only_id_rows_excluded"]>=0
+          print("=== NINTENDO SWITCH1 ONLY METADATA ===")
+          for key in ("raw_switch1_application_ids","game_count",
+                      "non_game_or_pre_release_title_ids_excluded",
+                      "switch2_only_id_rows_excluded","deferred_until_released_count"):
+              print(key, d[key])
+          print("exclusion_reason_counts",d["exclusion_reason_counts"])
+          print("WARNING: retained candidates are NOT official verified library count")
+          PY
+      - name: Publish evidence and exclusions before broad crawler restarts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Strict-Switch1-Only-Title-Qualification
+          path: /tmp/nx1-eligibility/strict-switch1-candidates.json
+          retention-days: 30
