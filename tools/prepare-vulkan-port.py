@@ -736,6 +736,24 @@ adapt('src/video_core/texture_cache/texture_cache.h',
     ('namespace VideoCommon {', '#include "performance.h"\n#include "vulkan_gc_budget.h"\n#include "common/scope_exit.h"\nnamespace Vulkan { class TextureCacheRuntime; }\n\nnamespace VideoCommon {'),
     (download_prefix, download_prefix + (port / 'vulkan_download_batch.inc').read_text() + '\n'),
     (gc_original, gc),
+    # Vulkan's total_used_memory may be a driver-reported snapshot rather than
+    # the exact sum of per-image logical costs. Never allow a DeleteImage
+    # subtraction to wrap u64 into enormous phantom VRAM pressure. OpenGL's
+    # accounting remains unchanged.
+    ('total_used_memory -= GetScaledImageSizeBytes(image);',
+     'if constexpr (std::is_same_v<Runtime, Vulkan::TextureCacheRuntime>) {\\n'
+     '            total_used_memory = ::Eden::VulkanMemory::AfterProjectedEviction(\\n'
+     '                total_used_memory, GetScaledImageSizeBytes(image));\\n'
+     '        } else {\\n'
+     '            total_used_memory -= GetScaledImageSizeBytes(image);\\n'
+     '        }'),
+    ('total_used_memory -= Common::AlignUp(tentative_size, 1024);',
+     'if constexpr (std::is_same_v<Runtime, Vulkan::TextureCacheRuntime>) {\\n'
+     '        total_used_memory = ::Eden::VulkanMemory::AfterProjectedEviction(\\n'
+     '            total_used_memory, Common::AlignUp(tentative_size, 1024));\\n'
+     '    } else {\\n'
+     '        total_used_memory -= Common::AlignUp(tentative_size, 1024);\\n'
+     '    }'),
     # RADV reports all Vulkan allocations, not just cached textures. A game's
     # measured ~1.9 GiB working set triggered dirty eviction at the old 1.6 GiB
     # threshold despite a 4 GiB budget. Retain 40% headroom; keep the original
