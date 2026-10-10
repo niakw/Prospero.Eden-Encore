@@ -14,7 +14,7 @@ assert spec and spec.loader
 run=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(run)
 
-catalog={"schema":1,"game_count":2,"games":[
+catalog={"schema":1,"scope":"switch1_base_game_research_candidates_only","game_count":2,"games":[
     {"title_id":"01007EF00011E000","title":"Zelda Breath of the Wild"},
     {"title_id":"0100AAA000111000","title":"Persona 3 Portable"}]}
 queue={"schema":1,"distinct_game_title_ids":2,"total_search_tasks":8,"games":[]}
