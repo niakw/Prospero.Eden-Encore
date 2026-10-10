@@ -134,6 +134,12 @@ eden_sparse_replace("if (IsCommittedPage(start / sizeof(T))) {" "if (IsCommitted
 # original zero/last valid element fast paths.
 eden_sparse_replace("if (index > alloc_size / sizeof(T)) {"
     "if (index >= alloc_size / sizeof(T)) {" 3)
+# Protect one table's bitmap scan/decommit from another worker's first commit.
+# Ordinary mapped reads and writes still run without the lock.
+eden_sparse_replace("#include <atomic>\n"
+    "#include <atomic>\n#include <mutex>\n" 1)
+eden_sparse_replace("void ZeroRegion(std::size_t start, std::size_t end_) noexcept {"
+    "void ZeroRegion(std::size_t start, std::size_t end_) noexcept {\n        std::lock_guard<std::mutex> mutation_lock{sparse_mutation_mutex};" 1)
 eden_sparse_replace("void FreeMemoryPages(void* base, std::size_t size) noexcept;"
     "void FreeMemoryPages(void* base, std::size_t size) noexcept;\nvoid* AllocateSparsePages(std::size_t size) noexcept;\nvoid FreeSparsePages(void* base, std::size_t size) noexcept;\nvoid CommitSparsePage(std::uintptr_t page) noexcept;\nvoid DecommitSparsePage(std::uintptr_t page) noexcept;\nstd::size_t SparseCommitSpan() noexcept;" 1)
 # Upstream #4471 decommits complete host pages. Encore's PS5 sparse backing is coarser (2 MiB),
@@ -167,9 +173,14 @@ set(sparse_private_replacement [=[    void DecommitPage(std::size_t index) noexc
         DecommitSparsePage(vector_base + slot_offset);
     }
 
-    constexpr void CommitPage(std::size_t index) noexcept {
+    void CommitPage(std::size_t index) noexcept {
+        std::lock_guard<std::mutex> mutation_lock{sparse_mutation_mutex};
+        if (IsCommittedPage(index)) return;
         auto page_index = (index * sizeof(T)) >> HostPageBits;]=])
 eden_sparse_replace("${sparse_private_anchor}" "${sparse_private_replacement}" 1)
+# Read-only paths stay lock-free. Only table mutations acquire this.
+eden_sparse_replace("    std::size_t alloc_size{};"
+    "    std::mutex sparse_mutation_mutex;\n    std::size_t alloc_size{};" 1)
 write_derived("${PORT_BUILD_DIR}/sparse/common/sparse_large_vector.h" "${sparse_header}")
 
 # An abandoned fiber stack is not unwound. Empty the by-value weak reference
