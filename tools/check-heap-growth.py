@@ -551,6 +551,25 @@ int main(int argc, char **argv) {
     fill(again, 1000, 3); verify(again, 1000, 3);
     __wrap_free(again);
     __wrap_free(first);
+    // Worker TLS destructors have returned physical cache entries and the
+    // main thread now drains its own. A root can still be pinned by a child
+    // arena, but no individual application mspace block may remain live.
+    // Realloc across large/direct/root and cache take/keep must balance.
+    (void)eden_heap_release_current_tcache();
+    long held_blocks = 0, held_bytes = 0;
+    unsigned arena_pins = 0;
+    for (unsigned root = 0; root < EDEN_HEAP_PIECES; ++root) {
+        if (!eden_heap_root_span[root]) continue;
+        const long blocks = atomic_load(&eden_heap_root_held_blocks[root]);
+        const long bytes = atomic_load(&eden_heap_root_held_bytes[root]);
+        assert(blocks >= 0 && bytes >= 0);
+        held_blocks += blocks;
+        held_bytes += bytes;
+        arena_pins += atomic_load(&eden_heap_root_arena_pins[root]);
+    }
+    assert(held_blocks == 0 && held_bytes == 0);
+    assert(arena_pins >= 1); // the arena still pins its parent's root
+    eden_heap_report_roots("host_after_free");
     printf("%s: %lu operations on 8 threads, %u arenas, most in use at once %zu MiB, %zu MiB of pieces after the threads, "
            "%zu MiB when full (%d blocks of 24 MiB)\n",
            refuse_range ? "whole heap at once" : "heap by pieces", atomic_load(&operations), eden_heap_arenas_created(),
