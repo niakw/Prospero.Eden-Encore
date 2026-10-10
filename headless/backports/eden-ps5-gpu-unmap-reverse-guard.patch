@@ -1,0 +1,21 @@
+--- a/src/core/device_memory_manager.inc
++++ b/src/core/device_memory_manager.inc
+@@ -305,6 +305,18 @@
+         if (phys_addr != 0) [[likely]] {
+             u32& base_dev = compressed_device_addr.GetAndFault(phys_addr - 1U);
+             if ((base_dev >> MULTI_FLAG_BITS) == 0) [[likely]] {
++#ifdef PS5_NATIVE
++                // Never erase a different GPU page's reverse mapping.
++                // This can occur after malformed or repeated guest remaps.
++                const u32 retiring_page = static_cast<u32>(start_page_d + i);
++                if (base_dev != retiring_page) {
++                    if (::Eden::GpuFault::ShouldReportRemapMismatch())
++                        LOG_WARNING(HW_Memory,
++                            "EDEN_GPU_UNMAP_REVERSE_MISMATCH guest={:#x} old_phys_page={:#x} reverse={:#x}",
++                            retiring_page, phys_addr - 1U, base_dev);
++                    continue;
++                }
++#endif
+                 base_dev = 0;
+                 continue;
+             }
