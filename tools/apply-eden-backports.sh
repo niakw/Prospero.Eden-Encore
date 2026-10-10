@@ -423,6 +423,21 @@ print('PS5 physical reverse mapping: full 4/6/8/10/12 GiB configured RAM PASS')
 PYPHYSICAL
 }
 apply_one "$root/headless/backports/eden-ps5-gpu-physical-capacity.patch" "$eden/.encore-backport-ps5-gpu-physical-capacity.sha256" validate_ps5_gpu_physical_capacity
+validate_ps5_gpu_remap_invalidation() {
+python3 - "$eden" <<'PYREMAPCACHE'
+from pathlib import Path
+import sys
+code=(Path(sys.argv[1])/'src/core/device_memory_manager.inc').read_text()
+for token in ('bool replaced_gpu_mapping = false;', 'std::unique_lock lk(mapping_guard);',
+              'replaced_gpu_mapping = true;', 'lk.unlock();',
+              'device_inter->InvalidateRegion(address, size);',
+              'remap_cache_evictions.fetch_add'):
+    if token not in code: raise SystemExit('PS5 GPU texture invalidation on remap missing: '+token)
+assert code.index('lk.unlock();') < code.index('remap_cache_evictions.fetch_add')
+print('PS5 GPU changed physical map invalidation outside mapping mutex: PASS')
+PYREMAPCACHE
+}
+apply_one "$root/headless/backports/eden-ps5-gpu-remap-cache-invalidate.patch" "$eden/.encore-backport-ps5-gpu-remap-cache-invalidate.sha256" validate_ps5_gpu_remap_invalidation
 validate_ps5_guest_mapping_diagnostics() {
 python3 - "$eden" <<'PYMAP'
 from pathlib import Path

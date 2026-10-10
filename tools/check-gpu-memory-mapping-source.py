@@ -55,6 +55,12 @@ for token in ('GetIntendedMemorySize() >> Memory::YUZU_PAGEBITS', 'EDEN_GPU_MAP_
               'EDEN_GPU_REVERSE_PHYS_OOB', 'compressed_device_addr.size()'):
     assert token in physical, token
 assert 'validate_ps5_gpu_physical_capacity' in apply
+cache_remap=(r/'headless/backports/eden-ps5-gpu-remap-cache-invalidate.patch').read_text()
+for token in ('std::unique_lock lk(mapping_guard);', 'replaced_gpu_mapping = true;',
+              'lk.unlock();', 'device_inter->InvalidateRegion(address, size);'):
+    assert token in cache_remap, token
+assert 'remap_cache_evictions.fetch_add' in cache_remap
+assert 'validate_ps5_gpu_remap_invalidation' in apply
 assert 'inline bool ShouldReportBadPhysical() noexcept' in h
 assert 'bad_map_range=%llu bad_unmap_range=%llu' in perf
 assert 'remap_replaced=%llu remap_mismatch=%llu' in perf
@@ -84,7 +90,7 @@ main=(r/'headless/main.cpp').read_text()
 assert '#include "gpu_fault_rate_limit.h"' in main
 assert '::Eden::GpuFault::ResetTitleCounters();' in main
 assert 'inline void ResetTitleCounters() noexcept' in h
-assert h.count('.store(0, std::memory_order_relaxed);') >= 11
+assert h.count('.store(0, std::memory_order_relaxed);') >= 12
 def sample(i): return i<=8 or i&(i-1)==0
 assert [i for i in range(1,129) if sample(i)] == [1,2,3,4,5,6,7,8,16,32,64,128]
 print('PASS source: physical continuity, PS5 shared-cache bypass, bounded fault logs')
