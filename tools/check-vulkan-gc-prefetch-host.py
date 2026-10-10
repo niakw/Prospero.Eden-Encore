@@ -28,7 +28,10 @@ assert "if (frame_tick < ticks_to_destroy) return;" in gc
 prefetch_body = gc[gc.index("    const auto PrefetchDownloads = [&] {"):gc.index("    const auto UsePrefetched = [&]")]
 assert "const bool prefetch_dirty = DirtyEvictions();" in prefetch_body
 assert "if (!prefetch_dirty) return;" in prefetch_body
+assert prefetch_body.index("if (frame_tick < ticks_to_destroy) return;") < prefetch_body.index("const bool prefetch_dirty = DirtyEvictions();")
 assert prefetch_body.index("if (!prefetch_dirty) return;") < prefetch_body.index("lru_cache.ForEachItemBelow(")
+assert prefetch_body.count("::Eden::Performance::KeepDirtyTextures()") == 1
+assert "return usage < projected_stop;" in prefetch_body
 assert "(!DirtyEvictions() && dirty)) return false;" not in prefetch_body
 pred_begin = gc.index("gc_downloads.size() == gc_prefetch_limit")
 pred_end = gc.index(") return true;", pred_begin)

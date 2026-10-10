@@ -22,11 +22,13 @@ assert "constexpr size_t gc_prefetch_limit = 40;" in declaration
 start = gc.index("                if (!dirty || !image.aliased_images.empty()")
 stop = gc.index("                bytes += image.unswizzled_size_bytes;", start)
 record = gc[start:stop + len("                bytes += image.unswizzled_size_bytes;")]
-project_begin = gc.index("            const auto NoteProjectedEviction = [&]")
+project_begin = gc.index("            const u64 projected_stop = (aggressive_mode ||")
 project_end = gc.index("\n            };", project_begin) + len("\n            };")
 projected = gc[project_begin:project_end]
 assert "usage, ReclaimedBytes(image)" in projected
 assert "critical_memory : expected_memory" in projected
+assert "return usage < projected_stop;" in projected
+assert projected.count("::Eden::Performance::KeepDirtyTextures()") == 1
 assert "return NoteProjectedEviction(image);" in record
 assert record.count("return true;") == 1
 assert record.index("return NoteProjectedEviction(image);") < record.index("return true;")
@@ -42,11 +44,12 @@ assert "--remaining;" in gc
 assert "if (frame_tick < ticks_to_destroy) return;" in gc
 assert "const bool prefetch_dirty = DirtyEvictions();" in gc
 assert "if (!prefetch_dirty) return;" in gc
+assert gc.index("if (frame_tick < ticks_to_destroy) return;") < gc.index("const bool prefetch_dirty = DirtyEvictions();")
 assert gc.index("if (!prefetch_dirty) return;") < gc.index("lru_cache.ForEachItemBelow(")
 assert "(!DirtyEvictions() && dirty)) return false;" not in gc
 assert "if (!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad))" in gc
-# Prefetch can only process dirty images. Clean-only cleanup remains separate.
-assert gc.index("    const auto Cleanup =") > gc.index("    const auto PrefetchDownloads =") if "    const auto Cleanup =" in gc else True
+# Only the prefetch forecast snapshots pressure; the actual Cleanup keeps
+# making independent current-pressure decisions as before.
 assert "if (!dirty || !image.aliased_images.empty()" in gc
 
 compiler = next((name for name in ("clang++-18", "clang++", "g++")
