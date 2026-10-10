@@ -40,7 +40,13 @@ assert record.index("gc_downloads.emplace_back") < record.index("image.DownloadM
 assert "if (remaining == 0) return true;" in gc
 assert "--remaining;" in gc
 assert "if (frame_tick < ticks_to_destroy) return;" in gc
-assert "(!DirtyEvictions() && dirty)) return false;" in gc
+assert "const bool prefetch_dirty = DirtyEvictions();" in gc
+assert "if (!prefetch_dirty) return;" in gc
+assert gc.index("if (!prefetch_dirty) return;") < gc.index("lru_cache.ForEachItemBelow(")
+assert "(!DirtyEvictions() && dirty)) return false;" not in gc
+assert "if (!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad))" in gc
+# Prefetch can only process dirty images. Clean-only cleanup remains separate.
+assert gc.index("    const auto Cleanup =") > gc.index("    const auto PrefetchDownloads =") if "    const auto Cleanup =" in gc else True
 assert "if (!dirty || !image.aliased_images.empty()" in gc
 
 compiler = next((name for name in ("clang++-18", "clang++", "g++")

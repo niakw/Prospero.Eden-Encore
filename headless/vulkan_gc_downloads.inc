@@ -22,6 +22,13 @@
     const auto PrefetchDownloads = [&] {
         if constexpr (std::is_same_v<Runtime, Vulkan::TextureCacheRuntime>) {
             ReleaseDownloads();
+            // No dirty texture can be prefetched while the real collector
+            // must preserve every GPU-written image. An early return skips
+            // the entire speculative LRU pass and avoids repeated calls
+            // into the kernel-backed GPU pressure probe. Cleanup still
+            // runs normally to reclaim eligible CLEAN images.
+            const bool prefetch_dirty = DirtyEvictions();
+            if (!prefetch_dirty) return;
             // No texture can be old enough before this title's first
             // age threshold. In particular, a zero cutoff would include
             // images first used at frame zero (LRU comparison is inclusive).
@@ -48,8 +55,11 @@
                 auto& image = slot_images[id];
                 if (True(image.flags & ImageFlagBits::IsDecoding)) return false;
                 const bool dirty = IsDownloadable(image) && False(image.flags & ImageFlagBits::BadOverlap);
-                if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) ||
-                    (!DirtyEvictions() && dirty)) return false;
+                // The prefetch pass was admitted from one stable pressure
+                // snapshot above. Per-image reprobing is unnecessary and can
+                // stall the GPU thread while walking up to 40 LRU entries.
+                if (!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad))
+                    return false;
                 // A clean or unsupported image is still visited by the
                 // real Cleanup pass, but cannot use this staged fast path.
                 // Skip it, do NOT stop scanning older-to-newer LRU entries:
