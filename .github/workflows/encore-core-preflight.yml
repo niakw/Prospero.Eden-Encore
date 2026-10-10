@@ -67,6 +67,7 @@ jobs:
           python3 -B tools/check-shader-cache-pressure.py
           python3 -B tools/check-vulkan-gc-budget-host.py
           python3 -B tools/check-vulkan-gc-prefetch-host.py
+          python3 -B tools/check-vulkan-gc-mixed-prefetch-host.py
           python3 -B tools/check-vulkan-readback-small-vector-host.py
           python3 -B tools/check-vulkan-readback-batch-integration-host.py
           python3 -B tools/check-vulkan-pipeline-trace-thread-host.py
