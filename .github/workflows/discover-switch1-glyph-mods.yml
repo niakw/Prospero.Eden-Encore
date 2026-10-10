@@ -51,7 +51,7 @@ concurrency:
 jobs:
   metadata-source-discovery:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -107,17 +107,18 @@ jobs:
       - name: Incremental source discovery without mod downloads
         env:
           SELECTED: ${{ inputs.provider || 'github' }}
-          LIMIT: ${{ inputs.max_games || '5' }}
+          LIMIT: ${{ inputs.max_games || '100' }}
           VARIANT: ${{ inputs.query_variant || '0' }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           YANDEX_SEARCH_API_KEY: ${{ secrets.YANDEX_SEARCH_API_KEY }}
           YANDEX_SEARCH_FOLDER_ID: ${{ secrets.YANDEX_SEARCH_FOLDER_ID }}
         run: |
-          # Every dev push: free GitHub + DuckDuckGo queries in distinct Switch/PC sweeps.
+          # Every dev push: 2x100 distinct authenticated GitHub discovery queries.
+          # Search API cap is 30/min authenticated: run at <=20/min, stop on throttle.
           # Metered Yandex requires explicitly configured credentials.
           if test "$GITHUB_EVENT_NAME" = push; then
             SELECTED=github
-            LIMIT=5
+            LIMIT=100
           fi
           if test "$SELECTED" = yandex && \
              { test -z "$YANDEX_SEARCH_API_KEY" || test -z "$YANDEX_SEARCH_FOLDER_ID"; }; then
@@ -154,12 +155,18 @@ jobs:
                 if test -n "$last_state"; then
                   args=(--state-in "$last_state")
                 fi
-                batch=5
-                if test "$engine" = curl_duckduckgo || test "$engine" = curl_yandex; then batch=2; fi
+                batch=100
+                pause=3
+                if test "$engine" = curl_duckduckgo || test "$engine" = curl_yandex; then
+                  # Public search pages routinely refuse GitHub datacenter IPs:
+                  # probe once; do not hammer, rotate identities or circumvent bans.
+                  batch=1
+                  pause=2
+                fi
                 if ! python3 -B tools/ps-glyph-mod-discovery.py \
                   --catalog /tmp/eden-glyph-discovery/catalog.json \
                   --provider "$engine" --network --max-games "$batch" \
-                  --interval 2 "${args[@]}" --query-variant "$variant" \
+                  --interval "$pause" "${args[@]}" --query-variant "$variant" \
                   --state-out "/tmp/eden-glyph-discovery/state-${label}.json" \
                   --report "/tmp/eden-glyph-discovery/leads-${label}.json"; then
                   echo "::warning::${engine} was throttled or rejected a query; keep partial search results"
