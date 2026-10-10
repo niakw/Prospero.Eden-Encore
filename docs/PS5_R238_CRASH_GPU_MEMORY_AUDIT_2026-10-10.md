@@ -103,3 +103,13 @@ New work, `fec15ed4` → `6bb8f4bd`:
 The root ledger is diagnostic evidence to select a safe next step, **not** proof the 1,280 MiB has been reclaimed; FC27 0-FPS/texture faults and the native launcher SIGSEGV remain open.
 
 **R239 supplemental source controls:** `a1960d72` avoids a second TLS lookup for the normal uncached allocator path. `65c8e6f6` adds a cache-to-mspace delta conservation check. `a7eb94be` adds a new host `root-span` scenario (192-MiB request, 256-MiB root mspace across two pieces) to prove that physical accounting and PA ownership attach to the root, not to an arbitrary 128-MiB slice. All remain unexecuted until the authorized host/native validation window. No automatic reclaim, no measured FPS gain and no claims about native `SIGSEGV` fixes.
+
+
+### R240 source hardening after R239 ledger
+
+- `a0d9a766` / `a6744281`: `root_span` and `root_direct_owner` are atomic and the root span's release publication follows initialization of every piece owner and the root mspace slot; this removes a race between a title diagnostic and heap growth. The ownership counters remain relaxed/batched and must **never** be used to unmap from an unsynchronized read.
+- `5d222a7c`: dirty-root bitmask limits 64-operation TLS flush work to the roots actually touched, rather than iterating all 24 possible Sony pieces. No additional per-frame allocation or mspace lookup.
+- `886f8e82`: on title-boundary launcher TLS cache drain, reset small-mspace hint to root 0 to let the next title reuse lower existing mspaces before an additional piece is committed. This does **not** reduce already committed physical memory or guarantee fewer hitches.
+- `33765f9a`: host-only core preflight now runs `tools/check-heap-growth.py` with UBSan/TSan and `tools/check-heap-growth-rollback-host.py` with clang-18. Prior green #38032224808 did **not** run these new tests. These checks are wired but not executed on the changed HEAD; the native PS5 workflow remains separately gated.
+
+**Remaining prerequisite to safely return 128-MiB pieces:** firmware-supported `sceLibcMspaceDestroy` / `IsHeapEmpty` behavior must be proven with matching PS5 symbols, all block/cache/child-arena owners retired with an allocator-entry exclusion protocol, and the exact root's VA unmapped before its direct physical allocation is freed. Neither source-only instrumentation nor host sanitizer success would by itself establish that these conditions hold on a real PS5. No successful FPS/texture/launcher-crash outcome is claimed.
