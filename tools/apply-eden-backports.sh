@@ -567,6 +567,33 @@ print('PS5 GPU forward-page atomic publication; no coarse hot-path mutex: PASS')
 PYGPUATOMIC
 }
 apply_one "$root/headless/backports/eden-ps5-gpu-atomic-forward-table.patch" "$eden/.encore-backport-ps5-gpu-atomic-forward-table.sha256" validate_ps5_gpu_atomic_forward_table
+validate_ps5_gpu_atomic_reverse_table() {
+python3 - "$eden" <<'PYREVERSEATOMIC'
+from pathlib import Path
+import sys
+r=Path(sys.argv[1])/'src/core'
+h=(r/'device_memory_manager.h').read_text()
+c=(r/'device_memory_manager.inc').read_text()
+for token in ('std::atomic_ref<const u32>(slot).load(std::memory_order_acquire)',
+              'std::atomic_ref<u32>(slot).store(value, std::memory_order_release)',
+              'AtomicLoadReverse(compressed_device_addr[(address >> page_bits)])'):
+    if token not in h:
+        raise SystemExit('missing uniform GPU physical reverse slot publication: '+token)
+for token in ('AtomicStoreReverse(reverse, 0)',
+              'AtomicStoreReverse(base_dev, 0)',
+              'AtomicLoadReverse(compressed_device_addr[phys_addr - 1U])',
+              'AtomicLoadReverse(compressed_device_addr[phys_addr])'):
+    if token not in c:
+        raise SystemExit('missing GPU reverse mapping atomic reader/writer: '+token)
+for old in ('const u32 base_dev = compressed_device_addr[',
+            'u32 backing = compressed_device_addr[',
+            'compressed_device_addr.GetAndFault(phys_addr - 1U) ='):
+    if old in c:
+        raise SystemExit('plain reverse GPU slot access bypassed atomic_ref: '+old)
+print('PS5 GPU physical reverse scalar slots: same atomic protocol in all C++ TUs PASS')
+PYREVERSEATOMIC
+}
+apply_one "$root/headless/backports/eden-ps5-gpu-atomic-reverse-table.patch" "$eden/.encore-backport-ps5-gpu-atomic-reverse-table.sha256" validate_ps5_gpu_atomic_reverse_table
 validate_ps5_guest_mapping_diagnostics() {
 python3 - "$eden" <<'PYMAP'
 from pathlib import Path
