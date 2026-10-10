@@ -44,6 +44,13 @@ suffix = r"""
 int main(void) {
     char tiny[4] = {0};
     size_t used = 0;
+    /* A zero-capacity formatter must not underflow capacity-1 or write. */
+    assert(!eden_heap_append_decimal(tiny, 0, &used, "", 1));
+    assert(!eden_heap_append_decimal(tiny, sizeof(tiny), NULL, "", 1));
+    assert(!eden_heap_append_decimal(NULL, sizeof(tiny), &used, "", 1));
+    used = sizeof(tiny);
+    assert(!eden_heap_append_decimal(tiny, sizeof(tiny), &used, "", 1));
+    used = 0;
     assert(!eden_heap_append_decimal(tiny, sizeof(tiny), &used,
                                      "abc", 123456789));
     assert(used < sizeof(tiny));
