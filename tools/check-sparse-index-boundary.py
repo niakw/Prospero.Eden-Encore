@@ -40,7 +40,7 @@ assert 'only calls here for a' in section
 # make A's previously set bytes zero before an A re-commit.
 pages = {0: bytearray(b'ABCD'), 1: bytearray(b'WXYZ')}
 committed = {0, 1}
-pages[0][:] = b'\\x00' * len(pages[0])
+pages[0][:] = bytes(len(pages[0]))
 committed.remove(0)
 assert 1 in committed and bytes(pages[0]) == bytes(4)
 committed.add(0)
