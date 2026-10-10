@@ -1,0 +1,153 @@
+name: Full Switch 1 controller glyph source crawl (read-only mod research)
+
+# One explicitly triggered dev-branch run starts a SERIAL matrix of shards.
+# GitHub-hosted jobs have a 6h cap and workflows a 35-day cap. Each shard
+# persists TitleID|provider|query-variant and source URL evidence in the
+# research directory before moving to the next shard; no default branch
+# edits, PAT, secret or paid Yandex API is required.
+#
+# Conservative: GitHub REST repository Search at >=4.1 seconds/request.
+# 2 queries/title (Switch and other-console versions). On 403/429/abuse
+# errors: rest then HALT, do not evade. Failed shard stops the matrix.
+# Game art/ZIPs are never downloaded or inserted in the emulation runtime.
+on:
+  push:
+    branches: [dev/ps5-sparse-jit]
+    paths:
+      - .github/workflows/ps-glyph-full-crawl.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: eden-glyph-complete-github-crawl-dev
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    outputs:
+      shards: ${{ steps.plan.outputs.shards }}
+      missing: ${{ steps.plan.outputs.missing }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+      - name: Test full-crawl checkpoint/retry logic without Internet
+        run: python3 -B tools/check-ps-glyph-long-crawl.py
+      - name: Calculate remaining authentic GitHub Switch + PC source queries
+        id: plan
+        run: |
+          python3 - <<'PY'
+          import gzip,json,math,os
+          from pathlib import Path
+          root=Path("data/glyph-research")
+          with gzip.open(root/"catalog/switch1-titles.json.gz","rt") as stream:
+              catalog=json.load(stream)
+          progress=json.loads((root/"discovery/progress.json").read_text())
+          complete=set(progress.get("completed_query_keys",[]))
+          missing=sum(
+              f"github|{variant}|{game['title_id']}" not in complete
+              for game in catalog["games"] for variant in (0,1))
+          # Each shard can process 128 of EACH query variant.
+          count=max(1,math.ceil(missing/256))
+          if count>256:
+              raise SystemExit("over 256 shards needed; split source corpus explicitly")
+          with open(os.environ["GITHUB_OUTPUT"],"a") as stream:
+              stream.write("missing="+str(missing)+"\n")
+              stream.write("shards="+json.dumps(list(range(count)),
+                                               separators=(",",":"))+"\n")
+          print("QUEUED github controller-mod queries",missing,
+                "across",len(catalog["games"]),"Switch base games;",
+                count,"serial checkpointed shards")
+          PY
+
+  crawl:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 140
+    strategy:
+      fail-fast: true
+      max-parallel: 1
+      matrix:
+        shard: ${{ fromJSON(needs.prepare.outputs.shards) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+      - name: Fetch latest durable checkpoint
+        run: |
+          git fetch origin dev/ps5-sparse-jit
+          git checkout -B eden-glyph-long-worker FETCH_HEAD
+      - name: Probe next never-searched Switch and other-platform games
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          set -euo pipefail
+          # Return code is held until AFTER durable checkpoint commit.
+          set +e
+          python3 -B tools/ps-glyph-long-crawl.py --repo . \
+            --batch-size 128 --interval 4.1 --retries 2 \
+            --run-id "${GITHUB_RUN_ID}-shard-${SHARD}"
+          result=$?
+          set -e
+          mkdir -p /tmp/eden-shard
+          cp data/glyph-research/discovery/leads.json /tmp/eden-shard/leads.json
+          cp data/glyph-research/discovery/progress.json /tmp/eden-shard/progress.json
+          cp data/glyph-research/discovery/metrics.json /tmp/eden-shard/metrics.json
+          echo "STATUS=$result" >> "$GITHUB_ENV"
+          echo "Prepared source-only shard checkpoint, code $result"
+      - name: Merge and commit shard evidence to dev branch before next shard
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          committed=0
+          for try_number in 1 2 3; do
+            # Runner-local uncommitted changes are backed up in /tmp first.
+            git reset --hard
+            git fetch origin dev/ps5-sparse-jit
+            git checkout -B eden-glyph-long-worker FETCH_HEAD
+            python3 - <<'PY'
+          import gzip,json
+          from pathlib import Path
+          root=Path("data/glyph-research/catalog")
+          with gzip.open(root/"switch1-titles.json.gz","rt") as f:
+              Path("/tmp/eden-shard/catalog.json").write_text(json.dumps(json.load(f)))
+          with gzip.open(root/"source-queries.json.gz","rt") as f:
+              Path("/tmp/eden-shard/queue.json").write_text(json.dumps(json.load(f)))
+          PY
+            python3 -B tools/ps-glyph-store-research.py \
+              --out-root data/glyph-research \
+              --fresh-leads /tmp/eden-shard/leads.json \
+              --fresh-state /tmp/eden-shard/progress.json \
+              --catalog /tmp/eden-shard/catalog.json \
+              --search-queue /tmp/eden-shard/queue.json \
+              --run-metrics /tmp/eden-shard/metrics.json
+            git add data/glyph-research/discovery/
+            if git diff --cached --quiet; then
+              committed=1
+              break
+            fi
+            git commit -m "data(glyphs): checkpoint full Switch and PC game mod searches [skip ci]"
+            if git push origin HEAD:dev/ps5-sparse-jit; then
+              committed=1
+              break
+            fi
+            echo "::warning::Concurrent dev update; merge latest source data and retry"
+          done
+          if test "$committed" != 1; then
+            echo "::error::Cannot persist research on dev; stop rather than drop results"
+            exit 1
+          fi
+      - name: Stop on provider throttling instead of attacking the search endpoint
+        if: always()
+        run: |
+          if test "${STATUS:-0}" != 0; then
+            echo "::error::Search paused by the provider or metadata failure. Resume only after investigating."
+            exit 1
+          fi
