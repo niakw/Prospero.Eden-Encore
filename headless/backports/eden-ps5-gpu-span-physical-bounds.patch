@@ -1,0 +1,40 @@
+--- a/src/core/device_memory_manager.inc
++++ b/src/core/device_memory_manager.inc
+@@ -448,8 +448,16 @@
+         return nullptr;
+     const size_t first_page = src_addr >> page_bits;
+     const size_t page_count = 1 + ((size - 1 + (src_addr & page_mask)) >> page_bits);
+-    const u32 backing = tracked_entries[first_page].compressed_physical_ptr;
+-    if (backing == 0) return nullptr;
++    const u32 backing = tracked_entries[first_page].compressed_physical_ptr;
++    if (backing == 0) return nullptr;
++#ifdef PS5_NATIVE
++    // Matching forward-page numbers do not by themselves prove that the
++    // complete multi-page span fits in the host DRAM backing.
++    const size_t first_phys = static_cast<size_t>(backing - 1U);
++    if (first_phys >= compressed_device_addr.size() ||
++        page_count > compressed_device_addr.size() - first_phys)
++        return nullptr;
++#endif
+     // Validate each physical page, not a potentially stale continuity hint.
+     for (size_t i = 1; i < page_count; ++i) {
+         if (tracked_entries[first_page + i].compressed_physical_ptr != backing + i)
+@@ -464,8 +472,16 @@
+         return nullptr;
+     const size_t first_page = src_addr >> page_bits;
+     const size_t page_count = 1 + ((size - 1 + (src_addr & page_mask)) >> page_bits);
+-    const u32 backing = tracked_entries[first_page].compressed_physical_ptr;
+-    if (backing == 0) return nullptr;
++    const u32 backing = tracked_entries[first_page].compressed_physical_ptr;
++    if (backing == 0) return nullptr;
++#ifdef PS5_NATIVE
++    // Matching forward-page numbers do not by themselves prove that the
++    // complete multi-page span fits in the host DRAM backing.
++    const size_t first_phys = static_cast<size_t>(backing - 1U);
++    if (first_phys >= compressed_device_addr.size() ||
++        page_count > compressed_device_addr.size() - first_phys)
++        return nullptr;
++#endif
+     // Validate each physical page, not a potentially stale continuity hint.
+     for (size_t i = 1; i < page_count; ++i) {
+         if (tracked_entries[first_page + i].compressed_physical_ptr != backing + i)
