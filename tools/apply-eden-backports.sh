@@ -410,6 +410,19 @@ print('PS5 GPU Map/Unmap bounds before commit/invalidate: PASS')
 PYMAPBOUNDS
 }
 apply_one "$root/headless/backports/eden-ps5-gpu-map-bounds.patch" "$eden/.encore-backport-ps5-gpu-map-bounds.sha256" validate_ps5_gpu_map_bounds
+validate_ps5_gpu_physical_capacity() {
+python3 - "$eden" <<'PYPHYSICAL'
+from pathlib import Path
+import sys
+s=(Path(sys.argv[1])/'src/core/device_memory_manager.inc').read_text()
+for token in ('GetIntendedMemorySize() >> Memory::YUZU_PAGEBITS',
+              'EDEN_GPU_MAP_OUTSIDE_DRAM', 'EDEN_GPU_REVERSE_PHYS_OOB',
+              'static_cast<size_t>(phys_addr - 1U) >= compressed_device_addr.size()'):
+    if token not in s: raise SystemExit('PS5 GPU physical reverse-map safety missing: '+token)
+print('PS5 physical reverse mapping: full 4/6/8/10/12 GiB configured RAM PASS')
+PYPHYSICAL
+}
+apply_one "$root/headless/backports/eden-ps5-gpu-physical-capacity.patch" "$eden/.encore-backport-ps5-gpu-physical-capacity.sha256" validate_ps5_gpu_physical_capacity
 validate_ps5_guest_mapping_diagnostics() {
 python3 - "$eden" <<'PYMAP'
 from pathlib import Path
