@@ -261,3 +261,10 @@ The generated PS5 `TextureCache<P>::DownloadMemory` path previously created `std
 
 
 **R255 host verification:** [#38046240302](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38046240302) = SUCCESS for code SHA `06aa786d419cb13286a58a412bc8886062ff6daa`. The source-contract check for `boost::container::small_vector` and its 1,000 × 16 move-only sanitizer fixture passed after explicit installation of `libboost-container-dev` in host-only CI (`20376e28`). Full Sony allocator, CPU affinity/worker, GPU mapping and approved launcher UX host tests were green; diff cleanliness passed. Native build job skipped; no PS5 runtime bandwidth/FPS or texture correctness measurement. The earlier R255 host #38046130254 was red only from a missing host package.
+
+
+### R256 — integration-level GPU readback batching verified in host CI
+
+R255's first staging test checked Boost small-vector move semantics but did not compile the generated Vulkan texture download loop. `7a09d766` adds `tools/check-vulkan-readback-batch-integration-host.py`, which includes the actual `headless/vulkan_download_batch.inc` into a C++20 mock Vulkan texture cache. Simulated GPU write tickets prove every `SwizzleImage` guest copy comes **after** a `runtime.Finish` barrier; assertions validate original transfer byte content and ordering, 16-map staging cap, 32-MiB boundary, an oversized texture's standalone completion and empty/zero-byte behavior under ASan+UBSan. `1c910332` / `4d48d5aa` add it to existing host preflights, with `960d5ebe` requesting **host only**, not firmware compilation.
+
+**Observed GitHub verdict:** [#38046739718](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38046739718) fully SUCCESS on SHA `960d5ebe`: GPU/CPU source/model and sanitizer suite, Sony mspace, JIT, approved launcher UX, and final clean diff. Native PS5 workflow was SKIPPED. This increases confidence in the exact staging algorithm but does not test real GPU descriptors/drivers, actual PS5 GDDR6 residency, real FC27 pixels, GPU utilization or frame timing.
