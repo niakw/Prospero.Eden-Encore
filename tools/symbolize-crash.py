@@ -67,10 +67,13 @@ def verify_elf_receipt(data: bytes, section_size: int, receipt: dict) -> None:
     The signed PS5 SELF remains separately fingerprinted; the receipt alone
     does not prove that an old console crash belongs to this binary.
     """
-    if (not isinstance(receipt, dict) or receipt.get("schema") != 1 or
+    if not isinstance(receipt, dict):
+        raise ValueError("malformed crash-provenance receipt")
+    files = receipt.get("files")
+    record = files.get("unstripped_elf") if isinstance(files, dict) else None
+    if (not isinstance(record, dict) or receipt.get("schema") != 1 or
             receipt.get("elf_text_size_hex") != f"0x{section_size:x}" or
-            receipt.get("files", {}).get("unstripped_elf", {}).get("sha256") !=
-            hashlib.sha256(data).hexdigest()):
+            record.get("sha256") != hashlib.sha256(data).hexdigest()):
         raise ValueError("ELF hash or .text size does not match crash-provenance receipt")
 
 
