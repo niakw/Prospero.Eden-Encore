@@ -86,10 +86,10 @@ def switch1_scope_audit(catalog:dict)->dict:
             bad_ids.append(tid)
         if not isinstance(title,str) or not title.strip():
             raise ValueError("source game title missing")
-        title_names[re.sub(r"[^\\w]+"," ",title.casefold()).strip()].append(tid)
-        if re.search(r"(?i)\\b(?:demo|trial version|playtest)\\b|体験版|试玩版",title):
+        title_names[re.sub(r"[^\w]+"," ",title.casefold()).strip()].append(tid)
+        if re.search(r"(?i)\b(?:demo|trial version|playtest)\b|体験版|试玩版",title):
             suspected_demo.append(tid)
-        if re.search(r"(?i)\\bcloud version\\b|クラウド",title):
+        if re.search(r"(?i)\bcloud version\b|クラウド",title):
             suspected_cloud.append(tid)
     if bad_ids:
         raise ValueError("catalog includes Nintendo Switch 2-only or invalid base title IDs")
