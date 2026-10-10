@@ -28,7 +28,7 @@ assert "SaturatingAdd" in header
 assert "std::numeric_limits<std::uint64_t>::max()" in header
 assert "return {extent, used, 0, true, false};" in header
 assert "return {extent, used, extent - used, true, true};" in header
-assert "untracked is NOT free" in perf.lower(), "Do not present unclassified as free"
+assert "untracked is not free" in perf.lower(), "Do not present unclassified as free"
 assert perf.index("void ReportDirectMemoryState(") < perf.index("EDEN_DIRECT_POOL_OWNERS")
 assert perf.index("EDEN_DIRECT_POOL_OWNERS") < perf.index("void ReportGpuThread(")
 compiler = next((name for name in ("clang++-18", "clang++", "g++")
