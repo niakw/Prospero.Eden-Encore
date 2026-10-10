@@ -6,7 +6,11 @@
                (total_used_memory >= critical_memory || !::Eden::Performance::KeepDirtyTextures());
     };
     using DownloadMap = decltype(runtime.DownloadStagingBuffer(size_t{}));
-    boost::container::small_vector<std::pair<ImageId, DownloadMap>, 16> gc_downloads;
+    // Aggressive GC can process 40 images per pass. Keep those readbacks in
+    // ONE scheduled batch instead of falling back to a Finish per image after
+    // the former 16-descriptor cap. The separate 32-MiB BYTE cap is unchanged.
+    constexpr size_t gc_prefetch_limit = 40;
+    boost::container::small_vector<std::pair<ImageId, DownloadMap>, gc_prefetch_limit> gc_downloads;
     const auto ReleaseDownloads = [&] {
         if constexpr (std::is_same_v<Runtime, Vulkan::TextureCacheRuntime>) {
             for (auto& [id, map] : gc_downloads)
@@ -36,7 +40,7 @@
                 if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) ||
                     (!DirtyEvictions() && dirty)) return false;
                 if (!dirty || !image.aliased_images.empty() || !image.overlapping_images.empty() ||
-                    image.HasScaled() || image.info.num_samples != 1 || gc_downloads.size() == 16 ||
+                    image.HasScaled() || image.info.num_samples != 1 || gc_downloads.size() == gc_prefetch_limit ||
                     image.unswizzled_size_bytes > 32_MiB - bytes) return true;
                 auto map = runtime.DownloadStagingBuffer(image.unswizzled_size_bytes, true);
                 // The pinned StagingBufferRef is a POD handle, not a RAII
