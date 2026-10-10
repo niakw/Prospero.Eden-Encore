@@ -558,6 +558,17 @@ static int eden_heap_grow(size_t bytes, unsigned seen) {
         atomic_store_explicit(&eden_heap_root_span[used],(unsigned char)pieces,memory_order_release);
         atomic_store_explicit(&eden_heap_pieces_used, used + (unsigned)pieces, memory_order_release);
         atomic_store_explicit(&eden_heap_space_count, count + 1, memory_order_release);
+        /* One bounded record per successful growth (max 23 on this heap).
+         * No printf/malloc while holding the growth lock; the kernel debug
+         * writer is already used on this exceptional allocation path.
+         * A first observed 128-MiB commitment without large live bytes is
+         * not sufficient to attribute frame stalls to physical memory. */
+        char growth_line[176];
+        const int growth_chars=snprintf(growth_line,sizeof(growth_line),
+            "EDEN_HEAP_GROW req_bytes=%zu root=%u pieces=%zu spaces=%u committed_mib=%zu\\n",
+            bytes, used, pieces, count+1, ((size_t)used+pieces)<< (EDEN_HEAP_PIECE_SHIFT-20u));
+        if (growth_chars>0 && (size_t)growth_chars<sizeof(growth_line))
+          sceKernelDebugOutText(0,growth_line);
         grown = 1;
       } else {
         /* No block from the new piece was ever issued, and no slot/space
