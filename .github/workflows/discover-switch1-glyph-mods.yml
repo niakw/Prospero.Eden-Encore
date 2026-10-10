@@ -7,6 +7,8 @@ on:
     branches: [dev/ps5-sparse-jit]
     paths:
       - .github/workflows/discover-switch1-glyph-mods.yml
+      - tools/ps-glyph-switch1-eligibility.py
+      - tools/check-ps-glyph-switch1-eligibility.py
       - tools/ps-glyph-switch1-corpus.py
       - tools/check-ps-glyph-switch1-corpus.py
       - tools/check-ps-glyph-mod-discovery.py
@@ -62,6 +64,7 @@ jobs:
       - name: Validate sources, parsers, state and billing boundaries
         run: |
           python3 -B tools/check-ps-glyph-switch1-corpus.py
+          python3 -B tools/check-ps-glyph-switch1-eligibility.py
           python3 -B tools/check-ps-glyph-mod-discovery.py
           python3 -B tools/check-ps-glyph-multiplatform-adapt.py
           python3 -B tools/check-ps-glyph-mod-results-merge.py
