@@ -233,9 +233,11 @@ jobs:
               --fresh-leads /tmp/eden-glyph-discovery/source-links.json \
               --fresh-state /tmp/eden-glyph-discovery/state-next.json \
               --catalog /tmp/eden-glyph-discovery/catalog.json \
-              --search-queue /tmp/eden-glyph-discovery/all-switch1-search-queue.json
+              --search-queue /tmp/eden-glyph-discovery/all-switch1-search-queue.json \
+              --run-metrics /tmp/eden-glyph-discovery/run-metrics.json
             git add data/glyph-research/discovery/leads.json \
                     data/glyph-research/discovery/progress.json \
+                    data/glyph-research/discovery/metrics.json \
                     data/glyph-research/catalog/switch1-titles.json.gz \
                     data/glyph-research/catalog/source-queries.json.gz
             if git diff --cached --quiet; then
