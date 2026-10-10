@@ -594,6 +594,43 @@ print('PS5 GPU physical reverse scalar slots: same atomic protocol in all C++ TU
 PYREVERSEATOMIC
 }
 apply_one "$root/headless/backports/eden-ps5-gpu-atomic-reverse-table.patch" "$eden/.encore-backport-ps5-gpu-atomic-reverse-table.sha256" validate_ps5_gpu_atomic_reverse_table
+validate_ps5_gpu_asid_lifetime() {
+python3 - "$eden" <<'PYGPUASID'
+from pathlib import Path
+import sys
+r=Path(sys.argv[1])/'src/core'
+h=(r/'device_memory_manager.h').read_text()
+c=(r/'device_memory_manager.inc').read_text()
+for token in ('#include <shared_mutex>',
+              'mutable std::shared_mutex process_registry_guard',
+              'std::shared_lock registry_lk(process_registry_guard);'):
+    if token not in h:
+        raise SystemExit('GPU process registry lifetime lock missing: '+token)
+for name in ('Map(', 'TrackContinuityImpl(', 'RegisterProcess(', 'UnregisterProcess(',
+             'UpdatePagesCachedCountNoLock(', 'UpdatePagesCachedCount(', 'UpdatePagesCachedBatch('):
+    if 'DeviceMemoryManager<Traits>::'+name not in c:
+        raise SystemExit('GPU ASID lifetime missing method: '+name)
+checks=('asid.id >= registered_processes.size()',
+        'registered_processes[asid.id] == nullptr',
+        'std::unique_lock registry_lk(process_registry_guard)',
+        'std::shared_lock registry_lk(process_registry_guard)',
+        'if (size == 0 || addr >= device_as_size || size > device_as_size - addr)',
+        'asid_2.id >= registered_processes.size()',
+        'memory_device_inter != nullptr',
+        'asid = asid_2;')
+for token in checks:
+    if token not in c:
+        raise SystemExit('GPU stale ASID guard missing: '+token)
+# No registry lock on per-texture/per-block GPU data operations.
+for method in ('ReadBlock(', 'ReadBlockUnsafe(', 'WriteBlock(', 'WriteBlockUnsafe(', 'GetSpan('):
+    begin=c.index('DeviceMemoryManager<Traits>::'+method)
+    end=c.find('template <typename Traits>',begin+5)
+    if 'registry_lk' in c[begin:end if end>=0 else len(c)]:
+        raise SystemExit('GPU registry mutex accidentally added to hot path '+method)
+print('PS5 GPU registered ASID lifetime, duplicate unregister and cache bounds: PASS')
+PYGPUASID
+}
+apply_one "$root/headless/backports/eden-ps5-gpu-asid-lifetime-guard.patch" "$eden/.encore-backport-ps5-gpu-asid-lifetime-guard.sha256" validate_ps5_gpu_asid_lifetime
 validate_ps5_guest_mapping_diagnostics() {
 python3 - "$eden" <<'PYMAP'
 from pathlib import Path
