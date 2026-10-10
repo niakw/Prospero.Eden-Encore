@@ -7,7 +7,9 @@ name: Full Switch 1 controller glyph source crawl (read-only mod research)
 # edits, PAT, secret or paid Yandex API is required.
 #
 # Conservative: GitHub REST repository Search at >=4.1 seconds/request.
-# 2 queries/title (Switch and other-console versions). On 403/429/abuse
+# 2 queries/title (Switch and other-console versions). Completed query keys,
+# not a stale shared offset, control resumption across provider variants.
+# On 403/429/abuse
 # errors: rest then HALT, do not evade. Failed shard stops the matrix.
 # Game art/ZIPs are never downloaded or inserted in the emulation runtime.
 on:
