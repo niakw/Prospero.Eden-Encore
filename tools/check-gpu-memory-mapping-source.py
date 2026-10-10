@@ -104,6 +104,8 @@ for token in ('static u32 AtomicLoadPhysical(', 'static void AtomicStorePhysical
     assert token in atomic_forward, token
 assert 'constexpr void InsertCPUBacking' in atomic_forward  # removed by this overlay
 assert '+    void InsertCPUBacking(size_t page_index' in atomic_forward
+assert '+#ifdef PS5_NATIVE' not in atomic_forward  # all including header inliners must be atomic
+assert atomic_forward.count('std::atomic_ref<') == 6
 assert 'validate_ps5_gpu_atomic_forward_table' in apply
 assert apply.index('eden-ps5-gpu-reverse-inline-bounds.patch') < apply.index(
     'eden-ps5-gpu-atomic-forward-table.patch')
