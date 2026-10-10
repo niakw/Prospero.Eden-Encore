@@ -68,6 +68,7 @@
 #include "prosperoeden/version.h"
 extern "C" void ps5_opengl_heap_snapshot(const char*, unsigned);
 extern "C" std::size_t eden_heap_release_current_tcache(void);
+extern "C" void eden_heap_report_roots(const char* phase);
 extern "C" std::int64_t sceKernelGetDirectMemorySize();
 extern "C" int sceNetInit();
 #else
@@ -2175,6 +2176,9 @@ int main(int argc, char** argv) {
         // Drain solely the already-freed small blocks; do not unmap Sony mspaces.
         const std::size_t tcache_drained = eden_heap_release_current_tcache();
         std::printf("EDEN_HEAP_TITLE_CACHE_DRAIN bytes=%zu\n", tcache_drained);
+        // Non-destructive per-mspace ownership snapshot; never unmap from a
+        // merely low global live-byte count or while another thread allocates.
+        eden_heap_report_roots("core_destroyed");
 #endif
         if (devices && pad) {
             pad.reset();
