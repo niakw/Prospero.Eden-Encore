@@ -1,0 +1,49 @@
+--- a/src/core/device_memory_manager.inc
++++ b/src/core/device_memory_manager.inc
+@@ -834,16 +834,14 @@
+ template <typename Traits>
+ Asid DeviceMemoryManager<Traits>::RegisterProcess(Memory::Memory* memory_device_inter) {
+     std::unique_lock registry_lk(process_registry_guard);
+-    size_t new_id{};
+-    if (!id_pool.empty()) {
+-        new_id = id_pool.front();
+-        id_pool.pop_front();
+-        registered_processes[new_id] = memory_device_inter;
+-    } else {
+-        registered_processes.emplace_back(memory_device_inter);
+-        new_id = registered_processes.size() - 1U;
+-    }
+-    return Asid{new_id};
++    // A recycled ASID can alias a delayed GPU mapping from an old process.
++    // Keep unregistered entries as tombstones until the manager is destroyed.
++    // One pointer-sized slot per process is cheaper than a stale GPU alias.
++    constexpr size_t max_ids = size_t{1} << (sizeof(VAddr) * 8 - guest_max_as_bits);
++    if (memory_device_inter == nullptr || registered_processes.size() >= max_ids)
++        return Asid{static_cast<size_t>(-1)};
++    registered_processes.emplace_back(memory_device_inter);
++    return Asid{registered_processes.size() - 1U};
+ }
+ 
+ template <typename Traits>
+@@ -853,8 +851,8 @@
+     // permitting two live processes to share one registry index.
+     if (asid.id >= registered_processes.size() || registered_processes[asid.id] == nullptr)
+         return;
+-    registered_processes[asid.id] = nullptr;
+-    id_pool.push_front(asid.id);
++    // Never recycle this index: stale tracked GPU pages retain its ASID.
++    registered_processes[asid.id] = nullptr;
+ }
+ 
+ template <typename Traits>
+--- a/src/core/device_memory_manager.h
++++ b/src/core/device_memory_manager.h
+@@ -233,7 +233,7 @@
+     // and cache bookkeeping against an ASID being unregistered/reused.
+     // None of the hot GPU ReadBlock/WriteBlock/GetSpan paths acquire it.
+     mutable std::shared_mutex process_registry_guard;
+-    std::deque<size_t> id_pool;
++    // Tombstoned IDs are intentionally not recycled while this GPU manager lives.
+     std::deque<Memory::Memory*> registered_processes;
+ 
+     // Memory protection management
