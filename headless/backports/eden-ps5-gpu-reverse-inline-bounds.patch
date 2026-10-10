@@ -1,0 +1,38 @@
+--- a/src/core/device_memory_manager.h
++++ b/src/core/device_memory_manager.h
+@@ -76,8 +76,12 @@
+ 
+     template <typename Func>
+     void ApplyOpOnPAddr(PAddr address, Common::ScratchBuffer<u32>& buffer, Func&& operation) {
++        // A non-DRAM physical address must not index the sparse reverse
++        // GPU table. Zero is the "no reverse mapping" sentinel, not GPU VA 0.
++        if ((address >> page_bits) >= compressed_device_addr.size()) return;
+         DAddr subbits = DAddr(address & page_mask);
+         const u32 base = compressed_device_addr[(address >> page_bits)];
++        if (base == 0) return;
+         if ((base >> MULTI_FLAG_BITS) == 0) [[likely]] {
+             const DAddr d_address = (DAddr(base) << page_bits) + subbits;
+             operation(d_address);
+@@ -91,14 +95,21 @@
+ 
+     template <typename Func>
+     void ApplyOpOnPointer(const u8* p, Common::ScratchBuffer<u32>& buffer, Func&& operation) {
++        // Some cached CPU pointers can outlive a guest page remap.
++        // Compare BEFORE subtracting physical_base, otherwise a foreign
++        // pointer wraps into a huge physical offset.
++        const auto host = reinterpret_cast<uintptr_t>(p);
++        if (host < physical_base ||
++            host - physical_base >= (compressed_device_addr.size() << page_bits)) return;
+         PAddr address = GetRawPhysicalAddr<u8>(p);
+         ApplyOpOnPAddr(address, buffer, operation);
+     }
+ 
+     PAddr GetPhysicalRawAddressFromDAddr(DAddr address) const {
++        if (address >= device_as_size) return 0;
+         PAddr subbits = PAddr(address & page_mask);
+         auto paddr = tracked_entries[(address >> page_bits)].compressed_physical_ptr;
++        if (paddr == 0 || static_cast<size_t>(paddr - 1) >= compressed_device_addr.size()) {
+-        if (paddr == 0) {
+             return 0;
+         }
+         return (PAddr(paddr - 1) << page_bits) + subbits;
