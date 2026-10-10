@@ -31,6 +31,8 @@ assert "(allowed_mask & ~secondary_mask) == 0" in policy
 assert "constexpr size_t secondary_headroom = 2;" in policy
 assert "constexpr size_t unverified_reserved = 7;" in policy
 assert "constexpr size_t max_pipeline_workers = 6;" in policy
+assert "const size_t schedulable = available ? available : std::min<size_t>(reported, 4);" in policy
+assert "available ? std::min(available, reported)" not in policy
 assert "std::min(spare, max_pipeline_workers)" in policy
 assert "spare / 2ULL" not in policy
 assert "EDEN_PS5_SHADER_WORKERS reported=" in policy
@@ -57,7 +59,8 @@ assert "worker_topology_ready = true;" in performance  # logical trial is intent
 
 def workers(reported: int, allowed: set[int], primary: set[int] | None,
             secondary: set[int] | None = None) -> int:
-    schedulable = min(len(allowed), reported) if allowed else min(reported, 4)
+    # OS-verified affinity wins over std::thread::hardware_concurrency hint.
+    schedulable = len(allowed) if allowed else min(reported, 4)
     isolated = bool(allowed and secondary and allowed.issubset(secondary))
     reserved = (len(allowed.intersection(primary)) + 2 if primary is not None
                 else 2 if isolated else 7)
@@ -66,6 +69,9 @@ def workers(reported: int, allowed: set[int], primary: set[int] | None,
 primary = set(range(5))
 assert workers(16, set(range(13)), primary) == 6   # full app mask
 assert workers(16, set(range(5, 13)), primary) == 6  # PS5 R237 secondary mask
+assert workers(4, set(range(5, 13)), primary) == 6  # OS mask overrides under-reported hint
+assert workers(2, set(range(13)), primary) == 6  # no artificial 2-thread hardware cap
+assert workers(16, set(range(5, 13)), primary) == 6  # 6 builders + 2 secondary service slots
 assert workers(16, set(range(5, 13)), None) == 1  # fail-closed unverified
 assert workers(16, set(range(5, 13)), None, set(range(5, 13))) == 6  # verified logical split
 assert workers(16, set(range(5, 13)), None, set(range(5, 12))) == 1  # one guest overlap -> refuse
