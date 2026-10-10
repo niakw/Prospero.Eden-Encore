@@ -87,7 +87,7 @@ int main() {
     assert(!reg.Map(next, 0, 0));
     assert(reg.Map(next, kDeviceSize - 1, 1));
     reg.UnregisterProcess(next);
-    
+
     std::atomic<std::size_t> published{std::size_t(-1)};
     constexpr int kCycles = 3500;
     std::thread producer([&] {
