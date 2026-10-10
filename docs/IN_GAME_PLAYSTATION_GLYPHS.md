@@ -233,9 +233,10 @@ required for both correct button semantics and rendering.
 
 ## License and attribution
 
-**PS5 Button Icons and Controls — Zacksly**  
-Source: https://zacksly.itch.io  
-License: https://creativecommons.org/licenses/by/3.0/ (**CC BY 3.0**)  
+**PS5 Button Icons and Controls — Zacksly**
+
+- Source: https://zacksly.itch.io
+- License: https://creativecommons.org/licenses/by/3.0/ (**CC BY 3.0**)
 Adaptation: the selected icons are resized and composited into user-local
 button atlas replacements. Any pack containing additional game artwork must
 also respect that game's rights; **CC BY for Zacksly's icons does not
