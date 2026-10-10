@@ -46,6 +46,11 @@ assert 'GetIntendedMemorySize()' in zero_alias
 assert 'guest_alias_mapped.fetch_add' in zero_alias
 assert 'guest_alias_access.fetch_add' in zero_alias
 assert 'validate_ps5_guest_zero_alias' in apply
+span=(r/'headless/backports/eden-ps5-guest-span.patch').read_text()
+assert '(addr + size - 1) >> YUZU_PAGEBITS' in span
+assert 'if (p != delta || t != type || b != block) return nullptr;' in span
+assert 'std::as_const(*this).GetSpan(addr, size)' in span
+assert 'validate_ps5_guest_span' in apply
 assert 'guest_alias_mapped=%llu guest_alias_access=%llu' in perf
 def sample(i): return i<=8 or i&(i-1)==0
 assert [i for i in range(1,129) if sample(i)] == [1,2,3,4,5,6,7,8,16,32,64,128]

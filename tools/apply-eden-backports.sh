@@ -399,6 +399,20 @@ print('Pinned PS5 guest delta-zero pointer alias guard: PASS')
 PYALIAS
 }
 apply_one "$root/headless/backports/eden-ps5-guest-zero-alias.patch" "$eden/.encore-backport-ps5-guest-zero-alias.sha256" validate_ps5_guest_zero_alias
+validate_ps5_guest_span() {
+python3 - "$eden" <<'PYSPAN'
+from pathlib import Path
+import sys
+source=(Path(sys.argv[1])/'src/core/memory.cpp').read_text()
+for needed in ('(addr + size - 1) >> YUZU_PAGEBITS',
+               'if (!size || !AddressSpaceContains(*current_page_table, addr, size))',
+               'if (p != delta || t != type || b != block) return nullptr;',
+               'std::as_const(*this).GetSpan(addr, size)'):
+    if needed not in source: raise SystemExit('PS5 guest span validation missing: '+needed)
+print('Pinned PS5 GetSpan correct end page and contiguous page guard PASS')
+PYSPAN
+}
+apply_one "$root/headless/backports/eden-ps5-guest-span.patch" "$eden/.encore-backport-ps5-guest-span.sha256" validate_ps5_guest_span
 # Citron fixes inform this host-worker SM/audctl proposal. It compiles on the
 # pinned Eden source, but PS5 service-init/shutdown behavior is not yet proven.
 # Keep it OFF in the baseline; qualify with a separate controlled HLE A/B.
