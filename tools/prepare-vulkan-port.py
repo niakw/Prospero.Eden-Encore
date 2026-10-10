@@ -347,6 +347,13 @@ adapt('src/video_core/renderer_vulkan/vk_present_manager.cpp', 'vulkan_present_m
     ('free_cv.wait(lock, [this] { return !free_queue.empty(); });',
      '''free_cv.wait(lock, [this] { return present_failure || !free_queue.empty(); });
     if (present_failure) std::rethrow_exception(present_failure);'''),
+    # Once dequeued, only GetRenderFrame owns this Frame until it returns.
+    # Do not block PresentThread's free-queue handoff on a GPU fence wait.
+    ('    free_queue.pop_front();',
+     '    free_queue.pop_front();\n'
+     '    // Exclusive ownership transferred to this caller. Let the present\n'
+     '    // thread recycle OTHER frames during our Vulkan GPU fence wait.\n'
+     '    lock.unlock();'),
     ('            present_queue.push_back(frame);',
      '            if (present_failure) return;\n            present_queue.push_back(frame);'),
     ('            present_queue.pop_front();',

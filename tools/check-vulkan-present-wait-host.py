@@ -22,6 +22,12 @@ checks = (
 for token in checks:
     assert token in generator, token
 assert generator.count("present_in_flight = false;") == 2
+# The GetRenderFrame consumer must unlock the free queue before waiting
+# on its own dequeued frame's GPU fence. Otherwise the presentation producer
+# stalls while attempting to recycle unrelated completed frames.
+assert "'    free_queue.pop_front();\\n'" in generator
+assert "'    lock.unlock();')," in generator
+assert generator.index("    free_queue.pop_front();\\n") < generator.index("    lock.unlock();'),")
 assert generator.index("lock.unlock();\\n") < generator.index("present_in_flight = false;\\n")
 assert "return present_failure || present_queue.empty(); });" not in generator
 assert "std::scoped_lock swapchain_lock{swapchain_mutex};" not in generator or True
@@ -95,7 +101,64 @@ struct Gate {
         if (present_failure) std::rethrow_exception(present_failure);
     }
 };
+struct FrameFence {
+    std::mutex mutex;
+    std::condition_variable cv;
+    bool entered = false, complete = false;
+    void Wait() {
+        std::unique_lock lock{mutex};
+        entered = true;
+        cv.notify_all();
+        cv.wait(lock, [this] { return complete; });
+    }
+    void UntilEntered() {
+        std::unique_lock lock{mutex};
+        cv.wait(lock, [this] { return entered; });
+    }
+    void Signal() {
+        std::lock_guard lock{mutex};
+        complete = true;
+        cv.notify_all();
+    }
+};
+struct FrameReuse {
+    std::mutex free_mutex;
+    std::condition_variable free_cv;
+    std::deque<int> free_queue{1};
+    FrameFence fence;
+    int GetRenderFrame() {
+        std::unique_lock lock{free_mutex};
+        free_cv.wait(lock, [this] { return !free_queue.empty(); });
+        const int frame = free_queue.front();
+        free_queue.pop_front();
+        // Same split as production: never hold this mutex across GPU wait.
+        lock.unlock();
+        fence.Wait();
+        return frame;
+    }
+};
 int main() {
+    // If GPU fence wait keeps the free queue locked, the producer cannot
+    // recycle an independent frame. Probe with try_lock while consumer is
+    // definitely blocked in the fence.
+    for (int run=0; run<30; ++run) {
+        FrameReuse reuse;
+        std::atomic<int> claimed{-1};
+        std::thread consumer{[&] { claimed = reuse.GetRenderFrame(); }};
+        reuse.fence.UntilEntered();
+        {
+            std::unique_lock lock{reuse.free_mutex, std::try_to_lock};
+            assert(lock.owns_lock());
+            assert(reuse.free_queue.empty());
+            reuse.free_queue.push_back(2);
+        }
+        reuse.free_cv.notify_one();
+        reuse.fence.Signal();
+        consumer.join();
+        assert(claimed == 1);
+        std::lock_guard lock{reuse.free_mutex};
+        assert(reuse.free_queue.size() == 1 && reuse.free_queue.front() == 2);
+    }
     for (int run=0; run<30; ++run) {
         Gate g;
         g.Queue(1); g.Queue(2);
@@ -147,4 +210,5 @@ with tempfile.TemporaryDirectory(prefix="eden-present-") as tmp:
                         str(source), "-o", str(binary)], check=True, timeout=120)
         subprocess.run([str(binary)], check=True, timeout=120)
         print("PASS host present completion/failure", label)
+print("PASS host GetRenderFrame: free mutex not held during GPU fence wait")
 print("PS5 firmware/GPU queue/FPS not qualified")
