@@ -40,6 +40,11 @@ unmap=(r/'headless/backports/eden-ps5-gpu-unmap-reverse-guard.patch').read_text(
 assert 'base_dev != retiring_page' in unmap
 assert 'EDEN_GPU_UNMAP_REVERSE_MISMATCH' in unmap
 assert 'validate_ps5_gpu_unmap_reverse' in apply
+multi=(r/'headless/backports/eden-ps5-gpu-multi-missing-guard.patch').read_text()
+for token in ('bool Contains(u32 value, u32 start_entry) const noexcept',
+              'EDEN_GPU_REMAP_MULTI_MISSING', 'EDEN_GPU_UNMAP_MULTI_MISSING'):
+    assert token in multi, token
+assert 'validate_ps5_gpu_multi_missing' in apply
 assert 'remap_replaced=%llu remap_mismatch=%llu' in perf
 assert 'EDEN_GPU_UNMAPPED_COUNTERS read=%llu write=%llu guest_map_zero=%llu guest_null_mapped=%llu' in perf
 diagnostics=(r/'headless/backports/eden-ps5-guest-mapping-diagnostics.patch').read_text()

@@ -384,6 +384,19 @@ print('Pinned PS5 GPU reverse-map unmap guard: PASS')
 PYUNMAP
 }
 apply_one "$root/headless/backports/eden-ps5-gpu-unmap-reverse-guard.patch" "$eden/.encore-backport-ps5-gpu-unmap-reverse-guard.sha256" validate_ps5_gpu_unmap_reverse
+validate_ps5_gpu_multi_missing() {
+python3 - "$eden" <<'PYMULTI'
+from pathlib import Path
+import sys
+s=(Path(sys.argv[1])/'src/core/device_memory_manager.inc').read_text()
+for token in ('bool Contains(u32 value, u32 start_entry) const noexcept',
+              'steps < storage.size()', 'start_entry > storage.size()',
+              'EDEN_GPU_REMAP_MULTI_MISSING', 'EDEN_GPU_UNMAP_MULTI_MISSING'):
+    if token not in s: raise SystemExit('PS5 reverse multi-map safe unlink missing: '+token)
+print('PS5 multi reverse-map unregistration hardening: PASS')
+PYMULTI
+}
+apply_one "$root/headless/backports/eden-ps5-gpu-multi-missing-guard.patch" "$eden/.encore-backport-ps5-gpu-multi-missing-guard.sha256" validate_ps5_gpu_multi_missing
 validate_ps5_guest_mapping_diagnostics() {
 python3 - "$eden" <<'PYMAP'
 from pathlib import Path
