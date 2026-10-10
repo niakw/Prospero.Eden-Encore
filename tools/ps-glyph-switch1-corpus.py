@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Merge broad Switch 1 TitleDB regional metadata into bounded discovery catalog.
+"""Index Switch 1 software from public regional metadata, never Switch 2-only.
 
-All regions are metadata-only. Do not download NSP/XCI, DLC or ROMFS.
-A title ID is a discovery identifier, not a per-version compatibility proof.
-Uses the conservative Switch-1 base application resolver already in Eden.
+Only base application IDs with the Switch 1 platform prefix 0100 are
+eligible. Native Nintendo Switch 2-only games use 0400 and are excluded;
+a Switch 1 release remains in scope even if it also has a Switch 2 Edition.
+A Title ID is NOT necessarily one commercially distinct, fully released
+game (region variants, demos, early listings and delisted titles exist).
+No NSP/XCI, DLC, game mods or ROMFS are downloaded.
 """
 from __future__ import annotations
 import argparse
@@ -53,9 +56,16 @@ def merge(regions: list[Path], known: list[str] | None = None) -> dict:
     items.sort(key=lambda x: (not x["previously_researched_title"],
                               x["title"].casefold(), x["title_id"]))
     return {"schema": 1, "scope": "switch1_metadata_all_supplied_regions",
+            "platform_filter": "Switch 1 base applications (0100), not Switch 2-only (0400)",
+            "includes_switch1_games_also_on_switch2": True,
+            "includes_switch2_exclusive_games": False,
+            "count_unit": "regional_deduplicated_base_title_ids_not_individual_games",
             "game_count": len(items), "source_regions": sources,
             "games": items, "glyph_compatible_games": 0,
-            "warning": "TitleDB name/ID metadata is not a ROMFS, scene or glyph compatibility test."}
+            "warning": ("TitleDB 0100 records are candidate Switch1 title IDs, not a "
+                        "verified count of distinct released commercial games. "
+                        "Other platforms, DLC, game-update and Switch2-only 0400 "
+                        "IDs must never enter native Switch 1 glyph matching.")}
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
@@ -71,8 +81,10 @@ def main():
             x["switch_game"] for x in seeds["games"]]
         catalog = merge(args.regions, research)
         args.out.write_text(json.dumps(catalog, ensure_ascii=False, separators=(",", ":"))+"\n")
-        print("SWITCH 1 METADATA:", catalog["game_count"], "base games across",
-              len(catalog["source_regions"]), "regional files; zero glyph activations")
+        print("SWITCH 1 METADATA:", catalog["game_count"],
+              "candidate Switch1 base TITLE IDs (not official unique games) across",
+              len(catalog["source_regions"]),
+              "regions; 0400 Switch2-only excluded; zero glyph activations")
     except (OSError, ValueError, KeyError, TypeError, UnicodeError) as exc:
         print("INVALID SWITCH1 CATALOG:", exc, file=sys.stderr)
         return 1
