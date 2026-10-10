@@ -22,30 +22,32 @@
     const auto PrefetchDownloads = [&] {
         if constexpr (std::is_same_v<Runtime, Vulkan::TextureCacheRuntime>) {
             ReleaseDownloads();
-            // No dirty texture can be prefetched while the real collector
-            // must preserve every GPU-written image. An early return skips
-            // the entire speculative LRU pass and avoids repeated calls
-            // into the kernel-backed GPU pressure probe. Cleanup still
-            // runs normally to reclaim eligible CLEAN images.
+            // No texture can be old enough before this title's first
+            // age threshold. Do not even consult the PS5 direct-memory
+            // pressure callback if the LRU cannot select any image.
+            if (frame_tick < ticks_to_destroy) return;
+            // Only prefetch GPU-written textures when actual Cleanup could
+            // evict them. Clean-only cleanup still runs independently.
+            // One pressure decision for this batch: avoid repeating a Sony
+            // kernel-backed probe while scanning up to 40 images.
             const bool prefetch_dirty = DirtyEvictions();
             if (!prefetch_dirty) return;
-            // No texture can be old enough before this title's first
-            // age threshold. In particular, a zero cutoff would include
-            // images first used at frame zero (LRU comparison is inclusive).
-            if (frame_tick < ticks_to_destroy) return;
             size_t remaining = num_iterations;
             size_t bytes = 0;
             u64 usage = total_used_memory;
-            // Cleanup reclaims clean AND dirty images. Model both kinds of
-            // evictions while looking ahead: otherwise a run of clean images
-            // can already end memory pressure but we still submit needless
-            // dirty-image downloads and a GPU Finish() for images retained.
-            // This is a conservative estimate, not actual image deletion.
+            // A stable target for THIS speculative pass. The actual Cleanup
+            // still makes authoritative eviction decisions using current
+            // GPU pressure; this staging forecast cannot free any texture.
+            // Avoid one kernel-backed pressure check per LRU candidate.
+            const u64 projected_stop = (aggressive_mode || ::Eden::Performance::KeepDirtyTextures())
+                                           ? critical_memory : expected_memory;
+            // Model both clean and dirty future evictions, but only submit
+            // readbacks that Cleanup could actually need. This estimate
+            // never changes a live GPU/guest texture or its synchronization.
             const auto NoteProjectedEviction = [&](const ImageBase& image) {
                 usage = ::Eden::VulkanMemory::AfterProjectedEviction(
                     usage, ReclaimedBytes(image));
-                return usage < (aggressive_mode || ::Eden::Performance::KeepDirtyTextures()
-                                    ? critical_memory : expected_memory);
+                return usage < projected_stop;
             };
             // Only look ahead through eligible evictions. Leave actual
             // deletion, alias updates and guest writes to Cleanup.

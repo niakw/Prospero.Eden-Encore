@@ -39,6 +39,9 @@ assert '"::Eden::VulkanMemory::OldestEvictionTick(frame_tick, ticks_to_destroy)"
 assert "if gc.count(cleanup_cutoff) != 2:" in generator
 assert 'if (frame_tick >= ticks_to_destroy) {\\n' in generator
 assert "if (frame_tick < ticks_to_destroy) return;" in gc
+assert gc.index("if (frame_tick < ticks_to_destroy) return;") < gc.index("const bool prefetch_dirty = DirtyEvictions();")
+assert "const u64 projected_stop = (aggressive_mode || ::Eden::Performance::KeepDirtyTextures())" in gc
+assert "return usage < projected_stop;" in gc
 # A saturated zero is inclusive in the pinned LRU cache. The wrapper MUST
 # skip both cleanup passes and Vulkan's lookahead until the age threshold.
 assert "constexpr std::uint64_t OldestEvictionTick(" in header
