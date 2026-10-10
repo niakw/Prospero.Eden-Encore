@@ -34,6 +34,7 @@ prefix = r"""
 #include <vector>
 using u64 = std::uint64_t;
 constexpr std::size_t HostPageSize = 16384;
+constexpr std::size_t HostPageBits = 14;
 constexpr std::uintptr_t HostPageMask = ~(std::uintptr_t(HostPageSize) - 1);
 constexpr std::size_t Slot = 2 * 1024 * 1024;
 static unsigned releases = 0;
@@ -45,6 +46,7 @@ void DecommitSparsePage(std::uintptr_t p) noexcept {
     std::memset(reinterpret_cast<void*>(p), 0, Slot);
 }
 struct Table {
+    using T = u64;
     u64* base_ptr;
     std::size_t alloc_size;
     std::vector<std::atomic<u64>> committed_pages;
