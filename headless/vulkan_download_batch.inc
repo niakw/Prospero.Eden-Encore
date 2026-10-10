@@ -3,8 +3,9 @@
         // in modification order. A staging allocation stays busy until its tick.
         using Map = decltype(runtime.DownloadStagingBuffer(size_t{}));
         // Most GPU readback calls fit entirely inside sixteen staging maps.
-        // Avoid heap allocation and allocator contention on every guest read:
-        // the same move-only Map type already uses small_vector in GC.
+        // Avoid heap allocation and allocator contention on every guest read.
+        // Pinned Vulkan StagingBufferRef is a non-owning value handle; the
+        // staging pool owns its backing memory and deferred lifetime.
         boost::container::small_vector<std::pair<ImageId, Map>, 16> pending;
         constexpr size_t batch_limit = 32_MiB;
         size_t batch_bytes = 0;
