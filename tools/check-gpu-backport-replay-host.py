@@ -99,6 +99,26 @@ with tempfile.TemporaryDirectory(prefix="eden-pinned-gpu-replay-") as tmp:
     assert "std::shared_lock registry_lk(process_registry_guard)" in merged_inc
     assert "std::atomic_ref" in merged_h
     assert "device_inter->InvalidateRegion(address, size);" in merged_inc
+    # Protect both GetSpan overloads independently, never count their tokens
+    # across the entire source: WalkBlock legitimately uses the same guard.
+    span_need = ("first_phys >= compressed_device_addr.size()",
+                 "page_count > compressed_device_addr.size() - first_phys")
+    for signature in ("u8* DeviceMemoryManager<Traits>::GetSpan(",
+                      "const u8* DeviceMemoryManager<Traits>::GetSpan("):
+        start = merged_inc.index(signature)
+        end = merged_inc.index("template <typename Traits>", start)
+        block = merged_inc[start:end]
+        for token in span_need:
+            assert block.count(token) == 1, (signature, token)
+        assert (block.index("if (backing == 0) return nullptr;") <
+                block.index(span_need[0]) < block.index(span_need[1]) <
+                block.index("for (size_t i = 1; i < page_count; ++i)"))
+    # Non-GetSpan guard is required too; global two-hit counts are unsafe.
+    walk = merged_inc[merged_inc.index("void DeviceMemoryManager<Traits>::WalkBlock("):
+                      merged_inc.index("void DeviceMemoryManager<Traits>::ReadBlock(")]
+    assert span_need[0] in walk
+    apply_source_guard = ("if s.count(token) != 2:")
+    assert apply_source_guard not in apply_source
     assert "tracked_entries[first_page + i].compressed_physical_ptr != backing + i" not in merged_inc, (
         "A pinned physical-page patch must update raw table access to atomic helpers")
 

@@ -501,17 +501,21 @@ python3 - "$eden" <<'PYSPANBOUNDS'
 from pathlib import Path
 import sys
 s=(Path(sys.argv[1])/'src/core/device_memory_manager.inc').read_text()
+# WalkBlock already has its own independent physical DRAM bound check.
+# Count only inside EACH GetSpan overload, not in the entire .inc file:
+# two GetSpan guards + WalkBlock must not produce a false build failure.
 need=('first_phys >= compressed_device_addr.size()',
       'page_count > compressed_device_addr.size() - first_phys')
-for token in need:
-    if s.count(token) != 2:
-        raise SystemExit('GPU GetSpan physical bounds missing from const/non-const path: '+token)
 for signature in ('u8* DeviceMemoryManager<Traits>::GetSpan(',
                   'const u8* DeviceMemoryManager<Traits>::GetSpan('):
     start=s.index(signature)
     end=s.index('template <typename Traits>',start)
     block=s[start:end]
+    for token in need:
+        if block.count(token) != 1:
+            raise SystemExit('GPU GetSpan physical bounds missing or duplicated: '+signature+' '+token)
     if not (block.index('if (backing == 0) return nullptr;') <
+            block.index('first_phys >= compressed_device_addr.size()') <
             block.index('page_count > compressed_device_addr.size() - first_phys') <
             block.index('for (size_t i = 1; i < page_count; ++i)')):
         raise SystemExit('GPU GetSpan physical capacity check incorrectly placed: '+signature)
