@@ -347,6 +347,8 @@ src=(Path(sys.argv[1])/'src/core/device_memory_manager.inc').read_text()
 for token in ('invalid.continuity_tracker = 0;', 'valid.continuity_tracker = 0;',
               'entry.continuity_tracker = 0;', 'observed == first_backing + n',
               'tracked_entries[first_page + i].compressed_physical_ptr != backing + i',
+              'if (addr >= device_as_size || size > device_as_size - addr)',
+              'if (address >= device_as_size) return nullptr;',
               '::Eden::GpuFault::ShouldReportRead()', '::Eden::GpuFault::ShouldReportWrite()'):
     if token not in src:
         raise SystemExit(f'Pinned PS5 GPU memory backport missing: {token}')
