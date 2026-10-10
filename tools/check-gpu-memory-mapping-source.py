@@ -30,6 +30,13 @@ assert 'set_property(SOURCE "${eden_cpu_memory_tu}" TARGET_DIRECTORY core' in c
 assert 'set_property(SOURCE "${PROJECT_SOURCE_DIR}/src/video_core/host1x/gpu_device_memory_manager.cpp"' in c
 assert c.count('APPEND PROPERTY COMPILE_DEFINITIONS "PS5_NATIVE=1"') >= 2
 assert 'validate_ps5_gpu_memory_mapping' in apply
+reverse=(r/'headless/backports/eden-ps5-gpu-remap-reverse.patch').read_text()
+for needle in ('previous_physical == replacement_physical',
+               'compressed_device_addr.GetAndFault(previous_physical - 1U)',
+               'impl->multi_dev_address.Unregister(', 'EDEN_GPU_REMAP_REVERSE_MISMATCH'):
+    assert needle in reverse, needle
+assert 'validate_ps5_gpu_remap_reverse' in apply
+assert 'remap_replaced=%llu remap_mismatch=%llu' in perf
 assert 'EDEN_GPU_UNMAPPED_COUNTERS read=%llu write=%llu guest_map_zero=%llu guest_null_mapped=%llu' in perf
 diagnostics=(r/'headless/backports/eden-ps5-guest-mapping-diagnostics.patch').read_text()
 for needle in ('EDEN_GUEST_MAP_POINTER_ZERO', 'EDEN_GUEST_MAPPED_NULL_POINTER',
@@ -56,7 +63,7 @@ main=(r/'headless/main.cpp').read_text()
 assert '#include "gpu_fault_rate_limit.h"' in main
 assert '::Eden::GpuFault::ResetTitleCounters();' in main
 assert 'inline void ResetTitleCounters() noexcept' in h
-assert h.count('.store(0, std::memory_order_relaxed);') >= 6
+assert h.count('.store(0, std::memory_order_relaxed);') >= 8
 def sample(i): return i<=8 or i&(i-1)==0
 assert [i for i in range(1,129) if sample(i)] == [1,2,3,4,5,6,7,8,16,32,64,128]
 print('PASS source: physical continuity, PS5 shared-cache bypass, bounded fault logs')
