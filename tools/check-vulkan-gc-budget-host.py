@@ -4,6 +4,7 @@
 Tests the exact header used in the PS5 generated texture cache. This does not
 emulate GPU residency/driver allocation, and is not a native PS5 build.
 """
+import ast
 from pathlib import Path
 import shutil
 import subprocess
@@ -19,6 +20,26 @@ assert "usage = ::Eden::VulkanMemory::AfterProjectedEviction(" in gc
 assert "usage -= ReclaimedBytes(image);" not in gc
 assert '#include "vulkan_gc_budget.h"' in generator
 assert generator.count("(gc_original, gc)") == 1
+# Extract real Python replacement templates; literal backslash-n would emit
+# malformed C++ and would not be caught by arithmetic-only C++ tests.
+tree = ast.parse(generator)
+replacements = {}
+for node in ast.walk(tree):
+    if (isinstance(node, ast.Tuple) and len(node.elts) == 2
+            and isinstance(node.elts[0], ast.Constant)
+            and isinstance(node.elts[0].value, str)
+            and node.elts[0].value.startswith("total_used_memory -= ")):
+        replacements[node.elts[0].value] = ast.literal_eval(node.elts[1])
+expected = ("total_used_memory -= GetScaledImageSizeBytes(image);",
+            "total_used_memory -= Common::AlignUp(tentative_size, 1024);")
+assert set(replacements) == set(expected), replacements.keys()
+for old in expected:
+    generated = replacements[old]
+    assert "if constexpr (std::is_same_v<Runtime, Vulkan::TextureCacheRuntime>)" in generated
+    assert "AfterProjectedEviction(" in generated
+    assert old in generated  # OpenGL path remains unchanged
+    assert "\\n" not in generated  # actual multiline generated C++ required
+    assert generated.count("{") == 2 and generated.count("}") == 2
 compiler = next((name for name in ("clang++-18", "clang++", "g++")
                  if shutil.which(name)), None)
 if compiler is None:
