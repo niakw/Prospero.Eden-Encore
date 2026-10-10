@@ -54,7 +54,8 @@ assert 'SetDirectMemoryRegionScanEnabled(' in (root / "headless/main.cpp").read_
 assert 'SetDirectMemoryRegionScanEnabled(bool enabled) noexcept;' in (root / "headless/performance.h").read_text()
 assert perf.index('if (scan_requested) {') < perf.index('sceKernelDirectMemoryQuery(scan.cursor')
 assert 'scan.Include(region.start, region.end)' in perf
-assert 'const long long free_upper = static_cast<long long>(scan.FreeUpperBound());' in perf
+assert 'const long long free_upper = scan_requested' in perf
+assert '? static_cast<long long>(scan.FreeUpperBound()) : -1LL;' in perf
 assert 'scan_reached_extent=%u scan_stop=%u query_rc=%d short=%d' in perf
 assert 'scan.ReachedExtent()' in perf
 assert "NEVER allocatable or a JIT/GPU budget" in region_policy
