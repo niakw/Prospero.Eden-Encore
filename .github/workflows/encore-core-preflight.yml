@@ -34,6 +34,8 @@ jobs:
           python3 -B tools/check-performance-policy.py
           python3 -B tools/check-vulkan-shader-workers.py
           python3 -B tools/check-vulkan-shader-workers-cpp-host.py
+          python3 -B tools/check-worker-topology.py
+          python3 -B tools/check-worker-affinity.py
           python3 -B tools/check-runtime-frame-budget.py
           python3 -B tools/check-universal-emulation-policy.py
           python3 -B tools/check-guest-network-isolation.py
