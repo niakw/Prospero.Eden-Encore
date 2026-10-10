@@ -1,0 +1,40 @@
+# PS5 R238 — October 10, 2026 crash, FC27/BOTW and GPU-memory fault audit
+
+**Source:** user-supplied `crash-20261010-001622*.{txt,log}`, `crash-20261010-002039*.{txt,log}`, `heap(8).log`, `stderr(9).log`, `boot-trace(5).txt`. Firmware `0x13600007`; native **R1 built October 9 22:00:57**. These are *previously built console* results, not acceptance results for later `[skip ci]` developer commits. Analysis inspected all relevant uploaded files without running a build, host test, GitHub Action, or Mac/PS5 modification.
+
+## 1. Two distinct **native launcher SIGSEGVs**
+
+| PS5 local timestamp | Uptime | Thread/context | Fault address | RIP | largest contiguous direct-memory extent | committed heap |
+|---|---:|---|---|---|---:|---:|
+| 00:16:22 | 19 s | main / launcher | `0x46dfd5b0` | `0x8000a878d` | 11800 MiB | 128 MiB |
+| 00:20:39 | 237 s | main / launcher, **after game teardown** | `0x46dfd5b0` | `0x8000a878d` | 4798 MiB | 1280 MiB |
+
+Both crashes share the same code and fault addresses, and are reproduced with vastly different memory headroom. This does **NOT** demonstrate physical OOM. The native RIP is outside the eboot image; absent a verified matching system-library symbol map / binary offset, we cannot name the failing function. `eboot+...` entries shown with '?' are only stack candidates, not decoded frames. Distinguish the native launcher crash from `Job0` guest faults; no evidence supports collapsing them into one cause.
+
+Launcher remains affected by image/upload hitches in the crash snapshots: native `slow frame: draw 134 ms` in crash #1; after returning from game in #2 `draw 690 ms` and `update 485 ms`. `EDEN_UI_HOTSPOT texture_upload` ~33–36 ms. Three ROMs are visible and Nlib cache icons/screens are populated, so "missing FC27" is not reproduced here.
+
+## 2. FC27 guest fault + huge guest/GPU memory mismatch
+
+`crash-20261010-002039-eden_log.txt` has **31,025 `Unmapped Device *Block` entries**: 22,642 ReadBlock and 8,383 WriteBlock. Their first timestamps occur at 28.945 s, up to 213.145 s; repeated hot addresses include `0x502a1f00`, `0x502a2600`, `0x502a1000` and `0x502a1e00`. There are separately about 5,120 `assert memory mapping base yield a nullptr within the table` and 2,122 `assert Mapped memory page without a pointer` messages in `build/headless/memory.cpp`. The latter begin *before* the first automatic retry and cannot be excused solely as later GPU garbage.
+
+First FC27 guest session: `Unmapped Read64 @ 0x0/0x18`, `Cannot execute instruction at unmapped address 0x0` at 12.934 s; `Job0` stack traces through `Engine.Render.Core2.PlatformNvn.nrs`, then `EDEN_GUEST_FAULT_RETRY 1 after 11.2 s`. The exact source currently on dev **already removed the automatic retry** and throws into launcher instead (regression `tools/check-ps5-guest-fault-recovery.py`); do not reintroduce recovery loops or claim the installed R1 binary contains that fix. Later FC27 reaches a guest panic `0x1A80A` and persistent invalid GPU mappings. PRMT Index-mode warnings and Fermi2D z0 software-copy fallbacks appear but no causal link to this specific corruption has been established.
+
+The underlying pinned Eden guest page-table/device-address mapping and GPU memory remap/lifecycle must be audited using this trace, not suppressed as harmless spam. **Do not fabricate GPU memory mapping fixes without symbol/owner evidence.**
+
+## 3. Frame pacing and direct-memory retention (new runs)
+
+`crash-20261010-002039-heap.log`: second FC27 Vulkan session, **32 five-second windows**, ~170.8 s observed, weighted presented **16.77 FPS**, **14 windows below 20 FPS** and **12 below 10 FPS**, lowest **0.342 FPS** / worst inter-present **3033.225 ms**. Approximately 1.28 GiB heap remains physically committed after game teardown (`1342177280` bytes); sparse JIT committed returns to zero.
+
+`heap(8).log`: first Zelda BOTW **Ultra / 2x / 2160p**, 20 five-second windows, **28.36 weighted FPS**, minimum **23.84 FPS**, single worst gap **333.438 ms**. Later FC27 **OpenGL safe launch** hits `guest_fault` roughly 32 seconds after the OpenGL session start, not proof the Vulkan driver alone causes the guest mapping failure. The subsequent FC27 Vulkan session shows ~89.3 seconds/16 windows, weighted **18.56 FPS**, lowest **0.104 FPS** with **9627.471 ms** worst interval. Frame times are presentation statistics, NOT proof of guest simulation step rate.
+
+For the second FC27 session in crash log, initial post-title `core_destroyed`: **1,025,569 live bytes** against 1,073,741,824 committed heap bytes; final `core_destroyed` committed heap **1,342,177,280 bytes**, sparse JIT remaining zero. Returning to launcher does NOT reclaim the heap's physical 128 MiB mspace pieces. Distinguish `largest contiguous free block` from total free PS5 RAM and driver-declared VRAM budgets.
+
+## 4. Verified 13 logical CPU slots, but **CPUID topology decoder rejected**
+
+`EDEN_PS5_CPU_ACCESS hardware_reported=16 affinity_allowed=13 allowed_mask=0x1fff`, followed by `EDEN_PS5_CPU_TOPOLOGY_REJECT more_than_8_physical_ids observed=13`; physical layout cannot actually have 13 distinct cores on a retail 8-core Zen 2 PS5. Native experiment binds primary guest/GPU worker IDs to 0,3,6,9,12 and other threads to secondary `0xdb6` (8 logical slots), but Vulkan shader compilation reported **1 worker**, `reserved=7 physical_verified=0`. The later dev-only verified-logical-secondary fix ([3f254d8a](https://github.com/niakw/Prospero.Eden-Encore/commit/3f254d8a69bbe5d9c988d4124653e899bb18e6fd)) has **NOT** been hardware qualified. More shader workers will not repair invalid GPU mappings or native SIGSEGV.
+
+## 5. Source-only mitigation, not root-cause fix
+
+The pinned common file backend in `headless/backports/eden-ps5-bounded-logging.patch` synchronously called `file->Flush()` on **every Error log**. With >38,000 severe mapping errors/assertions, that can magnify guest/video stalls and SSD load. In this checkpoint, source patch flushes **first Error and every 64th later Error**, always flushes `Critical`, retains all per-event messages, 8 MiB first+rolling log segments, and final explicit Flush() semantics. This does NOT repair the guest page tables; there is no measured FPS gain, and no host/native tests executed.
+
+**Prioritized next engineering steps:** (1) symbolize native `0x8000a878d` against matching PS5 library information / correct ELF build, correlate GL draw and async Nlib lifetime; (2) review pinned guest page table mapping unmap/alias transitions and GPU DeviceMemoryManager owners, preserving unmapped access semantics; (3) verify error storm not dominated by synchronous log flush; (4) PS5 repeat FC27 guest/renderer and BOTW across titles after authorized native build. Continue memory reclaimer ownership work separately; keep issues #7/#8 OPEN. The controller glyph report still explicitly says Nintendo original and `rule=unsupported`.
