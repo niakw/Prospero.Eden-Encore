@@ -123,3 +123,17 @@ The root ledger is diagnostic evidence to select a safe next step, **not** proof
 - Static source-only checks of the hooked code paths are consistent; **no host compiler/UBSan/TSan, new GitHub Action, Sony API invocation, game boot or FPS test has run for these revisions**.
 
 Still open: root lifetimes/safe destruction on PS5 firmware 13.60, 1,280-MiB physical heap retention, FC27 native SIGSEGV/guest GPU mapping/black textures and severe frame collapse. No direct-memory release is enabled.
+
+
+### R242 — root cause of continued 128-MiB heap growth, not a reclamation claim
+
+A zero (or negative) relaxed root counter from a multithreaded title is **not** proof that its Sony mspace is empty or safe to destroy. R242 makes the next console trace explain **which requested allocation caused each new root** instead of relying on the global 1,280-MiB/3.49-MiB disparity.
+
+- `d361d4f4` / `607be568`: always restore the main mspace allocation hint to zero on game teardown, even if the surviving launcher thread has no TLS record; synthetic host test detaches/restores TLS to exercise this.
+- `ca184df4` / `d02862f7`: when root telemetry has negative or mismatched blocks/bytes, log triage identifies `inconsistent_or_transient_ledger` rather than an ostensibly reclaimable empty root.
+- `9deda89b` / `cdce218c`: a bounded `EDEN_HEAP_GROW req_bytes=... root=... pieces=... spaces=... committed_mib=...` kernel record is emitted only after successful growth; it reports admission pressure *not* PS5 GPU VRAM totals. Standard malloc paths and every presented frame are unaffected.
+- `67f0ee1a` / `682bc8e0`: read-only log triage + synthetic fixture correlate each new mspace with its originating request and enforce the 3-GiB range/contiguous piece publication.
+- `05e67adc` / `2a9f001b`: host mock parses every emitted growth record to verify root/span and committed MiB, including the two-piece 192-MiB allocation test.
+- `4360ecab`: print a `post_cache_drain` allocator snapshot alongside `core_destroyed` root data, to show whether the surviving TLS cache produced a logical-accounting change after destruction.
+
+**Still NOT performed:** executable host UBSan/TSan run, GitHub Actions, native PS5 build, game/renderer tests, physical mspace release. Physical reclamation requires exact empty-space proof, owner quiescence, child arena retirement and a PS5 FW13.60-qualified destroy/import/unmap path. The PS4-mspace destruction pattern is informative but not native PS5 validation. Keep issue #8 open.
