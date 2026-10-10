@@ -43,6 +43,9 @@ growth = heap[heap.index('static int eden_heap_grow(size_t bytes, unsigned seen)
               heap.index('/* A block from the heap', heap.index('static int eden_heap_grow(size_t bytes, unsigned seen) {'))]
 assert growth.index('atomic_flag_clear_explicit(&eden_heap_grow_lock, memory_order_release)') < (
     growth.index('eden_heap_log_growth(report_request, report_root'))
+assert growth.index('atomic_flag_clear_explicit(&eden_heap_grow_lock, memory_order_release)') < (
+    growth.index('eden_heap_grow_refused(report_refusal)'))
+assert 'report_refusal = ("EDEN_HEAP_GROW refused:' in growth
 assert 'snprintf(' not in growth and 'printf(' not in growth
 if platform.machine().lower() not in ('x86_64', 'amd64'):
     print('Heap growth source/derivation contract PASS (x86 UBSan/TSan runtime harness deferred to CI)')
