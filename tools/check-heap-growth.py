@@ -450,7 +450,18 @@ int main(int argc, char **argv) {
     // Title-switch maintenance may drain only this thread's own freed blocks.
     // It may not deallocate an mspace or shrink direct physical backing.
     const size_t heap_before_drain = eden_heap_committed();
+    // The cache's logical blocks are freed but remain physically held.
+    // Their release must debit exactly the cached usable bytes from the
+    // root ledger, while leaving the physical 128-MiB mspace committed.
+    eden_heap_flush(eden_heap_self());
+    long phys_before_drain = 0;
+    for (unsigned root=0; root<EDEN_HEAP_PIECES; ++root)
+        phys_before_drain += atomic_load(&eden_heap_root_held_bytes[root]);
     const size_t freed_cache = eden_heap_release_current_tcache();
+    long phys_after_drain = 0;
+    for (unsigned root=0; root<EDEN_HEAP_PIECES; ++root)
+        phys_after_drain += atomic_load(&eden_heap_root_held_bytes[root]);
+    assert(phys_before_drain - phys_after_drain == (long)freed_cache);
     assert(freed_cache <= ((size_t)1 << 20));
     assert(eden_heap_tcache_held() == 0);
     assert(eden_heap_committed() == heap_before_drain);
