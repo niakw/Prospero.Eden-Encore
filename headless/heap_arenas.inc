@@ -305,6 +305,35 @@ size_t eden_heap_tcache_held(void) {
 size_t eden_heap_committed(void) {
   return (size_t)atomic_load_explicit(&eden_heap_pieces_used, memory_order_relaxed) << EDEN_HEAP_PIECE_SHIFT;
 }
+/* Physical mspace root retention has two different blockers:
+ * - child 8-MiB mspace arenas pin their parent's direct backing;
+ * - even unpinned roots have no proven allocator quiescence / destruction ABI.
+ * This observational summary NEVER grants permission to unmap any root. */
+struct eden_heap_retention {
+  size_t pinned_bytes;
+  size_t unpinned_bytes;
+  unsigned pinned_roots;
+  unsigned unpinned_roots;
+};
+static struct eden_heap_retention eden_heap_retention_snapshot(void) {
+  struct eden_heap_retention stats = {0};
+  const unsigned used=atomic_load_explicit(&eden_heap_pieces_used,memory_order_acquire);
+  for (unsigned root=0; root<used; ++root) {
+    const unsigned span=atomic_load_explicit(&eden_heap_root_span[root],memory_order_acquire);
+    if (!span) continue;
+    /* Committed physical ownership exists even if held counters read zero.
+     * Overflow is impossible: at most EDEN_HEAP_PIECES * 128 MiB. */
+    const size_t bytes=(size_t)span << EDEN_HEAP_PIECE_SHIFT;
+    if (atomic_load_explicit(&eden_heap_root_arena_pins[root],memory_order_relaxed)) {
+      stats.pinned_bytes += bytes;
+      ++stats.pinned_roots;
+    } else {
+      stats.unpinned_bytes += bytes;
+      ++stats.unpinned_roots;
+    }
+  }
+  return stats;
+}
 /* The launcher calls this after guest workers join and its own TLS drain.
  * Non-joined threads can still have pending deltas: values are diagnostic
  * bounds, NOT exact, synchronized proof that a space is empty. */
@@ -320,6 +349,10 @@ void eden_heap_report_roots(const char *phase) {
     printf("EDEN_HEAP_ROOT phase=%s root=%u pieces=%u held_bytes=%ld held_blocks=%ld arena_pins=%u physical_owner=%u reclaim=disabled\n",
            phase?phase:"unknown", root, span, bytes, blocks, pins, has_pa);
   }
+  const struct eden_heap_retention retention=eden_heap_retention_snapshot();
+  printf("EDEN_HEAP_RETENTION phase=%s pinned_bytes=%zu unpinned_bytes=%zu pinned_roots=%u unpinned_roots=%u reclaim=disabled quiescence=unproven\n",
+         phase?phase:"unknown", retention.pinned_bytes, retention.unpinned_bytes,
+         retention.pinned_roots, retention.unpinned_roots);
 }
 
 /* Memory of the large blocks alive now, and how many there are. */
