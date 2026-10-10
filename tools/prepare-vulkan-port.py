@@ -703,10 +703,10 @@ for old, new in [
     if gc.count(old) != 1:
         raise RuntimeError(f'Pinned GC anchor changed: {old}')
     gc = gc.replace(old, new)
-# Upstream's u64 frame_tick starts at 0, but GC subtracts 10/25/50
-# without checking: early memory pressure wraps the LRU cutoff to UINT64_MAX
-# and can evict just-created textures. Preserve a zero lower bound for BOTH
-# normal and aggressive passes, including OpenGL, with no GPU syscall/heap work.
+# Upstream u64 frame_tick starts at zero and subtracts ages 10/25/50.
+# It relied on unsigned wrap plus the pinned LRU signed comparison as an
+# accidental startup grace period. Replace with a saturated cutoff and
+# explicit age guards for both cleanup passes and Vulkan prefetch.
 unsafe_cutoff = "frame_tick - ticks_to_destroy"
 if gc.count(unsafe_cutoff) != 3:
     raise RuntimeError("Pinned GC needs three safe LRU cutoffs: prefetch and both cleanup passes")
