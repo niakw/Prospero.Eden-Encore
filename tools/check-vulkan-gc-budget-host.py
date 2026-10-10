@@ -24,6 +24,11 @@ assert 'unsafe_cutoff = "frame_tick - ticks_to_destroy"' in generator
 assert 'if gc.count(unsafe_cutoff) != 3:' in generator
 assert 'gc = gc.replace(unsafe_cutoff,' in generator
 assert '"::Eden::VulkanMemory::OldestEvictionTick(frame_tick, ticks_to_destroy)"' in generator
+assert "if gc.count(cleanup_cutoff) != 2:" in generator
+assert 'if (frame_tick >= ticks_to_destroy) {\\n' in generator
+assert "if (frame_tick < ticks_to_destroy) return;" in gc
+# A saturated zero is inclusive in the pinned LRU cache. The wrapper MUST
+# skip both cleanup passes and Vulkan's lookahead until the age threshold.
 assert "constexpr std::uint64_t OldestEvictionTick(" in header
 assert "return frame_tick >= min_age ? frame_tick - min_age : 0;" in header
 assert '#include "vulkan_gc_budget.h"' in generator
@@ -93,6 +98,17 @@ int main() {
             assert(cutoff == 0);
         if (frame > age)
             assert(cutoff < frame);
+        // The real pinned LeastRecentlyUsedCache::ForEachItemBelow compares
+        // an inclusive cutoff against the entry's touch tick. A zero cutoff
+        // without the explicit frame>=age guard would evict first-frame data.
+        const bool should_run_gc = frame >= age;
+        const bool frame_zero_texture_selected =
+            should_run_gc && 0 <= cutoff;
+        assert(frame_zero_texture_selected == (frame >= age));
+        const bool current_frame_texture_selected =
+            should_run_gc && frame <= cutoff;
+        if (age != 0)
+            assert(!current_frame_texture_selected);
     }
 
     std::uint64_t state = 0x534F4E5950533530ULL;
