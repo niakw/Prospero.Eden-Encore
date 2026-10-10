@@ -40,6 +40,9 @@ HEAP_PIECE = re.compile(
 HEAP_LIFETIME = re.compile(
     r"\bEDEN_HEAP_LIFETIME\s+phase=([a-z_]+)\s+pieces=(\d+)\s+"
     r"large=(\d+)\s+large_blocks=(\d+)\s+tcache=(\d+)")
+HEAP_GROW = re.compile(
+    r"\bEDEN_HEAP_GROW\s+req_bytes=(\d+)\s+root=(\d+)\s+pieces=(\d+)\s+"
+    r"spaces=(\d+)\s+committed_mib=(\d+)")
 HEAP_ROOT = re.compile(
     r"\bEDEN_HEAP_ROOT\s+phase=([a-z_]+)\s+root=(\d+)\s+pieces=(\d+)\s+"
     r"held_bytes=(-?\d+)\s+held_blocks=(-?\d+)\s+arena_pins=(\d+)\s+"
@@ -71,6 +74,7 @@ def parse_log(data: bytes) -> dict:
     heap_piece_samples: list[dict] = []
     heap_lifetime: list[dict] = []
     heap_roots: list[dict] = []
+    heap_growth: list[dict] = []
     dmem_failures: list[dict] = []
     dmem_slow: list[dict] = []
     memory_live: list[dict] = []
@@ -131,6 +135,19 @@ def parse_log(data: bytes) -> dict:
                     "large_live_bytes": int(large),
                     "large_live_blocks": int(blocks),
                     "tcache_approx_bytes": int(tcache)})
+        if growth := HEAP_GROW.search(line):
+            if len(heap_growth) < MAX_EVENTS:
+                req, index, span, spaces, committed = map(int, growth.groups())
+                if (req <= 3072 * 1024**2 and index < 24 and
+                        1 <= span <= 24 - index and 1 <= spaces <= 24 and
+                        (index + span) * 128 == committed):
+                    heap_growth.append({
+                        "line": number, "request_bytes": req,
+                        "root": index, "pieces": span, "spaces": spaces,
+                        "committed_total_mib": committed,
+                        "new_physical_extent_mib": span * 128,
+                        "reason": "all_existing_mspaces_rejected_request",
+                    })
         if root := HEAP_ROOT.search(line):
             if len(heap_roots) >= MAX_ROOT_EVENTS:
                 raise ValueError("excessive heap root telemetry")
@@ -209,6 +226,7 @@ def parse_log(data: bytes) -> dict:
                 sample["total_ms"] >= 16 for sample in heap_piece_samples),
             "heap_lifetime_samples": heap_lifetime,
             "heap_root_snapshots": heap_roots,
+            "heap_growth_events": heap_growth,
             "direct_memory_probe_failures": dmem_failures,
             "direct_memory_slow_probe_samples": dmem_slow,
             "gpu_last_confirmed_memory_samples": memory_live,
