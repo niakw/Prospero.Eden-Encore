@@ -2,8 +2,10 @@
         // Keep independent copies in one submission, then publish guest writes
         // in modification order. A staging allocation stays busy until its tick.
         using Map = decltype(runtime.DownloadStagingBuffer(size_t{}));
-        std::vector<std::pair<ImageId, Map>> pending;
-        pending.reserve(16);
+        // Most GPU readback calls fit entirely inside sixteen staging maps.
+        // Avoid heap allocation and allocator contention on every guest read:
+        // the same move-only Map type already uses small_vector in GC.
+        boost::container::small_vector<std::pair<ImageId, Map>, 16> pending;
         constexpr size_t batch_limit = 32_MiB;
         size_t batch_bytes = 0;
         const auto finish_batch = [&] {
