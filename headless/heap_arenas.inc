@@ -510,6 +510,47 @@ static void eden_heap_grow_refused(const char *line) {
     sceKernelDebugOutText(0, line);
 }
 
+/* Growth runs while the allocator's own growth lock is held. Do not
+ * invoke snprintf/stdio or another potentially malloc-using formatter here.
+ * This bounded decimal encoder uses only stack bytes, no allocation or
+ * locking, and rejects truncation instead of emitting misleading telemetry. */
+static int eden_heap_append_decimal(char *out, size_t capacity, size_t *length,
+                                    const char *prefix, size_t number) {
+  while (*prefix) {
+    if (*length >= capacity - 1) return 0;
+    out[(*length)++] = *prefix++;
+  }
+  char reversed[3 * sizeof(size_t) + 1];
+  unsigned digits = 0;
+  do {
+    reversed[digits++] = (char)('0' + (number % 10));
+    number /= 10;
+  } while (number != 0);
+  if (digits >= capacity - *length) return 0;
+  while (digits)
+    out[(*length)++] = reversed[--digits];
+  out[*length] = '\0';
+  return 1;
+}
+
+static void eden_heap_log_growth(size_t request, unsigned root, size_t pieces,
+                                 unsigned spaces) {
+  char line[176];
+  size_t length = 0;
+  const size_t committed_mib = ((size_t)root + pieces) << (EDEN_HEAP_PIECE_SHIFT - 20u);
+  if (!eden_heap_append_decimal(line, sizeof(line), &length,
+                                "EDEN_HEAP_GROW req_bytes=", request) ||
+      !eden_heap_append_decimal(line, sizeof(line), &length, " root=", root) ||
+      !eden_heap_append_decimal(line, sizeof(line), &length, " pieces=", pieces) ||
+      !eden_heap_append_decimal(line, sizeof(line), &length, " spaces=", spaces) ||
+      !eden_heap_append_decimal(line, sizeof(line), &length, " committed_mib=", committed_mib))
+    return;
+  if (length + 1 >= sizeof(line)) return;
+  line[length++] = '\n';
+  line[length] = '\0';
+  sceKernelDebugOutText(0, line);
+}
+
 /* Adds a space with room for `bytes`: memory for the next pieces of the range and an mspace
  * over them. `seen` is how many spaces the caller tried: when another thread added one
  * meanwhile, that one is tried first. Returns 0 when the heap is at its limit or the console
@@ -558,17 +599,9 @@ static int eden_heap_grow(size_t bytes, unsigned seen) {
         atomic_store_explicit(&eden_heap_root_span[used],(unsigned char)pieces,memory_order_release);
         atomic_store_explicit(&eden_heap_pieces_used, used + (unsigned)pieces, memory_order_release);
         atomic_store_explicit(&eden_heap_space_count, count + 1, memory_order_release);
-        /* One bounded record per successful growth (max 23 on this heap).
-         * No printf/malloc while holding the growth lock; the kernel debug
-         * writer is already used on this exceptional allocation path.
-         * A first observed 128-MiB commitment without large live bytes is
-         * not sufficient to attribute frame stalls to physical memory. */
-        char growth_line[176];
-        const int growth_chars=snprintf(growth_line,sizeof(growth_line),
-            "EDEN_HEAP_GROW req_bytes=%zu root=%u pieces=%zu spaces=%u committed_mib=%zu\n",
-            bytes, used, pieces, count+1, ((size_t)used+pieces)<< (EDEN_HEAP_PIECE_SHIFT-20u));
-        if (growth_chars>0 && (size_t)growth_chars<sizeof(growth_line))
-          sceKernelDebugOutText(0,growth_line);
+        /* At most 23 growth records in a 3-GiB heap. Never format a
+         * fresh 128-MiB admission through libc while holding this lock. */
+        eden_heap_log_growth(bytes, used, pieces, count + 1);
         grown = 1;
       } else {
         /* No block from the new piece was ever issued, and no slot/space
