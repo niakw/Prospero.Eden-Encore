@@ -741,18 +741,18 @@ adapt('src/video_core/texture_cache/texture_cache.h',
     # subtraction to wrap u64 into enormous phantom VRAM pressure. OpenGL's
     # accounting remains unchanged.
     ('total_used_memory -= GetScaledImageSizeBytes(image);',
-     'if constexpr (std::is_same_v<Runtime, Vulkan::TextureCacheRuntime>) {\\n'
-     '            total_used_memory = ::Eden::VulkanMemory::AfterProjectedEviction(\\n'
-     '                total_used_memory, GetScaledImageSizeBytes(image));\\n'
-     '        } else {\\n'
-     '            total_used_memory -= GetScaledImageSizeBytes(image);\\n'
+     'if constexpr (std::is_same_v<Runtime, Vulkan::TextureCacheRuntime>) {\n'
+     '            total_used_memory = ::Eden::VulkanMemory::AfterProjectedEviction(\n'
+     '                total_used_memory, GetScaledImageSizeBytes(image));\n'
+     '        } else {\n'
+     '            total_used_memory -= GetScaledImageSizeBytes(image);\n'
      '        }'),
     ('total_used_memory -= Common::AlignUp(tentative_size, 1024);',
-     'if constexpr (std::is_same_v<Runtime, Vulkan::TextureCacheRuntime>) {\\n'
-     '        total_used_memory = ::Eden::VulkanMemory::AfterProjectedEviction(\\n'
-     '            total_used_memory, Common::AlignUp(tentative_size, 1024));\\n'
-     '    } else {\\n'
-     '        total_used_memory -= Common::AlignUp(tentative_size, 1024);\\n'
+     'if constexpr (std::is_same_v<Runtime, Vulkan::TextureCacheRuntime>) {\n'
+     '        total_used_memory = ::Eden::VulkanMemory::AfterProjectedEviction(\n'
+     '            total_used_memory, Common::AlignUp(tentative_size, 1024));\n'
+     '    } else {\n'
+     '        total_used_memory -= Common::AlignUp(tentative_size, 1024);\n'
      '    }'),
     # RADV reports all Vulkan allocations, not just cached textures. A game's
     # measured ~1.9 GiB working set triggered dirty eviction at the old 1.6 GiB
