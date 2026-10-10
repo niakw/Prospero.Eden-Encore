@@ -265,10 +265,18 @@ def discover(catalog: dict, state: dict, limit: int,
     # probes. A prior Switch-only search MUST NOT suppress a PC/Wii U query.
     changed_route = bool(state and (state.get("last_provider") != provider or
                                     state.get("search_variant") != variant))
-    offset = 0 if updated_db or changed_route else state.get("next_offset", 0)
-    require(type(offset) is int and 0 <= offset <= len(games), "bad resume offset")
+    stored_offset = state.get("next_offset", 0)
+    require(type(stored_offset) is int and 0 <= stored_offset <= len(games),
+            "bad resume offset")
     completed = set(state.get("completed_title_ids", []))
     completed_tasks = set(state.get("completed_query_keys", []))
+    # A provider may have stopped on one title while another variant or
+    # regional catalog sweep advanced the shared cursor to the END.
+    # Durable per-provider query keys, not next_offset, are authoritative.
+    # Re-scan from the beginning (up to 25k inexpensive in-memory keys)
+    # to reach any previously missed source game instead of marking
+    # incomplete queries as finished.
+    offset = 0
     require(len(completed_tasks) <= MAX_CATALOG * 12,
             "too many completed search entries")
     rows, errors = [], []
