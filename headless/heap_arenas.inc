@@ -24,6 +24,7 @@
  */
 #include <pthread.h>
 #include <string.h>
+#include <stdio.h>
 
 #define EDEN_HEAP_ARENA_SHIFT 23u /* 8 MiB arenas and slots (<=256 MiB reserved) */
 #define EDEN_HEAP_ARENA_SIZE (1u << EDEN_HEAP_ARENA_SHIFT)
@@ -60,6 +61,14 @@ static void *eden_heap_spaces[EDEN_HEAP_PIECES];
 static atomic_uint eden_heap_space_count;
 /* The mspace each piece belongs to. */
 static void *_Atomic eden_heap_piece_space[EDEN_HEAP_PIECES];
+/* Each growth mspace owns one or more consecutive 128-MiB pieces. This
+ * observational ledger NEVER authorizes reclaim: no allocator quiescence
+ * protocol exists yet, and child arenas can pin the parent backing. */
+static _Atomic unsigned char eden_heap_piece_root[EDEN_HEAP_PIECES];
+static unsigned char eden_heap_root_span[EDEN_HEAP_PIECES];
+static atomic_long eden_heap_root_held_bytes[EDEN_HEAP_PIECES];
+static atomic_long eden_heap_root_held_blocks[EDEN_HEAP_PIECES];
+static atomic_uint eden_heap_root_arena_pins[EDEN_HEAP_PIECES];
 /* Pieces committed so far: [0, used). All of them when the heap could not be reserved to grow. */
 static atomic_uint eden_heap_pieces_used;
 static int eden_heap_grows;
@@ -155,6 +164,8 @@ unsigned long eden_heap_create_lock_state(unsigned *waiters) {
 }
 
 static void *eden_heap_owner(const void *address);
+static void eden_heap_physical_note(struct eden_heap_thread *self,
+                                    const void *address, long bytes, long blocks);
 
 /* Per-thread allocation statistics. The live/peak/block counters are process-wide atomics, and
  * updating them on every malloc and free made all allocating threads bounce the same cache
@@ -181,6 +192,8 @@ struct eden_heap_thread {
   long live;
   long blocks;
   unsigned pending;
+  long physical_bytes[EDEN_HEAP_PIECES];
+  long physical_blocks[EDEN_HEAP_PIECES];
   atomic_size_t cached_bytes; /* only the owning thread writes; snapshots may read */
   void *bins[EDEN_TCACHE_BINS];
   unsigned char counts[EDEN_TCACHE_BINS];
@@ -200,6 +213,17 @@ static void eden_heap_apply(long bytes, long blocks) {
 
 static void eden_heap_flush(struct eden_heap_thread *self) {
   eden_heap_apply(self->live, self->blocks);
+  /* Piggyback on existing 64-op TLS batching: no shared atomic per malloc. */
+  for (unsigned root=0; root<EDEN_HEAP_PIECES; ++root) {
+    if (self->physical_bytes[root]) {
+      atomic_fetch_add_explicit(&eden_heap_root_held_bytes[root], self->physical_bytes[root], memory_order_relaxed);
+      self->physical_bytes[root]=0;
+    }
+    if (self->physical_blocks[root]) {
+      atomic_fetch_add_explicit(&eden_heap_root_held_blocks[root], self->physical_blocks[root], memory_order_relaxed);
+      self->physical_blocks[root]=0;
+    }
+  }
   self->live = 0;
   self->blocks = 0;
   self->pending = 0;
@@ -214,7 +238,9 @@ static size_t eden_heap_drain_thread_cache(struct eden_heap_thread *self) {
     while (self->bins[bin] != NULL) {
       void *block = self->bins[bin];
       self->bins[bin] = *(void **)block;
+      const size_t usable=((size_t *)block)[1];
       sceLibcMspaceFree(eden_heap_owner(block), block);
+      eden_heap_physical_note(self, block, -(long)usable, -1);
     }
     self->counts[bin] = 0;
   }
@@ -235,7 +261,10 @@ static void eden_heap_thread_exit(void *value) {
 size_t eden_heap_release_current_tcache(void) {
   if (!eden_heap_arena_key_valid) return 0;
   struct eden_heap_thread *self = pthread_getspecific(eden_heap_arena_key);
-  return self != NULL ? eden_heap_drain_thread_cache(self) : 0;
+  if (!self) return 0;
+  const size_t drained=eden_heap_drain_thread_cache(self);
+  eden_heap_flush(self);
+  return drained;
 }
 
 unsigned eden_heap_arenas_created(void) {
@@ -254,6 +283,20 @@ size_t eden_heap_tcache_held(void) {
 /* Memory the heap's pieces hold now: this part only grows. */
 size_t eden_heap_committed(void) {
   return (size_t)atomic_load_explicit(&eden_heap_pieces_used, memory_order_relaxed) << EDEN_HEAP_PIECE_SHIFT;
+}
+/* The launcher calls this after guest workers join and its own TLS drain.
+ * Non-joined threads can still have pending deltas: values are diagnostic
+ * bounds, NOT exact, synchronized proof that a space is empty. */
+void eden_heap_report_roots(const char *phase) {
+  const unsigned used=atomic_load_explicit(&eden_heap_pieces_used,memory_order_acquire);
+  for (unsigned root=0; root<used; ++root) {
+    if (!eden_heap_root_span[root]) continue;
+    const long bytes=atomic_load_explicit(&eden_heap_root_held_bytes[root],memory_order_relaxed);
+    const long blocks=atomic_load_explicit(&eden_heap_root_held_blocks[root],memory_order_relaxed);
+    const unsigned pins=atomic_load_explicit(&eden_heap_root_arena_pins[root],memory_order_relaxed);
+    printf("EDEN_HEAP_ROOT phase=%s root=%u pieces=%u held_bytes=%ld held_blocks=%ld arena_pins=%u reclaim=disabled\n",
+           phase?phase:"unknown", root, (unsigned)eden_heap_root_span[root], bytes, blocks, pins);
+  }
 }
 
 /* Memory of the large blocks alive now, and how many there are. */
@@ -367,8 +410,11 @@ static int ps5_heap_ready(void) {
     return 0;
   }
   eden_heap_spaces[0] = ps5_heap_mspace;
-  for (unsigned piece = 0; piece < first_pieces; ++piece)
-    atomic_store_explicit(&eden_heap_piece_space[piece], ps5_heap_mspace, memory_order_relaxed);
+  eden_heap_root_span[0] = (unsigned char)first_pieces;
+  for (unsigned piece=0; piece<first_pieces; ++piece) {
+    atomic_store_explicit(&eden_heap_piece_root[piece],0,memory_order_relaxed);
+    atomic_store_explicit(&eden_heap_piece_space[piece],ps5_heap_mspace,memory_order_relaxed);
+  }
   atomic_store_explicit(&eden_heap_pieces_used, first_pieces, memory_order_relaxed);
   atomic_store_explicit(&eden_heap_space_count, 1, memory_order_release);
   /* libthr keeps specific data in its own storage; no recursion into malloc. */
@@ -477,8 +523,11 @@ static int eden_heap_grow(size_t bytes, unsigned seen) {
        * count or any owner until Sony mspace construction has succeeded. */
       void *space = sceLibcMspaceCreate("Eden-heap", start, size, 0);
       if (space != NULL) {
-        for (size_t piece = 0; piece < pieces; ++piece)
-          atomic_store_explicit(&eden_heap_piece_space[used + piece], space, memory_order_release);
+        eden_heap_root_span[used]=(unsigned char)pieces;
+        for (size_t piece=0; piece<pieces; ++piece) {
+          atomic_store_explicit(&eden_heap_piece_root[used+piece],(unsigned char)used,memory_order_relaxed);
+          atomic_store_explicit(&eden_heap_piece_space[used+piece],space,memory_order_release);
+        }
         eden_heap_spaces[count] = space;
         atomic_store_explicit(&eden_heap_pieces_used, used + (unsigned)pieces, memory_order_release);
         atomic_store_explicit(&eden_heap_space_count, count + 1, memory_order_release);
@@ -543,6 +592,9 @@ static void *eden_heap_create_arena(void) {
       if (arena != NULL) {
         const uintptr_t slot = eden_heap_slot(block);
         eden_heap_arena_list[count] = arena;
+        const unsigned piece=(unsigned)(((uintptr_t)block-(uintptr_t)ps5_heap_base)>>EDEN_HEAP_PIECE_SHIFT);
+        const unsigned root=atomic_load_explicit(&eden_heap_piece_root[piece],memory_order_relaxed);
+        atomic_fetch_add_explicit(&eden_heap_root_arena_pins[root],1,memory_order_relaxed);
         atomic_store_explicit(&eden_heap_slots[slot], arena, memory_order_release);
         atomic_store_explicit(&eden_heap_arena_count, count + 1, memory_order_release);
       } else {
@@ -570,6 +622,8 @@ static struct eden_heap_thread *eden_heap_self(void) {
     self->live = 0;
     self->blocks = 0;
     self->pending = 0;
+    memset(self->physical_bytes,0,sizeof(self->physical_bytes));
+    memset(self->physical_blocks,0,sizeof(self->physical_blocks));
     atomic_store_explicit(&self->cached_bytes, 0, memory_order_relaxed);
     if (pthread_setspecific(eden_heap_arena_key, self) != 0) {
       atomic_store_explicit(&eden_heap_thread_used[i], 0, memory_order_release);
@@ -580,6 +634,23 @@ static struct eden_heap_thread *eden_heap_self(void) {
   return NULL;
 }
 
+/* Charge a block to its physical root, including blocks inside child arenas.
+ * Explicit self is essential when draining in a TLS key destructor. */
+static void eden_heap_physical_note(struct eden_heap_thread *self,
+                                    const void *address, long bytes, long blocks) {
+  if (!address || (!bytes && !blocks)) return;
+  const unsigned piece=(unsigned)(((uintptr_t)address-(uintptr_t)ps5_heap_base)>>EDEN_HEAP_PIECE_SHIFT);
+  if (piece>=EDEN_HEAP_PIECES) __builtin_trap();
+  const unsigned root=atomic_load_explicit(&eden_heap_piece_root[piece],memory_order_relaxed);
+  if (!self) self=eden_heap_self();
+  if (self) {
+    self->physical_bytes[root]+=bytes;
+    self->physical_blocks[root]+=blocks;
+  } else {
+    if (bytes) atomic_fetch_add_explicit(&eden_heap_root_held_bytes[root],bytes,memory_order_relaxed);
+    if (blocks) atomic_fetch_add_explicit(&eden_heap_root_held_blocks[root],blocks,memory_order_relaxed);
+  }
+}
 static void eden_heap_charge(struct eden_heap_thread *self, long bytes, long blocks) {
   self->live += bytes;
   self->blocks += blocks;
@@ -598,7 +669,10 @@ static void eden_heap_account(long bytes, long blocks) {
 static void *eden_heap_record(void *address, int nonzero) {
   if (address == NULL)
     return ps5_heap_record_allocation(address, nonzero); /* counts the failure */
-  eden_heap_account((long)eden_heap_usable(address), 1);
+  const size_t usable=eden_heap_usable(address);
+  if (eden_heap_in_range(address))
+    eden_heap_physical_note(NULL,address,(long)usable,1);
+  eden_heap_account((long)usable,1);
   return address;
 }
 
@@ -728,7 +802,9 @@ void *__wrap_realloc(void *address, size_t size) {
     void *owner = eden_heap_owner(address);
     void *result = sceLibcMspaceRealloc(owner, address, size);
     if (result) {
-      eden_heap_account((long)sceLibcMspaceMallocUsableSize(result) - (long)before, 0);
+      const long delta=(long)sceLibcMspaceMallocUsableSize(result)-(long)before;
+      eden_heap_physical_note(NULL,result,delta,0);
+      eden_heap_account(delta,0);
       return result;
     }
   }
@@ -740,11 +816,16 @@ void *__wrap_realloc(void *address, size_t size) {
     return NULL;
   }
   memcpy(moved, address, before < size ? before : size);
-  eden_heap_account((long)eden_heap_usable(moved) - (long)before, 0);
-  if (large >= 0)
+  const size_t moved_usable=eden_heap_usable(moved);
+  if (eden_heap_in_range(moved))
+    eden_heap_physical_note(NULL,moved,(long)moved_usable,1);
+  eden_heap_account((long)moved_usable-(long)before,0);
+  if (large>=0)
     eden_heap_large_free(large);
-  else
-    sceLibcMspaceFree(eden_heap_owner(address), address);
+  else {
+    sceLibcMspaceFree(eden_heap_owner(address),address);
+    eden_heap_physical_note(NULL,address,-(long)before,-1);
+  }
   return moved;
 }
 
@@ -755,6 +836,7 @@ void __wrap_free(void *address) {
       return;
     eden_heap_account(-(long)usable, -1);
     sceLibcMspaceFree(eden_heap_owner(address), address);
+    eden_heap_physical_note(NULL,address,-(long)usable,-1);
     return;
   }
   const int large = eden_heap_large_find(address);
