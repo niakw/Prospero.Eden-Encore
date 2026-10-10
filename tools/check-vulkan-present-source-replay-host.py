@@ -49,7 +49,9 @@ for path, expected_sha in expected_blobs.items():
     assert blob_sha == expected_sha, f"Pinned upstream blob drift: {path}: {blob_sha}"
     source = data.decode("utf-8")
     target, replacements = adapters[path]
-    assert target.endswith("vk_present_manager.cpp") or target.endswith("vk_present_manager.h")
+    expected_target = ("vulkan_present_manager.cpp" if path.endswith(".cpp")
+                       else "include/video_core/renderer_vulkan/vk_present_manager.h")
+    assert target == expected_target, f"Unexpected generated port filename: {target}"
     for index, (old, replacement) in enumerate(replacements):
         hits = source.count(old)
         assert hits == 1, f"PS5 generator replacement {index} failed: {path} ({hits} matches): {old[:65]!r}"
