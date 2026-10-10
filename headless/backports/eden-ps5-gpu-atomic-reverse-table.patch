@@ -133,18 +133,18 @@
 @@ -210,7 +210,17 @@
      }
      static void AtomicStoreBacking(TrackedEntry& page, VAddr value) noexcept {
-         std::atomic_ref<VAddr>(page.cpu_backing_address).store(value, std::memory_order_release);
+         __atomic_store_n(&page.cpu_backing_address, value, __ATOMIC_RELEASE);
 -    }
 +    }
 +    // Scalar reverse physical-to-GPU slots are also read by header-inline
-+    // renderer callers. Both readers and writers use atomic_ref so those
++    // renderer callers. Both readers and writers use GNU __atomic builtins so those
 +    // calls do not race with Map/Unmap. MultiAddressContainer operations
 +    // still rely on the existing mapping_guard.
 +    static u32 AtomicLoadReverse(const u32& slot) noexcept {
-+        return std::atomic_ref<const u32>(slot).load(std::memory_order_acquire);
++        return __atomic_load_n(&slot, __ATOMIC_ACQUIRE);
 +    }
 +    static void AtomicStoreReverse(u32& slot, u32 value) noexcept {
-+        std::atomic_ref<u32>(slot).store(value, std::memory_order_release);
++        __atomic_store_n(&slot, value, __ATOMIC_RELEASE);
 +    }
      Common::SparseLargeVector<u32> compressed_device_addr;
      Common::SparseLargeVector<TrackedEntry> tracked_entries;

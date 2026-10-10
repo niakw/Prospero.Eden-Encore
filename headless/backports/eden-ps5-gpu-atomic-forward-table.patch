@@ -187,26 +187,26 @@
 -    };
 +    };
 +    // On PS5, GPU remap writers publish field changes concurrently with
-+    // renderer reads. atomic_ref leaves SparseLargeVector's trivially-copyable
++    // renderer reads. GNU __atomic builtins preserve SparseLargeVector's trivially-copyable
 +    // 16-byte record and its native physical layout unchanged. All C++
 +    // translation units use the same atomic publication protocol.
 +    static u32 AtomicLoadPhysical(const TrackedEntry& page) noexcept {
-+        return std::atomic_ref<const u32>(page.compressed_physical_ptr).load(std::memory_order_acquire);
++        return __atomic_load_n(&page.compressed_physical_ptr, __ATOMIC_ACQUIRE);
 +    }
 +    static void AtomicStorePhysical(TrackedEntry& page, u32 value) noexcept {
-+        std::atomic_ref<u32>(page.compressed_physical_ptr).store(value, std::memory_order_release);
++        __atomic_store_n(&page.compressed_physical_ptr, value, __ATOMIC_RELEASE);
 +    }
 +    static u32 AtomicLoadContinuity(const TrackedEntry& page) noexcept {
-+        return std::atomic_ref<const u32>(page.continuity_tracker).load(std::memory_order_relaxed);
++        return __atomic_load_n(&page.continuity_tracker, __ATOMIC_RELAXED);
 +    }
 +    static void AtomicStoreContinuity(TrackedEntry& page, u32 value) noexcept {
-+        std::atomic_ref<u32>(page.continuity_tracker).store(value, std::memory_order_relaxed);
++        __atomic_store_n(&page.continuity_tracker, value, __ATOMIC_RELAXED);
 +    }
 +    static VAddr AtomicLoadBacking(const TrackedEntry& page) noexcept {
-+        return std::atomic_ref<const VAddr>(page.cpu_backing_address).load(std::memory_order_acquire);
++        return __atomic_load_n(&page.cpu_backing_address, __ATOMIC_ACQUIRE);
 +    }
 +    static void AtomicStoreBacking(TrackedEntry& page, VAddr value) noexcept {
-+        std::atomic_ref<VAddr>(page.cpu_backing_address).store(value, std::memory_order_release);
++        __atomic_store_n(&page.cpu_backing_address, value, __ATOMIC_RELEASE);
 +    }
      Common::SparseLargeVector<u32> compressed_device_addr;
      Common::SparseLargeVector<TrackedEntry> tracked_entries;
