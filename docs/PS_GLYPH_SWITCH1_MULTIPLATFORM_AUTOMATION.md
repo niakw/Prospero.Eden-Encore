@@ -13,8 +13,13 @@ overwriting game-owned graphics.
 **Real first corpus run:** 24,205 distinct Switch 1 base title IDs
 from public four-region TitleDB metadata (US, GB, JP, FR) on
 [GitHub Actions #38004965979](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38004965979).
-This number is a community catalog snapshot, **not** a complete official
-Nintendo inventory, 24k supported games, or 24k discovered mods.
+This number is a community **unverified base-application-shaped TitleDB
+record count**, **not** 24k officially released Switch 1 games. It is an
+unqualified historical snapshot: entries may be demos, unreleased releases,
+cloud editions or storefront variations. The strict eligibility gate now
+screens this source before any NEW full-crawl snapshot is admitted. No
+arbitrary 4k-8k limit is imposed, and official platform validation is not
+inferred from IDs alone.
 
 ## Automation components
 
@@ -121,3 +126,34 @@ packs. This work never validates FC27 frame times/VRAM/JIT.
   branch. A denied push remains a warning and the downloadable workflow
   artifact is only a temporary fallback. No Nintendo game assets, mods,
   cookies or raw search-result HTML belong in the repository.
+
+
+## Périmètre strict — Switch 1 uniquement (2026-10-10)
+
+- **Inclure** un jeu disposant d'une version native Nintendo Switch 1,
+  même s'il est également disponible sur Switch 2, PC, Wii U, PlayStation
+  ou Xbox. Seules les données nécessaires à la **version Switch 1** peuvent
+  être utilisées pour préparer un patch exécutable.
+- **Exclure** les titres **Switch 2 seulement** : leur application native
+  utilise généralement la famille de Title ID `0400…`, pas `0100…`.
+  Les éditions Switch 2 ne fournissent pas, à elles seules, une preuve de
+  compatibilité des textures/ROMFS avec la Switch 1.
+- **Exclure ou différer** les démos clairement identifiées, DLC/updates,
+  applications non ludiques, versions cloud-only et titres non encore sortis
+  dans les métadonnées disponibles. Un identifiant `0100…000` reste un
+  **candidat**, pas une preuve de jeu officiellement sorti.
+- Ne **pas transformer** la fourchette d'inventaires tiers « 4 000–8 000 »
+  en plafond forcé : les méthodes de comptage, régions, jeux numériques
+  et dates diffèrent. La source autoritative de plateforme est la fiche
+  Switch 1 du jeu ou ses métadonnées d'application d'origine, pas une
+  estimation statistique.
+- Script de contrôle : `tools/ps-glyph-switch1-eligibility.py`, tests
+  `tools/check-ps-glyph-switch1-eligibility.py`, et corpus
+  `tools/ps-glyph-switch1-corpus.py`. Ils produisent les compteurs
+  `raw_switch1_application_ids`, `switch2_only_id_rows_excluded`,
+  `non_game_or_pre_release_title_ids_excluded`,
+  `officially_verified_switch1_game_count`. Les sources sans preuve
+  officielle restent marquées comme non vérifiées.
+- Le crawler long refuse le **vieux catalogue non qualifié** et attend la
+  rematérialisation de `catalog/switch1-titles.json.gz` avant de continuer.
+  L'historique de recherches déjà effectué n'est pas supprimé.
