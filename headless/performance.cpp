@@ -176,6 +176,10 @@ bool worker_topology_ready = false;
 // rebuilding the mutable topology, nor mistake logical-only placement
 // (physical_verified=0) for measured cores.
 std::atomic<std::uint64_t> verified_physical_worker_mask{0};
+// Only published after SetSecondaryPlacement(true) confirms exact OS
+// affinity. An explicit logical-only A/B split can use its own nonoverlap
+// evidence without pretending that CPUID physical topology was verified.
+std::atomic<std::uint64_t> verified_secondary_placement_mask{0};
 // Physical core (x2APIC above the SMT shift) of each allowed CPU, -1 if unknown.
 std::array<int, 64> cpu_core = [] { std::array<int, 64> c{}; c.fill(-1); return c; }();
 // CPUs outside guest cores 0-2 and their SMT siblings, and not the GPU thread CPU.
@@ -189,6 +193,7 @@ void CheckWorkerTopology() {
     // A new title/firmware check may fail before CPUID probing begins.
     // Never reuse a previous game's affinity decision in that case.
     verified_physical_worker_mask.store(0, std::memory_order_release);
+    verified_secondary_placement_mask.store(0, std::memory_order_release);
     worker_topology_ready = false;
     secondary_cpus = 0;
     worker_cpus.fill(0);
@@ -510,8 +515,19 @@ std::uint64_t PinnedWorkerMask() noexcept {
 #endif
 }
 
+std::uint64_t VerifiedSecondaryPlacementMask() noexcept {
+#ifdef PS5_NATIVE
+    return verified_secondary_placement_mask.load(std::memory_order_acquire);
+#else
+    return 0;
+#endif
+}
+
 void SetSecondaryPlacement(bool enabled) {
 #ifdef PS5_NATIVE
+    // Clear previous title/placement evidence BEFORE trying to repin. A
+    // success return from setaffinity alone is not a verified OS mask.
+    verified_secondary_placement_mask.store(0, std::memory_order_release);
     placement_secondary.store(enabled, std::memory_order_relaxed);
     if (!secondary_cpus || !topology_allowed_valid) return;
     cpuset_t mask{};
@@ -522,8 +538,14 @@ void SetSecondaryPlacement(bool enabled) {
         mask = topology_allowed;
     }
     const int result = cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, 8, &mask);
-    std::printf("EDEN_WORKER_INHERIT enabled=%d mask=%llx error=%d\n", enabled,
-                enabled ? secondary_cpus : 0ULL, result ? errno : 0);
+    cpuset_t actual{};
+    const bool verified = enabled && result == 0 &&
+        cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, 8, &actual) == 0 &&
+        std::memcmp(&mask, &actual, 8) == 0;
+    if (verified)
+        verified_secondary_placement_mask.store(secondary_cpus, std::memory_order_release);
+    std::printf("EDEN_WORKER_INHERIT enabled=%d mask=%llx error=%d verified=%u\n", enabled,
+                enabled ? secondary_cpus : 0ULL, result ? errno : 0, unsigned(verified));
 #else
     (void)enabled;
 #endif
