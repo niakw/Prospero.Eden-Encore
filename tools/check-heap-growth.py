@@ -195,8 +195,9 @@ int sceKernelDebugOutText(int channel, const char *text) {
         assert(sscanf(text,
             "EDEN_HEAP_GROW req_bytes=%zu root=%u pieces=%zu spaces=%u committed_mib=%zu",
             &req, &root, &pieces, &spaces, &committed_mib) == 5);
-        assert(root < EDEN_HEAP_PIECES && pieces > 0 && root + pieces <= EDEN_HEAP_PIECES);
-        assert(spaces > 0 && spaces <= EDEN_HEAP_PIECES);
+        /* MOCK precedes the generated allocator definitions in this C TU. */
+        assert(root < 24u && pieces > 0 && root + pieces <= 24u);
+        assert(spaces > 0 && spaces <= 24u);
         assert(committed_mib == (root + pieces) * 128);
         atomic_store(&last_growth_request, req);
         atomic_store(&last_growth_root, root);
