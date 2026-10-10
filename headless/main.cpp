@@ -2179,6 +2179,10 @@ int main(int argc, char** argv) {
         // Non-destructive per-mspace ownership snapshot; never unmap from a
         // merely low global live-byte count or while another thread allocates.
         eden_heap_report_roots("core_destroyed");
+        // The previous core_destroyed snapshot preceded this thread's TLS
+        // drain. This paired post-drain reading separates deferred allocator
+        // accounting from physically retained mspace backing.
+        ps5_opengl_heap_snapshot("post_cache_drain", 0);
 #endif
         if (devices && pad) {
             pad.reset();
