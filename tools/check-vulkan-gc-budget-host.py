@@ -19,9 +19,9 @@ assert "return reclaimed >= used ? 0 : used - reclaimed;" in header
 assert "usage = ::Eden::VulkanMemory::AfterProjectedEviction(" in gc
 assert "usage -= ReclaimedBytes(image);" not in gc
 # Extract the pinned GC rewrite instead of trusting a standalone math model.
-# This source originally contains TWO unchecked unsigned LRU age cutoffs.
+# The generated GC has THREE call sites: prefetch and two cleanup passes.
 assert 'unsafe_cutoff = "frame_tick - ticks_to_destroy"' in generator
-assert 'if gc.count(unsafe_cutoff) != 2:' in generator
+assert 'if gc.count(unsafe_cutoff) != 3:' in generator
 assert 'gc = gc.replace(unsafe_cutoff,' in generator
 assert '"::Eden::VulkanMemory::OldestEvictionTick(frame_tick, ticks_to_destroy)"' in generator
 assert "constexpr std::uint64_t OldestEvictionTick(" in header
