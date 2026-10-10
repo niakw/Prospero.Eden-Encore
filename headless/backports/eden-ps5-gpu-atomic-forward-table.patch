@@ -1,0 +1,255 @@
+--- a/src/core/device_memory_manager.inc
++++ b/src/core/device_memory_manager.inc
+@@ -272,7 +272,7 @@
+         // physical->GPU association before installing the replacement.
+         const u32 device_page = static_cast<u32>(start_page_d + i);
+         auto& old_entry = tracked_entries.GetUnchecked(start_page_d + i);
+-        const u32 previous_physical = old_entry.compressed_physical_ptr;
++        const u32 previous_physical = AtomicLoadPhysical(old_entry);
+         const u32 replacement_physical = ptr
+             ? static_cast<u32>(GetRawPhysicalAddr(ptr) >> Memory::YUZU_PAGEBITS) + 1U : 0U;
+         if (previous_physical != 0 && previous_physical != replacement_physical)
+@@ -280,8 +280,8 @@
+         if (previous_physical != 0 && previous_physical == replacement_physical) {
+             // Re-registering the same backing must not add a second reverse
+             // address to MultiAddressContainer. Refresh its CPU-side alias.
+-            old_entry.continuity_tracker = 0;
++            AtomicStoreContinuity(old_entry, 0);
+-            old_entry.cpu_backing_address = 0;
++            AtomicStoreBacking(old_entry, 0);
+             InsertCPUBacking(start_page_d + i, new_vaddress, asid);
+             continue;
+         }
+@@ -316,16 +316,16 @@
+ #endif
+         if (ptr == nullptr) [[unlikely]] {
+             auto& invalid = tracked_entries.GetUnchecked(start_page_d + i);
+-            invalid.compressed_physical_ptr = 0;
++            AtomicStorePhysical(invalid, 0);
+-            invalid.cpu_backing_address = 0;
++            AtomicStoreBacking(invalid, 0);
+-            invalid.continuity_tracker = 0;
++            AtomicStoreContinuity(invalid, 0);
+             continue;
+         }
+         auto phys_addr = static_cast<u32>(GetRawPhysicalAddr(ptr) >> Memory::YUZU_PAGEBITS) + 1U;
+         auto& valid = tracked_entries.GetUnchecked(start_page_d + i);
+-        valid.continuity_tracker = 0;
++        AtomicStoreContinuity(valid, 0);
+-        valid.cpu_backing_address = 0;
++        AtomicStoreBacking(valid, 0);
+-        valid.compressed_physical_ptr = phys_addr;
++        AtomicStorePhysical(valid, phys_addr);
+         InsertCPUBacking(start_page_d + i, new_vaddress, asid);
+         const u32 base_dev = compressed_device_addr[phys_addr - 1U];
+         const u32 new_dev = static_cast<u32>(start_page_d + i);
+@@ -373,10 +373,10 @@
+     tracked_entries.CommitRegion(start_page_d, start_page_d + num_pages); // should already be committed, but just in case
+     for (size_t i = 0; i < num_pages; i++) {
+         auto& entry = tracked_entries.GetUnchecked(start_page_d + i);
+-        auto phys_addr = entry.compressed_physical_ptr;
++        auto phys_addr = AtomicLoadPhysical(entry);
+-        entry.compressed_physical_ptr = 0;
++        AtomicStorePhysical(entry, 0);
+-        entry.cpu_backing_address = 0;
++        AtomicStoreBacking(entry, 0);
+-        entry.continuity_tracker = 0;
++        AtomicStoreContinuity(entry, 0);
+         if (phys_addr != 0) [[likely]] {
+             u32& base_dev = compressed_device_addr.GetAndFault(phys_addr - 1U);
+             if ((base_dev >> MULTI_FLAG_BITS) == 0) [[likely]] {
+@@ -439,7 +439,7 @@
+             page_count = 1;
+         }
+         last_ptr = new_ptr;
+-        tracked_entries.GetUnchecked(start_page_d + index).continuity_tracker = static_cast<u32>(page_count) - 1;
++        AtomicStoreContinuity(tracked_entries.GetUnchecked(start_page_d + index), static_cast<u32>(page_count) - 1);
+     }
+ }
+ template <typename Traits>
+@@ -448,7 +448,7 @@
+         return nullptr;
+     const size_t first_page = src_addr >> page_bits;
+     const size_t page_count = 1 + ((size - 1 + (src_addr & page_mask)) >> page_bits);
+-    const u32 backing = tracked_entries[first_page].compressed_physical_ptr;
++    const u32 backing = AtomicLoadPhysical(tracked_entries[first_page]);
+     if (backing == 0) return nullptr;
+ #ifdef PS5_NATIVE
+     // Matching forward-page numbers do not by themselves prove that the
+@@ -460,7 +460,7 @@
+ #endif
+     // Validate each physical page, not a potentially stale continuity hint.
+     for (size_t i = 1; i < page_count; ++i) {
+-        if (tracked_entries[first_page + i].compressed_physical_ptr != backing + i)
++        if (AtomicLoadPhysical(tracked_entries[first_page + i]) != backing + i)
+             return nullptr;
+     }
+     return GetPointer<u8>(src_addr);
+@@ -472,7 +472,7 @@
+         return nullptr;
+     const size_t first_page = src_addr >> page_bits;
+     const size_t page_count = 1 + ((size - 1 + (src_addr & page_mask)) >> page_bits);
+-    const u32 backing = tracked_entries[first_page].compressed_physical_ptr;
++    const u32 backing = AtomicLoadPhysical(tracked_entries[first_page]);
+     if (backing == 0) return nullptr;
+ #ifdef PS5_NATIVE
+     // Matching forward-page numbers do not by themselves prove that the
+@@ -484,7 +484,7 @@
+ #endif
+     // Validate each physical page, not a potentially stale continuity hint.
+     for (size_t i = 1; i < page_count; ++i) {
+-        if (tracked_entries[first_page + i].compressed_physical_ptr != backing + i)
++        if (AtomicLoadPhysical(tracked_entries[first_page + i]) != backing + i)
+             return nullptr;
+     }
+     return GetPointer<u8>(src_addr);
+@@ -520,7 +520,7 @@
+ #endif
+     const size_t index = address >> Memory::YUZU_PAGEBITS;
+     const size_t offset = address & Memory::YUZU_PAGEMASK;
+-    auto phys_addr = tracked_entries[index].compressed_physical_ptr;
++    auto phys_addr = AtomicLoadPhysical(tracked_entries[index]);
+ #ifdef PS5_NATIVE
+     if (phys_addr == 0 || static_cast<size_t>(phys_addr - 1U) >= compressed_device_addr.size())
+         return nullptr;
+@@ -541,7 +541,7 @@
+ #endif
+     const size_t index = address >> Memory::YUZU_PAGEBITS;
+     const size_t offset = address & Memory::YUZU_PAGEMASK;
+-    auto phys_addr = tracked_entries[index].compressed_physical_ptr;
++    auto phys_addr = AtomicLoadPhysical(tracked_entries[index]);
+ #ifdef PS5_NATIVE
+     if (phys_addr == 0 || static_cast<size_t>(phys_addr - 1U) >= compressed_device_addr.size())
+         return nullptr;
+@@ -592,9 +592,9 @@
+     std::size_t page_index = addr >> Memory::YUZU_PAGEBITS;
+     std::size_t page_offset = addr & Memory::YUZU_PAGEMASK;
+     while (remaining_size) {
+-        const auto first_backing = tracked_entries[page_index].compressed_physical_ptr;
++        const auto first_backing = AtomicLoadPhysical(tracked_entries[page_index]);
+         // A remap can invalidate continuity even on a preceding page.
+-        const size_t hint = static_cast<size_t>(tracked_entries[page_index].continuity_tracker) + 1;
++        const size_t hint = static_cast<size_t>(AtomicLoadContinuity(tracked_entries[page_index])) + 1;
+         const size_t remaining_pages = 1 + ((remaining_size - 1 + page_offset) >> Memory::YUZU_PAGEBITS);
+         size_t next_pages = (std::min)({hint, remaining_pages, tracked_entries.size() - page_index});
+ #ifdef PS5_NATIVE
+@@ -608,7 +608,7 @@
+         }
+ #endif
+         for (size_t n = 1; n < next_pages; ++n) {
+-            const auto observed = tracked_entries[page_index + n].compressed_physical_ptr;
++            const auto observed = AtomicLoadPhysical(tracked_entries[page_index + n]);
+             const bool contiguous = first_backing == 0 ? observed == 0 : observed == first_backing + n;
+             if (!contiguous) { next_pages = n; break; }
+         }
+@@ -621,7 +621,7 @@
+             remaining_size -= copy_amount;
+         };
+ 
+-        auto phys_addr = tracked_entries[page_index].compressed_physical_ptr;
++        auto phys_addr = AtomicLoadPhysical(tracked_entries[page_index]);
+ #ifdef PS5_NATIVE
+         if (phys_addr != 0 &&
+             static_cast<size_t>(phys_addr - 1U) >= compressed_device_addr.size()) {
+@@ -675,7 +675,7 @@
+ #endif
+ 
+         const std::size_t page_index = address >> Memory::YUZU_PAGEBITS;
+-        const auto phys_addr = tracked_entries[page_index].compressed_physical_ptr;
++        const auto phys_addr = AtomicLoadPhysical(tracked_entries[page_index]);
+         if (phys_addr != 0
+ #ifdef PS5_NATIVE
+             && static_cast<size_t>(phys_addr - 1U) < compressed_device_addr.size()
+@@ -756,7 +756,7 @@
+ #endif
+ 
+         const std::size_t page_index = address >> Memory::YUZU_PAGEBITS;
+-        const auto phys_addr = tracked_entries[page_index].compressed_physical_ptr;
++        const auto phys_addr = AtomicLoadPhysical(tracked_entries[page_index]);
+         if (phys_addr != 0
+ #ifdef PS5_NATIVE
+             && static_cast<size_t>(phys_addr - 1U) < compressed_device_addr.size()
+--- a/src/core/device_memory_manager.h
++++ b/src/core/device_memory_manager.h
+@@ -108,7 +108,7 @@
+     PAddr GetPhysicalRawAddressFromDAddr(DAddr address) const {
+         if (address >= device_as_size) return 0;
+         PAddr subbits = PAddr(address & page_mask);
+-        auto paddr = tracked_entries[(address >> page_bits)].compressed_physical_ptr;
++        auto paddr = AtomicLoadPhysical(tracked_entries[(address >> page_bits)]);
+         if (paddr == 0 || static_cast<size_t>(paddr - 1) >= compressed_device_addr.size()) {
+             return 0;
+         }
+@@ -188,7 +188,53 @@
+         VAddr cpu_backing_address;
+         u32 continuity_tracker;
+         u32 compressed_physical_ptr;
+-    };
++    };
++    // On PS5, GPU remap writers publish field changes concurrently with
++    // renderer reads. atomic_ref leaves SparseLargeVector's trivially-copyable
++    // 16-byte record and its native physical layout unchanged. On other
++    // platforms the accessors optimize to the original scalar reads/writes.
++    static u32 AtomicLoadPhysical(const TrackedEntry& page) noexcept {
++#ifdef PS5_NATIVE
++        return std::atomic_ref<const u32>(page.compressed_physical_ptr).load(std::memory_order_acquire);
++#else
++        return page.compressed_physical_ptr;
++#endif
++    }
++    static void AtomicStorePhysical(TrackedEntry& page, u32 value) noexcept {
++#ifdef PS5_NATIVE
++        std::atomic_ref<u32>(page.compressed_physical_ptr).store(value, std::memory_order_release);
++#else
++        page.compressed_physical_ptr = value;
++#endif
++    }
++    static u32 AtomicLoadContinuity(const TrackedEntry& page) noexcept {
++#ifdef PS5_NATIVE
++        return std::atomic_ref<const u32>(page.continuity_tracker).load(std::memory_order_relaxed);
++#else
++        return page.continuity_tracker;
++#endif
++    }
++    static void AtomicStoreContinuity(TrackedEntry& page, u32 value) noexcept {
++#ifdef PS5_NATIVE
++        std::atomic_ref<u32>(page.continuity_tracker).store(value, std::memory_order_relaxed);
++#else
++        page.continuity_tracker = value;
++#endif
++    }
++    static VAddr AtomicLoadBacking(const TrackedEntry& page) noexcept {
++#ifdef PS5_NATIVE
++        return std::atomic_ref<const VAddr>(page.cpu_backing_address).load(std::memory_order_acquire);
++#else
++        return page.cpu_backing_address;
++#endif
++    }
++    static void AtomicStoreBacking(TrackedEntry& page, VAddr value) noexcept {
++#ifdef PS5_NATIVE
++        std::atomic_ref<VAddr>(page.cpu_backing_address).store(value, std::memory_order_release);
++#else
++        page.cpu_backing_address = value;
++#endif
++    }
+     Common::SparseLargeVector<u32> compressed_device_addr;
+     Common::SparseLargeVector<TrackedEntry> tracked_entries;
+ 
+@@ -205,7 +251,7 @@
+     static constexpr size_t asid_start_bit = guest_max_as_bits;
+ 
+     std::pair<Asid, VAddr> ExtractCPUBacking(size_t page_index) {
+-        auto content = tracked_entries[page_index].cpu_backing_address;
++        auto content = AtomicLoadBacking(tracked_entries[page_index]);
+         const VAddr address = content & guest_mask;
+         const Asid asid{static_cast<size_t>(content >> asid_start_bit)};
+         return std::make_pair(asid, address);
+@@ -212,7 +258,7 @@
+     }
+ 
+     constexpr void InsertCPUBacking(size_t page_index, VAddr address, Asid asid) {
+-        tracked_entries.GetUnchecked(page_index).cpu_backing_address = address | (asid.id << asid_start_bit);
++        AtomicStoreBacking(tracked_entries.GetUnchecked(page_index), address | (asid.id << asid_start_bit));
+     }
+ 
+     std::array<TranslationEntry, 4> t_slot{};
