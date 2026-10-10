@@ -92,12 +92,17 @@ with tempfile.TemporaryDirectory(prefix="eden-pinned-gpu-replay-") as tmp:
         "EDEN_GPU_READ_WRITE_PHYS_OOB",
         "EDEN_GPU_UNMAP_REVERSE_MISMATCH",
         "EDEN_GPU_REMAP_MULTI_MISSING",
-        "std::atomic_ref",
+        "__atomic_load_n(",
+        "__atomic_store_n(",
     ):
         assert needle in merged_inc or needle in merged_h, needle
     assert "registered_processes.emplace_back(memory_device_inter)" in merged_inc
     assert "std::shared_lock registry_lk(process_registry_guard)" in merged_inc
-    assert "std::atomic_ref" in merged_h
+    assert "std::atomic_ref" not in merged_h
+    assert merged_h.count("__atomic_load_n(") == 4
+    assert merged_h.count("__atomic_store_n(") == 4
+    # Native C++17 SDK cannot instantiate C++20 std::atomic_ref.
+    assert "__ATOMIC_ACQUIRE" in merged_h and "__ATOMIC_RELEASE" in merged_h
     assert "device_inter->InvalidateRegion(address, size);" in merged_inc
     # Protect both GetSpan overloads independently, never count their tokens
     # across the entire source: WalkBlock legitimately uses the same guard.

@@ -546,12 +546,12 @@ import sys
 root=Path(sys.argv[1])/'src/core'
 h=(root/'device_memory_manager.h').read_text()
 c=(root/'device_memory_manager.inc').read_text()
-for token in ('std::atomic_ref<const u32>(page.compressed_physical_ptr).load(std::memory_order_acquire)',
-              'std::atomic_ref<u32>(page.compressed_physical_ptr).store(value, std::memory_order_release)',
-              'std::atomic_ref<const u32>(page.continuity_tracker).load(std::memory_order_relaxed)',
-              'std::atomic_ref<u32>(page.continuity_tracker).store(value, std::memory_order_relaxed)',
-              'std::atomic_ref<const VAddr>(page.cpu_backing_address).load(std::memory_order_acquire)',
-              'std::atomic_ref<VAddr>(page.cpu_backing_address).store(value, std::memory_order_release)',
+for token in ('__atomic_load_n(&page.compressed_physical_ptr, __ATOMIC_ACQUIRE)',
+              '__atomic_store_n(&page.compressed_physical_ptr, value, __ATOMIC_RELEASE)',
+              '__atomic_load_n(&page.continuity_tracker, __ATOMIC_RELAXED)',
+              '__atomic_store_n(&page.continuity_tracker, value, __ATOMIC_RELAXED)',
+              '__atomic_load_n(&page.cpu_backing_address, __ATOMIC_ACQUIRE)',
+              '__atomic_store_n(&page.cpu_backing_address, value, __ATOMIC_RELEASE)',
               'void InsertCPUBacking(size_t page_index, VAddr address, Asid asid)'):
     if token not in h:
         raise SystemExit('GPU atomic page publication missing: '+token)
@@ -578,8 +578,8 @@ import sys
 r=Path(sys.argv[1])/'src/core'
 h=(r/'device_memory_manager.h').read_text()
 c=(r/'device_memory_manager.inc').read_text()
-for token in ('std::atomic_ref<const u32>(slot).load(std::memory_order_acquire)',
-              'std::atomic_ref<u32>(slot).store(value, std::memory_order_release)',
+for token in ('__atomic_load_n(&slot, __ATOMIC_ACQUIRE)',
+              '__atomic_store_n(&slot, value, __ATOMIC_RELEASE)',
               'AtomicLoadReverse(compressed_device_addr[(address >> page_bits)])'):
     if token not in h:
         raise SystemExit('missing uniform GPU physical reverse slot publication: '+token)
@@ -593,7 +593,7 @@ for old in ('const u32 base_dev = compressed_device_addr[',
             'u32 backing = compressed_device_addr[',
             'compressed_device_addr.GetAndFault(phys_addr - 1U) ='):
     if old in c:
-        raise SystemExit('plain reverse GPU slot access bypassed atomic_ref: '+old)
+        raise SystemExit('plain reverse GPU slot access bypassed atomic builtins: '+old)
 print('PS5 GPU physical reverse scalar slots: same atomic protocol in all C++ TUs PASS')
 PYREVERSEATOMIC
 }

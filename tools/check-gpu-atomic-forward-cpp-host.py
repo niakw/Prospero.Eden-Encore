@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compile the ACTUAL production GPU atomic_ref helpers in a C++20 host race fixture.
+"""Compile ACTUAL production GPU atomic helper bodies in the PS5-native C++17 mode.
 
 Extracts six method bodies added to the pinned device_memory_manager.h
 overlay, compiles them with ASan/UBSan, and runs a concurrent-reader/writer
@@ -35,7 +35,9 @@ for name in ("AtomicLoadPhysical", "AtomicStorePhysical",
              "AtomicLoadContinuity", "AtomicStoreContinuity",
              "AtomicLoadBacking", "AtomicStoreBacking"):
     assert f"{name}(" in body, name
-assert body.count("std::atomic_ref<") == 6
+assert body.count("__atomic_load_n(") == 3
+assert body.count("__atomic_store_n(") == 3
+assert "std::atomic_ref" not in body
 # The reverse lookup is also compiled inline from other translation units.
 # Extract the exact two scalar-slot helpers from their own ordered patch.
 reverse_lines = (root / "headless/backports/eden-ps5-gpu-atomic-reverse-table.patch").read_text().splitlines()
@@ -53,7 +55,9 @@ for line in reverse_lines[reverse_start:]:
     else:
         raise AssertionError("non-contiguous reverse GPU atomic helpers")
 reverse_body = "\n".join(reverse_methods)
-assert reverse_body.count("std::atomic_ref<") == 2
+assert reverse_body.count("__atomic_load_n(") == 1
+assert reverse_body.count("__atomic_store_n(") == 1
+assert "std::atomic_ref" not in reverse_body
 assert reverse_body.rstrip().endswith("}")
 assert "#ifdef PS5_NATIVE" not in reverse_body
 assert "#ifdef PS5_NATIVE" not in body
@@ -111,7 +115,7 @@ static void StressAtomicMappings(int writer_count, int reader_count) {
         });
     }
     for (auto& thread : workers) thread.join();
-    std::cout << "PASS exact PS5 GPU forward+reverse atomic_ref: "
+    std::cout << "PASS exact PS5 GPU C++17 forward+reverse atomic builtins: "
               << writer_count + reader_count << " threads, "
               << iterations << " operations/thread\\n";
 }
@@ -124,22 +128,22 @@ int main() {
 compiler = next((name for name in ("clang++-18", "clang++", "g++")
                  if shutil.which(name)), None)
 if compiler is None:
-    raise SystemExit("C++20 compiler missing; refusing a false source-only PASS")
+    raise SystemExit("C++17 compiler missing; refusing a false source-only PASS")
 with tempfile.TemporaryDirectory(prefix="eden-gpu-atomic-host-") as dirname:
     folder = Path(dirname)
     file = folder / "atomic.cpp"
     file.write_text(source, encoding="utf-8")
     asan = folder / "gpu-atomic-asan"
-    subprocess.run([compiler, "-std=c++20", "-O1", "-g", "-DPS5_NATIVE=1",
+    subprocess.run([compiler, "-std=c++17", "-O1", "-g", "-DPS5_NATIVE=1",
                     "-pthread", "-Wall", "-Wextra", "-Werror",
                     "-fsanitize=address,undefined", "-fno-sanitize-recover=all",
                     str(file), "-o", str(asan)], check=True, timeout=90)
     subprocess.run([str(asan)], check=True, timeout=90)
     if platform.system() == "Linux" and platform.machine() in ("x86_64", "aarch64"):
         tsan = folder / "gpu-atomic-tsan"
-        subprocess.run([compiler, "-std=c++20", "-O1", "-g", "-DPS5_NATIVE=1",
+        subprocess.run([compiler, "-std=c++17", "-O1", "-g", "-DPS5_NATIVE=1",
                         "-pthread", "-Wall", "-Wextra", "-Werror",
                         "-fsanitize=thread", "-fno-sanitize-recover=all",
                         str(file), "-o", str(tsan)], check=True, timeout=90)
         subprocess.run([str(tsan)], check=True, timeout=180)
-print("Host C++20 forward+reverse atomic_ref accessors verified; GPU remap transactions unqualified")
+print("Host C++17 forward+reverse atomic helper accessors verified; GPU remap transactions unqualified")
