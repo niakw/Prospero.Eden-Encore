@@ -77,6 +77,16 @@ assert 'validate_ps5_gpu_physical_read_bounds' in apply
 assert apply.index('eden-ps5-gpu-empty-multi-head.patch') < apply.index(
     'eden-ps5-gpu-physical-read-bounds.patch') < apply.index(
     'eden-ps5-gpu-reverse-inline-bounds.patch')
+block_flush=(r/'headless/backports/eden-ps5-gpu-block-flush-bounds.patch').read_text()
+for token in ('if (size == 0) return;',
+              'if (address >= device_as_size || size > device_as_size - address)',
+              'std::memset(dest_pointer, 0, size);',
+              'if (size != 0 && address < device_as_size && size <= device_as_size - address)'):
+    assert token in block_flush, token
+assert 'validate_ps5_gpu_block_flush_bounds' in apply
+assert apply.index('eden-ps5-gpu-physical-read-bounds.patch') < apply.index(
+    'eden-ps5-gpu-block-flush-bounds.patch') < apply.index(
+    'eden-ps5-gpu-reverse-inline-bounds.patch')
 inline_bounds=(r/'headless/backports/eden-ps5-gpu-reverse-inline-bounds.patch').read_text()
 for token in ('if ((address >> page_bits) >= compressed_device_addr.size()) return;',
               'if (base == 0) return;', 'if (host < physical_base ||',
