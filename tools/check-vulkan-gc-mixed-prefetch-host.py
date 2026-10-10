@@ -27,6 +27,7 @@ assert record.count("return true;") == 1
 assert record.index("return false;") < record.index("return true;")
 assert "gc_downloads.size() == gc_prefetch_limit" in record
 assert "image.unswizzled_size_bytes > 32_MiB - bytes" in record
+assert "image.unswizzled_size_bytes > 32_MiB) return false;" in record
 assert "gc_downloads.emplace_back(id, map);" in record
 assert record.index("gc_downloads.emplace_back") < record.index("image.DownloadMemory")
 assert "if (remaining == 0) return true;" in gc
@@ -196,6 +197,19 @@ int main() {
         Scenario(std::move(images)).Test(1, {4});
     }
     {
+        // An oversized dirty image must use Cleanup's individual download.
+        // It must not prevent the next independent small images from sharing
+        // one Finish. The first huge image still consumes one scanned slot.
+        std::vector<Image> images;
+        std::vector<ImageId> ids;
+        images.push_back(ImageFor(0, true, 33_MiB));
+        for (ImageId i = 1; i <= 40; ++i) {
+            images.push_back(ImageFor(i, true));
+            if (i < 40) ids.push_back(i);
+        }
+        Scenario(std::move(images)).Test(39, std::move(ids));
+    }
+    {
         std::vector<Image> images;
         std::vector<ImageId> ids;
         for (ImageId i = 0; i < 41; ++i) {
@@ -226,5 +240,5 @@ with tempfile.TemporaryDirectory(prefix="eden-vulkan-mixed-gc-") as temp:
                     "-fno-sanitize-recover=all", str(path), "-o", str(executable)],
                    check=True, timeout=120)
     subprocess.run([str(executable)], check=True, timeout=180)
-print("PASS literal Vulkan mixed-GC scan: clean/alias/scaled/multisample skip, 20/40 batch, 32MiB, fenced release ASan/UBSan")
+print("PASS literal Vulkan mixed-GC scan: clean/alias/scaled/multisample/oversize skip, 20/40 batch, 32MiB, fenced release ASan/UBSan")
 print("No Sony PS5 SDK, driver or frame-time measurements")
