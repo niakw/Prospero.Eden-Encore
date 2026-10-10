@@ -160,9 +160,23 @@ def github(query: str) -> list[tuple[str,str]]:
     # gave zero results for real game repos even when relevant forks existed.
     named = re.search(r'^"([^"]{2,260})"', query)
     title = named.group(1) if named else " ".join(query.split()[:4])
-    q = '"' + title.replace('"', "")[:180] + '" in:name,description'
+    # Variant-specific queries: do not make exactly the same network request
+    # twice for Switch and the PC/Wii U game port. Broad source discovery
+    # first, targeted controller/graphic intent second.
+    query_variant = (1 if "DualSense Xbox controller glyphs PC mod" in query
+                     else 2 if "site:gamebanana.com" in query
+                     else 3 if "кнопки" in query else 0)
+    title_fragment = '"' + title.replace('"', "")[:175] + '"'
+    if query_variant == 0:
+        q = title_fragment + " in:name,description"
+    elif query_variant == 1:
+        q = title_fragment + " controller in:name,description"
+    elif query_variant == 2:
+        q = title_fragment + " glyph in:name,description"
+    else:
+        q = title_fragment + " playstation in:name,description"
     endpoint = ("https://api.github.com/search/repositories?q=" + quote(q) +
-                "&per_page=10")
+                "&per_page=50")
     headers = {"Accept": "application/vnd.github+json",
                "User-Agent": "EdenEncore-Mod-Discovery"}
     token = os.getenv("GITHUB_TOKEN", "").strip()
@@ -171,7 +185,7 @@ def github(query: str) -> list[tuple[str,str]]:
     return [(str(x.get("full_name", "")) + " " +
              str(x.get("description") or "")[:300],
              x.get("html_url", ""))
-            for x in result.get("items", [])[:10] if isinstance(x, dict)]
+            for x in result.get("items", [])[:50] if isinstance(x, dict)]
 
 def yandex(query: str) -> list[tuple[str,str]]:
     token = os.getenv("YANDEX_SEARCH_API_KEY", "").strip()
@@ -321,6 +335,9 @@ def discover(catalog: dict, state: dict, limit: int,
               "batch_offset": offset, "next_offset": cursor,
               "provider": provider, "network_queries_enabled": network,
               "source_leads": sum(len(r["leads"]) for r in rows),
+              "requests_attempted": len(rows) + len(errors) if network else 0,
+              "requests_completed": len(rows) if network else 0,
+              "requests_failed_or_blocked": len(errors),
               "games_examined": len(rows), "games": rows, "errors": errors,
               "mod_asset_downloads": 0, "gameplay_glyphs_autoenabled": 0,
               "status_note": ("Search leads only. Game title/platform matches, licenses, "
@@ -396,9 +413,11 @@ def main():
                                         args.query_variant, args.interval)
         new_file(args.report, report)
         new_file(args.state_out, progress)
-        print("GLYPH MOD SEARCH:", report["games_examined"], "Switch1 titles,",
-              report["source_leads"], "source leads,",
-              len(report["errors"]), "provider errors; cursor", progress["next_offset"],
+        print("GLYPH MOD SEARCH:", report["requests_completed"], "completed requests /",
+              report["requests_attempted"], "attempted;",
+              report["source_leads"], "leads,",
+              report["requests_failed_or_blocked"], "blocked; cursor",
+              progress["next_offset"],
               "/", progress["catalog_total"], "(never autoenable)")
         return 1 if report["errors"] else 0
     except (OSError, ValueError, TypeError, KeyError, UnicodeError) as exc:
