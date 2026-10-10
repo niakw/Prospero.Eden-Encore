@@ -17,4 +17,12 @@ constexpr std::uint64_t AfterProjectedEviction(std::uint64_t used,
     return reclaimed >= used ? 0 : used - reclaimed;
 }
 
+// Frame counters start at zero and eviction ages range from 10 to 50.
+// An unchecked unsigned subtraction makes recently touched textures appear
+// older than everything when early GPU memory pressure triggers GC.
+constexpr std::uint64_t OldestEvictionTick(std::uint64_t frame_tick,
+                                            std::uint64_t min_age) noexcept {
+    return frame_tick >= min_age ? frame_tick - min_age : 0;
+}
+
 } // namespace Eden::VulkanMemory
