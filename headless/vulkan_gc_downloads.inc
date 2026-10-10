@@ -43,8 +43,13 @@
                 // real Cleanup pass, but cannot use this staged fast path.
                 // Skip it, do NOT stop scanning older-to-newer LRU entries:
                 // the following dirty images can still share one Finish().
+                // Textures larger than the entire 32-MiB batch can NEVER
+                // join this prefetch. Let Cleanup download them individually
+                // without preventing later, independent small images from
+                // sharing the same GPU completion fence.
                 if (!dirty || !image.aliased_images.empty() || !image.overlapping_images.empty() ||
-                    image.HasScaled() || image.info.num_samples != 1) return false;
+                    image.HasScaled() || image.info.num_samples != 1 ||
+                    image.unswizzled_size_bytes > 32_MiB) return false;
                 // Full descriptor/byte capacity is a true batch boundary.
                 if (gc_downloads.size() == gc_prefetch_limit ||
                     image.unswizzled_size_bytes > 32_MiB - bytes) return true;
