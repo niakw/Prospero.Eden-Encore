@@ -102,8 +102,9 @@ int main() {
         // an inclusive cutoff against the entry's touch tick. A zero cutoff
         // without the explicit frame>=age guard would evict first-frame data.
         const bool should_run_gc = frame >= age;
+        const std::uint64_t initial_tick = 0;
         const bool frame_zero_texture_selected =
-            should_run_gc && 0 <= cutoff;
+            should_run_gc && initial_tick <= cutoff;
         assert(frame_zero_texture_selected == (frame >= age));
         const bool current_frame_texture_selected =
             should_run_gc && frame <= cutoff;
