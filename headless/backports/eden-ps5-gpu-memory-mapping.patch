@@ -1,0 +1,206 @@
+--- a/src/core/device_memory_manager.inc
++++ b/src/core/device_memory_manager.inc
+@@ -23,6 +23,9 @@
+ #include "core/device_memory.h"
+ #include "core/device_memory_manager.h"
+ #include "core/memory.h"
++#ifdef PS5_NATIVE
++#include "gpu_fault_rate_limit.h"
++#endif
+ 
+ namespace Core {
+ 
+@@ -215,11 +218,17 @@
+         const VAddr new_vaddress = virtual_address + i * Memory::YUZU_PAGESIZE;
+         auto* ptr = process_memory->GetPointerSilent(Common::ProcessAddress(new_vaddress));
+         if (ptr == nullptr) [[unlikely]] {
++            auto& invalid = tracked_entries.GetUnchecked(start_page_d + i);
++            invalid.compressed_physical_ptr = 0;
++            invalid.cpu_backing_address = 0;
++            invalid.continuity_tracker = 0;
+-            tracked_entries.GetUnchecked(start_page_d + i).compressed_physical_ptr = 0;
+             continue;
+         }
+         auto phys_addr = static_cast<u32>(GetRawPhysicalAddr(ptr) >> Memory::YUZU_PAGEBITS) + 1U;
++        auto& valid = tracked_entries.GetUnchecked(start_page_d + i);
++        valid.continuity_tracker = 0;
++        valid.cpu_backing_address = 0;
++        valid.compressed_physical_ptr = phys_addr;
+-        tracked_entries.GetUnchecked(start_page_d + i).compressed_physical_ptr = phys_addr;
+         InsertCPUBacking(start_page_d + i, new_vaddress, asid);
+         const u32 base_dev = compressed_device_addr[phys_addr - 1U];
+         const u32 new_dev = static_cast<u32>(start_page_d + i);
+@@ -253,6 +262,7 @@
+         auto phys_addr = entry.compressed_physical_ptr;
+         entry.compressed_physical_ptr = 0;
+         entry.cpu_backing_address = 0;
++        entry.continuity_tracker = 0;
+         if (phys_addr != 0) [[likely]] {
+             u32& base_dev = compressed_device_addr.GetAndFault(phys_addr - 1U);
+             if ((base_dev >> MULTI_FLAG_BITS) == 0) [[likely]] {
+@@ -285,7 +295,7 @@
+         const VAddr new_vaddress = virtual_address + index * Memory::YUZU_PAGESIZE;
+         const uintptr_t new_ptr = reinterpret_cast<uintptr_t>(
+             process_memory->GetPointerSilent(Common::ProcessAddress(new_vaddress)));
++        if (new_ptr != 0 && last_ptr != 0 && new_ptr + page_size == last_ptr) {
+-        if (new_ptr + page_size == last_ptr) {
+             page_count++;
+         } else {
+             page_count = 1;
+@@ -296,22 +306,34 @@
+ }
+ template <typename Traits>
+ u8* DeviceMemoryManager<Traits>::GetSpan(const DAddr src_addr, const std::size_t size) {
++    if (size == 0 || src_addr >= device_as_size || size > device_as_size - src_addr)
++        return nullptr;
++    const size_t first_page = src_addr >> page_bits;
++    const size_t page_count = 1 + ((size - 1 + (src_addr & page_mask)) >> page_bits);
++    const u32 backing = tracked_entries[first_page].compressed_physical_ptr;
++    if (backing == 0) return nullptr;
++    // Validate each physical page, not a potentially stale continuity hint.
++    for (size_t i = 1; i < page_count; ++i) {
++        if (tracked_entries[first_page + i].compressed_physical_ptr != backing + i)
++            return nullptr;
+-    size_t page_index = src_addr >> page_bits;
+-    size_t subbits = src_addr & page_mask;
+-    if ((static_cast<size_t>(tracked_entries[page_index].continuity_tracker+1) << page_bits) >= size + subbits) {
+-        return GetPointer<u8>(src_addr);
+     }
++    return GetPointer<u8>(src_addr);
+-    return nullptr;
+ }
+ 
+ template <typename Traits>
+ const u8* DeviceMemoryManager<Traits>::GetSpan(const DAddr src_addr, const std::size_t size) const {
++    if (size == 0 || src_addr >= device_as_size || size > device_as_size - src_addr)
++        return nullptr;
++    const size_t first_page = src_addr >> page_bits;
++    const size_t page_count = 1 + ((size - 1 + (src_addr & page_mask)) >> page_bits);
++    const u32 backing = tracked_entries[first_page].compressed_physical_ptr;
++    if (backing == 0) return nullptr;
++    // Validate each physical page, not a potentially stale continuity hint.
++    for (size_t i = 1; i < page_count; ++i) {
++        if (tracked_entries[first_page + i].compressed_physical_ptr != backing + i)
++            return nullptr;
+-    size_t page_index = src_addr >> page_bits;
+-    size_t subbits = src_addr & page_mask;
+-    if ((static_cast<size_t>(tracked_entries[page_index].continuity_tracker+1) << page_bits) >= size + subbits) {
+-        return GetPointer<u8>(src_addr);
+     }
++    return GetPointer<u8>(src_addr);
+-    return nullptr;
+ }
+ 
+ template <typename Traits>
+@@ -374,11 +396,20 @@
+ 
+ template <typename Traits>
+ void DeviceMemoryManager<Traits>::WalkBlock(DAddr addr, std::size_t size, auto on_unmapped, auto on_memory, auto increment) {
++    if (size == 0) return;
+     std::size_t remaining_size = size;
+     std::size_t page_index = addr >> Memory::YUZU_PAGEBITS;
+     std::size_t page_offset = addr & Memory::YUZU_PAGEMASK;
+     while (remaining_size) {
++        const auto first_backing = tracked_entries[page_index].compressed_physical_ptr;
++        // A remap can invalidate continuity even on a preceding page.
++        const size_t hint = static_cast<size_t>(tracked_entries[page_index].continuity_tracker) + 1;
++        size_t next_pages = (std::min)(hint, tracked_entries.size() - page_index);
++        for (size_t n = 1; n < next_pages; ++n) {
++            const auto observed = tracked_entries[page_index + n].compressed_physical_ptr;
++            const bool contiguous = first_backing == 0 ? observed == 0 : observed == first_backing + n;
++            if (!contiguous) { next_pages = n; break; }
++        }
+-        const size_t next_pages = std::size_t(tracked_entries[page_index].continuity_tracker+1);
+         const std::size_t copy_amount = (std::min)((next_pages << Memory::YUZU_PAGEBITS) - page_offset, remaining_size);
+         const auto current_vaddr = u64((page_index << Memory::YUZU_PAGEBITS) + page_offset);
+         SCOPE_EXIT{
+@@ -404,6 +435,7 @@
+     const std::size_t page_offset = address & Memory::YUZU_PAGEMASK;
+     if (size <= Memory::YUZU_PAGESIZE - page_offset) {
+         const DAddr guest_page = address & ~static_cast<DAddr>(Memory::YUZU_PAGEMASK);
++#ifndef PS5_NATIVE
+         for (size_t i = 0; i < 4; ++i) {
+             if (t_slot[i].guest_page == guest_page && t_slot[i].host_ptr != nullptr) {
+                 std::memcpy(dest_pointer, t_slot[i].host_ptr + page_offset, size);
+@@ -410,13 +442,16 @@
+                 return;
+             }
+         }
++#endif
+ 
+         const std::size_t page_index = address >> Memory::YUZU_PAGEBITS;
+         const auto phys_addr = tracked_entries[page_index].compressed_physical_ptr;
+         if (phys_addr != 0) {
+             auto* const mem_ptr = GetPointerFromRaw<u8>((PAddr(phys_addr - 1) << Memory::YUZU_PAGEBITS));
++#ifndef PS5_NATIVE
+             t_slot[cache_cursor % t_slot.size()] = TranslationEntry{.guest_page = guest_page, .host_ptr = mem_ptr};
+             cache_cursor = (cache_cursor + 1) & 3U;
++#endif
+             std::memcpy(dest_pointer, mem_ptr + page_offset, size);
+             return;
+         }
+@@ -424,6 +459,9 @@
+     WalkBlock(
+         address, size,
+         [&](size_t copy_amount, DAddr current_vaddr) {
++#ifdef PS5_NATIVE
++            if (::Eden::GpuFault::ShouldReportRead())
++#endif
+             LOG_ERROR(
+                 HW_Memory,
+                 "Unmapped Device ReadBlock @ {:#016x} (start address = {:#016x}, size = {})",
+@@ -443,6 +481,9 @@
+     WalkBlock(
+         address, size,
+         [&](size_t copy_amount, DAddr current_vaddr) {
++#ifdef PS5_NATIVE
++            if (::Eden::GpuFault::ShouldReportWrite())
++#endif
+             LOG_ERROR(
+                 HW_Memory,
+                 "Unmapped Device WriteBlock @ {:#016x} (start address = {:#016x}, size = {})",
+@@ -462,6 +503,7 @@
+     const std::size_t page_offset = address & Memory::YUZU_PAGEMASK;
+     if (size <= Memory::YUZU_PAGESIZE - page_offset) {
+         const DAddr guest_page = address & ~static_cast<DAddr>(Memory::YUZU_PAGEMASK);
++#ifndef PS5_NATIVE
+         for (size_t i = 0; i < 4; ++i) {
+             if (t_slot[i].guest_page == guest_page && t_slot[i].host_ptr != nullptr) {
+                 std::memcpy(dest_pointer, t_slot[i].host_ptr + page_offset, size);
+@@ -468,13 +510,16 @@
+                 return;
+             }
+         }
++#endif
+ 
+         const std::size_t page_index = address >> Memory::YUZU_PAGEBITS;
+         const auto phys_addr = tracked_entries[page_index].compressed_physical_ptr;
+         if (phys_addr != 0) {
+             auto* const mem_ptr = GetPointerFromRaw<u8>((PAddr(phys_addr - 1) << Memory::YUZU_PAGEBITS));
++#ifndef PS5_NATIVE
+             t_slot[cache_cursor % t_slot.size()] = TranslationEntry{.guest_page = guest_page, .host_ptr = mem_ptr};
+             cache_cursor = (cache_cursor + 1) & 3U;
++#endif
+             std::memcpy(dest_pointer, mem_ptr + page_offset, size);
+             return;
+         }
+@@ -482,6 +527,9 @@
+     WalkBlock(
+         address, size,
+         [&](size_t copy_amount, DAddr current_vaddr) {
++#ifdef PS5_NATIVE
++            if (::Eden::GpuFault::ShouldReportRead())
++#endif
+             LOG_ERROR(
+                 HW_Memory,
+                 "Unmapped Device ReadBlock @ {:#016x} (start address = {:#016x}, size = {})",
+@@ -502,6 +550,9 @@
+     WalkBlock(
+         address, size,
+         [&](size_t copy_amount, DAddr current_vaddr) {
++#ifdef PS5_NATIVE
++            if (::Eden::GpuFault::ShouldReportWrite())
++#endif
+             LOG_ERROR(
+                 HW_Memory,
+                 "Unmapped Device WriteBlock @ {:#016x} (start address = {:#016x}, size = {})",

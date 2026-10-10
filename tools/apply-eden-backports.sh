@@ -330,6 +330,23 @@ validate_launcher_http_budget() {
 }
 apply_one "$root/headless/backports/eden-ps5-launcher-fast-http.patch" "$eden/.encore-backport-launcher-http.sha256" validate_launcher_http_budget
 apply_one "$root/headless/backports/eden-ps5-bounded-logging.patch" "$eden/.encore-backport-ps5-bounded-logging.sha256" validate_ps5_bounded_logging
+validate_ps5_gpu_memory_mapping() {
+python3 - "$eden" <<'PYGPU'
+from pathlib import Path
+import sys
+src=(Path(sys.argv[1])/'src/core/device_memory_manager.inc').read_text()
+for token in ('invalid.continuity_tracker = 0;', 'valid.continuity_tracker = 0;',
+              'entry.continuity_tracker = 0;', 'observed == first_backing + n',
+              'tracked_entries[first_page + i].compressed_physical_ptr != backing + i',
+              '::Eden::GpuFault::ShouldReportRead()', '::Eden::GpuFault::ShouldReportWrite()'):
+    if token not in src:
+        raise SystemExit(f'Pinned PS5 GPU memory backport missing: {token}')
+if src.count('#ifndef PS5_NATIVE') < 4:
+    raise SystemExit('PS5 shared translation-cache bypass absent')
+print('PS5 GPU remap/continuity backport: PASS')
+PYGPU
+}
+apply_one "$root/headless/backports/eden-ps5-gpu-memory-mapping.patch" "$eden/.encore-backport-ps5-gpu-memory-mapping.sha256" validate_ps5_gpu_memory_mapping
 # Citron fixes inform this host-worker SM/audctl proposal. It compiles on the
 # pinned Eden source, but PS5 service-init/shutdown behavior is not yet proven.
 # Keep it OFF in the baseline; qualify with a separate controlled HLE A/B.
