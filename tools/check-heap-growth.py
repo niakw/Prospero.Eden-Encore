@@ -487,6 +487,16 @@ int main(int argc, char **argv) {
     atomic_store(&eden_heap_space_hint, EDEN_HEAP_PIECES - 1);
     const size_t freed_cache = eden_heap_release_current_tcache();
     assert(atomic_load(&eden_heap_space_hint) == 0);
+    /* A runner/launcher can have no TLS record: even then, the next title
+     * must not inherit a stale last-root preference from guest workers.
+     * Save/restore the record without invalidating its registered slot. */
+    struct eden_heap_thread *original_tls = pthread_getspecific(eden_heap_arena_key);
+    assert(original_tls != NULL);
+    assert(pthread_setspecific(eden_heap_arena_key, NULL) == 0);
+    atomic_store(&eden_heap_space_hint, EDEN_HEAP_PIECES - 1);
+    assert(eden_heap_release_current_tcache() == 0);
+    assert(atomic_load(&eden_heap_space_hint) == 0);
+    assert(pthread_setspecific(eden_heap_arena_key, original_tls) == 0);
     long phys_after_drain = 0;
     for (unsigned root=0; root<EDEN_HEAP_PIECES; ++root)
         phys_after_drain += atomic_load(&eden_heap_root_held_bytes[root]);
