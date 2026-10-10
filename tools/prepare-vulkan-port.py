@@ -708,8 +708,8 @@ for old, new in [
 # and can evict just-created textures. Preserve a zero lower bound for BOTH
 # normal and aggressive passes, including OpenGL, with no GPU syscall/heap work.
 unsafe_cutoff = "frame_tick - ticks_to_destroy"
-if gc.count(unsafe_cutoff) != 2:
-    raise RuntimeError("Pinned GC must contain exactly two unsigned LRU eviction cutoffs")
+if gc.count(unsafe_cutoff) != 3:
+    raise RuntimeError("Pinned GC needs three safe LRU cutoffs: prefetch and both cleanup passes")
 gc = gc.replace(unsafe_cutoff,
                 "::Eden::VulkanMemory::OldestEvictionTick(frame_tick, ticks_to_destroy)")
 texture_costs = []
