@@ -37,6 +37,7 @@
 #define EDEN_HEAP_PIECE_SHIFT 27u /* 128 MiB */
 #define EDEN_HEAP_PIECE_SIZE ((size_t)1 << EDEN_HEAP_PIECE_SHIFT)
 #define EDEN_HEAP_PIECES (PS5_OPENGL_HEAP_SIZE >> EDEN_HEAP_PIECE_SHIFT)
+_Static_assert(EDEN_HEAP_PIECES <= 32, "heap root dirty bitmap needs <=32 pieces");
 
 void *eden_heap_reserve(size_t size);             /* address space only; NULL when refused */
 int eden_heap_commit(void *address, size_t size); /* initial backing, with startup owner */
@@ -195,6 +196,7 @@ struct eden_heap_thread {
   long live;
   long blocks;
   unsigned pending;
+  uint32_t root_dirty; /* only roots touched since last counter flush */
   long physical_bytes[EDEN_HEAP_PIECES];
   long physical_blocks[EDEN_HEAP_PIECES];
   atomic_size_t cached_bytes; /* only the owning thread writes; snapshots may read */
@@ -216,8 +218,13 @@ static void eden_heap_apply(long bytes, long blocks) {
 
 static void eden_heap_flush(struct eden_heap_thread *self) {
   eden_heap_apply(self->live, self->blocks);
-  /* Piggyback on existing 64-op TLS batching: no shared atomic per malloc. */
-  for (unsigned root=0; root<EDEN_HEAP_PIECES; ++root) {
+  /* No per-frame work. Walk only the roots actually touched by this
+   * thread's last 64 allocator operations, rather than all 24 heap roots. */
+  uint32_t dirty=self->root_dirty;
+  self->root_dirty=0;
+  while (dirty) {
+    const unsigned root=(unsigned)__builtin_ctz(dirty);
+    dirty &= dirty-1;
     if (self->physical_bytes[root]) {
       atomic_fetch_add_explicit(&eden_heap_root_held_bytes[root], self->physical_bytes[root], memory_order_relaxed);
       self->physical_bytes[root]=0;
@@ -631,6 +638,7 @@ static struct eden_heap_thread *eden_heap_self(void) {
     self->live = 0;
     self->blocks = 0;
     self->pending = 0;
+    self->root_dirty = 0;
     memset(self->physical_bytes,0,sizeof(self->physical_bytes));
     memset(self->physical_blocks,0,sizeof(self->physical_blocks));
     atomic_store_explicit(&self->cached_bytes, 0, memory_order_relaxed);
@@ -655,6 +663,7 @@ static void eden_heap_physical_note(struct eden_heap_thread *self,
   if (self) {
     self->physical_bytes[root]+=bytes;
     self->physical_blocks[root]+=blocks;
+    self->root_dirty |= UINT32_C(1) << root;
   } else {
     if (bytes) atomic_fetch_add_explicit(&eden_heap_root_held_bytes[root],bytes,memory_order_relaxed);
     if (blocks) atomic_fetch_add_explicit(&eden_heap_root_held_blocks[root],blocks,memory_order_relaxed);
