@@ -75,6 +75,10 @@ def refresh(scratch: Path, archive: Path, owner: Path) -> bool:
         pristine = fresh_header.read_text()
         if any(v in pristine for v in (*OLD, *NEW)):
             raise RuntimeError("Expected a pristine pinned Eden archive")
+        # The pinned archive itself has no GIT-COMMIT receipt. Persist the
+        # already-verified pin before the atomic source swap so migration
+        # is idempotent even without the outer prepare-build.sh lifecycle.
+        (fresh / "GIT-COMMIT").write_text(PIN + "\n")
         store = source / ".cache"
         if store.is_symlink():
             raise RuntimeError("Refusing symlinked upstream CPM store")
