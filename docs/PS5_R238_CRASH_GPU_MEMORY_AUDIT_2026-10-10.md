@@ -236,3 +236,15 @@ A scratch C++20 CPU admission reproduction passed 9 policy cases under clang ASa
 - Sony heap mspace C UBSan+TSan stress (eight threads × 60,000 operations), host heap growth rollback and log formatter, SHA256 crash-symbol provenance and UX invariants PASS. `git diff --check FETCH_HEAD HEAD` clean. The source-bound full integration preflight is now an observed GitHub success, not just a static assertion.
 - Host #38044951686 had first detected an actual missing direct `gpu_fault_rate_limit.h` include at the PS5 title-counter reset call; corrected by `c63557e4`. Host #38045061932 then passed all functional/host sanitizer tests, but failed on a single trailing whitespace line in a C++ ASID fixture; corrected by `ca34b4b4`. The third host CI is fully green.
 - All **PS5 native build jobs skipped** (no `[full-build]`, `[test-all-on]` or workflow_dispatch). No console FC27/BOTW frame/pixel performance evidence, no qualified Sony mspace destruction or 1280 MiB release, and old launcher SIGSEGV has no exact matching ELF attribution. Hardware acceptance issue #8 remains open.
+
+
+### R254 — saturation of Vulkan GPU texture-cache pressure counters
+
+The pinned Eden garbage collector samples Vulkan driver memory to `total_used_memory`, then uses a derived per-image `ReclaimedBytes(image)` to anticipate future texture eviction. In R245–R253 the prefetch loop did an unchecked `u64 usage -= reclaimed`. Under alias/deferred-release/accounting divergence, `reclaimed > usage` wraps to an implausibly huge positive number. That can continue prefetching independent dirty texture readbacks, incurring `runtime.Finish` waits and reallocations instead of recognizing that pressure already fell below threshold. The same unsigned wrap could occur in the two `DeleteImage` accounting decrements.
+
+- `0690a951`: add `headless/vulkan_gc_budget.h`, a pure, constexpr/no-heap `AfterProjectedEviction` that clamps reclamation to available count rather than wrapping.
+- `177567dc`: use the bounded subtraction on the Vulkan GC's anticipated readback batch; retain the existing 16-texture / 32-MiB staging batch cap (latency bound, not PS5 VRAM cap).
+- `b538bef5`, `d17dfb1f`, `c93ae503`: include helper in generator-emitted texture-cache header, and on **Vulkan only** use it for `DeleteImage`'s scaled image and original aligned texture-cost decrements. Preserve OpenGL's original logic and the GPU pressure policy thresholds; do not increase or fake actual PS5 GDDR6 allocations.
+- `044a1f80`/`9df74881`, `a4f6ed83`/`02b16cdb`: source-bound host C++20 ASan/UBSan regression exercises 200,000 projected-memory arithmetic cases, verifies two exact Python AST generator replacements including generated literal newline correctness, and is wired to both existing CI preflights. A green host CI **on R254** is still required.
+
+This removes a plausible non-saturating GPU memory accounting bug. It does not make GPU or RAM "100% utilized", does not reclaim Sony mspaces, and does not prove any FC27/BOTW PS5 frame-time or texture improvement. Continue guarding cross-component memory owners and PS5 SDK ABI before native acceptance.
