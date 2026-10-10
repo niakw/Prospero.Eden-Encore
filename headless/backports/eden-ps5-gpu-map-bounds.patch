@@ -1,0 +1,34 @@
+--- a/src/core/device_memory_manager.inc
++++ b/src/core/device_memory_manager.inc
+@@ -223,6 +223,16 @@
+ template <typename Traits>
+ void DeviceMemoryManager<Traits>::Map(DAddr address, VAddr virtual_address, size_t size, Asid asid,
+                                       bool track) {
++#ifdef PS5_NATIVE
++    if (size == 0) return;
++    if (address >= device_as_size || size > device_as_size - address ||
++        virtual_address >= guest_as_size || size > guest_as_size - virtual_address) {
++        if (::Eden::GpuFault::ShouldReportBadMapRange())
++            LOG_ERROR(HW_Memory, "EDEN_GPU_MAP_BAD_RANGE gpu={:#x} guest={:#x} bytes={:#x}",
++                      address, virtual_address, size);
++        return;
++    }
++#endif
+     Core::Memory::Memory* process_memory = registered_processes[asid.id];
+     size_t start_page_d = address >> Memory::YUZU_PAGEBITS;
+     size_t num_pages = Common::AlignUp(size, Memory::YUZU_PAGESIZE) >> Memory::YUZU_PAGEBITS;
+@@ -312,6 +322,14 @@
+ 
+ template <typename Traits>
+ void DeviceMemoryManager<Traits>::Unmap(DAddr address, size_t size) {
++#ifdef PS5_NATIVE
++    if (size == 0) return;
++    if (address >= device_as_size || size > device_as_size - address) {
++        if (::Eden::GpuFault::ShouldReportBadUnmapRange())
++            LOG_ERROR(HW_Memory, "EDEN_GPU_UNMAP_BAD_RANGE gpu={:#x} bytes={:#x}", address, size);
++        return;
++    }
++#endif
+     size_t start_page_d = address >> Memory::YUZU_PAGEBITS;
+     size_t num_pages = Common::AlignUp(size, Memory::YUZU_PAGESIZE) >> Memory::YUZU_PAGEBITS;
+     device_inter->InvalidateRegion(address, size);
