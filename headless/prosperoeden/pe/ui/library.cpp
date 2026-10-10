@@ -8,6 +8,7 @@
 #include "pe/core/log.hpp"
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstdio>
 #include <exception>
@@ -1479,17 +1480,24 @@ void Launcher::draw_game(Canvas &c, float open)
     }
     else
     {
-        static constexpr const char *kGameAbout[] = {
+        // One description per editable game row. The former seven-entry table
+        // was read with option_ up to row_controls (index 9), causing an
+        // out-of-bounds read / SIGSEGV when scrolling to the bottom.
+        static constexpr std::array<const char*, row_mods> kGameAbout = {{
             TR("Docked can improve graphics but may cost performance; Handheld is lighter for demanding games."),
             TR("Vulkan is recommended on PS5. Use OpenGL only as a fallback for a title with Vulkan issues."),
             TR("Minimum, Recommended, High and Ultra apply the title-aware Encore profile. Manual changes become Custom for this game."),
+            TR("TV output determines the signal sent to your display, not the game's internal rendering resolution."),
             TR("Resolution follows the selected title-aware profile. Lower it for performance or memory; raise it only when the title has headroom."),
             TR("Bilinear is the lightest default. AMD FSR is useful when rendering below the TV output size."),
+            TR("FSR sharpness adjusts the filter when AMD FSR is selected."),
+            TR("Anti-aliasing smooths jagged edges at an additional rendering cost."),
             TR("60 Hz is the safe default. Use 120 Hz only with a compatible display or high-FPS patch."),
             TR("Open the per-game DualSense mapping. Global uses Settings > Controls; Custom overrides it only for this game."),
-        };
-        if (option_ >= row_mode && option_ <= row_controls)
-            text_shrink(c, tr(kGameAbout[option_]), 592.0f,
+        }};
+        static_assert(kGameAbout.size() == static_cast<std::size_t>(row_mods));
+        if (option_ >= row_mode && option_ < static_cast<int>(kGameAbout.size()))
+            text_shrink(c, tr(kGameAbout[static_cast<std::size_t>(option_)]), 592.0f,
                         baseline(kDialogHints - 34.0f, 24.0f, 18.0f), 18.0f,
                         theme::kMeta, 736.0f);
         static constexpr Hint kHints[] = {
