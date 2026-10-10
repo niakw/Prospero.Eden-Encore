@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "performance.h"
 #include "hle_counters.h"
+#include "gpu_fault_rate_limit.h"
 #include "crash_report.h"
 #include "stall_watchdog.h"
 #include "../src/fastmem.h"
@@ -1136,6 +1137,9 @@ void Snapshot() {
         }
     }
 #endif
+    std::printf("EDEN_GPU_UNMAPPED_COUNTERS read=%llu write=%llu\n",
+                static_cast<unsigned long long>(::Eden::GpuFault::reads.load(std::memory_order_relaxed)),
+                static_cast<unsigned long long>(::Eden::GpuFault::writes.load(std::memory_order_relaxed)));
     // Take an immutable owner-written copy; priority/CPU-clock syscalls,
     // formatting, and stdout flushes must NOT hold workers_mutex. Otherwise
     // all guest CPU workers can block in SampleCpu() on this GPU report.

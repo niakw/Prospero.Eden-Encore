@@ -119,6 +119,13 @@ apply_one() {
                 echo 'Migrated cached Eden HTTP backport in place (no source-cache reset)'
                 return
             fi
+            if [[ $(basename "$patch") == eden-ps5-bounded-logging.patch ]]; then
+                python3 -B "$root/tools/migrate-bounded-logging-cache.py" "$eden"
+                "$validator"
+                printf '%s\n' "$hash" > "$receipt"
+                echo 'Migrated only the known old PS5 logging flush policy in cached Eden source'
+                return
+            fi
             echo "Backport changed; reset the Eden source cache: $(basename "$patch")" >&2
             exit 1
         fi
@@ -162,6 +169,8 @@ for needle in [
     'first_filename += ".first.txt"',
     'file->SetSize(0)',
     'FS::SeekOrigin::SetOrigin',
+    'error_events == 1 || error_events % 64 == 0',
+    'entry.log_level >= Level::Critical',
 ]:
     if needle not in text:
         raise SystemExit(f'Encore bounded PS5 Eden logging missing: {needle}')

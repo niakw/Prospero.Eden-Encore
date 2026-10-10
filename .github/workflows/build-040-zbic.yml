@@ -172,6 +172,7 @@ jobs:
           python3 -B tools/check-vulkan-shader-workers.py
           python3 -B tools/check-ps5-dev-cache-contention.py
           python3 -B tools/check-gpu-native-diagnostics.py
+          python3 -B tools/check-gpu-memory-mapping-source.py
           python3 -B tools/check-jit-memory-policy.py
           python3 -B tools/check-jit-startup-retry.py
           python3 -B tools/check-vulkan-pipeline-persistence.py
