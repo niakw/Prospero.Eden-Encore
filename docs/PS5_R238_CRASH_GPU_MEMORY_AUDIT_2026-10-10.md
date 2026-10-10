@@ -251,3 +251,10 @@ This removes a plausible non-saturating GPU memory accounting bug. It does not m
 
 
 **R254 test confirmation:** Host-only [#38045810913](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38045810913) = SUCCESS for source SHA `b32d59c0d3ab99b22000a5f986bea184099c5794`. The generated Vulkan texture-budget source contracts, 200,000 bounded C++20 ASan/UBSan cases, full existing host GPU/CPU/JIT/Sony allocator suite, approved UX and branch diff gate all passed. The corresponding native PS5 build workflow was SKIPPED. This is **not** a full PS5 texture_cache.h compile, graphics render or FPS qualification; saturation only removes a provable unsigned-counter wrap and associated false-pressure risk.
+
+
+### R255 — eliminate readback descriptor allocation on the Vulkan hot path
+
+The generated PS5 `TextureCache<P>::DownloadMemory` path previously created `std::vector<std::pair<ImageId, Map>>` and `reserve(16)` for **every** independent readback call. This incurs at least one host allocator path even when the batch fits comfortably in inline descriptors. The same texture cache translation unit already includes `<boost/container/small_vector.hpp>` and uses exactly the same move-only `Map` type in the GC staging cache. `7f1778d0` switches only the download batch's 16-tuple scratch array to `boost::container::small_vector`, preserving 16-image and 32-MiB batching, readback order, `runtime.Finish` and the existing guest swizzle path.
+
+`d01edf55` adds host regression with 1,000 batches of 16 move-only staging descriptors under ASan+UBSan; a preliminary scratch Boost.Container code probe compiled and ran with clang ASan+UBSan. `b35fa2b5`/`c6d22488` add the checked-in test to both CI host gates. All changes are scoped to the PS5 Vulkan generated source; OpenGL and CPU guest ISA implementations are unchanged. Claim only reduced allocator call frequency in this code path, **not** proof of maximum CPU/GPU utilization or FC27 FPS gains.
