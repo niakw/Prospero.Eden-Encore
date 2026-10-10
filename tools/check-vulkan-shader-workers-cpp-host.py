@@ -125,7 +125,7 @@ with tempfile.TemporaryDirectory(prefix="eden-shader-worker-policy-") as dirname
     file = Path(dirname) / "shader-workers.cpp"
     exe = Path(dirname) / "shader-workers"
     file.write_text(prefix + policy + "\n" + suffix, encoding="utf-8")
-    subprocess.run([compiler, "-std=c++20", "-O1", "-Wall", "-Wextra", "-Werror",
+    subprocess.run([compiler, "-std=c++20", "-DPS5_NATIVE=1", "-O1", "-Wall", "-Wextra", "-Werror",
                     "-fsanitize=address,undefined", "-fno-sanitize-recover=all",
                     str(file), "-o", str(exe)], check=True, timeout=90)
     subprocess.run([str(exe)], check=True, timeout=90)
