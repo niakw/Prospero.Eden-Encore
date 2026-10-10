@@ -1094,6 +1094,13 @@ void Launcher::draw_library(Canvas &c)
 
 void Launcher::press_game(Key key)
 {
+    // The async ROM scan can replace the library during a Triangle dialog.
+    if (library_.selected < 0 ||
+        static_cast<std::size_t>(library_.selected) >= games_.size()) {
+        close_modal();
+        cue(Cue::error);
+        return;
+    }
     Game &game = games_[static_cast<std::size_t>(library_.selected)];
     const bool mode_confirmation =
         option_ == row_mode && (key == Key::left || key == Key::right || key == Key::cross);
@@ -1337,7 +1344,9 @@ void Launcher::draw_game(Canvas &c, float open)
           1.6f);
     text_shrink(c, tr("Game settings"), 592.0f, baseline(218.0f, 62.0f, theme::kDisplay),
                 theme::kDisplay, theme::kTitle, 736.0f);
-    const Game *game = games_.empty() ? nullptr : &games_[static_cast<std::size_t>(library_.selected)];
+    const Game *game = library_.selected >= 0 &&
+        static_cast<std::size_t>(library_.selected) < games_.size() ?
+        &games_[static_cast<std::size_t>(library_.selected)] : nullptr;
     text_fit(c, game != nullptr ? game->name : std::string{}, 592.0f,
              baseline(291.0f, 32.0f, theme::kSmall), theme::kSmall, Color::rgb(0xc5c1d2), 736.0f);
 
