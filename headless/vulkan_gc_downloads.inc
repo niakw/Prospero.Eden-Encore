@@ -35,13 +35,11 @@
                     image.HasScaled() || image.info.num_samples != 1 || gc_downloads.size() == 16 ||
                     image.unswizzled_size_bytes > 32_MiB - bytes) return true;
                 auto map = runtime.DownloadStagingBuffer(image.unswizzled_size_bytes, true);
+                // The pinned StagingBufferRef is a POD handle, not a RAII
+                // owner. The pool tracks deferred lifetime until FreeDeferred.
+                gc_downloads.emplace_back(id, map);
                 const auto copies = FixSmallVectorADL(FullDownloadCopies(image.info));
-                // Record the GPU download while the staging map is still ours,
-                // then TRANSFER ownership to the deferred-release queue.
-                // Copying the map duplicates its backing handle (or fails for
-                // move-only implementations), risking early release/UAF.
                 image.DownloadMemory(map, copies);
-                gc_downloads.emplace_back(id, std::move(map));
                 bytes += image.unswizzled_size_bytes;
                 // The driver's sampled total and logical per-image
                 // reclamation can diverge during alias/deferred cleanup.
