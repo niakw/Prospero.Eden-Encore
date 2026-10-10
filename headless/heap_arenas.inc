@@ -672,13 +672,23 @@ static void eden_heap_account(long bytes, long blocks) {
     eden_heap_charge(self, bytes, blocks);
 }
 
+/* Reuse the same TLS lookup for logical and physical ownership accounting.
+ * Keeping this joint path avoids doubling pthread_getspecific on the common
+ * uncached malloc/free path compared with the original allocator. */
+static void eden_heap_account_physical(const void *address, long bytes, long blocks) {
+  struct eden_heap_thread *self=eden_heap_self();
+  eden_heap_physical_note(self,address,bytes,blocks);
+  if (self) eden_heap_charge(self,bytes,blocks);
+  else eden_heap_apply(bytes,blocks);
+}
 static void *eden_heap_record(void *address, int nonzero) {
   if (address == NULL)
     return ps5_heap_record_allocation(address, nonzero); /* counts the failure */
   const size_t usable=eden_heap_usable(address);
   if (eden_heap_in_range(address))
-    eden_heap_physical_note(NULL,address,(long)usable,1);
-  eden_heap_account((long)usable,1);
+    eden_heap_account_physical(address,(long)usable,1);
+  else
+    eden_heap_account((long)usable,1);
   return address;
 }
 
@@ -809,8 +819,7 @@ void *__wrap_realloc(void *address, size_t size) {
     void *result = sceLibcMspaceRealloc(owner, address, size);
     if (result) {
       const long delta=(long)sceLibcMspaceMallocUsableSize(result)-(long)before;
-      eden_heap_physical_note(NULL,result,delta,0);
-      eden_heap_account(delta,0);
+      eden_heap_account_physical(result,delta,0);
       return result;
     }
   }
@@ -840,9 +849,8 @@ void __wrap_free(void *address) {
     const size_t usable = sceLibcMspaceMallocUsableSize(address);
     if (eden_tcache_keep(address, usable))
       return;
-    eden_heap_account(-(long)usable, -1);
+    eden_heap_account_physical(address,-(long)usable,-1);
     sceLibcMspaceFree(eden_heap_owner(address), address);
-    eden_heap_physical_note(NULL,address,-(long)usable,-1);
     return;
   }
   const int large = eden_heap_large_find(address);
