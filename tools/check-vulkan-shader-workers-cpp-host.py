@@ -49,6 +49,9 @@ prefix = r"""
 using cpuset_t = std::uint64_t;
 #define CPU_LEVEL_WHICH 1
 #define CPU_WHICH_TID 1
+#ifdef CPU_ISSET
+#undef CPU_ISSET
+#endif
 #define CPU_ISSET(cpu,ptr) (((*(ptr)) >> (cpu)) & 1ULL)
 static std::uint64_t allowed_mask = 0;
 static std::uint64_t primary_mask = 0;
