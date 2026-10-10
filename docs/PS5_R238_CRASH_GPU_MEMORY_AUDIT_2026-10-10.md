@@ -193,3 +193,15 @@ The pinned upstream `DeviceMemoryManager::Map`/`Unmap` update each `TrackedEntry
 - Latest exact in-memory source replay: **64/64 GPU manager/header patch hunks apply** on the pinned Eden mirror. The new 20-section atomic diff also has consistent unified-diff old/new line counts.
 
 **Limits:** The actual checked-in extracted fixture and full host sanitized suite have not been run in CI or from a complete GitHub checkout. The reverse `compressed_device_addr` and `MultiAddressContainer` path still requires a separate synchronization/lifetime audit; atomic forward fields do not make whole snapshots transactionally consistent and cannot prove PS5 graphics correctness. FC27 missing/black textures, extreme 0 FPS windows, native launcher SIGSEGV and 1,280-MiB retained physical heap remain OPEN. No SDK/native build or hardware test authorized/performed.
+
+
+### R248 — scalar GPU reverse mapping atomicity without per-read global locks
+
+The reverse `compressed_device_addr` u32 table is mutated under `mapping_guard` in `DeviceMemoryManager::Map/Unmap`, while `DeviceMemoryManager::ApplyOpOnPAddr` is an inline header function reading scalar reverse slots without that lock. The earlier R247 forward `TrackedEntry` atomics did not address this data race.
+
+- `4566625d`, `7e5d1076`: new pinned `eden-ps5-gpu-atomic-reverse-table.patch` replaces the scalar reverse lookup, reverse-map assignments and reads with unconditional `std::atomic_ref<const u32>.load(acquire)` / `std::atomic_ref<u32>.store(release)`. These inline helpers compile identically regardless of the unit-local `PS5_NATIVE` macro. Existing `MultiAddressContainer` reads still use `InnerGatherDeviceAddresses` under `mapping_guard`; no new mutex added to the hot scalar path.
+- `c35ae6c3`, `5009cea2`: source reconstruction, semantic guard and source-test ordering require the reverse overlay **after** the atomic forward table patch.
+- `57bf37ad`: future host-only CI will extract and exercise the actual eight atomic accessor method bodies under ASan/UBSan and TSan. An independent host C++20 method-shape reproduction **PASSED** both clang ASan+UBSan and GCC TSan with eight worker threads × 60,000 operations each.
+- **Exact pinned source replay:** `eden-emulator/mirror@5f142c7926d0c7fcbbd0ce30794d72f638a43b2a` plus all 13 manager/header overlays, **71/71 hunks applied**, seven forward/reverse bounds and atomic invariants confirmed. New reverse-overlay unified-diff headers have correct declared counts for all seven hunks.
+
+Atomic table loads prevent C++ scalar data races, but do **not** turn a sequence of separate forward/reverse/continuity fields or a multi-address container list into one transactional snapshot. A lookup can observe an already-retired mapping during concurrent `Map`/`Unmap`, and only PS5 hardware and renderer-source lifetime evidence can qualify that interaction. Native crash `RIP=0x8000a878d`, FC27 textures/FPS, unmap ownership, 1,280-MiB physical Sony heap and all-on build qualification remain open. **No build, CI dispatch or console run**.
