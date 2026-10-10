@@ -40,6 +40,22 @@ with tempfile.TemporaryDirectory(prefix="eden-mod-research-store-") as t:
     (root/"discovery"/"leads.json").write_text(json.dumps(remote))
     (root/"discovery"/"progress.json").write_text(json.dumps(oldstate))
     stats=store.persist(root,current,newstate,catalog,queue)
+    audit=json.loads((root/"catalog/scope-audit.json").read_text())
+    assert audit["switch1_candidate_title_ids"]==2
+    assert audit["excludes_switch2_only_0400"]
+    assert audit["includes_titles_also_released_for_switch2"]
+    assert audit["different_preferred_display_names"]==2
+    invalid_catalog=dict(catalog,games=[
+        *catalog["games"],
+        {"title_id":"0400C3F00006E000","title":"Mario Kart World"}])
+    try:
+        store.switch1_scope_audit(invalid_catalog)
+    except ValueError:pass
+    else:raise AssertionError("Switch 2 only title was incorrectly included")
+    dual_release=dict(catalog,games=[
+        *catalog["games"],
+        {"title_id":"0100F43008C44000","title":"Pokemon Legends Z-A"}])
+    assert store.switch1_scope_audit(dual_release)["switch1_candidate_title_ids"]==3
     assert stats["accumulated_mod_leads"]==2
     assert stats["total_research_queries"]==8
     assert stats["completed_provider_queries"]==2
