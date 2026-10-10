@@ -15,6 +15,7 @@ Nintendo ni archives de mods redistribuables sans licence.
 | `discovery/progress.json` | Curseurs de recherche par Title ID, moteur et variante | Régénéré puis commité sur cette branche par GitHub Actions |
 | `catalog/switch1-titles.json.gz` | Catalogue régional Switch 1 consolidé | Export gzip GitHub Actions et commit Git |
 | `catalog/source-queries.json.gz` | Requêtes publiques préconstruites (Switch/PC/GameBanana/ru) | Export gzip GitHub Actions et commit Git |
+| `catalog/scope-audit.json` | Contrôle du périmètre Switch 1, volume d'IDs candidats, doublons de noms et démos/cloud suspectées | Rapport indépendant, commité sur la branche |
 
 Les fichiers `discovery` et `catalog` apparaissent au **premier run dont le
 commit a été autorisé**. Si le jeton Actions n'a pas le droit d'écrire, si la
@@ -45,3 +46,17 @@ clients ne contourne CAPTCHA, authentification, 403 ou limitation de débit.
 Yandex via ses pages de recherche publiques ne nécessite pas une API payante ;
 l'API Search officielle est une voie **distincte** et uniquement sur
 activation avec ses clés et sa facturation éventuelle.
+
+## Périmètre matériel vérifié
+
+Seuls les **jeux et logiciels ayant réellement une version Nintendo Switch 1**
+entrent dans le catalogue. Les versions qui existent **sur Switch 1 et Switch 2**
+restent présentes via leurs IDs Switch 1 `0100…` (par exemple Zelda BOTW).
+Les exclusivités Switch 2 `0400…` (par exemple Mario Kart World) sont
+exclues. La compatibilité rétroactive sur Switch 2 ne convertit pas un jeu
+Switch 2 exclusif en jeu Switch 1.
+
+Le total `24 205` initial représente **des IDs d'applications candidates**
+collectés dans plusieurs régions, pas 24 205 jeux commerciaux uniques.
+L'audit `scope-audit.json` explique les doublons de noms et les indices
+de démos/versions cloud, sans exclure à tort des jeux Switch 1.
