@@ -23,6 +23,13 @@ assert "small_vector<std::pair<ImageId, DownloadMap>, gc_prefetch_limit>" in dec
 assert gc.count("gc_downloads.size() == gc_prefetch_limit") == 1
 assert gc.count("32_MiB - bytes") == 1
 assert "if (frame_tick < ticks_to_destroy) return;" in gc
+# Skip ALL LRU lookahead if pressure policy forbids staged dirty downloads.
+# Cleanup still executes and can reclaim old clean images.
+prefetch_body = gc[gc.index("    const auto PrefetchDownloads = [&] {"):gc.index("    const auto UsePrefetched = [&]")]
+assert "const bool prefetch_dirty = DirtyEvictions();" in prefetch_body
+assert "if (!prefetch_dirty) return;" in prefetch_body
+assert prefetch_body.index("if (!prefetch_dirty) return;") < prefetch_body.index("lru_cache.ForEachItemBelow(")
+assert "(!DirtyEvictions() && dirty)) return false;" not in prefetch_body
 pred_begin = gc.index("gc_downloads.size() == gc_prefetch_limit")
 pred_end = gc.index(") return true;", pred_begin)
 predicate = gc[pred_begin:pred_end]
