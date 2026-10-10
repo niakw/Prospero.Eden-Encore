@@ -87,6 +87,13 @@ assert 'validate_ps5_gpu_block_flush_bounds' in apply
 assert apply.index('eden-ps5-gpu-physical-read-bounds.patch') < apply.index(
     'eden-ps5-gpu-block-flush-bounds.patch') < apply.index(
     'eden-ps5-gpu-reverse-inline-bounds.patch')
+gpu_span=(r/'headless/backports/eden-ps5-gpu-span-physical-bounds.patch').read_text()
+assert gpu_span.count('first_phys >= compressed_device_addr.size()') == 2
+assert gpu_span.count('page_count > compressed_device_addr.size() - first_phys') == 2
+assert 'validate_ps5_gpu_span_physical_bounds' in apply
+assert apply.index('eden-ps5-gpu-block-flush-bounds.patch') < apply.index(
+    'eden-ps5-gpu-span-physical-bounds.patch') < apply.index(
+    'eden-ps5-gpu-reverse-inline-bounds.patch')
 inline_bounds=(r/'headless/backports/eden-ps5-gpu-reverse-inline-bounds.patch').read_text()
 for token in ('if ((address >> page_bits) >= compressed_device_addr.size()) return;',
               'if (base == 0) return;', 'if (host < physical_base ||',
