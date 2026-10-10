@@ -23,6 +23,10 @@ scratch=$(cat .local/headless-cache)
 [[ "$(cd -- "$(cat "$scratch/owner")" && pwd -P)" == "$root" ]] || { echo "Build cache $scratch belongs to another checkout" >&2; exit 1; }
 
 eden="$scratch/source"
+# R289: safely refresh the precise old C++20 atomic Eden source cache; retain
+# the pinned CPM downloads, SDK, RADV, ccache and native-object caches.
+python3 -B "$root/tools/refresh-eden-atomic-source-cache.py" "$scratch" \
+    "$root/.deps/eden-5f142c79.tar.gz" "$root"
 if [[ ! -f $eden/CMakeLists.txt ]]; then
     step "Eden source"
     mkdir -p "$eden"

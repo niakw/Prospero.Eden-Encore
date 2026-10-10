@@ -189,6 +189,7 @@ jobs:
           python3 -B tools/check-gpu-asid-lifetime-cpp-host.py
           python3 -B tools/check-gpu-memory-mapping-source.py
           python3 -B tools/check-gpu-backport-replay-host.py
+          python3 -B tools/check-eden-atomic-cache-refresh-host.py
           python3 -B tools/check-ps5-guest-null-backing-host.py
           python3 -B tools/check-guest-backport-replay-host.py
           python3 -B tools/check-sparse-index-boundary.py
