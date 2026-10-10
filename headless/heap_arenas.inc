@@ -666,7 +666,8 @@ static void eden_heap_physical_note(struct eden_heap_thread *self,
   const unsigned piece=(unsigned)(((uintptr_t)address-(uintptr_t)ps5_heap_base)>>EDEN_HEAP_PIECE_SHIFT);
   if (piece>=EDEN_HEAP_PIECES) __builtin_trap();
   const unsigned root=atomic_load_explicit(&eden_heap_piece_root[piece],memory_order_relaxed);
-  if (!self) self=eden_heap_self();
+  /* The caller has already looked up its TLS record, or deliberately
+   * provided NULL when slots are exhausted. Never retry TLS registration. */
   if (self) {
     self->physical_bytes[root]+=bytes;
     self->physical_blocks[root]+=blocks;
@@ -851,14 +852,20 @@ void *__wrap_realloc(void *address, size_t size) {
   }
   memcpy(moved, address, before < size ? before : size);
   const size_t moved_usable=eden_heap_usable(moved);
+  const long delta=(long)moved_usable-(long)before;
+  /* A moved realloc is one logical block before and after the move.
+   * Its physical owner can change from a root mspace to direct memory,
+   * or between two roots. Resolve TLS only once for both root updates. */
+  struct eden_heap_thread *self=eden_heap_self();
   if (eden_heap_in_range(moved))
-    eden_heap_physical_note(NULL,moved,(long)moved_usable,1);
-  eden_heap_account((long)moved_usable-(long)before,0);
+    eden_heap_physical_note(self,moved,(long)moved_usable,1);
+  if (self) eden_heap_charge(self,delta,0);
+  else eden_heap_apply(delta,0);
   if (large>=0)
     eden_heap_large_free(large);
   else {
     sceLibcMspaceFree(eden_heap_owner(address),address);
-    eden_heap_physical_note(NULL,address,-(long)before,-1);
+    eden_heap_physical_note(self,address,-(long)before,-1);
   }
   return moved;
 }
