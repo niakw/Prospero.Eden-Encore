@@ -362,6 +362,25 @@ int main(int argc, char **argv) {
     } else {
         assert(eden_heap_committed() == heap && atomic_load(&committed_bytes) == 0);
     }
+    if (argc == 1) {
+        // A size-zero realloc must have deterministic ownership semantics,
+        // not silently leave the block count and retained direct RAM unknown.
+        void *small_zero = __wrap_malloc(96);
+        assert(small_zero != NULL);
+        assert(__wrap_realloc(small_zero, 0) == NULL);
+        assert(atomic_load(&ps5_heap_ambiguous_zero_reallocs) == 0);
+        void *medium_zero = __wrap_malloc((size_t)1 << 20);
+        assert(medium_zero != NULL);
+        assert(__wrap_realloc(medium_zero, 0) == NULL);
+        const size_t big_bytes = (size_t)40 << 20;
+        unsigned big_blocks = 0;
+        void *large_zero = __wrap_malloc(big_bytes);
+        assert(large_zero != NULL);
+        assert(eden_heap_large_held(&big_blocks) >= big_bytes && big_blocks >= 1);
+        assert(__wrap_realloc(large_zero, 0) == NULL);
+        assert(eden_heap_large_held(&big_blocks) == 0 && big_blocks == 0);
+        assert(atomic_load(&ps5_heap_ambiguous_zero_reallocs) == 0);
+    }
     if (argc > 1 && strcmp(argv[1], "growth-mspace-fail") == 0) {
         // The main thread's small allocation first creates an 8 MiB
         // aligned arena in the same 128 MiB piece. The alignment and

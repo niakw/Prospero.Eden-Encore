@@ -685,6 +685,11 @@ void *__wrap_calloc(size_t count, size_t size) {
                                     count != 0 && size != 0);
 }
 
+/* The C library permits realloc(p, 0) to release p and return NULL.
+ * We make that behavior explicit for Eden-owned blocks, so free-list owners,
+ * large direct mappings and live-byte counters all take the SAME free path.
+ * Foreign pointers still use the original libc realloc semantics. */
+void __wrap_free(void *address);
 void *__wrap_realloc(void *address, size_t size) {
   if (address == NULL)
     return __wrap_malloc(size);
@@ -692,13 +697,12 @@ void *__wrap_realloc(void *address, size_t size) {
   const int large = in_range ? -1 : eden_heap_large_find(address);
   if (!in_range && large < 0)
     return __real_realloc(address, size);
+  if (size == 0) {
+    __wrap_free(address);
+    return NULL;
+  }
   const size_t before = in_range ? sceLibcMspaceMallocUsableSize(address) : eden_heap_large[large].size;
   if (large >= 0) {
-    if (size == 0) {
-      eden_heap_account(-(long)before, -1);
-      eden_heap_large_free(large);
-      return NULL;
-    }
     /* A large block keeps its memory while the new size still needs most of it. */
     if (size <= before && size >= before / 2)
       return address;
@@ -708,12 +712,6 @@ void *__wrap_realloc(void *address, size_t size) {
     if (result) {
       eden_heap_account((long)sceLibcMspaceMallocUsableSize(result) - (long)before, 0);
       return result;
-    }
-    if (size == 0) {
-      /* Preserve platform realloc(p,0) behavior; NULL does not tell us whether
-       * p was freed. Mark the counters inconclusive instead of guessing. */
-      atomic_fetch_add_explicit(&ps5_heap_ambiguous_zero_reallocs, 1, memory_order_relaxed);
-      return NULL;
     }
   }
   /* The block cannot stay where it is (its arena or its piece of the heap is full, or it

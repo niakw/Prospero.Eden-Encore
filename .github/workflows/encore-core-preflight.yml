@@ -30,6 +30,7 @@ jobs:
         run: |
           set -euxo pipefail
           python3 -B tools/check-python-source-syntax.py
+          python3 -B tools/check-ps5-log-analysis.py
           python3 -B tools/check-performance-policy.py
           python3 -B tools/check-runtime-frame-budget.py
           python3 -B tools/check-universal-emulation-policy.py
