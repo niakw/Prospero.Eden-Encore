@@ -81,8 +81,8 @@ def execute(root:Path,batch_size:int=128,interval:float=4.1,
     current=state
     failure=None
     for variant in (0,1):
-        if not any(f"github|{variant}|{x['title_id']}" not in
-                   current.get("completed_query_keys",[])
+        completed_keys=set(current.get("completed_query_keys",[]))
+        if not any(f"github|{variant}|{x['title_id']}" not in completed_keys
                    for x in catalog["games"]):
             continue
         tries=0
