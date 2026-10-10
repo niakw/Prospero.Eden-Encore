@@ -344,9 +344,31 @@ python3 - "$eden" <<'PYGPU'
 from pathlib import Path
 import sys
 src=(Path(sys.argv[1])/'src/core/device_memory_manager.inc').read_text()
-for token in ('invalid.continuity_tracker = 0;', 'valid.continuity_tracker = 0;',
-              'entry.continuity_tracker = 0;', 'observed == first_backing + n',
-              'tracked_entries[first_page + i].compressed_physical_ptr != backing + i',
+# A restored, fully-patched Eden tree already includes the later C++17
+# atomic publication patch. That patch intentionally replaces these four
+# unprotected legacy accesses. Validate either coherent *whole stage*:
+# never require a stale direct write, and never accept a partial migration.
+legacy = ('invalid.continuity_tracker = 0;',
+          'valid.continuity_tracker = 0;',
+          'entry.continuity_tracker = 0;',
+          'tracked_entries[first_page + i].compressed_physical_ptr != backing + i')
+atomic = ('AtomicStoreContinuity(invalid, 0);',
+          'AtomicStoreContinuity(valid, 0);',
+          'AtomicStoreContinuity(entry, 0);',
+          'AtomicLoadPhysical(tracked_entries[first_page + i]) != backing + i')
+has_legacy = all(token in src for token in legacy)
+has_atomic = all(token in src for token in atomic)
+if not (has_legacy or has_atomic):
+    raise SystemExit('PS5 GPU memory mapping stage missing/incomplete direct or atomic continuity guards')
+if has_atomic:
+    h=(Path(sys.argv[1])/'src/core/device_memory_manager.h').read_text()
+    for token in ('__atomic_load_n(&page.compressed_physical_ptr, __ATOMIC_ACQUIRE)',
+                  '__atomic_store_n(&page.continuity_tracker, value, __ATOMIC_RELAXED)'):
+        if token not in h:
+            raise SystemExit('PS5 cached GPU atomic mapping lacks publication helper: '+token)
+    if any(token in src for token in legacy):
+        raise SystemExit('PS5 GPU mapping mixes atomic and plain per-page access')
+for token in ('observed == first_backing + n',
               'if (addr >= device_as_size || size > device_as_size - addr)',
               'if (address >= device_as_size) return nullptr;',
               '::Eden::GpuFault::ShouldReportRead()', '::Eden::GpuFault::ShouldReportWrite()'):
