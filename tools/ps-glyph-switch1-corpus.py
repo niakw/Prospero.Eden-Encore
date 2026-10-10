@@ -91,12 +91,12 @@ def merge(regions:list[Path],known:list[str]|None=None,
             if eligible.SWITCH2_ID.fullmatch(tid):
                 switch2_in_region+=1
                 continue
-            record=rows.setdefault(tid,{"labels":set(),"metadatas":[]})
+            record=rows.setdefault(tid,{"labels":set(),"entries":[]})
             record["labels"].add(label)
-            # One title may occur in multiple regional stores. The point of
-            # each record is its native platform/type/release proof, not
-            # redundantly storing 4 copies of title text.
-            record["metadatas"].append(metadata)
+            # Keep each regional name attached to ITS OWN platform/type/date.
+            # A separate region's full-game listing must not accidentally
+            # erase the fact that this particular entry is a demo.
+            record["entries"].append((label,metadata))
             count+=1
             if len(rows)>MAX_GAME_ROWS:
                 raise ValueError("Switch1 metadata exceeds supported size")
@@ -112,25 +112,26 @@ def merge(regions:list[Path],known:list[str]|None=None,
     deferred=0
     for tid,value in rows.items():
         labels=sorted(value["labels"],key=lambda x:(len(x),x.casefold()))
-        exact=next((x for x in labels if titledb.clean_name(x) in aliases),None)
-        preferred=exact or labels[0]
-        reviews=[]
-        for metadata in value["metadatas"]:
-            # Detect demo/cloud names in the alias itself. A game with a
-            # qualifying non-demo regional name is not excluded solely
-            # because a regional storefront appends "Trial" to its display.
-            reviews.append(eligible.classify(tid,preferred,metadata,asof))
-        accepted=[v for v in reviews if v["decision"]=="candidate"]
+        # Review each alias with its own metadata, then pick a display name
+        # from qualifying FULL-GAME regional records only.
+        reviews=[(name,eligible.classify(tid,name,meta,asof))
+                 for name,meta in value["entries"]]
+        accepted={name for name,verdict in reviews
+                  if verdict["decision"]=="candidate"}
         if not accepted:
-            classifications=[r["reason"] for r in reviews]
+            classifications=[verdict["reason"] for _,verdict in reviews]
             reason=Counter(classifications).most_common(1)[0][0]
             exclusions[reason]+=1
-            if any(r["decision"]=="defer" for r in reviews):
+            if any(verdict["decision"]=="defer" for _,verdict in reviews):
                 deferred+=1
             if len(exclusions_sample)<120:
-                exclusions_sample.append({"title_id":tid,"title":preferred,
-                                          "reason":reason})
+                exclusions_sample.append({"title_id":tid,
+                                          "title":labels[0],"reason":reason})
             continue
+        full_labels=sorted(accepted,key=lambda x:(len(x),x.casefold()))
+        exact=next((x for x in full_labels
+                    if titledb.clean_name(x) in aliases),None)
+        preferred=exact or full_labels[0]
         games.append({
             "title_id":tid,"title":preferred,"aliases":labels[:12],
             "previously_researched_title":bool(exact),

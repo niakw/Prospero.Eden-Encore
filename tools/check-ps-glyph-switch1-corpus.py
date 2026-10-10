@@ -53,6 +53,27 @@ with tempfile.TemporaryDirectory(prefix="eden-switch1-only-") as temp:
     assert output["officially_verified_switch1_game_count"]==0
     assert output["glyph_compatible_games"]==0
 
+with tempfile.TemporaryDirectory(prefix="eden-switch1-regional-alias-") as temp:
+    a,b=Path(temp)/"first.json",Path(temp)/"second.json"
+    tid="0100ABC000111000"
+    demo_only="0100DEF000111000"
+    a.write_text(json.dumps({
+        "demo": {"id":tid,"name":"Island Explorer: Demo!",
+                 "platform":"Nintendo Switch"},
+        "only": {"id":demo_only,"name":"Island Playtest",
+                 "platform":"Nintendo Switch"}
+    }))
+    b.write_text(json.dumps({
+        "retail": {"id":tid,"name":"Island Explorer",
+                   "platform":"Nintendo Switch",
+                   "type":"Game","releaseDate":"2024-01-01"}
+    }))
+    qualified=tool.merge([a,b])
+    assert qualified["game_count"]==1,qualified
+    assert qualified["games"][0]["title_id"]==tid
+    assert qualified["games"][0]["title"]=="Island Explorer"
+    assert qualified["non_game_or_pre_release_title_ids_excluded"]==1
+
 print("PASS: Switch 1 base titles remain eligible when Switch 2 upgrade edition exists")
 print("PASS: Switch 2-only 0400 identifiers, software updates, and regional duplicate IDs excluded")
 print("NOTE: accepted 0100 title IDs are candidates, not audited unique retail games")

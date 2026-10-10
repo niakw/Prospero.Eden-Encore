@@ -18,9 +18,12 @@ from typing import Any
 
 SWITCH1_ID=re.compile(r"0100[0-9A-Fa-f]{9}000\Z")
 SWITCH2_ID=re.compile(r"0400[0-9A-Fa-f]{9}000\Z")
+# Punctuation beyond brackets (e.g. "Demo!" / "Démo.") and Asian trial
+# suffixes appear in regional metadata. Boundary checks avoid excluding
+# unrelated words such as "Democracy" or "Demon".
 DEMO_PATTERN=re.compile(
-    r"(?:^|[\s\[(\-–])(?:demo|demonstration|trial version|free trial|"
-    r"version d'essai|démo)(?:$|[\s\])\-–:])",re.I)
+    r"(?<!\w)(?:demo|demonstration|trial version|free trial|"
+    r"version d['’]essai|démo|playtest)(?!\w)|体験版|试玩版",re.I)
 CLOUD_PATTERN=re.compile(r"(?:\bcloud version\b|\bcloud edition\b|クラウドバージョン)",re.I)
 GAME_TYPE={"game","games","base game","application","full game"}
 NON_GAME_TYPES={"dlc","downloadable content","add-on","addon","update",
