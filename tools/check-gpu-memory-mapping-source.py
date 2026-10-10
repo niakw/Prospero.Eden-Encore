@@ -166,6 +166,15 @@ assert 'GetIntendedMemorySize()' in zero_alias
 assert 'guest_alias_mapped.fetch_add' in zero_alias
 assert 'guest_alias_access.fetch_add' in zero_alias
 assert 'validate_ps5_guest_zero_alias' in apply
+null_backing=(r/'headless/backports/eden-ps5-guest-map-null-backing.patch').read_text()
+for token in ('if (backing == nullptr)', 'Common::PageType::Unmapped',
+              'EDEN_GUEST_MAP_NO_BACKING', 'auto host_ptr = reinterpret_cast<u64>(backing)',
+              'ShouldReportGuestMapZero()', 'continue;'):
+    assert token in null_backing, token
+assert 'validate_ps5_guest_null_backing' in apply
+assert apply.index('eden-ps5-guest-zero-alias.patch') < apply.index(
+    'eden-ps5-guest-map-null-backing.patch') < apply.index(
+    'eden-ps5-guest-span.patch')
 span=(r/'headless/backports/eden-ps5-guest-span.patch').read_text()
 assert '(addr + size - 1) >> YUZU_PAGEBITS' in span
 assert 'if (p != delta || t != type || b != block) return nullptr;' in span
