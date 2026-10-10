@@ -36,6 +36,26 @@ for name in ("AtomicLoadPhysical", "AtomicStorePhysical",
              "AtomicLoadBacking", "AtomicStoreBacking"):
     assert f"{name}(" in body, name
 assert body.count("std::atomic_ref<") == 6
+# The reverse lookup is also compiled inline from other translation units.
+# Extract the exact two scalar-slot helpers from their own ordered patch.
+reverse_lines = (root / "headless/backports/eden-ps5-gpu-atomic-reverse-table.patch").read_text().splitlines()
+reverse_start = next(i for i, line in enumerate(reverse_lines)
+                     if line.startswith("+    static u32 AtomicLoadReverse("))
+reverse_methods = []
+last_reverse = False
+for line in reverse_lines[reverse_start:]:
+    if line.startswith("+"):
+        reverse_methods.append(line[1:])
+        if "static void AtomicStoreReverse(" in line:
+            last_reverse = True
+    elif last_reverse:
+        break
+    else:
+        raise AssertionError("non-contiguous reverse GPU atomic helpers")
+reverse_body = "\n".join(reverse_methods)
+assert reverse_body.count("std::atomic_ref<") == 2
+assert reverse_body.rstrip().endswith("}")
+assert "#ifdef PS5_NATIVE" not in reverse_body
 assert "#ifdef PS5_NATIVE" not in body
 assert "#else" not in body
 assert "#endif" not in body
@@ -62,10 +82,11 @@ struct Harness {
     };
     static_assert(sizeof(TrackedEntry) == 16);
     static_assert(std::is_trivially_copyable_v<TrackedEntry>);
-""" + body + """
+""" + body + "\n" + reverse_body + """
 };
 int main() {
     Harness::TrackedEntry entry{};
+    u32 reverse_slot{};
     constexpr int iterations = 60000;
     std::vector<std::thread> workers;
     for (int writer = 0; writer < 3; ++writer) {
@@ -75,6 +96,7 @@ int main() {
                 Harness::AtomicStorePhysical(entry, value);
                 Harness::AtomicStoreContinuity(entry, value);
                 Harness::AtomicStoreBacking(entry, static_cast<VAddr>(value));
+                Harness::AtomicStoreReverse(reverse_slot, value);
             }
         });
     }
@@ -84,6 +106,7 @@ int main() {
                 assert(Harness::AtomicLoadPhysical(entry) <= 65535);
                 assert(Harness::AtomicLoadContinuity(entry) <= 65535);
                 assert(Harness::AtomicLoadBacking(entry) <= 65535);
+                assert(Harness::AtomicLoadReverse(reverse_slot) <= 65535);
             }
         });
     }
@@ -113,4 +136,4 @@ with tempfile.TemporaryDirectory(prefix="eden-gpu-atomic-host-") as dirname:
                         "-fsanitize=thread", "-fno-sanitize-recover=all",
                         str(file), "-o", str(tsan)], check=True, timeout=90)
         subprocess.run([str(tsan)], check=True, timeout=180)
-print("Host C++20 atomic_ref helpers verified; PS5 driver/mapping lifecycle not tested")
+print("Host C++20 forward+reverse atomic_ref accessors verified; GPU remap transactions unqualified")
