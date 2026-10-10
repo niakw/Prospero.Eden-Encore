@@ -164,6 +164,7 @@ unsigned long eden_heap_create_lock_state(unsigned *waiters) {
 }
 
 static void *eden_heap_owner(const void *address);
+struct eden_heap_thread; /* forward declaration for TLS cache destructor */
 static void eden_heap_physical_note(struct eden_heap_thread *self,
                                     const void *address, long bytes, long blocks);
 
