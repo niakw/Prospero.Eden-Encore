@@ -18,6 +18,18 @@ for path in (
 ):
     assert path not in workflow, f"actions/cache still contains unsupported path {path}"
 
+# Native all-on builds must provision the same Boost.Container header as
+# the separate host-only core preflight. Four Vulkan host C++ checks consume
+# boost/container/small_vector.hpp before PS5-native compilation starts.
+host_workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
+native_toolchain = workflow.split("      - name: Install build toolchain", 1)[1].split(
+    "      - name: Upgrade Meson", 1)[0]
+assert "libboost-container-dev" in host_workflow
+assert "libboost-container-dev" in native_toolchain
+assert "clang++-18 -std=c++20 -x c++ -fsyntax-only -" in native_toolchain
+assert native_toolchain.index("libboost-container-dev") < native_toolchain.index(
+    "clang++-18 -std=c++20 -x c++ -fsyntax-only -"
+)
 assert "PROSPEROEDEN_GIT_DEPS_ROOT: .deps/repos" in workflow
 assert "PROSPEROEDEN_GIT_DEPS_ROOT" in deps
 assert "item.get('path', '').startswith('../')" in deps
