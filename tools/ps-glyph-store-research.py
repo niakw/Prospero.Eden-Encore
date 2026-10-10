@@ -73,8 +73,9 @@ def switch1_scope_audit(catalog:dict)->dict:
     Name heuristics are diagnostics only, not grounds to delete games.
     """
     games=catalog.get("games")
-    if catalog.get("schema")!=1 or not isinstance(games,list):
-        raise ValueError("invalid source catalog")
+    if (catalog.get("schema")!=1 or not isinstance(games,list) or
+        catalog.get("scope")!="switch1_base_game_research_candidates_only"):
+        raise ValueError("unqualified Switch1 candidate catalog cannot be persisted")
     title_names=defaultdict(list)
     suspected_demo, suspected_cloud=[],[]
     bad_ids=[]
@@ -109,10 +110,11 @@ def switch1_scope_audit(catalog:dict)->dict:
             "switch1_plus_switch2_editions_stay_in_scope":"01007EF00011E000",
             "switch2_only_game_does_not_enter_scope":"0400C3F00006E000"
         },
-        "warning": ("Demo/cloud name hints are diagnostics only; no game is "
-                    "automatically removed by a text heuristic. Availability, "
-                    "retail/release status, and per-game ROMFS eligibility are "
-                    "not certified by TitleDB metadata.")
+        "warning": ("The strict corpus already excludes named demos, cloud-only "
+                    "editions, future dated releases and supported non-game "
+                    "content types. This audit describes remaining metadata "
+                    "candidates, not independently verified official releases "
+                    "or compatible installed game assets.")
     }
 
 

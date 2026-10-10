@@ -266,7 +266,10 @@ def discover(catalog: dict, state: dict, limit: int,
     changed_route = bool(state and (state.get("last_provider") != provider or
                                     state.get("search_variant") != variant))
     stored_offset = state.get("next_offset", 0)
-    require(type(stored_offset) is int and 0 <= stored_offset <= len(games),
+    # An old 24k TitleDB cursor may exceed the smaller *filtered* Switch1
+    # candidate corpus. Offset is advisory: durable query keys decide which
+    # titles to visit, so do not reject a valid legacy cursor on migration.
+    require(type(stored_offset) is int and 0 <= stored_offset <= MAX_CATALOG,
             "bad resume offset")
     completed = set(state.get("completed_title_ids", []))
     completed_tasks = set(state.get("completed_query_keys", []))

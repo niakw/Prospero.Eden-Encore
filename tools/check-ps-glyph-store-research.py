@@ -13,7 +13,8 @@ assert sp and sp.loader
 store=importlib.util.module_from_spec(sp)
 sp.loader.exec_module(store)
 
-catalog={"schema":1,"game_count":2,"games":[{"title_id":"01007EF00011E000",
+catalog={"schema":1,"scope":"switch1_base_game_research_candidates_only",
+         "game_count":2,"games":[{"title_id":"01007EF00011E000",
      "title":"Zelda Breath of the Wild"},{"title_id":"0100AAA000111000",
      "title":"Persona 3 Portable"}]}
 queue={"schema":1,"distinct_game_title_ids":2,"total_search_tasks":8,"games":[]}
@@ -42,6 +43,10 @@ with tempfile.TemporaryDirectory(prefix="eden-mod-research-store-") as t:
     stats=store.persist(root,current,newstate,catalog,queue)
     audit=json.loads((root/"catalog/scope-audit.json").read_text())
     assert audit["switch1_candidate_title_ids"]==2
+    try:
+        store.switch1_scope_audit(dict(catalog,scope="switch1_metadata_all_supplied_regions"))
+    except ValueError:pass
+    else:raise AssertionError("legacy unfiltered Switch1 catalog was accepted")
     assert audit["excludes_switch2_only_0400"]
     assert audit["includes_titles_also_released_for_switch2"]
     assert audit["different_preferred_display_names"]==2

@@ -49,7 +49,8 @@ with tempfile.TemporaryDirectory(prefix="eden-switch1-only-") as temp:
                if x["title_id"]=="01007EF00011E000")
     assert zelda["previously_researched_title"]
     assert len(zelda["aliases"])==2
-    assert output["scope"]=="switch1_metadata_all_supplied_regions"
+    assert output["scope"]=="switch1_base_game_research_candidates_only"
+    assert output["officially_verified_switch1_game_count"]==0
     assert output["glyph_compatible_games"]==0
 
 print("PASS: Switch 1 base titles remain eligible when Switch 2 upgrade edition exists")

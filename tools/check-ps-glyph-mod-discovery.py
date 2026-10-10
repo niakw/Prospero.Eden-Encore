@@ -114,6 +114,14 @@ with tempfile.TemporaryDirectory(prefix="eden-glyph-web-discovery-") as root:
     assert carried["completed_title_ids"] == newst["completed_title_ids"]
     assert updated["games_examined"] == 1
     assert updated["games"][0]["title_id"] != newst["completed_title_ids"][0]
+    # The old unfiltered catalog had more IDs than the strict release-scoped
+    # catalog; its saved numeric offset must not abort a resumed crawl.
+    large_old_cursor = dict(newst, next_offset=24205)
+    resumed, migrated_cursor = search.discover(
+        changed_live, large_old_cursor, 2, provider="duckduckgo", network=False)
+    assert migrated_cursor["catalog_changed_since_last_batch"]
+    assert resumed["games_examined"] == 1
+    assert migrated_cursor["completed_title_ids"] == newst["completed_title_ids"]
     with patch.object(search, "ddg", side_effect=search.ProviderPaused("rate limit")):
         blocked, newstate = search.discover(full, {}, 1, "duckduckgo", True, interval=0)
     assert blocked["games_examined"] == 0 and blocked["errors"]
