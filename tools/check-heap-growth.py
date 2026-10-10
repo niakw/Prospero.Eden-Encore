@@ -414,6 +414,43 @@ int main(int argc, char **argv) {
         assert(eden_heap_large_held(&big_blocks) == 0 && big_blocks == 0);
         assert(atomic_load(&ps5_heap_ambiguous_zero_reallocs) == 0);
     }
+    if (argc > 1 && strcmp(argv[1], "title-cycles") == 0) {
+        // A closed title must be able to reuse existing, still-physically-
+        // backed mspace roots. Physical ownership MUST remain stable across
+        // repeated same-sized title sessions, even with the permanent
+        // 8-MiB thread-arena pin and the launcher allocation still alive.
+        // Do not fake physical reclaim: assert committed bytes stay retained.
+        enum { SESSION_BLOCKS = 8, SESSION_COUNT = 7 };
+        void *blocks[SESSION_BLOCKS];
+        size_t plateau = 0;
+        for (unsigned cycle = 0; cycle < SESSION_COUNT; ++cycle) {
+            for (unsigned i = 0; i < SESSION_BLOCKS; ++i) {
+                blocks[i] = __wrap_malloc((size_t)24 << 20);
+                assert(blocks[i] != NULL);
+                ((unsigned char *)blocks[i])[0] = (unsigned char)(i + cycle);
+                ((unsigned char *)blocks[i])[((size_t)24 << 20) - 1] =
+                    (unsigned char)(cycle ^ i);
+            }
+            for (unsigned i = 0; i < SESSION_BLOCKS; ++i) {
+                assert(((unsigned char *)blocks[i])[0] == (unsigned char)(i + cycle));
+                __wrap_free(blocks[i]);
+            }
+            const size_t committed = eden_heap_committed();
+            assert(committed >= 2 * piece && committed <= heap);
+            (void)eden_heap_release_current_tcache();
+            assert(eden_heap_committed() == committed);
+            if (cycle == 0) plateau = committed;
+            else assert(committed == plateau);
+        }
+        // This is safe REUSE, not a claim that root mspaces were destroyed.
+        // Child arena pins must survive until actual owning allocator exit.
+        assert(atomic_load(&eden_heap_root_arena_pins[0]) >= 1);
+        assert(atomic_load(&committed_bytes) == plateau);
+        assert(eden_heap_committed() == plateau);
+        __wrap_free(first);
+        puts("title-cycles: 7 sessions reuse same physical backing without growth, no unsafe unmap PASS");
+        return 0;
+    }
     if (argc > 1 && strcmp(argv[1], "root-span") == 0) {
         // If a direct large allocation cannot be admitted, a request larger
         // than one piece must create ONE root mspace across multiple pieces.
@@ -675,7 +712,7 @@ with tempfile.TemporaryDirectory(prefix='eden-heap-') as work:
         binary = work / ('heap-' + label.split()[0])
         subprocess.run(['clang-18', '-std=gnu11', '-pthread', '-Wall', '-Wextra', '-Wno-unused-function',
                         '-Wno-unused-parameter', *flags, str(source), '-o', str(binary)], check=True)
-        for mode in ((), ('whole',), ('first-commit-fail',), ('first-mspace-fail',), ('growth-mspace-fail',), ('root-span',)):
+        for mode in ((), ('whole',), ('first-commit-fail',), ('first-mspace-fail',), ('growth-mspace-fail',), ('root-span',), ('title-cycles',)):
             if label != 'checked' and mode:
                 continue
             result = subprocess.run([str(binary), *mode], capture_output=True, text=True, timeout=900)
