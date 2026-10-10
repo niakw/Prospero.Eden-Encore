@@ -18,6 +18,12 @@ import statistics
 from pathlib import Path
 
 VALUE = re.compile(r"([A-Za-z_][A-Za-z_0-9]*)=(-?[0-9]+(?:\.[0-9]+)?)")
+# Native stdio writes bare markers; archived boot-trace/stderr often prefixes
+# timestamps or logger names. Recognize ONLY real known telemetry markers.
+EVENT = re.compile(
+    r"\bEDEN_(?:VULKAN_FRAME|DEV_GPU|DEV_GUEST|PERF_CPU_POINT|PERF_PROGRESS|"
+    r"VULKAN_TEXTURE_BUDGET|JIT_SPARSE_MEMORY|MEMORY_LIVE|DEV_SNAPSHOT_COST)\b"
+)
 
 def read_values(line: str) -> dict[str, float]:
     return {key: float(value) for key, value in VALUE.findall(line)}
@@ -50,6 +56,10 @@ class Trace:
         memory_live: list[dict[str, float]] = []
         snapshot_cost: list[dict[str, float]] = []
         for line in lines:
+            marker = EVENT.search(line)
+            if marker is None:
+                continue
+            line = line[marker.start():]
             if line.startswith("EDEN_VULKAN_FRAME frames="):
                 frames.append(read_values(line))
             elif line.startswith("EDEN_DEV_GPU frame="):
@@ -77,13 +87,30 @@ class Trace:
         )
 
     def windows(self) -> int:
-        return min(len(self.frames), len(self.gpu), len(self.guest),
-                   *(len(self.cpu[k]) for k in range(3)),
-                   *(len(self.jit[k]) for k in range(3)))
+        # These independent threads print 5-second samples. If one snapshot
+        # is missing, aligning "window N" across streams invents a CPU/GPU
+        # correlation. Refuse detailed cross-stream attribution entirely.
+        counts = [len(self.frames), len(self.gpu), len(self.guest)]
+        counts += [len(self.cpu[k]) for k in range(3)]
+        counts += [len(self.jit[k]) for k in range(3)]
+        return counts[0] if counts[0] > 0 and len(set(counts)) == 1 else 0
 
     def report_window(self, index: int) -> dict[str, float]:
         # These counters are cumulative; taking DELTAS is mandatory.
         f = self.frames[index]
+        # Title switches, worker restarts and counter resets invalidate
+        # adjacent cumulative deltas. Never silently turn negative deltas
+        # into fabricated zero work (or attribute them to the next title).
+        counters = [(self.gpu, key) for key in ("cpu_ns", "idle_ns", "full_ns")]
+        counters += [(self.guest, key) for key in
+                     ("ipc_ns", "dequeue_ns", "cache_lock_blocked", "cache_lock_contended")]
+        counters += [(self.cpu[k], "cpu_ns") for k in range(3)]
+        counters += [(self.jit[k], key) for k in range(3)
+                     for key in ("compile_ns", "compilations")]
+        for series, field in counters:
+            if series[index][field] < series[index - 1][field]:
+                raise ValueError(f"cumulative {field} reset at window {index}; "
+                                 "cross-title attribution not safe")
         def delta(s: list[dict[str, float]], key: str) -> float:
             return s[index][key] - s[index-1][key]
         cpu = [max(0.0, delta(self.cpu[k], "cpu_ns") / 1e9)
@@ -106,10 +133,10 @@ class Trace:
             # 0 can mean no successful kernel pressure probe yet; never
             # present an unqualified zero as measured free direct RAM.
             "direct_free_mib": (self.memory_live[index].get("largest_last_confirmed", 0)
-                                / (1024**2) if index < len(self.memory_live)
+                                / (1024**2) if len(self.memory_live) == len(self.frames)
                                 and self.memory_live[index].get("largest_last_confirmed", 0) > 0 else -1),
             "direct_memory_short": (self.memory_live[index].get("short", -1)
-                                    if index < len(self.memory_live) else -1),
+                                    if len(self.memory_live) == len(self.frames) else -1),
             # Development sampling observer cost is NOT automatically a game
             # frame interval. Extra explicit/manual snapshots can break the
             # index alignment; report it separately in the trace overview.
@@ -155,8 +182,18 @@ def print_trace(trace: Trace, prefix: int | None) -> None:
           f" cross_thread_clock_valid={trace.cross_thread_clock_valid}")
     n = min(trace.windows(), limit)
     if n <= 1:
+        print("  NO CROSS-STREAM ATTRIBUTION: samples missing/unequal or "
+              "only one synchronized interval; FPS windows above remain valid.")
         return
-    snapshots = [(i, trace.report_window(i)) for i in range(1, n)]
+    snapshots = []
+    for index in range(1, n):
+        try:
+            snapshots.append((index, trace.report_window(index)))
+        except (KeyError, ValueError) as error:
+            print(f"  SKIP WINDOW #{index}: {error}")
+    if not snapshots:
+        print("  NO CROSS-STREAM ATTRIBUTION: all deltas invalid or reset.")
+        return
     slow = sorted(snapshots, key=lambda a: a[1]["fps"])[:8]
     fast = sorted(snapshots, key=lambda a: a[1]["fps"], reverse=True)[:8]
     for label, group in (("slowest", slow), ("fastest", fast)):
