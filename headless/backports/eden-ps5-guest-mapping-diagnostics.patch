@@ -1,0 +1,48 @@
+--- a/src/core/memory.cpp
++++ b/src/core/memory.cpp
+@@ -29,6 +29,9 @@
+ #include "core/hle/kernel/k_page_table.h"
+ #include "core/hle/kernel/k_process.h"
+ #include "core/memory.h"
++#ifdef PS5_NATIVE
++#include "gpu_fault_rate_limit.h"
++#endif
+ #include "video_core/gpu.h"
+ #include "video_core/host1x/gpu_device_memory_manager.h"
+ #include "video_core/host1x/host1x.h"
+@@ -556,8 +559,22 @@
+                 auto& entry = page_table.entries.GetUnchecked(base);
+ 
+                 entry.Store(false, type, current_block, host_ptr);
++#ifdef PS5_NATIVE
++                // A guest-mapped page with a zero decoded host pointer cannot
++                // supply code, textures or command buffers. Preserve the exact
++                // failure count and sample backing/delta; do not sync a
++                // Critical line to disk for every one of thousands of pages.
++                if (!page_table.entries[base].Pointer() &&
++                    ::Eden::GpuFault::ShouldReportGuestMapZero()) {
++                    LOG_CRITICAL(HW_Memory,
++                        "EDEN_GUEST_MAP_POINTER_ZERO guest={:#016x} target={:#016x} host_delta={:#016x} host_backing={:#016x}",
++                        base << YUZU_PAGEBITS, GetInteger(target), host_ptr,
++                        host_ptr + (base << YUZU_PAGEBITS));
++                }
++#else
+                 ASSERT_MSG(page_table.entries[base].Pointer(),
+                            "memory mapping base yield a nullptr within the table");
++#endif
+ 
+                 base += 1;
+                 target += YUZU_PAGESIZE;
+@@ -577,7 +594,12 @@
+             } else {
+                 switch (static_cast<Common::PageType>(raw.type)) {
+                 case Common::PageType::Memory:
++#ifdef PS5_NATIVE
++                    if (::Eden::GpuFault::ShouldReportGuestNullMapped())
++                        LOG_CRITICAL(HW_Memory, "EDEN_GUEST_MAPPED_NULL_POINTER address={:#016x}", vaddr);
++#else
+                     ASSERT_MSG(false, "Mapped memory page without a pointer @ {:#016x}", vaddr);
++#endif
+                     return nullptr;
+                 case Common::PageType::DebugMemory:
+                     return GetPointerFromDebugMemory(vaddr);

@@ -356,6 +356,19 @@ print('PS5 GPU remap/continuity backport: PASS')
 PYGPU
 }
 apply_one "$root/headless/backports/eden-ps5-gpu-memory-mapping.patch" "$eden/.encore-backport-ps5-gpu-memory-mapping.sha256" validate_ps5_gpu_memory_mapping
+validate_ps5_guest_mapping_diagnostics() {
+python3 - "$eden" <<'PYMAP'
+from pathlib import Path
+import sys
+source=(Path(sys.argv[1])/'src/core/memory.cpp').read_text()
+for token in ('EDEN_GUEST_MAP_POINTER_ZERO', 'EDEN_GUEST_MAPPED_NULL_POINTER',
+              'ShouldReportGuestMapZero()', 'ShouldReportGuestNullMapped()'):
+    if token not in source:
+        raise SystemExit('Pinned guest CPU memory diagnostic missing: '+token)
+print('PS5 guest page-table storm reports bounded: PASS')
+PYMAP
+}
+apply_one "$root/headless/backports/eden-ps5-guest-mapping-diagnostics.patch" "$eden/.encore-backport-ps5-guest-mapping-diagnostics.sha256" validate_ps5_guest_mapping_diagnostics
 # Citron fixes inform this host-worker SM/audctl proposal. It compiles on the
 # pinned Eden source, but PS5 service-init/shutdown behavior is not yet proven.
 # Keep it OFF in the baseline; qualify with a separate controlled HLE A/B.
