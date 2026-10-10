@@ -36,9 +36,11 @@ for name in ("AtomicLoadPhysical", "AtomicStorePhysical",
              "AtomicLoadBacking", "AtomicStoreBacking"):
     assert f"{name}(" in body, name
 assert body.count("std::atomic_ref<") == 6
-assert body.count("#ifdef PS5_NATIVE") == 6
-assert body.count("#else") == 6
-assert body.count("#endif") == 6
+assert "#ifdef PS5_NATIVE" not in body
+assert "#else" not in body
+assert "#endif" not in body
+# All translation units must use the same atomic helpers, even if the
+# PS5_NATIVE define is scoped to a single GPU manager source file.
 assert body.rstrip().endswith("}")
 assert "+    void InsertCPUBacking(size_t page_index" in patch
 assert "+    constexpr void InsertCPUBacking" not in patch
@@ -65,7 +67,6 @@ struct Harness {
 int main() {
     Harness::TrackedEntry entry{};
     constexpr int iterations = 60000;
-    std::atomic<bool> running{true};
     std::vector<std::thread> workers;
     for (int writer = 0; writer < 3; ++writer) {
         workers.emplace_back([&, writer] {
