@@ -567,6 +567,11 @@ static int eden_heap_grow(size_t bytes, unsigned seen) {
       sceKernelUsleep(50);
   }
   int grown = 0;
+  /* Capture immutable ownership metadata under the growth lock. Emit the
+   * kernel record only AFTER unlocking: a slow system logger must never
+   * extend the allocator's serialized 128-MiB commit critical section. */
+  size_t report_request = 0, report_pieces = 0;
+  unsigned report_root = 0, report_spaces = 0;
   const unsigned count = atomic_load_explicit(&eden_heap_space_count, memory_order_relaxed);
   const unsigned used = atomic_load_explicit(&eden_heap_pieces_used, memory_order_relaxed);
   /* Room for the request and for the mspace's own records. */
@@ -603,9 +608,10 @@ static int eden_heap_grow(size_t bytes, unsigned seen) {
         atomic_store_explicit(&eden_heap_root_span[used],(unsigned char)pieces,memory_order_release);
         atomic_store_explicit(&eden_heap_pieces_used, used + (unsigned)pieces, memory_order_release);
         atomic_store_explicit(&eden_heap_space_count, count + 1, memory_order_release);
-        /* At most 23 growth records in a 3-GiB heap. Never format a
-         * fresh 128-MiB admission through libc while holding this lock. */
-        eden_heap_log_growth(bytes, used, pieces, count + 1);
+        report_request = bytes;
+        report_root = used;
+        report_pieces = pieces;
+        report_spaces = count + 1;
         grown = 1;
       } else {
         /* No block from the new piece was ever issued, and no slot/space
@@ -624,6 +630,10 @@ static int eden_heap_grow(size_t bytes, unsigned seen) {
     eden_heap_grow_refused("EDEN_HEAP_GROW refused: the heap is at its limit\n");
   }
   atomic_flag_clear_explicit(&eden_heap_grow_lock, memory_order_release);
+  /* May be reordered against another thread's later growth record. The
+   * logged root/extent/count are captured under the lock, not re-read. */
+  if (report_pieces)
+    eden_heap_log_growth(report_request, report_root, report_pieces, report_spaces);
   return grown;
 }
 
