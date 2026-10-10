@@ -20,6 +20,13 @@ EDEN_PAD_CONTEXT mode=ui reason=navigation
 [ProsperoEden] glyphs: In-game button art: Nintendo original (rule=unsupported)
 CreateGraphicsPipeline: Instruction PRMT (imm) is not implemented
 Direct allocation failed: rc=80020023 bytes=461373440 limit=12884901888
+EDEN_HEAP_PIECE bytes=134217728 va=0x100000000 pa=abc123 alloc_ns=3000000 map_ns=6000000 zero_ns=15000000
+EDEN_HEAP_LIFETIME phase=core_destroyed pieces=1476395008 large=0 large_blocks=0 tcache=1048576
+EDEN_PS5_DMEM_PROBE_FAILED consecutive=1 fallback=last_confirmed
+EDEN_PS5_DMEM_PROBE_FAILED consecutive=2 fallback=conservative
+EDEN_PS5_DMEM_PROBE_SLOW latency_ns=3500000 known=1
+EDEN_MEMORY_LIVE frame=300 largest_last_confirmed=4328521728 short=0
+EDEN_WORKER_TOPOLOGY ready=0 distinct_cores=1 cpus=0,0,0,0,0
 """
 with tempfile.TemporaryDirectory(prefix="eden-ps5-log-triage-") as folder:
     root=Path(folder)
@@ -44,6 +51,17 @@ with tempfile.TemporaryDirectory(prefix="eden-ps5-log-triage-") as folder:
     assert data["out_of_memory_hints"] == 1
     assert len(data["gpu_compatibility_diagnostics"]) == 1
     assert data["jit_policy_samples"][0]["fields"]["sparse"] == 0
+    pressure = data["resource_pressure"]
+    assert pressure["heap_piece_commits_over_16ms"] == 1
+    assert pressure["heap_piece_commit_samples"][0]["total_ms"] == 24.0
+    assert pressure["heap_lifetime_samples"][0]["committed_heap_bytes"] == 1476395008
+    assert pressure["heap_lifetime_samples"][0]["phase"] == "core_destroyed"
+    assert [x["fallback"] for x in pressure["direct_memory_probe_failures"]] == [
+        "last_confirmed", "conservative"]
+    assert pressure["direct_memory_slow_probe_samples"][0]["latency_ms"] == 3.5
+    assert pressure["gpu_last_confirmed_memory_samples"][0]["short"] is False
+    assert pressure["worker_topology_samples"][0]["distinct_cores"] == 1
+    assert pressure["worker_topology_samples"][0]["ready"] is False
     b.write_bytes(b"binary\x00not a log")
     try:
         m.analyze([a,b])
@@ -51,5 +69,5 @@ with tempfile.TemporaryDirectory(prefix="eden-ps5-log-triage-") as folder:
         pass
     else:
         raise AssertionError("NUL log falsely treated as telemetry")
-print("HOST FIXTURE PASS: frame windows/late thresholds, slow launcher, controller transitions, OOM, GPU, identical logs")
+print("HOST FIXTURE PASS: FPS/late frames, heap-commit latency, memory probe, lifetime, worker topology, duplicate logs")
 print("No FC27 rerun, host native build, GitHub Actions or PS5 SDK compilation performed")

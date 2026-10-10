@@ -31,6 +31,23 @@ JIT = re.compile(r"\bEDEN_PS5_JIT_POLICY\s+(.+)")
 JIT_FIELD = re.compile(r"\b(free_mib|admission_budget_mib|safe|sparse)=(\d+)\b")
 GPU_ERROR = re.compile(r"PRMT\s*\(imm\)|PRMT_imm|Source depth is not one|EDEN_GPU_FERMI2D_UNSUPPORTED|EDEN_GPU_PRMT_\w+")
 GLYPH_ORIGINAL = re.compile(r"glyphs:.*Nintendo original.*rule=unsupported")
+# Bounded native-resource diagnostics: these are observed samples, never
+# estimates of total unified GPU/CPU memory or proof of an allocation leak.
+HEAP_PIECE = re.compile(
+    r"\bEDEN_HEAP_PIECE\s+bytes=(\d+)\s+va=\S+\s+pa=\S+\s+"
+    r"alloc_ns=(\d+)\s+map_ns=(\d+)\s+zero_ns=(\d+)")
+HEAP_LIFETIME = re.compile(
+    r"\bEDEN_HEAP_LIFETIME\s+phase=([a-z_]+)\s+pieces=(\d+)\s+"
+    r"large=(\d+)\s+large_blocks=(\d+)\s+tcache=(\d+)")
+DMEM_FAILED = re.compile(
+    r"\bEDEN_PS5_DMEM_PROBE_FAILED\s+consecutive=(\d+)\s+"
+    r"fallback=(last_confirmed|conservative)")
+DMEM_SLOW = re.compile(r"\bEDEN_PS5_DMEM_PROBE_SLOW\s+latency_ns=(\d+)\s+known=(\d+)")
+MEMORY_LIVE = re.compile(
+    r"\bEDEN_MEMORY_LIVE\s+frame=(\d+)\s+"
+    r"largest_last_confirmed=(\d+)\s+short=(\d+)")
+TOPOLOGY = re.compile(r"\bEDEN_WORKER_TOPOLOGY\s+ready=(\d+)([^\r\n]*)")
+TOPOLOGY_CORES = re.compile(r"\bdistinct_cores=(\d+)\b")
 LINE_LIMIT = 16 * 1024
 
 
@@ -46,6 +63,12 @@ def parse_log(data: bytes) -> dict:
     jit_policy = []
     glyph_original_count = 0
     oom_hints = 0
+    heap_piece_samples: list[dict] = []
+    heap_lifetime: list[dict] = []
+    dmem_failures: list[dict] = []
+    dmem_slow: list[dict] = []
+    memory_live: list[dict] = []
+    topology_samples: list[dict] = []
     for number, line in enumerate(text.splitlines(), 1):
         if len(line) > LINE_LIMIT:
             raise ValueError("oversized PS5 log line")
@@ -83,6 +106,47 @@ def parse_log(data: bytes) -> dict:
             glyph_original_count += 1
         if "std::bad_alloc" in line or "Direct allocation failed:" in line:
             oom_hints += 1
+        if heap := HEAP_PIECE.search(line):
+            if len(heap_piece_samples) < MAX_EVENTS:
+                size, alloc, mapping, zero = (int(x) for x in heap.groups())
+                if size <= 16 * 1024**3 and max(alloc, mapping, zero) <= 600_000_000_000:
+                    heap_piece_samples.append({
+                        "line": number, "committed_bytes": size,
+                        "alloc_ms": round(alloc / 1_000_000, 3),
+                        "map_ms": round(mapping / 1_000_000, 3),
+                        "zero_ms": round(zero / 1_000_000, 3),
+                        "total_ms": round((alloc + mapping + zero) / 1_000_000, 3)})
+        if lifetime := HEAP_LIFETIME.search(line):
+            if len(heap_lifetime) < MAX_EVENTS:
+                phase, pieces, large, blocks, tcache = lifetime.groups()
+                heap_lifetime.append({
+                    "line": number, "phase": phase,
+                    "committed_heap_bytes": int(pieces),
+                    "large_live_bytes": int(large),
+                    "large_live_blocks": int(blocks),
+                    "tcache_approx_bytes": int(tcache)})
+        if fail := DMEM_FAILED.search(line):
+            if len(dmem_failures) < MAX_EVENTS:
+                dmem_failures.append({
+                    "line": number, "consecutive": int(fail[1]),
+                    "fallback": fail[2]})
+        if slow_probe := DMEM_SLOW.search(line):
+            if len(dmem_slow) < MAX_EVENTS:
+                dmem_slow.append({
+                    "line": number, "latency_ms": round(int(slow_probe[1]) / 1_000_000, 3),
+                    "known": bool(int(slow_probe[2]))})
+        if live := MEMORY_LIVE.search(line):
+            if len(memory_live) < MAX_EVENTS:
+                memory_live.append({
+                    "line": number, "frame": int(live[1]),
+                    "last_confirmed_largest_bytes": int(live[2]),
+                    "short": bool(int(live[3]))})
+        if topology := TOPOLOGY.search(line):
+            if len(topology_samples) < MAX_EVENTS:
+                cores = TOPOLOGY_CORES.search(topology[2])
+                topology_samples.append({
+                    "line": number, "ready": bool(int(topology[1])),
+                    "distinct_cores": int(cores[1]) if cores else None})
 
     frame_count = sum(x["frames"] for x in frame_windows)
     seconds = sum(x["seconds"] for x in frame_windows)
@@ -105,6 +169,19 @@ def parse_log(data: bytes) -> dict:
         "gpu_compatibility_diagnostics": gpu_errors,
         "original_nintendo_glyph_events": glyph_original_count,
         "out_of_memory_hints": oom_hints,
+        "resource_pressure": {
+            "heap_piece_commit_samples": heap_piece_samples,
+            "heap_piece_commits_over_16ms": sum(
+                sample["total_ms"] >= 16 for sample in heap_piece_samples),
+            "heap_lifetime_samples": heap_lifetime,
+            "direct_memory_probe_failures": dmem_failures,
+            "direct_memory_slow_probe_samples": dmem_slow,
+            "gpu_last_confirmed_memory_samples": memory_live,
+            "worker_topology_samples": topology_samples,
+            "warning": ("Heap pieces are retained physical backing, not live bytes. "
+                        "A largest contiguous direct-memory block is not total free "
+                        "GPU VRAM; samples may be incomplete or from other sessions.")
+        },
         "frame_samples_absent_does_not_imply_smooth": True,
     }
 
