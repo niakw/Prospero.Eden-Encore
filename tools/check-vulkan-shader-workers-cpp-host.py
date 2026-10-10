@@ -66,6 +66,8 @@ std::uint64_t PinnedWorkerMask() { return ::primary_mask; }
 std::uint64_t VerifiedSecondaryPlacementMask() { return ::secondary_mask; }
 }
 static std::size_t ActualShaderWorkerPolicy(std::size_t max_core_threads) {
+    (void)max_core_threads;
+#ifndef ANDROID
 """
 suffix = r"""
 int main() {
