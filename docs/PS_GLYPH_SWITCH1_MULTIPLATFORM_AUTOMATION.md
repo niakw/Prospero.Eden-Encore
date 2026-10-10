@@ -157,3 +157,28 @@ packs. This work never validates FC27 frame times/VRAM/JIT.
 - Le crawler long refuse le **vieux catalogue non qualifié** et attend la
   rematérialisation de `catalog/switch1-titles.json.gz` avant de continuer.
   L'historique de recherches déjà effectué n'est pas supprimé.
+
+
+## Scope matériel corrigé — Switch 1 uniquement (10 octobre 2026)
+
+- **Inclure :** toute version de jeu exécutée sur la **Nintendo Switch 1**
+  (y compris les jeux qui ont aussi une version Switch 2, une Switch 2
+  Edition ou une mise à niveau sur la nouvelle console).
+- **Exclure :** les jeux natifs / exclusifs Nintendo Switch 2 (`0400…`),
+  même s'ils sont disponibles dans les mêmes boutiques ou séries.
+  BOTW Switch 1 : `01007EF00011E000`, conservé. Mario Kart World :
+  `0400C3F00006E000`, exclu.
+- **Méthode :** la source `blawar/titledb` sert de métadonnées candidates
+  Switch 1, avec validation des IDs d'application `0100…000`.
+  Les éditions Switch 2 `0400` ne sont jamais converties arbitrairement
+  en faux titres Switch 1.
+- **Comptage :** 24 205 correspond au nombre d'**IDs candidats dédupliqués
+  par région**, et non à 24 205 sorties commerciales uniques vérifiées.
+  Le rapport `data/glyph-research/catalog/scope-audit.json` expose les
+  noms d'affichage répétés et les indices de démos/cloud sans supprimer un
+  titre sur une simple règle textuelle.
+- **Validation :** `tools/check-ps-glyph-switch1-corpus.py` vérifie
+  les versions Switch 1 conservées et les exclusivités 2 écartées ;
+  `tools/check-ps-glyph-store-research.py` refuse les IDs `0400`
+  dans le stockage persistant. Les 96 820 liens de recherche préparés
+  ne sont pas 96 820 requêtes réellement exécutées.
