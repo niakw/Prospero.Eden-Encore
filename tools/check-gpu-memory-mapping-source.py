@@ -19,6 +19,13 @@ assert '({hint, remaining_pages, tracked_entries.size() - page_index})' in p
 assert 'std::atomic<std::uint64_t> reads{0}, writes{0}' in h
 assert 'return n <= 8 || (n & (n - 1)) == 0;' in h
 assert 'target_include_directories(video_core PRIVATE "${EDEN_PORT_DIR}")' in c
+# Upstream core/video_core do not inherit PS5_NATIVE from the executable/common.
+# Scope the define to precisely the rewritten memory.cpp and GPU manager TU.
+assert 'set(eden_cpu_memory_tu "${PORT_BUILD_DIR}/memory.cpp")' in c
+assert 'set(eden_cpu_memory_tu "${PROJECT_SOURCE_DIR}/src/core/memory.cpp")' in c
+assert 'set_property(SOURCE "${eden_cpu_memory_tu}" TARGET_DIRECTORY core' in c
+assert 'set_property(SOURCE "${PROJECT_SOURCE_DIR}/src/video_core/host1x/gpu_device_memory_manager.cpp"' in c
+assert c.count('APPEND PROPERTY COMPILE_DEFINITIONS "PS5_NATIVE=1"') >= 2
 assert 'validate_ps5_gpu_memory_mapping' in apply
 assert 'EDEN_GPU_UNMAPPED_COUNTERS read=%llu write=%llu guest_map_zero=%llu guest_null_mapped=%llu' in perf
 diagnostics=(r/'headless/backports/eden-ps5-guest-mapping-diagnostics.patch').read_text()

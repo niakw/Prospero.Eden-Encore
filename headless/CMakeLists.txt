@@ -996,6 +996,20 @@ if(EDEN_A32_FASTMEM)
     list(APPEND core_sources "${PORT_BUILD_DIR}/deconstructed_rom_directory.cpp")
 endif()
 set_property(TARGET core PROPERTY SOURCES "${core_sources}")
+# PS5_NATIVE is a CMake option, not a transitive preprocessor definition for
+# core or video_core. Only these two pinned TUs own the address guards below.
+# Do NOT enable it broadly for every upstream C++ source.
+if(PS5_NATIVE)
+    if(EDEN_A32_FASTMEM)
+        set(eden_cpu_memory_tu "${PORT_BUILD_DIR}/memory.cpp")
+    else()
+        set(eden_cpu_memory_tu "${PROJECT_SOURCE_DIR}/src/core/memory.cpp")
+    endif()
+    set_property(SOURCE "${eden_cpu_memory_tu}" TARGET_DIRECTORY core
+        APPEND PROPERTY COMPILE_DEFINITIONS "PS5_NATIVE=1")
+    set_property(SOURCE "${PROJECT_SOURCE_DIR}/src/video_core/host1x/gpu_device_memory_manager.cpp"
+        TARGET_DIRECTORY video_core APPEND PROPERTY COMPILE_DEFINITIONS "PS5_NATIVE=1")
+endif()
 # Homebrew and some titles can have no control/NACP data. Avoid dereferencing the absent
 # object when deriving the pseudo device ID; seed 0 matches Eden's defaults for missing NACP data.
 file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/am/service/application_functions.cpp" app_functions_source)
