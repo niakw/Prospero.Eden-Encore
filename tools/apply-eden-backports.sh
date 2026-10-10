@@ -496,6 +496,29 @@ print('PS5 GPU reject invalid flush/write-invalidation extents: PASS')
 PYBLOCKFLUSH
 }
 apply_one "$root/headless/backports/eden-ps5-gpu-block-flush-bounds.patch" "$eden/.encore-backport-ps5-gpu-block-flush-bounds.sha256" validate_ps5_gpu_block_flush_bounds
+validate_ps5_gpu_span_physical_bounds() {
+python3 - "$eden" <<'PYSPANBOUNDS'
+from pathlib import Path
+import sys
+s=(Path(sys.argv[1])/'src/core/device_memory_manager.inc').read_text()
+need=('first_phys >= compressed_device_addr.size()',
+      'page_count > compressed_device_addr.size() - first_phys')
+for token in need:
+    if s.count(token) != 2:
+        raise SystemExit('GPU GetSpan physical bounds missing from const/non-const path: '+token)
+for signature in ('u8* DeviceMemoryManager<Traits>::GetSpan(',
+                  'const u8* DeviceMemoryManager<Traits>::GetSpan('):
+    start=s.index(signature)
+    end=s.index('template <typename Traits>',start)
+    block=s[start:end]
+    if not (block.index('if (backing == 0) return nullptr;') <
+            block.index('page_count > compressed_device_addr.size() - first_phys') <
+            block.index('for (size_t i = 1; i < page_count; ++i)')):
+        raise SystemExit('GPU GetSpan physical capacity check incorrectly placed: '+signature)
+print('PS5 GPU direct-span physical bounds (const and mutable): PASS')
+PYSPANBOUNDS
+}
+apply_one "$root/headless/backports/eden-ps5-gpu-span-physical-bounds.patch" "$eden/.encore-backport-ps5-gpu-span-physical-bounds.sha256" validate_ps5_gpu_span_physical_bounds
 validate_ps5_gpu_reverse_inline() {
 python3 - "$eden" <<'PYGPUINLINE'
 from pathlib import Path
