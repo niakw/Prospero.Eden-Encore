@@ -39,8 +39,14 @@
                 const bool dirty = IsDownloadable(image) && False(image.flags & ImageFlagBits::BadOverlap);
                 if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) ||
                     (!DirtyEvictions() && dirty)) return false;
+                // A clean or unsupported image is still visited by the
+                // real Cleanup pass, but cannot use this staged fast path.
+                // Skip it, do NOT stop scanning older-to-newer LRU entries:
+                // the following dirty images can still share one Finish().
                 if (!dirty || !image.aliased_images.empty() || !image.overlapping_images.empty() ||
-                    image.HasScaled() || image.info.num_samples != 1 || gc_downloads.size() == gc_prefetch_limit ||
+                    image.HasScaled() || image.info.num_samples != 1) return false;
+                // Full descriptor/byte capacity is a true batch boundary.
+                if (gc_downloads.size() == gc_prefetch_limit ||
                     image.unswizzled_size_bytes > 32_MiB - bytes) return true;
                 auto map = runtime.DownloadStagingBuffer(image.unswizzled_size_bytes, true);
                 // The pinned StagingBufferRef is a POD handle, not a RAII
