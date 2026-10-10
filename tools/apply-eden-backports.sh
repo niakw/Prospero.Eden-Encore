@@ -399,7 +399,20 @@ python3 - "$eden" <<'PYUNMAP'
 from pathlib import Path
 import sys
 code=(Path(sys.argv[1])/'src/core/device_memory_manager.inc').read_text()
-for token in ('base_dev != retiring_page', 'EDEN_GPU_UNMAP_REVERSE_MISMATCH',
+# The later atomic reverse-table patch rewrites the same comparison.
+# A cache restored after that patch must prove its atomic equivalent,
+# not resurrect a direct racy read of the reverse mapping table.
+legacy='if (base_dev != retiring_page) {'
+atomic='if (AtomicLoadReverse(base_dev) != retiring_page) {'
+if legacy not in code and atomic not in code:
+    raise SystemExit('PS5 GPU Unmap reverse-map comparison guard missing')
+if atomic in code:
+    h=(Path(sys.argv[1])/'src/core/device_memory_manager.h').read_text()
+    if '__atomic_load_n(&slot, __ATOMIC_ACQUIRE)' not in h:
+        raise SystemExit('PS5 cached GPU reverse comparison missing atomic acquire helper')
+    if legacy in code:
+        raise SystemExit('PS5 GPU Unmap still contains plain reverse comparison')
+for token in ('EDEN_GPU_UNMAP_REVERSE_MISMATCH',
               'ShouldReportRemapMismatch()'):
     if token not in code: raise SystemExit('PS5 GPU Unmap reverse-map guard missing: '+token)
 print('Pinned PS5 GPU reverse-map unmap guard: PASS')

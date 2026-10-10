@@ -132,6 +132,7 @@ with tempfile.TemporaryDirectory(prefix="eden-pinned-gpu-replay-") as tmp:
     # apply_one() reruns each early-stage validator against a FULLY patched
     # cached Eden tree, which must accept later security-hardening edits.
     replay_count = 0
+    failed_validators = []
     for name in patch_names:
         binding = re.search(
             r'(?m)^apply_one "\$root/headless/backports/' + re.escape(name) +
@@ -143,10 +144,21 @@ with tempfile.TemporaryDirectory(prefix="eden-pinned-gpu-replay-") as tmp:
             r"\(\) \{\npython3 - \"\$eden\" <<'(\w+)'\n(.*?)\n\1\n\}",
             apply_source)
         assert script, "Cannot extract production validator: " + validator_name
-        subprocess.run([sys.executable, "-c", script.group(2), str(checkout)],
-                       cwd=checkout, check=True, timeout=20)
+        result = subprocess.run([sys.executable, "-c", script.group(2), str(checkout)],
+                                cwd=checkout, capture_output=True, text=True,
+                                timeout=20)
+        if result.returncode:
+            detail = (result.stderr or result.stdout).strip()
+            failed_validators.append((validator_name, detail))
+            print("GPU_CACHE_VALIDATOR_FAIL", validator_name, detail, flush=True)
+        else:
+            print("GPU_CACHE_VALIDATOR_PASS", validator_name, flush=True)
         replay_count += 1
     assert replay_count == len(patch_names)
+    if failed_validators:
+        raise SystemExit("Cached GPU source revalidation failed in " +
+                         str(len(failed_validators)) + " of " + str(replay_count) +
+                         " stages: " + repr(failed_validators))
     print(f"PASS cached fully-patched Eden GPU: {replay_count} actual stage validators", flush=True)
 
 print("PASS two exact pinned GPU sources, all 16 production-ordered git apply patches")
