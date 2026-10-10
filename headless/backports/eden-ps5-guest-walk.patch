@@ -1,0 +1,34 @@
+--- a/src/core/memory.cpp
++++ b/src/core/memory.cpp
+@@ -244,7 +244,14 @@
+         std::size_t page_offset = addr & YUZU_PAGEMASK;
+         bool user_accessible = true;
+ 
++#ifndef PS5_NATIVE
+         current_page_table->entries.CommitRegion(page_index, page_index + (size >> YUZU_PAGEBITS) + 1);
++#else
++        // The PS5's read-only shared-zero sparse slots are safe to inspect.
++        // WalkBlock reads PageEntryData; it never writes the page table.
++        // Committing every scanned page consumes 2 MiB of direct RAM per
++        // sparse slot, including reads of UNMAPPED guest/texture addresses.
++#endif
+         while (remaining_size != 0) {
+             const std::size_t copy_amount = (std::min)(std::size_t(YUZU_PAGESIZE) - page_offset, remaining_size);
+             const auto current_vaddr = u64((page_index << YUZU_PAGEBITS) + page_offset);
+@@ -256,6 +263,16 @@
+                 break;
+             }
+             case Common::PageType::Memory: {
++#ifdef PS5_NATIVE
++                // Preserve the zero-fill / write-discard contract instead of
++                // memcpy into an invalid host address if a corrupted table
++                // marks this guest page Memory but supplies no host pointer.
++                if (!pointer) {
++                    user_accessible = false;
++                    on_unmapped(offset, copy_amount, current_vaddr);
++                    break;
++                }
++#endif
+                 u8* mem_ptr = reinterpret_cast<u8*>(pointer + page_offset + (page_index << YUZU_PAGEBITS));
+                 on_memory(offset, copy_amount, mem_ptr);
+                 break;

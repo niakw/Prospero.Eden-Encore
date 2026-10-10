@@ -369,6 +369,19 @@ print('PS5 guest page-table storm reports bounded: PASS')
 PYMAP
 }
 apply_one "$root/headless/backports/eden-ps5-guest-mapping-diagnostics.patch" "$eden/.encore-backport-ps5-guest-mapping-diagnostics.sha256" validate_ps5_guest_mapping_diagnostics
+validate_ps5_guest_walk_memory() {
+python3 - "$eden" <<'PYWALK'
+from pathlib import Path
+import sys
+s=(Path(sys.argv[1])/'src/core/memory.cpp').read_text()
+assert 'current_page_table->entries.CommitRegion(page_index, page_index + (size >> YUZU_PAGEBITS) + 1);' in s
+assert '// WalkBlock reads PageEntryData; it never writes the page table.' in s
+assert 'if (!pointer) {' in s and 'on_unmapped(offset, copy_amount, current_vaddr);' in s
+assert 'Preserve the zero-fill / write-discard contract' in s
+print('Pinned PS5 guest memory walker: read-only lookup and invalid-pointer guard PASS')
+PYWALK
+}
+apply_one "$root/headless/backports/eden-ps5-guest-walk.patch" "$eden/.encore-backport-ps5-guest-walk.sha256" validate_ps5_guest_walk_memory
 # Citron fixes inform this host-worker SM/audctl proposal. It compiles on the
 # pinned Eden source, but PS5 service-init/shutdown behavior is not yet proven.
 # Keep it OFF in the baseline; qualify with a separate controlled HLE A/B.
