@@ -66,6 +66,8 @@ for wrong in (
     {"schema": 1, "elf_text_size_hex": "0x40", "files": {"unstripped_elf": {"sha256": "0" * 64}}},
     {"schema": 1, "elf_text_size_hex": "0x41", "files": valid["files"]},
     {"schema": 0, "elf_text_size_hex": "0x40", "files": valid["files"]},
+    {"schema": 1, "elf_text_size_hex": "0x40", "files": None},
+    {"schema": 1, "elf_text_size_hex": "0x40", "files": {"unstripped_elf": None}},
 ):
     try:
         sym.verify_elf_receipt(bytes(buf), 64, wrong)
