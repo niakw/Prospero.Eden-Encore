@@ -1,9 +1,9 @@
 --- a/src/core/memory.cpp
 +++ b/src/core/memory.cpp
 @@ -553,6 +553,26 @@
-              page_table.entries.CommitRegion(base, end);
-              while (base != end) {
--                 auto host_ptr = reinterpret_cast<u64>(system.DeviceMemory().GetPointer<u8>(target)) - (base << YUZU_PAGEBITS);;
+             page_table.entries.CommitRegion(base, end);
+             while (base != end) {
+-                auto host_ptr = reinterpret_cast<u64>(system.DeviceMemory().GetPointer<u8>(target)) - (base << YUZU_PAGEBITS);;
 +#ifdef PS5_NATIVE
 +                // Never publish a guest Memory page whose actual physical
 +                // backing lookup failed. A valid zero-delta host/guest alias
@@ -25,6 +25,6 @@
 +#else
 +                auto host_ptr = reinterpret_cast<u64>(system.DeviceMemory().GetPointer<u8>(target)) - (base << YUZU_PAGEBITS);;
 +#endif
-                  auto& entry = page_table.entries.GetUnchecked(base);
+                 auto& entry = page_table.entries.GetUnchecked(base);
  
-                  entry.Store(false, type, current_block, host_ptr);
+                 entry.Store(false, type, current_block, host_ptr);
