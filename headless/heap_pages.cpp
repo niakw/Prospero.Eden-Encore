@@ -26,6 +26,11 @@ extern "C" void* eden_heap_reserve(std::size_t size) {
 static void* first_committed_va;
 static std::size_t first_committed_size;
 static std::int64_t first_committed_pa = -1;
+// Read-only provenance; the original piece owns this exact physical range
+// unless the startup rollback has explicitly cleared the record.
+extern "C" std::int64_t eden_heap_first_direct_owner(void) {
+    return first_committed_pa;
+}
 extern "C" int eden_heap_commit(void* address, std::size_t size) {
     std::int64_t physical = -1;
     if (!Common::CommitMemoryRange(address, size, &physical)) return -1;
