@@ -33,6 +33,13 @@ for token in (
 ):
     assert token in perf, f"Missing physical pool provenance: {token}"
 assert "SaturatingAdd" in header
+assert 'IsKernelFreeSpanValid(' in header
+assert 'IsKernelFreeSpanValid(total, start, observed)' in perf
+assert 'IsKernelFreeSpanValid(cached_direct_total, start, largest)' in perf
+assert 'IsKernelFreeSpanValid(total, largest_start, largest)' in perf
+assert 'const bool largest_valid = largest_rc == 0' in perf
+assert 'unsigned(account.within_extent), unsigned(largest_valid),' in perf
+assert 'largest_start=%lld largest_valid=%u free_upper=' in perf
 assert '#include "direct_pool_probe_policy.h"' in perf
 assert '#include "direct_pool_region_scan.h"' in perf
 assert '::Eden::DirectPool::RegionScan scan{total};' in perf
@@ -40,7 +47,7 @@ assert 'scan.Include(region.start, region.end)' in perf
 assert 'const long long free_upper = static_cast<long long>(scan.FreeUpperBound());' in perf
 assert 'scan_reached_extent=%u scan_stop=%u query_rc=%d short=%d' in perf
 assert 'scan.ReachedExtent()' in perf
-assert 'NEVER allocatable' not in region_policy or 'NEVER allocatable' in region_policy
+assert "NEVER allocatable or a JIT/GPU budget" in region_policy
 assert '::Eden::DirectPool::ProbeIntervalNs(' in perf
 assert 'kProbeHighHeadroomBytes = 4ULL << 30' in probe_policy
 assert "std::numeric_limits<std::uint64_t>::max()" in header
@@ -86,6 +93,18 @@ int main() {
     static_assert(ProbeIntervalNs(true, 0, 4*GiB-MiB) == kProbeFastNs);
     static_assert(ProbeIntervalNs(true, 0, 4*GiB) == kProbeHighHeadroomNs);
     static_assert(ProbeIntervalNs(true, 0, 8*GiB) == kProbeHighHeadroomNs);
+    // An invalid kernel-free span must never drive the dense JIT plan
+    // or graphics admission. Check negative start, too-large length,
+    // exact boundary, zero known availability and extreme integer values.
+    static_assert(IsKernelFreeSpanValid(12*GiB, 0, 12*GiB));
+    static_assert(IsKernelFreeSpanValid(12*GiB, 4*GiB, 8*GiB));
+    static_assert(IsKernelFreeSpanValid(12*GiB, 12*GiB, 0));
+    static_assert(!IsKernelFreeSpanValid(12*GiB, 4*GiB, 9*GiB));
+    static_assert(!IsKernelFreeSpanValid(12*GiB, -1, 1));
+    static_assert(!IsKernelFreeSpanValid(12*GiB, 12*GiB+1, 0));
+    static_assert(!IsKernelFreeSpanValid(0, 0, 0));
+    static_assert(!IsKernelFreeSpanValid(-1, 0, 0));
+    static_assert(!IsKernelFreeSpanValid(12*GiB, 0, std::numeric_limits<std::size_t>::max()));
     // Interrupted enumeration must not become a fictional pool budget.
     RegionScan partial{12*GiB};
     assert(partial.Include(1*GiB, 2*GiB));
@@ -154,3 +173,4 @@ print("PASS kernel 12-GiB direct pool vs installed 16-GiB distinction, 1280-MiB 
 print("Unclassified bytes are NOT confirmed free RAM; no physical Sony mspace unmapping")
 print("PASS kernel direct-memory region scan: incomplete enumeration cannot claim full physical pool")
 print("PASS 100-ms pressure/unknown probe cadence, 250-ms only for >=4 GiB confirmed contiguous headroom")
+print("PASS JIT/GPU free-span admission refuses successful-but-out-of-range kernel replies")

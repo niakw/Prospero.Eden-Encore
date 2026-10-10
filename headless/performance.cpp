@@ -584,9 +584,14 @@ bool QueryLargestDirectMemoryBlock(std::size_t* largest) noexcept {
 #ifdef PS5_NATIVE
     const std::int64_t total = sceKernelGetDirectMemorySize();
     if (total <= 0) return false;
-    std::int64_t start = 0;
-    return sceKernelAvailableDirectMemorySize(0, total, 0x4000,
-                                                &start, largest) == 0;
+    std::int64_t start = -1;
+    std::size_t observed = 0;
+    if (sceKernelAvailableDirectMemorySize(0, total, 0x4000,
+                                           &start, &observed) != 0 ||
+        !::Eden::DirectPool::IsKernelFreeSpanValid(total, start, observed))
+        return false;
+    *largest = observed;
+    return true;
 #else
     return false;
 #endif
@@ -666,7 +671,8 @@ static void RefreshFreeMemory() {
         if (observed_total > 0) cached_direct_total = observed_total;
     }
     const bool known = cached_direct_total > 0 &&
-        sceKernelAvailableDirectMemorySize(0, cached_direct_total, 0x4000, &start, &largest) == 0;
+        sceKernelAvailableDirectMemorySize(0, cached_direct_total, 0x4000, &start, &largest) == 0 &&
+        ::Eden::DirectPool::IsKernelFreeSpanValid(cached_direct_total, start, largest);
     // Unknown is not the same as an observed low-memory condition. A single
     // transient failed query previously flipped memory_short to true and
     // immediately enabled expensive dirty-texture download/eviction. Keep
@@ -763,6 +769,8 @@ void ReportDirectMemoryState(const char* phase) {
     std::size_t largest = 0;
     const int largest_rc = sceKernelAvailableDirectMemorySize(
         0, total, 0x4000, &largest_start, &largest);
+    const bool largest_valid = largest_rc == 0 &&
+        ::Eden::DirectPool::IsKernelFreeSpanValid(total, largest_start, largest);
 
     // An early kernel stop can mean EOF or error; never equate structurally
     // valid records with a complete scan. Even a valid free_upper is only
@@ -827,14 +835,14 @@ void ReportDirectMemoryState(const char* phase) {
                 sparse_physical, jit_committed, jit_dense,
                 static_cast<unsigned long long>(account.tracked_bytes),
                 static_cast<unsigned long long>(account.not_tracked_bytes),
-                unsigned(account.within_extent), unsigned(largest_rc == 0),
-                largest_rc == 0 ? largest : std::size_t{0});
+                unsigned(account.within_extent), unsigned(largest_valid),
+                largest_valid ? largest : std::size_t{0});
     std::printf("EDEN_MEMORY_LAYOUT phase=%s largest_rc=%d total=%lld largest=%zu "
-                "largest_start=%lld free_upper=%lld scanned_regions=%u scan_valid=%d "
+                "largest_start=%lld largest_valid=%u free_upper=%lld scanned_regions=%u scan_valid=%d "
                 "scan_reached_extent=%u scan_stop=%u query_rc=%d short=%d\n",
                 phase, largest_rc, static_cast<long long>(total),
-                largest_rc == 0 ? largest : size_t{0},
-                static_cast<long long>(largest_start), free_upper,
+                largest_valid ? largest : size_t{0},
+                static_cast<long long>(largest_start), unsigned(largest_valid), free_upper,
                 scan.regions, int(scan.valid), unsigned(scan.ReachedExtent()),
                 scan_stop, query_rc, int(graphics_memory_short.load(std::memory_order_relaxed)));
 #else
