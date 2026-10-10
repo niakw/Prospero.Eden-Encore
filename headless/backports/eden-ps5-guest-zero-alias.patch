@@ -1,0 +1,67 @@
+--- a/src/core/memory.cpp
++++ b/src/core/memory.cpp
+@@ -26,6 +26,7 @@
+ #include "core/device_memory.h"
+ #include "core/gpu_dirty_memory_manager.h"
+ #include "core/hardware_properties.h"
++#include "core/hle/kernel/board/nintendo/nx/k_system_control.h"
+ #include "core/hle/kernel/k_page_table.h"
+ #include "core/hle/kernel/k_process.h"
+ #include "core/memory.h"
+@@ -50,6 +51,20 @@
+ struct Memory::Impl {
+     explicit Impl(Core::System& system_) : system{system_} {}
+ 
++#ifdef PS5_NATIVE
++    // Delta-zero page pointers are not necessarily unmapped: when valid
++    // guest VA and host VA coincide, their stored difference is zero.
++    // Bounds-check against the same allocation size used by DeviceMemory.
++    [[nodiscard]] bool IsDirectBackingAlias(u64 address, std::size_t bytes) const {
++        const auto base = reinterpret_cast<std::uintptr_t>(
++            system.DeviceMemory().buffer.BackingBasePointer());
++        const std::size_t capacity =
++            Kernel::Board::Nintendo::Nx::KSystemControl::Init::GetIntendedMemorySize();
++        return base != 0 && address >= base && bytes <= capacity &&
++               address - base <= capacity - bytes;
++    }
++#endif
++
+     void SetCurrentPageTable(Kernel::KProcess& process) {
+         current_page_table = &process.GetPageTable().GetImpl();
+ 
+@@ -271,6 +286,11 @@
+                 // memcpy into an invalid host address if a corrupted table
+                 // marks this guest page Memory but supplies no host pointer.
+                 if (!pointer) {
++                    if (IsDirectBackingAlias(current_vaddr, copy_amount)) {
++                        ::Eden::GpuFault::guest_alias_access.fetch_add(1, std::memory_order_relaxed);
++                        on_memory(offset, copy_amount, reinterpret_cast<u8*>(current_vaddr));
++                        break;
++                    }
+                     user_accessible = false;
+                     on_unmapped(offset, copy_amount, current_vaddr);
+                     break;
+@@ -582,7 +602,11 @@
+                 // failure count and sample backing/delta; do not sync a
+                 // Critical line to disk for every one of thousands of pages.
+                 if (!page_table.entries[base].Pointer() &&
++                    IsDirectBackingAlias(base << YUZU_PAGEBITS, YUZU_PAGESIZE)) {
++                    // Identity host/guest VA: the zero delta is a valid direct pointer.
++                    ::Eden::GpuFault::guest_alias_mapped.fetch_add(1, std::memory_order_relaxed);
++                } else if (!page_table.entries[base].Pointer() &&
++                           ::Eden::GpuFault::ShouldReportGuestMapZero()) {
+-                    ::Eden::GpuFault::ShouldReportGuestMapZero()) {
+                     LOG_CRITICAL(HW_Memory,
+                         "EDEN_GUEST_MAP_POINTER_ZERO guest={:#016x} target={:#016x} host_delta={:#016x} host_backing={:#016x}",
+                         base << YUZU_PAGEBITS, GetInteger(target), host_ptr,
+@@ -612,6 +636,10 @@
+                 switch (static_cast<Common::PageType>(raw.type)) {
+                 case Common::PageType::Memory:
+ #ifdef PS5_NATIVE
++                    if (IsDirectBackingAlias(vaddr, 1)) {
++                        ::Eden::GpuFault::guest_alias_access.fetch_add(1, std::memory_order_relaxed);
++                        return reinterpret_cast<u8*>(vaddr);
++                    }
+                     if (::Eden::GpuFault::ShouldReportGuestNullMapped())
+                         LOG_CRITICAL(HW_Memory, "EDEN_GUEST_MAPPED_NULL_POINTER address={:#016x}", vaddr);
+ #else

@@ -40,6 +40,13 @@ walk=(r/'headless/backports/eden-ps5-guest-walk.patch').read_text()
 assert 'The PS5\'s read-only shared-zero sparse slots are safe to inspect.' in walk
 assert 'on_unmapped(offset, copy_amount, current_vaddr);' in walk
 assert 'validate_ps5_guest_walk_memory' in apply
+zero_alias=(r/'headless/backports/eden-ps5-guest-zero-alias.patch').read_text()
+assert 'IsDirectBackingAlias(u64 address, std::size_t bytes) const' in zero_alias
+assert 'GetIntendedMemorySize()' in zero_alias
+assert 'guest_alias_mapped.fetch_add' in zero_alias
+assert 'guest_alias_access.fetch_add' in zero_alias
+assert 'validate_ps5_guest_zero_alias' in apply
+assert 'guest_alias_mapped=%llu guest_alias_access=%llu' in perf
 def sample(i): return i<=8 or i&(i-1)==0
 assert [i for i in range(1,129) if sample(i)] == [1,2,3,4,5,6,7,8,16,32,64,128]
 print('PASS source: physical continuity, PS5 shared-cache bypass, bounded fault logs')
