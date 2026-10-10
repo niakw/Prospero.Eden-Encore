@@ -18,6 +18,8 @@ on:
       - tools/check-ps-glyph-firefox-search.py
       - tools/ps-glyph-multiplatform-adapt.py
       - tools/check-ps-glyph-multiplatform-adapt.py
+      - tools/ps-glyph-run-metrics.py
+      - tools/check-ps-glyph-run-metrics.py
       - tools/ps-glyph-mod-results-merge.py
       - tools/ps-glyph-store-research.py
       - tools/check-ps-glyph-store-research.py
@@ -61,6 +63,7 @@ jobs:
           python3 -B tools/check-ps-glyph-mod-discovery.py
           python3 -B tools/check-ps-glyph-multiplatform-adapt.py
           python3 -B tools/check-ps-glyph-mod-results-merge.py
+          python3 -B tools/check-ps-glyph-run-metrics.py
           python3 -B tools/check-ps-glyph-store-research.py
           python3 -B tools/check-ps-glyph-switch1-search-queue.py
           python3 -B tools/check-ps-glyph-curl-search.py
@@ -197,6 +200,11 @@ jobs:
           python3 -B tools/ps-glyph-mod-results-merge.py \
             --reports "${reports[@]}" \
             --out /tmp/eden-glyph-discovery/source-links.json
+          actual_batches=(/tmp/eden-glyph-discovery/leads-*.json)
+          python3 -B tools/ps-glyph-run-metrics.py \
+            --batches "${actual_batches[@]}" \
+            --run-id "$GITHUB_RUN_ID" \
+            --out /tmp/eden-glyph-discovery/run-metrics.json
           python3 -B tools/ps-glyph-multiplatform-adapt.py \
             --catalog /tmp/eden-glyph-discovery/catalog.json \
             --discovery-reports /tmp/eden-glyph-discovery/source-links.json \
@@ -261,6 +269,7 @@ jobs:
           name: Switch1-Controller-Glyph-Mod-Sources
           path: |
             /tmp/eden-glyph-discovery/source-links.json
+            /tmp/eden-glyph-discovery/run-metrics.json
             /tmp/eden-glyph-discovery/state-next.json
             /tmp/eden-glyph-discovery/multiplatform-adaptation-plans.json
             /tmp/eden-glyph-discovery/all-switch1-search-queue.json
