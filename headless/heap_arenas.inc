@@ -424,12 +424,12 @@ static int ps5_heap_ready(void) {
   eden_heap_spaces[0] = ps5_heap_mspace;
   atomic_store_explicit(&eden_heap_root_direct_owner[0],
                         eden_heap_grows ? eden_heap_first_direct_owner() : -1,memory_order_relaxed);
-  /* Publish root metadata last; readers use acquire. */
-  atomic_store_explicit(&eden_heap_root_span[0],(unsigned char)first_pieces,memory_order_release);
   for (unsigned piece=0; piece<first_pieces; ++piece) {
     atomic_store_explicit(&eden_heap_piece_root[piece],0,memory_order_relaxed);
     atomic_store_explicit(&eden_heap_piece_space[piece],ps5_heap_mspace,memory_order_relaxed);
   }
+  /* Publish the root only after the entire piece→root and owner table. */
+  atomic_store_explicit(&eden_heap_root_span[0],(unsigned char)first_pieces,memory_order_release);
   atomic_store_explicit(&eden_heap_pieces_used, first_pieces, memory_order_relaxed);
   atomic_store_explicit(&eden_heap_space_count, 1, memory_order_release);
   /* libthr keeps specific data in its own storage; no recursion into malloc. */
@@ -539,12 +539,14 @@ static int eden_heap_grow(size_t bytes, unsigned seen) {
       void *space = sceLibcMspaceCreate("Eden-heap", start, size, 0);
       if (space != NULL) {
         atomic_store_explicit(&eden_heap_root_direct_owner[used],physical,memory_order_relaxed);
-        atomic_store_explicit(&eden_heap_root_span[used],(unsigned char)pieces,memory_order_release);
         for (size_t piece=0; piece<pieces; ++piece) {
           atomic_store_explicit(&eden_heap_piece_root[used+piece],(unsigned char)used,memory_order_relaxed);
           atomic_store_explicit(&eden_heap_piece_space[used+piece],space,memory_order_release);
         }
         eden_heap_spaces[count] = space;
+        /* A diagnostic reader seeing the span may now access initialized
+         * piece ownership data, even while growth remains in flight. */
+        atomic_store_explicit(&eden_heap_root_span[used],(unsigned char)pieces,memory_order_release);
         atomic_store_explicit(&eden_heap_pieces_used, used + (unsigned)pieces, memory_order_release);
         atomic_store_explicit(&eden_heap_space_count, count + 1, memory_order_release);
         grown = 1;
