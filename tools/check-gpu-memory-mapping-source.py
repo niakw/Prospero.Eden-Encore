@@ -26,6 +26,10 @@ for needle in ('EDEN_GUEST_MAP_POINTER_ZERO', 'EDEN_GUEST_MAPPED_NULL_POINTER',
                'ShouldReportGuestMapZero()', 'ShouldReportGuestNullMapped()'):
     assert needle in diagnostics, needle
 assert 'validate_ps5_guest_mapping_diagnostics' in apply
+walk=(r/'headless/backports/eden-ps5-guest-walk.patch').read_text()
+assert 'The PS5\'s read-only shared-zero sparse slots are safe to inspect.' in walk
+assert 'on_unmapped(offset, copy_amount, current_vaddr);' in walk
+assert 'validate_ps5_guest_walk_memory' in apply
 def sample(i): return i<=8 or i&(i-1)==0
 assert [i for i in range(1,129) if sample(i)] == [1,2,3,4,5,6,7,8,16,32,64,128]
 print('PASS source: physical continuity, PS5 shared-cache bypass, bounded fault logs')
