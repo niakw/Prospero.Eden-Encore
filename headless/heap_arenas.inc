@@ -269,16 +269,20 @@ static void eden_heap_thread_exit(void *value) {
  * Workers drain through their TLS destructor; never inspect their private
  * free-lists from another thread, and never unmap their backing. */
 size_t eden_heap_release_current_tcache(void) {
-  if (!eden_heap_arena_key_valid) return 0;
-  struct eden_heap_thread *self = pthread_getspecific(eden_heap_arena_key);
-  if (!self) return 0;
-  const size_t drained=eden_heap_drain_thread_cache(self);
-  eden_heap_flush(self);
-  /* The last game can leave the small-allocation hint pointing at its
-   * highest occupied space. At a title transition prefer existing earlier
-   * mspaces before encouraging another 128-MiB expansion. First successful
-   * later space restores the usual hot hint; never touch physical mappings. */
-  atomic_store_explicit(&eden_heap_space_hint,0,memory_order_relaxed);
+  size_t drained = 0;
+  /* There may be no TLS cache on the surviving launcher thread even when
+   * short-lived guest workers have used later heap roots. Always bias the
+   * next title toward reusing already-committed earlier mspaces. */
+  if (eden_heap_arena_key_valid) {
+    struct eden_heap_thread *self = pthread_getspecific(eden_heap_arena_key);
+    if (self) {
+      drained = eden_heap_drain_thread_cache(self);
+      eden_heap_flush(self);
+    }
+  }
+  /* A hint reset is metadata maintenance, never a release or compaction.
+   * Allocation threads are allowed to race this relaxed preference only. */
+  atomic_store_explicit(&eden_heap_space_hint, 0, memory_order_relaxed);
   return drained;
 }
 
