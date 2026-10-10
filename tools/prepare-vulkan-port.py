@@ -1018,7 +1018,11 @@ pipeline_worker_replacement = '''#ifdef PS5_NATIVE
     // Reserve only what is REALLY shared with guest/GPU workers in the
     // CURRENT thread's allowed mask. The masked-off primaries have already
     // been excluded by SetSecondaryPlacement: do NOT subtract them again.
-    const size_t schedulable = available ? std::min(available, reported) : std::min<size_t>(reported, 4);
+    // The kernel's confirmed affinity is authoritative. C++ hardware_concurrency()
+    // is only a hint: on constrained firmware it can under-report the CPUs
+    // actually granted to this thread and silently starve shader compilers.
+    // Never borrow CPUs outside the read-back allowed mask.
+    const size_t schedulable = available ? available : std::min<size_t>(reported, 4);
     const std::uint64_t primary_mask = ::Eden::Performance::PinnedWorkerMask();
     size_t primary_in_mask = 0;
     if (affinity_rc == 0 && primary_mask) {
