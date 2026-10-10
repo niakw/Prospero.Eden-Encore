@@ -1,0 +1,20 @@
+--- a/src/core/device_memory_manager.inc
++++ b/src/core/device_memory_manager.inc
+@@ -306,7 +306,7 @@
+                     const auto [multiple, first] = impl->multi_dev_address.Unregister(
+                         device_page, reverse & MULTI_MASK);
+                     if (!multiple)
++                        reverse = first != 0 ? impl->multi_dev_address.ReleaseEntry(first) : 0;
+-                        reverse = impl->multi_dev_address.ReleaseEntry(first);
+                     else
+                         reverse = first | MULTI_FLAG;
+                     ::Eden::GpuFault::remap_replaced.fetch_add(1, std::memory_order_relaxed);
+@@ -410,7 +410,7 @@
+             const auto [more_entries, new_start] = impl->multi_dev_address.Unregister(
+                 static_cast<u32>(start_page_d + i), base_dev & MULTI_MASK);
+             if (!more_entries) {
++                base_dev = new_start != 0 ? impl->multi_dev_address.ReleaseEntry(new_start) : 0;
+-                base_dev = impl->multi_dev_address.ReleaseEntry(new_start);
+                 continue;
+             }
+             base_dev = new_start | MULTI_FLAG;

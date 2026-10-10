@@ -61,6 +61,10 @@ for token in ('std::unique_lock lk(mapping_guard);', 'replaced_gpu_mapping = tru
     assert token in cache_remap, token
 assert 'remap_cache_evictions.fetch_add' in cache_remap
 assert 'validate_ps5_gpu_remap_invalidation' in apply
+empty_multi=(r/'headless/backports/eden-ps5-gpu-empty-multi-head.patch').read_text()
+assert 'first != 0 ? impl->multi_dev_address.ReleaseEntry(first) : 0' in empty_multi
+assert 'new_start != 0 ? impl->multi_dev_address.ReleaseEntry(new_start) : 0' in empty_multi
+assert 'validate_ps5_gpu_empty_multi_head' in apply
 inline_bounds=(r/'headless/backports/eden-ps5-gpu-reverse-inline-bounds.patch').read_text()
 for token in ('if ((address >> page_bits) >= compressed_device_addr.size()) return;',
               'if (base == 0) return;', 'if (host < physical_base ||',

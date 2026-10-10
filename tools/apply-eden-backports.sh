@@ -438,6 +438,18 @@ print('PS5 GPU changed physical map invalidation outside mapping mutex: PASS')
 PYREMAPCACHE
 }
 apply_one "$root/headless/backports/eden-ps5-gpu-remap-cache-invalidate.patch" "$eden/.encore-backport-ps5-gpu-remap-cache-invalidate.sha256" validate_ps5_gpu_remap_invalidation
+validate_ps5_gpu_empty_multi_head() {
+python3 - "$eden" <<'PYMULTIHEAD'
+from pathlib import Path
+import sys
+s=(Path(sys.argv[1])/'src/core/device_memory_manager.inc').read_text()
+for token in ('first != 0 ? impl->multi_dev_address.ReleaseEntry(first) : 0',
+              'new_start != 0 ? impl->multi_dev_address.ReleaseEntry(new_start) : 0'):
+    if token not in s: raise SystemExit('unsafe zero-head MultiAddressContainer release: '+token)
+print('PS5 GPU last reverse node never calls ReleaseEntry(0): PASS')
+PYMULTIHEAD
+}
+apply_one "$root/headless/backports/eden-ps5-gpu-empty-multi-head.patch" "$eden/.encore-backport-ps5-gpu-empty-multi-head.sha256" validate_ps5_gpu_empty_multi_head
 validate_ps5_gpu_reverse_inline() {
 python3 - "$eden" <<'PYGPUINLINE'
 from pathlib import Path
