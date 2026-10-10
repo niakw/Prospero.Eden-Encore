@@ -631,6 +631,34 @@ print('PS5 GPU registered ASID lifetime, duplicate unregister and cache bounds: 
 PYGPUASID
 }
 apply_one "$root/headless/backports/eden-ps5-gpu-asid-lifetime-guard.patch" "$eden/.encore-backport-ps5-gpu-asid-lifetime-guard.sha256" validate_ps5_gpu_asid_lifetime
+validate_ps5_gpu_asid_no_reuse() {
+python3 - "$eden" <<'PYASIDABA'
+from pathlib import Path
+import sys
+r=Path(sys.argv[1])/'src/core'
+h=(r/'device_memory_manager.h').read_text()
+s=(r/'device_memory_manager.inc').read_text()
+register=s[s.index('Asid DeviceMemoryManager<Traits>::RegisterProcess('):
+           s.index('void DeviceMemoryManager<Traits>::UnregisterProcess(')]
+unregister=s[s.index('void DeviceMemoryManager<Traits>::UnregisterProcess('):
+             s.index('void DeviceMemoryManager<Traits>::UpdatePagesCachedCountNoLock(')]
+if 'id_pool' in register+unregister+h:
+    raise SystemExit('GPU ASID ABA risk: recycled id pool still exists')
+for token in ('registered_processes.emplace_back(memory_device_inter)',
+              'registered_processes.size() - 1U',
+              'constexpr size_t max_ids',
+              'memory_device_inter == nullptr',
+              'return Asid{static_cast<size_t>(-1)}'):
+    if token not in register:
+        raise SystemExit('missing monotonic bounded GPU ASID registration: '+token)
+if 'registered_processes[asid.id] = nullptr' not in unregister:
+    raise SystemExit('retired GPU ASID must be tombstoned')
+if 'registered_processes[asid.id] == nullptr' not in unregister:
+    raise SystemExit('duplicate GPU ASID unregister must be idempotent')
+print('PS5 GPU ASID tombstones prevent recycled-process aliasing: PASS')
+PYASIDABA
+}
+apply_one "$root/headless/backports/eden-ps5-gpu-asid-no-reuse.patch" "$eden/.encore-backport-ps5-gpu-asid-no-reuse.sha256" validate_ps5_gpu_asid_no_reuse
 validate_ps5_guest_mapping_diagnostics() {
 python3 - "$eden" <<'PYMAP'
 from pathlib import Path
