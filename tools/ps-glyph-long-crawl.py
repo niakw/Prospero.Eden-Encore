@@ -1,0 +1,144 @@
+#!/usr/bin/env python3
+"""One checkpointed shard of the full Switch 1 GitHub mod-source crawl.
+
+Run from GitHub Actions' existing dev/ps5-sparse-jit checkout. Reads the
+already versioned TitleDB catalog/queue; no rematerialization/download.
+Each shard processes two independent query variants (Switch and
+PC/WiiU/PS/Xbox) at a conservative rate. Writes ONLY provenance metadata
+under data/glyph-research; no ROM, mod ZIP, textures or auto-activated packs.
+
+A full workflow matrix repeats this bounded worker serially; all successful
+queries are idempotent and persist by TitleID|provider|variant. A search
+provider ban/captcha/secondary throttle pauses the crawl and fails the job:
+NEVER hammer the same blocked query or claim completion on refusal.
+"""
+from __future__ import annotations
+
+import argparse
+import gzip
+import importlib.util
+import json
+import os
+from pathlib import Path
+import sys
+import time
+
+HERE=Path(__file__).resolve().parent
+REPO=HERE.parent
+
+
+def module(name:str,filename:str):
+    s=importlib.util.spec_from_file_location(name,HERE/filename)
+    if not s or not s.loader:
+        raise ValueError("missing metadata reader: "+filename)
+    obj=importlib.util.module_from_spec(s)
+    s.loader.exec_module(obj)
+    return obj
+
+
+discovery=module("eden_long_discover","ps-glyph-mod-discovery.py")
+collector=module("eden_long_store","ps-glyph-store-research.py")
+metrics=module("eden_long_metrics","ps-glyph-run-metrics.py")
+joiner=module("eden_long_merge","ps-glyph-mod-results-merge.py")
+
+
+class SearchStopped(RuntimeError):
+    pass
+
+
+def load_gzip(path:Path)->dict:
+    if not path.is_file() or path.is_symlink() or path.stat().st_size>32*1024*1024:
+        raise ValueError("missing/unsafe committed discovery catalog")
+    with gzip.open(path,"rt",encoding="utf-8") as source:
+        doc=json.load(source)
+    if doc.get("schema")!=1:
+        raise ValueError("invalid complete game source archive")
+    return doc
+
+
+def remaining(games:list[dict],finished:set[str],
+              provider:str="github",variants:tuple[int,...]=(0,1))->int:
+    return sum(f"{provider}|{variant}|{game['title_id']}" not in finished
+               for game in games for variant in variants)
+
+
+def execute(root:Path,batch_size:int=128,interval:float=4.1,
+            run_id:str="local",retries:int=2,pause=None)->tuple[dict,int]:
+    if pause is None:
+        pause=time.sleep
+    if not 1<=batch_size<=250 or not 3.0<=interval<=30 or not 0<=retries<=2:
+        raise ValueError("unsafe provider throughput")
+    research=root/"data/glyph-research"
+    catalog=load_gzip(research/"catalog/switch1-titles.json.gz")
+    queue=load_gzip(research/"catalog/source-queries.json.gz")
+    state=collector.read(research/"discovery/progress.json")
+    if len(catalog["games"])!=catalog["game_count"] or (
+        queue.get("total_search_tasks")!=4*catalog["game_count"]
+    ):
+        raise ValueError("corrupted Switch game catalog or query queue")
+    missing=remaining(catalog["games"],set(state.get("completed_query_keys",[])))
+    reports=[]
+    current=state
+    failure=None
+    for variant in (0,1):
+        if not any(f"github|{variant}|{x['title_id']}" not in
+                   current.get("completed_query_keys",[])
+                   for x in catalog["games"]):
+            continue
+        tries=0
+        while True:
+            report,current=discovery.discover(
+                catalog,current,batch_size,provider="github",network=True,
+                variant=variant,interval=interval)
+            reports.append(report)
+            if not report["errors"]:
+                break
+            tries+=1
+            if tries>retries:
+                failure=report["errors"][0].get("reason","provider blocked")
+                break
+            # Requests may be 403/429 or have transport failures. Stop and
+            # let GitHub's windows recover, not rotated agents/accounts.
+            pause([120,300][tries-1])
+        if failure:
+            break
+    if not reports:
+        return {"complete":True,"remaining":0,"completed":0,"attempted":0},0
+    fresh=joiner.merge(reports)
+    summary=metrics.summarize(reports,run_id)
+    data=collector.persist(research,fresh,current,catalog,queue,summary)
+    remaining_after=remaining(catalog["games"],
+                              set(collector.read(research/"discovery/progress.json")[
+                                  "completed_query_keys"]))
+    info={"complete":remaining_after==0,"remaining":remaining_after,
+          "completed":summary["total_completed"],
+          "attempted":summary["total_attempts"],
+          "failed":summary["total_blocked_or_failed"],
+          "leads":summary["source_leads_observed"],
+          "source_leads_total":data["accumulated_mod_leads"],
+          "previously_unfinished":missing,"provider":"github"}
+    print("LONG SWITCH GLYPH CRAWL CHECKPOINT",json.dumps(info,sort_keys=True),flush=True)
+    if failure:
+        print("GITHUB SEARCH STOPPED (RATE LIMIT/NETWORK):",failure,file=sys.stderr)
+        return info,2
+    return info,0
+
+
+def main()->int:
+    p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--repo",type=Path,default=REPO)
+    p.add_argument("--batch-size",type=int,default=128)
+    p.add_argument("--interval",type=float,default=4.1)
+    p.add_argument("--run-id",default=os.getenv("GITHUB_RUN_ID","manual"))
+    p.add_argument("--retries",type=int,default=2)
+    args=p.parse_args()
+    try:
+        info,code=execute(args.repo,args.batch_size,args.interval,
+                          args.run_id,args.retries)
+        return code
+    except (OSError,ValueError,TypeError,KeyError,UnicodeError) as exc:
+        print("INVALID LONG GLYPH CRAWL:",exc,file=sys.stderr)
+        return 1
+
+if __name__=="__main__":
+    raise SystemExit(main())
