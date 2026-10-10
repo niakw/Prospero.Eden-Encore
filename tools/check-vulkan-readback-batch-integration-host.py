@@ -125,7 +125,7 @@ struct MockCache {
     std::vector<ImageId> images;
     std::vector<std::uint8_t> swizzle_data_buffer;
     explicit MockCache(std::vector<std::size_t> sizes)
-        : runtime{std::make_shared<Monitor>()},
+        : runtime{std::make_shared<Monitor>(), {}},
           gpu{runtime.monitor, std::vector<std::vector<std::uint8_t>>(sizes.size()), {}},
           gpu_memory(&gpu) {
         runtime.monitor->image_tickets.resize(sizes.size());
