@@ -67,5 +67,17 @@ with tempfile.TemporaryDirectory(prefix="eden-long-crawl-test-") as root:
     assert len(run.collector.read(data/"discovery/progress.json")[
         "completed_query_keys"])==3
 
+# Source-level workflow check: the first real 35-minute shard lost its
+# checkpoint when metrics.json was untracked in old HEAD but tracked in new
+# HEAD. A reset alone does not remove untracked output files.
+workflow=(run.REPO/".github/workflows/ps-glyph-full-crawl.yml").read_text()
+assert "git clean -f --" in workflow
+for name in ("leads.json","progress.json","metrics.json"):
+    assert f"data/glyph-research/discovery/{name}" in workflow
+    assert f"/tmp/eden-shard/{name}" in workflow
+assert "if: always()" in workflow and "actions/upload-artifact@" in workflow
+assert "--run-metrics /tmp/eden-shard/metrics.json" in workflow
+assert "workflow_dispatch:" in workflow and "  push:" not in workflow
+print("PASS: shard data survives safe checkout; cumulative run metrics accepted; no throttle-triggered automatic restart")
 print("PASS: serial long crawl resumes from stored Title ID and provider/variant keys")
 print("PASS: two Switch/PC batches cover all games; blocked provider fails without losing evidence")

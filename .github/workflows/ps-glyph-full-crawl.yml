@@ -12,11 +12,10 @@ name: Full Switch 1 controller glyph source crawl (read-only mod research)
 # On 403/429/abuse
 # errors: rest then HALT, do not evade. Failed shard stops the matrix.
 # Game art/ZIPs are never downloaded or inserted in the emulation runtime.
+# Deliberate manual start only: changing the workflow code or persisting
+# checkpoints cannot restart thousands of queries after an HTTP 403 throttle.
+# Resume with workflow_dispatch once the upstream rate limit has recovered.
 on:
-  push:
-    branches: [dev/ps5-sparse-jit]
-    paths:
-      - .github/workflows/ps-glyph-full-crawl.yml
   workflow_dispatch:
 
 permissions:
@@ -112,6 +111,15 @@ jobs:
           for try_number in 1 2 3; do
             # Runner-local uncommitted changes are backed up in /tmp first.
             git reset --hard
+            # The old worker checkout may not TRACK metrics.json yet, while
+            # the latest branch does. reset --hard leaves untracked outputs
+            # behind, so checkout aborts and discards all source discoveries.
+            # Fresh evidence already lives in /tmp/eden-shard. Clean ONLY
+            # these precisely named scratch outputs, never unrelated files.
+            git clean -f -- \
+              data/glyph-research/discovery/leads.json \
+              data/glyph-research/discovery/progress.json \
+              data/glyph-research/discovery/metrics.json
             git fetch origin dev/ps5-sparse-jit
             git checkout -B eden-glyph-long-worker FETCH_HEAD
             python3 - <<'PY'
@@ -146,6 +154,17 @@ jobs:
             echo "::error::Cannot persist research on dev; stop rather than drop results"
             exit 1
           fi
+      - name: Preserve scratch checkpoint as fallback even if branch push fails
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Switch1-glyph-shard-${{ matrix.shard }}-checkpoint
+          path: |
+            /tmp/eden-shard/leads.json
+            /tmp/eden-shard/progress.json
+            /tmp/eden-shard/metrics.json
+          if-no-files-found: ignore
+          retention-days: 30
       - name: Stop on provider throttling instead of attacking the search endpoint
         if: always()
         run: |
