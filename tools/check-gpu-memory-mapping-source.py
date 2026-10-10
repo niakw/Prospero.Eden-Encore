@@ -14,6 +14,8 @@ for need in ('invalid.continuity_tracker = 0;', 'valid.continuity_tracker = 0;',
 assert p.count('#ifndef PS5_NATIVE') == 4
 assert p.count('::Eden::GpuFault::ShouldReportRead()') == 2
 assert p.count('::Eden::GpuFault::ShouldReportWrite()') == 2
+assert 'const size_t remaining_pages = 1 + ((remaining_size - 1 + page_offset) >> Memory::YUZU_PAGEBITS);' in p
+assert '({hint, remaining_pages, tracked_entries.size() - page_index})' in p
 assert 'std::atomic<std::uint64_t> reads{0}, writes{0}' in h
 assert 'return n <= 8 || (n & (n - 1)) == 0;' in h
 assert 'target_include_directories(video_core PRIVATE "${EDEN_PORT_DIR}")' in c
