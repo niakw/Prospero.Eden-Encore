@@ -244,7 +244,8 @@ jobs:
                     data/glyph-research/discovery/progress.json \
                     data/glyph-research/discovery/metrics.json \
                     data/glyph-research/catalog/switch1-titles.json.gz \
-                    data/glyph-research/catalog/source-queries.json.gz
+                    data/glyph-research/catalog/source-queries.json.gz \
+                    data/glyph-research/catalog/scope-audit.json
             if git diff --cached --quiet; then
               saved=1
               echo "Repository already contains up-to-date metadata"
