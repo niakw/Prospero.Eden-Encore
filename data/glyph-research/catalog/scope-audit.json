@@ -4,10 +4,10 @@
   "includes_titles_also_released_for_switch2": true,
   "excludes_switch2_only_0400": true,
   "count_unit": "candidate title IDs, NOT distinct fully released commercial games",
-  "switch1_candidate_title_ids": 23997,
-  "different_preferred_display_names": 23098,
+  "switch1_candidate_title_ids": 23883,
+  "different_preferred_display_names": 22984,
   "repeated_identical_display_names_across_title_ids": 899,
-  "suspected_demo_or_trial_title_ids": 118,
+  "suspected_demo_or_trial_title_ids": 0,
   "suspected_cloud_only_title_ids": 3,
   "demonstration": {
     "switch1_plus_switch2_editions_stay_in_scope": "01007EF00011E000",
