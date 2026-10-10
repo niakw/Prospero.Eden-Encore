@@ -35,6 +35,7 @@ for required in (
     'eden_heap_arenas_created', 'eden_heap_committed',
     'eden_heap_tcache_held', 'EDEN_TCACHE_TOTAL_LIMIT',
     'eden_heap_large_physical_held', 'eden_heap_pages_physical_size',
+    'eden_heap_retention_snapshot', 'EDEN_HEAP_RETENTION phase=',
     '__builtin_ia32_pause',
 ):
     assert required in heap, f'heap derivation contract changed: {required}'
@@ -473,6 +474,54 @@ int main(int argc, char **argv) {
         puts("title-cycles: 7 sessions reuse same physical backing without growth, no unsafe unmap PASS");
         return 0;
     }
+    if (argc > 1 && strcmp(argv[1], "mixed-title-cycles") == 0) {
+        // A fixed workload plateau (R268) is insufficient: test different
+        // guest allocations on twelve successive title lifetimes while a
+        // launcher block and an 8-MiB child arena remain pinned.
+        enum { SHAPES = 4, SESSIONS = 12, MAX_BLOCKS = 12 };
+        const struct { unsigned blocks; size_t bytes; } shape[SHAPES] = {
+            { 8, (size_t)24 << 20 }, { 6, (size_t)30 << 20 },
+            { 10, (size_t)16 << 20 }, { 11, (size_t)18 << 20 }
+        };
+        void *blocks[MAX_BLOCKS] = {0};
+        size_t plateau = 0;
+        for (unsigned cycle = 0; cycle < SESSIONS; ++cycle) {
+            const unsigned pattern = cycle % SHAPES;
+            const size_t bytes = shape[pattern].bytes;
+            for (unsigned i = 0; i < shape[pattern].blocks; ++i) {
+                blocks[i] = __wrap_malloc(bytes);
+                assert(blocks[i] != NULL);
+                ((unsigned char *)blocks[i])[0] = (unsigned char)(cycle + i);
+                ((unsigned char *)blocks[i])[bytes - 1] = (unsigned char)(cycle ^ i);
+            }
+            for (unsigned i = 0; i < shape[pattern].blocks; ++i) {
+                assert(((unsigned char *)blocks[i])[0] == (unsigned char)(cycle + i));
+                assert(((unsigned char *)blocks[i])[bytes - 1] == (unsigned char)(cycle ^ i));
+                __wrap_free(blocks[i]);
+                blocks[i] = NULL;
+            }
+            (void)eden_heap_release_current_tcache();
+            const size_t physical = eden_heap_committed();
+            assert(physical <= heap && physical >= 2 * piece);
+            if (cycle < SHAPES) plateau = physical; // warm up every demand shape
+            else assert(physical == plateau);      // no indefinite root growth
+            assert(eden_heap_large_physical_held() == 0);
+            const struct eden_heap_retention roots = eden_heap_retention_snapshot();
+            assert(roots.pinned_bytes + roots.unpinned_bytes == physical);
+            assert(roots.pinned_roots >= 1 && roots.pinned_bytes >= piece);
+            assert(atomic_load(&committed_bytes) == physical);
+        }
+        __wrap_free(first);
+        (void)eden_heap_release_current_tcache();
+        // A zero logical allocation balance still does not authorize
+        // destruction: the child mspace metadata lives inside its parent.
+        const struct eden_heap_retention roots = eden_heap_retention_snapshot();
+        assert(roots.pinned_bytes + roots.unpinned_bytes == plateau);
+        assert(roots.pinned_roots >= 1);
+        eden_heap_report_roots("host_after_mixed_titles");
+        puts("mixed-title-cycles: twelve alternating guest workloads plateau; pinned roots remain, no physical unmap PASS");
+        return 0;
+    }
     if (argc > 1 && strcmp(argv[1], "root-span") == 0) {
         // If a direct large allocation cannot be admitted, a request larger
         // than one piece must create ONE root mspace across multiple pieces.
@@ -738,7 +787,7 @@ with tempfile.TemporaryDirectory(prefix='eden-heap-') as work:
         binary = work / ('heap-' + label.split()[0])
         subprocess.run(['clang-18', '-std=gnu11', '-pthread', '-Wall', '-Wextra', '-Wno-unused-function',
                         '-Wno-unused-parameter', *flags, str(source), '-o', str(binary)], check=True)
-        for mode in ((), ('whole',), ('first-commit-fail',), ('first-mspace-fail',), ('growth-mspace-fail',), ('root-span',), ('title-cycles',)):
+        for mode in ((), ('whole',), ('first-commit-fail',), ('first-mspace-fail',), ('growth-mspace-fail',), ('root-span',), ('title-cycles',), ('mixed-title-cycles',)):
             if label != 'checked' and mode:
                 continue
             result = subprocess.run([str(binary), *mode], capture_output=True, text=True, timeout=900)
