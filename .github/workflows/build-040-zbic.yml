@@ -203,6 +203,8 @@ jobs:
           python3 -B tools/check-vulkan-readback-small-vector-host.py
           python3 -B tools/check-vulkan-readback-batch-integration-host.py
           python3 -B tools/check-vulkan-pipeline-trace-thread-host.py
+          python3 -B tools/check-vulkan-present-wait-host.py
+          python3 -B tools/check-vulkan-present-source-replay-host.py
           python3 -B tools/check-performance-policy.py
           python3 -B tools/check-ps5-direct-pool-host.py
           python3 -B tools/check-ps5-pc-ring-host.py
