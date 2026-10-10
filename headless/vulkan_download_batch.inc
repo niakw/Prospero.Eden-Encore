@@ -2,11 +2,13 @@
         // Keep independent copies in one submission, then publish guest writes
         // in modification order. A staging allocation stays busy until its tick.
         using Map = decltype(runtime.DownloadStagingBuffer(size_t{}));
-        // Most GPU readback calls fit entirely inside sixteen staging maps.
-        // Avoid heap allocation and allocator contention on every guest read.
-        // Pinned Vulkan StagingBufferRef is a non-owning value handle; the
-        // staging pool owns its backing memory and deferred lifetime.
-        boost::container::small_vector<std::pair<ImageId, Map>, 16> pending;
+        // Up to 40 small independent readbacks can now share one GPU
+        // completion fence. Keep their total staging bytes capped at 32 MiB
+        // and publish guest writes in their original modification order.
+        // Pinned Vulkan StagingBufferRef is a non-owning value handle;
+        // the staging pool owns the backing memory and its tick lifetime.
+        constexpr size_t readback_batch_limit = 40;
+        boost::container::small_vector<std::pair<ImageId, Map>, readback_batch_limit> pending;
         constexpr size_t batch_limit = 32_MiB;
         size_t batch_bytes = 0;
         const auto finish_batch = [&] {
@@ -24,7 +26,7 @@
         for (const ImageId image_id : images) {
             Image& image = slot_images[image_id];
             const size_t bytes = image.unswizzled_size_bytes;
-            if (pending.size() == 16 || bytes > batch_limit - batch_bytes)
+            if (pending.size() == readback_batch_limit || bytes > batch_limit - batch_bytes)
                 finish_batch();
             auto map = runtime.DownloadStagingBuffer(bytes);
             const auto copies = FixSmallVectorADL(FullDownloadCopies(image.info));
