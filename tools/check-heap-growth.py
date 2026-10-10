@@ -446,6 +446,17 @@ int main(int argc, char **argv) {
     // Joined workers have flushed their private caches at TLS destruction.
     // Only this main thread can still retain its <=1 MiB hot free-list.
     assert(eden_heap_tcache_held() <= ((size_t)1 << 20));
+    // Title-switch maintenance may drain only this thread's own freed blocks.
+    // It may not deallocate an mspace or shrink direct physical backing.
+    const size_t heap_before_drain = eden_heap_committed();
+    const size_t freed_cache = eden_heap_release_current_tcache();
+    assert(freed_cache <= ((size_t)1 << 20));
+    assert(eden_heap_tcache_held() == 0);
+    assert(eden_heap_committed() == heap_before_drain);
+    // The allocator remains immediately reusable after the drain.
+    void *next_title_alloc = __wrap_malloc(128);
+    assert(next_title_alloc != NULL);
+    __wrap_free(next_title_alloc);
     const size_t after_threads = eden_heap_committed();
     const size_t peak = atomic_load(&ps5_heap_peak_bytes);
     assert(eden_heap_arenas_created() >= 8);
