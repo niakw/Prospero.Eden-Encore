@@ -274,6 +274,11 @@ size_t eden_heap_release_current_tcache(void) {
   if (!self) return 0;
   const size_t drained=eden_heap_drain_thread_cache(self);
   eden_heap_flush(self);
+  /* The last game can leave the small-allocation hint pointing at its
+   * highest occupied space. At a title transition prefer existing earlier
+   * mspaces before encouraging another 128-MiB expansion. First successful
+   * later space restores the usual hot hint; never touch physical mappings. */
+  atomic_store_explicit(&eden_heap_space_hint,0,memory_order_relaxed);
   return drained;
 }
 
