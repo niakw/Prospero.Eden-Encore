@@ -16,7 +16,7 @@ alias_patch = (root / "headless/backports/eden-ps5-guest-zero-alias.patch").read
 apply = (root / "tools/apply-eden-backports.sh").read_text()
 checker = (root / "tools/check-gpu-memory-mapping-source.py").read_text()
 anchor = "                auto host_ptr = reinterpret_cast<u64>(system.DeviceMemory().GetPointer<u8>(target)) - (base << YUZU_PAGEBITS);;"
-assert patch.count("-" + anchor) == 1
+assert sum(line[1:].strip() == anchor.strip() for line in patch.splitlines()\n           if line.startswith("-") and not line.startswith("---")) == 1
 assert patch.startswith("--- a/src/core/memory.cpp\n+++ b/src/core/memory.cpp\n")
 assert "invalid.Store(false, Common::PageType::Unmapped, current_block, 0);" in patch
 assert "EDEN_GUEST_MAP_NO_BACKING" in patch
