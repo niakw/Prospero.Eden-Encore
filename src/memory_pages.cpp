@@ -857,12 +857,15 @@ void FreeSparsePages(void* base, std::size_t size) noexcept {
 }
 
 void CommitSparsePage(std::uintptr_t page) noexcept {
+    // FreeSparsePages() destroys 'owned' under this same mutex.
+    // Do not dereference the range or its slot bitmap before taking the lock:
+    // it could have been released and the static range record reused.
+    // This is a first-commit slow path, not the ordinary guest table read path.
+    const std::lock_guard lock{sparse_mutex};
     SparseRange* range = SparseRangeOf(page);
     if (range == nullptr) return; // dense: already writable
     const auto begin = range->begin.load(std::memory_order_relaxed);
     const std::size_t slot = (page - begin) / SparseSlot;
-    if (range->owned[slot].load(std::memory_order_acquire)) return;
-    const std::lock_guard lock{sparse_mutex};
     if (range->owned[slot].load(std::memory_order_relaxed)) return;
     if (!OwnSlot(begin + slot * SparseSlot, &range->physical[slot])) {
         // Out of memory in the middle of a guest mapping: there is no table to continue with.

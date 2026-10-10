@@ -26,5 +26,14 @@ for token in (
 ):
     assert token in cmake, token
 assert cmake.count('mutation_lock{sparse_mutation_mutex}') == 2
+native = (root / "src/memory_pages.cpp").read_text()
+commit_source = native.split("void CommitSparsePage(std::uintptr_t page) noexcept {", 1)[1].split(
+    "\\nstd::size_t SparseCommitSpan()", 1
+)[0]
+# The global owner lock must protect SparseRangeOf and the first owned[slot]
+# dereference; otherwise concurrent FreeSparsePages can free the bitmap.
+assert commit_source.count("const std::lock_guard lock{sparse_mutex};") == 1
+assert commit_source.index("const std::lock_guard lock{sparse_mutex};") < commit_source.index("SparseRange* range = SparseRangeOf(page);")
+assert commit_source.index("SparseRange* range = SparseRangeOf(page);") < commit_source.index("range->owned[slot]")
 print("PASS: sparse table zero/decommit and page commit serialized per vector")
 print("PASS: pinned SparseLargeVector GetAndFault/Set/IsCommittedPage stop at count")
