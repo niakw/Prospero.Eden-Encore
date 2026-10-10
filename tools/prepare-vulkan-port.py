@@ -320,6 +320,7 @@ adapt('src/video_core/renderer_vulkan/vk_present_manager.h',
       'include/video_core/renderer_vulkan/vk_present_manager.h', [
     ('#include <mutex>', '#include <mutex>\n#include <exception>'),
     ('    std::jthread present_thread;',
+     '    bool present_in_flight{}; // guarded by queue_mutex\n'
      '    std::exception_ptr present_failure;\n    std::jthread present_thread;'),
 ])
 adapt('src/video_core/renderer_vulkan/vk_present_manager.cpp', 'vulkan_present_manager.cpp', [
@@ -337,6 +338,7 @@ adapt('src/video_core/renderer_vulkan/vk_present_manager.cpp', 'vulkan_present_m
                 std::scoped_lock lock{queue_mutex, free_mutex};
                 present_failure = error;
                 present_queue.clear();
+                present_in_flight = false;
             }
             free_cv.notify_all();
             frame_cv.notify_all();
@@ -347,8 +349,28 @@ adapt('src/video_core/renderer_vulkan/vk_present_manager.cpp', 'vulkan_present_m
     if (present_failure) std::rethrow_exception(present_failure);'''),
     ('            present_queue.push_back(frame);',
      '            if (present_failure) return;\n            present_queue.push_back(frame);'),
+    ('            present_queue.pop_front();',
+     '            present_queue.pop_front();\n            present_in_flight = true;'),
+    ('            std::scoped_lock fl{free_mutex};\n'
+     '            free_queue.push_back(frame);\n'
+     '            free_cv.notify_one();',
+     '            {\n'
+     '                std::scoped_lock fl{free_mutex};\n'
+     '                free_queue.push_back(frame);\n'
+     '                free_cv.notify_one();\n'
+     '            }\n'
+     '            // Publish completion only AFTER presentation and frame handoff.\n'
+     '            // Release swapchain mutex before reacquiring queue_mutex.\n'
+     '            lock.unlock();\n'
+     '            {\n'
+     '                std::lock_guard queue_lock{queue_mutex};\n'
+     '                present_in_flight = false;\n'
+     '            }\n'
+     '            frame_cv.notify_all();'),
     ('frame_cv.wait(queue_lock, [this] { return present_queue.empty(); });',
-     'frame_cv.wait(queue_lock, [this] { return present_failure || present_queue.empty(); });'),
+     'frame_cv.wait(queue_lock, [this] { return present_failure || '
+     '(present_queue.empty() && !present_in_flight); });\n'
+     '        if (present_failure) std::rethrow_exception(present_failure);'),
 ])
 # Descriptor buffers: Eden's null buffer (nullDescriptor devices) has device address 0,
 # but WriteDescriptorBuffer passed it with the binding's range. RADV then builds a real
