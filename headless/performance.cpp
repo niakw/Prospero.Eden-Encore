@@ -1137,9 +1137,11 @@ void Snapshot() {
         }
     }
 #endif
-    std::printf("EDEN_GPU_UNMAPPED_COUNTERS read=%llu write=%llu\n",
+    std::printf("EDEN_GPU_UNMAPPED_COUNTERS read=%llu write=%llu guest_map_zero=%llu guest_null_mapped=%llu\n",
                 static_cast<unsigned long long>(::Eden::GpuFault::reads.load(std::memory_order_relaxed)),
-                static_cast<unsigned long long>(::Eden::GpuFault::writes.load(std::memory_order_relaxed)));
+                static_cast<unsigned long long>(::Eden::GpuFault::writes.load(std::memory_order_relaxed)),
+                static_cast<unsigned long long>(::Eden::GpuFault::guest_map_zero.load(std::memory_order_relaxed)),
+                static_cast<unsigned long long>(::Eden::GpuFault::guest_null_mapped.load(std::memory_order_relaxed)));
     // Take an immutable owner-written copy; priority/CPU-clock syscalls,
     // formatting, and stdout flushes must NOT hold workers_mutex. Otherwise
     // all guest CPU workers can block in SampleCpu() on this GPU report.

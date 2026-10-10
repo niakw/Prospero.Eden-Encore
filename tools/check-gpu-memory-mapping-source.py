@@ -18,7 +18,12 @@ assert 'std::atomic<std::uint64_t> reads{0}, writes{0}' in h
 assert 'return n <= 8 || (n & (n - 1)) == 0;' in h
 assert 'target_include_directories(video_core PRIVATE "${EDEN_PORT_DIR}")' in c
 assert 'validate_ps5_gpu_memory_mapping' in apply
-assert 'EDEN_GPU_UNMAPPED_COUNTERS read=%llu write=%llu' in perf
+assert 'EDEN_GPU_UNMAPPED_COUNTERS read=%llu write=%llu guest_map_zero=%llu guest_null_mapped=%llu' in perf
+diagnostics=(r/'headless/backports/eden-ps5-guest-mapping-diagnostics.patch').read_text()
+for needle in ('EDEN_GUEST_MAP_POINTER_ZERO', 'EDEN_GUEST_MAPPED_NULL_POINTER',
+               'ShouldReportGuestMapZero()', 'ShouldReportGuestNullMapped()'):
+    assert needle in diagnostics, needle
+assert 'validate_ps5_guest_mapping_diagnostics' in apply
 def sample(i): return i<=8 or i&(i-1)==0
 assert [i for i in range(1,129) if sample(i)] == [1,2,3,4,5,6,7,8,16,32,64,128]
 print('PASS source: physical continuity, PS5 shared-cache bypass, bounded fault logs')
