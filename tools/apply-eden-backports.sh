@@ -450,6 +450,30 @@ print('PS5 GPU last reverse node never calls ReleaseEntry(0): PASS')
 PYMULTIHEAD
 }
 apply_one "$root/headless/backports/eden-ps5-gpu-empty-multi-head.patch" "$eden/.encore-backport-ps5-gpu-empty-multi-head.sha256" validate_ps5_gpu_empty_multi_head
+validate_ps5_gpu_physical_read_bounds() {
+python3 - "$eden" <<'PYPHYSREAD'
+from pathlib import Path
+import sys
+s=(Path(sys.argv[1])/'src/core/device_memory_manager.inc').read_text()
+for token in ('EDEN_GPU_READ_WRITE_PHYS_OOB',
+              'first_phys >= compressed_device_addr.size()',
+              'compressed_device_addr.size() - first_phys',
+              'static_cast<size_t>(phys_addr - 1U) >= compressed_device_addr.size()',
+              'static_cast<size_t>(phys_addr - 1U) < compressed_device_addr.size()'):
+    if token not in s:
+        raise SystemExit('missing bounded PS5 GPU physical block reader: ' + token)
+walk=s[s.index('void DeviceMemoryManager<Traits>::WalkBlock('):
+       s.index('void DeviceMemoryManager<Traits>::ReadBlock(')]
+if walk.index('first_phys >= compressed_device_addr.size()') > walk.index('on_memory(copy_amount, mem_ptr)'):
+    raise SystemExit('unsafe physical DRAM continuity check after block read')
+for method in ('ReadBlock(', 'ReadBlockUnsafe('):
+    segment=s[s.index('void DeviceMemoryManager<Traits>::'+method):]
+    if segment.index('compressed_device_addr.size()') > segment.index('std::memcpy(dest_pointer, mem_ptr + page_offset, size)'):
+        raise SystemExit('unsafe physical DRAM check after ' + method + ' copy')
+print('PS5 GPU bounded physical block readers, no invalid page dereference: PASS')
+PYPHYSREAD
+}
+apply_one "$root/headless/backports/eden-ps5-gpu-physical-read-bounds.patch" "$eden/.encore-backport-ps5-gpu-physical-read-bounds.sha256" validate_ps5_gpu_physical_read_bounds
 validate_ps5_gpu_reverse_inline() {
 python3 - "$eden" <<'PYGPUINLINE'
 from pathlib import Path
