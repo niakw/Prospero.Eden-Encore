@@ -60,3 +60,28 @@ Le total `24 205` initial représente **des IDs d'applications candidates**
 collectés dans plusieurs régions, pas 24 205 jeux commerciaux uniques.
 L'audit `scope-audit.json` explique les doublons de noms et les indices
 de démos/versions cloud, sans exclure à tort des jeux Switch 1.
+
+
+## Switch 1 uniquement : vérification du catalogue (10 octobre 2026)
+
+**Ne pas interpréter le catalogue TitleDB comme une liste vérifiée de jeux
+officiels.** L'audit indépendant GitHub Actions
+[`#38008270773`](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38008270773)
+a traité 24 205 identifiants au format application Switch 1 et retenu
+**23 997 candidats non officiellement confirmés** après exclusion de
+153 démos clairement nommées, 17 versions cloud et 38 titres à sortie
+future. Les 95 occurrences de Title IDs Switch 2 seuls `0400…` ont
+également été rejetées au moment de la lecture des sources régionales.
+
+Cette correction est un **premier filtre de métadonnées**, pas la preuve
+que 23 997 jeux Switch 1 existent : un second recoupement avec des
+sources indépendantes reste nécessaire. Les estimations d'inventaires
+diffèrent selon les critères de comptage (édition, régions, jeux
+numériques/physiques, périodes). **Aucune limite arbitraire** n'est
+utilisée.
+
+Règle constante : un jeu ayant une édition réellement jouable sur
+**Switch 1** reste inclus même s'il possède aussi une édition Switch 2 ;
+les jeux **exclusivement Switch 2** ne font jamais partie du catalogue
+destiné à l'émulation Switch 1. Un ancien catalogue non filtré ne
+doit pas déclencher un nouveau long balayage.
