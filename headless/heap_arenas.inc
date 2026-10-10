@@ -565,7 +565,7 @@ static int eden_heap_grow(size_t bytes, unsigned seen) {
          * not sufficient to attribute frame stalls to physical memory. */
         char growth_line[176];
         const int growth_chars=snprintf(growth_line,sizeof(growth_line),
-            "EDEN_HEAP_GROW req_bytes=%zu root=%u pieces=%zu spaces=%u committed_mib=%zu\\n",
+            "EDEN_HEAP_GROW req_bytes=%zu root=%u pieces=%zu spaces=%u committed_mib=%zu\n",
             bytes, used, pieces, count+1, ((size_t)used+pieces)<< (EDEN_HEAP_PIECE_SHIFT-20u));
         if (growth_chars>0 && (size_t)growth_chars<sizeof(growth_line))
           sceKernelDebugOutText(0,growth_line);
