@@ -18,4 +18,13 @@ assert '"' + new + '" 3)' in cmake
 for capacity in (1, 2, 4096, 1 << 20):
     assert all(index < capacity for index in (0, capacity - 1))
     assert all(index >= capacity for index in (capacity, capacity + 1))
+for token in (
+    'std::mutex sparse_mutation_mutex;',
+    'std::lock_guard<std::mutex> mutation_lock{sparse_mutation_mutex};',
+    'if (IsCommittedPage(index)) return;',
+    'void CommitPage(std::size_t index) noexcept {',
+):
+    assert token in cmake, token
+assert cmake.count('mutation_lock{sparse_mutation_mutex}') == 2
+print("PASS: sparse table zero/decommit and page commit serialized per vector")
 print("PASS: pinned SparseLargeVector GetAndFault/Set/IsCommittedPage stop at count")
