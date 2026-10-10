@@ -83,6 +83,9 @@ with tempfile.TemporaryDirectory(prefix="eden-glyph-web-discovery-") as root:
         online, newst = search.discover(full, {}, 1, "duckduckgo", network=True,
                                         interval=0)
     assert online["source_leads"] == 1
+    assert online["requests_attempted"]==1
+    assert online["requests_completed"]==1
+    assert online["requests_failed_or_blocked"]==0
     assert online["mod_asset_downloads"] == 0
     assert newst["next_offset"] == 1
     assert newst["completed_title_ids"] == [full["games"][0]["title_id"]]
@@ -114,6 +117,8 @@ with tempfile.TemporaryDirectory(prefix="eden-glyph-web-discovery-") as root:
     with patch.object(search, "ddg", side_effect=search.ProviderPaused("rate limit")):
         blocked, newstate = search.discover(full, {}, 1, "duckduckgo", True, interval=0)
     assert blocked["games_examined"] == 0 and blocked["errors"]
+    assert blocked["requests_attempted"]==1 and blocked["requests_completed"]==0
+    assert blocked["requests_failed_or_blocked"]==1
     assert newstate["next_offset"] == 0
 
     with patch.object(search, "request_bytes",
@@ -121,6 +126,25 @@ with tempfile.TemporaryDirectory(prefix="eden-glyph-web-discovery-") as root:
                           "full_name": "test/controller-ui-glyphs",
                           "html_url": "https://github.com/test/controller-ui-glyphs"}]}).encode()):
         assert search.github('"Zelda BOTW" controller mod')
+    # One Switch generic search and one PC controller search must not
+    # duplicate the exact same REST request. Query all 50 repo summaries
+    # in one paginated request, not the former 10-per-game limit.
+    repository_queries=[]
+    def github_stub(url, headers=None):
+        repository_queries.append(url)
+        return json.dumps({"items":[{
+            "full_name":"test/source",
+            "description":"Zelda BOTW PS4 controller button prompts mod",
+            "html_url":"https://github.com/test/source",
+        }]}).encode()
+    with patch.object(search,"request_bytes",side_effect=github_stub):
+        search.github(search.game_query("Zelda: Breath of the Wild",0))
+        search.github(search.game_query("Zelda: Breath of the Wild",1))
+    assert len(repository_queries)==2
+    assert repository_queries[0]!=repository_queries[1]
+    assert "per_page=50" in repository_queries[0]
+    assert "controller" in __import__("urllib.parse",fromlist=["unquote"]).unquote(
+        repository_queries[1])
     with patch.dict("os.environ", {"YANDEX_SEARCH_API_KEY": "",
                                     "YANDEX_SEARCH_FOLDER_ID": ""}):
         try: search.yandex("game PS5 icons")
