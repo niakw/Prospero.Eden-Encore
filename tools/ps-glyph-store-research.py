@@ -169,7 +169,7 @@ def persist(root:Path, fresh_leads:dict, fresh_progress:dict,
             json.dumps(content,ensure_ascii=False,separators=(",",":"))+"\n",
             encoding="utf-8")
     (store/"scope-audit.json").write_text(
-        json.dumps(audit,ensure_ascii=False,indent=2)+"\\n",encoding="utf-8")
+        json.dumps(audit,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
     for file,doc in (("switch1-titles.json.gz",catalog),
                      ("source-queries.json.gz",queue)):
         encoded=json.dumps(doc,ensure_ascii=False,
