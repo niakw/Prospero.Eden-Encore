@@ -1,23 +1,5 @@
 --- a/src/core/device_memory_manager.inc
 +++ b/src/core/device_memory_manager.inc
-@@ -268,7 +268,7 @@
- #endif
- #ifdef PS5_NATIVE
-         // Map may replace an existing GPU-page mapping without an Unmap call.
--        // The previous forward page is NOT sufficient: unlink its reverse
-+        // The previous forward page is NOT sufficient: unlink its AtomicLoadReverse(reverse)
-         // physical->GPU association before installing the replacement.
-         const u32 device_page = static_cast<u32>(start_page_d + i);
-         auto& old_entry = tracked_entries.GetUnchecked(start_page_d + i);
-@@ -278,7 +278,7 @@
-         if (previous_physical != 0 && previous_physical != replacement_physical)
-             replaced_gpu_mapping = true;
-         if (previous_physical != 0 && previous_physical == replacement_physical) {
--            // Re-registering the same backing must not add a second reverse
-+            // Re-registering the same backing must not add a second AtomicLoadReverse(reverse)
-             // address to MultiAddressContainer. Refresh its CPU-side alias.
-             AtomicStoreContinuity(old_entry, 0);
-             AtomicStoreBacking(old_entry, 0);
 @@ -287,28 +287,28 @@
          }
          if (previous_physical != 0) {
