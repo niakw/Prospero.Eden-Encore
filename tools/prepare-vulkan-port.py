@@ -771,19 +771,20 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
          '            auto timer = Eden::Performance::VulkanTimer(16);\n            std::unique_lock lock{build_mutex};'),
     ])
 shader_costs = [
-    ('#include <algorithm>', '#include <algorithm>\n#include <cstdio>\n#include <unordered_set>\n'
+    ('#include <algorithm>', '#include <algorithm>\n#include <cstdio>\n#include "pipeline_trace_registry.h"\n'
      '#include "performance.h"\n#include "dev_vulkan.h"\n#include "diagnostics.h"'),
     # Development crash probes: report each pipeline's first use (stage hashes) to klog,
     # which survives a GPU fault that kills the title.
     ('    current_pipeline = pipeline.get();\n    return BuiltPipeline(current_pipeline);\n}',
      '    current_pipeline = pipeline.get();\n'
      '    if (::Eden::DevVulkan::trace_pipelines) {\n'
-     '        static std::unordered_set<const void*> traced;\n'
-     '        if (traced.insert(current_pipeline).second) {\n'
+     '        const auto first_use = ::Eden::PipelineTrace::graphics_first_use.Record(\n'
+     '            ::Eden::DevVulkan::gpu_time_session.load(std::memory_order_acquire), current_pipeline);\n'
+     '        if (first_use != 0) {\n'
      '            const auto& h = graphics_key.unique_hashes;\n'
      '            char text[256];\n'
      '            std::snprintf(text, sizeof(text), "G%zu p=%p new=%d va=%llx vb=%llx tc=%llx te=%llx gs=%llx fs=%llx",\n'
-     '                          traced.size(), (const void*)current_pipeline, int(is_new), (unsigned long long)h[0], (unsigned long long)h[1],\n'
+     '                          first_use, (const void*)current_pipeline, int(is_new), (unsigned long long)h[0], (unsigned long long)h[1],\n'
      '                          (unsigned long long)h[2], (unsigned long long)h[3], (unsigned long long)h[4],\n'
      '                          (unsigned long long)h[5]);\n'
      '            ::Eden::Report("pipeline", text);\n'
@@ -796,10 +797,11 @@ shader_costs = [
      '        pipeline = CreateComputePipeline(key, shader);\n'
      '    }\n'
      '    if (::Eden::DevVulkan::trace_pipelines && pipeline) {\n'
-     '        static std::unordered_set<const void*> traced;\n'
-     '        if (traced.insert(pipeline.get()).second) {\n'
+     '        const auto first_use = ::Eden::PipelineTrace::compute_first_use.Record(\n'
+     '            ::Eden::DevVulkan::gpu_time_session.load(std::memory_order_acquire), pipeline.get());\n'
+     '        if (first_use != 0) {\n'
      '            char text[160];\n'
-     '            std::snprintf(text, sizeof(text), "C%zu p=%p new=%d cs=%llx shared=%u wg=%u,%u,%u", traced.size(),\n'
+     '            std::snprintf(text, sizeof(text), "C%zu p=%p new=%d cs=%llx shared=%u wg=%u,%u,%u", first_use,\n'
      '                          (const void*)pipeline.get(), int(is_new), (unsigned long long)key.unique_hash, unsigned(key.shared_memory_size),\n'
      '                          unsigned(key.workgroup_size[0]), unsigned(key.workgroup_size[1]),\n'
      '                          unsigned(key.workgroup_size[2]));\n'
