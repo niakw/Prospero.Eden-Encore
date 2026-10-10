@@ -140,7 +140,15 @@ def parse_log(data: bytes) -> dict:
                 int(bytes_held), int(blocks), int(pins), bool(int(has_pa)))
             if index >= 24 or not 1 <= span <= 24 - index or pins > 32:
                 raise ValueError("out-of-range heap root telemetry")
-            reason = ("pinned_child_arenas" if pins else
+            # Atomically published root owners do not make relaxed and
+            # per-thread-batched occupancy counters an exact concurrent
+            # snapshot. Negative totals are an accounting inconsistency or
+            # a transient publication skew, never proof of live allocations.
+            reason = ("inconsistent_or_transient_ledger" if
+                      bytes_held < 0 or blocks < 0 or
+                      (blocks == 0 and bytes_held != 0) or
+                      (bytes_held == 0 and blocks != 0) else
+                      "pinned_child_arenas" if pins else
                       "unreturned_mspace_blocks" if bytes_held or blocks else
                       "missing_direct_owner" if not has_pa else
                       "zero_reported_but_quiescence_unproven")
