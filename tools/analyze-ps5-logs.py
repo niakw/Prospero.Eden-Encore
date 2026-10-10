@@ -23,6 +23,7 @@ MAX_FILES = 32
 MAX_LOG_BYTES = 32 * 1024 * 1024
 MAX_WINDOWS = 40000
 MAX_EVENTS = 100
+MAX_ROOT_EVENTS = 2000
 FRAME = re.compile(r"\bEDEN_VULKAN_FRAME\s+frames=(\d+)\s+seconds=([\d.]+)\s+fps=([\d.]+)\s+worst_ms=([\d.]+)([^\r\n]*)")
 LATE = re.compile(r"\b(late38|late50|late100|late200|late500)=(\d+)\b")
 SLOW = re.compile(r"\bslow frame:\s*update\s+(\d+)\s+ms,\s*draw\s+(\d+)\s+ms,\s*present\s+(\d+)\s+ms")
@@ -39,6 +40,10 @@ HEAP_PIECE = re.compile(
 HEAP_LIFETIME = re.compile(
     r"\bEDEN_HEAP_LIFETIME\s+phase=([a-z_]+)\s+pieces=(\d+)\s+"
     r"large=(\d+)\s+large_blocks=(\d+)\s+tcache=(\d+)")
+HEAP_ROOT = re.compile(
+    r"\bEDEN_HEAP_ROOT\s+phase=([a-z_]+)\s+root=(\d+)\s+pieces=(\d+)\s+"
+    r"held_bytes=(-?\d+)\s+held_blocks=(-?\d+)\s+arena_pins=(\d+)\s+"
+    r"physical_owner=([01])\s+reclaim=disabled\b")
 DMEM_FAILED = re.compile(
     r"\bEDEN_PS5_DMEM_PROBE_FAILED\s+consecutive=(\d+)\s+"
     r"fallback=(last_confirmed|conservative)")
@@ -65,6 +70,7 @@ def parse_log(data: bytes) -> dict:
     oom_hints = 0
     heap_piece_samples: list[dict] = []
     heap_lifetime: list[dict] = []
+    heap_roots: list[dict] = []
     dmem_failures: list[dict] = []
     dmem_slow: list[dict] = []
     memory_live: list[dict] = []
@@ -125,6 +131,26 @@ def parse_log(data: bytes) -> dict:
                     "large_live_bytes": int(large),
                     "large_live_blocks": int(blocks),
                     "tcache_approx_bytes": int(tcache)})
+        if root := HEAP_ROOT.search(line):
+            if len(heap_roots) >= MAX_ROOT_EVENTS:
+                raise ValueError("excessive heap root telemetry")
+            phase, index, span, bytes_held, blocks, pins, has_pa = root.groups()
+            index, span = int(index), int(span)
+            bytes_held, blocks, pins, has_pa = (
+                int(bytes_held), int(blocks), int(pins), bool(int(has_pa)))
+            if index >= 24 or not 1 <= span <= 24 - index or pins > 32:
+                raise ValueError("out-of-range heap root telemetry")
+            reason = ("pinned_child_arenas" if pins else
+                      "unreturned_mspace_blocks" if bytes_held or blocks else
+                      "missing_direct_owner" if not has_pa else
+                      "zero_reported_but_quiescence_unproven")
+            heap_roots.append({
+                "line": number, "phase": phase, "root": index,
+                "pieces": span, "physical_extent_mib": span * 128,
+                "held_usable_bytes": bytes_held, "held_blocks": blocks,
+                "arena_pins": pins, "has_direct_physical_owner": has_pa,
+                "reclaim": "disabled", "diagnostic_reason": reason,
+            })
         if fail := DMEM_FAILED.search(line):
             if len(dmem_failures) < MAX_EVENTS:
                 dmem_failures.append({
@@ -174,11 +200,14 @@ def parse_log(data: bytes) -> dict:
             "heap_piece_commits_over_16ms": sum(
                 sample["total_ms"] >= 16 for sample in heap_piece_samples),
             "heap_lifetime_samples": heap_lifetime,
+            "heap_root_snapshots": heap_roots,
             "direct_memory_probe_failures": dmem_failures,
             "direct_memory_slow_probe_samples": dmem_slow,
             "gpu_last_confirmed_memory_samples": memory_live,
             "worker_topology_samples": topology_samples,
             "warning": ("Heap pieces are retained physical backing, not live bytes. "
+                        "A root with zero reported held blocks is not reclaimable without "
+                        "mspace emptiness verification and allocator quiescence. "
                         "A largest contiguous direct-memory block is not total free "
                         "GPU VRAM; samples may be incomplete or from other sessions.")
         },
