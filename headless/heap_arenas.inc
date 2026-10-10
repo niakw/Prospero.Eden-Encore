@@ -42,7 +42,8 @@ void *eden_heap_reserve(size_t size);             /* address space only; NULL wh
 int eden_heap_commit(void *address, size_t size); /* initial backing, with startup owner */
 int eden_heap_commit_growth(void *address, size_t size, int64_t *physical); /* growth lock held */
 void eden_heap_rollback_growth(void *address, size_t size, int64_t physical); /* no mspace published */
-void eden_heap_abandon_initial(void *address, size_t reserved); /* only if first mspace create failed */
+void eden_heap_abandon_initial(void *address, size_t reserved);
+int64_t eden_heap_first_direct_owner(void); /* only if first mspace create failed */
 
 static void *_Atomic eden_heap_slots[EDEN_HEAP_SLOTS]; /* arena mspace owning each slot */
 static void *eden_heap_arena_list[EDEN_HEAP_MAX_ARENAS];
@@ -66,6 +67,7 @@ static void *_Atomic eden_heap_piece_space[EDEN_HEAP_PIECES];
  * protocol exists yet, and child arenas can pin the parent backing. */
 static _Atomic unsigned char eden_heap_piece_root[EDEN_HEAP_PIECES];
 static unsigned char eden_heap_root_span[EDEN_HEAP_PIECES];
+static int64_t eden_heap_root_direct_owner[EDEN_HEAP_PIECES];
 static atomic_long eden_heap_root_held_bytes[EDEN_HEAP_PIECES];
 static atomic_long eden_heap_root_held_blocks[EDEN_HEAP_PIECES];
 static atomic_uint eden_heap_root_arena_pins[EDEN_HEAP_PIECES];
@@ -295,8 +297,9 @@ void eden_heap_report_roots(const char *phase) {
     const long bytes=atomic_load_explicit(&eden_heap_root_held_bytes[root],memory_order_relaxed);
     const long blocks=atomic_load_explicit(&eden_heap_root_held_blocks[root],memory_order_relaxed);
     const unsigned pins=atomic_load_explicit(&eden_heap_root_arena_pins[root],memory_order_relaxed);
-    printf("EDEN_HEAP_ROOT phase=%s root=%u pieces=%u held_bytes=%ld held_blocks=%ld arena_pins=%u reclaim=disabled\n",
-           phase?phase:"unknown", root, (unsigned)eden_heap_root_span[root], bytes, blocks, pins);
+    const unsigned has_pa=eden_heap_root_direct_owner[root]>=0;
+    printf("EDEN_HEAP_ROOT phase=%s root=%u pieces=%u held_bytes=%ld held_blocks=%ld arena_pins=%u physical_owner=%u reclaim=disabled\n",
+           phase?phase:"unknown", root, (unsigned)eden_heap_root_span[root], bytes, blocks, pins, has_pa);
   }
 }
 
@@ -412,6 +415,7 @@ static int ps5_heap_ready(void) {
   }
   eden_heap_spaces[0] = ps5_heap_mspace;
   eden_heap_root_span[0] = (unsigned char)first_pieces;
+  eden_heap_root_direct_owner[0] = eden_heap_grows ? eden_heap_first_direct_owner() : -1;
   for (unsigned piece=0; piece<first_pieces; ++piece) {
     atomic_store_explicit(&eden_heap_piece_root[piece],0,memory_order_relaxed);
     atomic_store_explicit(&eden_heap_piece_space[piece],ps5_heap_mspace,memory_order_relaxed);
@@ -525,6 +529,7 @@ static int eden_heap_grow(size_t bytes, unsigned seen) {
       void *space = sceLibcMspaceCreate("Eden-heap", start, size, 0);
       if (space != NULL) {
         eden_heap_root_span[used]=(unsigned char)pieces;
+        eden_heap_root_direct_owner[used]=physical;
         for (size_t piece=0; piece<pieces; ++piece) {
           atomic_store_explicit(&eden_heap_piece_root[used+piece],(unsigned char)used,memory_order_relaxed);
           atomic_store_explicit(&eden_heap_piece_space[used+piece],space,memory_order_release);
