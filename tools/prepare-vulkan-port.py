@@ -712,6 +712,18 @@ if gc.count(unsafe_cutoff) != 3:
     raise RuntimeError("Pinned GC needs three safe LRU cutoffs: prefetch and both cleanup passes")
 gc = gc.replace(unsafe_cutoff,
                 "::Eden::VulkanMemory::OldestEvictionTick(frame_tick, ticks_to_destroy)")
+# The pinned LeastRecentlyUsedCache::ForEachItemBelow uses an inclusive
+# comparison. Passing a saturated zero WITHOUT a guard would evict textures
+# created at frame 0! Wait for the requested age before touching any entries.
+cleanup_cutoff = ("    lru_cache.ForEachItemBelow("
+                  "::Eden::VulkanMemory::OldestEvictionTick(frame_tick, ticks_to_destroy), Cleanup);")
+if gc.count(cleanup_cutoff) != 2:
+    raise RuntimeError("Pinned GC must preserve both cleanup passes")
+gc = gc.replace(cleanup_cutoff,
+                "    if (frame_tick >= ticks_to_destroy) {\\n"
+                "        lru_cache.ForEachItemBelow("
+                "::Eden::VulkanMemory::OldestEvictionTick(frame_tick, ticks_to_destroy), Cleanup);\\n"
+                "    }")
 texture_costs = []
 for signature, index in (
     ('RunGarbageCollector()', 13), ('DownloadMemory(DAddr cpu_addr, size_t size)', 14),
