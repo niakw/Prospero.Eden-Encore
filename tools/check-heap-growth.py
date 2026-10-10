@@ -237,6 +237,7 @@ void *eden_heap_pages(size_t size) {
     return address == MAP_FAILED ? NULL : address;
 }
 void eden_heap_pages_free(void *address, size_t size) { munmap(address, size); }
+int64_t eden_heap_first_direct_owner(void) { return -1; }
 void eden_heap_abandon_initial(void *address, size_t reserved) {
     assert(address == last_reserved_base && reserved == last_reserved_size);
     assert(munmap(address, reserved) == 0);
@@ -560,6 +561,7 @@ int main(int argc, char **argv) {
     unsigned arena_pins = 0;
     for (unsigned root = 0; root < EDEN_HEAP_PIECES; ++root) {
         if (!eden_heap_root_span[root]) continue;
+        assert(eden_heap_root_direct_owner[root] == -1);
         const long blocks = atomic_load(&eden_heap_root_held_blocks[root]);
         const long bytes = atomic_load(&eden_heap_root_held_bytes[root]);
         assert(blocks >= 0 && bytes >= 0);
