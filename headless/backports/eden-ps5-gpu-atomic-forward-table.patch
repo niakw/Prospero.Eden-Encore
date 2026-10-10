@@ -247,7 +247,8 @@
 @@ -212,7 +258,7 @@
      }
  
-     constexpr void InsertCPUBacking(size_t page_index, VAddr address, Asid asid) {
+-    constexpr void InsertCPUBacking(size_t page_index, VAddr address, Asid asid) {
++    void InsertCPUBacking(size_t page_index, VAddr address, Asid asid) {
 -        tracked_entries.GetUnchecked(page_index).cpu_backing_address = address | (asid.id << asid_start_bit);
 +        AtomicStoreBacking(tracked_entries.GetUnchecked(page_index), address | (asid.id << asid_start_bit));
      }
