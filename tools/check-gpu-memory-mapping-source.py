@@ -119,6 +119,24 @@ for token in ('static u32 AtomicLoadReverse(', 'static void AtomicStoreReverse('
 assert 'validate_ps5_gpu_atomic_reverse_table' in apply
 assert apply.index('eden-ps5-gpu-atomic-forward-table.patch') < apply.index(
     'eden-ps5-gpu-atomic-reverse-table.patch')
+asid_guard=(r/'headless/backports/eden-ps5-gpu-asid-lifetime-guard.patch').read_text()
+asid_retire=(r/'headless/backports/eden-ps5-gpu-asid-no-reuse.patch').read_text()
+for token in ('#include <shared_mutex>', 'process_registry_guard',
+              'std::shared_lock registry_lk(process_registry_guard)',
+              'std::unique_lock registry_lk(process_registry_guard)',
+              'asid.id >= registered_processes.size()',
+              'asid_2.id >= registered_processes.size()',
+              'memory_device_inter != nullptr'):
+    assert token in asid_guard, token
+for token in ('registered_processes.emplace_back(memory_device_inter)',
+              'registered_processes.size() - 1U', 'constexpr size_t max_ids',
+              'return Asid{static_cast<size_t>(-1)}'):
+    assert token in asid_retire, token
+assert 'validate_ps5_gpu_asid_lifetime' in apply
+assert 'validate_ps5_gpu_asid_no_reuse' in apply
+assert apply.index('eden-ps5-gpu-atomic-reverse-table.patch') < apply.index(
+    'eden-ps5-gpu-asid-lifetime-guard.patch') < apply.index(
+    'eden-ps5-gpu-asid-no-reuse.patch')
 cpp_host=(r/'tools/check-gpu-atomic-forward-cpp-host.py').read_text()
 assert 'std::atomic_ref<' in cpp_host
 assert '-fsanitize=address,undefined' in cpp_host
