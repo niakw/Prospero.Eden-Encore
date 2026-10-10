@@ -113,3 +113,13 @@ The root ledger is diagnostic evidence to select a safe next step, **not** proof
 - `33765f9a`: host-only core preflight now runs `tools/check-heap-growth.py` with UBSan/TSan and `tools/check-heap-growth-rollback-host.py` with clang-18. Prior green #38032224808 did **not** run these new tests. These checks are wired but not executed on the changed HEAD; the native PS5 workflow remains separately gated.
 
 **Remaining prerequisite to safely return 128-MiB pieces:** firmware-supported `sceLibcMspaceDestroy` / `IsHeapEmpty` behavior must be proven with matching PS5 symbols, all block/cache/child-arena owners retired with an allocator-entry exclusion protocol, and the exact root's VA unmapped before its direct physical allocation is freed. Neither source-only instrumentation nor host sanitizer success would by itself establish that these conditions hold on a real PS5. No successful FPS/texture/launcher-crash outcome is claimed.
+
+
+### R241 — bounded post-console log triage and moved realloc fast path
+
+- `a21a557b` parses `EDEN_HEAP_ROOT` in the existing read-only log analyzer. Each bounded entry distinguishes roots pinned by child arenas, those retaining physical mspace blocks, dense/unknown PA ownership, and roots that merely **report** zero occupancy but lack a quiescence/SDK-empty proof. All report `reclaim=disabled`; the analyzer does not add or merge potentially overlapping session metrics.
+- `978fd1d8` extends the synthetic analyzer test with three root categories and an out-of-range root rejection; inherited preflight `tools/check-ps5-log-analysis.py` will run it in the next host-only gate.
+- `b6bf92ac` reuses a single resolved TLS record for both the new and old root accounting on a moved `realloc`; a failed TLS slot claim does not run registration a second time. `eden_heap_physical_note` no longer silently re-registers its own TLS context.
+- Static source-only checks of the hooked code paths are consistent; **no host compiler/UBSan/TSan, new GitHub Action, Sony API invocation, game boot or FPS test has run for these revisions**.
+
+Still open: root lifetimes/safe destruction on PS5 firmware 13.60, 1,280-MiB physical heap retention, FC27 native SIGSEGV/guest GPU mapping/black textures and severe frame collapse. No direct-memory release is enabled.
