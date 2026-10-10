@@ -788,7 +788,7 @@ void ReportDirectMemoryState(const char* phase) {
     // Lifecycle checkpoints only: no per-frame region enumeration or logging.
     std::printf("EDEN_DIRECT_POOL_OWNERS phase=%s extent=%llu heap_roots=%zu "
                 "heap_large=%zu sparse_tables=%zu jit_sparse=%zu jit_dense=%zu "
-                "tracked=%llu untracked_not_free=%llu tracked_within_extent=%u "
+                "tracked=%llu unclassified=%llu tracked_within_extent=%u "
                 "largest_free_known=%u largest_free=%zu\n",
                 phase, static_cast<unsigned long long>(account.extent_bytes),
                 heap_roots, heap_large, sparse_physical, jit_committed, jit_dense,
