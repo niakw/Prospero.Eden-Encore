@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "performance.h"
 #include "direct_pool_accounting.h"
+#include "direct_pool_probe_policy.h"
 #include "hle_counters.h"
 #include "gpu_fault_rate_limit.h"
 #include "crash_report.h"
@@ -617,11 +618,22 @@ void ResetDirectMemoryProbeForTitle() noexcept {
 
 #ifdef PS5_NATIVE
 // The largest free block of direct memory is what the next graphics allocation needs.
-// Looked at every >=100 ms; called on the GPU thread by the texture collector.
+// 100 ms minimum (250 ms only with >=4 GiB confirmed free);
+// called on the GPU thread by the texture collector.
 static void RefreshFreeMemory() {
     const long long now = NowNs();
     long long last = checked_ns.load(std::memory_order_relaxed);
     if (last != 0 && (now <= last || now - last < 100'000'000))
+        return;
+    // Do not add any new atomics to the common per-frame fast-return path.
+    // At most once per 100 ms, a confirmed >=4-GiB contiguous free block
+    // permits 250-ms polling instead of blocking the GPU owner every 100 ms.
+    // Low memory, first probe, or an error retains the original fast cadence.
+    if (last != 0 &&
+        now - last < ::Eden::DirectPool::ProbeIntervalNs(
+            has_valid_sample.load(std::memory_order_acquire),
+            consecutive_failures.load(std::memory_order_relaxed),
+            largest_free_block.load(std::memory_order_relaxed)))
         return;
     // Two GPU/cache clients can hit this on the same refresh boundary.
     // The old separate load/store let BOTH perform a synchronous kernel

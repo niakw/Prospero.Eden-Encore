@@ -108,6 +108,20 @@ assert "static std::atomic<bool> has_valid_sample{false};" in perf
 assert "if (!has_valid_sample.load(std::memory_order_acquire) || failed >= 2)" in perf
 assert 'EDEN_PS5_DMEM_PROBE_FAILED consecutive=%u fallback=%s' in perf
 assert "graphics_memory_short.store(largest < kShortMemory" in perf
+# The query remains at the original 100-ms rate when headroom is unknown
+# or constrained. The high-headroom-only slowdown runs AFTER the original
+# per-frame fast return, without making more atomics hot at 60/120 FPS.
+probe_policy = (root / "headless/direct_pool_probe_policy.h").read_text()
+assert "kProbeFastNs = 100'000'000" in probe_policy
+assert "kProbeHighHeadroomNs = 250'000'000" in probe_policy
+assert "kProbeHighHeadroomBytes = 4ULL << 30" in probe_policy
+assert "failed_queries == 0" in probe_policy
+assert "has_valid_sample && failed_queries == 0" in probe_policy
+refresh = perf.split("static void RefreshFreeMemory() {", 1)[1].split("static bool GraphicsMemoryShort()", 1)[0]
+assert refresh.index("now <= last || now - last < 100'000'000") < refresh.index(
+    "::Eden::DirectPool::ProbeIntervalNs(")
+assert refresh.index("::Eden::DirectPool::ProbeIntervalNs(") < refresh.index(
+    "checked_ns.compare_exchange_strong(")
 # A new title starts with NO trusted previous-title memory sample. Reset only
 # after the prior renderer has stopped, before the next game's first frame.
 main_reset = main.index("Eden::Performance::ResetDirectMemoryProbeForTitle();")
