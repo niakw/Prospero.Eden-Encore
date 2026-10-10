@@ -16,7 +16,7 @@ flush_patch = (root / "headless/backports/eden-ps5-gpu-block-flush-bounds.patch"
 for token in (
     "first_phys >= compressed_device_addr.size()",
     "compressed_device_addr.size() - first_phys",
-    "next_pages = 1",
+    "next_pages = first_phys >= compressed_device_addr.size()",
     "on_unmapped(copy_amount, current_vaddr)",
     "static_cast<size_t>(phys_addr - 1U) < compressed_device_addr.size()",
 ):
