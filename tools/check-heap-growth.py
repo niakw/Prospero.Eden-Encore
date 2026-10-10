@@ -183,7 +183,28 @@ int sceLibcMspacePosixMemalign(void *space, void **address, size_t alignment, si
     return 0;
 }
 int sceKernelUsleep(unsigned int microseconds) { return usleep(microseconds); }
-int sceKernelDebugOutText(int channel, const char *text) { (void)channel; return (int)write(2, text, strlen(text)); }
+static atomic_uint observed_growth_logs;
+static atomic_size_t last_growth_request;
+static atomic_uint last_growth_root;
+static atomic_uint last_growth_span;
+int sceKernelDebugOutText(int channel, const char *text) {
+    (void)channel;
+    if (strncmp(text, "EDEN_HEAP_GROW req_bytes=", 25) == 0) {
+        size_t req = 0, pieces = 0, committed_mib = 0;
+        unsigned root = 0, spaces = 0;
+        assert(sscanf(text,
+            "EDEN_HEAP_GROW req_bytes=%zu root=%u pieces=%zu spaces=%u committed_mib=%zu",
+            &req, &root, &pieces, &spaces, &committed_mib) == 5);
+        assert(root < EDEN_HEAP_PIECES && pieces > 0 && root + pieces <= EDEN_HEAP_PIECES);
+        assert(spaces > 0 && spaces <= EDEN_HEAP_PIECES);
+        assert(committed_mib == (root + pieces) * 128);
+        atomic_store(&last_growth_request, req);
+        atomic_store(&last_growth_root, root);
+        atomic_store(&last_growth_span, (unsigned)pieces);
+        atomic_fetch_add(&observed_growth_logs, 1);
+    }
+    return (int)write(2, text, strlen(text));
+}
 
 // The C library's own allocator, for what the app's heap does not own.
 void *__real_malloc(size_t size) { return malloc(size); }
@@ -391,6 +412,10 @@ int main(int argc, char **argv) {
         assert(block != NULL);
         assert(eden_heap_committed() == 3 * piece);
         assert(eden_heap_root_span[1] == 2);
+        assert(atomic_load(&observed_growth_logs) == 1);
+        assert(atomic_load(&last_growth_request) == piece + piece / 2);
+        assert(atomic_load(&last_growth_root) == 1);
+        assert(atomic_load(&last_growth_span) == 2);
         assert(atomic_load(&eden_heap_piece_root[1]) == 1);
         assert(atomic_load(&eden_heap_piece_root[2]) == 1);
         assert(eden_heap_root_direct_owner[1] == -1);
