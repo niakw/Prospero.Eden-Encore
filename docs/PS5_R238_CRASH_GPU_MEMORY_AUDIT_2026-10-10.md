@@ -248,3 +248,6 @@ The pinned Eden garbage collector samples Vulkan driver memory to `total_used_me
 - `044a1f80`/`9df74881`, `a4f6ed83`/`02b16cdb`: source-bound host C++20 ASan/UBSan regression exercises 200,000 projected-memory arithmetic cases, verifies two exact Python AST generator replacements including generated literal newline correctness, and is wired to both existing CI preflights. A green host CI **on R254** is still required.
 
 This removes a plausible non-saturating GPU memory accounting bug. It does not make GPU or RAM "100% utilized", does not reclaim Sony mspaces, and does not prove any FC27/BOTW PS5 frame-time or texture improvement. Continue guarding cross-component memory owners and PS5 SDK ABI before native acceptance.
+
+
+**R254 test confirmation:** Host-only [#38045810913](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38045810913) = SUCCESS for source SHA `b32d59c0d3ab99b22000a5f986bea184099c5794`. The generated Vulkan texture-budget source contracts, 200,000 bounded C++20 ASan/UBSan cases, full existing host GPU/CPU/JIT/Sony allocator suite, approved UX and branch diff gate all passed. The corresponding native PS5 build workflow was SKIPPED. This is **not** a full PS5 texture_cache.h compile, graphics render or FPS qualification; saturation only removes a provable unsigned-counter wrap and associated false-pressure risk.
