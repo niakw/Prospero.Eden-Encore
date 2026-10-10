@@ -84,12 +84,12 @@ struct Harness {
     static_assert(std::is_trivially_copyable_v<TrackedEntry>);
 """ + body + "\n" + reverse_body + """
 };
-int main() {
+static void StressAtomicMappings(int writer_count, int reader_count) {
     Harness::TrackedEntry entry{};
     u32 reverse_slot{};
     constexpr int iterations = 60000;
     std::vector<std::thread> workers;
-    for (int writer = 0; writer < 3; ++writer) {
+    for (int writer = 0; writer < writer_count; ++writer) {
         workers.emplace_back([&, writer] {
             for (int i = 0; i < iterations; ++i) {
                 auto value = static_cast<u32>((i + writer) & 65535);
@@ -100,7 +100,7 @@ int main() {
             }
         });
     }
-    for (int reader = 0; reader < 5; ++reader) {
+    for (int reader = 0; reader < reader_count; ++reader) {
         workers.emplace_back([&] {
             for (int i = 0; i < iterations; ++i) {
                 assert(Harness::AtomicLoadPhysical(entry) <= 65535);
@@ -111,8 +111,14 @@ int main() {
         });
     }
     for (auto& thread : workers) thread.join();
-    std::cout << "PASS exact PS5 GPU atomic_ref forward table: 8 threads, "
+    std::cout << "PASS exact PS5 GPU forward+reverse atomic_ref: "
+              << writer_count + reader_count << " threads, "
               << iterations << " operations/thread\\n";
+}
+int main() {
+    // Regression scenarios do not dictate PS5 CPU availability or worker caps.
+    StressAtomicMappings(3, 5);  // original 8-thread harness
+    StressAtomicMappings(6, 10); // SMT-scale 16-thread contention probe
 }
 """
 compiler = next((name for name in ("clang++-18", "clang++", "g++")
