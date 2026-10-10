@@ -12,9 +12,21 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 header = (root / "headless/vulkan_gc_budget.h").read_text(encoding="utf-8")
+pool_header = (root / "headless/vulkan_pool_capacity.h").read_text(encoding="utf-8")
 gc = (root / "headless/vulkan_gc_downloads.inc").read_text(encoding="utf-8")
 generator = (root / "tools/prepare-vulkan-port.py").read_text(encoding="utf-8")
 assert "constexpr std::uint64_t AfterProjectedEviction(" in header
+assert "class PoolCapacityLatch" in pool_header
+assert "std::atomic<std::uint64_t> capacity_{0};" in pool_header
+assert '"vulkan_pool_capacity.h"' in generator
+assert "::Eden::VulkanMemory::PoolCapacityLatch graphics_capacity;" in generator
+assert "graphics_capacity.Reset(free_memory ? free_memory() : 0);" in generator
+assert "graphics_capacity.Observe(observed_free)" in generator
+assert "graphics_capacity.Value()" in generator
+assert "const u64 observed_free = free_memory();" in generator
+assert "const u64 free_bytes = static_cast<u64>(static_cast<double>(observed_free) * scale);" in generator
+assert "static_cast<double>(session_capacity)" in generator
+assert "u64 graphics_capacity = 0;" not in generator
 assert "return reclaimed >= used ? 0 : used - reclaimed;" in header
 assert "usage = ::Eden::VulkanMemory::AfterProjectedEviction(" in gc
 assert "usage -= ReclaimedBytes(image);" not in gc
@@ -59,11 +71,14 @@ if compiler is None:
     raise SystemExit("Missing C++20 compiler; do not mark Vulkan GC host check passed")
 
 source = r"""
+#include <array>
 #include <cassert>
 #include <cstdint>
 #include <initializer_list>
 #include <limits>
+#include <thread>
 #include "vulkan_gc_budget.h"
+#include "vulkan_pool_capacity.h"
 using Eden::VulkanMemory::AfterProjectedEviction;
 static_assert(AfterProjectedEviction(0, 0) == 0);
 static_assert(AfterProjectedEviction(0, 1) == 0);
@@ -85,6 +100,38 @@ static_assert(OldestEvictionTick(51, 50) == 1);
 static_assert(OldestEvictionTick(UINT64_MAX, UINT64_MAX) == 0);
 static_assert(OldestEvictionTick(UINT64_MAX, 10) == UINT64_MAX - 10);
 int main() {
+    // Transient kernel failure at VkDevice construction used to latch zero
+    // capacity for the whole title and distort Vulkan texture GC thresholds.
+    // Now one later VALID kernel observation repairs the capacity without
+    // an extra probe, and the next title resets its own session baseline.
+    Eden::VulkanMemory::PoolCapacityLatch capacity;
+    assert(capacity.Value() == 0);
+    assert(capacity.Observe(0) == 0);
+    assert(capacity.Observe(512ULL << 20) == (512ULL << 20));
+    assert(capacity.Observe(1ULL << 30) == (512ULL << 20));
+    capacity.Reset(0);
+    assert(capacity.Observe(0) == 0);
+    assert(capacity.Observe(2ULL << 30) == (2ULL << 30));
+    capacity.Reset(3ULL << 30);
+    assert(capacity.Observe(1ULL << 30) == (3ULL << 30));
+    // Multiple GPU/driver callers may observe the first available result.
+    // Only one wins; immutable thereafter until explicit device reset.
+    capacity.Reset(0);
+    std::array<std::thread, 8> contenders;
+    for (std::size_t i = 0; i < contenders.size(); ++i)
+        contenders[i] = std::thread([&capacity, i] {
+            for (int n = 0; n < 500; ++n) {
+                const std::uint64_t offered = (i + 1) * (128ULL << 20);
+                const auto seen = capacity.Observe(offered);
+                assert(seen >= (128ULL << 20) && seen <= (1ULL << 30));
+            }
+        });
+    for (auto& thread : contenders) thread.join();
+    const auto locked = capacity.Value();
+    assert(locked >= (128ULL << 20) && locked <= (1ULL << 30));
+    assert(capacity.Observe(4ULL << 30) == locked);
+    capacity.Reset(0);
+    assert(capacity.Value() == 0);
     // Reproduce the actual startup path: frame_tick begins at zero, while
     // immediate VRAM pressure can enter the texture collector before frame 50.
     // For a new image touched on this frame, the cutoff must NEVER select it
@@ -137,9 +184,10 @@ with tempfile.TemporaryDirectory(prefix="eden-vulkan-gc-budget-") as temp:
     executable = Path(temp) / "gc"
     source_path.write_text(source, encoding="utf-8")
     subprocess.run([compiler, "-std=c++20", "-O1", "-g", "-Wall", "-Wextra",
-                    "-Werror", "-fsanitize=address,undefined",
+                    "-Werror", "-fsanitize=address,undefined", "-pthread",
                     "-fno-sanitize-recover=all", "-I", str(root / "headless"),
                     str(source_path), "-o", str(executable)], check=True, timeout=90)
     subprocess.run([str(executable)], check=True, timeout=90)
 print("PASS actual Vulkan GC budget + both LRU cutoffs: 200000 saturation cases and early-frame eviction gates ASan/UBSan")
+print("PASS Vulkan pool capacity: first healthy sample after failed initialization, per-VkDevice reset and concurrent latch under ASan/UBSan")
 print("GPU driver, real VRAM headroom, FC27 textures/FPS: not console qualified")
