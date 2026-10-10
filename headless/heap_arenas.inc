@@ -66,8 +66,8 @@ static void *_Atomic eden_heap_piece_space[EDEN_HEAP_PIECES];
  * observational ledger NEVER authorizes reclaim: no allocator quiescence
  * protocol exists yet, and child arenas can pin the parent backing. */
 static _Atomic unsigned char eden_heap_piece_root[EDEN_HEAP_PIECES];
-static unsigned char eden_heap_root_span[EDEN_HEAP_PIECES];
-static int64_t eden_heap_root_direct_owner[EDEN_HEAP_PIECES];
+static atomic_uchar eden_heap_root_span[EDEN_HEAP_PIECES];
+static _Atomic int64_t eden_heap_root_direct_owner[EDEN_HEAP_PIECES];
 static atomic_long eden_heap_root_held_bytes[EDEN_HEAP_PIECES];
 static atomic_long eden_heap_root_held_blocks[EDEN_HEAP_PIECES];
 static atomic_uint eden_heap_root_arena_pins[EDEN_HEAP_PIECES];
@@ -293,13 +293,14 @@ size_t eden_heap_committed(void) {
 void eden_heap_report_roots(const char *phase) {
   const unsigned used=atomic_load_explicit(&eden_heap_pieces_used,memory_order_acquire);
   for (unsigned root=0; root<used; ++root) {
-    if (!eden_heap_root_span[root]) continue;
+    const unsigned span=atomic_load_explicit(&eden_heap_root_span[root],memory_order_acquire);
+    if (!span) continue;
     const long bytes=atomic_load_explicit(&eden_heap_root_held_bytes[root],memory_order_relaxed);
     const long blocks=atomic_load_explicit(&eden_heap_root_held_blocks[root],memory_order_relaxed);
     const unsigned pins=atomic_load_explicit(&eden_heap_root_arena_pins[root],memory_order_relaxed);
-    const unsigned has_pa=eden_heap_root_direct_owner[root]>=0;
+    const unsigned has_pa=atomic_load_explicit(&eden_heap_root_direct_owner[root],memory_order_relaxed)>=0;
     printf("EDEN_HEAP_ROOT phase=%s root=%u pieces=%u held_bytes=%ld held_blocks=%ld arena_pins=%u physical_owner=%u reclaim=disabled\n",
-           phase?phase:"unknown", root, (unsigned)eden_heap_root_span[root], bytes, blocks, pins, has_pa);
+           phase?phase:"unknown", root, span, bytes, blocks, pins, has_pa);
   }
 }
 
@@ -414,8 +415,10 @@ static int ps5_heap_ready(void) {
     return 0;
   }
   eden_heap_spaces[0] = ps5_heap_mspace;
-  eden_heap_root_span[0] = (unsigned char)first_pieces;
-  eden_heap_root_direct_owner[0] = eden_heap_grows ? eden_heap_first_direct_owner() : -1;
+  atomic_store_explicit(&eden_heap_root_direct_owner[0],
+                        eden_heap_grows ? eden_heap_first_direct_owner() : -1,memory_order_relaxed);
+  /* Publish root metadata last; readers use acquire. */
+  atomic_store_explicit(&eden_heap_root_span[0],(unsigned char)first_pieces,memory_order_release);
   for (unsigned piece=0; piece<first_pieces; ++piece) {
     atomic_store_explicit(&eden_heap_piece_root[piece],0,memory_order_relaxed);
     atomic_store_explicit(&eden_heap_piece_space[piece],ps5_heap_mspace,memory_order_relaxed);
@@ -528,8 +531,8 @@ static int eden_heap_grow(size_t bytes, unsigned seen) {
        * count or any owner until Sony mspace construction has succeeded. */
       void *space = sceLibcMspaceCreate("Eden-heap", start, size, 0);
       if (space != NULL) {
-        eden_heap_root_span[used]=(unsigned char)pieces;
-        eden_heap_root_direct_owner[used]=physical;
+        atomic_store_explicit(&eden_heap_root_direct_owner[used],physical,memory_order_relaxed);
+        atomic_store_explicit(&eden_heap_root_span[used],(unsigned char)pieces,memory_order_release);
         for (size_t piece=0; piece<pieces; ++piece) {
           atomic_store_explicit(&eden_heap_piece_root[used+piece],(unsigned char)used,memory_order_relaxed);
           atomic_store_explicit(&eden_heap_piece_space[used+piece],space,memory_order_release);
