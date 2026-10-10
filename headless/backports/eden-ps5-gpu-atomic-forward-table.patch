@@ -180,7 +180,7 @@
          if (paddr == 0 || static_cast<size_t>(paddr - 1) >= compressed_device_addr.size()) {
              return 0;
          }
-@@ -188,7 +188,53 @@
+@@ -188,7 +188,29 @@
          VAddr cpu_backing_address;
          u32 continuity_tracker;
          u32 compressed_physical_ptr;
@@ -191,51 +191,27 @@
 +    // 16-byte record and its native physical layout unchanged. On other
 +    // platforms the accessors optimize to the original scalar reads/writes.
 +    static u32 AtomicLoadPhysical(const TrackedEntry& page) noexcept {
-+#ifdef PS5_NATIVE
 +        return std::atomic_ref<const u32>(page.compressed_physical_ptr).load(std::memory_order_acquire);
-+#else
-+        return page.compressed_physical_ptr;
-+#endif
 +    }
 +    static void AtomicStorePhysical(TrackedEntry& page, u32 value) noexcept {
-+#ifdef PS5_NATIVE
 +        std::atomic_ref<u32>(page.compressed_physical_ptr).store(value, std::memory_order_release);
-+#else
-+        page.compressed_physical_ptr = value;
-+#endif
 +    }
 +    static u32 AtomicLoadContinuity(const TrackedEntry& page) noexcept {
-+#ifdef PS5_NATIVE
 +        return std::atomic_ref<const u32>(page.continuity_tracker).load(std::memory_order_relaxed);
-+#else
-+        return page.continuity_tracker;
-+#endif
 +    }
 +    static void AtomicStoreContinuity(TrackedEntry& page, u32 value) noexcept {
-+#ifdef PS5_NATIVE
 +        std::atomic_ref<u32>(page.continuity_tracker).store(value, std::memory_order_relaxed);
-+#else
-+        page.continuity_tracker = value;
-+#endif
 +    }
 +    static VAddr AtomicLoadBacking(const TrackedEntry& page) noexcept {
-+#ifdef PS5_NATIVE
 +        return std::atomic_ref<const VAddr>(page.cpu_backing_address).load(std::memory_order_acquire);
-+#else
-+        return page.cpu_backing_address;
-+#endif
 +    }
 +    static void AtomicStoreBacking(TrackedEntry& page, VAddr value) noexcept {
-+#ifdef PS5_NATIVE
 +        std::atomic_ref<VAddr>(page.cpu_backing_address).store(value, std::memory_order_release);
-+#else
-+        page.cpu_backing_address = value;
-+#endif
 +    }
      Common::SparseLargeVector<u32> compressed_device_addr;
      Common::SparseLargeVector<TrackedEntry> tracked_entries;
  
-@@ -205,7 +251,7 @@
+@@ -205,7 +227,7 @@
      static constexpr size_t asid_start_bit = guest_max_as_bits;
  
      std::pair<Asid, VAddr> ExtractCPUBacking(size_t page_index) {
@@ -244,7 +220,7 @@
          const VAddr address = content & guest_mask;
          const Asid asid{static_cast<size_t>(content >> asid_start_bit)};
          return std::make_pair(asid, address);
-@@ -212,7 +258,7 @@
+@@ -212,7 +234,7 @@
      }
  
 -    constexpr void InsertCPUBacking(size_t page_index, VAddr address, Asid asid) {
