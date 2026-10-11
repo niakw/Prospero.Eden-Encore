@@ -1248,6 +1248,10 @@ int main(int argc, char** argv) {
                     // the native GPU worker under the three busy guest cores.
                     Eden::Performance::cache_lock_spins.store(
                         static_cast<unsigned>(std::min(requested, 32ul)), std::memory_order_relaxed);
+                } else if (entry == "fast_pipelines=off" || entry == "fast_pipelines=on") {
+                    // PS5 dev A/B: only first-use runtime shaders get a non-optimized
+                    // pipeline followed by a single background optimized rebuild.
+                    Eden::DevVulkan::fast_first_pipelines = entry.ends_with("on");
                 } else if (entry == "gc_dirty=upstream") {
                     // Eden's rule: evict GPU-written textures from the "expected" memory mark on.
                     Eden::Performance::gc_keep_dirty = false;
