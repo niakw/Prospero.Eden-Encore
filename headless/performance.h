@@ -145,7 +145,8 @@ inline void GuestCacheLock(Mutex& mutex) {
 enum class CachePhase : unsigned {
     PairWait, PairHeld, PipelineConfigure, TextureDescriptorSync,
     TextureFillImageViews, GraphicsBufferUpdate, DescriptorQueueAcquire,
-    DynamicStates, QueryAndDraw, Count
+    DynamicStates, QueryAndDraw,
+    TextureCpuRefresh, TextureAliasScan, TextureAliasCopy, Count
 };
 struct CachePhaseTotal {
     std::atomic<unsigned long long> samples{}, total_ns{}, max_ns{};

@@ -1003,7 +1003,8 @@ void ReportGpuThread(unsigned frame) {
         constexpr const char* cache_phase_names[] = {
             "pair_wait", "pair_held", "pipeline_configure", "descriptor_sync",
             "fill_views", "graphics_buffers", "descriptor_acquire",
-            "dynamic_states", "query_draw"
+            "dynamic_states", "query_draw",
+            "texture_cpu_refresh", "texture_alias_scan", "texture_alias_copy"
         };
         static_assert(std::size(cache_phase_names) == cache_phase_totals.size());
         for (unsigned phase = 0; phase < cache_phase_totals.size(); ++phase) {
