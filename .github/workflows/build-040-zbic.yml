@@ -56,6 +56,7 @@ jobs:
     timeout-minutes: 240
     env:
       PROSPEROEDEN_GIT_DEPS_ROOT: .deps/repos
+      PROSPEROEDEN_DEPS_OFFLINE: '1' # source dependency pulls must never contact upstream
       EDEN_TEST_ALL_ON: ${{ (inputs.test_all_on || (github.ref == 'refs/heads/dev/ps5-sparse-jit' && contains(github.event.head_commit.message || '', '[test-all-on]'))) && '1' || '0' }}
       EDEN_TEST_TITLE_ID: ${{ inputs.test_title_id || '0100C49025D3E000' }}
       EDEN_STAGE_DIR: ${{ (inputs.test_all_on || (github.ref == 'refs/heads/dev/ps5-sparse-jit' && contains(github.event.head_commit.message || '', '[test-all-on]'))) && 'build/dev/PPSA99008' || 'build/release/PPSA99008' }}
@@ -207,6 +208,7 @@ jobs:
           python3 -B tools/check-ps5-vulkan-swapchain-snapshot.py
           python3 -B tools/check-ps5-vulkan-swapchain-acquire-bounds.py
           python3 -B tools/check-ps5-mihawk-radv-contract.py
+          python3 -B tools/check-vendored-deps.py
           python3 -B tools/check-ps5-descriptor-queue-preflight.py
           python3 -B tools/check-ps5-large-descriptor-preflight.py
           python3 -B tools/check-ps5-adjacent-texture-view-reuse.py

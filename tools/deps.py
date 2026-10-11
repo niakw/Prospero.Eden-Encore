@@ -8,6 +8,10 @@
   tools/deps.py verify          fail unless every git checkout matches its pinned commit
   tools/deps.py clean           remove the fetched inputs inside .deps (sibling checkouts stay)
 
+Optional immutable source vault: vendor/source-vault (or PROSPEROEDEN_DEPS_VAULT).
+Verified blobs and Git bundles are preferred to all network fetching.
+PROSPEROEDEN_DEPS_OFFLINE=1 refuses network access when a pinned input is missing.
+
 Nothing that already exists is modified: an existing checkout stays at whatever revision it
 has (status reports it), an existing file or folder is not downloaded again. Downloads are
 cached in $PROSPEROEDEN_DEPS_CACHE (default ~/.cache/prosperoeden-deps) and verified against
@@ -30,6 +34,53 @@ MANIFEST = json.loads((ROOT / 'tools/deps.json').read_text())
 CACHE = pathlib.Path(os.environ.get('PROSPEROEDEN_DEPS_CACHE') or
                      pathlib.Path(os.environ.get('XDG_CACHE_HOME') or pathlib.Path.home() / '.cache')
                      / 'prosperoeden-deps')
+VAULT = pathlib.Path(os.environ.get('PROSPEROEDEN_DEPS_VAULT') or ROOT / 'vendor').expanduser()
+OFFLINE = os.environ.get('PROSPEROEDEN_DEPS_OFFLINE', '').lower() in ('1', 'true', 'yes')
+
+
+def vault_source(item):
+    return VAULT / 'sources' / item['name']
+
+
+def restore_chunked_object(item):
+    """Reconstruct an immutable original tarball or Git bundle from tracked chunks."""
+    specpath = VAULT / 'objects' / item['name'] / 'chunks.json'
+    if not specpath.is_file():
+        return None
+    spec = json.loads(specpath.read_text())
+    if spec.get('name') != item['name']:
+        fail(f'vault manifest mismatch for {item["name"]}')
+    cache_file = CACHE / ('vault-' + item['name'] + '-' + spec['sha256'][:16])
+    if cache_file.is_file() and digest(cache_file, 'sha256') == spec['sha256']:
+        return cache_file
+    CACHE.mkdir(parents=True, exist_ok=True)
+    staged = cache_file.with_name(cache_file.name + f'.partial-{os.getpid()}')
+    hashed = hashlib.sha256()
+    try:
+        with open(staged, 'wb') as output:
+            total = 0
+            for chunk in spec['chunks']:
+                source = specpath.parent / chunk['file']
+                if not source.is_file() or source.stat().st_size != chunk['size']:
+                    fail(f'missing or truncated vendored chunk: {source}')
+                if digest(source, 'sha256') != chunk['sha256']:
+                    fail(f'corrupted vendored chunk: {source}')
+                with open(source, 'rb') as inp:
+                    for block in iter(lambda: inp.read(1 << 20), b''):
+                        hashed.update(block)
+                        output.write(block)
+                        total += len(block)
+        if total != spec['size'] or hashed.hexdigest() != spec['sha256']:
+            fail(f'reassembled vendored archive hash mismatch: {item["name"]}')
+        staged.replace(cache_file)
+    finally:
+        staged.unlink(missing_ok=True)
+    return cache_file
+
+
+def vault_bundle(item):
+    return restore_chunked_object(item)
+
 
 
 def fail(message):
@@ -83,6 +134,32 @@ def download(url, algorithm, expected, name):
     target = CACHE / name
     if target.exists() and digest(target, algorithm) == expected:
         return target
+    for item in MANIFEST['items']:
+        if item['kind'] != 'archive':
+            continue
+        if name.startswith(item['name'] + '-'):
+            restored = restore_chunked_object(item)
+            if restored:
+                if digest(restored, algorithm) != expected:
+                    fail(f'vendored archive checksum mismatch: {item["name"]}')
+                shutil.copyfile(restored, target)
+                print(f'deps: restored {item["name"]} archive from tracked chunks', flush=True)
+                return target
+    # Some bootstrap checkouts have additional versioned tarballs (zlib).
+    # These are immutable inputs too: archive them just like primary deps.
+    for item in MANIFEST['items']:
+        for index, prefetch in enumerate(item.get('setup_prefetch', ())):
+            if prefetch['url'] != url:
+                continue
+            restored = restore_chunked_object({'name': f'{item["name"]}-setup-{index}'})
+            if restored:
+                if digest(restored, algorithm) != expected:
+                    fail(f'vendored bootstrap archive checksum mismatch: {name}')
+                shutil.copyfile(restored, target)
+                print(f'deps: restored bootstrap archive from vendored source: {name}', flush=True)
+                return target
+    if OFFLINE:
+        fail(f'offline pinned source missing in vendor/objects: {name}')
     partial = target.with_name(target.name + f'.partial-{os.getpid()}')
     for attempt in range(1, 4):
         try:
@@ -145,8 +222,38 @@ def fetch_git(item):
         shutil.rmtree(staging, ignore_errors=True)
         git('init', '-q', str(staging))
         git('remote', 'add', 'origin', item['url'], cwd=staging)
-        git('fetch', '-q', '--depth', '1', 'origin', item['commit'], cwd=staging)
-        git('-c', 'advice.detachedHead=false', 'checkout', '-q', '--detach', 'FETCH_HEAD', cwd=staging)
+        bundle = vault_bundle(item)
+        if bundle is not None:
+            # Our committed Git bundles are intentionally made from shallow,
+            # exact-SHA snapshots. Standard `git fetch bundle` rejects their
+            # absent ancestor objects. Extract the *self-contained pack* and
+            # explicitly declare the original commit to be the shallow root.
+            # This retains the true upstream SHA and the full pinned worktree.
+            if not bundle.is_file():
+                fail(f'invalid vendored Git pack: {bundle}')
+            with open(bundle, 'rb') as stream:
+                bundle_bytes = stream.read()
+            try:
+                header, pack_bytes = bundle_bytes.split(b'\n\n', 1)
+            except ValueError:
+                fail(f'vendored pack missing Git bundle header: {item["name"]}')
+            if (b'# v2 git bundle' not in header or
+                    item['commit'].encode() + b' HEAD' not in header.splitlines() or
+                    not pack_bytes.startswith(b'PACK')):
+                fail(f'vendored pack does not contain expected original HEAD: {item["name"]}')
+            pack_path = staging / '.git/objects/pack/pack-vendor.pack'
+            pack_path.write_bytes(pack_bytes)
+            git('-C', str(staging), 'index-pack', str(pack_path))
+            (staging / '.git/shallow').write_text(item['commit'] + '\n')
+            git('-C', str(staging), '-c', 'advice.detachedHead=false',
+                'checkout', '-q', '--detach', item['commit'])
+            print(f'deps: restored {item["name"]} at original {item["commit"][:12]} from vendored Git pack', flush=True)
+        else:
+            if OFFLINE:
+                shutil.rmtree(staging, ignore_errors=True)
+                fail(f'offline Git source missing in vendor/objects: {item["name"]}')
+            git('fetch', '-q', '--depth', '1', 'origin', item['commit'], cwd=staging)
+            git('-c', 'advice.detachedHead=false', 'checkout', '-q', '--detach', 'FETCH_HEAD', cwd=staging)
         head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=staging, text=True).strip()
         if head != item['commit']:
             fail(f'{item["name"]}: fetched {head}, pinned {item["commit"]}')
@@ -163,6 +270,25 @@ def fetch_git(item):
             cached = download(entry['url'], algorithm, expected,
                               f'{item["name"]}-{pathlib.PurePosixPath(entry["dest"]).name}')
             shutil.copyfile(cached, target)
+        # The boilerplate bootstrap normally downloads the v0.42 SDK itself.
+        # Expand the checksum-verified vendored ZIP before invoking it, so
+        # its existing executable check takes the genuinely offline path.
+        if entry['dest'].endswith('.zip'):
+            import zipfile
+            with zipfile.ZipFile(target) as archive:
+                for member in archive.namelist():
+                    parts = pathlib.PurePosixPath(member).parts
+                    if member.startswith('/') or '..' in parts:
+                        fail(f'unsafe ZIP entry in {target}: {member}')
+                sdk_root = path / pathlib.PurePosixPath(entry['dest']).parent
+                archive.extractall(sdk_root)
+                # ZipFile.extractall does not restore Unix executable modes.
+                # The native bootstrap probes `-x bin/prospero-lld` and would
+                # otherwise attempt a network download even with this ZIP.
+                for member in archive.infolist():
+                    mode = (member.external_attr >> 16) & 0o777
+                    if mode and not member.is_dir():
+                        os.chmod(sdk_root / member.filename, mode)
     if 'setup' in item and not (path / item['setup_creates']).exists():
         print(f'deps: setting up {item["name"]}: {" ".join(item["setup"])}', flush=True)
         env = None
@@ -183,6 +309,29 @@ def fetch(item):
         return
     if present(item):
         return
+    # Source trees in the same Git checkout are complete, versioned, directly
+    # searchable inputs. The old .deps path becomes a symlink to the vendored
+    # tree, preserving existing CMake and source-generator paths without copies.
+    if kind in ('archive', 'files') and item['name'] != 'pacbrew':
+        source = vault_source(item)
+        if (source / 'VENDOR-ORIGIN.json').is_file():
+            if kind == 'archive':
+                marker = (ROOT / item['creates']).resolve(strict=False)
+                expected_dir = ROOT / item['extract']
+                if pathlib.PurePosixPath(item['extract']) == pathlib.PurePosixPath('.deps'):
+                    expected_dir = ROOT / '.deps' / pathlib.PurePosixPath(item['creates']).parts[1]
+                if pathlib.PurePosixPath(item['extract']) != pathlib.PurePosixPath('.deps'):
+                    expected_dir = ROOT / item['extract']
+            else:
+                expected_dir = ROOT / item['dest']
+            expected_dir.parent.mkdir(parents=True, exist_ok=True)
+            if not expected_dir.exists() and not expected_dir.is_symlink():
+                expected_dir.symlink_to(source.resolve(), target_is_directory=True)
+            if present(item):
+                print(f'deps: {item["name"]} uses vendored source tree', flush=True)
+                return
+    if OFFLINE and kind not in ('archive', 'files'):
+        fail(f'offline missing source for {item["name"]}')
     if kind == 'archive':
         algorithm, expected = pinned_hash(item)
         name = pathlib.PurePosixPath(item.get('save') or f'{item["name"]}-{expected[:12]}.tar.gz').name
