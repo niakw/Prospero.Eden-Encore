@@ -335,7 +335,7 @@ jobs:
           test -d build/dev/PPSA99008
           test -f build/dev/PPSA99008/eboot.bin
           test -f build/dev/PPSA99008/sce_sys/param.json
-          test "$(find build/dev -mindepth 1 -maxdepth 1 -printf '%f\\n' | sort)" = PPSA99008
+          test "$(ls -A build/dev)" = PPSA99008
           python3 - <<'PY'
           from pathlib import Path
           import json
