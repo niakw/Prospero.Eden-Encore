@@ -60,7 +60,7 @@ static constexpr int VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL=2;
 static constexpr int VK_FILTER_LINEAR=3;
 inline int MakeImageBlit(int,int,unsigned,unsigned) { return 0; }
 inline int MakeImageCopy(int,int,unsigned,unsigned) { return 0; }
-void scenario(int from_width, int from_height, unsigned to_width, unsigned to_height,
+void scenario(unsigned from_width, unsigned from_height, unsigned to_width, unsigned to_height,
               bool blit_supported, bool expected_copy) {
     int original_image=123;
     Frame frame_value{from_width,from_height,&original_image};
