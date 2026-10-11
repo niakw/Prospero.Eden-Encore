@@ -136,6 +136,63 @@ inline void GuestCacheLock(Mutex& mutex) {
         cache_lock_wait_ns.fetch_add(static_cast<unsigned long long>(waited),
                                      std::memory_order_relaxed);
 }
+// R310: sampled GPU-owner cache phases.  A successful FPS average does not
+// explain a late frame; measure how much of each 16th draw is waiting for the
+// cache pair, configuring images/buffers/descriptors, or recording commands.
+// Detailed Logging ONLY. The quiet path does not touch clocks or counters.
+// All phase measurements are nested inside the ORIGINAL cache locks; this
+// code changes neither memory ownership nor draw/fence ordering.
+enum class CachePhase : unsigned {
+    PairWait, PairHeld, PipelineConfigure, TextureDescriptorSync,
+    TextureFillImageViews, GraphicsBufferUpdate, DescriptorQueueAcquire,
+    DynamicStates, QueryAndDraw, Count
+};
+struct CachePhaseTotal {
+    std::atomic<unsigned long long> samples{}, total_ns{}, max_ns{};
+};
+inline std::array<CachePhaseTotal, static_cast<unsigned>(CachePhase::Count)> cache_phase_totals{};
+inline thread_local bool cache_draw_sample_active = false;
+inline bool ShouldSampleCacheDraw() noexcept {
+    if (!detailed_gpu_profile.load(std::memory_order_relaxed)) return false;
+    static thread_local unsigned sequence = 0;
+    // Sampling avoids injecting high-frequency clock calls into the render path.
+    return (++sequence & 15u) == 0u;
+}
+class CachePhaseTimer {
+public:
+    explicit CachePhaseTimer(CachePhase phase, bool enabled = cache_draw_sample_active)
+        : stats(enabled ? &cache_phase_totals[static_cast<unsigned>(phase)] : nullptr) {
+        if (stats) started = Common::g_wall_clock.GetTimeNS();
+    }
+    CachePhaseTimer(const CachePhaseTimer&) = delete;
+    CachePhaseTimer& operator=(const CachePhaseTimer&) = delete;
+    void Stop() noexcept {
+        if (!stats) return;
+        const auto elapsed = (Common::g_wall_clock.GetTimeNS() - started).count();
+        if (elapsed > 0) {
+            const auto ns = static_cast<unsigned long long>(elapsed);
+            stats->total_ns.fetch_add(ns, std::memory_order_relaxed);
+            auto previous = stats->max_ns.load(std::memory_order_relaxed);
+            while (previous < ns &&
+                   !stats->max_ns.compare_exchange_weak(
+                       previous, ns, std::memory_order_relaxed)) {}
+        }
+        stats->samples.fetch_add(1, std::memory_order_relaxed);
+        stats = nullptr;
+    }
+    ~CachePhaseTimer() { Stop(); }
+private:
+    CachePhaseTotal* stats{};
+    std::chrono::nanoseconds started{};
+};
+inline void ResetCachePhases() noexcept {
+    for (auto& s : cache_phase_totals) {
+        s.samples.store(0, std::memory_order_relaxed);
+        s.total_ns.store(0, std::memory_order_relaxed);
+        s.max_ns.store(0, std::memory_order_relaxed);
+    }
+}
+
 // Guest waits: nvhost_ctrl syncpoint event registration -> signal, and
 // BufferQueueProducer::DequeueBuffer waiting for a free buffer slot.
 inline Totals guest_sync_wait, guest_dequeue_wait;
