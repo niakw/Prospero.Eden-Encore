@@ -17,7 +17,7 @@ if len(sys.argv)>1:
     raw=(Path(sys.argv[1])/rel).read_bytes()
 else:
     with urlopen(Request(f'https://raw.githubusercontent.com/eden-emulator/mirror/{pin}/{rel}',
-                         headers={'User-Agent':'EdenEncore-R331'},timeout=35)) as response:
+                         headers={'User-Agent':'EdenEncore-R331'}), timeout=35) as response:
         raw=response.read()
 blob=hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()
 assert blob==expected_blob,(blob,expected_blob)
