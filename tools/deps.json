@@ -136,6 +136,11 @@
           "url": "https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz",
           "sha256": "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16",
           "dest": ".deps/native/zlib/zlib-1.3.2.tar.gz"
+        },
+        {
+          "url": "https://github.com/ps5-payload-dev/sdk/releases/download/v0.42/ps5-payload-sdk.zip",
+          "sha256": "8cfbc7cd5811e719eb4f0c47eea668d3dc7b40bc8ab11c4a5031d40c23ec02da",
+          "dest": ".deps/native/ps5-payload-sdk.zip"
         }
       ]
     },

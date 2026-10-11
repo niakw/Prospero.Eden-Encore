@@ -51,6 +51,9 @@ prepare: deps ## Build cache, Eden source, FFmpeg, packaging tool, driver stub, 
 deps: ## Fetch missing dependencies at their pinned revisions
 	$(PYTHON) tools/deps.py fetch
 
+vendor-verify: ## Verify that all vendored source archives and full Git packs are present and SHA-locked
+	$(PYTHON) tools/check-vendored-deps.py
+
 deps-status: ## Show every dependency, where it lives and whether it matches its pin
 	@$(PYTHON) tools/deps.py status
 
