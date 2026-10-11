@@ -1007,7 +1007,7 @@ void ReportGpuThread(unsigned frame) {
         };
         static_assert(std::size(cache_phase_names) == cache_phase_totals.size());
         for (unsigned phase = 0; phase < cache_phase_totals.size(); ++phase) {
-            const auto& entry = cache_phase_totals[phase];
+            auto& entry = cache_phase_totals[phase];
             std::printf("EDEN_GPU_CACHE_PHASE frame=%u phase=%s samples=%llu total_ns=%llu max_ns=%llu\n",
                         frame, cache_phase_names[phase],
                         entry.samples.load(std::memory_order_relaxed),
