@@ -463,8 +463,40 @@ adapt('src/video_core/renderer_vulkan/vk_present_manager.h',
     ('    std::jthread present_thread;',
      '    bool present_in_flight{}; // guarded by queue_mutex\n'
      '    std::exception_ptr present_failure;\n    std::jthread present_thread;'),
+    # R335: declare frame abandonment on repeated surface loss.
+    ('    void SetImageCount();',
+     '    void DiscardFrame(Frame* frame);\n\n    void SetImageCount();'),
 ])
 adapt('src/video_core/renderer_vulkan/vk_present_manager.cpp', 'vulkan_present_manager.cpp', [
+    # R335: bounded recovery from VK_ERROR_SURFACE_LOST_KHR. Upstream #4509
+    # October 8 2026 avoids a permanent while(true) Vulkan present loop.
+    ('constexpr size_t MAX_FRAMES_IN_FLIGHT = 7;',
+     'constexpr size_t MAX_FRAMES_IN_FLIGHT = 7;\nconstexpr u32 MAX_PRESENT_ATTEMPTS = 3;'),
+    ('void PresentManager::CopyToSwapchain(Frame* frame) {',
+     '''void PresentManager::DiscardFrame(Frame* frame) {
+    static constexpr VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    const VkSemaphore render_ready = *frame->render_ready;
+    const VkSubmitInfo submit_info{
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .pNext = nullptr,
+        .waitSemaphoreCount = 1U,
+        .pWaitSemaphores = &render_ready,
+        .pWaitDstStageMask = &wait_stage,
+        .commandBufferCount = 0U,
+        .pCommandBuffers = nullptr,
+        .signalSemaphoreCount = 0U,
+        .pSignalSemaphores = nullptr,
+    };
+    std::scoped_lock submit_lock{scheduler.submit_mutex};
+    void(device.GetGraphicsQueue().Submit(submit_info, *frame->present_done));
+}
+
+void PresentManager::CopyToSwapchain(Frame* frame) {'''),
+    ('    while (true) {\n        try {\n            // Recreate surface and swapchain if needed.',
+     '    for (u32 attempt = 0; attempt < MAX_PRESENT_ATTEMPTS; ++attempt) {\n'
+     '        try {\n            // Recreate surface and swapchain if needed.'),
+    ('    }\n}\n\nvoid PresentManager::CopyToSwapchainImpl(Frame* frame) {',
+     '    }\n    DiscardFrame(frame);\n}\n\nvoid PresentManager::CopyToSwapchainImpl(Frame* frame) {'),
     # R334: the existing RecreateFrame unconditionally assigns a new VkImage
     # while its previous VkFramebuffer and VkImageViews are still live.
     # Release dependents in Vulkan parent-child order before image replacement.
