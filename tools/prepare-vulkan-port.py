@@ -812,9 +812,28 @@ adapt('src/video_core/renderer_vulkan/present/layer.cpp', 'vulkan_present_layer.
     # allocator), and that size depends on framebuffer STRIDE as well as the
     # visible extent/format. A same-size framebuffer with a different stride
     # must reallocate, or UpdateRawImage's subspan can exceed the buffer.
-    ('        framebuffer.pixel_format == pixel_format && !raw_images.empty()) {',
-     '        framebuffer.pixel_format == pixel_format && !raw_images.empty() &&\n'
-     '        buffer.Mapped().size() == CalculateBufferSize(framebuffer)) {'),
+    # R330: for a pitch-only change, replace ONLY the upload buffer after
+    # per-image tick waits; preserve AA resources and avoid vkDeviceWaitIdle.
+    ('        framebuffer.pixel_format == pixel_format && !raw_images.empty()) {\n'
+     '        return;\n    }',
+     '''        framebuffer.pixel_format == pixel_format && !raw_images.empty() &&
+        buffer.Mapped().size() == CalculateBufferSize(framebuffer)) {
+        return;
+    }
+#ifdef PS5_NATIVE
+    // Same dimensions and format, but the guest row pitch changed. Recycle
+    // only the upload buffer after its last referenced GPU tick; AA images,
+    // descriptors, renderpasses and pipelines remain valid. Do NOT trigger
+    // a full-device WaitIdle or recreate the FXAA/SMAA pass on pitch changes.
+    if (framebuffer.width == raw_width && framebuffer.height == raw_height &&
+        framebuffer.pixel_format == pixel_format && !raw_images.empty()) {
+        for (const u64 tick : resource_ticks) {
+            scheduler.Wait(tick);
+        }
+        CreateStagingBuffer(device, framebuffer);
+        return;
+    }
+#endif'''),
     ('    pixel_format = framebuffer.pixel_format;\n'
      '    anti_alias.emplace<std::monostate>();\n\n'
      '    ReleaseRawImages();',
