@@ -28,6 +28,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 #include <ctime>
 #include <dirent.h>
 #include <exception>
@@ -891,7 +892,13 @@ EdenServices::EdenServices(std::string launch_error)
       performance_profile_labels_(Labels(Eden::kPerformanceProfileLabels)),
       language_labels_(Labels(Eden::kLanguageLabels)) {
     (void)mkdir(Eden::ConfigDir().c_str(), 0777);
-    StartEncoreOverridesRefresh();
+    // The repository currently publishes no runtime-manifest.json; a silent
+    // HTTPS request on every boot can only fail and is not required when all
+    // authored game profiles are compiled from our pinned vendored catalogue.
+    // Keep explicit diagnostic/dev opt-in for future validated remote manifests.
+    const char* remote_overrides = std::getenv("EDEN_OVERRIDES_REMOTE_REFRESH");
+    if (remote_overrides != nullptr && std::strcmp(remote_overrides, "1") == 0)
+        StartEncoreOverridesRefresh();
     setup_ = eden_startup_error();
     Eden::Report("setup", setup_.empty() ? "Keys and firmware startup checks passed" : setup_.c_str());
 }
