@@ -192,6 +192,7 @@ jobs:
           python3 -B tools/check-eden-atomic-cache-refresh-host.py
           python3 -B tools/check-ps5-guest-null-backing-host.py
           python3 -B tools/check-guest-backport-replay-host.py
+          python3 -B tools/check-ps5-nvmap-alloc-replay.py
           python3 -B tools/check-sparse-index-boundary.py
           python3 -B tools/check-sparse-slot-reuse-host.py
           python3 -B tools/check-jit-memory-policy.py
