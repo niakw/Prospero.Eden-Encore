@@ -161,7 +161,15 @@ GraphicsPipeline* prepared_pipeline = nullptr;
 template <typename Func>
 void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {'''),
     ('    std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};\n    // update engine as channel may be different.',
-     '''    const bool cache_sample = ::Eden::Performance::ShouldSampleCacheDraw();
+     '''#ifdef PS5_NATIVE
+    // Waiting on an eight-frame-old descriptor buffer GPU fence here keeps
+    // guest texture writes unblocked while the Vulkan GPU owner waits.
+    if (pipeline->CanUseDescriptorBuffer() &&
+        descriptor_buffer_ring.PreflightFrameReuse(scheduler)) {
+        gpu_memory->FlushCaching();
+    }
+#endif
+    const bool cache_sample = ::Eden::Performance::ShouldSampleCacheDraw();
     const bool previous_sample = ::Eden::Performance::cache_draw_sample_active;
     ::Eden::Performance::cache_draw_sample_active = cache_sample;
     SCOPE_EXIT { ::Eden::Performance::cache_draw_sample_active = previous_sample; };
@@ -963,6 +971,41 @@ adapt('src/video_core/texture_cache/texture_cache.h',
      'const s64 min_vacancy_expected =\n            ((std::is_same_v<Runtime, Vulkan::TextureCacheRuntime> ? 4 : 6) * mem_threshold) / 10;'),
 ] + texture_costs)
 
+# R323 PS5: the Vulkan descriptor ring can call scheduler.Wait(previous
+# frame tick) inside ConfigureDraw while BOTH rasterizer cache mutexes are
+# held. Pre-drain that SAME frame fence before the locks only for graphics
+# pipelines with descriptor-buffer payloads. No change to over-capacity GPU
+# Finish fallback or to the original Allocate memory-ordering checks.
+adapt('src/video_core/renderer_vulkan/vk_descriptor_buffer.h',
+      'include/video_core/renderer_vulkan/vk_descriptor_buffer.h', [
+    ('    void TouchFrame(Scheduler& scheduler);',
+     '    void TouchFrame(Scheduler& scheduler);\n'
+     '#ifdef PS5_NATIVE\n'
+     '    [[nodiscard]] bool PreflightFrameReuse(Scheduler& scheduler);\n'
+     '#endif'),
+])
+adapt('src/video_core/renderer_vulkan/vk_descriptor_buffer.cpp',
+      'vulkan_descriptor_buffer.cpp', [
+    ('void DescriptorBufferRing::TouchFrame(Scheduler& scheduler) {\n'
+     '    frame_ticks[frame_index] = scheduler.CurrentTick();\n'
+     '}',
+     '''void DescriptorBufferRing::TouchFrame(Scheduler& scheduler) {
+    frame_ticks[frame_index] = scheduler.CurrentTick();
+}
+#ifdef PS5_NATIVE
+bool DescriptorBufferRing::PreflightFrameReuse(Scheduler& scheduler) {
+    // This is the GPU-owner thread, called before the paired buffer/texture
+    // cache locks. Reuse the EXACT previous-frame tick the Allocate fallback
+    // would wait for; preserve fallback in case no preflight ran.
+    if (!frame_reused || chunks.empty())
+        return false;
+    scheduler.Wait(frame_ticks[frame_index]);
+    frame_reused = false;
+    return true;
+}
+#endif'''),
+])
+
 # R313: adapt the original graphics pipeline ABI so the fast-first object
 # owns both a valid first-use handle and a finished optimized Vulkan handle.
 # No preloaded disk pipelines are rebuilt: the constructor's worker_thread
@@ -986,6 +1029,14 @@ adapt('src/video_core/renderer_vulkan/vk_graphics_pipeline.h',
      '    std::shared_ptr<OptimizeState> optimize_state; // allocated ONLY for active R313 builds\n'
      '    vk::Pipeline optimized_pipeline;\n'
      '    std::atomic_bool optimized_ready{false};'),
+    # Guard pre-drain to pipelines that can actually allocate descriptors.
+    ('    bool HasDynamicVertexInput() const noexcept { return key.state.dynamic_vertex_input; }',
+     '    bool HasDynamicVertexInput() const noexcept { return key.state.dynamic_vertex_input; }\n'
+     '#ifdef PS5_NATIVE\n'
+     '    [[nodiscard]] bool CanUseDescriptorBuffer() const noexcept {\n'
+     '        return uses_descriptor_buffer && descriptor_set_layout;\n'
+     '    }\n'
+     '#endif'),
     ('#include <atomic>', '#include <atomic>\n#include <memory>'),
 ])
 
