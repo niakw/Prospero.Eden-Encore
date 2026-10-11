@@ -460,6 +460,18 @@ adapt('src/video_core/present.h', 'include/video_core/present.h', [])
 adapt('src/video_core/renderer_vulkan/vk_present_manager.h',
       'include/video_core/renderer_vulkan/vk_present_manager.h', [
     ('#include <mutex>', '#include <mutex>\n#include <exception>'),
+    # R336: present worker can recreate swapchain while GPU renderer reads its metadata.
+    ('#include <condition_variable>', '#include <atomic>\n#include <condition_variable>'),
+    ('    [[nodiscard]] size_t MaxExtraFrames() const;',
+     '    [[nodiscard]] size_t MaxExtraFrames() const;\n'
+     '    [[nodiscard]] std::size_t SwapchainImageCount() const { return swapchain_image_count.load(); }\n'
+     '    [[nodiscard]] VkFormat SwapchainImageFormat() const { return swapchain_image_format.load(); }\n'
+     '    [[nodiscard]] VkFormat SwapchainImageViewFormat() const { return swapchain_image_view_format.load(); }'),
+    ('    std::size_t image_count{};',
+     '    std::atomic<std::size_t> image_count{};\n'
+     '    std::atomic<std::size_t> swapchain_image_count{};\n'
+     '    std::atomic<VkFormat> swapchain_image_format{};\n'
+     '    std::atomic<VkFormat> swapchain_image_view_format{};'),
     ('    std::jthread present_thread;',
      '    bool present_in_flight{}; // guarded by queue_mutex\n'
      '    std::exception_ptr present_failure;\n    std::jthread present_thread;'),
@@ -472,6 +484,12 @@ adapt('src/video_core/renderer_vulkan/vk_present_manager.cpp', 'vulkan_present_m
     # October 8 2026 avoids a permanent while(true) Vulkan present loop.
     ('constexpr size_t MAX_FRAMES_IN_FLIGHT = 7;',
      'constexpr size_t MAX_FRAMES_IN_FLIGHT = 7;\nconstexpr u32 MAX_PRESENT_ATTEMPTS = 3;'),
+    # Capture presenter-owned swapchain metadata without data races.
+    ('    image_count = std::min<size_t>(swapchain.GetImageCount(), MAX_FRAMES_IN_FLIGHT);\n#endif',
+     '    image_count = std::min<size_t>(swapchain.GetImageCount(), MAX_FRAMES_IN_FLIGHT);\n#endif\n'
+     '    swapchain_image_count.store(swapchain.GetImageCount());\n'
+     '    swapchain_image_format.store(swapchain.GetImageFormat());\n'
+     '    swapchain_image_view_format.store(swapchain.GetImageViewFormat());'),
     ('void PresentManager::CopyToSwapchain(Frame* frame) {',
      '''void PresentManager::DiscardFrame(Frame* frame) {
     static constexpr VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
@@ -813,7 +831,13 @@ adapt('src/video_core/renderer_vulkan/renderer_vulkan.cpp', 'vulkan_renderer.cpp
      '    }\n'
      '    Frame* frame = present_manager.GetRenderFrame();'),
     ('    Report();', '    PresentLoading();\n    Report();'),
-    ('swapchain.GetImageViewFormat());', 'swapchain.GetImageViewFormat(), true);'),
+    # The graphics worker must not read mutable swapchain dimensions/format
+    # directly while the background present worker can call RecreateSwapchain.
+    ('render_window.GetFramebufferLayout(), swapchain.GetImageCount(),',
+     'render_window.GetFramebufferLayout(), present_manager.SwapchainImageCount(),'),
+    ('frame_gen.Process(device, frame, swapchain.GetImageFormat(), GuestExtent(framebuffers));',
+     'frame_gen.Process(device, frame, present_manager.SwapchainImageFormat(), GuestExtent(framebuffers));'),
+    ('swapchain.GetImageViewFormat());', 'present_manager.SwapchainImageViewFormat(), true);'),
     ('layout, 1, format);', 'layout, 1, format, true);'),
     ('void RendererVulkan::Report() const {',
      (port / 'vulkan_loading.inc').read_text() + '\nvoid RendererVulkan::Report() const {'),
