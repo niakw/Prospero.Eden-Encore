@@ -19,7 +19,8 @@ begin = port.index("pipeline_worker_replacement = '''")
 end = port.index("if shader_source.count(pipeline_worker_anchor)", begin)
 policy = port[begin:end]
 assert 'pipeline_ps5_headers = f\'\'\'' in port
-assert '"{port / \'performance.h\'}"' in port
+assert '#include \"performance.h\"' in port
+assert 'port / \'performance.h\'' not in port
 assert "cpuset_getaffinity(" in policy
 assert "::Eden::Performance::PinnedWorkerMask()" in policy
 assert "primary_in_mask" in policy
