@@ -76,6 +76,7 @@ jobs:
           python3 -B tools/check-guest-backport-replay-host.py
           python3 -B tools/check-ps5-nvmap-alloc-replay.py
           python3 -B tools/check-ps5-texture-descriptor-guard.py
+          python3 -B tools/check-ps5-null-texture-view-revival.py
           python3 -B tools/check-gpu-physical-copy-bounds-host.py
           python3 -B tools/check-gpu-physical-copy-cpp-host.py
           python3 -B tools/check-gpu-atomic-forward-cpp-host.py
