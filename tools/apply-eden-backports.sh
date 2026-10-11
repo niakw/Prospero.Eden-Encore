@@ -883,6 +883,34 @@ PYTIC
 }
 apply_one "$root/headless/backports/eden-ps5-texture-descriptor-residency.patch" "$eden/.encore-backport-ps5-texture-descriptor-residency.sha256" validate_ps5_texture_descriptor_residency
 
+# R314: a previously invalid texture descriptor is cached as NULL_IMAGE_VIEW_ID.
+# The guest may later map the GPU backing without rewriting that descriptor.
+# Re-probe ONLY the null entries; normal cached texture draw path unchanged.
+validate_ps5_null_texture_remap() {
+python3 - "$eden" <<'PYNULLTIC'
+from pathlib import Path
+import sys
+source = (Path(sys.argv[1]) / 'src/video_core/texture_cache/texture_cache.h').read_text()
+start = source.index('ImageViewId TextureCache<P>::VisitImageView(')
+end = source.index('\ntemplate <class P>', start)
+fn = source[start:end]
+for needle in (
+    'if (it->second == NULL_IMAGE_VIEW_ID && IsValidEntry(*gpu_memory, descriptor))',
+    'const auto [pair, is_new_tc] = channel_state->image_views.try_emplace(descriptor);',
+    'pair->second = CreateImageView(descriptor);',
+    'channel_state->image_view_ids.insert_or_assign(map_index, pair->second);',
+):
+    if fn.count(needle) != 1 and needle.startswith('if (it->second'):
+        raise SystemExit('Invalid R314 null-view recovery predicate')
+    if needle not in fn:
+        raise SystemExit('Missing R314 guest GPU texture remap recovery: ' + needle)
+assert fn.index('if (it->second == NULL_IMAGE_VIEW_ID') < fn.index('if (it->second != NULL_IMAGE_VIEW_ID)')
+assert fn.count('#ifdef PS5_NATIVE') == 1
+print('PS5 stale null texture view recover only after valid backing: PASS')
+PYNULLTIC
+}
+apply_one "$root/headless/backports/eden-ps5-texture-null-view-remap.patch" "$eden/.encore-backport-ps5-texture-null-view-remap.sha256" validate_ps5_null_texture_remap
+
 # Citron fixes inform this host-worker SM/audctl proposal. It compiles on the
 # pinned Eden source, but PS5 service-init/shutdown behavior is not yet proven.
 # Keep it OFF in the baseline; qualify with a separate controlled HLE A/B.
