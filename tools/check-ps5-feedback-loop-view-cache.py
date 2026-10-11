@@ -22,7 +22,7 @@ with tempfile.TemporaryDirectory(prefix="eden-r315-feedback-view-") as folder:
         payload = urlopen(Request(
             f"https://raw.githubusercontent.com/eden-emulator/mirror/{pin}/{rel}",
             headers={"User-Agent":"Eden-Encore-R315-pinned-source"}), timeout=25).read(500000)
-        computed = hashlib.sha1(b"blob "+str(len(payload)).encode()+b"\\0"+payload).hexdigest()
+        computed = hashlib.sha1(b"blob "+str(len(payload)).encode()+b"\0"+payload).hexdigest()
         assert computed == sha, (rel, computed, sha)
         target = directory / rel
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -34,7 +34,7 @@ with tempfile.TemporaryDirectory(prefix="eden-r315-feedback-view-") as folder:
     base = (directory/rels[0]).read_text()
     assert "std::vector<ImageViewId> last_feedback_view_ids;" in base
     start=source.index("void TextureCache<P>::CheckFeedbackLoop(")
-    end=source.index("\\ntemplate <class P>", start)
+    end=source.index("\ntemplate <class P>", start)
     fn=source[start:end]
     assert "&& identical_bound_views" in fn
     assert fn.index("last_feedback_view_ids.push_back") < fn.index("if (rt_active_mask == 0)")
