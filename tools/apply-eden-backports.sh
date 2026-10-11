@@ -899,6 +899,8 @@ for needle in (
     'const auto [pair, is_new_tc] = channel_state->image_views.try_emplace(descriptor);',
     'if (is_new_tc || pair->second == NULL_IMAGE_VIEW_ID)',
     'pair->second = CreateImageView(descriptor);',
+    'if (pair->second != NULL_IMAGE_VIEW_ID)',
+    '++texture_bindings_serial;',
     'channel_state->image_view_ids.insert_or_assign(map_index, pair->second);',
 ):
     if fn.count(needle) != 1 and needle.startswith('if (it->second'):
