@@ -929,6 +929,8 @@ int main(int argc, char** argv) {
         // The user setting is authoritative: development sentinel files
         // cannot re-enable deep captures while Detailed Logging is OFF.
         const bool deep_frame_profile = !performance_run && launch_preferences.detailed_logging;
+        // Previous title's sampled Vulkan timings must not leak into this game.
+        Eden::Performance::ResetCachePhases();
         Eden::Performance::detailed_gpu_profile.store(deep_frame_profile, std::memory_order_relaxed);
         Eden::Performance::texture_budget_log.store(deep_frame_profile, std::memory_order_relaxed);
         Eden::Performance::capture_passes.store(0, std::memory_order_relaxed);
