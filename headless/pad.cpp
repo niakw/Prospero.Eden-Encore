@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "devices.h"
+#include "log_pipe.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -275,6 +276,27 @@ bool Pad::Poll() {
         Consume(player, {samples.data(), static_cast<std::size_t>(count)});
         primary |= player == 0;
     }
+    // R332: a single low-frequency heartbeat proves the input worker is alive
+    // even when scePadRead returns zero samples. Never log on every 4 ms poll;
+    // never flush the log pipe from the input thread.
+    if (NativeLogs::Detailed() && polls % 1250 == 0) {
+        std::fprintf(stderr,
+            "EDEN_PAD_HEARTBEAT polls=%llu samples=%llu usable=%llu intercepted=%llu "
+            "errors=%llu last_read=%d connected=%u last_buttons=%08x "
+            "edges=%llu cross=%llu circle=%llu square=%llu triangle=%llu map_x=%d map_y=%d\n",
+            static_cast<unsigned long long>(polls),
+            static_cast<unsigned long long>(samples_read),
+            static_cast<unsigned long long>(usable_samples),
+            static_cast<unsigned long long>(intercepted_samples),
+            static_cast<unsigned long long>(read_errors), last_result,
+            connected_players.load(std::memory_order_relaxed), slots[0].last_buttons,
+            static_cast<unsigned long long>(face_edges.changes),
+            static_cast<unsigned long long>(face_edges.cross),
+            static_cast<unsigned long long>(face_edges.circle),
+            static_cast<unsigned long long>(face_edges.square),
+            static_cast<unsigned long long>(face_edges.triangle),
+            mapping[game_x], mapping[game_y]);
+    }
     return primary;
 }
 void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
@@ -363,6 +385,13 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
                          is_usable(raw) ? 1 : 0);
         }
 #endif
+        // R332: record physical rising edges, not guest button labels, so a
+        // missing Square/Triangle can be isolated from in-game remapping.
+        // Quiet sessions never pay for or publish these counters.
+        if (player == 0 && is_usable(raw) && NativeLogs::Detailed()) {
+            face_edges.Observe(last_buttons, pressed, kButtonCross, kButtonCircle,
+                               kButtonSquare, kButtonTriangle);
+        }
         last_buttons = pressed;
         for (const auto [mask, button] : fixed)
             engine->SetButtonState(player, button, (sample.buttons & mask) != 0);
