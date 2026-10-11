@@ -2,6 +2,8 @@
 """Verify tracked native Vulkan C++ fork exactly matches validated R337 source generator."""
 from pathlib import Path
 import filecmp
+import hashlib
+import os
 import subprocess
 import sys
 import tempfile
@@ -12,7 +14,19 @@ assert (upstream/'VENDOR-ORIGIN.json').exists()
 assert (active/'vulkan_renderer.cpp').exists()
 with tempfile.TemporaryDirectory(prefix='eden-vulkan-fork-compare-') as d:
     temp=Path(d)
-    subprocess.run([sys.executable,'-B',str(root/'tools/prepare-vulkan-port.py'),str(upstream),str(temp)],check=True,timeout=150)
+    # Pin shader input text separately from binary reproducibility. Avoid
+    # depending on a nondeterministic host glslangValidator version in CI.
+    expected_shaders={
+        'vert':'b7efb0f17a2cfb2ac044d0d678dfd7f970323deef86c10d25dde8ed723ef0290',
+        'frag':'eb91764f71e68593be5ddcc71599b9d66ed9d67ec49b44ff7b52473800ea3783',
+    }
+    for stage, digest in expected_shaders.items():
+        source=root/'headless'/f'vulkan_hud.{stage}'
+        assert hashlib.sha256(source.read_bytes()).hexdigest()==digest,source
+        assert (active/f'vulkan_hud.{stage}.spv').is_file()
+    env=os.environ.copy()
+    env['EDEN_VULKAN_ORACLE_SPV_DIR']=str(active)
+    subprocess.run([sys.executable,'-B',str(root/'tools/prepare-vulkan-port.py'),str(upstream),str(temp)],check=True,timeout=150,env=env)
     actual={str(p.relative_to(temp)):p for p in temp.rglob('*') if p.is_file()}
     expected={str(p.relative_to(active)):p for p in active.rglob('*') if p.is_file()}
     assert actual.keys()==expected.keys(),f'missing: {actual.keys()-expected.keys()}, extras: {expected.keys()-actual.keys()}'

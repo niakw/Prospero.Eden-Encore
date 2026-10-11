@@ -5,8 +5,20 @@ import hashlib
 import sys
 
 root = Path(__file__).resolve().parents[1]
-source = root.parent/'mihawk-mesa-review/src/vulkan/wsi/wsi_common_videoout.c'
-target = root.parent/'mihawk-vulkan-review/.deps/work/radv-src/src/vulkan/wsi/wsi_common_videoout.c'
+# R343: a legacy, reproducible SOURCE EQUIVALENCE ORACLE, not used by build.
+# Compare the complete checked-in modified RADV files against this generator.
+if sys.argv[1:2] == ['--check']:
+    expected = hashlib.sha256((root/'vendor/encore-active/ps5-mesa/src/vulkan/wsi/wsi_common_videoout.c').read_bytes()).hexdigest()
+    marker = Path(sys.argv[2]) if len(sys.argv) == 3 else None
+    recorded = marker.read_text().split()[0] if marker and marker.is_file() else ''
+    sys.exit(0 if expected == recorded else 1)
+oracle = sys.argv[1:2] == ['--oracle']
+if oracle and len(sys.argv) != 4:
+    raise SystemExit('usage: patch-radv-wsi.py --oracle PINNED_MESA_ROOT OUTPUT_ROOT')
+original_root = Path(sys.argv[2]) if oracle else root.parent/'mihawk-mesa-review'
+output_root = Path(sys.argv[3]) if oracle else root.parent/'mihawk-vulkan-review/.deps/work/radv-src'
+source = original_root/'src/vulkan/wsi/wsi_common_videoout.c'
+target = output_root/'src/vulkan/wsi/wsi_common_videoout.c'
 text = source.read_text()
 
 def replace(old, new):
@@ -63,17 +75,14 @@ replace('''                    (double)period / 1e6);
 replace('   wsi->base.get_support =', '   videoout_ref();\n\n   wsi->base.get_support =')
 replace('   if (wsi)\n      vk_free(alloc, wsi);',
         '   if (wsi) {\n      videoout_unref();\n      vk_free(alloc, wsi);\n      wsi_device->wsi[VK_ICD_WSI_PLATFORM_DISPLAY] = NULL;\n   }')
-if sys.argv[1:2] == ['--check']:
-    # Is the driver that was built (its recorded display source, EDEN_WSI_SHA256) this adaptation?
-    recorded = Path(sys.argv[2]).read_text().split()[0] if Path(sys.argv[2]).is_file() else ''
-    sys.exit(0 if recorded == hashlib.sha256(text.encode()).hexdigest() else 1)
 changed = not target.exists() or target.read_text() != text
 if changed:
+    target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(text)
     # Upstream caches the whole build by pin. Invalidate only that receipt;
     # Ninja retains all unchanged objects and rebuilds the patched WSI.
     provenance = root.parent/'mihawk-vulkan-review/.deps/native/radv-release/PROVENANCE.txt'
-    if provenance.exists():
+    if not oracle and provenance.exists():
         provenance.replace(provenance.with_suffix('.base.txt'))
 print(f'RADV WSI adaptation changed={changed} sha256={hashlib.sha256(text.encode()).hexdigest()}')
 
@@ -105,15 +114,16 @@ radv_ps5_memory_grant_gpu(void *address, uint64_t bytes)
         ('   if (!placed) {', '   if (!placed) {\n      fprintf(stderr, "radv/ps5: mapping rejected result=%d address=%p bytes=%llu window32=%d\\n", result, address, (unsigned long long)bytes, window32);'),
     ],
 }.items():
-    original = root.parent/'mihawk-mesa-review'/relative
-    destination = root.parent/'mihawk-vulkan-review/.deps/work/radv-src'/relative
+    original = original_root/relative
+    destination = output_root/relative
     adapted = original.read_text()
     for old, new in replacements:
         assert adapted.count(old) == 1, f'Pinned initialization anchor changed: {relative}'
         adapted = adapted.replace(old, new)
-    if destination.read_text() != adapted:
+    if not destination.exists() or destination.read_text() != adapted:
+        destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text(adapted)
         provenance = root.parent/'mihawk-vulkan-review/.deps/native/radv-release/PROVENANCE.txt'
-        if provenance.exists():
+        if not oracle and provenance.exists():
             provenance.replace(provenance.with_suffix('.base.txt'))
     print(f'RADV initialization diagnostic {relative} sha256={hashlib.sha256(adapted.encode()).hexdigest()}')

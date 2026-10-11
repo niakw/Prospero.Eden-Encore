@@ -83,8 +83,14 @@ fi
 for partial in "$vulkan/.deps/work/radv-clc-build" "$vulkan/.deps/work/radv-build-ps5-release"; do
     [[ ! -d $partial || -f $partial/build.ninja ]] || rm -rf "$partial"
 done
+# R343: all PS5-specific RADV sources are now complete, versioned files
+# checked into this fork. The pinned Mihawk build first stages Mesa worktree;
+# install those exact fork files before the final incremental Ninja pass.
+# No source rewrite script runs in a production PS5 build.
 bash "$vulkan/tools/build-radv.sh" release
-python3 "$root/tools/patch-radv-wsi.py"
+python3 "$root/tools/install-vendored-radv.py" \
+    "$vulkan/.deps/work/radv-src" \
+    --provenance "$vulkan/.deps/native/radv-release/PROVENANCE.txt"
 bash "$vulkan/tools/build-radv.sh" release
 sha256sum "$vulkan/.deps/work/radv-src/src/vulkan/wsi/wsi_common_videoout.c" \
     > "$vulkan/.deps/native/radv-release/EDEN_WSI_SHA256"
