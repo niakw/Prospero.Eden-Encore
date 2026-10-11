@@ -20,7 +20,7 @@ request = Request("https://raw.githubusercontent.com/eden-emulator/mirror/"
 with urlopen(request, timeout=25) as reply:
     source = reply.read(250000)
 assert hashlib.sha1(b"blob " + str(len(source)).encode() +
-                    b"\\0" + source).hexdigest() == git_blob
+                    b"\0" + source).hexdigest() == git_blob
 
 with tempfile.TemporaryDirectory(prefix="eden-r312-TIC-") as d:
     path = Path(d) / source_name
