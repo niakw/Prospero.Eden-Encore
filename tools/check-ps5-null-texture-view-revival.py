@@ -34,6 +34,11 @@ with tempfile.TemporaryDirectory(prefix="eden-r314-null-TIC-") as d:
     assert fn.count("#ifdef PS5_NATIVE") == 1
     assert "if (it->second == NULL_IMAGE_VIEW_ID && IsValidEntry(*gpu_memory, descriptor))" in fn
     assert "if (is_new_tc || pair->second == NULL_IMAGE_VIEW_ID)" in fn
+    recovered = fn[fn.index("if (it->second == NULL_IMAGE_VIEW_ID"):
+                   fn.index("#endif", fn.index("if (it->second == NULL_IMAGE_VIEW_ID"))]
+    assert "if (pair->second != NULL_IMAGE_VIEW_ID)\n            ++texture_bindings_serial;" in recovered
+    assert recovered.index("++texture_bindings_serial") < recovered.index(
+        "channel_state->image_view_ids.insert_or_assign")
     assert fn.index("channel_state->image_view_ids.insert_or_assign(map_index, pair->second);") < fn.index("return pair->second;", fn.index("if (it->second == NULL_IMAGE_VIEW_ID"))
 
     # Compile the EXACT C++ function from production patch against a tiny
@@ -79,6 +84,7 @@ template<class P> struct TextureCache {
     MemoryManager* gpu_memory;
     int next_id{1};
     int prepared{};
+    u32 texture_bindings_serial{};
     int transient_create_failures{};
     ImageViewId VisitImageView(u32 index,bool compute);
     ImageViewId CreateImageView(TICEntry) {
@@ -108,9 +114,9 @@ int main() {
 #ifdef PS5_NATIVE
     assert(tc.VisitImageView(5,false)==1);
     assert(c.image_view_ids.at(5)==1);
-    assert(tc.prepared==1);
+    assert(tc.prepared==1 && tc.texture_bindings_serial==1);
     assert(tc.VisitImageView(5,false)==1);
-    assert(tc.prepared==2);
+    assert(tc.prepared==2 && tc.texture_bindings_serial==1);
     assert(tc.next_id==2); // normal cached draw path never recreates
 #else
     assert(tc.VisitImageView(5,false)==NULL_IMAGE_VIEW_ID);
@@ -135,11 +141,14 @@ int main() {
     retry.transient_create_failures=1;
     assert(retry.VisitImageView(5,false)==NULL_IMAGE_VIEW_ID);
     assert(retry_state.image_views.at(TICEntry{3})==NULL_IMAGE_VIEW_ID);
+    assert(retry.texture_bindings_serial==0);
     retry_state.graphics_image_table.changed=false;
     assert(retry.VisitImageView(5,false)==1);
     assert(retry_state.image_views.at(TICEntry{3})==1);
+    assert(retry.texture_bindings_serial==1);
     assert(retry.VisitImageView(5,false)==1);
     assert(retry.prepared==2 && retry.next_id==2);
+    assert(retry.texture_bindings_serial==1);
 #endif
 }
 """
