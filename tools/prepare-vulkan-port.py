@@ -140,6 +140,25 @@ void RasterizerVulkan::DispatchCompute() {"""),
 #endif
 
     GraphicsPipeline* const pipeline{pipeline_cache.CurrentGraphicsPipeline()};'''),
+    # R325: uncommon >0x400-entry pipeline descriptor reservations can still
+    # block in Acquire() under both guest cache mutexes. Check their exact
+    # immutable reservation and reselect after any actual worker drain.
+    ('    GraphicsPipeline* const pipeline{pipeline_cache.CurrentGraphicsPipeline()};\n'
+     '    if (!pipeline) {\n        return;\n    }',
+     '''    GraphicsPipeline* pipeline{pipeline_cache.CurrentGraphicsPipeline()};
+    if (!pipeline) {
+        return;
+    }
+#ifdef PS5_NATIVE
+    for (unsigned preflight = 0; preflight != 2; ++preflight) {
+        if (!guest_descriptor_queue.PreflightLargeGuestDraw(
+                [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation()))
+            break;
+        gpu_memory->FlushCaching();
+        pipeline = pipeline_cache.CurrentGraphicsPipeline();
+        if (!pipeline) return;
+    }
+#endif'''),
     # A forced release blocks the GPU thread until the fence thread has retired
     # every older fence. Time only that producer-side drain.
     ('    fence_manager.WaitPendingFences(force);',
@@ -405,6 +424,18 @@ adapt('src/video_core/renderer_vulkan/vk_update_descriptor.h',
         constexpr size_t ordinary_reserve = 0x400;
         const size_t used = static_cast<size_t>(payload_cursor - payload_start);
         if (used + ordinary_reserve < frame_payload_size)
+            return false;
+        wait_worker();
+        payload_cursor = payload_start;
+        return true;
+    }
+    template <typename WaitWorker>
+    [[nodiscard]] bool PreflightLargeGuestDraw(WaitWorker&& wait_worker, size_t entries) {
+        // Keep the exact Acquire fallback, including oversized reservations.
+        if (entries <= 0x400 || entries >= frame_payload_size)
+            return false;
+        const size_t used = static_cast<size_t>(payload_cursor - payload_start);
+        if (used + entries < frame_payload_size)
             return false;
         wait_worker();
         payload_cursor = payload_start;
@@ -1035,6 +1066,9 @@ adapt('src/video_core/renderer_vulkan/vk_graphics_pipeline.h',
      '#ifdef PS5_NATIVE\n'
      '    [[nodiscard]] bool CanUseDescriptorBuffer() const noexcept {\n'
      '        return uses_descriptor_buffer && descriptor_set_layout;\n'
+     '    }\n'
+     '    [[nodiscard]] size_t DescriptorEntryReservation() const noexcept {\n'
+     '        return num_descriptor_entries != 0 ? num_descriptor_entries : 0x400;\n'
      '    }\n'
      '#endif'),
     ('#include <atomic>', '#include <atomic>\n#include <memory>'),
