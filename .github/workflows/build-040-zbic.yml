@@ -202,6 +202,7 @@ jobs:
           python3 -B tools/check-ps5-alias-current-tick.py
           python3 -B tools/check-ps5-texture-subphases.py
           python3 -B tools/check-ps5-descriptor-ring-preflight.py
+          python3 -B tools/check-ps5-software-bilinear.py
           python3 -B tools/check-sparse-index-boundary.py
           python3 -B tools/check-sparse-slot-reuse-host.py
           python3 -B tools/check-jit-memory-policy.py

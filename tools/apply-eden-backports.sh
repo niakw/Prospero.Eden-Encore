@@ -1035,6 +1035,23 @@ PYALIASSHORTCUT
 }
 apply_one "$root/headless/backports/eden-ps5-alias-current-tick-fastpath.patch" "$eden/.encore-backport-ps5-alias-current-tick-fastpath.sha256" validate_ps5_alias_latest_tick_shortcut
 
+
+# R324: source pixel coordinates in software bilinear were incorrectly
+# treated as 32.32 fixed point and X/Y were transposed.
+validate_ps5_bilinear_sw_blit() {
+python3 - "$eden" <<'PYBILINEAR'
+from pathlib import Path
+import sys
+src=(Path(sys.argv[1])/"src/video_core/engines/sw_blitter/blitter.cpp").read_text()
+fn=src[src.index("void Bilinear("):src.index("\ntemplate <bool unpack>",src.index("void Bilinear("))]
+assert "(static_cast<size_t>(in_y) * src_width + static_cast<size_t>(in_x))" in fn
+assert ">> 32" not in fn
+assert "std::lerp" in fn
+print("R324 Fermi2D bilinear row-major source coordinates PASS")
+PYBILINEAR
+}
+apply_one "$root/headless/backports/eden-ps5-software-bilinear-source-coordinates.patch" "$eden/.encore-backport-ps5-software-bilinear-source-coordinates.sha256" validate_ps5_bilinear_sw_blit
+
 # Citron fixes inform this host-worker SM/audctl proposal. It compiles on the
 # pinned Eden source, but PS5 service-init/shutdown behavior is not yet proven.
 # Keep it OFF in the baseline; qualify with a separate controlled HLE A/B.
