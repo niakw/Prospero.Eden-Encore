@@ -40,8 +40,9 @@ assert "scheduler.Flush();" in new and "scheduler.DispatchWork();" in new
 assert "draw_counter = 0;" in new
 assert "static constexpr u32 DRAWS_TO_DISPATCH = 512;" in script
 assert "inline std::atomic<unsigned> dispatch_mask{7};" in perf
-assert "Eden::Performance::dispatch_mask.store(63, std::memory_order_relaxed);" in main
+assert "Eden::Performance::dispatch_mask.store(7, std::memory_order_relaxed);" in main
 assert "Eden::Performance::dispatch_mask = static_cast<unsigned>(draws - 1);" in main
+assert "dev-settings dispatch_draws=64" in main  # 64 remains an explicit A/B override
 assert "draws >= 8 && draws <= 512 && (draws & (draws - 1)) == 0" in main
 
 # Native C++ harness: use the exact generated function body, not a retyped Python model.
