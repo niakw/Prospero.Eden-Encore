@@ -1546,14 +1546,23 @@ probes = {
 for name, index, expected in (
     ('vk_fence_manager', 6, 1), ('vk_buffer_cache', 7, 3),
     ('vk_texture_cache', 8, 1), ('vk_swapchain', 9, 6),
-    ('vk_descriptor_buffer', 10, 2), ('vk_multi_range_buffer', 11, 1),
+    ('vk_descriptor_buffer', 10, 3), ('vk_multi_range_buffer', 11, 1),
     ('vk_compute_pass', 12, 1),
 ):
     relative = f'src/video_core/renderer_vulkan/{name}.cpp'
     destination = 'vulkan_swapchain.cpp' if name == 'vk_swapchain' else name + '_cost.cpp'
-    # Preserve the earlier swapchain error-recovery adaptation.
+    # The descriptor source is adapted earlier for R323, just like the swapchain
+    # is adapted for error-recovery. The cost wrapper MUST preserve that source.
+    # Native CMake links vk_descriptor_buffer_cost.cpp, not the intermediate
+    # vulkan_descriptor_buffer.cpp; re-reading the pinned upstream here would
+    # silently discard PreflightFrameReuse and break the PS5 link.
     path = output / destination
-    text = path.read_text() if name == 'vk_swapchain' else (source / relative).read_text()
+    if name == 'vk_descriptor_buffer':
+        text = (output / 'vulkan_descriptor_buffer.cpp').read_text()
+    elif name == 'vk_swapchain':
+        text = path.read_text()
+    else:
+        text = (source / relative).read_text()
     pattern = r'(?m)^( +)(scheduler\.(?:Wait|Finish)\([^\n]*\);)$'
     matches = list(re.finditer(pattern, text))
     if len(matches) != expected:
