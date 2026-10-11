@@ -897,6 +897,7 @@ fn = source[start:end]
 for needle in (
     'if (it->second == NULL_IMAGE_VIEW_ID && IsValidEntry(*gpu_memory, descriptor))',
     'const auto [pair, is_new_tc] = channel_state->image_views.try_emplace(descriptor);',
+    'if (is_new_tc || pair->second == NULL_IMAGE_VIEW_ID)',
     'pair->second = CreateImageView(descriptor);',
     'channel_state->image_view_ids.insert_or_assign(map_index, pair->second);',
 ):
