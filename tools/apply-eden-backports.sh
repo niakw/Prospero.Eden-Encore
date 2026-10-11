@@ -916,7 +916,7 @@ ps5_blocks = fn.count('#ifdef PS5_NATIVE')
 assert ps5_blocks in (1, 2), ps5_blocks
 if ps5_blocks == 2:
     assert fn.count('if (is_new_tc || pair->second == NULL_IMAGE_VIEW_ID)') == 2
-    assert '#else\\n            if (is_new_tc)\\n#endif' in fn
+    assert '#else\n            if (is_new_tc)\n#endif' in fn
 print('PS5 stale null texture view recover only after valid backing: PASS')
 PYNULLTIC
 }
