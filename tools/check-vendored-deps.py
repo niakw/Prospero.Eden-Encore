@@ -85,4 +85,5 @@ preflight=(ROOT/'.github/workflows/encore-core-preflight.yml').read_text()
 assert 'git diff --check FETCH_HEAD HEAD -- .' in preflight
 assert "':(exclude)vendor/sources/**'" in preflight
 assert "':(exclude)vendor/objects/**'" in preflight
+assert "':(exclude)vendor/encore-active/**'" in preflight
 print('VENDOR_SOURCE_DIFF_POLICY_OK native Encore changes checked, pristine upstream excluded')

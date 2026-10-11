@@ -90,6 +90,7 @@ jobs:
           python3 -B tools/check-ps5-vulkan-swapchain-acquire-bounds.py
           python3 -B tools/check-ps5-mihawk-radv-contract.py
           python3 -B tools/check-vendored-deps.py
+          python3 -B tools/check-vendored-vulkan-fork.py
           python3 -B tools/check-ps5-descriptor-queue-preflight.py
           python3 -B tools/check-ps5-large-descriptor-preflight.py
           python3 -B tools/check-ps5-adjacent-texture-view-reuse.py
@@ -146,5 +147,5 @@ jobs:
           # Full pristine vendor trees retain upstream whitespace verbatim.
           # Keep strict diffs for all Encore-owned source, CI and vendor docs,
           # but never silently rewrite external pinned source snapshots or packs.
-          git diff --check FETCH_HEAD HEAD -- . ':(exclude)vendor/sources/**' ':(exclude)vendor/objects/**'
+          git diff --check FETCH_HEAD HEAD -- . ':(exclude)vendor/sources/**' ':(exclude)vendor/objects/**' ':(exclude)vendor/encore-active/**'
           echo CORE_PREFLIGHT_ALL_PASS

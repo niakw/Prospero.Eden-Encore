@@ -209,6 +209,7 @@ jobs:
           python3 -B tools/check-ps5-vulkan-swapchain-acquire-bounds.py
           python3 -B tools/check-ps5-mihawk-radv-contract.py
           python3 -B tools/check-vendored-deps.py
+          python3 -B tools/check-vendored-vulkan-fork.py
           python3 -B tools/check-ps5-descriptor-queue-preflight.py
           python3 -B tools/check-ps5-large-descriptor-preflight.py
           python3 -B tools/check-ps5-adjacent-texture-view-reuse.py
