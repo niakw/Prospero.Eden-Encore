@@ -15,3 +15,7 @@ No edits to `RefreshContents`, `ScaleUp/Down`, CPU guest invalidation, graphics 
 The production patch applies to the SHA-verified pinned `texture_cache.h`; `tools/check-ps5-alias-current-tick.py` extracts and compiles the real `SynchronizeAliases` function in PS5 and upstream variants, tests equal-to-global, newer alias, repeated synchronization, and unrelated modification. Host and full PS5 CI both invoke the test.
 
 R320 native #38144510483 **SUCCESS** on `da7c77fd`; the R320 artifact is a separate version without this new source-only R321 optimization. Reference FC27 results remain the longer **1440p** sessions, not the shorter 1080p/4K experiments.
+
+## Qualification R321
+
+Source preflight [#38152933356](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38152933356) **SUCCESS** (including pinned C++ PS5 and upstream alias tests). The native PS5 All-On build is requested on this documentation commit. The prior native-green R320 version is [#38144510483](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38144510483). Neither build certifies FC27 frame pacing, terrain LOD or elimination of 1440p stutters.
