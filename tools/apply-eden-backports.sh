@@ -908,7 +908,15 @@ for needle in (
     if needle not in fn:
         raise SystemExit('Missing R314 guest GPU texture remap recovery: ' + needle)
 assert fn.index('if (it->second == NULL_IMAGE_VIEW_ID') < fn.index('if (it->second != NULL_IMAGE_VIEW_ID)')
-assert fn.count('#ifdef PS5_NATIVE') == 1
+# A fresh source tree reaches this validator immediately after R314 (one
+# PS5 block). Cached native builds revisit it after R317 added its distinct
+# new-slot repair (two blocks). Accept both only when the second repair
+# predicate is present; never silently bypass the NULL-view coherency check.
+ps5_blocks = fn.count('#ifdef PS5_NATIVE')
+assert ps5_blocks in (1, 2), ps5_blocks
+if ps5_blocks == 2:
+    assert fn.count('if (is_new_tc || pair->second == NULL_IMAGE_VIEW_ID)') == 2
+    assert '#else\\n            if (is_new_tc)\\n#endif' in fn
 print('PS5 stale null texture view recover only after valid backing: PASS')
 PYNULLTIC
 }
