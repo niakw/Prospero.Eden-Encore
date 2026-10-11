@@ -9,6 +9,14 @@ inline bool disable_null_descriptor = false;
 inline bool disable_descriptor_buffer = false;
 inline bool robustness2 = false; // robustBufferAccess2 + robustImageAccess2
 inline bool trace_pipelines = false; // report first pipeline uses to klog
+// Experimental PS5 all-on: build a usable non-optimized Vulkan pipeline first
+// for new runtime shaders, then optimize with one background worker. Never
+// rebuild disk-preloaded pipelines (those already have optimized binaries).
+#if defined(EDEN_DEV_PROFILE)
+inline bool fast_first_pipelines = true;
+#else
+inline bool fast_first_pipelines = false;
+#endif
 inline bool disable_sparse = false; // no sparse binding: multi-range SSBOs are gathered copies
 inline bool disable_multi_range = false; // bind multi-range SSBOs the pre-2026 way
 // Standard border colours only (no RADV border table). On by default: with custom colours
@@ -50,6 +58,11 @@ inline void ResetForTitle() noexcept {
     disable_descriptor_buffer = false;
     robustness2 = false;
     trace_pipelines = false;
+#if defined(EDEN_DEV_PROFILE)
+    fast_first_pipelines = true;
+#else
+    fast_first_pipelines = false;
+#endif
     disable_sparse = false;
     disable_multi_range = false;
     disable_custom_border = true;
