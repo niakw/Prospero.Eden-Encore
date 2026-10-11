@@ -32,6 +32,13 @@ with tempfile.TemporaryDirectory(prefix='eden-vulkan-fork-compare-') as d:
     assert actual.keys()==expected.keys(),f'missing: {actual.keys()-expected.keys()}, extras: {expected.keys()-actual.keys()}'
     mismatches=[name for name in sorted(actual) if not filecmp.cmp(actual[name],expected[name],shallow=False)]
     assert not mismatches, f'vendored Vulkan C++ differs from pinned generated source: {mismatches}'
+    # Versioned code must compile after fresh clone at a different checkout
+    # path: forbids CMake/host absolute paths embedded in generated C++.
+    for name, file in expected.items():
+        if name.endswith(('.cpp', '.h')):
+            data=file.read_text()
+            assert '#include "/private/tmp/' not in data and '#include "/home/runner/' not in data,(name,'checkout-specific include')
+    assert '#include "performance.h"' in expected['vk_pipeline_cache_cost.cpp'].read_text()
     assert len(actual)>=35
     cmake=(root/'headless/vulkan.cmake').read_text()
     assert 'vendor/encore-active/eden-vulkan' in cmake

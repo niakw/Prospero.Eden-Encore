@@ -22,7 +22,7 @@
 #include <sys/param.h>
 #include <sys/cpuset.h>
 #include <cstdio>
-#include "/private/tmp/eden-dev-integration/headless/performance.h"
+#include "performance.h"
 #endif
 
 #include <vector>

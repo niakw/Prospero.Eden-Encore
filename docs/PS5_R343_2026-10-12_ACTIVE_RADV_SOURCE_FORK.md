@@ -18,3 +18,7 @@ The large `headless/CMakeLists.txt` derives and rewrites more CPU/JIT, GPU-threa
 ## Reproducible pinned HUD shaders
 
 The old Vulkan generator invoked the installed `glslangValidator` and `spirv-val` during every CMake reconfiguration. R342 compiles the two byte-for-byte tracked SPIR-V modules directly. Its source-only equivalence fixture verifies the unmodified GLSL shader source SHA-256, then uses the already-validated versioned SPIR-V to rebuild the generated C++ shader header in test mode; no CI runner-specific `glslangValidator` or non-deterministic SPIR-V differences are needed. Non-oracle manual generation still invokes the real shader compiler and validator.
+
+## R344 portability fix
+
+The R343 source-only GitHub CI correctly detected that the previous source generator had embedded a Mac-specific absolute path in `vk_pipeline_cache_cost.cpp`: `#include "/private/tmp/eden-dev-integration/headless/performance.h"`. R344 replaces it with `#include "performance.h"`, an already supported header in `target_include_directories(video_core PRIVATE ... "${EDEN_PORT_DIR}")`. Exact source generator equivalence is retained, and the preflight now bans checkout-specific absolute includes in versioned Vulkan source. The native R343 build was still in progress when this fatal portability issue was found, so it cannot be used as proof; only R344 native compilation can qualify the new source fork.
