@@ -302,21 +302,49 @@ def fetch_git(item):
         subprocess.run(item['setup'], cwd=path, check=True, env=env)
 
 
+def ensure_saved_archive(item):
+    # The native Eden prep deliberately unpacks the ORIGINAL exact pinned
+    # tarball to obtain a mutable scratch source tree. A readable vendored
+    # worktree alone does not satisfy this explicit build input.
+    if item['kind'] != 'archive' or 'save' not in item:
+        return
+    destination = ROOT / item['save']
+    algorithm, expected = pinned_hash(item)
+    if destination.is_file() and digest(destination, algorithm) == expected:
+        return
+    restored = restore_chunked_object(item)
+    if restored is None or digest(restored, algorithm) != expected:
+        if OFFLINE:
+            fail(f'missing offline pinned source archive for {item["name"]}')
+        restored = download(item['url'], algorithm, expected, destination.name)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    stage = destination.with_name(destination.name + f'.partial-{os.getpid()}')
+    try:
+        shutil.copyfile(restored, stage)
+        if digest(stage, algorithm) != expected:
+            fail(f'corrupted vendored original archive for {item["name"]}')
+        stage.replace(destination)
+    finally:
+        stage.unlink(missing_ok=True)
+    print(f'deps: restored original pinned archive {item["save"]}', flush=True)
+
+
 def fetch(item):
     kind = item['kind']
+    ensure_saved_archive(item)
     if kind == 'git':
         fetch_git(item)
         return
     if present(item):
         return
-    # Source trees in the same Git checkout are complete, versioned, directly
-    # searchable inputs. The old .deps path becomes a symlink to the vendored
-    # tree, preserving existing CMake and source-generator paths without copies.
+    # Build tools intentionally modify FFmpeg and Eden input trees during
+    # generation. Copy the committed read-only source snapshot into the
+    # disposable .deps workspace, never link back into the canonical vendor.
+    # This keeps vendor/sources immutable across even repeated builds.
     if kind in ('archive', 'files') and item['name'] != 'pacbrew':
         source = vault_source(item)
         if (source / 'VENDOR-ORIGIN.json').is_file():
             if kind == 'archive':
-                marker = (ROOT / item['creates']).resolve(strict=False)
                 expected_dir = ROOT / item['extract']
                 if pathlib.PurePosixPath(item['extract']) == pathlib.PurePosixPath('.deps'):
                     expected_dir = ROOT / '.deps' / pathlib.PurePosixPath(item['creates']).parts[1]
@@ -326,9 +354,9 @@ def fetch(item):
                 expected_dir = ROOT / item['dest']
             expected_dir.parent.mkdir(parents=True, exist_ok=True)
             if not expected_dir.exists() and not expected_dir.is_symlink():
-                expected_dir.symlink_to(source.resolve(), target_is_directory=True)
+                shutil.copytree(source, expected_dir, symlinks=True)
             if present(item):
-                print(f'deps: {item["name"]} uses vendored source tree', flush=True)
+                print(f'deps: {item["name"]} uses an isolated copy of its vendored source', flush=True)
                 return
     if OFFLINE and kind not in ('archive', 'files'):
         fail(f'offline missing source for {item["name"]}')
