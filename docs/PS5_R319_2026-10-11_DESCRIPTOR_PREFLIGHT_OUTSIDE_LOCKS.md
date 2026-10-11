@@ -15,3 +15,7 @@ This is a targeted reduction of possible critical-section wait, not a blanket re
 ## Tests
 
 `tools/check-ps5-descriptor-queue-preflight.py` verifies exact git SHA blobs for pinned rasterizer and descriptor header, extracts the real production adapter, checks call ordering and the unmodified upstream overflow safety gate, compiles the actual PS5 preflight method, and exercises normal, nearly-full, oversized and boundary conditions. Wired to host core and native PS5 gates. Requires native build and hardware observation to qualify performance gains.
+
+## Source qualification and native gate
+
+Host source preflight [#38140834981](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38140834981) **SUCCESS**, including the exact C++ descriptor reserve overflow replay. Full PS5 native All-On compilation requested only after this result, on the same R319 code. Source CI success does not prove on-console FPS, absence of stutter, or texture detail correctness.
