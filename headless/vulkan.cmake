@@ -16,12 +16,14 @@ list(APPEND video_sources "${PORT_BUILD_DIR}/vulkan_device.cpp" "${PORT_BUILD_DI
 list(REMOVE_ITEM video_sources vulkan_common/vulkan_instance.cpp vulkan_common/vulkan_wrapper.cpp
     vulkan_common/vulkan_library.cpp vulkan_common/vulkan_surface.cpp
     renderer_vulkan/vk_rasterizer.cpp renderer_vulkan/vk_blit_screen.cpp
-    renderer_vulkan/present/window_adapt_pass.cpp renderer_vulkan/renderer_vulkan.cpp
+    renderer_vulkan/present/window_adapt_pass.cpp renderer_vulkan/present/layer.cpp
+    renderer_vulkan/renderer_vulkan.cpp
     renderer_vulkan/vk_present_manager.cpp renderer_vulkan/vk_swapchain.cpp
     renderer_vulkan/vk_query_cache.cpp)
 list(APPEND video_sources "${PORT_BUILD_DIR}/vulkan_instance.cpp" "${PORT_BUILD_DIR}/vulkan_wrapper.cpp"
     "${PORT_BUILD_DIR}/vulkan_rasterizer.cpp" "${PORT_BUILD_DIR}/vulkan_blit_screen.cpp"
-    "${PORT_BUILD_DIR}/vulkan_window_adapt_pass.cpp" "${PORT_BUILD_DIR}/vulkan_renderer.cpp"
+    "${PORT_BUILD_DIR}/vulkan_window_adapt_pass.cpp" "${PORT_BUILD_DIR}/vulkan_present_layer.cpp"
+    "${PORT_BUILD_DIR}/vulkan_renderer.cpp"
     "${PORT_BUILD_DIR}/vulkan_library.cpp" "${EDEN_PORT_DIR}/vulkan_surface.cpp" "${EDEN_PORT_DIR}/vulkan_allocator.cpp"
     "${PORT_BUILD_DIR}/vulkan_present_manager.cpp" "${PORT_BUILD_DIR}/vulkan_swapchain.cpp"
     "${PORT_BUILD_DIR}/vulkan_query_cache.cpp")
@@ -56,7 +58,7 @@ set_property(SOURCE
     "${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/present/layer.cpp"
     "${PORT_BUILD_DIR}/renderer_opengl.cpp"
     "${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/gl_blit_screen.cpp"
-    "${PROJECT_SOURCE_DIR}/src/video_core/renderer_vulkan/present/layer.cpp"
+    "${PORT_BUILD_DIR}/vulkan_present_layer.cpp"
     TARGET_DIRECTORY video_core APPEND PROPERTY OBJECT_DEPENDS
     "${PORT_BUILD_DIR}/include/video_core/present.h")
 # BlitScreen stores WindowAdaptPass by value through unique_ptr; all consumers

@@ -802,6 +802,41 @@ adapt('src/video_core/renderer_vulkan/present/window_adapt_pass.cpp', 'vulkan_wi
     ('        cmdbuf.EndRenderPass();',
      (port / 'vulkan_hud_draw.inc').read_text() + '\n        cmdbuf.EndRenderPass();'),
 ])
+# R328: Framebuffer dimension / format changes and runtime antialias setting
+# changes can destroy old FXAA/SMAA images and descriptors with GPU work still
+# in flight. The raw-image resource ticks are waited *after* emplace today,
+# too late for the AA variant. Drain only if an AA pass actually exists.
+# Do not impose idle waits on normal draws or when the filter is disabled.
+adapt('src/video_core/renderer_vulkan/present/layer.cpp', 'vulkan_present_layer.cpp', [
+    ('    pixel_format = framebuffer.pixel_format;\n'
+     '    anti_alias.emplace<std::monostate>();\n\n'
+     '    ReleaseRawImages();',
+     '''    pixel_format = framebuffer.pixel_format;
+#ifdef PS5_NATIVE
+    if (!std::holds_alternative<std::monostate>(anti_alias)) {
+        // Existing FXAA/SMAA images and descriptors may still be referenced
+        // by command buffers submitted for prior presentation frames.
+        scheduler.Finish();
+        device.GetLogical().WaitIdle();
+    }
+#endif
+    anti_alias.emplace<std::monostate>();
+
+    ReleaseRawImages();'''),
+    ('    anti_alias_setting = filters.get_anti_aliasing();\n\n'
+     '    const VkExtent2D render_area{',
+     '''#ifdef PS5_NATIVE
+    if (!std::holds_alternative<std::monostate>(anti_alias)) {
+        // Swapping the AA variant frees GPU resources, not just host state.
+        scheduler.Finish();
+        device.GetLogical().WaitIdle();
+    }
+#endif
+    anti_alias_setting = filters.get_anti_aliasing();
+
+    const VkExtent2D render_area{'''),
+])
+
 adapt('src/video_core/renderer_vulkan/vk_blit_screen.cpp', 'vulkan_blit_screen.cpp', [
     # R327: a change in the number of guest presentation layers destroys
     # the prior descriptors, FSR/FXAA images, and views. The ordinary window
