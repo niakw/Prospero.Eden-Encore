@@ -11,7 +11,8 @@ pin = "5f142c7926d0c7fcbbd0ce30794d72f638a43b2a"
 rels = ["src/video_core/texture_cache/texture_cache_base.h","src/video_core/texture_cache/texture_cache.h"]
 shas = ["8a2318cc725ceb1b0ab3547ed4b4d99441709906","640bd38407b772d52701c22b81b3189adb17bed8"]
 patches = ["headless/backports/eden-ps5-texture-null-view-remap.patch",
-           "headless/backports/eden-ps5-feedback-loop-view-key.patch"]
+           "headless/backports/eden-ps5-feedback-loop-view-key.patch",
+           "headless/backports/eden-ps5-feedback-loop-no-depth-fastpath.patch"]
 apply = (root / "tools/apply-eden-backports.sh").read_text()
 for patch in patches:
     assert apply.count('apply_one "$root/' + patch + '"') == 1, patch
@@ -37,6 +38,7 @@ with tempfile.TemporaryDirectory(prefix="eden-r315-feedback-view-") as folder:
     end=source.index("\ntemplate <class P>", start)
     fn=source[start:end]
     assert "&& identical_bound_views" in fn
+    assert fn.index("if ((rt_active_mask & (1u << NUM_RT)) == 0)") < fn.index("identical_bound_views")
     assert fn.index("last_feedback_view_ids.push_back") < fn.index("if (rt_active_mask == 0)")
     prologue=r"""
 #include <array>
@@ -101,6 +103,14 @@ int main() {
     ++tc.render_targets_serial;
     tc.CheckFeedbackLoop(samples_depth);
     assert(tc.runtime.calls==4); // no active render target
+    assert(tc.last_feedback_view_ids.empty());
+    tc.rt_active_mask=1u; // color-only, no depth; cached false without scanning
+    tc.CheckFeedbackLoop(samples_depth);
+    assert(tc.runtime.calls==4);
+    assert(tc.last_feedback_view_ids.empty());
+    tc.rt_active_mask=1u<<NUM_RT; // same view + serial, depth reactivated
+    tc.CheckFeedbackLoop(samples_depth);
+    assert(tc.runtime.calls==5);
 #else
     assert(tc.runtime.calls==2); // reproduce upstream stale true
 #endif
