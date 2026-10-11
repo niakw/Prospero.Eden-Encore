@@ -914,6 +914,35 @@ PYNULLTIC
 }
 apply_one "$root/headless/backports/eden-ps5-texture-null-view-remap.patch" "$eden/.encore-backport-ps5-texture-null-view-remap.sha256" validate_ps5_null_texture_remap
 
+# R315: a texture-binding table serial is not a complete key for the
+# sampled image-view identities. Preserve Eden's cache fast path when the
+# actual views match; recompute the barrier decision when they change.
+validate_ps5_feedback_loop_binding_key() {
+python3 - "$eden" <<'PYFEEDBACK'
+from pathlib import Path
+import sys
+root = Path(sys.argv[1]) / 'src/video_core/texture_cache'
+base = (root / 'texture_cache_base.h').read_text()
+source = (root / 'texture_cache.h').read_text()
+start = source.index('void TextureCache<P>::CheckFeedbackLoop(')
+end = source.index('\ntemplate <class P>', start)
+fn = source[start:end]
+assert '#ifdef PS5_NATIVE\n    // Descriptor-table generation' not in fn  # header owns state, not logic
+for phrase in ('identical_bound_views', 'last_feedback_view_ids.size() == views.size()',
+               'last_feedback_view_ids[i] != views[i].id',
+               'last_feedback_view_ids.push_back(view.id)',
+               '&& identical_bound_views'):
+    if phrase not in fn:
+        raise SystemExit('Missing R315 exact view-keyed feedback barrier guard: ' + phrase)
+assert '#ifdef PS5_NATIVE\n    // Descriptor-table generation' not in base
+assert 'std::vector<ImageViewId> last_feedback_view_ids;' in base
+assert fn.index('last_feedback_view_ids.push_back') < fn.index('if (rt_active_mask == 0)')
+assert fn.index('identical_bound_views') < fn.index('if (render_targets_serial ==')
+print('R315 PS5 feedback-loop view-keyed barrier cache PASS')
+PYFEEDBACK
+}
+apply_one "$root/headless/backports/eden-ps5-feedback-loop-view-key.patch" "$eden/.encore-backport-ps5-feedback-loop-view-key.sha256" validate_ps5_feedback_loop_binding_key
+
 # Citron fixes inform this host-worker SM/audctl proposal. It compiles on the
 # pinned Eden source, but PS5 service-init/shutdown behavior is not yet proven.
 # Keep it OFF in the baseline; qualify with a separate controlled HLE A/B.
