@@ -507,7 +507,7 @@ adapt('src/video_core/vulkan_common/vulkan_device.cpp', 'vulkan_device.cpp', [
      '    // Reset on each new VkDevice, even when a first kernel probe fails.\n'
      '    graphics_capacity.Reset(free_memory ? free_memory() : 0);\n'
      '    std::printf("EDEN_VULKAN_MEMORY integrated=%d heaps=%zu local=%llu initial_usage=%llu device_access=%llu "\n'
-     '                "capacity=%llu\n",\n'
+     '                "capacity=%llu\\n",\n'
      '                int(is_integrated), valid_heap_memory.size(), static_cast<unsigned long long>(local_memory),\n'
      '                static_cast<unsigned long long>(device_initial_usage),\n'
      '                static_cast<unsigned long long>(device_access_memory),\n'
@@ -757,7 +757,7 @@ adapt('src/video_core/vulkan_common/vulkan_wrapper.h', 'include/video_core/vulka
         throw Exception(result);''', '''inline void Check(VkResult result, const char* file = __builtin_FILE(),
                   int line = __builtin_LINE(), const char* operation = __builtin_FUNCTION()) {
     if (result != VK_SUCCESS) {
-        std::fprintf(stderr, "[ProsperoEden] Vulkan failure: %s:%d (%s) VkResult=%d\n",
+        std::fprintf(stderr, "[ProsperoEden] Vulkan failure: %s:%d (%s) VkResult=%d\\n",
                      file, line, operation, static_cast<int>(result));
         throw Exception(result);'''),
 ])
@@ -834,7 +834,7 @@ for signature, index in (
         if ((cost_timer || Eden::Performance::texture_budget_log.load(std::memory_order_relaxed)) &&
             frame_tick % 300 == 0)
             std::printf("EDEN_VULKAN_TEXTURE_BUDGET frame=%llu usage=%llu expected=%llu critical=%llu "
-                        "keep_dirty=%d memory_short=%d\n",
+                        "keep_dirty=%d memory_short=%d\\n",
                         static_cast<unsigned long long>(frame_tick),
                         static_cast<unsigned long long>(total_used_memory),
                         static_cast<unsigned long long>(expected_memory),
@@ -1047,7 +1047,7 @@ shader_costs = [
      '                                                 u32 cache_version) {\n    auto timer = Eden::Performance::VulkanTimer(18);\n#ifdef PS5_NATIVE'),
     ('}\n\nPipelineCache::~PipelineCache()',
      '    if (Eden::Performance::vulkan_cost_enabled.load(std::memory_order_relaxed))\n'
-     '        std::printf("EDEN_VULKAN_DYNAMIC blend=%u enables=%u vertex=%u\n",\n'
+     '        std::printf("EDEN_VULKAN_DYNAMIC blend=%u enables=%u vertex=%u\\n",\n'
      '                    unsigned(dynamic_features.has_extended_dynamic_state_3_blend),\n'
      '                    unsigned(dynamic_features.has_extended_dynamic_state_3_enables),\n'
      '                    unsigned(dynamic_features.has_dynamic_vertex_input));\n'
@@ -1294,7 +1294,7 @@ pipeline_worker_replacement = '''#ifdef PS5_NATIVE
     const size_t selected = std::max<size_t>(1ULL, std::min(spare, max_pipeline_workers));
     std::printf("EDEN_PS5_SHADER_WORKERS reported=%zu available=%zu workers=%zu "
                 "reserved=%zu primary_in_mask=%zu physical_verified=%u logical_isolated=%u affinity_rc=%d "
-                "allowed_mask=0x%llx primary_mask=0x%llx secondary_mask=0x%llx\n",
+                "allowed_mask=0x%llx primary_mask=0x%llx secondary_mask=0x%llx\\n",
                 reported, available, selected, reserved, primary_in_mask,
                 unsigned(primary_mask != 0), unsigned(secondary_isolated), affinity_rc,
                 static_cast<unsigned long long>(allowed_mask),
