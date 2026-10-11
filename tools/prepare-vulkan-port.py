@@ -465,6 +465,18 @@ adapt('src/video_core/renderer_vulkan/vk_present_manager.h',
      '    std::exception_ptr present_failure;\n    std::jthread present_thread;'),
 ])
 adapt('src/video_core/renderer_vulkan/vk_present_manager.cpp', 'vulkan_present_manager.cpp', [
+    # R334: the existing RecreateFrame unconditionally assigns a new VkImage
+    # while its previous VkFramebuffer and VkImageViews are still live.
+    # Release dependents in Vulkan parent-child order before image replacement.
+    ('    frame->image = memory_allocator.CreateImage({',
+     '    frame->framebuffer = vk::Framebuffer{};\n'
+     '    frame->storage_view = vk::ImageView{};\n'
+     '    frame->image_view = vk::ImageView{};\n'
+     '    frame->image = memory_allocator.CreateImage({'),
+    # The upstream reset of storage_view after the new image_view is built
+    # is now redundant: it is already released before the old VkImage.
+    ('    frame->storage_view = vk::ImageView{};\n    if (storage_supported) {',
+     '    if (storage_supported) {'),
     ('#include "video_core/renderer_vulkan/vk_present_manager.h"',
      '#include "video_core/renderer_vulkan/vk_present_manager.h"\n#include "gpu_failure.h"\n#include "performance.h"'),
     # GetRenderFrame runs on the GPU thread: time its free-frame and
