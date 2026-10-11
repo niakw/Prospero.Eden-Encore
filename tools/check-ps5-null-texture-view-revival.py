@@ -43,6 +43,7 @@ with tempfile.TemporaryDirectory(prefix="eden-r314-null-TIC-") as d:
 #include <functional>
 #include <unordered_map>
 #include <utility>
+#define LOG_DEBUG(...) ((void)0)
 using u32 = std::uint32_t;
 using ImageViewId = int;
 constexpr ImageViewId NULL_IMAGE_VIEW_ID = 0;
@@ -117,7 +118,7 @@ int main() {
 }
 """
     cpp = Path(d) / "view.cpp"
-    cpp.write_text(head + fn + tail)
+    cpp.write_text(head + "template<class P>\n" + fn + tail)
     for label,flags in (("ps5", ["-DPS5_NATIVE"]),("upstream", [])):
         binary = Path(d)/label
         subprocess.run(["c++","-std=c++20","-O2","-Wall","-Wextra","-Werror",*flags,
