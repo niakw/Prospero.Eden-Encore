@@ -33,8 +33,9 @@ for path in blobs:
  wanted="PreflightFrameReuse" if path.endswith("vk_descriptor_buffer.cpp") or path.endswith("vk_descriptor_buffer.h") else "CanUseDescriptorBuffer"
  pairs=[(old,new) for old,new in changes if wanted in new]
  if path.endswith("vk_rasterizer.cpp"):
-  assert not pairs # raster preflight is inside an existing R310 timer pair
-  pairs=[(old,new) for old,new in changes if "const bool cache_sample" in new]
+  # The R323 call was inserted into the existing R310 sampled-lock adapter.
+  pairs=[(old,new) for old,new in changes
+         if "descriptor_buffer_ring.PreflightFrameReuse(scheduler)" in new]
  assert len(pairs)==1,(path,len(pairs))
  old,new=pairs[0]
  assert patched[path].count(old)==1,path
