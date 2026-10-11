@@ -1013,6 +1013,28 @@ PYADJACENT
 }
 apply_one "$root/headless/backports/eden-ps5-adjacent-valid-view-reuse.patch" "$eden/.encore-backport-ps5-adjacent-valid-view-reuse.sha256" validate_ps5_adjacent_valid_texture_view_reuse
 
+# R321: no alias may be strictly newer than the global monotonic texture
+# modification tick already owned by this image. Retain all stale-alias
+# synchronization paths, only skip a scan known to have an empty result.
+validate_ps5_alias_latest_tick_shortcut() {
+python3 - "$eden" <<'PYALIASSHORTCUT'
+from pathlib import Path
+import sys
+path = Path(sys.argv[1])/"src/video_core/texture_cache/texture_cache.h"
+source=path.read_text()
+start=source.index("void TextureCache<P>::SynchronizeAliases(")
+end=source.index("\ntemplate <class P>",start)
+fn=source[start:end]
+assert "#ifdef PS5_NATIVE\n    // MarkModification" in fn
+assert "if (image.modification_tick == modification_tick)" in fn
+assert fn.index("if (image.modification_tick == modification_tick)") < fn.index("for (const AliasedImage& aliased")
+assert "if (image.modification_tick < aliased_image.modification_tick)" in fn
+assert "std::ranges::sort(aliased_images" in fn
+print("R321 latest alias modification-tick fast path PASS")
+PYALIASSHORTCUT
+}
+apply_one "$root/headless/backports/eden-ps5-alias-current-tick-fastpath.patch" "$eden/.encore-backport-ps5-alias-current-tick-fastpath.sha256" validate_ps5_alias_latest_tick_shortcut
+
 # Citron fixes inform this host-worker SM/audctl proposal. It compiles on the
 # pinned Eden source, but PS5 service-init/shutdown behavior is not yet proven.
 # Keep it OFF in the baseline; qualify with a separate controlled HLE A/B.
