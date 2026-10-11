@@ -943,6 +943,27 @@ PYFEEDBACK
 }
 apply_one "$root/headless/backports/eden-ps5-feedback-loop-view-key.patch" "$eden/.encore-backport-ps5-feedback-loop-view-key.sha256" validate_ps5_feedback_loop_binding_key
 
+# R317 PS5: distinct TIC indices can share a descriptor whose image_views entry
+# still stores NULL after transient CreateImageView failure. Retry as soon as
+# another valid slot selects it, not only on a later is_new=false lookup.
+validate_ps5_shared_null_texture_view() {
+python3 - "$eden" <<'PYSHAREDNULL'
+from pathlib import Path
+import sys
+source = (Path(sys.argv[1]) / "src/video_core/texture_cache/texture_cache.h").read_text()
+start = source.index("ImageViewId TextureCache<P>::VisitImageView(")
+end = source.index("\ntemplate <class P>", start)
+fn = source[start:end]
+fresh = fn[fn.index("if (is_new) {"):fn.index("auto const it = channel_state->image_view_ids.find(map_index);")]
+assert "#ifdef PS5_NATIVE\n            // The descriptor" in fresh
+assert "if (is_new_tc || pair->second == NULL_IMAGE_VIEW_ID)" in fresh
+assert "#else\n            if (is_new_tc)\n#endif" in fresh
+assert fn.count("if (is_new_tc || pair->second == NULL_IMAGE_VIEW_ID)") == 2
+print("R317 PS5 shared NULL ImageView retry on new slot PASS")
+PYSHAREDNULL
+}
+apply_one "$root/headless/backports/eden-ps5-texture-shared-null-new-slot.patch" "$eden/.encore-backport-ps5-texture-shared-null-new-slot.sha256" validate_ps5_shared_null_texture_view
+
 # Citron fixes inform this host-worker SM/audctl proposal. It compiles on the
 # pinned Eden source, but PS5 service-init/shutdown behavior is not yet proven.
 # Keep it OFF in the baseline; qualify with a separate controlled HLE A/B.

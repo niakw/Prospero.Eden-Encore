@@ -11,9 +11,11 @@ pin = "5f142c7926d0c7fcbbd0ce30794d72f638a43b2a"
 rel = "src/video_core/texture_cache/texture_cache.h"
 git_blob = "640bd38407b772d52701c22b81b3189adb17bed8"
 patch_rel = "headless/backports/eden-ps5-texture-null-view-remap.patch"
+new_slot_patch_rel = "headless/backports/eden-ps5-texture-shared-null-new-slot.patch"
 apply = (root / "tools/apply-eden-backports.sh").read_text()
 assert "expected=" + pin in apply
 assert apply.count('apply_one "$root/' + patch_rel + '"') == 1
+assert apply.count('apply_one "$root/' + new_slot_patch_rel + '"') == 1
 
 url = "https://raw.githubusercontent.com/eden-emulator/mirror/" + pin + "/" + rel
 with urlopen(Request(url, headers={"User-Agent": "Eden-Encore-R314-pinned-source"}), timeout=25) as resp:
@@ -27,13 +29,16 @@ with tempfile.TemporaryDirectory(prefix="eden-r314-null-TIC-") as d:
     patch = root / patch_rel
     subprocess.run(["git", "apply", "--check", str(patch)], check=True, cwd=d, timeout=10)
     subprocess.run(["git", "apply", str(patch)], check=True, cwd=d, timeout=10)
+    shared_patch = root / new_slot_patch_rel
+    subprocess.run(["git", "apply", "--check", str(shared_patch)], check=True, cwd=d, timeout=10)
+    subprocess.run(["git", "apply", str(shared_patch)], check=True, cwd=d, timeout=10)
     text = target.read_text()
     start = text.index("ImageViewId TextureCache<P>::VisitImageView(")
     end = text.index("\ntemplate <class P>", start)
     fn = text[start:end]
     assert fn.count("#ifdef PS5_NATIVE") == 1
     assert "if (it->second == NULL_IMAGE_VIEW_ID && IsValidEntry(*gpu_memory, descriptor))" in fn
-    assert "if (is_new_tc || pair->second == NULL_IMAGE_VIEW_ID)" in fn
+    assert fn.count("if (is_new_tc || pair->second == NULL_IMAGE_VIEW_ID)") == 2
     recovered = fn[fn.index("if (it->second == NULL_IMAGE_VIEW_ID"):
                    fn.index("#endif", fn.index("if (it->second == NULL_IMAGE_VIEW_ID"))]
     assert "if (pair->second != NULL_IMAGE_VIEW_ID)\n            ++texture_bindings_serial;" in recovered
@@ -121,6 +126,24 @@ int main() {
 #else
     assert(tc.VisitImageView(5,false)==NULL_IMAGE_VIEW_ID);
     assert(tc.next_id==1); // original upstream behavior preserved
+#endif
+    // Two different indices may share descriptor bytes and the image_views
+    // map. A transient first-creation failure must not poison the second
+    // index's first bind (is_new=true). R314 alone only retries later.
+    Channel shared{};
+    MemoryManager shared_mem{true};
+    TextureCache<Dummy> reused{&shared, &shared_mem};
+    reused.transient_create_failures=1;
+    assert(reused.VisitImageView(5,false)==NULL_IMAGE_VIEW_ID);
+    assert(shared.image_views.at(TICEntry{3})==NULL_IMAGE_VIEW_ID);
+    assert(reused.next_id==1);
+#ifdef PS5_NATIVE
+    assert(reused.VisitImageView(6,false)==1);
+    assert(shared.image_view_ids.at(6)==1);
+    assert(reused.next_id==2 && reused.prepared==1);
+#else
+    assert(reused.VisitImageView(6,false)==NULL_IMAGE_VIEW_ID);
+    assert(reused.next_id==1);
 #endif
     // A sparse/compute texture shares the TIC bytes but NOT the slot key.
     c.compute_image_table.changed=true;
