@@ -510,6 +510,17 @@ adapt('src/video_core/renderer_vulkan/vk_present_manager.cpp', 'vulkan_present_m
 }
 
 void PresentManager::CopyToSwapchain(Frame* frame) {'''),
+    # R337: a *second* unbounded loop lives inside CopyToSwapchainImpl.
+    # Repeated VK_SUBOPTIMAL_KHR / VK_ERROR_OUT_OF_DATE_KHR can cause endless
+    # swapchain recreation even after R335 bounds outer surface-loss recovery.
+    # Propagate through the existing outer retry/discard fence path instead.
+    ('    while (swapchain.AcquireNextImage()) {\n        RecreateSwapchain(frame);\n    }',
+     '    for (u32 acquire_attempt = 0; swapchain.AcquireNextImage(); ++acquire_attempt) {\n'
+     '        if (acquire_attempt >= MAX_PRESENT_ATTEMPTS - 1) {\n'
+     '            throw vk::Exception(VK_ERROR_SURFACE_LOST_KHR);\n'
+     '        }\n'
+     '        RecreateSwapchain(frame);\n'
+     '    }'),
     ('    while (true) {\n        try {\n            // Recreate surface and swapchain if needed.',
      '    for (u32 attempt = 0; attempt < MAX_PRESENT_ATTEMPTS; ++attempt) {\n'
      '        try {\n            // Recreate surface and swapchain if needed.'),
