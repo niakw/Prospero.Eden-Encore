@@ -4,6 +4,7 @@ from pathlib import Path
 import filecmp
 import hashlib
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -14,6 +15,15 @@ assert (upstream/'VENDOR-ORIGIN.json').exists()
 assert (active/'vulkan_renderer.cpp').exists()
 with tempfile.TemporaryDirectory(prefix='eden-vulkan-fork-compare-') as d:
     temp=Path(d)
+    # The *production* renderer has always consumed Eden AFTER the ordered
+    # 43 shipping backports, not the pristine archive. Reproduce that exact
+    # working source before comparing the versioned Vulkan C++ translation
+    # units; otherwise stale GPU lifetime / texture-cache patches leak in.
+    patched=temp/'patched-eden'
+    shutil.copytree(upstream,patched,symlinks=True)
+    (patched/'GIT-COMMIT').write_text('5f142c7926d0c7fcbbd0ce30794d72f638a43b2a\n')
+    subprocess.run([sys.executable,'-B',str(root/'tools/install-vendored-eden-backports.py'),
+                    str(patched)],check=True,timeout=50,capture_output=True,text=True)
     # Pin shader input text separately from binary reproducibility. Avoid
     # depending on a nondeterministic host glslangValidator version in CI.
     expected_shaders={
@@ -26,8 +36,8 @@ with tempfile.TemporaryDirectory(prefix='eden-vulkan-fork-compare-') as d:
         assert (active/f'vulkan_hud.{stage}.spv').is_file()
     env=os.environ.copy()
     env['EDEN_VULKAN_ORACLE_SPV_DIR']=str(active)
-    subprocess.run([sys.executable,'-B',str(root/'tools/prepare-vulkan-port.py'),str(upstream),str(temp)],check=True,timeout=150,env=env)
-    actual={str(p.relative_to(temp)):p for p in temp.rglob('*') if p.is_file()}
+    subprocess.run([sys.executable,'-B',str(root/'tools/prepare-vulkan-port.py'),str(patched),str(temp/'generated')],check=True,timeout=150,env=env)
+    actual={str(p.relative_to(temp/'generated')):p for p in (temp/'generated').rglob('*') if p.is_file()}
     expected={str(p.relative_to(active)):p for p in active.rglob('*') if p.is_file()}
     assert actual.keys()==expected.keys(),f'missing: {actual.keys()-expected.keys()}, extras: {expected.keys()-actual.keys()}'
     mismatches=[name for name in sorted(actual) if not filecmp.cmp(actual[name],expected[name],shallow=False)]
