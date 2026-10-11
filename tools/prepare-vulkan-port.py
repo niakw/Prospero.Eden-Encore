@@ -803,6 +803,20 @@ adapt('src/video_core/renderer_vulkan/present/window_adapt_pass.cpp', 'vulkan_wi
      (port / 'vulkan_hud_draw.inc').read_text() + '\n        cmdbuf.EndRenderPass();'),
 ])
 adapt('src/video_core/renderer_vulkan/vk_blit_screen.cpp', 'vulkan_blit_screen.cpp', [
+    # R327: a change in the number of guest presentation layers destroys
+    # the prior descriptors, FSR/FXAA images, and views. The ordinary window
+    # reconfiguration waits for outstanding GPU work, but this resize path
+    # previously cleared layers immediately. Drain only when removing live
+    # layers, never on steady frames or initial construction.
+    ('    if (layers.size() != framebuffers.size()) {\n        layers.clear();',
+     '''    if (layers.size() != framebuffers.size()) {
+#ifdef PS5_NATIVE
+        if (!layers.empty()) {
+            // Old layer resources can still be in queued Vulkan draws.
+            WaitIdle(device);
+        }
+#endif
+        layers.clear();'''),
     ('VkFormat current_swapchain_view_format) {',
      'VkFormat current_swapchain_view_format, bool draw_hud) {'),
     ('image_index, layers, framebuffers, layout, frame);',
