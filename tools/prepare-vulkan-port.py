@@ -808,6 +808,11 @@ adapt('src/video_core/renderer_vulkan/present/window_adapt_pass.cpp', 'vulkan_wi
 # too late for the AA variant. Drain only if an AA pass actually exists.
 # Do not impose idle waits on normal draws or when the filter is disabled.
 adapt('src/video_core/renderer_vulkan/present/layer.cpp', 'vulkan_present_layer.cpp', [
+    # R331: ReleaseRawImages destroys the VkImage before the VkImageView(s)
+    # which reference it. Vulkan images must outlive their views. Free each
+    # view first, then the image; this is used on resize and Layer destruction.
+    ('    raw_images.clear();\n    buffer.reset();',
+     '    raw_image_views.clear();\n    raw_images.clear();\n    buffer.reset();'),
     # R329: the staging buffer has exactly ci.size mapped bytes (pinned VMA
     # allocator), and that size depends on framebuffer STRIDE as well as the
     # visible extent/format. A same-size framebuffer with a different stride
