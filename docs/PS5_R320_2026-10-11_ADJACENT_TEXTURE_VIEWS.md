@@ -9,3 +9,7 @@ R320 adds a PS5-only immediate reuse for this exact case, preserving NULL view r
 Test `tools/check-ps5-adjacent-texture-view-reuse.py` SHA-checks the exact upstream source, replays the production patch, and compiles/runs the **actual** `FillImageViews` function with C++20 under PS5 and upstream conditions, including NULL recovery, blacklisting, and deletion-loop safety. Host and native gates include it.
 
 Previous PS5 native R319 workflow [#38141622094](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38141622094) **SUCCESS**, All-On archive artifact ID 11702689609. R320 is **source-only** until native build; do not confuse artifacts.
+
+## R320 native compilation
+
+Core-source preflight [#38142726917](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38142726917): **SUCCESS** after correcting the test fixture's expected adjacent-duplicate visit count (three unique contiguous groups: 3,3,4,4,3,3). Native PS5 All-On qualification is triggered by this documentation-only commit. Only a successful native build and on-console FC27 test can qualify the effect on the 1440p reference workload.
