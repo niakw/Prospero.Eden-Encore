@@ -507,7 +507,7 @@ adapt('src/video_core/vulkan_common/vulkan_device.cpp', 'vulkan_device.cpp', [
      '    // Reset on each new VkDevice, even when a first kernel probe fails.\n'
      '    graphics_capacity.Reset(free_memory ? free_memory() : 0);\n'
      '    std::printf("EDEN_VULKAN_MEMORY integrated=%d heaps=%zu local=%llu initial_usage=%llu device_access=%llu "\n'
-     '                "capacity=%llu\\n",\n'
+     '                "capacity=%llu\n",\n'
      '                int(is_integrated), valid_heap_memory.size(), static_cast<unsigned long long>(local_memory),\n'
      '                static_cast<unsigned long long>(device_initial_usage),\n'
      '                static_cast<unsigned long long>(device_access_memory),\n'
@@ -757,7 +757,7 @@ adapt('src/video_core/vulkan_common/vulkan_wrapper.h', 'include/video_core/vulka
         throw Exception(result);''', '''inline void Check(VkResult result, const char* file = __builtin_FILE(),
                   int line = __builtin_LINE(), const char* operation = __builtin_FUNCTION()) {
     if (result != VK_SUCCESS) {
-        std::fprintf(stderr, "[ProsperoEden] Vulkan failure: %s:%d (%s) VkResult=%d\\n",
+        std::fprintf(stderr, "[ProsperoEden] Vulkan failure: %s:%d (%s) VkResult=%d\n",
                      file, line, operation, static_cast<int>(result));
         throw Exception(result);'''),
 ])
@@ -834,7 +834,7 @@ for signature, index in (
         if ((cost_timer || Eden::Performance::texture_budget_log.load(std::memory_order_relaxed)) &&
             frame_tick % 300 == 0)
             std::printf("EDEN_VULKAN_TEXTURE_BUDGET frame=%llu usage=%llu expected=%llu critical=%llu "
-                        "keep_dirty=%d memory_short=%d\\n",
+                        "keep_dirty=%d memory_short=%d\n",
                         static_cast<unsigned long long>(frame_tick),
                         static_cast<unsigned long long>(total_used_memory),
                         static_cast<unsigned long long>(expected_memory),
@@ -882,23 +882,23 @@ adapt('src/video_core/texture_cache/texture_cache.h',
 adapt('src/video_core/renderer_vulkan/vk_graphics_pipeline.h',
       'include/video_core/renderer_vulkan/vk_graphics_pipeline.h', [
     ('    GraphicsPipeline(const GraphicsPipeline&) = delete;',
-     '    GraphicsPipeline(const GraphicsPipeline&) = delete;\\n    ~GraphicsPipeline();'),
+     '    GraphicsPipeline(const GraphicsPipeline&) = delete;\n    ~GraphicsPipeline();'),
     ('    void MakePipeline(VkRenderPass render_pass);',
-     '    void MakePipeline(VkRenderPass render_pass, VkPipelineCreateFlags extra_flags = 0,\\n'
-     '                      vk::Pipeline* target = nullptr);\\n'
+     '    void MakePipeline(VkRenderPass render_pass, VkPipelineCreateFlags extra_flags = 0,\n'
+     '                      vk::Pipeline* target = nullptr);\n'
      '    void QueueOptimizedPipeline(VkRenderPass render_pass);'),
     ('    vk::Pipeline pipeline;',
-     '    vk::Pipeline pipeline;\\n'
-     '    struct OptimizeState {\\n'
-     '        std::mutex mutex;\\n'
-     '        std::condition_variable done;\\n'
-     '        bool cancelled{false};\\n'
-     '        bool running{false};\\n'
-     '    };\\n'
-     '    std::shared_ptr<OptimizeState> optimize_state; // allocated ONLY for active R313 builds\\n'
-     '    vk::Pipeline optimized_pipeline;\\n'
+     '    vk::Pipeline pipeline;\n'
+     '    struct OptimizeState {\n'
+     '        std::mutex mutex;\n'
+     '        std::condition_variable done;\n'
+     '        bool cancelled{false};\n'
+     '        bool running{false};\n'
+     '    };\n'
+     '    std::shared_ptr<OptimizeState> optimize_state; // allocated ONLY for active R313 builds\n'
+     '    vk::Pipeline optimized_pipeline;\n'
      '    std::atomic_bool optimized_ready{false};'),
-    ('#include <atomic>', '#include <atomic>\\n#include <memory>'),
+    ('#include <atomic>', '#include <atomic>\n#include <memory>'),
 ])
 
 # Adapted from Mihawk PS5 fast-first pipelines with important corrections:
@@ -964,16 +964,16 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
     if name == 'vk_graphics_pipeline':
         replacements.extend([
             ('#include <algorithm>',
-             '#include <algorithm>\\n#include <exception>\\n#include "common/thread_worker.h"'),
+             '#include <algorithm>\n#include <exception>\n#include "common/thread_worker.h"'),
             ('auto func{[this, shader_notify, &render_pass_cache, pipeline_statistics] {',
              'auto func{[this, shader_notify, &render_pass_cache, pipeline_statistics, '
              'fast_first_runtime = (worker_thread != nullptr)] {'),
             ('            MakePipeline(render_pass);',
-             '            if (::Eden::DevVulkan::fast_first_pipelines && fast_first_runtime) {\\n'
-             '                MakePipeline(render_pass, VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT);\\n'
-             '                QueueOptimizedPipeline(render_pass);\\n'
-             '            } else {\\n'
-             '                MakePipeline(render_pass);\\n'
+             '            if (::Eden::DevVulkan::fast_first_pipelines && fast_first_runtime) {\n'
+             '                MakePipeline(render_pass, VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT);\n'
+             '                QueueOptimizedPipeline(render_pass);\n'
+             '            } else {\n'
+             '                MakePipeline(render_pass);\n'
              '            }'),
             ('void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {',
              optimize_worker),
@@ -981,7 +981,7 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
              '    (target ? *target : pipeline) = device.GetLogical().CreateGraphicsPipeline({'),
             ('        .flags = flags,', '        .flags = flags | extra_flags,'),
             ('cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline);',
-             'cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,\\n'
+             'cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,\n'
              '    optimized_ready.load(std::memory_order_acquire) ? *optimized_pipeline : *pipeline);'),
         ])
         # The sample decision is set by the GPU owner's PrepareDraw, so the
@@ -1047,7 +1047,7 @@ shader_costs = [
      '                                                 u32 cache_version) {\n    auto timer = Eden::Performance::VulkanTimer(18);\n#ifdef PS5_NATIVE'),
     ('}\n\nPipelineCache::~PipelineCache()',
      '    if (Eden::Performance::vulkan_cost_enabled.load(std::memory_order_relaxed))\n'
-     '        std::printf("EDEN_VULKAN_DYNAMIC blend=%u enables=%u vertex=%u\\n",\n'
+     '        std::printf("EDEN_VULKAN_DYNAMIC blend=%u enables=%u vertex=%u\n",\n'
      '                    unsigned(dynamic_features.has_extended_dynamic_state_3_blend),\n'
      '                    unsigned(dynamic_features.has_extended_dynamic_state_3_enables),\n'
      '                    unsigned(dynamic_features.has_dynamic_vertex_input));\n'
@@ -1294,7 +1294,7 @@ pipeline_worker_replacement = '''#ifdef PS5_NATIVE
     const size_t selected = std::max<size_t>(1ULL, std::min(spare, max_pipeline_workers));
     std::printf("EDEN_PS5_SHADER_WORKERS reported=%zu available=%zu workers=%zu "
                 "reserved=%zu primary_in_mask=%zu physical_verified=%u logical_isolated=%u affinity_rc=%d "
-                "allowed_mask=0x%llx primary_mask=0x%llx secondary_mask=0x%llx\\n",
+                "allowed_mask=0x%llx primary_mask=0x%llx secondary_mask=0x%llx\n",
                 reported, available, selected, reserved, primary_in_mask,
                 unsigned(primary_mask != 0), unsigned(secondary_isolated), affinity_rc,
                 static_cast<unsigned long long>(allowed_mask),
