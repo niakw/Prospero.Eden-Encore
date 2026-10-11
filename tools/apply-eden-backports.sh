@@ -934,7 +934,7 @@ for phrase in ('identical_bound_views', 'last_feedback_view_ids.size() == views.
                '&& identical_bound_views'):
     if phrase not in fn:
         raise SystemExit('Missing R315 exact view-keyed feedback barrier guard: ' + phrase)
-assert '#ifdef PS5_NATIVE\n    // Descriptor-table generation' not in base
+assert '#ifdef PS5_NATIVE\n    // Descriptor-table generation' in base  # R315 added this scoped state
 assert 'std::vector<ImageViewId> last_feedback_view_ids;' in base
 assert fn.index('last_feedback_view_ids.push_back') < fn.index('if (rt_active_mask == 0)')
 assert fn.index('identical_bound_views') < fn.index('if (render_targets_serial ==')
