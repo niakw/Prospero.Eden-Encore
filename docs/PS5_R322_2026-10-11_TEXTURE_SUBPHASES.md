@@ -21,3 +21,7 @@ These timers are **diagnostic**, not a claim of increased FPS or graphics qualit
 ## Regression
 
 `tools/check-ps5-texture-subphases.py` SHA verifies upstream texture cache source, parses the actual production Python adapter, ensures exactly one anchor per insertion and correct instrumentation scope, and compiles the emitted blocks under PS5 and upstream C++20. Wired into both preflight and native-build gates. Important: interpret cumulative phase timings per five-second window; timers sample only 1/16 draws, and overlapping workers/timing should not be treated as additive CPU wall time.
+
+## Build qualification
+
+Core/source checks [#38154021961](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38154021961) **SUCCESS**, including the pinned generated-scope C++ smoke checks in PS5 and upstream mode. This documentation commit deliberately triggers the native PS5 All-On build, to verify that the actual generated `TextureCache` templates and nested timing scopes compile in the full Vulkan stack. R321 native #38153086997 SUCCESS remains available separately; no 1440p runtime improvement claimed.
