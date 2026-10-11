@@ -23,7 +23,7 @@ with urlopen(Request(url, headers={"User-Agent": "Encore-R311-pinned-source-repl
              timeout=25) as response:
     payload = response.read(200_000)
 actual = hashlib.sha1(
-    b"blob " + str(len(payload)).encode() + b"\\0" + payload).hexdigest()
+    b"blob " + str(len(payload)).encode() + b"\0" + payload).hexdigest()
 assert actual == blob_sha, (actual, blob_sha)
 original = payload.decode("utf-8")
 with tempfile.TemporaryDirectory(prefix="eden-r311-nvmap-") as directory:
