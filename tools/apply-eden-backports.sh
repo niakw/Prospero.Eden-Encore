@@ -964,6 +964,27 @@ PYSHAREDNULL
 }
 apply_one "$root/headless/backports/eden-ps5-texture-shared-null-new-slot.patch" "$eden/.encore-backport-ps5-texture-shared-null-new-slot.sha256" validate_ps5_shared_null_texture_view
 
+# R318 PS5: if there is no depth attachment, the feedback-loop decision
+# is necessarily false. Avoid scanning and storing textures while under
+# both graphics cache mutexes in the color-only path.
+validate_ps5_no_depth_feedback_fastpath() {
+python3 - "$eden" <<'PYNODEPTH'
+from pathlib import Path
+import sys
+source = (Path(sys.argv[1])/"src/video_core/texture_cache/texture_cache.h").read_text()
+start = source.index("void TextureCache<P>::CheckFeedbackLoop(")
+end = source.index("\ntemplate <class P>", start)
+fn = source[start:end]
+assert "if ((rt_active_mask & (1u << NUM_RT)) == 0)" in fn
+assert "last_feedback_view_ids.clear();" in fn
+assert fn.index("if ((rt_active_mask & (1u << NUM_RT)) == 0)") < fn.index("identical_bound_views")
+assert fn.index("last_feedback_view_ids.clear();") < fn.index("identical_bound_views")
+assert "if (depth_active && view_image_id == rt_depth_image_id)" in fn
+print("R318 no-depth feedback barrier fast-path PASS")
+PYNODEPTH
+}
+apply_one "$root/headless/backports/eden-ps5-feedback-loop-no-depth-fastpath.patch" "$eden/.encore-backport-ps5-feedback-loop-no-depth-fastpath.sha256" validate_ps5_no_depth_feedback_fastpath
+
 # Citron fixes inform this host-worker SM/audctl proposal. It compiles on the
 # pinned Eden source, but PS5 service-init/shutdown behavior is not yet proven.
 # Keep it OFF in the baseline; qualify with a separate controlled HLE A/B.
