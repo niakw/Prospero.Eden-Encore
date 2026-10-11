@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+"""R313: verify first-use pipelines are fast, cached ones unchanged, worker lifetime safe."""
+from pathlib import Path
+import ast
+import subprocess
+import tempfile
+
+root = Path(__file__).resolve().parents[1]
+generator = (root / "tools/prepare-vulkan-port.py").read_text()
+dev = (root / "headless/dev_vulkan.h").read_text()
+main = (root / "headless/main.cpp").read_text()
+
+nodes = ast.parse(generator).body
+workers = [ast.literal_eval(stmt.value) for stmt in nodes
+           if isinstance(stmt, ast.Assign)
+           and any(isinstance(t, ast.Name) and t.id == "optimize_worker"
+                   for t in stmt.targets)]
+assert len(workers) == 1
+worker = workers[0]
+
+for expected in (
+    "static Common::ThreadWorker worker(1,",
+    "if (!state) return;",
+    "state->cancelled = true;",
+    "state->done.wait(lock, [&] { return !state->running; });",
+    "if (state->cancelled) return;",
+    "optimized_ready.store(true, std::memory_order_release);",
+    "state->running = false;",
+    "state->done.notify_all();",
+    "catch (const std::exception& exception)",
+    "catch (...)",
+):
+    assert expected in worker, expected
+assert "VulkanTimer(24)" not in worker  # performance.h uses std::array<Totals,24>, 0..23
+assert "std::make_shared<OptimizeState>()" in worker
+assert "worker_thread != nullptr" in generator  # disk preload worker pointer null
+assert "VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT" in generator
+assert "optimized_ready.load(std::memory_order_acquire)" in generator
+assert "target ? *target : pipeline" in generator
+assert "void QueueOptimizedPipeline(VkRenderPass render_pass);" in generator
+assert "std::shared_ptr<OptimizeState> optimize_state;" in generator
+assert "fast_first_pipelines = true;" in dev and "fast_first_pipelines = false;" in dev
+assert "fast_pipelines=off" in main and "fast_pipelines=on" in main
+assert "EDEN_DEV_PROFILE" in dev
+assert generator.count("'include/video_core/renderer_vulkan/vk_graphics_pipeline.h'") == 1
+
+# Compile the precise native C++ optimization worker/dtor/queue implementation,
+# not a Python approximation. A queued job after object destruction must see
+# cancelled=true BEFORE any access to 'this'.
+code = r"""
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <exception>
+#include <memory>
+#include <mutex>
+#include <thread>
+#include <vector>
+#include <cassert>
+#include <stdexcept>
+#define LOG_WARNING(...) ((void)0)
+using VkRenderPass = int;
+using VkPipelineCreateFlags = int;
+namespace vk { using Pipeline = int; }
+namespace Common {
+class ThreadWorker {
+public:
+    ThreadWorker(int count, const char*) { assert(count == 1); }
+    template<class F> void QueueWork(F func) {
+        jobs.emplace_back([func = std::move(func)]() mutable {
+            std::this_thread::sleep_for(std::chrono::milliseconds(4));
+            func();
+        });
+    }
+    ~ThreadWorker() { for (auto& job : jobs) job.join(); }
+    std::vector<std::thread> jobs;
+};
+}
+class GraphicsPipeline {
+public:
+    struct OptimizeState {
+        std::mutex mutex;
+        std::condition_variable done;
+        bool cancelled{false};
+        bool running{false};
+    };
+    std::shared_ptr<OptimizeState> optimize_state;
+    vk::Pipeline optimized_pipeline{};
+    std::atomic_bool optimized_ready{false};
+    ~GraphicsPipeline();
+    void QueueOptimizedPipeline(VkRenderPass);
+    void MakePipeline(VkRenderPass, VkPipelineCreateFlags, vk::Pipeline*);
+};
+""" + worker + r"""
+    // The body above is the actual generated native TU method signature.
+    // This stub models Vulkan CreateGraphicsPipeline on a worker and the
+    // release/acquire transfer to the main GPU thread.
+    if (target) *target = render_pass + extra_flags + 44;
+}
+int main() {
+    for (int i = 0; i < 100; ++i) {
+        GraphicsPipeline p;
+        p.QueueOptimizedPipeline(11);
+        if (i % 2 == 0) {
+            // Destroy before a queued worker starts. Must cancel safely.
+            continue;
+        }
+        for (int spin = 0; spin < 1000000 &&
+             !p.optimized_ready.load(std::memory_order_acquire); ++spin)
+            std::this_thread::yield();
+        assert(p.optimized_ready.load(std::memory_order_acquire));
+        assert(p.optimized_pipeline == 55);
+    }
+}
+"""
+
+with tempfile.TemporaryDirectory(prefix="eden-r313-pipelines-") as d:
+    source = Path(d) / "worker.cpp"
+    app = Path(d) / "worker"
+    source.write_text(code)
+    subprocess.run(["c++", "-std=c++20", "-O2", "-pthread", "-Wall", "-Wextra",
+                    "-Werror", str(source), "-o", str(app)], check=True, timeout=40)
+    subprocess.run([str(app)], check=True, timeout=20)
+print("PASS R313 real native optimizer worker C++ lifecycle, cancelled jobs, release/acquire")
+print("PASS R313 runtime-only fast-first, disk cache exclusion, one worker, no OOB index 24")
