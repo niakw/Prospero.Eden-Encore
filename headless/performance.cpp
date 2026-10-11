@@ -978,6 +978,25 @@ void ReportGpuThread(unsigned frame) {
                 cache_lock_contended.load(std::memory_order_relaxed),
                 cache_lock_blocked.load(std::memory_order_relaxed),
                 cache_lock_wait_ns.load(std::memory_order_relaxed));
+    // These are 1-in-16 draw SAMPLES, not every draw's cost. Report cumulative
+    // totals plus maximum sampled latency; pair with frame IDs/time windows.
+    // Never issue a kernel query or print per-draw logging while the locks live.
+    if (detailed_gpu_profile.load(std::memory_order_relaxed)) {
+        constexpr const char* cache_phase_names[] = {
+            "pair_wait", "pair_held", "pipeline_configure", "descriptor_sync",
+            "fill_views", "graphics_buffers", "descriptor_acquire",
+            "dynamic_states", "query_draw"
+        };
+        static_assert(std::size(cache_phase_names) == cache_phase_totals.size());
+        for (unsigned phase = 0; phase < cache_phase_totals.size(); ++phase) {
+            const auto& entry = cache_phase_totals[phase];
+            std::printf("EDEN_GPU_CACHE_PHASE frame=%u phase=%s samples=%llu total_ns=%llu max_ns=%llu\n",
+                        frame, cache_phase_names[phase],
+                        entry.samples.load(std::memory_order_relaxed),
+                        entry.total_ns.load(std::memory_order_relaxed),
+                        entry.max_ns.load(std::memory_order_relaxed));
+        }
+    }
     std::printf(" fs_file_calls=%llu fs_file_ns=%llu fs_file_bytes=%llu fs_storage_calls=%llu fs_storage_ns=%llu "
                 "fs_storage_bytes=%llu",
                 load(guest_fs_file, true), load(guest_fs_file, false),
