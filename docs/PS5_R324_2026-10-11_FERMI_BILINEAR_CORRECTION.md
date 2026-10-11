@@ -13,3 +13,7 @@ R322 FC27 1440p logs include 96 Fermi2D non-unit source-depth warnings around ga
 ## Regression
 
 `tools/check-ps5-software-bilinear.py` pins and SHA checks the exact Eden source, replays the production patch with `git apply --check`, compiles the actual Bilinear function in C++20, and checks: 3x2 unsized identity, 3x2→5x3 interpolation at corner/center with four channels, and degenerate 1x1→4x3 upscaling. Integrated in core and native preflight. R323's source generator fix #38157962597 PASS; both R323 and R324 require native All-On validation before any PS5 test. No FPS gain claimed.
+
+## Native PS5 All-On qualification
+
+The combined R323/R324 source preflight [#38158423294](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38158423294) is **SUCCESS**, including the exact pinned C++ regression on non-square bilinear textures, the descriptor-ring preflight test, and the existing memory/JIT safety tests. This documentation-only commit triggers a **single** native PS5 build combining R323's final linked Vulkan fence-preflight implementation and R324's bilinear repair. Source CI passing is not proof that the PS5 executable links or that FC27 runs without stutter or graphical artifacts.
