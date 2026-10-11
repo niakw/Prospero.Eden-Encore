@@ -69,3 +69,14 @@ links on PS5, and that the actual all-on ZIP retains
 Do not claim a measured FPS gain, new PlayStation controller glyph behavior,
 or resolved FC27 crash/texture/HUD until hardware validation. User has ended
 the three R310 hardware tests for the night.
+
+## Preflight correction
+
+The first R313 host preflight #38110803998 failed on a generated C++
+`std::printf` literal in the shader-worker host fixture. The generator had
+five existing deliberately double-escaped `\\n` sequences; a global
+replacement during the R313 merge erroneously reduced them to a single
+escape in the **Python source**, producing a raw newline inside C++ quoted
+strings. Restored precisely the five original lines by comparison against
+R312 commit `6ff0a113`, leaving all new R313 replacement semantics intact.
+This is a CI-discovered source regression, not an FC27 user test result.
