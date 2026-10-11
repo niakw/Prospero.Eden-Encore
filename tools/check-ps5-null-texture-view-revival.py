@@ -36,7 +36,7 @@ with tempfile.TemporaryDirectory(prefix="eden-r314-null-TIC-") as d:
     start = text.index("ImageViewId TextureCache<P>::VisitImageView(")
     end = text.index("\ntemplate <class P>", start)
     fn = text[start:end]
-    assert fn.count("#ifdef PS5_NATIVE") == 1
+    assert fn.count("#ifdef PS5_NATIVE") == 2  # R314 cached slot + R317 new shared slot
     assert "if (it->second == NULL_IMAGE_VIEW_ID && IsValidEntry(*gpu_memory, descriptor))" in fn
     assert fn.count("if (is_new_tc || pair->second == NULL_IMAGE_VIEW_ID)") == 2
     recovered = fn[fn.index("if (it->second == NULL_IMAGE_VIEW_ID"):
