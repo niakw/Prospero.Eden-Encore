@@ -79,6 +79,7 @@ jobs:
           python3 -B tools/check-ps5-null-texture-view-revival.py
           python3 -B tools/check-ps5-feedback-loop-view-cache.py
           python3 -B tools/check-ps5-present-equal-copy.py
+          python3 -B tools/check-ps5-descriptor-queue-preflight.py
           python3 -B tools/check-gpu-physical-copy-bounds-host.py
           python3 -B tools/check-gpu-physical-copy-cpp-host.py
           python3 -B tools/check-gpu-atomic-forward-cpp-host.py
