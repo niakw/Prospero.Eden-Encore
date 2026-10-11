@@ -985,6 +985,26 @@ PYNODEPTH
 }
 apply_one "$root/headless/backports/eden-ps5-feedback-loop-no-depth-fastpath.patch" "$eden/.encore-backport-ps5-feedback-loop-no-depth-fastpath.sha256" validate_ps5_no_depth_feedback_fastpath
 
+# R320: skip an immediate repeated valid TIC read only in a read-only pass.
+validate_ps5_adjacent_valid_texture_view_reuse() {
+python3 - "$eden" <<'PYADJACENT'
+from pathlib import Path
+import sys
+t=(Path(sys.argv[1])/"src/video_core/texture_cache/texture_cache.h").read_text()
+a=t.index("void TextureCache<P>::FillImageViews(")
+b=t.index("\ntemplate <class P>",a)
+fn=t[a:b]
+assert fn.count("#ifdef PS5_NATIVE") == 3
+for v in ("if (!blacklist && !has_deleted_images &&", "previous_view_id != NULL_IMAGE_VIEW_ID",
+          "previous_image_index == view.index", "view.id = previous_view_id;",
+          "previous_image_index = view.index;", "previous_view_id = view.id;"):
+    assert v in fn, v
+assert fn.index("previous_image_index = view.index;") > fn.index("view.id = VisitImageView")
+print("R320 PS5 adjacent valid TIC read-only reuse PASS")
+PYADJACENT
+}
+apply_one "$root/headless/backports/eden-ps5-adjacent-valid-view-reuse.patch" "$eden/.encore-backport-ps5-adjacent-valid-view-reuse.sha256" validate_ps5_adjacent_valid_texture_view_reuse
+
 # Citron fixes inform this host-worker SM/audctl proposal. It compiles on the
 # pinned Eden source, but PS5 service-init/shutdown behavior is not yet proven.
 # Keep it OFF in the baseline; qualify with a separate controlled HLE A/B.
