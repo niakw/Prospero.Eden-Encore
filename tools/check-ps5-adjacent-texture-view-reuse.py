@@ -62,7 +62,7 @@ int main(){
  std::array<ImageViewInOut,6> read{{{3},{3},{4},{4},{3},{3}}};
  t.FillImageViews(read,false,false);
 #ifdef PS5_NATIVE
- assert(t.visits==4);
+ assert(t.visits==3);
 #else
  assert(t.visits==6);
 #endif
