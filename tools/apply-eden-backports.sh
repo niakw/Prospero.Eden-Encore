@@ -856,6 +856,33 @@ PYNVMAP
 }
 apply_one "$root/headless/backports/eden-ps5-nvmap-alloc-rollback.patch" "$eden/.encore-backport-ps5-nvmap-alloc-rollback.sha256" validate_ps5_nvmap_alloc_rollback
 
+# R312 FC27: a zero texture format is not a legal TIC, and the GPU
+# address-space range overload accepts ANY mapped page, not all pages.
+# Preserve sparse mappings while refusing to invent normal missing textures.
+validate_ps5_texture_descriptor_residency() {
+python3 - "$eden" <<'PYTIC'
+from pathlib import Path
+import sys
+source = (Path(sys.argv[1]) / 'src/video_core/texture_cache/util.cpp').read_text()
+start = source.index('bool IsValidEntry(')
+end = source.index('\nboost::container::small_vector<BufferImageCopy', start)
+fn = source[start:end]
+for needle in (
+    'config.format == static_cast<Tegra::Texture::TextureFormat>(0)',
+    'gpu_memory.GpuToCpuAddress(address).has_value()',
+    'if (config.is_sparse == 0) {',
+    'return gpu_memory.GpuToCpuAddress(address, guest_size_bytes).has_value();',
+):
+    if needle not in fn:
+        raise SystemExit('Missing PS5 TIC validity guard: ' + needle)
+assert fn.index('config.format ==') < fn.index('const ImageInfo info{config};')
+assert fn.index('if (config.is_sparse == 0)') < fn.index('const ImageInfo info{config};')
+assert fn.count('#ifdef PS5_NATIVE') == 2
+print('PS5 invalid TIC format and non-sparse first-page mapping guard PASS')
+PYTIC
+}
+apply_one "$root/headless/backports/eden-ps5-texture-descriptor-residency.patch" "$eden/.encore-backport-ps5-texture-descriptor-residency.sha256" validate_ps5_texture_descriptor_residency
+
 # Citron fixes inform this host-worker SM/audctl proposal. It compiles on the
 # pinned Eden source, but PS5 service-init/shutdown behavior is not yet proven.
 # Keep it OFF in the baseline; qualify with a separate controlled HLE A/B.
