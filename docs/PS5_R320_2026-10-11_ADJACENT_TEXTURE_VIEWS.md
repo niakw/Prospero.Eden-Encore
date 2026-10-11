@@ -13,3 +13,9 @@ Previous PS5 native R319 workflow [#38141622094](https://github.com/niakw/Prospe
 ## R320 native compilation
 
 Core-source preflight [#38142726917](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38142726917): **SUCCESS** after correcting the test fixture's expected adjacent-duplicate visit count (three unique contiguous groups: 3,3,4,4,3,3). Native PS5 All-On qualification is triggered by this documentation-only commit. Only a successful native build and on-console FC27 test can qualify the effect on the 1440p reference workload.
+
+## Native R320 qualification after cached R314/R317 validation fix
+
+Core #38144373711 **SUCCESS** on `aa3e467a9dd435d67659017e9deb7767f2545fb6`. The initial full build #38142888544 was blocked before native compilation because its cached pinned Eden source had already applied R317, and an earlier R314 validator expected precisely one `PS5_NATIVE` block inside `VisitImageView`. That count becomes two after R317. The validator now accepts fresh R314 or cached R314+R317 only with both R317 NULL-view retry predicates intact. This changes **validation only** and not guest-memory or graphics behavior.
+
+The full PS5 native All-On build is explicitly requested by this documentation commit. R319 remains the last native-green archive until the new workflow completes. R320 still has no claimed FC27 hardware FPS gain.
