@@ -52,135 +52,14 @@ cpp=patched["src/video_core/renderer_vulkan/vk_descriptor_buffer.cpp"]
 assert "if (frame_reused)" in cpp
 assert "scheduler.Wait(frame_ticks[frame_index]);" in cpp
 assert "scheduler.Finish();" in cpp
-# Reproduce the FINAL native compilation unit after the timing instrumentation.
-# The R323 symbol was previously defined only in an unlinked intermediate
-# generator file, while the final *_cost.cpp was rebuilt from pristine upstream.
-# Verify the generated final source and all 3 protected Wait/Finish sites.
-import re
+# The linked native descriptor TU is generated from the adapted Vulkan
+# descriptor implementation, not from unpatched upstream. Protect this
+# composition rule to catch a declaration-only link failure.
+assert "if name == 'vk_descriptor_buffer':" in gen
 assert "text = (output / 'vulkan_descriptor_buffer.cpp').read_text()" in gen
 assert "('vk_descriptor_buffer', 10, 3)" in gen
-cost_pattern=r'(?m)^( +)(scheduler\\.(?:Wait|Finish)\\([^\\n]*\\);)
-end=cpp.index("\n}",start)+2
-method=cpp[start:end]
-with tempfile.TemporaryDirectory(prefix="eden-r323-ring-") as tmp:
- p=Path(tmp)/"ring.cpp"
- p.write_text(r"""
-#include <array>
-#include <cassert>
-#include <cstddef>
-#include <cstdint>
-#include <vector>
-using u64=std::uint64_t;
-struct Scheduler{
- int waits=0;
- u64 last=0;
- void Wait(u64 tick){++waits;last=tick;}
-};
-class DescriptorBufferRing{
-public:
- bool PreflightFrameReuse(Scheduler&);
- bool frame_reused=false;
- std::vector<int> chunks{7};
- size_t frame_index=2;
- std::array<u64,8> frame_ticks{};
-};
-#ifdef PS5_NATIVE
-""" + method + r"""
-#endif
-int main(){
- Scheduler s;
- DescriptorBufferRing r;
-#ifdef PS5_NATIVE
- assert(!r.PreflightFrameReuse(s) && s.waits==0);
- r.frame_reused=true;
- r.chunks.clear();
- assert(!r.PreflightFrameReuse(s) && r.frame_reused && s.waits==0);
- r.chunks.push_back(7);
- r.frame_ticks[2]=421;
- assert(r.PreflightFrameReuse(s) && s.waits==1 && s.last==421);
- assert(!r.frame_reused && !r.PreflightFrameReuse(s) && s.waits==1);
- // An independent next-frame recycle must repeat the normal fence drain.
- r.frame_reused=true;r.frame_ticks[2]=623;
- assert(r.PreflightFrameReuse(s) && s.waits==2 && s.last==623);
-#else
- assert(s.waits==0);
-#endif
-}
-""")
- for label,flags in (("ps5",["-DPS5_NATIVE"]),("upstream",[])):
-  exe=Path(tmp)/label
-  subprocess.run(["c++","-std=c++20","-Wall","-Wextra","-Werror",
-                  *flags,str(p),"-o",str(exe)],check=True,timeout=30)
-  subprocess.run([str(exe)],check=True,timeout=10)
-  print("PASS R323 native and upstream ring preflight",label)
-print("PASS R323 pinned core descriptor frame wait moved ahead of both cache locks")
-
-# Match the exact pattern authored by the Vulkan cost adapter.
-cost_pattern=r'(?m)^( +)(scheduler\.(?:Wait|Finish)\([^\n]*\);)
-end=cpp.index("\n}",start)+2
-method=cpp[start:end]
-with tempfile.TemporaryDirectory(prefix="eden-r323-ring-") as tmp:
- p=Path(tmp)/"ring.cpp"
- p.write_text(r"""
-#include <array>
-#include <cassert>
-#include <cstddef>
-#include <cstdint>
-#include <vector>
-using u64=std::uint64_t;
-struct Scheduler{
- int waits=0;
- u64 last=0;
- void Wait(u64 tick){++waits;last=tick;}
-};
-class DescriptorBufferRing{
-public:
- bool PreflightFrameReuse(Scheduler&);
- bool frame_reused=false;
- std::vector<int> chunks{7};
- size_t frame_index=2;
- std::array<u64,8> frame_ticks{};
-};
-#ifdef PS5_NATIVE
-""" + method + r"""
-#endif
-int main(){
- Scheduler s;
- DescriptorBufferRing r;
-#ifdef PS5_NATIVE
- assert(!r.PreflightFrameReuse(s) && s.waits==0);
- r.frame_reused=true;
- r.chunks.clear();
- assert(!r.PreflightFrameReuse(s) && r.frame_reused && s.waits==0);
- r.chunks.push_back(7);
- r.frame_ticks[2]=421;
- assert(r.PreflightFrameReuse(s) && s.waits==1 && s.last==421);
- assert(!r.frame_reused && !r.PreflightFrameReuse(s) && s.waits==1);
- // An independent next-frame recycle must repeat the normal fence drain.
- r.frame_reused=true;r.frame_ticks[2]=623;
- assert(r.PreflightFrameReuse(s) && s.waits==2 && s.last==623);
-#else
- assert(s.waits==0);
-#endif
-}
-""")
- for label,flags in (("ps5",["-DPS5_NATIVE"]),("upstream",[])):
-  exe=Path(tmp)/label
-  subprocess.run(["c++","-std=c++20","-Wall","-Wextra","-Werror",
-                  *flags,str(p),"-o",str(exe)],check=True,timeout=30)
-  subprocess.run([str(exe)],check=True,timeout=10)
-  print("PASS R323 native and upstream ring preflight",label)
-print("PASS R323 pinned core descriptor frame wait moved ahead of both cache locks")
-
-matched=list(re.finditer(cost_pattern,cpp))
-assert len(matched)==3,len(matched)
-composed=re.sub(cost_pattern,
-                lambda m: m[1]+'{ auto timer = Eden::Performance::VulkanTimer(10); '+m[2]+' }',
-                cpp)
-assert 'bool DescriptorBufferRing::PreflightFrameReuse(Scheduler& scheduler)' in composed
-assert composed.count('VulkanTimer(10)')==3
-assert composed.count('scheduler.Wait(frame_ticks[frame_index]);')==2
-assert 'scheduler.Finish();' in composed
+assert cpp.count("scheduler.Wait(frame_ticks[frame_index]);") == 2
+assert cpp.count("scheduler.Finish();") == 1
 start=cpp.index("bool DescriptorBufferRing::PreflightFrameReuse(")
 end=cpp.index("\n}",start)+2
 method=cpp[start:end]
