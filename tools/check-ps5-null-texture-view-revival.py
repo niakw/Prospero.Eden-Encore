@@ -18,7 +18,7 @@ assert apply.count('apply_one "$root/' + patch_rel + '"') == 1
 url = "https://raw.githubusercontent.com/eden-emulator/mirror/" + pin + "/" + rel
 with urlopen(Request(url, headers={"User-Agent": "Eden-Encore-R314-pinned-source"}), timeout=25) as resp:
     data = resp.read(400000)
-sha = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\\0" + data).hexdigest()
+sha = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
 assert sha == git_blob, (sha, git_blob)
 with tempfile.TemporaryDirectory(prefix="eden-r314-null-TIC-") as d:
     target = Path(d) / rel
