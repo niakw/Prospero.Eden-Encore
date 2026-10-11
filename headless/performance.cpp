@@ -978,6 +978,24 @@ void ReportGpuThread(unsigned frame) {
                 cache_lock_contended.load(std::memory_order_relaxed),
                 cache_lock_blocked.load(std::memory_order_relaxed),
                 cache_lock_wait_ns.load(std::memory_order_relaxed));
+    std::printf(" fs_file_calls=%llu fs_file_ns=%llu fs_file_bytes=%llu fs_storage_calls=%llu fs_storage_ns=%llu "
+                "fs_storage_bytes=%llu",
+                load(guest_fs_file, true), load(guest_fs_file, false),
+                guest_fs_file_bytes.load(std::memory_order_relaxed),
+                load(guest_fs_storage, true), load(guest_fs_storage, false),
+                guest_fs_storage_bytes.load(std::memory_order_relaxed));
+    for (unsigned core = 0; core < jit_callbacks.size(); ++core)
+        std::printf(" r%u=%llu w%u=%llu x%u=%llu", core, jit_callbacks[core].reads.load(std::memory_order_relaxed),
+                    core, jit_callbacks[core].writes.load(std::memory_order_relaxed),
+                    core, jit_callbacks[core].exclusive_writes.load(std::memory_order_relaxed));
+    for (unsigned core = 0; core < 3; ++core)
+        std::printf(" idle%u=%llu/%llu/%llu", core, guest_idle[core].calls.load(std::memory_order_relaxed),
+                    guest_idle[core].nanoseconds.load(std::memory_order_relaxed) / 1000000,
+                    guest_idle[core].sleeps.load(std::memory_order_relaxed));
+    std::printf(" cond=");
+    for (unsigned slot = 0; slot < render_conditions.size(); ++slot)
+        std::printf("%s%llu", slot ? "," : "", render_conditions[slot].load(std::memory_order_relaxed));
+    std::printf("\n");
     // These are 1-in-16 draw SAMPLES, not every draw's cost. Report cumulative
     // totals plus maximum sampled latency; pair with frame IDs/time windows.
     // Never issue a kernel query or print per-draw logging while the locks live.
@@ -997,24 +1015,6 @@ void ReportGpuThread(unsigned frame) {
                         entry.max_ns.load(std::memory_order_relaxed));
         }
     }
-    std::printf(" fs_file_calls=%llu fs_file_ns=%llu fs_file_bytes=%llu fs_storage_calls=%llu fs_storage_ns=%llu "
-                "fs_storage_bytes=%llu",
-                load(guest_fs_file, true), load(guest_fs_file, false),
-                guest_fs_file_bytes.load(std::memory_order_relaxed),
-                load(guest_fs_storage, true), load(guest_fs_storage, false),
-                guest_fs_storage_bytes.load(std::memory_order_relaxed));
-    for (unsigned core = 0; core < jit_callbacks.size(); ++core)
-        std::printf(" r%u=%llu w%u=%llu x%u=%llu", core, jit_callbacks[core].reads.load(std::memory_order_relaxed),
-                    core, jit_callbacks[core].writes.load(std::memory_order_relaxed),
-                    core, jit_callbacks[core].exclusive_writes.load(std::memory_order_relaxed));
-    for (unsigned core = 0; core < 3; ++core)
-        std::printf(" idle%u=%llu/%llu/%llu", core, guest_idle[core].calls.load(std::memory_order_relaxed),
-                    guest_idle[core].nanoseconds.load(std::memory_order_relaxed) / 1000000,
-                    guest_idle[core].sleeps.load(std::memory_order_relaxed));
-    std::printf(" cond=");
-    for (unsigned slot = 0; slot < render_conditions.size(); ++slot)
-        std::printf("%s%llu", slot ? "," : "", render_conditions[slot].load(std::memory_order_relaxed));
-    std::printf("\n");
     const auto window = Eden::Fastmem::WindowStats();
     std::printf("EDEN_FASTMEM window=%llx pages=%llu chunks=%llu direct_reads=%llu direct_writes=%llu "
                 "faults=%llu maps=%llu unmaps=%llu protects=%llu kernel_calls=%llu kernel_ns=%llu failures=%llu\n",
