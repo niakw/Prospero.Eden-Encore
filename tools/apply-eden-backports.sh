@@ -822,6 +822,40 @@ print('Pinned PS5 GetSpan correct end page and contiguous page guard PASS')
 PYSPAN
 }
 apply_one "$root/headless/backports/eden-ps5-guest-span.patch" "$eden/.encore-backport-ps5-guest-span.sha256" validate_ps5_guest_span
+
+# R311: FC27 second run: kernel device-map lock failed, followed by writes to
+# zero, guest PANIC 0xD401, and a later null instruction fetch on Job0.
+# A failed lock must NOT be an apparently successful nvmap allocation.
+validate_ps5_nvmap_alloc_rollback() {
+python3 - "$eden" <<'PYNVMAP'
+from pathlib import Path
+import sys
+source = (Path(sys.argv[1]) /
+          'src/core/hle/service/nvdrv/devices/nvmap.cpp').read_text()
+begin = source.index('NvResult nvmap::IocAlloc(')
+end = source.index('NvResult nvmap::IocGetId(', begin)
+fn = source[begin:end]
+for required in (
+    'EDEN_NVMAP_REJECT_ZERO_ADDRESS',
+    'EDEN_NVMAP_MAP_FAILED',
+    'if (!map_result.IsSuccess()) {',
+    'handle_description->allocated = false;',
+    'handle_description->address = 0;',
+    'return NvResult::BadValue;',
+    'Kernel::KMemoryPermission::None, true, false',
+):
+    if required not in fn:
+        raise SystemExit('Incomplete PS5 nvmap failed-map rollback: ' + required)
+assert fn.index('if (!params.address) {') < fn.index('handle_description->Alloc(')
+failure = fn[fn.index('if (!map_result.IsSuccess()) {'):fn.index('#else', fn.index('if (!map_result.IsSuccess()) {'))]
+assert failure.index('handle_description->allocated = false;') < failure.index('return NvResult::BadValue;')
+assert 'UnlockForDeviceAddressSpace' not in failure
+assert '#else\n    ASSERT(process->GetPageTable()' in fn
+print('PS5 nvmap allocation: reject null address, rollback failed lock, preserve non-PS5 contract PASS')
+PYNVMAP
+}
+apply_one "$root/headless/backports/eden-ps5-nvmap-alloc-rollback.patch" "$eden/.encore-backport-ps5-nvmap-alloc-rollback.sha256" validate_ps5_nvmap_alloc_rollback
+
 # Citron fixes inform this host-worker SM/audctl proposal. It compiles on the
 # pinned Eden source, but PS5 service-init/shutdown behavior is not yet proven.
 # Keep it OFF in the baseline; qualify with a separate controlled HLE A/B.
