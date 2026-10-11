@@ -355,6 +355,32 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
+      # Verify the *uploaded* archive after extraction, not only the staging
+      # tree. This catches upload-artifact flattening PPSA99008 by mistake.
+      - name: Verify actual downloadable PS5 ZIP folder structure
+        if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v4.1.8
+        with:
+          name: Prospero.Eden-Encore-PS5-all-on-test
+          path: build/zip-layout-verification
+
+      - name: Assert extracted PS5 title folder and metadata
+        if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
+        run: |
+          test -f build/zip-layout-verification/PPSA99008/eboot.bin
+          test -f build/zip-layout-verification/PPSA99008/sce_sys/param.json
+          test -f build/zip-layout-verification/PPSA99008/network-hosts.txt
+          test -d build/zip-layout-verification/PPSA99008/ui
+          test ! -f build/zip-layout-verification/eboot.bin
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          app = Path('build/zip-layout-verification/PPSA99008')
+          value = json.loads((app / 'sce_sys/param.json').read_text())
+          assert value['titleId'] == 'PPSA99008', value
+          print('EXTRACTED_PS5_TEST_ZIP PASS: PPSA99008/eboot.bin + matching titleId')
+          PY
+
       - name: Upload unstripped PS5 All-On crash symbols
         if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
