@@ -1,0 +1,13 @@
+--- a/src/video_core/renderer_vulkan/vk_present_manager.cpp
++++ b/src/video_core/renderer_vulkan/vk_present_manager.cpp
+@@ -179,6 +179,10 @@
+     // Take the frame from the queue
+     Frame* frame = free_queue.front();
+     free_queue.pop_front();
++    // The frame is now ours exclusively. Waiting for its GPU fence with
++    // free_mutex held blocks the present thread from returning other frames.
++    // Release the queue mutex before any potentially slow GPU completion wait.
++    lock.unlock();
+ 
+     // Wait for the presentation to be finished so all frame resources are free
+     frame->present_done.Wait();

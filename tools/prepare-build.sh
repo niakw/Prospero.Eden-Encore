@@ -33,6 +33,7 @@ printf '%s\n' 'ps5-headless' > "$eden/GIT-REFSPEC"
 step "Audited Eden backports (GPU, FW23/services, runtime/HID)"
 bash tools/apply-eden-backports.sh "$eden"
 python3 -B tools/check-nvnflinger-dequeue-wakeup.py "$eden"
+python3 -B tools/check-vulkan-free-fence-lock.py "$eden"
 
 # Optional: seed Eden's package cache from another checkout's (CI reuses a development cache).
 if [[ -n ${EDEN_CPM_CACHE_SEED:-} && ! -d $eden/.cache/cpm ]]; then

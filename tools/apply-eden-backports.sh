@@ -247,6 +247,19 @@ PYBQ
 
 apply_one "$root/headless/backports/eden-4473-4477.patch" "$eden/.encore-backport-gpu.sha256" validate_gpu
 apply_one "$root/headless/backports/eden-nvnflinger-dequeue-wakeup.patch" "$eden/.encore-backport-nvnflinger-wakeup.sha256" validate_nvnflinger_wakeup
+validate_vulkan_free_fence_lock() {
+python3 - "$eden" <<'PYVF'
+from pathlib import Path
+import sys
+text=(Path(sys.argv[1])/'src/video_core/renderer_vulkan/vk_present_manager.cpp').read_text()
+method=text.split('Frame* PresentManager::GetRenderFrame() {',1)[1].split('void PresentManager::Present(Frame* frame)',1)[0]
+assert method.count('lock.unlock();') == 1
+assert method.index('free_queue.pop_front();') < method.index('lock.unlock();') < method.index('frame->present_done.Wait();')
+print('Eden Vulkan present/fence free-queue lock ordering: PASS')
+PYVF
+}
+
+apply_one "$root/headless/backports/eden-vulkan-free-fence-lock.patch" "$eden/.encore-backport-vulkan-free-fence-lock.sha256" validate_vulkan_free_fence_lock
 apply_one "$root/headless/backports/eden-4436-spinlock-mutex.patch" "$eden/.encore-backport-4436.sha256" validate_spinlock_mutex
 apply_one "$root/headless/backports/eden-fw23-services.patch" "$eden/.encore-backport-fw23.sha256" validate_fw23
 apply_one "$root/headless/backports/eden-runtime-hid.patch" "$eden/.encore-backport-runtime-hid.sha256" validate_runtime_hid
