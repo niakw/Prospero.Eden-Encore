@@ -2008,8 +2008,17 @@ if(EDEN_PS5_OPENGL)
         write_derived("${PORT_BUILD_DIR}/include/common/bounded_threadsafe_queue.h" "${native_queue_header}")
     endif()
     file(READ "${PROJECT_SOURCE_DIR}/src/video_core/gpu_thread.h" gpu_thread_header)
+    # R333: the eight-command PS5 override is demonstrably saturating in FC27.
+    # Allow a bounded short command burst without restoring the upstream 4096
+    # slots (which can hide large latency). Preserve all fences, FIFO and
+    # stop-aware producer waking; leave non-native host budgeting unchanged.
+    if(PS5_NATIVE)
+        set(eden_gpu_queue_capacity 32)
+    else()
+        set(eden_gpu_queue_capacity 8)
+    endif()
     string(REPLACE "using CommandQueue = Common::SPSCQueue<CommandDataContainer>;"
-        "using CommandQueue = Common::SPSCQueue<CommandDataContainer, 8>;"
+        "using CommandQueue = Common::SPSCQueue<CommandDataContainer, ${eden_gpu_queue_capacity}>;"
         gpu_thread_header "${gpu_thread_header}")
     string(REPLACE "    ~ThreadManager();" "    ~ThreadManager();\n    void Stop() { thread.request_stop(); if (thread.joinable()) thread.join(); }" gpu_thread_header "${gpu_thread_header}")
     if(PS5_NATIVE)
