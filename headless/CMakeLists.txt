@@ -1991,6 +1991,26 @@ if(EDEN_PS5_OPENGL)
         list(REMOVE_ITEM video_sources macro.cpp)
         list(APPEND video_sources "${MACRO_OUTPUT}")
     endif()
+    # R345: PS5 compiles our versioned, complete GPU worker and queue sources.
+    # No source-code string rewrites execute during native configuration.
+    if(PS5_NATIVE)
+        set(EDEN_ACTIVE_GPU "${PORT_ROOT}/vendor/encore-active/eden-gpu")
+        if(EDEN_DEV_PROFILE)
+            set(EDEN_GPU_WORKER_VARIANT "gpu_thread_dev.cpp")
+        else()
+            set(EDEN_GPU_WORKER_VARIANT "gpu_thread_quiet.cpp")
+        endif()
+        file(MAKE_DIRECTORY "${PORT_BUILD_DIR}/include/common" "${PORT_BUILD_DIR}/include/video_core")
+        configure_file("${EDEN_ACTIVE_GPU}/include/common/bounded_threadsafe_queue.h"
+            "${PORT_BUILD_DIR}/include/common/bounded_threadsafe_queue.h" COPYONLY)
+        configure_file("${EDEN_ACTIVE_GPU}/include/video_core/gpu_thread.h"
+            "${PORT_BUILD_DIR}/include/video_core/gpu_thread.h" COPYONLY)
+        configure_file("${EDEN_ACTIVE_GPU}/${EDEN_GPU_WORKER_VARIANT}"
+            "${PORT_BUILD_DIR}/gpu_thread.cpp" COPYONLY)
+        list(REMOVE_ITEM video_sources gpu_thread.cpp)
+        list(APPEND video_sources "${PORT_BUILD_DIR}/gpu_thread.cpp")
+        string(PREPEND gpu_source "#include <glad/glad.h>\n")
+    else()
     # PS5-only stop-aware producer wait; the pinned upstream queue has a
     # condition variable for free slots, but no stop-token overload.
     # Keep the plain host and other consumers on upstream's original queue.
@@ -2132,6 +2152,8 @@ if(EDEN_PS5_OPENGL)
     endif()
     string(PREPEND gpu_source "#include <glad/glad.h>\n")
     write_derived("${PORT_BUILD_DIR}/include/video_core/gpu_thread.h" "${gpu_thread_header}")
+    # R345_LEGACY_SOURCE_END
+    endif()
     target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/include")
     string(REPLACE "    ~Impl() = default;" "    ~Impl() { gpu_thread.Stop(); if (renderer && Settings::IsOpenGL()) { renderer->Context().MakeCurrent(); glFinish(); } }" gpu_source "${gpu_source}")
     # Join before unique_ptr destruction clears GPU::impl: queued draws call back
