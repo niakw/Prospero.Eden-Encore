@@ -51,3 +51,30 @@ for item in ITEMS:
  for idx,extra in enumerate(item.get('setup_prefetch',())):
   assert_blob(name+f'-setup-{idx}',extra['sha256'])
 print(f'VENDOR_COMPLETE_OK pinned={len(ITEMS)} source_roots=11 archive_bundles=12 bootstrap_objects=2 all_hashes_valid')
+
+# Prove the actual loader can hydrate a new build checkout without user cache,
+# DNS, or original upstream. Leave canonical sources untouched: compilers and
+# backport generators must receive disposable working trees, not symlinks.
+import tempfile
+import sys
+sys.path.insert(0,str(ROOT/'tools'))
+import deps
+with tempfile.TemporaryDirectory(prefix='eden-vendor-airgap-') as tmp:
+ isolated=Path(tmp)
+ deps.ROOT=isolated
+ deps.CACHE=isolated/'empty-source-cache'
+ deps.OFFLINE=True
+ for name in ('eden','fmt','compiler-rt','zbic'):
+  dep=next(x for x in ITEMS if x['name']==name)
+  deps.fetch(dep)
+  assert deps.present(dep),name
+  target=deps.location(dep) if dep['kind'] in ('git','files') else isolated/dep['creates']
+  assert not target.is_symlink(),f'{name}: source must be a mutable isolated copy'
+ assert (isolated/'.deps/eden-5f142c79.tar.gz').is_file()
+ assert (isolated/'.deps/fmt-12.1.0.tar.gz').is_file()
+ assert deps.revision(isolated/'.deps/zbic-11b08f27')=='11b08f2712264bbed731545085cbd9702096ceb7'
+ boilerplate=next(x for x in ITEMS if x['name']=='boilerplate')
+ sdk=boilerplate['setup_prefetch'][1]
+ archive=deps.download(sdk['url'],'sha256',sdk['sha256'],'boilerplate-ps5-payload-sdk.zip')
+ assert archive.is_file() and hashlib.sha256(archive.read_bytes()).hexdigest()==sdk['sha256']
+print('VENDOR_AIRGAP_OK empty-cache Eden tar + isolated source, fmt, compiler-rt, original Git SHA, PS5 SDK 0.42')
