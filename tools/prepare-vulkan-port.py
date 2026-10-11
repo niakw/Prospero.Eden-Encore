@@ -144,12 +144,45 @@ GraphicsPipeline* prepared_pipeline = nullptr;
 template <typename Func>
 void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {'''),
     ('    std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};\n    // update engine as channel may be different.',
-     '''    std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};
+     '''    const bool cache_sample = ::Eden::Performance::ShouldSampleCacheDraw();
+    const bool previous_sample = ::Eden::Performance::cache_draw_sample_active;
+    ::Eden::Performance::cache_draw_sample_active = cache_sample;
+    SCOPE_EXIT { ::Eden::Performance::cache_draw_sample_active = previous_sample; };
+    ::Eden::Performance::CachePhaseTimer pair_wait{
+        ::Eden::Performance::CachePhase::PairWait, cache_sample};
+    std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};
+    pair_wait.Stop();
+    ::Eden::Performance::CachePhaseTimer pair_held{
+        ::Eden::Performance::CachePhase::PairHeld, cache_sample};
     prepared_pipeline = pipeline;
     SCOPE_EXIT {
         prepared_pipeline = nullptr;
     };
     // update engine as channel may be different.'''),
+    # R310: keep all GPU cache locks unchanged. Only clock 1/16 diagnostic
+    # draws to resolve whether actual waits are in Configure or drawing.
+    ('    pipeline->SetEngine(maxwell3d, gpu_memory);\n    if (!pipeline->Configure(is_indexed))\n        return;\n\n    UpdateDynamicStates();\n',
+     '''    ::Eden::Performance::CachePhaseTimer configure_phase{
+        ::Eden::Performance::CachePhase::PipelineConfigure, cache_sample};
+    pipeline->SetEngine(maxwell3d, gpu_memory);
+    const bool pipeline_ok = pipeline->Configure(is_indexed);
+    configure_phase.Stop();
+    if (!pipeline_ok)
+        return;
+
+    ::Eden::Performance::CachePhaseTimer dynamic_phase{
+        ::Eden::Performance::CachePhase::DynamicStates, cache_sample};
+    UpdateDynamicStates();
+    dynamic_phase.Stop();
+'''),
+    ('    query_cache.NotifySegment(true);\n    HandleTransformFeedback();\n    query_cache.CounterEnable(VideoCommon::QueryType::ZPassPixelCount64, maxwell3d->regs.zpass_pixel_count_enable);\n    draw_func();',
+     '''    ::Eden::Performance::CachePhaseTimer draw_phase{
+        ::Eden::Performance::CachePhase::QueryAndDraw, cache_sample};
+    query_cache.NotifySegment(true);
+    HandleTransformFeedback();
+    query_cache.CounterEnable(VideoCommon::QueryType::ZPassPixelCount64, maxwell3d->regs.zpass_pixel_count_enable);
+    draw_func();
+    draw_phase.Stop();'''),
     ('        if (auto* gp = pipeline_cache.CurrentGraphicsPipeline(); gp && gp->HasDynamicVertexInput()) {',
      '        if (auto* gp = prepared_pipeline ? prepared_pipeline : pipeline_cache.CurrentGraphicsPipeline();\n            gp && gp->HasDynamicVertexInput()) {'),
     # Development GPU fault probe (dev_vulkan.h, pipeline_trace=on): once the runner
@@ -845,11 +878,25 @@ adapt('src/video_core/texture_cache/texture_cache.h',
 # These costs sit outside vkCreateGraphicsPipelines: guest shader translation,
 # worker readiness, and background serialization can block different threads.
 for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
-    adapt(f'src/video_core/renderer_vulkan/{name}.cpp', name + '_cost.cpp', [
+    replacements = [
         ('#include <algorithm>', '#include <algorithm>\n#include "performance.h"'),
         ('            std::unique_lock lock{build_mutex};',
          '            auto timer = Eden::Performance::VulkanTimer(16);\n            std::unique_lock lock{build_mutex};'),
-    ])
+    ]
+    if name == 'vk_graphics_pipeline':
+        # The sample decision is set by the GPU owner's PrepareDraw, so the
+        # nested stages measure exactly the same draw without extra clocks.
+        for expression, phase in (
+            ('texture_cache.SynchronizeDescriptors(false);', 'TextureDescriptorSync'),
+            ('texture_cache.FillImageViews(std::span(views.data(), views.size()), false, Spec::has_images);', 'TextureFillImageViews'),
+            ('buffer_cache.UpdateGraphicsBuffers(is_indexed);', 'GraphicsBufferUpdate'),
+            ('guest_descriptor_queue.Acquire(scheduler, num_descriptor_entries, uses_descriptor_buffer);', 'DescriptorQueueAcquire'),
+        ):
+            replacements.append(
+                ('    ' + expression,
+                 '    { ::Eden::Performance::CachePhaseTimer cost{::Eden::Performance::CachePhase::' + phase +
+                 '};\n        ' + expression + '\n    }'))
+    adapt(f'src/video_core/renderer_vulkan/{name}.cpp', name + '_cost.cpp', replacements)
 shader_costs = [
     ('#include <algorithm>', '#include <algorithm>\n#include <cstdio>\n#include "pipeline_trace_registry.h"\n'
      '#include "performance.h"\n#include "dev_vulkan.h"\n#include "diagnostics.h"'),
