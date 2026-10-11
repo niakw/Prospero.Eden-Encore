@@ -20,6 +20,8 @@ assert "return;" in generator
 assert "Eden::Performance::ResetCachePhases();" in main
 assert "EDEN_GPU_CACHE_PHASE frame=%u phase=%s samples=%llu total_ns=%llu max_ns=%llu" in report
 assert "entry.max_ns.exchange(0, std::memory_order_relaxed)" in report
+assert "auto& entry = cache_phase_totals[phase];" in report
+assert "const auto& entry = cache_phase_totals[phase];" not in report
 assert report.index('std::printf("\\n");\n    // These are 1-in-16') < report.index(
     'const auto window = Eden::Fastmem::WindowStats();')
 for name in ("PairWait", "PairHeld", "PipelineConfigure", "TextureDescriptorSync",
