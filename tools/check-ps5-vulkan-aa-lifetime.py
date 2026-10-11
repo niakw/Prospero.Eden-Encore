@@ -29,7 +29,12 @@ calls = [n.value for n in tree.body if isinstance(n, ast.Expr) and isinstance(n.
          and n.value.args[0].value == rel]
 assert len(calls) == 1
 assert ast.literal_eval(calls[0].args[1]) == 'vulkan_present_layer.cpp'
-pairs = ast.literal_eval(calls[0].args[2]);assert len(pairs) == 2
+# R329 introduces an independent stride-capacity guard in the same generated
+# translation unit. This fixture isolates R328 AA lifetime, while the separate
+# R329 exact-source fixture tests all three production generator edits.
+all_pairs = ast.literal_eval(calls[0].args[2]); assert len(all_pairs) == 3
+pairs = [(old, new) for old, new in all_pairs if 'buffer.Mapped().size()' not in new]
+assert len(pairs) == 2
 patched = source
 for old, new in pairs:
     assert patched.count(old) == 1

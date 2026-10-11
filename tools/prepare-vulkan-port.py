@@ -808,6 +808,13 @@ adapt('src/video_core/renderer_vulkan/present/window_adapt_pass.cpp', 'vulkan_wi
 # too late for the AA variant. Drain only if an AA pass actually exists.
 # Do not impose idle waits on normal draws or when the filter is disabled.
 adapt('src/video_core/renderer_vulkan/present/layer.cpp', 'vulkan_present_layer.cpp', [
+    # R329: the staging buffer has exactly ci.size mapped bytes (pinned VMA
+    # allocator), and that size depends on framebuffer STRIDE as well as the
+    # visible extent/format. A same-size framebuffer with a different stride
+    # must reallocate, or UpdateRawImage's subspan can exceed the buffer.
+    ('        framebuffer.pixel_format == pixel_format && !raw_images.empty()) {',
+     '        framebuffer.pixel_format == pixel_format && !raw_images.empty() &&\n'
+     '        buffer.Mapped().size() == CalculateBufferSize(framebuffer)) {'),
     ('    pixel_format = framebuffer.pixel_format;\n'
      '    anti_alias.emplace<std::monostate>();\n\n'
      '    ReleaseRawImages();',
