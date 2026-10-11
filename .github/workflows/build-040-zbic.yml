@@ -325,12 +325,33 @@ jobs:
             --output build/headless-native/crash-provenance.json \
             --test-title "$EDEN_TEST_TITLE_ID"
 
+      # Upload the title DIRECTORY, not just its contents. Installing an
+      # extracted ZIP must yield /data/homebrew/PPSA99008/eboot.bin directly.
+      # The compiled game's 16-hex Switch Title ID is for autoboot, never the
+      # PS5 homebrew's own folder or sce_sys/param.json titleId.
+      - name: Validate self-contained PS5 test archive root
+        if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
+        run: |
+          test -d build/dev/PPSA99008
+          test -f build/dev/PPSA99008/eboot.bin
+          test -f build/dev/PPSA99008/sce_sys/param.json
+          test "$(find build/dev -mindepth 1 -maxdepth 1 -printf '%f\\n' | sort)" = PPSA99008
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          app = Path('build/dev/PPSA99008')
+          assert json.loads((app / 'sce_sys/param.json').read_text())['titleId'] == app.name
+          print('PS5_TEST_ARCHIVE_ROOT_OK PPSA99008/eboot.bin')
+          PY
+
       - name: Upload checked all-on PS5 test app
         if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Prospero.Eden-Encore-PS5-all-on-test
-          path: build/dev/PPSA99008/
+          # upload-artifact strips the chosen root directory. Upload its PARENT
+          # to preserve PPSA99008/ as the archive's top-level directory.
+          path: build/dev/
           retention-days: 14
           if-no-files-found: error
 
