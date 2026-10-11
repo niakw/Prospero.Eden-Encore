@@ -13,6 +13,7 @@
 #include "input_common/drivers/virtual_gamepad.h"
 #include "input_common/input_engine.h"
 #include "button_mapping.h"
+#include "pad_diagnostics.h"
 #include "ps5_pad.hpp"
 
 namespace Eden {
@@ -120,6 +121,7 @@ private:
     u64 polls = 0, samples_read = 0, usable_samples = 0, intercepted_samples = 0, circle_samples = 0, read_errors = 0;
     u64 rumble_updates = 0, rumble_errors = 0;
     int rumble_last_error = 0;
+    PadEdgeDiagnostics face_edges{};
     int last_result = 0;
 };
 
