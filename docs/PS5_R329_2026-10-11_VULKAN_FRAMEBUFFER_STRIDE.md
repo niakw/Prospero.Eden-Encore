@@ -15,7 +15,7 @@ If a guest producer changes the row stride while retaining the same pixel width/
 
 ## Narrow correction
 
-In the existing PS5-native `vulkan_present_layer.cpp` derivation, require `buffer.Mapped().size() == CalculateBufferSize(framebuffer)` alongside the original dimensions, pixel format and existing raw-image checks before reuse. If the size differs, the original `RefreshResources` reallocation path runs, including the R328 antialias destruction guard and original raw-image resource ticks. No new allocation or wait occurs when the stride is unchanged. This change applies only to the generated PS5 Vulkan unit; upstream Eden, OpenGL and other platforms remain unchanged. No extra source header field or divergent mapping cache is introduced.
+In the existing PS5-native `vulkan_present_layer.cpp` derivation, require `buffer.Mapped().size() == CalculateBufferSize(framebuffer)` alongside the original dimensions, pixel format and existing raw-image checks before reuse. R330 subsequently optimized the **stride-only** case to wait existing per-image GPU ticks and replace only the staging upload buffer, preserving the AA passes and raw Vulkan image resources. Real width/height/format changes still use the R328 guarded full-recreation path. No new allocation or wait occurs when the stride is unchanged; see `PS5_R330_2026-10-11_STRIDE_FASTPATH.md`. This change applies only to the generated PS5 Vulkan unit; upstream Eden, OpenGL and other platforms remain unchanged. No extra source header field or divergent mapping cache is introduced.
 
 ## Reproduction and qualification
 

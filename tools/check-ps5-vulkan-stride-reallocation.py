@@ -70,10 +70,12 @@ prefix=r'''
 #include <variant>
 #include <vector>
 using u32 = std::uint32_t;
+using u64 = std::uint64_t;
+unsigned gpu_idles{}, gpu_finishes{}, gpu_tick_waits{};
 namespace Tegra { struct FramebufferConfig { u32 width{}, height{}, stride{}; int pixel_format{}; }; }
-struct LogicalDevice { void WaitIdle() const {} };
+struct LogicalDevice { void WaitIdle() const { ++gpu_idles; } };
 struct Device { const LogicalDevice& GetLogical() const { static LogicalDevice x;return x;} };
-struct Scheduler { void Finish() {} };
+struct Scheduler { void Finish() { ++gpu_finishes; } void Wait(u64) { ++gpu_tick_waits; } };
 struct AA {};
 struct Buffer {
     std::vector<unsigned char> allocation;
@@ -84,6 +86,7 @@ struct Layer {
     int pixel_format{};
     std::vector<int> raw_images;
     std::variant<std::monostate, AA> anti_alias;
+    std::vector<u64> resource_ticks{1,2,3};
     Scheduler scheduler;
     Buffer buffer;
     std::size_t image_count{3};
@@ -110,23 +113,31 @@ int main(){
     };
     layer.RefreshResources(device,fb);
     assert(layer.allocations==1 && fits());
+    layer.anti_alias.emplace<AA>();
     layer.RefreshResources(device,fb);
     assert(layer.allocations==1 && fits()); // No steady-frame realloc.
     fb.stride=768;
     layer.RefreshResources(device,fb); // Same resolution, different pitch.
     assert(layer.allocations==2 && fits()); // Old pinned branch fails HERE.
+    assert(std::holds_alternative<AA>(layer.anti_alias)); // R330: no AA reset.
+    assert(gpu_idles==0 && gpu_finishes==0 && gpu_tick_waits==3);
     layer.RefreshResources(device,fb);
     assert(layer.allocations==2 && fits());
+    assert(gpu_tick_waits==3); // No extra waits on an unchanged frame.
     fb.stride=736;
     layer.RefreshResources(device,fb);
     assert(layer.allocations==3 && fits()); // Shrinking pitch also updates offsets.
+    assert(std::holds_alternative<AA>(layer.anti_alias));
+    assert(gpu_idles==0 && gpu_finishes==0 && gpu_tick_waits==6);
     fb.height=400;
     layer.RefreshResources(device,fb);
     assert(layer.allocations==4 && fits());
+    assert(gpu_idles==1 && gpu_finishes==1); // Actual resize still guards AA destruction.
+    assert(std::holds_alternative<std::monostate>(layer.anti_alias));
     fb.pixel_format=2;
     layer.RefreshResources(device,fb);
     assert(layer.allocations==5 && fits());
-    std::puts("PASS R329 exact pinned Layer refresh: changed stride reallocates, steady rows remain fast");
+    std::puts("PASS R330 exact pinned Layer refresh: stride reallocates staging only; AA preserved; no GPU idle");
 }
 '''
 
@@ -148,5 +159,5 @@ def run(label, function, expected_success):
         else:
             assert result.returncode!=0, (label,'original unexpectedly passed')
             print(label+': EXPECTED FAILURE, reused undersized stale buffer on stride increase')
-run('R329 corrected',refresh(updated),True)
+run('R330 corrected',refresh(updated),True)
 run('Pinned original',refresh(original),False)
