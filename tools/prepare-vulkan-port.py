@@ -123,6 +123,23 @@ void RasterizerVulkan::DispatchCompute() {"""),
     ('    FlushWork();\n    gpu_memory->FlushCaching();\n\n    GraphicsPipeline* const pipeline{pipeline_cache.CurrentGraphicsPipeline()};',
      '    if (::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed))\n'
      '        ::Eden::Performance::rasterizer_draw.calls.fetch_add(1, std::memory_order_relaxed);\n    FlushWork();\n    gpu_memory->FlushCaching();\n\n    GraphicsPipeline* const pipeline{pipeline_cache.CurrentGraphicsPipeline()};'),
+
+    # R319: the guest descriptor queue can call scheduler.WaitWorker() on
+    # capacity overflow while BOTH GPU caches are locked in ConfigureImpl.
+    # Pre-drain the ordinary 0x400-entry reserve on the GPU thread BEFORE
+    # the rasterizer takes those mutexes, using the same worker fence as
+    # Acquire. Keep Acquire's original larger-descriptor fallback intact.
+    ('    gpu_memory->FlushCaching();\n\n    GraphicsPipeline* const pipeline{pipeline_cache.CurrentGraphicsPipeline()};',
+     '''    gpu_memory->FlushCaching();
+#ifdef PS5_NATIVE
+    if (guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); })) {
+        // CPU guests can have invalidated texture pages during the drain.
+        // Consume those guest remaps before choosing a pipeline/cache views.
+        gpu_memory->FlushCaching();
+    }
+#endif
+
+    GraphicsPipeline* const pipeline{pipeline_cache.CurrentGraphicsPipeline()};'''),
     # A forced release blocks the GPU thread until the fence thread has retired
     # every older fence. Time only that producer-side drain.
     ('    fence_manager.WaitPendingFences(force);',
@@ -361,6 +378,33 @@ bool QueryCacheRuntime::HostConditionalRenderingCompareValue(VideoCommon::Lookup
     ::Eden::Performance::CountCondition(16);
     HostConditionalRenderingCompareBCImpl(object_1.address, equal_check);'''),
 ])
+
+# R319: avoid descriptor-ring overflow waits while holding the paired guest
+# buffer/texture cache mutexes. Only the graphics queue invokes this method.
+# Normal draws add one cheap space check; overflow still waits using exactly
+# scheduler.WaitWorker(), which was the original UpdateDescriptorQueue gate.
+adapt('src/video_core/renderer_vulkan/vk_update_descriptor.h',
+      'include/video_core/renderer_vulkan/vk_update_descriptor.h', [
+    ('    void Acquire(Scheduler& scheduler, size_t required_entries = 0,\n'
+     '                 bool use_descriptor_buffer_ = false);',
+     '''    void Acquire(Scheduler& scheduler, size_t required_entries = 0,
+                 bool use_descriptor_buffer_ = false);
+#ifdef PS5_NATIVE
+    template <typename WaitWorker>
+    [[nodiscard]] bool PreflightGuestDraw(WaitWorker&& wait_worker) {
+        // The common graphics descriptor reservation is at most 0x400
+        // entries. Overflow waits are not allowed to hold both cache locks.
+        constexpr size_t ordinary_reserve = 0x400;
+        const size_t used = static_cast<size_t>(payload_cursor - payload_start);
+        if (used + ordinary_reserve < frame_payload_size)
+            return false;
+        wait_worker();
+        payload_cursor = payload_start;
+        return true;
+    }
+#endif'''),
+])
+
 adapt('src/video_core/renderer_vulkan/vk_swapchain.cpp', 'vulkan_swapchain.cpp', [
     # An acquisition error has no usable image index. Forward it to the existing
     # renderer recovery path instead of indexing or presenting an invalid image.
