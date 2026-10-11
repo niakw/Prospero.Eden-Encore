@@ -1012,7 +1012,7 @@ void ReportGpuThread(unsigned frame) {
                         frame, cache_phase_names[phase],
                         entry.samples.load(std::memory_order_relaxed),
                         entry.total_ns.load(std::memory_order_relaxed),
-                        entry.max_ns.load(std::memory_order_relaxed));
+                        entry.max_ns.exchange(0, std::memory_order_relaxed));
         }
     }
     const auto window = Eden::Fastmem::WindowStats();
