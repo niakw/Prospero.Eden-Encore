@@ -70,16 +70,14 @@ enum class ImageFlagBits : unsigned{CpuModified=1,GpuModified=2,Rescaled=4};
 struct Image { unsigned flags=1; };
 inline bool True(unsigned x){return x!=0;}
 """
-    blocks=r"""
-void refresh(){
- Image image{};
-""" + parts[0] + r"""
-}
-void alias_scan(){
- Image image{};
-""" + parts[1] + r"""
-}
-"""
+    # Compile the exact emitted RAII declarations, excluding only the
+    # unrelated image operations that depend on the full Eden GPU runtime.
+    refresh_timer=parts[0][:parts[0].index("    image.flags &= ~ImageFlagBits::CpuModified;")]
+    alias_timer=parts[1][:parts[1].index("    bool any_rescaled =")]
+    copy_timer=parts[2][parts[2].index("#ifdef PS5_NATIVE"):
+                         parts[2].index("    const bool can_rescale =")]
+    blocks=("void refresh(){\\n" + refresh_timer + "}\\n" +
+            "void alias_scan(){\\n" + alias_timer + copy_timer + "}\\n")
     # Compile the actual instrumentation declaration in its original scope;
     # the entire edited function is tested by the native build/clang.
     for mode,flags in (("ps5",["-DPS5_NATIVE"]),("upstream",[])):

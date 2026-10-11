@@ -904,32 +904,32 @@ for signature, index in (
 # Profile only if the R310 sampled draw TLS flag is true. The standard
 # non-diagnostic code makes no clock reads and changes no image semantics.
 texture_costs.extend([
-    ('    image.flags &= ~ImageFlagBits::CpuModified;\\n\\n    TrackImage(image, image_id);',
-     '#ifdef PS5_NATIVE\\n'
-     '    ::Eden::Performance::CachePhaseTimer upload_phase{\\n'
-     '        ::Eden::Performance::CachePhase::TextureCpuRefresh};\\n'
-     '#endif\\n'
-     '    image.flags &= ~ImageFlagBits::CpuModified;\\n\\n    TrackImage(image, image_id);'),
-    ('    bool any_rescaled = True(image.flags & ImageFlagBits::Rescaled);\\n'
+    ('    image.flags &= ~ImageFlagBits::CpuModified;\n\n    TrackImage(image, image_id);',
+     '#ifdef PS5_NATIVE\n'
+     '    ::Eden::Performance::CachePhaseTimer upload_phase{\n'
+     '        ::Eden::Performance::CachePhase::TextureCpuRefresh};\n'
+     '#endif\n'
+     '    image.flags &= ~ImageFlagBits::CpuModified;\n\n    TrackImage(image, image_id);'),
+    ('    bool any_rescaled = True(image.flags & ImageFlagBits::Rescaled);\n'
      '    bool any_modified = True(image.flags & ImageFlagBits::GpuModified);',
-     '#ifdef PS5_NATIVE\\n'
-     '    ::Eden::Performance::CachePhaseTimer alias_scan_phase{\\n'
-     '        ::Eden::Performance::CachePhase::TextureAliasScan};\\n'
-     '#endif\\n'
-     '    bool any_rescaled = True(image.flags & ImageFlagBits::Rescaled);\\n'
+     '#ifdef PS5_NATIVE\n'
+     '    ::Eden::Performance::CachePhaseTimer alias_scan_phase{\n'
+     '        ::Eden::Performance::CachePhase::TextureAliasScan};\n'
+     '#endif\n'
+     '    bool any_rescaled = True(image.flags & ImageFlagBits::Rescaled);\n'
      '    bool any_modified = True(image.flags & ImageFlagBits::GpuModified);'),
-    ('    if (aliased_images.empty()) {\\n'
-     '        return;\\n'
-     '    }\\n'
+    ('    if (aliased_images.empty()) {\n'
+     '        return;\n'
+     '    }\n'
      '    const bool can_rescale = ImageCanRescale(image);',
-     '    if (aliased_images.empty()) {\\n'
-     '        return;\\n'
-     '    }\\n'
-     '#ifdef PS5_NATIVE\\n'
-     '    alias_scan_phase.Stop();\\n'
-     '    ::Eden::Performance::CachePhaseTimer alias_copy_phase{\\n'
-     '        ::Eden::Performance::CachePhase::TextureAliasCopy};\\n'
-     '#endif\\n'
+     '    if (aliased_images.empty()) {\n'
+     '        return;\n'
+     '    }\n'
+     '#ifdef PS5_NATIVE\n'
+     '    alias_scan_phase.Stop();\n'
+     '    ::Eden::Performance::CachePhaseTimer alias_copy_phase{\n'
+     '        ::Eden::Performance::CachePhase::TextureAliasCopy};\n'
+     '#endif\n'
      '    const bool can_rescale = ImageCanRescale(image);'),
 ])
 adapt('src/video_core/texture_cache/texture_cache.h',
