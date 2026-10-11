@@ -25,3 +25,7 @@ This **does not remove the GPU wait**: it relocates the wait so other guest core
 ## Regression
 
 `tools/check-ps5-descriptor-ring-preflight.py` SHA-checks pinned Eden Vulkan ring/rasterizer source, extracts real production source adapters, verifies the wait occurs before both cache locks and original capacity/Finish fallback survives, compiles the native method in a C++20 scheduler mock with no-ring, no-pending-fence, pending-fence and subsequent frame reuse, and verifies upstream builds remain unchanged. Wired to host/core and native-build gates. Source checks are NOT proof of real FPS gain.
+
+## Validation CI / qualification native
+
+Le précontrôle de source [#38156955114](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38156955114) est **SUCCESS**, incluant le scénario C++ épinglé du déplacement d’attente Vulkan. Le build PS5 All-On est explicitement lancé par le présent commit documentaire. La conformité native reste à vérifier indépendamment du précontrôle, et l’amélioration en FPS ou en régularité n’est pas démontrée.
