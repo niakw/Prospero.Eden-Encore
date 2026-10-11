@@ -25,7 +25,7 @@ for required in ('libvulkan_radeon.ps5.a','libps5vk.a','radv_GetInstanceProcAddr
 package=source('tools/build-package.sh'); assert 'EDEN_VULKAN_DRIVER=RADV' in package
 build=source('tools/build-radv-dependencies.sh')
 for required in ('tools/deps.json','mihawk-vulkan-review','mihawk-mesa-review','PS5_MESA_FORK',
-                 'tools/build-radv.sh','release','patch-radv-wsi.py','EDEN_WSI_SHA256'):
+                 'tools/build-radv.sh','release','install-vendored-radv.py','EDEN_WSI_SHA256'):
     assert required in build,required
 wsi=source('tools/patch-radv-wsi.py')
 assert 'wsi_common_videoout.c' in wsi and 'videoout_unref' in wsi
