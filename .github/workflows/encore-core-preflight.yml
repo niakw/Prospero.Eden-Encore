@@ -143,5 +143,8 @@ jobs:
       - name: Validate all feature-branch source diffs
         run: |
           git fetch --no-tags --depth=1 origin fix/0.40-zbic-13.60
-          git diff --check FETCH_HEAD HEAD
+          # Full pristine vendor trees retain upstream whitespace verbatim.
+          # Keep strict diffs for all Encore-owned source, CI and vendor docs,
+          # but never silently rewrite external pinned source snapshots or packs.
+          git diff --check FETCH_HEAD HEAD -- . ':(exclude)vendor/sources/**' ':(exclude)vendor/objects/**'
           echo CORE_PREFLIGHT_ALL_PASS

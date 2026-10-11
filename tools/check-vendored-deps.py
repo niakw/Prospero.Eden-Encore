@@ -78,3 +78,11 @@ with tempfile.TemporaryDirectory(prefix='eden-vendor-airgap-') as tmp:
  archive=deps.download(sdk['url'],'sha256',sdk['sha256'],'boilerplate-ps5-payload-sdk.zip')
  assert archive.is_file() and hashlib.sha256(archive.read_bytes()).hexdigest()==sdk['sha256']
 print('VENDOR_AIRGAP_OK empty-cache Eden tar + isolated source, fmt, compiler-rt, original Git SHA, PS5 SDK 0.42')
+# Upstream source files cannot be rewritten just to satisfy our own formatting
+# policy. GitHub source CI must validate our changes while exempting only
+# verbatim third-party sources and binary Git/archive objects.
+preflight=(ROOT/'.github/workflows/encore-core-preflight.yml').read_text()
+assert 'git diff --check FETCH_HEAD HEAD -- .' in preflight
+assert "':(exclude)vendor/sources/**'" in preflight
+assert "':(exclude)vendor/objects/**'" in preflight
+print('VENDOR_SOURCE_DIFF_POLICY_OK native Encore changes checked, pristine upstream excluded')
