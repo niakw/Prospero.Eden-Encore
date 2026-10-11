@@ -230,6 +230,7 @@ jobs:
           python3 -B tools/check-ps5-frame-window-analysis.py
           python3 -B tools/check-ps5-vulkan-dispatch-ceiling.py
           python3 -B tools/check-ps5-vulkan-cache-phases.py
+          python3 -B tools/check-ps5-fast-first-pipelines.py
           python3 -B tools/check-universal-emulation-policy.py
           python3 -B tools/check-runtime-frame-budget.py
           python3 -B tools/check-library-docked-snapshot-host.py
