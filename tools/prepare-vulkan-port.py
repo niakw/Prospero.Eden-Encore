@@ -1571,7 +1571,7 @@ pipeline_ps5_headers = f'''#ifdef PS5_NATIVE
 #include <sys/param.h>
 #include <sys/cpuset.h>
 #include <cstdio>
-#include "{port / 'performance.h'}"
+#include "performance.h"
 #endif
 '''
 if shader_source.count('#include <thread>') != 1:
