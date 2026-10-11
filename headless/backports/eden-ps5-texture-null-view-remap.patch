@@ -1,6 +1,6 @@
 --- a/src/video_core/texture_cache/texture_cache.h
 +++ b/src/video_core/texture_cache/texture_cache.h
-@@ -558,13 +558,29 @@
+@@ -558,13 +558,32 @@
          }
          channel_state->image_view_ids.insert_or_assign(map_index, NULL_IMAGE_VIEW_ID);
          return NULL_IMAGE_VIEW_ID;
@@ -20,7 +20,10 @@
 +    // original zero-overhead fast path and sparse TICs retain their semantics.
 +    if (it->second == NULL_IMAGE_VIEW_ID && IsValidEntry(*gpu_memory, descriptor)) {
 +        const auto [pair, is_new_tc] = channel_state->image_views.try_emplace(descriptor);
-+        if (is_new_tc)
++        // CreateImageView can itself return NULL after a transient missing GPU
++        // page. An existing map entry with a NULL value must be retried too;
++        // otherwise the image remains absent for the entire guest session.
++        if (is_new_tc || pair->second == NULL_IMAGE_VIEW_ID)
 +            pair->second = CreateImageView(descriptor);
 +        PrepareImageView(pair->second, false, false);
 +        channel_state->image_view_ids.insert_or_assign(map_index, pair->second);
