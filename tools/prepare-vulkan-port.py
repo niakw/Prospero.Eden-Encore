@@ -875,6 +875,84 @@ adapt('src/video_core/texture_cache/texture_cache.h',
      'const s64 min_vacancy_expected =\n            ((std::is_same_v<Runtime, Vulkan::TextureCacheRuntime> ? 4 : 6) * mem_threshold) / 10;'),
 ] + texture_costs)
 
+# R313: adapt the original graphics pipeline ABI so the fast-first object
+# owns both a valid first-use handle and a finished optimized Vulkan handle.
+# No preloaded disk pipelines are rebuilt: the constructor's worker_thread
+# is null for those. OptimizeState is allocated lazily, not per cached pipeline.
+adapt('src/video_core/renderer_vulkan/vk_graphics_pipeline.h',
+      'include/video_core/renderer_vulkan/vk_graphics_pipeline.h', [
+    ('    GraphicsPipeline(const GraphicsPipeline&) = delete;',
+     '    GraphicsPipeline(const GraphicsPipeline&) = delete;\\n    ~GraphicsPipeline();'),
+    ('    void MakePipeline(VkRenderPass render_pass);',
+     '    void MakePipeline(VkRenderPass render_pass, VkPipelineCreateFlags extra_flags = 0,\\n'
+     '                      vk::Pipeline* target = nullptr);\\n'
+     '    void QueueOptimizedPipeline(VkRenderPass render_pass);'),
+    ('    vk::Pipeline pipeline;',
+     '    vk::Pipeline pipeline;\\n'
+     '    struct OptimizeState {\\n'
+     '        std::mutex mutex;\\n'
+     '        std::condition_variable done;\\n'
+     '        bool cancelled{false};\\n'
+     '        bool running{false};\\n'
+     '    };\\n'
+     '    std::shared_ptr<OptimizeState> optimize_state; // allocated ONLY for active R313 builds\\n'
+     '    vk::Pipeline optimized_pipeline;\\n'
+     '    std::atomic_bool optimized_ready{false};'),
+    ('#include <atomic>', '#include <atomic>\\n#include <memory>'),
+])
+
+# Adapted from Mihawk PS5 fast-first pipelines with important corrections:
+# * one optimizer worker to avoid contending with guest JIT cores
+# * only runtime-discovered pipelines, not preloaded disk cache entries
+# * no illegal VulkanTimer(24): timing array has 24 entries, indexed 0..23
+# * lazy state so optimized baseline and disk-loaded pipelines add no heap work
+# * cancellation is checked BEFORE touching an asynchronously destroyed pipeline
+optimize_worker = """
+namespace {
+Common::ThreadWorker& OptimizeWorker() {
+    static Common::ThreadWorker worker(1, "VkPipelineOptimize");
+    return worker;
+}
+} // namespace
+
+GraphicsPipeline::~GraphicsPipeline() {
+    const auto state = optimize_state;
+    if (!state) return;
+    std::unique_lock lock{state->mutex};
+    state->cancelled = true;
+    state->done.wait(lock, [&] { return !state->running; });
+}
+
+void GraphicsPipeline::QueueOptimizedPipeline(VkRenderPass render_pass) {
+    optimize_state = std::make_shared<OptimizeState>();
+    const auto state = optimize_state;
+    OptimizeWorker().QueueWork([this, state, render_pass] {
+        {
+            std::scoped_lock lock{state->mutex};
+            if (state->cancelled) return;
+            state->running = true;
+        }
+        try {
+            MakePipeline(render_pass, 0, &optimized_pipeline);
+            optimized_ready.store(true, std::memory_order_release);
+        } catch (const std::exception& exception) {
+            // Keep the already-built, valid first-use pipeline after any
+            // optimization failure. Completion must always release shutdown.
+            LOG_WARNING(Render_Vulkan, "Optimized pipeline rebuild failed: {}", exception.what());
+        } catch (...) {
+            LOG_WARNING(Render_Vulkan, "Optimized pipeline rebuild failed: unknown exception");
+        }
+        {
+            std::scoped_lock lock{state->mutex};
+            state->running = false;
+        }
+        state->done.notify_all();
+    });
+}
+
+void GraphicsPipeline::MakePipeline(VkRenderPass render_pass, VkPipelineCreateFlags extra_flags,
+                                    vk::Pipeline* target) {"""
+
 # These costs sit outside vkCreateGraphicsPipelines: guest shader translation,
 # worker readiness, and background serialization can block different threads.
 for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
@@ -884,6 +962,28 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
          '            auto timer = Eden::Performance::VulkanTimer(16);\n            std::unique_lock lock{build_mutex};'),
     ]
     if name == 'vk_graphics_pipeline':
+        replacements.extend([
+            ('#include <algorithm>',
+             '#include <algorithm>\\n#include <exception>\\n#include "common/thread_worker.h"'),
+            ('auto func{[this, shader_notify, &render_pass_cache, pipeline_statistics] {',
+             'auto func{[this, shader_notify, &render_pass_cache, pipeline_statistics, '
+             'fast_first_runtime = (worker_thread != nullptr)] {'),
+            ('            MakePipeline(render_pass);',
+             '            if (::Eden::DevVulkan::fast_first_pipelines && fast_first_runtime) {\\n'
+             '                MakePipeline(render_pass, VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT);\\n'
+             '                QueueOptimizedPipeline(render_pass);\\n'
+             '            } else {\\n'
+             '                MakePipeline(render_pass);\\n'
+             '            }'),
+            ('void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {',
+             optimize_worker),
+            ('    pipeline = device.GetLogical().CreateGraphicsPipeline({',
+             '    (target ? *target : pipeline) = device.GetLogical().CreateGraphicsPipeline({'),
+            ('        .flags = flags,', '        .flags = flags | extra_flags,'),
+            ('cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline);',
+             'cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,\\n'
+             '    optimized_ready.load(std::memory_order_acquire) ? *optimized_pipeline : *pipeline);'),
+        ])
         # The sample decision is set by the GPU owner's PrepareDraw, so the
         # nested stages measure exactly the same draw without extra clocks.
         for expression, phase in (
