@@ -964,7 +964,7 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
     if name == 'vk_graphics_pipeline':
         replacements.extend([
             ('#include <algorithm>',
-             '#include <algorithm>\n#include <exception>\n#include "common/thread_worker.h"'),
+             '#include <algorithm>\n#include <exception>\n#include "common/thread_worker.h"\n#include "dev_vulkan.h"'),
             ('auto func{[this, shader_notify, &render_pass_cache, pipeline_statistics] {',
              'auto func{[this, shader_notify, &render_pass_cache, pipeline_statistics, '
              'fast_first_runtime = (worker_thread != nullptr)] {'),
