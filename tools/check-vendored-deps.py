@@ -50,7 +50,7 @@ for item in ITEMS:
    p=src/entry['name'];assert p.is_file() and digest(p)==entry['sha256'],p
  for idx,extra in enumerate(item.get('setup_prefetch',())):
   assert_blob(name+f'-setup-{idx}',extra['sha256'])
-print(f'VENDOR_COMPLETE_OK pinned={len(ITEMS)} source_roots=11 archive_bundles=12 bootstrap_objects=2 all_hashes_valid')
+print(f'VENDOR_COMPLETE_OK pinned={len(ITEMS)} source_roots={sum((V / 'sources' / i['name']).is_dir() for i in ITEMS)} archive_bundles={sum((V / 'objects' / i['name'] / 'chunks.json').is_file() for i in ITEMS)} bootstrap_objects={sum(len(i.get('setup_prefetch',())) for i in ITEMS)} all_hashes_valid')
 
 # Prove the actual loader can hydrate a new build checkout without user cache,
 # DNS, or original upstream. Leave canonical sources untouched: compilers and
@@ -61,10 +61,14 @@ sys.path.insert(0,str(ROOT/'tools'))
 import deps
 with tempfile.TemporaryDirectory(prefix='eden-vendor-airgap-') as tmp:
  isolated=Path(tmp)
+ # Keep the extra git dependency inside this temporary airgap, not in /tmp
+ # next to unrelated build jobs and not on the user's persistent filesystem.
+ import os
+ os.environ['PROSPEROEDEN_GIT_DEPS_ROOT']=str(isolated/'repos')
  deps.ROOT=isolated
  deps.CACHE=isolated/'empty-source-cache'
  deps.OFFLINE=True
- for name in ('eden','fmt','compiler-rt','zbic'):
+ for name in ('eden','fmt','compiler-rt','zbic','encore-overrides'):
   dep=next(x for x in ITEMS if x['name']==name)
   deps.fetch(dep)
   assert deps.present(dep),name
@@ -73,6 +77,7 @@ with tempfile.TemporaryDirectory(prefix='eden-vendor-airgap-') as tmp:
  assert (isolated/'.deps/eden-5f142c79.tar.gz').is_file()
  assert (isolated/'.deps/fmt-12.1.0.tar.gz').is_file()
  assert deps.revision(isolated/'.deps/zbic-11b08f27')=='11b08f2712264bbed731545085cbd9702096ceb7'
+ assert deps.revision(isolated/'repos/encore-overrides-review')=='4fdb329e732a71878c1936b24759e58937c1ac18'
  boilerplate=next(x for x in ITEMS if x['name']=='boilerplate')
  sdk=boilerplate['setup_prefetch'][1]
  archive=deps.download(sdk['url'],'sha256',sdk['sha256'],'boilerplate-ps5-payload-sdk.zip')
