@@ -34,8 +34,16 @@ if [[ ! -f $eden/CMakeLists.txt ]]; then
 fi
 printf '%s\n' '5f142c7926d0c7fcbbd0ce30794d72f638a43b2a' > "$eden/GIT-COMMIT"
 printf '%s\n' 'ps5-headless' > "$eden/GIT-REFSPEC"
-step "Audited Eden backports (GPU, FW23/services, runtime/HID)"
-bash tools/apply-eden-backports.sh "$eden"
+step "Versioned Encore Eden fork (43 audited shipping patches, 83 full sources)"
+python3 -B tools/install-vendored-eden-backports.py "$eden"
+# Quarantined experiments remain explicit opt-in and must never leak into the
+# shipping baseline. Their legacy source patcher is NOT used otherwise.
+if [[ ${EDEN_EXPERIMENTAL_DUMMY_THREAD_WAITS:-OFF} == ON || \
+      ${EDEN_EXPERIMENTAL_ICACHE_COHERENCE:-OFF} == ON || \
+      ${EDEN_EXPERIMENTAL_SM_HOST_WAIT:-OFF} == ON ]]; then
+    step "Explicitly requested non-shipping experimental Eden backports"
+    bash tools/apply-eden-backports.sh "$eden"
+fi
 python3 -B tools/check-nvnflinger-dequeue-wakeup.py "$eden"
 
 # Optional: seed Eden's package cache from another checkout's (CI reuses a development cache).

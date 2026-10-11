@@ -377,8 +377,27 @@ void TextureCache<P>::FillImageViews(std::span<ImageViewInOut> views, bool compu
         if (blacklist) {
             has_blacklisted = false;
         }
+#ifdef PS5_NATIVE
+        // Reuse only the immediately preceding successful TIC binding in a
+        // read-only pass. Deletion, NULL recovery and blacklist effects must
+        // still visit every descriptor.
+        u32 previous_image_index{};
+        ImageViewId previous_view_id = NULL_IMAGE_VIEW_ID;
+#endif
         for (ImageViewInOut& view : views) {
+#ifdef PS5_NATIVE
+            if (!blacklist && !has_deleted_images &&
+                previous_view_id != NULL_IMAGE_VIEW_ID &&
+                previous_image_index == view.index) {
+                view.id = previous_view_id;
+                continue;
+            }
+#endif
             view.id = VisitImageView(view.index, compute);
+#ifdef PS5_NATIVE
+            previous_image_index = view.index;
+            previous_view_id = view.id;
+#endif
             if (blacklist) {
                 if (view.blacklist && view.id != NULL_IMAGE_VIEW_ID) {
                     const ImageViewBase& image_view = slot_image_views[view.id];
@@ -397,14 +416,51 @@ void TextureCache<P>::CheckFeedbackLoop(std::span<const ImageViewInOut> views) {
         return;
     }
 
+#ifdef PS5_NATIVE
+    // A feedback barrier is only possible for a sampled depth attachment.
+    // Avoid a per-draw view comparison and snapshot for color-only passes.
+    if ((rt_active_mask & (1u << NUM_RT)) == 0) {
+        last_feedback_loop_serial = render_targets_serial;
+        last_feedback_texture_serial = texture_bindings_serial;
+        last_feedback_loop_result = false;
+        last_feedback_view_ids.clear();
+        return;
+    }
+#endif
+
+#ifdef PS5_NATIVE
+    // The same TIC/TSC table can feed different shaders and texture indices
+    // without advancing texture_bindings_serial. Only reuse the cached
+    // barrier decision if the actual bound view IDs also match.
+    bool identical_bound_views = last_feedback_view_ids.size() == views.size();
+    if (identical_bound_views) {
+        for (size_t i = 0; i < views.size(); ++i) {
+            if (last_feedback_view_ids[i] != views[i].id) {
+                identical_bound_views = false;
+                break;
+            }
+        }
+    }
+#endif
     if (render_targets_serial == last_feedback_loop_serial &&
-        texture_bindings_serial == last_feedback_texture_serial) {
+        texture_bindings_serial == last_feedback_texture_serial
+#ifdef PS5_NATIVE
+        && identical_bound_views
+#endif
+    ) {
         if (last_feedback_loop_result) {
             runtime.BarrierFeedbackLoop();
         }
         return;
     }
 
+#ifdef PS5_NATIVE
+    // Update only when the decision must be recalculated. Capacity is reused.
+    last_feedback_view_ids.clear();
+    for (const auto& view : views) {
+        last_feedback_view_ids.push_back(view.id);
+    }
+#endif
     if (rt_active_mask == 0) {
         last_feedback_loop_serial = render_targets_serial;
         last_feedback_texture_serial = texture_bindings_serial;
@@ -704,7 +760,13 @@ ImageViewId TextureCache<P>::VisitImageView(u32 index, bool compute) {
         if (IsValidEntry(*gpu_memory, descriptor)) {
             // Is new (registered view) on the texture cache side?
             const auto [pair, is_new_tc] = channel_state->image_views.try_emplace(descriptor);
+#ifdef PS5_NATIVE
+            // The descriptor may be new to this slot but share a cached NULL
+            // view with another slot whose first creation failed transiently.
+            if (is_new_tc || pair->second == NULL_IMAGE_VIEW_ID)
+#else
             if (is_new_tc)
+#endif
                 pair->second = CreateImageView(descriptor);
             PrepareImageView(pair->second, false, false);
             channel_state->image_view_ids.insert_or_assign(map_index, pair->second);
@@ -714,6 +776,29 @@ ImageViewId TextureCache<P>::VisitImageView(u32 index, bool compute) {
         return NULL_IMAGE_VIEW_ID;
     }
     auto const it = channel_state->image_view_ids.find(map_index);
+#ifdef PS5_NATIVE
+    // A null image-view lookup was cached when the TIC had no valid GPU
+    // backing. Remapping a GPU virtual address does NOT rewrite the TIC bytes,
+    // so DescriptorTable::Read returns is_new=false forever and the texture
+    // otherwise stays missing (e.g. streamed HUD/jersey material).
+    // Only revalidate previously NULL views: common valid views retain the
+    // original zero-overhead fast path and sparse TICs retain their semantics.
+    if (it->second == NULL_IMAGE_VIEW_ID && IsValidEntry(*gpu_memory, descriptor)) {
+        const auto [pair, is_new_tc] = channel_state->image_views.try_emplace(descriptor);
+        // CreateImageView can itself return NULL after a transient missing GPU
+        // page. An existing map entry with a NULL value must be retried too;
+        // otherwise the image remains absent for the entire guest session.
+        if (is_new_tc || pair->second == NULL_IMAGE_VIEW_ID)
+            pair->second = CreateImageView(descriptor);
+        PrepareImageView(pair->second, false, false);
+        // CheckFeedbackLoop caches barrier decisions by this serial. Reviving
+        // an image without rewriting its TIC must invalidate that decision.
+        if (pair->second != NULL_IMAGE_VIEW_ID)
+            ++texture_bindings_serial;
+        channel_state->image_view_ids.insert_or_assign(map_index, pair->second);
+        return pair->second;
+    }
+#endif
     if (it->second != NULL_IMAGE_VIEW_ID)
         PrepareImageView(it->second, false, false);
     return it->second;
@@ -2676,6 +2761,14 @@ template <class P>
 void TextureCache<P>::SynchronizeAliases(ImageId image_id) {
     boost::container::small_vector<const AliasedImage*, 8> aliased_images;
     Image& image = slot_images[image_id];
+#ifdef PS5_NATIVE
+    // MarkModification advances the cache-wide tick monotonically. If this
+    // image already owns the latest tick, no alias can have a strictly newer
+    // modification, so the search, sort and copy cannot do useful work.
+    if (image.modification_tick == modification_tick) {
+        return;
+    }
+#endif
 #ifdef PS5_NATIVE
     ::Eden::Performance::CachePhaseTimer alias_scan_phase{
         ::Eden::Performance::CachePhase::TextureAliasScan};
