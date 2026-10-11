@@ -1,8 +1,16 @@
 if(NOT PS5_NATIVE)
     message(FATAL_ERROR "EDEN_PS5_VULKAN requires PS5_NATIVE")
 endif()
-execute_process(COMMAND python3 "${PORT_ROOT}/tools/prepare-vulkan-port.py"
-    "${PROJECT_SOURCE_DIR}" "${PORT_BUILD_DIR}" COMMAND_ERROR_IS_FATAL ANY)
+# R342: compile our versioned patched Vulkan sources directly, not transient
+# string replacements applied at every CMake configure. Upstream originals
+# remain in vendor/sources/eden and their Git bundle; this tree is OUR fork.
+set(EDEN_ACTIVE_VULKAN "${PORT_ROOT}/vendor/encore-active/eden-vulkan")
+if(NOT EXISTS "${EDEN_ACTIVE_VULKAN}/vulkan_renderer.cpp")
+    message(FATAL_ERROR "Missing checked-in Encore Vulkan fork")
+endif()
+file(COPY "${EDEN_ACTIVE_VULKAN}/" DESTINATION "${PORT_BUILD_DIR}")
+file(GLOB_RECURSE EDEN_VULKAN_FORK_FILES CONFIGURE_DEPENDS "${EDEN_ACTIVE_VULKAN}/*")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDEN_VULKAN_FORK_FILES})
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${PORT_ROOT}/tools/prepare-vulkan-port.py"
     "${EDEN_PORT_DIR}/vulkan_hud.vert" "${EDEN_PORT_DIR}/vulkan_hud.frag"
