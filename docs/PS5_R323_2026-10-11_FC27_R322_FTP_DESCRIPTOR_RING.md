@@ -29,3 +29,9 @@ This **does not remove the GPU wait**: it relocates the wait so other guest core
 ## Validation CI / qualification native
 
 Le précontrôle de source [#38156955114](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38156955114) est **SUCCESS**, incluant le scénario C++ épinglé du déplacement d’attente Vulkan. Le build PS5 All-On est explicitement lancé par le présent commit documentaire. La conformité native reste à vérifier indépendamment du précontrôle, et l’amélioration en FPS ou en régularité n’est pas démontrée.
+
+## R323 native link repair — keep the adjusted descriptor source in the final build
+
+Native All-On [#38157123481](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38157123481) failed at the final ELF link, **not** because the new fence wait has invalid semantics: `undefined symbol: Vulkan::DescriptorBufferRing::PreflightFrameReuse`. The generator wrote the R323 implementation into intermediate `vulkan_descriptor_buffer.cpp`, but the later Vulkan wait-cost adapter re-read *pristine* upstream source and emitted the actual compiled `vk_descriptor_buffer_cost.cpp`, accidentally dropping the new method. The same script already preserves the intermediate adapted swapchain correctly.
+
+The repair makes the descriptor-cost adapter consume `vulkan_descriptor_buffer.cpp`, preserving R323, and updates the expected wait/fence instrumentation sites from 2 to 3. A new pinned-source check recreates the **final** instrumented translation unit and asserts R323's method plus both original and preflight frame waits are present. Only the final-compilation integration is changed; the fence semantics and locking implementation remain identical. R323 must pass source CI and a *new* native All-On link before any on-console testing.
