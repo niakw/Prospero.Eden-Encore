@@ -49,7 +49,7 @@ head = r"""
 #include <cassert>
 #include <cstdint>
 struct Extent { unsigned width{}, height{}; };
-struct Frame { int width{}, height{}; int* image{}; };
+struct Frame { unsigned width{}, height{}; int* image{}; };
 struct Recorder {
     mutable int copied{}, blitted{};
     template<class... T> void CopyImage(T...) const { ++copied; }
