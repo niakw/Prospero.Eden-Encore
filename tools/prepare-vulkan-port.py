@@ -436,6 +436,17 @@ adapt('src/video_core/renderer_vulkan/vk_present_manager.cpp', 'vulkan_present_m
      'frame_cv.wait(queue_lock, [this] { return present_failure || '
      '(present_queue.empty() && !present_in_flight); });\n'
      '        if (present_failure) std::rethrow_exception(present_failure);'),
+    # R316 PS5: swapchain and present frame use the SAME VkFormat.
+    # When extents already match, vkCmdCopyImage is exact and avoids a
+    # redundant filtered blit. Keep the linear blit for actual scaling,
+    # and keep non-PS5/upstream behavior unchanged.
+    ('    if (blit_supported) {\n        cmdbuf.BlitImage(',
+     '    if (blit_supported\n'
+     '#ifdef PS5_NATIVE\n'
+     '        && (frame->width != extent.width || frame->height != extent.height)\n'
+     '#endif\n'
+     '    ) {\n        cmdbuf.BlitImage('),
+
 ])
 # Descriptor buffers: Eden's null buffer (nullDescriptor devices) has device address 0,
 # but WriteDescriptorBuffer passed it with the binding's range. RADV then builds a real
