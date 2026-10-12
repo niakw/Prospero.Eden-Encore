@@ -30,6 +30,9 @@ guest_lock=perf[perf.index('struct GuestCacheDomainTotals {'):
                 perf.index('// R310:')]
 cache_phase=perf[perf.index('enum class CachePhase : unsigned {'):
                  perf.index('// R361:')]
+batch_timer=perf[perf.index('class BatchedGuestWriteTimer {'):
+                 perf.index('// Opt-in API wall times:')]
+assert 'if (++batch.calls == 64) batch.Flush();' in batch_timer
 cpp=r"""
 #include <array>
 #include <atomic>
@@ -61,14 +64,11 @@ inline std::atomic<bool> detailed_gpu_profile{false};
 inline std::atomic<unsigned> cache_lock_spins{0};
 inline std::atomic<unsigned long long> cache_lock_contended{0}, cache_lock_blocked{0};
 inline std::atomic<unsigned long long> cache_lock_wait_ns{0};
-struct Totals { std::atomic<unsigned long long> calls{}; };
-inline Totals guest_cpu_write;
-struct DiagnosticTimer {
-    explicit DiagnosticTimer(Totals& tally) {
-        if (detailed_gpu_profile.load(std::memory_order_relaxed))
-            tally.calls.fetch_add(1,std::memory_order_relaxed);
-    }
+struct Totals {
+    std::atomic<unsigned long long> calls{}, nanoseconds{};
 };
+inline Totals guest_cpu_write;
+__BATCH_TIMER__
 __GUEST_LOCK__
 __CACHE_PHASE__
 }
@@ -116,6 +116,7 @@ int main() {
            r.pipeline_cache.invalidations==256);
     assert(cache_lock_contended.load()==0 && cache_lock_blocked.load()==0);
     assert(guest_cpu_write.calls.load()==128);
+    assert(guest_cpu_write.nanoseconds.load()>0);
     const auto reads=Common::g_wall_clock.calls.load();
     assert(reads>0);
     // Under a guest GPU-modified buffer hazard, the ORIGINAL immediate
@@ -141,7 +142,7 @@ int main() {
     }
     puts("R370_GUEST_WRITE_PHASES_HOST_PASS");
 }
-""".replace('__GUEST_LOCK__',guest_lock).replace('__CACHE_PHASE__',cache_phase).replace('__ON_CPU_WRITE__',method)
+""".replace('__GUEST_LOCK__',guest_lock).replace('__CACHE_PHASE__',cache_phase).replace('__BATCH_TIMER__',batch_timer).replace('__ON_CPU_WRITE__',method)
 # Test source-extracted exact method without graphically modifying any image/view.
 env=os.environ.copy()
 if sys.platform=='darwin' and not env.get('SDKROOT'):
