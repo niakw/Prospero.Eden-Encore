@@ -366,9 +366,13 @@ void CheckWorkerTopology() {
                         physical_ids[group], static_cast<unsigned long long>(physical_masks[group]));
         for (unsigned cpu = 0; cpu < 64; ++cpu) {
             if (!CPU_ISSET(cpu, &original) || cpu_core[cpu] < 0) continue;
-            const bool guest_core = cpu_core[cpu] == static_cast<int>(cores[0]) ||
-                cpu_core[cpu] == static_cast<int>(cores[1]) || cpu_core[cpu] == static_cast<int>(cores[2]);
-            if (!guest_core && cpu != worker_cpus[3] && cpu != worker_cpus[4]) secondary_cpus |= 1ULL << cpu;
+            // Four guest CPU owners AND the GPU owner each need an entire
+            // physical core, not merely one SMT thread. Previous code excluded
+            // only the first three guest cores, admitting siblings of the
+            // fourth guest core and GPU to secondary shader/IO workers.
+            const bool primary_core =
+                std::find(cores.begin(), cores.end(), static_cast<unsigned>(cpu_core[cpu])) != cores.end();
+            if (!primary_core) secondary_cpus |= 1ULL << cpu;
         }
         std::printf("EDEN_WORKER_SECONDARY mask=%llx\n", secondary_cpus);
         // Publish only after all CPU IDs and affinity/topology checks complete.
@@ -384,10 +388,11 @@ void CheckWorkerTopology() {
         std::uint64_t guest_smt_protected = 0;
         for (unsigned cpu = 0; cpu < 64; ++cpu) {
             if (!(excluded & (std::uint64_t{1} << cpu))) continue;
-            const bool guest_sibling = cpu_core[cpu] == static_cast<int>(cores[0]) ||
-                cpu_core[cpu] == static_cast<int>(cores[1]) ||
-                cpu_core[cpu] == static_cast<int>(cores[2]);
-            if (guest_sibling) guest_smt_protected |= std::uint64_t{1} << cpu;
+            // Preserve the legacy log key but protect SMT siblings of all
+            // five hot owners, including CPUCore_3 and the GPU worker.
+            const bool primary_sibling =
+                std::find(cores.begin(), cores.end(), static_cast<unsigned>(cpu_core[cpu])) != cores.end();
+            if (primary_sibling) guest_smt_protected |= std::uint64_t{1} << cpu;
         }
         std::printf("EDEN_PS5_CPU_SPLIT allowed=0x%llx primary=0x%llx secondary=0x%llx "
                     "guest_smt_protected=0x%llx other_allowed=0x%llx\n",

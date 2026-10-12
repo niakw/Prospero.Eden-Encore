@@ -68,6 +68,10 @@ int main(){
  for(unsigned i=0;i<64;++i) apics[i]=i;
  CheckWorkerTopology();assert(worker_topology_ready && current==0x1fff);
  assert((worker_cpus==std::array<unsigned,5>{0,2,4,6,8}));
+ // Four guest cores + one GPU core: keep their SMT siblings away from
+ // secondary shader/IO workers. Only genuinely spare cores 5 and 6 remain.
+ assert((secondary_cpus & 0x3ffULL) == 0);
+ assert(secondary_cpus == (0x1fffULL & ~0x3ffULL));
  cpuset_t allowed=current;PinWorker(4,allowed);assert(current==256 && allowed==256);
  // The probe's process-wide CPU set decides, not a narrower mask the thread inherited.
  current=0x1fff;allowed=3;PinWorker(4,allowed);assert(current==256 && allowed==256);
