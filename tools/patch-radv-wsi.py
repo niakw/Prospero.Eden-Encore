@@ -96,6 +96,8 @@ for relative, replacements in {
         ('   extent.height = MAX2(extent.width, pdev->info.gfx_level >= GFX12 ? 128 : 64);',
          '   extent.height = MAX2(extent.height, pdev->info.gfx_level >= GFX12 ? 128 : 64);'),
     ],
+    'src/amd/vulkan/radv_descriptor_update_template.c': [],
+    'src/amd/vulkan/radv_descriptor_update_template.h': [],
     'src/amd/vulkan/radv_pipeline.c': [
         # Mesa 26.2.2 (2026-09-02), upstream 3261364cab95877988e0bcf767e5f68c03f35652
         # The TRUNC_COORD sampler bit must not change array-layer rounding.
@@ -156,6 +158,12 @@ radv_ps5_memory_grant_gpu(void *address, uint64_t bytes)
                          and old == '.aspectMask = src_iview->vk.aspects,') else 1
         assert adapted.count(old) == expected, f'Pinned initialization anchor changed: {relative}'
         adapted = adapted.replace(old, new)
+    if relative == 'src/amd/vulkan/radv_descriptor_update_template.c':
+        from radv_official_immutable_sampler_fix import patch_c
+        adapted = patch_c(adapted)
+    if relative == 'src/amd/vulkan/radv_descriptor_update_template.h':
+        from radv_official_immutable_sampler_fix import patch_h
+        adapted = patch_h(adapted)
     if relative == 'src/amd/vulkan/radv_cmd_buffer.c':
         # Official Mesa 26.2.2 zero-draw firmware workaround, adapted to our
         # PS5 GS-compute raster path without bypassing any real draw packet.

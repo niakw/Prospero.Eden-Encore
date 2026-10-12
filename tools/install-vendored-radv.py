@@ -19,6 +19,8 @@ PATHS = (
     'src/vulkan/wsi/wsi_common_videoout.c',
     'src/amd/vulkan/radv_cmd_buffer.c',
     'src/amd/vulkan/radv_pipeline.c',
+    'src/amd/vulkan/radv_descriptor_update_template.c',
+    'src/amd/vulkan/radv_descriptor_update_template.h',
     'src/amd/vulkan/radv_physical_device.c',
     'src/amd/vulkan/meta/radv_meta_clear.c',
     'src/amd/vulkan/meta/radv_meta_resolve.c',

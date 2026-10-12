@@ -62,24 +62,24 @@ The R396 atomic AGC wake coalescing in `radv_ps5_platform.c` reduces redundant c
 |---|---|---|
 | Skip zero-(max)drawCount indirect draws (firmware may execute phantom first draw) | https://chromium.googlesource.com/external/gitlab.freedesktop.org/mesa/mesa/+/a2f2518a9febf1b3b791cd2df079dbd25e56939b | **Integrated with PS5 adaptation** in R397: the before-draw guard checks the guest-specified indirect count, while the custom GS-compute raster caller passes one for its single generated indirect packet. Exact source replay and host test `tools/check-radv-official-indirect-draw.py`; native behavior still unverified |
 | sRGB compute color clears | https://chromium.googlesource.com/external/gitlab.freedesktop.org/mesa/mesa/+/9a427b7668cfb19788c4347d7c3df01e10d9983b | Official fix for forced compute path or compute queue; lower FC27 priority unless matching clear path is observed |
-| Depth/stencil resolve aspects | https://chromium.googlesource.com/external/gitlab.freedesktop.org/mesa/mesa/+/6e18409d5800f975538236c4152fa4eeca3b444e | Vulkan spec correctness in RADV meta resolve; evaluate only with correct affected functions and tests |
-| Immutable sampler lifetimes with update templates | https://chromium.googlesource.com/external/gitlab.freedesktop.org/mesa/mesa/+/7b5888e8ca77cc0b407c7fb113df85764b561a86 | Potential use-after-layout bug: two source files, requires lifetime test, not ad hoc pointer swap |
+| Depth/stencil resolve aspects | https://chromium.googlesource.com/external/gitlab.freedesktop.org/mesa/mesa/+/6e18409d5800f975538236c4152fa4eeca3b444e | Integrated post-R398 in active meta resolve; source replay, not yet native rebuilt |
+| Immutable sampler lifetimes with update templates | https://chromium.googlesource.com/external/gitlab.freedesktop.org/mesa/mesa/+/7b5888e8ca77cc0b407c7fb113df85764b561a86 | Integrated R399 with two full active source units, template-owned copies, reproducible replay and ASan/UBSan; native runtime unverified |
 | Broken rendering Persona 3 Reload on RDNA2 | https://chromium.googlesource.com/external/gitlab.freedesktop.org/mesa/mesa/+/21e8be286d0e5888bee59243dc17a6159f613870 | Specific `RADV_FORCE_VRS` path; no evidence Encore enables it; do not treat as generic FC27 graphics cure |
 | Official RADV/GFX11-12-compat features | Mesa 26.2.1–26.2.4 release notes | Exclude hardware-specific features that our GFX10-class PS5 cannot use. Sony WSI is PS5-specific |
 
 ## Implementation/validation discipline
 
 1. **No global bump to Mesa 26.2.4**: C/C++ command buffer, shader compiler and AGC winsys form a coupled PS5 port. Instead preserve reproducible 26.2.0 input plus fully inspected, exact official patches in active source units.
-2. `tools/check-vendored-radv-fork.py` must assert the entire active 6-file tree matches the replay oracle **byte-for-byte**, including PS5-specific earlier fixes.
+2. `tools/check-vendored-radv-fork.py` must assert the entire active 10-file tree matches the replay oracle **byte-for-byte**, including PS5-specific earlier fixes.
 3. Host tests run in source-only GitHub CI before any native build; they do not certify visual smoothness.
 4. The R394 log user observation of visual stutter **at ~30 FPS** remains the primary quality criterion. Nominal present events do not measure game simulation step or correct texture contents. GPU buffer-cache contention explains only a subset of slow-frame periods; neither texture correctness nor guest freeze may be dismissed.
 5. Rebuild RADV and final PS5 package from one unambiguous commit SHA only after source CI. Do not ask for repeated diagnostics until an integrated meaningful build is prepared.
 
-## Integrated native test build request
+## PS5 build provenance and outstanding native qualification
 
-This source-only audit is finalized for a combined PS5 build. Trigger an explicit
-developer test package with `[full-build] [test-all-on]`, based on a *single*
-SHA containing the prior PS5 RADV AGC kick work plus three official Mesa fixes.
-The build must pass byte-for-byte vendor replay, sanitizer host checks, SDK
-native compilation and package assembly before a tester installs anything.
-Do not present an unbuilt GitHub SHA as a working PS5 binary.
+The R398 All-On PS5 build [#38314780723](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38314780723) **succeeded**, with verified archive structure and symbols, at SHA `ab1ed98a5cf170debd26959579b5676a602d704b`. That binary predates the official Mesa 26.2.4 depth/stencil clear/resolve backports and R399 sampler ownership source. It does **not** validate those later changes.
+
+- Mesa original 26.2.0 inputs remain immutable. The production RADV installer now replaces 10 complete active files: the existing six, two meta clear/resolve files, and two descriptor template files. Every file must replay byte-for-byte from the pinned original and known exact transformations.
+- Preflight #38316845719 failed only from this document's extra blank EOF line; the text-only fix is commit `f14f6f55`. Not a Vulkan failure.
+- Before requesting another console run: pass the complete source/host CI, including R399 template-copy ASan/UBSan, then build **one explicit SHA** with native PS5 compiler and check artifact/symbol provenance.
+- FC27 nominal 30fps with severe stutter, texture/HUD/grass loss and the gameplay freeze remain **unproven corrected** until measured on that binary.
