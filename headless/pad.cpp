@@ -56,10 +56,14 @@ void PadEngine::SetButtonState(std::size_t player, int button, bool value) {
         // Count only actual rising edges delivered to virtual input, not
         // repeated scePadRead samples. Never count a publishing attempt as
         // proof that FC27 read the Switch Npad shared-memory event.
-        if (player == 0 && value &&
-            button == static_cast<int>(VirtualButton::ButtonPlus) &&
-            NativeLogs::Detailed())
-            published_plus_edges.fetch_add(1, std::memory_order_relaxed);
+        if (player == 0 && value && NativeLogs::Detailed()) {
+            if (button == static_cast<int>(VirtualButton::ButtonPlus))
+                published_plus_edges.fetch_add(1, std::memory_order_relaxed);
+            else if (button == static_cast<int>(VirtualButton::ButtonHome))
+                published_home_edges.fetch_add(1, std::memory_order_relaxed);
+            else if (button == static_cast<int>(VirtualButton::ButtonCapture))
+                published_capture_edges.fetch_add(1, std::memory_order_relaxed);
+        }
     }
     // Inputs outside the known virtual-button subset remain visible to
     // the underlying engine rather than silently losing a future mapping.
@@ -314,11 +318,15 @@ bool Pad::Poll() {
         // separate layer and must not be inferred from these counters.
         std::fprintf(stderr,
             "EDEN_PAD_INPUT_CHAIN polls=%llu options_edges=%llu published_plus_edges=%llu "
-            "sony_intercepted_samples=%llu\n",
+            "sony_intercepted_samples=%llu create_edges=%llu "
+            "published_home_edges=%llu published_capture_edges=%llu\n",
             static_cast<unsigned long long>(polls),
             static_cast<unsigned long long>(options_edges),
             static_cast<unsigned long long>(engine->PublishedPlusEdges()),
-            static_cast<unsigned long long>(intercepted_samples));
+            static_cast<unsigned long long>(intercepted_samples),
+            static_cast<unsigned long long>(create_edges),
+            static_cast<unsigned long long>(engine->PublishedHomeEdges()),
+            static_cast<unsigned long long>(engine->PublishedCaptureEdges()));
     }
     return primary;
 }
@@ -344,14 +352,14 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
         {kButtonL1, static_cast<Button>(kRightSL)}, {kButtonR1, static_cast<Button>(kRightSR)},
     };
     auto& slot = slots[player];
-    // The game button the touchpad presses (tap or hold, see kSelectTapPolls); the Create button
-    // presses it too while it has no game button of its own.
+    // Only the touchpad presses Minus (tap or hold). Physical Create now
+    // provides virtual Switch Capture, not a second, surprise Minus press.
     const auto set_touch = [&](u32 pressed) {
         const int touch_button = MappedTo(mapping, pad_touchpad);
-        const bool create_free = MappedTo(mapping, pad_create) < 0;
         if (touch_button < 0) return;
         engine->SetButtonState(player, kGame[touch_button],
-            (create_free && (pressed & kButtonCreate) != 0) || slot.select_held || slot.select_pulse > 0);
+            !slot.guest_home.BlockChordButtons() &&
+            (slot.select_held || slot.select_pulse > 0));
     };
     const auto axis = [this](u8 raw) {
         const float x = (static_cast<int>(raw) - 128) / (raw < 128 ? 128.0f : 127.0f);
@@ -378,6 +386,22 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
             hud_toggle = true;
         if ((pressed & menu_chord) == menu_chord || (pressed & hud_chord) == hud_chord)
             sample.buttons &= ~(kButtonTouchPad | kButtonL1 | kButtonR1);
+        // libScePad does not expose the physical Sony PS/Home button.
+        // Touchpad + Options is a local guest HOME substitute, NEVER a
+        // Nintendo system menu shortcut. It suppresses guest Plus and Minus
+        // until both underlying controls are released.
+        const bool guest_home = slot.guest_home.Observe(
+            (pressed & kButtonTouchPad) != 0,
+            (pressed & kButtonOptions) != 0,
+            (pressed & (kButtonL1 | kButtonR1)) != 0);
+        if (slot.guest_home.BlockChordButtons()) {
+            sample.buttons &= ~(kButtonTouchPad | kButtonOptions);
+            // A tap pulse from an earlier interaction must not leak through
+            // during the guest HOME chord or immediately after its release.
+            slot.select_pulse = 0;
+            slot.select_held = false;
+        }
+        engine->SetButtonState(player, Button::ButtonHome, guest_home);
         // The touchpad on its own: see kSelectTapPolls.
         const bool touch = (pressed & kButtonTouchPad) != 0;
         const bool touched = (last_buttons & kButtonTouchPad) != 0;
@@ -385,7 +409,7 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
             slot.touch_chord = false;
             slot.touch_polls = 0;
         }
-        if (touch && (pressed & (kButtonL1 | kButtonR1)) != 0) {
+        if (touch && (pressed & (kButtonL1 | kButtonR1 | kButtonOptions)) != 0) {
             slot.touch_chord = true;
             slot.select_held = false;
         }
@@ -416,6 +440,8 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
                                kButtonSquare, kButtonTriangle);
             if ((pressed & kButtonOptions) && !(last_buttons & kButtonOptions))
                 ++options_edges;
+            if ((pressed & kButtonCreate) && !(last_buttons & kButtonCreate))
+                ++create_edges;
         }
         last_buttons = pressed;
         for (const auto [mask, button] : fixed)
@@ -430,6 +456,10 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
                                                         (pad == pad_l2 && left) || (pad == pad_r2 && right));
         }
         set_touch(sample.buttons);
+        // Respect custom layouts that explicitly map Create to another guest
+        // action. Only otherwise does physical Create become Switch Capture.
+        engine->SetButtonState(player, Button::ButtonCapture,
+            MappedTo(mapping, pad_create) < 0 && (sample.buttons & kButtonCreate) != 0);
         engine->SetStickPosition(player, 0, axis(sample.left_stick.x), -axis(sample.left_stick.y));
         engine->SetStickPosition(player, 1, axis(sample.right_stick.x), -axis(sample.right_stick.y));
         // Motion: acceleration in G and angular velocity in rad/s, mapped to Eden's axes and units

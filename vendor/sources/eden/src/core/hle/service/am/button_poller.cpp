@@ -59,6 +59,14 @@ ButtonPoller::~ButtonPoller() {
 }
 
 void ButtonPoller::OnButtonStateChanged(WindowSystem& window_system) {
+#ifdef PS5_NATIVE
+    // HOME/CAPTURE may be present in the virtual controller's HID state,
+    // but Sony manages its own system UI. Do NOT open emulated Nintendo
+    // applets, dispatch Switch HOME, or take a Switch screenshot on PS5.
+    // This does not interfere with the real DualSense PS system button.
+    (void)window_system;
+    return;
+#endif
     auto const home_button = m_handheld->GetHomeButtons().home.Value()
         || m_player1->GetHomeButtons().home.Value();
     auto const capture_button = m_handheld->GetCaptureButtons().capture.Value()
