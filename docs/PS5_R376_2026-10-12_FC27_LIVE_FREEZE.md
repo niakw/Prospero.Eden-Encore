@@ -33,3 +33,17 @@ The exact compiled R370 worker contained an unbounded build_condvar.wait() when 
 R378 uses SCOPE_EXIT in graphics AND compute builders to ALWAYS publish release-order is_built=true, build_condvar.notify_all(), and exactly one shader_notify->MarkShaderComplete() after build worker exit, including non-Vulkan exceptions and early returns. Both constructors catch std::exception and unknown exceptions; failed builds keep pipeline==nullptr and existing draw/dispatch omission guards, never use an uninitialized handle. Pipeline statistics are collected only with a valid handle. Shader/descriptor/fence/cache mutex and GPU state logic remains unchanged.
 
 New real-source-extracted ASan/UBSan tools/check-ps5-pipeline-build-wait.py tests both worker cleanup scopes with actual condition_variable, success, standard exception, nonstandard exception, early return and null notifier. Host C++ test passes. GitHub source and native PS5 CI remain required. No FPS or freeze cure is yet proven on the physical PS5.
+
+## R379 — FreeBSD 11.4 scheduler XML topology parser repair
+
+The user found releng/11.4/sys/kern/sched_ule.c. Verification against that source:
+- Lines 2968–3009 sysctl_kern_sched_topology_spec_internal() produces hierarchical groups XML with cpu count, cpuset mask and optional flags HTT, THREAD and SMT.
+- Lines 3017–3037 handle read-only sysctl XML. Lines 3096–3098 register SYSCTL_PROC(_kern_sched,...,topology_spec,CTLFLAG_RD) as the exact kern.sched.topology_spec OID, when SMP and ULE are built. Sony can omit the handler. An unprivileged userland application CANNOT install the kernel sysctl.
+- releng/11.4/sys/sys/smp.h lines 103–105 set CG_FLAG_HTT=1, CG_FLAG_SMT=2, CG_FLAG_THREAD=HTT|SMT. Real HTT sibling groups need to be recognized; THREAD alone is ambiguous and MUST NOT be used as physical proof.
+- releng/11.4/sys/kern/kern_cpuset.c lines 636–651 print cpuset mask LOW unsigned-long word first with comma-separated higher words. On PS5 64-bit, only the first 64 bits fit the probe's mask. Reject unexpected nonzero high bits rather than misidentify physical sibling groups.
+
+R379 ps5_cpu_topology.h parser now accepts either HTT or SMT flags, but NOT THREAD-only. Full allowed 13 logical CPUs must be classified into 5–8 nonoverlapping physical sibling groups of at most two. The parser rejects broken masks and publishes core IDs only if ALL groups validate, so malformed later groups cannot leak partially valid hardware maps. The two probes remain read-only: kern.sched.topology_spec and kern.sched.ule.topology_spec. Startup EDEN_PS5_CPU_OS_TOPOLOGY now prints legacy_errno and ule_errno, retaining existing fields.
+
+ASan/UBSan tools/check-ps5-freebsd11-ule-topology.py tests real FreeBSD XML HTT, SMT, mixed, THREAD-only, overlapping/partial masks, nonzero upper CPU words. The full source-extracted CheckWorkerTopology host fixture tests the HTT variant and CPU affinity. The actual firmware 13.60 may expose NEITHER read-only sysctl. When so, leave physical core separation unknown rather than fabricate it.
+
+This is a source-proven parser bug fix, NOT a proven FC27 FPS or freeze solution. No additional PS5 test requested until native CI succeeds.
