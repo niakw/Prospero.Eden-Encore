@@ -103,6 +103,19 @@ for relative, replacements in {
                   !compiler_info->ac->conformant_trunc_coord && !compiler_info->key.disable_trunc_coord,''',
          '''               .lower_array_layer_round_even = !compiler_info->ac->conformant_trunc_coord,'''),
     ],
+    'src/amd/vulkan/meta/radv_meta_clear.c': [
+        # Official Mesa 26.2.4 upstream 2752b54feeed5bb6fc7d21982b4c8acab0d0e613
+        ("      if (ds_att->format == VK_FORMAT_UNDEFINED)\n         return;\n\n      VkClearDepthStencilValue clear_value", "      if (ds_att->format == VK_FORMAT_UNDEFINED)\n         return;\n\n      /* Vulkan dynamic rendering: ignore missing depth/stencil aspects. */\n      aspects &= render->ds_att_aspects;\n      if (!aspects)\n         return;\n\n      VkClearDepthStencilValue clear_value"),
+        ("radv_fast_clear_depth(cmd_buffer, ds_att->iview, clear_att->clearValue.depthStencil, clear_att->aspectMask,", "radv_fast_clear_depth(cmd_buffer, ds_att->iview, clear_att->clearValue.depthStencil, aspects,"),
+        ("emit_depthstencil_clear(cmd_buffer, clear_att->clearValue.depthStencil, clear_att->aspectMask, clear_rect,", "emit_depthstencil_clear(cmd_buffer, clear_att->clearValue.depthStencil, aspects, clear_rect,"),
+    ],
+    'src/amd/vulkan/meta/radv_meta_resolve.c': [
+        # Official Mesa 26.2.4 upstream 6e18409d5800f975538236c4152fa4eeca3b444e
+        ("      const struct radv_image_view *src_iview = d_iview ? d_iview : s_iview;\n\n      const VkImageSubresourceLayers subresource", "      const struct radv_image_view *src_iview = d_iview ? d_iview : s_iview;\n      VkImageAspectFlags ds_att_aspects;\n      if (d_iview && s_iview) {\n         ds_att_aspects = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;\n      } else if (d_iview) {\n         ds_att_aspects = VK_IMAGE_ASPECT_DEPTH_BIT;\n      } else {\n         ds_att_aspects = VK_IMAGE_ASPECT_STENCIL_BIT;\n      }\n\n\n      const VkImageSubresourceLayers subresource"),
+        ("      struct radv_image_view *src_iview = d_iview ? d_iview : s_iview;\n      struct radv_image_view *dst_iview = d_res_iview ? d_res_iview : s_res_iview;", "      VkImageAspectFlags ds_att_aspects;\n      if (d_iview && s_iview) {\n         ds_att_aspects = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;\n      } else if (d_iview) {\n         ds_att_aspects = VK_IMAGE_ASPECT_DEPTH_BIT;\n      } else {\n         ds_att_aspects = VK_IMAGE_ASPECT_STENCIL_BIT;\n      }\n\n      struct radv_image_view *src_iview = d_iview ? d_iview : s_iview;\n      struct radv_image_view *dst_iview = d_res_iview ? d_res_iview : s_res_iview;"),
+        (".aspectMask = src_iview->vk.aspects,", ".aspectMask = ds_att_aspects,"),
+        (".aspectMask = dst_iview->vk.aspects,", ".aspectMask = ds_att_aspects,"),
+    ],
     'src/amd/vulkan/radv_physical_device.c': [
         ('   if (result == VK_ERROR_INCOMPATIBLE_DRIVER || result == VK_ERROR_INITIALIZATION_FAILED)\n      return VK_SUCCESS;',
          '   if (result != VK_SUCCESS) fprintf(stderr, "radv/ps5: physical device creation result=%d\\n", result);\n   if (result == VK_ERROR_INCOMPATIBLE_DRIVER || result == VK_ERROR_INITIALIZATION_FAILED)\n      return VK_SUCCESS;'),

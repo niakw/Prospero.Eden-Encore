@@ -20,6 +20,8 @@ PATHS = (
     'src/amd/vulkan/radv_cmd_buffer.c',
     'src/amd/vulkan/radv_pipeline.c',
     'src/amd/vulkan/radv_physical_device.c',
+    'src/amd/vulkan/meta/radv_meta_clear.c',
+    'src/amd/vulkan/meta/radv_meta_resolve.c',
     'src/amd/vulkan/winsys/ps5/radv_ps5_winsys.c',
     'src/amd/vulkan/winsys/ps5/radv_ps5_platform.c',
 )
