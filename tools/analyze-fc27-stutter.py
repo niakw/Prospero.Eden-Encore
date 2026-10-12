@@ -40,6 +40,8 @@ def analyze(log: str) -> dict:
     frames: dict[int, dict] = {}
     pressure: dict[int, dict] = {}
     gpu: dict[int, dict] = {}
+    guest: dict[int, dict] = {}
+    current_frame: int | None = None
     phases: dict[str, dict[int, dict]] = defaultdict(dict)
     domains: dict[str, dict[int, dict]] = defaultdict(dict)
     # HLE reports cumulative *service* timings. Command 3 is an outer Binder
@@ -63,7 +65,8 @@ def analyze(log: str) -> dict:
         if line.startswith("EDEN_VULKAN_FRAME "):
             value = values(line)
             if "total" in value:
-                frames[int(value["total"])] = value
+                current_frame = int(value["total"])
+                frames[current_frame] = value
         elif line.startswith("EDEN_FRAME_PRESSURE "):
             value = values(line)
             if "frame" in value:
@@ -72,6 +75,13 @@ def analyze(log: str) -> dict:
             value = values(line)
             if "frame" in value:
                 gpu[int(value["frame"])] = value
+        elif line.startswith("EDEN_DEV_GUEST "):
+            # The original report omits frame=. It is emitted directly
+            # after EDEN_DEV_GPU for the same renderer snapshot.
+            # Only associate it if that current Vulkan frame already has
+            # a matching pressure and GPU report, never infer time stamps.
+            if current_frame is not None and current_frame in pressure and current_frame in gpu:
+                guest[current_frame] = values(line)
         elif line.startswith("EDEN_GPU_CACHE_PHASE "):
             match = PHASE.search(line)
             value = values(line)
@@ -87,6 +97,7 @@ def analyze(log: str) -> dict:
         raise ValueError("No matching EDEN_VULKAN_FRAME / EDEN_FRAME_PRESSURE / EDEN_DEV_GPU windows")
     rows = []
     preceding: dict[str, dict] = {}
+    previous_guest: dict | None = None
     for frame in keys:
         row = {**frames[frame], **pressure[frame]}
         row["frame"] = frame
@@ -102,6 +113,16 @@ def analyze(log: str) -> dict:
             if before and snapshot.get("total_ns", 0) >= before.get("total_ns", 0):
                 row["phase_ms:" + phase] = (snapshot["total_ns"] - before["total_ns"]) / 1e6
             preceding["phase:" + phase] = snapshot
+        guest_snapshot = guest.get(frame)
+        if guest_snapshot is not None:
+            if previous_guest is not None:
+                for metric in ("cpu_write_calls", "cpu_write_ns",
+                               "cpu_read_calls", "cpu_read_ns"):
+                    now = guest_snapshot.get(metric)
+                    before = previous_guest.get(metric)
+                    if now is not None and before is not None and now >= before:
+                        row["guest_delta_" + metric] = now - before
+            previous_guest = guest_snapshot
         for domain, occurrences in domains.items():
             snap = occurrences.get(frame)
             if snap is None:
@@ -144,6 +165,33 @@ def analyze(log: str) -> dict:
                     "late50_correlation": round(correlation(rows, "phase_ms:" + phase, "late50"), 3)}
             for phase in sorted(phases)
         },
+        "guest_cpu_write_groups": {
+            name: {
+                "windows": len(group),
+                "calls_per_window": round(statistics.mean(
+                    row["guest_delta_cpu_write_calls"] for row in group), 1),
+                "ms_per_window": round(statistics.mean(
+                    row["guest_delta_cpu_write_ns"] for row in group) / 1e6, 2),
+                "cache_collisions_per_window": round(statistics.mean(
+                    row["cache_contended"] for row in group), 1),
+                "guest_blocking_ms_per_window": round(statistics.mean(
+                    row["cache_wait_ms"] for row in group), 2),
+            }
+            for name, group in (
+                ("near30", [row for row in rows if row.get("fps", 0) >= 29.9 and
+                             "guest_delta_cpu_write_calls" in row and
+                             "guest_delta_cpu_write_ns" in row and
+                             "cache_contended" in row and "cache_wait_ms" in row]),
+                ("slow_sub25", [row for row in rows if row.get("fps", 0) < 25 and
+                                "guest_delta_cpu_write_calls" in row and
+                                "guest_delta_cpu_write_ns" in row and
+                                "cache_contended" in row and "cache_wait_ms" in row]),
+            ) if group
+        },
+        "guest_cpu_write_late50_correlations": {
+            metric: round(correlation(rows, metric, "late50"), 3)
+            for metric in ("guest_delta_cpu_write_calls", "guest_delta_cpu_write_ns")
+        },
         "guest_cache_domains": {
             domain: {
                 "wait_ms": round(sum(row.get("domain_wait_ms:" + domain, 0) for row in rows), 3),
@@ -163,10 +211,12 @@ def self_test() -> None:
         "EDEN_VULKAN_FRAME total=150 frames=150 seconds=5 fps=30 worst_ms=70 late50=4",
         "EDEN_FRAME_PRESSURE frame=150 gpu_full_ms=20 gpu_idle_ms=3500 gpu_dispatch_ms=1200",
         "EDEN_DEV_GPU frame=150 dispatch_calls=500 full_calls=10 full_ns=20000000 draws=100",
+        "EDEN_DEV_GUEST cpu_write_calls=100 cpu_write_ns=10000000 cpu_read_calls=30 cpu_read_ns=3000000",
         "EDEN_GPU_CACHE_PHASE frame=150 phase=pair_wait total_ns=1000000",
         "EDEN_VULKAN_FRAME total=300 frames=150 seconds=5 fps=30 worst_ms=35 late50=0",
         "EDEN_FRAME_PRESSURE frame=300 gpu_full_ms=0 gpu_idle_ms=3800 gpu_dispatch_ms=1050",
         "EDEN_DEV_GPU frame=300 dispatch_calls=900 full_calls=10 full_ns=20000000 draws=280",
+        "EDEN_DEV_GUEST cpu_write_calls=250 cpu_write_ns=40000000 cpu_read_calls=75 cpu_read_ns=9000000",
         "EDEN_GPU_CACHE_PHASE frame=300 phase=pair_wait total_ns=1400000",
         "EDEN_GUEST_CACHE_DOMAIN frame=150 domain=buffer contended=8 blocked=5 wait_ns=10000000 window_contended=8 window_blocked=5 window_wait_ns=10000000",
         "EDEN_GUEST_CACHE_DOMAIN frame=150 domain=texture contended=4 blocked=4 wait_ns=2000000 window_contended=4 window_blocked=4 window_wait_ns=2000000",
@@ -184,15 +234,25 @@ def self_test() -> None:
     assert result["binder_auto_transaction_calls"] == 3
     assert result["binder_auto_transaction_seconds"] == 0.05
     assert result["rows"][1]["delta_dispatch_calls"] == 400
+    assert result["rows"][1]["guest_delta_cpu_write_calls"] == 150
+    assert result["rows"][1]["guest_delta_cpu_write_ns"] == 30000000
+    assert result["rows"][1]["guest_delta_cpu_read_calls"] == 45
     assert abs(result["cache_phases"]["pair_wait"]["sampled_ms"] - .4) < 1e-9
     assert result["guest_cache_domains"]["buffer"]["contended"] == 10
     assert result["guest_cache_domains"]["buffer"]["blocked"] == 7
     assert abs(result["guest_cache_domains"]["buffer"]["wait_ms"] - 13) < 1e-8
     assert result["guest_cache_domains"]["texture"]["contended"] == 5
     assert abs(result["guest_cache_domains"]["texture"]["wait_ms"] - 2.5) < 1e-8
-    # Legacy R359 logs without domain lines are supported with no invention.
-    legacy = analyze(sample.replace("EDEN_GUEST_CACHE_DOMAIN", "IGNORED_DOMAIN"))
+    # Legacy files lacking *both* optional domain and guest snapshot fields
+    # remain valid and do not invent new metrics.
+    legacy = analyze(sample.replace("EDEN_GUEST_CACHE_DOMAIN", "IGNORED_DOMAIN")
+                           .replace("EDEN_DEV_GUEST", "IGNORED_GUEST"))
     assert legacy["guest_cache_domains"] == {}
+    assert legacy["guest_cpu_write_groups"] == {}
+    assert legacy["guest_cpu_write_late50_correlations"] == {
+        "guest_delta_cpu_write_calls": 0.0,
+        "guest_delta_cpu_write_ns": 0.0,
+    }
     print("FC27_TRACE_ANALYZER_SELF_TEST_PASS")
 
 
@@ -216,6 +276,12 @@ def main() -> None:
           "binder_auto_calls={binder_auto_transaction_calls} "
           "binder_auto_seconds={binder_auto_transaction_seconds:.3f}".format(**report))
     print("CORRELATIONS", report["late50_correlation"])
+    if report["guest_cpu_write_groups"]:
+        print("GUEST_CPU_WRITE_GROUPS", report["guest_cpu_write_groups"])
+        print("GUEST_CPU_WRITE_LATE50_CORRELATIONS",
+              report["guest_cpu_write_late50_correlations"])
+    else:
+        print("GUEST_CPU_WRITE_GROUPS unavailable (no two successive paired guest samples)")
     for name, value in sorted(report["cache_phases"].items(),
                               key=lambda item: -item[1]["sampled_ms"]):
         print("CACHE_PHASE", name, value)
