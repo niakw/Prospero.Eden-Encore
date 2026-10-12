@@ -97,6 +97,9 @@ inline Totals gpu_queue_wait, gpu_dispatch;
 // GPU submit is already recorded in gpu_dispatch; the other commands must
 // not be misattributed to shader compilation or guest JIT.
 inline Totals gpu_command_tick, gpu_command_flush, gpu_command_invalidate;
+// Counts actual 4-KiB command-chunk pre-dispatches (R382), not ordinary
+// DispatchWork calls. Written only on a successful preflight when profiling.
+inline std::atomic<unsigned long long> scheduler_preflight_dispatches{0};
 // Producer-side waits outside the dispatch timer: forced fence drains on the GPU
 // thread, free presentation-frame waits, and guest pushes into a full GPU queue.
 inline Totals gpu_fence_drain, gpu_present_wait, gpu_queue_full;

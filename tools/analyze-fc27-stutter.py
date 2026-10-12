@@ -78,6 +78,7 @@ def analyze(log: str) -> dict:
     pressure: dict[int, dict] = {}
     gpu: dict[int, dict] = {}
     guest: dict[int, dict] = {}
+    preflights: dict[int, dict] = {}
     current_frame: int | None = None
     source_commits: set[str] = set()
     phases: dict[str, dict[int, dict]] = defaultdict(dict)
@@ -120,6 +121,10 @@ def analyze(log: str) -> dict:
             value = values(line)
             if "frame" in value:
                 gpu[int(value["frame"])] = value
+        elif line.startswith("EDEN_SCHEDULER_PREFLIGHT "):
+            snapshot = values(line)
+            if "frame" in snapshot and "dispatched" in snapshot:
+                preflights[int(snapshot["frame"])] = snapshot
         elif line.startswith("EDEN_DEV_GUEST "):
             # The original report omits frame=. It is emitted directly
             # after EDEN_DEV_GPU for the same renderer snapshot.
@@ -143,6 +148,7 @@ def analyze(log: str) -> dict:
     rows = []
     preceding: dict[str, dict] = {}
     previous_guest: dict | None = None
+    previous_preflights: dict | None = None
     for frame in keys:
         row = {**frames[frame], **pressure[frame]}
         row["frame"] = frame
@@ -165,6 +171,13 @@ def analyze(log: str) -> dict:
                     row["phase_samples:" + phase] = (
                         snapshot["samples"] - before["samples"])
             preceding["phase:" + phase] = snapshot
+        preflight = preflights.get(frame)
+        if preflight is not None:
+            if (previous_preflights is not None and
+                    preflight["dispatched"] >= previous_preflights["dispatched"]):
+                row["preflight_dispatches"] = (
+                    preflight["dispatched"] - previous_preflights["dispatched"])
+            previous_preflights = preflight
         guest_snapshot = guest.get(frame)
         if guest_snapshot is not None:
             if previous_guest is not None:
@@ -193,6 +206,17 @@ def analyze(log: str) -> dict:
         "source_commit": next(iter(source_commits), None),
         "windows": len(rows),
         "late50_total": int(stall),
+        # None means older build did not emit this metric; zero means R384
+        # really measured no pre-dispatches after its first snapshot.
+        "scheduler_preflight_dispatches": (
+            int(sum(row["preflight_dispatches"] for row in rows
+                    if "preflight_dispatches" in row))
+            if any("preflight_dispatches" in row for row in rows) else None
+        ),
+        "scheduler_preflight_late50_correlation": (
+            round(correlation(rows, "preflight_dispatches", "late50"), 3)
+            if sum("preflight_dispatches" in row for row in rows) >= 3 else None
+        ),
         "queue_full_windows": len(full),
         "late50_during_full": int(in_full),
         "late50_full_window_share": in_full / stall if stall else 0.0,
@@ -264,12 +288,14 @@ def self_test() -> None:
         "EDEN_VULKAN_FRAME total=150 frames=150 seconds=5 fps=30 worst_ms=70 late50=4",
         "EDEN_FRAME_PRESSURE frame=150 gpu_full_ms=20 gpu_idle_ms=3500 gpu_dispatch_ms=1200",
         "EDEN_DEV_GPU frame=150 dispatch_calls=500 full_calls=10 full_ns=20000000 draws=100",
+        "EDEN_SCHEDULER_PREFLIGHT frame=150 dispatched=3",
         "EDEN_DEV_GUEST cpu_write_calls=100 cpu_write_ns=10000000 cpu_read_calls=30 cpu_read_ns=3000000",
         "EDEN_GPU_CACHE_PHASE frame=150 phase=pair_wait samples=10 total_ns=1000000",
         "EDEN_GPU_CACHE_PHASE frame=150 phase=guest_write_buffer_wait samples=3 total_ns=200000 max_ns=150000",
         "EDEN_VULKAN_FRAME total=300 frames=150 seconds=5 fps=30 worst_ms=35 late50=0",
         "EDEN_FRAME_PRESSURE frame=300 gpu_full_ms=0 gpu_idle_ms=3800 gpu_dispatch_ms=1050",
         "EDEN_DEV_GPU frame=300 dispatch_calls=900 full_calls=10 full_ns=20000000 draws=280",
+        "EDEN_SCHEDULER_PREFLIGHT frame=300 dispatched=11",
         "EDEN_DEV_GUEST cpu_write_calls=250 cpu_write_ns=40000000 cpu_read_calls=75 cpu_read_ns=9000000",
         "EDEN_GPU_CACHE_PHASE frame=300 phase=pair_wait samples=14 total_ns=1400000",
         "EDEN_GPU_CACHE_PHASE frame=300 phase=guest_write_buffer_wait samples=7 total_ns=600000 max_ns=270000",
@@ -303,6 +329,10 @@ def self_test() -> None:
     else:
         raise AssertionError("mixed build SHAs were not rejected")
     assert result["late50_total"] == 4
+    assert result["scheduler_preflight_dispatches"] == 8
+    assert result["scheduler_preflight_late50_correlation"] is None
+    assert analyze(sample.replace("EDEN_SCHEDULER_PREFLIGHT", "OMITTED_PREFLIGHT"))[
+        "scheduler_preflight_dispatches"] is None
     assert result["queue_full_windows"] == 1
     assert result["late50_full_window_share"] == 1
     assert result["queue_wait_seconds"] == 0.02

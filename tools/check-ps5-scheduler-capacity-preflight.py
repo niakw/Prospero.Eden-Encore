@@ -20,12 +20,20 @@ assert 'alignof(std::max_align_t)' in capacity
 assert 'command_offset <= data.size() - needed' in capacity
 assert 'RecordWithUploadBuffer' in header and 'DispatchWork();' in header
 assert 'PreflightDrawCommands' in generator
-assert raster.count('scheduler.PreflightDrawCommands();') == 2
-assert raster.index('scheduler.PreflightDrawCommands();') < raster.index('std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};')
+assert raster.count('scheduler.PreflightDrawCommands() &&') == 2
+assert raster.count('scheduler_preflight_dispatches.fetch_add(')==2
+assert 'detailed_gpu_profile.load(std::memory_order_relaxed)' in raster
+
+performance=(root/'headless/performance.cpp').read_text()
+assert r'EDEN_SCHEDULER_PREFLIGHT frame=%u dispatched=%llu\n' in performance
+assert r'EDEN_SCHEDULER_PREFLIGHT frame=%u dispatched=%llu\\n' not in performance
+assert 'scheduler_preflight_dispatches.load(std::memory_order_relaxed)' in performance
+assert 'scheduler_preflight_dispatches{0};' in (root/'headless/performance.h').read_text()
+assert raster.index('scheduler.PreflightDrawCommands() &&') < raster.index('std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};')
 block=raster[raster.index('void RasterizerVulkan::DispatchCompute() {'):]
-assert block.index('scheduler.PreflightDrawCommands();') < block.index('std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};')
-assert raster.index('scheduler.PreflightDrawCommands();') < raster.index('gpu_memory->FlushCaching();')
-assert block.index('scheduler.PreflightDrawCommands();') < block.index('gpu_memory->FlushCaching();')
+assert block.index('scheduler.PreflightDrawCommands() &&') < block.index('std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};')
+assert raster.index('scheduler.PreflightDrawCommands() &&') < raster.index('gpu_memory->FlushCaching();')
+assert block.index('scheduler.PreflightDrawCommands() &&') < block.index('gpu_memory->FlushCaching();')
 code=r"""
 #include <array>
 #include <cassert>

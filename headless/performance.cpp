@@ -1109,6 +1109,11 @@ void ReportGpuThread(unsigned frame) {
                 frame, load(gpu_command_tick, true), load(gpu_command_tick, false),
                 load(gpu_command_flush, true), load(gpu_command_flush, false),
                 load(gpu_command_invalidate, true), load(gpu_command_invalidate, false));
+    // R384: confirm that R382's prelock FIFO dispatch optimization actually
+    // fired on the PS5. A zero counter is meaningful: do not attribute an
+    // FPS gain to a preflight that never ran.
+    std::printf("EDEN_SCHEDULER_PREFLIGHT frame=%u dispatched=%llu\n",
+                frame, scheduler_preflight_dispatches.load(std::memory_order_relaxed));
     std::printf("EDEN_DEV_GUEST cpu_write_calls=%llu cpu_write_ns=%llu cpu_read_calls=%llu cpu_read_ns=%llu "
                 "sync_calls=%llu sync_ns=%llu dequeue_calls=%llu dequeue_ns=%llu",
                 load(guest_cpu_write, true), load(guest_cpu_write, false),
