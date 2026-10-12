@@ -20,6 +20,9 @@ def adapt(relative, destination, replacements):
 adapt('src/core/frontend/emu_window.h', 'include/core/frontend/emu_window.h',
       [('    Xcb,', '    Xcb,\n    PS5,')])
 adapt('src/video_core/renderer_vulkan/vk_rasterizer.cpp', 'vulkan_rasterizer.cpp', [
+    # R360: virtual range ASID invalidations must share buffer-cache lock
+    # with graphics buffer binds. Texture and buffer scopes remain disjoint.
+    ("    buffer_cache.UnmapGPUMemory(as_id, addr, size);\n}\n\nvoid RasterizerVulkan::SignalFence(", "    // GPU-map invalidation changes virtual_ranges, concurrently queried by\n    // UpdateGraphicsBuffers under buffer_cache.mutex. Serialize this mutation.\n    // Keep texture and buffer lock scopes separate to preserve lock ordering.\n    {\n        std::scoped_lock lock{buffer_cache.mutex};\n        buffer_cache.UnmapGPUMemory(as_id, addr, size);\n    }\n}\n\nvoid RasterizerVulkan::SignalFence("),
     # Compute synchronization (dev_vulkan.h compute_barriers): indirect
     # dispatches returned before the pre-dispatch barrier, and no barrier made a dispatch's
     # writes visible to later indirect arguments, vertex/index fetch, shaders or copies.
