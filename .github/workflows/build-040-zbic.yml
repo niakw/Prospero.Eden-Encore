@@ -213,6 +213,7 @@ jobs:
           python3 -B tools/check-vendored-opengl-deps.py
           python3 -B tools/vendor-eden-cpm.py --check
           python3 -B tools/install-vendored-eden-backports.py --replay
+          python3 -B tools/check-surface-lifecycle.py
           python3 -B tools/check-vendored-vulkan-fork.py
           python3 -B tools/check-vendored-radv-fork.py
           python3 -B tools/check-vendored-gpu-thread.py
