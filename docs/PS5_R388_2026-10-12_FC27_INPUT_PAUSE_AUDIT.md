@@ -13,3 +13,9 @@ Source: user-provided R384 `stderr(20261012-174838).log`, `heap(10).log`; review
 Full offline audit and re-usable parser are also available in the conversation files `eden-r388-hypothese-pause-switch.md`, `eden-r388-input-freeze-analysis.json` and `analyze_eden_fc27_input_freeze.py`.
 
 **Status:** forensic diagnosis only; no runtime fix, no native compile and no extra console test requested.
+
+## R389 — diagnostic partiellement implémenté (branch only)
+
+Commits `9e54cd548` et `adc3d3eb8` : `headless/devices.h` / `headless/pad.cpp` comptent les nouveaux fronts physiques `Options` et les fronts montants `ButtonPlus` effectivement publiés par le moteur virtuel. Un unique `EDEN_PAD_INPUT_CHAIN` est émis toutes les 1 250 itérations (~5 secondes) **seulement avec Detailed Logging**, sans modifier le mapping ni injecter de boutons. Test de source `tools/check-ps5-pad-input-chain.py`, commit `00af8967b`.
+
+**Ne pas confondre `published_plus_edges` avec une lecture de la mémoire partagée Npad par le jeu.** Le troisième maillon HID et le diagnostic des applets restent à instrumenter. Aucun build PS5 ni essai console pour ces changements.
