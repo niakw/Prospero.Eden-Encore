@@ -401,6 +401,21 @@ void GraphicsPipeline::AddTransition(GraphicsPipeline* transition) {
     transitions.push_back(transition);
 }
 
+#ifdef PS5_NATIVE
+void GraphicsPipeline::PreflightDescriptorScratch() const {
+    // Called by the GPU owner before PrepareDraw acquires the buffer/texture
+    // cache pair. The immutable pipeline descriptor counts are safe here.
+    // Nested Configure calls use their own scratch and fall back to reserve
+    // under the lock; never corrupt an in-flight parent view list.
+    auto& scratch = graphics_descriptor_scratch;
+    if (scratch.in_use) return;
+    if (scratch.views.capacity() < num_image_elements)
+        scratch.views.reserve(num_image_elements);
+    if (scratch.samplers.capacity() < num_textures)
+        scratch.samplers.reserve(num_textures);
+}
+#endif
+
 template <typename Spec>
 bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
     // Reuse storage even for common <=64-descriptor draws: constructing two

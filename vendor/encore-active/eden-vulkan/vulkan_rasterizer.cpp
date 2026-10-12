@@ -298,6 +298,11 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
         gpu_memory->FlushCaching();
     }
 #endif
+#ifdef PS5_NATIVE
+    // Only reserve thread-local storage here. Cache descriptors and shader
+    // bindings are still read and validated under the paired cache locks.
+    pipeline->PreflightDescriptorScratch();
+#endif
     const bool cache_sample = ::Eden::Performance::ShouldSampleCacheDraw();
     const bool previous_sample = ::Eden::Performance::cache_draw_sample_active;
     ::Eden::Performance::cache_draw_sample_active = cache_sample;

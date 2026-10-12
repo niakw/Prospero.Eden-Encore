@@ -115,6 +115,11 @@ public:
     ~GraphicsPipeline();
 
     void AddTransition(GraphicsPipeline* transition);
+#ifdef PS5_NATIVE
+    // Reserve graphics descriptor scratch before acquiring both guest caches.
+    // No descriptor content is read outside the locks.
+    void PreflightDescriptorScratch() const;
+#endif
 
     bool Configure(bool is_indexed) {
         return configure_func(this, is_indexed);

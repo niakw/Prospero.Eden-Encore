@@ -189,6 +189,11 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {'''),
         gpu_memory->FlushCaching();
     }
 #endif
+#ifdef PS5_NATIVE
+    // Only reserve thread-local storage here. Cache descriptors and shader
+    // bindings are still read and validated under the paired cache locks.
+    pipeline->PreflightDescriptorScratch();
+#endif
     const bool cache_sample = ::Eden::Performance::ShouldSampleCacheDraw();
     const bool previous_sample = ::Eden::Performance::cache_draw_sample_active;
     ::Eden::Performance::cache_draw_sample_active = cache_sample;
@@ -1213,6 +1218,7 @@ adapt('src/video_core/renderer_vulkan/vk_graphics_pipeline.h',
       'include/video_core/renderer_vulkan/vk_graphics_pipeline.h', [
     ('    GraphicsPipeline(const GraphicsPipeline&) = delete;',
      '    GraphicsPipeline(const GraphicsPipeline&) = delete;\n    ~GraphicsPipeline();'),
+    ("    void AddTransition(GraphicsPipeline* transition);", "    void AddTransition(GraphicsPipeline* transition);\n#ifdef PS5_NATIVE\n    // Reserve graphics descriptor scratch before acquiring both guest caches.\n    // No descriptor content is read outside the locks.\n    void PreflightDescriptorScratch() const;\n#endif"),
     ('    void MakePipeline(VkRenderPass render_pass);',
      '    void MakePipeline(VkRenderPass render_pass, VkPipelineCreateFlags extra_flags = 0,\n'
      '                      vk::Pipeline* target = nullptr);\n'
@@ -1333,6 +1339,10 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
              'cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,\n'
              '    optimized_ready.load(std::memory_order_acquire) ? *optimized_pipeline : *pipeline);'),
         ])
+        # R356: reserve descriptor scratch on the GPU owner BEFORE the
+        # dual guest cache lock. Counts are immutable; texture/descriptor
+        # contents stay inside the lock.
+        replacements.append(("void GraphicsPipeline::AddTransition(GraphicsPipeline* transition) {\n    transition_keys.push_back(transition->key);\n    transitions.push_back(transition);\n}", "void GraphicsPipeline::AddTransition(GraphicsPipeline* transition) {\n    transition_keys.push_back(transition->key);\n    transitions.push_back(transition);\n}\n\n#ifdef PS5_NATIVE\nvoid GraphicsPipeline::PreflightDescriptorScratch() const {\n    // Called by the GPU owner before PrepareDraw acquires the buffer/texture\n    // cache pair. The immutable pipeline descriptor counts are safe here.\n    // Nested Configure calls use their own scratch and fall back to reserve\n    // under the lock; never corrupt an in-flight parent view list.\n    auto& scratch = graphics_descriptor_scratch;\n    if (scratch.in_use) return;\n    if (scratch.views.capacity() < num_image_elements)\n        scratch.views.reserve(num_image_elements);\n    if (scratch.samplers.capacity() < num_textures)\n        scratch.samplers.reserve(num_textures);\n}\n#endif"))
         # The sample decision is set by the GPU owner's PrepareDraw, so the
         # nested stages measure exactly the same draw without extra clocks.
         for expression, phase in (
