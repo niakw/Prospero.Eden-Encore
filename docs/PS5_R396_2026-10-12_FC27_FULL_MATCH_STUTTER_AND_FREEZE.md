@@ -28,7 +28,7 @@ The emulator still chooses 1x game resolution, 1440p output, FXAA, bilinear. Do 
 
 ### DNS audit workload
 
-`network-accepted(2).log` contains 6,960 `guest dns-denied` events: 6,851 target `spring25.client.blazeredirector.ea.com`, 93 `collector.errors.ea.com`, plus other names. Burst max ~32/sec. Policy correctly returns `GetAddrInfoError::NODATA` for denied hosts; do NOT alter denylist or return success to EA/Nintendo. The network observer's per-denial formatting/mutex/file-write is diagnostic overhead and is unrelated to network correctness.
+`network-accepted(2).log` is **append-only across sessions** and contains 6,960 guest denied events across three separated timestamp clusters. DO NOT attribute all of them to R394. The cluster aligned with this ~20-minute R394 run starts at epoch=1791839457 and ends at 1791840634; it contains **2,872 denied guest DNS events**, including 2,826 for `spring25.client.blazeredirector.ea.com` and 38 for `collector.errors.ea.com`. Average ~2.47 denied events/sec across the run, with isolated bursts up to 31/sec. Small relative to guest draw/IPC rates; audit load is not proven to account for gameplay stutter. Policy correctly returns `GetAddrInfoError::NODATA` for denied hosts; do NOT alter denylist or return success to EA/Nintendo. The network observer's per-denial formatting/mutex/file-write is diagnostic overhead and is unrelated to network correctness.
 
 R396 reduces repeated same-second guest DNS *audit* events via atomic key and summary counters without modifying DNS policy. This is a bounded log overhead reduction, **not** a confirmed fix for visual stutter, textures, or the freeze. Validate with `tools/check-network-accepted-audit.py`, and run source CI.
 
