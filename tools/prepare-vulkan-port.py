@@ -277,6 +277,14 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {'''),
     # creates /app0/sync-draws.txt, report every draw/dispatch to klog and wait for the
     # GPU, so the last report before a fatal GPU fault names the operation.
     ('#include "performance.h"', '#include "performance.h"\n#include "dev_vulkan.h"\n#include "diagnostics.h"\n#include <filesystem>'),
+    ('scheduler.Record([draw_params](vk::CommandBuffer cmdbuf) {\n            ',
+     'scheduler.Record([draw_params, pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {\n            if (!pipeline || !pipeline->CanExecuteDraw()) {\n                ::Eden::Performance::RecordGraphicsDrawDrop(\n                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                return;\n            }\n            '),
+    ('scheduler.Record([buffer_obj = buffer->Handle(), offset,\n                              stride = params.stride](vk::CommandBuffer cmdbuf) {\n                ',
+     'scheduler.Record([buffer_obj = buffer->Handle(), offset,\n                              stride = params.stride,\n                              pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {\n                if (!pipeline || !pipeline->CanExecuteDraw()) {\n                    ::Eden::Performance::RecordGraphicsDrawDrop(\n                        ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                    return;\n                }\n                '),
+    ('scheduler.Record([draw_buffer_obj = draw_buffer->Handle(),\n                              buffer_obj = buffer->Handle(), offset_base, offset,\n                              params](vk::CommandBuffer cmdbuf) {\n                ',
+     'scheduler.Record([draw_buffer_obj = draw_buffer->Handle(),\n                              buffer_obj = buffer->Handle(), offset_base, offset,\n                              params, pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {\n                if (!pipeline || !pipeline->CanExecuteDraw()) {\n                    ::Eden::Performance::RecordGraphicsDrawDrop(\n                        ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                    return;\n                }\n                '),
+    ('scheduler.Record([buffer_obj = buffer->Handle(), offset, params](vk::CommandBuffer cmdbuf) {\n            ',
+     'scheduler.Record([buffer_obj = buffer->Handle(), offset, params,\n                          pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {\n            if (!pipeline || !pipeline->CanExecuteDraw()) {\n                ::Eden::Performance::RecordGraphicsDrawDrop(\n                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                return;\n            }\n            '),
     ('GraphicsPipeline* prepared_pipeline = nullptr;',
      'GraphicsPipeline* prepared_pipeline = nullptr;\n'
      '// The pipeline of the last prepared draw, for the development fault probe.\n'
@@ -1281,6 +1289,14 @@ bool DescriptorBufferRing::PreflightCapacity(Scheduler& scheduler,
 # is null for those. OptimizeState is allocated lazily, not per cached pipeline.
 adapt('src/video_core/renderer_vulkan/vk_graphics_pipeline.h',
       'include/video_core/renderer_vulkan/vk_graphics_pipeline.h', [
+    ('    [[nodiscard]] bool IsBuilt() const noexcept {\n'
+     '        return is_built.load(std::memory_order::relaxed);\n    }',
+     '    [[nodiscard]] bool IsBuilt() const noexcept {\n'
+     '        return is_built.load(std::memory_order::relaxed);\n    }\n\n'
+     '    // Queued worker checks pipeline readiness AFTER async build wait.\n'
+     '    [[nodiscard]] bool CanExecuteDraw() const noexcept {\n'
+     '        return is_built.load(std::memory_order::acquire) && static_cast<bool>(pipeline);\n'
+     '    }'),
     ('    GraphicsPipeline(const GraphicsPipeline&) = delete;',
      '    GraphicsPipeline(const GraphicsPipeline&) = delete;\n    ~GraphicsPipeline();'),
     ("    void AddTransition(GraphicsPipeline* transition);", "    void AddTransition(GraphicsPipeline* transition);\n#ifdef PS5_NATIVE\n    // Reserve graphics descriptor scratch before acquiring both guest caches.\n    // No descriptor content is read outside the locks.\n    void PreflightDescriptorScratch() const;\n#endif"),

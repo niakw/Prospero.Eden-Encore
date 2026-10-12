@@ -47,3 +47,11 @@ R379 ps5_cpu_topology.h parser now accepts either HTT or SMT flags, but NOT THRE
 ASan/UBSan tools/check-ps5-freebsd11-ule-topology.py tests real FreeBSD XML HTT, SMT, mixed, THREAD-only, overlapping/partial masks, nonzero upper CPU words. The full source-extracted CheckWorkerTopology host fixture tests the HTT variant and CPU affinity. The actual firmware 13.60 may expose NEITHER read-only sysctl. When so, leave physical core separation unknown rather than fabricate it.
 
 This is a source-proven parser bug fix, NOT a proven FC27 FPS or freeze solution. No additional PS5 test requested until native CI succeeds.
+
+## R381 — Guard queued GPU draws against failed graphics pipeline build
+
+R378 fixed the infinite-wait potential from missed Vulkan pipeline-builder completion. The existing graphics VkBindPipeline callback already skipped a null native pipeline after a failed build, but the later Draw / DrawIndirect callbacks did NOT check and could send vkCmdDraw* with an unbound or stale previous pipeline. This is a source-demonstrated command correctness risk, NOT proof of the R370 observed freeze or pixellated HUD cause.
+
+R381 adds GraphicsPipeline::CanExecuteDraw(), which uses release/acquire ordering on the asynchronous builder's is_built flag before checking the published native pipeline handle. All four queued draw recording variants (ordinary Draw, indirect byte-count, indirect count, normal indirect) capture the prepared pipeline and return before issuing any vkCmdDraw* when that exact pipeline is absent, unfinished or failed. Failed cases increment the existing WorkerPipelineFailed diagnostic. The scheduler's build wait callback is queued BEFORE the draw callbacks; a pipeline that is still building is not skipped prematurely.
+
+No change to cache locks, textures, descriptors, fencing, normal Vulkan commands or guest CPU memory invalidations. The source-extracted C++20 ASan/UBSan regression check-ps5-gpu-worker-draw-guard.py checks all four sites and a successful concurrent builder; pinned-source generator remains byte-equivalent for all 40 files. This is a correctness fix, not a demonstrated FPS improvement. Native and real-console tests still required.

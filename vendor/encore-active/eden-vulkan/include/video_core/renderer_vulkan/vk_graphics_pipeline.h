@@ -146,6 +146,11 @@ public:
         return is_built.load(std::memory_order::relaxed);
     }
 
+    // Queued worker checks pipeline readiness AFTER async build wait.
+    [[nodiscard]] bool CanExecuteDraw() const noexcept {
+        return is_built.load(std::memory_order::acquire) && static_cast<bool>(pipeline);
+    }
+
     template <typename Spec>
     static auto MakeConfigureSpecFunc() {
         return [](GraphicsPipeline* pl, bool is_indexed) { return pl->ConfigureImpl<Spec>(is_indexed); };

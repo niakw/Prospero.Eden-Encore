@@ -370,7 +370,12 @@ void RasterizerVulkan::Draw(bool is_indexed, u32 instance_count) {
         const u32 num_instances{instance_count};
         const DrawParams draw_params{MakeDrawParams(draw_state, num_instances, is_indexed)};
 
-        scheduler.Record([draw_params](vk::CommandBuffer cmdbuf) {
+        scheduler.Record([draw_params, pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {
+            if (!pipeline || !pipeline->CanExecuteDraw()) {
+                ::Eden::Performance::RecordGraphicsDrawDrop(
+                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);
+                return;
+            }
             if (draw_params.is_indexed) {
                 cmdbuf.DrawIndexed(draw_params.num_vertices, draw_params.num_instances,
                                    draw_params.first_index, draw_params.base_vertex,
@@ -407,7 +412,13 @@ void RasterizerVulkan::DrawIndirect() {
         const auto& offset = indirect_buffer.second;
         if (params.is_byte_count) {
             scheduler.Record([buffer_obj = buffer->Handle(), offset,
-                              stride = params.stride](vk::CommandBuffer cmdbuf) {
+                              stride = params.stride,
+                              pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {
+                if (!pipeline || !pipeline->CanExecuteDraw()) {
+                    ::Eden::Performance::RecordGraphicsDrawDrop(
+                        ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);
+                    return;
+                }
                 cmdbuf.DrawIndirectByteCountEXT(1, 0, buffer_obj, offset, 0,
                                                 static_cast<u32>(stride));
             });
@@ -419,7 +430,12 @@ void RasterizerVulkan::DrawIndirect() {
             const auto& offset_base = count.second;
             scheduler.Record([draw_buffer_obj = draw_buffer->Handle(),
                               buffer_obj = buffer->Handle(), offset_base, offset,
-                              params](vk::CommandBuffer cmdbuf) {
+                              params, pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {
+                if (!pipeline || !pipeline->CanExecuteDraw()) {
+                    ::Eden::Performance::RecordGraphicsDrawDrop(
+                        ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);
+                    return;
+                }
                 if (params.is_indexed) {
                     cmdbuf.DrawIndexedIndirectCount(
                         buffer_obj, offset, draw_buffer_obj, offset_base,
@@ -432,7 +448,13 @@ void RasterizerVulkan::DrawIndirect() {
             });
             return;
         }
-        scheduler.Record([buffer_obj = buffer->Handle(), offset, params](vk::CommandBuffer cmdbuf) {
+        scheduler.Record([buffer_obj = buffer->Handle(), offset, params,
+                          pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {
+            if (!pipeline || !pipeline->CanExecuteDraw()) {
+                ::Eden::Performance::RecordGraphicsDrawDrop(
+                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);
+                return;
+            }
             if (params.is_indexed) {
                 cmdbuf.DrawIndexedIndirect(buffer_obj, offset,
                                            static_cast<u32>(params.max_draw_counts),
