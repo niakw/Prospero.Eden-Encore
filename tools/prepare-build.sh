@@ -44,6 +44,8 @@ if [[ ${EDEN_EXPERIMENTAL_DUMMY_THREAD_WAITS:-OFF} == ON || \
     step "Explicitly requested non-shipping experimental Eden backports"
     bash tools/apply-eden-backports.sh "$eden"
 fi
+step "R352 fence-safe NVNflinger layer/display cleanup (versioned complete source)"
+python3 -B tools/install-vendored-surface-lifecycle.py "$eden"
 python3 -B tools/check-nvnflinger-dequeue-wakeup.py "$eden"
 
 # Optional: seed Eden's package cache from another checkout's (CI reuses a development cache).
