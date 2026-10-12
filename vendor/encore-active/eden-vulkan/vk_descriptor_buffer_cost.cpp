@@ -123,7 +123,14 @@ DescriptorBufferRing::Allocation DescriptorBufferRing::Allocate(Scheduler& sched
             ++chunk_cursor;
         } else {
             LOG_DEBUG(Render_Vulkan, "Descriptor buffer frame exhausted, stalling on the GPU");
-            { auto timer = Eden::Performance::VulkanTimer(10); scheduler.Finish(); }
+            { auto timer = Eden::Performance::VulkanTimer(10);
+              // Exact rare full-ring fallback, not the usual 1-in-16 draw sample.
+              // This wait still holds both guest GPU cache locks; do not skip
+              // the fence or move it without proving descriptor reuse safety.
+              ::Eden::Performance::CachePhaseTimer finish_cost{
+                  ::Eden::Performance::CachePhase::DescriptorRingFinish,
+                  ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
+              scheduler.Finish(); }
             chunk_cursor = 0;
             ++generation;
         }
