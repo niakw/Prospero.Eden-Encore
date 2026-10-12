@@ -785,7 +785,16 @@ void GpuTimeDestroy(const Device& device) {
 }
 } // namespace
 '''
+# R357: a Vulkan worker wake-on-pop is only needed for active WaitWorker
+# drain callers, not for every consumed draw batch. Preserve native queue
+# ownership, execution_mutex synchronization, and destructor stop-wakeup.
+adapt('src/video_core/renderer_vulkan/vk_scheduler.h',
+      'include/video_core/renderer_vulkan/vk_scheduler.h', [
+    ("    std::condition_variable_any event_cv;\n    std::jthread worker_thread;", "    std::condition_variable_any event_cv;\n    // Protected by queue_mutex. Only a draining WaitWorker needs a wakeup\n    // when the Vulkan worker consumes a queued command chunk.\n    unsigned queue_drain_waiters{};\n    std::jthread worker_thread;"),
+])
 adapt('src/video_core/renderer_vulkan/vk_scheduler.cpp', 'vulkan_scheduler.cpp', [
+    ("        std::unique_lock ql{queue_mutex};\n        event_cv.wait(ql, [this] { return work_queue.empty(); });", "        std::unique_lock ql{queue_mutex};\n        ++queue_drain_waiters;\n        event_cv.wait(ql, [this] { return work_queue.empty(); });\n        --queue_drain_waiters;"),
+    ("        work = std::move(work_queue.front());\n        work_queue.pop();\n        event_cv.notify_all();\n        return true;", "        work = std::move(work_queue.front());\n        work_queue.pop();\n        // The consumer normally has no producer waiting for an empty queue.\n        // Avoid broadcasting on every chunk when it cannot wake anyone.\n        // queue_mutex synchronizes this check with WaitWorker's registration.\n        if (work_queue.empty() && queue_drain_waiters != 0)\n            event_cv.notify_all();\n        return true;"),
     ('#include <memory>', '#include <memory>\n#include <array>\n#include <chrono>\n#include <cstdio>\n#include "dev_vulkan.h"'),
     ('namespace Vulkan {\n', 'namespace Vulkan {\n' + GPU_TIME_HELPERS),
     # The default destructor joins worker_thread only AFTER its body. If a

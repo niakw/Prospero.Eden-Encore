@@ -186,7 +186,9 @@ void Scheduler::WaitWorker() {
     // Ensure the queue is drained.
     {
         std::unique_lock ql{queue_mutex};
+        ++queue_drain_waiters;
         event_cv.wait(ql, [this] { return work_queue.empty(); });
+        --queue_drain_waiters;
     }
 
     // Now wait for execution to finish.
@@ -390,7 +392,11 @@ void Scheduler::WorkerThread(std::stop_token stop_token) {
 
         work = std::move(work_queue.front());
         work_queue.pop();
-        event_cv.notify_all();
+        // The consumer normally has no producer waiting for an empty queue.
+        // Avoid broadcasting on every chunk when it cannot wake anyone.
+        // queue_mutex synchronizes this check with WaitWorker's registration.
+        if (work_queue.empty() && queue_drain_waiters != 0)
+            event_cv.notify_all();
         return true;
     }};
 
