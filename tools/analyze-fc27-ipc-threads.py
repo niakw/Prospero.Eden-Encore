@@ -21,13 +21,16 @@ def fields(line: str) -> dict[str, float]:
 def analyze(text: str) -> dict:
     frame = None
     windows: dict[int, dict] = {}
-    previous: dict[int, tuple[int, int]] = {}
-    prev_hist: dict[str, int] = {}
+    previous: dict[int, tuple[int, int, int]] = {}
+    prev_hist: tuple[int, dict[str, int]] | None = None
+    preceding_frame: int | None = None
     for line in text.splitlines():
         if line.startswith("EDEN_VULKAN_FRAME "):
             data = fields(line)
             if "total" in data:
-                frame = int(data["total"])
+                new_frame = int(data["total"])
+                if new_frame != frame:
+                    preceding_frame, frame = frame, new_frame
                 windows.setdefault(frame, {"late50": int(data.get("late50", 0)),
                                           "threads": {}, "hist": {}})
         elif line.startswith("EDEN_DEV_IPC_THREAD ") and frame is not None:
@@ -38,7 +41,10 @@ def analyze(text: str) -> dict:
             calls, ns = int(data["calls"]), int(data["ns"])
             # Only positive monotonic deltas on the SAME thread ID.
             old = previous.get(tid)
-            delta = None if old is None or calls < old[0] or ns < old[1] else (
+            # Never attribute a delta across an omitted top-12 snapshot
+            # entirely to the later window: the missing interval is unknown.
+            contiguous = old is not None and old[2] == preceding_frame
+            delta = None if not contiguous or calls < old[0] or ns < old[1] else (
                 calls - old[0], ns - old[1])
             windows[frame]["threads"][tid] = {
                 "calls": calls, "ns": ns,
@@ -46,15 +52,17 @@ def analyze(text: str) -> dict:
                 "delta_calls": delta[0] if delta else None,
                 "delta_ms": round(delta[1] / 1e6, 3) if delta else None,
             }
-            previous[tid] = (calls, ns)
+            previous[tid] = (calls, ns, frame)
         elif line.startswith("EDEN_DEV_IPCHIST ") and frame is not None:
             data = fields(line)
             current = {k: int(v) for k, v in data.items()}
             windows[frame]["hist"] = {
-                k: (v - prev_hist[k] if k in prev_hist and v >= prev_hist[k] else None)
+                k: (v - prev_hist[1][k] if prev_hist is not None
+                    and prev_hist[0] == preceding_frame
+                    and k in prev_hist[1] and v >= prev_hist[1][k] else None)
                 for k, v in current.items()
             }
-            prev_hist = current
+            prev_hist = (frame, current)
     # Entries represent only the top 12 cumulative threads per snapshot.
     # Missing threads cannot be assumed idle; avoid counting absent rows as zero.
     by_thread = defaultdict(lambda: {"measured_delta_ms": 0., "measured_calls": 0,
@@ -99,6 +107,18 @@ def self_test() -> None:
     reset = analyze(s + "\nEDEN_VULKAN_FRAME total=400 late50=1"
                     "\nEDEN_DEV_IPC_THREAD tid=10 calls=1 ns=2000000 max_ns=2000000")
     assert reset["snapshots"][400]["threads"][10]["delta_ms"] is None
+    missing = analyze("\\n".join([
+        "EDEN_VULKAN_FRAME total=100 late50=0",
+        "EDEN_DEV_IPC_THREAD tid=10 calls=1 ns=1000000 max_ns=1000000",
+        "EDEN_DEV_IPCHIST lt50us=1",
+        "EDEN_VULKAN_FRAME total=200 late50=3",
+        "EDEN_DEV_IPC_THREAD tid=11 calls=2 ns=500000 max_ns=500000",
+        "EDEN_VULKAN_FRAME total=300 late50=4",
+        "EDEN_DEV_IPC_THREAD tid=10 calls=9 ns=9000000 max_ns=1000000",
+        "EDEN_DEV_IPCHIST lt50us=10",
+    ]).replace("\\n", "\n"))
+    assert missing["snapshots"][300]["threads"][10]["delta_ms"] is None
+    assert missing["snapshots"][300]["hist"]["lt50us"] is None
     print("PASS R393 IPC cumulative delta, histogram, reset and sampled top-12 semantics")
 
 
