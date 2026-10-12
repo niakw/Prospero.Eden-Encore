@@ -175,6 +175,81 @@
       "url": "https://github.com/niakw/encore-overrides.git",
       "commit": "4fdb329e732a71878c1936b24759e58937c1ac18",
       "path": "../encore-overrides-review"
+    },
+    {
+      "name": "opengl-opengnm-psbc",
+      "about": "PS5 OpenGL pinned mandatory transitive Git source opengnm-psbc",
+      "kind": "git",
+      "url": "https://github.com/PS4-OpenGNM/opengnm-psbc.git",
+      "commit": "a92a1228ea3a64e4be9f0e61c2a65a5aa7ffed92",
+      "path": "../opengl-opengnm-psbc-review"
+    },
+    {
+      "name": "opengl-opengnm",
+      "about": "PS5 OpenGL pinned mandatory transitive Git source opengnm",
+      "kind": "git",
+      "url": "https://github.com/PS4-OpenGNM/opengnm.git",
+      "commit": "4b295ca54c82c83acf308d1c646a2dfa9ae57350",
+      "path": "../opengl-opengnm-review"
+    },
+    {
+      "name": "opengl-spirv-headers",
+      "about": "PS5 OpenGL pinned mandatory transitive Git source SPIRV-Headers",
+      "kind": "git",
+      "url": "https://github.com/KhronosGroup/SPIRV-Headers.git",
+      "commit": "0d25db97cb9b8f725e4c95e4553001710e7fc39d",
+      "path": "../opengl-spirv-headers-review"
+    },
+    {
+      "name": "opengl-vulkan-headers",
+      "about": "PS5 OpenGL pinned mandatory transitive Git source Vulkan-Headers",
+      "kind": "git",
+      "url": "https://github.com/KhronosGroup/Vulkan-Headers.git",
+      "commit": "b51f6b865c18fc5b33990d12f75e8dfd672cede6",
+      "path": "../opengl-vulkan-headers-review"
+    },
+    {
+      "name": "opengl-imgui",
+      "about": "PS5 OpenGL pinned mandatory transitive Git source imgui",
+      "kind": "git",
+      "url": "https://github.com/ocornut/imgui.git",
+      "commit": "f5befd2d29e66809cd1110a152e375a7f1981f06",
+      "path": "../opengl-imgui-review"
+    },
+    {
+      "name": "opengl-nanovg",
+      "about": "PS5 OpenGL pinned mandatory transitive Git source nanovg",
+      "kind": "git",
+      "url": "https://github.com/memononen/nanovg.git",
+      "commit": "ce3bf745eb2d2dbc14a50bf2446783f691ac4353",
+      "path": "../opengl-nanovg-review"
+    },
+    {
+      "name": "opengl-sokol",
+      "about": "PS5 OpenGL pinned mandatory transitive Git source sokol",
+      "kind": "git",
+      "url": "https://github.com/floooh/sokol.git",
+      "commit": "48c85905aeaa1350feb17515961aecb6c75447d8",
+      "path": "../opengl-sokol-review"
+    },
+    {
+      "name": "opengl-native-boilerplate",
+      "about": "PS5 OpenGL exact native template pin (not the Encore application boilerplate)",
+      "kind": "git",
+      "url": "https://github.com/blackbearreloaded/ps5-native-app-boilerplate.git",
+      "commit": "4f531c4b517f80bcb6b1267135848168d2250047",
+      "path": "../opengl-native-boilerplate-review"
+    },
+    {
+      "name": "opengl-mesa-26-2",
+      "about": "Original Mesa 26.2.0 tarball used by PS5 OpenGL SDK",
+      "kind": "archive",
+      "url": "https://archive.mesa3d.org/mesa-26.2.0.tar.xz",
+      "sha256": "efd4bb08cdb7c365a812cd4e6c9202ab55b2f22cdcd13c7d6c4f9647b799a4ef",
+      "save": ".deps/opengl-mesa-26.2.0.tar.xz",
+      "extract": ".deps/opengl-mesa-26.2.0",
+      "strip": 1,
+      "creates": ".deps/opengl-mesa-26.2.0/VERSION"
     }
   ]
 }

@@ -20,6 +20,11 @@ PY2
 )
 template="$source_dir/build/native-app-boilerplate"
 sdk="$template/.deps/native/ps5-payload-sdk"
+# R348: recursively pinned, directly vendored OpenGL/Mesa/compiler sources.
+# Stage exact original SHAs and verified archives from THIS Git checkout before
+# the upstream fetcher runs, so neither fresh builds nor its bootstrap need
+# the original upstream repositories or release servers.
+python3 -B "$root/tools/stage-vendored-opengl-deps.py" "$source_dir"
 
 actual=$(git -C "$source_dir" rev-parse HEAD)
 [[ $actual == "$expected" ]] || { echo "PS5 OpenGL pin mismatch: $actual != $expected" >&2; exit 1; }

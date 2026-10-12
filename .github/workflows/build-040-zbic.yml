@@ -210,6 +210,7 @@ jobs:
           python3 -B tools/check-ps5-mihawk-radv-contract.py
           python3 -B tools/check-vendored-deps.py
           python3 -B tools/check-vendored-overrides.py
+          python3 -B tools/check-vendored-opengl-deps.py
           python3 -B tools/install-vendored-eden-backports.py --replay
           python3 -B tools/check-vendored-vulkan-fork.py
           python3 -B tools/check-vendored-radv-fork.py

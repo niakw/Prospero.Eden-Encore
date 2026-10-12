@@ -60,3 +60,18 @@ Our previous embedded profile header referenced `niakw/encore-overrides@0afb14f3
 ## Complete default Eden backports (R347)
 
 `vendor/encore-active/eden-backports/` contains **all 83 complete files changed or added by 43 shipping backport patches** (firmware services, guest RAM/GPU mapping, JIT/texture caches, network policy, controller/HID, Vulkan buffer synchronization). The ordered original `headless/backports/` patches and `tools/apply-eden-backports.sh` are retained as an independent oracle, not production string rewriting. `tools/prepare-build.sh` installs the exact tracked files via `tools/install-vendored-eden-backports.py`; CI replays the 43 patches on a fresh pinned Eden tree and compares all 83 full files and receipt checksums. Three experimental patches remain deliberately disabled (`DUMMY_THREAD_WAITS`, `ICACHE_COHERENCE`, `SM_HOST_WAIT`) pending game/hardware proof and are applied only on explicit test opt-in. The Vulkan fork is also derived **after** these 43 patches; this catches two previously unsynchronized files, including the `KnownGpuTick` compiler failure.
+
+## Full PS5 OpenGL compiler and graphics dependency closure (R348)
+
+**Do not confuse the Mesa implementations:** our native Vulkan renderer uses Mihawk's full PS5 RADV source (`sources/ps5-mesa/`) while the optional OpenGL renderer uses a separate exact Mesa **26.2.0** release (`sources/opengl-mesa-26-2/`). The OpenGL source's own `dependencies.json` pins seven additional original Git repositories, plus its *own* `ps5-native-app-boilerplate` commit. All mandatory revisions are now explicit in `tools/deps.json` and included here as fully readable trees with complete original commit Git packs in `objects/`. The additional inputs are:
+
+- `opengl-opengnm-psbc` — the PSBC compiler backend and source patch;
+- `opengl-opengnm` — GNM graphics runtime;
+- `opengl-spirv-headers` and `opengl-vulkan-headers` — shader/API headers;
+- `opengl-imgui`, `opengl-nanovg`, `opengl-sokol` — native UI/drawing components;
+- `opengl-native-boilerplate` — its independently pinned PS5 toolchain wrapper;
+- `opengl-mesa-26-2` — complete 12,812-file Mesa 26.2 source plus exact SHA-verified original release archive.
+
+`tools/stage-vendored-opengl-deps.py` now stages all of these into a **disposable** checkout of PS5 OpenGL, reconstructing only original SHA-pinned Git trees and Mesa archive. It also restores the already preserved SDK v0.42 ZIP and zlib 1.3.2 tarball, pre-extracting the SDK to prevent a hidden bootstrap download. Our `tools/build-opengl-sdk.sh` invokes staging before the upstream OpenGL `fetch-sources.py`. The upstream fetcher independently verifies the patched PSBC Git tree and all declared immutable revisions. An isolated test staged the entire closure with `PROSPEROEDEN_DEPS_OFFLINE=1`, then ran the **unmodified upstream fetcher** with HTTP/HTTPS proxies set to an unreachable loopback and `GIT_ALLOW_PROTOCOL=file`. All required repos and Mesa were verified without external internet access.
+
+`tools/check-vendored-opengl-deps.py` enforces the upstream dependency closure and validates every relevant commit and archive pin from our checked-in manifest. Optional sample-and-validation repositories `sokol-samples` and `VK-GL-CTS` are **not used for production builds** and not silently represented as included. Transitive Eden CPM packages (Boost, Xbyak, httplib, Vulkan headers, etc.), Meson `subprojects/` wraps and platform toolchain downloads require a distinct inventory; full end-to-end airgap compliance must be established beyond this OpenGL staging test.
