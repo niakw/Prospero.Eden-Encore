@@ -83,13 +83,13 @@ void RasterizerVulkan::DispatchCompute() {"""),
      'VideoCore::RasterizerDownloadArea RasterizerVulkan::GetFlushArea(DAddr addr, u64 size) {\n    ::Eden::Performance::DiagnosticTimer guest_read_timer(::Eden::Performance::guest_cpu_read);'),
     # ... and wait for those locks spinning briefly before sleeping (performance.h GuestCacheLock).
     ('        std::scoped_lock lock{texture_cache.mutex};\n        auto area = texture_cache.GetFlushArea(addr, size);',
-     '        ::Eden::Performance::GuestCacheLock(texture_cache.mutex);\n'
+     '        ::Eden::Performance::GuestCacheLock(texture_cache.mutex, true);\n'
      '        std::lock_guard lock{texture_cache.mutex, std::adopt_lock};\n        auto area = texture_cache.GetFlushArea(addr, size);'),
     ('        std::scoped_lock lock{buffer_cache.mutex};\n        if (buffer_cache.OnCPUWrite(addr, size)) {',
-     '        ::Eden::Performance::GuestCacheLock(buffer_cache.mutex);\n'
+     '        ::Eden::Performance::GuestCacheLock(buffer_cache.mutex, false);\n'
      '        std::lock_guard lock{buffer_cache.mutex, std::adopt_lock};\n        if (buffer_cache.OnCPUWrite(addr, size)) {'),
     ('        std::scoped_lock lock{texture_cache.mutex};\n        texture_cache.WriteMemory(addr, size);\n    }\n    pipeline_cache.InvalidateRegion(addr, size);',
-     '        ::Eden::Performance::GuestCacheLock(texture_cache.mutex);\n'
+     '        ::Eden::Performance::GuestCacheLock(texture_cache.mutex, true);\n'
      '        std::lock_guard lock{texture_cache.mutex, std::adopt_lock};\n        texture_cache.WriteMemory(addr, size);\n    }\n    pipeline_cache.InvalidateRegion(addr, size);'),
     # From upstream ProsperoEden 0dd9dd0 (#102): submitting after 4096 draws
     # can exceed the PS5 GPU watchdog (VK_ERROR_DEVICE_LOST). Cap command

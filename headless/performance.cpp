@@ -1120,6 +1120,30 @@ void ReportGpuThread(unsigned frame) {
                         samples, total_ns, window_samples, window_ns,
                         entry.max_ns.exchange(0, std::memory_order_relaxed));
         }
+        // Guest CPU callback contention, split by actual cache ownership.
+        // Only 2 x 3 atomic loads/5s; no snapshot locking or output on a draw.
+        constexpr const char* guest_cache_domains[] = {"buffer", "texture"};
+        static std::array<std::array<unsigned long long, 3>, 2> previous_cache_domains{};
+        for (unsigned d = 0; d < guest_cache_domain_totals.size(); ++d) {
+            const auto& stat = guest_cache_domain_totals[d];
+            const unsigned long long totals[] = {
+                stat.contended.load(std::memory_order_relaxed),
+                stat.blocked.load(std::memory_order_relaxed),
+                stat.wait_ns.load(std::memory_order_relaxed)
+            };
+            unsigned long long changes[3]{};
+            for (unsigned type = 0; type < 3; ++type) {
+                const auto last = previous_cache_domains[d][type];
+                changes[type] = totals[type] >= last ? totals[type] - last : totals[type];
+                previous_cache_domains[d][type] = totals[type];
+            }
+            std::printf("EDEN_GUEST_CACHE_DOMAIN frame=%u domain=%s "
+                        "contended=%llu blocked=%llu wait_ns=%llu "
+                        "window_contended=%llu window_blocked=%llu window_wait_ns=%llu\n",
+                        frame, guest_cache_domains[d],
+                        totals[0], totals[1], totals[2],
+                        changes[0], changes[1], changes[2]);
+        }
     }
     const auto window = Eden::Fastmem::WindowStats();
     std::printf("EDEN_FASTMEM window=%llx pages=%llu chunks=%llu direct_reads=%llu direct_writes=%llu "
