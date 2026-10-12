@@ -90,7 +90,12 @@ print(f'RADV WSI adaptation changed={changed} sha256={hashlib.sha256(text.encode
 # These startup-only diagnostics avoid repeated full game runs for each stage.
 for relative, replacements in {
     # Restore the pinned upload path: explicit CPU flush did not affect HUD corruption.
-    'src/amd/vulkan/radv_cmd_buffer.c': [],
+    'src/amd/vulkan/radv_cmd_buffer.c': [
+        # Mesa 26.2.4 (2026-10-01), upstream 1f4f4aeee9db552e2955db77ee5584aa729b0644:
+        # Use the actual height, not the already clamped width, for GFX10 bin size.
+        ('   extent.height = MAX2(extent.width, pdev->info.gfx_level >= GFX12 ? 128 : 64);',
+         '   extent.height = MAX2(extent.height, pdev->info.gfx_level >= GFX12 ? 128 : 64);'),
+    ],
     'src/amd/vulkan/radv_physical_device.c': [
         ('   if (result == VK_ERROR_INCOMPATIBLE_DRIVER || result == VK_ERROR_INITIALIZATION_FAILED)\n      return VK_SUCCESS;',
          '   if (result != VK_SUCCESS) fprintf(stderr, "radv/ps5: physical device creation result=%d\\n", result);\n   if (result == VK_ERROR_INCOMPATIBLE_DRIVER || result == VK_ERROR_INITIALIZATION_FAILED)\n      return VK_SUCCESS;'),
