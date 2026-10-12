@@ -1007,12 +1007,26 @@ void ReportGpuThread(unsigned frame) {
             "texture_cpu_refresh", "texture_alias_scan", "texture_alias_copy"
         };
         static_assert(std::size(cache_phase_names) == cache_phase_totals.size());
+        // Keep the established lifetime totals for existing parsers, and also
+        // publish exact per-snapshot deltas. Summing cumulative values across
+        // snapshots multiplies the apparent cache-lock and pipeline costs.
+        // Only the GPU owner records these samples; no per-draw work is added.
+        static std::array<unsigned long long, cache_phase_totals.size()> last_samples{};
+        static std::array<unsigned long long, cache_phase_totals.size()> last_total_ns{};
         for (unsigned phase = 0; phase < cache_phase_totals.size(); ++phase) {
             auto& entry = cache_phase_totals[phase];
-            std::printf("EDEN_GPU_CACHE_PHASE frame=%u phase=%s samples=%llu total_ns=%llu max_ns=%llu\n",
+            const auto samples = entry.samples.load(std::memory_order_relaxed);
+            const auto total_ns = entry.total_ns.load(std::memory_order_relaxed);
+            // ResetCachePhases() runs between titles in the same PS5 process.
+            const auto window_samples =
+                samples >= last_samples[phase] ? samples - last_samples[phase] : samples;
+            const auto window_ns =
+                total_ns >= last_total_ns[phase] ? total_ns - last_total_ns[phase] : total_ns;
+            last_samples[phase] = samples;
+            last_total_ns[phase] = total_ns;
+            std::printf("EDEN_GPU_CACHE_PHASE frame=%u phase=%s samples=%llu total_ns=%llu window_samples=%llu window_ns=%llu max_ns=%llu\n",
                         frame, cache_phase_names[phase],
-                        entry.samples.load(std::memory_order_relaxed),
-                        entry.total_ns.load(std::memory_order_relaxed),
+                        samples, total_ns, window_samples, window_ns,
                         entry.max_ns.exchange(0, std::memory_order_relaxed));
         }
     }
