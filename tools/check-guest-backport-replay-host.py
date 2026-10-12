@@ -15,6 +15,16 @@ root = Path(__file__).resolve().parents[1]
 apply_source = (root / "tools/apply-eden-backports.sh").read_text()
 pin = "5f142c7926d0c7fcbbd0ce30794d72f638a43b2a"
 blob_sha = "837016de1d4efe74d2efb8df0d9de10aa10d8a26"
+patch_names = (
+    "eden-ps5-guest-mapping-diagnostics.patch",
+    "eden-ps5-guest-walk.patch",
+    "eden-ps5-guest-zero-alias.patch",
+    "eden-ps5-guest-map-null-backing.patch",
+    "eden-ps5-guest-span.patch",
+)
+positions = [apply_source.index(f'apply_one "$root/headless/backports/{name}"')
+             for name in patch_names]
+assert positions == sorted(positions), "Guest-memory backport ordering changed"
 upstream_path = root / "vendor/sources/eden/src/core/memory.cpp"
 assert upstream_path.is_file(), "Pinned original Eden memory.cpp was not vendored"
 assert (root / "vendor/sources/eden/VENDOR-ORIGIN.json").is_file()
