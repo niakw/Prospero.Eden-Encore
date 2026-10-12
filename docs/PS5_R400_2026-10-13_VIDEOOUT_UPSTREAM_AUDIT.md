@@ -37,3 +37,7 @@ Initial combined R400 All-On workflow [#38319048610](https://github.com/niakw/Pr
 The updated installer permits **only this pinned historical SHA256** for the WSI path in addition to the original/up-to-date source, then atomically replaces it with the current canonical active file and invalidates native provenance. Unrecognized bytes for this or any other RADV path remain rejected. `tools/fixtures/ps5-r398-wsi-videoout.c` preserves the full old source, and `tools/check-vendored-radv-fork.py` verifies the real old-to-new staged replacement plus refusal on unknown inputs.
 
 This is a reproducible build-cache migration, **not** a change to game-rendering logic and not evidence of a native R400 package yet.
+
+## R400b native rebuild after deterministic WSI migration
+
+Source CI [#38319934068](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38319934068) passed at `35faea74bd9117fa343438c693c301298b76cdc9`. This commit launches a combined All-On PS5 build using `[full-build] [test-all-on]`; it contains no runtime code changes relative to the green source SHA. Verify the exact resulting build SHA, source checks, RADV install, binary, symbol provenance and distributable artifact before requesting any live FC27 test. Do not publish a release.
