@@ -945,13 +945,7 @@ void RasterizerVulkan::ModifyGPUMemory(size_t as_id, GPUVAddr addr, u64 size) {
         std::scoped_lock lock{texture_cache.mutex};
         texture_cache.UnmapGPUMemory(as_id, addr, size);
     }
-    // GPU-map invalidation changes virtual_ranges, concurrently queried by
-    // UpdateGraphicsBuffers under buffer_cache.mutex. Serialize this mutation.
-    // Keep texture and buffer lock scopes separate to preserve lock ordering.
-    {
-        std::scoped_lock lock{buffer_cache.mutex};
-        buffer_cache.UnmapGPUMemory(as_id, addr, size);
-    }
+    buffer_cache.UnmapGPUMemory(as_id, addr, size);
 }
 
 void RasterizerVulkan::SignalFence(std::function<void()>&& func) {
