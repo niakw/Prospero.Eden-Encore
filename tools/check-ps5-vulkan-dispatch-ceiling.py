@@ -43,7 +43,7 @@ assert "inline std::atomic<unsigned> dispatch_mask{15};" in perf
 assert "Eden::Performance::dispatch_mask.store(15, std::memory_order_relaxed);" in main
 assert "dev-settings dispatch_draws=8" in main  # reversible 8-draw baseline
 assert "Eden::Performance::dispatch_mask = static_cast<unsigned>(draws - 1);" in main
-assert "dev-settings dispatch_draws=64" in main  # 64 remains an explicit A/B override
+assert "dev-settings dispatch_draws=8" in main  # documented rollback; 64 still accepted by the full 8..512 parser
 assert "draws >= 8 && draws <= 512 && (draws & (draws - 1)) == 0" in main
 
 # Native C++ harness: use the exact generated function body, not a retyped Python model.
