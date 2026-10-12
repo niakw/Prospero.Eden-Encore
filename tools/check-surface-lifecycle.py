@@ -115,7 +115,7 @@ checks = r'''
 int main() {
     {
         SurfaceFlinger s;
-        s.m_displays.push_back(Display{42});
+        s.m_displays.push_back(Display{42, {}});
         s.attach(42, 7);
         s.RemoveLayerFromDisplayStack(42, 7);
         assert((s.events == std::vector<std::string>{"wait", "release:7"}));
@@ -125,7 +125,7 @@ int main() {
     }
     {
         SurfaceFlinger s;
-        s.m_displays.push_back(Display{99});
+        s.m_displays.push_back(Display{99, {}});
         s.attach(99, 17);
         s.DestroyLayer(17); // Container::OnTerminate bypasses CloseLayerLocked
         assert((s.events == std::vector<std::string>{"wait", "release:17"}));
@@ -136,7 +136,7 @@ int main() {
     }
     {
         SurfaceFlinger s;
-        s.m_displays.push_back(Display{13});
+        s.m_displays.push_back(Display{13, {}});
         s.attach(13, 23);
         s.attach(13, 24);
         s.RemoveDisplay(13);
@@ -147,8 +147,8 @@ int main() {
     }
     {
         SurfaceFlinger s;
-        s.m_displays.push_back(Display{1});
-        s.m_displays.push_back(Display{2});
+        s.m_displays.push_back(Display{1, {}});
+        s.m_displays.push_back(Display{2, {}});
         s.attach(1, 6);
         s.attach(2, 6);
         s.DestroyLayer(6);
