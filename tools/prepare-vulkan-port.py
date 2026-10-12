@@ -348,6 +348,11 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {'''),
 # unconditionally, or predicate from a pending host query, to the exact CPU evaluation;
 # hcr=cpu evaluates every condition on the CPU and predicates from constant 0/1 buffers.
 adapt('src/video_core/renderer_vulkan/vk_query_cache.cpp', 'vulkan_query_cache.cpp', [
+    # Upstream Eden #4499: UpdateBuffers here can change the TFB counter
+    # buffer count after BeginTransformFeedbackEXT has already recorded it.
+    # Keep the existing refresh in FlushBeginTFB only.
+    ('        // Refresh buffer state before ending transform feedback to ensure counters_count is up-to-date.\n'
+     '        UpdateBuffers();\n', ''),
     ('#include "video_core/vulkan_common/vulkan_wrapper.h"\n',
      '#include "video_core/vulkan_common/vulkan_wrapper.h"\n#include "dev_vulkan.h"\n#include "performance.h"\n'),
     ('    vk::Buffer hcr_resolve_buffer;\n',
