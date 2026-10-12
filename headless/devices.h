@@ -27,6 +27,11 @@ public:
     explicit PadEngine(std::string name);
     void SetButtonState(std::size_t player, int button, bool value);
     void SetButtonState(std::size_t player, VirtualButton button, bool value);
+    // Diagnostic-only count of actual rising edges published to the virtual
+    // Switch Plus button. Does not imply the guest HID service consumed it.
+    unsigned long long PublishedPlusEdges() const noexcept {
+        return published_plus_edges.load(std::memory_order_relaxed);
+    }
     void SetStickPosition(std::size_t player, int axis, float x, float y);
     // Gyro in turns per second, acceleration in G (Eden's convention), delta in microseconds.
     void SetMotionState(std::size_t player, u64 delta_us, float gyro_x, float gyro_y, float gyro_z,
@@ -50,6 +55,7 @@ private:
     // The game poll and teardown/reset paths are serialized by main.cpp.
     static constexpr int kTrackedButtons = 22; // virtual buttons 0..21 (right Joy-Con SR)
     std::array<std::array<std::uint8_t, kTrackedButtons>, kPlayers> button_cache{};
+    std::atomic<unsigned long long> published_plus_edges{0};
     std::array<std::array<float, 4>, kPlayers> axis_cache{};
     std::array<std::array<bool, 4>, kPlayers> axis_known{};
     PadIdentifier Identifier(std::size_t player) const;
@@ -119,6 +125,7 @@ private:
     std::atomic<unsigned> connection_changes = 0;
     unsigned polls_since_scan = 0;
     u64 polls = 0, samples_read = 0, usable_samples = 0, intercepted_samples = 0, circle_samples = 0, read_errors = 0;
+    u64 options_edges = 0; // raw Sony Options rising edges, only in Detailed mode
     u64 rumble_updates = 0, rumble_errors = 0;
     int rumble_last_error = 0;
     PadEdgeDiagnostics face_edges{};
