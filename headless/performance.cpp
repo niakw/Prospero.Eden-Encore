@@ -1144,43 +1144,45 @@ void ReportGpuThread(unsigned frame) {
         std::printf("%s%llu", slot ? "," : "", render_conditions[slot].load(std::memory_order_relaxed));
     std::printf("\n");
 #ifdef EDEN_DEV_PROFILE
-    // R393: only report the 12 largest cumulative IPC waits at 5s intervals.
-    // This is not a call stack and does not say that a thread is currently stuck.
-    struct IpcRow {
-        unsigned long long tid{}, calls{}, ns{}, max_ns{};
-    };
-    std::array<IpcRow, 12> ipc_heaviest{};
-    unsigned ipc_used = 0;
-    for (const auto& source : guest_ipc_threads) {
-        const auto calls = source.calls.load(std::memory_order_relaxed);
-        if (calls == 0) continue;
-        const IpcRow item{source.tid.load(std::memory_order_relaxed), calls,
-                          source.ns.load(std::memory_order_relaxed),
-                          source.max_ns.load(std::memory_order_relaxed)};
-        if (ipc_used < ipc_heaviest.size()) {
-            ipc_heaviest[ipc_used++] = item;
-            continue;
+    if (detailed_gpu_profile.load(std::memory_order_relaxed)) {
+        // R393: only report the 12 largest cumulative IPC waits at 5s intervals.
+        // This is not a call stack and does not say that a thread is currently stuck.
+        struct IpcRow {
+            unsigned long long tid{}, calls{}, ns{}, max_ns{};
+        };
+        std::array<IpcRow, 12> ipc_heaviest{};
+        unsigned ipc_used = 0;
+        for (const auto& source : guest_ipc_threads) {
+            const auto calls = source.calls.load(std::memory_order_relaxed);
+            if (calls == 0) continue;
+            const IpcRow item{source.tid.load(std::memory_order_relaxed), calls,
+                              source.ns.load(std::memory_order_relaxed),
+                              source.max_ns.load(std::memory_order_relaxed)};
+            if (ipc_used < ipc_heaviest.size()) {
+                ipc_heaviest[ipc_used++] = item;
+                continue;
+            }
+            unsigned least = 0;
+            for (unsigned i = 1; i < ipc_heaviest.size(); ++i)
+                if (ipc_heaviest[i].ns < ipc_heaviest[least].ns) least = i;
+            if (item.ns > ipc_heaviest[least].ns)
+                ipc_heaviest[least] = item;
         }
-        unsigned least = 0;
-        for (unsigned i = 1; i < ipc_heaviest.size(); ++i)
-            if (ipc_heaviest[i].ns < ipc_heaviest[least].ns) least = i;
-        if (item.ns > ipc_heaviest[least].ns)
-            ipc_heaviest[least] = item;
+        std::sort(ipc_heaviest.begin(), ipc_heaviest.begin() + ipc_used,
+                  [](const IpcRow& a, const IpcRow& b) { return a.ns > b.ns; });
+        for (unsigned i = 0; i < ipc_used; ++i) {
+            const auto& row = ipc_heaviest[i];
+            std::printf("EDEN_DEV_IPC_THREAD tid=%llu calls=%llu ns=%llu max_ns=%llu\n",
+                        row.tid, row.calls, row.ns, row.max_ns);
+        }
+        std::printf("EDEN_DEV_IPCHIST lt50us=%llu lt500us=%llu lt5ms=%llu ge5ms=%llu "
+                    "overflow_calls=%llu\n",
+                    guest_ipc_hist[0].load(std::memory_order_relaxed),
+                    guest_ipc_hist[1].load(std::memory_order_relaxed),
+                    guest_ipc_hist[2].load(std::memory_order_relaxed),
+                    guest_ipc_hist[3].load(std::memory_order_relaxed),
+                    guest_ipc_overflow_calls.load(std::memory_order_relaxed));
     }
-    std::sort(ipc_heaviest.begin(), ipc_heaviest.begin() + ipc_used,
-              [](const IpcRow& a, const IpcRow& b) { return a.ns > b.ns; });
-    for (unsigned i = 0; i < ipc_used; ++i) {
-        const auto& row = ipc_heaviest[i];
-        std::printf("EDEN_DEV_IPC_THREAD tid=%llu calls=%llu ns=%llu max_ns=%llu\n",
-                    row.tid, row.calls, row.ns, row.max_ns);
-    }
-    std::printf("EDEN_DEV_IPCHIST lt50us=%llu lt500us=%llu lt5ms=%llu ge5ms=%llu "
-                "overflow_calls=%llu\n",
-                guest_ipc_hist[0].load(std::memory_order_relaxed),
-                guest_ipc_hist[1].load(std::memory_order_relaxed),
-                guest_ipc_hist[2].load(std::memory_order_relaxed),
-                guest_ipc_hist[3].load(std::memory_order_relaxed),
-                guest_ipc_overflow_calls.load(std::memory_order_relaxed));
 #endif
     // These are 1-in-16 GPU draw and 1-in-64 guest-write SAMPLES, not
     // full totals. Each phase reports its own sample count and window cost.
