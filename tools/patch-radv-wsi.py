@@ -96,6 +96,13 @@ for relative, replacements in {
         ('   extent.height = MAX2(extent.width, pdev->info.gfx_level >= GFX12 ? 128 : 64);',
          '   extent.height = MAX2(extent.height, pdev->info.gfx_level >= GFX12 ? 128 : 64);'),
     ],
+    'src/amd/vulkan/radv_pipeline.c': [
+        # Mesa 26.2.2 (2026-09-02), upstream 3261364cab95877988e0bcf767e5f68c03f35652
+        # The TRUNC_COORD sampler bit must not change array-layer rounding.
+        ('''               .lower_array_layer_round_even =
+                  !compiler_info->ac->conformant_trunc_coord && !compiler_info->key.disable_trunc_coord,''',
+         '''               .lower_array_layer_round_even = !compiler_info->ac->conformant_trunc_coord,'''),
+    ],
     'src/amd/vulkan/radv_physical_device.c': [
         ('   if (result == VK_ERROR_INCOMPATIBLE_DRIVER || result == VK_ERROR_INITIALIZATION_FAILED)\n      return VK_SUCCESS;',
          '   if (result != VK_SUCCESS) fprintf(stderr, "radv/ps5: physical device creation result=%d\\n", result);\n   if (result == VK_ERROR_INCOMPATIBLE_DRIVER || result == VK_ERROR_INITIALIZATION_FAILED)\n      return VK_SUCCESS;'),
