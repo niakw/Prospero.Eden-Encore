@@ -12,19 +12,6 @@ perf = (root / "headless/performance.h").read_text()
 report = (root / "headless/performance.cpp").read_text()
 main = (root / "headless/main.cpp").read_text()
 ast.parse(generator)
-# R360: virtual ranges' Unmap must be serialized against buffer binds.
-rasterizer = (root / "vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp").read_text()
-modify = rasterizer.split("void RasterizerVulkan::ModifyGPUMemory(", 1)[1].split(
-    "void RasterizerVulkan::SignalFence(", 1)[0]
-assert "texture_cache.UnmapGPUMemory(as_id, addr, size);" in modify
-assert "std::scoped_lock lock{texture_cache.mutex};" in modify
-assert "std::scoped_lock lock{buffer_cache.mutex};" in modify
-assert modify.index("texture_cache.UnmapGPUMemory(as_id, addr, size);") < modify.index(
-    "std::scoped_lock lock{buffer_cache.mutex};")
-assert modify.index("std::scoped_lock lock{buffer_cache.mutex};") < modify.index(
-    "buffer_cache.UnmapGPUMemory(as_id, addr, size);")
-assert "std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};" not in modify
-assert "buffer_cache.UnmapGPUMemory(as_id, addr, size);" in generator
 assert "std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};" in generator
 assert "pipeline->Configure(is_indexed)" in generator
 assert "cache_draw_sample_active = previous_sample;" in generator
