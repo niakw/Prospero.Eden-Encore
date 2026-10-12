@@ -230,7 +230,7 @@ class Services
     {
         return 1u;
     }
-    virtual std::string version() = 0; // "R1"
+    virtual std::string version() = 0; // compiler's RNNN (not package R1)
 
     // ---- library ----
     virtual std::vector<Game> games() = 0; // reads every game file: slow

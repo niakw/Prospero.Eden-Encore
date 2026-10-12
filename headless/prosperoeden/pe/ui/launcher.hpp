@@ -98,6 +98,7 @@ class Launcher
         mapping_reset,
         shader_caches,
         console_mode,
+        exit_app,
     };
 
     // ---- shell (launcher.cpp) ----

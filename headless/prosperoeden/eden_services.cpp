@@ -1038,7 +1038,7 @@ std::string EdenServices::clock() {
 unsigned EdenServices::controllers() { return radio_input_controllers(); }
 
 std::string EdenServices::version() {
-    return Eden::kAppVersion;
+    return Eden::kBuildVersion;
 }
 
 std::vector<pe::ui::Game> EdenServices::games() {

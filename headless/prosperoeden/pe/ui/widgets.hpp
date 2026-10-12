@@ -71,6 +71,11 @@ float text_shrink(Canvas &c, std::string_view value, float x, float baseline, fl
 // under 1 the letters shrink that far first (pass kShrink for the launcher's own text).
 void text_block(Canvas &c, std::string_view value, float x, float first_baseline, float size,
                 float line_height, Color color, float max_width, int max_lines, float least = 1.0f);
+// Hero copy only: when truncating, stop on a complete meaningful word
+// (never a standalone pronoun/conjunction/article), then add " ...".
+void text_block_semantic(Canvas &c, std::string_view value, float x, float first_baseline,
+                         float size, float line_height, Color color, float max_width,
+                         int max_lines, float least = 1.0f);
 // Where the values of a group of labelled lines start: `column`, or further right when one of
 // the labels (drawn from `left`) is longer than the English one.
 float value_column(Canvas &c, std::initializer_list<std::string_view> labels, float left,

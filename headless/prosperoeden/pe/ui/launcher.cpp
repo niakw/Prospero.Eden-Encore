@@ -101,6 +101,7 @@ bool Launcher::confirm_action(Confirmation action)
         case Confirmation::mapping_reset: question = TR("Reset controller mapping?"); break;
         case Confirmation::shader_caches: question = TR("Clear cache?"); break;
         case Confirmation::console_mode: question = TR("Change console mode for this game?"); break;
+        case Confirmation::exit_app: question = TR("Exit Eden Encore?"); break;
         default: break;
         }
         say(tr(question), true);
@@ -244,6 +245,15 @@ void Launcher::press(Key key)
     // through to the underlying screen while the dialog is visible.
     if (confirmation_ != Confirmation::none)
     {
+        // Exit is unlike setting resets: confirming it must not be replayed
+        // as another Circle event, which would immediately reopen the dialog.
+        if (confirmation_ == Confirmation::exit_app && key == Key::cross) {
+            clear_confirmation();
+            message_.clear();
+            done_ = true; // normal RunApp -> main exit(0); no game selected
+            cue(Cue::saved);
+            return;
+        }
         if (key == Key::circle)
         {
             clear_confirmation();
@@ -598,6 +608,8 @@ void Launcher::draw_confirmation(Canvas &c)
         title = tr("Controls");
     else if (confirmation_ == Confirmation::shader_caches)
         title = tr("Diagnostics");
+    else if (confirmation_ == Confirmation::exit_app)
+        title = tr("Exit Eden Encore");
 
     c.list.rounded_rect(kScreen, 0.0f, theme::kScrim.with_alpha(0.74f));
     const Rect panel{548.0f, 354.0f, 824.0f, 330.0f};

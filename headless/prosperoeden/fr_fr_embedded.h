@@ -1596,5 +1596,17 @@ msgstr "Bibliothèque de jeux indisponible"
 #: eden_services.cpp
 msgid "The game could not allocate PS5 memory. Close Eden Encore completely before retrying to release memory retained between games."
 msgstr "Le jeu n'a pas pu allouer de mémoire sur la PS5. Fermez complètement Eden Encore avant de réessayer pour libérer la mémoire conservée entre les jeux."
+
+#: pe/ui/home.cpp
+msgid "Quit"
+msgstr "Quitter"
+
+#: pe/ui/launcher.cpp
+msgid "Exit Eden Encore"
+msgstr "Quitter Eden Encore"
+
+#: pe/ui/launcher.cpp
+msgid "Exit Eden Encore?"
+msgstr "Voulez-vous quitter Eden Encore ?"
 )FRPO";
 }

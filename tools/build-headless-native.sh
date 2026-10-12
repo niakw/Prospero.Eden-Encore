@@ -19,6 +19,9 @@ cd "$root"
 # Source provenance travels with the app; the scratch tree is a detached
 # upstream snapshot, so derive the SHA from our actual Encore checkout.
 source_commit=$(git -C "$root" rev-parse --verify HEAD)
+# Do not conflate GitHub run numbers with Encore's R-revisions.
+build_label="${EDEN_LAUNCHER_BUILD_LABEL:-$(python3 -B "$root/tools/ci/derive-encore-build-label.py" "$root/MEMORY.md")}"
+[[ "$build_label" =~ ^R[0-9]+$ ]] || { echo "Invalid Encore build label: $build_label" >&2; exit 1; }
 [[ "$source_commit" =~ ^[0-9a-f]{40}$ ]] || {
     echo "Cannot attest the native Encore source commit" >&2
     exit 1
@@ -110,6 +113,7 @@ cmake -S "$scratch/source" -B "$scratch/native-local" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="$root/headless/ps5.cmake" -DPS5_NATIVE=ON -DEDEN_DEVICE_FRONTEND="$devices" \
     -DCMAKE_BUILD_TYPE=Release -DENABLE_LTO=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
     -DEDEN_ENCORE_SOURCE_COMMIT="$source_commit" \
+    -DEDEN_LAUNCHER_BUILD_LABEL="$build_label" \
     -DEDEN_SHARED_JIT="${EDEN_SHARED_JIT:-OFF}" \
     -DEDEN_JIT_COMPILE_BATCH="${EDEN_JIT_COMPILE_BATCH:-OFF}" \
     -DEDEN_SPARSE_JIT_DEV="${EDEN_SPARSE_JIT_DEV:-OFF}" \
