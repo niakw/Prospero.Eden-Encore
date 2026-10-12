@@ -1053,7 +1053,8 @@ void ReportGpuThread(unsigned frame) {
         };
         static_assert(std::size(cache_phase_names) == cache_phase_totals.size());
         constexpr const char* drop_names[] = {
-            "no_pipeline", "configure_rejected", "built_pipeline_failed", "descriptor_buffer_full"
+            "no_pipeline", "configure_rejected", "built_pipeline_failed", "descriptor_buffer_full",
+            "worker_pipeline_failed"
         };
         static_assert(std::size(drop_names) == graphics_draw_drop_totals.size());
         static std::array<unsigned long long, graphics_draw_drop_totals.size()> last_drops{};

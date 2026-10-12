@@ -23,6 +23,10 @@ assert "GraphicsDrawDrop::NoPipeline" in p
 assert "GraphicsDrawDrop::ConfigureRejected" in p
 assert "GraphicsDrawDrop::BuiltPipelineFailed" in graphics
 assert "GraphicsDrawDrop::DescriptorBufferFull" in graphics
+assert "GraphicsDrawDrop::WorkerPipelineFailed" in graphics
+assert "GraphicsDrawDrop::WorkerPipelineFailed" in generator
+assert "WorkerPipelineFailed" in perf
+assert '"worker_pipeline_failed"' in report
 assert "GraphicsDrawDrop::DescriptorBufferFull" in generator
 assert "GraphicsDrawDrop::ConfigureRejected" in generator
 # R362 uses 1-in-16 timers without altering the guest cache lock lifetimes.

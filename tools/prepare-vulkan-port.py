@@ -1328,6 +1328,9 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
     ]
     if name == 'vk_graphics_pipeline':
         replacements.extend([
+            # R363: async failed pipeline can be dropped by the Vulkan worker
+            # even after the earlier GPU-owner IsBuilt() check passed.
+            ("        if (bind_pipeline) {\n            if (!pipeline) {\n                return;\n            }", "        if (bind_pipeline) {\n            if (!pipeline) {\n                // An asynchronously-built pipeline can fail after Configure's\n                // earlier IsBuilt()/pipeline check but before this worker\n                // callback executes. Count the actual GPU draw omission.\n                ::Eden::Performance::RecordGraphicsDrawDrop(\n                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                return;\n            }"),
             # R362: split the previously unaccounted ConfigureImpl costs into
             # stage texture handles, texture buffers, descriptor binds, render
             # targets, feedback-loop barriers and final graphics submission.

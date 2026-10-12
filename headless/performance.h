@@ -192,7 +192,8 @@ private:
 // candidates. Only increment on an actual rejected draw with diagnostics on.
 // In particular no atomic writes are added to the normal successful draw path.
 enum class GraphicsDrawDrop : unsigned {
-    NoPipeline, ConfigureRejected, BuiltPipelineFailed, DescriptorBufferFull, Count
+    NoPipeline, ConfigureRejected, BuiltPipelineFailed, DescriptorBufferFull,
+    WorkerPipelineFailed, Count
 };
 inline std::array<std::atomic<unsigned long long>,
                   static_cast<unsigned>(GraphicsDrawDrop::Count)> graphics_draw_drop_totals{};
