@@ -646,6 +646,8 @@ bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
     texture_cache.CheckFeedbackLoop(std::span<const VideoCommon::ImageViewInOut>{views.data(),
                                                                                  views.size()});
     if (IsBuilt() && !pipeline) {
+        ::Eden::Performance::RecordGraphicsDrawDrop(
+            ::Eden::Performance::GraphicsDrawDrop::BuiltPipelineFailed);
         return false;
     }
     return ConfigureDraw(rescaling, render_area);
@@ -672,6 +674,8 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
             const DescriptorBufferRing::Allocation alloc{
                 descriptor_buffer_ring.Allocate(scheduler, descriptor_buffer_layout.size)};
             if (!alloc.host) {
+                ::Eden::Performance::RecordGraphicsDrawDrop(
+                    ::Eden::Performance::GraphicsDrawDrop::DescriptorBufferFull);
                 LOG_DEBUG(Render_Vulkan, "Failed to reserve descriptor memory, skipping draw");
                 return false;
             }

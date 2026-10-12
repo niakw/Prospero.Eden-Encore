@@ -20,6 +20,9 @@ def adapt(relative, destination, replacements):
 adapt('src/core/frontend/emu_window.h', 'include/core/frontend/emu_window.h',
       [('    Xcb,', '    Xcb,\n    PS5,')])
 adapt('src/video_core/renderer_vulkan/vk_rasterizer.cpp', 'vulkan_rasterizer.cpp', [
+    # R361: count skipped draws only in DEV detailed profiling.
+    ("    GraphicsPipeline* pipeline{pipeline_cache.CurrentGraphicsPipeline()};\n    if (!pipeline) {\n        return;\n    }", "    GraphicsPipeline* pipeline{pipeline_cache.CurrentGraphicsPipeline()};\n    if (!pipeline) {\n        ::Eden::Performance::RecordGraphicsDrawDrop(\n            ::Eden::Performance::GraphicsDrawDrop::NoPipeline);\n        return;\n    }"),
+    ("        if (!pipeline) return;", "        if (!pipeline) {\n            ::Eden::Performance::RecordGraphicsDrawDrop(\n                ::Eden::Performance::GraphicsDrawDrop::NoPipeline);\n            return;\n        }"),
     # Compute synchronization (dev_vulkan.h compute_barriers): indirect
     # dispatches returned before the pre-dispatch barrier, and no barrier made a dispatch's
     # writes visible to later indirect arguments, vertex/index fetch, shaders or copies.
@@ -217,8 +220,11 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {'''),
     pipeline->SetEngine(maxwell3d, gpu_memory);
     const bool pipeline_ok = pipeline->Configure(is_indexed);
     configure_phase.Stop();
-    if (!pipeline_ok)
+    if (!pipeline_ok) {
+        ::Eden::Performance::RecordGraphicsDrawDrop(
+            ::Eden::Performance::GraphicsDrawDrop::ConfigureRejected);
         return;
+    }
 
     ::Eden::Performance::CachePhaseTimer dynamic_phase{
         ::Eden::Performance::CachePhase::DynamicStates, cache_sample};
@@ -1319,6 +1325,9 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
     ]
     if name == 'vk_graphics_pipeline':
         replacements.extend([
+            # R361: attribute absent HUD/pitch to pipeline or descriptor skips.
+            ("    if (IsBuilt() && !pipeline) {\n        return false;\n    }", "    if (IsBuilt() && !pipeline) {\n        ::Eden::Performance::RecordGraphicsDrawDrop(\n            ::Eden::Performance::GraphicsDrawDrop::BuiltPipelineFailed);\n        return false;\n    }"),
+            ("            if (!alloc.host) {\n                LOG_DEBUG(Render_Vulkan, \"Failed to reserve descriptor memory, skipping draw\");\n                return false;\n            }", "            if (!alloc.host) {\n                ::Eden::Performance::RecordGraphicsDrawDrop(\n                    ::Eden::Performance::GraphicsDrawDrop::DescriptorBufferFull);\n                LOG_DEBUG(Render_Vulkan, \"Failed to reserve descriptor memory, skipping draw\");\n                return false;\n            }"),
             # R354: preserve the versioned GPU-only descriptor scratch reuse
             # without touching guest cache lock scopes or command ordering.
             ("#include <iostream>\n#include <span>",

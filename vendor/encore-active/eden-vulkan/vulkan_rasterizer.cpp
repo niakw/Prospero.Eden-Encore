@@ -278,6 +278,8 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
 
     GraphicsPipeline* pipeline{pipeline_cache.CurrentGraphicsPipeline()};
     if (!pipeline) {
+        ::Eden::Performance::RecordGraphicsDrawDrop(
+            ::Eden::Performance::GraphicsDrawDrop::NoPipeline);
         return;
     }
 #ifdef PS5_NATIVE
@@ -287,7 +289,11 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
             break;
         gpu_memory->FlushCaching();
         pipeline = pipeline_cache.CurrentGraphicsPipeline();
-        if (!pipeline) return;
+        if (!pipeline) {
+            ::Eden::Performance::RecordGraphicsDrawDrop(
+                ::Eden::Performance::GraphicsDrawDrop::NoPipeline);
+            return;
+        }
     }
 #endif
 #ifdef PS5_NATIVE
@@ -324,8 +330,11 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
     pipeline->SetEngine(maxwell3d, gpu_memory);
     const bool pipeline_ok = pipeline->Configure(is_indexed);
     configure_phase.Stop();
-    if (!pipeline_ok)
+    if (!pipeline_ok) {
+        ::Eden::Performance::RecordGraphicsDrawDrop(
+            ::Eden::Performance::GraphicsDrawDrop::ConfigureRejected);
         return;
+    }
 
     ::Eden::Performance::CachePhaseTimer dynamic_phase{
         ::Eden::Performance::CachePhase::DynamicStates, cache_sample};
