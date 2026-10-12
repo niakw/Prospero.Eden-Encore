@@ -53,6 +53,13 @@ void PadEngine::SetButtonState(std::size_t player, int button, bool value) {
         auto& previous = button_cache[player][static_cast<std::size_t>(button)];
         if (previous == state) return;
         previous = state;
+        // Count only actual rising edges delivered to virtual input, not
+        // repeated scePadRead samples. Never count a publishing attempt as
+        // proof that FC27 read the Switch Npad shared-memory event.
+        if (player == 0 && value &&
+            button == static_cast<int>(VirtualButton::ButtonPlus) &&
+            NativeLogs::Detailed())
+            published_plus_edges.fetch_add(1, std::memory_order_relaxed);
     }
     // Inputs outside the known virtual-button subset remain visible to
     // the underlying engine rather than silently losing a future mapping.
@@ -302,6 +309,16 @@ bool Pad::Poll() {
             static_cast<unsigned long long>(face_edges.square),
             static_cast<unsigned long long>(face_edges.triangle),
             mapping[game_x], mapping[game_y]);
+        // Compact extra read-only diagnostic: physical Options -> virtual
+        // Plus publication. The missing final Npad consumption remains a
+        // separate layer and must not be inferred from these counters.
+        std::fprintf(stderr,
+            "EDEN_PAD_INPUT_CHAIN polls=%llu options_edges=%llu published_plus_edges=%llu "
+            "sony_intercepted_samples=%llu\n",
+            static_cast<unsigned long long>(polls),
+            static_cast<unsigned long long>(options_edges),
+            static_cast<unsigned long long>(engine->PublishedPlusEdges()),
+            static_cast<unsigned long long>(intercepted_samples));
     }
     return primary;
 }
@@ -397,6 +414,8 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
         if (player == 0 && is_usable(raw) && NativeLogs::Detailed()) {
             face_edges.Observe(last_buttons, pressed, kButtonCross, kButtonCircle,
                                kButtonSquare, kButtonTriangle);
+            if ((pressed & kButtonOptions) && !(last_buttons & kButtonOptions))
+                ++options_edges;
         }
         last_buttons = pressed;
         for (const auto [mask, button] : fixed)
