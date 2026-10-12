@@ -110,6 +110,9 @@ assert "std::optional<GraphicsDescriptorScratchLease> reused" not in active
 assert "void GraphicsPipeline::PreflightDescriptorScratch() const" in active
 assert "scratch.views.reserve(num_image_elements)" in active
 assert "scratch.samplers.reserve(num_textures)" in active
+assert "thread_local GraphicsDescriptorScratch graphics_descriptor_nested_scratch;" in active
+assert "graphics_descriptor_nested_scratch" in generator
+assert "if (!nested) current->in_use = false;" in active
 header = (root / "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_graphics_pipeline.h").read_text()
 rasterizer = (root / "vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp").read_text()
 assert "void PreflightDescriptorScratch() const;" in header
@@ -154,8 +157,21 @@ int main() {
         {
             GraphicsDescriptorScratchLease nested;
             assert(nested.Views().empty());
+            assert(&nested.Views() == &Vulkan::graphics_descriptor_nested_scratch.views);
             nested.Views().push_back({999, true, 42});
             assert(nested.Views()[0].index == 999);
+            {
+                GraphicsDescriptorScratchLease deep;
+                assert(&deep.Views() != &nested.Views());
+                deep.Views().push_back({888, false, 88});
+                assert(deep.Views().front().index == 888);
+                assert(nested.Views()[0].index == 999);
+            }
+        }
+        {
+            GraphicsDescriptorScratchLease reused_nested;
+            assert(reused_nested.Views().empty());
+            assert(&reused_nested.Views() == &Vulkan::graphics_descriptor_nested_scratch.views);
         }
         assert(outer.Views().size() == 130);
         assert(outer.Views()[129].index == 129);
