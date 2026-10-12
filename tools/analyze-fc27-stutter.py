@@ -41,7 +41,24 @@ def analyze(log: str) -> dict:
     pressure: dict[int, dict] = {}
     gpu: dict[int, dict] = {}
     phases: dict[str, dict[int, dict]] = defaultdict(dict)
+    # HLE reports cumulative *service* timings. Command 3 is an outer Binder
+    # transaction, not the inner buffer-queue transaction type; never label it
+    # DequeueBuffer without separately accounting for the dequeue timer.
+    hle_previous: dict[tuple[str, str], tuple[int, int]] = {}
+    hle_deltas: dict[tuple[str, str], list[int]] = defaultdict(lambda: [0, 0])
+    hle_re = re.compile(r"\bservice=(\S+)\s+cmd=(\d+)\s+calls=(\d+)\s+ns=(\d+)")
     for line in log.splitlines():
+        if line.startswith("EDEN_DEV_HLE "):
+            match = hle_re.search(line)
+            if match:
+                service, command, raw_calls, raw_ns = match.groups()
+                key = (service, command)
+                calls, nanos = int(raw_calls), int(raw_ns)
+                previous = hle_previous.get(key)
+                if previous and calls >= previous[0] and nanos >= previous[1]:
+                    hle_deltas[key][0] += calls - previous[0]
+                    hle_deltas[key][1] += nanos - previous[1]
+                hle_previous[key] = (calls, nanos)
         if line.startswith("EDEN_VULKAN_FRAME "):
             value = values(line)
             if "total" in value:
@@ -91,6 +108,10 @@ def analyze(log: str) -> dict:
         "late50_during_full": int(in_full),
         "late50_full_window_share": in_full / stall if stall else 0.0,
         "queue_wait_seconds": sum(row.get("gpu_full_ms", 0) for row in rows) / 1000,
+        "guest_dequeue_seconds": sum(row.get("guest_dequeue_ms", 0) for row in rows) / 1000,
+        "guest_ipc_seconds": sum(row.get("guest_ipc_ms", 0) for row in rows) / 1000,
+        "binder_auto_transaction_calls": hle_deltas[("IHOSBinderDriver", "3")][0],
+        "binder_auto_transaction_seconds": hle_deltas[("IHOSBinderDriver", "3")][1] / 1e9,
         "gpu_thread_idle_fraction": (
             sum(row.get("gpu_idle_ms", 0) for row in rows) /
             (sum(row.get("seconds", 5.0) for row in rows) * 1000)
@@ -122,6 +143,8 @@ def self_test() -> None:
         "EDEN_FRAME_PRESSURE frame=300 gpu_full_ms=0 gpu_idle_ms=3800 gpu_dispatch_ms=1050",
         "EDEN_DEV_GPU frame=300 dispatch_calls=900 full_calls=10 full_ns=20000000 draws=280",
         "EDEN_GPU_CACHE_PHASE frame=300 phase=pair_wait total_ns=1400000",
+        "EDEN_DEV_HLE service=IHOSBinderDriver cmd=3 calls=2 ns=20000000",
+        "EDEN_DEV_HLE service=IHOSBinderDriver cmd=3 calls=5 ns=70000000",
     ])
     result = analyze(sample)
     assert result["windows"] == 2
@@ -129,6 +152,8 @@ def self_test() -> None:
     assert result["queue_full_windows"] == 1
     assert result["late50_full_window_share"] == 1
     assert result["queue_wait_seconds"] == 0.02
+    assert result["binder_auto_transaction_calls"] == 3
+    assert result["binder_auto_transaction_seconds"] == 0.05
     assert result["rows"][1]["delta_dispatch_calls"] == 400
     assert abs(result["cache_phases"]["pair_wait"]["sampled_ms"] - .4) < 1e-9
     print("FC27_TRACE_ANALYZER_SELF_TEST_PASS")
@@ -149,10 +174,16 @@ def main() -> None:
           "late_in_full={late50_during_full} fraction={late50_full_window_share:.3f} "
           "queue_wait_seconds={queue_wait_seconds:.3f} gpu_thread_idle_fraction={gpu_thread_idle_fraction:.3f} "
           "mean_fps={mean_fps:.2f} worst_frame_ms={max_frame_ms:.1f}".format(**report))
+    print("GUEST_BUFFER_DEQUEUE seconds={guest_dequeue_seconds:.3f} "
+          "guest_ipc_seconds={guest_ipc_seconds:.3f} "
+          "binder_auto_calls={binder_auto_transaction_calls} "
+          "binder_auto_seconds={binder_auto_transaction_seconds:.3f}".format(**report))
     print("CORRELATIONS", report["late50_correlation"])
     for name, value in sorted(report["cache_phases"].items(),
                               key=lambda item: -item[1]["sampled_ms"]):
         print("CACHE_PHASE", name, value)
+    print("NOTE: Outer Binder command 3 multiplexes graphics transactions (including DequeueBuffer); "
+          "its accumulated wall time is NOT proof of a single buffer queue deadlock.")
     print("NOTE: These are five-second window associations, not per-frame causation. "
           "GPU worker idle is not physical GPU utilization. "
           "Do not conflate gameplay stutter with frozen-but-presenting menus.")
