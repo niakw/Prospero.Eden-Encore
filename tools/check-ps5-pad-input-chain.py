@@ -14,7 +14,7 @@ mapping=(root/'headless/button_mapping.h').read_text()
 
 assert 'published_plus_edges{0}' in header
 assert 'PublishedPlusEdges() const noexcept' in header
-assert 'u64 options_edges = 0;' in header
+assert 'u64 options_edges = 0, create_edges = 0;' in header
 assert 'button == static_cast<int>(VirtualButton::ButtonPlus)' in source
 assert 'published_plus_edges.fetch_add(1, std::memory_order_relaxed)' in source
 assert 'if ((pressed & kButtonOptions) && !(last_buttons & kButtonOptions))' in source

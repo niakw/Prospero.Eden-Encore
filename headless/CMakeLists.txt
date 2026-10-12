@@ -1087,6 +1087,11 @@ if(PS5_NATIVE)
         APPEND PROPERTY COMPILE_DEFINITIONS "PS5_NATIVE=1")
     set_property(SOURCE "${PROJECT_SOURCE_DIR}/src/video_core/host1x/gpu_device_memory_manager.cpp"
         TARGET_DIRECTORY video_core APPEND PROPERTY COMPILE_DEFINITIONS "PS5_NATIVE=1")
+    # Upstream core is a distinct static target: PS5_NATIVE on eden-headless
+    # does NOT propagate here. Disable Switch HOME/Capture applet behavior
+    # only in the pinned AM poller, leaving desktop behavior unchanged.
+    set_property(SOURCE "${PROJECT_SOURCE_DIR}/src/core/hle/service/am/button_poller.cpp"
+        TARGET_DIRECTORY core APPEND PROPERTY COMPILE_DEFINITIONS "PS5_NATIVE=1")
 endif()
 # Homebrew and some titles can have no control/NACP data. Avoid dereferencing the absent
 # object when deriving the pseudo device ID; seed 0 matches Eden's defaults for missing NACP data.

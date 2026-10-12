@@ -110,7 +110,7 @@ void CheckPad() {
         const std::pair<ButtonMask, int> mapping[] = {
             {kButtonCircle, 0}, {kButtonCross, 1}, {kButtonTriangle, 2}, {kButtonSquare, 3},
             {kButtonL3, 4}, {kButtonR3, 5}, {kButtonL1, 6}, {kButtonR1, 7},
-            {kButtonL2, 8}, {kButtonR2, 9}, {kButtonOptions, 10}, {kButtonCreate, 11},
+            {kButtonL2, 8}, {kButtonR2, 9}, {kButtonOptions, 10},
             {kButtonLeft, 12}, {kButtonUp, 13}, {kButtonRight, 14}, {kButtonDown, 15},
         };
         for (auto [mask, button] : mapping) {
@@ -166,9 +166,22 @@ void CheckPad() {
         sample.buttons = kButtonTouchPad; consume();
         sample.connected = 0; consume(); CHECK(none_pressed());
         sample.connected = 1; sample.buttons = 0; consume(); CHECK(none_pressed());
-        // Create is Minus directly, also while the touchpad is down.
-        sample.buttons = kButtonCreate | kButtonTouchPad; consume(); CHECK(pad.Engine().GetButton({}, 11));
+        // The real PS5 Create button now becomes virtual Switch Capture,
+        // not an unexpected Minus. No Nintendo OS screenshot is emitted.
+        sample.buttons = kButtonCreate; consume();
+        CHECK(pad.Engine().GetButton({}, 19)); CHECK(!pad.Engine().GetButton({}, 11));
+        sample.buttons = 0; consume(); CHECK(none_pressed());
+        // Sony PS/Home itself is not exposed by scePadRead; Touchpad+Options
+        // provides guest HOME. Neither physical component may leak Plus/Minus.
+        sample.buttons = kButtonTouchPad | kButtonOptions; consume();
+        CHECK(pad.Engine().GetButton({}, 18));
+        CHECK(!pad.Engine().GetButton({}, 10) && !pad.Engine().GetButton({}, 11));
+        for (int i = 0; i < 80; ++i) {
+            consume(); CHECK(pad.Engine().GetButton({}, 18));
+            CHECK(!pad.Engine().GetButton({}, 10) && !pad.Engine().GetButton({}, 11));
+        }
         sample.buttons = kButtonTouchPad; consume(); CHECK(none_pressed());
+        sample.buttons = 0; consume(); CHECK(none_pressed());
         sample.buttons = kButtonTouchPad | kButtonL1; consume(); CHECK(pad.TakeReturnToMenu());
         sample.buttons = 0; consume(); CHECK(none_pressed());
 

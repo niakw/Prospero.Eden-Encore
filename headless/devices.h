@@ -14,6 +14,7 @@
 #include "input_common/input_engine.h"
 #include "button_mapping.h"
 #include "pad_diagnostics.h"
+#include "ps5_guest_system_button_route.h"
 #include "ps5_pad.hpp"
 
 namespace Eden {
@@ -31,6 +32,12 @@ public:
     // Switch Plus button. Does not imply the guest HID service consumed it.
     unsigned long long PublishedPlusEdges() const noexcept {
         return published_plus_edges.load(std::memory_order_relaxed);
+    }
+    unsigned long long PublishedHomeEdges() const noexcept {
+        return published_home_edges.load(std::memory_order_relaxed);
+    }
+    unsigned long long PublishedCaptureEdges() const noexcept {
+        return published_capture_edges.load(std::memory_order_relaxed);
     }
     void SetStickPosition(std::size_t player, int axis, float x, float y);
     // Gyro in turns per second, acceleration in G (Eden's convention), delta in microseconds.
@@ -56,6 +63,8 @@ private:
     static constexpr int kTrackedButtons = 22; // virtual buttons 0..21 (right Joy-Con SR)
     std::array<std::array<std::uint8_t, kTrackedButtons>, kPlayers> button_cache{};
     std::atomic<unsigned long long> published_plus_edges{0};
+    std::atomic<unsigned long long> published_home_edges{0};
+    std::atomic<unsigned long long> published_capture_edges{0};
     std::array<std::array<float, 4>, kPlayers> axis_cache{};
     std::array<std::array<bool, 4>, kPlayers> axis_known{};
     PadIdentifier Identifier(std::size_t player) const;
@@ -106,6 +115,7 @@ private:
         u64 last_motion_us = 0;
         // The touchpad as a guest button (Minus by default), see Consume.
         bool touch_chord = false;  // this press was part of a shortcut
+        GuestSystemButtonRoute guest_home; // Touchpad+Options fallback; Sony PS reserved
         bool select_held = false;  // a long press: its mapped button stays down until release
         unsigned touch_polls = 0;  // polls the touchpad has been down
         unsigned select_pulse = 0; // polls left of a tap's mapped-button press
@@ -125,7 +135,7 @@ private:
     std::atomic<unsigned> connection_changes = 0;
     unsigned polls_since_scan = 0;
     u64 polls = 0, samples_read = 0, usable_samples = 0, intercepted_samples = 0, circle_samples = 0, read_errors = 0;
-    u64 options_edges = 0; // raw Sony Options rising edges, only in Detailed mode
+    u64 options_edges = 0, create_edges = 0; // physical Sony edges, Detailed only
     u64 rumble_updates = 0, rumble_errors = 0;
     int rumble_last_error = 0;
     PadEdgeDiagnostics face_edges{};
