@@ -59,4 +59,3 @@ Instead of authorizing only this one file, a full audit compared the **10 RADV p
 The installer authorizes these **path-bound historical hashes only**, plus the pinned Mesa originals and exact current active files. It never bypasses verification for unknown bytes. The deterministic host regression now stages **all five old files at once**, upgrades to the canonical ten-file fork, checks the second install changes nothing, and refuses unknown modifications. This avoids a one-file-at-a-time build-and-fail loop and preserves source/compiled code provenance.
 
 No FC27 performance, HUD or freeze improvement is implied by this cache migration. R400c needs source CI and a single full native All-On build at a known SHA.
-
