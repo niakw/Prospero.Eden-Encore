@@ -262,22 +262,27 @@ void CheckWorkerTopology() {
     // an artificial SMT map if the scheduler hides sibling relationships.
     size_t topology_length = 0;
     int os_topology_errno = 0;
+    // A single errno for both probes hid which sysctl the Sony kernel
+    // actually exports. Keep the historical fields and add per-OID errors.
+    std::array<int, 2> oid_errno{};
     const char* os_topology_source = "none";
-    for (const char* oid : {"kern.sched.topology_spec",
-                            "kern.sched.ule.topology_spec"}) {
+    constexpr std::array oids{"kern.sched.topology_spec",
+                              "kern.sched.ule.topology_spec"};
+    for (size_t index = 0; index < oids.size(); ++index) {
+        const char* oid = oids[index];
         size_t length = 0;
         if (sysctlbyname(oid, nullptr, &length, nullptr, 0) != 0) {
-            os_topology_errno = errno;
+            oid_errno[index] = os_topology_errno = errno;
             continue;
         }
         if (length == 0 || length > 65536) {
-            os_topology_errno = EOVERFLOW;
+            oid_errno[index] = os_topology_errno = EOVERFLOW;
             continue;
         }
         std::string topology_xml(length, '\0');
         if (sysctlbyname(oid, topology_xml.data(), &length, nullptr, 0) != 0 ||
             length > topology_xml.size()) {
-            os_topology_errno = errno ? errno : EOVERFLOW;
+            oid_errno[index] = os_topology_errno = errno ? errno : EOVERFLOW;
             continue;
         }
         topology_length = length;
@@ -290,11 +295,12 @@ void CheckWorkerTopology() {
         }
         // A present but invalid scheduler map cannot justify SMT pinning.
         // A second, independent ULE OID may still provide a valid map.
-        os_topology_errno = EINVAL;
+        oid_errno[index] = os_topology_errno = EINVAL;
     }
-    std::printf("EDEN_PS5_CPU_OS_TOPOLOGY available=%u bytes=%zu errno=%d source=%s\n",
+    std::printf("EDEN_PS5_CPU_OS_TOPOLOGY available=%u bytes=%zu errno=%d "
+                "source=%s legacy_errno=%d ule_errno=%d\n",
                 unsigned(os_topology_valid), topology_length, os_topology_errno,
-                os_topology_source);
+                os_topology_source, oid_errno[0], oid_errno[1]);
     std::array<int, 64> amd_cpu_core{}, x2_cpu_core{};
     amd_cpu_core.fill(-1);
     x2_cpu_core.fill(-1);

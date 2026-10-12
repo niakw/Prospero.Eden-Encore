@@ -149,6 +149,17 @@ int main(){
  assert(worker_topology_ready && current==0x1fff);
  assert((worker_cpus==std::array<unsigned,5>{0,2,4,6,8}));
  assert(secondary_cpus==(0x1fffULL & ~0x3ffULL));
+ // FreeBSD 11.4 ULE can mark sibling groups HTT+THREAD instead of SMT.
+ // The exact kernel XML flags must both be accepted as physical SMT.
+ const std::string os_smt_xml=os_xml;
+ for(size_t at=0;(at=os_xml.find("name=\\\"SMT\\\"",at))!=std::string::npos;) {
+  os_xml.replace(at,strlen("name=\\\"SMT\\\""),"name=\\\"HTT\\\"");
+  at+=strlen("name=\\\"HTT\\\"");
+ }
+ CheckWorkerTopology();
+ assert(worker_topology_ready && current==0x1fff);
+ assert((worker_cpus==std::array<unsigned,5>{0,2,4,6,8}));
+ os_xml=os_smt_xml;
  // Invalid OS XML cannot turn a broken CPUID reading into physical proof.
  os_xml="<groups><group><cpu count=\"2\" mask=\"3\"></cpu>"
         "<flags><flag name=\"SMT\"></flag></flags></group></groups>";
