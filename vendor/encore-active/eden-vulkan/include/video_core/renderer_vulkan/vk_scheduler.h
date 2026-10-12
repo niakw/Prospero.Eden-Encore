@@ -99,6 +99,21 @@ public:
         on_submit = std::move(func);
     }
 
+#ifdef PS5_NATIVE
+    // A command chunk can fill while Configure() holds both guest GPU-cache
+    // locks. Send the previous command batch BEFORE those locks are acquired,
+    // without waiting for GPU completion or modifying resource/fence state.
+    // The normal Record fallback stays authoritative if a draw is unusually
+    // command-heavy (>4 KiB of queued callbacks).
+    bool PreflightDrawCommands() {
+        constexpr size_t kDrawCommandReserve = 4096;
+        if (!chunk || chunk->Empty() || chunk->HasReserve(kDrawCommandReserve))
+            return false;
+        DispatchWork();
+        return true;
+    }
+#endif
+
     /// Send work to a separate thread.
     template <typename T>
         requires std::is_invocable_v<T, vk::CommandBuffer, vk::CommandBuffer>
@@ -240,6 +255,14 @@ private:
         bool Empty() const {
             return command_offset == 0;
         }
+
+#ifdef PS5_NATIVE
+        bool HasReserve(size_t bytes) const noexcept {
+            // Allow for maximum command alignment after the current offset.
+            const size_t needed = bytes + alignof(std::max_align_t);
+            return needed <= data.size() && command_offset <= data.size() - needed;
+        }
+#endif
 
         bool HasSubmit() const {
             return submit;

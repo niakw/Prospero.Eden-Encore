@@ -267,6 +267,11 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
     if (::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed))
         ::Eden::Performance::rasterizer_draw.calls.fetch_add(1, std::memory_order_relaxed);
     FlushWork();
+#ifdef PS5_NATIVE
+    // Pre-dispatch a nearly full command chunk before cache acquisition.
+    // This is an ordinary FIFO dispatch, NOT a fence wait.
+    scheduler.PreflightDrawCommands();
+#endif
     gpu_memory->FlushCaching();
 #ifdef PS5_NATIVE
     if (guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); })) {
@@ -736,6 +741,9 @@ constexpr VkPipelineStageFlags COMPUTE_CONSUMER_STAGES =
 
 void RasterizerVulkan::DispatchCompute() {
     FlushWork();
+#ifdef PS5_NATIVE
+    scheduler.PreflightDrawCommands();
+#endif
     gpu_memory->FlushCaching();
 
     ComputePipeline* const pipeline{pipeline_cache.CurrentComputePipeline()};
