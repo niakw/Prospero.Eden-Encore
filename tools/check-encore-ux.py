@@ -42,7 +42,10 @@ assert 'const Rect players_chip{552.0f, 406.0f, 210.0f, 36.0f}' in home
 assert 'list.image(c.textures.brand(), {56.0f, 17.0f, 110.0f, 110.0f}' in launcher
 assert 'Color::rgb(0xbb59ff)' in read('headless/prosperoeden/pe/ui/theme.hpp')
 # Regression: do not remove the only width-measure helper while rearranging the hero.
-assert 'text_width(c, chip, 18.0f)' in home
+assert 'text_width(c, chips[i], 18.0f)' in home
+assert 'constexpr float kChipGap = 9.0f' in home
+assert 'const float room = kHeroX + kHeroContentWidth - chip_x - kChipGap * 3.0f' in home
+assert 'width *= factor' in home
 assert 'if (focus == kHomeQuickPanel)' in home and 'focus = kHomeQuickFirst' in home
 assert 'home_quick_edit_' in home and 'Pad::cross, TR("Edit")' in home
 assert 'VIEW ALL GAMES' not in home
@@ -129,10 +132,14 @@ assert 'it->second.loaded && it->second.texture == 0 &&' in textures_src
 assert 'it->second.age >= retry_after' in textures_src
 # Visual regressions from actual 1920x1080 PS5 captures (2026-10-08): the
 # Zelda title must not occupy the same vertical lines as its description.
-assert 'text_block(c, title_label, 90.0f' in home
-assert 'theme::kTitle, kHeroContentWidth, 2, 0.87f);' in home
-assert 'kHeroContentWidth / kMinOneLineScale' in home
-assert 'text_block(c, hero_caption, 90.0f' in home
+# R385 screenshot geometry: one bounded hero column, readable title and
+# semantic Nlib description truncation instead of the removed 1680px rail.
+assert 'constexpr float kHeroX = 90.0f' in home
+assert 'constexpr float kHeroContentWidth = 1250.0f' in home
+assert 'text_block(c, title_label, kHeroX' in home
+assert 'theme::kTitle, kHeroContentWidth, 2, 0.90f)' in home
+assert 'text_block_semantic(c, hero_caption, kHeroX' in home
+assert 'theme::kBody, kHeroContentWidth, 2, 0.90f)' in home
 assert 'label_area.x + label_area.w * 0.5f' in home
 assert 'text_shrink(c, game->name, 558.0f, baseline(574.0f, 52.0f, 40.0f)' in library
 assert 'text_block(c, game->name, 558.0f' not in library
