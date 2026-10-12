@@ -19,3 +19,11 @@ Upstream [7b59ef27](https://github.com/mihawk-99/PS5_Mesa/commit/7b59ef27c1b09b9
 ## Qualification and limits
 
 R398 GitHub Actions [#38314780723](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38314780723) passed native compilation at `ab1ed98a`, **not** the newer R399/R400 sources. No new native compile or PS5 test is implied by this source-only update. FC27 severe perceived stutter at ~30fps, partial HUD/grass corruption and freezes require integrated live PS5 proof, not merely source regression passes.
+
+## R400 combined native test request (after green source gate)
+
+Source CI [#38318600041](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38318600041) finished **success** on 0c952eb938c2309f8eab2f8a099291b96ea6efba. The combined PS5 All-On diagnostic package should be built from a **single source commit** with `[full-build] [test-all-on]`, without publishing a release. The build's own complete native preflight must pass again and must record the binary/symbol/provenance SHA before requesting a console test.
+
+It includes the previously integrated R396 AGC kick fix, R397/R398 official Mesa RADV backports, and post-R398 R399/R400 sampler and VideoOut changes. No visual/performance regression or freeze fix is proven until the actual PS5 binary is qualified. In particular, 120Hz negotiation correction only matters if a session requests 120Hz.
+
+Upstream Eden [#4503](https://github.com/eden-emulator/mirror/commit/67bada77f8a4) suppresses shaders matching a known broken fragment pattern on non-NVIDIA Vulkan drivers. **Do not blindly import** that change for Encore's AMD-based PS5 while FC27 exhibits missing/flickering HUD and surface textures; first prove the exact shader pattern and demonstrate that skipping output is safe for this title.
