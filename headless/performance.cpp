@@ -246,8 +246,9 @@ void CheckWorkerTopology() {
         std::printf("EDEN_WORKER_TOPOLOGY ready=0 reason=no_supported_physical_cpuid\n");
         return;
     }
-    std::array<unsigned, 5> cores{};
-    unsigned count = 0;
+    std::array<int, 64> amd_cpu_core{}, x2_cpu_core{};
+    amd_cpu_core.fill(-1);
+    x2_cpu_core.fill(-1);
     bool changed = false;
     for (unsigned cpu = 0; cpu < 64; ++cpu) {
         if (!CPU_ISSET(cpu, &original)) continue;
@@ -255,44 +256,27 @@ void CheckWorkerTopology() {
         CPU_SET(cpu, &one);
         if (cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, 8, &one)) break;
         changed = true;
-        // Affinity-mask changes are not necessarily reflected by the immediately following
-        // instruction. Give the kernel a scheduling point before sampling x2APIC topology;
-        // the old probe observed the same physical core for every allowed CPU on hardware.
+        // Affinity changes may take effect only after a scheduling point.
         sched_yield();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        unsigned a{}, b{}, c{}, d{};
-        // Accept a physical core only when the requested single-CPU mask
-        // is observed after rescheduling; setaffinity success is insufficient.
         cpuset_t verified{};
         if (cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, 8, &verified) ||
             std::memcmp(&one, &verified, 8)) break;
-        unsigned core = 0;
-        bool decoded = false;
-        // On AMD family 17h+, use its verified TopologyExtensions first:
-        // some PS5 firmware reports an unusable x2APIC SMT/core partition.
-        // EBX[7:0] CoreId, EBX[15:8] threads/core - 1,
-        // ECX[7:0] NUMA node ID. Never treat sibling logical IDs as cores.
+        unsigned a{}, b{}, c{}, d{};
+        // Probe both CPUID representations on the pinned logical CPU.
+        // PS5 13.60 reports AMD CoreIds distinct for all 13 logical CPUs
+        // despite advertising SMT: reject those impossible physical groups.
         if (has_amd_topology) {
             __cpuid_count(0x8000001eu, 0, a, b, c, d);
             const unsigned threads_per_core = ((b >> 8) & 255u) + 1u;
-            if (threads_per_core <= 8u) {
-                core = ((c & 255u) << 8) | (b & 255u);
-                decoded = true;
-            }
+            if (threads_per_core >= 1u && threads_per_core <= 8u)
+                amd_cpu_core[cpu] = static_cast<int>(((c & 255u) << 8) | (b & 255u));
         }
-        if (!decoded && has_x2apic) {
+        if (has_x2apic) {
             __cpuid_count(0xb, 0, a, b, c, d);
-            if (b && ((c >> 8) & 0xffu) == 1u && (a & 31u) < 16u) {
-                core = d >> (a & 31u);
-                decoded = true;
-            }
+            if (b && ((c >> 8) & 255u) == 1u && (a & 31u) < 16u)
+                x2_cpu_core[cpu] = static_cast<int>(d >> (a & 31u));
         }
-        if (!decoded) break;
-        cpu_core[cpu] = static_cast<int>(core);
-        if (count == cores.size() ||
-            std::find(cores.begin(), cores.begin() + count, core) != cores.begin() + count) continue;
-        cores[count] = core;
-        worker_cpus[count++] = cpu;
     }
     if (changed) {
         cpuset_t restored{};
@@ -301,9 +285,65 @@ void CheckWorkerTopology() {
             std::memcmp(&original, &restored, 8))
             throw std::runtime_error("Cannot restore topology-probe thread affinity");
     }
-    // Classify the actual allowed logical processors by the observed physical
-    // core identifier, including SMT siblings. Reject physically impossible
-    // topology reports (>8 physical cores on this Zen 2 PS5).
+    // A valid physical grouping must classify EVERY allowed CPU and identify
+    // between five and eight distinct real cores on this Zen 2 PS5. Never
+    // choose whichever CPUID leaf looks fastest or assume logical IDs are
+    // physical cores. Only use the x2APIC fallback when AMD is implausible.
+    const auto summarize = [&](const std::array<int, 64>& ids) {
+        std::array<int, 64> distinct{};
+        unsigned classified = 0, count = 0;
+        for (unsigned cpu = 0; cpu < 64; ++cpu) {
+            if (!CPU_ISSET(cpu, &original) || ids[cpu] < 0) continue;
+            ++classified;
+            if (std::find(distinct.begin(), distinct.begin() + count, ids[cpu]) ==
+                distinct.begin() + count)
+                distinct[count++] = ids[cpu];
+        }
+        return std::pair{classified, count};
+    };
+    const auto [amd_classified, amd_distinct] = summarize(amd_cpu_core);
+    const auto [x2_classified, x2_distinct] = summarize(x2_cpu_core);
+    const bool amd_plausible = has_amd_topology && amd_classified == allowed_count &&
+                               amd_distinct >= 5 && amd_distinct <= 8;
+    const bool x2_plausible = has_x2apic && x2_classified == allowed_count &&
+                              x2_distinct >= 5 && x2_distinct <= 8;
+    const std::array<int, 64>* physical_source = nullptr;
+    const char* source_name = "none";
+    if (amd_plausible) {
+        physical_source = &amd_cpu_core;
+        source_name = "amd_ext";
+    } else if (x2_plausible) {
+        physical_source = &x2_cpu_core;
+        source_name = has_amd_topology ? "x2apic_fallback" : "x2apic";
+    }
+    std::printf("EDEN_PS5_CPU_TOPOLOGY_SOURCES amd=%u/%u x2apic=%u/%u selected=%s\n",
+                amd_classified, amd_distinct, x2_classified, x2_distinct, source_name);
+    if (!physical_source) {
+        const unsigned observed = has_amd_topology ? amd_distinct : x2_distinct;
+        const unsigned classified = has_amd_topology ? amd_classified : x2_classified;
+        if (observed > 8)
+            std::printf("EDEN_PS5_CPU_TOPOLOGY_REJECT reason=more_than_8_physical_ids observed=%u\n",
+                        observed);
+        std::printf("EDEN_PS5_CPU_PHYSICAL_SUMMARY classified=%u of=%u distinct_physical=%u valid=0\n",
+                    classified, allowed_count, observed);
+        std::printf("EDEN_WORKER_TOPOLOGY ready=0 distinct_cores=0 cpus=0,0,0,0,0 amd_ext=%u x2apic=%u\n",
+                    unsigned(has_amd_topology), unsigned(has_x2apic));
+        return;
+    }
+    std::array<unsigned, 5> cores{};
+    unsigned count = 0;
+    for (unsigned cpu = 0; cpu < 64; ++cpu) {
+        if (!CPU_ISSET(cpu, &original)) continue;
+        const int core = (*physical_source)[cpu];
+        if (core < 0) continue;
+        cpu_core[cpu] = core;
+        if (count < cores.size() &&
+            std::find(cores.begin(), cores.begin() + count,
+                      static_cast<unsigned>(core)) == cores.begin() + count) {
+            cores[count] = static_cast<unsigned>(core);
+            worker_cpus[count++] = cpu;
+        }
+    }
     std::array<int, 64> physical_ids{};
     std::array<std::uint64_t, 64> physical_masks{};
     unsigned physical_count = 0, classified = 0;
@@ -315,11 +355,9 @@ void CheckWorkerTopology() {
         if (group == physical_count) physical_ids[physical_count++] = cpu_core[cpu];
         physical_masks[group] |= std::uint64_t{1} << cpu;
     }
-    const bool physical_ids_plausible = physical_count <= 8;
+    const bool physical_ids_plausible = physical_count >= 5 && physical_count <= 8 &&
+                                       classified == allowed_count;
     worker_topology_ready = count == cores.size() && physical_ids_plausible;
-    if (!physical_ids_plausible)
-        std::printf("EDEN_PS5_CPU_TOPOLOGY_REJECT reason=more_than_8_physical_ids observed=%u\n",
-                    physical_count);
     std::printf("EDEN_PS5_CPU_PHYSICAL_SUMMARY classified=%u of=%u distinct_physical=%u valid=%u\n",
                 classified, allowed_count, physical_count, unsigned(physical_ids_plausible));
     if (worker_topology_ready) {

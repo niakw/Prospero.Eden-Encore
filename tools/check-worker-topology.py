@@ -19,4 +19,9 @@ for needle in (
 
 assert probe.index("sched_yield();") < probe.index("__cpuid_count(0xb")
 assert probe.index("sleep_for(std::chrono::milliseconds(1))") < probe.index("__cpuid_count(0xb")
-print("PS5 worker-topology probe forces a scheduling point before x2APIC sampling: PASS")
+assert "amd_distinct >= 5 && amd_distinct <= 8" in probe
+assert "x2_distinct >= 5 && x2_distinct <= 8" in probe
+assert "source_name = has_amd_topology ? \"x2apic_fallback\" : \"x2apic\"" in probe
+assert "amd_classified == allowed_count" in probe
+assert "x2_classified == allowed_count" in probe
+print("PS5 worker topology: validated AMD/x2APIC plausible-source selection and scheduling point PASS")
