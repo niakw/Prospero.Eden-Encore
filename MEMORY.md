@@ -2769,3 +2769,8 @@ R349 original EOL audit: 69 normalized CRLF files of 77017 paths; 45849-byte ori
 - CMake PS5_NATIVE on eden-headless does not propagate to core static target. Per-source PS5_NATIVE definition applied to exact core AM ButtonPoller source, not globally. R390 extends R389 detailed-only EDEN_PAD_INPUT_CHAIN every 5s with physical Create, virtual Home and Capture published edge counters; these do NOT prove in-game consumption.
 - Updated devices_check.cpp Create/Home tests, new host sanitizer and source check tools/check-ps5-guest-system-buttons.py, future source/native preflight gates. On work/ps5-r390-system-buttons, do NOT compile native PS5 until the user explicitly asks for a single combined package. See docs/PS5_R390_2026-10-12_DUALSENSE_HOME_CAPTURE.md.
 - HOME is primarily a Switch OS key, not a guaranteed FC27 in-game pause control; no fix to FC27 freeze has been demonstrated.
+
+### 2026-10-12 R391 — scaled texture Vulkan GC batching
+
+- Sole dev/ps5-sparse-jit targeted port of upstream ProsperoEden 002c40c: old GC prefetch excluded image.HasScaled(), forcing independent runtime.Finish on each scaled GPU-written image. Removed ONLY that condition in headless/vulkan_gc_downloads.inc and active Vulkan texture-cache full source. Keep alias/overlap/MSAA/oversize exclusions, 40 images/32MiB caps, pressure policy and staging lifetime. Do NOT copy upstream 64 images/64MiB without PS5 memory evidence.
+- Mac C++ sanitizer source extracted GC mixed/budget/prefetch tests PASS, using vendored Boost 1.90 and CLT15.4 SDKROOT. Source generator/active Vulkan fork equivalent across 40 files PASS. No PS5 native build, no proven FPS effect. See docs/PS5_R391_2026-10-12_SCALED_GC_BATCH.md.

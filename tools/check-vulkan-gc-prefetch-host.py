@@ -43,6 +43,13 @@ compiler = next((name for name in ("clang++-18", "clang++", "g++")
                  if shutil.which(name)), None)
 if not compiler:
     raise SystemExit("No C++20 compiler; Vulkan GC prefetch proof unavailable")
+# The PS5 build uses pinned Boost 1.90. The host must compile against
+# the SAME vendored source, not assume a separately installed Homebrew Boost.
+boost_root = root / "vendor/sources/eden-cpm/boost/boost-1.90.0"
+boost_includes = [str(p) for p in boost_root.glob("libs/*/include") if p.is_dir()]
+if not boost_includes:
+    raise SystemExit(f"Vendored Boost headers missing: {boost_root}")
+boost_flags = [flag for inc in boost_includes for flag in ("-I", inc)]
 
 cpp = r"""
 #include <boost/container/small_vector.hpp>
@@ -145,7 +152,7 @@ with tempfile.TemporaryDirectory(prefix="eden-vk-gc-prefetch-") as folder:
     source.write_text(cpp, encoding="utf-8")
     subprocess.run([compiler, "-std=c++20", "-O1", "-g",
                     "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined",
-                    "-fno-sanitize-recover=all", str(source), "-o", str(binary)],
+                    "-fno-sanitize-recover=all", *boost_flags, str(source), "-o", str(binary)],
                    check=True, timeout=120)
     subprocess.run([str(binary)], check=True, timeout=180)
 print("PASS actual Vulkan GC admission/container: 20/40 staging slots, 32-MiB cap, one Finish, deferred pool release ASan/UBSan")

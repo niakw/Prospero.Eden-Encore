@@ -3,7 +3,8 @@
 
 Extract the production prefetch skip/capacity/recording sequence into a small
 C++20 mock of the pinned Vulkan non-owning StagingBufferRef. Assert that clean,
-aliased, scaled and multisample images do not truncate eligible dirty batching.
+aliased and multisample images do not truncate eligible dirty batching while
+scaled images DO batch behind one GPU completion barrier.
 This does not run the PS5 Vulkan driver or a real image cache.
 """
 from pathlib import Path
@@ -51,11 +52,24 @@ assert "if (!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad))" 
 # Only the prefetch forecast snapshots pressure; the actual Cleanup keeps
 # making independent current-pressure decisions as before.
 assert "if (!dirty || !image.aliased_images.empty()" in gc
+assert "image.HasScaled() || image.info.num_samples != 1" not in gc
+assert "Scaled textures use the SAME Image::DownloadMemory path" in gc
+assert "image.HasScaled() || image.info.num_samples != 1" not in (
+    root / "vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h"
+).read_text()
+
 
 compiler = next((name for name in ("clang++-18", "clang++", "g++")
                  if shutil.which(name)), None)
 if not compiler:
     raise SystemExit("Missing C++20 compiler for Vulkan mixed-GC test")
+# The PS5 build uses pinned Boost 1.90. The host must compile against
+# the SAME vendored source, not assume a separately installed Homebrew Boost.
+boost_root = root / "vendor/sources/eden-cpm/boost/boost-1.90.0"
+boost_includes = [str(p) for p in boost_root.glob("libs/*/include") if p.is_dir()]
+if not boost_includes:
+    raise SystemExit(f"Vendored Boost headers missing: {boost_root}")
+boost_flags = [flag for inc in boost_includes for flag in ("-I", inc)]
 
 cpp = r"""
 #include <boost/container/small_vector.hpp>
@@ -228,7 +242,21 @@ int main() {
         images[1].overlapping_images.push_back(4);
         images[2].scaled = true;
         images[3].info.num_samples = 4;
-        Scenario(std::move(images)).Test(1, {4});
+        // Scaled download is eligible; aliases/overlaps/MSAA are not.
+        Scenario(std::move(images)).Test(2, {2, 4});
+    }
+    {
+        // 40 scaled textures of 1MiB remain in one bounded prefetch pass.
+        // The 32-MiB staging budget is not enlarged to upstream's 64-MiB.
+        std::vector<Image> images;
+        std::vector<ImageId> ids;
+        for (ImageId i = 0; i < 40; ++i) {
+            auto scaled = ImageFor(i, true, 1_MiB);
+            scaled.scaled = true;
+            images.push_back(std::move(scaled));
+            if (i < 32) ids.push_back(i);
+        }
+        Scenario(std::move(images)).Test(32, std::move(ids), 40, 1000_MiB, 33);
     }
     {
         // An oversized dirty image must use Cleanup's individual download.
@@ -297,7 +325,7 @@ with tempfile.TemporaryDirectory(prefix="eden-vulkan-mixed-gc-") as temp:
     subprocess.run([compiler, "-std=c++20", "-O1", "-g", "-Wall", "-Wextra",
                     "-Werror", "-fsanitize=address,undefined",
                     "-fno-sanitize-recover=all", "-I", str(root / "headless"),
-                    str(path), "-o", str(executable)],
+                    *boost_flags, str(path), "-o", str(executable)],
                    check=True, timeout=120)
     subprocess.run([str(executable)], check=True, timeout=180)
 print("PASS literal Vulkan mixed-GC scan: clean pressure projection, skips, 20/40 batch, 32MiB, fenced release ASan/UBSan")
