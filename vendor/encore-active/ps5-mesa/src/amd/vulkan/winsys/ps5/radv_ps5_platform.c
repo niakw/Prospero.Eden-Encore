@@ -708,8 +708,8 @@ radv_ps5_submit(uint32_t *words, uint32_t count, volatile uint32_t *marker, uint
    };
    int32_t result = sceAgcDriverSubmitDcb(&description);
    const uint64_t submitted = os_time_get_nano();
-   radv_ps5_submit_ns[0] += flushed - started;
-   radv_ps5_submit_ns[1] += submitted - flushed;
+   p_atomic_add(&radv_ps5_submit_ns[0], flushed - started);
+   p_atomic_add(&radv_ps5_submit_ns[1], submitted - flushed);
    if (result != 0)
       return result;
    call_once(&radv_ps5_kick_once, radv_ps5_kick_start);
