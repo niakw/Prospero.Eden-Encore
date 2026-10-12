@@ -753,6 +753,11 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
         }
         if (bind_pipeline) {
             if (!pipeline) {
+                // An asynchronously-built pipeline can fail after Configure's
+                // earlier IsBuilt()/pipeline check but before this worker
+                // callback executes. Count the actual GPU draw omission.
+                ::Eden::Performance::RecordGraphicsDrawDrop(
+                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);
                 return;
             }
             cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,
