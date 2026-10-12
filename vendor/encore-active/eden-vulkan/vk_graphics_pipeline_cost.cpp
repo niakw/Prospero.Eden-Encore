@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include <algorithm>
+#include "common/scope_exit.h"
 #include <exception>
 #include "common/thread_worker.h"
 #include "dev_vulkan.h"
@@ -364,34 +365,35 @@ GraphicsPipeline::GraphicsPipeline(
     }
 
     auto func{[this, shader_notify, &render_pass_cache, pipeline_statistics, fast_first_runtime = (worker_thread != nullptr)] {
-        const VkRenderPass render_pass{render_pass_cache.Get(MakeRenderPassKey(key.state, device))};
-        Validate();
+        // Always release waiters, even when render-pass acquisition, shader
+        // validation, fast-first optimisation scheduling or statistics throws.
+        // A failed pipeline stays null and is rejected by the draw path.
+        SCOPE_EXIT {
+            {
+                std::scoped_lock lock{build_mutex};
+                is_built.store(true, std::memory_order_release);
+            }
+            build_condvar.notify_all();
+            if (shader_notify) {
+                shader_notify->MarkShaderComplete();
+            }
+        };
         try {
+            const VkRenderPass render_pass{render_pass_cache.Get(MakeRenderPassKey(key.state, device))};
+            Validate();
             if (::Eden::DevVulkan::fast_first_pipelines && fast_first_runtime) {
                 MakePipeline(render_pass, VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT);
                 QueueOptimizedPipeline(render_pass);
             } else {
                 MakePipeline(render_pass);
             }
-        } catch (const vk::Exception& exception) {
-            LOG_CRITICAL(Render_Vulkan, "Graphics pipeline build failed: {}", exception.what());
-            std::scoped_lock lock{build_mutex};
-            is_built = true;
-            build_condvar.notify_one();
-            if (shader_notify) {
-                shader_notify->MarkShaderComplete();
+            if (pipeline_statistics && pipeline) {
+                pipeline_statistics->Collect(device, *pipeline);
             }
-            return;
-        }
-        if (pipeline_statistics) {
-            pipeline_statistics->Collect(device, *pipeline);
-        }
-
-        std::scoped_lock lock{build_mutex};
-        is_built = true;
-        build_condvar.notify_one();
-        if (shader_notify) {
-            shader_notify->MarkShaderComplete();
+        } catch (const std::exception& exception) {
+            LOG_CRITICAL(Render_Vulkan, "Graphics pipeline build failed: {}", exception.what());
+        } catch (...) {
+            LOG_CRITICAL(Render_Vulkan, "Graphics pipeline build failed: unknown exception");
         }
     }};
     if (worker_thread) {

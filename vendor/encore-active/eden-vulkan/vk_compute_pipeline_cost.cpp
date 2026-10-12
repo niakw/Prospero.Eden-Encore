@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include <algorithm>
+#include "common/scope_exit.h"
 #include "performance.h"
 #include <vector>
 
@@ -81,6 +82,19 @@ ComputePipeline::ComputePipeline(const Device& device_, Scheduler& scheduler, vk
     }
 
     auto func{[this, shader_notify, pipeline_statistics] {
+        // The Vulkan worker may throw before/after vkCreateComputePipelines;
+        // never leave scheduler GPU build_condvar waiters blocked forever.
+        SCOPE_EXIT {
+            {
+                std::scoped_lock lock{build_mutex};
+                is_built.store(true, std::memory_order_release);
+            }
+            build_condvar.notify_all();
+            if (shader_notify) {
+                shader_notify->MarkShaderComplete();
+            }
+        };
+        try {
         const VkPipelineShaderStageRequiredSubgroupSizeCreateInfoEXT subgroup_size_ci{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO_EXT,
             .pNext = nullptr,
@@ -111,20 +125,7 @@ ComputePipeline::ComputePipeline(const Device& device_, Scheduler& scheduler, vk
             .basePipelineHandle = 0,
             .basePipelineIndex = 0,
         };
-        try {
             pipeline = device.GetLogical().CreateComputePipeline(compute_ci, *pipeline_cache);
-        } catch (const vk::Exception& exception) {
-            LOG_CRITICAL(Render_Vulkan, "Adreno rejected compute shader {:016X}: {}", shader_hash,
-                         exception.what());
-            std::scoped_lock lock{build_mutex};
-            is_built = true;
-            build_condvar.notify_one();
-            if (shader_notify) {
-                shader_notify->MarkShaderComplete();
-            }
-            return;
-        }
-
         // Log compute pipeline creation
         if (GPU::Logging::IsActive()) {
             GPU::Logging::GPULogger::GetInstance().LogPipelineStateChange(
@@ -132,14 +133,15 @@ ComputePipeline::ComputePipeline(const Device& device_, Scheduler& scheduler, vk
             );
         }
 
-        if (pipeline_statistics) {
+        if (pipeline_statistics && pipeline) {
             pipeline_statistics->Collect(device, *pipeline);
         }
-        std::scoped_lock lock{build_mutex};
-        is_built = true;
-        build_condvar.notify_one();
-        if (shader_notify) {
-            shader_notify->MarkShaderComplete();
+        } catch (const std::exception& exception) {
+            LOG_CRITICAL(Render_Vulkan, "Compute pipeline build failed {:016X}: {}",
+                         shader_hash, exception.what());
+        } catch (...) {
+            LOG_CRITICAL(Render_Vulkan, "Compute pipeline build failed {:016X}: unknown exception",
+                         shader_hash);
         }
     }};
     if (thread_worker) {
