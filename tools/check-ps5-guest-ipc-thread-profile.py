@@ -17,7 +17,9 @@ report = (root / "headless/performance.cpp").read_text()
 first = header.index("inline constexpr unsigned guest_ipc_thread_slots")
 last = header.index("void RecordHle(", first)
 impl = header[first:last]
-assert "inline constexpr unsigned guest_ipc_thread_slots = 128;" in impl
+assert "inline constexpr unsigned guest_ipc_thread_slots = 1024;" in impl
+assert "inline constexpr unsigned guest_ipc_max_probes = 64;" in impl
+assert "n < guest_ipc_max_probes" in impl
 assert "std::array<GuestIpcThread, guest_ipc_thread_slots>" in impl
 assert "std::memory_order_relaxed" in impl
 assert "std::printf(" not in impl and "NowNs()" not in impl
@@ -60,7 +62,7 @@ int main() {
     std::vector<std::thread> pool;
     for (unsigned i = 0; i < workers; ++i)
         pool.emplace_back([i] {
-            const auto tid = 1ull + i * 128ull;  // force collision/probing
+            const auto tid = 1ull + i * guest_ipc_thread_slots;  // force collision/probing
             for (unsigned n = 0; n < per_worker; ++n) {
                 RecordGuestIpc(tid, n % 4 == 0 ? 1'000 : n % 4 == 1 ? 80'000 :
                                        n % 4 == 2 ? 2'000'000 : 9'000'000);
@@ -82,10 +84,20 @@ int main() {
     // Zero/unknown ID, negative elapsed and full-table overflow must be safe.
     RecordGuestIpc(0, -3);
     assert(guest_ipc_overflow_calls.load() == 1);
-    for (unsigned i = 0; i < 120; ++i) RecordGuestIpc(10000 + i, 150);
+    // Fill every remaining independent slot, then enforce a bounded overflow.
+    // The original 8 collision TIDs all hash to slot 1 and occupy slots 1..8.
+    for (unsigned slot = 0; slot < guest_ipc_thread_slots; ++slot) {
+        if (slot >= 1 && slot <= workers) continue;
+        RecordGuestIpc(static_cast<unsigned long long>(slot) +
+                       2ull * guest_ipc_thread_slots, 150);
+    }
+    unsigned occupied = 0;
+    for (const auto& t : guest_ipc_threads) if (t.tid.load()) ++occupied;
+    assert(occupied == guest_ipc_thread_slots);
     RecordGuestIpc(900000, 30'000'000);
     assert(guest_ipc_overflow_calls.load() == 2);
-    assert(guest_ipc_wait.calls.load() == workers * per_worker + 122);
+    assert(guest_ipc_wait.calls.load() ==
+           workers * per_worker + (guest_ipc_thread_slots - workers) + 2);
 }
 """.replace("__PRODUCTION__", impl)
 
@@ -106,4 +118,4 @@ with tempfile.TemporaryDirectory(prefix="eden-r393-guest-ipc-") as temp:
                     "-fno-sanitize-recover=all", str(src), "-o", str(exe)],
                    check=True, env=env, timeout=90)
     subprocess.run([str(exe)], check=True, env=env, timeout=30)
-print("PASS R393 real per-guest-thread IPC counters under ASan/UBSan, collisions, overflow and detailed-only SVC gate")
+print("PASS R395 bounded R393 IPC counters under ASan/UBSan, collisions, saturation, overflow and detailed-only SVC gate")
