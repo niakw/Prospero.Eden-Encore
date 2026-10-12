@@ -31,6 +31,13 @@ before = report.rfind("#ifdef EDEN_DEV_PROFILE", 0, report.index("EDEN_DEV_IPC_T
 after = report.find("#endif", report.index("EDEN_DEV_IPC_THREAD"))
 assert before >= 0 and after > before
 assert "std::array<IpcRow, 12>" in report
+# Reporting must obey the same detailed-only switch as the SVC profiler.
+# With detailed logging disabled, no extra 5-second thread table or histogram.
+ipc_section = report[before:after]
+assert "if (detailed_gpu_profile.load(std::memory_order_relaxed)) {" in ipc_section
+assert ipc_section.index("if (detailed_gpu_profile.load(std::memory_order_relaxed)) {") < ipc_section.index("EDEN_DEV_IPC_THREAD")
+assert ipc_section.rstrip().endswith("}")
+
 
 cpp = r"""
 #include <array>
