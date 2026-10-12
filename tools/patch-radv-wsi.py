@@ -150,7 +150,11 @@ radv_ps5_memory_grant_gpu(void *address, uint64_t bytes)
     destination = output_root/relative
     adapted = original.read_text()
     for old, new in replacements:
-        assert adapted.count(old) == 1, f'Pinned initialization anchor changed: {relative}'
+        # Mesa 26.2.4 resolves one depth/stencil image in both decompression
+        # and resolve paths. Both identical source masks must be corrected.
+        expected = 2 if (relative == 'src/amd/vulkan/meta/radv_meta_resolve.c'
+                         and old == '.aspectMask = src_iview->vk.aspects,') else 1
+        assert adapted.count(old) == expected, f'Pinned initialization anchor changed: {relative}'
         adapted = adapted.replace(old, new)
     if relative == 'src/amd/vulkan/radv_cmd_buffer.c':
         # Official Mesa 26.2.2 zero-draw firmware workaround, adapted to our
