@@ -166,9 +166,11 @@ jobs:
           python3 -B tools/check-encore-ux.py
           python3 -B tools/check-ps5-ui-controls-per-game.py
 
-      - name: Validate all feature-branch source diffs
+      - name: Validate dev changes against archived release baseline
         run: |
-          git fetch --no-tags --depth=1 origin fix/0.40-zbic-13.60
+          # The old fix branch was intentionally removed during the single-dev
+          # cleanup. Compare to its preserved annotated tag, not a deleted ref.
+          git fetch --no-tags --depth=1 origin refs/tags/archive/fix-0.40-20261012
           # Full pristine vendor trees retain upstream whitespace verbatim.
           # Keep strict diffs for all Encore-owned source, CI and vendor docs,
           # but never silently rewrite external pinned source snapshots or packs.
