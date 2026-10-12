@@ -23,3 +23,18 @@ No claim of performance improvement. Before another combined PS5 test, validate 
 ## R365 read-only analysis compatibility
 
 The built-in tools/analyze-fc27-stutter.py also accepts EDEN_GUEST_CACHE_DOMAIN by exact frame identity and reports per-domain five-second wait, blocked count, contention count and Pearson associations with late50. It uses explicit window_wait_ns instead of incorrectly summing cumulative totals. When old R359 logs do not have the new fields, it prints an unavailable marker rather than pretending zero contention. Its --self-test includes both R364 and legacy/no-domain inputs. This only changes offline Python analysis, never runtime code.
+
+## R366 follow-up: guest CPU write volume versus wall-time latency
+
+Using the already fetched, earlier-than-R363 FC27 logs (NOT R364 measurements), tools/analyze-fc27-stutter.py now aligns EDEN_DEV_GUEST cumulative counters to EDEN_VULKAN_FRAME, EDEN_FRAME_PRESSURE and EDEN_DEV_GPU by exact renderer frame/window. Nondecreasing deltas are compared to late50.
+
+| Measure | Later 79 near-30FPS windows | Later 17 under-25FPS windows | Earlier 133 near-30FPS windows | Earlier 40 under-25FPS windows |
+|---|---:|---:|---:|---:|
+| Guest CPU write calls per 5s | 52,105 | 50,851 | 54,962 | 48,778 |
+| Guest CPU write elapsed ms per 5s | 49.93 | 209.79 | 51.51 | 222.18 |
+| Guest graphics cache collisions per 5s | 1,250 | 8,488 | 1,318 | 9,268 |
+| Guest graphics cache blocked ms per 5s | 41.38 | 156.59 | 41.67 | 165.61 |
+
+Pearson late50 versus write COUNT: +0.070 in later session; -0.056 earlier. Versus write elapsed TIME: +0.831 later; +0.849 earlier. Versus guest cache_wait_ms: +0.779 later; +0.807 earlier. This provides a reproducible, much more precise **contention-latency** hypothesis: similar operation volume costs 4x time during degraded output. Time spent in callbacks includes mutex waits and other work; causal direction and exact buffer/texture owner are not yet proven. Do not conflate aggregate core write times with serialized wall-clock or physical CPU consumption.
+
+No effect on PS5 runtime. Do not attempt to eliminate coherence locks or short-circuit page invalidations until R364 per-domain counters have been measured.
