@@ -114,6 +114,7 @@ jobs:
           python3 -B tools/check-ps5-radv-kick-coalescing.py
           python3 -B tools/check-radv-mesa-2624-bin-height.py
           python3 -B tools/check-radv-mesa-2622-texture-array.py
+          python3 -B tools/check-radv-official-indirect-draw.py
           python3 -B tools/check-vendored-gpu-thread.py
           python3 -B tools/analyze-fc27-stutter.py --self-test
           python3 -B tools/check-nvnflinger-dequeue-wakeup.py
