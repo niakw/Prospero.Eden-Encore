@@ -160,7 +160,9 @@ enum class CachePhase : unsigned {
     DynamicStates, QueryAndDraw,
     TextureCpuRefresh, TextureAliasScan, TextureAliasCopy,
     StageTextureHandles, BindTextureBuffers, BindStageDescriptors,
-    RefreshRenderTargets, CheckFeedbackLoop, CommitGraphicsDraw, DescriptorRingFinish, DescriptorRingPreflight, Count
+    RefreshRenderTargets, CheckFeedbackLoop, CommitGraphicsDraw, DescriptorRingFinish, DescriptorRingPreflight,
+    GuestWriteBufferWait, GuestWriteBufferWork, GuestWriteTextureWait,
+    GuestWriteTextureWork, GuestWriteShaderInvalidate, Count
 };
 struct CachePhaseTotal {
     std::atomic<unsigned long long> samples{}, total_ns{}, max_ns{};
@@ -172,6 +174,13 @@ inline bool ShouldSampleCacheDraw() noexcept {
     static thread_local unsigned sequence = 0;
     // Sampling avoids injecting high-frequency clock calls into the render path.
     return (++sequence & 15u) == 0u;
+}
+inline bool ShouldSampleGuestWrite() noexcept {
+    if (!detailed_gpu_profile.load(std::memory_order_relaxed)) return false;
+    static thread_local unsigned sequence = 0;
+    // One in 64 guest CPU-write callbacks, independent of the GPU-owner
+    // per-16 draw sequence. An entire callback shares the same sample flag.
+    return (++sequence & 63u) == 0u;
 }
 class CachePhaseTimer {
 public:

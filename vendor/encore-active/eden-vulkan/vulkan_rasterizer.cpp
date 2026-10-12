@@ -914,19 +914,32 @@ void RasterizerVulkan::InnerInvalidation(std::span<const std::pair<DAddr, std::s
 
 bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {
     ::Eden::Performance::DiagnosticTimer guest_write_timer(::Eden::Performance::guest_cpu_write);
+    const bool sample_guest_write = ::Eden::Performance::ShouldSampleGuestWrite();
     DEBUG_ASSERT(addr != 0 || size != 0);
     {
+        ::Eden::Performance::CachePhaseTimer buffer_wait{
+            ::Eden::Performance::CachePhase::GuestWriteBufferWait, sample_guest_write};
         ::Eden::Performance::GuestCacheLock(buffer_cache.mutex, false);
+        buffer_wait.Stop();
         std::lock_guard lock{buffer_cache.mutex, std::adopt_lock};
+        ::Eden::Performance::CachePhaseTimer buffer_work{
+            ::Eden::Performance::CachePhase::GuestWriteBufferWork, sample_guest_write};
         if (buffer_cache.OnCPUWrite(addr, size)) {
             return true;
         }
     }
     {
+        ::Eden::Performance::CachePhaseTimer texture_wait{
+            ::Eden::Performance::CachePhase::GuestWriteTextureWait, sample_guest_write};
         ::Eden::Performance::GuestCacheLock(texture_cache.mutex, true);
+        texture_wait.Stop();
         std::lock_guard lock{texture_cache.mutex, std::adopt_lock};
+        ::Eden::Performance::CachePhaseTimer texture_work{
+            ::Eden::Performance::CachePhase::GuestWriteTextureWork, sample_guest_write};
         texture_cache.WriteMemory(addr, size);
     }
+    ::Eden::Performance::CachePhaseTimer shader_invalidate{
+        ::Eden::Performance::CachePhase::GuestWriteShaderInvalidate, sample_guest_write};
     pipeline_cache.InvalidateRegion(addr, size);
     return false;
 }

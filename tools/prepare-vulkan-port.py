@@ -78,7 +78,7 @@ void RasterizerVulkan::DispatchCompute() {"""),
     ('#include <algorithm>', '#include <algorithm>\n#include "performance.h"'),
     # Guest threads take the cache locks here (tracked-page writes, flush-area reads).
     ('bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {',
-     'bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {\n    ::Eden::Performance::DiagnosticTimer guest_write_timer(::Eden::Performance::guest_cpu_write);'),
+     'bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {\n    ::Eden::Performance::DiagnosticTimer guest_write_timer(::Eden::Performance::guest_cpu_write);\n    const bool sample_guest_write = ::Eden::Performance::ShouldSampleGuestWrite();'),
     ('VideoCore::RasterizerDownloadArea RasterizerVulkan::GetFlushArea(DAddr addr, u64 size) {',
      'VideoCore::RasterizerDownloadArea RasterizerVulkan::GetFlushArea(DAddr addr, u64 size) {\n    ::Eden::Performance::DiagnosticTimer guest_read_timer(::Eden::Performance::guest_cpu_read);'),
     # ... and wait for those locks spinning briefly before sleeping (performance.h GuestCacheLock).
@@ -86,11 +86,26 @@ void RasterizerVulkan::DispatchCompute() {"""),
      '        ::Eden::Performance::GuestCacheLock(texture_cache.mutex, true);\n'
      '        std::lock_guard lock{texture_cache.mutex, std::adopt_lock};\n        auto area = texture_cache.GetFlushArea(addr, size);'),
     ('        std::scoped_lock lock{buffer_cache.mutex};\n        if (buffer_cache.OnCPUWrite(addr, size)) {',
+     '        ::Eden::Performance::CachePhaseTimer buffer_wait{\n'
+     '            ::Eden::Performance::CachePhase::GuestWriteBufferWait, sample_guest_write};\n'
      '        ::Eden::Performance::GuestCacheLock(buffer_cache.mutex, false);\n'
-     '        std::lock_guard lock{buffer_cache.mutex, std::adopt_lock};\n        if (buffer_cache.OnCPUWrite(addr, size)) {'),
+     '        buffer_wait.Stop();\n'
+     '        std::lock_guard lock{buffer_cache.mutex, std::adopt_lock};\n'
+     '        ::Eden::Performance::CachePhaseTimer buffer_work{\n'
+     '            ::Eden::Performance::CachePhase::GuestWriteBufferWork, sample_guest_write};\n'
+     '        if (buffer_cache.OnCPUWrite(addr, size)) {'),
     ('        std::scoped_lock lock{texture_cache.mutex};\n        texture_cache.WriteMemory(addr, size);\n    }\n    pipeline_cache.InvalidateRegion(addr, size);',
+     '        ::Eden::Performance::CachePhaseTimer texture_wait{\n'
+     '            ::Eden::Performance::CachePhase::GuestWriteTextureWait, sample_guest_write};\n'
      '        ::Eden::Performance::GuestCacheLock(texture_cache.mutex, true);\n'
-     '        std::lock_guard lock{texture_cache.mutex, std::adopt_lock};\n        texture_cache.WriteMemory(addr, size);\n    }\n    pipeline_cache.InvalidateRegion(addr, size);'),
+     '        texture_wait.Stop();\n'
+     '        std::lock_guard lock{texture_cache.mutex, std::adopt_lock};\n'
+     '        ::Eden::Performance::CachePhaseTimer texture_work{\n'
+     '            ::Eden::Performance::CachePhase::GuestWriteTextureWork, sample_guest_write};\n'
+     '        texture_cache.WriteMemory(addr, size);\n    }\n'
+     '    ::Eden::Performance::CachePhaseTimer shader_invalidate{\n'
+     '        ::Eden::Performance::CachePhase::GuestWriteShaderInvalidate, sample_guest_write};\n'
+     '    pipeline_cache.InvalidateRegion(addr, size);'),
     # From upstream ProsperoEden 0dd9dd0 (#102): submitting after 4096 draws
     # can exceed the PS5 GPU watchdog (VK_ERROR_DEVICE_LOST). Cap command
     # buffers at 512 draws, keeping Encore's current worker handoff cadence
