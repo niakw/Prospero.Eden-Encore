@@ -16,6 +16,13 @@ jobs=${EDEN_BUILD_JOBS:-$(eden_host_jobs)}
 command -v ninja >/dev/null
 cache=$(command -v ccache)
 cd "$root"
+# Source provenance travels with the app; the scratch tree is a detached
+# upstream snapshot, so derive the SHA from our actual Encore checkout.
+source_commit=$(git -C "$root" rev-parse --verify HEAD)
+[[ "$source_commit" =~ ^[0-9a-f]{40}$ ]] || {
+    echo "Cannot attest the native Encore source commit" >&2
+    exit 1
+}
 bash tools/build-core-fixture.sh
 scratch=$(cat .local/headless-cache)
 [[ "$scratch" == "${XDG_CACHE_HOME:-$HOME/.cache}"/ps5-eden-headless.* && "$(cd -- "$(cat "$scratch/owner")" && pwd -P)" == "$root" ]]
@@ -102,6 +109,7 @@ PY_STAMPS
 cmake -S "$scratch/source" -B "$scratch/native-local" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="$root/headless/ps5.cmake" -DPS5_NATIVE=ON -DEDEN_DEVICE_FRONTEND="$devices" \
     -DCMAKE_BUILD_TYPE=Release -DENABLE_LTO=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+    -DEDEN_ENCORE_SOURCE_COMMIT="$source_commit" \
     -DEDEN_SHARED_JIT="${EDEN_SHARED_JIT:-OFF}" \
     -DEDEN_JIT_COMPILE_BATCH="${EDEN_JIT_COMPILE_BATCH:-OFF}" \
     -DEDEN_SPARSE_JIT_DEV="${EDEN_SPARSE_JIT_DEV:-OFF}" \
