@@ -88,10 +88,16 @@ assert "vb == 0x68747541u" in topology  # AuthenticAMD
 assert "family >= 0x17u && (vc & (1u << 22)) != 0" in topology
 assert "__cpuid_count(0x8000001eu, 0, a, b, c, d)" in topology
 assert "const unsigned threads_per_core = ((b >> 8) & 255u) + 1u;" in topology
-assert "core = ((c & 255u) << 8) | (b & 255u);" in topology
+assert "amd_cpu_core[cpu] = static_cast<int>(((c & 255u) << 8) | (b & 255u));" in topology
+assert "amd_classified == allowed_count" in topology
+assert "amd_distinct >= 5 && amd_distinct <= 8" in topology
 assert "cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, 8, &verified)" in topology
 assert "std::memcmp(&one, &verified, 8)" in topology
-assert "if (!decoded && has_x2apic)" in topology
+assert "if (has_x2apic)" in topology
+assert "x2_cpu_core[cpu] = static_cast<int>(d >> (a & 31u));" in topology
+assert "x2_classified == allowed_count" in topology
+assert "x2_distinct >= 5 && x2_distinct <= 8" in topology
+assert 'source_name = has_amd_topology ? "x2apic_fallback" : "x2apic";' in topology
 assert "topology_allowed_valid = true;" in topology
 # A failed probe on title B must never inherit pinned workers from title A.
 for reset in ("worker_topology_ready = false;", "secondary_cpus = 0;",
