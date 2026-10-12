@@ -8,6 +8,8 @@ R384 has 294 ~5-second frame windows, average 29.021 FPS, 896 >50ms frames, max 
 
 The final **70 consecutive five-second windows (~350s)** of R384, from around frame 32,436 to 42,823, show near-perfectly repetitive ratios: ~**294 Vulkan draws**, **444 guest CPU writes**, **48.5 IPC calls** and **18 R382 pre-dispatches** per frame, at steady 30 FPS and *zero >50ms frames*. Guest CPU sample epochs 0/1/2 reach epoch 293. The host controller keeps polling (polls=358,750, errors=0) even though button-edge counters stop changing in the final segment. No fatal signal is recorded.
 
+The guest CPU PC samples collapse from 89/57/73 unique addresses in the first 100 five-second windows (cores 0/1/2) to only **9/7/6** unique addresses in the final 70. Core 0 repeatedly samples PC `0x8edbce14` in **55/70** windows. `IHardwareOpusDecoder` command 9 stops increasing near the same phase (126,981 cumulative calls), while IAudioOut, nvdrv and guest IPC calls continue. This strongly suggests a guest-side state/loop transition, but the PC addresses are not symbolicated and audio inactivity alone is not proof of deadlock.
+
 This is **not a host process crash or a stopped Vulkan worker** in the supplied evidence: guest logic may be stuck, a scene may be repeatedly redrawn, or the guest may intentionally be idle. **Workload equality does not prove identical pixels** without framebuffer evidence. Crucially, existing `headless/stall_watchdog.h` only diagnoses stalled GPU command/draw progress, so it will miss this *progressing GPU with apparently frozen gameplay* case. Do not force-reset, alter fences or classify guest deadlock from FPS alone.
 
 ## R382 command chunks
