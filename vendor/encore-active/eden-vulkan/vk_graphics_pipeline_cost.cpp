@@ -11,6 +11,8 @@
 #include "performance.h"
 #include <cstring>
 #include <iostream>
+#include <memory>
+#include <optional>
 #include <span>
 
 #include <boost/container/small_vector.hpp>
@@ -54,6 +56,48 @@ using VideoCore::Surface::PixelFormatFromDepthFormat;
 using VideoCore::Surface::PixelFormatFromRenderTargetFormat;
 
 constexpr size_t NUM_STAGES = Maxwell::MaxShaderStage;
+
+// Descriptor-heavy titles can exceed small_vector's inline capacity on
+// thousands of draws per second. Keep the spare heap capacity on the GPU
+// owner thread instead of allocating/freeing it while the guest texture and
+// buffer caches are locked. Small layouts retain their original stack path.
+// Reentrant Configure() calls receive independent scratch storage.
+struct GraphicsDescriptorScratch {
+    boost::container::small_vector<VideoCommon::ImageViewInOut, 64> views;
+    boost::container::small_vector<VideoCommon::SamplerId, 64> samplers;
+    bool in_use{};
+};
+
+thread_local GraphicsDescriptorScratch graphics_descriptor_scratch;
+
+class GraphicsDescriptorScratchLease {
+public:
+    GraphicsDescriptorScratchLease() {
+        if (graphics_descriptor_scratch.in_use) {
+            nested = std::make_unique<GraphicsDescriptorScratch>();
+            current = nested.get();
+        } else {
+            graphics_descriptor_scratch.in_use = true;
+            current = &graphics_descriptor_scratch;
+        }
+        current->views.clear();
+        current->samplers.clear();
+    }
+
+    ~GraphicsDescriptorScratchLease() {
+        if (!nested) graphics_descriptor_scratch.in_use = false;
+    }
+
+    GraphicsDescriptorScratchLease(const GraphicsDescriptorScratchLease&) = delete;
+    GraphicsDescriptorScratchLease& operator=(const GraphicsDescriptorScratchLease&) = delete;
+
+    auto& Views() noexcept { return current->views; }
+    auto& Samplers() noexcept { return current->samplers; }
+
+private:
+    std::unique_ptr<GraphicsDescriptorScratch> nested;
+    GraphicsDescriptorScratch* current{};
+};
 
 DescriptorLayoutBuilder MakeBuilder(const Device& device, std::span<const Shader::Info> infos) {
     DescriptorLayoutBuilder builder{device};
@@ -359,8 +403,14 @@ void GraphicsPipeline::AddTransition(GraphicsPipeline* transition) {
 
 template <typename Spec>
 bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
-    boost::container::small_vector<VideoCommon::ImageViewInOut, 64> views;
-    boost::container::small_vector<VideoCommon::SamplerId, 64> samplers;
+    boost::container::small_vector<VideoCommon::ImageViewInOut, 64> local_views;
+    boost::container::small_vector<VideoCommon::SamplerId, 64> local_samplers;
+    std::optional<GraphicsDescriptorScratchLease> reused;
+    if (num_image_elements > 64 || num_textures > 64) {
+        reused.emplace();
+    }
+    auto& views = reused ? reused->Views() : local_views;
+    auto& samplers = reused ? reused->Samplers() : local_samplers;
     views.reserve(num_image_elements);
     samplers.reserve(num_textures);
 
