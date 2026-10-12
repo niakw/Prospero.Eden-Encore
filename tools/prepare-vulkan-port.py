@@ -285,6 +285,28 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {'''),
      'scheduler.Record([draw_buffer_obj = draw_buffer->Handle(),\n                              buffer_obj = buffer->Handle(), offset_base, offset,\n                              params, pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {\n                if (!pipeline || !pipeline->CanExecuteDraw()) {\n                    ::Eden::Performance::RecordGraphicsDrawDrop(\n                        ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                    return;\n                }\n                '),
     ('scheduler.Record([buffer_obj = buffer->Handle(), offset, params](vk::CommandBuffer cmdbuf) {\n            ',
      'scheduler.Record([buffer_obj = buffer->Handle(), offset, params,\n                          pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {\n            if (!pipeline || !pipeline->CanExecuteDraw()) {\n                ::Eden::Performance::RecordGraphicsDrawDrop(\n                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                return;\n            }\n            '),
+    ('''    FlushWork();
+    gpu_memory->FlushCaching();
+#ifdef PS5_NATIVE
+    if (guest_descriptor_queue.PreflightGuestDraw''',
+     '''    FlushWork();
+#ifdef PS5_NATIVE
+    // Pre-dispatch a nearly full command chunk before cache acquisition.
+    // This is an ordinary FIFO dispatch, NOT a fence wait.
+    scheduler.PreflightDrawCommands();
+#endif
+    gpu_memory->FlushCaching();
+#ifdef PS5_NATIVE
+    if (guest_descriptor_queue.PreflightGuestDraw'''),
+    ('''void RasterizerVulkan::DispatchCompute() {
+    FlushWork();
+    gpu_memory->FlushCaching();''',
+     '''void RasterizerVulkan::DispatchCompute() {
+    FlushWork();
+#ifdef PS5_NATIVE
+    scheduler.PreflightDrawCommands();
+#endif
+    gpu_memory->FlushCaching();'''),
     ('GraphicsPipeline* prepared_pipeline = nullptr;',
      'GraphicsPipeline* prepared_pipeline = nullptr;\n'
      '// The pipeline of the last prepared draw, for the development fault probe.\n'
@@ -836,6 +858,40 @@ void GpuTimeDestroy(const Device& device) {
 # ownership, execution_mutex synchronization, and destructor stop-wakeup.
 adapt('src/video_core/renderer_vulkan/vk_scheduler.h',
       'include/video_core/renderer_vulkan/vk_scheduler.h', [
+
+    ('''    /// Send work to a separate thread.
+    template <typename T>''', '''#ifdef PS5_NATIVE
+    // A command chunk can fill while Configure() holds both guest GPU-cache
+    // locks. Send the previous command batch BEFORE those locks are acquired,
+    // without waiting for GPU completion or modifying resource/fence state.
+    // The normal Record fallback stays authoritative if a draw is unusually
+    // command-heavy (>4 KiB of queued callbacks).
+    bool PreflightDrawCommands() {
+        constexpr size_t kDrawCommandReserve = 4096;
+        if (!chunk || chunk->Empty() || chunk->HasReserve(kDrawCommandReserve))
+            return false;
+        DispatchWork();
+        return true;
+    }
+#endif
+
+    /// Send work to a separate thread.
+    template <typename T>'''),
+    ('''        bool Empty() const {
+            return command_offset == 0;
+        }
+''', '''        bool Empty() const {
+            return command_offset == 0;
+        }
+
+#ifdef PS5_NATIVE
+        bool HasReserve(size_t bytes) const noexcept {
+            // Allow for maximum command alignment after the current offset.
+            const size_t needed = bytes + alignof(std::max_align_t);
+            return needed <= data.size() && command_offset <= data.size() - needed;
+        }
+#endif
+'''),
     ("    std::condition_variable_any event_cv;\n    std::jthread worker_thread;", "    std::condition_variable_any event_cv;\n    // Protected by queue_mutex. Only a draining WaitWorker needs a wakeup\n    // when the Vulkan worker consumes a queued command chunk.\n    unsigned queue_drain_waiters{};\n    std::jthread worker_thread;"),
 ])
 adapt('src/video_core/renderer_vulkan/vk_scheduler.cpp', 'vulkan_scheduler.cpp', [
