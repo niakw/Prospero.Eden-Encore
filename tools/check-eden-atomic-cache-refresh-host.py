@@ -24,7 +24,10 @@ def invoke(scratch, archive, owner, expect_success=True):
     return cp
 
 with tempfile.TemporaryDirectory(prefix="eden-atomic-cache-regression-") as temp:
-    temp = Path(temp)
+    # macOS uses /tmp -> /private/tmp. The production cache owner check uses
+    # canonical paths; the synthetic test owner must use the same filesystem
+    # spelling instead of falsely reporting a different checkout.
+    temp = Path(temp).resolve()
     owner = temp / "repo"
     owner.mkdir()
     tar_input = temp / "pin" / "eden"
