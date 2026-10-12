@@ -576,7 +576,6 @@ void Launcher::draw_home(Canvas &c)
     const std::string hero_artwork = !hero_banner.empty() ? hero_banner : hero_screenshot;
     const std::string &hero_addons = hero_recent != nullptr ? hero_recent->addons : home_.last_addons;
     const std::string &hero_language = hero_recent != nullptr ? hero_recent->language : home_.last_language;
-    const std::string &hero_intro = hero_recent != nullptr ? hero_recent->intro : home_.last_intro;
     const std::string &hero_description =
         hero_recent != nullptr ? hero_recent->description : home_.last_description;
     const std::uint64_t hero_title_id = hero_recent != nullptr ? hero_recent->title_id : home_.last_title_id;
@@ -664,19 +663,20 @@ void Launcher::draw_home(Canvas &c)
     const std::string title_label =
         hero_file.empty() ? std::string{tr("Your next adventure")} : hero_title;
     constexpr float kTitleSize = 60.0f;
-    text_block(c, title_label, kHeroX, baseline(165.0f, 62.0f, kTitleSize),
-               kTitleSize, 62.0f, theme::kTitle, kHeroContentWidth, 2, 0.90f);
+    // One line only. The font scales to the measured title width, down to 45%
+    // for exceptional long Nlib names, then falls back to a fitted ellipsis.
+    // Never wrap the title into the description's vertical space.
+    text_shrink(c, title_label, kHeroX, baseline(165.0f, 62.0f, kTitleSize),
+                kTitleSize, theme::kTitle, kHeroContentWidth, Align::left, 0.0f, 0.45f);
     const bool hero_caption_warning = hero_recent == nullptr && home_.last_caption_warning;
-    // A game-return screen must not silently swap a full Nlib description
-    // for a short English marketing slogan ("The world's game...") merely
-    // because `intro` exists. Prefer the actual localized title description,
-    // but always show a genuine missing-language/ROM warning first.
+    // Use ONLY Nlib's long description. The one-line `intro` may be an
+    // unrelated tagline; never show it as though it were the full synopsis.
+    // Keep real missing-language / ROM warnings ahead of copy. If Nlib has
+    // no description yet, leave the two-line area blank until it arrives.
     const std::string hero_caption =
         hero_file.empty() ? std::string{tr("Choose a game from your library.")} :
         hero_caption_warning ? home_.last_caption :
-        !hero_description.empty() ? hero_description :
-        !hero_intro.empty() ? hero_intro :
-        hero_recent != nullptr ? std::string{tr("Recently played")} : home_.last_caption;
+        hero_description;
     if (hero_caption_warning)
         notice_block(c, hero_caption, kHeroX, baseline(282.0f, 27.0f, 21.0f),
                      21.0f, 26.0f, theme::kWarning, kHeroContentWidth, 2, true);

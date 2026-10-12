@@ -12,6 +12,7 @@ home=(ui/'home.cpp').read_text()
 launcher=(ui/'launcher.cpp').read_text()
 header=(ui/'launcher.hpp').read_text()
 widgets=(ui/'widgets.cpp').read_text()
+hero_layout=(ui/'hero_text_layout.hpp').read_text()
 widgets_header=(ui/'widgets.hpp').read_text()
 frontend=(root/'headless/prosperoeden/frontend.cpp').read_text()
 main=(root/'headless/main.cpp').read_text()
@@ -23,7 +24,9 @@ po=(root/'headless/prosperoeden/ui/lang/fr-FR.po').read_text()
 embedded=(root/'headless/prosperoeden/fr_fr_embedded.h').read_text()
 assert 'constexpr float kHeroX = 90.0f' in home
 assert 'constexpr float kHeroContentWidth = 1250.0f' in home
-assert 'text_block(c, title_label, kHeroX' in home
+assert 'text_shrink(c, title_label, kHeroX' in home
+assert 'kHeroContentWidth, Align::left, 0.0f, 0.45f)' in home
+assert 'text_block(c, title_label, kHeroX' not in home
 assert 'text_block_semantic(c, hero_caption, kHeroX' in home
 assert 'kHeroX + kHeroContentWidth - chip_x' in home
 assert 'room / desired' in home
@@ -32,34 +35,20 @@ assert 'theme::kBody, kHeroContentWidth, 2, 0.90f' in home
 assert 'constexpr float kChipGap = 9.0f' in home
 assert 90+1250 <= 1340
 
-# Ensure no mid-word UTF8 character elision, no visually misleading dangling
-# prepositions/articles, and actual font-metric reservation for " ...".
-assert 'font.wrap(value, drawn, max_width)' in widgets
-assert 'font.measure(candidate, size) <= max_width' in widgets
-assert 'constexpr std::string_view suffix = " ...";' in widgets
-assert 'semantic_hero_last_line(font, line, drawn, max_width, complete_word)' in widgets
-assert 'std::size_t position = value.find(line, source_cursor)' in widgets
-assert 'if (!whole_word)' in widgets
-assert 'text_block_semantic(Canvas &c' in widgets
-assert 'text_block_semantic(Canvas &c' in widgets_header
-stopblock=widgets.split('constexpr std::array<std::string_view,',1)[1].split('};',1)[0]
-stops=set(re.findall(r'"([^"]+)"',stopblock))
-for weak in ['de','des','le','la','les','un','une','et','qui','que','dans','pour','the','and','of','to']:
-    assert weak in stops,weak
-def preview_last_line(line, max_chars):
-    """Simulate the font-width gate for illustrative regression examples only."""
-    pieces=line.split()
-    if not pieces:return '...'
-    while pieces:
-        last=pieces[-1].lower().strip('.,;:!')
-        if last not in stops and len(' '.join(pieces)+' ...')<=max_chars:
-            return ' '.join(pieces)+' ...'
-        pieces.pop()
-    return '...'
-assert preview_last_line('Un monde grandiose de',29)=='Un monde grandiose ...'
-assert preview_last_line('Un monde grandiose et le',29)=='Un monde grandiose ...'
-assert preview_last_line('Discover a beautiful world and the',29)=='Discover a beautiful ...'
-assert preview_last_line('Un voyage mystérieux de',25)=='Un voyage mystérieux ...'
+# Hero titles are always one responsive line. Only Nlib's long description
+# may populate the synopsis (no one-line intro fallback). A real C++ test
+# exercises the same header-only measured layout that the renderer calls.
+assert 'hero_description;' in home
+assert '!hero_intro.empty() ? hero_intro' not in home
+assert 'const std::string &hero_intro' not in home
+assert 'hero_text::wrap_description(value, drawn, max_width, max_lines, measure)' in widgets
+assert 'font.measure(part, scale)' in widgets
+assert 'font.wrap(value, drawn, max_width)' in widgets  # generic non-Hero text only
+assert 'inline bool weak_ending(std::string_view word)' in hero_layout
+assert 'const std::string candidate = line + " ...";' in hero_layout
+assert 'out.lines.pop_back();' in hero_layout
+subprocess.run([sys.executable, '-B', str(root / 'tools/check-hero-text-layout.py')],
+               check=True, timeout=60)
 
 # Exit is available only at Home root and uses existing modal/input gating.
 assert '(void)confirm_action(Confirmation::exit_app);' in home
@@ -105,4 +94,4 @@ with tempfile.TemporaryDirectory(prefix='eden-r385-static-') as directory:
 current=subprocess.run([sys.executable,'-B',str(script),str(root/'MEMORY.md')],
                        capture_output=True,text=True,check=True).stdout.strip()
 assert re.fullmatch(r'R\d+',current) and int(current[1:]) >= 385
-print('R385 STATIC PASS: compact 1250px Hero, smart FR/EN words, 4 bounded chips, safe Circle confirmation, compiled version R385')
+print('R401 HERO STATIC PASS: one-line measured title, long synopsis only, two-line semantic clipping, 4 bounded chips')

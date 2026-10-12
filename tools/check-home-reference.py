@@ -70,8 +70,8 @@ assert 'hero_file.empty() ? std::string{tr("Your next adventure")}' in home
 # R385: unified left Hero column from the annotated PS5 screenshot.
 assert 'constexpr float kHeroX = 90.0f' in home
 assert 'constexpr float kHeroContentWidth = 1250.0f' in home
-assert 'text_block(c, title_label, kHeroX' in home
-assert 'theme::kTitle, kHeroContentWidth, 2, 0.90f)' in home
+assert 'text_shrink(c, title_label, kHeroX' in home
+assert 'kTitleSize, theme::kTitle, kHeroContentWidth, Align::left, 0.0f, 0.45f)' in home
 assert 'theme::kWarning, kHeroContentWidth, 2, true)' in home
 assert 'text_block_semantic(c, hero_caption, kHeroX' in home
 assert 'theme::kBody, kHeroContentWidth, 2, 0.90f)' in home
