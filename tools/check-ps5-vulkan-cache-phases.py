@@ -101,3 +101,76 @@ with tempfile.TemporaryDirectory(prefix="eden-r310-vk-cache-") as d:
                     "-pthread",str(source),"-o",str(binary)],check=True)
     subprocess.run([str(binary)],check=True)
 print("PASS R310: cache hotpath sample 1/16, max/delta/reset/quiet, pinned locks preserved")
+
+# R355: the exact active renderer's cached storage must be isolated per thread
+# and safe for nested/reentrant ConfigureImpl calls.
+active = (root / "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp").read_text()
+assert "GraphicsDescriptorScratchLease scratch;" in active
+assert "std::optional<GraphicsDescriptorScratchLease> reused" not in active
+assert "GraphicsDescriptorScratchLease scratch;" in generator
+start = active.index("struct GraphicsDescriptorScratch {")
+stop = active.index("DescriptorLayoutBuilder MakeBuilder", start)
+scratch_helper = active[start:stop]
+scratch_cpp = r"""
+#include <boost/container/small_vector.hpp>
+#include <cassert>
+#include <cstdint>
+#include <memory>
+#include <thread>
+namespace VideoCommon {
+struct ImageViewInOut {
+    std::uint32_t index{};
+    bool blacklist{};
+    std::uint64_t id{};
+};
+using SamplerId = std::uint32_t;
+}
+namespace Vulkan {
+namespace {
+__SCRATCH_HELPER__
+}
+}
+int main() {
+    using Vulkan::GraphicsDescriptorScratchLease;
+    std::size_t saved_capacity = 0;
+    {
+        GraphicsDescriptorScratchLease outer;
+        assert(outer.Views().empty());
+        for (unsigned i = 0; i < 130; ++i) {
+            outer.Views().push_back({i, false, i});
+            outer.Samplers().push_back(i);
+        }
+        saved_capacity = outer.Views().capacity();
+        {
+            GraphicsDescriptorScratchLease nested;
+            assert(nested.Views().empty());
+            nested.Views().push_back({999, true, 42});
+            assert(nested.Views()[0].index == 999);
+        }
+        assert(outer.Views().size() == 130);
+        assert(outer.Views()[129].index == 129);
+        assert(outer.Samplers()[129] == 129);
+    }
+    {
+        GraphicsDescriptorScratchLease next;
+        assert(next.Views().empty() && next.Samplers().empty());
+        assert(next.Views().capacity() >= saved_capacity);
+    }
+    std::thread guest([] {
+        GraphicsDescriptorScratchLease other_thread;
+        assert(other_thread.Views().empty());
+        other_thread.Views().push_back({1234, false, 7});
+    });
+    guest.join();
+    GraphicsDescriptorScratchLease main_thread;
+    assert(main_thread.Views().empty());
+}
+""".replace("__SCRATCH_HELPER__", scratch_helper)
+with tempfile.TemporaryDirectory(prefix="eden-r355-scratch-") as d:
+    source = Path(d) / "scratch.cpp"
+    binary = Path(d) / "scratch"
+    source.write_text(scratch_cpp)
+    subprocess.run([compiler, "-std=c++20", "-O1", "-Wall", "-Wextra",
+                    "-Werror", "-pthread", str(source), "-o", str(binary)], check=True)
+    subprocess.run([str(binary)], check=True)
+print("PASS R355: graphics descriptor scratch reuses capacity, isolates nested calls and threads")
