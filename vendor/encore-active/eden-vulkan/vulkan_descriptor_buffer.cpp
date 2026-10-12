@@ -102,6 +102,23 @@ bool DescriptorBufferRing::PreflightFrameReuse(Scheduler& scheduler) {
     frame_reused = false;
     return true;
 }
+
+bool DescriptorBufferRing::PreflightCapacity(Scheduler& scheduler,
+                                             VkDeviceSize size) {
+    // A previous generation or different payload count guarantees allocation.
+    if (chunks.empty() || frame_reused || size == 0 || !CanAllocate(size))
+        return false;
+    const VkDeviceSize needed{Common::AlignUp(size, alignment)};
+    if (needed <= chunk_capacity - cursor || chunk_cursor + 1 < chunks_per_frame)
+        return false;
+    // The same GPU completion as Allocate's full-ring fallback, BEFORE the
+    // guest buffer and texture cache locks: no early GPU memory reuse.
+    scheduler.Finish();
+    chunk_cursor = 0;
+    cursor = 0;
+    ++generation;
+    return true;
+}
 #endif
 
 DescriptorBufferRing::Allocation DescriptorBufferRing::Allocate(Scheduler& scheduler,

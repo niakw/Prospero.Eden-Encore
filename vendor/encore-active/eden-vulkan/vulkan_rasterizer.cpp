@@ -305,6 +305,20 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
     }
 #endif
 #ifdef PS5_NATIVE
+    // Pre-drain only when a new payload is GUARANTEED and the last ring
+    // chunk is full. Reusable/uncertain payloads keep the original fallback.
+    if (descriptor_buffer_ring.PreflightCapacity(
+            scheduler, pipeline->DescriptorRingPreflightSize())) {
+        gpu_memory->FlushCaching();
+        pipeline = pipeline_cache.CurrentGraphicsPipeline();
+        if (!pipeline) {
+            ::Eden::Performance::RecordGraphicsDrawDrop(
+                ::Eden::Performance::GraphicsDrawDrop::NoPipeline);
+            return;
+        }
+    }
+#endif
+#ifdef PS5_NATIVE
     // Only reserve thread-local storage here. Cache descriptors and shader
     // bindings are still read and validated under the paired cache locks.
     pipeline->PreflightDescriptorScratch();

@@ -39,6 +39,7 @@ public:
     void TouchFrame(Scheduler& scheduler);
 #ifdef PS5_NATIVE
     [[nodiscard]] bool PreflightFrameReuse(Scheduler& scheduler);
+    [[nodiscard]] bool PreflightCapacity(Scheduler& scheduler, VkDeviceSize size);
 #endif
 
     [[nodiscard]] bool CanAllocate(VkDeviceSize size) const noexcept {

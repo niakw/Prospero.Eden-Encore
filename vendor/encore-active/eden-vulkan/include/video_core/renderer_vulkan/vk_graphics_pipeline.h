@@ -95,6 +95,14 @@ public:
     [[nodiscard]] size_t DescriptorEntryReservation() const noexcept {
         return num_descriptor_entries != 0 ? num_descriptor_entries : 0x400;
     }
+    [[nodiscard]] VkDeviceSize DescriptorRingPreflightSize() const noexcept {
+        // Before reading guest descriptors, these are the only two conditions
+        // sufficient to PROVE the old descriptor allocation cannot be reused.
+        return CanUseDescriptorBuffer() &&
+               (last_descriptor_buffer_generation != descriptor_buffer_ring.CurrentGeneration() ||
+                last_descriptor_payload.size() != num_descriptor_entries)
+                   ? descriptor_buffer_layout.size : 0;
+    }
 #endif
     bool SupportsAlphaToCoverage() const noexcept {
         return fragment_has_color0_output;

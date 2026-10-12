@@ -107,6 +107,7 @@ jobs:
           python3 -B tools/check-ps5-alias-current-tick.py
           python3 -B tools/check-ps5-texture-subphases.py
           python3 -B tools/check-ps5-descriptor-ring-preflight.py
+          python3 -B tools/check-ps5-descriptor-capacity-preflight.py
           python3 -B tools/check-ps5-software-bilinear.py
           python3 -B tools/check-gpu-physical-copy-bounds-host.py
           python3 -B tools/check-gpu-physical-copy-cpp-host.py
