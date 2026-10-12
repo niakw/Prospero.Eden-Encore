@@ -94,6 +94,20 @@ int main(){
  CheckWorkerTopology();
  assert(worker_topology_ready && current==0x1fff);
  assert((worker_cpus==std::array<unsigned,5>{0,2,4,6,8}));
+ // FW13.60 regression: AMD leaf presents 13 unique "cores" for 13 logical
+ // CPUs, but the authenticated x2APIC SMT shift still identifies 7 physical.
+ max_leaf=0xb;amd_ext_feature=true;
+ for(unsigned i=0;i<13;++i) {amd_cores[i]=i;apics[i]=i;}
+ CheckWorkerTopology();
+ assert(worker_topology_ready && current==0x1fff);
+ assert((worker_cpus==std::array<unsigned,5>{0,2,4,6,8}));
+ assert(cpu_core[0]==cpu_core[1] && cpu_core[2]!=cpu_core[0]);
+ // Both leaves implausible: MUST retain the unpinned logical fallback.
+ for(unsigned i=0;i<13;++i) apics[i]=i*2;
+ CheckWorkerTopology();
+ assert(!worker_topology_ready && current==0x1fff);
+ assert((worker_cpus==std::array<unsigned,5>{0,0,0,0,0}));
+ max_leaf=0xa;
  // TopologyExtensions absent: do not claim proof from logical IDs alone.
  amd_ext_feature=false;
  CheckWorkerTopology();
@@ -107,4 +121,4 @@ with tempfile.TemporaryDirectory() as tmp:
     exe=Path(tmp)/'affinity'
     subprocess.run(['c++','-std=c++20','-Wall','-Wextra','-Werror','-fsanitize=address,undefined','-x','c++','-','-o',str(exe)],input=code,text=True,check=True)
     subprocess.run([str(exe)],check=True)
-print('Worker topology: PASS x2APIC/Zen physical siblings, missing-topology fallback, readback masks and restoration (host only)')
+print('Worker topology: PASS PS5 13-logical AMD rejection/x2APIC fallback, strict 5..8-core evidence, readback and restoration (host only)')
