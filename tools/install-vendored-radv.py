@@ -18,6 +18,7 @@ ACTIVE = ROOT / 'vendor/encore-active/ps5-mesa'
 PATHS = (
     'src/vulkan/wsi/wsi_common_videoout.c',
     'src/amd/vulkan/radv_cmd_buffer.c',
+    'src/amd/vulkan/radv_pipeline.c',
     'src/amd/vulkan/radv_physical_device.c',
     'src/amd/vulkan/winsys/ps5/radv_ps5_winsys.c',
     'src/amd/vulkan/winsys/ps5/radv_ps5_platform.c',
