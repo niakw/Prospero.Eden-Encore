@@ -102,6 +102,11 @@ for relative, replacements in {
         ('      radv_ps5_memory_free(&queue->ring);', '      fprintf(stderr, "radv/ps5: queue marker allocation failed\\n");\n      radv_ps5_memory_free(&queue->ring);'),
     ],
     'src/amd/vulkan/winsys/ps5/radv_ps5_platform.c': [
+        ("#include <time.h>\n", "#include <time.h>\n#include <stdatomic.h>\n"),
+        ("static bool radv_ps5_kick_pending;", "static atomic_bool radv_ps5_kick_pending = ATOMIC_VAR_INIT(false);"),
+        ("while (!radv_ps5_kick_pending)", "while (!atomic_load_explicit(&radv_ps5_kick_pending, memory_order_acquire))"),
+        ("      radv_ps5_kick_pending = false;", "      atomic_store_explicit(&radv_ps5_kick_pending, false, memory_order_release);"),
+        ("   mtx_lock(&radv_ps5_kick_lock);\n   radv_ps5_kick_pending = true;\n   cnd_signal(&radv_ps5_kick_wanted);\n   mtx_unlock(&radv_ps5_kick_lock);", "   // A wake is already scheduled when pending was true. Do not take the\n   // producer mutex and signal the condition variable for every additional\n   // DCB in the same GPU kick batch: FC27 submits thousands per window.\n   // Only the thread changing false->true signals; the consumer clears\n   // pending before suspend, so later submissions always get another kick.\n   if (!atomic_exchange_explicit(&radv_ps5_kick_pending, true, memory_order_acq_rel)) {\n      mtx_lock(&radv_ps5_kick_lock);\n      cnd_signal(&radv_ps5_kick_wanted);\n      mtx_unlock(&radv_ps5_kick_lock);\n   }"),
         ('''bool
 radv_ps5_memory_grant_gpu(void *address, uint64_t bytes)
 {
