@@ -2,7 +2,7 @@
 
 ## Real FTP evidence
 
-Read-only FTP download through the authorized Mac, PS5 192.168.1.209 port 2121, directory /data/prosperoeden/logs/, on October 12. Local temporary copies live in /private/tmp/eden-r363-ftp-audit. Console log timestamps Oct 12 03:23–03:33 are BEFORE the new R363 build, so these logs do not measure R363.
+Read-only FTP download through the authorized Mac, PS5 192.168.1.209 port 2121, directory /data/prosperoeden/logs/, on October 12. Local temporary copies live in /private/tmp/eden-r363-ftp-audit. Console log timestamps Oct 12 03:23–03:33 are BEFORE the new R363 build. More decisively, boot-trace.txt stamps the installed executable build at Oct 12 03:18:21 and its predecessor boot-trace.prev.txt at Oct 12 01:29:32; definitive R359 commit 52a782f1d is later at 03:52:15 UTC. These logs measure neither final R359 nor R363.
 
 - Earlier heap.prev.log: 210 approximately 5-second windows, 28.01 FPS average, 1,535 frames over 50 ms, no full producer GPU queue.
 - Later heap.log: 115 approximately 5-second windows, 28.47 FPS average, 598 frames over 50 ms, 38 over 100 ms, no full producer GPU queue. Worker topology ready=0; no verified physical core allocation.
@@ -38,3 +38,9 @@ Using the already fetched, earlier-than-R363 FC27 logs (NOT R364 measurements), 
 Pearson late50 versus write COUNT: +0.070 in later session; -0.056 earlier. Versus write elapsed TIME: +0.831 later; +0.849 earlier. Versus guest cache_wait_ms: +0.779 later; +0.807 earlier. This provides a reproducible, much more precise **contention-latency** hypothesis: similar operation volume costs 4x time during degraded output. Time spent in callbacks includes mutex waits and other work; causal direction and exact buffer/texture owner are not yet proven. Do not conflate aggregate core write times with serialized wall-clock or physical CPU consumption.
 
 No effect on PS5 runtime. Do not attempt to eliminate coherence locks or short-circuit page invalidations until R364 per-domain counters have been measured.
+
+## R367 provenance correction and workload-adjusted follow-up
+
+The previously used phrase R359 console measurements was NOT source-proven for these FTP logs. BootTrace::Begin embeds compile-time __DATE__ / __TIME__. The two actual build stamps (Oct 12 01:29:32 and 03:18:21) precede final R359 commit 03:52:15 UTC on the GitHub CI runner. Preserve numerical observations but label them pre-R359 installed binaries of unknown exact SHA. Do not claim R359's SMT fix was activated or that R363 improved FC27 at these timestamps.
+
+During the last-session 115 matched 5s samples, windows under 25 FPS had ~64,476 GPU draws and 1,216 dispatch calls per window versus ~51,949 draws and 721 dispatch calls in windows near 30 FPS. The preceding session reproduced higher draw/dispatch workload in slow windows (65,639/1,260 vs 54,219/730). Controlling simultaneously for draw and dispatch counts using normalized least-squares residuals, partial correlations of guest CPU-write elapsed time with late50 remained +0.762 and +0.760 (later/earlier), and aggregate cache-blocked time +0.694/+0.713. These data strengthen a contention-latency hypothesis but do not prove directional cause. No release policy or GPU cache ownership changed by this analysis.
