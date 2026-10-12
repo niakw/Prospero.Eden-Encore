@@ -28,13 +28,28 @@ PATHS = (
     'src/amd/vulkan/winsys/ps5/radv_ps5_platform.c',
 )
 
-# Only an *exact*, previously published Encore active source is accepted as
-# cached compiler input. Unlike a global bypass this does not trust arbitrary
-# patches from a stale or contaminated cache. Confirmed against the Git blob
-# 6e77c7e40de7158fe46774221934622c9411fbd7 at native R398 SHA ab1ed98a.
+# Only exact, Git-verified prior Encore build inputs are accepted.
+# A cache restored from an old Actions run can contain complete R343 active
+# RADV units mixed with R398 WSI. Each historical byte stream is archived in
+# tools/fixtures and checked against its SHA256 in check-vendored-radv-fork.py.
+# Never accept arbitrary native cache edits and never mutate immutable Mesa.
+# R343 source commit: 1c874ff951b02cf6ea8cef7ce4b110258727575c
+# R398 WSI was byte-identical to the R343 WSI.
 LEGACY_COMPILER_SHA256 = {
     'src/vulkan/wsi/wsi_common_videoout.c': frozenset({
         '6d54b8d68cc383faa9bbd910e327824689b5315e7ee5617d8981f582c47c2eaa',
+    }),
+    'src/amd/vulkan/radv_cmd_buffer.c': frozenset({
+        '27e4953853887778ca9fae7ef4114ec42e275b550754d6f6b2d218a692e867f5',
+    }),
+    'src/amd/vulkan/radv_physical_device.c': frozenset({
+        '56aed8905eea35687a7e263375ad216843eb5cc4c474f4eb791addaa2599341d',
+    }),
+    'src/amd/vulkan/winsys/ps5/radv_ps5_winsys.c': frozenset({
+        '0aa478ae4c4d3331177185e7a42386c0dc23fc9ff3869333c34ffaafe5e213b0',
+    }),
+    'src/amd/vulkan/winsys/ps5/radv_ps5_platform.c': frozenset({
+        '8112c2b41a600043d3096a0198c4e3c2d7dcf6b56e8f738f6ce8eb537943725c',
     }),
 }
 

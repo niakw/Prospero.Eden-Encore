@@ -43,23 +43,39 @@ with tempfile.TemporaryDirectory(prefix='eden-radv-fork-equivalence-') as tmp:
     module.install(source_stage, provenance)
     for relative in before:
         assert filecmp.cmp(source_stage / relative, ACTIVE / relative, shallow=False)
-    # Cached R398 native input must migrate exactly once to the current R400
-    # implementation; it is not an arbitrary white-list of modified files.
-    legacy_path = ROOT / 'tools/fixtures/ps5-r398-wsi-videoout.c'
-    legacy_sha = module.digest(legacy_path)
-    assert legacy_sha == '6d54b8d68cc383faa9bbd910e327824689b5315e7ee5617d8981f582c47c2eaa'
-    wsi = 'src/vulkan/wsi/wsi_common_videoout.c'
-    assert module.approved_compiler_input(
-        wsi, legacy_sha, module.digest(SOURCE / wsi), module.digest(ACTIVE / wsi))
-    assert not module.approved_compiler_input(
-        'src/amd/vulkan/radv_pipeline.c', legacy_sha,
-        module.digest(SOURCE / 'src/amd/vulkan/radv_pipeline.c'),
-        module.digest(ACTIVE / 'src/amd/vulkan/radv_pipeline.c'))
-    cached = source_stage / wsi
-    shutil.copy2(legacy_path, cached)
+    # A restored actions/cache can contain multiple R343 active RADV units
+    # simultaneously. Test the entire mixed-generation staging tree: old
+    # complete files -> canonical current inputs, then enforce idempotence.
+    historical = {
+        'src/vulkan/wsi/wsi_common_videoout.c':
+            ROOT / 'tools/fixtures/ps5-r398-wsi-videoout.c',
+        'src/amd/vulkan/radv_cmd_buffer.c':
+            ROOT / 'tools/fixtures/ps5-r343-radv-cmd-buffer.c',
+        'src/amd/vulkan/radv_physical_device.c':
+            ROOT / 'tools/fixtures/ps5-r343-radv-physical-device.c',
+        'src/amd/vulkan/winsys/ps5/radv_ps5_winsys.c':
+            ROOT / 'tools/fixtures/ps5-r343-radv-winsys.c',
+        'src/amd/vulkan/winsys/ps5/radv_ps5_platform.c':
+            ROOT / 'tools/fixtures/ps5-r343-radv-platform.c',
+    }
+    assert set(module.LEGACY_COMPILER_SHA256) == set(historical)
+    for relative, fixture in historical.items():
+        old_sha = module.digest(fixture)
+        assert old_sha in module.LEGACY_COMPILER_SHA256[relative], relative
+        assert module.approved_compiler_input(
+            relative, old_sha, module.digest(SOURCE / relative),
+            module.digest(ACTIVE / relative))
+        for unrelated in before:
+            if unrelated == relative:
+                continue
+            assert not module.approved_compiler_input(
+                unrelated, old_sha, module.digest(SOURCE / unrelated),
+                module.digest(ACTIVE / unrelated)), (relative, unrelated)
+        shutil.copy2(fixture, source_stage / relative)
     module.install(source_stage, None)
-    assert filecmp.cmp(cached, ACTIVE / wsi, shallow=False)
-    assert module.digest(cached) == module.digest(ACTIVE / wsi)
+    module.install(source_stage, None)
+    for relative in before:
+        assert filecmp.cmp(source_stage / relative, ACTIVE / relative, shallow=False), relative
 
     # Do not quietly clobber unknown source changes in a fresh driver export.
     invalid = source_stage / next(iter(before))
@@ -76,4 +92,4 @@ assert 'install-vendored-radv.py' in build
 assert 'python3 "$root/tools/patch-radv-wsi.py"' not in build
 assert build.count('bash "$vulkan/tools/build-radv.sh" release') == 2
 assert 'EDEN_WSI_SHA256' in build
-print('VENDORED_RADV_ACTIVE_INSTALL_OK immutable Mesa pin, R398 cache migration, unknown-source rejection')
+print('VENDORED_RADV_ACTIVE_INSTALL_OK immutable Mesa pin, mixed R343/R398 cached inputs, unknown-source rejection')

@@ -41,3 +41,22 @@ This is a reproducible build-cache migration, **not** a change to game-rendering
 ## R400b native rebuild after deterministic WSI migration
 
 Source CI [#38319934068](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38319934068) passed at `35faea74bd9117fa343438c693c301298b76cdc9`. This commit launches a combined All-On PS5 build using `[full-build] [test-all-on]`; it contains no runtime code changes relative to the green source SHA. Verify the exact resulting build SHA, source checks, RADV install, binary, symbol provenance and distributable artifact before requesting any live FC27 test. Do not publish a release.
+
+## R400c: enumerate all historical compiler inputs, not just one failing path
+
+A second native attempt [#38320275017](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38320275017) correctly passed the prior WSI cache migration, but failed on stale `radv_ps5_platform.c` SHA256 `8112c2b41a600043d3096a0198c4e3c2d7dcf6b56e8f738f6ce8eb537943725c`. GitHub source history identifies that exact source as `1c874ff951b02cf6ea8cef7ce4b110258727575c` (R343), before the R396 concurrent-submission accounting and coalesced wakeups.
+
+Instead of authorizing only this one file, a full audit compared the **10 RADV production-owned input paths** against R343's active fork. Five paths had R343 historical active snapshots; the other five were not yet modified/added in that fork and are handled by the immutable original Mesa pinned source rule. All five verified historical files are checked in under `tools/fixtures` with their original Git blob bytes (the WSI fixture remains named R398 because its exact bytes were unchanged since R343).
+
+| File | Authenticated cached R343 SHA256 prefix |
+| --- | --- |
+| `wsi_common_videoout.c` | `6d54b8d68cc3` |
+| `radv_cmd_buffer.c` | `27e495385388` |
+| `radv_physical_device.c` | `56aed8905eea` |
+| `radv_ps5_winsys.c` | `0aa478ae4c4d` |
+| `radv_ps5_platform.c` | `8112c2b41a60` |
+
+The installer authorizes these **path-bound historical hashes only**, plus the pinned Mesa originals and exact current active files. It never bypasses verification for unknown bytes. The deterministic host regression now stages **all five old files at once**, upgrades to the canonical ten-file fork, checks the second install changes nothing, and refuses unknown modifications. This avoids a one-file-at-a-time build-and-fail loop and preserves source/compiled code provenance.
+
+No FC27 performance, HUD or freeze improvement is implied by this cache migration. R400c needs source CI and a single full native All-On build at a known SHA.
+
