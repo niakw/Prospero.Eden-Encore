@@ -37,11 +37,12 @@ struct compiler_info {
 };
 int main(void) {
  struct amdgpu_info gpu={0};
- struct compiler_info compiler={&gpu,{0}};
+ struct compiler_info compiler_storage={&gpu,{0}};
+ struct compiler_info *compiler_info = &compiler_storage;
  bool round;
 """ + "round = " + after.strip().split("=",1)[1].strip().rstrip(",") + r""";
  assert(round);
- compiler.key.disable_trunc_coord=true;
+ compiler_info->key.disable_trunc_coord=true;
 """ + "round = " + after.strip().split("=",1)[1].strip().rstrip(",") + r""";
  assert(round); /* older Mesa 26.2.0 incorrectly turned this false */
  gpu.conformant_trunc_coord=true;
