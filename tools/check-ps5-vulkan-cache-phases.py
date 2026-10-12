@@ -56,8 +56,14 @@ assert "total_ns >= last_total_ns[phase] ? total_ns - last_total_ns[phase] : tot
 assert "entry.max_ns.exchange(0, std::memory_order_relaxed)" in report
 assert "auto& entry = cache_phase_totals[phase];" in report
 assert "const auto& entry = cache_phase_totals[phase];" not in report
-assert report.index('std::printf("\\n");\n    // These are 1-in-16') < report.index(
+# The detailed-only R393 IPC thread rows now sit between the guest summary
+# and the sampled cache phase report. Validate semantic ordering, not brittle
+# adjacency to the previous printf closing line.
+assert report.index('EDEN_DEV_GUEST cpu_write_calls=') < report.index(
+    '    // These are 1-in-16') < report.index(
     'const auto window = Eden::Fastmem::WindowStats();')
+assert report.index('EDEN_DEV_IPC_THREAD tid=') < report.index(
+    '    // These are 1-in-16')
 for name in ("PairWait", "PairHeld", "PipelineConfigure", "TextureDescriptorSync",
              "TextureFillImageViews", "GraphicsBufferUpdate", "DescriptorQueueAcquire",
              "DynamicStates", "QueryAndDraw"):
