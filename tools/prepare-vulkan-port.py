@@ -20,9 +20,6 @@ def adapt(relative, destination, replacements):
 adapt('src/core/frontend/emu_window.h', 'include/core/frontend/emu_window.h',
       [('    Xcb,', '    Xcb,\n    PS5,')])
 adapt('src/video_core/renderer_vulkan/vk_rasterizer.cpp', 'vulkan_rasterizer.cpp', [
-    # R361: count skipped draws only in DEV detailed profiling.
-    ("    GraphicsPipeline* pipeline{pipeline_cache.CurrentGraphicsPipeline()};\n    if (!pipeline) {\n        return;\n    }", "    GraphicsPipeline* pipeline{pipeline_cache.CurrentGraphicsPipeline()};\n    if (!pipeline) {\n        ::Eden::Performance::RecordGraphicsDrawDrop(\n            ::Eden::Performance::GraphicsDrawDrop::NoPipeline);\n        return;\n    }"),
-    ("        if (!pipeline) return;", "        if (!pipeline) {\n            ::Eden::Performance::RecordGraphicsDrawDrop(\n                ::Eden::Performance::GraphicsDrawDrop::NoPipeline);\n            return;\n        }"),
     # Compute synchronization (dev_vulkan.h compute_barriers): indirect
     # dispatches returned before the pre-dispatch barrier, and no barrier made a dispatch's
     # writes visible to later indirect arguments, vertex/index fetch, shaders or copies.
@@ -151,6 +148,8 @@ void RasterizerVulkan::DispatchCompute() {"""),
      '    if (!pipeline) {\n        return;\n    }',
      '''    GraphicsPipeline* pipeline{pipeline_cache.CurrentGraphicsPipeline()};
     if (!pipeline) {
+        ::Eden::Performance::RecordGraphicsDrawDrop(
+            ::Eden::Performance::GraphicsDrawDrop::NoPipeline);
         return;
     }
 #ifdef PS5_NATIVE
@@ -160,7 +159,11 @@ void RasterizerVulkan::DispatchCompute() {"""),
             break;
         gpu_memory->FlushCaching();
         pipeline = pipeline_cache.CurrentGraphicsPipeline();
-        if (!pipeline) return;
+        if (!pipeline) {
+            ::Eden::Performance::RecordGraphicsDrawDrop(
+                ::Eden::Performance::GraphicsDrawDrop::NoPipeline);
+            return;
+        }
     }
 #endif'''),
     # A forced release blocks the GPU thread until the fence thread has retired
