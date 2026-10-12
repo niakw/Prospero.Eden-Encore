@@ -7,6 +7,7 @@ No PS5 SDK, network, GPU hardware or permanent test files are required.
 """
 from __future__ import annotations
 from pathlib import Path
+import os
 import subprocess
 import sys
 import tempfile
@@ -181,7 +182,15 @@ with tempfile.TemporaryDirectory(prefix="eden-surface-lifecycle-") as tmp:
     unit = stage / "test.cpp"
     binary = stage / "test"
     unit.write_text(mock + methods + checks)
+    env = os.environ.copy()
+    if sys.platform == "darwin":
+        # Older Apple linker cannot parse the SDK v27 architecture tags.
+        for name in ("MacOSX15.4.sdk", "MacOSX15.sdk"):
+            candidate = Path("/Library/Developer/CommandLineTools/SDKs") / name
+            if candidate.is_dir():
+                env["SDKROOT"] = str(candidate)
+                break
     subprocess.run(["c++", "-std=c++20", "-O1", "-Wall", "-Wextra", "-Werror",
-                    str(unit), "-o", str(binary)], check=True, timeout=50)
+                    str(unit), "-o", str(binary)], check=True, timeout=50, env=env)
     subprocess.run([str(binary)], check=True, timeout=10)
 print("SURFACE_LIFECYCLE_COMPILER_INPUT_PASS full versioned source, pinned input and conflict rejection")
