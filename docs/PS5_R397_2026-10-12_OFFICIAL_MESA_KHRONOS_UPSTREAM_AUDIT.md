@@ -74,3 +74,13 @@ The R396 atomic AGC wake coalescing in `radv_ps5_platform.c` reduces redundant c
 3. Host tests run in source-only GitHub CI before any native build; they do not certify visual smoothness.
 4. The R394 log user observation of visual stutter **at ~30 FPS** remains the primary quality criterion. Nominal present events do not measure game simulation step or correct texture contents. GPU buffer-cache contention explains only a subset of slow-frame periods; neither texture correctness nor guest freeze may be dismissed.
 5. Rebuild RADV and final PS5 package from one unambiguous commit SHA only after source CI. Do not ask for repeated diagnostics until an integrated meaningful build is prepared.
+
+## Integrated native test build request
+
+This source-only audit is finalized for a combined PS5 build. Trigger an explicit
+developer test package with `[full-build] [test-all-on]`, based on a *single*
+SHA containing the prior PS5 RADV AGC kick work plus three official Mesa fixes.
+The build must pass byte-for-byte vendor replay, sanitizer host checks, SDK
+native compilation and package assembly before a tester installs anything.
+Do not present an unbuilt GitHub SHA as a working PS5 binary.
+
