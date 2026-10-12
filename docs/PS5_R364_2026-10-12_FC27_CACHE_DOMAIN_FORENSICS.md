@@ -19,3 +19,7 @@ The five-second GPU snapshot adds EDEN_GUEST_CACHE_DOMAIN with domain=buffer|tex
 Native generated Vulkan sources and pinned-source Python oracle must be byte identical. The R364 source-extracted host C++ fixture validates real GuestCacheLock code, separate buffer/texture blocking, overall totals, and zero clock work when diagnostics are quiet. Existing quiet GPU host regression remains in force.
 
 No claim of performance improvement. Before another combined PS5 test, validate core CI and native PS5 build. Correlate per-domain blocked windows with late frames and GPU cache phases only after the new log format is present.
+
+## R365 read-only analysis compatibility
+
+The built-in tools/analyze-fc27-stutter.py also accepts EDEN_GUEST_CACHE_DOMAIN by exact frame identity and reports per-domain five-second wait, blocked count, contention count and Pearson associations with late50. It uses explicit window_wait_ns instead of incorrectly summing cumulative totals. When old R359 logs do not have the new fields, it prints an unavailable marker rather than pretending zero contention. Its --self-test includes both R364 and legacy/no-domain inputs. This only changes offline Python analysis, never runtime code.

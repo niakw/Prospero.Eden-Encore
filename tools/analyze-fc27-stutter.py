@@ -41,6 +41,7 @@ def analyze(log: str) -> dict:
     pressure: dict[int, dict] = {}
     gpu: dict[int, dict] = {}
     phases: dict[str, dict[int, dict]] = defaultdict(dict)
+    domains: dict[str, dict[int, dict]] = defaultdict(dict)
     # HLE reports cumulative *service* timings. Command 3 is an outer Binder
     # transaction, not the inner buffer-queue transaction type; never label it
     # DequeueBuffer without separately accounting for the dequeue timer.
@@ -76,6 +77,11 @@ def analyze(log: str) -> dict:
             value = values(line)
             if match and "frame" in value:
                 phases[match.group(1)][int(value["frame"])] = value
+        elif line.startswith("EDEN_GUEST_CACHE_DOMAIN "):
+            match = re.search(r"\bdomain=(buffer|texture)\b", line)
+            value = values(line)
+            if match and "frame" in value:
+                domains[match.group(1)][int(value["frame"])] = value
     keys = sorted(frames.keys() & pressure.keys() & gpu.keys())
     if not keys:
         raise ValueError("No matching EDEN_VULKAN_FRAME / EDEN_FRAME_PRESSURE / EDEN_DEV_GPU windows")
@@ -96,6 +102,15 @@ def analyze(log: str) -> dict:
             if before and snapshot.get("total_ns", 0) >= before.get("total_ns", 0):
                 row["phase_ms:" + phase] = (snapshot["total_ns"] - before["total_ns"]) / 1e6
             preceding["phase:" + phase] = snapshot
+        for domain, occurrences in domains.items():
+            snap = occurrences.get(frame)
+            if snap is None:
+                continue
+            # Native R364 already emits a per-snapshot delta, unlike the
+            # cumulative older cache phase formats. Never sum totals twice.
+            row["domain_wait_ms:" + domain] = snap.get("window_wait_ns", 0) / 1e6
+            row["domain_contended:" + domain] = snap.get("window_contended", 0)
+            row["domain_blocked:" + domain] = snap.get("window_blocked", 0)
         preceding["gpu"] = owner
         rows.append(row)
     full = [row for row in rows if row.get("gpu_full_ms", 0) > 0.001]
@@ -129,6 +144,16 @@ def analyze(log: str) -> dict:
                     "late50_correlation": round(correlation(rows, "phase_ms:" + phase, "late50"), 3)}
             for phase in sorted(phases)
         },
+        "guest_cache_domains": {
+            domain: {
+                "wait_ms": round(sum(row.get("domain_wait_ms:" + domain, 0) for row in rows), 3),
+                "contended": int(sum(row.get("domain_contended:" + domain, 0) for row in rows)),
+                "blocked": int(sum(row.get("domain_blocked:" + domain, 0) for row in rows)),
+                "late50_correlation": round(
+                    correlation(rows, "domain_wait_ms:" + domain, "late50"), 3)
+            }
+            for domain in sorted(domains)
+        },
         "rows": rows,
     }
 
@@ -143,6 +168,10 @@ def self_test() -> None:
         "EDEN_FRAME_PRESSURE frame=300 gpu_full_ms=0 gpu_idle_ms=3800 gpu_dispatch_ms=1050",
         "EDEN_DEV_GPU frame=300 dispatch_calls=900 full_calls=10 full_ns=20000000 draws=280",
         "EDEN_GPU_CACHE_PHASE frame=300 phase=pair_wait total_ns=1400000",
+        "EDEN_GUEST_CACHE_DOMAIN frame=150 domain=buffer contended=8 blocked=5 wait_ns=10000000 window_contended=8 window_blocked=5 window_wait_ns=10000000",
+        "EDEN_GUEST_CACHE_DOMAIN frame=150 domain=texture contended=4 blocked=4 wait_ns=2000000 window_contended=4 window_blocked=4 window_wait_ns=2000000",
+        "EDEN_GUEST_CACHE_DOMAIN frame=300 domain=buffer contended=10 blocked=7 wait_ns=13000000 window_contended=2 window_blocked=2 window_wait_ns=3000000",
+        "EDEN_GUEST_CACHE_DOMAIN frame=300 domain=texture contended=5 blocked=5 wait_ns=2500000 window_contended=1 window_blocked=1 window_wait_ns=500000",
         "EDEN_DEV_HLE service=IHOSBinderDriver cmd=3 calls=2 ns=20000000",
         "EDEN_DEV_HLE service=IHOSBinderDriver cmd=3 calls=5 ns=70000000",
     ])
@@ -156,6 +185,14 @@ def self_test() -> None:
     assert result["binder_auto_transaction_seconds"] == 0.05
     assert result["rows"][1]["delta_dispatch_calls"] == 400
     assert abs(result["cache_phases"]["pair_wait"]["sampled_ms"] - .4) < 1e-9
+    assert result["guest_cache_domains"]["buffer"]["contended"] == 10
+    assert result["guest_cache_domains"]["buffer"]["blocked"] == 7
+    assert abs(result["guest_cache_domains"]["buffer"]["wait_ms"] - 13) < 1e-8
+    assert result["guest_cache_domains"]["texture"]["contended"] == 5
+    assert abs(result["guest_cache_domains"]["texture"]["wait_ms"] - 2.5) < 1e-8
+    # Legacy R359 logs without domain lines are supported with no invention.
+    legacy = analyze(sample.replace("EDEN_GUEST_CACHE_DOMAIN", "IGNORED_DOMAIN"))
+    assert legacy["guest_cache_domains"] == {}
     print("FC27_TRACE_ANALYZER_SELF_TEST_PASS")
 
 
@@ -182,6 +219,11 @@ def main() -> None:
     for name, value in sorted(report["cache_phases"].items(),
                               key=lambda item: -item[1]["sampled_ms"]):
         print("CACHE_PHASE", name, value)
+    if report["guest_cache_domains"]:
+        for name, value in report["guest_cache_domains"].items():
+            print("GUEST_CACHE_DOMAIN", name, value)
+    else:
+        print("GUEST_CACHE_DOMAIN unavailable (pre-R364 console log; do not infer zero contention)")
     print("NOTE: Outer Binder command 3 multiplexes graphics transactions (including DequeueBuffer); "
           "its accumulated wall time is NOT proof of a single buffer queue deadlock.")
     print("NOTE: These are five-second window associations, not per-frame causation. "
