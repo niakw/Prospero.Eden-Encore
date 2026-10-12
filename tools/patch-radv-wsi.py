@@ -139,6 +139,11 @@ radv_ps5_memory_grant_gpu(void *address, uint64_t bytes)
     for old, new in replacements:
         assert adapted.count(old) == 1, f'Pinned initialization anchor changed: {relative}'
         adapted = adapted.replace(old, new)
+    if relative == 'src/amd/vulkan/radv_cmd_buffer.c':
+        # Official Mesa 26.2.2 zero-draw firmware workaround, adapted to our
+        # PS5 GS-compute raster path without bypassing any real draw packet.
+        from radv_official_indirect_draw_fix import patch as patch_zero_indirect_draw
+        adapted = patch_zero_indirect_draw(adapted)
     if not destination.exists() or destination.read_text() != adapted:
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text(adapted)
