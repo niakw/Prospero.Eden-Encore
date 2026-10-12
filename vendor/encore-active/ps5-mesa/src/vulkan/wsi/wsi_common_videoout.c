@@ -313,22 +313,28 @@ videoout_open_locked(void)
       const int configured =
          supported > 0
             ? sceVideoOutConfigureOutput(out->handle, PS5_VIDEO_OUT_MODE_HIGH_FRAME_RATE, NULL, NULL, NULL)
-            : supported;
-      out->high_frame_rate = configured == 0;
+            : -1;
+      out->high_frame_rate = supported > 0 && configured == 0;
       if (out->high_frame_rate) {
          const uint64_t period = videoout_vblank_period_ns(out->handle);
-         if (period > UINT64_C(15000000) && period < UINT64_C(18500000)) {
+         if (period == 0 || (period > UINT64_C(15000000) && period < UINT64_C(18500000))) {
             sceVideoOutConfigureOutput(out->handle, PS5_VIDEO_OUT_MODE_RESTORE, NULL, NULL, NULL);
             out->high_frame_rate = false;
-            fprintf(stderr,
-                    "wsi/videoout: 119.88 Hz accepted, but a vblank comes every %.3f ms; 59.94 Hz restored\n",
-                    (double)period / 1e6);
+            if (period == 0)
+               fprintf(stderr, "wsi/videoout: 119.88 Hz accepted, but a vblank wait failed; 59.94 Hz restored\n");
+            else
+               fprintf(stderr,
+                       "wsi/videoout: 119.88 Hz accepted, but a vblank comes every %.3f ms; 59.94 Hz restored\n",
+                       (double)period / 1e6);
          } else {
             fprintf(stderr, "wsi/videoout: 119.88 Hz output, a vblank every %.3f ms\n", (double)period / 1e6);
          }
+      } else if (supported > 0) {
+         fprintf(stderr, "wsi/videoout: 119.88 Hz refused (%d); presenting at 59.94 Hz\n", configured);
       } else {
-         fprintf(stderr, "wsi/videoout: 119.88 Hz %s (%d); presenting at 59.94 Hz\n",
-                 supported > 0 ? "refused" : "not supported", configured);
+         fprintf(stderr,
+                 "wsi/videoout: 119.88 Hz not offered on present output (%d); presenting at 59.94 Hz\n",
+                 supported);
       }
    }
    return true;
