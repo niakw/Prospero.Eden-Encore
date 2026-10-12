@@ -10,6 +10,8 @@ The final **70 consecutive five-second windows (~350s)** of R384, from around fr
 
 The guest CPU PC samples collapse from 89/57/73 unique addresses in the first 100 five-second windows (cores 0/1/2) to only **9/7/6** unique addresses in the final 70. Core 0 repeatedly samples PC `0x8edbce14` in **55/70** windows. `IHardwareOpusDecoder` command 9 stops increasing near the same phase (126,981 cumulative calls), while IAudioOut, nvdrv and guest IPC calls continue. This strongly suggests a guest-side state/loop transition, but the PC addresses are not symbolicated and audio inactivity alone is not proof of deadlock.
 
+The recorded Horizon SVC identifiers during the 70-window terminal plateau are particularly relevant: core 0 often reports `svc=0x1d` (Switch `SignalProcessWideKey`), cores 1/2 often report `svc=0x1c` (`WaitProcessWideKeyAtomic`) or `0x18` (`WaitSynchronization`). These mappings are documented by Switchbrew, but **a sampled 'last SVC' is NOT an actual waiting call stack or proof that the syscall itself is stuck**. Audit guest condition-variable/synchronization behavior only after mapping captured guest PCs and checking per-service progress.
+
 This is **not a host process crash or a stopped Vulkan worker** in the supplied evidence: guest logic may be stuck, a scene may be repeatedly redrawn, or the guest may intentionally be idle. **Workload equality does not prove identical pixels** without framebuffer evidence. Crucially, existing `headless/stall_watchdog.h` only diagnoses stalled GPU command/draw progress, so it will miss this *progressing GPU with apparently frozen gameplay* case. Do not force-reset, alter fences or classify guest deadlock from FPS alone.
 
 ## R382 command chunks
