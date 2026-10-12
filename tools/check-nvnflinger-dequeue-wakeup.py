@@ -7,7 +7,8 @@ import sys
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-source = Path(sys.argv[1]) if len(sys.argv) > 1 else Path((root / '.local/headless-cache').read_text().strip()) / 'source'
+source = (Path(sys.argv[1]) if len(sys.argv) > 1 else
+          root / 'vendor/encore-active/eden-backports')
 header = (source / 'src/core/hle/service/nvnflinger/buffer_queue_core.h').read_text()
 cpp = (source / 'src/core/hle/service/nvnflinger/buffer_queue_core.cpp').read_text()
 assert 'std::atomic<std::uint64_t> dequeue_epoch{};' in header
