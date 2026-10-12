@@ -270,10 +270,13 @@ inline std::array<IdleCounters, 4> guest_idle{};
 // a racing game's heavy phase from ~55 to ~59.6 FPS; dev-settings
 // idle_spin_us=N overrides it (0 sleeps at once).
 inline std::atomic<unsigned> idle_spin_iterations{5000};
-// Draws between the Vulkan rasterizer's hand-offs to its worker, minus one (a power of two minus
-// one; tools/prepare-vulkan-port.py). Shipping uses Eden's upstream 8-draw cadence again;
-// dev-settings dispatch_draws=N (8 to 512) can still profile wider batching explicitly.
-inline std::atomic<unsigned> dispatch_mask{7};
+// R355: 16 draws between Vulkan worker hand-offs instead of 8. FC27 measured
+// ~1,000-2,000 dispatches per five-second window with an otherwise idle GPU
+// owner; halving dispatch submissions keeps the same hard 512-draw flush bound.
+// The guest-visible command order and all texture/buffer synchronization remain
+// unchanged. 8 is still available with dev-settings dispatch_draws=8.
+// This is a candidate optimization, not a measured PS5 FPS improvement.
+inline std::atomic<unsigned> dispatch_mask{15};
 inline void CountIdle(std::size_t core, long long nanoseconds, bool slept) {
     if (core >= guest_idle.size()) return;
     guest_idle[core].calls.fetch_add(1, std::memory_order_relaxed);

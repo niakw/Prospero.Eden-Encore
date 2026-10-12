@@ -403,14 +403,12 @@ void GraphicsPipeline::AddTransition(GraphicsPipeline* transition) {
 
 template <typename Spec>
 bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
-    boost::container::small_vector<VideoCommon::ImageViewInOut, 64> local_views;
-    boost::container::small_vector<VideoCommon::SamplerId, 64> local_samplers;
-    std::optional<GraphicsDescriptorScratchLease> reused;
-    if (num_image_elements > 64 || num_textures > 64) {
-        reused.emplace();
-    }
-    auto& views = reused ? reused->Views() : local_views;
-    auto& samplers = reused ? reused->Samplers() : local_samplers;
+    // Reuse storage even for common <=64-descriptor draws: constructing two
+    // inline small_vectors for every draw still churned ~1 KiB of stack and
+    // capacity metadata while both guest GPU cache locks were held.
+    GraphicsDescriptorScratchLease scratch;
+    auto& views = scratch.Views();
+    auto& samplers = scratch.Samplers();
     views.reserve(num_image_elements);
     samplers.reserve(num_textures);
 

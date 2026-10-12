@@ -1219,12 +1219,11 @@ int main(int argc, char** argv) {
         // globals before reading the current game's dev-settings.txt.
         Eden::Performance::graphics_usage_from_pool.store(true, std::memory_order_relaxed);
         Eden::Performance::gc_keep_dirty.store(true, std::memory_order_relaxed);
-        // R326: restore the reference 8-draw GPU handoff in PS5 dev builds.
-        // The experimental 64-draw batching can delay worker visibility; it
-        // never demonstrated smoother FC27 playback. Keep the 512-draw hard
-        // flush ceiling. Opt into 64 only via dev-settings dispatch_draws=64.
-        // Reset at each title so previous games cannot retain an A/B override.
-        Eden::Performance::dispatch_mask.store(7, std::memory_order_relaxed);
+        // R355: halve the high-frequency Vulkan dispatch overhead with a
+        // conservative 16-draw default; the hard 512-draw flush still applies.
+        // Earlier 64-draw experiments were not qualified as smoother FC27.
+        // A/B rollback: dev-settings dispatch_draws=8. Reset per title.
+        Eden::Performance::dispatch_mask.store(15, std::memory_order_relaxed);
         Eden::Performance::idle_spin_iterations.store(5000, std::memory_order_relaxed);
         Eden::Performance::jit_duplicate_tracking.store(false, std::memory_order_relaxed);
         Eden::Performance::pc_sample_core.store(0, std::memory_order_relaxed);
