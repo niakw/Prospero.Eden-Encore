@@ -1070,8 +1070,8 @@ void ReportGpuThread(unsigned frame) {
     for (unsigned slot = 0; slot < render_conditions.size(); ++slot)
         std::printf("%s%llu", slot ? "," : "", render_conditions[slot].load(std::memory_order_relaxed));
     std::printf("\n");
-    // These are 1-in-16 draw SAMPLES, not every draw's cost. Report cumulative
-    // totals plus maximum sampled latency; pair with frame IDs/time windows.
+    // These are 1-in-16 GPU draw and 1-in-64 guest-write SAMPLES, not
+    // full totals. Each phase reports its own sample count and window cost.
     // Never issue a kernel query or print per-draw logging while the locks live.
     if (detailed_gpu_profile.load(std::memory_order_relaxed)) {
         constexpr const char* cache_phase_names[] = {
@@ -1081,7 +1081,10 @@ void ReportGpuThread(unsigned frame) {
             "texture_cpu_refresh", "texture_alias_scan", "texture_alias_copy",
             "stage_texture_handles", "bind_texture_buffers", "bind_stage_descriptors",
             "refresh_render_targets", "check_feedback_loop", "commit_graphics_draw",
-            "descriptor_ring_finish", "descriptor_ring_preflight"
+            "descriptor_ring_finish", "descriptor_ring_preflight",
+            "guest_write_buffer_wait", "guest_write_buffer_work",
+            "guest_write_texture_wait", "guest_write_texture_work",
+            "guest_write_shader_invalidate"
         };
         static_assert(std::size(cache_phase_names) == cache_phase_totals.size());
         constexpr const char* drop_names[] = {
