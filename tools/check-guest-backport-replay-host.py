@@ -1,54 +1,26 @@
 #!/usr/bin/env python3
 """Replay the EXACT pinned Eden guest-memory patches against the real upstream TU.
 
-Runs on GitHub Actions only. Downloads only the 42-kB public, pinned and
-SHA-1-verified upstream src/core/memory.cpp, then applies the same ordered
-guest patches as tools/apply-eden-backports.sh. No PS5 SDK, emulator build,
-hardware, writable user device, or external unpinned source is required.
+Uses the complete, SHA-1-verified original Eden source already vendored in
+this Git checkout; no HTTP requests or GitHub services are required. Replays
+the same ordered guest patches as tools/apply-eden-backports.sh. No PS5 SDK,
+emulator build, hardware, or writable user device is required.
 """
 import hashlib
 from pathlib import Path
 import subprocess
 import tempfile
-import time
-from urllib.error import URLError, HTTPError
-from urllib.request import Request, urlopen
 
 root = Path(__file__).resolve().parents[1]
 apply_source = (root / "tools/apply-eden-backports.sh").read_text()
 pin = "5f142c7926d0c7fcbbd0ce30794d72f638a43b2a"
 blob_sha = "837016de1d4efe74d2efb8df0d9de10aa10d8a26"
-url = ("https://raw.githubusercontent.com/eden-emulator/mirror/"
-       + pin + "/src/core/memory.cpp")
+upstream_path = root / "vendor/sources/eden/src/core/memory.cpp"
+assert upstream_path.is_file(), "Pinned original Eden memory.cpp was not vendored"
+assert (root / "vendor/sources/eden/VENDOR-ORIGIN.json").is_file()
 assert f"expected={pin}" in apply_source, "Production upstream pin drifted"
-patch_names = (
-    "eden-ps5-guest-mapping-diagnostics.patch",
-    "eden-ps5-guest-walk.patch",
-    "eden-ps5-guest-zero-alias.patch",
-    "eden-ps5-guest-map-null-backing.patch",
-    "eden-ps5-guest-span.patch",
-)
-pos = [apply_source.index(f'apply_one "$root/headless/backports/{name}"')
-       for name in patch_names]
-assert pos == sorted(pos), "Backport ordering does not preserve valid alias handling"
-
-last_error = None
-for attempt in range(3):
-    try:
-        req = Request(url, headers={"User-Agent": "Eden-Encore-pinned-source-CI"})
-        with urlopen(req, timeout=18) as reply:
-            if reply.status != 200:
-                raise RuntimeError(f"Public upstream HTTP status {reply.status}")
-            upstream = reply.read(1024 * 1024 + 1)
-            if len(upstream) > 1024 * 1024:
-                raise RuntimeError("Upstream TU is too large: refuse unpinned content")
-        break
-    except (URLError, HTTPError, TimeoutError, OSError) as exc:
-        last_error = exc
-        if attempt < 2:
-            time.sleep(1)
-else:
-    raise SystemExit(f"Could not verify pinned upstream bytes: {last_error}")
+upstream = upstream_path.read_bytes()
+assert 0 < len(upstream) <= 1024 * 1024, "Pinned memory.cpp size invalid"
 actual_sha = hashlib.sha1(
     b"blob " + str(len(upstream)).encode("ascii") + b"\0" + upstream
 ).hexdigest()
