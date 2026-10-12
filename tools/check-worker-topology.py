@@ -23,7 +23,8 @@ assert "amd_distinct >= 5 && amd_distinct <= 8" in probe
 assert "x2_distinct >= 5 && x2_distinct <= 8" in probe
 assert "source_name = has_amd_topology ? \"x2apic_fallback\" : \"x2apic\"" in probe
 assert "amd_classified == allowed_count" in probe
-assert 'sysctlbyname("kern.sched.topology_spec"' in probe
+assert '"kern.sched.topology_spec"' in probe
+assert '"kern.sched.ule.topology_spec"' in probe
 assert "os_topology_valid" in probe
 assert 'source_name = "freebsd_sched"' in probe
 assert "ParseSmtGroups" in probe
