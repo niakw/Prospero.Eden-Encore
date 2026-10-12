@@ -2589,6 +2589,20 @@ void Initialize() {
     # The guest derived DNS source includes the matching policy prototype.
     target_include_directories(core PRIVATE "${EDEN_PORT_DIR}")
     target_compile_definitions(eden-headless PRIVATE PS5_NATIVE=1)
+    # Only main.cpp needs to recompile when the SHA changes. The stable
+    # video_core and other native app objects keep their incremental caches.
+    if(NOT DEFINED EDEN_ENCORE_SOURCE_COMMIT)
+        set(EDEN_ENCORE_SOURCE_COMMIT "unknown")
+    endif()
+    if(NOT EDEN_ENCORE_SOURCE_COMMIT STREQUAL "unknown")
+        string(LENGTH "${EDEN_ENCORE_SOURCE_COMMIT}" encore_commit_len)
+        if(NOT encore_commit_len EQUAL 40 OR
+           NOT EDEN_ENCORE_SOURCE_COMMIT MATCHES "^[0-9a-f]+$")
+            message(FATAL_ERROR "EDEN_ENCORE_SOURCE_COMMIT must be a 40-char lowercase Git SHA")
+        endif()
+    endif()
+    set_property(SOURCE "${EDEN_PORT_DIR}/main.cpp" APPEND PROPERTY
+        COMPILE_DEFINITIONS "EDEN_NATIVE_SOURCE_COMMIT=\"${EDEN_ENCORE_SOURCE_COMMIT}\"")
     if(EDEN_SPARSE_JIT_DEV)
         target_compile_definitions(eden-headless PRIVATE EDEN_SPARSE_JIT_DEV=1)
     endif()

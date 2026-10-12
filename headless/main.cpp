@@ -416,6 +416,11 @@ int main(int argc, char** argv) {
         std::setvbuf(report, nullptr, _IONBF, 0);
 #ifdef PS5_NATIVE
         Eden::BootTrace::Begin(Eden::kAppVersion, __DATE__ " " __TIME__);
+#ifdef EDEN_NATIVE_SOURCE_COMMIT
+        Eden::BootTrace::Line("source_sha=%s", EDEN_NATIVE_SOURCE_COMMIT);
+#else
+        Eden::BootTrace::Line("source_sha=unknown");
+#endif
 
         // One hardened one-shot filesystem request covers both the internal
         // /data/prosperoeden root and an optional external storage root.
@@ -551,6 +556,12 @@ int main(int argc, char** argv) {
             kReleaseLogSegmentBytes, persist_detailed_logs);
         Eden::NativeLogs::Register(stderr_attached ? &stderr_pipe : nullptr,
                                    stdout_attached ? &stdout_pipe : nullptr);
+#ifdef EDEN_NATIVE_SOURCE_COMMIT
+        // At most ONE log line per boot, only when diagnostic logging is on.
+        // Performance windows can now be matched to an immutable native SHA.
+        if (persist_detailed_logs)
+            std::printf("EDEN_BUILD_SOURCE source_sha=%s\n", EDEN_NATIVE_SOURCE_COMMIT);
+#endif
         if (!stderr_attached || !stdout_attached)
             Eden::Report("logs", "Asynchronous log sink unavailable; crash reports remain active");
         Eden::Crash::Install(Eden::LogsDir(), Eden::kAppVersion, last_crash.restarted);
