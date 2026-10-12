@@ -43,7 +43,13 @@ assert "!game.cover.empty() ? game.cover : game.hero" in lib
 assert "if (image.missing) continue;" in lib
 assert "Loading artwork" in home and "Artwork unavailable" in home
 assert "text_block(c, title_label" in home
-assert "text_block(c, hero_caption" in home
+# R385 switched the hero's non-warning description to semantic ellipsis.
+# Preserve the actual rendering and warning-priority contracts, rather
+# than locking the test to an obsolete text_block() call.
+assert "text_block_semantic(c, hero_caption" in home
+assert "notice_block(c, hero_caption" in home
+assert "if (hero_caption_warning)" in home
+assert "!hero_description.empty() ? hero_description :" in home
 assert "label_area.w - 4.0f, Align::center" in home
 assert 'TR("Recent")' in nav
 # Regression from FC27 hardware tests: use the matching game's proper Nlib
