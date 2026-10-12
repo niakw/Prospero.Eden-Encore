@@ -248,7 +248,11 @@ inline Totals guest_ipc_wait;
 // R393: bounded attribution of synchronous guest IPC waits. Only invoked
 // when detailed GPU profiling is active; no allocation, string lookup,
 // blocking lock or per-request log on the hot path.
-inline constexpr unsigned guest_ipc_thread_slots = 128;
+// FC27 R394 observed >63k unattributed calls in 9m32s once 128 TIDs filled.
+// 1024 slots cost only ~32 KiB; fixed bounded probing avoids O(1024)
+// per-call scans after high thread churn. Diagnostics only.
+inline constexpr unsigned guest_ipc_thread_slots = 1024;
+inline constexpr unsigned guest_ipc_max_probes = 64;
 struct GuestIpcThread {
     std::atomic<unsigned long long> tid{}, calls{}, ns{}, max_ns{};
 };
@@ -263,7 +267,7 @@ inline void RecordGuestIpc(unsigned long long tid, long long elapsed_ns) noexcep
         .fetch_add(1, std::memory_order_relaxed);
     if (tid != 0) {
         unsigned slot = static_cast<unsigned>(tid % guest_ipc_thread_slots);
-        for (unsigned n = 0; n < guest_ipc_thread_slots; ++n) {
+        for (unsigned n = 0; n < guest_ipc_max_probes; ++n) {
             auto& row = guest_ipc_threads[slot];
             auto found = row.tid.load(std::memory_order_relaxed);
             if (found == 0) {
