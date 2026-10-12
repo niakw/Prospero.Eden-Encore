@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <stdatomic.h>
 
 #include "c11/threads.h"
 #include "util/macros.h"
@@ -660,7 +661,7 @@ static uint64_t radv_ps5_submit_ns[3];
  * made; submissions made while it is at one share the next. */
 static mtx_t radv_ps5_kick_lock;
 static cnd_t radv_ps5_kick_wanted;
-static bool radv_ps5_kick_pending;
+static atomic_bool radv_ps5_kick_pending = ATOMIC_VAR_INIT(false);
 static once_flag radv_ps5_kick_once = ONCE_FLAG_INIT;
 
 static int
@@ -669,9 +670,9 @@ radv_ps5_kick_body(void *unused)
    (void)unused;
    mtx_lock(&radv_ps5_kick_lock);
    for (;;) {
-      while (!radv_ps5_kick_pending)
+      while (!atomic_load_explicit(&radv_ps5_kick_pending, memory_order_acquire))
          cnd_wait(&radv_ps5_kick_wanted, &radv_ps5_kick_lock);
-      radv_ps5_kick_pending = false;
+      atomic_store_explicit(&radv_ps5_kick_pending, false, memory_order_release);
       mtx_unlock(&radv_ps5_kick_lock);
       const uint64_t started = os_time_get_nano();
       const int32_t result = sceAgcSuspendPoint();
@@ -712,10 +713,16 @@ radv_ps5_submit(uint32_t *words, uint32_t count, volatile uint32_t *marker, uint
    if (result != 0)
       return result;
    call_once(&radv_ps5_kick_once, radv_ps5_kick_start);
-   mtx_lock(&radv_ps5_kick_lock);
-   radv_ps5_kick_pending = true;
-   cnd_signal(&radv_ps5_kick_wanted);
-   mtx_unlock(&radv_ps5_kick_lock);
+   // A wake is already scheduled when pending was true. Do not take the
+   // producer mutex and signal the condition variable for every additional
+   // DCB in the same GPU kick batch: FC27 submits thousands per window.
+   // Only the thread changing false->true signals; the consumer clears
+   // pending before suspend, so later submissions always get another kick.
+   if (!atomic_exchange_explicit(&radv_ps5_kick_pending, true, memory_order_acq_rel)) {
+      mtx_lock(&radv_ps5_kick_lock);
+      cnd_signal(&radv_ps5_kick_wanted);
+      mtx_unlock(&radv_ps5_kick_lock);
+   }
    return 0;
 }
 
