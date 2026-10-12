@@ -3,7 +3,6 @@ name: Build and release Prospero.Eden Encore
 on:
   push:
     branches:
-      - fix/0.40-zbic-13.60
       - dev/ps5-sparse-jit
       # On dev, build job is gated by the explicit [full-build] marker below.
       # Ordinary dev commits do not compile or publish a native app.
