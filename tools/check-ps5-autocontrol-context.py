@@ -33,7 +33,10 @@ assert 'manual_toggle' not in pad
 assert 'layout_chord' not in pad
 assert 'const int pad = mapping[game];' in pad
 assert 'MappedTo(mapping, pad_touchpad);' in pad
-assert 'MappedTo(mapping, pad_create) < 0;' in pad
+assert 'MappedTo(mapping, pad_create) < 0 && (sample.buttons & kButtonCreate) != 0' in pad
+assert 'engine->SetButtonState(player, Button::ButtonCapture,' in pad
+assert 'slot.guest_home.BlockChordButtons()' in pad
+assert 'engine->SetButtonState(player, kGame[touch_button],' in pad
 assert 'constexpr ButtonMask menu_chord = kButtonTouchPad | kButtonL1;' in pad
 assert 'constexpr ButtonMask hud_chord = kButtonTouchPad | kButtonR1;' in pad
 
