@@ -231,3 +231,13 @@ with tempfile.TemporaryDirectory(prefix="eden-r355-scratch-") as d:
                     "-Werror", "-pthread", str(source), "-o", str(binary)], check=True)
     subprocess.run([str(binary)], check=True)
 print("PASS R355: graphics descriptor scratch reuses capacity, isolates nested calls and threads")
+
+# R360: exact rare under-lock ring exhaustion versus sampled ConfigureDraw.
+ring = (root / "vendor/encore-active/eden-vulkan/vk_descriptor_buffer_cost.cpp").read_text()
+assert "DescriptorRingFinish" in perf
+assert '"descriptor_ring_finish"' in report
+assert "CachePhase::DescriptorRingFinish" in ring
+assert "CachePhase::DescriptorRingFinish" in generator
+assert "detailed_gpu_profile.load(std::memory_order_relaxed)" in ring
+assert ring.index("CachePhase::DescriptorRingFinish") < ring.index("scheduler.Finish();")
+assert "chunk_cursor = 0;" in ring and "++generation;" in ring

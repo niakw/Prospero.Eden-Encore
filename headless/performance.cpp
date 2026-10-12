@@ -1080,7 +1080,8 @@ void ReportGpuThread(unsigned frame) {
             "dynamic_states", "query_draw",
             "texture_cpu_refresh", "texture_alias_scan", "texture_alias_copy",
             "stage_texture_handles", "bind_texture_buffers", "bind_stage_descriptors",
-            "refresh_render_targets", "check_feedback_loop", "commit_graphics_draw"
+            "refresh_render_targets", "check_feedback_loop", "commit_graphics_draw",
+            "descriptor_ring_finish"
         };
         static_assert(std::size(cache_phase_names) == cache_phase_totals.size());
         constexpr const char* drop_names[] = {

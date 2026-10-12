@@ -1825,6 +1825,19 @@ for name, index, expected in (
         raise RuntimeError(f'Wait-site anchors changed: {name}: {len(matches)} != {expected}')
     text = re.sub(pattern, lambda m: m[1] + '{ auto timer = Eden::Performance::VulkanTimer('
                   + str(index) + '); ' + m[2] + ' }', text)
+    if name == 'vk_descriptor_buffer':
+        # R360: measure the exact full-ring stall that occurs inside cache locks.
+        ring_finish = '{ auto timer = Eden::Performance::VulkanTimer(10); scheduler.Finish(); }'
+        if text.count(ring_finish) != 1:
+            raise RuntimeError('R360 descriptor fallback anchor changed')
+        text = text.replace(ring_finish, '''{ auto timer = Eden::Performance::VulkanTimer(10);
+              // Exact rare full-ring fallback, not the usual 1-in-16 draw sample.
+              // This wait still holds both guest GPU cache locks; do not skip
+              // the fence or move it without proving descriptor reuse safety.
+              ::Eden::Performance::CachePhaseTimer finish_cost{
+                  ::Eden::Performance::CachePhase::DescriptorRingFinish,
+                  ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
+              scheduler.Finish(); }''')
     if name == 'vk_compute_pass':
         # ASTC decode has no CPU consumer. Its existing image barrier orders
         # later shaders, and staging/descriptor reuse is protected by ticks.
