@@ -33,7 +33,11 @@ for path,sha in paths.items():
 header_path="src/video_core/renderer_vulkan/vk_update_descriptor.h"
 raster_path="src/video_core/renderer_vulkan/vk_rasterizer.cpp"
 hr=[x for x in replacements(header_path) if "PreflightGuestDraw" in x[1]]
-rr=[x for x in replacements(raster_path) if "PreflightGuestDraw" in x[1]]
+# R382 preserves the already-inserted preflight in its before/after
+# scheduling-capacity replacement. Select only the ORIGINAL R319 insertion
+# into the pinned upstream file, whose original source has no preflight.
+rr=[x for x in replacements(raster_path)
+    if "PreflightGuestDraw" in x[1] and "PreflightGuestDraw" not in x[0]]
 assert len(hr)==len(rr)==1
 h_old,h_new=hr[0]
 r_old,r_new=rr[0]
