@@ -1328,6 +1328,18 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
     ]
     if name == 'vk_graphics_pipeline':
         replacements.extend([
+            # R362: split the previously unaccounted ConfigureImpl costs into
+            # stage texture handles, texture buffers, descriptor binds, render
+            # targets, feedback-loop barriers and final graphics submission.
+            # All timers are 1-in-16, nested inside the EXISTING cache mutexes.
+            ("    buffer_cache.SetUniformBuffersState(enabled_uniform_buffer_masks, &uniform_buffer_sizes);", "    ::Eden::Performance::CachePhaseTimer stage_texture_phase{\n        ::Eden::Performance::CachePhase::StageTextureHandles};\n    buffer_cache.SetUniformBuffersState(enabled_uniform_buffer_masks, &uniform_buffer_sizes);"),
+            ("    ASSERT(samplers.size() == num_textures);", "    ASSERT(samplers.size() == num_textures);\n    stage_texture_phase.Stop();"),
+            ("    VideoCommon::ImageViewInOut* texture_buffer_it{views.data()};", "    ::Eden::Performance::CachePhaseTimer bind_texture_phase{\n        ::Eden::Performance::CachePhase::BindTextureBuffers};\n    VideoCommon::ImageViewInOut* texture_buffer_it{views.data()};"),
+            ("    if (regs.transform_feedback_enabled != 0) {", "    bind_texture_phase.Stop();\n    if (regs.transform_feedback_enabled != 0) {"),
+            ("    RescalingPushConstant rescaling;", "    ::Eden::Performance::CachePhaseTimer stage_descriptor_phase{\n        ::Eden::Performance::CachePhase::BindStageDescriptors};\n    RescalingPushConstant rescaling;"),
+            ("    texture_cache.UpdateRenderTargets(false);", "    stage_descriptor_phase.Stop();\n    { ::Eden::Performance::CachePhaseTimer cost{\n        ::Eden::Performance::CachePhase::RefreshRenderTargets};\n        texture_cache.UpdateRenderTargets(false);\n    }"),
+            ("    texture_cache.CheckFeedbackLoop(std::span<const VideoCommon::ImageViewInOut>{views.data(),\n                                                                                 views.size()});", "    { ::Eden::Performance::CachePhaseTimer cost{\n        ::Eden::Performance::CachePhase::CheckFeedbackLoop};\n        texture_cache.CheckFeedbackLoop(std::span<const VideoCommon::ImageViewInOut>{views.data(),\n                                                                                     views.size()});\n    }"),
+            ("    return ConfigureDraw(rescaling, render_area);", "    { ::Eden::Performance::CachePhaseTimer cost{\n        ::Eden::Performance::CachePhase::CommitGraphicsDraw};\n        return ConfigureDraw(rescaling, render_area);\n    }"),
             # R361: attribute absent HUD/pitch to pipeline or descriptor skips.
             ("    if (IsBuilt() && !pipeline) {\n        return false;\n    }", "    if (IsBuilt() && !pipeline) {\n        ::Eden::Performance::RecordGraphicsDrawDrop(\n            ::Eden::Performance::GraphicsDrawDrop::BuiltPipelineFailed);\n        return false;\n    }"),
             ("            if (!alloc.host) {\n                LOG_DEBUG(Render_Vulkan, \"Failed to reserve descriptor memory, skipping draw\");\n                return false;\n            }", "            if (!alloc.host) {\n                ::Eden::Performance::RecordGraphicsDrawDrop(\n                    ::Eden::Performance::GraphicsDrawDrop::DescriptorBufferFull);\n                LOG_DEBUG(Render_Vulkan, \"Failed to reserve descriptor memory, skipping draw\");\n                return false;\n            }"),

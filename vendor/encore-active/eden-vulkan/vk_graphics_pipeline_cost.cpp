@@ -441,6 +441,8 @@ bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
         texture_cache.SynchronizeDescriptors(false);
     }
 
+    ::Eden::Performance::CachePhaseTimer stage_texture_phase{
+        ::Eden::Performance::CachePhase::StageTextureHandles};
     buffer_cache.SetUniformBuffersState(enabled_uniform_buffer_masks, &uniform_buffer_sizes);
 
     const auto& regs{maxwell3d->regs};
@@ -533,10 +535,13 @@ bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
     }
     ASSERT(views.size() == num_image_elements);
     ASSERT(samplers.size() == num_textures);
+    stage_texture_phase.Stop();
     { ::Eden::Performance::CachePhaseTimer cost{::Eden::Performance::CachePhase::TextureFillImageViews};
         texture_cache.FillImageViews(std::span(views.data(), views.size()), false, Spec::has_images);
     }
 
+    ::Eden::Performance::CachePhaseTimer bind_texture_phase{
+        ::Eden::Performance::CachePhase::BindTextureBuffers};
     VideoCommon::ImageViewInOut* texture_buffer_it{views.data()};
     const auto bind_stage_info{[&](size_t stage) LAMBDA_FORCEINLINE {
         size_t index{};
@@ -595,6 +600,7 @@ bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
         bind_stage_info(4);
     }
 
+    bind_texture_phase.Stop();
     if (regs.transform_feedback_enabled != 0) {
         scheduler.RequestOutsideRenderPassOperationContext();
     }
@@ -608,6 +614,8 @@ bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
         guest_descriptor_queue.Acquire(scheduler, num_descriptor_entries, uses_descriptor_buffer);
     }
 
+    ::Eden::Performance::CachePhaseTimer stage_descriptor_phase{
+        ::Eden::Performance::CachePhase::BindStageDescriptors};
     RescalingPushConstant rescaling;
     RenderAreaPushConstant render_area;
     const VideoCommon::SamplerId* samplers_it{samplers.data()};
@@ -642,15 +650,25 @@ bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
         buffer_cache.runtime.PostCopyBarrier();
         buffer_cache.any_buffer_uploaded = false;
     }
-    texture_cache.UpdateRenderTargets(false);
-    texture_cache.CheckFeedbackLoop(std::span<const VideoCommon::ImageViewInOut>{views.data(),
-                                                                                 views.size()});
+    stage_descriptor_phase.Stop();
+    { ::Eden::Performance::CachePhaseTimer cost{
+        ::Eden::Performance::CachePhase::RefreshRenderTargets};
+        texture_cache.UpdateRenderTargets(false);
+    }
+    { ::Eden::Performance::CachePhaseTimer cost{
+        ::Eden::Performance::CachePhase::CheckFeedbackLoop};
+        texture_cache.CheckFeedbackLoop(std::span<const VideoCommon::ImageViewInOut>{views.data(),
+                                                                                     views.size()});
+    }
     if (IsBuilt() && !pipeline) {
         ::Eden::Performance::RecordGraphicsDrawDrop(
             ::Eden::Performance::GraphicsDrawDrop::BuiltPipelineFailed);
         return false;
     }
-    return ConfigureDraw(rescaling, render_area);
+    { ::Eden::Performance::CachePhaseTimer cost{
+        ::Eden::Performance::CachePhase::CommitGraphicsDraw};
+        return ConfigureDraw(rescaling, render_area);
+    }
 }
 
 bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,

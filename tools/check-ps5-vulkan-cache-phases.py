@@ -25,6 +25,20 @@ assert "GraphicsDrawDrop::BuiltPipelineFailed" in graphics
 assert "GraphicsDrawDrop::DescriptorBufferFull" in graphics
 assert "GraphicsDrawDrop::DescriptorBufferFull" in generator
 assert "GraphicsDrawDrop::ConfigureRejected" in generator
+# R362 uses 1-in-16 timers without altering the guest cache lock lifetimes.
+p = (root / "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp").read_text()
+for phase in ("StageTextureHandles", "BindTextureBuffers", "BindStageDescriptors",
+              "RefreshRenderTargets", "CheckFeedbackLoop", "CommitGraphicsDraw"):
+    assert "CachePhase::" + phase in p
+    assert "CachePhase::" + phase in generator
+    assert phase in perf
+assert "stage_texture_phase.Stop();" in p
+assert "bind_texture_phase.Stop();" in p
+assert "stage_descriptor_phase.Stop();" in p
+for label in ("stage_texture_handles", "bind_texture_buffers", "bind_stage_descriptors",
+              "refresh_render_targets", "check_feedback_loop", "commit_graphics_draw"):
+    assert '"' + label + '"' in report
+assert "return ConfigureDraw(rescaling, render_area);" in p
 assert "std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};" in generator
 assert "pipeline->Configure(is_indexed)" in generator
 assert "cache_draw_sample_active = previous_sample;" in generator
