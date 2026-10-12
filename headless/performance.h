@@ -245,6 +245,45 @@ inline std::atomic<unsigned long long> guest_fs_file_bytes{}, guest_fs_storage_b
 // Guest svcSendSyncRequest latency (queueing + HLE handling), and HLE handling time per
 // service command (RecordHle, reported as EDEN_DEV_HLE).
 inline Totals guest_ipc_wait;
+// R393: bounded attribution of synchronous guest IPC waits. Only invoked
+// when detailed GPU profiling is active; no allocation, string lookup,
+// blocking lock or per-request log on the hot path.
+inline constexpr unsigned guest_ipc_thread_slots = 128;
+struct GuestIpcThread {
+    std::atomic<unsigned long long> tid{}, calls{}, ns{}, max_ns{};
+};
+inline std::array<GuestIpcThread, guest_ipc_thread_slots> guest_ipc_threads{};
+inline std::array<std::atomic<unsigned long long>, 4> guest_ipc_hist{};
+inline std::atomic<unsigned long long> guest_ipc_overflow_calls{};
+inline void RecordGuestIpc(unsigned long long tid, long long elapsed_ns) noexcept {
+    const auto ns = static_cast<unsigned long long>(elapsed_ns > 0 ? elapsed_ns : 0);
+    guest_ipc_wait.nanoseconds.fetch_add(ns, std::memory_order_relaxed);
+    guest_ipc_wait.calls.fetch_add(1, std::memory_order_relaxed);
+    guest_ipc_hist[ns < 50'000 ? 0u : ns < 500'000 ? 1u : ns < 5'000'000 ? 2u : 3u]
+        .fetch_add(1, std::memory_order_relaxed);
+    if (tid != 0) {
+        unsigned slot = static_cast<unsigned>(tid % guest_ipc_thread_slots);
+        for (unsigned n = 0; n < guest_ipc_thread_slots; ++n) {
+            auto& row = guest_ipc_threads[slot];
+            auto found = row.tid.load(std::memory_order_relaxed);
+            if (found == 0) {
+                unsigned long long expected = 0;
+                found = row.tid.compare_exchange_strong(expected, tid, std::memory_order_relaxed)
+                            ? tid : expected;
+            }
+            if (found == tid) {
+                row.calls.fetch_add(1, std::memory_order_relaxed);
+                row.ns.fetch_add(ns, std::memory_order_relaxed);
+                auto previous = row.max_ns.load(std::memory_order_relaxed);
+                while (previous < ns && !row.max_ns.compare_exchange_weak(
+                           previous, ns, std::memory_order_relaxed)) {}
+                return;
+            }
+            slot = (slot + 1u) % guest_ipc_thread_slots;
+        }
+    }
+    guest_ipc_overflow_calls.fetch_add(1, std::memory_order_relaxed);
+}
 void RecordHle(const char* service, unsigned command, long long ns);
 inline long long NowNs() { return Common::g_wall_clock.GetTimeNS().count(); }
 // Texture cache garbage collection (tools/prepare-vulkan-port.py, vulkan_gc_downloads.inc).

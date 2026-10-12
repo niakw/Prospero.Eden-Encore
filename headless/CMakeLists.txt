@@ -1010,7 +1010,9 @@ if(EDEN_DEV_PROFILE)
     if(ipc_at LESS 0)
         message(FATAL_ERROR "Pinned SendSyncRequest changed")
     endif()
-    string(REPLACE "${ipc_old}" "    const auto ipc_start = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed) ? ::Eden::Performance::NowNs() : 0;\n    const Result ipc_result = session->SendSyncRequest(kernel, message, buffer_size);\n    if (ipc_start) ::Eden::Performance::AddSince(::Eden::Performance::guest_ipc_wait, ipc_start);\n    R_RETURN(ipc_result);" ipc_source "${ipc_source}")
+    # Per-thread attribution only when Detailed Logging is on. Capture the
+    # requesting thread BEFORE SendSyncRequest can block or reschedule it.
+    string(REPLACE "${ipc_old}" "    const bool ipc_profile = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed);\n    const auto ipc_start = ipc_profile ? ::Eden::Performance::NowNs() : 0;\n    const auto ipc_tid = ipc_profile ? GetCurrentThread(kernel).GetThreadId() : 0;\n    const Result ipc_result = session->SendSyncRequest(kernel, message, buffer_size);\n    if (ipc_profile) ::Eden::Performance::RecordGuestIpc(ipc_tid, ::Eden::Performance::NowNs() - ipc_start);\n    R_RETURN(ipc_result);" ipc_source "${ipc_source}")
     write_derived("${PORT_BUILD_DIR}/svc_ipc.cpp" "#include \"${EDEN_PORT_DIR}/performance.h\"\n${ipc_source}")
     list(REMOVE_ITEM core_sources "hle/kernel/svc/svc_ipc.cpp")
     list(APPEND core_sources "${PORT_BUILD_DIR}/svc_ipc.cpp")
