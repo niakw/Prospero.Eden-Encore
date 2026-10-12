@@ -48,6 +48,31 @@ def correlation(rows: list[dict], x: str, y: str) -> float:
     return sum((u - mean_a) * (v - mean_b) for u, v in pairs) / math.sqrt(spread_a * spread_b)
 
 
+def phase_sampling_mode(phase: str) -> str:
+    # Never present sampled window_ns as full wall time or compare rates
+    # across differently sampled event families.
+    if phase.startswith("guest_write_"):
+        return "guest_write_1_in_64"
+    if phase in ("descriptor_ring_finish", "descriptor_ring_preflight"):
+        return "descriptor_gpu_wait_event_exact"
+    return "gpu_draw_1_in_16_nominal"
+
+
+def phase_summary(rows: list[dict], phase: str) -> dict:
+    elapsed_ms = sum(row.get("phase_ms:" + phase, 0) for row in rows)
+    samples = int(sum(row.get("phase_samples:" + phase, 0) for row in rows))
+    maxima = [row["phase_max_us:" + phase] for row in rows
+              if "phase_max_us:" + phase in row]
+    return {
+        "sampling": phase_sampling_mode(phase),
+        "samples": samples,
+        "sampled_ms": round(elapsed_ms, 2),
+        "worst_sample_us": round(max(maxima), 3) if maxima else None,
+        "mean_us_per_sample": round(elapsed_ms * 1000 / samples, 3) if samples else None,
+        "late50_correlation": round(correlation(rows, "phase_ms:" + phase, "late50"), 3),
+    }
+
+
 def analyze(log: str) -> dict:
     frames: dict[int, dict] = {}
     pressure: dict[int, dict] = {}
@@ -130,8 +155,15 @@ def analyze(log: str) -> dict:
             if not snapshot:
                 continue
             before = preceding.get("phase:" + phase)
+            if "max_ns" in snapshot and snapshot["max_ns"] > 0:
+                # Native recorder resets this maximum every five seconds.
+                row["phase_max_us:" + phase] = snapshot["max_ns"] / 1000
             if before and snapshot.get("total_ns", 0) >= before.get("total_ns", 0):
                 row["phase_ms:" + phase] = (snapshot["total_ns"] - before["total_ns"]) / 1e6
+                if ("samples" in snapshot and "samples" in before and
+                        snapshot["samples"] >= before["samples"]):
+                    row["phase_samples:" + phase] = (
+                        snapshot["samples"] - before["samples"])
             preceding["phase:" + phase] = snapshot
         guest_snapshot = guest.get(frame)
         if guest_snapshot is not None:
@@ -182,8 +214,7 @@ def analyze(log: str) -> dict:
                         "jit_ms", "delta_dispatch_calls")
         },
         "cache_phases": {
-            phase: {"sampled_ms": round(sum(row.get("phase_ms:" + phase, 0) for row in rows), 2),
-                    "late50_correlation": round(correlation(rows, "phase_ms:" + phase, "late50"), 3)}
+            phase: phase_summary(rows, phase)
             for phase in sorted(phases)
         },
         "guest_cpu_write_groups": {
@@ -234,12 +265,14 @@ def self_test() -> None:
         "EDEN_FRAME_PRESSURE frame=150 gpu_full_ms=20 gpu_idle_ms=3500 gpu_dispatch_ms=1200",
         "EDEN_DEV_GPU frame=150 dispatch_calls=500 full_calls=10 full_ns=20000000 draws=100",
         "EDEN_DEV_GUEST cpu_write_calls=100 cpu_write_ns=10000000 cpu_read_calls=30 cpu_read_ns=3000000",
-        "EDEN_GPU_CACHE_PHASE frame=150 phase=pair_wait total_ns=1000000",
+        "EDEN_GPU_CACHE_PHASE frame=150 phase=pair_wait samples=10 total_ns=1000000",
+        "EDEN_GPU_CACHE_PHASE frame=150 phase=guest_write_buffer_wait samples=3 total_ns=200000 max_ns=150000",
         "EDEN_VULKAN_FRAME total=300 frames=150 seconds=5 fps=30 worst_ms=35 late50=0",
         "EDEN_FRAME_PRESSURE frame=300 gpu_full_ms=0 gpu_idle_ms=3800 gpu_dispatch_ms=1050",
         "EDEN_DEV_GPU frame=300 dispatch_calls=900 full_calls=10 full_ns=20000000 draws=280",
         "EDEN_DEV_GUEST cpu_write_calls=250 cpu_write_ns=40000000 cpu_read_calls=75 cpu_read_ns=9000000",
-        "EDEN_GPU_CACHE_PHASE frame=300 phase=pair_wait total_ns=1400000",
+        "EDEN_GPU_CACHE_PHASE frame=300 phase=pair_wait samples=14 total_ns=1400000",
+        "EDEN_GPU_CACHE_PHASE frame=300 phase=guest_write_buffer_wait samples=7 total_ns=600000 max_ns=270000",
         "EDEN_GUEST_CACHE_DOMAIN frame=150 domain=buffer contended=8 blocked=5 wait_ns=10000000 window_contended=8 window_blocked=5 window_wait_ns=10000000",
         "EDEN_GUEST_CACHE_DOMAIN frame=150 domain=texture contended=4 blocked=4 wait_ns=2000000 window_contended=4 window_blocked=4 window_wait_ns=2000000",
         "EDEN_GUEST_CACHE_DOMAIN frame=300 domain=buffer contended=10 blocked=7 wait_ns=13000000 window_contended=2 window_blocked=2 window_wait_ns=3000000",
@@ -280,6 +313,18 @@ def self_test() -> None:
     assert result["rows"][1]["guest_delta_cpu_write_ns"] == 30000000
     assert result["rows"][1]["guest_delta_cpu_read_calls"] == 45
     assert abs(result["cache_phases"]["pair_wait"]["sampled_ms"] - .4) < 1e-9
+    assert result["cache_phases"]["pair_wait"]["samples"] == 4
+    assert result["cache_phases"]["pair_wait"]["sampling"] == "gpu_draw_1_in_16_nominal"
+    assert result["cache_phases"]["pair_wait"]["mean_us_per_sample"] == 100
+    guest_phase = result["cache_phases"]["guest_write_buffer_wait"]
+    assert guest_phase["samples"] == 4
+    assert guest_phase["sampling"] == "guest_write_1_in_64"
+    assert guest_phase["sampled_ms"] == .4
+    assert guest_phase["mean_us_per_sample"] == 100
+    assert guest_phase["worst_sample_us"] == 270
+    assert phase_sampling_mode("descriptor_ring_finish") == "descriptor_gpu_wait_event_exact"
+    assert phase_summary([{"phase_ms:guest_write_texture_wait": 5}], "guest_write_texture_wait")[
+        "mean_us_per_sample"] is None
     assert result["guest_cache_domains"]["buffer"]["contended"] == 10
     assert result["guest_cache_domains"]["buffer"]["blocked"] == 7
     assert abs(result["guest_cache_domains"]["buffer"]["wait_ms"] - 13) < 1e-8
@@ -339,8 +384,12 @@ def main() -> None:
     else:
         print("GUEST_CPU_WRITE_GROUPS unavailable (no two successive paired guest samples)")
     for name, value in sorted(report["cache_phases"].items(),
-                              key=lambda item: -item[1]["sampled_ms"]):
+                              key=lambda item: (item[1]["sampling"], item[0])):
         print("CACHE_PHASE", name, value)
+    print("NOTE: Cache phase durations are SAMPLES only (GPU draws generally 1/16; "
+          "guest CPU writes 1/64; descriptor ring waits are exact events). "
+          "Compare mean_us_per_sample within an event family, never raw "
+          "sampled_ms between families or as full CPU/GPU wall time.")
     if report["guest_cache_domains"]:
         for name, value in report["guest_cache_domains"].items():
             print("GUEST_CACHE_DOMAIN", name, value)
