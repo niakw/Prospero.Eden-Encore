@@ -72,6 +72,17 @@ replace('''                    (double)period / 1e6);
             fprintf(stderr, "wsi/videoout: 119.88 Hz output, a vblank every %.3f ms\\n", (double)period / 1e6);
          }
       } else {''')
+# Official PS5_Mesa 47e9eb61 (2026-10-10): 0 from IsOutputSupported
+# means unavailable, NOT a successful configure. Preserve Encore's VRR-aware
+# 48Hz vblank exemption; 0ns always means failed timing/wait.
+replace(": supported;\n      out->high_frame_rate = configured == 0;",
+        ": -1;\n      out->high_frame_rate = supported > 0 && configured == 0;")
+replace("if (period > UINT64_C(15000000) && period < UINT64_C(18500000)) {",
+        "if (period == 0 || (period > UINT64_C(15000000) && period < UINT64_C(18500000))) {")
+replace("            fprintf(stderr,\n                    \"wsi/videoout: 119.88 Hz accepted, but a vblank comes every %.3f ms; 59.94 Hz restored\\n\",\n                    (double)period / 1e6);",
+        "            if (period == 0)\n               fprintf(stderr, \"wsi/videoout: 119.88 Hz accepted, but a vblank wait failed; 59.94 Hz restored\\n\");\n            else\n               fprintf(stderr,\n                       \"wsi/videoout: 119.88 Hz accepted, but a vblank comes every %.3f ms; 59.94 Hz restored\\n\",\n                       (double)period / 1e6);")
+replace("      } else {\n         fprintf(stderr, \"wsi/videoout: 119.88 Hz %s (%d); presenting at 59.94 Hz\\n\",\n                 supported > 0 ? \"refused\" : \"not supported\", configured);\n      }",
+        "      } else if (supported > 0) {\n         fprintf(stderr, \"wsi/videoout: 119.88 Hz refused (%d); presenting at 59.94 Hz\\n\", configured);\n      } else {\n         fprintf(stderr,\n                 \"wsi/videoout: 119.88 Hz not offered on present output (%d); presenting at 59.94 Hz\\n\",\n                 supported);\n      }")
 replace('   wsi->base.get_support =', '   videoout_ref();\n\n   wsi->base.get_support =')
 replace('   if (wsi)\n      vk_free(alloc, wsi);',
         '   if (wsi) {\n      videoout_unref();\n      vk_free(alloc, wsi);\n      wsi_device->wsi[VK_ICD_WSI_PLATFORM_DISPLAY] = NULL;\n   }')

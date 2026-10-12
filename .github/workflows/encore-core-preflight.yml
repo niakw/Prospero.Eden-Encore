@@ -117,6 +117,7 @@ jobs:
           python3 -B tools/check-radv-official-indirect-draw.py
           python3 -B tools/check-radv-mesa-2624-ds-aspects.py
           python3 -B tools/check-radv-immutable-sampler-lifetime.py
+          python3 -B tools/check-ps5-videoout-120hz-offer.py
           python3 -B tools/check-vendored-gpu-thread.py
           python3 -B tools/analyze-fc27-stutter.py --self-test
           python3 -B tools/check-nvnflinger-dequeue-wakeup.py
