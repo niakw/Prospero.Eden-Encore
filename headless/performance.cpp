@@ -255,25 +255,46 @@ void CheckWorkerTopology() {
     std::array<int, 64> os_cpu_core{};
     os_cpu_core.fill(-1);
     bool os_topology_valid = false;
+    // kern.sched.topology_spec is available on older FreeBSD. ULE exposed
+    // kern.sched.ule.topology_spec while reworking scheduler sysctls in
+    // January 2026; the original alias was later reintroduced upstream.
+    // Sony's fork may expose neither. Probe both READ-ONLY without creating
+    // an artificial SMT map if the scheduler hides sibling relationships.
     size_t topology_length = 0;
     int os_topology_errno = 0;
-    if (sysctlbyname("kern.sched.topology_spec", nullptr, &topology_length, nullptr, 0) == 0 &&
-        topology_length > 0 && topology_length <= 65536) {
-        std::string topology_xml(topology_length, '\0');
-        if (sysctlbyname("kern.sched.topology_spec", topology_xml.data(),
-                         &topology_length, nullptr, 0) == 0 &&
-            topology_length <= topology_xml.size()) {
-            os_topology_valid = ::Eden::CpuTopology::ParseSmtGroups(
-                std::string_view{topology_xml.data(), topology_length},
-                allowed_mask, os_cpu_core);
-        } else {
+    const char* os_topology_source = "none";
+    for (const char* oid : {"kern.sched.topology_spec",
+                            "kern.sched.ule.topology_spec"}) {
+        size_t length = 0;
+        if (sysctlbyname(oid, nullptr, &length, nullptr, 0) != 0) {
             os_topology_errno = errno;
+            continue;
         }
-    } else {
-        os_topology_errno = errno;
+        if (length == 0 || length > 65536) {
+            os_topology_errno = EOVERFLOW;
+            continue;
+        }
+        std::string topology_xml(length, '\0');
+        if (sysctlbyname(oid, topology_xml.data(), &length, nullptr, 0) != 0 ||
+            length > topology_xml.size()) {
+            os_topology_errno = errno ? errno : EOVERFLOW;
+            continue;
+        }
+        topology_length = length;
+        if (::Eden::CpuTopology::ParseSmtGroups(
+                std::string_view{topology_xml.data(), length}, allowed_mask, os_cpu_core)) {
+            os_topology_valid = true;
+            os_topology_source = oid;
+            os_topology_errno = 0;
+            break;
+        }
+        // A present but invalid scheduler map cannot justify SMT pinning.
+        // A second, independent ULE OID may still provide a valid map.
+        os_topology_errno = EINVAL;
     }
-    std::printf("EDEN_PS5_CPU_OS_TOPOLOGY available=%u bytes=%zu errno=%d source=kern.sched.topology_spec\n",
-                unsigned(os_topology_valid), topology_length, os_topology_errno);
+    std::printf("EDEN_PS5_CPU_OS_TOPOLOGY available=%u bytes=%zu errno=%d source=%s\n",
+                unsigned(os_topology_valid), topology_length, os_topology_errno,
+                os_topology_source);
     std::array<int, 64> amd_cpu_core{}, x2_cpu_core{};
     amd_cpu_core.fill(-1);
     x2_cpu_core.fill(-1);
@@ -936,7 +957,48 @@ void ReportDirectMemoryState(const char* phase) {
 #endif
 }
 
+// Live gameplay progress is published ONLY by the GPU owner and read by the
+// independent pad heartbeat. A stalled GPU owner can no longer silently stop
+// its own diagnostic report while the controller worker stays alive.
+std::atomic<unsigned long long> latest_gpu_report_ns{0};
+std::atomic<unsigned> latest_gpu_report_frame{0};
+bool GpuReportStale(unsigned long long now_ns, unsigned long long progress_ns) noexcept {
+    constexpr unsigned long long kStallNs = 20'000'000'000ULL;
+    return progress_ns != 0 && now_ns > progress_ns &&
+           now_ns - progress_ns >= kStallNs;
+}
+void ReportInputThreadGpuLiveness() {
+    if (!detailed_gpu_profile.load(std::memory_order_relaxed)) return;
+    const auto progress_ns = latest_gpu_report_ns.load(std::memory_order_acquire);
+    const auto now = static_cast<unsigned long long>(Common::g_wall_clock.GetTimeNS().count());
+    if (!GpuReportStale(now, progress_ns)) return;
+    // Only the independent input worker invokes this, once per heartbeat
+    // (~5 seconds); throttle warnings to at most once per 30 seconds.
+    static unsigned long long last_warn_ns = 0;
+    if (last_warn_ns != 0 && now >= last_warn_ns &&
+        now - last_warn_ns < 30'000'000'000ULL) return;
+    last_warn_ns = now;
+    std::fprintf(stderr,
+        "EDEN_GPU_REPORT_STALLED age_ms=%llu frame=%u gpu_ticks=%llu "
+        "draws=%llu guest_writes=%llu guest_reads=%llu "
+        "guest_dequeues=%llu guest_ipc=%llu cache_collisions=%llu\n",
+        (now - progress_ns) / 1'000'000ULL,
+        latest_gpu_report_frame.load(std::memory_order_relaxed),
+        gpu_command_tick.calls.load(std::memory_order_relaxed),
+        rasterizer_draw.calls.load(std::memory_order_relaxed),
+        guest_cpu_write.calls.load(std::memory_order_relaxed),
+        guest_cpu_read.calls.load(std::memory_order_relaxed),
+        guest_dequeue_wait.calls.load(std::memory_order_relaxed),
+        guest_ipc_wait.calls.load(std::memory_order_relaxed),
+        cache_lock_contended.load(std::memory_order_relaxed));
+}
 void ReportGpuThread(unsigned frame) {
+    if (detailed_gpu_profile.load(std::memory_order_relaxed)) {
+        latest_gpu_report_frame.store(frame, std::memory_order_relaxed);
+        latest_gpu_report_ns.store(
+            static_cast<unsigned long long>(Common::g_wall_clock.GetTimeNS().count()),
+            std::memory_order_release);
+    }
     // Heap growth and arena use over the run (allocation failures abort the title).
     ps5_opengl_heap_snapshot("vulkan_report", frame);
     {

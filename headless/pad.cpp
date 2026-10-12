@@ -20,6 +20,9 @@ extern "C" int sceUserServiceGetForegroundUser(int* user);
 extern "C" int sceUserServiceGetLoginUserIdList(LoginUserIdList* list);
 
 namespace Eden {
+namespace Performance {
+void ReportInputThreadGpuLiveness();
+}
 // Look for newly signed-in (or signed-out) users about once a second at the 4 ms poll interval.
 constexpr unsigned kPollsPerScan = 250;
 // The touchpad is Select (the guest's Minus) as well as the shortcut key. So that a shortcut
@@ -280,6 +283,9 @@ bool Pad::Poll() {
     // even when scePadRead returns zero samples. Never log on every 4 ms poll;
     // never flush the log pipe from the input thread.
     if (NativeLogs::Detailed() && polls % 1250 == 0) {
+        // GPU-owner reporting can stop while the input worker remains alive.
+        // This independent read only samples atomics and never takes GPU locks.
+        Performance::ReportInputThreadGpuLiveness();
         std::fprintf(stderr,
             "EDEN_PAD_HEARTBEAT polls=%llu samples=%llu usable=%llu intercepted=%llu "
             "errors=%llu last_read=%d connected=%u last_buttons=%08x "

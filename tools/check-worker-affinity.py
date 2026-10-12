@@ -28,16 +28,19 @@ using cpuset_t=uint64_t;
 static uint64_t current=0x1fff, fail_mask=0;
 static unsigned max_leaf=0xb, level_type=1, apics[64], amd_cores[64];
 static bool fail_restore=false, amd_vendor=false, amd_ext_feature=false;
-static std::string os_xml;
+static std::string os_xml, os_ule_xml;
 static int sysctlbyname(const char* name, void* oldp, size_t* oldlen,
                         const void*, size_t) {
- if(std::strcmp(name,"kern.sched.topology_spec") || os_xml.empty()) {
+ const std::string* xml=nullptr;
+ if(!std::strcmp(name,"kern.sched.topology_spec")) xml=&os_xml;
+ if(!std::strcmp(name,"kern.sched.ule.topology_spec")) xml=&os_ule_xml;
+ if(!xml || xml->empty()) {
   errno=ENOENT;return -1;
  }
- const size_t length=os_xml.size()+1;
+ const size_t length=xml->size()+1;
  if(!oldp) {*oldlen=length;return 0;}
  if(*oldlen<length) {errno=ENOMEM;return -1;}
- std::memcpy(oldp,os_xml.c_str(),length);
+ std::memcpy(oldp,xml->c_str(),length);
  *oldlen=length;
  return 0;
 }
@@ -165,7 +168,14 @@ int main(){
  os_xml+="</groups>";
  CheckWorkerTopology();
  assert(worker_topology_ready && current==0x1fff);
+ // ULE-only kernel: primary sysctl absent, alt sysctl provides the
+ // exact same verified scheduler SMT masks.
+ os_ule_xml=os_xml;
  os_xml.clear();
+ CheckWorkerTopology();
+ assert(worker_topology_ready && current==0x1fff);
+ assert((worker_cpus==std::array<unsigned,5>{0,2,4,6,8}));
+ os_ule_xml.clear();
  max_leaf=0xa;
  // TopologyExtensions absent: do not claim proof from logical IDs alone.
  amd_ext_feature=false;
