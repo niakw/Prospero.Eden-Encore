@@ -50,6 +50,7 @@
 #include "error_applet.h"
 #include "preferences.h"
 #include "metadata_bridge.h"
+#include "title_id_fallback.h"
 #ifdef EDEN_PS5_OPENGL
 #include "graphics.h"
 #endif
@@ -835,7 +836,15 @@ int main(int argc, char** argv) {
         launch_error.clear();
         const bool safe_launch = std::getenv("EDEN_SAFE_LAUNCH") != nullptr;
         if (safe_launch) unsetenv("EDEN_SAFE_LAUNCH");
-        const std::uint64_t launch_title_id = eden_game_title_id(selected_game.c_str());
+        // Library may have saved a per-title mapping using the bracketed ROM
+        // ID if metadata could not be read. Startup MUST use the same ID,
+        // otherwise LoadGameSettings(0) silently falls back to global controls.
+        const std::uint64_t rom_metadata_id = eden_game_title_id(selected_game.c_str());
+        const std::uint64_t launch_title_id =
+            Eden::ResolveGameTitleId(rom_metadata_id, selected_game);
+        if (rom_metadata_id == 0 && launch_title_id != 0)
+            std::fprintf(stderr, "EDEN_TITLE_ID_LAUNCH_FALLBACK title=%016llx source=filename\n",
+                         static_cast<unsigned long long>(launch_title_id));
         const auto game_video = Eden::LoadGameSettings(launch_title_id);
         const auto launch_preferences = Eden::LoadPreferences();
         // PS5-wide code-memory policy, not title-specific or tiered A/B/C.
@@ -1653,11 +1662,12 @@ int main(int argc, char** argv) {
             // No automatic UI/gameplay A/B/X/Y swaps and no mid-title toggle.
             pad->SetMapping(mapping);
             std::fprintf(stderr,
-                "EDEN_PAD_MAPPING_FIXED title=%016llx layout=%d a=%d b=%d x=%d y=%d title_override=%u\n",
+                "EDEN_PAD_MAPPING_FIXED title=%016llx layout=%d a=%d b=%d x=%d y=%d title_override=%u own_mapping=%u\n",
                 static_cast<unsigned long long>(launch_title_id),
                 effective_layout, mapping[Eden::game_a], mapping[Eden::game_b],
                 mapping[Eden::game_x], mapping[Eden::game_y],
-                static_cast<unsigned>(game_video.controller_layout >= 0 || game_video.own_mapping));
+                static_cast<unsigned>(game_video.controller_layout >= 0 || game_video.own_mapping),
+                static_cast<unsigned>(game_video.own_mapping));
             if (!pad->Open()) throw std::runtime_error("PS5 controller initialization failed");
             const std::string mapping_profile =
                 custom_mapping ? (effective_layout == 1 ? "Custom Switch" : "Custom PS5") :

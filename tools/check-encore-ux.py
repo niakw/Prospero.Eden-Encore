@@ -123,7 +123,8 @@ for marker in ('Two-layer elevation','Inner hairline','Eden Encore luminous focu
 for marker in ('/banner/1080p','/screen/','/icon/512','fields=name,intro,description,publisher,developer,releaseDate',
                'CachedNlibScreens','result.screenshots','result.hero'):
     assert marker in services, marker
-assert 'hero_intro' in home
+assert 'hero_description;' in home
+assert 'hero_intro' not in home
 # Artwork arrives in the background, possibly after its first texture lookup.
 widgets_src = read('headless/prosperoeden/pe/ui/widgets.cpp')
 textures_src = read('headless/prosperoeden/pe/ui/textures.cpp')
@@ -136,8 +137,8 @@ assert 'it->second.age >= retry_after' in textures_src
 # semantic Nlib description truncation instead of the removed 1680px rail.
 assert 'constexpr float kHeroX = 90.0f' in home
 assert 'constexpr float kHeroContentWidth = 1250.0f' in home
-assert 'text_block(c, title_label, kHeroX' in home
-assert 'theme::kTitle, kHeroContentWidth, 2, 0.90f)' in home
+assert 'text_shrink(c, title_label, kHeroX' in home
+assert 'kTitleSize, theme::kTitle, kHeroContentWidth, Align::left, 0.0f, 0.45f)' in home
 assert 'text_block_semantic(c, hero_caption, kHeroX' in home
 assert 'theme::kBody, kHeroContentWidth, 2, 0.90f)' in home
 assert 'label_area.x + label_area.w * 0.5f' in home
