@@ -43,6 +43,24 @@ with tempfile.TemporaryDirectory(prefix='eden-radv-fork-equivalence-') as tmp:
     module.install(source_stage, provenance)
     for relative in before:
         assert filecmp.cmp(source_stage / relative, ACTIVE / relative, shallow=False)
+    # Cached R398 native input must migrate exactly once to the current R400
+    # implementation; it is not an arbitrary white-list of modified files.
+    legacy_path = ROOT / 'tools/fixtures/ps5-r398-wsi-videoout.c'
+    legacy_sha = module.digest(legacy_path)
+    assert legacy_sha == '6d54b8d68cc383faa9bbd910e327824689b5315e7ee5617d8981f582c47c2eaa'
+    wsi = 'src/vulkan/wsi/wsi_common_videoout.c'
+    assert module.approved_compiler_input(
+        wsi, legacy_sha, module.digest(SOURCE / wsi), module.digest(ACTIVE / wsi))
+    assert not module.approved_compiler_input(
+        'src/amd/vulkan/radv_pipeline.c', legacy_sha,
+        module.digest(SOURCE / 'src/amd/vulkan/radv_pipeline.c'),
+        module.digest(ACTIVE / 'src/amd/vulkan/radv_pipeline.c'))
+    cached = source_stage / wsi
+    shutil.copy2(legacy_path, cached)
+    module.install(source_stage, None)
+    assert filecmp.cmp(cached, ACTIVE / wsi, shallow=False)
+    assert module.digest(cached) == module.digest(ACTIVE / wsi)
+
     # Do not quietly clobber unknown source changes in a fresh driver export.
     invalid = source_stage / next(iter(before))
     invalid.write_bytes(b'unexpected unknown upstream revision')
@@ -58,4 +76,4 @@ assert 'install-vendored-radv.py' in build
 assert 'python3 "$root/tools/patch-radv-wsi.py"' not in build
 assert build.count('bash "$vulkan/tools/build-radv.sh" release') == 2
 assert 'EDEN_WSI_SHA256' in build
-print('VENDORED_RADV_ACTIVE_INSTALL_OK immutable Mesa pin, bounded install, unknown-source rejection')
+print('VENDORED_RADV_ACTIVE_INSTALL_OK immutable Mesa pin, R398 cache migration, unknown-source rejection')

@@ -27,3 +27,13 @@ Source CI [#38318600041](https://github.com/niakw/Prospero.Eden-Encore/actions/r
 It includes the previously integrated R396 AGC kick fix, R397/R398 official Mesa RADV backports, and post-R398 R399/R400 sampler and VideoOut changes. No visual/performance regression or freeze fix is proven until the actual PS5 binary is qualified. In particular, 120Hz negotiation correction only matters if a session requests 120Hz.
 
 Upstream Eden [#4503](https://github.com/eden-emulator/mirror/commit/67bada77f8a4) suppresses shaders matching a known broken fragment pattern on non-NVIDIA Vulkan drivers. **Do not blindly import** that change for Encore's AMD-based PS5 while FC27 exhibits missing/flickering HUD and surface textures; first prove the exact shader pattern and demonstrate that skipping output is safe for this title.
+
+## R400 native preparation failure and deterministic cache migration
+
+Initial combined R400 All-On workflow [#38319048610](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38319048610) passed source, SDK and release gates, then failed in `make prepare` at `install-vendored-radv.py`. Cached PS5 RADV `wsi_common_videoout.c` had SHA256 `6d54b8d68cc383faa9bbd910e327824689b5315e7ee5617d8981f582c47c2eaa`, which was not equal to either immutable PS5 Mesa upstream or new R400 active WSI.
+
+**Provenance established:** that SHA256 is the exact, complete Encore WSI source at R398 commit `ab1ed98a5cf170debd26959579b5676a602d704b` (Git blob `6e77c7e40de7158fe46774221934622c9411fbd7`), also unchanged at later pre-R400 commits `5fb6aa6c` and `b7528d7f`. It is expected in the native build cache.
+
+The updated installer permits **only this pinned historical SHA256** for the WSI path in addition to the original/up-to-date source, then atomically replaces it with the current canonical active file and invalidates native provenance. Unrecognized bytes for this or any other RADV path remain rejected. `tools/fixtures/ps5-r398-wsi-videoout.c` preserves the full old source, and `tools/check-vendored-radv-fork.py` verifies the real old-to-new staged replacement plus refusal on unknown inputs.
+
+This is a reproducible build-cache migration, **not** a change to game-rendering logic and not evidence of a native R400 package yet.
