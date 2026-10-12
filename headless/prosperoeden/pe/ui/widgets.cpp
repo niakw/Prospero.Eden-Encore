@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "pe/ui/widgets.hpp"
+#include "pe/ui/hero_text_layout.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -180,65 +181,6 @@ void text_block(Canvas &c, std::string_view value, float x, float first_baseline
     }
 }
 
-namespace
-{
-
-// A word must communicate something useful before a truncated sentence ends.
-// Articles, prepositions, conjunctions and common pronouns leave dangling copy
-// ("dans un ...", "and the ..."); trim them, but never split UTF-8 words.
-bool weak_hero_ending(std::string_view word)
-{
-    constexpr std::array<std::string_view, 65> weak{
-        "a", "à", "au", "aux", "avec", "ce", "ces", "cet", "cette",
-        "dans", "de", "des", "du", "elle", "elles", "en", "et", "il",
-        "ils", "je", "la", "le", "les", "leur", "leurs", "lui", "mais",
-        "mes", "mon", "ne", "nos", "notre", "nous", "ou", "où", "par",
-        "pour", "que", "qui", "sa", "se", "ses", "son", "sur", "ta",
-        "te", "tes", "ton", "tu", "un", "une", "vous", "y",
-        "an", "and", "at", "by", "for", "from", "in", "of", "or",
-        "the", "to", "with"
-    };
-    std::string normalized(word);
-    for (char& c : normalized)
-        if (c >= 'A' && c <= 'Z')
-            c = static_cast<char>(c + ('a' - 'A'));
-    return std::find(weak.begin(), weak.end(), normalized) != weak.end();
-}
-
-// Font::wrap normally chooses spaces, but can split a single extremely long
-// word. Reject that incomplete last fragment as well. The suffix uses ACTUAL
-// font measurements; no byte-count substr and no font.fit() inside a word.
-std::string semantic_hero_last_line(const gfx::Font& font, std::string line,
-                                    float size, float max_width, bool whole_word)
-{
-    if (!whole_word) {
-        const std::size_t boundary = line.find_last_of(" \t\n");
-        if (boundary == std::string::npos) return "...";
-        line.erase(boundary); // discard the fragment of a forced-split word
-    }
-    constexpr std::string_view suffix = " ...";
-    while (!line.empty()) {
-        while (!line.empty() && (line.back() == ' ' || line.back() == '\t' ||
-               line.back() == '\n' || line.back() == ',' || line.back() == ';' ||
-               line.back() == ':' || line.back() == '.' || line.back() == '!')) {
-            line.pop_back();
-        }
-        if (line.empty()) break;
-        const std::size_t boundary = line.find_last_of(" \t\n");
-        const auto last_word = std::string_view(line).substr(
-            boundary == std::string::npos ? 0 : boundary + 1);
-        const std::string candidate = line + std::string(suffix);
-        if (!weak_hero_ending(last_word) &&
-            font.measure(candidate, size) <= max_width)
-            return candidate;
-        if (boundary == std::string::npos) break;
-        line.erase(boundary);
-    }
-    return "...";
-}
-
-} // namespace
-
 void text_block_semantic(Canvas &c, std::string_view value, float x, float first_baseline,
                          float size, float line_height, Color color, float max_width,
                          int max_lines, float least)
@@ -246,34 +188,29 @@ void text_block_semantic(Canvas &c, std::string_view value, float x, float first
     if (value.empty() || max_lines <= 0 || max_width <= 0.0f) return;
     const gfx::Font& font = *c.fonts.font;
     const float full = text_size(size);
+    const float smallest = full * least;
     float drawn = full;
-    auto lines = font.wrap(value, drawn, max_width);
-    const float smallest = size * least;
-    while (static_cast<int>(lines.size()) > max_lines && drawn > smallest + 0.01f) {
+
+    // The real font measurements determine both line breaks AND the suffix.
+    // In contrast to the old wrap() path, a short teaser cannot leave a
+    // second row containing only "..." after a forced word break.
+    const auto measure = [&](std::string_view part, float scale) {
+        return font.measure(part, scale);
+    };
+    auto layout = hero_text::wrap_description(value, drawn, max_width, max_lines, measure);
+    while (layout.truncated && drawn > smallest + 0.01f) {
         drawn = std::max(smallest, drawn * 0.94f);
-        lines = font.wrap(value, drawn, max_width);
+        layout = hero_text::wrap_description(value, drawn, max_width, max_lines, measure);
     }
-    const int count = std::min(static_cast<int>(lines.size()), max_lines);
-    const bool truncated = static_cast<int>(lines.size()) > max_lines;
-    if (fit_report && (drawn < full || truncated))
-        fit_report(value, drawn / full, truncated);
-    // Track the REAL end of the visible prefix in the original Nlib text:
-    // forced font wrapping of a single long UTF-8 word must not be mistaken
-    // for a valid truncation boundary.
-    std::size_t source_cursor = 0;
-    for (int i = 0; i < count; ++i) {
-        const auto& line = lines[static_cast<std::size_t>(i)];
-        const std::size_t position = value.find(line, source_cursor);
-        if (position != std::string_view::npos)
-            source_cursor = position + line.size();
-        const bool complete_word = source_cursor >= value.size() ||
-            value[source_cursor] == ' ' || value[source_cursor] == '\n' ||
-            value[source_cursor] == '\t' || value[source_cursor] == ',' ||
-            value[source_cursor] == '.' || value[source_cursor] == ';' ||
-            value[source_cursor] == ':' || value[source_cursor] == '!';
-        const std::string content = truncated && i == count - 1 ?
-            semantic_hero_last_line(font, line, drawn, max_width, complete_word) : line;
-        draw_text(c, content, x, first_baseline + line_height * static_cast<float>(i),
+    if (fit_report && (drawn < full || layout.truncated))
+        fit_report(value, drawn / full, layout.truncated);
+    for (std::size_t i = 0; i < layout.lines.size(); ++i) {
+        const auto& line = layout.lines[i];
+        // Exception: a single unbreakable word wider than the whole column.
+        // Avoid overflow; all normally separated words remain intact.
+        const std::string printable = font.measure(line, drawn) > max_width ?
+            font.fit(line, drawn, max_width) : line;
+        draw_text(c, printable, x, first_baseline + line_height * static_cast<float>(i),
                   size, drawn, color, Align::left, 0.0f);
     }
 }
