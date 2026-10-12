@@ -3,6 +3,7 @@
 // This does not intercept, reroute, override or configure any system DNS.
 #include "network_audit.h"
 #include <pthread.h>
+#include <stdint.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <string.h>
@@ -16,9 +17,33 @@ static char audit_buffer[BUFFER_SIZE];
 static FILE* audit_file;
 static unsigned long long audit_bytes;
 static unsigned audit_line_count;
+// Repeated guest DNS refusals must not serialize thousands of identical writes
+// through this diagnostic logger. The network policy executes independently,
+// before this call; only the *audit* of duplicate denied requests is folded.
+// Exact events and all accepted native/guest packets retain their usual logs.
+static atomic_uint_fast64_t denied_epoch_hash = ATOMIC_VAR_INIT(0);
+static atomic_ullong denied_suppressed = ATOMIC_VAR_INIT(0);
+
+static void flush_denied_summary_locked(void) {
+    const unsigned long long skipped = atomic_exchange_explicit(
+        &denied_suppressed, 0, memory_order_relaxed);
+    if (!audit_file || !skipped) return;
+    const int count = fprintf(audit_file,
+        "epoch=%lld scope=guest event=dns-denied-summary target=aggregated count=%llu\\n",
+        (long long)time(NULL), skipped);
+    if (count > 0) audit_bytes += (unsigned)count;
+}
+
+static uint32_t audit_host_hash(const char* host, int status) {
+    uint32_t h = UINT32_C(2166136261) ^ (uint32_t)status;
+    for (const unsigned char* p=(const unsigned char*)host; *p; ++p)
+        h = (h ^ *p) * UINT32_C(16777619);
+    return h;
+}
 
 static void close_locked(void) {
     if (audit_file) {
+        flush_denied_summary_locked();
         (void)fflush(audit_file);
         (void)fclose(audit_file);
         audit_file = NULL;
@@ -85,6 +110,20 @@ void eden_network_audit_event(const char* scope, const char* event,
                               const char* target, unsigned long long bytes,
                               int status) {
     if (!atomic_load_explicit(&audit_enabled,memory_order_acquire)) return;
+    if (scope && event && target && strcmp(scope,"guest")==0 &&
+        strcmp(event,"dns-denied")==0) {
+        const uint64_t key = ((uint64_t)(uint32_t)time(NULL) << 32) |
+                             audit_host_hash(target,status);
+        // Lock-free common path: at most one verbatim identical denial per
+        // second per dominant domain. Hash collisions affect only diagnostic
+        // compression, never actual DNS answers or domain-policy matches.
+        if (atomic_exchange_explicit(&denied_epoch_hash, key,
+                                     memory_order_relaxed) == key) {
+            atomic_fetch_add_explicit(&denied_suppressed, 1,
+                                      memory_order_relaxed);
+            return;
+        }
+    }
     pthread_mutex_lock(&audit_mutex);
     if (!atomic_load_explicit(&audit_enabled,memory_order_relaxed)) {
         pthread_mutex_unlock(&audit_mutex);
@@ -92,6 +131,7 @@ void eden_network_audit_event(const char* scope, const char* event,
     }
     open_locked();
     if (audit_file) {
+        flush_denied_summary_locked();
         char sc[24],kind[28],dst[256];
         safe_token(scope,sc,sizeof(sc));
         safe_token(event,kind,sizeof(kind));
