@@ -82,6 +82,12 @@ int main(int argc,char** argv) {
     assert(eden_network_audit_active());
     eden_network_audit_event("launcher","dns-resolved","api.nlib.cc",0,0);
     eden_network_audit_event("guest","dns-denied","api.ea.com",0,1);
+    // Same-second repeated denials are a diagnostic/audit storm only; they
+    // must not do hundreds of writes or require a mutex for each repeat.
+    // Accepted packet events are NEVER throttled.
+    for (int i=0;i<500;i++)
+        eden_network_audit_event("guest","dns-denied",
+                                 "spring25.client.blazeredirector.ea.com",0,1);
     eden_network_audit_event("guest","tx","198.51.100.1:443",135,0);
     eden_network_audit_event("guest","tx","evil\nline",10,0);
     eden_network_audit_enable(0);
@@ -89,6 +95,8 @@ int main(int argc,char** argv) {
     assert(exists(logpath));
     assert(contains(logpath,"scope=launcher event=dns-resolved target=api.nlib.cc"));
     assert(contains(logpath,"scope=guest event=dns-denied target=api.ea.com"));
+    assert(contains(logpath,"event=dns-denied-summary target=aggregated count="));
+    assert(contains(logpath,"target=spring25.client.blazeredirector.ea.com"));
     assert(contains(logpath,"scope=guest event=tx target=198.51.100.1:443 bytes=135"));
     assert(contains(logpath,"target=evil_line"));
     const long initial=bytes(logpath);
@@ -101,7 +109,7 @@ int main(int argc,char** argv) {
     assert(exists(logpath)&&exists(oldpath));
     assert(bytes(logpath)<=4*1024*1024);
     assert(bytes(oldpath)<=4*1024*1024+512);
-    puts("NETWORK_AUDIT_HOST_PASS: quiet, live toggle, escaping, 4MiB rotation");
+    puts("NETWORK_AUDIT_HOST_PASS: quiet, duplicate DNS throttle, native TX preservation, escaping, 4MiB rotation");
     return 0;
 }
 """
