@@ -1060,7 +1060,7 @@ void ReportGpuThread(unsigned frame) {
             // Title reset is also supported: counters can decrease between games.
             const auto window = total >= last_drops[type] ? total - last_drops[type] : total;
             last_drops[type] = total;
-            std::printf("EDEN_GPU_DRAW_DROP frame=%u reason=%s total=%llu window=%llu\\n",
+            std::printf("EDEN_GPU_DRAW_DROP frame=%u reason=%s total=%llu window=%llu\n",
                         frame, drop_names[type], total, window);
         }
         // Keep the established lifetime totals for existing parsers, and also
