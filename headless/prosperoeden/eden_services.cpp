@@ -11,6 +11,7 @@
 #include "diagnostics.h"
 #include "encore_overrides_runtime.h"
 #include "metadata_bridge.h"
+#include "title_id_fallback.h"
 #include "mods.h"
 #include "native_directory.h"
 #include "pe/core/strings.hpp"
@@ -58,31 +59,10 @@ bool IsFile(const std::string& path) {
     return stat(path.c_str(), &info) == 0 && S_ISREG(info.st_mode);
 }
 
-std::uint64_t TitleIdFromFilename(const std::string& file) {
-    for (std::size_t open = file.find('['); open != std::string::npos;
-         open = file.find('[', open + 1)) {
-        const std::size_t close = file.find(']', open + 1);
-        if (close == std::string::npos || close - open != 17) continue;
-        std::uint64_t value = 0;
-        bool valid = true;
-        for (std::size_t i = open + 1; i < close; ++i) {
-            const unsigned char c = static_cast<unsigned char>(file[i]);
-            unsigned digit = 0;
-            if (c >= '0' && c <= '9') digit = c - '0';
-            else if (c >= 'a' && c <= 'f') digit = c - 'a' + 10;
-            else if (c >= 'A' && c <= 'F') digit = c - 'A' + 10;
-            else { valid = false; break; }
-            value = (value << 4) | digit;
-        }
-        if (valid && value != 0) return value;
-    }
-    return 0;
-}
-
 std::uint64_t ResolveTitleId(const std::string& path, const std::string& file) {
     const std::uint64_t metadata_id = eden_game_title_id(path.c_str());
     if (metadata_id != 0) return metadata_id;
-    const std::uint64_t filename_id = TitleIdFromFilename(file);
+    const std::uint64_t filename_id = Eden::TitleIdFromRomFilename(file);
     if (filename_id != 0)
         std::fprintf(stderr, "EDEN_TITLE_ID_FALLBACK file=%s title_id=%016llX\n", file.c_str(),
                      static_cast<unsigned long long>(filename_id));
