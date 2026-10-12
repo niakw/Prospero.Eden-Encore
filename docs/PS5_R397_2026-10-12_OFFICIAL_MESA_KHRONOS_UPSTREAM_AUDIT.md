@@ -46,6 +46,12 @@ Upstream corrected it to:
 ```
 Affecting graphics texture array sampling semantics independent of optional TRUNC_COORD. Applied to a **sixth** complete active RADV translation unit `vendor/encore-active/ps5-mesa/src/amd/vulkan/radv_pipeline.c`, added to `tools/install-vendored-radv.py`, reproduced by the same pinned build oracle and required by `tools/check-vendored-radv-fork.py`. Host source-check/semantic ASan+UBSan regression: `tools/check-radv-mesa-2622-texture-array.py`. The immutable `vendor/sources/ps5-mesa` base is unchanged. **Candidate for real texture/grass/HUD correctness**, not proof until native FC27 test.
 
+### 3. Official Mesa 26.2.2: guard indirect draws with zero count
+
+Source: https://chromium.googlesource.com/external/gitlab.freedesktop.org/mesa/mesa/+/a2f2518a9febf1b3b791cd2df079dbd25e56939b
+
+Mesa found that AMD firmware can execute the first indirect draw even when the maximum draw count is zero. Backported the complete **shared** `radv_before_draw()` guard with explicit counts through ordinary direct, indirect, DGC, transform-feedback and multi-draw call sites. Encore's extra PS5 GS-compute raster caller additionally passes `direct ? 0 : 1` so the synthesized one-draw indirect packet is *not* spuriously suppressed. The deterministic port and pinned replay are in `tools/radv_official_indirect_draw_fix.py`, `tools/patch-radv-wsi.py`, and `tools/check-radv-official-indirect-draw.py`. This corrects a real GPU packet correctness issue, **not proof** of the FC27 freeze or all graphical anomalies.
+
 ### Previous PS5-specific RADV improvement retained
 
 The R396 atomic AGC wake coalescing in `radv_ps5_platform.c` reduces redundant condition signals and protects concurrent submit accounting. It is not part of official Mesa and must remain PS5-specific. Tested by source-extracted parallel 12K DCBs in `tools/check-ps5-radv-kick-coalescing.py`.
@@ -54,7 +60,7 @@ The R396 atomic AGC wake coalescing in `radv_ps5_platform.c` reduces redundant c
 
 | Official upstream fix | Exact upstream | Audit decision |
 |---|---|---|
-| Skip zero-(max)drawCount indirect draws (firmware may execute phantom first draw) | https://chromium.googlesource.com/external/gitlab.freedesktop.org/mesa/mesa/+/a2f2518a9febf1b3b791cd2df079dbd25e56939b | **Still missing** from PS5 RADV `radv_before_draw` and four indirect-2KHR paths. Upstream patch adjusts a shared draw-preflight signature and calls. Our fork adds a custom GS-compute raster draw caller that also needs semantic preservation. High-priority follow-up; do not skip custom raster passes |
+| Skip zero-(max)drawCount indirect draws (firmware may execute phantom first draw) | https://chromium.googlesource.com/external/gitlab.freedesktop.org/mesa/mesa/+/a2f2518a9febf1b3b791cd2df079dbd25e56939b | **Integrated with PS5 adaptation** in R397: the before-draw guard checks the guest-specified indirect count, while the custom GS-compute raster caller passes one for its single generated indirect packet. Exact source replay and host test `tools/check-radv-official-indirect-draw.py`; native behavior still unverified |
 | sRGB compute color clears | https://chromium.googlesource.com/external/gitlab.freedesktop.org/mesa/mesa/+/9a427b7668cfb19788c4347d7c3df01e10d9983b | Official fix for forced compute path or compute queue; lower FC27 priority unless matching clear path is observed |
 | Depth/stencil resolve aspects | https://chromium.googlesource.com/external/gitlab.freedesktop.org/mesa/mesa/+/6e18409d5800f975538236c4152fa4eeca3b444e | Vulkan spec correctness in RADV meta resolve; evaluate only with correct affected functions and tests |
 | Immutable sampler lifetimes with update templates | https://chromium.googlesource.com/external/gitlab.freedesktop.org/mesa/mesa/+/7b5888e8ca77cc0b407c7fb113df85764b561a86 | Potential use-after-layout bug: two source files, requires lifetime test, not ad hoc pointer swap |
