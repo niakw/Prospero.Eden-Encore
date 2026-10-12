@@ -74,11 +74,12 @@ for token in ("disable_null_descriptor = false;", "disable_descriptor_buffer = f
               "disable_conditional_rendering = false;", "compute_barriers = true;",
               "hcr_mode = 1;"):
     assert token in vulkan_dev[vulkan_dev.index("inline void ResetForTitle()"):], token
-# R326 restores an 8-draw handoff by default in both DEV and shipping.
-# A 64-draw experimental cadence remains opt-in per title.
-assert "inline std::atomic<unsigned> dispatch_mask{7};" in (root / "headless/performance.h").read_text()
+# R355 uses 16 draws to reduce dispatch overhead, while dev-settings can
+# restore upstream 8 draws or experiment up to the unchanged 512-draw ceiling.
+assert "inline std::atomic<unsigned> dispatch_mask{15};" in (root / "headless/performance.h").read_text()
+assert "dev-settings dispatch_draws=8" in main
 for marker in ("graphics_usage_from_pool.store(true", "gc_keep_dirty.store(true",
-               "dispatch_mask.store(7", "idle_spin_iterations.store(5000",
+               "dispatch_mask.store(15", "idle_spin_iterations.store(5000",
                "jit_duplicate_tracking.store(false", "pc_sample_core.store(0",
                "pc_fast.store(false", "capture_early.store(false",
                "firmware_applets.store(false", "trace_fs_callers.store(false"):
