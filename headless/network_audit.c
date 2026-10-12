@@ -29,7 +29,7 @@ static void flush_denied_summary_locked(void) {
         &denied_suppressed, 0, memory_order_relaxed);
     if (!audit_file || !skipped) return;
     const int count = fprintf(audit_file,
-        "epoch=%lld scope=guest event=dns-denied-summary target=aggregated count=%llu\\n",
+        "epoch=%lld scope=guest event=dns-denied-summary target=aggregated count=%llu\n",
         (long long)time(NULL), skipped);
     if (count > 0) audit_bytes += (unsigned)count;
 }
