@@ -66,7 +66,7 @@ int main(){
     assert(at!=std::string::npos);
     duplicate.replace(at,strlen("mask=\"c,0,0,0\""),"mask=\"3,0,0,0\"");
     expect(duplicate,false); // duplicate sibling group
-    unsigned long long mask=0;
+    std::uint64_t mask=0;
     assert(FreeBsdMask("1fff,0,0,0",mask) && mask==allowed);
     assert(FreeBsdMask("1FFF",mask) && mask==allowed);
     assert(!FreeBsdMask("3,1",mask));
