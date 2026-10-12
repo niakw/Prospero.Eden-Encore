@@ -68,24 +68,30 @@ struct GraphicsDescriptorScratch {
     bool in_use{};
 };
 
+// Two per-thread scratch slots cover ordinary and once-nested Configure.
+// A third recursive call retains the original safe heap allocation fallback.
 thread_local GraphicsDescriptorScratch graphics_descriptor_scratch;
+thread_local GraphicsDescriptorScratch graphics_descriptor_nested_scratch;
 
 class GraphicsDescriptorScratchLease {
 public:
     GraphicsDescriptorScratchLease() {
-        if (graphics_descriptor_scratch.in_use) {
+        if (!graphics_descriptor_scratch.in_use) {
+            current = &graphics_descriptor_scratch;
+            current->in_use = true;
+        } else if (!graphics_descriptor_nested_scratch.in_use) {
+            current = &graphics_descriptor_nested_scratch;
+            current->in_use = true;
+        } else {
             nested = std::make_unique<GraphicsDescriptorScratch>();
             current = nested.get();
-        } else {
-            graphics_descriptor_scratch.in_use = true;
-            current = &graphics_descriptor_scratch;
         }
         current->views.clear();
         current->samplers.clear();
     }
 
     ~GraphicsDescriptorScratchLease() {
-        if (!nested) graphics_descriptor_scratch.in_use = false;
+        if (!nested) current->in_use = false;
     }
 
     GraphicsDescriptorScratchLease(const GraphicsDescriptorScratchLease&) = delete;
@@ -407,7 +413,11 @@ void GraphicsPipeline::PreflightDescriptorScratch() const {
     // cache pair. The immutable pipeline descriptor counts are safe here.
     // Nested Configure calls use their own scratch and fall back to reserve
     // under the lock; never corrupt an in-flight parent view list.
-    auto& scratch = graphics_descriptor_scratch;
+    // Nested Configure reserves its private thread-local slot before the GPU
+    // cache mutexes. Depth >= 3 still has the existing safe fallback.
+    auto& scratch = graphics_descriptor_scratch.in_use
+                        ? graphics_descriptor_nested_scratch
+                        : graphics_descriptor_scratch;
     if (scratch.in_use) return;
     if (scratch.views.capacity() < num_image_elements)
         scratch.views.reserve(num_image_elements);
