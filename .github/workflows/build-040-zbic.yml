@@ -225,6 +225,7 @@ jobs:
           python3 -B tools/check-radv-mesa-2622-texture-array.py
           python3 -B tools/check-radv-official-indirect-draw.py
           python3 -B tools/check-radv-mesa-2624-ds-aspects.py
+          python3 -B tools/check-radv-immutable-sampler-lifetime.py
           python3 -B tools/check-vendored-gpu-thread.py
           python3 -B tools/check-ps5-descriptor-queue-preflight.py
           python3 -B tools/check-ps5-large-descriptor-preflight.py
