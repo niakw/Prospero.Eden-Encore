@@ -2655,7 +2655,13 @@ else()
     target_compile_options(eden-devices-check PRIVATE -fno-rtti)
 endif()
 target_include_directories(eden-headless PRIVATE "${PROJECT_SOURCE_DIR}/src")
+# The R-label is injected by the native compiler, independently of sce_sys.
+set(EDEN_LAUNCHER_BUILD_LABEL "R1" CACHE STRING "Eden Encore compiled R revision")
+if(NOT EDEN_LAUNCHER_BUILD_LABEL MATCHES "^R[0-9]+$")
+    message(FATAL_ERROR "Invalid Eden launcher revision: ${EDEN_LAUNCHER_BUILD_LABEL}")
+endif()
 target_compile_definitions(eden-headless PRIVATE
+    EDEN_LAUNCHER_BUILD_LABEL=\"${EDEN_LAUNCHER_BUILD_LABEL}\"
     EDEN_SHARED_JIT_AVAILABLE=$<BOOL:${EDEN_SHARED_JIT}>
     EDEN_JIT_COMPILE_BATCH_AVAILABLE=$<BOOL:${EDEN_JIT_COMPILE_BATCH}>)
 target_link_libraries(eden-headless PRIVATE core eden-pad)

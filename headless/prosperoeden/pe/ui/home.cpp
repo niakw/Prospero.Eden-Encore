@@ -384,6 +384,11 @@ void Launcher::press_home(Key key)
             focus = recent_count > 0 ? kHomeRecentFirst : (hero_ready ? kHomeHero : kHomeNavRecent);
             cue(Cue::back);
         }
+        else
+        {
+            // Circle on the Home root: confirm, never force-kill the title.
+            (void)confirm_action(Confirmation::exit_app);
+        }
         return;
     case Key::triangle:
     {
@@ -651,22 +656,16 @@ void Launcher::draw_home(Canvas &c)
     text(c, hero_recent != nullptr ? tr("SELECTED GAME") : tr("CONTINUE PLAYING"),
          90.0f, baseline(133.0f, 30.0f, theme::kSmall),
          theme::kSmall, theme::kLimePale, Align::left, 3.0f);
-    // One shared left-aligned content span for title, description and
-    // action/chip rail. Never wrap a title at 1030px when the hero has
-    // enough horizontal room for an intact one-line title (e.g. BOTW).
-    // Keep 150px for the TV safe area at the right edge.
-    constexpr float kHeroContentWidth = 1680.0f; // x=90 .. 1770
+    // The title, Nlib summary and action rail are ONE compact left column.
+    // Do not stretch the Zelda title to the full 1920px cinematic backdrop.
+    // The game artwork remains visible on the right, as in the user markup.
+    constexpr float kHeroX = 90.0f;
+    constexpr float kHeroContentWidth = 1250.0f; // x=90..1340, within marked area
     const std::string title_label =
         hero_file.empty() ? std::string{tr("Your next adventure")} : hero_title;
-    constexpr float kTitleSize = 76.0f;
-    constexpr float kMinOneLineScale = 0.72f;
-    if (text_width(c, title_label, kTitleSize) <= kHeroContentWidth / kMinOneLineScale)
-        text_shrink(c, title_label, 90.0f, baseline(175.0f, 96.0f, kTitleSize),
-                    kTitleSize, theme::kTitle, kHeroContentWidth, Align::left,
-                    0.0f, kMinOneLineScale);
-    else
-        text_block(c, title_label, 90.0f, baseline(166.0f, 54.0f, 51.0f),
-                   51.0f, 53.0f, theme::kTitle, kHeroContentWidth, 2, 0.87f);
+    constexpr float kTitleSize = 60.0f;
+    text_block(c, title_label, kHeroX, baseline(165.0f, 62.0f, kTitleSize),
+               kTitleSize, 62.0f, theme::kTitle, kHeroContentWidth, 2, 0.90f);
     const bool hero_caption_warning = hero_recent == nullptr && home_.last_caption_warning;
     // A game-return screen must not silently swap a full Nlib description
     // for a short English marketing slogan ("The world's game...") merely
@@ -679,11 +678,11 @@ void Launcher::draw_home(Canvas &c)
         !hero_intro.empty() ? hero_intro :
         hero_recent != nullptr ? std::string{tr("Recently played")} : home_.last_caption;
     if (hero_caption_warning)
-        notice_block(c, hero_caption, 90.0f, baseline(280.0f, 27.0f, 21.0f),
-                     21.0f, 25.0f, theme::kWarning, kHeroContentWidth, 2, true);
+        notice_block(c, hero_caption, kHeroX, baseline(282.0f, 27.0f, 21.0f),
+                     21.0f, 26.0f, theme::kWarning, kHeroContentWidth, 2, true);
     else
-        text_block(c, hero_caption, 90.0f, baseline(280.0f, 27.0f, 21.0f),
-                   21.0f, 25.0f, theme::kBody, kHeroContentWidth, 2, 0.86f);
+        text_block_semantic(c, hero_caption, kHeroX, baseline(282.0f, 27.0f, 22.0f),
+                            22.0f, 27.0f, theme::kBody, kHeroContentWidth, 2, 0.90f);
     int hero_mods = hero_recent == nullptr ? home_.last_mods : 0;
     int hero_mods_on = hero_recent == nullptr ? home_.last_mods_on : 0;
     for (const Game &game : games_)
@@ -764,13 +763,30 @@ void Launcher::draw_home(Canvas &c)
     // profile chips in the same horizontal metadata rail. If Nlib has no
     // verified capacity, do not reserve space or invent a count.
     float chip_x = hero_max_players > 0 ? 774.0f : 570.0f;
-    for (const auto &chip : chips)
+    // Four badges adapt to the remaining width rather than crossing the hero
+    // boundary with translated labels or a long game-resolution setting.
+    constexpr float kChipGap = 9.0f;
+    std::array<float, 4> chip_widths{};
+    float desired = 0.0f;
+    for (std::size_t i = 0; i < chips.size(); ++i) {
+        chip_widths[i] = std::clamp(text_width(c, chips[i], 18.0f) + 30.0f,
+                                    88.0f, 210.0f);
+        desired += chip_widths[i];
+    }
+    const float room = kHeroX + kHeroContentWidth - chip_x - kChipGap * 3.0f;
+    if (desired > room) {
+        const float factor = room / desired;
+        for (float& width : chip_widths)
+            width *= factor;
+    }
+    for (std::size_t i = 0; i < chips.size(); ++i)
     {
-        const float w = std::clamp(text_width(c, chip, 18.0f) + 30.0f, 92.0f, 210.0f);
+        const auto& chip = chips[i];
+        const float w = chip_widths[i];
         list.rounded_rect({chip_x, 405.0f, w, 38.0f}, 19.0f, theme::kPanel.with_alpha(0.78f));
         text_shrink(c, chip, chip_x + w * 0.5f, baseline(405.0f, 38.0f, 18.0f), 18.0f,
                     theme::kLimePale, w - 18.0f, Align::center, 0.0f, 0.72f);
-        chip_x += w + 10.0f;
+        chip_x += w + kChipGap;
     }
     if (hero_max_players > 0)
     {
@@ -1031,8 +1047,9 @@ void Launcher::draw_home(Canvas &c)
     else
     {
         static constexpr Hint kHints[] = {
-            {Pad::cross, TR("Select")}, {Pad::triangle, TR("Game settings")}, {Pad::dpad, TR("Navigate")}};
-        draw_hints(c, kHints, 3, 60.0f, 1020.0f, theme::kMuted, 1200.0f);
+            {Pad::cross, TR("Select")}, {Pad::triangle, TR("Game settings")},
+            {Pad::dpad, TR("Navigate")}, {Pad::circle, TR("Quit")}};
+        draw_hints(c, kHints, 4, 60.0f, 1020.0f, theme::kMuted, 1340.0f);
     }
     text(c, version_, 1860.0f, 1026.0f,
          theme::kSmall, theme::kMeta, Align::right);

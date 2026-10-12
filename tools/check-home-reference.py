@@ -67,15 +67,18 @@ assert "home_diagnostics_.storage_root" in home
 for fabricated in ("CPU 17%", "GPU 28%", "60 FPS", "48.0 GB / 64.0 GB"):
     assert fabricated not in home
 assert 'hero_file.empty() ? std::string{tr("Your next adventure")}' in home
-assert 'text_block(c, title_label, 90.0f' in home
-assert 'constexpr float kHeroContentWidth = 1680.0f' in home
-assert 'kHeroContentWidth / kMinOneLineScale' in home
-assert 'text_shrink(c, title_label, 90.0f' in home
-assert 'theme::kTitle, kHeroContentWidth, 2, 0.87f)' in home
+# R385: unified left Hero column from the annotated PS5 screenshot.
+assert 'constexpr float kHeroX = 90.0f' in home
+assert 'constexpr float kHeroContentWidth = 1250.0f' in home
+assert 'text_block(c, title_label, kHeroX' in home
+assert 'theme::kTitle, kHeroContentWidth, 2, 0.90f)' in home
 assert 'theme::kWarning, kHeroContentWidth, 2, true)' in home
-assert 'theme::kBody, kHeroContentWidth, 2, 0.86f)' in home
-assert 'if (text_width(c, title_label, 76.0f) > 1030.0f)' not in home
-assert 90 + 1680 <= 1920 - 150
+assert 'text_block_semantic(c, hero_caption, kHeroX' in home
+assert 'theme::kBody, kHeroContentWidth, 2, 0.90f)' in home
+assert 'constexpr float kChipGap = 9.0f' in home
+assert 'const float room = kHeroX + kHeroContentWidth - chip_x - kChipGap * 3.0f' in home
+assert 'width *= factor' in home
+assert 90 + 1250 <= 1920 - 400
 assert 'const auto base = VideoPresetForTitle(title_id,' in home
 for value in ('base_renderer', 'base_output', 'base_resolution', 'base_filter', 'base_aa'):
     assert value in home
