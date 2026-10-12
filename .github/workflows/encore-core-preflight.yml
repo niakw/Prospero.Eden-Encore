@@ -39,6 +39,7 @@ jobs:
           python3 -B tools/check-ps5-guest-write-subphases.py
           python3 -B tools/check-ps5-guest-write-batching.py
           python3 -B tools/check-ps5-guest-ipc-thread-profile.py
+          python3 -B tools/analyze-fc27-ipc-threads.py --self-test
           python3 -B tools/check-ps5-fast-first-pipelines.py
           python3 -B tools/check-ps5-pipeline-build-wait.py
           python3 -B tools/check-ps5-gpu-worker-draw-guard.py
