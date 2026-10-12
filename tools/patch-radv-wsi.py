@@ -102,6 +102,8 @@ for relative, replacements in {
         ('      radv_ps5_memory_free(&queue->ring);', '      fprintf(stderr, "radv/ps5: queue marker allocation failed\\n");\n      radv_ps5_memory_free(&queue->ring);'),
     ],
     'src/amd/vulkan/winsys/ps5/radv_ps5_platform.c': [
+        ("   radv_ps5_submit_ns[0] += flushed - started;", "   p_atomic_add(&radv_ps5_submit_ns[0], flushed - started);"),
+        ("   radv_ps5_submit_ns[1] += submitted - flushed;", "   p_atomic_add(&radv_ps5_submit_ns[1], submitted - flushed);"),
         ("#include <time.h>\n", "#include <time.h>\n#include <stdatomic.h>\n"),
         ("static bool radv_ps5_kick_pending;", "static atomic_bool radv_ps5_kick_pending = ATOMIC_VAR_INIT(false);"),
         ("while (!radv_ps5_kick_pending)", "while (!atomic_load_explicit(&radv_ps5_kick_pending, memory_order_acquire))"),
