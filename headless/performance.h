@@ -112,8 +112,14 @@ inline std::atomic<unsigned long long> cache_lock_contended{0}, cache_lock_block
 // Accumulated time actually blocked on the guest cache mutex, not just
 // number of failed try_lock attempts. Updated ONLY during detailed profiling.
 inline std::atomic<unsigned long long> cache_lock_wait_ns{0};
+// The old aggregate hides whether CPU writes block on the graphics buffer
+// cache or the texture cache. Only count when detailed diagnostics are active.
+struct GuestCacheDomainTotals {
+    std::atomic<unsigned long long> contended{}, blocked{}, wait_ns{};
+};
+inline std::array<GuestCacheDomainTotals, 2> guest_cache_domain_totals{}; // buffer, texture
 template <typename Mutex>
-inline void GuestCacheLock(Mutex& mutex) {
+inline void GuestCacheLock(Mutex& mutex, bool texture_domain = false) {
     // Source of thousands of contended-cache atomic writes in FC27. When
     // diagnostics are OFF use the exact upstream blocking mutex path; do not
     // try_lock first or hammer two shared accounting cache lines per miss.
@@ -123,18 +129,24 @@ inline void GuestCacheLock(Mutex& mutex) {
         return;
     }
     if (mutex.try_lock()) return;
+    auto& domain = guest_cache_domain_totals[texture_domain ? 1u : 0u];
     cache_lock_contended.fetch_add(1, std::memory_order_relaxed);
+    domain.contended.fetch_add(1, std::memory_order_relaxed);
     for (unsigned tries = cache_lock_spins.load(std::memory_order_relaxed); tries != 0; --tries) {
         for (int pause = 0; pause < 4; ++pause) __builtin_ia32_pause();
         if (mutex.try_lock()) return;
     }
     cache_lock_blocked.fetch_add(1, std::memory_order_relaxed);
+    domain.blocked.fetch_add(1, std::memory_order_relaxed);
     const auto blocked_start = Common::g_wall_clock.GetTimeNS();
     mutex.lock();
     const auto waited = (Common::g_wall_clock.GetTimeNS() - blocked_start).count();
-    if (waited > 0)
+    if (waited > 0) {
         cache_lock_wait_ns.fetch_add(static_cast<unsigned long long>(waited),
                                      std::memory_order_relaxed);
+        domain.wait_ns.fetch_add(static_cast<unsigned long long>(waited),
+                                 std::memory_order_relaxed);
+    }
 }
 // R310: sampled GPU-owner cache phases.  A successful FPS average does not
 // explain a late frame; measure how much of each 16th draw is waiting for the

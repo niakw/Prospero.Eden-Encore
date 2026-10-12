@@ -856,7 +856,7 @@ bool RasterizerVulkan::MustFlushRegion(DAddr addr, u64 size, VideoCommon::CacheT
 VideoCore::RasterizerDownloadArea RasterizerVulkan::GetFlushArea(DAddr addr, u64 size) {
     ::Eden::Performance::DiagnosticTimer guest_read_timer(::Eden::Performance::guest_cpu_read);
     {
-        ::Eden::Performance::GuestCacheLock(texture_cache.mutex);
+        ::Eden::Performance::GuestCacheLock(texture_cache.mutex, true);
         std::lock_guard lock{texture_cache.mutex, std::adopt_lock};
         auto area = texture_cache.GetFlushArea(addr, size);
         if (area) {
@@ -916,14 +916,14 @@ bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {
     ::Eden::Performance::DiagnosticTimer guest_write_timer(::Eden::Performance::guest_cpu_write);
     DEBUG_ASSERT(addr != 0 || size != 0);
     {
-        ::Eden::Performance::GuestCacheLock(buffer_cache.mutex);
+        ::Eden::Performance::GuestCacheLock(buffer_cache.mutex, false);
         std::lock_guard lock{buffer_cache.mutex, std::adopt_lock};
         if (buffer_cache.OnCPUWrite(addr, size)) {
             return true;
         }
     }
     {
-        ::Eden::Performance::GuestCacheLock(texture_cache.mutex);
+        ::Eden::Performance::GuestCacheLock(texture_cache.mutex, true);
         std::lock_guard lock{texture_cache.mutex, std::adopt_lock};
         texture_cache.WriteMemory(addr, size);
     }

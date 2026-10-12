@@ -49,17 +49,23 @@ assert "std::lock_guard lock{texture_cache.mutex, std::adopt_lock};" in generato
 
 lock = perf.split("template <typename Mutex>\ninline void GuestCacheLock(", 1)[1].split("// Guest waits:", 1)[0]
 lock = "template <typename Mutex>\ninline void GuestCacheLock(" + lock
+domain = perf.split("struct GuestCacheDomainTotals {", 1)[1].split("template <typename Mutex>", 1)[0]
+domain = "struct GuestCacheDomainTotals {" + domain
 timer = perf.split("class DiagnosticTimer {", 1)[1].split("// Opt-in API wall times:", 1)[0]
 timer = "class DiagnosticTimer {" + timer
 
 fixture = r"""
 #include <atomic>
+#include <array>
 #include <cassert>
 #include <chrono>
 #include <mutex>
 #include <thread>
 #include <vector>
 #include <cstdio>
+#if !defined(__x86_64__)
+#define __builtin_ia32_pause() ((void)0) // Host-only arm64 C++ fixture
+#endif
 struct Totals {
     std::atomic<unsigned long long> calls{}, nanoseconds{}, requested_bytes{};
 };
@@ -79,6 +85,7 @@ inline std::atomic<bool> detailed_gpu_profile{false};
 inline std::atomic<unsigned> cache_lock_spins{0};
 inline std::atomic<unsigned long long> cache_lock_contended{0}, cache_lock_blocked{0};
 inline std::atomic<unsigned long long> cache_lock_wait_ns{0};
+DOMAIN
 LOCK
 
 TIMER
@@ -128,7 +135,7 @@ int main() {
     std::puts("PASS: quiet cache lock semantics and zero DEV timers; detailed counters preserved");
 }
 """
-fixture = fixture.replace("LOCK", lock).replace("TIMER", timer)
+fixture = fixture.replace("DOMAIN", domain).replace("LOCK", lock).replace("TIMER", timer)
 with tempfile.TemporaryDirectory(prefix="eden-ps5-quiet-gpu-hotpaths-") as folder:
     cpp=Path(folder)/"test.cpp"
     exe=Path(folder)/"test"
