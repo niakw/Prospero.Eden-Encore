@@ -18,7 +18,10 @@ assert "cache_draw_sample_active = previous_sample;" in generator
 assert "if (!pipeline_ok)" in generator
 assert "return;" in generator
 assert "Eden::Performance::ResetCachePhases();" in main
-assert "EDEN_GPU_CACHE_PHASE frame=%u phase=%s samples=%llu total_ns=%llu max_ns=%llu" in report
+assert ("EDEN_GPU_CACHE_PHASE frame=%u phase=%s samples=%llu total_ns=%llu "
+        "window_samples=%llu window_ns=%llu max_ns=%llu") in report
+assert "samples >= last_samples[phase] ? samples - last_samples[phase] : samples" in report
+assert "total_ns >= last_total_ns[phase] ? total_ns - last_total_ns[phase] : total_ns" in report
 assert "entry.max_ns.exchange(0, std::memory_order_relaxed)" in report
 assert "auto& entry = cache_phase_totals[phase];" in report
 assert "const auto& entry = cache_phase_totals[phase];" not in report
