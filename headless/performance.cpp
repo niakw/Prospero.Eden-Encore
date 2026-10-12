@@ -245,8 +245,9 @@ void CheckWorkerTopology() {
     topology_allowed = original;
     topology_allowed_valid = true;
     if (!has_x2apic && !has_amd_topology) {
-        std::printf("EDEN_WORKER_TOPOLOGY ready=0 reason=no_supported_physical_cpuid\n");
-        return;
+        // This is not yet a failure: the kernel may still expose authoritative
+        // SMT groups even when neither architectural CPUID leaf is usable.
+        std::printf("EDEN_PS5_CPU_CPUID unavailable=1 trying_kernel_topology=1\n");
     }
     // The PS5's FreeBSD scheduler may expose genuine SMT sibling groups
     // even when CPUID per-affinity yields bogus 13-core/one-core readings.

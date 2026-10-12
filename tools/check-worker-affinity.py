@@ -151,6 +151,20 @@ int main(){
         "<flags><flag name=\"SMT\"></flag></flags></group></groups>";
  CheckWorkerTopology();
  assert(!worker_topology_ready && current==0x1fff);
+ // Kernel topology must also work when no CPUID topology exists.
+ max_leaf=0xa;amd_vendor=false;amd_ext_feature=false;
+ os_xml="<groups>";
+ for(unsigned i=0;i<14;i+=2) {
+  char pair[160];
+  std::snprintf(pair,sizeof(pair),
+    "<group><cpu count=\"2\" mask=\"%llx,0,0\">pair</cpu>"
+    "<flags><flag name=\"SMT\">SMT group</flag></flags></group>",
+    (unsigned long long)(3ULL<<i));
+  os_xml+=pair;
+ }
+ os_xml+="</groups>";
+ CheckWorkerTopology();
+ assert(worker_topology_ready && current==0x1fff);
  os_xml.clear();
  max_leaf=0xa;
  // TopologyExtensions absent: do not claim proof from logical IDs alone.
