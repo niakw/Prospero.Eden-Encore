@@ -17,6 +17,18 @@ from pathlib import Path
 
 KEY_VALUE = re.compile(r"([A-Za-z][A-Za-z_0-9]*)=(-?[0-9]+(?:\.[0-9]+)?)")
 PHASE = re.compile(r"\bphase=([A-Za-z_0-9]+)")
+BUILD = re.compile(r"\bsource_sha=([^\s]+)")
+VALID_SHA = re.compile(r"^[0-9a-f]{40}$")
+
+
+def source_sha(line: str) -> str | None:
+    match = BUILD.search(line)
+    if match is None:
+        return None
+    sha = match.group(1)
+    if sha != "unknown" and not VALID_SHA.fullmatch(sha):
+        raise ValueError(f"Malformed Eden source_sha: {sha[:80]}")
+    return sha
 
 
 def values(line: str) -> dict[str, float]:
@@ -42,6 +54,7 @@ def analyze(log: str) -> dict:
     gpu: dict[int, dict] = {}
     guest: dict[int, dict] = {}
     current_frame: int | None = None
+    source_commits: set[str] = set()
     phases: dict[str, dict[int, dict]] = defaultdict(dict)
     domains: dict[str, dict[int, dict]] = defaultdict(dict)
     # HLE reports cumulative *service* timings. Command 3 is an outer Binder
@@ -51,6 +64,13 @@ def analyze(log: str) -> dict:
     hle_deltas: dict[tuple[str, str], list[int]] = defaultdict(lambda: [0, 0])
     hle_re = re.compile(r"\bservice=(\S+)\s+cmd=(\d+)\s+calls=(\d+)\s+ns=(\d+)")
     for line in log.splitlines():
+        if line.startswith("EDEN_BUILD_SOURCE "):
+            sha = source_sha(line)
+            if sha is None:
+                raise ValueError("EDEN_BUILD_SOURCE has no source_sha field")
+            source_commits.add(sha)
+            if len(source_commits) > 1:
+                raise ValueError("Mixed PS5 build source commits in one heap log")
         if line.startswith("EDEN_DEV_HLE "):
             match = hle_re.search(line)
             if match:
@@ -138,6 +158,7 @@ def analyze(log: str) -> dict:
     stall = sum(row.get("late50", 0) for row in rows)
     in_full = sum(row.get("late50", 0) for row in full)
     return {
+        "source_commit": next(iter(source_commits), None),
         "windows": len(rows),
         "late50_total": int(stall),
         "queue_full_windows": len(full),
@@ -208,6 +229,7 @@ def analyze(log: str) -> dict:
 
 def self_test() -> None:
     sample = "\n".join([
+        "EDEN_BUILD_SOURCE source_sha=0f1e2d3c4b5a6978877665544332211000aabbcc",
         "EDEN_VULKAN_FRAME total=150 frames=150 seconds=5 fps=30 worst_ms=70 late50=4",
         "EDEN_FRAME_PRESSURE frame=150 gpu_full_ms=20 gpu_idle_ms=3500 gpu_dispatch_ms=1200",
         "EDEN_DEV_GPU frame=150 dispatch_calls=500 full_calls=10 full_ns=20000000 draws=100",
@@ -227,6 +249,26 @@ def self_test() -> None:
     ])
     result = analyze(sample)
     assert result["windows"] == 2
+    expected_sha = "0f1e2d3c4b5a6978877665544332211000aabbcc"
+    assert result["source_commit"] == expected_sha
+    assert analyze(sample.replace("EDEN_BUILD_SOURCE", "NO_BUILD_SOURCE"))["source_commit"] is None
+    assert source_sha("source_sha=unknown") == "unknown"
+    assert source_sha("source_sha=" + expected_sha) == expected_sha
+    for broken in ("source_sha=1234", "source_sha=UPPERCASE"):
+        try:
+            source_sha(broken)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("unverified Git source accepted: " + broken)
+    try:
+        analyze(sample.replace("EDEN_BUILD_SOURCE source_sha=" + expected_sha,
+                               "EDEN_BUILD_SOURCE source_sha=aa" + expected_sha[2:] +
+                               "\nEDEN_BUILD_SOURCE source_sha=" + expected_sha))
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("mixed build SHAs were not rejected")
     assert result["late50_total"] == 4
     assert result["queue_full_windows"] == 1
     assert result["late50_full_window_share"] == 1
@@ -260,6 +302,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("log", nargs="?", type=Path)
     parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("--require-build-source", action="store_true",
+                        help="reject legacy heap logs without an immutable 40-character Git commit")
+    parser.add_argument("--boot-trace", type=Path,
+                        help="corroborate source_sha against the same PS5 session's boot trace")
     args = parser.parse_args()
     if args.self_test:
         self_test()
@@ -267,6 +313,16 @@ def main() -> None:
     if not args.log:
         parser.error("Provide an actual PS5 heap log or --self-test")
     report = analyze(args.log.read_text(errors="replace"))
+    reported_sha = report["source_commit"]
+    if args.require_build_source and (reported_sha is None or reported_sha == "unknown"):
+        parser.error("UNVERIFIED_BUILD: this legacy log lacks a valid 40-hex EDEN_BUILD_SOURCE SHA")
+    if args.boot_trace is not None:
+        boot_sources = {source_sha(line)
+                        for line in args.boot_trace.read_text(errors="replace").splitlines()
+                        if "source_sha=" in line}
+        if len(boot_sources) != 1 or reported_sha not in boot_sources:
+            parser.error("BOOT_PROVENANCE_MISMATCH: missing or nonmatching boot/heap SHA")
+    print("FC27_BUILD source_sha=" + (reported_sha or "unverified_pre_R368"))
     print("FC27_TRACE windows={windows} late50={late50_total} queue_full_windows={queue_full_windows} "
           "late_in_full={late50_during_full} fraction={late50_full_window_share:.3f} "
           "queue_wait_seconds={queue_wait_seconds:.3f} gpu_thread_idle_fraction={gpu_thread_idle_fraction:.3f} "
