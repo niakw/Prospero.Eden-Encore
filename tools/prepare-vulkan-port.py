@@ -196,6 +196,20 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {'''),
     }
 #endif
 #ifdef PS5_NATIVE
+    // Pre-drain only when a new payload is GUARANTEED and the last ring
+    // chunk is full. Reusable/uncertain payloads keep the original fallback.
+    if (descriptor_buffer_ring.PreflightCapacity(
+            scheduler, pipeline->DescriptorRingPreflightSize())) {
+        gpu_memory->FlushCaching();
+        pipeline = pipeline_cache.CurrentGraphicsPipeline();
+        if (!pipeline) {
+            ::Eden::Performance::RecordGraphicsDrawDrop(
+                ::Eden::Performance::GraphicsDrawDrop::NoPipeline);
+            return;
+        }
+    }
+#endif
+#ifdef PS5_NATIVE
     // Only reserve thread-local storage here. Cache descriptors and shader
     // bindings are still read and validated under the paired cache locks.
     pipeline->PreflightDescriptorScratch();
@@ -1204,6 +1218,7 @@ adapt('src/video_core/renderer_vulkan/vk_descriptor_buffer.h',
      '    void TouchFrame(Scheduler& scheduler);\n'
      '#ifdef PS5_NATIVE\n'
      '    [[nodiscard]] bool PreflightFrameReuse(Scheduler& scheduler);\n'
+     '    [[nodiscard]] bool PreflightCapacity(Scheduler& scheduler, VkDeviceSize size);\n'
      '#endif'),
 ])
 adapt('src/video_core/renderer_vulkan/vk_descriptor_buffer.cpp',
@@ -1223,6 +1238,23 @@ bool DescriptorBufferRing::PreflightFrameReuse(Scheduler& scheduler) {
         return false;
     scheduler.Wait(frame_ticks[frame_index]);
     frame_reused = false;
+    return true;
+}
+
+bool DescriptorBufferRing::PreflightCapacity(Scheduler& scheduler,
+                                             VkDeviceSize size) {
+    // A previous generation or different payload count guarantees allocation.
+    if (chunks.empty() || frame_reused || size == 0 || !CanAllocate(size))
+        return false;
+    const VkDeviceSize needed{Common::AlignUp(size, alignment)};
+    if (needed <= chunk_capacity - cursor || chunk_cursor + 1 < chunks_per_frame)
+        return false;
+    // The same GPU completion as Allocate's full-ring fallback, BEFORE the
+    // guest buffer and texture cache locks: no early GPU memory reuse.
+    scheduler.Finish();
+    chunk_cursor = 0;
+    cursor = 0;
+    ++generation;
     return true;
 }
 #endif'''),
@@ -1262,6 +1294,7 @@ adapt('src/video_core/renderer_vulkan/vk_graphics_pipeline.h',
      '    [[nodiscard]] size_t DescriptorEntryReservation() const noexcept {\n'
      '        return num_descriptor_entries != 0 ? num_descriptor_entries : 0x400;\n'
      '    }\n'
+     '    [[nodiscard]] VkDeviceSize DescriptorRingPreflightSize() const noexcept {\n        // Before reading guest descriptors, these are the only two conditions\n        // sufficient to PROVE the old descriptor allocation cannot be reused.\n        return CanUseDescriptorBuffer() &&\n               (last_descriptor_buffer_generation != descriptor_buffer_ring.CurrentGeneration() ||\n                last_descriptor_payload.size() != num_descriptor_entries)\n                   ? descriptor_buffer_layout.size : 0;\n    }\n'
      '#endif'),
     ('#include <atomic>', '#include <atomic>\n#include <memory>'),
 ])
@@ -1802,7 +1835,7 @@ probes = {
 for name, index, expected in (
     ('vk_fence_manager', 6, 1), ('vk_buffer_cache', 7, 3),
     ('vk_texture_cache', 8, 1), ('vk_swapchain', 9, 6),
-    ('vk_descriptor_buffer', 10, 3), ('vk_multi_range_buffer', 11, 1),
+    ('vk_descriptor_buffer', 10, 4), ('vk_multi_range_buffer', 11, 1),
     ('vk_compute_pass', 12, 1),
 ):
     relative = f'src/video_core/renderer_vulkan/{name}.cpp'
@@ -1828,16 +1861,29 @@ for name, index, expected in (
     if name == 'vk_descriptor_buffer':
         # R360: measure the exact full-ring stall that occurs inside cache locks.
         ring_finish = '{ auto timer = Eden::Performance::VulkanTimer(10); scheduler.Finish(); }'
-        if text.count(ring_finish) != 1:
-            raise RuntimeError('R360 descriptor fallback anchor changed')
-        text = text.replace(ring_finish, '''{ auto timer = Eden::Performance::VulkanTimer(10);
+        # R363 preflight also gets VulkanTimer(10); only the LATER
+        # full-ring Allocate fallback runs while guest caches are locked.
+        if text.count(ring_finish) != 2:
+            raise RuntimeError('R360 descriptor fallback/preflight anchors changed')
+        fallback_at = text.rindex(ring_finish)
+        if fallback_at <= text.index('Descriptor buffer frame exhausted, stalling on the GPU'):
+            raise RuntimeError('R360 selected the wrong Finish site')
+        text = text[:fallback_at] + '''{ auto timer = Eden::Performance::VulkanTimer(10);
               // Exact rare full-ring fallback, not the usual 1-in-16 draw sample.
               // This wait still holds both guest GPU cache locks; do not skip
               // the fence or move it without proving descriptor reuse safety.
               ::Eden::Performance::CachePhaseTimer finish_cost{
                   ::Eden::Performance::CachePhase::DescriptorRingFinish,
                   ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
-              scheduler.Finish(); }''')
+              scheduler.Finish(); }''' + text[fallback_at + len(ring_finish):]
+        # Remaining first Finish site is the R363 outside-lock preflight.
+        if text.count(ring_finish) != 1:
+            raise RuntimeError('R363 descriptor preflight timer anchor changed')
+        text = text.replace(ring_finish, '''{ auto timer = Eden::Performance::VulkanTimer(10);
+      ::Eden::Performance::CachePhaseTimer preflight_cost{
+          ::Eden::Performance::CachePhase::DescriptorRingPreflight,
+          ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
+      scheduler.Finish(); }''', 1)
     if name == 'vk_compute_pass':
         # ASTC decode has no CPU consumer. Its existing image barrier orders
         # later shaders, and staging/descriptor reuse is protected by ticks.

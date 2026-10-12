@@ -57,9 +57,9 @@ assert "scheduler.Finish();" in cpp
 # composition rule to catch a declaration-only link failure.
 assert "if name == 'vk_descriptor_buffer':" in gen
 assert "text = (output / 'vulkan_descriptor_buffer.cpp').read_text()" in gen
-assert "('vk_descriptor_buffer', 10, 3)" in gen
+assert "('vk_descriptor_buffer', 10, 4)" in gen
 assert cpp.count("scheduler.Wait(frame_ticks[frame_index]);") == 2
-assert cpp.count("scheduler.Finish();") == 1
+assert cpp.count("scheduler.Finish();") == 2
 start=cpp.index("bool DescriptorBufferRing::PreflightFrameReuse(")
 end=cpp.index("\n}",start)+2
 method=cpp[start:end]

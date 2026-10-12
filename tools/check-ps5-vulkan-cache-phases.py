@@ -238,6 +238,9 @@ assert "DescriptorRingFinish" in perf
 assert '"descriptor_ring_finish"' in report
 assert "CachePhase::DescriptorRingFinish" in ring
 assert "CachePhase::DescriptorRingFinish" in generator
+assert "CachePhase::DescriptorRingPreflight" in generator
+assert "CachePhase::DescriptorRingPreflight" in ring
+assert '"descriptor_ring_preflight"' in report
 assert "detailed_gpu_profile.load(std::memory_order_relaxed)" in ring
-assert ring.index("CachePhase::DescriptorRingFinish") < ring.index("scheduler.Finish();")
+assert ring.index("CachePhase::DescriptorRingFinish") < ring.index("scheduler.Finish();", ring.index("CachePhase::DescriptorRingFinish"))
 assert "chunk_cursor = 0;" in ring and "++generation;" in ring

@@ -148,7 +148,7 @@ enum class CachePhase : unsigned {
     DynamicStates, QueryAndDraw,
     TextureCpuRefresh, TextureAliasScan, TextureAliasCopy,
     StageTextureHandles, BindTextureBuffers, BindStageDescriptors,
-    RefreshRenderTargets, CheckFeedbackLoop, CommitGraphicsDraw, DescriptorRingFinish, Count
+    RefreshRenderTargets, CheckFeedbackLoop, CommitGraphicsDraw, DescriptorRingFinish, DescriptorRingPreflight, Count
 };
 struct CachePhaseTotal {
     std::atomic<unsigned long long> samples{}, total_ns{}, max_ns{};
