@@ -28,6 +28,21 @@ PATHS = (
     'src/amd/vulkan/winsys/ps5/radv_ps5_platform.c',
 )
 
+# Only an *exact*, previously published Encore active source is accepted as
+# cached compiler input. Unlike a global bypass this does not trust arbitrary
+# patches from a stale or contaminated cache. Confirmed against the Git blob
+# 6e77c7e40de7158fe46774221934622c9411fbd7 at native R398 SHA ab1ed98a.
+LEGACY_COMPILER_SHA256 = {
+    'src/vulkan/wsi/wsi_common_videoout.c': frozenset({
+        '6d54b8d68cc383faa9bbd910e327824689b5315e7ee5617d8981f582c47c2eaa',
+    }),
+}
+
+
+def approved_compiler_input(relative: str, compiled_sha: str, raw_sha: str, active_sha: str) -> bool:
+    return (compiled_sha in (raw_sha, active_sha) or
+            compiled_sha in LEGACY_COMPILER_SHA256.get(relative, ()))
+
 
 def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -45,7 +60,7 @@ def install(destination: Path, provenance: Path | None) -> None:
         before = digest(compiled)
         raw_sha = digest(original)
         fork_sha = digest(canonical)
-        if before not in (raw_sha, fork_sha):
+        if not approved_compiler_input(relative, before, raw_sha, fork_sha):
             raise RuntimeError(f'Unrecognized RADV compiler input (refusing to clobber): {relative}, sha256={before}')
         if before != fork_sha:
             # Atomic replacement allows incremental Ninja to detect only the
