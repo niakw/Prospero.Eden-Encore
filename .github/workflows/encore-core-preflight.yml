@@ -107,6 +107,7 @@ jobs:
           python3 -B tools/vendor-eden-cpm.py --check
           python3 -B tools/install-vendored-eden-backports.py --replay
           python3 -B tools/check-vendored-vulkan-fork.py
+          python3 -B tools/check-ps5-tfb-counter-stability.py
           python3 -B tools/check-vendored-radv-fork.py
           python3 -B tools/check-vendored-gpu-thread.py
           python3 -B tools/analyze-fc27-stutter.py --self-test
