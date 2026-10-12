@@ -186,7 +186,22 @@ private:
     CachePhaseTotal* stats{};
     std::chrono::nanoseconds started{};
 };
+// R361: Count draws rejected before recording, including hidden HUD/pitch
+// candidates. Only increment on an actual rejected draw with diagnostics on.
+// In particular no atomic writes are added to the normal successful draw path.
+enum class GraphicsDrawDrop : unsigned {
+    NoPipeline, ConfigureRejected, BuiltPipelineFailed, DescriptorBufferFull, Count
+};
+inline std::array<std::atomic<unsigned long long>,
+                  static_cast<unsigned>(GraphicsDrawDrop::Count)> graphics_draw_drop_totals{};
+inline void RecordGraphicsDrawDrop(GraphicsDrawDrop reason) noexcept {
+    if (!detailed_gpu_profile.load(std::memory_order_relaxed)) return;
+    graphics_draw_drop_totals[static_cast<unsigned>(reason)].fetch_add(
+        1, std::memory_order_relaxed);
+}
 inline void ResetCachePhases() noexcept {
+    for (auto& drop : graphics_draw_drop_totals)
+        drop.store(0, std::memory_order_relaxed);
     for (auto& s : cache_phase_totals) {
         s.samples.store(0, std::memory_order_relaxed);
         s.total_ns.store(0, std::memory_order_relaxed);

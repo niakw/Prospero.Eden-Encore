@@ -12,6 +12,19 @@ perf = (root / "headless/performance.h").read_text()
 report = (root / "headless/performance.cpp").read_text()
 main = (root / "headless/main.cpp").read_text()
 ast.parse(generator)
+# R361: all early exit paths are counted with zero successful-draw atomics.
+p = (root / "vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp").read_text()
+graphics = (root / "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp").read_text()
+assert "enum class GraphicsDrawDrop : unsigned" in perf
+assert "if (!detailed_gpu_profile.load(std::memory_order_relaxed)) return;" in perf
+assert "graphics_draw_drop_totals" in perf
+assert "EDEN_GPU_DRAW_DROP frame=%u reason=%s total=%llu window=%llu" in report
+assert "GraphicsDrawDrop::NoPipeline" in p
+assert "GraphicsDrawDrop::ConfigureRejected" in p
+assert "GraphicsDrawDrop::BuiltPipelineFailed" in graphics
+assert "GraphicsDrawDrop::DescriptorBufferFull" in graphics
+assert "GraphicsDrawDrop::DescriptorBufferFull" in generator
+assert "GraphicsDrawDrop::ConfigureRejected" in generator
 assert "std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};" in generator
 assert "pipeline->Configure(is_indexed)" in generator
 assert "cache_draw_sample_active = previous_sample;" in generator

@@ -1050,6 +1050,19 @@ void ReportGpuThread(unsigned frame) {
             "texture_cpu_refresh", "texture_alias_scan", "texture_alias_copy"
         };
         static_assert(std::size(cache_phase_names) == cache_phase_totals.size());
+        constexpr const char* drop_names[] = {
+            "no_pipeline", "configure_rejected", "built_pipeline_failed", "descriptor_buffer_full"
+        };
+        static_assert(std::size(drop_names) == graphics_draw_drop_totals.size());
+        static std::array<unsigned long long, graphics_draw_drop_totals.size()> last_drops{};
+        for (unsigned type = 0; type < graphics_draw_drop_totals.size(); ++type) {
+            const auto total = graphics_draw_drop_totals[type].load(std::memory_order_relaxed);
+            // Title reset is also supported: counters can decrease between games.
+            const auto window = total >= last_drops[type] ? total - last_drops[type] : total;
+            last_drops[type] = total;
+            std::printf("EDEN_GPU_DRAW_DROP frame=%u reason=%s total=%llu window=%llu\\n",
+                        frame, drop_names[type], total, window);
+        }
         // Keep the established lifetime totals for existing parsers, and also
         // publish exact per-snapshot deltas. Summing cumulative values across
         // snapshots multiplies the apparent cache-lock and pipeline costs.
