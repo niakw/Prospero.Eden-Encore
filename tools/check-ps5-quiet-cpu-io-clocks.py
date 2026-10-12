@@ -19,12 +19,20 @@ assert "m_on_interrupt.wait(lk, [this] { return m_is_interrupted; });" in idle
 for start, end, metric, name in [
     ('string(REPLACE "${ctrl_old}"', ' ctrl_source "${ctrl_source}")', "wait_start", "guest_sync_wait"),
     ('string(REPLACE "${producer_old}"', ' producer_source "${producer_source}")', "dequeue_start", "guest_dequeue_wait"),
-    ('string(REPLACE "${ipc_old}"', ' ipc_source "${ipc_source}")', "ipc_start", "guest_ipc_wait"),
 ]:
     fragment = section(start, end)
     assert f"const auto {metric} = ::Eden::Performance::detailed_gpu_profile.load" in fragment
     assert f"if ({metric}) ::Eden::Performance::AddSince(::Eden::Performance::{name}, {metric});" in fragment
     assert fragment.index("::Eden::Performance::NowNs()") < fragment.index(f"if ({metric})")
+ipc = section('string(REPLACE "${ipc_old}"', ' ipc_source "${ipc_source}")')
+# R393 additionally attributes sync IPC latency to its original guest thread.
+# Quiet gameplay must still skip the clock and thread ID lookup entirely.
+assert "const bool ipc_profile = ::Eden::Performance::detailed_gpu_profile.load" in ipc
+assert "const auto ipc_start = ipc_profile ? ::Eden::Performance::NowNs() : 0;" in ipc
+assert "const auto ipc_tid = ipc_profile ? GetCurrentThread(kernel).GetThreadId() : 0;" in ipc
+assert "if (ipc_profile) ::Eden::Performance::RecordGuestIpc(ipc_tid," in ipc
+assert "AddSince(::Eden::Performance::guest_ipc_wait" not in ipc
+assert ipc.index("const auto ipc_tid") < ipc.index("session->SendSyncRequest(") < ipc.index("RecordGuestIpc(")
 fs_file = section('string(REPLACE "${fs_file_old}"', ' fs_file_source "${fs_file_source}")')
 fs_storage = section('string(REPLACE "${fs_storage_old}"', ' fs_storage_source "${fs_storage_source}")')
 for fragment, name in [(fs_file, "guest_fs_file"), (fs_storage, "guest_fs_storage")]:
