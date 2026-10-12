@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "performance.h"
+#include "ps5_cpu_topology.h"
 #include "direct_pool_accounting.h"
 #include "direct_pool_probe_policy.h"
 #include "direct_pool_region_scan.h"
@@ -35,6 +36,7 @@
 #ifdef PS5_NATIVE
 #include <sys/param.h>
 #include <sys/cpuset.h>
+#include <sys/sysctl.h>
 #endif
 
 // dynarmic A64 dispatch-path counters (headless/dynarmic/jit_group_support.inc).
@@ -246,6 +248,31 @@ void CheckWorkerTopology() {
         std::printf("EDEN_WORKER_TOPOLOGY ready=0 reason=no_supported_physical_cpuid\n");
         return;
     }
+    // The PS5's FreeBSD scheduler may expose genuine SMT sibling groups
+    // even when CPUID per-affinity yields bogus 13-core/one-core readings.
+    // Probe is read-only and bounded; failure preserves the existing fallback.
+    std::array<int, 64> os_cpu_core{};
+    os_cpu_core.fill(-1);
+    bool os_topology_valid = false;
+    size_t topology_length = 0;
+    int os_topology_errno = 0;
+    if (sysctlbyname("kern.sched.topology_spec", nullptr, &topology_length, nullptr, 0) == 0 &&
+        topology_length > 0 && topology_length <= 65536) {
+        std::string topology_xml(topology_length, '\0');
+        if (sysctlbyname("kern.sched.topology_spec", topology_xml.data(),
+                         &topology_length, nullptr, 0) == 0 &&
+            topology_length <= topology_xml.size()) {
+            os_topology_valid = ::Eden::CpuTopology::ParseSmtGroups(
+                std::string_view{topology_xml.data(), topology_length},
+                allowed_mask, os_cpu_core);
+        } else {
+            os_topology_errno = errno;
+        }
+    } else {
+        os_topology_errno = errno;
+    }
+    std::printf("EDEN_PS5_CPU_OS_TOPOLOGY available=%u bytes=%zu errno=%d source=kern.sched.topology_spec\n",
+                unsigned(os_topology_valid), topology_length, os_topology_errno);
     std::array<int, 64> amd_cpu_core{}, x2_cpu_core{};
     amd_cpu_core.fill(-1);
     x2_cpu_core.fill(-1);
@@ -309,7 +336,10 @@ void CheckWorkerTopology() {
                               x2_distinct >= 5 && x2_distinct <= 8;
     const std::array<int, 64>* physical_source = nullptr;
     const char* source_name = "none";
-    if (amd_plausible) {
+    if (os_topology_valid) {
+        physical_source = &os_cpu_core;
+        source_name = "freebsd_sched";
+    } else if (amd_plausible) {
         physical_source = &amd_cpu_core;
         source_name = "amd_ext";
     } else if (x2_plausible) {

@@ -16,6 +16,8 @@ code=r'''
 #include <cstdint>
 #include <chrono>
 #include <thread>
+#include <string>
+#include "ps5_cpu_topology.h"
 using cpuset_t=uint64_t;
 #undef CPU_ISSET
 #undef CPU_SET
@@ -26,6 +28,20 @@ using cpuset_t=uint64_t;
 static uint64_t current=0x1fff, fail_mask=0;
 static unsigned max_leaf=0xb, level_type=1, apics[64], amd_cores[64];
 static bool fail_restore=false, amd_vendor=false, amd_ext_feature=false;
+static std::string os_xml;
+static int sysctlbyname(const char* name, void* oldp, size_t* oldlen,
+                        const void*, size_t) {
+ if(std::strcmp(name,"kern.sched.topology_spec") || os_xml.empty()) {
+  errno=ENOENT;return -1;
+ }
+ const size_t length=os_xml.size()+1;
+ if(!oldp) {*oldlen=length;return 0;}
+ if(*oldlen<length) {errno=ENOMEM;return -1;}
+ std::memcpy(oldp,os_xml.c_str(),length);
+ *oldlen=length;
+ return 0;
+}
+
 static constexpr std::array names{"CPUCore_0","CPUCore_1","CPUCore_2","CPUCore_3","GPU"};
 static unsigned __get_cpuid_max(unsigned base, void*) {
  return base >= 0x80000000u ? (amd_vendor ? 0x8000001eu : 0x80000000u) : max_leaf;
@@ -112,6 +128,31 @@ int main(){
  assert(!worker_topology_ready && current==0x1fff);
  assert((worker_cpus==std::array<unsigned,5>{0,0,0,0,0}));
  max_leaf=0xa;
+ // PS5's 13 visible CPUs are seven OS-reported physical SMT groups.
+ // CPUID is intentionally broken in BOTH AMD and x2APIC representations.
+ max_leaf=0xb;amd_vendor=true;amd_ext_feature=true;
+ for(unsigned i=0;i<13;++i) {amd_cores[i]=i;apics[i]=0;}
+ os_xml="<groups><group level=\"1\"><children>";
+ for(unsigned i=0;i<14;i+=2) {
+  char pair[150];
+  std::snprintf(pair,sizeof(pair),
+    "<group level=\"2\"><cpu count=\"2\" mask=\"%llx,0,0\">pair</cpu>"
+    "<flags><flag name=\"SMT\">SMT group</flag></flags></group>",
+    (unsigned long long)(3ULL<<i));
+  os_xml+=pair;
+ }
+ os_xml+="</children></group></groups>";
+ CheckWorkerTopology();
+ assert(worker_topology_ready && current==0x1fff);
+ assert((worker_cpus==std::array<unsigned,5>{0,2,4,6,8}));
+ assert(secondary_cpus==(0x1fffULL & ~0x3ffULL));
+ // Invalid OS XML cannot turn a broken CPUID reading into physical proof.
+ os_xml="<groups><group><cpu count=\"2\" mask=\"3\"></cpu>"
+        "<flags><flag name=\"SMT\"></flag></flags></group></groups>";
+ CheckWorkerTopology();
+ assert(!worker_topology_ready && current==0x1fff);
+ os_xml.clear();
+ max_leaf=0xa;
  // TopologyExtensions absent: do not claim proof from logical IDs alone.
  amd_ext_feature=false;
  CheckWorkerTopology();
@@ -123,6 +164,6 @@ int main(){
 '''
 with tempfile.TemporaryDirectory() as tmp:
     exe=Path(tmp)/'affinity'
-    subprocess.run(['c++','-std=c++20','-Wall','-Wextra','-Werror','-fsanitize=address,undefined','-x','c++','-','-o',str(exe)],input=code,text=True,check=True)
+    subprocess.run(['c++','-std=c++20','-I',str(root/'headless'),'-Wall','-Wextra','-Werror','-fsanitize=address,undefined','-x','c++','-','-o',str(exe)],input=code,text=True,check=True)
     subprocess.run([str(exe)],check=True)
-print('Worker topology: PASS PS5 13-logical AMD rejection/x2APIC fallback, strict 5..8-core evidence, readback and restoration (host only)')
+print('Worker topology: PASS OS scheduler SMT groups, broken CPUID fallback and readback/restoration (host only)')
