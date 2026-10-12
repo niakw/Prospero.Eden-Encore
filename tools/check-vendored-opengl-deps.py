@@ -42,4 +42,4 @@ builder=(ROOT/'tools/build-opengl-sdk.sh').read_text()
 assert 'tools/stage-vendored-opengl-deps.py' in builder
 assert builder.index('stage-vendored-opengl-deps.py') < builder.index('python3 "$source_dir/tools/fetch-sources.py"')
 print('PS5_OPENGL_CLOSURE_OK 7 mandatory source repos + Mesa 26.2 + native boilerplate, all exact pinned bytes retained')
-print('PS5_OPENGL_CLOSURE_LIMITS optional CTS/sokol-samples not used by release; CPM and Mesa wraps separately scoped')
+print('PS5_OPENGL_CLOSURE_LIMITS optional CTS/sokol-samples not used by release; Mesa wraps and non-PS5 CPM pins separate')

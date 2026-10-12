@@ -52,6 +52,12 @@ if [[ -n ${EDEN_CPM_CACHE_SEED:-} && ! -d $eden/.cache/cpm ]]; then
     mkdir -p "$eden/.cache"
     cp -a "$EDEN_CPM_CACHE_SEED" "$eden/.cache/cpm"
 fi
+# R349: the actual 22 PS5 CPM source trees are checked into this Git repo
+# (full 1-GiB source plus pinned upstream cpmfile.json SHA and content locks).
+# Only missing package/version directories are copied into mutable build cache;
+# existing native CPM caches remain available for incremental builds.
+step "Pinned PS5 Eden CPM source cache (fully vendored)"
+python3 -B tools/vendor-eden-cpm.py --stage "$eden"
 # The FFmpeg source Eden pins, where Eden's package cache keeps it.
 ffmpeg_source="$eden/.cache/cpm/ffmpeg/c7b5f1537d"
 if [[ ! -f $ffmpeg_source/configure ]]; then
