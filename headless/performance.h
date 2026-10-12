@@ -396,6 +396,48 @@ private:
     std::chrono::nanoseconds start{};
 };
 
+// Guest OnCPUWrite can run tens of millions of times per match. Counting
+// every one using shared atomics makes the DEVELOPMENT logger itself contend
+// across guest cores. Preserve exact per-callback wall-clock measurements,
+// but publish each thread's accumulated calls/elapsed only every 64 writes.
+// No guest cache mutex or buffer/texture resource lifetime is changed.
+class BatchedGuestWriteTimer {
+public:
+    BatchedGuestWriteTimer() noexcept
+        : enabled(detailed_gpu_profile.load(std::memory_order_relaxed)) {
+        if (enabled) start = Common::g_wall_clock.GetTimeNS();
+    }
+    BatchedGuestWriteTimer(const BatchedGuestWriteTimer&) = delete;
+    BatchedGuestWriteTimer& operator=(const BatchedGuestWriteTimer&) = delete;
+    ~BatchedGuestWriteTimer() {
+        if (!enabled) return;
+        const auto elapsed = (Common::g_wall_clock.GetTimeNS() - start).count();
+        auto& batch = LocalBatch();
+        batch.nanoseconds += static_cast<unsigned long long>(elapsed > 0 ? elapsed : 0);
+        if (++batch.calls == 64) batch.Flush();
+    }
+
+private:
+    struct Batch {
+        unsigned calls{};
+        unsigned long long nanoseconds{};
+        ~Batch() { Flush(); }
+        void Flush() noexcept {
+            if (!calls) return;
+            guest_cpu_write.nanoseconds.fetch_add(nanoseconds, std::memory_order_relaxed);
+            guest_cpu_write.calls.fetch_add(calls, std::memory_order_relaxed);
+            calls = 0;
+            nanoseconds = 0;
+        }
+    };
+    static Batch& LocalBatch() noexcept {
+        static thread_local Batch batch{};
+        return batch;
+    }
+    bool enabled{};
+    std::chrono::nanoseconds start{};
+};
+
 // Opt-in API wall times: calls may overlap across threads, so do not sum them as frame time.
 inline std::atomic<bool> vulkan_cost_enabled{false};
 inline std::array<Totals, 24> vulkan_api;

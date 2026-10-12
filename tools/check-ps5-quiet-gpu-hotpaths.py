@@ -24,7 +24,8 @@ assert "std::chrono::nanoseconds start{};" in perf
 for name in ("idle_timer", "dispatch_timer", "full_timer"):
     assert "::Eden::Performance::DiagnosticTimer " + name in cmake
     assert "::Eden::Performance::Timer " + name not in cmake
-for name in ("guest_write_timer", "guest_read_timer", "drain_timer", "present_wait_timer"):
+assert "::Eden::Performance::BatchedGuestWriteTimer guest_write_timer;" in generator
+for name in ("guest_read_timer", "drain_timer", "present_wait_timer"):
     assert "::Eden::Performance::DiagnosticTimer " + name in generator
     assert "::Eden::Performance::Timer " + name not in generator
 assert "if (::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed))\\n" in generator
@@ -51,7 +52,7 @@ lock = perf.split("template <typename Mutex>\ninline void GuestCacheLock(", 1)[1
 lock = "template <typename Mutex>\ninline void GuestCacheLock(" + lock
 domain = perf.split("struct GuestCacheDomainTotals {", 1)[1].split("template <typename Mutex>", 1)[0]
 domain = "struct GuestCacheDomainTotals {" + domain
-timer = perf.split("class DiagnosticTimer {", 1)[1].split("// Opt-in API wall times:", 1)[0]
+timer = perf.split("class DiagnosticTimer {", 1)[1].split("class BatchedGuestWriteTimer {", 1)[0]
 timer = "class DiagnosticTimer {" + timer
 
 fixture = r"""

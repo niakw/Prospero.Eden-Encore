@@ -913,7 +913,7 @@ void RasterizerVulkan::InnerInvalidation(std::span<const std::pair<DAddr, std::s
 }
 
 bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {
-    ::Eden::Performance::DiagnosticTimer guest_write_timer(::Eden::Performance::guest_cpu_write);
+    ::Eden::Performance::BatchedGuestWriteTimer guest_write_timer;
     const bool sample_guest_write = ::Eden::Performance::ShouldSampleGuestWrite();
     DEBUG_ASSERT(addr != 0 || size != 0);
     {

@@ -78,7 +78,7 @@ void RasterizerVulkan::DispatchCompute() {"""),
     ('#include <algorithm>', '#include <algorithm>\n#include "performance.h"'),
     # Guest threads take the cache locks here (tracked-page writes, flush-area reads).
     ('bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {',
-     'bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {\n    ::Eden::Performance::DiagnosticTimer guest_write_timer(::Eden::Performance::guest_cpu_write);\n    const bool sample_guest_write = ::Eden::Performance::ShouldSampleGuestWrite();'),
+     'bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {\n    ::Eden::Performance::BatchedGuestWriteTimer guest_write_timer;\n    const bool sample_guest_write = ::Eden::Performance::ShouldSampleGuestWrite();'),
     ('VideoCore::RasterizerDownloadArea RasterizerVulkan::GetFlushArea(DAddr addr, u64 size) {',
      'VideoCore::RasterizerDownloadArea RasterizerVulkan::GetFlushArea(DAddr addr, u64 size) {\n    ::Eden::Performance::DiagnosticTimer guest_read_timer(::Eden::Performance::guest_cpu_read);'),
     # ... and wait for those locks spinning briefly before sleeping (performance.h GuestCacheLock).

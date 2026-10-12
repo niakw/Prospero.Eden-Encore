@@ -21,3 +21,7 @@ Every 5s GPU owner ReportGpuThread publishes its timestamp and frame through loc
 A later double snapshot of these counter values can distinguish whether the CPU guest and GPU tick continue while GPU frame accounting stops. It cannot by itself pinpoint a mutex owner. This is a corrective observability and CPU-platform compatibility release, not a validated solution to FC27 stutter/freeze.
 
 Test once only after source/native GitHub workflows succeed, without suppressing crash logs or overriding graphical settings. The current captured frozen R370 logs remain valid and complete; the user may close the console game.
+
+## R377 — bound the instrumentation perturbation of CPU guest writes
+
+The first SHA-verified R370 match generated ~12.9 million guest OnCPUWrite callbacks, each using a DiagnosticTimer that wrote two shared atomic counters with detailed logs enabled. These writes can cause shared-cache traffic across three guest CPU host workers. R377 batches the SAME per-callback measured elapsed nanoseconds and count per thread, publishing to the existing atomic totals every 64 callbacks or on thread exit. ~64x fewer global atomic RMWs in the detailed profiler; quiet mode stays entirely untouched. At any five-second snapshot or freeze, guest-write cumulative totals may lag a maximum of 63 per active guest thread; the new independent pad GPU-stale witness remains valid. This is not a verified FPS speedup and does not change underlying buffer-cache critical sections or the unknown freeze HLE/GPU owner.
