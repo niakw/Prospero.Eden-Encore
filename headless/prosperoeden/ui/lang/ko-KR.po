@@ -984,3 +984,27 @@ msgstr "Game overrides reset to global defaults."
 #: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
 msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
 msgstr "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
+
+#: settings_store.h
+msgid "0.25x (minimum)"
+msgstr "0,25x (최소)"
+
+#: settings_store.h
+msgid "0.5x (fastest, softer)"
+msgstr "0,5x (가장 빠름, 부드러움)"
+
+#: settings_store.h
+msgid "1.25x (recommended)"
+msgstr "1,25x (권장)"
+
+#: settings_store.h
+msgid "2x (high memory)"
+msgstr "2x (메모리 높음)"
+
+#: settings_store.h
+msgid "3x (very high memory)"
+msgstr "3x (메모리 매우 높음)"
+
+#: settings_store.h
+msgid "4x (extreme memory)"
+msgstr "4x (메모리 극대)"
