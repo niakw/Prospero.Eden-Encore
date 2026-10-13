@@ -24,8 +24,9 @@ assert "Eden::ResolveGameTitleId(rom_metadata_id, selected_game)" in launch
 assert "const int pad = active_mapping[game];" in pad_runtime
 # Global/menu button semantics never move as a side effect of guest input.
 # Explicit FC27 match-profile activation is allowed and must be consumed.
-assert "constexpr ButtonMask gameplay_chord = kButtonTouchPad | kButtonSquare;" in pad_runtime
-assert "if (gameplay_chord_down && !slot.gameplay_chord_held)" in pad_runtime
+assert "gameplay_chord" not in pad_runtime
+assert "EDEN_PAD_GAMEPLAY_PROFILE" not in pad_runtime
+assert "pad->SetMapping(mapping);" in launch
 assert "kSwitchMapping" not in pad_runtime
 CXX = next((x for x in ("clang++-18", "clang++", "g++") if shutil.which(x)), None)
 if not CXX:
