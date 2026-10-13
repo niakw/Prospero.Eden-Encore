@@ -1458,12 +1458,17 @@ void GraphicsPipeline::QueueOptimizedPipeline(VkRenderPass render_pass) {
     OptimizeWorker().QueueWork([this, state, render_pass] {
 #ifdef PS5_NATIVE
         ::Eden::Performance::ProbeSchedulerOnce("VkPipelineOptimize");
-        // Do not spend a second Vulkan compiler thread on speculative rebuilds
-        // while first-use shaders are queued. Defer ONLY on this background
-        // worker, for at most 48 ms: no GPU/guest lock or frame pacing delay.
-        const auto until = std::chrono::steady_clock::now() + std::chrono::milliseconds(48);
-        while (pending_first_use_graphics_builds.load(std::memory_order_acquire) != 0 &&
-               std::chrono::steady_clock::now() < until) {
+        // R444: Speculative rebuilds must not compete with first-use shaders.
+        // The prior 48 ms deadline could expire while cold gameplay pipelines
+        // were still compiling, adding a second Vulkan compiler at the worst
+        // moment. This background-only wait takes no GPU/guest locks.
+        // Checking cancellation on each cycle guarantees prompt title teardown
+        // even when a first-use shader worker remains stuck.
+        while (pending_first_use_graphics_builds.load(std::memory_order_acquire) != 0) {
+            {
+                std::scoped_lock lock{state->mutex};
+                if (state->cancelled) return;
+            }
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
         }
 #endif
