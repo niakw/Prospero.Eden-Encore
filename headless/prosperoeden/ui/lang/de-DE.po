@@ -4,10 +4,6 @@
 # AMD FSR, DLC, NSP, XCI, prod.keys, Ryujinx) unchanged.
 
 #: settings_store.h
-msgid "0.5x (faster, softer)"
-msgstr "0,5x (schneller, weicher)"
-
-#: settings_store.h
 msgid "0.75x (faster)"
 msgstr "0,75x (schneller)"
 
@@ -19,29 +15,9 @@ msgstr "1,5x (schärfer)"
 msgid "1x (native)"
 msgstr "1x (nativ)"
 
-#: settings_store.h
-msgid "2x (sharpest)"
-msgstr "2x (am schärfsten)"
-
-#: settings_store.h
-msgid "3x (slower)"
-msgstr "3x (langsamer)"
-
-#: settings_store.h
-msgid "4x (slowest)"
-msgstr "4x (am langsamsten)"
-
 #: eden_services.cpp
 msgid "A firmware NCA cannot be read. Reinstall the firmware dump."
 msgstr "Eine Firmware-NCA ist nicht lesbar. Installiere den Firmware-Dump neu."
-
-#: pe/ui/home.cpp
-msgid "About"
-msgstr "Info"
-
-#: pe/ui/browse.cpp
-msgid "About ProsperoEden"
-msgstr "Über ProsperoEden"
 
 #. Label: which folders the app can read.
 #: pe/ui/browse.cpp
@@ -57,19 +33,10 @@ msgstr "Barrierefreiheit"
 msgid "ACCESSIBILITY"
 msgstr "BARRIEREFREIHEIT"
 
-#. Label: a game's updates, DLC and mods.
-#: pe/ui/library.cpp
-msgid "ADD-ONS"
-msgstr "ADD-ONS"
-
 #. {0}: updates, DLC and mods of the game; {1}: the language it will use.
 #: pe/ui/home.cpp
 msgid "Add-ons: {0}  /  Language: {1}"
 msgstr "Add-ons: {0}  /  Sprache: {1}"
-
-#: pe/ui/settings.cpp
-msgid "Adjust the essentials without leaving your library behind."
-msgstr "Passe das Wichtigste an, ohne deine Bibliothek zu verlassen."
 
 #: pe/ui/browse.cpp
 msgid "All credit for the Eden emulator goes to its developers and contributors."
@@ -159,10 +126,6 @@ msgid "Choose a game from your library."
 msgstr "Wähle ein Spiel aus deiner Bibliothek."
 
 #: pe/ui/browse.cpp
-msgid "Choose the folder that holds your keys, firmware and games"
-msgstr "Wähle den Ordner mit Schlüsseln, Firmware und Spielen"
-
-#: pe/ui/browse.cpp
 msgid "Choose the language games use"
 msgstr "Wähle die Sprache für deine Spiele"
 
@@ -173,10 +136,6 @@ msgstr "Konsolenmodus"
 #: pe/ui/home.cpp
 msgid "CONTINUE PLAYING"
 msgstr "WEITERSPIELEN"
-
-#: pe/ui/settings.cpp
-msgid "Controller shortcuts and supported features."
-msgstr "Controller-Kurzbefehle und unterstützte Funktionen."
 
 #: pe/ui/home.cpp
 msgid "CONTROLLERS"
@@ -194,17 +153,9 @@ msgstr "STEUERUNG"
 msgid "Could not create the folder. Check that the game files folder can be written."
 msgstr "Der Ordner konnte nicht erstellt werden. Prüfe, ob der Spieldateien-Ordner beschreibbar ist."
 
-#: pe/ui/library.cpp
-msgid "Could not save console mode. Please try again."
-msgstr "Konsolenmodus nicht gespeichert. Bitte versuche es erneut."
-
 #: pe/ui/launcher.cpp
 msgid "Could not save settings. Please try again."
 msgstr "Einstellungen nicht gespeichert. Bitte versuche es erneut."
-
-#: pe/ui/browse.cpp
-msgid "Could not save the folder. Please try again."
-msgstr "Ordner nicht gespeichert. Bitte versuche es erneut."
 
 #: pe/ui/browse.cpp, pe/ui/library.cpp
 msgid "Could not save. Please try again."
@@ -229,34 +180,13 @@ msgstr "Credits und Einrichtung"
 msgid "Default ({0})"
 msgstr "Standard ({0})"
 
-#: pe/ui/browse.cpp
-msgid "Default folder"
-msgstr "Standardordner"
-
-#: pe/ui/browse.cpp
-msgid "Default folder saved. Reopen ProsperoEden to use it."
-msgstr "Standardordner gespeichert. Starte ProsperoEden neu, um ihn zu verwenden."
-
 #: pe/ui/settings.cpp
 msgid "Detailed logging"
 msgstr "Ausführliche Logs"
 
 #: pe/ui/settings.cpp
-msgid "DETAILED LOGS"
-msgstr "AUSFÜHRLICHE LOGS"
-
-#: pe/ui/settings.cpp
-msgid "Detailed logs apply to the next game launch."
-msgstr "Ausführliche Logs gelten ab dem nächsten Spielstart."
-
-#: pe/ui/settings.cpp
 msgid "Detailed logs on"
 msgstr "Ausführliche Logs ein"
-
-#. Button hint: show the game's details.
-#: pe/ui/home.cpp
-msgid "Details"
-msgstr "Details"
 
 #: pe/ui/settings.cpp
 msgid "Diagnostics"
@@ -279,18 +209,10 @@ msgstr "Zeigt kleinen Text im Menü größer an."
 msgid "Dutch"
 msgstr "Niederländisch"
 
-#: pe/ui/home.cpp
-msgid "Eden emulator for PlayStation 5"
-msgstr "Eden-Emulator für PlayStation 5"
-
 #. Label of the shortcut that ends the running game.
 #: pe/ui/settings.cpp
 msgid "END GAME"
 msgstr "SPIEL BEENDEN"
-
-#: pe/ui/settings.cpp
-msgid "End the game and return to this menu"
-msgstr "Spiel beenden und zurück zu diesem Menü"
 
 #: settings_store.h
 msgid "English (UK)"
@@ -309,18 +231,10 @@ msgstr "Europa"
 msgid "Export a copy"
 msgstr "Kopie exportieren"
 
-#: eden_services.cpp
-msgid "Export failed. Check that the game files folder can be written."
-msgstr "Export fehlgeschlagen. Prüfe, ob der Spieldateien-Ordner beschreibbar ist."
-
 #. {0} is a folder.
 #: eden_services.cpp, host/fake_services.hpp
 msgid "Exported to {0}."
 msgstr "Nach {0} exportiert."
-
-#: pe/ui/library.cpp
-msgid "FILE"
-msgstr "DATEI"
 
 #. What a mod is made of: files that replace the game's own.
 #: eden_services.cpp, host/fake_services.cpp
@@ -350,10 +264,6 @@ msgstr "Die SystemVersion-Daten der Firmware fehlen oder sind nicht lesbar. Inst
 #: pe/ui/browse.cpp
 msgid "FOLDERS"
 msgstr "ORDNER"
-
-#: pe/ui/library.cpp
-msgid "FORMAT"
-msgstr "FORMAT"
 
 #. Label: the frames-per-second counter drawn over a game.
 #: pe/ui/settings.cpp
@@ -385,22 +295,6 @@ msgstr "Spielaudio; die Musik im PS5-Systemmenü bleibt unverändert."
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Game could not start: {0} Details: {1}"
 msgstr "Spiel konnte nicht gestartet werden: {0} Details: {1}"
-
-#: pe/ui/home.cpp
-msgid "Game details"
-msgstr "Spieldetails"
-
-#: pe/ui/library.cpp
-msgid "GAME DETAILS"
-msgstr "SPIELDETAILS"
-
-#: pe/ui/browse.cpp, pe/ui/settings.cpp
-msgid "Game files"
-msgstr "Spieldateien"
-
-#: pe/ui/settings.cpp
-msgid "GAME FILES"
-msgstr "SPIELDATEIEN"
 
 #: pe/ui/library.cpp
 msgid "Game settings"
@@ -460,10 +354,6 @@ msgstr "STARKER KONTRAST"
 msgid "High contrast"
 msgstr "Starker Kontrast"
 
-#: pe/ui/settings.cpp
-msgid "How games are drawn and scaled to your TV."
-msgstr "Wie Spiele dargestellt und auf deinen Fernseher skaliert werden."
-
 #. Button hint: copy a save in.
 #: pe/ui/library.cpp
 msgid "Import"
@@ -497,11 +387,6 @@ msgstr "Japan"
 #: settings_store.h
 msgid "Japanese"
 msgstr "Japanisch"
-
-#. keys, firmware and roms are folder names (unchanged). TRIANGLE is the controller's triangle button, in capitals.
-#: pe/ui/browse.cpp
-msgid "Keep keys, firmware and roms folders together. TRIANGLE uses the folder shown."
-msgstr "Bewahre die Ordner keys, firmware und roms zusammen auf. DREIECK verwendet den angezeigten Ordner."
 
 #. Label: the encryption keys file (prod.keys).
 #: pe/ui/browse.cpp
@@ -553,15 +438,6 @@ msgstr "Spiel starten"
 #: pe/ui/home.cpp
 msgid "Library"
 msgstr "Bibliothek"
-
-#: pe/ui/library.cpp
-msgid "LIBRARY"
-msgstr "BIBLIOTHEK"
-
-#. Headline of the Settings screen.
-#: pe/ui/settings.cpp
-msgid "Make it yours."
-msgstr "Ganz nach deinen Wünschen."
 
 #: pe/ui/settings.cpp
 msgid "Make the menu easier to see and follow."
@@ -620,15 +496,6 @@ msgstr "Aktion erforderlich"
 msgid "Next launch: {0}"
 msgstr "Nächster Start: {0}"
 
-#. Label: the folder used the next time the app starts.
-#: pe/ui/settings.cpp
-msgid "NEXT START"
-msgstr "NÄCHSTER START"
-
-#: pe/ui/library.cpp
-msgid "No cover art"
-msgstr "Kein Cover"
-
 #: pe/ui/browse.cpp
 msgid "No firmware folder"
 msgstr "Kein firmware-Ordner"
@@ -655,10 +522,6 @@ msgstr "Noch keine Mods für dieses Spiel. Kopiere den Ordner jedes Mods nach {0
 msgid "No ROM files found."
 msgstr "Keine ROM-Dateien gefunden."
 
-#: pe/ui/library.cpp
-msgid "No ROM selected"
-msgstr "Keine ROM-Datei ausgewählt"
-
 #: pe/ui/browse.cpp
 msgid "No roms folder"
 msgstr "Kein roms-Ordner"
@@ -683,10 +546,6 @@ msgstr "Aus"
 msgid "On"
 msgstr "Ein"
 
-#: pe/ui/settings.cpp
-msgid "ON THIS CONSOLE"
-msgstr "AUF DIESER KONSOLE"
-
 #. Short tag on a folder row.
 #: pe/ui/browse.cpp
 msgid "OPEN"
@@ -700,16 +559,6 @@ msgstr "Öffnen"
 #: pe/ui/home.cpp
 msgid "Open library"
 msgstr "Bibliothek öffnen"
-
-#. Label: see 'Output resolution'.
-#: pe/ui/settings.cpp
-msgid "OUTPUT RESOLUTION"
-msgstr "AUSGABEAUFLÖSUNG"
-
-#. Setting: the size of the picture sent to the TV (1080p, 1440p or 2160p). Not the same as 'Resolution', which scales the game's own picture (1x, 2x...).
-#: pe/ui/settings.cpp
-msgid "Output resolution"
-msgstr "Ausgabeauflösung"
 
 #. Button hint: jump a page of the list (L1 / R1).
 #: pe/ui/browse.cpp
@@ -742,10 +591,6 @@ msgstr "Portugiesisch (Brasilien)"
 msgid "Powered by Eden"
 msgstr "Basiert auf Eden"
 
-#: pe/ui/settings.cpp
-msgid "PREFERENCES"
-msgstr "OPTIONEN"
-
 #. Asked before a save is imported over the one in use.
 #: pe/ui/library.cpp
 msgid "Press again to replace this game's save. The current one is backed up."
@@ -767,10 +612,6 @@ msgstr "prod.keys fehlt"
 msgid "PROJECT CREDITS"
 msgstr "PROJEKT-CREDITS"
 
-#: pe/ui/browse.cpp
-msgid "ProsperoEden is an unofficial PS5 port brought to you by BlackBearReloaded."
-msgstr "ProsperoEden ist eine inoffizielle PS5-Portierung, präsentiert von BlackBearReloaded."
-
 #. Shown on the home screen after the app crashed and started again; {0} is a file.
 #: eden_services.cpp, host/fake_services.cpp
 msgid "ProsperoEden stopped because of an error. A report was saved to {0}."
@@ -780,15 +621,6 @@ msgstr "ProsperoEden wurde wegen eines Fehlers beendet. Ein Bericht wurde unter 
 #: eden_services.cpp
 msgid "PS5 controller initialization failed"
 msgstr "Initialisierung des PS5-Controllers fehlgeschlagen"
-
-#: pe/ui/browse.cpp
-msgid "PS5 EDITION"
-msgstr "PS5-EDITION"
-
-#. {0} is the version, for example v1.000.030.
-#: pe/ui/home.cpp
-msgid "PS5 EDITION  /  {0}"
-msgstr "PS5-EDITION  /  {0}"
 
 #: pe/ui/settings.cpp
 msgid "Ready"
@@ -833,10 +665,6 @@ msgstr "RENDERER"
 msgid "Resolution"
 msgstr "Auflösung"
 
-#: pe/ui/settings.cpp
-msgid "RESOLUTION"
-msgstr "AUFLÖSUNG"
-
 #: eden_services.cpp
 msgid "ROM missing from the game files folder"
 msgstr "ROM fehlt im Spieldateien-Ordner"
@@ -878,10 +706,6 @@ msgstr "Gespeichert. Ein Bildschirm ohne 120 Hz bleibt bei 60 Hz."
 msgid "Saved. Applies when a game starts."
 msgstr "Gespeichert. Gilt ab dem nächsten Spielstart."
 
-#: pe/ui/browse.cpp
-msgid "Saved. Reopen ProsperoEden to use this folder."
-msgstr "Gespeichert. Starte ProsperoEden neu, um diesen Ordner zu verwenden."
-
 #. Button hint: choose the highlighted item (not the Select button).
 #: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Select"
@@ -894,15 +718,6 @@ msgstr "Wähle ein Spiel aus"
 #: pe/ui/library.cpp
 msgid "Select a game to begin"
 msgstr "Wähle ein Spiel aus, um loszulegen"
-
-#: pe/ui/library.cpp
-msgid "Select a readable game to configure its mode."
-msgstr "Wähle ein lesbares Spiel aus, um den Modus einzustellen."
-
-#. Select is a button's name (unchanged).
-#: pe/ui/settings.cpp
-msgid "Select is the touchpad button on PS5."
-msgstr "Select ist auf der PS5 die Touchpad-Taste."
 
 #. Heading: the language highlighted in the list.
 #: pe/ui/browse.cpp
@@ -931,25 +746,9 @@ msgstr "Einrichtung erforderlich"
 msgid "Setup required: {0} Open Settings, Game files to choose the folder that holds your keys, firmware and roms folders (or add the files to {1}), then reopen ProsperoEden."
 msgstr "Einrichtung erforderlich: {0} Öffne Einstellungen > Spieldateien und wähle den Ordner, der deine Ordner keys, firmware und roms enthält (oder lege die Dateien in {1} ab). Starte ProsperoEden danach neu."
 
-#: pe/ui/settings.cpp
-msgid "Setup status and detailed logs."
-msgstr "Einrichtungsstatus und ausführliche Logs."
-
 #: eden_services.cpp
 msgid "Setup validation failed. Check that firmware and key files are readable and valid."
 msgstr "Prüfung der Einrichtung fehlgeschlagen. Prüfe, ob Firmware- und Schlüsseldateien lesbar und gültig sind."
-
-#: pe/ui/settings.cpp
-msgid "Shortcuts during a game, and vibration."
-msgstr "Kurzbefehle im Spiel und Vibration."
-
-#: pe/ui/settings.cpp
-msgid "Show or hide the FPS overlay"
-msgstr "FPS-Anzeige ein- oder ausblenden"
-
-#: pe/ui/library.cpp
-msgid "SIZE"
-msgstr "GRÖSSE"
 
 #: pe/ui/settings.cpp
 msgid "Solid panels, brighter text and an outlined highlight."
@@ -994,14 +793,6 @@ msgstr "Thai"
 msgid "THANKS"
 msgstr "DANKSAGUNG"
 
-#: pe/ui/browse.cpp
-msgid "Thanks to the whole PS5 homebrew community and to every developer whose drivers, tools and libraries make ProsperoEden possible."
-msgstr "Danke an die gesamte PS5-Homebrew-Community und an alle Entwickler, deren Treiber, Tools und Bibliotheken ProsperoEden möglich machen."
-
-#: pe/ui/settings.cpp
-msgid "The folder that holds your keys, firmware and games."
-msgstr "Der Ordner mit Schlüsseln, Firmware und Spielen."
-
 #. Why a game stopped. 'Settings, Video' is the menu path; 'the game's own settings' is the Game settings dialog of the Library.
 #: eden_services.cpp
 msgid "The game ran out of graphics memory. Lower the resolution in Settings, Video (or in the game's own settings) and start it again."
@@ -1010,10 +801,6 @@ msgstr "Dem Spiel ist der Grafikspeicher ausgegangen. Verringere die Auflösung 
 #: pe/ui/settings.cpp
 msgid "The language games use when they offer it."
 msgstr "Die Sprache, die Spiele verwenden, sofern verfügbar."
-
-#: pe/ui/browse.cpp
-msgid "THIS FOLDER"
-msgstr "DIESER ORDNER"
 
 #: pe/ui/browse.cpp
 msgid "This folder cannot be opened."
@@ -1036,10 +823,6 @@ msgstr "Kopiere zum Import einen Ryujinx-Ordner in ryujinx/ oder gespeicherte Da
 #: pe/ui/library.cpp
 msgid "Turn on or off"
 msgstr "Ein- oder ausschalten"
-
-#: pe/ui/library.cpp
-msgid "Unavailable"
-msgstr "Nicht verfügbar"
 
 #. Short tag on the 'Parent folder' row.
 #: pe/ui/browse.cpp
@@ -1067,14 +850,6 @@ msgstr "UPSCALING-FILTER"
 msgid "USA"
 msgstr "USA"
 
-#: pe/ui/browse.cpp
-msgid "Use extracted firmware NCA files. Choose the folder in Settings, Game files; restart the app after changing it."
-msgstr "Verwende extrahierte NCA-Dateien der Firmware. Wähle den Ordner unter Einstellungen > Spieldateien; starte die App nach einer Änderung neu."
-
-#: pe/ui/browse.cpp
-msgid "Use this folder"
-msgstr "Diesen Ordner verwenden"
-
 #: pe/ui/settings.cpp
 msgid "VIBRATION"
 msgstr "VIBRATION"
@@ -1084,24 +859,12 @@ msgid "Vibration"
 msgstr "Vibration"
 
 #: pe/ui/settings.cpp
-msgid "Vibration off"
-msgstr "Vibration aus"
-
-#: pe/ui/settings.cpp
-msgid "Vibration on"
-msgstr "Vibration ein"
-
-#: pe/ui/settings.cpp
 msgid "Video"
 msgstr "Video"
 
 #: pe/ui/settings.cpp
 msgid "VIDEO"
 msgstr "VIDEO"
-
-#: pe/ui/home.cpp
-msgid "VIEW ALL GAMES"
-msgstr "ALLE SPIELE ANZEIGEN"
 
 #. Vulkan is a name (unchanged).
 #: pe/ui/settings.cpp
@@ -1217,22 +980,6 @@ msgstr "Reset overrides"
 #: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
 msgid "Game overrides reset to global defaults."
 msgstr "Game overrides reset to global defaults."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "About Prospero.Eden Encore"
-msgstr "About Prospero.Eden Encore"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "tools and libraries make Prospero.Eden Encore possible."
-msgstr "tools and libraries make Prospero.Eden Encore possible."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Prospero.Eden Encore keeps the proven 0.40 base for PS5 13.60, with Eden branding, safer recovery, and targeted compatibility and performance improvements."
-msgstr "Prospero.Eden Encore keeps the proven 0.40 base for PS5 13.60, with Eden branding, safer recovery, and targeted compatibility and performance improvements."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Options starts a one-shot Safe Launch without changing saved settings."
-msgstr "Options starts a one-shot Safe Launch without changing saved settings."
 
 #: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
 msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
