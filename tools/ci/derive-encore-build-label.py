@@ -1,12 +1,49 @@
 #!/usr/bin/env python3
-"""Print the current documented Eden Encore revision for compiler injection."""
+"""Derive the native launcher's R revision from first-parent Git commit subjects.
+
+MEMORY.md is a historical engineering log and can lag behind the source.
+Never silently fall back to its latest heading: a stale footer is worse than
+failing the native build with an actionable diagnostic.
+
+For host regression tests, a single optional path contains newline-separated
+commit subjects (newest first), using exactly the same R-prefix matching.
+"""
 from pathlib import Path
 import re
+import subprocess
 import sys
 
-source = Path(sys.argv[1]) if len(sys.argv) == 2 else Path(__file__).resolve().parents[2] / "MEMORY.md"
-revisions = [int(m.group(1)) for m in re.finditer(
-    r"^###\s+\d{4}-\d{2}-\d{2}\s+R(\d{2,6})(?=\s|$)", source.read_text(encoding="utf-8"), re.M)]
-if not revisions:
-    raise SystemExit(f"No documented R revision in {source}")
-print(f"R{max(revisions)}")
+ROOT = Path(__file__).resolve().parents[2]
+REVISION = re.compile(r"^R([0-9]{2,6})(?=\\b|:|\\s|$)")
+
+
+def build_label(subjects: str) -> str:
+    numbers = [
+        int(match.group(1))
+        for subject in subjects.splitlines()
+        if (match := REVISION.match(subject.strip()))
+    ]
+    if not numbers:
+        raise ValueError("No numbered R revision in Git history; fetch more first-parent commits")
+    return f"R{max(numbers)}"
+
+
+def main() -> None:
+    if len(sys.argv) > 2:
+        raise SystemExit("Usage: derive-encore-build-label.py [fixture-subjects.txt]")
+    if len(sys.argv) == 2:
+        subjects = Path(sys.argv[1]).read_text(encoding="utf-8")
+    else:
+        proc = subprocess.run(
+            ["git", "-C", str(ROOT), "log", "--first-parent", "-n", "256", "--format=%s"],
+            check=True, capture_output=True, text=True,
+        )
+        subjects = proc.stdout
+    try:
+        print(build_label(subjects))
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+
+
+if __name__ == "__main__":
+    main()
