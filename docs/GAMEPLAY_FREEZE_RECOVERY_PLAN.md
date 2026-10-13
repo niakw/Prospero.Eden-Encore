@@ -51,3 +51,17 @@ Distinguish virtual JIT reservation from committed native physical memory. Inspe
 5. A representative 15–20-minute match has no >500 ms stall, no sustained sub-25 FPS collapse, and p95/p99 frametimes demonstrably improve versus the provided R457 baseline. Report measured numbers; do not claim success from compilation alone.
 
 **Release rule:** do not label the gameplay issue fixed before these hardware gates are passed.
+
+## Consolidated native qualification requested — 13 October 2026
+
+Source-only gate **passed** at [run 38448896105](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38448896105) for commit `4bd32156cc92fc1db240980a10f6d677980fffd8`. The matching native job was skipped by design: no prior build of this remediation is evidence of hardware success.
+
+The consolidated candidate includes three distinct source changes:
+
+- **Guest-owned actions:** one immutable per-title physical-to-guest button mapping throughout gameplay and menus; no manual or automatic A/B scene toggle. This removes an emulator-induced contradiction, but saved game action behavior is not yet demonstrated on hardware.
+- **Unverified topology:** do not constrain graphics and HLE secondary workers to `0x1003` or pin guest threads to presumed SMT siblings. Retain the operating system's allowed logical CPU set until physical topology is verified. This is a correctness-first scheduler baseline, not a demonstrated FPS gain.
+- **Liveness diagnostics:** reset progress age at each title transition; previous `EDEN_GPU_REPORT_STALLED age_ms=619430` may include old-title counters and cannot by itself diagnose a new title's pause stall.
+
+**Pause-freeze remains open:** the older pause investigation observed continued render/present activity near 30 FPS while the game UI stopped responding; later tests contain stalls up to 2,024 ms and sustained low frame windows. Do not conflate FPS with guest CPU or input progress. If a future build reproduces the pause freeze, correlate guest HID fullkey publication, guest IPC thread waits, cache lock hold/wait owners, CPU phase/PC, and GPU progress around the first event rather than tuning shaders or JIT by guesswork.
+
+**One build, not one more speculative console cycle:** request native All-On preflight, compile and packaging on the already-green source snapshot. Do not mark mapping, performance, HUD or pause freeze fixed until the acceptance gates above succeed on hardware. Keep prior captures for comparison; do not insist on clearing shader caches between comparable runs.
