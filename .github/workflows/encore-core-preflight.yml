@@ -196,6 +196,8 @@ jobs:
           python3 -B tools/check-home-media.py
           python3 -B tools/check-encore-ux.py
           python3 -B tools/check-ps5-ui-controls-per-game.py
+          python3 -B tools/check-dualsense-artwork.py
+          python3 -B tools/check-ps-glyph-cross-platform-index.py
 
       - name: Validate dev changes against archived release baseline
         run: |
