@@ -1,4 +1,4 @@
-name: Audit Switch 1-only eligible game corpus (no PS5 build)
+name: Audit guest title eligibility (host only)
 
 on:
   push:
