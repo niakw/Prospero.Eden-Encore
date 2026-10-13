@@ -84,7 +84,7 @@ library_source = (root / "headless/prosperoeden/pe/ui/library.cpp").read_text()
 assert "Confirmation::launch_game" not in home_source + library_source, "launch still asks for confirmation"
 assert "open_game_settings_at_file" in home_source, "Home Triangle no longer opens per-game settings"
 assert "recent.hero" in home_source, "recent-game Nlib artwork is not used by Home"
-assert "hero_intro" in home_source, "Nlib intro is not used by Home hero"
+assert "hero_description;" in home_source and "hero_intro" not in home_source, "Home must use Nlib long description only"
 assert "game->screenshots" in library_source, "Nlib screenshots are not used by Library"
 assert "VIEW ALL GAMES" not in home_source, "removed Home pseudo-link returned"
 assert all(marker in home_source for marker in (
