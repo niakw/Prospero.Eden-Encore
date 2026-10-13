@@ -275,6 +275,7 @@ jobs:
           python3 -B tools/check-ps5-native-timing-replay.py
           python3 -B tools/check-ps5-display-vs-guest-fps.py
           python3 -B tools/check-ps5-async-present-source-stress.py
+          python3 -B tools/check-ps5-vulkan-present-submit-contention.py
           python3 -B tools/check-ps5-buffer-dequeue-generation.py
           python3 -B tools/check-ps5-buffer-presentation-state-space.py
           python3 -B tools/check-hle-counter-contention.py
