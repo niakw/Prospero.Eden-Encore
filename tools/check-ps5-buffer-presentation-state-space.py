@@ -121,7 +121,7 @@ int main(){
 } // namespace Service::android
 int main(){return Service::android::main();}
 
-[executed on device: MacBook-Pro-de-ADMIN.local (7485558d-c24b-4307-89bc-0bb671606bb0)]"""
+"""
 fixture = fixture.replace("__ORIGINAL__", original).replace("__DERIVED__", counterfactual)
 compiler = shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
 assert compiler, "C++20 compiler required"
