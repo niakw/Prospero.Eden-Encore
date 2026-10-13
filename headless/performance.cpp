@@ -618,14 +618,40 @@ std::uint64_t VerifiedSecondaryPlacementMask() noexcept {
 
 void ProbeSchedulerOnce(const char* role) noexcept {
 #ifdef PS5_NATIVE
-    // Once per actual OS thread. Diagnose FW13.60 priority and logical mask;
-    // no scheduling or affinity mutation, and no per-frame sampling.
+    // The verified reference scheduler fix uses round-robin for equally
+    // prioritized CPU-bound native threads. Only the All-On development
+    // profile opts in. Release builds preserve the existing scheduler.
+    // One attempt per OS thread; no per-frame syscalls or priority changes.
     static thread_local bool reported = false;
     if (reported) return;
     reported = true;
     int policy = -1;
     sched_param priority{};
     const int sched_error = pthread_getschedparam(pthread_self(), &policy, &priority);
+    const int original_policy = policy;
+    int rr_attempted = 0;
+    int rr_error = 0;
+    int rr_verified = 0;
+#if defined(EDEN_DEV_PROFILE)
+    if (!sched_error && policy == SCHED_FIFO && priority.sched_priority == 700) {
+        rr_attempted = 1;
+        // Keep the native priority and all affinity masks intact.
+        rr_error = pthread_setschedparam(pthread_self(), SCHED_RR, &priority);
+        if (!rr_error) {
+            sched_param observed_priority{};
+            int observed_policy = -1;
+            const int readback_error = pthread_getschedparam(
+                pthread_self(), &observed_policy, &observed_priority);
+            rr_verified = readback_error == 0 && observed_policy == SCHED_RR &&
+                          observed_priority.sched_priority == priority.sched_priority;
+            rr_error = readback_error;
+            if (!readback_error) {
+                policy = observed_policy;
+                priority = observed_priority;
+            }
+        }
+    }
+#endif
     cpuset_t allowed{};
     const int affinity_rc = cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1,
                                               sizeof(unsigned long long), &allowed);
@@ -639,9 +665,10 @@ void ProbeSchedulerOnce(const char* role) noexcept {
         sched_error ? "unknown" : policy == SCHED_FIFO ? "FIFO" :
         policy == SCHED_RR ? "RR" : "OTHER";
     std::printf("EDEN_PS5_THREAD_SCHED role=%s sched_error=%d policy=%s(%d) priority=%d "
-                "affinity_error=%d allowed_mask=0x%llx\n",
+                "affinity_error=%d allowed_mask=0x%llx original_policy=%d "
+                "rr_attempted=%d rr_error=%d rr_verified=%d\n",
                 role, sched_error, policy_name, policy, priority.sched_priority,
-                affinity_error, mask);
+                affinity_error, mask, original_policy, rr_attempted, rr_error, rr_verified);
 #else
     (void)role;
 #endif
