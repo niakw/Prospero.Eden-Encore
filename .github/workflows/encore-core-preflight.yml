@@ -43,6 +43,7 @@ jobs:
           python3 -B tools/check-ps5-fast-first-pipelines.py
           python3 -B tools/check-ps5-pipeline-build-wait.py
           python3 -B tools/check-ps5-pipeline-fairness.py
+          python3 -B tools/check-ps5-present-phase-timing.py
           python3 -B tools/check-ps5-first-use-draw-preservation.py
           python3 -B tools/check-ps5-gpu-worker-draw-guard.py
           python3 -B tools/check-ps5-scheduler-capacity-preflight.py
@@ -79,6 +80,7 @@ jobs:
           python3 -B tools/check-ps-glyph-curl-search.py
           python3 -B tools/check-ps-glyph-mod-discovery.py
           python3 -B tools/check-codeql-security-scope.py
+          python3 -B tools/check-pinned-boost-mapbox-demo.py
           python3 -B tools/check-fc27-hle-compat.py
           python3 -B tools/check-game-liveness.py
           python3 -B tools/check-fc27-trace.py

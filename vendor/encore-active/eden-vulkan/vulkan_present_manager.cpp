@@ -188,21 +188,28 @@ PresentManager::~PresentManager() = default;
 
 Frame* PresentManager::GetRenderFrame() {
 
-    // Wait for free presentation frames
+    // Keep the original aggregate for existing FPS/parsing tools.
     ::Eden::Performance::DiagnosticTimer present_wait_timer(::Eden::Performance::gpu_present_wait);
-    std::unique_lock lock{free_mutex};
-    free_cv.wait(lock, [this] { return present_failure || !free_queue.empty(); });
-    if (present_failure) std::rethrow_exception(present_failure);
+    Frame* frame{};
+    {
+        // Wait for a free presentation frame without holding free_mutex
+        // during the later GPU completion fence.
+        ::Eden::Performance::DiagnosticTimer free_wait(
+            ::Eden::Performance::gpu_present_free_wait);
+        std::unique_lock lock{free_mutex};
+        free_cv.wait(lock, [this] { return present_failure || !free_queue.empty(); });
+        if (present_failure) std::rethrow_exception(present_failure);
+        frame = free_queue.front();
+        free_queue.pop_front();
+    }
 
-    // Take the frame from the queue
-    Frame* frame = free_queue.front();
-    free_queue.pop_front();
-    // Exclusive ownership transferred to this caller. Let the present
-    // thread recycle OTHER frames during our Vulkan GPU fence wait.
-    lock.unlock();
-
-    // Wait for the presentation to be finished so all frame resources are free
-    frame->present_done.Wait();
+    // The fence wait is distinct from FIFO backpressure. Both phases are
+    // measured ONLY in detailed logging; quiet path semantics are unchanged.
+    {
+        ::Eden::Performance::DiagnosticTimer fence_wait(
+            ::Eden::Performance::gpu_present_fence_wait);
+        frame->present_done.Wait();
+    }
     frame->present_done.Reset();
 
     return frame;

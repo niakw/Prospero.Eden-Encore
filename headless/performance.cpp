@@ -1149,6 +1149,12 @@ void ReportGpuThread(unsigned frame) {
                 load(gpu_fence_drain, true), load(gpu_fence_drain, false),
                 load(gpu_present_wait, true), load(gpu_present_wait, false),
                 load(gpu_queue_full, true), load(gpu_queue_full, false), load(rasterizer_draw, true));
+    // R424: distinguish FIFO backpressure from GPU fence completion.
+    // The existing EDEN_DEV_GPU.present_* cumulative counter is unchanged.
+    std::printf("EDEN_PRESENT_WAIT_PHASE frame=%u free_calls=%llu free_ns=%llu "
+                "fence_calls=%llu fence_ns=%llu\n", frame,
+                load(gpu_present_free_wait, true), load(gpu_present_free_wait, false),
+                load(gpu_present_fence_wait, true), load(gpu_present_fence_wait, false));
     // Breakdown of GPU-owner command types. In the R293 quiet path no clocks
     // or counters are touched; this runs only inside ReportGpuThread's opt-in
     // five-second diagnostic callback. Values are cumulative, not FPS.

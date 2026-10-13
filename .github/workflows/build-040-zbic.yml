@@ -329,18 +329,6 @@ jobs:
             bash tools/build-package.sh release-stage
           fi
 
-      - name: Save build caches immediately after staging
-        if: ${{ !cancelled() && steps.stage.outcome != 'skipped' }}
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            ~/.cache/ccache
-            ~/.cache/prosperoeden-deps
-            ~/.cache/ps5-eden-headless.*
-            ~/.cache/prosperoeden-mkpfs
-            .deps
-          key: prospero-eden-encore-040-${{ runner.os }}-${{ hashFiles('tools/deps.json') }}-${{ github.run_id }}
-
       - name: Upload resumable staged app
         if: ${{ steps.stage.outcome == 'success' && env.EDEN_TEST_ALL_ON != '1' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -457,6 +445,18 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
+      - name: Save build caches after verified artifact uploads
+        if: ${{ !cancelled() && steps.stage.outcome == 'success' }}
+        continue-on-error: true
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/ccache
+            ~/.cache/prosperoeden-deps
+            ~/.cache/ps5-eden-headless.*
+            ~/.cache/prosperoeden-mkpfs
+            .deps
+          key: prospero-eden-encore-040-${{ runner.os }}-${{ hashFiles('tools/deps.json') }}-${{ github.run_id }}
 
   release:
     needs: build
