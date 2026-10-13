@@ -34,7 +34,7 @@ assert "published_home_edges=%llu published_capture_edges=%llu" in pad
 assert "MappedTo(active_mapping, pad_create) < 0 && (sample.buttons & kButtonCreate) != 0" in pad
 assert "create_free" not in pad
 assert "slot.select_held || slot.select_pulse > 0" in pad
-assert "if (touch && (pressed & (kButtonL1 | kButtonR1 | kButtonOptions | (gameplay_chord_down ? kButtonSquare : 0))) != 0)" in pad
+assert "if (touch && (pressed & (kButtonL1 | kButtonR1 | kButtonOptions | (gameplay_chord_held ? kButtonSquare : 0))) != 0)" in pad
 assert "kButtonOptions" in pad and "Button::ButtonPlus" in pad
 assert "ButtonHome" in virtual and "ButtonCapture" in virtual
 assert 'virtual_button_params[Settings::NativeButton::Home].Set("button", 18);' in emulated
