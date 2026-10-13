@@ -572,6 +572,12 @@ adapt('src/video_core/renderer_vulkan/vk_swapchain.cpp', 'vulkan_swapchain.cpp',
      '    case VK_ERROR_OUT_OF_DATE_KHR:\n        is_outdated = true;\n        break;',
      '    case VK_SUBOPTIMAL_KHR:\n        is_suboptimal = true;\n        break;\n'
      '    case VK_ERROR_OUT_OF_DATE_KHR:\n        is_outdated = true;\n        return true;'),
+    # VK_SUBOPTIMAL_KHR DOES acquire an image and signals image_available.
+    # Recreate on the following frame (NeedsRecreation), only AFTER submitting
+    # the current image and consuming that signal. Do not rebuild a swapchain
+    # while holding an acquired image or a still-signalled semaphore.
+    ('    return is_suboptimal || is_outdated;\n}\n\nvoid Swapchain::Present(',
+     '    return is_outdated;\n}\n\nvoid Swapchain::Present('),
     # An acquisition error has no usable image index. Forward it to the existing
     # renderer recovery path instead of indexing or presenting an invalid image.
     ('LOG_ERROR(Render_Vulkan, "vkAcquireNextImageKHR returned {}", string_VkResult(result));',
