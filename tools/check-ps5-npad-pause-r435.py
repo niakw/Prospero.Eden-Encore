@@ -10,7 +10,7 @@ hid=(root/'vendor/sources/eden/src/hid_core/resources/npad/npad.cpp').read_text(
 input_src=(root/'headless/pad.cpp').read_text()
 pad_header=(root/'third_party/ps5_pad.hpp').read_text()
 assert 'if(PS5_NATIVE AND EDEN_DEV_PROFILE)' in cmake
-assert 'R435: read-only Npad witness' in cmake
+assert 'R435: dev-only guest HID Fullkey Npad LIFO witness' in cmake
 assert 'npad->fullkey_lifo.WriteNextEntry(pad_state);' in cmake
 assert 'list(REMOVE_ITEM eden_npad_sources resources/npad/npad.cpp)' in cmake
 assert 'Pinned Eden fullkey Npad writer changed; requalify R435' in cmake
