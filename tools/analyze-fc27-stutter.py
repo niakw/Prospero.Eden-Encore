@@ -80,6 +80,7 @@ def analyze(log: str) -> dict:
     guest: dict[int, dict] = {}
     preflights: dict[int, dict] = {}
     jit_cores: dict[int, dict[int, dict]] = defaultdict(dict)
+    dma_sync: dict[int, dict] = {}
     current_frame: int | None = None
     source_commits: set[str] = set()
     phases: dict[str, dict[int, dict]] = defaultdict(dict)
@@ -126,6 +127,10 @@ def analyze(log: str) -> dict:
             snapshot = values(line)
             if "frame" in snapshot and "dispatched" in snapshot:
                 preflights[int(snapshot["frame"])] = snapshot
+        elif line.startswith("EDEN_GPU_DMA_SYNC "):
+            value = values(line)
+            if {"frame", "calls", "ns"} <= value.keys():
+                dma_sync[int(value["frame"])] = value
         elif line.startswith("EDEN_FRAME_JIT_CORE "):
             value = values(line)
             if ({"frame", "core", "compile_ns", "compile_calls", "evacuations"} <= value.keys()
@@ -215,6 +220,18 @@ def analyze(log: str) -> dict:
             }
             for core, metrics in row["jit_cores"].items():
                 row[f"jit_core_ms:{core}"] = metrics["compile_ms"]
+        # R405: only adjacent detailed GPU reports provide a valid cumulative
+        # delta. Missing and reset source readings are not measured zeros.
+        dma = dma_sync.get(frame)
+        if dma is not None:
+            prev_dma = preceding.get("dma_sync")
+            if (prev_dma is not None and dma["ns"] >= prev_dma["ns"]
+                    and dma["calls"] >= prev_dma["calls"]):
+                row["dma_sync_wait_ms"] = (dma["ns"] - prev_dma["ns"]) / 1e6
+                row["dma_sync_wait_calls"] = int(dma["calls"] - prev_dma["calls"])
+            preceding["dma_sync"] = dma
+        else:
+            preceding.pop("dma_sync", None)
         preceding["gpu"] = owner
         rows.append(row)
     full = [row for row in rows if row.get("gpu_full_ms", 0) > 0.001]
@@ -251,6 +268,17 @@ def analyze(log: str) -> dict:
             for core in range(4)
             if (observed := [r for r in rows if core in r.get("jit_cores", {})])
         },
+        "gpu_dma_sync": ({
+            "observed_windows": len(dma_observed),
+            "measured_wait_ms": round(sum(r["dma_sync_wait_ms"] for r in dma_observed), 3),
+            "wait_calls": sum(r["dma_sync_wait_calls"] for r in dma_observed),
+            "worst_frame_correlation": (round(correlation(
+                dma_observed, "dma_sync_wait_ms", "worst_ms"), 3)
+                if len(dma_observed) >= 3 else None),
+            "late50_correlation": (round(correlation(
+                dma_observed, "dma_sync_wait_ms", "late50"), 3)
+                if len(dma_observed) >= 3 else None),
+        } if (dma_observed := [r for r in rows if "dma_sync_wait_ms" in r]) else None),
         "queue_full_windows": len(full),
         "late50_during_full": int(in_full),
         "late50_full_window_share": in_full / stall if stall else 0.0,
@@ -325,6 +353,7 @@ def self_test() -> None:
         "EDEN_FRAME_JIT_CORE frame=150 core=1 compile_ns=2000000 compile_calls=8 evacuations=0",
         "EDEN_DEV_GPU frame=150 dispatch_calls=500 full_calls=10 full_ns=20000000 draws=100",
         "EDEN_SCHEDULER_PREFLIGHT frame=150 dispatched=3",
+        "EDEN_GPU_DMA_SYNC frame=150 calls=1 ns=2500000",
         "EDEN_DEV_GUEST cpu_write_calls=100 cpu_write_ns=10000000 cpu_read_calls=30 cpu_read_ns=3000000",
         "EDEN_GPU_CACHE_PHASE frame=150 phase=pair_wait samples=10 total_ns=1000000",
         "EDEN_GPU_CACHE_PHASE frame=150 phase=guest_write_buffer_wait samples=3 total_ns=200000 max_ns=150000",
@@ -334,6 +363,7 @@ def self_test() -> None:
         "EDEN_FRAME_JIT_CORE frame=300 core=1 compile_ns=5000000 compile_calls=4 evacuations=1",
         "EDEN_DEV_GPU frame=300 dispatch_calls=900 full_calls=10 full_ns=20000000 draws=280",
         "EDEN_SCHEDULER_PREFLIGHT frame=300 dispatched=11",
+        "EDEN_GPU_DMA_SYNC frame=300 calls=3 ns=13000000",
         "EDEN_DEV_GUEST cpu_write_calls=250 cpu_write_ns=40000000 cpu_read_calls=75 cpu_read_ns=9000000",
         "EDEN_GPU_CACHE_PHASE frame=300 phase=pair_wait samples=14 total_ns=1400000",
         "EDEN_GPU_CACHE_PHASE frame=300 phase=guest_write_buffer_wait samples=7 total_ns=600000 max_ns=270000",
@@ -367,6 +397,11 @@ def self_test() -> None:
     else:
         raise AssertionError("mixed build SHAs were not rejected")
     assert result["late50_total"] == 4
+    assert result["gpu_dma_sync"]["observed_windows"] == 1
+    assert result["gpu_dma_sync"]["measured_wait_ms"] == 10.5
+    assert result["gpu_dma_sync"]["wait_calls"] == 2
+    assert result["gpu_dma_sync"]["worst_frame_correlation"] is None
+    assert analyze(sample.replace("EDEN_GPU_DMA_SYNC", "NO_DMA_SYNC"))["gpu_dma_sync"] is None
     assert result["jit_core_summary"][0]["compile_ms"] == 5
     assert result["jit_core_summary"][0]["compile_calls"] == 7
     assert result["jit_core_summary"][0]["evacuations"] == 1
@@ -453,6 +488,12 @@ def main() -> None:
           "binder_auto_calls={binder_auto_transaction_calls} "
           "binder_auto_seconds={binder_auto_transaction_seconds:.3f}".format(**report))
     print("CORRELATIONS", report["late50_correlation"])
+    if report["gpu_dma_sync"] is not None:
+        print("GPU_DMA_SYNC_WAIT", report["gpu_dma_sync"])
+        print("NOTE: DMA sync wait is a subcomponent of Scheduler::Push,"
+              " not physical GPU busy time or proof of stutter causality.")
+    else:
+        print("GPU_DMA_SYNC_WAIT unavailable (pre-R405 logs)")
     if report["jit_core_summary"]:
         print("GUEST_JIT_CORE_INTERVALS", report["jit_core_summary"])
         print("NOTE: JIT per-core intervals are overlapping CPU work, not wall-clock"

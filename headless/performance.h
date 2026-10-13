@@ -97,6 +97,9 @@ inline Totals gpu_queue_wait, gpu_dispatch;
 // GPU submit is already recorded in gpu_dispatch; the other commands must
 // not be misattributed to shader compilation or guest JIT.
 inline Totals gpu_command_tick, gpu_command_flush, gpu_command_invalidate;
+// R405: GPU-owner DmaPusher fence-wait intervals INSIDE Scheduler::Push.
+// Detailed logging only; not physical GPU utilization or a guest timing fix.
+inline Totals gpu_dma_sync_wait;
 // Counts actual 4-KiB command-chunk pre-dispatches (R382), not ordinary
 // DispatchWork calls. Written only on a successful preflight when profiling.
 inline std::atomic<unsigned long long> scheduler_preflight_dispatches{0};

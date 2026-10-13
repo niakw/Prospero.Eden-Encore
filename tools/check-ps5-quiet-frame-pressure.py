@@ -44,6 +44,13 @@ assert "counter" in present  # explicit reset handling; no bogus negative deltas
 assert "std::this_thread::sleep" not in present
 assert "frame_pressure_previous" in header
 assert 'cache_wait_ms=%.3f jit_ms=%.3f' in graphics
+# The precise DMA fence wait is generated in native PS5 DEV only; quiet
+# gameplay must use DiagnosticTimer's clock-free disabled path.
+assert 'inline Totals gpu_dma_sync_wait;' in perf
+assert 'EDEN_GPU_DMA_SYNC frame=%u calls=%llu ns=%llu' in read("headless/performance.cpp")
+assert 'if(unit STREQUAL "dma_pusher" AND EDEN_DEV_PROFILE)' in cmake
+assert '::Eden::Performance::DiagnosticTimer dma_fence_timer(::Eden::Performance::gpu_dma_sync_wait);' in cmake
+assert 'message(FATAL_ERROR "Pinned guest GPU DMA fence wait changed")' in cmake
 
 # A fixed count of atomic loads at five-second boundaries; no new per-frame
 # filesystem calls, mallocs, locks, kernel memory walks, or clock probes.

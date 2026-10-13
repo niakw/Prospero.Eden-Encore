@@ -2177,6 +2177,19 @@ if(EDEN_PS5_OPENGL)
         file(READ "${PROJECT_SOURCE_DIR}/src/video_core/${unit}.cpp" command_source)
         string(REPLACE "        sync_cv.wait(lk, [this]() { return synced; });"
             "        while (!synced && !system.IsShuttingDown())\n            sync_cv.wait_for(lk, std::chrono::milliseconds(10));\n        if (system.IsShuttingDown()) return false;" command_source "${command_source}")
+        if(unit STREQUAL "dma_pusher" AND EDEN_DEV_PROFILE)
+            # R405: time the genuine GPU fence wait, preserving the existing
+            # bounded shutdown-aware CV loop and all guest synchronization.
+            set(dma_fence_wait "        while (!synced && !system.IsShuttingDown())\n            sync_cv.wait_for(lk, std::chrono::milliseconds(10));")
+            string(FIND "${command_source}" "${dma_fence_wait}" fence_at)
+            if(fence_at LESS 0)
+                message(FATAL_ERROR "Pinned guest GPU DMA fence wait changed")
+            endif()
+            string(REPLACE "${dma_fence_wait}"
+                "        { ::Eden::Performance::DiagnosticTimer dma_fence_timer(::Eden::Performance::gpu_dma_sync_wait);\n${dma_fence_wait}\n        }"
+                command_source "${command_source}")
+            string(PREPEND command_source "#include \"${EDEN_PORT_DIR}/performance.h\"\n")
+        endif()
         string(REPLACE "    while (word != value) {" "    while (word != value && !dma_pusher.system.IsShuttingDown()) {" command_source "${command_source}")
         string(PREPEND command_source "#include <chrono>\n")
         string(REPLACE "/" "_" unit_name "${unit}")
