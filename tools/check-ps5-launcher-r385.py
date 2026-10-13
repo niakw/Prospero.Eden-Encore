@@ -68,8 +68,8 @@ for text in ('Quit','Exit Eden Encore','Exit Eden Encore?'):
     assert f'msgid "{text}"' in po, text
 # The maintained text may be shortened to fit the TV confirmation overlay.
 # Compare the actual translation against its embedded runtime copy.
-assert 'msgid "Exit Eden Encore?"\\nmsgstr "Quitter Eden Encore ?"' in po
-assert 'msgid "Exit Eden Encore?"\\nmsgstr "Quitter Eden Encore ?"' in embedded
+assert 'msgid "Exit Eden Encore?"\nmsgstr "Quitter Eden Encore ?"' in po
+assert 'msgid "Exit Eden Encore?"\nmsgstr "Quitter Eden Encore ?"' in embedded
 assert 'void Launcher::draw_confirmation' in launcher
 
 # Compiler-injected RNNN; not release package metadata nor a GitHub run number.
