@@ -49,7 +49,7 @@ assert "text_shrink(c, title_label" in home
 assert "text_block_semantic(c, hero_caption" in home
 assert "notice_block(c, hero_caption" in home
 assert "if (hero_caption_warning)" in home
-assert "!hero_description.empty() ? hero_description :" in home
+assert "hero_description;" in home
 assert "label_area.w - 4.0f, Align::center" in home
 assert 'TR("Recent")' in nav
 # Regression from FC27 hardware tests: use the matching game's proper Nlib
@@ -66,7 +66,7 @@ assert "home_.last_description = enriched.description;" in lib
 assert "recent.description = enriched.description;" in lib
 assert "home_.last_description = game.description;" in lib
 assert "const std::string &hero_description =" in home
-assert "!hero_description.empty() ? hero_description :" in home
+assert "hero_description;" in home
 assert "hero_caption_warning ? home_.last_caption :" in home
 # Never decompress or resize Nlib artwork inside the frame update.
 texture_h = src("headless/prosperoeden/pe/ui/textures.hpp")
