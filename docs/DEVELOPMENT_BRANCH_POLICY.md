@@ -1,7 +1,21 @@
-# Eden Encore — unique development branch
+# Eden Encore — branche de développement unique
 
-The **only active development branch** is `dev/ps5-sparse-jit`, which is also the GitHub default branch. Do not create a `work/*`, `security/*`, `feature/*` or `fix/*` branch for future updates. Make edits directly on the default branch with optimistic SHA checks, audit one change set at a time, and use explicit `[core-ready]` and `[full-build]` gates as needed.
+**Branche unique et branche GitHub par défaut :** `dev/ps5-sparse-jit`.
 
-Historical branch clean-up was requested after integrating R428. All R419–R427 changes in the obsolete experiment branches were already represented in the default branch's consolidated commits; R428 was fast-forwarded onto the default branch. Obsolete historical refs are **not** authoritative for the current build. Do not merge them independently and accidentally restore older performance/security experiments.
+Tous les prochains changements (performances PS5, rendu Vulkan, corrections de sécurité, documentation et tests) s'effectuent directement sur cette branche, avec vérification de son SHA avant chaque écriture. **Ne pas créer de branches temporaires** `work/*`, `security/*`, `fix/*` ou `feature/*`.
 
-The remote branch deletion operation requires GitHub branch/ref delete permission and an appropriate API action. The available GitHub connector can read and move references, but has no delete-ref operation; a safe deletion must be carried out through an authorized GitHub UI or another properly authenticated tool. Branch cleanup does not imply deletion of the old commit objects or revert any code.
+## Nettoyage validé le 13 octobre 2026
+
+- Les correctifs R419 à R427 avaient déjà été consolidés sur `dev/ps5-sparse-jit`.
+- Le portage R428 de ProsperoEden v1.001.000 a été intégré par **fast-forward** depuis sa branche de préparation, sans écraser les modifications existantes.
+- Les 10 branches secondaires ont été supprimées après vérification exacte de leurs SHA. Exécution GitHub Actions : https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38380839924 (succès).
+- Le workflow temporaire ayant réalisé cette suppression est lui-même retiré du dépôt dans le commit de clôture.
+- Vérification via l'API GitHub : **une seule branche distante demeure**, `dev/ps5-sparse-jit`.
+
+Les anciens objets Git restent dans l'historique normal ; supprimer une branche ne supprime ni le code fusionné ni les commits inclus dans `dev`.
+
+## Contrôles
+
+- `[core-ready]` déclenche le préflight source ; `[full-build]` et les contrôles du pipeline natif n'ont pas à être déclenchés pour un simple changement de documentation.
+- Les modifications des dépendances pinées passent par des dérivations CMake vérifiées et restent séparées des archives immuables.
+- Les workflows CodeQL, CI, compilation et releases doivent cibler exclusivement `dev/ps5-sparse-jit`.
