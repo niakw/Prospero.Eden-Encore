@@ -7,6 +7,7 @@
 #include <algorithm>
 #include "performance.h"
 #include "image_pages.h"
+#include "buffer_pages.h"
 #include "dev_vulkan.h"
 #include "diagnostics.h"
 #include <filesystem>
@@ -965,7 +966,9 @@ bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {
     ::Eden::Performance::BatchedGuestWriteTimer guest_write_timer;
     const bool sample_guest_write = ::Eden::Performance::ShouldSampleGuestWrite();
     DEBUG_ASSERT(addr != 0 || size != 0);
-    {
+    // Buffer lock elision applies only to never-registered pages.
+    // Texture/shader invalidations below always run.
+    if (!::Eden::BufferPages::NeverRegistered(addr, size)) {
         ::Eden::Performance::CachePhaseTimer buffer_wait{
             ::Eden::Performance::CachePhase::GuestWriteBufferWait, sample_guest_write};
         ::Eden::Performance::GuestCacheLock(buffer_cache.mutex, false);

@@ -113,6 +113,11 @@ void RasterizerVulkan::DispatchCompute() {"""),
     ('#ifdef __ANDROID__\n    static constexpr u32 DRAWS_TO_DISPATCH = 512;\n    static constexpr u32 CHECK_MASK = 3;\n#else\n    static constexpr u32 DRAWS_TO_DISPATCH = 4096;\n    static constexpr u32 CHECK_MASK = 7;\n#endif // __ANDROID__\n\n    static_assert(DRAWS_TO_DISPATCH % (CHECK_MASK + 1) == 0);\n',
      '    static constexpr u32 DRAWS_TO_DISPATCH = 512;\n'
      '    const u32 CHECK_MASK = ::Eden::Performance::dispatch_mask.load(std::memory_order_relaxed);\n\n'),
+    # R437: buffer-cache OnCPUWrite is allowed to avoid only the buffer
+    # mutex when no page in the small write was EVER registered. The image
+    # and shader invalidations remain unconditional on this code path.
+    ('DEBUG_ASSERT(addr != 0 || size != 0);\n    {\n        ::Eden::Performance::CachePhaseTimer buffer_wait',
+     'DEBUG_ASSERT(addr != 0 || size != 0);\n    // Buffer lock elision applies only to never-registered pages.\n    // Texture/shader invalidations below always run.\n    if (!::Eden::BufferPages::NeverRegistered(addr, size)) {\n        ::Eden::Performance::CachePhaseTimer buffer_wait'),
     # R309 PS5 watchdog: upstream checked the dispatch cadence BEFORE the 512-draw
     # ceiling. At mask 7 it therefore flushed on draw 519, not 512; at mask 63
     # on draw 575. Enforce the hard ceiling independently of dispatch cadence.
@@ -276,7 +281,7 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {'''),
     # Development GPU fault probe (dev_vulkan.h, pipeline_trace=on): once the runner
     # creates /app0/sync-draws.txt, report every draw/dispatch to klog and wait for the
     # GPU, so the last report before a fatal GPU fault names the operation.
-    ('#include "performance.h"', '#include "performance.h"\n#include "image_pages.h"\n#include "dev_vulkan.h"\n#include "diagnostics.h"\n#include <filesystem>'),
+    ('#include "performance.h"', '#include "performance.h"\n#include "image_pages.h"\n#include "buffer_pages.h"\n#include "dev_vulkan.h"\n#include "diagnostics.h"\n#include <filesystem>'),
     ('scheduler.Record([draw_params](vk::CommandBuffer cmdbuf) {\n            ',
      'scheduler.Record([draw_params, pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {\n            if (!pipeline || !pipeline->CanExecuteDraw()) {\n                ::Eden::Performance::RecordGraphicsDrawDrop(\n                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                return;\n            }\n            '),
     ('scheduler.Record([buffer_obj = buffer->Handle(), offset,\n                              stride = params.stride](vk::CommandBuffer cmdbuf) {\n                ',
