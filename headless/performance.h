@@ -412,6 +412,9 @@ inline void CountJit(std::atomic<unsigned long long>& counter) {
 }
 // GPU thread only (Vulkan frame report): cumulative GPU-thread idle/dispatch/wait
 // totals with the owner's CPU clock, then a guest-core CPU snapshot.
+// Once per title, after the previous GPU owner has joined. Do not report
+// the preceding title's last GPU frame as a freeze in this session.
+void ResetGpuReportForTitle() noexcept;
 void ReportGpuThread(unsigned frame);
 inline std::atomic<unsigned> capture_passes{};
 
