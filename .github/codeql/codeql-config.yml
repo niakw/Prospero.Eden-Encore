@@ -18,6 +18,9 @@ paths:
   - fixtures
   - vendor/encore-active
 paths-ignore:
+  # Immutable upstream source snapshots used as regression fixtures only.
+  # The active graphics runtime remains under vendor/encore-active.
+  - 'tools/fixtures/**'
   - 'vendor/sources/**/libs/mpl/preprocessed/pp.py'   # Boost MPL formatter
   - 'vendor/sources/**/tools/litre/cplusplus.py'      # Boost Litre harness
   - 'vendor/sources/**/bin/nir-test-runner.py'        # Mesa offline test runner
