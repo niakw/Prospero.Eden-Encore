@@ -159,11 +159,13 @@ assert 'game->screenshots' in library
 assert 'void SetMapping(const ButtonMapping& value)' in devices
 assert 'if (slots[0].handle >= 0) return;' in devices
 assert 'pad->SetMapping(separate_fc27_gameplay ? controls.mapping : mapping);' in main
-assert 'if (separate_fc27_gameplay) pad->SetGameplayMapping(mapping);' in main
+assert 'if (separate_fc27_gameplay) pad->SetGameplayMapping(fc27_gameplay_mapping);' in main
+assert 'Eden::Fc27GameplayButtons(' in main
 assert 'pad->Open()' in main
 assert main.index('pad->SetMapping(separate_fc27_gameplay ? controls.mapping : mapping);') < main.index('if (!pad->Open())')
 assert 'EDEN_PAD_MAPPING_FIXED title=%016llx' in main
 assert 'EDEN_PAD_MAPPING_LOCKED scope=session mode=static' in main
+assert 'EDEN_PAD_MAPPING_LOCKED scope=fc27 mode=dual_manual gesture=touchpad_square' in main
 assert '(effective_layout == 1 ? "Switch" : "PlayStation")' in main
 assert 'SetAdaptivePlayStation' not in devices + main + pad
 assert 'mapping_context.observe(' not in pad
@@ -218,6 +220,7 @@ staged_check = read('tools/ci/check-staged-app.py')
 # not old PlayStation Auto / EDEN_PAD_CONTEXT strings removed from source.
 assert '"EDEN_PAD_MAPPING_FIXED title="' in staged_check
 assert '"EDEN_PAD_MAPPING_LOCKED scope=session mode=static"' in staged_check
+assert '"EDEN_PAD_MAPPING_LOCKED scope=fc27 mode=dual_manual"' in staged_check
 assert '"PlayStation Auto"' not in staged_check
 assert '"EDEN_PAD_CONTEXT mode=gameplay reason=sustained_activity sticky=1"' not in staged_check
 match = re.search(r'assert all\(marker in home_source for marker in \((.*?)\)\)', staged_check, re.S)
