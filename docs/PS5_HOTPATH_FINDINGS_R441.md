@@ -48,3 +48,7 @@ Source inspection confirmed the secondary `VkPipelineOptimize` worker could begi
 ## R445 — Cross-test parity for R442 (2026-10-13)
 
 GitHub core-preflight R443 demonstrated R439/R442's source tests and real GC admission/batching fixtures pass but the older `check-vulkan-gc-mixed-prefetch-host.py` stopped on the obsolete exact string `if (remaining == 0) return true;`. The host-side literal staging model now treats skipped decoding/costly-load images as non-evictions under the same 8192 scan ceiling as the shipping collector, and adds 180 excluded textures before five dirty GPU-written images. The updated test still compiles and runs its existing ASan/UBSan C++ staging, 32 MiB cap and one-Finish scenarios. Source-only; console result pending later combined test.
+
+## R447 — Repair validated WSI cache admission for native build
+
+R446 failed before compiling because the exact source SHA-256 `4175fad06454b5c14a2be8045d791deb33fc6034959a7d58b733ed27b22d23b2` from Encore's own R439 WSI was present in the cached compiler staging tree. It was no longer equal to post-R440 active WSI nor the R398 legacy fixture. The pre-R440 WSI bytes are now retained under `tools/fixtures/ps5-r439-wsi-videoout.c` and explicitly recognized **only** for the WSI translation unit. `check-vendored-radv-fork.py` replays and verifies the exact fixture → R440 canonical input; unknown inputs remain fatal. This is a CI staging fix, not a GPU-rendering change.
