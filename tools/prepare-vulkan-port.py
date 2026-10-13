@@ -537,6 +537,41 @@ adapt('src/video_core/renderer_vulkan/vk_update_descriptor.h',
 ])
 
 adapt('src/video_core/renderer_vulkan/vk_swapchain.cpp', 'vulkan_swapchain.cpp', [
+    # PS5 native: a swapchain without a free image previously hung here
+    # forever (UINT64_MAX). Timeouts are recoverable without touching the
+    # image index or the signalled image-available semaphore.
+    # 40 * 250ms is an upper bound, not a per-frame polling/logging loop.
+    ('    const VkResult result = device.GetLogical().AcquireNextImageKHR(\n'
+     '        *swapchain, (std::numeric_limits<u64>::max)(), *present_semaphores[frame_index],\n'
+     '        VK_NULL_HANDLE, &image_index);',
+     '''#ifdef PS5_NATIVE
+    constexpr u64 kAcquireSliceNs = 250'000'000ULL;
+    constexpr u32 kMaxAcquireTimeouts = 40;
+    VkResult result = VK_TIMEOUT;
+    for (u32 i = 0; i < kMaxAcquireTimeouts; ++i) {
+        result = device.GetLogical().AcquireNextImageKHR(
+            *swapchain, kAcquireSliceNs, *present_semaphores[frame_index],
+            VK_NULL_HANDLE, &image_index);
+        if (result != VK_TIMEOUT && result != VK_NOT_READY) {
+            break;
+        }
+    }
+    if (result == VK_TIMEOUT || result == VK_NOT_READY) {
+        // Failed acquisition has no valid image and must not reach scheduler.Wait.
+        // Propagate to the existing present_failure + launcher recovery path.
+        throw vk::Exception(VK_TIMEOUT);
+    }
+#else
+    const VkResult result = device.GetLogical().AcquireNextImageKHR(
+        *swapchain, (std::numeric_limits<u64>::max)(), *present_semaphores[frame_index],
+        VK_NULL_HANDLE, &image_index);
+#endif'''),
+    # VK_ERROR_OUT_OF_DATE_KHR does not acquire an image or signal the
+    # semaphore. Never index resource_ticks[image_index] on this path.
+    ('    case VK_SUBOPTIMAL_KHR:\n        is_suboptimal = true;\n        break;\n'
+     '    case VK_ERROR_OUT_OF_DATE_KHR:\n        is_outdated = true;\n        break;',
+     '    case VK_SUBOPTIMAL_KHR:\n        is_suboptimal = true;\n        break;\n'
+     '    case VK_ERROR_OUT_OF_DATE_KHR:\n        is_outdated = true;\n        return true;'),
     # An acquisition error has no usable image index. Forward it to the existing
     # renderer recovery path instead of indexing or presenting an invalid image.
     ('LOG_ERROR(Render_Vulkan, "vkAcquireNextImageKHR returned {}", string_VkResult(result));',
