@@ -1351,6 +1351,11 @@ void ReportGpuThread(unsigned frame) {
 
 void RegisterWorker(const char* name) {
     Eden::Crash::NameThread(name);  // a crash report names the thread
+#ifdef PS5_NATIVE
+    // CPU and GPU owners compete with service and pipeline threads.
+    // Diagnose and qualify fair scheduling before guest work starts.
+    ProbeSchedulerOnce(name);
+#endif
 #if defined(EDEN_DEV_PROFILE) && defined(PS5_NATIVE)
     Eden::Stall::NoteThread(name);
 #endif
