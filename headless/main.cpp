@@ -1660,36 +1660,28 @@ int main(int argc, char** argv) {
             const bool custom_mapping = Eden::MappingIsCustom(mapping, effective_layout);
             pad = std::make_unique<Eden::Pad>(
                 static_cast<float>(controls.stick_deadzone) / 100.0f, 0.5f);
-            // FC27's explicit custom title mapping should control match actions
-            // without changing PlayStation navigation/cinematics. No heuristic
-            // scene detection: Touchpad+Square deliberately switches profile.
-            const auto fc27_gameplay_mapping = Eden::Fc27GameplayButtons(
-                game_video.own_mapping, mapping);
-            const bool separate_fc27_gameplay = Eden::HasFc27MatchMapping(
-                launch_title_id, game_video.own_mapping, controls.mapping, mapping);
-            pad->SetMapping(separate_fc27_gameplay ? controls.mapping : mapping);
-            if (separate_fc27_gameplay) pad->SetGameplayMapping(fc27_gameplay_mapping);
+            // The emulator publishes one stable guest button mapping for the
+            // entire session. The running title owns its saved action bindings,
+            // including match, pause menus, cutscenes and transitions.
+            // Do not silently override or toggle those guest actions.
+            pad->SetMapping(mapping);
             std::fprintf(stderr,
-                "EDEN_PAD_MAPPING_FIXED title=%016llx layout=%d a=%d b=%d x=%d y=%d title_override=%u own_mapping=%u\n",
+                "EDEN_PAD_MAPPING_FIXED title=%016llx layout=%d a=%d b=%d x=%d y=%d title_override=%u own_mapping=%u\\n",
                 static_cast<unsigned long long>(launch_title_id),
                 effective_layout, mapping[Eden::game_a], mapping[Eden::game_b],
                 mapping[Eden::game_x], mapping[Eden::game_y],
                 static_cast<unsigned>(game_video.controller_layout >= 0 || game_video.own_mapping),
                 static_cast<unsigned>(game_video.own_mapping));
             std::fprintf(stderr,
-                "EDEN_PAD_MAPPING_CONTEXT title=%016llx mode=%s menu_a=%d menu_b=%d match_a=%d match_b=%d\n",
+                "EDEN_PAD_MAPPING_CONTEXT title=%016llx mode=game_owned a=%d b=%d x=%d y=%d\\n",
                 static_cast<unsigned long long>(launch_title_id),
-                separate_fc27_gameplay ? "dual_manual" : "fixed",
-                controls.mapping[Eden::game_a], controls.mapping[Eden::game_b],
-                fc27_gameplay_mapping[Eden::game_a], fc27_gameplay_mapping[Eden::game_b]);
+                mapping[Eden::game_a], mapping[Eden::game_b],
+                mapping[Eden::game_x], mapping[Eden::game_y]);
             if (!pad->Open()) throw std::runtime_error("PS5 controller initialization failed");
             const std::string mapping_profile =
                 custom_mapping ? (effective_layout == 1 ? "Custom Switch" : "Custom PS5") :
                                  (effective_layout == 1 ? "Switch" : "PlayStation");
-            if (separate_fc27_gameplay)
-                Eden::Report("controls", "EDEN_PAD_MAPPING_LOCKED scope=fc27 mode=dual_manual gesture=touchpad_square");
-            else
-                Eden::Report("controls", "EDEN_PAD_MAPPING_LOCKED scope=session mode=static");
+            Eden::Report("controls", "EDEN_PAD_MAPPING_LOCKED scope=session mode=static game_actions=guest_owned");
             Eden::Report("controls", (std::string("Controller profile ") + mapping_profile +
                 ", map " + Eden::Settings::MappingJson(mapping, Eden::BaseMappingForLayout(effective_layout)).dump() +
                 ", deadzone " + std::to_string(controls.stick_deadzone) + "%, vibration " +
