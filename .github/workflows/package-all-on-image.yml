@@ -1,4 +1,4 @@
-name: Package existing PS5 All-On test image
+name: Package existing native test image
 on:
   push:
     branches: [dev/ps5-sparse-jit]
