@@ -393,6 +393,14 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
             slot.select_pulse = 0;
             std::fprintf(stderr, "EDEN_PAD_GAMEPLAY_PROFILE mode=%s source=fc27_manual_chord\n",
                          gameplay_mode ? "match" : "menu");
+            // One event per deliberate profile switch, not one per 4ms input poll.
+            // Report the effective guest-action assignment, independent of UI art.
+            const auto& active_face = ActiveMapping();
+            std::fprintf(stderr,
+                "EDEN_PAD_GUEST_FACE mode=%s a=%s b=%s x=%s y=%s\\n",
+                gameplay_mode ? "match" : "menu",
+                kPadButtonKeys[active_face[game_a]], kPadButtonKeys[active_face[game_b]],
+                kPadButtonKeys[active_face[game_x]], kPadButtonKeys[active_face[game_y]]);
         }
         slot.gameplay_chord_held = gameplay_chord_held;
         if (gameplay_chord_held)
