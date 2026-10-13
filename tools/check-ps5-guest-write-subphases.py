@@ -72,6 +72,14 @@ __BATCH_TIMER__
 __GUEST_LOCK__
 __CACHE_PHASE__
 }
+namespace Eden::BufferPages {
+inline std::atomic<bool> test_skip_empty_page{false};
+// The real bitmap has its own sanitizer test. Exercise the exact extracted
+// RasterizerVulkan method here, with the fast/slow decision controlled.
+inline bool NeverRegistered(DAddr,u64) {
+    return test_skip_empty_page.load(std::memory_order_relaxed);
+}
+}
 struct FakeBuffer {
     std::mutex mutex;
     bool hazard{};
@@ -140,6 +148,18 @@ int main() {
         const auto count=cache_phase_totals[static_cast<unsigned>(groups[i])].samples.load();
         assert(count==(i<2?3u:2u));
     }
+    // R437: empty buffer pages skip ONLY the buffer mutex and OnCPUWrite.
+    // The GPU texture cache and shader cache must still observe the write.
+    r.buffer_cache.hazard=false;
+    const auto before_buffer=r.buffer_cache.writes;
+    const auto before_texture=r.texture_cache.writes;
+    const auto before_shader=r.pipeline_cache.invalidations;
+    ::Eden::BufferPages::test_skip_empty_page.store(true);
+    for (int i=0;i<32;++i) assert(!r.OnCPUWrite(1,4));
+    assert(r.buffer_cache.writes==before_buffer);
+    assert(r.texture_cache.writes==before_texture+32);
+    assert(r.pipeline_cache.invalidations==before_shader+32);
+    ::Eden::BufferPages::test_skip_empty_page.store(false);
     puts("R370_GUEST_WRITE_PHASES_HOST_PASS");
 }
 """.replace('__GUEST_LOCK__',guest_lock).replace('__CACHE_PHASE__',cache_phase).replace('__BATCH_TIMER__',batch_timer).replace('__ON_CPU_WRITE__',method)
