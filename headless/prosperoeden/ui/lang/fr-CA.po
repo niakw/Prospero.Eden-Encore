@@ -1294,3 +1294,560 @@ msgstr "Stockage configuré"
 #: eden_services.cpp
 msgid "The game could not allocate PS5 memory. Close Eden Encore completely before retrying to release memory retained between games."
 msgstr "Le jeu n'a pas pu allouer de mémoire sur la PS5. Fermez complètement Eden Encore avant de réessayer afin de libérer la mémoire conservée entre les jeux."
+
+
+#: settings_store.h
+msgid "0.25x (minimum)"
+msgstr "0,25x (minimum)"
+
+#: settings_store.h
+msgid "0.5x (fastest, softer)"
+msgstr "0,5x (le plus rapide, plus doux)"
+
+#: settings_store.h
+msgid "1.25x (recommended)"
+msgstr "1.25x (recommandé)"
+
+#: pe/ui/settings.cpp
+msgid "100% is full DualSense rumble strength. Lower it if vibration feels too strong."
+msgstr "100 % correspond à l'intensité maximale des vibrations DualSense. Réduisez-la si elles sont trop fortes."
+
+#: settings_store.h
+msgid "2x (high memory)"
+msgstr "2x (mémoire élevée)"
+
+#: settings_store.h
+msgid "3x (very high memory)"
+msgstr "3x (mémoire très élevée)"
+
+#: settings_store.h
+msgid "4x (extreme memory)"
+msgstr "4x (mémoire extrême)"
+
+#: pe/ui/settings.cpp
+msgid "60 Hz is recommended. 120 Hz changes display mode only; the game still needs to render above 60 FPS to benefit."
+msgstr "60 Hz est recommandé. 120 Hz ne change que le mode d'affichage ; le jeu doit quand même dépasser 60 FPS pour en profiter."
+
+#: pe/ui/library.cpp
+msgid "60 Hz is the safe default. Use 120 Hz only with a compatible display or high-FPS patch."
+msgstr "60 Hz est le réglage sûr. Utilisez 120 Hz seulement avec un écran compatible ou un patch haute fréquence d'images."
+
+#: pe/ui/settings.cpp
+msgid "8% is recommended. Increase it for stick drift; decrease it for more sensitive aiming."
+msgstr "8 % est recommandé. Augmentez-la en cas de drift ; réduisez-la pour une visée plus sensible."
+
+#: pe/ui/browse.cpp
+msgid "About Eden Encore"
+msgstr "À propos d'Eden Encore"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Anti-aliasing"
+msgstr "Anticrénelage"
+
+#: pe/ui/settings.cpp
+msgid "ANTI-ALIASING"
+msgstr "ANTICRÉNELAGE"
+
+#: pe/ui/settings.cpp
+msgid "Anti-aliasing smooths jagged edges. None is fastest; FXAA is light; SMAA prioritizes image quality."
+msgstr "L’anticrénelage lisse les contours. Aucun est le plus rapide ; FXAA est léger ; SMAA privilégie la qualité d’image."
+
+#: pe/ui/settings.cpp
+msgid "Bilinear is the lightest default. AMD FSR is most useful when rendering below the TV output size."
+msgstr "Bilinéaire est le réglage le plus léger. AMD FSR est surtout utile lorsque le rendu est inférieur à la résolution de sortie TV."
+
+#: pe/ui/library.cpp
+msgid "Bilinear is the lightest default. AMD FSR is useful when rendering below the TV output size."
+msgstr "Bilinéaire est le réglage le plus léger. AMD FSR est utile lorsque le rendu est inférieur à la résolution de sortie TV."
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Button mapping"
+msgstr "Attribution des touches"
+
+#: pe/ui/settings.cpp
+msgid "BUTTON MAPPING"
+msgstr "ATTRIBUTION DES TOUCHES"
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping reset to global settings."
+msgstr "Attribution des touches réinitialisée sur les réglages globaux."
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping reset to the active profile."
+msgstr "Attribution des touches réinitialisée selon le profil actif."
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping saved."
+msgstr "Touches enregistrées."
+
+#: pe/ui/settings.cpp
+msgid "BUTTON PROFILE"
+msgstr "PROFIL DE TOUCHES"
+
+#: pe/ui/settings.cpp
+msgid "Button profile"
+msgstr "Profil de touches"
+
+#: pe/ui/launcher.cpp
+msgid "Cancel"
+msgstr "Annuler"
+
+#: pe/ui/launcher.cpp
+msgid "Change console mode for this game?"
+msgstr "Changer le mode console de ce jeu ?"
+
+#: pe/ui/browse.cpp
+msgid "Choose one root for keys, firmware, games, updates and mods"
+msgstr "Choisissez une racine unique pour les clés, le firmware, les jeux, les mises à jour et les mods"
+
+#: pe/ui/mapping.cpp
+msgid "Circle"
+msgstr "Rond"
+
+#: pe/ui/settings.cpp
+msgid "Clear"
+msgstr "Vider"
+
+#: pe/ui/launcher.cpp
+msgid "Confirm"
+msgstr "Confirmer"
+
+#: pe/ui/launcher.cpp
+msgid "Confirm this action?"
+msgstr "Confirmer cette action ?"
+
+#: pe/ui/home.cpp
+msgid "Controller mapping"
+msgstr "Attribution des touches"
+
+#: pe/ui/settings.cpp
+msgid "Controller profile: {0}"
+msgstr "Profil de manette : {0}"
+
+#: pe/ui/home.cpp
+msgid "Controllers"
+msgstr "Manettes"
+
+#: pe/ui/browse.cpp
+msgid "Could not save the storage root. Please try again."
+msgstr "Impossible d'enregistrer la racine de stockage. Réessayez."
+
+#: pe/ui/mapping.cpp
+msgid "Create"
+msgstr "Create"
+
+#: pe/ui/mapping.cpp
+msgid "Cross"
+msgstr "Croix"
+
+#: pe/ui/settings.cpp, settings_store.h
+msgid "Custom"
+msgstr "Personnalisé"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Custom PS5"
+msgstr "PS5 personnalisé"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Custom Switch"
+msgstr "Switch personnalisé"
+
+#: pe/ui/settings.cpp
+msgid "Customize"
+msgstr "Personnaliser"
+
+#: pe/ui/settings.cpp
+msgid "Customize every guest button. The profile automatically becomes Custom PS5 or Custom Switch."
+msgstr "Personnalisez chaque touche du jeu. Le profil devient automatiquement PS5 personnalisé ou Switch personnalisé."
+
+#: pe/ui/settings.cpp
+msgid "DATA"
+msgstr "DONNÉES"
+
+#: pe/ui/settings.cpp
+msgid "Data: {0}"
+msgstr "Données : {0}"
+
+#: pe/ui/settings.cpp
+msgid "DETAILED LOGGING"
+msgstr "JOURNALISATION DÉTAILLÉE"
+
+#: pe/ui/library.cpp
+msgid "Docked can improve graphics but may cost performance; Handheld is lighter for demanding games."
+msgstr "Le mode TV peut améliorer les graphismes mais coûter en performances ; le mode portable est plus léger pour les jeux exigeants."
+
+#: pe/ui/home.cpp
+msgid "Done"
+msgstr "Terminé"
+
+#: pe/ui/settings.cpp
+msgid "DualSense mapping, calibration, vibration and shortcuts."
+msgstr "Attribution DualSense, calibrage, vibrations et raccourcis."
+
+#: pe/ui/browse.cpp
+msgid "Eden Encore builds on the proven ProsperoEden 0.40 PS5 base for firmware 13.60, with the Eden core, safer recovery, and targeted compatibility, performance and TV-first UX improvements."
+msgstr "Eden Encore s'appuie sur la base PS5 éprouvée de ProsperoEden 0.40 pour le firmware 13.60, avec le cœur Eden, une récupération plus sûre et des améliorations ciblées de compatibilité, de performances et d'interface TV."
+
+#: pe/ui/home.cpp
+msgid "Edit"
+msgstr "Modifier"
+
+#: pe/ui/settings.cpp
+msgid "Edit custom mapping"
+msgstr "Modifier les touches"
+
+#: pe/ui/browse.cpp
+msgid "Encore uses the same keys, firmware, roms, updates and mods folders under every storage root."
+msgstr "Encore utilise les mêmes dossiers keys, firmware, roms, updates et mods sous chaque racine de stockage."
+
+#: eden_services.cpp
+msgid "Export failed. Check that the storage root can be written."
+msgstr "Échec de l'export. Vérifiez que la racine de stockage est accessible en écriture."
+
+#: pe/ui/settings.cpp
+msgid "FILESYSTEM"
+msgstr "SYSTÈME DE FICHIERS"
+
+#: pe/ui/settings.cpp
+msgid "Final app output size. Choose 1080p for lower memory use, 1440p for balance, or 2160p for maximum output detail."
+msgstr "Taille finale de l'image envoyée par l'application. Choisissez 1080p pour réduire l'usage mémoire, 1440p pour un bon équilibre ou 2160p pour un maximum de détails en sortie."
+
+#: pe/ui/settings.cpp
+msgid "Fixed Encore folder structure"
+msgstr "Structure de dossiers Encore fixe"
+
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "FSR sharpness"
+msgstr "Netteté FSR"
+
+#: pe/ui/settings.cpp
+msgid "FSR SHARPNESS"
+msgstr "NETTETÉ FSR"
+
+#: pe/ui/settings.cpp
+msgid "FSR sharpness changes detail recovery only when AMD FSR is selected. Lower it if the picture looks grainy or over-sharpened."
+msgstr "La netteté FSR agit uniquement avec AMD FSR. Réduisez-la si l’image paraît granuleuse ou trop accentuée."
+
+#: settings_store.h
+msgid "FXAA"
+msgstr "FXAA"
+
+#: pe/ui/settings.cpp
+msgid "Game render scale follows the selected profile. Lower it for performance or memory; raise it only when a game has headroom."
+msgstr "L'échelle de rendu du jeu suit le profil sélectionné. Réduisez-la pour gagner en performances ou en mémoire ; augmentez-la seulement si le jeu a de la marge."
+
+#: pe/ui/settings.cpp
+msgid "GAME RESOLUTION"
+msgstr "RÉSOLUTION DU JEU"
+
+#: pe/ui/settings.cpp
+msgid "Game resolution"
+msgstr "Résolution du jeu"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp
+msgid "Global ({0})"
+msgstr "Global ({0})"
+
+#: pe/ui/mapping.cpp
+msgid "Global controller profile: {0}"
+msgstr "Profil de manette global : {0}"
+
+#: pe/ui/settings.cpp
+msgid "Health and storage tools. Cache cleanup never removes saves, settings, keys or games."
+msgstr "Outils d'état et de stockage. Le nettoyage du cache ne supprime jamais les sauvegardes, réglages, clés ni jeux."
+
+#: settings_store.h
+msgid "High"
+msgstr "Haute"
+
+#: pe/ui/launcher.cpp
+msgid "Home"
+msgstr "Accueil"
+
+#: pe/ui/browse.cpp
+msgid "Internal storage"
+msgstr "Stockage interne"
+
+#: pe/ui/browse.cpp
+msgid "Internal storage saved. Reopen Encore to use it."
+msgstr "Stockage interne enregistré. Rouvrez Encore pour l'utiliser."
+
+#: pe/ui/home.cpp
+msgid "Play"
+msgstr "Jouer"
+
+#: pe/ui/settings.cpp
+msgid "LAYOUT"
+msgstr "STRUCTURE"
+
+#: pe/ui/library.cpp
+msgid "Left/right: Global, PlayStation or Switch for this game; Cross: edit individual buttons."
+msgstr "Gauche/droite : global, PlayStation ou Switch pour ce jeu ; Croix : personnaliser les touches."
+
+#: pe/ui/mapping.cpp
+msgid "Left stick press"
+msgstr "Clic stick gauche"
+
+#: pe/ui/settings.cpp
+msgid "LOGS"
+msgstr "JOURNAUX"
+
+#: settings_store.h
+msgid "Minimum"
+msgstr "Minimum"
+
+#: pe/ui/settings.cpp
+msgid "Minimum reduces GPU load and may use lower GPU accuracy for speed. Recommended balances quality and stability. High and Ultra raise image quality when the game has headroom."
+msgstr "Minimum réduit la charge GPU et peut utiliser une précision GPU plus faible pour gagner en vitesse. Recommandé équilibre qualité et stabilité. Haute et Ultra améliorent la qualité d'image lorsque le jeu a suffisamment de marge."
+
+#: pe/ui/library.cpp
+msgid "Minimum, Recommended, High and Ultra apply the title-aware Encore profile. Manual changes become Custom for this game."
+msgstr "Minimum, Recommandé, Haute et Ultra appliquent le profil Encore adapté au jeu. Les modifications manuelles passent ce jeu en Personnalisé."
+
+#: pe/ui/settings.cpp
+msgid "One root for keys, firmware, games, updates, mods and transfers."
+msgstr "Une seule racine pour les clés, le firmware, les jeux, les mises à jour, les mods et les transferts."
+
+#: pe/ui/home.cpp
+msgid "Open quick settings"
+msgstr "Ouvrir les paramètres rapides"
+
+#: pe/ui/home.cpp
+msgid "Open settings"
+msgstr "Ouvrir les paramètres"
+
+#: pe/ui/home.cpp
+msgid "Open storage"
+msgstr "Ouvrir le stockage"
+
+#: pe/ui/library.cpp
+msgid "Open the per-game DualSense mapping. Global uses Settings > Controls; Custom overrides it only for this game."
+msgstr "Ouvre l’attribution DualSense propre à ce jeu. Global utilise Réglages > Contrôles ; Personnalisé la remplace uniquement pour ce jeu."
+
+#: pe/ui/mapping.cpp
+msgid "Options"
+msgstr "Options"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "PlayStation"
+msgstr "PlayStation"
+
+#: pe/ui/settings.cpp
+msgid "PlayStation Auto keeps Cross/Circle menu semantics while adapting gameplay to physical Switch positions. Switch stays fixed; editing any button creates a custom profile."
+msgstr "PlayStation Auto conserve Croix/Rond dans les menus tout en adaptant le gameplay aux positions physiques Switch. Switch reste fixe ; modifier une touche crée un profil personnalisé."
+
+#: pe/ui/settings.cpp
+msgid "Preset"
+msgstr "Préréglage"
+
+#: pe/ui/browse.cpp
+msgid "PS5 13.60 FORK"
+msgstr "FORK PS5 13.60"
+
+#: pe/ui/home.cpp
+msgid "QUICK SETTINGS"
+msgstr "PARAMÈTRES RAPIDES"
+
+#: pe/ui/home.cpp
+msgid "Quick settings"
+msgstr "Paramètres rapides"
+
+#: settings_store.h
+msgid "Recommended"
+msgstr "Recommandé"
+
+#: pe/ui/mapping.cpp
+msgid "Reset"
+msgstr "Réinitialiser"
+
+#: pe/ui/launcher.cpp
+msgid "Reset controller mapping?"
+msgstr "Réinitialiser les touches ?"
+
+#: pe/ui/launcher.cpp
+msgid "Reset this game's custom settings?"
+msgstr "Réinitialiser les paramètres personnalisés de ce jeu ?"
+
+#: pe/ui/library.cpp
+msgid "Resolution follows the selected title-aware profile. Lower it for performance or memory; raise it only when the title has headroom."
+msgstr "La résolution suit le profil Encore adapté au jeu. Réduisez-la pour gagner en performances ou en mémoire ; augmentez-la seulement si le jeu a de la marge."
+
+#: pe/ui/launcher.cpp
+msgid "Restore default settings?"
+msgstr "Rétablir les paramètres par défaut ?"
+
+#: pe/ui/mapping.cpp
+msgid "Right stick press"
+msgstr "Clic stick droit"
+
+#: eden_services.cpp
+msgid "ROM missing from the storage root"
+msgstr "ROM absente de la racine de stockage"
+
+#: pe/ui/settings.cpp
+msgid "ROOT"
+msgstr "RACINE"
+
+#: pe/ui/settings.cpp
+msgid "Runtime health, storage and recovery tools."
+msgstr "État d'exécution, stockage et outils de récupération."
+
+#: pe/ui/library.cpp
+msgid "Safe launch"
+msgstr "Lancement sûr"
+
+#: eden_services.cpp, pe/ui/browse.cpp
+msgid "Sandbox only"
+msgstr "Sandbox uniquement"
+
+#: pe/ui/home.cpp
+msgid "SELECTED GAME"
+msgstr "JEU SÉLECTIONNÉ"
+
+#: eden_services.cpp
+msgid "Setup required: {0} Open Settings, Storage to choose the root that holds the standard keys, firmware and roms folders (or add the files to {1}), then reopen Encore."
+msgstr "Configuration requise : {0} Ouvrez Réglages, Stockage pour choisir la racine contenant les dossiers standard keys, firmware et roms (ou ajoutez les fichiers dans {1}), puis rouvrez Encore."
+
+#: pe/ui/settings.cpp
+msgid "Shows live FPS while playing. Off is cleaner for normal use; Touchpad + R1 toggles it at any time."
+msgstr "Affiche les FPS en direct pendant le jeu. Désactivé est plus propre au quotidien ; Touchpad + R1 permet de le basculer à tout moment."
+
+#: settings_store.h
+msgid "SMAA"
+msgstr "SMAA"
+
+#: eden_services.cpp
+msgid "Some cache files could not be removed."
+msgstr "Certains fichiers de cache n'ont pas pu être supprimés."
+
+#: pe/ui/mapping.cpp
+msgid "Square"
+msgstr "Carré"
+
+#: pe/ui/settings.cpp
+msgid "STICK DEADZONE"
+msgstr "ZONE MORTE DES STICKS"
+
+#: pe/ui/settings.cpp
+msgid "Stick deadzone"
+msgstr "Zone morte des sticks"
+
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/settings.cpp
+msgid "Storage"
+msgstr "Stockage"
+
+#: pe/ui/settings.cpp
+msgid "STORAGE"
+msgstr "STOCKAGE"
+
+#: pe/ui/browse.cpp
+msgid "Storage root saved. Reopen Encore to use it."
+msgstr "Racine de stockage enregistrée. Rouvrez Encore pour l'utiliser."
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Switch"
+msgstr "Switch"
+
+#: pe/ui/home.cpp
+msgid "Switch card"
+msgstr "Changer de carte"
+
+#: pe/ui/home.cpp
+msgid "System"
+msgstr "Système"
+
+#: pe/ui/browse.cpp
+msgid "Thanks to the whole PS5 homebrew community and to every developer whose drivers, tools and libraries make Eden Encore possible."
+msgstr "Merci à toute la communauté homebrew PS5 et à chaque développeur dont les pilotes, outils et bibliothèques rendent Eden Encore possible."
+
+#: pe/ui/browse.cpp
+msgid "THIS ROOT"
+msgstr "CETTE RACINE"
+
+#: pe/ui/mapping.cpp
+msgid "Touchpad"
+msgstr "Pavé tactile"
+
+#: pe/ui/mapping.cpp
+msgid "Triangle"
+msgstr "Triangle"
+
+#: pe/ui/settings.cpp
+msgid "Turns DualSense vibration on or off for games."
+msgstr "Active ou désactive les vibrations DualSense dans les jeux."
+
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "TV output"
+msgstr "Sortie TV"
+
+#: pe/ui/settings.cpp
+msgid "TV OUTPUT"
+msgstr "SORTIE TV"
+
+#: settings_store.h
+msgid "Ultra"
+msgstr "Ultra"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp
+msgid "Unknown"
+msgstr "Inconnu"
+
+#: pe/ui/browse.cpp
+msgid "Use extracted firmware NCA files. Choose the root in Settings, Storage; restart the app after changing it."
+msgstr "Utilisez des fichiers NCA de firmware extraits. Choisissez la racine dans Réglages, Stockage ; redémarrez l'application après l'avoir modifiée."
+
+#: pe/ui/browse.cpp
+msgid "Use this root"
+msgstr "Utiliser cette racine"
+
+#: pe/ui/settings.cpp
+msgid "VIBRATION STRENGTH"
+msgstr "INTENSITÉ DES VIBRATIONS"
+
+#: pe/ui/settings.cpp
+msgid "Vibration strength"
+msgstr "Intensité des vibrations"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Video preset"
+msgstr "Profil vidéo"
+
+#: pe/ui/settings.cpp
+msgid "VIDEO PRESET"
+msgstr "PRÉRÉGLAGE VIDÉO"
+
+#: pe/ui/settings.cpp
+msgid "Vulkan is recommended on PS5. Use OpenGL only as a fallback for a game with Vulkan issues."
+msgstr "Vulkan est recommandé sur PS5. Utilisez OpenGL seulement en solution de repli pour un jeu ayant des problèmes avec Vulkan."
+
+#: pe/ui/library.cpp
+msgid "Vulkan is recommended on PS5. Use OpenGL only as a fallback for a title with Vulkan issues."
+msgstr "Vulkan est recommandé sur PS5. Utilisez OpenGL seulement en solution de repli pour un jeu ayant des problèmes avec Vulkan."
+
+#: pe/ui/library.cpp
+msgid "Loading game library..."
+msgstr "Chargement des jeux..."
+
+#: pe/ui/library.cpp
+msgid "Could not load game list. Please try again."
+msgstr "Impossible de charger la liste des jeux. Réessayez."
+
+#: pe/ui/library.cpp
+msgid "Could not load game library. Reopen Encore to retry."
+msgstr "Impossible de charger la bibliothèque de jeux. Relancez Encore pour réessayer."
+
+#: pe/ui/library.cpp
+msgid "Game library unavailable"
+msgstr "Bibliothèque de jeux indisponible"
+
+#: pe/ui/home.cpp
+msgid "Quit"
+msgstr "Quitter"
+
+#: pe/ui/launcher.cpp
+msgid "Exit Eden Encore"
+msgstr "Quitter Eden Encore"
+
+#: pe/ui/launcher.cpp
+msgid "Exit Eden Encore?"
+msgstr "Quitter Eden Encore ?"
