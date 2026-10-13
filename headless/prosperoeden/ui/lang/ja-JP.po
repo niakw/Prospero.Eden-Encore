@@ -1008,3 +1008,143 @@ msgstr "3x (メモリ非常に多)"
 #: settings_store.h
 msgid "4x (extreme memory)"
 msgstr "4x (メモリ最大)"
+
+#: translated UI setting
+msgid "Anti-aliasing"
+msgstr "アンチエイリアス"
+
+#: translated UI setting
+msgid "Button mapping"
+msgstr "ボタン割り当て"
+
+#: translated UI setting
+msgid "Quick settings"
+msgstr "クイック設定"
+
+#: translated UI setting
+msgid "Storage"
+msgstr "ストレージ"
+
+#: translated UI setting
+msgid "Video preset"
+msgstr "映像プリセット"
+
+#: translated UI setting
+msgid "Game resolution"
+msgstr "ゲーム解像度"
+
+#: translated UI setting
+msgid "TV output"
+msgstr "テレビ出力"
+
+#: translated UI setting
+msgid "Play"
+msgstr "プレイ"
+
+#: translated UI setting
+msgid "Cancel"
+msgstr "キャンセル"
+
+#: translated UI setting
+msgid "Confirm"
+msgstr "決定"
+
+#: translated UI setting
+msgid "Reset"
+msgstr "リセット"
+
+#: translated UI setting
+msgid "Ultra"
+msgstr "ウルトラ"
+
+#: translated UI setting
+msgid "Recommended"
+msgstr "推奨"
+
+#: translated UI setting
+msgid "Minimum"
+msgstr "最小"
+
+#: translated UI setting
+msgid "Home"
+msgstr "ホーム"
+
+#: translated UI setting
+msgid "Clear cache"
+msgstr "キャッシュを削除"
+
+#: translated UI setting
+msgid "Done"
+msgstr "完了"
+
+#: translated UI setting
+msgid "Custom"
+msgstr "カスタム"
+
+#: translated UI setting
+msgid "Controllers"
+msgstr "コントローラー"
+
+#: translated UI setting
+msgid "Quit"
+msgstr "終了"
+
+#: translated UI setting
+msgid "FSR sharpness"
+msgstr "FSRのシャープネス"
+
+#: translated UI setting
+msgid "Stick deadzone"
+msgstr "スティックのデッドゾーン"
+
+#: translated UI setting
+msgid "Vibration strength"
+msgstr "振動の強さ"
+
+#: translated UI setting
+msgid "Preset"
+msgstr "プリセット"
+
+#: translated UI setting
+msgid "Open settings"
+msgstr "設定を開く"
+
+#: translated UI setting
+msgid "ANTI-ALIASING"
+msgstr "アンチエイリアス"
+
+#: translated UI setting
+msgid "BUTTON MAPPING"
+msgstr "ボタン割り当て"
+
+#: translated UI setting
+msgid "QUICK SETTINGS"
+msgstr "クイック設定"
+
+#: translated UI setting
+msgid "STORAGE"
+msgstr "ストレージ"
+
+#: translated UI setting
+msgid "VIDEO PRESET"
+msgstr "映像プリセット"
+
+#: translated UI setting
+msgid "GAME RESOLUTION"
+msgstr "ゲーム解像度"
+
+#: translated UI setting
+msgid "TV OUTPUT"
+msgstr "テレビ出力"
+
+#: translated UI setting
+msgid "FSR SHARPNESS"
+msgstr "FSRのシャープネス"
+
+#: translated UI setting
+msgid "STICK DEADZONE"
+msgstr "スティックのデッドゾーン"
+
+#: translated UI setting
+msgid "VIBRATION STRENGTH"
+msgstr "振動の強さ"

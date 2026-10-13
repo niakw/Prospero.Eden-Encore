@@ -1008,3 +1008,143 @@ msgstr "3x (memori sangat tinggi)"
 #: settings_store.h
 msgid "4x (extreme memory)"
 msgstr "4x (memori ekstrem)"
+
+#: translated UI setting
+msgid "Anti-aliasing"
+msgstr "Anti-aliasing"
+
+#: translated UI setting
+msgid "Button mapping"
+msgstr "Pemetaan tombol"
+
+#: translated UI setting
+msgid "Quick settings"
+msgstr "Pengaturan cepat"
+
+#: translated UI setting
+msgid "Storage"
+msgstr "Penyimpanan"
+
+#: translated UI setting
+msgid "Video preset"
+msgstr "Prasetel video"
+
+#: translated UI setting
+msgid "Game resolution"
+msgstr "Resolusi game"
+
+#: translated UI setting
+msgid "TV output"
+msgstr "Keluaran TV"
+
+#: translated UI setting
+msgid "Play"
+msgstr "Mainkan"
+
+#: translated UI setting
+msgid "Cancel"
+msgstr "Batal"
+
+#: translated UI setting
+msgid "Confirm"
+msgstr "Konfirmasi"
+
+#: translated UI setting
+msgid "Reset"
+msgstr "Atur ulang"
+
+#: translated UI setting
+msgid "Ultra"
+msgstr "Ultra"
+
+#: translated UI setting
+msgid "Recommended"
+msgstr "Direkomendasikan"
+
+#: translated UI setting
+msgid "Minimum"
+msgstr "Minimum"
+
+#: translated UI setting
+msgid "Home"
+msgstr "Beranda"
+
+#: translated UI setting
+msgid "Clear cache"
+msgstr "Hapus cache"
+
+#: translated UI setting
+msgid "Done"
+msgstr "Selesai"
+
+#: translated UI setting
+msgid "Custom"
+msgstr "Kustom"
+
+#: translated UI setting
+msgid "Controllers"
+msgstr "Pengontrol"
+
+#: translated UI setting
+msgid "Quit"
+msgstr "Keluar"
+
+#: translated UI setting
+msgid "FSR sharpness"
+msgstr "Ketajaman FSR"
+
+#: translated UI setting
+msgid "Stick deadzone"
+msgstr "Zona mati stik"
+
+#: translated UI setting
+msgid "Vibration strength"
+msgstr "Kekuatan getaran"
+
+#: translated UI setting
+msgid "Preset"
+msgstr "Prasetel"
+
+#: translated UI setting
+msgid "Open settings"
+msgstr "Buka pengaturan"
+
+#: translated UI setting
+msgid "ANTI-ALIASING"
+msgstr "ANTI-ALIASING"
+
+#: translated UI setting
+msgid "BUTTON MAPPING"
+msgstr "PEMETAAN TOMBOL"
+
+#: translated UI setting
+msgid "QUICK SETTINGS"
+msgstr "PENGATURAN CEPAT"
+
+#: translated UI setting
+msgid "STORAGE"
+msgstr "PENYIMPANAN"
+
+#: translated UI setting
+msgid "VIDEO PRESET"
+msgstr "PRASETEL VIDEO"
+
+#: translated UI setting
+msgid "GAME RESOLUTION"
+msgstr "RESOLUSI GAME"
+
+#: translated UI setting
+msgid "TV OUTPUT"
+msgstr "KELUARAN TV"
+
+#: translated UI setting
+msgid "FSR SHARPNESS"
+msgstr "KETAJAMAN FSR"
+
+#: translated UI setting
+msgid "STICK DEADZONE"
+msgstr "ZONA MATI STIK"
+
+#: translated UI setting
+msgid "VIBRATION STRENGTH"
+msgstr "KEKUATAN GETARAN"

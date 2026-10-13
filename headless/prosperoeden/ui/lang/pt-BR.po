@@ -1008,3 +1008,143 @@ msgstr "3x (memória muito elevada)"
 #: settings_store.h
 msgid "4x (extreme memory)"
 msgstr "4x (memória extrema)"
+
+#: translated UI setting
+msgid "Anti-aliasing"
+msgstr "Suavização de serrilhado"
+
+#: translated UI setting
+msgid "Button mapping"
+msgstr "Mapeamento de botões"
+
+#: translated UI setting
+msgid "Quick settings"
+msgstr "Configurações rápidas"
+
+#: translated UI setting
+msgid "Storage"
+msgstr "Armazenamento"
+
+#: translated UI setting
+msgid "Video preset"
+msgstr "Predefinição de vídeo"
+
+#: translated UI setting
+msgid "Game resolution"
+msgstr "Resolução do jogo"
+
+#: translated UI setting
+msgid "TV output"
+msgstr "Saída de TV"
+
+#: translated UI setting
+msgid "Play"
+msgstr "Jogar"
+
+#: translated UI setting
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: translated UI setting
+msgid "Confirm"
+msgstr "Confirmar"
+
+#: translated UI setting
+msgid "Reset"
+msgstr "Redefinir"
+
+#: translated UI setting
+msgid "Ultra"
+msgstr "Ultra"
+
+#: translated UI setting
+msgid "Recommended"
+msgstr "Recomendado"
+
+#: translated UI setting
+msgid "Minimum"
+msgstr "Mínimo"
+
+#: translated UI setting
+msgid "Home"
+msgstr "Início"
+
+#: translated UI setting
+msgid "Clear cache"
+msgstr "Limpar cache"
+
+#: translated UI setting
+msgid "Done"
+msgstr "Concluído"
+
+#: translated UI setting
+msgid "Custom"
+msgstr "Personalizado"
+
+#: translated UI setting
+msgid "Controllers"
+msgstr "Controles"
+
+#: translated UI setting
+msgid "Quit"
+msgstr "Sair"
+
+#: translated UI setting
+msgid "FSR sharpness"
+msgstr "Nitidez do FSR"
+
+#: translated UI setting
+msgid "Stick deadzone"
+msgstr "Zona morta do analógico"
+
+#: translated UI setting
+msgid "Vibration strength"
+msgstr "Intensidade da vibração"
+
+#: translated UI setting
+msgid "Preset"
+msgstr "Predefinição"
+
+#: translated UI setting
+msgid "Open settings"
+msgstr "Abrir configurações"
+
+#: translated UI setting
+msgid "ANTI-ALIASING"
+msgstr "SUAVIZAÇÃO DE SERRILHADO"
+
+#: translated UI setting
+msgid "BUTTON MAPPING"
+msgstr "MAPEAMENTO DE BOTÕES"
+
+#: translated UI setting
+msgid "QUICK SETTINGS"
+msgstr "CONFIGURAÇÕES RÁPIDAS"
+
+#: translated UI setting
+msgid "STORAGE"
+msgstr "ARMAZENAMENTO"
+
+#: translated UI setting
+msgid "VIDEO PRESET"
+msgstr "PREDEFINIÇÃO DE VÍDEO"
+
+#: translated UI setting
+msgid "GAME RESOLUTION"
+msgstr "RESOLUÇÃO DO JOGO"
+
+#: translated UI setting
+msgid "TV OUTPUT"
+msgstr "SAÍDA DE TV"
+
+#: translated UI setting
+msgid "FSR SHARPNESS"
+msgstr "NITIDEZ DO FSR"
+
+#: translated UI setting
+msgid "STICK DEADZONE"
+msgstr "ZONA MORTA DO ANALÓGICO"
+
+#: translated UI setting
+msgid "VIBRATION STRENGTH"
+msgstr "INTENSIDADE DA VIBRAÇÃO"

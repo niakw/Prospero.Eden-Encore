@@ -1008,3 +1008,143 @@ msgstr "3x (memoria molto elevata)"
 #: settings_store.h
 msgid "4x (extreme memory)"
 msgstr "4x (memoria estrema)"
+
+#: translated UI setting
+msgid "Anti-aliasing"
+msgstr "Antialiasing"
+
+#: translated UI setting
+msgid "Button mapping"
+msgstr "Mappatura pulsanti"
+
+#: translated UI setting
+msgid "Quick settings"
+msgstr "Impostazioni rapide"
+
+#: translated UI setting
+msgid "Storage"
+msgstr "Archiviazione"
+
+#: translated UI setting
+msgid "Video preset"
+msgstr "Profilo video"
+
+#: translated UI setting
+msgid "Game resolution"
+msgstr "Risoluzione gioco"
+
+#: translated UI setting
+msgid "TV output"
+msgstr "Uscita TV"
+
+#: translated UI setting
+msgid "Play"
+msgstr "Gioca"
+
+#: translated UI setting
+msgid "Cancel"
+msgstr "Annulla"
+
+#: translated UI setting
+msgid "Confirm"
+msgstr "Conferma"
+
+#: translated UI setting
+msgid "Reset"
+msgstr "Ripristina"
+
+#: translated UI setting
+msgid "Ultra"
+msgstr "Ultra"
+
+#: translated UI setting
+msgid "Recommended"
+msgstr "Consigliato"
+
+#: translated UI setting
+msgid "Minimum"
+msgstr "Minimo"
+
+#: translated UI setting
+msgid "Home"
+msgstr "Home"
+
+#: translated UI setting
+msgid "Clear cache"
+msgstr "Svuota cache"
+
+#: translated UI setting
+msgid "Done"
+msgstr "Fine"
+
+#: translated UI setting
+msgid "Custom"
+msgstr "Personalizzato"
+
+#: translated UI setting
+msgid "Controllers"
+msgstr "Controller"
+
+#: translated UI setting
+msgid "Quit"
+msgstr "Esci"
+
+#: translated UI setting
+msgid "FSR sharpness"
+msgstr "Nitidezza FSR"
+
+#: translated UI setting
+msgid "Stick deadzone"
+msgstr "Zona morta levetta"
+
+#: translated UI setting
+msgid "Vibration strength"
+msgstr "Intensità vibrazione"
+
+#: translated UI setting
+msgid "Preset"
+msgstr "Preimpostazione"
+
+#: translated UI setting
+msgid "Open settings"
+msgstr "Apri impostazioni"
+
+#: translated UI setting
+msgid "ANTI-ALIASING"
+msgstr "ANTIALIASING"
+
+#: translated UI setting
+msgid "BUTTON MAPPING"
+msgstr "MAPPATURA PULSANTI"
+
+#: translated UI setting
+msgid "QUICK SETTINGS"
+msgstr "IMPOSTAZIONI RAPIDE"
+
+#: translated UI setting
+msgid "STORAGE"
+msgstr "ARCHIVIAZIONE"
+
+#: translated UI setting
+msgid "VIDEO PRESET"
+msgstr "PROFILO VIDEO"
+
+#: translated UI setting
+msgid "GAME RESOLUTION"
+msgstr "RISOLUZIONE GIOCO"
+
+#: translated UI setting
+msgid "TV OUTPUT"
+msgstr "USCITA TV"
+
+#: translated UI setting
+msgid "FSR SHARPNESS"
+msgstr "NITIDEZZA FSR"
+
+#: translated UI setting
+msgid "STICK DEADZONE"
+msgstr "ZONA MORTA LEVETTA"
+
+#: translated UI setting
+msgid "VIBRATION STRENGTH"
+msgstr "INTENSITÀ VIBRAZIONE"

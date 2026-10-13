@@ -1008,3 +1008,143 @@ msgstr "3x (메모리 매우 높음)"
 #: settings_store.h
 msgid "4x (extreme memory)"
 msgstr "4x (메모리 극대)"
+
+#: translated UI setting
+msgid "Anti-aliasing"
+msgstr "계단 현상 제거"
+
+#: translated UI setting
+msgid "Button mapping"
+msgstr "버튼 매핑"
+
+#: translated UI setting
+msgid "Quick settings"
+msgstr "빠른 설정"
+
+#: translated UI setting
+msgid "Storage"
+msgstr "저장 공간"
+
+#: translated UI setting
+msgid "Video preset"
+msgstr "비디오 프리셋"
+
+#: translated UI setting
+msgid "Game resolution"
+msgstr "게임 해상도"
+
+#: translated UI setting
+msgid "TV output"
+msgstr "TV 출력"
+
+#: translated UI setting
+msgid "Play"
+msgstr "플레이"
+
+#: translated UI setting
+msgid "Cancel"
+msgstr "취소"
+
+#: translated UI setting
+msgid "Confirm"
+msgstr "확인"
+
+#: translated UI setting
+msgid "Reset"
+msgstr "초기화"
+
+#: translated UI setting
+msgid "Ultra"
+msgstr "울트라"
+
+#: translated UI setting
+msgid "Recommended"
+msgstr "권장"
+
+#: translated UI setting
+msgid "Minimum"
+msgstr "최소"
+
+#: translated UI setting
+msgid "Home"
+msgstr "홈"
+
+#: translated UI setting
+msgid "Clear cache"
+msgstr "캐시 지우기"
+
+#: translated UI setting
+msgid "Done"
+msgstr "완료"
+
+#: translated UI setting
+msgid "Custom"
+msgstr "사용자 지정"
+
+#: translated UI setting
+msgid "Controllers"
+msgstr "컨트롤러"
+
+#: translated UI setting
+msgid "Quit"
+msgstr "종료"
+
+#: translated UI setting
+msgid "FSR sharpness"
+msgstr "FSR 선명도"
+
+#: translated UI setting
+msgid "Stick deadzone"
+msgstr "스틱 데드존"
+
+#: translated UI setting
+msgid "Vibration strength"
+msgstr "진동 강도"
+
+#: translated UI setting
+msgid "Preset"
+msgstr "프리셋"
+
+#: translated UI setting
+msgid "Open settings"
+msgstr "설정 열기"
+
+#: translated UI setting
+msgid "ANTI-ALIASING"
+msgstr "계단 현상 제거"
+
+#: translated UI setting
+msgid "BUTTON MAPPING"
+msgstr "버튼 매핑"
+
+#: translated UI setting
+msgid "QUICK SETTINGS"
+msgstr "빠른 설정"
+
+#: translated UI setting
+msgid "STORAGE"
+msgstr "저장 공간"
+
+#: translated UI setting
+msgid "VIDEO PRESET"
+msgstr "비디오 프리셋"
+
+#: translated UI setting
+msgid "GAME RESOLUTION"
+msgstr "게임 해상도"
+
+#: translated UI setting
+msgid "TV OUTPUT"
+msgstr "TV 출력"
+
+#: translated UI setting
+msgid "FSR SHARPNESS"
+msgstr "FSR 선명도"
+
+#: translated UI setting
+msgid "STICK DEADZONE"
+msgstr "스틱 데드존"
+
+#: translated UI setting
+msgid "VIBRATION STRENGTH"
+msgstr "진동 강도"
