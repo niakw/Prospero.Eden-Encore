@@ -21,6 +21,10 @@ header=(root/"vendor/encore-active/eden-vulkan/include/video_core/renderer_vulka
 native_main=(root/"headless/main.cpp").read_text()
 render=(root/"vendor/encore-active/eden-vulkan/vulkan_renderer.cpp").read_text()
 assert "MAX_FRAMES_IN_FLIGHT = 7;" in active
+assert "image_count = std::min<size_t>(swapchain.GetImageCount(), MAX_FRAMES_IN_FLIGHT);" in active
+swap=(root/"vendor/encore-active/eden-vulkan/vulkan_swapchain.cpp").read_text()
+assert "requested_image_count = (std::max)(requested_image_count, 3U);" in swap
+assert "image_count = static_cast<u32>(images.size());" in swap
 assert "std::jthread present_thread;" in header
 assert "Settings::values.async_presentation = backend == Eden::GraphicsBackend::Vulkan;" in native_main
 assert "SCOPE_EXIT {\n        render_window.OnFrameDisplayed();" in render
@@ -123,8 +127,8 @@ struct Outcome {
   double callback_max_ms{},present_gap_max_ms{},age_max_ms{};
   unsigned callback_count{},present_count{};
 };
-Outcome Run(unsigned mode){
-  PresentManager manager{7,mode};
+Outcome Run(unsigned mode,unsigned pool){
+  PresentManager manager{pool,mode};
   constexpr unsigned count=150;
   constexpr auto cadence=std::chrono::microseconds(33333);
   std::vector<Tick> callbacks;
@@ -152,11 +156,12 @@ Outcome Run(unsigned mode){
   return out;
 }
 int main(){
-  const auto base=Run(0);
-  const auto intermittent=Run(1);
-  const auto oversize=Run(2);
-  for(auto [label,v]:{std::pair{"baseline",base},std::pair{"130ms_present_delay",intermittent},
-                       std::pair{"350ms_pool_exhaustion",oversize}}){
+  const auto base3=Run(0,3);
+  const auto short3=Run(1,3);
+  const auto short7=Run(1,7);
+  const auto oversize7=Run(2,7);
+  for(auto [label,v]:{std::pair{"baseline_pool3",base3},std::pair{"130ms_pool3",short3},
+                       std::pair{"130ms_pool7",short7},std::pair{"350ms_pool7",oversize7}}){
     std::printf("%s callbacks=%u presented=%u max_callback_gap_ms=%.2f "
                 "max_present_gap_ms=%.2f max_async_age_ms=%.2f\n",label,
                 v.callback_count,v.present_count,v.callback_max_ms,
@@ -165,14 +170,16 @@ int main(){
   }
   // The tested 130ms intermittent present delay can remain INVISIBLE
   // to upstream callbacks, exactly as normal 30 FPS telemetry would.
-  assert(intermittent.present_gap_max_ms>100.0);
-  assert(intermittent.age_max_ms>125.0);
-  assert(intermittent.callback_max_ms<50.0);
-  // Sustained/350ms presentation bottleneck should eventually cause
-  // free-frame exhaustion and affect the callback FPS as well.
-  assert(oversize.callback_max_ms>60.0);
-  assert(base.present_gap_max_ms<80.0);
-  std::puts("PASS: real native async present worker replay demonstrates hidden judder");
+  assert(short3.present_gap_max_ms>100.0);
+  assert(short7.present_gap_max_ms>100.0);
+  assert(short7.age_max_ms>125.0);
+  // The actual swapchain image count is driver-returned. A small pool can
+  // propagate the same delay upstream, a 7-image pool may conceal it.
+  assert(short3.callback_max_ms>55.0);
+  assert(short7.callback_max_ms<50.0);
+  assert(oversize7.callback_max_ms>60.0);
+  assert(base3.present_gap_max_ms<80.0);
+  std::puts("PASS: true present thread with 3-vs-7 frames exposes the capacity dependency");
 }
 """
 source=source.replace("__PRODUCTION_METHODS__","\n".join(methods))
