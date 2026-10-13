@@ -86,7 +86,8 @@ replace("      } else {\n         fprintf(stderr, \"wsi/videoout: 119.88 Hz %s (
 replace('   wsi->base.get_support =', '   videoout_ref();\n\n   wsi->base.get_support =')
 replace('   if (wsi)\n      vk_free(alloc, wsi);',
         '   if (wsi) {\n      videoout_unref();\n      vk_free(alloc, wsi);\n      wsi_device->wsi[VK_ICD_WSI_PLATFORM_DISPLAY] = NULL;\n   }')
-# R440: mpereiraesaa/PS5_Mesa f2ee389 (hardware/prospero-win tested).
+# R440: mpereiraesaa/PS5_Mesa f2ee389 (author's host-model tested).
+# PS5 issue was observed, but this precise new WSI adaptation is not yet hardware-qualified.
 # Retire only a never-presented hidden/probe swapchain when replacing a surface.
 # Preserve Encore's multi-owner VideoOut and existing 120 Hz restore behavior.
 for old, new in [

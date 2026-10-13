@@ -28,6 +28,7 @@ def window(n: int, new: bool) -> str:
         items.append(f"EDEN_MEMORY_LIVE frame={20+n} largest_last_confirmed={33554432*n} short={int(n==2)}")
         items.append(f"EDEN_JIT_SPARSE_MEMORY phase=dev-profile reserved={134217728} committed={2097152*n}")
         items.append(f"EDEN_DEV_SNAPSHOT_COST mono_ns={123456789*n} elapsed_ns={3500000*n}")
+        items.append(f"EDEN_VULKAN_GC_SCAN frame={20+n} visits={200*n} skipped={150*n} evicted={10*n} cap=8192")
     return "\n".join(items) + "\n"
 
 with tempfile.TemporaryDirectory(prefix="eden-ps5-window-test-") as directory:
@@ -39,6 +40,8 @@ with tempfile.TemporaryDirectory(prefix="eden-ps5-window-test-") as directory:
     assert old.windows() == new.windows() == 2
     assert not old.memory_live and not old.sparse and not old.snapshot_cost
     assert len(new.memory_live) == len(new.sparse) == len(new.snapshot_cost) == 2
+    assert not old.gc_scan and len(new.gc_scan) == 2
+    assert new.gc_scan[0]['visits'] == 200 and new.gc_scan[1]['evicted'] == 20
     assert max(item["elapsed_ns"] for item in new.snapshot_cost) == 7000000
     assert old.report_window(1)["direct_free_mib"] == -1
     sample = new.report_window(1)
@@ -54,7 +57,7 @@ with tempfile.TemporaryDirectory(prefix="eden-ps5-window-test-") as directory:
         for line in (window(1, True)+window(2, True)).splitlines()
     ), encoding="utf-8")
     wrapped = module.Trace.load(prefixed)
-    assert wrapped.windows() == 2
+    assert wrapped.windows() == 2 and len(wrapped.gc_scan) == 2
     assert wrapped.report_window(1)["jit_blocks"] == sample["jit_blocks"]
     # One missing CPU point cannot be shifted onto the next video sample;
     # summary FPS remains available without fabricated attribution.

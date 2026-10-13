@@ -22,7 +22,7 @@ VALUE = re.compile(r"([A-Za-z_][A-Za-z_0-9]*)=(-?[0-9]+(?:\.[0-9]+)?)")
 # timestamps or logger names. Recognize ONLY real known telemetry markers.
 EVENT = re.compile(
     r"\bEDEN_(?:VULKAN_FRAME|DEV_GPU|DEV_GUEST|PERF_CPU_POINT|PERF_PROGRESS|"
-    r"VULKAN_TEXTURE_BUDGET|JIT_SPARSE_MEMORY|MEMORY_LIVE|DEV_SNAPSHOT_COST)\b"
+    r"VULKAN_TEXTURE_BUDGET|VULKAN_GC_SCAN|JIT_SPARSE_MEMORY|MEMORY_LIVE|DEV_SNAPSHOT_COST)\b"
 )
 
 def read_values(line: str) -> dict[str, float]:
@@ -42,6 +42,7 @@ class Trace:
     snapshot_cost: list[dict[str, float]]
     owner_clock_valid: bool
     cross_thread_clock_valid: bool
+    gc_scan: list[dict[str, float]] = dataclasses.field(default_factory=list)
 
     @classmethod
     def load(cls, filename: Path) -> "Trace":
@@ -55,6 +56,7 @@ class Trace:
         sparse: list[dict[str, float]] = []
         memory_live: list[dict[str, float]] = []
         snapshot_cost: list[dict[str, float]] = []
+        gc_scan: list[dict[str, float]] = []
         for line in lines:
             marker = EVENT.search(line)
             if marker is None:
@@ -74,6 +76,8 @@ class Trace:
                 jit[int(info["core"])].append(info)
             elif line.startswith("EDEN_VULKAN_TEXTURE_BUDGET "):
                 budget.append(read_values(line))
+            elif line.startswith("EDEN_VULKAN_GC_SCAN "):
+                gc_scan.append(read_values(line))
             elif line.startswith("EDEN_JIT_SPARSE_MEMORY phase=dev-profile"):
                 sparse.append(read_values(line))
             elif line.startswith("EDEN_MEMORY_LIVE frame="):
@@ -84,6 +88,7 @@ class Trace:
             filename, frames, gpu, guest, cpu, jit, budget, sparse, memory_live, snapshot_cost,
             any(line.startswith("EDEN_PERF_OWNER_CLOCK_CHECK valid=1 ") for line in lines),
             any(line.startswith("EDEN_PERF_CPU_CLOCK_CHECK valid=1 ") for line in lines),
+            gc_scan=gc_scan,
         )
 
     def windows(self) -> int:
@@ -163,6 +168,14 @@ def print_trace(trace: Trace, prefix: int | None) -> None:
             int(trace.budget[-1].get("expected", 0)),
             int(trace.budget[-1].get("critical", 0)),
             int(max(x.get("memory_short", 0) for x in trace.budget))))
+    if trace.gc_scan:
+        # Samples are emitted every 300 frames. Do not falsely align them to
+        # separately sampled five-second guest/renderer statistics.
+        visited = sum(row.get("visits", 0) for row in trace.gc_scan)
+        skipped = sum(row.get("skipped", 0) for row in trace.gc_scan)
+        evicted = sum(row.get("evicted", 0) for row in trace.gc_scan)
+        print("  GC sampled_runs={} visits={} skipped={} evicted={} (not FPS-window-aligned)".format(
+            len(trace.gc_scan), int(visited), int(skipped), int(evicted)))
     if trace.sparse:
         print("  sparse JIT: committed_peak_MiB={:.1f} virtual_reserved_MiB={:.1f}".format(
             max(x.get("committed", 0) for x in trace.sparse)/(1024**2),
