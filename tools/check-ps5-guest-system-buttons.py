@@ -31,7 +31,7 @@ assert "published_home_edges.fetch_add(1, std::memory_order_relaxed)" in pad
 assert "published_capture_edges.fetch_add(1, std::memory_order_relaxed)" in pad
 assert "create_edges=%llu" in pad
 assert "published_home_edges=%llu published_capture_edges=%llu" in pad
-assert "MappedTo(mapping, pad_create) < 0 && (sample.buttons & kButtonCreate) != 0" in pad
+assert "MappedTo(active_mapping, pad_create) < 0 && (sample.buttons & kButtonCreate) != 0" in pad
 assert "create_free" not in pad
 assert "slot.select_held || slot.select_pulse > 0" in pad
 assert "if (touch && (pressed & (kButtonL1 | kButtonR1 | kButtonOptions)) != 0)" in pad
