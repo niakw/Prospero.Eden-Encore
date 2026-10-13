@@ -62,3 +62,29 @@
 6. Maintain **single** branch `dev/ps5-sparse-jit`; don't create temp branches and don't trigger a new native compilation for audit-only documentation.
 
 **Evidence limits:** External title FPS numbers (GTA IV, HL2, PS5SX2) are not forecasts for FC27. Driver experiments from FW 12.02 / 13.40 cannot automatically be assigned to FW 13.60; host preflight success is not a hardware graphics-quality measurement.
+
+## R440 correction and ecosystem expansion (13 October 2026)
+
+**Acceptance policy:** A properly scoped native result from the upstream author is sufficient to *start porting* a compatible change. Do not demand another user PS5 run before implementation. An author's hardware test cannot certify an Encore-specific integration; source/CI checks and a consolidated later console test still apply. No automatic native build is implied.
+
+### Factual correction to R438
+
+The official Mihawk PS5_Mesa high-frame-rate offer/configure fix **was already ported in R400**: `tools/patch-radv-wsi.py` and `tools/check-ps5-videoout-120hz-offer.py` prove its presence, and the active source reports `supported > 0 && configured == 0`. The manifest remains pinned to the older Mesa commit deliberately. R438's *driver revision comparison* remains worthwhile, but it is wrong to imply that particular WSI 120 Hz fix is still absent.
+
+### Integrated, author-qualified adaptation — Pereira WSI
+
+- Source: [mpereiraesaa/PS5_Mesa f2ee3891](https://github.com/mpereiraesaa/PS5_Mesa/commit/f2ee3891be81f5f36fc1e64ada36e36033bae5e4). His tested Wine/Zink case has a hidden swapchain that never presents and prevents the real window acquiring the display. His host model exercises that takeover, retirement, new presents and release.
+- R440 ports the narrow `presented`/handover logic into the **existing fixed-resolution, single-scanout Encore RADV WSI**, *not* the author's entire variable-size WSI. It also patches the archived generator and checks for conflict both before and after image allocation. The winning swapchain owns presentation; the displaced one is retired; last-owner teardown remains Encore-owned.
+- Gate: `tools/check-ps5-videoout-unpresented-takeover.py`, with state matrix and active-source anchors. This is **source-only**: no claim that FC27 HUD, texture or pause freezes are fixed.
+
+### Further relevant upstreams
+
+- [Swordpdf/ps5-framegen](https://github.com/Swordpdf/ps5-framegen): reusable Vulkan interpolation and guest-tick-based pacing, already exercised in PS5SX2 on ps5vk and RPCS3-PS5 on RADV. A credible later *presentation* enhancement; generated frames do **not** unblock game simulation, HID/HLE waits or source texture corruption. Integrate source and shaders with provenance before wiring to Encore's present queue; do not claim it is active merely by vendoring it.
+- [drakmor/ps5-hwinfo](https://github.com/drakmor/ps5-hwinfo): system CPU clocks and idle-delta load; a payload has different permissions/lifecycle than a title, so cannot simply call every API from `eboot.bin`.
+- [drakmor/ps5-native-gamepad-input-research](https://github.com/drakmor/ps5-native-gamepad-input-research): device-tested `scePadRead` batching/timestamps; Encore `headless/pad.cpp` already consumes each batch, so do not reimplement that.
+- [ArkSama/PS5_RPCS3](https://github.com/ArkSama/PS5_RPCS3): emulation architecture reference; RPCS3 GPL-2.0-only and RetroArch GPL-3.0-or-later distribution restrictions demand separation before copying source.
+- [ArkSama/Unlock-ps5-pro-memory](https://github.com/ArkSama/Unlock-ps5-pro-memory): title attribute3 bit 22 qualifies ~1.19 GiB extra direct pool on **PS5 Pro**, FW13.60, but does not give additional RAM to Encore's base PS5.
+- [EchoStretch](https://github.com/EchoStretch/kstuff-lite), [soniciso1](https://github.com/soniciso1/ps5-linux-archive) and [ntfargo](https://github.com/ntfargo/Relapse-Exploit): useful kernel/loader/firmware evidence, not portable Vulkan or emulator FPS patches by themselves.
+- Mesa outside GitHub: [RADV documentation](https://docs.mesa3d.org/drivers/radv.html) separates application SPIR-V, NIR/ACO compilation, userspace winsys and privileged GPU submission. [Mesa 26.2 release notes](https://docs.mesa3d.org/relnotes/26.2.0.html) include shader/image/format fixes but require cherry-picking onto PS5 fork, not wholesale desktop driver replacement.
+
+**Follow-up priorities:** bounded same-frame simulation/lock/present correlation; descriptor/alias/HUD freshness; independently vetted WSI variable swapchain sizes; controlled native worker scheduling; full optional Swordpdf framegen present path, after the core's stalled frames are identified. Do not block source ports on repeated user tests.
