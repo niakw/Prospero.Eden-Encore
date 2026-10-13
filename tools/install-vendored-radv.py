@@ -55,9 +55,19 @@ LEGACY_COMPILER_SHA256 = {
 }
 
 
+# The last successfully pinned pre-R440 WSI is NOT the old R398 fixture:
+# R400..R439 legitimately modified this file. R446 restored it from cache.
+# Verify the exact original bytes in a checked-in R439 fixture, not a wildcard.
+PRE_R440_COMPILER_SHA256 = {
+    'src/vulkan/wsi/wsi_common_videoout.c': frozenset({
+        '4175fad06454b5c14a2be8045d791deb33fc6034959a7d58b733ed27b22d23b2',
+    }),
+}
+
 def approved_compiler_input(relative: str, compiled_sha: str, raw_sha: str, active_sha: str) -> bool:
     return (compiled_sha in (raw_sha, active_sha) or
-            compiled_sha in LEGACY_COMPILER_SHA256.get(relative, ()))
+            compiled_sha in LEGACY_COMPILER_SHA256.get(relative, ()) or
+            compiled_sha in PRE_R440_COMPILER_SHA256.get(relative, ()))
 
 
 def digest(path: Path) -> str:

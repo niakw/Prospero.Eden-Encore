@@ -77,6 +77,18 @@ with tempfile.TemporaryDirectory(prefix='eden-radv-fork-equivalence-') as tmp:
     for relative in before:
         assert filecmp.cmp(source_stage / relative, ACTIVE / relative, shallow=False), relative
 
+    # R447: cache from a previous R400..R439 native build is verified
+    # byte-for-byte against the source we committed BEFORE Pereira's R440 WSI.
+    # The 4175... hash appeared in R446 and blocked an otherwise valid build.
+    pre_r440 = ROOT / 'tools/fixtures/ps5-r439-wsi-videoout.c'
+    wsi = 'src/vulkan/wsi/wsi_common_videoout.c'
+    assert module.digest(pre_r440) in module.PRE_R440_COMPILER_SHA256[wsi]
+    assert module.approved_compiler_input(
+        wsi, module.digest(pre_r440), module.digest(SOURCE / wsi),
+        module.digest(ACTIVE / wsi))
+    shutil.copy2(pre_r440, source_stage / wsi)
+    module.install(source_stage, None)
+    assert filecmp.cmp(source_stage / wsi, ACTIVE / wsi, shallow=False)
     # Do not quietly clobber unknown source changes in a fresh driver export.
     invalid = source_stage / next(iter(before))
     invalid.write_bytes(b'unexpected unknown upstream revision')
