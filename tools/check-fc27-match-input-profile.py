@@ -16,7 +16,9 @@ assert "void SetGameplayMapping(const ButtonMapping& value)" in device
 assert "has_gameplay_mapping && gameplay_mode ? gameplay_mapping : mapping" in device
 assert "constexpr ButtonMask gameplay_chord = kButtonTouchPad | kButtonSquare;" in pad
 assert "if (gameplay_chord_down && !slot.gameplay_chord_held)" in pad
-assert "slot.gameplay_chord_held = gameplay_chord_down;" in pad
+assert "slot.gameplay_chord_held = gameplay_chord_held;" in pad
+assert "const bool gameplay_chord_held = player == 0" in pad
+assert "const bool gameplay_chord_down = gameplay_chord_held" in pad
 assert "sample.buttons &= ~(kButtonTouchPad | kButtonSquare);" in pad
 assert "EDEN_PAD_GAMEPLAY_PROFILE mode=%s" in pad
 assert "const int pad = active_mapping[game];" in pad

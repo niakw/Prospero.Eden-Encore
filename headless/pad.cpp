@@ -376,8 +376,11 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
         constexpr ButtonMask hud_chord = kButtonTouchPad | kButtonR1;
         constexpr ButtonMask gameplay_chord = kButtonTouchPad | kButtonSquare;
         const auto pressed = sample.buttons;
-        const bool gameplay_chord_down = player == 0 && has_gameplay_mapping && is_usable(raw) &&
-            (pressed & gameplay_chord) == gameplay_chord &&
+        // Latch the PHYSICAL chord for its entire lifetime. Other buttons
+        // arriving while both chord buttons stay down must never re-arm it.
+        const bool gameplay_chord_held = player == 0 && has_gameplay_mapping &&
+            is_usable(raw) && (pressed & gameplay_chord) == gameplay_chord;
+        const bool gameplay_chord_down = gameplay_chord_held &&
             (pressed & (kButtonL1 | kButtonR1 | kButtonOptions | kButtonCross |
                         kButtonCircle | kButtonTriangle)) == 0;
         if (gameplay_chord_down && !slot.gameplay_chord_held) {
@@ -391,8 +394,8 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
             std::fprintf(stderr, "EDEN_PAD_GAMEPLAY_PROFILE mode=%s source=fc27_manual_chord\n",
                          gameplay_mode ? "match" : "menu");
         }
-        slot.gameplay_chord_held = gameplay_chord_down;
-        if (gameplay_chord_down)
+        slot.gameplay_chord_held = gameplay_chord_held;
+        if (gameplay_chord_held)
             sample.buttons &= ~(kButtonTouchPad | kButtonSquare);
 
         // The launcher/menu and HUD shortcuts still work from every controller.
@@ -427,7 +430,7 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
             slot.touch_chord = false;
             slot.touch_polls = 0;
         }
-        if (touch && (pressed & (kButtonL1 | kButtonR1 | kButtonOptions | (gameplay_chord_down ? kButtonSquare : 0))) != 0) {
+        if (touch && (pressed & (kButtonL1 | kButtonR1 | kButtonOptions | (gameplay_chord_held ? kButtonSquare : 0))) != 0) {
             slot.touch_chord = true;
             slot.select_held = false;
         }
