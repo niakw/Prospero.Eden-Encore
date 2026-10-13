@@ -39,8 +39,9 @@ private:
     unsigned frame_slow_streak{}, frame_max_slow_streak{};
     std::array<unsigned, 6> experimental_pacing_bins{};
     // Five-second delta baselines belong to this GraphicsWindow, NOT a static
-    // shared across titles. Read 11 cheap counters at the report boundary.
-    std::array<unsigned long long, 12> frame_pressure_previous{};
+    // shared across titles. R404 also attributes JIT activity to its four
+    // guest cores from the same five-second counter snapshot (no frame hot path).
+    std::array<unsigned long long, 24> frame_pressure_previous{};
     EGLDisplay display{EGL_NO_DISPLAY};
     EGLConfig config{};
     EGLContext root{EGL_NO_CONTEXT};
