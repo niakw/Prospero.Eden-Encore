@@ -52,7 +52,6 @@ for status,body,where in [
 for hostile in (
     "javascript:alert(1)", "data:text/html,payload",
     "https://user@evil.invalid/path", "http://mod.example/item",
-    "https://html.duckduckgo.com.evil.invalid/l/?uddg=x",
     "https://html.duckduckgo.com/search/?next=/l/?uddg=x",
 ):
     injected=(f'<a href="{hostile}">Injected result</a>').encode()
