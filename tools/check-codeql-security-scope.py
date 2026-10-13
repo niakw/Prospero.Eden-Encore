@@ -23,6 +23,15 @@ expected = {
     "vendor/sources/**/python/run_tests.py",
 }
 assert set(patterns) == expected, (patterns, expected)
+# R428: c-cpp build-mode:none no longer traverses the immutable 40k-file
+# vendored snapshots; Python and Actions still scan our active code.
+scan_root = config.split("paths:\n", 1)[1].split("paths-ignore:", 1)[0]
+included = set(re.findall(r"^\s+- ([^\s#]+)$", scan_root, flags=re.M))
+assert included == {
+    ".github", "headless", "src", "tools", "third_party", "fixtures",
+    "vendor/encore-active",
+}, included
+assert "vendor/sources" not in included and "vendor/objects" not in included
 def ignored(path: str) -> bool:
     return any(fnmatchcase(path, p) for p in patterns)
 
