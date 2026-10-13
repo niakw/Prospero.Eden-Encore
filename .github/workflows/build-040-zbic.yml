@@ -115,6 +115,7 @@ jobs:
         run: |
           python3 -B tools/launcher/strings.py check
           python3 -B tools/check-language-runtime.py
+          python3 -B tools/check-launcher-translation-coverage.py
 
       - name: Restore build caches
         if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
