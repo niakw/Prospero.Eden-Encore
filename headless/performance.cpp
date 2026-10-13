@@ -479,7 +479,7 @@ void EnableExperimentalLogicalPlacementImpl() {
             if (CPU_ISSET(cpu, &topology_allowed))
                 allowed_mask |= std::uint64_t{1} << cpu;
     }
-    std::printf("EDEN_EXPERIMENT_CPU result=skipped reason=%s allowed_mask=0x%llx physical_verified=0\\n",
+    std::printf("EDEN_EXPERIMENT_CPU result=skipped reason=%s allowed_mask=0x%llx physical_verified=0\n",
                 worker_topology_ready ? "physical_topology_already_available" :
                 topology_allowed_valid ? "physical_topology_unverified" : "affinity_unavailable",
                 static_cast<unsigned long long>(allowed_mask));
