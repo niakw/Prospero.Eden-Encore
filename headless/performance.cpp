@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "performance.h"
+#include "gameplay_stall_trace.h"
 #include "ps5_cpu_topology.h"
 #include "direct_pool_accounting.h"
 #include "direct_pool_probe_policy.h"
@@ -1050,6 +1051,34 @@ void ReportInputThreadGpuLiveness() {
         cache_lock_contended.load(std::memory_order_relaxed),
         ActiveDiagnosticWaitNs(gpu_dma_sync_active_since_ns) / 1'000'000ULL,
         ActiveDiagnosticWaitNs(gpu_puller_semaphore_active_since_ns) / 1'000'000ULL);
+#if defined(PS5_NATIVE) && defined(EDEN_DEV_PROFILE)
+    // Independent input thread: no GPU locks, reads or signal delivery.
+    // A stale frame report alone cannot distinguish an empty producer from
+    // the worker being blocked inside a dispatch or a guest buffer wait.
+    const auto gpu_stage = GameplayStallTrace::gpu_phase.load(std::memory_order_acquire);
+    const auto stage_since = GameplayStallTrace::gpu_phase_since_ns.load(std::memory_order_relaxed);
+    const auto stamp = GameplayStallTrace::ClockNs();
+    std::fprintf(stderr,
+        "EDEN_GPU_STALL_WITNESS phase=%u phase_age_ms=%llu completed=%llu "
+        "gpu_producer_active=%u gpu_producer_starts=%llu gpu_producer_finishes=%llu "
+        "gpu_producer_slow=%llu gpu_producer_max_ms=%llu "
+        "binder_dequeue_active=%u binder_dequeue_starts=%llu binder_dequeue_finishes=%llu "
+        "binder_dequeue_slow=%llu binder_dequeue_max_ms=%llu\n",
+        gpu_stage,
+        stage_since > 0 && stamp > stage_since ?
+            static_cast<unsigned long long>((stamp - stage_since) / 1'000'000) : 0ULL,
+        GameplayStallTrace::gpu_commands_completed.load(std::memory_order_relaxed),
+        GameplayStallTrace::gpu_producer_waits_active.load(std::memory_order_relaxed),
+        GameplayStallTrace::gpu_producer_waits_started.load(std::memory_order_relaxed),
+        GameplayStallTrace::gpu_producer_waits_finished.load(std::memory_order_relaxed),
+        GameplayStallTrace::gpu_producer_waits_over_100ms.load(std::memory_order_relaxed),
+        GameplayStallTrace::gpu_producer_wait_max_ns.load(std::memory_order_relaxed) / 1'000'000ULL,
+        GameplayStallTrace::binder_dequeues_active.load(std::memory_order_relaxed),
+        GameplayStallTrace::binder_dequeues_started.load(std::memory_order_relaxed),
+        GameplayStallTrace::binder_dequeues_finished.load(std::memory_order_relaxed),
+        GameplayStallTrace::binder_dequeues_over_100ms.load(std::memory_order_relaxed),
+        GameplayStallTrace::binder_dequeue_max_ns.load(std::memory_order_relaxed) / 1'000'000ULL);
+#endif
 }
 void ReportGpuThread(unsigned frame) {
     if (detailed_gpu_profile.load(std::memory_order_relaxed)) {
