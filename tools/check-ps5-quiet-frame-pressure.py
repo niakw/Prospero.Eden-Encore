@@ -56,11 +56,17 @@ for metric in ("gpu_queue_wait.nanoseconds", "gpu_dispatch.nanoseconds",
                "cache_lock_contended", "cache_lock_blocked", "cache_lock_wait_ns", "compilation"):
     assert metric in snapshot, metric
 assert "std::memory_order_relaxed" in snapshot
-assert "jit_ns += read(core.nanoseconds)" in snapshot
+assert "jit_ns += ns;" in snapshot
+assert "result[12 + core] = ns;" in snapshot
+assert "result[16 + core] = read(compilation[core].calls);" in snapshot
+assert "result[20 + core] = read(evacuations[core]);" in snapshot
+assert "result[11] = jit_ns;" in snapshot
+assert "EDEN_FRAME_JIT_CORE frame=%u core=%u compile_ns=%llu" in present
+assert present.index("EDEN_FRAME_PRESSURE frame=") < present.index("EDEN_FRAME_JIT_CORE frame=")
 assert "std::printf(" not in snapshot
 assert "NowNs()" not in snapshot
 assert "mutex" not in snapshot and "malloc" not in snapshot
-assert "std::array<unsigned long long, 12>" in header
+assert "std::array<unsigned long long, 24>" in header
 
 # In the pinned CMake HLE-service injector, avoid TWO clock probes and the
 # HleCounters atomic hash-table update for every quiet guest IPC request.
