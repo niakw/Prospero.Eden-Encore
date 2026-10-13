@@ -20,7 +20,7 @@ cd "$root"
 # upstream snapshot, so derive the SHA from our actual Encore checkout.
 source_commit=$(git -C "$root" rev-parse --verify HEAD)
 # Do not conflate GitHub run numbers with Encore's R-revisions.
-build_label="${EDEN_LAUNCHER_BUILD_LABEL:-$(python3 -B "$root/tools/ci/derive-encore-build-label.py" "$root/MEMORY.md")}"
+build_label="${EDEN_LAUNCHER_BUILD_LABEL:-$(python3 -B "$root/tools/ci/derive-encore-build-label.py")}"
 [[ "$build_label" =~ ^R[0-9]+$ ]] || { echo "Invalid Encore build label: $build_label" >&2; exit 1; }
 [[ "$source_commit" =~ ^[0-9a-f]{40}$ ]] || {
     echo "Cannot attest the native Encore source commit" >&2
