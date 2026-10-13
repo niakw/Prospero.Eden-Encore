@@ -467,50 +467,24 @@ void CheckWorkerTopology() {
 // Explicit logical-CPU A/B trial when x2APIC topology is unverifiable.
 // Different OS logical CPU IDs do NOT establish distinct physical cores.
 void EnableExperimentalLogicalPlacementImpl() {
-    if (worker_topology_ready || !topology_allowed_valid) {
-        std::printf("EDEN_EXPERIMENT_CPU result=skipped reason=%s\n",
-                    worker_topology_ready ? "physical_topology_available" : "affinity_unavailable");
-        return;
-    }
-    // R410: this remains an explicit logical-only A/B experiment, NOT
-    // physical SMT proof. Other native PS5 ports use logical pairs
-    // (2k,2k+1), whereas the old even-spread trial reserved just five
-    // logical CPUs and let shader workers contend on their siblings.
-    // Restrict the hypothesis to the exact 13-CPU game-title mask from
-    // this firmware. Do NOT extrapolate to payload or future title masks.
+    // No OS scheduler SMT groups and no trustworthy physical topology:
+    // leave all 13 permitted logical processors available to the kernel
+    // scheduler. Isolating guests on guessed SMT pairs previously restricted
+    // all renderer, audio, filesystem and service workers to only three CPUs.
+    // A successful cpuset pin is not evidence of an independent physical core.
+    // Do not pin anything until physical siblings can be proven.
     std::uint64_t allowed_mask = 0;
-    for (unsigned cpu = 0; cpu < 64; ++cpu)
-        if (CPU_ISSET(cpu, &topology_allowed))
-            allowed_mask |= std::uint64_t{1} << cpu;
-    if (allowed_mask != 0x1fffULL) {
-        std::printf("EDEN_EXPERIMENT_CPU result=skipped reason=unqualified_logical_mask mask=0x%llx\n",
-                    static_cast<unsigned long long>(allowed_mask));
-        return;
+    if (topology_allowed_valid) {
+        for (unsigned cpu = 0; cpu < 64; ++cpu)
+            if (CPU_ISSET(cpu, &topology_allowed))
+                allowed_mask |= std::uint64_t{1} << cpu;
     }
-    // Four guest owners plus GPU are given separate presumed physical
-    // pairs. Their SMT siblings are RESERVED, never shader/IO targets.
-    // CPU0+1 and the unpaired CPU12 are left to secondary workers;
-    // only the kernel readback (not this assumption) can verify pinning.
-    worker_cpus = {2, 4, 6, 8, 10};
-    constexpr std::uint64_t primary_mask = 0x554ULL;
-    constexpr std::uint64_t presumed_siblings = 0xaa8ULL;
-    secondary_cpus = allowed_mask & ~(primary_mask | presumed_siblings);
-    if (secondary_cpus != 0x1003ULL) {
-        std::printf("EDEN_EXPERIMENT_CPU result=skipped reason=sibling_mask_error\n");
-        worker_cpus.fill(0);
-        secondary_cpus = 0;
-        return;
-    }
-    worker_topology_ready = true;
-    // verified_physical_worker_mask remains zero in this experiment.
-    std::printf("EDEN_EXPERIMENT_CPU result=enabled physical_verified=0 smt_pair_hypothesis=1 "
-                "primary=0x%llx sibling_protected=0x%llx secondary_mask=0x%llx "
-                "logical=%u,%u,%u,%u,%u\n",
-                static_cast<unsigned long long>(primary_mask),
-                static_cast<unsigned long long>(presumed_siblings),
-                secondary_cpus, worker_cpus[0], worker_cpus[1], worker_cpus[2],
-                worker_cpus[3], worker_cpus[4]);
+    std::printf("EDEN_EXPERIMENT_CPU result=skipped reason=%s allowed_mask=0x%llx physical_verified=0\\n",
+                worker_topology_ready ? "physical_topology_already_available" :
+                topology_allowed_valid ? "physical_topology_unverified" : "affinity_unavailable",
+                static_cast<unsigned long long>(allowed_mask));
 }
+
 void PlaceSecondary(const char* name) {
     if (!placement_secondary.load(std::memory_order_relaxed) || !secondary_cpus) return;
     cpuset_t mask{};
