@@ -5,6 +5,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <thread>
 #include "common/scope_exit.h"
 #include <exception>
 #include "common/thread_worker.h"
@@ -57,6 +60,11 @@ using VideoCore::Surface::PixelFormatFromDepthFormat;
 using VideoCore::Surface::PixelFormatFromRenderTargetFormat;
 
 constexpr size_t NUM_STAGES = Maxwell::MaxShaderStage;
+#ifdef PS5_NATIVE
+// Counts cold first-use Vulkan graphics builds, not draws or cached pipelines.
+// Only the optional fast-first dev profile updates it; normal gameplay pays nothing.
+std::atomic<unsigned> pending_first_use_graphics_builds{0};
+#endif
 
 // Descriptor-heavy titles can exceed small_vector's inline capacity on
 // thousands of draws per second. Keep the spare heap capacity on the GPU
@@ -400,7 +408,27 @@ GraphicsPipeline::GraphicsPipeline(
         }
     }};
     if (worker_thread) {
-        worker_thread->QueueWork(std::move(func));
+#ifdef PS5_NATIVE
+        if (::Eden::DevVulkan::fast_first_pipelines) {
+            // Cold first-use compilation has priority over speculative optimization.
+            // Publish BEFORE enqueuing, including work waiting in the builder queue.
+            pending_first_use_graphics_builds.fetch_add(1, std::memory_order_release);
+            try {
+                worker_thread->QueueWork([build = std::move(func)]() mutable {
+                    SCOPE_EXIT {
+                        pending_first_use_graphics_builds.fetch_sub(1, std::memory_order_release);
+                    };
+                    build();
+                });
+            } catch (...) {
+                pending_first_use_graphics_builds.fetch_sub(1, std::memory_order_release);
+                throw;
+            }
+        } else
+#endif
+        {
+            worker_thread->QueueWork(std::move(func));
+        }
     } else {
         func();
     }
@@ -824,6 +852,17 @@ void GraphicsPipeline::QueueOptimizedPipeline(VkRenderPass render_pass) {
     optimize_state = std::make_shared<OptimizeState>();
     const auto state = optimize_state;
     OptimizeWorker().QueueWork([this, state, render_pass] {
+#ifdef PS5_NATIVE
+        ::Eden::Performance::ProbeSchedulerOnce("VkPipelineOptimize");
+        // Do not spend a second Vulkan compiler thread on speculative rebuilds
+        // while first-use shaders are queued. Defer ONLY on this background
+        // worker, for at most 48 ms: no GPU/guest lock or frame pacing delay.
+        const auto until = std::chrono::steady_clock::now() + std::chrono::milliseconds(48);
+        while (pending_first_use_graphics_builds.load(std::memory_order_acquire) != 0 &&
+               std::chrono::steady_clock::now() < until) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        }
+#endif
         {
             std::scoped_lock lock{state->mutex};
             if (state->cancelled) return;
