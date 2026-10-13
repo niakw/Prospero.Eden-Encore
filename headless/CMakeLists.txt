@@ -56,6 +56,38 @@ string(REPLACE "${eden_small_vector_include}"
 write_derived("${PORT_BUILD_DIR}/small-vector/video_core/texture_cache/util.h"
               "${eden_texture_header}")
 target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/small-vector")
+# R428: upstream d7f2764 — repeated guest faults must not force a
+# synchronous PS5 storage flush for every error line. Keep regular buffer
+# flushes and the explicit Flush() API; only coalesce bursts to 100 ms.
+# Never edit the immutable Eden logging.cpp source.
+file(READ "${PROJECT_SOURCE_DIR}/src/common/logging.cpp" eden_logging_source)
+set(eden_log_error_flush [=[            if (write_limit_exceeded)
+                enabled = false;
+            file->Flush();]=])
+set(eden_log_backend_field "    std::optional<FS::IOFile> file;")
+string(FIND "${eden_logging_source}" "${eden_log_error_flush}" eden_log_flush_at)
+string(FIND "${eden_logging_source}" "${eden_log_backend_field}" eden_log_field_at)
+if(eden_log_flush_at LESS 0 OR eden_log_field_at LESS 0)
+    message(FATAL_ERROR "Pinned Eden log backend changed; requalify R428")
+endif()
+string(REPLACE "${eden_log_error_flush}" [=[            if (write_limit_exceeded)
+                enabled = false;
+            const auto flush_now = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count();
+            if (write_limit_exceeded ||
+                flush_now - error_flushed_ms.load(std::memory_order_relaxed) >= 100) {
+                error_flushed_ms.store(flush_now, std::memory_order_relaxed);
+                file->Flush();
+            }]=] eden_logging_source "${eden_logging_source}")
+string(REPLACE "${eden_log_backend_field}"
+    "    std::optional<FS::IOFile> file;\n    std::atomic<long long> error_flushed_ms{-1000};"
+    eden_logging_source "${eden_logging_source}")
+write_derived("${PORT_BUILD_DIR}/logging.cpp"
+    "#include <atomic>\n#include <chrono>\n${eden_logging_source}")
+get_target_property(eden_common_sources common SOURCES)
+list(REMOVE_ITEM eden_common_sources logging.cpp)
+list(APPEND eden_common_sources "${PORT_BUILD_DIR}/logging.cpp")
+set_property(TARGET common PROPERTY SOURCES "${eden_common_sources}")
 # Keep successful JIT invariant checks inline; preserve upstream failure handling.
 # Use a private include root so other core/renderer targets retain their headers.
 file(READ "${PROJECT_SOURCE_DIR}/src/common/assert.h" jit_assert_header)
