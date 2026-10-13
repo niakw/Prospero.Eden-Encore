@@ -59,7 +59,7 @@ assert performance.index("verified_physical_worker_mask.store(verified_mask, std
 # The unverified logical-only trial must not fabricate physical topology
 # or pin workers to assumed SMT sibling pairs.
 start = performance.index("void EnableExperimentalLogicalPlacementImpl() {")
-end = performance.index("\\nvoid PlaceSecondary(", start)
+end = performance.index("void PlaceSecondary(", start)
 logical_fallback = performance[start:end]
 assert "result=skipped" in logical_fallback
 assert "worker_topology_ready = true;" not in logical_fallback
