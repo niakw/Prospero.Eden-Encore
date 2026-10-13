@@ -47,3 +47,5 @@ The open report describes an app freeze **after returning from console rest mode
 2. Run `tools/launcher/strings.py check` and `tools/check-launcher-translation-coverage.py` before source compilation. The two French locales must have no missing or obsolete translation and no overlong labels.
 3. Run `tools/check-vendor-consolidation-debt.py` and existing vendor-source/binary/archive integrity checks; do not claim completion while generated source rewrites remain.
 4. The original stable-30-FPS gameplay lag, title action mapping and sustained GPU freeze remain separate **open runtime defects**; successful host tests do not prove their resolution on hardware.
+
+Validation request: re-run source preflight, warning-free maintained French checks, vendored fork exact-equivalence gate and one native All-On compile from the same head; no release/publish requested. The non-French translation coverage work and remaining derived-source migration are explicitly still open.
