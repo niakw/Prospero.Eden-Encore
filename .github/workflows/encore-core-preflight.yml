@@ -1,4 +1,4 @@
-name: Encore core source regressions — no GUI or PS5 build
+name: Encore source preflight (host only)
 
 on:
   push:
