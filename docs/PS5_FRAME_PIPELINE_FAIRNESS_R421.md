@@ -20,3 +20,7 @@ This is a **hypothesis-driven frame-time contention reduction**. It cannot by it
 ## CodeQL
 
 GitHub created `.github/workflows/codeql.yml` during the manual transition from Default Setup to Advanced. That generated file had no `config-file`, scanning the vendor test fixtures twice and making results inconsistent. R421 removes this duplicate, retaining the existing `.github/workflows/codeql-advanced.yml` with `.github/codeql/codeql-config.yml` and all three languages. `tools/check-codeql-security-scope.py` now prevents accidentally reintroducing it. The 14 vendor-source alerts are scope exclusions, not claims of patched upstream code.
+
+## R422 native qualification
+
+After R421 source regression checks passed, run one PS5 **All-On native** build with the verified R421 shader-fairness code and R417 scheduler thread probes. Package a single candidate for a combined FC27 console test; no change to release graphics presets, per-game FPS policy or cached media.
