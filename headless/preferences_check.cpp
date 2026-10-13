@@ -148,6 +148,31 @@ int main() {
     assert(Eden::SaveGameSettings(racer, {-1, 4, -1, -1}, file) && Eden::LoadGameSettings(racer, file).refresh == -1);
     assert(!Eden::SaveGameSettings(racer, {-1, -1, -1, 2}, file));
 
+    // A per-title button map without a selected layout must keep its base
+    // after saving. The old writer used PlayStation while the reader assumed
+    // legacy Switch, silently changing custom controls on the next launch.
+    auto title_controls = Eden::LoadGameSettings(racer, file);
+    title_controls.controller_layout = -1;
+    title_controls.own_mapping = true;
+    title_controls.mapping = Eden::Assign(Eden::kPlayStationMapping,
+                                          Eden::game_a, Eden::pad_circle);
+    assert(Eden::SaveGameSettings(racer, title_controls, file));
+    auto restored_controls = Eden::LoadGameSettings(racer, file);
+    assert(restored_controls.controller_layout == 0 && restored_controls.own_mapping);
+    assert(restored_controls.mapping == title_controls.mapping);
+    assert(Eden::ResolveSessionButtonMapping(
+        0, Eden::kPlayStationMapping, restored_controls.controller_layout,
+        restored_controls.own_mapping, restored_controls.mapping).buttons == title_controls.mapping);
+
+    // Explicit Switch positioning remains unaffected by this migration.
+    title_controls.controller_layout = 1;
+    title_controls.mapping = Eden::Assign(Eden::kSwitchMapping,
+                                          Eden::game_a, Eden::pad_cross);
+    assert(Eden::SaveGameSettings(racer, title_controls, file));
+    restored_controls = Eden::LoadGameSettings(racer, file);
+    assert(restored_controls.controller_layout == 1 &&
+           restored_controls.mapping == title_controls.mapping);
+
     // Game files folder.
     assert(Eden::LoadSavedAssetsDir(file).empty());
     assert(Eden::SaveAssetsDir("/mnt/ext1/eden", file));
