@@ -77,8 +77,22 @@ assert 'option(EDEN_SHARED_JIT "Enable the experimental cross-core A64 JIT" OFF)
 assert 'option(EDEN_JIT_COMPILE_BATCH "Compile bounded A64 successor chains on a cache miss" OFF)' in cmake
 
 assert "EnableExperimentalLogicalPlacementImpl" in cpu
-assert "if (count < 7)" in cpu and "physical_verified=0" in cpu
-assert "secondary_cpus = secondary;" in cpu
+# R410: test the NEW safe logical-only A/B contract, not the obsolete
+# every-fifth-CPU spread that placed shader workers on possible SMT siblings.
+logical_trial = cpu.split("void EnableExperimentalLogicalPlacementImpl()", 1)[1].split(
+    "void PlaceSecondary(", 1)[0]
+for invariant in (
+    "allowed_mask != 0x1fffULL",
+    "worker_cpus = {2, 4, 6, 8, 10};",
+    "primary_mask = 0x554ULL",
+    "presumed_siblings = 0xaa8ULL",
+    "secondary_cpus = allowed_mask & ~(primary_mask | presumed_siblings);",
+    "secondary_cpus != 0x1003ULL",
+    "physical_verified=0",
+    "smt_pair_hypothesis=1",
+):
+    assert invariant in logical_trial, invariant
+assert "verified_physical_worker_mask.store" not in logical_trial
 # AMD Zen2/PS5 firmware can expose extended physical topology even when
 # x2APIC SMT topology is absent or misleading. Do not trust logical IDs.
 topology = cpu.split("void CheckWorkerTopology()", 1)[1].split(
