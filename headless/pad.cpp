@@ -370,42 +370,11 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
     for (const auto& raw : samples) {
         auto sample = is_usable(raw) ? raw : neutral_data(raw.timestamp_us);
 
-        // R448: no unreliable automatic guesses from sticks/Options/D-pad.
-        // An explicit title-scoped chord toggles menu vs match button profiles.
+        // The guest title owns its saved gameplay assignments. Publish the
+        // same physical-to-guest buttons in match, pause, and cinematics.
         constexpr ButtonMask menu_chord = kButtonTouchPad | kButtonL1;
         constexpr ButtonMask hud_chord = kButtonTouchPad | kButtonR1;
-        constexpr ButtonMask gameplay_chord = kButtonTouchPad | kButtonSquare;
         const auto pressed = sample.buttons;
-        // Latch the PHYSICAL chord for its entire lifetime. Other buttons
-        // arriving while both chord buttons stay down must never re-arm it.
-        const bool gameplay_chord_held = player == 0 && has_gameplay_mapping &&
-            is_usable(raw) && (pressed & gameplay_chord) == gameplay_chord;
-        const bool gameplay_chord_down = gameplay_chord_held &&
-            (pressed & (kButtonL1 | kButtonR1 | kButtonOptions | kButtonCross |
-                        kButtonCircle | kButtonTriangle)) == 0;
-        if (gameplay_chord_down && !slot.gameplay_chord_held) {
-            // Release all old guest face/shoulder holds before changing their owners.
-            for (std::size_t p = 0; p < kMaxPlayers; ++p)
-                for (const auto button : kGame)
-                    engine->SetButtonState(p, button, false);
-            gameplay_mode = !gameplay_mode;
-            slot.select_held = false;
-            slot.select_pulse = 0;
-            std::fprintf(stderr, "EDEN_PAD_GAMEPLAY_PROFILE mode=%s source=fc27_manual_chord\n",
-                         gameplay_mode ? "match" : "menu");
-            // One event per deliberate profile switch, not one per 4ms input poll.
-            // Report the effective guest-action assignment, independent of UI art.
-            const auto& active_face = ActiveMapping();
-            std::fprintf(stderr,
-                "EDEN_PAD_GUEST_FACE mode=%s a=%s b=%s x=%s y=%s\n",
-                gameplay_mode ? "match" : "menu",
-                kPadButtonKeys[active_face[game_a]], kPadButtonKeys[active_face[game_b]],
-                kPadButtonKeys[active_face[game_x]], kPadButtonKeys[active_face[game_y]]);
-        }
-        slot.gameplay_chord_held = gameplay_chord_held;
-        if (gameplay_chord_held)
-            sample.buttons &= ~(kButtonTouchPad | kButtonSquare);
-
         // The launcher/menu and HUD shortcuts still work from every controller.
         if ((pressed & menu_chord) == menu_chord &&
             (last_buttons & menu_chord) != menu_chord)
@@ -438,7 +407,7 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
             slot.touch_chord = false;
             slot.touch_polls = 0;
         }
-        if (touch && (pressed & (kButtonL1 | kButtonR1 | kButtonOptions | (gameplay_chord_held ? kButtonSquare : 0))) != 0) {
+        if (touch && (pressed & (kButtonL1 | kButtonR1 | kButtonOptions)) != 0) {
             slot.touch_chord = true;
             slot.select_held = false;
         }
