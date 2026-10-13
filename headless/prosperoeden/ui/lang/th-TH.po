@@ -1008,3 +1008,143 @@ msgstr "3x (ใช้หน่วยความจำสูงมาก)"
 #: settings_store.h
 msgid "4x (extreme memory)"
 msgstr "4x (ใช้หน่วยความจำสูงสุด)"
+
+#: translated UI setting
+msgid "Anti-aliasing"
+msgstr "การลดรอยหยัก"
+
+#: translated UI setting
+msgid "Button mapping"
+msgstr "การกำหนดปุ่ม"
+
+#: translated UI setting
+msgid "Quick settings"
+msgstr "การตั้งค่าด่วน"
+
+#: translated UI setting
+msgid "Storage"
+msgstr "พื้นที่จัดเก็บ"
+
+#: translated UI setting
+msgid "Video preset"
+msgstr "โปรไฟล์วิดีโอ"
+
+#: translated UI setting
+msgid "Game resolution"
+msgstr "ความละเอียดเกม"
+
+#: translated UI setting
+msgid "TV output"
+msgstr "สัญญาณออกทีวี"
+
+#: translated UI setting
+msgid "Play"
+msgstr "เล่น"
+
+#: translated UI setting
+msgid "Cancel"
+msgstr "ยกเลิก"
+
+#: translated UI setting
+msgid "Confirm"
+msgstr "ยืนยัน"
+
+#: translated UI setting
+msgid "Reset"
+msgstr "รีเซ็ต"
+
+#: translated UI setting
+msgid "Ultra"
+msgstr "อัลตรา"
+
+#: translated UI setting
+msgid "Recommended"
+msgstr "แนะนำ"
+
+#: translated UI setting
+msgid "Minimum"
+msgstr "ขั้นต่ำ"
+
+#: translated UI setting
+msgid "Home"
+msgstr "หน้าหลัก"
+
+#: translated UI setting
+msgid "Clear cache"
+msgstr "ล้างแคช"
+
+#: translated UI setting
+msgid "Done"
+msgstr "เสร็จสิ้น"
+
+#: translated UI setting
+msgid "Custom"
+msgstr "กำหนดเอง"
+
+#: translated UI setting
+msgid "Controllers"
+msgstr "ตัวควบคุม"
+
+#: translated UI setting
+msgid "Quit"
+msgstr "ออก"
+
+#: translated UI setting
+msgid "FSR sharpness"
+msgstr "ความคมชัด FSR"
+
+#: translated UI setting
+msgid "Stick deadzone"
+msgstr "เดดโซนของก้านอนาล็อก"
+
+#: translated UI setting
+msgid "Vibration strength"
+msgstr "ระดับการสั่น"
+
+#: translated UI setting
+msgid "Preset"
+msgstr "ค่าที่ตั้งไว้"
+
+#: translated UI setting
+msgid "Open settings"
+msgstr "เปิดการตั้งค่า"
+
+#: translated UI setting
+msgid "ANTI-ALIASING"
+msgstr "การลดรอยหยัก"
+
+#: translated UI setting
+msgid "BUTTON MAPPING"
+msgstr "การกำหนดปุ่ม"
+
+#: translated UI setting
+msgid "QUICK SETTINGS"
+msgstr "การตั้งค่าด่วน"
+
+#: translated UI setting
+msgid "STORAGE"
+msgstr "พื้นที่จัดเก็บ"
+
+#: translated UI setting
+msgid "VIDEO PRESET"
+msgstr "โปรไฟล์วิดีโอ"
+
+#: translated UI setting
+msgid "GAME RESOLUTION"
+msgstr "ความละเอียดเกม"
+
+#: translated UI setting
+msgid "TV OUTPUT"
+msgstr "สัญญาณออกทีวี"
+
+#: translated UI setting
+msgid "FSR SHARPNESS"
+msgstr "ความคมชัด FSR"
+
+#: translated UI setting
+msgid "STICK DEADZONE"
+msgstr "เดดโซนของก้านอนาล็อก"
+
+#: translated UI setting
+msgid "VIBRATION STRENGTH"
+msgstr "ระดับการสั่น"

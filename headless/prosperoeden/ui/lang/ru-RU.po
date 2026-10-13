@@ -1008,3 +1008,143 @@ msgstr "3x (очень много памяти)"
 #: settings_store.h
 msgid "4x (extreme memory)"
 msgstr "4x (максимум памяти)"
+
+#: translated UI setting
+msgid "Anti-aliasing"
+msgstr "Сглаживание"
+
+#: translated UI setting
+msgid "Button mapping"
+msgstr "Назначение кнопок"
+
+#: translated UI setting
+msgid "Quick settings"
+msgstr "Быстрые настройки"
+
+#: translated UI setting
+msgid "Storage"
+msgstr "Хранилище"
+
+#: translated UI setting
+msgid "Video preset"
+msgstr "Видеопрофиль"
+
+#: translated UI setting
+msgid "Game resolution"
+msgstr "Разрешение игры"
+
+#: translated UI setting
+msgid "TV output"
+msgstr "Вывод на ТВ"
+
+#: translated UI setting
+msgid "Play"
+msgstr "Играть"
+
+#: translated UI setting
+msgid "Cancel"
+msgstr "Отмена"
+
+#: translated UI setting
+msgid "Confirm"
+msgstr "Подтвердить"
+
+#: translated UI setting
+msgid "Reset"
+msgstr "Сбросить"
+
+#: translated UI setting
+msgid "Ultra"
+msgstr "Ультра"
+
+#: translated UI setting
+msgid "Recommended"
+msgstr "Рекомендуемый"
+
+#: translated UI setting
+msgid "Minimum"
+msgstr "Минимум"
+
+#: translated UI setting
+msgid "Home"
+msgstr "Главная"
+
+#: translated UI setting
+msgid "Clear cache"
+msgstr "Очистить кэш"
+
+#: translated UI setting
+msgid "Done"
+msgstr "Готово"
+
+#: translated UI setting
+msgid "Custom"
+msgstr "Пользовательский"
+
+#: translated UI setting
+msgid "Controllers"
+msgstr "Контроллеры"
+
+#: translated UI setting
+msgid "Quit"
+msgstr "Выход"
+
+#: translated UI setting
+msgid "FSR sharpness"
+msgstr "Резкость FSR"
+
+#: translated UI setting
+msgid "Stick deadzone"
+msgstr "Мёртвая зона стика"
+
+#: translated UI setting
+msgid "Vibration strength"
+msgstr "Сила вибрации"
+
+#: translated UI setting
+msgid "Preset"
+msgstr "Профиль"
+
+#: translated UI setting
+msgid "Open settings"
+msgstr "Открыть настройки"
+
+#: translated UI setting
+msgid "ANTI-ALIASING"
+msgstr "СГЛАЖИВАНИЕ"
+
+#: translated UI setting
+msgid "BUTTON MAPPING"
+msgstr "НАЗНАЧЕНИЕ КНОПОК"
+
+#: translated UI setting
+msgid "QUICK SETTINGS"
+msgstr "БЫСТРЫЕ НАСТРОЙКИ"
+
+#: translated UI setting
+msgid "STORAGE"
+msgstr "ХРАНИЛИЩЕ"
+
+#: translated UI setting
+msgid "VIDEO PRESET"
+msgstr "ВИДЕОПРОФИЛЬ"
+
+#: translated UI setting
+msgid "GAME RESOLUTION"
+msgstr "РАЗРЕШЕНИЕ ИГРЫ"
+
+#: translated UI setting
+msgid "TV OUTPUT"
+msgstr "ВЫВОД НА ТВ"
+
+#: translated UI setting
+msgid "FSR SHARPNESS"
+msgstr "РЕЗКОСТЬ FSR"
+
+#: translated UI setting
+msgid "STICK DEADZONE"
+msgstr "МЁРТВАЯ ЗОНА СТИКА"
+
+#: translated UI setting
+msgid "VIBRATION STRENGTH"
+msgstr "СИЛА ВИБРАЦИИ"

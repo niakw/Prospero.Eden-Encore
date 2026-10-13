@@ -1008,3 +1008,143 @@ msgstr "3x (çok yüksek bellek)"
 #: settings_store.h
 msgid "4x (extreme memory)"
 msgstr "4x (aşırı bellek)"
+
+#: translated UI setting
+msgid "Anti-aliasing"
+msgstr "Kenar yumuşatma"
+
+#: translated UI setting
+msgid "Button mapping"
+msgstr "Tuş eşleme"
+
+#: translated UI setting
+msgid "Quick settings"
+msgstr "Hızlı ayarlar"
+
+#: translated UI setting
+msgid "Storage"
+msgstr "Depolama"
+
+#: translated UI setting
+msgid "Video preset"
+msgstr "Video ön ayarı"
+
+#: translated UI setting
+msgid "Game resolution"
+msgstr "Oyun çözünürlüğü"
+
+#: translated UI setting
+msgid "TV output"
+msgstr "TV çıkışı"
+
+#: translated UI setting
+msgid "Play"
+msgstr "Oyna"
+
+#: translated UI setting
+msgid "Cancel"
+msgstr "İptal"
+
+#: translated UI setting
+msgid "Confirm"
+msgstr "Onayla"
+
+#: translated UI setting
+msgid "Reset"
+msgstr "Sıfırla"
+
+#: translated UI setting
+msgid "Ultra"
+msgstr "Ultra"
+
+#: translated UI setting
+msgid "Recommended"
+msgstr "Önerilen"
+
+#: translated UI setting
+msgid "Minimum"
+msgstr "Minimum"
+
+#: translated UI setting
+msgid "Home"
+msgstr "Ana sayfa"
+
+#: translated UI setting
+msgid "Clear cache"
+msgstr "Önbelleği temizle"
+
+#: translated UI setting
+msgid "Done"
+msgstr "Bitti"
+
+#: translated UI setting
+msgid "Custom"
+msgstr "Özel"
+
+#: translated UI setting
+msgid "Controllers"
+msgstr "Kumandalar"
+
+#: translated UI setting
+msgid "Quit"
+msgstr "Çıkış"
+
+#: translated UI setting
+msgid "FSR sharpness"
+msgstr "FSR keskinliği"
+
+#: translated UI setting
+msgid "Stick deadzone"
+msgstr "Çubuk ölü bölgesi"
+
+#: translated UI setting
+msgid "Vibration strength"
+msgstr "Titreşim gücü"
+
+#: translated UI setting
+msgid "Preset"
+msgstr "Ön ayar"
+
+#: translated UI setting
+msgid "Open settings"
+msgstr "Ayarları aç"
+
+#: translated UI setting
+msgid "ANTI-ALIASING"
+msgstr "KENAR YUMUŞATMA"
+
+#: translated UI setting
+msgid "BUTTON MAPPING"
+msgstr "TUŞ EŞLEME"
+
+#: translated UI setting
+msgid "QUICK SETTINGS"
+msgstr "HIZLI AYARLAR"
+
+#: translated UI setting
+msgid "STORAGE"
+msgstr "DEPOLAMA"
+
+#: translated UI setting
+msgid "VIDEO PRESET"
+msgstr "VİDEO ÖN AYARI"
+
+#: translated UI setting
+msgid "GAME RESOLUTION"
+msgstr "OYUN ÇÖZÜNÜRLÜĞÜ"
+
+#: translated UI setting
+msgid "TV OUTPUT"
+msgstr "TV ÇIKIŞI"
+
+#: translated UI setting
+msgid "FSR SHARPNESS"
+msgstr "FSR KESKİNLİĞİ"
+
+#: translated UI setting
+msgid "STICK DEADZONE"
+msgstr "ÇUBUK ÖLÜ BÖLGESİ"
+
+#: translated UI setting
+msgid "VIBRATION STRENGTH"
+msgstr "TİTREŞİM GÜCÜ"

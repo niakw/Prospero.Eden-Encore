@@ -1008,3 +1008,143 @@ msgstr "3x (很高記憶體用量)"
 #: settings_store.h
 msgid "4x (extreme memory)"
 msgstr "4x (極高記憶體用量)"
+
+#: translated UI setting
+msgid "Anti-aliasing"
+msgstr "反鋸齒"
+
+#: translated UI setting
+msgid "Button mapping"
+msgstr "按鍵對應"
+
+#: translated UI setting
+msgid "Quick settings"
+msgstr "快速設定"
+
+#: translated UI setting
+msgid "Storage"
+msgstr "儲存空間"
+
+#: translated UI setting
+msgid "Video preset"
+msgstr "影像預設"
+
+#: translated UI setting
+msgid "Game resolution"
+msgstr "遊戲解析度"
+
+#: translated UI setting
+msgid "TV output"
+msgstr "電視輸出"
+
+#: translated UI setting
+msgid "Play"
+msgstr "開始遊戲"
+
+#: translated UI setting
+msgid "Cancel"
+msgstr "取消"
+
+#: translated UI setting
+msgid "Confirm"
+msgstr "確認"
+
+#: translated UI setting
+msgid "Reset"
+msgstr "重設"
+
+#: translated UI setting
+msgid "Ultra"
+msgstr "極致"
+
+#: translated UI setting
+msgid "Recommended"
+msgstr "建議"
+
+#: translated UI setting
+msgid "Minimum"
+msgstr "最低"
+
+#: translated UI setting
+msgid "Home"
+msgstr "首頁"
+
+#: translated UI setting
+msgid "Clear cache"
+msgstr "清除快取"
+
+#: translated UI setting
+msgid "Done"
+msgstr "完成"
+
+#: translated UI setting
+msgid "Custom"
+msgstr "自訂"
+
+#: translated UI setting
+msgid "Controllers"
+msgstr "控制器"
+
+#: translated UI setting
+msgid "Quit"
+msgstr "離開"
+
+#: translated UI setting
+msgid "FSR sharpness"
+msgstr "FSR 銳利度"
+
+#: translated UI setting
+msgid "Stick deadzone"
+msgstr "搖桿死區"
+
+#: translated UI setting
+msgid "Vibration strength"
+msgstr "震動強度"
+
+#: translated UI setting
+msgid "Preset"
+msgstr "預設"
+
+#: translated UI setting
+msgid "Open settings"
+msgstr "開啟設定"
+
+#: translated UI setting
+msgid "ANTI-ALIASING"
+msgstr "反鋸齒"
+
+#: translated UI setting
+msgid "BUTTON MAPPING"
+msgstr "按鍵對應"
+
+#: translated UI setting
+msgid "QUICK SETTINGS"
+msgstr "快速設定"
+
+#: translated UI setting
+msgid "STORAGE"
+msgstr "儲存空間"
+
+#: translated UI setting
+msgid "VIDEO PRESET"
+msgstr "影像預設"
+
+#: translated UI setting
+msgid "GAME RESOLUTION"
+msgstr "遊戲解析度"
+
+#: translated UI setting
+msgid "TV OUTPUT"
+msgstr "電視輸出"
+
+#: translated UI setting
+msgid "FSR SHARPNESS"
+msgstr "FSR 銳利度"
+
+#: translated UI setting
+msgid "STICK DEADZONE"
+msgstr "搖桿死區"
+
+#: translated UI setting
+msgid "VIBRATION STRENGTH"
+msgstr "震動強度"
