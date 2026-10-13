@@ -158,9 +158,10 @@ assert 'game->screenshots' in library
 # Assert the actual fixed mapping, not the removed auto-context implementation.
 assert 'void SetMapping(const ButtonMapping& value)' in devices
 assert 'if (slots[0].handle >= 0) return;' in devices
-assert 'pad->SetMapping(mapping);' in main
+assert 'pad->SetMapping(separate_fc27_gameplay ? controls.mapping : mapping);' in main
+assert 'if (separate_fc27_gameplay) pad->SetGameplayMapping(mapping);' in main
 assert 'pad->Open()' in main
-assert main.index('pad->SetMapping(mapping);') < main.index('if (!pad->Open())')
+assert main.index('pad->SetMapping(separate_fc27_gameplay ? controls.mapping : mapping);') < main.index('if (!pad->Open())')
 assert 'EDEN_PAD_MAPPING_FIXED title=%016llx' in main
 assert 'EDEN_PAD_MAPPING_LOCKED scope=session mode=static' in main
 assert '(effective_layout == 1 ? "Switch" : "PlayStation")' in main
