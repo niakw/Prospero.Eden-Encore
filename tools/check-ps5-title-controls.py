@@ -17,8 +17,8 @@ assert 'EDEN_TITLE_ID_LAUNCH_FALLBACK' in main
 assert 'EDEN_PAD_MAPPING_FIXED' in main and 'own_mapping=%u' in main
 assert 'const auto game_video = Eden::LoadGameSettings(launch_title_id);' in main
 assert 'game_video.controller_layout, game_video.own_mapping, game_video.mapping' in main
-assert 'pad->SetMapping(separate_fc27_gameplay ? controls.mapping : mapping);' in main
-assert 'if (separate_fc27_gameplay) pad->SetGameplayMapping(fc27_gameplay_mapping);' in main
+assert 'pad->SetMapping(mapping);' in main
+assert 'SetGameplayMapping' not in main + pad
 assert 'if (slots[0].handle >= 0) return;' in (ROOT / 'headless/devices.h').read_text()
 assert 'const int pad = active_mapping[game];' in pad
 assert 'result.own_mapping = document.contains(mapping);' in store
