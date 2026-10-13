@@ -1,4 +1,4 @@
-name: Full Switch 1 controller glyph source crawl (read-only mod research)
+name: Full guest glyph source research (manual)
 
 # One explicitly triggered dev-branch run starts a SERIAL matrix of shards.
 # GitHub-hosted jobs have a 6h cap and workflows a 35-day cap. Each shard
