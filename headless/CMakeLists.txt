@@ -1457,6 +1457,47 @@ list(REMOVE_ITEM hid_sources resource_manager.cpp)
 list(APPEND hid_sources "${PORT_BUILD_DIR}/resource_manager.cpp")
 set_property(TARGET hid_core PROPERTY SOURCES "${hid_sources}")
 
+# R435: read-only Npad witness for FC27 Options/pause stalls. Native dev only.
+# This proves a Plus bit reached the guest HID LIFO, not that FC27 read it.
+if(PS5_NATIVE AND EDEN_DEV_PROFILE)
+    file(READ "${PROJECT_SOURCE_DIR}/src/hid_core/resources/npad/npad.cpp" eden_npad_source)
+    set(eden_npad_write_anchor "                npad->fullkey_lifo.WriteNextEntry(pad_state);")
+    string(FIND "${eden_npad_source}" "${eden_npad_write_anchor}" eden_npad_write_at)
+    if(eden_npad_write_at LESS 0)
+        message(FATAL_ERROR "Pinned Eden fullkey Npad writer changed; requalify R435")
+    endif()
+    string(REPLACE "${eden_npad_write_anchor}" [=[                npad->fullkey_lifo.WriteNextEntry(pad_state);
+                // Guest HID wrote an Npad fullkey sample; no GPU calls.
+                static std::atomic<unsigned long long> eden_fullkey_writes{0};
+                static std::atomic<unsigned long long> eden_fullkey_plus_edges{0};
+                static std::atomic<bool> eden_fullkey_last_plus{false};
+                const bool eden_plus_now = static_cast<bool>(pad_state.npad_buttons.plus);
+                const bool eden_plus_before = eden_fullkey_last_plus.exchange(
+                    eden_plus_now, std::memory_order_relaxed);
+                const auto eden_writes = eden_fullkey_writes.fetch_add(
+                    1, std::memory_order_relaxed) + 1;
+                if (eden_plus_now && !eden_plus_before) {
+                    const auto eden_edges = eden_fullkey_plus_edges.fetch_add(
+                        1, std::memory_order_relaxed) + 1;
+                    if (eden_edges <= 32)
+                        std::fprintf(stderr,
+                            "EDEN_NPAD_PLUS_LIFO edges=%llu writes=%llu aruid=%llu\\n",
+                            eden_edges, eden_writes,
+                            static_cast<unsigned long long>(aruid));
+                }
+                if (eden_writes % 1500 == 0)
+                    std::fprintf(stderr,
+                        "EDEN_NPAD_PROGRESS fullkey_writes=%llu plus_edges=%llu\\n",
+                        eden_writes, eden_fullkey_plus_edges.load(std::memory_order_relaxed));]=]
+        eden_npad_source "${eden_npad_source}")
+    write_derived("${PORT_BUILD_DIR}/npad_pause_diag.cpp"
+        "#include <atomic>\n#include <cstdio>\n${eden_npad_source}")
+    get_target_property(eden_npad_sources hid_core SOURCES)
+    list(REMOVE_ITEM eden_npad_sources resources/npad/npad.cpp)
+    list(APPEND eden_npad_sources "${PORT_BUILD_DIR}/npad_pause_diag.cpp")
+    set_property(TARGET hid_core PROPERTY SOURCES "${eden_npad_sources}")
+endif()
+
 # Clang 18 trips over libstdc++ range constraints for implicit vector-to-span
 # conversions inside these generic lambdas. Use the equivalent pointer/count
 # constructor for every variable-argument wrapper.
