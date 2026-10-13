@@ -22,6 +22,13 @@ assert 'ActiveMapping()[game_x], ActiveMapping()[game_y]' in source
 assert 'std::fflush(stderr)' not in source
 assert 'EDEN_PAD_INPUT mode=%s' in main and 'pad->Poll();' in main
 assert 'pad_square, pad_triangle' in (root / 'headless/button_mapping.h').read_text()
+# A new title must not inherit the previous renderer's stall timestamp.
+perf_source = (root / 'headless/performance.cpp').read_text()
+perf_header = (root / 'headless/performance.h').read_text()
+assert 'void ResetGpuReportForTitle() noexcept;' in perf_header
+assert 'void ResetGpuReportForTitle() noexcept {' in perf_source
+assert 'latest_gpu_report_ns.store(0, std::memory_order_release);' in perf_source
+assert 'Eden::Performance::ResetGpuReportForTitle();' in main
 
 unit = r'''
 #include "pad_diagnostics.h"
