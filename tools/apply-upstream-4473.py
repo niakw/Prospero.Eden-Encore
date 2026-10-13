@@ -14,8 +14,8 @@ import tempfile
 
 REWRITES = {
     "buffer_cache/buffer_cache.h": [
-        ("if (memory_tracker.IsRegionGpuModified(device_addr, size)) {",
-         "if (IsRegionGpuModified(device_addr, size)) {"),
+        ("void BufferCache<P>::WriteMemory(DAddr device_addr, u64 size) {\n    if (memory_tracker.IsRegionGpuModified(device_addr, size)) {",
+         "void BufferCache<P>::WriteMemory(DAddr device_addr, u64 size) {\n    if (IsRegionGpuModified(device_addr, size)) {"),
         ("""        const DAddr device_addr_start = Common::AlignDown(device_addr, 64);
         const DAddr device_addr_end = Common::AlignUp(device_addr + size, 64);
         const size_t new_size = device_addr_end - device_addr_start;
