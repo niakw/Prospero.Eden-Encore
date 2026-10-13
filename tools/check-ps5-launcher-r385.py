@@ -82,13 +82,13 @@ assert 'text(c, version_, 1860.0f, 1026.0f' in home
 script=root/'tools/ci/derive-encore-build-label.py'
 with tempfile.TemporaryDirectory(prefix='eden-r385-static-') as directory:
     f=Path(directory)/'commit-subjects.txt'
-    f.write_text('docs: updated engineering notes\\nR384: old\\nR385: new\\n')
+    f.write_text('docs: updated engineering notes\nR384: old\nR385: new\n')
     result=subprocess.run([sys.executable,'-B',str(script),str(f)],capture_output=True,text=True)
     assert result.returncode==0 and result.stdout.strip()=='R385',result.stderr
-    f.write_text('docs: update\\nR384: old\\nR386: newer\\n')
+    f.write_text('docs: update\nR384: old\nR386: newer\n')
     result=subprocess.run([sys.executable,'-B',str(script),str(f)],capture_output=True,text=True)
     assert result.returncode==0 and result.stdout.strip()=='R386'
-    f.write_text('docs: only this commit\\n')
+    f.write_text('docs: only this commit\n')
     result=subprocess.run([sys.executable,'-B',str(script),str(f)],capture_output=True,text=True)
     assert result.returncode!=0
 # The native build must not derive the footer from the historical MEMORY file.
@@ -96,5 +96,5 @@ assert 'derive-encore-build-label.py" "$root/MEMORY.md"' not in native
 assert 'fetch-depth: 256' in (root/'.github/workflows/build-040-zbic.yml').read_text()
 current=subprocess.run([sys.executable,'-B',str(script)],
                        capture_output=True,text=True,check=True).stdout.strip()
-assert re.fullmatch(r'R\\d+',current) and int(current[1:]) >= 457, current
+assert re.fullmatch(r'R[0-9]+',current) and int(current[1:]) >= 457, current
 print('R401 HERO STATIC PASS: one-line measured title, long synopsis only, two-line semantic clipping, 4 bounded chips')
