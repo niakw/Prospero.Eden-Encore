@@ -52,3 +52,9 @@ Status 2026-10-13: R414 source CI SUCCESS, R415 native CI SUCCESS, next PS5 hard
 R417 captures `EDEN_PS5_THREAD_SCHED` exactly once per actual Vulkan command worker and shader graphics/compute compilation thread. It records `pthread_getschedparam` policy (FIFO/RR/OTHER), effective priority, permitted CPU affinity and both API error codes. The change is read-only: it does not modify thread priorities, CPU placement, mutex scopes, the renderer, the shader-worker count, Mesa, or VideoOut.
 
 The tracked prepared Vulkan files and `prepare-vulkan-port.py` source generator are updated together and qualified by a host fixture. Host tests establish source/wiring behavior only, not console performance. The real FW13.60 readback remains unknown until a hardware run; R415 is still the latest tested native archive, and R417 must NOT be presented as a FPS or graphics fix. Only contemplate explicit SCHED_RR A/B once the priority/mask measurements and hot-stage timings have been reviewed.
+
+## R418 — one qualified native PS5 All-On package
+
+R417's host source preflight #38337626162 completed SUCCESS. This build changes NO graphics algorithms, worker count, render quality settings, source dependency revisions or OS scheduling settings beyond the read-only R417 scheduler probes. Build R418 once to combine the R414 disk shader-cache correction with R417's `EDEN_PS5_THREAD_SCHED` evidence in one installable console archive, rather than requesting two separate hardware test sessions.
+
+Hardware qualification is still REQUIRED: do not claim stable FC27 frames or persistent shader-cache gains from CI alone. For one gaming session keep the cache across two FC27 launches; capture policy/mask readbacks and frame-wait classifications without logging repeatedly on the hot path.
