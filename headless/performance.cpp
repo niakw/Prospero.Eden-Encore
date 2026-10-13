@@ -987,7 +987,8 @@ void ReportInputThreadGpuLiveness() {
     std::fprintf(stderr,
         "EDEN_GPU_REPORT_STALLED age_ms=%llu frame=%u gpu_ticks=%llu "
         "draws=%llu guest_writes=%llu guest_reads=%llu "
-        "guest_dequeues=%llu guest_ipc=%llu cache_collisions=%llu\n",
+        "guest_dequeues=%llu guest_ipc=%llu cache_collisions=%llu "
+        "dma_active_ms=%llu puller_active_ms=%llu\n",
         (now - progress_ns) / 1'000'000ULL,
         latest_gpu_report_frame.load(std::memory_order_relaxed),
         gpu_command_tick.calls.load(std::memory_order_relaxed),
@@ -996,7 +997,9 @@ void ReportInputThreadGpuLiveness() {
         guest_cpu_read.calls.load(std::memory_order_relaxed),
         guest_dequeue_wait.calls.load(std::memory_order_relaxed),
         guest_ipc_wait.calls.load(std::memory_order_relaxed),
-        cache_lock_contended.load(std::memory_order_relaxed));
+        cache_lock_contended.load(std::memory_order_relaxed),
+        ActiveDiagnosticWaitNs(gpu_dma_sync_active_since_ns) / 1'000'000ULL,
+        ActiveDiagnosticWaitNs(gpu_puller_semaphore_active_since_ns) / 1'000'000ULL);
 }
 void ReportGpuThread(unsigned frame) {
     if (detailed_gpu_profile.load(std::memory_order_relaxed)) {

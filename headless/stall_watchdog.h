@@ -94,7 +94,7 @@ inline void Loop() {
                 std::snprintf(line, sizeof(line),
                     "EDEN_GAME_GPU_STALL_SUSPECT idle_s=%llu dispatch=%llu draws=%llu "
                     "gpu_queue_full=%llu guest_sync_wait=%llu cpu_phases=%u,%u,%u,%u "
-                    "note=diagnostic_only\n",
+                    "dma_active_ms=%llu puller_active_ms=%llu note=diagnostic_only\n",
                     static_cast<unsigned long long>(observation.seconds_without_progress),
                     static_cast<unsigned long long>(counters.dispatches),
                     static_cast<unsigned long long>(counters.draws),
@@ -105,7 +105,11 @@ inline void Loop() {
                     unsigned(Performance::cpu_state[0].phase.load(std::memory_order_relaxed)),
                     unsigned(Performance::cpu_state[1].phase.load(std::memory_order_relaxed)),
                     unsigned(Performance::cpu_state[2].phase.load(std::memory_order_relaxed)),
-                    unsigned(Performance::cpu_state[3].phase.load(std::memory_order_relaxed)));
+                    unsigned(Performance::cpu_state[3].phase.load(std::memory_order_relaxed)),
+                    Performance::ActiveDiagnosticWaitNs(
+                        Performance::gpu_dma_sync_active_since_ns) / 1'000'000ULL,
+                    Performance::ActiveDiagnosticWaitNs(
+                        Performance::gpu_puller_semaphore_active_since_ns) / 1'000'000ULL);
                 Print(line);
                 }
             }
