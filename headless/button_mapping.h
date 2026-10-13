@@ -39,12 +39,18 @@ inline constexpr ButtonMapping kSwitchMapping = {
     pad_touchpad, pad_l3, pad_r3};
 
 inline constexpr ButtonMapping kDefaultMapping = kPlayStationMapping;
-// R448: only explicit FC27 title mapping is scoped to match gameplay.
+// R456: The guest title owns its in-game action settings. Those are NOT
+// stored in Encore's per-title launcher settings. Match physical positions
+// default to Switch; a user-authored Encore game mapping takes precedence.
 inline constexpr std::uint64_t kFc27TitleId = 0x0100C49025D3E000ULL;
+inline constexpr ButtonMapping Fc27GameplayButtons(bool has_custom_title_mapping,
+                                                   const ButtonMapping& selected) noexcept {
+    return has_custom_title_mapping ? selected : kSwitchMapping;
+}
 inline constexpr bool HasFc27MatchMapping(std::uint64_t title, bool custom,
                                            const ButtonMapping& menu,
-                                           const ButtonMapping& game) noexcept {
-    return title == kFc27TitleId && custom && menu != game;
+                                           const ButtonMapping& selected) noexcept {
+    return title == kFc27TitleId && menu != Fc27GameplayButtons(custom, selected);
 }
 
 inline constexpr const ButtonMapping& BaseMappingForLayout(int layout) {

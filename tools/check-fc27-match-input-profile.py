@@ -10,7 +10,7 @@ ui=(root/"headless/prosperoeden/pe/ui/mapping.cpp").read_text()
 store=(root/"headless/settings_store.h").read_text()
 assert "separate_fc27_gameplay = Eden::HasFc27MatchMapping(" in main
 assert "pad->SetMapping(separate_fc27_gameplay ? controls.mapping : mapping);" in main
-assert "if (separate_fc27_gameplay) pad->SetGameplayMapping(mapping);" in main
+assert "if (separate_fc27_gameplay) pad->SetGameplayMapping(fc27_gameplay_mapping);" in main
 assert "mode=dual_manual gesture=touchpad_square" in main
 assert "void SetGameplayMapping(const ButtonMapping& value)" in device
 assert "has_gameplay_mapping && gameplay_mode ? gameplay_mapping : mapping" in device
@@ -34,7 +34,10 @@ using namespace Eden;
 int main() {
     auto custom=Assign(kPlayStationMapping,game_a,pad_circle);
     assert(custom[game_a]==pad_circle && custom[game_b]==pad_cross);
-    static_assert(!HasFc27MatchMapping(kFc27TitleId,false,kPlayStationMapping,kSwitchMapping));
+    static_assert(HasFc27MatchMapping(kFc27TitleId,false,kPlayStationMapping,kPlayStationMapping));
+    static_assert(!HasFc27MatchMapping(kFc27TitleId,false,kSwitchMapping,kPlayStationMapping));
+    static_assert(Fc27GameplayButtons(false,kPlayStationMapping)==kSwitchMapping);
+    static_assert(Fc27GameplayButtons(true,kPlayStationMapping)==kPlayStationMapping);
     static_assert(!HasFc27MatchMapping(0x01007EF00011E000ULL,true,kPlayStationMapping,kSwitchMapping));
     static_assert(!HasFc27MatchMapping(kFc27TitleId,true,kPlayStationMapping,kPlayStationMapping));
     assert(HasFc27MatchMapping(kFc27TitleId,true,kPlayStationMapping,custom));

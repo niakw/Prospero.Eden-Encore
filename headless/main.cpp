@@ -1663,10 +1663,12 @@ int main(int argc, char** argv) {
             // FC27's explicit custom title mapping should control match actions
             // without changing PlayStation navigation/cinematics. No heuristic
             // scene detection: Touchpad+Square deliberately switches profile.
+            const auto fc27_gameplay_mapping = Eden::Fc27GameplayButtons(
+                game_video.own_mapping, mapping);
             const bool separate_fc27_gameplay = Eden::HasFc27MatchMapping(
                 launch_title_id, game_video.own_mapping, controls.mapping, mapping);
             pad->SetMapping(separate_fc27_gameplay ? controls.mapping : mapping);
-            if (separate_fc27_gameplay) pad->SetGameplayMapping(mapping);
+            if (separate_fc27_gameplay) pad->SetGameplayMapping(fc27_gameplay_mapping);
             std::fprintf(stderr,
                 "EDEN_PAD_MAPPING_FIXED title=%016llx layout=%d a=%d b=%d x=%d y=%d title_override=%u own_mapping=%u\n",
                 static_cast<unsigned long long>(launch_title_id),
@@ -1679,7 +1681,7 @@ int main(int argc, char** argv) {
                 static_cast<unsigned long long>(launch_title_id),
                 separate_fc27_gameplay ? "dual_manual" : "fixed",
                 controls.mapping[Eden::game_a], controls.mapping[Eden::game_b],
-                mapping[Eden::game_a], mapping[Eden::game_b]);
+                fc27_gameplay_mapping[Eden::game_a], fc27_gameplay_mapping[Eden::game_b]);
             if (!pad->Open()) throw std::runtime_error("PS5 controller initialization failed");
             const std::string mapping_profile =
                 custom_mapping ? (effective_layout == 1 ? "Custom Switch" : "Custom PS5") :

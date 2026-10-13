@@ -60,3 +60,7 @@ The fixed-input implementation hardcoded `pad->SetMapping(mapping)` for every gu
 ## R452 — FC27 chord held-state correction
 
 A physical Touchpad+Square press must toggle once even if Cross/Options or other buttons change during the held chord. The R448 predicate mixed “physically held” with “valid for entering mode”, causing its latch to reset if a disallowed button entered during the hold. R452 separates the physical latch (remains true until the actual chord is released) from the acceptance predicate (only the first permitted press toggles); guest chord buttons remain suppressed throughout the hold. This prevents unintended match/menu reversals. No extra guest scene inference is introduced.
+
+## R456 — Make FC27 in-game controls effective without a launcher title override
+
+**Corrected oversight:** R448 required `game_video.own_mapping` to be true, despite the reported configuration being edited inside FC27 rather than in Encore. The guest's internal control assignments cannot set `own_mapping`. R456 permits the title `0100C49025D3E000` to keep the global PlayStation UI profile while selecting physical Switch guest button positions in *manual match context*, with the saved Encore per-title mapping taking precedence if actually present. Other titles unchanged. The existing Touchpad+Square context toggle remains explicit; no automatic scene recognition was added. The C++ regression checks FC27 with and without a launcher override. Source-only until native validation.
