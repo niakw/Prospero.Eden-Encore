@@ -23,7 +23,8 @@ assert parse_qs(yandex_url.query)["text"] == ["BOTW кнопки"]
 html=b'<html><body><a class="result__a" href="/l/?uddg=https%3A%2F%2Fgamebanana.com%2Fmods%2F659253">Zelda BOTW DS4 mod</a><a href="https://github.com/test/botw-controller-buttons">BOTW controller glyphs</a></body></html>'
 a=mod.parse_page("curl_duckduckgo","https://html.duckduckgo.com/html/?q=BOTW",
                  "https://html.duckduckgo.com/html/?q=BOTW",200,html)
-assert len(a)==2 and urlsplit(a[0][1]).hostname == "html.duckduckgo.com"\nassert parse_qs(urlsplit(a[0][1]).query).get("uddg") == ["https://gamebanana.com/mods/659253"]
+assert len(a)==2 and urlsplit(a[0][1]).hostname == "html.duckduckgo.com"
+assert parse_qs(urlsplit(a[0][1]).query).get("uddg") == ["https://gamebanana.com/mods/659253"]
 b=mod.parse_page("curl_yandex","https://yandex.com/search/?text=BOTW",
                  "https://yandex.com/search/?text=BOTW",200,html)
 assert len(b)==2
