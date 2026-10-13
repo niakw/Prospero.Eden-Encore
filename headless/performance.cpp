@@ -987,6 +987,10 @@ void ReportDirectMemoryState(const char* phase) {
 // its own diagnostic report while the controller worker stays alive.
 std::atomic<unsigned long long> latest_gpu_report_ns{0};
 std::atomic<unsigned> latest_gpu_report_frame{0};
+void ResetGpuReportForTitle() noexcept {
+    latest_gpu_report_ns.store(0, std::memory_order_release);
+    latest_gpu_report_frame.store(0, std::memory_order_relaxed);
+}
 bool GpuReportStale(unsigned long long now_ns, unsigned long long progress_ns) noexcept {
     constexpr unsigned long long kStallNs = 20'000'000'000ULL;
     return progress_ns != 0 && now_ns > progress_ns &&
