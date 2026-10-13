@@ -9,6 +9,7 @@ advanced in virtual counters; we do NOT claim 28 minutes of wall-clock testing
 or emulate the firmware scheduler/driver.
 """
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -61,6 +62,7 @@ assert 'producer.cv.wait(lock, stop_token' in queue_source
 frames = ",".join(str(x["frames"]) for x in window)
 gpu_load_ms = ",".join(str(x["gpu_dispatch_ms"]) for x in window)
 gpu_idle_ms = ",".join(str(x["gpu_idle_ms"]) for x in window)
+baseline = stalls[0]
 test = r"""
 int main() {
     using namespace std::chrono_literals;
@@ -68,6 +70,9 @@ int main() {
     const std::array<double,68> dispatch_ms{__DISPATCH__};
     const std::array<double,68> idle_ms{__IDLE__};
     unsigned total{};
+    const unsigned recorded_draws=__DRAWS__;
+    const unsigned recorded_guest_writes=__WRITES__;
+    const unsigned recorded_guest_ipc=__IPC_START__;
     double dispatch{}, idle{};
     for (size_t i=0; i<frames.size(); ++i) {
         total+=frames[i];
@@ -86,6 +91,7 @@ int main() {
         const unsigned expected=total*factor;
         std::atomic<unsigned> blocked{0};
         std::atomic<unsigned> drawn{0};
+        std::atomic<unsigned long long> synthetic_draws{0}, synthetic_writes{0};
         std::atomic<unsigned long long> checksum{0};
         std::atomic<unsigned> background{0};
         std::thread producer([&] {
@@ -102,7 +108,10 @@ int main() {
             assert(seq==expected);
         });
         std::thread renderer([&] {
-            unsigned long long work=0;
+            unsigned long long work=0, draw_ops=0, write_ops=0;
+            std::array<unsigned,8192> fake_guest_memory{};
+            const unsigned long long total_draw_ops=static_cast<unsigned long long>(recorded_draws)*factor;
+            const unsigned long long total_write_ops=static_cast<unsigned long long>(recorded_guest_writes)*factor;
             for(unsigned i=0;i<expected;i++) {
                 unsigned value{};
                 while (!q.TryPop(value)) std::this_thread::yield();
@@ -110,15 +119,24 @@ int main() {
                 // Synthetic cost variation; never equate host iterations with
                 // firmware driver time. Helps expose producer/consumer races.
                 unsigned long long acc=value+1;
-                for(int draw=0;draw<48;draw++)
+                const unsigned long long n_draws=total_draw_ops/expected+(i<total_draw_ops%expected);
+                const unsigned long long n_writes=total_write_ops/expected+(i<total_write_ops%expected);
+                for(unsigned long long draw=0;draw<n_draws;draw++)
                     acc=(acc*6364136223846793005ULL+1442695040888963407ULL);
+                for(unsigned long long j=0;j<n_writes;j++)
+                    fake_guest_memory[(acc+j)&8191u]^=static_cast<unsigned>(i+j+1);
+                draw_ops+=n_draws;
+                write_ops+=n_writes;
                 work^=acc;
                 drawn.fetch_add(1,std::memory_order_relaxed);
             }
+            for (auto value:fake_guest_memory) work ^= value;
+            synthetic_draws.store(draw_ops,std::memory_order_release);
+            synthetic_writes.store(write_ops,std::memory_order_release);
             checksum.store(work,std::memory_order_release);
         });
         std::thread ipc([&] {
-            const unsigned loops=500000u*factor;
+            const unsigned loops=recorded_guest_ipc*factor;
             unsigned local=0;
             for(unsigned n=0;n<loops;n++)local+=(n&1);
             background.fetch_add(loops,std::memory_order_relaxed);
@@ -128,11 +146,14 @@ int main() {
         unsigned value{};
         assert(!q.TryPop(value));
         assert(drawn.load()==expected);
-        assert(background.load()==500000u*factor);
-        std::printf("LOAD_FACTOR %dx commands=%u ipc_work=%u bounded_queue=32 "
+        assert(background.load()==recorded_guest_ipc*factor);
+        assert(synthetic_draws.load()==static_cast<unsigned long long>(recorded_draws)*factor);
+        assert(synthetic_writes.load()==static_cast<unsigned long long>(recorded_guest_writes)*factor);
+        std::printf("LOAD_FACTOR %dx command_units=%u draw_like_ops=%llu "
+                    "guest_write_like_ops=%llu ipc_work=%u bounded_queue=32 "
                     "producer_waits=%u checksum=%llu\n",
-                    factor,expected,500000u*factor,blocked.load(),
-                    checksum.load());
+                    factor,expected,synthetic_draws.load(),synthetic_writes.load(),
+                    recorded_guest_ipc*factor,blocked.load(),checksum.load());
     }
     // Exact observed 1,669-second interval is VIRTUAL. Exercise actual
     // producer full-queue blocking while IPC + pad pathways keep progressing.
@@ -170,13 +191,18 @@ int main() {
     std::puts("HOST STRESS PASS: native queue stays FIFO/bounded under record-derived load");
 }
 """.replace("__FRAMES__",frames).replace("__DISPATCH__",gpu_load_ms).replace("__IDLE__",gpu_idle_ms)
+test = (test.replace("__DRAWS__",str(baseline["draws"]))
+        .replace("__WRITES__",str(baseline["guest_writes"]))
+        .replace("__IPC_START__",str(baseline["guest_ipc"])))
 compiler = shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
 assert compiler, "C++20 compiler required"
 with tempfile.TemporaryDirectory(prefix="eden-native-recorded-pressure-") as tmp:
     src = Path(tmp)/"native-stress.cpp"
     exe = Path(tmp)/"native-stress"
     src.write_text(queue_source+test)
+    sanitize = os.environ.get("EDEN_STRESS_SANITIZE") == "1"
+    flags = ["-fsanitize=address,undefined", "-fno-sanitize-recover=all"] if sanitize else []
     subprocess.run([compiler,"-std=c++20","-O2","-pthread","-Wall","-Wextra","-Werror",
-                    str(src),"-o",str(exe)],check=True,timeout=60)
+                    *flags,str(src),"-o",str(exe)],check=True,timeout=60)
     subprocess.run([str(exe)],check=True,timeout=55)
 print("QUALIFICATION: source-derived workload, NOT the original game, kernel, GPU or Vulkan driver")
