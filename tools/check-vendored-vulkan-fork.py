@@ -41,7 +41,24 @@ with tempfile.TemporaryDirectory(prefix='eden-vulkan-fork-compare-') as d:
     expected={str(p.relative_to(active)):p for p in active.rglob('*') if p.is_file()}
     assert actual.keys()==expected.keys(),f'missing: {actual.keys()-expected.keys()}, extras: {expected.keys()-actual.keys()}'
     mismatches=[name for name in sorted(actual) if not filecmp.cmp(actual[name],expected[name],shallow=False)]
-    assert not mismatches, f'vendored Vulkan C++ differs from pinned generated source: {mismatches}'
+    if mismatches:
+        # Print a tightly bounded exact diff before failing. The generator and
+        # active files previously looked equivalent in high-level assertions,
+        # forcing repeated CI runs to diagnose a single byte of drift.
+        from difflib import unified_diff
+        from itertools import islice
+        for name in mismatches[:5]:
+            generated, versioned = actual[name], expected[name]
+            if not name.endswith(('.cpp', '.h', '.py', '.cmake')):
+                print(f'VULKAN_ORACLE_BINARY_DIFF {name} SHA256={hashlib.sha256(generated.read_bytes()).hexdigest()} '
+                      f'active_SHA256={hashlib.sha256(versioned.read_bytes()).hexdigest()}', flush=True)
+                continue
+            diff = unified_diff(generated.read_text().splitlines(keepends=True),
+                                versioned.read_text().splitlines(keepends=True),
+                                fromfile=f'generated/{name}', tofile=f'active/{name}')
+            for line in islice(diff, 130):
+                print(line, end='', flush=True)
+        raise AssertionError(f'vendored Vulkan C++ differs from pinned generated source: {mismatches}')
     # Versioned code must compile after fresh clone at a different checkout
     # path: forbids CMake/host absolute paths embedded in generated C++.
     for name, file in expected.items():
