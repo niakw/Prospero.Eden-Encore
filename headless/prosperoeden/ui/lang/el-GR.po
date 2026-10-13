@@ -1008,3 +1008,143 @@ msgstr "3x (πολύ υψηλή μνήμη)"
 #: settings_store.h
 msgid "4x (extreme memory)"
 msgstr "4x (ακραία μνήμη)"
+
+#: translated UI setting
+msgid "Anti-aliasing"
+msgstr "Εξομάλυνση ακμών"
+
+#: translated UI setting
+msgid "Button mapping"
+msgstr "Αντιστοίχιση πλήκτρων"
+
+#: translated UI setting
+msgid "Quick settings"
+msgstr "Γρήγορες ρυθμίσεις"
+
+#: translated UI setting
+msgid "Storage"
+msgstr "Αποθήκευση"
+
+#: translated UI setting
+msgid "Video preset"
+msgstr "Προφίλ βίντεο"
+
+#: translated UI setting
+msgid "Game resolution"
+msgstr "Ανάλυση παιχνιδιού"
+
+#: translated UI setting
+msgid "TV output"
+msgstr "Έξοδος TV"
+
+#: translated UI setting
+msgid "Play"
+msgstr "Παίξε"
+
+#: translated UI setting
+msgid "Cancel"
+msgstr "Ακύρωση"
+
+#: translated UI setting
+msgid "Confirm"
+msgstr "Επιβεβαίωση"
+
+#: translated UI setting
+msgid "Reset"
+msgstr "Επαναφορά"
+
+#: translated UI setting
+msgid "Ultra"
+msgstr "Ultra"
+
+#: translated UI setting
+msgid "Recommended"
+msgstr "Προτεινόμενο"
+
+#: translated UI setting
+msgid "Minimum"
+msgstr "Ελάχιστο"
+
+#: translated UI setting
+msgid "Home"
+msgstr "Αρχική"
+
+#: translated UI setting
+msgid "Clear cache"
+msgstr "Εκκαθάριση μνήμης cache"
+
+#: translated UI setting
+msgid "Done"
+msgstr "Τέλος"
+
+#: translated UI setting
+msgid "Custom"
+msgstr "Προσαρμοσμένο"
+
+#: translated UI setting
+msgid "Controllers"
+msgstr "Χειριστήρια"
+
+#: translated UI setting
+msgid "Quit"
+msgstr "Έξοδος"
+
+#: translated UI setting
+msgid "FSR sharpness"
+msgstr "Ευκρίνεια FSR"
+
+#: translated UI setting
+msgid "Stick deadzone"
+msgstr "Νεκρή ζώνη μοχλού"
+
+#: translated UI setting
+msgid "Vibration strength"
+msgstr "Ένταση δόνησης"
+
+#: translated UI setting
+msgid "Preset"
+msgstr "Προεπιλογή"
+
+#: translated UI setting
+msgid "Open settings"
+msgstr "Άνοιγμα ρυθμίσεων"
+
+#: translated UI setting
+msgid "ANTI-ALIASING"
+msgstr "ΕΞΟΜΑΛΥΝΣΗ ΑΚΜΩΝ"
+
+#: translated UI setting
+msgid "BUTTON MAPPING"
+msgstr "ΑΝΤΙΣΤΟΙΧΙΣΗ ΠΛΗΚΤΡΩΝ"
+
+#: translated UI setting
+msgid "QUICK SETTINGS"
+msgstr "ΓΡΗΓΟΡΕΣ ΡΥΘΜΙΣΕΙΣ"
+
+#: translated UI setting
+msgid "STORAGE"
+msgstr "ΑΠΟΘΗΚΕΥΣΗ"
+
+#: translated UI setting
+msgid "VIDEO PRESET"
+msgstr "ΠΡΟΦΙΛ ΒΙΝΤΕΟ"
+
+#: translated UI setting
+msgid "GAME RESOLUTION"
+msgstr "ΑΝΑΛΥΣΗ ΠΑΙΧΝΙΔΙΟΥ"
+
+#: translated UI setting
+msgid "TV OUTPUT"
+msgstr "ΕΞΟΔΟΣ TV"
+
+#: translated UI setting
+msgid "FSR SHARPNESS"
+msgstr "ΕΥΚΡΙΝΕΙΑ FSR"
+
+#: translated UI setting
+msgid "STICK DEADZONE"
+msgstr "ΝΕΚΡΗ ΖΩΝΗ ΜΟΧΛΟΥ"
+
+#: translated UI setting
+msgid "VIBRATION STRENGTH"
+msgstr "ΕΝΤΑΣΗ ΔΟΝΗΣΗΣ"

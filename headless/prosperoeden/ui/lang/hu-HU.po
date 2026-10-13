@@ -1008,3 +1008,143 @@ msgstr "3x (igen nagy memóriaigény)"
 #: settings_store.h
 msgid "4x (extreme memory)"
 msgstr "4x (extrém memóriaigény)"
+
+#: translated UI setting
+msgid "Anti-aliasing"
+msgstr "Élsimítás"
+
+#: translated UI setting
+msgid "Button mapping"
+msgstr "Gombkiosztás"
+
+#: translated UI setting
+msgid "Quick settings"
+msgstr "Gyorsbeállítások"
+
+#: translated UI setting
+msgid "Storage"
+msgstr "Tárhely"
+
+#: translated UI setting
+msgid "Video preset"
+msgstr "Videóbeállítási profil"
+
+#: translated UI setting
+msgid "Game resolution"
+msgstr "Játékfelbontás"
+
+#: translated UI setting
+msgid "TV output"
+msgstr "TV-kimenet"
+
+#: translated UI setting
+msgid "Play"
+msgstr "Játék"
+
+#: translated UI setting
+msgid "Cancel"
+msgstr "Mégse"
+
+#: translated UI setting
+msgid "Confirm"
+msgstr "Megerősítés"
+
+#: translated UI setting
+msgid "Reset"
+msgstr "Visszaállítás"
+
+#: translated UI setting
+msgid "Ultra"
+msgstr "Ultra"
+
+#: translated UI setting
+msgid "Recommended"
+msgstr "Ajánlott"
+
+#: translated UI setting
+msgid "Minimum"
+msgstr "Minimum"
+
+#: translated UI setting
+msgid "Home"
+msgstr "Kezdőlap"
+
+#: translated UI setting
+msgid "Clear cache"
+msgstr "Gyorsítótár törlése"
+
+#: translated UI setting
+msgid "Done"
+msgstr "Kész"
+
+#: translated UI setting
+msgid "Custom"
+msgstr "Egyéni"
+
+#: translated UI setting
+msgid "Controllers"
+msgstr "Vezérlők"
+
+#: translated UI setting
+msgid "Quit"
+msgstr "Kilépés"
+
+#: translated UI setting
+msgid "FSR sharpness"
+msgstr "FSR-élesség"
+
+#: translated UI setting
+msgid "Stick deadzone"
+msgstr "Kar holtzónája"
+
+#: translated UI setting
+msgid "Vibration strength"
+msgstr "Rezgés erőssége"
+
+#: translated UI setting
+msgid "Preset"
+msgstr "Előbeállítás"
+
+#: translated UI setting
+msgid "Open settings"
+msgstr "Beállítások megnyitása"
+
+#: translated UI setting
+msgid "ANTI-ALIASING"
+msgstr "ÉLSIMÍTÁS"
+
+#: translated UI setting
+msgid "BUTTON MAPPING"
+msgstr "GOMBKIOSZTÁS"
+
+#: translated UI setting
+msgid "QUICK SETTINGS"
+msgstr "GYORSBEÁLLÍTÁSOK"
+
+#: translated UI setting
+msgid "STORAGE"
+msgstr "TÁRHELY"
+
+#: translated UI setting
+msgid "VIDEO PRESET"
+msgstr "VIDEÓBEÁLLÍTÁSI PROFIL"
+
+#: translated UI setting
+msgid "GAME RESOLUTION"
+msgstr "JÁTÉKFELBONTÁS"
+
+#: translated UI setting
+msgid "TV OUTPUT"
+msgstr "TV-KIMENET"
+
+#: translated UI setting
+msgid "FSR SHARPNESS"
+msgstr "FSR-ÉLESSÉG"
+
+#: translated UI setting
+msgid "STICK DEADZONE"
+msgstr "KAR HOLTZÓNÁJA"
+
+#: translated UI setting
+msgid "VIBRATION STRENGTH"
+msgstr "REZGÉS ERŐSSÉGE"
