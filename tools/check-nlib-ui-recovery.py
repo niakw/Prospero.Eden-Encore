@@ -42,7 +42,7 @@ assert "media_retry_timer_ >= 8.0f" in nav
 assert "!game.cover.empty() ? game.cover : game.hero" in lib
 assert "if (image.missing) continue;" in lib
 assert "Loading artwork" in home and "Artwork unavailable" in home
-assert "text_block(c, title_label" in home
+assert "text_shrink(c, title_label" in home
 # R385 switched the hero's non-warning description to semantic ellipsis.
 # Preserve the actual rendering and warning-priority contracts, rather
 # than locking the test to an obsolete text_block() call.
