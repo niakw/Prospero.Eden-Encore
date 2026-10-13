@@ -1,12 +1,29 @@
 # Dedicated advanced CodeQL setup for this personal-account repository.
 # Requires switching GitHub's existing *default* CodeQL setup to advanced.
 # First-party and active renderer code remain in scope.
-name: Eden Encore CodeQL Advanced
+name: Encore security analysis
 on:
   push:
     branches: [dev/ps5-sparse-jit]
+    paths:
+      - '.github/workflows/**'
+      - '.github/codeql/**'
+      - 'headless/**'
+      - 'src/**'
+      - 'tools/**'
+      - 'third_party/**'
+      - 'fixtures/**'
+      - 'vendor/encore-active/**'
   pull_request:
     branches: [dev/ps5-sparse-jit]
+    paths:
+      - '.github/**'
+      - 'headless/**'
+      - 'src/**'
+      - 'tools/**'
+      - 'third_party/**'
+      - 'fixtures/**'
+      - 'vendor/encore-active/**'
   workflow_dispatch:
   schedule:
     - cron: '37 4 * * 2'
@@ -14,6 +31,9 @@ permissions:
   actions: read
   contents: read
   security-events: write
+concurrency:
+  group: encore-security-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
