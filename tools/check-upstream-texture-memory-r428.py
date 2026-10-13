@@ -12,6 +12,12 @@ assert '#include <boost/version.hpp>' in cmake
 assert 'target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/small-vector")' in cmake
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/texture_cache/util.cpp"' in cmake
 assert 'Pinned Eden ASTC ConvertImage changed; requalify R428' in cmake
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/common/logging.cpp"' in cmake
+assert 'flush_now - error_flushed_ms.load(std::memory_order_relaxed) >= 100' in cmake
+assert 'write_limit_exceeded ||' in cmake
+assert 'get_target_property(eden_common_sources common SOURCES)' in cmake
+assert 'list(REMOVE_ITEM eden_common_sources logging.cpp)' in cmake
+assert 'list(APPEND eden_common_sources "${PORT_BUILD_DIR}/logging.cpp")' in cmake
 assert 'const u32 layers = copy.image_subresource.num_layers * copy.image_extent.depth;' in cmake
 assert 'input_offset.subspan(layer * layer_input)' in cmake
 assert 'output.subspan(output_offset + layer * layer_output)' in cmake
@@ -42,6 +48,17 @@ std::vector<T> FixSmallVectorADL(
 constexpr u32 DivideUp(u32 a,u32 b){return (a+b-1)/b;}
 constexpr u32 AlignUp(u32 a,u32 b){return DivideUp(a,b)*b;}
 int main(){
+    // First error flush is immediate, next flush at 100 ms, oversized log forces a flush.
+    long long last_flush=-1000;
+    const auto flush_error = [&](long long now, bool oversized) {
+        if(oversized || now-last_flush>=100) { last_flush=now; return true; }
+        return false;
+    };
+    assert(flush_error(1000,false));
+    assert(!flush_error(1001,false));
+    assert(!flush_error(1099,false));
+    assert(flush_error(1100,false));
+    assert(flush_error(1110,true));
     static_assert(BOOST_VERSION >= 108100, "Modern Boost must select small_vector");
     using V=boost::container::small_vector<int,16>;
     static_assert(std::is_same_v<decltype(FixSmallVectorADL(V{})),V>);
