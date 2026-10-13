@@ -94,7 +94,15 @@ with tempfile.TemporaryDirectory(prefix='eden-r385-static-') as directory:
 # The native build must not derive the footer from the historical MEMORY file.
 assert 'derive-encore-build-label.py" "$root/MEMORY.md"' not in native
 assert 'fetch-depth: 256' in (root/'.github/workflows/build-040-zbic.yml').read_text()
-current=subprocess.run([sys.executable,'-B',str(script)],
-                       capture_output=True,text=True,check=True).stdout.strip()
-assert re.fullmatch(r'R[0-9]+',current) and int(current[1:]) >= 457, current
+current_result=subprocess.run([sys.executable,'-B',str(script)],
+                              capture_output=True,text=True)
+if current_result.returncode == 0:
+    current=current_result.stdout.strip()
+    assert re.fullmatch(r'R[0-9]+',current) and int(current[1:]) >= 457, current
+else:
+    # Lightweight source preflights check out only HEAD. The native build
+    # checks out 256 commits and must fail closed if it cannot derive R.
+    shallow=subprocess.run(['git','-C',str(root),'rev-parse','--is-shallow-repository'],
+                           capture_output=True,text=True,check=True).stdout.strip()
+    assert shallow=='true' and 'No numbered R revision' in current_result.stderr, current_result.stderr
 print('R401 HERO STATIC PASS: one-line measured title, long synopsis only, two-line semantic clipping, 4 bounded chips')
