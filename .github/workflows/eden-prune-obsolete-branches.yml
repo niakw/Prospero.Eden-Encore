@@ -1,0 +1,66 @@
+name: Eden one-time obsolete branch cleanup
+on:
+  push:
+    branches: [dev/ps5-sparse-jit]
+
+permissions:
+  contents: write
+
+jobs:
+  prune:
+    if: contains(github.event.head_commit.message, '[prune-branches]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Delete only allowlisted obsolete refs after verifying their SHA
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+          repo = os.environ["GITHUB_REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+          base = f"https://api.github.com/repos/{repo}"
+          headers = {"Authorization": "Bearer " + token,
+                     "Accept": "application/vnd.github+json",
+                     "X-GitHub-Api-Version": "2022-11-28"}
+          def call(path, method="GET"):
+              req = urllib.request.Request(base + path, headers=headers, method=method)
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  data = response.read()
+                  return json.loads(data) if data else None
+          assert repo == "niakw/Prospero.Eden-Encore", "Unexpected repository"
+          assert call("")["default_branch"] == "dev/ps5-sparse-jit", "Default branch changed"
+          refs = {
+              "security/boost-mapbox-demo-token-r423": "7466e2a8017dff9216630a8e43e96787929216d5",
+              "security/codeql-10-28": "925d125f451be7e94ba7de099bfc7dc18f7bcc47",
+              "security/codeql-advanced-r420": "242698ed77344f21da300e3cec4eaf02589b6047",
+              "work/r417-ps5-thread-schedule-proof": "b0bcc84d6a44598ef23ea934829002882dd1841d",
+              "work/r421-frame-pacing-codeql-cleanup": "601cd66ad304e1ef7144b93626868bb70e04736b",
+              "work/r424-present-fence-phase-diagnostics": "55197994513146266622aada833f26a6426b2908",
+              "work/r425-security-present-combined": "da224c3f43878ff461a1556cd30a4a53f4814be2",
+              "work/r425-validation": "245733adda112040045d67d86e4473e2ca6146f6",
+              "work/r426-artifact-before-cache": "146128cd2c98f34ab2f41088829475b9a8459f25",
+              "work/r428-upstream-memory-texture-port": "e3a654451743052f7f2f03413b47b5252614aceb",
+          }
+          # Check ALL leases before deleting ANYTHING. New work on a stale
+          # branch must cause a safe abort, not a destructive race.
+          for branch, expected in refs.items():
+              assert branch != "dev/ps5-sparse-jit"
+              suffix = urllib.parse.quote("heads/" + branch, safe="/")
+              actual = call("/git/ref/" + suffix)["object"]["sha"]
+              if actual != expected:
+                  raise RuntimeError(f"Ref {branch} moved; refusing cleanup")
+          for branch in refs:
+              suffix = urllib.parse.quote("heads/" + branch, safe="/")
+              call("/git/refs/" + suffix, "DELETE")
+              print("DELETED", branch, flush=True)
+          assert call("/git/ref/heads/dev/ps5-sparse-jit")["object"]["sha"] == os.environ["GITHUB_SHA"], \
+              "Default branch changed during cleanup"
+          print("SUCCESS: 10 obsolete branches deleted, dev preserved")
+          PY
