@@ -1,4 +1,4 @@
-name: Verify PS Glyph Reconstruction (host only)
+name: Verify controller glyph reconstruction (host only)
 on:
   push:
     branches: [dev/ps5-sparse-jit]
