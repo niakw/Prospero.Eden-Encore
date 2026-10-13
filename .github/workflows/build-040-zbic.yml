@@ -225,6 +225,7 @@ jobs:
           python3 -B tools/install-vendored-eden-backports.py --replay
           python3 -B tools/check-surface-lifecycle.py
           python3 -B tools/check-vendored-vulkan-fork.py
+          python3 -B tools/check-vendor-consolidation-debt.py
           python3 -B tools/check-ps5-tfb-counter-stability.py
           python3 -B tools/check-ps5-guest-ipc-thread-profile.py
           python3 -B tools/analyze-fc27-ipc-threads.py --self-test
