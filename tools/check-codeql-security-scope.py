@@ -16,6 +16,7 @@ assert not (root / ".github/workflows/codeql.yml").exists(), "Remove duplicate a
 assert config.startswith("name: Eden Encore CodeQL")
 patterns = re.findall(r"^\s+- '([^']+)'", config, flags=re.M)
 expected = {
+    "tools/fixtures/**",  # Immutable regression snapshots are not shipped runtime sources.
     "vendor/sources/**/libs/mpl/preprocessed/pp.py",
     "vendor/sources/**/tools/litre/cplusplus.py",
     "vendor/sources/**/bin/nir-test-runner.py",
@@ -44,6 +45,7 @@ for path in (
     "vendor/sources/harfbuzz/test/shaping/python/run_tests.py",
 ):
     assert ignored(path), path
+assert ignored("tools/fixtures/ps5-r343-radv-cmd-buffer.c")
 for path in (
     "headless/main.cpp",
     "headless/network_domain_rules.c",
