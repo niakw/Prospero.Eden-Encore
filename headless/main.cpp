@@ -1666,14 +1666,14 @@ int main(int argc, char** argv) {
             // Do not silently override or toggle those guest actions.
             pad->SetMapping(mapping);
             std::fprintf(stderr,
-                "EDEN_PAD_MAPPING_FIXED title=%016llx layout=%d a=%d b=%d x=%d y=%d title_override=%u own_mapping=%u\\n",
+                "EDEN_PAD_MAPPING_FIXED title=%016llx layout=%d a=%d b=%d x=%d y=%d title_override=%u own_mapping=%u\n",
                 static_cast<unsigned long long>(launch_title_id),
                 effective_layout, mapping[Eden::game_a], mapping[Eden::game_b],
                 mapping[Eden::game_x], mapping[Eden::game_y],
                 static_cast<unsigned>(game_video.controller_layout >= 0 || game_video.own_mapping),
                 static_cast<unsigned>(game_video.own_mapping));
             std::fprintf(stderr,
-                "EDEN_PAD_MAPPING_CONTEXT title=%016llx mode=game_owned a=%d b=%d x=%d y=%d\\n",
+                "EDEN_PAD_MAPPING_CONTEXT title=%016llx mode=game_owned a=%d b=%d x=%d y=%d\n",
                 static_cast<unsigned long long>(launch_title_id),
                 mapping[Eden::game_a], mapping[Eden::game_b],
                 mapping[Eden::game_x], mapping[Eden::game_y]);
