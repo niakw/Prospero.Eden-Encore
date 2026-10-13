@@ -11,6 +11,8 @@
 
 namespace Eden::Performance {
 void RegisterWorker(const char* name);
+// One-shot read-only PS5 scheduler and cpuset evidence for Vulkan workers.
+void ProbeSchedulerOnce(const char* role) noexcept;
 // Development: keep other named threads off guest cores 0-2 and their SMT siblings.
 void SetSecondaryPlacement(bool enabled);
 // Which logical slots are already dedicated to guest CPU/GPU workers.

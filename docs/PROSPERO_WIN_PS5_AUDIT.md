@@ -46,3 +46,9 @@ Scope: real native PS5 title on FW 13.60, FC27 (0100C49025D3E000), BOTW. This is
 5. Keep one performance A/B variable per compiled build and do not conflate debug-log overhead with final FPS.
 
 Status 2026-10-13: R414 source CI SUCCESS, R415 native CI SUCCESS, next PS5 hardware run unperformed. No live gameplay performance gain claimed.
+
+## R417 follow-up — firmware scheduling evidence (source-only)
+
+R417 captures `EDEN_PS5_THREAD_SCHED` exactly once per actual Vulkan command worker and shader graphics/compute compilation thread. It records `pthread_getschedparam` policy (FIFO/RR/OTHER), effective priority, permitted CPU affinity and both API error codes. The change is read-only: it does not modify thread priorities, CPU placement, mutex scopes, the renderer, the shader-worker count, Mesa, or VideoOut.
+
+The tracked prepared Vulkan files and `prepare-vulkan-port.py` source generator are updated together and qualified by a host fixture. Host tests establish source/wiring behavior only, not console performance. The real FW13.60 readback remains unknown until a hardware run; R415 is still the latest tested native archive, and R417 must NOT be presented as a FPS or graphics fix. Only contemplate explicit SCHED_RR A/B once the priority/mask measurements and hot-stage timings have been reviewed.

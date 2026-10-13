@@ -642,6 +642,37 @@ std::uint64_t VerifiedSecondaryPlacementMask() noexcept {
 #endif
 }
 
+void ProbeSchedulerOnce(const char* role) noexcept {
+#ifdef PS5_NATIVE
+    // Once per actual OS thread. Diagnose FW13.60 priority and logical mask;
+    // no scheduling or affinity mutation, and no per-frame sampling.
+    static thread_local bool reported = false;
+    if (reported) return;
+    reported = true;
+    int policy = -1;
+    sched_param priority{};
+    const int sched_error = pthread_getschedparam(pthread_self(), &policy, &priority);
+    cpuset_t allowed{};
+    const int affinity_rc = cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1,
+                                              sizeof(unsigned long long), &allowed);
+    const int affinity_error = affinity_rc ? errno : 0;
+    unsigned long long mask = 0;
+    if (!affinity_rc) {
+        for (unsigned cpu = 0; cpu < 64; ++cpu)
+            if (CPU_ISSET(cpu, &allowed)) mask |= 1ULL << cpu;
+    }
+    const char* const policy_name =
+        sched_error ? "unknown" : policy == SCHED_FIFO ? "FIFO" :
+        policy == SCHED_RR ? "RR" : "OTHER";
+    std::printf("EDEN_PS5_THREAD_SCHED role=%s sched_error=%d policy=%s(%d) priority=%d "
+                "affinity_error=%d allowed_mask=0x%llx\n",
+                role, sched_error, policy_name, policy, priority.sched_priority,
+                affinity_error, mask);
+#else
+    (void)role;
+#endif
+}
+
 void SetSecondaryPlacement(bool enabled) {
 #ifdef PS5_NATIVE
     // Clear previous title/placement evidence BEFORE trying to repin. A

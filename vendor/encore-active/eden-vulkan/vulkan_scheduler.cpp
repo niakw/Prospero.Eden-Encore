@@ -19,6 +19,7 @@
 
 #include "common/settings.h"
 #include "common/thread.h"
+#include "performance.h"
 #include "video_core/gpu_logging/gpu_logging.h"
 #include "video_core/renderer_vulkan/vk_command_pool.h"
 #include "video_core/renderer_vulkan/vk_graphics_pipeline.h"
@@ -384,6 +385,9 @@ void Scheduler::WorkerThread(std::stop_token stop_token) {
     Common::SetCurrentThreadName("VulkanWorker");
     Common::SetCurrentThreadPriority(Common::ThreadPriority::Critical);
     Common::SetCurrentThreadToPerformanceCores();
+#ifdef PS5_NATIVE
+    ::Eden::Performance::ProbeSchedulerOnce("VulkanWorker");
+#endif
 
     const auto TryPopQueue{[this](auto& work) -> bool {
         if (work_queue.empty()) {

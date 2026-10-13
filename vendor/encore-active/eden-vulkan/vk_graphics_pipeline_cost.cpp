@@ -365,6 +365,9 @@ GraphicsPipeline::GraphicsPipeline(
     }
 
     auto func{[this, shader_notify, &render_pass_cache, pipeline_statistics, fast_first_runtime = (worker_thread != nullptr)] {
+#ifdef PS5_NATIVE
+        ::Eden::Performance::ProbeSchedulerOnce("VkPipelineBuilder");
+#endif
         // Always release waiters, even when render-pass acquisition, shader
         // validation, fast-first optimisation scheduling or statistics throws.
         // A failed pipeline stays null and is rejected by the draw path.

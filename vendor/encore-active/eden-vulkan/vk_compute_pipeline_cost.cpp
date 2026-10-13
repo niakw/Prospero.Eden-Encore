@@ -82,6 +82,9 @@ ComputePipeline::ComputePipeline(const Device& device_, Scheduler& scheduler, vk
     }
 
     auto func{[this, shader_notify, pipeline_statistics] {
+#ifdef PS5_NATIVE
+        ::Eden::Performance::ProbeSchedulerOnce("VkPipelineBuilder");
+#endif
         // The Vulkan worker may throw before/after vkCreateComputePipelines;
         // never leave scheduler GPU build_condvar waiters blocked forever.
         SCOPE_EXIT {
