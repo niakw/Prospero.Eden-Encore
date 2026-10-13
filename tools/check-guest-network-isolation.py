@@ -42,7 +42,11 @@ assert 'eden_network_filter_load(Eden::AppFile("network-hosts.txt").c_str())' in
 assert 'eden_network_host_blocked(node)' in resolver
 assert 'eden_network_host_blocked(name)' in resolver
 assert 'cp "$root/headless/network-hosts.txt" "$app/network-hosts.txt"' in package
-assert 'nintendo.com' in hosts and 'ea.com' in hosts and 'gogcdn.net' in hosts
+# Assert exact active denylist entries, never URL/domain substrings.
+# A commented example or a lookalike such as evilnintendo.com is not a rule.
+denylist = {line.strip().casefold() for line in hosts.splitlines()
+            if line.strip() and not line.lstrip().startswith("#")}
+assert {"nintendo.com", "ea.com", "gogcdn.net"}.issubset(denylist)
 
 # Native HTTPS remains available to Home and guest networking is enabled.
 assert 'Common::Net::MakeRequest("https://api.nlib.cc", endpoint)' in services

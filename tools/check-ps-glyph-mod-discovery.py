@@ -62,6 +62,12 @@ with tempfile.TemporaryDirectory(prefix="eden-glyph-web-discovery-") as root:
     assert search.canonical_link("https://evil.com/l/?uddg=https%3A%2F%2Fgamebanana.com") is None
     assert search.canonical_link("https://127.0.0.1/secret") is None
     assert search.canonical_link("https://gamebanana.com.evil.net/mods/777") is None
+    assert search.canonical_link(
+        "https://evilduckduckgo.com/l/?uddg=https%3A%2F%2Fgamebanana.com%2Fmods%2F659253"
+    ) is None
+    assert search.canonical_link(
+        "https://duckduckgo.com.evil.net/l/?uddg=https%3A%2F%2Fgamebanana.com%2Fmods%2F659253"
+    ) is None
     assert search.canonical_link("javascript:alert(1)") is None
     assert search.canonical_link("http://gamebanana.com/mods/659253?utm_token=secret") == (
         "https://gamebanana.com/mods/659253")

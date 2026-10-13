@@ -75,6 +75,9 @@ jobs:
           python3 -B tools/analyze-ps5-network-audit.py --self-test
           python3 -B tools/check-ps5-net-unit.py
           python3 -B tools/check-guest-network-isolation.py
+          python3 -B tools/check-ps-glyph-curl-search.py
+          python3 -B tools/check-ps-glyph-mod-discovery.py
+          python3 -B tools/check-codeql-security-scope.py
           python3 -B tools/check-fc27-hle-compat.py
           python3 -B tools/check-game-liveness.py
           python3 -B tools/check-fc27-trace.py

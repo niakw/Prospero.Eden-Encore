@@ -1,0 +1,11 @@
+name: Eden Encore CodeQL — first-party sources
+# Default setup requires repository property:
+# github-codeql-config-file = ./.github/codeql/codeql-config.yml
+# Preserve scanning of our code and active renderer forks.
+# Only exclude unused tool/test scripts inside byte-locked third-party snapshots.
+paths-ignore:
+  - 'vendor/sources/**/libs/mpl/preprocessed/pp.py'   # Boost MPL formatter
+  - 'vendor/sources/**/tools/litre/cplusplus.py'      # Boost Litre harness
+  - 'vendor/sources/**/bin/nir-test-runner.py'        # Mesa offline test runner
+  - 'vendor/sources/**/hb_test_tools.py'              # HarfBuzz shaping test helper
+  - 'vendor/sources/**/python/run_tests.py'          # Third-party Python test runner
