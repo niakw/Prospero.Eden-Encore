@@ -18,11 +18,11 @@ with tempfile.TemporaryDirectory(prefix='eden-radv-fork-equivalence-') as tmp:
                     str(SOURCE), str(temp)], check=True, capture_output=True, text=True, timeout=60)
     before = {str(p.relative_to(temp)): p for p in temp.rglob('*') if p.is_file()}
     after = {str(p.relative_to(ACTIVE)): p for p in ACTIVE.rglob('*') if p.is_file()}
-    assert len(before) == len(after) == 10
+    assert len(before) == len(after) == 11
     assert before.keys() == after.keys(), f'changed file list: {before.keys() ^ after.keys()}'
     for relative in before:
         assert filecmp.cmp(before[relative], after[relative], shallow=False), relative
-    print('VENDORED_RADV_FORK_EQUIVALENT_OK count=10 patch_oracle_matches_active_sources')
+    print('VENDORED_RADV_FORK_EQUIVALENT_OK count=11 patch_oracle_matches_active_sources')
 
     # Replay installation from the EXACT original pinned inputs, then retry
     # idempotently. Unexpected prior modifications must fail closed.
@@ -91,5 +91,6 @@ build = (ROOT / 'tools/build-radv-dependencies.sh').read_text()
 assert 'install-vendored-radv.py' in build
 assert 'python3 "$root/tools/patch-radv-wsi.py"' not in build
 assert build.count('bash "$vulkan/tools/build-radv.sh" release') == 2
+assert 'src/util/disk_cache_os.c' in module.PATHS
 assert 'EDEN_WSI_SHA256' in build
 print('VENDORED_RADV_ACTIVE_INSTALL_OK immutable Mesa pin, mixed R343/R398 cached inputs, unknown-source rejection')

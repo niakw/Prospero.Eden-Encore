@@ -187,3 +187,29 @@ radv_ps5_memory_grant_gpu(void *address, uint64_t bytes)
         if not oracle and provenance.exists():
             provenance.replace(provenance.with_suffix('.base.txt'))
     print(f'RADV initialization diagnostic {relative} sha256={hashlib.sha256(adapted.encode()).hexdigest()}')
+
+# R414: versioned, exact PS5 elevated-credentials shader cache fix.
+# This is an immutable pinned-source equivalence oracle, NOT a shipping patch.
+disk_relative = 'src/util/disk_cache_os.c'
+disk_input = (original_root / disk_relative).read_text()
+disk_old = '''   /* If running as a users other than the real user disable cache */
+   if (!__normal_user())
+      return false;'''
+disk_new = '''   /* A PS5 title can use launcher-assigned credentials (not setuid).
+    * A host-only effective/real-user mismatch disabled RADV shader cache
+    * silently on homebrew titles. Keep the safety guard on other OSes.
+    * Source: mpereiraesaa/PS5_Mesa 2026-10-09 (MIT). */
+#if !defined(__PROSPERO__)
+   if (!__normal_user())
+      return false;
+#endif'''
+assert disk_input.count(disk_old) == 1, 'Pinned Mesa cache guard changed'
+disk_output = disk_input.replace(disk_old, disk_new, 1)
+disk_target = output_root / disk_relative
+disk_target.parent.mkdir(parents=True, exist_ok=True)
+if not disk_target.exists() or disk_target.read_text() != disk_output:
+    disk_target.write_text(disk_output)
+    provenance = root.parent/'mihawk-vulkan-review/.deps/native/radv-release/PROVENANCE.txt'
+    if not oracle and provenance.exists():
+        provenance.replace(provenance.with_suffix('.base.txt'))
+print(f'RADV shader disk cache source sha256={hashlib.sha256(disk_output.encode()).hexdigest()}')

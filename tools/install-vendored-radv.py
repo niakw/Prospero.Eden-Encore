@@ -26,6 +26,7 @@ PATHS = (
     'src/amd/vulkan/meta/radv_meta_resolve.c',
     'src/amd/vulkan/winsys/ps5/radv_ps5_winsys.c',
     'src/amd/vulkan/winsys/ps5/radv_ps5_platform.c',
+    'src/util/disk_cache_os.c',
 )
 
 # Only exact, Git-verified prior Encore build inputs are accepted.
