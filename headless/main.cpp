@@ -2005,6 +2005,11 @@ int main(int argc, char** argv) {
                 [[maybe_unused]] double session_seconds = 0;  // guest-fault relaunch (PS5 only)
                 std::jthread input_worker;
                 if (pad) input_worker = std::jthread([&](std::stop_token stop) {
+#ifdef PS5_NATIVE
+                    // Keep physical input polling runnable when guest workers
+                    // saturate the OS-allowed CPU set.
+                    Eden::Performance::ProbeSchedulerOnce("PadInput");
+#endif
 #ifdef EDEN_DEV_PROFILE
                     // Live DualSense is ALWAYS the default, including the all-on
                     // FC27 development build. A title ID is only a boot target;
