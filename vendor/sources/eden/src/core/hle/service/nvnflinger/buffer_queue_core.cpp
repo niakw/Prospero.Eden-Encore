@@ -51,14 +51,19 @@ void BufferQueueCore::UpdateHistory(u64 frame_number, BufferState state) {
 }
 
 void BufferQueueCore::SignalDequeueCondition() {
-    dequeue_possible.store(true);
+    // Both producer and consumer hold mutex here. A single boolean consumed by
+    // the first awakened waiter loses the notification for other waiters.
+    // A generation survives until every waiter has observed the transition.
+    ++dequeue_generation;
     dequeue_condition.notify_all();
 }
 
 bool BufferQueueCore::WaitForDequeueCondition(std::unique_lock<std::mutex>& lk) {
-    dequeue_condition.wait(lk, [&] { return dequeue_possible.load(); });
-    dequeue_possible.store(false);
-
+    // The caller checked buffer availability with this same mutex held.
+    // Capture the generation before releasing it inside wait(): even when
+    // many producers wait, each observes this wakeup independently.
+    const u64 observed_generation = dequeue_generation;
+    dequeue_condition.wait(lk, [&] { return dequeue_generation != observed_generation; });
     return true;
 }
 
