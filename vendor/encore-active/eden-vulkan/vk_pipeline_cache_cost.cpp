@@ -883,6 +883,15 @@ GraphicsPipeline* PipelineCache::BuiltPipeline(GraphicsPipeline* pipeline) const
     if (pipeline->IsBuilt()) {
         return pipeline;
     }
+#ifdef PS5_NATIVE
+    // Prefer correct output over a missing shader draw. A not-yet-built
+    // async pipeline is safe to return: ConfigureDraw records an ordered
+    // scheduler-worker wait, and R378's SCOPE_EXIT publishes completion
+    // even on worker failure. No waiting under the guest cache pair here.
+    // The standard "skip complex first-use draws" policy stays unchanged
+    // on desktop/mobile, where it can improve cold first-use frame times.
+    return pipeline;
+#endif
     if (!use_asynchronous_shaders) {
         return pipeline;
     }

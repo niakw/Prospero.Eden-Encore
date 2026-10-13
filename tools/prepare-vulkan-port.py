@@ -1874,6 +1874,34 @@ for old, new in shader_costs:
     if shader_source.count(old) != 1:
         raise RuntimeError(f'Shader pipeline anchor changed: {old[:60]}')
     shader_source = shader_source.replace(old, new)
+# R403: On native PS5 do not silently discard a guest graphics draw just
+# because its asynchronous shader pipeline is compiling. ConfigureDraw already
+# waits via a GPU scheduler worker and R378 publishes completion even on error.
+# Desktop/mobile retain upstream first-use skip policy.
+ps5_first_use_old = (
+    '    if (pipeline->IsBuilt()) {\n'
+    '        return pipeline;\n'
+    '    }\n'
+    '    if (!use_asynchronous_shaders) {'
+)
+ps5_first_use_new = (
+    '    if (pipeline->IsBuilt()) {\n'
+    '        return pipeline;\n'
+    '    }\n'
+    '#ifdef PS5_NATIVE\n'
+    '    // Prefer correct output over a missing shader draw. A not-yet-built\n'
+    '    // async pipeline is safe to return: ConfigureDraw records an ordered\n'
+    "    // scheduler-worker wait, and R378's SCOPE_EXIT publishes completion\n"
+    '    // even on worker failure. No waiting under the guest cache pair here.\n'
+    '    // The standard "skip complex first-use draws" policy stays unchanged\n'
+    '    // on desktop/mobile, where it can improve cold first-use frame times.\n'
+    '    return pipeline;\n'
+    '#endif\n'
+    '    if (!use_asynchronous_shaders) {'
+)
+if shader_source.count(ps5_first_use_old) != 1:
+    raise RuntimeError('PS5 visual-first pipeline source anchor drift')
+shader_source = shader_source.replace(ps5_first_use_old, ps5_first_use_new)
 shader_output = output / 'vk_pipeline_cache_cost.cpp'
 if not shader_output.exists() or shader_output.read_text() != shader_source:
     shader_output.write_text(shader_source)
