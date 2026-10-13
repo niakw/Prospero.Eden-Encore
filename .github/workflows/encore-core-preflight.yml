@@ -63,6 +63,7 @@ jobs:
           python3 -B tools/check-vulkan-shader-workers-cpp-host.py
           python3 -B tools/check-worker-topology.py
           python3 -B tools/check-worker-affinity.py
+          python3 -B tools/check-ps5-thread-scheduler-probe.py
           python3 -B tools/check-ps5-pad-input-chain.py
           python3 -B tools/check-ps5-guest-system-buttons.py
           python3 -B tools/check-ps5-freebsd11-ule-topology.py
