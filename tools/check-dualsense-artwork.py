@@ -37,7 +37,8 @@ assert alpha[0] == alpha[-1] == 0
 
 assert '#include "pe/ui/dualsense_mask_asset.hpp"' in texture
 assert "pad_image.rgba.resize(kPixels * 4u);" in texture
-assert "level * 85u" in texture
+assert "color[0] = color[1] = color[2] = 255;" in texture
+assert "color[3] = level == 0 ? 0 : (level == 1 ? 240 : 255);" in texture
 assert "length > kPixels - pixel" in texture
 assert "if (valid && pixel == kPixels)" in texture
 assert 'load("art/controller.tga", &controller_)' in texture  # fallback
@@ -45,7 +46,7 @@ assert "c.textures.controller()" in widgets
 assert "c.list.image(image, r, {0.0f, 0.0f, 1.0f, 1.0f}," in widgets
 assert "Original vector fallback" in widgets
 assert "controller_icon(c, r, lit);" in (ui / "home.cpp").read_text()
-assert "dualsense_icon(c, {left - 2.0f" in (ui / "home.cpp").read_text()
+assert "dualsense_icon(c, {left - 10.0f" in (ui / "home.cpp").read_text()
 assert "PS5 Button Icons and Controls" in credit
 assert "Zacksly" in credit and "CC BY 3.0" in credit
 assert "Modified" not in credit or "Changes made:" in credit
