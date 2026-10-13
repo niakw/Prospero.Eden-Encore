@@ -24,3 +24,5 @@ Historical failures [38481264063](https://github.com/niakw/Prospero.Eden-Encore/
 New core/native build validation must confirm both stage-file equality and translated resolution keys. Do not declare the build warning-free, fully translated or a gameplay performance fix on the evidence of source edits alone.
 
 Validation target: stage the two complete maintained native source files, require catalog coverage and safe URL regression, then execute a single All-On native compile. [build-check requested]
+
+The first follow-up preflight at 18c1887f correctly rejected one outdated Yandex curl-search fixture: a relative DDG-specific /l/ route must not count as a valid Yandex search result. The fixture has now been corrected and expanded with adversarial URL and origin cases. Native build compilation and CodeQL classification remain gated by fresh CI evidence.
