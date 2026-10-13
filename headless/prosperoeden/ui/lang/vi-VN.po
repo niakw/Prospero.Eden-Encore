@@ -4,10 +4,6 @@
 # AMD FSR, DLC, NSP, XCI, prod.keys, Ryujinx) unchanged.
 
 #: settings_store.h
-msgid "0.5x (faster, softer)"
-msgstr "0,5x (nhanh hơn, kém nét hơn)"
-
-#: settings_store.h
 msgid "0.75x (faster)"
 msgstr "0,75x (nhanh hơn)"
 
@@ -19,29 +15,9 @@ msgstr "1,5x (nét hơn)"
 msgid "1x (native)"
 msgstr "1x (gốc)"
 
-#: settings_store.h
-msgid "2x (sharpest)"
-msgstr "2x (nét nhất)"
-
-#: settings_store.h
-msgid "3x (slower)"
-msgstr "3x (chậm hơn)"
-
-#: settings_store.h
-msgid "4x (slowest)"
-msgstr "4x (chậm nhất)"
-
 #: eden_services.cpp
 msgid "A firmware NCA cannot be read. Reinstall the firmware dump."
 msgstr "Không đọc được một tệp NCA của firmware. Hãy cài đặt lại bản dump firmware."
-
-#: pe/ui/home.cpp
-msgid "About"
-msgstr "Giới thiệu"
-
-#: pe/ui/browse.cpp
-msgid "About ProsperoEden"
-msgstr "Giới thiệu về ProsperoEden"
 
 #. Label: which folders the app can read.
 #: pe/ui/browse.cpp
@@ -57,19 +33,10 @@ msgstr "Trợ năng"
 msgid "ACCESSIBILITY"
 msgstr "TRỢ NĂNG"
 
-#. Label: a game's updates, DLC and mods.
-#: pe/ui/library.cpp
-msgid "ADD-ONS"
-msgstr "BỔ SUNG"
-
 #. {0}: updates, DLC and mods of the game; {1}: the language it will use.
 #: pe/ui/home.cpp
 msgid "Add-ons: {0}  /  Language: {1}"
 msgstr "Bổ sung: {0}  /  Ngôn ngữ: {1}"
-
-#: pe/ui/settings.cpp
-msgid "Adjust the essentials without leaving your library behind."
-msgstr "Điều chỉnh các thiết lập cơ bản mà không cần rời thư viện."
 
 #: pe/ui/browse.cpp
 msgid "All credit for the Eden emulator goes to its developers and contributors."
@@ -159,10 +126,6 @@ msgid "Choose a game from your library."
 msgstr "Chọn một trò chơi từ thư viện của bạn."
 
 #: pe/ui/browse.cpp
-msgid "Choose the folder that holds your keys, firmware and games"
-msgstr "Chọn thư mục chứa khóa, firmware và trò chơi của bạn"
-
-#: pe/ui/browse.cpp
 msgid "Choose the language games use"
 msgstr "Chọn ngôn ngữ dùng trong trò chơi"
 
@@ -173,10 +136,6 @@ msgstr "Chế độ máy"
 #: pe/ui/home.cpp
 msgid "CONTINUE PLAYING"
 msgstr "TIẾP TỤC CHƠI"
-
-#: pe/ui/settings.cpp
-msgid "Controller shortcuts and supported features."
-msgstr "Lối tắt trên bộ điều khiển và các tính năng được hỗ trợ."
 
 #: pe/ui/home.cpp
 msgid "CONTROLLERS"
@@ -194,17 +153,9 @@ msgstr "ĐIỀU KHIỂN"
 msgid "Could not create the folder. Check that the game files folder can be written."
 msgstr "Không tạo được thư mục. Hãy kiểm tra xem có ghi được vào thư mục tệp trò chơi không."
 
-#: pe/ui/library.cpp
-msgid "Could not save console mode. Please try again."
-msgstr "Không thể lưu chế độ máy. Vui lòng thử lại."
-
 #: pe/ui/launcher.cpp
 msgid "Could not save settings. Please try again."
 msgstr "Không thể lưu cài đặt. Vui lòng thử lại."
-
-#: pe/ui/browse.cpp
-msgid "Could not save the folder. Please try again."
-msgstr "Không thể lưu thư mục. Vui lòng thử lại."
 
 #: pe/ui/browse.cpp, pe/ui/library.cpp
 msgid "Could not save. Please try again."
@@ -229,34 +180,13 @@ msgstr "Ghi công và thiết lập"
 msgid "Default ({0})"
 msgstr "Mặc định ({0})"
 
-#: pe/ui/browse.cpp
-msgid "Default folder"
-msgstr "Thư mục mặc định"
-
-#: pe/ui/browse.cpp
-msgid "Default folder saved. Reopen ProsperoEden to use it."
-msgstr "Đã lưu thư mục mặc định. Hãy mở lại ProsperoEden để sử dụng."
-
 #: pe/ui/settings.cpp
 msgid "Detailed logging"
 msgstr "Ghi nhật ký chi tiết"
 
 #: pe/ui/settings.cpp
-msgid "DETAILED LOGS"
-msgstr "NHẬT KÝ CHI TIẾT"
-
-#: pe/ui/settings.cpp
-msgid "Detailed logs apply to the next game launch."
-msgstr "Nhật ký chi tiết áp dụng từ lần mở trò chơi tiếp theo."
-
-#: pe/ui/settings.cpp
 msgid "Detailed logs on"
 msgstr "Nhật ký chi tiết: Bật"
-
-#. Button hint: show the game's details.
-#: pe/ui/home.cpp
-msgid "Details"
-msgstr "Chi tiết"
 
 #: pe/ui/settings.cpp
 msgid "Diagnostics"
@@ -279,18 +209,10 @@ msgstr "Hiển thị chữ nhỏ trong menu lớn hơn."
 msgid "Dutch"
 msgstr "Tiếng Hà Lan"
 
-#: pe/ui/home.cpp
-msgid "Eden emulator for PlayStation 5"
-msgstr "Trình giả lập Eden cho PlayStation 5"
-
 #. Label of the shortcut that ends the running game.
 #: pe/ui/settings.cpp
 msgid "END GAME"
 msgstr "ĐÓNG TRÒ CHƠI"
-
-#: pe/ui/settings.cpp
-msgid "End the game and return to this menu"
-msgstr "Đóng trò chơi và quay lại menu này"
 
 #: settings_store.h
 msgid "English (UK)"
@@ -309,18 +231,10 @@ msgstr "Châu Âu"
 msgid "Export a copy"
 msgstr "Xuất bản sao"
 
-#: eden_services.cpp
-msgid "Export failed. Check that the game files folder can be written."
-msgstr "Xuất thất bại. Hãy kiểm tra xem có ghi được vào thư mục tệp trò chơi không."
-
 #. {0} is a folder.
 #: eden_services.cpp, host/fake_services.hpp
 msgid "Exported to {0}."
 msgstr "Đã xuất ra {0}."
-
-#: pe/ui/library.cpp
-msgid "FILE"
-msgstr "TỆP"
 
 #. What a mod is made of: files that replace the game's own.
 #: eden_services.cpp, host/fake_services.cpp
@@ -350,10 +264,6 @@ msgstr "Dữ liệu SystemVersion của firmware bị thiếu hoặc không đ�
 #: pe/ui/browse.cpp
 msgid "FOLDERS"
 msgstr "THƯ MỤC"
-
-#: pe/ui/library.cpp
-msgid "FORMAT"
-msgstr "ĐỊNH DẠNG"
 
 #. Label: the frames-per-second counter drawn over a game.
 #: pe/ui/settings.cpp
@@ -385,22 +295,6 @@ msgstr "Âm thanh trò chơi; nhạc menu hệ thống PS5 không thay đổi."
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Game could not start: {0} Details: {1}"
 msgstr "Không thể mở trò chơi: {0} Chi tiết: {1}"
-
-#: pe/ui/home.cpp
-msgid "Game details"
-msgstr "Chi tiết trò chơi"
-
-#: pe/ui/library.cpp
-msgid "GAME DETAILS"
-msgstr "CHI TIẾT TRÒ CHƠI"
-
-#: pe/ui/browse.cpp, pe/ui/settings.cpp
-msgid "Game files"
-msgstr "Tệp trò chơi"
-
-#: pe/ui/settings.cpp
-msgid "GAME FILES"
-msgstr "TỆP TRÒ CHƠI"
 
 #: pe/ui/library.cpp
 msgid "Game settings"
@@ -460,10 +354,6 @@ msgstr "ĐỘ TƯƠNG PHẢN CAO"
 msgid "High contrast"
 msgstr "Độ tương phản cao"
 
-#: pe/ui/settings.cpp
-msgid "How games are drawn and scaled to your TV."
-msgstr "Cách trò chơi được kết xuất và co giãn theo TV của bạn."
-
 #. Button hint: copy a save in.
 #: pe/ui/library.cpp
 msgid "Import"
@@ -497,11 +387,6 @@ msgstr "Nhật Bản"
 #: settings_store.h
 msgid "Japanese"
 msgstr "Tiếng Nhật"
-
-#. keys, firmware and roms are folder names (unchanged). TRIANGLE is the controller's triangle button, in capitals.
-#: pe/ui/browse.cpp
-msgid "Keep keys, firmware and roms folders together. TRIANGLE uses the folder shown."
-msgstr "Hãy để các thư mục keys, firmware và roms cùng một chỗ. TAM GIÁC dùng thư mục đang hiển thị."
 
 #. Label: the encryption keys file (prod.keys).
 #: pe/ui/browse.cpp
@@ -553,15 +438,6 @@ msgstr "Mở trò chơi"
 #: pe/ui/home.cpp
 msgid "Library"
 msgstr "Thư viện"
-
-#: pe/ui/library.cpp
-msgid "LIBRARY"
-msgstr "THƯ VIỆN"
-
-#. Headline of the Settings screen.
-#: pe/ui/settings.cpp
-msgid "Make it yours."
-msgstr "Tùy chỉnh theo ý bạn."
 
 #: pe/ui/settings.cpp
 msgid "Make the menu easier to see and follow."
@@ -620,15 +496,6 @@ msgstr "Cần chú ý"
 msgid "Next launch: {0}"
 msgstr "Lần mở tới: {0}"
 
-#. Label: the folder used the next time the app starts.
-#: pe/ui/settings.cpp
-msgid "NEXT START"
-msgstr "LẦN MỞ TỚI"
-
-#: pe/ui/library.cpp
-msgid "No cover art"
-msgstr "Không có ảnh bìa"
-
 #: pe/ui/browse.cpp
 msgid "No firmware folder"
 msgstr "Không có thư mục firmware"
@@ -655,10 +522,6 @@ msgstr "Trò chơi này chưa có mod. Hãy chép thư mục của từng mod v�
 msgid "No ROM files found."
 msgstr "Không tìm thấy tệp ROM."
 
-#: pe/ui/library.cpp
-msgid "No ROM selected"
-msgstr "Chưa chọn ROM"
-
 #: pe/ui/browse.cpp
 msgid "No roms folder"
 msgstr "Không có thư mục roms"
@@ -683,10 +546,6 @@ msgstr "Tắt"
 msgid "On"
 msgstr "Bật"
 
-#: pe/ui/settings.cpp
-msgid "ON THIS CONSOLE"
-msgstr "TRÊN MÁY NÀY"
-
 #. Short tag on a folder row.
 #: pe/ui/browse.cpp
 msgid "OPEN"
@@ -700,16 +559,6 @@ msgstr "Mở"
 #: pe/ui/home.cpp
 msgid "Open library"
 msgstr "Mở thư viện"
-
-#. Label: see 'Output resolution'.
-#: pe/ui/settings.cpp
-msgid "OUTPUT RESOLUTION"
-msgstr "ĐỘ PHÂN GIẢI ĐẦU RA"
-
-#. Setting: the size of the picture sent to the TV (1080p, 1440p or 2160p). Not the same as 'Resolution', which scales the game's own picture (1x, 2x...).
-#: pe/ui/settings.cpp
-msgid "Output resolution"
-msgstr "Độ phân giải đầu ra"
 
 #. Button hint: jump a page of the list (L1 / R1).
 #: pe/ui/browse.cpp
@@ -742,10 +591,6 @@ msgstr "Tiếng Bồ Đào Nha (Brazil)"
 msgid "Powered by Eden"
 msgstr "Chạy trên nền Eden"
 
-#: pe/ui/settings.cpp
-msgid "PREFERENCES"
-msgstr "TÙY CHỌN"
-
 #. Asked before a save is imported over the one in use.
 #: pe/ui/library.cpp
 msgid "Press again to replace this game's save. The current one is backed up."
@@ -767,10 +612,6 @@ msgstr "Thiếu prod.keys"
 msgid "PROJECT CREDITS"
 msgstr "GHI CÔNG DỰ ÁN"
 
-#: pe/ui/browse.cpp
-msgid "ProsperoEden is an unofficial PS5 port brought to you by BlackBearReloaded."
-msgstr "ProsperoEden là bản port PS5 không chính thức do BlackBearReloaded mang đến cho bạn."
-
 #. Shown on the home screen after the app crashed and started again; {0} is a file.
 #: eden_services.cpp, host/fake_services.cpp
 msgid "ProsperoEden stopped because of an error. A report was saved to {0}."
@@ -780,15 +621,6 @@ msgstr "ProsperoEden đã dừng do xảy ra lỗi. Báo cáo đã được lưu
 #: eden_services.cpp
 msgid "PS5 controller initialization failed"
 msgstr "Khởi tạo bộ điều khiển PS5 thất bại"
-
-#: pe/ui/browse.cpp
-msgid "PS5 EDITION"
-msgstr "PHIÊN BẢN PS5"
-
-#. {0} is the version, for example v1.000.030.
-#: pe/ui/home.cpp
-msgid "PS5 EDITION  /  {0}"
-msgstr "PHIÊN BẢN PS5  /  {0}"
 
 #: pe/ui/settings.cpp
 msgid "Ready"
@@ -833,10 +665,6 @@ msgstr "TRÌNH KẾT XUẤT"
 msgid "Resolution"
 msgstr "Độ phân giải"
 
-#: pe/ui/settings.cpp
-msgid "RESOLUTION"
-msgstr "ĐỘ PHÂN GIẢI"
-
 #: eden_services.cpp
 msgid "ROM missing from the game files folder"
 msgstr "Không có ROM trong thư mục tệp trò chơi"
@@ -878,10 +706,6 @@ msgstr "Đã lưu. Màn hình không hỗ trợ 120 Hz sẽ giữ ở 60 Hz."
 msgid "Saved. Applies when a game starts."
 msgstr "Đã lưu. Áp dụng khi mở trò chơi."
 
-#: pe/ui/browse.cpp
-msgid "Saved. Reopen ProsperoEden to use this folder."
-msgstr "Đã lưu. Hãy mở lại ProsperoEden để dùng thư mục này."
-
 #. Button hint: choose the highlighted item (not the Select button).
 #: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Select"
@@ -894,15 +718,6 @@ msgstr "Chọn một trò chơi"
 #: pe/ui/library.cpp
 msgid "Select a game to begin"
 msgstr "Chọn một trò chơi để bắt đầu"
-
-#: pe/ui/library.cpp
-msgid "Select a readable game to configure its mode."
-msgstr "Chọn một trò chơi đọc được để thiết lập chế độ."
-
-#. Select is a button's name (unchanged).
-#: pe/ui/settings.cpp
-msgid "Select is the touchpad button on PS5."
-msgstr "Trên PS5, Select là nút bàn rê cảm ứng."
 
 #. Heading: the language highlighted in the list.
 #: pe/ui/browse.cpp
@@ -931,25 +746,9 @@ msgstr "Cần thiết lập"
 msgid "Setup required: {0} Open Settings, Game files to choose the folder that holds your keys, firmware and roms folders (or add the files to {1}), then reopen ProsperoEden."
 msgstr "Cần thiết lập: {0} Hãy mở Cài đặt, Tệp trò chơi để chọn thư mục chứa các thư mục keys, firmware và roms của bạn (hoặc thêm các tệp vào {1}), rồi mở lại ProsperoEden."
 
-#: pe/ui/settings.cpp
-msgid "Setup status and detailed logs."
-msgstr "Trạng thái thiết lập và nhật ký chi tiết."
-
 #: eden_services.cpp
 msgid "Setup validation failed. Check that firmware and key files are readable and valid."
 msgstr "Xác thực thiết lập thất bại. Hãy kiểm tra xem các tệp firmware và khóa có đọc được và hợp lệ không."
-
-#: pe/ui/settings.cpp
-msgid "Shortcuts during a game, and vibration."
-msgstr "Lối tắt trong khi chơi và chế độ rung."
-
-#: pe/ui/settings.cpp
-msgid "Show or hide the FPS overlay"
-msgstr "Hiện hoặc ẩn bộ đếm FPS"
-
-#: pe/ui/library.cpp
-msgid "SIZE"
-msgstr "DUNG LƯỢNG"
 
 #: pe/ui/settings.cpp
 msgid "Solid panels, brighter text and an outlined highlight."
@@ -994,14 +793,6 @@ msgstr "Tiếng Thái"
 msgid "THANKS"
 msgstr "LỜI CẢM ƠN"
 
-#: pe/ui/browse.cpp
-msgid "Thanks to the whole PS5 homebrew community and to every developer whose drivers, tools and libraries make ProsperoEden possible."
-msgstr "Cảm ơn toàn thể cộng đồng homebrew PS5 và mọi nhà phát triển có driver, công cụ và thư viện giúp ProsperoEden thành hiện thực."
-
-#: pe/ui/settings.cpp
-msgid "The folder that holds your keys, firmware and games."
-msgstr "Thư mục chứa khóa, firmware và trò chơi của bạn."
-
 #. Why a game stopped. 'Settings, Video' is the menu path; 'the game's own settings' is the Game settings dialog of the Library.
 #: eden_services.cpp
 msgid "The game ran out of graphics memory. Lower the resolution in Settings, Video (or in the game's own settings) and start it again."
@@ -1010,10 +801,6 @@ msgstr "Trò chơi đã hết bộ nhớ đồ họa. Hãy giảm độ phân gi
 #: pe/ui/settings.cpp
 msgid "The language games use when they offer it."
 msgstr "Ngôn ngữ trò chơi sẽ dùng nếu có hỗ trợ."
-
-#: pe/ui/browse.cpp
-msgid "THIS FOLDER"
-msgstr "THƯ MỤC NÀY"
 
 #: pe/ui/browse.cpp
 msgid "This folder cannot be opened."
@@ -1036,10 +823,6 @@ msgstr "Để nhập, hãy sao chép thư mục Ryujinx vào ryujinx/ hoặc b�
 #: pe/ui/library.cpp
 msgid "Turn on or off"
 msgstr "Bật hoặc tắt"
-
-#: pe/ui/library.cpp
-msgid "Unavailable"
-msgstr "Không khả dụng"
 
 #. Short tag on the 'Parent folder' row.
 #: pe/ui/browse.cpp
@@ -1067,14 +850,6 @@ msgstr "BỘ LỌC PHÓNG TO"
 msgid "USA"
 msgstr "Mỹ"
 
-#: pe/ui/browse.cpp
-msgid "Use extracted firmware NCA files. Choose the folder in Settings, Game files; restart the app after changing it."
-msgstr "Hãy dùng các tệp NCA firmware đã trích xuất. Chọn thư mục trong Cài đặt, Tệp trò chơi; khởi động lại ứng dụng sau khi thay đổi."
-
-#: pe/ui/browse.cpp
-msgid "Use this folder"
-msgstr "Dùng thư mục này"
-
 #: pe/ui/settings.cpp
 msgid "VIBRATION"
 msgstr "RUNG"
@@ -1084,24 +859,12 @@ msgid "Vibration"
 msgstr "Rung"
 
 #: pe/ui/settings.cpp
-msgid "Vibration off"
-msgstr "Rung: Tắt"
-
-#: pe/ui/settings.cpp
-msgid "Vibration on"
-msgstr "Rung: Bật"
-
-#: pe/ui/settings.cpp
 msgid "Video"
 msgstr "Video"
 
 #: pe/ui/settings.cpp
 msgid "VIDEO"
 msgstr "VIDEO"
-
-#: pe/ui/home.cpp
-msgid "VIEW ALL GAMES"
-msgstr "XEM TẤT CẢ TRÒ CHƠI"
 
 #. Vulkan is a name (unchanged).
 #: pe/ui/settings.cpp
@@ -1217,22 +980,6 @@ msgstr "Reset overrides"
 #: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
 msgid "Game overrides reset to global defaults."
 msgstr "Game overrides reset to global defaults."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "About Prospero.Eden Encore"
-msgstr "About Prospero.Eden Encore"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "tools and libraries make Prospero.Eden Encore possible."
-msgstr "tools and libraries make Prospero.Eden Encore possible."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Prospero.Eden Encore keeps the proven 0.40 base for PS5 13.60, with Eden branding, safer recovery, and targeted compatibility and performance improvements."
-msgstr "Prospero.Eden Encore keeps the proven 0.40 base for PS5 13.60, with Eden branding, safer recovery, and targeted compatibility and performance improvements."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Options starts a one-shot Safe Launch without changing saved settings."
-msgstr "Options starts a one-shot Safe Launch without changing saved settings."
 
 #: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
 msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
