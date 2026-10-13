@@ -56,7 +56,16 @@ assert "verified_physical_worker_mask.store(verified_mask, std::memory_order_rel
 assert "verified_physical_worker_mask.load(std::memory_order_acquire)" in performance
 assert "if (!worker_topology_ready) return 0;" not in performance
 assert performance.index("verified_physical_worker_mask.store(verified_mask, std::memory_order_release);") < performance.index("void EnableExperimentalLogicalPlacementImpl()")
-assert "worker_topology_ready = true;" in performance  # logical trial is intentionally NOT physical proof
+# The unverified logical-only trial must not fabricate physical topology
+# or pin workers to assumed SMT sibling pairs.
+start = performance.index("void EnableExperimentalLogicalPlacementImpl() {")
+end = performance.index("\\nvoid PlaceSecondary(", start)
+logical_fallback = performance[start:end]
+assert "result=skipped" in logical_fallback
+assert "worker_topology_ready = true;" not in logical_fallback
+assert "worker_cpus =" not in logical_fallback
+assert "secondary_cpus =" not in logical_fallback
+assert "cpuset_setaffinity(" not in logical_fallback
 
 def workers(reported: int, allowed: set[int], primary: set[int] | None,
             secondary: set[int] | None = None) -> int:
@@ -84,6 +93,6 @@ assert workers(16, set(range(1, 7)), primary) == 1
 assert workers(16, set(), primary) == 2  # successful empty affinity: fallback 4 slots minus 2 headroom
 assert workers(16, set(), None) == 1  # unavailable/unverified affinity: reserve 7
 print("SOURCE POLICY: verified PS5 logical secondary split permits up to 6 shader workers; fail-closed otherwise")
-print("R237 test result still unknown: no build without user authorization")
+print("Host/source-only: native scheduling and gameplay performance require hardware qualification")
 
 # Trigger unified PS5 validation/build after the corrected shader worker fallback regression.
