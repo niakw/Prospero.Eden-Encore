@@ -21,3 +21,9 @@ All modifications use CMake configure-time substitutions with fail-closed pinned
 ## Validation gates
 
 Core source regressions including R428 host fixture; all pinned dependency source digests unchanged; PS5 build required for actual CMake generation and linkage; only then a combined FC27/BOTW test. Neither the upstream FPS claims nor its memory measurements are presented as measured Encore results.
+
+## CodeQL CI overload addressed in the same source-only release
+
+After moving from GitHub default CodeQL to Advanced, `python` and `actions` analyses succeeded, but `c-cpp` `build-mode:none` was still extracting approximately **40,477 source files and 138,465 repository files**. A runner shutdown around 33 minutes into source extraction is **not** evidence of a C++ vulnerability or a passing scan.
+
+R428 narrows **C/C++ no-build extraction** to Encore-owned `.github`, `headless`, `src`, `tools`, `third_party`, `fixtures`, plus the **active** renderer forks under `vendor/encore-active`. Pinned source archives `vendor/sources` and archived objects are preserved, but deliberately outside static analysis of maintained compilation units. This matches GitHub's officially supported `paths` setting for `build-mode:none` and makes the intended partial scope explicit; it does not claim a security audit of third-party archive contents. The R419 five unused-vendor-test-script exclusions remain documented as defense in depth. The code-scanning workflow must successfully upload C/C++ SARIF before closing the prior CI incident.
