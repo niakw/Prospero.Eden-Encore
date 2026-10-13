@@ -991,6 +991,55 @@ write_derived("${PORT_BUILD_DIR}/physical_core.cpp"
     "#include \"${EDEN_PORT_DIR}/guest_fault.h\"\n#include \"${EDEN_PORT_DIR}/performance.h\"\n#include \"core/arm/debug.h\"\n${physical_core_source}")
 list(REMOVE_ITEM core_sources "hle/kernel/physical_core.cpp")
 list(APPEND core_sources "${PORT_BUILD_DIR}/physical_core.cpp")
+# Native buffer consumer: a deferred present can return after releasing old
+# queued buffers. Wake blocked guest producers before taking that early return.
+# Keep the third-party original unchanged; build this qualified derived unit.
+if(PS5_NATIVE)
+    file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/nvnflinger/buffer_queue_consumer.cpp" eden_bq_consumer)
+    set(eden_bq_front [=[    auto front(core->queue.begin());
+
+    // If expected_present is specified,]=])
+    string(FIND "${eden_bq_consumer}" "${eden_bq_front}" eden_bq_front_at)
+    if(eden_bq_front_at LESS 0)
+        message(FATAL_ERROR "Pinned guest buffer consumer front selection changed")
+    endif()
+    string(REPLACE "${eden_bq_front}"
+        [=[    auto front(core->queue.begin());
+    bool eden_dropped_queued_buffer = false;
+
+    // If expected_present is specified,]=]
+        eden_bq_consumer "${eden_bq_consumer}")
+    set(eden_bq_drop [=[            core->queue.erase(front);
+            front = core->queue.begin();]=])
+    string(FIND "${eden_bq_consumer}" "${eden_bq_drop}" eden_bq_drop_at)
+    if(eden_bq_drop_at LESS 0)
+        message(FATAL_ERROR "Pinned guest buffer consumer drop changed")
+    endif()
+    string(REPLACE "${eden_bq_drop}"
+        [=[            core->queue.erase(front);
+            eden_dropped_queued_buffer = true;
+            front = core->queue.begin();]=]
+        eden_bq_consumer "${eden_bq_consumer}")
+    set(eden_bq_later [=[            LOG_DEBUG(Service_Nvnflinger, "defer desire={} expect={}", desired_present,
+                      expected_present.count());
+            return Status::PresentLater;]=])
+    string(FIND "${eden_bq_consumer}" "${eden_bq_later}" eden_bq_later_at)
+    if(eden_bq_later_at LESS 0)
+        message(FATAL_ERROR "Pinned guest buffer consumer deferred present changed")
+    endif()
+    string(REPLACE "${eden_bq_later}"
+        [=[            LOG_DEBUG(Service_Nvnflinger, "defer desire={} expect={}", desired_present,
+                      expected_present.count());
+            // Releasing an old queued buffer made room for a blocked producer.
+            // The normal dequeue notification is skipped by this early return.
+            if (eden_dropped_queued_buffer) core->SignalDequeueCondition();
+            return Status::PresentLater;]=]
+        eden_bq_consumer "${eden_bq_consumer}")
+    write_derived("${PORT_BUILD_DIR}/buffer_queue_consumer.cpp" "${eden_bq_consumer}")
+    list(REMOVE_ITEM core_sources "hle/service/nvnflinger/buffer_queue_consumer.cpp")
+    list(APPEND core_sources "${PORT_BUILD_DIR}/buffer_queue_consumer.cpp")
+endif()
+
 if(EDEN_DEV_PROFILE)
     # Guest-visible waits: syncpoint event registration to signal (GPU-pipeline latency
     # the game waits on) and buffer-queue dequeue waits (presentation back-pressure).
