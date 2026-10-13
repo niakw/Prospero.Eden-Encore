@@ -1481,13 +1481,13 @@ if(PS5_NATIVE AND EDEN_DEV_PROFILE)
                         1, std::memory_order_relaxed) + 1;
                     if (eden_edges <= 32)
                         std::fprintf(stderr,
-                            "EDEN_NPAD_PLUS_LIFO edges=%llu writes=%llu aruid=%llu\\n",
+                            "EDEN_NPAD_PLUS_LIFO edges=%llu writes=%llu aruid=%llu\n",
                             eden_edges, eden_writes,
                             static_cast<unsigned long long>(aruid));
                 }
                 if (eden_writes % 1500 == 0)
                     std::fprintf(stderr,
-                        "EDEN_NPAD_PROGRESS fullkey_writes=%llu plus_edges=%llu\\n",
+                        "EDEN_NPAD_PROGRESS fullkey_writes=%llu plus_edges=%llu\n",
                         eden_writes, eden_fullkey_plus_edges.load(std::memory_order_relaxed));]=]
         eden_npad_source "${eden_npad_source}")
     write_derived("${PORT_BUILD_DIR}/npad_pause_diag.cpp"
