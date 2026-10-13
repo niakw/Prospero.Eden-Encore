@@ -194,17 +194,16 @@ int main(){
  assert(!worker_topology_ready && topology_allowed_valid);
  assert(current==0x1fff);
  assert((worker_cpus==std::array<unsigned,5>{0,0,0,0,0}));
- // R410: the opt-in logical-only experiment must protect possible SMT
- // siblings while refusing to certify physical-core identities.
+ // A topology failure must NOT activate guessed physical pairs.
+ // Leave every allowed logical CPU to the kernel and reserve none.
  EnableExperimentalLogicalPlacementImpl();
- assert(worker_topology_ready && current==0x1fff);
- assert((worker_cpus==std::array<unsigned,5>{2,4,6,8,10}));
- assert(secondary_cpus==0x1003ULL);
+ assert(!worker_topology_ready && current==0x1fff);
+ assert((worker_cpus==std::array<unsigned,5>{0,0,0,0,0}));
+ assert(secondary_cpus==0);
  assert(verified_physical_worker_mask==0);
- assert((secondary_cpus & 0xffcULL)==0);
  cpuset_t actual=current;
  PinWorker(0,actual);
- assert(current==4 && actual==4);
+ assert(current==0x1fff && actual==0x1fff);
  // New firmware or different permitted mask MUST retain unpinned fallback.
  max_leaf=0xa;current=0x3ff;os_xml.clear();os_ule_xml.clear();
  CheckWorkerTopology();assert(!worker_topology_ready);
