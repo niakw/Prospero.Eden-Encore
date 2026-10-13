@@ -27,6 +27,9 @@ assert script.count('apply_one "$root/headless/backports/eden-4473-4477.patch"')
 assert (root / "headless/eden-buffer-4473.cmake").exists() is False
 assert "eden-buffer-4473.cmake" not in native_cmake
 assert "eden4473/dma_pusher.cpp" not in native_cmake
+assert "gpu-memory-4473" not in native_cmake
+assert "apply-upstream-4473.py" not in native_cmake
+assert "Prepared Eden source lacks #4473/#4477" in native_cmake
 assert "Eden #4473/#4477 are already applied once" in native_cmake
 print("PASS R307: one authoritative audited Eden #4473/#4477 patch, no double Vulkan overlay")
 print("PS5 experimental HLE/JIT/SM backports remain OFF by default: PASS")

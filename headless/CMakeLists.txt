@@ -1915,32 +1915,30 @@ string(REPLACE "    case Settings::RendererBackend::Vulkan:\n        return std:
 endif()
 write_derived("${PORT_BUILD_DIR}/video_core.cpp" "${video_factory}")
 get_target_property(video_sources video_core SOURCES)
-# R408: full upstream Eden #4473 CPU/GPU memory ownership fix, native only.
-# Generate patched disposable sources before native GPU-worker rewrites.
-# Immutable vendored archives and their verified hashes are not modified.
+# R411: Eden #4473/#4477 are already applied once by the audited
+# version-locked shipping backports to PROJECT_SOURCE_DIR before CMake.
 if(PS5_NATIVE)
-    execute_process(
-        COMMAND python3 "${PORT_ROOT}/tools/apply-upstream-4473.py"
-            --source "${PROJECT_SOURCE_DIR}/src/video_core"
-            --dest "${PORT_BUILD_DIR}/gpu-memory-4473"
-        RESULT_VARIABLE eden_gpu4473_rc
-        OUTPUT_VARIABLE eden_gpu4473_out
-        ERROR_VARIABLE eden_gpu4473_error)
-    if(NOT eden_gpu4473_rc EQUAL 0)
-        message(FATAL_ERROR "Eden GPU #4473 patch failed: ${eden_gpu4473_error}")
-    endif()
-    list(REMOVE_ITEM video_sources engines/kepler_compute.cpp)
-    list(APPEND video_sources "${PORT_BUILD_DIR}/gpu-memory-4473/kepler_compute.cpp")
+    foreach(gpu4473_item
+        "buffer_cache/buffer_cache.h|gpu_modified_ranges.ForEachInRange(device_addr_out, range_size"
+        "buffer_cache/buffer_cache.h|if (IsRegionGpuModified(device_addr, size))"
+        "engines/kepler_compute.h|bool upload_dirty{};"
+        "engines/kepler_compute.h|bool was_dirty;"
+        "engines/kepler_compute.cpp|data.was_dirty || source_dirty"
+        "dma_pusher.cpp|dma_state.method == ComputeInline && dma_state.non_incrementing")
+        string(REPLACE "|" ";" gpu4473_pair "${gpu4473_item}")
+        list(GET gpu4473_pair 0 gpu4473_path)
+        list(GET gpu4473_pair 1 gpu4473_anchor)
+        file(READ "${PROJECT_SOURCE_DIR}/src/video_core/${gpu4473_path}" gpu4473_source)
+        string(FIND "${gpu4473_source}" "${gpu4473_anchor}" gpu4473_at)
+        if(gpu4473_at LESS 0)
+            message(FATAL_ERROR "Prepared Eden source lacks #4473/#4477: ${gpu4473_path}: ${gpu4473_anchor}")
+        endif()
+    endforeach()
 endif()
 if(NOT EDEN_PS5_VULKAN)
     list(FILTER video_sources EXCLUDE REGEX "^(renderer_vulkan|vulkan_common)/")
 else()
     include("${EDEN_PORT_DIR}/vulkan.cmake")
-endif()
-# Vulkan.cmake adds its own BEFORE PUBLIC include roots. Keep the #4473
-# generated header ahead of ALL renderer/regular source roots.
-if(PS5_NATIVE)
-    target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/gpu-memory-4473")
 endif()
 list(REMOVE_ITEM video_sources video_core.cpp gpu.cpp)
 list(APPEND video_sources "${PORT_BUILD_DIR}/video_core.cpp")
@@ -2196,14 +2194,9 @@ if(EDEN_PS5_OPENGL)
         "    void NotifyShutdown() {\n        {\n            std::unique_lock lk{sync_mutex};\n            shutting_down.store(true, std::memory_order::relaxed);\n            sync_cv.notify_all();\n        }\n        gpu_thread.Stop();\n    }" gpu_source "${gpu_source}")
     # In-flight guest waits must also unwind before Stop can join the worker.
     foreach(unit dma_pusher engines/puller)
-        if(unit STREQUAL "dma_pusher")
-            # Already patched as one #4473 group with Kepler/BufferCache.
-            # Keep the native shutdown-aware CV and R405-R407 instrumentation
-            # that follow; reading pristine DMA here would silently lose #4473.
-            file(READ "${PORT_BUILD_DIR}/gpu-memory-4473/dma_pusher.cpp" command_source)
-        else()
-            file(READ "${PROJECT_SOURCE_DIR}/src/video_core/${unit}.cpp" command_source)
-        endif()
+        # Prepared Eden source already has #4473/#4477; apply only native
+        # shutdown-aware sync and profiling adaptations below.
+        file(READ "${PROJECT_SOURCE_DIR}/src/video_core/${unit}.cpp" command_source)
         string(REPLACE "        sync_cv.wait(lk, [this]() { return synced; });"
             "        while (!synced && !system.IsShuttingDown())\n            sync_cv.wait_for(lk, std::chrono::milliseconds(10));\n        if (system.IsShuttingDown()) return false;" command_source "${command_source}")
         if(unit STREQUAL "dma_pusher" AND EDEN_DEV_PROFILE)
