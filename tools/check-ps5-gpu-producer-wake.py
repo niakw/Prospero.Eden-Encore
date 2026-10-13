@@ -150,7 +150,55 @@ int main() {
         });
         producer.join(); consumer.join();
     }
-    std::puts("PASS: stop cancellation, FIFO, 32-slot bounded burst, 4K commands");
+    // 64 independent title-like lifecycles with bursty GPU producers and
+    // deliberately delayed consumers. The REAL native stop-aware method is
+    // still injected from gpu_queue_stop_wait.inc, not reimplemented here.
+    for (int session=0; session<64; ++session) {
+        Queue<int,32> q;
+        constexpr int items=384;
+        std::stop_source src;
+        std::thread producer([&] {
+            for(int i=0; i<items; ++i) {
+                if(!q.TryEmplace(i))
+                    assert(q.EmplaceWaitWithStopToken(src.get_token(),i));
+                if((i+session)%37==0) std::this_thread::yield();
+            }
+        });
+        std::thread consumer([&] {
+            for(int i=0; i<items; ++i) {
+                int value{-1};
+                while(!q.TryPop(value)) std::this_thread::yield();
+                assert(value==i);
+                if((i+session)%17==0)
+                    std::this_thread::sleep_for(std::chrono::microseconds(25));
+            }
+        });
+        producer.join();
+        consumer.join();
+        int last{};
+        assert(!q.TryPop(last));
+    }
+    // Shutdown when producer is waiting on a full native command queue.
+    // No command should be published after cancellation or outlive the queue.
+    for (int cycle=0; cycle<64; ++cycle) {
+        Queue<int,8> q;
+        for(int i=0;i<8;i++) assert(q.TryEmplace(i));
+        std::stop_source src;
+        std::promise<bool> promise;
+        auto future=promise.get_future();
+        std::thread blocked([&] {
+            promise.set_value(q.EmplaceWaitWithStopToken(src.get_token(),99));
+        });
+        assert(future.wait_for(1ms)==std::future_status::timeout);
+        src.request_stop();
+        assert(future.wait_for(2s)==std::future_status::ready);
+        assert(!future.get());
+        blocked.join();
+        int value{-1};
+        for(int i=0;i<8;i++) { assert(q.TryPop(value) && value==i); }
+        assert(!q.TryPop(value));
+    }
+    std::puts("PASS: exact native SPSC wait: 4096 base + 24576 bursty commands, 64 cancelled/full sessions");
 }
 """.replace("STOP_CODE", inc)
 with tempfile.TemporaryDirectory(prefix="eden-ps5-gpu-cv-wake-") as tmp:
