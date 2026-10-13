@@ -61,6 +61,7 @@ jobs:
           python3 -B tools/check-ps5-quiet-jit-timers.py
           python3 -B tools/check-ps5-gpu-producer-wake.py
           python3 -B tools/check-ps5-native-load-replay.py
+          python3 -B tools/check-ps5-native-timing-replay.py
           python3 -B tools/check-ps5-buffer-dequeue-generation.py
           python3 -B tools/check-ps5-buffer-presentation-state-space.py
           python3 -B tools/check-ps5-vulkan-worker-wake.py
