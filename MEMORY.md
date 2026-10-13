@@ -2895,3 +2895,9 @@ R349 original EOL audit: 69 normalized CRLF files of 77017 paths; 45849-byte ori
 - The source-only preflight runs tools/apply-upstream-4473.py --self-test: four-file preimage and generation checks, actual generated BufferCache upload-copy lambda compiled/run under host ASan/UBSan on GPU-owned adjacent subranges. Requires CI success then one separately justified native PS5 build; NO change of gameplay performance or HUD quality claimed without a console test.
 
 - R408 include-order tightening: headless/vulkan.cmake pushes two `BEFORE PUBLIC` include roots. Move the private GPU #4473 derived-header include AFTER vulkan.cmake so actual compilation resolves corrected BufferCache/Kepler headers with higher priority. CI source selftest asserts this CMake ordering, not just output text. Still source-only and not yet native-qualified.
+
+### 2026-10-13 R409 — one combined native PS5 All-On qualification build requested
+
+- R408b source-only workflow #38332036153 concluded SUCCESS. All host source/ASan/UBSan, prior Vulkan/JIT/IPC/launch UX, release-base diff gates passed. Its generated four-source upstream #4473 patch now has fail-closed source anchors and highest-priority BufferCache/Kepler include root.
+- ONE deliberate native PS5 test build on dev/ps5-sparse-jit requested by [full-build] [test-all-on] on this R409 documentation commit. It combines previously source-qualified R404–R407 JIT/DMA/puller/stall diagnostics and R408 memory ownership backport. The build must use offline vendored dependencies and default FC27 title id 0100C49025D3E000; never publish to release.
+- No R409 FPS/performance/graphics improvement or compatibility claim before real PS5 gameplay. R403 remains the last confirmed successful native build until R409's native compilation and package validation complete. Do not request hardware test until whole workflow green; avoid extra experimental build variants.
