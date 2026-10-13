@@ -134,6 +134,7 @@ jobs:
           python3 -B tools/check-radv-mesa-2624-ds-aspects.py
           python3 -B tools/check-radv-immutable-sampler-lifetime.py
           python3 -B tools/check-ps5-videoout-120hz-offer.py
+          python3 -B tools/check-ps5-videoout-unpresented-takeover.py
           python3 -B tools/check-vendored-gpu-thread.py
           python3 -B tools/analyze-fc27-stutter.py --self-test
           python3 -B tools/check-nvnflinger-dequeue-wakeup.py
@@ -159,6 +160,8 @@ jobs:
           python3 -B tools/check-sparse-index-boundary.py
           python3 -B tools/check-sparse-slot-reuse-host.py
           python3 -B tools/check-shader-cache-pressure.py
+          python3 -B tools/check-gc-scan.py
+          python3 -B tools/check-gc-prefetch-budget.py
           python3 -B tools/check-vulkan-gc-budget-host.py
           python3 -B tools/check-vulkan-gc-prefetch-host.py
           python3 -B tools/check-vulkan-gc-mixed-prefetch-host.py
