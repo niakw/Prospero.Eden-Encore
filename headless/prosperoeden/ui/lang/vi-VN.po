@@ -1008,3 +1008,143 @@ msgstr "3x (tốn rất nhiều bộ nhớ)"
 #: settings_store.h
 msgid "4x (extreme memory)"
 msgstr "4x (bộ nhớ cực cao)"
+
+#: translated UI setting
+msgid "Anti-aliasing"
+msgstr "Khử răng cưa"
+
+#: translated UI setting
+msgid "Button mapping"
+msgstr "Gán nút điều khiển"
+
+#: translated UI setting
+msgid "Quick settings"
+msgstr "Cài đặt nhanh"
+
+#: translated UI setting
+msgid "Storage"
+msgstr "Lưu trữ"
+
+#: translated UI setting
+msgid "Video preset"
+msgstr "Cấu hình video"
+
+#: translated UI setting
+msgid "Game resolution"
+msgstr "Độ phân giải trò chơi"
+
+#: translated UI setting
+msgid "TV output"
+msgstr "Xuất hình ra TV"
+
+#: translated UI setting
+msgid "Play"
+msgstr "Chơi"
+
+#: translated UI setting
+msgid "Cancel"
+msgstr "Hủy"
+
+#: translated UI setting
+msgid "Confirm"
+msgstr "Xác nhận"
+
+#: translated UI setting
+msgid "Reset"
+msgstr "Đặt lại"
+
+#: translated UI setting
+msgid "Ultra"
+msgstr "Siêu cao"
+
+#: translated UI setting
+msgid "Recommended"
+msgstr "Đề xuất"
+
+#: translated UI setting
+msgid "Minimum"
+msgstr "Tối thiểu"
+
+#: translated UI setting
+msgid "Home"
+msgstr "Trang chủ"
+
+#: translated UI setting
+msgid "Clear cache"
+msgstr "Xóa bộ nhớ đệm"
+
+#: translated UI setting
+msgid "Done"
+msgstr "Xong"
+
+#: translated UI setting
+msgid "Custom"
+msgstr "Tùy chỉnh"
+
+#: translated UI setting
+msgid "Controllers"
+msgstr "Tay cầm"
+
+#: translated UI setting
+msgid "Quit"
+msgstr "Thoát"
+
+#: translated UI setting
+msgid "FSR sharpness"
+msgstr "Độ sắc nét FSR"
+
+#: translated UI setting
+msgid "Stick deadzone"
+msgstr "Vùng chết cần điều khiển"
+
+#: translated UI setting
+msgid "Vibration strength"
+msgstr "Cường độ rung"
+
+#: translated UI setting
+msgid "Preset"
+msgstr "Thiết lập sẵn"
+
+#: translated UI setting
+msgid "Open settings"
+msgstr "Mở cài đặt"
+
+#: translated UI setting
+msgid "ANTI-ALIASING"
+msgstr "KHỬ RĂNG CƯA"
+
+#: translated UI setting
+msgid "BUTTON MAPPING"
+msgstr "GÁN NÚT ĐIỀU KHIỂN"
+
+#: translated UI setting
+msgid "QUICK SETTINGS"
+msgstr "CÀI ĐẶT NHANH"
+
+#: translated UI setting
+msgid "STORAGE"
+msgstr "LƯU TRỮ"
+
+#: translated UI setting
+msgid "VIDEO PRESET"
+msgstr "CẤU HÌNH VIDEO"
+
+#: translated UI setting
+msgid "GAME RESOLUTION"
+msgstr "ĐỘ PHÂN GIẢI TRÒ CHƠI"
+
+#: translated UI setting
+msgid "TV OUTPUT"
+msgstr "XUẤT HÌNH RA TV"
+
+#: translated UI setting
+msgid "FSR SHARPNESS"
+msgstr "ĐỘ SẮC NÉT FSR"
+
+#: translated UI setting
+msgid "STICK DEADZONE"
+msgstr "VÙNG CHẾT CẦN ĐIỀU KHIỂN"
+
+#: translated UI setting
+msgid "VIBRATION STRENGTH"
+msgstr "CƯỜNG ĐỘ RUNG"

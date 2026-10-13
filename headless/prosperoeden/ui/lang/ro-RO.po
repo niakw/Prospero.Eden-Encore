@@ -1008,3 +1008,143 @@ msgstr "3x (memorie foarte ridicată)"
 #: settings_store.h
 msgid "4x (extreme memory)"
 msgstr "4x (memorie extremă)"
+
+#: translated UI setting
+msgid "Anti-aliasing"
+msgstr "Antialiasing"
+
+#: translated UI setting
+msgid "Button mapping"
+msgstr "Maparea butoanelor"
+
+#: translated UI setting
+msgid "Quick settings"
+msgstr "Setări rapide"
+
+#: translated UI setting
+msgid "Storage"
+msgstr "Stocare"
+
+#: translated UI setting
+msgid "Video preset"
+msgstr "Presetare video"
+
+#: translated UI setting
+msgid "Game resolution"
+msgstr "Rezoluția jocului"
+
+#: translated UI setting
+msgid "TV output"
+msgstr "Ieșire TV"
+
+#: translated UI setting
+msgid "Play"
+msgstr "Joacă"
+
+#: translated UI setting
+msgid "Cancel"
+msgstr "Anulează"
+
+#: translated UI setting
+msgid "Confirm"
+msgstr "Confirmă"
+
+#: translated UI setting
+msgid "Reset"
+msgstr "Resetează"
+
+#: translated UI setting
+msgid "Ultra"
+msgstr "Ultra"
+
+#: translated UI setting
+msgid "Recommended"
+msgstr "Recomandat"
+
+#: translated UI setting
+msgid "Minimum"
+msgstr "Minim"
+
+#: translated UI setting
+msgid "Home"
+msgstr "Acasă"
+
+#: translated UI setting
+msgid "Clear cache"
+msgstr "Șterge memoria cache"
+
+#: translated UI setting
+msgid "Done"
+msgstr "Gata"
+
+#: translated UI setting
+msgid "Custom"
+msgstr "Personalizat"
+
+#: translated UI setting
+msgid "Controllers"
+msgstr "Controlere"
+
+#: translated UI setting
+msgid "Quit"
+msgstr "Ieșire"
+
+#: translated UI setting
+msgid "FSR sharpness"
+msgstr "Claritate FSR"
+
+#: translated UI setting
+msgid "Stick deadzone"
+msgstr "Zona moartă a manetei"
+
+#: translated UI setting
+msgid "Vibration strength"
+msgstr "Intensitatea vibrațiilor"
+
+#: translated UI setting
+msgid "Preset"
+msgstr "Presetare"
+
+#: translated UI setting
+msgid "Open settings"
+msgstr "Deschide setările"
+
+#: translated UI setting
+msgid "ANTI-ALIASING"
+msgstr "ANTIALIASING"
+
+#: translated UI setting
+msgid "BUTTON MAPPING"
+msgstr "MAPAREA BUTOANELOR"
+
+#: translated UI setting
+msgid "QUICK SETTINGS"
+msgstr "SETĂRI RAPIDE"
+
+#: translated UI setting
+msgid "STORAGE"
+msgstr "STOCARE"
+
+#: translated UI setting
+msgid "VIDEO PRESET"
+msgstr "PRESETARE VIDEO"
+
+#: translated UI setting
+msgid "GAME RESOLUTION"
+msgstr "REZOLUȚIA JOCULUI"
+
+#: translated UI setting
+msgid "TV OUTPUT"
+msgstr "IEȘIRE TV"
+
+#: translated UI setting
+msgid "FSR SHARPNESS"
+msgstr "CLARITATE FSR"
+
+#: translated UI setting
+msgid "STICK DEADZONE"
+msgstr "ZONA MOARTĂ A MANETEI"
+
+#: translated UI setting
+msgid "VIBRATION STRENGTH"
+msgstr "INTENSITATEA VIBRAȚIILOR"
