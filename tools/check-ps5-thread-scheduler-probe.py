@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""R417: native Vulkan thread scheduling probe source + mocked-PS5 host fixture.
+"""Native worker scheduling qualification and mocked-platform host fixture.
 
-Validates read-only worker instrumentation and one log per real OS thread.
-Host tests do NOT prove PS5 SMT topology, actual policy, or gameplay speed.
+The All-On build may request SCHED_RR while retaining priority 700. Verify
+one attempt per native thread, successful readback and fail-open on refusal.
+These host tests do not establish a hardware FPS or pause-freeze gain.
 """
 from pathlib import Path
 import subprocess
@@ -25,7 +26,10 @@ assert probe.count("pthread_getschedparam(pthread_self()") == 1
 assert probe.count("cpuset_getaffinity(") == 1
 assert "SCHED_FIFO" in probe and "SCHED_RR" in probe
 assert "EDEN_PS5_THREAD_SCHED" in probe
-assert "pthread_setschedparam" not in probe
+assert "pthread_setschedparam(pthread_self(), SCHED_RR, &priority)" in probe
+assert "#if defined(EDEN_DEV_PROFILE)" in probe
+assert "rr_verified" in probe and "rr_error" in probe
+assert "priority.sched_priority == 700" in probe
 assert "cpuset_setaffinity" not in probe
 assert scheduler.count('::Eden::Performance::ProbeSchedulerOnce("VulkanWorker");') == 1
 assert scheduler.count('#include "performance.h"') == 1
@@ -38,6 +42,8 @@ assert generator.count("sched_probe_anchor") == 3
 assert '#ifdef PS5_NATIVE\n    ::Eden::Performance::ProbeSchedulerOnce' in scheduler
 
 fixture = r"""
+#include <atomic>
+#include <cassert>
 #include <cerrno>
 #include <cstdint>
 #include <cstdio>
@@ -52,9 +58,24 @@ fixture = r"""
 struct cpuset_t { unsigned long long bits{}; };
 #define CPU_ISSET(cpu, set) (((set)->bits & (1ULL << (cpu))) != 0)
 int cpuset_getaffinity(int, int, int, size_t, cpuset_t* out) {
-    out->bits = 0x1003ULL;
+    out->bits = 0x1fffULL;
     return 0;
 }
+static thread_local int fake_policy = SCHED_FIFO;
+static std::atomic<bool> deny_rr{false};
+int fake_getschedparam(pthread_t, int* policy, sched_param* priority) {
+    *policy = fake_policy;
+    priority->sched_priority = 700;
+    return 0;
+}
+int fake_setschedparam(pthread_t, int policy, const sched_param* priority) {
+    assert(policy == SCHED_RR && priority->sched_priority == 700);
+    if (deny_rr.load()) return EPERM;
+    fake_policy = policy;
+    return 0;
+}
+#define pthread_getschedparam fake_getschedparam
+#define pthread_setschedparam fake_setschedparam
 namespace Eden::Performance {
 """ + probe + r"""
 }
@@ -63,6 +84,9 @@ int main() {
     Eden::Performance::ProbeSchedulerOnce("VkPipelineBuilder");
     std::thread t([] { Eden::Performance::ProbeSchedulerOnce("VulkanWorker"); });
     t.join();
+    deny_rr.store(true);
+    std::thread denied([] { Eden::Performance::ProbeSchedulerOnce("FallbackWorker"); });
+    denied.join();
 }
 """
 
@@ -71,19 +95,30 @@ with tempfile.TemporaryDirectory() as tmp:
     cpp.write_text(fixture)
     exe = Path(tmp) / "probe"
     subprocess.run(
-        ["c++", "-std=c++20", "-pthread", "-DPS5_NATIVE", str(cpp), "-o", str(exe)],
-        check=True,
+        ["c++", "-std=c++20", "-pthread", "-DPS5_NATIVE", "-DEDEN_DEV_PROFILE",
+         str(cpp), "-o", str(exe)], check=True,
     )
     run = subprocess.run([str(exe)], check=True, capture_output=True, text=True)
     records = run.stdout.strip().splitlines()
-    assert len(records) == 2, records
+    assert len(records) == 3, records
     assert all(line.startswith("EDEN_PS5_THREAD_SCHED") for line in records), records
-    assert any("role=VkPipelineBuilder" in line for line in records), records
-    assert any("role=VulkanWorker" in line for line in records), records
-    assert all("allowed_mask=0x1003" in line for line in records), records
+    assert all("allowed_mask=0x1fff" in line for line in records), records
+    assert all("original_policy=" in line for line in records), records
+    assert all("rr_attempted=1" in line for line in records), records
+    assert all("rr_verified=1" in line for line in records[:2]), records
+    assert "role=FallbackWorker" in records[-1] and "rr_verified=0" in records[-1], records
+    assert "rr_error=1" in records[-1], records
 
-    # Plain desktop build remains a genuine no-op.
+    # Native release builds retain the original FIFO scheduler.
+    subprocess.run(["c++", "-std=c++20", "-pthread", "-DPS5_NATIVE",
+                    str(cpp), "-o", str(exe)], check=True)
+    release = subprocess.run([str(exe)], check=True, capture_output=True, text=True)
+    records = release.stdout.strip().splitlines()
+    assert len(records) == 3, records
+    assert all("rr_attempted=0" in line and "rr_verified=0" in line for line in records), records
+
+    # Ordinary desktop builds have no native scheduling side effects.
     subprocess.run(["c++", "-std=c++20", "-pthread", str(cpp), "-o", str(exe)], check=True)
     host = subprocess.run([str(exe)], check=True, capture_output=True, text=True)
     assert not host.stdout, host.stdout
-print("R417 scheduling probe: source and host fixture OK")
+print("Native scheduler: All-On round-robin success/fallback, release unchanged, host no-op")
