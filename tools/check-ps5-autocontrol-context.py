@@ -20,15 +20,15 @@ mapper = (ROOT / "headless/button_mapping.h").read_text()
 assert 'ResolveSessionButtonMapping(' in mapper
 assert "Eden::ResolveSessionButtonMapping(" in launcher
 assert "ResolveSessionButtonMapping(" in ui
-assert 'pad->SetMapping(separate_fc27_gameplay ? controls.mapping : mapping);' in launcher
-assert 'pad->SetMapping(separate_fc27_gameplay ? controls.mapping : mapping);' in launcher.split('pad->Open()', 1)[0]
+assert 'pad->SetMapping(mapping);' in launcher
+assert 'pad->SetMapping(mapping);' in launcher.split('pad->Open()', 1)[0]
 assert 'EDEN_PAD_MAPPING_LOCKED scope=session mode=static' in launcher
 assert 'void SetMapping(const ButtonMapping& value)' in device
 assert 'if (slots[0].handle >= 0) return;' in device
 assert 'SetAdaptivePlayStation' not in device
 assert 'SetAdaptivePlayStation' not in launcher
 assert 'mapping_context' not in pad and 'mapping_context' not in device
-assert 'void SetGameplayMapping(const ButtonMapping& value)' in device
+assert 'SetGameplayMapping' not in device + launcher + pad
 assert 'adaptive_playstation' not in pad
 assert 'manual_toggle' not in pad
 assert 'layout_chord' not in pad
@@ -83,5 +83,5 @@ with tempfile.TemporaryDirectory(prefix="eden-ps5-fixed-input-") as work:
                     "-I", str(ROOT / "headless"), str(cpp), "-o", str(exe)],
                    check=True)
     subprocess.run([str(exe)], check=True)
-print("PASS: fixed default and title profile at boot, deliberate FC27-only match switching")
+print("PASS: fixed default and title mapping at boot, guest gameplay actions never remapped")
 print("NOTE: Nintendo in-game glyph artwork remains a separate RomFS requirement")
