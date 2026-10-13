@@ -386,7 +386,10 @@ def check():
             print("   ", line)
         for line in warnings[:12]:
             print("    warning:", line)
-        failed |= bool(problems)
+        # The maintained primary locale must stay warning-free as well as valid.
+        # Other 28 catalogs still report translation debt without being silently
+        # filled with English or excluding their warnings from coverage totals.
+        failed |= bool(problems) or (strict and bool(warnings))
     print(f"{len(texts)} texts in the code, {len(catalogs)} catalogs" + (" FAIL" if failed else " PASS"))
     return 1 if failed else 0
 
