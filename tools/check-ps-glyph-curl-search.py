@@ -30,7 +30,9 @@ assert (first.scheme,first.hostname,first.path,first.username,first.password) ==
 assert parse_qs(urlsplit(a[0][1]).query).get("uddg") == ["https://gamebanana.com/mods/659253"]
 b=mod.parse_page("curl_yandex","https://yandex.com/search/?text=BOTW",
                  "https://yandex.com/search/?text=BOTW",200,html)
-assert len(b)==2
+# A DDG-relative /l/ URL must NOT be treated as a valid Yandex result.
+assert b == [("BOTW controller glyphs",
+              "https://github.com/test/botw-controller-buttons")]
 for status,body,where in [
     (403,html,"https://html.duckduckgo.com/html/"),
     (429,html,"https://html.duckduckgo.com/html/"),
