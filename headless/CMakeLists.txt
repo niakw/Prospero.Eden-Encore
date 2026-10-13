@@ -1011,6 +1011,18 @@ if(EDEN_DEV_PROFILE)
         message(FATAL_ERROR "Pinned buffer queue dequeue changed")
     endif()
     string(REPLACE "${producer_old}" "        const auto dequeue_start = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed) ? ::Eden::Performance::NowNs() : 0;\n${producer_old}\n        if (dequeue_start) ::Eden::Performance::AddSince(::Eden::Performance::guest_dequeue_wait, dequeue_start);" producer_source "${producer_source}")
+    # Detailed native diagnostic only. Record the *active* guest buffer dequeue
+    # without modifying its condition variable, timeout, return value or locks.
+    if(PS5_NATIVE)
+        string(FIND "${producer_source}" "${producer_old}" eden_guest_wait_anchor)
+        if(eden_guest_wait_anchor LESS 0)
+            message(FATAL_ERROR "Pinned native guest dequeue diagnostic anchor changed")
+        endif()
+        string(REPLACE "${producer_old}"
+            "        const auto eden_dequeue_probe_start = ::Eden::GameplayStallTrace::BinderDequeueStart();\n${producer_old}\n        ::Eden::GameplayStallTrace::BinderDequeueEnd(eden_dequeue_probe_start);"
+            producer_source "${producer_source}")
+        string(PREPEND producer_source "#include \"${EDEN_PORT_DIR}/gameplay_stall_trace.h\"\n")
+    endif()
     write_derived("${PORT_BUILD_DIR}/buffer_queue_producer.cpp" "#include \"${EDEN_PORT_DIR}/performance.h\"\n${producer_source}")
     list(REMOVE_ITEM core_sources "hle/service/nvnflinger/buffer_queue_producer.cpp")
     list(APPEND core_sources "${PORT_BUILD_DIR}/buffer_queue_producer.cpp")
@@ -2294,6 +2306,56 @@ if(EDEN_PS5_OPENGL)
             set(profiled_producer_wait
                 "        { ::Eden::Performance::DiagnosticTimer full_timer(::Eden::Performance::gpu_queue_full);\n${producer_wait}\n        }")
             string(REPLACE "${producer_wait}" "${profiled_producer_wait}"
+                gpu_worker "${gpu_worker}")
+        endif()
+        # All-On *read-only* worker-stage evidence. This does not modify queue
+        # capacity, fence ordering, worker scheduling, guest commands or waits.
+        if(PS5_NATIVE AND EDEN_DEV_PROFILE)
+            string(PREPEND gpu_worker "#include \"${EDEN_PORT_DIR}/gameplay_stall_trace.h\"\n")
+            set(eden_gpu_trace_loop "        while (!stop_token.stop_requested()) {")
+            string(FIND "${gpu_worker}" "${eden_gpu_trace_loop}" eden_gpu_trace_loop_at)
+            if(eden_gpu_trace_loop_at LESS 0)
+                message(FATAL_ERROR "Pinned GPU owner loop stage changed")
+            endif()
+            string(REPLACE "${eden_gpu_trace_loop}"
+                "${eden_gpu_trace_loop}\n            ::Eden::GameplayStallTrace::GpuMark(::Eden::GameplayStallTrace::GpuPhase::AwaitingCommand);"
+                gpu_worker "${gpu_worker}")
+            foreach(eden_gpu_trace_kind IN ITEMS Submit Tick Flush Invalidate)
+                if(eden_gpu_trace_kind STREQUAL "Submit")
+                    set(eden_gpu_trace_call "                scheduler.Push(system.GPU(), submit_list->channel, std::move(submit_list->entries));")
+                    set(eden_gpu_trace_phase DispatchSubmit)
+                elseif(eden_gpu_trace_kind STREQUAL "Tick")
+                    set(eden_gpu_trace_call "                system.GPU().TickWork();")
+                    set(eden_gpu_trace_phase DispatchTick)
+                elseif(eden_gpu_trace_kind STREQUAL "Flush")
+                    set(eden_gpu_trace_call "                renderer.ReadRasterizer()->FlushRegion(flush->addr, flush->size);")
+                    set(eden_gpu_trace_phase DispatchFlush)
+                else()
+                    set(eden_gpu_trace_call "                renderer.ReadRasterizer()->OnCacheInvalidation(invalidate->addr, invalidate->size);")
+                    set(eden_gpu_trace_phase DispatchInvalidate)
+                endif()
+                string(FIND "${gpu_worker}" "${eden_gpu_trace_call}" eden_gpu_trace_call_at)
+                if(eden_gpu_trace_call_at LESS 0)
+                    message(FATAL_ERROR "Pinned GPU owner ${eden_gpu_trace_kind} stage changed")
+                endif()
+                string(REPLACE "${eden_gpu_trace_call}"
+                    "                ::Eden::GameplayStallTrace::GpuMark(::Eden::GameplayStallTrace::GpuPhase::${eden_gpu_trace_phase});\n${eden_gpu_trace_call}"
+                    gpu_worker "${gpu_worker}")
+            endforeach()
+            set(eden_gpu_trace_fence "            state.signaled_fence.store(next.fence);")
+            string(FIND "${gpu_worker}" "${eden_gpu_trace_fence}" eden_gpu_trace_fence_at)
+            if(eden_gpu_trace_fence_at LESS 0)
+                message(FATAL_ERROR "Pinned GPU owner fence stage changed")
+            endif()
+            string(REPLACE "${eden_gpu_trace_fence}"
+                "            ::Eden::GameplayStallTrace::GpuMark(::Eden::GameplayStallTrace::GpuPhase::PublishingFence);\n${eden_gpu_trace_fence}\n            ::Eden::GameplayStallTrace::GpuCommandFinished();"
+                gpu_worker "${gpu_worker}")
+            string(FIND "${gpu_worker}" "${producer_wait}" eden_gpu_trace_producer_at)
+            if(eden_gpu_trace_producer_at LESS 0)
+                message(FATAL_ERROR "Pinned GPU queue producer-wait stage changed")
+            endif()
+            string(REPLACE "${producer_wait}"
+                "        const auto eden_gpu_queue_start = ::Eden::GameplayStallTrace::GpuProducerWaitStart();\n${producer_wait}\n        ::Eden::GameplayStallTrace::GpuProducerWaitEnd(eden_gpu_queue_start);"
                 gpu_worker "${gpu_worker}")
         endif()
         write_derived("${PORT_BUILD_DIR}/gpu_thread.cpp" "${gpu_worker}")
