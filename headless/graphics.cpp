@@ -784,7 +784,10 @@ void GraphicsWindow::OnFrameDisplayed() {
                 if (Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed))
                     Eden::Performance::ReportGpuThread(frame_total);
 #endif
-                std::fflush(stdout);
+                // Keep logging asynchronous: a blocking stdio flush on the
+                // render callback can indefinitely stall presentation when the
+                // device log writer is delayed. LogPipe drains stdout off-thread.
+                // A native process fault has its own crash-only output path.
                 } else {
                     // These baselines must not span a quiet session and later
                     // explode into false five-second deltas if re-enabled.
