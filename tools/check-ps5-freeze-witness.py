@@ -23,6 +23,15 @@ assert 'latest_gpu_report_ns.store(' in performance
 assert 'std::memory_order_release' in performance
 assert 'std::memory_order_acquire' in performance
 assert 'EDEN_GPU_REPORT_STALLED' in performance
+assert 'dma_active_ms=%llu puller_active_ms=%llu' in performance
+assert 'ActiveDiagnosticWaitNs(gpu_dma_sync_active_since_ns)' in performance
+assert 'ActiveDiagnosticWaitNs(gpu_puller_semaphore_active_since_ns)' in performance
+watch = (root / "headless/stall_watchdog.h").read_text()
+assert 'EDEN_GAME_GPU_STALL_SUSPECT' in watch
+assert 'dma_active_ms=%llu puller_active_ms=%llu note=diagnostic_only' in watch
+assert 'Performance::ActiveDiagnosticWaitNs(' in watch
+assert 'if (observation.suspected)' in watch
+assert 'if (Performance::detailed_gpu_profile.load(std::memory_order_relaxed))' in watch
 assert 'gpu_command_tick.calls.load' in performance
 assert 'guest_cpu_write.calls.load' in performance
 assert 'guest_dequeue_wait.calls.load' in performance
