@@ -1,6 +1,6 @@
 name: Eden Encore CodeQL — first-party sources
-# Default setup requires repository property:
-# github-codeql-config-file = ./.github/codeql/codeql-config.yml
+# Consumed by .github/workflows/codeql-advanced.yml (config-file).
+# Do not assume org-only custom repository properties on personal repos.
 # Preserve scanning of our code and active renderer forks.
 # Only exclude unused tool/test scripts inside byte-locked third-party snapshots.
 paths-ignore:

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Security R419: keep CodeQL exclusions narrow and first-party coverage intact.
 
-This fixture deliberately checks policy source only. CodeQL default setup must
-be pointed to the config using github-codeql-config-file in repository settings.
+This fixture checks policy source only; switch existing GitHub default setup
+to the tracked advanced workflow before treating vendor exclusions as active.
 """
 from fnmatch import fnmatchcase
 from pathlib import Path
@@ -11,6 +11,7 @@ import re
 root = Path(__file__).resolve().parents[1]
 config = (root / ".github/codeql/codeql-config.yml").read_text()
 doc = (root / "docs/CODEQL_SECURITY_TRIAGE_R419.md").read_text()
+advanced = (root / ".github/workflows/codeql-advanced.yml").read_text()
 assert config.startswith("name: Eden Encore CodeQL")
 patterns = re.findall(r"^\s+- '([^']+)'", config, flags=re.M)
 expected = {
@@ -46,7 +47,12 @@ for path in (
     "vendor/sources/ps5-mesa/src/amd/vulkan/radv_device.c",
 ):
     assert not ignored(path), path
-assert "github-codeql-config-file" in doc
-assert "default setup" in doc
+assert "Switch to advanced" in doc
+assert "default" in doc
+assert "config-file: ./.github/codeql/codeql-config.yml" in advanced
+assert "security-events: write" in advanced
+for language in ("actions", "python", "c-cpp"):
+    assert "- language: " + language in advanced
+assert "paths-ignore:" in config
 assert "#23" in doc and "#28" in doc
 print("R419 CodeQL scope policy: narrow third-party test exclusions PASS")
