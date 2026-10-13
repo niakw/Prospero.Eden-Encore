@@ -19,7 +19,10 @@ assert cmake.count('EDEN_NPAD_PROGRESS fullkey_writes=%llu') == 1
 assert 'std::atomic<bool> eden_fullkey_last_plus' in cmake
 assert 'std::memory_order_relaxed' in cmake
 assert cmake.count('npad->fullkey_lifo.WriteNextEntry(pad_state);') == 2
-assert hid.count('                npad->fullkey_lifo.WriteNextEntry(pad_state);') == 1
+assert hid.count('                npad->fullkey_lifo.WriteNextEntry(pad_state);') == 2
+assert hid.count('npad->fullkey_lifo.WriteNextEntry(pad_state);\\n                break;\\n            case Core::HID::NpadStyleIndex::Handheld:') == 1
+assert 'set(eden_npad_write_anchor [=[' in cmake
+assert '                {\\n                    // Event has entered emulated HID memory' in cmake
 assert 'EDEN_NPAD_PLUS_LIFO' not in hid
 assert 'published_plus_edges.fetch_add' in input_src
 assert 'return sample.connected != 0 &&' in pad_header
