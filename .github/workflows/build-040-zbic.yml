@@ -1,4 +1,4 @@
-name: Build and release Prospero.Eden Encore
+name: Encore native build and package
 
 on:
   push:
@@ -30,7 +30,7 @@ on:
         type: boolean
         default: false
       test_title_id:
-        description: Nintendo Switch game title ID for test autoboot (default FC27)
+        description: Guest title ID for test autoboot (default FC27)
         required: false
         type: string
         default: "0100C49025D3E000"
@@ -40,7 +40,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: prospero-eden-encore-${{ github.ref }}
+  group: encore-native-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
