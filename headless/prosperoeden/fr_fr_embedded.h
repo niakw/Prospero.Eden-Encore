@@ -176,7 +176,7 @@ msgstr "Attribution des touches réinitialisée selon le profil actif."
 
 #: pe/ui/mapping.cpp
 msgid "Button mapping saved."
-msgstr "Attribution des touches enregistrée."
+msgstr "Touches enregistrées."
 
 #: pe/ui/settings.cpp
 msgid "BUTTON PROFILE"
@@ -423,7 +423,7 @@ msgstr "Modifier"
 
 #: pe/ui/settings.cpp
 msgid "Edit custom mapping"
-msgstr "Modifier l’attribution personnalisée"
+msgstr "Modifier les touches"
 
 #: pe/ui/browse.cpp
 msgid "Encore uses the same keys, firmware, roms, updates and mods folders under every storage root."
@@ -548,13 +548,10 @@ msgstr "Audio des jeux. La musique du menu de la PS5 reste inchangée."
 msgid "Game could not start: {0} Details: {1}"
 msgstr "Impossible de lancer le jeu : {0} Détails dans {1}"
 
-#: pe/ui/home.cpp
-msgid "Game details"
-msgstr "Détails du jeu"
 
 #: pe/ui/library.cpp
 msgid "Game overrides reset to global defaults."
-msgstr "Les réglages spécifiques au jeu utilisent de nouveau les réglages globaux."
+msgstr "Réglages du jeu réinitialisés."
 
 #: pe/ui/settings.cpp
 msgid "Game render scale follows the selected profile. Lower it for performance or memory; raise it only when a game has headroom."
@@ -1010,9 +1007,6 @@ msgstr "Paramètres rapides"
 msgid "Ready"
 msgstr "Prête"
 
-#: pe/ui/home.cpp
-msgid "Recently played"
-msgstr "Joué récemment"
 
 #: pe/ui/home.cpp, pe/ui/launcher.cpp
 msgid "RECENTLY PLAYED"
@@ -1038,12 +1032,12 @@ msgstr "Réduire les animations"
 #. Setting: how many times a second the TV picture is refreshed while a game runs (60 or 120 Hz).
 #: pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Refresh rate"
-msgstr "Fréquence de rafraîchissement"
+msgstr "Fréquence écran"
 
 #. Label: see 'Refresh rate'.
 #: pe/ui/settings.cpp
 msgid "REFRESH RATE"
-msgstr "FRÉQUENCE DE RAFRAÎCHISSEMENT"
+msgstr "FRÉQUENCE ÉCRAN"
 
 #: pe/ui/browse.cpp, pe/ui/settings.cpp
 msgid "REGION"
@@ -1063,7 +1057,7 @@ msgstr "Réinitialiser"
 
 #: pe/ui/launcher.cpp
 msgid "Reset controller mapping?"
-msgstr "Réinitialiser l'affectation de la manette ?"
+msgstr "Réinitialiser les touches ?"
 
 #: pe/ui/library.cpp
 msgid "Reset overrides"
@@ -1557,9 +1551,6 @@ msgstr "Récents"
 msgid "Loading artwork"
 msgstr "Chargement du visuel"
 
-#: pe/ui/home.cpp pe/ui/library.cpp pe/ui/launcher.cpp
-msgid "Artwork unavailable"
-msgstr "Visuel indisponible"
 
 #: pe/ui/home.cpp pe/ui/library.cpp pe/ui/launcher.cpp
 msgid "No screenshots available"
@@ -1579,7 +1570,7 @@ msgstr "Stockage configuré"
 
 #: pe/ui/library.cpp
 msgid "Loading game library..."
-msgstr "Chargement de la bibliothèque de jeux..."
+msgstr "Chargement des jeux..."
 
 #: pe/ui/library.cpp
 msgid "Could not load game list. Please try again."
@@ -1607,6 +1598,6 @@ msgstr "Quitter Eden Encore"
 
 #: pe/ui/launcher.cpp
 msgid "Exit Eden Encore?"
-msgstr "Voulez-vous quitter Eden Encore ?"
+msgstr "Quitter Eden Encore ?"
 )FRPO";
 }
