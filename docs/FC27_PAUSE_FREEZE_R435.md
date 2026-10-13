@@ -22,3 +22,7 @@ This does not change mapping, use synthetic presses, acquire GPU locks, reset th
 ## Qualification
 
 R434 native PS5 All-On build has succeeded: https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38385105638. R435 source-only preflight and a new PS5 dev native build must pass before any console validation. No source tree other than `dev/ps5-sparse-jit` is used.
+
+## R436 native qualification
+
+R435 source regressions passed in https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38409150567. Build a PS5 native All-On candidate containing **only** the read-only Fullkey Npad Plus witness and the already validated R434 performance code. Verify actual configure-time derived source, native linking, and package upload before asking for a minimal in-match Options test. Do not clear guest shader/texture caches. Do not claim that logging alone fixes the pause-menu hang.
