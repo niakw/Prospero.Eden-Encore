@@ -73,7 +73,7 @@ The official Mihawk PS5_Mesa high-frame-rate offer/configure fix **was already p
 
 ### Integrated, author-qualified adaptation — Pereira WSI
 
-- Source: [mpereiraesaa/PS5_Mesa f2ee3891](https://github.com/mpereiraesaa/PS5_Mesa/commit/f2ee3891be81f5f36fc1e64ada36e36033bae5e4). His tested Wine/Zink case has a hidden swapchain that never presents and prevents the real window acquiring the display. His host model exercises that takeover, retirement, new presents and release.
+- Source: [mpereiraesaa/PS5_Mesa f2ee3891](https://github.com/mpereiraesaa/PS5_Mesa/commit/f2ee3891be81f5f36fc1e64ada36e36033bae5e4). His PS5 Wine/Zink report concerns a hidden swapchain blocking the real window. The fix's host-model tests demonstrate takeover, retirement, presenting and release; the exact new version is not documented here as validated on console.
 - R440 ports the narrow `presented`/handover logic into the **existing fixed-resolution, single-scanout Encore RADV WSI**, *not* the author's entire variable-size WSI. It also patches the archived generator and checks for conflict both before and after image allocation. The winning swapchain owns presentation; the displaced one is retired; last-owner teardown remains Encore-owned.
 - Gate: `tools/check-ps5-videoout-unpresented-takeover.py`, with state matrix and active-source anchors. This is **source-only**: no claim that FC27 HUD, texture or pause freezes are fixed.
 
