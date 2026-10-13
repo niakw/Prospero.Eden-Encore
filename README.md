@@ -24,6 +24,8 @@
 
 The active development line is **`dev/ps5-sparse-jit`** (R457, `82e13e5655fc`). This is a development candidate, **not** a verified console release. Native build, source/host contracts, and hardware behavior must be reported separately; a source-contract failure blocks the native build and is not evidence that native compilation or gameplay validation succeeded.
 
+**Native build label:** the launcher footer is compiled from the newest numbered `R...` first-parent commit in this checkout. The historical `MEMORY.md` journal is not its version source. The public package version and source-commit provenance remain independently tracked. Shallow/missing revision history causes a pre-build failure rather than silently displaying an obsolete label.
+
 Current priorities: preserve launcher/menu control prompts while respecting each title's saved in-game control settings during gameplay; diagnose pause-menu stalls, frame-time spikes, textures and HUD regressions; retain the pinned graphics dependency integrity checks. A stable FPS counter alone does not establish guest progress.
 
 **Public naming policy:** use neutral component terms (console, controller, guest system, native graphics stack, online service, gameplay title) in new CI run names, messages, code comments and general-purpose documentation. Avoid unnecessary third-party brand names. Preserve exact proper names where required for attribution, licenses, security notices, upstream repository links, verifiable compatibility records, external API names or technical identifiers. Do not automatically rewrite immutable commit history, license text, copyrighted notices, executable paths or integration identifiers.
