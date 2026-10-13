@@ -2916,3 +2916,10 @@ R349 original EOL audit: 69 normalized CRLF files of 77017 paths; 45849-byte ori
 - R411 restores native GPU/DMA build inputs to the existing version-locked prepared Eden source, removes duplicate R408 generated Kepler/BufferCache/DMA overlays, adds fail-closed CMake checks for actual #4473 key signatures in prepared four sources. Leaves R405-R407 wait diagnostics operating after prepared DMA source is read.
 - R411 strengthens R307 no-duplicate policy and updates the R408 historical source-only fixture expectations. R410 opt-in CPU A/B pair separation remains unverified physical topology, gated by 0x1FFF and source tests.
 - Next qualified source CI only; do NOT launch second build before source CI passes. The failed R409 run produced no PS5 application.
+
+### 2026-10-13 R413 — one native All-On after source qualification
+
+- R412 source-only preflight #38333388723 concluded SUCCESS with complete host source, UBSan/ASan, UX, release-baseline gates. It validated the real R410 PS5 core-pair hypothesis placement test and the R411 elimination of redundant pre-patched #4473 overlays.
+- R409 #38332257466 failed ONLY in CMake because #4473 was already supplied by existing shipping Eden backports. R411 repaired native source provenance and fail-closed checked the prepared **already patched** four files. R412 updated obsolete CPU experiment tests; it is source-qualified. **Do not mislabel R408 as a new GPU fix:** the #4473/#4477 corrections were already present via the audited backport installer.
+- This R413 commit explicitly triggers ONE new native PS5 All-On build via [full-build] [test-all-on], for FC27 ID 0100C49025D3E000, no release publication. All four guest/JIT+GPU owners receive presumed SMT-isolated placements only if native developer trial enabled and exact mask 0x1FFF; any other mask skips it. Firmware physical topology still unverified; no performance result claimed.
+- The build must finish and upload validated app + symbols + provenance before any console test is requested; R403 is last successful native build until then.
