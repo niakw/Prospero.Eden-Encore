@@ -4,10 +4,6 @@
 # AMD FSR, DLC, NSP, XCI, prod.keys, Ryujinx) unchanged.
 
 #: settings_store.h
-msgid "0.5x (faster, softer)"
-msgstr "0.5x(빠름, 부드러움)"
-
-#: settings_store.h
 msgid "0.75x (faster)"
 msgstr "0.75x(빠름)"
 
@@ -19,29 +15,9 @@ msgstr "1.5x(선명함)"
 msgid "1x (native)"
 msgstr "1x(기본)"
 
-#: settings_store.h
-msgid "2x (sharpest)"
-msgstr "2x(가장 선명함)"
-
-#: settings_store.h
-msgid "3x (slower)"
-msgstr "3x(느림)"
-
-#: settings_store.h
-msgid "4x (slowest)"
-msgstr "4x(가장 느림)"
-
 #: eden_services.cpp
 msgid "A firmware NCA cannot be read. Reinstall the firmware dump."
 msgstr "펌웨어 NCA를 읽을 수 없습니다. 펌웨어를 다시 설치하세요."
-
-#: pe/ui/home.cpp
-msgid "About"
-msgstr "정보"
-
-#: pe/ui/browse.cpp
-msgid "About ProsperoEden"
-msgstr "ProsperoEden 정보"
 
 #. Label: which folders the app can read.
 #: pe/ui/browse.cpp
@@ -57,19 +33,10 @@ msgstr "접근성"
 msgid "ACCESSIBILITY"
 msgstr "접근성"
 
-#. Label: a game's updates, DLC and mods.
-#: pe/ui/library.cpp
-msgid "ADD-ONS"
-msgstr "추가 콘텐츠"
-
 #. {0}: updates, DLC and mods of the game; {1}: the language it will use.
 #: pe/ui/home.cpp
 msgid "Add-ons: {0}  /  Language: {1}"
 msgstr "추가 콘텐츠: {0}  /  언어: {1}"
-
-#: pe/ui/settings.cpp
-msgid "Adjust the essentials without leaving your library behind."
-msgstr "라이브러리를 벗어나지 않고 기본 설정을 조정하세요."
 
 #: pe/ui/browse.cpp
 msgid "All credit for the Eden emulator goes to its developers and contributors."
@@ -159,10 +126,6 @@ msgid "Choose a game from your library."
 msgstr "라이브러리에서 게임을 선택하세요."
 
 #: pe/ui/browse.cpp
-msgid "Choose the folder that holds your keys, firmware and games"
-msgstr "키, 펌웨어, 게임이 들어 있는 폴더를 선택하세요"
-
-#: pe/ui/browse.cpp
 msgid "Choose the language games use"
 msgstr "게임에서 사용할 언어를 선택하세요"
 
@@ -173,10 +136,6 @@ msgstr "본체 모드"
 #: pe/ui/home.cpp
 msgid "CONTINUE PLAYING"
 msgstr "이어서 플레이"
-
-#: pe/ui/settings.cpp
-msgid "Controller shortcuts and supported features."
-msgstr "컨트롤러 단축키와 지원 기능."
 
 #: pe/ui/home.cpp
 msgid "CONTROLLERS"
@@ -194,17 +153,9 @@ msgstr "조작"
 msgid "Could not create the folder. Check that the game files folder can be written."
 msgstr "폴더를 만들지 못했습니다. 게임 파일 폴더에 쓸 수 있는지 확인하세요."
 
-#: pe/ui/library.cpp
-msgid "Could not save console mode. Please try again."
-msgstr "본체 모드를 저장하지 못했습니다. 다시 시도해 주세요."
-
 #: pe/ui/launcher.cpp
 msgid "Could not save settings. Please try again."
 msgstr "설정을 저장하지 못했습니다. 다시 시도해 주세요."
-
-#: pe/ui/browse.cpp
-msgid "Could not save the folder. Please try again."
-msgstr "폴더를 저장하지 못했습니다. 다시 시도해 주세요."
 
 #: pe/ui/browse.cpp, pe/ui/library.cpp
 msgid "Could not save. Please try again."
@@ -229,34 +180,13 @@ msgstr "크레딧 및 설정 안내"
 msgid "Default ({0})"
 msgstr "기본값({0})"
 
-#: pe/ui/browse.cpp
-msgid "Default folder"
-msgstr "기본 폴더"
-
-#: pe/ui/browse.cpp
-msgid "Default folder saved. Reopen ProsperoEden to use it."
-msgstr "기본 폴더를 저장했습니다. ProsperoEden을 다시 열면 적용됩니다."
-
 #: pe/ui/settings.cpp
 msgid "Detailed logging"
 msgstr "상세 로그"
 
 #: pe/ui/settings.cpp
-msgid "DETAILED LOGS"
-msgstr "상세 로그"
-
-#: pe/ui/settings.cpp
-msgid "Detailed logs apply to the next game launch."
-msgstr "상세 로그는 다음 게임 실행부터 적용됩니다."
-
-#: pe/ui/settings.cpp
 msgid "Detailed logs on"
 msgstr "상세 로그 켜짐"
-
-#. Button hint: show the game's details.
-#: pe/ui/home.cpp
-msgid "Details"
-msgstr "상세 정보"
 
 #: pe/ui/settings.cpp
 msgid "Diagnostics"
@@ -279,18 +209,10 @@ msgstr "메뉴의 작은 글자를 더 크게 표시합니다."
 msgid "Dutch"
 msgstr "네덜란드어"
 
-#: pe/ui/home.cpp
-msgid "Eden emulator for PlayStation 5"
-msgstr "PlayStation 5용 Eden 에뮬레이터"
-
 #. Label of the shortcut that ends the running game.
 #: pe/ui/settings.cpp
 msgid "END GAME"
 msgstr "게임 종료"
-
-#: pe/ui/settings.cpp
-msgid "End the game and return to this menu"
-msgstr "게임을 종료하고 이 메뉴로 돌아가기"
 
 #: settings_store.h
 msgid "English (UK)"
@@ -309,18 +231,10 @@ msgstr "유럽"
 msgid "Export a copy"
 msgstr "사본 내보내기"
 
-#: eden_services.cpp
-msgid "Export failed. Check that the game files folder can be written."
-msgstr "내보내지 못했습니다. 게임 파일 폴더에 쓸 수 있는지 확인하세요."
-
 #. {0} is a folder.
 #: eden_services.cpp, host/fake_services.hpp
 msgid "Exported to {0}."
 msgstr "{0}에 내보냈습니다."
-
-#: pe/ui/library.cpp
-msgid "FILE"
-msgstr "파일"
 
 #. What a mod is made of: files that replace the game's own.
 #: eden_services.cpp, host/fake_services.cpp
@@ -350,10 +264,6 @@ msgstr "펌웨어의 SystemVersion 데이터가 없거나 읽을 수 없습니�
 #: pe/ui/browse.cpp
 msgid "FOLDERS"
 msgstr "폴더"
-
-#: pe/ui/library.cpp
-msgid "FORMAT"
-msgstr "형식"
 
 #. Label: the frames-per-second counter drawn over a game.
 #: pe/ui/settings.cpp
@@ -385,22 +295,6 @@ msgstr "게임 소리입니다. PS5 시스템 메뉴 음악은 바뀌지 않습�
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Game could not start: {0} Details: {1}"
 msgstr "게임을 시작할 수 없습니다: {0} 자세한 내용: {1}"
-
-#: pe/ui/home.cpp
-msgid "Game details"
-msgstr "게임 상세 정보"
-
-#: pe/ui/library.cpp
-msgid "GAME DETAILS"
-msgstr "게임 상세 정보"
-
-#: pe/ui/browse.cpp, pe/ui/settings.cpp
-msgid "Game files"
-msgstr "게임 파일"
-
-#: pe/ui/settings.cpp
-msgid "GAME FILES"
-msgstr "게임 파일"
 
 #: pe/ui/library.cpp
 msgid "Game settings"
@@ -460,10 +354,6 @@ msgstr "고대비"
 msgid "High contrast"
 msgstr "고대비"
 
-#: pe/ui/settings.cpp
-msgid "How games are drawn and scaled to your TV."
-msgstr "게임을 그리는 방식과 TV에 맞춘 확대 방식."
-
 #. Button hint: copy a save in.
 #: pe/ui/library.cpp
 msgid "Import"
@@ -497,11 +387,6 @@ msgstr "일본"
 #: settings_store.h
 msgid "Japanese"
 msgstr "일본어"
-
-#. keys, firmware and roms are folder names (unchanged). TRIANGLE is the controller's triangle button, in capitals.
-#: pe/ui/browse.cpp
-msgid "Keep keys, firmware and roms folders together. TRIANGLE uses the folder shown."
-msgstr "keys, firmware, roms 폴더를 한곳에 두세요. △ 버튼을 누르면 표시된 폴더를 사용합니다."
 
 #. Label: the encryption keys file (prod.keys).
 #: pe/ui/browse.cpp
@@ -553,15 +438,6 @@ msgstr "게임 실행"
 #: pe/ui/home.cpp
 msgid "Library"
 msgstr "라이브러리"
-
-#: pe/ui/library.cpp
-msgid "LIBRARY"
-msgstr "라이브러리"
-
-#. Headline of the Settings screen.
-#: pe/ui/settings.cpp
-msgid "Make it yours."
-msgstr "나만의 설정으로."
 
 #: pe/ui/settings.cpp
 msgid "Make the menu easier to see and follow."
@@ -620,15 +496,6 @@ msgstr "확인 필요"
 msgid "Next launch: {0}"
 msgstr "다음 실행: {0}"
 
-#. Label: the folder used the next time the app starts.
-#: pe/ui/settings.cpp
-msgid "NEXT START"
-msgstr "다음 실행"
-
-#: pe/ui/library.cpp
-msgid "No cover art"
-msgstr "커버 이미지 없음"
-
 #: pe/ui/browse.cpp
 msgid "No firmware folder"
 msgstr "firmware 폴더 없음"
@@ -655,10 +522,6 @@ msgstr "이 게임에는 아직 모드가 없습니다. 각 모드의 폴더를 
 msgid "No ROM files found."
 msgstr "ROM 파일을 찾을 수 없습니다."
 
-#: pe/ui/library.cpp
-msgid "No ROM selected"
-msgstr "선택한 ROM 없음"
-
 #: pe/ui/browse.cpp
 msgid "No roms folder"
 msgstr "roms 폴더 없음"
@@ -683,10 +546,6 @@ msgstr "끔"
 msgid "On"
 msgstr "켬"
 
-#: pe/ui/settings.cpp
-msgid "ON THIS CONSOLE"
-msgstr "이 본체"
-
 #. Short tag on a folder row.
 #: pe/ui/browse.cpp
 msgid "OPEN"
@@ -700,16 +559,6 @@ msgstr "열기"
 #: pe/ui/home.cpp
 msgid "Open library"
 msgstr "라이브러리 열기"
-
-#. Label: see 'Output resolution'.
-#: pe/ui/settings.cpp
-msgid "OUTPUT RESOLUTION"
-msgstr "출력 해상도"
-
-#. Setting: the size of the picture sent to the TV (1080p, 1440p or 2160p). Not the same as 'Resolution', which scales the game's own picture (1x, 2x...).
-#: pe/ui/settings.cpp
-msgid "Output resolution"
-msgstr "출력 해상도"
 
 #. Button hint: jump a page of the list (L1 / R1).
 #: pe/ui/browse.cpp
@@ -742,10 +591,6 @@ msgstr "포르투갈어(브라질)"
 msgid "Powered by Eden"
 msgstr "Powered by Eden"
 
-#: pe/ui/settings.cpp
-msgid "PREFERENCES"
-msgstr "환경 설정"
-
 #. Asked before a save is imported over the one in use.
 #: pe/ui/library.cpp
 msgid "Press again to replace this game's save. The current one is backed up."
@@ -767,10 +612,6 @@ msgstr "prod.keys 없음"
 msgid "PROJECT CREDITS"
 msgstr "프로젝트 크레딧"
 
-#: pe/ui/browse.cpp
-msgid "ProsperoEden is an unofficial PS5 port brought to you by BlackBearReloaded."
-msgstr "ProsperoEden은 BlackBearReloaded가 제공하는 비공식 PS5 이식판입니다."
-
 #. Shown on the home screen after the app crashed and started again; {0} is a file.
 #: eden_services.cpp, host/fake_services.cpp
 msgid "ProsperoEden stopped because of an error. A report was saved to {0}."
@@ -780,15 +621,6 @@ msgstr "오류로 인해 ProsperoEden이 중지되었습니다. 보고서가 {0}
 #: eden_services.cpp
 msgid "PS5 controller initialization failed"
 msgstr "PS5 컨트롤러를 초기화하지 못했습니다"
-
-#: pe/ui/browse.cpp
-msgid "PS5 EDITION"
-msgstr "PS5 에디션"
-
-#. {0} is the version, for example v1.000.030.
-#: pe/ui/home.cpp
-msgid "PS5 EDITION  /  {0}"
-msgstr "PS5 에디션  /  {0}"
 
 #: pe/ui/settings.cpp
 msgid "Ready"
@@ -833,10 +665,6 @@ msgstr "렌더러"
 msgid "Resolution"
 msgstr "해상도"
 
-#: pe/ui/settings.cpp
-msgid "RESOLUTION"
-msgstr "해상도"
-
 #: eden_services.cpp
 msgid "ROM missing from the game files folder"
 msgstr "게임 파일 폴더에 ROM이 없습니다"
@@ -878,10 +706,6 @@ msgstr "저장했습니다. 120Hz를 지원하지 않는 디스플레이는 60Hz
 msgid "Saved. Applies when a game starts."
 msgstr "저장했습니다. 게임을 시작할 때 적용됩니다."
 
-#: pe/ui/browse.cpp
-msgid "Saved. Reopen ProsperoEden to use this folder."
-msgstr "저장했습니다. ProsperoEden을 다시 열면 이 폴더를 사용합니다."
-
 #. Button hint: choose the highlighted item (not the Select button).
 #: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Select"
@@ -894,15 +718,6 @@ msgstr "게임 선택"
 #: pe/ui/library.cpp
 msgid "Select a game to begin"
 msgstr "게임을 선택해 시작하세요"
-
-#: pe/ui/library.cpp
-msgid "Select a readable game to configure its mode."
-msgstr "모드를 설정하려면 읽을 수 있는 게임을 선택하세요."
-
-#. Select is a button's name (unchanged).
-#: pe/ui/settings.cpp
-msgid "Select is the touchpad button on PS5."
-msgstr "Select는 PS5의 터치패드 버튼입니다."
 
 #. Heading: the language highlighted in the list.
 #: pe/ui/browse.cpp
@@ -931,25 +746,9 @@ msgstr "설정 필요"
 msgid "Setup required: {0} Open Settings, Game files to choose the folder that holds your keys, firmware and roms folders (or add the files to {1}), then reopen ProsperoEden."
 msgstr "설정 필요: {0} 설정의 게임 파일에서 keys, firmware, roms 폴더가 들어 있는 폴더를 선택하거나 파일을 {1}에 넣은 다음 ProsperoEden을 다시 여세요."
 
-#: pe/ui/settings.cpp
-msgid "Setup status and detailed logs."
-msgstr "설정 상태와 상세 로그."
-
 #: eden_services.cpp
 msgid "Setup validation failed. Check that firmware and key files are readable and valid."
 msgstr "설정 검증에 실패했습니다. 펌웨어와 키 파일을 읽을 수 있고 올바른지 확인하세요."
-
-#: pe/ui/settings.cpp
-msgid "Shortcuts during a game, and vibration."
-msgstr "게임 중 단축키와 진동."
-
-#: pe/ui/settings.cpp
-msgid "Show or hide the FPS overlay"
-msgstr "FPS 표시 켜기/끄기"
-
-#: pe/ui/library.cpp
-msgid "SIZE"
-msgstr "크기"
 
 #: pe/ui/settings.cpp
 msgid "Solid panels, brighter text and an outlined highlight."
@@ -994,14 +793,6 @@ msgstr "태국어"
 msgid "THANKS"
 msgstr "감사의 말"
 
-#: pe/ui/browse.cpp
-msgid "Thanks to the whole PS5 homebrew community and to every developer whose drivers, tools and libraries make ProsperoEden possible."
-msgstr "PS5 홈브루 커뮤니티 여러분과 ProsperoEden을 가능하게 한 드라이버, 도구, 라이브러리의 모든 개발자에게 감사드립니다."
-
-#: pe/ui/settings.cpp
-msgid "The folder that holds your keys, firmware and games."
-msgstr "키, 펌웨어, 게임이 들어 있는 폴더."
-
 #. Why a game stopped. 'Settings, Video' is the menu path; 'the game's own settings' is the Game settings dialog of the Library.
 #: eden_services.cpp
 msgid "The game ran out of graphics memory. Lower the resolution in Settings, Video (or in the game's own settings) and start it again."
@@ -1010,10 +801,6 @@ msgstr "게임의 그래픽 메모리가 부족합니다. 설정의 비디오(�
 #: pe/ui/settings.cpp
 msgid "The language games use when they offer it."
 msgstr "게임이 지원할 때 사용할 언어."
-
-#: pe/ui/browse.cpp
-msgid "THIS FOLDER"
-msgstr "이 폴더"
 
 #: pe/ui/browse.cpp
 msgid "This folder cannot be opened."
@@ -1036,10 +823,6 @@ msgstr "가져오려면 Ryujinx 폴더를 ryujinx/에, 또는 세이브 데이�
 #: pe/ui/library.cpp
 msgid "Turn on or off"
 msgstr "켜기/끄기"
-
-#: pe/ui/library.cpp
-msgid "Unavailable"
-msgstr "사용할 수 없음"
 
 #. Short tag on the 'Parent folder' row.
 #: pe/ui/browse.cpp
@@ -1067,14 +850,6 @@ msgstr "확대 필터"
 msgid "USA"
 msgstr "미국"
 
-#: pe/ui/browse.cpp
-msgid "Use extracted firmware NCA files. Choose the folder in Settings, Game files; restart the app after changing it."
-msgstr "추출한 펌웨어 NCA 파일을 사용하세요. 폴더는 설정의 게임 파일에서 선택하고, 변경한 뒤에는 앱을 다시 시작하세요."
-
-#: pe/ui/browse.cpp
-msgid "Use this folder"
-msgstr "이 폴더 사용"
-
 #: pe/ui/settings.cpp
 msgid "VIBRATION"
 msgstr "진동"
@@ -1084,24 +859,12 @@ msgid "Vibration"
 msgstr "진동"
 
 #: pe/ui/settings.cpp
-msgid "Vibration off"
-msgstr "진동 끔"
-
-#: pe/ui/settings.cpp
-msgid "Vibration on"
-msgstr "진동 켬"
-
-#: pe/ui/settings.cpp
 msgid "Video"
 msgstr "비디오"
 
 #: pe/ui/settings.cpp
 msgid "VIDEO"
 msgstr "비디오"
-
-#: pe/ui/home.cpp
-msgid "VIEW ALL GAMES"
-msgstr "모든 게임 보기"
 
 #. Vulkan is a name (unchanged).
 #: pe/ui/settings.cpp
@@ -1217,22 +980,6 @@ msgstr "Reset overrides"
 #: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
 msgid "Game overrides reset to global defaults."
 msgstr "Game overrides reset to global defaults."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "About Prospero.Eden Encore"
-msgstr "About Prospero.Eden Encore"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "tools and libraries make Prospero.Eden Encore possible."
-msgstr "tools and libraries make Prospero.Eden Encore possible."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Prospero.Eden Encore keeps the proven 0.40 base for PS5 13.60, with Eden branding, safer recovery, and targeted compatibility and performance improvements."
-msgstr "Prospero.Eden Encore keeps the proven 0.40 base for PS5 13.60, with Eden branding, safer recovery, and targeted compatibility and performance improvements."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Options starts a one-shot Safe Launch without changing saved settings."
-msgstr "Options starts a one-shot Safe Launch without changing saved settings."
 
 #: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
 msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
