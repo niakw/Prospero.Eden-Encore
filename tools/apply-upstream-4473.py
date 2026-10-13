@@ -195,9 +195,10 @@ if __name__ == "__main__":
     if args.self_test:
         cmake_file = (Path(__file__).resolve().parents[1] / "headless/CMakeLists.txt").read_text()
         marker = 'target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/gpu-memory-4473")'
-        assert cmake_file.count(marker) == 1
-        assert cmake_file.index('include("${EDEN_PORT_DIR}/vulkan.cmake")') < cmake_file.index(marker)
-        assert 'file(READ "${PORT_BUILD_DIR}/gpu-memory-4473/dma_pusher.cpp" command_source)' in cmake_file
+        assert cmake_file.count(marker) == 0
+        assert 'Eden #4473/#4477 are already applied once' in cmake_file
+        assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/${unit}.cpp" command_source)' in cmake_file
+        assert 'Prepared Eden source lacks #4473/#4477' in cmake_file
         self_test(args.source)
     else:
         if args.dest is None:
