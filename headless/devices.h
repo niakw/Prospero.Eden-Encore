@@ -102,13 +102,6 @@ public:
         if (slots[0].handle >= 0) return;
         mapping = ValidMapping(value) ? value : kDefaultMapping;
     }
-    // Optional FC27 match map, chosen explicitly; no scene inference from input.
-    void SetGameplayMapping(const ButtonMapping& value) {
-        if (slots[0].handle >= 0 || !ValidMapping(value)) return;
-        gameplay_mapping = value;
-        has_gameplay_mapping = value != mapping;
-        gameplay_mode = false;
-    }
     void Consume(std::span<const ps5::pad::Data> samples) { Consume(0, samples); }
     void Consume(std::size_t player, std::span<const ps5::pad::Data> samples);
     PadEngine& Engine() { return *engine; }
@@ -122,7 +115,6 @@ private:
         bool touch_chord = false;  // this press was part of a shortcut
         GuestSystemButtonRoute guest_home; // Touchpad+Options fallback; Sony PS reserved
         bool select_held = false;  // a long press: its mapped button stays down until release
-        bool gameplay_chord_held = false; // one toggle per Touchpad+Square press
         unsigned touch_polls = 0;  // polls the touchpad has been down
         unsigned select_pulse = 0; // polls left of a tap's mapped-button press
     };
@@ -133,12 +125,7 @@ private:
     float deadzone;
     float trigger_threshold;
     ButtonMapping mapping = kDefaultMapping;
-    ButtonMapping gameplay_mapping = kDefaultMapping;
-    bool has_gameplay_mapping = false;
-    bool gameplay_mode = false;
-    const ButtonMapping& ActiveMapping() const noexcept {
-        return has_gameplay_mapping && gameplay_mode ? gameplay_mapping : mapping;
-    }
+    const ButtonMapping& ActiveMapping() const noexcept { return mapping; }
     std::array<Slot, kMaxPlayers> slots{};
     bool owns_user_service = false;
     std::atomic<bool> return_to_menu = false;
