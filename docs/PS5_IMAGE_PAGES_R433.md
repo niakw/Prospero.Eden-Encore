@@ -21,3 +21,7 @@ A guest CPU memory read asks RasterizerVulkan::GetFlushArea whether a GPU-modifi
 This is a **lock contention hypothesis**, not a measured FPS gain. The bitset is deliberately monotonic and may become less selective after many game sessions, but never becomes optimistic because of eviction. In concurrent registration, marking precedes slot-map insertion, but a CPU read racing a registration can still linearize before the mark, as with an unsynchronized guest read; rendering fidelity and HUD correctness must be verified on hardware. Until R433 is built, the R432 all-on package is the last native-qualified image.
 
 No changes to DualSense/gameplay mapping, PS5 firmware affinity, image resolution, shader compilation, texture conversion, or guest frame timing.
+
+## R434 — Native PS5 All-On qualification
+
+The full R433 source preflight is green: https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38384783341 (including the byte-for-byte Vulkan fork replay and host-sanitized bitset concurrency tests). Produce one PS5 native All-On test build with R433 image-page lock elision; retain the already verified R432 artifact as an independent reference. This step validates native compilation, staging and packaging, not empirical FPS/texture correctness on console. No game cache reset or launcher/control profile changes.
