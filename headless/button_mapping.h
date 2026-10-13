@@ -6,6 +6,7 @@
 // touchpad + R1) are not part of it.
 #pragma once
 #include <array>
+#include <cstdint>
 
 namespace Eden {
 enum GameButton : int {
@@ -38,6 +39,13 @@ inline constexpr ButtonMapping kSwitchMapping = {
     pad_touchpad, pad_l3, pad_r3};
 
 inline constexpr ButtonMapping kDefaultMapping = kPlayStationMapping;
+// R448: only explicit FC27 title mapping is scoped to match gameplay.
+inline constexpr std::uint64_t kFc27TitleId = 0x0100C49025D3E000ULL;
+inline constexpr bool HasFc27MatchMapping(std::uint64_t title, bool custom,
+                                           const ButtonMapping& menu,
+                                           const ButtonMapping& game) noexcept {
+    return title == kFc27TitleId && custom && menu != game;
+}
 
 inline constexpr const ButtonMapping& BaseMappingForLayout(int layout) {
     return layout == 1 ? kSwitchMapping : kPlayStationMapping;

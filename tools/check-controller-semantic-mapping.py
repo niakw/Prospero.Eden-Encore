@@ -21,7 +21,7 @@ assert "adaptive_playstation" not in pad_runtime
 assert '(effective_layout == 1 ? "Switch" : "PlayStation")' in launch
 assert "Eden::ResolveSessionButtonMapping(" in launch
 assert "Eden::ResolveGameTitleId(rom_metadata_id, selected_game)" in launch
-assert "const int pad = mapping[game];" in pad_runtime
+assert "const int pad = active_mapping[game];" in pad_runtime
 # A session's guest face buttons are no longer reinterpreted after menu
 # navigation, stick motion, cutscenes or a match starts.
 assert "kButtonTouchPad | kButtonSquare" not in pad_runtime

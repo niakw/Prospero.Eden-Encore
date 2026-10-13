@@ -312,7 +312,7 @@ bool Pad::Poll() {
             static_cast<unsigned long long>(face_edges.circle),
             static_cast<unsigned long long>(face_edges.square),
             static_cast<unsigned long long>(face_edges.triangle),
-            mapping[game_x], mapping[game_y]);
+            ActiveMapping()[game_x], ActiveMapping()[game_y]);
         // Compact extra read-only diagnostic: physical Options -> virtual
         // Plus publication. The missing final Npad consumption remains a
         // separate layer and must not be inferred from these counters.
@@ -355,7 +355,7 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
     // Only the touchpad presses Minus (tap or hold). Physical Create now
     // provides virtual Switch Capture, not a second, surprise Minus press.
     const auto set_touch = [&](u32 pressed) {
-        const int touch_button = MappedTo(mapping, pad_touchpad);
+        const int touch_button = MappedTo(ActiveMapping(), pad_touchpad);
         if (touch_button < 0) return;
         engine->SetButtonState(player, kGame[touch_button],
             !slot.guest_home.BlockChordButtons() &&
@@ -370,12 +370,30 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
     for (const auto& raw : samples) {
         auto sample = is_usable(raw) ? raw : neutral_data(raw.timestamp_us);
 
-        // Keep the game's selected mapping fixed throughout menus,
-        // cutscenes, dialogue and gameplay. Emulated HID cannot infer the
-        // game's scene reliably, and input-dependent swaps break prompts.
+        // R448: no unreliable automatic guesses from sticks/Options/D-pad.
+        // An explicit title-scoped chord toggles menu vs match button profiles.
         constexpr ButtonMask menu_chord = kButtonTouchPad | kButtonL1;
         constexpr ButtonMask hud_chord = kButtonTouchPad | kButtonR1;
+        constexpr ButtonMask gameplay_chord = kButtonTouchPad | kButtonSquare;
         const auto pressed = sample.buttons;
+        const bool gameplay_chord_down = player == 0 && has_gameplay_mapping && is_usable(raw) &&
+            (pressed & gameplay_chord) == gameplay_chord &&
+            (pressed & (kButtonL1 | kButtonR1 | kButtonOptions | kButtonCross |
+                        kButtonCircle | kButtonTriangle)) == 0;
+        if (gameplay_chord_down && !slot.gameplay_chord_held) {
+            // Release all old guest face/shoulder holds before changing their owners.
+            for (std::size_t p = 0; p < kMaxPlayers; ++p)
+                for (const auto button : kGame)
+                    engine->SetButtonState(p, button, false);
+            gameplay_mode = !gameplay_mode;
+            slot.select_held = false;
+            slot.select_pulse = 0;
+            std::fprintf(stderr, "EDEN_PAD_GAMEPLAY_PROFILE mode=%s source=fc27_manual_chord\n",
+                         gameplay_mode ? "match" : "menu");
+        }
+        slot.gameplay_chord_held = gameplay_chord_down;
+        if (gameplay_chord_down)
+            sample.buttons &= ~(kButtonTouchPad | kButtonSquare);
 
         // The launcher/menu and HUD shortcuts still work from every controller.
         if ((pressed & menu_chord) == menu_chord &&
@@ -409,7 +427,7 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
             slot.touch_chord = false;
             slot.touch_polls = 0;
         }
-        if (touch && (pressed & (kButtonL1 | kButtonR1 | kButtonOptions)) != 0) {
+        if (touch && (pressed & (kButtonL1 | kButtonR1 | kButtonOptions | (gameplay_chord_down ? kButtonSquare : 0))) != 0) {
             slot.touch_chord = true;
             slot.select_held = false;
         }
@@ -449,8 +467,9 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
         // The game's buttons are digital: the analog triggers count from the threshold.
         const bool left = sample.triggers.l2 / 255.0f >= trigger_threshold;
         const bool right = sample.triggers.r2 / 255.0f >= trigger_threshold;
+        const auto& active_mapping = ActiveMapping();
         for (int game = 0; game < kGameButtons; ++game) {
-            const int pad = mapping[game];
+            const int pad = active_mapping[game];
             if (pad == pad_touchpad) continue;  // set_touch
             engine->SetButtonState(player, kGame[game], (sample.buttons & kPad[pad]) != 0 ||
                                                         (pad == pad_l2 && left) || (pad == pad_r2 && right));
@@ -459,7 +478,7 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
         // Respect custom layouts that explicitly map Create to another guest
         // action. Only otherwise does physical Create become Switch Capture.
         engine->SetButtonState(player, Button::ButtonCapture,
-            MappedTo(mapping, pad_create) < 0 && (sample.buttons & kButtonCreate) != 0);
+            MappedTo(active_mapping, pad_create) < 0 && (sample.buttons & kButtonCreate) != 0);
         engine->SetStickPosition(player, 0, axis(sample.left_stick.x), -axis(sample.left_stick.y));
         engine->SetStickPosition(player, 1, axis(sample.right_stick.x), -axis(sample.right_stick.y));
         // Motion: acceleration in G and angular velocity in rad/s, mapped to Eden's axes and units
