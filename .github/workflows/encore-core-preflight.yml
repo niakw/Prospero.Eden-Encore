@@ -96,6 +96,7 @@ jobs:
           python3 -B tools/check-ps-glyph-packs.py
           python3 -B tools/check-controller-semantic-mapping.py
           python3 -B tools/check-ps5-title-controls.py
+          python3 -B tools/check-fc27-match-input-profile.py
           python3 -B tools/check-ps5-pad-freeze-observability.py
           python3 -B tools/check-ps5-autocontrol-context.py
           python3 -B tools/check-gpu-native-diagnostics.py

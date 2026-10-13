@@ -20,18 +20,19 @@ mapper = (ROOT / "headless/button_mapping.h").read_text()
 assert 'ResolveSessionButtonMapping(' in mapper
 assert "Eden::ResolveSessionButtonMapping(" in launcher
 assert "ResolveSessionButtonMapping(" in ui
-assert 'pad->SetMapping(mapping);' in launcher
-assert 'pad->SetMapping(mapping);' in launcher.split('pad->Open()', 1)[0]
+assert 'pad->SetMapping(separate_fc27_gameplay ? controls.mapping : mapping);' in launcher
+assert 'pad->SetMapping(separate_fc27_gameplay ? controls.mapping : mapping);' in launcher.split('pad->Open()', 1)[0]
 assert 'EDEN_PAD_MAPPING_LOCKED scope=session mode=static' in launcher
 assert 'void SetMapping(const ButtonMapping& value)' in device
 assert 'if (slots[0].handle >= 0) return;' in device
 assert 'SetAdaptivePlayStation' not in device
 assert 'SetAdaptivePlayStation' not in launcher
 assert 'mapping_context' not in pad and 'mapping_context' not in device
+assert 'void SetGameplayMapping(const ButtonMapping& value)' in device
 assert 'adaptive_playstation' not in pad
 assert 'manual_toggle' not in pad
 assert 'layout_chord' not in pad
-assert 'const int pad = mapping[game];' in pad
+assert 'const int pad = active_mapping[game];' in pad
 assert 'MappedTo(mapping, pad_touchpad);' in pad
 assert 'MappedTo(mapping, pad_create) < 0 && (sample.buttons & kButtonCreate) != 0' in pad
 assert 'engine->SetButtonState(player, Button::ButtonCapture,' in pad
