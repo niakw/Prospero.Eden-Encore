@@ -156,6 +156,7 @@ jobs:
           python3 -B tools/check-jit-stability.py
           python3 -B tools/check-experimental-performance.py
           python3 -B tools/check-gc-scan.py
+          python3 -B tools/check-gc-prefetch-budget.py
           python3 -B tools/check-ps5-all-on-contract.py
           python3 -B tools/check-ps5-architecture.py
           python3 -B tools/check-python-source-syntax.py
