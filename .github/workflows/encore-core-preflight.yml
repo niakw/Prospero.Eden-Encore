@@ -47,6 +47,7 @@ jobs:
           python3 -B tools/check-ps5-scheduler-capacity-preflight.py
           python3 -B tools/check-ps5-quiet-frame-pressure.py
           python3 -B tools/check-ps5-gpu-active-wait-host.py
+          python3 -B tools/apply-upstream-4473.py --self-test
           python3 -B tools/check-ps5-quiet-cpu-io-clocks.py
           python3 -B tools/check-ps5-quiet-guest-entry.py
           python3 -B tools/check-ps5-quiet-gpu-hotpaths.py

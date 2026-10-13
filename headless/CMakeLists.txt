@@ -1915,6 +1915,24 @@ string(REPLACE "    case Settings::RendererBackend::Vulkan:\n        return std:
 endif()
 write_derived("${PORT_BUILD_DIR}/video_core.cpp" "${video_factory}")
 get_target_property(video_sources video_core SOURCES)
+# R408: full upstream Eden #4473 CPU/GPU memory ownership fix, native only.
+# Generate patched disposable sources before native GPU-worker rewrites.
+# Immutable vendored archives and their verified hashes are not modified.
+if(PS5_NATIVE)
+    execute_process(
+        COMMAND python3 "${PORT_ROOT}/tools/apply-upstream-4473.py"
+            --source "${PROJECT_SOURCE_DIR}/src/video_core"
+            --dest "${PORT_BUILD_DIR}/gpu-memory-4473"
+        RESULT_VARIABLE eden_gpu4473_rc
+        OUTPUT_VARIABLE eden_gpu4473_out
+        ERROR_VARIABLE eden_gpu4473_error)
+    if(NOT eden_gpu4473_rc EQUAL 0)
+        message(FATAL_ERROR "Eden GPU #4473 patch failed: ${eden_gpu4473_error}")
+    endif()
+    target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/gpu-memory-4473")
+    list(REMOVE_ITEM video_sources engines/kepler_compute.cpp)
+    list(APPEND video_sources "${PORT_BUILD_DIR}/gpu-memory-4473/kepler_compute.cpp")
+endif()
 if(NOT EDEN_PS5_VULKAN)
     list(FILTER video_sources EXCLUDE REGEX "^(renderer_vulkan|vulkan_common)/")
 else()
@@ -2174,7 +2192,14 @@ if(EDEN_PS5_OPENGL)
         "    void NotifyShutdown() {\n        {\n            std::unique_lock lk{sync_mutex};\n            shutting_down.store(true, std::memory_order::relaxed);\n            sync_cv.notify_all();\n        }\n        gpu_thread.Stop();\n    }" gpu_source "${gpu_source}")
     # In-flight guest waits must also unwind before Stop can join the worker.
     foreach(unit dma_pusher engines/puller)
-        file(READ "${PROJECT_SOURCE_DIR}/src/video_core/${unit}.cpp" command_source)
+        if(unit STREQUAL "dma_pusher")
+            # Already patched as one #4473 group with Kepler/BufferCache.
+            # Keep the native shutdown-aware CV and R405-R407 instrumentation
+            # that follow; reading pristine DMA here would silently lose #4473.
+            file(READ "${PORT_BUILD_DIR}/gpu-memory-4473/dma_pusher.cpp" command_source)
+        else()
+            file(READ "${PROJECT_SOURCE_DIR}/src/video_core/${unit}.cpp" command_source)
+        endif()
         string(REPLACE "        sync_cv.wait(lk, [this]() { return synced; });"
             "        while (!synced && !system.IsShuttingDown())\n            sync_cv.wait_for(lk, std::chrono::milliseconds(10));\n        if (system.IsShuttingDown()) return false;" command_source "${command_source}")
         if(unit STREQUAL "dma_pusher" AND EDEN_DEV_PROFILE)
