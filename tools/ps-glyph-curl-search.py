@@ -11,7 +11,7 @@ from __future__ import annotations
 from html.parser import HTMLParser
 import re
 import subprocess
-from urllib.parse import quote, urljoin, urlparse
+from urllib.parse import quote, urljoin, urlsplit
 
 FIREFOX_UA=("Mozilla/5.0 (X11; Linux x86_64; rv:140.0) "
             "Gecko/20100101 Firefox/140.0")
@@ -61,13 +61,23 @@ def engine_url(provider,query):
     raise ValueError("unknown public curl provider")
 
 def engine_matches(provider,url):
-    host=(urlparse(url).hostname or "").casefold()
-    names=("duckduckgo.com",) if provider=="curl_duckduckgo" else (
+    # Compare parsed scheme, host, userinfo and port. Never use URL substrings
+    # as an allowlist: "trusted.example.evil.invalid" is not trusted.example.
+    try:
+        parts=urlsplit(url)
+        host=(parts.hostname or "").casefold()
+        port=parts.port
+    except ValueError:
+        return False
+    if (parts.scheme != "https" or parts.username is not None
+            or parts.password is not None or port not in (None,443)):
+        return False
+    names=("html.duckduckgo.com",) if provider=="curl_duckduckgo" else (
         "yandex.com","yandex.ru")
-    return any(host==name or host.endswith("."+name) for name in names)
+    return host in names
 
 def parse_page(provider,original_url,final_url,status,body):
-    if not 200<=status<400:
+    if status != 200:
         raise CurlSearchPaused("search engine returned HTTP "+str(status))
     if not engine_matches(provider,final_url):
         raise CurlSearchPaused("search redirected to another origin")
@@ -80,7 +90,19 @@ def parse_page(provider,original_url,final_url,status,body):
     result,seen=[],set()
     for label,href in p.links[:2500]:
         link=urljoin(final_url,href)
-        if engine_matches(provider,link) and "/l/?" not in link:
+        try:
+            parts=urlsplit(link)
+            port=parts.port
+        except ValueError:
+            continue
+        if (parts.scheme != "https" or not parts.hostname or
+                parts.username is not None or parts.password is not None or
+                port not in (None,443)):
+            continue
+        # Only permit the search engine's exact well-known result endpoint,
+        # not an arbitrary substring anywhere in an attacker-controlled URL.
+        if engine_matches(provider,link) and (
+                provider != "curl_duckduckgo" or parts.path != "/l/"):
             continue
         if link not in seen and len(link)<2048:
             seen.add(link)
@@ -90,8 +112,10 @@ def parse_page(provider,original_url,final_url,status,body):
 
 def search(provider,query):
     url=engine_url(provider,query)
-    cmd=["curl","--silent","--show-error","--location",
-         "--max-redirs","2","--max-time","23","--connect-timeout","9",
+    # Never follow search-engine redirects to an unapproved network origin:
+    # validating the *final* URL after curl --location is too late.
+    cmd=["curl","--silent","--show-error","--proto","=https",
+         "--max-time","23","--connect-timeout","9",
          "--compressed","--user-agent",FIREFOX_UA,
          "--write-out","\nEDEN_SEARCH_HTTP:%{http_code}\nEDEN_SEARCH_URL:%{url_effective}\n",
          url]
