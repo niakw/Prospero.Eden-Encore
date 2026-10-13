@@ -57,20 +57,32 @@ HudSnapshot vulkan_hud;
 // Never sample clocks or traverse HLE data on each present. These cumulative
 // counters need just 12 relaxed loads plus three JIT totals every five seconds.
 // Their deltas are concurrent worker time, NOT additive wall-clock frame time.
-using FramePressureNumbers = std::array<unsigned long long, 12>;
+// R404 captures the four guest JIT cores from the SAME report-boundary reads,
+// avoiding false attribution of parallel compilation to one paused thread.
+// Indexes 0..11 retain the R403 aggregate format for backward compatibility;
+// 12..15: compile ns/core, 16..19: compile calls/core, 20..23: evacuations/core.
+using FramePressureNumbers = std::array<unsigned long long, 24>;
 FramePressureNumbers CaptureFramePressure() noexcept {
     using namespace Eden::Performance;
     const auto read = [](const std::atomic<unsigned long long>& value) {
         return value.load(std::memory_order_relaxed);
     };
-    unsigned long long jit_ns = 0;
-    for (const auto& core : compilation) jit_ns += read(core.nanoseconds);
-    return {read(gpu_queue_wait.nanoseconds), read(gpu_dispatch.nanoseconds),
+    FramePressureNumbers result{read(gpu_queue_wait.nanoseconds), read(gpu_dispatch.nanoseconds),
             read(gpu_fence_drain.nanoseconds), read(gpu_present_wait.nanoseconds),
             read(gpu_queue_full.nanoseconds), read(guest_dequeue_wait.nanoseconds),
             read(guest_sync_wait.nanoseconds), read(guest_ipc_wait.nanoseconds),
             read(cache_lock_contended), read(cache_lock_blocked),
-            read(cache_lock_wait_ns), jit_ns};
+            read(cache_lock_wait_ns), 0};
+    unsigned long long jit_ns = 0;
+    for (unsigned core = 0; core < compilation.size(); ++core) {
+        const auto ns = read(compilation[core].nanoseconds);
+        jit_ns += ns;
+        result[12 + core] = ns;
+        result[16 + core] = read(compilation[core].calls);
+        result[20 + core] = read(evacuations[core]);
+    }
+    result[11] = jit_ns;
+    return result;
 }
 bool vulkan_loading{};
 double vulkan_loading_start{-1};
@@ -753,6 +765,14 @@ void GraphicsWindow::OnFrameDisplayed() {
                         pressure_delta[6] * to_ms, pressure_delta[7] * to_ms,
                         pressure_delta[8], pressure_delta[9], pressure_delta[10] * to_ms,
                         pressure_delta[11] * to_ms);
+                    // Detailed logs only. A per-core interval is a CPU-worker sum,
+                    // NOT a measured stall or an elapsed time on the renderer.
+                    // The same cumulative snapshot also supplies aggregate jit_ms.
+                    for (unsigned core = 0; core < Eden::Performance::compilation.size(); ++core)
+                        std::printf("EDEN_FRAME_JIT_CORE frame=%u core=%u compile_ns=%llu "
+                                    "compile_calls=%llu evacuations=%llu\n",
+                            frame_total, core, pressure_delta[12 + core],
+                            pressure_delta[16 + core], pressure_delta[20 + core]);
                 } else {
                     std::printf("EDEN_FRAME_PRESSURE frame=%u counters_reset=1\n", frame_total);
                 }
