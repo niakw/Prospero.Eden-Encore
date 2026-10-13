@@ -22,3 +22,5 @@ The earlier build log also contains **hundreds of NIR/Mesa diagnostics** from th
 Historical failures [38481264063](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38481264063) and [38481264066](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38481264066) were a **single obsolete UX test assertion** after an intentionally shortened French exit string. The test now checks the current French translation and its embedded copy. Those red runs cannot become green retroactively.
 
 New core/native build validation must confirm both stage-file equality and translated resolution keys. Do not declare the build warning-free, fully translated or a gameplay performance fix on the evidence of source edits alone.
+
+Validation target: stage the two complete maintained native source files, require catalog coverage and safe URL regression, then execute a single All-On native compile. [build-check requested]
