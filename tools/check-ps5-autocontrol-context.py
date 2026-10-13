@@ -33,8 +33,8 @@ assert 'adaptive_playstation' not in pad
 assert 'manual_toggle' not in pad
 assert 'layout_chord' not in pad
 assert 'const int pad = active_mapping[game];' in pad
-assert 'MappedTo(mapping, pad_touchpad);' in pad
-assert 'MappedTo(mapping, pad_create) < 0 && (sample.buttons & kButtonCreate) != 0' in pad
+assert 'MappedTo(ActiveMapping(), pad_touchpad);' in pad
+assert 'MappedTo(active_mapping, pad_create) < 0 && (sample.buttons & kButtonCreate) != 0' in pad
 assert 'engine->SetButtonState(player, Button::ButtonCapture,' in pad
 assert 'slot.guest_home.BlockChordButtons()' in pad
 assert 'engine->SetButtonState(player, kGame[touch_button],' in pad
@@ -83,5 +83,5 @@ with tempfile.TemporaryDirectory(prefix="eden-ps5-fixed-input-") as work:
                     "-I", str(ROOT / "headless"), str(cpp), "-o", str(exe)],
                    check=True)
     subprocess.run([str(exe)], check=True)
-print("PASS: fixed global and per-game PS5 mapping before boot; no runtime swapping")
+print("PASS: fixed default and title profile at boot, deliberate FC27-only match switching")
 print("NOTE: Nintendo in-game glyph artwork remains a separate RomFS requirement")
