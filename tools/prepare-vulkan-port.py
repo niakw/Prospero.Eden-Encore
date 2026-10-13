@@ -75,7 +75,7 @@ void RasterizerVulkan::DispatchCompute() {"""),
     # when the guest enables occlusion counting.
     ('const bool can_defer_clear = ENABLE_DEFERRED_CLEAR &&',
      'const bool can_defer_clear = ENABLE_DEFERRED_CLEAR && !regs.zpass_pixel_count_enable &&'),
-    ('#include <algorithm>', '#include <algorithm>\n#include "performance.h"\n#include "image_pages.h"'),
+    ('#include <algorithm>', '#include <algorithm>\n#include "performance.h"'),
     # Guest threads take the cache locks here (tracked-page writes, flush-area reads).
     ('bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {',
      'bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {\n    ::Eden::Performance::BatchedGuestWriteTimer guest_write_timer;\n    const bool sample_guest_write = ::Eden::Performance::ShouldSampleGuestWrite();'),
@@ -276,7 +276,7 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {'''),
     # Development GPU fault probe (dev_vulkan.h, pipeline_trace=on): once the runner
     # creates /app0/sync-draws.txt, report every draw/dispatch to klog and wait for the
     # GPU, so the last report before a fatal GPU fault names the operation.
-    ('#include "performance.h"', '#include "performance.h"\n#include "dev_vulkan.h"\n#include "diagnostics.h"\n#include <filesystem>'),
+    ('#include "performance.h"', '#include "performance.h"\n#include "image_pages.h"\n#include "dev_vulkan.h"\n#include "diagnostics.h"\n#include <filesystem>'),
     ('scheduler.Record([draw_params](vk::CommandBuffer cmdbuf) {\n            ',
      'scheduler.Record([draw_params, pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {\n            if (!pipeline || !pipeline->CanExecuteDraw()) {\n                ::Eden::Performance::RecordGraphicsDrawDrop(\n                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                return;\n            }\n            '),
     ('scheduler.Record([buffer_obj = buffer->Handle(), offset,\n                              stride = params.stride](vk::CommandBuffer cmdbuf) {\n                ',
