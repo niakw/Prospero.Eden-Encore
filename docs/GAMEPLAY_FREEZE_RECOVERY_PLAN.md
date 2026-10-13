@@ -196,3 +196,5 @@ Native fix, applied **only** to the generated `vulkan_swapchain.cpp` through `to
 - `tools/check-ps5-native-acquire-failfast.py` replays **the exact patched body compiled in C++20**, including transient timeout recovery, a run of 40 consecutive timeouts, a no-image/outdated index sentinel, a valid suboptimal image and fatal error propagation. This passes in both native-macro and non-native mode on the authorized Mac. Linux host preflight and native build gate now run the same validation.
 
 **Important validation limit:** A source-level memory/synchronization bug has been corrected; current PS5 telemetry cannot tell whether these two WSI statuses occurred during the recorded 30-FPS hitches. No observed console FPS gain or reduced input lag is claimed. Qualify native build first, then one controlled device comparison only when the code is compiled and ready.
+
+Native qualification gate: compile this exact patched generated swapchain with the All-On native toolchain before claiming it is ready for console validation. The source test only proves the modeled VkResult/error branches; it cannot simulate a WSI driver that ignores Vulkan timeouts.
