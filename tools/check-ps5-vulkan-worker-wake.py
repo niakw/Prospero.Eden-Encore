@@ -26,6 +26,7 @@ worker_start = source.index("    const auto TryPopQueue{[this](auto& work) -> bo
 worker_end = source.index("\n    while (!stop_token.stop_requested())", worker_start)
 native_pop = source[worker_start:worker_end]
 cpp = r"""
+#include <array>
 #include <atomic>
 #include <cassert>
 #include <chrono>
@@ -90,10 +91,25 @@ int main() {
         completion.get();
         assert(scheduler.executed.load() == (batch+1)*each);
     }
+    // Real native WaitWorker body under overlapping guest sync demand:
+    // three independent waiters must all observe the same queue drain,
+    // including when the last queued work is already executing.
+    for (unsigned wave=0; wave<64; ++wave) {
+        for (unsigned i=0; i<64; ++i) scheduler.Enqueue(rounds*each + wave*64 + i);
+        std::array<std::future<void>, 3> waiters;
+        for (auto& waiter : waiters) {
+            waiter = std::async(std::launch::async, [&] { scheduler.WaitWorker(); });
+        }
+        for (auto& waiter : waiters) {
+            assert(waiter.wait_for(4s) == std::future_status::ready);
+            waiter.get();
+        }
+        assert(scheduler.executed.load() == rounds*each + (wave+1)*64);
+    }
     // WaitWorker must also return when queue already empty, without notification.
     scheduler.WaitWorker();
     assert(scheduler.queue_drain_waiters == 0);
-    std::puts("PASS R357: source-replayed empty-drain waits, FIFO, no missed wakeups");
+    std::puts("PASS: real WaitWorker exact source, 4000 base tasks + 4096 competing three-waiter tasks, FIFO, no missed wakeups");
 }
 """.replace("__NATIVE_POP__", native_pop).replace("__NATIVE_WAIT__", native_wait)
 compiler = shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
