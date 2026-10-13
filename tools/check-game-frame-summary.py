@@ -5,6 +5,7 @@ s=(r/'headless/graphics.cpp').read_text()
 body=s.split('        if (sample_start < 0) {',1)[1].split('\n#endif\n        clock.Present(now);',1)[0]
 code='''#include <algorithm>
 #include <cstdio>
+namespace Eden::NativeLogs { inline bool Detailed() { return true; } }
 struct Sample {double sample_start{-1},prior_sample_frame{},sample_worst{};unsigned sample_frames{},presented_frames{};
 void present(double now){++presented_frames;if(sample_start<0){'''+body+'''} };
 int main(){Sample first;for(int i=0;i<=100;++i)first.present(100+i/20.0);
