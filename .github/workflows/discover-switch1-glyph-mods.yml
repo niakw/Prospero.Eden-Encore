@@ -1,4 +1,4 @@
-name: Discover Switch 1 controller UI mods (metadata only)
+name: Discover guest controller glyph metadata
 
 # GitHub schedules run on the default branch ONLY. Do not modify release
 # branch; use workflow_dispatch on dev/ps5-sparse-jit for live incremental scans.
