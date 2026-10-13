@@ -17,6 +17,15 @@ graphics_path = root / "headless/graphics.cpp"
 native_source = cpp_path.read_text()
 native_header = hdr_path.read_text()
 graphics = graphics_path.read_text()
+consumer_source = (root / "vendor/sources/eden/src/core/hle/service/nvnflinger/buffer_queue_consumer.cpp").read_text()
+consumer_start = consumer_source.index("Status BufferQueueConsumer::AcquireBuffer(")
+consumer_end = consumer_source.index("Status BufferQueueConsumer::ReleaseBuffer(", consumer_start)
+consumer_path = consumer_source[consumer_start:consumer_end]
+assert "bool dropped_queued_buffer = false;" in consumer_path
+assert "core->queue.erase(front);\n            dropped_queued_buffer = true;" in consumer_path
+deferred = consumer_path[consumer_path.index("if (desired_present > expected_present.count()"):consumer_path.index("return Status::PresentLater;")]
+assert "if (dropped_queued_buffer) core->SignalDequeueCondition();" in deferred
+assert deferred.index("core->SignalDequeueCondition();") > deferred.index("LOG_DEBUG(")
 
 assert "u64 dequeue_generation{};" in native_header
 assert "std::atomic<bool> dequeue_possible" not in native_header
