@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Prevent a producer wake from being consumed by only one guest buffer waiter.
+"""Qualify active backport generation wakes and Encore native deferred-present wake.
 
-This host test compiles the EXACT source methods from our pinned guest
+This host test compiles the EXACT source methods from the active guest
 BufferQueueCore. It proves multiwait notification semantics, not FC27 FPS.
 """
 from pathlib import Path
@@ -11,29 +11,31 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-cpp_path = root / "vendor/sources/eden/src/core/hle/service/nvnflinger/buffer_queue_core.cpp"
-hdr_path = root / "vendor/sources/eden/src/core/hle/service/nvnflinger/buffer_queue_core.h"
+cpp_path = root / "vendor/encore-active/eden-backports/src/core/hle/service/nvnflinger/buffer_queue_core.cpp"
+hdr_path = root / "vendor/encore-active/eden-backports/src/core/hle/service/nvnflinger/buffer_queue_core.h"
 graphics_path = root / "headless/graphics.cpp"
 native_source = cpp_path.read_text()
 native_header = hdr_path.read_text()
 graphics = graphics_path.read_text()
-consumer_source = (root / "vendor/sources/eden/src/core/hle/service/nvnflinger/buffer_queue_consumer.cpp").read_text()
-consumer_start = consumer_source.index("Status BufferQueueConsumer::AcquireBuffer(")
-consumer_end = consumer_source.index("Status BufferQueueConsumer::ReleaseBuffer(", consumer_start)
-consumer_path = consumer_source[consumer_start:consumer_end]
-assert "bool dropped_queued_buffer = false;" in consumer_path
-assert "core->queue.erase(front);\n            dropped_queued_buffer = true;" in consumer_path
-deferred = consumer_path[consumer_path.index("if (desired_present > expected_present.count()"):consumer_path.index("return Status::PresentLater;")]
-assert "if (dropped_queued_buffer) core->SignalDequeueCondition();" in deferred
-assert deferred.index("core->SignalDequeueCondition();") > deferred.index("LOG_DEBUG(")
+# Shipping source is installed from the already-audited active backports.
+# The dropped-buffer early-return fix is instead generated only for native.
+cmake = (root / "headless/CMakeLists.txt").read_text()
+original_consumer = (root / "vendor/sources/eden/src/core/hle/service/nvnflinger/buffer_queue_consumer.cpp").read_text()
+assert "bool eden_dropped_queued_buffer = false;" in cmake
+assert "eden_dropped_queued_buffer = true;" in cmake
+assert "if (eden_dropped_queued_buffer) core->SignalDequeueCondition();" in cmake
+assert 'write_derived("${PORT_BUILD_DIR}/buffer_queue_consumer.cpp"' in cmake
+assert 'list(REMOVE_ITEM core_sources "hle/service/nvnflinger/buffer_queue_consumer.cpp")' in cmake
+assert "return Status::PresentLater;" in original_consumer
+assert 'core->queue.erase(front);\n            front = core->queue.begin();' in original_consumer
 
-assert "u64 dequeue_generation{};" in native_header
+assert "std::atomic<std::uint64_t> dequeue_epoch{};" in native_header
 assert "std::atomic<bool> dequeue_possible" not in native_header
 start = native_source.index("void BufferQueueCore::SignalDequeueCondition() {")
 end = native_source.index("\ns32 BufferQueueCore::GetMinUndequeuedBufferCountLocked", start)
 real_methods = native_source[start:end]
-assert "++dequeue_generation;" in real_methods
-assert "dequeue_generation != observed_generation" in real_methods
+assert "dequeue_epoch.fetch_add(1, std::memory_order_relaxed);" in real_methods
+assert "dequeue_epoch.load(std::memory_order_relaxed) != previous_epoch" in real_methods
 assert "dequeue_condition.notify_all();" in real_methods
 assert "dequeue_possible.store(false)" not in real_methods
 
@@ -62,7 +64,7 @@ class BufferQueueCore {
 public:
     std::mutex mutex;
     std::condition_variable dequeue_condition;
-    u64 dequeue_generation{};
+    std::atomic<std::uint64_t> dequeue_epoch{};
     void SignalDequeueCondition();
     bool WaitForDequeueCondition(std::unique_lock<std::mutex>& lk);
 };
@@ -99,7 +101,7 @@ int main() {
         for (auto& thread:threads) thread.join();
         assert(done.load()==waiters);
     }
-    std::puts("PASS: 400 guest waiters, 100 broadcast generations; render callback is non-flushing");
+    std::puts("PASS: 400 waiters on active backport generation; native deferred-present wake source pinned");
 }
 """.replace("__REAL_METHODS__", real_methods)
 
