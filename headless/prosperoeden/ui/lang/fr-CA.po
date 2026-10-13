@@ -642,12 +642,12 @@ msgstr "Réduction des mouvements"
 #. Setting: how many times a second the TV picture is refreshed while a game runs (60 or 120 Hz).
 #: pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Refresh rate"
-msgstr "Fréquence de rafraîchissement"
+msgstr "Fréquence écran"
 
 #. Label: see 'Refresh rate'.
 #: pe/ui/settings.cpp
 msgid "REFRESH RATE"
-msgstr "FRÉQUENCE DE RAFRAÎCHISSEMENT"
+msgstr "FRÉQUENCE ÉCRAN"
 
 #: pe/ui/browse.cpp, pe/ui/settings.cpp
 msgid "REGION"
@@ -979,7 +979,7 @@ msgstr "Réinitialiser"
 
 #: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
 msgid "Game overrides reset to global defaults."
-msgstr "Les réglages spécifiques au jeu utilisent de nouveau les réglages globaux."
+msgstr "Réglages du jeu réinitialisés."
 
 #: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
 msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
