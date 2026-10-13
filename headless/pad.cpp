@@ -397,7 +397,7 @@ void Pad::Consume(std::size_t player, std::span<const ps5::pad::Data> samples) {
             // Report the effective guest-action assignment, independent of UI art.
             const auto& active_face = ActiveMapping();
             std::fprintf(stderr,
-                "EDEN_PAD_GUEST_FACE mode=%s a=%s b=%s x=%s y=%s\\n",
+                "EDEN_PAD_GUEST_FACE mode=%s a=%s b=%s x=%s y=%s\n",
                 gameplay_mode ? "match" : "menu",
                 kPadButtonKeys[active_face[game_a]], kPadButtonKeys[active_face[game_b]],
                 kPadButtonKeys[active_face[game_x]], kPadButtonKeys[active_face[game_y]]);
