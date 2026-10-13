@@ -221,7 +221,7 @@ staged_check = read('tools/ci/check-staged-app.py')
 # not old PlayStation Auto / EDEN_PAD_CONTEXT strings removed from source.
 assert '"EDEN_PAD_MAPPING_FIXED title="' in staged_check
 assert '"EDEN_PAD_MAPPING_LOCKED scope=session mode=static"' in staged_check
-assert '"EDEN_PAD_MAPPING_LOCKED scope=fc27 mode=dual_manual"' in staged_check
+assert '"EDEN_PAD_MAPPING_LOCKED scope=fc27 mode=dual_manual"' not in staged_check
 assert '"PlayStation Auto"' not in staged_check
 assert '"EDEN_PAD_CONTEXT mode=gameplay reason=sustained_activity sticky=1"' not in staged_check
 match = re.search(r'assert all\(marker in home_source for marker in \((.*?)\)\)', staged_check, re.S)
