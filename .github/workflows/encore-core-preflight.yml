@@ -135,6 +135,7 @@ jobs:
           python3 -B tools/install-vendored-eden-backports.py --replay
           python3 -B tools/check-vendored-vulkan-fork.py
           python3 -B tools/check-vendor-consolidation-debt.py
+          python3 -B tools/install-vendored-eden-build-flags.py
           python3 -B tools/check-ps5-tfb-counter-stability.py
           python3 -B tools/check-vendored-radv-fork.py
           python3 -B tools/check-ps5-mesa-shader-cache.py
