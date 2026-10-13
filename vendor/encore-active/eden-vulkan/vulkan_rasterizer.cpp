@@ -904,7 +904,6 @@ VideoCore::RasterizerDownloadArea RasterizerVulkan::GetFlushArea(DAddr addr, u64
             .preemtive = true,
         };
     }
-
     {
         ::Eden::Performance::GuestCacheLock(texture_cache.mutex, true);
         std::lock_guard lock{texture_cache.mutex, std::adopt_lock};
