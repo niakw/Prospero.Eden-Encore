@@ -28,6 +28,8 @@ The active development line is **`dev/ps5-sparse-jit`** (R457, `82e13e5655fc`). 
 
 Current priorities: preserve launcher/menu control prompts while respecting each title's saved in-game control settings during gameplay; diagnose pause-menu stalls, frame-time spikes, textures and HUD regressions; retain the pinned graphics dependency integrity checks. A stable FPS counter alone does not establish guest progress.
 
+**Active recovery plan:** [Gameplay controller ownership, pause-menu freezes, frame-time spikes and HUD diagnosis](docs/GAMEPLAY_FREEZE_RECOVERY_PLAN.md). The old manual gameplay-profile toggle has been removed in source; a CI pass cannot certify the user's saved guest-game bindings or performance. Hardware verification remains mandatory.
+
 **Public naming policy:** use neutral component terms (console, controller, guest system, native graphics stack, online service, gameplay title) in new CI run names, messages, code comments and general-purpose documentation. Avoid unnecessary third-party brand names. Preserve exact proper names where required for attribution, licenses, security notices, upstream repository links, verifiable compatibility records, external API names or technical identifiers. Do not automatically rewrite immutable commit history, license text, copyrighted notices, executable paths or integration identifiers.
 
 > Historical engineering notes below describe earlier development snapshots; do not interpret older branch names, validation claims or release dates as the current development status.
