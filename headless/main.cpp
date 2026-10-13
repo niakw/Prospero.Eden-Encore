@@ -66,6 +66,7 @@
 #include "native_directory.h"
 #include "cache_budget.h"
 #include "performance.h"
+#include "gameplay_stall_trace.h"
 #include "stall_watchdog.h"
 #include "stop_limit.h"
 #include "dev_vulkan.h"
@@ -952,6 +953,8 @@ int main(int argc, char** argv) {
         // Previous title's sampled Vulkan timings must not leak into this game.
         Eden::Performance::ResetCachePhases();
         Eden::Performance::detailed_gpu_profile.store(deep_frame_profile, std::memory_order_relaxed);
+        // Read-only owner/guest wait witnesses; reset between fully stopped titles.
+        Eden::GameplayStallTrace::ResetForTitle(deep_frame_profile);
         Eden::Performance::texture_budget_log.store(deep_frame_profile, std::memory_order_relaxed);
         Eden::Performance::capture_passes.store(0, std::memory_order_relaxed);
         std::printf("EDEN_FRAME_PROFILE detailed=%u mode=%s\n",
