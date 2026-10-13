@@ -160,9 +160,28 @@ void Swapchain::Create(
 }
 
 bool Swapchain::AcquireNextImage() {
+#ifdef PS5_NATIVE
+    constexpr u64 kAcquireSliceNs = 250'000'000ULL;
+    constexpr u32 kMaxAcquireTimeouts = 40;
+    VkResult result = VK_TIMEOUT;
+    for (u32 i = 0; i < kMaxAcquireTimeouts; ++i) {
+        result = device.GetLogical().AcquireNextImageKHR(
+            *swapchain, kAcquireSliceNs, *present_semaphores[frame_index],
+            VK_NULL_HANDLE, &image_index);
+        if (result != VK_TIMEOUT && result != VK_NOT_READY) {
+            break;
+        }
+    }
+    if (result == VK_TIMEOUT || result == VK_NOT_READY) {
+        // Failed acquisition has no valid image and must not reach scheduler.Wait.
+        // Propagate to the existing present_failure + launcher recovery path.
+        throw vk::Exception(VK_TIMEOUT);
+    }
+#else
     const VkResult result = device.GetLogical().AcquireNextImageKHR(
         *swapchain, (std::numeric_limits<u64>::max)(), *present_semaphores[frame_index],
         VK_NULL_HANDLE, &image_index);
+#endif
     switch (result) {
     case VK_SUCCESS:
         break;
@@ -171,7 +190,7 @@ bool Swapchain::AcquireNextImage() {
         break;
     case VK_ERROR_OUT_OF_DATE_KHR:
         is_outdated = true;
-        break;
+        return true;
     case VK_ERROR_SURFACE_LOST_KHR:
         vk::Check(result);
         break;
@@ -213,7 +232,7 @@ bool Swapchain::AcquireNextImage() {
 
     resource_ticks[image_index] = scheduler.CurrentTick();
 
-    return is_suboptimal || is_outdated;
+    return is_outdated;
 }
 
 void Swapchain::Present(VkSemaphore render_semaphore) {
