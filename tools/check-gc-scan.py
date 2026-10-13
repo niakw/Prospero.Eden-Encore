@@ -19,7 +19,7 @@ for item in ("size_t num_scanned = 0", "max_scanned = 8192",
              "num_scanned = 0; // independent scan allowance for the aggressive pass",
              "EDEN_VULKAN_GC_SCAN"):
     assert item in gc, item
-assert gc.count("gc_count_visits.load(std::memory_order_relaxed)") == 2
+assert gc.count("gc_count_visits.load(std::memory_order_relaxed)") == 3
 assert "Pinned GC scan anchor changed" in port and "gc_ending" in port
 def model(items, budget=10, limit=8192, old=False):
     visits = evictions = 0

@@ -28,11 +28,14 @@
             if (frame_tick < ticks_to_destroy) return;
             // Only prefetch GPU-written textures when actual Cleanup could
             // evict them. Clean-only cleanup still runs independently.
-            // One pressure decision for this batch: avoid repeating a Sony
-            // kernel-backed probe while scanning up to 40 images.
+            // One pressure decision for this batch, independent of LRU scanning.
+            // R442: the R439 collector skips non-evictable LRU candidates without
+            // burning the deletion budget; prefetch must use the SAME rules.
             const bool prefetch_dirty = DirtyEvictions();
             if (!prefetch_dirty) return;
             size_t remaining = num_iterations;
+            size_t scanned = 0;
+            const bool count_visits = ::Eden::Performance::gc_count_visits.load(std::memory_order_relaxed);
             size_t bytes = 0;
             u64 usage = total_used_memory;
             // A stable target for THIS speculative pass. The actual Cleanup
@@ -52,8 +55,9 @@
             // Only look ahead through eligible evictions. Leave actual
             // deletion, alias updates and guest writes to Cleanup.
             lru_cache.ForEachItemBelow(frame_tick - ticks_to_destroy, [&](ImageId id) {
-                if (remaining == 0) return true;
-                --remaining;
+                if (remaining == 0 || scanned >= max_scanned) return true;
+                ++scanned;
+                if (count_visits) --remaining;
                 auto& image = slot_images[id];
                 if (True(image.flags & ImageFlagBits::IsDecoding)) return false;
                 const bool dirty = IsDownloadable(image) && False(image.flags & ImageFlagBits::BadOverlap);
@@ -62,6 +66,9 @@
                 // stall the GPU thread while walking up to 40 LRU entries.
                 if (!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad))
                     return false;
+                // Only real collector eviction candidates spend the allowance;
+                // the gc_scan=upstream rollback intentionally counts ALL visits.
+                if (!count_visits) --remaining;
                 // A clean or unsupported image is still visited by the
                 // real Cleanup pass, but cannot use this staged fast path.
                 // Skip it, do NOT stop scanning older-to-newer LRU entries:

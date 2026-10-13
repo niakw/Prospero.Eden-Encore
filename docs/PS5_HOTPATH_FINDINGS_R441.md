@@ -36,3 +36,7 @@ Source audited: dev/ps5-sparse-jit, after R440. Source-only, no PS5 native build
 4. Port author's image-size WSI only as one coherent ownership change.
 5. Import Swordpdf framegen full sources, shaders, licenses and native presentation integration as a separate optional feature once guest-tick pacing can be trusted.
 6. Bundle console testing across changes. Never equate a green host contract with verified PS5 FPS/fidelity.
+
+## R442 — Align GPU-written texture prefetch with R439 collector (2026-10-13)
+
+Confirmed mismatch: R439's `Cleanup` counts actual eligible evictions while `headless/vulkan_gc_downloads.inc::PrefetchDownloads` still decremented its 10/20/40 batch lookahead allowance before checking IsDecoding/CostlyLoad. Under LRU-skew, the collector could evict dirty images that were not prefetched, forcing individual GPU Finish() waits. R442 now mirrors the collector's **8192 bounded visits**, skip semantics and `gc_scan=upstream` visit-count rollback in both the generator include and checked-in active source. It does not expand the maximum of 40 prefetched downloads or the 32 MiB byte budget, change guest GPU memory ownership, or discard draws. Adds a host contract/model `tools/check-gc-prefetch-budget.py` and R439 cross-check update. Source-only; no FC27 performance claim before a native run.
