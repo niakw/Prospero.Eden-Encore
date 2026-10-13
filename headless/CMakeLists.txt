@@ -39,6 +39,30 @@ function(write_derived path content)
     file(WRITE "${path}.in" "${content}")
     configure_file("${path}.in" "${path}" COPYONLY)
 endfunction()
+# R437: derived buffer-cache header, immutable vendor source. On registration,
+# publish all occupied physical pages BEFORE the buffer page_table entry.
+if(PS5_NATIVE)
+    file(READ "${PROJECT_SOURCE_DIR}/src/video_core/buffer_cache/buffer_cache.h"
+         eden_buffer_cache_source)
+    set(eden_buf_reg_old [=[    const auto size = buffer.SizeBytes();
+    if (insert) {
+        total_used_memory += Common::AlignUp(size, 1024);]=])
+    set(eden_buf_reg_new [=[    const auto size = buffer.SizeBytes();
+    if (insert) {
+        ::Eden::BufferPages::Mark(buffer.CpuAddr(), size);
+        total_used_memory += Common::AlignUp(size, 1024);]=])
+    string(FIND "${eden_buffer_cache_source}" "${eden_buf_reg_old}" eden_buf_reg_at)
+    if(eden_buf_reg_at LESS 0)
+        message(FATAL_ERROR "Pinned BufferCache ChangeRegister changed; requalify R437")
+    endif()
+    string(REPLACE "${eden_buf_reg_old}" "${eden_buf_reg_new}"
+           eden_buffer_cache_source "${eden_buffer_cache_source}")
+    string(PREPEND eden_buffer_cache_source
+           "#include \"${CMAKE_CURRENT_LIST_DIR}/buffer_pages.h\"\n")
+    write_derived("${PORT_BUILD_DIR}/buffer-pages/video_core/buffer_cache/buffer_cache.h"
+                  "${eden_buffer_cache_source}")
+    target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/buffer-pages")
+endif()
 # R428: upstream ProsperoEden d7f2764 — avoid a heap std::vector copy on
 # every FixSmallVectorADL call. The pinned Eden header uses BOOST_VERSION but
 # does not include its definition. Keep the vendor file immutable, derive a

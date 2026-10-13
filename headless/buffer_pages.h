@@ -1,0 +1,41 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#pragma once
+// Monotonic witness: a buffer has ever occupied a guest-physical page.
+#include <array>
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
+namespace Eden::BufferPages {
+inline constexpr unsigned kPageBits=12;
+inline constexpr std::uint64_t kSpace=std::uint64_t{1}<<34;
+inline constexpr std::size_t kWords=static_cast<std::size_t>(kSpace>>kPageBits)/64;
+inline std::array<std::atomic<std::uint64_t>,kWords> registered{};
+inline std::atomic<bool> coverage_unknown{false};
+constexpr std::uint64_t Bits(unsigned first,unsigned last) noexcept {
+  return (~std::uint64_t{0}>>(63-last)) & (~std::uint64_t{0}<<first);
+}
+inline void Mark(std::uint64_t address,std::uint64_t size) noexcept {
+  if(!size)return;
+  if(address>=kSpace || size>kSpace-address || size>128ull*1024*1024){
+    coverage_unknown.store(true,std::memory_order_release);
+    return;
+  }
+  const auto first=address>>kPageBits,last=(address+size-1)>>kPageBits;
+  for(auto word=first/64;word<=last/64;++word){
+    const auto mask=Bits(word==first/64?first%64:0,
+                         word==last/64?last%64:63);
+    registered[word].fetch_or(mask,std::memory_order_release);
+  }
+}
+inline bool NeverRegistered(std::uint64_t address,std::uint64_t size) noexcept {
+  if(coverage_unknown.load(std::memory_order_acquire))return false;
+  if(!size || size>64*1024 || address>=kSpace || size>kSpace-address)return false;
+  const auto first=address>>kPageBits,last=(address+size-1)>>kPageBits;
+  for(auto word=first/64;word<=last/64;++word){
+    const auto mask=Bits(word==first/64?first%64:0,
+                         word==last/64?last%64:63);
+    if(registered[word].load(std::memory_order_acquire)&mask)return false;
+  }
+  return !coverage_unknown.load(std::memory_order_acquire);
+}
+} // namespace Eden::BufferPages
