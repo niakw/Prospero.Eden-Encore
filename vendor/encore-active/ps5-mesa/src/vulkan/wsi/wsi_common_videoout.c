@@ -249,6 +249,8 @@ videoout_output_init_once(void)
 struct wsi_videoout_swapchain {
    struct wsi_swapchain base;
    bool retired;
+   /* Set after a successful queue_present: only unused contexts may yield display. */
+   bool presented;
    /* Presents queued and not yet flipped. */
    uint32_t in_flight;
    struct wsi_image images[];
@@ -976,6 +978,7 @@ videoout_swapchain_queue_present(struct wsi_swapchain *wsi_chain, uint32_t image
    out->queue_count++;
    out->buffer[image_index].pending = true;
    chain->in_flight++;
+   chain->presented = true;
    cnd_broadcast(&out->changed);
    mtx_unlock(&out->lock);
    return VK_SUCCESS;
@@ -1014,6 +1017,15 @@ videoout_swapchain_destroy(struct wsi_swapchain *wsi_chain, const VkAllocationCa
    return VK_SUCCESS;
 }
 
+/* Pereira PS5_Mesa f2ee389: an unpresented hidden/probe swapchain must not
+ * monopolize VideoOut. Caller holds out->lock for the whole check. */
+static bool
+videoout_display_free_locked(const struct wsi_videoout_swapchain *old)
+{
+   const struct wsi_videoout_swapchain *current = videoout_output.current;
+   return !current || current == old || !current->presented;
+}
+
 static VkResult
 videoout_surface_create_swapchain(VkIcdSurfaceBase *icd_surface, VkDevice device, struct wsi_device *wsi_device,
                                   const VkSwapchainCreateInfoKHR *pCreateInfo,
@@ -1035,9 +1047,10 @@ videoout_surface_create_swapchain(VkIcdSurfaceBase *icd_surface, VkDevice device
       return VK_ERROR_INITIALIZATION_FAILED;
 
    mtx_lock(&out->lock);
+   struct wsi_videoout_swapchain *old =
+      (struct wsi_videoout_swapchain *)wsi_swapchain_from_handle(pCreateInfo->oldSwapchain);
    VkResult result = videoout_register_locked();
-   if (result == VK_SUCCESS && out->current && out->current != (struct wsi_videoout_swapchain *)
-                                                 wsi_swapchain_from_handle(pCreateInfo->oldSwapchain))
+   if (result == VK_SUCCESS && !videoout_display_free_locked(old))
       result = VK_ERROR_NATIVE_WINDOW_IN_USE_KHR;
    mtx_unlock(&out->lock);
    if (result != VK_SUCCESS)
@@ -1079,10 +1092,22 @@ videoout_surface_create_swapchain(VkIcdSurfaceBase *icd_surface, VkDevice device
       }
    }
 
-   /* The old swapchain is retired: its acquires and presents are out of date. */
+   /* Recheck after image allocation: another chain may have presented meanwhile.
+    * A losing candidate destroys only its own images, never the shared VideoOut. */
    mtx_lock(&out->lock);
-   if (out->current)
+   if (!videoout_display_free_locked(old)) {
+      mtx_unlock(&out->lock);
+      for (uint32_t i = 0; i < num_images; i++)
+         wsi_destroy_image(&chain->base, &chain->images[i]);
+      wsi_swapchain_finish(&chain->base);
+      vk_free(pAllocator, chain);
+      return VK_ERROR_NATIVE_WINDOW_IN_USE_KHR;
+   }
+   if (out->current) {
+      if (out->current != old)
+         fprintf(stderr, "wsi/videoout: unpresented swapchain yielded display to new swapchain\n");
       out->current->retired = true;
+   }
    out->current = chain;
    mtx_unlock(&out->lock);
 
