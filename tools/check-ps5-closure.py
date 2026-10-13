@@ -89,7 +89,7 @@ def audit(data: dict) -> dict:
             if not isinstance(check,dict):
                 raise ValueError("bad acceptance item")
             key=check.get("id")
-            if not isinstance(key,str) or not re.fullmatch(r"[a-z0-9_]{10,90}",key) or key in ids:
+            if not isinstance(key,str) or not re.fullmatch(r"[A-Za-z0-9_]{10,90}",key) or key in ids:
                 raise ValueError("bad/repeated acceptance id")
             ids.add(key)
             count+=1
