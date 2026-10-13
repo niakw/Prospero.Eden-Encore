@@ -313,6 +313,8 @@ inline long long NowNs() { return Common::g_wall_clock.GetTimeNS().count(); }
 // direct memory (what the next allocation needs) is under kShortMemory.
 // dev-settings gc_dirty=upstream restores Eden's rule.
 inline std::atomic<bool> gc_keep_dirty{true};
+// R439: old visits budget can be restored with dev-settings gc_scan=upstream.
+inline std::atomic<bool> gc_count_visits{false};
 inline std::atomic<bool> graphics_memory_short{false};
 inline constexpr std::size_t kShortMemory = std::size_t{384} << 20;
 // Development: the texture cache reports its memory use and marks every 300 frames.
