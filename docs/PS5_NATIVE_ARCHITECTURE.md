@@ -1,7 +1,7 @@
 # Eden Encore — PS5-first execution architecture
 
-Status: **engineering decision and source-only investigation**, 8 October 2026.
-No new PS5 build, run, performance claim, or shipping change is authorized by this document.
+Status: **historical engineering observations originating 8 October 2026**. Current active development is `dev/ps5-sparse-jit` at R457 (13 October 2026); native build and hardware qualification are separate gates.
+This document alone does not authorize any new native build, performance claim or shipping change.
 
 ## Decision: close FC27 A/B/C/D experimental campaign
 
