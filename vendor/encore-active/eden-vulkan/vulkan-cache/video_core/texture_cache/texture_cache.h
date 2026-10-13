@@ -144,6 +144,11 @@ void TextureCache<P>::RunGarbageCollector() {
     bool aggressive_mode = false;
     u64 ticks_to_destroy = 0;
     size_t num_iterations = 0;
+    size_t num_scanned = 0;
+    size_t total_scanned = 0;
+    size_t skipped = 0;
+    size_t evicted = 0;
+    constexpr size_t max_scanned = 8192;
     const auto Configure = [&](bool allow_aggressive) {
         high_priority_mode = total_used_memory >= expected_memory;
         aggressive_mode = allow_aggressive && total_used_memory >= critical_memory;
@@ -279,17 +284,26 @@ void TextureCache<P>::RunGarbageCollector() {
     };
 
     const auto Cleanup = [&, this](ImageId image_id) {
-        if (num_iterations == 0) {
+        if (num_iterations == 0 || num_scanned >= max_scanned) {
             return true;
         }
-        --num_iterations;
+        ++num_scanned;
+        ++total_scanned;
+        if (::Eden::Performance::gc_count_visits.load(std::memory_order_relaxed)) {
+            --num_iterations;
+        }
         auto& image = slot_images[image_id];
         if (True(image.flags & ImageFlagBits::IsDecoding)) {
+            ++skipped;
             return false;
         }
         const bool must_download = IsDownloadable(image) && False(image.flags & ImageFlagBits::BadOverlap);
         if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) || (!DirtyEvictions() && must_download)) {
+            ++skipped;
             return false;
+        }
+        if (!::Eden::Performance::gc_count_visits.load(std::memory_order_relaxed)) {
+            --num_iterations;
         }
         if (must_download && !UsePrefetched(image_id, image)) {
             auto map = runtime.DownloadStagingBuffer(image.unswizzled_size_bytes);
@@ -303,6 +317,7 @@ void TextureCache<P>::RunGarbageCollector() {
         }
         UnregisterImage(image_id);
         DeleteImage(image_id, image.scale_tick > frame_tick + 5);
+        ++evicted;
         if (aggressive_mode && total_used_memory < critical_memory) {
             num_iterations >>= 2;
             aggressive_mode = false;
@@ -319,10 +334,16 @@ void TextureCache<P>::RunGarbageCollector() {
     }
     if (total_used_memory >= critical_memory) {
         Configure(true);
+        num_scanned = 0; // independent scan allowance for the aggressive pass
         PrefetchDownloads();
         if (frame_tick >= ticks_to_destroy) {
         lru_cache.ForEachItemBelow(::Eden::VulkanMemory::OldestEvictionTick(frame_tick, ticks_to_destroy), Cleanup);
     }
+    }
+    if constexpr (std::is_same_v<Runtime, Vulkan::TextureCacheRuntime>) {
+        if (::Eden::Performance::texture_budget_log.load(std::memory_order_relaxed) && frame_tick % 300 == 0)
+            std::printf("EDEN_VULKAN_GC_SCAN frame=%llu visits=%zu skipped=%zu evicted=%zu cap=%zu\n",
+                        static_cast<unsigned long long>(frame_tick), total_scanned, skipped, evicted, max_scanned);
     }
 }
 

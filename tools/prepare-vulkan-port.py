@@ -1198,6 +1198,22 @@ for old, new in [
     if gc.count(old) != 1:
         raise RuntimeError(f'Pinned GC anchor changed: {old}')
     gc = gc.replace(old, new)
+# R439: independently bound visits and count actual evictions; reversible.
+for old, new in [
+    ("    size_t num_iterations = 0;", "    size_t num_iterations = 0;\n    size_t num_scanned = 0;\n    size_t total_scanned = 0;\n    size_t skipped = 0;\n    size_t evicted = 0;\n    constexpr size_t max_scanned = 8192;"),
+    ("        if (num_iterations == 0) {\n            return true;\n        }\n        --num_iterations;", "        if (num_iterations == 0 || num_scanned >= max_scanned) {\n            return true;\n        }\n        ++num_scanned;\n        ++total_scanned;\n        if (::Eden::Performance::gc_count_visits.load(std::memory_order_relaxed)) {\n            --num_iterations;\n        }"),
+    ("        if (True(image.flags & ImageFlagBits::IsDecoding)) {\n            return false;\n        }", "        if (True(image.flags & ImageFlagBits::IsDecoding)) {\n            ++skipped;\n            return false;\n        }"),
+    ("        if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) || (!DirtyEvictions() && must_download)) {\n            return false;\n        }", "        if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) || (!DirtyEvictions() && must_download)) {\n            ++skipped;\n            return false;\n        }\n        if (!::Eden::Performance::gc_count_visits.load(std::memory_order_relaxed)) {\n            --num_iterations;\n        }"),
+    ("        DeleteImage(image_id, image.scale_tick > frame_tick + 5);", "        DeleteImage(image_id, image.scale_tick > frame_tick + 5);\n        ++evicted;"),
+    ("        Configure(true);\n        PrefetchDownloads();", "        Configure(true);\n        num_scanned = 0; // independent scan allowance for the aggressive pass\n        PrefetchDownloads();"),
+]:
+    if gc.count(old) != 1:
+        raise RuntimeError(f'Pinned GC scan anchor changed: {old[:80]}')
+    gc = gc.replace(old, new)
+gc_ending = "    }\n}\n"
+if not gc.endswith(gc_ending):
+    raise RuntimeError('Pinned GC scan collector ending changed')
+gc = gc[:-len(gc_ending)] + "    }\n    if constexpr (std::is_same_v<Runtime, Vulkan::TextureCacheRuntime>) {\n        if (::Eden::Performance::texture_budget_log.load(std::memory_order_relaxed) && frame_tick % 300 == 0)\n            std::printf(\"EDEN_VULKAN_GC_SCAN frame=%llu visits=%zu skipped=%zu evicted=%zu cap=%zu\\n\",\n                        static_cast<unsigned long long>(frame_tick), total_scanned, skipped, evicted, max_scanned);\n    }\n}\n"
 # Upstream u64 frame_tick starts at zero and subtracts ages 10/25/50.
 # It relied on unsigned wrap plus the pinned LRU signed comparison as an
 # accidental startup grace period. Replace with a saturated cutoff and

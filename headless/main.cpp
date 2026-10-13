@@ -1239,6 +1239,7 @@ int main(int argc, char** argv) {
         // globals before reading the current game's dev-settings.txt.
         Eden::Performance::graphics_usage_from_pool.store(true, std::memory_order_relaxed);
         Eden::Performance::gc_keep_dirty.store(true, std::memory_order_relaxed);
+        Eden::Performance::gc_count_visits.store(false, std::memory_order_relaxed);
         // R355: halve the high-frequency Vulkan dispatch overhead with a
         // conservative 16-draw default; the hard 512-draw flush still applies.
         // Earlier 64-draw experiments were not qualified as smoother FC27.
@@ -1275,6 +1276,8 @@ int main(int argc, char** argv) {
                 } else if (entry == "gc_dirty=upstream") {
                     // Eden's rule: evict GPU-written textures from the "expected" memory mark on.
                     Eden::Performance::gc_keep_dirty = false;
+                } else if (entry == "gc_scan=upstream") {
+                    Eden::Performance::gc_count_visits = true;
                 } else if (entry.starts_with("dispatch_draws=")) {
                     // Draws between Vulkan worker hand-offs: a power of two from 8 (upstream) to 512.
                     const unsigned long draws = std::strtoul(entry.c_str() + 15, nullptr, 10);
