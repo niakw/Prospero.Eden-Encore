@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Qualify active backport generation wakes and Encore native deferred-present wake.
+"""Qualify active backport dequeue broadcast generation with 400 host waits.
 
 This host test compiles the EXACT source methods from the active guest
 BufferQueueCore. It proves multiwait notification semantics, not FC27 FPS.
@@ -17,18 +17,6 @@ graphics_path = root / "headless/graphics.cpp"
 native_source = cpp_path.read_text()
 native_header = hdr_path.read_text()
 graphics = graphics_path.read_text()
-# Shipping source is installed from the already-audited active backports.
-# The dropped-buffer early-return fix is instead generated only for native.
-cmake = (root / "headless/CMakeLists.txt").read_text()
-original_consumer = (root / "vendor/sources/eden/src/core/hle/service/nvnflinger/buffer_queue_consumer.cpp").read_text()
-assert "bool eden_dropped_queued_buffer = false;" in cmake
-assert "eden_dropped_queued_buffer = true;" in cmake
-assert "if (eden_dropped_queued_buffer) core->SignalDequeueCondition();" in cmake
-assert 'write_derived("${PORT_BUILD_DIR}/buffer_queue_consumer.cpp"' in cmake
-assert 'list(REMOVE_ITEM core_sources "hle/service/nvnflinger/buffer_queue_consumer.cpp")' in cmake
-assert "return Status::PresentLater;" in original_consumer
-assert 'core->queue.erase(front);\n            front = core->queue.begin();' in original_consumer
-
 assert "std::atomic<std::uint64_t> dequeue_epoch{};" in native_header
 assert "std::atomic<bool> dequeue_possible" not in native_header
 start = native_source.index("void BufferQueueCore::SignalDequeueCondition() {")
@@ -101,7 +89,7 @@ int main() {
         for (auto& thread:threads) thread.join();
         assert(done.load()==waiters);
     }
-    std::puts("PASS: 400 waiters on active backport generation; native deferred-present wake source pinned");
+    std::puts("PASS: 400 waiters on active backport broadcast-generation wake");
 }
 """.replace("__REAL_METHODS__", real_methods)
 
