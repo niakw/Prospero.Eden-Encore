@@ -39,6 +39,23 @@ function(write_derived path content)
     file(WRITE "${path}.in" "${content}")
     configure_file("${path}.in" "${path}" COPYONLY)
 endfunction()
+# R428: upstream ProsperoEden d7f2764 — avoid a heap std::vector copy on
+# every FixSmallVectorADL call. The pinned Eden header uses BOOST_VERSION but
+# does not include its definition. Keep the vendor file immutable, derive a
+# private include override at configure time, and fail on version drift.
+file(READ "${PROJECT_SOURCE_DIR}/src/video_core/texture_cache/util.h" eden_texture_header)
+set(eden_small_vector_include "#include <boost/container/small_vector.hpp>")
+string(FIND "${eden_texture_header}" "${eden_small_vector_include}" eden_small_vector_at)
+string(FIND "${eden_texture_header}" "FixSmallVectorADL" eden_small_vector_helper_at)
+if(eden_small_vector_at LESS 0 OR eden_small_vector_helper_at LESS 0)
+    message(FATAL_ERROR "Pinned Eden small_vector ADL helper changed; requalify R428")
+endif()
+string(REPLACE "${eden_small_vector_include}"
+    "${eden_small_vector_include}\n#include <boost/version.hpp>"
+    eden_texture_header "${eden_texture_header}")
+write_derived("${PORT_BUILD_DIR}/small-vector/video_core/texture_cache/util.h"
+              "${eden_texture_header}")
+target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/small-vector")
 # Keep successful JIT invariant checks inline; preserve upstream failure handling.
 # Use a private include root so other core/renderer targets retain their headers.
 file(READ "${PROJECT_SOURCE_DIR}/src/common/assert.h" jit_assert_header)
@@ -2290,6 +2307,46 @@ write_derived("${PORT_BUILD_DIR}/shader_environment.cpp"
     "${shader_environment_head}#include \"${EDEN_PORT_DIR}/shader_cache_reader.inc\"\n\n${shader_environment_tail}")
 set_property(SOURCE "${PORT_BUILD_DIR}/shader_environment.cpp" APPEND PROPERTY OBJECT_DEPENDS
     "${EDEN_PORT_DIR}/shader_cache_reader.inc")
+# R428: port upstream d7f2764 ASTC per-layer scratch without modifying
+# the immutable Eden source package. Keep the converted pixel order and BC
+# output offsets; only the temporary decode batch width changes.
+file(READ "${PROJECT_SOURCE_DIR}/src/video_core/texture_cache/util.cpp" eden_texture_util)
+set(eden_astc_decode_old [=[            decode_scratch.resize_destructive(level_size);
+
+            Tegra::Texture::ASTC::Decompress(
+                input_offset, copy.image_extent.width, copy.image_extent.height,
+                copy.image_subresource.num_layers * copy.image_extent.depth, tile_size.width,
+                tile_size.height, decode_scratch);
+
+            compress(decode_scratch, copy.image_extent.width, copy.image_extent.height,
+                     copy.image_subresource.num_layers * copy.image_extent.depth,
+                     output.subspan(output_offset));
+]=])
+string(FIND "${eden_texture_util}" "${eden_astc_decode_old}" eden_astc_at)
+if(eden_astc_at LESS 0)
+    message(FATAL_ERROR "Pinned Eden ASTC ConvertImage changed; requalify R428")
+endif()
+string(REPLACE "${eden_astc_decode_old}" [=[            // d7f2764: decode a single ASTC array/depth layer at a time.
+            // The original per-mip temporary allocation scaled to hundreds
+            // of MiB on tall arrays, competing with PS5's graphics memory.
+            const u32 layers = copy.image_subresource.num_layers * copy.image_extent.depth;
+            const u32 layer_input = Common::DivideUp(copy.image_extent.width, tile_size.width) *
+                                    Common::DivideUp(copy.image_extent.height, tile_size.height) * 16;
+            const u32 layer_output = Common::AlignUp(copy.image_extent.width, 4) *
+                                     Common::AlignUp(copy.image_extent.height, 4) / bpp_div;
+            decode_scratch.resize_destructive(level_size / (std::max)(layers, 1u));
+            for (u32 layer = 0; layer < layers; ++layer) {
+                Tegra::Texture::ASTC::Decompress(
+                    input_offset.subspan(layer * layer_input), copy.image_extent.width,
+                    copy.image_extent.height, 1, tile_size.width, tile_size.height, decode_scratch);
+                compress(decode_scratch, copy.image_extent.width, copy.image_extent.height, 1,
+                         output.subspan(output_offset + layer * layer_output));
+            }
+]=]
+    eden_texture_util "${eden_texture_util}")
+write_derived("${PORT_BUILD_DIR}/texture_cache_util.cpp" "${eden_texture_util}")
+list(REMOVE_ITEM video_sources texture_cache/util.cpp)
+list(APPEND video_sources "${PORT_BUILD_DIR}/texture_cache_util.cpp")
 list(REMOVE_ITEM video_sources shader_environment.cpp)
 list(APPEND video_sources "${PORT_BUILD_DIR}/shader_environment.cpp")
 # Eden #4473/#4477 are already applied once to the pinned source by
