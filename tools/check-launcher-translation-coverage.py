@@ -22,6 +22,17 @@ assert m, "no resolution labels"
 resolution_labels = re.findall(r'"([^"]+)"', m.group(1))
 assert len(resolution_labels) == 9, resolution_labels
 assert "2x (high memory)" in resolution_labels and "4x (extreme memory)" in resolution_labels
+core_ui = {
+    "Anti-aliasing", "ANTI-ALIASING", "Button mapping", "BUTTON MAPPING",
+    "Quick settings", "QUICK SETTINGS", "Storage", "STORAGE",
+    "Video preset", "VIDEO PRESET", "Game resolution", "GAME RESOLUTION",
+    "TV output", "TV OUTPUT", "FSR sharpness", "FSR SHARPNESS",
+    "Stick deadzone", "STICK DEADZONE",
+    "Vibration strength", "VIBRATION STRENGTH", "Play", "Cancel", "Confirm",
+    "Reset", "Ultra", "Recommended", "Minimum", "Home", "Clear cache",
+    "Done", "Custom", "Controllers", "Quit", "Preset", "Open settings",
+}
+assert core_ui <= marked, "essential UI source markers disappeared"
 total_missing = 0
 for catalog in catalogs:
     translations = read_po(catalog)
@@ -29,11 +40,13 @@ for catalog in catalogs:
     missing = {key for key in marked if not translations.get(key)}
     missing_resolutions = [label for label in resolution_labels if not translations.get(label)]
     assert not missing_resolutions, f"{catalog.name}: untranslated display scale options {missing_resolutions}"
+    core_missing = sorted(k for k in core_ui if not translations.get(k))
+    assert not core_missing, f"{catalog.name}: missing translated core UI labels {core_missing}"
     if stale:
         raise AssertionError(f"{catalog.name}: {len(stale)} stale msgid entries, examples={sorted(stale)[:5]}")
     if catalog.stem in {"fr-FR", "fr-CA"}:
         assert not missing, f"{catalog.name} maintained language has {len(missing)} missing"
-    elif len(missing) > 152:
+    elif len(missing) > 117:
         raise AssertionError(f"{catalog.name}: translation coverage regressed; {len(missing)} untranslated")
     total_missing += len(missing)
     print(f"LOCALE_COVERAGE {catalog.stem} active={len(marked)} "
