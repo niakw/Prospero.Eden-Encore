@@ -14,7 +14,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-REVISION = re.compile(r"^R([0-9]{2,6})(?=\\b|:|\\s|$)")
+REVISION = re.compile(r"^R([0-9]{2,6})(?=[: -]|$)")
 
 
 def build_label(subjects: str) -> str:
