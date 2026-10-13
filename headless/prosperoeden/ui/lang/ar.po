@@ -1008,3 +1008,143 @@ msgstr "3x (ذاكرة عالية جدًا)"
 #: settings_store.h
 msgid "4x (extreme memory)"
 msgstr "4x (ذاكرة قصوى)"
+
+#: translated UI setting
+msgid "Anti-aliasing"
+msgstr "تنعيم الحواف"
+
+#: translated UI setting
+msgid "Button mapping"
+msgstr "تعيين الأزرار"
+
+#: translated UI setting
+msgid "Quick settings"
+msgstr "الإعدادات السريعة"
+
+#: translated UI setting
+msgid "Storage"
+msgstr "التخزين"
+
+#: translated UI setting
+msgid "Video preset"
+msgstr "إعداد الفيديو المسبق"
+
+#: translated UI setting
+msgid "Game resolution"
+msgstr "دقة اللعبة"
+
+#: translated UI setting
+msgid "TV output"
+msgstr "خرج التلفاز"
+
+#: translated UI setting
+msgid "Play"
+msgstr "تشغيل"
+
+#: translated UI setting
+msgid "Cancel"
+msgstr "إلغاء"
+
+#: translated UI setting
+msgid "Confirm"
+msgstr "تأكيد"
+
+#: translated UI setting
+msgid "Reset"
+msgstr "إعادة ضبط"
+
+#: translated UI setting
+msgid "Ultra"
+msgstr "فائق"
+
+#: translated UI setting
+msgid "Recommended"
+msgstr "موصى به"
+
+#: translated UI setting
+msgid "Minimum"
+msgstr "الحد الأدنى"
+
+#: translated UI setting
+msgid "Home"
+msgstr "الرئيسية"
+
+#: translated UI setting
+msgid "Clear cache"
+msgstr "مسح ذاكرة التخزين المؤقت"
+
+#: translated UI setting
+msgid "Done"
+msgstr "تم"
+
+#: translated UI setting
+msgid "Custom"
+msgstr "مخصص"
+
+#: translated UI setting
+msgid "Controllers"
+msgstr "وحدات التحكم"
+
+#: translated UI setting
+msgid "Quit"
+msgstr "خروج"
+
+#: translated UI setting
+msgid "FSR sharpness"
+msgstr "حدة FSR"
+
+#: translated UI setting
+msgid "Stick deadzone"
+msgstr "المنطقة الميتة للعصا"
+
+#: translated UI setting
+msgid "Vibration strength"
+msgstr "قوة الاهتزاز"
+
+#: translated UI setting
+msgid "Preset"
+msgstr "إعداد مسبق"
+
+#: translated UI setting
+msgid "Open settings"
+msgstr "فتح الإعدادات"
+
+#: translated UI setting
+msgid "ANTI-ALIASING"
+msgstr "تنعيم الحواف"
+
+#: translated UI setting
+msgid "BUTTON MAPPING"
+msgstr "تعيين الأزرار"
+
+#: translated UI setting
+msgid "QUICK SETTINGS"
+msgstr "الإعدادات السريعة"
+
+#: translated UI setting
+msgid "STORAGE"
+msgstr "التخزين"
+
+#: translated UI setting
+msgid "VIDEO PRESET"
+msgstr "إعداد الفيديو المسبق"
+
+#: translated UI setting
+msgid "GAME RESOLUTION"
+msgstr "دقة اللعبة"
+
+#: translated UI setting
+msgid "TV OUTPUT"
+msgstr "خرج التلفاز"
+
+#: translated UI setting
+msgid "FSR SHARPNESS"
+msgstr "حدة FSR"
+
+#: translated UI setting
+msgid "STICK DEADZONE"
+msgstr "المنطقة الميتة للعصا"
+
+#: translated UI setting
+msgid "VIBRATION STRENGTH"
+msgstr "قوة الاهتزاز"

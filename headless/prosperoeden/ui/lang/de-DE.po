@@ -1008,3 +1008,143 @@ msgstr "3x (sehr hoher Bedarf)"
 #: settings_store.h
 msgid "4x (extreme memory)"
 msgstr "4x (extremer Speicherbedarf)"
+
+#: translated UI setting
+msgid "Anti-aliasing"
+msgstr "Kantenglättung"
+
+#: translated UI setting
+msgid "Button mapping"
+msgstr "Tastenbelegung"
+
+#: translated UI setting
+msgid "Quick settings"
+msgstr "Schnelleinstellungen"
+
+#: translated UI setting
+msgid "Storage"
+msgstr "Speicher"
+
+#: translated UI setting
+msgid "Video preset"
+msgstr "Videovoreinstellung"
+
+#: translated UI setting
+msgid "Game resolution"
+msgstr "Spielauflösung"
+
+#: translated UI setting
+msgid "TV output"
+msgstr "TV-Ausgabe"
+
+#: translated UI setting
+msgid "Play"
+msgstr "Spielen"
+
+#: translated UI setting
+msgid "Cancel"
+msgstr "Abbrechen"
+
+#: translated UI setting
+msgid "Confirm"
+msgstr "Bestätigen"
+
+#: translated UI setting
+msgid "Reset"
+msgstr "Zurücksetzen"
+
+#: translated UI setting
+msgid "Ultra"
+msgstr "Ultra"
+
+#: translated UI setting
+msgid "Recommended"
+msgstr "Empfohlen"
+
+#: translated UI setting
+msgid "Minimum"
+msgstr "Minimum"
+
+#: translated UI setting
+msgid "Home"
+msgstr "Startseite"
+
+#: translated UI setting
+msgid "Clear cache"
+msgstr "Cache leeren"
+
+#: translated UI setting
+msgid "Done"
+msgstr "Fertig"
+
+#: translated UI setting
+msgid "Custom"
+msgstr "Benutzerdefiniert"
+
+#: translated UI setting
+msgid "Controllers"
+msgstr "Controller"
+
+#: translated UI setting
+msgid "Quit"
+msgstr "Beenden"
+
+#: translated UI setting
+msgid "FSR sharpness"
+msgstr "FSR-Schärfe"
+
+#: translated UI setting
+msgid "Stick deadzone"
+msgstr "Stick-Totzone"
+
+#: translated UI setting
+msgid "Vibration strength"
+msgstr "Vibrationsstärke"
+
+#: translated UI setting
+msgid "Preset"
+msgstr "Voreinstellung"
+
+#: translated UI setting
+msgid "Open settings"
+msgstr "Einstellungen öffnen"
+
+#: translated UI setting
+msgid "ANTI-ALIASING"
+msgstr "KANTENGLÄTTUNG"
+
+#: translated UI setting
+msgid "BUTTON MAPPING"
+msgstr "TASTENBELEGUNG"
+
+#: translated UI setting
+msgid "QUICK SETTINGS"
+msgstr "SCHNELLEINSTELLUNGEN"
+
+#: translated UI setting
+msgid "STORAGE"
+msgstr "SPEICHER"
+
+#: translated UI setting
+msgid "VIDEO PRESET"
+msgstr "VIDEOVOREINSTELLUNG"
+
+#: translated UI setting
+msgid "GAME RESOLUTION"
+msgstr "SPIELAUFLÖSUNG"
+
+#: translated UI setting
+msgid "TV OUTPUT"
+msgstr "TV-AUSGABE"
+
+#: translated UI setting
+msgid "FSR SHARPNESS"
+msgstr "FSR-SCHÄRFE"
+
+#: translated UI setting
+msgid "STICK DEADZONE"
+msgstr "STICK-TOTZONE"
+
+#: translated UI setting
+msgid "VIBRATION STRENGTH"
+msgstr "VIBRATIONSSTÄRKE"

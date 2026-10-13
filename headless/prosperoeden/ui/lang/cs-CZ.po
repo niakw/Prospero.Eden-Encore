@@ -1008,3 +1008,143 @@ msgstr "3x (mnoho paměti)"
 #: settings_store.h
 msgid "4x (extreme memory)"
 msgstr "4x (extrémní paměť)"
+
+#: translated UI setting
+msgid "Anti-aliasing"
+msgstr "Vyhlazování hran"
+
+#: translated UI setting
+msgid "Button mapping"
+msgstr "Mapování tlačítek"
+
+#: translated UI setting
+msgid "Quick settings"
+msgstr "Rychlá nastavení"
+
+#: translated UI setting
+msgid "Storage"
+msgstr "Úložiště"
+
+#: translated UI setting
+msgid "Video preset"
+msgstr "Předvolba videa"
+
+#: translated UI setting
+msgid "Game resolution"
+msgstr "Rozlišení hry"
+
+#: translated UI setting
+msgid "TV output"
+msgstr "Výstup na TV"
+
+#: translated UI setting
+msgid "Play"
+msgstr "Hrát"
+
+#: translated UI setting
+msgid "Cancel"
+msgstr "Zrušit"
+
+#: translated UI setting
+msgid "Confirm"
+msgstr "Potvrdit"
+
+#: translated UI setting
+msgid "Reset"
+msgstr "Obnovit"
+
+#: translated UI setting
+msgid "Ultra"
+msgstr "Ultra"
+
+#: translated UI setting
+msgid "Recommended"
+msgstr "Doporučené"
+
+#: translated UI setting
+msgid "Minimum"
+msgstr "Minimum"
+
+#: translated UI setting
+msgid "Home"
+msgstr "Domů"
+
+#: translated UI setting
+msgid "Clear cache"
+msgstr "Vymazat mezipaměť"
+
+#: translated UI setting
+msgid "Done"
+msgstr "Hotovo"
+
+#: translated UI setting
+msgid "Custom"
+msgstr "Vlastní"
+
+#: translated UI setting
+msgid "Controllers"
+msgstr "Ovladače"
+
+#: translated UI setting
+msgid "Quit"
+msgstr "Ukončit"
+
+#: translated UI setting
+msgid "FSR sharpness"
+msgstr "Ostrost FSR"
+
+#: translated UI setting
+msgid "Stick deadzone"
+msgstr "Mrtvá zóna páčky"
+
+#: translated UI setting
+msgid "Vibration strength"
+msgstr "Síla vibrací"
+
+#: translated UI setting
+msgid "Preset"
+msgstr "Předvolba"
+
+#: translated UI setting
+msgid "Open settings"
+msgstr "Otevřít nastavení"
+
+#: translated UI setting
+msgid "ANTI-ALIASING"
+msgstr "VYHLAZOVÁNÍ HRAN"
+
+#: translated UI setting
+msgid "BUTTON MAPPING"
+msgstr "MAPOVÁNÍ TLAČÍTEK"
+
+#: translated UI setting
+msgid "QUICK SETTINGS"
+msgstr "RYCHLÁ NASTAVENÍ"
+
+#: translated UI setting
+msgid "STORAGE"
+msgstr "ÚLOŽIŠTĚ"
+
+#: translated UI setting
+msgid "VIDEO PRESET"
+msgstr "PŘEDVOLBA VIDEA"
+
+#: translated UI setting
+msgid "GAME RESOLUTION"
+msgstr "ROZLIŠENÍ HRY"
+
+#: translated UI setting
+msgid "TV OUTPUT"
+msgstr "VÝSTUP NA TV"
+
+#: translated UI setting
+msgid "FSR SHARPNESS"
+msgstr "OSTROST FSR"
+
+#: translated UI setting
+msgid "STICK DEADZONE"
+msgstr "MRTVÁ ZÓNA PÁČKY"
+
+#: translated UI setting
+msgid "VIBRATION STRENGTH"
+msgstr "SÍLA VIBRACÍ"

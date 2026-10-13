@@ -1008,3 +1008,143 @@ msgstr "3x (hyvin paljon muistia)"
 #: settings_store.h
 msgid "4x (extreme memory)"
 msgstr "4x (äärimmäinen muisti)"
+
+#: translated UI setting
+msgid "Anti-aliasing"
+msgstr "Reunojen pehmennys"
+
+#: translated UI setting
+msgid "Button mapping"
+msgstr "Painikemääritykset"
+
+#: translated UI setting
+msgid "Quick settings"
+msgstr "Pika-asetukset"
+
+#: translated UI setting
+msgid "Storage"
+msgstr "Tallennustila"
+
+#: translated UI setting
+msgid "Video preset"
+msgstr "Videon esiasetus"
+
+#: translated UI setting
+msgid "Game resolution"
+msgstr "Pelin tarkkuus"
+
+#: translated UI setting
+msgid "TV output"
+msgstr "TV-lähtö"
+
+#: translated UI setting
+msgid "Play"
+msgstr "Pelaa"
+
+#: translated UI setting
+msgid "Cancel"
+msgstr "Peruuta"
+
+#: translated UI setting
+msgid "Confirm"
+msgstr "Vahvista"
+
+#: translated UI setting
+msgid "Reset"
+msgstr "Palauta"
+
+#: translated UI setting
+msgid "Ultra"
+msgstr "Ultra"
+
+#: translated UI setting
+msgid "Recommended"
+msgstr "Suositeltu"
+
+#: translated UI setting
+msgid "Minimum"
+msgstr "Vähimmäistaso"
+
+#: translated UI setting
+msgid "Home"
+msgstr "Koti"
+
+#: translated UI setting
+msgid "Clear cache"
+msgstr "Tyhjennä välimuisti"
+
+#: translated UI setting
+msgid "Done"
+msgstr "Valmis"
+
+#: translated UI setting
+msgid "Custom"
+msgstr "Mukautettu"
+
+#: translated UI setting
+msgid "Controllers"
+msgstr "Ohjaimet"
+
+#: translated UI setting
+msgid "Quit"
+msgstr "Lopeta"
+
+#: translated UI setting
+msgid "FSR sharpness"
+msgstr "FSR-terävöitys"
+
+#: translated UI setting
+msgid "Stick deadzone"
+msgstr "Ohjaussauvan kuollut alue"
+
+#: translated UI setting
+msgid "Vibration strength"
+msgstr "Värinän voimakkuus"
+
+#: translated UI setting
+msgid "Preset"
+msgstr "Esiasetus"
+
+#: translated UI setting
+msgid "Open settings"
+msgstr "Avaa asetukset"
+
+#: translated UI setting
+msgid "ANTI-ALIASING"
+msgstr "REUNOJEN PEHMENNYS"
+
+#: translated UI setting
+msgid "BUTTON MAPPING"
+msgstr "PAINIKEMÄÄRITYKSET"
+
+#: translated UI setting
+msgid "QUICK SETTINGS"
+msgstr "PIKA-ASETUKSET"
+
+#: translated UI setting
+msgid "STORAGE"
+msgstr "TALLENNUSTILA"
+
+#: translated UI setting
+msgid "VIDEO PRESET"
+msgstr "VIDEON ESIASETUS"
+
+#: translated UI setting
+msgid "GAME RESOLUTION"
+msgstr "PELIN TARKKUUS"
+
+#: translated UI setting
+msgid "TV OUTPUT"
+msgstr "TV-LÄHTÖ"
+
+#: translated UI setting
+msgid "FSR SHARPNESS"
+msgstr "FSR-TERÄVÖITYS"
+
+#: translated UI setting
+msgid "STICK DEADZONE"
+msgstr "OHJAUSSAUVAN KUOLLUT ALUE"
+
+#: translated UI setting
+msgid "VIBRATION STRENGTH"
+msgstr "VÄRINÄN VOIMAKKUUS"
