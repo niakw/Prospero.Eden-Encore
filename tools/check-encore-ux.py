@@ -18,6 +18,7 @@ store=read('headless/settings_store.h')
 devices=read('headless/devices.h')
 pad=read('headless/pad.cpp')
 main=read('headless/main.cpp')
+staged_check=read('tools/ci/check-staged-app.py')
 generated=read('headless/encore_overrides_generated.h')
 
 # One TV shell everywhere.
@@ -215,12 +216,11 @@ assert 'Prospero.Eden-Encore/1' in net_patch and 'User-Agent' in net_patch
 # run #37710086280 it required removed kHomeCache despite the native app passing
 # all package inventory, import and compiled-string checks. Validate this contract
 # in the early fast preflight, before consuming hours on another native build.
-staged_check = read('tools/ci/check-staged-app.py')
 # Avoid another multi-hour native build failing on stale controller markers:
 # the staged eboot must expose the fixed mapping diagnostics from main.cpp,
 # not old PlayStation Auto / EDEN_PAD_CONTEXT strings removed from source.
 assert '"EDEN_PAD_MAPPING_FIXED title="' in staged_check
-assert '"EDEN_PAD_MAPPING_LOCKED scope=session mode=static"' in staged_check
+assert '"EDEN_PAD_MAPPING_LOCKED scope=session mode=static game_actions=guest_owned"' in staged_check
 assert '"EDEN_PAD_MAPPING_LOCKED scope=fc27 mode=dual_manual"' not in staged_check
 assert '"PlayStation Auto"' not in staged_check
 assert '"EDEN_PAD_CONTEXT mode=gameplay reason=sustained_activity sticky=1"' not in staged_check
