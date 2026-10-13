@@ -20,7 +20,7 @@
 > **PS5 firmware 13.60 is Encore's primary hardware-tested target.**
 > Other firmware versions are not currently claimed as validated by this fork.
 
-## Development status — 13 October 2026 (R457)
+## Development status — 13 October 2026 (R457 source fixes and native rebuild candidate)
 
 The active development line is **`dev/ps5-sparse-jit`** (R457, `82e13e5655fc`). This is a development candidate, **not** a verified console release. Native build, source/host contracts, and hardware behavior must be reported separately; a source-contract failure blocks the native build and is not evidence that native compilation or gameplay validation succeeded.
 
