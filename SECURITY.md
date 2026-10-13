@@ -1,6 +1,6 @@
 # Security Policy
 
-Prospero.Eden Encore is a PS5 homebrew emulator port that contains native code, file import/export
+Prospero.Eden Encore is a console homebrew emulator port that contains native code, file import/export
 logic, build tooling and a privileged one-shot filesystem-elevation helper. Security reports for
 those areas are taken seriously.
 
@@ -9,11 +9,11 @@ those areas are taken seriously.
 | Version / branch | Security support |
 | --- | --- |
 | Current **Prospero.Eden Encore 1.000.040** release line | ✅ Supported |
-| Default branch `fix/0.40-zbic-13.60` | ✅ Supported |
-| Archive/reference branch `>0.50-bug_13.60` | ❌ Not supported |
+| Active development branch `dev/ps5-sparse-jit` | Development only; fixes assessed case-by-case |
+| Historical and archived branches | ❌ Not supported |
 | Upstream ProsperoEden / Eden | ❌ Report to the corresponding upstream project |
 
-Encore's primary validated console target is **PS5 firmware 13.60**. A security issue may still be
+Encore's primary validated console target is **firmware 13.60**. A security issue may still be
 relevant on another firmware, but firmware compatibility itself is not a security guarantee.
 
 ## Reporting a vulnerability
@@ -34,7 +34,7 @@ the exploit details.
 A useful report includes:
 
 - affected Encore commit/release;
-- PS5 firmware and relevant jailbreak/runtime environment;
+- console firmware and relevant runtime environment;
 - affected file/component;
 - impact and required attacker/user interaction;
 - minimal reproduction steps or proof of concept;
