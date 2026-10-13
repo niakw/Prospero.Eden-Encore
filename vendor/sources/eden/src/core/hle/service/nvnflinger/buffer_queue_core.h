@@ -77,7 +77,7 @@ private:
     std::vector<BufferItem> queue;
     s32 override_max_buffer_count{};
     std::condition_variable dequeue_condition;
-    u64 dequeue_generation{}; // guarded by mutex; never consumed by a single waiter
+    std::atomic<bool> dequeue_possible{};
     const bool use_async_buffer{}; // This is always disabled on HOS
     bool dequeue_buffer_cannot_block{};
     PixelFormat default_buffer_format{PixelFormat::Rgba8888};
