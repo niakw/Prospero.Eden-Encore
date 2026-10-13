@@ -2186,11 +2186,25 @@ if(EDEN_PS5_OPENGL)
                 message(FATAL_ERROR "Pinned guest GPU DMA fence wait changed")
             endif()
             string(REPLACE "${dma_fence_wait}"
-                "        { ::Eden::Performance::DiagnosticTimer dma_fence_timer(::Eden::Performance::gpu_dma_sync_wait);\n${dma_fence_wait}\n        }"
+                "        { ::Eden::Performance::DiagnosticActiveTimer dma_fence_timer(\n            ::Eden::Performance::gpu_dma_sync_wait, ::Eden::Performance::gpu_dma_sync_active_since_ns,\n            !synced && !system.IsShuttingDown());\n${dma_fence_wait}\n        }"
                 command_source "${command_source}")
             string(PREPEND command_source "#include \"${EDEN_PORT_DIR}/performance.h\"\n")
         endif()
         string(REPLACE "    while (word != value) {" "    while (word != value && !dma_pusher.system.IsShuttingDown()) {" command_source "${command_source}")
+        if(unit STREQUAL "engines/puller" AND EDEN_DEV_PROFILE)
+            # R406: an unmatched guest semaphore can keep the GPU worker in
+            # ReleaseFences() indefinitely. Observe entry/exit ONCE, never
+            # poll clocks, write counters or change wait semantics per loop.
+            set(puller_semaphore_loop "    while (word != value && !dma_pusher.system.IsShuttingDown()) {")
+            string(FIND "${command_source}" "${puller_semaphore_loop}" puller_sem_at)
+            if(puller_sem_at LESS 0)
+                message(FATAL_ERROR "Pinned guest GPU puller semaphore acquire changed")
+            endif()
+            string(REPLACE "${puller_semaphore_loop}"
+                "    ::Eden::Performance::DiagnosticActiveTimer semaphore_timer(\n        ::Eden::Performance::gpu_puller_semaphore_wait,\n        ::Eden::Performance::gpu_puller_semaphore_active_since_ns,\n        word != value && !dma_pusher.system.IsShuttingDown());\n${puller_semaphore_loop}"
+                command_source "${command_source}")
+            string(PREPEND command_source "#include \"${EDEN_PORT_DIR}/performance.h\"\n")
+        endif()
         string(PREPEND command_source "#include <chrono>\n")
         string(REPLACE "/" "_" unit_name "${unit}")
         write_derived("${PORT_BUILD_DIR}/${unit_name}.cpp" "${command_source}")

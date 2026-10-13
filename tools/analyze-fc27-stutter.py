@@ -81,6 +81,7 @@ def analyze(log: str) -> dict:
     preflights: dict[int, dict] = {}
     jit_cores: dict[int, dict[int, dict]] = defaultdict(dict)
     dma_sync: dict[int, dict] = {}
+    puller_semaphore: dict[int, dict] = {}
     current_frame: int | None = None
     source_commits: set[str] = set()
     phases: dict[str, dict[int, dict]] = defaultdict(dict)
@@ -131,6 +132,10 @@ def analyze(log: str) -> dict:
             value = values(line)
             if {"frame", "calls", "ns"} <= value.keys():
                 dma_sync[int(value["frame"])] = value
+        elif line.startswith("EDEN_GPU_PULLER_SEMAPHORE "):
+            value = values(line)
+            if {"frame", "calls", "ns", "active_ns"} <= value.keys():
+                puller_semaphore[int(value["frame"])] = value
         elif line.startswith("EDEN_FRAME_JIT_CORE "):
             value = values(line)
             if ({"frame", "core", "compile_ns", "compile_calls", "evacuations"} <= value.keys()
@@ -220,10 +225,12 @@ def analyze(log: str) -> dict:
             }
             for core, metrics in row["jit_cores"].items():
                 row[f"jit_core_ms:{core}"] = metrics["compile_ms"]
-        # R405: only adjacent detailed GPU reports provide a valid cumulative
+        # R405/R406: only adjacent detailed GPU reports provide a valid cumulative
         # delta. Missing and reset source readings are not measured zeros.
         dma = dma_sync.get(frame)
         if dma is not None:
+            if "active_ns" in dma:
+                row["dma_sync_active_ms"] = dma["active_ns"] / 1e6
             prev_dma = preceding.get("dma_sync")
             if (prev_dma is not None and dma["ns"] >= prev_dma["ns"]
                     and dma["calls"] >= prev_dma["calls"]):
@@ -232,6 +239,20 @@ def analyze(log: str) -> dict:
             preceding["dma_sync"] = dma
         else:
             preceding.pop("dma_sync", None)
+        # Active age is an instant observation, not cumulative, so never
+        # subtract or sum it as completed work. A wait spanning windows may
+        # show zero new completed calls while remaining active throughout.
+        sem = puller_semaphore.get(frame)
+        if sem is not None:
+            row["puller_sem_active_ms"] = sem["active_ns"] / 1e6
+            prev_sem = preceding.get("puller_semaphore")
+            if (prev_sem is not None and sem["ns"] >= prev_sem["ns"]
+                    and sem["calls"] >= prev_sem["calls"]):
+                row["puller_sem_completed_ms"] = (sem["ns"] - prev_sem["ns"]) / 1e6
+                row["puller_sem_completed_calls"] = int(sem["calls"] - prev_sem["calls"])
+            preceding["puller_semaphore"] = sem
+        else:
+            preceding.pop("puller_semaphore", None)
         preceding["gpu"] = owner
         rows.append(row)
     full = [row for row in rows if row.get("gpu_full_ms", 0) > 0.001]
@@ -279,6 +300,20 @@ def analyze(log: str) -> dict:
                 dma_observed, "dma_sync_wait_ms", "late50"), 3)
                 if len(dma_observed) >= 3 else None),
         } if (dma_observed := [r for r in rows if "dma_sync_wait_ms" in r]) else None),
+        "gpu_puller_semaphore": ({
+            "observed_snapshots": len(sem_seen),
+            "completed_windows": len(sem_completed),
+            "completed_wait_ms": round(sum(r["puller_sem_completed_ms"]
+                                           for r in sem_completed), 3),
+            "completed_calls": sum(r["puller_sem_completed_calls"]
+                                    for r in sem_completed),
+            "max_inflight_ms": round(max(r["puller_sem_active_ms"]
+                                           for r in sem_seen), 3),
+            "windows_with_inflight_wait": sum(r["puller_sem_active_ms"] > 0
+                                               for r in sem_seen),
+        } if (sem_seen := [r for r in rows if "puller_sem_active_ms" in r])
+        and (sem_completed := [r for r in rows if "puller_sem_completed_ms" in r]) is not None
+        else None),
         "queue_full_windows": len(full),
         "late50_during_full": int(in_full),
         "late50_full_window_share": in_full / stall if stall else 0.0,
@@ -353,7 +388,8 @@ def self_test() -> None:
         "EDEN_FRAME_JIT_CORE frame=150 core=1 compile_ns=2000000 compile_calls=8 evacuations=0",
         "EDEN_DEV_GPU frame=150 dispatch_calls=500 full_calls=10 full_ns=20000000 draws=100",
         "EDEN_SCHEDULER_PREFLIGHT frame=150 dispatched=3",
-        "EDEN_GPU_DMA_SYNC frame=150 calls=1 ns=2500000",
+        "EDEN_GPU_DMA_SYNC frame=150 calls=1 ns=2500000 active_ns=3000000",
+        "EDEN_GPU_PULLER_SEMAPHORE frame=150 calls=4 ns=500000 active_ns=5000000",
         "EDEN_DEV_GUEST cpu_write_calls=100 cpu_write_ns=10000000 cpu_read_calls=30 cpu_read_ns=3000000",
         "EDEN_GPU_CACHE_PHASE frame=150 phase=pair_wait samples=10 total_ns=1000000",
         "EDEN_GPU_CACHE_PHASE frame=150 phase=guest_write_buffer_wait samples=3 total_ns=200000 max_ns=150000",
@@ -363,7 +399,8 @@ def self_test() -> None:
         "EDEN_FRAME_JIT_CORE frame=300 core=1 compile_ns=5000000 compile_calls=4 evacuations=1",
         "EDEN_DEV_GPU frame=300 dispatch_calls=900 full_calls=10 full_ns=20000000 draws=280",
         "EDEN_SCHEDULER_PREFLIGHT frame=300 dispatched=11",
-        "EDEN_GPU_DMA_SYNC frame=300 calls=3 ns=13000000",
+        "EDEN_GPU_DMA_SYNC frame=300 calls=3 ns=13000000 active_ns=0",
+        "EDEN_GPU_PULLER_SEMAPHORE frame=300 calls=6 ns=2300000 active_ns=0",
         "EDEN_DEV_GUEST cpu_write_calls=250 cpu_write_ns=40000000 cpu_read_calls=75 cpu_read_ns=9000000",
         "EDEN_GPU_CACHE_PHASE frame=300 phase=pair_wait samples=14 total_ns=1400000",
         "EDEN_GPU_CACHE_PHASE frame=300 phase=guest_write_buffer_wait samples=7 total_ns=600000 max_ns=270000",
@@ -398,6 +435,16 @@ def self_test() -> None:
         raise AssertionError("mixed build SHAs were not rejected")
     assert result["late50_total"] == 4
     assert result["gpu_dma_sync"]["observed_windows"] == 1
+    assert result["rows"][0]["dma_sync_active_ms"] == 3
+    assert result["rows"][1]["dma_sync_active_ms"] == 0
+    assert result["gpu_puller_semaphore"]["observed_snapshots"] == 2
+    assert result["gpu_puller_semaphore"]["completed_windows"] == 1
+    assert result["gpu_puller_semaphore"]["completed_wait_ms"] == 1.8
+    assert result["gpu_puller_semaphore"]["completed_calls"] == 2
+    assert result["gpu_puller_semaphore"]["max_inflight_ms"] == 5
+    assert result["gpu_puller_semaphore"]["windows_with_inflight_wait"] == 1
+    assert analyze(sample.replace("EDEN_GPU_PULLER_SEMAPHORE", "NO_PULLER_SEMAPHORE"))[
+        "gpu_puller_semaphore"] is None
     assert result["gpu_dma_sync"]["measured_wait_ms"] == 10.5
     assert result["gpu_dma_sync"]["wait_calls"] == 2
     assert result["gpu_dma_sync"]["worst_frame_correlation"] is None
@@ -494,6 +541,12 @@ def main() -> None:
               " not physical GPU busy time or proof of stutter causality.")
     else:
         print("GPU_DMA_SYNC_WAIT unavailable (pre-R405 logs)")
+    if report["gpu_puller_semaphore"] is not None:
+        print("GPU_PULLER_SEMAPHORE", report["gpu_puller_semaphore"])
+        print("NOTE: active_ns is a snapshot of an unfinished guest semaphore"
+              " wait; do not add it to completed time or infer deadlock alone.")
+    else:
+        print("GPU_PULLER_SEMAPHORE unavailable (pre-R406 logs)")
     if report["jit_core_summary"]:
         print("GUEST_JIT_CORE_INTERVALS", report["jit_core_summary"])
         print("NOTE: JIT per-core intervals are overlapping CPU work, not wall-clock"

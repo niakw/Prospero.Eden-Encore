@@ -99,7 +99,12 @@ inline Totals gpu_queue_wait, gpu_dispatch;
 inline Totals gpu_command_tick, gpu_command_flush, gpu_command_invalidate;
 // R405: GPU-owner DmaPusher fence-wait intervals INSIDE Scheduler::Push.
 // Detailed logging only; not physical GPU utilization or a guest timing fix.
-inline Totals gpu_dma_sync_wait;
+inline Totals gpu_dma_sync_wait, gpu_puller_semaphore_wait;
+// GPU-owned live wait slots, independently readable from the compositor.
+// Zero means no outstanding profiled wait. Do not use these as watchdogs or
+// alter the guest command's lifetime/order based on diagnostic counters.
+inline std::atomic<long long> gpu_dma_sync_active_since_ns{0};
+inline std::atomic<long long> gpu_puller_semaphore_active_since_ns{0};
 // Counts actual 4-KiB command-chunk pre-dispatches (R382), not ordinary
 // DispatchWork calls. Written only on a successful preflight when profiling.
 inline std::atomic<unsigned long long> scheduler_preflight_dispatches{0};
@@ -444,6 +449,46 @@ private:
     Totals* totals{};
     std::chrono::nanoseconds start{};
 };
+
+// R406: a blocking DMA or puller semaphore may never return during a freeze.
+// DiagnosticTimer only counts completed calls. Publish an active timestamp
+// without a per-iteration probe, and clear it on every normal/scope exit.
+// GPU-owner single-writer; five-second presenter may read concurrently.
+class DiagnosticActiveTimer {
+public:
+    DiagnosticActiveTimer(Totals& target, std::atomic<long long>& active_slot,
+                          bool waiting = true) noexcept
+        : totals(waiting && detailed_gpu_profile.load(std::memory_order_relaxed) ? &target : nullptr),
+          active(totals ? &active_slot : nullptr) {
+        if (totals) {
+            start = Common::g_wall_clock.GetTimeNS();
+            active->store(start.count(), std::memory_order_release);
+        }
+    }
+    DiagnosticActiveTimer(const DiagnosticActiveTimer&) = delete;
+    DiagnosticActiveTimer& operator=(const DiagnosticActiveTimer&) = delete;
+    ~DiagnosticActiveTimer() {
+        if (!totals) return;
+        const auto end = Common::g_wall_clock.GetTimeNS();
+        const auto delta = end - start;
+        if (delta.count() > 0)
+            totals->nanoseconds.fetch_add(static_cast<unsigned long long>(delta.count()),
+                                         std::memory_order_relaxed);
+        totals->calls.fetch_add(1, std::memory_order_relaxed);
+        active->store(0, std::memory_order_release);
+    }
+private:
+    Totals* totals{};
+    std::atomic<long long>* active{};
+    std::chrono::nanoseconds start{};
+};
+inline unsigned long long ActiveDiagnosticWaitNs(
+        const std::atomic<long long>& active_slot) noexcept {
+    const auto since = active_slot.load(std::memory_order_acquire);
+    if (since <= 0) return 0;
+    const auto now = Common::g_wall_clock.GetTimeNS().count();
+    return now >= since ? static_cast<unsigned long long>(now - since) : 0ULL;
+}
 
 // Guest OnCPUWrite can run tens of millions of times per match. Counting
 // every one using shared atomics makes the DEVELOPMENT logger itself contend

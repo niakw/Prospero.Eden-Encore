@@ -1111,8 +1111,16 @@ void ReportGpuThread(unsigned frame) {
                 load(gpu_command_invalidate, true), load(gpu_command_invalidate, false));
     // R405: completed fence waits are a subset of scheduler.Push time, not
     // the GPU's busy time. This is reported only in the detailed five-second path.
-    std::printf("EDEN_GPU_DMA_SYNC frame=%u calls=%llu ns=%llu\n",
-                frame, load(gpu_dma_sync_wait, true), load(gpu_dma_sync_wait, false));
+    std::printf("EDEN_GPU_DMA_SYNC frame=%u calls=%llu ns=%llu active_ns=%llu\n",
+                frame, load(gpu_dma_sync_wait, true), load(gpu_dma_sync_wait, false),
+                ActiveDiagnosticWaitNs(gpu_dma_sync_active_since_ns));
+    // R406: GPU puller semaphore equality loop is a different blocking path.
+    // Snapshot in-flight waits, not only completed calls, to retain evidence
+    // even when the game never reaches the RAII destructor.
+    std::printf("EDEN_GPU_PULLER_SEMAPHORE frame=%u calls=%llu ns=%llu active_ns=%llu\n",
+                frame, load(gpu_puller_semaphore_wait, true),
+                load(gpu_puller_semaphore_wait, false),
+                ActiveDiagnosticWaitNs(gpu_puller_semaphore_active_since_ns));
     // R384: confirm that R382's prelock FIFO dispatch optimization actually
     // fired on the PS5. A zero counter is meaningful: do not attribute an
     // FPS gain to a preflight that never ran.
