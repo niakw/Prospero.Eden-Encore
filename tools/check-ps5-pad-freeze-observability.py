@@ -18,7 +18,7 @@ assert 'player == 0 && is_usable(raw) && NativeLogs::Detailed()' in source
 assert 'if (NativeLogs::Detailed() && polls % 1250 == 0)' in source
 assert source.count('EDEN_PAD_HEARTBEAT polls=') == 1
 assert 'last_read=%d' in source and 'square=%llu triangle=%llu' in source
-assert 'mapping[game_x], mapping[game_y]' in source
+assert 'ActiveMapping()[game_x], ActiveMapping()[game_y]' in source
 assert 'std::fflush(stderr)' not in source
 assert 'EDEN_PAD_INPUT mode=%s' in main and 'pad->Poll();' in main
 assert 'pad_square, pad_triangle' in (root / 'headless/button_mapping.h').read_text()
