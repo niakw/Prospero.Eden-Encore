@@ -1008,3 +1008,143 @@ msgstr "3x (zeer hoog geheugengebruik)"
 #: settings_store.h
 msgid "4x (extreme memory)"
 msgstr "4x (extreem geheugengebruik)"
+
+#: translated UI setting
+msgid "Anti-aliasing"
+msgstr "Anti-aliasing"
+
+#: translated UI setting
+msgid "Button mapping"
+msgstr "Knoptoewijzing"
+
+#: translated UI setting
+msgid "Quick settings"
+msgstr "Snelle instellingen"
+
+#: translated UI setting
+msgid "Storage"
+msgstr "Opslag"
+
+#: translated UI setting
+msgid "Video preset"
+msgstr "Videovoorinstelling"
+
+#: translated UI setting
+msgid "Game resolution"
+msgstr "Spelresolutie"
+
+#: translated UI setting
+msgid "TV output"
+msgstr "Tv-uitvoer"
+
+#: translated UI setting
+msgid "Play"
+msgstr "Spelen"
+
+#: translated UI setting
+msgid "Cancel"
+msgstr "Annuleren"
+
+#: translated UI setting
+msgid "Confirm"
+msgstr "Bevestigen"
+
+#: translated UI setting
+msgid "Reset"
+msgstr "Opnieuw instellen"
+
+#: translated UI setting
+msgid "Ultra"
+msgstr "Ultra"
+
+#: translated UI setting
+msgid "Recommended"
+msgstr "Aanbevolen"
+
+#: translated UI setting
+msgid "Minimum"
+msgstr "Minimum"
+
+#: translated UI setting
+msgid "Home"
+msgstr "Startpagina"
+
+#: translated UI setting
+msgid "Clear cache"
+msgstr "Cache wissen"
+
+#: translated UI setting
+msgid "Done"
+msgstr "Gereed"
+
+#: translated UI setting
+msgid "Custom"
+msgstr "Aangepast"
+
+#: translated UI setting
+msgid "Controllers"
+msgstr "Controllers"
+
+#: translated UI setting
+msgid "Quit"
+msgstr "Afsluiten"
+
+#: translated UI setting
+msgid "FSR sharpness"
+msgstr "FSR-scherpte"
+
+#: translated UI setting
+msgid "Stick deadzone"
+msgstr "Dode zone van stick"
+
+#: translated UI setting
+msgid "Vibration strength"
+msgstr "Trilsterkte"
+
+#: translated UI setting
+msgid "Preset"
+msgstr "Voorinstelling"
+
+#: translated UI setting
+msgid "Open settings"
+msgstr "Instellingen openen"
+
+#: translated UI setting
+msgid "ANTI-ALIASING"
+msgstr "ANTI-ALIASING"
+
+#: translated UI setting
+msgid "BUTTON MAPPING"
+msgstr "KNOPTOEWIJZING"
+
+#: translated UI setting
+msgid "QUICK SETTINGS"
+msgstr "SNELLE INSTELLINGEN"
+
+#: translated UI setting
+msgid "STORAGE"
+msgstr "OPSLAG"
+
+#: translated UI setting
+msgid "VIDEO PRESET"
+msgstr "VIDEOVOORINSTELLING"
+
+#: translated UI setting
+msgid "GAME RESOLUTION"
+msgstr "SPELRESOLUTIE"
+
+#: translated UI setting
+msgid "TV OUTPUT"
+msgstr "TV-UITVOER"
+
+#: translated UI setting
+msgid "FSR SHARPNESS"
+msgstr "FSR-SCHERPTE"
+
+#: translated UI setting
+msgid "STICK DEADZONE"
+msgstr "DODE ZONE VAN STICK"
+
+#: translated UI setting
+msgid "VIBRATION STRENGTH"
+msgstr "TRILSTERKTE"
