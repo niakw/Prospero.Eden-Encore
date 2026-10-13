@@ -984,3 +984,27 @@ msgstr "Game overrides reset to global defaults."
 #: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
 msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
 msgstr "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
+
+#: settings_store.h
+msgid "0.25x (minimum)"
+msgstr "0,25x (الأدنى)"
+
+#: settings_store.h
+msgid "0.5x (fastest, softer)"
+msgstr "0,5x (الأسرع، أكثر نعومة)"
+
+#: settings_store.h
+msgid "1.25x (recommended)"
+msgstr "1,25x (موصى به)"
+
+#: settings_store.h
+msgid "2x (high memory)"
+msgstr "2x (ذاكرة عالية)"
+
+#: settings_store.h
+msgid "3x (very high memory)"
+msgstr "3x (ذاكرة عالية جدًا)"
+
+#: settings_store.h
+msgid "4x (extreme memory)"
+msgstr "4x (ذاكرة قصوى)"
