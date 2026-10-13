@@ -77,6 +77,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # The launcher footer is derived from first-parent R commits, not MEMORY.md.
+          # Keep enough history for the latest numbered revision; the script fails
+          # closed if history is insufficient instead of displaying a stale R label.
+          fetch-depth: 256
 
       - name: Install build toolchain
         if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
