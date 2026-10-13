@@ -20,6 +20,7 @@ graphics=(root/"headless/graphics.cpp").read_text()
 native_main=(root/"headless/main.cpp").read_text()
 settings=(root/"vendor/sources/eden/src/common/settings.h").read_text()
 swapchain=(root/"vendor/encore-active/eden-vulkan/vulkan_swapchain.cpp").read_text()
+composer=(root/"vendor/sources/eden/src/core/hle/service/nvnflinger/hardware_composer.cpp").read_text()
 data=json.loads((root/"tools/fixtures/native-load-20261013.json").read_text())
 rows=[dict(zip(data["window_fields"],values)) for values in data["windows"]]
 stable=[w for w in rows if 29.95<=w["fps"]<=30.05 and w["worst_ms"]<38]
@@ -47,6 +48,13 @@ assert "Settings::values.async_presentation = backend == Eden::GraphicsBackend::
 assert "++frame_total;" in graphics and "frame_sample_count / (now - frame_sample_start)" in graphics
 assert "VK_PRESENT_MODE_FIFO_KHR" in swapchain
 assert "FramePacingMode::Target_Auto" in settings # no assumption about user's runtime setting
+# Guest compositor requests Composite only when a new BufferItem is acquired.
+# New BufferItem/slot is NOT proof that new animation or scene content exists.
+assert "if (result == CacheStatus::BufferAcquired) {" in composer
+assert "has_acquired_buffer = true;" in composer
+assert "if (has_acquired_buffer && !composition_stack.empty())" in composer
+assert "nvdisp.Composite(composition_stack);" in composer
+assert "return CacheStatus::CachedBufferReused;" in composer
 
 CALLBACK_MS=1000.0/30
 SCANOUT_MS=1000.0/60
@@ -69,6 +77,7 @@ def run_model(present_delay, guest_content):
     current_sequence=-1
     current_content=-1
     deliveries=[]
+    displayed_times=[]
     unique_changes=[]
     displayed_age=[]
     for k in range(301):
@@ -83,10 +92,12 @@ def run_model(present_delay, guest_content):
                 unique_changes.append(scan)
                 current_content=content
         deliveries.append(current_content)
+        displayed_times.append((scan,current_content))
         if current_sequence>=0:
             displayed_age.append(scan-callback[current_sequence])
     dwell=[b-a for a,b in zip(unique_changes,unique_changes[1:])]
     return {
+        "display_timeline":displayed_times,
         "callback_fps":round((N-1)/(callback[-1]-callback[0])*1000,3),
         "actual_distinct_content":len(unique_changes),
         "longest_distinct_content_hold_ms":round(max(dwell),2),
@@ -99,10 +110,22 @@ def run_model(present_delay, guest_content):
 normal=run_model(lambda _:3.0,lambda i:i)
 late_present=run_model(lambda i:120.0 if i%30==11 else 3.0,lambda i:i)
 stale_guest=run_model(lambda _:3.0,lambda i:i-((i%20)-9 if 9<=i%20<=12 else 0))
+def action_visual_latency_ms(display_timeline, input_at_ms, minimum_content_id):
+    return min((t-input_at_ms for t,content in display_timeline
+                if t>=input_at_ms and content>=minimum_content_id),default=float("inf"))
+# Input just after frame 49: the first guest animation reflecting it would
+# appear in frame 50 if the guest pipeline applied the action immediately.
+input_at_ms=callback[49]+1.0
+baseline_response=action_visual_latency_ms(normal["display_timeline"],input_at_ms,50)
+stale_response=action_visual_latency_ms(stale_guest["display_timeline"],input_at_ms,50)
+assert baseline_response<60.0
+assert stale_response>130.0
 print("CAPTURE nominal_30_windows=",len(stable),"of",len(rows))
-print("SCREEN_MODEL baseline=",json.dumps(normal,sort_keys=True))
-print("SCREEN_MODEL delayed_async_present=",json.dumps(late_present,sort_keys=True))
-print("SCREEN_MODEL repeated_guest_content=",json.dumps(stale_guest,sort_keys=True))
+print("INPUT_TO_VISIBLE_MODEL baseline_ms=",round(baseline_response,2),
+      "stale_guest_ms=",round(stale_response,2))
+print("SCREEN_MODEL baseline=",json.dumps({k:v for k,v in normal.items() if k!="display_timeline"},sort_keys=True))
+print("SCREEN_MODEL delayed_async_present=",json.dumps({k:v for k,v in late_present.items() if k!="display_timeline"},sort_keys=True))
+print("SCREEN_MODEL repeated_guest_content=",json.dumps({k:v for k,v in stale_guest.items() if k!="display_timeline"},sort_keys=True))
 assert normal["callback_fps"]==late_present["callback_fps"]==stale_guest["callback_fps"]==30.0
 assert normal["actual_distinct_content"]>=148
 assert normal["longest_distinct_content_hold_ms"]<=50.1
