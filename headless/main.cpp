@@ -1481,6 +1481,7 @@ int main(int argc, char** argv) {
             // destroyed renderer, not to this title's direct-memory budget.
             // Prior GPU workers have joined before this launcher path.
             Eden::Performance::ResetDirectMemoryProbeForTitle();
+            Eden::Performance::ResetGpuReportForTitle();
             // The size of the picture the session puts out (Settings > Video > Output resolution).
             const int output = safe_launch ? 0 :
                 (game_video.output >= 0 ? game_video.output : profile_output);
