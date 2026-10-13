@@ -40,8 +40,9 @@ assert "image.unswizzled_size_bytes > 32_MiB)" in record
 assert "return NoteProjectedEviction(image);" in record
 assert "gc_downloads.emplace_back(id, map);" in record
 assert record.index("gc_downloads.emplace_back") < record.index("image.DownloadMemory")
-assert "if (remaining == 0) return true;" in gc
-assert "--remaining;" in gc
+assert "if (remaining == 0 || scanned >= max_scanned) return true;" in gc
+assert "if (count_visits) --remaining;" in gc
+assert "if (!count_visits) --remaining;" in gc
 assert "if (frame_tick < ticks_to_destroy) return;" in gc
 assert "const bool prefetch_dirty = DirtyEvictions();" in gc
 assert "if (!prefetch_dirty) return;" in gc
@@ -134,6 +135,7 @@ struct Image {
     std::vector<ImageId> aliased_images;
     std::vector<ImageId> overlapping_images;
     u64 reclaimed_bytes{};
+    bool decoding{false}, costly{false};
     bool HasScaled() const { return scaled; }
     void DownloadMemory(Vulkan::StagingBufferRef& map,
                         const std::vector<ImageId>& copies) {
@@ -150,7 +152,7 @@ struct Scenario {
     std::vector<Image> images;
     explicit Scenario(std::vector<Image> values) : images(std::move(values)) {}
     void Test(std::size_t expected, std::vector<ImageId> ids,
-              std::size_t max_scanned = 40,
+              std::size_t eviction_budget = 40,
               u64 initial_usage = 1000_MiB,
               std::size_t expected_scanned = 0) {
         Vulkan::TextureCacheRuntime runtime;
@@ -165,12 +167,15 @@ __PRODUCTION_DECLARATION__
         };
 __PRODUCTION_PROJECTION__
         std::size_t scanned = 0;
-        std::size_t remaining = max_scanned;
+        std::size_t remaining = eviction_budget;
         for (ImageId id = 0; id < images.size(); ++id) {
-            if (remaining == 0) break;
-            --remaining;
+            if (remaining == 0 || scanned >= 8192) break;
             ++scanned;
             auto& image = images[id];
+            // R442: decoding and costly-load images are visited but are not
+            // eviction candidates; their presence cannot exhaust the budget.
+            if (image.decoding || image.costly) continue;
+            --remaining;
             const bool dirty = image.dirty;
             const auto scan_one = [&]() -> bool {
 __PRODUCTION_RECORD__
@@ -181,7 +186,7 @@ __PRODUCTION_RECORD__
             assert(gc_downloads.size() <= gc_prefetch_limit);
             assert(runtime.freed == 0);
         }
-        assert(scanned <= max_scanned);
+        assert(scanned <= 8192);
         if (expected_scanned != 0) assert(scanned == expected_scanned);
         assert(gc_downloads.size() == expected);
         std::vector<ImageId> actual;
@@ -294,6 +299,19 @@ int main() {
             images.back().reclaimed_bytes = 5_MiB;
         }
         Scenario(std::move(images)).Test(3, {1, 2, 3}, 40, 130_MiB, 4);
+    }
+    {
+        // R442: more than 40 decoding/costly LRU entries preceding dirty
+        // candidates no longer prevent their shared GPU Finish().
+        std::vector<Image> images;
+        for (ImageId i = 0; i < 185; ++i) {
+            auto image = ImageFor(i, i >= 180);
+            if (i < 120) image.decoding = true;
+            else if (i < 180) image.costly = true;
+            images.push_back(std::move(image));
+        }
+        Scenario(std::move(images)).Test(5, {180, 181, 182, 183, 184}, 10,
+                                          1000_MiB, 185);
     }
     {
         std::vector<Image> images;
