@@ -1,0 +1,182 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Replay observed native GPU command counts under 1x/4x/8x host stress.
+
+The native SPSC stop-aware producer code is copied verbatim from the actual
+build injection. The ring shim is the existing regression fixture, NOT the
+PS5 GPU or the guest's HLE implementation. The 28-minute stalled scenario is
+advanced in virtual counters; we do NOT claim 28 minutes of wall-clock testing
+or emulate the firmware scheduler/driver.
+"""
+import json
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+
+root = Path(__file__).resolve().parents[1]
+capture = json.loads((root / "tools/fixtures/native-load-20261013.json").read_text())
+assert capture["schema"] == 1
+fields = capture["window_fields"]
+stfields = capture["stall_fields"]
+window = [dict(zip(fields, values)) for values in capture["windows"]]
+stalls = [dict(zip(stfields, values)) for values in capture["stalls"]]
+assert len(window) == capture["expected_window_count"] == 68
+assert len(stalls) == capture["expected_stall_count"] == 55
+assert window[-1]["total"] == 9480
+assert all(x["total"] == sum(y["frames"] for y in window[:i+1])+1
+           for i, x in enumerate(window))
+assert sum(x["frames"] for x in window) == 9479
+assert abs(sum(x["seconds"] for x in window)-341.505307) < 0.001
+assert max(x["worst_ms"] for x in window) >= 575
+assert sum(x["late500"] for x in window) == 2
+assert len([x for x in window if x["fps"] < 25]) >= 3
+assert stalls[-1]["age_ms"]-stalls[0]["age_ms"] == 1_669_171
+assert all(x["gpu_ticks"] == 9514 and x["frame"] == 9480 and
+           x["guest_writes"] == 3123456 and x["guest_dequeues"] == 9515
+           for x in stalls)
+assert all(a["age_ms"] < b["age_ms"] and a["guest_ipc"] < b["guest_ipc"]
+           for a, b in zip(stalls, stalls[1:]))
+ipc_delta = stalls[-1]["guest_ipc"]-stalls[0]["guest_ipc"]
+assert ipc_delta == 1_259_768
+pad_delta = capture["pad_aggregate"]
+assert pad_delta["polls_delta"] == 497_500
+assert pad_delta["errors_delta"] == 0
+assert pad_delta["samples_delta"] > pad_delta["polls_delta"]
+ipc_per_second = ipc_delta / ((stalls[-1]["age_ms"]-stalls[0]["age_ms"])/1000)
+assert 750 < ipc_per_second < 760
+
+# Keep the real source-backed queue STOP-WAIT shim used by native All-On.
+host = (root / "tools/check-ps5-gpu-producer-wake.py").read_text()
+start = host.index('cpp = r"""') + len('cpp = r"""')
+end = host.index('""".replace("STOP_CODE", inc)', start)
+cpp = host[start:end]
+assert cpp.count("int main() {") == 1
+queue_source = cpp.split("int main() {")[0]
+queue_source = queue_source.replace("STOP_CODE", (root / "headless/gpu_queue_stop_wait.inc").read_text())
+assert 'producer.cv.wait(lock, stop_token' in queue_source
+
+# One queue item corresponds to one observed GPU-tick-sized source workload
+# rather than a draw, CPU instruction, guest write or IPC service call.
+frames = ",".join(str(x["frames"]) for x in window)
+gpu_load_ms = ",".join(str(x["gpu_dispatch_ms"]) for x in window)
+gpu_idle_ms = ",".join(str(x["gpu_idle_ms"]) for x in window)
+test = r"""
+int main() {
+    using namespace std::chrono_literals;
+    const std::array<unsigned,68> frames{__FRAMES__};
+    const std::array<double,68> dispatch_ms{__DISPATCH__};
+    const std::array<double,68> idle_ms{__IDLE__};
+    unsigned total{};
+    double dispatch{}, idle{};
+    for (size_t i=0; i<frames.size(); ++i) {
+        total+=frames[i];
+        dispatch+=dispatch_ms[i];
+        idle+=idle_ms[i];
+        assert(frames[i]>=100 && frames[i]<=151);
+        assert(dispatch_ms[i]>=0 && idle_ms[i]>=0);
+    }
+    assert(total==9479);
+    assert(idle>dispatch*2.0); // GPU owner NOT saturated before freeze.
+    // Real recorded command pacing AND a 4x/8x stress envelope, with a bounded
+    // 32-slot native ring and simultaneous IPC/graphics/pad-like CPU demand.
+    for (int factor : {1,4,8}) {
+        Queue<unsigned,32> q;
+        std::stop_source source;
+        const unsigned expected=total*factor;
+        std::atomic<unsigned> blocked{0};
+        std::atomic<unsigned> drawn{0};
+        std::atomic<unsigned long long> checksum{0};
+        std::atomic<unsigned> background{0};
+        std::thread producer([&] {
+            unsigned seq=0;
+            for(auto size:frames) {
+                for(unsigned i=0;i<size*static_cast<unsigned>(factor);i++) {
+                    if (!q.TryEmplace(seq)) {
+                        blocked.fetch_add(1,std::memory_order_relaxed);
+                        assert(q.EmplaceWaitWithStopToken(source.get_token(),seq));
+                    }
+                    ++seq;
+                }
+            }
+            assert(seq==expected);
+        });
+        std::thread renderer([&] {
+            unsigned long long work=0;
+            for(unsigned i=0;i<expected;i++) {
+                unsigned value{};
+                while (!q.TryPop(value)) std::this_thread::yield();
+                assert(value==i); // FIFO, no duplicate/missing GPU command.
+                // Synthetic cost variation; never equate host iterations with
+                // firmware driver time. Helps expose producer/consumer races.
+                unsigned long long acc=value+1;
+                for(int draw=0;draw<48;draw++)
+                    acc=(acc*6364136223846793005ULL+1442695040888963407ULL);
+                work^=acc;
+                drawn.fetch_add(1,std::memory_order_relaxed);
+            }
+            checksum.store(work,std::memory_order_release);
+        });
+        std::thread ipc([&] {
+            const unsigned loops=500000u*factor;
+            unsigned local=0;
+            for(unsigned n=0;n<loops;n++)local+=(n&1);
+            background.fetch_add(loops,std::memory_order_relaxed);
+            assert(local==loops/2);
+        });
+        producer.join();renderer.join();ipc.join();
+        unsigned value{};
+        assert(!q.TryPop(value));
+        assert(drawn.load()==expected);
+        assert(background.load()==500000u*factor);
+        std::printf("LOAD_FACTOR %dx commands=%u ipc_work=%u bounded_queue=32 "
+                    "producer_waits=%u checksum=%llu\n",
+                    factor,expected,500000u*factor,blocked.load(),
+                    checksum.load());
+    }
+    // Exact observed 1,669-second interval is VIRTUAL. Exercise actual
+    // producer full-queue blocking while IPC + pad pathways keep progressing.
+    // This mimics the observed counter *pattern*, NOT its missing GPU cause.
+    {
+        Queue<unsigned,32> q;
+        for(unsigned i=0;i<32;i++) assert(q.TryEmplace(i));
+        std::stop_source stop;
+        std::promise<bool> done;
+        auto response=done.get_future();
+        std::thread blocked([&] {
+            done.set_value(q.EmplaceWaitWithStopToken(stop.get_token(),32));
+        });
+        assert(response.wait_for(15ms)==std::future_status::timeout);
+        std::atomic<unsigned> ipc{0},pads{0};
+        std::thread ipc_thread([&] {
+            for(unsigned i=0;i<1259768;i++)ipc.fetch_add(1,std::memory_order_relaxed);
+        });
+        std::thread pad_thread([&] {
+            for(unsigned i=0;i<497500;i++)pads.fetch_add(1,std::memory_order_relaxed);
+        });
+        ipc_thread.join();pad_thread.join();
+        assert(response.wait_for(1ms)==std::future_status::timeout);
+        assert(ipc.load()==1259768 && pads.load()==497500);
+        stop.request_stop();
+        assert(response.wait_for(2s)==std::future_status::ready);
+        assert(!response.get());
+        blocked.join();
+        unsigned value=0;
+        for(unsigned i=0;i<32;i++)assert(q.TryPop(value) && value==i);
+        assert(!q.TryPop(value));
+        std::puts("VIRTUAL_FREEZE: zero GPU progress + 1259768 IPC + 497500 pad polls "
+                  "with blocked native producer, safe cancellation");
+    }
+    std::puts("HOST STRESS PASS: native queue stays FIFO/bounded under record-derived load");
+}
+""".replace("__FRAMES__",frames).replace("__DISPATCH__",gpu_load_ms).replace("__IDLE__",gpu_idle_ms)
+compiler = shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
+assert compiler, "C++20 compiler required"
+with tempfile.TemporaryDirectory(prefix="eden-native-recorded-pressure-") as tmp:
+    src = Path(tmp)/"native-stress.cpp"
+    exe = Path(tmp)/"native-stress"
+    src.write_text(queue_source+test)
+    subprocess.run([compiler,"-std=c++20","-O2","-pthread","-Wall","-Wextra","-Werror",
+                    str(src),"-o",str(exe)],check=True,timeout=60)
+    subprocess.run([str(exe)],check=True,timeout=55)
+print("QUALIFICATION: source-derived workload, NOT the original game, kernel, GPU or Vulkan driver")
