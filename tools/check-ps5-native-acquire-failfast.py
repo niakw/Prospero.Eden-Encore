@@ -38,6 +38,10 @@ assert "throw vk::Exception(VK_TIMEOUT);" in body
 assert body.index("if (result == VK_TIMEOUT || result == VK_NOT_READY)") < body.index("switch (result)")
 assert body.count("    case VK_ERROR_OUT_OF_DATE_KHR:")==1
 assert "is_outdated = true;\n        return true;" in body
+assert "    return is_outdated;" in body
+assert "    return is_suboptimal || is_outdated;" not in body
+swap_header=(root/"vendor/sources/eden/src/video_core/renderer_vulkan/vk_swapchain.h").read_text()
+assert "return IsSubOptimal() || NeedsPresentModeUpdate();" in swap_header
 assert body.index("is_outdated = true;\n        return true;") < body.index("resource_ticks[image_index]")
 assert "#ifdef PS5_NATIVE" in body and "#else" in body and "#endif" in body
 assert "vk::Check(result);" in body # actual fatal errors still propagated
@@ -134,8 +138,10 @@ int main(){
   {
     Swapchain s;
     s.device.logical.results={VK_SUBOPTIMAL_KHR};
-    assert(s.AcquireNextImage() && s.is_suboptimal && s.image_index==1);
+    assert(!s.AcquireNextImage() && s.is_suboptimal && s.image_index==1);
     assert(s.scheduler.waits==1);
+    assert(s.device.logical.successes==1);
+    // Image remains valid until present; recreation is deferred to next pass.
   }
 #ifdef PS5_NATIVE
   {
