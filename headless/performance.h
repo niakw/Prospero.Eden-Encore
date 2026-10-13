@@ -113,6 +113,9 @@ inline std::atomic<unsigned long long> scheduler_preflight_dispatches{0};
 // Producer-side waits outside the dispatch timer: forced fence drains on the GPU
 // thread, free presentation-frame waits, and guest pushes into a full GPU queue.
 inline Totals gpu_fence_drain, gpu_present_wait, gpu_queue_full;
+// R424: isolate presenter FIFO starvation from recycled-frame GPU fence stalls.
+// Sampled only when Detailed Logging is ON, never during normal gameplay.
+inline Totals gpu_present_free_wait, gpu_present_fence_wait;
 // Guest threads entering the GPU caches: CPU writes to tracked pages and flush-area lookups.
 inline Totals guest_cpu_write, guest_cpu_read;
 // Those entries take the buffer and texture cache locks, which the GPU thread holds for one draw at

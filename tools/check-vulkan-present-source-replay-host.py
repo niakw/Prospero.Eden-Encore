@@ -68,11 +68,21 @@ assert source.count("if (present_failure) std::rethrow_exception(present_failure
 get_frame = source.split("Frame* PresentManager::GetRenderFrame() {", 1)[1].split(
     "void PresentManager::Present(", 1)[0]
 pop = get_frame.index("free_queue.pop_front();")
-unlock = get_frame.index("lock.unlock();")
 fence_wait = get_frame.index("frame->present_done.Wait();")
 fence_reset = get_frame.index("frame->present_done.Reset();")
-assert pop < unlock < fence_wait < fence_reset
-assert get_frame.count("lock.unlock();") == 1
+assert pop < fence_wait < fence_reset
+if "lock.unlock();" in get_frame:
+    # Original R336 form explicitly releases free_mutex before waiting.
+    unlock = get_frame.index("lock.unlock();")
+    assert pop < unlock < fence_wait
+    assert get_frame.count("lock.unlock();") == 1
+else:
+    # R424 scoped free_mutex guard: the queue lock's destructor releases it
+    # before the separate GPU fence-wait scope begins.
+    queue_scope_release = get_frame.index("\n    }\n\n    // The fence wait", pop)
+    assert pop < queue_scope_release < fence_wait
+    assert "DiagnosticTimer free_wait(" in get_frame
+    assert "DiagnosticTimer fence_wait(" in get_frame
 assert "free_cv.wait(lock, [this] { return present_failure || !free_queue.empty(); });" in get_frame
 wait_present = source.split("void PresentManager::WaitPresent() {", 1)[1].split(
     "void PresentManager::PresentThread(", 1)[0]
