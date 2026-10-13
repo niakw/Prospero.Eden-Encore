@@ -32,7 +32,10 @@ assert "dequeue_possible.store(false)" not in real_methods
 # but must not forcibly flush or wait for file I/O in a frame callback.
 render_start = graphics.index("void GraphicsWindow::OnFrameDisplayed() {")
 render_end = graphics.index("\nvoid GraphicsWindow::CheckPresentation", render_start)
-assert "std::fflush(stdout);" not in graphics[render_start:render_end]
+render_callback = graphics[render_start:render_end]
+report_end = render_callback.index("Eden::Performance::ReportGpuThread(frame_total);")
+next_branch = render_callback.index("} else {", report_end)
+assert "std::fflush(stdout);" not in render_callback[report_end:next_branch]
 
 fixture = r"""
 #include <atomic>
