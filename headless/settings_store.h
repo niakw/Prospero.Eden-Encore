@@ -565,7 +565,13 @@ inline bool SaveGameSettings(uint64_t title_id, const GameSettings& value, const
     store("performance_profile", value.performance_profile, kPerformanceProfileKeys);
     store("controller_layout", value.controller_layout, kControllerLayoutKeys);
     if (value.own_mapping) {
+        // The serialized button differences use the PlayStation base when
+        // no title layout was selected. Persist that base explicitly: the
+        // reader treats a mapping without a layout as legacy Switch data.
+        // Without this, save -> reload silently changes A/B/X/Y bindings.
         const int layout = value.controller_layout >= 0 ? value.controller_layout : 0;
+        if (value.controller_layout < 0)
+            game["controller_layout"] = kControllerLayoutKeys[layout];
         game["mapping"] = Settings::MappingJson(value.mapping, BaseMappingForLayout(layout));
     } else {
         game.erase("mapping");
