@@ -44,6 +44,7 @@ Status BufferQueueConsumer::AcquireBuffer(BufferItem* out_buffer,
     }
 
     auto front(core->queue.begin());
+    bool dropped_queued_buffer = false;
 
     // If expected_present is specified, we may not want to return a buffer yet.
     if (expected_present.count() != 0) {
@@ -73,6 +74,7 @@ Status BufferQueueConsumer::AcquireBuffer(BufferItem* out_buffer,
             }
 
             core->queue.erase(front);
+            dropped_queued_buffer = true;
             front = core->queue.begin();
         }
 
@@ -82,6 +84,10 @@ Status BufferQueueConsumer::AcquireBuffer(BufferItem* out_buffer,
             desired_present < expected_present.count() + MAX_REASONABLE_NSEC) {
             LOG_DEBUG(Service_Nvnflinger, "defer desire={} expect={}", desired_present,
                       expected_present.count());
+            // Old queued buffers were freed, but no new one can be presented
+            // yet. Wake producers before returning: the normal notification
+            // below is bypassed by PresentLater.
+            if (dropped_queued_buffer) core->SignalDequeueCondition();
             return Status::PresentLater;
         }
 
