@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include "performance.h"
+#include "image_pages.h"
 #include "dev_vulkan.h"
 #include "diagnostics.h"
 #include <filesystem>
@@ -893,6 +894,17 @@ bool RasterizerVulkan::MustFlushRegion(DAddr addr, u64 size, VideoCommon::CacheT
 
 VideoCore::RasterizerDownloadArea RasterizerVulkan::GetFlushArea(DAddr addr, u64 size) {
     ::Eden::Performance::DiagnosticTimer guest_read_timer(::Eden::Performance::guest_cpu_read);
+    // A guest read cannot overlap a registered image when no page in this
+    // range has ever appeared in the image slot map. Skip the GPU-held mutex.
+    // Unknown/out-of-range/large ranges retain the original blocking path.
+    if (::Eden::ImagePages::NeverHeld(addr, size)) {
+        return VideoCore::RasterizerDownloadArea{
+            .start_address = Common::AlignDown(addr, Core::DEVICE_PAGESIZE),
+            .end_address = Common::AlignUp(addr + size, Core::DEVICE_PAGESIZE),
+            .preemtive = true,
+        };
+    }
+
     {
         ::Eden::Performance::GuestCacheLock(texture_cache.mutex, true);
         std::lock_guard lock{texture_cache.mutex, std::adopt_lock};

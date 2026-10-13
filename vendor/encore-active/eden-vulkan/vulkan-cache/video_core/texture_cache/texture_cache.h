@@ -27,6 +27,7 @@
 #include "video_core/textures/decoders.h"
 
 #include "performance.h"
+#include "image_pages.h"
 #include "vulkan_gc_budget.h"
 #include "common/scope_exit.h"
 namespace Vulkan { class TextureCacheRuntime; }
@@ -2464,6 +2465,7 @@ void TextureCache<P>::RegisterImage(ImageId image_id) {
         (*channel_state->gpu_page_table)[page].push_back(image_id);
     });
     if (False(image.flags & ImageFlagBits::Sparse)) {
+        ::Eden::ImagePages::Mark(image.cpu_addr, image.guest_size_bytes);
         auto map_id =
             slot_map_views.insert(image.gpu_addr, image.cpu_addr, image.guest_size_bytes, image_id);
         ForEachCPUPage(image.cpu_addr, image.guest_size_bytes,
@@ -2474,6 +2476,7 @@ void TextureCache<P>::RegisterImage(ImageId image_id) {
     boost::container::small_vector<ImageViewId, 16> sparse_maps;
     ForEachSparseSegment(
         image, [this, image_id, &sparse_maps](GPUVAddr gpu_addr, DAddr cpu_addr, size_t size) {
+            ::Eden::ImagePages::Mark(cpu_addr, size);
             auto map_id = slot_map_views.insert(gpu_addr, cpu_addr, size, image_id);
             ForEachCPUPage(cpu_addr, size,
                            [this, map_id](u64 page) { page_table[page].push_back(map_id); });
