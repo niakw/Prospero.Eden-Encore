@@ -2,6 +2,7 @@
 """No-network tests: curl Firefox UA, DDG/Yandex links and refusal policy."""
 import importlib.util
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 from unittest.mock import patch
 from types import SimpleNamespace
 
@@ -11,10 +12,14 @@ assert spec and spec.loader
 mod=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 assert "Firefox/" in mod.FIREFOX_UA
-assert mod.engine_url("curl_duckduckgo","BOTW PS4").startswith(
-    "https://html.duckduckgo.com/html/?q=")
-assert mod.engine_url("curl_yandex","BOTW кнопки").startswith(
-    "https://yandex.com/search/?text=")
+ddg_url = urlsplit(mod.engine_url("curl_duckduckgo", "BOTW PS4"))
+yandex_url = urlsplit(mod.engine_url("curl_yandex", "BOTW кнопки"))
+assert (ddg_url.scheme, ddg_url.hostname, ddg_url.path) == (
+    "https", "html.duckduckgo.com", "/html/")
+assert parse_qs(ddg_url.query)["q"] == ["BOTW PS4"]
+assert (yandex_url.scheme, yandex_url.hostname, yandex_url.path) == (
+    "https", "yandex.com", "/search/")
+assert parse_qs(yandex_url.query)["text"] == ["BOTW кнопки"]
 html=b'<html><body><a class="result__a" href="/l/?uddg=https%3A%2F%2Fgamebanana.com%2Fmods%2F659253">Zelda BOTW DS4 mod</a><a href="https://github.com/test/botw-controller-buttons">BOTW controller glyphs</a></body></html>'
 a=mod.parse_page("curl_duckduckgo","https://html.duckduckgo.com/html/?q=BOTW",
                  "https://html.duckduckgo.com/html/?q=BOTW",200,html)

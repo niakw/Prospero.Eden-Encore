@@ -89,8 +89,12 @@ def canonical_link(href: str) -> str | None:
     href = html.unescape(href).strip()
     if href.startswith("//"): href = "https:" + href
     parsed = urlparse(href)
-    if ((parsed.hostname or "").lower().endswith("duckduckgo.com") or
-        (not parsed.netloc and parsed.path.startswith("/l/"))):
+    # Only the real DuckDuckGo host (or one of its DNS subdomains) may
+    # supply uddg redirect targets; suffix-only substring checks also
+    # accept attacker-controlled names such as evilduckduckgo.com.
+    redirect_host = (parsed.hostname or "").casefold().rstrip(".")
+    is_ddg = redirect_host == "duckduckgo.com" or redirect_host.endswith(".duckduckgo.com")
+    if (is_ddg or (not parsed.netloc and parsed.path == "/l/")):
         url = parse_qs(parsed.query).get("uddg")
         if url:
             href = url[0]
