@@ -217,8 +217,11 @@ void main()
         // radius, leaving an uninterrupted rim even at oblique angles.
         float radius = v_params.z > 0.5 ? 18.0 : 22.0;
         float d = round_box(v_local, v_half, radius);
-        color = v_params.z > 0.5 ? texture(u_texture, v_uv) * v_top : v_top;
-        color.a *= 1.0 - smoothstep(-1.0, 1.0, d);
+        color = v_params.z > 0.5 ? texture(u_texture, clamp(v_uv, 0.0, 1.0)) * v_top : v_top;
+        float scan_inside = v_params.z > 0.5 ?
+            step(0.0, v_uv.x) * step(v_uv.x, 1.0) *
+            step(0.0, v_uv.y) * step(v_uv.y, 1.0) : 1.0;
+        color.a *= scan_inside * (1.0 - smoothstep(-1.0, 1.0, d));
     }
     else if (shape == 14)
     {
