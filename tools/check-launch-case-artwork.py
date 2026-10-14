@@ -273,6 +273,18 @@ assert "uv.h = source / target;" in lib_sleeve
 assert "uv.y = (1.0f - uv.h) * 0.5f;" in lib_sleeve
 assert "uv.x = rear ? 1.0f - uv.w : 0.0f;" in lib_sleeve
 assert "std::clamp(shell.w * 0.012f, 1.75f, 5.0f)" in lib_sleeve
+# A 181x278 retail sleeve must not spend ~10% of its width on an
+# aspect-contain blank column + molded opening. Source pixels UV-cover paper.
+shelf_width, shelf_height = 181.0, 278.0
+shelf_rim = min(5.0, max(1.75, shelf_width * 0.012))
+shelf_cap = max(5.0, shelf_height * 0.018)
+paper_aspect = (shelf_width - shelf_rim) / (shelf_height - 2 * shelf_cap)
+european_front_aspect = 872.0 / 1419.0
+assert shelf_rim < 2.3 and paper_aspect > european_front_aspect
+assert 0.85 < european_front_aspect / paper_aspect < 1.0
+# The 3D caps run the SAME 13px plastic skirt on either projected face.
+assert "float from_cap = min(v_st.y, 1.0 - v_st.y)" in shader
+assert "max(rim_intensity, cap_intensity)" in shader
 assert "shell.w - side, shell.h - 2.0f * top" in lib_sleeve
 assert "const float opening_x = rear ? shell.x : shell.x + shell.w - side;" in lib_sleeve
 
