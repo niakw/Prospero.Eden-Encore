@@ -1192,21 +1192,22 @@ if(PS5_NATIVE)
     set_property(SOURCE "${PROJECT_SOURCE_DIR}/src/core/hle/service/am/button_poller.cpp"
         TARGET_DIRECTORY core APPEND PROPERTY COMPILE_DEFINITIONS "PS5_NATIVE=1")
 endif()
-# Homebrew and some titles can have no control/NACP data. Avoid dereferencing the absent
-# object when deriving the pseudo device ID; seed 0 matches Eden's defaults for missing NACP data.
-file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/am/service/application_functions.cpp" app_functions_source)
-set(app_functions_old "    auto const seed = res.first->raw.seed_for_pseudo_device_id;")
-string(FIND "${app_functions_source}" "${app_functions_old}" app_functions_at)
-if(app_functions_at LESS 0)
-    message(FATAL_ERROR "Pinned GetPseudoDeviceId changed")
+# Maintained service source: title metadata null handling plus a dev-only
+# witness of the version resolved from guest update content.
+set(EDEN_APP_FUNCTION_SOURCE "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/service/am/service/application_functions.cpp")
+if(NOT EXISTS "${EDEN_APP_FUNCTION_SOURCE}")
+    message(FATAL_ERROR "Missing maintained guest application metadata service")
 endif()
-string(REPLACE "${app_functions_old}"
-    "    auto const seed = res.first != nullptr ? res.first->raw.seed_for_pseudo_device_id : u64_le{0};"
-    app_functions_source "${app_functions_source}")
-write_derived("${PORT_BUILD_DIR}/application_functions.cpp" "${app_functions_source}")
+list(FIND core_sources "hle/service/am/service/application_functions.cpp" eden_app_old)
+if(eden_app_old EQUAL -1)
+    message(FATAL_ERROR "Pinned application metadata service source moved")
+endif()
 list(REMOVE_ITEM core_sources "hle/service/am/service/application_functions.cpp")
-list(APPEND core_sources "${PORT_BUILD_DIR}/application_functions.cpp")
+list(APPEND core_sources "${EDEN_APP_FUNCTION_SOURCE}")
 set_property(TARGET core PROPERTY SOURCES "${core_sources}")
+if(PS5_NATIVE AND EDEN_DEV_PROFILE)
+    target_compile_definitions(core PRIVATE EDEN_GUEST_TITLE_VERSION_DIAG=1)
+endif()
 # Core's NS query service owns this implementation from frontend_common.
 target_sources(core PRIVATE "${PROJECT_SOURCE_DIR}/src/frontend_common/play_time_manager.cpp")
 
