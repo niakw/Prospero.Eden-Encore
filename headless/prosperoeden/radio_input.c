@@ -64,7 +64,7 @@ static unsigned queue_write;
 static uint32_t button_state;
 static int analog_key = -1;
 static uint64_t analog_repeat_at;
-/* A held L1 or R1 repeats like the stick (the Game files browser pages with them). */
+/* Held shoulders repeat: L1/R1 page lists, L2/R2 zoom a retail jacket. */
 static int shoulder_key = -1;
 static uint64_t shoulder_repeat_at;
 /* So does a held D-pad direction: the last one pressed. */
@@ -131,7 +131,8 @@ static void process_sample(const unsigned char * sample)
         if((changed & buttons[i].button) != 0) {
             const bool down = (current & buttons[i].button) != 0;
             queue_push(buttons[i].key, down);
-            if(buttons[i].key == RADIO_INPUT_L1 || buttons[i].key == RADIO_INPUT_R1) {
+            if(buttons[i].key == RADIO_INPUT_L1 || buttons[i].key == RADIO_INPUT_R1 ||
+               buttons[i].key == RADIO_INPUT_L2 || buttons[i].key == RADIO_INPUT_R2) {
                 if(down) {
                     shoulder_key = buttons[i].key;
                     shoulder_repeat_at = monotonic_milliseconds() + STICK_REPEAT_DELAY_MS;
