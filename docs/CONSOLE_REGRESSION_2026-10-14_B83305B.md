@@ -31,6 +31,12 @@
 - The explicit unmapped-guest-execution fault is in `stderr.prev(9).log`, line 334: `MuseLogicThread_match jumped to an unmapped address`. It is **not** established for the b83305b release from its truncated stdout/heap trace; GPU unmapped-address counters do not cover this CPU prefetch-abort path.
 - Heap diagnostics showed `failures=0` in the observed snapshots; absence of allocation failure does not rule out wrong guest memory mapping.
 
+## Next independent worker-clock witness (commit after 92e6c26)
+- A GPU heartbeat older than 20 seconds reports on the native controller thread.
+- The stall path also samples the already-registered native CPU workers' OS CPU-time clocks: role, CPU-time nanoseconds or error. The worker registry is copied under a nonblocking try-lock; no per-frame or per-poll clock sampling is introduced.
+- **CPU time is not guest instruction progress**. A spinning JIT worker may increase CPU time while guest emulation is wedged. Compare two snapshots at least 30 seconds apart to identify CPU-bound versus sleeping host threads, then investigate guest kernel/HLE progress separately.
+- The detailed-logging preference still controls persistence of stderr and stdout. Disable it only if you intentionally do not need diagnostic evidence.
+
 ## Required engineering order before promising another console improvement
 
 1. **Guest execution and genuine freeze:** use the already-implemented fatal-path `pc/lr/sp/fp/tid` capture when a new mapped/unmapped fault occurs, and distinguish a running GPU/pad heartbeat from actual *guest* progress. Do not auto-retry an invalid jump.

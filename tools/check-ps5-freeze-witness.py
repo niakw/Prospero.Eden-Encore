@@ -28,6 +28,13 @@ assert 'latest_gpu_report_ns.store(' in performance
 assert 'std::memory_order_release' in performance
 assert 'std::memory_order_acquire' in performance
 assert 'EDEN_GPU_REPORT_STALLED' in performance
+assert 'EDEN_GPU_STALL_WORKER role=%s' in performance
+assert 'std::unique_lock<std::mutex> lock(workers_mutex, std::try_to_lock);' in performance
+assert 'snapshot = workers;' in performance
+assert 'clock_gettime(worker.clock, &usage)' in performance
+assert 'cpu_progress=not_measured' in performance
+assert performance.count('ReportGpuStallWorkerClocks(age_ms);') == 2
+assert performance.index('if (!GpuReportStale(now, progress_ns)) return;') < performance.index('ReportGpuStallWorkerClocks(age_ms);')
 assert 'dma_active_ms=%llu puller_active_ms=%llu' in performance
 assert 'ActiveDiagnosticWaitNs(gpu_dma_sync_active_since_ns)' in performance
 assert 'ActiveDiagnosticWaitNs(gpu_puller_semaphore_active_since_ns)' in performance
