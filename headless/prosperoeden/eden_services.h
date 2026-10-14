@@ -24,6 +24,7 @@ public:
     std::vector<pe::ui::Game> games(const std::atomic<bool>* cancel) override;
     pe::ui::Game enrich_game_media(pe::ui::Game game) override;
     pe::ui::Game enrich_game_media(pe::ui::Game game, const std::atomic<bool>* cancel) override;
+    pe::ui::BoxArt box_art(std::uint64_t title_id) override;
     std::string game_path(const std::string& file) override;
     bool game_exists(const std::string& file) override;
     bool game_storage_available() override;
