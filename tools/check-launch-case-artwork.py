@@ -50,7 +50,6 @@ for fragment in (
     "const Cover artwork = c.textures.cover(",
     "c.list.case_face(artwork.texture, face, angle, back, kWhite, paper_uv);",
     "c.list.case_spine(side_strip, angle, case_depth,",
-    "// Only the 12px clear molded latch rim, never a translucent second face.",
     "launch_screenshots_.front()",
     "const Rect physical{374.0f, 126.0f, 454.0f, 730.0f};",
     "c.textures.brand()",
