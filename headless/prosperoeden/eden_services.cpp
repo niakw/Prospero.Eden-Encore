@@ -480,7 +480,7 @@ bool FetchCaseFace(const std::vector<std::string>& candidates,
         if (!stbi_info_from_memory(
                 reinterpret_cast<const unsigned char*>(body.data()),
                 static_cast<int>(body.size()), &w, &h, &channels) ||
-            w < (narrow_spine ? 32 : 128) ||
+            w < (narrow_spine ? 12 : 128) ||
             h < (narrow_spine ? 128 : 200) || w > 4096 || h > 4096 ||
             static_cast<std::uint64_t>(w) * h > 3840u * 2160u)
             continue;
