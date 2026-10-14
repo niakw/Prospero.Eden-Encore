@@ -45,7 +45,7 @@ jobs:
           persist-credentials: true
       - name: Test full-crawl checkpoint/retry logic without Internet
         run: python3 -B tools/check-ps-glyph-long-crawl.py
-      - name: Calculate remaining authentic GitHub Switch + PC source queries
+      - name: Calculate outstanding cross-platform source queries
         id: plan
         run: |
           python3 - <<'PY'
@@ -90,7 +90,7 @@ jobs:
         run: |
           git fetch origin dev/ps5-sparse-jit
           git checkout -B eden-glyph-long-worker FETCH_HEAD
-      - name: Probe next never-searched Switch and other-platform games
+      - name: Probe previously unsearched guest and desktop title sources
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SHARD: ${{ matrix.shard }}

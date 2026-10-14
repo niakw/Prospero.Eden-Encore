@@ -345,7 +345,7 @@ jobs:
         if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
         run: make prepare JOBS=4
 
-      - name: Build and stage PS5 app (release OR all-on test)
+      - name: Build and stage native app (release or development)
         id: stage
         if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
         env:
@@ -378,7 +378,7 @@ jobs:
             python3 -B tools/ci/check-all-on-test-binary.py "$EDEN_STAGE_DIR" "$EDEN_TEST_TITLE_ID"
           fi
 
-      - name: Record matching unstripped ELF and staged PS5 binary SHA256
+      - name: Record matching debug ELF and native binary digests
         if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
         run: |
           python3 -B tools/ci/write-crash-provenance.py \
@@ -391,7 +391,7 @@ jobs:
       # extracted ZIP must yield /data/homebrew/PPSA99008/eboot.bin directly.
       # The compiled game's 16-hex Switch Title ID is for autoboot, never the
       # PS5 homebrew's own folder or sce_sys/param.json titleId.
-      - name: Validate self-contained PS5 test archive root
+      - name: Validate self-contained development package root
         if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
         run: |
           test -d build/dev/PPSA99008
@@ -406,7 +406,7 @@ jobs:
           print('PS5_TEST_ARCHIVE_ROOT_OK PPSA99008/eboot.bin')
           PY
 
-      - name: Upload checked all-on PS5 test app
+      - name: Upload validated native development package
         if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -419,14 +419,14 @@ jobs:
 
       # Verify the *uploaded* archive after extraction, not only the staging
       # tree. This catches upload-artifact flattening PPSA99008 by mistake.
-      - name: Verify actual downloadable PS5 ZIP folder structure
+      - name: Verify downloadable application archive layout
         if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v4.1.8
         with:
           name: Prospero.Eden-Encore-PS5-all-on-test
           path: build/zip-layout-verification
 
-      - name: Assert extracted PS5 title folder and metadata
+      - name: Verify extracted title directory and runtime metadata
         if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
         run: |
           test -f build/zip-layout-verification/PPSA99008/eboot.bin
@@ -443,7 +443,7 @@ jobs:
           print('EXTRACTED_PS5_TEST_ZIP PASS: PPSA99008/eboot.bin + matching titleId')
           PY
 
-      - name: Upload unstripped PS5 All-On crash symbols
+      - name: Upload native development debug symbols
         if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
