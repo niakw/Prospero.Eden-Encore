@@ -835,21 +835,22 @@ void Launcher::draw_launch(Canvas &c)
     } else {
         c.list.case_face(0, face, angle, back, Color::rgb(0x251a43));
     }
-    // Clear molded top and bottom must be in FRONT of the printed rear
-    // scan in painter order; previously both caps were hidden underneath.
+    // Depth-bearing top/bottom plastic caps remain in painter order above
+    // the scan. Their front/rear refractive outline is separately lit by
+    // the single shape-11 shell rim, even when these faces project edge-on.
     c.list.case_cap({physical.x + case_radius, physical.y,
                      physical.w - 2.0f * case_radius, physical.h},
                     angle, false, case_depth,
-                    Color::rgb(0xdce9f8, 0.39f),
-                    Color::rgb(0x687890, 0.35f));
+                    Color::rgb(0xe9f3ff, 0.79f),
+                    Color::rgb(0x71859d, 0.62f));
     c.list.case_cap({physical.x + case_radius, physical.y,
                      physical.w - 2.0f * case_radius, physical.h},
                     angle, true, case_depth,
-                    Color::rgb(0xc9d8e9, 0.37f),
-                    Color::rgb(0x647287, 0.34f));
-    // Only the 12px clear molded latch rim, never a translucent second face.
-    // The shader gives every other pixel of this projected quad zero alpha.
-    // The same RIGHT physical rim naturally projects LEFT on the rear view.
+                    Color::rgb(0xddeaf8, 0.78f),
+                    Color::rgb(0x60748a, 0.65f));
+    // One 12px latch plus 13px TOP/BOTTOM mold lines, NEVER a translucent
+    // second face over the print: the shader clips strictly to these strips.
+    // On the rear view the same physical right opening projects to the left.
     c.list.case_plastic(physical, angle, back, Color::rgb(0xd9e8f7, 0.93f));
 
     // A real case has TWO different sides. The left is the printed red
