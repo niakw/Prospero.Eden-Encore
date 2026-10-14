@@ -756,29 +756,38 @@ void Launcher::draw_launch(Canvas &c)
             (seconds - return_start) / theme::kCaseTurnSeconds);
     }
     const float angle = motion() > 0.0f ?
-        0.13f + 6.2831853071795864769f * revolution : 0.13f;
+        0.53f + 6.2831853071795864769f * revolution : 0.53f;
     const float facing = std::cos(angle);
     const bool back = facing < 0.0f;
+    constexpr float case_depth = 64.0f;
+    constexpr float case_radius = 31.0f;
     const float width = 422.0f * std::abs(facing) +
-                        34.0f * std::abs(std::sin(angle));
+                        case_depth * std::abs(std::sin(angle));
     const Rect physical{390.0f, 162.0f, 422.0f, 655.0f};
     const Rect face{physical.x + 9.0f, physical.y + 9.0f,
                     physical.w - 18.0f, physical.h - 18.0f};
     const float mid_x = physical.x + physical.w * 0.5f;
-    c.list.shadow({mid_x - width * 0.5f - 25.0f, 158.0f,
-                   width + 50.0f, 671.0f}, 40.0f, 84.0f,
-                  theme::kSun.with_alpha(0.38f));
-    c.list.shadow({mid_x - width * 0.5f - 15.0f, 168.0f,
-                   width + 30.0f, 640.0f}, 30.0f, 55.0f,
+    c.list.shadow({mid_x - width * 0.5f - 65.0f, 184.0f,
+                   width + 130.0f, 670.0f}, 38.0f, 104.0f,
+                  Color::rgb(0x07030f, 0.76f));
+    c.list.shadow({mid_x - width * 0.5f - 29.0f, 190.0f,
+                   width + 58.0f, 634.0f}, 32.0f, 49.0f,
                   theme::kBlue.with_alpha(0.20f));
+    c.list.shadow({mid_x - width * 0.40f - 40.0f, 802.0f,
+                   width * 0.8f + 80.0f, 96.0f}, 40.0f, 78.0f,
+                  Color::rgb(0x020209, 0.72f));
 
     // PSD reference: a shallow polycarbonate box, about 8% spine thickness.
     // The original template remains external; this is OUR shared geometric
     // model and uses no pre-rendered cover-box layer.
-    c.list.case_cap(physical, angle, false, 28.0f,
+    c.list.case_cap({physical.x + case_radius, physical.y,
+                     physical.w - 2.0f * case_radius, physical.h},
+                    angle, false, case_depth,
                     Color::rgb(0xf1f5fe, 0.90f),
                     Color::rgb(0xabb6cf, 0.74f));
-    c.list.case_cap(physical, angle, true, 28.0f,
+    c.list.case_cap({physical.x + case_radius, physical.y,
+                     physical.w - 2.0f * case_radius, physical.h},
+                    angle, true, case_depth,
                     Color::rgb(0xd8dfed, 0.82f),
                     Color::rgb(0x757c91, 0.71f));
     // The same clear-polycarbonate 3D shell surrounds every game. Printed
@@ -815,19 +824,33 @@ void Launcher::draw_launch(Canvas &c)
 
     // Opaque red printed spine under translucent plastic, white outer rails,
     // and two molded hinges. The material is common to all game editions.
-    c.list.case_spine(physical, angle, 22.0f,
+    const Rect side_strip{physical.x, physical.y + case_radius, physical.w,
+                          physical.h - 2.0f * case_radius};
+    c.list.case_spine(side_strip, angle, case_depth - 6.0f,
                       Color::rgb(0xe72536), Color::rgb(0x971421), 3.0f);
-    c.list.case_spine(physical, angle, 3.0f,
+    c.list.case_spine(side_strip, angle, 3.0f,
                       Color::rgb(0xf8faff, 0.92f),
                       Color::rgb(0xd8dfed, 0.86f), 0.0f);
-    c.list.case_spine(physical, angle, 3.0f,
+    c.list.case_spine(side_strip, angle, 3.0f,
                       Color::rgb(0xf7f9ff, 0.87f),
-                      Color::rgb(0xc8ccdb, 0.76f), 25.0f);
+                      Color::rgb(0xc8ccdb, 0.76f), case_depth - 3.0f);
     for (int hinge = 0; hinge < 2; ++hinge) {
         const float y = physical.y + (hinge == 0 ? 43.0f : physical.h - 64.0f);
-        c.list.case_spine({physical.x, y, physical.w, 19.0f}, angle, 29.0f,
+        c.list.case_spine({physical.x, y, physical.w, 19.0f}, angle, case_depth,
                           Color::rgb(0xecedf3, 0.88f),
                           Color::rgb(0xaaa9bd, 0.69f));
+    }
+
+    // A true curved perimeter: 8 actual depth-bearing strips per quarter
+    // arc. Only the visible pair occludes the printed insert.
+    const bool show_left = std::sin(angle) >= 0.0f;
+    for (int quadrant = 0; quadrant < 4; ++quadrant) {
+        const bool left = quadrant == 0 || quadrant == 3;
+        if (left != show_left) continue;
+        for (int part = 0; part < 8; ++part)
+            c.list.case_corner(physical, angle, case_radius, case_depth,
+                               quadrant, part, Color::rgb(0xf5f8ff, 0.94f),
+                               Color::rgb(0x8f99ae, 0.86f));
     }
 
     if (c.textures.brand() != 0)
