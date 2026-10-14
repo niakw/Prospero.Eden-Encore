@@ -79,7 +79,10 @@ void main()
         } else if (shape == 10 || shape == 14) {
             // The side lies between two parallel printed planes. It occupies
             // real space in Z rather than being a 2D strip in screen-space.
-            float edge_x = (sn > 0.0 ? -0.5 : 0.5) * size.x;
+            float side = a_extra.x < -0.5 ? -0.5 :
+                         a_extra.x > 0.5 ? 0.5 :
+                         (sn > 0.0 ? -0.5 : 0.5);
+            float edge_x = side * size.x;
             float depth = a_params.z + corner.x * a_params.y;
             x = edge_x * cs - depth * sn;
             z = -edge_x * sn - depth * cs;
