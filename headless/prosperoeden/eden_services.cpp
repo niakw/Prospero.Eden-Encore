@@ -645,14 +645,15 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
         retries[title_id] = std::chrono::steady_clock::now() + std::chrono::minutes(5);
     }
     bool all_ready = true;
+    const bool both_faces_cached_at_start =
+        ValidNlibTga(CaseFacePath(title_id, "front")) &&
+        ValidNlibTga(CaseFacePath(title_id, "back"));
     for (int side = 0; side < 3; ++side) {
         if (cancel && cancel->load(std::memory_order_acquire)) return;
         // The optional spine must NEVER delay publication of either paper
         // face. On this first pass fetch front/back; fetch spine on a later
         // media refresh after both are already cached.
-        if (side == 2 &&
-            (!ValidNlibTga(CaseFacePath(title_id, "front")) ||
-             !ValidNlibTga(CaseFacePath(title_id, "back")))) {
+        if (side == 2 && !both_faces_cached_at_start) {
             all_ready = false;
             break;
         }
@@ -1477,6 +1478,11 @@ std::vector<pe::ui::Game> EdenServices::games(const std::atomic<bool>* cancel) {
                 game.developer = nlib.developer;
                 game.release_date = nlib.release_date;
                 game.categories = nlib.categories;
+                // Render already-cached real paper scans immediately during
+                // local enumeration, without waiting for network enrichment.
+                const pe::ui::BoxArt cached_case = box_art(game.title_id);
+                game.box_front = cached_case.front;
+                game.box_back = cached_case.back;
             }
             const GameLanguage language = LanguageFor(path, game.title_id, language_choice);
             game.addons = AddOnSummary(game.title_id);
@@ -1514,6 +1520,17 @@ pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game,
         (cancel && cancel->load(std::memory_order_acquire))) return game;
     const int language_choice = Eden::LoadPreferences().language;
     const std::string scanned_name = game.name;
+    // Prioritize the requested ORIGINAL retail scans before any optional
+    // metadata/banner/icon requests. Nlib may perform multiple slow calls;
+    // previously a complete retail front could remain invisible for minutes.
+    EnsureRetailCase(game.title_id, scanned_name, CleanTitle(game.file),
+                     language_choice, cancel);
+    if (!(cancel && cancel->load(std::memory_order_acquire))) {
+        const auto cached_case = box_art(game.title_id);
+        game.box_front = cached_case.front;
+        game.box_back = cached_case.back;
+    }
+    if (cancel && cancel->load(std::memory_order_acquire)) return game;
     NlibEnrichment enrichment = EnsureNlibEnrichment(game.title_id, language_choice, cancel);
     game.artwork_changed = enrichment.artwork_changed;
     if (!enrichment.icon.empty()) game.cover = std::move(enrichment.icon);
@@ -1527,17 +1544,18 @@ pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game,
     if (!enrichment.developer.empty()) game.developer = std::move(enrichment.developer);
     if (!enrichment.release_date.empty()) game.release_date = std::move(enrichment.release_date);
     if (!enrichment.categories.empty()) game.categories = std::move(enrichment.categories);
-    // Reuse this already asynchronous media worker. Both faces are downloaded
-    // only when indexed, never during the actual title handoff.
-    EnsureRetailCase(game.title_id, game.name,
-                     scanned_name != game.name ? scanned_name :
-                     CleanTitle(game.file), language_choice, cancel);
-    // This work stays on the media worker. Library drawing/navigation never
-    // reopens all retail scans to look them up at 60 Hz.
+    // A newly fetched localized Nlib name may match a catalog title that the
+    // ROM header did not. Give it its own lookup, but never perform any HTTP
+    // from the launcher draw or game-start path.
+    if ((game.box_front.empty() || game.box_back.empty()) &&
+        scanned_name != game.name) {
+        EnsureRetailCase(game.title_id, game.name, scanned_name,
+                         language_choice, cancel);
+    }
     if (!(cancel && cancel->load(std::memory_order_acquire))) {
         const auto box = box_art(game.title_id);
-        game.box_front = box.front;
-        game.box_back = box.back;
+        if (!box.front.empty()) game.box_front = box.front;
+        if (!box.back.empty()) game.box_back = box.back;
     }
     return game;
 }
