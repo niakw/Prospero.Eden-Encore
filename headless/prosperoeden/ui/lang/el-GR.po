@@ -1608,3 +1608,15 @@ msgstr "Κλείσιμο"
 #: pe/ui/library.cpp
 msgid "Down: view back cover"
 msgstr "Κάτω: προβολή οπισθόφυλλου"
+
+#: pe/ui/library.cpp
+msgid "Zoom out"
+msgstr "Σμίκρυνση"
+
+#: pe/ui/library.cpp
+msgid "Zoom in"
+msgstr "Μεγέθυνση"
+
+#: pe/ui/library.cpp
+msgid "Move cover"
+msgstr "Μετακίνηση εξωφύλλου"

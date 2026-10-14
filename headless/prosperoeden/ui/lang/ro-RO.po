@@ -1608,3 +1608,15 @@ msgstr "Închide"
 #: pe/ui/library.cpp
 msgid "Down: view back cover"
 msgstr "Jos: vezi spatele copertei"
+
+#: pe/ui/library.cpp
+msgid "Zoom out"
+msgstr "Micșorează"
+
+#: pe/ui/library.cpp
+msgid "Zoom in"
+msgstr "Mărește"
+
+#: pe/ui/library.cpp
+msgid "Move cover"
+msgstr "Mută coperta"

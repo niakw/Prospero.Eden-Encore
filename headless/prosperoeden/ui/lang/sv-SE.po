@@ -1608,3 +1608,15 @@ msgstr "Stäng"
 #: pe/ui/library.cpp
 msgid "Down: view back cover"
 msgstr "Ned: visa omslagets baksida"
+
+#: pe/ui/library.cpp
+msgid "Zoom out"
+msgstr "Zooma ut"
+
+#: pe/ui/library.cpp
+msgid "Zoom in"
+msgstr "Zooma in"
+
+#: pe/ui/library.cpp
+msgid "Move cover"
+msgstr "Flytta omslag"

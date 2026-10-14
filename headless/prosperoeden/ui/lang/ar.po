@@ -1608,3 +1608,15 @@ msgstr "إغلاق"
 #: pe/ui/library.cpp
 msgid "Down: view back cover"
 msgstr "أسفل: عرض الغلاف الخلفي"
+
+#: pe/ui/library.cpp
+msgid "Zoom out"
+msgstr "تصغير"
+
+#: pe/ui/library.cpp
+msgid "Zoom in"
+msgstr "تكبير"
+
+#: pe/ui/library.cpp
+msgid "Move cover"
+msgstr "تحريك الغلاف"

@@ -1659,5 +1659,17 @@ msgstr "Tir"
 #: pe/ui/library.cpp
 msgid "Close"
 msgstr "Fermer"
+
+#: pe/ui/library.cpp
+msgid "Zoom out"
+msgstr "Zoom arrière"
+
+#: pe/ui/library.cpp
+msgid "Zoom in"
+msgstr "Zoom avant"
+
+#: pe/ui/library.cpp
+msgid "Move cover"
+msgstr "Déplacer la jaquette"
 )FRPO";
 }

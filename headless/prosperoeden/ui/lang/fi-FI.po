@@ -1608,3 +1608,15 @@ msgstr "Sulje"
 #: pe/ui/library.cpp
 msgid "Down: view back cover"
 msgstr "Alas: näytä takakansi"
+
+#: pe/ui/library.cpp
+msgid "Zoom out"
+msgstr "Loitonna"
+
+#: pe/ui/library.cpp
+msgid "Zoom in"
+msgstr "Lähennä"
+
+#: pe/ui/library.cpp
+msgid "Move cover"
+msgstr "Siirrä kantta"

@@ -1608,3 +1608,15 @@ msgstr "Закрыть"
 #: pe/ui/library.cpp
 msgid "Down: view back cover"
 msgstr "Вниз: показать оборот обложки"
+
+#: pe/ui/library.cpp
+msgid "Zoom out"
+msgstr "Уменьшить"
+
+#: pe/ui/library.cpp
+msgid "Zoom in"
+msgstr "Увеличить"
+
+#: pe/ui/library.cpp
+msgid "Move cover"
+msgstr "Переместить обложку"

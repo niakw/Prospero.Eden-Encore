@@ -1608,3 +1608,15 @@ msgstr "ปิด"
 #: pe/ui/library.cpp
 msgid "Down: view back cover"
 msgstr "ลง: ดูปกหลัง"
+
+#: pe/ui/library.cpp
+msgid "Zoom out"
+msgstr "ย่อ"
+
+#: pe/ui/library.cpp
+msgid "Zoom in"
+msgstr "ขยาย"
+
+#: pe/ui/library.cpp
+msgid "Move cover"
+msgstr "ย้ายปก"
