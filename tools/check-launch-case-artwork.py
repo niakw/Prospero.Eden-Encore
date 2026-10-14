@@ -118,7 +118,7 @@ assert "void DrawList::case_cap(" in drawlist
 assert "void DrawList::case_corner(" in drawlist
 assert "void DrawList::case_spine_image(" in drawlist
 assert "depth_offset * transform_.scale" in drawlist
-assert "clip_w = max(0.65, 1.0 - z / 950.0)" in shader
+assert "clip_w = max(0.65, 1.0 - z / 780.0)" in shader
 assert "gl_Position = vec4(ndc.x * clip_w, -ndc.y * clip_w, 0.0, clip_w);" in shader
 assert "1.0 - corner.x : corner.x" in shader
 assert "shape == 9 || shape == 10 || shape == 11 || shape == 12" in shader
@@ -129,7 +129,8 @@ assert "else if (shape == 14)" in shader
 assert "printed_side_visible" in draw
 assert "c.list.case_spine_image(ink.texture, side_strip, angle," in draw
 assert "True rounded corner" in shader
-assert "float d = round_box(v_local, v_half, 12.0);" in shader
+assert "float radius = v_params.z > 0.5 ? 10.0 : 30.0;" in shader
+assert "float rounded = round_box(v_local, v_half, 30.0);" in shader
 assert "angle, false, case_depth," in draw
 assert "c.list.case_corner(physical, angle, case_radius, case_depth," in draw
 assert "constexpr float case_depth = 64.0f;" in draw
