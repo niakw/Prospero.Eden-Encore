@@ -44,7 +44,7 @@ for catalog in catalogs:
     assert not core_missing, f"{catalog.name}: missing translated core UI labels {core_missing}"
     if stale:
         raise AssertionError(f"{catalog.name}: {len(stale)} stale msgid entries, examples={sorted(stale)[:5]}")
-    if catalog.stem in {"fr-FR", "fr-CA"}:
+    if catalog.stem in {"fr-FR", "fr-CA", "es-ES", "es-419"}:
         assert not missing, f"{catalog.name} maintained language has {len(missing)} missing"
     elif len(missing) > 117:
         raise AssertionError(f"{catalog.name}: translation coverage regressed; {len(missing)} untranslated")
