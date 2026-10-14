@@ -153,7 +153,7 @@ void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
 void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
                         bool rear, float shadow, float texture_scale = 1.0f)
 {
-    const float side = std::max(4.0f, shell.w * 0.022f);
+    const float side = std::max(5.0f, shell.w * 0.027f);
     const float top = std::max(5.0f, shell.h * 0.018f);
     const float radius = std::max(5.0f, shell.w * 0.028f);
     // One continuous square-corner paper wrap, folded directly onto the
@@ -166,6 +166,12 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
         c.list.shadow({shell.x + 2.0f, shell.y + 7.0f, shell.w - 4.0f,
                        shell.h - 1.0f}, radius, 21.0f * shadow,
                       Color::rgb(0x02030a, 0.64f));
+
+    // The pale molded case substrate is BEHIND the printed sleeve. The
+    // opening side remains readable against dark UI backgrounds without
+    // coating the entire front/back scan in a translucent second layer.
+    c.list.gradient_rect(shell, radius, Color::rgb(0xb6c4d5, 0.78f),
+                         Color::rgb(0x66778c, 0.79f));
 
     const std::string& scan = rear ? game.box_back : game.box_front;
     if (!scan.empty()) {
@@ -200,22 +206,54 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
         flat_front_fallback(c, game, paper);
     }
 
-    // Only real clear plastic: narrow TOP/BOTTOM caps and the opening side.
-    // No transparent film over the entire print and NO right-hand plastic
-    // margin on the back (the rear scan meets the red printed fold there).
+    // ONE physical shell: narrow top/bottom molded caps and ONE clear
+    // opening edge. On the front it is RIGHT; on the rear it is LEFT.
+    // Never add a clear vertical border at the rear's RIGHT printed fold.
     c.list.gradient_rect({shell.x, shell.y, shell.w, top}, 0.0f,
-                         Color::rgb(0xf3faff, 0.48f),
-                         Color::rgb(0x8da2b9, 0.18f));
+                         Color::rgb(0xf7fcff, 0.76f),
+                         Color::rgb(0x71859d, 0.54f));
     c.list.gradient_rect({shell.x, shell.y + shell.h - top,
                           shell.w, top}, 0.0f,
-                         Color::rgb(0x7e91a8, 0.24f),
-                         Color::rgb(0xf4faff, 0.49f));
+                         Color::rgb(0x74869d, 0.55f),
+                         Color::rgb(0xf3f9ff, 0.78f));
+    const float cap_ridge = std::max(1.0f, top * 0.17f);
+    c.list.gradient_rect({shell.x, shell.y + top - cap_ridge,
+                          shell.w, cap_ridge}, 0.0f,
+                         Color::rgb(0xffffff, 0.43f),
+                         Color::rgb(0x99b1c9, 0.24f));
+    c.list.gradient_rect({shell.x, shell.y + shell.h - top,
+                          shell.w, cap_ridge}, 0.0f,
+                         Color::rgb(0x33465d, 0.29f),
+                         Color::rgb(0xf5faff, 0.34f));
+
     const float opening_x = rear ? shell.x : shell.x + shell.w - side;
-    c.list.hgradient_rect({opening_x, shell.y + top, side,
-                           shell.h - 2.0f * top}, 0.0f,
-                          Color::rgb(0xf3faff, rear ? 0.47f : 0.21f),
-                          Color::rgb(0x98acc4, 0.17f));
-    // Paper has square corners and is never covered with a second bezel.
+    const float opening_y = shell.y + top;
+    const float opening_h = shell.h - 2.0f * top;
+    const float highlight_w = std::max(1.1f, side * 0.25f);
+    // Diffused body plus separate refractive outside highlight and darker
+    // inner seal. Gradients reverse with the side, not with the scan UV.
+    c.list.hgradient_rect({opening_x, opening_y, side, opening_h}, 0.0f,
+                          rear ? Color::rgb(0xf7fbff, 0.91f)
+                               : Color::rgb(0x788fa9, 0.68f),
+                          rear ? Color::rgb(0x7489a2, 0.70f)
+                               : Color::rgb(0xf5faff, 0.92f));
+    const float glint_x = rear ? opening_x : opening_x + side - highlight_w;
+    c.list.hgradient_rect({glint_x, opening_y, highlight_w, opening_h}, 0.0f,
+                          Color::rgb(0xffffff, rear ? 0.64f : 0.35f),
+                          Color::rgb(0xe6f4ff, rear ? 0.35f : 0.72f));
+    const float seal_x = rear ? opening_x + side - highlight_w : opening_x;
+    c.list.hgradient_rect({seal_x, opening_y, highlight_w, opening_h}, 0.0f,
+                          Color::rgb(0x354a66, rear ? 0.36f : 0.17f),
+                          Color::rgb(0xa4bed6, rear ? 0.15f : 0.35f));
+    // Fine manufacturing striations live on the opening rim ONLY.
+    // They suggest transparent textured plastic without painting the art.
+    for (int i = 1; i < 5; ++i) {
+        const float y = opening_y + opening_h * (float(i) / 5.0f);
+        c.list.gradient_rect({opening_x, y, side, 1.0f}, 0.0f,
+                             Color::rgb(0xffffff, 0.18f),
+                             Color::rgb(0x7189a4, 0.12f));
+    }
+    // The paper keeps square corners and its original branding untouched.
 }
 
 std::string controller_profile_name(int layout, const ButtonMapping& mapping)
