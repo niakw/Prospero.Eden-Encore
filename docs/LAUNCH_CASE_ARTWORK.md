@@ -136,6 +136,27 @@ material is now photorealistic. Inspect actual frame screenshots before
 declaring the design ready; assess projection, printed-spine readability,
 bevel shading, contact shadows and face sharpness.
 
+## Real physical case material and printed side
+
+The model is a **true volume** rather than two 2D sprites. It has two planes
+64 virtual pixels apart, two solid connecting caps, left/right sides, a
+31px corner radius built from eight extruded arc segments on each exposed
+corner, curved plastic highlights, restrained specular edges and an ambient
+object shadow. The shell and materials are owned entirely by Encore.
+
+An optional independent **Box - Spine** flat scan is indexed and cached the
+same way as Box - Front/Back, with region-ranked candidates. A real scanned
+spine is texture-mapped onto the left red side of the model. The opposite
+right-hand side is the semi-transparent hinged/latch edge; it does not reuse
+the printed sleeve. Without a valid spine scan, the real side geometry still
+uses a red unprinted fallback. No pre-rendered 3D cover or PSD component is
+used as a game-side texture. The physical volume is the same for every game.
+
+Attractive results depend on original source quality. The public test
+source for the French back and European spine may still provide only low-
+resolution thumbnails even when the catalog advertises high-res scans.
+A successful shader test proves rendering works, not photorealism.
+
 ## Real renderer screenshot test
 
 `.github/workflows/launcher-production-preview.yml` captures
