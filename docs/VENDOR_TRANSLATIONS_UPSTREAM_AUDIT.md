@@ -81,3 +81,13 @@ gate fails if any supported locale loses a translation.
 ## Additional native CMake migration (14 October 2026)
 
 Pinned-source-equivalent copies of the code loader and bounded error logger now live under `vendor/encore-active/eden-core/src`. Their generated CMake translation units have been replaced by maintained sources, and a source-parity regression gate checks both against their exact pinned transformations. The count is now **79 write_derived**, **89 file(READ** and **227 string(REPLACE** occurrences. Migration is incomplete, and native compilation on the new commit remains to be verified.
+
+## Maintained audio units (14 October 2026)
+
+The pinned native audio sink-selection unit and renderer voice-flag unit are now
+versioned under `vendor/encore-active/eden-core/src`. Exact source-parity
+checks ensure the native sink factory and SRC bit position keep their former
+behaviour. The buffer-stream generation is **not** migrated or modified.
+CMake generation debt is now **77 write_derived**, **87 file(READ**, and
+**225 string(REPLACE** calls. This is source-only validation pending a fresh
+native compile and is not a correction of the FC27 end-match freeze.
