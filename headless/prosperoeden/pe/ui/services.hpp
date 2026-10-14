@@ -31,6 +31,8 @@ enum class Key : std::uint8_t
     down,
     left,
     right,
+    l2, // Library jacket: zoom out
+    r2, // Library jacket: zoom in
 };
 
 // Button mapping shared with the runtime: guest button -> physical DualSense button.
