@@ -11,6 +11,8 @@
 #include <array>
 #include <chrono>
 #include <cstdio>
+#include <cctype>
+#include <sstream>
 #include <exception>
 #include <iterator>
 #include <new>
@@ -49,6 +51,45 @@ constexpr int kDialogRowsShown = 5;
 constexpr Rect kDialogWindow{592.0f, kDialogRowsTop, 736.0f,
                              kDialogRowPitch * (kDialogRowsShown - 1) + kDialogRowHeight};
 constexpr float kDialogHints = 848.0f;
+
+// Presentation-only conversions: never rewrite the original Nlib metadata.
+std::string library_date(const std::string& iso, const std::string& region)
+{
+    if (iso.size() < 10 || iso[4] != '-' || iso[7] != '-')
+        return iso;
+    for (const int pos : {0, 1, 2, 3, 5, 6, 8, 9})
+        if (!std::isdigit(static_cast<unsigned char>(iso[static_cast<std::size_t>(pos)])))
+            return iso;
+    const auto y = iso.substr(0, 4), m = iso.substr(5, 2), d = iso.substr(8, 2);
+    if (region == tr("USA")) return m + "/" + d + "/" + y;
+    if (region == tr("Japan") || region == tr("China") ||
+        region == tr("Korea") || region == tr("Taiwan")) return y + "/" + m + "/" + d;
+    return d + "/" + m + "/" + y;
+}
+std::string library_genres(const std::string& genres)
+{
+    std::istringstream stream(genres);
+    std::string part, result;
+    while (std::getline(stream, part, ',')) {
+        const auto start = part.find_first_not_of(" \\t");
+        if (start == std::string::npos) continue;
+        const auto stop = part.find_last_not_of(" \\t");
+        if (!result.empty()) result += " · ";
+        result += tr(part.substr(start, stop - start + 1));
+    }
+    return result;
+}
+std::string library_size(const std::string& size)
+{
+    const auto pos = size.find(" GB");
+    return pos == std::string::npos ? size :
+        size.substr(0, pos) + " " + tr("GB") + size.substr(pos + 3);
+}
+std::string library_format(const std::string& format)
+{
+    if (format.empty()) return tr("Unknown");
+    return format.front() == '.' ? format : "." + format;
+}
 
 std::string controller_profile_name(int layout, const ButtonMapping& mapping)
 {
@@ -920,82 +961,52 @@ void Launcher::draw_library(Canvas &c)
     text(c, list_position(count > 0 ? library_.selected + 1 : 0, count), 1848.0f,
          baseline(150.0f, 32.0f, theme::kSmall), theme::kSmall, theme::kLimePale, Align::right);
 
-    // ---- horizontal TV-first game rail ----
-    constexpr float rail_x = 72.0f;
-    constexpr float rail_y = 220.0f;
-    constexpr float rail_w = 1776.0f;
-    constexpr float gap = 20.0f;
+    // Five authentic portrait flat covers on a continuous shelf; no square
+    // ROM thumbnails or 3D prefab images. The launcher handles depth alone.
+    constexpr float rail_x = 72.0f, rail_y = 205.0f, rail_w = 1776.0f;
+    constexpr float shelf_y = 498.0f;
     constexpr int slots = 5;
-    constexpr float card_h = 286.0f;
-    constexpr float card_w = (rail_w - gap * float(slots - 1)) / float(slots);
-
-    if (count == 0)
-    {
-        const Rect empty{rail_x, rail_y, rail_w, card_h};
-        glass(c, empty, 28.0f, theme::kGlass.with_alpha(0.58f), theme::kPanelEdge.with_alpha(0.48f));
-        text(c, tr("No ROM files found."), empty.x + empty.w * 0.5f,
-             baseline(empty.y, empty.h, theme::kText24), theme::kText24, theme::kCopy, Align::center);
-    }
-    else
-    {
+    constexpr float gap = 20.0f;
+    constexpr float card_w = (rail_w - gap * (slots - 1)) / float(slots);
+    constexpr float sleeve_w = 181.0f, sleeve_h = 278.0f;
+    list.shadow({rail_x + 3.0f, shelf_y, rail_w - 6.0f, 20.0f}, 9.0f,
+                25.0f, theme::kScrim.with_alpha(0.65f));
+    list.gradient_rect({rail_x, shelf_y, rail_w, 7.0f}, 3.0f,
+                       theme::kPanelEdge.with_alpha(0.23f),
+                       theme::kFocusCore.with_alpha(0.48f));
+    if (count == 0) {
+        text(c, tr("No ROM files found."), 960.0f, baseline(240.0f, 190.0f, theme::kText24),
+             theme::kText24, theme::kCopy, Align::center);
+    } else {
         const int first = std::clamp(library_.selected - slots / 2, 0, std::max(0, count - slots));
         const int last = std::min(count, first + slots);
-        for (int index = first; index < last; ++index)
-        {
+        for (int index = first; index < last; ++index) {
             const int slot = index - first;
             const Game& game = games_[static_cast<std::size_t>(index)];
-            const Rect card{rail_x + float(slot) * (card_w + gap), rail_y, card_w, card_h};
             const bool selected = index == library_.selected;
-            const float lift = selected ? 1.0f : 0.0f;
-            list.push_transform(selected ? 1.025f : 1.0f, card.x + card.w * 0.5f,
-                                card.y + card.h * 0.5f, 0.0f, selected ? -5.0f : 0.0f);
+            const float x = rail_x + float(slot) * (card_w + gap) +
+                            (card_w - sleeve_w) * 0.5f;
+            const Rect sleeve{x, rail_y, sleeve_w, sleeve_h};
+            list.push_transform(selected ? 1.045f : 1.0f,
+                                x + sleeve_w * 0.5f, rail_y + sleeve_h * 0.5f,
+                                0.0f, selected ? -6.0f : 0.0f);
+            list.shadow({x - 5.0f, rail_y - 4.0f, sleeve_w + 10.0f, sleeve_h + 13.0f},
+                        8.0f, selected ? 30.0f : 17.0f,
+                        theme::kScrim.with_alpha(0.72f));
             if (selected)
-                list.shadow({card.x - 7.0f, card.y - 5.0f, card.w + 14.0f, card.h + 16.0f},
-                            28.0f, 42.0f, theme::kLime.with_alpha(0.20f));
-            plate_rest(c, kTilePlate, card);
-            // A square Nlib/ROM icon belongs on a square game tile; the
-            // panoramic banner is only a fallback, never the first choice.
-            const std::string& artwork = !game.cover.empty() ? game.cover : game.hero;
-            const Rect tile_art{card.x + 4.0f, card.y + 4.0f,
-                                card.w - 8.0f, card.h - 8.0f};
-            cover_crop(c, artwork, tile_art, 20.0f, selected ? 0.42f : 0.28f);
-            const Cover image = c.textures.cover(artwork, std::max(tile_art.w, tile_art.h));
-            if (image.texture == 0) {
-                const bool fetching = game.title_id != 0 &&
-                    (media_scan_title_id_ == game.title_id ||
-                     home_media_scan_title_id_ == game.title_id);
-                text_shrink(c, tr(fetching || !image.missing ?
-                                      "Loading artwork" : "Artwork unavailable"),
-                            card.x + card.w * 0.5f,
-                            baseline(card.y + 78.0f, 35.0f, 16.0f), 16.0f,
-                            theme::kMuted, card.w - 22.0f, Align::center);
-            }
-            // The scrim must meet the BOTTOM edge of the art exactly. The
-            // previous .43/.53 ratios ended 4% above the card bottom, leaving
-            // an unnatural bright strip under the title and player badge.
-            list.gradient_rect({tile_art.x, tile_art.y + tile_art.h * 0.43f,
-                                tile_art.w, tile_art.h * 0.57f}, 20.0f,
-                               theme::kScrim.with_alpha(0.0f), theme::kScrim.with_alpha(0.94f));
-            if (selected)
-                plate_focus(c, kTilePlate, card, lift);
-
-            text_shrink(c, game.name, card.x + 20.0f,
-                        baseline(card.y + card.h - 66.0f, 32.0f, 22.0f), 22.0f,
-                        theme::kTitle, card.w - 40.0f);
-            text_shrink(c, game.format, card.x + 20.0f,
-                        baseline(card.y + card.h - 31.0f, 22.0f, 15.0f), 15.0f,
-                        theme::kMeta, 90.0f);
-            if (game.max_players > 0)
-            {
-                // Full-white DualSense at TV distance; the former 30x21
-                // image mask was barely visible against the black scrim.
-                dualsense_icon(c, {card.x + card.w - 87.0f, card.y + card.h - 41.0f,
-                                   42.0f, 29.0f}, theme::kTitle, 1.0f);
-                text(c, "×" + std::to_string(game.max_players), card.x + card.w - 16.0f,
-                     baseline(card.y + card.h - 36.0f, 22.0f, 15.0f), 15.0f,
-                     theme::kTitle, Align::right);
-            }
+                list.shadow({x - 5.0f, rail_y - 4.0f, sleeve_w + 10.0f, sleeve_h + 9.0f},
+                            8.0f, 28.0f, theme::kLime.with_alpha(0.30f));
+            const std::string& face = !game.box_front.empty() ? game.box_front : game.cover;
+            cover(c, face, sleeve, 5.0f, 0.16f);
+            list.bordered_rect(sleeve, 5.0f, theme::kGlass.with_alpha(0.0f),
+                               selected ? 2.2f : 1.0f,
+                               selected ? theme::kFocusCore.with_alpha(0.93f) :
+                                          theme::kPanelEdge.with_alpha(0.45f));
             list.pop_transform();
+            text_shrink(c, game.name, x + sleeve_w * 0.5f,
+                        baseline(rail_y + sleeve_h + 6.0f, 24.0f, 16.0f),
+                        16.0f, selected ? theme::kTitle : theme::kMeta,
+                        card_w - 12.0f, Align::center);
         }
     }
 
@@ -1010,57 +1021,54 @@ void Launcher::draw_library(Canvas &c)
 
     if (game != nullptr)
     {
-        const Rect art{96.0f, 572.0f, 420.0f, 298.0f};
-        const std::string& artwork = !game->screenshots.empty() ? game->screenshots.front() :
-            (!game->hero.empty() ? game->hero : game->cover);
-        if (game->screenshots.empty() && game->hero.empty() && !game->cover.empty())
-            cover(c, artwork, art, 22.0f, 0.70f);
-        else
-            cover_crop(c, artwork, art, 22.0f, 0.70f);
-        const Cover art_state = c.textures.cover(artwork, std::max(art.w, art.h));
-        if (art_state.texture == 0) {
-            const bool fetching = game->title_id != 0 &&
-                (media_scan_title_id_ == game->title_id ||
-                 home_media_scan_title_id_ == game->title_id);
-            text_shrink(c, tr(fetching || !art_state.missing ?
-                                  "Loading artwork" : "Artwork unavailable"),
-                        art.x + art.w * 0.5f, baseline(art.y + 115.0f, 36.0f, 19.0f),
-                        19.0f, theme::kMuted, art.w - 28.0f, Align::center);
-        }
+        // Actual rear retail scan, never the old panoramic screenshot.
+        // Cross on this jacket opens a full-screen, aspect-preserving preview.
+        const Rect art{99.0f, 572.0f, 181.0f, 288.0f};
+        const std::string& artwork = !game->box_back.empty() ? game->box_back :
+             (!game->cover.empty() ? game->cover : game->hero);
+        cover(c, artwork, art, 5.0f, 0.5f);
+        list.bordered_rect(art, 5.0f, theme::kGlass.with_alpha(0.0f),
+                           library_back_focused_ ? 2.5f : 1.0f,
+                           library_back_focused_ ? theme::kFocusCore :
+                                                   theme::kPanelEdge.with_alpha(0.45f));
+        if (library_back_focused_)
+            text_shrink(c, tr("Enlarge cover"), art.x + art.w * 0.5f,
+                        baseline(854.0f, 23.0f, 15.0f), 15.0f,
+                        theme::kLimePale, 224.0f, Align::center);
         // A two-line title previously overlapped the publisher/date and intro
         // (e.g. Breath of the Wild in French). Keep one readable, scaled line.
-        text_shrink(c, game->name, 558.0f, baseline(574.0f, 52.0f, 40.0f),
-                    40.0f, theme::kTitle, 1160.0f);
+        text_shrink(c, game->name, 337.0f, baseline(574.0f, 52.0f, 40.0f),
+                    40.0f, theme::kTitle, 1420.0f);
 
         std::string identity;
         if (!game->publisher.empty()) identity = game->publisher;
         else if (!game->developer.empty()) identity = game->developer;
         if (!game->release_date.empty()) {
             if (!identity.empty()) identity += "  ·  ";
-            identity += game->release_date;
+            identity += library_date(game->release_date, services_.language_region(prefs_.language));
         }
         if (!game->categories.empty()) {
             if (!identity.empty()) identity += "  ·  ";
-            identity += game->categories;
+            identity += library_genres(game->categories);
         }
         if (!identity.empty())
-            text_shrink(c, identity, 558.0f, baseline(632.0f, 24.0f, 17.0f), 17.0f,
-                        theme::kLimePale, 1180.0f);
+            text_shrink(c, identity, 337.0f, baseline(632.0f, 24.0f, 17.0f), 17.0f,
+                        theme::kLimePale, 1420.0f);
 
         if (!game->intro.empty())
-            text_block(c, game->intro, 558.0f, baseline(662.0f, 24.0f, 18.0f), 18.0f, 25.0f,
-                       theme::kCopy, 1180.0f, 2, kShrink);
+            text_block(c, game->intro, 337.0f, baseline(662.0f, 24.0f, 18.0f), 18.0f, 25.0f,
+                       theme::kCopy, 1420.0f, 2, kShrink);
 
         const std::string addons = addons_line(game->addons, game->mods, game->mods_on, true);
         const std::string mode = selected_docked_ ? tr("Docked") : tr("Handheld");
         const std::array<std::string, 5> chips{
-            game->format,
-            game->size,
+            library_format(game->format),
+            library_size(game->size),
             mode,
             game->language.empty() ? std::string{tr("Unknown")} : game->language,
             addons,
         };
-        float chip_x = 558.0f;
+        float chip_x = 337.0f;
         for (const auto& chip : chips)
         {
             const float w = std::clamp(text_width(c, chip, 15.0f) + 26.0f, 82.0f, 220.0f);
@@ -1085,7 +1093,7 @@ void Launcher::draw_library(Canvas &c)
             const Cover image = c.textures.cover(path, shot_w);
             // Never reserve a blank, bordered thumbnail for an unreadable file.
             if (image.missing) continue;
-            const Rect shot{558.0f + float(shown_screens) * (shot_w + shot_gap),
+            const Rect shot{337.0f + float(shown_screens) * (shot_w + shot_gap),
                             shot_y, shot_w, shot_h};
             cover_crop(c, path, shot, 12.0f, 0.18f);
             if (image.texture == 0)
@@ -1098,7 +1106,7 @@ void Launcher::draw_library(Canvas &c)
             ++shown_screens;
         }
         if (shown_screens == 0)
-            text_shrink(c, tr("No screenshots available"), 558.0f,
+            text_shrink(c, tr("No screenshots available"), 337.0f,
                         baseline(shot_y + 20.0f, 32.0f, 16.0f), 16.0f,
                         theme::kMuted, 480.0f);
 
@@ -1122,7 +1130,31 @@ void Launcher::draw_library(Canvas &c)
         {Pad::leftright, TR("Browse games")}, {Pad::cross, TR("Launch game")},
         {Pad::triangle, TR("Game settings")}, {Pad::square, TR("Mods")},
         {Pad::options, TR("Safe launch")}, {Pad::circle, TR("Back")}};
-    draw_footer(c, kHints, 6);
+    if (library_back_zoom_) {
+        // An actual controller-operable overlay, not a static screenshot.
+        list.rounded_rect(kScreen, 0.0f, theme::kScrim.with_alpha(0.96f));
+        if (game != nullptr) {
+            text_shrink(c, game->name, 960.0f, baseline(54.0f, 52.0f, 35.0f),
+                        35.0f, theme::kTitle, 1580.0f, Align::center);
+            const std::string& full = !game->box_back.empty() ? game->box_back :
+                                          (!game->cover.empty() ? game->cover : game->hero);
+            cover(c, full, {625.0f, 112.0f, 670.0f, 808.0f}, 6.0f, 0.42f);
+        }
+        static constexpr Hint kZoomHints[] = {{Pad::circle, TR("Close")},
+                                              {Pad::cross, TR("Close")}};
+        draw_footer(c, kZoomHints, 2);
+    } else if (library_back_focused_) {
+        static constexpr Hint kBackHints[] = {{Pad::cross, TR("Enlarge cover")},
+                                             {Pad::updown, TR("Browse games")},
+                                             {Pad::circle, TR("Back")}};
+        draw_footer(c, kBackHints, 3);
+    } else {
+        // The Down action is listed in text, not a fake button icon.
+        draw_footer(c, kHints, 6);
+        text_shrink(c, tr("Down: view back cover"), 1550.0f,
+                    baseline(946.0f, 25.0f, 15.0f), 15.0f,
+                    theme::kMeta, 280.0f, Align::right);
+    }
 }
 
 void Launcher::press_game(Key key)
