@@ -93,3 +93,5 @@ third-party artwork.
 The host source contract is `tools/check-launch-case-artwork.py`. CI runs it
 in the source preflight and native build checks. A passing source test does not
 replace a completed native build or an on-device visual check.
+
+The actual CDN/download path remains subject to a real console network check; a green host-source test cannot prove that every indexed image URL resolves.
