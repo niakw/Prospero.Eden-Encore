@@ -39,8 +39,10 @@ permissions:
   contents: read
   actions: read
 
+# A skipped build on an ordinary push must not cancel an explicit
+# workflow_dispatch native build. Keep those execution queues independent.
 concurrency:
-  group: encore-native-${{ github.ref }}
+  group: encore-native-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
