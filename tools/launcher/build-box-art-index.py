@@ -89,11 +89,15 @@ def regional_candidates(items, limit=12):
         if filename not in group:
             group.append(filename)
     choices = []
-    for region in REGION_ORDER:
-        for filename in grouped.get(region, ())[:2]:
-            choices.append(f"{region}:{filename}")
-            if len(choices) == limit:
-                return ";".join(choices)
+    # First cover every available region, then offer its alternate scan.
+    # Otherwise two French/European images may displace a Japanese/US face.
+    for variant in range(2):
+        for region in REGION_ORDER:
+            group = grouped.get(region, ())
+            if len(group) > variant:
+                choices.append(f"{region}:{group[variant]}")
+                if len(choices) == limit:
+                    return ";".join(choices)
     return ";".join(choices) if choices else "-"
 
 def parse(source):
