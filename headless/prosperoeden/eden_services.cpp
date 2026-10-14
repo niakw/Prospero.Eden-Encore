@@ -1412,7 +1412,7 @@ pe::ui::BoxArt EdenServices::box_art(std::uint64_t title_id) {
                 continue;
             int width = 0, height = 0, channels = 0;
             if (!stbi_info(path.c_str(), &width, &height, &channels) ||
-                width < (std::strcmp(side, "spine") == 0 ? 32 : 128) ||
+                width < (std::strcmp(side, "spine") == 0 ? 12 : 128) ||
                 height < 128 || width > 4096 || height > 4096 ||
                 static_cast<std::uint64_t>(width) * height > 3840u * 2160u)
                 continue;
