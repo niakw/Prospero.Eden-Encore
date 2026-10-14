@@ -80,7 +80,8 @@ assert "library_format(game->format)" in library
 assert "library_size(game->size)" in library
 assert "library_date(game->release_date" in library
 assert "library_genres(game->categories)" in library
-assert "View back cover" in library
+assert 'tr("Down: view back cover")' in library
+assert 'tr("Enlarge cover")' in library
 assert "cover(c, artwork, art, 5.0f, 0.5f);" in library
 assert "PE_PREVIEW_LIBRARY_ONLY" in (
     root / "headless/prosperoeden/host/preview_main.cpp").read_text()
