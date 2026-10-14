@@ -6,6 +6,8 @@ no longer selects those experimental JIT tiers.
 This source contract does NOT validate firmware performance.
 """
 from pathlib import Path
+import subprocess
+import sys
 
 root = Path(__file__).resolve().parents[1]
 read = lambda name: (root / name).read_text()
@@ -42,6 +44,8 @@ assert '#ifdef PS5_NATIVE' in experimental_section
 assert '#if defined(PS5_NATIVE) && defined(EDEN_DEV_PROFILE)' not in experimental_section
 assert '#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)\n        // Native evidence' in experimental_section
 assert '-DEDEN_SPARSE_JIT_DEV="${EDEN_SPARSE_JIT_DEV:-OFF}"' in read("tools/build-headless-native.sh")
+assert 'python3 -B tools/ci/check-release-experiments.py "$EDEN_STAGE_DIR"' in read('.github/workflows/build-040-zbic.yml')
+subprocess.run([sys.executable, '-B', str(root / 'tools/ci/check-release-experiments.py'), '--self-test'], check=True)
 assert "EnableExperimentalLogicalPlacement();" in main
 assert 'jit == "balanced"' not in main and 'jit == "expanded"' not in main
 assert "ChooseJitMemoryPlan(" in main and "ApplyJitMemoryPlan(" in main
