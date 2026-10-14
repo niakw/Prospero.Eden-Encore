@@ -330,3 +330,15 @@ Only the host OpenGL screenshot workflow is requested for this checkpoint.
 
 Actual test checkpoint: textual source contracts were reconciled with the
 current Library implementation before this host-only rendering run.
+
+## Library actual-image preview verification
+
+The Library screenshot sequence must select the **actual indexed retail-art
+fixture**, wait for the asynchronous texture worker, and capture the real front
+shelf, selected back scan, enlarged back popup and post-close state. Earlier
+screen captures selected a different sample without retail art and therefore
+showed blank placeholders; those images are not accepted as visual validation.
+For titles with no retail flat art at all, Library now draws a common
+non-animated 2D fallback using the available icon/banner, real game title,
+and known description. It must never appear as an empty rectangle or a
+fabricated third-party box scan.
