@@ -196,15 +196,26 @@ void DrawList::case_face(std::uint32_t texture, const Rect &r, float angle,
 }
 
 void DrawList::case_spine(const Rect &r, float angle, float thickness,
-                          Color front_edge, Color rear_edge)
+                          Color front_edge, Color rear_edge, float depth_offset)
 {
     Instance &i = append(0);
     const Rect t = apply(r);
     set4(i.rect, t.x, t.y, t.w, t.h);
     set_color(i.color_top, front_edge);
     set_color(i.color_bottom, rear_edge);
-    set4(i.params, angle, thickness * transform_.scale, 0.0f,
-         static_cast<float>(Shape::case_spine));
+    set4(i.params, angle, thickness * transform_.scale,
+         depth_offset * transform_.scale, static_cast<float>(Shape::case_spine));
+}
+
+void DrawList::case_plastic(const Rect &r, float angle, bool back, Color plastic)
+{
+    Instance &i = append(0);
+    const Rect t = apply(r);
+    set4(i.rect, t.x, t.y, t.w, t.h);
+    set_color(i.color_top, plastic);
+    set_color(i.color_bottom, plastic);
+    set4(i.params, angle, back ? 1.0f : 0.0f, 0.0f,
+         static_cast<float>(Shape::case_plastic));
 }
 
 float DrawList::text(const Font &font, std::uint32_t font_texture, std::string_view text, float x,
