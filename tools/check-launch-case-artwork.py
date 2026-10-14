@@ -44,11 +44,11 @@ draw = launcher.split("void Launcher::draw_launch(", 1)[1].split(
 )[0]
 for fragment in (
     "const std::string& scan = back ? launch_box_back_ : launch_box_front_;",
-    "if (!scan.empty())",
-    "c.list.rounded_image(artwork.texture, face,",
-    "cover_crop(c, launch_cover_, art",
+    "const Cover artwork = c.textures.cover(",
+    "c.list.case_face(artwork.texture, face, angle, back, kWhite);",
+    "c.list.case_spine(physical, angle, 28.0f,",
     "launch_screenshots_.front()",
-    "text_block_semantic(c, launch_description_",
+    "const Rect physical{390.0f, 162.0f, 422.0f, 655.0f};",
     "c.textures.brand()",
     "motion() > 0.0f",
     'tr("STARTING")',
@@ -60,9 +60,9 @@ assert "std::vector<std::string> launch_screenshots_;" in header
 assert "constexpr float kLaunchSeconds = 1.85f;" in theme
 
 # Quarter turn becomes an edge; the full back is visible half a turn later.
-assert math.cos(0.12) > 0
-assert math.cos(0.12 + 6.10 * 0.50) < 0
-assert math.cos(0.12 + 6.10 * 0.99) > 0
+assert math.cos(0.10) > 0
+assert math.cos(0.10 + 6.18 * 0.50) < 0
+assert math.cos(0.10 + 6.18 * 0.99) > 0
 indexer = (root / "tools/launcher/build-box-art-index.py").read_text()
 workflow = (root / ".github/workflows/build-040-zbic.yml").read_text()
 packager = (root / "tools/package-headless-native.sh").read_text()
@@ -89,7 +89,18 @@ assert "launch_hero_ = game.hero;" in launcher
 assert "launch_hero_ = home_.last_hero;" in launcher
 assert "c.list.image(background.texture, kScreen, uv," in draw
 assert "theme::kScrim.with_alpha(0.16f)" in draw
-assert "companion_scan = back ? launch_box_front_ : launch_box_back_" in draw
+# Projective body and spine are shared geometry; game title only selects art.
+assert "const std::string& scan = back ? launch_box_back_ : launch_box_front_;" in draw
+assert "0x01007EF00011E000" not in draw
+shapes = (root / "headless/prosperoeden/pe/gfx/draw_list.hpp").read_text()
+drawlist = (root / "headless/prosperoeden/pe/gfx/draw_list.cpp").read_text()
+shader = (root / "headless/prosperoeden/pe/gfx/gl_batch.cpp").read_text()
+assert "case_face = 9" in shapes and "case_spine = 10" in shapes
+assert "void DrawList::case_face(" in drawlist
+assert "void DrawList::case_spine(" in drawlist
+assert "clip_w = max(0.65, 1.0 - z / 950.0)" in shader
+assert "gl_Position = vec4(ndc.x * clip_w, -ndc.y * clip_w, 0.0, clip_w);" in shader
+assert "1.0 - corner.x : corner.x" in shader
 assert "if (!selected_game_.empty()) {\n        draw_launch(c);\n        return;" in launcher
 preview_source = (root / "headless/prosperoeden/host/preview_main.cpp").read_text()
 preview_workflow = (root / ".github/workflows/launcher-production-preview.yml").read_text()
