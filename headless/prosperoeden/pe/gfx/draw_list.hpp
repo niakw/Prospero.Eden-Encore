@@ -135,6 +135,8 @@ class DrawList
                   Color near, Color far);
     void case_corner(const Rect &r, float angle, float radius, float depth,
                      int quadrant, int segment, Color near, Color far);
+    void case_spine_image(std::uint32_t texture, const Rect &r,
+                          float angle, float depth, Color tint);
 
     // ---- text ----
     // font_texture is the GL texture holding font's atlas. Returns the advance.
