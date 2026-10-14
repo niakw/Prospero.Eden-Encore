@@ -48,7 +48,7 @@ draw = launcher.split("void Launcher::draw_launch(", 1)[1].split(
 for fragment in (
     "const std::string& scan = back ? launch_box_back_ : launch_box_front_;",
     "const Cover artwork = c.textures.cover(",
-    "c.list.case_face(artwork.texture, face, angle, back, kWhite, paper_uv,",
+    "c.list.case_face(artwork.texture, face, angle, back, kWhite, paper_uv);",
     "c.list.case_spine(side_strip, angle, case_depth,",
     "// No additional transparent face overlay.",
     "launch_screenshots_.front()",
@@ -105,9 +105,10 @@ assert "{Pad::dpad, TR(\"Move cover\")}" in library
 
 assert "PE_PREVIEW_LIBRARY_ONLY" in (
     root / "headless/prosperoeden/host/preview_main.cpp").read_text()
-assert "case_face(artwork.texture, face, angle, back, kWhite, paper_uv," in draw
+assert "case_face(artwork.texture, face, angle, back, kWhite, paper_uv);" in draw
 assert "c.list.case_cap(" in draw and draw.index("c.list.case_cap(") > draw.index("c.list.case_face(artwork.texture")
-assert "c.list.case_plastic(physical" not in draw
+assert "c.list.case_plastic(physical, angle, back, Color::rgb(0xd9e8f7, 0.93f));" in draw
+assert draw.count("c.list.case_plastic(physical, angle, back") == 1
 assert "for (int hinge" not in draw
 assert "const float return_start = back_start + theme::kCaseBackHold;" in draw
 assert "constexpr float kFrontYaw = 0.52f;" in draw
@@ -268,6 +269,14 @@ assert "shell.w - side, shell.h - 2.0f * top" in lib_sleeve
 assert "const float opening_x = rear ? shell.x : shell.x + shell.w - side;" in lib_sleeve
 
 assert "c.list.bordered_rect(shell, radius" not in lib_sleeve
+assert "const float opening_x = rear ? shell.x : shell.x + shell.w - side;" in lib_sleeve
+assert "const float glint_x = rear ? opening_x : opening_x + side - highlight_w;" in lib_sleeve
+assert "c.list.gradient_rect(shell, radius" in lib_sleeve
+assert "for (int i = 1; i < 5; ++i)" in lib_sleeve
+assert "color.rgb = vec3(0.97, 0.025, 0.07);" not in shader
+assert "float from_edge = (1.0 - v_st.x)" in shader
+assert "float outer_glint" in shader
+assert "simplify_switch_header" not in shapes and "simplify_switch_header" not in drawlist
 assert "round_box(v_local, v_half, 22.0)" in shader
 assert "angle, false, case_depth," in draw
 assert "c.list.case_corner(physical, angle, case_radius, case_depth," in draw
