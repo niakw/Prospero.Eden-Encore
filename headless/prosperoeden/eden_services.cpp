@@ -1173,6 +1173,37 @@ pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game,
     return game;
 }
 
+pe::ui::BoxArt EdenServices::box_art(std::uint64_t title_id) {
+    pe::ui::BoxArt artwork;
+    if (title_id == 0) return artwork;
+
+    // Optional local media only. Remote services need independent credentials /
+    // redistribution terms; the native game-start path must never make requests.
+    char id[17]{};
+    std::snprintf(id, sizeof(id), "%016llX", static_cast<unsigned long long>(title_id));
+    const std::string root = Eden::CoversDir() + "/box-";
+
+    const auto find_face = [&](const char* side) -> std::string {
+        for (const char* ext : {"tga", "png", "jpg", "jpeg"}) {
+            const std::string path = root + side + "-" + id + "." + ext;
+            struct stat info{};
+            if (!IsFile(path) || stat(path.c_str(), &info) != 0 ||
+                info.st_size <= 0 || info.st_size > (16LL << 20))
+                continue;
+            int width = 0, height = 0, channels = 0;
+            if (!stbi_info(path.c_str(), &width, &height, &channels) ||
+                width < 128 || height < 128 || width > 4096 || height > 4096 ||
+                static_cast<std::uint64_t>(width) * height > 3840u * 2160u)
+                continue;
+            return path;
+        }
+        return {};
+    };
+    artwork.front = find_face("front");
+    artwork.back = find_face("back");
+    return artwork;
+}
+
 std::string EdenServices::game_path(const std::string& file) { return Eden::AssetsPath("roms/" + file); }
 
 bool EdenServices::game_exists(const std::string& file) {
