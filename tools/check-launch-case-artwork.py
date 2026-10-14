@@ -170,8 +170,11 @@ assert 'const bool opened = static_cast<bool>(input);' in native
 assert "const pe::ui::BoxArt cached_case = box_art(game.title_id);" in native
 case_worker = native.split("pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game,", 1)[1].split("pe::ui::BoxArt EdenServices::box_art(", 1)[0]
 assert case_worker.index("EnsureRetailCase(game.title_id, scanned_name") < case_worker.index("EnsureNlibEnrichment(game.title_id")
-assert 'case_index_source = source_ui / "box-art-index.tsv"' in (
-    root / "tools/ci/check-staged-app.py").read_text()
+staged_validator = (root / "tools/ci/check-staged-app.py").read_text()
+assert 'case_index_source = source_ui / "box-art-index.tsv"' in staged_validator
+assert 'case_index_staged = app / "ui/box-art-index.tsv"' in staged_validator
+assert 'ui_expected.add("ui/box-art-index.tsv")' in staged_validator
+assert 'if case_index_source.is_file():' in staged_validator
 assert 'Common::Net::MakeRequest(' in native
 assert '"https://images.launchbox-app.com"' in native
 assert "EnsureRetailCase(game.title_id, game.name," in native
