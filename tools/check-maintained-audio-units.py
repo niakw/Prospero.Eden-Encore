@@ -31,12 +31,12 @@ assert 'file(READ "${PROJECT_SOURCE_DIR}/src/audio_core/renderer/voice/voice_inf
 assert 'target_include_directories(audio_core PRIVATE "${EDEN_PORT_DIR}"' in cmake
 # Full checked source for the native guest scheduler lock: no CMake-derived override.
 spin_original=(base/"core/hle/kernel/k_spin_lock.cpp").read_text()
-spin_old="void KSpinLock::Lock() {\\n    m_lock.lock();\\n}"
+spin_old="void KSpinLock::Lock() {\n    m_lock.lock();\n}"
 assert spin_original.count(spin_old)==1
 spin_expected=spin_original.replace(
     '#include "core/hle/kernel/k_spin_lock.h"',
-    '#include "performance.h"\\n#include "core/hle/kernel/k_spin_lock.h"'
-).replace(spin_old,"void KSpinLock::Lock() {\\n    ::Eden::Performance::SpinAcquire(m_lock);\\n}")
+    '#include "performance.h"\n#include "core/hle/kernel/k_spin_lock.h"'
+).replace(spin_old,"void KSpinLock::Lock() {\n    ::Eden::Performance::SpinAcquire(m_lock);\n}")
 assert (active/"core/hle/kernel/k_spin_lock.cpp").read_text()==spin_expected
 assert 'list(APPEND core_sources "${eden_kernel_spin}")' in cmake
 assert 'write_derived("${PORT_BUILD_DIR}/k_spin_lock.cpp"' not in cmake
