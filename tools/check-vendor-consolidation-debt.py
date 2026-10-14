@@ -30,7 +30,7 @@ for name in ("eden-backports", "eden-build", "eden-core", "eden-gpu",
 assert 'file(COPY "${EDEN_ACTIVE_VULKAN}/" DESTINATION "${PORT_BUILD_DIR}")' in vulkan
 assert (active/"eden-build/src/CMakeLists.txt").is_file(), "missing maintained native CMake"
 assert 'execute_process(COMMAND python3 "${PORT_ROOT}/tools/prepare-vulkan-port.py"' not in vulkan
-baseline = {"write_derived(": 82, "file(READ": 92, "string(REPLACE": 231}
+baseline = {"write_derived(": 81, "file(READ": 91, "string(REPLACE": 230}
 counts = {name: c.count(name) for name in baseline}
 for name, limit in baseline.items():
     assert counts[name] <= limit, (
