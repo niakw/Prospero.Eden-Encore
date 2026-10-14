@@ -478,7 +478,12 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
         if (cancel && cancel->load(std::memory_order_acquire)) return;
         if (selected->second[side].empty()) continue;
         const std::string path = CaseFacePath(title_id, side == 0 ? "front" : "back");
-        if (IsFile(path)) continue; // manually supplied art always wins
+        // An explicitly supplied JPEG/PNG takes precedence over a downloaded
+        // TGA for this face. Detect valid cached files before an HTTP retry.
+        const std::string base = path.substr(0, path.size() - 4);
+        if (IsFile(base + ".png") || IsFile(base + ".jpg") ||
+            IsFile(base + ".jpeg") || ValidNlibTga(path))
+            continue;
         if (!FetchCaseFace(selected->second[side], path, cancel))
             all_ready = false;
     }
@@ -1336,7 +1341,7 @@ pe::ui::BoxArt EdenServices::box_art(std::uint64_t title_id) {
     const std::string root = Eden::CoversDir() + "/box-";
 
     const auto find_face = [&](const char* side) -> std::string {
-        for (const char* ext : {"tga", "png", "jpg", "jpeg"}) {
+        for (const char* ext : {"png", "jpg", "jpeg", "tga"}) {
             const std::string path = root + side + "-" + id + "." + ext;
             struct stat info{};
             if (!IsFile(path) || stat(path.c_str(), &info) != 0 ||
