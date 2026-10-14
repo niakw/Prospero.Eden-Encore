@@ -29,13 +29,21 @@ assert 'write_derived("${PORT_BUILD_DIR}/voice_info.cpp"' not in cmake
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/audio_core/sink/sink_details.cpp"' not in cmake
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/audio_core/renderer/voice/voice_info.cpp"' not in cmake
 assert 'target_include_directories(audio_core PRIVATE "${EDEN_PORT_DIR}"' in cmake
-# Keep the CMake source-derivation budget explicit. The new native guest-kernel
-# spinlock, early HID applet guard and guest VSync conductor explain these increases;
-# retained audio sources must remain fully vendored and unmodified.
-assert 'list(APPEND core_sources "${PORT_BUILD_DIR}/k_spin_lock.cpp")' in cmake
+# Full checked source for the native guest scheduler lock: no CMake-derived override.
+spin_original=(base/"core/hle/kernel/k_spin_lock.cpp").read_text()
+spin_old="void KSpinLock::Lock() {\\n    m_lock.lock();\\n}"
+assert spin_original.count(spin_old)==1
+spin_expected=spin_original.replace(
+    '#include "core/hle/kernel/k_spin_lock.h"',
+    '#include "performance.h"\\n#include "core/hle/kernel/k_spin_lock.h"'
+).replace(spin_old,"void KSpinLock::Lock() {\\n    ::Eden::Performance::SpinAcquire(m_lock);\\n}")
+assert (active/"core/hle/kernel/k_spin_lock.cpp").read_text()==spin_expected
+assert 'list(APPEND core_sources "${eden_kernel_spin}")' in cmake
+assert 'write_derived("${PORT_BUILD_DIR}/k_spin_lock.cpp"' not in cmake
 assert 'set(npad_entry "void NPad::ControllerUpdate(' in cmake
 assert "set(compose_new [=[" in cmake
-assert cmake.count("write_derived(") <= 78
-assert cmake.count("file(READ") <= 88
-assert cmake.count("string(REPLACE") <= 228
+# The port must keep reducing generator rewrites, not silently increase them.
+assert cmake.count("write_derived(") <= 77
+assert cmake.count("file(READ") <= 87
+assert cmake.count("string(REPLACE") <= 227
 print("MAINTAINED_AUDIO_UNITS_PARITY_PASS sink=1 voice=1")
