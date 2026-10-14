@@ -33,8 +33,11 @@ assert 'std::unique_lock<std::mutex> lock(workers_mutex, std::try_to_lock);' in 
 assert 'snapshot = workers;' in performance
 assert 'clock_gettime(worker.clock, &usage)' in performance
 assert 'cpu_progress=not_measured' in performance
-assert performance.count('ReportGpuStallWorkerClocks(age_ms);') == 2
-assert performance.index('if (!GpuReportStale(now, progress_ns)) return;') < performance.index('ReportGpuStallWorkerClocks(age_ms);')
+assert performance.count('ReportGpuStallWorkerClocks(age_ms, epoch_ms, mono_ns);') == 2
+assert 'const long long epoch_ms = ClockNs(CLOCK_REALTIME) / 1000000LL;' in performance
+assert 'const long long mono_ns = ClockNs(CLOCK_MONOTONIC);' in performance
+assert 'cpu_progress=not_measured epoch_ms=%lld mono_ns=%lld' in performance
+assert performance.index('if (!GpuReportStale(now, progress_ns)) return;') < performance.index('ReportGpuStallWorkerClocks(age_ms, epoch_ms, mono_ns);')
 assert 'dma_active_ms=%llu puller_active_ms=%llu' in performance
 assert 'ActiveDiagnosticWaitNs(gpu_dma_sync_active_since_ns)' in performance
 assert 'ActiveDiagnosticWaitNs(gpu_puller_semaphore_active_since_ns)' in performance
