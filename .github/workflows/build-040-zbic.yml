@@ -331,6 +331,7 @@ jobs:
           python3 -B tools/check-game-liveness.py
           python3 -B tools/check-ps5-guest-fault-recovery.py
           python3 -B tools/check-fc27-trace.py
+          python3 -B tools/check-ci-neutral-labels.py
           python3 -B tools/check-credit-attribution.py
           python3 -B tools/check-ci-cache.py
           python3 -B tools/check-package-flexible-memory.py
