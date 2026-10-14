@@ -156,52 +156,63 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
     const float side = std::max(4.0f, shell.w * 0.022f);
     const float top = std::max(5.0f, shell.h * 0.018f);
     const float radius = std::max(5.0f, shell.w * 0.028f);
-    // One square-corner paper jacket INSIDE the transparent shell. The
-    // plastic extends beyond the paper to LEFT/RIGHT and top/bottom, but
-    // does not interrupt the paper-to-spine fold in the rotating loader.
-    const Rect paper{shell.x + side, shell.y + top,
-                     shell.w - 2.0f * side, shell.h - 2.0f * top};
-    // The whole sleeve is translucent, so the Library wallpaper subtly
-    // shows through the edges, not through the opaque printed paper.
+    // One continuous square-corner paper wrap, folded directly onto the
+    // printed red spine: front touches its LEFT hinge, back its RIGHT hinge.
+    // The ONLY exposed clear-plastic vertical opening is the opposite edge.
+    // Front/back both use the same paper height; do not add a second frame.
+    const Rect paper{shell.x + (rear ? side : 0.0f), shell.y + top,
+                     shell.w - side, shell.h - 2.0f * top};
     if (shadow > 0.0f)
         c.list.shadow({shell.x + 2.0f, shell.y + 7.0f, shell.w - 4.0f,
                        shell.h - 1.0f}, radius, 21.0f * shadow,
                       Color::rgb(0x02030a, 0.64f));
-    c.list.rounded_rect(shell, radius, Color::rgb(0xe5effa, 0.22f));
 
     const std::string& scan = rear ? game.box_back : game.box_front;
-    if (!scan.empty())
-        cover(c, scan, paper, 0.0f, 0.0f);
-    else if (rear)
+    if (!scan.empty()) {
+        // The generic cover() helper draws its OWN four-sided border; using it
+        // here made the jacket look like a second transparent plastic box.
+        // Use only the opaque original printed scan, aspect-contained.
+        const Cover artwork = c.textures.cover(scan, std::max(paper.w, paper.h));
+        if (artwork.texture != 0) {
+            Rect fitted = paper;
+            const float source = std::max(0.01f, artwork.aspect);
+            const float target = paper.w / paper.h;
+            if (source > target) {
+                fitted.h = paper.w / source;
+                fitted.y += (paper.h - fitted.h) * 0.5f;
+            } else if (source < target) {
+                fitted.w = paper.h * source;
+                fitted.x += (paper.w - fitted.w) * 0.5f;
+            }
+            c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f},
+                         Color::rgb(0xffffff,
+                                    tween::cubic_out(artwork.age / 0.22f)));
+        } else {
+            c.list.gradient_rect(paper, 0.0f, Color::rgb(0x191a28),
+                                 Color::rgb(0x10111b));
+        }
+    } else if (rear) {
         flat_back_fallback(c, game, paper);
-    else
+    } else {
         flat_front_fallback(c, game, paper);
+    }
 
-    // A single transparent molded rim, INSIDE the outside silhouette. These
-    // 4 strips never enlarge the paper or masquerade as a white second case.
-    c.list.gradient_rect({shell.x + side * 0.5f, shell.y,
-                          shell.w - side, top}, radius * 0.45f,
+    // Only real clear plastic: narrow TOP/BOTTOM caps and the opening side.
+    // No transparent film over the entire print and NO right-hand plastic
+    // margin on the back (the rear scan meets the red printed fold there).
+    c.list.gradient_rect({shell.x, shell.y, shell.w, top}, 0.0f,
                          Color::rgb(0xf3faff, 0.48f),
                          Color::rgb(0x8da2b9, 0.18f));
-    c.list.gradient_rect({shell.x + side * 0.5f, shell.y + shell.h - top,
-                          shell.w - side, top}, radius * 0.45f,
+    c.list.gradient_rect({shell.x, shell.y + shell.h - top,
+                          shell.w, top}, 0.0f,
                          Color::rgb(0x7e91a8, 0.24f),
                          Color::rgb(0xf4faff, 0.49f));
-    // Opening seam: on the back it sits on the left; on the front it is
-    // the far/right edge. This is a subtle plastic edge, never red ink.
     const float opening_x = rear ? shell.x : shell.x + shell.w - side;
     c.list.hgradient_rect({opening_x, shell.y + top, side,
-                           shell.h - 2.0f * top}, radius * 0.3f,
+                           shell.h - 2.0f * top}, 0.0f,
                           Color::rgb(0xf3faff, rear ? 0.47f : 0.21f),
                           Color::rgb(0x98acc4, 0.17f));
-    // Both OUTER edges of the transparent shell remain visible around
-    // the paper, without another white frame painted on the artwork.
-    const float other_x = rear ? shell.x + shell.w - side : shell.x;
-    c.list.hgradient_rect({other_x, shell.y + top, side,
-                           shell.h - 2.0f * top}, 0.0f,
-                          Color::rgb(0xd8e7f6, 0.23f),
-                          Color::rgb(0xa6b9cb, 0.13f));
-    // Paper retains square corners. Only shell geometry may be rounded.
+    // Paper has square corners and is never covered with a second bezel.
 }
 
 std::string controller_profile_name(int layout, const ButtonMapping& mapping)
@@ -936,11 +947,37 @@ void Launcher::refresh_selected_game()
 void Launcher::press_library(Key key)
 {
     if (library_back_zoom_) {
-        if (key == Key::circle || key == Key::cross) {
+        if (key == Key::circle) {
             library_back_zoom_ = false;
             cue(Cue::back);
+        } else if (key == Key::l2 || key == Key::r2) {
+            const float old = library_back_scale_;
+            const float factor = key == Key::r2 ? 1.30f : (1.0f / 1.30f);
+            library_back_scale_ = std::clamp(old * factor, 1.0f, 3.4f);
+            // Keep the same printed region under the viewer's centre.
+            library_back_pan_x_ *= library_back_scale_ / old;
+            library_back_pan_y_ *= library_back_scale_ / old;
+            const float limit_x = std::max(0.0f, (500.0f * library_back_scale_ - 700.0f) * 0.5f);
+            const float limit_y = std::max(0.0f, (807.0f * library_back_scale_ - 807.0f) * 0.5f);
+            library_back_pan_x_ = std::clamp(library_back_pan_x_, -limit_x, limit_x);
+            library_back_pan_y_ = std::clamp(library_back_pan_y_, -limit_y, limit_y);
+            if (old != library_back_scale_)
+                cue(Cue::focus);
+        } else if (key == Key::left || key == Key::right ||
+                   key == Key::up || key == Key::down) {
+            // D-pad and the radio input's left-stick repeat share these keys.
+            // Move the VIEW across the image, not the game selection below.
+            constexpr float step = 68.0f;
+            if (key == Key::left) library_back_pan_x_ += step;
+            if (key == Key::right) library_back_pan_x_ -= step;
+            if (key == Key::up) library_back_pan_y_ += step;
+            if (key == Key::down) library_back_pan_y_ -= step;
+            const float limit_x = std::max(0.0f, (500.0f * library_back_scale_ - 700.0f) * 0.5f);
+            const float limit_y = std::max(0.0f, (807.0f * library_back_scale_ - 807.0f) * 0.5f);
+            library_back_pan_x_ = std::clamp(library_back_pan_x_, -limit_x, limit_x);
+            library_back_pan_y_ = std::clamp(library_back_pan_y_, -limit_y, limit_y);
         }
-        return; // popup owns all input; never launch a game under it
+        return; // Circle alone closes; Cross cannot accidentally launch a game.
     }
     if (key != Key::left && key != Key::right && key != Key::cross && key != Key::options)
         clear_confirmation();
@@ -1047,6 +1084,9 @@ void Launcher::press_library(Key key)
     case Key::cross:
         if (game != nullptr && library_back_focused_) {
             library_back_zoom_ = true;
+            library_back_scale_ = 1.0f;
+            library_back_pan_x_ = 0.0f;
+            library_back_pan_y_ = 0.0f;
             cue(Cue::open);
             return;
         }
@@ -1250,11 +1290,23 @@ void Launcher::draw_library(Canvas &c)
             // Tall portrait matching the printed paper: no wide 670px
             // stretched-looking pane in the full-screen back-cover popup.
             const Rect enlarged{710.0f, 111.0f, 500.0f, 807.0f};
+            // Stable 700x807 viewport. Scale the original sleeve uniformly,
+            // then pan beneath a screen-fixed clip; never scale X/Y separately.
+            const Rect viewer{610.0f, 111.0f, 700.0f, 807.0f};
+            list.push_clip(viewer);
+            list.push_transform(library_back_scale_, 960.0f, 514.5f,
+                                library_back_pan_x_, library_back_pan_y_);
             flat_retail_sleeve(c, *game, enlarged, true, 0.92f);
+            list.pop_transform();
+            list.pop_clip();
+            text_shrink(c, std::to_string(static_cast<int>(library_back_scale_ * 100.0f + 0.5f)) + "%",
+                        1340.0f, baseline(140.0f, 34.0f, 20.0f),
+                        20.0f, theme::kLimePale, 110.0f, Align::left);
         }
-        static constexpr Hint kZoomHints[] = {{Pad::circle, TR("Close")},
-                                              {Pad::cross, TR("Close")}};
-        draw_footer(c, kZoomHints, 2);
+        static constexpr Hint kZoomHints[] = {
+            {Pad::circle, TR("Close")}, {Pad::l2, TR("Zoom out")},
+            {Pad::r2, TR("Zoom in")}, {Pad::updown, TR("Move cover")}};
+        draw_footer(c, kZoomHints, 4);
     } else if (library_back_focused_) {
         static constexpr Hint kBackHints[] = {{Pad::cross, TR("Enlarge cover")},
                                              {Pad::updown, TR("Browse games")},
