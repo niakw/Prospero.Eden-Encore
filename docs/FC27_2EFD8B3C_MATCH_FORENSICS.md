@@ -245,3 +245,21 @@ contention, the end-of-match stall, HUD freshness or texture faults are fixed.
 Required before another device test: full source preflight, native build and
 artifact integrity, then explicit comparison of gameplay progress and long
 frame tails; do not use green CI or a 30 FPS average as the gameplay gate.
+
+## Native candidate gate: fatal guest caller provenance and build isolation
+
+A prior native compilation reached 641 of 643 Ninja objects with no compiler
+error reported and was cancelled by a newer ordinary source push, not by the
+compiler or an observed device failure. The development workflow now separates
+build-capable pushes from skipped, unrelated pushes in its concurrency group;
+only an explicitly requested new build candidate supersedes an older one.
+
+The fatal guest-prefetch path now records `PC`, `LR`, `SP` and `FP` with
+the guest thread identity once, after saving its live context and before
+publishing the fatal error. No register sampling or cache flush is added to the
+per-frame execution path. The original `2efd8b3c` capture did not contain
+these fields, so it cannot be retroactively symbolized with them.
+
+CI gate: the source preflight, native all-on package compilation and artifact
+layout must pass on one specific commit. Do not claim a gameplay freeze fix or
+user-visible frame-time improvement based only on this source-level validation.
