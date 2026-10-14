@@ -21,6 +21,12 @@ assert 'std::printf("EDEN_BUILD_SOURCE source_sha=%s\\n", EDEN_NATIVE_SOURCE_COM
 assert 'std::printf("EDEN_SESSION_SOURCE source_sha=%s\\n", EDEN_NATIVE_SOURCE_COMMIT);' in main
 assert main.index('passed("session_start");') < main.index('std::printf("EDEN_SESSION_SOURCE')
 assert 'if (Eden::NativeLogs::Detailed()) {' in main
+assert 'std::printf("EDEN_TIME_ANCHOR epoch_ms=%lld mono_ns=%lld phase=session_start\n",' in main
+assert 'eden_network_audit_event("launcher", "session-start",' in main
+assert main.index('passed("session_start");') < main.index('EDEN_TIME_ANCHOR')
+assert main.index('EDEN_TIME_ANCHOR') < main.index('std::fflush(stdout);', main.index('EDEN_SESSION_SOURCE'))
+assert 'clock_gettime(CLOCK_REALTIME, &real_clock)' in main
+assert 'clock_gettime(CLOCK_MONOTONIC, &mono_clock)' in main
 
 assert 'if (persist_detailed_logs)' in main
 assert main.index('BootTrace::Begin(') < main.index('BootTrace::Line("source_sha=%s"')
