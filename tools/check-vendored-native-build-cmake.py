@@ -11,7 +11,8 @@ import subprocess
 root = Path(__file__).resolve().parents[1]
 original = (root/"vendor/sources/eden/src/CMakeLists.txt").read_text()
 active = (root/"vendor/encore-active/eden-build/src/CMakeLists.txt").read_text()
-inject = (root/"headless/inject.cmake").read_text()
+installer = (root/"tools/install-vendored-eden-build-flags.py").read_text()
+stager = (root/"tools/prepare-build.sh").read_text()
 builder = (root/"tools/build-headless-native.sh").read_text()
 
 old = '$<$<COMPILE_LANGUAGE:C,CXX>:-Wno-error-all>'
@@ -19,10 +20,10 @@ new = '$<$<COMPILE_LANGUAGE:C,CXX>:-Wno-error=all>'
 assert original.count(old) == 1
 assert old not in active
 assert active == original.replace(old, new), "active native CMake has unreviewed drift"
-assert inject.count('configure_file("${EDEN_ACTIVE_BUILD_CMAKE}" "${EDEN_SNAPSHOT_BUILD_CMAKE}" COPYONLY)') == 1
-assert 'eden_build_snapshot STREQUAL eden_build_original' in inject
-assert 'eden_build_snapshot STREQUAL eden_build_active' in inject
-assert 'if(PS5_NATIVE)' in inject.split('configure_file')[0]
+assert '("src/CMakeLists.txt",b"-Wno-error-all>",b"-Wno-error=all>")' in installer
+assert '("src/common/scm_rev.cpp.in"' in installer
+assert 'assert current==old' in installer
+assert 'python3 -B tools/install-vendored-eden-build-flags.py "$eden"' in stager
 assert 'CMAKE_PROJECT_yuzu_INCLUDE="$root/headless/inject.cmake"' in builder
 clang = shutil.which("clang++-18") or shutil.which("clang++")
 if clang:
@@ -32,4 +33,4 @@ if clang:
     assert run.returncode == 0, run.stderr
     assert "unknown" not in run.stderr.casefold(), run.stderr
 print("PASS: complete tracked native CMake fork matches upstream except one supported Clang flag")
-print("PASS: PS5-only guarded CMake source copy, upstream preservation and compiler flag")
+print("PASS: existing native stage installs tracked CMake and SCM forks with drift rejection")
