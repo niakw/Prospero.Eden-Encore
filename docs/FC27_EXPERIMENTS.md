@@ -6,7 +6,11 @@
 > for every title, without an Experimental menu switch or `experiments.json`.
 > Safe Launch disables the extra test modes. Sparse additionally probes PS5 RW/RX
 > alias support at runtime and reverts to dense if the probe fails.
-> `release` and `release-stage` force sparse **OFF**; none of this
+> `release` and `release-stage` now compile sparse **ON** too. At launch, Safe Launch
+> disables the experiments and alias preflight failure falls back to dense JIT. The
+> regular release keeps the launcher and all-title library; the dedicated DEV
+> artifact additionally enables heavy diagnostics and title-specific autorun.
+> None of this
 > creates or verifies PlayStation glyph artwork or unimplemented GPU operations.
 > The source has not yet been built/qualified on firmware 13.60.
 >
@@ -65,7 +69,9 @@ ceiling in the current development branch. All PS5 titles, both A64 and A32,
 now receive a continuous launch-time memory-derived code cache budget. Safe
 Launch and unavailable memory measurements use the respective proven
 baselines. The historical A/B/C/D tests remain documented here only;
-The unified development test build automatically enables CPU/frame/sparse tracing; legacy `experiments.json` is ignored
+Native installable release and development builds enable sparse JIT, logical-CPU trial
+(which safely declines unverified SMT placement) and Vulkan pacing by default;
+legacy `experiments.json` is ignored
 but does **not** override the code cache capacity. This does not yet provide
 mid-game growth, or prove all games benefit from larger dense allocations.
 The installed PS5 app remains unchanged.

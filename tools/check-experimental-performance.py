@@ -35,7 +35,12 @@ assert "experimental_logical_cpu = true;" in main
 assert "experimental_frame_probe = true;" in main
 assert 'experimental_sparse_jit = false;' in main  # alias preflight
 assert 'export EDEN_SPARSE_JIT_DEV=ON' in read("tools/build-package.sh")
-assert 'export EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF EDEN_SPARSE_JIT_DEV=OFF' in read("tools/build-package.sh")
+assert 'export EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF EDEN_SPARSE_JIT_DEV=ON' in read("tools/build-package.sh")
+assert 'EDEN_EXPERIMENT_DEFAULTS sparse=%u logical_cpu=%u frame_probe=%u safe=%u' in main
+experimental_section = main[main.index('bool experimental_sparse_jit = false;'):main.index('Eden::Experimental::ApplyJitMemoryPlan(jit_plan);')]
+assert '#ifdef PS5_NATIVE' in experimental_section
+assert '#if defined(PS5_NATIVE) && defined(EDEN_DEV_PROFILE)' not in experimental_section
+assert '#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)\n        // Native evidence' in experimental_section
 assert '-DEDEN_SPARSE_JIT_DEV="${EDEN_SPARSE_JIT_DEV:-OFF}"' in read("tools/build-headless-native.sh")
 assert "EnableExperimentalLogicalPlacement();" in main
 assert 'jit == "balanced"' not in main and 'jit == "expanded"' not in main
