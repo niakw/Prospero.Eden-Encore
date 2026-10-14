@@ -4,20 +4,64 @@
 # AMD FSR, DLC, NSP, XCI, prod.keys, Ryujinx) unchanged.
 
 #: settings_store.h
+msgid "0.25x (minimum)"
+msgstr "0,25x (minimum)"
+
+#: settings_store.h
+msgid "0.5x (fastest, softer)"
+msgstr "0,5x (raskest, mykere)"
+
+#: settings_store.h
 msgid "0.75x (faster)"
 msgstr "0,75x (raskere)"
+
+#: settings_store.h
+msgid "1.25x (recommended)"
+msgstr "1,25x (anbefalt)"
 
 #: settings_store.h
 msgid "1.5x (sharper)"
 msgstr "1,5x (skarpere)"
 
+#: pe/ui/settings.cpp
+msgid "100% is full DualSense rumble strength. Lower it if vibration feels too strong."
+msgstr "100 % er full DualSense-buldrestyrke. Senk den hvis vibrasjonen føles for sterk."
+
 #: settings_store.h
 msgid "1x (native)"
 msgstr "1x (opprinnelig)"
 
+#: settings_store.h
+msgid "2x (high memory)"
+msgstr "2x (høyt minnebruk)"
+
+#: settings_store.h
+msgid "3x (very high memory)"
+msgstr "3x (svært høyt minnebruk)"
+
+#: settings_store.h
+msgid "4x (extreme memory)"
+msgstr "4x (ekstremt minnebruk)"
+
+#: pe/ui/settings.cpp
+msgid "60 Hz is recommended. 120 Hz changes display mode only; the game still needs to render above 60 FPS to benefit."
+msgstr "60 Hz anbefales. 120 Hz endrer kun visningsmodus; spillet må fortsatt gjengi over 60 FPS for å dra nytte av det."
+
+#: pe/ui/library.cpp
+msgid "60 Hz is the safe default. Use 120 Hz only with a compatible display or high-FPS patch."
+msgstr "60 Hz er den sikre standarden. Bruk kun 120 Hz med en kompatibel skjerm eller høy-FPS-patch."
+
+#: pe/ui/settings.cpp
+msgid "8% is recommended. Increase it for stick drift; decrease it for more sensitive aiming."
+msgstr "8 % anbefales. Øk den for stokkdrift; reduser den for mer følsom sikting."
+
 #: eden_services.cpp
 msgid "A firmware NCA cannot be read. Reinstall the firmware dump."
 msgstr "En fastvare-NCA kan ikke leses. Installer fastvaredumpen på nytt."
+
+#: pe/ui/browse.cpp
+msgid "About Eden Encore"
+msgstr "Om Eden Encore"
 
 #. Label: which folders the app can read.
 #: pe/ui/browse.cpp
@@ -50,7 +94,19 @@ msgstr "AMD FSR"
 msgid "Another language"
 msgstr "Annet språk"
 
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Anti-aliasing"
+msgstr "Kantutjevning"
+
 #: pe/ui/settings.cpp
+msgid "ANTI-ALIASING"
+msgstr "KANTUTJEVNING"
+
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Anti-aliasing smooths jagged edges. None is fastest; FXAA is light; SMAA prioritizes image quality."
+msgstr "Anti-aliasing jevner ut taggete kanter. Ingen er raskest; FXAA er lett; SMAA prioriterer bildekvalitet."
+
+#: pe/ui/home.cpp, pe/ui/settings.cpp
 msgid "Audio"
 msgstr "Lyd"
 
@@ -63,7 +119,7 @@ msgid "Australia"
 msgstr "Australia"
 
 #. Button hint: go back one screen.
-#: pe/ui/browse.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
 msgid "Back"
 msgstr "Tilbake"
 
@@ -76,6 +132,14 @@ msgstr "Bikubisk"
 #: settings_store.h
 msgid "Bilinear"
 msgstr "Bilineær"
+
+#: pe/ui/settings.cpp
+msgid "Bilinear is the lightest default. AMD FSR is most useful when rendering below the TV output size."
+msgstr "Bilineær er den letteste standarden. AMD FSR er mest nyttig når du gjengir under TV-utgangsstørrelsen."
+
+#: pe/ui/library.cpp
+msgid "Bilinear is the lightest default. AMD FSR is useful when rendering below the TV output size."
+msgstr "Bilineær er den letteste standarden. AMD FSR er nyttig når du renderer under TV-utgangsstørrelsen."
 
 #. Button hint: move through the list.
 #: pe/ui/browse.cpp
@@ -90,14 +154,58 @@ msgstr "Bla i spill"
 msgid "Browse settings"
 msgstr "Bla i innstillinger"
 
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Button mapping"
+msgstr "Knappeoppsett"
+
+#: pe/ui/settings.cpp
+msgid "BUTTON MAPPING"
+msgstr "KNAPPEOPPSETT"
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping reset to global settings."
+msgstr "Knapptilordning tilbakestilt til globale innstillinger."
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping reset to the active profile."
+msgstr "Knappetilordning tilbakestilt til den aktive profilen."
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping saved."
+msgstr "Knapptilordning lagret."
+
+#: pe/ui/settings.cpp
+msgid "BUTTON PROFILE"
+msgstr "KNAPPPROFIL"
+
+#: pe/ui/settings.cpp
+msgid "Button profile"
+msgstr "Knappeprofil"
+
+#: pe/ui/home.cpp, pe/ui/settings.cpp
+msgid "CACHE"
+msgstr "CACHE"
+
+#: pe/ui/settings.cpp
+msgid "Cache: {0}  |  Logs: {1}"
+msgstr "Buffer: {0} |  Logger: {1}"
+
+#: pe/ui/launcher.cpp
+msgid "Cancel"
+msgstr "Avbryt"
+
 #: eden_services.cpp
 msgid "Cannot read firmware/ in {0}. Install extracted firmware NCAs."
 msgstr "Kan ikke lese firmware/ i {0}. Installer utpakkede fastvare-NCA-filer."
 
 #. Button hint: change the highlighted setting.
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
 msgid "Change"
 msgstr "Endre"
+
+#: pe/ui/launcher.cpp
+msgid "Change console mode for this game?"
+msgstr "Vil du endre konsollmodus for dette spillet?"
 
 #. What a mod is made of: cheat codes.
 #: eden_services.cpp, host/fake_services.cpp
@@ -126,10 +234,42 @@ msgid "Choose a game from your library."
 msgstr "Velg et spill fra biblioteket ditt."
 
 #: pe/ui/browse.cpp
+msgid "Choose one root for keys, firmware, games, updates and mods"
+msgstr "Velg én rot for nøkler, fastvare, spill, oppdateringer og mods"
+
+#: pe/ui/browse.cpp
 msgid "Choose the language games use"
 msgstr "Velg språket spillene bruker"
 
-#: pe/ui/library.cpp
+#: pe/ui/mapping.cpp
+msgid "Circle"
+msgstr "Sirkel"
+
+#: pe/ui/settings.cpp
+msgid "Clear"
+msgstr "Klart"
+
+#: pe/ui/settings.cpp
+msgid "Clear cache"
+msgstr "Tøm hurtigbuffer"
+
+#: pe/ui/launcher.cpp
+msgid "Clear cache?"
+msgstr "Tømme bufferen?"
+
+#: eden_services.cpp
+msgid "Cleared {0} of cache."
+msgstr "Tømte {0} for buffer."
+
+#: pe/ui/launcher.cpp
+msgid "Confirm"
+msgstr "Bekreft"
+
+#: pe/ui/launcher.cpp
+msgid "Confirm this action?"
+msgstr "Vil du bekrefte denne handlingen?"
+
+#: pe/ui/home.cpp, pe/ui/launcher.cpp, pe/ui/library.cpp
 msgid "Console mode"
 msgstr "Konsollmodus"
 
@@ -138,10 +278,22 @@ msgid "CONTINUE PLAYING"
 msgstr "SPILL VIDERE"
 
 #: pe/ui/home.cpp
+msgid "Controller mapping"
+msgstr "Kontroller kartlegging"
+
+#: pe/ui/settings.cpp
+msgid "Controller profile: {0}"
+msgstr "Kontrollørprofil: {0}"
+
+#: pe/ui/home.cpp
 msgid "CONTROLLERS"
 msgstr "KONTROLLERE"
 
-#: pe/ui/settings.cpp
+#: pe/ui/home.cpp
+msgid "Controllers"
+msgstr "Kontrollere"
+
+#: pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Controls"
 msgstr "Styring"
 
@@ -153,13 +305,29 @@ msgstr "STYRING"
 msgid "Could not create the folder. Check that the game files folder can be written."
 msgstr "Kunne ikke opprette mappen. Sjekk at det går an å skrive til mappen med spillfiler."
 
+#: pe/ui/library.cpp
+msgid "Could not load game library. Reopen Encore to retry."
+msgstr "Kunne ikke laste inn spillbiblioteket. Åpne Encore på nytt for å prøve på nytt."
+
+#: pe/ui/library.cpp
+msgid "Could not load game list. Please try again."
+msgstr "Kunne ikke laste inn spilllisten. Vennligst prøv igjen."
+
 #: pe/ui/launcher.cpp
 msgid "Could not save settings. Please try again."
 msgstr "Kunne ikke lagre innstillingene. Prøv igjen."
 
-#: pe/ui/browse.cpp, pe/ui/library.cpp
+#: pe/ui/browse.cpp
+msgid "Could not save the storage root. Please try again."
+msgstr "Kunne ikke lagre lagringsroten. Vennligst prøv igjen."
+
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp
 msgid "Could not save. Please try again."
 msgstr "Kunne ikke lagre. Prøv igjen."
+
+#: pe/ui/mapping.cpp
+msgid "Create"
+msgstr "Opprett"
 
 #. Button hint: make the folder a game's mods go in.
 #: pe/ui/library.cpp
@@ -175,10 +343,46 @@ msgstr "{0} er opprettet. Kopier mappen til hver modd dit."
 msgid "Credits and setup"
 msgstr "Medvirkende og oppsett"
 
+#: pe/ui/mapping.cpp
+msgid "Cross"
+msgstr "Cross"
+
+#: pe/ui/settings.cpp, settings_store.h
+msgid "Custom"
+msgstr "Egendefinert"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Custom PS5"
+msgstr "Egendefinert PS5"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Custom Switch"
+msgstr "Egendefinert bryter"
+
+#: pe/ui/settings.cpp
+msgid "Customize"
+msgstr "Tilpass"
+
+#: pe/ui/settings.cpp
+msgid "Customize every guest button. The profile automatically becomes Custom PS5 or Custom Switch."
+msgstr "Tilpass hver gjesteknapp. Profilen blir automatisk Custom PS5 eller Custom Switch."
+
+#: pe/ui/settings.cpp
+msgid "DATA"
+msgstr "DATA"
+
+#: pe/ui/settings.cpp
+msgid "Data: {0}"
+msgstr "Data: {0}"
+
 #. A per-game setting that follows the general setting; {0} is its value.
 #: pe/ui/library.cpp
 msgid "Default ({0})"
 msgstr "Standard ({0})"
+
+#: pe/ui/settings.cpp
+msgid "DETAILED LOGGING"
+msgstr "DETALJERT LOGGING"
 
 #: pe/ui/settings.cpp
 msgid "Detailed logging"
@@ -188,7 +392,7 @@ msgstr "Detaljert logging"
 msgid "Detailed logs on"
 msgstr "Detaljerte logger på"
 
-#: pe/ui/settings.cpp
+#: pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Diagnostics"
 msgstr "Diagnostikk"
 
@@ -197,17 +401,45 @@ msgid "DIAGNOSTICS"
 msgstr "DIAGNOSTIKK"
 
 #. Console mode: the console as if connected to a TV. Keep it short (about 9 letters).
-#: pe/ui/library.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Docked"
 msgstr "Dokket"
+
+#: pe/ui/library.cpp
+msgid "Docked can improve graphics but may cost performance; Handheld is lighter for demanding games."
+msgstr "Dokket kan forbedre grafikken, men kan koste ytelse; Håndholdt er lettere for krevende spill."
+
+#: pe/ui/home.cpp
+msgid "Done"
+msgstr "Ferdig"
 
 #: pe/ui/settings.cpp
 msgid "Draws the menu's small text larger."
 msgstr "Gjør liten tekst i menyen større."
 
+#: pe/ui/settings.cpp
+msgid "DualSense mapping, calibration, vibration and shortcuts."
+msgstr "DualSense-kartlegging, kalibrering, vibrasjon og snarveier."
+
 #: settings_store.h
 msgid "Dutch"
 msgstr "Nederlandsk"
+
+#: pe/ui/browse.cpp
+msgid "Eden Encore builds on the proven ProsperoEden 0.40 PS5 base for firmware 13.60, with the Eden core, safer recovery, and targeted compatibility, performance and TV-first UX improvements."
+msgstr "Eden Encore bygger på den velprøvde ProsperoEden 0.40 PS5-basen for fastvare 13.60, med Eden-kjernen, sikrere gjenoppretting og målrettet kompatibilitet, ytelse og TV-første UX-forbedringer."
+
+#: pe/ui/home.cpp
+msgid "Edit"
+msgstr "Rediger"
+
+#: pe/ui/settings.cpp
+msgid "Edit custom mapping"
+msgstr "Rediger tilpasset kartlegging"
+
+#: pe/ui/browse.cpp
+msgid "Encore uses the same keys, firmware, roms, updates and mods folders under every storage root."
+msgstr "Encore bruker samme nøkler, fastvare, rom, oppdateringer og mods-mapper under hver lagringsrot."
 
 #. Label of the shortcut that ends the running game.
 #: pe/ui/settings.cpp
@@ -226,10 +458,22 @@ msgstr "Engelsk (USA)"
 msgid "Europe"
 msgstr "Europa"
 
+#: pe/ui/launcher.cpp
+msgid "Exit Eden Encore"
+msgstr "Avslutt Eden Encore"
+
+#: pe/ui/launcher.cpp
+msgid "Exit Eden Encore?"
+msgstr "Vil du avslutte Eden Encore?"
+
 #. Button hint: copy the game's save out to a folder.
 #: pe/ui/library.cpp
 msgid "Export a copy"
 msgstr "Eksporter en kopi"
+
+#: eden_services.cpp
+msgid "Export failed. Check that the storage root can be written."
+msgstr "Eksporten mislyktes. Sjekk at lagringsroten kan skrives."
 
 #. {0} is a folder.
 #: eden_services.cpp, host/fake_services.hpp
@@ -240,6 +484,14 @@ msgstr "Eksportert til {0}."
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Files"
 msgstr "Filer"
+
+#: pe/ui/settings.cpp
+msgid "FILESYSTEM"
+msgstr "FILSYSTEM"
+
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Final app output size. Choose 1080p for lower memory use, 1440p for balance, or 2160p for maximum output detail."
+msgstr "Endelig apputdatastørrelse. Velg 1080p for lavere minnebruk, 1440p for balanse eller 2160p for maksimal utdata."
 
 #: pe/ui/settings.cpp
 msgid "Fine-tune your experience"
@@ -260,6 +512,10 @@ msgstr "Fastvare klar"
 #: eden_services.cpp
 msgid "Firmware SystemVersion data is missing or unreadable. Install a complete firmware dump."
 msgstr "SystemVersion-data i fastvaren mangler eller kan ikke leses. Installer en komplett fastvaredump."
+
+#: pe/ui/settings.cpp
+msgid "Fixed Encore folder structure"
+msgstr "Fast Encore-mappestruktur"
 
 #: pe/ui/browse.cpp
 msgid "FOLDERS"
@@ -282,10 +538,26 @@ msgstr "Fransk"
 msgid "French (Canada)"
 msgstr "Fransk (Canada)"
 
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "FSR sharpness"
+msgstr "FSR-skarphet"
+
+#: pe/ui/settings.cpp
+msgid "FSR SHARPNESS"
+msgstr "FSR-SKARPHET"
+
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "FSR sharpness changes detail recovery only when AMD FSR is selected. Lower it if the picture looks grainy or over-sharpened."
+msgstr "FSR-skarphet endrer detaljgjenoppretting bare når AMD FSR er valgt. Senk den hvis bildet ser kornete ut eller for skarpt."
+
 #. The app can read every folder of the console.
-#: pe/ui/browse.cpp
+#: eden_services.cpp, pe/ui/browse.cpp
 msgid "Full filesystem"
 msgstr "Hele filsystemet"
+
+#: settings_store.h
+msgid "FXAA"
+msgstr "FXAA"
 
 #: pe/ui/settings.cpp
 msgid "Game audio; PS5 system-menu music is unchanged."
@@ -297,6 +569,26 @@ msgid "Game could not start: {0} Details: {1}"
 msgstr "Spillet kunne ikke startes: {0} Detaljer: {1}"
 
 #: pe/ui/library.cpp
+msgid "Game library unavailable"
+msgstr "Spillbiblioteket er utilgjengelig"
+
+#: pe/ui/library.cpp
+msgid "Game overrides reset to global defaults."
+msgstr "Game overrides reset to global defaults."
+
+#: pe/ui/settings.cpp
+msgid "Game render scale follows the selected profile. Lower it for performance or memory; raise it only when a game has headroom."
+msgstr "Spillgjengivelsesskalaen følger den valgte profilen. Senk den for ytelse eller minne; heve den bare når et spill har takhøyde."
+
+#: pe/ui/settings.cpp
+msgid "GAME RESOLUTION"
+msgstr "SPILLOPPLØSNING"
+
+#: pe/ui/settings.cpp
+msgid "Game resolution"
+msgstr "Spilloppløsning"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Game settings"
 msgstr "Spillinnstillinger"
 
@@ -316,6 +608,10 @@ msgstr "Spillvolum og lydene i denne menyen."
 msgid "GAMES"
 msgstr "SPILL"
 
+#: pe/ui/home.cpp
+msgid "Games and cache"
+msgstr "Spill og cache"
+
 #: pe/ui/browse.cpp
 msgid "Games use this language when they offer it, and their own default otherwise. It applies when a game starts."
 msgstr "Spill bruker dette språket når de støtter det, og ellers sitt eget standardspråk. Endringen gjelder når et spill starter."
@@ -332,6 +628,14 @@ msgstr "Tysk"
 msgid "GETTING STARTED"
 msgstr "KOM I GANG"
 
+#: pe/ui/library.cpp, pe/ui/mapping.cpp
+msgid "Global ({0})"
+msgstr "Globalt ({0})"
+
+#: pe/ui/mapping.cpp
+msgid "Global controller profile: {0}"
+msgstr "Global kontrollerprofil: {0}"
+
 #: pe/ui/settings.cpp
 msgid "Graphics backend and how games are scaled to your TV."
 msgstr "Renderer og skalering av spill til TV-en din."
@@ -341,9 +645,17 @@ msgid "Graphics backend initialization failed. Try another backend in Settings; 
 msgstr "Rendereren kunne ikke initialiseres. Prøv en annen i Innstillinger; driverdetaljer står i stderr.log og eden_log.txt."
 
 #. Console mode: the console as if held in the hands. Keep it short (about 9 letters).
-#: pe/ui/library.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Handheld"
 msgstr "Håndholdt"
+
+#: pe/ui/settings.cpp
+msgid "Health and storage tools. Cache cleanup never removes saves, settings, keys or games."
+msgstr "Helse- og oppbevaringsverktøy. Cache-opprydding fjerner aldri lagringer, innstillinger, nøkler eller spill."
+
+#: settings_store.h
+msgid "High"
+msgstr "Høy"
 
 #: pe/ui/settings.cpp
 msgid "HIGH CONTRAST"
@@ -353,6 +665,10 @@ msgstr "HØY KONTRAST"
 #: pe/ui/settings.cpp
 msgid "High contrast"
 msgstr "Høy kontrast"
+
+#: pe/ui/launcher.cpp
+msgid "Home"
+msgstr "Hjem"
 
 #. Button hint: copy a save in.
 #: pe/ui/library.cpp
@@ -372,9 +688,17 @@ msgid "Imported. The save it replaced was backed up."
 msgstr "Importert. De gamle dataene er sikkerhetskopiert."
 
 #. Tag on the language or folder that is in use now.
-#: pe/ui/browse.cpp, pe/ui/settings.cpp
+#: pe/ui/browse.cpp
 msgid "IN USE"
 msgstr "I BRUK"
+
+#: pe/ui/browse.cpp
+msgid "Internal storage"
+msgstr "Intern lagring"
+
+#: pe/ui/browse.cpp
+msgid "Internal storage saved. Reopen Encore to use it."
+msgstr "Intern lagring lagret. Åpne Encore på nytt for å bruke den."
 
 #: settings_store.h
 msgid "Italian"
@@ -409,7 +733,7 @@ msgstr "Koreansk"
 msgid "Language"
 msgstr "Språk"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/settings.cpp
 msgid "LANGUAGE"
 msgstr "SPRÅK"
 
@@ -431,17 +755,45 @@ msgstr "Større tekst"
 msgid "Last game opened"
 msgstr "Sist åpnede spill"
 
-#: pe/ui/home.cpp
+#: pe/ui/library.cpp
 msgid "Launch game"
 msgstr "Start spillet"
 
-#: pe/ui/home.cpp
+#: pe/ui/settings.cpp
+msgid "LAYOUT"
+msgstr "LAYOUT"
+
+#: pe/ui/mapping.cpp
+msgid "Left stick press"
+msgstr "Venstre pinnepress"
+
+#: pe/ui/library.cpp
+msgid "Left/right: Global, PlayStation or Switch for this game; Cross: edit individual buttons."
+msgstr "Venstre/høyre: Global, PlayStation eller Switch for dette spillet; Kryss: rediger individuelle knapper."
+
+#: pe/ui/launcher.cpp
 msgid "Library"
 msgstr "Bibliotek"
+
+#: pe/ui/library.cpp
+msgid "Loading artwork"
+msgstr "Laster inn kunstverk"
+
+#: pe/ui/launcher.cpp
+msgid "Loading game library..."
+msgstr "Laster spillbibliotek ..."
+
+#: pe/ui/settings.cpp
+msgid "LOGS"
+msgstr "LOGGER"
 
 #: pe/ui/settings.cpp
 msgid "Make the menu easier to see and follow."
 msgstr "Gjør menyen lettere å se og følge."
+
+#: pe/ui/home.cpp
+msgid "Max. players: {0}"
+msgstr "Maks. spillere: {0}"
 
 #: pe/ui/settings.cpp
 msgid "MENU SOUNDS"
@@ -450,6 +802,18 @@ msgstr "MENYLYDER"
 #: pe/ui/settings.cpp
 msgid "Menu sounds"
 msgstr "Menylyder"
+
+#: settings_store.h
+msgid "Minimum"
+msgstr "Minimum"
+
+#: pe/ui/settings.cpp
+msgid "Minimum reduces GPU load and may use lower GPU accuracy for speed. Recommended balances quality and stability. High and Ultra raise image quality when the game has headroom."
+msgstr "Minimum reduserer GPU-belastning og kan bruke lavere GPU-nøyaktighet for hastighet. Anbefalt balanserer kvalitet og stabilitet. Høy og Ultra hever bildekvaliteten når spillet har takhøyde."
+
+#: pe/ui/library.cpp
+msgid "Minimum, Recommended, High and Ultra apply the title-aware Encore profile. Manual changes become Custom for this game."
+msgstr "Minimum, Anbefalt, Høy og Ultra bruker den tittelbevisste Encore-profilen. Manuelle endringer blir tilpasset for dette spillet."
 
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Missing or empty keys/prod.keys in {0}."
@@ -526,8 +890,12 @@ msgstr "Fant ingen ROM-filer."
 msgid "No roms folder"
 msgstr "Ingen roms-mappe"
 
-#. No add-ons (updates or DLC).
 #: pe/ui/library.cpp
+msgid "No screenshots available"
+msgstr "Ingen tilgjengelige skjermbilder"
+
+#. No add-ons (updates or DLC).
+#: pe/ui/library.cpp, settings_store.h
 msgid "None"
 msgstr "Ingen"
 
@@ -546,19 +914,43 @@ msgstr "Av"
 msgid "On"
 msgstr "På"
 
+#: pe/ui/settings.cpp
+msgid "One root for keys, firmware, games, updates, mods and transfers."
+msgstr "En rot for nøkler, fastvare, spill, oppdateringer, mods og overføringer."
+
 #. Short tag on a folder row.
 #: pe/ui/browse.cpp
 msgid "OPEN"
 msgstr "ÅPNE"
 
 #. Button hint: open the highlighted folder.
-#: pe/ui/browse.cpp, pe/ui/library.cpp
+#: pe/ui/browse.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Open"
 msgstr "Åpne"
 
 #: pe/ui/home.cpp
 msgid "Open library"
 msgstr "Åpne biblioteket"
+
+#: pe/ui/home.cpp
+msgid "Open quick settings"
+msgstr "Åpne hurtiginnstillinger"
+
+#: pe/ui/home.cpp
+msgid "Open settings"
+msgstr "Åpne innstillinger"
+
+#: pe/ui/home.cpp
+msgid "Open storage"
+msgstr "Åpen lagring"
+
+#: pe/ui/library.cpp
+msgid "Open the per-game DualSense mapping. Global uses Settings > Controls; Custom overrides it only for this game."
+msgstr "Åpne DualSense-kartleggingen per spill. Global bruk Innstillinger > Kontroller; Tilpasset overstyrer det bare for dette spillet."
+
+#: pe/ui/mapping.cpp
+msgid "Options"
+msgstr "Alternativer"
 
 #. Button hint: jump a page of the list (L1 / R1).
 #: pe/ui/browse.cpp
@@ -573,6 +965,18 @@ msgstr "Overordnet mappe"
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Patch"
 msgstr "Patch"
+
+#: pe/ui/home.cpp
+msgid "Play"
+msgstr "Spill"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "PlayStation"
+msgstr "PlayStation"
+
+#: pe/ui/settings.cpp
+msgid "PlayStation Auto keeps Cross/Circle menu semantics while adapting gameplay to physical Switch positions. Switch stays fixed; editing any button creates a custom profile."
+msgstr "PlayStation Auto beholder Cross/Circle-menyens semantikk mens spillet tilpasses fysiske Switch-posisjoner. Bryteren forblir fast; redigere en hvilken som helst knapp oppretter en egendefinert profil."
 
 #: settings_store.h
 msgid "Polish"
@@ -590,6 +994,10 @@ msgstr "Portugisisk (Brasil)"
 #: pe/ui/browse.cpp
 msgid "Powered by Eden"
 msgstr "Drevet av Eden"
+
+#: pe/ui/settings.cpp
+msgid "Preset"
+msgstr "Forvalg"
 
 #. Asked before a save is imported over the one in use.
 #: pe/ui/library.cpp
@@ -617,18 +1025,46 @@ msgstr "MEDVIRKENDE"
 msgid "ProsperoEden stopped because of an error. A report was saved to {0}."
 msgstr "ProsperoEden stoppet på grunn av en feil. En rapport ble lagret i {0}."
 
+#: pe/ui/browse.cpp
+msgid "PS5 13.60 FORK"
+msgstr "PS5 13,60 GAFFEL"
+
 #. Why a game did not start.
 #: eden_services.cpp
 msgid "PS5 controller initialization failed"
 msgstr "PS5-kontrolleren kunne ikke initialiseres"
 
+#: pe/ui/home.cpp
+msgid "QUICK SETTINGS"
+msgstr "HURTIGINNSTILLINGER"
+
+#: pe/ui/home.cpp
+msgid "Quick settings"
+msgstr "Hurtiginnstillinger"
+
+#: pe/ui/home.cpp
+msgid "Quit"
+msgstr "Avslutt"
+
 #: pe/ui/settings.cpp
 msgid "Ready"
 msgstr "Klar"
 
+#: pe/ui/launcher.cpp
+msgid "Recent"
+msgstr "Nylig"
+
 #: pe/ui/home.cpp
 msgid "RECENTLY PLAYED"
 msgstr "NYLIG SPILT"
+
+#: settings_store.h
+msgid "Recommended"
+msgstr "Anbefalt"
+
+#: pe/ui/settings.cpp
+msgid "Recommended defaults restored."
+msgstr "Recommended defaults restored."
 
 #: pe/ui/settings.cpp
 msgid "REDUCE MOTION"
@@ -653,7 +1089,7 @@ msgstr "OPPDATERINGSFREKVENS"
 msgid "REGION"
 msgstr "REGION"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Renderer"
 msgstr "Renderer"
 
@@ -661,13 +1097,57 @@ msgstr "Renderer"
 msgid "RENDERER"
 msgstr "RENDERER"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/mapping.cpp
+msgid "Reset"
+msgstr "Tilbakestill"
+
+#: pe/ui/launcher.cpp
+msgid "Reset controller mapping?"
+msgstr "Tilbakestille kontrollerkartlegging?"
+
+#: pe/ui/library.cpp
+msgid "Reset overrides"
+msgstr "Reset overrides"
+
+#: pe/ui/launcher.cpp
+msgid "Reset this game's custom settings?"
+msgstr "Vil du tilbakestille dette spillets egendefinerte innstillinger?"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Resolution"
 msgstr "Oppløsning"
 
-#: eden_services.cpp
+#: pe/ui/library.cpp
+msgid "Resolution follows the selected title-aware profile. Lower it for performance or memory; raise it only when the title has headroom."
+msgstr "Oppløsningen følger den valgte tittelbevisste profilen. Senk den for ytelse eller minne; heve den bare når tittelen har takhøyde."
+
+#: pe/ui/launcher.cpp
+msgid "Restore default settings?"
+msgstr "Gjenopprette standardinnstillinger?"
+
+#: pe/ui/settings.cpp
+msgid "Restore defaults"
+msgstr "Restore defaults"
+
+#: pe/ui/mapping.cpp
+msgid "Right stick press"
+msgstr "Høyre pinne trykk"
+
+#: pe/ui/launcher.cpp, pe/ui/library.cpp
 msgid "ROM missing from the game files folder"
 msgstr "ROM mangler i mappen med spillfiler"
+
+#: eden_services.cpp
+msgid "ROM missing from the storage root"
+msgstr "ROM mangler fra lagringsroten"
+
+#: pe/ui/settings.cpp
+msgid "ROOT"
+msgstr "ROT"
+
+#: pe/ui/settings.cpp
+msgid "Runtime health, storage and recovery tools."
+msgstr "Kjøretidshelse, lagring og gjenopprettingsverktøy."
 
 #: settings_store.h
 msgid "Russian"
@@ -677,6 +1157,18 @@ msgstr "Russisk"
 #: pe/ui/library.cpp
 msgid "Ryujinx save found"
 msgstr "Ryujinx-data funnet"
+
+#: pe/ui/library.cpp
+msgid "Safe launch"
+msgstr "Sikker lansering"
+
+#: pe/ui/library.cpp
+msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
+msgstr "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
+
+#: eden_services.cpp, pe/ui/browse.cpp
+msgid "Sandbox only"
+msgstr "Kun sandkasse"
 
 #. The app can read only its own folder; {0} is a number.
 #: pe/ui/browse.cpp
@@ -693,7 +1185,7 @@ msgstr "Lagrede data"
 msgid "Save folder found"
 msgstr "Lagringsmappe funnet"
 
-#: pe/ui/library.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp
 msgid "Saved for this game. Applies on next launch."
 msgstr "Lagret for dette spillet. Gjelder fra neste start."
 
@@ -702,12 +1194,12 @@ msgstr "Lagret for dette spillet. Gjelder fra neste start."
 msgid "Saved. A display that cannot show 120 Hz stays at 60 Hz."
 msgstr "Lagret. En skjerm som ikke kan vise 120 Hz, blir på 60 Hz."
 
-#: pe/ui/browse.cpp, pe/ui/launcher.cpp
+#: pe/ui/launcher.cpp
 msgid "Saved. Applies when a game starts."
 msgstr "Lagret. Gjelder når et spill starter."
 
 #. Button hint: choose the highlighted item (not the Select button).
-#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
 msgid "Select"
 msgstr "Velg"
 
@@ -724,12 +1216,16 @@ msgstr "Velg et spill for å begynne"
 msgid "SELECTED"
 msgstr "MARKERT"
 
+#: pe/ui/home.cpp
+msgid "SELECTED GAME"
+msgstr "VALGT SPILL"
+
 #. Why a game did not start (the file is gone).
 #: eden_services.cpp
 msgid "Selected ROM is no longer available"
 msgstr "Valgt ROM er ikke lenger tilgjengelig"
 
-#: pe/ui/home.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Settings"
 msgstr "Innstillinger"
 
@@ -742,17 +1238,33 @@ msgstr "OPPSETT"
 msgid "Setup required"
 msgstr "Oppsett kreves"
 
-#: eden_services.cpp, host/fake_services.cpp
+#: host/fake_services.cpp
 msgid "Setup required: {0} Open Settings, Game files to choose the folder that holds your keys, firmware and roms folders (or add the files to {1}), then reopen ProsperoEden."
 msgstr "Oppsett kreves: {0} Åpne Innstillinger, Spillfiler for å velge mappen som inneholder mappene keys, firmware og roms (eller legg filene i {1}), og åpne deretter ProsperoEden på nytt."
+
+#: eden_services.cpp
+msgid "Setup required: {0} Open Settings, Storage to choose the root that holds the standard keys, firmware and roms folders (or add the files to {1}), then reopen Encore."
+msgstr "Oppsett kreves: {0} Åpne Innstillinger, Lagring for å velge roten som inneholder standardnøkler, fastvare og rom-mappene (eller legg til filene i {1}), og åpne Encore på nytt."
 
 #: eden_services.cpp
 msgid "Setup validation failed. Check that firmware and key files are readable and valid."
 msgstr "Validering av oppsettet mislyktes. Sjekk at fastvaren og nøkkelfilene kan leses og er gyldige."
 
 #: pe/ui/settings.cpp
+msgid "Shows live FPS while playing. Off is cleaner for normal use; Touchpad + R1 toggles it at any time."
+msgstr "Viser live FPS mens du spiller. Off er renere for normal bruk; Touchpad + R1 veksler når som helst."
+
+#: settings_store.h
+msgid "SMAA"
+msgstr "SMAA"
+
+#: pe/ui/settings.cpp
 msgid "Solid panels, brighter text and an outlined highlight."
 msgstr "Ugjennomsiktige paneler, lysere tekst og markering med kontur."
+
+#: eden_services.cpp
+msgid "Some cache files could not be removed."
+msgstr "Noen hurtigbufferfiler kunne ikke fjernes."
 
 #: settings_store.h
 msgid "Spanish"
@@ -761,6 +1273,10 @@ msgstr "Spansk"
 #: settings_store.h
 msgid "Spanish (Latin America)"
 msgstr "Spansk (Latin-Amerika)"
+
+#: pe/ui/mapping.cpp
+msgid "Square"
+msgstr "Square"
 
 #. The app creates its user the first time a game runs.
 #: eden_services.cpp
@@ -773,12 +1289,52 @@ msgid "STARTING"
 msgstr "STARTER"
 
 #: pe/ui/settings.cpp
+msgid "STICK DEADZONE"
+msgstr "DØDSONE FOR STYRESPAK"
+
+#: pe/ui/settings.cpp
+msgid "Stick deadzone"
+msgstr "Dødsone for styrespak"
+
+#: pe/ui/settings.cpp
 msgid "Stops the background drifting and the screens sliding, here and on the loading screen."
 msgstr "Bakgrunnen står stille, og skjermene glir ikke, her og på lasteskjermen."
+
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/settings.cpp
+msgid "Storage"
+msgstr "Lagring"
+
+#: pe/ui/settings.cpp
+msgid "STORAGE"
+msgstr "LAGRING"
+
+#: pe/ui/home.cpp
+msgid "Storage not configured"
+msgstr "Lagring ikke konfigurert"
+
+#: pe/ui/home.cpp
+msgid "Storage ready"
+msgstr "Lagring klar"
+
+#: pe/ui/browse.cpp
+msgid "Storage root saved. Reopen Encore to use it."
+msgstr "Lagringsrot lagret. Åpne Encore på nytt for å bruke den."
 
 #: pe/ui/browse.cpp
 msgid "Supply your own files"
 msgstr "Bruk dine egne filer"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Switch"
+msgstr "Bytt"
+
+#: pe/ui/home.cpp
+msgid "Switch card"
+msgstr "Bytt kort"
+
+#: pe/ui/home.cpp
+msgid "System"
+msgstr "System"
 
 #: eden_services.cpp
 msgid "Taiwan"
@@ -792,6 +1348,14 @@ msgstr "Thai"
 #: pe/ui/browse.cpp
 msgid "THANKS"
 msgstr "TAKK"
+
+#: pe/ui/browse.cpp
+msgid "Thanks to the whole PS5 homebrew community and to every developer whose drivers, tools and libraries make Eden Encore possible."
+msgstr "Takk til hele PS5-hjemmebryggersamfunnet og til alle utviklere hvis drivere, verktøy og biblioteker gjør Eden Encore mulig."
+
+#: eden_services.cpp
+msgid "The game could not allocate PS5 memory. Close Eden Encore completely before retrying to release memory retained between games."
+msgstr "Spillet kunne ikke tildele PS5-minne. Lukk Eden Encore helt før du prøver å frigjøre minnet mellom spillene."
 
 #. Why a game stopped. 'Settings, Video' is the menu path; 'the game's own settings' is the Game settings dialog of the Library.
 #: eden_services.cpp
@@ -814,15 +1378,47 @@ msgstr "Dette spillet har ingen lagrede data å eksportere ennå."
 msgid "This game's settings cannot be saved (no title ID)."
 msgstr "Innstillingene for dette spillet kan ikke lagres (ingen tittel-ID)."
 
+#: pe/ui/browse.cpp
+msgid "THIS ROOT"
+msgstr "DENNE ROTTEN"
+
 #. ryujinx/, save-import/ and roms/ are folder names (unchanged); {0} is the game's ID.
 #: eden_services.cpp
 msgid "To import, copy a Ryujinx folder to ryujinx/ or a save to save-import/{0}/, next to roms/."
 msgstr "For å importere kopierer du en Ryujinx-mappe til ryujinx/ eller lagrede data til save-import/{0}/, ved siden av roms/."
 
+#: pe/ui/mapping.cpp
+msgid "Touchpad"
+msgstr "Touchpad"
+
+#: pe/ui/mapping.cpp
+msgid "Triangle"
+msgstr "Trekant"
+
 #. Button hint: switch the highlighted mod on or off.
 #: pe/ui/library.cpp
 msgid "Turn on or off"
 msgstr "Slå på eller av"
+
+#: pe/ui/settings.cpp
+msgid "Turns DualSense vibration on or off for games."
+msgstr "Slår DualSense-vibrasjon på eller av for spill."
+
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "TV output"
+msgstr "TV-utgang"
+
+#: pe/ui/settings.cpp
+msgid "TV OUTPUT"
+msgstr "TV-UTGANG"
+
+#: settings_store.h
+msgid "Ultra"
+msgstr "Ultra"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp
+msgid "Unknown"
+msgstr "Ukjent"
 
 #. Short tag on the 'Parent folder' row.
 #: pe/ui/browse.cpp
@@ -838,7 +1434,7 @@ msgstr "Oppdatering {0}"
 msgid "UPDATES, DLC"
 msgstr "OPPDATERINGER, DLC"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Upscaling filter"
 msgstr "Oppskaleringsfilter"
 
@@ -850,6 +1446,14 @@ msgstr "OPPSKALERINGSFILTER"
 msgid "USA"
 msgstr "USA"
 
+#: pe/ui/browse.cpp
+msgid "Use extracted firmware NCA files. Choose the root in Settings, Storage; restart the app after changing it."
+msgstr "Bruk utpakkede fastvare NCA-filer. Velg roten i Innstillinger, Lagring; start appen på nytt etter at du har endret den."
+
+#: pe/ui/browse.cpp
+msgid "Use this root"
+msgstr "Bruk denne roten"
+
 #: pe/ui/settings.cpp
 msgid "VIBRATION"
 msgstr "VIBRASJON"
@@ -859,6 +1463,14 @@ msgid "Vibration"
 msgstr "Vibrasjon"
 
 #: pe/ui/settings.cpp
+msgid "VIBRATION STRENGTH"
+msgstr "VIBRASJONSSTYRKE"
+
+#: pe/ui/settings.cpp
+msgid "Vibration strength"
+msgstr "Vibrasjonsstyrke"
+
+#: pe/ui/home.cpp, pe/ui/settings.cpp
 msgid "Video"
 msgstr "Video"
 
@@ -866,10 +1478,26 @@ msgstr "Video"
 msgid "VIDEO"
 msgstr "VIDEO"
 
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Video preset"
+msgstr "Videoforvalg"
+
+#: pe/ui/settings.cpp
+msgid "VIDEO PRESET"
+msgstr "VIDEOFORVALG"
+
 #. Vulkan is a name (unchanged).
 #: pe/ui/settings.cpp
 msgid "Vulkan (recommended)"
 msgstr "Vulkan (anbefales)"
+
+#: pe/ui/settings.cpp
+msgid "Vulkan is recommended on PS5. Use OpenGL only as a fallback for a game with Vulkan issues."
+msgstr "Vulkan anbefales på PS5. Bruk OpenGL bare som en reserve for et spill med Vulkan-problemer."
+
+#: pe/ui/library.cpp
+msgid "Vulkan is recommended on PS5. Use OpenGL only as a fallback for a title with Vulkan issues."
+msgstr "Vulkan anbefales på PS5. Bruk OpenGL bare som en reserve for en tittel med Vulkan-problemer."
 
 #: pe/ui/library.cpp
 msgid "Your games"
@@ -951,7 +1579,7 @@ msgid "{0} of {1} on"
 msgstr "{0} av {1} på"
 
 #. A percentage (a volume): write it as the language does, for example with a space before the sign.
-#: pe/ui/settings.cpp
+#: pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "{0}%"
 msgstr "{0} %"
 
@@ -964,187 +1592,3 @@ msgstr "{0}/ (NSP eller XCI)"
 #: pe/ui/browse.cpp
 msgid "{0}/ (one folder per game ID)"
 msgstr "{0}/ (én mappe per tittel-ID)"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Restore defaults"
-msgstr "Restore defaults"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Recommended defaults restored."
-msgstr "Recommended defaults restored."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Reset overrides"
-msgstr "Reset overrides"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Game overrides reset to global defaults."
-msgstr "Game overrides reset to global defaults."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
-msgstr "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
-
-#: settings_store.h
-msgid "0.25x (minimum)"
-msgstr "0,25x (minimum)"
-
-#: settings_store.h
-msgid "0.5x (fastest, softer)"
-msgstr "0,5x (raskest, mykere)"
-
-#: settings_store.h
-msgid "1.25x (recommended)"
-msgstr "1,25x (anbefalt)"
-
-#: settings_store.h
-msgid "2x (high memory)"
-msgstr "2x (høyt minnebruk)"
-
-#: settings_store.h
-msgid "3x (very high memory)"
-msgstr "3x (svært høyt minnebruk)"
-
-#: settings_store.h
-msgid "4x (extreme memory)"
-msgstr "4x (ekstremt minnebruk)"
-
-#: translated UI setting
-msgid "Anti-aliasing"
-msgstr "Kantutjevning"
-
-#: translated UI setting
-msgid "Button mapping"
-msgstr "Knappeoppsett"
-
-#: translated UI setting
-msgid "Quick settings"
-msgstr "Hurtiginnstillinger"
-
-#: translated UI setting
-msgid "Storage"
-msgstr "Lagring"
-
-#: translated UI setting
-msgid "Video preset"
-msgstr "Videoforvalg"
-
-#: translated UI setting
-msgid "Game resolution"
-msgstr "Spilloppløsning"
-
-#: translated UI setting
-msgid "TV output"
-msgstr "TV-utgang"
-
-#: translated UI setting
-msgid "Play"
-msgstr "Spill"
-
-#: translated UI setting
-msgid "Cancel"
-msgstr "Avbryt"
-
-#: translated UI setting
-msgid "Confirm"
-msgstr "Bekreft"
-
-#: translated UI setting
-msgid "Reset"
-msgstr "Tilbakestill"
-
-#: translated UI setting
-msgid "Ultra"
-msgstr "Ultra"
-
-#: translated UI setting
-msgid "Recommended"
-msgstr "Anbefalt"
-
-#: translated UI setting
-msgid "Minimum"
-msgstr "Minimum"
-
-#: translated UI setting
-msgid "Home"
-msgstr "Hjem"
-
-#: translated UI setting
-msgid "Clear cache"
-msgstr "Tøm hurtigbuffer"
-
-#: translated UI setting
-msgid "Done"
-msgstr "Ferdig"
-
-#: translated UI setting
-msgid "Custom"
-msgstr "Egendefinert"
-
-#: translated UI setting
-msgid "Controllers"
-msgstr "Kontrollere"
-
-#: translated UI setting
-msgid "Quit"
-msgstr "Avslutt"
-
-#: translated UI setting
-msgid "FSR sharpness"
-msgstr "FSR-skarphet"
-
-#: translated UI setting
-msgid "Stick deadzone"
-msgstr "Dødsone for styrespak"
-
-#: translated UI setting
-msgid "Vibration strength"
-msgstr "Vibrasjonsstyrke"
-
-#: translated UI setting
-msgid "Preset"
-msgstr "Forvalg"
-
-#: translated UI setting
-msgid "Open settings"
-msgstr "Åpne innstillinger"
-
-#: translated UI setting
-msgid "ANTI-ALIASING"
-msgstr "KANTUTJEVNING"
-
-#: translated UI setting
-msgid "BUTTON MAPPING"
-msgstr "KNAPPEOPPSETT"
-
-#: translated UI setting
-msgid "QUICK SETTINGS"
-msgstr "HURTIGINNSTILLINGER"
-
-#: translated UI setting
-msgid "STORAGE"
-msgstr "LAGRING"
-
-#: translated UI setting
-msgid "VIDEO PRESET"
-msgstr "VIDEOFORVALG"
-
-#: translated UI setting
-msgid "GAME RESOLUTION"
-msgstr "SPILLOPPLØSNING"
-
-#: translated UI setting
-msgid "TV OUTPUT"
-msgstr "TV-UTGANG"
-
-#: translated UI setting
-msgid "FSR SHARPNESS"
-msgstr "FSR-SKARPHET"
-
-#: translated UI setting
-msgid "STICK DEADZONE"
-msgstr "DØDSONE FOR STYRESPAK"
-
-#: translated UI setting
-msgid "VIBRATION STRENGTH"
-msgstr "VIBRASJONSSTYRKE"

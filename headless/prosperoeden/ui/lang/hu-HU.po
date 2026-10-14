@@ -4,20 +4,64 @@
 # AMD FSR, DLC, NSP, XCI, prod.keys, Ryujinx) unchanged.
 
 #: settings_store.h
+msgid "0.25x (minimum)"
+msgstr "0,25x (minimum)"
+
+#: settings_store.h
+msgid "0.5x (fastest, softer)"
+msgstr "0,5x (leggyorsabb, lágyabb)"
+
+#: settings_store.h
 msgid "0.75x (faster)"
 msgstr "0,75x (gyorsabb)"
+
+#: settings_store.h
+msgid "1.25x (recommended)"
+msgstr "1,25x (ajánlott)"
 
 #: settings_store.h
 msgid "1.5x (sharper)"
 msgstr "1,5x (élesebb)"
 
+#: pe/ui/settings.cpp
+msgid "100% is full DualSense rumble strength. Lower it if vibration feels too strong."
+msgstr "100% a teljes DualSense dübörgés. Csökkentse, ha a vibráció túl erősnek tűnik."
+
 #: settings_store.h
 msgid "1x (native)"
 msgstr "1x (natív)"
 
+#: settings_store.h
+msgid "2x (high memory)"
+msgstr "2x (nagy memóriaigény)"
+
+#: settings_store.h
+msgid "3x (very high memory)"
+msgstr "3x (igen nagy memóriaigény)"
+
+#: settings_store.h
+msgid "4x (extreme memory)"
+msgstr "4x (extrém memóriaigény)"
+
+#: pe/ui/settings.cpp
+msgid "60 Hz is recommended. 120 Hz changes display mode only; the game still needs to render above 60 FPS to benefit."
+msgstr "60 Hz ajánlott. 120 Hz csak a megjelenítési módot változtatja; a játéknak továbbra is 60 FPS felett kell renderelnie a haszon érdekében."
+
+#: pe/ui/library.cpp
+msgid "60 Hz is the safe default. Use 120 Hz only with a compatible display or high-FPS patch."
+msgstr "60 Hz a biztonságos alapértelmezett. 120 Hz-et csak kompatibilis kijelzővel vagy nagy FPS-es javítással használjon."
+
+#: pe/ui/settings.cpp
+msgid "8% is recommended. Increase it for stick drift; decrease it for more sensitive aiming."
+msgstr "8% ajánlott. Növelje a botsodródás érdekében; csökkentse az érzékenyebb célzás érdekében."
+
 #: eden_services.cpp
 msgid "A firmware NCA cannot be read. Reinstall the firmware dump."
 msgstr "A firmware egyik NCA-fájlja nem olvasható. Telepítsd újra a firmware-dumpot."
+
+#: pe/ui/browse.cpp
+msgid "About Eden Encore"
+msgstr "Az Eden Encore-ról"
 
 #. Label: which folders the app can read.
 #: pe/ui/browse.cpp
@@ -50,7 +94,19 @@ msgstr "AMD FSR"
 msgid "Another language"
 msgstr "Másik nyelv"
 
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Anti-aliasing"
+msgstr "Élsimítás"
+
 #: pe/ui/settings.cpp
+msgid "ANTI-ALIASING"
+msgstr "ÉLSIMÍTÁS"
+
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Anti-aliasing smooths jagged edges. None is fastest; FXAA is light; SMAA prioritizes image quality."
+msgstr "Az élsimítás kisimítja a szaggatott éleket. Egyik sem a leggyorsabb; Az FXAA könnyű; Az SMAA a képminőséget részesíti előnyben."
+
+#: pe/ui/home.cpp, pe/ui/settings.cpp
 msgid "Audio"
 msgstr "Hang"
 
@@ -63,7 +119,7 @@ msgid "Australia"
 msgstr "Ausztrália"
 
 #. Button hint: go back one screen.
-#: pe/ui/browse.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
 msgid "Back"
 msgstr "Vissza"
 
@@ -76,6 +132,14 @@ msgstr "Bikubikus"
 #: settings_store.h
 msgid "Bilinear"
 msgstr "Bilineáris"
+
+#: pe/ui/settings.cpp
+msgid "Bilinear is the lightest default. AMD FSR is most useful when rendering below the TV output size."
+msgstr "A bilineáris a legkönnyebb alapértelmezett. Az AMD FSR akkor a leghasznosabb, ha a renderelés a TV kimeneti mérete alatt van."
+
+#: pe/ui/library.cpp
+msgid "Bilinear is the lightest default. AMD FSR is useful when rendering below the TV output size."
+msgstr "A bilineáris a legkönnyebb alapértelmezett. Az AMD FSR akkor hasznos, ha a TV kimeneti mérete alatti megjelenítést végez."
 
 #. Button hint: move through the list.
 #: pe/ui/browse.cpp
@@ -90,14 +154,58 @@ msgstr "Játékok böngészése"
 msgid "Browse settings"
 msgstr "Beállítások böngészése"
 
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Button mapping"
+msgstr "Gombkiosztás"
+
+#: pe/ui/settings.cpp
+msgid "BUTTON MAPPING"
+msgstr "GOMBKIOSZTÁS"
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping reset to global settings."
+msgstr "A gombleképezés visszaállt a globális beállításokra."
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping reset to the active profile."
+msgstr "A gombleképezés visszaállt az aktív profilra."
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping saved."
+msgstr "Gombleképezés mentve."
+
+#: pe/ui/settings.cpp
+msgid "BUTTON PROFILE"
+msgstr "GOMBPROFIL"
+
+#: pe/ui/settings.cpp
+msgid "Button profile"
+msgstr "Gomb profil"
+
+#: pe/ui/home.cpp, pe/ui/settings.cpp
+msgid "CACHE"
+msgstr "CACHE"
+
+#: pe/ui/settings.cpp
+msgid "Cache: {0}  |  Logs: {1}"
+msgstr "Gyorsítótár: {0} |  Naplók: {1}"
+
+#: pe/ui/launcher.cpp
+msgid "Cancel"
+msgstr "Mégse"
+
 #: eden_services.cpp
 msgid "Cannot read firmware/ in {0}. Install extracted firmware NCAs."
 msgstr "A firmware/ nem olvasható itt: {0}. Telepítsd a firmware kicsomagolt NCA-fájljait."
 
 #. Button hint: change the highlighted setting.
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
 msgid "Change"
 msgstr "Módosítás"
+
+#: pe/ui/launcher.cpp
+msgid "Change console mode for this game?"
+msgstr "Módosítja a konzol módot ehhez a játékhoz?"
 
 #. What a mod is made of: cheat codes.
 #: eden_services.cpp, host/fake_services.cpp
@@ -126,10 +234,42 @@ msgid "Choose a game from your library."
 msgstr "Válassz egy játékot a játéktárból."
 
 #: pe/ui/browse.cpp
+msgid "Choose one root for keys, firmware, games, updates and mods"
+msgstr "Válasszon egy gyökeret a kulcsokhoz, firmware-hez, játékokhoz, frissítésekhez és modokhoz"
+
+#: pe/ui/browse.cpp
 msgid "Choose the language games use"
 msgstr "Válaszd ki a játékok nyelvét"
 
-#: pe/ui/library.cpp
+#: pe/ui/mapping.cpp
+msgid "Circle"
+msgstr "Kör"
+
+#: pe/ui/settings.cpp
+msgid "Clear"
+msgstr "Világos"
+
+#: pe/ui/settings.cpp
+msgid "Clear cache"
+msgstr "Gyorsítótár törlése"
+
+#: pe/ui/launcher.cpp
+msgid "Clear cache?"
+msgstr "Törli a gyorsítótárat?"
+
+#: eden_services.cpp
+msgid "Cleared {0} of cache."
+msgstr "{0} gyorsítótár törölve."
+
+#: pe/ui/launcher.cpp
+msgid "Confirm"
+msgstr "Megerősítés"
+
+#: pe/ui/launcher.cpp
+msgid "Confirm this action?"
+msgstr "Megerősíti ezt a műveletet?"
+
+#: pe/ui/home.cpp, pe/ui/launcher.cpp, pe/ui/library.cpp
 msgid "Console mode"
 msgstr "Konzolmód"
 
@@ -138,10 +278,22 @@ msgid "CONTINUE PLAYING"
 msgstr "JÁTÉK FOLYTATÁSA"
 
 #: pe/ui/home.cpp
+msgid "Controller mapping"
+msgstr "Vezérlő leképezés"
+
+#: pe/ui/settings.cpp
+msgid "Controller profile: {0}"
+msgstr "Vezérlőprofil: {0}"
+
+#: pe/ui/home.cpp
 msgid "CONTROLLERS"
 msgstr "VEZÉRLŐK"
 
-#: pe/ui/settings.cpp
+#: pe/ui/home.cpp
+msgid "Controllers"
+msgstr "Vezérlők"
+
+#: pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Controls"
 msgstr "Irányítás"
 
@@ -153,13 +305,29 @@ msgstr "IRÁNYÍTÁS"
 msgid "Could not create the folder. Check that the game files folder can be written."
 msgstr "A mappát nem sikerült létrehozni. Ellenőrizd, hogy írható-e a játékfájlok mappája."
 
+#: pe/ui/library.cpp
+msgid "Could not load game library. Reopen Encore to retry."
+msgstr "Nem sikerült betölteni a játékkönyvtárat. Nyissa meg újra az Encore-t az újrapróbálkozáshoz."
+
+#: pe/ui/library.cpp
+msgid "Could not load game list. Please try again."
+msgstr "Nem sikerült betölteni a játéklistát. Kérjük, próbálja újra."
+
 #: pe/ui/launcher.cpp
 msgid "Could not save settings. Please try again."
 msgstr "Nem sikerült menteni a beállításokat. Próbáld újra."
 
-#: pe/ui/browse.cpp, pe/ui/library.cpp
+#: pe/ui/browse.cpp
+msgid "Could not save the storage root. Please try again."
+msgstr "Nem sikerült menteni a tárhely gyökerét. Kérjük, próbálja újra."
+
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp
 msgid "Could not save. Please try again."
 msgstr "Nem sikerült menteni. Próbáld újra."
+
+#: pe/ui/mapping.cpp
+msgid "Create"
+msgstr "Teremt"
 
 #. Button hint: make the folder a game's mods go in.
 #: pe/ui/library.cpp
@@ -175,10 +343,46 @@ msgstr "{0} létrehozva. Másold bele az egyes modok mappáját."
 msgid "Credits and setup"
 msgstr "Készítők és előkészítés"
 
+#: pe/ui/mapping.cpp
+msgid "Cross"
+msgstr "Kereszt"
+
+#: pe/ui/settings.cpp, settings_store.h
+msgid "Custom"
+msgstr "Egyéni"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Custom PS5"
+msgstr "Egyedi PS5"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Custom Switch"
+msgstr "Egyedi kapcsoló"
+
+#: pe/ui/settings.cpp
+msgid "Customize"
+msgstr "Testreszabás"
+
+#: pe/ui/settings.cpp
+msgid "Customize every guest button. The profile automatically becomes Custom PS5 or Custom Switch."
+msgstr "Minden vendég gomb testreszabása. A profil automatikusan Custom PS5 vagy Custom Switch lesz."
+
+#: pe/ui/settings.cpp
+msgid "DATA"
+msgstr "ADAT"
+
+#: pe/ui/settings.cpp
+msgid "Data: {0}"
+msgstr "Adatok: {0}"
+
 #. A per-game setting that follows the general setting; {0} is its value.
 #: pe/ui/library.cpp
 msgid "Default ({0})"
 msgstr "Alapértelmezett ({0})"
+
+#: pe/ui/settings.cpp
+msgid "DETAILED LOGGING"
+msgstr "RÉSZLETES NAPLÓZÁS"
 
 #: pe/ui/settings.cpp
 msgid "Detailed logging"
@@ -188,7 +392,7 @@ msgstr "Részletes naplózás"
 msgid "Detailed logs on"
 msgstr "Részletes naplók bekapcsolva"
 
-#: pe/ui/settings.cpp
+#: pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Diagnostics"
 msgstr "Diagnosztika"
 
@@ -197,17 +401,45 @@ msgid "DIAGNOSTICS"
 msgstr "DIAGNOSZTIKA"
 
 #. Console mode: the console as if connected to a TV. Keep it short (about 9 letters).
-#: pe/ui/library.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Docked"
 msgstr "Dokkolt"
+
+#: pe/ui/library.cpp
+msgid "Docked can improve graphics but may cost performance; Handheld is lighter for demanding games."
+msgstr "A dokkolás javíthatja a grafikát, de költséges lehet a teljesítmény; A Handheld könnyebb az igényes játékokhoz."
+
+#: pe/ui/home.cpp
+msgid "Done"
+msgstr "Kész"
 
 #: pe/ui/settings.cpp
 msgid "Draws the menu's small text larger."
 msgstr "Megnöveli a menü apró szövegeit."
 
+#: pe/ui/settings.cpp
+msgid "DualSense mapping, calibration, vibration and shortcuts."
+msgstr "DualSense leképezés, kalibrálás, rezgés és parancsikonok."
+
 #: settings_store.h
 msgid "Dutch"
 msgstr "Holland"
+
+#: pe/ui/browse.cpp
+msgid "Eden Encore builds on the proven ProsperoEden 0.40 PS5 base for firmware 13.60, with the Eden core, safer recovery, and targeted compatibility, performance and TV-first UX improvements."
+msgstr "Az Eden Encore a bevált ProsperoEden 0.40 PS5 alapra épít a 13.60-as firmware-hez, Eden maggal, biztonságosabb helyreállítással, valamint célzott kompatibilitási, teljesítmény- és TV-első UX-fejlesztésekkel."
+
+#: pe/ui/home.cpp
+msgid "Edit"
+msgstr "Szerkesztés"
+
+#: pe/ui/settings.cpp
+msgid "Edit custom mapping"
+msgstr "Egyéni leképezés szerkesztése"
+
+#: pe/ui/browse.cpp
+msgid "Encore uses the same keys, firmware, roms, updates and mods folders under every storage root."
+msgstr "Az Encore ugyanazokat a kulcsokat, firmware-t, ROM-okat, frissítések és modok mappáit használja minden tárhely gyökér alatt."
 
 #. Label of the shortcut that ends the running game.
 #: pe/ui/settings.cpp
@@ -226,10 +458,22 @@ msgstr "Angol (USA)"
 msgid "Europe"
 msgstr "Európa"
 
+#: pe/ui/launcher.cpp
+msgid "Exit Eden Encore"
+msgstr "Lépjen ki az Eden Encore-ból"
+
+#: pe/ui/launcher.cpp
+msgid "Exit Eden Encore?"
+msgstr "Kilép az Eden Encore-ból?"
+
 #. Button hint: copy the game's save out to a folder.
 #: pe/ui/library.cpp
 msgid "Export a copy"
 msgstr "Másolat exportálása"
+
+#: eden_services.cpp
+msgid "Export failed. Check that the storage root can be written."
+msgstr "Nem sikerült exportálni. Ellenőrizze, hogy a tárológyökér írható-e."
 
 #. {0} is a folder.
 #: eden_services.cpp, host/fake_services.hpp
@@ -240,6 +484,14 @@ msgstr "Exportálva ide: {0}."
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Files"
 msgstr "Fájlok"
+
+#: pe/ui/settings.cpp
+msgid "FILESYSTEM"
+msgstr "FÁJLRENDSZER"
+
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Final app output size. Choose 1080p for lower memory use, 1440p for balance, or 2160p for maximum output detail."
+msgstr "Az alkalmazás végső kimeneti mérete. Válasszon 1080p-t az alacsonyabb memóriahasználathoz, 1440p-t az egyensúlyhoz, vagy 2160p-t a maximális kimeneti részletezéshez."
 
 #: pe/ui/settings.cpp
 msgid "Fine-tune your experience"
@@ -260,6 +512,10 @@ msgstr "Firmware rendben"
 #: eden_services.cpp
 msgid "Firmware SystemVersion data is missing or unreadable. Install a complete firmware dump."
 msgstr "A firmware SystemVersion adatai hiányoznak vagy olvashatatlanok. Telepíts teljes firmware-dumpot."
+
+#: pe/ui/settings.cpp
+msgid "Fixed Encore folder structure"
+msgstr "Javítva az Encore mappaszerkezet"
 
 #: pe/ui/browse.cpp
 msgid "FOLDERS"
@@ -282,10 +538,26 @@ msgstr "Francia"
 msgid "French (Canada)"
 msgstr "Francia (Kanada)"
 
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "FSR sharpness"
+msgstr "FSR-élesség"
+
+#: pe/ui/settings.cpp
+msgid "FSR SHARPNESS"
+msgstr "FSR-ÉLESSÉG"
+
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "FSR sharpness changes detail recovery only when AMD FSR is selected. Lower it if the picture looks grainy or over-sharpened."
+msgstr "Az FSR élessége csak az AMD FSR kiválasztása esetén változtatja meg a részletek helyreállítását. Engedje le, ha a kép szemcsésnek vagy túlélesnek tűnik."
+
 #. The app can read every folder of the console.
-#: pe/ui/browse.cpp
+#: eden_services.cpp, pe/ui/browse.cpp
 msgid "Full filesystem"
 msgstr "Teljes fájlrendszer"
+
+#: settings_store.h
+msgid "FXAA"
+msgstr "FXAA"
 
 #: pe/ui/settings.cpp
 msgid "Game audio; PS5 system-menu music is unchanged."
@@ -297,6 +569,26 @@ msgid "Game could not start: {0} Details: {1}"
 msgstr "A játék nem indult el: {0} Részletek: {1}"
 
 #: pe/ui/library.cpp
+msgid "Game library unavailable"
+msgstr "A játékkönyvtár nem érhető el"
+
+#: pe/ui/library.cpp
+msgid "Game overrides reset to global defaults."
+msgstr "Game overrides reset to global defaults."
+
+#: pe/ui/settings.cpp
+msgid "Game render scale follows the selected profile. Lower it for performance or memory; raise it only when a game has headroom."
+msgstr "A játék renderelési skálája követi a kiválasztott profilt. Csökkentse a teljesítmény vagy a memória érdekében; csak akkor emelje fel, ha egy játéknak van szabad kapacitása."
+
+#: pe/ui/settings.cpp
+msgid "GAME RESOLUTION"
+msgstr "JÁTÉKFELBONTÁS"
+
+#: pe/ui/settings.cpp
+msgid "Game resolution"
+msgstr "Játékfelbontás"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Game settings"
 msgstr "Játék beállításai"
 
@@ -316,6 +608,10 @@ msgstr "A játékok hangereje és a menü hangjai."
 msgid "GAMES"
 msgstr "JÁTÉKOK"
 
+#: pe/ui/home.cpp
+msgid "Games and cache"
+msgstr "Játékok és gyorsítótár"
+
 #: pe/ui/browse.cpp
 msgid "Games use this language when they offer it, and their own default otherwise. It applies when a game starts."
 msgstr "A játékok ezt a nyelvet használják, ha elérhető bennük, egyébként a saját alapértelmezett nyelvüket. A játék indításakor lép érvénybe."
@@ -332,6 +628,14 @@ msgstr "Német"
 msgid "GETTING STARTED"
 msgstr "ELSŐ LÉPÉSEK"
 
+#: pe/ui/library.cpp, pe/ui/mapping.cpp
+msgid "Global ({0})"
+msgstr "Globális ({0})"
+
+#: pe/ui/mapping.cpp
+msgid "Global controller profile: {0}"
+msgstr "Globális vezérlőprofil: {0}"
+
 #: pe/ui/settings.cpp
 msgid "Graphics backend and how games are scaled to your TV."
 msgstr "A renderelő és a játékok skálázása a TV-re."
@@ -341,9 +645,17 @@ msgid "Graphics backend initialization failed. Try another backend in Settings; 
 msgstr "A renderelő inicializálása sikertelen. Próbálj ki egy másik renderelőt a Beállításokban; az illesztőprogram részleteit lásd az stderr.log és az eden_log.txt fájlban."
 
 #. Console mode: the console as if held in the hands. Keep it short (about 9 letters).
-#: pe/ui/library.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Handheld"
 msgstr "Kézi"
+
+#: pe/ui/settings.cpp
+msgid "Health and storage tools. Cache cleanup never removes saves, settings, keys or games."
+msgstr "Egészségügyi és tárolási eszközök. A gyorsítótár tisztítása soha nem távolítja el a mentéseket, beállításokat, kulcsokat vagy játékokat."
+
+#: settings_store.h
+msgid "High"
+msgstr "Magas"
 
 #: pe/ui/settings.cpp
 msgid "HIGH CONTRAST"
@@ -353,6 +665,10 @@ msgstr "MAGAS KONTRASZT"
 #: pe/ui/settings.cpp
 msgid "High contrast"
 msgstr "Magas kontraszt"
+
+#: pe/ui/launcher.cpp
+msgid "Home"
+msgstr "Kezdőlap"
 
 #. Button hint: copy a save in.
 #: pe/ui/library.cpp
@@ -372,9 +688,17 @@ msgid "Imported. The save it replaced was backed up."
 msgstr "Importálva. A lecserélt mentésről biztonsági másolat készült."
 
 #. Tag on the language or folder that is in use now.
-#: pe/ui/browse.cpp, pe/ui/settings.cpp
+#: pe/ui/browse.cpp
 msgid "IN USE"
 msgstr "HASZNÁLATBAN"
+
+#: pe/ui/browse.cpp
+msgid "Internal storage"
+msgstr "Belső tárhely"
+
+#: pe/ui/browse.cpp
+msgid "Internal storage saved. Reopen Encore to use it."
+msgstr "A belső tárhely mentve. A használatához nyissa meg újra az Encore-t."
 
 #: settings_store.h
 msgid "Italian"
@@ -409,7 +733,7 @@ msgstr "Koreai"
 msgid "Language"
 msgstr "Nyelv"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/settings.cpp
 msgid "LANGUAGE"
 msgstr "NYELV"
 
@@ -431,17 +755,45 @@ msgstr "Nagyobb szöveg"
 msgid "Last game opened"
 msgstr "Legutóbb megnyitott játék"
 
-#: pe/ui/home.cpp
+#: pe/ui/library.cpp
 msgid "Launch game"
 msgstr "Játék indítása"
 
-#: pe/ui/home.cpp
+#: pe/ui/settings.cpp
+msgid "LAYOUT"
+msgstr "ELRENDEZÉS"
+
+#: pe/ui/mapping.cpp
+msgid "Left stick press"
+msgstr "Bal oldali pálcát nyomni"
+
+#: pe/ui/library.cpp
+msgid "Left/right: Global, PlayStation or Switch for this game; Cross: edit individual buttons."
+msgstr "Bal/jobb: Global, PlayStation vagy Switch ehhez a játékhoz; Kereszt: az egyes gombok szerkesztése."
+
+#: pe/ui/launcher.cpp
 msgid "Library"
 msgstr "Játéktár"
+
+#: pe/ui/library.cpp
+msgid "Loading artwork"
+msgstr "Műalkotások betöltése"
+
+#: pe/ui/launcher.cpp
+msgid "Loading game library..."
+msgstr "Játékkönyvtár betöltése..."
+
+#: pe/ui/settings.cpp
+msgid "LOGS"
+msgstr "NAPLÓK"
 
 #: pe/ui/settings.cpp
 msgid "Make the menu easier to see and follow."
 msgstr "Legyen a menü könnyebben látható és követhető."
+
+#: pe/ui/home.cpp
+msgid "Max. players: {0}"
+msgstr "Max. játékosok: {0}"
 
 #: pe/ui/settings.cpp
 msgid "MENU SOUNDS"
@@ -450,6 +802,18 @@ msgstr "MENÜHANGOK"
 #: pe/ui/settings.cpp
 msgid "Menu sounds"
 msgstr "Menühangok"
+
+#: settings_store.h
+msgid "Minimum"
+msgstr "Minimum"
+
+#: pe/ui/settings.cpp
+msgid "Minimum reduces GPU load and may use lower GPU accuracy for speed. Recommended balances quality and stability. High and Ultra raise image quality when the game has headroom."
+msgstr "A minimum csökkenti a GPU-terhelést, és alacsonyabb GPU-pontosságot használhat a sebességhez. Az ajánlott egyensúly a minőség és a stabilitás között. Magas és Ultra javítja a képminőséget, ha a játékban van szabad tér."
+
+#: pe/ui/library.cpp
+msgid "Minimum, Recommended, High and Ultra apply the title-aware Encore profile. Manual changes become Custom for this game."
+msgstr "A Minimum, az Ajánlott, a Magas és az Ultra a cím-tudatos Encore profilt alkalmazza. A kézi változtatások egyénivé válnak ehhez a játékhoz."
 
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Missing or empty keys/prod.keys in {0}."
@@ -526,8 +890,12 @@ msgstr "Nem található ROM-fájl."
 msgid "No roms folder"
 msgstr "Nincs roms mappa"
 
-#. No add-ons (updates or DLC).
 #: pe/ui/library.cpp
+msgid "No screenshots available"
+msgstr "Nem állnak rendelkezésre képernyőképek"
+
+#. No add-ons (updates or DLC).
+#: pe/ui/library.cpp, settings_store.h
 msgid "None"
 msgstr "Nincs"
 
@@ -546,19 +914,43 @@ msgstr "Ki"
 msgid "On"
 msgstr "Be"
 
+#: pe/ui/settings.cpp
+msgid "One root for keys, firmware, games, updates, mods and transfers."
+msgstr "Egy gyökér a kulcsokhoz, firmware-hez, játékokhoz, frissítésekhez, módosításokhoz és átvitelekhez."
+
 #. Short tag on a folder row.
 #: pe/ui/browse.cpp
 msgid "OPEN"
 msgstr "MEGNYITÁS"
 
 #. Button hint: open the highlighted folder.
-#: pe/ui/browse.cpp, pe/ui/library.cpp
+#: pe/ui/browse.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Open"
 msgstr "Megnyitás"
 
 #: pe/ui/home.cpp
 msgid "Open library"
 msgstr "Játéktár megnyitása"
+
+#: pe/ui/home.cpp
+msgid "Open quick settings"
+msgstr "Nyissa meg a gyorsbeállításokat"
+
+#: pe/ui/home.cpp
+msgid "Open settings"
+msgstr "Beállítások megnyitása"
+
+#: pe/ui/home.cpp
+msgid "Open storage"
+msgstr "Nyitott tárhely"
+
+#: pe/ui/library.cpp
+msgid "Open the per-game DualSense mapping. Global uses Settings > Controls; Custom overrides it only for this game."
+msgstr "Nyissa meg a játékonkénti DualSense leképezést. Globális a Beállítások > Vezérlők menüpontot használja; Az egyéni csak ennél a játéknál írja felül."
+
+#: pe/ui/mapping.cpp
+msgid "Options"
+msgstr "Opciók"
 
 #. Button hint: jump a page of the list (L1 / R1).
 #: pe/ui/browse.cpp
@@ -573,6 +965,18 @@ msgstr "Szülőmappa"
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Patch"
 msgstr "Patch"
+
+#: pe/ui/home.cpp
+msgid "Play"
+msgstr "Játék"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "PlayStation"
+msgstr "PlayStation"
+
+#: pe/ui/settings.cpp
+msgid "PlayStation Auto keeps Cross/Circle menu semantics while adapting gameplay to physical Switch positions. Switch stays fixed; editing any button creates a custom profile."
+msgstr "A PlayStation Auto megtartja a Cross/Circle menü szemantikáját, miközben a játékmenetet a fizikai Switch pozíciókhoz igazítja. A kapcsoló rögzített marad; bármely gomb szerkesztése egyéni profilt hoz létre."
 
 #: settings_store.h
 msgid "Polish"
@@ -590,6 +994,10 @@ msgstr "Portugál (Brazília)"
 #: pe/ui/browse.cpp
 msgid "Powered by Eden"
 msgstr "Az Eden hajtja"
+
+#: pe/ui/settings.cpp
+msgid "Preset"
+msgstr "Előbeállítás"
 
 #. Asked before a save is imported over the one in use.
 #: pe/ui/library.cpp
@@ -617,18 +1025,46 @@ msgstr "A PROJEKT KÉSZÍTŐI"
 msgid "ProsperoEden stopped because of an error. A report was saved to {0}."
 msgstr "A ProsperoEden hiba miatt leállt. A jelentés ide lett mentve: {0}."
 
+#: pe/ui/browse.cpp
+msgid "PS5 13.60 FORK"
+msgstr "PS5 13.60 FORK"
+
 #. Why a game did not start.
 #: eden_services.cpp
 msgid "PS5 controller initialization failed"
 msgstr "A PS5-vezérlő inicializálása sikertelen"
 
+#: pe/ui/home.cpp
+msgid "QUICK SETTINGS"
+msgstr "GYORSBEÁLLÍTÁSOK"
+
+#: pe/ui/home.cpp
+msgid "Quick settings"
+msgstr "Gyorsbeállítások"
+
+#: pe/ui/home.cpp
+msgid "Quit"
+msgstr "Kilépés"
+
 #: pe/ui/settings.cpp
 msgid "Ready"
 msgstr "Kész"
 
+#: pe/ui/launcher.cpp
+msgid "Recent"
+msgstr "Legutóbbi"
+
 #: pe/ui/home.cpp
 msgid "RECENTLY PLAYED"
 msgstr "LEGUTÓBB JÁTSZOTT"
+
+#: settings_store.h
+msgid "Recommended"
+msgstr "Ajánlott"
+
+#: pe/ui/settings.cpp
+msgid "Recommended defaults restored."
+msgstr "Recommended defaults restored."
 
 #: pe/ui/settings.cpp
 msgid "REDUCE MOTION"
@@ -653,7 +1089,7 @@ msgstr "KÉPFRISSÍTÉS"
 msgid "REGION"
 msgstr "RÉGIÓ"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Renderer"
 msgstr "Renderelő"
 
@@ -661,13 +1097,57 @@ msgstr "Renderelő"
 msgid "RENDERER"
 msgstr "RENDERELŐ"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/mapping.cpp
+msgid "Reset"
+msgstr "Visszaállítás"
+
+#: pe/ui/launcher.cpp
+msgid "Reset controller mapping?"
+msgstr "Visszaállítja a vezérlőleképezést?"
+
+#: pe/ui/library.cpp
+msgid "Reset overrides"
+msgstr "Reset overrides"
+
+#: pe/ui/launcher.cpp
+msgid "Reset this game's custom settings?"
+msgstr "Visszaállítja a játék egyéni beállításait?"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Resolution"
 msgstr "Felbontás"
 
-#: eden_services.cpp
+#: pe/ui/library.cpp
+msgid "Resolution follows the selected title-aware profile. Lower it for performance or memory; raise it only when the title has headroom."
+msgstr "A felbontás követi a kiválasztott cím-tudatos profilt. Csökkentse a teljesítmény vagy a memória érdekében; csak akkor emelje fel, ha a címnek van helye."
+
+#: pe/ui/launcher.cpp
+msgid "Restore default settings?"
+msgstr "Visszaállítja az alapértelmezett beállításokat?"
+
+#: pe/ui/settings.cpp
+msgid "Restore defaults"
+msgstr "Restore defaults"
+
+#: pe/ui/mapping.cpp
+msgid "Right stick press"
+msgstr "Jobb gombnyomás"
+
+#: pe/ui/launcher.cpp, pe/ui/library.cpp
 msgid "ROM missing from the game files folder"
 msgstr "A ROM hiányzik a játékfájlok mappájából"
+
+#: eden_services.cpp
+msgid "ROM missing from the storage root"
+msgstr "A ROM hiányzik a tároló gyökérből"
+
+#: pe/ui/settings.cpp
+msgid "ROOT"
+msgstr "GYÖKÉR"
+
+#: pe/ui/settings.cpp
+msgid "Runtime health, storage and recovery tools."
+msgstr "Futásidejű egészségügyi, tárolási és helyreállítási eszközök."
 
 #: settings_store.h
 msgid "Russian"
@@ -677,6 +1157,18 @@ msgstr "Orosz"
 #: pe/ui/library.cpp
 msgid "Ryujinx save found"
 msgstr "Ryujinx-mentés megvan"
+
+#: pe/ui/library.cpp
+msgid "Safe launch"
+msgstr "Biztonságos indítás"
+
+#: pe/ui/library.cpp
+msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
+msgstr "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
+
+#: eden_services.cpp, pe/ui/browse.cpp
+msgid "Sandbox only"
+msgstr "Csak homokozó"
 
 #. The app can read only its own folder; {0} is a number.
 #: pe/ui/browse.cpp
@@ -693,7 +1185,7 @@ msgstr "Mentett adatok"
 msgid "Save folder found"
 msgstr "Mentési mappa megvan"
 
-#: pe/ui/library.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp
 msgid "Saved for this game. Applies on next launch."
 msgstr "Mentve ehhez a játékhoz. A következő indítástól érvényes."
 
@@ -702,12 +1194,12 @@ msgstr "Mentve ehhez a játékhoz. A következő indítástól érvényes."
 msgid "Saved. A display that cannot show 120 Hz stays at 60 Hz."
 msgstr "Mentve. A 120 Hz-re nem képes kijelző 60 Hz-en marad."
 
-#: pe/ui/browse.cpp, pe/ui/launcher.cpp
+#: pe/ui/launcher.cpp
 msgid "Saved. Applies when a game starts."
 msgstr "Mentve. A következő játékindítástól érvényes."
 
 #. Button hint: choose the highlighted item (not the Select button).
-#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
 msgid "Select"
 msgstr "Kiválasztás"
 
@@ -724,12 +1216,16 @@ msgstr "A kezdéshez válassz egy játékot"
 msgid "SELECTED"
 msgstr "KIJELÖLT"
 
+#: pe/ui/home.cpp
+msgid "SELECTED GAME"
+msgstr "KIVÁLASZTOTT JÁTÉK"
+
 #. Why a game did not start (the file is gone).
 #: eden_services.cpp
 msgid "Selected ROM is no longer available"
 msgstr "A kiválasztott ROM már nem érhető el"
 
-#: pe/ui/home.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Settings"
 msgstr "Beállítások"
 
@@ -742,17 +1238,33 @@ msgstr "ELŐKÉSZÍTÉS"
 msgid "Setup required"
 msgstr "Előkészítés szükséges"
 
-#: eden_services.cpp, host/fake_services.cpp
+#: host/fake_services.cpp
 msgid "Setup required: {0} Open Settings, Game files to choose the folder that holds your keys, firmware and roms folders (or add the files to {1}), then reopen ProsperoEden."
 msgstr "Előkészítés szükséges: {0} Nyisd meg a Beállítások, Játékfájlok menüt, és válaszd ki azt a mappát, amelyben a keys, firmware és roms mappa van (vagy tedd a fájlokat ide: {1}), majd indítsd újra a ProsperoEden alkalmazást."
+
+#: eden_services.cpp
+msgid "Setup required: {0} Open Settings, Storage to choose the root that holds the standard keys, firmware and roms folders (or add the files to {1}), then reopen Encore."
+msgstr "Beállítás szükséges: {0} Nyissa meg a Beállítások, Tárhely menüpontot a szabványos kulcsokat, firmware-t és ROM-mappákat tartalmazó gyökér kiválasztásához (vagy adja hozzá a fájlokat a következőhöz: {1}), majd nyissa meg újra az Encore-t."
 
 #: eden_services.cpp
 msgid "Setup validation failed. Check that firmware and key files are readable and valid."
 msgstr "Az előkészítés ellenőrzése sikertelen. Ellenőrizd, hogy a firmware- és a kulcsfájlok olvashatók és érvényesek-e."
 
 #: pe/ui/settings.cpp
+msgid "Shows live FPS while playing. Off is cleaner for normal use; Touchpad + R1 toggles it at any time."
+msgstr "Élő FPS-t mutat játék közben. Az Off tisztább normál használatra; Az érintőpad + R1 bármikor átkapcsolja."
+
+#: settings_store.h
+msgid "SMAA"
+msgstr "SMAA"
+
+#: pe/ui/settings.cpp
 msgid "Solid panels, brighter text and an outlined highlight."
 msgstr "Átlátszatlan panelek, világosabb szöveg és körvonalas kiemelés."
+
+#: eden_services.cpp
+msgid "Some cache files could not be removed."
+msgstr "Néhány gyorsítótár-fájlt nem sikerült eltávolítani."
 
 #: settings_store.h
 msgid "Spanish"
@@ -761,6 +1273,10 @@ msgstr "Spanyol"
 #: settings_store.h
 msgid "Spanish (Latin America)"
 msgstr "Spanyol (Latin-Amerika)"
+
+#: pe/ui/mapping.cpp
+msgid "Square"
+msgstr "Négyzet"
 
 #. The app creates its user the first time a game runs.
 #: eden_services.cpp
@@ -773,12 +1289,52 @@ msgid "STARTING"
 msgstr "INDÍTÁS"
 
 #: pe/ui/settings.cpp
+msgid "STICK DEADZONE"
+msgstr "KAR HOLTZÓNÁJA"
+
+#: pe/ui/settings.cpp
+msgid "Stick deadzone"
+msgstr "Kar holtzónája"
+
+#: pe/ui/settings.cpp
 msgid "Stops the background drifting and the screens sliding, here and on the loading screen."
 msgstr "Leállítja a háttér sodródását és a képernyők csúszását, itt és a betöltőképernyőn is."
+
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/settings.cpp
+msgid "Storage"
+msgstr "Tárhely"
+
+#: pe/ui/settings.cpp
+msgid "STORAGE"
+msgstr "TÁRHELY"
+
+#: pe/ui/home.cpp
+msgid "Storage not configured"
+msgstr "A tárhely nincs konfigurálva"
+
+#: pe/ui/home.cpp
+msgid "Storage ready"
+msgstr "Tárolás kész"
+
+#: pe/ui/browse.cpp
+msgid "Storage root saved. Reopen Encore to use it."
+msgstr "Tárhelygyökér mentve. A használatához nyissa meg újra az Encore-t."
 
 #: pe/ui/browse.cpp
 msgid "Supply your own files"
 msgstr "Hozd a saját fájljaidat"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Switch"
+msgstr "Kapcsoló"
+
+#: pe/ui/home.cpp
+msgid "Switch card"
+msgstr "Válts kártyát"
+
+#: pe/ui/home.cpp
+msgid "System"
+msgstr "Rendszer"
 
 #: eden_services.cpp
 msgid "Taiwan"
@@ -792,6 +1348,14 @@ msgstr "Thai"
 #: pe/ui/browse.cpp
 msgid "THANKS"
 msgstr "KÖSZÖNET"
+
+#: pe/ui/browse.cpp
+msgid "Thanks to the whole PS5 homebrew community and to every developer whose drivers, tools and libraries make Eden Encore possible."
+msgstr "Köszönet az egész PS5 homebrew közösségnek és minden fejlesztőnek, akinek illesztőprogramjai, eszközei és könyvtárai lehetővé teszik az Eden Encore-t."
+
+#: eden_services.cpp
+msgid "The game could not allocate PS5 memory. Close Eden Encore completely before retrying to release memory retained between games."
+msgstr "A játék nem tudta lefoglalni a PS5 memóriát. Zárja be teljesen az Eden Encore-t, mielőtt újra megpróbálná felszabadítani a játékok között megőrzött memóriát."
 
 #. Why a game stopped. 'Settings, Video' is the menu path; 'the game's own settings' is the Game settings dialog of the Library.
 #: eden_services.cpp
@@ -814,15 +1378,47 @@ msgstr "Ennek a játéknak még nincs exportálható mentése."
 msgid "This game's settings cannot be saved (no title ID)."
 msgstr "A játék beállításai nem menthetők (nincs játékazonosító)."
 
+#: pe/ui/browse.cpp
+msgid "THIS ROOT"
+msgstr "EZ A GYÖKÉR"
+
 #. ryujinx/, save-import/ and roms/ are folder names (unchanged); {0} is the game's ID.
 #: eden_services.cpp
 msgid "To import, copy a Ryujinx folder to ryujinx/ or a save to save-import/{0}/, next to roms/."
 msgstr "Az importáláshoz másolj egy Ryujinx-mappát a ryujinx/ vagy egy mentést a save-import/{0}/ mappába, a roms/ mellé."
 
+#: pe/ui/mapping.cpp
+msgid "Touchpad"
+msgstr "Érintőpad"
+
+#: pe/ui/mapping.cpp
+msgid "Triangle"
+msgstr "Háromszög"
+
 #. Button hint: switch the highlighted mod on or off.
 #: pe/ui/library.cpp
 msgid "Turn on or off"
 msgstr "Be- vagy kikapcsolás"
+
+#: pe/ui/settings.cpp
+msgid "Turns DualSense vibration on or off for games."
+msgstr "Be- vagy kikapcsolja a DualSense rezgést a játékokhoz."
+
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "TV output"
+msgstr "TV-kimenet"
+
+#: pe/ui/settings.cpp
+msgid "TV OUTPUT"
+msgstr "TV-KIMENET"
+
+#: settings_store.h
+msgid "Ultra"
+msgstr "Ultra"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp
+msgid "Unknown"
+msgstr "Ismeretlen"
 
 #. Short tag on the 'Parent folder' row.
 #: pe/ui/browse.cpp
@@ -838,7 +1434,7 @@ msgstr "Frissítés {0}"
 msgid "UPDATES, DLC"
 msgstr "FRISSÍTÉSEK, DLC"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Upscaling filter"
 msgstr "Felskálázó szűrő"
 
@@ -850,6 +1446,14 @@ msgstr "FELSKÁLÁZÓ SZŰRŐ"
 msgid "USA"
 msgstr "USA"
 
+#: pe/ui/browse.cpp
+msgid "Use extracted firmware NCA files. Choose the root in Settings, Storage; restart the app after changing it."
+msgstr "Használjon kicsomagolt firmware NCA fájlokat. Válassza ki a gyökeret a Beállítások, Tárhely menüpontban; a módosítás után indítsa újra az alkalmazást."
+
+#: pe/ui/browse.cpp
+msgid "Use this root"
+msgstr "Használja ezt a gyökeret"
+
 #: pe/ui/settings.cpp
 msgid "VIBRATION"
 msgstr "REZGÉS"
@@ -859,6 +1463,14 @@ msgid "Vibration"
 msgstr "Rezgés"
 
 #: pe/ui/settings.cpp
+msgid "VIBRATION STRENGTH"
+msgstr "REZGÉS ERŐSSÉGE"
+
+#: pe/ui/settings.cpp
+msgid "Vibration strength"
+msgstr "Rezgés erőssége"
+
+#: pe/ui/home.cpp, pe/ui/settings.cpp
 msgid "Video"
 msgstr "Videó"
 
@@ -866,10 +1478,26 @@ msgstr "Videó"
 msgid "VIDEO"
 msgstr "VIDEÓ"
 
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Video preset"
+msgstr "Videóbeállítási profil"
+
+#: pe/ui/settings.cpp
+msgid "VIDEO PRESET"
+msgstr "VIDEÓBEÁLLÍTÁSI PROFIL"
+
 #. Vulkan is a name (unchanged).
 #: pe/ui/settings.cpp
 msgid "Vulkan (recommended)"
 msgstr "Vulkan (ajánlott)"
+
+#: pe/ui/settings.cpp
+msgid "Vulkan is recommended on PS5. Use OpenGL only as a fallback for a game with Vulkan issues."
+msgstr "A Vulkan ajánlott PS5-re. Az OpenGL-t csak tartalékként használja a Vulkan-problémákkal küzdő játékokhoz."
+
+#: pe/ui/library.cpp
+msgid "Vulkan is recommended on PS5. Use OpenGL only as a fallback for a title with Vulkan issues."
+msgstr "A Vulkan ajánlott PS5-re. Az OpenGL-t csak tartalékként használja a Vulkan-problémákkal küzdő címekhez."
 
 #: pe/ui/library.cpp
 msgid "Your games"
@@ -951,7 +1579,7 @@ msgid "{0} of {1} on"
 msgstr "{0} / {1} bekapcsolva"
 
 #. A percentage (a volume): write it as the language does, for example with a space before the sign.
-#: pe/ui/settings.cpp
+#: pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "{0}%"
 msgstr "{0}%"
 
@@ -964,187 +1592,3 @@ msgstr "{0}/ (NSP vagy XCI)"
 #: pe/ui/browse.cpp
 msgid "{0}/ (one folder per game ID)"
 msgstr "{0}/ (játékazonosítónként egy mappa)"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Restore defaults"
-msgstr "Restore defaults"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Recommended defaults restored."
-msgstr "Recommended defaults restored."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Reset overrides"
-msgstr "Reset overrides"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Game overrides reset to global defaults."
-msgstr "Game overrides reset to global defaults."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
-msgstr "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
-
-#: settings_store.h
-msgid "0.25x (minimum)"
-msgstr "0,25x (minimum)"
-
-#: settings_store.h
-msgid "0.5x (fastest, softer)"
-msgstr "0,5x (leggyorsabb, lágyabb)"
-
-#: settings_store.h
-msgid "1.25x (recommended)"
-msgstr "1,25x (ajánlott)"
-
-#: settings_store.h
-msgid "2x (high memory)"
-msgstr "2x (nagy memóriaigény)"
-
-#: settings_store.h
-msgid "3x (very high memory)"
-msgstr "3x (igen nagy memóriaigény)"
-
-#: settings_store.h
-msgid "4x (extreme memory)"
-msgstr "4x (extrém memóriaigény)"
-
-#: translated UI setting
-msgid "Anti-aliasing"
-msgstr "Élsimítás"
-
-#: translated UI setting
-msgid "Button mapping"
-msgstr "Gombkiosztás"
-
-#: translated UI setting
-msgid "Quick settings"
-msgstr "Gyorsbeállítások"
-
-#: translated UI setting
-msgid "Storage"
-msgstr "Tárhely"
-
-#: translated UI setting
-msgid "Video preset"
-msgstr "Videóbeállítási profil"
-
-#: translated UI setting
-msgid "Game resolution"
-msgstr "Játékfelbontás"
-
-#: translated UI setting
-msgid "TV output"
-msgstr "TV-kimenet"
-
-#: translated UI setting
-msgid "Play"
-msgstr "Játék"
-
-#: translated UI setting
-msgid "Cancel"
-msgstr "Mégse"
-
-#: translated UI setting
-msgid "Confirm"
-msgstr "Megerősítés"
-
-#: translated UI setting
-msgid "Reset"
-msgstr "Visszaállítás"
-
-#: translated UI setting
-msgid "Ultra"
-msgstr "Ultra"
-
-#: translated UI setting
-msgid "Recommended"
-msgstr "Ajánlott"
-
-#: translated UI setting
-msgid "Minimum"
-msgstr "Minimum"
-
-#: translated UI setting
-msgid "Home"
-msgstr "Kezdőlap"
-
-#: translated UI setting
-msgid "Clear cache"
-msgstr "Gyorsítótár törlése"
-
-#: translated UI setting
-msgid "Done"
-msgstr "Kész"
-
-#: translated UI setting
-msgid "Custom"
-msgstr "Egyéni"
-
-#: translated UI setting
-msgid "Controllers"
-msgstr "Vezérlők"
-
-#: translated UI setting
-msgid "Quit"
-msgstr "Kilépés"
-
-#: translated UI setting
-msgid "FSR sharpness"
-msgstr "FSR-élesség"
-
-#: translated UI setting
-msgid "Stick deadzone"
-msgstr "Kar holtzónája"
-
-#: translated UI setting
-msgid "Vibration strength"
-msgstr "Rezgés erőssége"
-
-#: translated UI setting
-msgid "Preset"
-msgstr "Előbeállítás"
-
-#: translated UI setting
-msgid "Open settings"
-msgstr "Beállítások megnyitása"
-
-#: translated UI setting
-msgid "ANTI-ALIASING"
-msgstr "ÉLSIMÍTÁS"
-
-#: translated UI setting
-msgid "BUTTON MAPPING"
-msgstr "GOMBKIOSZTÁS"
-
-#: translated UI setting
-msgid "QUICK SETTINGS"
-msgstr "GYORSBEÁLLÍTÁSOK"
-
-#: translated UI setting
-msgid "STORAGE"
-msgstr "TÁRHELY"
-
-#: translated UI setting
-msgid "VIDEO PRESET"
-msgstr "VIDEÓBEÁLLÍTÁSI PROFIL"
-
-#: translated UI setting
-msgid "GAME RESOLUTION"
-msgstr "JÁTÉKFELBONTÁS"
-
-#: translated UI setting
-msgid "TV OUTPUT"
-msgstr "TV-KIMENET"
-
-#: translated UI setting
-msgid "FSR SHARPNESS"
-msgstr "FSR-ÉLESSÉG"
-
-#: translated UI setting
-msgid "STICK DEADZONE"
-msgstr "KAR HOLTZÓNÁJA"
-
-#: translated UI setting
-msgid "VIBRATION STRENGTH"
-msgstr "REZGÉS ERŐSSÉGE"
