@@ -146,6 +146,61 @@ void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
                 font * 0.68f, theme::kMeta, r.w * 0.88f, Align::center);
 }
 
+// Static sleeve used by the Library's front shelf, back detail, and zoom.
+// Unlike the spinning launcher model, this is deliberately 2D, but BOTH
+// faces use one physical outline with identical inset paper dimensions.
+// Neither PNG nor the source art contains baked-in 3D plastic.
+void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
+                        bool rear, float shadow)
+{
+    const float side = std::max(4.0f, shell.w * 0.022f);
+    const float top = std::max(5.0f, shell.h * 0.018f);
+    const float radius = std::max(5.0f, shell.w * 0.028f);
+    const Rect paper{shell.x + side, shell.y + top,
+                     shell.w - 2.0f * side, shell.h - 2.0f * top};
+    // The whole sleeve is translucent, so the Library wallpaper subtly
+    // shows through the edges, not through the opaque printed paper.
+    if (shadow > 0.0f)
+        c.list.shadow({shell.x + 2.0f, shell.y + 7.0f, shell.w - 4.0f,
+                       shell.h - 1.0f}, radius, 21.0f * shadow,
+                      Color::rgb(0x02030a, 0.64f));
+    c.list.rounded_rect(shell, radius, Color::rgb(0xe5effa, 0.22f));
+
+    const std::string& scan = rear ? game.box_back : game.box_front;
+    if (!scan.empty())
+        cover(c, scan, paper, std::max(3.0f, radius - 2.0f), 0.0f);
+    else if (rear)
+        flat_back_fallback(c, game, paper);
+    else
+        flat_front_fallback(c, game, paper);
+
+    // A single transparent molded rim, INSIDE the outside silhouette. These
+    // 4 strips never enlarge the paper or masquerade as a white second case.
+    c.list.gradient_rect({shell.x + side * 0.5f, shell.y,
+                          shell.w - side, top}, radius * 0.45f,
+                         Color::rgb(0xf3faff, 0.48f),
+                         Color::rgb(0x8da2b9, 0.18f));
+    c.list.gradient_rect({shell.x + side * 0.5f, shell.y + shell.h - top,
+                          shell.w - side, top}, radius * 0.45f,
+                         Color::rgb(0x7e91a8, 0.24f),
+                         Color::rgb(0xf4faff, 0.49f));
+    // Opening seam: on the back it sits on the left; on the front it is
+    // the far/right edge. This is a subtle plastic edge, never red ink.
+    const float opening_x = rear ? shell.x : shell.x + shell.w - side;
+    c.list.hgradient_rect({opening_x, shell.y + top, side,
+                           shell.h - 2.0f * top}, radius * 0.3f,
+                          Color::rgb(0xf3faff, rear ? 0.47f : 0.21f),
+                          Color::rgb(0x98acc4, 0.17f));
+    const float other_x = rear ? shell.x + shell.w - side : shell.x;
+    c.list.hgradient_rect({other_x, shell.y + top, side,
+                           shell.h - 2.0f * top}, radius * 0.3f,
+                          Color::rgb(0xc8d7e9, 0.30f),
+                          Color::rgb(0xe8f5ff, 0.12f));
+    c.list.bordered_rect(shell, radius, Color::rgb(0xffffff, 0.0f),
+                         std::max(1.0f, side * 0.22f),
+                         Color::rgb(0xe9f5ff, 0.47f));
+}
+
 std::string controller_profile_name(int layout, const ButtonMapping& mapping)
 {
     const bool custom = mapping_is_custom(mapping, layout);
@@ -1051,9 +1106,7 @@ void Launcher::draw_library(Canvas &c)
             if (selected)
                 list.shadow({x - 5.0f, rail_y - 4.0f, sleeve_w + 10.0f, sleeve_h + 9.0f},
                             8.0f, 28.0f, theme::kLime.with_alpha(0.30f));
-            const std::string& face = !game.box_front.empty() ? game.box_front : game.cover;
-            if (!game.box_front.empty()) cover(c, face, sleeve, 5.0f, 0.16f);
-            else flat_front_fallback(c, game, sleeve);
+            flat_retail_sleeve(c, game, sleeve, false, 0.24f);
             list.bordered_rect(sleeve, 5.0f, theme::kGlass.with_alpha(0.0f),
                                selected ? 2.2f : 1.0f,
                                selected ? theme::kFocusCore.with_alpha(0.93f) :
@@ -1080,10 +1133,7 @@ void Launcher::draw_library(Canvas &c)
         // Actual rear retail scan, never the old panoramic screenshot.
         // Cross on this jacket opens a full-screen, aspect-preserving preview.
         const Rect art{99.0f, 572.0f, 181.0f, 288.0f};
-        const std::string& artwork = !game->box_back.empty() ? game->box_back :
-             (!game->cover.empty() ? game->cover : game->hero);
-        if (!game->box_back.empty()) cover(c, artwork, art, 5.0f, 0.5f);
-        else flat_back_fallback(c, *game, art);
+        flat_retail_sleeve(c, *game, art, true, 0.60f);
         list.bordered_rect(art, 5.0f, theme::kGlass.with_alpha(0.0f),
                            library_back_focused_ ? 2.5f : 1.0f,
                            library_back_focused_ ? theme::kFocusCore :
@@ -1194,12 +1244,10 @@ void Launcher::draw_library(Canvas &c)
         if (game != nullptr) {
             text_shrink(c, game->name, 960.0f, baseline(54.0f, 52.0f, 35.0f),
                         35.0f, theme::kTitle, 1580.0f, Align::center);
-            const std::string& full = !game->box_back.empty() ? game->box_back :
-                                          (!game->cover.empty() ? game->cover : game->hero);
-            if (!game->box_back.empty())
-                cover(c, full, {625.0f, 112.0f, 670.0f, 808.0f}, 6.0f, 0.42f);
-            else
-                flat_back_fallback(c, *game, {625.0f, 112.0f, 670.0f, 808.0f});
+            // Tall portrait matching the printed paper: no wide 670px
+            // stretched-looking pane in the full-screen back-cover popup.
+            const Rect enlarged{710.0f, 111.0f, 500.0f, 807.0f};
+            flat_retail_sleeve(c, *game, enlarged, true, 0.92f);
         }
         static constexpr Hint kZoomHints[] = {{Pad::circle, TR("Close")},
                                               {Pad::cross, TR("Close")}};
