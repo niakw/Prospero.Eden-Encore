@@ -288,7 +288,10 @@ class Launcher
     bool games_loaded_ = false;
     ListView library_;
     bool library_back_focused_ = false; // Down selects rear jacket
-    bool library_back_zoom_ = false; // Cross opens, Circle closes full-screen popup
+    bool library_back_zoom_ = false; // Cross opens, Circle alone closes the viewer
+    float library_back_scale_ = 1.0f; // L2 / R2; no artwork stretching
+    float library_back_pan_x_ = 0.0f; // D-pad or left stick in viewer
+    float library_back_pan_y_ = 0.0f;
     bool selected_docked_ = true;
     tween::Spring mode_;   // 0 docked .. 1 handheld
     tween::Spring mods_switch_; // the selected game's Mods switch: 0 off .. 1 on
