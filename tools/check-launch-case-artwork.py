@@ -130,7 +130,8 @@ assert "else if (shape == 14)" in shader
 assert "printed_side_visible" in draw
 assert "c.list.case_spine_image(ink.texture, side_strip, angle," in draw
 assert "True rounded corner" in shader
-assert "float radius = v_params.z > 0.5 ? 8.0 : 22.0;" in shader
+assert "float radius = v_params.z > 0.5 ? 18.0 : 22.0;" in shader
+assert "const Rect face{physical.x + 3.0f, physical.y + 3.0f," in draw
 assert "float rounded = round_box(v_local, v_half, 22.0);" in shader
 assert "angle, false, case_depth," in draw
 assert "c.list.case_corner(physical, angle, case_radius, case_depth," in draw
