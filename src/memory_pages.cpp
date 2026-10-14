@@ -60,7 +60,7 @@ std::int64_t DirectMemoryExtent() noexcept {
 std::int32_t AllocateDirectOwned(std::size_t bytes, std::size_t align,
                                   std::int64_t* physical) noexcept {
     const auto extent = DirectMemoryExtent();
-    // No allocator can recover by passing a negative/zero extent to Sony.
+    // No allocator can recover by passing a negative/zero extent to the native mapping API.
     return extent > 0 ? sceKernelAllocateDirectMemory(0, extent, bytes, align, 12, physical) : -1;
 }
 // One ownership contract for sparse JIT, sparse page tables and growing
