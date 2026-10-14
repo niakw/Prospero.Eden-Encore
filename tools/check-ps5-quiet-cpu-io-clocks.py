@@ -15,6 +15,9 @@ assert "const bool profile_idle = ::Eden::Performance::detailed_gpu_profile.load
 assert "const long long start = profile_idle ? ::Eden::Performance::NowNs() : 0;" in idle
 assert "if (profile_idle)\n            ::Eden::Performance::CountIdle(" in idle
 assert "m_on_interrupt.wait(lk, [this] { return m_is_interrupted; });" in idle
+# The writer modifies m_is_interrupted under m_guard using ordinary stores.
+# Do not permit an unlocked atomic builtin read in native development code.
+assert "__atomic_load_n(&m_is_interrupted" not in cmake
 
 for start, end, metric, name in [
     ('string(REPLACE "${ctrl_old}"', ' ctrl_source "${ctrl_source}")', "wait_start", "guest_sync_wait"),
