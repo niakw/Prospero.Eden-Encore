@@ -57,6 +57,7 @@ struct BoxArt
 {
     std::string front;
     std::string back;
+    std::string spine; // optional FLAT printed spine scan; shell stays native 3D
 };
 
 // A game file in the games folder.
