@@ -79,8 +79,8 @@ def main() -> None:
             "Sparse JIT must not be a shipping build default")
     require('target_compile_definitions(eden-headless PRIVATE EDEN_SPARSE_JIT_DEV=1)' in cmake,
             "Native opt-in compile guard is missing")
-    require('#if defined(PS5_NATIVE) && defined(EDEN_DEV_PROFILE)' in app,
-            "Experiments JSON must remain developer-only")
+    require('#ifdef PS5_NATIVE\n        // Default experimental profile for all native console builds' in app,
+            "Native experiment defaults must apply to release and dev")
     require('#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)' in app,
             "Sparse alias preflight must remain gated")
     require('if (experimental_sparse_jit && !Common::ProbeSparseJitAlias())' in app,
@@ -199,10 +199,10 @@ def main() -> None:
             "Startup retry must only catch actual code allocator failures")
     require('NextCapacity(capacity, baseline)' in startup,
             "A64/A32 cache retry must step toward each core baseline")
-    dev_start = app.index('#if defined(PS5_NATIVE) && defined(EDEN_DEV_PROFILE)')
-    dev_end = app.index('\n#endif\n#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)', dev_start)
-    require(app.index('ApplyJitMemoryPlan(jit_plan)') > dev_end,
-            "Release JIT memory policy must be applied outside development guards")
+    native_start = app.index('#ifdef PS5_NATIVE\n        // Default experimental profile for all native console builds')
+    native_end = app.index('\n#endif\n#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)', native_start)
+    require(app.index('ApplyJitMemoryPlan(jit_plan)') > native_end,
+            "Native JIT memory policy must be applied after experiment selection")
     require('EDEN_PS5_JIT_POLICY scope=all_titles' in app,
             "Selected JIT policy should be logged once at launch")
     require('jit_cache_tier' not in app and 'tier == 3' not in jit_policy,

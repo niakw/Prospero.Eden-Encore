@@ -873,12 +873,11 @@ int main(int argc, char** argv) {
         bool experimental_sparse_jit = false;
         bool experimental_logical_cpu = false;
         bool experimental_frame_probe = false;
-#if defined(PS5_NATIVE) && defined(EDEN_DEV_PROFILE)
-        // One test profile for all titles. These are automatically enabled by
-        // the dedicated native DEV build, not by a settings-menu toggle or
-        // stale experiments.json from an earlier A/B/C/D campaign.
-        // Safe Launch is the only runtime opt-out. Sparse still requires
-        // a successful real native RW/RX alias probe below.
+#ifdef PS5_NATIVE
+        // Default experimental profile for all native console builds,
+        // including the installable launcher release. Never inherit stale
+        // per-title experiments.json. Safe Launch disables these probes;
+        // sparse executable backing also requires verified RW/RX aliases.
         if (!safe_launch) {
 #ifdef EDEN_SPARSE_JIT_DEV
             experimental_sparse_jit = true;
@@ -893,7 +892,7 @@ int main(int argc, char** argv) {
             experimental_sparse_jit = false;
         }
 #endif
-#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV) && defined(EDEN_DEV_PROFILE)
+#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)
         // Native evidence: four consecutive starts went from 11,824 MiB to
         // 4,128 MiB *largest contiguous block*. The dense allocator must use
         // CURRENT headroom. Sparse only reserves virtual address space, so
@@ -917,6 +916,11 @@ int main(int argc, char** argv) {
         Eden::Experimental::ApplyJitMemoryPlan(jit_plan);
         Eden::Experimental::sparse_jit_cache.store(experimental_sparse_jit, std::memory_order_relaxed);
         Eden::Experimental::vulkan_frame_probe.store(experimental_frame_probe, std::memory_order_relaxed);
+#ifdef PS5_NATIVE
+        std::printf("EDEN_EXPERIMENT_DEFAULTS sparse=%u logical_cpu=%u frame_probe=%u safe=%u\n",
+                    unsigned(experimental_sparse_jit), unsigned(experimental_logical_cpu),
+                    unsigned(experimental_frame_probe), unsigned(safe_launch));
+#endif
 #ifdef PS5_NATIVE
         std::printf("EDEN_PS5_JIT_POLICY scope=all_titles memory_known=%u free_mib=%zu "
                     "admission_budget_mib=%zu a64=%u,%u,%u a32=%u,%u,%u safe=%u sparse=%u\n",

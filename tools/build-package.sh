@@ -18,9 +18,11 @@ export EDEN_PS5_VULKAN=ON EDEN_VULKAN_DRIVER=RADV
 case $mode in
 release|release-stage)
     export EDEN_DEV_VULKAN=OFF EDEN_DEV_ROM_ID= EDEN_DEV_PROFILE=OFF EDEN_DEV_WAIT_CALLERS=OFF
-    # Shipping stability contract: experimental cross-core JIT and successor batching never
-    # inherit an operator's shell environment or a reused CMake cache.
-    export EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF EDEN_SPARSE_JIT_DEV=OFF
+    # Enable sparse executable backing by default on this native test branch,
+    # with a per-title alias probe and Safe Launch fallback at runtime.
+    # Cross-core JIT and successor batching stay disabled while a guest
+    # unmapped-execution fault remains under investigation.
+    export EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF EDEN_SPARSE_JIT_DEV=ON
     export EDEN_PACKAGE_DIR="$root/build/release/PPSA99008"
     ;;
 dev)
@@ -29,7 +31,7 @@ dev)
     export EDEN_DEV_VULKAN=ON EDEN_DEV_ROM_ID="$title" EDEN_DEV_PROFILE=ON EDEN_DEV_PROFILE_TITLE="$title"
     # This IS the unified PS5 test build: sparse executable backing is compiled
     # in without a separate user-facing Experimental toggle or JSON opt-in.
-    # Production release/release-stage forcibly set this OFF above.
+    # Normal release/release-stage packages now also compile sparse support.
     export EDEN_SPARSE_JIT_DEV=ON
     # The release-configuration source checks do not apply to development instrumentation.
     export EDEN_SKIP_SOURCE_CHECKS=1
