@@ -676,9 +676,12 @@ void Launcher::draw_confirmation(Canvas &c)
 void Launcher::draw_launch(Canvas &c)
 {
     const float t = tween::clamp01(launch_.progress());
-    const float fade = tween::cubic_in_out((t - 0.87f) / 0.13f);
-    const float appear = tween::cubic_out(t / 0.12f);
-    const float leave = 1.0f - tween::cubic_in_out((t - 0.80f) / 0.20f);
+    const float seconds = theme::kLaunchSeconds * t;
+    const float fade = tween::cubic_in_out(
+        (seconds - theme::kLaunchSeconds + 0.35f) / 0.35f);
+    const float appear = tween::cubic_out(seconds / 0.25f);
+    const float leave = 1.0f - tween::cubic_in_out(
+        (seconds - theme::kLaunchSeconds + 0.45f) / 0.45f);
 
     // Use exactly the full-bleed Hero asset already shown for this title on
     // Home (Nlib banner, then screenshot). No menu cards, duplicate text or
@@ -735,8 +738,25 @@ void Launcher::draw_launch(Canvas &c)
     // source. The *same pivot* and camera project front/back and the plastic
     // side in the OpenGL vertex shader; the scan is a perspective-correct
     // texture on the face rather than a 2D width squash.
-    const float rotation = t * t * (3.0f - 2.0f * t);
-    const float angle = motion() > 0.0f ? 0.13f + 6.15f * rotation : 0.13f;
+    // Hold the rear cover 4.5 seconds at full width. A constant 360-degree
+    // spin would make the physical description impossible to read.
+    const float turn_start = theme::kCaseFrontHold;
+    const float back_start = turn_start + theme::kCaseTurnSeconds;
+    const float return_start = back_start + theme::kCaseBackHold;
+    float revolution = 0.0f;
+    if (seconds < turn_start) {
+        revolution = 0.0f;
+    } else if (seconds < back_start) {
+        revolution = 0.5f * tween::cubic_in_out(
+            (seconds - turn_start) / theme::kCaseTurnSeconds);
+    } else if (seconds < return_start) {
+        revolution = 0.5f;
+    } else {
+        revolution = 0.5f + 0.5f * tween::cubic_in_out(
+            (seconds - return_start) / theme::kCaseTurnSeconds);
+    }
+    const float angle = motion() > 0.0f ?
+        0.13f + 6.2831853071795864769f * revolution : 0.13f;
     const float facing = std::cos(angle);
     const bool back = facing < 0.0f;
     const float width = 422.0f * std::abs(facing) +
@@ -752,6 +772,15 @@ void Launcher::draw_launch(Canvas &c)
                    width + 30.0f, 640.0f}, 30.0f, 55.0f,
                   theme::kBlue.with_alpha(0.20f));
 
+    // PSD reference: a shallow polycarbonate box, about 8% spine thickness.
+    // The original template remains external; this is OUR shared geometric
+    // model and uses no pre-rendered cover-box layer.
+    c.list.case_cap(physical, angle, false, 28.0f,
+                    Color::rgb(0xf1f5fe, 0.90f),
+                    Color::rgb(0xabb6cf, 0.74f));
+    c.list.case_cap(physical, angle, true, 28.0f,
+                    Color::rgb(0xd8dfed, 0.82f),
+                    Color::rgb(0x757c91, 0.71f));
     // The same clear-polycarbonate 3D shell surrounds every game. Printed
     // front/back artwork sits behind the translucent white molded edges.
     c.list.case_face(0, physical, angle, back, Color::rgb(0xe6e8f0, 0.52f));
