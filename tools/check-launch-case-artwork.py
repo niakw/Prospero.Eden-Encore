@@ -70,8 +70,8 @@ assert "constexpr float kLaunchSeconds = kCaseFrontHold" in theme
 
 # Quarter turn becomes an edge; the full back is visible half a turn later.
 assert math.cos(0.52) > 0 and math.sin(0.52) > 0
-assert math.cos(math.pi + 0.35) < -0.93
-assert math.sin(math.pi + 0.35) < 0
+assert math.cos(math.pi + 0.44) < -0.90
+assert math.sin(math.pi + 0.44) < 0
 assert math.cos(2.0 * math.pi + 0.52) > 0
 library = (root / "headless/prosperoeden/pe/ui/library.cpp").read_text()
 assert "game.box_front" in library and "game->box_back" in library
@@ -82,9 +82,13 @@ assert "library_date(game->release_date" in library
 assert "library_genres(game->categories)" in library
 assert 'tr("Down: view back cover")' in library
 assert 'tr("Enlarge cover")' in library
-assert "if (!game->box_back.empty()) cover(c, artwork, art, 5.0f, 0.5f);" in library
-assert "flat_back_fallback(c, *game, art);" in library
-assert "flat_front_fallback(c, game, sleeve);" in library
+assert "flat_retail_sleeve(c, *game, art, true, 0.60f);" in library
+assert "flat_retail_sleeve(c, *game, enlarged, true, 0.92f);" in library
+assert "flat_retail_sleeve(c, game, sleeve, false, 0.24f);" in library
+assert "const Rect paper{shell.x + side, shell.y + top," in library
+assert "flat_back_fallback(c, game, paper);" in library
+assert "flat_front_fallback(c, game, paper);" in library
+assert "shell.y + shell.h - top" in library
 assert "s.press({Key::r1, Key::r1});" in (
     root / "headless/prosperoeden/host/preview_main.cpp").read_text()
 assert "PE_PREVIEW_LIBRARY_ONLY" in (
@@ -93,7 +97,7 @@ assert "case_face(artwork.texture, face, angle, back, kWhite, paper_uv," in draw
 assert "c.list.case_cap(" in draw and draw.index("c.list.case_cap(") > draw.index("c.list.case_face(artwork.texture")
 assert "const float return_start = back_start + theme::kCaseBackHold;" in draw
 assert "constexpr float kFrontYaw = 0.52f;" in draw
-assert "constexpr float kBackYaw = 3.14159265358979323846f + 0.35f;" in draw
+assert "constexpr float kBackYaw = 3.14159265358979323846f + 0.44f;" in draw
 assert "case_depth, 3.2f" not in draw
 assert "const bool printed_side_visible = std::sin(angle) >= 0.0f;" in draw
 assert "Color::rgb(0xb61626, 0.78f)" not in draw
@@ -170,7 +174,10 @@ assert "w < (narrow_spine ? 64 : 128)" in native
 assert "h < (narrow_spine ? 600 : 200)" in native
 assert "c.list.case_spine(side_strip, angle, 3.2f," not in draw
 assert "c.list.case_spine_blank(side_strip, angle, case_depth," in draw
-assert "const Rect face{physical.x + 3.0f, physical.y + 3.0f," in draw
+assert "constexpr float kPaperSideInset = 9.0f;" in draw
+assert "constexpr float kPaperTopInset = 13.0f;" in draw
+assert "const Rect face{physical.x + kPaperSideInset," in draw
+assert draw.count("const Rect face{") == 1
 assert "float rounded = round_box(v_local, v_half, 22.0);" in shader
 assert "angle, false, case_depth," in draw
 assert "c.list.case_corner(physical, angle, case_radius, case_depth," in draw
@@ -194,7 +201,10 @@ assert "const float return_start = back_start + theme::kCaseBackHold;" in draw
 assert "angle = kBackYaw;" in draw
 assert "const Cover ink = c.textures.cover(launch_box_spine_, 760.0f);" in draw
 assert "std::string fallback;" in draw
-assert "const Rect face{physical.x + 3.0f, physical.y + 3.0f," in draw
+assert "constexpr float kPaperSideInset = 9.0f;" in draw
+assert "constexpr float kPaperTopInset = 13.0f;" in draw
+assert "const Rect face{physical.x + kPaperSideInset," in draw
+assert draw.count("const Rect face{") == 1
 assert "int side = 0" in shapes
 assert "a_extra.x < -0.5 ? -0.5 :" in shader
 assert "botw-back.tga" in (root / "tools/launcher/preview-botw-media.py").read_text()
