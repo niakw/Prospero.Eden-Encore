@@ -92,7 +92,25 @@ def analyze(log: str, minimum_still_seconds: float = 300.0) -> dict:
     guest_active = bool(w[0].guest and w[-1].guest) and (
         w[-1].guest.get("ipc_calls", 0) > w[0].guest.get("ipc_calls", 0) and
         w[-1].guest.get("cpu_write_calls", 0) > w[0].guest.get("cpu_write_calls", 0))
-    candidate = len(pairs) == 2 and gpu_active and guest_active
+    # A whole-session increase is not proof that the compositor and guest
+    # were STILL progressing during the suspected frozen end-of-match tail.
+    # Require both media plateaus to overlap for the requested duration,
+    # and actual monotonic progress in the last ten windows of that overlap.
+    overlap_start = max((media[k][0] for k in pairs), default=len(w))
+    overlap_seconds = sum(x.duration for x in w[overlap_start:])
+    recent = w[max(overlap_start, len(w) - 10):]
+    def advancing(kind: str, keys: tuple[str, ...]) -> bool:
+        rows = [getattr(x, kind) for x in recent]
+        return (len(rows) >= 2 and
+                all(row and all(k in row for k in keys) for row in rows) and
+                all(all(b[k] >= a[k] for k in keys)
+                    for a, b in zip(rows, rows[1:])) and
+                all(rows[-1][k] > rows[0][k] for k in keys))
+    tail_gpu_active = advancing("gpu", ("draws", "dispatch_calls"))
+    tail_guest_active = advancing("guest", ("ipc_calls", "cpu_write_calls"))
+    candidate = (len(pairs) == 2 and
+                 overlap_seconds >= minimum_still_seconds and
+                 tail_gpu_active and tail_guest_active)
     # The 2 media services are function-specific, and a title may normally
     # stop them in silent menus. This is a diagnostic CANDIDATE, not a root cause.
     return {
@@ -105,6 +123,9 @@ def analyze(log: str, minimum_still_seconds: float = 300.0) -> dict:
         "largest_frame_gap_ms": max(x.worst_ms for x in w),
         "gpu_progress": gpu_active,
         "guest_ipc_writes_progress": guest_active,
+        "both_media_flat_seconds": round(overlap_seconds, 1) if len(pairs) == 2 else 0,
+        "gpu_progress_in_last_plateau": tail_gpu_active if len(pairs) == 2 else False,
+        "guest_progress_in_last_plateau": tail_guest_active if len(pairs) == 2 else False,
         "media_last_change": {
             key: {
                 "first_flat_frame": w[item[0]].total,
@@ -136,6 +157,21 @@ def self_test() -> None:
     assert evidence["media_last_change"]["IStorage/0"]["approx_flat_seconds"] >= 400
     healthy = "\n".join(record(i, i, i, 1000+150*i) for i in range(95))
     assert not analyze(healthy)["candidate_still_media_while_compositor_active"]
+    # Regress false positives: both media counters become flat AFTER the GPU
+    # and guest also stop. A complete-session comparison previously called
+    # this "compositor active" because of the earlier gameplay.
+    stopped_tail = "\\n".join([record(i, min(i, 9), min(i, 9),
+        1000 + 150 * min(i, 9)) for i in range(95)])
+    stopped = analyze(stopped_tail)
+    assert stopped["gpu_progress"] and stopped["guest_ipc_writes_progress"]
+    assert not stopped["gpu_progress_in_last_plateau"]
+    assert not stopped["guest_progress_in_last_plateau"]
+    assert not stopped["candidate_still_media_while_compositor_active"]
+    # If the last interval lacks counter snapshots, do not manufacture
+    # evidence from older completed work.
+    last_gpu = log.rsplit("EDEN_DEV_GPU ", 1)
+    missing_gpu = last_gpu[0] + last_gpu[1].replace("draws=", "missing_draws=", 1)
+    assert not analyze(missing_gpu)["candidate_still_media_while_compositor_active"]
     # Missing HLE service rows have no readable status, never fabricate idle.
     cut = log.rsplit("EDEN_DEV_HLE service=IStorage cmd=0 calls=9 ns=100", 1)[0]
     assert not analyze(cut)["candidate_still_media_while_compositor_active"]
