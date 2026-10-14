@@ -62,18 +62,24 @@ assert "MakeRequest" not in draw
 assert "progress%" not in draw
 assert "std::vector<std::string> launch_screenshots_;" in header
 assert "constexpr float kCaseBackHold = 4.50f;" in theme
-assert "constexpr float kCaseTurnSeconds = 1.30f;" in theme
+assert "constexpr float kCaseTurnSeconds = 0.72f;" in theme
+assert "constexpr float kCaseBackHold = 4.50f;" in theme
+assert "s.wait(0.51f); // instantaneous ~90-degree spine glimpse, no dwell" in (
+    root / "headless/prosperoeden/host/preview_main.cpp").read_text()
 assert "constexpr float kLaunchSeconds = kCaseFrontHold" in theme
 
 # Quarter turn becomes an edge; the full back is visible half a turn later.
 assert math.cos(0.52) > 0 and math.sin(0.52) > 0
-assert math.cos(math.pi + 0.63) < 0 and math.sin(math.pi + 0.63) < 0
+assert math.cos(math.pi + 0.26) < -0.96
+assert math.sin(math.pi + 0.26) < 0
 assert math.cos(2.0 * math.pi + 0.52) > 0
 assert "const float return_start = back_start + theme::kCaseBackHold;" in draw
 assert "constexpr float kFrontYaw = 0.52f;" in draw
-assert "constexpr float kBackYaw = 3.14159265358979323846f + 0.63f;" in draw
+assert "constexpr float kBackYaw = 3.14159265358979323846f + 0.26f;" in draw
 assert "case_depth, 3.2f" not in draw
-assert "0.63f), 1.0f, -1);" in draw
+assert "const bool printed_side_visible = std::sin(angle) >= 0.0f;" in draw
+assert "Color::rgb(0xb61626, 0.78f)" not in draw
+assert "c.list.case_spine(side_strip, angle, 3.2f," not in draw
 indexer = (root / "tools/launcher/build-box-art-index.py").read_text()
 workflow = (root / ".github/workflows/build-040-zbic.yml").read_text()
 packager = (root / "tools/package-headless-native.sh").read_text()

@@ -284,3 +284,17 @@ shapes on the SAME projected 3D side, and no synthetic game title is shown.
 The user-provided spine photo is a visual reference, not a distributed asset.
 The original official flat spine remains the priority whenever its decoded
 resolution is sufficient. Only the host OpenGL renderer is tested here.
+
+## Quick spine transition / readable rear pose
+
+The box does **not pause on its spine**. Both half-turns are eased 0.72-second
+movements; the side is only briefly visible while passing through 90 degrees.
+The actual back is presented at yaw pi+0.26 rad (approximately 15 degrees
+away from straight-on), and is held for 4.5 seconds so its original flat scan
+can be read. Its left clear opening is a projected physical side; there is
+**no** artificial red graphic border on the right of the back. Only the real
+shell's outer right edge remains. The front still exposes the real left
+printed red hinge at +0.52 rad. No special-case per-game meshes are used.
+
+The preview explicitly captures front, an instant of the passing spine, and
+back in its reading hold. No native console build is authorized here.
