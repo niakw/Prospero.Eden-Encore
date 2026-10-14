@@ -735,7 +735,8 @@ void Launcher::draw_launch(Canvas &c)
     // source. The *same pivot* and camera project front/back and the plastic
     // side in the OpenGL vertex shader; the scan is a perspective-correct
     // texture on the face rather than a 2D width squash.
-    const float angle = motion() > 0.0f ? 0.10f + 6.18f * t : 0.10f;
+    const float rotation = t * t * (3.0f - 2.0f * t);
+    const float angle = motion() > 0.0f ? 0.13f + 6.15f * rotation : 0.13f;
     const float facing = std::cos(angle);
     const bool back = facing < 0.0f;
     const float width = 422.0f * std::abs(facing) +
@@ -751,12 +752,12 @@ void Launcher::draw_launch(Canvas &c)
                    width + 30.0f, 640.0f}, 30.0f, 55.0f,
                   theme::kBlue.with_alpha(0.20f));
 
-    // Plastic case shell and rim. A projected spine is an actual 28px-deep
-    // face joining front and rear planes, most visible at quarter turns.
-    c.list.case_face(0, physical, angle, back, Color::rgb(0x341c47));
+    // The same clear-polycarbonate 3D shell surrounds every game. Printed
+    // front/back artwork sits behind the translucent white molded edges.
+    c.list.case_face(0, physical, angle, back, Color::rgb(0xe6e8f0, 0.52f));
     c.list.case_face(0, {physical.x + 5.0f, physical.y + 5.0f,
                          physical.w - 10.0f, physical.h - 10.0f}, angle, back,
-                     Color::rgb(0x160e26));
+                     Color::rgb(0x211727));
 
     // An authentic front/back has first priority. When no physical scan was
     // found, existing Nlib game art supplies the relevant face. No title-
@@ -779,17 +780,25 @@ void Launcher::draw_launch(Canvas &c)
     } else {
         c.list.case_face(0, face, angle, back, Color::rgb(0x251a43));
     }
-    // Transparent neon case trim: never overwrite the printed art.
-    c.list.case_spine(physical, angle, 28.0f,
-                      theme::kFocusCore.with_alpha(0.96f),
-                      Color::rgb(0x341b52, 0.96f));
-    // Hinges on the plastic spine distinguish a physical box from a poster.
-    // They are deliberately part of the projected side geometry.
+    // Thin glossy plastic frame and clips are physically projected with the
+    // scan rather than floating above it in screen coordinates.
+    c.list.case_plastic(physical, angle, back, Color::rgb(0xf6f9ff, 0.88f));
+
+    // Opaque red printed spine under translucent plastic, white outer rails,
+    // and two molded hinges. The material is common to all game editions.
+    c.list.case_spine(physical, angle, 22.0f,
+                      Color::rgb(0xe72536), Color::rgb(0x971421), 3.0f);
+    c.list.case_spine(physical, angle, 3.0f,
+                      Color::rgb(0xf8faff, 0.92f),
+                      Color::rgb(0xd8dfed, 0.86f), 0.0f);
+    c.list.case_spine(physical, angle, 3.0f,
+                      Color::rgb(0xf7f9ff, 0.87f),
+                      Color::rgb(0xc8ccdb, 0.76f), 25.0f);
     for (int hinge = 0; hinge < 2; ++hinge) {
-        const float y = physical.y + (hinge == 0 ? 33.0f : physical.h - 56.0f);
-        c.list.case_spine({physical.x, y, physical.w, 17.0f}, angle, 30.0f,
-                          Color::rgb(0xf9b3f3, 0.63f),
-                          theme::kLimeDeep.with_alpha(0.64f));
+        const float y = physical.y + (hinge == 0 ? 43.0f : physical.h - 64.0f);
+        c.list.case_spine({physical.x, y, physical.w, 19.0f}, angle, 29.0f,
+                          Color::rgb(0xecedf3, 0.88f),
+                          Color::rgb(0xaaa9bd, 0.69f));
     }
 
     if (c.textures.brand() != 0)
