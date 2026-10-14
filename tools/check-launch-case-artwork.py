@@ -207,9 +207,9 @@ assert "w < (narrow_spine ? 64 : 128)" in native
 assert "h < (narrow_spine ? 600 : 200)" in native
 assert "c.list.case_spine(side_strip, angle, 3.2f," not in draw
 assert "c.list.case_spine_blank(side_strip, angle, case_depth," in draw
-# The image is a single paper wrap: no transparent front face and no
-# second plastic frame on the front or right-back fold.
-assert "c.list.case_plastic(physical" not in draw
+# Single paper wrap with one localized projected rim; no second full-face
+# coating and no clear border at the rear's printed spine fold.
+assert draw.count("c.list.case_plastic(physical, angle, back") == 1
 assert "Color::rgb(0xe6effa, 0.38f)" not in draw
 assert "case_spine({physical.x, y" not in draw
 # Navigation in the enlarged Library viewer is not delegated to the game.
@@ -242,7 +242,7 @@ assert "2.5f" not in draw.split("void Launcher::draw_launch(", 1)[-1]
 assert "c.list.case_spine(side_strip, angle, case_depth," in draw
 assert "float d = round_box(v_local, v_half, 0.0);" in shader
 assert "float radius = v_params.z > 0.5 ?" not in shader
-assert "vec2 edge_px = min(v_st, 1.0 - v_st)" in shader
+assert "float from_edge = (1.0 - v_st.x)" in shader
 paper_top, paper_bottom, side_lip, box_h, width, depth = 13.0, 13.0, 7.0, 730.0, 454.0, 44.0
 paper_h = box_h - paper_top - paper_bottom
 paper_l = side_lip
@@ -280,14 +280,14 @@ assert "v_border.x > 0.5 && v_params.y < 0.5" not in shader
 assert "float inner_ridge" in shader
 assert "vec4(material, v_top.a *" in shader
 assert "simplify_switch_header" not in shapes and "simplify_switch_header" not in drawlist
-assert "round_box(v_local, v_half, 22.0)" in shader
+assert "float inner_ridge = exp(" in shader
 assert "angle, false, case_depth," in draw
 assert "c.list.case_corner(physical, angle, case_radius, case_depth," in draw
 assert "constexpr float case_depth = 44.0f;" in draw
 assert "float depth = a_params.y > 0.5 ? 44.0 : 0.0;" in shader
 assert "constexpr float case_radius = 22.0f;" in draw
-assert "round_box(v_local, v_half, 22.0)" in shader
-assert "float fresnel = pow(1.0 - abs(cos(v_params.x)), 3.0);" in shader
+assert "float inner_ridge = exp(" in shader
+assert "float grazing = 0.15 + 0.20" in shader
 assert "case_depth * std::abs(std::sin(angle))" in draw
 assert "if (!selected_game_.empty()) {\n        draw_launch(c);\n        return;" in launcher
 preview_source = (root / "headless/prosperoeden/host/preview_main.cpp").read_text()
