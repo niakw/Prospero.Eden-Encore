@@ -151,7 +151,7 @@ void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
 // faces use one physical outline with identical inset paper dimensions.
 // Neither PNG nor the source art contains baked-in 3D plastic.
 void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
-                        bool rear, float shadow)
+                        bool rear, float shadow, float texture_scale = 1.0f)
 {
     const float side = std::max(4.0f, shell.w * 0.022f);
     const float top = std::max(5.0f, shell.h * 0.018f);
@@ -172,7 +172,8 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
         // The generic cover() helper draws its OWN four-sided border; using it
         // here made the jacket look like a second transparent plastic box.
         // Use only the opaque original printed scan, aspect-contained.
-        const Cover artwork = c.textures.cover(scan, std::max(paper.w, paper.h));
+        const Cover artwork = c.textures.cover(
+            scan, std::max(paper.w, paper.h) * texture_scale);
         if (artwork.texture != 0) {
             Rect fitted = paper;
             const float source = std::max(0.01f, artwork.aspect);
@@ -182,7 +183,9 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
                 fitted.y += (paper.h - fitted.h) * 0.5f;
             } else if (source < target) {
                 fitted.w = paper.h * source;
-                fitted.x += (paper.w - fitted.w) * 0.5f;
+                // The rear print reaches the RIGHT-hand red spine fold;
+                // front artwork meets the left spine fold.
+                fitted.x += rear ? paper.w - fitted.w : 0.0f;
             }
             c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f},
                          Color::rgb(0xffffff,
@@ -1306,7 +1309,8 @@ void Launcher::draw_library(Canvas &c)
             list.push_clip(viewer);
             list.push_transform(library_back_scale_, 960.0f, 514.5f,
                                 library_back_pan_x_, library_back_pan_y_);
-            flat_retail_sleeve(c, *game, enlarged, true, 0.92f);
+            flat_retail_sleeve(c, *game, enlarged, true, 0.92f,
+                               library_back_scale_);
             list.pop_transform();
             list.pop_clip();
             text_shrink(c, std::to_string(static_cast<int>(library_back_scale_ * 100.0f + 0.5f)) + "%",
