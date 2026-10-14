@@ -1130,10 +1130,11 @@ void Launcher::draw_library(Canvas &c)
         // Cross on this jacket opens a full-screen, aspect-preserving preview.
         const Rect art{99.0f, 572.0f, 181.0f, 288.0f};
         flat_retail_sleeve(c, *game, art, true, 0.60f);
-        list.bordered_rect(art, 5.0f, theme::kGlass.with_alpha(0.0f),
-                           library_back_focused_ ? 2.5f : 1.0f,
-                           library_back_focused_ ? theme::kFocusCore :
-                                                   theme::kPanelEdge.with_alpha(0.45f));
+        // The focus ring is UI feedback only. No white plastic bezel
+        // is drawn around an unfocused square-corner paper cover.
+        if (library_back_focused_)
+            list.bordered_rect(art, 5.0f, theme::kGlass.with_alpha(0.0f),
+                               2.5f, theme::kFocusCore);
         if (library_back_focused_)
             text_shrink(c, tr("Enlarge cover"), art.x + art.w * 0.5f,
                         baseline(854.0f, 23.0f, 15.0f), 15.0f,
