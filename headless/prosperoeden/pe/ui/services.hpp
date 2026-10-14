@@ -51,6 +51,14 @@ inline constexpr const char* kPadButtonNames[kPadButtons] = {
     "Cross", "Circle", "Square", "Triangle", "L1", "R1", "L2", "R2", "L3", "R3",
     "Options", "Create", "Touchpad"};
 
+// Cached retail-case artwork. Each face is independent: a real back is never inferred
+// from a front icon or promotional screenshot. Empty means not available locally.
+struct BoxArt
+{
+    std::string front;
+    std::string back;
+};
+
 // A game file in the games folder.
 struct Game
 {
@@ -249,6 +257,9 @@ class Services
         if (cancel && cancel->load(std::memory_order_acquire)) return game;
         return enrich_game_media(std::move(game));
     }
+    // Resolve locally cached, user-supplied retail-case artwork by title ID.
+    // Never requests an API or blocks gameplay startup on a network call.
+    virtual BoxArt box_art(std::uint64_t) { return {}; }
     // The value the launcher hands back to start a game.
     virtual std::string game_path(const std::string &file) = 0;
     // Cheap presence check used while the launcher is open.
