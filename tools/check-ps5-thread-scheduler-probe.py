@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Native worker scheduling qualification and mocked-platform host fixture.
 
-The All-On build may request SCHED_RR while retaining priority 700. Verify
-one attempt per native thread, successful readback and fail-open on refusal.
+Both native release and diagnostic builds request SCHED_RR at priority 700.
+Verify one attempt per native thread, readback and fail-open on refusal.
 These host tests do not establish a hardware FPS or pause-freeze gain.
 """
 from pathlib import Path
@@ -27,7 +27,7 @@ assert probe.count("cpuset_getaffinity(") == 1
 assert "SCHED_FIFO" in probe and "SCHED_RR" in probe
 assert "EDEN_PS5_THREAD_SCHED" in probe
 assert "pthread_setschedparam(pthread_self(), SCHED_RR, &priority)" in probe
-assert "#if defined(EDEN_DEV_PROFILE)" in probe
+assert "#if defined(EDEN_DEV_PROFILE)" not in probe
 assert "rr_verified" in probe and "rr_error" in probe
 assert "priority.sched_priority == 700" in probe
 assert "cpuset_setaffinity" not in probe
@@ -109,16 +109,18 @@ with tempfile.TemporaryDirectory() as tmp:
     assert "role=FallbackWorker" in records[-1] and "rr_verified=0" in records[-1], records
     assert "rr_error=1" in records[-1], records
 
-    # Native release builds retain the original FIFO scheduler.
+    # Shipping builds must apply the same verified, fail-open RR request.
     subprocess.run(["c++", "-std=c++20", "-pthread", "-DPS5_NATIVE",
                     str(cpp), "-o", str(exe)], check=True)
     release = subprocess.run([str(exe)], check=True, capture_output=True, text=True)
     records = release.stdout.strip().splitlines()
     assert len(records) == 3, records
-    assert all("rr_attempted=0" in line and "rr_verified=0" in line for line in records), records
+    assert all("rr_attempted=1" in line for line in records), records
+    assert all("rr_verified=1" in line for line in records[:2]), records
+    assert "role=FallbackWorker" in records[-1] and "rr_verified=0" in records[-1], records
 
     # Ordinary desktop builds have no native scheduling side effects.
     subprocess.run(["c++", "-std=c++20", "-pthread", str(cpp), "-o", str(exe)], check=True)
     host = subprocess.run([str(exe)], check=True, capture_output=True, text=True)
     assert not host.stdout, host.stdout
-print("Native scheduler: All-On round-robin success/fallback, release unchanged, host no-op")
+print("Native scheduler: release+diagnostic round-robin success/fallback, host no-op")
