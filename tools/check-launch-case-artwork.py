@@ -66,12 +66,12 @@ assert "constexpr float kCaseTurnSeconds = 1.30f;" in theme
 assert "constexpr float kLaunchSeconds = kCaseFrontHold" in theme
 
 # Quarter turn becomes an edge; the full back is visible half a turn later.
-assert math.cos(0.40) > 0 and math.sin(0.40) > 0
-assert math.cos(math.pi + 0.57) < 0 and math.sin(math.pi + 0.57) < 0
-assert math.cos(2.0 * math.pi + 0.40) > 0
+assert math.cos(0.52) > 0 and math.sin(0.52) > 0
+assert math.cos(math.pi + 0.63) < 0 and math.sin(math.pi + 0.63) < 0
+assert math.cos(2.0 * math.pi + 0.52) > 0
 assert "const float return_start = back_start + theme::kCaseBackHold;" in draw
-assert "constexpr float kFrontYaw = 0.40f;" in draw
-assert "constexpr float kBackYaw = 3.14159265358979323846f + 0.57f;" in draw
+assert "constexpr float kFrontYaw = 0.52f;" in draw
+assert "constexpr float kBackYaw = 3.14159265358979323846f + 0.63f;" in draw
 assert "case_depth, 3.2f" not in draw
 assert "0.63f), 1.0f, -1);" in draw
 indexer = (root / "tools/launcher/build-box-art-index.py").read_text()
@@ -142,13 +142,13 @@ assert "paper_uv.w = target_aspect / source_aspect;" in draw
 assert "w < (narrow_spine ? 64 : 128)" in native
 assert "h < (narrow_spine ? 600 : 200)" in native
 assert "c.list.case_spine(side_strip, angle, 3.2f," in draw
-assert "Color::rgb(0xfcfaf9, 0.76f)" in draw
+assert "Clean empty red sleeve" in draw
 assert "const Rect face{physical.x + 3.0f, physical.y + 3.0f," in draw
 assert "float rounded = round_box(v_local, v_half, 22.0);" in shader
 assert "angle, false, case_depth," in draw
 assert "c.list.case_corner(physical, angle, case_radius, case_depth," in draw
-assert "constexpr float case_depth = 36.0f;" in draw
-assert "float depth = a_params.y > 0.5 ? 36.0 : 0.0;" in shader
+assert "constexpr float case_depth = 44.0f;" in draw
+assert "float depth = a_params.y > 0.5 ? 44.0 : 0.0;" in shader
 assert "constexpr float case_radius = 22.0f;" in draw
 assert "float rounded = round_box(v_local, v_half, 22.0);" in shader
 assert "float fresnel = pow(1.0 - abs(cos(v_params.x)), 3.0);" in shader
