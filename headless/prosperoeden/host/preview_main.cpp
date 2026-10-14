@@ -166,8 +166,10 @@ void pictures(Stage &s)
         }
         s.wait(0.12f);
         s.shoot("00-launch-case-front");
-        s.wait(0.78f);
-        s.shoot("01-launch-case-back");
+        s.wait(0.26f); // quarter-turn: physical plastic spine must be visible
+        s.shoot("01-launch-case-spine");
+        s.wait(0.52f);
+        s.shoot("02-launch-case-back");
         return;
     }
 
