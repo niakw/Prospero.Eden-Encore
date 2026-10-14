@@ -372,3 +372,9 @@ rules apply to every title, including placeholder covers.
 
 Only an actual host OpenGL render preview is authorized to validate this UI
 iteration. Native console build/package is not authorized.
+
+The static source contract was reconciled with the shared flat-case helper:
+front, rear detail and rear zoom are rendered through the same sleeve, not
+old independent image paths. The visual preview must confirm the paper stays
+inside the clear top/bottom/lateral casing, with the rear opening visible at
+its readable yaw. No platform-native compilation accompanies this validation.
