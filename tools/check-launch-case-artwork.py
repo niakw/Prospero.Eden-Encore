@@ -133,6 +133,16 @@ assert "cached_source == selected->second[side].front()" in native
 assert "best_pixels" not in native.split("bool FetchCaseFace(", 1)[1].split(
     "void EnsureRetailCase(", 1)[0]
 assert "EUROPE_FRONT_PINS" in indexer
+assert "regional_candidates(front)" in indexer
+assert 'region_code(element.findtext("Region", ""))' in indexer
+assert '"north america": "us"' in indexer
+assert 'region:filename' in native
+assert "SafeCaseCandidate(part)" in native
+assert "LocaleCaseCandidates(selected->second[side], language_choice, side)" in native
+assert 'regions = {"us", "ca", "world", "uk", "eu", "fr"};' in native
+assert 'regions = {"fr", "eu", "world", "uk", "ca", "us"};' in native
+assert "face == 1" in native
+assert "CleanTitle(game.file), language_choice, cancel);" in native
 assert "9524e5f7-ccc8-4ce6-a581-03f82c51825e.jpg" in indexer
 assert "a8bcb4cc-a3b0-4cf0-82f3-cb10dd18b27c.jpg" in indexer
 assert "BotW_NA_Switch_Box_Art" not in (root / "tools/launcher/preview-botw-media.py").read_text()
