@@ -342,6 +342,138 @@ bool CacheNlibJpeg(const std::string& endpoint, const std::string& path,
     return false;
 }
 
+// Optional real retail case images from the build-time filtered public catalog.
+// No full metadata archive, credentials, HTTP or XML parsing on the console.
+// Matching is exact and skips colliding release editions at index-generation time.
+using BoxIndex = std::unordered_map<std::string, std::array<std::string, 2>>;
+
+std::string CaseKey(const std::string& title) {
+    std::string key;
+    key.reserve(title.size());
+    bool spaced = false;
+    for (unsigned char byte : title) {
+        char c = static_cast<char>(byte);
+        if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
+        if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
+            key.push_back(c);
+            spaced = false;
+        } else if (!key.empty() && !spaced) {
+            key.push_back(' ');
+            spaced = true;
+        }
+    }
+    while (!key.empty() && key.back() == ' ') key.pop_back();
+    return key;
+}
+
+bool SafeCaseFilename(const std::string& file) {
+    if (file.size() < 40 || file.size() > 48) return false;
+    for (unsigned char c : file)
+        if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+              (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.'))
+            return false;
+    const auto dot = file.rfind('.');
+    if (dot == std::string::npos) return false;
+    const std::string ext = file.substr(dot);
+    return ext == ".jpg" || ext == ".jpeg" || ext == ".png";
+}
+
+const BoxIndex& RetailCaseIndex() {
+    static const BoxIndex index = [] {
+        BoxIndex items;
+        std::ifstream input(Eden::AppFile("ui/box-art-index.tsv"));
+        std::string row;
+        while (std::getline(input, row) && items.size() < 20000) {
+            if (row.empty() || row[0] == '#' || row.size() > 300) continue;
+            const auto a = row.find('\t');
+            if (a == std::string::npos) continue;
+            const auto b = row.find('\t', a + 1);
+            if (b == std::string::npos) continue;
+            const std::string title = row.substr(0, a);
+            const std::string front = row.substr(a + 1, b - a - 1);
+            const std::string back = row.substr(b + 1);
+            if (title.empty() || title.size() > 170 ||
+                (front != "-" && !SafeCaseFilename(front)) ||
+                (back != "-" && !SafeCaseFilename(back)))
+                continue;
+            items.emplace(title, std::array<std::string, 2>{
+                front == "-" ? "" : front, back == "-" ? "" : back});
+        }
+        return items;
+    }();
+    return index;
+}
+
+std::string CaseFacePath(std::uint64_t title_id, const char* side) {
+    char id[17]{};
+    std::snprintf(id, sizeof(id), "%016llX", static_cast<unsigned long long>(title_id));
+    return Eden::CoversDir() + "/box-" + side + "-" + id + ".tga";
+}
+
+bool FetchCaseFace(const std::string& filename, const std::string& destination,
+                   const std::atomic<bool>* cancel) {
+    if (!SafeCaseFilename(filename) ||
+        (cancel && cancel->load(std::memory_order_acquire))) return false;
+    const auto response = Common::Net::MakeRequest(
+        "https://images.launchbox-app.com", "/" + filename);
+    if (!response || (cancel && cancel->load(std::memory_order_acquire))) return false;
+    const std::string& body = *response;
+    const bool jpeg = body.size() >= 2 &&
+        static_cast<unsigned char>(body[0]) == 0xff &&
+        static_cast<unsigned char>(body[1]) == 0xd8;
+    const bool png = body.size() >= 8 &&
+        std::memcmp(body.data(), "\x89PNG\r\n\x1a\n", 8) == 0;
+    if (body.size() < 1024 || body.size() > (16u << 20) || (!jpeg && !png))
+        return false;
+    if (cancel && cancel->load(std::memory_order_acquire)) return false;
+    (void)mkdir(Eden::CoversDir().c_str(), 0777);
+    const std::string staged = destination + ".new";
+    if (WriteJpegTga(body, staged) && std::rename(staged.c_str(), destination.c_str()) == 0)
+        return true;
+    (void)std::remove(staged.c_str());
+    return false;
+}
+
+void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
+                      const std::string& alternate_name,
+                      const std::atomic<bool>* cancel) {
+    if (title_id == 0 || (cancel && cancel->load(std::memory_order_acquire))) return;
+    const auto& index = RetailCaseIndex();
+    const auto selected = [&]() -> BoxIndex::const_iterator {
+        auto it = index.find(CaseKey(name));
+        if (it != index.end()) return it;
+        return index.find(CaseKey(alternate_name));
+    }();
+    if (selected == index.end()) return;
+    // Both Home and Library may enrich the same title at once. The fixed
+    // striped locks protect the atomic .new cache path, not the render thread.
+    static std::array<std::mutex, 64> locks;
+    std::unique_lock guard(locks[title_id % locks.size()], std::try_to_lock);
+    if (!guard.owns_lock()) return;
+    static std::mutex retry_mutex;
+    static std::unordered_map<std::uint64_t, std::chrono::steady_clock::time_point> retries;
+    {
+        std::lock_guard retry(retry_mutex);
+        const auto it = retries.find(title_id);
+        if (it != retries.end() && std::chrono::steady_clock::now() < it->second)
+            return;
+        retries[title_id] = std::chrono::steady_clock::now() + std::chrono::hours(4);
+    }
+    bool all_ready = true;
+    for (int side = 0; side < 2; ++side) {
+        if (cancel && cancel->load(std::memory_order_acquire)) return;
+        if (selected->second[side].empty()) continue;
+        const std::string path = CaseFacePath(title_id, side == 0 ? "front" : "back");
+        if (IsFile(path)) continue; // manually supplied art always wins
+        if (!FetchCaseFace(selected->second[side], path, cancel))
+            all_ready = false;
+    }
+    if (all_ready) {
+        std::lock_guard retry(retry_mutex);
+        retries.erase(title_id);
+    }
+}
+
 NlibEnrichment CachedNlibEnrichment(std::uint64_t title_id, int language_choice) {
     NlibEnrichment result;
     if (title_id == 0) return result;
