@@ -235,3 +235,20 @@ polycarbonate shell with an 18px paper mask: no independent opaque white frame
 may stick out around the picture. Thin semi-transparent Fresnel highlights
 remain on the single physical case. The body stays 36px deep, around eight
 percent of the 454px front width. The same treatment applies to every title.
+
+## Verified directional layout contract (all titles)
+
+- **Front hold**: yaw +0.40 rad, showing more of the LEFT red printed spine;
+  right side remains discreet.
+- **Back hold**: yaw pi+0.57 rad, showing more of the LEFT clear opening;
+  the opposite physical RED hinge appears only as a narrow seam on the RIGHT.
+- The flat front/back scans use aspect-preserving containment and cannot
+  stretch a region's back-cover descriptions. Genuine scans remain priority.
+- An original unreadably tiny physical spine (under 64x600 px) is rejected;
+  the universal fallback is a clean red neutral sleeve with pale, title-free
+  molding marks, never a pixel-stretched title.
+- Eden logo and title are moved into the right column with clear case margins.
+- Same C++ shader and fixed geometry for every game. The 4.5 s back hold remains.
+
+Only the host OpenGL case-visual workflow is requested here. Native console
+packaging/compilation requires an explicit separate user approval.
