@@ -63,23 +63,14 @@ if(PS5_NATIVE)
                   "${eden_buffer_cache_source}")
     target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/buffer-pages")
 endif()
-# R428: upstream ProsperoEden d7f2764 — avoid a heap std::vector copy on
-# every FixSmallVectorADL call. The pinned Eden header uses BOOST_VERSION but
-# does not include its definition. Keep the vendor file immutable, derive a
-# private include override at configure time, and fail on version drift.
-file(READ "${PROJECT_SOURCE_DIR}/src/video_core/texture_cache/util.h" eden_texture_header)
-set(eden_small_vector_include "#include <boost/container/small_vector.hpp>")
-string(FIND "${eden_texture_header}" "${eden_small_vector_include}" eden_small_vector_at)
-string(FIND "${eden_texture_header}" "FixSmallVectorADL" eden_small_vector_helper_at)
-if(eden_small_vector_at LESS 0 OR eden_small_vector_helper_at LESS 0)
-    message(FATAL_ERROR "Pinned Eden small_vector ADL helper changed; requalify R428")
+# The texture-cache small-vector Boost version dependency is a complete
+# tracked header under vendor/encore-active, not a configure-time replacement.
+# Its only modification to the original is #include <boost/version.hpp>.
+set(EDEN_SMALL_VECTOR_ROOT "${PORT_ROOT}/vendor/encore-active/eden-core/src")
+if(NOT EXISTS "${EDEN_SMALL_VECTOR_ROOT}/video_core/texture_cache/util.h")
+    message(FATAL_ERROR "Missing maintained texture-cache type header")
 endif()
-string(REPLACE "${eden_small_vector_include}"
-    "${eden_small_vector_include}\n#include <boost/version.hpp>"
-    eden_texture_header "${eden_texture_header}")
-write_derived("${PORT_BUILD_DIR}/small-vector/video_core/texture_cache/util.h"
-              "${eden_texture_header}")
-target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/small-vector")
+target_include_directories(video_core BEFORE PRIVATE "${EDEN_SMALL_VECTOR_ROOT}")
 # R428: upstream d7f2764 — repeated guest faults must not force a
 # synchronous PS5 storage flush for every error line. Keep regular buffer
 # flushes and the explicit Flush() API; only coalesce bursts to 100 ms.
