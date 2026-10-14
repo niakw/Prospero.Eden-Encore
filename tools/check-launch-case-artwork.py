@@ -264,7 +264,15 @@ assert "const Cover artwork = c.textures.cover(" in lib_sleeve
 assert "scan, std::max(paper.w, paper.h) * texture_scale);" in lib_sleeve
 assert "const float other_x" not in lib_sleeve
 assert "cover(c, scan, paper, 0.0f, 0.0f);" not in lib_sleeve
-assert "c.list.image(artwork.texture, fitted" in lib_sleeve
+assert "c.list.image(artwork.texture, paper, uv," in lib_sleeve
+assert "Rect fitted = paper;" not in lib_sleeve
+assert "fitted.w = paper.h * source;" not in lib_sleeve
+assert "fitted.h = paper.w / source;" not in lib_sleeve
+assert "uv.w = target / source;" in lib_sleeve
+assert "uv.h = source / target;" in lib_sleeve
+assert "uv.y = (1.0f - uv.h) * 0.5f;" in lib_sleeve
+assert "uv.x = rear ? 1.0f - uv.w : 0.0f;" in lib_sleeve
+assert "std::clamp(shell.w * 0.012f, 1.75f, 5.0f)" in lib_sleeve
 assert "shell.w - side, shell.h - 2.0f * top" in lib_sleeve
 assert "const float opening_x = rear ? shell.x : shell.x + shell.w - side;" in lib_sleeve
 
@@ -276,12 +284,20 @@ assert "for (int i = 1; i < 5; ++i)" in lib_sleeve
 assert "color.rgb = vec3(0.97, 0.025, 0.07);" not in shader
 assert "float from_edge = (1.0 - v_st.x)" in shader
 assert "float outer_glint" in shader
+assert "float from_cap = min(v_st.y, 1.0 - v_st.y)" in shader
+assert "float cap_band = 1.0 - smoothstep(11.5, 13.2, from_cap);" in shader
+assert "float cap_outer = exp(" in shader
+assert "float cap_inner = exp(" in shader
+assert "max(rim_intensity, cap_intensity)" in shader
+assert "round_box(v_local, v_half, 22.0)" in shader
 assert "v_border.x > 0.5 && v_params.y < 0.5" not in shader
 assert "float inner_ridge" in shader
 assert "vec4(material, v_top.a *" in shader
 assert "simplify_switch_header" not in shapes and "simplify_switch_header" not in drawlist
 assert "float inner_ridge = exp(" in shader
 assert "angle, false, case_depth," in draw
+assert "Color::rgb(0xe9f3ff, 0.79f)" in draw
+assert "Color::rgb(0xddeaf8, 0.78f)" in draw
 assert "c.list.case_corner(physical, angle, case_radius, case_depth," in draw
 assert "constexpr float case_depth = 44.0f;" in draw
 assert "float depth = a_params.y > 0.5 ? 44.0 : 0.0;" in shader
