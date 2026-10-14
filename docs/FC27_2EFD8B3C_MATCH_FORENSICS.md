@@ -165,3 +165,23 @@ game update (at least 1.0.1 if available on the guest platform), the
 custom preset selected for each player in the pre-match side selector,
 and whether it remains active during the match. No save files should
 be erased or automatically modified.
+
+## Guest display version witness (development build candidate)
+
+The title's own `IApplicationFunctions::GetDisplayVersion` now has
+a **development-profile-only**, once-per-title diagnostic in the
+maintained `vendor/encore-active/eden-core/src/core/hle/service/am/service/application_functions.cpp`.
+When the guest requests its display version, it emits
+`EDEN_GUEST_TITLE_VERSION title=... metadata=... version=...`.
+If the guest metadata is missing, the witness reports `unknown`
+rather than falsely treating the HLE's synthetic `1.0.0` fallback
+as an installed content update.
+
+The original upstream's null-metadata safety behavior is preserved,
+and the pinned archive is not modified. This is a **candidate until
+native compile and guest run**; absence of the line may mean the title
+never called the service, not necessarily that the update is absent.
+An installed version at least 1.0.1 is relevant to the publisher's
+recognized custom action preset bug, but doesn't establish its
+resolution on the guest or remove the need to inspect the preset
+selected before the match.
