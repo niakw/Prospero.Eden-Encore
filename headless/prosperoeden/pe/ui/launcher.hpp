@@ -231,6 +231,7 @@ class Launcher
     std::string launch_hero_;
     std::string launch_box_front_;
     std::string launch_box_back_;
+    std::string launch_box_spine_;
     std::string launch_description_;
     std::vector<std::string> launch_screenshots_;
     tween::Timer launch_;
