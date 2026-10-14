@@ -2131,7 +2131,8 @@ void RasterizerVulkan::UpdateVertexInput(Tegra::Engines::Maxwell3D::Regs& regs) 
 
     for (u32 binding = 0; binding < max_bindings; ++binding) {
         const auto& input_binding{regs.vertex_streams[binding]};
-        const bool is_instanced{regs.vertex_stream_instances.IsInstancingEnabled(binding)};
+        const bool is_instanced{regs.vertex_stream_instances.IsInstancingEnabled(binding) &&
+                                input_binding.frequency != 0};
         bindings.push_back({
             .sType = VK_STRUCTURE_TYPE_VERTEX_INPUT_BINDING_DESCRIPTION_2_EXT,
             .pNext = nullptr,
