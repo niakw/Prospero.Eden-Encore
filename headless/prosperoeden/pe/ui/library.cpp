@@ -1132,7 +1132,8 @@ void Launcher::draw_library(Canvas &c)
         {Pad::options, TR("Safe launch")}, {Pad::circle, TR("Back")}};
     if (library_back_zoom_) {
         // An actual controller-operable overlay, not a static screenshot.
-        list.rounded_rect(kScreen, 0.0f, theme::kScrim.with_alpha(0.96f));
+        list.rounded_rect({0.0f, 0.0f, 1920.0f, 1080.0f}, 0.0f,
+                          theme::kScrim.with_alpha(0.96f));
         if (game != nullptr) {
             text_shrink(c, game->name, 960.0f, baseline(54.0f, 52.0f, 35.0f),
                         35.0f, theme::kTitle, 1580.0f, Align::center);
