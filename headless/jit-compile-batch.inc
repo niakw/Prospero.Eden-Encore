@@ -17,6 +17,8 @@
                 continue;
             if (batch && block_of_code.SpaceRemaining() < MINIMUM_REMAINING_CODESIZE)
                 break;
+            // Commit the lazy code cache before each batched successor, not only the first.
+            if (batch) block_of_code.EnsureMemoryCommitted(MINIMUM_REMAINING_CODESIZE);
             // Count additional batched blocks.
             const auto arch_descriptor = A64::LocationDescriptor{descriptor};
             ir_block.Reset(arch_descriptor);
