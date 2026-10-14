@@ -56,13 +56,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Host fixture dependencies (not a PS5 build)
+      - name: Install host fixture dependencies (non-native)
         run: |
           python3 -m pip install --user --break-system-packages Pillow
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends astcenc
       # Host-only cross-console source layout regression; deliberately no native PS5 compile.
-      - name: Verify same-game PS4/Switch positions across layout/scaled art
+      - name: Verify cross-platform glyph alignment at supported sizes
         run: |
           python3 -B tools/check-ps-glyph-scene-positions.py
           python3 -B tools/check-ps-glyph-cross-platform-image.py
@@ -70,7 +70,7 @@ jobs:
       - name: Verify per-game input semantics and independently approved cross-console scene geometry
         run: |
           python3 -B tools/check-ps-glyph-reconstruct.py
-      - name: Verify mod pixel differences reconstruct safe, unapproved Switch sprite candidates
+      - name: Verify candidate glyph pixel reconstruction without activation
         run: |
           python3 -B tools/check-ps-glyph-diff-to-evidence.py
       - name: Verify BOTW Yaz0 to SARC/BNTX resource discovery and parser guards

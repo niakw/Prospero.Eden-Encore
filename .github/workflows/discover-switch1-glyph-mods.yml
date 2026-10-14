@@ -73,7 +73,7 @@ jobs:
           python3 -B tools/check-ps-glyph-switch1-search-queue.py
           python3 -B tools/check-ps-glyph-curl-search.py
           python3 -B tools/check-ps-glyph-firefox-search.py
-      - name: Load public Switch 1 game title metadata
+      - name: Load public source-platform title metadata
         run: |
           mkdir -p /tmp/eden-title-catalog /tmp/eden-glyph-discovery
           succeeded=0
@@ -98,7 +98,7 @@ jobs:
           python3 -B tools/ps-glyph-switch1-search-queue.py \
             --catalog /tmp/eden-glyph-discovery/catalog.json \
             --out /tmp/eden-glyph-discovery/all-switch1-search-queue.json
-      - name: Restore last completed Switch game Title IDs
+      - name: Restore completed guest-title identifiers
         uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
           path: |
@@ -262,7 +262,7 @@ jobs:
           if test "$saved" -ne 1; then
             echo "::warning::Durable branch update was denied; GH Actions artifacts retain a temporary backup."
           fi
-      - name: Save durable Switch Title ID and per-console mod search cursor
+      - name: Save guest-title source discovery cursor
         if: success()
         uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:

@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Verify Switch1 base game, cross-generation and Switch2-only filters
+      - name: Verify source-platform base and cross-generation eligibility
         run: |
           python3 -B tools/check-ps-glyph-switch1-eligibility.py
           python3 -B tools/check-ps-glyph-mod-discovery.py
