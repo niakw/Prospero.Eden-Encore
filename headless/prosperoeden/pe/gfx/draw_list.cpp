@@ -207,6 +207,18 @@ void DrawList::case_spine(const Rect &r, float angle, float thickness,
          depth_offset * transform_.scale, static_cast<float>(Shape::case_spine));
 }
 
+void DrawList::case_cap(const Rect &r, float angle, bool bottom, float depth,
+                        Color near, Color far)
+{
+    Instance &i = append(0);
+    const Rect t = apply(r);
+    set4(i.rect, t.x, t.y, t.w, t.h);
+    set_color(i.color_top, near);
+    set_color(i.color_bottom, far);
+    set4(i.params, angle, bottom ? 1.0f : 0.0f, depth * transform_.scale,
+         static_cast<float>(Shape::case_cap));
+}
+
 void DrawList::case_plastic(const Rect &r, float angle, bool back, Color plastic)
 {
     Instance &i = append(0);
