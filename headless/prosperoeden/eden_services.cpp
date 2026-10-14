@@ -629,6 +629,11 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
                      static_cast<unsigned long long>(title_id), index.size());
         return;
     }
+    std::fprintf(stderr,
+                 "EDEN_CASE_LOOKUP title=%016llX status=match front=%zu back=%zu spine=%zu\n",
+                 static_cast<unsigned long long>(title_id),
+                 selected->second[0].size(), selected->second[1].size(),
+                 selected->second[2].size());
     // Both Home and Library may enrich the same title at once. The fixed
     // striped locks protect the atomic .new cache path, not the render thread.
     static std::array<std::mutex, 64> locks;
