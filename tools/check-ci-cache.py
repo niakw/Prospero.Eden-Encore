@@ -30,6 +30,19 @@ assert "clang++-18 -std=c++20 -x c++ -fsyntax-only -" in native_toolchain
 assert native_toolchain.index("libboost-container-dev") < native_toolchain.index(
     "clang++-18 -std=c++20 -x c++ -fsyntax-only -"
 )
+# Ordinary dev UI/docs pushes start a *skipped* native workflow.
+# They must not cancel a long-running explicitly requested native package.
+native_group = workflow.split("concurrency:", 1)[1].split("jobs:", 1)[0]
+assert "github.ref == 'refs/heads/dev/ps5-sparse-jit'" in native_group
+assert "github.event_name == 'push'" in native_group
+assert "!contains(github.event.head_commit.message || '', '[full-build]')" in native_group
+assert "!contains(github.event.head_commit.message || '', '[resume-stage:37728435816]')" in native_group
+assert "'skip-only' || 'build-capable'" in native_group
+assert "cancel-in-progress: true" in native_group
+# Preserve existing one-at-a-time build-capable behavior for explicitly
+# requested native pushes; workflow_dispatch has its own event scope.
+assert "${{ github.event_name }}" in native_group
+
 assert "PROSPEROEDEN_GIT_DEPS_ROOT: .deps/repos" in workflow
 assert "PROSPEROEDEN_GIT_DEPS_ROOT" in deps
 assert "item.get('path', '').startswith('../')" in deps
