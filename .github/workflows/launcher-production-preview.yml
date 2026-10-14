@@ -118,6 +118,39 @@ jobs:
           print("UNIVERSAL_CASE_NO_RETAIL_ART: PASS")
           PY
 
+      - name: Capture real Library jackets, focus and back enlargement
+        env:
+          PE_LANG: fr-FR
+          PE_PREVIEW_LIBRARY_ONLY: "1"
+          PE_PREVIEW_BOTW: "1"
+          PE_PREVIEW_JOBS: "2"
+          PROSPEROEDEN_LAUNCHER_BUILD: ${{ runner.temp }}/encore-launcher-only
+        run: |
+          set -o pipefail
+          mkdir -p build/launch-case-library
+          cp build/launch-case-render/botw-*.tga build/launch-case-library/
+          bash tools/launcher/preview.sh build/launch-case-library 1920 1080 \
+            2>&1 | tee build-launch-case-library.log
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageChops, ImageStat
+          folder = Path("build/launch-case-library")
+          expected = ["00-library-front-shelf.png", "01-library-back-focus.png",
+                      "02-library-back-zoom.png", "03-library-back-closed.png"]
+          files = sorted(folder.glob("*.png"))
+          assert [f.name for f in files] == expected, files
+          for image_file in files:
+              with Image.open(image_file) as frame:
+                  assert frame.size == (1920, 1080)
+                  assert sum(ImageStat.Stat(frame.convert("RGB")).stddev) > 15
+          with Image.open(files[1]) as focus, Image.open(files[2]) as zoom:
+              crop = (630, 140, 1280, 880)
+              difference = ImageStat.Stat(ImageChops.difference(
+                  focus.convert("RGB").crop(crop), zoom.convert("RGB").crop(crop))).mean
+              assert max(difference) > 15, difference
+          print("ENCORE_LIBRARY_FLAT_JACKETS_AND_REAR_ZOOM: PASS")
+          PY
+
       - name: Export full-resolution production-render evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -126,6 +159,8 @@ jobs:
           path: |
             build/launch-case-render/*.png
             build/launch-case-generic/*.png
+            build/launch-case-library/*.png
+            build-launch-case-library.log
             build-launch-case-render.log
             build-launch-case-generic.log
           if-no-files-found: error
