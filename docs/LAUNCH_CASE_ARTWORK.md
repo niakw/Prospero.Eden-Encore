@@ -342,3 +342,12 @@ For titles with no retail flat art at all, Library now draws a common
 non-animated 2D fallback using the available icon/banner, real game title,
 and known description. It must never appear as an empty rectangle or a
 fabricated third-party box scan.
+
+## Final actual-capture proof gate
+
+Capture timing is controlled by loaded-texture state, not a blind fixed number
+of frames. Both flat BOTW scans must be decoded and have completed their fade-in
+before the host screenshot is accepted. The enlarged scan similarly must be
+actually loaded at its higher texture bucket. Pixel-stat assertions reject
+blank fronts or blank popups. Both compiled app states are captured directly
+as 1920x1080 PNGs; there is no generated or composited mockup.
