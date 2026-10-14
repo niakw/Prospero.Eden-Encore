@@ -269,8 +269,10 @@ void Launcher::launch(const std::string &file, const std::string &title, const s
     const BoxArt case_art = services_.box_art(title_id);
     launch_box_front_ = case_art.front;
     launch_box_back_ = case_art.back;
-    if (!launch_box_front_.empty()) (void)textures_.cover(launch_box_front_, 640.0f);
-    if (!launch_box_back_.empty()) (void)textures_.cover(launch_box_back_, 640.0f);
+    launch_box_spine_ = case_art.spine;
+    if (!launch_box_front_.empty()) (void)textures_.cover(launch_box_front_, 760.0f);
+    if (!launch_box_back_.empty()) (void)textures_.cover(launch_box_back_, 760.0f);
+    if (!launch_box_spine_.empty()) (void)textures_.cover(launch_box_spine_, 760.0f);
     launch_.start(theme::kLaunchSeconds);
     press_ = 1.0f;
     cue(Cue::launch);
