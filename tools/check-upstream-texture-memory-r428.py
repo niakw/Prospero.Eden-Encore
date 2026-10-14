@@ -19,12 +19,21 @@ assert 'target_include_directories(video_core BEFORE PRIVATE "${EDEN_SMALL_VECTO
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/texture_cache/util.h"' not in cmake
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/texture_cache/util.cpp"' in cmake
 assert 'Pinned Eden ASTC ConvertImage changed; requalify R428' in cmake
-assert 'file(READ "${PROJECT_SOURCE_DIR}/src/common/logging.cpp"' in cmake
-assert 'flush_now - error_flushed_ms.load(std::memory_order_relaxed) >= 100' in cmake
-assert 'write_limit_exceeded ||' in cmake
+# Logging was moved to the maintained versioned unit. Keep R428's
+# bounded-flush semantics and assert exact pinned-source transformation parity,
+# instead of requiring the removed configure-time CMake generator.
+logging = (root / "vendor/encore-active/eden-core/src/common/logging.cpp").read_text()
+original_logging = (root / "vendor/sources/eden/src/common/logging.cpp").read_text()
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/common/logging.cpp"' not in cmake
+assert 'set(EDEN_MAINTAINED_LOGGING ' in cmake
+assert 'list(APPEND eden_common_sources "${EDEN_MAINTAINED_LOGGING}")' in cmake
 assert 'get_target_property(eden_common_sources common SOURCES)' in cmake
-assert 'list(REMOVE_ITEM eden_common_sources logging.cpp)' in cmake
-assert 'list(APPEND eden_common_sources "${PORT_BUILD_DIR}/logging.cpp")' in cmake
+assert 'list(REMOVE_ITEM eden_common_sources "logging.cpp")' in cmake
+assert 'flush_now - error_flushed_ms.load(std::memory_order_relaxed) >= 100' in logging
+assert 'write_limit_exceeded ||' in logging
+assert original_logging.count("            file->Flush();") >= 1
+assert logging.count("            file->Flush();") >= 1
+assert "std::atomic<long long> error_flushed_ms{-1000};" in logging
 assert 'const u32 layers = copy.image_subresource.num_layers * copy.image_extent.depth;' in cmake
 assert 'input_offset.subspan(layer * layer_input)' in cmake
 assert 'output.subspan(output_offset + layer * layer_output)' in cmake
