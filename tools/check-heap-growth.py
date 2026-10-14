@@ -264,7 +264,7 @@ void eden_heap_rollback_growth(void *address, size_t size, int64_t physical) {
     ++rolled_back_growth;
 }
 static int refuse_pages;   // the console has no memory left for a block of its own
-// Full-span mock for Sony pages: payload rounded to 2 MiB plus 2 MiB lead.
+// Full-span native allocation mock: payload rounded to 2 MiB plus 2 MiB lead.
 #define MOCK_DIRECT_PAGE ((size_t)2 << 20)
 static size_t direct_span(size_t size) {
     if (size > SIZE_MAX - 2 * MOCK_DIRECT_PAGE) return 0;
