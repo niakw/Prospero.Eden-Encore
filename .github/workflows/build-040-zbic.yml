@@ -228,6 +228,7 @@ jobs:
           python3 -B tools/check-vendored-vulkan-fork.py
           python3 -B tools/check-vendor-consolidation-debt.py
           python3 -B tools/check-maintained-logging-loader.py
+          python3 -B tools/check-maintained-audio-units.py
           python3 -B tools/check-encore-first-parent-revision.py
           python3 -B tools/check-vendored-native-build-cmake.py
           python3 -B tools/check-vendored-fiber-source.py
