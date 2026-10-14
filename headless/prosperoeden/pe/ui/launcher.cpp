@@ -225,6 +225,7 @@ void Launcher::launch(const std::string &file, const std::string &title, const s
     selected_game_ = services_.game_path(file);
     launch_title_ = title;
     launch_cover_ = cover;
+    launch_hero_.clear();
     launch_description_.clear();
     launch_screenshots_.clear();
     // Resolve metadata once. Never scan the disk or reach a remote artwork
@@ -235,12 +236,14 @@ void Launcher::launch(const std::string &file, const std::string &title, const s
         if (game.file != file) continue;
         title_id = game.title_id;
         launch_description_ = !game.description.empty() ? game.description : game.intro;
+        launch_hero_ = game.hero;
         launch_screenshots_ = game.screenshots;
         break;
     }
     for (const Recent& recent : home_.recents) {
         if (recent.file != file) continue;
         if (title_id == 0) title_id = recent.title_id;
+        if (launch_hero_.empty()) launch_hero_ = recent.hero;
         if (launch_description_.empty())
             launch_description_ = !recent.description.empty() ? recent.description : recent.intro;
         if (launch_screenshots_.empty() && !recent.screenshot.empty())
@@ -249,12 +252,18 @@ void Launcher::launch(const std::string &file, const std::string &title, const s
     }
     if (home_.last_file == file) {
         if (title_id == 0) title_id = home_.last_title_id;
+        if (launch_hero_.empty()) launch_hero_ = home_.last_hero;
         if (launch_description_.empty())
             launch_description_ = !home_.last_description.empty() ?
                 home_.last_description : home_.last_intro;
         if (launch_screenshots_.empty() && !home_.last_screenshot.empty())
             launch_screenshots_.push_back(home_.last_screenshot);
     }
+    if (launch_hero_.empty() && !launch_screenshots_.empty())
+        launch_hero_ = launch_screenshots_.front();
+    if (!launch_hero_.empty())
+        (void)textures_.cover(launch_hero_, 1920.0f);
+
     // Real, locally cached retail scans win independently per face. A missing
     // back is composed from cached game metadata, never faked as a real scan.
     const BoxArt case_art = services_.box_art(title_id);
