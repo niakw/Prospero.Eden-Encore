@@ -62,6 +62,7 @@ enum class Shape : std::uint8_t
     case_plastic = 11,  // transparent molded edge over the printed face
     case_cap = 12,      // top or bottom of a solid case with real depth
     case_corner = 13,   // segmented curved plastic corners extruded in Z
+    case_spine_image = 14, // optional original FLAT printed side scan
 };
 
 // One instanced quad; field order matches the vertex attributes.
