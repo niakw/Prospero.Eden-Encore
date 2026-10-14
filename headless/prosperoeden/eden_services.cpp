@@ -1326,7 +1326,7 @@ pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game,
     // only when indexed, never during the actual title handoff.
     EnsureRetailCase(game.title_id, game.name,
                      scanned_name != game.name ? scanned_name :
-                     std::filesystem::path(game.file).stem().string(), cancel);
+                     CleanTitle(game.file), cancel);
     return game;
 }
 
