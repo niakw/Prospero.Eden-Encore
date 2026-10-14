@@ -166,9 +166,9 @@ void pictures(Stage &s)
         }
         s.wait(1.02f); // hold initial cover before the 3D turn
         s.shoot("00-launch-case-front");
-        s.wait(0.83f); // quarter-turn: 28px spine, plastic top and bottom
+        s.wait(0.74f); // at ~90 degrees: capture the actual physical spine
         s.shoot("01-launch-case-spine");
-        s.wait(2.25f); // full back held long enough to read its description
+        s.wait(2.34f); // full back held long enough to read its description
         s.shoot("02-launch-case-back");
         return;
     }
