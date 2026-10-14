@@ -198,3 +198,17 @@ The revised rounded-plastic material shades edge normals with two virtual
 light sources and simulates angle-dependent Fresnel on the molded front rim.
 Its adequacy is assessed by the actual host GL screenshots rather than the
 source preflight alone.
+
+## October 14 material/render comparison
+
+The case render is measured against the supplied PSD composite rather than
+approved from a green CI status. The inset printed scans are separate from
+our own 3D polycarbonate shell. The shell uses a 454x730 front silhouette,
+31px extrusion rounding, 64px depth, a recessed insert, solid projected
+upper/lower surfaces and directionally lit curved side/corner segments.
+Transparent molded rim reflections use a grazing-angle Fresnel term; the
+lighting avoids tinting the underlying printed artwork. Neither the PSD nor
+any pre-rendered 3D box image is shipped as a game texture.
+
+**Only the host C++/OpenGL visual-preview workflow is requested for this
+iteration; do not invoke source preflight or a native console build.**
