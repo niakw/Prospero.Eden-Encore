@@ -82,7 +82,8 @@ assert "library_date(game->release_date" in library
 assert "library_genres(game->categories)" in library
 assert "View back cover" in library
 assert "cover(c, artwork, art, 5.0f, 0.5f);" in library
-assert "PE_PREVIEW_LIBRARY_ONLY" in preview_source
+assert "PE_PREVIEW_LIBRARY_ONLY" in (
+    root / "headless/prosperoeden/host/preview_main.cpp").read_text()
 assert "case_face(artwork.texture, face, angle, back, kWhite, paper_uv," in draw
 assert "c.list.case_cap(" in draw and draw.index("c.list.case_cap(") > draw.index("c.list.case_face(artwork.texture")
 assert "const float return_start = back_start + theme::kCaseBackHold;" in draw
