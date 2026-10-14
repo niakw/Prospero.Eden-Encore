@@ -153,7 +153,9 @@ void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
 void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
                         bool rear, float shadow, float texture_scale = 1.0f)
 {
-    const float side = std::max(5.0f, shell.w * 0.027f);
+    // Fine edge on the opening ONLY: 2.2px on a 181px shelf jacket.
+    // Do not let a fixed 5px rim become a huge transparent column.
+    const float side = std::clamp(shell.w * 0.012f, 1.75f, 5.0f);
     const float top = std::max(5.0f, shell.h * 0.018f);
     const float radius = std::max(5.0f, shell.w * 0.028f);
     // One continuous square-corner paper wrap, folded directly onto the
@@ -175,25 +177,27 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
 
     const std::string& scan = rear ? game.box_back : game.box_front;
     if (!scan.empty()) {
-        // The generic cover() helper draws its OWN four-sided border; using it
-        // here made the jacket look like a second transparent plastic box.
-        // Use only the opaque original printed scan, aspect-contained.
+        // The generic cover() helper drew a second plastic bezel. Use the
+        // original opaque scan directly, with a *UV cover* of the paper: an
+        // aspect-contain image left a large empty column by the opening rim.
+        // Cropping the source UV (not stretching its pixels) fills the same
+        // square-corner paper on both sides, including next to the spine.
         const Cover artwork = c.textures.cover(
             scan, std::max(paper.w, paper.h) * texture_scale);
         if (artwork.texture != 0) {
-            Rect fitted = paper;
+            Rect uv{0.0f, 0.0f, 1.0f, 1.0f};
             const float source = std::max(0.01f, artwork.aspect);
             const float target = paper.w / paper.h;
             if (source > target) {
-                fitted.h = paper.w / source;
-                fitted.y += (paper.h - fitted.h) * 0.5f;
+                uv.w = target / source;
+                // No transparent seam at either of the two printed folds.
+                uv.x = rear ? 1.0f - uv.w : 0.0f;
             } else if (source < target) {
-                fitted.w = paper.h * source;
-                // The rear print reaches the RIGHT-hand red spine fold;
-                // front artwork meets the left spine fold.
-                fitted.x += rear ? paper.w - fitted.w : 0.0f;
+                uv.h = source / target;
+                // Centre the minimal vertical crop to retain retail artwork.
+                uv.y = (1.0f - uv.h) * 0.5f;
             }
-            c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f},
+            c.list.image(artwork.texture, paper, uv,
                          Color::rgb(0xffffff,
                                     tween::cubic_out(artwork.age / 0.22f)));
         } else {
