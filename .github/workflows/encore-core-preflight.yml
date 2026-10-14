@@ -46,6 +46,7 @@ jobs:
           python3 -B tools/analyze-fc27-ipc-threads.py --self-test
           python3 -B tools/analyze-guest-progress-stall.py --self-test
           python3 -B tools/check-ps5-fast-first-pipelines.py
+          python3 -B tools/check-native-shader-cache-eligibility.py --self-test
           python3 -B tools/check-ps5-pipeline-build-wait.py
           python3 -B tools/check-ps5-pipeline-fairness.py
           python3 -B tools/check-upstream-texture-memory-r428.py
