@@ -636,6 +636,17 @@ int main(int argc, char** argv) {
                     Eden::Report("cache", "The driver's shader cache could not move to the data folder; it starts empty");
             }
             (void)mkdir(cache.c_str(), 0777);
+            // The pinned driver refuses disk caching whenever real/effective
+            // user OR group credentials differ (src/util/u_debug.h,
+            // __normal_user). A configured cache path is not proof of a live
+            // cache. Observe eligibility without changing process privileges.
+            const bool cache_uid_match = getuid() == geteuid();
+            const bool cache_gid_match = getgid() == getegid();
+            std::printf("EDEN_GPU_DISK_CACHE_ELIGIBILITY uid_match=%u gid_match=%u "
+                        "directory_ready=%u disable_env_present=%u\n",
+                        unsigned(cache_uid_match), unsigned(cache_gid_match),
+                        unsigned(Eden::DirectoryExists(cache)),
+                        unsigned(std::getenv("MESA_SHADER_CACHE_DISABLE") != nullptr));
             setenv("MESA_SHADER_CACHE_DIR", cache.c_str(), 1);
             // The PS5 has writable game-data storage, not a desktop temp dir.
             // Keep compiled Vulkan/RADV shaders while space exists. The cache
