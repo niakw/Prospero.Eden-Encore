@@ -82,7 +82,11 @@ void main()
             z = -edge_x * sn - depth * cs;
         }
         clip_w = max(0.65, 1.0 - z / 950.0);
-        virt = centre + vec2(x, local.y) / clip_w;
+        // A slight stable 3-axis display tilt makes the cover's upper and
+        // lower edges read as an actual physical object. All shell layers
+        // share this transform, including the bevel and printed side.
+        virt = centre + vec2(x + local.y * 0.025,
+                             local.y + x * 0.065) / clip_w;
         v_virtual = virt;
     }
     vec2 surface = virt * u_viewport.x + u_viewport.yz;
