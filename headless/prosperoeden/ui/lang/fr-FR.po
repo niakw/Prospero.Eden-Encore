@@ -1659,3 +1659,7 @@ msgstr "Tir"
 #: pe/ui/library.cpp
 msgid "Back to games"
 msgstr "Retour aux jeux"
+
+#: pe/ui/library.cpp
+msgid "Close"
+msgstr "Fermer"
