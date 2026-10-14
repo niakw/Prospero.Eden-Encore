@@ -1,7 +1,9 @@
 name: Encore launcher render preview (host only)
 
 on:
-  # Legacy preview branch was removed; render only by explicit manual dispatch.
+  # The developer branch only; the job below requires [preview-ready] for pushes.
+  push:
+    branches: [dev/ps5-sparse-jit]
   workflow_dispatch:
 
 permissions:
@@ -78,6 +80,40 @@ jobs:
           print("RENDERED_FROM_REAL_CPP_GL_LAUNCHER: PASS")
           PY
 
+      - name: Capture native launch-case render with original C++/OpenGL
+        env:
+          PE_LANG: fr-FR
+          PE_PREVIEW_LAUNCH_ONLY: "1"
+          PE_PREVIEW_JOBS: "2"
+          PROSPEROEDEN_LAUNCHER_BUILD: ${{ runner.temp }}/encore-launcher-only
+        run: |
+          set -o pipefail
+          bash tools/launcher/preview.sh build/launch-case-render 1920 1080 \
+            2>&1 | tee build-launch-case-render.log
+
+      - name: Verify the real front/back screenshots
+        run: |
+          python3 - <<'PY'
+          from PIL import Image, ImageChops, ImageStat
+          from pathlib import Path
+          path = Path("build/launch-case-render")
+          expected = ["00-launch-case-front.png", "01-launch-case-back.png"]
+          screenshots = sorted(path.glob("*.png"))
+          assert [item.name for item in screenshots] == expected, screenshots
+          with Image.open(screenshots[0]) as front, Image.open(screenshots[1]) as back:
+              assert front.size == back.size == (1920, 1080)
+              front_rgb, back_rgb = front.convert("RGB"), back.convert("RGB")
+              area = (360, 205, 760, 795)
+              delta = ImageStat.Stat(ImageChops.difference(
+                  front_rgb.crop(area), back_rgb.crop(area))).mean
+              assert max(delta) > 10, ("front/back image did not turn", delta)
+              for image, filepath in ((front_rgb, screenshots[0]), (back_rgb, screenshots[1])):
+                  variation = sum(ImageStat.Stat(image.resize((64, 36))).stddev)
+                  assert variation > 12 and filepath.stat().st_size > 20000
+                  print(filepath.name, "actual OpenGL", filepath.stat().st_size, variation)
+          print("LAUNCH_CASE_CPP_OPENGL_RENDER: PASS")
+          PY
+
       - name: Export full-resolution production-render evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -85,6 +121,8 @@ jobs:
           name: Encore-launcher-native-render-1080p
           path: |
             build/launcher-production/*.png
+            build/launch-case-render/*.png
             build-launcher-render.log
+            build-launch-case-render.log
           if-no-files-found: error
           retention-days: 14
