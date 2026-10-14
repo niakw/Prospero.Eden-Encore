@@ -139,6 +139,7 @@ jobs:
           python3 -B tools/check-vendored-fiber-source.py
           python3 -B tools/check-native-link-weak-flags.py
           python3 -B tools/check-vendored-texture-header.py
+          python3 -B tools/check-vendored-jit-assert-source.py
           python3 -B tools/install-vendored-eden-build-flags.py
           python3 -B tools/check-native-build-recipe.py
           python3 -B tools/check-ps5-tfb-counter-stability.py
