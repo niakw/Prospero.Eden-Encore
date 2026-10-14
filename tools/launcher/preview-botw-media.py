@@ -27,6 +27,9 @@ MEDIA = {
         "https://images.launchbox-app.com/b5f2899a-717f-4544-b63f-ee5d13e24483.jpg",
     ),
     "botw-hero.tga": (
+        # Existing 2560x1440 downloadable desktop wallpaper from Nintendo.
+        # Host-only art fixture; native Encore still uses its cached Nlib Hero.
+        "https://www.nintendo.com/eu/media/images/08_content_images/games_6/nintendo_switch_7/nswitch_thelegendofzeldabreathofthewild/NSwitch_TheLegendOfZeldaBreathOfTheWild_wp_desktop_01.jpg",
         "https://images.launchbox-app.com/9ec55095-ae9a-4da6-b1a4-025dfe92ca4b.jpg",
     ),
 }
