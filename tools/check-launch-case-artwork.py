@@ -48,7 +48,7 @@ draw = launcher.split("void Launcher::draw_launch(", 1)[1].split(
 for fragment in (
     "const std::string& scan = back ? launch_box_back_ : launch_box_front_;",
     "const Cover artwork = c.textures.cover(",
-    "c.list.case_face(artwork.texture, face, angle, back, kWhite, paper_uv);",
+    "c.list.case_face(artwork.texture, face, angle, back, kWhite, paper_uv,",
     "c.list.case_spine(side_strip, angle, case_depth - 6.0f,",
     "c.list.case_plastic(physical, angle, back,",
     "launch_screenshots_.front()",
@@ -73,6 +73,18 @@ assert math.cos(0.52) > 0 and math.sin(0.52) > 0
 assert math.cos(math.pi + 0.26) < -0.96
 assert math.sin(math.pi + 0.26) < 0
 assert math.cos(2.0 * math.pi + 0.52) > 0
+library = (root / "headless/prosperoeden/pe/ui/library.cpp").read_text()
+assert "game.box_front" in library and "game->box_back" in library
+assert "library_back_zoom_" in library and "library_back_focused_" in library
+assert "library_format(game->format)" in library
+assert "library_size(game->size)" in library
+assert "library_date(game->release_date" in library
+assert "library_genres(game->categories)" in library
+assert "View back cover" in library
+assert "cover(c, artwork, art, 5.0f, 0.5f);" in library
+assert "PE_PREVIEW_LIBRARY_ONLY" in preview_source
+assert "case_face(artwork.texture, face, angle, back, kWhite, paper_uv," in draw
+assert "c.list.case_cap(" in draw and draw.index("c.list.case_cap(") > draw.index("c.list.case_face(artwork.texture")
 assert "const float return_start = back_start + theme::kCaseBackHold;" in draw
 assert "constexpr float kFrontYaw = 0.52f;" in draw
 assert "constexpr float kBackYaw = 3.14159265358979323846f + 0.26f;" in draw
