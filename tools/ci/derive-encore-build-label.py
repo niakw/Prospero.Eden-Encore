@@ -3,7 +3,8 @@
 
 MEMORY.md is a historical engineering log and can lag behind the source.
 Never silently fall back to its latest heading: a stale footer is worse than
-failing the native build with an actionable diagnostic.
+failing the native build with an actionable diagnostic. Walk all first-parent
+subjects: documentation and CI commits may exceed the old 256-commit cutoff.
 
 For host regression tests, a single optional path contains newline-separated
 commit subjects (newest first), using exactly the same R-prefix matching.
@@ -35,7 +36,7 @@ def main() -> None:
         subjects = Path(sys.argv[1]).read_text(encoding="utf-8")
     else:
         proc = subprocess.run(
-            ["git", "-C", str(ROOT), "log", "--first-parent", "-n", "256", "--format=%s"],
+            ["git", "-C", str(ROOT), "log", "--first-parent", "--format=%s"],
             check=True, capture_output=True, text=True,
         )
         subjects = proc.stdout
