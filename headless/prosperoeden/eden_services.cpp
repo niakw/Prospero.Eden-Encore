@@ -359,7 +359,7 @@ bool CacheNlibJpeg(const std::string& endpoint, const std::string& path,
 // Optional real retail case images from the build-time filtered public catalog.
 // No full metadata archive, credentials, HTTP or XML parsing on the console.
 // Matching is exact and skips colliding release editions at index-generation time.
-using BoxIndex = std::unordered_map<std::string, std::array<std::vector<std::string>, 2>>;
+using BoxIndex = std::unordered_map<std::string, std::array<std::vector<std::string>, 3>>;
 
 std::string CaseKey(const std::string& title) {
     std::string key;
@@ -403,9 +403,12 @@ const BoxIndex& RetailCaseIndex() {
             if (a == std::string::npos) continue;
             const auto b = row.find('\t', a + 1);
             if (b == std::string::npos) continue;
+            const auto c = row.find('\t', b + 1);
             const std::string title = row.substr(0, a);
             const std::string front = row.substr(a + 1, b - a - 1);
-            const std::string back = row.substr(b + 1);
+            const std::string back = row.substr(b + 1,
+                c == std::string::npos ? c : c - b - 1);
+            const std::string spine = c == std::string::npos ? "-" : row.substr(c + 1);
             if (title.empty() || title.size() > 170) continue;
             const auto split_candidates = [](const std::string& value) {
                 std::vector<std::string> found;
@@ -427,10 +430,12 @@ const BoxIndex& RetailCaseIndex() {
             };
             auto fronts = split_candidates(front);
             auto backs = split_candidates(back);
+            auto spines = split_candidates(spine);
             if ((front != "-" && fronts.empty()) ||
-                (back != "-" && backs.empty())) continue;
-            items.emplace(title, std::array<std::vector<std::string>, 2>{
-                std::move(fronts), std::move(backs)});
+                (back != "-" && backs.empty()) ||
+                (spine != "-" && spines.empty())) continue;
+            items.emplace(title, std::array<std::vector<std::string>, 3>{
+                std::move(fronts), std::move(backs), std::move(spines)});
         }
         return items;
     }();
@@ -444,7 +449,7 @@ std::string CaseFacePath(std::uint64_t title_id, const char* side) {
 }
 
 bool FetchCaseFace(const std::vector<std::string>& candidates,
-                   const std::string& destination,
+                   const std::string& destination, bool narrow_spine,
                    const std::atomic<bool>* cancel) {
     if (candidates.empty() ||
         (cancel && cancel->load(std::memory_order_acquire))) return false;
@@ -475,7 +480,8 @@ bool FetchCaseFace(const std::vector<std::string>& candidates,
         if (!stbi_info_from_memory(
                 reinterpret_cast<const unsigned char*>(body.data()),
                 static_cast<int>(body.size()), &w, &h, &channels) ||
-            w < 128 || h < 200 || w > 4096 || h > 4096 ||
+            w < (narrow_spine ? 32 : 128) ||
+            h < (narrow_spine ? 128 : 200) || w > 4096 || h > 4096 ||
             static_cast<std::uint64_t>(w) * h > 3840u * 2160u)
             continue;
         const std::uint64_t pixels = static_cast<std::uint64_t>(w) * h;
@@ -484,7 +490,8 @@ bool FetchCaseFace(const std::vector<std::string>& candidates,
             best = body;
         }
         // Enough native source resolution to display a sharp face at 1080p.
-        if (w >= 750 && h >= 1100) break;
+        if ((narrow_spine && w >= 96 && h >= 650) ||
+            (!narrow_spine && w >= 750 && h >= 1100)) break;
     }
     if (best.empty() || (cancel && cancel->load(std::memory_order_acquire)))
         return false;
@@ -523,10 +530,11 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
         retries[title_id] = std::chrono::steady_clock::now() + std::chrono::hours(4);
     }
     bool all_ready = true;
-    for (int side = 0; side < 2; ++side) {
+    for (int side = 0; side < 3; ++side) {
         if (cancel && cancel->load(std::memory_order_acquire)) return;
         if (selected->second[side].empty()) continue;
-        const std::string path = CaseFacePath(title_id, side == 0 ? "front" : "back");
+        const std::string path = CaseFacePath(
+            title_id, side == 0 ? "front" : side == 1 ? "back" : "spine");
         // User-provided original scans win. Cached low-resolution CDN scans
         // may be upgraded when a better ranked alternative becomes available.
         const std::string base = path.substr(0, path.size() - 4);
@@ -535,10 +543,11 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
         int width = 0, height = 0, channels = 0;
         if (ValidNlibTga(path) &&
             stbi_info(path.c_str(), &width, &height, &channels) &&
-            width >= 750 && height >= 1100) continue;
+            ((side == 2 && width >= 96 && height >= 650) ||
+             (side != 2 && width >= 750 && height >= 1100))) continue;
         // Existing lower-quality files stay usable while a better face is
         // searched. No file is replaced by a smaller CDN thumbnail.
-        if (!FetchCaseFace(selected->second[side], path, cancel))
+        if (!FetchCaseFace(selected->second[side], path, side == 2, cancel))
             all_ready = false;
     }
     if (all_ready) {
@@ -1403,7 +1412,8 @@ pe::ui::BoxArt EdenServices::box_art(std::uint64_t title_id) {
                 continue;
             int width = 0, height = 0, channels = 0;
             if (!stbi_info(path.c_str(), &width, &height, &channels) ||
-                width < 128 || height < 128 || width > 4096 || height > 4096 ||
+                width < (std::strcmp(side, "spine") == 0 ? 32 : 128) ||
+                height < 128 || width > 4096 || height > 4096 ||
                 static_cast<std::uint64_t>(width) * height > 3840u * 2160u)
                 continue;
             return path;
@@ -1412,6 +1422,7 @@ pe::ui::BoxArt EdenServices::box_art(std::uint64_t title_id) {
     };
     artwork.front = find_face("front");
     artwork.back = find_face("back");
+    artwork.spine = find_face("spine");
     return artwork;
 }
 
