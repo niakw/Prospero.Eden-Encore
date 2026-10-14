@@ -392,13 +392,82 @@ bool SafeCaseFilename(const std::string& file) {
     return ext == ".jpg" || ext == ".jpeg" || ext == ".png";
 }
 
+// The host index carries region:filename for each actual flat scan.
+// Select a localized physical edition independently for front/back/spine.
+// Fallbacks remain available (including North American scans for EN users).
+bool SafeCaseCandidate(const std::string& token) {
+    const auto colon = token.find(':');
+    if (colon == std::string::npos) return SafeCaseFilename(token); // v3 fallback
+    if (colon == 0 || colon > 12) return false;
+    for (std::size_t i = 0; i < colon; ++i) {
+        const char c = token[i];
+        if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')))
+            return false;
+    }
+    return SafeCaseFilename(token.substr(colon + 1));
+}
+
+std::vector<std::string> LocaleCaseCandidates(
+    const std::vector<std::string>& entries, int language_choice) {
+    language_choice = std::clamp(language_choice, 0,
+        static_cast<int>(std::size(Eden::kLanguageKeys)) - 1);
+    const std::string locale = Eden::kLanguageKeys[language_choice];
+    std::vector<std::string> regions;
+    if (locale == "en-US" || locale == "es-419" || locale == "pt-BR")
+        regions = {"us", "ca", "world", "uk", "eu", "fr"};
+    else if (locale == "en-GB")
+        regions = {"uk", "eu", "world", "us", "ca"};
+    else if (locale == "fr-CA")
+        regions = {"ca", "fr", "us", "world", "eu"};
+    else if (locale == "fr")
+        regions = {"fr", "eu", "world", "uk", "ca", "us"};
+    else if (locale == "ja")
+        regions = {"jp", "asia", "world", "us", "eu"};
+    else if (locale == "ko" || locale.rfind("zh", 0) == 0)
+        regions = {"asia", "kr", "jp", "world", "us", "eu"};
+    else {
+        const auto hyphen = locale.find('-');
+        const std::string lang = locale.substr(0, hyphen);
+        regions = {lang, "eu", "world", "uk", "us", "ca"};
+    }
+    struct Candidate { int priority; std::size_t order; std::string file; };
+    std::vector<Candidate> choices;
+    choices.reserve(entries.size());
+    for (std::size_t i = 0; i < entries.size(); ++i) {
+        const std::string& token = entries[i];
+        if (!SafeCaseCandidate(token)) continue;
+        const auto colon = token.find(':');
+        const std::string region = colon == std::string::npos ?
+            "other" : token.substr(0, colon);
+        const std::string file = colon == std::string::npos ?
+            token : token.substr(colon + 1);
+        int priority = 100;
+        for (std::size_t position = 0; position < regions.size(); ++position)
+            if (region == regions[position]) {
+                priority = static_cast<int>(position);
+                break;
+            }
+        choices.push_back({priority, i, file});
+    }
+    std::stable_sort(choices.begin(), choices.end(),
+        [](const Candidate& a, const Candidate& b) {
+            return a.priority < b.priority;
+        });
+    std::vector<std::string> sorted;
+    sorted.reserve(choices.size());
+    for (const auto& candidate : choices)
+        if (std::find(sorted.begin(), sorted.end(), candidate.file) == sorted.end())
+            sorted.push_back(candidate.file);
+    return sorted;
+}
+
 const BoxIndex& RetailCaseIndex() {
     static const BoxIndex index = [] {
         BoxIndex items;
         std::ifstream input(Eden::AppFile("ui/box-art-index.tsv"));
         std::string row;
         while (std::getline(input, row) && items.size() < 20000) {
-            if (row.empty() || row[0] == '#' || row.size() > 800) continue;
+            if (row.empty() || row[0] == '#' || row.size() > 2600) continue;
             const auto a = row.find('\t');
             if (a == std::string::npos) continue;
             const auto b = row.find('\t', a + 1);
@@ -414,11 +483,11 @@ const BoxIndex& RetailCaseIndex() {
                 std::vector<std::string> found;
                 if (value == "-") return found;
                 std::size_t start = 0;
-                while (start < value.size() && found.size() < 6) {
+                while (start < value.size() && found.size() < 12) {
                     const auto end = value.find(';', start);
                     const std::string part = value.substr(
                         start, end == std::string::npos ? end : end - start);
-                    if (!SafeCaseFilename(part)) {
+                    if (!SafeCaseCandidate(part)) {
                         found.clear();
                         break; // reject an invalid indexed row
                     }
@@ -508,7 +577,7 @@ bool FetchCaseFace(const std::vector<std::string>& candidates,
 }
 
 void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
-                      const std::string& alternate_name,
+                      const std::string& alternate_name, int language_choice,
                       const std::atomic<bool>* cancel) {
     if (title_id == 0 || (cancel && cancel->load(std::memory_order_acquire))) return;
     const auto& index = RetailCaseIndex();
@@ -535,7 +604,8 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
     bool all_ready = true;
     for (int side = 0; side < 3; ++side) {
         if (cancel && cancel->load(std::memory_order_acquire)) return;
-        if (selected->second[side].empty()) continue;
+        const auto candidates = LocaleCaseCandidates(selected->second[side], language_choice);
+        if (candidates.empty()) continue;
         const std::string path = CaseFacePath(
             title_id, side == 0 ? "front" : side == 1 ? "back" : "spine");
         // User-provided original scans win. Cached low-resolution CDN scans
@@ -550,14 +620,14 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
         std::ifstream receipt(path + ".source");
         std::string cached_source;
         if (receipt) std::getline(receipt, cached_source);
-        if (cached_source == selected->second[side].front() &&
+        if (cached_source == candidates.front() &&
             ValidNlibTga(path) &&
             stbi_info(path.c_str(), &width, &height, &channels) &&
             ((side == 2 && width >= 64 && height >= 600) ||
              (side != 2 && width >= 128 && height >= 200))) continue;
         // If network retrieval fails, the old cached TGA remains usable;
         // source migration is retried later without blocking rendering.
-        if (!FetchCaseFace(selected->second[side], path, side == 2, cancel)) {
+        if (!FetchCaseFace(candidates, path, side == 2, cancel)) {
             all_ready = false;
         } else {
             // A fallback candidate remains usable, but only retry its higher
@@ -565,7 +635,7 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
             std::ifstream refreshed(path + ".source");
             std::string actual;
             if (refreshed) std::getline(refreshed, actual);
-            if (actual != selected->second[side].front()) all_ready = false;
+            if (actual != candidates.front()) all_ready = false;
         }
     }
     if (all_ready) {
@@ -1407,7 +1477,7 @@ pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game,
     // only when indexed, never during the actual title handoff.
     EnsureRetailCase(game.title_id, game.name,
                      scanned_name != game.name ? scanned_name :
-                     CleanTitle(game.file), cancel);
+                     CleanTitle(game.file), language_choice, cancel);
     // This work stays on the media worker. Library drawing/navigation never
     // reopens all retail scans to look them up at 60 Hz.
     if (!(cancel && cancel->load(std::memory_order_acquire))) {
