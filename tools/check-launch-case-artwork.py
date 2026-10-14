@@ -115,7 +115,15 @@ assert "gamesdb.launchbox-app.com/Metadata.zip" in indexer
 assert "if len(matching) != 1:" in indexer
 assert "SafeCaseFilename" in native
 assert 'std::array<std::vector<std::string>, 3>' in native
-assert "w >= 750 && h >= 1100" in native
+assert "best_source = filename;" in native
+assert "std::ofstream receipt(destination + \".source\"" in native
+assert "cached_source == selected->second[side].front()" in native
+assert "best_pixels" not in native.split("bool FetchCaseFace(", 1)[1].split(
+    "void EnsureRetailCase(", 1)[0]
+assert "EUROPE_FRONT_PINS" in indexer
+assert "9524e5f7-ccc8-4ce6-a581-03f82c51825e.jpg" in indexer
+assert "a8bcb4cc-a3b0-4cf0-82f3-cb10dd18b27c.jpg" in indexer
+assert "BotW_NA_Switch_Box_Art" not in (root / "tools/launcher/preview-botw-media.py").read_text()
 assert '"Box - Spine"' in indexer
 assert "void EnsureRetailCase(" in native
 assert "RetailCaseIndex()" in native
@@ -268,5 +276,10 @@ assert "int side = 0" in shapes
 assert "a_extra.x < -0.5 ? -0.5 :" in shader
 assert "botw-back.tga" in (root / "tools/launcher/preview-botw-media.py").read_text()
 assert "4b815db4-d2d1-4587-89c7-f82524750914.jpg" in (
+    root / "tools/launcher/preview-botw-media.py").read_text()
+assert "source_replacement_guard" not in native
+assert "textures_.invalidate(enriched.box_front);" in library
+assert "textures_.invalidate(enriched.box_back);" in library
+assert '"https://images.launchbox-app.com/9524e5f7-ccc8-4ce6-a581-03f82c51825e.jpg"' in (
     root / "tools/launcher/preview-botw-media.py").read_text()
 print("PASS source-scans region fallback, readable back, rounded solid 3D case")
