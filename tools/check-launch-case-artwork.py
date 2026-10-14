@@ -305,4 +305,7 @@ assert "textures_.invalidate(enriched.box_front);" in library
 assert "textures_.invalidate(enriched.box_back);" in library
 assert '"https://images.launchbox-app.com/9524e5f7-ccc8-4ce6-a581-03f82c51825e.jpg"' in (
     root / "tools/launcher/preview-botw-media.py").read_text()
-print("PASS source-scans region fallback, readable back, rounded solid 3D case")
+assert 'EUROPE_FRONT_PINS["79189"]' in indexer or '"79189": (' in indexer
+assert 'region_code' in indexer and 'REGION_ORDER' in indexer
+assert "LocaleCaseCandidates" in native
+print("PASS regional fronts/backs, case geometry and zoom/pan source contracts")
