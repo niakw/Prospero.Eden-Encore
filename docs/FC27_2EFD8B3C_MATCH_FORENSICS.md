@@ -185,3 +185,26 @@ An installed version at least 1.0.1 is relevant to the publisher's
 recognized custom action preset bug, but doesn't establish its
 resolution on the guest or remove the need to inspect the preset
 selected before the match.
+
+## New native comparison candidate — source qualification (14 October 2026)
+
+An earlier development build (Actions 38499769635) compiled and packaged
+successfully and uploaded both the test application and debug symbols. That
+build did **not** contain the later guest-version witness, HID lifecycle
+source migration, maintained logging/loader sources or the updated package
+memory declaration; it is not the final candidate for these changes.
+
+For the next CI candidate, two generated CMake translation units (bounded
+logging and 16 KiB-aligned loader) are maintained directly under
+`vendor/encore-active/eden-core/src`, and the native package declares
+`kernel.flexibleMemorySize=335544320`, matching the primary port's package
+metadata. Host source parity and packaging contract tests have been added.
+Remaining CMake generation debt: 79 `write_derived`, 89 `file(READ`,
+227 `string(REPLACE` occurrences. These are **not closed**.
+
+Current guest control investigation has not yet demonstrated a mapping
+defect in Encore's physical controller layer. The guest display-version
+witness only emits when the game requests that service; absence of its log
+is not proof of an old game update. No game save or title-specific input
+preset was edited. A real match and end-of-match progress test is
+deferred to the console owner; the native CI is not an FC27 gameplay test.
