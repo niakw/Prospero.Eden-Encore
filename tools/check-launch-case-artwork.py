@@ -60,9 +60,9 @@ assert "std::vector<std::string> launch_screenshots_;" in header
 assert "constexpr float kLaunchSeconds = 2.20f;" in theme
 
 # Quarter turn becomes an edge; the full back is visible half a turn later.
-assert math.cos(0.10) > 0
-assert math.cos(0.10 + 6.18 * 0.50) < 0
-assert math.cos(0.10 + 6.18 * 0.99) > 0
+assert math.cos(0.13) > 0
+assert math.cos(0.13 + 6.15 * 0.50) < 0
+assert math.cos(0.13 + 6.15 * 0.99) > 0
 indexer = (root / "tools/launcher/build-box-art-index.py").read_text()
 workflow = (root / ".github/workflows/build-040-zbic.yml").read_text()
 packager = (root / "tools/package-headless-native.sh").read_text()
