@@ -76,8 +76,22 @@ third-party artwork.
   rims, side rails, glossy bevel and physical hinges. This identical geometry
   applies to EVERY game. No separate 3D engine or per-game model is required.
 - **Reduce Motion** shows the front without spinning.
-- The case makes one eased 360-degree rotation around its vertical axis.
-- Animation duration is capped at 2.20 s before the existing game-start path;
+- The case makes one eased full 360-degree rotation: initial front hold
+  1.2s, first half-turn 1.3s, **back cover readable for 4.5s**, return
+  half-turn 1.3s, and 0.5s settle/fade (**8.8s total**). This deliberately
+  delays the native guest handoff; it does not claim to measure guest progress.
+- The rendering is source-independent: the PSD template provided for the
+  case design is used solely as a geometry reference (587x995 document,
+  approximately 45px spine), not copied, shipped or rendered as a texture.
+  The launcher itself constructs the rounded polycarbonate shell, clear top
+  and bottom faces, red spine and white rim. Third-party logos remain in the
+  cover scan only, not baked into Encore's 3D material.
+- The background metadata worker now stores up to six region-ranked original
+  **flat** scans per side (FR > EU > World > other), choosing an available
+  higher-resolution image if the first candidate is a thumbnail. Box - 3D
+  preview images are never used as front/back surfaces.
+- The 8.8s transition does not run network requests or decode artwork on the
+  draw thread;
   no network, metadata scan, or image decode is performed in the draw loop.
 - Texture loading remains asynchronous and budgeted through `Textures::pump`.
 - A true game-loading overlay **after the emulator takes control** is not part
