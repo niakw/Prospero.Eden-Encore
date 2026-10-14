@@ -1057,6 +1057,12 @@ void ReportGpuThread(unsigned frame) {
         latest_gpu_report_ns.store(
             static_cast<unsigned long long>(Common::g_wall_clock.GetTimeNS().count()),
             std::memory_order_release);
+        // Fresh UTC/monotonic correlation every sampled five-second frame
+        // window, even when the session-start segment has already rotated.
+        // No per-draw timing, and only two clock queries per report.
+        std::printf("EDEN_TIME_ANCHOR epoch_ms=%lld mono_ns=%lld phase=frame_report frame=%u\n",
+                    ClockNs(CLOCK_REALTIME) / 1000000LL,
+                    ClockNs(CLOCK_MONOTONIC), frame);
     }
     // Heap growth and arena use over the run (allocation failures abort the title).
     ps5_opengl_heap_snapshot("vulkan_report", frame);
