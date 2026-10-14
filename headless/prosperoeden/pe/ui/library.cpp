@@ -91,6 +91,61 @@ std::string library_format(const std::string& format)
     return format.front() == '.' ? format : "." + format;
 }
 
+// Native 2D jacket fallback only where no authentic retail scan exists.
+// The title/known art are displayed, never an invented rear scan or a 3D
+// prefabricated case. Supports both the shelf and the enlarged back view.
+void flat_front_fallback(Canvas& c, const Game& game, const Rect& r)
+{
+    c.list.gradient_rect(r, 6.0f, Color::rgb(0x2c1742), Color::rgb(0x0d1021));
+    const float band = std::max(20.0f, r.h * 0.12f);
+    c.list.rounded_rect({r.x, r.y, r.w, band}, 5.0f,
+                        Color::rgb(0xa32356, 0.98f));
+    text_shrink(c, "EDEN ENCORE", r.x + r.w * 0.5f,
+                baseline(r.y, band, std::max(11.0f, band * 0.42f)),
+                std::max(11.0f, band * 0.42f), theme::kTitle,
+                r.w - 20.0f, Align::center);
+    const Rect art{r.x + 3.0f, r.y + band + 3.0f,
+                   r.w - 6.0f, r.h - band - std::max(38.0f, r.h * 0.19f) - 6.0f};
+    if (!game.cover.empty()) cover_crop(c, game.cover, art, 2.0f, 0.0f);
+    else if (!game.hero.empty()) cover_crop(c, game.hero, art, 2.0f, 0.0f);
+    c.list.gradient_rect({r.x, r.y + r.h - std::max(41.0f, r.h * 0.21f),
+                          r.w, std::max(41.0f, r.h * 0.21f)}, 3.0f,
+                         theme::kGlass.with_alpha(0.90f),
+                         theme::kScrim.with_alpha(0.97f));
+    text_shrink(c, game.name, r.x + r.w * 0.5f,
+                baseline(r.y + r.h - std::max(41.0f, r.h * 0.21f),
+                         std::max(41.0f, r.h * 0.21f),
+                         std::max(13.0f, r.w * 0.09f)),
+                std::max(13.0f, r.w * 0.09f), theme::kTitle,
+                r.w - 16.0f, Align::center);
+}
+
+void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
+{
+    c.list.gradient_rect(r, 5.0f, Color::rgb(0x201831), Color::rgb(0x0a1023));
+    const float font = std::clamp(r.w * 0.087f, 14.0f, 30.0f);
+    text_shrink(c, game.name, r.x + r.w * 0.5f,
+                baseline(r.y + r.h * 0.045f, r.h * 0.14f, font),
+                font, theme::kTitle, r.w - 20.0f, Align::center);
+    const float top = r.y + r.h * 0.21f;
+    const Rect shot{r.x + r.w * 0.06f, top, r.w * 0.88f, r.h * 0.31f};
+    const std::string& image = !game.screenshots.empty() ?
+        game.screenshots.front() : (!game.hero.empty() ? game.hero : game.cover);
+    if (!image.empty()) cover_crop(c, image, shot, 5.0f, 0.06f);
+    const std::string& desc = !game.description.empty() ? game.description :
+                              !game.intro.empty() ? game.intro : game.name;
+    text_block(c, desc, r.x + r.w * 0.07f,
+               baseline(r.y + r.h * 0.59f, r.h * 0.10f, font * 0.76f),
+               font * 0.76f, font * 1.28f, theme::kCopy,
+               r.w * 0.86f, 4, kShrink);
+    c.list.rounded_rect({r.x + r.w * 0.07f, r.y + r.h * 0.89f,
+                         r.w * 0.86f, 1.0f}, 0.0f,
+                        theme::kPanelEdge.with_alpha(0.60f));
+    text_shrink(c, "EDEN ENCORE", r.x + r.w * 0.5f,
+                baseline(r.y + r.h * 0.90f, r.h * 0.07f, font * 0.68f),
+                font * 0.68f, theme::kMeta, r.w * 0.88f, Align::center);
+}
+
 std::string controller_profile_name(int layout, const ButtonMapping& mapping)
 {
     const bool custom = mapping_is_custom(mapping, layout);
@@ -997,7 +1052,8 @@ void Launcher::draw_library(Canvas &c)
                 list.shadow({x - 5.0f, rail_y - 4.0f, sleeve_w + 10.0f, sleeve_h + 9.0f},
                             8.0f, 28.0f, theme::kLime.with_alpha(0.30f));
             const std::string& face = !game.box_front.empty() ? game.box_front : game.cover;
-            cover(c, face, sleeve, 5.0f, 0.16f);
+            if (!game.box_front.empty()) cover(c, face, sleeve, 5.0f, 0.16f);
+            else flat_front_fallback(c, game, sleeve);
             list.bordered_rect(sleeve, 5.0f, theme::kGlass.with_alpha(0.0f),
                                selected ? 2.2f : 1.0f,
                                selected ? theme::kFocusCore.with_alpha(0.93f) :
@@ -1026,7 +1082,8 @@ void Launcher::draw_library(Canvas &c)
         const Rect art{99.0f, 572.0f, 181.0f, 288.0f};
         const std::string& artwork = !game->box_back.empty() ? game->box_back :
              (!game->cover.empty() ? game->cover : game->hero);
-        cover(c, artwork, art, 5.0f, 0.5f);
+        if (!game->box_back.empty()) cover(c, artwork, art, 5.0f, 0.5f);
+        else flat_back_fallback(c, *game, art);
         list.bordered_rect(art, 5.0f, theme::kGlass.with_alpha(0.0f),
                            library_back_focused_ ? 2.5f : 1.0f,
                            library_back_focused_ ? theme::kFocusCore :
@@ -1139,7 +1196,10 @@ void Launcher::draw_library(Canvas &c)
                         35.0f, theme::kTitle, 1580.0f, Align::center);
             const std::string& full = !game->box_back.empty() ? game->box_back :
                                           (!game->cover.empty() ? game->cover : game->hero);
-            cover(c, full, {625.0f, 112.0f, 670.0f, 808.0f}, 6.0f, 0.42f);
+            if (!game->box_back.empty())
+                cover(c, full, {625.0f, 112.0f, 670.0f, 808.0f}, 6.0f, 0.42f);
+            else
+                flat_back_fallback(c, *game, {625.0f, 112.0f, 670.0f, 808.0f});
         }
         static constexpr Hint kZoomHints[] = {{Pad::circle, TR("Close")},
                                               {Pad::cross, TR("Close")}};
