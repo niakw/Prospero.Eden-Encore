@@ -214,13 +214,6 @@ void main()
         // individually rounded rectangles separated from the side print.
         float d = round_box(v_local, v_half, 0.0);
         color = v_params.z > 0.5 ? texture(u_texture, clamp(v_uv, 0.0, 1.0)) * v_top : v_top;
-        // Only real Switch-style front retail scans request the simplified
-        // header. Hide the tiny Nintendo word, preserve the icon and SWITCH.
-        // All game art outside this local banner remains the original scan.
-        if (v_border.x > 0.5 && v_params.y < 0.5 &&
-            v_uv.x > 0.035 && v_uv.x < 0.204 &&
-            v_uv.y > 0.105 && v_uv.y < 0.126)
-            color.rgb = vec3(0.97, 0.025, 0.07);
         float scan_inside = v_params.z > 0.5 ?
             step(0.0, v_uv.x) * step(v_uv.x, 1.0) *
             step(0.0, v_uv.y) * step(v_uv.y, 1.0) : 1.0;
@@ -311,22 +304,25 @@ void main()
     }
     else if (shape == 11)
     {
-        // One translucent upper/lower LIP of the molded case; never an
-        // additional four-sided white frame over the continuous paper.
-        vec2 edge_px = min(v_st, 1.0 - v_st) * (v_half * 2.0);
-        float lip = 1.0 - smoothstep(0.0, 13.0, edge_px.y);
-        float bevel = smoothstep(3.0, 6.0, edge_px.y) -
-                      smoothstep(9.0, 13.0, edge_px.y);
-        float fresnel = pow(1.0 - abs(cos(v_params.x)), 3.0);
-        float opening_highlight = exp(-45.0 * edge_px.x) *
-                                  (v_params.y > 0.5 ? 0.18 : 0.06);
-        float light = clamp(lip * (0.30 + 0.24 * fresnel) +
-                            0.10 * bevel + opening_highlight, 0.0, 0.66);
-        float shell = 1.0 - smoothstep(-1.2, 1.2,
-                        round_box(v_local, v_half, 22.0));
-        vec3 sheen = mix(v_top.rgb, vec3(0.98, 0.99, 1.0),
-                         0.30 + 0.18 * fresnel);
-        color = vec4(sheen, v_top.a * light * shell);
+        // Only the molded opening LIP, along the physical RIGHT side of
+        // the shell. Projection moves it to screen-left on the rear view.
+        // All pixels away from that 12px strip are fully transparent: this
+        // does not reintroduce a second plastic face over the paper.
+        float from_edge = (1.0 - v_st.x) * (v_half.x * 2.0);
+        float bevel = 1.0 - smoothstep(8.0, 13.0, from_edge);
+        float outer_glint = exp(-0.5 * pow((from_edge - 2.3) / 1.25, 2.0));
+        float inner_ridge = exp(-0.5 * pow((from_edge - 9.0) / 1.55, 2.0));
+        float grazing = 0.15 + 0.20 * pow(abs(sin(v_params.x)), 1.5);
+        // Low-contrast manufacturing grain and broad traveling reflection,
+        // confined strictly to the single plastic rim.
+        float grain = 0.96 + 0.04 * sin(v_st.y * 670.0);
+        float sheen = 0.5 + 0.5 * sin(v_st.y * 7.0 + v_params.x * 0.65);
+        float intensity = (0.27 + grazing) * bevel +
+                          0.44 * outer_glint + 0.22 * inner_ridge;
+        vec3 material = mix(v_top.rgb, vec3(0.99, 0.995, 1.0),
+                            0.29 + 0.19 * sheen);
+        color = vec4(material, v_top.a *
+                     clamp(intensity * grain, 0.0, 0.91));
     }
     else if (shape == 8)
     {
