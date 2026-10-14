@@ -70,7 +70,7 @@ void main()
         if (shape == 9 || shape == 11) {
             // Place a real back surface on the FAR plane of the case.
             // It must not occupy the same Z as the front artwork.
-            float depth = a_params.y > 0.5 ? 36.0 : 0.0;
+            float depth = a_params.y > 0.5 ? 44.0 : 0.0;
             x = local.x * cs - depth * sn;
             z = -local.x * sn - depth * cs;
             vec2 oriented = vec2(a_params.y > 0.5 ? 1.0 - corner.x : corner.x,
