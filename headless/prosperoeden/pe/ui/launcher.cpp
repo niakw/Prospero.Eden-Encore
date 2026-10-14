@@ -859,8 +859,11 @@ void Launcher::draw_launch(Canvas &c)
     // retail spine, the right is the mostly clear hinged latch edge.
     // The visible side changes as the rigid box rotates; no artificial red
     // strip on the wrong side during the back-cover hold.
-    const Rect side_strip{physical.x, physical.y + case_radius, physical.w,
-                          physical.h - 2.0f * case_radius};
+    // The flat spine printing follows the SAME vertical paper limits as the
+    // two faces: all three share a 704px paper height inside the 730px shell.
+    // Only the translucent molded caps/rounded corners extend beyond it.
+    const Rect side_strip{physical.x, physical.y + kPaperTopInset, physical.w,
+                          physical.h - 2.0f * kPaperTopInset};
     const bool printed_side_visible = std::sin(angle) >= 0.0f;
     if (printed_side_visible) {
         const Cover ink = c.textures.cover(launch_box_spine_, 760.0f);
