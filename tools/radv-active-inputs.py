@@ -105,7 +105,7 @@ def self_test():
     script = (ROOT / "tools/prepare-build.sh").read_text()
     build = (ROOT / "tools/build-radv-dependencies.sh").read_text()
     assert 'radv-active-inputs.py --check' in script
-    assert 'radv-active-inputs.py --stamp' in build
+    assert 'radv-active-inputs.py" --stamp' in build  # absolute script path is quoted
     assert 'EDEN_ACTIVE_INPUTS_SHA256' in script and 'EDEN_ACTIVE_INPUTS_SHA256' in build
     print("DRIVER_SOURCE_CACHE_KEY_PASS maintained_compiler_units=11 stale_archive_rejected")
 
