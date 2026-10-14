@@ -143,11 +143,21 @@ jobs:
               with Image.open(image_file) as frame:
                   assert frame.size == (1920, 1080)
                   assert sum(ImageStat.Stat(frame.convert("RGB")).stddev) > 15
-          with Image.open(files[1]) as focus, Image.open(files[2]) as zoom:
+          with Image.open(files[0]) as shelf, Image.open(files[1]) as focus, Image.open(files[2]) as zoom:
               crop = (630, 140, 1280, 880)
               difference = ImageStat.Stat(ImageChops.difference(
                   focus.convert("RGB").crop(crop), zoom.convert("RGB").crop(crop))).mean
               assert max(difference) > 15, difference
+              # A popup with no decoded texture once passed these tests.
+              # Require actual high-detail printed pixels inside BOTH
+              # the selected original front and the enlarged rear scan.
+              front_detail = sum(ImageStat.Stat(
+                  shelf.convert("RGB").crop((1230, 210, 1395, 470))).stddev)
+              back_detail = sum(ImageStat.Stat(
+                  zoom.convert("RGB").crop((740, 320, 1150, 730))).stddev)
+              assert front_detail > 45, ("blank original front", front_detail)
+              assert back_detail > 45, ("blank expanded original back", back_detail)
+              print("retail pixels", front_detail, back_detail)
           print("ENCORE_LIBRARY_FLAT_JACKETS_AND_REAR_ZOOM: PASS")
           PY
 
