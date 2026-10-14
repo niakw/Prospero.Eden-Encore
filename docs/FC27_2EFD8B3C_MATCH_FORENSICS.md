@@ -141,3 +141,27 @@ selection with the title's in-match controls. Preserve the user's saves;
 do not synthesize gameplay actions from the launcher or confuse glyph
 appearance with the title's own controller action scheme. No gameplay
 mapping correction is claimed yet.
+
+## Publisher-confirmed title action preset bug (14 October 2026)
+
+The publisher's official FC27 update **1.0.1** explicitly lists a
+gameplay bug where users with a custom control preset could sometimes
+not perform the intended actions, and describes this as fixed. The
+official international game-info hub states 1.0.1 released on all
+platforms. Evidence:
+
+- https://forums.ea.com/blog/ea-sports-fc-game-info-hub-it/ea-sports-fc%E2%84%A2-27-aggiornamento-1-0-1/13734810
+- https://forums.ea.com/category/ea-sports-fc-en/blog/ea-sports-fc-game-info-hub-en
+- https://forums.ea.com/idea/fc-27-bug-reports-en/custom-controls-are-broken-ps5-%E2%80%93-game-unplayable-during-early-access/13720070
+
+This is independently supported as a **title defect**, not evidence
+that Encore globally overwrites in-match actions. Other reports still
+described issues after patch 1.0.1. Current game-update version loaded
+on the test console is **not established** by `source_sha=2efd8b3c`,
+firmware 13.60, title ID, or launcher `own_mapping=0`. Those identify
+the emulator/kernel and launcher configuration, **not** guest update
+content. Before touching any input mapping, verify the title's active
+game update (at least 1.0.1 if available on the guest platform), the
+custom preset selected for each player in the pre-match side selector,
+and whether it remains active during the match. No save files should
+be erased or automatically modified.
