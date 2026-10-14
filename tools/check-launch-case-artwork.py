@@ -20,6 +20,7 @@ for fragment in (
     'Eden::CoversDir() + "/box-"',
     'artwork.front = find_face("front");',
     'artwork.back = find_face("back");',
+    'artwork.spine = find_face("spine");',
     '"png", "jpg", "jpeg", "tga"',
     "stbi_info(path.c_str()",
     "info.st_size > (16LL << 20)",
@@ -33,10 +34,12 @@ launch_setup = launcher.split("void Launcher::launch(", 1)[1].split(
 assert "services_.box_art(title_id)" in launch_setup
 assert "launch_box_front_ = case_art.front;" in launch_setup
 assert "launch_box_back_ = case_art.back;" in launch_setup
+assert "launch_box_spine_ = case_art.spine;" in launch_setup
 assert "launch_description_" in launch_setup
 assert "launch_screenshots_" in launch_setup
-assert "textures_.cover(launch_box_front_, 640.0f)" in launch_setup
-assert "textures_.cover(launch_box_back_, 640.0f)" in launch_setup
+assert "textures_.cover(launch_box_front_, 760.0f)" in launch_setup
+assert "textures_.cover(launch_box_back_, 760.0f)" in launch_setup
+assert "textures_.cover(launch_box_spine_, 760.0f)" in launch_setup
 assert "Common::Net" not in launch_setup
 
 draw = launcher.split("void Launcher::draw_launch(", 1)[1].split(
@@ -71,13 +74,14 @@ workflow = (root / ".github/workflows/build-040-zbic.yml").read_text()
 packager = (root / "tools/package-headless-native.sh").read_text()
 assert "Nintendo Switch" in indexer
 assert "def candidates(items, limit=6):" in indexer
-assert "front-candidates, back-candidates" in indexer
+assert "flat spine candidates" in indexer
 assert "Box - Front" in indexer and "Box - Back" in indexer
 assert "gamesdb.launchbox-app.com/Metadata.zip" in indexer
 assert "if len(matching) != 1:" in indexer
 assert "SafeCaseFilename" in native
-assert 'std::array<std::vector<std::string>, 2>' in native
-assert "if (w >= 750 && h >= 1100) break;" in native
+assert 'std::array<std::vector<std::string>, 3>' in native
+assert "w >= 750 && h >= 1100" in native
+assert '"Box - Spine"' in indexer
 assert "void EnsureRetailCase(" in native
 assert "RetailCaseIndex()" in native
 assert 'Eden::AppFile("ui/box-art-index.tsv")' in native
@@ -106,11 +110,13 @@ assert "case_face = 9" in shapes and "case_spine = 10" in shapes
 assert "case_plastic = 11" in shapes
 assert "case_cap = 12" in shapes
 assert "case_corner = 13" in shapes
+assert "case_spine_image = 14" in shapes
 assert "void DrawList::case_face(" in drawlist
 assert "void DrawList::case_spine(" in drawlist
 assert "void DrawList::case_plastic(" in drawlist
 assert "void DrawList::case_cap(" in drawlist
 assert "void DrawList::case_corner(" in drawlist
+assert "void DrawList::case_spine_image(" in drawlist
 assert "depth_offset * transform_.scale" in drawlist
 assert "clip_w = max(0.65, 1.0 - z / 950.0)" in shader
 assert "gl_Position = vec4(ndc.x * clip_w, -ndc.y * clip_w, 0.0, clip_w);" in shader
@@ -119,6 +125,9 @@ assert "shape == 9 || shape == 10 || shape == 11 || shape == 12" in shader
 assert "else if (shape == 11)" in shader
 assert "else if (shape == 12)" in shader
 assert "else if (shape == 13)" in shader
+assert "else if (shape == 14)" in shader
+assert "printed_side_visible" in draw
+assert "c.list.case_spine_image(ink.texture, side_strip, angle," in draw
 assert "True rounded corner" in shader
 assert "float d = round_box(v_local, v_half, 12.0);" in shader
 assert "angle, false, case_depth," in draw
