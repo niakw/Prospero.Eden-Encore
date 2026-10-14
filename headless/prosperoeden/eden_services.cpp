@@ -134,7 +134,8 @@ bool AtomicWriteText(const std::string& path, const std::string& body) {
     return true;
 }
 
-bool WriteJpegTga(const std::string& encoded, const std::string& output) {
+bool WriteJpegTga(const std::string& encoded, const std::string& output,
+                  bool tall_case = false) {
     // Read JPEG dimensions BEFORE allocation. Nlib artwork is fetched in
     // parallel, so malformed/oversized JPEGs must not cause a multi-image
     // transient allocation spike on a memory-constrained console.
@@ -142,10 +143,13 @@ bool WriteJpegTga(const std::string& encoded, const std::string& output) {
     int width = 0;
     int height = 0;
     int channels = 0;
-    if (!stbi_info_from_memory(
+    const bool dimensions_read = stbi_info_from_memory(
             reinterpret_cast<const unsigned char*>(encoded.data()),
-            static_cast<int>(encoded.size()), &width, &height, &channels) ||
-        width <= 0 || height <= 0 || width > 4096 || height > 4096 ||
+            static_cast<int>(encoded.size()), &width, &height, &channels);
+    const bool standard_oversized = width > 4096 || height > 2160;
+    if (!dimensions_read || width <= 0 || height <= 0 ||
+        (standard_oversized && !tall_case) ||
+        (tall_case && (width > 4096 || height > 4096)) ||
         static_cast<std::uint64_t>(width) * static_cast<std::uint64_t>(height) > 3840u * 2160u)
         return false;
 
@@ -428,7 +432,7 @@ bool FetchCaseFace(const std::string& filename, const std::string& destination,
     if (cancel && cancel->load(std::memory_order_acquire)) return false;
     (void)mkdir(Eden::CoversDir().c_str(), 0777);
     const std::string staged = destination + ".new";
-    if (WriteJpegTga(body, staged) && std::rename(staged.c_str(), destination.c_str()) == 0)
+    if (WriteJpegTga(body, staged, true) && std::rename(staged.c_str(), destination.c_str()) == 0)
         return true;
     (void)std::remove(staged.c_str());
     return false;
