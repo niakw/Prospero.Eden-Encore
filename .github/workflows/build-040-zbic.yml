@@ -323,6 +323,7 @@ jobs:
           python3 -B tools/check-fc27-trace.py
           python3 -B tools/check-credit-attribution.py
           python3 -B tools/check-ci-cache.py
+          python3 -B tools/check-package-flexible-memory.py
           if (( validation_failed )); then
             echo "::error::One or more source/host contracts failed; native build blocked"
             exit 1
