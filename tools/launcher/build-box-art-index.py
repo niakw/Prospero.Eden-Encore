@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+"""Build a tiny Switch-only front/back box-art index from public Metadata.zip.
+
+The large archive is processed on a build host, NEVER by the console. Only
+normalized game names and safe CDN image basenames are packaged, no art assets.
+"""
+import argparse
+import io
+import pathlib
+import re
+import urllib.request
+import xml.etree.ElementTree as ET
+import zipfile
+
+SOURCE = "https://gamesdb.launchbox-app.com/Metadata.zip"
+IMAGE_FILE = re.compile(r"^(?:r2_)?[0-9a-fA-F-]{36}\.(?:jpg|jpeg|png)$")
+
+def normalize(value):
+    out = []
+    space = False
+    for char in value:
+        if "A" <= char <= "Z":
+            char = char.lower()
+        if "a" <= char <= "z" or "0" <= char <= "9":
+            out.append(char)
+            space = False
+        elif out and not space:
+            out.append(" ")
+            space = True
+    return "".join(out).strip()
+
+def rank(region):
+    return {"france": 6, "europe": 5, "world": 4, "united kingdom": 3,
+            "north america": 2, "united states": 2}.get(region.lower(), 1)
+
+def parse(source):
+    games, aliases, images = {}, {}, {}
+    iterator = ET.iterparse(source, events=("start", "end"))
+    _, root = next(iterator)
+    for event, element in iterator:
+        if event != "end":
+            continue
+        tag = element.tag.rsplit("}", 1)[-1]
+        if tag == "Game":
+            if element.findtext("Platform", "") == "Nintendo Switch":
+                gid = element.findtext("DatabaseID", "")
+                if gid.isdecimal():
+                    games[gid] = element.findtext("Name", "")
+        elif tag == "GameAlternateName":
+            gid = element.findtext("DatabaseID", "")
+            if gid in games:
+                aliases.setdefault(gid, []).append(element.findtext("AlternateName", ""))
+        elif tag == "GameImage":
+            gid = element.findtext("DatabaseID", "")
+            kind = element.findtext("Type", "")
+            filename = element.findtext("FileName", "")
+            if (gid in games and kind in ("Box - Front", "Box - Back")
+                    and IMAGE_FILE.fullmatch(filename)):
+                images.setdefault(gid, {}).setdefault(kind, []).append(
+                    (rank(element.findtext("Region", "")), filename))
+        if tag in ("Game", "GameAlternateName", "GameImage"):
+            element.clear()
+            root.clear()
+    names = {}
+    for gid, name in games.items():
+        if gid not in images:
+            continue
+        for label in (name, *aliases.get(gid, ())):
+            key = normalize(label)
+            if key:
+                names.setdefault(key, set()).add(gid)
+    lines = ["# Eden Encore Switch retail case index v1 (title, front, back)\n"]
+    for key, matching in sorted(names.items()):
+        if len(matching) != 1:
+            continue  # avoid colliding editions / ambiguous matching
+        media = images[next(iter(matching))]
+        front = sorted(media.get("Box - Front", []), key=lambda item: (-item[0], item[1]))
+        back = sorted(media.get("Box - Back", []), key=lambda item: (-item[0], item[1]))
+        if front or back:
+            lines.append(f"{key}\t{front[0][1] if front else '-'}\t"
+                         f"{back[0][1] if back else '-'}\n")
+    return "".join(lines)
+
+def build(archive_path):
+    with zipfile.ZipFile(archive_path) as archive:
+        xml = [item for item in archive.infolist()
+               if pathlib.PurePosixPath(item.filename).name.lower() == "metadata.xml"]
+        if len(xml) != 1 or xml[0].file_size > 2 * 1024**3:
+            raise ValueError("metadata archive missing or oversized")
+        with archive.open(xml[0]) as handle:
+            return parse(handle)
+
+def download(target):
+    request = urllib.request.Request(SOURCE, headers={"User-Agent": "EdenEncore-IndexBuilder/1.0"})
+    with urllib.request.urlopen(request, timeout=40) as response, target.open("wb") as output:
+        total = 0
+        while block := response.read(1024 * 1024):
+            total += len(block)
+            if total > 220 * 1024 * 1024:
+                raise ValueError("metadata archive exceeded 220 MiB")
+            output.write(block)
+
+def self_test():
+    sample = """<LaunchBox>
+    <Game><DatabaseID>1</DatabaseID><Platform>Nintendo Switch</Platform><Name>Example: Journey</Name></Game>
+    <Game><DatabaseID>2</DatabaseID><Platform>Sony Playstation 5</Platform><Name>Example: Journey</Name></Game>
+    <Game><DatabaseID>3</DatabaseID><Platform>Nintendo Switch</Platform><Name>Ambiguous</Name></Game>
+    <Game><DatabaseID>4</DatabaseID><Platform>Nintendo Switch</Platform><Name>Ambiguous</Name></Game>
+    <GameImage><DatabaseID>1</DatabaseID><Type>Box - Front</Type><Region>World</Region><FileName>11111111-1111-1111-1111-111111111111.jpg</FileName></GameImage>
+    <GameImage><DatabaseID>1</DatabaseID><Type>Box - Front</Type><Region>Europe</Region><FileName>22222222-2222-2222-2222-222222222222.png</FileName></GameImage>
+    <GameImage><DatabaseID>1</DatabaseID><Type>Box - Back</Type><Region>France</Region><FileName>33333333-3333-3333-3333-333333333333.jpg</FileName></GameImage>
+    <GameImage><DatabaseID>2</DatabaseID><Type>Box - Back</Type><FileName>44444444-4444-4444-4444-444444444444.jpg</FileName></GameImage>
+    <GameImage><DatabaseID>3</DatabaseID><Type>Box - Back</Type><FileName>55555555-5555-5555-5555-555555555555.jpg</FileName></GameImage>
+    <GameImage><DatabaseID>4</DatabaseID><Type>Box - Back</Type><FileName>66666666-6666-6666-6666-666666666666.jpg</FileName></GameImage>
+    <GameAlternateName><DatabaseID>1</DatabaseID><AlternateName>Example Voyage</AlternateName></GameAlternateName>
+    </LaunchBox>"""
+    result = parse(io.BytesIO(sample.encode()))
+    assert "example journey\t22222222" in result
+    assert "example voyage\t22222222" in result
+    assert "\t33333333-3333-3333-3333-333333333333.jpg" in result
+    assert "ambiguous\t" not in result and "44444444" not in result
+    assert normalize("EA SPORTS FC 27!") == "ea sports fc 27"
+    print("PASS Switch-only case index, FR region, real back and collision guards")
+
+def main():
+    cli = argparse.ArgumentParser()
+    cli.add_argument("--download", action="store_true")
+    cli.add_argument("--zip", type=pathlib.Path)
+    cli.add_argument("--output", type=pathlib.Path)
+    cli.add_argument("--self-test", action="store_true")
+    args = cli.parse_args()
+    if args.self_test:
+        self_test()
+        return
+    if not args.output:
+        cli.error("--output is required")
+    archive = args.zip or pathlib.Path("/tmp/encore-metadata.zip")
+    if args.download:
+        download(archive)
+    result = build(archive)
+    if result.count("\n") < 20:
+        raise ValueError("No usable game data; index not installed")
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    pending = args.output.with_suffix(".tmp")
+    pending.write_text(result, encoding="utf-8")
+    pending.replace(args.output)
+    print(f"Retail case index: {result.count(chr(10)) - 1} names, {len(result)} bytes")
+
+if __name__ == "__main__":
+    main()
