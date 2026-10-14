@@ -18,7 +18,17 @@ prefetch = cmake.split('string(REPLACE "${prefetch_old}" [=[', 1)[1].split(']=]'
 assert 'if (prefetch_abort) {' in prefetch
 assert 'interface->GetContext(thread->GetContext());' in prefetch
 assert 'thread->GetThreadId()' in prefetch
-assert 'thread->GetContext().pc' in prefetch
+assert 'const auto& fault_context = thread->GetContext();' in prefetch
+assert 'fault_context.pc' in prefetch
+assert 'fault_context.lr' in prefetch
+assert 'fault_context.sp' in prefetch
+assert 'fault_context.fp' in prefetch
+for register in ('pc', 'lr', 'sp', 'fp'):
+    assert f'{register}=0x%llx' in prefetch
+# The registers are captured after the fatal context save, but before
+# publishing the one-shot fault to the launcher.
+assert prefetch.index('interface->GetContext(thread->GetContext());') < prefetch.index('const auto& fault_context')
+assert prefetch.index('const auto& fault_context') < prefetch.index('RecordGuestFault(eden_fault);')
 assert 'RecordGuestFault(eden_fault);' in prefetch
 assert prefetch.index('interface->GetContext(thread->GetContext());') < prefetch.index('RecordGuestFault(eden_fault);')
 assert '#include <cstdio>' in cmake
