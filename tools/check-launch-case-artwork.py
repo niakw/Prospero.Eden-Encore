@@ -63,4 +63,22 @@ assert "constexpr float kLaunchSeconds = 1.85f;" in theme
 assert math.cos(0.12) > 0
 assert math.cos(0.12 + 6.10 * 0.50) < 0
 assert math.cos(0.12 + 6.10 * 0.99) > 0
-print("PASS local retail-case faces / fallback / branded animated handoff")
+indexer = (root / "tools/launcher/build-box-art-index.py").read_text()
+workflow = (root / ".github/workflows/build-040-zbic.yml").read_text()
+packager = (root / "tools/package-headless-native.sh").read_text()
+assert "Nintendo Switch" in indexer
+assert "Box - Front" in indexer and "Box - Back" in indexer
+assert "gamesdb.launchbox-app.com/Metadata.zip" in indexer
+assert "if len(matching) != 1:" in indexer
+assert "SafeCaseFilename" in native
+assert "void EnsureRetailCase(" in native
+assert "RetailCaseIndex()" in native
+assert 'Eden::AppFile("ui/box-art-index.tsv")' in native
+assert 'Common::Net::MakeRequest(' in native
+assert '"https://images.launchbox-app.com"' in native
+assert "EnsureRetailCase(game.title_id, game.name," in native
+assert "ui/box-art-index.tsv" in workflow
+assert "tools/launcher/build-box-art-index.py --download" in workflow
+assert 'cp -a "$root/headless/prosperoeden/ui" "$app/ui"' in packager
+assert "MakeRequest" not in launch_setup and "MakeRequest" not in draw
+print("PASS real front/back index, background media cache and branded launch transition")
