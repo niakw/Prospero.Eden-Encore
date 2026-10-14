@@ -59,6 +59,7 @@ enum class Shape : std::uint8_t
     rounded_image = 8,  // image clipped to a rounded rect
     case_face = 9,      // perspective-projected front/back of a retail case
     case_spine = 10,    // matching projected plastic case side
+    case_plastic = 11,  // transparent molded edge over the printed face
 };
 
 // One instanced quad; field order matches the vertex attributes.
@@ -123,7 +124,10 @@ class DrawList
     void case_face(std::uint32_t texture, const Rect &r, float angle,
                    bool back, Color tint, const Rect &uv = {0.0f, 0.0f, 1.0f, 1.0f});
     void case_spine(const Rect &r, float angle, float thickness,
-                    Color front_edge, Color rear_edge);
+                    Color front_edge, Color rear_edge, float depth_offset = 0.0f);
+    // Translucent rounded white plastic shell, projected with the SAME pivot
+    // and perspective as the printed image, on both front and back.
+    void case_plastic(const Rect &r, float angle, bool back, Color plastic);
 
     // ---- text ----
     // font_texture is the GL texture holding font's atlas. Returns the advance.
