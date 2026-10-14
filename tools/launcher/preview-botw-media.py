@@ -57,7 +57,8 @@ def download(destination: Path) -> None:
                     raise ValueError("image too large")
                 with Image.open(BytesIO(body)) as source_image:
                     source_image.load()
-                    if source_image.width < 150 or source_image.height < 210:
+                    if (source_image.width < (12 if filename == "botw-spine.tga" else 150) or
+                            source_image.height < 210):
                         raise ValueError(f"image is not a usable scan: {source_image.size}")
                     if source_image.width * source_image.height > 12_000_000:
                         raise ValueError("pixel budget exceeded")
