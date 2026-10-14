@@ -252,3 +252,25 @@ percent of the 454px front width. The same treatment applies to every title.
 
 Only the host OpenGL case-visual workflow is requested here. Native console
 packaging/compilation requires an explicit separate user approval.
+
+## Directional render and media verification (October 14)
+
+The physical case is common to all games. At the front pause (+0.52 rad),
+the red hinge occupies more of the LEFT side. At the back pause
+(pi+0.63 rad), the transparent opening on the LEFT is more prominent,
+while a thin separate red seam is visible on the RIGHT. Shell depth is
+44 virtual px (9.7% of the 454px front width), not a flat width-flipped image.
+Both covers remain separate flat scans under the same translucent plastic.
+
+The image worker considers multiple region-ranked originals separately for
+front/back/spine. For BOTW, the user-identified 4b815... French back-cover
+source resolved as an actual 1167x1878 scan in the host visual run, replacing
+the tiny 174x281 thumbnail. The rendering preserves the original aspect ratio
+rather than stretching the lettering. A source spine narrower than 64px or
+shorter than 600px is not passed off as readable: the preview and native
+resolver use the neutral empty red sleeve without an invented game title.
+
+The full-screen game Hero and the right-hand Eden brand/title have additional
+clearance. The back scan remains held for 4.5 seconds. The host screenshot is
+still a *render verification*, not a claim of photorealistic 3D materials or a
+successful native console build.
