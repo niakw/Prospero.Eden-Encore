@@ -75,33 +75,17 @@ target_include_directories(video_core BEFORE PRIVATE "${EDEN_SMALL_VECTOR_ROOT}"
 # synchronous PS5 storage flush for every error line. Keep regular buffer
 # flushes and the explicit Flush() API; only coalesce bursts to 100 ms.
 # Never edit the immutable Eden logging.cpp source.
-file(READ "${PROJECT_SOURCE_DIR}/src/common/logging.cpp" eden_logging_source)
-set(eden_log_error_flush [=[            if (write_limit_exceeded)
-                enabled = false;
-            file->Flush();]=])
-set(eden_log_backend_field "    std::optional<FS::IOFile> file;")
-string(FIND "${eden_logging_source}" "${eden_log_error_flush}" eden_log_flush_at)
-string(FIND "${eden_logging_source}" "${eden_log_backend_field}" eden_log_field_at)
-if(eden_log_flush_at LESS 0 OR eden_log_field_at LESS 0)
-    message(FATAL_ERROR "Pinned Eden log backend changed; requalify R428")
+set(EDEN_MAINTAINED_LOGGING "${PORT_ROOT}/vendor/encore-active/eden-core/src/common/logging.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_LOGGING}")
+    message(FATAL_ERROR "Missing maintained bounded logging source")
 endif()
-string(REPLACE "${eden_log_error_flush}" [=[            if (write_limit_exceeded)
-                enabled = false;
-            const auto flush_now = std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now().time_since_epoch()).count();
-            if (write_limit_exceeded ||
-                flush_now - error_flushed_ms.load(std::memory_order_relaxed) >= 100) {
-                error_flushed_ms.store(flush_now, std::memory_order_relaxed);
-                file->Flush();
-            }]=] eden_logging_source "${eden_logging_source}")
-string(REPLACE "${eden_log_backend_field}"
-    "    std::optional<FS::IOFile> file;\n    std::atomic<long long> error_flushed_ms{-1000};"
-    eden_logging_source "${eden_logging_source}")
-write_derived("${PORT_BUILD_DIR}/logging.cpp"
-    "#include <atomic>\n#include <chrono>\n${eden_logging_source}")
 get_target_property(eden_common_sources common SOURCES)
-list(REMOVE_ITEM eden_common_sources logging.cpp)
-list(APPEND eden_common_sources "${PORT_BUILD_DIR}/logging.cpp")
+list(FIND eden_common_sources "logging.cpp" eden_pinned_logging_idx)
+if(eden_pinned_logging_idx EQUAL -1)
+    message(FATAL_ERROR "Pinned logging source moved; requalify maintained overlay")
+endif()
+list(REMOVE_ITEM eden_common_sources "logging.cpp")
+list(APPEND eden_common_sources "${EDEN_MAINTAINED_LOGGING}")
 set_property(TARGET common PROPERTY SOURCES "${eden_common_sources}")
 # Upstream pair #4436 + #4447: kernel guest context and slab guards use
 # blocking std::mutex instead of CPU-spinning locks. The scheduler's lazy
@@ -1130,17 +1114,13 @@ if(EDEN_A32_FASTMEM)
     # Upstream places code at any 4 KiB offset below 16 MiB, which leaves three of four
     # layouts with every module page out of 16 KiB phase with its backing. Keep the same
     # range with 16 KiB steps so module chunks can alias.
-    file(READ "${PROJECT_SOURCE_DIR}/src/core/loader/deconstructed_rom_directory.cpp" aslr_source)
-    set(aslr_old "? ::Settings::values.rng_seed.GetValue() : Common::Random::Random64(0)) << 12) & 0xfff000;")
-    string(FIND "${aslr_source}" "${aslr_old}" aslr_at)
-    if(aslr_at LESS 0)
-        message(FATAL_ERROR "Pinned code ASLR offset changed")
+    set(EDEN_MAINTAINED_CODE_LOADER
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/loader/deconstructed_rom_directory.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_CODE_LOADER}")
+        message(FATAL_ERROR "Missing maintained aligned code loader")
     endif()
-    string(REPLACE "${aslr_old}" "? ::Settings::values.rng_seed.GetValue() : Common::Random::Random64(0)) << 14) & 0xffc000;"
-        aslr_source "${aslr_source}")
-    write_derived("${PORT_BUILD_DIR}/deconstructed_rom_directory.cpp" "${aslr_source}")
     list(REMOVE_ITEM core_sources "loader/deconstructed_rom_directory.cpp")
-    list(APPEND core_sources "${PORT_BUILD_DIR}/deconstructed_rom_directory.cpp")
+    list(APPEND core_sources "${EDEN_MAINTAINED_CODE_LOADER}")
 endif()
 set_property(TARGET core PROPERTY SOURCES "${core_sources}")
 # PS5_NATIVE is a CMake option, not a transitive preprocessor definition for
