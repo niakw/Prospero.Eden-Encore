@@ -293,6 +293,7 @@ FakeServices::FakeServices(const std::string &covers_directory)
             if (preview_botw_) {
                 sample_case_front_ = covers_directory + "/botw-front.tga";
                 sample_case_back_ = covers_directory + "/botw-back.tga";
+                sample_case_spine_ = covers_directory + "/botw-spine.tga";
             } else {
                 sample_case_front_ = covers_directory + "/fixture-case-front.tga";
                 sample_case_back_ = covers_directory + "/fixture-case-back.tga";
