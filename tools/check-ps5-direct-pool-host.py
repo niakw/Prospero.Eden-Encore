@@ -137,7 +137,7 @@ int main() {
     assert(monotone.FreeUpperBound() == 1*GiB);
     // 16 GiB physically installed in PS5 is NOT what firmware gives Encore.
     // Old real FW 13.60 console directly exposed 12 GiB, and its Encore
-    // heap committed 1280 MiB after game exit. Not Sony OS-reserved memory.
+    // Heap retained committed backing after title exit; excludes platform reservations.
     constexpr auto old = Summarize(12*GiB, {.heap_roots=1280*MiB});
     static_assert(old.extent_known && old.within_extent);
     static_assert(old.extent_bytes==12*GiB);
@@ -181,7 +181,7 @@ with tempfile.TemporaryDirectory(prefix="eden-direct-pool-") as work:
         check=True, timeout=120)
     subprocess.run([str(exe)], check=True, timeout=120)
 print("PASS kernel 12-GiB direct pool vs installed 16-GiB distinction, 1280-MiB Encore heap ledger, ASan/UBSan")
-print("Unclassified bytes are NOT confirmed free RAM; no physical Sony mspace unmapping")
+print("Unclassified bytes are not confirmed free RAM; native allocator backing is not unmapped")
 print("PASS kernel direct-memory region scan: incomplete enumeration cannot claim full physical pool")
 print("PASS 100-ms pressure/unknown probe cadence, 250-ms only for >=4 GiB confirmed contiguous headroom")
 print("PASS JIT/GPU free-span admission refuses successful-but-out-of-range kernel replies")
