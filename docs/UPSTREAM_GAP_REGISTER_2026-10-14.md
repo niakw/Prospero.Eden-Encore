@@ -272,3 +272,7 @@ These are upstream commit titles, not validated Encore integrations.
 Unavailable comparisons are not equivalent to zero changes.
 The API can truncate changed-file lists beyond 300 files.
 <!-- END AUTO-UPSTREAM-COMPARISON -->
+
+## Native memory package comparison (14 October 2026)
+
+The native build previously inherited a boilerplate `param.json` without the optional `kernel.flexibleMemorySize` key, whereas the current primary source declares **335544320 bytes (320 MiB)**. Encore now explicitly writes this same value when packaging the native app; a host CI gate verifies the field without changing the runtime kernel, guest heap, JIT cache, GPU VRAM accounting, or per-game saves. The size is a package memory declaration, **not** the console's total physical capacity or a promise of additional available memory. Native compilation and firmware 13.60 behavior must still be qualified.
