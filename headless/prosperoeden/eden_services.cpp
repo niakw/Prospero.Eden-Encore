@@ -359,7 +359,7 @@ bool CacheNlibJpeg(const std::string& endpoint, const std::string& path,
 // Optional real retail case images from the build-time filtered public catalog.
 // No full metadata archive, credentials, HTTP or XML parsing on the console.
 // Matching is exact and skips colliding release editions at index-generation time.
-using BoxIndex = std::unordered_map<std::string, std::array<std::string, 2>>;
+using BoxIndex = std::unordered_map<std::string, std::array<std::vector<std::string>, 2>>;
 
 std::string CaseKey(const std::string& title) {
     std::string key;
@@ -398,7 +398,7 @@ const BoxIndex& RetailCaseIndex() {
         std::ifstream input(Eden::AppFile("ui/box-art-index.tsv"));
         std::string row;
         while (std::getline(input, row) && items.size() < 20000) {
-            if (row.empty() || row[0] == '#' || row.size() > 300) continue;
+            if (row.empty() || row[0] == '#' || row.size() > 800) continue;
             const auto a = row.find('\t');
             if (a == std::string::npos) continue;
             const auto b = row.find('\t', a + 1);
@@ -406,12 +406,31 @@ const BoxIndex& RetailCaseIndex() {
             const std::string title = row.substr(0, a);
             const std::string front = row.substr(a + 1, b - a - 1);
             const std::string back = row.substr(b + 1);
-            if (title.empty() || title.size() > 170 ||
-                (front != "-" && !SafeCaseFilename(front)) ||
-                (back != "-" && !SafeCaseFilename(back)))
-                continue;
-            items.emplace(title, std::array<std::string, 2>{
-                front == "-" ? "" : front, back == "-" ? "" : back});
+            if (title.empty() || title.size() > 170) continue;
+            const auto split_candidates = [](const std::string& value) {
+                std::vector<std::string> found;
+                if (value == "-") return found;
+                std::size_t start = 0;
+                while (start < value.size() && found.size() < 6) {
+                    const auto end = value.find(';', start);
+                    const std::string part = value.substr(
+                        start, end == std::string::npos ? end : end - start);
+                    if (!SafeCaseFilename(part)) {
+                        found.clear();
+                        break; // reject an invalid indexed row
+                    }
+                    found.push_back(part);
+                    if (end == std::string::npos) break;
+                    start = end + 1;
+                }
+                return found;
+            };
+            auto fronts = split_candidates(front);
+            auto backs = split_candidates(back);
+            if ((front != "-" && fronts.empty()) ||
+                (back != "-" && backs.empty())) continue;
+            items.emplace(title, std::array<std::vector<std::string>, 2>{
+                std::move(fronts), std::move(backs)});
         }
         return items;
     }();
@@ -424,25 +443,55 @@ std::string CaseFacePath(std::uint64_t title_id, const char* side) {
     return Eden::CoversDir() + "/box-" + side + "-" + id + ".tga";
 }
 
-bool FetchCaseFace(const std::string& filename, const std::string& destination,
+bool FetchCaseFace(const std::vector<std::string>& candidates,
+                   const std::string& destination,
                    const std::atomic<bool>* cancel) {
-    if (!SafeCaseFilename(filename) ||
+    if (candidates.empty() ||
         (cancel && cancel->load(std::memory_order_acquire))) return false;
-    const auto response = Common::Net::MakeRequest(
-        "https://images.launchbox-app.com", "/" + filename);
-    if (!response || (cancel && cancel->load(std::memory_order_acquire))) return false;
-    const std::string& body = *response;
-    const bool jpeg = body.size() >= 2 &&
-        static_cast<unsigned char>(body[0]) == 0xff &&
-        static_cast<unsigned char>(body[1]) == 0xd8;
-    const bool png = body.size() >= 8 &&
-        std::memcmp(body.data(), "\x89PNG\r\n\x1a\n", 8) == 0;
-    if (body.size() < 1024 || body.size() > (16u << 20) || (!jpeg && !png))
+    int old_width = 0, old_height = 0, old_channels = 0;
+    if (!stbi_info(destination.c_str(), &old_width, &old_height, &old_channels) ||
+        !ValidNlibTga(destination)) { old_width = 0; old_height = 0; }
+    std::uint64_t best_pixels = static_cast<std::uint64_t>(old_width) * old_height;
+    std::string best;
+    // Region-ranked candidates from the build index. A public CDN may return
+    // only a small thumbnail even for an entry advertised as high resolution.
+    // Try the next candidate and retain the sharpest safe flat scan, never a
+    // pre-rendered Box - 3D. No network activity occurs on the launch thread.
+    for (const std::string& filename : candidates) {
+        if (!SafeCaseFilename(filename) ||
+            (cancel && cancel->load(std::memory_order_acquire))) break;
+        const auto response = Common::Net::MakeRequest(
+            "https://images.launchbox-app.com", "/" + filename);
+        if (!response || (cancel && cancel->load(std::memory_order_acquire))) continue;
+        const std::string& body = *response;
+        const bool jpeg = body.size() >= 2 &&
+            static_cast<unsigned char>(body[0]) == 0xff &&
+            static_cast<unsigned char>(body[1]) == 0xd8;
+        const bool png = body.size() >= 8 &&
+            std::memcmp(body.data(), "\x89PNG\r\n\x1a\n", 8) == 0;
+        if (body.size() < 1024 || body.size() > (16u << 20) || (!jpeg && !png))
+            continue;
+        int w = 0, h = 0, channels = 0;
+        if (!stbi_info_from_memory(
+                reinterpret_cast<const unsigned char*>(body.data()),
+                static_cast<int>(body.size()), &w, &h, &channels) ||
+            w < 128 || h < 200 || w > 4096 || h > 4096 ||
+            static_cast<std::uint64_t>(w) * h > 3840u * 2160u)
+            continue;
+        const std::uint64_t pixels = static_cast<std::uint64_t>(w) * h;
+        if (pixels > best_pixels) {
+            best_pixels = pixels;
+            best = body;
+        }
+        // Enough native source resolution to display a sharp face at 1080p.
+        if (w >= 750 && h >= 1100) break;
+    }
+    if (best.empty() || (cancel && cancel->load(std::memory_order_acquire)))
         return false;
-    if (cancel && cancel->load(std::memory_order_acquire)) return false;
     (void)mkdir(Eden::CoversDir().c_str(), 0777);
     const std::string staged = destination + ".new";
-    if (WriteJpegTga(body, staged, true) && std::rename(staged.c_str(), destination.c_str()) == 0)
+    if (WriteJpegTga(best, staged, true) &&
+        std::rename(staged.c_str(), destination.c_str()) == 0)
         return true;
     (void)std::remove(staged.c_str());
     return false;
@@ -478,12 +527,17 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
         if (cancel && cancel->load(std::memory_order_acquire)) return;
         if (selected->second[side].empty()) continue;
         const std::string path = CaseFacePath(title_id, side == 0 ? "front" : "back");
-        // An explicitly supplied JPEG/PNG takes precedence over a downloaded
-        // TGA for this face. Detect valid cached files before an HTTP retry.
+        // User-provided original scans win. Cached low-resolution CDN scans
+        // may be upgraded when a better ranked alternative becomes available.
         const std::string base = path.substr(0, path.size() - 4);
         if (IsFile(base + ".png") || IsFile(base + ".jpg") ||
-            IsFile(base + ".jpeg") || ValidNlibTga(path))
-            continue;
+            IsFile(base + ".jpeg")) continue;
+        int width = 0, height = 0, channels = 0;
+        if (ValidNlibTga(path) &&
+            stbi_info(path.c_str(), &width, &height, &channels) &&
+            width >= 750 && height >= 1100) continue;
+        // Existing lower-quality files stay usable while a better face is
+        // searched. No file is replaced by a smaller CDN thumbnail.
         if (!FetchCaseFace(selected->second[side], path, cancel))
             all_ready = false;
     }
