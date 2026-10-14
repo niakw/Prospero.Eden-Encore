@@ -86,3 +86,33 @@ of every commit in every external repository previously discussed (including
 independent experimental forks). The upstream gap register documents divergent
 Mesa and SDK histories, and GitHub changed-file results may be truncated.
 No FC27 save data or console file was read or modified.
+
+## Cache eligibility qualification after original audit
+
+The exact pinned driver, `vendor/sources/ps5-mesa/src/util/u_debug.h`,
+defines `__normal_user()` by requiring **both**
+`geteuid()==getuid()` and `getegid()==getgid()`. Its
+`src/util/disk_cache_os.c` returns false from `disk_cache_enabled()`
+when the credentials are unequal. A configured cache directory and
+`MESA_SHADER_CACHE_MAX_SIZE` do not override that check.
+
+The source-wired, **read-only** one-time
+`EDEN_GPU_DISK_CACHE_ELIGIBILITY` event now reports whether both credentials
+match, whether the directory exists, and whether a disable variable was
+provided. This is a *driver-eligibility check*, **not** a verified cache hit.
+`tools/check-native-shader-cache-eligibility.py` tests the rule against
+the pinned driver sources and explicitly classifies old traces without the
+new event as **NOT_MEASURED**. It never invokes `setegid`,
+`seteuid`, chmod, deletes the shader cache, or accesses game saves.
+
+The existing local `2efd8b3c` capture records only
+`EDEN_RADV_DISK_CACHE limit_mib=2048 free_mib=16384`. It does *not*
+contain the credential eligibility event and cannot prove that disk shader
+caching was enabled. If a new trace reports `uid_match=0` or
+`gid_match=0`, study the privilege and filesystem implications of a
+credential adjustment before applying Mihawk's `setegid(getgid())`
+adaptation.
+
+The newer development candidate built in run 38547995294 and uploaded
+native application and debug symbols successfully; that run preceded this
+new cache probe and does not validate its compilation or behavior.
