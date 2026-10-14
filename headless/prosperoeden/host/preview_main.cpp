@@ -201,9 +201,21 @@ void pictures(Stage &s)
             return;
         }
         s.shoot("02-library-back-zoom");
+        // Regression evidence: shoulders must zoom the REAL high-res back
+        // insert, while D-pad moves the magnified view (not selected game).
+        s.press({Key::r2, Key::r2, Key::down, Key::right});
+        s.wait(0.42f);
+        s.shoot("03-library-back-zoom-pan");
+        s.press({Key::l2});
+        s.wait(0.30f);
+        s.shoot("04-library-back-zoom-out");
+        // Cross no longer closes the viewer or launches the title.
+        s.press({Key::cross});
+        s.wait(0.12f);
+        s.shoot("05-library-back-cross-ignored");
         s.press({Key::circle});
         s.wait(0.16f);
-        s.shoot("03-library-back-closed");
+        s.shoot("06-library-back-closed");
         return;
     }
     if (const char* launch_only = std::getenv("PE_PREVIEW_LAUNCH_ONLY");
