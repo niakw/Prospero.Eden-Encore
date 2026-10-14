@@ -22,6 +22,8 @@
 #include "stb_image_write.h"
 
 #include <algorithm>
+#include <chrono>
+#include <thread>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -152,6 +154,15 @@ void pictures(Stage &s)
             std::fprintf(stderr, "launch-preview: the game did not enter the real launch path\n");
             s.ok = false;
             return;
+        }
+        // This host program advances 60 virtual frames almost instantly.
+        // The actual launcher renders/pumps in real time, so let the async
+        // texture workers finish before taking evidence. Zero-delta updates
+        // complete queued uploads without advancing the game's transition.
+        for (int attempt = 0; attempt < 8; ++attempt) {
+            s.render();
+            std::this_thread::sleep_for(std::chrono::milliseconds(55));
+            s.launcher->update(0.0f);
         }
         s.wait(0.12f);
         s.shoot("00-launch-case-front");
