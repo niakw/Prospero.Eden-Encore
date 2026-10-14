@@ -1123,6 +1123,17 @@ int main(int argc, char** argv) {
         Eden::Stall::Arm();
 #endif
         passed("session_start");
+#ifdef EDEN_NATIVE_SOURCE_COMMIT
+        // A log can contain multiple games and its initial source marker
+        // may have rotated to heap.first.log. Stamp each game session once
+        // so forensic tools never silently combine different sessions or
+        // mistake a tail-only capture for an unidentified source build.
+        // No per-frame logging or extra disk I/O in quiet gameplay.
+        if (Eden::NativeLogs::Detailed()) {
+            std::printf("EDEN_SESSION_SOURCE source_sha=%s\\n", EDEN_NATIVE_SOURCE_COMMIT);
+            std::fflush(stdout);
+        }
+#endif
         if (!std::filesystem::is_directory(user_dir)) {
             std::fputs("Run from the isolated directory containing user/.\n", stderr);
             return 2;
