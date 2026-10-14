@@ -96,9 +96,9 @@ std::string library_format(const std::string& format)
 // prefabricated case. Supports both the shelf and the enlarged back view.
 void flat_front_fallback(Canvas& c, const Game& game, const Rect& r)
 {
-    c.list.gradient_rect(r, 6.0f, Color::rgb(0x2c1742), Color::rgb(0x0d1021));
+    c.list.gradient_rect(r, 0.0f, Color::rgb(0x2c1742), Color::rgb(0x0d1021));
     const float band = std::max(20.0f, r.h * 0.12f);
-    c.list.rounded_rect({r.x, r.y, r.w, band}, 5.0f,
+    c.list.rounded_rect({r.x, r.y, r.w, band}, 0.0f,
                         Color::rgb(0xa32356, 0.98f));
     text_shrink(c, "EDEN ENCORE", r.x + r.w * 0.5f,
                 baseline(r.y, band, std::max(11.0f, band * 0.42f)),
@@ -106,7 +106,7 @@ void flat_front_fallback(Canvas& c, const Game& game, const Rect& r)
                 r.w - 20.0f, Align::center);
     const Rect art{r.x + 3.0f, r.y + band + 3.0f,
                    r.w - 6.0f, r.h - band - std::max(38.0f, r.h * 0.19f) - 6.0f};
-    if (!game.cover.empty()) cover_crop(c, game.cover, art, 2.0f, 0.0f);
+    if (!game.cover.empty()) cover_crop(c, game.cover, art, 0.0f, 0.0f);
     else if (!game.hero.empty()) cover_crop(c, game.hero, art, 2.0f, 0.0f);
     c.list.gradient_rect({r.x, r.y + r.h - std::max(41.0f, r.h * 0.21f),
                           r.w, std::max(41.0f, r.h * 0.21f)}, 3.0f,
@@ -122,7 +122,7 @@ void flat_front_fallback(Canvas& c, const Game& game, const Rect& r)
 
 void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
 {
-    c.list.gradient_rect(r, 5.0f, Color::rgb(0x201831), Color::rgb(0x0a1023));
+    c.list.gradient_rect(r, 0.0f, Color::rgb(0x201831), Color::rgb(0x0a1023));
     const float font = std::clamp(r.w * 0.087f, 14.0f, 30.0f);
     text_shrink(c, game.name, r.x + r.w * 0.5f,
                 baseline(r.y + r.h * 0.045f, r.h * 0.14f, font),
