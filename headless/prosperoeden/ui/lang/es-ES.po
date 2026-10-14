@@ -642,12 +642,12 @@ msgstr "Reducir movimiento"
 #. Setting: how many times a second the TV picture is refreshed while a game runs (60 or 120 Hz).
 #: pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Refresh rate"
-msgstr "Frecuencia de actualización"
+msgstr "Frecuencia TV"
 
 #. Label: see 'Refresh rate'.
 #: pe/ui/settings.cpp
 msgid "REFRESH RATE"
-msgstr "FRECUENCIA DE ACTUALIZACIÓN"
+msgstr "FRECUENCIA TV"
 
 #: pe/ui/browse.cpp, pe/ui/settings.cpp
 msgid "REGION"
@@ -1363,7 +1363,7 @@ msgstr "Izquierda/derecha: Global, PlayStation o Switch para este juego; Cruz: e
 
 #: launcher translated copy
 msgid "Left stick press"
-msgstr "Pulsación del stick izquierdo"
+msgstr "Pulsar stick izq."
 
 #: launcher translated copy
 msgid "Max. players: {0}"
@@ -1431,7 +1431,7 @@ msgstr "¿Restablecer los ajustes predeterminados?"
 
 #: launcher translated copy
 msgid "Right stick press"
-msgstr "Pulsación del stick derecho"
+msgstr "Pulsar stick der."
 
 #: launcher translated copy
 msgid "ROM missing from the storage root"
