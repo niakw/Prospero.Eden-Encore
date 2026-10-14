@@ -164,11 +164,11 @@ void pictures(Stage &s)
             std::this_thread::sleep_for(std::chrono::milliseconds(55));
             s.launcher->update(0.0f);
         }
-        s.wait(0.14f);
+        s.wait(1.02f); // hold initial cover before the 3D turn
         s.shoot("00-launch-case-front");
-        s.wait(0.53f); // smoothstep turn: visible red spine near 90 degrees
+        s.wait(0.83f); // quarter-turn: 28px spine, plastic top and bottom
         s.shoot("01-launch-case-spine");
-        s.wait(0.43f); // actual back is visible near 180 degrees
+        s.wait(2.25f); // full back held long enough to read its description
         s.shoot("02-launch-case-back");
         return;
     }
