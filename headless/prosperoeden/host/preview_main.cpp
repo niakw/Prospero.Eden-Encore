@@ -137,6 +137,27 @@ struct Stage
 
 void pictures(Stage &s)
 {
+    // Independently verify the game's real launch transition using the same
+    // original C++ draw list, EGL context and shader backend as Home. This
+    // takes *screenshots*, not image synthesis or a mock-up of the layout.
+    if (const char* launch_only = std::getenv("PE_PREVIEW_LAUNCH_ONLY");
+        launch_only != nullptr && std::strcmp(launch_only, "1") == 0)
+    {
+        s.restart(false);
+        s.wait(2.0f); // background Home snapshot has settled
+        s.press({Key::down, Key::cross}); // hero launch, not a direct draw call
+        if (s.launcher->selected_game().empty()) {
+            std::fprintf(stderr, "launch-preview: the game did not enter the real launch path\n");
+            s.ok = false;
+            return;
+        }
+        s.wait(0.12f);
+        s.shoot("00-launch-case-front");
+        s.wait(0.78f);
+        s.shoot("01-launch-case-back");
+        return;
+    }
+
     // Home, as it settles after the app opens.
     s.restart(true);
     s.wait(0.42f);
