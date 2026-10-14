@@ -69,7 +69,7 @@ int main(void) {
     assert(messages == 2);
     assert(strstr(last_message, "req_bytes=") != NULL);
     assert(last_message[strlen(last_message) - 1] == '\n');
-    puts("PASS extracted PS5 heap growth formatter: no libc formatting, bounds and records");
+    puts("PASS extracted native heap formatter: formatting, bounds and records verified");
     return 0;
 }
 """
