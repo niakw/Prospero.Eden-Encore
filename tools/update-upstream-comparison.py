@@ -67,7 +67,7 @@ def compare(rows,api=fetch):
         if not isinstance(ahead,int) or not isinstance(behind,int):
             raise RuntimeError("Malformed response "+repo)
         status="identical" if ahead==behind==0 else "diverged" if behind else "upstream ahead"
-                # Commit messages remain untrusted upstream text: sanitize before rendering.
+        # Commit messages remain untrusted upstream text: sanitize before rendering.
         important=("kernel","schedul","mutex","lock","memory","heap","guest","jit",
                    "dynarmic","cache","shader","texture","gpu","vulkan","radv",
                    "buffer","hid","controller","input","save","fs","sync","thread",
