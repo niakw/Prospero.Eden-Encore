@@ -772,7 +772,7 @@ void Launcher::draw_launch(Canvas &c)
     }
     c.list.pop_opacity();
     if (black > 0.0f)
-        c.list.rounded_rect(kScreen, 0.0f, kBlack.with_alpha(black));
+        c.list.rounded_rect(kScreen, 0.0f, Color{0.0f, 0.0f, 0.0f, black});
 }
 
 void Launcher::draw(gfx::DrawList &list)
