@@ -25,6 +25,9 @@ MEDIA = {
         "https://gamefaqs.gamespot.com/a/box/6/6/4/599664_front.jpg",
         "https://images.launchbox-app.com/a8bcb4cc-a3b0-4cf0-82f3-cb10dd18b27c.jpg",
     ),
+    "botw-spine.tga": (
+        "https://images.launchbox-app.com/61b12a95-c917-42ff-9c25-b265732204fe.jpg",
+    ),
     "botw-back.tga": (
         "https://gamefaqs.gamespot.com/a/box/6/6/4/599664_back.jpg",
         "https://images.launchbox-app.com/b5f2899a-717f-4544-b63f-ee5d13e24483.jpg",
