@@ -104,20 +104,21 @@ jobs:
           from PIL import Image, ImageChops, ImageStat
           from pathlib import Path
           path = Path("build/launch-case-render")
-          expected = ["00-launch-case-front.png", "01-launch-case-back.png"]
+          expected = ["00-launch-case-front.png", "01-launch-case-spine.png",
+                      "02-launch-case-back.png"]
           screenshots = sorted(path.glob("*.png"))
           assert [item.name for item in screenshots] == expected, screenshots
           receipts = (path / "source-receipts.txt").read_text()
           assert len(receipts.splitlines()) == 3 and "botw-front.tga" in receipts
           assert "botw-back.tga" in receipts and "botw-hero.tga" in receipts
-          with Image.open(screenshots[0]) as front, Image.open(screenshots[1]) as back:
+          with Image.open(screenshots[0]) as front, Image.open(screenshots[2]) as back:
               assert front.size == back.size == (1920, 1080)
               front_rgb, back_rgb = front.convert("RGB"), back.convert("RGB")
               area = (360, 205, 760, 795)
               delta = ImageStat.Stat(ImageChops.difference(
                   front_rgb.crop(area), back_rgb.crop(area))).mean
               assert max(delta) > 10, ("front/back image did not turn", delta)
-              for image, filepath in ((front_rgb, screenshots[0]), (back_rgb, screenshots[1])):
+              for image, filepath in ((front_rgb, screenshots[0]), (back_rgb, screenshots[2])):
                   variation = sum(ImageStat.Stat(image.resize((64, 36))).stddev)
                   # A correct backdrop/logo with an entirely blank case face
                   # previously passed. Measure *inside* the printed scan.
@@ -127,7 +128,38 @@ jobs:
                   assert variation > 12 and filepath.stat().st_size > 20000
                   print(filepath.name, "actual OpenGL", filepath.stat().st_size,
                         variation, "face detail", face_detail)
+          with Image.open(screenshots[1]) as edge:
+              assert edge.size == (1920, 1080)
+              delta = ImageStat.Stat(ImageChops.difference(
+                  edge.convert("RGB").crop((380, 200, 810, 810)),
+                  front_rgb.crop((380, 200, 810, 810)))).mean
+              assert max(delta) > 15, ("3D quarter-turn not distinguishable", delta)
           print("LAUNCH_CASE_CPP_OPENGL_RENDER: PASS")
+          PY
+
+      - name: Render same projective box with generic game-art fallback
+        env:
+          PE_LANG: fr-FR
+          PE_PREVIEW_LAUNCH_ONLY: "1"
+          PE_PREVIEW_NO_BOX_SCANS: "1"
+          PE_PREVIEW_JOBS: "2"
+          PROSPEROEDEN_LAUNCHER_BUILD: ${{ runner.temp }}/encore-launcher-only
+        run: |
+          set -o pipefail
+          bash tools/launcher/preview.sh build/launch-case-generic 1920 1080 \
+            2>&1 | tee build-launch-case-generic.log
+          python3 - <<'PY'
+          from PIL import Image, ImageStat
+          from pathlib import Path
+          folder = Path("build/launch-case-generic")
+          names = sorted(path.name for path in folder.glob("*.png"))
+          assert names == ["00-launch-case-front.png", "01-launch-case-spine.png",
+                           "02-launch-case-back.png"], names
+          for filepath in sorted(folder.glob("*.png")):
+              with Image.open(filepath) as frame:
+                  assert frame.size == (1920, 1080)
+                  assert sum(ImageStat.Stat(frame.convert("RGB").resize((64, 36))).stddev) > 12
+          print("UNIVERSAL_CASE_NO_RETAIL_ART: PASS")
           PY
 
       - name: Export full-resolution production-render evidence
@@ -138,7 +170,9 @@ jobs:
           path: |
             build/launcher-production/*.png
             build/launch-case-render/*.png
+            build/launch-case-generic/*.png
             build-launcher-render.log
             build-launch-case-render.log
+            build-launch-case-generic.log
           if-no-files-found: error
           retention-days: 14
