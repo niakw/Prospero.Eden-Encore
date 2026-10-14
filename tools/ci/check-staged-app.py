@@ -15,6 +15,16 @@ base = {
     "sce_sys/pic0.dds", "sce_sys/pic1.dds", "sce_sys/snd0.at9",
 }
 source_ui = root / "headless/prosperoeden/ui"
+# A successful installable release must contain the real retail-scan lookup.
+# Its absence previously produced a green emulator build but three permanent
+# fallback thumbnails; do not silently accept that as a validated package.
+case_index_source = source_ui / "box-art-index.tsv"
+assert case_index_source.is_file(), "retail case index missing from build inputs"
+case_index_text = case_index_source.read_text(encoding="utf-8")
+assert case_index_text.count("\\n") > 1000, "retail case index is empty/truncated"
+assert "eu:9524e5f7-ccc8-4ce6-a581-03f82c51825e.jpg" in case_index_text, (
+    "reference physical front missing from installed scan catalog"
+)
 ui_expected = {
     "ui/" + p.relative_to(source_ui).as_posix()
     for p in source_ui.rglob("*") if p.is_file()
