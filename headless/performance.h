@@ -7,7 +7,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <optional>
-#include "common/cpu_features.h"
 
 namespace Eden::Performance {
 void RegisterWorker(const char* name);
