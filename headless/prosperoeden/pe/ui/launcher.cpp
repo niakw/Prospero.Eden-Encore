@@ -831,8 +831,7 @@ void Launcher::draw_launch(Canvas &c)
             // the front attaches at the left, the back at the right.
             paper_uv.x = back ? 1.0f - paper_uv.w : 0.0f;
         }
-        c.list.case_face(artwork.texture, face, angle, back, kWhite, paper_uv,
-                         !back && !scan.empty());
+        c.list.case_face(artwork.texture, face, angle, back, kWhite, paper_uv);
     } else {
         c.list.case_face(0, face, angle, back, Color::rgb(0x251a43));
     }
@@ -848,9 +847,10 @@ void Launcher::draw_launch(Canvas &c)
                     angle, true, case_depth,
                     Color::rgb(0xc9d8e9, 0.37f),
                     Color::rgb(0x647287, 0.34f));
-    // No additional transparent face overlay. The top/bottom caps, outer
-    // curved corners and ONE projected side already form the physical shell;
-    // drawing case_plastic over the paper gave it a second translucent case.
+    // Only the 12px clear molded latch rim, never a translucent second face.
+    // The shader gives every other pixel of this projected quad zero alpha.
+    // The same RIGHT physical rim naturally projects LEFT on the rear view.
+    c.list.case_plastic(physical, angle, back, Color::rgb(0xd9e8f7, 0.93f));
 
     // A real case has TWO different sides. The left is the printed red
     // retail spine, the right is the mostly clear hinged latch edge.
@@ -883,8 +883,8 @@ void Launcher::draw_launch(Canvas &c)
         // One actual left opening wall: no extra hinge bars pasted across
         // the back scan and no second white lip at the paper/spine seam.
         c.list.case_spine(side_strip, angle, case_depth,
-                          Color::rgb(0xc9d7e7, 0.35f),
-                          Color::rgb(0x75879b, 0.30f));
+                          Color::rgb(0xc9d7e7, 0.57f),
+                          Color::rgb(0x75879b, 0.48f));
     }
     // Deliberately NO right-side red stripe on the rear view.
     // Only genuinely visible projected shell edges are rendered.
@@ -899,8 +899,8 @@ void Launcher::draw_launch(Canvas &c)
         if (left != show_left) continue;
         for (int part = 0; part < 8; ++part)
             c.list.case_corner(physical, angle, case_radius, case_depth,
-                               quadrant, part, Color::rgb(0xdbe5f0, 0.40f),
-                               Color::rgb(0x677588, 0.37f));
+                               quadrant, part, Color::rgb(0xdbe5f0, 0.59f),
+                               Color::rgb(0x677588, 0.49f));
     }
 
     // The brand/title column begins well after the 3D case's cast shadow.
