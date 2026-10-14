@@ -298,3 +298,25 @@ printed red hinge at +0.52 rad. No special-case per-game meshes are used.
 
 The preview explicitly captures front, an instant of the passing spine, and
 back in its reading hold. No native console build is authorized here.
+
+## Retail-cover Library, rear popup and localization
+
+- Library shelves use cached original **flat Box - Front** assets, not square ROM
+  icons and not prebaked 3D boxes. Exactly five cover slots use portrait art
+  with a common shelf and focused cover highlight.
+- Selected details display the cached **Box - Back** on the left with its own
+  selectable focus. Down focuses that print; Cross opens its full-size,
+  aspect-preserving overlay; Circle closes it without launching a game.
+- Existing async Nlib/retail media workers resolve and propagate the paths.
+  No new filesystem scan/HTTP lookup occurs in a 60Hz paint or D-pad path.
+- Detail dates adapt to the region chosen by the system/game language
+  preference, genre tokens are translated independently, French GB is Go,
+  and file formats display as .NSP/.XCI. The source metadata remains intact.
+- Loader: the top and bottom clear shell surfaces render **over** back print,
+  so it no longer looks like an unrestricted poster. The back remains mostly
+  face-on and the real left opening side is preserved. Front printed branding
+  has a local, conditional simplified Switch header without overwriting
+  archived flat artwork.
+- The host-only software OpenGL preview now captures the actual Library shelf,
+  rear focus and opened/closed enlargement, in addition to its case sequence.
+  **No native console packaging/build has been authorized.**
