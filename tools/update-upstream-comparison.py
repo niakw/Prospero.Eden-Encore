@@ -96,7 +96,7 @@ def section(rows,stamp):
         name,repo,ref,delta,status=row[:5]
         source=("["+repo+"](https://github.com/"+repo+")") if "/" in repo else repo
         lines.append("| "+name+" | "+source+" | "+ref+" | "+delta+" | "+status+" |")
-        lines.extend(["","### Source changes requiring review","",
+    lines.extend(["","### Source changes requiring review","",
                   "These are upstream commit titles, not validated Encore integrations."])
     for row in rows:
         if len(row)<7 or not row[5]:continue
