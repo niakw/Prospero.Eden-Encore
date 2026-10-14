@@ -5,7 +5,7 @@
 
   <h3>L'émulation native, pensée pour jouer depuis son canapé.</h3>
 
-  **Une évolution maintenue de ProsperoEden, centrée sur le firmware 13.60, la stabilité du lancement, les jeux récents et une interface vraiment utilisable à la manette.**
+  <p><strong>Une évolution maintenue de ProsperoEden, centrée sur le firmware 13.60, la stabilité du lancement, les jeux récents et une interface vraiment utilisable à la manette.</strong></p>
 
   <p><a href="README.md"><strong>English</strong></a> · <strong>Français</strong></p>
   <p><kbd>Firmware 13.60 · testé sur matériel</kbd> <kbd>Vulkan + OpenGL</kbd> <kbd>Interface TV</kbd> <kbd>Dynarmic</kbd></p>
