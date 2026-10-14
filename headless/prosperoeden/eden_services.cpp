@@ -167,23 +167,33 @@ bool WriteJpegTga(const std::string& encoded, const std::string& output,
         return false;
     }
 
+    // Case scans are unusually tall. Store only the resolution needed by
+    // the launcher: uncompressed TGA stays under 13 MiB, even for a 4K source.
+    // Normal Nlib images keep their previous pixel-for-pixel behaviour.
+    const float scale = tall_case ?
+        std::min({1.0f, 1500.0f / width, 2100.0f / height}) : 1.0f;
+    const int output_width = std::max(1, static_cast<int>(width * scale));
+    const int output_height = std::max(1, static_cast<int>(height * scale));
     unsigned char header[18]{};
     header[2] = 2;
-    header[12] = static_cast<unsigned char>(width);
-    header[13] = static_cast<unsigned char>(width >> 8);
-    header[14] = static_cast<unsigned char>(height);
-    header[15] = static_cast<unsigned char>(height >> 8);
+    header[12] = static_cast<unsigned char>(output_width);
+    header[13] = static_cast<unsigned char>(output_width >> 8);
+    header[14] = static_cast<unsigned char>(output_height);
+    header[15] = static_cast<unsigned char>(output_height >> 8);
     header[16] = 32;
     header[17] = 0x28; // top-left origin + 8 alpha bits
     bool ok = std::fwrite(header, 1, sizeof(header), file) == sizeof(header);
-    std::vector<unsigned char> row(static_cast<std::size_t>(width) * 4);
-    for (int y = 0; ok && y < height; ++y) {
-        const unsigned char* source = rgba + static_cast<std::size_t>(y) * row.size();
-        for (int x = 0; x < width; ++x) {
-            row[4 * x + 0] = source[4 * x + 2];
-            row[4 * x + 1] = source[4 * x + 1];
-            row[4 * x + 2] = source[4 * x + 0];
-            row[4 * x + 3] = source[4 * x + 3];
+    std::vector<unsigned char> row(static_cast<std::size_t>(output_width) * 4);
+    for (int y = 0; ok && y < output_height; ++y) {
+        const int source_y = y * height / output_height;
+        const unsigned char* source = rgba + static_cast<std::size_t>(source_y) *
+                                               static_cast<std::size_t>(width) * 4;
+        for (int x = 0; x < output_width; ++x) {
+            const std::size_t offset = static_cast<std::size_t>(x * width / output_width) * 4;
+            row[4 * x + 0] = source[offset + 2];
+            row[4 * x + 1] = source[offset + 1];
+            row[4 * x + 2] = source[offset + 0];
+            row[4 * x + 3] = source[offset + 3];
         }
         ok = std::fwrite(row.data(), 1, row.size(), file) == row.size();
     }
