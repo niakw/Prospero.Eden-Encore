@@ -13,7 +13,7 @@ active_header = (root / "vendor/encore-active/eden-core/src/video_core/texture_c
 original_header = (root / "vendor/sources/eden/src/video_core/texture_cache/util.h").read_text()
 assert active_header == original_header.replace(
     "#include <boost/container/small_vector.hpp>",
-    "#include <boost/container/small_vector.hpp>\\n#include <boost/version.hpp>")
+    "#include <boost/container/small_vector.hpp>\n#include <boost/version.hpp>")
 assert '#include <boost/version.hpp>' in active_header
 assert 'target_include_directories(video_core BEFORE PRIVATE "${EDEN_SMALL_VECTOR_ROOT}")' in cmake
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/texture_cache/util.h"' not in cmake
