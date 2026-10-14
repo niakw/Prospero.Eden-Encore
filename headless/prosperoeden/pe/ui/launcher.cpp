@@ -750,7 +750,7 @@ void Launcher::draw_launch(Canvas &c)
     // No cosmetic red stripe is superimposed on the right edge. Both poses
     // use the exact same shared case geometry for every game.
     constexpr float kFrontYaw = 0.52f;
-    constexpr float kBackYaw = 3.14159265358979323846f + 0.26f;
+    constexpr float kBackYaw = 3.14159265358979323846f + 0.35f;
     constexpr float kFullTurn = 6.28318530717958647692f;
     float angle = kFrontYaw;
     if (motion() > 0.0f) {
@@ -792,16 +792,6 @@ void Launcher::draw_launch(Canvas &c)
     // PSD reference: a shallow polycarbonate box, about 8% spine thickness.
     // The original template remains external; this is OUR shared geometric
     // model and uses no pre-rendered cover-box layer.
-    c.list.case_cap({physical.x + case_radius, physical.y,
-                     physical.w - 2.0f * case_radius, physical.h},
-                    angle, false, case_depth,
-                    Color::rgb(0xdce9f8, 0.39f),
-                    Color::rgb(0x687890, 0.35f));
-    c.list.case_cap({physical.x + case_radius, physical.y,
-                     physical.w - 2.0f * case_radius, physical.h},
-                    angle, true, case_depth,
-                    Color::rgb(0xc9d8e9, 0.37f),
-                    Color::rgb(0x647287, 0.34f));
     // The same clear-polycarbonate 3D shell surrounds every game. Printed
     // front/back artwork sits behind the translucent white molded edges.
     c.list.case_face(0, physical, angle, back, Color::rgb(0x9da9ba, 0.24f));
@@ -840,6 +830,18 @@ void Launcher::draw_launch(Canvas &c)
     } else {
         c.list.case_face(0, face, angle, back, Color::rgb(0x251a43));
     }
+    // Clear molded top and bottom must be in FRONT of the printed rear
+    // scan in painter order; previously both caps were hidden underneath.
+    c.list.case_cap({physical.x + case_radius, physical.y,
+                     physical.w - 2.0f * case_radius, physical.h},
+                    angle, false, case_depth,
+                    Color::rgb(0xdce9f8, 0.39f),
+                    Color::rgb(0x687890, 0.35f));
+    c.list.case_cap({physical.x + case_radius, physical.y,
+                     physical.w - 2.0f * case_radius, physical.h},
+                    angle, true, case_depth,
+                    Color::rgb(0xc9d8e9, 0.37f),
+                    Color::rgb(0x647287, 0.34f));
     // Thin glossy plastic frame and clips are physically projected with the
     // scan rather than floating above it in screen coordinates.
     c.list.case_plastic(physical, angle, back, Color::rgb(0xe6effa, 0.38f));
