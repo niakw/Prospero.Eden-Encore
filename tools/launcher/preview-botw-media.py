@@ -65,16 +65,16 @@ def download(destination: Path) -> None:
                     if source_image.width * source_image.height > 12_000_000:
                         raise ValueError("pixel budget exceeded")
                     image = source_image.convert("RGB")
-                # Only candidates from the required region are comparable.
-                # Compare resolution inside that region; no NA override.
-                score = image.width * image.height
-                if selected is None or score > selected[3]:
-                    selected = (url, body, image, score)
+                # The user's exact European original wins if it decodes.
+                # The current Europe listing is a fallback, not a competitor
+                # allowed to silently replace the explicitly selected scan.
+                selected = (url, body, image)
+                break
             except Exception as error:
                 errors.append(f"{url}: {error}")
         if selected is None:
             raise RuntimeError(f"No usable source for {filename}: " + "; ".join(errors))
-        url, body, image, score = selected
+        url, body, image = selected
         original = image.size
         if filename == "botw-spine.tga" and (image.width < 64 or image.height < 600):
             # LaunchBox's tiny 18x281 preview cannot display crisp printed
