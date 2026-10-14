@@ -39,7 +39,11 @@ assert "void Textures::invalidate(" in src("headless/prosperoeden/pe/ui/textures
 assert "EDEN_NLIB_ASSETS title_id=" in svc
 assert "home_media_next_retry_" in hdr and "media_next_retry_" in hdr
 assert "media_retry_timer_ >= 8.0f" in nav
-assert "!game.cover.empty() ? game.cover : game.hero" in lib
+# The physical sleeve prefers an original box scan; the fallback still
+# permits a game to render with only its older cover/hero artwork.
+assert "const std::string& scan = rear ? game.box_back : game.box_front;" in lib
+assert "flat_front_fallback(c, game, paper);" in lib
+assert "else if (!game.hero.empty()) cover_crop(c, game.hero, art" in lib
 assert "if (image.missing) continue;" in lib
 assert "Loading artwork" in home and "Artwork unavailable" in home
 assert "text_shrink(c, title_label" in home
