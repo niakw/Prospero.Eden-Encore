@@ -118,6 +118,24 @@ replace a completed native build or an on-device visual check.
 
 The actual CDN/download path remains subject to a real console network check; a green host-source test cannot prove that every indexed image URL resolves.
 
+## Depth-first correction
+
+The prior shader used a 28px flat spine and masked rounded 2D cover; the
+screenshots made it look like a thin printed sheet. The new shell has a
+64px projective depth and a molded 31px corner radius. Each exposed corner is
+constructed from eight true 3D extruded arc segments with curved lighting;
+the upper and lower plastic caps, the red sleeve side, the white rails and
+the printed front/back all share the same 3D axis. Front and rear are placed
+on different depth planes, not merely switched as two flat slides.
+The frame is deliberately tested at a three-quarter viewing angle to make
+its actual thickness perceptible. This is a custom rendered object, not an
+existing 3D box image or a layer of the uploaded PSD.
+
+A green host render verifies executable geometry, not a claim that the
+material is now photorealistic. Inspect actual frame screenshots before
+declaring the design ready; assess projection, printed-spine readability,
+bevel shading, contact shadows and face sharpness.
+
 ## Real renderer screenshot test
 
 `.github/workflows/launcher-production-preview.yml` captures
