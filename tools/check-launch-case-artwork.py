@@ -129,7 +129,7 @@ assert "SafeCaseFilename" in native
 assert 'std::array<std::vector<std::string>, 3>' in native
 assert "best_source = filename;" in native
 assert "std::ofstream receipt(destination + \".source\"" in native
-assert "cached_source == selected->second[side].front()" in native
+assert "cached_source == candidates.front()" in native
 assert "best_pixels" not in native.split("bool FetchCaseFace(", 1)[1].split(
     "void EnsureRetailCase(", 1)[0]
 assert "EUROPE_FRONT_PINS" in indexer
