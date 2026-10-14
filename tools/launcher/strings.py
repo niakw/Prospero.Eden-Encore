@@ -248,7 +248,7 @@ def font_characters():
 
 # Catalogs written in scripts the console's fonts draw.
 SYSTEM_FONT_CATALOGS = {"ja-JP", "ko-KR", "zh-Hans", "zh-Hant", "el-GR", "th-TH", "ar"}
-STRICT_CATALOGS = {"fr-FR", "fr-CA"}
+STRICT_CATALOGS = {"fr-FR", "fr-CA", "es-ES", "es-419"}
 # Characters that take no room: the zero-width space (a line may break there), direction marks.
 INVISIBLE = {0x200B, 0x200C, 0x200D, 0x200E, 0x200F}
 
