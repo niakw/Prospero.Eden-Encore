@@ -1103,10 +1103,9 @@ void Launcher::draw_library(Canvas &c)
                 list.shadow({x - 5.0f, rail_y - 4.0f, sleeve_w + 10.0f, sleeve_h + 9.0f},
                             8.0f, 28.0f, theme::kLime.with_alpha(0.30f));
             flat_retail_sleeve(c, game, sleeve, false, 0.24f);
-            list.bordered_rect(sleeve, 5.0f, theme::kGlass.with_alpha(0.0f),
-                               selected ? 2.2f : 1.0f,
-                               selected ? theme::kFocusCore.with_alpha(0.93f) :
-                                          theme::kPanelEdge.with_alpha(0.45f));
+            if (selected)
+                list.bordered_rect(sleeve, 2.0f, theme::kGlass.with_alpha(0.0f),
+                                   2.2f, theme::kFocusCore.with_alpha(0.93f));
             list.pop_transform();
             text_shrink(c, game.name, x + sleeve_w * 0.5f,
                         baseline(rail_y + sleeve_h + 6.0f, 24.0f, 16.0f),
