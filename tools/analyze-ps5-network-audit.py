@@ -12,15 +12,26 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter, defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 import re
 import sys
 import tempfile
 
+# Old firmware captures carried epoch seconds only. The new audit format
+# supplies explicit UTC milliseconds and a monotonic time in nanoseconds.
+# Both remain optional for read-only, backwards-compatible analysis.
 LINE = re.compile(
-    r"^epoch=(\d+) scope=(launcher|guest|native) "
-    r"event=([a-z][a-z-]*) target=(\S{1,256}) "
-    r"bytes=(\d+) status=(-?\d+)$"
+    r"^epoch=(?P<epoch>\d+)"
+    r"(?: utc=(?P<utc>\S+) mono_ns=(?P<mono_ns>-?\d+))?"
+    r" scope=(?P<scope>launcher|guest|native)"
+    r" event=(?P<event>[a-z][a-z-]*) target=(?P<target>\S{1,256}) "
+    r"bytes=(?P<bytes>\d+) status=(?P<status>-?\d+)"
+    r"(?: count=(?P<count>\d+))?$"
+)
+LEGACY_SUMMARY = re.compile(
+    r"^epoch=(?P<epoch>\d+) scope=guest "
+    r"event=dns-denied-summary target=aggregated count=(?P<count>\d+)$"
 )
 IPV4_PORT = re.compile(
     r"^(?:\d{1,3}\.){3}\d{1,3}:\d{1,5}$"
@@ -39,15 +50,50 @@ def summarize(paths: list[Path]) -> dict:
     observed = 0
     latest_epoch = None
     earliest_epoch = None
+    utc_rows = 0
+    legacy_rows = 0
+    summarized_dns_denials = 0
+    mono_start = None
+    mono_end = None
     for path in paths:
         with path.open(encoding="utf-8", errors="replace") as f:
             for row in f:
-                match = LINE.fullmatch(row.rstrip("\r\n"))
-                if not match:
+                line = row.rstrip("\r\n")
+                match = LINE.fullmatch(line)
+                legacy_summary = LEGACY_SUMMARY.fullmatch(line) if not match else None
+                if not match and not legacy_summary:
                     malformed += 1
                     continue
-                epoch, scope, event, target, num_bytes, status = match.groups()
-                timestamp = int(epoch)
+                if legacy_summary:
+                    rec = legacy_summary.groupdict()
+                    scope, event, target, num_bytes, status = (
+                        "guest", "dns-denied-summary", "aggregated", "0", "0")
+                    timestamp = int(rec["epoch"])
+                    summarized_dns_denials += int(rec["count"])
+                    legacy_rows += 1
+                else:
+                    rec = match.groupdict()
+                    scope, event, target = rec["scope"], rec["event"], rec["target"]
+                    num_bytes, status = rec["bytes"], rec["status"]
+                    timestamp = int(rec["epoch"])
+                    if event == "dns-denied-summary":
+                        summarized_dns_denials += int(rec["count"] or 0)
+                    if rec["utc"] is not None:
+                        try:
+                            wall = datetime.fromisoformat(rec["utc"].replace("Z", "+00:00"))
+                            if (not rec["utc"].endswith("Z") or
+                                int(wall.timestamp()) != timestamp):
+                                raise ValueError("UTC and epoch differ")
+                        except (ValueError, OverflowError):
+                            malformed += 1
+                            continue
+                        utc_rows += 1
+                        monotonic = int(rec["mono_ns"])
+                        if monotonic >= 0:
+                            mono_start = monotonic if mono_start is None else min(mono_start, monotonic)
+                            mono_end = monotonic if mono_end is None else max(mono_end, monotonic)
+                    else:
+                        legacy_rows += 1
                 earliest_epoch = timestamp if earliest_epoch is None else min(earliest_epoch, timestamp)
                 latest_epoch = timestamp if latest_epoch is None else max(latest_epoch, timestamp)
                 observed += 1
@@ -66,6 +112,10 @@ def summarize(paths: list[Path]) -> dict:
         "invalid_lines": malformed,
         "start": earliest_epoch,
         "end": latest_epoch,
+        "utc_rows": utc_rows,
+        "legacy_rows": legacy_rows,
+        "monotonic_ns_range": (mono_start, mono_end),
+        "summarized_dns_denials": summarized_dns_denials,
         "by_event": by_event,
         "dns": dns,
         "dns_scoped": dns_scoped,
@@ -75,9 +125,18 @@ def summarize(paths: list[Path]) -> dict:
 
 
 def display(report: dict, top: int) -> str:
+    def utc_at(epoch: int | None) -> str:
+        return (datetime.fromtimestamp(epoch, timezone.utc)
+                .strftime("%Y-%m-%dT%H:%M:%SZ")) if epoch is not None else "unknown"
+
     lines = [
         f"Events: {report['events']:,}; malformed lines: {report['invalid_lines']:,}; "
-        f"epoch interval: {report['start']}–{report['end']}",
+        f"UTC: {utc_at(report['start'])} – {utc_at(report['end'])} "
+        f"(epoch {report['start']}–{report['end']})",
+        f"Timestamp coverage: {report['utc_rows']:,} with UTC+monotonic, "
+        f"{report['legacy_rows']:,} legacy epoch-only; "
+        f"aggregated denied DNS attempts: {report['summarized_dns_denials']:,} "
+        f"(summary flush time, not individual-request timestamps)",
         "",
         "Events by layer (guest HLE and native socket calls can refer to the SAME traffic):",
     ]
@@ -153,6 +212,26 @@ def self_test() -> None:
         )) + "\n")
         report = summarize([path])
         assert report["events"] == 9 and report["invalid_lines"] == 1
+        assert report["legacy_rows"] == 9 and report["utc_rows"] == 0
+        assert "UTC: 1970-01-01T00:00:10Z" in display(report, 10)
+        # Real historical captures have a summary without bytes/status;
+        # it is a valid event, not a malformed line to discard.
+        with path.open("a") as old:
+            old.write("epoch=20 scope=guest event=dns-denied-summary target=aggregated count=42\n")
+        old_result = summarize([path])
+        assert old_result["invalid_lines"] == 1 and old_result["events"] == 10
+        assert old_result["summarized_dns_denials"] == 42
+        # Validate wall/monotonic time, new summaries and guard against a
+        # future mismatch between UTC and epoch clocks.
+        with path.open("a") as new:
+            new.write("epoch=1791977112 utc=2026-10-14T11:25:12.125Z mono_ns=123450000000 scope=guest event=dns-denied target=api.example bytes=0 status=1\n")
+            new.write("epoch=1791977112 utc=2026-10-14T11:25:12.126Z mono_ns=123450001000 scope=guest event=dns-denied-summary target=aggregated bytes=0 status=0 count=3\n")
+            new.write("epoch=1791977112 utc=2026-10-14T11:25:13.000Z mono_ns=123450003000 scope=guest event=dns-denied target=bad.example bytes=0 status=1\n")
+        new_result = summarize([path])
+        assert new_result["utc_rows"] == 2 and new_result["invalid_lines"] == 2
+        assert new_result["summarized_dns_denials"] == 45
+        assert new_result["monotonic_ns_range"] == (123450000000, 123450001000)
+        assert "2026-10-14T11:25:12Z" in display(new_result, 10)
         assert report["dns_scoped"][("guest", "dns-resolved")]["pass.example"] == 1
         assert report["dns_scoped"][("launcher", "dns-resolved")]["api.nlib.cc"] == 1
         assert report["dns_scoped"][("guest", "dns-error")]["fail.example"] == 1
