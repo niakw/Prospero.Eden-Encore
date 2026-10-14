@@ -78,6 +78,11 @@ def download(destination: Path) -> None:
             raise RuntimeError(f"No usable source for {filename}: " + "; ".join(errors))
         url, body, image, score = selected
         original = image.size
+        if filename == "botw-spine.tga" and (image.width < 64 or image.height < 600):
+            # LaunchBox's tiny 18x281 preview cannot display crisp printed
+            # letters. Exercise the production blank-red-side fallback.
+            print(f"{filename}: no legible original ({original[0]}x{original[1]}), using clean empty spine")
+            continue
         image.thumbnail((1920, 1920), Image.Resampling.LANCZOS)
         # This is deliberately not upscaled: a 18px-wide "Box - Spine"
         # thumbnail cannot become legible ink by enlarging the pixels.
