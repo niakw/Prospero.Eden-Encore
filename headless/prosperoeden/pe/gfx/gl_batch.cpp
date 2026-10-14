@@ -113,16 +113,20 @@ void main()
             v_uv = vec2(cos(theta), sin(theta));
             virt.y = rounded_y;
         }
-        clip_w = max(0.65, 1.0 - z / 780.0);
-        // A slight stable 3-axis display tilt makes the cover's upper and
-        // lower edges read as an actual physical object. All shell layers
-        // share this transform, including the bevel and printed side.
-        float y = (shape == 12) ?
-            (a_params.y > 0.5 ? 0.5 : -0.5) * size.y +
-            corner.y * a_params.z * (a_params.y > 0.5 ? 0.18 : -0.18) :
+        // One rigid transform for all six surfaces. Previously the caps
+        // faked a separate vertical slope, leaving visibly disconnected
+        // white triangles at the plastic corners.
+        float world_y = shape == 12 ?
+            (a_params.y > 0.5 ? 0.5 : -0.5) * size.y :
             shape == 13 ? virt.y : local.y;
-        virt = centre + vec2(x + y * 0.025,
-                             y + x * 0.065) / clip_w;
+        const float pitch = 0.055;
+        float pitched_y = world_y * cos(pitch) - z * sin(pitch);
+        float pitched_z = world_y * sin(pitch) + z * cos(pitch);
+        clip_w = max(0.65, 1.0 - pitched_z / 820.0);
+        // Small camera roll exposes the shell while preserving the paper's
+        // perspective (and retaining the same camera for front/back/corners).
+        virt = centre + vec2(x + pitched_y * 0.018,
+                             pitched_y + x * 0.045) / clip_w;
         v_virtual = virt;
     }
     vec2 surface = virt * u_viewport.x + u_viewport.yz;
