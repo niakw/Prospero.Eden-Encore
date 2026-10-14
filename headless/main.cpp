@@ -26,6 +26,7 @@
 #include <system_error>
 #include <condition_variable>
 #include <chrono>
+#include <ctime>
 #include <cstdlib>
 #include <mutex>
 #include <thread>
@@ -1130,7 +1131,25 @@ int main(int argc, char** argv) {
         // mistake a tail-only capture for an unidentified source build.
         // No per-frame logging or extra disk I/O in quiet gameplay.
         if (Eden::NativeLogs::Detailed()) {
+            // One source + clock-correlation marker per game start. The
+            // graphics/CPU sampling clock is monotonic; audit DNS also has
+            // UTC, so neither clock's origin needs to be guessed offline.
+            struct timespec real_clock {}, mono_clock {};
+            const int rt_ok = clock_gettime(CLOCK_REALTIME, &real_clock);
+            const int mt_ok = clock_gettime(CLOCK_MONOTONIC, &mono_clock);
+            const long long epoch_ms = rt_ok == 0 ?
+                static_cast<long long>(real_clock.tv_sec) * 1000LL +
+                static_cast<long long>(real_clock.tv_nsec / 1000000L) : -1LL;
+            const long long mono_ns = mt_ok == 0 ?
+                static_cast<long long>(mono_clock.tv_sec) * 1000000000LL +
+                static_cast<long long>(mono_clock.tv_nsec) : -1LL;
             std::printf("EDEN_SESSION_SOURCE source_sha=%s\n", EDEN_NATIVE_SOURCE_COMMIT);
+            std::printf("EDEN_TIME_ANCHOR epoch_ms=%lld mono_ns=%lld phase=session_start\n",
+                        epoch_ms, mono_ns);
+            // The independently buffered network file must identify the
+            // same game session, not only individual DNS events.
+            eden_network_audit_event("launcher", "session-start",
+                                     EDEN_NATIVE_SOURCE_COMMIT, 0, 0);
             std::fflush(stdout);
         }
 #endif
