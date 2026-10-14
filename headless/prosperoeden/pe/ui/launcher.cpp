@@ -827,7 +827,9 @@ void Launcher::draw_launch(Canvas &c)
             paper_uv.y = (1.0f - paper_uv.h) * 0.5f;
         } else {
             paper_uv.w = target_aspect / source_aspect;
-            paper_uv.x = (1.0f - paper_uv.w) * 0.5f;
+            // The printed paper meets the spine with NO UV letterbox gap:
+            // the front attaches at the left, the back at the right.
+            paper_uv.x = back ? 1.0f - paper_uv.w : 0.0f;
         }
         c.list.case_face(artwork.texture, face, angle, back, kWhite, paper_uv,
                          !back && !scan.empty());
