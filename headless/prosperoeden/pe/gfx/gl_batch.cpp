@@ -218,6 +218,13 @@ void main()
         float radius = v_params.z > 0.5 ? 18.0 : 22.0;
         float d = round_box(v_local, v_half, radius);
         color = v_params.z > 0.5 ? texture(u_texture, clamp(v_uv, 0.0, 1.0)) * v_top : v_top;
+        // Only real Switch-style front retail scans request the simplified
+        // header. Hide the tiny Nintendo word, preserve the icon and SWITCH.
+        // All game art outside this local banner remains the original scan.
+        if (v_border.x > 0.5 && v_params.y < 0.5 &&
+            v_uv.x > 0.035 && v_uv.x < 0.204 &&
+            v_uv.y > 0.068 && v_uv.y < 0.084)
+            color.rgb = vec3(0.92, 0.035, 0.055);
         float scan_inside = v_params.z > 0.5 ?
             step(0.0, v_uv.x) * step(v_uv.x, 1.0) *
             step(0.0, v_uv.y) * step(v_uv.y, 1.0) : 1.0;
