@@ -223,8 +223,8 @@ void main()
         // All game art outside this local banner remains the original scan.
         if (v_border.x > 0.5 && v_params.y < 0.5 &&
             v_uv.x > 0.035 && v_uv.x < 0.204 &&
-            v_uv.y > 0.068 && v_uv.y < 0.084)
-            color.rgb = vec3(0.92, 0.035, 0.055);
+            v_uv.y > 0.105 && v_uv.y < 0.126)
+            color.rgb = vec3(0.97, 0.025, 0.07);
         float scan_inside = v_params.z > 0.5 ?
             step(0.0, v_uv.x) * step(v_uv.x, 1.0) *
             step(0.0, v_uv.y) * step(v_uv.y, 1.0) : 1.0;
