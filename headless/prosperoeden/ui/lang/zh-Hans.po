@@ -1592,3 +1592,19 @@ msgstr "{0}/（NSP 或 XCI）"
 #: pe/ui/browse.cpp
 msgid "{0}/ (one folder per game ID)"
 msgstr "{0}/（每个游戏 ID 一个文件夹）"
+
+#: pe/ui/library.cpp
+msgid "GB"
+msgstr "GB"
+
+#: pe/ui/library.cpp
+msgid "Enlarge cover"
+msgstr "放大封面"
+
+#: pe/ui/library.cpp
+msgid "Close"
+msgstr "关闭"
+
+#: pe/ui/library.cpp
+msgid "Down: view back cover"
+msgstr "向下：查看封底"
