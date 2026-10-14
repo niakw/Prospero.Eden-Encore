@@ -467,7 +467,14 @@ std::vector<std::string> LocaleCaseCandidates(
 const BoxIndex& RetailCaseIndex() {
     static const BoxIndex index = [] {
         BoxIndex items;
-        std::ifstream input(Eden::AppFile("ui/box-art-index.tsv"));
+        // Mounted titles can expose eboot.bin but omit auxiliary ui/ files.
+        // Use the same fallback search as fonts, translations and launcher art.
+        const std::string catalog_path = Eden::AppResourceFile("ui/box-art-index.tsv");
+        std::ifstream input(catalog_path);
+        if (!input) {
+            std::fprintf(stderr, "EDEN_CASE_INDEX status=missing path=%s\n",
+                         catalog_path.c_str());
+        }
         std::string row;
         while (std::getline(input, row) && items.size() < 20000) {
             if (row.empty() || row[0] == '#' || row.size() > 2600) continue;
@@ -509,6 +516,8 @@ const BoxIndex& RetailCaseIndex() {
             items.emplace(title, std::array<std::vector<std::string>, 3>{
                 std::move(fronts), std::move(backs), std::move(spines)});
         }
+        std::fprintf(stderr, "EDEN_CASE_INDEX status=%s entries=%zu path=%s\n",
+                     input ? "loaded" : "missing", items.size(), catalog_path.c_str());
         return items;
     }();
     return index;
