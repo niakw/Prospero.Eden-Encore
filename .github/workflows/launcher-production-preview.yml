@@ -10,8 +10,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: encore-launcher-preview-${{ github.ref }}
-  cancel-in-progress: true
+  group: encore-launcher-preview-${{ github.ref }}-${{ github.sha }}
+  # Native/JIT branches move often. A later unrelated push must not cancel
+  # in-flight capture of a precisely pinned launcher commit.
+  cancel-in-progress: false
 
 jobs:
   preview:
