@@ -105,10 +105,12 @@ shader = (root / "headless/prosperoeden/pe/gfx/gl_batch.cpp").read_text()
 assert "case_face = 9" in shapes and "case_spine = 10" in shapes
 assert "case_plastic = 11" in shapes
 assert "case_cap = 12" in shapes
+assert "case_corner = 13" in shapes
 assert "void DrawList::case_face(" in drawlist
 assert "void DrawList::case_spine(" in drawlist
 assert "void DrawList::case_plastic(" in drawlist
 assert "void DrawList::case_cap(" in drawlist
+assert "void DrawList::case_corner(" in drawlist
 assert "depth_offset * transform_.scale" in drawlist
 assert "clip_w = max(0.65, 1.0 - z / 950.0)" in shader
 assert "gl_Position = vec4(ndc.x * clip_w, -ndc.y * clip_w, 0.0, clip_w);" in shader
@@ -116,8 +118,13 @@ assert "1.0 - corner.x : corner.x" in shader
 assert "shape == 9 || shape == 10 || shape == 11 || shape == 12" in shader
 assert "else if (shape == 11)" in shader
 assert "else if (shape == 12)" in shader
+assert "else if (shape == 13)" in shader
+assert "True rounded corner" in shader
 assert "float d = round_box(v_local, v_half, 12.0);" in shader
-assert "c.list.case_cap(physical, angle, false, 28.0f," in draw
+assert "angle, false, case_depth," in draw
+assert "c.list.case_corner(physical, angle, case_radius, case_depth," in draw
+assert "constexpr float case_depth = 64.0f;" in draw
+assert "constexpr float case_radius = 31.0f;" in draw
 assert "corner = length(max(abs(v_local)" in shader
 assert "if (!selected_game_.empty()) {\n        draw_launch(c);\n        return;" in launcher
 preview_source = (root / "headless/prosperoeden/host/preview_main.cpp").read_text()
