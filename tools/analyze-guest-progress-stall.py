@@ -160,8 +160,17 @@ def self_test() -> None:
     # Regress false positives: both media counters become flat AFTER the GPU
     # and guest also stop. A complete-session comparison previously called
     # this "compositor active" because of the earlier gameplay.
-    stopped_tail = "\\n".join([record(i, min(i, 9), min(i, 9),
-        1000 + 150 * min(i, 9)) for i in range(95)])
+    def paused(i: int) -> str:
+        # A 30-Hz compositor keeps reporting new frame callbacks, while
+        # independent GPU-draw and guest-IPC counters stop after window 9.
+        total = 1000 + 150 * i
+        work = 1000 + 150 * min(i, 9)
+        return (record(i, min(i, 9), min(i, 9), total)
+                .replace(f"draws={total*4} dispatch_calls={total*2}",
+                         f"draws={work*4} dispatch_calls={work*2}")
+                .replace(f"cpu_write_calls={total*4} ipc_calls={total*8}",
+                         f"cpu_write_calls={work*4} ipc_calls={work*8}"))
+    stopped_tail = "\n".join(paused(i) for i in range(95))
     stopped = analyze(stopped_tail)
     assert stopped["gpu_progress"] and stopped["guest_ipc_writes_progress"]
     assert not stopped["gpu_progress_in_last_plateau"]
