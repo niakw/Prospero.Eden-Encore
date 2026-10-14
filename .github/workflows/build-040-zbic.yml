@@ -358,7 +358,7 @@ jobs:
         if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
         run: make prepare JOBS=4
 
-      - name: Prepare local Switch case index
+      - name: Prepare local retail case index
         if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
         run: |
           set -euo pipefail
