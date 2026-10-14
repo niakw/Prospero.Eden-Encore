@@ -304,25 +304,35 @@ void main()
     }
     else if (shape == 11)
     {
-        // Only the molded opening LIP, along the physical RIGHT side of
-        // the shell. Projection moves it to screen-left on the rear view.
-        // All pixels away from that 12px strip are fully transparent: this
-        // does not reintroduce a second plastic face over the paper.
+        // One molded shell around the SAME paper, projected on its face.
+        // Only the 12px RIGHT opening, 13px TOP and 13px BOTTOM are lit.
+        // The rest is fully transparent, never a second overlay on the ink.
         float from_edge = (1.0 - v_st.x) * (v_half.x * 2.0);
+        float from_cap = min(v_st.y, 1.0 - v_st.y) * (v_half.y * 2.0);
         float bevel = 1.0 - smoothstep(8.0, 13.0, from_edge);
         float outer_glint = exp(-0.5 * pow((from_edge - 2.3) / 1.25, 2.0));
         float inner_ridge = exp(-0.5 * pow((from_edge - 9.0) / 1.55, 2.0));
         float grazing = 0.15 + 0.20 * pow(abs(sin(v_params.x)), 1.5);
-        // Low-contrast manufacturing grain and broad traveling reflection,
-        // confined strictly to the single plastic rim.
+        // A visible molded front/rear cap line even when the horizontal
+        // depth surface projects almost edge-on (especially at the bottom).
+        float cap_band = 1.0 - smoothstep(11.5, 13.2, from_cap);
+        float cap_outer = exp(-0.5 * pow((from_cap - 1.8) / 1.25, 2.0));
+        float cap_inner = exp(-0.5 * pow((from_cap - 11.5) / 1.6, 2.0));
+        float cap_sheen = 0.78 + 0.22 * cos(v_st.x * 5.8 + v_params.x);
+        float cap_intensity = (0.53 * cap_band + 0.30 * cap_outer +
+                               0.25 * cap_inner) * cap_sheen;
+        float rim_intensity = (0.27 + grazing) * bevel +
+                              0.44 * outer_glint + 0.22 * inner_ridge;
+        // Fine manufacturing grain on PLASTIC ONLY, never on the scan.
         float grain = 0.96 + 0.04 * sin(v_st.y * 670.0);
         float sheen = 0.5 + 0.5 * sin(v_st.y * 7.0 + v_params.x * 0.65);
-        float intensity = (0.27 + grazing) * bevel +
-                          0.44 * outer_glint + 0.22 * inner_ridge;
         vec3 material = mix(v_top.rgb, vec3(0.99, 0.995, 1.0),
                             0.29 + 0.19 * sheen);
-        color = vec4(material, v_top.a *
-                     clamp(intensity * grain, 0.0, 0.91));
+        float shell = 1.0 - smoothstep(-1.0, 1.0,
+                            round_box(v_local, v_half, 22.0));
+        color = vec4(material, v_top.a * shell *
+                     clamp(max(rim_intensity, cap_intensity) * grain,
+                           0.0, 0.96));
     }
     else if (shape == 8)
     {
