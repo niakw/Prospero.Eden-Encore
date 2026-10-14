@@ -30,8 +30,26 @@ def normalize(value):
     return "".join(out).strip()
 
 def rank(region):
-    return {"france": 6, "europe": 5, "world": 4, "united kingdom": 3,
-            "north america": 2, "united states": 2}.get(region.lower(), 1)
+    # User locale first; leave the rest as fallbacks, including a single
+    # foreign-region scan. A front and back are ranked independently.
+    return {"france": 7, "europe": 6, "world": 5,
+            "united kingdom": 4, "germany": 4, "belgium": 4,
+            "north america": 3, "united states": 3, "canada": 3,
+            "italy": 2, "spain": 2}.get(region.casefold().strip(), 1)
+
+def candidates(items, limit=6):
+    # Keep alternate images, do not collapse each side to one filename.
+    # A region-preferred first choice may only have a tiny CDN thumbnail,
+    # so the console is allowed to try the following candidate.
+    seen = set()
+    result = []
+    for _, filename in sorted(items, key=lambda item: (-item[0], item[1])):
+        if filename not in seen:
+            result.append(filename)
+            seen.add(filename)
+        if len(result) >= limit:
+            break
+    return ";".join(result) if result else "-"
 
 def parse(source):
     games, aliases, images = {}, {}, {}
@@ -69,16 +87,15 @@ def parse(source):
             key = normalize(label)
             if key:
                 names.setdefault(key, set()).add(gid)
-    lines = ["# Eden Encore Switch retail case index v1 (title, front, back)\n"]
+    lines = ["# Eden Encore retail case index v2 (title, front-candidates, back-candidates)\n"]
     for key, matching in sorted(names.items()):
         if len(matching) != 1:
             continue  # avoid colliding editions / ambiguous matching
         media = images[next(iter(matching))]
-        front = sorted(media.get("Box - Front", []), key=lambda item: (-item[0], item[1]))
-        back = sorted(media.get("Box - Back", []), key=lambda item: (-item[0], item[1]))
+        front = media.get("Box - Front", [])
+        back = media.get("Box - Back", [])
         if front or back:
-            lines.append(f"{key}\t{front[0][1] if front else '-'}\t"
-                         f"{back[0][1] if back else '-'}\n")
+            lines.append(f"{key}\t{candidates(front)}\t{candidates(back)}\n")
     return "".join(lines)
 
 def build(archive_path):
@@ -119,6 +136,9 @@ def self_test():
     assert "example voyage\t22222222" in result
     assert "\t33333333-3333-3333-3333-333333333333.jpg" in result
     assert "ambiguous\t" not in result and "44444444" not in result
+    assert candidates([(7, "f" * 36 + ".jpg"), (1, "0" * 36 + ".png")]).count(";") == 1
+    assert candidates([(1, "a" * 36 + ".jpg")]) == "a" * 36 + ".jpg"
+    assert rank("France") > rank("Europe") > rank("World") > rank("Japan")
     assert normalize("EA SPORTS FC 27!") == "ea sports fc 27"
     print("PASS Switch-only case index, FR region, real back and collision guards")
 
