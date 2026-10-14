@@ -48,7 +48,7 @@ draw = launcher.split("void Launcher::draw_launch(", 1)[1].split(
 for fragment in (
     "const std::string& scan = back ? launch_box_back_ : launch_box_front_;",
     "const Cover artwork = c.textures.cover(",
-    "c.list.case_face(artwork.texture, face, angle, back, kWhite);",
+    "c.list.case_face(artwork.texture, face, angle, back, kWhite, paper_uv);",
     "c.list.case_spine(side_strip, angle, case_depth - 6.0f,",
     "c.list.case_plastic(physical, angle, back,",
     "launch_screenshots_.front()",
@@ -66,9 +66,14 @@ assert "constexpr float kCaseTurnSeconds = 1.30f;" in theme
 assert "constexpr float kLaunchSeconds = kCaseFrontHold" in theme
 
 # Quarter turn becomes an edge; the full back is visible half a turn later.
-assert math.cos(0.23) > 0
-assert math.cos(0.23 + math.pi) < 0
-assert math.cos(0.23 + 2.0 * math.pi) > 0
+assert math.cos(0.40) > 0 and math.sin(0.40) > 0
+assert math.cos(math.pi + 0.57) < 0 and math.sin(math.pi + 0.57) < 0
+assert math.cos(2.0 * math.pi + 0.40) > 0
+assert "const float return_start = back_start + theme::kCaseBackHold;" in draw
+assert "constexpr float kFrontYaw = 0.40f;" in draw
+assert "constexpr float kBackYaw = 3.14159265358979323846f + 0.57f;" in draw
+assert "case_depth, 3.2f" not in draw
+assert "0.63f), 1.0f, -1);" in draw
 indexer = (root / "tools/launcher/build-box-art-index.py").read_text()
 workflow = (root / ".github/workflows/build-040-zbic.yml").read_text()
 packager = (root / "tools/package-headless-native.sh").read_text()
@@ -131,6 +136,13 @@ assert "printed_side_visible" in draw
 assert "c.list.case_spine_image(ink.texture, side_strip, angle," in draw
 assert "True rounded corner" in shader
 assert "float radius = v_params.z > 0.5 ? 18.0 : 22.0;" in shader
+assert "float scan_inside = v_params.z > 0.5 ?" in shader
+assert "paper_uv.h = source_aspect / target_aspect;" in draw
+assert "paper_uv.w = target_aspect / source_aspect;" in draw
+assert "w < (narrow_spine ? 64 : 128)" in native
+assert "h < (narrow_spine ? 600 : 200)" in native
+assert "c.list.case_spine(side_strip, angle, 3.2f," in draw
+assert "Color::rgb(0xfcfaf9, 0.76f)" in draw
 assert "const Rect face{physical.x + 3.0f, physical.y + 3.0f," in draw
 assert "float rounded = round_box(v_local, v_half, 22.0);" in shader
 assert "angle, false, case_depth," in draw
