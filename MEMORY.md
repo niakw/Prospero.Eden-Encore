@@ -6,6 +6,15 @@
 
 ## Latest verified status — 14 October 2026 (pre-test source audit)
 
+### Pre-test diagnostics and FPS policy (14 October, follow-up)
+
+- The **visible FPS overlay defaults OFF** in both runtime preference models, and the persisted override remains user-owned; `tools/check-encore-ux.py` asserts the fresh-install/default and saved-setting contracts.
+- Opt-in network audit now records `epoch`, `utc=YYYY-MM-DDTHH:MM:SS.mmmZ`, and `mono_ns` for each stored event and every grouped DNS-denied summary; summary `count` describes events skipped but does **not** timestamp them separately.
+- Legacy audit compatibility tested against `network-accepted(6).log`: **3,624/3,624 valid rows**, **1,291** historical summaries previously misclassified as malformed, representing **17,564** bundled denial attempts. No DNS block/allow behavior or traffic payload handling changed.
+- Each title session records a source-SHA and UTC↔monotonic `EDEN_TIME_ANCHOR`, and each five-second detailed GPU diagnostic window refreshes the anchor. Routine third-party driver log lines are **not** all individually clock-stamped; claims of universal per-line timestamps would be inaccurate. This avoids syscall/format overhead per draw and preserves bounded asynchronous sink behavior.
+- Re-run source preflight **and native All-On package** on a single SHA after the new audit changes before inviting the next hardware test. Neither source tests nor the new log timestamps establish FC27 frame pacing or end-of-match stability. See `docs/PRETEST_AUDIT_2026-10-14.md`.
+
+
 - **Only active remote branch:** `dev/ps5-sparse-jit` (verified via GitHub branches API). The historical release branch mentioned below is no longer a remote branch; all historical sections are retained for audit only. The local Mac worktree was **not** inspected in this pass.
 - **Latest qualified native test package:** Actions [38587429272](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38587429272), SHA `b5f0301a31cef17f70a8c4e19484d2fb638daa17`, success; package ZIP and debug-symbol artifact uploaded and archive layout rechecked. **Not** the current branch tip after new UI/diagnostic commits.
 - **Source preflight:** [38587774361](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38587774361) succeeded on `4e4a3cd2`; new changes need separate gates before their next test package.
