@@ -24,13 +24,42 @@ static unsigned audit_line_count;
 static atomic_uint_fast64_t denied_epoch_hash = ATOMIC_VAR_INIT(0);
 static atomic_ullong denied_suppressed = ATOMIC_VAR_INIT(0);
 
+// Only on the optional audit writer. Existing Unix epoch stays for backwards
+// compatibility; UTC is human-readable and mono_ns correlates with native
+// CPU/GPU clocks. Never read either clock when Detailed Logging is OFF.
+static void audit_timestamp(char utc[32], long long* epoch, long long* mono_ns) {
+    struct timespec real = {0, 0};
+    struct timespec mono = {0, 0};
+    if (clock_gettime(CLOCK_REALTIME, &real) != 0)
+        real.tv_sec = time(NULL);
+    const int monotonic_ok = clock_gettime(CLOCK_MONOTONIC, &mono) == 0;
+    *epoch = (long long)real.tv_sec;
+    *mono_ns = monotonic_ok ?
+        (long long)mono.tv_sec * 1000000000LL + (long long)mono.tv_nsec : -1LL;
+    struct tm converted = {0};
+    if (gmtime_r(&real.tv_sec, &converted)) {
+        (void)snprintf(utc, 32, "%04d-%02d-%02dT%02d:%02d:%02d.%03ldZ",
+            converted.tm_year + 1900, converted.tm_mon + 1, converted.tm_mday,
+            converted.tm_hour, converted.tm_min, converted.tm_sec,
+            real.tv_nsec / 1000000L);
+    } else {
+        (void)snprintf(utc, 32, "unknown");
+    }
+}
+
+
 static void flush_denied_summary_locked(void) {
     const unsigned long long skipped = atomic_exchange_explicit(
         &denied_suppressed, 0, memory_order_relaxed);
     if (!audit_file || !skipped) return;
+    char utc[32];
+    long long epoch = 0, mono_ns = -1;
+    audit_timestamp(utc, &epoch, &mono_ns);
+    // A summary records the time it was flushed, NOT a fabricated original
+    // timestamp for each suppressed denial. Keep the same schema as events.
     const int count = fprintf(audit_file,
-        "epoch=%lld scope=guest event=dns-denied-summary target=aggregated count=%llu\n",
-        (long long)time(NULL), skipped);
+        "epoch=%lld utc=%s mono_ns=%lld scope=guest event=dns-denied-summary target=aggregated bytes=0 status=0 count=%llu\n",
+        epoch, utc, mono_ns, skipped);
     if (count > 0) audit_bytes += (unsigned)count;
 }
 
@@ -136,10 +165,12 @@ void eden_network_audit_event(const char* scope, const char* event,
         safe_token(scope,sc,sizeof(sc));
         safe_token(event,kind,sizeof(kind));
         safe_token(target,dst,sizeof(dst));
-        const time_t now=time(NULL);
+        char utc[32];
+        long long epoch = 0, mono_ns = -1;
+        audit_timestamp(utc, &epoch, &mono_ns);
         const int count=fprintf(audit_file,
-            "epoch=%lld scope=%s event=%s target=%s bytes=%llu status=%d\n",
-            (long long)now,sc,kind,dst,bytes,status);
+            "epoch=%lld utc=%s mono_ns=%lld scope=%s event=%s target=%s bytes=%llu status=%d\n",
+            epoch,utc,mono_ns,sc,kind,dst,bytes,status);
         if (count > 0) audit_bytes+=(unsigned)count;
         if (++audit_line_count >= 64) {
             // Buffer output: periodic fflush for forensic usefulness; no
