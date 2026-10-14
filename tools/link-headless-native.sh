@@ -53,7 +53,7 @@ link_native() {
         "$sdk/target/lib/libc.a" "$sdk/target/lib/libSceNet.so"
 }
 
-# No -z nodynamic-undefined-weak: native pros﻿pero-lld rejects this unknown option.
+# No -z nodynamic-undefined-weak: the native linker ignores this unknown option.
 # The two-link pass below explicitly resolves any remaining weak symbol to 0
 # and verifies no weak imports survive; the unsupported flag never protected us.
 # First pass: let every real static/system provider resolve what it can.
