@@ -83,7 +83,11 @@ assert "library_genres(game->categories)" in library
 assert 'tr("Down: view back cover")' in library
 assert 'tr("Enlarge cover")' in library
 assert "flat_retail_sleeve(c, *game, art, true, 0.60f);" in library
-assert "flat_retail_sleeve(c, *game, enlarged, true, 0.92f);" in library
+assert "flat_retail_sleeve(c, *game, enlarged, true, 0.92f," in library
+assert "library_back_scale_);" in library
+assert "std::max(paper.w, paper.h) * texture_scale" in library
+assert "fitted.x += rear ? paper.w - fitted.w : 0.0f;" in library
+assert "paper_uv.x = back ? 1.0f - paper_uv.w : 0.0f;" in draw
 assert "flat_retail_sleeve(c, game, sleeve, false, 0.24f);" in library
 assert "const Rect paper{shell.x + (rear ? side : 0.0f), shell.y + top," in library
 assert "flat_back_fallback(c, game, paper);" in library
