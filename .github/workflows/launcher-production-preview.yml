@@ -65,6 +65,14 @@ jobs:
           receipts = (path / "source-receipts.txt").read_text()
           assert len(receipts.splitlines()) in (3, 4) and "botw-front.tga" in receipts
           assert "botw-back.tga" in receipts and "botw-hero.tga" in receipts
+          # The physical front MUST be European, never a higher-resolution
+          # North American image silently promoted over the selected region.
+          front_receipt = next(line for line in receipts.splitlines()
+                               if line.startswith("botw-front.tga\\t"))
+          eu_fronts = ("9524e5f7-ccc8-4ce6-a581-03f82c51825e.jpg",
+                       "a8bcb4cc-a3b0-4cf0-82f3-cb10dd18b27c.jpg")
+          assert any(id in front_receipt for id in eu_fronts), front_receipt
+          assert "BotW_NA_Switch_Box_Art" not in receipts
           # Official spine may be unavailable in native resolution: then
           # the game uses the clean red title-free empty-side fallback.
           with Image.open(screenshots[0]) as front, Image.open(screenshots[2]) as back:
@@ -136,7 +144,10 @@ jobs:
           from PIL import Image, ImageChops, ImageStat
           folder = Path("build/launch-case-library")
           expected = ["00-library-front-shelf.png", "01-library-back-focus.png",
-                      "02-library-back-zoom.png", "03-library-back-closed.png"]
+                      "02-library-back-zoom.png", "03-library-back-zoom-pan.png",
+                      "04-library-back-zoom-out.png",
+                      "05-library-back-cross-ignored.png",
+                      "06-library-back-closed.png"]
           files = sorted(folder.glob("*.png"))
           assert [f.name for f in files] == expected, files
           for image_file in files:
@@ -158,7 +169,19 @@ jobs:
               assert front_detail > 45, ("blank original front", front_detail)
               assert back_detail > 45, ("blank expanded original back", back_detail)
               print("retail pixels", front_detail, back_detail)
-          print("ENCORE_LIBRARY_FLAT_JACKETS_AND_REAR_ZOOM: PASS")
+          # Stronger than a source token check: actually render the enlarged
+          # print and show movement from D-pad, zoom-out, and ignored Cross.
+          with Image.open(files[2]) as baseline, Image.open(files[3]) as moved, \\
+               Image.open(files[4]) as reduced, Image.open(files[5]) as ignored:
+              crop = (760, 270, 1150, 690)
+              def diff(a, b):
+                  return max(ImageStat.Stat(ImageChops.difference(
+                      a.convert("RGB").crop(crop),
+                      b.convert("RGB").crop(crop))).mean)
+              assert diff(baseline, moved) > 10, "R2 zoom / D-pad pan inactive"
+              assert diff(moved, reduced) > 8, "L2 zoom-out inactive"
+              assert diff(reduced, ignored) < 8, "Cross closed/changed the viewer"
+          print("ENCORE_LIBRARY_FLAT_JACKETS_ZOOM_PAN_CIRCLE_ONLY: PASS")
           PY
 
       - name: Export full-resolution production-render evidence
