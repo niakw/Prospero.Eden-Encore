@@ -775,13 +775,17 @@ void Launcher::draw_launch(Canvas &c)
     const Rect physical{374.0f, 126.0f, 454.0f, 730.0f};
     const float width = physical.w * std::abs(facing) +
                         case_depth * std::abs(std::sin(angle));
-    // One continuous RECTANGULAR paper wrap: the front, printed spine,
-    // and back touch precisely at the same physical case-side vertices.
-    // Only the transparent CASE, never the PAPER, has rounded corners.
-    // Plastic upper/lower lips remain 13px beyond the paper on all sides.
+    // The case shell is wider than its continuous rectangular paper wrap:
+    // the LEFT and RIGHT 7px are molded clear-plastic lips, not blank
+    // gaps BETWEEN the three printed surfaces. Front, printed spine and
+    // back have identical paper coordinates and share the very same folds.
+    // Only the plastic gets rounded corners. Paper corners stay square.
+    constexpr float kPaperSideInset = 7.0f;
     constexpr float kPaperTopInset = 13.0f;
-    const Rect face{physical.x, physical.y + kPaperTopInset,
-                    physical.w, physical.h - 2.0f * kPaperTopInset};
+    const Rect face{physical.x + kPaperSideInset,
+                    physical.y + kPaperTopInset,
+                    physical.w - 2.0f * kPaperSideInset,
+                    physical.h - 2.0f * kPaperTopInset};
     const float mid_x = physical.x + physical.w * 0.5f;
     c.list.shadow({mid_x - width * 0.5f - 72.0f, physical.y - 8.0f,
                    width + 144.0f, physical.h + 34.0f}, 35.0f, 105.0f,
@@ -853,8 +857,10 @@ void Launcher::draw_launch(Canvas &c)
     // The flat spine printing follows the SAME vertical paper limits as the
     // two faces: all three share a 704px paper height inside the 730px shell.
     // Only the translucent molded caps/rounded corners extend beyond it.
-    const Rect side_strip{physical.x, physical.y + kPaperTopInset, physical.w,
-                          physical.h - 2.0f * kPaperTopInset};
+    // Critical seam invariant: print side plane and both face planes share
+    // precisely the same X boundaries; a transparent plastic margin exists
+    // OUTSIDE these boundaries, never in between paper and paper.
+    const Rect side_strip = face;
     const bool printed_side_visible = std::sin(angle) >= 0.0f;
     if (printed_side_visible) {
         const Cover ink = c.textures.cover(launch_box_spine_, 760.0f);
