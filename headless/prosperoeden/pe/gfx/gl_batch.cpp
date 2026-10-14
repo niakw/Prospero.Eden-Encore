@@ -212,7 +212,7 @@ void main()
         // Flat printed art goes behind the molded shell. The molded outer
         // panel itself has a 31px corner; the paper inset a smaller 10px
         // radius, leaving an uninterrupted rim even at oblique angles.
-        float radius = v_params.z > 0.5 ? 10.0 : 30.0;
+        float radius = v_params.z > 0.5 ? 8.0 : 22.0;
         float d = round_box(v_local, v_half, radius);
         color = v_params.z > 0.5 ? texture(u_texture, v_uv) * v_top : v_top;
         color.a *= 1.0 - smoothstep(-1.0, 1.0, d);
@@ -279,10 +279,10 @@ void main()
         // Every point shares the EXACT projective pivot of case_face().
         vec2 pixel_from_edge = min(v_st, 1.0 - v_st) * (v_half * 2.0);
         float nearest = min(pixel_from_edge.x, pixel_from_edge.y);
-        float outer = 1.0 - smoothstep(5.0, 22.0, nearest);
-        float inner_bevel = (smoothstep(7.0, 12.0, nearest) -
-                             smoothstep(19.0, 26.0, nearest));
-        float outer_bevel = 1.0 - smoothstep(0.0, 5.0, nearest);
+        float outer = 1.0 - smoothstep(3.0, 13.0, nearest);
+        float inner_bevel = (smoothstep(5.0, 8.0, nearest) -
+                             smoothstep(12.0, 17.0, nearest));
+        float outer_bevel = 1.0 - smoothstep(0.0, 3.0, nearest);
         float top_edge = exp(-46.0 * v_st.y);
         float side_edge = exp(-65.0 * v_st.x);
         float seam_right = exp(-85.0 * (1.0 - v_st.x));
@@ -291,11 +291,11 @@ void main()
         float fresnel = pow(1.0 - abs(cos(v_params.x)), 3.0);
         float glint = 0.10 * exp(-170.0 *
             pow(v_st.x - (0.36 + 0.23 * sin(v_params.x)), 2.0));
-        float brightness = clamp(outer * (0.58 + 0.25 * fresnel) +
-            inner_bevel * 0.20 + outer_bevel * 0.34 +
+        float brightness = clamp(outer * (0.42 + 0.30 * fresnel) +
+            inner_bevel * 0.13 + outer_bevel * 0.24 +
             top_edge * 0.12 + side_edge * 0.08 + seam_right * 0.11 +
             glint * (0.38 + fresnel), 0.0, 1.0);
-        float rounded = round_box(v_local, v_half, 30.0);
+        float rounded = round_box(v_local, v_half, 22.0);
         float silhouette = 1.0 - smoothstep(-1.2, 1.2, rounded);
         vec3 sheen = mix(v_top.rgb, vec3(0.98, 0.99, 1.0),
                          0.42 + 0.16 * fresnel);
