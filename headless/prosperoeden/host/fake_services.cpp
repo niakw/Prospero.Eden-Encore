@@ -285,7 +285,7 @@ FakeServices::FakeServices(const std::string &covers_directory)
     }
     std::sort(games_.begin(), games_.end(),
               [](const ui::Game &a, const ui::Game &b) { return a.name < b.name; });
-    for (const ui::Game& game : games_) {
+    for (ui::Game& game : games_) {
         if (game.name == (preview_botw_ ?
                          "The Legend of Zelda: Breath of the Wild" :
                          "Echoes of the Valley")) {
@@ -299,6 +299,10 @@ FakeServices::FakeServices(const std::string &covers_directory)
                 sample_case_back_ = covers_directory + "/fixture-case-back.tga";
                 if (!write_case_fixture(sample_case_front_, false)) sample_case_front_.clear();
                 if (!write_case_fixture(sample_case_back_, true)) sample_case_back_.clear();
+            }
+            if (enable_sample_case_) {
+                game.box_front = sample_case_front_;
+                game.box_back = sample_case_back_;
             }
             break;
         }
