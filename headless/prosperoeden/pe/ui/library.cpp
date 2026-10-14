@@ -1305,7 +1305,7 @@ void Launcher::draw_library(Canvas &c)
         }
         static constexpr Hint kZoomHints[] = {
             {Pad::circle, TR("Close")}, {Pad::l2, TR("Zoom out")},
-            {Pad::r2, TR("Zoom in")}, {Pad::updown, TR("Move cover")}};
+            {Pad::r2, TR("Zoom in")}, {Pad::dpad, TR("Move cover")}};
         draw_footer(c, kZoomHints, 4);
     } else if (library_back_focused_) {
         static constexpr Hint kBackHints[] = {{Pad::cross, TR("Enlarge cover")},
