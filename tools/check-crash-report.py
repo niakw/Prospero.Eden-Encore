@@ -212,9 +212,22 @@ def build(work, name, flags):
     source = work / 'crash-check.cpp'
     source.write_text(PROGRAM)
     binary = work / name
+    # PS5_NATIVE also includes performance.h, whose production wall-clock
+    # header lives in the pinned core. Stub only that header in this isolated
+    # host harness, as check-game-liveness.py does; never alter production timing.
+    if '-DPS5_NATIVE' in flags:
+        clock = work / 'common' / 'cpu_features.h'
+        clock.parent.mkdir(parents=True, exist_ok=True)
+        clock.write_text(
+            "#pragma once\\n#include <chrono>\\n"
+            "namespace Common {\\n"
+            "struct HostTestClock { std::chrono::nanoseconds GetTimeNS() const { return {}; } };\\n"
+            "inline HostTestClock g_wall_clock{};\\n"
+            "}\\n")
     # The app's linker script names the code's bounds; the host's linker takes it as an input.
     subprocess.run(['clang++-18', '-std=c++20', '-O2', '-g', '-pthread', '-Wall', '-Wextra', '-Werror',
-                    '-Wno-unused-parameter', '-fno-rtti', '-fuse-ld=lld', *flags, '-I', str(root / 'headless'),
+                    '-Wno-unused-parameter', '-fno-rtti', '-fuse-ld=lld', *flags, '-I', str(work),
+                    '-I', str(root / 'headless'),
                     str(source), str(root / 'headless/crash_report.cpp'), str(root / 'tools/unwind.ld'),
                     '-o', str(binary)], check=True)
     return binary
