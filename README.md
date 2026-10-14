@@ -5,7 +5,7 @@
 
   <h3>Console-native emulation, made for the living room.</h3>
 
-  **A maintained, controller-first continuation of ProsperoEden — focused on firmware 13.60, safer startup, modern game loading, TV navigation and reproducible native builds.**
+  <p><strong>A maintained, controller-first continuation of ProsperoEden — focused on firmware 13.60, safer startup, modern game loading, TV navigation and reproducible native builds.</strong></p>
 
   <p><strong>English</strong> · <a href="README.fr.md">Français</a></p>
   <p><kbd>Firmware 13.60 · hardware-tested target</kbd> <kbd>Vulkan + OpenGL</kbd> <kbd>TV-first UI</kbd> <kbd>Dynarmic</kbd></p>
