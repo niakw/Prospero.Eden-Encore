@@ -45,9 +45,13 @@ namespace Common {
 struct Clock {
     std::atomic<unsigned long long> reads{};
     std::chrono::nanoseconds GetTimeNS() noexcept {
-        reads.fetch_add(1, std::memory_order_relaxed);
-        return std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::steady_clock::now().time_since_epoch());
+        // Publish a read only AFTER capturing the blocked-start timestamp.
+        // The harness can then wait until a worker is definitely timing its lock wait.
+        const auto started = std::chrono::steady_clock::now();
+        const auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+            started.time_since_epoch());
+        reads.fetch_add(1, std::memory_order_release);
+        return ns;
     }
 };
 inline Clock g_wall_clock;
@@ -75,17 +79,24 @@ int main() {
     assert(Common::g_wall_clock.reads.load()==0);
     detailed_gpu_profile.store(true);
     auto exercise=[](std::mutex& m,bool texture) {
-        std::atomic<bool> started{false};
+        // A thread-start signal does NOT mean GuestCacheLock has reached its
+        // timed blocking path. Slow CI runners could resume it only after
+        // unlocking and spuriously report a wait shorter than 10 ms.
+        const auto initial_reads=Common::g_wall_clock.reads.load(std::memory_order_acquire);
         m.lock();
         std::thread worker([&] {
-            started.store(true,std::memory_order_release);
             GuestCacheLock(m,texture);
             std::lock_guard unlock{m,std::adopt_lock};
         });
-        while (!started.load(std::memory_order_acquire)) std::this_thread::yield();
-        std::this_thread::sleep_for(std::chrono::milliseconds(15));
+        const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(2);
+        while (Common::g_wall_clock.reads.load(std::memory_order_acquire)==initial_reads &&
+               std::chrono::steady_clock::now()<deadline) std::this_thread::yield();
+        const bool timing_started=
+            Common::g_wall_clock.reads.load(std::memory_order_acquire)>initial_reads;
+        if (timing_started) std::this_thread::sleep_for(std::chrono::milliseconds(15));
         m.unlock();
         worker.join();
+        assert(timing_started);
     };
     exercise(buffer_mutex,false);
     assert(guest_cache_domain_totals[0].contended.load()==1);
