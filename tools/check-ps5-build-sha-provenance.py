@@ -18,6 +18,10 @@ assert cmake.count('set_property(SOURCE "${EDEN_PORT_DIR}/main.cpp" APPEND PROPE
 assert 'Eden::BootTrace::Line("source_sha=%s", EDEN_NATIVE_SOURCE_COMMIT);' in main
 assert 'Eden::BootTrace::Line("source_sha=unknown");' in main
 assert 'std::printf("EDEN_BUILD_SOURCE source_sha=%s\\n", EDEN_NATIVE_SOURCE_COMMIT);' in main
+assert 'std::printf("EDEN_SESSION_SOURCE source_sha=%s\\n", EDEN_NATIVE_SOURCE_COMMIT);' in main
+assert main.index('passed("session_start");') < main.index('std::printf("EDEN_SESSION_SOURCE')
+assert 'if (Eden::NativeLogs::Detailed()) {' in main
+
 assert 'if (persist_detailed_logs)' in main
 assert main.index('BootTrace::Begin(') < main.index('BootTrace::Line("source_sha=%s"')
 assert 'Eden::BootTrace::Begin(Eden::kAppVersion, __DATE__ " " __TIME__);' in main
