@@ -711,6 +711,26 @@ void Launcher::draw_launch(Canvas &c)
                          theme::kBase.with_alpha(0.65f));
 
     c.list.push_opacity(appear * leave);
+
+    // Low-cost elliptical light trails behind the case, drawn with the
+    // launcher's own line primitives (no extra textures or shaders). Their
+    // glow stays off the text column and does not tint the printed covers.
+    constexpr float pi = 3.14159265358979323846f;
+    for (int i = 0; i < 72; ++i) {
+        const float a = static_cast<float>(i) * (2.0f * pi / 72.0f);
+        const float b = static_cast<float>(i + 1) * (2.0f * pi / 72.0f);
+        const float drift = motion() > 0.0f ? t * 0.45f : 0.0f;
+        const float brightness = 0.16f + 0.26f *
+            (0.5f + 0.5f * std::sin(a * 2.0f - c.time * 1.6f));
+        c.list.line(512.0f + 454.0f * std::cos(a + drift),
+                    526.0f + 117.0f * std::sin(a + drift),
+                    512.0f + 454.0f * std::cos(b + drift),
+                    526.0f + 117.0f * std::sin(b + drift),
+                    2.3f, theme::kLime.with_alpha(brightness));
+    }
+    c.list.shadow({194.0f, 796.0f, 795.0f, 80.0f}, 42.0f, 94.0f,
+                  theme::kSun.with_alpha(0.18f));
+
     const float angle = motion() > 0.0f ? 0.10f + 6.18f * t : 0.10f;
     const float facing = std::cos(angle);
     const float width_factor = std::max(0.075f, std::abs(facing));
