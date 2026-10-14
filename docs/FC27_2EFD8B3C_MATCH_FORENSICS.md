@@ -208,3 +208,40 @@ witness only emits when the game requests that service; absence of its log
 is not proof of an old game update. No game save or title-specific input
 preset was edited. A real match and end-of-match progress test is
 deferred to the console owner; the native CI is not an FC27 gameplay test.
+
+## Post-replay qualification: contemporaneous progress and buffer witness (14 October)
+
+The two provided rotated heap captures must not be mixed into one continuous
+run. In the **long** capture, the last reported media/storage service calls
+stay flat for roughly 16 minutes while the most recent ten sampled windows
+continue to advance actual GPU draw/dispatch counts and guest IPC/write
+counts. This is still a **candidate** application-progression stall: there
+is no scene pixel hash, confirmed guest PC of the stalled thread, or IPC
+wait ownership stack.
+
+The original offline analyzer compared GPU/guest counters from the first to
+last window of the *entire run*. This could falsely call a session active
+even if both stopped during the later media plateau. The updated analyzer
+now requires an overlapping audio/storage plateau of sufficient duration
+and non-regressing actual work counters in its last ten sampled windows.
+A synthetic regression keeps compositor frame totals advancing while guest
+writes and GPU draws are frozen, and must **not** be classified active.
+
+The shorter capture terminates following an unmapped guest jump from
+\`MuseLogicThread_match\`. Neither capture contains
+\`EDEN_JIT_SPARSE_OOM\` or \`EDEN_JIT_SPARSE_MAP_FAILED\`. This rules out only
+those explicitly logged allocation-failure paths, **not** JIT correctness or
+a stale guest call target. Recent source-side fault-PC capture is not present
+in the tested \`2efd8b3c\` package.
+
+**Targeted runtime change**: \`BufferPages::Mark\` still performs a release
+atomic \`fetch_or\` for every newly seen/partially seen page word, preserving
+concurrent registration and the never-clear safety rule, but skips redundant
+RMW updates once all required bits were already published. The host contract
+adds repeated and overlapping concurrent registration cases. This is an
+optimization of unnecessary atomic traffic, **not** a claim that cache-lock
+contention, the end-of-match stall, HUD freshness or texture faults are fixed.
+
+Required before another device test: full source preflight, native build and
+artifact integrity, then explicit comparison of gameplay progress and long
+frame tails; do not use green CI or a 30 FPS average as the gameplay gate.
