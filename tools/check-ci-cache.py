@@ -60,8 +60,8 @@ assert build.index('tools/check-native-source-syntax.py') < build.index('cmake -
 # The R422 all-on compile reached a potentially lengthy cache upload BEFORE
 # GitHub saved the usable PS5 zip. Never sacrifice a successful build artifact
 # to optional cache persistence: publish and verify first, cache last.
-assert workflow.index("Upload checked all-on PS5 test app") < workflow.index("Save build caches after verified artifact uploads")
-assert workflow.index("Upload unstripped PS5 All-On crash symbols") < workflow.index("Save build caches after verified artifact uploads")
+assert workflow.index("Upload validated native development package") < workflow.index("Save build caches after verified artifact uploads")
+assert workflow.index("Upload native development debug symbols") < workflow.index("Save build caches after verified artifact uploads")
 assert workflow.index("Upload compiled release bundle") < workflow.index("Save build caches after verified artifact uploads")
 cache_block = workflow.split("      - name: Save build caches after verified artifact uploads", 1)[1].split("  release:", 1)[0]
 assert "continue-on-error: true" in cache_block, "optional cache write must not fail artifact delivery"
