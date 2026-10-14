@@ -8,6 +8,13 @@ root = Path(__file__).resolve().parents[1]
 scratch = Path((root / '.local/headless-cache').read_text().strip())
 code = (scratch / 'native-local/headless/block_of_code.cpp').read_text()
 assert ', EdenJitAllocator())' in code
+# The reduced host-allocation footprint must never be confused with a
+# production cache-size change. Those remain independently constrained by
+# the runtime's A64/A32 admission policy.
+policy = (root / 'headless/experimental_performance.h').read_text()
+assert '256u*kMiB, 192u*kMiB, 192u*kMiB, 16u*kMiB' in policy
+assert '512u*kMiB, 64u*kMiB, 64u*kMiB, 16u*kMiB' in policy
+assert 'kSingleArenaAddressingLimit = 1536u * kMiB' in policy
 if sys.platform == 'darwin':
     # The runtime harness below is Linux/x86 specific: memfd aliases, mincore
     # semantics, GNU ld --wrap and generated x86 execution. The injected
