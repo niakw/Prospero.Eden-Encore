@@ -156,9 +156,11 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
     const float side = std::max(4.0f, shell.w * 0.022f);
     const float top = std::max(5.0f, shell.h * 0.018f);
     const float radius = std::max(5.0f, shell.w * 0.028f);
-    // Same single square-corner paper profile as the 3D loader:
-    // both covers fill the width and meet the physical spine edge.
-    const Rect paper{shell.x, shell.y + top, shell.w, shell.h - 2.0f * top};
+    // One square-corner paper jacket INSIDE the transparent shell. The
+    // plastic extends beyond the paper to LEFT/RIGHT and top/bottom, but
+    // does not interrupt the paper-to-spine fold in the rotating loader.
+    const Rect paper{shell.x + side, shell.y + top,
+                     shell.w - 2.0f * side, shell.h - 2.0f * top};
     // The whole sleeve is translucent, so the Library wallpaper subtly
     // shows through the edges, not through the opaque printed paper.
     if (shadow > 0.0f)
@@ -192,9 +194,14 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
                            shell.h - 2.0f * top}, radius * 0.3f,
                           Color::rgb(0xf3faff, rear ? 0.47f : 0.21f),
                           Color::rgb(0x98acc4, 0.17f));
-    // No 'opposite' side strip or outer four-sided white border:
-    // a continuous paper wrap cannot have a second rounded border at
-    // the front/spine or spine/back junction.
+    // Both OUTER edges of the transparent shell remain visible around
+    // the paper, without another white frame painted on the artwork.
+    const float other_x = rear ? shell.x + shell.w - side : shell.x;
+    c.list.hgradient_rect({other_x, shell.y + top, side,
+                           shell.h - 2.0f * top}, 0.0f,
+                          Color::rgb(0xd8e7f6, 0.23f),
+                          Color::rgb(0xa6b9cb, 0.13f));
+    // Paper retains square corners. Only shell geometry may be rounded.
 }
 
 std::string controller_profile_name(int layout, const ButtonMapping& mapping)
