@@ -57,10 +57,19 @@ extern "C" int sceKernelMapDirectMemory(void** out, size_t size, int prot, int,
     const auto offset=physical & 0xffffffff;
     assert(!(prot&PROT_EXEC) && (!offset || enabled));
     assert(reinterpret_cast<uintptr_t>(*out)==0x1000000000ull);
+    // Linux normally places anonymous/shared mappings far above the native
+    // 0x3...0x40 CPU VA window. Exercise the PS5 mapping contract with a
+    // collision-checked address *inside* that window, not a random host VA.
+    // Retain the deliberate out-of-window success in fault stage 5.
+    static uintptr_t next_safe_va=0x1000000000ull;
     const bool low = fail_stage==5 && stage==2;
-    *out=mmap(low ? reinterpret_cast<void*>(0x280000000ull) : nullptr,size,prot,
-              MAP_SHARED | (low ? MAP_FIXED_NOREPLACE : 0),physical>>32,offset);
-    assert(*out!=MAP_FAILED); views.push_back(*out); return 0;
+    const uintptr_t address = low ? 0x280000000ull : next_safe_va;
+    if (!low) next_safe_va += ((size + 0x1fffff) & ~size_t(0x1fffff)) + 0x200000;
+    *out=mmap(reinterpret_cast<void*>(address),size,prot,
+              MAP_SHARED | MAP_FIXED_NOREPLACE,physical>>32,offset);
+    assert(*out!=MAP_FAILED);
+    assert(reinterpret_cast<uintptr_t>(*out)==address);
+    views.push_back(*out); return 0;
 }
 extern "C" int __real_mprotect(void*,size_t,int);
 extern "C" int __wrap_mprotect(void* p,size_t size,int prot) {
