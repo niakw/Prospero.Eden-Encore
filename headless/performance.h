@@ -349,6 +349,7 @@ inline void FinishGuestIpc(GuestIpcThread* row, unsigned long long tid,
             expected, 0, std::memory_order_release, std::memory_order_relaxed);
     }
 }
+void RecordHle(const char* service, unsigned command, long long ns);
 // kspin=N: bounded host mutex acquisition used for guest scheduler locks.
 inline std::atomic<unsigned> kernel_spin_iterations{4000};
 template <typename Mutex>
@@ -360,7 +361,7 @@ inline void SpinAcquire(Mutex& mutex) {
     }
     mutex.lock();
 }
-void RecordHle(const char* service, unsigned command, long long ns);
+
 inline long long NowNs() { return Common::g_wall_clock.GetTimeNS().count(); }
 // Texture cache garbage collection (tools/prepare-vulkan-port.py, vulkan_gc_downloads.inc).
 // Past its "expected" memory use Eden's collector also evicts images the GPU wrote, and each of
