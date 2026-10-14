@@ -20,6 +20,10 @@ assert 'if (polls % 1250 == 0) Performance::ReportInputThreadGpuLiveness();' in 
 assert source.index('if (polls % 1250 == 0) Performance::ReportInputThreadGpuLiveness();') < source.index('if (NativeLogs::Detailed() && polls % 1250 == 0)')
 assert source.count('EDEN_PAD_HEARTBEAT polls=') == 1
 assert 'last_read=%d' in source and 'square=%llu triangle=%llu' in source
+assert '"epoch_ms=%lld mono_ns=%lld\\n"' in source
+assert source.count('clock_gettime(') == 2
+assert source.index('const int utc_rc = clock_gettime(') > source.index('if (NativeLogs::Detailed() && polls % 1250 == 0)')
+assert 'epoch_ms, mono_ns);' in source
 assert 'ActiveMapping()[game_x], ActiveMapping()[game_y]' in source
 assert 'std::fflush(stderr)' not in source
 assert 'EDEN_PAD_INPUT mode=%s' in main and 'pad->Poll();' in main

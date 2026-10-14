@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <numbers>
 #include <stdexcept>
+#include <time.h>
 #include "common/input.h"
 #include "common/logging.h"
 #include "input_common/input_poller.h"
@@ -297,10 +298,20 @@ bool Pad::Poll() {
     // No locks, per-frame probes, or logging unless its report has stalled.
     if (polls % 1250 == 0) Performance::ReportInputThreadGpuLiveness();
     if (NativeLogs::Detailed() && polls % 1250 == 0) {
+        // One timestamp pair per heartbeat, never on the 4ms pad hot path.
+        // The two logs share this clock anchor for frame/pad correlation.
+        timespec utc{}, monotonic{};
+        const int utc_rc = clock_gettime(CLOCK_REALTIME, &utc);
+        const int mono_rc = clock_gettime(CLOCK_MONOTONIC, &monotonic);
+        const long long epoch_ms = utc_rc == 0 ?
+            static_cast<long long>(utc.tv_sec) * 1000 + utc.tv_nsec / 1000000 : -1;
+        const long long mono_ns = mono_rc == 0 ?
+            static_cast<long long>(monotonic.tv_sec) * 1000000000LL + monotonic.tv_nsec : -1;
         std::fprintf(stderr,
             "EDEN_PAD_HEARTBEAT polls=%llu samples=%llu usable=%llu intercepted=%llu "
             "errors=%llu last_read=%d connected=%u last_buttons=%08x "
-            "edges=%llu cross=%llu circle=%llu square=%llu triangle=%llu map_x=%d map_y=%d\n",
+            "edges=%llu cross=%llu circle=%llu square=%llu triangle=%llu map_x=%d map_y=%d "
+            "epoch_ms=%lld mono_ns=%lld\n",
             static_cast<unsigned long long>(polls),
             static_cast<unsigned long long>(samples_read),
             static_cast<unsigned long long>(usable_samples),
@@ -312,21 +323,23 @@ bool Pad::Poll() {
             static_cast<unsigned long long>(face_edges.circle),
             static_cast<unsigned long long>(face_edges.square),
             static_cast<unsigned long long>(face_edges.triangle),
-            ActiveMapping()[game_x], ActiveMapping()[game_y]);
+            ActiveMapping()[game_x], ActiveMapping()[game_y], epoch_ms, mono_ns);
         // Compact extra read-only diagnostic: physical Options -> virtual
         // Plus publication. The missing final Npad consumption remains a
         // separate layer and must not be inferred from these counters.
         std::fprintf(stderr,
             "EDEN_PAD_INPUT_CHAIN polls=%llu options_edges=%llu published_plus_edges=%llu "
             "sony_intercepted_samples=%llu create_edges=%llu "
-            "published_home_edges=%llu published_capture_edges=%llu\n",
+            "published_home_edges=%llu published_capture_edges=%llu "
+            "epoch_ms=%lld mono_ns=%lld\n",
             static_cast<unsigned long long>(polls),
             static_cast<unsigned long long>(options_edges),
             static_cast<unsigned long long>(engine->PublishedPlusEdges()),
             static_cast<unsigned long long>(intercepted_samples),
             static_cast<unsigned long long>(create_edges),
             static_cast<unsigned long long>(engine->PublishedHomeEdges()),
-            static_cast<unsigned long long>(engine->PublishedCaptureEdges()));
+            static_cast<unsigned long long>(engine->PublishedCaptureEdges()),
+            epoch_ms, mono_ns);
     }
     return primary;
 }
