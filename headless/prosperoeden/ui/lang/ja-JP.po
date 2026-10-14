@@ -1608,3 +1608,15 @@ msgstr "閉じる"
 #: pe/ui/library.cpp
 msgid "Down: view back cover"
 msgstr "下：裏面を見る"
+
+#: pe/ui/library.cpp
+msgid "Zoom out"
+msgstr "縮小"
+
+#: pe/ui/library.cpp
+msgid "Zoom in"
+msgstr "拡大"
+
+#: pe/ui/library.cpp
+msgid "Move cover"
+msgstr "カバーを移動"

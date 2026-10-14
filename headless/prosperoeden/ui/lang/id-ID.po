@@ -1608,3 +1608,15 @@ msgstr "Tutup"
 #: pe/ui/library.cpp
 msgid "Down: view back cover"
 msgstr "Bawah: lihat sampul belakang"
+
+#: pe/ui/library.cpp
+msgid "Zoom out"
+msgstr "Perkecil"
+
+#: pe/ui/library.cpp
+msgid "Zoom in"
+msgstr "Perbesar"
+
+#: pe/ui/library.cpp
+msgid "Move cover"
+msgstr "Geser sampul"

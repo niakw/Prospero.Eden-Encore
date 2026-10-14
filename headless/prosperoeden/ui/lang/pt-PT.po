@@ -1608,3 +1608,15 @@ msgstr "Fechar"
 #: pe/ui/library.cpp
 msgid "Down: view back cover"
 msgstr "Baixo: ver verso da capa"
+
+#: pe/ui/library.cpp
+msgid "Zoom out"
+msgstr "Reduzir zoom"
+
+#: pe/ui/library.cpp
+msgid "Zoom in"
+msgstr "Ampliar"
+
+#: pe/ui/library.cpp
+msgid "Move cover"
+msgstr "Mover capa"

@@ -1608,3 +1608,15 @@ msgstr "Sluiten"
 #: pe/ui/library.cpp
 msgid "Down: view back cover"
 msgstr "Omlaag: achterkant hoes bekijken"
+
+#: pe/ui/library.cpp
+msgid "Zoom out"
+msgstr "Uitzoomen"
+
+#: pe/ui/library.cpp
+msgid "Zoom in"
+msgstr "Inzoomen"
+
+#: pe/ui/library.cpp
+msgid "Move cover"
+msgstr "Hoes verplaatsen"

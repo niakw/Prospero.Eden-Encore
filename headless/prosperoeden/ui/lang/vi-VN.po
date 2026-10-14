@@ -1608,3 +1608,15 @@ msgstr "Đóng"
 #: pe/ui/library.cpp
 msgid "Down: view back cover"
 msgstr "Xuống: xem mặt sau bìa"
+
+#: pe/ui/library.cpp
+msgid "Zoom out"
+msgstr "Thu nhỏ"
+
+#: pe/ui/library.cpp
+msgid "Zoom in"
+msgstr "Phóng to"
+
+#: pe/ui/library.cpp
+msgid "Move cover"
+msgstr "Di chuyển bìa"

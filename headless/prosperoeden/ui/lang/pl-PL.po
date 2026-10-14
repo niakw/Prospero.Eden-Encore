@@ -1608,3 +1608,15 @@ msgstr "Zamknij"
 #: pe/ui/library.cpp
 msgid "Down: view back cover"
 msgstr "W dół: pokaż tył okładki"
+
+#: pe/ui/library.cpp
+msgid "Zoom out"
+msgstr "Oddal"
+
+#: pe/ui/library.cpp
+msgid "Zoom in"
+msgstr "Przybliż"
+
+#: pe/ui/library.cpp
+msgid "Move cover"
+msgstr "Przesuń okładkę"

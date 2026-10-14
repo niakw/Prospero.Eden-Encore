@@ -1608,3 +1608,15 @@ msgstr "Bezárás"
 #: pe/ui/library.cpp
 msgid "Down: view back cover"
 msgstr "Le: hátlap megtekintése"
+
+#: pe/ui/library.cpp
+msgid "Zoom out"
+msgstr "Kicsinyítés"
+
+#: pe/ui/library.cpp
+msgid "Zoom in"
+msgstr "Nagyítás"
+
+#: pe/ui/library.cpp
+msgid "Move cover"
+msgstr "Borító mozgatása"

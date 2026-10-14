@@ -1608,3 +1608,15 @@ msgstr "關閉"
 #: pe/ui/library.cpp
 msgid "Down: view back cover"
 msgstr "向下：查看封底"
+
+#: pe/ui/library.cpp
+msgid "Zoom out"
+msgstr "縮小"
+
+#: pe/ui/library.cpp
+msgid "Zoom in"
+msgstr "放大"
+
+#: pe/ui/library.cpp
+msgid "Move cover"
+msgstr "移動封面"
