@@ -70,7 +70,7 @@ void main()
         if (shape == 9 || shape == 11) {
             // Place a real back surface on the FAR plane of the case.
             // It must not occupy the same Z as the front artwork.
-            float depth = a_params.y > 0.5 ? 64.0 : 0.0;
+            float depth = a_params.y > 0.5 ? 36.0 : 0.0;
             x = local.x * cs - depth * sn;
             z = -local.x * sn - depth * cs;
             vec2 oriented = vec2(a_params.y > 0.5 ? 1.0 - corner.x : corner.x,
@@ -279,9 +279,9 @@ void main()
         // Every point shares the EXACT projective pivot of case_face().
         vec2 pixel_from_edge = min(v_st, 1.0 - v_st) * (v_half * 2.0);
         float nearest = min(pixel_from_edge.x, pixel_from_edge.y);
-        float outer = 1.0 - smoothstep(3.0, 13.0, nearest);
-        float inner_bevel = (smoothstep(5.0, 8.0, nearest) -
-                             smoothstep(12.0, 17.0, nearest));
+        float outer = 1.0 - smoothstep(2.0, 9.0, nearest);
+        float inner_bevel = (smoothstep(3.0, 5.0, nearest) -
+                             smoothstep(8.0, 11.0, nearest));
         float outer_bevel = 1.0 - smoothstep(0.0, 3.0, nearest);
         float top_edge = exp(-46.0 * v_st.y);
         float side_edge = exp(-65.0 * v_st.x);
@@ -291,8 +291,8 @@ void main()
         float fresnel = pow(1.0 - abs(cos(v_params.x)), 3.0);
         float glint = 0.10 * exp(-170.0 *
             pow(v_st.x - (0.36 + 0.23 * sin(v_params.x)), 2.0));
-        float brightness = clamp(outer * (0.42 + 0.30 * fresnel) +
-            inner_bevel * 0.13 + outer_bevel * 0.24 +
+        float brightness = clamp(outer * (0.24 + 0.45 * fresnel) +
+            inner_bevel * 0.11 + outer_bevel * 0.18 +
             top_edge * 0.12 + side_edge * 0.08 + seam_right * 0.11 +
             glint * (0.38 + fresnel), 0.0, 1.0);
         float rounded = round_box(v_local, v_half, 22.0);
