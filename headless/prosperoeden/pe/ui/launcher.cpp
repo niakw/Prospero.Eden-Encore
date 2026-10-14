@@ -750,7 +750,7 @@ void Launcher::draw_launch(Canvas &c)
     // No cosmetic red stripe is superimposed on the right edge. Both poses
     // use the exact same shared case geometry for every game.
     constexpr float kFrontYaw = 0.52f;
-    constexpr float kBackYaw = 3.14159265358979323846f + 0.35f;
+    constexpr float kBackYaw = 3.14159265358979323846f + 0.44f;
     constexpr float kFullTurn = 6.28318530717958647692f;
     float angle = kFrontYaw;
     if (motion() > 0.0f) {
@@ -775,8 +775,16 @@ void Launcher::draw_launch(Canvas &c)
     const Rect physical{374.0f, 126.0f, 454.0f, 730.0f};
     const float width = physical.w * std::abs(facing) +
                         case_depth * std::abs(std::sin(angle));
-    const Rect face{physical.x + 3.0f, physical.y + 3.0f,
-                    physical.w - 6.0f, physical.h - 6.0f};
+    // Single paper template, identical on FRONT and BACK. The paper is
+    // smaller than the molded shell on ALL four sides: 13px clear top/bottom
+    // lips and 9px left/right lips. A back scan can never grow taller than
+    // its front counterpart, regardless of the image's source dimensions.
+    constexpr float kPaperSideInset = 9.0f;
+    constexpr float kPaperTopInset = 13.0f;
+    const Rect face{physical.x + kPaperSideInset,
+                    physical.y + kPaperTopInset,
+                    physical.w - 2.0f * kPaperSideInset,
+                    physical.h - 2.0f * kPaperTopInset};
     const float mid_x = physical.x + physical.w * 0.5f;
     c.list.shadow({mid_x - width * 0.5f - 72.0f, physical.y - 8.0f,
                    width + 144.0f, physical.h + 34.0f}, 35.0f, 105.0f,
@@ -794,7 +802,7 @@ void Launcher::draw_launch(Canvas &c)
     // model and uses no pre-rendered cover-box layer.
     // The same clear-polycarbonate 3D shell surrounds every game. Printed
     // front/back artwork sits behind the translucent white molded edges.
-    c.list.case_face(0, physical, angle, back, Color::rgb(0x9da9ba, 0.24f));
+    c.list.case_face(0, physical, angle, back, Color::rgb(0xe2ebf7, 0.31f));
     // The narrow inner seal does not sit as an opaque white second box
     // around the printed cover; its silhouette shares the outer shell pivot.
 
