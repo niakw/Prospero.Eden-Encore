@@ -1673,8 +1673,10 @@ int main(int argc, char** argv) {
                 mapping[Eden::game_x], mapping[Eden::game_y],
                 static_cast<unsigned>(game_video.controller_layout >= 0 || game_video.own_mapping),
                 static_cast<unsigned>(game_video.own_mapping));
+            // Host mapping is stable; no proof that the guest title loaded its
+            // own saved action scheme is available at this call site.
             std::fprintf(stderr,
-                "EDEN_PAD_MAPPING_CONTEXT title=%016llx mode=game_owned a=%d b=%d x=%d y=%d\n",
+                "EDEN_PAD_MAPPING_CONTEXT title=%016llx mode=game_owned a=%d b=%d x=%d y=%d game_action_profile_observed=0\n",
                 static_cast<unsigned long long>(launch_title_id),
                 mapping[Eden::game_a], mapping[Eden::game_b],
                 mapping[Eden::game_x], mapping[Eden::game_y]);
