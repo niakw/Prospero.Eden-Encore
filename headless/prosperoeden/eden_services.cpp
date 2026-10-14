@@ -536,6 +536,9 @@ bool FetchCaseFace(const std::vector<std::string>& candidates,
         (cancel && cancel->load(std::memory_order_acquire))) return false;
     std::string best;
     std::string best_source;
+    std::size_t attempts = 0;
+    std::size_t transport_failures = 0;
+    std::size_t invalid_responses = 0;
     // The index is ranked by REGION, then by alternative. Take the first
     // DECODABLE face from the highest available region, not the face with the
     // most pixels across regions (which wrongly selected North America over
@@ -543,27 +546,40 @@ bool FetchCaseFace(const std::vector<std::string>& candidates,
     // Manual .png/.jpg/.jpeg overrides are protected in EnsureRetailCase.
     // No network activity occurs on the launch/render thread.
     for (const std::string& filename : candidates) {
-        if (!SafeCaseFilename(filename) ||
+        if (attempts >= 3 ||
             (cancel && cancel->load(std::memory_order_acquire))) break;
+        if (!SafeCaseFilename(filename)) {
+            ++invalid_responses;
+            continue;
+        }
+        ++attempts;
         const auto response = Common::Net::MakeRequest(
             "https://images.launchbox-app.com", "/" + filename);
-        if (!response || (cancel && cancel->load(std::memory_order_acquire))) continue;
+        if (!response) {
+            ++transport_failures;
+            continue;
+        }
+        if (cancel && cancel->load(std::memory_order_acquire)) break;
         const std::string& body = *response;
         const bool jpeg = body.size() >= 2 &&
             static_cast<unsigned char>(body[0]) == 0xff &&
             static_cast<unsigned char>(body[1]) == 0xd8;
         const bool png = body.size() >= 8 &&
             std::memcmp(body.data(), "\x89PNG\r\n\x1a\n", 8) == 0;
-        if (body.size() < 1024 || body.size() > (16u << 20) || (!jpeg && !png))
+        if (body.size() < 1024 || body.size() > (16u << 20) || (!jpeg && !png)) {
+            ++invalid_responses;
             continue;
+        }
         int w = 0, h = 0, channels = 0;
         if (!stbi_info_from_memory(
                 reinterpret_cast<const unsigned char*>(body.data()),
                 static_cast<int>(body.size()), &w, &h, &channels) ||
             w < (narrow_spine ? 64 : 128) ||
             h < (narrow_spine ? 600 : 200) || w > 4096 || h > 4096 ||
-            static_cast<std::uint64_t>(w) * h > 3840u * 2160u)
+            static_cast<std::uint64_t>(w) * h > 3840u * 2160u) {
+            ++invalid_responses;
             continue;
+        }
         // A larger image from a different region is NOT a better scan of
         // this edition. Once the first region-ranked usable candidate
         // decodes, do not replace it with an unrelated region.
@@ -571,8 +587,13 @@ bool FetchCaseFace(const std::vector<std::string>& candidates,
         best_source = filename;
         break;
     }
-    if (best.empty() || (cancel && cancel->load(std::memory_order_acquire)))
+    if (best.empty() || (cancel && cancel->load(std::memory_order_acquire))) {
+        std::fprintf(stderr,
+                     "EDEN_CASE_FETCH status=unavailable side=%s attempts=%zu network=%zu invalid=%zu\n",
+                     narrow_spine ? "spine" : "face",
+                     attempts, transport_failures, invalid_responses);
         return false;
+    }
     (void)mkdir(Eden::CoversDir().c_str(), 0777);
     const std::string staged = destination + ".new";
     if (WriteJpegTga(best, staged, true) &&
@@ -582,9 +603,13 @@ bool FetchCaseFace(const std::vector<std::string>& candidates,
         // The TGA remains usable if this tiny receipt write fails.
         std::ofstream receipt(destination + ".source", std::ios::trunc);
         if (receipt) receipt << best_source << '\n';
+        std::fprintf(stderr, "EDEN_CASE_FETCH status=stored side=%s attempts=%zu bytes=%zu\n",
+                     narrow_spine ? "spine" : "face", attempts, best.size());
         return true;
     }
     (void)std::remove(staged.c_str());
+    std::fprintf(stderr, "EDEN_CASE_FETCH status=write-failed side=%s attempts=%zu\n",
+                 narrow_spine ? "spine" : "face", attempts);
     return false;
 }
 
@@ -598,7 +623,11 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
         if (it != index.end()) return it;
         return index.find(CaseKey(alternate_name));
     }();
-    if (selected == index.end()) return;
+    if (selected == index.end()) {
+        std::fprintf(stderr, "EDEN_CASE_LOOKUP title=%016llX status=no-match index_entries=%zu\n",
+                     static_cast<unsigned long long>(title_id), index.size());
+        return;
+    }
     // Both Home and Library may enrich the same title at once. The fixed
     // striped locks protect the atomic .new cache path, not the render thread.
     static std::array<std::mutex, 64> locks;
@@ -611,11 +640,22 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
         const auto it = retries.find(title_id);
         if (it != retries.end() && std::chrono::steady_clock::now() < it->second)
             return;
-        retries[title_id] = std::chrono::steady_clock::now() + std::chrono::hours(4);
+        // Failed image hosts, cancellation or an incomplete side must not
+        // disable all retries for four hours on a newly installed game.
+        retries[title_id] = std::chrono::steady_clock::now() + std::chrono::minutes(5);
     }
     bool all_ready = true;
     for (int side = 0; side < 3; ++side) {
         if (cancel && cancel->load(std::memory_order_acquire)) return;
+        // The optional spine must NEVER delay publication of either paper
+        // face. On this first pass fetch front/back; fetch spine on a later
+        // media refresh after both are already cached.
+        if (side == 2 &&
+            (!ValidNlibTga(CaseFacePath(title_id, "front")) ||
+             !ValidNlibTga(CaseFacePath(title_id, "back")))) {
+            all_ready = false;
+            break;
+        }
         const auto candidates = LocaleCaseCandidates(selected->second[side], language_choice, side);
         if (candidates.empty()) continue;
         const std::string path = CaseFacePath(
@@ -641,6 +681,8 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
         // source migration is retried later without blocking rendering.
         if (!FetchCaseFace(candidates, path, side == 2, cancel)) {
             all_ready = false;
+            std::fprintf(stderr, "EDEN_CASE_FACE title=%016llX side=%d status=unavailable\n",
+                         static_cast<unsigned long long>(title_id), side);
         } else {
             // A fallback candidate remains usable, but only retry its higher
             // priority European/locale scan on the next bounded refresh.
