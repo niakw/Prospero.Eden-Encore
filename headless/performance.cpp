@@ -625,10 +625,11 @@ std::uint64_t VerifiedSecondaryPlacementMask() noexcept {
 
 void ProbeSchedulerOnce(const char* role) noexcept {
 #ifdef PS5_NATIVE
-    // The verified reference scheduler fix uses round-robin for equally
-    // prioritized CPU-bound native threads. Only the All-On development
-    // profile opts in. Release builds preserve the existing scheduler.
-    // One attempt per OS thread; no per-frame syscalls or priority changes.
+    // Console evidence shows equal-priority FIFO workers in the release;
+    // one always-runnable native worker can starve same-priority peers.
+    // Request RR for both native release and diagnostic builds, keeping
+    // priority 700, affinity and a fail-open FIFO fallback on refusal.
+    // One attempt per OS thread; never call scheduler syscalls per frame.
     static thread_local bool reported = false;
     if (reported) return;
     reported = true;
@@ -639,7 +640,6 @@ void ProbeSchedulerOnce(const char* role) noexcept {
     int rr_attempted = 0;
     int rr_error = 0;
     int rr_verified = 0;
-#if defined(EDEN_DEV_PROFILE)
     if (!sched_error && policy == SCHED_FIFO && priority.sched_priority == 700) {
         rr_attempted = 1;
         // Keep the native priority and all affinity masks intact.
@@ -658,7 +658,6 @@ void ProbeSchedulerOnce(const char* role) noexcept {
             }
         }
     }
-#endif
     cpuset_t allowed{};
     const int affinity_rc = cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1,
                                               sizeof(unsigned long long), &allowed);
