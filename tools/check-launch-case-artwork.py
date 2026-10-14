@@ -50,7 +50,7 @@ for fragment in (
     "const Cover artwork = c.textures.cover(",
     "c.list.case_face(artwork.texture, face, angle, back, kWhite, paper_uv,",
     "c.list.case_spine(side_strip, angle, case_depth,",
-    "c.list.case_plastic(physical, angle, back,",
+    "// No additional transparent face overlay.",
     "launch_screenshots_.front()",
     "const Rect physical{374.0f, 126.0f, 454.0f, 730.0f};",
     "c.textures.brand()",
@@ -70,8 +70,8 @@ assert "constexpr float kLaunchSeconds = kCaseFrontHold" in theme
 
 # Quarter turn becomes an edge; the full back is visible half a turn later.
 assert math.cos(0.52) > 0 and math.sin(0.52) > 0
-assert math.cos(math.pi + 0.44) < -0.90
-assert math.sin(math.pi + 0.44) < 0
+assert math.cos(math.pi + 0.60) < -0.82
+assert math.sin(math.pi + 0.60) < 0
 assert math.cos(2.0 * math.pi + 0.52) > 0
 library = (root / "headless/prosperoeden/pe/ui/library.cpp").read_text()
 assert "game.box_front" in library and "game.box_back" in library
@@ -85,7 +85,7 @@ assert 'tr("Enlarge cover")' in library
 assert "flat_retail_sleeve(c, *game, art, true, 0.60f);" in library
 assert "flat_retail_sleeve(c, *game, enlarged, true, 0.92f);" in library
 assert "flat_retail_sleeve(c, game, sleeve, false, 0.24f);" in library
-assert "const Rect paper{shell.x + side, shell.y + top," in library
+assert "const Rect paper{shell.x + (rear ? side : 0.0f), shell.y + top," in library
 assert "flat_back_fallback(c, game, paper);" in library
 assert "flat_front_fallback(c, game, paper);" in library
 assert "shell.y + shell.h - top" in library
@@ -95,9 +95,11 @@ assert "PE_PREVIEW_LIBRARY_ONLY" in (
     root / "headless/prosperoeden/host/preview_main.cpp").read_text()
 assert "case_face(artwork.texture, face, angle, back, kWhite, paper_uv," in draw
 assert "c.list.case_cap(" in draw and draw.index("c.list.case_cap(") > draw.index("c.list.case_face(artwork.texture")
+assert "c.list.case_plastic(physical" not in draw
+assert "for (int hinge" not in draw
 assert "const float return_start = back_start + theme::kCaseBackHold;" in draw
 assert "constexpr float kFrontYaw = 0.52f;" in draw
-assert "constexpr float kBackYaw = 3.14159265358979323846f + 0.44f;" in draw
+assert "constexpr float kBackYaw = 3.14159265358979323846f + 0.60f;" in draw
 assert "case_depth, 3.2f" not in draw
 assert "const bool printed_side_visible = std::sin(angle) >= 0.0f;" in draw
 assert "Color::rgb(0xb61626, 0.78f)" not in draw
@@ -174,6 +176,21 @@ assert "w < (narrow_spine ? 64 : 128)" in native
 assert "h < (narrow_spine ? 600 : 200)" in native
 assert "c.list.case_spine(side_strip, angle, 3.2f," not in draw
 assert "c.list.case_spine_blank(side_strip, angle, case_depth," in draw
+# The image is a single paper wrap: no transparent front face and no
+# second plastic frame on the front or right-back fold.
+assert "c.list.case_plastic(physical" not in draw
+assert "Color::rgb(0xe6effa, 0.38f)" not in draw
+assert "case_spine({physical.x, y" not in draw
+# Navigation in the enlarged Library viewer is not delegated to the game.
+assert "key == Key::circle || key == Key::cross" not in library
+assert "key == Key::l2 || key == Key::r2" in library
+assert "library_back_pan_x_" in library and "library_back_pan_y_" in library
+assert "list.push_clip(viewer);" in library
+assert "list.push_transform(library_back_scale_" in library
+assert "{Pad::circle, TR(\"Close\")}" in library
+assert '{Pad::cross, TR("Close")}' not in library
+assert "RADIO_INPUT_L2" in (root / "headless/prosperoeden/radio_input.c").read_text()
+assert "RADIO_INPUT_R2" in (root / "headless/prosperoeden/radio_input.c").read_text()
 assert "constexpr float kPaperSideInset = 7.0f;" in draw
 assert "constexpr float kPaperTopInset = 13.0f;" in draw
 assert "const Rect face{physical.x + kPaperSideInset," in draw
@@ -210,10 +227,14 @@ assert (paper_l, width - paper_r) == (7.0, 7.0)
 assert paper_h == 704.0 and paper_top + paper_h == box_h - paper_bottom
 lib_sleeve = library.split("void flat_retail_sleeve(", 1)[1].split(
     "std::string controller_profile_name(", 1)[0]
-assert "const Rect paper{shell.x + side, shell.y + top," in lib_sleeve
-assert "shell.w - 2.0f * side, shell.h - 2.0f * top" in lib_sleeve
-assert "cover(c, scan, paper, 0.0f, 0.0f);" in lib_sleeve
-assert "const float other_x" in lib_sleeve
+assert "const Rect paper{shell.x + (rear ? side : 0.0f), shell.y + top," in lib_sleeve
+assert "shell.w - side, shell.h - 2.0f * top" in lib_sleeve
+assert "const Cover artwork = c.textures.cover(scan," in lib_sleeve
+assert "const float other_x" not in lib_sleeve
+assert "cover(c, scan, paper, 0.0f, 0.0f);" not in lib_sleeve
+assert "c.list.image(artwork.texture, fitted" in lib_sleeve
+assert "shell.w - side, shell.h - 2.0f * top" in lib_sleeve
+assert "const float opening_x = rear ? shell.x : shell.x + shell.w - side;" in lib_sleeve
 
 assert "c.list.bordered_rect(shell, radius" not in lib_sleeve
 assert "round_box(v_local, v_half, 22.0)" in shader
