@@ -155,6 +155,7 @@ assert 'Eden::AppFile("ui/box-art-index.tsv")' not in native
 assert '"EDEN_CASE_INDEX status=%s entries=%zu path=%s' in native
 assert '"EDEN_CASE_FETCH status=unavailable' in native
 assert '"EDEN_CASE_LOOKUP title=%016llX status=no-match' in native
+assert '"EDEN_CASE_LOOKUP title=%016llX status=match' in native
 assert "std::chrono::minutes(5)" in native
 assert "std::chrono::hours(4)" not in native.split("void EnsureRetailCase(", 1)[1].split("NlibEnrichment CachedNlibEnrichment(", 1)[0]
 assert "both_faces_cached_at_start" in native
