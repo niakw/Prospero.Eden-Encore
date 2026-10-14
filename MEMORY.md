@@ -4,6 +4,21 @@
 > Read this file before changing architecture, UX, build/release behaviour or performance policy.
 > Keep it concise but authoritative. Update it whenever a project-level decision changes.
 
+## Latest verified status — 14 October 2026 (pre-test source audit)
+
+- **Only active remote branch:** `dev/ps5-sparse-jit` (verified via GitHub branches API). The historical release branch mentioned below is no longer a remote branch; all historical sections are retained for audit only. The local Mac worktree was **not** inspected in this pass.
+- **Latest qualified native test package:** Actions [38587429272](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38587429272), SHA `b5f0301a31cef17f70a8c4e19484d2fb638daa17`, success; package ZIP and debug-symbol artifact uploaded and archive layout rechecked. **Not** the current branch tip after new UI/diagnostic commits.
+- **Source preflight:** [38587774361](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38587774361) succeeded on `4e4a3cd2`; new changes need separate gates before their next test package.
+- **Original device evidence:** `2efd8b3c`, cache cleared. Saccades, delayed HUD/texture updates, a guest jump to an unmapped address, and a long end-of-match *candidate* application-progression stall remain unresolved. Do not say a successful package fixes them.
+- **Current diagnostic improvements:** per-session source SHA; offline analyzer splits multi-session logs; fatal guest invalid-branch records PC/LR/SP/FP; bounded asynchronous log segments and optional detailed profiling. They still do not provide a consistent wait-owner stack snapshot for every live thread or a pixel hash on a visual freeze.
+- **Important unported upstream:** original source #156 guest lazy backing and incremental executable-cache commitment are not shipping equivalents in Encore. Shared cross-core JIT remains deliberately OFF. Never equate `vendor/sources` inventory with compiled feature parity.
+- **Read-first audit for next tester:** [docs/PRETEST_AUDIT_2026-10-14.md](docs/PRETEST_AUDIT_2026-10-14.md). The READMEs, SECURITY, third-party notices and LICENSES bundle exist. Retain every present `*.first.log`, `*.prev.log`, and the native crash/symbol artifacts when collecting evidence.
+- **Remote GitHub is not the Mac:** do not claim an audited local working-tree cleanup without access to that machine. Do not clear game save/shader caches in an unrequested cleanup.
+
+The dated notes below describe historical work and may contain obsolete
+“current” status, old branch names, settings experiments or run conclusions.
+This section and the dedicated pre-test audit take precedence.
+
 ## Repository / branch
 
 - Repository: `niakw/Prospero.Eden-Encore`
