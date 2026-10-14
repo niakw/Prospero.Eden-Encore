@@ -1592,3 +1592,19 @@ msgstr "{0}/ (NSP lub XCI)"
 #: pe/ui/browse.cpp
 msgid "{0}/ (one folder per game ID)"
 msgstr "{0}/ (folder dla każdego ID tytułu)"
+
+#: pe/ui/library.cpp
+msgid "GB"
+msgstr "GB"
+
+#: pe/ui/library.cpp
+msgid "Enlarge cover"
+msgstr "Powiększ okładkę"
+
+#: pe/ui/library.cpp
+msgid "Close"
+msgstr "Zamknij"
+
+#: pe/ui/library.cpp
+msgid "Down: view back cover"
+msgstr "W dół: pokaż tył okładki"
