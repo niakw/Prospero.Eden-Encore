@@ -748,8 +748,8 @@ void Launcher::draw_launch(Canvas &c)
     // Front: more of the red printed hinge on the LEFT. Back: more
     // of the clear opening on the LEFT and only a tiny red seam at the RIGHT.
     // They are two poses of the SAME rigid case, never per-title overrides.
-    constexpr float kFrontYaw = 0.40f;
-    constexpr float kBackYaw = 3.14159265358979323846f + 0.57f;
+    constexpr float kFrontYaw = 0.52f;
+    constexpr float kBackYaw = 3.14159265358979323846f + 0.63f;
     constexpr float kFullTurn = 6.28318530717958647692f;
     float angle = kFrontYaw;
     if (motion() > 0.0f) {
@@ -767,7 +767,7 @@ void Launcher::draw_launch(Canvas &c)
     }
     const float facing = std::cos(angle);
     const bool back = facing < 0.0f;
-    constexpr float case_depth = 36.0f;
+    constexpr float case_depth = 44.0f;
     constexpr float case_radius = 22.0f;
     // Use the actual reusable case outline for projected shadow/geometry.
     // The reference template is taller than the previous 422x655 poster.
@@ -858,17 +858,8 @@ void Launcher::draw_launch(Canvas &c)
             c.list.case_spine_image(ink.texture, side_strip, angle,
                                     case_depth, kWhite);
         } else {
-            // Generic clean retail-style spine: red sleeve, a pale maker's
-            // mark and a tiny footer. Crucially NO generated game title and
-            // no 18px-wide CDN thumbnail inflated to 700px.
-            c.list.case_spine({physical.x, physical.y + 39.0f,
-                               physical.w, 48.0f}, angle, case_depth - 7.0f,
-                              Color::rgb(0xfcfaf9, 0.76f),
-                              Color::rgb(0xe5ebef, 0.58f), 3.0f);
-            c.list.case_spine({physical.x, physical.y + physical.h - 77.0f,
-                               physical.w, 18.0f}, angle, case_depth - 7.0f,
-                              Color::rgb(0xf9f9fa, 0.63f),
-                              Color::rgb(0xdee2eb, 0.47f), 3.0f);
+            // Clean empty red sleeve, no invented or enlarged typography.
+            // The subdued transparent edge rails render below this section.
         }
     } else {
         c.list.case_spine(side_strip, angle, case_depth,
