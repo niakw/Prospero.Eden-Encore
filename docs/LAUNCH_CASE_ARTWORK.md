@@ -384,3 +384,21 @@ identical `physical.y + kPaperTopInset` and
 `physical.h - 2*kPaperTopInset` vertical coordinates as the front/back
 printed paper (704 units). The clear molded top/bottom shell remains 730
 units high. Real host OpenGL screenshots are the acceptance evidence.
+
+## Single wrap + independent plastic shell (physical invariant)
+
+For **all games**, the artwork is one square-cornered printed paper wrap
+spanning front, red inked spine, and back. These three planes share one
+continuous top/bottom interval and exactly the same fold vertices. The shell
+is a **separate**, translucent, rounded polycarbonate case outside this wrap.
+Its visible lip is 7 virtual pixels LEFT and RIGHT of each face print, and
+13 virtual pixels ABOVE and BELOW every face and printed spine. There are no
+white frames or artificial empty stripes at the front/spine and spine/back
+paper junctions. The spine itself spans all 44 pixels of physical case depth;
+no 3px inset or shortened side print is permitted. Only molded plastic is
+rounded; printed faces and spine are square-cornered. The static Library
+front/back jackets share those same paper-vs-plastic rules.
+
+Visual validation runs only with the host OpenGL renderer (front, crossing
+spine, back and Library shelf/detail/zoom); do not compile the native PS5 app
+without the user's explicit authorization.
