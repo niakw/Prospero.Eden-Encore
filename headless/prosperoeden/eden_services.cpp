@@ -408,7 +408,7 @@ bool SafeCaseCandidate(const std::string& token) {
 }
 
 std::vector<std::string> LocaleCaseCandidates(
-    const std::vector<std::string>& entries, int language_choice) {
+    const std::vector<std::string>& entries, int language_choice, int face) {
     language_choice = std::clamp(language_choice, 0,
         static_cast<int>(std::size(Eden::kLanguageKeys)) - 1);
     const std::string locale = Eden::kLanguageKeys[language_choice];
@@ -416,7 +416,10 @@ std::vector<std::string> LocaleCaseCandidates(
     if (locale == "en-US" || locale == "es-419" || locale == "pt-BR")
         regions = {"us", "ca", "world", "uk", "eu", "fr"};
     else if (locale == "en-GB")
-        regions = {"uk", "eu", "world", "us", "ca"};
+        // UK rear copy should stay English; use the US scan before an
+        // unlocalized European back. PEGI European fronts remain preferred.
+        regions = face == 1 ? std::vector<std::string>{"uk", "us", "ca", "world", "eu"} :
+                              std::vector<std::string>{"uk", "eu", "us", "world", "ca"};
     else if (locale == "fr-CA")
         regions = {"ca", "fr", "us", "world", "eu"};
     else if (locale == "fr")
@@ -604,7 +607,7 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
     bool all_ready = true;
     for (int side = 0; side < 3; ++side) {
         if (cancel && cancel->load(std::memory_order_acquire)) return;
-        const auto candidates = LocaleCaseCandidates(selected->second[side], language_choice);
+        const auto candidates = LocaleCaseCandidates(selected->second[side], language_choice, side);
         if (candidates.empty()) continue;
         const std::string path = CaseFacePath(
             title_id, side == 0 ? "front" : side == 1 ? "back" : "spine");
