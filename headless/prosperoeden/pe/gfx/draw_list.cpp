@@ -183,17 +183,14 @@ void DrawList::rounded_image(std::uint32_t texture, const Rect &r, const Rect &u
 }
 
 void DrawList::case_face(std::uint32_t texture, const Rect &r, float angle,
-                         bool back, Color tint, const Rect &uv,
-                         bool simplify_switch_header)
+                         bool back, Color tint, const Rect &uv)
 {
     Instance &i = append(texture);
     const Rect t = apply(r);
     set4(i.rect, t.x, t.y, t.w, t.h);
     set_color(i.color_top, tint);
     set_color(i.color_bottom, tint);
-    // One isolated flag on the printed front surface, not a global shader
-    // modification to unrelated boxes, labels or images.
-    set4(i.border_color, simplify_switch_header ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f);
+    // Scan pixels are presented verbatim, including the original logo.
     set4(i.params, angle, back ? 1.0f : 0.0f, texture != 0 ? 1.0f : 0.0f,
          static_cast<float>(Shape::case_face));
     set4(i.extra, uv.x, uv.y, uv.x + uv.w, uv.y + uv.h);
