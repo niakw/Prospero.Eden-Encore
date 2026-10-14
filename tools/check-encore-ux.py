@@ -102,8 +102,11 @@ assert 'const int shown = std::min<int>(kHomeRecentMax' in recent_block
 assert 'constexpr float available = 1770.0f' in recent_block
 assert 'card_w = (available - gap * 6.0f) / 7.0f' in recent_block
 
-# Library/Settings are horizontal TV surfaces, not legacy utility lists.
-assert 'horizontal TV-first game rail' in library
+# The library now shows a 5-slot, controller-navigated retail sleeve shelf.
+# Check the real geometry and navigation instead of a retired comment.
+assert 'constexpr int slots = 5;' in library
+assert 'constexpr float rail_x = 72.0f, rail_y = 205.0f, rail_w = 1776.0f;' in library
+assert 'flat_retail_sleeve(c, game, sleeve, false, 0.24f);' in library
 assert 'library_.move(key == Key::right ? 1 : -1)' in library
 press_library=library[library.index('void Launcher::press_library'):library.index('void Launcher::draw_library')]
 assert 'set_docked' not in press_library
