@@ -77,3 +77,7 @@ truncation checks and physical system-font verification remain outstanding**.
 These translations are not synthetic copies of the English msgid and must
 not be represented as native-speaker certified. The new source coverage
 gate fails if any supported locale loses a translation.
+
+## Additional native CMake migration (14 October 2026)
+
+Pinned-source-equivalent copies of the code loader and bounded error logger now live under `vendor/encore-active/eden-core/src`. Their generated CMake translation units have been replaced by maintained sources, and a source-parity regression gate checks both against their exact pinned transformations. The count is now **79 write_derived**, **89 file(READ** and **227 string(REPLACE** occurrences. Migration is incomplete, and native compilation on the new commit remains to be verified.
