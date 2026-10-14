@@ -62,6 +62,40 @@ def candidates(items, limit=6):
             break
     return ";".join(result) if result else "-"
 
+# Region metadata is packaged with every image so the console can choose a
+# language-appropriate jacket at runtime (including after language changes).
+# Keep both EU/FR and North-American editions; do not hardwire French globally.
+REGIONS = {
+    "france": "fr", "europe": "eu", "world": "world",
+    "north america": "us", "united states": "us", "usa": "us",
+    "united kingdom": "uk", "england": "uk",
+    "canada": "ca", "germany": "de", "belgium": "eu",
+    "italy": "it", "spain": "es", "portugal": "pt",
+    "australia": "au", "japan": "jp", "brazil": "br",
+    "mexico": "mx", "asia": "asia", "korea": "kr",
+}
+REGION_ORDER = ("fr", "eu", "us", "uk", "ca", "world", "de",
+                "es", "it", "pt", "au", "jp", "br", "mx", "asia", "kr", "other")
+
+def region_code(name):
+    return REGIONS.get(name.casefold().strip(), "other")
+
+def regional_candidates(items, limit=12):
+    # Preserve independent front/back/spine region variants. Cap two sources
+    # per region and the total so the on-device index stays small and bounded.
+    grouped = {}
+    for region, filename in items:
+        group = grouped.setdefault(region, [])
+        if filename not in group:
+            group.append(filename)
+    choices = []
+    for region in REGION_ORDER:
+        for filename in grouped.get(region, ())[:2]:
+            choices.append(f"{region}:{filename}")
+            if len(choices) == limit:
+                return ";".join(choices)
+    return ";".join(choices) if choices else "-"
+
 def parse(source):
     games, aliases, images = {}, {}, {}
     iterator = ET.iterparse(source, events=("start", "end"))
@@ -86,7 +120,7 @@ def parse(source):
             if (gid in games and kind in ("Box - Front", "Box - Back", "Box - Spine")
                     and IMAGE_FILE.fullmatch(filename)):
                 images.setdefault(gid, {}).setdefault(kind, []).append(
-                    (rank(element.findtext("Region", "")), filename))
+                    (region_code(element.findtext("Region", "")), filename))
         if tag in ("Game", "GameAlternateName", "GameImage"):
             element.clear()
             root.clear()
@@ -98,7 +132,7 @@ def parse(source):
             key = normalize(label)
             if key:
                 names.setdefault(key, set()).add(gid)
-    lines = ["# Eden Encore retail case index v3 (title, front, back, flat spine candidates)\n"]
+    lines = ["# Eden Encore retail case index v4 (regional front, back, flat spine candidates)\n"]
     for key, matching in sorted(names.items()):
         if len(matching) != 1:
             continue  # avoid colliding editions / ambiguous matching
@@ -106,12 +140,12 @@ def parse(source):
         front = list(media.get("Box - Front", []))
         if next(iter(matching)) in EUROPE_FRONT_PINS:
             pinned = EUROPE_FRONT_PINS[next(iter(matching))]
-            front = [(99 - index, filename) for index, filename in enumerate(pinned)] + front
+            front = [("eu", filename) for filename in pinned] + front
         back = media.get("Box - Back", [])
         spine = media.get("Box - Spine", [])
         if front or back or spine:
-            lines.append(f"{key}\t{candidates(front)}\t{candidates(back)}"
-                         f"\t{candidates(spine)}\n")
+            lines.append(f"{key}\t{regional_candidates(front)}\t{regional_candidates(back)}"
+                         f"\t{regional_candidates(spine)}\n")
     return "".join(lines)
 
 def build(archive_path):
@@ -149,19 +183,23 @@ def self_test():
     <GameAlternateName><DatabaseID>1</DatabaseID><AlternateName>Example Voyage</AlternateName></GameAlternateName>
     </LaunchBox>"""
     result = parse(io.BytesIO(sample.encode()))
-    assert "example journey\t22222222" in result
-    assert "example voyage\t22222222" in result
-    assert "\t33333333-3333-3333-3333-333333333333.jpg" in result
+    assert "example journey\t" in result and "eu:22222222" in result
+    assert "world:11111111" in result
+    assert "example voyage\t" in result and "eu:22222222" in result
+    assert "fr:33333333-3333-3333-3333-333333333333.jpg" in result
     assert "ambiguous\t" not in result and "44444444" not in result
-    assert "77777777-7777-7777-7777-777777777777.png" in result
+    assert "eu:77777777-7777-7777-7777-777777777777.png" in result
     assert "Box - 3D" not in result
     assert candidates([(7, "f" * 36 + ".jpg"), (1, "0" * 36 + ".png")]).count(";") == 1
     assert candidates([(1, "a" * 36 + ".jpg")]) == "a" * 36 + ".jpg"
     assert rank("France") > rank("Europe") > rank("World") > rank("Japan")
-    assert candidates([(99, EUROPE_FRONT_PINS["79189"][0]), (6, "0" * 36 + ".jpg")]).startswith(
-        "9524e5f7-ccc8-4ce6-a581-03f82c51825e.jpg")
+    assert regional_candidates([("eu", EUROPE_FRONT_PINS["79189"][0]),
+                                ("us", "0" * 36 + ".jpg")]).startswith(
+        "eu:9524e5f7-ccc8-4ce6-a581-03f82c51825e.jpg")
+    assert "us:" in regional_candidates([("eu", EUROPE_FRONT_PINS["79189"][0]),
+                                         ("us", "0" * 36 + ".jpg")])
     assert normalize("EA SPORTS FC 27!") == "ea sports fc 27"
-    print("PASS Switch-only case index, FR region, real back and collision guards")
+    print("PASS Switch-only regional case index, EU and North America, collision guards")
 
 def main():
     cli = argparse.ArgumentParser()
