@@ -210,13 +210,9 @@ void main()
     }
     else if (shape == 9)
     {
-        // Mask the flat printed scan to a rounded insert. The translucent
-        // rounded plastic surround is drawn separately over this surface.
-        // Flat printed art goes behind the molded shell. The molded outer
-        // panel itself has a 31px corner; the paper inset a smaller 10px
-        // radius, leaving an uninterrupted rim even at oblique angles.
-        float radius = v_params.z > 0.5 ? 18.0 : 22.0;
-        float d = round_box(v_local, v_half, radius);
+        // The paper is a square-cornered continuous wrap, not three
+        // individually rounded rectangles separated from the side print.
+        float d = round_box(v_local, v_half, 0.0);
         color = v_params.z > 0.5 ? texture(u_texture, clamp(v_uv, 0.0, 1.0)) * v_top : v_top;
         // Only real Switch-style front retail scans request the simplified
         // header. Hide the tiny Nintendo word, preserve the icon and SWITCH.
@@ -315,32 +311,22 @@ void main()
     }
     else if (shape == 11)
     {
-        // A molded translucent sleeve with a beveled white frame. The centre
-        // remains transparent so high-resolution real cover art is untouched.
-        // Every point shares the EXACT projective pivot of case_face().
-        vec2 pixel_from_edge = min(v_st, 1.0 - v_st) * (v_half * 2.0);
-        float nearest = min(pixel_from_edge.x, pixel_from_edge.y);
-        float outer = 1.0 - smoothstep(2.0, 9.0, nearest);
-        float inner_bevel = (smoothstep(3.0, 5.0, nearest) -
-                             smoothstep(8.0, 11.0, nearest));
-        float outer_bevel = 1.0 - smoothstep(0.0, 3.0, nearest);
-        float top_edge = exp(-46.0 * v_st.y);
-        float side_edge = exp(-65.0 * v_st.x);
-        float seam_right = exp(-85.0 * (1.0 - v_st.x));
-        // Grazing-angle Fresnel makes the clear cover shell catch light as
-        // it rotates; the center remains transparent over printed artwork.
+        // One translucent upper/lower LIP of the molded case; never an
+        // additional four-sided white frame over the continuous paper.
+        vec2 edge_px = min(v_st, 1.0 - v_st) * (v_half * 2.0);
+        float lip = 1.0 - smoothstep(0.0, 13.0, edge_px.y);
+        float bevel = smoothstep(3.0, 6.0, edge_px.y) -
+                      smoothstep(9.0, 13.0, edge_px.y);
         float fresnel = pow(1.0 - abs(cos(v_params.x)), 3.0);
-        float glint = 0.10 * exp(-170.0 *
-            pow(v_st.x - (0.36 + 0.23 * sin(v_params.x)), 2.0));
-        float brightness = clamp(outer * (0.24 + 0.45 * fresnel) +
-            inner_bevel * 0.11 + outer_bevel * 0.18 +
-            top_edge * 0.12 + side_edge * 0.08 + seam_right * 0.11 +
-            glint * (0.38 + fresnel), 0.0, 1.0);
-        float rounded = round_box(v_local, v_half, 22.0);
-        float silhouette = 1.0 - smoothstep(-1.2, 1.2, rounded);
+        float opening_highlight = exp(-45.0 * edge_px.x) *
+                                  (v_params.y > 0.5 ? 0.18 : 0.06);
+        float light = clamp(lip * (0.30 + 0.24 * fresnel) +
+                            0.10 * bevel + opening_highlight, 0.0, 0.66);
+        float shell = 1.0 - smoothstep(-1.2, 1.2,
+                        round_box(v_local, v_half, 22.0));
         vec3 sheen = mix(v_top.rgb, vec3(0.98, 0.99, 1.0),
-                         0.42 + 0.16 * fresnel);
-        color = vec4(sheen, v_top.a * brightness * silhouette);
+                         0.30 + 0.18 * fresnel);
+        color = vec4(sheen, v_top.a * light * shell);
     }
     else if (shape == 8)
     {
