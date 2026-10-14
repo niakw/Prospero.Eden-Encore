@@ -226,3 +226,12 @@ cannot be repaired by stretching it.
 
 Validation is limited to the host-only, real C++/OpenGL visual preview;
 no native app packaging or native platform compilation is requested.
+
+## Printing under the transparent sleeve
+
+The original flat front and back scans extend to within 3px of the outside
+case silhouette. The radius of each printed corner follows the 22px
+polycarbonate shell with an 18px paper mask: no independent opaque white frame
+may stick out around the picture. Thin semi-transparent Fresnel highlights
+remain on the single physical case. The body stays 36px deep, around eight
+percent of the 454px front width. The same treatment applies to every title.
