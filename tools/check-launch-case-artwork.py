@@ -49,7 +49,7 @@ for fragment in (
     "const std::string& scan = back ? launch_box_back_ : launch_box_front_;",
     "const Cover artwork = c.textures.cover(",
     "c.list.case_face(artwork.texture, face, angle, back, kWhite, paper_uv,",
-    "c.list.case_spine(side_strip, angle, case_depth - 6.0f,",
+    "c.list.case_spine(side_strip, angle, case_depth,",
     "c.list.case_plastic(physical, angle, back,",
     "launch_screenshots_.front()",
     "const Rect physical{374.0f, 126.0f, 454.0f, 730.0f};",
@@ -188,6 +188,9 @@ assert "const Rect face{physical.x, physical.y + kPaperTopInset," in draw
 assert "physical.w, physical.h - 2.0f * kPaperTopInset};" in draw
 assert "const Rect side_strip{physical.x, physical.y + kPaperTopInset," in draw
 assert "c.list.case_face(0, physical" not in draw
+assert "case_depth - 6.0f" not in draw
+assert "2.5f" not in draw.split("void Launcher::draw_launch(", 1)[-1]
+assert "c.list.case_spine(side_strip, angle, case_depth," in draw
 assert "float d = round_box(v_local, v_half, 0.0);" in shader
 assert "float radius = v_params.z > 0.5 ?" not in shader
 assert "vec2 edge_px = min(v_st, 1.0 - v_st)" in shader
