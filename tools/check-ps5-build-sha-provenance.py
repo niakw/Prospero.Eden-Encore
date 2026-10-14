@@ -6,6 +6,7 @@ root=Path(__file__).resolve().parents[1]
 builder=(root/'tools/build-headless-native.sh').read_text()
 cmake=(root/'headless/CMakeLists.txt').read_text()
 main=(root/'headless/main.cpp').read_text()
+performance=(root/'headless/performance.cpp').read_text()
 workflow=(root/'.github/workflows/build-040-zbic.yml').read_text()
 assert 'source_commit=$(git -C "$root" rev-parse --verify HEAD)' in builder
 assert '[[ "$source_commit" =~ ^[0-9a-f]{40}$ ]]' in builder
@@ -27,6 +28,10 @@ assert main.index('passed("session_start");') < main.index('EDEN_TIME_ANCHOR')
 assert main.index('EDEN_TIME_ANCHOR') < main.index('std::fflush(stdout);', main.index('EDEN_SESSION_SOURCE'))
 assert 'clock_gettime(CLOCK_REALTIME, &real_clock)' in main
 assert 'clock_gettime(CLOCK_MONOTONIC, &mono_clock)' in main
+assert 'EDEN_TIME_ANCHOR epoch_ms=%lld mono_ns=%lld phase=frame_report frame=%u' in performance
+assert 'ClockNs(CLOCK_REALTIME) / 1000000LL' in performance
+assert 'ClockNs(CLOCK_MONOTONIC), frame' in performance
+assert 'if (detailed_gpu_profile.load(std::memory_order_relaxed)) {' in performance
 
 assert 'if (persist_detailed_logs)' in main
 assert main.index('BootTrace::Begin(') < main.index('BootTrace::Line("source_sha=%s"')
