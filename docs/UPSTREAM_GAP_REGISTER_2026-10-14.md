@@ -46,6 +46,17 @@ Totals: 22/22 manifest entries **inventoried**; 15 entries compared to active Gi
 | GPU driver memory/WSI changes after pinned revision | **Open**; branch diverges significantly | ABI and image-coherency matrix; staged native binary verification |
 | Alternative compiler/runtime and thread APIs after SDK pin | **Open**; divergent ABI | Examine source, build and firmware-valid API calls before port |
 
+## End-of-day upstream recheck — functional disposition
+
+- [Original #156 — incremental guest/JIT backing](https://github.com/blackbearreloaded/ProsperoEden/commit/9ce26e650e26112d958f6db4b20d93260de77825): **not ported as an equivalent active runtime mechanism**. It modifies guest pool commitment, JIT Xbyak allocation/commit and kernel pool creation together. Encore already maintains a different sparse JIT/guest map lifetime. Keep a separate audited memory workstream rather than combine it with a gameplay baseline.
+- [Main mirror #4499](https://github.com/eden-emulator/mirror/commit/6352612425ae0765802eaa8c5904ff652b97222a): **already implemented in the active native renderer**. `vendor/encore-active/eden-vulkan/vulkan_query_cache.cpp::FlushEndTFB` no longer calls `UpdateBuffers()`, while Begin does. `tools/check-ps5-tfb-counter-stability.py` asserts both positions. The old immutable `vendor/sources` still contains the call; do not infer a missing port by checking that archive alone.
+- [Original #164/#171/#172](https://github.com/blackbearreloaded/ProsperoEden/commits/main): updated **emulator overlay information, launcher menu button remapping and translations**. This is not a fix for the guest title's delayed HUD nor proof that its saved in-match control preset applies. **Not declared integrated**, evaluate separately against Encore's launcher UI policy.
+- [PS5 OpenGL SDK 1.0.2](https://github.com/blackbearreloaded/ps5-opengl/commit/a519561626933257213d64a4a8bd5e02b55dceb2): program-query/retirement/stats changes; **pin remains intentional** pending source and ABI parity validation. Not proof of a Vulkan match progression fix.
+- [Latest maintained native WSI](https://github.com/mihawk-99/PS5_Mesa/commit/47e9eb61ee7e1112194557e1e047178562827bc6): refresh-mode acceptance changed for 119.88 Hz. Prior Encore 120 Hz work is tracked, but latest source parity is **not** established by pinning an older Mesa archive, and FC27 is currently a nominal 30 FPS title.
+- [External native Vulkan runtime](https://github.com/mpereiraesaa/PS5_Mesa): disk-cache permission and unpresented-swapchain ownership fixes are adapted in maintained Encore sources. The latest Wine stream-compiler-gate architecture is **not a drop-in patch** for Encore's own Vulkan scheduler. Frame interpolation remains deferred until trustworthy game-progress pacing.
+
+This is a **review of named current high-impact changes**, not a certification that every third-party repository, dependency and commit was imported. The separate [pre-test audit](PRETEST_AUDIT_2026-10-14.md) tracks run-specific log boundaries and native-package qualification.
+
 ## Audit controls
 
 1. Every new dependency must be entered in this register; an inventory checker rejects additions without review rows. This is a **coverage alarm**, not an automatic integration decision.
