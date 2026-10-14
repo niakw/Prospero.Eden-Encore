@@ -40,7 +40,7 @@ def parse(log: str) -> tuple[str, list[Window]]:
     sha = ""
     windows: list[Window] = []
     for line in log.splitlines():
-        if line.startswith("EDEN_BUILD_SOURCE "):
+        if line.startswith(("EDEN_BUILD_SOURCE ", "EDEN_SESSION_SOURCE ")):
             sha = line.partition("source_sha=")[2].strip()
         elif line.startswith("EDEN_VULKAN_FRAME "):
             kv = values(line)
