@@ -126,7 +126,8 @@ class DrawList
     // Retail case on a shared 3D pivot: GPU perspective, correct back-face UV
     // winding and a real-thickness projected side. Available for every game.
     void case_face(std::uint32_t texture, const Rect &r, float angle,
-                   bool back, Color tint, const Rect &uv = {0.0f, 0.0f, 1.0f, 1.0f});
+                   bool back, Color tint, const Rect &uv = {0.0f, 0.0f, 1.0f, 1.0f},
+                   bool simplify_switch_header = false);
     void case_spine(const Rect &r, float angle, float thickness,
                     Color front_edge, Color rear_edge, float depth_offset = 0.0f,
                     int side = 0); // -1: red left hinge, +1: clear right edge
