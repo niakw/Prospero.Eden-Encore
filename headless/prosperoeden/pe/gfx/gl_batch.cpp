@@ -43,7 +43,7 @@ void main()
     vec2 size = a_rect.zw;
     // Grow shapes by their softness plus one output pixel for anti-aliasing;
     // glyph and image quads map texels exactly and are not grown.
-    float pad = (shape == 1 || shape == 3 || shape == 9 || shape == 10 || shape == 11 || shape == 12) ?
+    float pad = (shape == 1 || shape == 3 || shape == 9 || shape == 10 || shape == 11 || shape == 12 || shape == 13) ?
         0.0 : a_params.z + 1.0 / u_viewport.x;
     vec2 local = mix(vec2(-pad), size + vec2(pad), corner);
     vec2 virt = a_rect.xy + local;
@@ -59,7 +59,7 @@ void main()
     v_params = a_params;
     v_extra = a_extra;
     float clip_w = 1.0;
-    if (shape == 9 || shape == 10 || shape == 11 || shape == 12) {
+    if (shape == 9 || shape == 10 || shape == 11 || shape == 12 || shape == 13) {
         // A real projective quad, not a horizontally squashed 2D image.
         // Shared retail-case geometry across all titles and console/host.
         const float a = a_params.x;
@@ -70,7 +70,7 @@ void main()
         if (shape == 9 || shape == 11) {
             // Place a real back surface on the FAR plane of the case.
             // It must not occupy the same Z as the front artwork.
-            float depth = a_params.y > 0.5 ? 28.0 : 0.0;
+            float depth = a_params.y > 0.5 ? 64.0 : 0.0;
             x = local.x * cs - depth * sn;
             z = -local.x * sn - depth * cs;
             vec2 oriented = vec2(a_params.y > 0.5 ? 1.0 - corner.x : corner.x,
@@ -83,12 +83,34 @@ void main()
             float depth = a_params.z + corner.x * a_params.y;
             x = edge_x * cs - depth * sn;
             z = -edge_x * sn - depth * cs;
-        } else {
-            // Solid transparent upper/lower cap: breadth X, real depth Z.
-            // It joins the very same projected vertices as both face planes.
+        } else if (shape == 12) {
             float depth = corner.y * a_params.z;
             x = local.x * cs - depth * sn;
             z = -local.x * sn - depth * cs;
+        } else {
+            // True rounded corner: eight 3D quarter-arc segments, extruded
+            // along the full case depth. This is an actual curved silhouette,
+            // NOT a 2D rounded border or a flat image on the side.
+            const float pi = 3.14159265358979323846;
+            int quadrant = int(a_extra.x + 0.5);
+            float theta0 = quadrant == 0 ? pi :
+                           quadrant == 1 ? 1.5*pi :
+                           quadrant == 2 ? 0.0 : 0.5*pi;
+            float theta = theta0 +
+                (a_extra.y + corner.y) / max(1.0, a_extra.z) * 0.5*pi;
+            float radius = a_params.y;
+            float side_x = (quadrant == 0 || quadrant == 3 ? -1.0 : 1.0);
+            float side_y = (quadrant <= 1 ? -1.0 : 1.0);
+            float rounded_x = side_x * (0.5 * size.x - radius) +
+                              radius * cos(theta);
+            float rounded_y = side_y * (0.5 * size.y - radius) +
+                              radius * sin(theta);
+            float depth = corner.x * a_params.z;
+            x = rounded_x * cs - depth * sn;
+            z = -rounded_x * sn - depth * cs;
+            // Normal on curved side, consumed by the lit plastic material.
+            v_uv = vec2(cos(theta), sin(theta));
+            virt.y = rounded_y;
         }
         clip_w = max(0.65, 1.0 - z / 950.0);
         // A slight stable 3-axis display tilt makes the cover's upper and
@@ -97,7 +119,7 @@ void main()
         float y = (shape == 12) ?
             (a_params.y > 0.5 ? 0.5 : -0.5) * size.y +
             corner.y * a_params.z * (a_params.y > 0.5 ? 0.18 : -0.18) :
-            local.y;
+            shape == 13 ? virt.y : local.y;
         virt = centre + vec2(x + y * 0.025,
                              y + x * 0.065) / clip_w;
         v_virtual = virt;
@@ -202,6 +224,20 @@ void main()
         color = mix(v_top, v_bottom, v_st.y);
         color.rgb = mix(color.rgb, vec3(1.0), 0.13 * lip);
         color.a *= lip * end_mask;
+    }
+    else if (shape == 13)
+    {
+        // Soft plastic with a curved normal-derived highlight and an
+        // illuminated front rim, darkening naturally toward the rear plane.
+        vec2 n = normalize(v_uv);
+        vec2 light_dir = normalize(vec2(-0.65, -0.76));
+        float diffuse = max(0.0, dot(n, light_dir));
+        float specular = pow(max(0.0, dot(n, normalize(vec2(-0.78, -0.62)))), 6.0);
+        vec4 material = mix(v_top, v_bottom, v_st.x);
+        material.rgb *= 0.58 + 0.40 * diffuse;
+        material.rgb += vec3(0.24, 0.26, 0.31) * specular;
+        material.a *= (0.72 + 0.18 * diffuse);
+        color = material;
     }
     else if (shape == 11)
     {
