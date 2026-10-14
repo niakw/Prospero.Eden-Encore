@@ -404,6 +404,9 @@ jobs:
           python3 -B tools/ci/check-staged-app.py "$EDEN_STAGE_DIR"
           if [[ "$EDEN_TEST_ALL_ON" == 1 ]]; then
             python3 -B tools/ci/check-all-on-test-binary.py "$EDEN_STAGE_DIR" "$EDEN_TEST_TITLE_ID"
+          else
+            # Check the compiled CMake profile, not just source/eboot strings.
+            python3 -B tools/ci/check-release-experiments.py "$EDEN_STAGE_DIR"
           fi
 
       - name: Record matching debug ELF and native binary digests
