@@ -150,7 +150,7 @@ assert "paper_uv.h = source_aspect / target_aspect;" in draw
 assert "paper_uv.w = target_aspect / source_aspect;" in draw
 assert "w < (narrow_spine ? 64 : 128)" in native
 assert "h < (narrow_spine ? 600 : 200)" in native
-assert "c.list.case_spine(side_strip, angle, 3.2f," in draw
+assert "c.list.case_spine(side_strip, angle, 3.2f," not in draw
 assert "c.list.case_spine_blank(side_strip, angle, case_depth," in draw
 assert "const Rect face{physical.x + 3.0f, physical.y + 3.0f," in draw
 assert "float rounded = round_box(v_local, v_half, 22.0);" in shader
