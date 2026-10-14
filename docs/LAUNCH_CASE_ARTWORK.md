@@ -212,3 +212,17 @@ any pre-rendered 3D box image is shipped as a game texture.
 
 **Only the host C++/OpenGL visual-preview workflow is requested for this
 iteration; do not invoke source preflight or a native console build.**
+
+## Physical-case correction checkpoint
+
+The transparent molded sleeve now stays within the projected front/back shell.
+The printed scan is recessed only 7px, and the shell has a single subdued
+translucent rim instead of stacked white backing rectangles. Case depth is
+36px for a 454px-wide cover (~7.9%); both paper planes, spine ink, curved
+edges, and upper/lower caps agree on this depth. The front and the real back
+use the same slight angle; the back still pauses for 4.5 seconds. The public
+CDN may supply a low-resolution original; source resolution is logged and
+cannot be repaired by stretching it.
+
+Validation is limited to the host-only, real C++/OpenGL visual preview;
+no native app packaging or native platform compilation is requested.
