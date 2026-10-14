@@ -636,13 +636,14 @@ int main(int argc, char** argv) {
                     Eden::Report("cache", "The driver's shader cache could not move to the data folder; it starts empty");
             }
             (void)mkdir(cache.c_str(), 0777);
-            // The pinned driver refuses disk caching whenever real/effective
-            // user OR group credentials differ (src/util/u_debug.h,
-            // __normal_user). A configured cache path is not proof of a live
-            // cache. Observe eligibility without changing process privileges.
+            // The native maintained driver deliberately bypasses Mesa's
+            // __normal_user() gate on this console (but not on ordinary hosts).
+            // Credential differences are context, NOT evidence the PS5 driver
+            // rejected disk caching. A configured directory still proves no
+            // actual cache hits. Never adjust process privileges here.
             const bool cache_uid_match = getuid() == geteuid();
             const bool cache_gid_match = getgid() == getegid();
-            std::printf("EDEN_GPU_DISK_CACHE_ELIGIBILITY uid_match=%u gid_match=%u "
+            std::printf("EDEN_GPU_DISK_CACHE_CONTEXT uid_match=%u gid_match=%u "
                         "directory_ready=%u disable_env_present=%u\n",
                         unsigned(cache_uid_match), unsigned(cache_gid_match),
                         unsigned(Eden::DirectoryExists(cache)),
