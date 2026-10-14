@@ -103,13 +103,14 @@ get_target_property(eden_common_sources common SOURCES)
 list(REMOVE_ITEM eden_common_sources logging.cpp)
 list(APPEND eden_common_sources "${PORT_BUILD_DIR}/logging.cpp")
 set_property(TARGET common PROPERTY SOURCES "${eden_common_sources}")
-# Keep successful JIT invariant checks inline; preserve upstream failure handling.
-# Use a private include root so other core/renderer targets retain their headers.
-file(READ "${PROJECT_SOURCE_DIR}/src/common/assert.h" jit_assert_header)
-file(READ "${CMAKE_CURRENT_LIST_DIR}/jit_assert.inc" jit_assert_override)
-write_derived("${PORT_BUILD_DIR}/jit-checks/common/assert.h"
-    "${jit_assert_header}\n${jit_assert_override}")
-target_include_directories(dynarmic BEFORE PRIVATE "${PORT_BUILD_DIR}/jit-checks")
+# The full JIT assertion header is versioned under vendor/encore-active.
+# It is byte-equivalent to the previous pinned header + guarded override;
+# only the Dynarmic target sees these exceptional-path assertion semantics.
+set(EDEN_JIT_ASSERT_ROOT "${PORT_ROOT}/vendor/encore-active/eden-core/src")
+if(NOT EXISTS "${EDEN_JIT_ASSERT_ROOT}/common/assert.h")
+    message(FATAL_ERROR "Missing maintained JIT assertions")
+endif()
+target_include_directories(dynarmic BEFORE PRIVATE "${EDEN_JIT_ASSERT_ROOT}")
 # Let the existing compiler inline across the JIT's translation units. Keep the
 # rest of the native application on its qualified non-LTO build path.
 target_compile_options(dynarmic PRIVATE -flto=thin)
