@@ -19,6 +19,8 @@ typedef enum {
     RADIO_INPUT_DOWN,
     RADIO_INPUT_LEFT,
     RADIO_INPUT_RIGHT,
+    RADIO_INPUT_L2,
+    RADIO_INPUT_R2,
     RADIO_INPUT_COUNT
 } radio_input_key_t;
 
