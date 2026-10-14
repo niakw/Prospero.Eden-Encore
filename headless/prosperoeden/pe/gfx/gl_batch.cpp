@@ -43,7 +43,7 @@ void main()
     vec2 size = a_rect.zw;
     // Grow shapes by their softness plus one output pixel for anti-aliasing;
     // glyph and image quads map texels exactly and are not grown.
-    float pad = (shape == 1 || shape == 3 || shape == 9 || shape == 10 || shape == 11 || shape == 12 || shape == 13 || shape == 14) ?
+    float pad = (shape == 1 || shape == 3 || shape == 9 || shape == 10 || shape == 11 || shape == 12 || shape == 13 || shape == 14 || shape == 15) ?
         0.0 : a_params.z + 1.0 / u_viewport.x;
     vec2 local = mix(vec2(-pad), size + vec2(pad), corner);
     vec2 virt = a_rect.xy + local;
@@ -59,7 +59,7 @@ void main()
     v_params = a_params;
     v_extra = a_extra;
     float clip_w = 1.0;
-    if (shape == 9 || shape == 10 || shape == 11 || shape == 12 || shape == 13 || shape == 14) {
+    if (shape == 9 || shape == 10 || shape == 11 || shape == 12 || shape == 13 || shape == 14 || shape == 15) {
         // A real projective quad, not a horizontally squashed 2D image.
         // Shared retail-case geometry across all titles and console/host.
         const float a = a_params.x;
@@ -76,7 +76,7 @@ void main()
             vec2 oriented = vec2(a_params.y > 0.5 ? 1.0 - corner.x : corner.x,
                                  corner.y);
             v_uv = mix(a_extra.xy, a_extra.zw, oriented);
-        } else if (shape == 10 || shape == 14) {
+        } else if (shape == 10 || shape == 14 || shape == 15) {
             // The side lies between two parallel printed planes. It occupies
             // real space in Z rather than being a 2D strip in screen-space.
             float side = a_extra.x < -0.5 ? -0.5 :
@@ -230,6 +230,34 @@ void main()
         vec4 ink = texture(u_texture, v_uv);
         float side_light = 0.81 + 0.19 * (1.0 - v_st.x);
         color = vec4(ink.rgb * v_top.rgb * side_light, ink.a * v_top.a);
+    }
+    else if (shape == 15)
+    {
+        // User's red empty-spine reference rendered as clean vector features
+        // directly on our physical side plane. No low-resolution texture or
+        // fake game title is ever stretched to cover the height.
+        vec2 p = vec2(v_st.x * 44.0, v_st.y * 730.0);
+        vec3 red = v_top.rgb * (0.85 + 0.15 * (1.0 - v_st.x));
+        float left_outer = 1.0 - smoothstep(-0.9, 0.9,
+            round_box(p - vec2(14.5, 34.0), vec2(8.0, 20.0), 7.7));
+        float left_inner = 1.0 - smoothstep(-0.9, 0.9,
+            round_box(p - vec2(14.5, 34.0), vec2(5.1, 17.0), 5.0));
+        float right_body = 1.0 - smoothstep(-0.9, 0.9,
+            round_box(p - vec2(30.0, 34.0), vec2(7.8, 20.0), 7.5));
+        float left_dot = 1.0 - smoothstep(2.3, 3.9,
+            length(p - vec2(14.5, 25.5)));
+        float right_dot = 1.0 - smoothstep(2.3, 3.9,
+            length(p - vec2(30.0, 42.0)));
+        float footer = 1.0 - smoothstep(-0.8, 0.8,
+            round_box(p - vec2(22.0, 683.0), vec2(12.0, 26.0), 9.0));
+        float footer_inset = 1.0 - smoothstep(-0.8, 0.8,
+            round_box(p - vec2(22.0, 683.0), vec2(8.7, 22.0), 6.0));
+        float symbol = max(max(left_outer - left_inner, right_body),
+                           max(left_dot, footer - footer_inset));
+        vec3 white = vec3(0.96, 0.97, 1.0);
+        vec3 ink = mix(red, white, clamp(symbol, 0.0, 1.0));
+        ink = mix(ink, red, right_dot * 0.92);
+        color = vec4(ink, v_top.a);
     }
     else if (shape == 10)
     {
