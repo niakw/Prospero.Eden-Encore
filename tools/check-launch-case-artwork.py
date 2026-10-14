@@ -155,7 +155,7 @@ assert '"https://images.launchbox-app.com"' in native
 assert "EnsureRetailCase(game.title_id, game.name," in native
 assert "1500.0f / width, 2100.0f / height" in native
 assert "ValidNlibTga(path)" in native
-assert "CleanTitle(game.file), cancel);" in native
+assert "CleanTitle(game.file), language_choice, cancel);" in native
 assert 'IsFile(base + ".png")' in native
 assert "ui/box-art-index.tsv" in workflow
 assert "tools/launcher/build-box-art-index.py --download" in workflow
