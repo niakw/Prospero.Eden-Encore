@@ -1366,6 +1366,23 @@ void ReportGpuThread(unsigned frame) {
                         frame, guest_cache_domains[d],
                         totals[0], totals[1], totals[2],
                         changes[0], changes[1], changes[2]);
+            // High-threshold tails distinguish many brief cache waits from
+            // a single frame-scale lock hold. Never infer frame causality.
+            static std::array<std::array<unsigned long long, 2>, 2> previous_slow_waits{};
+            const unsigned long long slow_totals[] = {
+                stat.waited_ge1ms.load(std::memory_order_relaxed),
+                stat.waited_ge10ms.load(std::memory_order_relaxed)
+            };
+            unsigned long long slow_window[2]{};
+            for (unsigned t = 0; t < 2; ++t) {
+                const auto prev = previous_slow_waits[d][t];
+                slow_window[t] = slow_totals[t] >= prev ? slow_totals[t] - prev : slow_totals[t];
+                previous_slow_waits[d][t] = slow_totals[t];
+            }
+            std::printf("EDEN_GUEST_CACHE_LOCK_TAIL frame=%u domain=%s "
+                        "wait_ge1ms=%llu wait_ge10ms=%llu max_wait_ns=%llu\n",
+                        frame, guest_cache_domains[d], slow_window[0], slow_window[1],
+                        stat.max_wait_ns.exchange(0, std::memory_order_relaxed));
         }
     }
     const auto window = Eden::Fastmem::WindowStats();
