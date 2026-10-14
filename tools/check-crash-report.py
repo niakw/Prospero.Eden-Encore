@@ -292,10 +292,12 @@ def check(binary, console):
     # Never let a different build attribute a system-library RIP to a
     # coincidentally similar application function. The Oct 10 console logs
     # exposed this exact source/build mismatch.
-    wrong_size = re.sub(
-        r'\\(code size 0x([0-9a-f]+)\\)',
+    wrong_size, substitutions = re.subn(
+        r'\(code size 0x([0-9a-f]+)\)',
         lambda m: '(code size 0x%x)' % (int(m.group(1), 16) + 1),
         report, count=1)
+    assert substitutions == 1 and wrong_size != report, (
+        "Crash-report negative fixture must change exactly one code-size marker")
     mismatch_report = reports[0].with_name('wrong-symbols.txt')
     mismatch_report.write_text(wrong_size)
     mismatch = subprocess.run(
