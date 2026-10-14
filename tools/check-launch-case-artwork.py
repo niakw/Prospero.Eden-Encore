@@ -166,7 +166,7 @@ assert "else if (shape == 15)" in shader
 assert "printed_side_visible" in draw
 assert "c.list.case_spine_image(ink.texture, side_strip, angle," in draw
 assert "True rounded corner" in shader
-assert "float radius = v_params.z > 0.5 ? 18.0 : 22.0;" in shader
+assert "float d = round_box(v_local, v_half, 0.0);" in shader
 assert "float scan_inside = v_params.z > 0.5 ?" in shader
 assert "paper_uv.h = source_aspect / target_aspect;" in draw
 assert "paper_uv.w = target_aspect / source_aspect;" in draw
@@ -174,20 +174,44 @@ assert "w < (narrow_spine ? 64 : 128)" in native
 assert "h < (narrow_spine ? 600 : 200)" in native
 assert "c.list.case_spine(side_strip, angle, 3.2f," not in draw
 assert "c.list.case_spine_blank(side_strip, angle, case_depth," in draw
-assert "constexpr float kPaperSideInset = 9.0f;" in draw
+assert "kPaperSideInset" not in draw
 assert "constexpr float kPaperTopInset = 13.0f;" in draw
-assert "const Rect face{physical.x + kPaperSideInset," in draw
+assert "const Rect face{physical.x, physical.y + kPaperTopInset," in draw
 assert draw.count("const Rect face{") == 1
 assert "const Rect side_strip{physical.x, physical.y + kPaperTopInset," in draw
 assert "physical.h - 2.0f * kPaperTopInset" in draw
 assert "physical.h - 2.0f * case_radius" not in draw
-assert "float rounded = round_box(v_local, v_half, 22.0);" in shader
+# The continuous WRAP must meet the spine without left/right paper margins.
+# All three scanned faces share EXACTLY one physical Y interval. Front Z=0,
+# spine Z=[0,-depth], back Z=-depth: there is no paper break at either seam.
+assert "const Rect face{physical.x, physical.y + kPaperTopInset," in draw
+assert "physical.w, physical.h - 2.0f * kPaperTopInset};" in draw
+assert "const Rect side_strip{physical.x, physical.y + kPaperTopInset," in draw
+assert "c.list.case_face(0, physical" not in draw
+assert "float d = round_box(v_local, v_half, 0.0);" in shader
+assert "float radius = v_params.z > 0.5 ?" not in shader
+assert "vec2 edge_px = min(v_st, 1.0 - v_st)" in shader
+paper_top, paper_bottom, box_h, width, depth = 13.0, 13.0, 730.0, 454.0, 44.0
+paper_h = box_h - paper_top - paper_bottom
+front_x = (0.0, width)
+back_x = (0.0, width)
+spine_z = (0.0, -depth)
+front_z, back_z = 0.0, -depth
+assert front_x == back_x and spine_z == (front_z, back_z)
+assert paper_h == 704.0 and 13.0 + paper_h == box_h - paper_bottom
+lib_sleeve = library.split("void flat_retail_sleeve(", 1)[1].split(
+    "std::string controller_profile_name(", 1)[0]
+assert "const Rect paper{shell.x, shell.y + top, shell.w," in lib_sleeve
+assert "cover(c, scan, paper, 0.0f, 0.0f);" in lib_sleeve
+assert "const float other_x" not in lib_sleeve
+assert "c.list.bordered_rect(shell, radius" not in lib_sleeve
+assert "round_box(v_local, v_half, 22.0)" in shader
 assert "angle, false, case_depth," in draw
 assert "c.list.case_corner(physical, angle, case_radius, case_depth," in draw
 assert "constexpr float case_depth = 44.0f;" in draw
 assert "float depth = a_params.y > 0.5 ? 44.0 : 0.0;" in shader
 assert "constexpr float case_radius = 22.0f;" in draw
-assert "float rounded = round_box(v_local, v_half, 22.0);" in shader
+assert "round_box(v_local, v_half, 22.0)" in shader
 assert "float fresnel = pow(1.0 - abs(cos(v_params.x)), 3.0);" in shader
 assert "case_depth * std::abs(std::sin(angle))" in draw
 assert "if (!selected_game_.empty()) {\n        draw_launch(c);\n        return;" in launcher
@@ -204,9 +228,9 @@ assert "const float return_start = back_start + theme::kCaseBackHold;" in draw
 assert "angle = kBackYaw;" in draw
 assert "const Cover ink = c.textures.cover(launch_box_spine_, 760.0f);" in draw
 assert "std::string fallback;" in draw
-assert "constexpr float kPaperSideInset = 9.0f;" in draw
+assert "kPaperSideInset" not in draw
 assert "constexpr float kPaperTopInset = 13.0f;" in draw
-assert "const Rect face{physical.x + kPaperSideInset," in draw
+assert "const Rect face{physical.x, physical.y + kPaperTopInset," in draw
 assert draw.count("const Rect face{") == 1
 assert "int side = 0" in shapes
 assert "a_extra.x < -0.5 ? -0.5 :" in shader
