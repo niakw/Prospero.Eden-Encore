@@ -70,8 +70,8 @@ def download(destination: Path) -> None:
         image.thumbnail((1920, 1920), Image.Resampling.LANCZOS)
         image.save(destination / filename, format="TGA")
         receipts.append(
-            f"{filename}\\t{url}\\tsha256:{hashlib.sha256(body).hexdigest()}\\t"
-            f"source={original[0]}x{original[1]}\\n")
+            f"{filename}\t{url}\tsha256:{hashlib.sha256(body).hexdigest()}\t"
+            f"source={original[0]}x{original[1]}\n")
         print(f"{filename} from {url} native size={original[0]}x{original[1]}")
     (destination / "source-receipts.txt").write_text("".join(receipts))
     print("HOST_RETAIL_SCANS: fetched 2 physical faces and 1 game background")
