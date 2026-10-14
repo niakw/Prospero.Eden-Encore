@@ -150,7 +150,20 @@ assert "BotW_NA_Switch_Box_Art" not in (root / "tools/launcher/preview-botw-medi
 assert '"Box - Spine"' in indexer
 assert "void EnsureRetailCase(" in native
 assert "RetailCaseIndex()" in native
-assert 'Eden::AppFile("ui/box-art-index.tsv")' in native
+assert 'Eden::AppResourceFile("ui/box-art-index.tsv")' in native
+assert 'Eden::AppFile("ui/box-art-index.tsv")' not in native
+assert '"EDEN_CASE_INDEX status=%s entries=%zu path=%s' in native
+assert '"EDEN_CASE_FETCH status=unavailable' in native
+assert '"EDEN_CASE_LOOKUP title=%016llX status=no-match' in native
+assert "std::chrono::minutes(5)" in native
+assert "std::chrono::hours(4)" not in native.split("void EnsureRetailCase(", 1)[1].split("NlibEnrichment CachedNlibEnrichment(", 1)[0]
+assert "both_faces_cached_at_start" in native
+assert "attempts >= 3" in native
+assert "const pe::ui::BoxArt cached_case = box_art(game.title_id);" in native
+case_worker = native.split("pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game,", 1)[1].split("pe::ui::BoxArt EdenServices::box_art(", 1)[0]
+assert case_worker.index("EnsureRetailCase(game.title_id, scanned_name") < case_worker.index("EnsureNlibEnrichment(game.title_id")
+assert 'case_index_source = source_ui / "box-art-index.tsv"' in (
+    root / "tools/ci/check-staged-app.py").read_text()
 assert 'Common::Net::MakeRequest(' in native
 assert '"https://images.launchbox-app.com"' in native
 assert "EnsureRetailCase(game.title_id, game.name," in native
