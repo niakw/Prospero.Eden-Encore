@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 
 namespace pe::host
 {
@@ -220,6 +221,10 @@ constexpr int kLanguageRegions[] = {1, 2, 2, 1, 2, 2, 2, 1, 2, 1, 2, 2, 2, 0, 5,
 
 FakeServices::FakeServices(const std::string &covers_directory)
 {
+    // Optional real images are fetched into the GitHub runner workspace.
+    // No game art is checked into git or published in native packages.
+    preview_botw_ = std::getenv("PE_PREVIEW_BOTW") != nullptr &&
+                    std::string_view(std::getenv("PE_PREVIEW_BOTW")) == "1";
     int index = 0;
     for (const Sample &sample : kSamples)
     {
@@ -263,18 +268,36 @@ FakeServices::FakeServices(const std::string &covers_directory)
                 game.max_players = 2;
             }
         }
+        if (preview_botw_ && std::string_view(sample.name) == "Echoes of the Valley") {
+            game.name = "The Legend of Zelda: Breath of the Wild";
+            game.file = "The Legend of Zelda - Breath of the Wild [01007EF00011E000].xci";
+            game.title_id = 0x01007EF00011E000ull;
+            game.cover = covers_directory + "/botw-front.tga";
+            game.hero = covers_directory + "/botw-hero.tga";
+            game.screenshots = {game.hero};
+            game.intro = "Explore the vast landscapes of Hyrule.";
+            game.description = "Discover Hyrule, explore its landscapes and embark on an open-air adventure.";
+            game.max_players = 1;
+        }
         games_.push_back(game);
         ++index;
     }
     std::sort(games_.begin(), games_.end(),
               [](const ui::Game &a, const ui::Game &b) { return a.name < b.name; });
     for (const ui::Game& game : games_) {
-        if (game.name == "Echoes of the Valley") {
+        if (game.name == (preview_botw_ ?
+                         "The Legend of Zelda: Breath of the Wild" :
+                         "Echoes of the Valley")) {
             sample_case_title_id_ = game.title_id;
-            sample_case_front_ = covers_directory + "/fixture-case-front.tga";
-            sample_case_back_ = covers_directory + "/fixture-case-back.tga";
-            if (!write_case_fixture(sample_case_front_, false)) sample_case_front_.clear();
-            if (!write_case_fixture(sample_case_back_, true)) sample_case_back_.clear();
+            if (preview_botw_) {
+                sample_case_front_ = covers_directory + "/botw-front.tga";
+                sample_case_back_ = covers_directory + "/botw-back.tga";
+            } else {
+                sample_case_front_ = covers_directory + "/fixture-case-front.tga";
+                sample_case_back_ = covers_directory + "/fixture-case-back.tga";
+                if (!write_case_fixture(sample_case_front_, false)) sample_case_front_.clear();
+                if (!write_case_fixture(sample_case_back_, true)) sample_case_back_.clear();
+            }
             break;
         }
     }
@@ -310,7 +333,8 @@ ui::Home FakeServices::home()
                     return game;
             return games_.front();
         };
-        const ui::Game &last = find("Echoes of the Valley");
+        const ui::Game &last = find(preview_botw_ ?
+            "The Legend of Zelda: Breath of the Wild" : "Echoes of the Valley");
         home.last_file = last.file;
         home.last_exists = true;
         home.last_title = last.name;
@@ -325,7 +349,9 @@ ui::Home FakeServices::home()
         home.last_title_id = last.title_id;
         home.last_addons = last.addons;
         home.last_language = last.language;
-        for (const char *name : {"Echoes of the Valley", "Kart Carnival Deluxe", "Starfall Odyssey",
+        for (const char *name : {preview_botw_ ?
+                                 "The Legend of Zelda: Breath of the Wild" :
+                                 "Echoes of the Valley", "Kart Carnival Deluxe", "Starfall Odyssey",
                                  "Caf\xC3\xA9 Nocturne", "Moss & Lantern", "Tiny Harbor", "Cloudline"})
         {
             const ui::Game &game = find(name);
