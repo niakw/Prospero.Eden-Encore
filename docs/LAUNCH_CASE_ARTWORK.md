@@ -164,3 +164,11 @@ supplied by its external publisher; copyright stays with its owners.
 Only commits containing `[preview-ready]` trigger this host-only
 workflow automatically. No native console binary is implied by these
 screenshots.
+
+## Verification checkpoint
+
+The shared three-dimensional case mesh, screenshot rendering, cache source selection,
+and native build are validated through the dedicated source-preflight, OpenGL
+preview, and native build workflows. A passing workflow is a prerequisite for
+claiming a render is verified; actual on-device appearance still requires a
+separate console test.
