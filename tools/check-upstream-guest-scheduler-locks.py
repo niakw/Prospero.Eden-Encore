@@ -130,5 +130,58 @@ with tempfile.TemporaryDirectory(prefix="encore-scheduler-guard-") as folder:
     subprocess.run([compiler, "-std=c++20", "-Wall", "-Wextra", "-Werror",
                     str(cpp), "-o", str(exe)], check=True, env=env, timeout=60)
     subprocess.run([str(exe)], check=True, env=env, timeout=15)
+
+# Configure the *actual* CMake override fragment with mocked target source
+# lists both ON and OFF. This catches accidental duplicate scheduler TUs,
+# wrong include visibility and breaks in source-list replacement.
+cmake_exe = shutil.which("cmake")
+assert cmake_exe, "CMake required to check native source-selection contract"
+fragment_start = "# Upstream pair #4436 + #4447:"
+fragment_end = "# The full JIT assertion header is versioned"
+assert cmake.count(fragment_start) == 1 and cmake.count(fragment_end) == 1
+fragment = cmake.split(fragment_start, 1)[1].split(fragment_end, 1)[0]
+fragment = fragment_start + fragment
+with tempfile.TemporaryDirectory(prefix="encore-thread-cmake-") as folder:
+    source_dir = Path(folder) / "source"
+    source_dir.mkdir()
+    (source_dir / "hle/kernel").mkdir(parents=True)
+    (source_dir / "hle/kernel/k_scheduler.cpp").write_text("void fake_scheduler() {}\n")
+    (source_dir / "dummy.cpp").write_text("void unused_dummy() {}\n")
+    prefix = """cmake_minimum_required(VERSION 3.22)
+project(EncoreSchedulerProbe LANGUAGES CXX)
+add_library(core STATIC hle/kernel/k_scheduler.cpp)
+foreach(t IN ITEMS video_core audio_core hid_core network input_common
+                   frontend_common shader_recompiler dynarmic)
+  add_library(${t} STATIC dummy.cpp)
+endforeach()
+set(PORT_ROOT "@PORT_ROOT@")
+""".replace("@PORT_ROOT@", str(root))
+    verify = """
+get_target_property(actual_sources core SOURCES)
+if(EDEN_BLOCKING_GUEST_CONTEXT_LOCKS)
+  list(FIND actual_sources
+    "${EDEN_THREAD_ROOT}/core/hle/kernel/k_scheduler.cpp" active_idx)
+  list(FIND actual_sources "hle/kernel/k_scheduler.cpp" legacy_idx)
+  if(active_idx EQUAL -1 OR NOT legacy_idx EQUAL -1)
+    message(FATAL_ERROR "Native core scheduler source override lost")
+  endif()
+  get_target_property(exported core INTERFACE_INCLUDE_DIRECTORIES)
+  if(NOT "${EDEN_THREAD_ROOT}" IN_LIST exported)
+    message(FATAL_ERROR "Native KThread header layout not propagated")
+  endif()
+else()
+  list(FIND actual_sources "hle/kernel/k_scheduler.cpp" legacy_idx)
+  if(legacy_idx EQUAL -1)
+    message(FATAL_ERROR "Original scheduler not restored when option is OFF")
+  endif()
+endif()
+"""
+    (source_dir / "CMakeLists.txt").write_text(prefix + fragment + verify)
+    for enabled in ("ON", "OFF"):
+        subprocess.run([cmake_exe, "-S", str(source_dir),
+                        "-B", str(Path(folder) / ("build_" + enabled)),
+                        "-DEDEN_BLOCKING_GUEST_CONTEXT_LOCKS=" + enabled],
+                       check=True, env=env, timeout=50, stdout=subprocess.DEVNULL)
+
 print("PASS paired upstream kernel source overlays + exact hashes + CMake/CI wiring")
 print("HOST ONLY: native build and guest gameplay still require qualification")
