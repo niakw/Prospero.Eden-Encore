@@ -236,6 +236,18 @@ void DrawList::case_spine_image(std::uint32_t texture, const Rect &r,
     set4(i.extra, 0.0f, 0.0f, 1.0f, 1.0f);
 }
 
+void DrawList::case_spine_blank(const Rect &r, float angle, float depth,
+                                Color tint)
+{
+    Instance &i = append(0);
+    const Rect t = apply(r);
+    set4(i.rect, t.x, t.y, t.w, t.h);
+    set_color(i.color_top, tint);
+    set_color(i.color_bottom, tint);
+    set4(i.params, angle, depth * transform_.scale, 0.0f,
+         static_cast<float>(Shape::case_spine_blank));
+}
+
 void DrawList::case_corner(const Rect &r, float angle, float radius, float depth,
                            int quadrant, int segment, Color near, Color far)
 {
