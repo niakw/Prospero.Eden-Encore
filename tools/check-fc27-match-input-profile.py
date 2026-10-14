@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Native host contract: guest-saved action bindings never receive title-specific swaps."""
+"""Host input is fixed at launch; native game-owned action settings remain unqualified.
+
+Neither a launcher button profile nor this source-derived unit test can tell
+whether a title saved, selected, or consumed its own in-match action scheme.
+"""
 from pathlib import Path
 import shutil
 import subprocess
@@ -24,6 +28,7 @@ assert "gameplay_chord" not in device + pad
 assert "EDEN_PAD_GAMEPLAY_PROFILE" not in pad
 assert "EDEN_PAD_MAPPING_LOCKED scope=session mode=static game_actions=guest_owned" in main
 assert "EDEN_PAD_MAPPING_CONTEXT title=%016llx mode=game_owned" in main
+assert "game_action_profile_observed=0" in main
 assert "const int pad = active_mapping[game];" in pad
 assert "MappedTo(ActiveMapping(), pad_touchpad)" in pad
 assert "MappedTo(active_mapping, pad_create)" in pad
@@ -60,5 +65,5 @@ with tempfile.TemporaryDirectory(prefix="encore-guest-actions-") as folder:
                     "-I", str(root / "headless"), str(src), "-o", str(exe)],
                    check=True, timeout=60)
     subprocess.run([str(exe)], check=True, timeout=20)
-print("PASS: one stable controller mapping, no match/pause override of guest action bindings")
-print("Guest save-file persistence and on-device gameplay remain hardware test gates")
+print("PASS: physical-to-guest buttons are fixed at title boot with no game-phase swaps")
+print("UNQUALIFIED: the title's custom match actions, selected player profile and save persistence")
