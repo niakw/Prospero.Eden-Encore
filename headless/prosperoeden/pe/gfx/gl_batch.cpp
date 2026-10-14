@@ -43,7 +43,8 @@ void main()
     vec2 size = a_rect.zw;
     // Grow shapes by their softness plus one output pixel for anti-aliasing;
     // glyph and image quads map texels exactly and are not grown.
-    float pad = (shape == 1 || shape == 3) ? 0.0 : a_params.z + 1.0 / u_viewport.x;
+    float pad = (shape == 1 || shape == 3 || shape == 9 || shape == 10) ?
+        0.0 : a_params.z + 1.0 / u_viewport.x;
     vec2 local = mix(vec2(-pad), size + vec2(pad), corner);
     vec2 virt = a_rect.xy + local;
     vec2 unit = local / max(size, vec2(1e-3));
@@ -57,9 +58,37 @@ void main()
     v_border = a_border;
     v_params = a_params;
     v_extra = a_extra;
+    float clip_w = 1.0;
+    if (shape == 9 || shape == 10) {
+        // A real projective quad, not a horizontally squashed 2D image.
+        // Shared retail-case geometry across all titles and console/host.
+        const float a = a_params.x;
+        const float cs = cos(a), sn = sin(a);
+        const vec2 centre = a_rect.xy + 0.5 * size;
+        const vec2 local = (corner - 0.5) * size;
+        float x, z;
+        if (shape == 9) {
+            x = local.x * cs;
+            z = -local.x * sn;
+            vec2 oriented = vec2(a_params.y > 0.5 ? 1.0 - corner.x : corner.x,
+                                 corner.y);
+            v_uv = mix(a_extra.xy, a_extra.zw, oriented);
+        } else {
+            // Exposed left/right plastic side joins front face to rear face.
+            // Front and rear lie on actual parallel planes, 25 virtual px apart.
+            float edge_x = (sn > 0.0 ? -0.5 : 0.5) * size.x;
+            float rear = corner.x;
+            x = edge_x * cs - rear * sn * a_params.y;
+            z = -edge_x * sn - rear * cs * a_params.y;
+        }
+        clip_w = max(0.65, 1.0 - z / 950.0);
+        virt = centre + vec2(x, local.y) / clip_w;
+        v_virtual = virt;
+    }
     vec2 surface = virt * u_viewport.x + u_viewport.yz;
     vec2 ndc = surface / u_surface * 2.0 - 1.0;
-    gl_Position = vec4(ndc.x, -ndc.y, 0.0, 1.0);
+    // Non-unit W gives hardware perspective-correct image UV interpolation.
+    gl_Position = vec4(ndc.x * clip_w, -ndc.y * clip_w, 0.0, clip_w);
 }
 )";
 
@@ -131,6 +160,14 @@ void main()
     else if (shape == 3)
     {
         color = texture(u_texture, v_uv) * fill;
+    }
+    else if (shape == 9)
+    {
+        color = v_params.z > 0.5 ? texture(u_texture, v_uv) * v_top : v_top;
+    }
+    else if (shape == 10)
+    {
+        color = mix(v_top, v_bottom, v_st.x);
     }
     else if (shape == 8)
     {
