@@ -156,8 +156,9 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
     const float side = std::max(4.0f, shell.w * 0.022f);
     const float top = std::max(5.0f, shell.h * 0.018f);
     const float radius = std::max(5.0f, shell.w * 0.028f);
-    const Rect paper{shell.x + side, shell.y + top,
-                     shell.w - 2.0f * side, shell.h - 2.0f * top};
+    // Same single square-corner paper profile as the 3D loader:
+    // both covers fill the width and meet the physical spine edge.
+    const Rect paper{shell.x, shell.y + top, shell.w, shell.h - 2.0f * top};
     // The whole sleeve is translucent, so the Library wallpaper subtly
     // shows through the edges, not through the opaque printed paper.
     if (shadow > 0.0f)
@@ -168,7 +169,7 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
 
     const std::string& scan = rear ? game.box_back : game.box_front;
     if (!scan.empty())
-        cover(c, scan, paper, std::max(3.0f, radius - 2.0f), 0.0f);
+        cover(c, scan, paper, 0.0f, 0.0f);
     else if (rear)
         flat_back_fallback(c, game, paper);
     else
@@ -191,14 +192,9 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
                            shell.h - 2.0f * top}, radius * 0.3f,
                           Color::rgb(0xf3faff, rear ? 0.47f : 0.21f),
                           Color::rgb(0x98acc4, 0.17f));
-    const float other_x = rear ? shell.x + shell.w - side : shell.x;
-    c.list.hgradient_rect({other_x, shell.y + top, side,
-                           shell.h - 2.0f * top}, radius * 0.3f,
-                          Color::rgb(0xc8d7e9, 0.30f),
-                          Color::rgb(0xe8f5ff, 0.12f));
-    c.list.bordered_rect(shell, radius, Color::rgb(0xffffff, 0.0f),
-                         std::max(1.0f, side * 0.22f),
-                         Color::rgb(0xe9f5ff, 0.47f));
+    // No 'opposite' side strip or outer four-sided white border:
+    // a continuous paper wrap cannot have a second rounded border at
+    // the front/spine or spine/back junction.
 }
 
 std::string controller_profile_name(int layout, const ButtonMapping& mapping)
