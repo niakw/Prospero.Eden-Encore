@@ -228,6 +228,7 @@ class Launcher
     std::string selected_game_;
     std::string launch_title_;
     std::string launch_cover_;
+    std::string launch_hero_;
     std::string launch_box_front_;
     std::string launch_box_back_;
     std::string launch_description_;
