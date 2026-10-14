@@ -42,6 +42,9 @@ actual = {p.relative_to(app).as_posix() for p in app.rglob("*") if p.is_file()}
 missing = sorted(expected - actual)
 extra = sorted(actual - expected)
 assert not missing and not extra, f"package inventory mismatch missing={missing} extra={extra}"
+assert (app / "ui/box-art-index.tsv").read_bytes() == case_index_source.read_bytes(), (
+    "installed retail index differs from generated host index"
+)
 assert (app / "network-hosts.txt").read_bytes() == (root / "headless/network-hosts.txt").read_bytes(), "stale/missing packaged network denylist"
 for name in expected:
     p = app / name
@@ -77,6 +80,7 @@ assert len(eboot) > 1024 * 1024
 for text in (
     "QUICK SETTINGS", "SELECTED GAME", "Confirm this action?", "PARAMÈTRES RAPIDES",
     "api.nlib.cc", "EDEN_NLIB_RESULT title_id=",
+    "EDEN_CASE_INDEX status=", "EDEN_CASE_LOOKUP title=", "EDEN_CASE_FETCH status=",
     "/banner/1080p", "/screen/", "fields=name,intro,description,publisher,developer,releaseDate",
     "BUTTON PROFILE", "PlayStation", "Custom PS5", "Custom Switch",
     "EDEN_PAD_MAPPING_FIXED title=", "EDEN_PAD_MAPPING_LOCKED scope=session mode=static game_actions=guest_owned",
