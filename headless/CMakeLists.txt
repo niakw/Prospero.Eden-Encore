@@ -1000,12 +1000,20 @@ string(REPLACE "${prefetch_old}" [=[            } else {
                     // the suspended thread can be unloaded or switched.
                     interface->GetContext(thread->GetContext());
                     const auto eden_name = Core::GetThreadName(thread).value_or("?");
-                    char eden_fault[192]{};
+                    // A faulting PC alone cannot identify a corrupt
+                    // indirect-branch target vs a stale JIT return. Preserve
+                    // the original guest return address and stack registers
+                    // on this single fatal path; never sample per-frame.
+                    const auto& fault_context = thread->GetContext();
+                    char eden_fault[320]{};
                     std::snprintf(eden_fault, sizeof(eden_fault),
-                        "guest thread %.64s tid=%llu pc=0x%llx jumped to an unmapped address",
+                        "guest thread %.64s tid=%llu pc=0x%llx lr=0x%llx sp=0x%llx fp=0x%llx jumped to an unmapped address",
                         eden_name.c_str(),
                         static_cast<unsigned long long>(thread->GetThreadId()),
-                        static_cast<unsigned long long>(thread->GetContext().pc));
+                        static_cast<unsigned long long>(fault_context.pc),
+                        static_cast<unsigned long long>(fault_context.lr),
+                        static_cast<unsigned long long>(fault_context.sp),
+                        static_cast<unsigned long long>(fault_context.fp));
                     ::Eden::RecordGuestFault(eden_fault);
                 }
             }
