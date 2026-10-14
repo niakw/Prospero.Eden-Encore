@@ -116,6 +116,8 @@ assert "case_plastic = 11" in shapes
 assert "case_cap = 12" in shapes
 assert "case_corner = 13" in shapes
 assert "case_spine_image = 14" in shapes
+assert "case_spine_blank = 15" in shapes
+assert "void DrawList::case_spine_blank(" in drawlist
 assert "void DrawList::case_face(" in drawlist
 assert "void DrawList::case_spine(" in drawlist
 assert "void DrawList::case_plastic(" in drawlist
@@ -132,6 +134,7 @@ assert "else if (shape == 11)" in shader
 assert "else if (shape == 12)" in shader
 assert "else if (shape == 13)" in shader
 assert "else if (shape == 14)" in shader
+assert "else if (shape == 15)" in shader
 assert "printed_side_visible" in draw
 assert "c.list.case_spine_image(ink.texture, side_strip, angle," in draw
 assert "True rounded corner" in shader
@@ -142,7 +145,7 @@ assert "paper_uv.w = target_aspect / source_aspect;" in draw
 assert "w < (narrow_spine ? 64 : 128)" in native
 assert "h < (narrow_spine ? 600 : 200)" in native
 assert "c.list.case_spine(side_strip, angle, 3.2f," in draw
-assert "Clean empty red sleeve" in draw
+assert "c.list.case_spine_blank(side_strip, angle, case_depth," in draw
 assert "const Rect face{physical.x + 3.0f, physical.y + 3.0f," in draw
 assert "float rounded = round_box(v_local, v_half, 22.0);" in shader
 assert "angle, false, case_depth," in draw
