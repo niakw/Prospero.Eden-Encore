@@ -2000,10 +2000,12 @@ target_link_libraries(eden-pad PUBLIC common)
 target_compile_options(eden-pad PRIVATE -fno-rtti $<$<BOOL:${PS5_NATIVE}>:-femulated-tls>)
 target_sources(audio_core PRIVATE "${EDEN_PORT_DIR}/audio.cpp")
 target_include_directories(audio_core PRIVATE "${EDEN_PORT_DIR}" "${pad_contract}" "${audio_contract}")
-file(READ "${PROJECT_SOURCE_DIR}/src/audio_core/sink/sink_details.cpp" sink_source)
-string(REPLACE "    return GetOutputSinkDetails(sink_id).factory(device_id);"
-    "    if (device_id == \"ps5\") return std::make_unique<Eden::AudioSink>();\n    return GetOutputSinkDetails(sink_id).factory(device_id);" sink_source "${sink_source}")
-write_derived("${PORT_BUILD_DIR}/sink_details.cpp" "#include \"devices.h\"\n${sink_source}")
+# The native audio sink's exact pinned-source transform is maintained as C++.
+set(EDEN_MAINTAINED_SINK_DETAILS
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/audio_core/sink/sink_details.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_SINK_DETAILS}")
+    message(FATAL_ERROR "Missing maintained native audio sink")
+endif()
 # Mirror mono PCM into both hardware channels in the existing upmix path.
 file(READ "${PROJECT_SOURCE_DIR}/src/audio_core/sink/sink_stream.cpp" stream_source)
 string(REPLACE "    if (type == StreamType::In)\n        return;"
@@ -2016,17 +2018,15 @@ string(REPLACE "        samples_buffer.Pop(&output_buffer[frames_written * frame
     "        samples_buffer.Pop(&output_buffer[frames_written * frame_size], frames_available * frame_size);\n        if (frames_available) std::memcpy(last_frame.data(), &output_buffer[(frames_written + frames_available - 1) * frame_size], frame_size_bytes);" stream_source "${stream_source}")
 write_derived("${PORT_BUILD_DIR}/sink_stream.cpp" "#include <stdexcept>\n${stream_source}")
 # A bitfield expression yields 0/1, so explicitly restore the SRC flag's bit position.
-file(READ "${PROJECT_SOURCE_DIR}/src/audio_core/renderer/voice/voice_info.cpp" voice_source)
-set(old_voice_flag "flags |= u16(params.flags.IsVoicePitchAndSrcSkippedSupported);")
-string(FIND "${voice_source}" "${old_voice_flag}" voice_flag_offset)
-if(voice_flag_offset LESS 0)
-    message(FATAL_ERROR "Pinned voice flag assignment changed; review the correction.")
+# Preserve the source bitfield-position fix without regenerating this TU.
+set(EDEN_MAINTAINED_VOICE_INFO
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/audio_core/renderer/voice/voice_info.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_VOICE_INFO}")
+    message(FATAL_ERROR "Missing maintained voice source")
 endif()
-string(REPLACE "${old_voice_flag}" "flags |= u16(params.flags.IsVoicePitchAndSrcSkippedSupported) << 1;" voice_source "${voice_source}")
-write_derived("${PORT_BUILD_DIR}/voice_info.cpp" "${voice_source}")
 get_target_property(audio_sources audio_core SOURCES)
 list(REMOVE_ITEM audio_sources sink/sink_details.cpp sink/sink_stream.cpp renderer/voice/voice_info.cpp)
-list(APPEND audio_sources "${PORT_BUILD_DIR}/sink_details.cpp" "${PORT_BUILD_DIR}/sink_stream.cpp" "${PORT_BUILD_DIR}/voice_info.cpp")
+list(APPEND audio_sources "${EDEN_MAINTAINED_SINK_DETAILS}" "${PORT_BUILD_DIR}/sink_stream.cpp" "${EDEN_MAINTAINED_VOICE_INFO}")
 set_property(TARGET audio_core PROPERTY SOURCES "${audio_sources}")
 if(PS5_NATIVE)
     target_link_libraries(eden-pad PUBLIC "${sdk}/target/lib/libScePad.so" "${sdk}/target/lib/libSceUserService.so")
