@@ -149,15 +149,30 @@ void pictures(Stage &s)
         s.wait(2.0f);
         s.press({Key::up, Key::cross});
         s.wait(1.0f);
-        // The fixture title with authentic source front/back is at index 4.
-        s.press({Key::right, Key::right, Key::right, Key::right});
-        s.wait(0.7f);
+        // Fixture games are alphabetically sorted. BOTW's real flat scans
+        // are on the eleventh title (index 10), not on Moss & Lantern.
+        // A page is five entries, so two page moves reach the actual artwork.
+        s.press({Key::r1, Key::r1});
+        s.wait(0.4f);
+        // Library artwork is decoded by a background texture worker. Unlike
+        // the actual 60Hz app, this host advances hundreds of virtual frames
+        // instantly, so it must pump GL uploads before screenshots.
+        for (int attempt = 0; attempt < 18; ++attempt) {
+            s.render();
+            std::this_thread::sleep_for(std::chrono::milliseconds(55));
+            s.launcher->update(0.0f);
+        }
         s.shoot("00-library-front-shelf");
         s.press({Key::down});
         s.wait(0.15f);
         s.shoot("01-library-back-focus");
         s.press({Key::cross});
         s.wait(0.20f);
+        for (int attempt = 0; attempt < 12; ++attempt) {
+            s.render();
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            s.launcher->update(0.0f);
+        }
         s.shoot("02-library-back-zoom");
         s.press({Key::circle});
         s.wait(0.16f);
