@@ -750,7 +750,7 @@ void Launcher::draw_launch(Canvas &c)
     // No cosmetic red stripe is superimposed on the right edge. Both poses
     // use the exact same shared case geometry for every game.
     constexpr float kFrontYaw = 0.52f;
-    constexpr float kBackYaw = 3.14159265358979323846f + 0.60f;
+    constexpr float kBackYaw = 3.14159265358979323846f + 0.18f;
     constexpr float kFullTurn = 6.28318530717958647692f;
     float angle = kFrontYaw;
     if (motion() > 0.0f) {
