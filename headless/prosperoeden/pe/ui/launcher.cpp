@@ -745,11 +745,12 @@ void Launcher::draw_launch(Canvas &c)
     const float turn_start = theme::kCaseFrontHold;
     const float back_start = turn_start + theme::kCaseTurnSeconds;
     const float return_start = back_start + theme::kCaseBackHold;
-    // Front: more of the red printed hinge on the LEFT. Back: more
-    // of the clear opening on the LEFT and only a tiny red seam at the RIGHT.
-    // They are two poses of the SAME rigid case, never per-title overrides.
+    // The front exposes the real LEFT red spine. On the nearly face-on
+    // back, the real clear opening appears on the LEFT through perspective.
+    // No cosmetic red stripe is superimposed on the right edge. Both poses
+    // use the exact same shared case geometry for every game.
     constexpr float kFrontYaw = 0.52f;
-    constexpr float kBackYaw = 3.14159265358979323846f + 0.63f;
+    constexpr float kBackYaw = 3.14159265358979323846f + 0.26f;
     constexpr float kFullTurn = 6.28318530717958647692f;
     float angle = kFrontYaw;
     if (motion() > 0.0f) {
@@ -876,14 +877,8 @@ void Launcher::draw_launch(Canvas &c)
                                Color::rgb(0xb0b6c4, 0.35f));
         }
     }
-    if (back && std::sin(angle) < -0.01f) {
-        // The red printed hinge is on the opposite (right on screen) side
-        // when viewing the rear. Only its narrow exposed seam is visible;
-        // the substantial clear opening stays on the left.
-        c.list.case_spine(side_strip, angle, 3.2f,
-                          Color::rgb(0xb61626, 0.78f),
-                          Color::rgb(0x801325, 0.63f), 1.0f, -1);
-    }
+    // Deliberately NO right-side red stripe on the rear view.
+    // Only genuinely visible projected shell edges are rendered.
     // Transparent surface seams follow the full depth of the same edge.
     c.list.case_spine(side_strip, angle, 2.5f,
                       Color::rgb(0xd5e3ee, 0.37f),

@@ -71,7 +71,7 @@ constexpr float kScreenSeconds = 0.30f;
 // return turn 1.3 s, final settle/fade 0.5 s. A truthful staged cinematic
 // transition, NOT a proxy for guest/emulation loading percentage.
 constexpr float kCaseFrontHold = 1.20f;
-constexpr float kCaseTurnSeconds = 1.30f;
+constexpr float kCaseTurnSeconds = 0.72f; // rapid pass through spine; never a pause
 constexpr float kCaseBackHold = 4.50f;
 constexpr float kCaseSettleSeconds = 0.50f;
 constexpr float kLaunchSeconds = kCaseFrontHold + 2.0f * kCaseTurnSeconds +
