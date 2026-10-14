@@ -287,6 +287,8 @@ class Launcher
     float media_retry_timer_ = 0.0f; // only periodically poll for failed/late Nlib artwork
     bool games_loaded_ = false;
     ListView library_;
+    bool library_back_focused_ = false; // Down selects rear jacket
+    bool library_back_zoom_ = false; // Cross opens, Circle closes full-screen popup
     bool selected_docked_ = true;
     tween::Spring mode_;   // 0 docked .. 1 handheld
     tween::Spring mods_switch_; // the selected game's Mods switch: 0 off .. 1 on
