@@ -62,7 +62,8 @@ enum class Shape : std::uint8_t
     case_plastic = 11,  // transparent molded edge over the printed face
     case_cap = 12,      // top or bottom of a solid case with real depth
     case_corner = 13,   // segmented curved plastic corners extruded in Z
-    case_spine_image = 14, // optional original FLAT printed side scan
+    case_spine_image = 14,
+    case_spine_blank = 15, // clean title-free default with vector manufacturing marks // optional original FLAT printed side scan
 };
 
 // One instanced quad; field order matches the vertex attributes.
@@ -138,6 +139,7 @@ class DrawList
                      int quadrant, int segment, Color near, Color far);
     void case_spine_image(std::uint32_t texture, const Rect &r,
                           float angle, float depth, Color tint);
+    void case_spine_blank(const Rect &r, float angle, float depth, Color tint);
 
     // ---- text ----
     // font_texture is the GL texture holding font's atlas. Returns the advance.
