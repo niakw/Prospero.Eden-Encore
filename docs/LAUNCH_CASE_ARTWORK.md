@@ -274,3 +274,13 @@ The full-screen game Hero and the right-hand Eden brand/title have additional
 clearance. The back scan remains held for 4.5 seconds. The host screenshot is
 still a *render verification*, not a claim of photorealistic 3D materials or a
 successful native console build.
+
+## Blank-spine manufacturing marks (host GL validation)
+
+When an official original spine is missing or so small its printing cannot
+be read, the common shader prints a sharp red blank spine with a small paired
+white emblem and an unlettered outlined footer. These features are vector
+shapes on the SAME projected 3D side, and no synthetic game title is shown.
+The user-provided spine photo is a visual reference, not a distributed asset.
+The original official flat spine remains the priority whenever its decoded
+resolution is sufficient. Only the host OpenGL renderer is tested here.
