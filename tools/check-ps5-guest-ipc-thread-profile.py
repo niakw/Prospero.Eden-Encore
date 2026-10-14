@@ -26,8 +26,11 @@ assert "std::printf(" not in impl and "NowNs()" not in impl
 assert "GetThreadName" not in impl and "mutex" not in impl.lower()
 anchor = cmake.index('const auto ipc_tid = ipc_profile ? GetCurrentThread(kernel).GetThreadId() : 0;')
 assert anchor < cmake.index("session->SendSyncRequest(kernel, message, buffer_size);", anchor)
-assert "if (ipc_profile) ::Eden::Performance::RecordGuestIpc(" in cmake
+assert "if (ipc_profile) ::Eden::Performance::FinishGuestIpc(" in cmake
+assert "BeginGuestIpc(ipc_tid, ipc_start)" in cmake
 assert "EDEN_DEV_IPC_THREAD tid=%llu calls=%llu ns=%llu max_ns=%llu" in report
+assert "EDEN_DEV_IPC_ACTIVE tid=%llu age_ms=%.3f" in report
+assert "std::array<ActiveIpcRow, 8>" in report
 assert "EDEN_DEV_IPCHIST lt50us=%llu lt500us=%llu lt5ms=%llu" in report
 before = report.rfind("#ifdef EDEN_DEV_PROFILE", 0, report.index("EDEN_DEV_IPC_THREAD"))
 after = report.find("#endif", report.index("EDEN_DEV_IPC_THREAD"))
@@ -96,8 +99,18 @@ int main() {
     assert(occupied == guest_ipc_thread_slots);
     RecordGuestIpc(900000, 30'000'000);
     assert(guest_ipc_overflow_calls.load() == 2);
+    // An active IPC becomes visible BEFORE it returns. A nested completion
+    // must not erase the original (still pending) start timestamp.
+    auto* active = BeginGuestIpc(1, 1'000'000);
+    assert(active && active->active_since_ns.load() == 1'000'000);
+    auto* nested = BeginGuestIpc(1, 2'000'000);
+    assert(nested == active && active->active_since_ns.load() == 1'000'000);
+    FinishGuestIpc(nested, 1, 2'000'000, 1'000);
+    assert(active->active_since_ns.load() == 1'000'000);
+    FinishGuestIpc(active, 1, 1'000'000, 5'000'000);
+    assert(active->active_since_ns.load() == 0);
     assert(guest_ipc_wait.calls.load() ==
-           workers * per_worker + (guest_ipc_thread_slots - workers) + 2);
+           workers * per_worker + (guest_ipc_thread_slots - workers) + 4);
 }
 """.replace("__PRODUCTION__", impl)
 

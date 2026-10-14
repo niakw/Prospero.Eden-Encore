@@ -60,3 +60,37 @@ The official [FC27 input accessibility notes](https://www.ea.com/able/resources/
 Read-only save-directory **metadata only** show one active game save and one older directory containing only an emulator save-size marker. SaveDataFactory::ReadSaveDataSize and WriteSaveDataSize both invoke GetOrCreateDirectoryRelative, so an empty metadata-only directory is **not evidence of a competing active user profile**. Current evidence does not establish a save-profile mismatch; never migrate, merge, overwrite or delete user save content based on this observation. No game save contents, profile IDs, IPs or raw logs were committed.
 
 Game progress stall and gameplay action profiles remain separately unresolved. **CI boundary:** tools/analyze-guest-progress-stall.py --self-test and tools/check-fc27-match-input-profile.py were both executed successfully on the owner's Mac. They verify forensic classification and constant physical-button routing only. A green source preflight does not prove smooth game animation, successful profile loading or actual in-match action correctness. Keep original tested baseline 2efd8b3c unmodified; no new console package is justified by a test-only change.
+
+
+## Offline guest-thread transition and non-invasive follow-up
+
+The pre-existing five-second repeated-workload analyzer on the original
+`2efd8b3c` heap log finds a ~945-second stable tail from frame 32,641 to
+60,955: approximately 397 draws, 376 guest CPU writes and 52 completed IPCs
+per compositor callback. This is strong evidence of *repeated work* but
+not a pixel hash, scanout capture, or verified frozen application state.
+
+The `EDEN_PERF_CPU_POINT` records around frame 32,000 show a marked loss of
+per-core observed PC diversity: core 0: 167 distinct PCs in 222 snapshots
+before versus 10 in 193 after; core 1: 144 versus 29; core 2: 140
+versus 12. Core 0's sampled `CpuPhase::Kernel` increases from 7/222 to
+95/193. These are JIT entry/exit **boundary samples**, not an interrupt-time
+backtrace of running guest instructions, and their pre-existing `thread=0`
+was a placeholder. Core 3 has no valid sample. The CPU points establish
+a changed workload, **not** which title thread is blocked or why.
+
+The next development-native diagnostic records the actual guest thread ID
+for an epoch-sampled CPU point, using `CpuSampleDue` to avoid a kernel
+thread lookup on every JIT entry/exit. It also records `EDEN_DEV_IPC_ACTIVE`
+for the eight longest still-in-flight guest IPCs exceeding 500 ms at each
+five-second report. In contrast, `EDEN_DEV_IPC_THREAD` tracks only
+**completed** waits. These probes are gated by detailed development profiling,
+leave IPC return values and scheduling unmodified, and are explicitly **not a
+gameplay fix**. The profiling itself can perturb frame timings.
+
+No guest saves, control settings, network filters, renderer queue depth,
+kernel scheduler priorities, or applet states were changed. A new console
+package is not warranted solely by the source-level proof of these probes;
+a future diagnostic run must correlate `EDEN_PERF_CPU_POINT thread=` with
+`EDEN_DEV_IPC_ACTIVE tid=` and the freeze transition before choosing a
+corrective patch.

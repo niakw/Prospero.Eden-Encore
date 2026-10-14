@@ -72,6 +72,9 @@ inline std::atomic<bool> firmware_applets{false};
 enum class CpuPhase : unsigned { Kernel, Guest, Idle };
 struct alignas(64) CpuState { std::atomic<CpuPhase> phase{}; };
 inline std::array<CpuState, 4> cpu_state{};
+// Caller checks the epoch before resolving the guest thread ID, avoiding a
+// kernel lookup on every diagnostic JIT transition. Worker-owned only.
+bool CpuSampleDue(unsigned core) noexcept;
 void SampleCpu(unsigned core, unsigned long long thread, unsigned long long pc, unsigned svc, unsigned fpcr);
 struct alignas(64) Totals {
     std::atomic<unsigned long long> calls{}, nanoseconds{}, requested_bytes{};
@@ -268,38 +271,70 @@ inline constexpr unsigned guest_ipc_thread_slots = 1024;
 inline constexpr unsigned guest_ipc_max_probes = 64;
 struct GuestIpcThread {
     std::atomic<unsigned long long> tid{}, calls{}, ns{}, max_ns{};
+    // A completed-call profiler alone cannot see an IPC which never returns.
+    // Guest-thread ownership is unique; zero means no observed in-flight call.
+    std::atomic<long long> active_since_ns{};
 };
 inline std::array<GuestIpcThread, guest_ipc_thread_slots> guest_ipc_threads{};
 inline std::array<std::atomic<unsigned long long>, 4> guest_ipc_hist{};
 inline std::atomic<unsigned long long> guest_ipc_overflow_calls{};
-inline void RecordGuestIpc(unsigned long long tid, long long elapsed_ns) noexcept {
+inline GuestIpcThread* FindGuestIpcThread(unsigned long long tid) noexcept {
+    if (tid == 0) return nullptr;
+    unsigned slot = static_cast<unsigned>(tid % guest_ipc_thread_slots);
+    for (unsigned n = 0; n < guest_ipc_max_probes; ++n) {
+        auto& row = guest_ipc_threads[slot];
+        auto found = row.tid.load(std::memory_order_relaxed);
+        if (found == 0) {
+            unsigned long long expected = 0;
+            found = row.tid.compare_exchange_strong(expected, tid, std::memory_order_relaxed)
+                        ? tid : expected;
+        }
+        if (found == tid) return &row;
+        slot = (slot + 1u) % guest_ipc_thread_slots;
+    }
+    return nullptr;
+}
+// Diagnostic-only caller (gated by detailed_gpu_profile). Never allocates,
+// holds an emulator lock, or changes synchronous service IPC semantics.
+inline GuestIpcThread* BeginGuestIpc(unsigned long long tid, long long started_ns) noexcept {
+    auto* row = FindGuestIpcThread(tid);
+    if (row && started_ns > 0) {
+        long long empty = 0;
+        row->active_since_ns.compare_exchange_strong(
+            empty, started_ns, std::memory_order_release, std::memory_order_relaxed);
+    }
+    return row;
+}
+inline void CountGuestIpc(GuestIpcThread* row, long long elapsed_ns) noexcept {
     const auto ns = static_cast<unsigned long long>(elapsed_ns > 0 ? elapsed_ns : 0);
     guest_ipc_wait.nanoseconds.fetch_add(ns, std::memory_order_relaxed);
     guest_ipc_wait.calls.fetch_add(1, std::memory_order_relaxed);
     guest_ipc_hist[ns < 50'000 ? 0u : ns < 500'000 ? 1u : ns < 5'000'000 ? 2u : 3u]
         .fetch_add(1, std::memory_order_relaxed);
-    if (tid != 0) {
-        unsigned slot = static_cast<unsigned>(tid % guest_ipc_thread_slots);
-        for (unsigned n = 0; n < guest_ipc_max_probes; ++n) {
-            auto& row = guest_ipc_threads[slot];
-            auto found = row.tid.load(std::memory_order_relaxed);
-            if (found == 0) {
-                unsigned long long expected = 0;
-                found = row.tid.compare_exchange_strong(expected, tid, std::memory_order_relaxed)
-                            ? tid : expected;
-            }
-            if (found == tid) {
-                row.calls.fetch_add(1, std::memory_order_relaxed);
-                row.ns.fetch_add(ns, std::memory_order_relaxed);
-                auto previous = row.max_ns.load(std::memory_order_relaxed);
-                while (previous < ns && !row.max_ns.compare_exchange_weak(
-                           previous, ns, std::memory_order_relaxed)) {}
-                return;
-            }
-            slot = (slot + 1u) % guest_ipc_thread_slots;
-        }
+    if (row) {
+        row->calls.fetch_add(1, std::memory_order_relaxed);
+        row->ns.fetch_add(ns, std::memory_order_relaxed);
+        auto previous = row->max_ns.load(std::memory_order_relaxed);
+        while (previous < ns && !row->max_ns.compare_exchange_weak(
+                   previous, ns, std::memory_order_relaxed)) {}
+    } else {
+        guest_ipc_overflow_calls.fetch_add(1, std::memory_order_relaxed);
     }
-    guest_ipc_overflow_calls.fetch_add(1, std::memory_order_relaxed);
+}
+// Preserve the existing standalone completed-IPC contract used by host tests.
+inline void RecordGuestIpc(unsigned long long tid, long long elapsed_ns) noexcept {
+    CountGuestIpc(FindGuestIpcThread(tid), elapsed_ns);
+}
+inline void FinishGuestIpc(GuestIpcThread* row, unsigned long long tid,
+                           long long started_ns, long long elapsed_ns) noexcept {
+    CountGuestIpc(row ? row : FindGuestIpcThread(tid), elapsed_ns);
+    if (row && started_ns > 0) {
+        // Only clear this invocation's pending timestamp. A nested/older IPC
+        // cannot be mistaken for this completion.
+        long long expected = started_ns;
+        row->active_since_ns.compare_exchange_strong(
+            expected, 0, std::memory_order_release, std::memory_order_relaxed);
+    }
 }
 void RecordHle(const char* service, unsigned command, long long ns);
 inline long long NowNs() { return Common::g_wall_clock.GetTimeNS().count(); }
