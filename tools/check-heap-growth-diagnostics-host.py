@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Compile the actual PS5 heap-growth formatter with host UBSan.
 
-This is a source-extracted formatter test, NOT a Sony SDK/firmware test and
+This is a source-extracted formatter test, NOT a native SDK/firmware test and
 NOT a PS5 compilation. It must not edit working-tree files or start a build.
 """
 from pathlib import Path
@@ -82,4 +82,4 @@ with tempfile.TemporaryDirectory(prefix="eden-growth-format-") as tmp:
                     "-fsanitize=undefined", "-fno-sanitize-recover=all",
                     str(cpp), "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True)
-print("Host-only extraction/formatter ABI qualified; Sony direct memory remains untested")
+print("Host-only extraction/formatter ABI qualified; native direct-memory behavior untested")
