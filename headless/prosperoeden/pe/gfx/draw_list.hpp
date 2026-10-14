@@ -127,7 +127,8 @@ class DrawList
     void case_face(std::uint32_t texture, const Rect &r, float angle,
                    bool back, Color tint, const Rect &uv = {0.0f, 0.0f, 1.0f, 1.0f});
     void case_spine(const Rect &r, float angle, float thickness,
-                    Color front_edge, Color rear_edge, float depth_offset = 0.0f);
+                    Color front_edge, Color rear_edge, float depth_offset = 0.0f,
+                    int side = 0); // -1: red left hinge, +1: clear right edge
     // Translucent rounded white plastic shell, projected with the SAME pivot
     // and perspective as the printed image, on both front and back.
     void case_plastic(const Rect &r, float angle, bool back, Color plastic);
