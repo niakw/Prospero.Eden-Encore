@@ -61,3 +61,19 @@ CPU diagnostic is corrected to use the actual ArmDynarmic class member
 m_system, rather than nonexistent m_parent, based on the failed native build
 run 38495903010. This is source qualification until a new native build passes.
 The remaining CMake rewrite count is still **not zero**.
+
+
+## Locale completion (14 October 2026)
+
+All 29 currently supported locale catalogs now contain 376 / 376 active
+msgids each: **zero missing translations**, 2,775 previously empty entries
+filled across 25 non-primary locales. The existing translations were not
+replaced. Initial drafts for 23 languages came from machine assistance;
+the remaining two Chinese variants used an original simplified translation
+with the traditional variant converted by an offline OpenCC s2tw pass.
+The tool checks all substitutions, forbids stale ids and verifies the
+supported font glyphs where available, but **human linguistic proofreading,
+truncation checks and physical system-font verification remain outstanding**.
+These translations are not synthetic copies of the English msgid and must
+not be represented as native-speaker certified. The new source coverage
+gate fails if any supported locale loses a translation.

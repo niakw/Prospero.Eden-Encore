@@ -4,20 +4,64 @@
 # AMD FSR, DLC, NSP, XCI, prod.keys, Ryujinx) unchanged.
 
 #: settings_store.h
+msgid "0.25x (minimum)"
+msgstr "0,25x (minim)"
+
+#: settings_store.h
+msgid "0.5x (fastest, softer)"
+msgstr "0,5x (cel mai rapid, mai fin)"
+
+#: settings_store.h
 msgid "0.75x (faster)"
 msgstr "0,75x (mai rapid)"
+
+#: settings_store.h
+msgid "1.25x (recommended)"
+msgstr "1,25x (recomandat)"
 
 #: settings_store.h
 msgid "1.5x (sharper)"
 msgstr "1,5x (mai clar)"
 
+#: pe/ui/settings.cpp
+msgid "100% is full DualSense rumble strength. Lower it if vibration feels too strong."
+msgstr "100% este puterea totală a zgomotului DualSense. Coborâți-l dacă vibrația este prea puternică."
+
 #: settings_store.h
 msgid "1x (native)"
 msgstr "1x (nativ)"
 
+#: settings_store.h
+msgid "2x (high memory)"
+msgstr "2x (memorie ridicată)"
+
+#: settings_store.h
+msgid "3x (very high memory)"
+msgstr "3x (memorie foarte ridicată)"
+
+#: settings_store.h
+msgid "4x (extreme memory)"
+msgstr "4x (memorie extremă)"
+
+#: pe/ui/settings.cpp
+msgid "60 Hz is recommended. 120 Hz changes display mode only; the game still needs to render above 60 FPS to benefit."
+msgstr "Se recomandă 60 Hz. 120 Hz schimbă doar modul de afișare; jocul trebuie să fie redat peste 60 FPS pentru a beneficia."
+
+#: pe/ui/library.cpp
+msgid "60 Hz is the safe default. Use 120 Hz only with a compatible display or high-FPS patch."
+msgstr "60 Hz este valoarea implicită sigură. Utilizați 120 Hz numai cu un afișaj compatibil sau cu un patch FPS ridicat."
+
+#: pe/ui/settings.cpp
+msgid "8% is recommended. Increase it for stick drift; decrease it for more sensitive aiming."
+msgstr "Se recomandă 8%. Măriți-l pentru stick drift; reduceți-l pentru o țintire mai sensibilă."
+
 #: eden_services.cpp
 msgid "A firmware NCA cannot be read. Reinstall the firmware dump."
 msgstr "Un fișier NCA din firmware nu poate fi citit. Reinstalează dump-ul de firmware."
+
+#: pe/ui/browse.cpp
+msgid "About Eden Encore"
+msgstr "Despre Eden Encore"
 
 #. Label: which folders the app can read.
 #: pe/ui/browse.cpp
@@ -50,7 +94,19 @@ msgstr "AMD FSR"
 msgid "Another language"
 msgstr "Altă limbă"
 
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Anti-aliasing"
+msgstr "Antialiasing"
+
 #: pe/ui/settings.cpp
+msgid "ANTI-ALIASING"
+msgstr "ANTIALIASING"
+
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Anti-aliasing smooths jagged edges. None is fastest; FXAA is light; SMAA prioritizes image quality."
+msgstr "Anti-aliasing netezește marginile zimțate. Nici unul nu este cel mai rapid; FXAA este ușor; SMAA acordă prioritate calității imaginii."
+
+#: pe/ui/home.cpp, pe/ui/settings.cpp
 msgid "Audio"
 msgstr "Sunet"
 
@@ -63,7 +119,7 @@ msgid "Australia"
 msgstr "Australia"
 
 #. Button hint: go back one screen.
-#: pe/ui/browse.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
 msgid "Back"
 msgstr "Înapoi"
 
@@ -76,6 +132,14 @@ msgstr "Bicubic"
 #: settings_store.h
 msgid "Bilinear"
 msgstr "Biliniar"
+
+#: pe/ui/settings.cpp
+msgid "Bilinear is the lightest default. AMD FSR is most useful when rendering below the TV output size."
+msgstr "Biliniar este cel mai ușor implicit. AMD FSR este cel mai util atunci când se redă sub dimensiunea de ieșire TV."
+
+#: pe/ui/library.cpp
+msgid "Bilinear is the lightest default. AMD FSR is useful when rendering below the TV output size."
+msgstr "Biliniar este cel mai ușor implicit. AMD FSR este util când se redă sub dimensiunea de ieșire TV."
 
 #. Button hint: move through the list.
 #: pe/ui/browse.cpp
@@ -90,14 +154,58 @@ msgstr "Răsfoire jocuri"
 msgid "Browse settings"
 msgstr "Răsfoire setări"
 
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Button mapping"
+msgstr "Maparea butoanelor"
+
+#: pe/ui/settings.cpp
+msgid "BUTTON MAPPING"
+msgstr "MAPAREA BUTOANELOR"
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping reset to global settings."
+msgstr "Maparea butoanelor resetează la setările globale."
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping reset to the active profile."
+msgstr "Maparea butoanelor resetează la profilul activ."
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping saved."
+msgstr "Maparea butoanelor a fost salvată."
+
+#: pe/ui/settings.cpp
+msgid "BUTTON PROFILE"
+msgstr "PROFIL BUTON"
+
+#: pe/ui/settings.cpp
+msgid "Button profile"
+msgstr "Profil de buton"
+
+#: pe/ui/home.cpp, pe/ui/settings.cpp
+msgid "CACHE"
+msgstr "CACHE"
+
+#: pe/ui/settings.cpp
+msgid "Cache: {0}  |  Logs: {1}"
+msgstr "Cache: {0} |  Jurnale: {1}"
+
+#: pe/ui/launcher.cpp
+msgid "Cancel"
+msgstr "Anulează"
+
 #: eden_services.cpp
 msgid "Cannot read firmware/ in {0}. Install extracted firmware NCAs."
 msgstr "Nu se poate citi firmware/ din {0}. Instalează fișierele NCA extrase din firmware."
 
 #. Button hint: change the highlighted setting.
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
 msgid "Change"
 msgstr "Modificare"
+
+#: pe/ui/launcher.cpp
+msgid "Change console mode for this game?"
+msgstr "Schimbați modul consolă pentru acest joc?"
 
 #. What a mod is made of: cheat codes.
 #: eden_services.cpp, host/fake_services.cpp
@@ -126,10 +234,42 @@ msgid "Choose a game from your library."
 msgstr "Alege un joc din biblioteca ta."
 
 #: pe/ui/browse.cpp
+msgid "Choose one root for keys, firmware, games, updates and mods"
+msgstr "Alegeți o singură rădăcină pentru chei, firmware, jocuri, actualizări și modificări"
+
+#: pe/ui/browse.cpp
 msgid "Choose the language games use"
 msgstr "Alege limba folosită de jocuri"
 
-#: pe/ui/library.cpp
+#: pe/ui/mapping.cpp
+msgid "Circle"
+msgstr "Cerc"
+
+#: pe/ui/settings.cpp
+msgid "Clear"
+msgstr "Clar"
+
+#: pe/ui/settings.cpp
+msgid "Clear cache"
+msgstr "Șterge memoria cache"
+
+#: pe/ui/launcher.cpp
+msgid "Clear cache?"
+msgstr "Ștergeți memoria cache?"
+
+#: eden_services.cpp
+msgid "Cleared {0} of cache."
+msgstr "S-a golit {0} din cache."
+
+#: pe/ui/launcher.cpp
+msgid "Confirm"
+msgstr "Confirmă"
+
+#: pe/ui/launcher.cpp
+msgid "Confirm this action?"
+msgstr "Confirmați această acțiune?"
+
+#: pe/ui/home.cpp, pe/ui/launcher.cpp, pe/ui/library.cpp
 msgid "Console mode"
 msgstr "Mod consolă"
 
@@ -138,10 +278,22 @@ msgid "CONTINUE PLAYING"
 msgstr "CONTINUĂ SĂ JOCI"
 
 #: pe/ui/home.cpp
+msgid "Controller mapping"
+msgstr "Maparea controlerului"
+
+#: pe/ui/settings.cpp
+msgid "Controller profile: {0}"
+msgstr "Profil de controler: {0}"
+
+#: pe/ui/home.cpp
 msgid "CONTROLLERS"
 msgstr "CONTROLERE"
 
-#: pe/ui/settings.cpp
+#: pe/ui/home.cpp
+msgid "Controllers"
+msgstr "Controlere"
+
+#: pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Controls"
 msgstr "Comenzi"
 
@@ -153,13 +305,29 @@ msgstr "COMENZI"
 msgid "Could not create the folder. Check that the game files folder can be written."
 msgstr "Folderul nu a putut fi creat. Verifică dacă se poate scrie în folderul fișierelor de joc."
 
+#: pe/ui/library.cpp
+msgid "Could not load game library. Reopen Encore to retry."
+msgstr "Biblioteca de jocuri nu a putut fi încărcată. Redeschideți Encore pentru a reîncerca."
+
+#: pe/ui/library.cpp
+msgid "Could not load game list. Please try again."
+msgstr "Lista de jocuri nu a putut fi încărcată. Vă rugăm să încercați din nou."
+
 #: pe/ui/launcher.cpp
 msgid "Could not save settings. Please try again."
 msgstr "Nu s-au putut salva setările. Încearcă din nou."
 
-#: pe/ui/browse.cpp, pe/ui/library.cpp
+#: pe/ui/browse.cpp
+msgid "Could not save the storage root. Please try again."
+msgstr "Nu s-a putut salva rădăcina de stocare. Vă rugăm să încercați din nou."
+
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp
 msgid "Could not save. Please try again."
 msgstr "Nu s-a putut salva. Încearcă din nou."
+
+#: pe/ui/mapping.cpp
+msgid "Create"
+msgstr "Crea"
 
 #. Button hint: make the folder a game's mods go in.
 #: pe/ui/library.cpp
@@ -175,10 +343,46 @@ msgstr "{0} a fost creat. Copiază în el folderul fiecărui mod."
 msgid "Credits and setup"
 msgstr "Credite și configurare"
 
+#: pe/ui/mapping.cpp
+msgid "Cross"
+msgstr "Cruce"
+
+#: pe/ui/settings.cpp, settings_store.h
+msgid "Custom"
+msgstr "Personalizat"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Custom PS5"
+msgstr "PS5 personalizat"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Custom Switch"
+msgstr "Comutator personalizat"
+
+#: pe/ui/settings.cpp
+msgid "Customize"
+msgstr "Personalizați"
+
+#: pe/ui/settings.cpp
+msgid "Customize every guest button. The profile automatically becomes Custom PS5 or Custom Switch."
+msgstr "Personalizați fiecare buton pentru invitați. Profilul devine automat PS5 personalizat sau Switch personalizat."
+
+#: pe/ui/settings.cpp
+msgid "DATA"
+msgstr "DATE"
+
+#: pe/ui/settings.cpp
+msgid "Data: {0}"
+msgstr "Date: {0}"
+
 #. A per-game setting that follows the general setting; {0} is its value.
 #: pe/ui/library.cpp
 msgid "Default ({0})"
 msgstr "Implicit ({0})"
+
+#: pe/ui/settings.cpp
+msgid "DETAILED LOGGING"
+msgstr "ÎNREGISTRARE DETALIATĂ"
 
 #: pe/ui/settings.cpp
 msgid "Detailed logging"
@@ -188,7 +392,7 @@ msgstr "Jurnalizare detaliată"
 msgid "Detailed logs on"
 msgstr "Jurnale detaliate activate"
 
-#: pe/ui/settings.cpp
+#: pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Diagnostics"
 msgstr "Diagnosticare"
 
@@ -197,17 +401,45 @@ msgid "DIAGNOSTICS"
 msgstr "DIAGNOSTICARE"
 
 #. Console mode: the console as if connected to a TV. Keep it short (about 9 letters).
-#: pe/ui/library.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Docked"
 msgstr "Andocat"
+
+#: pe/ui/library.cpp
+msgid "Docked can improve graphics but may cost performance; Handheld is lighter for demanding games."
+msgstr "Andocat poate îmbunătăți grafica, dar poate costa performanța; Handheld este mai ușor pentru jocuri solicitante."
+
+#: pe/ui/home.cpp
+msgid "Done"
+msgstr "Gata"
 
 #: pe/ui/settings.cpp
 msgid "Draws the menu's small text larger."
 msgstr "Mărește textul mic din meniu."
 
+#: pe/ui/settings.cpp
+msgid "DualSense mapping, calibration, vibration and shortcuts."
+msgstr "Cartografiere DualSense, calibrare, vibrații și comenzi rapide."
+
 #: settings_store.h
 msgid "Dutch"
 msgstr "Olandeză"
+
+#: pe/ui/browse.cpp
+msgid "Eden Encore builds on the proven ProsperoEden 0.40 PS5 base for firmware 13.60, with the Eden core, safer recovery, and targeted compatibility, performance and TV-first UX improvements."
+msgstr "Eden Encore se bazează pe baza dovedită ProsperoEden 0.40 PS5 pentru firmware-ul 13.60, cu nucleul Eden, recuperare mai sigură și îmbunătățiri specifice pentru compatibilitate, performanță și UX pentru televizor."
+
+#: pe/ui/home.cpp
+msgid "Edit"
+msgstr "Edita"
+
+#: pe/ui/settings.cpp
+msgid "Edit custom mapping"
+msgstr "Editați maparea personalizată"
+
+#: pe/ui/browse.cpp
+msgid "Encore uses the same keys, firmware, roms, updates and mods folders under every storage root."
+msgstr "Encore folosește aceleași chei, firmware, rom-uri, actualizări și foldere de mod-uri sub fiecare rădăcină de stocare."
 
 #. Label of the shortcut that ends the running game.
 #: pe/ui/settings.cpp
@@ -226,10 +458,22 @@ msgstr "Engleză (SUA)"
 msgid "Europe"
 msgstr "Europa"
 
+#: pe/ui/launcher.cpp
+msgid "Exit Eden Encore"
+msgstr "Ieșiți din Eden Encore"
+
+#: pe/ui/launcher.cpp
+msgid "Exit Eden Encore?"
+msgstr "Ieși din Eden Encore?"
+
 #. Button hint: copy the game's save out to a folder.
 #: pe/ui/library.cpp
 msgid "Export a copy"
 msgstr "Exportare copie"
+
+#: eden_services.cpp
+msgid "Export failed. Check that the storage root can be written."
+msgstr "Exportul nu a reușit. Verificați dacă rădăcina de stocare poate fi scrisă."
 
 #. {0} is a folder.
 #: eden_services.cpp, host/fake_services.hpp
@@ -240,6 +484,14 @@ msgstr "Exportat în {0}."
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Files"
 msgstr "Fișiere"
+
+#: pe/ui/settings.cpp
+msgid "FILESYSTEM"
+msgstr "SISTEMUL DE FIȘIERE"
+
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Final app output size. Choose 1080p for lower memory use, 1440p for balance, or 2160p for maximum output detail."
+msgstr "Dimensiunea finală a ieșirii aplicației. Alegeți 1080p pentru o utilizare mai mică a memoriei, 1440p pentru echilibru sau 2160p pentru detalii maxime de ieșire."
 
 #: pe/ui/settings.cpp
 msgid "Fine-tune your experience"
@@ -260,6 +512,10 @@ msgstr "Firmware gata"
 #: eden_services.cpp
 msgid "Firmware SystemVersion data is missing or unreadable. Install a complete firmware dump."
 msgstr "Datele SystemVersion din firmware lipsesc sau nu pot fi citite. Instalează un dump complet de firmware."
+
+#: pe/ui/settings.cpp
+msgid "Fixed Encore folder structure"
+msgstr "S-a rezolvat structura folderului Encore"
 
 #: pe/ui/browse.cpp
 msgid "FOLDERS"
@@ -282,10 +538,26 @@ msgstr "Franceză"
 msgid "French (Canada)"
 msgstr "Franceză (Canada)"
 
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "FSR sharpness"
+msgstr "Claritate FSR"
+
+#: pe/ui/settings.cpp
+msgid "FSR SHARPNESS"
+msgstr "CLARITATE FSR"
+
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "FSR sharpness changes detail recovery only when AMD FSR is selected. Lower it if the picture looks grainy or over-sharpened."
+msgstr "Claritatea FSR modifică recuperarea detaliilor numai atunci când este selectat AMD FSR. Coborâți-l dacă imaginea pare granulată sau prea clară."
+
 #. The app can read every folder of the console.
-#: pe/ui/browse.cpp
+#: eden_services.cpp, pe/ui/browse.cpp
 msgid "Full filesystem"
 msgstr "Tot sistemul de fișiere"
+
+#: settings_store.h
+msgid "FXAA"
+msgstr "FXAA"
 
 #: pe/ui/settings.cpp
 msgid "Game audio; PS5 system-menu music is unchanged."
@@ -297,6 +569,26 @@ msgid "Game could not start: {0} Details: {1}"
 msgstr "Jocul nu a putut porni: {0} Detalii: {1}"
 
 #: pe/ui/library.cpp
+msgid "Game library unavailable"
+msgstr "Biblioteca de jocuri indisponibilă"
+
+#: pe/ui/library.cpp
+msgid "Game overrides reset to global defaults."
+msgstr "Game overrides reset to global defaults."
+
+#: pe/ui/settings.cpp
+msgid "Game render scale follows the selected profile. Lower it for performance or memory; raise it only when a game has headroom."
+msgstr "Scala de randare a jocului urmează profilul selectat. Coborâți-l pentru performanță sau memorie; ridicați-l numai atunci când un joc are spațiu liber."
+
+#: pe/ui/settings.cpp
+msgid "GAME RESOLUTION"
+msgstr "REZOLUȚIA JOCULUI"
+
+#: pe/ui/settings.cpp
+msgid "Game resolution"
+msgstr "Rezoluția jocului"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Game settings"
 msgstr "Setări joc"
 
@@ -316,6 +608,10 @@ msgstr "Volumul jocurilor și sunetele acestui meniu."
 msgid "GAMES"
 msgstr "JOCURI"
 
+#: pe/ui/home.cpp
+msgid "Games and cache"
+msgstr "Jocuri și cache"
+
 #: pe/ui/browse.cpp
 msgid "Games use this language when they offer it, and their own default otherwise. It applies when a game starts."
 msgstr "Jocurile folosesc această limbă atunci când o oferă; altfel, limba lor implicită. Se aplică la pornirea unui joc."
@@ -332,6 +628,14 @@ msgstr "Germană"
 msgid "GETTING STARTED"
 msgstr "PRIMII PAȘI"
 
+#: pe/ui/library.cpp, pe/ui/mapping.cpp
+msgid "Global ({0})"
+msgstr "Global ({0})"
+
+#: pe/ui/mapping.cpp
+msgid "Global controller profile: {0}"
+msgstr "Profil global de controler: {0}"
+
 #: pe/ui/settings.cpp
 msgid "Graphics backend and how games are scaled to your TV."
 msgstr "Motorul de randare și scalarea jocurilor pe televizor."
@@ -341,9 +645,17 @@ msgid "Graphics backend initialization failed. Try another backend in Settings; 
 msgstr "Inițializarea motorului de randare a eșuat. Încearcă alt motor de randare în Setări; vezi stderr.log și eden_log.txt pentru detalii despre driver."
 
 #. Console mode: the console as if held in the hands. Keep it short (about 9 letters).
-#: pe/ui/library.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Handheld"
 msgstr "Portabil"
+
+#: pe/ui/settings.cpp
+msgid "Health and storage tools. Cache cleanup never removes saves, settings, keys or games."
+msgstr "Sănătate și instrumente de depozitare. Curățarea memoriei cache nu elimină niciodată salvările, setările, cheile sau jocurile."
+
+#: settings_store.h
+msgid "High"
+msgstr "Ridicat"
 
 #: pe/ui/settings.cpp
 msgid "HIGH CONTRAST"
@@ -353,6 +665,10 @@ msgstr "CONTRAST RIDICAT"
 #: pe/ui/settings.cpp
 msgid "High contrast"
 msgstr "Contrast ridicat"
+
+#: pe/ui/launcher.cpp
+msgid "Home"
+msgstr "Acasă"
 
 #. Button hint: copy a save in.
 #: pe/ui/library.cpp
@@ -372,9 +688,17 @@ msgid "Imported. The save it replaced was backed up."
 msgstr "Importat. S-a făcut o copie de rezervă a salvării înlocuite."
 
 #. Tag on the language or folder that is in use now.
-#: pe/ui/browse.cpp, pe/ui/settings.cpp
+#: pe/ui/browse.cpp
 msgid "IN USE"
 msgstr "ÎN UZ"
+
+#: pe/ui/browse.cpp
+msgid "Internal storage"
+msgstr "Stocare internă"
+
+#: pe/ui/browse.cpp
+msgid "Internal storage saved. Reopen Encore to use it."
+msgstr "Stocarea internă a fost salvată. Redeschideți Encore pentru a-l folosi."
 
 #: settings_store.h
 msgid "Italian"
@@ -409,7 +733,7 @@ msgstr "Coreeană"
 msgid "Language"
 msgstr "Limbă"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/settings.cpp
 msgid "LANGUAGE"
 msgstr "LIMBĂ"
 
@@ -431,17 +755,45 @@ msgstr "Text mai mare"
 msgid "Last game opened"
 msgstr "Ultimul joc deschis"
 
-#: pe/ui/home.cpp
+#: pe/ui/library.cpp
 msgid "Launch game"
 msgstr "Pornire joc"
 
-#: pe/ui/home.cpp
+#: pe/ui/settings.cpp
+msgid "LAYOUT"
+msgstr "DISPOSARE"
+
+#: pe/ui/mapping.cpp
+msgid "Left stick press"
+msgstr "Apăsați stick-ul din stânga"
+
+#: pe/ui/library.cpp
+msgid "Left/right: Global, PlayStation or Switch for this game; Cross: edit individual buttons."
+msgstr "Stânga/dreapta: Global, PlayStation sau Switch pentru acest joc; Cruce: editați butoanele individuale."
+
+#: pe/ui/launcher.cpp
 msgid "Library"
 msgstr "Bibliotecă"
+
+#: pe/ui/library.cpp
+msgid "Loading artwork"
+msgstr "Se încarcă opera de artă"
+
+#: pe/ui/launcher.cpp
+msgid "Loading game library..."
+msgstr "Se încarcă biblioteca de jocuri..."
+
+#: pe/ui/settings.cpp
+msgid "LOGS"
+msgstr "JURNI"
 
 #: pe/ui/settings.cpp
 msgid "Make the menu easier to see and follow."
 msgstr "Fă meniul mai ușor de văzut și de urmărit."
+
+#: pe/ui/home.cpp
+msgid "Max. players: {0}"
+msgstr "Max. jucători: {0}"
 
 #: pe/ui/settings.cpp
 msgid "MENU SOUNDS"
@@ -450,6 +802,18 @@ msgstr "SUNETE MENIU"
 #: pe/ui/settings.cpp
 msgid "Menu sounds"
 msgstr "Sunete meniu"
+
+#: settings_store.h
+msgid "Minimum"
+msgstr "Minim"
+
+#: pe/ui/settings.cpp
+msgid "Minimum reduces GPU load and may use lower GPU accuracy for speed. Recommended balances quality and stability. High and Ultra raise image quality when the game has headroom."
+msgstr "Minimum reduce încărcarea GPU-ului și poate utiliza o precizie mai mică a GPU pentru viteză. Recomandat echilibrează calitatea și stabilitatea. High și Ultra cresc calitatea imaginii atunci când jocul are spațiu liber."
+
+#: pe/ui/library.cpp
+msgid "Minimum, Recommended, High and Ultra apply the title-aware Encore profile. Manual changes become Custom for this game."
+msgstr "Minimum, Recomandat, Înalt și Ultra aplică profilul Encore care ține cont de titlu. Modificările manuale devin Personalizate pentru acest joc."
 
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Missing or empty keys/prod.keys in {0}."
@@ -526,8 +890,12 @@ msgstr "Nu s-au găsit fișiere ROM."
 msgid "No roms folder"
 msgstr "Fără folder roms"
 
-#. No add-ons (updates or DLC).
 #: pe/ui/library.cpp
+msgid "No screenshots available"
+msgstr "Nu sunt disponibile capturi de ecran"
+
+#. No add-ons (updates or DLC).
+#: pe/ui/library.cpp, settings_store.h
 msgid "None"
 msgstr "Niciunul"
 
@@ -546,19 +914,43 @@ msgstr "Dezactivat"
 msgid "On"
 msgstr "Activat"
 
+#: pe/ui/settings.cpp
+msgid "One root for keys, firmware, games, updates, mods and transfers."
+msgstr "O singură rădăcină pentru chei, firmware, jocuri, actualizări, modificări și transferuri."
+
 #. Short tag on a folder row.
 #: pe/ui/browse.cpp
 msgid "OPEN"
 msgstr "DESCHIDERE"
 
 #. Button hint: open the highlighted folder.
-#: pe/ui/browse.cpp, pe/ui/library.cpp
+#: pe/ui/browse.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Open"
 msgstr "Deschidere"
 
 #: pe/ui/home.cpp
 msgid "Open library"
 msgstr "Deschidere bibliotecă"
+
+#: pe/ui/home.cpp
+msgid "Open quick settings"
+msgstr "Deschideți setările rapide"
+
+#: pe/ui/home.cpp
+msgid "Open settings"
+msgstr "Deschide setările"
+
+#: pe/ui/home.cpp
+msgid "Open storage"
+msgstr "Deschideți spațiul de stocare"
+
+#: pe/ui/library.cpp
+msgid "Open the per-game DualSense mapping. Global uses Settings > Controls; Custom overrides it only for this game."
+msgstr "Deschideți maparea DualSense per joc. Utilizări globale Setări > Comenzi; Personalizat îl înlocuiește numai pentru acest joc."
+
+#: pe/ui/mapping.cpp
+msgid "Options"
+msgstr "Opțiuni"
 
 #. Button hint: jump a page of the list (L1 / R1).
 #: pe/ui/browse.cpp
@@ -573,6 +965,18 @@ msgstr "Folder părinte"
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Patch"
 msgstr "Patch"
+
+#: pe/ui/home.cpp
+msgid "Play"
+msgstr "Joacă"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "PlayStation"
+msgstr "PlayStation"
+
+#: pe/ui/settings.cpp
+msgid "PlayStation Auto keeps Cross/Circle menu semantics while adapting gameplay to physical Switch positions. Switch stays fixed; editing any button creates a custom profile."
+msgstr "PlayStation Auto păstrează semantica meniului Cross/Circle în timp ce adaptează jocul la pozițiile fizice ale comutatorului. Comutatorul rămâne fix; editarea oricărui buton creează un profil personalizat."
 
 #: settings_store.h
 msgid "Polish"
@@ -590,6 +994,10 @@ msgstr "Portugheză (Brazilia)"
 #: pe/ui/browse.cpp
 msgid "Powered by Eden"
 msgstr "Bazat pe Eden"
+
+#: pe/ui/settings.cpp
+msgid "Preset"
+msgstr "Presetare"
 
 #. Asked before a save is imported over the one in use.
 #: pe/ui/library.cpp
@@ -617,18 +1025,46 @@ msgstr "CREDITE PROIECT"
 msgid "ProsperoEden stopped because of an error. A report was saved to {0}."
 msgstr "ProsperoEden s-a oprit din cauza unei erori. Un raport a fost salvat în {0}."
 
+#: pe/ui/browse.cpp
+msgid "PS5 13.60 FORK"
+msgstr "PS5 13.60 FURCĂ"
+
 #. Why a game did not start.
 #: eden_services.cpp
 msgid "PS5 controller initialization failed"
 msgstr "Inițializarea controlerului PS5 a eșuat"
 
+#: pe/ui/home.cpp
+msgid "QUICK SETTINGS"
+msgstr "SETĂRI RAPIDE"
+
+#: pe/ui/home.cpp
+msgid "Quick settings"
+msgstr "Setări rapide"
+
+#: pe/ui/home.cpp
+msgid "Quit"
+msgstr "Ieșire"
+
 #: pe/ui/settings.cpp
 msgid "Ready"
 msgstr "Gata"
 
+#: pe/ui/launcher.cpp
+msgid "Recent"
+msgstr "Recent"
+
 #: pe/ui/home.cpp
 msgid "RECENTLY PLAYED"
 msgstr "JUCATE RECENT"
+
+#: settings_store.h
+msgid "Recommended"
+msgstr "Recomandat"
+
+#: pe/ui/settings.cpp
+msgid "Recommended defaults restored."
+msgstr "Recommended defaults restored."
 
 #: pe/ui/settings.cpp
 msgid "REDUCE MOTION"
@@ -653,7 +1089,7 @@ msgstr "RATĂ DE REÎMPROSPĂTARE"
 msgid "REGION"
 msgstr "REGIUNE"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Renderer"
 msgstr "Randare"
 
@@ -661,13 +1097,57 @@ msgstr "Randare"
 msgid "RENDERER"
 msgstr "RANDARE"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/mapping.cpp
+msgid "Reset"
+msgstr "Resetează"
+
+#: pe/ui/launcher.cpp
+msgid "Reset controller mapping?"
+msgstr "Resetați maparea controlerului?"
+
+#: pe/ui/library.cpp
+msgid "Reset overrides"
+msgstr "Reset overrides"
+
+#: pe/ui/launcher.cpp
+msgid "Reset this game's custom settings?"
+msgstr "Resetați setările personalizate ale acestui joc?"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Resolution"
 msgstr "Rezoluție"
 
-#: eden_services.cpp
+#: pe/ui/library.cpp
+msgid "Resolution follows the selected title-aware profile. Lower it for performance or memory; raise it only when the title has headroom."
+msgstr "Rezoluția urmează profilul selectat care ține cont de titlu. Coborâți-l pentru performanță sau memorie; ridicați-l numai atunci când titlul are spațiu."
+
+#: pe/ui/launcher.cpp
+msgid "Restore default settings?"
+msgstr "Restabiliți setările implicite?"
+
+#: pe/ui/settings.cpp
+msgid "Restore defaults"
+msgstr "Restore defaults"
+
+#: pe/ui/mapping.cpp
+msgid "Right stick press"
+msgstr "Apăsați stick-ul drept"
+
+#: pe/ui/launcher.cpp, pe/ui/library.cpp
 msgid "ROM missing from the game files folder"
 msgstr "ROM-ul lipsește din folderul fișierelor de joc"
+
+#: eden_services.cpp
+msgid "ROM missing from the storage root"
+msgstr "ROM-ul lipsește din rădăcina de stocare"
+
+#: pe/ui/settings.cpp
+msgid "ROOT"
+msgstr "RĂDĂCINĂ"
+
+#: pe/ui/settings.cpp
+msgid "Runtime health, storage and recovery tools."
+msgstr "Instrumente de funcționare, stocare și recuperare."
 
 #: settings_store.h
 msgid "Russian"
@@ -677,6 +1157,18 @@ msgstr "Rusă"
 #: pe/ui/library.cpp
 msgid "Ryujinx save found"
 msgstr "Salvare Ryujinx găsită"
+
+#: pe/ui/library.cpp
+msgid "Safe launch"
+msgstr "Lansare sigură"
+
+#: pe/ui/library.cpp
+msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
+msgstr "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
+
+#: eden_services.cpp, pe/ui/browse.cpp
+msgid "Sandbox only"
+msgstr "Doar cutie cu nisip"
 
 #. The app can read only its own folder; {0} is a number.
 #: pe/ui/browse.cpp
@@ -693,7 +1185,7 @@ msgstr "Date salvate"
 msgid "Save folder found"
 msgstr "Folder de salvare găsit"
 
-#: pe/ui/library.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp
 msgid "Saved for this game. Applies on next launch."
 msgstr "Salvat pentru acest joc. Se aplică la următoarea pornire."
 
@@ -702,12 +1194,12 @@ msgstr "Salvat pentru acest joc. Se aplică la următoarea pornire."
 msgid "Saved. A display that cannot show 120 Hz stays at 60 Hz."
 msgstr "Salvat. Un ecran care nu poate afișa 120 Hz rămâne la 60 Hz."
 
-#: pe/ui/browse.cpp, pe/ui/launcher.cpp
+#: pe/ui/launcher.cpp
 msgid "Saved. Applies when a game starts."
 msgstr "Salvat. Se aplică la pornirea unui joc."
 
 #. Button hint: choose the highlighted item (not the Select button).
-#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
 msgid "Select"
 msgstr "Selectare"
 
@@ -724,12 +1216,16 @@ msgstr "Selectează un joc pentru a începe"
 msgid "SELECTED"
 msgstr "SELECTATĂ"
 
+#: pe/ui/home.cpp
+msgid "SELECTED GAME"
+msgstr "JOC SELECTAT"
+
 #. Why a game did not start (the file is gone).
 #: eden_services.cpp
 msgid "Selected ROM is no longer available"
 msgstr "ROM-ul selectat nu mai este disponibil"
 
-#: pe/ui/home.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Settings"
 msgstr "Setări"
 
@@ -742,17 +1238,33 @@ msgstr "CONFIGURARE"
 msgid "Setup required"
 msgstr "Configurare necesară"
 
-#: eden_services.cpp, host/fake_services.cpp
+#: host/fake_services.cpp
 msgid "Setup required: {0} Open Settings, Game files to choose the folder that holds your keys, firmware and roms folders (or add the files to {1}), then reopen ProsperoEden."
 msgstr "Configurare necesară: {0} Deschide Setări, Fișiere de joc pentru a alege folderul care conține folderele keys, firmware și roms (sau adaugă fișierele în {1}), apoi redeschide ProsperoEden."
+
+#: eden_services.cpp
+msgid "Setup required: {0} Open Settings, Storage to choose the root that holds the standard keys, firmware and roms folders (or add the files to {1}), then reopen Encore."
+msgstr "Configurare necesară: {0} Deschideți Setări, Stocare pentru a alege rădăcina care deține cheile standard, firmware-ul și folderele rom-uri (sau adăugați fișierele în {1}), apoi redeschideți Encore."
 
 #: eden_services.cpp
 msgid "Setup validation failed. Check that firmware and key files are readable and valid."
 msgstr "Validarea configurării a eșuat. Verifică dacă fișierele de firmware și de chei pot fi citite și sunt valide."
 
 #: pe/ui/settings.cpp
+msgid "Shows live FPS while playing. Off is cleaner for normal use; Touchpad + R1 toggles it at any time."
+msgstr "Afișează FPS live în timpul jocului. Off este mai curat pentru utilizare normală; Touchpad + R1 îl comută în orice moment."
+
+#: settings_store.h
+msgid "SMAA"
+msgstr "SMAA"
+
+#: pe/ui/settings.cpp
 msgid "Solid panels, brighter text and an outlined highlight."
 msgstr "Panouri opace, text mai luminos și evidențiere cu contur."
+
+#: eden_services.cpp
+msgid "Some cache files could not be removed."
+msgstr "Unele fișiere cache nu au putut fi eliminate."
 
 #: settings_store.h
 msgid "Spanish"
@@ -761,6 +1273,10 @@ msgstr "Spaniolă"
 #: settings_store.h
 msgid "Spanish (Latin America)"
 msgstr "Spaniolă (America Latină)"
+
+#: pe/ui/mapping.cpp
+msgid "Square"
+msgstr "Pătrat"
 
 #. The app creates its user the first time a game runs.
 #: eden_services.cpp
@@ -773,12 +1289,52 @@ msgid "STARTING"
 msgstr "SE PORNEȘTE"
 
 #: pe/ui/settings.cpp
+msgid "STICK DEADZONE"
+msgstr "ZONA MOARTĂ A MANETEI"
+
+#: pe/ui/settings.cpp
+msgid "Stick deadzone"
+msgstr "Zona moartă a manetei"
+
+#: pe/ui/settings.cpp
 msgid "Stops the background drifting and the screens sliding, here and on the loading screen."
 msgstr "Oprește mișcarea fundalului și glisarea ecranelor, aici și pe ecranul de încărcare."
+
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/settings.cpp
+msgid "Storage"
+msgstr "Stocare"
+
+#: pe/ui/settings.cpp
+msgid "STORAGE"
+msgstr "STOCARE"
+
+#: pe/ui/home.cpp
+msgid "Storage not configured"
+msgstr "Stocarea nu este configurată"
+
+#: pe/ui/home.cpp
+msgid "Storage ready"
+msgstr "Depozitare gata"
+
+#: pe/ui/browse.cpp
+msgid "Storage root saved. Reopen Encore to use it."
+msgstr "Rădăcina de stocare a fost salvată. Redeschideți Encore pentru a-l folosi."
 
 #: pe/ui/browse.cpp
 msgid "Supply your own files"
 msgstr "Folosește propriile fișiere"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Switch"
+msgstr "Comutator"
+
+#: pe/ui/home.cpp
+msgid "Switch card"
+msgstr "Comutați cardul"
+
+#: pe/ui/home.cpp
+msgid "System"
+msgstr "Sistem"
 
 #: eden_services.cpp
 msgid "Taiwan"
@@ -792,6 +1348,14 @@ msgstr "Thailandeză"
 #: pe/ui/browse.cpp
 msgid "THANKS"
 msgstr "MULȚUMIRI"
+
+#: pe/ui/browse.cpp
+msgid "Thanks to the whole PS5 homebrew community and to every developer whose drivers, tools and libraries make Eden Encore possible."
+msgstr "Mulțumim întregii comunități de homebrew PS5 și fiecărui dezvoltator ale cărui drivere, instrumente și biblioteci fac Eden Encore posibil."
+
+#: eden_services.cpp
+msgid "The game could not allocate PS5 memory. Close Eden Encore completely before retrying to release memory retained between games."
+msgstr "Jocul nu a putut aloca memorie PS5. Închideți complet Eden Encore înainte de a încerca din nou să eliberați memoria păstrată între jocuri."
 
 #. Why a game stopped. 'Settings, Video' is the menu path; 'the game's own settings' is the Game settings dialog of the Library.
 #: eden_services.cpp
@@ -814,15 +1378,47 @@ msgstr "Acest joc nu are încă o salvare de exportat."
 msgid "This game's settings cannot be saved (no title ID)."
 msgstr "Setările acestui joc nu pot fi salvate (fără ID de titlu)."
 
+#: pe/ui/browse.cpp
+msgid "THIS ROOT"
+msgstr "ACEASTA RADINA"
+
 #. ryujinx/, save-import/ and roms/ are folder names (unchanged); {0} is the game's ID.
 #: eden_services.cpp
 msgid "To import, copy a Ryujinx folder to ryujinx/ or a save to save-import/{0}/, next to roms/."
 msgstr "Pentru import, copiază un folder Ryujinx în ryujinx/ sau o salvare în save-import/{0}/, lângă roms/."
 
+#: pe/ui/mapping.cpp
+msgid "Touchpad"
+msgstr "Touchpad"
+
+#: pe/ui/mapping.cpp
+msgid "Triangle"
+msgstr "Triunghi"
+
 #. Button hint: switch the highlighted mod on or off.
 #: pe/ui/library.cpp
 msgid "Turn on or off"
 msgstr "Activează sau dezactivează"
+
+#: pe/ui/settings.cpp
+msgid "Turns DualSense vibration on or off for games."
+msgstr "Activează sau dezactivează vibrația DualSense pentru jocuri."
+
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "TV output"
+msgstr "Ieșire TV"
+
+#: pe/ui/settings.cpp
+msgid "TV OUTPUT"
+msgstr "IEȘIRE TV"
+
+#: settings_store.h
+msgid "Ultra"
+msgstr "Ultra"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp
+msgid "Unknown"
+msgstr "Necunoscut"
 
 #. Short tag on the 'Parent folder' row.
 #: pe/ui/browse.cpp
@@ -838,7 +1434,7 @@ msgstr "Actualizare {0}"
 msgid "UPDATES, DLC"
 msgstr "ACTUALIZĂRI, DLC"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Upscaling filter"
 msgstr "Filtru de scalare"
 
@@ -850,6 +1446,14 @@ msgstr "FILTRU DE SCALARE"
 msgid "USA"
 msgstr "SUA"
 
+#: pe/ui/browse.cpp
+msgid "Use extracted firmware NCA files. Choose the root in Settings, Storage; restart the app after changing it."
+msgstr "Utilizați fișierele NCA cu firmware extrase. Alegeți rădăcina în Setări, Stocare; reporniți aplicația după ce o schimbați."
+
+#: pe/ui/browse.cpp
+msgid "Use this root"
+msgstr "Folosește această rădăcină"
+
 #: pe/ui/settings.cpp
 msgid "VIBRATION"
 msgstr "VIBRAȚIE"
@@ -859,6 +1463,14 @@ msgid "Vibration"
 msgstr "Vibrație"
 
 #: pe/ui/settings.cpp
+msgid "VIBRATION STRENGTH"
+msgstr "INTENSITATEA VIBRAȚIILOR"
+
+#: pe/ui/settings.cpp
+msgid "Vibration strength"
+msgstr "Intensitatea vibrațiilor"
+
+#: pe/ui/home.cpp, pe/ui/settings.cpp
 msgid "Video"
 msgstr "Video"
 
@@ -866,10 +1478,26 @@ msgstr "Video"
 msgid "VIDEO"
 msgstr "VIDEO"
 
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Video preset"
+msgstr "Presetare video"
+
+#: pe/ui/settings.cpp
+msgid "VIDEO PRESET"
+msgstr "PRESETARE VIDEO"
+
 #. Vulkan is a name (unchanged).
 #: pe/ui/settings.cpp
 msgid "Vulkan (recommended)"
 msgstr "Vulkan (recomandat)"
+
+#: pe/ui/settings.cpp
+msgid "Vulkan is recommended on PS5. Use OpenGL only as a fallback for a game with Vulkan issues."
+msgstr "Vulkan este recomandat pe PS5. Folosiți OpenGL doar ca alternativă pentru un joc cu probleme Vulkan."
+
+#: pe/ui/library.cpp
+msgid "Vulkan is recommended on PS5. Use OpenGL only as a fallback for a title with Vulkan issues."
+msgstr "Vulkan este recomandat pe PS5. Utilizați OpenGL numai ca alternativă pentru un titlu cu probleme Vulkan."
 
 #: pe/ui/library.cpp
 msgid "Your games"
@@ -951,7 +1579,7 @@ msgid "{0} of {1} on"
 msgstr "{0} din {1} activate"
 
 #. A percentage (a volume): write it as the language does, for example with a space before the sign.
-#: pe/ui/settings.cpp
+#: pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "{0}%"
 msgstr "{0}%"
 
@@ -964,187 +1592,3 @@ msgstr "{0}/ (NSP sau XCI)"
 #: pe/ui/browse.cpp
 msgid "{0}/ (one folder per game ID)"
 msgstr "{0}/ (un dosar pentru fiecare ID de titlu)"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Restore defaults"
-msgstr "Restore defaults"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Recommended defaults restored."
-msgstr "Recommended defaults restored."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Reset overrides"
-msgstr "Reset overrides"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Game overrides reset to global defaults."
-msgstr "Game overrides reset to global defaults."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
-msgstr "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
-
-#: settings_store.h
-msgid "0.25x (minimum)"
-msgstr "0,25x (minim)"
-
-#: settings_store.h
-msgid "0.5x (fastest, softer)"
-msgstr "0,5x (cel mai rapid, mai fin)"
-
-#: settings_store.h
-msgid "1.25x (recommended)"
-msgstr "1,25x (recomandat)"
-
-#: settings_store.h
-msgid "2x (high memory)"
-msgstr "2x (memorie ridicată)"
-
-#: settings_store.h
-msgid "3x (very high memory)"
-msgstr "3x (memorie foarte ridicată)"
-
-#: settings_store.h
-msgid "4x (extreme memory)"
-msgstr "4x (memorie extremă)"
-
-#: translated UI setting
-msgid "Anti-aliasing"
-msgstr "Antialiasing"
-
-#: translated UI setting
-msgid "Button mapping"
-msgstr "Maparea butoanelor"
-
-#: translated UI setting
-msgid "Quick settings"
-msgstr "Setări rapide"
-
-#: translated UI setting
-msgid "Storage"
-msgstr "Stocare"
-
-#: translated UI setting
-msgid "Video preset"
-msgstr "Presetare video"
-
-#: translated UI setting
-msgid "Game resolution"
-msgstr "Rezoluția jocului"
-
-#: translated UI setting
-msgid "TV output"
-msgstr "Ieșire TV"
-
-#: translated UI setting
-msgid "Play"
-msgstr "Joacă"
-
-#: translated UI setting
-msgid "Cancel"
-msgstr "Anulează"
-
-#: translated UI setting
-msgid "Confirm"
-msgstr "Confirmă"
-
-#: translated UI setting
-msgid "Reset"
-msgstr "Resetează"
-
-#: translated UI setting
-msgid "Ultra"
-msgstr "Ultra"
-
-#: translated UI setting
-msgid "Recommended"
-msgstr "Recomandat"
-
-#: translated UI setting
-msgid "Minimum"
-msgstr "Minim"
-
-#: translated UI setting
-msgid "Home"
-msgstr "Acasă"
-
-#: translated UI setting
-msgid "Clear cache"
-msgstr "Șterge memoria cache"
-
-#: translated UI setting
-msgid "Done"
-msgstr "Gata"
-
-#: translated UI setting
-msgid "Custom"
-msgstr "Personalizat"
-
-#: translated UI setting
-msgid "Controllers"
-msgstr "Controlere"
-
-#: translated UI setting
-msgid "Quit"
-msgstr "Ieșire"
-
-#: translated UI setting
-msgid "FSR sharpness"
-msgstr "Claritate FSR"
-
-#: translated UI setting
-msgid "Stick deadzone"
-msgstr "Zona moartă a manetei"
-
-#: translated UI setting
-msgid "Vibration strength"
-msgstr "Intensitatea vibrațiilor"
-
-#: translated UI setting
-msgid "Preset"
-msgstr "Presetare"
-
-#: translated UI setting
-msgid "Open settings"
-msgstr "Deschide setările"
-
-#: translated UI setting
-msgid "ANTI-ALIASING"
-msgstr "ANTIALIASING"
-
-#: translated UI setting
-msgid "BUTTON MAPPING"
-msgstr "MAPAREA BUTOANELOR"
-
-#: translated UI setting
-msgid "QUICK SETTINGS"
-msgstr "SETĂRI RAPIDE"
-
-#: translated UI setting
-msgid "STORAGE"
-msgstr "STOCARE"
-
-#: translated UI setting
-msgid "VIDEO PRESET"
-msgstr "PRESETARE VIDEO"
-
-#: translated UI setting
-msgid "GAME RESOLUTION"
-msgstr "REZOLUȚIA JOCULUI"
-
-#: translated UI setting
-msgid "TV OUTPUT"
-msgstr "IEȘIRE TV"
-
-#: translated UI setting
-msgid "FSR SHARPNESS"
-msgstr "CLARITATE FSR"
-
-#: translated UI setting
-msgid "STICK DEADZONE"
-msgstr "ZONA MOARTĂ A MANETEI"
-
-#: translated UI setting
-msgid "VIBRATION STRENGTH"
-msgstr "INTENSITATEA VIBRAȚIILOR"

@@ -4,20 +4,64 @@
 # AMD FSR, DLC, NSP, XCI, prod.keys, Ryujinx) unchanged.
 
 #: settings_store.h
+msgid "0.25x (minimum)"
+msgstr "0,25x (最低)"
+
+#: settings_store.h
+msgid "0.5x (fastest, softer)"
+msgstr "0,5x (最快、较柔和)"
+
+#: settings_store.h
 msgid "0.75x (faster)"
 msgstr "0.75x（更快）"
+
+#: settings_store.h
+msgid "1.25x (recommended)"
+msgstr "1,25x (推荐)"
 
 #: settings_store.h
 msgid "1.5x (sharper)"
 msgstr "1.5x（更清晰）"
 
+#: pe/ui/settings.cpp
+msgid "100% is full DualSense rumble strength. Lower it if vibration feels too strong."
+msgstr "100% 是 DualSense 震动强度的上限。如果震动过强，请适当调低。"
+
 #: settings_store.h
 msgid "1x (native)"
 msgstr "1x（原生）"
 
+#: settings_store.h
+msgid "2x (high memory)"
+msgstr "2x (高内存占用)"
+
+#: settings_store.h
+msgid "3x (very high memory)"
+msgstr "3x (很高内存占用)"
+
+#: settings_store.h
+msgid "4x (extreme memory)"
+msgstr "4x (极高内存占用)"
+
+#: pe/ui/settings.cpp
+msgid "60 Hz is recommended. 120 Hz changes display mode only; the game still needs to render above 60 FPS to benefit."
+msgstr "建议使用 60 Hz。120 Hz 仅切换显示模式；游戏仍需以超过 60 FPS 的速度渲染才能受益。"
+
+#: pe/ui/library.cpp
+msgid "60 Hz is the safe default. Use 120 Hz only with a compatible display or high-FPS patch."
+msgstr "60 Hz 是安全的默认设置。仅在显示设备兼容或使用高帧率补丁时启用 120 Hz。"
+
+#: pe/ui/settings.cpp
+msgid "8% is recommended. Increase it for stick drift; decrease it for more sensitive aiming."
+msgstr "建议使用 8%。摇杆漂移时可提高；希望瞄准更灵敏时可降低。"
+
 #: eden_services.cpp
 msgid "A firmware NCA cannot be read. Reinstall the firmware dump."
 msgstr "无法读取固件 NCA。请重新安装固件。"
+
+#: pe/ui/browse.cpp
+msgid "About Eden Encore"
+msgstr "关于 Eden Encore"
 
 #. Label: which folders the app can read.
 #: pe/ui/browse.cpp
@@ -50,7 +94,19 @@ msgstr "AMD FSR"
 msgid "Another language"
 msgstr "其他语言"
 
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Anti-aliasing"
+msgstr "抗锯齿"
+
 #: pe/ui/settings.cpp
+msgid "ANTI-ALIASING"
+msgstr "抗锯齿"
+
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Anti-aliasing smooths jagged edges. None is fastest; FXAA is light; SMAA prioritizes image quality."
+msgstr "抗锯齿可平滑锯齿边缘。关闭时速度最快；FXAA 开销较低；SMAA 更注重画质。"
+
+#: pe/ui/home.cpp, pe/ui/settings.cpp
 msgid "Audio"
 msgstr "音频"
 
@@ -63,7 +119,7 @@ msgid "Australia"
 msgstr "澳大利亚"
 
 #. Button hint: go back one screen.
-#: pe/ui/browse.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
 msgid "Back"
 msgstr "返回"
 
@@ -76,6 +132,14 @@ msgstr "双三次"
 #: settings_store.h
 msgid "Bilinear"
 msgstr "双线性"
+
+#: pe/ui/settings.cpp
+msgid "Bilinear is the lightest default. AMD FSR is most useful when rendering below the TV output size."
+msgstr "双线性过滤是开销最低的默认选项。渲染分辨率低于电视输出分辨率时，AMD FSR 最有用。"
+
+#: pe/ui/library.cpp
+msgid "Bilinear is the lightest default. AMD FSR is useful when rendering below the TV output size."
+msgstr "双线性过滤是开销最低的默认选项。渲染分辨率低于电视输出分辨率时，AMD FSR 很有用。"
 
 #. Button hint: move through the list.
 #: pe/ui/browse.cpp
@@ -90,14 +154,58 @@ msgstr "浏览游戏"
 msgid "Browse settings"
 msgstr "浏览设置"
 
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Button mapping"
+msgstr "按键映射"
+
+#: pe/ui/settings.cpp
+msgid "BUTTON MAPPING"
+msgstr "按键映射"
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping reset to global settings."
+msgstr "按键映射已恢复为全局设置。"
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping reset to the active profile."
+msgstr "按键映射已恢复为当前配置。"
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping saved."
+msgstr "按键映射已保存。"
+
+#: pe/ui/settings.cpp
+msgid "BUTTON PROFILE"
+msgstr "按键配置"
+
+#: pe/ui/settings.cpp
+msgid "Button profile"
+msgstr "按键配置"
+
+#: pe/ui/home.cpp, pe/ui/settings.cpp
+msgid "CACHE"
+msgstr "缓存"
+
+#: pe/ui/settings.cpp
+msgid "Cache: {0}  |  Logs: {1}"
+msgstr "缓存：{0}  |  日志：{1}"
+
+#: pe/ui/launcher.cpp
+msgid "Cancel"
+msgstr "取消"
+
 #: eden_services.cpp
 msgid "Cannot read firmware/ in {0}. Install extracted firmware NCAs."
 msgstr "无法读取 {0} 中的 firmware/。请安装解包后的固件 NCA。"
 
 #. Button hint: change the highlighted setting.
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
 msgid "Change"
 msgstr "更改"
+
+#: pe/ui/launcher.cpp
+msgid "Change console mode for this game?"
+msgstr "要更改此游戏的主机模式吗？"
 
 #. What a mod is made of: cheat codes.
 #: eden_services.cpp, host/fake_services.cpp
@@ -126,10 +234,42 @@ msgid "Choose a game from your library."
 msgstr "请从游戏库中选择一个游戏。"
 
 #: pe/ui/browse.cpp
+msgid "Choose one root for keys, firmware, games, updates and mods"
+msgstr "为密钥、固件、游戏、更新和模组选择同一个根目录"
+
+#: pe/ui/browse.cpp
 msgid "Choose the language games use"
 msgstr "选择游戏使用的语言"
 
-#: pe/ui/library.cpp
+#: pe/ui/mapping.cpp
+msgid "Circle"
+msgstr "圆圈键"
+
+#: pe/ui/settings.cpp
+msgid "Clear"
+msgstr "清除"
+
+#: pe/ui/settings.cpp
+msgid "Clear cache"
+msgstr "清除缓存"
+
+#: pe/ui/launcher.cpp
+msgid "Clear cache?"
+msgstr "要清除缓存吗？"
+
+#: eden_services.cpp
+msgid "Cleared {0} of cache."
+msgstr "已清除 {0} 的缓存。"
+
+#: pe/ui/launcher.cpp
+msgid "Confirm"
+msgstr "确认"
+
+#: pe/ui/launcher.cpp
+msgid "Confirm this action?"
+msgstr "确认执行此操作吗？"
+
+#: pe/ui/home.cpp, pe/ui/launcher.cpp, pe/ui/library.cpp
 msgid "Console mode"
 msgstr "主机模式"
 
@@ -138,10 +278,22 @@ msgid "CONTINUE PLAYING"
 msgstr "继续游戏"
 
 #: pe/ui/home.cpp
+msgid "Controller mapping"
+msgstr "控制器按键映射"
+
+#: pe/ui/settings.cpp
+msgid "Controller profile: {0}"
+msgstr "控制器配置：{0}"
+
+#: pe/ui/home.cpp
 msgid "CONTROLLERS"
 msgstr "手柄"
 
-#: pe/ui/settings.cpp
+#: pe/ui/home.cpp
+msgid "Controllers"
+msgstr "控制器"
+
+#: pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Controls"
 msgstr "操作"
 
@@ -153,13 +305,29 @@ msgstr "操作"
 msgid "Could not create the folder. Check that the game files folder can be written."
 msgstr "无法创建文件夹。请确认游戏文件的文件夹可以写入。"
 
+#: pe/ui/library.cpp
+msgid "Could not load game library. Reopen Encore to retry."
+msgstr "无法加载游戏库。请重新打开 Encore 后重试。"
+
+#: pe/ui/library.cpp
+msgid "Could not load game list. Please try again."
+msgstr "无法加载游戏列表。请重试。"
+
 #: pe/ui/launcher.cpp
 msgid "Could not save settings. Please try again."
 msgstr "无法保存设置。请重试。"
 
-#: pe/ui/browse.cpp, pe/ui/library.cpp
+#: pe/ui/browse.cpp
+msgid "Could not save the storage root. Please try again."
+msgstr "无法保存存储根目录。请重试。"
+
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp
 msgid "Could not save. Please try again."
 msgstr "无法保存。请重试。"
+
+#: pe/ui/mapping.cpp
+msgid "Create"
+msgstr "创建键"
 
 #. Button hint: make the folder a game's mods go in.
 #: pe/ui/library.cpp
@@ -175,10 +343,46 @@ msgstr "已创建 {0}。请将每个模组的文件夹复制到其中。"
 msgid "Credits and setup"
 msgstr "制作人员与设置说明"
 
+#: pe/ui/mapping.cpp
+msgid "Cross"
+msgstr "叉键"
+
+#: pe/ui/settings.cpp, settings_store.h
+msgid "Custom"
+msgstr "自定义"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Custom PS5"
+msgstr "自定义 PS5"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Custom Switch"
+msgstr "自定义 Switch"
+
+#: pe/ui/settings.cpp
+msgid "Customize"
+msgstr "自定义"
+
+#: pe/ui/settings.cpp
+msgid "Customize every guest button. The profile automatically becomes Custom PS5 or Custom Switch."
+msgstr "自定义每个游戏按键。配置将自动变为“自定义 PS5”或“自定义 Switch”。"
+
+#: pe/ui/settings.cpp
+msgid "DATA"
+msgstr "数据"
+
+#: pe/ui/settings.cpp
+msgid "Data: {0}"
+msgstr "数据：{0}"
+
 #. A per-game setting that follows the general setting; {0} is its value.
 #: pe/ui/library.cpp
 msgid "Default ({0})"
 msgstr "默认（{0}）"
+
+#: pe/ui/settings.cpp
+msgid "DETAILED LOGGING"
+msgstr "详细日志"
 
 #: pe/ui/settings.cpp
 msgid "Detailed logging"
@@ -188,7 +392,7 @@ msgstr "详细日志"
 msgid "Detailed logs on"
 msgstr "详细日志已开启"
 
-#: pe/ui/settings.cpp
+#: pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Diagnostics"
 msgstr "诊断"
 
@@ -197,17 +401,45 @@ msgid "DIAGNOSTICS"
 msgstr "诊断"
 
 #. Console mode: the console as if connected to a TV. Keep it short (about 9 letters).
-#: pe/ui/library.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Docked"
 msgstr "TV模式"
+
+#: pe/ui/library.cpp
+msgid "Docked can improve graphics but may cost performance; Handheld is lighter for demanding games."
+msgstr "底座模式可能提高画质，但会降低性能；手持模式对要求较高的游戏更轻量。"
+
+#: pe/ui/home.cpp
+msgid "Done"
+msgstr "完成"
 
 #: pe/ui/settings.cpp
 msgid "Draws the menu's small text larger."
 msgstr "将菜单中的小字放大显示。"
 
+#: pe/ui/settings.cpp
+msgid "DualSense mapping, calibration, vibration and shortcuts."
+msgstr "DualSense 按键映射、校准、震动和快捷键。"
+
 #: settings_store.h
 msgid "Dutch"
 msgstr "荷兰语"
+
+#: pe/ui/browse.cpp
+msgid "Eden Encore builds on the proven ProsperoEden 0.40 PS5 base for firmware 13.60, with the Eden core, safer recovery, and targeted compatibility, performance and TV-first UX improvements."
+msgstr "Eden Encore 基于已验证的 ProsperoEden 0.40 PS5 固件 13.60 版本，结合 Eden 核心、更安全的恢复机制，以及针对兼容性、性能和电视操作界面的改进。"
+
+#: pe/ui/home.cpp
+msgid "Edit"
+msgstr "编辑"
+
+#: pe/ui/settings.cpp
+msgid "Edit custom mapping"
+msgstr "编辑自定义映射"
+
+#: pe/ui/browse.cpp
+msgid "Encore uses the same keys, firmware, roms, updates and mods folders under every storage root."
+msgstr "无论使用哪个存储根目录，Encore 都采用相同的 keys、firmware、roms、updates 和 mods 文件夹。"
 
 #. Label of the shortcut that ends the running game.
 #: pe/ui/settings.cpp
@@ -226,10 +458,22 @@ msgstr "英语（美国）"
 msgid "Europe"
 msgstr "欧洲"
 
+#: pe/ui/launcher.cpp
+msgid "Exit Eden Encore"
+msgstr "退出 Eden Encore"
+
+#: pe/ui/launcher.cpp
+msgid "Exit Eden Encore?"
+msgstr "要退出 Eden Encore 吗？"
+
 #. Button hint: copy the game's save out to a folder.
 #: pe/ui/library.cpp
 msgid "Export a copy"
 msgstr "导出副本"
+
+#: eden_services.cpp
+msgid "Export failed. Check that the storage root can be written."
+msgstr "导出失败。请检查存储根目录是否可写。"
 
 #. {0} is a folder.
 #: eden_services.cpp, host/fake_services.hpp
@@ -240,6 +484,14 @@ msgstr "已导出到 {0}。"
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Files"
 msgstr "文件"
+
+#: pe/ui/settings.cpp
+msgid "FILESYSTEM"
+msgstr "文件系统"
+
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Final app output size. Choose 1080p for lower memory use, 1440p for balance, or 2160p for maximum output detail."
+msgstr "应用最终输出分辨率。1080p 占用较少内存，1440p 兼顾平衡，2160p 提供最高输出细节。"
 
 #: pe/ui/settings.cpp
 msgid "Fine-tune your experience"
@@ -260,6 +512,10 @@ msgstr "固件就绪"
 #: eden_services.cpp
 msgid "Firmware SystemVersion data is missing or unreadable. Install a complete firmware dump."
 msgstr "固件的 SystemVersion 数据缺失或无法读取。请安装完整的固件。"
+
+#: pe/ui/settings.cpp
+msgid "Fixed Encore folder structure"
+msgstr "固定的 Encore 文件夹结构"
 
 #: pe/ui/browse.cpp
 msgid "FOLDERS"
@@ -282,10 +538,26 @@ msgstr "法语"
 msgid "French (Canada)"
 msgstr "法语（加拿大）"
 
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "FSR sharpness"
+msgstr "FSR 锐度"
+
+#: pe/ui/settings.cpp
+msgid "FSR SHARPNESS"
+msgstr "FSR 锐度"
+
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "FSR sharpness changes detail recovery only when AMD FSR is selected. Lower it if the picture looks grainy or over-sharpened."
+msgstr "仅选择 AMD FSR 时，FSR 锐化才会改变细节恢复效果。如果画面有颗粒感或过度锐化，请调低。"
+
 #. The app can read every folder of the console.
-#: pe/ui/browse.cpp
+#: eden_services.cpp, pe/ui/browse.cpp
 msgid "Full filesystem"
 msgstr "完整文件系统"
+
+#: settings_store.h
+msgid "FXAA"
+msgstr "FXAA"
 
 #: pe/ui/settings.cpp
 msgid "Game audio; PS5 system-menu music is unchanged."
@@ -297,6 +569,26 @@ msgid "Game could not start: {0} Details: {1}"
 msgstr "游戏无法启动：{0} 详情：{1}"
 
 #: pe/ui/library.cpp
+msgid "Game library unavailable"
+msgstr "游戏库不可用"
+
+#: pe/ui/library.cpp
+msgid "Game overrides reset to global defaults."
+msgstr "Game overrides reset to global defaults."
+
+#: pe/ui/settings.cpp
+msgid "Game render scale follows the selected profile. Lower it for performance or memory; raise it only when a game has headroom."
+msgstr "游戏渲染比例由所选配置决定。降低可改善性能或减少内存占用；仅在游戏性能充足时提高。"
+
+#: pe/ui/settings.cpp
+msgid "GAME RESOLUTION"
+msgstr "游戏分辨率"
+
+#: pe/ui/settings.cpp
+msgid "Game resolution"
+msgstr "游戏分辨率"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Game settings"
 msgstr "游戏设置"
 
@@ -316,6 +608,10 @@ msgstr "游戏音量和本菜单的音效。"
 msgid "GAMES"
 msgstr "游戏"
 
+#: pe/ui/home.cpp
+msgid "Games and cache"
+msgstr "游戏与缓存"
+
 #: pe/ui/browse.cpp
 msgid "Games use this language when they offer it, and their own default otherwise. It applies when a game starts."
 msgstr "游戏支持此语言时使用此语言，否则使用游戏自身的默认语言。启动游戏时生效。"
@@ -332,6 +628,14 @@ msgstr "德语"
 msgid "GETTING STARTED"
 msgstr "入门"
 
+#: pe/ui/library.cpp, pe/ui/mapping.cpp
+msgid "Global ({0})"
+msgstr "全局（{0}）"
+
+#: pe/ui/mapping.cpp
+msgid "Global controller profile: {0}"
+msgstr "全局控制器配置：{0}"
+
 #: pe/ui/settings.cpp
 msgid "Graphics backend and how games are scaled to your TV."
 msgstr "图形后端，以及游戏画面如何缩放到电视。"
@@ -341,9 +645,17 @@ msgid "Graphics backend initialization failed. Try another backend in Settings; 
 msgstr "图形后端初始化失败。请在设置中尝试其他后端；驱动详情见 stderr.log 和 eden_log.txt。"
 
 #. Console mode: the console as if held in the hands. Keep it short (about 9 letters).
-#: pe/ui/library.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Handheld"
 msgstr "掌机模式"
+
+#: pe/ui/settings.cpp
+msgid "Health and storage tools. Cache cleanup never removes saves, settings, keys or games."
+msgstr "运行状态与存储工具。清理缓存绝不会删除存档、设置、密钥或游戏。"
+
+#: settings_store.h
+msgid "High"
+msgstr "高"
 
 #: pe/ui/settings.cpp
 msgid "HIGH CONTRAST"
@@ -353,6 +665,10 @@ msgstr "高对比度"
 #: pe/ui/settings.cpp
 msgid "High contrast"
 msgstr "高对比度"
+
+#: pe/ui/launcher.cpp
+msgid "Home"
+msgstr "主页"
 
 #. Button hint: copy a save in.
 #: pe/ui/library.cpp
@@ -372,9 +688,17 @@ msgid "Imported. The save it replaced was backed up."
 msgstr "已导入。被替换的存档已备份。"
 
 #. Tag on the language or folder that is in use now.
-#: pe/ui/browse.cpp, pe/ui/settings.cpp
+#: pe/ui/browse.cpp
 msgid "IN USE"
 msgstr "使用中"
+
+#: pe/ui/browse.cpp
+msgid "Internal storage"
+msgstr "内部存储"
+
+#: pe/ui/browse.cpp
+msgid "Internal storage saved. Reopen Encore to use it."
+msgstr "内部存储设置已保存。重新打开 Encore 后生效。"
 
 #: settings_store.h
 msgid "Italian"
@@ -409,7 +733,7 @@ msgstr "韩语"
 msgid "Language"
 msgstr "语言"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/settings.cpp
 msgid "LANGUAGE"
 msgstr "语言"
 
@@ -431,17 +755,45 @@ msgstr "放大文字"
 msgid "Last game opened"
 msgstr "上次打开的游戏"
 
-#: pe/ui/home.cpp
+#: pe/ui/library.cpp
 msgid "Launch game"
 msgstr "启动游戏"
 
-#: pe/ui/home.cpp
+#: pe/ui/settings.cpp
+msgid "LAYOUT"
+msgstr "布局"
+
+#: pe/ui/mapping.cpp
+msgid "Left stick press"
+msgstr "按下左摇杆"
+
+#: pe/ui/library.cpp
+msgid "Left/right: Global, PlayStation or Switch for this game; Cross: edit individual buttons."
+msgstr "左右切换：为此游戏选择全局、PlayStation 或 Switch；按叉键可逐个编辑按键。"
+
+#: pe/ui/launcher.cpp
 msgid "Library"
 msgstr "游戏库"
+
+#: pe/ui/library.cpp
+msgid "Loading artwork"
+msgstr "正在加载封面图片"
+
+#: pe/ui/launcher.cpp
+msgid "Loading game library..."
+msgstr "正在加载游戏库..."
+
+#: pe/ui/settings.cpp
+msgid "LOGS"
+msgstr "日志"
 
 #: pe/ui/settings.cpp
 msgid "Make the menu easier to see and follow."
 msgstr "让菜单更易看清、更易操作。"
+
+#: pe/ui/home.cpp
+msgid "Max. players: {0}"
+msgstr "最多玩家数：{0}"
 
 #: pe/ui/settings.cpp
 msgid "MENU SOUNDS"
@@ -450,6 +802,18 @@ msgstr "菜单音效"
 #: pe/ui/settings.cpp
 msgid "Menu sounds"
 msgstr "菜单音效"
+
+#: settings_store.h
+msgid "Minimum"
+msgstr "最低"
+
+#: pe/ui/settings.cpp
+msgid "Minimum reduces GPU load and may use lower GPU accuracy for speed. Recommended balances quality and stability. High and Ultra raise image quality when the game has headroom."
+msgstr "最低档降低 GPU 负载，并可能降低 GPU 精度以提高速度。推荐档平衡画质与稳定性。高档和极致档仅适合性能充足的游戏。"
+
+#: pe/ui/library.cpp
+msgid "Minimum, Recommended, High and Ultra apply the title-aware Encore profile. Manual changes become Custom for this game."
+msgstr "最低、推荐、高和极致档会应用 Encore 针对游戏的配置。手动修改后，该游戏会变为自定义配置。"
 
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Missing or empty keys/prod.keys in {0}."
@@ -526,8 +890,12 @@ msgstr "未找到 ROM 文件。"
 msgid "No roms folder"
 msgstr "没有 roms 文件夹"
 
-#. No add-ons (updates or DLC).
 #: pe/ui/library.cpp
+msgid "No screenshots available"
+msgstr "没有可用截图"
+
+#. No add-ons (updates or DLC).
+#: pe/ui/library.cpp, settings_store.h
 msgid "None"
 msgstr "无"
 
@@ -546,19 +914,43 @@ msgstr "关"
 msgid "On"
 msgstr "开"
 
+#: pe/ui/settings.cpp
+msgid "One root for keys, firmware, games, updates, mods and transfers."
+msgstr "将密钥、固件、游戏、更新、模组和传输内容放在同一根目录。"
+
 #. Short tag on a folder row.
 #: pe/ui/browse.cpp
 msgid "OPEN"
 msgstr "打开"
 
 #. Button hint: open the highlighted folder.
-#: pe/ui/browse.cpp, pe/ui/library.cpp
+#: pe/ui/browse.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Open"
 msgstr "打开"
 
 #: pe/ui/home.cpp
 msgid "Open library"
 msgstr "打开游戏库"
+
+#: pe/ui/home.cpp
+msgid "Open quick settings"
+msgstr "打开快捷设置"
+
+#: pe/ui/home.cpp
+msgid "Open settings"
+msgstr "打开设置"
+
+#: pe/ui/home.cpp
+msgid "Open storage"
+msgstr "打开存储设置"
+
+#: pe/ui/library.cpp
+msgid "Open the per-game DualSense mapping. Global uses Settings > Controls; Custom overrides it only for this game."
+msgstr "打开此游戏的 DualSense 按键映射。全局配置使用“设置 > 控制器”；自定义配置仅覆盖此游戏。"
+
+#: pe/ui/mapping.cpp
+msgid "Options"
+msgstr "选项键"
 
 #. Button hint: jump a page of the list (L1 / R1).
 #: pe/ui/browse.cpp
@@ -573,6 +965,18 @@ msgstr "上级文件夹"
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Patch"
 msgstr "补丁"
+
+#: pe/ui/home.cpp
+msgid "Play"
+msgstr "开始游戏"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "PlayStation"
+msgstr "PlayStation"
+
+#: pe/ui/settings.cpp
+msgid "PlayStation Auto keeps Cross/Circle menu semantics while adapting gameplay to physical Switch positions. Switch stays fixed; editing any button creates a custom profile."
+msgstr "PlayStation 自动模式在菜单中保持叉键/圆圈键语义，并按 Switch 按键的实体位置调整游戏操作。Switch 模式保持固定；编辑任一按键会创建自定义配置。"
 
 #: settings_store.h
 msgid "Polish"
@@ -590,6 +994,10 @@ msgstr "葡萄牙语（巴西）"
 #: pe/ui/browse.cpp
 msgid "Powered by Eden"
 msgstr "Powered by Eden"
+
+#: pe/ui/settings.cpp
+msgid "Preset"
+msgstr "预设"
 
 #. Asked before a save is imported over the one in use.
 #: pe/ui/library.cpp
@@ -617,18 +1025,46 @@ msgstr "项目致谢"
 msgid "ProsperoEden stopped because of an error. A report was saved to {0}."
 msgstr "ProsperoEden 因错误而停止。报告已保存到 {0}。"
 
+#: pe/ui/browse.cpp
+msgid "PS5 13.60 FORK"
+msgstr "PS5 13.60 分支"
+
 #. Why a game did not start.
 #: eden_services.cpp
 msgid "PS5 controller initialization failed"
 msgstr "PS5 手柄初始化失败"
 
+#: pe/ui/home.cpp
+msgid "QUICK SETTINGS"
+msgstr "快捷设置"
+
+#: pe/ui/home.cpp
+msgid "Quick settings"
+msgstr "快捷设置"
+
+#: pe/ui/home.cpp
+msgid "Quit"
+msgstr "退出"
+
 #: pe/ui/settings.cpp
 msgid "Ready"
 msgstr "就绪"
 
+#: pe/ui/launcher.cpp
+msgid "Recent"
+msgstr "最近"
+
 #: pe/ui/home.cpp
 msgid "RECENTLY PLAYED"
 msgstr "最近游玩"
+
+#: settings_store.h
+msgid "Recommended"
+msgstr "推荐"
+
+#: pe/ui/settings.cpp
+msgid "Recommended defaults restored."
+msgstr "Recommended defaults restored."
 
 #: pe/ui/settings.cpp
 msgid "REDUCE MOTION"
@@ -653,7 +1089,7 @@ msgstr "刷新率"
 msgid "REGION"
 msgstr "地区"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Renderer"
 msgstr "渲染器"
 
@@ -661,13 +1097,57 @@ msgstr "渲染器"
 msgid "RENDERER"
 msgstr "渲染器"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/mapping.cpp
+msgid "Reset"
+msgstr "重置"
+
+#: pe/ui/launcher.cpp
+msgid "Reset controller mapping?"
+msgstr "要重置控制器按键映射吗？"
+
+#: pe/ui/library.cpp
+msgid "Reset overrides"
+msgstr "Reset overrides"
+
+#: pe/ui/launcher.cpp
+msgid "Reset this game's custom settings?"
+msgstr "要重置此游戏的自定义设置吗？"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Resolution"
 msgstr "分辨率"
 
-#: eden_services.cpp
+#: pe/ui/library.cpp
+msgid "Resolution follows the selected title-aware profile. Lower it for performance or memory; raise it only when the title has headroom."
+msgstr "分辨率由所选游戏配置决定。降低可改善性能或减少内存占用；仅在性能充足时提高。"
+
+#: pe/ui/launcher.cpp
+msgid "Restore default settings?"
+msgstr "要恢复默认设置吗？"
+
+#: pe/ui/settings.cpp
+msgid "Restore defaults"
+msgstr "Restore defaults"
+
+#: pe/ui/mapping.cpp
+msgid "Right stick press"
+msgstr "按下右摇杆"
+
+#: pe/ui/launcher.cpp, pe/ui/library.cpp
 msgid "ROM missing from the game files folder"
 msgstr "游戏文件的文件夹中缺少 ROM"
+
+#: eden_services.cpp
+msgid "ROM missing from the storage root"
+msgstr "存储根目录中缺少 ROM"
+
+#: pe/ui/settings.cpp
+msgid "ROOT"
+msgstr "根目录"
+
+#: pe/ui/settings.cpp
+msgid "Runtime health, storage and recovery tools."
+msgstr "运行状态、存储与恢复工具。"
 
 #: settings_store.h
 msgid "Russian"
@@ -677,6 +1157,18 @@ msgstr "俄语"
 #: pe/ui/library.cpp
 msgid "Ryujinx save found"
 msgstr "已找到 Ryujinx 存档"
+
+#: pe/ui/library.cpp
+msgid "Safe launch"
+msgstr "安全启动"
+
+#: pe/ui/library.cpp
+msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
+msgstr "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
+
+#: eden_services.cpp, pe/ui/browse.cpp
+msgid "Sandbox only"
+msgstr "仅限沙盒"
 
 #. The app can read only its own folder; {0} is a number.
 #: pe/ui/browse.cpp
@@ -693,7 +1185,7 @@ msgstr "存档数据"
 msgid "Save folder found"
 msgstr "已找到存档文件夹"
 
-#: pe/ui/library.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp
 msgid "Saved for this game. Applies on next launch."
 msgstr "已为此游戏保存。下次启动时生效。"
 
@@ -702,12 +1194,12 @@ msgstr "已为此游戏保存。下次启动时生效。"
 msgid "Saved. A display that cannot show 120 Hz stays at 60 Hz."
 msgstr "已保存。不支持 120 Hz 的显示设备将保持 60 Hz。"
 
-#: pe/ui/browse.cpp, pe/ui/launcher.cpp
+#: pe/ui/launcher.cpp
 msgid "Saved. Applies when a game starts."
 msgstr "已保存。启动游戏时生效。"
 
 #. Button hint: choose the highlighted item (not the Select button).
-#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
 msgid "Select"
 msgstr "确定"
 
@@ -724,12 +1216,16 @@ msgstr "选择一个游戏开始"
 msgid "SELECTED"
 msgstr "已选"
 
+#: pe/ui/home.cpp
+msgid "SELECTED GAME"
+msgstr "所选游戏"
+
 #. Why a game did not start (the file is gone).
 #: eden_services.cpp
 msgid "Selected ROM is no longer available"
 msgstr "所选的 ROM 已不存在"
 
-#: pe/ui/home.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Settings"
 msgstr "设置"
 
@@ -742,17 +1238,33 @@ msgstr "设置状态"
 msgid "Setup required"
 msgstr "需要设置"
 
-#: eden_services.cpp, host/fake_services.cpp
+#: host/fake_services.cpp
 msgid "Setup required: {0} Open Settings, Game files to choose the folder that holds your keys, firmware and roms folders (or add the files to {1}), then reopen ProsperoEden."
 msgstr "需要设置：{0} 请打开“设置”中的“游戏文件”，选择存放 keys、firmware 和 roms 文件夹的文件夹（或将文件放入 {1}），然后重新打开 ProsperoEden。"
+
+#: eden_services.cpp
+msgid "Setup required: {0} Open Settings, Storage to choose the root that holds the standard keys, firmware and roms folders (or add the files to {1}), then reopen Encore."
+msgstr "需要完成设置：{0} 打开“设置 > 存储”，选择包含标准 keys、firmware 和 roms 文件夹的根目录（或将文件添加到 {1}），然后重新打开 Encore。"
 
 #: eden_services.cpp
 msgid "Setup validation failed. Check that firmware and key files are readable and valid."
 msgstr "设置验证失败。请确认固件和密钥文件可以读取且有效。"
 
 #: pe/ui/settings.cpp
+msgid "Shows live FPS while playing. Off is cleaner for normal use; Touchpad + R1 toggles it at any time."
+msgstr "游戏过程中显示实时 FPS。正常使用时关闭更简洁；随时按触摸板 + R1 可切换。"
+
+#: settings_store.h
+msgid "SMAA"
+msgstr "SMAA"
+
+#: pe/ui/settings.cpp
 msgid "Solid panels, brighter text and an outlined highlight."
 msgstr "不透明的面板、更亮的文字和带边框的高亮。"
+
+#: eden_services.cpp
+msgid "Some cache files could not be removed."
+msgstr "部分缓存文件无法删除。"
 
 #: settings_store.h
 msgid "Spanish"
@@ -761,6 +1273,10 @@ msgstr "西班牙语"
 #: settings_store.h
 msgid "Spanish (Latin America)"
 msgstr "西班牙语（拉丁美洲）"
+
+#: pe/ui/mapping.cpp
+msgid "Square"
+msgstr "方块键"
 
 #. The app creates its user the first time a game runs.
 #: eden_services.cpp
@@ -773,12 +1289,52 @@ msgid "STARTING"
 msgstr "正在启动"
 
 #: pe/ui/settings.cpp
+msgid "STICK DEADZONE"
+msgstr "摇杆死区"
+
+#: pe/ui/settings.cpp
+msgid "Stick deadzone"
+msgstr "摇杆死区"
+
+#: pe/ui/settings.cpp
 msgid "Stops the background drifting and the screens sliding, here and on the loading screen."
 msgstr "停止背景飘动和画面滑动，加载画面也同样适用。"
+
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/settings.cpp
+msgid "Storage"
+msgstr "存储空间"
+
+#: pe/ui/settings.cpp
+msgid "STORAGE"
+msgstr "存储空间"
+
+#: pe/ui/home.cpp
+msgid "Storage not configured"
+msgstr "尚未配置存储"
+
+#: pe/ui/home.cpp
+msgid "Storage ready"
+msgstr "存储已就绪"
+
+#: pe/ui/browse.cpp
+msgid "Storage root saved. Reopen Encore to use it."
+msgstr "存储根目录已保存。重新打开 Encore 后生效。"
 
 #: pe/ui/browse.cpp
 msgid "Supply your own files"
 msgstr "请自备文件"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Switch"
+msgstr "Switch"
+
+#: pe/ui/home.cpp
+msgid "Switch card"
+msgstr "切换卡片"
+
+#: pe/ui/home.cpp
+msgid "System"
+msgstr "系统"
 
 #: eden_services.cpp
 msgid "Taiwan"
@@ -792,6 +1348,14 @@ msgstr "泰语"
 #: pe/ui/browse.cpp
 msgid "THANKS"
 msgstr "鸣谢"
+
+#: pe/ui/browse.cpp
+msgid "Thanks to the whole PS5 homebrew community and to every developer whose drivers, tools and libraries make Eden Encore possible."
+msgstr "感谢整个 PS5 自制软件社区，以及所有开发驱动、工具和库、使 Eden Encore 成为可能的开发者。"
+
+#: eden_services.cpp
+msgid "The game could not allocate PS5 memory. Close Eden Encore completely before retrying to release memory retained between games."
+msgstr "游戏无法分配 PS5 内存。请完全关闭 Eden Encore，以释放游戏之间保留的内存，然后重试。"
 
 #. Why a game stopped. 'Settings, Video' is the menu path; 'the game's own settings' is the Game settings dialog of the Library.
 #: eden_services.cpp
@@ -814,15 +1378,47 @@ msgstr "此游戏还没有可导出的存档。"
 msgid "This game's settings cannot be saved (no title ID)."
 msgstr "无法保存此游戏的设置（没有游戏 ID）。"
 
+#: pe/ui/browse.cpp
+msgid "THIS ROOT"
+msgstr "此根目录"
+
 #. ryujinx/, save-import/ and roms/ are folder names (unchanged); {0} is the game's ID.
 #: eden_services.cpp
 msgid "To import, copy a Ryujinx folder to ryujinx/ or a save to save-import/{0}/, next to roms/."
 msgstr "要导入，请将 Ryujinx 文件夹复制到 ryujinx/，或将存档复制到 save-import/{0}/（与 roms/ 同级）。"
 
+#: pe/ui/mapping.cpp
+msgid "Touchpad"
+msgstr "触摸板"
+
+#: pe/ui/mapping.cpp
+msgid "Triangle"
+msgstr "三角键"
+
 #. Button hint: switch the highlighted mod on or off.
 #: pe/ui/library.cpp
 msgid "Turn on or off"
 msgstr "开启或关闭"
+
+#: pe/ui/settings.cpp
+msgid "Turns DualSense vibration on or off for games."
+msgstr "开启或关闭游戏中的 DualSense 震动。"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "TV output"
+msgstr "电视输出"
+
+#: pe/ui/settings.cpp
+msgid "TV OUTPUT"
+msgstr "电视输出"
+
+#: settings_store.h
+msgid "Ultra"
+msgstr "极致"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp
+msgid "Unknown"
+msgstr "未知"
 
 #. Short tag on the 'Parent folder' row.
 #: pe/ui/browse.cpp
@@ -838,7 +1434,7 @@ msgstr "更新 {0}"
 msgid "UPDATES, DLC"
 msgstr "更新、DLC"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Upscaling filter"
 msgstr "缩放滤镜"
 
@@ -850,6 +1446,14 @@ msgstr "缩放滤镜"
 msgid "USA"
 msgstr "美国"
 
+#: pe/ui/browse.cpp
+msgid "Use extracted firmware NCA files. Choose the root in Settings, Storage; restart the app after changing it."
+msgstr "请使用解包后的固件 NCA 文件。在“设置 > 存储”中选择根目录；更改后重启应用。"
+
+#: pe/ui/browse.cpp
+msgid "Use this root"
+msgstr "使用此根目录"
+
 #: pe/ui/settings.cpp
 msgid "VIBRATION"
 msgstr "振动"
@@ -859,6 +1463,14 @@ msgid "Vibration"
 msgstr "振动"
 
 #: pe/ui/settings.cpp
+msgid "VIBRATION STRENGTH"
+msgstr "振动强度"
+
+#: pe/ui/settings.cpp
+msgid "Vibration strength"
+msgstr "振动强度"
+
+#: pe/ui/home.cpp, pe/ui/settings.cpp
 msgid "Video"
 msgstr "视频"
 
@@ -866,10 +1478,26 @@ msgstr "视频"
 msgid "VIDEO"
 msgstr "视频"
 
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Video preset"
+msgstr "视频预设"
+
+#: pe/ui/settings.cpp
+msgid "VIDEO PRESET"
+msgstr "视频预设"
+
 #. Vulkan is a name (unchanged).
 #: pe/ui/settings.cpp
 msgid "Vulkan (recommended)"
 msgstr "Vulkan（推荐）"
+
+#: pe/ui/settings.cpp
+msgid "Vulkan is recommended on PS5. Use OpenGL only as a fallback for a game with Vulkan issues."
+msgstr "建议在 PS5 上使用 Vulkan。仅当某游戏存在 Vulkan 问题时才使用 OpenGL 作为备用方案。"
+
+#: pe/ui/library.cpp
+msgid "Vulkan is recommended on PS5. Use OpenGL only as a fallback for a title with Vulkan issues."
+msgstr "建议在 PS5 上使用 Vulkan。仅当某款游戏存在 Vulkan 问题时才使用 OpenGL 作为备用方案。"
 
 #: pe/ui/library.cpp
 msgid "Your games"
@@ -951,7 +1579,7 @@ msgid "{0} of {1} on"
 msgstr "已开启 {0}/{1}"
 
 #. A percentage (a volume): write it as the language does, for example with a space before the sign.
-#: pe/ui/settings.cpp
+#: pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "{0}%"
 msgstr "{0}%"
 
@@ -964,187 +1592,3 @@ msgstr "{0}/（NSP 或 XCI）"
 #: pe/ui/browse.cpp
 msgid "{0}/ (one folder per game ID)"
 msgstr "{0}/（每个游戏 ID 一个文件夹）"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Restore defaults"
-msgstr "Restore defaults"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Recommended defaults restored."
-msgstr "Recommended defaults restored."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Reset overrides"
-msgstr "Reset overrides"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Game overrides reset to global defaults."
-msgstr "Game overrides reset to global defaults."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
-msgstr "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
-
-#: settings_store.h
-msgid "0.25x (minimum)"
-msgstr "0,25x (最低)"
-
-#: settings_store.h
-msgid "0.5x (fastest, softer)"
-msgstr "0,5x (最快、较柔和)"
-
-#: settings_store.h
-msgid "1.25x (recommended)"
-msgstr "1,25x (推荐)"
-
-#: settings_store.h
-msgid "2x (high memory)"
-msgstr "2x (高内存占用)"
-
-#: settings_store.h
-msgid "3x (very high memory)"
-msgstr "3x (很高内存占用)"
-
-#: settings_store.h
-msgid "4x (extreme memory)"
-msgstr "4x (极高内存占用)"
-
-#: translated UI setting
-msgid "Anti-aliasing"
-msgstr "抗锯齿"
-
-#: translated UI setting
-msgid "Button mapping"
-msgstr "按键映射"
-
-#: translated UI setting
-msgid "Quick settings"
-msgstr "快捷设置"
-
-#: translated UI setting
-msgid "Storage"
-msgstr "存储空间"
-
-#: translated UI setting
-msgid "Video preset"
-msgstr "视频预设"
-
-#: translated UI setting
-msgid "Game resolution"
-msgstr "游戏分辨率"
-
-#: translated UI setting
-msgid "TV output"
-msgstr "电视输出"
-
-#: translated UI setting
-msgid "Play"
-msgstr "开始游戏"
-
-#: translated UI setting
-msgid "Cancel"
-msgstr "取消"
-
-#: translated UI setting
-msgid "Confirm"
-msgstr "确认"
-
-#: translated UI setting
-msgid "Reset"
-msgstr "重置"
-
-#: translated UI setting
-msgid "Ultra"
-msgstr "极致"
-
-#: translated UI setting
-msgid "Recommended"
-msgstr "推荐"
-
-#: translated UI setting
-msgid "Minimum"
-msgstr "最低"
-
-#: translated UI setting
-msgid "Home"
-msgstr "主页"
-
-#: translated UI setting
-msgid "Clear cache"
-msgstr "清除缓存"
-
-#: translated UI setting
-msgid "Done"
-msgstr "完成"
-
-#: translated UI setting
-msgid "Custom"
-msgstr "自定义"
-
-#: translated UI setting
-msgid "Controllers"
-msgstr "控制器"
-
-#: translated UI setting
-msgid "Quit"
-msgstr "退出"
-
-#: translated UI setting
-msgid "FSR sharpness"
-msgstr "FSR 锐度"
-
-#: translated UI setting
-msgid "Stick deadzone"
-msgstr "摇杆死区"
-
-#: translated UI setting
-msgid "Vibration strength"
-msgstr "振动强度"
-
-#: translated UI setting
-msgid "Preset"
-msgstr "预设"
-
-#: translated UI setting
-msgid "Open settings"
-msgstr "打开设置"
-
-#: translated UI setting
-msgid "ANTI-ALIASING"
-msgstr "抗锯齿"
-
-#: translated UI setting
-msgid "BUTTON MAPPING"
-msgstr "按键映射"
-
-#: translated UI setting
-msgid "QUICK SETTINGS"
-msgstr "快捷设置"
-
-#: translated UI setting
-msgid "STORAGE"
-msgstr "存储空间"
-
-#: translated UI setting
-msgid "VIDEO PRESET"
-msgstr "视频预设"
-
-#: translated UI setting
-msgid "GAME RESOLUTION"
-msgstr "游戏分辨率"
-
-#: translated UI setting
-msgid "TV OUTPUT"
-msgstr "电视输出"
-
-#: translated UI setting
-msgid "FSR SHARPNESS"
-msgstr "FSR 锐度"
-
-#: translated UI setting
-msgid "STICK DEADZONE"
-msgstr "摇杆死区"
-
-#: translated UI setting
-msgid "VIBRATION STRENGTH"
-msgstr "振动强度"

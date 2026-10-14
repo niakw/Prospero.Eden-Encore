@@ -4,20 +4,64 @@
 # AMD FSR, DLC, NSP, XCI, prod.keys, Ryujinx) unchanged.
 
 #: settings_store.h
+msgid "0.25x (minimum)"
+msgstr "0,25x (minimum)"
+
+#: settings_store.h
+msgid "0.5x (fastest, softer)"
+msgstr "0,5x (tercepat, lebih halus)"
+
+#: settings_store.h
 msgid "0.75x (faster)"
 msgstr "0,75x (lebih cepat)"
+
+#: settings_store.h
+msgid "1.25x (recommended)"
+msgstr "1,25x (disarankan)"
 
 #: settings_store.h
 msgid "1.5x (sharper)"
 msgstr "1,5x (lebih tajam)"
 
+#: pe/ui/settings.cpp
+msgid "100% is full DualSense rumble strength. Lower it if vibration feels too strong."
+msgstr "100% adalah kekuatan gemuruh DualSense penuh. Turunkan jika getaran terasa terlalu kuat."
+
 #: settings_store.h
 msgid "1x (native)"
 msgstr "1x (asli)"
 
+#: settings_store.h
+msgid "2x (high memory)"
+msgstr "2x (memori tinggi)"
+
+#: settings_store.h
+msgid "3x (very high memory)"
+msgstr "3x (memori sangat tinggi)"
+
+#: settings_store.h
+msgid "4x (extreme memory)"
+msgstr "4x (memori ekstrem)"
+
+#: pe/ui/settings.cpp
+msgid "60 Hz is recommended. 120 Hz changes display mode only; the game still needs to render above 60 FPS to benefit."
+msgstr "60Hz direkomendasikan. 120 Hz hanya mengubah mode tampilan; game ini masih perlu merender di atas 60 FPS untuk mendapatkan manfaatnya."
+
+#: pe/ui/library.cpp
+msgid "60 Hz is the safe default. Use 120 Hz only with a compatible display or high-FPS patch."
+msgstr "60 Hz adalah default yang aman. Gunakan 120 Hz hanya dengan tampilan yang kompatibel atau patch FPS tinggi."
+
+#: pe/ui/settings.cpp
+msgid "8% is recommended. Increase it for stick drift; decrease it for more sensitive aiming."
+msgstr "8% direkomendasikan. Tingkatkan untuk stick drift; kurangi untuk bidikan yang lebih sensitif."
+
 #: eden_services.cpp
 msgid "A firmware NCA cannot be read. Reinstall the firmware dump."
 msgstr "Salah satu NCA firmware tidak dapat dibaca. Instal ulang dump firmware."
+
+#: pe/ui/browse.cpp
+msgid "About Eden Encore"
+msgstr "Tentang Eden Encore"
 
 #. Label: which folders the app can read.
 #: pe/ui/browse.cpp
@@ -50,7 +94,19 @@ msgstr "AMD FSR"
 msgid "Another language"
 msgstr "Bahasa lain"
 
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Anti-aliasing"
+msgstr "Anti-aliasing"
+
 #: pe/ui/settings.cpp
+msgid "ANTI-ALIASING"
+msgstr "ANTI-ALIASING"
+
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Anti-aliasing smooths jagged edges. None is fastest; FXAA is light; SMAA prioritizes image quality."
+msgstr "Anti-aliasing menghaluskan bagian tepi yang bergerigi. Tidak ada yang tercepat; FXAA ringan; SMAA mengutamakan kualitas gambar."
+
+#: pe/ui/home.cpp, pe/ui/settings.cpp
 msgid "Audio"
 msgstr "Audio"
 
@@ -63,7 +119,7 @@ msgid "Australia"
 msgstr "Australia"
 
 #. Button hint: go back one screen.
-#: pe/ui/browse.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
 msgid "Back"
 msgstr "Kembali"
 
@@ -76,6 +132,14 @@ msgstr "Bikubik"
 #: settings_store.h
 msgid "Bilinear"
 msgstr "Bilinear"
+
+#: pe/ui/settings.cpp
+msgid "Bilinear is the lightest default. AMD FSR is most useful when rendering below the TV output size."
+msgstr "Bilinear adalah default paling ringan. AMD FSR paling berguna saat melakukan rendering di bawah ukuran output TV."
+
+#: pe/ui/library.cpp
+msgid "Bilinear is the lightest default. AMD FSR is useful when rendering below the TV output size."
+msgstr "Bilinear adalah default paling ringan. AMD FSR berguna saat melakukan rendering di bawah ukuran output TV."
 
 #. Button hint: move through the list.
 #: pe/ui/browse.cpp
@@ -90,14 +154,58 @@ msgstr "Telusuri game"
 msgid "Browse settings"
 msgstr "Telusuri pengaturan"
 
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Button mapping"
+msgstr "Pemetaan tombol"
+
+#: pe/ui/settings.cpp
+msgid "BUTTON MAPPING"
+msgstr "PEMETAAN TOMBOL"
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping reset to global settings."
+msgstr "Pemetaan tombol diatur ulang ke pengaturan global."
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping reset to the active profile."
+msgstr "Pemetaan tombol disetel ulang ke profil aktif."
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping saved."
+msgstr "Pemetaan tombol disimpan."
+
+#: pe/ui/settings.cpp
+msgid "BUTTON PROFILE"
+msgstr "PROFIL TOMBOL"
+
+#: pe/ui/settings.cpp
+msgid "Button profile"
+msgstr "Profil tombol"
+
+#: pe/ui/home.cpp, pe/ui/settings.cpp
+msgid "CACHE"
+msgstr "TEMBOLOK"
+
+#: pe/ui/settings.cpp
+msgid "Cache: {0}  |  Logs: {1}"
+msgstr "Tembolok: {0} |  Log: {1}"
+
+#: pe/ui/launcher.cpp
+msgid "Cancel"
+msgstr "Batal"
+
 #: eden_services.cpp
 msgid "Cannot read firmware/ in {0}. Install extracted firmware NCAs."
 msgstr "Tidak dapat membaca firmware/ di {0}. Instal NCA firmware hasil ekstraksi."
 
 #. Button hint: change the highlighted setting.
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
 msgid "Change"
 msgstr "Ubah"
+
+#: pe/ui/launcher.cpp
+msgid "Change console mode for this game?"
+msgstr "Ubah mode konsol untuk game ini?"
 
 #. What a mod is made of: cheat codes.
 #: eden_services.cpp, host/fake_services.cpp
@@ -126,10 +234,42 @@ msgid "Choose a game from your library."
 msgstr "Pilih game dari perpustakaan Anda."
 
 #: pe/ui/browse.cpp
+msgid "Choose one root for keys, firmware, games, updates and mods"
+msgstr "Pilih satu root untuk kunci, firmware, game, pembaruan, dan mod"
+
+#: pe/ui/browse.cpp
 msgid "Choose the language games use"
 msgstr "Pilih bahasa yang digunakan game"
 
-#: pe/ui/library.cpp
+#: pe/ui/mapping.cpp
+msgid "Circle"
+msgstr "Lingkaran"
+
+#: pe/ui/settings.cpp
+msgid "Clear"
+msgstr "Jelas"
+
+#: pe/ui/settings.cpp
+msgid "Clear cache"
+msgstr "Hapus cache"
+
+#: pe/ui/launcher.cpp
+msgid "Clear cache?"
+msgstr "Hapus cache?"
+
+#: eden_services.cpp
+msgid "Cleared {0} of cache."
+msgstr "Menghapus {0} cache."
+
+#: pe/ui/launcher.cpp
+msgid "Confirm"
+msgstr "Konfirmasi"
+
+#: pe/ui/launcher.cpp
+msgid "Confirm this action?"
+msgstr "Konfirmasikan tindakan ini?"
+
+#: pe/ui/home.cpp, pe/ui/launcher.cpp, pe/ui/library.cpp
 msgid "Console mode"
 msgstr "Mode konsol"
 
@@ -138,10 +278,22 @@ msgid "CONTINUE PLAYING"
 msgstr "LANJUTKAN BERMAIN"
 
 #: pe/ui/home.cpp
+msgid "Controller mapping"
+msgstr "Pemetaan pengontrol"
+
+#: pe/ui/settings.cpp
+msgid "Controller profile: {0}"
+msgstr "Profil pengontrol: {0}"
+
+#: pe/ui/home.cpp
 msgid "CONTROLLERS"
 msgstr "CONTROLLER"
 
-#: pe/ui/settings.cpp
+#: pe/ui/home.cpp
+msgid "Controllers"
+msgstr "Pengontrol"
+
+#: pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Controls"
 msgstr "Kontrol"
 
@@ -153,13 +305,29 @@ msgstr "KONTROL"
 msgid "Could not create the folder. Check that the game files folder can be written."
 msgstr "Folder tidak dapat dibuat. Periksa apakah folder file game dapat ditulisi."
 
+#: pe/ui/library.cpp
+msgid "Could not load game library. Reopen Encore to retry."
+msgstr "Tidak dapat memuat perpustakaan game. Buka kembali Encore untuk mencoba lagi."
+
+#: pe/ui/library.cpp
+msgid "Could not load game list. Please try again."
+msgstr "Tidak dapat memuat daftar permainan. Silakan coba lagi."
+
 #: pe/ui/launcher.cpp
 msgid "Could not save settings. Please try again."
 msgstr "Gagal menyimpan pengaturan. Silakan coba lagi."
 
-#: pe/ui/browse.cpp, pe/ui/library.cpp
+#: pe/ui/browse.cpp
+msgid "Could not save the storage root. Please try again."
+msgstr "Tidak dapat menyimpan root penyimpanan. Silakan coba lagi."
+
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp
 msgid "Could not save. Please try again."
 msgstr "Gagal menyimpan. Silakan coba lagi."
+
+#: pe/ui/mapping.cpp
+msgid "Create"
+msgstr "Buat"
 
 #. Button hint: make the folder a game's mods go in.
 #: pe/ui/library.cpp
@@ -175,10 +343,46 @@ msgstr "{0} dibuat. Salin folder tiap mod ke dalamnya."
 msgid "Credits and setup"
 msgstr "Kredit dan penyiapan"
 
+#: pe/ui/mapping.cpp
+msgid "Cross"
+msgstr "Salib"
+
+#: pe/ui/settings.cpp, settings_store.h
+msgid "Custom"
+msgstr "Kustom"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Custom PS5"
+msgstr "PS5 khusus"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Custom Switch"
+msgstr "Sakelar Kustom"
+
+#: pe/ui/settings.cpp
+msgid "Customize"
+msgstr "Sesuaikan"
+
+#: pe/ui/settings.cpp
+msgid "Customize every guest button. The profile automatically becomes Custom PS5 or Custom Switch."
+msgstr "Sesuaikan setiap tombol tamu. Profil otomatis menjadi Custom PS5 atau Custom Switch."
+
+#: pe/ui/settings.cpp
+msgid "DATA"
+msgstr "DATA"
+
+#: pe/ui/settings.cpp
+msgid "Data: {0}"
+msgstr "Data: {0}"
+
 #. A per-game setting that follows the general setting; {0} is its value.
 #: pe/ui/library.cpp
 msgid "Default ({0})"
 msgstr "Default ({0})"
+
+#: pe/ui/settings.cpp
+msgid "DETAILED LOGGING"
+msgstr "PENCATATAN RINCI"
 
 #: pe/ui/settings.cpp
 msgid "Detailed logging"
@@ -188,7 +392,7 @@ msgstr "Pencatatan log terperinci"
 msgid "Detailed logs on"
 msgstr "Log terperinci aktif"
 
-#: pe/ui/settings.cpp
+#: pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Diagnostics"
 msgstr "Diagnostik"
 
@@ -197,17 +401,45 @@ msgid "DIAGNOSTICS"
 msgstr "DIAGNOSTIK"
 
 #. Console mode: the console as if connected to a TV. Keep it short (about 9 letters).
-#: pe/ui/library.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Docked"
 msgstr "TV"
+
+#: pe/ui/library.cpp
+msgid "Docked can improve graphics but may cost performance; Handheld is lighter for demanding games."
+msgstr "Docking dapat meningkatkan grafis tetapi mungkin membebani kinerja; Genggam lebih ringan untuk game yang menuntut."
+
+#: pe/ui/home.cpp
+msgid "Done"
+msgstr "Selesai"
 
 #: pe/ui/settings.cpp
 msgid "Draws the menu's small text larger."
 msgstr "Memperbesar teks kecil pada menu."
 
+#: pe/ui/settings.cpp
+msgid "DualSense mapping, calibration, vibration and shortcuts."
+msgstr "Pemetaan DualSense, kalibrasi, getaran, dan pintasan."
+
 #: settings_store.h
 msgid "Dutch"
 msgstr "Belanda"
+
+#: pe/ui/browse.cpp
+msgid "Eden Encore builds on the proven ProsperoEden 0.40 PS5 base for firmware 13.60, with the Eden core, safer recovery, and targeted compatibility, performance and TV-first UX improvements."
+msgstr "Eden Encore dibangun berdasarkan basis ProsperoEden 0.40 PS5 yang telah terbukti untuk firmware 13.60, dengan inti Eden, pemulihan yang lebih aman, dan kompatibilitas yang ditargetkan, kinerja, dan peningkatan UX yang mengutamakan TV."
+
+#: pe/ui/home.cpp
+msgid "Edit"
+msgstr "Sunting"
+
+#: pe/ui/settings.cpp
+msgid "Edit custom mapping"
+msgstr "Edit pemetaan khusus"
+
+#: pe/ui/browse.cpp
+msgid "Encore uses the same keys, firmware, roms, updates and mods folders under every storage root."
+msgstr "Encore menggunakan folder kunci, firmware, ROM, pembaruan, dan mod yang sama di setiap root penyimpanan."
 
 #. Label of the shortcut that ends the running game.
 #: pe/ui/settings.cpp
@@ -226,10 +458,22 @@ msgstr "Inggris (AS)"
 msgid "Europe"
 msgstr "Eropa"
 
+#: pe/ui/launcher.cpp
+msgid "Exit Eden Encore"
+msgstr "Keluar dari Eden Encore"
+
+#: pe/ui/launcher.cpp
+msgid "Exit Eden Encore?"
+msgstr "Keluar dari Eden Encore?"
+
 #. Button hint: copy the game's save out to a folder.
 #: pe/ui/library.cpp
 msgid "Export a copy"
 msgstr "Ekspor salinan"
+
+#: eden_services.cpp
+msgid "Export failed. Check that the storage root can be written."
+msgstr "Ekspor gagal. Periksa apakah root penyimpanan dapat ditulis."
 
 #. {0} is a folder.
 #: eden_services.cpp, host/fake_services.hpp
@@ -240,6 +484,14 @@ msgstr "Diekspor ke {0}."
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Files"
 msgstr "File"
+
+#: pe/ui/settings.cpp
+msgid "FILESYSTEM"
+msgstr "SISTEM FILE"
+
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Final app output size. Choose 1080p for lower memory use, 1440p for balance, or 2160p for maximum output detail."
+msgstr "Ukuran keluaran aplikasi akhir. Pilih 1080p untuk penggunaan memori lebih rendah, 1440p untuk keseimbangan, atau 2160p untuk detail keluaran maksimum."
 
 #: pe/ui/settings.cpp
 msgid "Fine-tune your experience"
@@ -260,6 +512,10 @@ msgstr "Firmware siap"
 #: eden_services.cpp
 msgid "Firmware SystemVersion data is missing or unreadable. Install a complete firmware dump."
 msgstr "Data SystemVersion firmware tidak ada atau tidak dapat dibaca. Instal dump firmware yang lengkap."
+
+#: pe/ui/settings.cpp
+msgid "Fixed Encore folder structure"
+msgstr "Memperbaiki struktur folder Encore"
 
 #: pe/ui/browse.cpp
 msgid "FOLDERS"
@@ -282,10 +538,26 @@ msgstr "Prancis"
 msgid "French (Canada)"
 msgstr "Prancis (Kanada)"
 
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "FSR sharpness"
+msgstr "Ketajaman FSR"
+
+#: pe/ui/settings.cpp
+msgid "FSR SHARPNESS"
+msgstr "KETAJAMAN FSR"
+
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "FSR sharpness changes detail recovery only when AMD FSR is selected. Lower it if the picture looks grainy or over-sharpened."
+msgstr "Ketajaman FSR mengubah pemulihan detail hanya ketika AMD FSR dipilih. Turunkan jika gambar terlihat berbintik atau terlalu tajam."
+
 #. The app can read every folder of the console.
-#: pe/ui/browse.cpp
+#: eden_services.cpp, pe/ui/browse.cpp
 msgid "Full filesystem"
 msgstr "Seluruh sistem file"
+
+#: settings_store.h
+msgid "FXAA"
+msgstr "FXAA"
 
 #: pe/ui/settings.cpp
 msgid "Game audio; PS5 system-menu music is unchanged."
@@ -297,6 +569,26 @@ msgid "Game could not start: {0} Details: {1}"
 msgstr "Game tidak dapat dijalankan: {0} Detail: {1}"
 
 #: pe/ui/library.cpp
+msgid "Game library unavailable"
+msgstr "Perpustakaan permainan tidak tersedia"
+
+#: pe/ui/library.cpp
+msgid "Game overrides reset to global defaults."
+msgstr "Game overrides reset to global defaults."
+
+#: pe/ui/settings.cpp
+msgid "Game render scale follows the selected profile. Lower it for performance or memory; raise it only when a game has headroom."
+msgstr "Skala render game mengikuti profil yang dipilih. Turunkan untuk kinerja atau memori; naikkan hanya ketika permainan memiliki ruang kepala."
+
+#: pe/ui/settings.cpp
+msgid "GAME RESOLUTION"
+msgstr "RESOLUSI GAME"
+
+#: pe/ui/settings.cpp
+msgid "Game resolution"
+msgstr "Resolusi game"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Game settings"
 msgstr "Pengaturan game"
 
@@ -316,6 +608,10 @@ msgstr "Volume game dan suara menu ini."
 msgid "GAMES"
 msgstr "GAME"
 
+#: pe/ui/home.cpp
+msgid "Games and cache"
+msgstr "Game dan cache"
+
 #: pe/ui/browse.cpp
 msgid "Games use this language when they offer it, and their own default otherwise. It applies when a game starts."
 msgstr "Game menggunakan bahasa ini jika tersedia, dan bahasa default-nya jika tidak. Berlaku saat game dijalankan."
@@ -332,6 +628,14 @@ msgstr "Jerman"
 msgid "GETTING STARTED"
 msgstr "PERSIAPAN AWAL"
 
+#: pe/ui/library.cpp, pe/ui/mapping.cpp
+msgid "Global ({0})"
+msgstr "Global ({0})"
+
+#: pe/ui/mapping.cpp
+msgid "Global controller profile: {0}"
+msgstr "Profil pengontrol global: {0}"
+
 #: pe/ui/settings.cpp
 msgid "Graphics backend and how games are scaled to your TV."
 msgstr "Renderer grafis dan cara game diskalakan ke TV Anda."
@@ -341,9 +645,17 @@ msgid "Graphics backend initialization failed. Try another backend in Settings; 
 msgstr "Inisialisasi renderer grafis gagal. Coba renderer lain di Pengaturan; lihat stderr.log dan eden_log.txt untuk detail driver."
 
 #. Console mode: the console as if held in the hands. Keep it short (about 9 letters).
-#: pe/ui/library.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Handheld"
 msgstr "Genggam"
+
+#: pe/ui/settings.cpp
+msgid "Health and storage tools. Cache cleanup never removes saves, settings, keys or games."
+msgstr "Alat kesehatan dan penyimpanan. Pembersihan cache tidak pernah menghapus simpanan, pengaturan, kunci, atau permainan."
+
+#: settings_store.h
+msgid "High"
+msgstr "Tinggi"
 
 #: pe/ui/settings.cpp
 msgid "HIGH CONTRAST"
@@ -353,6 +665,10 @@ msgstr "KONTRAS TINGGI"
 #: pe/ui/settings.cpp
 msgid "High contrast"
 msgstr "Kontras tinggi"
+
+#: pe/ui/launcher.cpp
+msgid "Home"
+msgstr "Beranda"
 
 #. Button hint: copy a save in.
 #: pe/ui/library.cpp
@@ -372,9 +688,17 @@ msgid "Imported. The save it replaced was backed up."
 msgstr "Berhasil diimpor. Data tersimpan yang digantikan telah dicadangkan."
 
 #. Tag on the language or folder that is in use now.
-#: pe/ui/browse.cpp, pe/ui/settings.cpp
+#: pe/ui/browse.cpp
 msgid "IN USE"
 msgstr "DIGUNAKAN"
+
+#: pe/ui/browse.cpp
+msgid "Internal storage"
+msgstr "Penyimpanan internal"
+
+#: pe/ui/browse.cpp
+msgid "Internal storage saved. Reopen Encore to use it."
+msgstr "Penyimpanan internal disimpan. Buka kembali Encore untuk menggunakannya."
 
 #: settings_store.h
 msgid "Italian"
@@ -409,7 +733,7 @@ msgstr "Korea"
 msgid "Language"
 msgstr "Bahasa"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/settings.cpp
 msgid "LANGUAGE"
 msgstr "BAHASA"
 
@@ -431,17 +755,45 @@ msgstr "Teks lebih besar"
 msgid "Last game opened"
 msgstr "Game terakhir yang dibuka"
 
-#: pe/ui/home.cpp
+#: pe/ui/library.cpp
 msgid "Launch game"
 msgstr "Jalankan game"
 
-#: pe/ui/home.cpp
+#: pe/ui/settings.cpp
+msgid "LAYOUT"
+msgstr "TATA LETAK"
+
+#: pe/ui/mapping.cpp
+msgid "Left stick press"
+msgstr "Tekan tongkat kiri"
+
+#: pe/ui/library.cpp
+msgid "Left/right: Global, PlayStation or Switch for this game; Cross: edit individual buttons."
+msgstr "Kiri/kanan: Global, PlayStation atau Switch untuk game ini; Cross: edit tombol individual."
+
+#: pe/ui/launcher.cpp
 msgid "Library"
 msgstr "Perpustakaan"
+
+#: pe/ui/library.cpp
+msgid "Loading artwork"
+msgstr "Memuat karya seni"
+
+#: pe/ui/launcher.cpp
+msgid "Loading game library..."
+msgstr "Memuat perpustakaan permainan..."
+
+#: pe/ui/settings.cpp
+msgid "LOGS"
+msgstr "LOG"
 
 #: pe/ui/settings.cpp
 msgid "Make the menu easier to see and follow."
 msgstr "Buat menu lebih mudah dilihat dan diikuti."
+
+#: pe/ui/home.cpp
+msgid "Max. players: {0}"
+msgstr "Maks. pemain: {0}"
 
 #: pe/ui/settings.cpp
 msgid "MENU SOUNDS"
@@ -450,6 +802,18 @@ msgstr "SUARA MENU"
 #: pe/ui/settings.cpp
 msgid "Menu sounds"
 msgstr "Suara menu"
+
+#: settings_store.h
+msgid "Minimum"
+msgstr "Minimum"
+
+#: pe/ui/settings.cpp
+msgid "Minimum reduces GPU load and may use lower GPU accuracy for speed. Recommended balances quality and stability. High and Ultra raise image quality when the game has headroom."
+msgstr "Minimum mengurangi beban GPU dan mungkin menggunakan akurasi GPU yang lebih rendah untuk kecepatan. Direkomendasikan menyeimbangkan kualitas dan stabilitas. Tinggi dan Ultra meningkatkan kualitas gambar saat game memiliki ruang kepala."
+
+#: pe/ui/library.cpp
+msgid "Minimum, Recommended, High and Ultra apply the title-aware Encore profile. Manual changes become Custom for this game."
+msgstr "Minimum, Direkomendasikan, Tinggi dan Ultra menerapkan profil Encore yang sadar judul. Perubahan manual menjadi Custom untuk game ini."
 
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Missing or empty keys/prod.keys in {0}."
@@ -526,8 +890,12 @@ msgstr "File ROM tidak ditemukan."
 msgid "No roms folder"
 msgstr "Tidak ada folder roms"
 
-#. No add-ons (updates or DLC).
 #: pe/ui/library.cpp
+msgid "No screenshots available"
+msgstr "Tidak ada tangkapan layar yang tersedia"
+
+#. No add-ons (updates or DLC).
+#: pe/ui/library.cpp, settings_store.h
 msgid "None"
 msgstr "Tidak ada"
 
@@ -546,19 +914,43 @@ msgstr "Nonaktif"
 msgid "On"
 msgstr "Aktif"
 
+#: pe/ui/settings.cpp
+msgid "One root for keys, firmware, games, updates, mods and transfers."
+msgstr "Satu root untuk kunci, firmware, game, pembaruan, mod, dan transfer."
+
 #. Short tag on a folder row.
 #: pe/ui/browse.cpp
 msgid "OPEN"
 msgstr "BUKA"
 
 #. Button hint: open the highlighted folder.
-#: pe/ui/browse.cpp, pe/ui/library.cpp
+#: pe/ui/browse.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Open"
 msgstr "Buka"
 
 #: pe/ui/home.cpp
 msgid "Open library"
 msgstr "Buka perpustakaan"
+
+#: pe/ui/home.cpp
+msgid "Open quick settings"
+msgstr "Buka pengaturan cepat"
+
+#: pe/ui/home.cpp
+msgid "Open settings"
+msgstr "Buka pengaturan"
+
+#: pe/ui/home.cpp
+msgid "Open storage"
+msgstr "Penyimpanan terbuka"
+
+#: pe/ui/library.cpp
+msgid "Open the per-game DualSense mapping. Global uses Settings > Controls; Custom overrides it only for this game."
+msgstr "Buka pemetaan DualSense per game. Penggunaan global Pengaturan > Kontrol; Kustom menimpanya hanya untuk game ini."
+
+#: pe/ui/mapping.cpp
+msgid "Options"
+msgstr "Pilihan"
 
 #. Button hint: jump a page of the list (L1 / R1).
 #: pe/ui/browse.cpp
@@ -573,6 +965,18 @@ msgstr "Folder induk"
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Patch"
 msgstr "Patch"
+
+#: pe/ui/home.cpp
+msgid "Play"
+msgstr "Mainkan"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "PlayStation"
+msgstr "PlayStation"
+
+#: pe/ui/settings.cpp
+msgid "PlayStation Auto keeps Cross/Circle menu semantics while adapting gameplay to physical Switch positions. Switch stays fixed; editing any button creates a custom profile."
+msgstr "PlayStation Auto mempertahankan semantik menu Cross/Circle sambil mengadaptasi gameplay ke posisi Switch fisik. Sakelar tetap terpasang; mengedit tombol apa pun akan membuat profil khusus."
 
 #: settings_store.h
 msgid "Polish"
@@ -590,6 +994,10 @@ msgstr "Portugis (Brasil)"
 #: pe/ui/browse.cpp
 msgid "Powered by Eden"
 msgstr "Ditenagai oleh Eden"
+
+#: pe/ui/settings.cpp
+msgid "Preset"
+msgstr "Prasetel"
 
 #. Asked before a save is imported over the one in use.
 #: pe/ui/library.cpp
@@ -617,18 +1025,46 @@ msgstr "KREDIT PROYEK"
 msgid "ProsperoEden stopped because of an error. A report was saved to {0}."
 msgstr "ProsperoEden berhenti karena terjadi kesalahan. Laporan disimpan di {0}."
 
+#: pe/ui/browse.cpp
+msgid "PS5 13.60 FORK"
+msgstr "PS5 13.60 GARPU"
+
 #. Why a game did not start.
 #: eden_services.cpp
 msgid "PS5 controller initialization failed"
 msgstr "Inisialisasi controller PS5 gagal"
 
+#: pe/ui/home.cpp
+msgid "QUICK SETTINGS"
+msgstr "PENGATURAN CEPAT"
+
+#: pe/ui/home.cpp
+msgid "Quick settings"
+msgstr "Pengaturan cepat"
+
+#: pe/ui/home.cpp
+msgid "Quit"
+msgstr "Keluar"
+
 #: pe/ui/settings.cpp
 msgid "Ready"
 msgstr "Siap"
 
+#: pe/ui/launcher.cpp
+msgid "Recent"
+msgstr "Baru-baru ini"
+
 #: pe/ui/home.cpp
 msgid "RECENTLY PLAYED"
 msgstr "BARU DIMAINKAN"
+
+#: settings_store.h
+msgid "Recommended"
+msgstr "Direkomendasikan"
+
+#: pe/ui/settings.cpp
+msgid "Recommended defaults restored."
+msgstr "Recommended defaults restored."
 
 #: pe/ui/settings.cpp
 msgid "REDUCE MOTION"
@@ -653,7 +1089,7 @@ msgstr "LAJU PENYEGARAN"
 msgid "REGION"
 msgstr "WILAYAH"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Renderer"
 msgstr "Renderer"
 
@@ -661,13 +1097,57 @@ msgstr "Renderer"
 msgid "RENDERER"
 msgstr "RENDERER"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/mapping.cpp
+msgid "Reset"
+msgstr "Atur ulang"
+
+#: pe/ui/launcher.cpp
+msgid "Reset controller mapping?"
+msgstr "Setel ulang pemetaan pengontrol?"
+
+#: pe/ui/library.cpp
+msgid "Reset overrides"
+msgstr "Reset overrides"
+
+#: pe/ui/launcher.cpp
+msgid "Reset this game's custom settings?"
+msgstr "Reset pengaturan khusus game ini?"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Resolution"
 msgstr "Resolusi"
 
-#: eden_services.cpp
+#: pe/ui/library.cpp
+msgid "Resolution follows the selected title-aware profile. Lower it for performance or memory; raise it only when the title has headroom."
+msgstr "Resolusi mengikuti profil sadar judul yang dipilih. Turunkan untuk kinerja atau memori; naikkan hanya jika judulnya memiliki ruang kepala."
+
+#: pe/ui/launcher.cpp
+msgid "Restore default settings?"
+msgstr "Kembalikan pengaturan default?"
+
+#: pe/ui/settings.cpp
+msgid "Restore defaults"
+msgstr "Restore defaults"
+
+#: pe/ui/mapping.cpp
+msgid "Right stick press"
+msgstr "Tekan tongkat kanan"
+
+#: pe/ui/launcher.cpp, pe/ui/library.cpp
 msgid "ROM missing from the game files folder"
 msgstr "ROM tidak ada di folder file game"
+
+#: eden_services.cpp
+msgid "ROM missing from the storage root"
+msgstr "ROM hilang dari root penyimpanan"
+
+#: pe/ui/settings.cpp
+msgid "ROOT"
+msgstr "AKAR"
+
+#: pe/ui/settings.cpp
+msgid "Runtime health, storage and recovery tools."
+msgstr "Alat kesehatan, penyimpanan, dan pemulihan runtime."
 
 #: settings_store.h
 msgid "Russian"
@@ -677,6 +1157,18 @@ msgstr "Rusia"
 #: pe/ui/library.cpp
 msgid "Ryujinx save found"
 msgstr "Data Ryujinx ditemukan"
+
+#: pe/ui/library.cpp
+msgid "Safe launch"
+msgstr "Peluncuran yang aman"
+
+#: pe/ui/library.cpp
+msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
+msgstr "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
+
+#: eden_services.cpp, pe/ui/browse.cpp
+msgid "Sandbox only"
+msgstr "Hanya kotak pasir"
 
 #. The app can read only its own folder; {0} is a number.
 #: pe/ui/browse.cpp
@@ -693,7 +1185,7 @@ msgstr "Data tersimpan"
 msgid "Save folder found"
 msgstr "Folder data ditemukan"
 
-#: pe/ui/library.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp
 msgid "Saved for this game. Applies on next launch."
 msgstr "Disimpan untuk game ini. Berlaku saat game dijalankan lagi."
 
@@ -702,12 +1194,12 @@ msgstr "Disimpan untuk game ini. Berlaku saat game dijalankan lagi."
 msgid "Saved. A display that cannot show 120 Hz stays at 60 Hz."
 msgstr "Tersimpan. Layar yang tidak mendukung 120 Hz tetap di 60 Hz."
 
-#: pe/ui/browse.cpp, pe/ui/launcher.cpp
+#: pe/ui/launcher.cpp
 msgid "Saved. Applies when a game starts."
 msgstr "Disimpan. Berlaku saat game dijalankan."
 
 #. Button hint: choose the highlighted item (not the Select button).
-#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
 msgid "Select"
 msgstr "Pilih"
 
@@ -724,12 +1216,16 @@ msgstr "Pilih game untuk memulai"
 msgid "SELECTED"
 msgstr "DIPILIH"
 
+#: pe/ui/home.cpp
+msgid "SELECTED GAME"
+msgstr "PERMAINAN YANG DIPILIH"
+
 #. Why a game did not start (the file is gone).
 #: eden_services.cpp
 msgid "Selected ROM is no longer available"
 msgstr "ROM yang dipilih sudah tidak tersedia"
 
-#: pe/ui/home.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Settings"
 msgstr "Pengaturan"
 
@@ -742,17 +1238,33 @@ msgstr "PENYIAPAN"
 msgid "Setup required"
 msgstr "Perlu penyiapan"
 
-#: eden_services.cpp, host/fake_services.cpp
+#: host/fake_services.cpp
 msgid "Setup required: {0} Open Settings, Game files to choose the folder that holds your keys, firmware and roms folders (or add the files to {1}), then reopen ProsperoEden."
 msgstr "Perlu penyiapan: {0} Buka Pengaturan, File game untuk memilih folder yang berisi folder keys, firmware, dan roms Anda (atau tambahkan file ke {1}), lalu buka ulang ProsperoEden."
+
+#: eden_services.cpp
+msgid "Setup required: {0} Open Settings, Storage to choose the root that holds the standard keys, firmware and roms folders (or add the files to {1}), then reopen Encore."
+msgstr "Diperlukan penyiapan: {0} Buka Setelan, Penyimpanan untuk memilih akar yang menyimpan kunci standar, folder firmware dan ROM (atau tambahkan berkas ke {1}), lalu buka kembali Encore."
 
 #: eden_services.cpp
 msgid "Setup validation failed. Check that firmware and key files are readable and valid."
 msgstr "Validasi penyiapan gagal. Periksa apakah file firmware dan kunci dapat dibaca dan valid."
 
 #: pe/ui/settings.cpp
+msgid "Shows live FPS while playing. Off is cleaner for normal use; Touchpad + R1 toggles it at any time."
+msgstr "Menampilkan FPS langsung saat bermain. Mati lebih bersih untuk penggunaan normal; Touchpad + R1 mengaktifkannya kapan saja."
+
+#: settings_store.h
+msgid "SMAA"
+msgstr "SMAA"
+
+#: pe/ui/settings.cpp
 msgid "Solid panels, brighter text and an outlined highlight."
 msgstr "Panel solid, teks lebih terang, dan sorotan bergaris tepi."
+
+#: eden_services.cpp
+msgid "Some cache files could not be removed."
+msgstr "Beberapa file cache tidak dapat dihapus."
 
 #: settings_store.h
 msgid "Spanish"
@@ -761,6 +1273,10 @@ msgstr "Spanyol"
 #: settings_store.h
 msgid "Spanish (Latin America)"
 msgstr "Spanyol (Amerika Latin)"
+
+#: pe/ui/mapping.cpp
+msgid "Square"
+msgstr "Persegi"
 
 #. The app creates its user the first time a game runs.
 #: eden_services.cpp
@@ -773,12 +1289,52 @@ msgid "STARTING"
 msgstr "MEMULAI"
 
 #: pe/ui/settings.cpp
+msgid "STICK DEADZONE"
+msgstr "ZONA MATI STIK"
+
+#: pe/ui/settings.cpp
+msgid "Stick deadzone"
+msgstr "Zona mati stik"
+
+#: pe/ui/settings.cpp
 msgid "Stops the background drifting and the screens sliding, here and on the loading screen."
 msgstr "Menghentikan gerakan latar belakang dan pergeseran layar, di sini dan di layar pemuatan."
+
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/settings.cpp
+msgid "Storage"
+msgstr "Penyimpanan"
+
+#: pe/ui/settings.cpp
+msgid "STORAGE"
+msgstr "PENYIMPANAN"
+
+#: pe/ui/home.cpp
+msgid "Storage not configured"
+msgstr "Penyimpanan tidak dikonfigurasi"
+
+#: pe/ui/home.cpp
+msgid "Storage ready"
+msgstr "Penyimpanan siap"
+
+#: pe/ui/browse.cpp
+msgid "Storage root saved. Reopen Encore to use it."
+msgstr "Root penyimpanan disimpan. Buka kembali Encore untuk menggunakannya."
 
 #: pe/ui/browse.cpp
 msgid "Supply your own files"
 msgstr "Sediakan file Anda sendiri"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Switch"
+msgstr "Beralih"
+
+#: pe/ui/home.cpp
+msgid "Switch card"
+msgstr "Ganti kartu"
+
+#: pe/ui/home.cpp
+msgid "System"
+msgstr "Sistem"
 
 #: eden_services.cpp
 msgid "Taiwan"
@@ -792,6 +1348,14 @@ msgstr "Thai"
 #: pe/ui/browse.cpp
 msgid "THANKS"
 msgstr "TERIMA KASIH"
+
+#: pe/ui/browse.cpp
+msgid "Thanks to the whole PS5 homebrew community and to every developer whose drivers, tools and libraries make Eden Encore possible."
+msgstr "Terima kasih kepada seluruh komunitas homebrew PS5 dan kepada setiap pengembang yang driver, alat, dan perpustakaannya memungkinkan Eden Encore."
+
+#: eden_services.cpp
+msgid "The game could not allocate PS5 memory. Close Eden Encore completely before retrying to release memory retained between games."
+msgstr "Game tidak dapat mengalokasikan memori PS5. Tutup Eden Encore sepenuhnya sebelum mencoba melepaskan memori yang disimpan di antara permainan."
 
 #. Why a game stopped. 'Settings, Video' is the menu path; 'the game's own settings' is the Game settings dialog of the Library.
 #: eden_services.cpp
@@ -814,15 +1378,47 @@ msgstr "Game ini belum memiliki data tersimpan untuk diekspor."
 msgid "This game's settings cannot be saved (no title ID)."
 msgstr "Pengaturan game ini tidak dapat disimpan (tidak ada ID judul)."
 
+#: pe/ui/browse.cpp
+msgid "THIS ROOT"
+msgstr "AKAR INI"
+
 #. ryujinx/, save-import/ and roms/ are folder names (unchanged); {0} is the game's ID.
 #: eden_services.cpp
 msgid "To import, copy a Ryujinx folder to ryujinx/ or a save to save-import/{0}/, next to roms/."
 msgstr "Untuk mengimpor, salin folder Ryujinx ke ryujinx/ atau data tersimpan ke save-import/{0}/, di samping roms/."
 
+#: pe/ui/mapping.cpp
+msgid "Touchpad"
+msgstr "Panel sentuh"
+
+#: pe/ui/mapping.cpp
+msgid "Triangle"
+msgstr "Segitiga"
+
 #. Button hint: switch the highlighted mod on or off.
 #: pe/ui/library.cpp
 msgid "Turn on or off"
 msgstr "Aktifkan atau nonaktifkan"
+
+#: pe/ui/settings.cpp
+msgid "Turns DualSense vibration on or off for games."
+msgstr "Mengaktifkan atau menonaktifkan getaran DualSense untuk game."
+
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "TV output"
+msgstr "Keluaran TV"
+
+#: pe/ui/settings.cpp
+msgid "TV OUTPUT"
+msgstr "KELUARAN TV"
+
+#: settings_store.h
+msgid "Ultra"
+msgstr "Ultra"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp
+msgid "Unknown"
+msgstr "Tidak diketahui"
 
 #. Short tag on the 'Parent folder' row.
 #: pe/ui/browse.cpp
@@ -838,7 +1434,7 @@ msgstr "Pembaruan {0}"
 msgid "UPDATES, DLC"
 msgstr "PEMBARUAN, DLC"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Upscaling filter"
 msgstr "Filter upscaling"
 
@@ -850,6 +1446,14 @@ msgstr "FILTER UPSCALING"
 msgid "USA"
 msgstr "AS"
 
+#: pe/ui/browse.cpp
+msgid "Use extracted firmware NCA files. Choose the root in Settings, Storage; restart the app after changing it."
+msgstr "Gunakan file NCA firmware yang diekstrak. Pilih root di Pengaturan, Penyimpanan; mulai ulang aplikasi setelah mengubahnya."
+
+#: pe/ui/browse.cpp
+msgid "Use this root"
+msgstr "Gunakan akar ini"
+
 #: pe/ui/settings.cpp
 msgid "VIBRATION"
 msgstr "GETARAN"
@@ -859,6 +1463,14 @@ msgid "Vibration"
 msgstr "Getaran"
 
 #: pe/ui/settings.cpp
+msgid "VIBRATION STRENGTH"
+msgstr "KEKUATAN GETARAN"
+
+#: pe/ui/settings.cpp
+msgid "Vibration strength"
+msgstr "Kekuatan getaran"
+
+#: pe/ui/home.cpp, pe/ui/settings.cpp
 msgid "Video"
 msgstr "Video"
 
@@ -866,10 +1478,26 @@ msgstr "Video"
 msgid "VIDEO"
 msgstr "VIDEO"
 
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Video preset"
+msgstr "Prasetel video"
+
+#: pe/ui/settings.cpp
+msgid "VIDEO PRESET"
+msgstr "PRASETEL VIDEO"
+
 #. Vulkan is a name (unchanged).
 #: pe/ui/settings.cpp
 msgid "Vulkan (recommended)"
 msgstr "Vulkan (disarankan)"
+
+#: pe/ui/settings.cpp
+msgid "Vulkan is recommended on PS5. Use OpenGL only as a fallback for a game with Vulkan issues."
+msgstr "Vulkan direkomendasikan di PS5. Gunakan OpenGL hanya sebagai pengganti untuk game dengan masalah Vulkan."
+
+#: pe/ui/library.cpp
+msgid "Vulkan is recommended on PS5. Use OpenGL only as a fallback for a title with Vulkan issues."
+msgstr "Vulkan direkomendasikan di PS5. Gunakan OpenGL hanya sebagai cadangan untuk judul dengan masalah Vulkan."
 
 #: pe/ui/library.cpp
 msgid "Your games"
@@ -951,7 +1579,7 @@ msgid "{0} of {1} on"
 msgstr "{0} dari {1} aktif"
 
 #. A percentage (a volume): write it as the language does, for example with a space before the sign.
-#: pe/ui/settings.cpp
+#: pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "{0}%"
 msgstr "{0}%"
 
@@ -964,187 +1592,3 @@ msgstr "{0}/ (NSP atau XCI)"
 #: pe/ui/browse.cpp
 msgid "{0}/ (one folder per game ID)"
 msgstr "{0}/ (satu folder per ID judul)"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Restore defaults"
-msgstr "Restore defaults"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Recommended defaults restored."
-msgstr "Recommended defaults restored."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Reset overrides"
-msgstr "Reset overrides"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Game overrides reset to global defaults."
-msgstr "Game overrides reset to global defaults."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
-msgstr "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
-
-#: settings_store.h
-msgid "0.25x (minimum)"
-msgstr "0,25x (minimum)"
-
-#: settings_store.h
-msgid "0.5x (fastest, softer)"
-msgstr "0,5x (tercepat, lebih halus)"
-
-#: settings_store.h
-msgid "1.25x (recommended)"
-msgstr "1,25x (disarankan)"
-
-#: settings_store.h
-msgid "2x (high memory)"
-msgstr "2x (memori tinggi)"
-
-#: settings_store.h
-msgid "3x (very high memory)"
-msgstr "3x (memori sangat tinggi)"
-
-#: settings_store.h
-msgid "4x (extreme memory)"
-msgstr "4x (memori ekstrem)"
-
-#: translated UI setting
-msgid "Anti-aliasing"
-msgstr "Anti-aliasing"
-
-#: translated UI setting
-msgid "Button mapping"
-msgstr "Pemetaan tombol"
-
-#: translated UI setting
-msgid "Quick settings"
-msgstr "Pengaturan cepat"
-
-#: translated UI setting
-msgid "Storage"
-msgstr "Penyimpanan"
-
-#: translated UI setting
-msgid "Video preset"
-msgstr "Prasetel video"
-
-#: translated UI setting
-msgid "Game resolution"
-msgstr "Resolusi game"
-
-#: translated UI setting
-msgid "TV output"
-msgstr "Keluaran TV"
-
-#: translated UI setting
-msgid "Play"
-msgstr "Mainkan"
-
-#: translated UI setting
-msgid "Cancel"
-msgstr "Batal"
-
-#: translated UI setting
-msgid "Confirm"
-msgstr "Konfirmasi"
-
-#: translated UI setting
-msgid "Reset"
-msgstr "Atur ulang"
-
-#: translated UI setting
-msgid "Ultra"
-msgstr "Ultra"
-
-#: translated UI setting
-msgid "Recommended"
-msgstr "Direkomendasikan"
-
-#: translated UI setting
-msgid "Minimum"
-msgstr "Minimum"
-
-#: translated UI setting
-msgid "Home"
-msgstr "Beranda"
-
-#: translated UI setting
-msgid "Clear cache"
-msgstr "Hapus cache"
-
-#: translated UI setting
-msgid "Done"
-msgstr "Selesai"
-
-#: translated UI setting
-msgid "Custom"
-msgstr "Kustom"
-
-#: translated UI setting
-msgid "Controllers"
-msgstr "Pengontrol"
-
-#: translated UI setting
-msgid "Quit"
-msgstr "Keluar"
-
-#: translated UI setting
-msgid "FSR sharpness"
-msgstr "Ketajaman FSR"
-
-#: translated UI setting
-msgid "Stick deadzone"
-msgstr "Zona mati stik"
-
-#: translated UI setting
-msgid "Vibration strength"
-msgstr "Kekuatan getaran"
-
-#: translated UI setting
-msgid "Preset"
-msgstr "Prasetel"
-
-#: translated UI setting
-msgid "Open settings"
-msgstr "Buka pengaturan"
-
-#: translated UI setting
-msgid "ANTI-ALIASING"
-msgstr "ANTI-ALIASING"
-
-#: translated UI setting
-msgid "BUTTON MAPPING"
-msgstr "PEMETAAN TOMBOL"
-
-#: translated UI setting
-msgid "QUICK SETTINGS"
-msgstr "PENGATURAN CEPAT"
-
-#: translated UI setting
-msgid "STORAGE"
-msgstr "PENYIMPANAN"
-
-#: translated UI setting
-msgid "VIDEO PRESET"
-msgstr "PRASETEL VIDEO"
-
-#: translated UI setting
-msgid "GAME RESOLUTION"
-msgstr "RESOLUSI GAME"
-
-#: translated UI setting
-msgid "TV OUTPUT"
-msgstr "KELUARAN TV"
-
-#: translated UI setting
-msgid "FSR SHARPNESS"
-msgstr "KETAJAMAN FSR"
-
-#: translated UI setting
-msgid "STICK DEADZONE"
-msgstr "ZONA MATI STIK"
-
-#: translated UI setting
-msgid "VIBRATION STRENGTH"
-msgstr "KEKUATAN GETARAN"

@@ -11,9 +11,10 @@ The code holds the English text: tr("...") where it is drawn, TR("...") in const
 the setting labels of headless/settings_store.h). A catalog is a gettext .po file named after the
 PS5 system language's tag (third_party/ps5_system_language.hpp): pt-BR.po, fr-FR.po...
 
-check keeps fr-FR complete because it is the release's primary maintained translation. Other
-catalogs may be partial: missing text falls back to English at runtime and stale entries are
-harmless. Every translation that is present is still validated.
+check keeps fr-FR complete because it is the release's primary maintained translation. All
+catalogs are currently filled (coverage is enforced by check-launcher-translation-coverage.py).
+Missing text would fall back to English at runtime, but is a regression. Every
+translation is validated for placeholders and supported characters.
 
 check fails when
   - fr-FR leaves current code text untranslated,
@@ -387,8 +388,8 @@ def check():
         for line in warnings[:12]:
             print("    warning:", line)
         # The maintained primary locale must stay warning-free as well as valid.
-        # Other 28 catalogs still report translation debt without being silently
-        # filled with English or excluding their warnings from coverage totals.
+        # Non-primary catalogs may still have wording/length warnings. The
+        # separate coverage gate now requires every active msgid to be present.
         failed |= bool(problems) or (strict and bool(warnings))
     print(f"{len(texts)} texts in the code, {len(catalogs)} catalogs" + (" FAIL" if failed else " PASS"))
     return 1 if failed else 0

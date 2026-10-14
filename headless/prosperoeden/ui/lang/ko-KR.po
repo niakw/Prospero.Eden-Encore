@@ -4,20 +4,64 @@
 # AMD FSR, DLC, NSP, XCI, prod.keys, Ryujinx) unchanged.
 
 #: settings_store.h
+msgid "0.25x (minimum)"
+msgstr "0,25x (최소)"
+
+#: settings_store.h
+msgid "0.5x (fastest, softer)"
+msgstr "0,5x (가장 빠름, 부드러움)"
+
+#: settings_store.h
 msgid "0.75x (faster)"
 msgstr "0.75x(빠름)"
+
+#: settings_store.h
+msgid "1.25x (recommended)"
+msgstr "1,25x (권장)"
 
 #: settings_store.h
 msgid "1.5x (sharper)"
 msgstr "1.5x(선명함)"
 
+#: pe/ui/settings.cpp
+msgid "100% is full DualSense rumble strength. Lower it if vibration feels too strong."
+msgstr "100%는 전체 DualSense 진동 강도입니다. 진동이 너무 강하다고 느껴지면 낮추십시오."
+
 #: settings_store.h
 msgid "1x (native)"
 msgstr "1x(기본)"
 
+#: settings_store.h
+msgid "2x (high memory)"
+msgstr "2x (메모리 높음)"
+
+#: settings_store.h
+msgid "3x (very high memory)"
+msgstr "3x (메모리 매우 높음)"
+
+#: settings_store.h
+msgid "4x (extreme memory)"
+msgstr "4x (메모리 극대)"
+
+#: pe/ui/settings.cpp
+msgid "60 Hz is recommended. 120 Hz changes display mode only; the game still needs to render above 60 FPS to benefit."
+msgstr "60Hz를 권장합니다. 120Hz는 디스플레이 모드만 변경합니다. 이점을 얻으려면 게임이 여전히 60FPS 이상으로 렌더링되어야 합니다."
+
+#: pe/ui/library.cpp
+msgid "60 Hz is the safe default. Use 120 Hz only with a compatible display or high-FPS patch."
+msgstr "60Hz가 안전한 기본값입니다. 호환되는 디스플레이나 높은 FPS 패치에서만 120Hz를 사용하세요."
+
+#: pe/ui/settings.cpp
+msgid "8% is recommended. Increase it for stick drift; decrease it for more sensitive aiming."
+msgstr "8%가 권장됩니다. 스틱 드리프트를 위해 늘리십시오. 보다 민감한 조준을 위해서는 이 값을 줄이십시오."
+
 #: eden_services.cpp
 msgid "A firmware NCA cannot be read. Reinstall the firmware dump."
 msgstr "펌웨어 NCA를 읽을 수 없습니다. 펌웨어를 다시 설치하세요."
+
+#: pe/ui/browse.cpp
+msgid "About Eden Encore"
+msgstr "에덴앙코르 소개"
 
 #. Label: which folders the app can read.
 #: pe/ui/browse.cpp
@@ -50,7 +94,19 @@ msgstr "AMD FSR"
 msgid "Another language"
 msgstr "다른 언어"
 
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Anti-aliasing"
+msgstr "계단 현상 제거"
+
 #: pe/ui/settings.cpp
+msgid "ANTI-ALIASING"
+msgstr "계단 현상 제거"
+
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Anti-aliasing smooths jagged edges. None is fastest; FXAA is light; SMAA prioritizes image quality."
+msgstr "앤티앨리어싱은 들쭉날쭉한 가장자리를 부드럽게 만듭니다. 가장 빠른 것은 없습니다. FXAA는 가볍습니다. SMAA는 이미지 품질을 우선시합니다."
+
+#: pe/ui/home.cpp, pe/ui/settings.cpp
 msgid "Audio"
 msgstr "오디오"
 
@@ -63,7 +119,7 @@ msgid "Australia"
 msgstr "호주"
 
 #. Button hint: go back one screen.
-#: pe/ui/browse.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
 msgid "Back"
 msgstr "뒤로"
 
@@ -76,6 +132,14 @@ msgstr "바이큐빅"
 #: settings_store.h
 msgid "Bilinear"
 msgstr "바이리니어"
+
+#: pe/ui/settings.cpp
+msgid "Bilinear is the lightest default. AMD FSR is most useful when rendering below the TV output size."
+msgstr "Bilinear는 가장 가벼운 기본값입니다. AMD FSR은 TV 출력 크기 이하로 렌더링할 때 가장 유용합니다."
+
+#: pe/ui/library.cpp
+msgid "Bilinear is the lightest default. AMD FSR is useful when rendering below the TV output size."
+msgstr "Bilinear는 가장 가벼운 기본값입니다. AMD FSR은 TV 출력 크기 이하로 렌더링할 때 유용합니다."
 
 #. Button hint: move through the list.
 #: pe/ui/browse.cpp
@@ -90,14 +154,58 @@ msgstr "게임 둘러보기"
 msgid "Browse settings"
 msgstr "설정 둘러보기"
 
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Button mapping"
+msgstr "버튼 매핑"
+
+#: pe/ui/settings.cpp
+msgid "BUTTON MAPPING"
+msgstr "버튼 매핑"
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping reset to global settings."
+msgstr "버튼 매핑이 전역 설정으로 재설정되었습니다."
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping reset to the active profile."
+msgstr "버튼 매핑이 활성 프로필로 재설정되었습니다."
+
+#: pe/ui/mapping.cpp
+msgid "Button mapping saved."
+msgstr "버튼 매핑이 저장되었습니다."
+
+#: pe/ui/settings.cpp
+msgid "BUTTON PROFILE"
+msgstr "버튼 프로필"
+
+#: pe/ui/settings.cpp
+msgid "Button profile"
+msgstr "버튼 프로필"
+
+#: pe/ui/home.cpp, pe/ui/settings.cpp
+msgid "CACHE"
+msgstr "은닉처"
+
+#: pe/ui/settings.cpp
+msgid "Cache: {0}  |  Logs: {1}"
+msgstr "캐시: {0} |  로그: {1}"
+
+#: pe/ui/launcher.cpp
+msgid "Cancel"
+msgstr "취소"
+
 #: eden_services.cpp
 msgid "Cannot read firmware/ in {0}. Install extracted firmware NCAs."
 msgstr "{0}의 firmware/를 읽을 수 없습니다. 추출한 펌웨어 NCA를 설치하세요."
 
 #. Button hint: change the highlighted setting.
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
 msgid "Change"
 msgstr "변경"
+
+#: pe/ui/launcher.cpp
+msgid "Change console mode for this game?"
+msgstr "이 게임의 콘솔 모드를 변경하시겠습니까?"
 
 #. What a mod is made of: cheat codes.
 #: eden_services.cpp, host/fake_services.cpp
@@ -126,10 +234,42 @@ msgid "Choose a game from your library."
 msgstr "라이브러리에서 게임을 선택하세요."
 
 #: pe/ui/browse.cpp
+msgid "Choose one root for keys, firmware, games, updates and mods"
+msgstr "키, 펌웨어, 게임, 업데이트 및 모드에 대해 하나의 루트를 선택하세요."
+
+#: pe/ui/browse.cpp
 msgid "Choose the language games use"
 msgstr "게임에서 사용할 언어를 선택하세요"
 
-#: pe/ui/library.cpp
+#: pe/ui/mapping.cpp
+msgid "Circle"
+msgstr "원"
+
+#: pe/ui/settings.cpp
+msgid "Clear"
+msgstr "분명한"
+
+#: pe/ui/settings.cpp
+msgid "Clear cache"
+msgstr "캐시 지우기"
+
+#: pe/ui/launcher.cpp
+msgid "Clear cache?"
+msgstr "캐시를 삭제하시겠습니까?"
+
+#: eden_services.cpp
+msgid "Cleared {0} of cache."
+msgstr "캐시 {0}개를 지웠습니다."
+
+#: pe/ui/launcher.cpp
+msgid "Confirm"
+msgstr "확인"
+
+#: pe/ui/launcher.cpp
+msgid "Confirm this action?"
+msgstr "이 작업을 확인하시겠습니까?"
+
+#: pe/ui/home.cpp, pe/ui/launcher.cpp, pe/ui/library.cpp
 msgid "Console mode"
 msgstr "본체 모드"
 
@@ -138,10 +278,22 @@ msgid "CONTINUE PLAYING"
 msgstr "이어서 플레이"
 
 #: pe/ui/home.cpp
+msgid "Controller mapping"
+msgstr "컨트롤러 매핑"
+
+#: pe/ui/settings.cpp
+msgid "Controller profile: {0}"
+msgstr "컨트롤러 프로필: {0}"
+
+#: pe/ui/home.cpp
 msgid "CONTROLLERS"
 msgstr "컨트롤러"
 
-#: pe/ui/settings.cpp
+#: pe/ui/home.cpp
+msgid "Controllers"
+msgstr "컨트롤러"
+
+#: pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Controls"
 msgstr "조작"
 
@@ -153,13 +305,29 @@ msgstr "조작"
 msgid "Could not create the folder. Check that the game files folder can be written."
 msgstr "폴더를 만들지 못했습니다. 게임 파일 폴더에 쓸 수 있는지 확인하세요."
 
+#: pe/ui/library.cpp
+msgid "Could not load game library. Reopen Encore to retry."
+msgstr "게임 라이브러리를 로드할 수 없습니다. 다시 시도하려면 Encore를 다시 여세요."
+
+#: pe/ui/library.cpp
+msgid "Could not load game list. Please try again."
+msgstr "게임 목록을 로드할 수 없습니다. 다시 시도해 주세요."
+
 #: pe/ui/launcher.cpp
 msgid "Could not save settings. Please try again."
 msgstr "설정을 저장하지 못했습니다. 다시 시도해 주세요."
 
-#: pe/ui/browse.cpp, pe/ui/library.cpp
+#: pe/ui/browse.cpp
+msgid "Could not save the storage root. Please try again."
+msgstr "저장소 루트를 저장할 수 없습니다. 다시 시도해 주세요."
+
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp
 msgid "Could not save. Please try again."
 msgstr "저장하지 못했습니다. 다시 시도해 주세요."
+
+#: pe/ui/mapping.cpp
+msgid "Create"
+msgstr "만들다"
 
 #. Button hint: make the folder a game's mods go in.
 #: pe/ui/library.cpp
@@ -175,10 +343,46 @@ msgstr "{0}을(를) 만들었습니다. 각 모드의 폴더를 그 안에 복�
 msgid "Credits and setup"
 msgstr "크레딧 및 설정 안내"
 
+#: pe/ui/mapping.cpp
+msgid "Cross"
+msgstr "십자가"
+
+#: pe/ui/settings.cpp, settings_store.h
+msgid "Custom"
+msgstr "사용자 지정"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Custom PS5"
+msgstr "맞춤형 PS5"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Custom Switch"
+msgstr "맞춤형 스위치"
+
+#: pe/ui/settings.cpp
+msgid "Customize"
+msgstr "사용자 정의"
+
+#: pe/ui/settings.cpp
+msgid "Customize every guest button. The profile automatically becomes Custom PS5 or Custom Switch."
+msgstr "모든 게스트 버튼을 맞춤설정하세요. 프로필은 자동으로 Custom PS5 또는 Custom Switch가 됩니다."
+
+#: pe/ui/settings.cpp
+msgid "DATA"
+msgstr "데이터"
+
+#: pe/ui/settings.cpp
+msgid "Data: {0}"
+msgstr "데이터: {0}"
+
 #. A per-game setting that follows the general setting; {0} is its value.
 #: pe/ui/library.cpp
 msgid "Default ({0})"
 msgstr "기본값({0})"
+
+#: pe/ui/settings.cpp
+msgid "DETAILED LOGGING"
+msgstr "자세한 로깅"
 
 #: pe/ui/settings.cpp
 msgid "Detailed logging"
@@ -188,7 +392,7 @@ msgstr "상세 로그"
 msgid "Detailed logs on"
 msgstr "상세 로그 켜짐"
 
-#: pe/ui/settings.cpp
+#: pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Diagnostics"
 msgstr "진단"
 
@@ -197,17 +401,45 @@ msgid "DIAGNOSTICS"
 msgstr "진단"
 
 #. Console mode: the console as if connected to a TV. Keep it short (about 9 letters).
-#: pe/ui/library.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Docked"
 msgstr "TV 모드"
+
+#: pe/ui/library.cpp
+msgid "Docked can improve graphics but may cost performance; Handheld is lighter for demanding games."
+msgstr "도킹하면 그래픽이 향상되지만 성능이 저하될 수 있습니다. 핸드헬드는 까다로운 게임에 적합합니다."
+
+#: pe/ui/home.cpp
+msgid "Done"
+msgstr "완료"
 
 #: pe/ui/settings.cpp
 msgid "Draws the menu's small text larger."
 msgstr "메뉴의 작은 글자를 더 크게 표시합니다."
 
+#: pe/ui/settings.cpp
+msgid "DualSense mapping, calibration, vibration and shortcuts."
+msgstr "DualSense 매핑, 교정, 진동 및 단축키."
+
 #: settings_store.h
 msgid "Dutch"
 msgstr "네덜란드어"
+
+#: pe/ui/browse.cpp
+msgid "Eden Encore builds on the proven ProsperoEden 0.40 PS5 base for firmware 13.60, with the Eden core, safer recovery, and targeted compatibility, performance and TV-first UX improvements."
+msgstr "Eden Encore는 펌웨어 13.60용 입증된 ProsperoEden 0.40 PS5 기반을 기반으로 하며 Eden 코어, 보다 안전한 복구 및 대상 호환성, 성능 및 TV 우선 UX 개선 기능을 갖추고 있습니다."
+
+#: pe/ui/home.cpp
+msgid "Edit"
+msgstr "편집하다"
+
+#: pe/ui/settings.cpp
+msgid "Edit custom mapping"
+msgstr "맞춤 매핑 수정"
+
+#: pe/ui/browse.cpp
+msgid "Encore uses the same keys, firmware, roms, updates and mods folders under every storage root."
+msgstr "Encore는 모든 저장소 루트 아래에서 동일한 키, 펌웨어, ROM, 업데이트 및 모드 폴더를 사용합니다."
 
 #. Label of the shortcut that ends the running game.
 #: pe/ui/settings.cpp
@@ -226,10 +458,22 @@ msgstr "영어(미국)"
 msgid "Europe"
 msgstr "유럽"
 
+#: pe/ui/launcher.cpp
+msgid "Exit Eden Encore"
+msgstr "에덴앙코르 나가기"
+
+#: pe/ui/launcher.cpp
+msgid "Exit Eden Encore?"
+msgstr "에덴 앙코르를 종료하시겠습니까?"
+
 #. Button hint: copy the game's save out to a folder.
 #: pe/ui/library.cpp
 msgid "Export a copy"
 msgstr "사본 내보내기"
+
+#: eden_services.cpp
+msgid "Export failed. Check that the storage root can be written."
+msgstr "내보내기에 실패했습니다. 저장소 루트에 쓸 수 있는지 확인하십시오."
 
 #. {0} is a folder.
 #: eden_services.cpp, host/fake_services.hpp
@@ -240,6 +484,14 @@ msgstr "{0}에 내보냈습니다."
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Files"
 msgstr "파일"
+
+#: pe/ui/settings.cpp
+msgid "FILESYSTEM"
+msgstr "파일 시스템"
+
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Final app output size. Choose 1080p for lower memory use, 1440p for balance, or 2160p for maximum output detail."
+msgstr "최종 앱 출력 크기. 메모리 사용량을 줄이려면 1080p를 선택하고, 밸런스를 맞추려면 1440p를, 출력 세부정보를 최대화하려면 2160p를 선택하세요."
 
 #: pe/ui/settings.cpp
 msgid "Fine-tune your experience"
@@ -260,6 +512,10 @@ msgstr "펌웨어 준비됨"
 #: eden_services.cpp
 msgid "Firmware SystemVersion data is missing or unreadable. Install a complete firmware dump."
 msgstr "펌웨어의 SystemVersion 데이터가 없거나 읽을 수 없습니다. 완전한 펌웨어를 설치하세요."
+
+#: pe/ui/settings.cpp
+msgid "Fixed Encore folder structure"
+msgstr "Encore 폴더 구조 수정"
 
 #: pe/ui/browse.cpp
 msgid "FOLDERS"
@@ -282,10 +538,26 @@ msgstr "프랑스어"
 msgid "French (Canada)"
 msgstr "프랑스어(캐나다)"
 
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "FSR sharpness"
+msgstr "FSR 선명도"
+
+#: pe/ui/settings.cpp
+msgid "FSR SHARPNESS"
+msgstr "FSR 선명도"
+
+#: pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "FSR sharpness changes detail recovery only when AMD FSR is selected. Lower it if the picture looks grainy or over-sharpened."
+msgstr "FSR 선명도는 AMD FSR을 선택한 경우에만 세부 복구를 변경합니다. 사진이 거칠거나 지나치게 선명해 보이면 낮추세요."
+
 #. The app can read every folder of the console.
-#: pe/ui/browse.cpp
+#: eden_services.cpp, pe/ui/browse.cpp
 msgid "Full filesystem"
 msgstr "전체 파일 시스템"
+
+#: settings_store.h
+msgid "FXAA"
+msgstr "FXAA"
 
 #: pe/ui/settings.cpp
 msgid "Game audio; PS5 system-menu music is unchanged."
@@ -297,6 +569,26 @@ msgid "Game could not start: {0} Details: {1}"
 msgstr "게임을 시작할 수 없습니다: {0} 자세한 내용: {1}"
 
 #: pe/ui/library.cpp
+msgid "Game library unavailable"
+msgstr "게임 라이브러리를 사용할 수 없습니다"
+
+#: pe/ui/library.cpp
+msgid "Game overrides reset to global defaults."
+msgstr "Game overrides reset to global defaults."
+
+#: pe/ui/settings.cpp
+msgid "Game render scale follows the selected profile. Lower it for performance or memory; raise it only when a game has headroom."
+msgstr "게임 렌더링 규모는 선택한 프로필을 따릅니다. 성능이나 메모리를 위해 낮추십시오. 게임에 헤드룸이 있을 때만 올립니다."
+
+#: pe/ui/settings.cpp
+msgid "GAME RESOLUTION"
+msgstr "게임 해상도"
+
+#: pe/ui/settings.cpp
+msgid "Game resolution"
+msgstr "게임 해상도"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Game settings"
 msgstr "게임 설정"
 
@@ -316,6 +608,10 @@ msgstr "게임 음량과 이 메뉴의 효과음."
 msgid "GAMES"
 msgstr "게임"
 
+#: pe/ui/home.cpp
+msgid "Games and cache"
+msgstr "게임과 캐시"
+
 #: pe/ui/browse.cpp
 msgid "Games use this language when they offer it, and their own default otherwise. It applies when a game starts."
 msgstr "게임이 이 언어를 지원하면 이 언어를, 그렇지 않으면 게임의 기본 언어를 사용합니다. 게임을 시작할 때 적용됩니다."
@@ -332,6 +628,14 @@ msgstr "독일어"
 msgid "GETTING STARTED"
 msgstr "시작하기"
 
+#: pe/ui/library.cpp, pe/ui/mapping.cpp
+msgid "Global ({0})"
+msgstr "글로벌({0})"
+
+#: pe/ui/mapping.cpp
+msgid "Global controller profile: {0}"
+msgstr "전역 컨트롤러 프로필: {0}"
+
 #: pe/ui/settings.cpp
 msgid "Graphics backend and how games are scaled to your TV."
 msgstr "그래픽 백엔드와 TV에 맞춘 화면 확대 방식."
@@ -341,9 +645,17 @@ msgid "Graphics backend initialization failed. Try another backend in Settings; 
 msgstr "그래픽 백엔드를 초기화하지 못했습니다. 설정에서 다른 백엔드를 사용해 보세요. 드라이버 정보는 stderr.log와 eden_log.txt를 참고하세요."
 
 #. Console mode: the console as if held in the hands. Keep it short (about 9 letters).
-#: pe/ui/library.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Handheld"
 msgstr "휴대 모드"
+
+#: pe/ui/settings.cpp
+msgid "Health and storage tools. Cache cleanup never removes saves, settings, keys or games."
+msgstr "건강 및 저장 도구. 캐시 정리는 저장 파일, 설정, 키 또는 게임을 제거하지 않습니다."
+
+#: settings_store.h
+msgid "High"
+msgstr "높은"
 
 #: pe/ui/settings.cpp
 msgid "HIGH CONTRAST"
@@ -353,6 +665,10 @@ msgstr "고대비"
 #: pe/ui/settings.cpp
 msgid "High contrast"
 msgstr "고대비"
+
+#: pe/ui/launcher.cpp
+msgid "Home"
+msgstr "홈"
 
 #. Button hint: copy a save in.
 #: pe/ui/library.cpp
@@ -372,9 +688,17 @@ msgid "Imported. The save it replaced was backed up."
 msgstr "가져왔습니다. 대체된 세이브 데이터는 백업했습니다."
 
 #. Tag on the language or folder that is in use now.
-#: pe/ui/browse.cpp, pe/ui/settings.cpp
+#: pe/ui/browse.cpp
 msgid "IN USE"
 msgstr "사용 중"
+
+#: pe/ui/browse.cpp
+msgid "Internal storage"
+msgstr "내부 저장소"
+
+#: pe/ui/browse.cpp
+msgid "Internal storage saved. Reopen Encore to use it."
+msgstr "내부 저장소가 저장되었습니다. Encore를 다시 열어 사용하세요."
 
 #: settings_store.h
 msgid "Italian"
@@ -409,7 +733,7 @@ msgstr "한국어"
 msgid "Language"
 msgstr "언어"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/settings.cpp
 msgid "LANGUAGE"
 msgstr "언어"
 
@@ -431,17 +755,45 @@ msgstr "큰 글자"
 msgid "Last game opened"
 msgstr "마지막으로 연 게임"
 
-#: pe/ui/home.cpp
+#: pe/ui/library.cpp
 msgid "Launch game"
 msgstr "게임 실행"
 
-#: pe/ui/home.cpp
+#: pe/ui/settings.cpp
+msgid "LAYOUT"
+msgstr "공들여 나열한 것"
+
+#: pe/ui/mapping.cpp
+msgid "Left stick press"
+msgstr "왼쪽 스틱 누르기"
+
+#: pe/ui/library.cpp
+msgid "Left/right: Global, PlayStation or Switch for this game; Cross: edit individual buttons."
+msgstr "왼쪽/오른쪽: 이 게임의 글로벌, PlayStation 또는 Switch; 크로스: 개별 버튼을 편집합니다."
+
+#: pe/ui/launcher.cpp
 msgid "Library"
 msgstr "라이브러리"
+
+#: pe/ui/library.cpp
+msgid "Loading artwork"
+msgstr "작품 로드 중"
+
+#: pe/ui/launcher.cpp
+msgid "Loading game library..."
+msgstr "게임 라이브러리 로드 중..."
+
+#: pe/ui/settings.cpp
+msgid "LOGS"
+msgstr "로그"
 
 #: pe/ui/settings.cpp
 msgid "Make the menu easier to see and follow."
 msgstr "메뉴를 더 보기 쉽고 따라가기 쉽게 만듭니다."
+
+#: pe/ui/home.cpp
+msgid "Max. players: {0}"
+msgstr "최대. 플레이어: {0}"
 
 #: pe/ui/settings.cpp
 msgid "MENU SOUNDS"
@@ -450,6 +802,18 @@ msgstr "메뉴 효과음"
 #: pe/ui/settings.cpp
 msgid "Menu sounds"
 msgstr "메뉴 효과음"
+
+#: settings_store.h
+msgid "Minimum"
+msgstr "최소"
+
+#: pe/ui/settings.cpp
+msgid "Minimum reduces GPU load and may use lower GPU accuracy for speed. Recommended balances quality and stability. High and Ultra raise image quality when the game has headroom."
+msgstr "최소값은 GPU 로드를 줄이고 속도를 위해 더 낮은 GPU 정확도를 사용할 수 있습니다. 권장 사항은 품질과 안정성의 균형을 유지합니다. 높음 및 울트라는 게임에 여유 공간이 있을 때 이미지 품질을 높입니다."
+
+#: pe/ui/library.cpp
+msgid "Minimum, Recommended, High and Ultra apply the title-aware Encore profile. Manual changes become Custom for this game."
+msgstr "최소, 권장, 높음 및 울트라는 제목 인식 Encore 프로필을 적용합니다. 수동 변경 사항은 이 게임에 대해 사용자 지정이 됩니다."
 
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Missing or empty keys/prod.keys in {0}."
@@ -526,8 +890,12 @@ msgstr "ROM 파일을 찾을 수 없습니다."
 msgid "No roms folder"
 msgstr "roms 폴더 없음"
 
-#. No add-ons (updates or DLC).
 #: pe/ui/library.cpp
+msgid "No screenshots available"
+msgstr "사용 가능한 스크린샷이 없습니다."
+
+#. No add-ons (updates or DLC).
+#: pe/ui/library.cpp, settings_store.h
 msgid "None"
 msgstr "없음"
 
@@ -546,19 +914,43 @@ msgstr "끔"
 msgid "On"
 msgstr "켬"
 
+#: pe/ui/settings.cpp
+msgid "One root for keys, firmware, games, updates, mods and transfers."
+msgstr "키, 펌웨어, 게임, 업데이트, 모드 및 전송을 위한 단일 루트입니다."
+
 #. Short tag on a folder row.
 #: pe/ui/browse.cpp
 msgid "OPEN"
 msgstr "열기"
 
 #. Button hint: open the highlighted folder.
-#: pe/ui/browse.cpp, pe/ui/library.cpp
+#: pe/ui/browse.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Open"
 msgstr "열기"
 
 #: pe/ui/home.cpp
 msgid "Open library"
 msgstr "라이브러리 열기"
+
+#: pe/ui/home.cpp
+msgid "Open quick settings"
+msgstr "빠른 설정 열기"
+
+#: pe/ui/home.cpp
+msgid "Open settings"
+msgstr "설정 열기"
+
+#: pe/ui/home.cpp
+msgid "Open storage"
+msgstr "오픈 스토리지"
+
+#: pe/ui/library.cpp
+msgid "Open the per-game DualSense mapping. Global uses Settings > Controls; Custom overrides it only for this game."
+msgstr "게임별 DualSense 매핑을 엽니다. 전역에서는 설정 > 컨트롤을 사용합니다. 사용자 정의는 이 게임에서만 이를 재정의합니다."
+
+#: pe/ui/mapping.cpp
+msgid "Options"
+msgstr "옵션"
 
 #. Button hint: jump a page of the list (L1 / R1).
 #: pe/ui/browse.cpp
@@ -573,6 +965,18 @@ msgstr "상위 폴더"
 #: eden_services.cpp, host/fake_services.cpp
 msgid "Patch"
 msgstr "패치"
+
+#: pe/ui/home.cpp
+msgid "Play"
+msgstr "플레이"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "PlayStation"
+msgstr "플레이스테이션"
+
+#: pe/ui/settings.cpp
+msgid "PlayStation Auto keeps Cross/Circle menu semantics while adapting gameplay to physical Switch positions. Switch stays fixed; editing any button creates a custom profile."
+msgstr "PlayStation Auto는 물리적인 스위치 위치에 게임플레이를 적용하면서 십자형/원형 메뉴 의미를 유지합니다. 스위치는 고정되어 있습니다. 버튼을 편집하면 사용자 정의 프로필이 생성됩니다."
 
 #: settings_store.h
 msgid "Polish"
@@ -590,6 +994,10 @@ msgstr "포르투갈어(브라질)"
 #: pe/ui/browse.cpp
 msgid "Powered by Eden"
 msgstr "Powered by Eden"
+
+#: pe/ui/settings.cpp
+msgid "Preset"
+msgstr "프리셋"
 
 #. Asked before a save is imported over the one in use.
 #: pe/ui/library.cpp
@@ -617,18 +1025,46 @@ msgstr "프로젝트 크레딧"
 msgid "ProsperoEden stopped because of an error. A report was saved to {0}."
 msgstr "오류로 인해 ProsperoEden이 중지되었습니다. 보고서가 {0}에 저장되었습니다."
 
+#: pe/ui/browse.cpp
+msgid "PS5 13.60 FORK"
+msgstr "PS5 13.60 포크"
+
 #. Why a game did not start.
 #: eden_services.cpp
 msgid "PS5 controller initialization failed"
 msgstr "PS5 컨트롤러를 초기화하지 못했습니다"
 
+#: pe/ui/home.cpp
+msgid "QUICK SETTINGS"
+msgstr "빠른 설정"
+
+#: pe/ui/home.cpp
+msgid "Quick settings"
+msgstr "빠른 설정"
+
+#: pe/ui/home.cpp
+msgid "Quit"
+msgstr "종료"
+
 #: pe/ui/settings.cpp
 msgid "Ready"
 msgstr "준비됨"
 
+#: pe/ui/launcher.cpp
+msgid "Recent"
+msgstr "최근의"
+
 #: pe/ui/home.cpp
 msgid "RECENTLY PLAYED"
 msgstr "최근 플레이"
+
+#: settings_store.h
+msgid "Recommended"
+msgstr "권장"
+
+#: pe/ui/settings.cpp
+msgid "Recommended defaults restored."
+msgstr "Recommended defaults restored."
 
 #: pe/ui/settings.cpp
 msgid "REDUCE MOTION"
@@ -653,7 +1089,7 @@ msgstr "주사율"
 msgid "REGION"
 msgstr "지역"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Renderer"
 msgstr "렌더러"
 
@@ -661,13 +1097,57 @@ msgstr "렌더러"
 msgid "RENDERER"
 msgstr "렌더러"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/mapping.cpp
+msgid "Reset"
+msgstr "초기화"
+
+#: pe/ui/launcher.cpp
+msgid "Reset controller mapping?"
+msgstr "컨트롤러 매핑을 재설정하시겠습니까?"
+
+#: pe/ui/library.cpp
+msgid "Reset overrides"
+msgstr "Reset overrides"
+
+#: pe/ui/launcher.cpp
+msgid "Reset this game's custom settings?"
+msgstr "이 게임의 사용자 정의 설정을 재설정하시겠습니까?"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp
 msgid "Resolution"
 msgstr "해상도"
 
-#: eden_services.cpp
+#: pe/ui/library.cpp
+msgid "Resolution follows the selected title-aware profile. Lower it for performance or memory; raise it only when the title has headroom."
+msgstr "해상도는 선택한 제목 인식 프로필을 따릅니다. 성능이나 메모리를 위해 낮추십시오. 제목에 헤드룸이 있는 경우에만 올리세요."
+
+#: pe/ui/launcher.cpp
+msgid "Restore default settings?"
+msgstr "기본 설정을 복원하시겠습니까?"
+
+#: pe/ui/settings.cpp
+msgid "Restore defaults"
+msgstr "Restore defaults"
+
+#: pe/ui/mapping.cpp
+msgid "Right stick press"
+msgstr "오른쪽 스틱 누르기"
+
+#: pe/ui/launcher.cpp, pe/ui/library.cpp
 msgid "ROM missing from the game files folder"
 msgstr "게임 파일 폴더에 ROM이 없습니다"
+
+#: eden_services.cpp
+msgid "ROM missing from the storage root"
+msgstr "저장소 루트에 ROM이 없습니다."
+
+#: pe/ui/settings.cpp
+msgid "ROOT"
+msgstr "뿌리"
+
+#: pe/ui/settings.cpp
+msgid "Runtime health, storage and recovery tools."
+msgstr "런타임 상태, 저장 및 복구 도구."
 
 #: settings_store.h
 msgid "Russian"
@@ -677,6 +1157,18 @@ msgstr "러시아어"
 #: pe/ui/library.cpp
 msgid "Ryujinx save found"
 msgstr "Ryujinx 세이브 있음"
+
+#: pe/ui/library.cpp
+msgid "Safe launch"
+msgstr "안전한 발사"
+
+#: pe/ui/library.cpp
+msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
+msgstr "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
+
+#: eden_services.cpp, pe/ui/browse.cpp
+msgid "Sandbox only"
+msgstr "샌드박스 전용"
 
 #. The app can read only its own folder; {0} is a number.
 #: pe/ui/browse.cpp
@@ -693,7 +1185,7 @@ msgstr "세이브 데이터"
 msgid "Save folder found"
 msgstr "세이브 폴더 있음"
 
-#: pe/ui/library.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp
 msgid "Saved for this game. Applies on next launch."
 msgstr "이 게임에 저장했습니다. 다음 실행부터 적용됩니다."
 
@@ -702,12 +1194,12 @@ msgstr "이 게임에 저장했습니다. 다음 실행부터 적용됩니다."
 msgid "Saved. A display that cannot show 120 Hz stays at 60 Hz."
 msgstr "저장했습니다. 120Hz를 지원하지 않는 디스플레이는 60Hz로 유지됩니다."
 
-#: pe/ui/browse.cpp, pe/ui/launcher.cpp
+#: pe/ui/launcher.cpp
 msgid "Saved. Applies when a game starts."
 msgstr "저장했습니다. 게임을 시작할 때 적용됩니다."
 
 #. Button hint: choose the highlighted item (not the Select button).
-#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
 msgid "Select"
 msgstr "선택"
 
@@ -724,12 +1216,16 @@ msgstr "게임을 선택해 시작하세요"
 msgid "SELECTED"
 msgstr "선택됨"
 
+#: pe/ui/home.cpp
+msgid "SELECTED GAME"
+msgstr "선택한 게임"
+
 #. Why a game did not start (the file is gone).
 #: eden_services.cpp
 msgid "Selected ROM is no longer available"
 msgstr "선택한 ROM을 더 이상 사용할 수 없습니다"
 
-#: pe/ui/home.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/launcher.cpp, pe/ui/settings.cpp
 msgid "Settings"
 msgstr "설정"
 
@@ -742,17 +1238,33 @@ msgstr "설정 상태"
 msgid "Setup required"
 msgstr "설정 필요"
 
-#: eden_services.cpp, host/fake_services.cpp
+#: host/fake_services.cpp
 msgid "Setup required: {0} Open Settings, Game files to choose the folder that holds your keys, firmware and roms folders (or add the files to {1}), then reopen ProsperoEden."
 msgstr "설정 필요: {0} 설정의 게임 파일에서 keys, firmware, roms 폴더가 들어 있는 폴더를 선택하거나 파일을 {1}에 넣은 다음 ProsperoEden을 다시 여세요."
+
+#: eden_services.cpp
+msgid "Setup required: {0} Open Settings, Storage to choose the root that holds the standard keys, firmware and roms folders (or add the files to {1}), then reopen Encore."
+msgstr "설정 필요: {0} 설정, 저장소를 열어 표준 키, 펌웨어 및 ROM 폴더가 있는 루트를 선택한 다음(또는 {1}에 파일을 추가) Encore를 다시 엽니다."
 
 #: eden_services.cpp
 msgid "Setup validation failed. Check that firmware and key files are readable and valid."
 msgstr "설정 검증에 실패했습니다. 펌웨어와 키 파일을 읽을 수 있고 올바른지 확인하세요."
 
 #: pe/ui/settings.cpp
+msgid "Shows live FPS while playing. Off is cleaner for normal use; Touchpad + R1 toggles it at any time."
+msgstr "재생하는 동안 실시간 FPS를 표시합니다. Off는 정상적인 사용을 위해 더 깨끗합니다. 터치패드 + R1은 언제든지 전환할 수 있습니다."
+
+#: settings_store.h
+msgid "SMAA"
+msgstr "SMAA"
+
+#: pe/ui/settings.cpp
 msgid "Solid panels, brighter text and an outlined highlight."
 msgstr "불투명한 패널, 더 밝은 글자, 테두리가 있는 강조 표시."
+
+#: eden_services.cpp
+msgid "Some cache files could not be removed."
+msgstr "일부 캐시 파일을 제거할 수 없습니다."
 
 #: settings_store.h
 msgid "Spanish"
@@ -761,6 +1273,10 @@ msgstr "스페인어"
 #: settings_store.h
 msgid "Spanish (Latin America)"
 msgstr "스페인어(중남미)"
+
+#: pe/ui/mapping.cpp
+msgid "Square"
+msgstr "정사각형"
 
 #. The app creates its user the first time a game runs.
 #: eden_services.cpp
@@ -773,12 +1289,52 @@ msgid "STARTING"
 msgstr "시작 중"
 
 #: pe/ui/settings.cpp
+msgid "STICK DEADZONE"
+msgstr "스틱 데드존"
+
+#: pe/ui/settings.cpp
+msgid "Stick deadzone"
+msgstr "스틱 데드존"
+
+#: pe/ui/settings.cpp
 msgid "Stops the background drifting and the screens sliding, here and on the loading screen."
 msgstr "배경의 움직임과 화면 슬라이드를 멈춥니다. 로딩 화면에도 적용됩니다."
+
+#: pe/ui/browse.cpp, pe/ui/home.cpp, pe/ui/settings.cpp
+msgid "Storage"
+msgstr "저장 공간"
+
+#: pe/ui/settings.cpp
+msgid "STORAGE"
+msgstr "저장 공간"
+
+#: pe/ui/home.cpp
+msgid "Storage not configured"
+msgstr "저장소가 구성되지 않았습니다."
+
+#: pe/ui/home.cpp
+msgid "Storage ready"
+msgstr "저장 준비됨"
+
+#: pe/ui/browse.cpp
+msgid "Storage root saved. Reopen Encore to use it."
+msgstr "저장소 루트가 저장되었습니다. Encore를 다시 열어 사용하세요."
 
 #: pe/ui/browse.cpp
 msgid "Supply your own files"
 msgstr "파일은 직접 준비하세요"
+
+#: pe/ui/library.cpp, pe/ui/mapping.cpp, pe/ui/settings.cpp
+msgid "Switch"
+msgstr "스위치"
+
+#: pe/ui/home.cpp
+msgid "Switch card"
+msgstr "카드 전환"
+
+#: pe/ui/home.cpp
+msgid "System"
+msgstr "체계"
 
 #: eden_services.cpp
 msgid "Taiwan"
@@ -792,6 +1348,14 @@ msgstr "태국어"
 #: pe/ui/browse.cpp
 msgid "THANKS"
 msgstr "감사의 말"
+
+#: pe/ui/browse.cpp
+msgid "Thanks to the whole PS5 homebrew community and to every developer whose drivers, tools and libraries make Eden Encore possible."
+msgstr "전체 PS5 홈브루 커뮤니티와 Eden Encore를 가능하게 해주는 드라이버, 도구 및 라이브러리를 보유한 모든 개발자에게 감사드립니다."
+
+#: eden_services.cpp
+msgid "The game could not allocate PS5 memory. Close Eden Encore completely before retrying to release memory retained between games."
+msgstr "게임에서 PS5 메모리를 할당할 수 없습니다. 게임 사이에 유지된 메모리를 해제하려고 다시 시도하기 전에 Eden Encore를 완전히 닫으십시오."
 
 #. Why a game stopped. 'Settings, Video' is the menu path; 'the game's own settings' is the Game settings dialog of the Library.
 #: eden_services.cpp
@@ -814,15 +1378,47 @@ msgstr "이 게임에는 아직 내보낼 세이브 데이터가 없습니다."
 msgid "This game's settings cannot be saved (no title ID)."
 msgstr "이 게임의 설정을 저장할 수 없습니다(타이틀 ID 없음)."
 
+#: pe/ui/browse.cpp
+msgid "THIS ROOT"
+msgstr "이 루트"
+
 #. ryujinx/, save-import/ and roms/ are folder names (unchanged); {0} is the game's ID.
 #: eden_services.cpp
 msgid "To import, copy a Ryujinx folder to ryujinx/ or a save to save-import/{0}/, next to roms/."
 msgstr "가져오려면 Ryujinx 폴더를 ryujinx/에, 또는 세이브 데이터를 save-import/{0}/에 복사하세요(roms/ 옆)."
 
+#: pe/ui/mapping.cpp
+msgid "Touchpad"
+msgstr "터치패드"
+
+#: pe/ui/mapping.cpp
+msgid "Triangle"
+msgstr "삼각형"
+
 #. Button hint: switch the highlighted mod on or off.
 #: pe/ui/library.cpp
 msgid "Turn on or off"
 msgstr "켜기/끄기"
+
+#: pe/ui/settings.cpp
+msgid "Turns DualSense vibration on or off for games."
+msgstr "게임에 대한 DualSense 진동을 켜거나 끕니다."
+
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "TV output"
+msgstr "TV 출력"
+
+#: pe/ui/settings.cpp
+msgid "TV OUTPUT"
+msgstr "TV 출력"
+
+#: settings_store.h
+msgid "Ultra"
+msgstr "울트라"
+
+#: pe/ui/home.cpp, pe/ui/library.cpp
+msgid "Unknown"
+msgstr "알려지지 않은"
 
 #. Short tag on the 'Parent folder' row.
 #: pe/ui/browse.cpp
@@ -838,7 +1434,7 @@ msgstr "업데이트 {0}"
 msgid "UPDATES, DLC"
 msgstr "업데이트, DLC"
 
-#: pe/ui/library.cpp, pe/ui/settings.cpp
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "Upscaling filter"
 msgstr "확대 필터"
 
@@ -850,6 +1446,14 @@ msgstr "확대 필터"
 msgid "USA"
 msgstr "미국"
 
+#: pe/ui/browse.cpp
+msgid "Use extracted firmware NCA files. Choose the root in Settings, Storage; restart the app after changing it."
+msgstr "추출된 펌웨어 NCA 파일을 사용합니다. 설정, 저장소에서 루트를 선택합니다. 앱을 변경한 후 다시 시작하세요."
+
+#: pe/ui/browse.cpp
+msgid "Use this root"
+msgstr "이 루트를 사용하세요"
+
 #: pe/ui/settings.cpp
 msgid "VIBRATION"
 msgstr "진동"
@@ -859,6 +1463,14 @@ msgid "Vibration"
 msgstr "진동"
 
 #: pe/ui/settings.cpp
+msgid "VIBRATION STRENGTH"
+msgstr "진동 강도"
+
+#: pe/ui/settings.cpp
+msgid "Vibration strength"
+msgstr "진동 강도"
+
+#: pe/ui/home.cpp, pe/ui/settings.cpp
 msgid "Video"
 msgstr "비디오"
 
@@ -866,10 +1478,26 @@ msgstr "비디오"
 msgid "VIDEO"
 msgstr "비디오"
 
+#: pe/ui/home.cpp, pe/ui/library.cpp, pe/ui/settings.cpp
+msgid "Video preset"
+msgstr "비디오 프리셋"
+
+#: pe/ui/settings.cpp
+msgid "VIDEO PRESET"
+msgstr "비디오 프리셋"
+
 #. Vulkan is a name (unchanged).
 #: pe/ui/settings.cpp
 msgid "Vulkan (recommended)"
 msgstr "Vulkan(권장)"
+
+#: pe/ui/settings.cpp
+msgid "Vulkan is recommended on PS5. Use OpenGL only as a fallback for a game with Vulkan issues."
+msgstr "Vulkan은 PS5에서 권장됩니다. OpenGL은 Vulkan 문제가 있는 게임에 대한 대체 수단으로만 사용하십시오."
+
+#: pe/ui/library.cpp
+msgid "Vulkan is recommended on PS5. Use OpenGL only as a fallback for a title with Vulkan issues."
+msgstr "Vulkan은 PS5에서 권장됩니다. Vulkan 문제가 있는 타이틀에 대한 대체 수단으로만 OpenGL을 사용하십시오."
 
 #: pe/ui/library.cpp
 msgid "Your games"
@@ -951,7 +1579,7 @@ msgid "{0} of {1} on"
 msgstr "{1}개 중 {0}개 켜짐"
 
 #. A percentage (a volume): write it as the language does, for example with a space before the sign.
-#: pe/ui/settings.cpp
+#: pe/ui/library.cpp, pe/ui/settings.cpp
 msgid "{0}%"
 msgstr "{0}%"
 
@@ -964,187 +1592,3 @@ msgstr "{0}/(NSP 또는 XCI)"
 #: pe/ui/browse.cpp
 msgid "{0}/ (one folder per game ID)"
 msgstr "{0}/(타이틀 ID마다 폴더 하나)"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Restore defaults"
-msgstr "Restore defaults"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Recommended defaults restored."
-msgstr "Recommended defaults restored."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Reset overrides"
-msgstr "Reset overrides"
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Game overrides reset to global defaults."
-msgstr "Game overrides reset to global defaults."
-
-#: pe/ui/settings.cpp pe/ui/library.cpp pe/ui/browse.cpp
-msgid "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
-msgstr "Safe launch: OpenGL, Handheld, 1x, 60 Hz, 1080p and mods off for this launch only."
-
-#: settings_store.h
-msgid "0.25x (minimum)"
-msgstr "0,25x (최소)"
-
-#: settings_store.h
-msgid "0.5x (fastest, softer)"
-msgstr "0,5x (가장 빠름, 부드러움)"
-
-#: settings_store.h
-msgid "1.25x (recommended)"
-msgstr "1,25x (권장)"
-
-#: settings_store.h
-msgid "2x (high memory)"
-msgstr "2x (메모리 높음)"
-
-#: settings_store.h
-msgid "3x (very high memory)"
-msgstr "3x (메모리 매우 높음)"
-
-#: settings_store.h
-msgid "4x (extreme memory)"
-msgstr "4x (메모리 극대)"
-
-#: translated UI setting
-msgid "Anti-aliasing"
-msgstr "계단 현상 제거"
-
-#: translated UI setting
-msgid "Button mapping"
-msgstr "버튼 매핑"
-
-#: translated UI setting
-msgid "Quick settings"
-msgstr "빠른 설정"
-
-#: translated UI setting
-msgid "Storage"
-msgstr "저장 공간"
-
-#: translated UI setting
-msgid "Video preset"
-msgstr "비디오 프리셋"
-
-#: translated UI setting
-msgid "Game resolution"
-msgstr "게임 해상도"
-
-#: translated UI setting
-msgid "TV output"
-msgstr "TV 출력"
-
-#: translated UI setting
-msgid "Play"
-msgstr "플레이"
-
-#: translated UI setting
-msgid "Cancel"
-msgstr "취소"
-
-#: translated UI setting
-msgid "Confirm"
-msgstr "확인"
-
-#: translated UI setting
-msgid "Reset"
-msgstr "초기화"
-
-#: translated UI setting
-msgid "Ultra"
-msgstr "울트라"
-
-#: translated UI setting
-msgid "Recommended"
-msgstr "권장"
-
-#: translated UI setting
-msgid "Minimum"
-msgstr "최소"
-
-#: translated UI setting
-msgid "Home"
-msgstr "홈"
-
-#: translated UI setting
-msgid "Clear cache"
-msgstr "캐시 지우기"
-
-#: translated UI setting
-msgid "Done"
-msgstr "완료"
-
-#: translated UI setting
-msgid "Custom"
-msgstr "사용자 지정"
-
-#: translated UI setting
-msgid "Controllers"
-msgstr "컨트롤러"
-
-#: translated UI setting
-msgid "Quit"
-msgstr "종료"
-
-#: translated UI setting
-msgid "FSR sharpness"
-msgstr "FSR 선명도"
-
-#: translated UI setting
-msgid "Stick deadzone"
-msgstr "스틱 데드존"
-
-#: translated UI setting
-msgid "Vibration strength"
-msgstr "진동 강도"
-
-#: translated UI setting
-msgid "Preset"
-msgstr "프리셋"
-
-#: translated UI setting
-msgid "Open settings"
-msgstr "설정 열기"
-
-#: translated UI setting
-msgid "ANTI-ALIASING"
-msgstr "계단 현상 제거"
-
-#: translated UI setting
-msgid "BUTTON MAPPING"
-msgstr "버튼 매핑"
-
-#: translated UI setting
-msgid "QUICK SETTINGS"
-msgstr "빠른 설정"
-
-#: translated UI setting
-msgid "STORAGE"
-msgstr "저장 공간"
-
-#: translated UI setting
-msgid "VIDEO PRESET"
-msgstr "비디오 프리셋"
-
-#: translated UI setting
-msgid "GAME RESOLUTION"
-msgstr "게임 해상도"
-
-#: translated UI setting
-msgid "TV OUTPUT"
-msgstr "TV 출력"
-
-#: translated UI setting
-msgid "FSR SHARPNESS"
-msgstr "FSR 선명도"
-
-#: translated UI setting
-msgid "STICK DEADZONE"
-msgstr "스틱 데드존"
-
-#: translated UI setting
-msgid "VIBRATION STRENGTH"
-msgstr "진동 강도"
