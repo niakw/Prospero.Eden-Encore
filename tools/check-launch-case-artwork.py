@@ -52,7 +52,7 @@ for fragment in (
     "c.list.case_spine(side_strip, angle, case_depth - 6.0f,",
     "c.list.case_plastic(physical, angle, back,",
     "launch_screenshots_.front()",
-    "const Rect physical{390.0f, 162.0f, 422.0f, 655.0f};",
+    "const Rect physical{374.0f, 126.0f, 454.0f, 730.0f};",
     "c.textures.brand()",
     "motion() > 0.0f",
     'tr("STARTING")',
@@ -135,7 +135,9 @@ assert "angle, false, case_depth," in draw
 assert "c.list.case_corner(physical, angle, case_radius, case_depth," in draw
 assert "constexpr float case_depth = 64.0f;" in draw
 assert "constexpr float case_radius = 31.0f;" in draw
-assert "corner = length(max(abs(v_local)" in shader
+assert "float rounded = round_box(v_local, v_half, 30.0);" in shader
+assert "float fresnel = pow(1.0 - abs(cos(v_params.x)), 3.0);" in shader
+assert "case_depth * std::abs(std::sin(angle))" in draw
 assert "if (!selected_game_.empty()) {\n        draw_launch(c);\n        return;" in launcher
 preview_source = (root / "headless/prosperoeden/host/preview_main.cpp").read_text()
 preview_workflow = (root / ".github/workflows/launcher-production-preview.yml").read_text()
