@@ -758,7 +758,7 @@ void Launcher::draw_launch(Canvas &c)
             (seconds - return_start) / theme::kCaseTurnSeconds);
     }
     const float angle = motion() > 0.0f ?
-        0.53f + 6.2831853071795864769f * revolution : 0.53f;
+        0.23f + 6.2831853071795864769f * revolution : 0.23f;
     const float facing = std::cos(angle);
     const bool back = facing < 0.0f;
     constexpr float case_depth = 36.0f;
