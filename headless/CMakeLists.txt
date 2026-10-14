@@ -979,9 +979,9 @@ if(EDEN_DEV_PROFILE)
     string(REPLACE "${idle_old}" [=[void PhysicalCore::Idle() {
         const bool profile_idle = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed);
         const long long start = profile_idle ? ::Eden::Performance::NowNs() : 0;
-        const unsigned spins = ::Eden::Performance::idle_spin_iterations.load(std::memory_order_relaxed);
-        for (unsigned i = 0; i < spins && !__atomic_load_n(&m_is_interrupted, __ATOMIC_ACQUIRE); ++i)
-            __builtin_ia32_pause();
+        // The interrupt flag is guarded by m_guard. An unlocked atomic
+        // builtin read races with Interrupt()/ClearInterrupt() plain stores.
+        // Diagnostic idle sampling uses the original condition variable.
         bool slept;
         {
             std::unique_lock lk{m_guard};
@@ -992,11 +992,27 @@ if(EDEN_DEV_PROFILE)
             ::Eden::Performance::CountIdle(m_core_index, ::Eden::Performance::NowNs() - start, slept);
     }]=] physical_core_source "${physical_core_source}")
 endif()
-string(REPLACE "${prefetch_old}"
-    "            } else {\n                interface->LogBacktrace(process);\n                if (prefetch_abort)\n                    ::Eden::RecordGuestFault(\"guest thread \" + Core::GetThreadName(thread).value_or(\"?\") +\n                                             \" jumped to an unmapped address\");\n            }\n            thread->RequestSuspend(kernel, SuspendType::Debug);"
+string(REPLACE "${prefetch_old}" [=[            } else {
+                interface->LogBacktrace(process);
+                if (prefetch_abort) {
+                    // ExitContext saves guest registers only for attached debuggers.
+                    // Capture the faulting PC at the actual prefetch abort before
+                    // the suspended thread can be unloaded or switched.
+                    interface->GetContext(thread->GetContext());
+                    const auto eden_name = Core::GetThreadName(thread).value_or("?");
+                    char eden_fault[192]{};
+                    std::snprintf(eden_fault, sizeof(eden_fault),
+                        "guest thread %.64s tid=%llu pc=0x%llx jumped to an unmapped address",
+                        eden_name.c_str(),
+                        static_cast<unsigned long long>(thread->GetThreadId()),
+                        static_cast<unsigned long long>(thread->GetContext().pc));
+                    ::Eden::RecordGuestFault(eden_fault);
+                }
+            }
+            thread->RequestSuspend(kernel, SuspendType::Debug);]=]
     physical_core_source "${physical_core_source}")
 write_derived("${PORT_BUILD_DIR}/physical_core.cpp"
-    "#include \"${EDEN_PORT_DIR}/guest_fault.h\"\n#include \"${EDEN_PORT_DIR}/performance.h\"\n#include \"core/arm/debug.h\"\n${physical_core_source}")
+    "#include <cstdio>\n#include \"${EDEN_PORT_DIR}/guest_fault.h\"\n#include \"${EDEN_PORT_DIR}/performance.h\"\n#include \"core/arm/debug.h\"\n${physical_core_source}")
 list(REMOVE_ITEM core_sources "hle/kernel/physical_core.cpp")
 list(APPEND core_sources "${PORT_BUILD_DIR}/physical_core.cpp")
 if(EDEN_DEV_PROFILE)
