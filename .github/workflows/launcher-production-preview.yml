@@ -68,7 +68,7 @@ jobs:
           # The physical front MUST be European, never a higher-resolution
           # North American image silently promoted over the selected region.
           front_receipt = next(line for line in receipts.splitlines()
-                               if line.startswith("botw-front.tga\\t"))
+                               if line.startswith("botw-front.tga\t"))
           eu_fronts = ("9524e5f7-ccc8-4ce6-a581-03f82c51825e.jpg",
                        "a8bcb4cc-a3b0-4cf0-82f3-cb10dd18b27c.jpg")
           assert any(id in front_receipt for id in eu_fronts), front_receipt
@@ -171,7 +171,7 @@ jobs:
               print("retail pixels", front_detail, back_detail)
           # Stronger than a source token check: actually render the enlarged
           # print and show movement from D-pad, zoom-out, and ignored Cross.
-          with Image.open(files[2]) as baseline, Image.open(files[3]) as moved, \\
+          with Image.open(files[2]) as baseline, Image.open(files[3]) as moved, \
                Image.open(files[4]) as reduced, Image.open(files[5]) as ignored:
               crop = (760, 270, 1150, 690)
               def diff(a, b):
