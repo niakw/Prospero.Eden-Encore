@@ -107,6 +107,9 @@ assert 'card_w = (available - gap * 6.0f) / 7.0f' in recent_block
 assert 'constexpr int slots = 5;' in library
 assert 'constexpr float rail_x = 72.0f, rail_y = 205.0f, rail_w = 1776.0f;' in library
 assert 'flat_retail_sleeve(c, game, sleeve, false, 0.24f);' in library
+assert 'flat_retail_sleeve(c, *game, art, true, 0.60f);' in library
+assert 'flat_retail_sleeve(c, *game, enlarged, true, 0.92f,' in library
+assert 'const float opening_x = rear ? shell.x : shell.x + shell.w - side;' in library
 assert 'library_.move(key == Key::right ? 1 : -1)' in library
 press_library=library[library.index('void Launcher::press_library'):library.index('void Launcher::draw_library')]
 assert 'set_docked' not in press_library
