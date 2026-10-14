@@ -46,7 +46,8 @@ for fragment in (
     "const std::string& scan = back ? launch_box_back_ : launch_box_front_;",
     "const Cover artwork = c.textures.cover(",
     "c.list.case_face(artwork.texture, face, angle, back, kWhite);",
-    "c.list.case_spine(physical, angle, 28.0f,",
+    "c.list.case_spine(physical, angle, 22.0f,",
+    "c.list.case_plastic(physical, angle, back,",
     "launch_screenshots_.front()",
     "const Rect physical{390.0f, 162.0f, 422.0f, 655.0f};",
     "c.textures.brand()",
@@ -96,11 +97,17 @@ shapes = (root / "headless/prosperoeden/pe/gfx/draw_list.hpp").read_text()
 drawlist = (root / "headless/prosperoeden/pe/gfx/draw_list.cpp").read_text()
 shader = (root / "headless/prosperoeden/pe/gfx/gl_batch.cpp").read_text()
 assert "case_face = 9" in shapes and "case_spine = 10" in shapes
+assert "case_plastic = 11" in shapes
 assert "void DrawList::case_face(" in drawlist
 assert "void DrawList::case_spine(" in drawlist
+assert "void DrawList::case_plastic(" in drawlist
+assert "depth_offset * transform_.scale" in drawlist
 assert "clip_w = max(0.65, 1.0 - z / 950.0)" in shader
 assert "gl_Position = vec4(ndc.x * clip_w, -ndc.y * clip_w, 0.0, clip_w);" in shader
 assert "1.0 - corner.x : corner.x" in shader
+assert "shape == 9 || shape == 10 || shape == 11" in shader
+assert "else if (shape == 11)" in shader
+assert "corner = length(max(abs(v_local)" in shader
 assert "if (!selected_game_.empty()) {\n        draw_launch(c);\n        return;" in launcher
 preview_source = (root / "headless/prosperoeden/host/preview_main.cpp").read_text()
 preview_workflow = (root / ".github/workflows/launcher-production-preview.yml").read_text()
