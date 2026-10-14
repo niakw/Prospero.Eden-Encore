@@ -276,6 +276,9 @@ assert "for (int i = 1; i < 5; ++i)" in lib_sleeve
 assert "color.rgb = vec3(0.97, 0.025, 0.07);" not in shader
 assert "float from_edge = (1.0 - v_st.x)" in shader
 assert "float outer_glint" in shader
+assert "v_border.x > 0.5 && v_params.y < 0.5" not in shader
+assert "float inner_ridge" in shader
+assert "vec4(material, v_top.a *" in shader
 assert "simplify_switch_header" not in shapes and "simplify_switch_header" not in drawlist
 assert "round_box(v_local, v_half, 22.0)" in shader
 assert "angle, false, case_depth," in draw
