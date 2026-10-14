@@ -145,7 +145,7 @@ bool WriteJpegTga(const std::string& encoded, const std::string& output) {
     if (!stbi_info_from_memory(
             reinterpret_cast<const unsigned char*>(encoded.data()),
             static_cast<int>(encoded.size()), &width, &height, &channels) ||
-        width <= 0 || height <= 0 || width > 4096 || height > 2160 ||
+        width <= 0 || height <= 0 || width > 4096 || height > 4096 ||
         static_cast<std::uint64_t>(width) * static_cast<std::uint64_t>(height) > 3840u * 2160u)
         return false;
 
