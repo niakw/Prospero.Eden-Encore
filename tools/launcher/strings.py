@@ -43,6 +43,12 @@ FONT = LAUNCHER / "ui/fonts/montserrat-medium.pefont"
 SETTINGS = ROOT / "headless/settings_store.h"
 SETTING_LABELS = ("kResolutionLabels", "kUpscalingFilterLabels", "kAntiAliasingLabels",
                   "kPerformanceProfileLabels", "kLanguageLabels")
+# Game categories in Nlib metadata reach tr() at runtime, not as string literals.
+DYNAMIC_LIBRARY_GENRES = frozenset({
+    "Strategy", "Role-Playing", "Adventure", "Action", "Simulation", "Sports",
+    "Racing", "Puzzle", "Platformer", "Fighting", "Shooter",
+})
+
 
 LITERALS = r'((?:"(?:[^"\\]|\\.)*"\s*)+)'
 MARKED = re.compile(r"\b(?:tr|TR)\(\s*" + LITERALS)
@@ -369,7 +375,7 @@ def check():
             if not entries.get(text):
                 (problems if strict else warnings).append(f"untranslated: {text!r}")
         for text, translation in entries.items():
-            if text not in texts:
+            if text not in texts and text not in DYNAMIC_LIBRARY_GENRES:
                 warnings.append(f"not in the code any more: {text!r}")
                 continue
             if sorted(re.findall(r"\{\d\}", text)) != sorted(re.findall(r"\{\d\}", translation)) and translation:
@@ -377,7 +383,7 @@ def check():
             missing = sorted({c for c in translation if ord(c) not in characters and c not in "\n"})
             if missing:
                 problems.append(f"characters the font lacks {''.join(missing)!r} in {translation!r}")
-            if text.isupper() and translation and translation != translation.upper():
+            if text.isupper() and translation and translation != translation.upper() and not (text == "GB" and translation == "Go"):
                 warnings.append(f"label not uppercase: {text!r} -> {translation!r}")
             if translation and len(translation) > max(len(text) * 1.7, len(text) + 12):
                 warnings.append(f"long ({len(text)} -> {len(translation)}): {translation!r}")

@@ -79,7 +79,7 @@ for token in ("disable_null_descriptor = false;", "disable_descriptor_buffer = f
 assert "inline std::atomic<unsigned> dispatch_mask{15};" in (root / "headless/performance.h").read_text()
 assert "dev-settings dispatch_draws=8" in main
 for marker in ("graphics_usage_from_pool.store(true", "gc_keep_dirty.store(true",
-               "dispatch_mask.store(15", "idle_spin_iterations.store(5000",
+               "dispatch_mask.store(15", "idle_spin_iterations.store(25000",
                "jit_duplicate_tracking.store(false", "pc_sample_core.store(0",
                "pc_fast.store(false", "capture_early.store(false",
                "firmware_applets.store(false", "trace_fs_callers.store(false"):

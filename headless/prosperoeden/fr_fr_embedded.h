@@ -1601,10 +1601,6 @@ msgid "Exit Eden Encore?"
 msgstr "Quitter Eden Encore ?"
 
 #: pe/ui/library.cpp
-msgid "View back cover"
-msgstr "Voir le dos de la jaquette"
-
-#: pe/ui/library.cpp
 msgid "Enlarge cover"
 msgstr "Agrandir la jaquette"
 
@@ -1659,10 +1655,6 @@ msgstr "Combat"
 #: pe/ui/library.cpp
 msgid "Shooter"
 msgstr "Tir"
-
-#: pe/ui/library.cpp
-msgid "Back to games"
-msgstr "Retour aux jeux"
 
 #: pe/ui/library.cpp
 msgid "Close"
