@@ -15,6 +15,17 @@ import zipfile
 SOURCE = "https://gamesdb.launchbox-app.com/Metadata.zip"
 IMAGE_FILE = re.compile(r"^(?:r2_)?[0-9a-fA-F-]{36}\.(?:jpg|jpeg|png)$")
 
+# Original physical European front supplied by the user for this exact
+# LaunchBox DatabaseID. Keep this in the media INDEX, never in the renderer.
+# Current LaunchBox Box - Front (Europe) is an independent fallback. Both
+# precede lower-priority regions regardless of resolution.
+EUROPE_FRONT_PINS = {
+    "79189": (
+        "9524e5f7-ccc8-4ce6-a581-03f82c51825e.jpg",
+        "a8bcb4cc-a3b0-4cf0-82f3-cb10dd18b27c.jpg",
+    ),
+}
+
 def normalize(value):
     out = []
     space = False
@@ -92,7 +103,10 @@ def parse(source):
         if len(matching) != 1:
             continue  # avoid colliding editions / ambiguous matching
         media = images[next(iter(matching))]
-        front = media.get("Box - Front", [])
+        front = list(media.get("Box - Front", []))
+        if next(iter(matching)) in EUROPE_FRONT_PINS:
+            pinned = EUROPE_FRONT_PINS[next(iter(matching))]
+            front = [(99 - index, filename) for index, filename in enumerate(pinned)] + front
         back = media.get("Box - Back", [])
         spine = media.get("Box - Spine", [])
         if front or back or spine:
@@ -144,6 +158,8 @@ def self_test():
     assert candidates([(7, "f" * 36 + ".jpg"), (1, "0" * 36 + ".png")]).count(";") == 1
     assert candidates([(1, "a" * 36 + ".jpg")]) == "a" * 36 + ".jpg"
     assert rank("France") > rank("Europe") > rank("World") > rank("Japan")
+    assert candidates([(99, EUROPE_FRONT_PINS["79189"][0]), (6, "0" * 36 + ".jpg")]).startswith(
+        "9524e5f7-ccc8-4ce6-a581-03f82c51825e.jpg")
     assert normalize("EA SPORTS FC 27!") == "ea sports fc 27"
     print("PASS Switch-only case index, FR region, real back and collision guards")
 
