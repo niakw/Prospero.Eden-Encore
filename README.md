@@ -1,9 +1,9 @@
 <div align="center">
   <img src="assets/icon0.png" alt="Prospero.Eden Encore logo" width="154">
 
-  # Prospero.Eden Encore
+  <h1>Prospero.Eden Encore</h1>
 
-  ### Console-native emulation, made for the living room.
+  <h3>Console-native emulation, made for the living room.</h3>
 
   **A maintained, controller-first continuation of ProsperoEden — focused on firmware 13.60, safer startup, modern game loading, TV navigation and reproducible native builds.**
 
