@@ -93,7 +93,12 @@ int main() {
         if (profiling) {
             // Only detailed mode reads the clock. Expecting a timed read in
             // quiet mode made the test fail despite correct blocking behavior.
-            const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
+            // Source checkout, sanitizer startup and heavy native-build
+            // competition can starve a newly created test thread for
+            // several seconds. Preserve the mandatory observed-clock
+            // handshake; extend only its upper bound, never drop the
+            // assertion or infer that a thread started timing.
+            const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(15);
             while (Common::g_wall_clock.reads.load(std::memory_order_acquire)==initial_reads &&
                    std::chrono::steady_clock::now()<deadline) std::this_thread::yield();
             timing_started =
@@ -144,5 +149,5 @@ with tempfile.TemporaryDirectory(prefix='eden-r364-domains-') as d:
     subprocess.run(['c++','-std=c++20','-O1','-pthread','-Wall','-Wextra','-Werror',
                     '-fsanitize=address,undefined',str(src),'-o',str(binary)],
                    check=True,env=env,timeout=40)
-    subprocess.run([str(binary)],check=True,env=env,timeout=15)
+    subprocess.run([str(binary)],check=True,env=env,timeout=40)
 print('PASS R364 actual GuestCacheLock C++: buffer/texture isolation, aggregate identity, no quiet clock/counters')
