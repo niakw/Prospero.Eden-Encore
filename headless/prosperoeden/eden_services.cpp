@@ -480,8 +480,8 @@ bool FetchCaseFace(const std::vector<std::string>& candidates,
         if (!stbi_info_from_memory(
                 reinterpret_cast<const unsigned char*>(body.data()),
                 static_cast<int>(body.size()), &w, &h, &channels) ||
-            w < (narrow_spine ? 12 : 128) ||
-            h < (narrow_spine ? 128 : 200) || w > 4096 || h > 4096 ||
+            w < (narrow_spine ? 64 : 128) ||
+            h < (narrow_spine ? 600 : 200) || w > 4096 || h > 4096 ||
             static_cast<std::uint64_t>(w) * h > 3840u * 2160u)
             continue;
         const std::uint64_t pixels = static_cast<std::uint64_t>(w) * h;
@@ -1412,8 +1412,9 @@ pe::ui::BoxArt EdenServices::box_art(std::uint64_t title_id) {
                 continue;
             int width = 0, height = 0, channels = 0;
             if (!stbi_info(path.c_str(), &width, &height, &channels) ||
-                width < (std::strcmp(side, "spine") == 0 ? 12 : 128) ||
-                height < 128 || width > 4096 || height > 4096 ||
+                width < (std::strcmp(side, "spine") == 0 ? 64 : 128) ||
+                height < (std::strcmp(side, "spine") == 0 ? 600 : 128) ||
+                width > 4096 || height > 4096 ||
                 static_cast<std::uint64_t>(width) * height > 3840u * 2160u)
                 continue;
             return path;
