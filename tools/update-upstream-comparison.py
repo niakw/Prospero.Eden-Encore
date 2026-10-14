@@ -59,7 +59,7 @@ def compare(rows,api=fetch):
             continue
         branch=meta["default_branch"]
         encoded=urllib.parse.quote(ref,safe="")+"..."+urllib.parse.quote(branch,safe="")
-        data=api("repos/"+repo+"/compare/"+encoded+"?per_page=1")
+        data=api("repos/"+repo+"/compare/"+encoded+"?per_page=100")
         if "error_status" in data:
             output.append((name,repo,ref[:12],"—","comparison unavailable"))
             continue
@@ -67,7 +67,22 @@ def compare(rows,api=fetch):
         if not isinstance(ahead,int) or not isinstance(behind,int):
             raise RuntimeError("Malformed response "+repo)
         status="identical" if ahead==behind==0 else "diverged" if behind else "upstream ahead"
-        output.append((name,repo,ref[:12],f"+{ahead} / -{behind}",status))
+                # Commit messages remain untrusted upstream text: sanitize before rendering.
+        important=("kernel","schedul","mutex","lock","memory","heap","guest","jit",
+                   "dynarmic","cache","shader","texture","gpu","vulkan","radv",
+                   "buffer","hid","controller","input","save","fs","sync","thread",
+                   "frame","fence","alloc","compil","driv","fix","hang","freeze")
+        notable=[]
+        for item in data.get("commits",[]):
+            raw=item.get("commit",{}).get("message","").splitlines()
+            title=raw[0] if raw else ""
+            if any(term in title.lower() for term in important):
+                title=title.replace("|","/").replace("[","(").replace("]",")")
+                title=title.replace("<","").replace(">","").replace("`","'")[:115]
+                notable.append((item.get("sha","")[:12],title))
+        limit=45 if name=="eden" else 20 if name in ("ps5-mesa","ps5-payload-sdk-fork","opengl-source") else 8
+        output.append((name,repo,ref[:12],f"+{ahead} / -{behind}",status,
+                       notable[-limit:],ahead>len(data.get("commits",[]))))
         print(name,repo,output[-1][3],status,flush=True)
     return output
 
@@ -77,9 +92,20 @@ def section(rows,stamp):
        "This workflow never imports source patches, modifies dependencies, or reads console data.","",
        "| Dependency | Source | Pinned revision | Ahead / behind | Status |",
        "|---|---|---|---:|---|"]
-    for name,repo,ref,delta,status in rows:
+    for row in rows:
+        name,repo,ref,delta,status=row[:5]
         source=("["+repo+"](https://github.com/"+repo+")") if "/" in repo else repo
         lines.append("| "+name+" | "+source+" | "+ref+" | "+delta+" | "+status+" |")
+        lines.extend(["","### Source changes requiring review","",
+                  "These are upstream commit titles, not validated Encore integrations."])
+    for row in rows:
+        if len(row)<7 or not row[5]:continue
+        name,repo=row[:2]
+        lines.append("")
+        lines.append("**"+name+"**"+(" (history excerpt; some commits omitted)" if row[6] else ""))
+        for sha,title in row[5]:
+            if sha:
+                lines.append("- ["+sha+"](https://github.com/"+repo+"/commit/"+sha+") — "+title)
     lines.extend(["","Unavailable comparisons are not equivalent to zero changes.",
                   "The API can truncate changed-file lists beyond 300 files.",END])
     return "\n".join(lines)
