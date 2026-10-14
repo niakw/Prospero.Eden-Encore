@@ -851,15 +851,17 @@ void Launcher::draw_launch(Canvas &c)
                           physical.h - 2.0f * case_radius};
     const bool printed_side_visible = std::sin(angle) >= 0.0f;
     if (printed_side_visible) {
-        c.list.case_spine(side_strip, angle, case_depth - 6.0f,
-                          Color::rgb(0xa90e20), Color::rgb(0x6d1020), 3.0f);
         const Cover ink = c.textures.cover(launch_box_spine_, 760.0f);
         if (ink.texture != 0) {
+            c.list.case_spine(side_strip, angle, case_depth - 6.0f,
+                              Color::rgb(0xa90e20), Color::rgb(0x6d1020), 3.0f);
             c.list.case_spine_image(ink.texture, side_strip, angle,
                                     case_depth, kWhite);
         } else {
-            // Clean empty red sleeve, no invented or enlarged typography.
-            // The subdued transparent edge rails render below this section.
+            // Source-independent empty spine: vector white reference-style
+            // marks and red ink, never any low-res or invented game title.
+            c.list.case_spine_blank(side_strip, angle, case_depth,
+                                    Color::rgb(0xd91b2e, 0.96f));
         }
     } else {
         c.list.case_spine(side_strip, angle, case_depth,
