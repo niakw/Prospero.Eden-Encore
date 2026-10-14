@@ -55,3 +55,38 @@ Totals: 22/22 manifest entries **inventoried**; 15 entries compared to active Gi
 5. Keep branches limited to `dev/ps5-sparse-jit`. During an active native run, defer unrelated workflow-label commits so GitHub's cancel-in-progress concurrency does not invalidate the candidate build.
 
 Reference material: `docs/UPSTREAM_VENDOR_AUDIT_2026-10-12.md`, `docs/EXTERNAL_PS5_EMULATOR_ECOSYSTEM_AUDIT_R438.md`, source pinning in `tools/deps.json`, and the publicly linked upstream commits identified in those audits.
+
+<!-- BEGIN AUTO-UPSTREAM-COMPARISON -->
+### Automated comparison (daily + manual)
+
+Checked in UTC: **2026-10-14 01:57 UTC**. Changes are commits relative to pins, not proven missing fixes.
+This workflow never imports source patches, modifies dependencies, or reads console data.
+
+| Dependency | Source | Pinned revision | Ahead / behind | Status |
+|---|---|---|---:|---|
+| eden | [eden-emulator/mirror](https://github.com/eden-emulator/mirror) | 5f142c7926d0 | +84 / -0 | upstream ahead |
+| ffmpeg | [FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg) | c7b5f1537d9c | +4579 / -0 | upstream ahead |
+| fmt | [fmtlib/fmt](https://github.com/fmtlib/fmt) | 12.1.0 | +354 / -0 | upstream ahead |
+| zbic | [kinnay/zbic](https://github.com/kinnay/zbic) | 11b08f271226 | +0 / -0 | identical |
+| compiler-rt | [frozen archive / binary](https://github.com/frozen archive / binary) | — | — | not comparable |
+| pacbrew | [frozen archive / binary](https://github.com/frozen archive / binary) | — | — | not comparable |
+| opengl-source | [blackbearreloaded/ps5-opengl](https://github.com/blackbearreloaded/ps5-opengl) | ad2807d41cef | +18 / -0 | upstream ahead |
+| harfbuzz | [frozen archive / binary](https://github.com/frozen archive / binary) | — | — | not comparable |
+| boilerplate | [blackbearreloaded/ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) | dd44bbdc7543 | +43 / -0 | upstream ahead |
+| ps5-vulkan-tools | [mihawk-99/PS5_Vulkan](https://github.com/mihawk-99/PS5_Vulkan) | 3f3ee6960701 | +18 / -0 | upstream ahead |
+| ps5-mesa | [mihawk-99/PS5_Mesa](https://github.com/mihawk-99/PS5_Mesa) | 0b2d6d1a61d9 | +110 / -103 | diverged |
+| ps5-payload-sdk-fork | [mihawk-99/PS5_PayloadSDK](https://github.com/mihawk-99/PS5_PayloadSDK) | 95c08f27386f | +100 / -48 | diverged |
+| encore-overrides | [niakw/encore-overrides](https://github.com/niakw/encore-overrides) | 4fdb329e732a | +0 / -0 | identical |
+| opengl-opengnm-psbc | [PS4-OpenGNM/opengnm-psbc](https://github.com/PS4-OpenGNM/opengnm-psbc) | a92a1228ea3a | +0 / -0 | identical |
+| opengl-opengnm | [PS4-OpenGNM/opengnm](https://github.com/PS4-OpenGNM/opengnm) | 4b295ca54c82 | +0 / -0 | identical |
+| opengl-spirv-headers | [KhronosGroup/SPIRV-Headers](https://github.com/KhronosGroup/SPIRV-Headers) | 0d25db97cb9b | +8 / -0 | upstream ahead |
+| opengl-vulkan-headers | [KhronosGroup/Vulkan-Headers](https://github.com/KhronosGroup/Vulkan-Headers) | b51f6b865c18 | +6 / -0 | upstream ahead |
+| opengl-imgui | [ocornut/imgui](https://github.com/ocornut/imgui) | f5befd2d29e6 | +1498 / -0 | upstream ahead |
+| opengl-nanovg | [memononen/nanovg](https://github.com/memononen/nanovg) | ce3bf745eb2d | +0 / -0 | identical |
+| opengl-sokol | [floooh/sokol](https://github.com/floooh/sokol) | 48c85905aeaa | +219 / -0 | upstream ahead |
+| opengl-native-boilerplate | [blackbearreloaded/ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) | 4f531c4b517f | +52 / -0 | upstream ahead |
+| opengl-mesa-26-2 | [frozen archive / binary](https://github.com/frozen archive / binary) | — | — | not comparable |
+
+Unavailable comparisons are not equivalent to zero changes.
+The API can truncate changed-file lists beyond 300 files.
+<!-- END AUTO-UPSTREAM-COMPARISON -->
