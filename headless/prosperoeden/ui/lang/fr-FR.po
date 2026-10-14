@@ -1595,3 +1595,67 @@ msgstr "Quitter Eden Encore"
 #: pe/ui/launcher.cpp
 msgid "Exit Eden Encore?"
 msgstr "Quitter Eden Encore ?"
+
+#: pe/ui/library.cpp
+msgid "View back cover"
+msgstr "Voir le dos de la jaquette"
+
+#: pe/ui/library.cpp
+msgid "Enlarge cover"
+msgstr "Agrandir la jaquette"
+
+#: pe/ui/library.cpp
+msgid "Down: view back cover"
+msgstr "Bas : voir le dos de la jaquette"
+
+#: pe/ui/library.cpp
+msgid "GB"
+msgstr "Go"
+
+#: pe/ui/library.cpp
+msgid "Strategy"
+msgstr "Stratégie"
+
+#: pe/ui/library.cpp
+msgid "Role-Playing"
+msgstr "Jeu de rôle"
+
+#: pe/ui/library.cpp
+msgid "Adventure"
+msgstr "Aventure"
+
+#: pe/ui/library.cpp
+msgid "Action"
+msgstr "Action"
+
+#: pe/ui/library.cpp
+msgid "Simulation"
+msgstr "Simulation"
+
+#: pe/ui/library.cpp
+msgid "Sports"
+msgstr "Sport"
+
+#: pe/ui/library.cpp
+msgid "Racing"
+msgstr "Course"
+
+#: pe/ui/library.cpp
+msgid "Puzzle"
+msgstr "Réflexion"
+
+#: pe/ui/library.cpp
+msgid "Platformer"
+msgstr "Plateforme"
+
+#: pe/ui/library.cpp
+msgid "Fighting"
+msgstr "Combat"
+
+#: pe/ui/library.cpp
+msgid "Shooter"
+msgstr "Tir"
+
+#: pe/ui/library.cpp
+msgid "Back to games"
+msgstr "Retour aux jeux"
