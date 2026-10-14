@@ -99,7 +99,7 @@ assert "c.list.case_plastic(physical" not in draw
 assert "for (int hinge" not in draw
 assert "const float return_start = back_start + theme::kCaseBackHold;" in draw
 assert "constexpr float kFrontYaw = 0.52f;" in draw
-assert "constexpr float kBackYaw = 3.14159265358979323846f + 0.60f;" in draw
+assert "constexpr float kBackYaw = 3.14159265358979323846f + 0.18f;" in draw
 assert "case_depth, 3.2f" not in draw
 assert "const bool printed_side_visible = std::sin(angle) >= 0.0f;" in draw
 assert "Color::rgb(0xb61626, 0.78f)" not in draw
