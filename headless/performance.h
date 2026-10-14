@@ -135,6 +135,9 @@ inline std::atomic<unsigned long long> cache_lock_wait_ns{0};
 // cache or the texture cache. Only count when detailed diagnostics are active.
 struct GuestCacheDomainTotals {
     std::atomic<unsigned long long> contended{}, blocked{}, wait_ns{};
+    // Exact completed waits above 1/10 ms, plus largest wait since snapshot.
+    // Never touched in quiet gameplay; high-threshold diagnostics only.
+    std::atomic<unsigned long long> waited_ge1ms{}, waited_ge10ms{}, max_wait_ns{};
 };
 inline std::array<GuestCacheDomainTotals, 2> guest_cache_domain_totals{}; // buffer, texture
 template <typename Mutex>
@@ -165,6 +168,16 @@ inline void GuestCacheLock(Mutex& mutex, bool texture_domain = false) {
                                      std::memory_order_relaxed);
         domain.wait_ns.fetch_add(static_cast<unsigned long long>(waited),
                                  std::memory_order_relaxed);
+        if (waited >= 1'000'000) {
+            domain.waited_ge1ms.fetch_add(1, std::memory_order_relaxed);
+            if (waited >= 10'000'000)
+                domain.waited_ge10ms.fetch_add(1, std::memory_order_relaxed);
+            const auto elapsed = static_cast<unsigned long long>(waited);
+            auto old_max = domain.max_wait_ns.load(std::memory_order_relaxed);
+            while (old_max < elapsed &&
+                   !domain.max_wait_ns.compare_exchange_weak(
+                       old_max, elapsed, std::memory_order_relaxed)) {}
+        }
     }
 }
 // R310: sampled GPU-owner cache phases.  A successful FPS average does not
