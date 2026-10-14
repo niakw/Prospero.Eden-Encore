@@ -14,25 +14,24 @@ import urllib.request
 
 from PIL import Image
 
-# GameFAQs original EU box scan first; LaunchBox serves a smaller public
-# thumbnail on some CDN routes and is an explicitly lower-resolution fallback.
+# Host-only retail fixture: regional authenticity is a requirement, NOT
+# interchangeable with pixel count. Never promote North American artwork
+# just because it has more pixels. The first front URL was supplied by the
+# user as an original European Box - Front scan; the second is the current
+# verified European Box - Front entry on the game's LaunchBox detail page.
 # None of these files are committed, bundled or used by the native executable.
 MEDIA = {
     "botw-front.tga": (
-        # Original 1447x2343 press-cover asset; do not use a thumbnail when
-        # this source is reachable. The cover remains a host-only test fixture.
-        "https://cdn.wikimg.net/en/zeldawiki/images/c/c7/BotW_NA_Switch_Box_Art.png",
-        "https://gamefaqs.gamespot.com/a/box/6/6/4/599664_front.jpg",
+        "https://images.launchbox-app.com/9524e5f7-ccc8-4ce6-a581-03f82c51825e.jpg",
         "https://images.launchbox-app.com/a8bcb4cc-a3b0-4cf0-82f3-cb10dd18b27c.jpg",
     ),
     "botw-spine.tga": (
+        # European printed spine from the same Box - Spine collection.
         "https://images.launchbox-app.com/61b12a95-c917-42ff-9c25-b265732204fe.jpg",
     ),
     "botw-back.tga": (
-        # User-identified alternate actual Box - Back scan. Compare decoded
-        # ORIGINAL pixels, not the LaunchBox page's advertised dimensions.
+        # French Box - Back scans only. Never replace with an NA high-res box.
         "https://images.launchbox-app.com/4b815db4-d2d1-4587-89c7-f82524750914.jpg",
-        "https://gamefaqs.gamespot.com/a/box/6/6/4/599664_back.jpg",
         "https://images.launchbox-app.com/b5f2899a-717f-4544-b63f-ee5d13e24483.jpg",
     ),
     "botw-hero.tga": (
@@ -66,9 +65,8 @@ def download(destination: Path) -> None:
                     if source_image.width * source_image.height > 12_000_000:
                         raise ValueError("pixel budget exceeded")
                     image = source_image.convert("RGB")
-                # Never accept the first file just because it responds.
-                # Comparing native pixel counts prevents low-res previews
-                # from superseding clearer scans of the same physical side.
+                # Only candidates from the required region are comparable.
+                # Compare resolution inside that region; no NA override.
                 score = image.width * image.height
                 if selected is None or score > selected[3]:
                     selected = (url, body, image, score)
