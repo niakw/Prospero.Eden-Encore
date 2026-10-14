@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""R390 PS5 HOME/Capture mapping: static production checks + host C++ sanitizer.
+"""R390 guest HOME/Capture mapping: static production checks + host C++ sanitizer.
 
 No PS5 build: only tests the pure state machine and static source wiring.
 """
@@ -94,4 +94,4 @@ with tempfile.TemporaryDirectory(prefix="eden-r390-system-buttons-") as td:
                     "-fsanitize=address,undefined","-I",str(root/"headless"),
                     str(source_file),"-o",str(target)],check=True,env=env,timeout=45)
     subprocess.run([str(target)],check=True,env=env,timeout=15)
-print("PASS R390: HOME chord suppression, Create→Capture source, Sony PS untouched, Switch AM actions blocked")
+print("PASS R390: system-button chord isolation, Capture routing, host system key preserved, guest system actions suppressed")
