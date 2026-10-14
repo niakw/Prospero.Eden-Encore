@@ -15,6 +15,14 @@ mapping=read('headless/prosperoeden/pe/ui/mapping.cpp')
 services=read('headless/prosperoeden/eden_services.cpp')
 presets=read('headless/prosperoeden/pe/ui/video_presets.hpp')
 store=read('headless/settings_store.h')
+# FPS readout is opt-in on a fresh install; diagnostics continue running
+# independently. Respect an already-saved choice rather than clearing prefs.
+ui_preferences=read('headless/prosperoeden/pe/ui/services.hpp')
+for source in (store, ui_preferences):
+    assert re.search(r'^\s*bool hud = false;', source, re.MULTILINE)
+assert 'result.hud = Settings::Bool(document, Json::json_pointer("/video/fps_overlay"), result.hud);' in store
+assert 'document["video"]["fps_overlay"] = value.hud;' in store
+assert '{tr("FPS OVERLAY"), on_off(prefs_.hud)}' in settings
 devices=read('headless/devices.h')
 pad=read('headless/pad.cpp')
 main=read('headless/main.cpp')
