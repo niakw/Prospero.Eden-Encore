@@ -199,6 +199,7 @@ jobs:
           python3 -B tools/check-bounded-logs.py
           python3 -B tools/check-nlib-media-safety.py
           python3 -B tools/check-ci-cache.py
+          python3 -B tools/check-package-flexible-memory.py
 
       - name: Verify native memory arena ownership (host sanitizers only)
         run: |
