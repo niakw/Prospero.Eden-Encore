@@ -745,20 +745,26 @@ void Launcher::draw_launch(Canvas &c)
     const float turn_start = theme::kCaseFrontHold;
     const float back_start = turn_start + theme::kCaseTurnSeconds;
     const float return_start = back_start + theme::kCaseBackHold;
-    float revolution = 0.0f;
-    if (seconds < turn_start) {
-        revolution = 0.0f;
-    } else if (seconds < back_start) {
-        revolution = 0.5f * tween::cubic_in_out(
-            (seconds - turn_start) / theme::kCaseTurnSeconds);
-    } else if (seconds < return_start) {
-        revolution = 0.5f;
-    } else {
-        revolution = 0.5f + 0.5f * tween::cubic_in_out(
-            (seconds - return_start) / theme::kCaseTurnSeconds);
+    // Front: more of the red printed hinge on the LEFT. Back: more
+    // of the clear opening on the LEFT and only a tiny red seam at the RIGHT.
+    // They are two poses of the SAME rigid case, never per-title overrides.
+    constexpr float kFrontYaw = 0.40f;
+    constexpr float kBackYaw = 3.14159265358979323846f + 0.57f;
+    constexpr float kFullTurn = 6.28318530717958647692f;
+    float angle = kFrontYaw;
+    if (motion() > 0.0f) {
+        if (seconds < turn_start) {
+            angle = kFrontYaw;
+        } else if (seconds < back_start) {
+            angle = kFrontYaw + (kBackYaw - kFrontYaw) *
+                tween::cubic_in_out((seconds - turn_start) / theme::kCaseTurnSeconds);
+        } else if (seconds < return_start) {
+            angle = kBackYaw;
+        } else {
+            angle = kBackYaw + (kFullTurn + kFrontYaw - kBackYaw) *
+                tween::cubic_in_out((seconds - return_start) / theme::kCaseTurnSeconds);
+        }
     }
-    const float angle = motion() > 0.0f ?
-        0.23f + 6.2831853071795864769f * revolution : 0.23f;
     const float facing = std::cos(angle);
     const bool back = facing < 0.0f;
     constexpr float case_depth = 36.0f;
@@ -855,6 +861,14 @@ void Launcher::draw_launch(Canvas &c)
                                Color::rgb(0xb0b6c4, 0.35f));
         }
     }
+    if (back && std::sin(angle) < -0.01f) {
+        // The red printed hinge is on the opposite (right on screen) side
+        // when viewing the rear. Only its narrow exposed seam is visible;
+        // the substantial clear opening stays on the left.
+        c.list.case_spine(side_strip, angle, 3.2f,
+                          Color::rgb(0xb61626, 0.78f),
+                          Color::rgb(0x801325, 0.63f), 1.0f, -1);
+    }
     // Transparent surface seams follow the full depth of the same edge.
     c.list.case_spine(side_strip, angle, 2.5f,
                       Color::rgb(0xd5e3ee, 0.37f),
@@ -875,19 +889,21 @@ void Launcher::draw_launch(Canvas &c)
                                Color::rgb(0x677588, 0.37f));
     }
 
+    // The brand/title column begins well after the 3D case's cast shadow.
+    constexpr float brand_x = 1382.0f;
     if (c.textures.brand() != 0)
-        c.list.image(c.textures.brand(), {1140.0f, 147.0f, 310.0f, 310.0f},
+        c.list.image(c.textures.brand(), {brand_x - 151.0f, 147.0f, 302.0f, 302.0f},
                      {0.0f, 0.0f, 1.0f, 1.0f}, kWhite);
-    text_shrink(c, launch_title_, 1286.0f, 535.0f, 48.0f,
-                theme::kTitle, 885.0f, Align::center, 0.0f, 0.54f);
-    c.list.rounded_rect({1132.0f, 574.0f, 308.0f, 2.0f}, 1.0f,
+    text_shrink(c, launch_title_, brand_x, 535.0f, 45.0f,
+                theme::kTitle, 650.0f, Align::center, 0.0f, 0.57f);
+    c.list.rounded_rect({brand_x - 155.0f, 574.0f, 310.0f, 2.0f}, 1.0f,
                         theme::kLimePale.with_alpha(0.66f));
-    text(c, tr("STARTING"), 1286.0f, 659.0f, theme::kText24,
+    text(c, tr("STARTING"), brand_x, 659.0f, theme::kText24,
          theme::kText, Align::center);
     for (int i = 0; i < 3; ++i) {
         const float pulse = 0.32f + 0.68f *
             (0.5f + 0.5f * std::sin(c.time * 5.5f - i * 1.15f));
-        c.list.circle(1260.0f + 26.0f * i, 716.0f, 4.0f,
+        c.list.circle(brand_x - 26.0f + 26.0f * i, 716.0f, 4.0f,
                       theme::kBlue.with_alpha(pulse));
     }
     c.list.pop_opacity();
