@@ -13,11 +13,37 @@ loading screen, does not intercept game input, and reports no fictitious percent
    gameplay screenshots, title, and localized description. This is not labelled
    as an official scan. If no screenshot exists, the cached icon is used.
 
-The native launcher does not ship external artwork, download scans, embed API
-keys, or make new HTTPS requests during launch. Nlib remains the source of
-existing **icon/banner/screenshots/description**, not official back scans.
-API providers with credentials or special redistribution conditions are not
-required, enabled, or silently scraped.
+## Automatic scans: public LaunchBox catalog
+
+The build workflow obtains the public `Metadata.zip` from LaunchBox on its
+**build host**. `tools/launcher/build-box-art-index.py` streams its XML and
+generates only a compact **Switch** index (`ui/box-art-index.tsv`) containing
+normalized game names and validated remote image basenames. The full database
+is **never bundled with the app or downloaded on the console**.
+
+When Home/Library performs its existing asynchronous Nlib media enrichment,
+the same background worker also looks up the title in this index and downloads
+available `Box - Front` / `Box - Back` JPEG/PNG files through the public
+LaunchBox image CDN. The files are converted to the native cached TGA format,
+stored under the game's title ID and reused offline. Each face is independent.
+An existing manually supplied face always takes precedence. Missing images
+retry after a bounded backoff; the launcher never waits for remote artwork.
+
+Matching is **exact**, using an ASCII-normalized title and a ROM-name
+fallback. Ambiguous catalog names are rejected; regions prefer France, Europe,
+World, then other releases. No fuzzy match is used that could silently attach
+an unrelated edition's artwork.
+
+No API key or account is required. The source does not contain or redistribute
+commercial scans; it only references images made available by the third-party
+service. Their ownership and usage terms remain those of the rights holders.
+The index builder intentionally ignores modern WebP-only entries until a
+tested native decoder is available; those faces use the local composition.
+
+If the optional external catalog is unreachable during compilation, the build
+falls back to local images and Nlib without blocking the emulator build.
+Nlib remains the source of existing **icons, banners, gameplay screenshots
+and descriptions**, not physical back scans.
 
 ## Supplying original case scans
 
@@ -54,13 +80,13 @@ third-party artwork.
   of this change; it requires separate runtime coordination to avoid hiding
   crash or guest-progress diagnostics.
 
-## Future source integration
+## Known limits
 
-A source for real back scans can be added as a separate cache-fill worker only
-after its access and usage conditions are met **without mandatory contact or
-permission requests**. Front and back must be identified independently and
-tied to the correct region/edition and title ID; never treat screenshots,
-promotional banners, or unrelated box art as a genuine back scan.
+- The published catalog and CDN are third-party services and may change.
+- WebP-only artwork and ambiguous regional/edition matches are not fetched.
+- This is a **launch transition**, not an overlay during the emulator's game
+  loading process.
+- Successful code and CI checks do not guarantee CDN access on every console.
 
 ## Validation
 
