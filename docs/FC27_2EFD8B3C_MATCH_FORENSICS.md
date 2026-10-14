@@ -117,3 +117,27 @@ before console evaluation. Do not alter user save data, network blocking or
 controller mappings to evaluate it. Host tests cannot establish that a title
 freeze is solved; a meaningful qualification must compare **actual game
 progress and frame latency**, not compositor 30 FPS alone.
+
+## Title-owned match action presets: cross-platform evidence (14 October 2026)
+
+The old title log reports layout=0 and own_mapping=0, with stable physical
+button mapping and HID samples continuing. These fields do **not** prove
+which custom action preset was loaded by the guest at kickoff. The current
+SaveDataFactory::Open/GetFullPath path-selection algorithm is identical
+in the pinned guest source and the latest reference source inspected.
+
+External players report a distinct game-level problem: customized controls
+can be saved in the settings screen but not selected on the pre-match
+Select Sides screen; another report suggests selecting and saving the
+active in-game profile, restarting, and explicitly saving the game profile.
+These reports are platform-specific anecdotal evidence, **not** a verified
+root cause on this guest version. Sources:
+- https://www.reddit.com/r/EASportsFC/comments/1uahomt/
+- https://www.reddit.com/r/EASportsFC/comments/1wjhng8/
+- https://www.ea.com/able/resources/ea-sports-fc/fc-27
+
+Next qualification: compare the active controller preset at pre-match side
+selection with the title's in-match controls. Preserve the user's saves;
+do not synthesize gameplay actions from the launcher or confuse glyph
+appearance with the title's own controller action scheme. No gameplay
+mapping correction is claimed yet.
