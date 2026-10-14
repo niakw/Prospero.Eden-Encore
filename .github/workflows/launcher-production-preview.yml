@@ -109,8 +109,14 @@ jobs:
               assert max(delta) > 10, ("front/back image did not turn", delta)
               for image, filepath in ((front_rgb, screenshots[0]), (back_rgb, screenshots[1])):
                   variation = sum(ImageStat.Stat(image.resize((64, 36))).stddev)
+                  # A correct backdrop/logo with an entirely blank case face
+                  # previously passed. Measure *inside* the printed scan.
+                  face_detail = sum(ImageStat.Stat(
+                      image.crop((480, 270, 565, 620))).stddev)
+                  assert face_detail > 18, ("case texture not loaded", filepath, face_detail)
                   assert variation > 12 and filepath.stat().st_size > 20000
-                  print(filepath.name, "actual OpenGL", filepath.stat().st_size, variation)
+                  print(filepath.name, "actual OpenGL", filepath.stat().st_size,
+                        variation, "face detail", face_detail)
           print("LAUNCH_CASE_CPP_OPENGL_RENDER: PASS")
           PY
 
