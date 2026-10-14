@@ -43,7 +43,7 @@ void main()
     vec2 size = a_rect.zw;
     // Grow shapes by their softness plus one output pixel for anti-aliasing;
     // glyph and image quads map texels exactly and are not grown.
-    float pad = (shape == 1 || shape == 3 || shape == 9 || shape == 10 || shape == 11) ?
+    float pad = (shape == 1 || shape == 3 || shape == 9 || shape == 10 || shape == 11 || shape == 12) ?
         0.0 : a_params.z + 1.0 / u_viewport.x;
     vec2 local = mix(vec2(-pad), size + vec2(pad), corner);
     vec2 virt = a_rect.xy + local;
@@ -59,7 +59,7 @@ void main()
     v_params = a_params;
     v_extra = a_extra;
     float clip_w = 1.0;
-    if (shape == 9 || shape == 10 || shape == 11) {
+    if (shape == 9 || shape == 10 || shape == 11 || shape == 12) {
         // A real projective quad, not a horizontally squashed 2D image.
         // Shared retail-case geometry across all titles and console/host.
         const float a = a_params.x;
@@ -73,20 +73,30 @@ void main()
             vec2 oriented = vec2(a_params.y > 0.5 ? 1.0 - corner.x : corner.x,
                                  corner.y);
             v_uv = mix(a_extra.xy, a_extra.zw, oriented);
-        } else {
-            // Exposed left/right plastic side joins front face to rear face.
-            // Front and rear lie on actual parallel planes, 25 virtual px apart.
+        } else if (shape == 10) {
+            // The side lies between two parallel printed planes. It occupies
+            // real space in Z rather than being a 2D strip in screen-space.
             float edge_x = (sn > 0.0 ? -0.5 : 0.5) * size.x;
             float depth = a_params.z + corner.x * a_params.y;
             x = edge_x * cs - depth * sn;
             z = -edge_x * sn - depth * cs;
+        } else {
+            // Solid transparent upper/lower cap: breadth X, real depth Z.
+            // It joins the very same projected vertices as both face planes.
+            float depth = corner.y * a_params.z;
+            x = local.x * cs - depth * sn;
+            z = -local.x * sn - depth * cs;
         }
         clip_w = max(0.65, 1.0 - z / 950.0);
         // A slight stable 3-axis display tilt makes the cover's upper and
         // lower edges read as an actual physical object. All shell layers
         // share this transform, including the bevel and printed side.
-        virt = centre + vec2(x + local.y * 0.025,
-                             local.y + x * 0.065) / clip_w;
+        float y = (shape == 12) ?
+            (a_params.y > 0.5 ? 0.5 : -0.5) * size.y +
+            corner.y * a_params.z * (a_params.y > 0.5 ? 0.18 : -0.18) :
+            local.y;
+        virt = centre + vec2(x + y * 0.025,
+                             y + x * 0.065) / clip_w;
         v_virtual = virt;
     }
     vec2 surface = virt * u_viewport.x + u_viewport.yz;
@@ -167,11 +177,28 @@ void main()
     }
     else if (shape == 9)
     {
+        // Mask the flat printed scan to a rounded insert. The translucent
+        // rounded plastic surround is drawn separately over this surface.
+        float d = round_box(v_local, v_half, 12.0);
         color = v_params.z > 0.5 ? texture(u_texture, v_uv) * v_top : v_top;
+        color.a *= 1.0 - smoothstep(-1.25, 1.25, d);
     }
     else if (shape == 10)
     {
+        float gloss = 0.12 * (1.0 - smoothstep(0.0, 0.13, v_st.x));
         color = mix(v_top, v_bottom, v_st.x);
+        color.rgb = min(vec3(1.0), color.rgb + vec3(gloss));
+    }
+    else if (shape == 12)
+    {
+        // Rounded top/bottom plastic cap: half-transparent near rim, brighter
+        // distal reflection, subdued middle to retain physical depth.
+        float lip = 0.38 + 0.42 * pow(abs(v_st.y - 0.5) * 2.0, 3.0);
+        float end_mask = smoothstep(0.0, 0.032, v_st.x) *
+                         smoothstep(0.0, 0.032, 1.0 - v_st.x);
+        color = mix(v_top, v_bottom, v_st.y);
+        color.rgb = mix(color.rgb, vec3(1.0), 0.13 * lip);
+        color.a *= lip * end_mask;
     }
     else if (shape == 11)
     {
