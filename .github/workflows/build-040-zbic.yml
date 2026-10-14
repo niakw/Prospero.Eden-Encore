@@ -39,10 +39,12 @@ permissions:
   contents: read
   actions: read
 
-# A skipped build on an ordinary push must not cancel an explicit
-# workflow_dispatch native build. Keep those execution queues independent.
+# A skipped dev push must not cancel a running explicit native build.
+# Distinguish build-capable commits from ordinary UI/docs pushes, while
+# preserving one-at-a-time supersession for deliberate native candidates.
+# workflow_dispatch is already isolated by its event name.
 concurrency:
-  group: encore-native-${{ github.ref }}-${{ github.event_name }}
+  group: encore-native-${{ github.ref }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/dev/ps5-sparse-jit' && github.event_name == 'push' && !contains(github.event.head_commit.message || '', '[full-build]') && !contains(github.event.head_commit.message || '', '[resume-stage:37728435816]')) && 'skip-only' || 'build-capable' }}
   cancel-in-progress: true
 
 jobs:
