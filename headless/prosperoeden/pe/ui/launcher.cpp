@@ -676,44 +676,87 @@ void Launcher::draw_confirmation(Canvas &c)
 void Launcher::draw_launch(Canvas &c)
 {
     const float t = tween::clamp01(launch_.progress());
-    const float black = tween::cubic_in_out((t - 0.84f) / 0.16f);
-    c.list.rounded_rect(kScreen, 0.0f,
-                        theme::kScrim.with_alpha(std::max(0.91f, black)));
+    const float fade = tween::cubic_in_out((t - 0.87f) / 0.13f);
+    const float appear = tween::cubic_out(t / 0.12f);
+    const float leave = 1.0f - tween::cubic_in_out((t - 0.80f) / 0.20f);
 
-    // The official packaged palm/wordmark retains its exact colors and type.
-    // No substitute "EDEN" text or platform branding on the overlay.
-    const float appear = tween::cubic_out(t / 0.15f);
-    const float leave = 1.0f - tween::cubic_in_out((t - 0.82f) / 0.18f);
+    // Use exactly the full-bleed Hero asset already shown for this title on
+    // Home (Nlib banner, then screenshot). No menu cards, duplicate text or
+    // navigation beneath this overlay. The Eden wallpaper stays as fallback.
+    if (!launch_hero_.empty()) {
+        const Cover background = c.textures.cover(launch_hero_, 1920.0f);
+        if (background.texture != 0) {
+            constexpr float target = 1920.0f / 1080.0f;
+            const float source = std::max(0.01f, background.aspect);
+            Rect uv{0.0f, 0.0f, 1.0f, 1.0f};
+            if (source > target) {
+                uv.w = target / source;
+                uv.x = (1.0f - uv.w) * 0.5f;
+            } else if (source < target) {
+                uv.h = source / target;
+                uv.y = (1.0f - uv.h) * 0.5f;
+            }
+            c.list.image(background.texture, kScreen, uv,
+                         kWhite.with_alpha(tween::cubic_out(background.age / 0.26f)));
+        }
+    }
+    // Preserve the colors of the game's scene while providing a legible right
+    // column. Unlike the former 91% black scrim, the Hero remains recognizable.
+    c.list.rounded_rect(kScreen, 0.0f, theme::kScrim.with_alpha(0.16f));
+    c.list.hgradient_rect(kScreen, 0.0f,
+                          theme::kScrim.with_alpha(0.12f),
+                          theme::kScrim.with_alpha(0.83f));
+    c.list.gradient_rect({0.0f, 490.0f, 1920.0f, 590.0f}, 0.0f,
+                         theme::kBase.with_alpha(0.0f),
+                         theme::kBase.with_alpha(0.65f));
+
     c.list.push_opacity(appear * leave);
-    c.list.shadow({210.0f, 240.0f, 650.0f, 640.0f}, 200.0f, 185.0f,
-                  theme::kLime.with_alpha(0.25f));
-    c.list.shadow({240.0f, 330.0f, 510.0f, 420.0f}, 180.0f, 170.0f,
-                  theme::kBlue.with_alpha(0.16f));
-
-    // 2.5D turn in the existing batched 2D renderer: perspective-like
-    // horizontal foreshortening, bright spine and a true front/back face
-    // switch. Reduced Motion holds the front still.
-    const float angle = motion() > 0.0f ? 0.12f + t * 6.10f : 0.12f;
+    const float angle = motion() > 0.0f ? 0.10f + 6.18f * t : 0.10f;
     const float facing = std::cos(angle);
-    const float width_factor = std::max(0.08f, std::abs(facing));
+    const float width_factor = std::max(0.075f, std::abs(facing));
     const bool back = facing < 0.0f;
-    const float cx = 556.0f + (motion() > 0.0f ? 20.0f * std::sin(angle) : 0.0f);
-    const float case_width = 356.0f * width_factor;
-    const Rect case_rect{cx - case_width * 0.5f, 220.0f,
-                         case_width, 558.0f};
-    c.list.shadow({case_rect.x - 16.0f, case_rect.y - 10.0f,
-                   case_rect.w + 32.0f, case_rect.h + 28.0f}, 24.0f, 60.0f,
-                  theme::kSun.with_alpha(0.38f));
-    c.list.rounded_rect(case_rect, 13.0f, Color::rgb(0x211323));
-    c.list.bordered_rect(case_rect, 13.0f, theme::kPanel,
-                         2.5f, theme::kFocusCore.with_alpha(0.62f));
+    const float cx = 610.0f + (motion() > 0.0f ? 13.0f * std::sin(angle) : 0.0f);
+    const float box_width = 405.0f * width_factor;
+    const Rect box{cx - box_width * 0.5f, 167.0f, box_width, 646.0f};
 
+    // A companion rear scan gives the physical double-sided case some depth
+    // when actual scans exist. It is always the *other* face and never copied
+    // from the front. The turning hero case remains the primary animation.
+    const std::string& companion_scan = back ? launch_box_front_ : launch_box_back_;
+    if (width_factor > 0.54f && !companion_scan.empty()) {
+        const Rect companion{120.0f, 232.0f, 315.0f, 515.0f};
+        const Cover companion_image = c.textures.cover(companion_scan, 640.0f);
+        if (companion_image.texture != 0) {
+            c.list.shadow({companion.x - 6.0f, companion.y + 15.0f,
+                           companion.w + 12.0f, companion.h}, 12.0f, 56.0f,
+                          theme::kSun.with_alpha(0.32f));
+            c.list.rounded_rect({companion.x - 7.0f, companion.y - 7.0f,
+                                 companion.w + 14.0f, companion.h + 14.0f},
+                                12.0f, Color::rgb(0x191022));
+            c.list.rounded_image(companion_image.texture, companion,
+                                 {0.0f, 0.0f, 1.0f, 1.0f}, 6.0f, kWhite.with_alpha(0.83f));
+            c.list.bordered_rect(companion, 6.0f, kWhite.with_alpha(0.0f),
+                                 2.0f, theme::kSun.with_alpha(0.46f));
+        }
+    }
+
+    c.list.shadow({box.x - 22.0f, box.y + 6.0f,
+                   box.w + 44.0f, box.h + 28.0f}, 33.0f, 104.0f,
+                  theme::kSun.with_alpha(0.33f));
+    c.list.shadow({box.x - 15.0f, box.y - 10.0f,
+                   box.w + 30.0f, box.h + 20.0f}, 25.0f, 75.0f,
+                  theme::kBlue.with_alpha(0.23f));
+    c.list.rounded_rect({box.x - 8.0f, box.y - 8.0f,
+                         box.w + 16.0f, box.h + 16.0f}, 11.0f,
+                        Color::rgb(0x210c2c));
+    c.list.bordered_rect({box.x - 8.0f, box.y - 8.0f,
+                          box.w + 16.0f, box.h + 16.0f}, 11.0f,
+                         theme::kGlass, 2.4f,
+                         theme::kFocusCore.with_alpha(0.81f));
+
+    const Rect face{box.x, box.y, std::max(1.0f, box.w), box.h};
     const std::string& scan = back ? launch_box_back_ : launch_box_front_;
-    const Rect face{case_rect.x + 7.0f, case_rect.y + 7.0f,
-                    std::max(1.0f, case_rect.w - 14.0f), case_rect.h - 14.0f};
     if (!scan.empty()) {
-        // Draw all of the printed scan. Its width foreshortens with the case:
-        // object-fit/contain would shrink the *height* at each quarter-turn.
         const Cover artwork = c.textures.cover(scan, 640.0f);
         if (artwork.texture != 0)
             c.list.rounded_image(artwork.texture, face,
@@ -721,73 +764,67 @@ void Launcher::draw_launch(Canvas &c)
         else
             c.list.gradient_rect(face, 5.0f, theme::kGlass, theme::kPanel);
     } else if (!back) {
-        // No retail front: the existing game icon is framed as a stylized
-        // case, rather than misrepresented as a physical box scan.
-        c.list.gradient_rect(face, 7.0f, Color::rgb(0x251738), Color::rgb(0x080b1a));
-        if (face.w > 40.0f) {
-            const Rect art{face.x + 8.0f, face.y + 48.0f, face.w - 16.0f,
-                           360.0f};
+        c.list.gradient_rect(face, 5.0f, Color::rgb(0x251738), Color::rgb(0x080b1a));
+        if (face.w > 55.0f) {
+            const Rect art{face.x + 12.0f, face.y + 58.0f,
+                           face.w - 24.0f, 425.0f};
             cover_crop(c, launch_cover_, art, 5.0f);
             text_shrink(c, launch_title_, face.x + face.w * 0.5f,
-                        face.y + 464.0f, 25.0f, theme::kTitle,
-                        face.w - 22.0f, Align::center);
+                        face.y + 542.0f, 25.0f, theme::kTitle,
+                        face.w - 28.0f, Align::center);
         }
     } else {
-        // No real back: a clearly custom Eden composition from the title's
-        // existing cached gameplay shots and description (works offline).
-        c.list.gradient_rect(face, 7.0f, Color::rgb(0x1d112c), Color::rgb(0x0b1021));
-        if (face.w > 80.0f) {
-            text_shrink(c, launch_title_, face.x + 14.0f, face.y + 43.0f,
-                        23.0f, theme::kTitle, face.w - 28.0f);
+        c.list.gradient_rect(face, 5.0f, Color::rgb(0x1d112c), Color::rgb(0x0b1021));
+        if (face.w > 90.0f) {
+            text_shrink(c, launch_title_, face.x + 19.0f, face.y + 52.0f,
+                        25.0f, theme::kTitle, face.w - 38.0f);
             const std::string& shot = launch_screenshots_.empty() ?
                 launch_cover_ : launch_screenshots_.front();
-            cover_crop(c, shot, {face.x + 12.0f, face.y + 62.0f,
-                                face.w - 24.0f, 215.0f}, 5.0f);
+            cover_crop(c, shot, {face.x + 15.0f, face.y + 80.0f,
+                                face.w - 30.0f, 244.0f}, 5.0f);
             if (launch_screenshots_.size() > 1) {
-                const float gap = 8.0f;
-                const float width = (face.w - 24.0f - gap) * 0.5f;
+                const float width = (face.w - 39.0f) * 0.5f;
                 cover_crop(c, launch_screenshots_[1],
-                           {face.x + 12.0f, face.y + 286.0f, width, 104.0f}, 4.0f);
+                           {face.x + 15.0f, face.y + 334.0f, width, 107.0f}, 4.0f);
                 if (launch_screenshots_.size() > 2)
                     cover_crop(c, launch_screenshots_[2],
-                               {face.x + 12.0f + width + gap, face.y + 286.0f,
-                                width, 104.0f}, 4.0f);
+                               {face.x + 24.0f + width, face.y + 334.0f,
+                                width, 107.0f}, 4.0f);
             }
             if (!launch_description_.empty())
-                text_block_semantic(c, launch_description_, face.x + 16.0f,
-                                    face.y + 423.0f, 20.0f, 29.0f,
-                                    theme::kBody, face.w - 32.0f, 3);
+                text_block_semantic(c, launch_description_, face.x + 18.0f,
+                                    face.y + 489.0f, 20.0f, 29.0f,
+                                    theme::kBody, face.w - 36.0f, 4);
         }
     }
-
-    // A slim plastic case edge is visible near a quarter turn.
+    // Gloss along the case edge; keep real printed art visible.
     if (width_factor < 0.42f) {
-        const float spine = std::min(11.0f, case_rect.w * 0.32f);
-        c.list.hgradient_rect({case_rect.x + (std::sin(angle) > 0.0f ?
-                              0.0f : case_rect.w - spine), case_rect.y + 4.0f,
-                              spine, case_rect.h - 8.0f}, 3.0f,
-                              theme::kSun.with_alpha(0.9f),
-                              theme::kLimeDeep.with_alpha(0.8f));
+        const float spine = std::min(12.0f, box.w * 0.32f);
+        c.list.hgradient_rect({box.x + (std::sin(angle) > 0.0f ?
+                               0.0f : box.w - spine), box.y,
+                               spine, box.h}, 3.0f,
+                              theme::kSun.with_alpha(0.83f),
+                              theme::kLimeDeep.with_alpha(0.81f));
     }
 
     if (c.textures.brand() != 0)
-        c.list.image(c.textures.brand(), {1138.0f, 217.0f, 264.0f, 264.0f},
+        c.list.image(c.textures.brand(), {1140.0f, 147.0f, 310.0f, 310.0f},
                      {0.0f, 0.0f, 1.0f, 1.0f}, kWhite);
-    text_shrink(c, launch_title_, 1270.0f, 564.0f, 43.0f,
-                theme::kTitle, 920.0f, Align::center);
-    c.list.rounded_rect({1090.0f, 623.0f, 360.0f, 2.0f}, 1.0f,
-                        theme::kLime.with_alpha(0.52f));
-    text(c, tr("STARTING"), 1270.0f, 694.0f, theme::kSmall,
-         theme::kLimePale, Align::center, 3.0f);
+    text_shrink(c, launch_title_, 1286.0f, 535.0f, 48.0f,
+                theme::kTitle, 885.0f, Align::center, 0.0f, 0.54f);
+    c.list.rounded_rect({1132.0f, 574.0f, 308.0f, 2.0f}, 1.0f,
+                        theme::kLimePale.with_alpha(0.66f));
+    text(c, tr("STARTING"), 1286.0f, 659.0f, theme::kText24,
+         theme::kText, Align::center);
     for (int i = 0; i < 3; ++i) {
-        const float pulse = 0.35f + 0.65f *
-            (0.5f + 0.5f * std::sin(c.time * 5.0f - i * 1.2f));
-        c.list.circle(1244.0f + i * 26.0f, 745.0f, 4.0f,
+        const float pulse = 0.32f + 0.68f *
+            (0.5f + 0.5f * std::sin(c.time * 5.5f - i * 1.15f));
+        c.list.circle(1260.0f + 26.0f * i, 716.0f, 4.0f,
                       theme::kBlue.with_alpha(pulse));
     }
     c.list.pop_opacity();
-    if (black > 0.0f)
-        c.list.rounded_rect(kScreen, 0.0f, Color{0.0f, 0.0f, 0.0f, black});
+    if (fade > 0.0f)
+        c.list.rounded_rect(kScreen, 0.0f, kBlack.with_alpha(fade));
 }
 
 void Launcher::draw(gfx::DrawList &list)
@@ -795,7 +832,13 @@ void Launcher::draw(gfx::DrawList &list)
     Canvas c{list, fonts_, textures_, backdrop_, time_};
     backdrop_.draw(list, textures_, dim_.value);
 
-    const bool launching = !selected_game_.empty();
+    // During the game handoff only the selected game's cinematic Hero and
+    // rotating box are drawn, not Home/Library controls behind a black scrim.
+    if (!selected_game_.empty()) {
+        draw_launch(c);
+        return;
+    }
+    const bool launching = false;
     const float zoom =
         launching ? 1.0f + 0.045f * tween::cubic_in_out(launch_.progress()) * motion() : 1.0f;
     list.push_transform(zoom, 960.0f, 540.0f, 0.0f, 0.0f);
