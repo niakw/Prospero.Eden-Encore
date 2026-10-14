@@ -225,6 +225,7 @@ FakeServices::FakeServices(const std::string &covers_directory)
     // No game art is checked into git or published in native packages.
     preview_botw_ = std::getenv("PE_PREVIEW_BOTW") != nullptr &&
                     std::string_view(std::getenv("PE_PREVIEW_BOTW")) == "1";
+    enable_sample_case_ = std::getenv("PE_PREVIEW_NO_BOX_SCANS") == nullptr;
     int index = 0;
     for (const Sample &sample : kSamples)
     {
