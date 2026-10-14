@@ -103,6 +103,40 @@ get_target_property(eden_common_sources common SOURCES)
 list(REMOVE_ITEM eden_common_sources logging.cpp)
 list(APPEND eden_common_sources "${PORT_BUILD_DIR}/logging.cpp")
 set_property(TARGET common PROPERTY SOURCES "${eden_common_sources}")
+# Upstream pair #4436 + #4447: kernel guest context and slab guards use
+# blocking std::mutex instead of CPU-spinning locks. The scheduler's lazy
+# libc++ materialization fix is inseparable from that conversion.
+# Curated source overlays leave the immutable upstream archive untouched.
+option(EDEN_BLOCKING_GUEST_CONTEXT_LOCKS
+    "Use the paired upstream guest scheduler lock fixes" ON)
+if(EDEN_BLOCKING_GUEST_CONTEXT_LOCKS)
+    set(EDEN_THREAD_ROOT "${PORT_ROOT}/vendor/encore-active/eden-threading/src")
+    foreach(eden_thread_file IN ITEMS k_thread.h k_slab_heap.h k_scheduler.cpp)
+        if(NOT EXISTS "${EDEN_THREAD_ROOT}/core/hle/kernel/${eden_thread_file}")
+            message(FATAL_ERROR "Missing maintained kernel threading source ${eden_thread_file}")
+        endif()
+    endforeach()
+    # KThread is a public core ABI type. Propagate the override to consumers,
+    # not just compilation units inside core, to avoid inconsistent layout.
+    target_include_directories(core BEFORE PUBLIC "${EDEN_THREAD_ROOT}")
+    foreach(eden_thread_target IN ITEMS
+            video_core audio_core hid_core network input_common
+            frontend_common shader_recompiler dynarmic)
+        if(TARGET ${eden_thread_target})
+            target_include_directories(${eden_thread_target} BEFORE PRIVATE "${EDEN_THREAD_ROOT}")
+        endif()
+    endforeach()
+    get_target_property(eden_kernel_sources core SOURCES)
+    list(FIND eden_kernel_sources "hle/kernel/k_scheduler.cpp" eden_pinned_scheduler_idx)
+    if(eden_pinned_scheduler_idx EQUAL -1)
+        message(FATAL_ERROR "Pinned core scheduler source moved; requalify override")
+    endif()
+    list(REMOVE_ITEM eden_kernel_sources "hle/kernel/k_scheduler.cpp")
+    list(APPEND eden_kernel_sources
+        "${EDEN_THREAD_ROOT}/core/hle/kernel/k_scheduler.cpp")
+    set_property(TARGET core PROPERTY SOURCES "${eden_kernel_sources}")
+endif()
+
 # The full JIT assertion header is versioned under vendor/encore-active.
 # It is byte-equivalent to the previous pinned header + guarded override;
 # only the Dynarmic target sees these exceptional-path assertion semantics.

@@ -317,6 +317,7 @@ jobs:
           python3 -B tools/check-dummy-thread-waits.py
           python3 -B tools/check-dynarmic-icache.py
           python3 -B tools/check-ps5-backport-policy.py
+          python3 -B tools/check-upstream-guest-scheduler-locks.py
           python3 -B tools/check-game-liveness.py
           python3 -B tools/check-ps5-guest-fault-recovery.py
           python3 -B tools/check-fc27-trace.py
