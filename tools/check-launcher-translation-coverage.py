@@ -37,7 +37,7 @@ assert core_ui <= marked, "essential UI source markers disappeared"
 total_missing = 0
 for catalog in catalogs:
     translations = read_po(catalog)
-    stale = set(translations) - marked
+    stale = set(translations) - marked - module["DYNAMIC_LIBRARY_GENRES"]
     missing = {key for key in marked if not translations.get(key)}
     missing_resolutions = [label for label in resolution_labels if not translations.get(label)]
     assert not missing_resolutions, f"{catalog.name}: untranslated display scale options {missing_resolutions}"
