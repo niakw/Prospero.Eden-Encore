@@ -29,6 +29,9 @@ MEDIA = {
         "https://images.launchbox-app.com/61b12a95-c917-42ff-9c25-b265732204fe.jpg",
     ),
     "botw-back.tga": (
+        # User-identified alternate actual Box - Back scan. Compare decoded
+        # ORIGINAL pixels, not the LaunchBox page's advertised dimensions.
+        "https://images.launchbox-app.com/4b815db4-d2d1-4587-89c7-f82524750914.jpg",
         "https://gamefaqs.gamespot.com/a/box/6/6/4/599664_back.jpg",
         "https://images.launchbox-app.com/b5f2899a-717f-4544-b63f-ee5d13e24483.jpg",
     ),
@@ -63,25 +66,25 @@ def download(destination: Path) -> None:
                     if source_image.width * source_image.height > 12_000_000:
                         raise ValueError("pixel budget exceeded")
                     image = source_image.convert("RGB")
-                selected = (url, body, image)
-                break
+                # Never accept the first file just because it responds.
+                # Comparing native pixel counts prevents low-res previews
+                # from superseding clearer scans of the same physical side.
+                score = image.width * image.height
+                if selected is None or score > selected[3]:
+                    selected = (url, body, image, score)
             except Exception as error:
                 errors.append(f"{url}: {error}")
         if selected is None:
             raise RuntimeError(f"No usable source for {filename}: " + "; ".join(errors))
-        url, body, image = selected
+        url, body, image, score = selected
         original = image.size
-        # If only a low-resolution thumbnail exists, let PIL scale it for
-        # consistent texture testing. Never call it a high-resolution scan.
-        target_width = 720 if filename != "botw-hero.tga" else 1920
-        if image.width < target_width:
-            target_height = round(image.height * target_width / image.width)
-            image = image.resize((target_width, target_height), Image.Resampling.LANCZOS)
         image.thumbnail((1920, 1920), Image.Resampling.LANCZOS)
+        # This is deliberately not upscaled: a 18px-wide "Box - Spine"
+        # thumbnail cannot become legible ink by enlarging the pixels.
         image.save(destination / filename, format="TGA")
         receipts.append(
-            f"{filename}\t{url}\tsha256:{hashlib.sha256(body).hexdigest()}\t"
-            f"source={original[0]}x{original[1]}\n")
+            f"{filename}\\t{url}\\tsha256:{hashlib.sha256(body).hexdigest()}\\t"
+            f"source={original[0]}x{original[1]}\\n")
         print(f"{filename} from {url} native size={original[0]}x{original[1]}")
     (destination / "source-receipts.txt").write_text("".join(receipts))
     print("HOST_RETAIL_SCANS: fetched 2 physical faces and 1 game background")
