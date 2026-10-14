@@ -1567,6 +1567,11 @@ string(REPLACE "(fixed, inl_in," "(fixed, std::span<InlInVarArg>{inl_in.data(), 
 write_derived("${PORT_BUILD_DIR}/include/${ioctl_header}" "${ioctl_source}")
 target_include_directories(core BEFORE PRIVATE "${PORT_BUILD_DIR}/include")
 
+# Cached build trees may still hold the old generated slab header even after
+# its CMake rewrite was removed. A stale include would hide the maintained
+# mutex and object destructor. Purge only the derived build-tree copy.
+file(REMOVE "${PORT_BUILD_DIR}/include/core/hle/kernel/k_slab_heap.h")
+
 # PostDestroy can release an owner process and enter the scheduler using the
 # current dummy thread's mutex. Keep that thread alive through this cleanup.
 set(slab_helpers "core/hle/kernel/slab_helpers.h")

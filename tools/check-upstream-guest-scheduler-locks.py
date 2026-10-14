@@ -69,6 +69,7 @@ native = (root / ".github/workflows/build-040-zbic.yml").read_text()
 assert "option(EDEN_BLOCKING_GUEST_CONTEXT_LOCKS" in cmake
 assert "if(EDEN_BLOCKING_GUEST_CONTEXT_LOCKS)" in cmake
 assert "eden_pinned_scheduler_idx EQUAL -1" in cmake
+assert 'file(REMOVE "${PORT_BUILD_DIR}/include/core/hle/kernel/k_slab_heap.h")' in cmake
 assert 'target_include_directories(core BEFORE PUBLIC "${EDEN_THREAD_ROOT}")' in cmake
 assert 'list(REMOVE_ITEM eden_kernel_sources "hle/kernel/k_scheduler.cpp")' in cmake
 assert 'set_property(TARGET core PROPERTY SOURCES "${eden_kernel_sources}")' in cmake
