@@ -154,7 +154,10 @@ assert 'kTitleSize, theme::kTitle, kHeroContentWidth, Align::left, 0.0f, 0.45f)'
 assert 'text_block_semantic(c, hero_caption, kHeroX' in home
 assert 'theme::kBody, kHeroContentWidth, 2, 0.90f)' in home
 assert 'label_area.x + label_area.w * 0.5f' in home
-assert 'text_shrink(c, game->name, 558.0f, baseline(574.0f, 52.0f, 40.0f)' in library
+# Rear jacket now occupies x=99..280; its title begins at x=337,
+# clear of the printed scan and its focus highlight.
+assert 'const Rect art{99.0f, 572.0f, 181.0f, 288.0f};' in library
+assert 'text_shrink(c, game->name, 337.0f, baseline(574.0f, 52.0f, 40.0f)' in library
 assert 'text_block(c, game->name, 558.0f' not in library
 assert 'kNlibCacheSchema = 3' in services
 assert 'current_metadata_cache' in services
