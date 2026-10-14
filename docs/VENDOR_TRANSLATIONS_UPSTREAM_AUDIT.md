@@ -49,3 +49,15 @@ The open report describes an app freeze **after returning from console rest mode
 4. The original stable-30-FPS gameplay lag, title action mapping and sustained GPU freeze remain separate **open runtime defects**; successful host tests do not prove their resolution on hardware.
 
 Validation request: re-run source preflight, warning-free maintained French checks, vendored fork exact-equivalence gate and one native All-On compile from the same head; no release/publish requested. The non-French translation coverage work and remaining derived-source migration are explicitly still open.
+
+
+## Kernel header consistency follow-up (14 October 2026)
+
+The paired native scheduler lock overlay now owns the slab header AND the
+existing object-destruction guard in one maintained source. The old CMake
+generated slab-header clone has been removed, preventing inconsistent header
+layouts between core and the libraries that consume its public ABI. The JIT
+CPU diagnostic is corrected to use the actual ArmDynarmic class member
+m_system, rather than nonexistent m_parent, based on the failed native build
+run 38495903010. This is source qualification until a new native build passes.
+The remaining CMake rewrite count is still **not zero**.

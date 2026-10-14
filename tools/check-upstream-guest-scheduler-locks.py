@@ -22,7 +22,7 @@ rel = "vendor/encore-active/eden-threading/src/core/hle/kernel"
 directory = root / rel
 expected_hashes = {
     "k_thread.h": "dafd67c04e9e25fbaf096536fbce0eef3162ef3c046391ff45f138057947b808",
-    "k_slab_heap.h": "13bdea0823a9bb916cbc6b26c4c1d225a187125b365b35e68747f73658e0fc1e",
+    "k_slab_heap.h": "dc6b2bb0180e8521710422ac27e17c069338c01484f32de69f79a7210549e0f3",
     "k_scheduler.cpp": "585b84722c6fdc717e0c6d54c5d74af45f2b7da6f482a517642efb8c89399750",
 }
 sources = {}
@@ -41,6 +41,8 @@ assert "Common::SpinLock m_context_guard" not in thread
 assert "Common::SpinLock m_lock" not in slab
 assert "std::mutex m_context_guard{};" in thread
 assert "std::mutex m_lock;" in slab
+assert "std::destroy_at(obj);" in slab
+assert slab.index("std::destroy_at(obj);") < slab.index("BaseHeap::Free(obj);")
 assert "KSlabHeapImpl() = default;" in slab
 assert "constexpr KSlabHeapImpl()" not in slab
 assert "#include <mutex>" in slab

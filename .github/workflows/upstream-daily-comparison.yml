@@ -1,0 +1,44 @@
+name: Daily dependency comparison
+on:
+  schedule:
+    - cron: '17 05 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dependency-comparison-dev
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    if: github.ref == 'refs/heads/dev/ps5-sparse-jit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout development source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: dev/ps5-sparse-jit
+          persist-credentials: true
+      - name: Verify and refresh pinned dependency comparisons
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python3 -B tools/check-upstream-coverage-inventory.py
+          python3 -B tools/update-upstream-comparison.py --self-test
+          python3 -B tools/update-upstream-comparison.py --refresh
+          python3 -B tools/check-upstream-coverage-inventory.py
+      - name: Commit documentation update
+        run: |
+          set -euo pipefail
+          git add docs/UPSTREAM_GAP_REGISTER_2026-10-14.md
+          if git diff --cached --quiet; then
+            echo 'No comparison changes' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'docs: refresh dependency comparison [skip ci]'
+          git push origin HEAD:dev/ps5-sparse-jit
+          echo 'Pinned dependency comparisons updated.' >> "$GITHUB_STEP_SUMMARY"
