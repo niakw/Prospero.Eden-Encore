@@ -320,3 +320,10 @@ back in its reading hold. No native console build is authorized here.
 - The host-only software OpenGL preview now captures the actual Library shelf,
   rear focus and opened/closed enlargement, in addition to its case sequence.
   **No native console packaging/build has been authorized.**
+
+### Locale and preview verification
+
+The French Library's directly referenced translation keys have been audited,
+including the enlarged-jacket Close hint. Its date and metadata formatting
+are UI-only; launcher strings and full media acquisition remain shared.
+Only the host OpenGL screenshot workflow is requested for this checkpoint.
