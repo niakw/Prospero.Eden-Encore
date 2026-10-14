@@ -34,7 +34,8 @@
 ## Next independent worker-clock witness (commit after 92e6c26)
 - A GPU heartbeat older than 20 seconds reports on the native controller thread.
 - The stall path also samples the already-registered native CPU workers' OS CPU-time clocks: role, CPU-time nanoseconds or error. The worker registry is copied under a nonblocking try-lock; no per-frame or per-poll clock sampling is introduced.
-- **CPU time is not guest instruction progress**. A spinning JIT worker may increase CPU time while guest emulation is wedged. Compare two snapshots at least 30 seconds apart to identify CPU-bound versus sleeping host threads, then investigate guest kernel/HLE progress separately.
+- **CPU time is not guest instruction progress**. A spinning JIT worker may increase CPU time while guest emulation is wedged. Compare two valid snapshots at least 30 seconds apart to identify CPU-bound versus sleeping host threads, then investigate guest kernel/HLE progress separately.
+- **Important firmware limitation:** all 1,449 `EDEN_PERF_WORKER` records in the earlier on-console `heap.prev(9).log` report `cpu_ns=-45` (thread CPU-clock unavailable). The new `EDEN_GPU_STALL_WORKER` sampler will explicitly emit `cpu_ns=-1`/`clock_error` if that persists; do **not** claim that it measures CPU progress on 13.60 or interpret these error values as idle workers. Its additional evidence is limited to registered worker liveness and clock availability until a supported per-thread CPU-time source is confirmed.
 - The detailed-logging preference still controls persistence of stderr and stdout. Disable it only if you intentionally do not need diagnostic evidence.
 
 ## Required engineering order before promising another console improvement
