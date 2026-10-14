@@ -74,7 +74,7 @@ assert math.cos(math.pi + 0.44) < -0.90
 assert math.sin(math.pi + 0.44) < 0
 assert math.cos(2.0 * math.pi + 0.52) > 0
 library = (root / "headless/prosperoeden/pe/ui/library.cpp").read_text()
-assert "game.box_front" in library and "game->box_back" in library
+assert "game.box_front" in library and "game.box_back" in library
 assert "library_back_zoom_" in library and "library_back_focused_" in library
 assert "library_format(game->format)" in library
 assert "library_size(game->size)" in library
