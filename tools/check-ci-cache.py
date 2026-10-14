@@ -24,6 +24,13 @@ for path in (
 host_workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
 native_toolchain = workflow.split("      - name: Install build toolchain", 1)[1].split(
     "      - name: Upgrade Meson", 1)[0]
+# A no-op push must not cancel deliberate core-ready tests either.
+host_group = host_workflow.split("concurrency:", 1)[1].split("jobs:", 1)[0]
+assert "github.event_name == 'push'" in host_group
+assert "!contains(github.event.head_commit.message || '', '[core-ready]')" in host_group
+assert "'skip-only' || 'test-capable'" in host_group
+assert "cancel-in-progress: true" in host_group
+
 assert "libboost-container-dev" in host_workflow
 assert "libboost-container-dev" in native_toolchain
 assert "clang++-18 -std=c++20 -x c++ -fsyntax-only -" in native_toolchain
