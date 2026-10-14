@@ -34,7 +34,7 @@ messages_checked = 0
 for relative in message_files:
     source = (root / relative).read_text()
     for number, line in enumerate(source.splitlines(), 1):
-        if not re.match(r"^\\s*(?:print|puts)\\s*\\(", line):
+        if not re.match(r"^\s*(?:print|puts)\s*\(", line):
             continue
         messages_checked += 1
         if blocked.search(line):
