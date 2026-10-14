@@ -859,8 +859,10 @@ void Launcher::draw_launch(Canvas &c)
     if (printed_side_visible) {
         const Cover ink = c.textures.cover(launch_box_spine_, 760.0f);
         if (ink.texture != 0) {
-            c.list.case_spine(side_strip, angle, case_depth - 6.0f,
-                              Color::rgb(0xa90e20), Color::rgb(0x6d1020), 3.0f);
+            // Printed spine fills the SAME depth as the front/back paper:
+            // neither an inset (3px) nor a shorter strip (depth-6px).
+            c.list.case_spine(side_strip, angle, case_depth,
+                              Color::rgb(0xa90e20), Color::rgb(0x6d1020));
             c.list.case_spine_image(ink.texture, side_strip, angle,
                                     case_depth, kWhite);
         } else {
@@ -886,13 +888,8 @@ void Launcher::draw_launch(Canvas &c)
     }
     // Deliberately NO right-side red stripe on the rear view.
     // Only genuinely visible projected shell edges are rendered.
-    // Transparent surface seams follow the full depth of the same edge.
-    c.list.case_spine(side_strip, angle, 2.5f,
-                      Color::rgb(0xd5e3ee, 0.37f),
-                      Color::rgb(0x71859c, 0.23f), 0.0f);
-    c.list.case_spine(side_strip, angle, 2.5f,
-                      Color::rgb(0xd4dfeb, 0.37f),
-                      Color::rgb(0x708095, 0.25f), case_depth - 2.5f);
+    // Do not add two fake white depth strips at paper-to-spine junctions.
+    // The real rounded plastic corner mesh below defines the shell edge.
 
     // A true curved perimeter: 8 actual depth-bearing strips per quarter
     // arc. Only the visible pair occludes the printed insert.
