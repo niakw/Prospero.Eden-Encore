@@ -1275,6 +1275,8 @@ int main(int argc, char** argv) {
         Settings::values.renderer_backend = Settings::RendererBackend::Null;
 #endif
         Settings::values.memory_layout_mode = Settings::MemoryLayout::Memory_4Gb;
+        [[maybe_unused]] int dev_vertex_input = -1;
+        Eden::DevVulkan::static_vertex_input = true; // do not leak A/B settings to the next title
 #ifdef EDEN_DEV_PROFILE
         // A one-game A/B override must NEVER silently become the next game's
         // effective performance policy. Reset the other development-only
@@ -1376,8 +1378,10 @@ int main(int argc, char** argv) {
                     Eden::DevVulkan::disable_descriptor_buffer = true;
                 } else if (entry == "robustness2=on") {
                     Eden::DevVulkan::robustness2 = true;
-                } else if (entry == "vertex_input_dynamic=off") {
-                    Settings::values.vertex_input_dynamic_state.SetValue(false);
+                } else if (entry == "vertex_input_dynamic=off" || entry == "vertex_input_dynamic=on") {
+                    dev_vertex_input = entry.ends_with("on") ? 1 : 0;
+                } else if (entry == "static_vi=off") {
+                    Eden::DevVulkan::static_vertex_input = false;
                 } else if (entry == "pipeline_trace=on") {
                     Eden::DevVulkan::trace_pipelines = true;
                 } else if (entry.starts_with("radv_debug=")) {
@@ -1451,6 +1455,8 @@ int main(int argc, char** argv) {
                     std::printf("EDEN_DEV_SETTINGS unknown=%s\n", entry.c_str());
                 }
             }
+            // Full per-game reset of the dynamic-vertex-input A/B setting.
+            Settings::values.vertex_input_dynamic_state.SetValue(dev_vertex_input > 0);
             std::printf("EDEN_DEV_SETTINGS dma_accuracy=%u gpu_accuracy=%u null_descriptor=%u "
                         "descriptor_buffer=%u robustness2=%u vertex_input_dynamic=%u dyna_state=%u "
                         "sparse=%u multirange=%u custom_border=%u submit_sync=%u fastmem=%u\n",

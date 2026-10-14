@@ -85,7 +85,10 @@ static int cpuset_setaffinity(int,int,int,size_t n,const cpuset_t* in){
 '''+body+r'''
 int main(){
  for(unsigned i=0;i<64;++i) apics[i]=i;
- CheckWorkerTopology();assert(worker_topology_ready && current==0x1fff);
+ worker_topology_ready=false;CheckWorkerTopology();assert(worker_topology_ready && current==0x1fff);
+ // The second title reuses the proven layout even from a narrowed launcher-thread mask.
+ current=3;CheckWorkerTopology();assert(worker_topology_ready && current==3);
+ current=0x1fff;
  assert((worker_cpus==std::array<unsigned,5>{0,2,4,6,8}));
  // Four guest cores + one GPU core: keep their SMT siblings away from
  // secondary shader/IO workers. Only genuinely spare cores 5 and 6 remain.
@@ -98,14 +101,14 @@ int main(){
  PinWorker(5,allowed);assert(current==0x1fff);
  for(unsigned i=0;i<7;++i) apics[i]=i*2;
  for(unsigned i=7;i<13;++i) apics[i]=(i-7)*2+1;
- CheckWorkerTopology();assert((worker_cpus==std::array<unsigned,5>{0,1,2,3,4}) && current==0x1fff);
- current=3;CheckWorkerTopology();assert(!worker_topology_ready && current==3);
- current=0x1fff;fail_mask=4;CheckWorkerTopology();assert(!worker_topology_ready && current==0x1fff);
- fail_mask=0;level_type=0;CheckWorkerTopology();assert(!worker_topology_ready && current==0x1fff);
- level_type=1;CheckWorkerTopology();assert(worker_topology_ready);
+ worker_topology_ready=false;CheckWorkerTopology();assert((worker_cpus==std::array<unsigned,5>{0,1,2,3,4}) && current==0x1fff);
+ current=3;worker_topology_ready=false;CheckWorkerTopology();assert(!worker_topology_ready && current==3);
+ current=0x1fff;fail_mask=4;worker_topology_ready=false;CheckWorkerTopology();assert(!worker_topology_ready && current==0x1fff);
+ fail_mask=0;level_type=0;worker_topology_ready=false;CheckWorkerTopology();assert(!worker_topology_ready && current==0x1fff);
+ level_type=1;worker_topology_ready=false;CheckWorkerTopology();assert(worker_topology_ready);
  fail_mask=16;allowed=current;PinWorker(4,allowed);assert(allowed==0x1fff && current==0x1fff);
  fail_mask=0;fail_restore=true;bool threw=false;
- try{CheckWorkerTopology();}catch(const std::runtime_error&){threw=true;}
+ try{worker_topology_ready=false;CheckWorkerTopology();}catch(const std::runtime_error&){threw=true;}
  assert(threw);
 
  // PS5 Zen-family extended-topology path: x2APIC is unavailable, but
@@ -114,20 +117,20 @@ int main(){
  fail_restore=false;current=0x1fff;max_leaf=0xa;
  amd_vendor=true;amd_ext_feature=true;
  for(unsigned i=0;i<13;++i) amd_cores[i]=i/2;
- CheckWorkerTopology();
+ worker_topology_ready=false;CheckWorkerTopology();
  assert(worker_topology_ready && current==0x1fff);
  assert((worker_cpus==std::array<unsigned,5>{0,2,4,6,8}));
  // FW13.60 regression: AMD leaf presents 13 unique "cores" for 13 logical
  // CPUs, but the authenticated x2APIC SMT shift still identifies 7 physical.
  max_leaf=0xb;amd_ext_feature=true;
  for(unsigned i=0;i<13;++i) {amd_cores[i]=i;apics[i]=i;}
- CheckWorkerTopology();
+ worker_topology_ready=false;CheckWorkerTopology();
  assert(worker_topology_ready && current==0x1fff);
  assert((worker_cpus==std::array<unsigned,5>{0,2,4,6,8}));
  assert(cpu_core[0]==cpu_core[1] && cpu_core[2]!=cpu_core[0]);
  // Both leaves implausible: MUST retain the unpinned logical fallback.
  for(unsigned i=0;i<13;++i) apics[i]=i*2;
- CheckWorkerTopology();
+ worker_topology_ready=false;CheckWorkerTopology();
  assert(!worker_topology_ready && current==0x1fff);
  assert((worker_cpus==std::array<unsigned,5>{0,0,0,0,0}));
  max_leaf=0xa;
@@ -145,7 +148,7 @@ int main(){
   os_xml+=pair;
  }
  os_xml+="</children></group></groups>";
- CheckWorkerTopology();
+ worker_topology_ready=false;CheckWorkerTopology();
  assert(worker_topology_ready && current==0x1fff);
  assert((worker_cpus==std::array<unsigned,5>{0,2,4,6,8}));
  assert(secondary_cpus==(0x1fffULL & ~0x3ffULL));
@@ -156,14 +159,14 @@ int main(){
   os_xml.replace(at,strlen("name=\\\"SMT\\\""),"name=\\\"HTT\\\"");
   at+=strlen("name=\\\"HTT\\\"");
  }
- CheckWorkerTopology();
+ worker_topology_ready=false;CheckWorkerTopology();
  assert(worker_topology_ready && current==0x1fff);
  assert((worker_cpus==std::array<unsigned,5>{0,2,4,6,8}));
  os_xml=os_smt_xml;
  // Invalid OS XML cannot turn a broken CPUID reading into physical proof.
  os_xml="<groups><group><cpu count=\"2\" mask=\"3\"></cpu>"
         "<flags><flag name=\"SMT\"></flag></flags></group></groups>";
- CheckWorkerTopology();
+ worker_topology_ready=false;CheckWorkerTopology();
  assert(!worker_topology_ready && current==0x1fff);
  // Kernel topology must also work when no CPUID topology exists.
  max_leaf=0xa;amd_vendor=false;amd_ext_feature=false;
@@ -177,20 +180,20 @@ int main(){
   os_xml+=pair;
  }
  os_xml+="</groups>";
- CheckWorkerTopology();
+ worker_topology_ready=false;CheckWorkerTopology();
  assert(worker_topology_ready && current==0x1fff);
  // ULE-only kernel: primary sysctl absent, alt sysctl provides the
  // exact same verified scheduler SMT masks.
  os_ule_xml=os_xml;
  os_xml.clear();
- CheckWorkerTopology();
+ worker_topology_ready=false;CheckWorkerTopology();
  assert(worker_topology_ready && current==0x1fff);
  assert((worker_cpus==std::array<unsigned,5>{0,2,4,6,8}));
  os_ule_xml.clear();
  max_leaf=0xa;
  // TopologyExtensions absent: do not claim proof from logical IDs alone.
  amd_ext_feature=false;
- CheckWorkerTopology();
+ worker_topology_ready=false;CheckWorkerTopology();
  assert(!worker_topology_ready && topology_allowed_valid);
  assert(current==0x1fff);
  assert((worker_cpus==std::array<unsigned,5>{0,0,0,0,0}));
@@ -206,7 +209,7 @@ int main(){
  assert(current==0x1fff && actual==0x1fff);
  // New firmware or different permitted mask MUST retain unpinned fallback.
  max_leaf=0xa;current=0x3ff;os_xml.clear();os_ule_xml.clear();
- CheckWorkerTopology();assert(!worker_topology_ready);
+ worker_topology_ready=false;CheckWorkerTopology();assert(!worker_topology_ready);
  EnableExperimentalLogicalPlacementImpl();
  assert(!worker_topology_ready && secondary_cpus==0 && current==0x3ff);
  return 0;

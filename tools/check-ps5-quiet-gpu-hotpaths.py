@@ -30,7 +30,7 @@ for name in ("guest_read_timer", "drain_timer", "present_wait_timer"):
     assert "::Eden::Performance::Timer " + name not in generator
 assert "if (::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed))\\n" in generator
 assert "::Eden::Performance::rasterizer_draw.calls.fetch_add(1, std::memory_order_relaxed)" in generator
-assert 'set(eden_gpu_queue_capacity 32)' in cmake
+assert 'set(eden_gpu_queue_capacity 256)' in cmake
 assert 'set(eden_gpu_queue_capacity 8)' in cmake
 assert 'Common::SPSCQueue<CommandDataContainer, ${eden_gpu_queue_capacity}>' in cmake
 assert "gpu_command_tick, gpu_command_flush, gpu_command_invalidate" in perf

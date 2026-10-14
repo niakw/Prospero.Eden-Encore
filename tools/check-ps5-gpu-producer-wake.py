@@ -27,7 +27,7 @@ assert 'set(profiled_producer_wait' in cmake
 assert 'string(REPLACE "${producer_wait}" "${profiled_producer_wait}"' in cmake
 assert 'gpu_worker "${gpu_worker}")' in cmake
 assert "std::this_thread::sleep_for(std::chrono::microseconds(100));" not in cmake
-assert 'set(eden_gpu_queue_capacity 32)' in cmake
+assert 'set(eden_gpu_queue_capacity 256)' in cmake
 assert 'set(eden_gpu_queue_capacity 8)' in cmake
 assert 'Common::SPSCQueue<CommandDataContainer, ${eden_gpu_queue_capacity}>' in cmake
 
@@ -108,25 +108,24 @@ int main() {
         assert(q.TryPop(v) && v==12); assert(q.TryPop(v) && v==13);
         assert(!q.TryPop(v));
     }
-    // R333: the PS5's old 8-slot override forces producers to sleep on
-    // ordinary 9-32-command bursts. The 32-slot budget accepts a complete
-    // short burst without polling, then retains strict bounded backpressure.
+    // A 256-entry native queue absorbs long multi-draw submission bursts
+    // while retaining bounded capacity, FIFO order and stop-aware backpressure.
     {
-        Queue<int,32> q;
-        for (int i=0; i<32; ++i) assert(q.TryEmplace(i));
-        assert(!q.TryEmplace(32));
+        Queue<int,256> q;
+        for (int i=0; i<256; ++i) assert(q.TryEmplace(i));
+        assert(!q.TryEmplace(256));
         std::stop_source src;
         std::promise<bool> completion;
         auto result=completion.get_future();
         std::thread producer([&] {
-            completion.set_value(q.EmplaceWaitWithStopToken(src.get_token(),32));
+            completion.set_value(q.EmplaceWaitWithStopToken(src.get_token(),256));
         });
         assert(result.wait_for(20ms)==std::future_status::timeout);
         int value=-1;
         assert(q.TryPop(value) && value==0);
         assert(result.wait_for(1s)==std::future_status::ready && result.get());
         producer.join();
-        for (int i=1; i<=32; ++i) {
+        for (int i=1; i<=256; ++i) {
             assert(q.TryPop(value) && value==i);
         }
         assert(!q.TryPop(value));
@@ -154,7 +153,7 @@ int main() {
     // deliberately delayed consumers. The REAL native stop-aware method is
     // still injected from gpu_queue_stop_wait.inc, not reimplemented here.
     for (int session=0; session<64; ++session) {
-        Queue<int,32> q;
+        Queue<int,256> q;
         constexpr int items=384;
         std::stop_source src;
         std::thread producer([&] {
