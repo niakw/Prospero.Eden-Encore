@@ -164,5 +164,13 @@ assert "02-launch-case-back" in preview_source
 assert "PE_PREVIEW_NO_BOX_SCANS" in preview_workflow
 assert "UNIVERSAL_CASE_NO_RETAIL_ART: PASS" in preview_workflow
 assert "const float return_start = back_start + theme::kCaseBackHold;" in draw
-assert "revolution = 0.5f;" in draw
+assert "angle = kBackYaw;" in draw
+assert "const Cover ink = c.textures.cover(launch_box_spine_, 760.0f);" in draw
+assert "std::string fallback;" in draw
+assert "const Rect face{physical.x + 3.0f, physical.y + 3.0f," in draw
+assert "int side = 0" in shapes
+assert "a_extra.x < -0.5 ? -0.5 :" in shader
+assert "botw-back.tga" in (root / "tools/launcher/preview-botw-media.py").read_text()
+assert "4b815db4-d2d1-4587-89c7-f82524750914.jpg" in (
+    root / "tools/launcher/preview-botw-media.py").read_text()
 print("PASS source-scans region fallback, readable back, rounded solid 3D case")
