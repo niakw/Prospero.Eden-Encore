@@ -378,3 +378,9 @@ front, rear detail and rear zoom are rendered through the same sleeve, not
 old independent image paths. The visual preview must confirm the paper stays
 inside the clear top/bottom/lateral casing, with the rear opening visible at
 its readable yaw. No platform-native compilation accompanies this validation.
+
+Final dimensional consistency: the print on the spine now shares the
+identical `physical.y + kPaperTopInset` and
+`physical.h - 2*kPaperTopInset` vertical coordinates as the front/back
+printed paper (704 units). The clear molded top/bottom shell remains 730
+units high. Real host OpenGL screenshots are the acceptance evidence.
