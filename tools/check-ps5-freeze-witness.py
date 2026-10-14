@@ -16,7 +16,12 @@ assert 'kStallNs = 20' in body
 assert 'progress_ns != 0' in body
 assert 'now_ns > progress_ns' in body
 assert 'now_ns - progress_ns >= kStallNs' in body
-assert 'if (!detailed_gpu_profile.load(std::memory_order_relaxed)) return;' in performance
+liveness = performance[performance.index('void ReportInputThreadGpuLiveness()'):performance.index('\nvoid ReportGpuThread(unsigned frame)')]
+assert 'if (!detailed_gpu_profile.load(std::memory_order_relaxed)) return;' not in liveness
+assert 'if (progress_ns == 0) return;' in liveness
+assert 'detail=not_measured' in liveness
+assert 'last_gpu_stall_warn_ns.store(now, std::memory_order_relaxed);' in liveness
+assert 'last_gpu_stall_warn_ns.store(0, std::memory_order_relaxed);' in performance
 assert 'latest_gpu_report_frame.store(frame' in performance
 assert 'if (detailed_gpu_profile.load(std::memory_order_relaxed)) {' in performance
 assert 'latest_gpu_report_ns.store(' in performance
@@ -37,8 +42,9 @@ assert 'guest_cpu_write.calls.load' in performance
 assert 'guest_dequeue_wait.calls.load' in performance
 assert 'gpu_command_tick.calls.store' not in performance
 assert 'Performance::ReportInputThreadGpuLiveness();' in pad
-assert pad.index('if (NativeLogs::Detailed() && polls % 1250 == 0)') < \
-    pad.index('Performance::ReportInputThreadGpuLiveness();') < \
+assert 'if (polls % 1250 == 0) Performance::ReportInputThreadGpuLiveness();' in pad
+assert pad.index('if (polls % 1250 == 0) Performance::ReportInputThreadGpuLiveness();') < \
+    pad.index('if (NativeLogs::Detailed() && polls % 1250 == 0)') < \
     pad.index('"EDEN_PAD_HEARTBEAT')
 source = '''
 #include <cassert>
@@ -70,4 +76,4 @@ with tempfile.TemporaryDirectory(prefix="eden-r376-witness-") as temp:
                     "-fsanitize=address,undefined", str(cpp), "-o", str(binary)],
                    check=True, timeout=30, env=env)
     subprocess.run([str(binary)], check=True, timeout=12, env=env)
-print("PASS R376 GPU report stale threshold: independent 20s witness, quiet-path guards, no locks")
+print("PASS R376 release+dev GPU report stale threshold: independent 20s witness, throttled quiet-path, no locks")
