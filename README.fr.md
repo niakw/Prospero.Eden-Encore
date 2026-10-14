@@ -1,9 +1,9 @@
 <div align="center">
   <img src="assets/icon0.png" alt="Logo Prospero.Eden Encore" width="154">
 
-  # Prospero.Eden Encore
+  <h1>Prospero.Eden Encore</h1>
 
-  ### L'émulation native, pensée pour jouer depuis son canapé.
+  <h3>L'émulation native, pensée pour jouer depuis son canapé.</h3>
 
   **Une évolution maintenue de ProsperoEden, centrée sur le firmware 13.60, la stabilité du lancement, les jeux récents et une interface vraiment utilisable à la manette.**
 
