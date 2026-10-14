@@ -106,7 +106,21 @@ if [[ -f $radv_release/lib/libvulkan_radeon.ps5.a ]]; then
         step "RADV: the display code's adaptation changed"
         bash tools/build-radv-dependencies.sh
         rm -f build/radv-isolated/libvulkan_radeon.ps5.a
+    elif ! python3 -B tools/radv-active-inputs.py --check "$radv_release/EDEN_ACTIVE_INPUTS_SHA256"; then
+        # Cache hits require ALL maintained compiled units, not just WSI.
+        # Otherwise cache-policy, descriptor and draw fixes may remain absent
+        # from a perfectly linkable archive despite passing source checks.
+        step "RADV: maintained compiled source set changed; rebuilding archive"
+        bash tools/build-radv-dependencies.sh
+        rm -f build/radv-isolated/libvulkan_radeon.ps5.a
     fi
+fi
+# A restored isolated archive is not trusted if its source build stamp is
+# missing, even when the original pre-isolation archive was not restored.
+if [[ -f build/radv-isolated/libvulkan_radeon.ps5.a ]] &&
+   ! python3 -B tools/radv-active-inputs.py --check "$radv_release/EDEN_ACTIVE_INPUTS_SHA256"; then
+    step "RADV: old isolated archive has no matching compiler input proof"
+    rm -f build/radv-isolated/libvulkan_radeon.ps5.a
 fi
 if [[ ! -f build/radv-isolated/libvulkan_radeon.ps5.a ]]; then
     if [[ ! -f $radv_release/lib/libvulkan_radeon.ps5.a ]]; then
