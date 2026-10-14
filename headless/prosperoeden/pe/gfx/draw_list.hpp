@@ -57,6 +57,8 @@ enum class Shape : std::uint8_t
     triangle = 5,       // isosceles triangle pointing up inside the rect
     rounded_rect_h = 7, // rounded_rect with a left-to-right gradient
     rounded_image = 8,  // image clipped to a rounded rect
+    case_face = 9,      // perspective-projected front/back of a retail case
+    case_spine = 10,    // matching projected plastic case side
 };
 
 // One instanced quad; field order matches the vertex attributes.
@@ -116,6 +118,12 @@ class DrawList
     // The image clipped to a rounded rectangle (covers, frosted panels).
     void rounded_image(std::uint32_t texture, const Rect &r, const Rect &uv, float radius,
                        Color tint);
+    // Retail case on a shared 3D pivot: GPU perspective, correct back-face UV
+    // winding and a real-thickness projected side. Available for every game.
+    void case_face(std::uint32_t texture, const Rect &r, float angle,
+                   bool back, Color tint, const Rect &uv = {0.0f, 0.0f, 1.0f, 1.0f});
+    void case_spine(const Rect &r, float angle, float thickness,
+                    Color front_edge, Color rear_edge);
 
     // ---- text ----
     // font_texture is the GL texture holding font's atlas. Returns the advance.
