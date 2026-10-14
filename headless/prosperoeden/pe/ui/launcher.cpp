@@ -822,26 +822,44 @@ void Launcher::draw_launch(Canvas &c)
     }
     // Thin glossy plastic frame and clips are physically projected with the
     // scan rather than floating above it in screen coordinates.
-    c.list.case_plastic(physical, angle, back, Color::rgb(0xf6f9ff, 0.88f));
+    c.list.case_plastic(physical, angle, back, Color::rgb(0xf6f9ff, 0.57f));
 
-    // Opaque red printed spine under translucent plastic, white outer rails,
-    // and two molded hinges. The material is common to all game editions.
+    // A real case has TWO different sides. The left is the printed red
+    // retail spine, the right is the mostly clear hinged latch edge.
+    // The visible side changes as the rigid box rotates; no artificial red
+    // strip on the wrong side during the back-cover hold.
     const Rect side_strip{physical.x, physical.y + case_radius, physical.w,
                           physical.h - 2.0f * case_radius};
-    c.list.case_spine(side_strip, angle, case_depth - 6.0f,
-                      Color::rgb(0xe72536), Color::rgb(0x971421), 3.0f);
-    c.list.case_spine(side_strip, angle, 3.0f,
-                      Color::rgb(0xf8faff, 0.92f),
-                      Color::rgb(0xd8dfed, 0.86f), 0.0f);
-    c.list.case_spine(side_strip, angle, 3.0f,
-                      Color::rgb(0xf7f9ff, 0.87f),
-                      Color::rgb(0xc8ccdb, 0.76f), case_depth - 3.0f);
-    for (int hinge = 0; hinge < 2; ++hinge) {
-        const float y = physical.y + (hinge == 0 ? 43.0f : physical.h - 64.0f);
-        c.list.case_spine({physical.x, y, physical.w, 19.0f}, angle, case_depth,
-                          Color::rgb(0xecedf3, 0.88f),
-                          Color::rgb(0xaaa9bd, 0.69f));
+    const bool printed_side_visible = std::sin(angle) >= 0.0f;
+    if (printed_side_visible) {
+        c.list.case_spine(side_strip, angle, case_depth - 6.0f,
+                          Color::rgb(0xd81b2b), Color::rgb(0x971421), 3.0f);
+        if (!launch_box_spine_.empty()) {
+            const Cover ink = c.textures.cover(launch_box_spine_, 760.0f);
+            if (ink.texture != 0)
+                c.list.case_spine_image(ink.texture, side_strip, angle,
+                                        case_depth, kWhite);
+        }
+    } else {
+        c.list.case_spine(side_strip, angle, case_depth,
+                          Color::rgb(0xe1e7f2, 0.63f),
+                          Color::rgb(0x687485, 0.58f));
+        for (int hinge = 0; hinge < 2; ++hinge) {
+            const float y = physical.y +
+                (hinge == 0 ? case_radius + 28.0f :
+                              physical.h - case_radius - 50.0f);
+            c.list.case_spine({physical.x, y, physical.w, 12.0f}, angle,
+                               case_depth, Color::rgb(0xfafcff, 0.42f),
+                               Color::rgb(0xb0b6c4, 0.35f));
+        }
     }
+    // Transparent surface seams follow the full depth of the same edge.
+    c.list.case_spine(side_strip, angle, 2.5f,
+                      Color::rgb(0xffffff, 0.63f),
+                      Color::rgb(0xc8d1e0, 0.42f), 0.0f);
+    c.list.case_spine(side_strip, angle, 2.5f,
+                      Color::rgb(0xffffff, 0.59f),
+                      Color::rgb(0x9ba5b7, 0.35f), case_depth - 2.5f);
 
     // A true curved perimeter: 8 actual depth-bearing strips per quarter
     // arc. Only the visible pair occludes the printed insert.
@@ -851,8 +869,8 @@ void Launcher::draw_launch(Canvas &c)
         if (left != show_left) continue;
         for (int part = 0; part < 8; ++part)
             c.list.case_corner(physical, angle, case_radius, case_depth,
-                               quadrant, part, Color::rgb(0xf5f8ff, 0.94f),
-                               Color::rgb(0x8f99ae, 0.86f));
+                               quadrant, part, Color::rgb(0xf5f8ff, 0.70f),
+                               Color::rgb(0x8f99ae, 0.59f));
     }
 
     if (c.textures.brand() != 0)
