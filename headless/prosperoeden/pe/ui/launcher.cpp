@@ -876,9 +876,11 @@ void Launcher::draw_launch(Canvas &c)
                                     Color::rgb(0xd91b2e, 0.96f));
         }
     } else {
+        // Back-left opening: subtle but legible clear molded side. This is
+        // the real projected 44px wall, not a red stripe painted on the face.
         c.list.case_spine(side_strip, angle, case_depth,
-                          Color::rgb(0xaab8c7, 0.34f),
-                          Color::rgb(0x536171, 0.30f));
+                          Color::rgb(0xd7e5f4, 0.47f),
+                          Color::rgb(0x8196ad, 0.39f));
         for (int hinge = 0; hinge < 2; ++hinge) {
             const float y = physical.y +
                 (hinge == 0 ? case_radius + 28.0f :
