@@ -95,3 +95,19 @@ in the source preflight and native build checks. A passing source test does not
 replace a completed native build or an on-device visual check.
 
 The actual CDN/download path remains subject to a real console network check; a green host-source test cannot prove that every indexed image URL resolves.
+
+## Real renderer screenshot test
+
+`.github/workflows/launcher-production-preview.yml` captures
+`00-launch-case-front.png` and `01-launch-case-back.png` with the
+existing `tools/launcher/preview.sh`, the original C++ launcher
+`Launcher::draw_launch()`, and Mesa's real OpenGL shader backend.
+The PNG files appear in the **Encore-launcher-native-render-1080p**
+workflow artifact. Host media are deterministic test fixtures, not
+actual downloaded commercial scans or AI illustrations. The front
+capture is the visual reference for this feature. The backend also
+verifies that the two case faces are visibly different.
+
+Only commits containing `[preview-ready]` trigger this host-only
+workflow automatically. No native console binary is implied by these
+screenshots.
