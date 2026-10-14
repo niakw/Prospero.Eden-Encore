@@ -19,6 +19,9 @@ from PIL import Image
 # None of these files are committed, bundled or used by the native executable.
 MEDIA = {
     "botw-front.tga": (
+        # Original 1447x2343 press-cover asset; do not use a thumbnail when
+        # this source is reachable. The cover remains a host-only test fixture.
+        "https://cdn.wikimg.net/en/zeldawiki/images/c/c7/BotW_NA_Switch_Box_Art.png",
         "https://gamefaqs.gamespot.com/a/box/6/6/4/599664_front.jpg",
         "https://images.launchbox-app.com/a8bcb4cc-a3b0-4cf0-82f3-cb10dd18b27c.jpg",
     ),
