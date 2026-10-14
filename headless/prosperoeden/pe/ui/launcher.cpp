@@ -822,9 +822,20 @@ void Launcher::draw_launch(Canvas &c)
     }
     const Cover artwork = c.textures.cover(scan.empty() ? fallback : scan, 760.0f);
     if (artwork.texture != 0) {
-        // Shader flips the back-face UV once per half-turn, and its non-unit
-        // clip W provides genuine perspective-correct texture interpolation.
-        c.list.case_face(artwork.texture, face, angle, back, kWhite);
+        // Keep the WHOLE printed back visible: never stretch a scan or crop
+        // its French description. Letterbox only for unmatched source ratios.
+        // Transparent excess UV is discarded by the case-face fragment shader.
+        const float target_aspect = face.w / face.h;
+        const float source_aspect = std::max(0.01f, artwork.aspect);
+        Rect paper_uv{0.0f, 0.0f, 1.0f, 1.0f};
+        if (source_aspect > target_aspect) {
+            paper_uv.h = source_aspect / target_aspect;
+            paper_uv.y = (1.0f - paper_uv.h) * 0.5f;
+        } else {
+            paper_uv.w = target_aspect / source_aspect;
+            paper_uv.x = (1.0f - paper_uv.w) * 0.5f;
+        }
+        c.list.case_face(artwork.texture, face, angle, back, kWhite, paper_uv);
     } else {
         c.list.case_face(0, face, angle, back, Color::rgb(0x251a43));
     }
@@ -847,6 +858,18 @@ void Launcher::draw_launch(Canvas &c)
             if (ink.texture != 0)
                 c.list.case_spine_image(ink.texture, side_strip, angle,
                                         case_depth, kWhite);
+        } else {
+            // Generic clean retail-style spine: red sleeve, a pale maker's
+            // mark and a tiny footer. Crucially NO generated game title and
+            // no 18px-wide CDN thumbnail inflated to 700px.
+            c.list.case_spine({physical.x, physical.y + 39.0f,
+                               physical.w, 48.0f}, angle, case_depth - 7.0f,
+                              Color::rgb(0xfcfaf9, 0.76f),
+                              Color::rgb(0xe5ebef, 0.58f), 3.0f);
+            c.list.case_spine({physical.x, physical.y + physical.h - 77.0f,
+                               physical.w, 18.0f}, angle, case_depth - 7.0f,
+                              Color::rgb(0xf9f9fa, 0.63f),
+                              Color::rgb(0xdee2eb, 0.47f), 3.0f);
         }
     } else {
         c.list.case_spine(side_strip, angle, case_depth,
