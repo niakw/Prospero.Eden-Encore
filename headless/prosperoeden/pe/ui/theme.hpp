@@ -67,7 +67,15 @@ constexpr float kCursorSpring = 26.0f;
 constexpr float kScrollSpring = 16.0f;
 constexpr float kScreenSeconds = 0.30f;
 // Allow one visible face change while keeping game admission bounded.
-constexpr float kLaunchSeconds = 2.20f;
+// Front preview 1.2 s, first turn 1.3 s, BACK remains readable 4.5 s,
+// return turn 1.3 s, final settle/fade 0.5 s. A truthful staged cinematic
+// transition, NOT a proxy for guest/emulation loading percentage.
+constexpr float kCaseFrontHold = 1.20f;
+constexpr float kCaseTurnSeconds = 1.30f;
+constexpr float kCaseBackHold = 4.50f;
+constexpr float kCaseSettleSeconds = 0.50f;
+constexpr float kLaunchSeconds = kCaseFrontHold + 2.0f * kCaseTurnSeconds +
+                                 kCaseBackHold + kCaseSettleSeconds;
 
 } // namespace theme
 
