@@ -22,7 +22,8 @@ assert injection.count('"') == 2
 escaped = injection.split('"')[1]
 assert escaped.count(r"\n") >= 6
 assert escaped.count("::Eden::Performance::SampleCpu(") == 2
-assert escaped.count("if (eden_detailed_cpu_sample) ::Eden::Performance::SampleCpu") == 2
+assert escaped.count("if (eden_detailed_cpu_sample && ::Eden::Performance::CpuSampleDue(m_core_index))") == 2
+assert escaped.count("Kernel::GetCurrentThread(m_parent.m_system.Kernel()).GetThreadId()") == 2
 assert escaped.count("m_jit->Run()") == 1
 assert escaped.count("cpu_state[m_core_index].phase.store(") == 2
 assert escaped.count("return TranslateHaltReason(halt);") == 1
@@ -48,9 +49,17 @@ enum class CpuPhase : unsigned { Kernel, Guest, Idle };
 struct State { std::atomic<CpuPhase> phase{CpuPhase::Kernel}; };
 std::array<State, 4> cpu_state{};
 std::atomic<bool> detailed_gpu_profile{false};
-std::atomic<unsigned> samples{0};
-void SampleCpu(std::size_t, unsigned long long, unsigned long long,
-               unsigned, unsigned) { ++samples; }
+std::atomic<unsigned> samples{0}, due_checks{0};
+std::atomic<bool> sample_allowed{true};
+std::atomic<unsigned long long> last_thread{0};
+bool CpuSampleDue(std::size_t) { ++due_checks; return sample_allowed.load(); }
+void SampleCpu(std::size_t, unsigned long long thread, unsigned long long,
+               unsigned, unsigned) { ++samples; last_thread.store(thread); }
+}
+namespace Kernel {
+std::atomic<unsigned> lookups{0};
+struct GuestThread { unsigned long long GetThreadId() const { return 789; } };
+GuestThread GetCurrentThread(int) { ++lookups; return {}; }
 }
 struct Jit {
     int run_calls=0, guest_phase_observed=0;
@@ -70,6 +79,7 @@ struct Jit {
 struct Fixture {
     Jit jit{};
     Jit* m_jit=&jit;
+    struct Parent { struct System { int Kernel() const { return 1; } } m_system; } m_parent;
     std::size_t m_core_index=0;
     unsigned svc_calls=0;
     unsigned GetSvcNumber() { ++svc_calls; return 11; }
@@ -92,6 +102,7 @@ int main() {
     assert(fixture.jit.get_pc == 0 && fixture.jit.get_fpcr == 0);
     assert(fixture.jit.regs_calls == 0 && fixture.jit.fpscr_calls == 0);
     assert(fixture.svc_calls == 0 && Eden::Performance::samples == 0);
+    assert(Eden::Performance::due_checks == 0 && Kernel::lookups == 0);
     assert(Eden::Performance::cpu_state[0].phase.load() ==
            Eden::Performance::CpuPhase::Kernel);
     Eden::Performance::detailed_gpu_profile.store(true);
@@ -99,13 +110,20 @@ int main() {
     assert(fixture.jit.get_pc == 2 && fixture.jit.get_fpcr == 2);
     assert(fixture.jit.regs_calls == 2 && fixture.jit.fpscr_calls == 2);
     assert(fixture.svc_calls == 4 && Eden::Performance::samples == 4);
+    assert(Eden::Performance::due_checks == 4 && Kernel::lookups == 4);
+    assert(Eden::Performance::last_thread == 789);
+    Eden::Performance::sample_allowed.store(false);
+    assert(fixture.Run64()==77 && fixture.Run32()==77);
+    assert(Eden::Performance::due_checks == 8 && Kernel::lookups == 4);
+    assert(fixture.svc_calls == 4 && Eden::Performance::samples == 4);
     Eden::Performance::detailed_gpu_profile.store(false);
     assert(fixture.Run64()==77 && fixture.Run32()==77);
     assert(fixture.jit.get_pc == 2 && fixture.jit.get_fpcr == 2);
     assert(fixture.jit.regs_calls == 2 && fixture.jit.fpscr_calls == 2);
     assert(fixture.svc_calls == 4 && Eden::Performance::samples == 4);
-    assert(fixture.jit.run_calls == 40004);
-    assert(fixture.jit.guest_phase_observed == 40004);
+    assert(fixture.jit.run_calls == 40006);
+    assert(fixture.jit.guest_phase_observed == 40006);
+    assert(Kernel::lookups == 4);
     std::puts("PASS: real A32/A64 Run wrappers skip quiet register sampling and preserve phases/results");
 }
 """.replace("A64_CODE", generated(64)).replace("A32_CODE", generated(32))

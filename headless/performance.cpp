@@ -1246,6 +1246,41 @@ void ReportGpuThread(unsigned frame) {
             std::printf("EDEN_DEV_IPC_THREAD tid=%llu calls=%llu ns=%llu max_ns=%llu\n",
                         row.tid, row.calls, row.ns, row.max_ns);
         }
+        // Completed calls cannot reveal an IPC waiting indefinitely. Read the
+        // lock-free per-thread pending timestamp without touching guest IPC.
+        // Top eight active calls over 500 ms; a long call is a suspect, not
+        // proof of a deadlock (normal services can legitimately wait).
+        struct ActiveIpcRow {
+            unsigned long long tid{};
+            long long started{}, age_ns{};
+        };
+        std::array<ActiveIpcRow, 8> pending{};
+        unsigned pending_used = 0;
+        const auto observed_ns = NowNs();
+        for (const auto& source : guest_ipc_threads) {
+            const auto started = source.active_since_ns.load(std::memory_order_acquire);
+            if (started <= 0 || observed_ns <= started ||
+                observed_ns - started < 500'000'000) continue;
+            const auto tid = source.tid.load(std::memory_order_relaxed);
+            if (!tid) continue;
+            const ActiveIpcRow item{tid, started, observed_ns - started};
+            if (pending_used < pending.size()) {
+                pending[pending_used++] = item;
+                continue;
+            }
+            unsigned shortest = 0;
+            for (unsigned i = 1; i < pending.size(); ++i)
+                if (pending[i].age_ns < pending[shortest].age_ns) shortest = i;
+            if (item.age_ns > pending[shortest].age_ns)
+                pending[shortest] = item;
+        }
+        std::sort(pending.begin(), pending.begin() + pending_used,
+                  [](const ActiveIpcRow& a, const ActiveIpcRow& b) {
+                      return a.age_ns > b.age_ns;
+                  });
+        for (unsigned i = 0; i < pending_used; ++i)
+            std::printf("EDEN_DEV_IPC_ACTIVE tid=%llu age_ms=%.3f\n",
+                        pending[i].tid, pending[i].age_ns / 1'000'000.0);
         std::printf("EDEN_DEV_IPCHIST lt50us=%llu lt500us=%llu lt5ms=%llu ge5ms=%llu "
                     "overflow_calls=%llu\n",
                     guest_ipc_hist[0].load(std::memory_order_relaxed),
@@ -1434,6 +1469,9 @@ void RegisterWorker(const char* name) {
 #endif
 }
 
+bool CpuSampleDue(unsigned core) noexcept {
+    return sampled_epoch[core] != sample_epoch.load(std::memory_order_relaxed);
+}
 void SampleCpu(unsigned core, unsigned long long thread, unsigned long long pc, unsigned svc, unsigned fpcr) {
     const auto epoch = sample_epoch.load(std::memory_order_relaxed);
     if (sampled_epoch.at(core) == epoch) return;
