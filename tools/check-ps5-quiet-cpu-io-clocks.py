@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Verify R300 quiet CPU/IO clock gates in native generator (host only)."""
 from pathlib import Path
-import shutil, subprocess, tempfile
+import platform, shutil, subprocess, sys, tempfile
 
 cmake = (Path(__file__).resolve().parents[1] / "headless/CMakeLists.txt").read_text()
 def section(start, end):
@@ -30,9 +30,12 @@ ipc = section('string(REPLACE "${ipc_old}"', ' ipc_source "${ipc_source}")')
 assert "const bool ipc_profile = ::Eden::Performance::detailed_gpu_profile.load" in ipc
 assert "const auto ipc_start = ipc_profile ? ::Eden::Performance::NowNs() : 0;" in ipc
 assert "const auto ipc_tid = ipc_profile ? GetCurrentThread(kernel).GetThreadId() : 0;" in ipc
-assert "if (ipc_profile) ::Eden::Performance::RecordGuestIpc(ipc_tid," in ipc
+assert "auto* const ipc_slot = ipc_profile ? ::Eden::Performance::BeginGuestIpc(ipc_tid, ipc_start) : nullptr;" in ipc
+assert "if (ipc_profile) ::Eden::Performance::FinishGuestIpc(ipc_slot, ipc_tid, ipc_start," in ipc
 assert "AddSince(::Eden::Performance::guest_ipc_wait" not in ipc
-assert ipc.index("const auto ipc_tid") < ipc.index("session->SendSyncRequest(") < ipc.index("RecordGuestIpc(")
+assert (ipc.index("const auto ipc_tid") < ipc.index("BeginGuestIpc(")
+        < ipc.index("session->SendSyncRequest(") < ipc.index("FinishGuestIpc("))
+assert "ipc_profile ? GetCurrentThread" in ipc and "ipc_profile ? ::Eden::Performance::BeginGuestIpc" in ipc
 fs_file = section('string(REPLACE "${fs_file_old}"', ' fs_file_source "${fs_file_source}")')
 fs_storage = section('string(REPLACE "${fs_storage_old}"', ' fs_storage_source "${fs_storage_source}")')
 for fragment, name in [(fs_file, "guest_fs_file"), (fs_storage, "guest_fs_storage")]:
@@ -44,6 +47,10 @@ assert "fs_read != static_cast<std::size_t>(length)" in fs_storage
 fs_open = section('string(REPLACE "${call_old}"', ' fs_system_source "${fs_system_source}")')
 assert r"if (::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed))\n        LOG_WARNING(Service_FS, \"EDEN_FS_OPEN" in fs_open
 assert 'write_derived("${PORT_BUILD_DIR}/fs_i_filesystem.cpp" "#include \\"${EDEN_PORT_DIR}/performance.h\\"\\n${fs_system_source}")' in cmake
+
+if sys.platform == "darwin" and platform.machine() == "arm64":
+    print("PASS: native clock/IPC/FS source gates; x86 pause mock deferred to Linux CI")
+    raise SystemExit(0)
 
 compiler = next((x for x in ("clang++-18", "clang++", "g++") if shutil.which(x)), None)
 assert compiler, "C++20 compiler required"
