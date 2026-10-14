@@ -154,13 +154,29 @@ void pictures(Stage &s)
         // A page is five entries, so two page moves reach the actual artwork.
         s.press({Key::r1, Key::r1});
         s.wait(0.4f);
-        // Library artwork is decoded by a background texture worker. Unlike
-        // the actual 60Hz app, this host advances hundreds of virtual frames
-        // instantly, so it must pump GL uploads before screenshots.
-        for (int attempt = 0; attempt < 18; ++attempt) {
+        // The host advances game-list frames far faster than the console.
+        // Wait for the actual original retail textures AND their fade-in
+        // before taking evidence. Do not capture an empty placeholder as
+        // though it were a successful rendering.
+        const auto sample_games = s.services.games();
+        const auto retail = s.services.box_art(sample_games.at(10).title_id);
+        bool shelf_ready = false;
+        for (int attempt = 0; attempt < 75; ++attempt) {
             s.render();
-            std::this_thread::sleep_for(std::chrono::milliseconds(55));
+            std::this_thread::sleep_for(std::chrono::milliseconds(45));
             s.launcher->update(1.0f / 60.0f);
+            const auto front = s.textures.cover(retail.front, 181.0f);
+            const auto back = s.textures.cover(retail.back, 181.0f);
+            if (front.texture && back.texture &&
+                front.age > 0.24f && back.age > 0.24f) {
+                shelf_ready = true;
+                break;
+            }
+        }
+        if (!shelf_ready) {
+            std::fprintf(stderr, "library-preview: real front/back scan never became visible\n");
+            s.ok = false;
+            return;
         }
         s.shoot("00-library-front-shelf");
         s.press({Key::down});
@@ -168,10 +184,21 @@ void pictures(Stage &s)
         s.shoot("01-library-back-focus");
         s.press({Key::cross});
         s.wait(0.20f);
-        for (int attempt = 0; attempt < 12; ++attempt) {
+        bool zoom_ready = false;
+        for (int attempt = 0; attempt < 75; ++attempt) {
             s.render();
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            std::this_thread::sleep_for(std::chrono::milliseconds(45));
             s.launcher->update(1.0f / 60.0f);
+            const auto full = s.textures.cover(retail.back, 670.0f);
+            if (full.texture && full.age > 0.24f) {
+                zoom_ready = true;
+                break;
+            }
+        }
+        if (!zoom_ready) {
+            std::fprintf(stderr, "library-preview: full-resolution rear scan never became visible\n");
+            s.ok = false;
+            return;
         }
         s.shoot("02-library-back-zoom");
         s.press({Key::circle});
