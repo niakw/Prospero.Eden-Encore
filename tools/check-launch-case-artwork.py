@@ -95,6 +95,14 @@ assert "flat_front_fallback(c, game, paper);" in library
 assert "shell.y + shell.h - top" in library
 assert "s.press({Key::r1, Key::r1});" in (
     root / "headless/prosperoeden/host/preview_main.cpp").read_text()
+assert 's.shoot("03-library-back-zoom-pan");' in (
+    root / "headless/prosperoeden/host/preview_main.cpp").read_text()
+assert "RADIO_INPUT_L2" in (root / "headless/prosperoeden/radio_input.h").read_text()
+assert "RADIO_INPUT_R2" in (root / "headless/prosperoeden/radio_input.h").read_text()
+assert "if (key == Key::circle)" in library
+assert "{Pad::r2, TR(\"Zoom in\")}" in library
+assert "{Pad::dpad, TR(\"Move cover\")}" in library
+
 assert "PE_PREVIEW_LIBRARY_ONLY" in (
     root / "headless/prosperoeden/host/preview_main.cpp").read_text()
 assert "case_face(artwork.texture, face, angle, back, kWhite, paper_uv," in draw
