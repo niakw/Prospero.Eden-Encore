@@ -212,7 +212,7 @@ void main()
         // Flat printed art goes behind the molded shell. The molded outer
         // panel itself has a 31px corner; the paper inset a smaller 10px
         // radius, leaving an uninterrupted rim even at oblique angles.
-        float radius = v_params.z > 0.5 ? 8.0 : 22.0;
+        float radius = v_params.z > 0.5 ? 18.0 : 22.0;
         float d = round_box(v_local, v_half, radius);
         color = v_params.z > 0.5 ? texture(u_texture, v_uv) * v_top : v_top;
         color.a *= 1.0 - smoothstep(-1.0, 1.0, d);
