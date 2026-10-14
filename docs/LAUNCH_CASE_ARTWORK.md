@@ -193,3 +193,8 @@ and native build are validated through the dedicated source-preflight, OpenGL
 preview, and native build workflows. A passing workflow is a prerequisite for
 claiming a render is verified; actual on-device appearance still requires a
 separate console test.
+
+The revised rounded-plastic material shades edge normals with two virtual
+light sources and simulates angle-dependent Fresnel on the molded front rim.
+Its adequacy is assessed by the actual host GL screenshots rather than the
+source preflight alone.
