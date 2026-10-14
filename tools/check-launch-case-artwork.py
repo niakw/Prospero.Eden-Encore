@@ -159,6 +159,13 @@ assert "std::chrono::minutes(5)" in native
 assert "std::chrono::hours(4)" not in native.split("void EnsureRetailCase(", 1)[1].split("NlibEnrichment CachedNlibEnrichment(", 1)[0]
 assert "both_faces_cached_at_start" in native
 assert "attempts >= 3" in native
+assert 'std::fprintf(stderr, "EDEN_CASE_FACE title=%016llX side=%d status=unavailable' in native
+assert "const bool both_faces_cached_at_start =" in native
+assert 'game.box_front = cached_case.front;' in native
+assert 'game.box_back = cached_case.back;' in native
+assert 'game.box_front = box.front;' in native
+assert 'game.box_back = box.back;' in native
+assert 'const bool opened = static_cast<bool>(input);' in native
 assert "const pe::ui::BoxArt cached_case = box_art(game.title_id);" in native
 case_worker = native.split("pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game,", 1)[1].split("pe::ui::BoxArt EdenServices::box_art(", 1)[0]
 assert case_worker.index("EnsureRetailCase(game.title_id, scanned_name") < case_worker.index("EnsureNlibEnrichment(game.title_id")
