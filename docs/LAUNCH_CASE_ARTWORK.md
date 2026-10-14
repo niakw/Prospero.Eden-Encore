@@ -70,8 +70,10 @@ third-party artwork.
 
 - The original Eden brand texture (`art/brand.tga`, built from
   `assets/icon0.png`) is reused without a substitute font or recoloring.
-- A lightweight faux-3D horizontal flip uses existing batched 2D draw calls
-  and cached textures. No extra renderer, shader pipeline or 3D engine.
+- A shared perspective-projected shell uses the existing batched OpenGL
+  renderer: front and back are true projective planes with perspective-correct
+  UVs and a separately projected 28px plastic spine. Hinges rotate with it.
+  No additional 3D engine or per-game geometry is required.
 - **Reduce Motion** shows the front without spinning.
 - Animation duration is capped at 1.85 s before the existing game-start path;
   no network, metadata scan, or image decode is performed in the draw loop.
@@ -103,7 +105,10 @@ The actual CDN/download path remains subject to a real console network check; a 
 existing `tools/launcher/preview.sh`, the original C++ launcher
 `Launcher::draw_launch()`, and Mesa's real OpenGL shader backend.
 The PNG files appear in the **Encore-launcher-native-render-1080p**
-workflow artifact. For the dedicated launch test only, GitHub retrieves
+workflow artifact. Front, quarter-turn spine and back are captured.
+A second host test verifies the exact same 3D geometry on a different
+game using icon/hero fallbacks with no retail scans. For the dedicated
+launch test only, GitHub retrieves
 real **Zelda BOTW** Switch box scans (Europe front, France back) and an
 existing BOTW landscape background from the public LaunchBox image CDN.
 The downloaded TGA files are temporary GitHub runner inputs, **not**
