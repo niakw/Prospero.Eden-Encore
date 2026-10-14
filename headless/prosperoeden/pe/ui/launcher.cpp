@@ -750,7 +750,7 @@ void Launcher::draw_launch(Canvas &c)
     // No cosmetic red stripe is superimposed on the right edge. Both poses
     // use the exact same shared case geometry for every game.
     constexpr float kFrontYaw = 0.52f;
-    constexpr float kBackYaw = 3.14159265358979323846f + 0.44f;
+    constexpr float kBackYaw = 3.14159265358979323846f + 0.60f;
     constexpr float kFullTurn = 6.28318530717958647692f;
     float angle = kFrontYaw;
     if (motion() > 0.0f) {
@@ -846,9 +846,9 @@ void Launcher::draw_launch(Canvas &c)
                     angle, true, case_depth,
                     Color::rgb(0xc9d8e9, 0.37f),
                     Color::rgb(0x647287, 0.34f));
-    // Thin glossy plastic frame and clips are physically projected with the
-    // scan rather than floating above it in screen coordinates.
-    c.list.case_plastic(physical, angle, back, Color::rgb(0xe6effa, 0.38f));
+    // No additional transparent face overlay. The top/bottom caps, outer
+    // curved corners and ONE projected side already form the physical shell;
+    // drawing case_plastic over the paper gave it a second translucent case.
 
     // A real case has TWO different sides. The left is the printed red
     // retail spine, the right is the mostly clear hinged latch edge.
@@ -878,19 +878,11 @@ void Launcher::draw_launch(Canvas &c)
                                     Color::rgb(0xd91b2e, 0.96f));
         }
     } else {
-        // Back-left opening: subtle but legible clear molded side. This is
-        // the real projected 44px wall, not a red stripe painted on the face.
+        // One actual left opening wall: no extra hinge bars pasted across
+        // the back scan and no second white lip at the paper/spine seam.
         c.list.case_spine(side_strip, angle, case_depth,
-                          Color::rgb(0xd7e5f4, 0.47f),
-                          Color::rgb(0x8196ad, 0.39f));
-        for (int hinge = 0; hinge < 2; ++hinge) {
-            const float y = physical.y +
-                (hinge == 0 ? case_radius + 28.0f :
-                              physical.h - case_radius - 50.0f);
-            c.list.case_spine({physical.x, y, physical.w, 12.0f}, angle,
-                               case_depth, Color::rgb(0xfafcff, 0.42f),
-                               Color::rgb(0xb0b6c4, 0.35f));
-        }
+                          Color::rgb(0xc9d7e7, 0.35f),
+                          Color::rgb(0x75879b, 0.30f));
     }
     // Deliberately NO right-side red stripe on the rear view.
     // Only genuinely visible projected shell edges are rendered.
