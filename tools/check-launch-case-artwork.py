@@ -82,7 +82,11 @@ assert "library_date(game->release_date" in library
 assert "library_genres(game->categories)" in library
 assert 'tr("Down: view back cover")' in library
 assert 'tr("Enlarge cover")' in library
-assert "cover(c, artwork, art, 5.0f, 0.5f);" in library
+assert "if (!game->box_back.empty()) cover(c, artwork, art, 5.0f, 0.5f);" in library
+assert "flat_back_fallback(c, *game, art);" in library
+assert "flat_front_fallback(c, game, sleeve);" in library
+assert "s.press({Key::r1, Key::r1});" in (
+    root / "headless/prosperoeden/host/preview_main.cpp").read_text()
 assert "PE_PREVIEW_LIBRARY_ONLY" in (
     root / "headless/prosperoeden/host/preview_main.cpp").read_text()
 assert "case_face(artwork.texture, face, angle, back, kWhite, paper_uv," in draw
