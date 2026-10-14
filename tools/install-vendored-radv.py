@@ -95,6 +95,11 @@ def install(destination: Path, provenance: Path | None) -> None:
             try:
                 shutil.copy2(canonical, temporary)
                 temporary.replace(compiled)
+                # copy2 preserves the checkout mtime, which may predate the
+                # first Ninja build's object file. Mark replaced source NEW
+                # so the second build recompiles the maintained translation
+                # unit instead of silently reusing stale object code.
+                os.utime(compiled, None)
             finally:
                 temporary.unlink(missing_ok=True)
             changed = True
