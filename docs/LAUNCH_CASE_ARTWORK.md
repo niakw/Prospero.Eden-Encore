@@ -72,10 +72,12 @@ third-party artwork.
   `assets/icon0.png`) is reused without a substitute font or recoloring.
 - A shared perspective-projected shell uses the existing batched OpenGL
   renderer: front and back are true projective planes with perspective-correct
-  UVs and a separately projected 28px plastic spine. Hinges rotate with it.
-  No additional 3D engine or per-game geometry is required.
+  UVs, a separate red 28px-deep spine, translucent molded white plastic
+  rims, side rails, glossy bevel and physical hinges. This identical geometry
+  applies to EVERY game. No separate 3D engine or per-game model is required.
 - **Reduce Motion** shows the front without spinning.
-- Animation duration is capped at 1.85 s before the existing game-start path;
+- The case makes one eased 360-degree rotation around its vertical axis.
+- Animation duration is capped at 2.20 s before the existing game-start path;
   no network, metadata scan, or image decode is performed in the draw loop.
 - Texture loading remains asynchronous and budgeted through `Textures::pump`.
 - A true game-loading overlay **after the emulator takes control** is not part
@@ -86,6 +88,10 @@ third-party artwork.
 
 - The published catalog and CDN are third-party services and may change.
 - WebP-only artwork and ambiguous regional/edition matches are not fetched.
+- Source sharpness cannot be created by upscaling: the public CDN sometimes
+  returns a 172x281 thumbnail. The host visual check prefers a real 1447x2343
+  cover for BOTW; both host source dimensions are recorded in the receipt.
+  Original commercial artwork remains outside this source repository.
 - This is a **launch transition**, not an overlay during the emulator's game
   loading process.
 - Successful code and CI checks do not guarantee CDN access on every console.
