@@ -1148,3 +1148,447 @@ msgstr "ZONA MUERTA DE LA PALANCA"
 #: translated UI setting
 msgid "VIBRATION STRENGTH"
 msgstr "INTENSIDAD DE VIBRACIÓN"
+
+#: launcher translated copy
+msgid "100% is full DualSense rumble strength. Lower it if vibration feels too strong."
+msgstr "100 % equivale a la vibración máxima del DualSense. Redúcela si resulta demasiado intensa."
+
+#: launcher translated copy
+msgid "60 Hz is recommended. 120 Hz changes display mode only; the game still needs to render above 60 FPS to benefit."
+msgstr "Se recomiendan 60 Hz. Los 120 Hz solo cambian el modo de pantalla; el juego debe superar los 60 FPS para aprovecharlos."
+
+#: launcher translated copy
+msgid "60 Hz is the safe default. Use 120 Hz only with a compatible display or high-FPS patch."
+msgstr "60 Hz es el valor seguro. Usa 120 Hz solo con una pantalla compatible o un parche de FPS altos."
+
+#: launcher translated copy
+msgid "8% is recommended. Increase it for stick drift; decrease it for more sensitive aiming."
+msgstr "Se recomienda un 8 %. Auméntalo si el palanca se desvía; redúcelo para apuntar con más sensibilidad."
+
+#: launcher translated copy
+msgid "About Eden Encore"
+msgstr "Acerca de Eden Encore"
+
+#: launcher translated copy
+msgid "Anti-aliasing smooths jagged edges. None is fastest; FXAA is light; SMAA prioritizes image quality."
+msgstr "El antialiasing suaviza los bordes dentados. Desactivarlo mejora la velocidad; FXAA consume poco y SMAA prioriza la imagen."
+
+#: launcher translated copy
+msgid "Bilinear is the lightest default. AMD FSR is most useful when rendering below the TV output size."
+msgstr "Bilineal es la opción más ligera. AMD FSR ayuda especialmente si renderizas por debajo de la resolución de la TV."
+
+#: launcher translated copy
+msgid "Bilinear is the lightest default. AMD FSR is useful when rendering below the TV output size."
+msgstr "Bilineal es la opción más ligera. AMD FSR ayuda si renderizas por debajo de la resolución de la TV."
+
+#: launcher translated copy
+msgid "Button mapping reset to global settings."
+msgstr "Botones restablecidos según los ajustes globales."
+
+#: launcher translated copy
+msgid "Button mapping reset to the active profile."
+msgstr "Botones restablecidos según el perfil activo."
+
+#: launcher translated copy
+msgid "Button mapping saved."
+msgstr "Asignación de botones guardada."
+
+#: launcher translated copy
+msgid "BUTTON PROFILE"
+msgstr "PERFIL DE BOTONES"
+
+#: launcher translated copy
+msgid "Button profile"
+msgstr "Perfil de botones"
+
+#: launcher translated copy
+msgid "Change console mode for this game?"
+msgstr "¿Cambiar el modo de consola para este juego?"
+
+#: launcher translated copy
+msgid "Choose one root for keys, firmware, games, updates and mods"
+msgstr "Elige una carpeta raíz para claves, firmware, juegos, actualizaciones y mods"
+
+#: launcher translated copy
+msgid "Circle"
+msgstr "Círculo"
+
+#: launcher translated copy
+msgid "Clear"
+msgstr "Borrar"
+
+#: launcher translated copy
+msgid "Clear cache?"
+msgstr "¿Borrar la caché?"
+
+#: launcher translated copy
+msgid "Cleared {0} of cache."
+msgstr "Se han borrado {0} de caché."
+
+#: launcher translated copy
+msgid "Confirm this action?"
+msgstr "¿Confirmar esta acción?"
+
+#: launcher translated copy
+msgid "Controller mapping"
+msgstr "Asignación del control"
+
+#: launcher translated copy
+msgid "Controller profile: {0}"
+msgstr "Perfil del control: {0}"
+
+#: launcher translated copy
+msgid "Could not save the storage root. Please try again."
+msgstr "No se pudo guardar la carpeta raíz. Inténtalo de nuevo."
+
+#: launcher translated copy
+msgid "Create"
+msgstr "Crear"
+
+#: launcher translated copy
+msgid "Cross"
+msgstr "Cruz"
+
+#: launcher translated copy
+msgid "Custom PS5"
+msgstr "PS5 personalizado"
+
+#: launcher translated copy
+msgid "Custom Switch"
+msgstr "Switch personalizado"
+
+#: launcher translated copy
+msgid "Customize"
+msgstr "Personalizar"
+
+#: launcher translated copy
+msgid "Customize every guest button. The profile automatically becomes Custom PS5 or Custom Switch."
+msgstr "Personaliza cada botón del juego. El perfil pasará automáticamente a PS5 personalizado o Switch personalizado."
+
+#: launcher translated copy
+msgid "DATA"
+msgstr "DATOS"
+
+#: launcher translated copy
+msgid "Data: {0}"
+msgstr "Datos: {0}"
+
+#: launcher translated copy
+msgid "DETAILED LOGGING"
+msgstr "REGISTRO DETALLADO"
+
+#: launcher translated copy
+msgid "Docked can improve graphics but may cost performance; Handheld is lighter for demanding games."
+msgstr "El modo TV puede mejorar los gráficos a costa del rendimiento; el modo portátil requiere menos recursos."
+
+#: launcher translated copy
+msgid "DualSense mapping, calibration, vibration and shortcuts."
+msgstr "Asignación, calibración, vibración y atajos del DualSense."
+
+#: launcher translated copy
+msgid "Eden Encore builds on the proven ProsperoEden 0.40 PS5 base for firmware 13.60, with the Eden core, safer recovery, and targeted compatibility, performance and TV-first UX improvements."
+msgstr "Eden Encore parte de la base ProsperoEden 0.40 para el firmware 13.60, con el núcleo Eden, recuperación más segura y mejoras de compatibilidad, rendimiento e interfaz para TV."
+
+#: launcher translated copy
+msgid "Edit"
+msgstr "Editar"
+
+#: launcher translated copy
+msgid "Edit custom mapping"
+msgstr "Editar asignación personalizada"
+
+#: launcher translated copy
+msgid "Encore uses the same keys, firmware, roms, updates and mods folders under every storage root."
+msgstr "Encore usa las mismas carpetas keys, firmware, roms, updates y mods en cada ubicación raíz."
+
+#: launcher translated copy
+msgid "Export failed. Check that the storage root can be written."
+msgstr "Error al exportar. Comprueba que se pueda escribir en la carpeta raíz."
+
+#: launcher translated copy
+msgid "FILESYSTEM"
+msgstr "SISTEMA DE ARCHIVOS"
+
+#: launcher translated copy
+msgid "Final app output size. Choose 1080p for lower memory use, 1440p for balance, or 2160p for maximum output detail."
+msgstr "Resolución enviada a la pantalla. Elige 1080p para ahorrar memoria, 1440p para equilibrar o 2160p para el máximo detalle."
+
+#: launcher translated copy
+msgid "Fixed Encore folder structure"
+msgstr "Estructura fija de carpetas de Encore"
+
+#: launcher translated copy
+msgid "FSR sharpness changes detail recovery only when AMD FSR is selected. Lower it if the picture looks grainy or over-sharpened."
+msgstr "La nitidez FSR solo actúa al seleccionar AMD FSR. Redúcela si la imagen parece granulada o demasiado enfocada."
+
+#: launcher translated copy
+msgid "FXAA"
+msgstr "FXAA"
+
+#: launcher translated copy
+msgid "Game render scale follows the selected profile. Lower it for performance or memory; raise it only when a game has headroom."
+msgstr "La escala de renderizado sigue el perfil elegido. Bájala para mejorar rendimiento o memoria; súbela solo si hay margen."
+
+#: launcher translated copy
+msgid "Global ({0})"
+msgstr "Global ({0})"
+
+#: launcher translated copy
+msgid "Global controller profile: {0}"
+msgstr "Perfil global del control: {0}"
+
+#: launcher translated copy
+msgid "Health and storage tools. Cache cleanup never removes saves, settings, keys or games."
+msgstr "Herramientas de estado y almacenamiento. Borrar la caché no elimina partidas, ajustes, claves ni juegos."
+
+#: launcher translated copy
+msgid "High"
+msgstr "Alta"
+
+#: launcher translated copy
+msgid "Internal storage"
+msgstr "Almacenamiento interno"
+
+#: launcher translated copy
+msgid "Internal storage saved. Reopen Encore to use it."
+msgstr "Almacenamiento interno guardado. Vuelve a abrir Encore para utilizarlo."
+
+#: launcher translated copy
+msgid "LAYOUT"
+msgstr "DISTRIBUCIÓN"
+
+#: launcher translated copy
+msgid "Left/right: Global, PlayStation or Switch for this game; Cross: edit individual buttons."
+msgstr "Izquierda/derecha: Global, PlayStation o Switch para este juego; Cruz: editar los botones."
+
+#: launcher translated copy
+msgid "Left stick press"
+msgstr "Presionación del palanca izquierdo"
+
+#: launcher translated copy
+msgid "Max. players: {0}"
+msgstr "Jugadores máx.: {0}"
+
+#: launcher translated copy
+msgid "LOGS"
+msgstr "REGISTROS"
+
+#: launcher translated copy
+msgid "Minimum reduces GPU load and may use lower GPU accuracy for speed. Recommended balances quality and stability. High and Ultra raise image quality when the game has headroom."
+msgstr "Mínimo reduce la carga de GPU y puede sacrificar precisión. Recomendado equilibra calidad y estabilidad; Alto y Ultra mejoran la imagen si hay margen."
+
+#: launcher translated copy
+msgid "Minimum, Recommended, High and Ultra apply the title-aware Encore profile. Manual changes become Custom for this game."
+msgstr "Mínimo, Recomendado, Alto y Ultra aplican perfiles por juego. Los cambios manuales pasan a Personalizado."
+
+#: launcher translated copy
+msgid "One root for keys, firmware, games, updates, mods and transfers."
+msgstr "Una carpeta raíz para claves, firmware, juegos, actualizaciones, mods y transferencias."
+
+#: launcher translated copy
+msgid "Open quick settings"
+msgstr "Abrir ajustes rápidos"
+
+#: launcher translated copy
+msgid "Open storage"
+msgstr "Abrir almacenamiento"
+
+#: launcher translated copy
+msgid "Open the per-game DualSense mapping. Global uses Settings > Controls; Custom overrides it only for this game."
+msgstr "Abre la asignación DualSense de este juego. Global usa Configuración > Controles; Personalizado solo modifica este juego."
+
+#: launcher translated copy
+msgid "Options"
+msgstr "Options"
+
+#: launcher translated copy
+msgid "PlayStation"
+msgstr "PlayStation"
+
+#: launcher translated copy
+msgid "PlayStation Auto keeps Cross/Circle menu semantics while adapting gameplay to physical Switch positions. Switch stays fixed; editing any button creates a custom profile."
+msgstr "PlayStation Auto mantiene Cruz/Círculo en los menús y adapta el juego a los botones físicos de Switch. Editar un botón crea un perfil personalizado."
+
+#: launcher translated copy
+msgid "PS5 13.60 FORK"
+msgstr "FORK PS5 13.60"
+
+#: launcher translated copy
+msgid "Reset controller mapping?"
+msgstr "¿Restablecer la asignación del control?"
+
+#: launcher translated copy
+msgid "Reset this game's custom settings?"
+msgstr "¿Restablecer los ajustes personalizados de este juego?"
+
+#: launcher translated copy
+msgid "Resolution follows the selected title-aware profile. Lower it for performance or memory; raise it only when the title has headroom."
+msgstr "La resolución sigue el perfil del juego. Bájala para mejorar rendimiento o memoria; súbela solo si hay margen."
+
+#: launcher translated copy
+msgid "Restore default settings?"
+msgstr "¿Restablecer los ajustes predeterminados?"
+
+#: launcher translated copy
+msgid "Right stick press"
+msgstr "Presionación del palanca derecho"
+
+#: launcher translated copy
+msgid "ROM missing from the storage root"
+msgstr "Falta la ROM en la carpeta raíz"
+
+#: launcher translated copy
+msgid "ROOT"
+msgstr "RAÍZ"
+
+#: launcher translated copy
+msgid "Runtime health, storage and recovery tools."
+msgstr "Herramientas de estado, almacenamiento y recuperación."
+
+#: launcher translated copy
+msgid "Safe launch"
+msgstr "Inicio seguro"
+
+#: launcher translated copy
+msgid "Sandbox only"
+msgstr "Solo entorno aislado"
+
+#: launcher translated copy
+msgid "SELECTED GAME"
+msgstr "JUEGO SELECCIONADO"
+
+#: launcher translated copy
+msgid "Setup required: {0} Open Settings, Storage to choose the root that holds the standard keys, firmware and roms folders (or add the files to {1}), then reopen Encore."
+msgstr "Configuración necesaria: {0} Abre Configuración > Almacenamiento y elige la carpeta con keys, firmware y roms (o cópialas en {1}). Después reinicia Encore."
+
+#: launcher translated copy
+msgid "CACHE"
+msgstr "CACHÉ"
+
+#: launcher translated copy
+msgid "Cache: {0}  |  Logs: {1}"
+msgstr "Caché: {0}  |  Registros: {1}"
+
+#: launcher translated copy
+msgid "Shows live FPS while playing. Off is cleaner for normal use; Touchpad + R1 toggles it at any time."
+msgstr "Muestra los FPS durante el juego. Desactivarlo evita distracciones; Touchpad + R1 permite alternarlo."
+
+#: launcher translated copy
+msgid "SMAA"
+msgstr "SMAA"
+
+#: launcher translated copy
+msgid "Some cache files could not be removed."
+msgstr "No se pudieron borrar algunos archivos de caché."
+
+#: launcher translated copy
+msgid "Square"
+msgstr "Cuadrado"
+
+#: launcher translated copy
+msgid "Storage root saved. Reopen Encore to use it."
+msgstr "Carpeta raíz guardada. Vuelve a abrir Encore para utilizarla."
+
+#: launcher translated copy
+msgid "Switch"
+msgstr "Switch"
+
+#: launcher translated copy
+msgid "Switch card"
+msgstr "Tarjeta Switch"
+
+#: launcher translated copy
+msgid "System"
+msgstr "Sistema"
+
+#: launcher translated copy
+msgid "Thanks to the whole PS5 homebrew community and to every developer whose drivers, tools and libraries make Eden Encore possible."
+msgstr "Gracias a toda la comunidad homebrew de PS5 y a quienes desarrollan los controladores, herramientas y bibliotecas que hacen posible Eden Encore."
+
+#: launcher translated copy
+msgid "THIS ROOT"
+msgstr "ESTA CARPETA"
+
+#: launcher translated copy
+msgid "Touchpad"
+msgstr "Panel táctil"
+
+#: launcher translated copy
+msgid "Triangle"
+msgstr "Triángulo"
+
+#: launcher translated copy
+msgid "Turns DualSense vibration on or off for games."
+msgstr "Activa o desactiva la vibración DualSense en los juegos."
+
+#: launcher translated copy
+msgid "Unknown"
+msgstr "Desconocido"
+
+#: launcher translated copy
+msgid "Use extracted firmware NCA files. Choose the root in Settings, Storage; restart the app after changing it."
+msgstr "Usa archivos NCA del firmware extraído. Elige su ubicación en Configuración > Almacenamiento y reinicia la aplicación."
+
+#: launcher translated copy
+msgid "Use this root"
+msgstr "Usar esta carpeta"
+
+#: launcher translated copy
+msgid "Vulkan is recommended on PS5. Use OpenGL only as a fallback for a game with Vulkan issues."
+msgstr "Se recomienda Vulkan en PS5. Utiliza OpenGL solo como alternativa si un juego falla con Vulkan."
+
+#: launcher translated copy
+msgid "Vulkan is recommended on PS5. Use OpenGL only as a fallback for a title with Vulkan issues."
+msgstr "Se recomienda Vulkan en PS5. Utiliza OpenGL solo como alternativa si un título falla con Vulkan."
+
+#: launcher translated copy
+msgid "Recent"
+msgstr "Recientes"
+
+#: launcher translated copy
+msgid "Loading artwork"
+msgstr "Cargando imágenes"
+
+#: launcher translated copy
+msgid "No screenshots available"
+msgstr "No hay capturas disponibles"
+
+#: launcher translated copy
+msgid "Games and cache"
+msgstr "Juegos y caché"
+
+#: launcher translated copy
+msgid "Storage not configured"
+msgstr "Almacenamiento sin configurar"
+
+#: launcher translated copy
+msgid "Storage ready"
+msgstr "Almacenamiento listo"
+
+#: launcher translated copy
+msgid "Loading game library..."
+msgstr "Cargando biblioteca de juegos..."
+
+#: launcher translated copy
+msgid "Could not load game list. Please try again."
+msgstr "No se pudo cargar la lista de juegos. Inténtalo de nuevo."
+
+#: launcher translated copy
+msgid "Could not load game library. Reopen Encore to retry."
+msgstr "No se pudo cargar la biblioteca. Vuelve a abrir Encore para reintentarlo."
+
+#: launcher translated copy
+msgid "Game library unavailable"
+msgstr "Biblioteca de juegos no disponible"
+
+#: launcher translated copy
+msgid "The game could not allocate PS5 memory. Close Eden Encore completely before retrying to release memory retained between games."
+msgstr "El juego no pudo reservar memoria de PS5. Cierra Eden Encore por completo antes de reintentarlo para liberar memoria retenida."
+
+#: launcher translated copy
+msgid "Exit Eden Encore"
+msgstr "Salir de Eden Encore"
+
+#: launcher translated copy
+msgid "Exit Eden Encore?"
+msgstr "¿Salir de Eden Encore?"
