@@ -853,11 +853,10 @@ void Launcher::draw_launch(Canvas &c)
     if (printed_side_visible) {
         c.list.case_spine(side_strip, angle, case_depth - 6.0f,
                           Color::rgb(0xa90e20), Color::rgb(0x6d1020), 3.0f);
-        if (!launch_box_spine_.empty()) {
-            const Cover ink = c.textures.cover(launch_box_spine_, 760.0f);
-            if (ink.texture != 0)
-                c.list.case_spine_image(ink.texture, side_strip, angle,
-                                        case_depth, kWhite);
+        const Cover ink = c.textures.cover(launch_box_spine_, 760.0f);
+        if (ink.texture != 0) {
+            c.list.case_spine_image(ink.texture, side_strip, angle,
+                                    case_depth, kWhite);
         } else {
             // Generic clean retail-style spine: red sleeve, a pale maker's
             // mark and a tiny footer. Crucially NO generated game title and
