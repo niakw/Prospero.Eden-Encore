@@ -39,7 +39,7 @@ link_native() {
     local map=$2
     shift 2
     "$lld" \
-        "${tls_flags[@]}" "${radv_link_flags[@]}" "$@" -z nodynamic-undefined-weak -L "$sdk/target/lib" \
+        "${tls_flags[@]}" "${radv_link_flags[@]}" "$@" -L "$sdk/target/lib" \
         --defsym=__dlopen=0 --defsym=__dlsym=0 --defsym=__dladdr=0 \
         --defsym=__dlclose=0 --defsym=__dlerror=0 \
         -T "$template/tooling/native/ps5-pie.ld" -T "$root/tools/unwind.ld" \
@@ -53,6 +53,9 @@ link_native() {
         "$sdk/target/lib/libc.a" "$sdk/target/lib/libSceNet.so"
 }
 
+# No -z nodynamic-undefined-weak: native pros﻿pero-lld rejects this unknown option.
+# The two-link pass below explicitly resolves any remaining weak symbol to 0
+# and verifies no weak imports survive; the unsupported flag never protected us.
 # First pass: let every real static/system provider resolve what it can.
 # Mesa dispatch tables intentionally carry weak references for optional hooks; anything weak that
 # survives this complete link has no provider on the PS5 and must behave as a NULL function pointer.
