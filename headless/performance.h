@@ -349,6 +349,17 @@ inline void FinishGuestIpc(GuestIpcThread* row, unsigned long long tid,
             expected, 0, std::memory_order_release, std::memory_order_relaxed);
     }
 }
+// kspin=N: bounded host mutex acquisition used for guest scheduler locks.
+inline std::atomic<unsigned> kernel_spin_iterations{4000};
+template <typename Mutex>
+inline void SpinAcquire(Mutex& mutex) {
+    const unsigned spins = kernel_spin_iterations.load(std::memory_order_relaxed);
+    for (unsigned i = 0; i < spins; ++i) {
+        if (mutex.try_lock()) return;
+        __builtin_ia32_pause();
+    }
+    mutex.lock();
+}
 void RecordHle(const char* service, unsigned command, long long ns);
 inline long long NowNs() { return Common::g_wall_clock.GetTimeNS().count(); }
 // Texture cache garbage collection (tools/prepare-vulkan-port.py, vulkan_gc_downloads.inc).
@@ -393,6 +404,8 @@ inline bool KeepDirtyTextures() {
     const auto probe = graphics_memory_probe.load(std::memory_order_relaxed);
     return !probe || !probe();
 }
+// 1.5ms compose delay after signaling guest VSync (compose_delay_us=0 restores upstream).
+inline std::atomic<int> compose_delay_us{1500};
 // Development boot trace (dev-settings boot_trace=START:END, milliseconds after the settings
 // are read): guest GPU submissions and GPU-thread dispatches inside it are logged one by one.
 inline std::atomic<long long> boot_trace_begin{0}, boot_trace_end{0};
@@ -417,7 +430,7 @@ inline std::array<IdleCounters, 4> guest_idle{};
 // handoff put the host's thread wake-up latency on the critical path. 100 us (the default) took
 // a racing game's heavy phase from ~55 to ~59.6 FPS; dev-settings
 // idle_spin_us=N overrides it (0 sleeps at once).
-inline std::atomic<unsigned> idle_spin_iterations{5000};
+inline std::atomic<unsigned> idle_spin_iterations{25000};
 // R355: 16 draws between Vulkan worker hand-offs instead of 8. FC27 measured
 // ~1,000-2,000 dispatches per five-second window with an otherwise idle GPU
 // owner; halving dispatch submissions keeps the same hard 512-draw flush bound.

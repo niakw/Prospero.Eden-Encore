@@ -132,6 +132,10 @@ target_include_directories(dynarmic BEFORE PRIVATE "${EDEN_JIT_ASSERT_ROOT}")
 # Let the existing compiler inline across the JIT's translation units. Keep the
 # rest of the native application on its qualified non-LTO build path.
 target_compile_options(dynarmic PRIVATE -flto=thin)
+if(PS5_NATIVE)
+    # Limit ThinLTO and Zen2 tuning to the GPU code; preserve core/common fiber behavior.
+    target_compile_options(video_core PRIVATE -flto=thin -march=znver2)
+endif()
 if(NOT PS5_NATIVE)
     target_link_options(dynarmic INTERFACE -fuse-ld=lld-18)
 endif()
@@ -1023,6 +1027,17 @@ write_derived("${PORT_BUILD_DIR}/physical_core.cpp"
     "#include <cstdio>\n#include \"${EDEN_PORT_DIR}/guest_fault.h\"\n#include \"${EDEN_PORT_DIR}/performance.h\"\n#include \"core/arm/debug.h\"\n${physical_core_source}")
 list(REMOVE_ITEM core_sources "hle/kernel/physical_core.cpp")
 list(APPEND core_sources "${PORT_BUILD_DIR}/physical_core.cpp")
+# Guest kernel scheduler mutex: bounded pause retries before host blocking.
+file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/kernel/k_spin_lock.cpp" spin_source)
+set(spin_old "void KSpinLock::Lock() {\n    m_lock.lock();\n}")
+string(FIND "${spin_source}" "${spin_old}" spin_at)
+if(spin_at LESS 0)
+    message(FATAL_ERROR "Pinned KSpinLock::Lock changed")
+endif()
+string(REPLACE "${spin_old}" "void KSpinLock::Lock() {\n    ::Eden::Performance::SpinAcquire(m_lock);\n}" spin_source "${spin_source}")
+write_derived("${PORT_BUILD_DIR}/k_spin_lock.cpp" "#include \"${EDEN_PORT_DIR}/performance.h\"\n${spin_source}")
+list(REMOVE_ITEM core_sources "hle/kernel/k_spin_lock.cpp")
+list(APPEND core_sources "${PORT_BUILD_DIR}/k_spin_lock.cpp")
 if(EDEN_DEV_PROFILE)
     # Guest-visible waits: syncpoint event registration to signal (GPU-pipeline latency
     # the game waits on) and buffer-queue dequeue waits (presentation back-pressure).
@@ -1475,7 +1490,32 @@ set_property(TARGET core PROPERTY SOURCES "${core_sources}")
 # published for the renderer: frames a display has no refresh for are not presented
 # (headless/display_refresh.h).
 file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/vi/conductor.cpp" conductor_source)
-string(PREPEND conductor_source "#include \"${EDEN_PORT_DIR}/display_refresh.h\"\n")
+# Guest VSync notification can precede composition in multicore mode (0 = original order).
+set(compose_old [=[    for (auto& [display_id, manager] : m_vsync_managers) {
+        m_container.ComposeOnDisplay(&m_swap_interval, &m_compose_speed_scale, display_id);
+        manager.SignalVsync(m_system.Kernel());
+    }]=])
+string(FIND "${conductor_source}" "${compose_old}" compose_at)
+if(compose_at LESS 0)
+    message(FATAL_ERROR "Pinned VI conductor composition loop changed")
+endif()
+set(compose_new [=[    if (const int compose_delay = ::Eden::Performance::compose_delay_us.load(std::memory_order_relaxed);
+        compose_delay > 0 && m_system.IsMulticore()) {
+        for (auto& [display_id, manager] : m_vsync_managers) {
+            manager.SignalVsync(m_system.Kernel());
+        }
+        std::this_thread::sleep_for(std::chrono::microseconds(compose_delay));
+        for (auto& [display_id, manager] : m_vsync_managers) {
+            m_container.ComposeOnDisplay(&m_swap_interval, &m_compose_speed_scale, display_id);
+        }
+        return;
+    }
+    for (auto& [display_id, manager] : m_vsync_managers) {
+        m_container.ComposeOnDisplay(&m_swap_interval, &m_compose_speed_scale, display_id);
+        manager.SignalVsync(m_system.Kernel());
+    }]=])
+string(REPLACE "${compose_old}" "${compose_new}" conductor_source "${conductor_source}")
+string(PREPEND conductor_source "#include \"${EDEN_PORT_DIR}/display_refresh.h\"\n#include \"${EDEN_PORT_DIR}/performance.h\"\n#include <thread>\n")
 eden_patch(conductor_source
     "    const f32 effective_fps = 60.f / static_cast<f32>(m_swap_interval);\n    return static_cast<s64>(speed_scale * (1000000000.f / effective_fps));"
     "    const f32 effective_fps = 60.f / static_cast<f32>(m_swap_interval);\n    ::Eden::Display::game_millihertz.store(static_cast<int>(effective_fps * 1000.f / speed_scale),\n                                           std::memory_order_relaxed);\n    return static_cast<s64>(speed_scale * (1000000000.f / effective_fps));")
@@ -2010,6 +2050,15 @@ endif()
 string(REPLACE "${npad_update}"
     "        auto& controller = controller_data[aruid_index][controller_idx];\n        if (controller.device == nullptr) {\n            continue;  // ProsperoEden: this applet resource is not activated yet\n        }\n        const auto is_connected = controller.device->IsConnected();"
     npad_source "${npad_source}")
+# Motion callbacks may precede the HID applet-resource assignment (first frame).
+set(npad_entry "void NPad::ControllerUpdate(Kernel::KernelCore& kernel, Core::HID::ControllerTriggerType type, std::size_t controller_idx) {\n")
+string(FIND "${npad_source}" "${npad_entry}" npad_entry_at)
+if(npad_entry_at LESS 0)
+    message(FATAL_ERROR "Pinned NPad::ControllerUpdate entry changed")
+endif()
+string(REPLACE "${npad_entry}"
+    "${npad_entry}    if (applet_resource_holder.applet_resource == nullptr) {\n        return;\n    }\n"
+    npad_source "${npad_source}")
 write_derived("${PORT_BUILD_DIR}/npad.cpp" "${npad_source}")
 get_target_property(npad_sources hid_core SOURCES)
 list(FILTER npad_sources EXCLUDE REGEX "(^|/)npad\\.cpp$")
@@ -2215,7 +2264,7 @@ if(EDEN_PS5_OPENGL)
     # slots (which can hide large latency). Preserve all fences, FIFO and
     # stop-aware producer waking; leave non-native host budgeting unchanged.
     if(PS5_NATIVE)
-        set(eden_gpu_queue_capacity 32)
+        set(eden_gpu_queue_capacity 256)
     else()
         set(eden_gpu_queue_capacity 8)
     endif()

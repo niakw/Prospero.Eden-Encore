@@ -196,6 +196,13 @@ bool topology_allowed_valid = false;
 std::atomic<bool> placement_secondary{false};
 std::atomic<unsigned> secondary_reports{};
 void CheckWorkerTopology() {
+    // A later game may start from a launcher thread with a narrower inherited CPU set.
+    // Preserve the process-wide physically verified layout, rather than probing that subset.
+    if (worker_topology_ready) {
+        std::printf("EDEN_WORKER_TOPOLOGY ready=1 cached=1 cpus=%u,%u,%u,%u,%u\n",
+            worker_cpus[0], worker_cpus[1], worker_cpus[2], worker_cpus[3], worker_cpus[4]);
+        return;
+    }
     // A new title/firmware check may fail before CPUID probing begins.
     // Never reuse a previous game's affinity decision in that case.
     verified_physical_worker_mask.store(0, std::memory_order_release);

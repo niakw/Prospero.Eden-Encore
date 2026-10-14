@@ -1287,7 +1287,9 @@ int main(int argc, char** argv) {
         // Earlier 64-draw experiments were not qualified as smoother FC27.
         // A/B rollback: dev-settings dispatch_draws=8. Reset per title.
         Eden::Performance::dispatch_mask.store(15, std::memory_order_relaxed);
-        Eden::Performance::idle_spin_iterations.store(5000, std::memory_order_relaxed);
+        Eden::Performance::idle_spin_iterations.store(25000, std::memory_order_relaxed);
+        Eden::Performance::kernel_spin_iterations.store(4000, std::memory_order_relaxed);
+        Eden::Performance::compose_delay_us.store(1500, std::memory_order_relaxed);
         Eden::Performance::jit_duplicate_tracking.store(false, std::memory_order_relaxed);
         Eden::Performance::pc_sample_core.store(0, std::memory_order_relaxed);
         Eden::Performance::pc_fast.store(false, std::memory_order_relaxed);
@@ -1325,6 +1327,10 @@ int main(int argc, char** argv) {
                     const unsigned long draws = std::strtoul(entry.c_str() + 15, nullptr, 10);
                     if (draws >= 8 && draws <= 512 && (draws & (draws - 1)) == 0)
                         Eden::Performance::dispatch_mask = static_cast<unsigned>(draws - 1);
+                } else if (entry.starts_with("compose_delay_us=")) {
+                    Eden::Performance::compose_delay_us.store(std::clamp(std::stoi(entry.substr(17)), 0, 10000), std::memory_order_relaxed);
+                } else if (entry.starts_with("kspin=")) {
+                    Eden::Performance::kernel_spin_iterations.store(static_cast<unsigned>(std::min(100000UL, std::strtoul(entry.c_str() + 6, nullptr, 10))), std::memory_order_relaxed);
                 } else if (entry.starts_with("idle_spin_us=")) {
                     // Guest cores spin this long on their interrupt flag before sleeping (W1).
                     Eden::Performance::idle_spin_iterations = static_cast<unsigned>(std::stoul(entry.substr(13)) * 50);
