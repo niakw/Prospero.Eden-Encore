@@ -33,8 +33,12 @@ for forbidden in ('resolv.conf','sceNetResolverStartNtoa(', 'sceNetInit(', 'setd
     assert forbidden not in (root/"headless/network_audit.c").read_text()
     assert forbidden not in observer
 # The expensive formatting is guarded in every call site when OFF.
-assert 'if (!atomic_load_explicit(&audit_enabled,memory_order_acquire)) return;' in (
-    root/"headless/network_audit.c").read_text()
+audit_source = (root/"headless/network_audit.c").read_text()
+assert 'if (!atomic_load_explicit(&audit_enabled,memory_order_acquire)) return;' in audit_source
+for stamp in ('clock_gettime(CLOCK_REALTIME', 'clock_gettime(CLOCK_MONOTONIC',
+              'gmtime_r(', 'epoch=%lld utc=%s mono_ns=%lld'):
+    assert stamp in audit_source, stamp
+assert 'dns-denied-summary target=aggregated bytes=0 status=0 count=%llu' in audit_source
 assert 'if (eden_network_audit_active()' in observer or 'eden_network_audit_active())' in observer
 # The generated guest service inherits the existing DNS denylist, not a new resolver.
 assert 'eden_network_host_blocked(host.c_str())' in cmake
@@ -68,6 +72,22 @@ static int contains(const char* path,const char* phrase) {
     while (fgets(row,sizeof(row),f)) if (strstr(row,phrase)) found=1;
     fclose(f); return found;
 }
+static void check_all_timestamps(const char* path) {
+    FILE* f=fopen(path,"rb"); assert(f);
+    char row[640],utc[32];
+    unsigned records=0;
+    while(fgets(row,sizeof(row),f)) {
+        long long epoch=-1,mono=-1;
+        memset(utc,0,sizeof(utc));
+        assert(sscanf(row,"epoch=%lld utc=%31s mono_ns=%lld",&epoch,utc,&mono)==3);
+        assert(epoch>0 && mono>0);
+        assert(strlen(utc)==24 && utc[23]=='Z' &&
+               utc[10]=='T' && utc[19]=='.');
+        ++records;
+    }
+    fclose(f);
+    assert(records>0);
+}
 int main(int argc,char** argv) {
     assert(argc==2);
     char logpath[640],oldpath[650];
@@ -95,7 +115,8 @@ int main(int argc,char** argv) {
     assert(exists(logpath));
     assert(contains(logpath,"scope=launcher event=dns-resolved target=api.nlib.cc"));
     assert(contains(logpath,"scope=guest event=dns-denied target=api.ea.com"));
-    assert(contains(logpath,"event=dns-denied-summary target=aggregated count="));
+    assert(contains(logpath,"event=dns-denied-summary target=aggregated bytes=0 status=0 count="));
+    check_all_timestamps(logpath);
     assert(contains(logpath,"target=spring25.client.blazeredirector.ea.com"));
     assert(contains(logpath,"scope=guest event=tx target=198.51.100.1:443 bytes=135"));
     assert(contains(logpath,"target=evil_line"));
@@ -109,6 +130,8 @@ int main(int argc,char** argv) {
     assert(exists(logpath)&&exists(oldpath));
     assert(bytes(logpath)<=4*1024*1024);
     assert(bytes(oldpath)<=4*1024*1024+512);
+    check_all_timestamps(logpath);
+    check_all_timestamps(oldpath);
     puts("NETWORK_AUDIT_HOST_PASS: quiet, duplicate DNS throttle, native TX preservation, escaping, 4MiB rotation");
     return 0;
 }
