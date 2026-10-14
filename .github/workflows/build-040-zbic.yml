@@ -358,6 +358,19 @@ jobs:
         if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
         run: make prepare JOBS=4
 
+      - name: Prepare local Switch case index
+        if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
+        run: |
+          set -euo pipefail
+          python3 -B tools/launcher/build-box-art-index.py --self-test
+          if python3 -B tools/launcher/build-box-art-index.py --download --output headless/prosperoeden/ui/box-art-index.tsv; then
+            echo "Retail scan index ready (no full database shipped)"
+          else
+            # Network/catalog outages must never prevent an emulator build.
+            rm -f headless/prosperoeden/ui/box-art-index.tsv
+            echo "::warning::Optional case index unavailable; cached/user-provided artwork remains supported"
+          fi
+
       - name: Build and stage native app (release or development)
         id: stage
         if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
