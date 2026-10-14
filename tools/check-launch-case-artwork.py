@@ -46,7 +46,7 @@ for fragment in (
     "const std::string& scan = back ? launch_box_back_ : launch_box_front_;",
     "const Cover artwork = c.textures.cover(",
     "c.list.case_face(artwork.texture, face, angle, back, kWhite);",
-    "c.list.case_spine(physical, angle, 22.0f,",
+    "c.list.case_spine(side_strip, angle, case_depth - 6.0f,",
     "c.list.case_plastic(physical, angle, back,",
     "launch_screenshots_.front()",
     "const Rect physical{390.0f, 162.0f, 422.0f, 655.0f};",
@@ -63,9 +63,9 @@ assert "constexpr float kCaseTurnSeconds = 1.30f;" in theme
 assert "constexpr float kLaunchSeconds = kCaseFrontHold" in theme
 
 # Quarter turn becomes an edge; the full back is visible half a turn later.
-assert math.cos(0.13) > 0
-assert math.cos(0.13 + 6.15 * 0.50) < 0
-assert math.cos(0.13 + 6.15 * 0.99) > 0
+assert math.cos(0.53) > 0
+assert math.cos(0.53 + math.pi) < 0
+assert math.cos(0.53 + 2.0 * math.pi) > 0
 indexer = (root / "tools/launcher/build-box-art-index.py").read_text()
 workflow = (root / ".github/workflows/build-040-zbic.yml").read_text()
 packager = (root / "tools/package-headless-native.sh").read_text()
