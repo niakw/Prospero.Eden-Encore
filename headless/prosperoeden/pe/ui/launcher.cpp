@@ -768,8 +768,8 @@ void Launcher::draw_launch(Canvas &c)
     const Rect physical{374.0f, 126.0f, 454.0f, 730.0f};
     const float width = physical.w * std::abs(facing) +
                         case_depth * std::abs(std::sin(angle));
-    const Rect face{physical.x + 7.0f, physical.y + 7.0f,
-                    physical.w - 14.0f, physical.h - 14.0f};
+    const Rect face{physical.x + 3.0f, physical.y + 3.0f,
+                    physical.w - 6.0f, physical.h - 6.0f};
     const float mid_x = physical.x + physical.w * 0.5f;
     c.list.shadow({mid_x - width * 0.5f - 72.0f, physical.y - 8.0f,
                    width + 144.0f, physical.h + 34.0f}, 35.0f, 105.0f,
