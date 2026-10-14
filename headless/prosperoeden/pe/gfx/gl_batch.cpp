@@ -43,7 +43,7 @@ void main()
     vec2 size = a_rect.zw;
     // Grow shapes by their softness plus one output pixel for anti-aliasing;
     // glyph and image quads map texels exactly and are not grown.
-    float pad = (shape == 1 || shape == 3 || shape == 9 || shape == 10) ?
+    float pad = (shape == 1 || shape == 3 || shape == 9 || shape == 10 || shape == 11) ?
         0.0 : a_params.z + 1.0 / u_viewport.x;
     vec2 local = mix(vec2(-pad), size + vec2(pad), corner);
     vec2 virt = a_rect.xy + local;
@@ -59,7 +59,7 @@ void main()
     v_params = a_params;
     v_extra = a_extra;
     float clip_w = 1.0;
-    if (shape == 9 || shape == 10) {
+    if (shape == 9 || shape == 10 || shape == 11) {
         // A real projective quad, not a horizontally squashed 2D image.
         // Shared retail-case geometry across all titles and console/host.
         const float a = a_params.x;
@@ -67,7 +67,7 @@ void main()
         const vec2 centre = a_rect.xy + 0.5 * size;
         const vec2 local = (corner - 0.5) * size;
         float x, z;
-        if (shape == 9) {
+        if (shape == 9 || shape == 11) {
             x = local.x * cs;
             z = -local.x * sn;
             vec2 oriented = vec2(a_params.y > 0.5 ? 1.0 - corner.x : corner.x,
@@ -77,9 +77,9 @@ void main()
             // Exposed left/right plastic side joins front face to rear face.
             // Front and rear lie on actual parallel planes, 25 virtual px apart.
             float edge_x = (sn > 0.0 ? -0.5 : 0.5) * size.x;
-            float rear = corner.x;
-            x = edge_x * cs - rear * sn * a_params.y;
-            z = -edge_x * sn - rear * cs * a_params.y;
+            float depth = a_params.z + corner.x * a_params.y;
+            x = edge_x * cs - depth * sn;
+            z = -edge_x * sn - depth * cs;
         }
         clip_w = max(0.65, 1.0 - z / 950.0);
         virt = centre + vec2(x, local.y) / clip_w;
@@ -168,6 +168,30 @@ void main()
     else if (shape == 10)
     {
         color = mix(v_top, v_bottom, v_st.x);
+    }
+    else if (shape == 11)
+    {
+        // A molded translucent sleeve with a beveled white frame. The centre
+        // remains transparent so high-resolution real cover art is untouched.
+        // Every point shares the EXACT projective pivot of case_face().
+        vec2 d = min(v_st, 1.0 - v_st) * (v_half * 2.0);
+        float distance_edge = min(d.x, d.y);
+        float outer = 1.0 - smoothstep(5.0, 19.0, distance_edge);
+        float lip = (smoothstep(7.0, 11.0, distance_edge) -
+                     smoothstep(14.0, 21.0, distance_edge)) * 0.37;
+        float top_glint = (1.0 - smoothstep(0.0, 0.065, v_st.y)) * 0.28;
+        float left_glint = (1.0 - smoothstep(0.0, 0.028, v_st.x)) * 0.18;
+        float clip_gloss = (1.0 - smoothstep(0.0, 0.024, 1.0-v_st.x)) *
+            (1.0 - smoothstep(0.0, 0.045, abs(v_st.y - 0.16))) * 0.36;
+        clip_gloss += (1.0 - smoothstep(0.0, 0.024, 1.0-v_st.x)) *
+            (1.0 - smoothstep(0.0, 0.045, abs(v_st.y - 0.81))) * 0.36;
+        float body = clamp(outer * 0.89 + lip + top_glint + left_glint + clip_gloss,
+                           0.0, 1.0);
+        float corner = length(max(abs(v_local) - (v_half - vec2(17.0)), 0.0));
+        body *= 1.0 - smoothstep(16.0, 22.0, corner);
+        vec3 sheen = mix(v_top.rgb, vec3(0.93, 0.97, 1.0),
+                         0.20 + 0.22 * (1.0 - v_st.y));
+        color = vec4(sheen, v_top.a * body);
     }
     else if (shape == 8)
     {
