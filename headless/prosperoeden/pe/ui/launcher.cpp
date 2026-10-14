@@ -703,8 +703,14 @@ void Launcher::draw_launch(Canvas &c)
     const Rect face{case_rect.x + 7.0f, case_rect.y + 7.0f,
                     std::max(1.0f, case_rect.w - 14.0f), case_rect.h - 14.0f};
     if (!scan.empty()) {
-        // Native scan: do not crop away the printed border or overpaint text.
-        cover(c, scan, face, 5.0f);
+        // Draw all of the printed scan. Its width foreshortens with the case:
+        // object-fit/contain would shrink the *height* at each quarter-turn.
+        const Cover artwork = c.textures.cover(scan, 640.0f);
+        if (artwork.texture != 0)
+            c.list.rounded_image(artwork.texture, face,
+                                 {0.0f, 0.0f, 1.0f, 1.0f}, 5.0f, kWhite);
+        else
+            c.list.gradient_rect(face, 5.0f, theme::kGlass, theme::kPanel);
     } else if (!back) {
         // No retail front: the existing game icon is framed as a stylized
         // case, rather than misrepresented as a physical box scan.
