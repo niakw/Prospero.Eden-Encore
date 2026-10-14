@@ -66,9 +66,9 @@ assert "constexpr float kCaseTurnSeconds = 1.30f;" in theme
 assert "constexpr float kLaunchSeconds = kCaseFrontHold" in theme
 
 # Quarter turn becomes an edge; the full back is visible half a turn later.
-assert math.cos(0.53) > 0
-assert math.cos(0.53 + math.pi) < 0
-assert math.cos(0.53 + 2.0 * math.pi) > 0
+assert math.cos(0.23) > 0
+assert math.cos(0.23 + math.pi) < 0
+assert math.cos(0.23 + 2.0 * math.pi) > 0
 indexer = (root / "tools/launcher/build-box-art-index.py").read_text()
 workflow = (root / ".github/workflows/build-040-zbic.yml").read_text()
 packager = (root / "tools/package-headless-native.sh").read_text()
@@ -134,7 +134,8 @@ assert "float radius = v_params.z > 0.5 ? 8.0 : 22.0;" in shader
 assert "float rounded = round_box(v_local, v_half, 22.0);" in shader
 assert "angle, false, case_depth," in draw
 assert "c.list.case_corner(physical, angle, case_radius, case_depth," in draw
-assert "constexpr float case_depth = 64.0f;" in draw
+assert "constexpr float case_depth = 36.0f;" in draw
+assert "float depth = a_params.y > 0.5 ? 36.0 : 0.0;" in shader
 assert "constexpr float case_radius = 22.0f;" in draw
 assert "float rounded = round_box(v_local, v_half, 22.0);" in shader
 assert "float fresnel = pow(1.0 - abs(cos(v_params.x)), 3.0);" in shader
