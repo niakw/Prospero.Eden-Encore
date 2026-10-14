@@ -1390,6 +1390,13 @@ pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game,
     EnsureRetailCase(game.title_id, game.name,
                      scanned_name != game.name ? scanned_name :
                      CleanTitle(game.file), cancel);
+    // This work stays on the media worker. Library drawing/navigation never
+    // reopens all retail scans to look them up at 60 Hz.
+    if (!(cancel && cancel->load(std::memory_order_acquire))) {
+        const auto box = box_art(game.title_id);
+        game.box_front = box.front;
+        game.box_back = box.back;
+    }
     return game;
 }
 
