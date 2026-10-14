@@ -1020,9 +1020,13 @@ void ReportDirectMemoryState(const char* phase) {
 // its own diagnostic report while the controller worker stays alive.
 std::atomic<unsigned long long> latest_gpu_report_ns{0};
 std::atomic<unsigned> latest_gpu_report_frame{0};
+// This heartbeat is needed in shipping builds too: the GPU may stop
+// reporting while the native controller/pad thread remains responsive.
+std::atomic<unsigned long long> last_gpu_stall_warn_ns{0};
 void ResetGpuReportForTitle() noexcept {
     latest_gpu_report_ns.store(0, std::memory_order_release);
     latest_gpu_report_frame.store(0, std::memory_order_relaxed);
+    last_gpu_stall_warn_ns.store(0, std::memory_order_relaxed);
 }
 bool GpuReportStale(unsigned long long now_ns, unsigned long long progress_ns) noexcept {
     constexpr unsigned long long kStallNs = 20'000'000'000ULL;
@@ -1030,22 +1034,35 @@ bool GpuReportStale(unsigned long long now_ns, unsigned long long progress_ns) n
            now_ns - progress_ns >= kStallNs;
 }
 void ReportInputThreadGpuLiveness() {
-    if (!detailed_gpu_profile.load(std::memory_order_relaxed)) return;
+    // Invoked once per 1250 pad polls, including in the release. No clock
+    // query or logging at all until the first GPU report is published.
     const auto progress_ns = latest_gpu_report_ns.load(std::memory_order_acquire);
+    if (progress_ns == 0) return;
     const auto now = static_cast<unsigned long long>(Common::g_wall_clock.GetTimeNS().count());
     if (!GpuReportStale(now, progress_ns)) return;
     // Only the independent input worker invokes this, once per heartbeat
     // (~5 seconds); throttle warnings to at most once per 30 seconds.
-    static unsigned long long last_warn_ns = 0;
+    const auto last_warn_ns = last_gpu_stall_warn_ns.load(std::memory_order_relaxed);
     if (last_warn_ns != 0 && now >= last_warn_ns &&
         now - last_warn_ns < 30'000'000'000ULL) return;
-    last_warn_ns = now;
+    last_gpu_stall_warn_ns.store(now, std::memory_order_relaxed);
+    const auto age_ms = (now - progress_ns) / 1'000'000ULL;
+    // Release counters below are disabled by design. Never misrepresent
+    // their zeros as evidence that CPU/GPU work or IPC stopped.
+    if (!detailed_gpu_profile.load(std::memory_order_relaxed)) {
+        std::fprintf(stderr,
+            "EDEN_GPU_REPORT_STALLED age_ms=%llu frame=%u detail=not_measured "
+            "epoch_ms=%lld mono_ns=%lld\n",
+            age_ms, latest_gpu_report_frame.load(std::memory_order_relaxed),
+            ClockNs(CLOCK_REALTIME) / 1000000LL, ClockNs(CLOCK_MONOTONIC));
+        return;
+    }
     std::fprintf(stderr,
         "EDEN_GPU_REPORT_STALLED age_ms=%llu frame=%u gpu_ticks=%llu "
         "draws=%llu guest_writes=%llu guest_reads=%llu "
         "guest_dequeues=%llu guest_ipc=%llu cache_collisions=%llu "
         "dma_active_ms=%llu puller_active_ms=%llu\n",
-        (now - progress_ns) / 1'000'000ULL,
+        age_ms,
         latest_gpu_report_frame.load(std::memory_order_relaxed),
         gpu_command_tick.calls.load(std::memory_order_relaxed),
         rasterizer_draw.calls.load(std::memory_order_relaxed),
@@ -1058,11 +1075,14 @@ void ReportInputThreadGpuLiveness() {
         ActiveDiagnosticWaitNs(gpu_puller_semaphore_active_since_ns) / 1'000'000ULL);
 }
 void ReportGpuThread(unsigned frame) {
+    // Exactly one atomic GPU-owner heartbeat and clock read per report window.
+    // Do not gate it behind the diagnostic profile: releases must also reveal
+    // a frozen renderer while the independent input thread remains alive.
+    latest_gpu_report_frame.store(frame, std::memory_order_relaxed);
+    latest_gpu_report_ns.store(
+        static_cast<unsigned long long>(Common::g_wall_clock.GetTimeNS().count()),
+        std::memory_order_release);
     if (detailed_gpu_profile.load(std::memory_order_relaxed)) {
-        latest_gpu_report_frame.store(frame, std::memory_order_relaxed);
-        latest_gpu_report_ns.store(
-            static_cast<unsigned long long>(Common::g_wall_clock.GetTimeNS().count()),
-            std::memory_order_release);
         // Fresh UTC/monotonic correlation every sampled five-second frame
         // window, even when the session-start segment has already rotated.
         // No per-draw timing, and only two clock queries per report.

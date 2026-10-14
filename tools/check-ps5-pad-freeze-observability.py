@@ -16,6 +16,8 @@ assert 'face_edges.Observe(last_buttons, pressed, kButtonCross, kButtonCircle,' 
 assert 'kButtonSquare, kButtonTriangle);' in source
 assert 'player == 0 && is_usable(raw) && NativeLogs::Detailed()' in source
 assert 'if (NativeLogs::Detailed() && polls % 1250 == 0)' in source
+assert 'if (polls % 1250 == 0) Performance::ReportInputThreadGpuLiveness();' in source
+assert source.index('if (polls % 1250 == 0) Performance::ReportInputThreadGpuLiveness();') < source.index('if (NativeLogs::Detailed() && polls % 1250 == 0)')
 assert source.count('EDEN_PAD_HEARTBEAT polls=') == 1
 assert 'last_read=%d' in source and 'square=%llu triangle=%llu' in source
 assert 'ActiveMapping()[game_x], ActiveMapping()[game_y]' in source
@@ -28,6 +30,10 @@ perf_header = (root / 'headless/performance.h').read_text()
 assert 'void ResetGpuReportForTitle() noexcept;' in perf_header
 assert 'void ResetGpuReportForTitle() noexcept {' in perf_source
 assert 'latest_gpu_report_ns.store(0, std::memory_order_release);' in perf_source
+assert 'last_gpu_stall_warn_ns.store(0, std::memory_order_relaxed);' in perf_source
+assert 'detail=not_measured' in perf_source
+assert perf_source.index('latest_gpu_report_frame.store(frame, std::memory_order_relaxed);') < perf_source.index('if (detailed_gpu_profile.load(std::memory_order_relaxed)) {', perf_source.index('void ReportGpuThread(unsigned frame)'))
+assert perf_source.index('if (progress_ns == 0) return;', perf_source.index('void ReportInputThreadGpuLiveness()')) < perf_source.index('const auto now = static_cast<unsigned long long>', perf_source.index('void ReportInputThreadGpuLiveness()'))
 assert 'Eden::Performance::ResetGpuReportForTitle();' in main
 
 unit = r'''
@@ -66,4 +72,4 @@ with tempfile.TemporaryDirectory(prefix='eden-r332-pad-') as tmp:
     result = subprocess.run([str(path/'test')], capture_output=True, text=True, timeout=15)
     assert result.returncode == 0, result.stderr
     print(result.stdout.strip())
-print('R332 PASS: detailed-only once/1250-polls heartbeat, no per-sample persistent I/O')
+print('R332 PASS: release+dev GPU stall monitor every 1250 polls; detailed pad logging optional, no per-sample I/O')

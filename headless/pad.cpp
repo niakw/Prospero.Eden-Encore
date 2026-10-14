@@ -293,10 +293,10 @@ bool Pad::Poll() {
     // R332: a single low-frequency heartbeat proves the input worker is alive
     // even when scePadRead returns zero samples. Never log on every 4 ms poll;
     // never flush the log pipe from the input thread.
+    // Always check the shipping GPU heartbeat, even without verbose pad logs.
+    // No locks, per-frame probes, or logging unless its report has stalled.
+    if (polls % 1250 == 0) Performance::ReportInputThreadGpuLiveness();
     if (NativeLogs::Detailed() && polls % 1250 == 0) {
-        // GPU-owner reporting can stop while the input worker remains alive.
-        // This independent read only samples atomics and never takes GPU locks.
-        Performance::ReportInputThreadGpuLiveness();
         std::fprintf(stderr,
             "EDEN_PAD_HEARTBEAT polls=%llu samples=%llu usable=%llu intercepted=%llu "
             "errors=%llu last_read=%d connected=%u last_buttons=%08x "
