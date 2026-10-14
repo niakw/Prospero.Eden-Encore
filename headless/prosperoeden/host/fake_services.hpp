@@ -155,6 +155,7 @@ class FakeServices final : public ui::Services
 
   private:
     std::vector<ui::Game> games_;
+    bool preview_botw_ = false; // host-only real scan example, never packaged
     std::uint64_t sample_case_title_id_ = 0;
     std::string sample_case_front_;
     std::string sample_case_back_;
