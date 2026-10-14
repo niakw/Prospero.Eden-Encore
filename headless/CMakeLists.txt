@@ -1497,12 +1497,18 @@ list(APPEND core_sources "${PORT_BUILD_DIR}/nvdrv_container.cpp")
 set_property(TARGET core PROPERTY SOURCES "${core_sources}")
 # Finalize alone leaves both event references and its owner process open.
 # Use the same paired close as the other HID event owners.
-file(READ "${PROJECT_SOURCE_DIR}/src/hid_core/resource_manager.cpp" hid_source)
-string(REPLACE "input_event->Finalize(system.Kernel());" "service_context.CloseEvent(input_event);" hid_source "${hid_source}")
-write_derived("${PORT_BUILD_DIR}/resource_manager.cpp" "${hid_source}")
+# Maintained full-source HID event lifetime correction; immutable upstream preserved.
+set(EDEN_HID_RESOURCE "${PORT_ROOT}/vendor/encore-active/eden-core/src/hid_core/resource_manager.cpp")
+if(NOT EXISTS "${EDEN_HID_RESOURCE}")
+    message(FATAL_ERROR "Missing maintained HID resource manager")
+endif()
 get_target_property(hid_sources hid_core SOURCES)
+list(FIND hid_sources resource_manager.cpp hid_resource_original)
+if(hid_resource_original EQUAL -1)
+    message(FATAL_ERROR "Pinned HID resource source moved; requalify")
+endif()
 list(REMOVE_ITEM hid_sources resource_manager.cpp)
-list(APPEND hid_sources "${PORT_BUILD_DIR}/resource_manager.cpp")
+list(APPEND hid_sources "${EDEN_HID_RESOURCE}")
 set_property(TARGET hid_core PROPERTY SOURCES "${hid_sources}")
 
 
