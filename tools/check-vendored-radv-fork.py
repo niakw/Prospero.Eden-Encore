@@ -7,6 +7,8 @@ import subprocess
 import sys
 import tempfile
 import shutil
+import os
+import time
 
 ROOT = Path(__file__).resolve().parents[1]
 ACTIVE = ROOT / 'vendor/encore-active/ps5-mesa'
@@ -38,7 +40,14 @@ with tempfile.TemporaryDirectory(prefix='eden-radv-fork-equivalence-') as tmp:
         shutil.copy2(SOURCE / relative, file)
     provenance = temp / 'PROVENANCE.txt'
     provenance.write_text('upstream native build receipt')
+    # Simulate restored Ninja object files newer than this source. A content
+    # rewrite must explicitly refresh its mtime or Ninja can skip recompiling.
+    wsi_input = source_stage / 'src/vulkan/wsi/wsi_common_videoout.c'
+    assert module.digest(wsi_input) != module.digest(ACTIVE / 'src/vulkan/wsi/wsi_common_videoout.c')
+    os.utime(wsi_input, ns=(1_000_000_000, 1_000_000_000))
+    started_ns = time.time_ns()
     module.install(source_stage, provenance)
+    assert wsi_input.stat().st_mtime_ns >= started_ns, 'Native source changed but Ninja input timestamp stayed stale'
     assert not provenance.exists() and provenance.with_suffix('.base.txt').exists()
     module.install(source_stage, provenance)
     for relative in before:
