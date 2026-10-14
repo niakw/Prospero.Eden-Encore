@@ -128,3 +128,34 @@ Never infer what Encore runs solely from the original immutable
 CMake/native build path → source/host test → runtime trace**. In this
 case the existing test `check-ps5-mesa-shader-cache.py` was stronger
 evidence than either the documentation or the original Mesa source.
+
+
+## Full native graphics archive provenance (follow-up)
+
+A second source-to-binary integration gap was found in the build scripts.
+The original native archive reuse check in `tools/prepare-build.sh` checked
+only the pinned Mesa revision and the adapted **WSI** source hash
+(`EDEN_WSI_SHA256`). It did not compare the other ten patched Mesa inputs,
+including `src/util/disk_cache_os.c`. Thus an archive could be linkable but
+still contain an outdated translation unit even while the source tests passed.
+
+The corrected build now fingerprints **all eleven** maintained files listed
+by `tools/install-vendored-radv.py::PATHS`; the deterministic SHA256
+includes relative paths, lengths and file digests. Only the second,
+successful native driver compilation can write
+`EDEN_ACTIVE_INPUTS_SHA256`, after verifying every staged source matches
+the maintained tree. Missing or mismatched stamps force regeneration and
+discard any old isolated archive. `tools/radv-active-inputs.py --self-test`
+individually mutates each of the 11 paths to prove all invalidate reuse.
+
+Also, `install-vendored-radv.py` now refreshes the modified file's mtime
+after atomic replacement. Preserving the *original* source mtime with
+`copy2` could make an older source file appear older than Ninja's
+compiled object, preventing recompilation even after bytes changed.
+`check-vendored-radv-fork.py` now verifies the actual post-install mtime
+change with a deliberately stale test input.
+
+This **strengthens compiled-source selection**, not emulator performance.
+The first cold reconstruction of the native driver may be slower. No new
+FC27 match demonstrates any FPS or texture change, and the new source
+fingerprint guard still requires CI and native build qualification.
