@@ -5,14 +5,14 @@
  * 1.16 GiB of it, and the rest was graphics memory that game then ran out of. So the heap now
  * reserves its 3 GiB as address space only and commits it a piece (128 MiB) at a time, from the
  * start of the range, when an allocation finds no room. Every piece (or run of pieces, for one
- * request larger than a piece) is a Sony mspace of its own; an address tells its piece, and
+ * request larger than a piece) is a native allocator arena of its own; an address tells its piece, and
  * the piece its mspace. Memory is not given back: a piece stays for the next game.
  *
  * Large blocks. A request of 32 MiB or more gets memory of its own, outside the range, and gives
  * it back when it is freed: a game file read whole, or a buffer that doubles as it grows, would
  * otherwise leave the heap larger for good and its pieces full of holes no other large block fits.
  *
- * Arenas. One Sony mspace serialised every allocation in the process. Its lock collapses
+ * Arenas. One shared allocator arena serialised every allocation in the process. Its lock collapses
  * under contention: a malloc/free pair costs 225 ns alone but 33/67/138 us with
  * 2/4/8 contending threads (EDEN_PERF_ALLOC),
  * which made allocation-heavy shader compilation ~100-250x slower than on a
@@ -90,7 +90,7 @@ static int eden_heap_growth_mspace_failed;
 static struct {
   _Atomic uintptr_t address;
   size_t size; /* requested payload */
-  size_t physical_size; /* Sony direct bytes incl. leading page and rounding */
+  size_t physical_size; /* native direct bytes incl. leading page and rounding */
 } eden_heap_large[EDEN_HEAP_LARGE_BLOCKS];
 static atomic_uint eden_heap_large_count;
 static atomic_size_t eden_heap_large_bytes;
@@ -361,7 +361,7 @@ size_t eden_heap_large_held(unsigned *blocks) {
     *blocks = atomic_load_explicit(&eden_heap_large_count, memory_order_relaxed);
   return atomic_load_explicit(&eden_heap_large_bytes, memory_order_relaxed);
 }
-/* Reporting only, NOT permission to reclaim underlying Sony allocations. */
+/* Reporting only, NOT permission to reclaim underlying native allocations. */
 size_t eden_heap_large_physical_held(void) {
   return atomic_load_explicit(&eden_heap_large_physical_bytes, memory_order_relaxed);
 }
@@ -642,7 +642,7 @@ static int eden_heap_grow(size_t bytes, unsigned seen) {
     int64_t physical = -1;
     if (eden_heap_commit_growth(start, size, &physical) == 0) {
       /* Only this growth lock sees the new pages. Do NOT publish the piece
-       * count or any owner until Sony mspace construction has succeeded. */
+       * count or any owner until native arena construction has succeeded. */
       void *space = sceLibcMspaceCreate("Eden-heap", start, size, 0);
       if (space != NULL) {
         atomic_store_explicit(&eden_heap_root_direct_owner[used],physical,memory_order_relaxed);
