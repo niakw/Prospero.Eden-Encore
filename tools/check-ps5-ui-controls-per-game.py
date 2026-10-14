@@ -69,6 +69,9 @@ assert "dualsense_icon(c, {left - 10.0f, cy - 15.0f, 44.0f, 30.0f}, theme::kTitl
 assert "theme::kTitle, 1.0f);" in home
 assert "players_chip.x + 8.0f, players_chip.y + 3.0f, 45.0f, 30.0f" in home
 assert "controller_icon(c, {card.x + card.w - 74.0f" not in library
-assert "42.0f, 29.0f}, theme::kTitle, 1.0f);" in library
+# The jacket shelf deliberately has no gamepad stamp covering original art.
+# Physical controller symbols remain on the Home/controller surfaces.
+assert "flat_retail_sleeve(c, game, sleeve, false, 0.24f);" in library
+assert "dualsense_icon(c, {" not in library
 print("SOURCE CHECK ONLY: Triangle bounds + per-game controls + quiet Vulkan driver + white DualSense")
 print("REQUIRES USER RUN AUTHORIZATION: compiled PS5 UI rendering and controller effects NOT VERIFIED")
