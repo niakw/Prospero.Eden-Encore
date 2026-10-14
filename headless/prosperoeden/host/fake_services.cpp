@@ -108,6 +108,57 @@ bool write_cover(const std::string &path, const Sample &sample, int index)
     return ok;
 }
 
+// Deterministic vertically oriented test case scans. They are synthetic test
+// *fixtures*, not generated UI captures: only the production C++ OpenGL renderer
+// generates the actual evidence PNG. Front and back differ substantially so
+// source bugs that duplicate one face are caught visually.
+bool write_case_fixture(const std::string& path, bool back)
+{
+    constexpr int width = 360, height = 560;
+    std::vector<std::uint8_t> pixels(static_cast<std::size_t>(width) * height * 4);
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            const float xf = static_cast<float>(x) / width;
+            const float yf = static_cast<float>(y) / height;
+            const bool band = (y >= 74 && y < 302);
+            const bool thumb = back && y >= 340 && y < 452 && x >= 28 && x < 330;
+            const bool stripe = back && y > 462 && ((y / 18) % 3 == 0);
+            float r = back ? 0.07f + 0.22f * yf : 0.12f + 0.25f * (1.0f - yf);
+            float g = back ? 0.09f + 0.12f * xf : 0.09f + 0.22f * yf;
+            float b = back ? 0.19f + 0.20f * xf : 0.32f + 0.43f * xf;
+            if (band) {
+                const float wave = 0.5f + 0.5f * std::sin(xf * 12.0f + yf * 30.0f);
+                r += back ? 0.11f : 0.17f * wave;
+                g += back ? 0.20f * wave : 0.10f;
+                b += back ? 0.18f : 0.15f * wave;
+            }
+            if (thumb) { r = 0.16f + xf * 0.25f; g = 0.30f; b = 0.50f; }
+            if (stripe) { r = 0.65f; g = 0.38f; b = 0.78f; }
+            if (x < 7 || x >= width - 7 || y < 7 || y >= height - 7) {
+                r = 0.85f; g = 0.25f; b = 0.67f;
+            }
+            const std::size_t i = (static_cast<std::size_t>(y) * width + x) * 4;
+            pixels[i] = static_cast<std::uint8_t>(std::clamp(b, 0.0f, 1.0f) * 255);
+            pixels[i + 1] = static_cast<std::uint8_t>(std::clamp(g, 0.0f, 1.0f) * 255);
+            pixels[i + 2] = static_cast<std::uint8_t>(std::clamp(r, 0.0f, 1.0f) * 255);
+            pixels[i + 3] = 255;
+        }
+    }
+    unsigned char header[18]{};
+    header[2] = 2;
+    header[12] = static_cast<unsigned char>(width);
+    header[13] = static_cast<unsigned char>(width >> 8);
+    header[14] = static_cast<unsigned char>(height);
+    header[15] = static_cast<unsigned char>(height >> 8);
+    header[16] = 32;
+    header[17] = 0x28;
+    std::FILE* file = std::fopen(path.c_str(), "wb");
+    if (!file) return false;
+    const bool ok = std::fwrite(header, 1, 18, file) == 18 &&
+        std::fwrite(pixels.data(), 1, pixels.size(), file) == pixels.size();
+    return std::fclose(file) == 0 && ok;
+}
+
 // Production-render test data: a real 16:9 TGA texture rendered by the exact
 // launcher GPU pipeline, but with invented scenery instead of copyrighted game
 // art. This catches full-bleed crop, overlays and header occlusion that a bare
@@ -217,6 +268,16 @@ FakeServices::FakeServices(const std::string &covers_directory)
     }
     std::sort(games_.begin(), games_.end(),
               [](const ui::Game &a, const ui::Game &b) { return a.name < b.name; });
+    for (const ui::Game& game : games_) {
+        if (game.name == "Echoes of the Valley") {
+            sample_case_title_id_ = game.title_id;
+            sample_case_front_ = covers_directory + "/fixture-case-front.tga";
+            sample_case_back_ = covers_directory + "/fixture-case-back.tga";
+            if (!write_case_fixture(sample_case_front_, false)) sample_case_front_.clear();
+            if (!write_case_fixture(sample_case_back_, true)) sample_case_back_.clear();
+            break;
+        }
+    }
 }
 
 ui::Home FakeServices::home()
