@@ -351,3 +351,24 @@ before the host screenshot is accepted. The enlarged scan similarly must be
 actually loaded at its higher texture bucket. Pixel-stat assertions reject
 blank fronts or blank popups. Both compiled app states are captured directly
 as 1920x1080 PNGs; there is no generated or composited mockup.
+
+## Same-height paperback / Library transparent sleeve
+
+The retail paper surface is always the SAME inset rectangle for FRONT and BACK:
+physical outer shell 454x730; printed flat scan inset 9px horizontally and
+13px vertically. Therefore both printed faces are 436x704, with a visible
+single translucent molding above, below and beside them. Source art uses
+aspect-preserving containment, never a stretched full-bleed back poster.
+The rear is still readable at yaw pi+0.44, but exposes more of the actual
+transparent left opening. Only the projected real wall is shown; no synthetic
+red back-right stripe is added.
+
+The Library, including the focusable/really enlarged rear cover, uses one
+separate non-rotating sleeve treatment for both flat front and back. Its
+outer edges and paper inset scale together; the popup is a portrait 500x807
+case rather than an overly wide art panel. Translucent edge strips are drawn
+WITHIN the outline so they cannot look like a floating second frame. These
+rules apply to every title, including placeholder covers.
+
+Only an actual host OpenGL render preview is authorized to validate this UI
+iteration. Native console build/package is not authorized.
