@@ -160,7 +160,7 @@ void pictures(Stage &s)
         for (int attempt = 0; attempt < 18; ++attempt) {
             s.render();
             std::this_thread::sleep_for(std::chrono::milliseconds(55));
-            s.launcher->update(0.0f);
+            s.launcher->update(1.0f / 60.0f);
         }
         s.shoot("00-library-front-shelf");
         s.press({Key::down});
@@ -171,7 +171,7 @@ void pictures(Stage &s)
         for (int attempt = 0; attempt < 12; ++attempt) {
             s.render();
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
-            s.launcher->update(0.0f);
+            s.launcher->update(1.0f / 60.0f);
         }
         s.shoot("02-library-back-zoom");
         s.press({Key::circle});
