@@ -1028,6 +1028,36 @@ void ResetGpuReportForTitle() noexcept {
     latest_gpu_report_frame.store(0, std::memory_order_relaxed);
     last_gpu_stall_warn_ns.store(0, std::memory_order_relaxed);
 }
+// Read the native guest-worker CPU clocks only after a confirmed stale
+// rendering report. Never sample CPU clocks in the frame or pad poll hot paths.
+// A running host clock is NOT proof that emulated guest instructions advance.
+void ReportGpuStallWorkerClocks(unsigned long long age_ms) {
+    std::array<Worker, names.size()> snapshot{};
+    {
+        // A wedged worker cannot make the input heartbeat block on this lock.
+        std::unique_lock<std::mutex> lock(workers_mutex, std::try_to_lock);
+        if (!lock.owns_lock()) {
+            std::fprintf(stderr,
+                "EDEN_GPU_STALL_WORKERS age_ms=%llu state=lock_busy cpu_progress=not_measured\n",
+                age_ms);
+            return;
+        }
+        snapshot = workers;
+    }
+    for (unsigned i = 0; i < snapshot.size(); ++i) {
+        const auto& worker = snapshot[i];
+        if (!worker.registered) continue;
+        timespec usage{};
+        int cpu_clock_error = worker.clock_error;
+        if (!cpu_clock_error && clock_gettime(worker.clock, &usage) != 0)
+            cpu_clock_error = errno;
+        const long long cpu_ns = cpu_clock_error ?
+            -1 : static_cast<long long>(usage.tv_sec) * 1000000000LL + usage.tv_nsec;
+        std::fprintf(stderr,
+            "EDEN_GPU_STALL_WORKER role=%s age_ms=%llu cpu_ns=%lld clock_error=%d cpu_progress=not_measured\n",
+            names[i], age_ms, cpu_ns, cpu_clock_error);
+    }
+}
 bool GpuReportStale(unsigned long long now_ns, unsigned long long progress_ns) noexcept {
     constexpr unsigned long long kStallNs = 20'000'000'000ULL;
     return progress_ns != 0 && now_ns > progress_ns &&
@@ -1055,6 +1085,7 @@ void ReportInputThreadGpuLiveness() {
             "epoch_ms=%lld mono_ns=%lld\n",
             age_ms, latest_gpu_report_frame.load(std::memory_order_relaxed),
             ClockNs(CLOCK_REALTIME) / 1000000LL, ClockNs(CLOCK_MONOTONIC));
+        ReportGpuStallWorkerClocks(age_ms);
         return;
     }
     std::fprintf(stderr,
@@ -1073,6 +1104,7 @@ void ReportInputThreadGpuLiveness() {
         cache_lock_contended.load(std::memory_order_relaxed),
         ActiveDiagnosticWaitNs(gpu_dma_sync_active_since_ns) / 1'000'000ULL,
         ActiveDiagnosticWaitNs(gpu_puller_semaphore_active_since_ns) / 1'000'000ULL);
+    ReportGpuStallWorkerClocks(age_ms);
 }
 void ReportGpuThread(unsigned frame) {
     // Exactly one atomic GPU-owner heartbeat and clock read per report window.
