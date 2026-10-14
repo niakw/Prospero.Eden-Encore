@@ -824,7 +824,7 @@ void Launcher::draw_launch(Canvas &c)
     }
     c.list.pop_opacity();
     if (fade > 0.0f)
-        c.list.rounded_rect(kScreen, 0.0f, kBlack.with_alpha(fade));
+        c.list.rounded_rect(kScreen, 0.0f, Color{0.0f, 0.0f, 0.0f, fade});
 }
 
 void Launcher::draw(gfx::DrawList &list)
