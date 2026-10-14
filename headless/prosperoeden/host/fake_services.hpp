@@ -160,6 +160,7 @@ class FakeServices final : public ui::Services
     std::uint64_t sample_case_title_id_ = 0;
     std::string sample_case_front_;
     std::string sample_case_back_;
+    std::string sample_case_spine_;
     std::vector<std::uint64_t> handheld_;
     ui::GameSettings game_settings_;
     ui::Preferences preferences_;
