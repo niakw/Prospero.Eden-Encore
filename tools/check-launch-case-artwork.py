@@ -58,7 +58,9 @@ for fragment in (
 assert "MakeRequest" not in draw
 assert "progress%" not in draw
 assert "std::vector<std::string> launch_screenshots_;" in header
-assert "constexpr float kLaunchSeconds = 2.20f;" in theme
+assert "constexpr float kCaseBackHold = 4.50f;" in theme
+assert "constexpr float kCaseTurnSeconds = 1.30f;" in theme
+assert "constexpr float kLaunchSeconds = kCaseFrontHold" in theme
 
 # Quarter turn becomes an edge; the full back is visible half a turn later.
 assert math.cos(0.13) > 0
@@ -68,10 +70,14 @@ indexer = (root / "tools/launcher/build-box-art-index.py").read_text()
 workflow = (root / ".github/workflows/build-040-zbic.yml").read_text()
 packager = (root / "tools/package-headless-native.sh").read_text()
 assert "Nintendo Switch" in indexer
+assert "def candidates(items, limit=6):" in indexer
+assert "front-candidates, back-candidates" in indexer
 assert "Box - Front" in indexer and "Box - Back" in indexer
 assert "gamesdb.launchbox-app.com/Metadata.zip" in indexer
 assert "if len(matching) != 1:" in indexer
 assert "SafeCaseFilename" in native
+assert 'std::array<std::vector<std::string>, 2>' in native
+assert "if (w >= 750 && h >= 1100) break;" in native
 assert "void EnsureRetailCase(" in native
 assert "RetailCaseIndex()" in native
 assert 'Eden::AppFile("ui/box-art-index.tsv")' in native
@@ -98,15 +104,20 @@ drawlist = (root / "headless/prosperoeden/pe/gfx/draw_list.cpp").read_text()
 shader = (root / "headless/prosperoeden/pe/gfx/gl_batch.cpp").read_text()
 assert "case_face = 9" in shapes and "case_spine = 10" in shapes
 assert "case_plastic = 11" in shapes
+assert "case_cap = 12" in shapes
 assert "void DrawList::case_face(" in drawlist
 assert "void DrawList::case_spine(" in drawlist
 assert "void DrawList::case_plastic(" in drawlist
+assert "void DrawList::case_cap(" in drawlist
 assert "depth_offset * transform_.scale" in drawlist
 assert "clip_w = max(0.65, 1.0 - z / 950.0)" in shader
 assert "gl_Position = vec4(ndc.x * clip_w, -ndc.y * clip_w, 0.0, clip_w);" in shader
 assert "1.0 - corner.x : corner.x" in shader
-assert "shape == 9 || shape == 10 || shape == 11" in shader
+assert "shape == 9 || shape == 10 || shape == 11 || shape == 12" in shader
 assert "else if (shape == 11)" in shader
+assert "else if (shape == 12)" in shader
+assert "float d = round_box(v_local, v_half, 12.0);" in shader
+assert "c.list.case_cap(physical, angle, false, 28.0f," in draw
 assert "corner = length(max(abs(v_local)" in shader
 assert "if (!selected_game_.empty()) {\n        draw_launch(c);\n        return;" in launcher
 preview_source = (root / "headless/prosperoeden/host/preview_main.cpp").read_text()
@@ -118,4 +129,6 @@ assert "01-launch-case-spine" in preview_source
 assert "02-launch-case-back" in preview_source
 assert "PE_PREVIEW_NO_BOX_SCANS" in preview_workflow
 assert "UNIVERSAL_CASE_NO_RETAIL_ART: PASS" in preview_workflow
-print("PASS real front/back index, cinematic Hero, host BOTW proof and branded launch")
+assert "const float return_start = back_start + theme::kCaseBackHold;" in draw
+assert "revolution = 0.5f;" in draw
+print("PASS source-scans region fallback, readable back, rounded solid 3D case")
