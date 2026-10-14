@@ -132,6 +132,8 @@ class DrawList
     void case_plastic(const Rect &r, float angle, bool back, Color plastic);
     void case_cap(const Rect &r, float angle, bool bottom, float depth,
                   Color near, Color far);
+    void case_corner(const Rect &r, float angle, float radius, float depth,
+                     int quadrant, int segment, Color near, Color far);
 
     // ---- text ----
     // font_texture is the GL texture holding font's atlas. Returns the advance.
