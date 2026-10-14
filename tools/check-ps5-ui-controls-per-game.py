@@ -46,10 +46,12 @@ assert "static_cast<std::size_t>(library_.selected) >= games_.size()" in library
 assert "performance_run || !launch_preferences.detailed_logging" in launch
 assert 'setenv("PS5VK_QUIET_LOG", quiet_driver ? "1" : "0", 1);' in launch
 
-# The Library title scrim now actually extends to the bottom of the cover
-# interior, rather than leaving a four-percent bright strip under the text.
-assert "tile_art.y + tile_art.h * 0.43f" in library
-assert "tile_art.w, tile_art.h * 0.57f" in library
+# The Library now displays an actual retail sleeve on the shelf and moves
+# its game title BELOW the jacket. The obsolete tile-art caption scrim must
+# not be restored (it covered the bottom portion of box artwork).
+assert "flat_retail_sleeve(c, game, sleeve, false, 0.24f);" in library
+assert "rail_y + sleeve_h + 6.0f" in library
+assert "tile_art.y + tile_art.h * 0.43f" not in library
 assert "card.h * 0.53f" not in library
 
 # The user-supplied mask is 96% transparent, and the actual visible
