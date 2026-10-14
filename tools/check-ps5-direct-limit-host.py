@@ -14,7 +14,7 @@ root = Path(__file__).resolve().parents[1]
 s = (root / "src/memory_pages.cpp").read_text()
 begin = s.index("namespace {\n// This is the fixed addressable direct-memory EXTENT")
 # The original anonymous namespace also contains the independent CPU VA
-# reservation wrapper, which needs Sony/mmap mocks from another harness.
+# reservation wrapper, which needs native mapping mocks from another harness.
 # Extract only the direct-extent cache and allocator exercised here.
 reservation_begin = s.index("void* ReserveCpuVirtualRange(", begin)
 namespace_end = s.index("} // namespace\n#endif", begin)
