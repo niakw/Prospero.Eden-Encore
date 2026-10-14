@@ -24,7 +24,12 @@ inline void Mark(std::uint64_t address,std::uint64_t size) noexcept {
   for(auto word=first/64;word<=last/64;++word){
     const auto mask=Bits(word==first/64?first%64:0,
                          word==last/64?last%64:63);
-    registered[word].fetch_or(mask,std::memory_order_release);
+    // Most image/buffer reuses touch pages that were already published.
+    // A read-only witness avoids another contended atomic RMW in that case.
+    // A partial/previously unseen word still uses fetch_or so concurrent
+    // registrations of disjoint pages cannot lose either registration.
+    if ((registered[word].load(std::memory_order_acquire) & mask) != mask)
+      registered[word].fetch_or(mask,std::memory_order_release);
   }
 }
 inline bool NeverRegistered(std::uint64_t address,std::uint64_t size) noexcept {
