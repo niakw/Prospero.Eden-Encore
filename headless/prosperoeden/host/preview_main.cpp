@@ -142,6 +142,28 @@ void pictures(Stage &s)
     // Independently verify the game's real launch transition using the same
     // original C++ draw list, EGL context and shader backend as Home. This
     // takes *screenshots*, not image synthesis or a mock-up of the layout.
+    if (const char* library_only = std::getenv("PE_PREVIEW_LIBRARY_ONLY");
+        library_only != nullptr && std::strcmp(library_only, "1") == 0)
+    {
+        s.restart(false);
+        s.wait(2.0f);
+        s.press({Key::up, Key::cross});
+        s.wait(1.0f);
+        // The fixture title with authentic source front/back is at index 4.
+        s.press({Key::right, Key::right, Key::right, Key::right});
+        s.wait(0.7f);
+        s.shoot("00-library-front-shelf");
+        s.press({Key::down});
+        s.wait(0.15f);
+        s.shoot("01-library-back-focus");
+        s.press({Key::cross});
+        s.wait(0.20f);
+        s.shoot("02-library-back-zoom");
+        s.press({Key::circle});
+        s.wait(0.16f);
+        s.shoot("03-library-back-closed");
+        return;
+    }
     if (const char* launch_only = std::getenv("PE_PREVIEW_LAUNCH_ONLY");
         launch_only != nullptr && std::strcmp(launch_only, "1") == 0)
     {
