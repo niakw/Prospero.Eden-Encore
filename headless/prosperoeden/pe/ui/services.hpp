@@ -68,6 +68,8 @@ struct Game
     std::string size;   // "1.2 GB"
     std::string file;   // its name in the games folder
     std::string cover;  // square icon path; empty without cover art
+    std::string box_front; // original flat front, from async cached retail scans
+    std::string box_back;  // original flat back, never a pre-rendered 3D case
     std::string hero;   // cached 16:9 Nlib banner; empty => use first screenshot/cover
     std::vector<std::string> screenshots; // up to three cached Nlib gameplay screenshots
     int max_players = 0; // Nlib maximum local players; 0 when unknown/offline
