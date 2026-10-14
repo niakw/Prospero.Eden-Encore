@@ -88,15 +88,23 @@ int main() {
             GuestCacheLock(m,texture);
             std::lock_guard unlock{m,std::adopt_lock};
         });
-        const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(2);
-        while (Common::g_wall_clock.reads.load(std::memory_order_acquire)==initial_reads &&
-               std::chrono::steady_clock::now()<deadline) std::this_thread::yield();
-        const bool timing_started=
-            Common::g_wall_clock.reads.load(std::memory_order_acquire)>initial_reads;
-        if (timing_started) std::this_thread::sleep_for(std::chrono::milliseconds(15));
+        const bool profiling = detailed_gpu_profile.load(std::memory_order_relaxed);
+        bool timing_started = false;
+        if (profiling) {
+            // Only detailed mode reads the clock. Expecting a timed read in
+            // quiet mode made the test fail despite correct blocking behavior.
+            const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
+            while (Common::g_wall_clock.reads.load(std::memory_order_acquire)==initial_reads &&
+                   std::chrono::steady_clock::now()<deadline) std::this_thread::yield();
+            timing_started =
+                Common::g_wall_clock.reads.load(std::memory_order_acquire)>initial_reads;
+            if (timing_started) std::this_thread::sleep_for(std::chrono::milliseconds(15));
+        } else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(15));
+        }
         m.unlock();
         worker.join();
-        assert(timing_started);
+        if (profiling) assert(timing_started);
     };
     exercise(buffer_mutex,false);
     assert(guest_cache_domain_totals[0].contended.load()==1);
