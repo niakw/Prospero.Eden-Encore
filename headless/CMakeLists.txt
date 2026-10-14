@@ -1511,7 +1511,7 @@ set(compose_new [=[    if (const int compose_delay = ::Eden::Performance::compos
         m_container.ComposeOnDisplay(&m_swap_interval, &m_compose_speed_scale, display_id);
         manager.SignalVsync(m_system.Kernel());
     }]=])
-string(REPLACE "${compose_old}" "${compose_new}" conductor_source "${conductor_source}")
+eden_patch(conductor_source "${compose_old}" "${compose_new}")
 string(PREPEND conductor_source "#include \"${EDEN_PORT_DIR}/display_refresh.h\"\n#include \"${EDEN_PORT_DIR}/performance.h\"\n#include <thread>\n")
 eden_patch(conductor_source
     "    const f32 effective_fps = 60.f / static_cast<f32>(m_swap_interval);\n    return static_cast<s64>(speed_scale * (1000000000.f / effective_fps));"
@@ -2053,9 +2053,9 @@ string(FIND "${npad_source}" "${npad_entry}" npad_entry_at)
 if(npad_entry_at LESS 0)
     message(FATAL_ERROR "Pinned NPad::ControllerUpdate entry changed")
 endif()
-string(REPLACE "${npad_entry}"
+eden_patch(npad_source "${npad_entry}"
     "${npad_entry}    if (applet_resource_holder.applet_resource == nullptr) {\n        return;\n    }\n"
-    npad_source "${npad_source}")
+)
 write_derived("${PORT_BUILD_DIR}/npad.cpp" "${npad_source}")
 get_target_property(npad_sources hid_core SOURCES)
 list(FILTER npad_sources EXCLUDE REGEX "(^|/)npad\\.cpp$")
