@@ -56,16 +56,22 @@ Totals: 22/22 manifest entries **inventoried**; 15 entries compared to active Gi
 
 Reference material: `docs/UPSTREAM_VENDOR_AUDIT_2026-10-12.md`, `docs/EXTERNAL_PS5_EMULATOR_ECOSYSTEM_AUDIT_R438.md`, source pinning in `tools/deps.json`, and the publicly linked upstream commits identified in those audits.
 
+
+
+## Native memory package comparison (14 October 2026)
+
+The native build previously inherited a boilerplate `param.json` without the optional `kernel.flexibleMemorySize` key, whereas the current primary source declares **335544320 bytes (320 MiB)**. Encore now explicitly writes this same value when packaging the native app; a host CI gate verifies the field without changing the runtime kernel, guest heap, JIT cache, GPU VRAM accounting, or per-game saves. The size is a package memory declaration, **not** the console's total physical capacity or a promise of additional available memory. Native compilation and firmware 13.60 behavior must still be qualified.
+
 <!-- BEGIN AUTO-UPSTREAM-COMPARISON -->
 ### Automated comparison (daily + manual)
 
-Checked in UTC: **2026-10-14 02:09 UTC**. Changes are commits relative to pins, not proven missing fixes.
+Checked in UTC: **2026-10-14 10:15 UTC**. Changes are commits relative to pins, not proven missing fixes.
 This workflow never imports source patches, modifies dependencies, or reads console data.
 
 | Dependency | Source | Pinned revision | Ahead / behind | Status |
 |---|---|---|---:|---|
 | eden | [eden-emulator/mirror](https://github.com/eden-emulator/mirror) | 5f142c7926d0 | +84 / -0 | upstream ahead |
-| ffmpeg | [FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg) | c7b5f1537d9c | +4579 / -0 | upstream ahead |
+| ffmpeg | [FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg) | c7b5f1537d9c | +4585 / -0 | upstream ahead |
 | fmt | [fmtlib/fmt](https://github.com/fmtlib/fmt) | 12.1.0 | +354 / -0 | upstream ahead |
 | zbic | [kinnay/zbic](https://github.com/kinnay/zbic) | 11b08f271226 | +0 / -0 | identical |
 | compiler-rt | [frozen archive / binary](https://github.com/frozen archive / binary) | — | — | not comparable |
@@ -272,7 +278,3 @@ These are upstream commit titles, not validated Encore integrations.
 Unavailable comparisons are not equivalent to zero changes.
 The API can truncate changed-file lists beyond 300 files.
 <!-- END AUTO-UPSTREAM-COMPARISON -->
-
-## Native memory package comparison (14 October 2026)
-
-The native build previously inherited a boilerplate `param.json` without the optional `kernel.flexibleMemorySize` key, whereas the current primary source declares **335544320 bytes (320 MiB)**. Encore now explicitly writes this same value when packaging the native app; a host CI gate verifies the field without changing the runtime kernel, guest heap, JIT cache, GPU VRAM accounting, or per-game saves. The size is a package memory declaration, **not** the console's total physical capacity or a promise of additional available memory. Native compilation and firmware 13.60 behavior must still be qualified.
