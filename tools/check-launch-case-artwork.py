@@ -178,6 +178,9 @@ assert "constexpr float kPaperSideInset = 9.0f;" in draw
 assert "constexpr float kPaperTopInset = 13.0f;" in draw
 assert "const Rect face{physical.x + kPaperSideInset," in draw
 assert draw.count("const Rect face{") == 1
+assert "const Rect side_strip{physical.x, physical.y + kPaperTopInset," in draw
+assert "physical.h - 2.0f * kPaperTopInset" in draw
+assert "physical.h - 2.0f * case_radius" not in draw
 assert "float rounded = round_box(v_local, v_half, 22.0);" in shader
 assert "angle, false, case_depth," in draw
 assert "c.list.case_corner(physical, angle, case_radius, case_depth," in draw
