@@ -94,3 +94,26 @@ package is not warranted solely by the source-level proof of these probes;
 a future diagnostic run must correlate `EDEN_PERF_CPU_POINT thread=` with
 `EDEN_DEV_IPC_ACTIVE tid=` and the freeze transition before choosing a
 corrective patch.
+
+
+## Paired upstream scheduler lock correction (new development candidate)
+
+Source review identified a coherent two-part upstream kernel correction not
+present in the pinned archive: upstream #4436 replaces actively spinning
+context/slab locks with `std::mutex`; #4447 handles lazy mutex backing
+materialization on libc++ before two scheduler unlock sites. The pinned
+archive still had `Common::SpinLock`, so #4447 alone would be inapplicable.
+
+Both source changes are maintained together under
+`vendor/encore-active/eden-threading/src` and compiled as a curated,
+reversible unit with `EDEN_BLOCKING_GUEST_CONTEXT_LOCKS=ON` (default);
+`OFF` restores the pinned source and old guard headers. Native compilation
+and title-level regression have not yet been established. The change follows
+the upstream authors' paired correctness fix, not a conclusion that any
+particular FC27 end-of-match wait is the root cause.
+
+The candidate must pass source/host verification and full native packaging
+before console evaluation. Do not alter user save data, network blocking or
+controller mappings to evaluate it. Host tests cannot establish that a title
+freeze is solved; a meaningful qualification must compare **actual game
+progress and frame latency**, not compositor 30 FPS alone.

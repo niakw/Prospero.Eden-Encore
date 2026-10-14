@@ -57,6 +57,7 @@ jobs:
           python3 -B tools/apply-upstream-4473.py --self-test
           python3 -B tools/check-ps5-quiet-cpu-io-clocks.py
           python3 -B tools/check-ps5-quiet-guest-entry.py
+          python3 -B tools/check-upstream-guest-scheduler-locks.py
           python3 -B tools/check-ps5-quiet-gpu-hotpaths.py
           python3 -B tools/check-ps5-upstream-fixes-r302.py
           python3 -B tools/check-ps5-quiet-jit-timers.py
