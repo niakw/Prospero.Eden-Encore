@@ -30,7 +30,7 @@ a list of 22 complete functional upstream backports.
 | P0 GPU | Guest CPU writes / buffer coherence | **Instrumented, not established corrected** | `vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp` takes the buffer mutex when pages were registered and invalidates texture/shader state. The newer `EDEN_GUEST_CACHE_LOCK_TAIL` observes >1 ms and >10 ms waits without removing locks; no fresh real-game trace has established its actual long-tail distribution. |
 | P0 GPU | RADV native binary source provenance | **Selection known; complete current-source parity not proven** | `headless/vulkan.cmake` links `build/radv-isolated/libvulkan_radeon.ps5.a`. `tools/deps.json` pins Mihawk's Mesa `0b2d6d1` and Vulkan tools `3f3ee69`. A source pin alone does not show the actual binary was produced from all desired/latest Mihawk commits; audit the archive's build recipe/hash before claiming that. |
 | P0 shader stutter | Fast-first graphics pipelines | **Adapted, default ON only in dev builds; OFF in ordinary builds** | `headless/main.cpp` recognizes `fast_pipelines=on/off`; `headless/dev_vulkan.h` initializes `fast_first_pipelines=true` under `EDEN_DEV_PROFILE`, `false` otherwise. Mihawk reports 32% less draw wait in one cold-cache game. That measurement is **not** FC27 or Encore proof. |
-| P0 shader cache | Persisted RADV cache directory | **Configured, with an unresolved process-identity gap** | Encore sets `MESA_SHADER_CACHE_DIR` under writable data and a size limit. Mihawk's `headless/main.cpp` explicitly corrects real/effective group mismatch via `setegid(getgid())` because Mesa otherwise disables caching. Encore records UID/GID around elevation but does not apply this adjustment. Must verify actual GID pair, cache effectiveness, and privilege/storage implications before changing credentials. |
+| P0 shader cache | Persisted native graphics cache | **PS5 credential guard already adapted; cache hits unproven** | The **active** `vendor/encore-active/ps5-mesa/src/util/disk_cache_os.c` bypasses `__normal_user()` only under `__PROSPERO__` (ported from mpereiraesaa); its ordinary-host protection and cache-disable variables remain in place. `tools/check-ps5-mesa-shader-cache.py` exercises both variants. A configured cache directory still does **not** prove writes/hits or eliminate shader-related stutter. |
 | P1 GPU | HUD counters | **Launcher/emulator HUD distinct from game's HUD** | ProsperoEden's newer per-core FPS/HUD source changes concern the emulator overlay. The player's complaint about an **in-game HUD updating late** concerns guest-generated draw/state freshness and is not fixed by changing overlay display fields. |
 | P1 CPU | A32 fastmem | **Selected / pinned-file parity** | `headless/checked-fastmem.cmake` matches upstream, A32 alias is separate from A64. |
 | P1 CPU | A64 fastmem | **Not a validated shipping shortcut** | Mihawk's `docs/PERFORMANCE_FINDINGS.md` reports checked A64 fastmem working but lower FPS in one game due to kernel wait behavior. Do not assume enabling it fixes FC27. |
@@ -87,32 +87,44 @@ independent experimental forks). The upstream gap register documents divergent
 Mesa and SDK histories, and GitHub changed-file results may be truncated.
 No FC27 save data or console file was read or modified.
 
-## Cache eligibility qualification after original audit
+## Corrected native cache integration audit
 
-The exact pinned driver, `vendor/sources/ps5-mesa/src/util/u_debug.h`,
-defines `__normal_user()` by requiring **both**
-`geteuid()==getuid()` and `getegid()==getgid()`. Its
-`src/util/disk_cache_os.c` returns false from `disk_cache_enabled()`
-when the credentials are unequal. A configured cache directory and
-`MESA_SHADER_CACHE_MAX_SIZE` do not override that check.
+**Correction to the earlier conclusion:** the plain pinned Mesa code requires
+`geteuid()==getuid()` and `getegid()==getgid()` before accepting disk
+caching. But Encore does **not** compile that unmodified policy on PS5.
+Its actual production source
+`vendor/encore-active/ps5-mesa/src/util/disk_cache_os.c` includes a
+selective `#if !defined(__PROSPERO__)` guard around the
+`__normal_user()` rejection. That adaptation was already present, came
+from `mpereiraesaa/PS5_Mesa`, and is proved against the immutable source by
+`tools/check-ps5-mesa-shader-cache.py` (including native/host C sanitizers).
+Changing the process group via `setegid(getgid())` is **not** an identified
+missing correction for Encore. The earlier claim based only on
+`vendor/sources/ps5-mesa` was mistaken.
 
-The source-wired, **read-only** one-time
-`EDEN_GPU_DISK_CACHE_ELIGIBILITY` event now reports whether both credentials
-match, whether the directory exists, and whether a disable variable was
-provided. This is a *driver-eligibility check*, **not** a verified cache hit.
-`tools/check-native-shader-cache-eligibility.py` tests the rule against
-the pinned driver sources and explicitly classifies old traces without the
-new event as **NOT_MEASURED**. It never invokes `setegid`,
-`seteuid`, chmod, deletes the shader cache, or accesses game saves.
+The new one-time `EDEN_GPU_DISK_CACHE_CONTEXT` marker logs UID/GID match
+flags, cache-directory presence and existence of a disable environment
+variable. On this driver, mismatch alone is **not** interpreted as a cache
+rejection. The parser `tools/check-native-shader-cache-eligibility.py`
+checks the exact native source bypass, treats absent events as
+**NOT_MEASURED**, and never claims shader cache hits from the configuration.
+It makes **no credential change or filesystem mutation**.
 
-The existing local `2efd8b3c` capture records only
-`EDEN_RADV_DISK_CACHE limit_mib=2048 free_mib=16384`. It does *not*
-contain the credential eligibility event and cannot prove that disk shader
-caching was enabled. If a new trace reports `uid_match=0` or
-`gid_match=0`, study the privilege and filesystem implications of a
-credential adjustment before applying Mihawk's `setegid(getgid())`
-adaptation.
+The `2efd8b3c` capture only contains
+`EDEN_RADV_DISK_CACHE limit_mib=2048 free_mib=16384`, which cannot
+confirm shader cache hit rate. A genuine shader hit/miss or cache-file
+reuse probe is still needed if shader compilation remains a bottleneck.
 
-The newer development candidate built in run 38547995294 and uploaded
-native application and debug symbols successfully; that run preceded this
-new cache probe and does not validate its compilation or behavior.
+Build qualification: run `38547995294` completed successfully and
+uploaded the native test package and symbols before the new context
+marker. The later marker must pass its own source preflight and native
+compilation; there are no new console performance measurements.
+
+## Lessons for the upstream adaptation audit
+
+Never infer what Encore runs solely from the original immutable
+`vendor/sources/` snapshot. For each relevant fix, compare
+**original source → `vendor/encore-active/` compiled source → concrete
+CMake/native build path → source/host test → runtime trace**. In this
+case the existing test `check-ps5-mesa-shader-cache.py` was stronger
+evidence than either the documentation or the original Mesa source.
