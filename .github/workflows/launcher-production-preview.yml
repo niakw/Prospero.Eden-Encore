@@ -81,6 +81,7 @@ jobs:
           receipts = (path / "source-receipts.txt").read_text()
           assert len(receipts.splitlines()) == 4 and "botw-front.tga" in receipts
           assert "botw-back.tga" in receipts and "botw-hero.tga" in receipts
+          assert "botw-spine.tga" in receipts
           with Image.open(screenshots[0]) as front, Image.open(screenshots[2]) as back:
               assert front.size == back.size == (1920, 1080)
               front_rgb, back_rgb = front.convert("RGB"), back.convert("RGB")
