@@ -12,6 +12,9 @@ assert '::Eden::BufferPages::Mark(buffer.CpuAddr(), size);' in cm
 assert 'buffer-pages/video_core/buffer_cache/buffer_cache.h' in cm
 assert source.count('        total_used_memory += Common::AlignUp(size, 1024);')==1
 assert r.count('::Eden::BufferPages::NeverRegistered(addr, size)')==1
+witness=(root/'headless/buffer_pages.h').read_text()
+assert 'registered[word].load(std::memory_order_acquire) & mask' in witness
+assert 'registered[word].fetch_or(mask,std::memory_order_release)' in witness
 assert g.count('::Eden::BufferPages::NeverRegistered(addr, size)')==1
 pos=r.index('bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size)')
 body=r[pos:r.index('void RasterizerVulkan::OnCacheInvalidation',pos)]
@@ -37,6 +40,23 @@ int main(){
  assert(!NeverRegistered(0,64*p+1) && !NeverRegistered(kSpace-1,2));
  Mark(0,1);
  assert(!NeverRegistered(0,1) && NeverRegistered(p,1));
+ // A previously marked word stays marked on repeated registrations.
+ Mark(100*p,1);
+ const auto word = (100ull*p >> kPageBits) / 64;
+ const auto previous = registered[word].load(std::memory_order_acquire);
+ for(unsigned n=0;n<2000;++n) Mark(100*p,1);
+ assert(registered[word].load(std::memory_order_acquire)==previous);
+ // Concurrent overlapping and disjoint writers within one bitmap word
+ // must never lose either registration on the conditional fast path.
+ std::vector<std::thread> overlapping;
+ for(unsigned t=0;t<8;++t)overlapping.emplace_back([t]{
+   for(unsigned n=0;n<1000;++n) {
+     Mark((128+t)*p, 1);
+     Mark(128*p, 8*p);
+   }
+ });
+ for(auto& task:overlapping)task.join();
+ for(unsigned t=0;t<8;++t)assert(!NeverRegistered((128+t)*p,1));
  Mark(63*p+7,2*p);
  assert(!NeverRegistered(63*p,1) && !NeverRegistered(64*p,1));
  assert(!NeverRegistered(65*p,1) && NeverRegistered(66*p,p));
