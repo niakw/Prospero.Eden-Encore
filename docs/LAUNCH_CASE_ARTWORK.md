@@ -103,10 +103,20 @@ The actual CDN/download path remains subject to a real console network check; a 
 existing `tools/launcher/preview.sh`, the original C++ launcher
 `Launcher::draw_launch()`, and Mesa's real OpenGL shader backend.
 The PNG files appear in the **Encore-launcher-native-render-1080p**
-workflow artifact. Host media are deterministic test fixtures, not
-actual downloaded commercial scans or AI illustrations. The front
-capture is the visual reference for this feature. The backend also
-verifies that the two case faces are visibly different.
+workflow artifact. For the dedicated launch test only, GitHub retrieves
+real **Zelda BOTW** Switch box scans (Europe front, France back) and an
+existing BOTW landscape background from the public LaunchBox image CDN.
+The downloaded TGA files are temporary GitHub runner inputs, **not**
+repository assets or application content. The screenshots are produced
+with C++/OpenGL using these source images, not AI image generation.
+The test verifies that case textures are readable and different.
+
+The launch screen now uses the selected game's existing Home Hero image
+(Nlib banner then screenshot); all Home controls are omitted behind the
+overlay. Dark gradients retain the game scene and text readability.
+In the absence of a matching Hero, the existing Eden wallpaper remains.
+The test's example screenshots depict actual original retail artwork
+supplied by its external publisher; copyright stays with its owners.
 
 Only commits containing `[preview-ready]` trigger this host-only
 workflow automatically. No native console binary is implied by these
