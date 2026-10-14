@@ -6,10 +6,17 @@ import subprocess
 import tempfile
 root = Path(__file__).resolve().parents[1]
 cmake = (root / "headless/CMakeLists.txt").read_text()
-assert "R428: upstream ProsperoEden d7f2764" in cmake
-assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/texture_cache/util.h"' in cmake
-assert '#include <boost/version.hpp>' in cmake
-assert 'target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/small-vector")' in cmake
+# R428's texture header is now compiled from the versioned active fork.
+# Preserve the exact original header + Boost-version declaration instead of
+# preserving an obsolete generated-file assertion.
+active_header = (root / "vendor/encore-active/eden-core/src/video_core/texture_cache/util.h").read_text()
+original_header = (root / "vendor/sources/eden/src/video_core/texture_cache/util.h").read_text()
+assert active_header == original_header.replace(
+    "#include <boost/container/small_vector.hpp>",
+    "#include <boost/container/small_vector.hpp>\\n#include <boost/version.hpp>")
+assert '#include <boost/version.hpp>' in active_header
+assert 'target_include_directories(video_core BEFORE PRIVATE "${EDEN_SMALL_VECTOR_ROOT}")' in cmake
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/texture_cache/util.h"' not in cmake
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/texture_cache/util.cpp"' in cmake
 assert 'Pinned Eden ASTC ConvertImage changed; requalify R428' in cmake
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/common/logging.cpp"' in cmake
