@@ -128,3 +128,50 @@ See `INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md` and
 **No claim of fully repaired gameplay:** the end-of-match progression stall,
 late frames, texture/HUD freshness and guest custom mapping remain open
 until a matching hardware run supports a conclusion.
+
+## Rechecked log clocks, DNS and default FPS display (pre-test update)
+
+**New diagnostic build only** (not the already green older native artifact):
+`headless/network_audit.c` now includes `epoch` seconds, explicit UTC
+`YYYY-MM-DDTHH:MM:SS.mmmZ`, and `mono_ns` on **each recorded** network
+API event, including a DNS denied-summary flush. Denied summaries include the
+usual `bytes=0 status=0` fields plus `count=N`, so the parser can ingest
+them. The timestamp of a grouped denial count is the **summary flush**
+time, not invented times for its individual suppressed requests. At a cold
+launch, network `session-start` carries the native SHA; for each guest
+launch, the stdout `EDEN_SESSION_SOURCE` and `EDEN_TIME_ANCHOR` record
+source and clock alignment, and the periodic GPU diagnostic window emits an
+additional time anchor even after log-file rotation.
+
+**Historical console capture checked:** `network-accepted(6).log` has 3,624
+lines; the backwards-compatible parser recognizes 3,624/3,624, including
+1,291 formerly ignored summary rows totaling 17,564 grouped requests. The
+original legacy records themselves are only accurate to **whole seconds**.
+The updated analyzer reports old/new timestamp coverage and uses explicit
+UTC for human-readable start/end; it does not retroactively claim that
+old records contain milliseconds.
+
+**Clock limitations:** legacy `stderr`, raw Vulkan driver text and
+`result.tsv` do not all include independent wall timestamps on *every*
+line. They are scoped by phase/CPU-monotonic observations and the new
+periodic anchor. It would be inaccurate to claim that literally every
+third-party driver message receives a wall-clock timestamp. Adding
+synchronous clock/format operations to every draw, IPC or stderr print
+would bias the frame-latency diagnosis. Forced closure can still lose the
+last unflushed pipe contents; the initial and latest bounded segments
+must be collected as a complete set.
+
+**Default visible FPS:** both normal preference models have `hud=false`,
+and settings load defaults from that value when `/video/fps_overlay`
+is missing. Existing explicit user settings are preserved. A new source
+gate checks the default and the saved preference contract. Internal
+frame-time sampling is independent of display visibility.
+
+**What the model tests actually prove:** duplicate DNS audit rows are
+bounded without changing denied/allowed network results; old and new
+formats parse consistently; source-to-stream clock identity is preserved;
+buffer-page witnesses avoid redundant atomic read-modify-writes after
+a page bit is known set; multi-session forensic analysis does not merge
+guest lifetimes. They **do not** prove lower GPU frame time, live HUD
+freshness, successful in-game mapping or resolution of the end-of-match
+freeze. Those are still awaiting game-level hardware comparison.
