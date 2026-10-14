@@ -25,7 +25,7 @@ def derive(profile: str, directory: Path) -> dict[str, bytes]:
     end = content.index(END, begin)
     fragment = content[begin:end]
     assert 'EmplaceWaitWithStopToken' in fragment
-    assert 'eden_gpu_queue_capacity 32' in fragment
+    assert 'eden_gpu_queue_capacity 256' in fragment
     assert 'write_derived("${PORT_BUILD_DIR}/gpu_thread.cpp"' in fragment
     assert 'write_derived("${PORT_BUILD_DIR}/include/video_core/gpu_thread.h"' in fragment
     header = f'''cmake_minimum_required(VERSION 3.25)
@@ -88,7 +88,7 @@ def main() -> None:
     assert present.keys() == generated.keys(), (generated.keys() - present.keys(), present.keys() - generated.keys())
     for relative, content in generated.items():
         assert present[relative].read_bytes() == content, f'R345 generated GPU source mismatch: {relative}'
-    assert b'SPSCQueue<CommandDataContainer, 32>' in generated['include/video_core/gpu_thread.h']
+    assert b'SPSCQueue<CommandDataContainer, 256>' in generated['include/video_core/gpu_thread.h']
     assert b'EmplaceWaitWithStopToken' in generated['include/common/bounded_threadsafe_queue.h']
     assert b'DiagnosticTimer' in generated['gpu_thread_dev.cpp']
     assert b'DiagnosticTimer' not in generated['gpu_thread_quiet.cpp']
@@ -124,7 +124,7 @@ def main() -> None:
                 assert (build/name).read_bytes()==generated[name], (profile,name)
     print('VENDORED_GPU_CMAKE_NATIVE_BRANCH_OK direct source copies for dev/quiet')
     print('VENDORED_GPU_THREAD_EQUIVALENT_OK', len(generated),
-          'original 32-slot FIFO, stop-aware worker, dev/quiet source variants')
+          'bounded 256-slot FIFO, stop-aware worker, dev/quiet source variants')
 
 
 if __name__ == '__main__':
