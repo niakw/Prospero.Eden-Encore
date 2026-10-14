@@ -471,7 +471,8 @@ const BoxIndex& RetailCaseIndex() {
         // Use the same fallback search as fonts, translations and launcher art.
         const std::string catalog_path = Eden::AppResourceFile("ui/box-art-index.tsv");
         std::ifstream input(catalog_path);
-        if (!input) {
+        const bool opened = static_cast<bool>(input);
+        if (!opened) {
             std::fprintf(stderr, "EDEN_CASE_INDEX status=missing path=%s\n",
                          catalog_path.c_str());
         }
@@ -517,7 +518,7 @@ const BoxIndex& RetailCaseIndex() {
                 std::move(fronts), std::move(backs), std::move(spines)});
         }
         std::fprintf(stderr, "EDEN_CASE_INDEX status=%s entries=%zu path=%s\n",
-                     input ? "loaded" : "missing", items.size(), catalog_path.c_str());
+                     opened ? "loaded" : "missing", items.size(), catalog_path.c_str());
         return items;
     }();
     return index;
