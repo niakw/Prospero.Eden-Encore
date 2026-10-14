@@ -865,7 +865,7 @@ foreach(bits 32 64)
             set(sample_fp "m_jit->Fpscr()")
         endif()
         string(REPLACE "    return TranslateHaltReason(m_jit->Run());"
-            "    const bool eden_detailed_cpu_sample = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed);\n    if (eden_detailed_cpu_sample && ::Eden::Performance::CpuSampleDue(m_core_index)) ::Eden::Performance::SampleCpu(m_core_index, Kernel::GetCurrentThread(m_parent.m_system.Kernel()).GetThreadId(), ${sample_pc}, GetSvcNumber(), ${sample_fp});\n    ::Eden::Performance::cpu_state[m_core_index].phase.store(::Eden::Performance::CpuPhase::Guest, std::memory_order_release);\n    const auto halt = m_jit->Run();\n    ::Eden::Performance::cpu_state[m_core_index].phase.store(::Eden::Performance::CpuPhase::Kernel, std::memory_order_release);\n    if (eden_detailed_cpu_sample && ::Eden::Performance::CpuSampleDue(m_core_index)) ::Eden::Performance::SampleCpu(m_core_index, Kernel::GetCurrentThread(m_parent.m_system.Kernel()).GetThreadId(), ${sample_pc}, GetSvcNumber(), ${sample_fp});\n    return TranslateHaltReason(halt);"
+            "    const bool eden_detailed_cpu_sample = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed);\n    if (eden_detailed_cpu_sample && ::Eden::Performance::CpuSampleDue(m_core_index)) ::Eden::Performance::SampleCpu(m_core_index, Kernel::GetCurrentThread(m_system.Kernel()).GetThreadId(), ${sample_pc}, GetSvcNumber(), ${sample_fp});\n    ::Eden::Performance::cpu_state[m_core_index].phase.store(::Eden::Performance::CpuPhase::Guest, std::memory_order_release);\n    const auto halt = m_jit->Run();\n    ::Eden::Performance::cpu_state[m_core_index].phase.store(::Eden::Performance::CpuPhase::Kernel, std::memory_order_release);\n    if (eden_detailed_cpu_sample && ::Eden::Performance::CpuSampleDue(m_core_index)) ::Eden::Performance::SampleCpu(m_core_index, Kernel::GetCurrentThread(m_system.Kernel()).GetThreadId(), ${sample_pc}, GetSvcNumber(), ${sample_fp});\n    return TranslateHaltReason(halt);"
             wrapper "${wrapper}")
     endif()
     if(EDEN_DEV_PROFILE)
@@ -1566,14 +1566,6 @@ string(REPLACE "(fixed, var," "(fixed, std::span<VarArg>{var.data(), var.size()}
 string(REPLACE "(fixed, inl_in," "(fixed, std::span<InlInVarArg>{inl_in.data(), inl_in.size()}," ioctl_source "${ioctl_source}")
 write_derived("${PORT_BUILD_DIR}/include/${ioctl_header}" "${ioctl_source}")
 target_include_directories(core BEFORE PRIVATE "${PORT_BUILD_DIR}/include")
-
-# Slab allocation constructs C++ objects; returning a slot must release their
-# host RAII members as well as the guest resources handled by Finalize().
-set(slab_header "core/hle/kernel/k_slab_heap.h")
-file(READ "${PROJECT_SOURCE_DIR}/src/${slab_header}" slab_source)
-string(REPLACE "    void Free(T* obj) {\n        BaseHeap::Free(obj);"
-    "    void Free(T* obj) {\n        std::destroy_at(obj);\n        BaseHeap::Free(obj);" slab_source "${slab_source}")
-write_derived("${PORT_BUILD_DIR}/include/${slab_header}" "${slab_source}")
 
 # PostDestroy can release an owner process and enter the scheduler using the
 # current dummy thread's mutex. Keep that thread alive through this cleanup.

@@ -23,7 +23,7 @@ escaped = injection.split('"')[1]
 assert escaped.count(r"\n") >= 6
 assert escaped.count("::Eden::Performance::SampleCpu(") == 2
 assert escaped.count("if (eden_detailed_cpu_sample && ::Eden::Performance::CpuSampleDue(m_core_index))") == 2
-assert escaped.count("Kernel::GetCurrentThread(m_parent.m_system.Kernel()).GetThreadId()") == 2
+assert escaped.count("Kernel::GetCurrentThread(m_system.Kernel()).GetThreadId()") == 2
 assert escaped.count("m_jit->Run()") == 1
 assert escaped.count("cpu_state[m_core_index].phase.store(") == 2
 assert escaped.count("return TranslateHaltReason(halt);") == 1
@@ -79,7 +79,7 @@ struct Jit {
 struct Fixture {
     Jit jit{};
     Jit* m_jit=&jit;
-    struct Parent { struct System { int Kernel() const { return 1; } } m_system; } m_parent;
+    struct System { int Kernel() const { return 1; } } m_system;
     std::size_t m_core_index=0;
     unsigned svc_calls=0;
     unsigned GetSvcNumber() { ++svc_calls; return 11; }

@@ -7,6 +7,7 @@
 #pragma once
 
 #include <atomic>
+#include <memory>
 #include <mutex>
 
 #include "common/assert.h"
@@ -204,6 +205,7 @@ public:
     }
 
     void Free(T* obj) {
+        std::destroy_at(obj);
         BaseHeap::Free(obj);
     }
 
