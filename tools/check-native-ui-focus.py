@@ -68,5 +68,8 @@ for catalog in (fr, frca):
 
 # The test output MUST come from C++ shader rendering, never image synthesis.
 assert 'bash tools/launcher/preview.sh' in preview
-assert 'RENDERED_FROM_REAL_CPP_GL_LAUNCHER: PASS' in preview
+assert 'bash tools/launcher/preview.sh' in preview
+assert 'LAUNCH_CASE_CPP_OPENGL_RENDER: PASS' in preview
+assert 'ENCORE_LIBRARY_FLAT_JACKETS_ZOOM_PAN_CIRCLE_ONLY: PASS' in preview
+assert 'Capture native launch-case render with original C++/OpenGL' in preview
 print("Eden Encore authentic branding / COVER / dark fades / neon focus / UX copy: PASS")
