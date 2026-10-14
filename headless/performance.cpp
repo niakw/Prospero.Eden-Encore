@@ -1348,7 +1348,7 @@ void ReportGpuThread(unsigned frame) {
         constexpr const char* guest_cache_domains[] = {"buffer", "texture"};
         static std::array<std::array<unsigned long long, 3>, 2> previous_cache_domains{};
         for (unsigned d = 0; d < guest_cache_domain_totals.size(); ++d) {
-            const auto& stat = guest_cache_domain_totals[d];
+            auto& stat = guest_cache_domain_totals[d];
             const unsigned long long totals[] = {
                 stat.contended.load(std::memory_order_relaxed),
                 stat.blocked.load(std::memory_order_relaxed),
