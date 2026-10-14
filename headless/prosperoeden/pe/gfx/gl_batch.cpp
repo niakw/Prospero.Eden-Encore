@@ -113,7 +113,7 @@ void main()
             v_uv = vec2(cos(theta), sin(theta));
             virt.y = rounded_y;
         }
-        clip_w = max(0.65, 1.0 - z / 950.0);
+        clip_w = max(0.65, 1.0 - z / 780.0);
         // A slight stable 3-axis display tilt makes the cover's upper and
         // lower edges read as an actual physical object. All shell layers
         // share this transform, including the bevel and printed side.
@@ -205,9 +205,13 @@ void main()
     {
         // Mask the flat printed scan to a rounded insert. The translucent
         // rounded plastic surround is drawn separately over this surface.
-        float d = round_box(v_local, v_half, 12.0);
+        // Flat printed art goes behind the molded shell. The molded outer
+        // panel itself has a 31px corner; the paper inset a smaller 10px
+        // radius, leaving an uninterrupted rim even at oblique angles.
+        float radius = v_params.z > 0.5 ? 10.0 : 30.0;
+        float d = round_box(v_local, v_half, radius);
         color = v_params.z > 0.5 ? texture(u_texture, v_uv) * v_top : v_top;
-        color.a *= 1.0 - smoothstep(-1.25, 1.25, d);
+        color.a *= 1.0 - smoothstep(-1.0, 1.0, d);
     }
     else if (shape == 14)
     {
@@ -219,33 +223,49 @@ void main()
     }
     else if (shape == 10)
     {
-        float gloss = 0.12 * (1.0 - smoothstep(0.0, 0.13, v_st.x));
+        // An inked side wall, not a red overlay on a flat poster. Near/far
+        // planes receive different light; a narrow front-facing lip catches
+        // the rim light without turning the whole wall bright white.
+        float rim = exp(-70.0 * min(v_st.x, 1.0 - v_st.x));
+        float broad = 0.77 + 0.20 * (1.0 - v_st.x);
         color = mix(v_top, v_bottom, v_st.x);
-        color.rgb = min(vec3(1.0), color.rgb + vec3(gloss));
+        color.rgb = min(vec3(1.0), color.rgb * broad +
+            vec3(0.44, 0.34, 0.36) * rim * 0.18);
     }
     else if (shape == 12)
     {
         // Rounded top/bottom plastic cap: half-transparent near rim, brighter
         // distal reflection, subdued middle to retain physical depth.
-        float lip = 0.38 + 0.42 * pow(abs(v_st.y - 0.5) * 2.0, 3.0);
-        float end_mask = smoothstep(0.0, 0.032, v_st.x) *
-                         smoothstep(0.0, 0.032, 1.0 - v_st.x);
+        // Solid top/bottom surfaces: diffused light in the plastic, distinct
+        // bright front-edge refraction, and a darker rear-facing inner wall.
+        float front_glint = exp(-48.0 * v_st.y);
+        float rear_shadow = smoothstep(0.58, 1.0, v_st.y);
+        float near_edge = smoothstep(0.0, 0.02, v_st.x) *
+                          smoothstep(0.0, 0.02, 1.0 - v_st.x);
         color = mix(v_top, v_bottom, v_st.y);
-        color.rgb = mix(color.rgb, vec3(1.0), 0.13 * lip);
-        color.a *= lip * end_mask;
+        color.rgb = min(vec3(1.0), color.rgb * (0.96 - 0.24 * rear_shadow) +
+                        vec3(0.17, 0.19, 0.22) * front_glint);
+        color.a *= near_edge * (0.86 + 0.10 * front_glint);
     }
     else if (shape == 13)
     {
         // Soft plastic with a curved normal-derived highlight and an
         // illuminated front rim, darkening naturally toward the rear plane.
         vec2 n = normalize(v_uv);
-        vec2 light_dir = normalize(vec2(-0.65, -0.76));
-        float diffuse = max(0.0, dot(n, light_dir));
-        float specular = pow(max(0.0, dot(n, normalize(vec2(-0.78, -0.62)))), 6.0);
+        vec2 key_light = normalize(vec2(-0.58, -0.82));
+        vec2 secondary = normalize(vec2(0.92, -0.39));
+        float diffuse = 0.48 + 0.37 * max(dot(n, key_light), 0.0);
+        float highlight = pow(max(dot(n, key_light), 0.0), 20.0);
+        float fill = 0.11 * max(dot(n, secondary), 0.0);
+        // Curved corner normals interpolate across eight physical strips.
+        // The highlight tracks their actual curvature, not a screen border.
+        float near_glint = 0.20 * exp(-20.0 * v_st.x);
+        float rear_shadow = 1.0 - 0.23 * v_st.x;
         vec4 material = mix(v_top, v_bottom, v_st.x);
-        material.rgb *= 0.58 + 0.40 * diffuse;
-        material.rgb += vec3(0.24, 0.26, 0.31) * specular;
-        material.a *= (0.72 + 0.18 * diffuse);
+        material.rgb = min(vec3(1.0), material.rgb *
+            (diffuse + fill + near_glint) * rear_shadow +
+            vec3(0.62, 0.72, 0.83) * highlight * 0.41);
+        material.a *= 0.90 - 0.15 * v_st.x;
         color = material;
     }
     else if (shape == 11)
@@ -253,24 +273,29 @@ void main()
         // A molded translucent sleeve with a beveled white frame. The centre
         // remains transparent so high-resolution real cover art is untouched.
         // Every point shares the EXACT projective pivot of case_face().
-        vec2 d = min(v_st, 1.0 - v_st) * (v_half * 2.0);
-        float distance_edge = min(d.x, d.y);
-        float outer = 1.0 - smoothstep(5.0, 19.0, distance_edge);
-        float lip = (smoothstep(7.0, 11.0, distance_edge) -
-                     smoothstep(14.0, 21.0, distance_edge)) * 0.37;
-        float top_glint = (1.0 - smoothstep(0.0, 0.065, v_st.y)) * 0.28;
-        float left_glint = (1.0 - smoothstep(0.0, 0.028, v_st.x)) * 0.18;
-        float clip_gloss = (1.0 - smoothstep(0.0, 0.024, 1.0-v_st.x)) *
-            (1.0 - smoothstep(0.0, 0.045, abs(v_st.y - 0.16))) * 0.36;
-        clip_gloss += (1.0 - smoothstep(0.0, 0.024, 1.0-v_st.x)) *
-            (1.0 - smoothstep(0.0, 0.045, abs(v_st.y - 0.81))) * 0.36;
-        float body = clamp(outer * 0.89 + lip + top_glint + left_glint + clip_gloss,
-                           0.0, 1.0);
-        float corner = length(max(abs(v_local) - (v_half - vec2(17.0)), 0.0));
-        body *= 1.0 - smoothstep(16.0, 22.0, corner);
-        vec3 sheen = mix(v_top.rgb, vec3(0.93, 0.97, 1.0),
-                         0.20 + 0.22 * (1.0 - v_st.y));
-        color = vec4(sheen, v_top.a * body);
+        vec2 pixel_from_edge = min(v_st, 1.0 - v_st) * (v_half * 2.0);
+        float nearest = min(pixel_from_edge.x, pixel_from_edge.y);
+        float outer = 1.0 - smoothstep(5.0, 22.0, nearest);
+        float inner_bevel = (smoothstep(7.0, 12.0, nearest) -
+                             smoothstep(19.0, 26.0, nearest));
+        float outer_bevel = 1.0 - smoothstep(0.0, 5.0, nearest);
+        float top_edge = exp(-46.0 * v_st.y);
+        float side_edge = exp(-65.0 * v_st.x);
+        float seam_right = exp(-85.0 * (1.0 - v_st.x));
+        // Grazing-angle Fresnel makes the clear cover shell catch light as
+        // it rotates; the center remains transparent over printed artwork.
+        float fresnel = pow(1.0 - abs(cos(v_params.x)), 3.0);
+        float glint = 0.10 * exp(-170.0 *
+            pow(v_st.x - (0.36 + 0.23 * sin(v_params.x)), 2.0));
+        float brightness = clamp(outer * (0.58 + 0.25 * fresnel) +
+            inner_bevel * 0.20 + outer_bevel * 0.34 +
+            top_edge * 0.12 + side_edge * 0.08 + seam_right * 0.11 +
+            glint * (0.38 + fresnel), 0.0, 1.0);
+        float rounded = round_box(v_local, v_half, 30.0);
+        float silhouette = 1.0 - smoothstep(-1.2, 1.2, rounded);
+        vec3 sheen = mix(v_top.rgb, vec3(0.98, 0.99, 1.0),
+                         0.42 + 0.16 * fresnel);
+        color = vec4(sheen, v_top.a * brightness * silhouette);
     }
     else if (shape == 8)
     {
