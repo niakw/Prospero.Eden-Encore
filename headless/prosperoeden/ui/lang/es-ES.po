@@ -1592,3 +1592,19 @@ msgstr "Salir de Eden Encore"
 #: launcher translated copy
 msgid "Exit Eden Encore?"
 msgstr "¿Salir de Eden Encore?"
+
+#: pe/ui/library.cpp
+msgid "GB"
+msgstr "GB"
+
+#: pe/ui/library.cpp
+msgid "Enlarge cover"
+msgstr "Ampliar carátula"
+
+#: pe/ui/library.cpp
+msgid "Close"
+msgstr "Cerrar"
+
+#: pe/ui/library.cpp
+msgid "Down: view back cover"
+msgstr "Abajo: ver contraportada"
