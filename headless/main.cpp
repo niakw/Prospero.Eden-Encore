@@ -1130,7 +1130,7 @@ int main(int argc, char** argv) {
         // mistake a tail-only capture for an unidentified source build.
         // No per-frame logging or extra disk I/O in quiet gameplay.
         if (Eden::NativeLogs::Detailed()) {
-            std::printf("EDEN_SESSION_SOURCE source_sha=%s\\n", EDEN_NATIVE_SOURCE_COMMIT);
+            std::printf("EDEN_SESSION_SOURCE source_sha=%s\n", EDEN_NATIVE_SOURCE_COMMIT);
             std::fflush(stdout);
         }
 #endif
