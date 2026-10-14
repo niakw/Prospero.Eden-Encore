@@ -61,6 +61,48 @@ def parse(log: str) -> tuple[str, list[Window]]:
     return sha, windows
 
 
+def split_sessions(log: str) -> list[str]:
+    """Retain each game's independent five-second windows, even in one heap file.
+
+    The application can return to the launcher and start another game without
+    restarting the process. Frame totals then reset, and naive whole-file
+    comparisons either raise or falsely merge independent HLE counters.
+    A late tail-only file may lack the boot SHA; copy the last known source
+    identity into the next segment, or report it as unknown.
+    """
+    sessions: list[str] = []
+    active: list[str] = []
+    source = ""
+    has_frames = False
+    last_total: int | None = None
+    for line in log.splitlines():
+        if line.startswith(("EDEN_BUILD_SOURCE ", "EDEN_SESSION_SOURCE ")):
+            source = line
+        new_game = line.startswith("EDEN_STAGE ") and "phase=session_start" in line
+        frame_total: int | None = None
+        if line.startswith("EDEN_VULKAN_FRAME "):
+            frame_kv = values(line)
+            if "total" in frame_kv:
+                frame_total = int(frame_kv["total"])
+        reset = frame_total is not None and last_total is not None and frame_total <= last_total
+        if has_frames and (new_game or reset):
+            sessions.append("\n".join(active))
+            active = [source] if source else []
+            has_frames = False
+            last_total = None
+        active.append(line)
+        if frame_total is not None:
+            has_frames = True
+            last_total = frame_total
+    if has_frames:
+        sessions.append("\n".join(active))
+    return sessions
+
+
+def analyze_sessions(log: str, minimum_still_seconds: float = 300.0) -> list[dict]:
+    return [analyze(part, minimum_still_seconds) for part in split_sessions(log)]
+
+
 def tail_since_last_advance(windows: list[Window], key: str) -> tuple[int, float] | None:
     # Require the service to remain in every reported top-32 HLE snapshot.
     # A missing snapshot is unknown, NOT evidence the service stopped.
@@ -184,6 +226,19 @@ def self_test() -> None:
     # Missing HLE service rows have no readable status, never fabricate idle.
     cut = log.rsplit("EDEN_DEV_HLE service=IStorage cmd=0 calls=9 ns=100", 1)[0]
     assert not analyze(cut)["candidate_still_media_while_compositor_active"]
+    # The real diagnostic stream may contain two sessions in one heap file.
+    multi = log + "\nEDEN_STAGE backend=Vulkan phase=session_start mono_ns=7\n" + healthy
+    separate = analyze_sessions(multi)
+    assert len(separate) == 2
+    assert separate[0]["candidate_still_media_while_compositor_active"]
+    assert not separate[1]["candidate_still_media_while_compositor_active"]
+    assert all(x["source_sha"] == "1234abcd" for x in separate)
+    # Old builds without a session marker can still be separated by reset.
+    assert len(analyze_sessions(log + "\n" + healthy)) == 2
+    # New per-session SHA overrides the boot SHA for that game's own windows.
+    stamped = log + ("\nEDEN_STAGE backend=Vulkan phase=session_start mono_ns=7"
+                     "\nEDEN_SESSION_SOURCE source_sha=5678dcba\n" + healthy)
+    assert analyze_sessions(stamped)[1]["source_sha"] == "5678dcba"
     print("PASS guest vs compositor liveness: stopped media, progress, normal and missing sample")
 
 
@@ -195,11 +250,15 @@ def main() -> None:
     if args.self_test:
         self_test()
     elif args.heap_log:
-        result = analyze(args.heap_log.read_text(errors="replace"))
-        for key, val in result.items():
-            print(f"{key}: {val}")
-        print("CAUTION: no scene-content hash, user-gameplay PC, real scanout, "
-              "guest action-profile persistence or deadlock call stack is established")
+        sessions = analyze_sessions(args.heap_log.read_text(errors="replace"))
+        if not sessions:
+            parser.error("no measured five-second game session in heap log")
+        for index, result in enumerate(sessions, 1):
+            print(f"=== Game session {index}/{len(sessions)} ===")
+            for key, val in result.items():
+                print(f"{key}: {val}")
+        print("CAUTION: a compositor and guest counter advance does not prove "
+              "scene progression, guest action-profile persistence or deadlock ownership")
     else:
         parser.error("provide read-only heap log or --self-test")
 
