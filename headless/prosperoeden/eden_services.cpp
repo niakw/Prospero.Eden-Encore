@@ -500,7 +500,7 @@ bool FetchCaseFace(const std::vector<std::string>& candidates,
         // US artwork even when the cached US image has higher resolution.
         // The TGA remains usable if this tiny receipt write fails.
         std::ofstream receipt(destination + ".source", std::ios::trunc);
-        if (receipt) receipt << best_source << '\\n';
+        if (receipt) receipt << best_source << '\n';
         return true;
     }
     (void)std::remove(staged.c_str());
@@ -557,8 +557,16 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
              (side != 2 && width >= 128 && height >= 200))) continue;
         // If network retrieval fails, the old cached TGA remains usable;
         // source migration is retried later without blocking rendering.
-        if (!FetchCaseFace(selected->second[side], path, side == 2, cancel))
+        if (!FetchCaseFace(selected->second[side], path, side == 2, cancel)) {
             all_ready = false;
+        } else {
+            // A fallback candidate remains usable, but only retry its higher
+            // priority European/locale scan on the next bounded refresh.
+            std::ifstream refreshed(path + ".source");
+            std::string actual;
+            if (refreshed) std::getline(refreshed, actual);
+            if (actual != selected->second[side].front()) all_ready = false;
+        }
     }
     if (all_ready) {
         std::lock_guard retry(retry_mutex);
