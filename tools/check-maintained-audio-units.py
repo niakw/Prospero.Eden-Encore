@@ -29,4 +29,8 @@ assert 'write_derived("${PORT_BUILD_DIR}/voice_info.cpp"' not in cmake
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/audio_core/sink/sink_details.cpp"' not in cmake
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/audio_core/renderer/voice/voice_info.cpp"' not in cmake
 assert 'target_include_directories(audio_core PRIVATE "${EDEN_PORT_DIR}"' in cmake
+# Prevent the same CMake generator debt from returning unnoticed.
+assert cmake.count("write_derived(") <= 77
+assert cmake.count("file(READ") <= 87
+assert cmake.count("string(REPLACE") <= 225
 print("MAINTAINED_AUDIO_UNITS_PARITY_PASS sink=1 voice=1")
