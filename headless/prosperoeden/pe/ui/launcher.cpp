@@ -731,100 +731,65 @@ void Launcher::draw_launch(Canvas &c)
     c.list.shadow({194.0f, 796.0f, 795.0f, 80.0f}, 42.0f, 94.0f,
                   theme::kSun.with_alpha(0.18f));
 
+    // Every game uses this exact geometric case, independent of the artwork
+    // source. The *same pivot* and camera project front/back and the plastic
+    // side in the OpenGL vertex shader; the scan is a perspective-correct
+    // texture on the face rather than a 2D width squash.
     const float angle = motion() > 0.0f ? 0.10f + 6.18f * t : 0.10f;
     const float facing = std::cos(angle);
-    const float width_factor = std::max(0.075f, std::abs(facing));
     const bool back = facing < 0.0f;
-    const float cx = 610.0f + (motion() > 0.0f ? 13.0f * std::sin(angle) : 0.0f);
-    const float box_width = 405.0f * width_factor;
-    const Rect box{cx - box_width * 0.5f, 167.0f, box_width, 646.0f};
+    const float width = 422.0f * std::abs(facing) +
+                        34.0f * std::abs(std::sin(angle));
+    const Rect physical{390.0f, 162.0f, 422.0f, 655.0f};
+    const Rect face{physical.x + 9.0f, physical.y + 9.0f,
+                    physical.w - 18.0f, physical.h - 18.0f};
+    const float mid_x = physical.x + physical.w * 0.5f;
+    c.list.shadow({mid_x - width * 0.5f - 25.0f, 158.0f,
+                   width + 50.0f, 671.0f}, 40.0f, 84.0f,
+                  theme::kSun.with_alpha(0.38f));
+    c.list.shadow({mid_x - width * 0.5f - 15.0f, 168.0f,
+                   width + 30.0f, 640.0f}, 30.0f, 55.0f,
+                  theme::kBlue.with_alpha(0.20f));
 
-    // A companion rear scan gives the physical double-sided case some depth
-    // when actual scans exist. It is always the *other* face and never copied
-    // from the front. The turning hero case remains the primary animation.
-    const std::string& companion_scan = back ? launch_box_front_ : launch_box_back_;
-    if (width_factor > 0.54f && !companion_scan.empty()) {
-        const Rect companion{120.0f, 232.0f, 315.0f, 515.0f};
-        const Cover companion_image = c.textures.cover(companion_scan, 640.0f);
-        if (companion_image.texture != 0) {
-            c.list.shadow({companion.x - 6.0f, companion.y + 15.0f,
-                           companion.w + 12.0f, companion.h}, 12.0f, 56.0f,
-                          theme::kSun.with_alpha(0.32f));
-            c.list.rounded_rect({companion.x - 7.0f, companion.y - 7.0f,
-                                 companion.w + 14.0f, companion.h + 14.0f},
-                                12.0f, Color::rgb(0x191022));
-            c.list.rounded_image(companion_image.texture, companion,
-                                 {0.0f, 0.0f, 1.0f, 1.0f}, 6.0f, kWhite.with_alpha(0.83f));
-            c.list.bordered_rect(companion, 6.0f, kWhite.with_alpha(0.0f),
-                                 2.0f, theme::kSun.with_alpha(0.46f));
-        }
-    }
+    // Plastic case shell and rim. A projected spine is an actual 28px-deep
+    // face joining front and rear planes, most visible at quarter turns.
+    c.list.case_face(0, physical, angle, back, Color::rgb(0x341c47));
+    c.list.case_face(0, {physical.x + 5.0f, physical.y + 5.0f,
+                         physical.w - 10.0f, physical.h - 10.0f}, angle, back,
+                     Color::rgb(0x160e26));
 
-    c.list.shadow({box.x - 22.0f, box.y + 6.0f,
-                   box.w + 44.0f, box.h + 28.0f}, 33.0f, 104.0f,
-                  theme::kSun.with_alpha(0.33f));
-    c.list.shadow({box.x - 15.0f, box.y - 10.0f,
-                   box.w + 30.0f, box.h + 20.0f}, 25.0f, 75.0f,
-                  theme::kBlue.with_alpha(0.23f));
-    c.list.rounded_rect({box.x - 8.0f, box.y - 8.0f,
-                         box.w + 16.0f, box.h + 16.0f}, 11.0f,
-                        Color::rgb(0x210c2c));
-    c.list.bordered_rect({box.x - 8.0f, box.y - 8.0f,
-                          box.w + 16.0f, box.h + 16.0f}, 11.0f,
-                         theme::kGlass, 2.4f,
-                         theme::kFocusCore.with_alpha(0.81f));
-
-    const Rect face{box.x, box.y, std::max(1.0f, box.w), box.h};
+    // An authentic front/back has first priority. When no physical scan was
+    // found, existing Nlib game art supplies the relevant face. No title-
+    // specific look, filenames or artwork are hardcoded in production.
     const std::string& scan = back ? launch_box_back_ : launch_box_front_;
-    if (!scan.empty()) {
-        const Cover artwork = c.textures.cover(scan, 640.0f);
-        if (artwork.texture != 0)
-            c.list.rounded_image(artwork.texture, face,
-                                 {0.0f, 0.0f, 1.0f, 1.0f}, 5.0f, kWhite);
+    std::string fallback;
+    if (scan.empty()) {
+        if (back && !launch_screenshots_.empty())
+            fallback = launch_screenshots_.front();
+        else if (back && !launch_hero_.empty())
+            fallback = launch_hero_;
         else
-            c.list.gradient_rect(face, 5.0f, theme::kGlass, theme::kPanel);
-    } else if (!back) {
-        c.list.gradient_rect(face, 5.0f, Color::rgb(0x251738), Color::rgb(0x080b1a));
-        if (face.w > 55.0f) {
-            const Rect art{face.x + 12.0f, face.y + 58.0f,
-                           face.w - 24.0f, 425.0f};
-            cover_crop(c, launch_cover_, art, 5.0f);
-            text_shrink(c, launch_title_, face.x + face.w * 0.5f,
-                        face.y + 542.0f, 25.0f, theme::kTitle,
-                        face.w - 28.0f, Align::center);
-        }
-    } else {
-        c.list.gradient_rect(face, 5.0f, Color::rgb(0x1d112c), Color::rgb(0x0b1021));
-        if (face.w > 90.0f) {
-            text_shrink(c, launch_title_, face.x + 19.0f, face.y + 52.0f,
-                        25.0f, theme::kTitle, face.w - 38.0f);
-            const std::string& shot = launch_screenshots_.empty() ?
-                launch_cover_ : launch_screenshots_.front();
-            cover_crop(c, shot, {face.x + 15.0f, face.y + 80.0f,
-                                face.w - 30.0f, 244.0f}, 5.0f);
-            if (launch_screenshots_.size() > 1) {
-                const float width = (face.w - 39.0f) * 0.5f;
-                cover_crop(c, launch_screenshots_[1],
-                           {face.x + 15.0f, face.y + 334.0f, width, 107.0f}, 4.0f);
-                if (launch_screenshots_.size() > 2)
-                    cover_crop(c, launch_screenshots_[2],
-                               {face.x + 24.0f + width, face.y + 334.0f,
-                                width, 107.0f}, 4.0f);
-            }
-            if (!launch_description_.empty())
-                text_block_semantic(c, launch_description_, face.x + 18.0f,
-                                    face.y + 489.0f, 20.0f, 29.0f,
-                                    theme::kBody, face.w - 36.0f, 4);
-        }
+            fallback = launch_cover_;
     }
-    // Gloss along the case edge; keep real printed art visible.
-    if (width_factor < 0.42f) {
-        const float spine = std::min(12.0f, box.w * 0.32f);
-        c.list.hgradient_rect({box.x + (std::sin(angle) > 0.0f ?
-                               0.0f : box.w - spine), box.y,
-                               spine, box.h}, 3.0f,
-                              theme::kSun.with_alpha(0.83f),
-                              theme::kLimeDeep.with_alpha(0.81f));
+    const Cover artwork = c.textures.cover(scan.empty() ? fallback : scan, 760.0f);
+    if (artwork.texture != 0) {
+        // Shader flips the back-face UV once per half-turn, and its non-unit
+        // clip W provides genuine perspective-correct texture interpolation.
+        c.list.case_face(artwork.texture, face, angle, back, kWhite);
+    } else {
+        c.list.case_face(0, face, angle, back, Color::rgb(0x251a43));
+    }
+    // Transparent neon case trim: never overwrite the printed art.
+    c.list.case_spine(physical, angle, 28.0f,
+                      theme::kFocusCore.with_alpha(0.96f),
+                      Color::rgb(0x341b52, 0.96f));
+    // Hinges on the plastic spine distinguish a physical box from a poster.
+    // They are deliberately part of the projected side geometry.
+    for (int hinge = 0; hinge < 2; ++hinge) {
+        const float y = physical.y + (hinge == 0 ? 33.0f : physical.h - 56.0f);
+        c.list.case_spine({physical.x, y, physical.w, 17.0f}, angle, 30.0f,
+                          Color::rgb(0xf9b3f3, 0.63f),
+                          theme::kLimeDeep.with_alpha(0.64f));
     }
 
     if (c.textures.brand() != 0)
