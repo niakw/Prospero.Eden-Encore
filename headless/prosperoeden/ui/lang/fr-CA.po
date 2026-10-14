@@ -1594,3 +1594,19 @@ msgstr "Quitter Eden Encore"
 #: pe/ui/launcher.cpp
 msgid "Exit Eden Encore?"
 msgstr "Quitter Eden Encore ?"
+
+#: pe/ui/library.cpp
+msgid "GB"
+msgstr "Go"
+
+#: pe/ui/library.cpp
+msgid "Enlarge cover"
+msgstr "Agrandir la jaquette"
+
+#: pe/ui/library.cpp
+msgid "Close"
+msgstr "Fermer"
+
+#: pe/ui/library.cpp
+msgid "Down: view back cover"
+msgstr "Bas : voir le verso de la jaquette"
