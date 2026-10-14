@@ -1289,6 +1289,7 @@ pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game,
     if (game.title_id == 0 ||
         (cancel && cancel->load(std::memory_order_acquire))) return game;
     const int language_choice = Eden::LoadPreferences().language;
+    const std::string scanned_name = game.name;
     NlibEnrichment enrichment = EnsureNlibEnrichment(game.title_id, language_choice, cancel);
     game.artwork_changed = enrichment.artwork_changed;
     if (!enrichment.icon.empty()) game.cover = std::move(enrichment.icon);
@@ -1302,6 +1303,11 @@ pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game,
     if (!enrichment.developer.empty()) game.developer = std::move(enrichment.developer);
     if (!enrichment.release_date.empty()) game.release_date = std::move(enrichment.release_date);
     if (!enrichment.categories.empty()) game.categories = std::move(enrichment.categories);
+    // Reuse this already asynchronous media worker. Both faces are downloaded
+    // only when indexed, never during the actual title handoff.
+    EnsureRetailCase(game.title_id, game.name,
+                     scanned_name != game.name ? scanned_name :
+                     std::filesystem::path(game.file).stem().string(), cancel);
     return game;
 }
 
