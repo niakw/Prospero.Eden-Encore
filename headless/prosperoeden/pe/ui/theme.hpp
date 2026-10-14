@@ -67,7 +67,7 @@ constexpr float kCursorSpring = 26.0f;
 constexpr float kScrollSpring = 16.0f;
 constexpr float kScreenSeconds = 0.30f;
 // Allow one visible face change while keeping game admission bounded.
-constexpr float kLaunchSeconds = 1.85f;
+constexpr float kLaunchSeconds = 2.20f;
 
 } // namespace theme
 
