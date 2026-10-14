@@ -453,15 +453,14 @@ bool FetchCaseFace(const std::vector<std::string>& candidates,
                    const std::atomic<bool>* cancel) {
     if (candidates.empty() ||
         (cancel && cancel->load(std::memory_order_acquire))) return false;
-    int old_width = 0, old_height = 0, old_channels = 0;
-    if (!stbi_info(destination.c_str(), &old_width, &old_height, &old_channels) ||
-        !ValidNlibTga(destination)) { old_width = 0; old_height = 0; }
-    std::uint64_t best_pixels = static_cast<std::uint64_t>(old_width) * old_height;
     std::string best;
-    // Region-ranked candidates from the build index. A public CDN may return
-    // only a small thumbnail even for an entry advertised as high resolution.
-    // Try the next candidate and retain the sharpest safe flat scan, never a
-    // pre-rendered Box - 3D. No network activity occurs on the launch thread.
+    std::string best_source;
+    // The index is ranked by REGION, then by alternative. Take the first
+    // DECODABLE face from the highest available region, not the face with the
+    // most pixels across regions (which wrongly selected North America over
+    // Europe). Generated older cached covers are migrated by .source markers.
+    // Manual .png/.jpg/.jpeg overrides are protected in EnsureRetailCase.
+    // No network activity occurs on the launch/render thread.
     for (const std::string& filename : candidates) {
         if (!SafeCaseFilename(filename) ||
             (cancel && cancel->load(std::memory_order_acquire))) break;
@@ -484,22 +483,26 @@ bool FetchCaseFace(const std::vector<std::string>& candidates,
             h < (narrow_spine ? 600 : 200) || w > 4096 || h > 4096 ||
             static_cast<std::uint64_t>(w) * h > 3840u * 2160u)
             continue;
-        const std::uint64_t pixels = static_cast<std::uint64_t>(w) * h;
-        if (pixels > best_pixels) {
-            best_pixels = pixels;
-            best = body;
-        }
-        // Enough native source resolution to display a sharp face at 1080p.
-        if ((narrow_spine && w >= 96 && h >= 650) ||
-            (!narrow_spine && w >= 750 && h >= 1100)) break;
+        // A larger image from a different region is NOT a better scan of
+        // this edition. Once the first region-ranked usable candidate
+        // decodes, do not replace it with an unrelated region.
+        best = body;
+        best_source = filename;
+        break;
     }
     if (best.empty() || (cancel && cancel->load(std::memory_order_acquire)))
         return false;
     (void)mkdir(Eden::CoversDir().c_str(), 0777);
     const std::string staged = destination + ".new";
     if (WriteJpegTga(best, staged, true) &&
-        std::rename(staged.c_str(), destination.c_str()) == 0)
+        std::rename(staged.c_str(), destination.c_str()) == 0) {
+        // Provenance for a generated TGA. A newer index can replace stale
+        // US artwork even when the cached US image has higher resolution.
+        // The TGA remains usable if this tiny receipt write fails.
+        std::ofstream receipt(destination + ".source", std::ios::trunc);
+        if (receipt) receipt << best_source << '\\n';
         return true;
+    }
     (void)std::remove(staged.c_str());
     return false;
 }
@@ -541,12 +544,19 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
         if (IsFile(base + ".png") || IsFile(base + ".jpg") ||
             IsFile(base + ".jpeg")) continue;
         int width = 0, height = 0, channels = 0;
-        if (ValidNlibTga(path) &&
+        // Revalidate region provenance when the package index changes.
+        // Older TGA files without .source (or from another region) must be
+        // re-fetched, not silently accepted solely for their pixel count.
+        std::ifstream receipt(path + ".source");
+        std::string cached_source;
+        if (receipt) std::getline(receipt, cached_source);
+        if (cached_source == selected->second[side].front() &&
+            ValidNlibTga(path) &&
             stbi_info(path.c_str(), &width, &height, &channels) &&
-            ((side == 2 && width >= 96 && height >= 650) ||
-             (side != 2 && width >= 750 && height >= 1100))) continue;
-        // Existing lower-quality files stay usable while a better face is
-        // searched. No file is replaced by a smaller CDN thumbnail.
+            ((side == 2 && width >= 64 && height >= 600) ||
+             (side != 2 && width >= 128 && height >= 200))) continue;
+        // If network retrieval fails, the old cached TGA remains usable;
+        // source migration is retried later without blocking rendering.
         if (!FetchCaseFace(selected->second[side], path, side == 2, cancel))
             all_ready = false;
     }
