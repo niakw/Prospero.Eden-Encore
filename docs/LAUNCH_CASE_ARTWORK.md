@@ -327,3 +327,6 @@ The French Library's directly referenced translation keys have been audited,
 including the enlarged-jacket Close hint. Its date and metadata formatting
 are UI-only; launcher strings and full media acquisition remain shared.
 Only the host OpenGL screenshot workflow is requested for this checkpoint.
+
+Actual test checkpoint: textual source contracts were reconciled with the
+current Library implementation before this host-only rendering run.
