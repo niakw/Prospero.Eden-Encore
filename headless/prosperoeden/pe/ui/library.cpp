@@ -223,6 +223,8 @@ void Launcher::finish_home_media()
         for (Game& game : games_) {
             if (game.title_id != enriched.title_id) continue;
             if (!enriched.cover.empty()) game.cover = enriched.cover;
+            if (!enriched.box_front.empty()) game.box_front = enriched.box_front;
+            if (!enriched.box_back.empty()) game.box_back = enriched.box_back;
             if (!enriched.hero.empty()) game.hero = enriched.hero;
             if (!enriched.screenshots.empty()) game.screenshots = enriched.screenshots;
             if (enriched.max_players > 0) game.max_players = enriched.max_players;
@@ -286,6 +288,8 @@ void Launcher::finish_selected_media()
         for (Game& game : games_) {
             if (game.title_id != enriched.title_id) continue;
             if (!enriched.cover.empty()) game.cover = std::move(enriched.cover);
+            if (!enriched.box_front.empty()) game.box_front = std::move(enriched.box_front);
+            if (!enriched.box_back.empty()) game.box_back = std::move(enriched.box_back);
             if (!enriched.hero.empty()) game.hero = std::move(enriched.hero);
             if (!enriched.screenshots.empty()) game.screenshots = std::move(enriched.screenshots);
             if (enriched.max_players > 0) game.max_players = enriched.max_players;
@@ -322,6 +326,8 @@ void Launcher::apply_games(std::vector<Game> games)
                                      std::string{};
     games_ = std::move(games);
     games_loaded_ = true;
+    library_back_focused_ = false;
+    library_back_zoom_ = false;
     // Even if file order stayed identical, a preferences refresh may
     // have changed the selected game's effective docked mode.
     if (same && library_.selected >= 0 &&
@@ -695,6 +701,8 @@ void Launcher::enter_library()
     start_scan();
     library_.visible = 5;
     library_.pitch = 1.0f;
+    library_back_focused_ = false;
+    library_back_zoom_ = false;
     library_.reset(static_cast<int>(games_.size()), 0);
     refresh_selected_game();
     detail_.snap(1.0f);
@@ -773,6 +781,13 @@ void Launcher::refresh_selected_game()
 
 void Launcher::press_library(Key key)
 {
+    if (library_back_zoom_) {
+        if (key == Key::circle || key == Key::cross) {
+            library_back_zoom_ = false;
+            cue(Cue::back);
+        }
+        return; // popup owns all input; never launch a game under it
+    }
     if (key != Key::left && key != Key::right && key != Key::cross && key != Key::options)
         clear_confirmation();
     const int count = static_cast<int>(games_.size());
@@ -781,15 +796,27 @@ void Launcher::press_library(Key key)
     switch (key)
     {
     case Key::circle:
+        if (library_back_focused_) {
+            library_back_focused_ = false;
+            cue(Cue::back);
+            return;
+        }
         open(Screen::home, false);
         return;
     case Key::up:
+        if (library_back_focused_) {
+            library_back_focused_ = false;
+            cue(Cue::focus);
+            return;
+        }
         top_nav_focus_ = 1;
         cue(Cue::focus);
         return;
     case Key::down:
-        // The Library is a horizontal console rail. Down is intentionally reserved for future
-        // shelves/actions instead of silently changing game settings.
+        if (game != nullptr) {
+            library_back_focused_ = true;
+            cue(Cue::focus);
+        }
         return;
     case Key::l1:
     case Key::r1:
@@ -803,6 +830,7 @@ void Launcher::press_library(Key key)
         return;
     case Key::left:
     case Key::right:
+        library_back_focused_ = false;
         if (library_.move(key == Key::right ? 1 : -1))
         {
             message_.clear();
@@ -863,6 +891,11 @@ void Launcher::press_library(Key key)
         launch(game->file, game->name, game->cover);
         return;
     case Key::cross:
+        if (game != nullptr && library_back_focused_) {
+            library_back_zoom_ = true;
+            cue(Cue::open);
+            return;
+        }
         if (game == nullptr || !home_.setup_ready)
         {
             cue(Cue::error);
