@@ -763,21 +763,24 @@ void Launcher::draw_launch(Canvas &c)
     const bool back = facing < 0.0f;
     constexpr float case_depth = 64.0f;
     constexpr float case_radius = 31.0f;
-    const float width = 422.0f * std::abs(facing) +
+    // Use the actual reusable case outline for projected shadow/geometry.
+    // The reference template is taller than the previous 422x655 poster.
+    const Rect physical{374.0f, 126.0f, 454.0f, 730.0f};
+    const float width = physical.w * std::abs(facing) +
                         case_depth * std::abs(std::sin(angle));
-    const Rect physical{390.0f, 162.0f, 422.0f, 655.0f};
-    const Rect face{physical.x + 9.0f, physical.y + 9.0f,
-                    physical.w - 18.0f, physical.h - 18.0f};
+    const Rect face{physical.x + 12.0f, physical.y + 14.0f,
+                    physical.w - 24.0f, physical.h - 28.0f};
     const float mid_x = physical.x + physical.w * 0.5f;
-    c.list.shadow({mid_x - width * 0.5f - 65.0f, 184.0f,
-                   width + 130.0f, 670.0f}, 38.0f, 104.0f,
-                  Color::rgb(0x07030f, 0.76f));
-    c.list.shadow({mid_x - width * 0.5f - 29.0f, 190.0f,
-                   width + 58.0f, 634.0f}, 32.0f, 49.0f,
-                  theme::kBlue.with_alpha(0.20f));
-    c.list.shadow({mid_x - width * 0.40f - 40.0f, 802.0f,
-                   width * 0.8f + 80.0f, 96.0f}, 40.0f, 78.0f,
-                  Color::rgb(0x020209, 0.72f));
+    c.list.shadow({mid_x - width * 0.5f - 72.0f, physical.y - 8.0f,
+                   width + 144.0f, physical.h + 34.0f}, 35.0f, 105.0f,
+                  Color::rgb(0x05040b, 0.84f));
+    c.list.shadow({mid_x - width * 0.5f - 22.0f, physical.y + 6.0f,
+                   width + 44.0f, physical.h - 6.0f}, 29.0f, 33.0f,
+                  Color::rgb(0x190f23, 0.44f));
+    c.list.shadow({mid_x - width * 0.39f - 50.0f,
+                   physical.y + physical.h - 18.0f,
+                   width * 0.78f + 100.0f, 86.0f}, 39.0f, 80.0f,
+                  Color::rgb(0x020208, 0.83f));
 
     // PSD reference: a shallow polycarbonate box, about 8% spine thickness.
     // The original template remains external; this is OUR shared geometric
@@ -794,10 +797,12 @@ void Launcher::draw_launch(Canvas &c)
                     Color::rgb(0x757c91, 0.71f));
     // The same clear-polycarbonate 3D shell surrounds every game. Printed
     // front/back artwork sits behind the translucent white molded edges.
-    c.list.case_face(0, physical, angle, back, Color::rgb(0xe6e8f0, 0.52f));
-    c.list.case_face(0, {physical.x + 5.0f, physical.y + 5.0f,
-                         physical.w - 10.0f, physical.h - 10.0f}, angle, back,
-                     Color::rgb(0x211727));
+    c.list.case_face(0, physical, angle, back, Color::rgb(0xc9d4e3, 0.92f));
+    // The thin dark rebate is recessed under the transparent molded lip,
+    // making the printed paper visibly separate from the hard-plastic case.
+    c.list.case_face(0, {physical.x + 6.0f, physical.y + 7.0f,
+                         physical.w - 12.0f, physical.h - 14.0f}, angle, back,
+                     Color::rgb(0x10131b, 0.94f));
 
     // An authentic front/back has first priority. When no physical scan was
     // found, existing Nlib game art supplies the relevant face. No title-
@@ -822,7 +827,7 @@ void Launcher::draw_launch(Canvas &c)
     }
     // Thin glossy plastic frame and clips are physically projected with the
     // scan rather than floating above it in screen coordinates.
-    c.list.case_plastic(physical, angle, back, Color::rgb(0xf6f9ff, 0.57f));
+    c.list.case_plastic(physical, angle, back, Color::rgb(0xf5f8ff, 0.88f));
 
     // A real case has TWO different sides. The left is the printed red
     // retail spine, the right is the mostly clear hinged latch edge.
