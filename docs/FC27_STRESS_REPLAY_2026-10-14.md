@@ -70,3 +70,54 @@ Other successful host checks include guest progress classification, IPC analysis
 5. **Native qualification:** the later source migrations, flexible memory declaration and audio changes only become a candidate after their own green native package run; neither archived log tested these changes.
 
 **Privacy:** This report retains counts and build SHAs only. It does not copy raw FTP logs, save content, personal file paths, or sensitive network requests to GitHub.
+
+
+## Separate stutter regimes: the former GPU-only replay was too optimistic
+
+The complete 415-window capture has a **measured 858 presentation intervals over
+50 ms, including 10 over 500 ms**, with the worst gap at 1,288 ms. A GPU
+dispatch-only queue replay that reports 0 full-queue windows cannot classify
+this session as smooth. The source-backed regression fixture contains
+**only 20 numeric timing/counter fields** per window (no raw console, network,
+account or save content), and the checked-in
+`tools/check-fc27-stutter-regimes.py --self-test` deliberately requires that
+the actual capture be flagged `stutter_sla=FAIL`.
+
+| Range (frame total) | Windows | >50ms intervals | >500ms intervals | Median JIT (ms/5s window) | Median cache lock wait (ms/5s window) |
+|---|---:|---:|---:|---:|---:|
+| <= 6,000, early compile-heavy gameplay | 42 | 109 | 7 | 592.853 | 8.552 |
+| 6,001–32,000, sustained gameplay | 180 | 679 | 3 | 25.952 | 16.529 |
+| >32,000, later repeating presentation | 193 | 70 | 0 | 0 | 0.257 |
+
+These are **not controlled stage annotations or per-frame blame**. They
+are ranges of frame totals, and the CPU/JIT/cache numbers are aggregates across
+multiple host cores. There are two distinct stutter targets:
+initial burst compilation and persistent gameplay CPU memory/cache contention.
+The very quiet end stage must *not* be counted as evidence that title
+progression resumed.
+
+The source-backed `RasterizerVulkan::OnCPUWrite` currently acquires the buffer
+cache lock for pages that have ever belonged to a GPU buffer. The monotonic
+page-witness safely elides the lock only when no registration has ever
+occurred; removing the mutex more aggressively could violate CPU/GPU memory
+coherence. Do not silently remove it for a performance experiment.
+
+Additional optional native diagnostic counters now report
+`EDEN_GUEST_CACHE_LOCK_TAIL`: the **actual number of completed >1ms and
+>10ms waits and the maximum individual buffer/texture wait per reporting
+window**. They are disabled in quiet mode and do not alter cache lock
+ownership, spin budget, or ordering. The next native trace can distinguish
+hundreds of small waits from a handful of long holds. There is **no new
+console trace for these counters yet**.
+
+### Counterexample stress: compositor FPS is not content freshness
+
+The replay now includes a deterministic 750ms guest-producer pause while
+an independent 30Hz compositor continues presenting the last buffer. It
+produces 0 over-50ms compositor intervals, 0 GPU queue-pressure events,
+and 23 repeated-content frames. This is a *synthetic model*, not proof of
+this specific game's mechanism. It prevents treating smooth 30 FPS counters
+as proof that the application advanced.
+
+**Do not claim an FPS improvement from the source-only fixes or tests**.
+The 415 windows were captured on build `2efd8b3c`, not the newer binary.
