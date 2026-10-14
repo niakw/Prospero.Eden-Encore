@@ -263,3 +263,12 @@ these fields, so it cannot be retroactively symbolized with them.
 CI gate: the source preflight, native all-on package compilation and artifact
 layout must pass on one specific commit. Do not claim a gameplay freeze fix or
 user-visible frame-time improvement based only on this source-level validation.
+
+### Concurrent development validation
+
+Both native packaging and core source validation separate intentional
+build/test pushes from ordinary no-op UI pushes in their workflow concurrency
+groups. Native packages remain pinned to the launching SHA; a newer
+explicit full-build request may still supersede an earlier build. This
+prevents accidental cancellation of most of a long native compilation while
+the single development branch receives unrelated interface edits.
