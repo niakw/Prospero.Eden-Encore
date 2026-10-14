@@ -826,7 +826,8 @@ void Launcher::draw_launch(Canvas &c)
             paper_uv.w = target_aspect / source_aspect;
             paper_uv.x = (1.0f - paper_uv.w) * 0.5f;
         }
-        c.list.case_face(artwork.texture, face, angle, back, kWhite, paper_uv);
+        c.list.case_face(artwork.texture, face, angle, back, kWhite, paper_uv,
+                         !back && !scan.empty());
     } else {
         c.list.case_face(0, face, angle, back, Color::rgb(0x251a43));
     }
