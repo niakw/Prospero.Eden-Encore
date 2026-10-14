@@ -72,7 +72,7 @@ def parse(source):
             gid = element.findtext("DatabaseID", "")
             kind = element.findtext("Type", "")
             filename = element.findtext("FileName", "")
-            if (gid in games and kind in ("Box - Front", "Box - Back")
+            if (gid in games and kind in ("Box - Front", "Box - Back", "Box - Spine")
                     and IMAGE_FILE.fullmatch(filename)):
                 images.setdefault(gid, {}).setdefault(kind, []).append(
                     (rank(element.findtext("Region", "")), filename))
@@ -87,15 +87,17 @@ def parse(source):
             key = normalize(label)
             if key:
                 names.setdefault(key, set()).add(gid)
-    lines = ["# Eden Encore retail case index v2 (title, front-candidates, back-candidates)\n"]
+    lines = ["# Eden Encore retail case index v3 (title, front, back, flat spine candidates)\n"]
     for key, matching in sorted(names.items()):
         if len(matching) != 1:
             continue  # avoid colliding editions / ambiguous matching
         media = images[next(iter(matching))]
         front = media.get("Box - Front", [])
         back = media.get("Box - Back", [])
-        if front or back:
-            lines.append(f"{key}\t{candidates(front)}\t{candidates(back)}\n")
+        spine = media.get("Box - Spine", [])
+        if front or back or spine:
+            lines.append(f"{key}\t{candidates(front)}\t{candidates(back)}"
+                         f"\t{candidates(spine)}\n")
     return "".join(lines)
 
 def build(archive_path):
@@ -126,6 +128,7 @@ def self_test():
     <GameImage><DatabaseID>1</DatabaseID><Type>Box - Front</Type><Region>World</Region><FileName>11111111-1111-1111-1111-111111111111.jpg</FileName></GameImage>
     <GameImage><DatabaseID>1</DatabaseID><Type>Box - Front</Type><Region>Europe</Region><FileName>22222222-2222-2222-2222-222222222222.png</FileName></GameImage>
     <GameImage><DatabaseID>1</DatabaseID><Type>Box - Back</Type><Region>France</Region><FileName>33333333-3333-3333-3333-333333333333.jpg</FileName></GameImage>
+    <GameImage><DatabaseID>1</DatabaseID><Type>Box - Spine</Type><Region>Europe</Region><FileName>77777777-7777-7777-7777-777777777777.png</FileName></GameImage>
     <GameImage><DatabaseID>2</DatabaseID><Type>Box - Back</Type><FileName>44444444-4444-4444-4444-444444444444.jpg</FileName></GameImage>
     <GameImage><DatabaseID>3</DatabaseID><Type>Box - Back</Type><FileName>55555555-5555-5555-5555-555555555555.jpg</FileName></GameImage>
     <GameImage><DatabaseID>4</DatabaseID><Type>Box - Back</Type><FileName>66666666-6666-6666-6666-666666666666.jpg</FileName></GameImage>
@@ -136,6 +139,8 @@ def self_test():
     assert "example voyage\t22222222" in result
     assert "\t33333333-3333-3333-3333-333333333333.jpg" in result
     assert "ambiguous\t" not in result and "44444444" not in result
+    assert "77777777-7777-7777-7777-777777777777.png" in result
+    assert "Box - 3D" not in result
     assert candidates([(7, "f" * 36 + ".jpg"), (1, "0" * 36 + ".png")]).count(";") == 1
     assert candidates([(1, "a" * 36 + ".jpg")]) == "a" * 36 + ".jpg"
     assert rank("France") > rank("Europe") > rank("World") > rank("Japan")
