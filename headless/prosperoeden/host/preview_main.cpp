@@ -145,7 +145,9 @@ void pictures(Stage &s)
     {
         s.restart(false);
         s.wait(2.0f); // background Home snapshot has settled
-        s.press({Key::down, Key::cross}); // hero launch, not a direct draw call
+        // Initial Home snapshot focuses Continue (hero). Use its real Cross
+        // action; Down would instead move focus into the recent-title rail.
+        s.press({Key::cross});
         if (s.launcher->selected_game().empty()) {
             std::fprintf(stderr, "launch-preview: the game did not enter the real launch path\n");
             s.ok = false;
