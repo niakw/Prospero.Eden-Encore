@@ -249,7 +249,8 @@ lib_sleeve = library.split("void flat_retail_sleeve(", 1)[1].split(
     "std::string controller_profile_name(", 1)[0]
 assert "const Rect paper{shell.x + (rear ? side : 0.0f), shell.y + top," in lib_sleeve
 assert "shell.w - side, shell.h - 2.0f * top" in lib_sleeve
-assert "const Cover artwork = c.textures.cover(scan," in lib_sleeve
+assert "const Cover artwork = c.textures.cover(" in lib_sleeve
+assert "scan, std::max(paper.w, paper.h) * texture_scale);" in lib_sleeve
 assert "const float other_x" not in lib_sleeve
 assert "cover(c, scan, paper, 0.0f, 0.0f);" not in lib_sleeve
 assert "c.list.image(artwork.texture, fitted" in lib_sleeve
