@@ -85,4 +85,16 @@ assert "ui/box-art-index.tsv" in workflow
 assert "tools/launcher/build-box-art-index.py --download" in workflow
 assert 'cp -a "$root/headless/prosperoeden/ui" "$app/ui"' in packager
 assert "MakeRequest" not in launch_setup and "MakeRequest" not in draw
-print("PASS real front/back index, background media cache and branded launch transition")
+assert "launch_hero_ = game.hero;" in launcher
+assert "launch_hero_ = home_.last_hero;" in launcher
+assert "c.list.image(background.texture, kScreen, uv," in draw
+assert "theme::kScrim.with_alpha(0.16f)" in draw
+assert "companion_scan = back ? launch_box_front_ : launch_box_back_" in draw
+assert "if (!selected_game_.empty()) {\n        draw_launch(c);\n        return;" in launcher
+preview_source = (root / "headless/prosperoeden/host/preview_main.cpp").read_text()
+preview_workflow = (root / ".github/workflows/launcher-production-preview.yml").read_text()
+assert 'PE_PREVIEW_BOTW: "1"' in preview_workflow
+assert "tools/launcher/preview-botw-media.py" in preview_workflow
+assert "00-launch-case-front" in preview_source
+assert "01-launch-case-back" in preview_source
+print("PASS real front/back index, cinematic Hero, host BOTW proof and branded launch")
