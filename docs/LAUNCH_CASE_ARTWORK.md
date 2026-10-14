@@ -61,3 +61,9 @@ after its access and usage conditions are met **without mandatory contact or
 permission requests**. Front and back must be identified independently and
 tied to the correct region/edition and title ID; never treat screenshots,
 promotional banners, or unrelated box art as a genuine back scan.
+
+## Validation
+
+The host source contract is `tools/check-launch-case-artwork.py`. CI runs it
+in the source preflight and native build checks. A passing source test does not
+replace a completed native build or an on-device visual check.
