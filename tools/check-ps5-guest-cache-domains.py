@@ -17,6 +17,11 @@ assert methods.index('mutex.lock();\n        return;') < methods.index('mutex.tr
 assert 'domain.contended.fetch_add(1' in methods
 assert 'domain.blocked.fetch_add(1' in methods
 assert 'domain.wait_ns.fetch_add' in methods
+assert 'domain.waited_ge1ms.fetch_add' in methods
+assert 'domain.waited_ge10ms.fetch_add' in methods
+assert 'domain.max_wait_ns.compare_exchange_weak' in methods
+assert 'EDEN_GUEST_CACHE_LOCK_TAIL frame=%u domain=%s' in report
+assert 'wait_ge1ms=%llu wait_ge10ms=%llu max_wait_ns=%llu' in report
 for source in (active,oracle):
     assert source.count('::Eden::Performance::GuestCacheLock(texture_cache.mutex, true);')==2
     assert source.count('::Eden::Performance::GuestCacheLock(buffer_cache.mutex, false);')==1
@@ -92,6 +97,11 @@ int main() {
     assert(guest_cache_domain_totals[1].blocked.load()==1);
     assert(guest_cache_domain_totals[1].wait_ns.load()>0);
     assert(cache_lock_contended.load()==2 && cache_lock_blocked.load()==2);
+    for (const auto& domain : guest_cache_domain_totals) {
+        assert(domain.waited_ge1ms.load() == 1);
+        assert(domain.waited_ge10ms.load() == 1);
+        assert(domain.max_wait_ns.load() >= 10'000'000);
+    }
     assert(cache_lock_wait_ns.load()==
            guest_cache_domain_totals[0].wait_ns.load() +
            guest_cache_domain_totals[1].wait_ns.load());
@@ -101,6 +111,9 @@ int main() {
     assert(Common::g_wall_clock.reads.load()==reads);
     assert(cache_lock_contended.load()==2);
     assert(cache_lock_blocked.load()==2);
+    // Quiet path does not increment expensive profiling histograms.
+    assert(guest_cache_domain_totals[0].waited_ge1ms.load()==1);
+    assert(guest_cache_domain_totals[1].waited_ge10ms.load()==1);
 }
 """.replace('__METHODS__',methods)
 env=os.environ.copy()
