@@ -70,7 +70,7 @@ assert "constexpr float kLaunchSeconds = kCaseFrontHold" in theme
 
 # Quarter turn becomes an edge; the full back is visible half a turn later.
 assert math.cos(0.52) > 0 and math.sin(0.52) > 0
-assert math.cos(math.pi + 0.60) < -0.82
+assert math.cos(math.pi + 0.18) < -0.98
 assert math.sin(math.pi + 0.60) < 0
 assert math.cos(2.0 * math.pi + 0.52) > 0
 library = (root / "headless/prosperoeden/pe/ui/library.cpp").read_text()
