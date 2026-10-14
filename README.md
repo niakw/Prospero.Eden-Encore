@@ -28,6 +28,8 @@
 
 > [!IMPORTANT]
 > **Firmware 13.60 is Encore's primary hardware-tested target, not a universal compatibility guarantee.** The launcher and selected titles have been exercised on this firmware, but game performance, saved control profiles and end-of-match stability still need work. Other firmware versions are **not** qualified. A current development build is **not** automatically a stable release.
+>
+> **Before a console test:** [source, logs, upstream and package checklist](docs/PRETEST_AUDIT_2026-10-14.md) — verify that the artifact and symbols match the exact tested SHA.
 
 ---
 
