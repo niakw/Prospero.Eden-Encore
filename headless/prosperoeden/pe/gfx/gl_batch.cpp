@@ -68,8 +68,11 @@ void main()
         const vec2 local = (corner - 0.5) * size;
         float x, z;
         if (shape == 9 || shape == 11) {
-            x = local.x * cs;
-            z = -local.x * sn;
+            // Place a real back surface on the FAR plane of the case.
+            // It must not occupy the same Z as the front artwork.
+            float depth = a_params.y > 0.5 ? 28.0 : 0.0;
+            x = local.x * cs - depth * sn;
+            z = -local.x * sn - depth * cs;
             vec2 oriented = vec2(a_params.y > 0.5 ? 1.0 - corner.x : corner.x,
                                  corner.y);
             v_uv = mix(a_extra.xy, a_extra.zw, oriented);
