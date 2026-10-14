@@ -57,7 +57,7 @@ for fragment in (
 assert "MakeRequest" not in draw
 assert "progress%" not in draw
 assert "std::vector<std::string> launch_screenshots_;" in header
-assert "constexpr float kLaunchSeconds = 1.85f;" in theme
+assert "constexpr float kLaunchSeconds = 2.20f;" in theme
 
 # Quarter turn becomes an edge; the full back is visible half a turn later.
 assert math.cos(0.10) > 0
