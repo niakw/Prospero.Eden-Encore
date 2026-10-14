@@ -196,7 +196,8 @@ void DrawList::case_face(std::uint32_t texture, const Rect &r, float angle,
 }
 
 void DrawList::case_spine(const Rect &r, float angle, float thickness,
-                          Color front_edge, Color rear_edge, float depth_offset)
+                          Color front_edge, Color rear_edge, float depth_offset,
+                          int side)
 {
     Instance &i = append(0);
     const Rect t = apply(r);
@@ -205,6 +206,9 @@ void DrawList::case_spine(const Rect &r, float angle, float thickness,
     set_color(i.color_bottom, rear_edge);
     set4(i.params, angle, thickness * transform_.scale,
          depth_offset * transform_.scale, static_cast<float>(Shape::case_spine));
+    // Same side-plane primitive supports an explicit right/back red seam,
+    // while the normal spine still selects the geometrically visible side.
+    set4(i.extra, static_cast<float>(side), 0.0f, 0.0f, 0.0f);
 }
 
 void DrawList::case_cap(const Rect &r, float angle, bool bottom, float depth,
