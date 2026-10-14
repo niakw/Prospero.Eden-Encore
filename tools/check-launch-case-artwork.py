@@ -107,5 +107,8 @@ preview_workflow = (root / ".github/workflows/launcher-production-preview.yml").
 assert 'PE_PREVIEW_BOTW: "1"' in preview_workflow
 assert "tools/launcher/preview-botw-media.py" in preview_workflow
 assert "00-launch-case-front" in preview_source
-assert "01-launch-case-back" in preview_source
+assert "01-launch-case-spine" in preview_source
+assert "02-launch-case-back" in preview_source
+assert "PE_PREVIEW_NO_BOX_SCANS" in preview_workflow
+assert "UNIVERSAL_CASE_NO_RETAIL_ART: PASS" in preview_workflow
 print("PASS real front/back index, cinematic Hero, host BOTW proof and branded launch")
