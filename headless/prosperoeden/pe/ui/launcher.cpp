@@ -775,16 +775,13 @@ void Launcher::draw_launch(Canvas &c)
     const Rect physical{374.0f, 126.0f, 454.0f, 730.0f};
     const float width = physical.w * std::abs(facing) +
                         case_depth * std::abs(std::sin(angle));
-    // Single paper template, identical on FRONT and BACK. The paper is
-    // smaller than the molded shell on ALL four sides: 13px clear top/bottom
-    // lips and 9px left/right lips. A back scan can never grow taller than
-    // its front counterpart, regardless of the image's source dimensions.
-    constexpr float kPaperSideInset = 9.0f;
+    // One continuous RECTANGULAR paper wrap: the front, printed spine,
+    // and back touch precisely at the same physical case-side vertices.
+    // Only the transparent CASE, never the PAPER, has rounded corners.
+    // Plastic upper/lower lips remain 13px beyond the paper on all sides.
     constexpr float kPaperTopInset = 13.0f;
-    const Rect face{physical.x + kPaperSideInset,
-                    physical.y + kPaperTopInset,
-                    physical.w - 2.0f * kPaperSideInset,
-                    physical.h - 2.0f * kPaperTopInset};
+    const Rect face{physical.x, physical.y + kPaperTopInset,
+                    physical.w, physical.h - 2.0f * kPaperTopInset};
     const float mid_x = physical.x + physical.w * 0.5f;
     c.list.shadow({mid_x - width * 0.5f - 72.0f, physical.y - 8.0f,
                    width + 144.0f, physical.h + 34.0f}, 35.0f, 105.0f,
@@ -797,14 +794,8 @@ void Launcher::draw_launch(Canvas &c)
                    width * 0.78f + 100.0f, 86.0f}, 39.0f, 80.0f,
                   Color::rgb(0x020208, 0.83f));
 
-    // PSD reference: a shallow polycarbonate box, about 8% spine thickness.
-    // The original template remains external; this is OUR shared geometric
-    // model and uses no pre-rendered cover-box layer.
-    // The same clear-polycarbonate 3D shell surrounds every game. Printed
-    // front/back artwork sits behind the translucent white molded edges.
-    c.list.case_face(0, physical, angle, back, Color::rgb(0xe2ebf7, 0.31f));
-    // The narrow inner seal does not sit as an opaque white second box
-    // around the printed cover; its silhouette shares the outer shell pivot.
+    // The molded plastic is rendered by its own shell/cap/corner surfaces.
+    // Do not draw another opaque full-size face under the printed paper.
 
     // An authentic front/back has first priority. When no physical scan was
     // found, existing Nlib game art supplies the relevant face. No title-
