@@ -20,7 +20,7 @@ for fragment in (
     'Eden::CoversDir() + "/box-"',
     'artwork.front = find_face("front");',
     'artwork.back = find_face("back");',
-    '"tga", "png", "jpg", "jpeg"',
+    '"png", "jpg", "jpeg", "tga"',
     "stbi_info(path.c_str()",
     "info.st_size > (16LL << 20)",
 ):
