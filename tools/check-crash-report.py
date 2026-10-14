@@ -219,11 +219,11 @@ def build(work, name, flags):
         clock = work / 'common' / 'cpu_features.h'
         clock.parent.mkdir(parents=True, exist_ok=True)
         clock.write_text(
-            "#pragma once\\n#include <chrono>\\n"
-            "namespace Common {\\n"
-            "struct HostTestClock { std::chrono::nanoseconds GetTimeNS() const { return {}; } };\\n"
-            "inline HostTestClock g_wall_clock{};\\n"
-            "}\\n")
+            "#pragma once\n#include <chrono>\n"
+            "namespace Common {\n"
+            "struct HostTestClock { std::chrono::nanoseconds GetTimeNS() const { return {}; } };\n"
+            "inline HostTestClock g_wall_clock{};\n"
+            "}\n")
     # The app's linker script names the code's bounds; the host's linker takes it as an input.
     subprocess.run(['clang++-18', '-std=c++20', '-O2', '-g', '-pthread', '-Wall', '-Wextra', '-Werror',
                     '-Wno-unused-parameter', '-fno-rtti', '-fuse-ld=lld', *flags, '-I', str(work),
