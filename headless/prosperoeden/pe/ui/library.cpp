@@ -364,6 +364,11 @@ void Launcher::finish_home_media()
             textures_.invalidate(enriched.hero);
             for (const auto& path : enriched.screenshots) textures_.invalidate(path);
         }
+        // Generated retail scans can be replaced in-place when the region
+        // index changes. The texture key is still the same TGA pathname;
+        // invalidate it when this bounded background media worker finishes.
+        textures_.invalidate(enriched.box_front);
+        textures_.invalidate(enriched.box_back);
         if (enriched.title_id == home_.last_title_id) {
             if (!enriched.cover.empty()) home_.last_cover = enriched.cover;
             if (!enriched.hero.empty()) home_.last_hero = enriched.hero;
@@ -450,6 +455,11 @@ void Launcher::finish_selected_media()
             textures_.invalidate(enriched.hero);
             for (const auto& path : enriched.screenshots) textures_.invalidate(path);
         }
+        // Generated retail scans can be replaced in-place when the region
+        // index changes. The texture key is still the same TGA pathname;
+        // invalidate it when this bounded background media worker finishes.
+        textures_.invalidate(enriched.box_front);
+        textures_.invalidate(enriched.box_back);
         for (Game& game : games_) {
             if (game.title_id != enriched.title_id) continue;
             if (!enriched.cover.empty()) game.cover = std::move(enriched.cover);
