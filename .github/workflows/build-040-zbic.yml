@@ -290,6 +290,7 @@ jobs:
           python3 -B tools/check-ps5-worker-lifetime-host.py
           python3 -B tools/check-ps5-native-load-replay.py
           python3 -B tools/check-ps5-native-timing-replay.py
+          python3 -B tools/check-fc27-stutter-regimes.py --self-test
           python3 -B tools/check-ps5-display-vs-guest-fps.py
           python3 -B tools/check-ps5-async-present-source-stress.py
           python3 -B tools/check-ps5-vulkan-present-submit-contention.py
