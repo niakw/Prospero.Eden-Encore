@@ -82,21 +82,26 @@ def self_test():
         write_if_compiled(stage, archive, marker)
         assert matches(marker)
         target = stage / PATHS[-1]
-        target.write_bytes(target.read_bytes() + b"\n/* cache drift fixture */\n")
+        original = target.read_bytes()
+        target.write_bytes(original + b"\n/* cache drift fixture */\n")
         try:
             write_if_compiled(stage, archive, marker)
         except RuntimeError:
             pass
         else:
             raise AssertionError("Refuse to stamp staged code that differs from active")
+        target.write_bytes(original)
+        assert fingerprint(stage) == fingerprint(ACTIVE)
         marker.write_text("0" * 64 + "\n")
         assert not matches(marker)
-        # Every changed file, not only WSI, must invalidate the cached archive.
+        # Each individual source mutation must invalidate the complete set.
         for relative in PATHS:
-            data = (stage / relative).read_bytes()
-            (stage / relative).write_bytes(data + b"!")
+            target = stage / relative
+            original = target.read_bytes()
+            target.write_bytes(original + b"!")
             assert fingerprint(stage) != fingerprint(ACTIVE)
-            (stage / relative).write_bytes(data)
+            target.write_bytes(original)
+            assert fingerprint(stage) == fingerprint(ACTIVE)
     script = (ROOT / "tools/prepare-build.sh").read_text()
     build = (ROOT / "tools/build-radv-dependencies.sh").read_text()
     assert 'radv-active-inputs.py --check' in script
