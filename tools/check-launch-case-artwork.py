@@ -95,8 +95,8 @@ assert "flat_retail_sleeve(c, *game, art, true, 0.60f);" in library
 assert "flat_retail_sleeve(c, *game, enlarged, true, 0.92f," in library
 assert "library_back_scale_);" in library
 assert "std::max(paper.w, paper.h) * texture_scale" in library
-assert "uv.x = rear ? 1.0f - uv.w : 0.0f;" in library
-assert "c.list.image(artwork.texture, paper, uv," in library
+assert "if (rear) fitted.x += paper.w - fitted.w;" in library
+assert "c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f}," in library
 assert "paper_uv.x = back ? 1.0f - paper_uv.w : 0.0f;" in draw
 assert "flat_retail_sleeve(c, game, sleeve, false, 0.24f);" in library
 assert "const Rect paper{shell.x + (rear ? side : 0.0f), shell.y + top," in library
@@ -336,14 +336,14 @@ assert "const Cover artwork = c.textures.cover(" in lib_sleeve
 assert "scan, std::max(paper.w, paper.h) * texture_scale);" in lib_sleeve
 assert "const float other_x" not in lib_sleeve
 assert "cover(c, scan, paper, 0.0f, 0.0f);" not in lib_sleeve
-assert "c.list.image(artwork.texture, paper, uv," in lib_sleeve
-assert "Rect fitted = paper;" not in lib_sleeve
-assert "fitted.w = paper.h * source;" not in lib_sleeve
-assert "fitted.h = paper.w / source;" not in lib_sleeve
-assert "uv.w = target / source;" in lib_sleeve
-assert "uv.h = source / target;" in lib_sleeve
-assert "uv.y = (1.0f - uv.h) * 0.5f;" in lib_sleeve
-assert "uv.x = rear ? 1.0f - uv.w : 0.0f;" in lib_sleeve
+assert "c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f}," in lib_sleeve
+assert "Rect fitted = paper;" in lib_sleeve
+assert "fitted.w = paper.h * source;" in lib_sleeve
+assert "fitted.h = paper.w / source;" in lib_sleeve
+assert "if (source > target) {" in lib_sleeve
+assert "if (source < target) {" in lib_sleeve
+assert "fitted.y += (paper.h - fitted.h) * 0.5f;" in lib_sleeve
+assert "if (rear) fitted.x += paper.w - fitted.w;" in lib_sleeve
 assert "std::clamp(shell.w * 0.012f, 1.75f, 5.0f)" in lib_sleeve
 # A 181x278 retail sleeve must not spend ~10% of its width on an
 # aspect-contain blank column + molded opening. Source pixels UV-cover paper.
