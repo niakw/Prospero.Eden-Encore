@@ -20,8 +20,10 @@ assert "guest_write_deferred_bridge.cmake" in base
 assert "cpu_write_defer{false}" in perf
 assert "cpu_write_defer.store(true" not in code
 assert "ScopedReplay" in replay and "replaying_guest_write" in replay
+assert "ScopedGuestWriteOrigin" in replay and "guest_write_origin_core = previous" in replay
 for signature in (
     "EnqueueDeferredCPUWrite",
+    "ScopedGuestWriteOrigin guest_origin",
     "deferred_cpu_write_queue",
     "ReplayQueued(",
     "dirty[core].Collect(address, size);",
@@ -63,6 +65,7 @@ with tempfile.TemporaryDirectory(prefix="encore-bridge-on-") as d:
     stage.mkdir()
     source=root/"vendor/sources/eden/src/video_core/dma_pusher.cpp"
     (stage/"dma_pusher.cpp").write_bytes(source.read_bytes())
+    (stage/"memory-ps5.cpp").write_bytes((root/"vendor/sources/eden/src/core/memory.cpp").read_bytes())
     project=r"""cmake_minimum_required(VERSION 3.24)
 project(InactiveBridgeConfigure LANGUAGES CXX)
 set(PS5_NATIVE ON)
@@ -75,6 +78,7 @@ set(PROJECT_SOURCE_DIR "__ROOT__/vendor/sources/eden")
 set(PORT_BUILD_DIR "__STAGE__")
 add_library(video_core STATIC "@{CMAKE_CURRENT_SOURCE_DIR}/empty.cpp")
 add_library(core STATIC "@{CMAKE_CURRENT_SOURCE_DIR}/empty.cpp")
+set_property(TARGET core PROPERTY SOURCES "@{PORT_BUILD_DIR}/memory-ps5.cpp")
 set_property(TARGET video_core PROPERTY SOURCES
     "memory_manager.cpp"
     "@{PORT_BUILD_DIR}/vulkan_rasterizer.cpp"
@@ -117,6 +121,12 @@ include("__BRIDGE__")
     assert "void State::ProcessData(std::span<const u8> read_buffer) {\n    memory_manager.FlushCaching();" in upload
     h=(stage/"include/video_core/memory_manager.h").read_text()
     assert "GpuDeferredWrite::Queue deferred_cpu_write_queue" in h
+    guest=(stage/"memory-ps5-deferred.cpp").read_text()
+    assert guest.count("ScopedGuestWriteOrigin guest_origin") == 1
+    assert "system.GPU().OnCPUWrite(address, size)" in guest
+    assert "GetCurrentHostThreadID()" not in mm.split("bool MemoryManager::EnqueueDeferredCPUWrite",1)[1].split("void MemoryManager::FlushCaching",1)[0]
+    assert "guest_write_origin_core" in mm
+    assert "guest_write_origin_core < ::Eden::GpuDeferredWrite::Queue::Cores" in vk
     dirty_h=(stage/"deferred-core/core/gpu_dirty_memory_manager.h").read_text()
     assert dirty_h.count("void Collect(PAddr address, size_t size) {") == 1
     assert "void Collect(PAddr address, size_t size) {\n        std::scoped_lock lk(guard);" in dirty_h

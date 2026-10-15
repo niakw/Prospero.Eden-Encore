@@ -71,8 +71,8 @@ if(EDEN_GUEST_WRITE_BRIDGE_DEV)
 bool MemoryManager::EnqueueDeferredCPUWrite(u64 address, u64 size) {
     if (!::Eden::Performance::cpu_write_defer.load(std::memory_order_relaxed) ||
         ::Eden::GpuDeferredWrite::replaying_guest_write) return false;
-    const size_t thread = system.GetCurrentHostThreadID();
-    const unsigned core = static_cast<unsigned>(std::min<size_t>(thread, 3));
+    const unsigned core = ::Eden::GpuDeferredWrite::guest_write_origin_core;
+    if (core >= ::Eden::GpuDeferredWrite::Queue::Cores) return false;
     return deferred_cpu_write_queue.Enqueue(core, address, size);
 }
 void MemoryManager::FlushCaching() {
@@ -109,6 +109,7 @@ void MemoryManager::FlushCaching() {
     string(REPLACE "${vk_entry}" [=[bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {
     const bool defer_candidate =
         ::Eden::Performance::cpu_write_defer.load(std::memory_order_relaxed) &&
+        ::Eden::GpuDeferredWrite::guest_write_origin_core < ::Eden::GpuDeferredWrite::Queue::Cores &&
         !::Eden::GpuDeferredWrite::replaying_guest_write;]=]
         bridge_vk "${bridge_vk}")
     string(REPLACE "${vk_buffer_lock}" [=[
@@ -175,6 +176,37 @@ void MemoryManager::FlushCaching() {
         "void State::ProcessData(std::span<const u8> read_buffer) {\n    memory_manager.FlushCaching();"
         bridge_upload "${bridge_upload}")
     write_derived("${PORT_BUILD_DIR}/engine_upload_deferred.cpp" "${bridge_upload}")
+
+    # Only a real guest-memory write may produce deferred work. The original
+    # HandleRasterizerWrite knows the exact guest core, including syscore 3.
+    # Preserve that origin across GPU::OnCPUWrite, rather than inferring a core
+    # from whichever host thread later invokes the Vulkan rasterizer.
+    set(bridge_cpu_source "${PORT_BUILD_DIR}/memory-ps5.cpp")
+    if(NOT EXISTS "${bridge_cpu_source}")
+        message(FATAL_ERROR "Missing canonical native guest memory translation unit")
+    endif()
+    file(READ "${bridge_cpu_source}" bridge_cpu)
+    set(bridge_guest_origin [=[                auto const do_collection = (address != 0 && size != 0)
+                    && system.GPU().OnCPUWrite(address, size);]=])
+    string(FIND "${bridge_cpu}" "${bridge_guest_origin}" found)
+    if(found LESS 0)
+        message(FATAL_ERROR "Pinned HandleRasterizerWrite guest origin changed")
+    endif()
+    string(REPLACE "${bridge_guest_origin}" [=[                ::Eden::GpuDeferredWrite::ScopedGuestWriteOrigin guest_origin{
+                    static_cast<unsigned>(core)};
+                auto const do_collection = (address != 0 && size != 0)
+                    && system.GPU().OnCPUWrite(address, size);]=]
+        bridge_cpu "${bridge_cpu}")
+    string(PREPEND bridge_cpu "#include \"${EDEN_PORT_DIR}/gpu_deferred_replay.h\"\n")
+    write_derived("${PORT_BUILD_DIR}/memory-ps5-deferred.cpp" "${bridge_cpu}")
+    get_target_property(bridge_core_sources core SOURCES)
+    list(FIND bridge_core_sources "${bridge_cpu_source}" core_memory_index)
+    if(core_memory_index EQUAL -1)
+        message(FATAL_ERROR "Canonical native guest memory TU missing from core target")
+    endif()
+    list(REMOVE_ITEM bridge_core_sources "${bridge_cpu_source}")
+    list(APPEND bridge_core_sources "${PORT_BUILD_DIR}/memory-ps5-deferred.cpp")
+    set_property(TARGET core PROPERTY SOURCES "${bridge_core_sources}")
 
     get_target_property(bridge_sources video_core SOURCES)
     foreach(old IN ITEMS
