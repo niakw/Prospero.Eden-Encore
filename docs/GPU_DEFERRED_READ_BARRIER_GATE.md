@@ -478,6 +478,16 @@ two separate CPU waiters observing one unconsumed fatal worker error, and
 unchanged voluntary shutdown cancellation without falsely advancing a
 fence. The host workflow runs this test without building a console app.
 
+The same native `GPU::Impl::TickWork` callback loop previously called
+`sync_request_mutex.unlock()` directly while its `std::unique_lock lck`
+still reported ownership. If `request()` threw, stack unwinding would
+call the lock destructor while the mutex was already unlocked, invoking
+undefined behaviour. The native derivation now uses `lck.unlock()` and
+`lck.lock()`, so the guard tracks the actual ownership. The host fixture
+executes the derived `TickWork` in normal and throwing-callback cases,
+verifies the mutex is reusable after the error, and retains the original
+fence completion rules.
+
 This is a **fatal-error liveness correction in the native runtime**, not
 a verified FC27 performance or gameplay fix. A GPU worker that remains
 alive but blocks inside a rasterizer command will not record an exception;
