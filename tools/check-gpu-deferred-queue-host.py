@@ -136,6 +136,51 @@ int main() {
     concurrent.ResetAfterQuiescence();
     assert(!concurrent.Pending());
     assert(concurrent.Drain(drain)==0);
+
+    // Sequence watermarks acknowledge merged writes, not just FIFO entries.
+    Queue tracked;
+    const auto a = tracked.EnqueueTracked(2, 100, 8);
+    const auto b = tracked.EnqueueTracked(2, 104, 8);
+    assert(a && b && *a == 1 && *b == 2);
+    assert(tracked.AcceptedSequence() == 2);
+    assert(tracked.CompletedSequence() == 0 && tracked.Pending());
+    std::atomic<bool> wait_done{false};
+    std::atomic<bool> wait_ok{false};
+    std::thread waiting_reader([&] {
+        wait_ok.store(tracked.WaitUntil(*b), std::memory_order_release);
+        wait_done.store(true, std::memory_order_release);
+    });
+    std::atomic<unsigned> batch_count{0};
+    assert(tracked.DrainThrough(*b, [&](unsigned core, std::uint64_t addr, std::uint64_t sz) {
+        assert(core == 2 && addr == 100 && sz == 12);
+        assert(tracked.Pending()); // In-flight replay is not a completed ticket.
+        batch_count.fetch_add(1);
+        // A new producer during replay must not extend this drain indefinitely.
+        auto late = tracked.EnqueueTracked(0, 4096, 8);
+        assert(late && *late == 3);
+    }) == 1);
+    waiting_reader.join();
+    assert(wait_done.load() && wait_ok.load());
+    assert(batch_count.load() == 1);
+    assert(tracked.CompletedSequence() == 2);
+    assert(tracked.AcceptedSequence() == 3 && tracked.Pending());
+    assert(tracked.Drain([&](unsigned, std::uint64_t, std::uint64_t) {}) == 1);
+    assert(tracked.CompletedSequence() == 3 && !tracked.Pending());
+    assert(tracked.WaitUntil(3) && !tracked.WaitUntil(4));
+
+    // A blocked read must escape on title shutdown rather than wait forever.
+    Queue stopping;
+    const auto ticket = stopping.EnqueueTracked(1, 8192, 8);
+    assert(ticket && *ticket == 1);
+    std::atomic<bool> cancelled{false};
+    std::thread blocked([&] { cancelled.store(!stopping.WaitUntil(*ticket)); });
+    stopping.Close();
+    blocked.join();
+    assert(cancelled.load());
+    assert(!stopping.EnqueueTracked(1, 12288, 8).has_value());
+    stopping.ResetAfterQuiescence();
+    assert(!stopping.Pending() && stopping.Enqueue(1, 12288, 8));
+    assert(stopping.Drain([](unsigned, std::uint64_t, std::uint64_t) {}) == 1);
 }
 '''
 with tempfile.TemporaryDirectory(prefix="encore-deferred-host-") as folder:
