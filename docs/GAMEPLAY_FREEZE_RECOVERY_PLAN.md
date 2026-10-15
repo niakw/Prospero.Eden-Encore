@@ -538,7 +538,10 @@ The archived dummy-thread wait workaround is **not** activated: its
 current code may clear a scheduler wait-queue pointer while the thread
 is still waiting; existing comments correctly quarantine that lifetime
 hazard. The cross-core shared JIT and successor-batch compiler are
-separate feature families and have not been silently advertised as active.
+separate feature families. They are explicitly compiled **ON in the All-On
+native test build** (and checked against the actual CMakeCache); the ordinary
+release profile remains OFF until the integrated test code is qualified.
+This is a source/build change, not proof of in-game behavior or FPS gains.
 
 The Oct 15 `5edc677b` binary remains unchanged. Its pinned artifact
 release action downloaded and validated the exact successful archive
