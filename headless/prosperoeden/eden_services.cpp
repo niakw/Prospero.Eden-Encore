@@ -1635,6 +1635,10 @@ pe::ui::BoxArt EdenServices::box_art(std::uint64_t title_id) {
     artwork.front = find_face("front");
     artwork.back = find_face("back");
     artwork.spine = find_face("spine");
+    std::fprintf(stderr,
+        "EDEN_CASE_RESULT title=%016llX front=%d back=%d spine=%d\n",
+        static_cast<unsigned long long>(title_id),
+        !artwork.front.empty(), !artwork.back.empty(), !artwork.spine.empty());
     return artwork;
 }
 
