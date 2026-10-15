@@ -81,6 +81,15 @@ assert "generation_{FreshGeneration()}" in queue
 assert "generation_ = FreshGeneration();" in queue
 assert "bool WaitUntil(Sequence sequence)" not in queue
 assert "std::optional<Ticket> EnqueueTracked" in queue
+# Shutdown must be a replay-lifetime barrier, not just a waiter wake-up.
+# Without this, the GPU callback can still touch freed rasterizer resources.
+close_body=queue.split("void Close() {",1)[1].split("void ResetAfterQuiescence()",1)[0]
+assert close_body.index("closed_ = true;") < close_body.index("std::lock_guard owner(consumer_mutex_);")
+assert "completed_cv_.notify_all()" in close_body
+assert "if (active_consumer_ == this) std::terminate();" in close_body
+drain_body=queue.split("std::uint64_t DrainThrough(Ticket target, Replay&& replay)",1)[1].split("std::uint64_t Drain(Replay&& replay)",1)[0]
+assert "std::unique_lock owner(consumer_mutex_);" in drain_body
+assert "if (closed_ || target.generation != generation_" in drain_body
 assert "completed_cv_.notify_all()" in queue
 assert "WaitUntil(" not in code
 # The host candidate now has a publish-after-store contract; the real bridge
