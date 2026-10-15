@@ -92,7 +92,7 @@ assert "entry->last_sequence != ticket.sequence" in publish_body
 # first becomes replayable. RequestGpu runs OUTSIDE the queue mutex, so a
 # synchronous callback can acquire the queue and renderer locks safely.
 notify_body=queue.split("bool PublishAndWake(Ticket ticket, RequestGpu&& request_gpu) {",1)[1].split("// Existing opt-in native bridge",1)[0]
-assert "PublishImpl(ticket)" in notify_body
+assert "PublishImpl(ticket, true)" in notify_body
 assert "std::forward<RequestGpu>(request_gpu)();" in notify_body
 assert "failed_ = true;" in notify_body and "throw;" in notify_body
 assert "const bool became_ready = !was_ready && !queue_.empty()" in publish_body
@@ -100,6 +100,8 @@ assert "if (arm_wake && became_ready) ++pending_wake_callbacks_;" in publish_bod
 assert "std::optional<bool> PublishImpl(Ticket ticket, bool arm_wake = false)" in queue
 assert "wake_cv_.wait(lock, [&] { return pending_wake_callbacks_ == 0; });" in queue
 assert "pending_wake_callbacks_ != 0" in queue
+assert "active_wake_callback_ == this" in queue
+assert "active_wake_callback_ = this;" in notify_body
 assert "deferred_cpu_write_queue.PublishAndWake(" not in code
 # Shutdown must be a replay-lifetime barrier, not just a waiter wake-up.
 # Without this, the GPU callback can still touch freed rasterizer resources.
