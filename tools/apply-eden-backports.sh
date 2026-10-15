@@ -1067,4 +1067,3 @@ apply_one "$root/headless/backports/eden-ps5-software-bilinear-source-coordinate
 
 # This core backport is now installed by tools/install-active-core-backports.py
 # in all native builds, independent of the legacy shipping patch replay.
-
