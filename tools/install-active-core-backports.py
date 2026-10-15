@@ -38,8 +38,8 @@ def affected() -> list[str]:
                 if not rel.startswith("src/") or ".." in Path(rel).parts:
                     raise RuntimeError(f"Invalid target in {patch}: {rel}")
                 names.add(rel)
-    if len(names) != 6:
-        raise RuntimeError(f"Expected exactly six core patch sources: {sorted(names)}")
+    if len(names) != 5:
+        raise RuntimeError(f"Expected exactly five core patch sources: {sorted(names)}")
     return sorted(names)
 
 
