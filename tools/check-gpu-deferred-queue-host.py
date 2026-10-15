@@ -699,6 +699,45 @@ int main() {
     wake_failure.Close();
     assert(wake_failure.ResetAfterQuiescence());
     assert(!wake_failure.Failed());
+
+    // Closing a title while a producer is still inside the post-store wake
+    // callback must wait for that callback, not just for GPU replay. This
+    // prevents an in-flight request from touching a freed GPU scheduler.
+    Queue wake_lifetime;
+    const auto lifetime_wake = wake_lifetime.Reserve(0, 98304, 8);
+    assert(lifetime_wake);
+    std::atomic<bool> notify_entered{false};
+    std::atomic<bool> release_notify{false};
+    std::atomic<bool> woke_close_returned{false};
+    std::atomic<bool> woke_reader_cancelled{false};
+    std::thread waking_producer([&] {
+        assert(wake_lifetime.PublishAndWake(*lifetime_wake, [&] {
+            notify_entered.store(true, std::memory_order_release);
+            while (!release_notify.load(std::memory_order_acquire))
+                std::this_thread::yield();
+        }));
+    });
+    while (!notify_entered.load(std::memory_order_acquire))
+        std::this_thread::yield();
+    std::thread woke_reader([&] {
+        woke_reader_cancelled.store(!wake_lifetime.WaitUntil(*lifetime_wake),
+                                    std::memory_order_release);
+    });
+    std::thread closing_wake([&] {
+        wake_lifetime.Close();
+        woke_close_returned.store(true, std::memory_order_release);
+    });
+    while (!woke_reader_cancelled.load(std::memory_order_acquire))
+        std::this_thread::yield();
+    assert(!woke_close_returned.load(std::memory_order_acquire));
+    release_notify.store(true, std::memory_order_release);
+    waking_producer.join();
+    woke_reader.join();
+    closing_wake.join();
+    assert(woke_close_returned.load(std::memory_order_acquire));
+    assert(!wake_lifetime.Publish(*lifetime_wake));
+    assert(wake_lifetime.ResetAfterQuiescence());
+    assert(!wake_lifetime.Pending());
 }
 '''
 with tempfile.TemporaryDirectory(prefix="encore-deferred-host-") as folder:
