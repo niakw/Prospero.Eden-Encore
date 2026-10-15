@@ -25,11 +25,11 @@ stopped_pinned = pinned.replace(
 assert stopped_pinned.count(original) == 1
 assert "file(READ \"${EDEN_PORT_DIR}/gpu_sync_failure_wait.inc\" gpu_sync_wait_replacement)" in cmake
 assert 'string(FIND "${gpu_source}" "${gpu_sync_wait_original}" gpu_sync_wait_position)' in cmake
-assert 'string(PREPEND gpu_source "#include \\"' not in cmake or "gpu_failure.h" in cmake
 assert "std::rethrow_exception(failure);" in native_method
 assert "sync_request_cv.wait_for(lck, std::chrono::milliseconds(100));" in native_method
 assert "std::exception_ptr PeekGpuFailure()" in header
-assert native_method.startswith("    void") is False or "WaitForSyncOperation" in native_method
+assert "void WaitForSyncOperation(const u64 fence)" in native_method
+assert '#include \\"' not in native_method
 derived = stopped_pinned.replace(original, native_method.rstrip("\n"))
 assert derived.count("std::rethrow_exception(failure);") == 2
 assert derived.count("sync_request_cv.wait_for(lck, std::chrono::milliseconds(100));") == 1
