@@ -104,7 +104,9 @@ include("__BRIDGE__")
     assert "rasterizer->OnCPUWrite(address, size)" in mm
     assert "dirty[core].Collect(address, size)" in mm
     vk=sources["vulkan_rasterizer_deferred.cpp"]
-    assert vk.count("EnqueueDeferredCPUWrite(addr, size)") == 2
+    assert vk.count("EnqueueDeferredCPUWrite(addr, size)") == 1
+    assert vk.count("GuestCacheLock(texture_cache.mutex, true)") >= 2
+    assert "texture_cache.mutex.try_lock()" not in vk
     assert "!::Eden::GpuDeferredWrite::replaying_guest_write" in vk
     assert "std::lock_guard lock{buffer_cache.mutex, std::adopt_lock};" in vk
     assert "std::lock_guard lock{texture_cache.mutex, std::adopt_lock};" in vk
