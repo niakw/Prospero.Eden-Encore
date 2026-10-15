@@ -84,7 +84,7 @@ assert "std::optional<Ticket> EnqueueTracked" in queue
 # Publishing thousands of reservations out of order must not turn the FIFO
 # into a quadratic per-frame CPU hotspot. Last-sequence keys are monotone
 # across tail merges and prefix drains, allowing log-time lookup.
-publish_body=queue.split("std::optional<bool> PublishImpl(Ticket ticket) {",1)[1].split("static std::uint64_t FreshGeneration()",1)[0]
+publish_body=queue.split("std::optional<bool> PublishImpl(Ticket ticket, bool arm_wake = false) {",1)[1].split("static std::uint64_t FreshGeneration()",1)[0]
 assert "std::lower_bound(" in publish_body
 assert "write.last_sequence < sequence" in publish_body
 assert "entry->last_sequence != ticket.sequence" in publish_body
