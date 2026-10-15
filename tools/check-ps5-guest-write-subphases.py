@@ -14,6 +14,8 @@ method=active[method_start:method_end]
 assert 'ShouldSampleGuestWrite()' in method
 assert method.count('CachePhaseTimer') == 5
 assert method.count('GuestCacheLock(') == 2
+assert 'cpu_write_ahead{0}' in perf
+assert method.count('BufferWriteAhead::MarkFollowingPages') == 1
 assert method.index('GuestWriteBufferWait') < method.index('GuestWriteBufferWork')
 assert method.index('GuestWriteBufferWork') < method.index('GuestWriteTextureWait')
 assert method.index('GuestWriteTextureWait') < method.index('GuestWriteTextureWork')
@@ -40,6 +42,7 @@ cpp=r"""
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include "buffer_write_ahead.h"
 #include <mutex>
 #include <cstdio>
 #if !defined(__x86_64__)
@@ -62,6 +65,7 @@ inline Clock g_wall_clock{};
 namespace Eden::Performance {
 inline std::atomic<bool> detailed_gpu_profile{false};
 inline std::atomic<unsigned> cache_lock_spins{0};
+inline std::atomic<unsigned> cpu_write_ahead{0};
 inline std::atomic<unsigned long long> cache_lock_contended{0}, cache_lock_blocked{0};
 inline std::atomic<unsigned long long> cache_lock_wait_ns{0};
 struct Totals {
@@ -83,8 +87,10 @@ inline bool NeverRegistered(DAddr,u64) {
 struct FakeBuffer {
     std::mutex mutex;
     bool hazard{};
+    DAddr gpu_modified_page{};
     unsigned writes{};
-    bool OnCPUWrite(DAddr,u64) { ++writes; return hazard; }
+    bool IsRegionRegistered(DAddr page, u64 bytes) { return page != 0 && bytes == 4096; }
+    bool OnCPUWrite(DAddr address,u64) { ++writes; return hazard || (gpu_modified_page && gpu_modified_page == address); }
 };
 struct FakeTexture {
     std::mutex mutex;
@@ -160,6 +166,23 @@ int main() {
     assert(r.texture_cache.writes==before_texture+32);
     assert(r.pipeline_cache.invalidations==before_shader+32);
     ::Eden::BufferPages::test_skip_empty_page.store(false);
+    // Upstream #187 write-ahead subset: only registered buffer pages are
+    // marked under the existing lock. Shader/texture invalidation remains.
+    cpu_write_ahead.store(3);
+    const unsigned a=r.buffer_cache.writes;
+    const unsigned b=r.texture_cache.writes;
+    const unsigned c=r.pipeline_cache.invalidations;
+    assert(!r.OnCPUWrite(1,4));
+    assert(r.buffer_cache.writes==a+4); // current page + 3 future pages
+    assert(r.texture_cache.writes==b+1 && r.pipeline_cache.invalidations==c+1);
+    // A GPU-owned next page must terminate pre-marking immediately, without
+    // making its contents look guest-owned or skipping texture updates.
+    r.buffer_cache.gpu_modified_page=8192;
+    const unsigned d=r.buffer_cache.writes;
+    assert(!r.OnCPUWrite(1,4));
+    assert(r.buffer_cache.writes==d+3); // current, page 4096, stop at 8192
+    r.buffer_cache.gpu_modified_page=0;
+    cpu_write_ahead.store(0);
     puts("R370_GUEST_WRITE_PHASES_HOST_PASS");
 }
 """.replace('__GUEST_LOCK__',guest_lock).replace('__CACHE_PHASE__',cache_phase).replace('__BATCH_TIMER__',batch_timer).replace('__ON_CPU_WRITE__',method)
@@ -171,7 +194,7 @@ if sys.platform=='darwin' and not env.get('SDKROOT'):
 with tempfile.TemporaryDirectory(prefix='eden-r370-write-') as d:
     f=Path(d)/'phases.cpp';o=Path(d)/'phases';f.write_text(cpp)
     subprocess.run(['c++','-std=c++20','-O1','-pthread','-Wall','-Wextra','-Werror',
-                    '-fsanitize=address,undefined',str(f),'-o',str(o)],
+                    '-fsanitize=address,undefined','-I',str(root/'headless'),str(f),'-o',str(o)],
                    env=env,check=True,timeout=40)
     subprocess.run([str(o)],check=True,env=env,timeout=15)
 print('PASS R370: original CPU-write ordering/early return, 1-in-64 sampling, quiet counters untouched')
