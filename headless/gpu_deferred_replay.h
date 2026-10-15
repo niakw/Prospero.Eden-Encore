@@ -7,6 +7,22 @@
 #include <utility>
 
 namespace Eden::GpuDeferredWrite {
+// The origin belongs to the guest's HandleRasterizerWrite invocation, not
+// whichever host worker later drains or dispatches a GPU command. The GPU
+// thread and all unrelated threads have NoGuestCore by default.
+inline constexpr unsigned NoGuestCore = Queue::Cores;
+inline thread_local unsigned guest_write_origin_core = NoGuestCore;
+struct ScopedGuestWriteOrigin final {
+    const unsigned previous;
+    explicit ScopedGuestWriteOrigin(unsigned core) noexcept
+        : previous{guest_write_origin_core} {
+        guest_write_origin_core = core < Queue::Cores ? core : NoGuestCore;
+    }
+    ~ScopedGuestWriteOrigin() { guest_write_origin_core = previous; }
+    ScopedGuestWriteOrigin(const ScopedGuestWriteOrigin&) = delete;
+    ScopedGuestWriteOrigin& operator=(const ScopedGuestWriteOrigin&) = delete;
+};
+
 // GPU-owner replay must never defer itself. No process-global session queue.
 inline thread_local bool replaying_guest_write = false;
 struct ScopedReplay final {

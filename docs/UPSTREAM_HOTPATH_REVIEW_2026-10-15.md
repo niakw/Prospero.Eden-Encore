@@ -174,3 +174,17 @@ normal vendor header. Both `core` and `video_core` opt-in builds must see
 the same shadow header; the memory-manager replay translation unit now
 includes its complete type explicitly. The host contract checks the
 derived source and is extended with concurrent collection stress.
+
+## Guest-core attribution and GPU-thread exclusion
+
+The development bridge now derives `memory-ps5-deferred.cpp` from the
+native-specific, already patched core memory translation unit. It scopes
+`ScopedGuestWriteOrigin` around the **actual** `HandleRasterizerWrite ->
+GPU::OnCPUWrite` call, restoring the previous TLS origin on return.
+`Tegra::MemoryManager::EnqueueDeferredCPUWrite` takes that explicit guest
+core instead of guessing from `GetCurrentHostThreadID`. The opt-in Vulkan
+branch may only defer when the guest origin is valid, the queue gate is
+enabled and the call is not itself a replay. Ordinary GPU-worker writes
+have no guest origin and remain on the original synchronous path.
+The developer CMake fixture checks the resulting seventh translation
+unit and the exact origin guard. The shipping mode stays OFF.
