@@ -174,8 +174,10 @@ assert "both_faces_cached_at_start" in native
 case_fetch = native.split("unsigned EnsureRetailCase(", 1)[1].split(
     "NlibEnrichment CachedNlibEnrichment(", 1
 )[0]
-assert "std::unique_lock guard(locks[title_id % locks.size()]);" in case_fetch
-assert "std::try_to_lock" not in case_fetch
+assert "std::unique_lock guard(locks[title_id % locks.size()], std::defer_lock);" in case_fetch
+assert "while (!guard.try_lock()) {" in case_fetch
+assert "std::this_thread::sleep_for(std::chrono::milliseconds(50));" in case_fetch
+assert "if (cancel && cancel->load(std::memory_order_acquire)) return 0;" in case_fetch
 assert "if (cancel && cancel->load(std::memory_order_acquire)) return changed_faces;" in case_fetch
 # The first successful front/back download permits the optional spine in the
 # same background pass; no enforced five-minute wait for an empty case side.
