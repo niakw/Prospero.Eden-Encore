@@ -1738,7 +1738,7 @@ msgstr "Rythme"
 
 #: pe/ui/library.cpp
 msgid "RPG"
-msgstr "Jeu de rôle"
+msgstr "JDR"
 
 #: pe/ui/library.cpp
 msgid "Sandbox"
