@@ -228,6 +228,35 @@ activate the deferred path. GPU work scheduling, post-store native producer
 integration, page-mapping lifetime and cache/texture fence ordering still
 need separate verification.
 
+## Shutdown replay lifetime barrier
+
+A source audit found that merely setting `closed_` and waking the waiting
+CPU threads allowed an already-entered `DrainThrough` callback to continue
+after `Close()` returned. A title could then tear down rasterizer/texture
+resources while a GPU-owner callback was still using them.
+
+The inactive queue's `Close()` now performs three ordered steps:
+
+1. Under the queue mutex, set `closed_` so new reservations, publications
+   and new GPU drain snapshots are rejected.
+2. Wake outstanding CPU waiters without holding the GPU-consumer lock.
+3. Acquire the GPU-consumer mutex **after releasing the queue mutex** and wait
+   for any already-active GPU replay batch to finish before returning.
+
+The host fixture coordinates an active blocked GPU callback, a CPU waiter
+and a closing thread. It asserts that the reader is cancelled promptly but
+`Close()` cannot finish until that callback completes. A separate test
+asserts that queued writes are not replayed after closure.
+
+**Strict native integration preconditions:** `Close()` must not run from
+inside a replay callback and must never be called while the caller holds a
+GPU cache lock needed by that callback. All producers and waiters must be
+joined before deleting the owning queue and address-space structures. A
+callback that itself blocks indefinitely may delay closure indefinitely;
+the host test verifies ordering, not shutdown progress for every engine
+deadlock scenario. This is **not** a lifecycle integration into the native
+title manager and does not make the bridge eligible for activation.
+
 ## Required engineering contract
 
 - Give accepted entries an ordered, per-session completion watermark.
