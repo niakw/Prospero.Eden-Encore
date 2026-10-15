@@ -370,6 +370,15 @@ The host-only queue now provides `PublishAndWake(ticket, request_gpu)`:
 The host fixture covers an initially blocked GPU drain, reverse publication
 of 256 writes with **one** GPU wake, a published prefix followed by a
 previously unpublished hole and a second wake, and scheduling failure.
+It also holds a producer inside its GPU scheduling callback while title
+`Close()` runs: the CPU read waiter is released, but the close operation
+cannot return until the callback exits. Wake-callback lifetime is counted
+under the queue mutex **before** invoking the notifier, and `Close()`
+waits on a separate condition variable for all counted wake callbacks.
+This protects the caller from reclaiming GPU scheduler resources while an
+earlier producer is still issuing a GPU wake. A scheduling callback that
+blocks forever will delay closure, so the eventual native implementation
+must supply a nonblocking, bounded-lifetime wake request.
 These are host protocol checks, not native renderer results.
 
 **This is not yet wired to any native post-store write path.** The current
