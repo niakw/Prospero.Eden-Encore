@@ -203,12 +203,17 @@ public:
         {
             std::lock_guard lock(mutex_);
             closed_ = true;
+            close_completed_ = false;
         }
         completed_cv_.notify_all();
         // DrainThrough holds consumer_mutex_ for the complete replay batch.
         // Lock order is consumer_mutex_ -> mutex_ on a drain; never hold
         // mutex_ while waiting for this lock.
         std::lock_guard owner(consumer_mutex_);
+        {
+            std::lock_guard lock(mutex_);
+            close_completed_ = true;
+        }
     }
 
     // Reset only AFTER Close(), joining producers/readers and releasing all
@@ -219,12 +224,13 @@ public:
         if (active_consumer_ == this) return false;
         std::lock_guard owner(consumer_mutex_);
         std::lock_guard lock(mutex_);
-        if (!closed_) return false;
+        if (!closed_ || !close_completed_) return false;
         queue_.clear();
         accepted_ = completed_ = 0;
         generation_ = FreshGeneration(); // Unique across ALL queue instances.
         failed_ = false;
         closed_ = false;
+        close_completed_ = false;
         return true;
     }
 
@@ -283,5 +289,6 @@ private:
     std::uint64_t generation_{FreshGeneration()};
     bool closed_{};
     bool failed_{};
+    bool close_completed_{};
 };
 } // namespace Eden::GpuDeferredWrite
