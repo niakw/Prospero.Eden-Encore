@@ -562,3 +562,51 @@ jobs:
             --title "Prospero.Eden Encore R1 (${short})" \
             --notes-file "$notes" \
             --latest
+
+  # Publish the immutable archive FROM an already-green run. This MUST NOT
+  # rebuild at the current (possibly newer) dev branch or claim unshipped
+  # experiments are present. The download is pinned to source SHA and run ID.
+  publish_green_test_build:
+    if: ${{ github.ref == 'refs/heads/dev/ps5-sparse-jit' && github.event_name == 'push' && contains(github.event.head_commit.message, '[publish-existing:38743260411]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Download immutable successful test artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: Prospero.Eden-Encore-PS5-all-on-test
+          run-id: 38743260411
+          github-token: ${{ github.token }}
+          path: pinned-app
+      - name: Package validated test app as a GitHub pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test -s pinned-app/PPSA99008/eboot.bin
+          test -s pinned-app/PPSA99008/sce_sys/param.json
+          test -d pinned-app/PPSA99008/ui
+          test "$(find pinned-app -mindepth 1 -maxdepth 1 | wc -l)" -eq 1
+          mkdir -p release-dist
+          (cd pinned-app && zip -qr ../release-dist/Eden-Encore-5edc677b-PPSA99008.zip PPSA99008)
+          (cd release-dist && sha256sum Eden-Encore-5edc677b-PPSA99008.zip > SHA256SUMS && sha256sum -c SHA256SUMS)
+          cat > release-dist/RELEASE-NOTES.md <<'NOTES'
+          # Eden Encore — validated PS5 test build (5edc677b)
+          
+          Source SHA: `5edc677b6dbe5f74fac558e92f35b421b7ba72b6`
+          
+          Native Actions run: https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38743260411
+          
+          The tested All-On profile includes diagnostic tools but DOES NOT
+          include the separately quarantined Dynarmic I-cache, dummy-thread
+          or service-manager host-wait backports, nor shared JIT or batching.
+          This version has not been demonstrated to fix game freezes, HUD
+          delays, or cold-start stutter.
+          
+          Install contents of the ZIP under the intended PPSA99008 app folder.
+          This is a development **pre-release**, not a new stable R1.
+          NOTES
+          gh release create encore-test-5edc677b             release-dist/Eden-Encore-5edc677b-PPSA99008.zip             release-dist/SHA256SUMS             --repo "$GITHUB_REPOSITORY"             --target 5edc677b6dbe5f74fac558e92f35b421b7ba72b6             --title "Eden Encore PS5 test build (5edc677b)"             --notes-file release-dist/RELEASE-NOTES.md             --prerelease --latest=false
