@@ -52,26 +52,38 @@ public:
         return EnqueueImpl(core, address, size, false);
     }
 
-    // Releasing mutex_ after the producer's real store publishes the payload
-    // to a GPU consumer that subsequently acquires the same mutex. Publishing
-    // a stale session ticket, a nonexistent ticket or an already published
-    // entry fails without advancing the FIFO.
+    // Host-only legacy publication without GPU wakeup. This is NOT sufficient
+    // for a native CPU reader to await the replayed write.
     bool Publish(Ticket ticket) {
-        std::lock_guard lock(mutex_);
-        if (closed_ || failed_ || ticket.generation != generation_ || ticket.sequence == 0 ||
-            ticket.sequence > accepted_) return false;
-        // Entries are ordered by their last accepted sequence, even after
-        // same-core tail coalescing and published-prefix snapshots. Do not
-        // linearly scan a potentially unbounded backlog for every producer:
-        // reverse/out-of-order publication would otherwise cost O(n^2).
-        const auto entry = std::lower_bound(
-            queue_.begin(), queue_.end(), ticket.sequence,
-            [](const Write& write, Sequence sequence) {
-                return write.last_sequence < sequence;
-            });
-        if (entry == queue_.end() || entry->last_sequence != ticket.sequence ||
-            entry->published) return false;
-        entry->published = true;
+        return PublishImpl(ticket).has_value();
+    }
+
+    // A native-ready producer needs TWO actions after its actual guest store:
+    // publish the payload, then request a GPU-owner wake when the oldest FIFO
+    // reservation first becomes replayable. Run the caller's scheduling
+    // callback OUTSIDE mutex_ to avoid a scheduler/cache-lock inversion.
+    //
+    // This is a host-only scheduling contract. The disabled native bridge
+    // does not invoke it or guarantee GPU-thread lifetime/fence ordering.
+    template<class RequestGpu>
+    bool PublishAndWake(Ticket ticket, RequestGpu&& request_gpu) {
+        const auto became_ready = PublishImpl(ticket);
+        if (!became_ready) return false;
+        if (*became_ready) {
+            try {
+                std::forward<RequestGpu>(request_gpu)();
+            } catch (...) {
+                // A publication without a successful GPU wake cannot safely
+                // satisfy its reader. Fail closed, never assume another GPU
+                // command will eventually rescue this title.
+                {
+                    std::lock_guard lock(mutex_);
+                    failed_ = true;
+                }
+                completed_cv_.notify_all();
+                throw;
+            }
+        }
         return true;
     }
 
@@ -241,6 +253,27 @@ public:
     }
 
 private:
+    // Returning true means a blocked/unready FIFO head became published.
+    // A later ready tail does NOT schedule an unnecessary second GPU tick.
+    // The wake callback itself runs after this queue lock is released.
+    std::optional<bool> PublishImpl(Ticket ticket) {
+        std::lock_guard lock(mutex_);
+        if (closed_ || failed_ || ticket.generation != generation_ || ticket.sequence == 0 ||
+            ticket.sequence > accepted_) return std::nullopt;
+        // Strictly monotone upper sequence IDs survive tail merges and
+        // published-prefix drains: binary search remains exact.
+        const auto entry = std::lower_bound(
+            queue_.begin(), queue_.end(), ticket.sequence,
+            [](const Write& write, Sequence sequence) {
+                return write.last_sequence < sequence;
+            });
+        if (entry == queue_.end() || entry->last_sequence != ticket.sequence ||
+            entry->published) return std::nullopt;
+        const bool was_ready = !queue_.empty() && queue_.front().published;
+        entry->published = true;
+        return !was_ready && !queue_.empty() && queue_.front().published;
+    }
+
     // Tickets must identify the owning queue as well as the title session.
     // An epoch starting at 1 for every Queue would permit cross-address-space
     // confusion whenever two independent queues reached the same sequence.
