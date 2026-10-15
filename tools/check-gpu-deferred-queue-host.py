@@ -182,31 +182,37 @@ int main() {
     assert(!stopping.Pending() && stopping.Enqueue(1, 12288, 8));
     assert(stopping.Drain([](unsigned, std::uint64_t, std::uint64_t) {}) == 1);
 
-    // Simultaneous GPU-owner replays must never reorder newer batches ahead
-    // of older in-flight callbacks. The second owner fails closed.
+    // Two GPU-owner attempts are serialized. The second must not replay a
+    // newer write before the first callback completes, nor skip its own work.
     Queue single_owner;
     assert(single_owner.Enqueue(0, 16384, 8));
     std::atomic<bool> replay_entered{false};
     std::atomic<bool> release_replay{false};
+    std::atomic<bool> first_callback_done{false};
+    std::atomic<bool> second_started{false};
+    std::atomic<bool> second_callback_done{false};
     std::thread first_owner([&] {
         assert(single_owner.Drain([&](unsigned, std::uint64_t, std::uint64_t) {
             replay_entered.store(true, std::memory_order_release);
             while (!release_replay.load(std::memory_order_acquire)) std::this_thread::yield();
+            first_callback_done.store(true, std::memory_order_release);
         }) == 1);
     });
     while (!replay_entered.load(std::memory_order_acquire)) std::this_thread::yield();
     assert(single_owner.Enqueue(1, 20480, 8));
-    unsigned stolen = 0;
-    assert(single_owner.Drain([&](unsigned, std::uint64_t, std::uint64_t) {
-        ++stolen;
-    }) == 0);
-    assert(stolen == 0 && single_owner.CompletedSequence() == 0);
+    std::thread second_owner([&] {
+        second_started.store(true, std::memory_order_release);
+        assert(single_owner.Drain([&](unsigned core, std::uint64_t, std::uint64_t) {
+            assert(core == 1 && first_callback_done.load(std::memory_order_acquire));
+            second_callback_done.store(true, std::memory_order_release);
+        }) == 1);
+    });
+    while (!second_started.load(std::memory_order_acquire)) std::this_thread::yield();
+    assert(single_owner.CompletedSequence() == 0);
     release_replay.store(true, std::memory_order_release);
     first_owner.join();
-    assert(single_owner.CompletedSequence() == 1 && single_owner.Pending());
-    assert(single_owner.Drain([&](unsigned core, std::uint64_t, std::uint64_t) {
-        assert(core == 1);
-    }) == 1);
+    second_owner.join();
+    assert(first_callback_done.load() && second_callback_done.load());
     assert(single_owner.CompletedSequence() == 2 && !single_owner.Pending());
 }
 '''
