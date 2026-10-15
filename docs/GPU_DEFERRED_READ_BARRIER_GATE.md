@@ -79,6 +79,47 @@ CPU payload publication/order relative to GPU reads, not merely mark the
 invalidation callback complete. GPU dirty/fence handling and texture
 validity remain separate proof obligations.
 
+## Finite replay snapshot: race corrected (source-only)
+
+The earlier `DrainThrough` took a sequence target but repeatedly swapped and
+processed the *entire* incoming queue. In the interval between observing the
+sequence and acquiring the queue mutex, another producer could append work;
+the loop also risked continuing indefinitely under reentrant or constant
+concurrent producer pressure.
+
+The corrected code captures **one FIFO snapshot under the queue mutex**,
+releases that mutex, then runs all callbacks before publishing the completion
+of the last snapshotted entry. New writes after this snapshot remain for a
+later GPU-owner boundary. Multiple GPU-owner drainers remain serialized by
+`consumer_mutex_`. A ticket passed to `DrainThrough` is therefore a
+**minimum completion target**, not an exact maximum: newer entries accepted
+*before* the snapshot may be included. That is intentional and host-tested.
+
+A targeted C++20 host reproducer with Clang 17, ASan and UBSan completed 30
+iterations covering continual callback enqueues (400 later writes), reader
+completion, cancellation at session close and two serialized drain owners.
+The repository's `check-gpu-deferred-queue-host.py` now includes an explicit
+regression for this bounded snapshot behavior. These checks do not validate
+native GPU timing or cache coherency.
+
+## Pre-store publication race: still BLOCKED
+
+The pinned `core/memory.cpp` executes `HandleRasterizerWrite` **before**
+writing guest backing memory in `WriteBlockImpl` (tracked `memcpy`),
+`ZeroBlock` (`memset`) and the scalar `Write<T>` path. In the disabled
+bridge, `HandleRasterizerWrite` may enqueue and return immediately. A GPU
+consumer could then replay the cache invalidation, acknowledge the sequence,
+and consume RAM **before** the producer completes its actual store. Sequence
+tracking cannot repair this fundamental ordering hole.
+
+The bridge therefore also needs a post-store publication protocol that
+covers every relevant scalar, exclusive, bulk, zeroing and fastmem write
+path, with correct shutdown handling and memory ordering. No consumer may
+consider an accepted write replayable until its source payload is published.
+The current source-contract test pins the known pre-store ordering as a
+**negative gate**, rather than pretending it is safe. Do NOT enable the
+bridge or add a GPU read wait solely from the current watermark APIs.
+
 ## Required engineering contract
 
 - Give accepted entries an ordered, per-session completion watermark.
