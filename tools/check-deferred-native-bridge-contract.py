@@ -84,10 +84,19 @@ assert "std::optional<Ticket> EnqueueTracked" in queue
 # Publishing thousands of reservations out of order must not turn the FIFO
 # into a quadratic per-frame CPU hotspot. Last-sequence keys are monotone
 # across tail merges and prefix drains, allowing log-time lookup.
-publish_body=queue.split("bool Publish(Ticket ticket) {",1)[1].split("bool Enqueue(unsigned core",1)[0]
+publish_body=queue.split("std::optional<bool> PublishImpl(Ticket ticket) {",1)[1].split("static std::uint64_t FreshGeneration()",1)[0]
 assert "std::lower_bound(" in publish_body
 assert "write.last_sequence < sequence" in publish_body
 assert "entry->last_sequence != ticket.sequence" in publish_body
+# A post-store producer must wake the GPU when a previously blocked FIFO head
+# first becomes replayable. RequestGpu runs OUTSIDE the queue mutex, so a
+# synchronous callback can acquire the queue and renderer locks safely.
+notify_body=queue.split("bool PublishAndWake(Ticket ticket, RequestGpu&& request_gpu) {",1)[1].split("// Existing opt-in native bridge",1)[0]
+assert "PublishImpl(ticket)" in notify_body
+assert "std::forward<RequestGpu>(request_gpu)();" in notify_body
+assert "failed_ = true;" in notify_body and "throw;" in notify_body
+assert "return !was_ready && !queue_.empty() && queue_.front().published;" in publish_body
+assert "deferred_cpu_write_queue.PublishAndWake(" not in code
 # Shutdown must be a replay-lifetime barrier, not just a waiter wake-up.
 # Without this, the GPU callback can still touch freed rasterizer resources.
 close_body=queue.split("void Close() {",1)[1].split("bool ResetAfterQuiescence()",1)[0]
