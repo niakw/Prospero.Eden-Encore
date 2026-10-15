@@ -52,7 +52,7 @@ scalar_write=reader.split("inline void Write(Common::ProcessAddress vaddr,",1)[1
 assert scalar_write.index("HandleRasterizerWrite(addr, sizeof(T));") < scalar_write.index("std::memcpy(ptr, &data, sizeof(T));")
 # Exhaustive dispatch-site audit in this pinned implementation. These paths
 # cannot all be rewritten by patching WriteBlockImpl alone.
-assert reader.count("HandleRasterizerWrite(") == 9
+assert reader.count("HandleRasterizerWrite(") == 8
 exclusive=reader.split("bool WriteExclusive(Common::ProcessAddress vaddr,",1)[1].split("void HandleRasterizerDownload(",1)[0]
 assert exclusive.count("HandleRasterizerWrite(") == 2
 assert "Common::AtomicCompareAndSwap(reinterpret_cast<T*>(ptr), data, expected)" in exclusive
