@@ -75,6 +75,20 @@ public:
                       entry.nanoseconds.load(std::memory_order_relaxed));
     }
 
+    // Completed HLE-call latency distribution, reported every five seconds.
+    // Keep the original ForEach API for callers that need only sums.
+    template<class Visit>
+    void ForEachLatency(Visit&& visit) const {
+        for (const Counter& entry : counters_)
+            if (entry.key.load(std::memory_order_acquire) != 0)
+                visit(entry.name, entry.command,
+                      entry.calls.load(std::memory_order_relaxed),
+                      entry.nanoseconds.load(std::memory_order_relaxed),
+                      entry.ge20ms.load(std::memory_order_relaxed),
+                      entry.ge100ms.load(std::memory_order_relaxed),
+                      entry.max_ns.load(std::memory_order_relaxed));
+    }
+
     std::uint64_t OverflowCalls() const noexcept {
         return overflow_calls_.load(std::memory_order_relaxed);
     }
@@ -89,7 +103,19 @@ private:
         char name[kNameBytes]{};           // owned copy, survives service teardown
         std::atomic<std::uint64_t> calls{0};
         std::atomic<std::uint64_t> nanoseconds{0};
+        std::atomic<std::uint64_t> ge20ms{0}, ge100ms{0}, max_ns{0};
     };
+
+    static void RecordSlowCall(Counter& entry, std::uint64_t elapsed) noexcept {
+        // No histogram atomics or compare-exchange in the normal HLE path.
+        if (elapsed < 20'000'000) return;
+        entry.ge20ms.fetch_add(1, std::memory_order_relaxed);
+        if (elapsed >= 100'000'000)
+            entry.ge100ms.fetch_add(1, std::memory_order_relaxed);
+        std::uint64_t old = entry.max_ns.load(std::memory_order_relaxed);
+        while (old < elapsed && !entry.max_ns.compare_exchange_weak(
+                   old, elapsed, std::memory_order_relaxed)) {}
+    }
 
     static std::uint64_t Hash(const char* name, unsigned command) noexcept {
         // Stable key by CONTENT, not a potentially reused service-name
