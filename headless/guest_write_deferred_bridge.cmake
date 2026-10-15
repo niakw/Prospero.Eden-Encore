@@ -79,6 +79,9 @@ bool MemoryManager::EnqueueDeferredCPUWrite(u64 address, u64 size) {
     return deferred_cpu_write_queue.Enqueue(core, address, size);
 }
 void MemoryManager::FlushCaching() {
+    // A failed replay may have partially modified cache state. Never allow
+    // a later GPU command to proceed through this developer-only bridge.
+    if (deferred_cpu_write_queue.Failed()) std::terminate();
     if (deferred_cpu_write_queue.Pending()) {
         ::Eden::GpuDeferredWrite::ScopedReplay replay_guard;
         auto dirty = system.GetGPUDirtyMemoryManager();
