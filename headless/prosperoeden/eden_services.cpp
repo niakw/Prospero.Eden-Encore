@@ -620,10 +620,10 @@ bool FetchCaseFace(const std::vector<std::string>& candidates,
     return false;
 }
 
-void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
+unsigned EnsureRetailCase(std::uint64_t title_id, const std::string& name,
                       const std::string& alternate_name, int language_choice,
                       const std::atomic<bool>* cancel) {
-    if (title_id == 0 || (cancel && cancel->load(std::memory_order_acquire))) return;
+    if (title_id == 0 || (cancel && cancel->load(std::memory_order_acquire))) return 0;
     const auto& index = RetailCaseIndex();
     const auto selected = [&]() -> BoxIndex::const_iterator {
         auto it = index.find(CaseKey(name));
@@ -634,7 +634,7 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
         std::fprintf(stderr, "EDEN_CASE_LOOKUP title=%016llX status=no-match name=%s alternate=%s index_entries=%zu\n",
                      static_cast<unsigned long long>(title_id), name.c_str(),
                      alternate_name.c_str(), index.size());
-        return;
+        return 0;
     }
     std::fprintf(stderr,
                  "EDEN_CASE_LOOKUP title=%016llX status=match front=%zu back=%zu spine=%zu\n",
@@ -647,24 +647,25 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
     // enrichment (which could publish fallback artwork for five minutes).
     static std::array<std::mutex, 64> locks;
     std::unique_lock guard(locks[title_id % locks.size()]);
-    if (cancel && cancel->load(std::memory_order_acquire)) return;
+    if (cancel && cancel->load(std::memory_order_acquire)) return 0;
     static std::mutex retry_mutex;
     static std::unordered_map<std::uint64_t, std::chrono::steady_clock::time_point> retries;
     {
         std::lock_guard retry(retry_mutex);
         const auto it = retries.find(title_id);
         if (it != retries.end() && std::chrono::steady_clock::now() < it->second)
-            return;
+            return 0;
         // Failed image hosts, cancellation or an incomplete side must not
         // disable all retries for four hours on a newly installed game.
         retries[title_id] = std::chrono::steady_clock::now() + std::chrono::minutes(5);
     }
     bool all_ready = true;
+    unsigned changed_faces = 0;
     const bool both_faces_cached_at_start =
         ValidNlibTga(CaseFacePath(title_id, "front")) &&
         ValidNlibTga(CaseFacePath(title_id, "back"));
     for (int side = 0; side < 3; ++side) {
-        if (cancel && cancel->load(std::memory_order_acquire)) return;
+        if (cancel && cancel->load(std::memory_order_acquire)) return 0;
         // Front and back always fetch first. A successful first-pass pair
         // can be followed by its spine in the SAME background enrichment;
         // otherwise the 5-minute retry could leave a complete paper wrap
@@ -719,6 +720,7 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
             std::fprintf(stderr, "EDEN_CASE_FACE title=%016llX side=%d status=unavailable\n",
                          static_cast<unsigned long long>(title_id), side);
         } else {
+            changed_faces |= (1u << side); // Only successful atomic replacements.
             // A fallback candidate remains usable, but only retry its higher
             // priority European/locale scan on the next bounded refresh.
             std::ifstream refreshed(path + ".source");
@@ -731,6 +733,7 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
         std::lock_guard retry(retry_mutex);
         retries.erase(title_id);
     }
+    return changed_faces;
 }
 
 NlibEnrichment CachedNlibEnrichment(std::uint64_t title_id, int language_choice) {
@@ -1557,7 +1560,7 @@ pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game,
     // Prioritize the requested ORIGINAL retail scans before any optional
     // metadata/banner/icon requests. Nlib may perform multiple slow calls;
     // previously a complete retail front could remain invisible for minutes.
-    EnsureRetailCase(game.title_id, scanned_name, CleanTitle(game.file),
+    game.case_artwork_changed = EnsureRetailCase(game.title_id, scanned_name, CleanTitle(game.file),
                      language_choice, cancel);
     if (!(cancel && cancel->load(std::memory_order_acquire))) {
         const auto cached_case = box_art(game.title_id);
@@ -1583,7 +1586,7 @@ pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game,
     // from the launcher draw or game-start path.
     if ((game.box_front.empty() || game.box_back.empty()) &&
         scanned_name != game.name) {
-        EnsureRetailCase(game.title_id, game.name, scanned_name,
+        game.case_artwork_changed |= EnsureRetailCase(game.title_id, game.name, scanned_name,
                          language_choice, cancel);
     }
     if (!(cancel && cancel->load(std::memory_order_acquire))) {
