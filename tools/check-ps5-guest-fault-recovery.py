@@ -10,6 +10,11 @@ assert 'selected_game = SelectProsperoEdenGame(launch_error)' in s
 assert 'std::string relaunch_game;' not in s
 assert 'guest_fault_retries' not in s
 assert 'EDEN_GUEST_FAULT_RETRY' not in s
+# A one-shot executable range allows the saved LR to be qualified against
+# the exact title mapping rather than guessing a module base from its value.
+assert 'EDEN_GUEST_CODE_RANGE entry=0x%llx end=0x%llx bytes=%llu' in s
+assert 'const u64 code_start = GetInteger(process->GetEntryPoint());' in s
+assert 'code_end = info.m_address + info.m_size;' in s
 # A prefetch abort used to report only the thread name. Require the native
 # CMake replacement to capture the stopped guest context exactly once on the
 # fault path, never per guest JIT entry or normal frame.
