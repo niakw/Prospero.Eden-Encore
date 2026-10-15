@@ -120,6 +120,42 @@ The current source-contract test pins the known pre-store ordering as a
 **negative gate**, rather than pretending it is safe. Do NOT enable the
 bridge or add a GPU read wait solely from the current watermark APIs.
 
+## Two-phase write-publication prototype (host only)
+
+A source-only `Queue::Reserve(core, address, size)` now assigns a FIFO position
+**before** the producer changes guest RAM. The returned ticket contains both
+a monotonically increasing write sequence and a session generation. Only
+`Queue::Publish(ticket)`, called **after the actual guest store**, marks that
+entry eligible for GPU-owner replay.
+
+`DrainThrough` snapshots at most the contiguous **published FIFO prefix**;
+an earlier unpublished reservation blocks later ready entries even when they
+come from a different guest core. Published entries ahead of the first gap
+may drain; entries after the gap cannot overtake it. `Publish` releases the
+same mutex that a later GPU consumer acquires to snapshot ready work, giving
+a C++ happens-before edge from the completed CPU store to the callback.
+It **does not** establish a Vulkan completion fence, guest JIT fastmem
+publication, or device visibility beyond the host-level callback.
+
+Stale session-generation tickets cannot publish or wait successfully after
+`ResetAfterQuiescence`; `Close` prevents new reservations and releases
+waiters. A missed `Publish` intentionally leaves an unresolved FIFO entry
+until shutdown instead of silently replaying uncommitted RAM.
+
+**Native opt-in bridge is still NOT wired to this protocol.** Its generated
+`MemoryManager::EnqueueDeferredCPUWrite` still calls the eager
+`deferred_cpu_write_queue.Enqueue` before the guest's actual store.
+A fail-closed host source test pins this mismatch; it must be replaced with
+a real post-store integration across scalar, exclusive, zero, block and JIT
+fastmem write paths before `cpu_write_defer` could ever be enabled.
+No console build or on-device test is justified by this host prototype.
+
+**Remaining liveness problem:** native `GPU::OnCPURead` and
+`HandleRasterizerDownload` can bypass queue drainage. A read waiting
+for a reserved ticket also requires scheduling the GPU owner after publish;
+there is no such native orchestration yet. Native shutdown/wakeup and
+queue pressure constraints remain unqualified.
+
 ## Required engineering contract
 
 - Give accepted entries an ordered, per-session completion watermark.
