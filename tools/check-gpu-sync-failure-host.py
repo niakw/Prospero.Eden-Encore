@@ -59,6 +59,12 @@ with tempfile.TemporaryDirectory(prefix="encore-gpu-sync-derive-") as d:
     generated = outfile.read_text()
     assert native_method.rstrip("\n") in generated
     assert generated.count("std::rethrow_exception(failure);") == 2
+    tick_method = "    void TickWork() {" + generated.split("    void TickWork() {", 1)[1].split(
+        "    [[nodiscard]] u64 GetTicks() const", 1)[0]
+    assert "lck.unlock();" in tick_method and "lck.lock();" in tick_method
+    assert "sync_request_mutex.unlock();" not in tick_method
+    assert tick_method.index("lck.unlock();") < tick_method.index("request();")
+    assert tick_method.index("request();") < tick_method.index("lck.lock();")
     assert "#include \"" + (root / "headless/gpu_failure.h").as_posix() + "\"" in generated
 
 source = r"""
@@ -70,6 +76,7 @@ source = r"""
 #include <cstdint>
 #include <exception>
 #include <functional>
+#include <list>
 #include <mutex>
 #include <stdexcept>
 #include <thread>
@@ -77,12 +84,14 @@ using u64 = std::uint64_t;
 struct GPU {
     std::mutex sync_request_mutex;
     std::condition_variable sync_request_cv;
+    std::list<std::function<void()>> sync_requests;
     std::atomic<u64> current_sync_fence{};
     bool sync_requests_stopped{};
     [[nodiscard]] u64 CurrentSyncRequestFence() const {
         return current_sync_fence.load(std::memory_order_relaxed);
     }
 __NATIVE_METHOD__
+__NATIVE_TICK_METHOD__
     void Complete(u64 seq) {
         {
             std::lock_guard lock(sync_request_mutex);
@@ -106,10 +115,30 @@ int main() {
         normal.WaitForSyncOperation(1);
         success.store(true, std::memory_order_release);
     });
-    normal.Complete(1);
+    {
+        std::lock_guard lock(normal.sync_request_mutex);
+        normal.sync_requests.emplace_back([]{});
+    }
+    normal.TickWork();
     completed.join();
     assert(success.load(std::memory_order_acquire));
     assert(normal.CurrentSyncRequestFence() == 1);
+
+    // An exception inside a GPU callback must unwind the queue's
+    // unique_lock without double-unlocking the raw mutex.
+    GPU throwing;
+    throwing.sync_requests.emplace_back([] {
+        throw std::runtime_error("rasterizer callback failed");
+    });
+    bool caught_callback = false;
+    try { throwing.TickWork(); }
+    catch (const std::runtime_error&) { caught_callback = true; }
+    assert(caught_callback);
+    assert(throwing.CurrentSyncRequestFence() == 0);
+    {
+        std::unique_lock lock(throwing.sync_request_mutex, std::try_to_lock);
+        assert(lock.owns_lock());
+    }
 
     // The GPU worker has failed, leaving two distinct fence requests
     // unacknowledged. Neither waiter may hang, and failure must be visible
@@ -142,7 +171,7 @@ int main() {
     cancelled.join();
     assert(stopped.CurrentSyncRequestFence() == 0);
 }
-""".replace("__NATIVE_METHOD__", native_method)
+""".replace("__NATIVE_METHOD__", native_method).replace("__NATIVE_TICK_METHOD__", tick_method)
 with tempfile.TemporaryDirectory(prefix="encore-gpu-sync-fail-host-") as d:
     source_file = Path(d) / "test.cpp"
     executable = Path(d) / "test"
@@ -154,4 +183,4 @@ with tempfile.TemporaryDirectory(prefix="encore-gpu-sync-fail-host-") as d:
         str(source_file), "-o", str(executable)
     ], check=True, timeout=45)
     subprocess.run([str(executable)], check=True, timeout=30)
-print("GPU_SYNC_WORKER_FAILURE_HOST_PASS normal=1 fatal_waiters=2 no_fake_fence=1 shutdown=1")
+print("GPU_SYNC_WORKER_FAILURE_HOST_PASS normal=1 fatal_waiters=2 no_fake_fence=1 shutdown=1 throw_lock=1")
