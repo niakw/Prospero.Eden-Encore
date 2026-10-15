@@ -597,6 +597,108 @@ int main() {
         assert(!nested_reset.ResetAfterQuiescence());
     }) == 1);
     assert(nested_reset.WaitUntil(*nested_ticket));
+
+    // Lost-wakeup regression: GPU sees an unpublished FIFO head and exits
+    // Drain(), while later writes can be published in arbitrary order.
+    // Publishing the blocked HEAD must schedule another tick; publishing
+    // a ready tail must NOT fire redundant notifications.
+    Queue wake;
+    const auto stalled = wake.Reserve(0, 4096, 8);
+    const auto middle = wake.Reserve(1, 8192, 8);
+    const auto tail = wake.Reserve(2, 12288, 8);
+    assert(stalled && middle && tail);
+    unsigned wakes = 0;
+    unsigned replayed = 0;
+    auto gpu_tick = [&] {
+        ++wakes;
+        // Synchronous GPU work from the callback verifies the queue mutex
+        // was released before the wake was invoked.
+        wake.Drain([&](unsigned core, std::uint64_t addr, std::uint64_t sz) {
+            assert(sz == 8 && core == replayed);
+            assert(addr == (std::uint64_t(replayed) + 1) * 4096);
+            ++replayed;
+        });
+    };
+    assert(wake.Drain([](unsigned,std::uint64_t,std::uint64_t) {
+        assert(false);
+    }) == 0);
+    assert(wake.PublishAndWake(*tail, gpu_tick));
+    assert(wake.PublishAndWake(*middle, gpu_tick));
+    assert(wakes == 0 && replayed == 0);
+    assert(wake.PublishAndWake(*stalled, gpu_tick));
+    assert(wakes == 1 && replayed == 3 && !wake.Pending());
+    assert(!wake.PublishAndWake(*middle, gpu_tick) && wakes == 1);
+
+    // A published prefix can drain before an unpublished hole. Publishing
+    // the hole later MUST reschedule the owner; the first tick is insufficient.
+    Queue gap_wake;
+    const auto head0 = gap_wake.Reserve(0, 16384, 8);
+    const auto hole1 = gap_wake.Reserve(1, 20480, 8);
+    const auto after2 = gap_wake.Reserve(2, 24576, 8);
+    assert(head0 && hole1 && after2);
+    unsigned gap_ticks = 0;
+    unsigned gap_replayed = 0;
+    auto tick_gap = [&] {
+        ++gap_ticks;
+        gap_wake.Drain([&](unsigned core,std::uint64_t,std::uint64_t) {
+            assert(core == gap_replayed);
+            ++gap_replayed;
+        });
+    };
+    assert(gap_wake.PublishAndWake(*head0, tick_gap));
+    assert(gap_ticks == 1 && gap_replayed == 1);
+    assert(gap_wake.PublishAndWake(*after2, tick_gap));
+    assert(gap_ticks == 1);
+    assert(gap_wake.PublishAndWake(*hole1, tick_gap));
+    assert(gap_ticks == 2 && gap_replayed == 3);
+    assert(!gap_wake.Pending());
+
+    // Multiple published tails are not a storm of redundant GPU ticks.
+    // Publish the head last after 256 others; one wake replays all 257.
+    Queue coalesce_wake;
+    constexpr unsigned WakeBacklog = 256;
+    std::vector<Queue::Ticket> wake_tickets;
+    for (unsigned i = 0; i < WakeBacklog; ++i) {
+        const auto t = coalesce_wake.Reserve(i % 4, 32768 + std::uint64_t(i) * 4096, 8);
+        assert(t);
+        wake_tickets.push_back(*t);
+    }
+    unsigned scheduled_ticks = 0, wake_replayed = 0;
+    auto tick_coalesced = [&] {
+        ++scheduled_ticks;
+        coalesce_wake.Drain([&](unsigned core,std::uint64_t,std::uint64_t) {
+            assert(core == wake_replayed % 4);
+            ++wake_replayed;
+        });
+    };
+    for (unsigned i = WakeBacklog - 1; i > 0; --i)
+        assert(coalesce_wake.PublishAndWake(wake_tickets[i], tick_coalesced));
+    assert(scheduled_ticks == 0 && wake_replayed == 0);
+    assert(coalesce_wake.PublishAndWake(wake_tickets[0], tick_coalesced));
+    assert(scheduled_ticks == 1 && wake_replayed == WakeBacklog);
+    assert(!coalesce_wake.Pending());
+
+    // A failed GPU wake must poison this title rather than strand a reader.
+    Queue wake_failure;
+    const auto pending_wake = wake_failure.Reserve(0, 65536, 8);
+    assert(pending_wake);
+    bool failed_to_schedule = false;
+    try {
+        wake_failure.PublishAndWake(*pending_wake, [] {
+            throw std::runtime_error("GPU scheduling failed");
+        });
+    } catch (const std::runtime_error&) {
+        failed_to_schedule = true;
+    }
+    assert(failed_to_schedule && wake_failure.Failed());
+    assert(!wake_failure.WaitUntil(*pending_wake));
+    assert(wake_failure.Drain([](unsigned,std::uint64_t,std::uint64_t) {
+        assert(false);
+    }) == 0);
+    assert(!wake_failure.Enqueue(1, 69632, 8));
+    wake_failure.Close();
+    assert(wake_failure.ResetAfterQuiescence());
+    assert(!wake_failure.Failed());
 }
 '''
 with tempfile.TemporaryDirectory(prefix="encore-deferred-host-") as folder:
