@@ -471,8 +471,9 @@ original exception, rather than letting the CPU reader hang or inventing
 fence completion. Multiple readers can observe the same fatal event;
 `TakeGpuFailure` still clears the error only when a new GPU worker starts.
 
-`tools/check-gpu-sync-failure-host.py` compiles this exact native-derived
-wait method with host ASan/UBSan. It tests immediate normal completion,
+`tools/check-gpu-sync-failure-host.py` reproduces the actual native
+CMake source-generation fragment and compiles the resulting wait method
+with host ASan/UBSan. It tests immediate normal completion,
 two separate CPU waiters observing one unconsumed fatal worker error, and
 unchanged voluntary shutdown cancellation without falsely advancing a
 fence. The host workflow runs this test without building a console app.
