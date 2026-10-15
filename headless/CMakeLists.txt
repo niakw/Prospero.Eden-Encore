@@ -3157,3 +3157,5 @@ endif()
 # Capture reproducible GPU compatibility evidence without changing any
 # Maxwell/Fermi instructions or swallowing unsupported feature failures.
 include("${CMAKE_CURRENT_LIST_DIR}/gpu_native_observability.cmake")
+# Disabled native GPU coherency bridge, explicit developer compilation only.
+include("${CMAKE_CURRENT_LIST_DIR}/guest_write_deferred_bridge.cmake")

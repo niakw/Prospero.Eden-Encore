@@ -7,6 +7,15 @@
 #include <utility>
 
 namespace Eden::GpuDeferredWrite {
+// GPU-owner replay must never defer itself. No process-global session queue.
+inline thread_local bool replaying_guest_write = false;
+struct ScopedReplay final {
+    const bool previous = replaying_guest_write;
+    ScopedReplay() noexcept { replaying_guest_write = true; }
+    ~ScopedReplay() { replaying_guest_write = previous; }
+    ScopedReplay(const ScopedReplay&) = delete;
+    ScopedReplay& operator=(const ScopedReplay&) = delete;
+};
 inline constexpr std::uint64_t kDirtyRegionBytes = 2048;
 inline constexpr std::uint64_t kDirtyBlockBytes = 64;
 struct ReplayTotals {

@@ -112,3 +112,22 @@ a coalescing shortcut across intervening core writes.
 This guarantees enqueue order only. It does NOT prove the memory visibility
 order between guest writes and GPU command execution; native enablement
 remains blocked on DMA/fence and title-lifecycle contracts.
+
+## Native Vulkan bridge (source integration; strictly OFF)
+
+A guarded `headless/guest_write_deferred_bridge.cmake` is included by the
+native CMake port, with `EDEN_GUEST_WRITE_BRIDGE_DEV=OFF` by default. Only a
+native Vulkan development profile can select the CMake path. Its derived
+source translations (immutable upstream + immutable maintained Vulkan files)
+pair the title-owned `Tegra::MemoryManager` queue with Vulkan
+`RasterizerVulkan::OnCPUWrite`, `MemoryManager::FlushCaching`, GPU-dirty
+per-core collection and command boundaries at start/end of DMA dispatch,
+Maxwell DMA and Kepler compute launches. Reentrant GPU replay suppresses
+its own enqueue through a thread-local scope.
+
+**Not yet production-ready.** `cpu_write_defer` remains false with no
+activation through settings. Host CI tests CMake parsing in OFF mode and
+pinned-source anchors, but no native SDK build has compiled the opt-in branch.
+Even a successful native compilation would not yet prove callback ordering,
+GPU cache synchronization, shutdown quiescence or stable game HUD. No
+console test is justified.

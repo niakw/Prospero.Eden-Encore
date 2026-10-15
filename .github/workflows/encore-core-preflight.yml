@@ -58,6 +58,7 @@ jobs:
           python3 -B tools/check-buffer-write-ahead-host.py
           python3 -B tools/check-gpu-deferred-queue-host.py
           python3 -B tools/check-gpu-deferred-replay-host.py
+          python3 -B tools/check-deferred-native-bridge-contract.py
           python3 -B tools/check-ps5-present-phase-timing.py
           python3 -B tools/check-ps5-first-use-draw-preservation.py
           python3 -B tools/check-ps5-gpu-worker-draw-guard.py
