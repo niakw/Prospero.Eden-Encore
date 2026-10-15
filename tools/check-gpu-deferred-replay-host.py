@@ -100,7 +100,14 @@ int main() {
             if(invoked==1)assert(reentrant.Enqueue(1,4096,8));
             return false;
         },[](unsigned,std::uint64_t,std::uint64_t){assert(false);});
-    assert(invoked==2 && rereplay.queued_ranges==2 && !reentrant.Pending());
+    // A drain handles the watermark it observed on entry. A reentrant
+    // enqueue is processed at the NEXT safe GPU owner boundary.
+    assert(invoked==1 && rereplay.queued_ranges==1 && reentrant.Pending());
+    assert(reentrant.CompletedSequence()==1 && reentrant.AcceptedSequence()==2);
+    const auto later=ReplayQueued(reentrant,
+        [&](std::uint64_t,std::uint64_t) { ++invoked; return false; },
+        [](unsigned,std::uint64_t,std::uint64_t){assert(false);});
+    assert(invoked==2 && later.queued_ranges==1 && !reentrant.Pending());
 }
 '''
 with tempfile.TemporaryDirectory(prefix="encore-replay-host-") as folder:
