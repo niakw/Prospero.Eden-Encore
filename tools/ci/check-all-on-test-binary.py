@@ -20,8 +20,8 @@ REQUIRED = {
     "EDEN_PS5_VULKAN:BOOL": "ON",
     "EDEN_DEV_VULKAN:BOOL": "ON",
     "EDEN_VULKAN_DRIVER:STRING": "RADV",
-    "EDEN_SHARED_JIT:BOOL": "OFF",
-    "EDEN_JIT_COMPILE_BATCH:BOOL": "OFF",
+    "EDEN_SHARED_JIT:BOOL": "ON",
+    "EDEN_JIT_COMPILE_BATCH:BOOL": "ON",
 }
 
 
@@ -55,6 +55,8 @@ def audit(app: Path, title_id: str) -> dict:
         "status": "compiled_test_artifact_flags_verified",
         "title_id": title_id.upper(),
         "jit_sparse_compiled": True,
+        "jit_shared_compiled": True,
+        "jit_successor_batch_compiled": True,
         "dev_frame_diagnostics_compiled": True,
         "native_ps5_execution_verified": False,
         "sparse_alias_probe_result": None,
