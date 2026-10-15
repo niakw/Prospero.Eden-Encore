@@ -316,6 +316,31 @@ The host regression rejects reset on an open session or inside a replay
 callback, and requires close-before-reset on all previous fixture paths.
 The native bridge is still disabled and does not yet manage this lifecycle.
 
+## Host backlog: publication lookup no longer quadratic
+
+The queue's `Publish(ticket)` previously linearly scanned every pending
+write, while another CPU core could publish a later reservation before an
+earlier one. A backlog of `n` separate reservations published in reverse
+order therefore required up to O(n²) comparisons just to mark them ready,
+before any rasterizer work.
+
+The queue already assigns strictly increasing `last_sequence` values to
+FIFO entries. Same-core coalescing only changes the final entry's upper
+sequence; GPU draining removes a prefix without reordering survivors.
+`Publish` now performs a `std::lower_bound` lookup on this monotone key
+under the existing queue mutex, giving O(log n) search with identical
+exact-ticket and unpublished-entry validation.
+
+The host fixture adds 4,096 reserved writes published in reverse order,
+then verifies zero premature replay and exact FIFO output. It also tests
+publication after a previously published prefix has been drained, including
+rejecting the removed ticket. The source contract pins binary lookup.
+
+This reduces one potential CPU contention hotspot in the **inactive
+prototype**, not the native GPU rendering cost. The unbounded queue's
+memory pressure, repeated prefix vector moves, guest-write publication,
+GPU-read barriers and session integration remain blockers to activation.
+
 ## Required engineering contract
 
 - Give accepted entries an ordered, per-session completion watermark.
