@@ -89,7 +89,16 @@ assert "completed_cv_.notify_all()" in close_body
 assert "if (active_consumer_ == this) std::terminate();" in close_body
 drain_body=queue.split("std::uint64_t DrainThrough(Ticket target, Replay&& replay)",1)[1].split("std::uint64_t Drain(Replay&& replay)",1)[0]
 assert "std::unique_lock owner(consumer_mutex_);" in drain_body
-assert "if (closed_ || target.generation != generation_" in drain_body
+assert "if (closed_ || failed_ || target.generation != generation_" in drain_body
+# A thrown rasterizer callback has potentially non-atomic side effects.
+# Never let the queue acknowledge, retry or accept fresh work after failure.
+assert "catch (...)" in drain_body
+assert drain_body.index("failed_ = true;") < drain_body.index("throw;")
+assert "bool Failed() const" in queue
+assert "closed_ || failed_ || ticket.generation != generation_" in queue
+assert "completed_ >= ticket.sequence || closed_ || failed_" in queue
+assert "if (closed_ || failed_ || accepted_" in queue
+assert "failed_ = false;" in queue
 assert "completed_cv_.notify_all()" in queue
 assert "WaitUntil(" not in code
 # The host candidate now has a publish-after-store contract; the real bridge
