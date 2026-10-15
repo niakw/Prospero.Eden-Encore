@@ -136,7 +136,7 @@ public:
         std::vector<Write> work;
         {
             std::lock_guard lock(mutex_);
-            if (target.generation != generation_ || target.sequence == 0 ||
+            if (closed_ || target.generation != generation_ || target.sequence == 0 ||
                 target.sequence > accepted_ || completed_ >= target.sequence) return 0;
             // Reserve + Publish is ordered, but publishers can finish out of
             // order. Drain only the contiguous PUBLISHED prefix. Never
@@ -174,14 +174,21 @@ public:
         return DrainThrough(target, std::forward<Replay>(replay));
     }
 
-    // Wake CPU waiters when the owning title begins shutdown. Producers must
-    // eventually quiesce before the queue/memory manager itself is destroyed.
+    // Shutdown barrier: reject future work, release CPU waiters, then wait
+    // until any in-flight GPU replay callback has returned. No GPU cache lock
+    // may be held while calling Close(). Never call it recursively from replay.
+    // Producers and waiters still must be joined before destroying the Queue.
     void Close() {
+        if (active_consumer_ == this) std::terminate();
         {
             std::lock_guard lock(mutex_);
             closed_ = true;
         }
         completed_cv_.notify_all();
+        // DrainThrough holds consumer_mutex_ for the complete replay batch.
+        // Lock order is consumer_mutex_ -> mutex_ on a drain; never hold
+        // mutex_ while waiting for this lock.
+        std::lock_guard owner(consumer_mutex_);
     }
 
     // Only after all producers, waiters and GPU consumer have joined. No old
