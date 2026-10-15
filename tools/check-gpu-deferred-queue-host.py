@@ -428,6 +428,63 @@ int main() {
     assert(concurrent_publication.CompletedSequence() == PublishedWrites);
     assert(!concurrent_publication.Pending());
 
+    // Backlog regression: reverse publication across thousands of tickets.
+    // A linear Publish() search performs quadratic work in this case; binary
+    // lookup must preserve the exact sequence and FIFO replay semantics.
+    Queue reverse_publish;
+    constexpr unsigned BacklogWrites = 4096;
+    std::vector<Queue::Ticket> backlog;
+    backlog.reserve(BacklogWrites);
+    for (unsigned i = 0; i < BacklogWrites; ++i) {
+        const auto t = reverse_publish.Reserve(i % Queue::Cores,
+                                               (std::uint64_t(i) + 512) * 4096, 8);
+        assert(t && t->sequence == i + 1);
+        backlog.push_back(*t);
+    }
+    for (unsigned i = BacklogWrites - 1; i != 0; --i) {
+        assert(reverse_publish.Publish(backlog[i]));
+        assert(!reverse_publish.Publish(backlog[i]));
+        if (i == BacklogWrites - 1 || i == 1) {
+            assert(reverse_publish.Drain(
+                [](unsigned,std::uint64_t,std::uint64_t){assert(false);}) == 0);
+        }
+    }
+    assert(reverse_publish.CompletedSequence() == 0);
+    assert(reverse_publish.Pending());
+    assert(reverse_publish.Publish(backlog.front()));
+    unsigned replayed_backlog = 0;
+    assert(reverse_publish.Drain([&](unsigned core, std::uint64_t addr,
+                                     std::uint64_t size) {
+        assert(size == 8);
+        assert(addr == (std::uint64_t(replayed_backlog) + 512) * 4096);
+        assert(core == replayed_backlog % Queue::Cores);
+        ++replayed_backlog;
+    }) == BacklogWrites);
+    assert(replayed_backlog == BacklogWrites);
+    assert(reverse_publish.CompletedSequence() == BacklogWrites);
+    assert(reverse_publish.WaitUntil(backlog.back()) && !reverse_publish.Pending());
+    assert(!reverse_publish.Publish(backlog.back()));
+
+    // Draining a prefix shifts the queue. New lower-bound lookups must still
+    // resolve surviving out-of-order reservations, not removed sequence IDs.
+    Queue sliced_backlog;
+    const auto consumed = sliced_backlog.EnqueueTracked(0, 2048, 8);
+    const auto hold = sliced_backlog.Reserve(1, 8192, 8);
+    const auto after_hold = sliced_backlog.Reserve(2, 12288, 8);
+    assert(consumed && hold && after_hold);
+    assert(sliced_backlog.Drain([](unsigned,std::uint64_t,std::uint64_t){}) == 1);
+    assert(!sliced_backlog.Publish(*consumed));
+    assert(sliced_backlog.Publish(*after_hold));
+    assert(sliced_backlog.Drain(
+        [](unsigned,std::uint64_t,std::uint64_t){assert(false);}) == 0);
+    assert(sliced_backlog.Publish(*hold));
+    std::vector<unsigned> sliced_order;
+    assert(sliced_backlog.Drain([&](unsigned core,std::uint64_t,std::uint64_t) {
+        sliced_order.push_back(core);
+    }) == 2);
+    assert((sliced_order == std::vector<unsigned>{1,2}));
+    assert(!sliced_backlog.Pending());
+
     // Shutdown must not race the renderer's replay callback lifetime.
     // An unpublished second write also gives a reliable wait-to-close signal.
     Queue teardown;
