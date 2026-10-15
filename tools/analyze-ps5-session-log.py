@@ -17,40 +17,48 @@ def fields(line):
 
 
 def replay(stderr, heap):
-    pads, chains, lifo = [], [], []
+    sessions = []
+    session = {"pads": [], "chains": [], "lifo": []}
     for line in stderr.splitlines():
+        if line.startswith("EDEN_PAD_INPUT mode=") and any(session.values()):
+            sessions.append(session)
+            session = {"pads": [], "chains": [], "lifo": []}
         if line.startswith("EDEN_PAD_HEARTBEAT "):
-            pads.append(fields(line))
+            session["pads"].append(fields(line))
         elif line.startswith("EDEN_PAD_INPUT_CHAIN "):
-            chains.append(fields(line))
+            session["chains"].append(fields(line))
         elif line.startswith("EDEN_NPAD_PLUS_LIFO "):
-            lifo.append(fields(line))
+            session["lifo"].append(fields(line))
+    if any(session.values()):
+        sessions.append(session)
 
-    # A plateau is *observed* only when successful samples keep arriving and
-    # usable/intercepted counters do not advance. The "connected" heartbeat
-    # field is an open-slot bitmap, NOT raw Data.connected for the sample.
-    streak = []
-    streaks = []
-    for before, after in zip(pads, pads[1:]):
-        quiet = (int(after['samples']) > int(before['samples']) and
-                 after['usable'] == before['usable'] and
-                 after['intercepted'] == before['intercepted'] and
-                 after['errors'] == before['errors'])
-        if quiet:
-            streak.append((before, after))
-        elif streak:
+    # 'connected' on a heartbeat is an open-slot bitmap, NOT raw
+    # Data.connected. Do not compare monotonically reset counters across
+    # distinct launches in the same app process.
+    stalls = []
+    for number, session in enumerate(sessions, start=1):
+        streak, streaks = [], []
+        for before, after in zip(session['pads'], session['pads'][1:]):
+            quiet = (int(after['samples']) > int(before['samples']) and
+                     after['usable'] == before['usable'] and
+                     after['intercepted'] == before['intercepted'] and
+                     after['errors'] == before['errors'])
+            if quiet:
+                streak.append((before, after))
+            elif streak:
+                streaks.append(streak)
+                streak = []
+        if streak:
             streaks.append(streak)
-            streak = []
-    if streak:
-        streaks.append(streak)
-    stalls = [{
-        "first_poll": int(s[0][0]['polls']),
-        "last_poll": int(s[-1][1]['polls']),
-        "duration_ms": int(s[-1][1]['epoch_ms']) - int(s[0][0]['epoch_ms']),
-        "samples_added": int(s[-1][1]['samples']) - int(s[0][0]['samples']),
-        "usable_added": 0,
-        "reason": "unusable samples; not proof of guest freeze",
-    } for s in streaks]
+        stalls.extend({
+            "session": number,
+            "first_poll": int(s[0][0]['polls']),
+            "last_poll": int(s[-1][1]['polls']),
+            "duration_ms": int(s[-1][1]['epoch_ms']) - int(s[0][0]['epoch_ms']),
+            "samples_added": int(s[-1][1]['samples']) - int(s[0][0]['samples']),
+            "usable_added": 0,
+            "reason": "unusable samples; not proof of guest freeze",
+        } for s in streaks)
 
     frames = []
     pressures = []
@@ -61,9 +69,12 @@ def replay(stderr, heap):
             pressures.append(fields(line))
     report = {
         "input": {
-            "heartbeats": len(pads), "unusable_streaks": stalls,
-            "plus_published": int(chains[-1]['published_plus_edges']) if chains else None,
-            "plus_seen_in_npad": int(lifo[-1]['edges']) if lifo else None,
+            "heartbeats": sum(len(s['pads']) for s in sessions),
+            "session_count": len(sessions), "unusable_streaks": stalls,
+            "plus_published": sum(int(s['chains'][-1]['published_plus_edges'])
+                                  for s in sessions if s['chains']),
+            "plus_seen_in_npad": sum(int(s['lifo'][-1]['edges'])
+                                    for s in sessions if s['lifo']),
             "npad_plus_is_guest_consumption_proof": False,
         },
         "graphics": {
@@ -101,7 +112,14 @@ def self_test():
     assert a['graphics']['windows'] == a['graphics']['windows_below_20_fps'] == 5
     assert a['graphics']['last_five_mean_reported_gpu_idle_ms'] == 4000.0
     assert not a['graphics']['frame_presentation_proves_guest_progress']
-    print('PASS: offline pad/graphics correlation; no console/test build')
+    two = replay(s + '\nEDEN_PAD_INPUT mode=dualsense\n' +
+                 h(1250, 100, 100, 21000) + '\n' +
+                 'EDEN_PAD_INPUT_CHAIN published_plus_edges=0', g)
+    assert two['input']['session_count'] == 2
+    assert two['input']['plus_published'] == 2
+    assert two['input']['plus_seen_in_npad'] == 2
+    assert len(two['input']['unusable_streaks']) == 1
+    print('PASS: offline pad/graphics correlation and multi-session reset')
 
 
 def main():
