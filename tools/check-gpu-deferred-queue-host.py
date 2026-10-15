@@ -146,7 +146,10 @@ int main() {
     concurrent.Drain(drain);
     assert(replay_count==4*N);
     for(const auto& s:seen)assert(s.load()==N);
-    concurrent.ResetAfterQuiescence();
+    // An open session must never silently recycle live ticket identities.
+    assert(!concurrent.ResetAfterQuiescence());
+    concurrent.Close();
+    assert(concurrent.ResetAfterQuiescence());
     assert(!concurrent.Pending());
     assert(concurrent.Drain(drain)==0);
 
@@ -194,7 +197,7 @@ int main() {
     blocked.join();
     assert(cancelled.load());
     assert(!stopping.EnqueueTracked(1, 12288, 8).has_value());
-    stopping.ResetAfterQuiescence();
+    assert(stopping.ResetAfterQuiescence());
     assert(!stopping.Pending() && stopping.Enqueue(1, 12288, 8));
     assert(stopping.Drain([](unsigned, std::uint64_t, std::uint64_t) {}) == 1);
 
@@ -347,7 +350,7 @@ int main() {
     lifetime.Close();
     assert(!lifetime.Publish(*old));
     assert(!lifetime.WaitUntil(*old));
-    lifetime.ResetAfterQuiescence();
+    assert(lifetime.ResetAfterQuiescence());
     const auto fresh = lifetime.Reserve(2, 24576, 8);
     assert(fresh && fresh->sequence == old->sequence &&
            fresh->generation != old->generation);
@@ -470,7 +473,7 @@ int main() {
         assert(false); // Never replay remaining queued work after Close().
     }) == 0);
     assert(teardown.Pending()); // Unpublished reservation awaits teardown.
-    teardown.ResetAfterQuiescence();
+    assert(teardown.ResetAfterQuiescence());
     assert(!teardown.Pending());
 
     // Closing with a queued but not yet replayed write also forbids late
@@ -521,12 +524,22 @@ int main() {
         assert(false); // A poisoned session may not silently resume.
     }) == 0);
     poisoned.Close();
-    poisoned.ResetAfterQuiescence(); // Strictly after all threads have joined.
+    assert(poisoned.ResetAfterQuiescence()); // Strictly after all threads have joined.
     assert(!poisoned.Failed() && !poisoned.Pending());
     const auto recovered = poisoned.EnqueueTracked(0, 278528, 8);
     assert(recovered && recovered->generation != first_write->generation);
     assert(poisoned.Drain([](unsigned,std::uint64_t,std::uint64_t){}) == 1);
     assert(poisoned.WaitUntil(*recovered));
+
+    // A replay callback cannot reset the queue while it owns its GPU
+    // consumer mutex, irrespective of the external session state.
+    Queue nested_reset;
+    const auto nested_ticket = nested_reset.EnqueueTracked(2, 282624, 8);
+    assert(nested_ticket);
+    assert(nested_reset.Drain([&](unsigned,std::uint64_t,std::uint64_t) {
+        assert(!nested_reset.ResetAfterQuiescence());
+    }) == 1);
+    assert(nested_reset.WaitUntil(*nested_ticket));
 }
 '''
 with tempfile.TemporaryDirectory(prefix="encore-deferred-host-") as folder:
