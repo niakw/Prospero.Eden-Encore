@@ -21,6 +21,11 @@ assert "cpu_write_defer{false}" in perf
 assert "cpu_write_defer.store(true" not in code
 assert "ScopedReplay" in replay and "replaying_guest_write" in replay
 assert "ScopedGuestWriteOrigin" in replay and "guest_write_origin_core = previous" in replay
+# Fail-closed runtime qualification, independent of any developer toggle.
+assert "inline constexpr bool kNativePostStorePublicationReady = false;" in replay
+assert code.count("::Eden::GpuDeferredWrite::kNativePostStorePublicationReady") == 2
+assert code.index("!::Eden::GpuDeferredWrite::kNativePostStorePublicationReady") < code.index("deferred_cpu_write_queue.Enqueue(core, address, size)")
+assert "const bool defer_candidate =\n        ::Eden::GpuDeferredWrite::kNativePostStorePublicationReady &&" in code
 # Fail-closed documentation contract: the inactive candidate does not yet
 # synchronize deferred writes before either CPU-read fast path. Pin BOTH bypass
 # sites so a future change must replace this negative proof with a real ordered
