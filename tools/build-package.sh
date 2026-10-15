@@ -33,6 +33,10 @@ dev)
     # in without a separate user-facing Experimental toggle or JSON opt-in.
     # Normal release/release-stage packages now also compile sparse support.
     export EDEN_SPARSE_JIT_DEV=ON
+    # All-On means the cross-core and bounded successor JIT code is actually
+    # compiled into the PS5 test binary, not silently OFF in CMakeCache.txt.
+    # Keep ordinary release builds on the separately validated per-core path.
+    export EDEN_SHARED_JIT=ON EDEN_JIT_COMPILE_BATCH=ON
     # The release-configuration source checks do not apply to development instrumentation.
     export EDEN_SKIP_SOURCE_CHECKS=1
     export EDEN_PACKAGE_DIR="${EDEN_DEV_PACKAGE_DIR:-$root/build/dev/PPSA99008}"
