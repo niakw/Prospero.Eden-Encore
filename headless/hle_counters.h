@@ -29,6 +29,7 @@ public:
                 std::strncmp(entry.name, service, kNameBytes - 1) == 0) {
                 entry.calls.fetch_add(1, std::memory_order_relaxed);
                 entry.nanoseconds.fetch_add(elapsed, std::memory_order_relaxed);
+                RecordSlowCall(entry, elapsed);
                 return;
             }
             if (published == 0) {
@@ -45,6 +46,7 @@ public:
                         std::strncmp(entry.name, service, kNameBytes - 1) == 0) {
                         entry.calls.fetch_add(1, std::memory_order_relaxed);
                         entry.nanoseconds.fetch_add(elapsed, std::memory_order_relaxed);
+                        RecordSlowCall(entry, elapsed);
                         return;
                     }
                     continue;
@@ -56,6 +58,7 @@ public:
                 entry.key.store(key, std::memory_order_release);
                 entry.calls.fetch_add(1, std::memory_order_relaxed);
                 entry.nanoseconds.fetch_add(elapsed, std::memory_order_relaxed);
+                RecordSlowCall(entry, elapsed);
                 return;
             }
         }
