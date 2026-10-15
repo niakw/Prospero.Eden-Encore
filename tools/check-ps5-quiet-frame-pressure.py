@@ -44,6 +44,9 @@ assert "counter" in present  # explicit reset handling; no bogus negative deltas
 assert "std::this_thread::sleep" not in present
 assert "frame_pressure_previous" in header
 assert 'cache_wait_ms=%.3f jit_ms=%.3f' in graphics
+# A disabled deep profiler must never report zero-valued waits as measured.
+assert 'EDEN_FRAME_PRESSURE frame=%u detail=not_measured' in present
+assert 'if (!Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)) {' in present
 # The precise DMA fence wait is generated in native PS5 DEV only; quiet
 # gameplay must use DiagnosticTimer's clock-free disabled path.
 assert 'inline Totals gpu_dma_sync_wait, gpu_puller_semaphore_wait;' in perf
