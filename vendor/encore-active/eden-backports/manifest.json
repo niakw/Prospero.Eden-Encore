@@ -417,9 +417,7 @@
     }
   },
   "excluded_experimental": [
-    "EDEN_EXPERIMENTAL_DUMMY_THREAD_WAITS",
-    "EDEN_EXPERIMENTAL_ICACHE_COHERENCE",
-    "EDEN_EXPERIMENTAL_SM_HOST_WAIT"
+    "EDEN_EXPERIMENTAL_DUMMY_THREAD_WAITS"
   ],
   "pinned_eden_commit": "5f142c7926d0c7fcbbd0ce30794d72f638a43b2a",
   "shipping_receipts": {
