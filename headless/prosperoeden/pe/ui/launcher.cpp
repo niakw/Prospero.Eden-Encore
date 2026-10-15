@@ -270,6 +270,9 @@ void Launcher::launch(const std::string &file, const std::string &title, const s
     launch_box_front_ = case_art.front;
     launch_box_back_ = case_art.back;
     launch_box_spine_ = case_art.spine;
+    launch_title_id_ = title_id;
+    launch_case_placeholder_mask_ = 0;
+    launch_case_ready_mask_ = 0;
     if (!launch_box_front_.empty()) (void)textures_.cover(launch_box_front_, 760.0f);
     if (!launch_box_back_.empty()) (void)textures_.cover(launch_box_back_, 760.0f);
     if (!launch_box_spine_.empty()) (void)textures_.cover(launch_box_spine_, 760.0f);
@@ -815,6 +818,22 @@ void Launcher::draw_launch(Canvas &c)
             fallback = launch_cover_;
     }
     const Cover artwork = c.textures.cover(scan.empty() ? fallback : scan, 760.0f);
+    // One event per visible paper face and state, NEVER a per-frame log.
+    // Stored/decoded/uploaded assets can still fail to reach the render list;
+    // this is the last observable stage before the case-face GPU draw call.
+    const unsigned face_bit = back ? 2u : 1u;
+    if (artwork.texture == 0 && !(launch_case_placeholder_mask_ & face_bit)) {
+        launch_case_placeholder_mask_ |= face_bit;
+        sys::log("EDEN_CASE_DRAW title=%016llX side=%s status=placeholder retail_path=%d",
+                 static_cast<unsigned long long>(launch_title_id_),
+                 back ? "back" : "front", !scan.empty());
+    } else if (artwork.texture != 0 && !(launch_case_ready_mask_ & face_bit)) {
+        launch_case_ready_mask_ |= face_bit;
+        sys::log("EDEN_CASE_DRAW title=%016llX side=%s status=ready source=%s texture=%u",
+                 static_cast<unsigned long long>(launch_title_id_),
+                 back ? "back" : "front", scan.empty() ? "fallback" : "retail",
+                 artwork.texture);
+    }
     if (artwork.texture != 0) {
         // Keep the WHOLE printed back visible: never stretch a scan or crop
         // its French description. Letterbox only for unmatched source ratios.
