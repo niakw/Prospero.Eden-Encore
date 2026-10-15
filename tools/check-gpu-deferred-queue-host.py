@@ -17,6 +17,7 @@ source = r'''
 #include <atomic>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <thread>
 #include <vector>
 using Eden::GpuDeferredWrite::Queue;
@@ -141,9 +142,11 @@ int main() {
     Queue tracked;
     const auto a = tracked.EnqueueTracked(2, 100, 8);
     const auto b = tracked.EnqueueTracked(2, 104, 8);
-    assert(a && b && *a == 1 && *b == 2);
+    assert(a && b && a->sequence == 1 && b->sequence == 2);
+    assert(a->generation == b->generation);
     assert(tracked.AcceptedSequence() == 2);
     assert(tracked.CompletedSequence() == 0 && tracked.Pending());
+    std::optional<Queue::Ticket> late_ticket;
     std::atomic<bool> wait_done{false};
     std::atomic<bool> wait_ok{false};
     std::thread waiting_reader([&] {
@@ -151,13 +154,13 @@ int main() {
         wait_done.store(true, std::memory_order_release);
     });
     std::atomic<unsigned> batch_count{0};
-    assert(tracked.DrainThrough(*b, [&](unsigned core, std::uint64_t addr, std::uint64_t sz) {
+    assert(tracked.DrainThrough(b->sequence, [&](unsigned core, std::uint64_t addr, std::uint64_t sz) {
         assert(core == 2 && addr == 100 && sz == 12);
         assert(tracked.Pending()); // In-flight replay is not a completed ticket.
         batch_count.fetch_add(1);
         // A new producer during replay must not extend this drain indefinitely.
-        auto late = tracked.EnqueueTracked(0, 4096, 8);
-        assert(late && *late == 3);
+        late_ticket = tracked.EnqueueTracked(0, 4096, 8);
+        assert(late_ticket && late_ticket->sequence == 3);
     }) == 1);
     waiting_reader.join();
     assert(wait_done.load() && wait_ok.load());
@@ -166,12 +169,13 @@ int main() {
     assert(tracked.AcceptedSequence() == 3 && tracked.Pending());
     assert(tracked.Drain([&](unsigned, std::uint64_t, std::uint64_t) {}) == 1);
     assert(tracked.CompletedSequence() == 3 && !tracked.Pending());
-    assert(tracked.WaitUntil(3) && !tracked.WaitUntil(4));
+    assert(tracked.WaitUntil(*late_ticket));
+    assert(!tracked.WaitUntil(Queue::Ticket{4, late_ticket->generation}));
 
     // A blocked read must escape on title shutdown rather than wait forever.
     Queue stopping;
     const auto ticket = stopping.EnqueueTracked(1, 8192, 8);
-    assert(ticket && *ticket == 1);
+    assert(ticket && ticket->sequence == 1);
     std::atomic<bool> cancelled{false};
     std::thread blocked([&] { cancelled.store(!stopping.WaitUntil(*ticket)); });
     stopping.Close();
@@ -220,12 +224,12 @@ int main() {
     // new work until producers finally stop. The old implementation did.
     Queue burst;
     const auto initial = burst.EnqueueTracked(0, 32768, 8);
-    assert(initial && *initial == 1);
-    assert(burst.DrainThrough(*initial, [&](unsigned core, std::uint64_t, std::uint64_t) {
+    assert(initial && initial->sequence == 1);
+    assert(burst.DrainThrough(initial->sequence, [&](unsigned core, std::uint64_t, std::uint64_t) {
         assert(core == 0);
         for (unsigned i = 0; i < 400; ++i) {
             const auto added = burst.EnqueueTracked(1, (std::uint64_t(i) + 20) * 4096, 8);
-            assert(added && *added == i + 2);
+            assert(added && added->sequence == i + 2);
         }
     }) == 1);
     assert(burst.CompletedSequence() == 1);
@@ -244,11 +248,11 @@ int main() {
     Queue snapshot;
     const auto early = snapshot.EnqueueTracked(0, 4096, 8);
     const auto later = snapshot.EnqueueTracked(1, 8192, 8);
-    assert(early && later && *early == 1 && *later == 2);
-    assert(snapshot.DrainThrough(*early, [](unsigned, std::uint64_t, std::uint64_t) {}) == 2);
-    assert(snapshot.CompletedSequence() == *later);
+    assert(early && later && early->sequence == 1 && later->sequence == 2);
+    assert(snapshot.DrainThrough(early->sequence, [](unsigned, std::uint64_t, std::uint64_t) {}) == 2);
+    assert(snapshot.CompletedSequence() == later->sequence);
     assert(!snapshot.Pending());
-    assert(snapshot.DrainThrough(*early, [](unsigned, std::uint64_t, std::uint64_t) {
+    assert(snapshot.DrainThrough(early->sequence, [](unsigned, std::uint64_t, std::uint64_t) {
         assert(false);
     }) == 0);
 
