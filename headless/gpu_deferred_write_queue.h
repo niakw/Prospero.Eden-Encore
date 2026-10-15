@@ -98,6 +98,12 @@ public:
     // holds the queue lock while calling the original rasterizer.
     template<class Replay>
     std::uint64_t DrainThrough(Sequence watermark, Replay&& replay) {
+        // Fail closed when a second consumer tries to drain in parallel or
+        // recursively: swapping two snapshots on separate threads could
+        // otherwise publish the newer completion ahead of the older replay.
+        // The caller must arrange a later GPU-owner drain if this returns 0.
+        std::unique_lock owner(consumer_mutex_, std::try_to_lock);
+        if (!owner.owns_lock()) return 0;
         std::uint64_t count = 0;
         while (true) {
             std::vector<Write> work;
@@ -149,6 +155,7 @@ public:
     }
 
 private:
+    std::mutex consumer_mutex_; // Never held by producer or CPU waiter.
     mutable std::mutex mutex_;
     std::condition_variable completed_cv_;
     std::vector<Write> queue_;
