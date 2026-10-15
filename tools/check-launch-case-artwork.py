@@ -38,6 +38,13 @@ assert "services_.box_art(title_id)" in launch_setup
 assert "launch_box_front_ = case_art.front;" in launch_setup
 assert "launch_box_back_ = case_art.back;" in launch_setup
 assert "launch_box_spine_ = case_art.spine;" in launch_setup
+assert "launch_title_id_ = title_id;" in launch_setup
+assert "launch_case_placeholder_mask_ = 0;" in launch_setup
+assert "launch_case_ready_mask_ = 0;" in launch_setup
+assert "EDEN_CASE_DRAW title=%016llX side=%s status=placeholder" in launcher
+assert "EDEN_CASE_DRAW title=%016llX side=%s status=ready" in launcher
+assert 'scan.empty() ? "fallback" : "retail"' in launcher
+assert 'launch_case_ready_mask_ & face_bit' in launcher
 assert "launch_description_" in launch_setup
 assert "launch_screenshots_" in launch_setup
 assert "textures_.cover(launch_box_front_, 760.0f)" in launch_setup
