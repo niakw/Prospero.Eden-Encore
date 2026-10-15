@@ -67,7 +67,7 @@ public:
     // does not invoke it or guarantee GPU-thread lifetime/fence ordering.
     template<class RequestGpu>
     bool PublishAndWake(Ticket ticket, RequestGpu&& request_gpu) {
-        const auto became_ready = PublishImpl(ticket);
+        const auto became_ready = PublishImpl(ticket, true);
         if (!became_ready) return false;
         if (*became_ready) {
             try {
@@ -79,10 +79,17 @@ public:
                 {
                     std::lock_guard lock(mutex_);
                     failed_ = true;
+                    --pending_wake_callbacks_;
                 }
+                wake_cv_.notify_all();
                 completed_cv_.notify_all();
                 throw;
             }
+            {
+                std::lock_guard lock(mutex_);
+                --pending_wake_callbacks_;
+            }
+            wake_cv_.notify_all();
         }
         return true;
     }
@@ -224,6 +231,13 @@ public:
             close_completed_ = false;
         }
         completed_cv_.notify_all();
+        // A publish may have released mutex_ and be about to invoke the GPU
+        // scheduling callback. Join all such callbacks before returning:
+        // otherwise the caller could free the scheduler underneath them.
+        {
+            std::unique_lock lock(mutex_);
+            wake_cv_.wait(lock, [&] { return pending_wake_callbacks_ == 0; });
+        }
         // DrainThrough holds consumer_mutex_ for the complete replay batch.
         // Lock order is consumer_mutex_ -> mutex_ on a drain; never hold
         // mutex_ while waiting for this lock.
@@ -242,7 +256,8 @@ public:
         if (active_consumer_ == this) return false;
         std::lock_guard owner(consumer_mutex_);
         std::lock_guard lock(mutex_);
-        if (!closed_ || !close_completed_) return false;
+        if (!closed_ || !close_completed_ || pending_wake_callbacks_ != 0)
+            return false;
         queue_.clear();
         accepted_ = completed_ = 0;
         generation_ = FreshGeneration(); // Unique across ALL queue instances.
@@ -256,7 +271,7 @@ private:
     // Returning true means a blocked/unready FIFO head became published.
     // A later ready tail does NOT schedule an unnecessary second GPU tick.
     // The wake callback itself runs after this queue lock is released.
-    std::optional<bool> PublishImpl(Ticket ticket) {
+    std::optional<bool> PublishImpl(Ticket ticket, bool arm_wake = false) {
         std::lock_guard lock(mutex_);
         if (closed_ || failed_ || ticket.generation != generation_ || ticket.sequence == 0 ||
             ticket.sequence > accepted_) return std::nullopt;
@@ -271,7 +286,12 @@ private:
             entry->published) return std::nullopt;
         const bool was_ready = !queue_.empty() && queue_.front().published;
         entry->published = true;
-        return !was_ready && !queue_.empty() && queue_.front().published;
+        const bool became_ready = !was_ready && !queue_.empty() &&
+                                  queue_.front().published;
+        // Account for the notifier WHILE holding mutex_, before Close() can
+        // set closed_. Close() waits for this callback before returning.
+        if (arm_wake && became_ready) ++pending_wake_callbacks_;
+        return became_ready;
     }
 
     // Tickets must identify the owning queue as well as the title session.
@@ -322,6 +342,8 @@ private:
     static inline thread_local const Queue* active_consumer_{nullptr};
     mutable std::mutex mutex_;
     std::condition_variable completed_cv_;
+    std::condition_variable wake_cv_;
+    std::size_t pending_wake_callbacks_{};
     std::vector<Write> queue_;
     Sequence accepted_{};
     Sequence completed_{};
