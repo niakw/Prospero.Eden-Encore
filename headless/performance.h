@@ -121,6 +121,10 @@ inline Totals gpu_fence_drain, gpu_present_wait, gpu_queue_full;
 inline Totals gpu_present_free_wait, gpu_present_fence_wait;
 // Guest threads entering the GPU caches: CPU writes to tracked pages and flush-area lookups.
 inline Totals guest_cpu_write, guest_cpu_read;
+// Upstream #187 write-ahead candidate: only mark subsequent registered buffer
+// pages after a successful OnCPUWrite under the buffer-cache mutex. This is
+// not deferred-write replay. Default OFF pending native title qualification.
+inline std::atomic<unsigned> cpu_write_ahead{0};
 // Those entries take the buffer and texture cache locks, which the GPU thread holds for one draw at
 // a time. Shipping builds block exactly as upstream: the earlier bounded spin reduced wake latency
 // but remains a development-only experiment until it is requalified against PS5 soft hangs.

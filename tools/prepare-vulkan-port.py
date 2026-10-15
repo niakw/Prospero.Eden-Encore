@@ -75,7 +75,7 @@ void RasterizerVulkan::DispatchCompute() {"""),
     # when the guest enables occlusion counting.
     ('const bool can_defer_clear = ENABLE_DEFERRED_CLEAR &&',
      'const bool can_defer_clear = ENABLE_DEFERRED_CLEAR && !regs.zpass_pixel_count_enable &&'),
-    ('#include <algorithm>', '#include <algorithm>\n#include "performance.h"'),
+    ('#include <algorithm>', '#include <algorithm>\n#include "performance.h"\n#include "buffer_write_ahead.h"'),
     # Guest threads take the cache locks here (tracked-page writes, flush-area reads).
     ('bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {',
      'bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {\n    ::Eden::Performance::BatchedGuestWriteTimer guest_write_timer;\n    const bool sample_guest_write = ::Eden::Performance::ShouldSampleGuestWrite();'),
@@ -106,6 +106,21 @@ void RasterizerVulkan::DispatchCompute() {"""),
      '    ::Eden::Performance::CachePhaseTimer shader_invalidate{\n'
      '        ::Eden::Performance::CachePhase::GuestWriteShaderInvalidate, sample_guest_write};\n'
      '    pipeline_cache.InvalidateRegion(addr, size);'),
+    # Upstream #187 subset: under the ALREADY-HELD buffer lock, optionally
+    # mark contiguous registered pages CPU-dirty ahead of a guest write.
+    # No guest texture/shader tracking shortcut, no speculative deferred replay;
+    # the unqualified path stays disabled by default (cpu_write_ahead=0).
+    ('        if (buffer_cache.OnCPUWrite(addr, size)) {\n            return true;\n        }\n    }\n',
+     '        if (buffer_cache.OnCPUWrite(addr, size)) {\n            return true;\n        }\n'
+     '        (void)::Eden::BufferWriteAhead::MarkFollowingPages(\n'
+     '            static_cast<std::uint64_t>(addr), static_cast<std::uint64_t>(size),\n'
+     '            ::Eden::Performance::cpu_write_ahead.load(std::memory_order_relaxed),\n'
+     '            [&](std::uint64_t page, std::uint64_t span) {\n'
+     '                return buffer_cache.IsRegionRegistered(static_cast<DAddr>(page), span);\n'
+     '            },\n'
+     '            [&](std::uint64_t page, std::uint64_t span) {\n'
+     '                return buffer_cache.OnCPUWrite(static_cast<DAddr>(page), span);\n'
+     '            });\n    }\n'),
     # From upstream ProsperoEden 0dd9dd0 (#102): submitting after 4096 draws
     # can exceed the PS5 GPU watchdog (VK_ERROR_DEVICE_LOST). Cap command
     # buffers at 512 draws, keeping Encore's current worker handoff cadence
