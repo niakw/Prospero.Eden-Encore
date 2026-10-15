@@ -232,3 +232,70 @@ the exact tested build/source SHA; compare with a native A/B run only after
 a hypothesis-specific host regression exists. Existing 5-second frame
 pressure probes report mostly zero for several wait categories; those
 zeros cannot be treated as proof that no thread was blocked.
+
+
+## Cross-check of 01:22 archive — 15 October 2026
+
+The later-collected filenames `boot-trace(20261015-012240).txt`,
+`stderr(20261015-012244).log`, `heap(20261015-012240).log`,
+and `network-accepted(9).log` preserve **the same tested session**
+`9d066b826cf277efda1f0ea9d5555de18e2f5b08`, not a second
+independent post-fix crash. The session started at epoch
+`1792024431032 ms` (2026-10-15 00:33:51 UTC). The sampled guest
+fault at monotonic `136407283966809 ns` corresponds to approximately
+00:44:47 UTC, around **656.1 s after session start**. The adjacent
+launcher diagnostic confirms the original `pc=0x4`, `lr=0x8b9f42cc`
+fault; `failures=0` in the heap snapshot is not evidence of
+memory-corruption absence.
+
+Offline numerical analysis of `heap(20261015-012240).log` found 127
+five-second Vulkan frame windows: median **29.999 FPS**, minimum
+**16.520 FPS**, maximum individual window-reported `worst_ms=721.319`,
+25 recorded frames over 200 ms, and five over 500 ms. The retained
+`heap.prev(20261015-012241).log` has 131 windows across earlier dense
+JIT sessions: median **29.999 FPS**, minimum **18.087 FPS**, maximum
+`worst_ms=1233.472`, 23 over 200 ms, six over 500 ms. The latter file
+contains multiple sessions, so **this is not a controlled dense-vs-sparse
+A/B**. Sparse JIT cannot be claimed to resolve stutter from this
+comparison. `EDEN_FRAME_PRESSURE` outputs zero for all its categories
+in many windows with visible spikes; no conclusion about actual
+GPU/IPC/cache/JIT wait durations can be drawn from those zero values
+until the instrumentation's enabled/observed path is verified.
+
+The current-session portion of the timestamped network audit (starting
+at the `session-start` marker for `9d066b82`) records 369 individually
+logged denied guest DNS lookups and 213 aggregated denial summaries.
+The network file is cumulative and also contains **older sessions**;
+the denial records must not be counted as successful external
+connections. The last network record is approximately 37 s before
+the recorded fault. No network-to-crash causality is established.
+
+This particular `9d066b82` launcher log reports a catalog of 4,835
+retail-case index rows. Two installed titles produced name-based
+matches; title `0100C49025D3E000` produced `status=no-match`
+for the then-available scanned/alternate names. The successful
+`EDEN_CASE_FETCH status=stored` records prove source downloads and
+writes, **not** successful GL texture upload or on-screen rendering.
+Later source changes added `EDEN_CASE_RESOLVE`,
+`EDEN_CASE_RESULT`, and `EDEN_CASE_TEXTURE` stages and fixed the
+native BGRA TGA cache validation; none were exercised by this
+older tested binary. Do not classify the retail-case problem as
+fixed without seeing those stages in a matching native artifact.
+
+The independent pad input heartbeat increased from 1,250 polls /
+4,022 returned samples to 157,500 polls / 425,885 samples over
+approximately 647.80 s: about **241 poll calls/s** and **651 returned
+samples/s**, or **2.70 samples/poll**. These are API-read/sample
+counters, not unique human button actions. The sample flow continued
+to within about 1.8 s of the guest fault, with `errors=0`; it does not
+establish the title's own in-match action-binding correctness.
+
+**Next engineering gate:** preserve the two distinct failures
+(guest invalid branch versus indefinite GPU progress stall).
+Resolve the saved guest LR against loaded code segment boundaries,
+and only in the actual fault handler record safely validated
+branch-source instruction/register context. For retail art, prove
+index/name lookup, cached-file format, `box_art()` publication,
+decode success, GL texture upload, and active face rendering in
+separate stages. Do not request another console cycle merely to
+repeat the already captured 01:22 archive.
