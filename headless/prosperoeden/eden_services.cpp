@@ -669,7 +669,12 @@ unsigned EnsureRetailCase(std::uint64_t title_id, const std::string& name,
         ValidNlibTga(CaseFacePath(title_id, "front")) &&
         ValidNlibTga(CaseFacePath(title_id, "back"));
     for (int side = 0; side < 3; ++side) {
-        if (cancel && cancel->load(std::memory_order_acquire)) return changed_faces;
+        if (cancel && cancel->load(std::memory_order_acquire)) {
+            // Aborted title switch must not lock the next attempt out for
+            // five minutes after a partial or cancelled CDN transaction.
+            all_ready = false;
+            break;
+        }
         // Front and back always fetch first. A successful first-pass pair
         // can be followed by its spine in the SAME background enrichment;
         // otherwise the 5-minute retry could leave a complete paper wrap
@@ -733,7 +738,9 @@ unsigned EnsureRetailCase(std::uint64_t title_id, const std::string& name,
             if (actual != candidates.front()) all_ready = false;
         }
     }
-    if (all_ready) {
+    if (all_ready || (cancel && cancel->load(std::memory_order_acquire))) {
+        // A fully successful refresh needs no retry guard; a cancelled
+        // refresh is immediately retryable on the next launcher session.
         std::lock_guard retry(retry_mutex);
         retries.erase(title_id);
     }
