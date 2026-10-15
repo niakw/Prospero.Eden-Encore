@@ -27,6 +27,32 @@ if(EDEN_GUEST_WRITE_BRIDGE_DEV)
     write_derived("${PORT_BUILD_DIR}/include/video_core/memory_manager.h" "${bridge_h}")
     target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/include")
     target_include_directories(core BEFORE PRIVATE "${PORT_BUILD_DIR}/include")
+    # The pinned GPU-dirty collector has an unsafe read/exchange handoff:
+    # concurrent Collect from the guest and renderer can discard another
+    # producer's pending transform. Derive a host-tested synchronized version
+    # ONLY when this opt-in bridge is compiled, leaving pinned sources intact.
+    file(READ "${PROJECT_SOURCE_DIR}/src/core/gpu_dirty_memory_manager.h" bridge_dirty)
+    set(dirty_entry "    void Collect(PAddr address, size_t size) {\n        TransformAddress t = BuildTransform(address, size);")
+    set(dirty_nested "                    std::scoped_lock lk(guard);\n                    back_buffer.emplace_back(tmp);")
+    foreach(anchor IN ITEMS dirty_entry dirty_nested)
+        string(FIND "${bridge_dirty}" "${${anchor}}" found)
+        if(found LESS 0)
+            message(FATAL_ERROR "Pinned GPU-dirty collector changed (${anchor})")
+        endif()
+    endforeach()
+    string(REPLACE "${dirty_entry}"
+        "    void Collect(PAddr address, size_t size) {\n        std::scoped_lock lk(guard);\n        TransformAddress t = BuildTransform(address, size);"
+        bridge_dirty "${bridge_dirty}")
+    # Do not recursively acquire guard inside the now-serialized Collect.
+    string(REPLACE "${dirty_nested}"
+        "                    back_buffer.emplace_back(tmp);"
+        bridge_dirty "${bridge_dirty}")
+    file(MAKE_DIRECTORY "${PORT_BUILD_DIR}/deferred-core/core")
+    write_derived("${PORT_BUILD_DIR}/deferred-core/core/gpu_dirty_memory_manager.h"
+        "${bridge_dirty}")
+    target_include_directories(core BEFORE PRIVATE "${PORT_BUILD_DIR}/deferred-core")
+    target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/deferred-core")
+
 
     # Derive the actual GPU memory manager, explicitly using the shadow header.
     file(READ "${PROJECT_SOURCE_DIR}/src/video_core/memory_manager.cpp" bridge_mm)
@@ -63,7 +89,7 @@ void MemoryManager::FlushCaching() {
     }
 ]=])
     string(REPLACE "${flush_api}" "${bridge_flush}" bridge_mm "${bridge_mm}")
-    string(PREPEND bridge_mm "#include \"${EDEN_PORT_DIR}/performance.h\"\n#include \"${EDEN_PORT_DIR}/gpu_deferred_replay.h\"\n")
+    string(PREPEND bridge_mm "#include \"core/gpu_dirty_memory_manager.h\"\n#include \"${EDEN_PORT_DIR}/performance.h\"\n#include \"${EDEN_PORT_DIR}/gpu_deferred_replay.h\"\n")
     write_derived("${PORT_BUILD_DIR}/memory_manager_deferred.cpp" "${bridge_mm}")
 
     # Use maintained Vulkan implementation; do not mutate its byte-pinned

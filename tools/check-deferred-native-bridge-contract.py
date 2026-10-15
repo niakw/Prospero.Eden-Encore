@@ -117,4 +117,9 @@ include("__BRIDGE__")
     assert "void State::ProcessData(std::span<const u8> read_buffer) {\n    memory_manager.FlushCaching();" in upload
     h=(stage/"include/video_core/memory_manager.h").read_text()
     assert "GpuDeferredWrite::Queue deferred_cpu_write_queue" in h
+    dirty_h=(stage/"deferred-core/core/gpu_dirty_memory_manager.h").read_text()
+    assert dirty_h.count("void Collect(PAddr address, size_t size) {") == 1
+    assert "void Collect(PAddr address, size_t size) {\n        std::scoped_lock lk(guard);" in dirty_h
+    assert "std::scoped_lock lk(guard);\n                    back_buffer.emplace_back(tmp);" not in dirty_h
+    assert '#include "core/gpu_dirty_memory_manager.h"' in mm
 print("NATIVE_GUEST_WRITE_BRIDGE_SOURCE_PASS default_off=1 dev_on_translations=6 no_runtime_enable=1")
