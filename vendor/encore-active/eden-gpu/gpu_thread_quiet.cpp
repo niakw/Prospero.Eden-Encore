@@ -1,5 +1,6 @@
 namespace VideoCore { class RendererBase; }
 namespace Eden { bool LoadingTick(VideoCore::RendererBase&, bool idle); }
+#include "gpu_failure.h"
 #include "crash_report.h"
 // SPDX-FileCopyrightText: Copyright 2026 Eden Emulator Project
 // SPDX-License-Identifier: GPL-3.0-or-later
@@ -127,13 +128,25 @@ u64 ThreadManager::PushCommand(CommandData&& command_data, bool block, bool is_a
             std::move(command_data), fence, block);
         }
     }
-    if (!pushed)
-        return state.signaled_fence.load(std::memory_order_relaxed);
+    if (!pushed) {
+        if (stop_source.stop_requested()) {
+            if (const auto failure = Eden::PeekGpuFailure()) {
+                std::rethrow_exception(failure);
+            }
+        }
+        return state.signaled_fence.load(std::memory_order_acquire);
+    }
 
     if (block) {
-        state.cv.wait(lk, stop_source.get_token(), [this, fence] {
-            return fence <= state.signaled_fence.load(std::memory_order_relaxed);
+        const bool completed = state.cv.wait(lk, stop_source.get_token(), [this, fence] {
+            return fence <= state.signaled_fence.load(std::memory_order_acquire);
         });
+        if (!completed) {
+            if (const auto failure = Eden::PeekGpuFailure()) {
+                std::rethrow_exception(failure);
+            }
+            return state.signaled_fence.load(std::memory_order_acquire);
+        }
     }
 
     return fence;
