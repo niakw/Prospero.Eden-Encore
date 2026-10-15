@@ -641,11 +641,13 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
                  static_cast<unsigned long long>(title_id),
                  selected->second[0].size(), selected->second[1].size(),
                  selected->second[2].size());
-    // Both Home and Library may enrich the same title at once. The fixed
-    // striped locks protect the atomic .new cache path, not the render thread.
+    // Both Home and Library may enrich the same title at once. These calls
+    // happen only on background workers, never in a render/input callback.
+    // Serialize an in-flight fetch instead of silently dropping the second
+    // enrichment (which could publish fallback artwork for five minutes).
     static std::array<std::mutex, 64> locks;
-    std::unique_lock guard(locks[title_id % locks.size()], std::try_to_lock);
-    if (!guard.owns_lock()) return;
+    std::unique_lock guard(locks[title_id % locks.size()]);
+    if (cancel && cancel->load(std::memory_order_acquire)) return;
     static std::mutex retry_mutex;
     static std::unordered_map<std::uint64_t, std::chrono::steady_clock::time_point> retries;
     {
@@ -663,10 +665,13 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
         ValidNlibTga(CaseFacePath(title_id, "back"));
     for (int side = 0; side < 3; ++side) {
         if (cancel && cancel->load(std::memory_order_acquire)) return;
-        // The optional spine must NEVER delay publication of either paper
-        // face. On this first pass fetch front/back; fetch spine on a later
-        // media refresh after both are already cached.
-        if (side == 2 && !both_faces_cached_at_start) {
+        // Front and back always fetch first. A successful first-pass pair
+        // can be followed by its spine in the SAME background enrichment;
+        // otherwise the 5-minute retry could leave a complete paper wrap
+        // without its printed spine until the next launcher session.
+        if (side == 2 && !both_faces_cached_at_start &&
+            (!ValidNlibTga(CaseFacePath(title_id, "front")) ||
+             !ValidNlibTga(CaseFacePath(title_id, "back")))) {
             all_ready = false;
             break;
         }
