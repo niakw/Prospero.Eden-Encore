@@ -71,6 +71,33 @@ int main() {
     });
     assert(held_for_fence == 1 && immediate == 1);
 
+    // Cross-core enqueue order is part of the memory coherency contract.
+    // Previously a per-core sweep moved core 0 ahead of earlier core 2.
+    Queue ordered;
+    assert(ordered.Enqueue(2,12288,8));
+    assert(ordered.Enqueue(0,4096,8));
+    assert(ordered.Enqueue(3,16384,8));
+    assert(ordered.Enqueue(1,8192,8));
+    std::vector<unsigned> observed_order;
+    assert(ordered.Drain([&](unsigned core, std::uint64_t, std::uint64_t) {
+        observed_order.push_back(core);
+    })==4);
+    assert((observed_order == std::vector<unsigned>{2,0,3,1}));
+    assert(!ordered.Pending());
+
+    // Adjacent writes by the same core cannot merge when another core's
+    // write sits between them in the global FIFO.
+    Queue interleaved;
+    assert(interleaved.Enqueue(0,64,8));
+    assert(interleaved.Enqueue(1,4096,8));
+    assert(interleaved.Enqueue(0,72,8));
+    unsigned entries=0;
+    assert(interleaved.Drain([&](unsigned,std::uint64_t,std::uint64_t) {
+        ++entries;
+    })==3);
+    assert(entries==3);
+
+
     // Independent producer cores race with the GPU drain: every unique
     // page written must be replayed, including pushes during a drain.
     Queue concurrent;

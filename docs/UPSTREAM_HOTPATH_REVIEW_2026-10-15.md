@@ -95,3 +95,20 @@ cross-region adjacency and unwritten gaps within a region.
 This conservative policy is source-only; the full #187 runtime path
 remains intentionally disconnected until ordered GPU/DMA/fence replay is
 verified, including on title teardown.
+
+## Cross-core FIFO requirement and correction
+
+The first host queue drained all core 0 writes before core 1-3 writes.
+That could reorder CPU invalidations across independent core producers
+and make a GPU cache snapshot inconsistent. The new session-owned FIFO
+assigns one mutex-protected enqueue order across all cores and stores
+the original core on each range. Replaying never holds the queue mutex;
+a callback may enqueue more work for a subsequent batch. Coalescing
+only applies to adjacent/overlapping ranges from the **same core**
+in the **same 2-KiB dirty region**, and only when consecutive in FIFO.
+The sanitizer fixture asserts cross-core [2,0,3,1] ordering and prohibits
+a coalescing shortcut across intervening core writes.
+
+This guarantees enqueue order only. It does NOT prove the memory visibility
+order between guest writes and GPU command execution; native enablement
+remains blocked on DMA/fence and title-lifecycle contracts.
