@@ -177,27 +177,23 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
 
     const std::string& scan = rear ? game.box_back : game.box_front;
     if (!scan.empty()) {
-        // The generic cover() helper drew a second plastic bezel. Use the
-        // original opaque scan directly, with a *UV cover* of the paper: an
-        // aspect-contain image left a large empty column by the opening rim.
-        // Cropping the source UV (not stretching its pixels) fills the same
-        // square-corner paper on both sides, including next to the spine.
+        // Never crop a paper scan's banner, title, or top/bottom logos.
+        // Preserve its complete aspect ratio, with the hinge side touching
+        // the printed spine (front LEFT, back RIGHT) and square paper corners.
         const Cover artwork = c.textures.cover(
             scan, std::max(paper.w, paper.h) * texture_scale);
         if (artwork.texture != 0) {
-            Rect uv{0.0f, 0.0f, 1.0f, 1.0f};
             const float source = std::max(0.01f, artwork.aspect);
             const float target = paper.w / paper.h;
+            Rect fitted = paper;
             if (source > target) {
-                uv.w = target / source;
-                // No transparent seam at either of the two printed folds.
-                uv.x = rear ? 1.0f - uv.w : 0.0f;
+                fitted.h = paper.w / source;
+                fitted.y += (paper.h - fitted.h) * 0.5f;
             } else if (source < target) {
-                uv.h = source / target;
-                // Centre the minimal vertical crop to retain retail artwork.
-                uv.y = (1.0f - uv.h) * 0.5f;
+                fitted.w = paper.h * source;
+                if (rear) fitted.x += paper.w - fitted.w;
             }
-            c.list.image(artwork.texture, paper, uv,
+            c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f},
                          Color::rgb(0xffffff,
                                     tween::cubic_out(artwork.age / 0.22f)));
         } else {
