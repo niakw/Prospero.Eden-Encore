@@ -19,7 +19,9 @@ assert "#ifdef EDEN_DEV_PROFILE" in hot
 assert "HleCounters hle_calls;" in source.split("#ifdef EDEN_DEV_PROFILE", 1)[1]
 assert "(void)service;" in hot and "(void)command;" in hot and "(void)ns;" in hot
 assert "hle_mutex" not in hot and "std::map<" not in hot
-assert "hle_calls.ForEach(" in source
+assert "hle_calls.ForEachLatency(" in source
+assert "EDEN_DEV_HLE_TAIL" in source
+assert "RecordSlowCall(entry, elapsed);" in (root / "headless/hle_counters.h").read_text()
 assert "EDEN_DEV_HLE_OVERFLOW" in source
 assert "std::array<HleReportRow, 32> heaviest{};" in source
 assert "EDEN_DEV_HLE_SUMMARY keys=%zu reported=%zu calls=%llu ns=%llu" in source
