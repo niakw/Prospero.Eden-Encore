@@ -54,14 +54,15 @@ The disabled candidate `headless/gpu_deferred_write_queue.h` now exposes:
   and rejected writes must never be silently acknowledged.
 - `Pending` includes in-flight callbacks, avoiding a false empty indication
   while an older write is being replayed.
-- A separate try-lock guards the GPU consumer: if a second drain attempts
-  to run while another is replaying, it processes nothing and cannot falsely
-  advance completion. The GPU owner must reschedule a later drain; this
-  protects ordering but does not independently guarantee liveness.
+- A separate mutex serializes GPU consumers: a second drain waits for the
+  earlier replay to finish, then processes its own requested watermark;
+  it cannot skip dependent invalidations. Recursive drain of the same queue
+  on the owning thread fails fast rather than silently bypassing replay.
+  Native lock-order and reentrancy must still be audited before enablement.
 
 Targeted host-only Clang/ASan/UBSan compilation and execution passed (four
 producers, 1,280 writes, coalescing, completion wait, shutdown cancellation,
-and rejected concurrent replay ownership (25 local stress iterations)).
+and serialized concurrent replay owners (25 local stress iterations)).
 This is **not** a native SDK build and **does not** establish renderer correctness.
 
 **Still missing and blocking:** no real `HandleRasterizerDownload`,
