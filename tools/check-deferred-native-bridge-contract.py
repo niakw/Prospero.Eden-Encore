@@ -122,4 +122,82 @@ include("__BRIDGE__")
     assert "void Collect(PAddr address, size_t size) {\n        std::scoped_lock lk(guard);" in dirty_h
     assert "std::scoped_lock lk(guard);\n                    back_buffer.emplace_back(tmp);" not in dirty_h
     assert '#include "core/gpu_dirty_memory_manager.h"' in mm
+    # Compile the generated (not hand-reimplemented) GPU-dirty collector
+    # against a minimal pinned-page-size shim under ASan and UBSan.
+    stub=stage/"fixture/core"
+    stub.mkdir(parents=True,exist_ok=True)
+    (stub/"device_memory_manager.h").write_text(
+        "#pragma once\n#include <cstddef>\n#include <cstdint>\n"
+        "using PAddr = std::uint64_t;\nusing u32 = std::uint32_t;\n"
+        "using u64 = std::uint64_t;\n"
+        "namespace Core { inline constexpr std::size_t DEVICE_PAGEBITS = 12; }\n"
+    )
+    stress = r'''
+#include "core/gpu_dirty_memory_manager.h"
+#include <array>
+#include <atomic>
+#include <cassert>
+#include <cstdint>
+#include <functional>
+#include <thread>
+#include <vector>
+int main() {
+    static constexpr unsigned Cores=4, Writes=400;
+    Core::GPUDirtyMemoryManager dirty;
+    std::array<std::atomic<bool>,Cores> finished{};
+    std::vector<unsigned char> seen(Cores*Writes,0);
+    auto receive = [&](PAddr a, std::size_t length) {
+        assert(a>=2048 && a%2048==0 && length==64);
+        const auto index=a/2048-1;
+        assert(index<seen.size());
+        ++seen[index];
+    };
+    std::function<void(PAddr,std::size_t)> callback=receive;
+    std::vector<std::thread> writers;
+    for(unsigned core=0;core<Cores;++core) writers.emplace_back([&,core] {
+        for(unsigned i=0;i<Writes;++i) {
+            const auto address=std::uint64_t(core*Writes+i+1)*2048;
+            dirty.Collect(address,64);
+            if((i%11)==0) std::this_thread::yield();
+        }
+        finished[core].store(true,std::memory_order_release);
+    });
+    while(true) {
+        dirty.Gather(callback);
+        bool all=true;
+        for(auto& done:finished) all &= done.load(std::memory_order_acquire);
+        if(all) break;
+        std::this_thread::yield();
+    }
+    for(auto& w:writers) w.join();
+    dirty.Gather(callback);
+    for(unsigned i=0;i<seen.size();++i) assert(seen[i]!=0);
+
+    // Same-region disjoint writes must union their 64-byte dirty masks.
+    Core::GPUDirtyMemoryManager blocks;
+    std::vector<std::thread> union_writers;
+    for(unsigned c=0;c<4;++c) union_writers.emplace_back([&,c] {
+        for(unsigned j=0;j<8;++j) blocks.Collect(0x200000+c*512+j*64,64);
+    });
+    for(auto& w:union_writers) w.join();
+    std::vector<std::pair<PAddr,std::size_t>> combined;
+    std::function<void(PAddr,std::size_t)> union_callback =
+        [&](PAddr a,std::size_t n){combined.emplace_back(a,n);};
+    blocks.Gather(union_callback);
+    assert(combined.size()==1);
+    assert(combined[0].first==0x200000 && combined[0].second==2048);
+}
+'''
+    cpp=stage/"dirty_collector_stress.cpp"
+    binary=stage/"dirty_collector_stress"
+    cpp.write_text(stress)
+    subprocess.run(["clang++","-std=c++20","-O1","-g","-pthread",
+                    "-Wall","-Wextra","-Werror","-fsanitize=address,undefined",
+                    "-fno-sanitize-recover=all",
+                    "-I",str(stage/"deferred-core"),"-I",str(stage/"fixture"),
+                    str(cpp),"-o",str(binary)],
+                   check=True,timeout=45)
+    subprocess.run([str(binary)],check=True,timeout=45)
+    print("DEFERRED_GPU_DIRTY_STRESS_PASS producers=4 regions=1600 live_gather=1 mask_union=32")
+
 print("NATIVE_GUEST_WRITE_BRIDGE_SOURCE_PASS default_off=1 dev_on_translations=6 no_runtime_enable=1")
