@@ -232,6 +232,9 @@ class Launcher
     std::string launch_box_front_;
     std::string launch_box_back_;
     std::string launch_box_spine_;
+    std::uint64_t launch_title_id_ = 0; // single launch provenance in case draw logs
+    unsigned launch_case_placeholder_mask_ = 0; // one-time per-face diagnostic
+    unsigned launch_case_ready_mask_ = 0;
     std::string launch_description_;
     std::vector<std::string> launch_screenshots_;
     tween::Timer launch_;
