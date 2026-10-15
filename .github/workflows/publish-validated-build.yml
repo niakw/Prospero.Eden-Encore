@@ -1,4 +1,4 @@
-name: Publish validated PS5 build
+name: Publish Eden Encore Release (FTP)
 
 # Separate publication job: download a previously GREEN native artifact.
 # Never rebuild from HEAD and never silently publish a different source SHA.
@@ -30,7 +30,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publish-validated-test:
+  publish-ftp-release:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -66,8 +66,8 @@ jobs:
           count=$(jq --arg name "$ARTIFACT_NAME" '[.artifacts[] | select(.name == $name and .expired == false)] | length' <<< "$artifacts")
           [[ "$count" == "1" ]] || { echo "::error::Expected one unexpired app artifact, found $count"; exit 1; }
           short="${EXPECTED_SOURCE_SHA:0:8}"
-          echo "tag=encore-test-$short" >> "$GITHUB_OUTPUT"
-          echo "zip=Eden-Encore-$short-PPSA99008.zip" >> "$GITHUB_OUTPUT"
+          echo "tag=encore-R1-$short" >> "$GITHUB_OUTPUT"
+          echo "zip=Eden-Encore-$short-FTP-PPSA99008.zip" >> "$GITHUB_OUTPUT"
           echo "Approved run $SOURCE_RUN_ID, source $EXPECTED_SOURCE_SHA, artifact $ARTIFACT_NAME"
 
       - name: Download exact approved PS5 application
@@ -99,21 +99,47 @@ jobs:
           assert (app / 'eboot.bin').stat().st_size > 1_000_000
           print('PASS: matching native title ID and executable')
           PY
+          # Preserve executable permissions in ZIP for FTP homebrew installs.
+          # An FTP client may reset them, so the release notes explain chmod.
+          chmod -R 0777 pinned-app/PPSA99008
           mkdir -p dist
           (cd pinned-app && zip -qrX "../dist/$ZIP_NAME" PPSA99008)
           unzip -tq "dist/$ZIP_NAME" >/dev/null
+          ZIP_PATH="dist/$ZIP_NAME" python3 - <<'PY'
+          from pathlib import Path
+          import json
+          import os
+          import stat
+          import zipfile
+          with zipfile.ZipFile(os.environ['ZIP_PATH']) as package:
+              members = package.infolist()
+              names = [m.filename for m in members]
+              assert len(members) >= 50, len(members)
+              assert len(names) == len(set(names)), 'duplicate ZIP members'
+              assert all(n.startswith('PPSA99008/') and '..' not in Path(n).parts for n in names)
+              for member in members:
+                  perms = (member.external_attr >> 16) & 0o777
+                  assert member.create_system == 3 and perms == 0o777, (member.filename, oct(perms))
+                  assert not stat.S_ISLNK(member.external_attr >> 16), member.filename
+              for name in ('eboot.bin', 'sce_sys/param.json', 'core-homebrew.nro', 'network-hosts.txt'):
+                  assert f'PPSA99008/{name}' in names, name
+              data = json.loads(package.read('PPSA99008/sce_sys/param.json'))
+              assert data['titleId'] == 'PPSA99008'
+              assert package.getinfo('PPSA99008/eboot.bin').file_size > 1_000_000
+              print(f'FTP_ZIP_OK root=PPSA99008 files={sum(not m.is_dir() for m in members)} mode=0777')
+          PY
           (cd dist && sha256sum "$ZIP_NAME" > SHA256SUMS && sha256sum -c SHA256SUMS)
-          echo "Archive root: PPSA99008/"
+          echo "FTP archive root: PPSA99008/"
           echo "File count: $(find pinned-app/PPSA99008 -type f | wc -l)"
 
-      - name: Write transparent pre-release notes
+      - name: Write standard Release notes and FTP instructions
         env:
           SOURCE_RUN_ID: ${{ env.SOURCE_RUN_ID }}
           EXPECTED_SOURCE_SHA: ${{ env.EXPECTED_SOURCE_SHA }}
         shell: bash
         run: |
           cat > dist/RELEASE-NOTES.md <<EOF
-          # Eden Encore — validated native PS5 test package
+          # Eden Encore — R1 native PS5 FTP package
 
           **Source SHA:** \`$EXPECTED_SOURCE_SHA\`
 
@@ -121,7 +147,7 @@ jobs:
 
           This ZIP is repackaged from the *existing successful CI artifact*,
           without recompiling or changing \`PPSA99008/\`.
-          It is a **test pre-release**, not a stable R1.
+          This is a **normal, visible GitHub Release**, not a pre-release.\n          Native compilation is verified; gameplay stability is not guaranteed.
 
           The selected All-On test build compiles shared and successor-batch JIT
           and materializes active I-cache and host service-wait fixes.
@@ -129,13 +155,12 @@ jobs:
           verification is not evidence that gameplay freezes, HUD delays or
           cold-start stutters are fixed on the physical console.
 
-          Install the files from \`PPSA99008/\` to the matching application
-          directory. Do not rename the title ID.
+          FTP: extract and upload the complete PPSA99008/ folder into\n          /data/homebrew/, resulting in /data/homebrew/PPSA99008/.\n          The ZIP stores Unix permission 0777 for every file and folder.\n          Some FTP clients strip these permissions: apply 0777 recursively\n          on the console if CE-107750-0 appears. Do not rename PPSA99008\n          or overwrite personal files under /data/prosperoeden.
 
           \`SHA256SUMS\` checks the downloadable ZIP archive.
           EOF
 
-      - name: Publish immutable test GitHub Release
+      - name: Publish visible latest standard GitHub Release
         shell: bash
         env:
           TAG: ${{ steps.verify.outputs.tag }}
@@ -146,7 +171,7 @@ jobs:
             echo "Release $TAG already exists; refusing to overwrite immutable assets."
             exit 0
           fi
-          gh release create "$TAG"             "dist/$ZIP_NAME"             "dist/SHA256SUMS"             --repo "$GITHUB_REPOSITORY"             --target "$EXPECTED_SOURCE_SHA"             --title "Eden Encore PS5 test ($TAG)"             --notes-file dist/RELEASE-NOTES.md             --prerelease --latest=false
+          gh release create "$TAG"             "dist/$ZIP_NAME"             "dist/SHA256SUMS"             --repo "$GITHUB_REPOSITORY"             --target "$EXPECTED_SOURCE_SHA"             --title "Eden Encore R1 - PS5 FTP ($TAG)"             --notes-file dist/RELEASE-NOTES.md             --latest
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url,tagName,isPrerelease
 
       - name: Explain missing GitHub publication permission
