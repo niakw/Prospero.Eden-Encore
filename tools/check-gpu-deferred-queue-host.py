@@ -528,6 +528,9 @@ int main() {
     title_close.join();
     assert(close_returned.load(std::memory_order_acquire));
     assert(teardown.CompletedSequence() == active->sequence);
+    // This callback completed while shutdown was joining GPU ownership.
+    // Its CPU wait ticket MUST still fail after Close().
+    assert(!teardown.WaitUntil(*active));
     assert(teardown.Drain([](unsigned,std::uint64_t,std::uint64_t) {
         assert(false); // Never replay remaining queued work after Close().
     }) == 0);
@@ -802,6 +805,43 @@ int main() {
     assert(callback_count.load() == 3 && !asynchronous.Pending());
     asynchronous.Close();
     assert(asynchronous.ResetAfterQuiescence());
+
+    // A completed write is NOT a valid read ticket once its title has
+    // closed. The previous implementation returned true based only on the
+    // completion watermark, even after Close() finished.
+    Queue completed_then_closed;
+    const auto done_before_close = completed_then_closed.EnqueueTracked(0, 131072, 8);
+    assert(done_before_close);
+    assert(completed_then_closed.Drain(
+        [](unsigned,std::uint64_t,std::uint64_t){}) == 1);
+    assert(completed_then_closed.WaitUntil(*done_before_close));
+    completed_then_closed.Close();
+    assert(!completed_then_closed.WaitUntil(*done_before_close));
+
+    // Same failure contract after a previously completed write followed by
+    // a partial replay exception: completed tickets from a poisoned session
+    // cannot authorize further guest reads.
+    Queue poisoned_after_success;
+    const auto prior = poisoned_after_success.EnqueueTracked(0, 135168, 8);
+    assert(prior);
+    assert(poisoned_after_success.Drain(
+        [](unsigned,std::uint64_t,std::uint64_t){}) == 1);
+    assert(poisoned_after_success.WaitUntil(*prior));
+    const auto causes_failure = poisoned_after_success.EnqueueTracked(1, 139264, 8);
+    assert(causes_failure);
+    bool callback_failed = false;
+    try {
+        poisoned_after_success.Drain([](unsigned,std::uint64_t,std::uint64_t) {
+            throw std::runtime_error("GPU cache replay failed");
+        });
+    } catch (const std::runtime_error&) {
+        callback_failed = true;
+    }
+    assert(callback_failed && poisoned_after_success.Failed());
+    assert(!poisoned_after_success.WaitUntil(*prior));
+    assert(!poisoned_after_success.WaitUntil(*causes_failure));
+    poisoned_after_success.Close();
+    assert(poisoned_after_success.ResetAfterQuiescence());
 }
 '''
 with tempfile.TemporaryDirectory(prefix="encore-deferred-host-") as folder:
