@@ -595,17 +595,17 @@ jobs:
           (cd release-dist && sha256sum Eden-Encore-5edc677b-PPSA99008.zip > SHA256SUMS && sha256sum -c SHA256SUMS)
           cat > release-dist/RELEASE-NOTES.md <<'NOTES'
           # Eden Encore — validated PS5 test build (5edc677b)
-          
+
           Source SHA: `5edc677b6dbe5f74fac558e92f35b421b7ba72b6`
-          
+
           Native Actions run: https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38743260411
-          
+
           The tested All-On profile includes diagnostic tools but DOES NOT
           include the separately quarantined Dynarmic I-cache, dummy-thread
           or service-manager host-wait backports, nor shared JIT or batching.
           This version has not been demonstrated to fix game freezes, HUD
           delays, or cold-start stutter.
-          
+
           Install contents of the ZIP under the intended PPSA99008 app folder.
           This is a development **pre-release**, not a new stable R1.
           NOTES
