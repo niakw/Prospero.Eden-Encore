@@ -43,6 +43,23 @@ int main() {
     assert((written[2] == std::array<std::uint64_t,3>{0,4100,10}));
     assert(q.Drain(replay) == 0);
 
+    // Boundary-adjacent and gap-separated writes must not coalesce into
+    // one GPU dirty area, even when inside the same guest 4-KiB page.
+    Queue regions;
+    assert(regions.Enqueue(0,2040,8));
+    assert(regions.Enqueue(0,2048,8));
+    assert(regions.Enqueue(0,3072,8));
+    assert(regions.Enqueue(0,3090,8));
+    assert(regions.Enqueue(0,3095,8)); // overlaps last: safe to merge
+    std::vector<std::array<std::uint64_t,3>> precise;
+    assert(regions.Drain([&](unsigned core,std::uint64_t addr,std::uint64_t sz) {
+        precise.push_back({core,addr,sz});
+    })==4);
+    assert((precise[0]==std::array<std::uint64_t,3>{0,2040,8}));
+    assert((precise[1]==std::array<std::uint64_t,3>{0,2048,8}));
+    assert((precise[2]==std::array<std::uint64_t,3>{0,3072,8}));
+    assert((precise[3]==std::array<std::uint64_t,3>{0,3090,13}));
+
     // GPU-owned writes must collect dirty ranges for the next fence and must
     // not overwrite GPU memory immediately. This is a caller contract.
     unsigned immediate = 0, held_for_fence = 0;

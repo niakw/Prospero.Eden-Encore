@@ -21,6 +21,7 @@ class Queue {
 public:
     static constexpr unsigned Cores = 4;
     static constexpr std::uint64_t PageBytes = 4096;
+    static constexpr std::uint64_t DirtyRegionBytes = PageBytes / 2;
 
     // Reject invalid input instead of publishing an impossible dirty range.
     // Returns false to request caller's ORIGINAL blocking invalidation path.
@@ -30,13 +31,14 @@ public:
         auto& slot = cores_[core];
         std::lock_guard lock(slot.mutex);
         const auto end = address + size;
-        // Only combine writes entirely within the SAME guest page; widening
-        // across a GPU-modified boundary would break fence ordering.
+        // Merge only adjacent/overlapping writes within a single 2-KiB GPU dirty
+        // transform. Do not widen across unwritten gaps or GPU-owned halves.
         if (!slot.pending.empty()) {
             auto& tail = slot.pending.back();
-            if ((address / PageBytes) == ((end - 1) / PageBytes) &&
-                (tail.begin / PageBytes) == ((tail.end - 1) / PageBytes) &&
-                (address / PageBytes) == (tail.begin / PageBytes)) {
+            if ((address / DirtyRegionBytes) == ((end - 1) / DirtyRegionBytes) &&
+                (tail.begin / DirtyRegionBytes) == ((tail.end - 1) / DirtyRegionBytes) &&
+                (address / DirtyRegionBytes) == (tail.begin / DirtyRegionBytes) &&
+                address <= tail.end && tail.begin <= end) {
                 tail.begin = std::min(tail.begin, address);
                 tail.end = std::max(tail.end, end);
                 pending_.store(true, std::memory_order_release);
