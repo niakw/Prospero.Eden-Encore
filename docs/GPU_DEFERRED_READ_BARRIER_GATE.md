@@ -278,6 +278,11 @@ While poisoned:
 
 A callback may already have changed buffer/texture state before throwing,
 so blindly retrying that item would not be safe or necessarily idempotent.
+The generated developer-only `MemoryManager::FlushCaching` now also checks
+`Queue::Failed()` and terminates rather than allowing a later GPU command to
+continue with the poisoned cache state, even if an intermediate layer catches
+the original exception. This is a fail-closed safety gate, **not crash
+recovery**, and the developer bridge remains disabled.
 Only `Close()`, joining the producers/readers/GPU consumer and
 `ResetAfterQuiescence()` can clear the poison for a *new* title session.
 This is **not a runtime recovery mechanism**. Callers must treat a poison
