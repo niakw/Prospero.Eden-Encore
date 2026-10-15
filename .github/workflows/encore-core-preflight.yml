@@ -220,6 +220,7 @@ jobs:
           python3 -B tools/check-heap-growth-diagnostics-host.py
           python3 -B tools/check-crash-provenance-host.py
           python3 -B tools/check-ps5-guest-fault-recovery.py
+          python3 -B tools/check-hle-tail-counters.py
 
       - name: Check approved user-facing UX invariants (no graphics compilation)
         run: |
