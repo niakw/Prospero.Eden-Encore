@@ -341,6 +341,48 @@ prototype**, not the native GPU rendering cost. The unbounded queue's
 memory pressure, repeated prefix vector moves, guest-write publication,
 GPU-read barriers and session integration remain blockers to activation.
 
+## Lost GPU wake after publication: source-only scheduling contract
+
+In the source-proven GPU path, `Core::Memory::HandleRasterizerDownload`
+may return early from its per-core read-area cache, and
+`GPU::Impl::OnCPURead` may return on a preemptive `GetFlushArea`.
+Neither schedules a deferred queue drain. A pending `Reserve` can thus
+make a GPU owner's `Drain()` return zero; simply publishing that entry
+later does not, by itself, cause any GPU thread to revisit the queue.
+
+The host-only queue now provides `PublishAndWake(ticket, request_gpu)`:
+
+1. Validate the generation-tagged ticket and publish the completed RAM store
+   under the queue mutex, using binary search over sequence-ordered writes.
+2. Recognize an **edge from an unready FIFO head to a published head**.
+   Publishing a tail behind an unpublished head does not spuriously wake the
+   GPU. A newly published former head does, including after a preceding
+   prefix was already drained.
+3. Release the queue mutex **before** invoking the caller-supplied
+   `request_gpu()` callback. A synchronous host test demonstrates the
+   callback can reenter the queue without a lock inversion; in the native
+   engine the callback must normally **enqueue GPU-thread work**, not
+   recursively perform rasterizer replay on the GPU-owner thread.
+4. If the scheduling callback throws, poison the title's queue and release
+   blocked readers with an error. Do not claim the write has been replayed
+   or rely on an unrelated later draw to repair the broken ordering.
+
+The host fixture covers an initially blocked GPU drain, reverse publication
+of 256 writes with **one** GPU wake, a published prefix followed by a
+previously unpublished hole and a second wake, and scheduling failure.
+These are host protocol checks, not native renderer results.
+
+**This is not yet wired to any native post-store write path.** The current
+developer-only bridge still uses eager `Enqueue` and the
+`kNativePostStorePublicationReady = false` interlock. Future production
+integration must schedule work safely on the existing
+`GPU::Impl::RequestSyncOperation` / `gpu_thread.TickGPU` path, ensure
+asynchronous/synchronous GPU modes and shutdown are handled, avoid holding
+buffer/texture locks, and run all read barriers against *published* writes
+before their CPU reader proceeds. Producer lifecycle must keep the queue
+and GPU scheduler alive through the wake callback. A wake is not a
+Vulkan fence and must not be mistaken for completion.
+
 ## Required engineering contract
 
 - Give accepted entries an ordered, per-session completion watermark.
