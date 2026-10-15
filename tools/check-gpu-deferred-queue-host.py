@@ -16,6 +16,8 @@ source = r'''
 #include <array>
 #include <atomic>
 #include <cassert>
+#include <mutex>
+#include <condition_variable>
 #include <cstdint>
 #include <optional>
 #include <stdexcept>
@@ -738,6 +740,68 @@ int main() {
     assert(!wake_lifetime.Publish(*lifetime_wake));
     assert(wake_lifetime.ResetAfterQuiescence());
     assert(!wake_lifetime.Pending());
+
+    // Actual asynchronous host GPU scheduling: the first GPU tick can still
+    // be executing after its ready snapshot was removed. When another
+    // reservation becomes ready behind it, a second wake must survive until
+    // the GPU worker returns from the first replay callback.
+    Queue asynchronous;
+    const auto async_a = asynchronous.Reserve(0, 4096, 8);
+    const auto async_b = asynchronous.Reserve(1, 8192, 8);
+    const auto async_c = asynchronous.Reserve(2, 12288, 8);
+    assert(async_a && async_b && async_c);
+    std::mutex scheduler_mutex;
+    std::condition_variable scheduler_cv;
+    unsigned tick_requests = 0;
+    bool stop_scheduler = false;
+    std::atomic<bool> first_callback_entered{false};
+    std::atomic<bool> release_first_callback{false};
+    std::atomic<unsigned> callback_count{0};
+    auto schedule_gpu = [&] {
+        {
+            std::lock_guard lock(scheduler_mutex);
+            ++tick_requests;
+        }
+        scheduler_cv.notify_one();
+    };
+    std::thread gpu_worker([&] {
+        while (true) {
+            {
+                std::unique_lock lock(scheduler_mutex);
+                scheduler_cv.wait(lock, [&] { return tick_requests != 0 || stop_scheduler; });
+                if (tick_requests == 0 && stop_scheduler) break;
+                --tick_requests;
+            }
+            asynchronous.Drain([&](unsigned core,std::uint64_t addr,std::uint64_t sz) {
+                const auto index = callback_count.fetch_add(1);
+                assert(core == index && sz == 8 &&
+                       addr == (std::uint64_t(index) + 1) * 4096);
+                if (index == 0) {
+                    first_callback_entered.store(true, std::memory_order_release);
+                    while (!release_first_callback.load(std::memory_order_acquire))
+                        std::this_thread::yield();
+                }
+            });
+        }
+    });
+    assert(asynchronous.PublishAndWake(*async_a, schedule_gpu));
+    while (!first_callback_entered.load(std::memory_order_acquire))
+        std::this_thread::yield();
+    // The GPU is busy with the first snapshot. C cannot pass B; B becoming
+    // ready requests a new GPU tick even while the first one is in flight.
+    assert(asynchronous.PublishAndWake(*async_c, schedule_gpu));
+    assert(asynchronous.PublishAndWake(*async_b, schedule_gpu));
+    release_first_callback.store(true, std::memory_order_release);
+    assert(asynchronous.WaitUntil(*async_c));
+    {
+        std::lock_guard lock(scheduler_mutex);
+        stop_scheduler = true;
+    }
+    scheduler_cv.notify_one();
+    gpu_worker.join();
+    assert(callback_count.load() == 3 && !asynchronous.Pending());
+    asynchronous.Close();
+    assert(asynchronous.ResetAfterQuiescence());
 }
 '''
 with tempfile.TemporaryDirectory(prefix="encore-deferred-host-") as folder:
