@@ -145,7 +145,10 @@ public:
             return completed_ >= ticket.sequence || closed_ || failed_ ||
                    generation_ != ticket.generation;
         });
-        return generation_ == ticket.generation &&
+        // A callback may complete while Close() is joining the GPU owner.
+        // Never report a successful CPU read for a closed/poisoned title,
+        // even if the sequence watermark was acknowledged before shutdown.
+        return !closed_ && !failed_ && generation_ == ticket.generation &&
                completed_ >= ticket.sequence;
     }
 
