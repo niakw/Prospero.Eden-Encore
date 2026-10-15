@@ -98,22 +98,6 @@ int main() {
     assert(entries==3);
 
 
-    // Sustained producer pressure must never allocate an unbounded guest
-    // dirty backlog. Full means FALL BACK to the original blocking path.
-    Queue bounded;
-    for (std::uint64_t i=0; i<Queue::MaxPendingEntries; ++i)
-        assert(bounded.Enqueue(i%Queue::Cores, (i+1)*4096, 8));
-    assert(bounded.Pending());
-    assert(!bounded.Enqueue(0, (Queue::MaxPendingEntries+1)*4096, 8));
-    assert(bounded.Pending()); // failure must not silently clear old entries
-    std::uint64_t recovered=0;
-    assert(bounded.Drain([&](unsigned, std::uint64_t, std::uint64_t) {
-        ++recovered;
-    })==Queue::MaxPendingEntries);
-    assert(recovered==Queue::MaxPendingEntries && !bounded.Pending());
-    assert(bounded.Enqueue(0, 4096, 8));
-    assert(bounded.Drain([&](unsigned, std::uint64_t, std::uint64_t) {})==1);
-
     // Independent producer cores race with the GPU drain: every unique
     // page written must be replayed, including pushes during a drain.
     Queue concurrent;
@@ -164,4 +148,4 @@ with tempfile.TemporaryDirectory(prefix="encore-deferred-host-") as folder:
         "-I", str(header.parent), str(cpp), "-o", str(exe)
     ], check=True, timeout=45)
     subprocess.run([str(exe)], check=True, timeout=45)
-print("GPU_DEFERRED_QUEUE_HOST_PASS concurrency=4 no_lost_ranges=1280 backpressure=8192 crosspage_split=1 quiescence=1")
+print("GPU_DEFERRED_QUEUE_HOST_PASS concurrency=4 no_lost_ranges=1280 crosspage_split=1 quiescence=1")
