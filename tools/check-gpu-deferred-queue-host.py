@@ -352,6 +352,17 @@ int main() {
            fresh->generation != old->generation);
     assert(!lifetime.Publish(*old));
     assert(!lifetime.WaitUntil(*old));
+    // Different address spaces can carry sequence 1 at the same time, but
+    // their ticket epochs must never be interchangeable.
+    Queue foreign_space;
+    const auto foreign = foreign_space.Reserve(2, 24576, 8);
+    assert(foreign && foreign->sequence == fresh->sequence);
+    assert(foreign->generation != fresh->generation);
+    assert(!lifetime.Publish(*foreign));
+    assert(!lifetime.WaitUntil(*foreign));
+    assert(lifetime.DrainThrough(*foreign,
+        [](unsigned,std::uint64_t,std::uint64_t){assert(false);}) == 0);
+    assert(!foreign_space.Publish(*fresh));
     assert(lifetime.Publish(*fresh));
     // The sequence number is identical, but the previous title session
     // must be rejected even at a GPU drain boundary.
