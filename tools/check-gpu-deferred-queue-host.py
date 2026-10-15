@@ -424,6 +424,63 @@ int main() {
     assert(concurrent_publication.CompletedSequence() == PublishedWrites);
     assert(!concurrent_publication.Pending());
 
+    // Shutdown must not race the renderer's replay callback lifetime.
+    // An unpublished second write also gives a reliable wait-to-close signal.
+    Queue teardown;
+    const auto active = teardown.EnqueueTracked(0, 32768, 8);
+    const auto waiting = teardown.Reserve(1, 65536, 8);
+    assert(active && waiting);
+    std::atomic<bool> replay_active{false};
+    std::atomic<bool> release_gpu{false};
+    std::atomic<bool> close_returned{false};
+    std::atomic<bool> waiting_cancelled{false};
+    std::thread gpu_owner([&] {
+        assert(teardown.Drain([&](unsigned c,std::uint64_t,std::uint64_t) {
+            assert(c == 0);
+            replay_active.store(true, std::memory_order_release);
+            while (!release_gpu.load(std::memory_order_acquire))
+                std::this_thread::yield();
+        }) == 1);
+    });
+    while (!replay_active.load(std::memory_order_acquire))
+        std::this_thread::yield();
+    std::thread cpu_reader([&] {
+        waiting_cancelled.store(!teardown.WaitUntil(*waiting),
+                                std::memory_order_release);
+    });
+    std::thread title_close([&] {
+        teardown.Close();
+        close_returned.store(true, std::memory_order_release);
+    });
+    // A cancelled CPU waiter proves Close() has set the close flag and sent
+    // its notification while the GPU callback is still blocked.
+    while (!waiting_cancelled.load(std::memory_order_acquire))
+        std::this_thread::yield();
+    assert(!close_returned.load(std::memory_order_acquire));
+    assert(!teardown.Publish(*waiting));
+    assert(!teardown.EnqueueTracked(1, 98304, 8));
+    release_gpu.store(true, std::memory_order_release);
+    gpu_owner.join();
+    cpu_reader.join();
+    title_close.join();
+    assert(close_returned.load(std::memory_order_acquire));
+    assert(teardown.CompletedSequence() == active->sequence);
+    assert(teardown.Drain([](unsigned,std::uint64_t,std::uint64_t) {
+        assert(false); // Never replay remaining queued work after Close().
+    }) == 0);
+    assert(teardown.Pending()); // Unpublished reservation awaits teardown.
+    teardown.ResetAfterQuiescence();
+    assert(!teardown.Pending());
+
+    // Closing with a queued but not yet replayed write also forbids late
+    // rasterizer invocation, even if a stale GPU tick arrives afterwards.
+    Queue closed_before_replay;
+    const auto never_replay = closed_before_replay.EnqueueTracked(3, 131072, 8);
+    assert(never_replay);
+    closed_before_replay.Close();
+    assert(closed_before_replay.DrainThrough(*never_replay,
+        [](unsigned,std::uint64_t,std::uint64_t) {assert(false);}) == 0);
+    assert(!closed_before_replay.WaitUntil(*never_replay));
 }
 '''
 with tempfile.TemporaryDirectory(prefix="encore-deferred-host-") as folder:
