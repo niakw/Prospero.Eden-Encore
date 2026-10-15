@@ -1155,18 +1155,20 @@ void ReportGpuThread(unsigned frame) {
         unsigned command{};
         std::uint64_t calls{};
         std::uint64_t ns{};
+        std::uint64_t ge20ms{}, ge100ms{}, max_ns{};
     };
     std::array<HleReportRow, 32> heaviest{};
     std::size_t heavy_count = 0;
     std::size_t active_keys = 0;
     std::uint64_t total_hle_calls = 0, total_hle_ns = 0;
-    hle_calls.ForEach([&](const char* name, unsigned command, std::uint64_t calls,
-                          std::uint64_t ns) {
+    hle_calls.ForEachLatency([&](const char* name, unsigned command, std::uint64_t calls,
+                                 std::uint64_t ns, std::uint64_t ge20ms,
+                                 std::uint64_t ge100ms, std::uint64_t max_ns) {
         ++active_keys;
         total_hle_calls += calls;
         total_hle_ns += ns;
         if (ns < 1'000'000) return;
-        const HleReportRow candidate{name, command, calls, ns};
+        const HleReportRow candidate{name, command, calls, ns, ge20ms, ge100ms, max_ns};
         if (heavy_count < heaviest.size()) {
             heaviest[heavy_count++] = candidate;
             return;
@@ -1187,6 +1189,19 @@ void ReportGpuThread(unsigned frame) {
                     row.name, row.command,
                     static_cast<unsigned long long>(row.calls),
                     static_cast<unsigned long long>(row.ns));
+    }
+    // Distinguish slow individual HLE calls from large cumulative totals.
+    // Snapshot only eight rows on the five-second GPU-owner report path.
+    unsigned tail_reported = 0;
+    for (std::size_t i = 0; i < heavy_count && tail_reported < 8; ++i) {
+        const auto& row = heaviest[i];
+        if (!row.ge20ms) continue;
+        std::printf("EDEN_DEV_HLE_TAIL service=%s cmd=%u ge20ms=%llu ge100ms=%llu max_ns=%llu\\n",
+                    row.name, row.command,
+                    static_cast<unsigned long long>(row.ge20ms),
+                    static_cast<unsigned long long>(row.ge100ms),
+                    static_cast<unsigned long long>(row.max_ns));
+        ++tail_reported;
     }
     std::printf("EDEN_DEV_HLE_SUMMARY keys=%zu reported=%zu calls=%llu ns=%llu\n",
                 active_keys, heavy_count,
