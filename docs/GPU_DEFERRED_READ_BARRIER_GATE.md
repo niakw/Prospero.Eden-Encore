@@ -288,6 +288,29 @@ batch, verifies the exception reaches its caller, the reader is released
 with failure and no fresh write/replay is accepted, then resets after joining
 all threads. It does not model Vulkan's partially applied cache operations.
 
+## Quiescent reset is now a checked lifecycle transition
+
+The queue previously allowed `ResetAfterQuiescence()` while the session
+was still open, simply trusting the caller's promise that all producers and
+GPU callbacks had stopped. That could clear in-flight ticket state and
+recycle the queue for a new title while old work was still active.
+
+`ResetAfterQuiescence()` now returns `false` unless `Close()` has
+**fully completed**, not merely set the close flag. It first acquires the
+GPU-consumer mutex (except from inside its own callback, where it refuses
+to proceed), then the queue mutex, preserving the established lock order.
+A successful reset clears the completed-close gate, discards old-session
+state and issues a fresh process-unique epoch for new tickets.
+
+This protects against accidental live-session resets. The caller must
+**still join all producers, CPU read waiters and GPU consumers before reset**;
+that external ownership/lifetime rule is not automatically provable from
+queue-local locks. Reset is not designed to race a second `Close()` call.
+
+The host regression rejects reset on an open session or inside a replay
+callback, and requires close-before-reset on all previous fixture paths.
+The native bridge is still disabled and does not yet manage this lifecycle.
+
 ## Required engineering contract
 
 - Give accepted entries an ordered, per-session completion watermark.
