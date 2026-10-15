@@ -23,7 +23,7 @@ for flag in ("EDEN_EXPERIMENTAL_ICACHE_COHERENCE", "EDEN_EXPERIMENTAL_SM_HOST_WA
 flag = "EDEN_EXPERIMENTAL_DUMMY_THREAD_WAITS"
 condition = "if [[ ${" + flag + ":-OFF} == ON ]]; then"
 start = script.index(condition)
-stop = script.index("\\nfi", start)
+stop = script.index("\nfi", start)
 assert "eden-dummy-thread-waits.patch" in script[start:stop]
 assert script.count('apply_one "$root/headless/backports/eden-dummy-thread-waits.patch"') == 1
 
