@@ -2472,6 +2472,24 @@ if(EDEN_PS5_OPENGL)
     string(REPLACE "${gpu_sync_wait_original}" "${gpu_sync_wait_replacement}"
         gpu_source "${gpu_source}")
     string(PREPEND gpu_source "#include \"${EDEN_PORT_DIR}/gpu_failure.h\"\n")
+    # TickWork previously unlocked its mutex through the raw object while a
+    # unique_lock still believed it owned that mutex. On an exception from a
+    # GPU callback, the unique_lock destructor would attempt another unlock.
+    # Keep ownership tracking correct before worker failure propagation.
+    set(gpu_tick_lock_original [=[            sync_request_mutex.unlock();
+            request();
+            current_sync_fence.fetch_add(1, std::memory_order_release);
+            sync_request_mutex.lock();]=])
+    set(gpu_tick_lock_safe [=[            lck.unlock();
+            request();
+            current_sync_fence.fetch_add(1, std::memory_order_release);
+            lck.lock();]=])
+    string(FIND "${gpu_source}" "${gpu_tick_lock_original}" gpu_tick_lock_position)
+    if(gpu_tick_lock_position LESS 0)
+        message(FATAL_ERROR "Pinned native GPU callback lock ownership changed")
+    endif()
+    string(REPLACE "${gpu_tick_lock_original}" "${gpu_tick_lock_safe}"
+        gpu_source "${gpu_source}")
     string(REPLACE "GPU::~GPU() = default;" "GPU::~GPU() { impl->NotifyShutdown(); }" gpu_source "${gpu_source}")
     string(REPLACE "void GPU::PushGPUEntries(s32 channel, Tegra::CommandList&& entries) {"
         "void GPU::PushGPUEntries(s32 channel, Tegra::CommandList&& entries) {\n    static std::atomic<unsigned> submissions{};\n    const auto count = ++submissions;\n    if (count <= 3) LOG_INFO(Render_OpenGL, \"EDEN_GUEST_GPU_SUBMIT count={} channel={}\", count, channel);"
