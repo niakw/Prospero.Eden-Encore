@@ -1,0 +1,80 @@
+# Deferred guest writes: CPU-read and drain-barrier gate
+
+Status: **BLOCKED / not eligible for activation**. Scope: `dev/ps5-sparse-jit`.
+Source audit only: no console test, no native SDK compilation, no FPS claim.
+The production switch `cpu_write_defer` stays OFF.
+
+## Verified source paths
+
+1. `Core::Memory::Impl::HandleRasterizerWrite` invokes `system.GPU().OnCPUWrite(address, size)`.
+   The opt-in bridge preserves `ScopedGuestWriteOrigin` while the Vulkan implementation may enqueue
+   the whole invalidation **before** modifying either cache (on buffer mutex contention).
+   Guest code may then write the backing RAM immediately.
+2. `Core::Memory::Impl::HandleRasterizerDownload` first consults the per-core
+   `rasterizer_read_areas` cache. A covered read returns without calling `GPU::OnCPURead`.
+3. `GPU::Impl::OnCPURead` consults `RasterizerVulkan::GetFlushArea`. For a
+   preemptive area it returns before queuing any GPU request. Otherwise it
+   requests `RasterizerVulkan::FlushRegion`, waits on a GPU sync fence, and returns.
+   That request does **not** call the deferred queue's `FlushCaching`.
+4. The opt-in `Tegra::MemoryManager::FlushCaching` drains queued writes at
+   selected GPU commands/engines, but neither CPU-read bypass above has an
+   explicit outstanding-write barrier. A read may therefore pass without
+   acknowledging an earlier deferred cache invalidation.
+
+Sources:
+- `vendor/sources/eden/src/core/memory.cpp`: `HandleRasterizerDownload`, `HandleRasterizerWrite`
+- `vendor/sources/eden/src/video_core/gpu.cpp`: `GPU::Impl::OnCPURead`, `RequestSyncOperation`
+- `vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp`: `GetFlushArea`, `FlushRegion`, `OnCPUWrite`
+- `headless/guest_write_deferred_bridge.cmake`: opt-in queue, rasterizer and engine wiring
+- `headless/gpu_deferred_write_queue.h`: FIFO, unbounded outstanding entries
+
+## Correctness failure mode (not a reproduced game bug)
+
+Deferred invalidation A is accepted while a cache mutex is held. The CPU
+subsequently accesses a GPU-tracked range before the GPU owner replays A.
+A cached read-area hit can bypass `OnCPURead` entirely; even a non-cached
+read can return via `GetFlushArea`'s preemptive shortcut or flush without
+draining A first. GPU cache state can therefore lag CPU backing RAM and
+read/download ordering is not established. This is a **source-level
+counterexample**, not proof that it causes a particular freeze or HUD issue.
+
+## Required engineering contract
+
+- Give accepted entries an ordered, per-session completion watermark.
+  A read of a tracked range must observe the completion of every
+  causally earlier conflicting write before relying on cached read areas
+  or calculating/flushing the GPU download area. Cross-core ordering is
+  assigned by the queue's mutex, not by host thread identity.
+- Put the read dependency check **before the per-core cached-area shortcut**
+  and the `GetFlushArea` shortcut; patching only `GPU::OnCPURead` is insufficient.
+- Request GPU-owner drainage and wait for its acknowledged watermark.
+  No CPU caller may replay GPU cache operations directly. Do not wait
+  while holding a GPU buffer/texture cache mutex or the queue mutex.
+- Cover each live graphics address space, including non-default channels;
+  the queue lives in a `Tegra::MemoryManager`, not a process-global singleton.
+- Replace any future queue cap with watermark-aware drainage and
+  shutdown-aware backpressure. Never fall back to synchronous handling
+  of a newer write while older writes remain pending.
+- At title shutdown/switch, either complete all required work before
+  destroying caches/queues or explicitly cancel after producer quiescence;
+  no blocked CPU producer or dangling GPU callback may survive teardown.
+
+## Required host/native qualification before any console test
+
+1. **Deterministic order test:** enqueue A, trigger a read before draw/DMA,
+   assert replay completion precedes read-area lookup and GPU download.
+2. **Read shortcut test:** already-cached read area and preemptive
+   `GetFlushArea` both still honor pending write dependencies.
+3. **Concurrency test:** four guest producers, overlapping ranges, GPU
+   owner drainage, reads racing with writes; no lost or reordered
+   pre-watermark invalidations.
+4. **Liveness test:** a full queue blocks producers only outside locks;
+   GPU drain unblocks them; cancellation during shutdown releases waiters;
+   continuous producers cannot indefinitely starve the GPU owner.
+5. **Native test:** compile the ON development bridge with the actual native
+   toolchain and linked source units, then inspect real call ordering.
+   Host source fixtures and sanitizers alone do not satisfy this gate.
+
+The previous host run `38794257575` validates its listed host checks only.
+Neither that run nor upstream experimental patches establish this read barrier.
+Keep `EDEN_GUEST_WRITE_BRIDGE_DEV` and `cpu_write_defer` OFF for shipping.
