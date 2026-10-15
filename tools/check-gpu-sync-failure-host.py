@@ -62,6 +62,8 @@ with tempfile.TemporaryDirectory(prefix="encore-gpu-sync-derive-") as d:
     tick_method = "    void TickWork() {" + generated.split("    void TickWork() {", 1)[1].split(
         "    [[nodiscard]] u64 GetTicks() const", 1)[0]
     assert "lck.unlock();" in tick_method and "lck.lock();" in tick_method
+    assert "for (auto remaining = sync_requests.size(); remaining != 0; --remaining)" in tick_method
+    assert "while (!sync_requests.empty())" not in tick_method
     assert "sync_request_mutex.unlock();" not in tick_method
     assert tick_method.index("lck.unlock();") < tick_method.index("request();")
     assert tick_method.index("request();") < tick_method.index("lck.lock();")
@@ -80,6 +82,7 @@ source = r"""
 #include <mutex>
 #include <stdexcept>
 #include <thread>
+#include <vector>
 using u64 = std::uint64_t;
 struct GPU {
     std::mutex sync_request_mutex;
@@ -140,6 +143,51 @@ int main() {
         assert(lock.owns_lock());
     }
 
+    // Reentrant sync work is not allowed to starve the GPU command owner:
+    // only callbacks queued at tick entry may run in this invocation.
+    // Every later callback needs the next already-scheduled GPU tick.
+    GPU bounded;
+    unsigned callbacks = 0;
+    std::function<void()> refill;
+    refill = [&] {
+        ++callbacks;
+        if (callbacks < 16) {
+            std::lock_guard lock(bounded.sync_request_mutex);
+            bounded.sync_requests.emplace_back(refill);
+        }
+    };
+    {
+        std::lock_guard lock(bounded.sync_request_mutex);
+        bounded.sync_requests.emplace_back(refill);
+    }
+    for (unsigned tick = 1; tick <= 16; ++tick) {
+        bounded.TickWork();
+        assert(callbacks == tick);
+        assert(bounded.CurrentSyncRequestFence() == tick);
+        std::lock_guard lock(bounded.sync_request_mutex);
+        assert(bounded.sync_requests.size() == (tick < 16 ? 1u : 0u));
+    }
+
+    // A batch with two initial requests preserves both completions and
+    // postpones reentrant work, maintaining global FIFO fence order.
+    GPU two_initial;
+    std::vector<unsigned> completion_order;
+    {
+        std::lock_guard lock(two_initial.sync_request_mutex);
+        two_initial.sync_requests.emplace_back([&] {
+            completion_order.push_back(1);
+            std::lock_guard enqueue_lock(two_initial.sync_request_mutex);
+            two_initial.sync_requests.emplace_back([&] { completion_order.push_back(3); });
+        });
+        two_initial.sync_requests.emplace_back([&] { completion_order.push_back(2); });
+    }
+    two_initial.TickWork();
+    assert((completion_order == std::vector<unsigned>{1, 2}));
+    assert(two_initial.CurrentSyncRequestFence() == 2);
+    two_initial.TickWork();
+    assert((completion_order == std::vector<unsigned>{1, 2, 3}));
+    assert(two_initial.CurrentSyncRequestFence() == 3);
+
     // The GPU worker has failed, leaving two distinct fence requests
     // unacknowledged. Neither waiter may hang, and failure must be visible
     // to BOTH without TakeGpuFailure consuming the cause.
@@ -184,3 +232,4 @@ with tempfile.TemporaryDirectory(prefix="encore-gpu-sync-fail-host-") as d:
     ], check=True, timeout=45)
     subprocess.run([str(executable)], check=True, timeout=30)
 print("GPU_SYNC_WORKER_FAILURE_HOST_PASS normal=1 fatal_waiters=2 no_fake_fence=1 shutdown=1 throw_lock=1")
+print("GPU_TICK_SNAPSHOT_HOST_PASS reentrant=16 fifo=3 callbacks=ordered no_fake_fence=1")

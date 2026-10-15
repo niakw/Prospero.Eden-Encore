@@ -2504,14 +2504,28 @@ if(EDEN_PS5_OPENGL)
     # unique_lock still believed it owned that mutex. On an exception from a
     # GPU callback, the unique_lock destructor would attempt another unlock.
     # Keep ownership tracking correct before worker failure propagation.
-    set(gpu_tick_lock_original [=[            sync_request_mutex.unlock();
+    # A continuously replenished sync request queue must not monopolize the
+    # worker's GPUTick command: replay only the FIFO batch already queued
+    # when the tick began. New requests retain their own queued GPU ticks.
+    # Advance each fence ONLY after its callback returns normally.
+    set(gpu_tick_lock_original [=[        while (!sync_requests.empty()) {
+            auto request = std::move(sync_requests.front());
+            sync_requests.pop_front();
+            sync_request_mutex.unlock();
             request();
             current_sync_fence.fetch_add(1, std::memory_order_release);
-            sync_request_mutex.lock();]=])
-    set(gpu_tick_lock_safe [=[            lck.unlock();
+            sync_request_mutex.lock();
+            sync_request_cv.notify_all();
+        }]=])
+    set(gpu_tick_lock_safe [=[        for (auto remaining = sync_requests.size(); remaining != 0; --remaining) {
+            auto request = std::move(sync_requests.front());
+            sync_requests.pop_front();
+            lck.unlock();
             request();
             current_sync_fence.fetch_add(1, std::memory_order_release);
-            lck.lock();]=])
+            lck.lock();
+            sync_request_cv.notify_all();
+        }]=])
     string(FIND "${gpu_source}" "${gpu_tick_lock_original}" gpu_tick_lock_position)
     if(gpu_tick_lock_position LESS 0)
         message(FATAL_ERROR "Pinned native GPU callback lock ownership changed")
