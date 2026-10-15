@@ -7,7 +7,8 @@ Usage:
  python3 tools/install-vendored-eden-backports.py INSTALL_SOURCE
 
 The pinned original remains pristine; no git apply is used in production.
-Optional experimental backports are intentionally excluded by policy.
+The separately unsafe dummy-thread workaround remains excluded by policy;
+I-cache and service-manager fixes are installed by install-active-core-backports.py.
 """
 from __future__ import annotations
 import argparse
@@ -24,9 +25,7 @@ ROOT=Path(__file__).resolve().parents[1]
 ORIGINAL=ROOT/'vendor/sources/eden'
 ACTIVE=ROOT/'vendor/encore-active/eden-backports'
 PIN='5f142c7926d0c7fcbbd0ce30794d72f638a43b2a'
-EXPERIMENT=('EDEN_EXPERIMENTAL_DUMMY_THREAD_WAITS',
-            'EDEN_EXPERIMENTAL_ICACHE_COHERENCE',
-            'EDEN_EXPERIMENTAL_SM_HOST_WAIT')
+EXPERIMENT=('EDEN_EXPERIMENTAL_DUMMY_THREAD_WAITS',)
 
 def sha(content:bytes)->str:return hashlib.sha256(content).hexdigest()
 
