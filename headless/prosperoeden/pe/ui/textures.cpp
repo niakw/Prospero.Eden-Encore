@@ -200,8 +200,15 @@ void Textures::pump(float dt, int budget)
                 Entry &entry = it->second;
                 entry.loaded = true;
                 entry.age = 0.0f;
+                const bool retail_case =
+                    entry.path.find("/box-front-") != std::string::npos ||
+                    entry.path.find("/box-back-") != std::string::npos ||
+                    entry.path.find("/box-spine-") != std::string::npos;
                 if (!result.ok || result.image.empty()) {
                     entry.failed_loads = std::min(entry.failed_loads + 1u, 4u);
+                    if (retail_case)
+                        sys::log("EDEN_CASE_TEXTURE status=decode-failed path=%s attempt=%u",
+                                 entry.path.c_str(), entry.failed_loads);
                 } else {
                     entry.failed_loads = 0;
                     entry.aspect = static_cast<float>(result.image.width) /
@@ -209,6 +216,11 @@ void Textures::pump(float dt, int budget)
                     entry.texture = create(result.image);
                     if (entry.texture == 0)
                         entry.failed_loads = std::min(entry.failed_loads + 1u, 4u);
+                    if (retail_case)
+                        sys::log("EDEN_CASE_TEXTURE status=%s path=%s width=%d height=%d texture=%u",
+                                 entry.texture ? "ready" : "upload-failed",
+                                 entry.path.c_str(), result.image.width,
+                                 result.image.height, entry.texture);
                 }
             }
         } catch (const std::exception& error) {
