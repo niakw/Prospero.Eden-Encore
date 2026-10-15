@@ -1009,6 +1009,20 @@ string(REPLACE "${prefetch_old}" [=[            } else {
                     // the original guest return address and stack registers
                     // on this single fatal path; never sample per-frame.
                     const auto& fault_context = thread->GetContext();
+                    // One bounded page-table query at the fatal fault only.
+                    // Never dereference an untrusted guest address or alter JIT.
+                    Kernel::KMemoryInfo lr_info{};
+                    Kernel::Svc::PageInfo lr_page{};
+                    const bool lr_query = process &&
+                        !process->GetPageTable().QueryInfo(
+                            &lr_info, &lr_page, fault_context.lr).IsError();
+                    std::fprintf(stderr,
+                        "EDEN_GUEST_FAULT_LR_MAP lr=0x%llx query=%s start=0x%llx size=0x%llx state=%u\n",
+                        static_cast<unsigned long long>(fault_context.lr),
+                        lr_query ? "ok" : "failed",
+                        static_cast<unsigned long long>(lr_info.m_address),
+                        static_cast<unsigned long long>(lr_info.m_size),
+                        static_cast<unsigned>(lr_info.m_state));
                     char eden_fault[320]{};
                     std::snprintf(eden_fault, sizeof(eden_fault),
                         "guest thread %.64s tid=%llu pc=0x%llx lr=0x%llx sp=0x%llx fp=0x%llx jumped to an unmapped address",
@@ -1024,7 +1038,7 @@ string(REPLACE "${prefetch_old}" [=[            } else {
             thread->RequestSuspend(kernel, SuspendType::Debug);]=]
     physical_core_source "${physical_core_source}")
 write_derived("${PORT_BUILD_DIR}/physical_core.cpp"
-    "#include <cstdio>\n#include \"${EDEN_PORT_DIR}/guest_fault.h\"\n#include \"${EDEN_PORT_DIR}/performance.h\"\n#include \"core/arm/debug.h\"\n${physical_core_source}")
+    "#include <cstdio>\n#include \"${EDEN_PORT_DIR}/guest_fault.h\"\n#include \"${EDEN_PORT_DIR}/performance.h\"\n#include \"core/hle/kernel/k_process.h\"\n#include \"core/arm/debug.h\"\n${physical_core_source}")
 list(REMOVE_ITEM core_sources "hle/kernel/physical_core.cpp")
 list(APPEND core_sources "${PORT_BUILD_DIR}/physical_core.cpp")
 # Guest scheduler spin lock is maintained as a complete qualified source, not a CMake rewrite.
