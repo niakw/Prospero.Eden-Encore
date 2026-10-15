@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
-// Isolated host-verified candidate for replaying guest writes past GPU cache
-// mutex contention. NOT wired to guest memory until fence semantics are proven.
+// Source-only candidate: session-owned FIFO for deferred guest cache writes.
+// This header does not activate deferred writes in the native renderer.
 #include <algorithm>
-#include <array>
 #include <atomic>
 #include <cstdint>
 #include <limits>
@@ -12,9 +11,12 @@
 #include <vector>
 
 namespace Eden::GpuDeferredWrite {
-
 struct Range {
-    std::uint64_t begin{}, end{}; // half-open [begin, end)
+    std::uint64_t begin{}, end{}; // half-open
+};
+struct Write {
+    unsigned core{};
+    Range range{};
 };
 
 class Queue {
@@ -23,29 +25,28 @@ public:
     static constexpr std::uint64_t PageBytes = 4096;
     static constexpr std::uint64_t DirtyRegionBytes = PageBytes / 2;
 
-    // Reject invalid input instead of publishing an impossible dirty range.
-    // Returns false to request caller's ORIGINAL blocking invalidation path.
+    // Assign a single linearization point to all guest cores. Per-core drain
+    // order would reorder dependent writes from distinct CPU producers.
     bool Enqueue(unsigned core, std::uint64_t address, std::uint64_t size) {
         if (core >= Cores || size == 0 ||
             size > std::numeric_limits<std::uint64_t>::max() - address) return false;
-        auto& slot = cores_[core];
-        std::lock_guard lock(slot.mutex);
         const auto end = address + size;
-        // Merge only adjacent/overlapping writes within a single 2-KiB GPU dirty
-        // transform. Do not widen across unwritten gaps or GPU-owned halves.
-        if (!slot.pending.empty()) {
-            auto& tail = slot.pending.back();
-            if ((address / DirtyRegionBytes) == ((end - 1) / DirtyRegionBytes) &&
-                (tail.begin / DirtyRegionBytes) == ((tail.end - 1) / DirtyRegionBytes) &&
-                (address / DirtyRegionBytes) == (tail.begin / DirtyRegionBytes) &&
-                address <= tail.end && tail.begin <= end) {
-                tail.begin = std::min(tail.begin, address);
-                tail.end = std::max(tail.end, end);
+        std::lock_guard lock(mutex_);
+        if (!queue_.empty()) {
+            auto& tail = queue_.back();
+            const auto& last = tail.range;
+            if (tail.core == core &&
+                (address / DirtyRegionBytes) == ((end - 1) / DirtyRegionBytes) &&
+                (last.begin / DirtyRegionBytes) == ((last.end - 1) / DirtyRegionBytes) &&
+                (address / DirtyRegionBytes) == (last.begin / DirtyRegionBytes) &&
+                address <= last.end && last.begin <= end) {
+                tail.range.begin = std::min(last.begin, address);
+                tail.range.end = std::max(last.end, end);
                 pending_.store(true, std::memory_order_release);
                 return true;
             }
         }
-        slot.pending.push_back({address, end});
+        queue_.push_back({core, {address, end}});
         pending_.store(true, std::memory_order_release);
         return true;
     }
@@ -54,48 +55,37 @@ public:
         return pending_.load(std::memory_order_acquire);
     }
 
-    // Must run on the GPU owner, outside BOTH cache mutexes, before work that
-    // could read any of the guest ranges. Callback MUST pass GPU-owned writes
-    // to the original dirty/fence collection path, not upload them early.
-    // If a writer enqueues during one pass, drain the new batch as well.
-    template <class Replay>
+    // Single GPU consumer. Snapshot all queued writes atomically, preserve
+    // their inter-core enqueue order, and replay without holding queue mutex.
+    // Reentrant enqueues are drained in the following pass.
+    template<class Replay>
     std::uint64_t Drain(Replay&& replay) {
-        std::uint64_t batches = 0;
+        std::uint64_t count = 0;
         while (pending_.exchange(false, std::memory_order_acq_rel)) {
-            for (unsigned core = 0; core < Cores; ++core) {
-                std::vector<Range> work;
-                {
-                    std::lock_guard lock(cores_[core].mutex);
-                    work.swap(cores_[core].pending);
-                }
-                for (const auto& range : work) {
-                    // Callback cannot hold this queue's lock: it may acquire
-                    // cache mutexes and trigger unrelated callbacks.
-                    replay(core, range.begin, range.end - range.begin);
-                    ++batches;
-                }
+            std::vector<Write> work;
+            {
+                std::lock_guard lock(mutex_);
+                work.swap(queue_);
+            }
+            for (const auto& item : work) {
+                replay(item.core, item.range.begin, item.range.end - item.range.begin);
+                ++count;
             }
         }
-        return batches;
+        return count;
     }
 
-    // Only when guest core threads AND GPU worker have quiesced at shutdown.
-    // Cannot run concurrently with Enqueue or Drain.
+    // Only after all guest producers and GPU consumer are joined. Not
+    // concurrently callable with Enqueue() or Drain().
     void ResetAfterQuiescence() {
-        for (auto& core : cores_) {
-            std::lock_guard lock(core.mutex);
-            core.pending.clear();
-        }
+        std::lock_guard lock(mutex_);
+        queue_.clear();
         pending_.store(false, std::memory_order_release);
     }
 
 private:
-    struct PerCore {
-        std::mutex mutex;
-        std::vector<Range> pending;
-    };
-    std::array<PerCore, Cores> cores_{};
+    std::mutex mutex_;
+    std::vector<Write> queue_;
     std::atomic<bool> pending_{false};
 };
-
 } // namespace Eden::GpuDeferredWrite
