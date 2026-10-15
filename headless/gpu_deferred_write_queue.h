@@ -58,7 +58,7 @@ public:
     // entry fails without advancing the FIFO.
     bool Publish(Ticket ticket) {
         std::lock_guard lock(mutex_);
-        if (closed_ || ticket.generation != generation_ || ticket.sequence == 0 ||
+        if (closed_ || failed_ || ticket.generation != generation_ || ticket.sequence == 0 ||
             ticket.sequence > accepted_) return false;
         for (auto& entry : queue_) {
             if (entry.last_sequence == ticket.sequence && !entry.published) {
@@ -90,6 +90,14 @@ public:
         return completed_ != accepted_;
     }
 
+    // A callback exception permanently poisons this title's queue. Replaying
+    // it again is unsafe because the callback may have made partial cache
+    // changes before throwing. Only quiescent teardown can clear the poison.
+    bool Failed() const {
+        std::lock_guard lock(mutex_);
+        return failed_;
+    }
+
     // Generation-tagged wait for either queued or reserved writes.
     // Caller MUST schedule a GPU-owner drain, without holding any GPU cache
     // lock, before waiting. The result is replay-callback completion only,
@@ -100,7 +108,7 @@ public:
         if (ticket.generation != generation_ || ticket.sequence == 0 ||
             ticket.sequence > accepted_) return false;
         completed_cv_.wait(lock, [&] {
-            return completed_ >= ticket.sequence || closed_ ||
+            return completed_ >= ticket.sequence || closed_ || failed_ ||
                    generation_ != ticket.generation;
         });
         return generation_ == ticket.generation &&
@@ -136,7 +144,7 @@ public:
         std::vector<Write> work;
         {
             std::lock_guard lock(mutex_);
-            if (closed_ || target.generation != generation_ || target.sequence == 0 ||
+            if (closed_ || failed_ || target.generation != generation_ || target.sequence == 0 ||
                 target.sequence > accepted_ || completed_ >= target.sequence) return 0;
             // Reserve + Publish is ordered, but publishers can finish out of
             // order. Drain only the contiguous PUBLISHED prefix. Never
@@ -153,8 +161,20 @@ public:
         }
         // Under the consumer mutex no other replay can be in flight.
         // The snapshot includes ONLY the published FIFO prefix.
-        for (const auto& item : work) {
-            replay(item.core, item.range.begin, item.range.end - item.range.begin);
+        try {
+            for (const auto& item : work) {
+                replay(item.core, item.range.begin, item.range.end - item.range.begin);
+            }
+        } catch (...) {
+            // The callback may have partially modified GPU caches. Never
+            // acknowledge this batch, retry it, or permit later work to
+            // overtake it. Report failure to readers and propagate the error.
+            {
+                std::lock_guard lock(mutex_);
+                failed_ = true;
+            }
+            completed_cv_.notify_all();
+            throw;
         }
         {
             std::lock_guard lock(mutex_);
@@ -198,6 +218,7 @@ public:
         queue_.clear();
         accepted_ = completed_ = 0;
         generation_ = FreshGeneration(); // Unique across ALL queue instances.
+        failed_ = false;
         closed_ = false;
     }
 
@@ -223,7 +244,7 @@ private:
             return std::nullopt;
         const auto end = address + size;
         std::lock_guard lock(mutex_);
-        if (closed_ || accepted_ == std::numeric_limits<Sequence>::max())
+        if (closed_ || failed_ || accepted_ == std::numeric_limits<Sequence>::max())
             return std::nullopt;
         const Sequence sequence = accepted_ + 1;
         if (published && !queue_.empty()) {
@@ -255,5 +276,6 @@ private:
     Sequence completed_{};
     std::uint64_t generation_{FreshGeneration()};
     bool closed_{};
+    bool failed_{};
 };
 } // namespace Eden::GpuDeferredWrite
