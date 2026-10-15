@@ -39,14 +39,13 @@ python3 -B tools/install-vendored-eden-backports.py "$eden"
 # Native build recipe is a fully versioned translation unit, not a string
 # replacement performed during CMake configure. Original Eden is immutable.
 python3 -B tools/install-vendored-eden-build-flags.py "$eden"
-# Quarantined experiments remain explicit opt-in and must never leak into the
-# shipping baseline. Their legacy source patcher is NOT used otherwise.
-if [[ ${EDEN_EXPERIMENTAL_DUMMY_THREAD_WAITS:-OFF} == ON || \
-      ${EDEN_EXPERIMENTAL_ICACHE_COHERENCE:-OFF} == ON || \
-      ${EDEN_EXPERIMENTAL_SM_HOST_WAIT:-OFF} == ON ]]; then
-    step "Explicitly requested non-shipping experimental Eden backports"
-    bash tools/apply-eden-backports.sh "$eden"
-fi
+# The tested I-cache and service-manager host-wait implementations are
+# always installed into the ACTIVE native core. This is source materialization,
+# not an environment-variable runtime opt-in or a debug-only wrapper.
+step "Always-on guest I-cache and host-service wait backports"
+python3 -B tools/install-active-core-backports.py "$eden" --check 2>/dev/null || \
+    python3 -B tools/install-active-core-backports.py "$eden"
+python3 -B tools/install-active-core-backports.py "$eden" --check
 step "R352 fence-safe NVNflinger layer/display cleanup (versioned complete source)"
 python3 -B tools/install-vendored-surface-lifecycle.py "$eden"
 python3 -B tools/check-nvnflinger-dequeue-wakeup.py "$eden"
