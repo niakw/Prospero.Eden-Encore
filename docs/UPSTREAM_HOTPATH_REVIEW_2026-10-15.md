@@ -48,3 +48,20 @@ new write-ahead optimization on a release from host contracts alone.
 Prioritize full write/read/fence ordering proof for #187, then independent
 JIT memory differential verification for #188, then per-texture lifecycle
 checks for #185. CI success proves source contracts, not FC27 gameplay.
+
+## Deferred write pipeline gate (follow-up)
+
+A standalone `headless/gpu_deferred_write_queue.h` now models per-core deferred
+ranges, same-page-only merging, release/acquire handoff, GPU owner replay
+without holding queue mutexes, and explicit shutdown quiescence. The
+`tools/check-gpu-deferred-queue-host.py` sanitizer fixture covers four
+concurrent producers (1,280 distinct writes), invalid/overflow ranges,
+cross-page boundaries and a simulated GPU-modified fence case.
+
+**This is deliberately NOT wired to OnCPUWrite, FlushCaching, or the DMA
+pusher.** The test validates queue ownership mechanics but cannot prove that
+real GPU cache invalidation, guest dirty range collection, guest submits and
+GPU fences remain ordered. Runtime behavior therefore stays unchanged; a
+console test now would provide no useful signal. The next engineering gate is
+a source-level native integration whose actual guest cache and HLE ordering
+passes host validation before any activation.
