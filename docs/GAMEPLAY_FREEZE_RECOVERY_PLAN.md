@@ -364,3 +364,26 @@ triggers the independent native test profile; its success,
 actual SHA, and artifact IDs must be checked before any
 installation recommendation. No retroactive assertion that the
 older binary contains these changes is valid.
+
+
+## Fatal LR mapping and cancelled media fetch guard
+
+After the initial full native candidate was scheduled, source validation found
+one additional unfinished-transaction edge case: a cancelled retail-case
+download could retain the five-minute rate-limit entry despite a premature
+launcher transition. The cancellation path now clears that gate without
+deleting already cached faces; a currently running network request still
+remains bounded by its own cancellation support/timeout.
+
+The fatal guest prefetch abort now issues exactly **one** page-table
+`QueryInfo` for its captured LR. The new
+`EDEN_GUEST_FAULT_LR_MAP` event records queried address,
+mapping range and state. It never reads guest memory, does not
+interpret a mapped LR as proof of JIT correctness, and does not
+mask the original `pc=0x4` fault. On hardware, compare this
+record to `EDEN_GUEST_CODE_RANGE` and the saved fault
+registers; separate findings from the unrelated GPU-progress stall.
+
+A core-ready host CI run must cover these source invariants and
+the actual native case TGA decoder before the next full All-On
+native build can be described as a qualified release candidate.
