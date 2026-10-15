@@ -257,6 +257,37 @@ the host test verifies ordering, not shutdown progress for every engine
 deadlock scenario. This is **not** a lifecycle integration into the native
 title manager and does not make the bridge eligible for activation.
 
+## Partial replay exception: poison instead of false completion
+
+The inactive queue formerly removed a published batch from its FIFO before
+invoking the rasterizer. A C++ exception from an individual replay callback
+would then destroy that batch without advancing its completion watermark.
+Subsequent drain attempts could process newer writes despite older, partially
+applied cache operations being missing.
+
+The queue now catches callback exceptions only to **poison the owning title
+session**, wake pending CPU readers, and rethrow the original exception.
+While poisoned:
+
+- no later GPU drain can run, even after the throwing callback exits;
+- no new writes may be enqueued or published;
+- outstanding `WaitUntil(ticket)` calls fail rather than hang;
+- the failed batch is **not** acknowledged as replayed;
+- `Pending()` remains true until quiescent teardown, and `Failed()` exposes
+  the terminal state for diagnostics.
+
+A callback may already have changed buffer/texture state before throwing,
+so blindly retrying that item would not be safe or necessarily idempotent.
+Only `Close()`, joining the producers/readers/GPU consumer and
+`ResetAfterQuiescence()` can clear the poison for a *new* title session.
+This is **not a runtime recovery mechanism**. Callers must treat a poison
+as a fatal per-session coherency failure and avoid submitting more GPU work.
+
+The C++ host sanitizer fixture now throws during the second callback in a
+batch, verifies the exception reaches its caller, the reader is released
+with failure and no fresh write/replay is accepted, then resets after joining
+all threads. It does not model Vulkan's partially applied cache operations.
+
 ## Required engineering contract
 
 - Give accepted entries an ordered, per-session completion watermark.
