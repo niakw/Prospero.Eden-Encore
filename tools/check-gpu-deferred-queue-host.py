@@ -251,6 +251,96 @@ int main() {
     assert(snapshot.DrainThrough(*early, [](unsigned, std::uint64_t, std::uint64_t) {
         assert(false);
     }) == 0);
+
+    // Two-phase publication: an out-of-order published write must not
+    // leapfrog a prior reservation from another guest core.
+    Queue two_phase;
+    const auto first = two_phase.Reserve(1, 4096, 8);
+    const auto second = two_phase.Reserve(3, 8192, 8);
+    assert(first && second && first->sequence == 1 && second->sequence == 2);
+    assert(first->generation == second->generation);
+    assert(two_phase.Publish(*second));
+    assert(!two_phase.Publish(*second));
+    assert(two_phase.Pending() && two_phase.CompletedSequence() == 0);
+    unsigned premature = 0;
+    assert(two_phase.Drain([&](unsigned,std::uint64_t,std::uint64_t){++premature;}) == 0);
+    assert(premature == 0);
+    assert(two_phase.Publish(*first));
+    std::vector<unsigned> published_order;
+    assert(two_phase.Drain([&](unsigned core,std::uint64_t,std::uint64_t) {
+        published_order.push_back(core);
+    }) == 2);
+    assert((published_order == std::vector<unsigned>{1,3}));
+    assert(two_phase.WaitUntil(*first) && two_phase.WaitUntil(*second));
+    assert(!two_phase.Publish(*first) && !two_phase.Pending());
+
+    // A finished ordinary (non-atomic) CPU store is visible to replay
+    // because Publish releases the queue mutex and the consumer acquires it.
+    // No callback may execute before publication of this exact ticket.
+    Queue publication;
+    int guest_payload = 0;
+    const auto delayed = publication.Reserve(0, 12288, sizeof(guest_payload));
+    assert(delayed);
+    assert(publication.Drain([](unsigned,std::uint64_t,std::uint64_t){assert(false);}) == 0);
+    std::atomic<bool> started{false};
+    std::thread producer([&] {
+        started.store(true, std::memory_order_release);
+        guest_payload = 0x12345;
+        assert(publication.Publish(*delayed));
+    });
+    while (!started.load(std::memory_order_acquire)) std::this_thread::yield();
+    unsigned observed = 0;
+    while (publication.CompletedSequence() < delayed->sequence) {
+        publication.Drain([&](unsigned core,std::uint64_t addr,std::uint64_t sz) {
+            assert(core == 0 && addr == 12288 && sz == sizeof(guest_payload));
+            assert(guest_payload == 0x12345);
+            ++observed;
+        });
+        std::this_thread::yield();
+    }
+    producer.join();
+    assert(observed == 1 && publication.WaitUntil(*delayed));
+
+    // Published entries before an uncommitted reservation can drain.
+    // Published entries after that reservation must wait.
+    Queue partial;
+    assert(partial.Enqueue(0, 4096, 8));
+    const auto hole = partial.Reserve(1, 8192, 8);
+    assert(hole);
+    assert(partial.Enqueue(2, 16384, 8));
+    std::vector<unsigned> prefix;
+    assert(partial.Drain([&](unsigned c,std::uint64_t,std::uint64_t) {
+        prefix.push_back(c);
+    }) == 1);
+    assert((prefix == std::vector<unsigned>{0}));
+    assert(partial.CompletedSequence() == 1 && partial.Pending());
+    assert(partial.Drain([](unsigned,std::uint64_t,std::uint64_t){assert(false);}) == 0);
+    assert(partial.Publish(*hole));
+    assert(partial.Drain([&](unsigned c,std::uint64_t,std::uint64_t) {
+        prefix.push_back(c);
+    }) == 2);
+    assert((prefix == std::vector<unsigned>{0,1,2}));
+    assert(!partial.Pending());
+
+    // Stale sessions, invalid tickets, and teardown cancellation.
+    Queue lifetime;
+    const auto old = lifetime.Reserve(2, 24576, 8);
+    assert(old);
+    assert(!lifetime.Publish(Queue::Ticket{0, old->generation}));
+    assert(!lifetime.Publish(Queue::Ticket{old->sequence + 1, old->generation}));
+    lifetime.Close();
+    assert(!lifetime.Publish(*old));
+    assert(!lifetime.WaitUntil(*old));
+    lifetime.ResetAfterQuiescence();
+    const auto fresh = lifetime.Reserve(2, 24576, 8);
+    assert(fresh && fresh->sequence == old->sequence &&
+           fresh->generation != old->generation);
+    assert(!lifetime.Publish(*old));
+    assert(!lifetime.WaitUntil(*old));
+    assert(lifetime.Publish(*fresh));
+    assert(lifetime.Drain([](unsigned,std::uint64_t,std::uint64_t){}) == 1);
+    assert(lifetime.WaitUntil(*fresh));
+
 }
 '''
 with tempfile.TemporaryDirectory(prefix="encore-deferred-host-") as folder:
