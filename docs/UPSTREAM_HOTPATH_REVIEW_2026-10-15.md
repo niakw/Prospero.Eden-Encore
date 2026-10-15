@@ -65,3 +65,20 @@ GPU fences remain ordered. Runtime behavior therefore stays unchanged; a
 console test now would provide no useful signal. The next engineering gate is
 a source-level native integration whose actual guest cache and HLE ordering
 passes host validation before any activation.
+
+## GPU-dirty replay correctness gate (follow-up)
+
+The pinned `core/gpu_dirty_memory_manager.h` uses `DEVICE_PAGEBITS-1`
+(2,048-byte) transform regions and 64-byte alignment. Passing an arbitrary
+queued guest write directly to `Collect` can cross one or several transform
+regions and violate its bit-mask preconditions. `headless/gpu_deferred_replay.h`
+slices each GPU-owned replay at the exact 2-KiB boundary while preserving
+the original CPU-core index; regular guest writes must still go through
+texture/shader invalidation but do not create false GPUDirty entries.
+`tools/check-gpu-deferred-replay-host.py` runs sanitizer-backed boundary,
+large-span, core-attribution and reentrant-drain checks.
+
+**Not yet connected to actual GPU dispatch or caches**. A native runtime
+bridge still requires source and lifecycle validation across
+`HandleRasterizerWrite`, `OnCPUWrite`, `FlushCaching`, DMA and fences.
+No PS5 test is warranted until that integration is qualified.
