@@ -74,6 +74,11 @@ for symbol in ("EnqueueTracked", "AcceptedSequence", "CompletedSequence",
 assert "return DrainThrough(target, std::forward<Replay>(replay));" in queue
 assert "DrainThrough(Ticket target, Replay&& replay)" in queue
 assert "target.generation != generation_" in queue
+# Prevent cross-address-space ticket aliasing even when sequence and session
+# counters align. The queue epoch generator is global to the process.
+assert "static inline std::atomic<std::uint64_t> next_generation_{0};" in queue
+assert "generation_{FreshGeneration()}" in queue
+assert "generation_ = FreshGeneration();" in queue
 assert "bool WaitUntil(Sequence sequence)" not in queue
 assert "std::optional<Ticket> EnqueueTracked" in queue
 assert "completed_cv_.notify_all()" in queue
