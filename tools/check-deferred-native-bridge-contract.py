@@ -54,6 +54,14 @@ for symbol in ("EnqueueTracked", "AcceptedSequence", "CompletedSequence",
 assert "return DrainThrough(AcceptedSequence()" in queue
 assert "completed_cv_.notify_all()" in queue
 assert "WaitUntil(" not in code
+# The host candidate now has a publish-after-store contract; the real bridge
+# still uses eager Enqueue and must NOT be presented as correctly integrated.
+for symbol in ("struct Ticket", "Reserve(", "Publish(Ticket", "WaitUntil(Ticket",
+               "generation_", "queue_[ready].published"):
+    assert symbol in queue, symbol
+assert "deferred_cpu_write_queue.Enqueue(core, address, size)" in code
+assert "deferred_cpu_write_queue.Reserve(" not in code
+assert "deferred_cpu_write_queue.Publish(" not in code
 assert "cpu_write_defer{false}" in perf
 for signature in (
     "EnqueueDeferredCPUWrite",
