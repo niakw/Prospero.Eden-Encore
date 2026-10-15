@@ -76,13 +76,13 @@ The native build previously inherited a boilerplate `param.json` without the opt
 <!-- BEGIN AUTO-UPSTREAM-COMPARISON -->
 ### Automated comparison (daily + manual)
 
-Checked in UTC: **2026-10-14 10:15 UTC**. Changes are commits relative to pins, not proven missing fixes.
+Checked in UTC: **2026-10-15 09:56 UTC**. Changes are commits relative to pins, not proven missing fixes.
 This workflow never imports source patches, modifies dependencies, or reads console data.
 
 | Dependency | Source | Pinned revision | Ahead / behind | Status |
 |---|---|---|---:|---|
-| eden | [eden-emulator/mirror](https://github.com/eden-emulator/mirror) | 5f142c7926d0 | +84 / -0 | upstream ahead |
-| ffmpeg | [FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg) | c7b5f1537d9c | +4585 / -0 | upstream ahead |
+| eden | [eden-emulator/mirror](https://github.com/eden-emulator/mirror) | 5f142c7926d0 | +87 / -0 | upstream ahead |
+| ffmpeg | [FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg) | c7b5f1537d9c | +4622 / -0 | upstream ahead |
 | fmt | [fmtlib/fmt](https://github.com/fmtlib/fmt) | 12.1.0 | +354 / -0 | upstream ahead |
 | zbic | [kinnay/zbic](https://github.com/kinnay/zbic) | 11b08f271226 | +0 / -0 | identical |
 | compiler-rt | [frozen archive / binary](https://github.com/frozen archive / binary) | — | — | not comparable |
@@ -90,15 +90,15 @@ This workflow never imports source patches, modifies dependencies, or reads cons
 | opengl-source | [blackbearreloaded/ps5-opengl](https://github.com/blackbearreloaded/ps5-opengl) | ad2807d41cef | +18 / -0 | upstream ahead |
 | harfbuzz | [frozen archive / binary](https://github.com/frozen archive / binary) | — | — | not comparable |
 | boilerplate | [blackbearreloaded/ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) | dd44bbdc7543 | +43 / -0 | upstream ahead |
-| ps5-vulkan-tools | [mihawk-99/PS5_Vulkan](https://github.com/mihawk-99/PS5_Vulkan) | 3f3ee6960701 | +18 / -0 | upstream ahead |
-| ps5-mesa | [mihawk-99/PS5_Mesa](https://github.com/mihawk-99/PS5_Mesa) | 0b2d6d1a61d9 | +110 / -103 | diverged |
+| ps5-vulkan-tools | [mihawk-99/PS5_Vulkan](https://github.com/mihawk-99/PS5_Vulkan) | 3f3ee6960701 | +19 / -0 | upstream ahead |
+| ps5-mesa | [mihawk-99/PS5_Mesa](https://github.com/mihawk-99/PS5_Mesa) | 0b2d6d1a61d9 | +111 / -103 | diverged |
 | ps5-payload-sdk-fork | [mihawk-99/PS5_PayloadSDK](https://github.com/mihawk-99/PS5_PayloadSDK) | 95c08f27386f | +100 / -48 | diverged |
 | encore-overrides | [niakw/encore-overrides](https://github.com/niakw/encore-overrides) | 4fdb329e732a | +0 / -0 | identical |
 | opengl-opengnm-psbc | [PS4-OpenGNM/opengnm-psbc](https://github.com/PS4-OpenGNM/opengnm-psbc) | a92a1228ea3a | +0 / -0 | identical |
 | opengl-opengnm | [PS4-OpenGNM/opengnm](https://github.com/PS4-OpenGNM/opengnm) | 4b295ca54c82 | +0 / -0 | identical |
 | opengl-spirv-headers | [KhronosGroup/SPIRV-Headers](https://github.com/KhronosGroup/SPIRV-Headers) | 0d25db97cb9b | +8 / -0 | upstream ahead |
 | opengl-vulkan-headers | [KhronosGroup/Vulkan-Headers](https://github.com/KhronosGroup/Vulkan-Headers) | b51f6b865c18 | +6 / -0 | upstream ahead |
-| opengl-imgui | [ocornut/imgui](https://github.com/ocornut/imgui) | f5befd2d29e6 | +1498 / -0 | upstream ahead |
+| opengl-imgui | [ocornut/imgui](https://github.com/ocornut/imgui) | f5befd2d29e6 | +1501 / -0 | upstream ahead |
 | opengl-nanovg | [memononen/nanovg](https://github.com/memononen/nanovg) | ce3bf745eb2d | +0 / -0 | identical |
 | opengl-sokol | [floooh/sokol](https://github.com/floooh/sokol) | 48c85905aeaa | +219 / -0 | upstream ahead |
 | opengl-native-boilerplate | [blackbearreloaded/ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) | 4f531c4b517f | +52 / -0 | upstream ahead |
@@ -109,8 +109,6 @@ This workflow never imports source patches, modifies dependencies, or reads cons
 These are upstream commit titles, not validated Encore integrations.
 
 **eden**
-- [5adaa5b0f7e1](https://github.com/eden-emulator/mirror/commit/5adaa5b0f7e1) — (core) Fix MSVC handler table initialization (#4421)
-- [1575f55abee5](https://github.com/eden-emulator/mirror/commit/1575f55abee5) — (dynarmic) fix sign extension logic on x64 (#4415)
 - [c5405250d179](https://github.com/eden-emulator/mirror/commit/c5405250d179) — (common, ui) Refining UI for FX shaders for PC (#4426)
 - [b77308ced62a](https://github.com/eden-emulator/mirror/commit/b77308ced62a) — (applet) ReconfigureControllers fallback unconditional disconnect fix (#4420)
 - [fa4e7c699243](https://github.com/eden-emulator/mirror/commit/fa4e7c699243) — (vk_texture_cache) drop depth comparison sampler fallback (#4408)
@@ -154,6 +152,8 @@ These are upstream commit titles, not validated Encore integrations.
 - [6352612425ae](https://github.com/eden-emulator/mirror/commit/6352612425ae) — (vk) Return the corrections made for buffer update logic #3690 (#4499)
 - [4dc69c06f764](https://github.com/eden-emulator/mirror/commit/4dc69c06f764) — (*) Remove Fix{Static,Small}VectorADL workaround for GCC 12 (#4386)
 - [a594c8d60ef7](https://github.com/eden-emulator/mirror/commit/a594c8d60ef7) — (shader_recompiler, vulkan, qcom, tu) Provide handling to missing shader subgroups on QCOM (#4508)
+- [fb51a1253447](https://github.com/eden-emulator/mirror/commit/fb51a1253447) — (input/sdl) nuke SDL_Vibration thread (#4299)
+- [14da4482a466](https://github.com/eden-emulator/mirror/commit/14da4482a466) — (input_common/joycon) Enumerate SDL devices iff SDL signals change (#4486)
 
 **ffmpeg** (history excerpt; some commits omitted)
 - [9c51aa182488](https://github.com/FFmpeg/FFmpeg/commit/9c51aa182488) — swscale: add SwsCompiledOp.slice_align
@@ -191,7 +191,6 @@ These are upstream commit titles, not validated Encore integrations.
 - [df84e9f8ff98](https://github.com/blackbearreloaded/ps5-native-app-boilerplate/commit/df84e9f8ff98) — No video mode change at launch: declare HDR output and no VRR in param.json (#10)
 
 **ps5-vulkan-tools**
-- [f3cbf875f899](https://github.com/mihawk-99/PS5_Vulkan/commit/f3cbf875f899) — radv-link: bind strcasestr, mkstemp, readlink, link and symlink, when the SDK has them
 - [403ea46701eb](https://github.com/mihawk-99/PS5_Vulkan/commit/403ea46701eb) — Provide a shared GPU broker and optional Windows Zink build
 - [5b5e4fc2d80f](https://github.com/mihawk-99/PS5_Vulkan/commit/5b5e4fc2d80f) — build-mesa-windows-zink: PS5 Mesa b3588f78dd7, Zink's persistent buffers host-visible
 - [2d414b13cfb2](https://github.com/mihawk-99/PS5_Vulkan/commit/2d414b13cfb2) — gpu-broker: count shown frames and take a picture of the next one
@@ -199,6 +198,7 @@ These are upstream commit titles, not validated Encore integrations.
 - [7786fe42b49b](https://github.com/mihawk-99/PS5_Vulkan/commit/7786fe42b49b) — gpu-broker: a client maps its memory again where the application places it
 - [4e41388958f8](https://github.com/mihawk-99/PS5_Vulkan/commit/4e41388958f8) — gpu-broker: the application chooses each client's host-visible memory
 - [252bf912a745](https://github.com/mihawk-99/PS5_Vulkan/commit/252bf912a745) — build-radv: PS5 Mesa 47e9eb6, 119.88 Hz counts only when offered and taken
+- [f410e67a0241](https://github.com/mihawk-99/PS5_Vulkan/commit/f410e67a0241) — RADV: fragment shader barycentrics in order, the survey that found why, and the Mesa pin
 
 **ps5-mesa** (history excerpt; some commits omitted)
 - [ff437af31b9b](https://github.com/mihawk-99/PS5_Mesa/commit/ff437af31b9b) — radv/ps5: mesh workgroups in parts run once and publish their outputs
