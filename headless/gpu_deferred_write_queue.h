@@ -94,9 +94,14 @@ public:
         return completed_ >= sequence;
     }
 
-    // GPU owner only. Drain a fixed watermark so continuing guest producers
-    // cannot indefinitely starve the next draw/command. The consumer never
-    // holds the queue lock while calling the original rasterizer.
+    // GPU owner only. Capture ONE finite FIFO batch while holding the queue
+    // mutex, then replay it without that mutex. New enqueues remain pending
+    // until a later GPU boundary, even if they arrive during replay.
+    //
+    // The requested watermark is a MINIMUM completion target, not an upper
+    // cutoff: entries merged into the tail or accepted before this snapshot
+    // may be included. No callback may run before its guest payload is
+    // published (a separate, currently UNPROVEN native contract).
     template<class Replay>
     std::uint64_t DrainThrough(Sequence watermark, Replay&& replay) {
         // Only one GPU owner can replay a session at a time. A second owner
@@ -111,30 +116,24 @@ public:
             ~RestoreOwner() { slot = prior; }
         } restore{active_consumer_, active_consumer_};
         active_consumer_ = this;
-        std::uint64_t count = 0;
-        while (true) {
-            std::vector<Write> work;
-            {
-                std::lock_guard lock(mutex_);
-                if (completed_ >= watermark) break;
-                work.swap(queue_);
-            }
-            // This can only happen if the single-GPU-consumer contract is
-            // violated, or if a caller supplied a future/invalid watermark.
-            if (work.empty()) break;
-            Sequence last_done = 0;
-            for (const auto& item : work) {
-                replay(item.core, item.range.begin, item.range.end - item.range.begin);
-                last_done = item.last_sequence;
-                ++count;
-            }
-            {
-                std::lock_guard lock(mutex_);
-                completed_ = std::max(completed_, last_done);
-            }
-            completed_cv_.notify_all();
+        std::vector<Write> work;
+        {
+            std::lock_guard lock(mutex_);
+            if (watermark > accepted_ || completed_ >= watermark) return 0;
+            work.swap(queue_);
         }
-        return count;
+        // Under the consumer mutex no other replay can be in flight; the
+        // snapshot therefore covers every accepted, unacknowledged write.
+        if (work.empty()) std::terminate();
+        for (const auto& item : work) {
+            replay(item.core, item.range.begin, item.range.end - item.range.begin);
+        }
+        {
+            std::lock_guard lock(mutex_);
+            completed_ = work.back().last_sequence;
+        }
+        completed_cv_.notify_all();
+        return static_cast<std::uint64_t>(work.size());
     }
 
     template<class Replay>
