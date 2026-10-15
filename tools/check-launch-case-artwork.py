@@ -177,6 +177,9 @@ case_fetch = native.split("unsigned EnsureRetailCase(", 1)[1].split(
 assert "std::unique_lock guard(locks[title_id % locks.size()], std::defer_lock);" in case_fetch
 assert "while (!guard.try_lock()) {" in case_fetch
 assert "std::this_thread::sleep_for(std::chrono::milliseconds(50));" in case_fetch
+assert "if (all_ready || (cancel && cancel->load(std::memory_order_acquire))) {" in case_fetch
+assert "retries.erase(title_id);" in case_fetch
+assert "all_ready = false;\n            break;" in case_fetch
 assert "if (cancel && cancel->load(std::memory_order_acquire)) return 0;" in case_fetch
 assert "if (cancel && cancel->load(std::memory_order_acquire)) return changed_faces;" in case_fetch
 # The first successful front/back download permits the optional spine in the
