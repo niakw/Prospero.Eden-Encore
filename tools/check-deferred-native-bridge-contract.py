@@ -81,6 +81,12 @@ assert "generation_{FreshGeneration()}" in queue
 assert "generation_ = FreshGeneration();" in queue
 assert "bool WaitUntil(Sequence sequence)" not in queue
 assert "std::optional<Ticket> EnqueueTracked" in queue
+# Bounded backlog counts accepted but UNACKNOWLEDGED sequence IDs, not
+# vector entries: a GPU snapshot in progress and coalesced eager writes
+# must both consume the budget. Rejected reservations require a safe
+# synchronous producer fallback, never a silently lost invalidation.
+assert "static constexpr Sequence MaxOutstandingWrites = 8192;" in queue
+assert "accepted_ - completed_ >= MaxOutstandingWrites" in queue
 # Publishing thousands of reservations out of order must not turn the FIFO
 # into a quadratic per-frame CPU hotspot. Last-sequence keys are monotone
 # across tail merges and prefix drains, allowing log-time lookup.
