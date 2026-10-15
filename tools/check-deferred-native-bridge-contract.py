@@ -83,7 +83,7 @@ assert "bool WaitUntil(Sequence sequence)" not in queue
 assert "std::optional<Ticket> EnqueueTracked" in queue
 # Shutdown must be a replay-lifetime barrier, not just a waiter wake-up.
 # Without this, the GPU callback can still touch freed rasterizer resources.
-close_body=queue.split("void Close() {",1)[1].split("void ResetAfterQuiescence()",1)[0]
+close_body=queue.split("void Close() {",1)[1].split("bool ResetAfterQuiescence()",1)[0]
 assert close_body.index("closed_ = true;") < close_body.index("std::lock_guard owner(consumer_mutex_);")
 assert "completed_cv_.notify_all()" in close_body
 assert "if (active_consumer_ == this) std::terminate();" in close_body
