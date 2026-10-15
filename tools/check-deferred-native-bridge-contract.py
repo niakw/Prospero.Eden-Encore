@@ -117,6 +117,11 @@ for symbol in ("struct Ticket", "Reserve(", "Publish(Ticket", "WaitUntil(Ticket"
                "generation_", "queue_[ready].published"):
     assert symbol in queue, symbol
 assert "deferred_cpu_write_queue.Enqueue(core, address, size)" in code
+# A GPU replay exception poisons the session; even if upstream catches it,
+# no later native command may silently proceed through FlushCaching().
+assert "if (deferred_cpu_write_queue.Failed()) std::terminate();" in code
+assert code.index("if (deferred_cpu_write_queue.Failed()) std::terminate();") < code.index("if (deferred_cpu_write_queue.Pending())")
+
 assert "deferred_cpu_write_queue.Reserve(" not in code
 assert "deferred_cpu_write_queue.Publish(" not in code
 assert "cpu_write_defer{false}" in perf
