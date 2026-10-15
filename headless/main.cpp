@@ -2046,6 +2046,15 @@ int main(int argc, char** argv) {
                             break;
                         code_end = info.m_address + info.m_size;
                     }
+#ifdef PS5_NATIVE
+                    // One snapshot per title, never in the JIT or GPU hot path.
+                    // Qualify a future guest fault's saved LR against this
+                    // queried executable range before choosing a JIT/HLE fix.
+                    std::printf("EDEN_GUEST_CODE_RANGE entry=0x%llx end=0x%llx bytes=%llu\n",
+                        static_cast<unsigned long long>(code_start),
+                        static_cast<unsigned long long>(code_end),
+                        static_cast<unsigned long long>(code_end - code_start));
+#endif
                     jit_list.Start(system.GetApplicationProcessProgramID(), build, code_start, code_end - code_start);
                 }
                 Eden::TakeGuestFault(); // Nothing from an earlier session belongs to this one.
