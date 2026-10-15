@@ -71,7 +71,11 @@ queue=(root/"headless/gpu_deferred_write_queue.h").read_text()
 for symbol in ("EnqueueTracked", "AcceptedSequence", "CompletedSequence",
                "DrainThrough", "WaitUntil", "Close"):
     assert symbol in queue, symbol
-assert "return DrainThrough(AcceptedSequence()" in queue
+assert "return DrainThrough(target, std::forward<Replay>(replay));" in queue
+assert "DrainThrough(Ticket target, Replay&& replay)" in queue
+assert "target.generation != generation_" in queue
+assert "bool WaitUntil(Sequence sequence)" not in queue
+assert "std::optional<Ticket> EnqueueTracked" in queue
 assert "completed_cv_.notify_all()" in queue
 assert "WaitUntil(" not in code
 # The host candidate now has a publish-after-store contract; the real bridge
