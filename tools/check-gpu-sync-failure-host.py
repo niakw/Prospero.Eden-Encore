@@ -33,6 +33,33 @@ assert '#include \\"' not in native_method
 derived = stopped_pinned.replace(original, native_method.rstrip("\n"))
 assert derived.count("std::rethrow_exception(failure);") == 2
 assert derived.count("sync_request_cv.wait_for(lck, std::chrono::milliseconds(100));") == 1
+# Follow the EXACT native CMake derivation fragment, not a handwritten
+# approximation. The shipped build uses --graphics and compiles this GPU path
+# even when the selected renderer backend is Vulkan.
+assert '-DEDEN_PS5_OPENGL="$graphics"' in (root / "tools/build-headless-native.sh").read_text()
+assert 'tools/build-headless-native.sh --graphics' in (root / "tools/build-package.sh").read_text()
+start = cmake.index("    set(gpu_sync_wait_original [=[")
+end = cmake.index('    string(REPLACE "GPU::~GPU() = default;"', start)
+fragment = cmake[start:end]
+with tempfile.TemporaryDirectory(prefix="encore-gpu-sync-derive-") as d:
+    directory = Path(d)
+    outfile = directory / "native_gpu.cpp"
+    cmakefile = directory / "derive.cmake"
+    cmakefile.write_text(
+        'cmake_minimum_required(VERSION 3.25)\n'
+        + f'set(EDEN_PORT_DIR "{(root / "headless").as_posix()}")\n'
+        + f'file(READ "{(root / "vendor/sources/eden/src/video_core/gpu.cpp").as_posix()}" gpu_source)\n'
+        + 'string(REPLACE "return CurrentSyncRequestFence() >= fence;" '
+        + '"return sync_requests_stopped || CurrentSyncRequestFence() >= fence;" '
+        + 'gpu_source "${gpu_source}")\n'
+        + fragment + '\n'
+        + f'file(WRITE "{outfile.as_posix()}" "${{gpu_source}}")\n'
+    )
+    subprocess.run(["cmake", "-P", str(cmakefile)], check=True, timeout=20)
+    generated = outfile.read_text()
+    assert native_method.rstrip("\n") in generated
+    assert generated.count("std::rethrow_exception(failure);") == 2
+    assert "#include \"" + (root / "headless/gpu_failure.h").as_posix() + "\"" in generated
 
 source = r"""
 #include "gpu_failure.h"
