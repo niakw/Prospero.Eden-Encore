@@ -47,6 +47,10 @@ SETTING_LABELS = ("kResolutionLabels", "kUpscalingFilterLabels", "kAntiAliasingL
 DYNAMIC_LIBRARY_GENRES = frozenset({
     "Strategy", "Role-Playing", "Adventure", "Action", "Simulation", "Sports",
     "Racing", "Puzzle", "Platformer", "Fighting", "Shooter",
+    "Multiplayer", "Other", "Arcade", "Party", "Music", "Horror",
+    "Casual", "Education", "Board Game", "Card Game", "Indie",
+    "Visual Novel", "Family", "RPG", "Action-Adventure", "Co-op",
+    "Online", "Single Player", "Rhythm", "Sandbox",
 })
 
 
