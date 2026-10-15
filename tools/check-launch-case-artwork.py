@@ -159,6 +159,19 @@ assert '"EDEN_CASE_LOOKUP title=%016llX status=match' in native
 assert "std::chrono::minutes(5)" in native
 assert "std::chrono::hours(4)" not in native.split("void EnsureRetailCase(", 1)[1].split("NlibEnrichment CachedNlibEnrichment(", 1)[0]
 assert "both_faces_cached_at_start" in native
+# A competing background Home/Library request must wait for the atomic
+# retail-case writer instead of disappearing behind the five-minute retry.
+case_fetch = native.split("void EnsureRetailCase(", 1)[1].split(
+    "NlibEnrichment CachedNlibEnrichment(", 1
+)[0]
+assert "std::unique_lock guard(locks[title_id % locks.size()]);" in case_fetch
+assert "std::try_to_lock" not in case_fetch
+assert "if (cancel && cancel->load(std::memory_order_acquire)) return;" in case_fetch
+# The first successful front/back download permits the optional spine in the
+# same background pass; no enforced five-minute wait for an empty case side.
+assert 'if (side == 2 && !both_faces_cached_at_start &&' in case_fetch
+assert '!ValidNlibTga(CaseFacePath(title_id, "front"))' in case_fetch
+assert '!ValidNlibTga(CaseFacePath(title_id, "back"))' in case_fetch
 assert "attempts >= 3" in native
 assert 'std::fprintf(stderr, "EDEN_CASE_FACE title=%016llX side=%d status=unavailable' in native
 assert "const bool both_faces_cached_at_start =" in native
