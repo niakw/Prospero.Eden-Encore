@@ -33,6 +33,18 @@ gpu_read=gpu_src.split("VideoCore::RasterizerDownloadArea OnCPURead(",1)[1].spli
 assert gpu_read.index("if (raster_area.preemtive)") < gpu_read.index("RequestSyncOperation(")
 assert "FlushCaching(" not in gpu_read
 assert "HandleRasterizerDownload" not in code
+# Known unresolved publication hazard: guest writes can enqueue deferred GPU
+# invalidations BEFORE the backing RAM write has occurred. A replay-completion
+# ticket is NOT sufficient to assert the new payload has become visible.
+# Pin the real source ordering until there is an explicit post-store publication
+# protocol and a native read-fence qualification.
+write_block=reader.split("bool WriteBlockImpl(",1)[1].split("bool ZeroBlock(",1)[0]
+tracked_store=write_block.rsplit("HandleRasterizerWrite(GetInteger(current_vaddr), copy_amount);",1)[1]
+assert "std::memcpy(ptr, reinterpret_cast<u8 const*>(buffer) + offset, copy_amount);" in tracked_store
+zero_block=reader.split("bool ZeroBlock(",1)[1].split("bool CopyBlock(",1)[0]
+assert zero_block.index("HandleRasterizerWrite(GetInteger(current_vaddr), copy_amount);") < zero_block.rindex("std::memset(ptr, 0, copy_amount);")
+scalar_write=reader.split("inline void Write(Common::ProcessAddress vaddr,",1)[1].split("bool WriteExclusive(",1)[0]
+assert scalar_write.index("HandleRasterizerWrite(addr, sizeof(T));") < scalar_write.index("std::memcpy(ptr, &data, sizeof(T));")
 # The host queue now exposes a completion model. It must not be mistaken for
 # a native CPU-read barrier: the real reader still has no GPU-drain request.
 queue=(root/"headless/gpu_deferred_write_queue.h").read_text()
