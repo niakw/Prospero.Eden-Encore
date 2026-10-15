@@ -18,6 +18,7 @@ source = r'''
 #include <cassert>
 #include <cstdint>
 #include <optional>
+#include <stdexcept>
 #include <thread>
 #include <vector>
 using Eden::GpuDeferredWrite::Queue;
@@ -481,6 +482,51 @@ int main() {
     assert(closed_before_replay.DrainThrough(*never_replay,
         [](unsigned,std::uint64_t,std::uint64_t) {assert(false);}) == 0);
     assert(!closed_before_replay.WaitUntil(*never_replay));
+
+    // A cache replay callback can fail after partially applying invalidation.
+    // The queue must NEVER report that snapshot as completed or retry it:
+    // retrying may duplicate partially applied GPU/texture side effects.
+    Queue poisoned;
+    const auto first_write = poisoned.EnqueueTracked(0, 262144, 8);
+    const auto second_write = poisoned.EnqueueTracked(1, 266240, 8);
+    const auto not_yet_published = poisoned.Reserve(2, 270336, 8);
+    assert(first_write && second_write && not_yet_published);
+    std::atomic<bool> failed_reader{false};
+    std::thread poison_reader([&] {
+        failed_reader.store(!poisoned.WaitUntil(*second_write),
+                            std::memory_order_release);
+    });
+    unsigned replay_attempts = 0;
+    bool saw_error = false;
+    try {
+        poisoned.Drain([&](unsigned, std::uint64_t, std::uint64_t) {
+            ++replay_attempts;
+            if (replay_attempts == 2)
+                throw std::runtime_error("partial rasterizer replay failed");
+        });
+    } catch (const std::runtime_error&) {
+        saw_error = true;
+    }
+    poison_reader.join();
+    assert(saw_error && replay_attempts == 2);
+    assert(failed_reader.load(std::memory_order_acquire));
+    assert(poisoned.Failed() && poisoned.Pending());
+    assert(poisoned.CompletedSequence() == 0);
+    assert(poisoned.AcceptedSequence() == not_yet_published->sequence);
+    assert(!poisoned.Publish(*not_yet_published));
+    assert(!poisoned.EnqueueTracked(3, 274432, 8));
+    assert(!poisoned.WaitUntil(*first_write));
+    assert(!poisoned.WaitUntil(*second_write));
+    assert(poisoned.Drain([&](unsigned, std::uint64_t, std::uint64_t) {
+        assert(false); // A poisoned session may not silently resume.
+    }) == 0);
+    poisoned.Close();
+    poisoned.ResetAfterQuiescence(); // Strictly after all threads have joined.
+    assert(!poisoned.Failed() && !poisoned.Pending());
+    const auto recovered = poisoned.EnqueueTracked(0, 278528, 8);
+    assert(recovered && recovered->generation != first_write->generation);
+    assert(poisoned.Drain([](unsigned,std::uint64_t,std::uint64_t){}) == 1);
+    assert(poisoned.WaitUntil(*recovered));
 }
 '''
 with tempfile.TemporaryDirectory(prefix="encore-deferred-host-") as folder:
