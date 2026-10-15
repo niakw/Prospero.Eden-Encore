@@ -108,7 +108,7 @@ assert "deferred_cpu_write_queue.PublishAndWake(" not in code
 close_body=queue.split("void Close() {",1)[1].split("bool ResetAfterQuiescence()",1)[0]
 assert close_body.index("closed_ = true;") < close_body.index("std::lock_guard owner(consumer_mutex_);")
 assert "completed_cv_.notify_all()" in close_body
-assert "if (active_consumer_ == this) std::terminate();" in close_body
+assert "if (active_consumer_ == this || active_wake_callback_ == this)" in close_body
 drain_body=queue.split("std::uint64_t DrainThrough(Ticket target, Replay&& replay)",1)[1].split("std::uint64_t Drain(Replay&& replay)",1)[0]
 assert "std::unique_lock owner(consumer_mutex_);" in drain_body
 assert "if (closed_ || failed_ || target.generation != generation_" in drain_body
