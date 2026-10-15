@@ -52,4 +52,63 @@ for needle in ("bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {",
 with tempfile.TemporaryDirectory(prefix="encore-bridge-config-") as d:
     subprocess.run(["cmake","-P",str(bridge)],cwd=d,check=True,
                    timeout=20,capture_output=True,text=True)
-print("NATIVE_GUEST_WRITE_BRIDGE_STATIC_PASS default_off=1 guest_session=1 gpu_dirty=1 dma=1 no_runtime_enable=1")
+# Configure the development CMake path using dummy host targets. This
+# exercises source translation without the native SDK or a console build.
+with tempfile.TemporaryDirectory(prefix="encore-bridge-on-") as d:
+    fake=Path(d)
+    (fake/"empty.cpp").write_text("int bridge_host_stub() { return 0; }\n")
+    stage=fake/"stage"
+    stage.mkdir()
+    source=root/"vendor/sources/eden/src/video_core/dma_pusher.cpp"
+    (stage/"dma_pusher.cpp").write_bytes(source.read_bytes())
+    project=r"""cmake_minimum_required(VERSION 3.24)
+project(InactiveBridgeConfigure LANGUAGES CXX)
+set(PS5_NATIVE ON)
+set(EDEN_PS5_VULKAN ON)
+set(EDEN_DEV_PROFILE ON)
+set(EDEN_GUEST_WRITE_BRIDGE_DEV ON CACHE BOOL "" FORCE)
+set(PORT_ROOT "__ROOT__")
+set(EDEN_PORT_DIR "__ROOT__/headless")
+set(PROJECT_SOURCE_DIR "__ROOT__/vendor/sources/eden")
+set(PORT_BUILD_DIR "__STAGE__")
+add_library(video_core STATIC "@{CMAKE_CURRENT_SOURCE_DIR}/empty.cpp")
+add_library(core STATIC "@{CMAKE_CURRENT_SOURCE_DIR}/empty.cpp")
+set_property(TARGET video_core PROPERTY SOURCES
+    "memory_manager.cpp"
+    "@{PORT_BUILD_DIR}/vulkan_rasterizer.cpp"
+    "@{PORT_BUILD_DIR}/dma_pusher.cpp"
+    "engines/maxwell_dma.cpp"
+    "engines/kepler_compute.cpp")
+function(write_derived path content)
+    file(WRITE "@{path}" "@{content}")
+endfunction()
+include("__BRIDGE__")
+""".replace("@{",chr(36)+"{").replace("__ROOT__",str(root)).replace("__STAGE__",str(stage)).replace("__BRIDGE__",str(bridge))
+    (fake/"CMakeLists.txt").write_text(project)
+    result=subprocess.run(["cmake","-S",str(fake),"-B",str(fake/"build")],
+                          capture_output=True,text=True,timeout=45)
+    if result.returncode:
+        print(result.stdout[-3500:])
+        print(result.stderr[-3500:])
+        raise AssertionError("native ON CMake source translation failed")
+    sources={p.name:p.read_text() for p in stage.iterdir() if p.is_file()}
+    for name in ("memory_manager_deferred.cpp","vulkan_rasterizer_deferred.cpp",
+                 "dma_pusher_deferred.cpp","maxwell_dma_deferred.cpp",
+                 "kepler_compute_deferred.cpp"):
+        assert name in sources and len(sources[name])>200,name
+    mm=sources["memory_manager_deferred.cpp"]
+    assert "deferred_cpu_write_queue.Enqueue(core, address, size)" in mm
+    assert "rasterizer->OnCPUWrite(address, size)" in mm
+    assert "dirty[core].Collect(address, size)" in mm
+    vk=sources["vulkan_rasterizer_deferred.cpp"]
+    assert vk.count("EnqueueDeferredCPUWrite(addr, size)") == 2
+    assert "!::Eden::GpuDeferredWrite::replaying_guest_write" in vk
+    assert "std::lock_guard lock{buffer_cache.mutex, std::adopt_lock};" in vk
+    assert "std::lock_guard lock{texture_cache.mutex, std::adopt_lock};" in vk
+    assert sources["dma_pusher_deferred.cpp"].count("memory_manager.FlushCaching()") >= 2
+    assert "memory_manager.FlushCaching();" in sources["maxwell_dma_deferred.cpp"]
+    assert "memory_manager.FlushCaching();" in sources["kepler_compute_deferred.cpp"]
+    h=(stage/"include/video_core/memory_manager.h").read_text()
+    assert "GpuDeferredWrite::Queue deferred_cpu_write_queue" in h
+print("NATIVE_GUEST_WRITE_BRIDGE_SOURCE_PASS default_off=1 dev_on_translations=5 no_runtime_enable=1")
+
