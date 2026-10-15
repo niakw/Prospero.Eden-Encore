@@ -20,6 +20,7 @@ s=swap[swap.index("void Swapchain::Present(VkSemaphore render_semaphore) {"):]
 s=s[:s.index("\nbool Swapchain::")]
 b=s.index("std::unique_lock<std::mutex> lock{scheduler.submit_mutex, std::defer_lock};")
 assert "if (device.GetGraphicsFamily() == device.GetPresentFamily()) lock.lock();" in s
+assert "if (device.GetGraphicsFamily() == device.GetPresentFamily()) lock.lock();" in (root/"tools/prepare-vulkan-port.py").read_text()
 a=s.index("present_queue.Present(present_info)")
 assert b<a
 worker=scheduler[scheduler.index("u64 Scheduler::SubmitExecution("):]
