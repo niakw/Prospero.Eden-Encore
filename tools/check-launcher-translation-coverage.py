@@ -14,6 +14,18 @@ marked = set(module["marked_text"]())
 read_po = module["parse_po"]
 catalogs = sorted((root / "headless/prosperoeden/ui/lang").glob("*.po"))
 assert len(catalogs) == 29, f"catalog count changed: {len(catalogs)}"
+# Category strings arrive from external metadata at runtime; they are not
+# automatically captured by tr("literal") extraction. Guard both French
+# regional catalogs, including genres that previously fell back to English.
+required_french_genres = {"Strategy", "Multiplayer", "Other", "Racing",
+                          "Adventure", "Role-Playing", "Arcade", "Casual"}
+assert required_french_genres <= module["DYNAMIC_LIBRARY_GENRES"]
+for name in ("fr-FR.po", "fr-CA.po"):
+    genre_translations = read_po(root / "headless/prosperoeden/ui/lang" / name)
+    absent = {key for key in required_french_genres
+              if not genre_translations.get(key) or genre_translations[key] == key
+              and key in {"Strategy", "Multiplayer", "Other", "Role-Playing"}}
+    assert not absent, f"{name}: untranslated game categories {sorted(absent)}"
 # Resolution labels are dynamic constants, not tr("...") literals. Never
 # permit them to disappear in non-primary languages after gettext extraction.
 import re
