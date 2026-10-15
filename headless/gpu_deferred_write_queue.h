@@ -24,6 +24,9 @@ public:
     static constexpr unsigned Cores = 4;
     static constexpr std::uint64_t PageBytes = 4096;
     static constexpr std::uint64_t DirtyRegionBytes = PageBytes / 2;
+    // Limit queued invalidations to about 192 KiB of metadata; when full the
+    // caller MUST use the original blocking cache write path (not drop data).
+    static constexpr std::uint64_t MaxPendingEntries = 8192;
 
     // Assign a single linearization point to all guest cores. Per-core drain
     // order would reorder dependent writes from distinct CPU producers.
@@ -46,6 +49,7 @@ public:
                 return true;
             }
         }
+        if (queue_.size() >= MaxPendingEntries) return false;
         queue_.push_back({core, {address, end}});
         pending_.store(true, std::memory_order_release);
         return true;

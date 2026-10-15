@@ -15,10 +15,43 @@ code = r'''
 #include "gpu_deferred_replay.h"
 #include <cassert>
 #include <cstdint>
+#include <atomic>
+#include <thread>
 #include <vector>
 using namespace Eden::GpuDeferredWrite;
 struct Span {unsigned core; std::uint64_t address, size;};
 int main() {
+    // The real producer sets the guest core. Nested invocations must restore
+    // the old identity, and unrelated GPU threads must see NoGuestCore.
+    assert(guest_write_origin_core==NoGuestCore);
+    {
+        ScopedGuestWriteOrigin guest{2};
+        assert(guest_write_origin_core==2);
+        {
+            ScopedGuestWriteOrigin nested{3};
+            assert(guest_write_origin_core==3);
+        }
+        assert(guest_write_origin_core==2);
+        {
+            ScopedReplay mark{};
+            assert(replaying_guest_write);
+            ScopedReplay recursive{};
+            assert(replaying_guest_write);
+        }
+        assert(!replaying_guest_write);
+    }
+    assert(guest_write_origin_core==NoGuestCore);
+    std::atomic<bool> other_ok{false};
+    std::thread different_worker([&]() {
+        assert(guest_write_origin_core==NoGuestCore);
+        ScopedGuestWriteOrigin own{1};
+        assert(guest_write_origin_core==1);
+        other_ok.store(true,std::memory_order_release);
+    });
+    different_worker.join();
+    assert(other_ok.load(std::memory_order_acquire));
+    assert(guest_write_origin_core==NoGuestCore);
+
     Queue queue;
     std::vector<Span> replayed, dirty;
     assert(queue.Enqueue(1,2040,32));
@@ -79,4 +112,4 @@ with tempfile.TemporaryDirectory(prefix="encore-replay-host-") as folder:
                     "-fno-sanitize-recover=all","-I",str(root/"headless"),
                     str(cpp),"-o",str(exe)],check=True,timeout=45)
     subprocess.run([str(exe)],check=True,timeout=45)
-print("GPU_DEFERRED_REPLAY_HOST_PASS dirty_regions=2048 granularity=64 crossregion=1 core_preserved=1 reentrant=1")
+print("GPU_DEFERRED_REPLAY_HOST_PASS dirty_regions=2048 granularity=64 crossregion=1 core_preserved=1 tls_origin=1 reentrant=1")

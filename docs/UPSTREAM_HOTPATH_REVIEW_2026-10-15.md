@@ -188,3 +188,16 @@ enabled and the call is not itself a replay. Ordinary GPU-worker writes
 have no guest origin and remain on the original synchronous path.
 The developer CMake fixture checks the resulting seventh translation
 unit and the exact origin guard. The shipping mode stays OFF.
+
+## Deferred guest write backpressure and origin lifetime
+
+The experimental session-owned FIFO now permits at most 8,192 outstanding
+entries (roughly 192 KiB of metadata) and **returns false at capacity**,
+which makes the caller execute the original synchronous cache invalidation
+rather than drop or indefinitely accumulate CPU writes. The existing FIFO
+and core identity are preserved; the cap is checked only after an eligible
+same-region/same-core merge. A sanitizer fixture fills the whole queue,
+checks backpressure and verifies that draining permits new writes.
+A second sanitizer fixture covers nested guest-core TLS scope restoration,
+GPU replay scope nesting and isolation from unrelated host threads.
+The native deferred gate remains OFF, so these checks do not assert FPS gains.
