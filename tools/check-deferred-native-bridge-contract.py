@@ -21,6 +21,18 @@ assert "cpu_write_defer{false}" in perf
 assert "cpu_write_defer.store(true" not in code
 assert "ScopedReplay" in replay and "replaying_guest_write" in replay
 assert "ScopedGuestWriteOrigin" in replay and "guest_write_origin_core = previous" in replay
+# Fail-closed documentation contract: the inactive candidate does not yet
+# synchronize deferred writes before either CPU-read fast path. Pin BOTH bypass
+# sites so a future change must replace this negative proof with a real ordered
+# read/drain qualification before runtime activation can be contemplated.
+reader=(root/"vendor/sources/eden/src/core/memory.cpp").read_text()
+download=reader.split("void HandleRasterizerDownload(",1)[1].split("void HandleRasterizerWrite(",1)[0]
+assert download.index("if (current_area.start_address <= address") < download.index("system.GPU().OnCPURead(address, size)")
+gpu_src=(root/"vendor/sources/eden/src/video_core/gpu.cpp").read_text()
+gpu_read=gpu_src.split("VideoCore::RasterizerDownloadArea OnCPURead(",1)[1].split("void InvalidateRegion(",1)[0]
+assert gpu_read.index("if (raster_area.preemtive)") < gpu_read.index("RequestSyncOperation(")
+assert "FlushCaching(" not in gpu_read
+assert "HandleRasterizerDownload" not in code
 for signature in (
     "EnqueueDeferredCPUWrite",
     "ScopedGuestWriteOrigin guest_origin",
