@@ -21,6 +21,17 @@ source = r'''
 #include <thread>
 #include <vector>
 using Eden::GpuDeferredWrite::Queue;
+template<typename T>
+concept AcceptsBareWait = requires(T& queue) {
+    queue.WaitUntil(std::uint64_t{1});
+};
+template<typename T>
+concept AcceptsBareDrain = requires(T& queue) {
+    queue.DrainThrough(std::uint64_t{1},
+        [](unsigned, std::uint64_t, std::uint64_t) {});
+};
+static_assert(!AcceptsBareWait<Queue>);
+static_assert(!AcceptsBareDrain<Queue>);
 int main() {
     Queue q;
     assert(!q.Pending());
