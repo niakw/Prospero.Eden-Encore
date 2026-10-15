@@ -43,8 +43,7 @@ python3 -B tools/install-vendored-eden-build-flags.py "$eden"
 # always installed into the ACTIVE native core. This is source materialization,
 # not an environment-variable runtime opt-in or a debug-only wrapper.
 step "Always-on guest I-cache and host-service wait backports"
-python3 -B tools/install-active-core-backports.py "$eden" --check 2>/dev/null || \
-    python3 -B tools/install-active-core-backports.py "$eden"
+python3 -B tools/install-active-core-backports.py "$eden"
 python3 -B tools/install-active-core-backports.py "$eden" --check
 step "R352 fence-safe NVNflinger layer/display cleanup (versioned complete source)"
 python3 -B tools/install-vendored-surface-lifecycle.py "$eden"
