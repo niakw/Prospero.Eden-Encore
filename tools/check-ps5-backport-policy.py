@@ -3,20 +3,30 @@
 from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 script = (root / "tools/apply-eden-backports.sh").read_text()
-for flag, patch in (
-    ("EDEN_EXPERIMENTAL_DUMMY_THREAD_WAITS", "eden-dummy-thread-waits.patch"),
-    ("EDEN_EXPERIMENTAL_ICACHE_COHERENCE", "eden-dynarmic-icache-coherence.patch"),
-    ("EDEN_EXPERIMENTAL_SM_HOST_WAIT", "eden-sm-host-wait.patch"),
-):
-    condition = "if [[ ${" + flag + ":-OFF} == ON ]]; then"
-    start = script.index(condition)
-    end = script.index("\nfi", start)
-    assert patch in script[start:end], (flag, patch)
-    assert script.count('apply_one "$root/headless/backports/' + patch + '"') == 1
-    assert ":-OFF" in condition
+# The active source materializer, not test-only environment variables, owns
+# the previously optional I-cache and service-manager patches.
+import json
+active = (root / "tools/install-active-core-backports.py").read_text()
+prepare = (root / "tools/prepare-build.sh").read_text()
+manifest = json.loads((root / "vendor/encore-active/eden-backports/manifest.json").read_text())
+assert manifest["excluded_experimental"] == ["EDEN_EXPERIMENTAL_DUMMY_THREAD_WAITS"]
+assert 'python3 -B tools/install-active-core-backports.py "$eden"' in prepare
+assert 'python3 -B tools/install-active-core-backports.py "$eden" --check' in prepare
+for patch in ("eden-dynarmic-icache-coherence.patch", "eden-sm-host-wait.patch"):
+    assert patch in active
+    assert 'apply_one "$root/headless/backports/' + patch + '"' not in script
+for flag in ("EDEN_EXPERIMENTAL_ICACHE_COHERENCE", "EDEN_EXPERIMENTAL_SM_HOST_WAIT"):
+    assert flag not in prepare
+    assert flag not in script
+# Known dangling wait-queue pointers remain unsafe: the dummy-thread patch
+# must not silently enter the active core. Preserve the sole quarantine.
+flag = "EDEN_EXPERIMENTAL_DUMMY_THREAD_WAITS"
+condition = "if [[ ${" + flag + ":-OFF} == ON ]]; then"
+start = script.index(condition)
+stop = script.index("\\nfi", start)
+assert "eden-dummy-thread-waits.patch" in script[start:stop]
+assert script.count('apply_one "$root/headless/backports/eden-dummy-thread-waits.patch"') == 1
 
-# The Citron-inspired SM fix compiles, but is not automatically hardware-qualified.
-assert 'validate_sm_host_wait' in script
 # R307: the #4473/#4477 cache/fence fixes are already in the pinned
 # backport replay. Do not stage a second derived buffer-cache header or
 # duplicate Kepler/DMA implementation in the native Vulkan build.
@@ -32,4 +42,4 @@ assert "apply-upstream-4473.py" not in native_cmake
 assert "Prepared Eden source lacks #4473/#4477" in native_cmake
 assert "Eden #4473/#4477 are already applied once" in native_cmake
 print("PASS R307: one authoritative audited Eden #4473/#4477 patch, no double Vulkan overlay")
-print("PS5 experimental HLE/JIT/SM backports remain OFF by default: PASS")
+print("PASS active I-cache and SM backports, quarantined dummy wait remains excluded")
