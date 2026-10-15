@@ -30,6 +30,7 @@ for signature in (
     "memory_manager.FlushCaching();",
     "void MaxwellDMA::Launch()",
     "void KeplerCompute::ProcessLaunch()",
+    "void State::ProcessData(std::span<const u8> read_buffer)",
     "void DmaPusher::DispatchCalls()",
     "system.GPU().OnCommandListEnd();",
 ):
@@ -38,6 +39,7 @@ pins={
     "video_core/memory_manager.h":["    void FlushCaching();","    Core::System& system;"],
     "video_core/memory_manager.cpp":['#include "memory_manager.h"',"void MemoryManager::FlushCaching() {"],
     "video_core/engines/maxwell_dma.cpp":["void MaxwellDMA::Launch() {"],
+    "video_core/engines/engine_upload.cpp":["void State::ProcessData(std::span<const u8> read_buffer) {"],
     "video_core/engines/kepler_compute.cpp":["void KeplerCompute::ProcessLaunch() {"],
     "video_core/dma_pusher.cpp":["void DmaPusher::DispatchCalls() {","    system.GPU().OnCommandListEnd();"],
 }
@@ -78,7 +80,8 @@ set_property(TARGET video_core PROPERTY SOURCES
     "@{PORT_BUILD_DIR}/vulkan_rasterizer.cpp"
     "@{PORT_BUILD_DIR}/dma_pusher.cpp"
     "engines/maxwell_dma.cpp"
-    "engines/kepler_compute.cpp")
+    "engines/kepler_compute.cpp"
+    "engines/engine_upload.cpp")
 function(write_derived path content)
     file(WRITE "@{path}" "@{content}")
 endfunction()
@@ -94,7 +97,7 @@ include("__BRIDGE__")
     sources={p.name:p.read_text() for p in stage.iterdir() if p.is_file()}
     for name in ("memory_manager_deferred.cpp","vulkan_rasterizer_deferred.cpp",
                  "dma_pusher_deferred.cpp","maxwell_dma_deferred.cpp",
-                 "kepler_compute_deferred.cpp"):
+                 "kepler_compute_deferred.cpp","engine_upload_deferred.cpp"):
         assert name in sources and len(sources[name])>200,name
     mm=sources["memory_manager_deferred.cpp"]
     assert "deferred_cpu_write_queue.Enqueue(core, address, size)" in mm
@@ -108,7 +111,9 @@ include("__BRIDGE__")
     assert sources["dma_pusher_deferred.cpp"].count("memory_manager.FlushCaching()") >= 2
     assert "memory_manager.FlushCaching();" in sources["maxwell_dma_deferred.cpp"]
     assert "memory_manager.FlushCaching();" in sources["kepler_compute_deferred.cpp"]
+    upload=sources["engine_upload_deferred.cpp"]
+    assert "void State::ProcessData(std::span<const u8> read_buffer) {\n    memory_manager.FlushCaching();" in upload
     h=(stage/"include/video_core/memory_manager.h").read_text()
     assert "GpuDeferredWrite::Queue deferred_cpu_write_queue" in h
-print("NATIVE_GUEST_WRITE_BRIDGE_SOURCE_PASS default_off=1 dev_on_translations=5 no_runtime_enable=1")
+print("NATIVE_GUEST_WRITE_BRIDGE_SOURCE_PASS default_off=1 dev_on_translations=6 no_runtime_enable=1")
 
