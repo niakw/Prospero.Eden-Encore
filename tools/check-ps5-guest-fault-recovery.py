@@ -28,6 +28,14 @@ assert 'fault_context.pc' in prefetch
 assert 'fault_context.lr' in prefetch
 assert 'fault_context.sp' in prefetch
 assert 'fault_context.fp' in prefetch
+assert 'EDEN_GUEST_FAULT_LR_MAP lr=0x%llx query=%s' in prefetch
+assert 'process->GetPageTable().QueryInfo(' in prefetch
+assert '&lr_info, &lr_page, fault_context.lr' in prefetch
+assert 'Kernel::KMemoryInfo lr_info{};' in prefetch
+assert 'Kernel::Svc::PageInfo lr_page{};' in prefetch
+assert '#include \\"core/hle/kernel/k_process.h\\"' in cmake
+assert prefetch.index('const auto& fault_context') < prefetch.index('GetPageTable().QueryInfo(')
+assert prefetch.index('GetPageTable().QueryInfo(') < prefetch.index('RecordGuestFault(eden_fault);')
 for register in ('pc', 'lr', 'sp', 'fp'):
     assert f'{register}=0x%llx' in prefetch
 # The registers are captured after the fatal context save, but before
