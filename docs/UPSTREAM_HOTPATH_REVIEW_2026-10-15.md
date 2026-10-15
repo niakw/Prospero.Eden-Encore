@@ -131,3 +131,13 @@ pinned-source anchors, but no native SDK build has compiled the opt-in branch.
 Even a successful native compilation would not yet prove callback ordering,
 GPU cache synchronization, shutdown quiescence or stable game HUD. No
 console test is justified.
+
+## Inline guest memory upload barrier
+
+The development bridge now also derives `engine_upload_deferred.cpp`.
+Its `State::ProcessData(std::span<...>)` drains the title-owned pending
+guest writes before either direct linear `AccelerateInlineToMemory` or
+tiled `GpuGuestMemoryScoped` upload, rather than waiting until a later
+draw or dispatch. This closes one ordering hole between DMA and renderer
+command boundaries. The mock native-ON CMake generator now expects **six**
+derived units, while the runtime defer gate and normal build remain OFF.

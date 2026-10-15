@@ -143,13 +143,27 @@ void MemoryManager::FlushCaching() {
         bridge_kepler "${bridge_kepler}")
     write_derived("${PORT_BUILD_DIR}/kepler_compute_deferred.cpp" "${bridge_kepler}")
 
+    # An inline memory upload can touch cached guest data BEFORE the next
+    # renderer draw/dispatch. Drain ahead of linear and tiled uploads alike.
+    file(READ "${PROJECT_SOURCE_DIR}/src/video_core/engines/engine_upload.cpp" bridge_upload)
+    set(upload_anchor "void State::ProcessData(std::span<const u8> read_buffer) {")
+    string(FIND "${bridge_upload}" "${upload_anchor}" found)
+    if(found LESS 0)
+        message(FATAL_ERROR "Pinned upload State::ProcessData moved")
+    endif()
+    string(REPLACE "${upload_anchor}"
+        "void State::ProcessData(std::span<const u8> read_buffer) {\n    memory_manager.FlushCaching();"
+        bridge_upload "${bridge_upload}")
+    write_derived("${PORT_BUILD_DIR}/engine_upload_deferred.cpp" "${bridge_upload}")
+
     get_target_property(bridge_sources video_core SOURCES)
     foreach(old IN ITEMS
         "memory_manager.cpp"
         "${PORT_BUILD_DIR}/vulkan_rasterizer.cpp"
         "${PORT_BUILD_DIR}/dma_pusher.cpp"
         "engines/maxwell_dma.cpp"
-        "engines/kepler_compute.cpp")
+        "engines/kepler_compute.cpp"
+        "engines/engine_upload.cpp")
         list(FIND bridge_sources "${old}" found)
         if(found EQUAL -1)
             message(FATAL_ERROR "Missing native source ${old}")
@@ -161,7 +175,8 @@ void MemoryManager::FlushCaching() {
         "${PORT_BUILD_DIR}/vulkan_rasterizer_deferred.cpp"
         "${PORT_BUILD_DIR}/dma_pusher_deferred.cpp"
         "${PORT_BUILD_DIR}/maxwell_dma_deferred.cpp"
-        "${PORT_BUILD_DIR}/kepler_compute_deferred.cpp")
+        "${PORT_BUILD_DIR}/kepler_compute_deferred.cpp"
+        "${PORT_BUILD_DIR}/engine_upload_deferred.cpp")
     set_property(TARGET video_core PROPERTY SOURCES "${bridge_sources}")
     # IMPORTANT: No code enables cpu_write_defer. Native bridge compilation
     # is not a gameplay qualification or permission to run experiments.
