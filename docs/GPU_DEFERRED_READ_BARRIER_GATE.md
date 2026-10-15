@@ -448,6 +448,42 @@ session. A caller must never drop the invalidation and continue. This
 host-only bound does not prove any FPS gain, and the native developer bridge
 remains disabled while its pre-store enqueue is unqualified.
 
+## Native GPU worker failure versus CPU sync-fence liveness
+
+A separate audit of the **active native GPU worker** found a concrete
+failure mode independent of the disabled deferred guest-write queue. The
+native worker already catches exceptions, records an `exception_ptr` via
+`Eden::RecordGpuFailure`, and requests its stop token. However,
+`GPU::Impl::WaitForSyncOperation(fence)` traditionally waits on
+`sync_request_cv` until the GPU-owned `TickWork()` increments the
+completion fence. Once the worker has exited unexpectedly, no subsequent
+`TickWork()` can acknowledge outstanding requests. The deliberate
+`NotifyShutdown()` path cancels waits **after joining the GPU worker**,
+but a CPU thread blocked on a missing fence might prevent the shutdown
+sequence from starting.
+
+The native build now derives `gpu.cpp` with a source-pinned
+`headless/gpu_sync_failure_wait.inc` method. It preserves the original
+condition-variable completion notification and shutdown cancellation, but
+checks a non-consuming copy of the already recorded fatal GPU error at
+most every 100 ms while a fence is pending. On failure it rethrows that
+original exception, rather than letting the CPU reader hang or inventing
+fence completion. Multiple readers can observe the same fatal event;
+`TakeGpuFailure` still clears the error only when a new GPU worker starts.
+
+`tools/check-gpu-sync-failure-host.py` compiles this exact native-derived
+wait method with host ASan/UBSan. It tests immediate normal completion,
+two separate CPU waiters observing one unconsumed fatal worker error, and
+unchanged voluntary shutdown cancellation without falsely advancing a
+fence. The host workflow runs this test without building a console app.
+
+This is a **fatal-error liveness correction in the native runtime**, not
+a verified FC27 performance or gameplay fix. A GPU worker that remains
+alive but blocks inside a rasterizer command will not record an exception;
+the guard therefore does not address GPU work deadlocks, missing guest
+fences, or all observed freezes. It also does not enable the deferred
+guest-write queue, whose post-store native contract remains incomplete.
+
 ## Required engineering contract
 
 - Give accepted entries an ordered, per-session completion watermark.
