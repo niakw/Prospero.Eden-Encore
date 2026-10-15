@@ -641,12 +641,16 @@ unsigned EnsureRetailCase(std::uint64_t title_id, const std::string& name,
                  static_cast<unsigned long long>(title_id),
                  selected->second[0].size(), selected->second[1].size(),
                  selected->second[2].size());
-    // Both Home and Library may enrich the same title at once. These calls
-    // happen only on background workers, never in a render/input callback.
-    // Serialize an in-flight fetch instead of silently dropping the second
-    // enrichment (which could publish fallback artwork for five minutes).
+    // Both Home and Library may enrich the same title at once. Serialize
+    // background fetches so the second worker reads the first worker's
+    // finished cache, but never hold launcher teardown hostage to this wait.
+    // No socket request or mutex sleep runs on the UI/render thread.
     static std::array<std::mutex, 64> locks;
-    std::unique_lock guard(locks[title_id % locks.size()]);
+    std::unique_lock guard(locks[title_id % locks.size()], std::defer_lock);
+    while (!guard.try_lock()) {
+        if (cancel && cancel->load(std::memory_order_acquire)) return 0;
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
     if (cancel && cancel->load(std::memory_order_acquire)) return 0;
     static std::mutex retry_mutex;
     static std::unordered_map<std::uint64_t, std::chrono::steady_clock::time_point> retries;
