@@ -299,3 +299,49 @@ index/name lookup, cached-file format, `box_art()` publication,
 decode success, GL texture upload, and active face rendering in
 separate stages. Do not request another console cycle merely to
 repeat the already captured 01:22 archive.
+
+
+## Native retail scans — host render evidence gate (15 October)
+
+The 15 October launch/library media changes are deliberately distinct from
+the native guest fault and GPU-stall investigations. A retail-case **file
+download** is not a successful **visible texture**. The source now emits
+these independently attributable stages:
+
+- `EDEN_CASE_INDEX` / `EDEN_CASE_LOOKUP`: packaged physical-scan metadata,
+  and exact/alternate title-name selection. An unknown game (not present in
+  the index) must not reuse a different edition's retail art.
+- `EDEN_CASE_FETCH` / `EDEN_CASE_RESOLVE`: accepted response, atomic
+  BGRA TGA write, local full-length/header/dimension validation.
+- `EDEN_CASE_TEXTURE`: decoded source dimensions and requested GL texture
+  upload result. This is not itself visual proof of GPU sampling.
+- `EDEN_CASE_DRAW`: once per front/back visible launch-face state,
+  distinguishes `status=placeholder` from `status=ready`, and labels
+  `source=retail` versus `source=fallback` rather than treating either as
+  a genuine paper scan.
+
+The worker's per-face `case_artwork_changed` mask only invalidates an
+existing GL jacket after a successful replacement; unchanged sources keep
+their resident textures. Simultaneous Home/Library fetches are serialized
+on background workers; waiting checks cancellation every 50 ms so a
+pending *second* request does not unnecessarily block launcher teardown.
+The active network request's own cancellation/timeout is still a
+separate boundary and is **not** proven by this lock policy.
+
+Host-only regressions now exercise the actual C++ 32-bit BGRA case TGA
+decoder, both vertical scan orientations, half-size pixel output, and
+truncation rejection. The independent launcher OpenGL preview captures
+front/back/spine poses and Library front/back/zoom with actual scanned
+art and explicit fallback. Passing host screenshots qualifies the
+renderer path on the host, **not** console graphics-driver behavior.
+
+**Tomorrow's console gate (only after a green matching native build):**
+record the tested git SHA and packaging run; check independent front/back
+in the Library and in launch animation; preserve both
+`EDEN_CASE_TEXTURE` and `EDEN_CASE_DRAW` lines if a face still displays
+a placeholder. Do not clear every cache again or interpret a successful
+preview as proof that game-mode JIT, HUD, GPU stalls, or a guest
+`pc=0x4` fault has been repaired. The guest fault's code-range
+provenance is logged once at title start under
+`EDEN_GUEST_CODE_RANGE`; matching it with the saved LR is the next
+evidence requirement before modifying JIT/HLE.
