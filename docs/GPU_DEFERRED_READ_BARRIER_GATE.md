@@ -194,6 +194,24 @@ and multiple nested or split writes. Prove that no untracked GPU/cache
 writer can enter the deferred path, and do not change the CPU-read barrier
 until GPU-thread scheduling and session lifetime are proven separately.
 
+## Session identity is mandatory for read waits and drains
+
+Host tests exposed an ambiguity in the first two-phase queue API: plain
+`Sequence` values restart from 1 after title teardown. A consumer holding
+sequence 1 from the old title could accidentally wait on, or drain, sequence
+1 in the new title. The queue now returns a `Ticket {sequence, generation}`
+from both `Reserve` and `EnqueueTracked`, accepts only a ticket for
+`WaitUntil` and `DrainThrough`, and rejects a ticket whose generation
+does not match the current session. Bare-number waits and drains are
+rejected at C++ compile time by the host fixture. `Drain()` internally
+captures the queue's current generation and accepted watermark.
+
+This prevents one specific class of stale-session API misuse. The
+`ResetAfterQuiescence` lifecycle precondition remains mandatory, and
+neither a completed ticket nor a flush request proves GPU device-fence
+completion. No native CPU reader has been wired to these APIs; the
+`kNativePostStorePublicationReady = false` interlock remains in force.
+
 ## Required engineering contract
 
 - Give accepted entries an ordered, per-session completion watermark.
