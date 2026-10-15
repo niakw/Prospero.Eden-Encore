@@ -60,13 +60,19 @@ public:
         std::lock_guard lock(mutex_);
         if (closed_ || failed_ || ticket.generation != generation_ || ticket.sequence == 0 ||
             ticket.sequence > accepted_) return false;
-        for (auto& entry : queue_) {
-            if (entry.last_sequence == ticket.sequence && !entry.published) {
-                entry.published = true;
-                return true;
-            }
-        }
-        return false;
+        // Entries are ordered by their last accepted sequence, even after
+        // same-core tail coalescing and published-prefix snapshots. Do not
+        // linearly scan a potentially unbounded backlog for every producer:
+        // reverse/out-of-order publication would otherwise cost O(n^2).
+        const auto entry = std::lower_bound(
+            queue_.begin(), queue_.end(), ticket.sequence,
+            [](const Write& write, Sequence sequence) {
+                return write.last_sequence < sequence;
+            });
+        if (entry == queue_.end() || entry->last_sequence != ticket.sequence ||
+            entry->published) return false;
+        entry->published = true;
+        return true;
     }
 
     // Existing opt-in native bridge uses this signature. There is deliberately
