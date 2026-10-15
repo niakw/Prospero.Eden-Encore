@@ -116,4 +116,3 @@ include("__BRIDGE__")
     h=(stage/"include/video_core/memory_manager.h").read_text()
     assert "GpuDeferredWrite::Queue deferred_cpu_write_queue" in h
 print("NATIVE_GUEST_WRITE_BRIDGE_SOURCE_PASS default_off=1 dev_on_translations=6 no_runtime_enable=1")
-
