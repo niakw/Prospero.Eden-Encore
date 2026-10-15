@@ -35,6 +35,11 @@ public:
     static constexpr unsigned Cores = 4;
     static constexpr std::uint64_t PageBytes = 4096;
     static constexpr std::uint64_t DirtyRegionBytes = PageBytes / 2;
+    // Upper bound on accepted-but-not-acknowledged guest stores, including
+    // entries in an active GPU replay snapshot. Saturation must be handled by
+    // the producer with a synchronous/cache-safe fallback BEFORE its store.
+    // Never silently drop a write while pretending the ticket was accepted.
+    static constexpr Sequence MaxOutstandingWrites = 8192;
 
     // Legacy host-only immediate publication. The inactive native bridge
     // still calls this BEFORE its backing RAM store; that path is unsafe to
@@ -328,7 +333,8 @@ private:
             return std::nullopt;
         const auto end = address + size;
         std::lock_guard lock(mutex_);
-        if (closed_ || failed_ || accepted_ == std::numeric_limits<Sequence>::max())
+        if (closed_ || failed_ || accepted_ == std::numeric_limits<Sequence>::max() ||
+            accepted_ - completed_ >= MaxOutstandingWrites)
             return std::nullopt;
         const Sequence sequence = accepted_ + 1;
         if (published && !queue_.empty()) {
