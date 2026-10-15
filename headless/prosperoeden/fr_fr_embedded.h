@@ -1751,6 +1751,5 @@ msgstr "Solo"
 #: pe/ui/library.cpp
 msgid "Visual Novel"
 msgstr "Roman visuel"
-
 )FRPO";
 }
