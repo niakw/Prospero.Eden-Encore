@@ -758,7 +758,7 @@ void GraphicsWindow::OnFrameDisplayed() {
                 // zero-length waits; retain pacing stats but label the absent
                 // instrumentation explicitly instead of printing false zeros.
                 if (!Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)) {
-                    std::printf("EDEN_FRAME_PRESSURE frame=%u detail=not_measured\\n", frame_total);
+                    std::printf("EDEN_FRAME_PRESSURE frame=%u detail=not_measured\n", frame_total);
                 } else if (pressure_valid) {
                     constexpr double to_ms = 1.0 / 1'000'000.0;
                     std::printf("EDEN_FRAME_PRESSURE frame=%u gpu_idle_ms=%.3f gpu_dispatch_ms=%.3f "
