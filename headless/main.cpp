@@ -1295,6 +1295,7 @@ int main(int argc, char** argv) {
         Eden::Performance::dispatch_mask.store(15, std::memory_order_relaxed);
         Eden::Performance::idle_spin_iterations.store(25000, std::memory_order_relaxed);
         Eden::Performance::kernel_spin_iterations.store(4000, std::memory_order_relaxed);
+        Eden::Performance::cpu_write_ahead.store(0, std::memory_order_relaxed);
         Eden::Performance::compose_delay_us.store(1500, std::memory_order_relaxed);
         Eden::Performance::jit_duplicate_tracking.store(false, std::memory_order_relaxed);
         Eden::Performance::pc_sample_core.store(0, std::memory_order_relaxed);
@@ -1312,6 +1313,11 @@ int main(int argc, char** argv) {
                     Eden::Performance::SetSecondaryPlacement(false);
                 } else if (entry == "fastmem=off" || entry == "fastmem=on") {
                     Eden::Fastmem::Request(entry.ends_with("on"));
+                } else if (entry.starts_with("cpu_write_ahead=")) {
+                    // Source-qualified candidate from upstream #187; unproven for this title.
+                    const auto requested = std::strtoul(entry.c_str() + 16, nullptr, 10);
+                    Eden::Performance::cpu_write_ahead.store(
+                        static_cast<unsigned>(std::min(requested, 64ul)), std::memory_order_relaxed);
                 } else if (entry.starts_with("cache_spin=")) {
                     // try_lock retries before a guest core sleeps on a GPU cache lock (0 = upstream).
                     const auto requested = std::strtoul(entry.c_str() + 11, nullptr, 10);
