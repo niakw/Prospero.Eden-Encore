@@ -125,6 +125,8 @@ inline Totals guest_cpu_write, guest_cpu_read;
 // pages after a successful OnCPUWrite under the buffer-cache mutex. This is
 // not deferred-write replay. Default OFF pending native title qualification.
 inline std::atomic<unsigned> cpu_write_ahead{0};
+// Bridge is source-only; no normal build or dev option enables this automatically.
+inline std::atomic<bool> cpu_write_defer{false};
 // Those entries take the buffer and texture cache locks, which the GPU thread holds for one draw at
 // a time. Shipping builds block exactly as upstream: the earlier bounded spin reduced wake latency
 // but remains a development-only experiment until it is requalified against PS5 soft hangs.
