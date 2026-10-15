@@ -82,3 +82,16 @@ large-span, core-attribution and reentrant-drain checks.
 bridge still requires source and lifecycle validation across
 `HandleRasterizerWrite`, `OnCPUWrite`, `FlushCaching`, DMA and fences.
 No PS5 test is warranted until that integration is qualified.
+
+## Queue coalescing narrowed to the GPU-dirty transform
+
+A previously staged queue could merge disjoint guest writes inside a 4-KiB
+page. The actual GPU dirty collector tracks 2-KiB regions, so an overly
+wide merged range could cause false GPU-owned dirty marks. Coalescing now
+requires both a single 2-KiB region AND overlapping/touching spans;
+disjoint spans are kept separate. The host sanitizer fixture checks both
+cross-region adjacency and unwritten gaps within a region.
+
+This conservative policy is source-only; the full #187 runtime path
+remains intentionally disconnected until ordered GPU/DMA/fence replay is
+verified, including on title teardown.
