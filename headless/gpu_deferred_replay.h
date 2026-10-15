@@ -7,6 +7,11 @@
 #include <utility>
 
 namespace Eden::GpuDeferredWrite {
+// Native opt-in source derivation still calls eager Enqueue before the guest
+// backing-store write. Fail closed even if cpu_write_defer is toggled at
+// runtime: this must remain false until ALL producer/read/fence paths are
+// integrated and qualified with post-store publication semantics.
+inline constexpr bool kNativePostStorePublicationReady = false;
 // The origin belongs to the guest's HandleRasterizerWrite invocation, not
 // whichever host worker later drains or dispatches a GPU command. The GPU
 // thread and all unrelated threads have NoGuestCore by default.
