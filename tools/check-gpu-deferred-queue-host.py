@@ -154,7 +154,7 @@ int main() {
         wait_done.store(true, std::memory_order_release);
     });
     std::atomic<unsigned> batch_count{0};
-    assert(tracked.DrainThrough(b->sequence, [&](unsigned core, std::uint64_t addr, std::uint64_t sz) {
+    assert(tracked.DrainThrough(*b, [&](unsigned core, std::uint64_t addr, std::uint64_t sz) {
         assert(core == 2 && addr == 100 && sz == 12);
         assert(tracked.Pending()); // In-flight replay is not a completed ticket.
         batch_count.fetch_add(1);
@@ -225,7 +225,7 @@ int main() {
     Queue burst;
     const auto initial = burst.EnqueueTracked(0, 32768, 8);
     assert(initial && initial->sequence == 1);
-    assert(burst.DrainThrough(initial->sequence, [&](unsigned core, std::uint64_t, std::uint64_t) {
+    assert(burst.DrainThrough(*initial, [&](unsigned core, std::uint64_t, std::uint64_t) {
         assert(core == 0);
         for (unsigned i = 0; i < 400; ++i) {
             const auto added = burst.EnqueueTracked(1, (std::uint64_t(i) + 20) * 4096, 8);
@@ -249,10 +249,10 @@ int main() {
     const auto early = snapshot.EnqueueTracked(0, 4096, 8);
     const auto later = snapshot.EnqueueTracked(1, 8192, 8);
     assert(early && later && early->sequence == 1 && later->sequence == 2);
-    assert(snapshot.DrainThrough(early->sequence, [](unsigned, std::uint64_t, std::uint64_t) {}) == 2);
+    assert(snapshot.DrainThrough(*early, [](unsigned, std::uint64_t, std::uint64_t) {}) == 2);
     assert(snapshot.CompletedSequence() == later->sequence);
     assert(!snapshot.Pending());
-    assert(snapshot.DrainThrough(early->sequence, [](unsigned, std::uint64_t, std::uint64_t) {
+    assert(snapshot.DrainThrough(*early, [](unsigned, std::uint64_t, std::uint64_t) {
         assert(false);
     }) == 0);
 
@@ -342,7 +342,14 @@ int main() {
     assert(!lifetime.Publish(*old));
     assert(!lifetime.WaitUntil(*old));
     assert(lifetime.Publish(*fresh));
-    assert(lifetime.Drain([](unsigned,std::uint64_t,std::uint64_t){}) == 1);
+    // The sequence number is identical, but the previous title session
+    // must be rejected even at a GPU drain boundary.
+    assert(lifetime.DrainThrough(*old, [](unsigned,std::uint64_t,std::uint64_t){
+        assert(false);
+    }) == 0);
+    assert(lifetime.Pending() && lifetime.CompletedSequence() == 0);
+    assert(lifetime.DrainThrough(*fresh,
+        [](unsigned,std::uint64_t,std::uint64_t){}) == 1);
     assert(lifetime.WaitUntil(*fresh));
 
     // Multiple CPU producers publish DIFFERENT RAM payloads out of order.
