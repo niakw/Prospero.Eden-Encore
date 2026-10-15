@@ -1591,12 +1591,43 @@ pe::ui::BoxArt EdenServices::box_art(std::uint64_t title_id) {
                 info.st_size <= 0 || info.st_size > (16LL << 20))
                 continue;
             int width = 0, height = 0, channels = 0;
-            if (!stbi_info(path.c_str(), &width, &height, &channels) ||
+            bool valid = false;
+            if (std::strcmp(ext, "tga") == 0) {
+                // Generated scans use uncompressed BGRA TGA. Check the whole
+                // payload, then use the SAME header convention as load_tga().
+                // Format sniffing through stbi_info can reject a usable TGA.
+                if (ValidNlibTga(path)) {
+                    std::FILE* input = std::fopen(path.c_str(), "rb");
+                    if (input) {
+                        unsigned char header[18]{};
+                        if (std::fread(header, 1, sizeof(header), input) == sizeof(header)) {
+                            width = static_cast<int>(header[12]) |
+                                    (static_cast<int>(header[13]) << 8);
+                            height = static_cast<int>(header[14]) |
+                                     (static_cast<int>(header[15]) << 8);
+                            valid = true;
+                        }
+                        std::fclose(input);
+                    }
+                }
+            } else {
+                valid = stbi_info(path.c_str(), &width, &height, &channels) != 0;
+            }
+            if (!valid ||
                 width < (std::strcmp(side, "spine") == 0 ? 64 : 128) ||
                 height < (std::strcmp(side, "spine") == 0 ? 600 : 128) ||
                 width > 4096 || height > 4096 ||
-                static_cast<std::uint64_t>(width) * height > 3840u * 2160u)
+                static_cast<std::uint64_t>(width) * height > 3840u * 2160u) {
+                std::fprintf(stderr,
+                    "EDEN_CASE_RESOLVE title=%016llX side=%s status=rejected ext=%s bytes=%lld dimensions=%dx%d path=%s\n",
+                    static_cast<unsigned long long>(title_id), side, ext,
+                    static_cast<long long>(info.st_size), width, height, path.c_str());
                 continue;
+            }
+            std::fprintf(stderr,
+                "EDEN_CASE_RESOLVE title=%016llX side=%s status=ready ext=%s bytes=%lld dimensions=%dx%d path=%s\n",
+                static_cast<unsigned long long>(title_id), side, ext,
+                static_cast<long long>(info.st_size), width, height, path.c_str());
             return path;
         }
         return {};
