@@ -71,8 +71,10 @@ void MemoryManager::FlushCaching() {
     file(READ "${PORT_ROOT}/vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp" bridge_vk)
     set(vk_entry "bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {")
     set(vk_buffer_lock "        ::Eden::Performance::GuestCacheLock(buffer_cache.mutex, false);")
-    set(vk_texture_lock "        ::Eden::Performance::GuestCacheLock(texture_cache.mutex, true);\n        texture_wait.Stop();")
-    foreach(anchor IN ITEMS vk_entry vk_buffer_lock vk_texture_lock)
+    # The texture lock MUST retain the original blocking path. Once
+    # buffer_cache.OnCPUWrite runs, postponing the texture invalidation
+    # would replay an operation whose first half already mutated cache state.
+    foreach(anchor IN ITEMS vk_entry vk_buffer_lock)
         string(FIND "${bridge_vk}" "${${anchor}}" found)
         if(found LESS 0)
             message(FATAL_ERROR "Pinned Vulkan guest write anchor changed (${anchor})")
@@ -90,14 +92,6 @@ void MemoryManager::FlushCaching() {
             if (gpu_memory->EnqueueDeferredCPUWrite(addr, size)) return false;
             ::Eden::Performance::GuestCacheLock(buffer_cache.mutex, false);
         }]=] bridge_vk "${bridge_vk}")
-    string(REPLACE "${vk_texture_lock}" [=[
-        if (!defer_candidate) {
-            ::Eden::Performance::GuestCacheLock(texture_cache.mutex, true);
-        } else if (!texture_cache.mutex.try_lock()) {
-            if (gpu_memory->EnqueueDeferredCPUWrite(addr, size)) return false;
-            ::Eden::Performance::GuestCacheLock(texture_cache.mutex, true);
-        }
-        texture_wait.Stop();]=] bridge_vk "${bridge_vk}")
     string(PREPEND bridge_vk "#include \"${EDEN_PORT_DIR}/gpu_deferred_replay.h\"\n#include \"video_core/memory_manager.h\"\n")
     write_derived("${PORT_BUILD_DIR}/vulkan_rasterizer_deferred.cpp" "${bridge_vk}")
 

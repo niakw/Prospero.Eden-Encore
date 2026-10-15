@@ -141,3 +141,16 @@ tiled `GpuGuestMemoryScoped` upload, rather than waiting until a later
 draw or dispatch. This closes one ordering hole between DMA and renderer
 command boundaries. The mock native-ON CMake generator now expects **six**
 derived units, while the runtime defer gate and normal build remain OFF.
+
+## Prevent partially replayed cache invalidations
+
+Review of pinned `HandleRasterizerWrite` and active Vulkan `OnCPUWrite`
+identified a critical asymmetry: buffer cache invalidation runs before
+texture cache invalidation. If the buffer phase succeeds, it is unsafe to
+queue the entire write only because the subsequent texture mutex is held.
+The disabled native bridge therefore **only defers before acquiring the
+buffer cache mutex**, before either cache has been modified. Once that
+mutex is acquired, the existing full buffer, texture and pipeline sequence
+runs synchronously, including the texture mutex wait. The host generation
+contract requires exactly one enqueue call in the active derived method
+and forbids texture mutex `try_lock` in that path.
