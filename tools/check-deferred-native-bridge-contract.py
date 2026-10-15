@@ -33,6 +33,16 @@ gpu_read=gpu_src.split("VideoCore::RasterizerDownloadArea OnCPURead(",1)[1].spli
 assert gpu_read.index("if (raster_area.preemtive)") < gpu_read.index("RequestSyncOperation(")
 assert "FlushCaching(" not in gpu_read
 assert "HandleRasterizerDownload" not in code
+# The host queue now exposes a completion model. It must not be mistaken for
+# a native CPU-read barrier: the real reader still has no GPU-drain request.
+queue=(root/"headless/gpu_deferred_write_queue.h").read_text()
+for symbol in ("EnqueueTracked", "AcceptedSequence", "CompletedSequence",
+               "DrainThrough", "WaitUntil", "Close"):
+    assert symbol in queue, symbol
+assert "return DrainThrough(AcceptedSequence()" in queue
+assert "completed_cv_.notify_all()" in queue
+assert "WaitUntil(" not in code
+assert "cpu_write_defer{false}" in perf
 for signature in (
     "EnqueueDeferredCPUWrite",
     "ScopedGuestWriteOrigin guest_origin",
