@@ -2532,6 +2532,19 @@ if(EDEN_PS5_OPENGL)
     endif()
     string(REPLACE "${gpu_tick_lock_original}" "${gpu_tick_lock_safe}"
         gpu_source "${gpu_source}")
+    # Commit a GPU sync fence only after its callback enters the FIFO.
+    # On a throwing copy/allocation, no unfulfillable fence may be issued.
+    set(gpu_enqueue_fence_original [=[        const u64 fence = ++last_sync_fence;
+        sync_requests.emplace_back(std::forward<Func>(action));
+        return fence;]=])
+    set(gpu_enqueue_fence_atomic [=[        sync_requests.emplace_back(std::forward<Func>(action));
+        return ++last_sync_fence;]=])
+    string(FIND "${gpu_source}" "${gpu_enqueue_fence_original}" gpu_enqueue_fence_position)
+    if(gpu_enqueue_fence_position LESS 0)
+        message(FATAL_ERROR "Pinned native GPU sync enqueue/fence contract changed")
+    endif()
+    string(REPLACE "${gpu_enqueue_fence_original}" "${gpu_enqueue_fence_atomic}"
+        gpu_source "${gpu_source}")
     string(REPLACE "GPU::~GPU() = default;" "GPU::~GPU() { impl->NotifyShutdown(); }" gpu_source "${gpu_source}")
     string(REPLACE "void GPU::PushGPUEntries(s32 channel, Tegra::CommandList&& entries) {"
         "void GPU::PushGPUEntries(s32 channel, Tegra::CommandList&& entries) {\n    static std::atomic<unsigned> submissions{};\n    const auto count = ++submissions;\n    if (count <= 3) LOG_INFO(Render_OpenGL, \"EDEN_GUEST_GPU_SUBMIT count={} channel={}\", count, channel);"

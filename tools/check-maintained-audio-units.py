@@ -53,5 +53,7 @@ assert cmake.count("file(READ") - cmake.count(gpu_sync_input) <= 87
 # source-derived wait replacement; keep the previous ceiling for all others.
 gpu_producer_wait='string(REPLACE "${gpu_block_wait_original}" "${gpu_block_wait_checked}"'
 assert cmake.count(gpu_producer_wait) == 1
-assert cmake.count("string(REPLACE") - cmake.count(gpu_producer_wait) <= 227
+gpu_enqueue_fence='string(REPLACE "${gpu_enqueue_fence_original}" "${gpu_enqueue_fence_atomic}"'
+assert cmake.count(gpu_enqueue_fence) == 1
+assert cmake.count("string(REPLACE") - cmake.count(gpu_producer_wait) - cmake.count(gpu_enqueue_fence) <= 227
 print("MAINTAINED_AUDIO_UNITS_PARITY_PASS sink=1 voice=1")
