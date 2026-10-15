@@ -181,7 +181,8 @@ assert "if (all_ready || (cancel && cancel->load(std::memory_order_acquire))) {"
 assert "retries.erase(title_id);" in case_fetch
 assert "all_ready = false;\n            break;" in case_fetch
 assert "if (cancel && cancel->load(std::memory_order_acquire)) return 0;" in case_fetch
-assert "if (cancel && cancel->load(std::memory_order_acquire)) return changed_faces;" in case_fetch
+assert "if (cancel && cancel->load(std::memory_order_acquire)) {" in case_fetch
+assert "return changed_faces;" in case_fetch
 # The first successful front/back download permits the optional spine in the
 # same background pass; no enforced five-minute wait for an empty case side.
 assert 'if (side == 2 && !both_faces_cached_at_start &&' in case_fetch
