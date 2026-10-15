@@ -198,3 +198,37 @@ Native fix, applied **only** to the generated `vulkan_swapchain.cpp` through `to
 **Important validation limit:** A source-level memory/synchronization bug has been corrected; current PS5 telemetry cannot tell whether these two WSI statuses occurred during the recorded 30-FPS hitches. No observed console FPS gain or reduced input lag is claimed. Qualify native build first, then one controlled device comparison only when the code is compiled and ready.
 
 Native qualification gate: compile this exact patched generated swapchain with the All-On native toolchain before claiming it is ready for console validation. The source test only proves the modeled VkResult/error branches; it cannot simulate a WSI driver that ignores Vulkan timeouts.
+
+
+## Native guest fault — 15 October 2026 (00:45 capture)
+
+The user-supplied capture `boot-trace(20261015-004550).txt`,
+`stderr(20261015-004554).log` and `heap(20261015-004550).log`
+belongs to tested source `9d066b826cf277efda1f0ea9d5555de18e2f5b08`,
+firmware `0x13600007`, title `0100C49025D3E000`.
+This is a **specific guest instruction-prefetch fault**, unlike earlier
+sessions with a persistent 30-FPS overlay and a stalled GPU-owner heartbeat:
+
+```text
+guest thread Job0 tid=90 pc=0x4 lr=0x8b9f42cc
+sp=0x10bb46d700 fp=0x10bb46d700 jumped to an unmapped address
+```
+
+The guest-fault path also emitted `EDEN_STAGE phase=guest_fault` and
+returned to the launcher, not a native signal handler. The heap sample at
+the fault reported `failures=0`, `live_bytes=2636901564`, and
+`peak_bytes=2856496319`; JIT sparse reservations/commitment were released
+during shutdown. None of these observations proves an out-of-memory cause
+or JIT corruption. The near-null target `0x4` is consistent with a bad
+guest indirect-branch destination, but the saved LR alone cannot identify
+who produced it. Do not patch the fault handler to silently continue or
+suppress the exception.
+
+Before attempting a correction to guest JIT/HLE, resolve the saved LR
+against loaded guest executable segment ranges, and record on the *fault
+path only* the instruction/branch source and the relevant register value,
+using safe guest-address validation before any memory read. Preserve
+the exact tested build/source SHA; compare with a native A/B run only after
+a hypothesis-specific host regression exists. Existing 5-second frame
+pressure probes report mostly zero for several wait categories; those
+zeros cannot be treated as proof that no thread was blocked.
