@@ -114,12 +114,12 @@ public:
     // mutex, then replay it without that mutex. New enqueues remain pending
     // until a later GPU boundary, even if they arrive during replay.
     //
-    // The requested watermark is a MINIMUM completion target, not an upper
-    // cutoff: entries merged into the tail or accepted before this snapshot
-    // may be included. No callback may run before its guest payload is
-    // published (a separate, currently UNPROVEN native contract).
+    // The requested generation-tagged ticket is a MINIMUM completion target,
+    // not an upper cutoff: entries accepted before the snapshot may be
+    // included. A stale session's ticket cannot drain another session.
+    // Only published guest payloads are eligible for replay.
     template<class Replay>
-    std::uint64_t DrainThrough(Sequence watermark, Replay&& replay) {
+    std::uint64_t DrainThrough(Ticket target, Replay&& replay) {
         // Only one GPU owner can replay a session at a time. A second owner
         // waits for the first before it rechecks its requested watermark.
         // Recursive replay on the same thread is a caller contract violation:
@@ -135,7 +135,8 @@ public:
         std::vector<Write> work;
         {
             std::lock_guard lock(mutex_);
-            if (watermark > accepted_ || completed_ >= watermark) return 0;
+            if (target.generation != generation_ || target.sequence == 0 ||
+                target.sequence > accepted_ || completed_ >= target.sequence) return 0;
             // Reserve + Publish is ordered, but publishers can finish out of
             // order. Drain only the contiguous PUBLISHED prefix. Never
             // overtake an earlier uncommitted guest RAM write.
@@ -164,7 +165,12 @@ public:
 
     template<class Replay>
     std::uint64_t Drain(Replay&& replay) {
-        return DrainThrough(AcceptedSequence(), std::forward<Replay>(replay));
+        Ticket target{};
+        {
+            std::lock_guard lock(mutex_);
+            target = {accepted_, generation_};
+        }
+        return DrainThrough(target, std::forward<Replay>(replay));
     }
 
     // Wake CPU waiters when the owning title begins shutdown. Producers must
