@@ -70,6 +70,15 @@ public:
         const auto became_ready = PublishImpl(ticket, true);
         if (!became_ready) return false;
         if (*became_ready) {
+            // A synchronous scheduling callback must never recursively close
+            // this very queue: Close() waits for the callback's own counter.
+            // Keep the owner marker scoped, including exception unwinding.
+            struct RestoreWake {
+                const Queue*& slot;
+                const Queue* prior;
+                ~RestoreWake() { slot = prior; }
+            } restore{active_wake_callback_, active_wake_callback_};
+            active_wake_callback_ = this;
             try {
                 std::forward<RequestGpu>(request_gpu)();
             } catch (...) {
@@ -224,7 +233,8 @@ public:
     // may be held while calling Close(). Never call it recursively from replay.
     // Producers and waiters still must be joined before destroying the Queue.
     void Close() {
-        if (active_consumer_ == this) std::terminate();
+        if (active_consumer_ == this || active_wake_callback_ == this)
+            std::terminate();
         {
             std::lock_guard lock(mutex_);
             closed_ = true;
@@ -340,6 +350,7 @@ private:
 
     std::mutex consumer_mutex_; // Never held by producer or CPU waiter.
     static inline thread_local const Queue* active_consumer_{nullptr};
+    static inline thread_local const Queue* active_wake_callback_{nullptr};
     mutable std::mutex mutex_;
     std::condition_variable completed_cv_;
     std::condition_variable wake_cv_;
