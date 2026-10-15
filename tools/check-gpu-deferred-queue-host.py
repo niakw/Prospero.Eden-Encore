@@ -214,6 +214,43 @@ int main() {
     second_owner.join();
     assert(first_callback_done.load() && second_callback_done.load());
     assert(single_owner.CompletedSequence() == 2 && !single_owner.Pending());
+
+    // Regression: the replay callback continuously appends more writes.
+    // DrainThrough must take ONE fixed queue snapshot, not keep draining
+    // new work until producers finally stop. The old implementation did.
+    Queue burst;
+    const auto initial = burst.EnqueueTracked(0, 32768, 8);
+    assert(initial && *initial == 1);
+    assert(burst.DrainThrough(*initial, [&](unsigned core, std::uint64_t, std::uint64_t) {
+        assert(core == 0);
+        for (unsigned i = 0; i < 400; ++i) {
+            const auto added = burst.EnqueueTracked(1, (std::uint64_t(i) + 20) * 4096, 8);
+            assert(added && *added == i + 2);
+        }
+    }) == 1);
+    assert(burst.CompletedSequence() == 1);
+    assert(burst.AcceptedSequence() == 401 && burst.Pending());
+    unsigned later_count = 0;
+    assert(burst.Drain([&](unsigned core, std::uint64_t, std::uint64_t) {
+        assert(core == 1);
+        ++later_count;
+    }) == 400);
+    assert(later_count == 400 && !burst.Pending());
+    assert(burst.CompletedSequence() == burst.AcceptedSequence());
+
+    // A requested read ticket is a minimum completion target, not an
+    // exact cutoff. The captured snapshot can acknowledge newer writes
+    // accepted before the GPU consumer takes its snapshot.
+    Queue snapshot;
+    const auto early = snapshot.EnqueueTracked(0, 4096, 8);
+    const auto later = snapshot.EnqueueTracked(1, 8192, 8);
+    assert(early && later && *early == 1 && *later == 2);
+    assert(snapshot.DrainThrough(*early, [](unsigned, std::uint64_t, std::uint64_t) {}) == 2);
+    assert(snapshot.CompletedSequence() == *later);
+    assert(!snapshot.Pending());
+    assert(snapshot.DrainThrough(*early, [](unsigned, std::uint64_t, std::uint64_t) {
+        assert(false);
+    }) == 0);
 }
 '''
 with tempfile.TemporaryDirectory(prefix="encore-deferred-host-") as folder:
