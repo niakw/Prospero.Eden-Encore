@@ -135,7 +135,7 @@ assert "best_source = filename;" in native
 assert "std::ofstream receipt(destination + \".source\"" in native
 assert "cached_source == candidates.front()" in native
 assert "best_pixels" not in native.split("bool FetchCaseFace(", 1)[1].split(
-    "void EnsureRetailCase(", 1)[0]
+    "unsigned EnsureRetailCase(", 1)[0]
 assert "EUROPE_FRONT_PINS" in indexer
 assert "regional_candidates(front)" in indexer
 assert 'region_code(element.findtext("Region", ""))' in indexer
@@ -151,7 +151,7 @@ assert "9524e5f7-ccc8-4ce6-a581-03f82c51825e.jpg" in indexer
 assert "a8bcb4cc-a3b0-4cf0-82f3-cb10dd18b27c.jpg" in indexer
 assert "BotW_NA_Switch_Box_Art" not in (root / "tools/launcher/preview-botw-media.py").read_text()
 assert '"Box - Spine"' in indexer
-assert "void EnsureRetailCase(" in native
+assert "unsigned EnsureRetailCase(" in native
 assert "RetailCaseIndex()" in native
 assert 'Eden::AppResourceFile("ui/box-art-index.tsv")' in native
 assert 'Eden::AppFile("ui/box-art-index.tsv")' not in native
@@ -160,16 +160,16 @@ assert '"EDEN_CASE_FETCH status=unavailable' in native
 assert '"EDEN_CASE_LOOKUP title=%016llX status=no-match' in native
 assert '"EDEN_CASE_LOOKUP title=%016llX status=match' in native
 assert "std::chrono::minutes(5)" in native
-assert "std::chrono::hours(4)" not in native.split("void EnsureRetailCase(", 1)[1].split("NlibEnrichment CachedNlibEnrichment(", 1)[0]
+assert "std::chrono::hours(4)" not in native.split("unsigned EnsureRetailCase(", 1)[1].split("NlibEnrichment CachedNlibEnrichment(", 1)[0]
 assert "both_faces_cached_at_start" in native
 # A competing background Home/Library request must wait for the atomic
 # retail-case writer instead of disappearing behind the five-minute retry.
-case_fetch = native.split("void EnsureRetailCase(", 1)[1].split(
+case_fetch = native.split("unsigned EnsureRetailCase(", 1)[1].split(
     "NlibEnrichment CachedNlibEnrichment(", 1
 )[0]
 assert "std::unique_lock guard(locks[title_id % locks.size()]);" in case_fetch
 assert "std::try_to_lock" not in case_fetch
-assert "if (cancel && cancel->load(std::memory_order_acquire)) return;" in case_fetch
+assert "if (cancel && cancel->load(std::memory_order_acquire)) return changed_faces;" in case_fetch
 # The first successful front/back download permits the optional spine in the
 # same background pass; no enforced five-minute wait for an empty case side.
 assert 'if (side == 2 && !both_faces_cached_at_start &&' in case_fetch
@@ -201,7 +201,7 @@ case_worker = native.split("pe::ui::Game EdenServices::enrich_game_media(pe::ui:
 assert case_worker.index("EnsureRetailCase(game.title_id, scanned_name") < case_worker.index("EnsureNlibEnrichment(game.title_id")
 # A generated retail TGA must not be fetched again merely because stb_image's
 # format probe does not recognize the native loader's uncompressed BGRA TGA.
-case_cache = native.split("void EnsureRetailCase(", 1)[1].split("NlibEnrichment CachedNlibEnrichment(", 1)[0]
+case_cache = native.split("unsigned EnsureRetailCase(", 1)[1].split("NlibEnrichment CachedNlibEnrichment(", 1)[0]
 assert 'if (cached_source == candidates.front() && ValidNlibTga(path))' in case_cache
 assert 'stbi_info(path.c_str(), &width, &height, &channels)' not in case_cache
 assert 'std::fread(header, 1, sizeof(header), input)' in case_cache
