@@ -20,7 +20,7 @@ cache_record = root / '.local/headless-cache'
 if not cache_record.is_file():
     if '--require-pinned-source' in sys.argv:
         raise SystemExit('Pinned Eden fixture unavailable; cannot verify patch applicability')
-    print('Experimental patch static policy PASS (pinned source check deferred)')
+    print('Active I-cache patch policy PASS (staged native source check deferred)')
     sys.exit(0)
 cache=Path(cache_record.read_text().strip())
 source=cache/'source'
