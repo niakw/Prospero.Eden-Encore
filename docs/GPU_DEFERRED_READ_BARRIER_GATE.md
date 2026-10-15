@@ -38,6 +38,41 @@ draining A first. GPU cache state can therefore lag CPU backing RAM and
 read/download ordering is not established. This is a **source-level
 counterexample**, not proof that it causes a particular freeze or HUD issue.
 
+## Host-only progress: numbered replay watermark (15 October 2026)
+
+The disabled candidate `headless/gpu_deferred_write_queue.h` now exposes:
+
+- `EnqueueTracked`: monotonically numbered accepted writes, including contiguous
+  same-core coalescing, with a per-session total enqueue order.
+- `DrainThrough` / `Drain`: GPU-owner callbacks run without the queue mutex;
+  the drain is bounded to a captured sequence, even if other producers
+  continuously enqueue. A later enqueue from inside a callback remains pending
+  for a subsequent drain.
+- `CompletedSequence` and `WaitUntil`: a CPU-side waiter can wait for a
+  previously accepted ticket. Completion is published only after the
+  corresponding replay callback returns. `Close` wakes outstanding readers,
+  and rejected writes must never be silently acknowledged.
+- `Pending` includes in-flight callbacks, avoiding a false empty indication
+  while an older write is being replayed.
+
+Targeted host-only Clang/ASan/UBSan compilation and execution passed (four
+producers, 1,280 writes, coalescing, completion wait, shutdown cancellation).
+This is **not** a native SDK build and **does not** establish renderer correctness.
+
+**Still missing and blocking:** no real `HandleRasterizerDownload`,
+`GPU::OnCPURead` or cache read-area hook uses these tickets, nor does the GPU
+command processor schedule a drain on behalf of a waiting reader. `Close`
+is not wired into the real title lifecycle. `WaitUntil` without first
+scheduling the GPU owner can deadlock, so it must NOT be inserted into the
+CPU-read path by itself. There is no safe queue-cap backpressure yet.
+
+A callback completion watermark is NOT a Vulkan device/submit fence. Moreover,
+`HandleRasterizerWrite` may enqueue before the actual backing-memory
+`memcpy` on the producer returns: native integration must prove the required
+CPU payload publication/order relative to GPU reads, not merely mark the
+invalidation callback complete. GPU dirty/fence handling and texture
+validity remain separate proof obligations.
+
 ## Required engineering contract
 
 - Give accepted entries an ordered, per-session completion watermark.
