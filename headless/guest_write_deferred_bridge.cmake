@@ -69,7 +69,10 @@ if(EDEN_GUEST_WRITE_BRIDGE_DEV)
     endif()
     set(bridge_flush [=[
 bool MemoryManager::EnqueueDeferredCPUWrite(u64 address, u64 size) {
-    if (!::Eden::Performance::cpu_write_defer.load(std::memory_order_relaxed) ||
+    // The native producer still enqueues BEFORE writing guest backing RAM.
+    // No runtime setting may activate this until the post-store bridge exists.
+    if (!::Eden::GpuDeferredWrite::kNativePostStorePublicationReady ||
+        !::Eden::Performance::cpu_write_defer.load(std::memory_order_relaxed) ||
         ::Eden::GpuDeferredWrite::replaying_guest_write) return false;
     const unsigned core = ::Eden::GpuDeferredWrite::guest_write_origin_core;
     if (core >= ::Eden::GpuDeferredWrite::Queue::Cores) return false;
@@ -108,6 +111,7 @@ void MemoryManager::FlushCaching() {
     endforeach()
     string(REPLACE "${vk_entry}" [=[bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {
     const bool defer_candidate =
+        ::Eden::GpuDeferredWrite::kNativePostStorePublicationReady &&
         ::Eden::Performance::cpu_write_defer.load(std::memory_order_relaxed) &&
         ::Eden::GpuDeferredWrite::guest_write_origin_core < ::Eden::GpuDeferredWrite::Queue::Cores &&
         !::Eden::GpuDeferredWrite::replaying_guest_write;]=]
