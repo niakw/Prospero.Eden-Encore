@@ -154,3 +154,23 @@ mutex is acquired, the existing full buffer, texture and pipeline sequence
 runs synchronously, including the texture mutex wait. The host generation
 contract requires exactly one enqueue call in the active derived method
 and forbids texture mutex `try_lock` in that path.
+
+## Serialize GPU-dirty writes across guest and GPU producers
+
+The pinned `Core::GPUDirtyMemoryManager::Collect` performs its
+`current.exchange(new_transform)` under `guard` but the initial
+`current.load` and same-region CAS occur outside the mutex.
+With a GPU replay producer collecting into the same guest core concurrently,
+one producer may replace a newer current transform with a stale snapshot,
+silently dropping dirty blocks before `Gather`. Atomic exchange alone
+does **not** solve a compare-and-swap race.
+
+The **developer-only**, default-OFF bridge now derives
+`deferred-core/core/gpu_dirty_memory_manager.h` from the pinned original,
+acquiring the existing `guard` for the entire `Collect` method, while
+removing the obsolete nested lock. `Gather` already takes `guard`.
+No changes to `TransformAddress`, dirty bit granularity, fences, or the
+normal vendor header. Both `core` and `video_core` opt-in builds must see
+the same shadow header; the memory-manager replay translation unit now
+includes its complete type explicitly. The host contract checks the
+derived source and is extended with concurrent collection stress.
