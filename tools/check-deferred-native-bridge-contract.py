@@ -126,8 +126,8 @@ assert "failed_ = false;" in queue
 reset_body=queue.split("bool ResetAfterQuiescence() {",1)[1].split("private:",1)[0]
 assert reset_body.index("std::lock_guard owner(consumer_mutex_);") < reset_body.index("std::lock_guard lock(mutex_);")
 assert "if (active_consumer_ == this) return false;" in reset_body
-assert "if (!closed_ || !close_completed_) return false;" in reset_body
-assert reset_body.index("if (!closed_ || !close_completed_) return false;") < reset_body.index("queue_.clear();")
+assert "if (!closed_ || !close_completed_ || pending_wake_callbacks_ != 0)" in reset_body
+assert reset_body.index("if (!closed_ || !close_completed_ || pending_wake_callbacks_ != 0)") < reset_body.index("queue_.clear();")
 assert "close_completed_ = false;" in queue
 assert "close_completed_ = true;" in close_body
 assert close_body.index("std::lock_guard owner(consumer_mutex_);") < close_body.index("close_completed_ = true;")
