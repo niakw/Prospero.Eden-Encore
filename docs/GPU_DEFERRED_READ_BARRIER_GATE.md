@@ -419,6 +419,35 @@ developer-only bridge remains disabled. A native reader must treat `false`
 as a fatal/session-cancelled barrier outcome rather than continuing with
 potentially stale RAM.
 
+## Bounded pending write budget
+
+An uncommitted FIFO reservation blocks replay of every later reservation.
+Previously, producers could continue accepting guest writes without any
+limit while that head was unready, risking unbounded per-title memory
+growth. The inactive queue now admits at most **8,192 accepted but not yet
+acknowledged writes**, calculated as `accepted_ - completed_` under the
+queue mutex. This includes:
+
+- published or unpublished writes sitting in the FIFO;
+- an entire GPU snapshot currently inside a replay callback (removed from
+  the vector but not yet acknowledged);
+- separately accepted sequence IDs merged into a single eager tail entry.
+
+At the limit, both `Reserve` and legacy `EnqueueTracked` reject new
+writes without advancing a sequence. Existing reserved writes can still
+`Publish` and drain normally; once replay completes, the budget opens
+again. The host test fills all 8,192 slots behind an unpublished head,
+publishes them in reverse order, checks replay order and attempts a new
+reservation from inside the still-in-flight GPU callback. It also verifies
+that eager same-range coalescing cannot bypass the budget.
+
+**Critical integration contract:** a rejected `Reserve` is not an
+acknowledgment and must cause the actual CPU write site to take an original
+synchronous/cache-correct path *before storing guest RAM*, or fail the
+session. A caller must never drop the invalidation and continue. This
+host-only bound does not prove any FPS gain, and the native developer bridge
+remains disabled while its pre-store enqueue is unqualified.
+
 ## Required engineering contract
 
 - Give accepted entries an ordered, per-session completion watermark.
