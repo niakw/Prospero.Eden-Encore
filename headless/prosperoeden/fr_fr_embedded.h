@@ -1671,5 +1671,86 @@ msgstr "Zoom avant"
 #: pe/ui/library.cpp
 msgid "Move cover"
 msgstr "Déplacer la jaquette"
+
+#: pe/ui/library.cpp
+msgid "Action-Adventure"
+msgstr "Action-aventure"
+
+#: pe/ui/library.cpp
+msgid "Arcade"
+msgstr "Arcade"
+
+#: pe/ui/library.cpp
+msgid "Board Game"
+msgstr "Jeu de société"
+
+#: pe/ui/library.cpp
+msgid "Card Game"
+msgstr "Jeu de cartes"
+
+#: pe/ui/library.cpp
+msgid "Casual"
+msgstr "Occasionnel"
+
+#: pe/ui/library.cpp
+msgid "Co-op"
+msgstr "Coopératif"
+
+#: pe/ui/library.cpp
+msgid "Education"
+msgstr "Éducatif"
+
+#: pe/ui/library.cpp
+msgid "Family"
+msgstr "Familial"
+
+#: pe/ui/library.cpp
+msgid "Horror"
+msgstr "Horreur"
+
+#: pe/ui/library.cpp
+msgid "Indie"
+msgstr "Indépendant"
+
+#: pe/ui/library.cpp
+msgid "Multiplayer"
+msgstr "Multijoueur"
+
+#: pe/ui/library.cpp
+msgid "Music"
+msgstr "Musique"
+
+#: pe/ui/library.cpp
+msgid "Online"
+msgstr "En ligne"
+
+#: pe/ui/library.cpp
+msgid "Other"
+msgstr "Autre"
+
+#: pe/ui/library.cpp
+msgid "Party"
+msgstr "Jeu de groupe"
+
+#: pe/ui/library.cpp
+msgid "Rhythm"
+msgstr "Rythme"
+
+#: pe/ui/library.cpp
+msgid "RPG"
+msgstr "Jeu de rôle"
+
+#: pe/ui/library.cpp
+msgid "Sandbox"
+msgstr "Bac à sable"
+
+#: pe/ui/library.cpp
+msgid "Single Player"
+msgstr "Solo"
+
+#: pe/ui/library.cpp
+msgid "Visual Novel"
+msgstr "Roman visuel"
+
 )FRPO";
 }
