@@ -212,6 +212,22 @@ neither a completed ticket nor a flush request proves GPU device-fence
 completion. No native CPU reader has been wired to these APIs; the
 `kNativePostStorePublicationReady = false` interlock remains in force.
 
+## Cross-address-space ticket isolation
+
+A further host audit found that the first generation-tagged API initialized
+each Queue's `generation_` to 1. Distinct guest address spaces could thus
+both issue `Ticket{1, 1}`, allowing one queue's ticket to be accepted by
+another. Each Queue instance and each quiescent reset now acquires a fresh,
+process-unique epoch from a checked atomic counter. Ticket identity therefore
+covers the owning address space and the title session, in addition to FIFO
+order. The host fixture tests rejection of foreign tickets on Publish,
+WaitUntil and DrainThrough; bare sequence waits/drains remain unsupported.
+
+This is a narrow host-level correctness proof, not an authorization to
+activate the deferred path. GPU work scheduling, post-store native producer
+integration, page-mapping lifetime and cache/texture fence ordering still
+need separate verification.
+
 ## Required engineering contract
 
 - Give accepted entries an ordered, per-session completion watermark.
