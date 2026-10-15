@@ -60,6 +60,7 @@ inline int hcr_mode = 1;
 // while the previous VkDevice and its worker threads are already destroyed.
 inline void ResetForTitle() noexcept {
     disable_null_descriptor = false;
+    static_vertex_input = true;
     disable_descriptor_buffer = false;
     robustness2 = false;
     trace_pipelines = false;
