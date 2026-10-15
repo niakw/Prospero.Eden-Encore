@@ -2304,6 +2304,7 @@ if(EDEN_PS5_OPENGL)
             "        unsigned completed_gpu_commands = 0;\n        CommandDataContainer next;"
             gpu_worker "${gpu_worker}")
         string(PREPEND gpu_worker "#include \"${EDEN_PORT_DIR}/crash_report.h\"\n")
+        string(PREPEND gpu_worker "#include \"${EDEN_PORT_DIR}/gpu_failure.h\"\n")
         set(worker_start "void ThreadManager::StartThread(VideoCore::RendererBase& renderer, Core::Frontend::GraphicsContext& context, Tegra::Control::Scheduler& scheduler) {\n    rasterizer = renderer.ReadRasterizer();\n    thread = std::jthread([&](std::stop_token stop_token) {")
         string(FIND "${gpu_worker}" "${worker_start}" worker_start_offset)
         if(worker_start_offset LESS 0)
@@ -2327,9 +2328,36 @@ if(EDEN_PS5_OPENGL)
         if(old_producer_at LESS 0)
             message(FATAL_ERROR "Pinned GPU producer source changed")
         endif()
-        set(producer_rewrite "    bool pushed = false;\n    if (!stop_source.stop_requested()) {\n        pushed = state.queue.TryEmplace(std::move(command_data), fence, block);\n        if (!pushed) {\n${producer_wait}\n        }\n    }\n    if (!pushed)\n        return state.signaled_fence.load(std::memory_order_relaxed);")
+        set(producer_rewrite "    bool pushed = false;\n    if (!stop_source.stop_requested()) {\n        pushed = state.queue.TryEmplace(std::move(command_data), fence, block);\n        if (!pushed) {\n${producer_wait}\n        }\n    }\n    if (!pushed) {\n        if (stop_source.stop_requested()) {\n            if (const auto failure = Eden::PeekGpuFailure()) {\n                std::rethrow_exception(failure);\n            }\n        }\n        return state.signaled_fence.load(std::memory_order_acquire);\n    }")
         string(REPLACE "    state.queue.EmplaceWait(std::move(command_data), fence, block);"
             "${producer_rewrite}" gpu_worker "${gpu_worker}")
+        # Cancellation of a synchronous GPU submission is not fence completion.
+        # A recorded fatal worker error must propagate to ALL CPU producers.
+        set(gpu_block_wait_original [=[
+    if (block) {
+        state.cv.wait(lk, stop_source.get_token(), [this, fence] {
+            return fence <= state.signaled_fence.load(std::memory_order_relaxed);
+        });
+    }
+]=])
+        set(gpu_block_wait_checked [=[
+    if (block) {
+        const bool completed = state.cv.wait(lk, stop_source.get_token(), [this, fence] {
+            return fence <= state.signaled_fence.load(std::memory_order_acquire);
+        });
+        if (!completed) {
+            if (const auto failure = Eden::PeekGpuFailure()) {
+                std::rethrow_exception(failure);
+            }
+            return state.signaled_fence.load(std::memory_order_acquire);
+        }
+    }
+]=])
+        string(FIND "${gpu_worker}" "${gpu_block_wait_original}" gpu_block_wait_at)
+        if(gpu_block_wait_at LESS 0)
+            message(FATAL_ERROR "Pinned GPU producer fence wait changed")
+        endif()
+        string(REPLACE "${gpu_block_wait_original}" "${gpu_block_wait_checked}" gpu_worker "${gpu_worker}")
         file(READ "${EDEN_PORT_DIR}/native_gpu_thread.inc" native_gpu_lifecycle)
         string(REPLACE "#include \"diagnostics.h\"" "#include \"${EDEN_PORT_DIR}/diagnostics.h\""
             native_gpu_lifecycle "${native_gpu_lifecycle}")

@@ -42,6 +42,7 @@ approved_sync = {
     "string(REPLACE": (
         'string(REPLACE "${gpu_sync_wait_original}" "${gpu_sync_wait_replacement}"',
         'string(REPLACE "${gpu_tick_lock_original}" "${gpu_tick_lock_safe}"',
+        'string(REPLACE "${gpu_block_wait_original}" "${gpu_block_wait_checked}"',
     ),
 }
 approved_counts = {}
