@@ -1196,7 +1196,7 @@ void ReportGpuThread(unsigned frame) {
     for (std::size_t i = 0; i < heavy_count && tail_reported < 8; ++i) {
         const auto& row = heaviest[i];
         if (!row.ge20ms) continue;
-        std::printf("EDEN_DEV_HLE_TAIL service=%s cmd=%u ge20ms=%llu ge100ms=%llu max_ns=%llu\\n",
+        std::printf("EDEN_DEV_HLE_TAIL service=%s cmd=%u ge20ms=%llu ge100ms=%llu max_ns=%llu\n",
                     row.name, row.command,
                     static_cast<unsigned long long>(row.ge20ms),
                     static_cast<unsigned long long>(row.ge100ms),
