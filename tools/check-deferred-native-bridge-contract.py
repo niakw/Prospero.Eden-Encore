@@ -99,6 +99,13 @@ assert "closed_ || failed_ || ticket.generation != generation_" in queue
 assert "completed_ >= ticket.sequence || closed_ || failed_" in queue
 assert "if (closed_ || failed_ || accepted_" in queue
 assert "failed_ = false;" in queue
+# Reset is destructive: it must not race any GPU callback or reopen a live
+# title merely because producers have momentarily become idle.
+reset_body=queue.split("bool ResetAfterQuiescence() {",1)[1].split("private:",1)[0]
+assert reset_body.index("std::lock_guard owner(consumer_mutex_);") < reset_body.index("std::lock_guard lock(mutex_);")
+assert "if (active_consumer_ == this) return false;" in reset_body
+assert "if (!closed_) return false;" in reset_body
+assert reset_body.index("if (!closed_) return false;") < reset_body.index("queue_.clear();")
 assert "completed_cv_.notify_all()" in queue
 assert "WaitUntil(" not in code
 # The host candidate now has a publish-after-store contract; the real bridge
