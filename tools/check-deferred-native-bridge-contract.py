@@ -50,6 +50,21 @@ zero_block=reader.split("bool ZeroBlock(",1)[1].split("bool CopyBlock(",1)[0]
 assert zero_block.index("HandleRasterizerWrite(GetInteger(current_vaddr), copy_amount);") < zero_block.rindex("std::memset(ptr, 0, copy_amount);")
 scalar_write=reader.split("inline void Write(Common::ProcessAddress vaddr,",1)[1].split("bool WriteExclusive(",1)[0]
 assert scalar_write.index("HandleRasterizerWrite(addr, sizeof(T));") < scalar_write.index("std::memcpy(ptr, &data, sizeof(T));")
+# Exhaustive dispatch-site audit in this pinned implementation. These paths
+# cannot all be rewritten by patching WriteBlockImpl alone.
+assert reader.count("HandleRasterizerWrite(") == 9
+exclusive=reader.split("bool WriteExclusive(Common::ProcessAddress vaddr,",1)[1].split("void HandleRasterizerDownload(",1)[0]
+assert exclusive.count("HandleRasterizerWrite(") == 2
+assert "Common::AtomicCompareAndSwap(reinterpret_cast<T*>(ptr), data, expected)" in exclusive
+assert "Common::AtomicCompareAndSwap(reinterpret_cast<u64*>(ptr), data, expected)" in exclusive
+cache_ops=reader.split("Result StoreDataCache(",1)[1].split("void MarkRegionDebug(",1)[0]
+assert "Result FlushDataCache(" in cache_ops
+assert cache_ops.count("HandleRasterizerWrite(GetInteger(current_vaddr), block_size);") == 2
+copy_block=reader.split("bool CopyBlock(",1)[1].split("template <typename Callback>",1)[0]
+assert "WriteBlockImpl(dest_addr + offset, ptr, copy_amount, false)" in copy_block
+assert "HandleRasterizerDownload(GetInteger(current_vaddr), copy_amount);" in copy_block
+# These memory-side callbacks are NOT a complete proof of JIT/fastmem
+# publication; the native candidate must remain unreachable.
 # The host queue now exposes a completion model. It must not be mistaken for
 # a native CPU-read barrier: the real reader still has no GPU-drain request.
 queue=(root/"headless/gpu_deferred_write_queue.h").read_text()
