@@ -521,3 +521,28 @@ blocked binder. If the long-call histogram spikes with hitches,
 trace the actual transaction ID in a separate targeted experiment
 before changing binder semantics. This update is a diagnostics
 candidate, not a performance fix.
+
+
+## Always-active native core backports (15 October 2026)
+
+The native source materialization now applies the pinned A64/A32
+instruction-cache coherence fix and the host service-manager/lazy-audio
+wait fix in **every** native preparation, regardless of dev profile,
+runtime options or `EDEN_EXPERIMENTAL_*` environment flags. Build setup
+verifies exact bytes of the five affected translation units with an
+independent, fuzz-free patch replay and rejects unknown modified sources.
+`tools/check-dynarmic-icache.py --require-pinned-source` verifies the
+resulting staged source instead of erroneously applying the patch twice.
+
+The archived dummy-thread wait workaround is **not** activated: its
+current code may clear a scheduler wait-queue pointer while the thread
+is still waiting; existing comments correctly quarantine that lifetime
+hazard. The cross-core shared JIT and successor-batch compiler are
+separate feature families and have not been silently advertised as active.
+
+The Oct 15 `5edc677b` binary remains unchanged. Its pinned artifact
+release action downloaded and validated the exact successful archive
+but could not create a GitHub Release due to token HTTP 403
+(Resource not accessible by integration). Releasing that archive
+requires correcting the repository's GitHub Actions release permissions.
+Do not report it as published or recompile it under a different source SHA.
