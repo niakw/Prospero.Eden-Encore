@@ -341,6 +341,56 @@ int main() {
     assert(lifetime.Drain([](unsigned,std::uint64_t,std::uint64_t){}) == 1);
     assert(lifetime.WaitUntil(*fresh));
 
+    // Multiple CPU producers publish DIFFERENT RAM payloads out of order.
+    // Replay must stay FIFO and must never observe a pre-publication value.
+    // Entries are spaced apart so ordinary coalescing cannot hide a hole.
+    Queue concurrent_publication;
+    constexpr unsigned PublishedWrites = 128;
+    std::array<Queue::Ticket, PublishedWrites> reserved_tickets{};
+    std::array<unsigned, PublishedWrites> guest_values{};
+    std::array<std::atomic<bool>, 4> finished_publishers{};
+    for (unsigned i = 0; i < PublishedWrites; ++i) {
+        auto ticket = concurrent_publication.Reserve(i % 4,
+                                                     (std::uint64_t(i) + 1) * 4096, 8);
+        assert(ticket && ticket->sequence == i + 1);
+        reserved_tickets[i] = *ticket;
+    }
+    std::vector<std::thread> publishers;
+    for (unsigned core = 0; core < 4; ++core) {
+        publishers.emplace_back([&, core] {
+            for (int index = int(PublishedWrites) - 4 + int(core);
+                 index >= 0; index -= 4) {
+                guest_values[unsigned(index)] = unsigned(index) + 1;
+                assert(concurrent_publication.Publish(reserved_tickets[unsigned(index)]));
+                if ((index & 15) == 0) std::this_thread::yield();
+            }
+            finished_publishers[core].store(true, std::memory_order_release);
+        });
+    }
+    unsigned next_replay_index = 0;
+    const auto verify_publication = [&](unsigned core, std::uint64_t addr,
+                                        std::uint64_t size) {
+        const auto index = unsigned(addr / 4096 - 1);
+        assert(size == 8 && index == next_replay_index);
+        assert(core == index % 4);
+        // Plain CPU backing-RAM values, synchronized only by Publish and the
+        // replay snapshot's mutex acquisition.
+        assert(guest_values[index] == index + 1);
+        ++next_replay_index;
+    };
+    while (true) {
+        concurrent_publication.Drain(verify_publication);
+        bool producers_done = true;
+        for (const auto& done : finished_publishers)
+            producers_done &= done.load(std::memory_order_acquire);
+        if (producers_done && !concurrent_publication.Pending()) break;
+        std::this_thread::yield();
+    }
+    for (auto& publisher : publishers) publisher.join();
+    assert(next_replay_index == PublishedWrites);
+    assert(concurrent_publication.CompletedSequence() == PublishedWrites);
+    assert(!concurrent_publication.Pending());
+
 }
 '''
 with tempfile.TemporaryDirectory(prefix="encore-deferred-host-") as folder:
