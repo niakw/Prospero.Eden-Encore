@@ -466,6 +466,18 @@ int main(int argc, char** argv) {
     ], check=True, capture_output=True, text=True)
     subprocess.run([str(binary), str(case_file)], check=True,
                    capture_output=True, text=True)
-print("PASS native-format BGRA retail TGA decoder and scaled pixels (host only)")
+    # The same native loader also accepts a bottom-up physical scan.
+    header[17] = 0x08  # 8-bit alpha, bottom-left origin
+    case_file.write_bytes(header + bottom * (width * (height // 2)) +
+                          top * (width * (height // 2)))
+    subprocess.run([str(binary), str(case_file)], check=True,
+                   capture_output=True, text=True)
+    # An interrupted atomic download can leave a short body. It must never
+    # be accepted by the UI decoder as a valid texture.
+    case_file.write_bytes(header + top * 4)
+    truncated = subprocess.run([str(binary), str(case_file)],
+                               capture_output=True, text=True)
+    assert truncated.returncode == 2, truncated.returncode
+print("PASS native-format BGRA retail TGA decoder, orientation and truncation (host only)")
 
 print("PASS regional fronts/backs, case geometry and zoom/pan source contracts")
