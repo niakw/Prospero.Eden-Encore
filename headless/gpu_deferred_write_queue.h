@@ -211,15 +211,21 @@ public:
         std::lock_guard owner(consumer_mutex_);
     }
 
-    // Only after all producers, waiters and GPU consumer have joined. No old
-    // session sequence ticket may be reused after reset.
-    void ResetAfterQuiescence() {
+    // Reset only AFTER Close(), joining producers/readers and releasing all
+    // GPU cache locks. Serialize with the consumer as an extra safety barrier.
+    // Reject open-session resets instead of silently recycling live tickets.
+    // A caller must still enforce full thread quiescence before destruction.
+    bool ResetAfterQuiescence() {
+        if (active_consumer_ == this) return false;
+        std::lock_guard owner(consumer_mutex_);
         std::lock_guard lock(mutex_);
+        if (!closed_) return false;
         queue_.clear();
         accepted_ = completed_ = 0;
         generation_ = FreshGeneration(); // Unique across ALL queue instances.
         failed_ = false;
         closed_ = false;
+        return true;
     }
 
 private:
