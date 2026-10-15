@@ -2,6 +2,9 @@
 """Offline launch case-artwork wiring contract (host-only, no network)."""
 from pathlib import Path
 import math
+import shutil
+import subprocess
+import tempfile
 
 root = Path(__file__).resolve().parents[1]
 service = (root / "headless/prosperoeden/pe/ui/services.hpp").read_text()
@@ -391,4 +394,65 @@ assert '"https://images.launchbox-app.com/9524e5f7-ccc8-4ce6-a581-03f82c51825e.j
 assert 'EUROPE_FRONT_PINS["79189"]' in indexer or '"79189": (' in indexer
 assert 'region_code' in indexer and 'REGION_ORDER' in indexer
 assert "LocaleCaseCandidates" in native
+
+# Compile and invoke the actual launcher decoder on a generated retail-case
+# BGRA TGA, not a hand-written Python approximation of its file contract.
+# This is still a host-only decoder check, not evidence of PS5 GL upload.
+compiler = shutil.which("c++") or shutil.which("g++") or shutil.which("clang++")
+if not compiler:
+    raise RuntimeError("native case decoder contract needs a host C++ compiler")
+with tempfile.TemporaryDirectory(prefix="encore-retail-tga-") as workspace:
+    temp = Path(workspace)
+    source = temp / "case_decode.cpp"
+    binary = temp / "case_decode"
+    case_file = temp / "case.tga"
+    width, height = 128, 200
+    header = bytearray(18)
+    header[2] = 2  # Uncompressed, true-color
+    header[12:14] = width.to_bytes(2, "little")
+    header[14:16] = height.to_bytes(2, "little")
+    header[16] = 32  # BGRA
+    header[17] = 0x28  # top-left origin and 8 alpha bits
+    # Different top and bottom scanlines exercise the actual orientation.
+    top = bytes((0x11, 0x22, 0x33, 0xff))
+    bottom = bytes((0x44, 0x55, 0x66, 0xee))
+    case_file.write_bytes(header + top * (width * (height // 2)) +
+                          bottom * (width * (height // 2)))
+    source.write_text(r"""
+#include "pe/gfx/image.hpp"
+#include <cstddef>
+#include <cstdint>
+int main(int argc, char** argv) {
+    if (argc != 2) return 1;
+    pe::gfx::Image image;
+    if (!pe::gfx::load_tga(argv[1], &image)) return 2;
+    if (image.width != 128 || image.height != 200) return 3;
+    if (image.rgba.size() != 128u * 200u * 4u) return 4;
+    const auto is_pixel = [&](std::size_t y,
+                              std::uint8_t r, std::uint8_t g,
+                              std::uint8_t b, std::uint8_t a) {
+        const std::size_t i = 4 * (y * 128);
+        return image.rgba[i] == r && image.rgba[i + 1] == g &&
+               image.rgba[i + 2] == b && image.rgba[i + 3] == a;
+    };
+    if (!is_pixel(0, 0x33, 0x22, 0x11, 0xff)) return 5;
+    if (!is_pixel(199, 0x66, 0x55, 0x44, 0xee)) return 6;
+    pe::gfx::Image small = pe::gfx::halve(image);
+    if (small.width != 64 || small.height != 100) return 7;
+    if (small.rgba[0] != 0x33 || small.rgba[1] != 0x22 ||
+        small.rgba[2] != 0x11 || small.rgba[3] != 0xff) return 8;
+    return 0;
+}
+""", encoding="utf-8")
+    subprocess.run([
+        compiler, "-std=c++17", "-O0",
+        "-I", str(root / "headless/prosperoeden"),
+        str(source),
+        str(root / "headless/prosperoeden/pe/gfx/image.cpp"),
+        "-o", str(binary)
+    ], check=True, capture_output=True, text=True)
+    subprocess.run([str(binary), str(case_file)], check=True,
+                   capture_output=True, text=True)
+print("PASS native-format BGRA retail TGA decoder and scaled pixels (host only)")
+
 print("PASS regional fronts/backs, case geometry and zoom/pan source contracts")
