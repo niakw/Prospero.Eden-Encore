@@ -21,45 +21,53 @@ struct Write {
     Range range{};
     // A merged FIFO entry acknowledges all consecutive enqueues through this id.
     std::uint64_t last_sequence{};
+    bool published{true}; // False until producer finishes the guest RAM store.
 };
 
 class Queue {
 public:
     using Sequence = std::uint64_t;
+    struct Ticket {
+        Sequence sequence{};
+        std::uint64_t generation{};
+    };
     static constexpr unsigned Cores = 4;
     static constexpr std::uint64_t PageBytes = 4096;
     static constexpr std::uint64_t DirtyRegionBytes = PageBytes / 2;
 
-    // The mutex assigns one total order across guest cores. A failed enqueue
-    // MUST NOT be treated as an acknowledged deferred write.
+    // Legacy host-only immediate publication. The inactive native bridge
+    // still calls this BEFORE its backing RAM store; that path is unsafe to
+    // activate until it is replaced by Reserve + post-store Publish.
     std::optional<Sequence> EnqueueTracked(unsigned core, std::uint64_t address,
                                            std::uint64_t size) {
-        if (core >= Cores || size == 0 ||
-            size > std::numeric_limits<std::uint64_t>::max() - address) return std::nullopt;
-        const auto end = address + size;
+        const auto ticket = EnqueueImpl(core, address, size, true);
+        if (!ticket) return std::nullopt;
+        return ticket->sequence;
+    }
+
+    // Reserve an order position before touching guest RAM. The GPU consumer
+    // cannot replay this entry until the producer has finished the actual
+    // write and explicitly called Publish(ticket).
+    std::optional<Ticket> Reserve(unsigned core, std::uint64_t address,
+                                  std::uint64_t size) {
+        return EnqueueImpl(core, address, size, false);
+    }
+
+    // Releasing mutex_ after the producer's real store publishes the payload
+    // to a GPU consumer that subsequently acquires the same mutex. Publishing
+    // a stale session ticket, a nonexistent ticket or an already published
+    // entry fails without advancing the FIFO.
+    bool Publish(Ticket ticket) {
         std::lock_guard lock(mutex_);
-        if (closed_ || accepted_ == std::numeric_limits<Sequence>::max()) {
-            return std::nullopt;
-        }
-        const auto sequence = accepted_ + 1;
-        if (!queue_.empty()) {
-            auto& tail = queue_.back();
-            const auto& last = tail.range;
-            if (tail.core == core &&
-                (address / DirtyRegionBytes) == ((end - 1) / DirtyRegionBytes) &&
-                (last.begin / DirtyRegionBytes) == ((last.end - 1) / DirtyRegionBytes) &&
-                (address / DirtyRegionBytes) == (last.begin / DirtyRegionBytes) &&
-                address <= last.end && last.begin <= end) {
-                tail.range.begin = std::min(last.begin, address);
-                tail.range.end = std::max(last.end, end);
-                tail.last_sequence = sequence;
-                accepted_ = sequence;
-                return sequence;
+        if (closed_ || ticket.generation != generation_ || ticket.sequence == 0 ||
+            ticket.sequence > accepted_) return false;
+        for (auto& entry : queue_) {
+            if (entry.last_sequence == ticket.sequence && !entry.published) {
+                entry.published = true;
+                return true;
             }
         }
-        queue_.push_back({core, {address, end}, sequence});
-        accepted_ = sequence;
-        return sequence;
+        return false;
     }
 
     // Existing opt-in native bridge uses this signature. There is deliberately
@@ -81,6 +89,20 @@ public:
     bool Pending() const {
         std::lock_guard lock(mutex_);
         return completed_ != accepted_;
+    }
+
+    // Generation-tagged wait for two-phase reservations. A stale ticket
+    // cannot become valid again after an idle session reset.
+    bool WaitUntil(Ticket ticket) {
+        std::unique_lock lock(mutex_);
+        if (ticket.generation != generation_ || ticket.sequence == 0 ||
+            ticket.sequence > accepted_) return false;
+        completed_cv_.wait(lock, [&] {
+            return completed_ >= ticket.sequence || closed_ ||
+                   generation_ != ticket.generation;
+        });
+        return generation_ == ticket.generation &&
+               completed_ >= ticket.sequence;
     }
 
     // CPU caller: the GPU owner MUST have been scheduled before this wait;
@@ -120,11 +142,21 @@ public:
         {
             std::lock_guard lock(mutex_);
             if (watermark > accepted_ || completed_ >= watermark) return 0;
-            work.swap(queue_);
+            // Reserve + Publish is ordered, but publishers can finish out of
+            // order. Drain only the contiguous PUBLISHED prefix. Never
+            // overtake an earlier uncommitted guest RAM write.
+            std::size_t ready = 0;
+            while (ready != queue_.size() && queue_[ready].published) ++ready;
+            if (ready == 0) return 0;
+            if (ready == queue_.size()) {
+                work.swap(queue_);
+            } else {
+                work.assign(queue_.begin(), queue_.begin() + ready);
+                queue_.erase(queue_.begin(), queue_.begin() + ready);
+            }
         }
-        // Under the consumer mutex no other replay can be in flight; the
-        // snapshot therefore covers every accepted, unacknowledged write.
-        if (work.empty()) std::terminate();
+        // Under the consumer mutex no other replay can be in flight.
+        // The snapshot includes ONLY the published FIFO prefix.
         for (const auto& item : work) {
             replay(item.core, item.range.begin, item.range.end - item.range.begin);
         }
@@ -157,10 +189,44 @@ public:
         std::lock_guard lock(mutex_);
         queue_.clear();
         accepted_ = completed_ = 0;
+        if (generation_ == std::numeric_limits<std::uint64_t>::max()) {
+            std::terminate(); // Never recycle a session ticket generation.
+        }
+        ++generation_;
         closed_ = false;
     }
 
 private:
+    std::optional<Ticket> EnqueueImpl(unsigned core, std::uint64_t address,
+                                      std::uint64_t size, bool published) {
+        if (core >= Cores || size == 0 ||
+            size > std::numeric_limits<std::uint64_t>::max() - address)
+            return std::nullopt;
+        const auto end = address + size;
+        std::lock_guard lock(mutex_);
+        if (closed_ || accepted_ == std::numeric_limits<Sequence>::max())
+            return std::nullopt;
+        const Sequence sequence = accepted_ + 1;
+        if (published && !queue_.empty()) {
+            auto& tail = queue_.back();
+            const auto& last = tail.range;
+            if (tail.published && tail.core == core &&
+                (address / DirtyRegionBytes) == ((end - 1) / DirtyRegionBytes) &&
+                (last.begin / DirtyRegionBytes) == ((last.end - 1) / DirtyRegionBytes) &&
+                (address / DirtyRegionBytes) == (last.begin / DirtyRegionBytes) &&
+                address <= last.end && last.begin <= end) {
+                tail.range.begin = std::min(last.begin, address);
+                tail.range.end = std::max(last.end, end);
+                tail.last_sequence = sequence;
+                accepted_ = sequence;
+                return Ticket{sequence, generation_};
+            }
+        }
+        queue_.push_back({core, {address, end}, sequence, published});
+        accepted_ = sequence;
+        return Ticket{sequence, generation_};
+    }
+
     std::mutex consumer_mutex_; // Never held by producer or CPU waiter.
     static inline thread_local const Queue* active_consumer_{nullptr};
     mutable std::mutex mutex_;
@@ -168,6 +234,7 @@ private:
     std::vector<Write> queue_;
     Sequence accepted_{};
     Sequence completed_{};
+    std::uint64_t generation_{1};
     bool closed_{};
 };
 } // namespace Eden::GpuDeferredWrite
