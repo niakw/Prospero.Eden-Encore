@@ -387,3 +387,24 @@ registers; separate findings from the unrelated GPU-progress stall.
 A core-ready host CI run must cover these source invariants and
 the actual native case TGA decoder before the next full All-On
 native build can be described as a qualified release candidate.
+
+
+## Native All-On candidate with cancellation and LR fault map
+
+The native test candidate following the successful
+`43a82765` reference build includes:
+
+- The per-face GL cache invalidation fix and worker serialization;
+- Immediate retry eligibility after cancellation, instead of leaving an
+  incomplete fetch rate-limited for five minutes;
+- One-shot `EDEN_CASE_DRAW` state reporting after GL texture readiness;
+- One fatal-only `EDEN_GUEST_FAULT_LR_MAP` page-table metadata query
+  (no guest memory dereference);
+- Host regressions including C++ BGRA decode, orientation, and truncated
+  scan rejection, plus cancellation/guest fault source invariants.
+
+The build is development-only, not published. A green CI build qualifies
+the archive and native linked code, not console FPS, GPU/HUD synchronization,
+or runtime guest crash repair. For the next console session, record the
+exact git SHA and preserve logs without resetting the cache unless prompted
+by new evidence.
