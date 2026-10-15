@@ -38,11 +38,9 @@ public:
     // Legacy host-only immediate publication. The inactive native bridge
     // still calls this BEFORE its backing RAM store; that path is unsafe to
     // activate until it is replaced by Reserve + post-store Publish.
-    std::optional<Sequence> EnqueueTracked(unsigned core, std::uint64_t address,
-                                           std::uint64_t size) {
-        const auto ticket = EnqueueImpl(core, address, size, true);
-        if (!ticket) return std::nullopt;
-        return ticket->sequence;
+    std::optional<Ticket> EnqueueTracked(unsigned core, std::uint64_t address,
+                                         std::uint64_t size) {
+        return EnqueueImpl(core, address, size, true);
     }
 
     // Reserve an order position before touching guest RAM. The GPU consumer
@@ -91,8 +89,11 @@ public:
         return completed_ != accepted_;
     }
 
-    // Generation-tagged wait for two-phase reservations. A stale ticket
-    // cannot become valid again after an idle session reset.
+    // Generation-tagged wait for either queued or reserved writes.
+    // Caller MUST schedule a GPU-owner drain, without holding any GPU cache
+    // lock, before waiting. The result is replay-callback completion only,
+    // NOT GPU/device-fence completion or safe native CPU-read synchronization.
+    // A stale ticket cannot become valid again after an idle session reset.
     bool WaitUntil(Ticket ticket) {
         std::unique_lock lock(mutex_);
         if (ticket.generation != generation_ || ticket.sequence == 0 ||
@@ -105,16 +106,9 @@ public:
                completed_ >= ticket.sequence;
     }
 
-    // CPU caller: the GPU owner MUST have been scheduled before this wait;
-    // no GPU cache lock or queue mutex may be held by the waiter. Completion
-    // only means the replay callback returned, NOT completion of a Vulkan fence.
-    // Returns false on shutdown or for a ticket this session never accepted.
-    bool WaitUntil(Sequence sequence) {
-        std::unique_lock lock(mutex_);
-        if (sequence > accepted_) return false;
-        completed_cv_.wait(lock, [&] { return completed_ >= sequence || closed_; });
-        return completed_ >= sequence;
-    }
+    // Deliberately NO WaitUntil(Sequence) overload. Sequence numbers reset
+    // after quiescence; only generation-tagged tickets can be waited upon.
+    // A stale read ticket must never succeed against another title session.
 
     // GPU owner only. Capture ONE finite FIFO batch while holding the queue
     // mutex, then replay it without that mutex. New enqueues remain pending
