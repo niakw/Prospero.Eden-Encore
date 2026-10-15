@@ -345,3 +345,22 @@ preview as proof that game-mode JIT, HUD, GPU stalls, or a guest
 provenance is logged once at title start under
 `EDEN_GUEST_CODE_RANGE`; matching it with the saved LR is the next
 evidence requirement before modifying JIT/HLE.
+
+
+## Final All-On native candidate trigger (15 October)
+
+Build `38667914391` compiled and validated the package at source
+`15adbaafa2f6af387392db39ccd62258da039742`; a test-only
+`Prospero.Eden-Encore-PS5-all-on-test` artifact was uploaded.
+Its media-worker wait was subsequently improved at source
+`5296e9ac`, with the source-level cancellation regression
+at `10488e34`. The host preview at `38669015120` was
+separately requested to validate rendered physical scans.
+
+The final release candidate must compile the **later** tree
+containing cancellation-aware serial fetches, precise face
+invalidation, and launch-paper submission traces. This marker
+triggers the independent native test profile; its success,
+actual SHA, and artifact IDs must be checked before any
+installation recommendation. No retroactive assertion that the
+older binary contains these changes is valid.
