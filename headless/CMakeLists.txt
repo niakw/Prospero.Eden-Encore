@@ -2455,6 +2455,23 @@ if(EDEN_PS5_OPENGL)
     string(REPLACE "    u64 pending_composite_fence{};" "    bool sync_requests_stopped{}; // Protected by sync_request_mutex.\n    u64 pending_composite_fence{};" gpu_source "${gpu_source}")
     string(REPLACE "        const u64 fence = ++last_sync_fence;" "        if (sync_requests_stopped) return CurrentSyncRequestFence();\n        const u64 fence = ++last_sync_fence;" gpu_source "${gpu_source}")
     string(REPLACE "return CurrentSyncRequestFence() >= fence;" "return sync_requests_stopped || CurrentSyncRequestFence() >= fence;" gpu_source "${gpu_source}")
+    # A worker exception can stop GPU ticks before a pending CPU fence is
+    # acknowledged. The ordinary shutdown cancellation runs only after
+    # joining that worker, and cannot rescue a guest already stuck on its
+    # CPU-side WaitForSyncOperation. Source-gated native correction: observe
+    # the existing fatal GPU error without consuming it for other waiters.
+    set(gpu_sync_wait_original [=[    void WaitForSyncOperation(const u64 fence) {
+        std::unique_lock lck{sync_request_mutex};
+        sync_request_cv.wait(lck, [this, fence] { return sync_requests_stopped || CurrentSyncRequestFence() >= fence; });
+    }]=])
+    string(FIND "${gpu_source}" "${gpu_sync_wait_original}" gpu_sync_wait_position)
+    if(gpu_sync_wait_position LESS 0)
+        message(FATAL_ERROR "Pinned native GPU synchronization wait changed")
+    endif()
+    file(READ "${EDEN_PORT_DIR}/gpu_sync_failure_wait.inc" gpu_sync_wait_replacement)
+    string(REPLACE "${gpu_sync_wait_original}" "${gpu_sync_wait_replacement}"
+        gpu_source "${gpu_source}")
+    string(PREPEND gpu_source "#include \"${EDEN_PORT_DIR}/gpu_failure.h\"\n")
     string(REPLACE "GPU::~GPU() = default;" "GPU::~GPU() { impl->NotifyShutdown(); }" gpu_source "${gpu_source}")
     string(REPLACE "void GPU::PushGPUEntries(s32 channel, Tegra::CommandList&& entries) {"
         "void GPU::PushGPUEntries(s32 channel, Tegra::CommandList&& entries) {\n    static std::atomic<unsigned> submissions{};\n    const auto count = ++submissions;\n    if (count <= 3) LOG_INFO(Render_OpenGL, \"EDEN_GUEST_GPU_SUBMIT count={} channel={}\", count, channel);"
