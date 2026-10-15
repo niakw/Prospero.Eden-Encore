@@ -71,7 +71,7 @@ void MemoryManager::FlushCaching() {
     file(READ "${PORT_ROOT}/vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp" bridge_vk)
     set(vk_entry "bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {")
     set(vk_buffer_lock "        ::Eden::Performance::GuestCacheLock(buffer_cache.mutex, false);")
-    set(vk_texture_lock "        ::Eden::Performance::GuestCacheLock(texture_cache.mutex, true);")
+    set(vk_texture_lock "        ::Eden::Performance::GuestCacheLock(texture_cache.mutex, true);\n        texture_wait.Stop();")
     foreach(anchor IN ITEMS vk_entry vk_buffer_lock vk_texture_lock)
         string(FIND "${bridge_vk}" "${${anchor}}" found)
         if(found LESS 0)
@@ -96,7 +96,8 @@ void MemoryManager::FlushCaching() {
         } else if (!texture_cache.mutex.try_lock()) {
             if (gpu_memory->EnqueueDeferredCPUWrite(addr, size)) return false;
             ::Eden::Performance::GuestCacheLock(texture_cache.mutex, true);
-        }]=] bridge_vk "${bridge_vk}")
+        }
+        texture_wait.Stop();]=] bridge_vk "${bridge_vk}")
     string(PREPEND bridge_vk "#include \"${EDEN_PORT_DIR}/gpu_deferred_replay.h\"\n#include \"video_core/memory_manager.h\"\n")
     write_derived("${PORT_BUILD_DIR}/vulkan_rasterizer_deferred.cpp" "${bridge_vk}")
 
