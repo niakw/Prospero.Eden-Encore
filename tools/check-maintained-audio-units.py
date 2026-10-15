@@ -49,5 +49,9 @@ assert cmake.count("write_derived(") <= 77
 gpu_sync_input='file(READ "${EDEN_PORT_DIR}/gpu_sync_failure_wait.inc" gpu_sync_wait_replacement)'
 assert cmake.count(gpu_sync_input) == 1
 assert cmake.count("file(READ") - cmake.count(gpu_sync_input) <= 87
-assert cmake.count("string(REPLACE") <= 227
+# The native GPU producer cancellation contract adds exactly one checked
+# source-derived wait replacement; keep the previous ceiling for all others.
+gpu_producer_wait='string(REPLACE "${gpu_block_wait_original}" "${gpu_block_wait_checked}"'
+assert cmake.count(gpu_producer_wait) == 1
+assert cmake.count("string(REPLACE") - cmake.count(gpu_producer_wait) <= 227
 print("MAINTAINED_AUDIO_UNITS_PARITY_PASS sink=1 voice=1")
