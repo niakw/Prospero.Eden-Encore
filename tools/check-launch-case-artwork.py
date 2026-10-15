@@ -178,6 +178,19 @@ assert '!ValidNlibTga(CaseFacePath(title_id, "back"))' in case_fetch
 assert "attempts >= 3" in native
 assert 'std::fprintf(stderr, "EDEN_CASE_FACE title=%016llX side=%d status=unavailable' in native
 assert "const bool both_faces_cached_at_start =" in native
+# Preserve the already resident GPU jacket when a background metadata scan
+# found the same file; explicitly distinguish successful front/back replacement.
+service = (root / "headless/prosperoeden/pe/ui/services.hpp").read_text()
+assert "unsigned case_artwork_changed = 0;" in service
+case_fetch = native.split("unsigned EnsureRetailCase(", 1)[1].split(
+    "NlibEnrichment CachedNlibEnrichment(", 1
+)[0]
+assert "changed_faces |= (1u << side);" in case_fetch
+assert "return changed_faces;" in case_fetch
+assert "game.case_artwork_changed = EnsureRetailCase(" in native
+assert "game.case_artwork_changed |= EnsureRetailCase(" in native
+assert library.count("if (enriched.case_artwork_changed & 1u)") == 2
+assert library.count("if (enriched.case_artwork_changed & 2u)") == 2
 assert 'game.box_front = cached_case.front;' in native
 assert 'game.box_back = cached_case.back;' in native
 assert 'game.box_front = box.front;' in native
