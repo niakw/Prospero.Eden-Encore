@@ -544,6 +544,19 @@ adapt('src/video_core/renderer_vulkan/vk_update_descriptor.h',
 ])
 
 adapt('src/video_core/renderer_vulkan/vk_swapchain.cpp', 'vulkan_swapchain.cpp', [
+    # A single VkQueue requires host external synchronization; two distinct
+    # queue *families* do not. Avoid holding the graphics submit lock over a
+    # potentially blocking WSI call only when the handles are provably distinct.
+    ('    std::scoped_lock lock{scheduler.submit_mutex};\n'
+     '    switch (const VkResult result = present_queue.Present(present_info)) {',
+     '    // Host queue external synchronization is per VkQueue, not per VkDevice.\n'
+     '    // Different queue families use distinct handles: do not delay GPU\n'
+     '    // submissions behind a blocked WSI present on an independent queue.\n'
+     '    // When the families match, both handles refer to queue index zero and\n'
+     '    // MUST still share the same mutex for Vulkan correctness.\n'
+     '    std::unique_lock<std::mutex> lock{scheduler.submit_mutex, std::defer_lock};\n'
+     '    if (device.GetGraphicsFamily() == device.GetPresentFamily()) lock.lock();\n'
+     '    switch (const VkResult result = present_queue.Present(present_info)) {'),
     # PS5 native: a swapchain without a free image previously hung here
     # forever (UINT64_MAX). Timeouts are recoverable without touching the
     # image index or the signalled image-available semaphore.
