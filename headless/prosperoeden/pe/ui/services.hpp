@@ -76,6 +76,7 @@ struct Game
     std::vector<std::string> screenshots; // up to three cached Nlib gameplay screenshots
     int max_players = 0; // Nlib maximum local players; 0 when unknown/offline
     bool artwork_changed = false; // async refresh replaced one or more files
+    unsigned case_artwork_changed = 0; // bit 0 front, bit 1 back, bit 2 spine; only successful replacements
     std::string intro;
     std::string description;
     std::string publisher;
