@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include "performance.h"
+#include "buffer_write_ahead.h"
 #include "image_pages.h"
 #include "buffer_pages.h"
 #include "dev_vulkan.h"
@@ -979,6 +980,15 @@ bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {
         if (buffer_cache.OnCPUWrite(addr, size)) {
             return true;
         }
+        (void)::Eden::BufferWriteAhead::MarkFollowingPages(
+            static_cast<std::uint64_t>(addr), static_cast<std::uint64_t>(size),
+            ::Eden::Performance::cpu_write_ahead.load(std::memory_order_relaxed),
+            [&](std::uint64_t page, std::uint64_t span) {
+                return buffer_cache.IsRegionRegistered(static_cast<DAddr>(page), span);
+            },
+            [&](std::uint64_t page, std::uint64_t span) {
+                return buffer_cache.OnCPUWrite(static_cast<DAddr>(page), span);
+            });
     }
     {
         ::Eden::Performance::CachePhaseTimer texture_wait{
