@@ -842,6 +842,63 @@ int main() {
     assert(!poisoned_after_success.WaitUntil(*causes_failure));
     poisoned_after_success.Close();
     assert(poisoned_after_success.ResetAfterQuiescence());
+
+    // A stalled/unpublished FIFO head must not allow unlimited memory
+    // accumulation. Saturation rejects reservations BEFORE their guest RAM
+    // store; the caller must execute its original synchronous fallback.
+    Queue bounded;
+    std::vector<Queue::Ticket> accepted;
+    accepted.reserve(Queue::MaxOutstandingWrites);
+    for (Queue::Sequence i = 0; i < Queue::MaxOutstandingWrites; ++i) {
+        auto ticket = bounded.Reserve(unsigned(i % Queue::Cores),
+                                      (i + 1) * 4096, 8);
+        assert(ticket && ticket->sequence == i + 1);
+        accepted.push_back(*ticket);
+    }
+    assert(bounded.AcceptedSequence() == Queue::MaxOutstandingWrites);
+    assert(bounded.Pending());
+    assert(!bounded.Reserve(0, 0x20000000, 8));
+    assert(!bounded.EnqueueTracked(1, 0x20001000, 8));
+    assert(bounded.AcceptedSequence() == Queue::MaxOutstandingWrites);
+
+    // Saturation must not suppress Publish for already accepted writes.
+    // Reverse-order publication cannot bypass the pending first write.
+    for (std::size_t i = accepted.size(); i-- > 1;)
+        assert(bounded.Publish(accepted[i]));
+    assert(bounded.Drain([](unsigned,std::uint64_t,std::uint64_t) {
+        assert(false);
+    }) == 0);
+    assert(bounded.Publish(accepted.front()));
+    unsigned replayed_bounded = 0;
+    assert(bounded.Drain([&](unsigned c,std::uint64_t a,std::uint64_t n) {
+        assert(n == 8 && c == replayed_bounded % Queue::Cores);
+        assert(a == (std::uint64_t(replayed_bounded) + 1) * 4096);
+        if (replayed_bounded == 0) {
+            // Snapshot has left queue_, but its guest writes are NOT yet
+            // acknowledged. The pending budget must include in-flight work.
+            assert(!bounded.Reserve(0, 0x20002000, 8));
+        }
+        ++replayed_bounded;
+    }) == Queue::MaxOutstandingWrites);
+    assert(replayed_bounded == Queue::MaxOutstandingWrites);
+    assert(!bounded.Pending());
+    assert(bounded.WaitUntil(accepted.back()));
+    auto post_drain = bounded.Reserve(3, 0x20003000, 8);
+    assert(post_drain);
+    assert(bounded.Publish(*post_drain));
+    assert(bounded.Drain([](unsigned,std::uint64_t,std::uint64_t) {}) == 1);
+
+    // Coalescing does not create an unbounded accepted-sequence backlog
+    // disguised as one vector entry: throttle the outstanding watermark.
+    Queue coalesced_budget;
+    for (Queue::Sequence i = 0; i < Queue::MaxOutstandingWrites; ++i)
+        assert(coalesced_budget.Enqueue(0, 100, 8));
+    assert(!coalesced_budget.Enqueue(0, 101, 8));
+    assert(coalesced_budget.AcceptedSequence() == Queue::MaxOutstandingWrites);
+    assert(coalesced_budget.Drain([](unsigned c,std::uint64_t a,std::uint64_t n) {
+        assert(c == 0 && a == 100 && n == 8);
+    }) == 1);
+    assert(coalesced_budget.Enqueue(0, 101, 8));
 }
 '''
 with tempfile.TemporaryDirectory(prefix="encore-deferred-host-") as folder:
