@@ -95,7 +95,11 @@ notify_body=queue.split("bool PublishAndWake(Ticket ticket, RequestGpu&& request
 assert "PublishImpl(ticket)" in notify_body
 assert "std::forward<RequestGpu>(request_gpu)();" in notify_body
 assert "failed_ = true;" in notify_body and "throw;" in notify_body
-assert "return !was_ready && !queue_.empty() && queue_.front().published;" in publish_body
+assert "const bool became_ready = !was_ready && !queue_.empty()" in publish_body
+assert "if (arm_wake && became_ready) ++pending_wake_callbacks_;" in publish_body
+assert "std::optional<bool> PublishImpl(Ticket ticket, bool arm_wake = false)" in queue
+assert "wake_cv_.wait(lock, [&] { return pending_wake_callbacks_ == 0; });" in queue
+assert "pending_wake_callbacks_ != 0" in queue
 assert "deferred_cpu_write_queue.PublishAndWake(" not in code
 # Shutdown must be a replay-lifetime barrier, not just a waiter wake-up.
 # Without this, the GPU callback can still touch freed rasterizer resources.
