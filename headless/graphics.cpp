@@ -753,7 +753,13 @@ void GraphicsWindow::OnFrameDisplayed() {
                     }
                     pressure_delta[i] = pressure_now[i] - frame_pressure_previous[i];
                 }
-                if (pressure_valid) {
+                // These GPU/HLE/cache/JIT timers are diagnostic-only on
+                // native quiet runs. Their zeroed atomics are NOT measured
+                // zero-length waits; retain pacing stats but label the absent
+                // instrumentation explicitly instead of printing false zeros.
+                if (!Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)) {
+                    std::printf("EDEN_FRAME_PRESSURE frame=%u detail=not_measured\\n", frame_total);
+                } else if (pressure_valid) {
                     constexpr double to_ms = 1.0 / 1'000'000.0;
                     std::printf("EDEN_FRAME_PRESSURE frame=%u gpu_idle_ms=%.3f gpu_dispatch_ms=%.3f "
                                 "gpu_fence_ms=%.3f gpu_present_ms=%.3f gpu_full_ms=%.3f "
