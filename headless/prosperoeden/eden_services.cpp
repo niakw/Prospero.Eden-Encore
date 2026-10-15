@@ -679,18 +679,34 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
         const std::string base = path.substr(0, path.size() - 4);
         if (IsFile(base + ".png") || IsFile(base + ".jpg") ||
             IsFile(base + ".jpeg")) continue;
-        int width = 0, height = 0, channels = 0;
         // Revalidate region provenance when the package index changes.
         // Older TGA files without .source (or from another region) must be
         // re-fetched, not silently accepted solely for their pixel count.
         std::ifstream receipt(path + ".source");
         std::string cached_source;
         if (receipt) std::getline(receipt, cached_source);
-        if (cached_source == candidates.front() &&
-            ValidNlibTga(path) &&
-            stbi_info(path.c_str(), &width, &height, &channels) &&
-            ((side == 2 && width >= 64 && height >= 600) ||
-             (side != 2 && width >= 128 && height >= 200))) continue;
+        if (cached_source == candidates.front() && ValidNlibTga(path)) {
+            // Generated retail scans are uncompressed BGRA TGA. stb_image's
+            // stbi_info() may reject these perfectly readable files, which
+            // previously triggered a fresh CDN download on every enrichment.
+            // Match box_art() and the native TGA loader's header contract.
+            std::FILE* input = std::fopen(path.c_str(), "rb");
+            if (input) {
+                unsigned char header[18]{};
+                if (std::fread(header, 1, sizeof(header), input) == sizeof(header)) {
+                    const int width = static_cast<int>(header[12]) |
+                                      (static_cast<int>(header[13]) << 8);
+                    const int height = static_cast<int>(header[14]) |
+                                       (static_cast<int>(header[15]) << 8);
+                    if ((side == 2 && width >= 64 && height >= 600) ||
+                        (side != 2 && width >= 128 && height >= 200)) {
+                        std::fclose(input);
+                        continue;
+                    }
+                }
+                std::fclose(input);
+            }
+        }
         // If network retrieval fails, the old cached TGA remains usable;
         // source migration is retried later without blocking rendering.
         if (!FetchCaseFace(candidates, path, side == 2, cancel)) {
