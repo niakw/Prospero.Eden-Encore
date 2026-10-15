@@ -7,6 +7,7 @@
 #include "common/settings.h"
 #include "core/arm/dynarmic/arm_dynarmic.h"
 #include "core/arm/dynarmic/arm_dynarmic_64.h"
+#include "guest_code_cache_range.h"
 #include "core/arm/dynarmic/dynarmic_exclusive_monitor.h"
 #include "core/core_timing.h"
 #include "core/hle/kernel/k_process.h"
@@ -458,6 +459,13 @@ void ArmDynarmic64::ClearInstructionCache() {
 }
 
 void ArmDynarmic64::InvalidateCacheRange(u64 addr, std::size_t size) {
+    // Range invalidation must invalidate BOTH the compiled blocks and the
+    // one-page MemoryReadCode snapshot when the affected addresses overlap.
+    // Otherwise recompilation may read stale instructions from that snapshot.
+    if (::Eden::GuestCodeCache::TouchesCachedPage(
+            addr, size, m_cb->last_code_addr, Core::Memory::YUZU_PAGESIZE)) {
+        m_cb->last_code_addr = u64(-1);
+    }
     m_jit->InvalidateCacheRange(addr, size);
 }
 
