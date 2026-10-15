@@ -181,6 +181,33 @@ int main() {
     stopping.ResetAfterQuiescence();
     assert(!stopping.Pending() && stopping.Enqueue(1, 12288, 8));
     assert(stopping.Drain([](unsigned, std::uint64_t, std::uint64_t) {}) == 1);
+
+    // Simultaneous GPU-owner replays must never reorder newer batches ahead
+    // of older in-flight callbacks. The second owner fails closed.
+    Queue single_owner;
+    assert(single_owner.Enqueue(0, 16384, 8));
+    std::atomic<bool> replay_entered{false};
+    std::atomic<bool> release_replay{false};
+    std::thread first_owner([&] {
+        assert(single_owner.Drain([&](unsigned, std::uint64_t, std::uint64_t) {
+            replay_entered.store(true, std::memory_order_release);
+            while (!release_replay.load(std::memory_order_acquire)) std::this_thread::yield();
+        }) == 1);
+    });
+    while (!replay_entered.load(std::memory_order_acquire)) std::this_thread::yield();
+    assert(single_owner.Enqueue(1, 20480, 8));
+    unsigned stolen = 0;
+    assert(single_owner.Drain([&](unsigned, std::uint64_t, std::uint64_t) {
+        ++stolen;
+    }) == 0);
+    assert(stolen == 0 && single_owner.CompletedSequence() == 0);
+    release_replay.store(true, std::memory_order_release);
+    first_owner.join();
+    assert(single_owner.CompletedSequence() == 1 && single_owner.Pending());
+    assert(single_owner.Drain([&](unsigned core, std::uint64_t, std::uint64_t) {
+        assert(core == 1);
+    }) == 1);
+    assert(single_owner.CompletedSequence() == 2 && !single_owner.Pending());
 }
 '''
 with tempfile.TemporaryDirectory(prefix="encore-deferred-host-") as folder:
