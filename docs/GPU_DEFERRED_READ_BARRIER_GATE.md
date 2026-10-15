@@ -156,6 +156,44 @@ for a reserved ticket also requires scheduling the GPU owner after publish;
 there is no such native orchestration yet. Native shutdown/wakeup and
 queue pressure constraints remain unqualified.
 
+## Native runtime interlock and write-site inventory (15 October 2026)
+
+The experimental source generation previously retained a dangerous escape
+hatch: even with the default switch OFF, a future runtime toggle could have
+entered the legacy eager `Enqueue` before the guest's actual `memcpy` or
+`memset` completed. The native bridge now checks the compile-time
+`kNativePostStorePublicationReady = false` guard at BOTH the candidate
+rasterizer path and the enqueue helper. With the guard false, a cache-mutex
+contention uses the original blocking path rather than deferring it.
+This protects the currently unqualified opt-in developer configuration even
+if someone accidentally changes `cpu_write_defer` at runtime. Flipping the
+guard is prohibited until the checklist below is met.
+
+The pinned `core/memory.cpp` has **eight** `HandleRasterizerWrite`
+references (seven call sites plus the definition):
+
+| Write source | Current action | Publication risk |
+| --- | --- | --- |
+| `WriteBlockImpl` | Callback before tracked `memcpy` | Pre-store |
+| `ZeroBlock` | Callback before tracked `memset` | Pre-store |
+| Scalar `Write<T>` | Callback during pointer lookup, then `memcpy` | Pre-store |
+| `WriteExclusive<T>` | Callback before atomic compare/exchange | May not store |
+| `WriteExclusive128` | Callback before 128-bit compare/exchange | May not store |
+| `StoreDataCache` | Cache operation; no direct store in the callback | Already-written data; ordering must be proven |
+| `FlushDataCache` | Cache operation; no direct store in the callback | Already-written data; ordering must be proven |
+
+`CopyBlock` routes its writes through `WriteBlockImpl` and can perform
+a preceding `HandleRasterizerDownload`. Other device-pointer, JIT/fastmem
+and write-watch paths need separate verification; the list is an audit of
+**this file's dispatch sites**, not proof that all writers are covered.
+
+Before enabling native deferral: wrap each actual data-producing operation
+with a reservation whose ticket is published only after its store has
+completed; accommodate conditional atomic success, CPU cache operations,
+and multiple nested or split writes. Prove that no untracked GPU/cache
+writer can enter the deferred path, and do not change the CPU-read barrier
+until GPU-thread scheduling and session lifetime are proven separately.
+
 ## Required engineering contract
 
 - Give accepted entries an ordered, per-session completion watermark.
