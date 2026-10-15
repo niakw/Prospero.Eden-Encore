@@ -665,7 +665,7 @@ unsigned EnsureRetailCase(std::uint64_t title_id, const std::string& name,
         ValidNlibTga(CaseFacePath(title_id, "front")) &&
         ValidNlibTga(CaseFacePath(title_id, "back"));
     for (int side = 0; side < 3; ++side) {
-        if (cancel && cancel->load(std::memory_order_acquire)) return 0;
+        if (cancel && cancel->load(std::memory_order_acquire)) return changed_faces;
         // Front and back always fetch first. A successful first-pass pair
         // can be followed by its spine in the SAME background enrichment;
         // otherwise the 5-minute retry could leave a complete paper wrap
