@@ -408,3 +408,74 @@ the archive and native linked code, not console FPS, GPU/HUD synchronization,
 or runtime guest crash repair. For the next console session, record the
 exact git SHA and preserve logs without resetting the cache unless prompted
 by new evidence.
+
+
+## 15 October 10:01–10:19 UTC: observed native failure and menu freeze
+
+User-cleared cache, on-console tested **exactly**
+`43a82765a98b5891070db40541b438fb22a3af55`, all-on diagnostics.
+The 2 runtime records are different and MUST NOT be combined as one crash:
+
+1. The first gameplay attempt (`heap.prev(20261015-101920).log`)
+   follows a separate clean title-return, then opens game title
+   `0100C49025D3E000` at 2560x1440. It contains 23 five-second
+   rendered-frame windows; its final windows degrade from 30 FPS
+   to 19.39 and 15.09 FPS, with respective worst individual frame
+   times 1627 and 1230 ms. The report ends **abruptly** at frame
+   3128 without guest-fault signature, native shutdown stages or a
+   diagnostic error code. Do NOT attribute the process exit to
+   guest `pc=0x4`, JIT OOM, or graphics allocation from this file;
+   corresponding `stderr`/crash reports are absent from this upload.
+2. The resumed game (`heap(20261015-101923).log`) reports frame
+   23176 at ~30 FPS, up to ~811 seconds of uptime. It ends with
+   `phase=shortcut_return_to_menu`, `core_shutdown`, and
+   `core_destroyed`. This was a manual exit *after* a fully
+   unresponsive half-time menu, not a detected fatal guest crash.
+   Many late windows show repeat 30 FPS presentation and ~34 ms
+   displayed-frame intervals; HLE calls and guest writes still
+   increase. Thus GPU-present progress and some background guest
+   execution coexist with stalled game-menu state. Neither
+   number proves forward progress of the main game simulation.
+
+**Qualified bottleneck evidence:** `IHOSBinderDriver cmd=3`
+(`TransactParcelAuto`, graphics/display-related binder IPC)
+accumulated ~47.7 seconds in the first report and ~125.2 seconds
+in the second. This is summed service-call duration across threads,
+not equivalent to lost wall-clock or CPU utilization; do not
+blindly shortcut a binder transaction without tracing transaction
+IDs and per-transaction latency. `bsd:s cmd=6` accumulated
+~22.4–22.6 seconds, predominantly early; the guest network
+policy denied repeated server DNS attempts. No demonstrated causal
+link from those DNS events to the half-time menu freeze.
+
+**Ruled out as standalone explanations:** monitored Vulkan
+draw-drop reasons stayed zero; native heap allocator logged
+`failures=0`, with substantial memory still confirmed. This
+does NOT eliminate use-after-free, thread deadlock, invalid host
+pointer, guest memory corruption, or driver faults.
+`EDEN_EXPERIMENT_CPU result=skipped
+reason=physical_topology_unverified`, topology was rejected
+as 13 distinct physical IDs, and per-thread CPU clock validity
+was false. Consequently all-on *enabled* logical-CPU policy
+but **did not deploy verified CPU topology pinning**.
+
+**UI confirmation and scoped fixes:** Retail jacket retrieval now
+works on console after a clean cache, so do not rebuild the
+cover fetch system. The Library's UV-cover calculation cropped
+top/bottom paper on both sides: switched to full-aspect contain,
+maintaining a spine-side hinge without stretch, and updated
+source/UI OpenGL preview contracts. The two French region
+catalogs and embedded primary French catalog now include
+dynamic category keys such as `Strategy`, `Multiplayer`,
+`Other`, plus related genre labels.
+
+**Next gate:** keep two independent crash classes in logs.
+For abrupt process exit, obtain the native `stderr` and
+crash/signal report for the **matching PID/session**; a heap
+trace ending without shutdown is not a cause. For stalled
+guest menu with a still-moving GPU, correlate guest-thread
+state/context and graphics binder transaction latency around
+the first input that fails, rather than counting ongoing
+Vulkan present calls as proof of gameplay. No new arbitrary
+JIT cache size, shader technology, or GPU workaround is
+justified from these two runs.
