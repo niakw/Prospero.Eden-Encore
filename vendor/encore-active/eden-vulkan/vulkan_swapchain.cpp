@@ -247,7 +247,13 @@ void Swapchain::Present(VkSemaphore render_semaphore) {
         .pImageIndices = &image_index,
         .pResults = nullptr,
     };
-    std::scoped_lock lock{scheduler.submit_mutex};
+    // Host queue external synchronization is per VkQueue, not per VkDevice.
+    // Different queue families use distinct handles: do not delay GPU
+    // submissions behind a blocked WSI present on an independent queue.
+    // When the families match, both handles refer to queue index zero and
+    // MUST still share the same mutex for Vulkan correctness.
+    std::unique_lock<std::mutex> lock{scheduler.submit_mutex, std::defer_lock};
+    if (device.GetGraphicsFamily() == device.GetPresentFamily()) lock.lock();
     switch (const VkResult result = present_queue.Present(present_info)) {
     case VK_SUCCESS:
         break;
