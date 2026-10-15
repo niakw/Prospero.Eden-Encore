@@ -479,3 +479,45 @@ the first input that fails, rather than counting ongoing
 Vulkan present calls as proof of gameplay. No new arbitrary
 JIT cache size, shader technology, or GPU workaround is
 justified from these two runs.
+
+
+## Freeze telemetry clarification — HID command 206 is vibration
+
+Do **not** use the increase of `EDEN_DEV_HLE service=hid cmd=206`
+as evidence that game-button changes were consumed. The pinned
+`IHidServer` command table names command 206
+`SendVibrationValues`. On the 15 October pause-menu run it
+continues at ~950 commands per five seconds, but these are
+vibration requests. The corresponding service time increases
+by only ~3.8 ms per five-second window, so these calls are not
+a demonstrated FPS bottleneck.
+
+The same windows show ~450 completed
+`IHOSBinderDriver cmd=3` calls (graphics binder) per five seconds,
+~150 Vulkan presentations, and continuing audio HLE calls.
+Host-level progress thus coexists with a nonresponsive game menu.
+Neither an unchanged image nor ongoing HLE work proves the game's
+main UI thread advances. The `Pad::Poll` path already records
+`EDEN_PAD_HEARTBEAT` with physical face-button edges,
+`EDEN_PAD_INPUT_CHAIN` with Options -> virtual Plus publishing,
+and `EDEN_PAD_MAPPING_FIXED` at title start in *stderr*.
+Their corresponding current-session stderr capture was not
+attached: **collect the matching source/PID logs, do not add
+redundant polling probes or claim input was delivered**.
+
+New developer-only `EDEN_DEV_HLE_TAIL` records cumulative
+>20 ms and >100 ms completed service calls, and the maximum
+observed single-call time, for at most eight expensive HLE
+services per GPU report. The existing `EDEN_DEV_HLE` sums
+and 1 Hz watchdog remain unchanged. The bounded counters
+do not allocate, acquire a mutex, or use a clock per normal
+HLE request; their concurrency and boundary behavior are
+verified in a compiled native C++ host test.
+
+**Interpretation gate:** if binder sums grow while slow-call
+counts do not, prioritize guest simulation/input progression
+and render-resource synchronization instead of assuming one
+blocked binder. If the long-call histogram spikes with hitches,
+trace the actual transaction ID in a separate targeted experiment
+before changing binder semantics. This update is a diagnostics
+candidate, not a performance fix.
