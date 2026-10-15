@@ -19,6 +19,8 @@ code = r'''
 #include <thread>
 #include <vector>
 using namespace Eden::GpuDeferredWrite;
+static_assert(!kNativePostStorePublicationReady,
+    "The native producer cannot defer before post-store publication");
 struct Span {unsigned core; std::uint64_t address, size;};
 int main() {
     // The real producer sets the guest core. Nested invocations must restore
