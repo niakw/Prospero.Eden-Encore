@@ -3,6 +3,7 @@
 // Source-only, session-owned FIFO for deferred guest cache writes.
 // Completion watermarks are a host contract, NOT a GPU fence or runtime enable.
 #include <algorithm>
+#include <atomic>
 #include <condition_variable>
 #include <cstdint>
 #include <exception>
@@ -189,14 +190,25 @@ public:
         std::lock_guard lock(mutex_);
         queue_.clear();
         accepted_ = completed_ = 0;
-        if (generation_ == std::numeric_limits<std::uint64_t>::max()) {
-            std::terminate(); // Never recycle a session ticket generation.
-        }
-        ++generation_;
+        generation_ = FreshGeneration(); // Unique across ALL queue instances.
         closed_ = false;
     }
 
 private:
+    // Tickets must identify the owning queue as well as the title session.
+    // An epoch starting at 1 for every Queue would permit cross-address-space
+    // confusion whenever two independent queues reached the same sequence.
+    static std::uint64_t FreshGeneration() {
+        auto prior = next_generation_.load(std::memory_order_relaxed);
+        do {
+            if (prior == std::numeric_limits<std::uint64_t>::max())
+                std::terminate(); // Never issue a duplicate epoch on wrap.
+        } while (!next_generation_.compare_exchange_weak(
+            prior, prior + 1, std::memory_order_relaxed));
+        return prior + 1;
+    }
+    static inline std::atomic<std::uint64_t> next_generation_{0};
+
     std::optional<Ticket> EnqueueImpl(unsigned core, std::uint64_t address,
                                       std::uint64_t size, bool published) {
         if (core >= Cores || size == 0 ||
@@ -234,7 +246,7 @@ private:
     std::vector<Write> queue_;
     Sequence accepted_{};
     Sequence completed_{};
-    std::uint64_t generation_{1};
+    std::uint64_t generation_{FreshGeneration()};
     bool closed_{};
 };
 } // namespace Eden::GpuDeferredWrite
