@@ -558,6 +558,8 @@ bool FetchCaseFace(const std::vector<std::string>& candidates,
             "https://images.launchbox-app.com", "/" + filename);
         if (!response) {
             ++transport_failures;
+            std::fprintf(stderr, "EDEN_CASE_CDN status=network-failed file=%s attempt=%zu side=%s\n",
+                         filename.c_str(), attempts, narrow_spine ? "spine" : "face");
             continue;
         }
         if (cancel && cancel->load(std::memory_order_acquire)) break;
@@ -569,6 +571,8 @@ bool FetchCaseFace(const std::vector<std::string>& candidates,
             std::memcmp(body.data(), "\x89PNG\r\n\x1a\n", 8) == 0;
         if (body.size() < 1024 || body.size() > (16u << 20) || (!jpeg && !png)) {
             ++invalid_responses;
+            std::fprintf(stderr, "EDEN_CASE_CDN status=invalid-body file=%s bytes=%zu jpeg=%d png=%d\n",
+                         filename.c_str(), body.size(), jpeg, png);
             continue;
         }
         int w = 0, h = 0, channels = 0;
@@ -579,6 +583,8 @@ bool FetchCaseFace(const std::vector<std::string>& candidates,
             h < (narrow_spine ? 600 : 200) || w > 4096 || h > 4096 ||
             static_cast<std::uint64_t>(w) * h > 3840u * 2160u) {
             ++invalid_responses;
+            std::fprintf(stderr, "EDEN_CASE_CDN status=invalid-image file=%s bytes=%zu width=%d height=%d\n",
+                         filename.c_str(), body.size(), w, h);
             continue;
         }
         // A larger image from a different region is NOT a better scan of
@@ -604,8 +610,8 @@ bool FetchCaseFace(const std::vector<std::string>& candidates,
         // The TGA remains usable if this tiny receipt write fails.
         std::ofstream receipt(destination + ".source", std::ios::trunc);
         if (receipt) receipt << best_source << '\n';
-        std::fprintf(stderr, "EDEN_CASE_FETCH status=stored side=%s attempts=%zu bytes=%zu\n",
-                     narrow_spine ? "spine" : "face", attempts, best.size());
+        std::fprintf(stderr, "EDEN_CASE_FETCH status=stored side=%s source=%s attempts=%zu bytes=%zu\n",
+                     narrow_spine ? "spine" : "face", best_source.c_str(), attempts, best.size());
         return true;
     }
     (void)std::remove(staged.c_str());
@@ -625,8 +631,9 @@ void EnsureRetailCase(std::uint64_t title_id, const std::string& name,
         return index.find(CaseKey(alternate_name));
     }();
     if (selected == index.end()) {
-        std::fprintf(stderr, "EDEN_CASE_LOOKUP title=%016llX status=no-match index_entries=%zu\n",
-                     static_cast<unsigned long long>(title_id), index.size());
+        std::fprintf(stderr, "EDEN_CASE_LOOKUP title=%016llX status=no-match name=%s alternate=%s index_entries=%zu\n",
+                     static_cast<unsigned long long>(title_id), name.c_str(),
+                     alternate_name.c_str(), index.size());
         return;
     }
     std::fprintf(stderr,
