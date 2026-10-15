@@ -119,6 +119,10 @@ assert drain_body.index("failed_ = true;") < drain_body.index("throw;")
 assert "bool Failed() const" in queue
 assert "closed_ || failed_ || ticket.generation != generation_" in queue
 assert "completed_ >= ticket.sequence || closed_ || failed_" in queue
+# A title that is closing or poisoned must never return a successful read,
+# even when its GPU callback previously acknowledged the ticket's watermark.
+wait_body=queue.split("bool WaitUntil(Ticket ticket) {",1)[1].split("std::uint64_t DrainThrough(",1)[0]
+assert "return !closed_ && !failed_ && generation_ == ticket.generation" in wait_body
 assert "if (closed_ || failed_ || accepted_" in queue
 assert "failed_ = false;" in queue
 # Reset is destructive: it must not race any GPU callback or reopen a live
