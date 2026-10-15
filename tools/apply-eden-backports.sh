@@ -338,11 +338,8 @@ apply_one "$root/headless/backports/eden-ps5-guest-domain-filter.patch" "$eden/.
 if [[ ${EDEN_EXPERIMENTAL_DUMMY_THREAD_WAITS:-OFF} == ON ]]; then
     apply_one "$root/headless/backports/eden-dummy-thread-waits.patch" "$eden/.encore-backport-dummy-thread-waits.sha256" validate_dummy_thread_waits
 fi
-# Cross-core guest I-cache invalidation is separate from FC27's proven waits.
-# Qualify as its own controlled A/B, not in the first stability baseline.
-if [[ ${EDEN_EXPERIMENTAL_ICACHE_COHERENCE:-OFF} == ON ]]; then
-    apply_one "$root/headless/backports/eden-dynarmic-icache-coherence.patch" "$eden/.encore-backport-dynarmic-icache.sha256" validate_dynarmic_icache
-fi
+# This core backport is now installed by tools/install-active-core-backports.py
+# in all native builds, independent of the legacy shipping patch replay.
 validate_sm_host_wait() {
 python3 - "$eden" <<'PYSM'
 from pathlib import Path
@@ -1068,9 +1065,6 @@ PYBILINEAR
 }
 apply_one "$root/headless/backports/eden-ps5-software-bilinear-source-coordinates.patch" "$eden/.encore-backport-ps5-software-bilinear-source-coordinates.sha256" validate_ps5_bilinear_sw_blit
 
-# Citron fixes inform this host-worker SM/audctl proposal. It compiles on the
-# pinned Eden source, but PS5 service-init/shutdown behavior is not yet proven.
-# Keep it OFF in the baseline; qualify with a separate controlled HLE A/B.
-if [[ ${EDEN_EXPERIMENTAL_SM_HOST_WAIT:-OFF} == ON ]]; then
-    apply_one "$root/headless/backports/eden-sm-host-wait.patch" "$eden/.encore-backport-sm-host-wait.sha256" validate_sm_host_wait
-fi
+# This core backport is now installed by tools/install-active-core-backports.py
+# in all native builds, independent of the legacy shipping patch replay.
+
