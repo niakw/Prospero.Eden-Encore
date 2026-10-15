@@ -398,6 +398,27 @@ before their CPU reader proceeds. Producer lifecycle must keep the queue
 and GPU scheduler alive through the wake callback. A wake is not a
 Vulkan fence and must not be mistaken for completion.
 
+## Fail-closed CPU read tickets during shutdown
+
+The original `WaitUntil(ticket)` woke readers when a session was closed or
+poisoned, but returned success whenever the sequence watermark had been
+completed. A GPU replay callback finishing concurrently with `Close()`,
+or a previous successful callback followed by a replay exception, could
+therefore make an unusable title's CPU reader believe its cache state was
+still valid.
+
+The host-only queue now requires **both** successful replay completion
+**and** a live, unpoisoned session at the return point of `WaitUntil`.
+A closed or failed session cannot authorize further CPU reads, even for
+tickets acknowledged earlier. Host regressions cover an in-flight callback
+completed during teardown, a completed write followed by `Close()`,
+and a previously successful write followed by a later poisoned callback.
+
+This does not prove guest-side visibility or Vulkan barriers, and the
+developer-only bridge remains disabled. A native reader must treat `false`
+as a fatal/session-cancelled barrier outcome rather than continuing with
+potentially stale RAM.
+
 ## Required engineering contract
 
 - Give accepted entries an ordered, per-session completion watermark.
