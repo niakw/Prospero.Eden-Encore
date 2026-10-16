@@ -1173,6 +1173,16 @@ if(EDEN_A32_FASTMEM)
     list(APPEND core_sources "${EDEN_MAINTAINED_CODE_LOADER}")
 endif()
 set_property(TARGET core PROPERTY SOURCES "${core_sources}")
+# The guest title is the owner of a zero-ID cache storage request.
+set(EDEN_MAINTAINED_SAVEDATA
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/file_sys/savedata_factory.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_SAVEDATA}")
+    message(FATAL_ERROR "Missing maintained per-title cache storage source")
+endif()
+get_target_property(eden_savedata_sources core SOURCES)
+list(REMOVE_ITEM eden_savedata_sources "file_sys/savedata_factory.cpp")
+list(APPEND eden_savedata_sources "${EDEN_MAINTAINED_SAVEDATA}")
+set_property(TARGET core PROPERTY SOURCES "${eden_savedata_sources}")
 # PS5_NATIVE is a CMake option, not a transitive preprocessor definition for
 # core or video_core. Only these two pinned TUs own the address guards below.
 # Do NOT enable it broadly for every upstream C++ source.
