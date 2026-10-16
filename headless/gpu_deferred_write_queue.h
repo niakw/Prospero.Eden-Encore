@@ -211,6 +211,21 @@ public:
                completed_ >= ticket.sequence;
     }
 
+    // A conditional RAM read must wait ONLY for the FIFO work preceding its
+    // own still-unpublished ticket. Sequence zero represents no predecessors.
+    // It is valid only for a live reservation in the correct session and must
+    // not bypass poison or title shutdown. GPU-owner scheduling is external.
+    bool WaitForPredecessors(Ticket predecessor) {
+        {
+            std::lock_guard lock(mutex_);
+            if (closed_ || failed_ || predecessor.generation != generation_ ||
+                accepted_ == 0 || predecessor.sequence >= accepted_)
+                return false;
+            if (predecessor.sequence == 0) return true;
+        }
+        return WaitUntil(predecessor);
+    }
+
     // Deliberately NO WaitUntil(Sequence) overload. Sequence numbers reset
     // after quiescence; only generation-tagged tickets can be waited upon.
     // A stale read ticket must never succeed against another title session.

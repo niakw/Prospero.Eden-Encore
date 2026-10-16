@@ -46,6 +46,8 @@ assert header.index("queue.ReserveOrdered(core, address, size, request_gpu);",
 assert "CommitConditionalAfterRead(" not in bridge
 assert "GuestStoreOrderGate" not in bridge
 assert "void FailClosed()" in queue
+assert "bool WaitForPredecessors(Ticket predecessor)" in queue
+assert "queue.WaitForPredecessors(predecessors)" in header
 assert "queue.FailClosed();" in header
 assert "completed_cv_.notify_all();" in queue.split("void FailClosed()",1)[1].split("// Generation-tagged wait",1)[0]
 
@@ -142,6 +144,7 @@ int main() {
                 assert(core == 1 && addr == 0x5000 && size == 4);
                 ++prior_invalidations;
             }) == 1);
+            assert(conditional.WaitForPredecessors(predecessors));
             return ReadBarrierResult::Complete;
         },
         [&]() noexcept -> StoreOutcome {
@@ -162,6 +165,46 @@ int main() {
            prior_invalidations == 1 && conditional_invalidations == 1 &&
            conditional_ram.load() == 15 && !conditional.Pending());
 
+    // Zero predecessors are valid for the first reserved CAS, without
+    // waiting for that CAS's own unpublished reservation.
+    Queue first_read;
+    unsigned zero_barriers = 0, zero_attempts = 0, zero_invalidations = 0;
+    const auto first_result = CommitConditionalAfterRead(
+        first_read, 0, 0x6100, 4,
+        [&](Queue::Ticket predecessor) -> ReadBarrierResult {
+            assert(predecessor.sequence == 0);
+            assert(!first_read.WaitUntil(predecessor));
+            assert(first_read.WaitForPredecessors(predecessor));
+            ++zero_barriers;
+            return ReadBarrierResult::Complete;
+        }, [&]() noexcept -> StoreOutcome {
+            assert(zero_barriers == 1);
+            ++zero_attempts;
+            return StoreOutcome::Modified;
+        }, [&]() -> bool {
+            assert(first_read.Drain([&](unsigned,std::uint64_t,std::uint64_t) {
+                ++zero_invalidations;
+            }) == 1);
+            return true;
+        });
+    assert(first_result == StoreOutcome::Modified && zero_barriers == 1 &&
+           zero_attempts == 1 && zero_invalidations == 1);
+
+    // A forged/foreign zero predecessor or a poisoned/closed session must
+    // not pass the fast path even if its sequence is zero.
+    Queue foreign_read;
+    const auto foreign_ticket = foreign_read.Reserve(1, 0x6200, 4);
+    assert(foreign_ticket);
+    const Queue::Ticket foreign_zero{0, foreign_ticket->generation};
+    assert(!first_read.WaitForPredecessors(foreign_zero));
+    assert(foreign_read.WaitForPredecessors(foreign_zero));
+    foreign_read.FailClosed();
+    assert(!foreign_read.WaitForPredecessors(foreign_zero));
+    foreign_read.Close();
+    assert(!foreign_read.WaitForPredecessors(foreign_zero));
+    assert(foreign_read.ResetAfterQuiescence());
+    assert(!foreign_read.WaitForPredecessors(foreign_zero));
+
     // A CAS comparison failure resolves its FIFO position WITHOUT
     // invalidation, even after a successful prerequisite CPU-read fence.
     Queue conditional_failed;
@@ -169,7 +212,9 @@ int main() {
     unsigned failures_synced = 0, failures_replayed = 0;
     const auto conditional_noop = CommitConditionalAfterRead(
         conditional_failed, 1, 0x6000, 4,
-        [&]([[maybe_unused]] Queue::Ticket predecessors) -> ReadBarrierResult {
+        [&](Queue::Ticket predecessors) -> ReadBarrierResult {
+            assert(predecessors.sequence == 0);
+            assert(conditional_failed.WaitForPredecessors(predecessors));
             ++failures_synced;
             return ReadBarrierResult::Complete;
         },
@@ -252,6 +297,7 @@ int main() {
             assert(drains_before_read == 1);
             assert(prior.sequence == Queue::MaxOutstandingWrites);
             assert(saturated_read.AcceptedSequence() == prior.sequence + 1);
+            assert(saturated_read.WaitForPredecessors(prior));
             assert(saturated_read.Drain([](unsigned,std::uint64_t,std::uint64_t) {
                 assert(false);
             }) == 0); // Our reserved CAS cannot replay before its store.
@@ -288,6 +334,7 @@ int main() {
         const auto done = gate.Conditional(1, 0x8000, 4,
             [&](Queue::Ticket prior) -> ReadBarrierResult {
                 assert(prior.sequence == 0);
+                assert(gated_queue.WaitForPredecessors(prior));
                 read_entered.store(true, std::memory_order_release);
                 while (!release_read.load(std::memory_order_acquire))
                     std::this_thread::yield();
@@ -428,4 +475,4 @@ with tempfile.TemporaryDirectory(prefix="encore-poststore-host-") as temp:
                     "-fno-sanitize-recover=all", "-I", str(root / "headless"),
                     str(unit), "-o", str(binary)], check=True, timeout=45)
     subprocess.run([str(binary)], check=True, timeout=45)
-print("GPU_DEFERRED_POSTSTORE_HOST_PASS ordinary=1 cancel=1 fifo=1 pressure=1 scheduler_reject=1 conditional_read_fence=1 cas_success=1 cas_failed=1 read_fail_poison=1 read_throw_poison=1 saturation_before_read=1 gated_concurrent_writes=1 no_native_activation=1")
+print("GPU_DEFERRED_POSTSTORE_HOST_PASS ordinary=1 cancel=1 fifo=1 pressure=1 scheduler_reject=1 conditional_read_fence=1 cas_success=1 cas_failed=1 read_fail_poison=1 read_throw_poison=1 saturation_before_read=1 gated_concurrent_writes=1 predecessor_zero=1 predecessor_epoch=1 no_native_activation=1")
