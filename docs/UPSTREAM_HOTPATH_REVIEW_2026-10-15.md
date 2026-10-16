@@ -317,3 +317,26 @@ anchors; the generated-source contract verifies two tagged maintenance
 callbacks without converting either into a RAM store. The host sanitizer
 tests Store -> Maintenance -> Store nesting and restoration. The native
 runtime bridge remains gated off and normal native sources are unchanged.
+
+## Full store lifetime scoping in derived guest memory (2026-10-16)
+
+A source review revealed that the previous `StoreFollows` markers for scalar
+`Write`, `WriteExclusive` and `WriteExclusive128` lived only inside the
+`GetPointerImpl` rasterizer callback; they ended before the subsequent
+`memcpy` or atomic compare-and-swap. The tracked `WriteBlockImpl` marker
+also ended before `memcpy`. This prevented any later post-store publication
+hook from sharing the scoped operation identity.
+
+The derived developer-only guest memory source now keeps markers in scope
+for the complete tracked `WriteBlockImpl` callback and at function scope
+for scalar/exclusive writes. The unsafe WriteBlockImpl branch performs its
+original memcpy without a marker. `ZeroBlock` already covered its memset,
+and cache-maintenance callbacks still force `NoStore`.
+The host-generated-source contract checks the marker lifetime relative to
+actual memcpy/CAS lines and confirms the five paths are still distinct.
+
+This is **not** post-store publication: no native ticket, wake callback,
+GPU-to-CPU read fence, or conditional-store outcome has been wired. The
+developer-only enqueue path remains blocked by
+`kNativePostStorePublicationReady=false`; shipping Vulkan sources are
+unchanged. No console build, release, gameplay test or performance claim.
