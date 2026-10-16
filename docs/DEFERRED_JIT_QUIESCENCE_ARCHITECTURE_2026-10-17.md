@@ -76,3 +76,33 @@ performance measurements. It does not prove absence of real lock cycles.
   p50/p95/p99 and worst-case tails before considering native activation.
 
 No console build, release or FC27 test is requested.
+
+## Newly verified FIFO head-of-line hazard
+
+The pinned GPU worker (`video_core/gpu_thread.cpp`) pops ONE
+`CommandDataContainer` and completes its SubmitList branch before
+dispatching the next entry. GPU read synchronization uses
+`RequestSyncOperation` + `gpu_thread.TickGPU` to enqueue a later
+`GPUTickCommand`, which invokes `GPU::TickWork`.
+
+If an earlier dependent SubmitList blocks the GPU worker awaiting JIT
+quiescence, while a JIT core waits for its GPU read fence via the later
+GPUTick, the GPU queue cannot advance. This produces a precise wait cycle:
+SubmitList → JIT exit → CPU read fence → GPUTick → SubmitList completion.
+
+`tools/check-native-gpu-fifo-quiescence-host.py` reproduces this bounded
+head-of-line stall from a FIFO model tied to actual source anchors.
+It also demonstrates a hypothetical *independently qualified* GPU control
+path which services the read synchronization but leaves later graphics
+submits ordered. The model does NOT prove it is safe to process such a
+control request ahead of the blocked SubmitList in real Vulkan or DMA.
+If independence or fence ordering is unknown, it explicitly fails closed.
+
+**Design impact:** before adding any quiescence wait to `DispatchCalls`,
+`FlushCaching`, a rasterizer operation or a queued SubmitList, either
+(i) resolve the transition before the dependent command enters the FIFO,
+or (ii) introduce a separately proven non-blocking command suspension
+and control-plane progress mechanism. Do not pump arbitrary GPU commands,
+call `TickWork` out of order, or bypass graphics FIFO merely to avoid
+the deadlock. Both approaches still require real hardware/device-fence
+qualification. The native deferred bridge gate remains false.
