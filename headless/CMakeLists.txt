@@ -1201,6 +1201,15 @@ set_property(TARGET shader_recompiler PROPERTY SOURCES "${eden_shader_sources}")
 # core or video_core. Only these two pinned TUs own the address guards below.
 # Do NOT enable it broadly for every upstream C++ source.
 if(PS5_NATIVE)
+    # Keep the pinned collector source immutable. The maintained header fixes
+    # an atomic page-transition race only for the native target. Make this
+    # sole-header override PUBLIC so consumers share one inline definition.
+    set(EDEN_NATIVE_DIRTY_HEADER_ROOT
+        "${PORT_ROOT}/vendor/encore-active/eden-core/overrides")
+    if(NOT EXISTS "${EDEN_NATIVE_DIRTY_HEADER_ROOT}/core/gpu_dirty_memory_manager.h")
+        message(FATAL_ERROR "Missing maintained native GPU dirty collector")
+    endif()
+    target_include_directories(core BEFORE PUBLIC "${EDEN_NATIVE_DIRTY_HEADER_ROOT}")
     if(EDEN_A32_FASTMEM)
         set(eden_cpu_memory_tu "${PORT_BUILD_DIR}/memory.cpp")
     else()
