@@ -220,6 +220,18 @@ jobs:
               with Image.open(file) as image:
                   assert image.size==(1920,1080)
                   assert sum(ImageStat.Stat(image.convert("RGB")).stddev) > 18
+          # Confirmation must be an actual light overlay, not a mislabeled
+          # screenshot of HOME or an Encore neon dialog.
+          with Image.open(folder / "06-switch-exit-confirm.png") as image:
+              img=image.convert("RGB")
+              assert img.getpixel((50,50))[0] < 190, "confirmation scrim missing"
+              assert min(img.getpixel((920,540))) > 235, "light dialog missing"
+              # Native prompt belongs inside the dialog, never repeated as a
+              # red notification underneath. This caught a real visual bug.
+              feedback=img.crop((145,695,800,745))
+              red=sum(r > 100 and r > g * 1.3 and r > b * 1.12
+                      for r,g,b in feedback.getdata())
+              assert red < 40, f"stray red confirmation text: {red} pixels"
           print("SWITCH_THEME_NATIVE_HOST_CAPTURE: PASS")
           PY
 
