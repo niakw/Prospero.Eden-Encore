@@ -88,18 +88,22 @@ IR::U32 ShortOffset(IR::IREmitter& ir, const IR::U32& offset) {
     return ir.BitwiseAnd(ir.ShiftLeftLogical(offset, ir.Imm32(3)), ir.Imm32(16));
 }
 
-IR::U1 LocalInBounds(TranslatorVisitor& v, const IR::U32& offset) {
-    return v.ir.ILessThan(offset, v.ir.Imm32(v.env.LocalMemorySize()), false);
+// Bound the ORIGINAL byte offset to (allocation size - following word bytes).
+// Checking a wrapped offset + N would incorrectly admit addresses near UINT32_MAX.
+IR::U1 LocalInBounds(TranslatorVisitor& v, const IR::U32& offset, u32 max_start) {
+    return v.ir.ILessThan(offset, v.ir.Imm32(max_start), false);
 }
 
 // Check the address before emitting a read: a Select of an unsafe LoadLocal
 // still emits the read, and an empty local allocation has no safe word 0.
-IR::U32 LoadLocal(TranslatorVisitor& v, const IR::U32& word_offset, const IR::U32& offset) {
+IR::U32 LoadLocal(TranslatorVisitor& v, const IR::U32& word_offset, const IR::U32& offset,
+                  u32 byte_advance = 0) {
     const u32 local_size{v.env.LocalMemorySize()};
-    if (local_size == 0 || (offset.IsImmediate() && offset.U32() >= local_size)) {
+    const u32 max_start{byte_advance < local_size ? local_size - byte_advance : 0};
+    if (max_start == 0 || (offset.IsImmediate() && offset.U32() >= max_start)) {
         return v.ir.Imm32(0);
     }
-    const IR::U1 in_bounds{LocalInBounds(v, offset)};
+    const IR::U1 in_bounds{LocalInBounds(v, offset, max_start)};
     const IR::U32 safe_word_offset{v.ir.Select(in_bounds, word_offset, v.ir.Imm32(0))};
     return IR::U32{v.ir.Select(in_bounds, v.ir.LoadLocal(safe_word_offset), v.ir.Imm32(0))};
 }
@@ -107,16 +111,17 @@ IR::U32 LoadLocal(TranslatorVisitor& v, const IR::U32& word_offset, const IR::U3
 // An out-of-bounds dynamic store writes the old contents of scratch word 0
 // back to itself. Out-of-bounds immediate tail words are simply dropped.
 void WriteLocal(TranslatorVisitor& v, const IR::U32& word_offset, const IR::U32& offset,
-                const IR::U32& value) {
+                const IR::U32& value, u32 byte_advance = 0) {
     const u32 local_size{v.env.LocalMemorySize()};
-    if (local_size == 0 || (offset.IsImmediate() && offset.U32() >= local_size)) {
+    const u32 max_start{byte_advance < local_size ? local_size - byte_advance : 0};
+    if (max_start == 0 || (offset.IsImmediate() && offset.U32() >= max_start)) {
         return;
     }
     if (offset.IsImmediate()) {
         v.ir.WriteLocal(word_offset, value);
         return;
     }
-    const IR::U1 in_bounds{LocalInBounds(v, offset)};
+    const IR::U1 in_bounds{LocalInBounds(v, offset, max_start)};
     const IR::U32 safe_word_offset{v.ir.Select(in_bounds, word_offset, v.ir.Imm32(0))};
     const IR::U32 safe_value{v.ir.Select(in_bounds, value, v.ir.LoadLocal(safe_word_offset))};
     v.ir.WriteLocal(safe_word_offset, safe_value);
@@ -148,8 +153,7 @@ void TranslatorVisitor::LDL(u64 insn) {
         X(dest, word);
         for (int i = 1; i < bit_size / 32; ++i) {
             const IR::U32 sub_word_offset{ir.IAdd(word_offset, ir.Imm32(i))};
-            const IR::U32 sub_offset{ir.IAdd(offset, ir.Imm32(i * 4))};
-            X(dest + i, LoadLocal(*this, sub_word_offset, sub_offset));
+            X(dest + i, LoadLocal(*this, sub_word_offset, offset, static_cast<u32>(i * 4)));
         }
         break;
     }
@@ -212,8 +216,8 @@ void TranslatorVisitor::STL(u64 insn) {
         }
         WriteLocal(*this, word_offset, offset, src);
         for (int i = 1; i < bit_size / 32; ++i) {
-            WriteLocal(*this, ir.IAdd(word_offset, ir.Imm32(i)), ir.IAdd(offset, ir.Imm32(i * 4)),
-                       X(reg + i));
+            WriteLocal(*this, ir.IAdd(word_offset, ir.Imm32(i)), offset, X(reg + i),
+                       static_cast<u32>(i * 4));
         }
         break;
     }

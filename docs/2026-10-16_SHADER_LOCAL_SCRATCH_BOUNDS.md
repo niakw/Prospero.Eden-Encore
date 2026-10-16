@@ -22,3 +22,18 @@ ensure 8/16/32/64/128 bit stores route through the checked helper.
 This is a source-level correctness improvement, not evidence that past FC27
 crashes or HUD defects had this cause; it does not qualify a console build.
 Reference: https://github.com/blackbearreloaded/ProsperoEden/commit/a302cde87a03158bfeab2a37aaf27e772d184b9d
+
+## Multiword tail overflow follow-up
+
+The original maintained multiword LDL/STL translation added `i*4` to a
+32-bit byte offset before testing its bound. For an offset `0xFFFFFFFC`, the
+next word's byte offset wraps to zero, making an invalid access appear valid
+and potentially aliasing scratch word zero. The same issue applies to an
+in-range base whose later word exceeds the allocation.
+
+Both LDL and STL now pass the **original** byte offset together with the
+compile-time word advance to their helpers. The guards compare the original
+offset against `local_size - byte_advance` (or reject when the advance does
+not fit). No overflowing address addition participates in the bounds check.
+ASan/UBSan tests cover wrapped tails, boundary crossings, valid tails and
+empty scratch, and source checks reject reintroducing the unsafe expression.
