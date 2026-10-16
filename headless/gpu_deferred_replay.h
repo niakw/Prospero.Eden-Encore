@@ -39,6 +39,17 @@ struct ScopedGuestStoreIntent final {
     ScopedGuestStoreIntent(const ScopedGuestStoreIntent&) = delete;
     ScopedGuestStoreIntent& operator=(const ScopedGuestStoreIntent&) = delete;
 };
+// An explicit maintenance exclusion overrides any enclosing StoreFollows
+// scope, including reentrant cache operations on the same host thread.
+struct ScopedGuestCacheMaintenanceIntent final {
+    const GuestWriteIntent previous{guest_write_intent};
+    ScopedGuestCacheMaintenanceIntent() noexcept {
+        guest_write_intent = GuestWriteIntent::NoStore;
+    }
+    ~ScopedGuestCacheMaintenanceIntent() { guest_write_intent = previous; }
+    ScopedGuestCacheMaintenanceIntent(const ScopedGuestCacheMaintenanceIntent&) = delete;
+    ScopedGuestCacheMaintenanceIntent& operator=(const ScopedGuestCacheMaintenanceIntent&) = delete;
+};
 // GPU-owner replay must never defer itself. No process-global session queue.
 inline thread_local bool replaying_guest_write = false;
 struct ScopedReplay final {
