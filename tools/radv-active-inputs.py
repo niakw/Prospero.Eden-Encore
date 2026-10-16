@@ -107,7 +107,7 @@ def self_test():
     assert 'radv-active-inputs.py --check' in script
     assert 'radv-active-inputs.py" --stamp' in build  # absolute script path is quoted
     assert 'EDEN_ACTIVE_INPUTS_SHA256' in script and 'EDEN_ACTIVE_INPUTS_SHA256' in build
-    print("DRIVER_SOURCE_CACHE_KEY_PASS maintained_compiler_units=11 stale_archive_rejected")
+    print(f"DRIVER_SOURCE_CACHE_KEY_PASS maintained_compiler_units={len(PATHS)} stale_archive_rejected")
 
 
 def main():
@@ -124,12 +124,12 @@ def main():
         if args.paths: parser.error("--check accepts only the stamp filename")
         if not matches(args.check):
             raise SystemExit("STALE_DRIVER_INPUTS: rebuilt source stamp is absent or mismatched")
-        print("DRIVER_COMPILER_INPUTS_MATCH units=11")
+        print(f"DRIVER_COMPILER_INPUTS_MATCH units={len(PATHS)}")
     else:
         if len(args.paths) != 2:
             parser.error("--stamp needs DRIVER_ARCHIVE and STAMP paths")
         digest = write_if_compiled(args.stamp, args.paths[0], args.paths[1])
-        print("DRIVER_COMPILER_INPUTS_STAMPED units=11 sha256=" + digest)
+        print(f"DRIVER_COMPILER_INPUTS_STAMPED units={len(PATHS)} sha256=" + digest)
 
 
 if __name__ == "__main__":
