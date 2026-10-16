@@ -410,7 +410,7 @@ void Launcher::draw_switch_language(Canvas& c) {
         text_shrink(c,labels[static_cast<std::size_t>(i)],row.x+32,
                     baseline(row.y,79,26),26,selected?kWhite:kInk,1520);
         if(i==prefs_.language)
-            text(c,"✓",row.x+row.w-52,baseline(row.y,79,27),27,
+            text(c,"OK",row.x+row.w-52,baseline(row.y,79,21),21,
                  selected?kWhite:kInk,Align::center);
     }
     list.pop_clip();

@@ -1816,3 +1816,33 @@ msgstr "Accueil Encore"
 msgid "Configure"
 msgstr "Configurer"
 
+
+# Optional Switch theme: storage and language navigation
+#: pe/ui/switch_theme.cpp
+msgid "Keys found"
+msgstr "Clés présentes"
+
+#: pe/ui/switch_theme.cpp
+msgid "Keys missing"
+msgstr "Clés manquantes"
+
+#: pe/ui/switch_theme.cpp
+msgid "Games found"
+msgstr "Jeux trouvés"
+
+#: pe/ui/switch_theme.cpp
+msgid "No games found"
+msgstr "Aucun jeu trouvé"
+
+#: pe/ui/switch_theme.cpp
+msgid "Browse folders: D-pad / Open: A"
+msgstr "Parcourir : croix directionnelle · Ouvrir : A"
+
+#: pe/ui/switch_theme.cpp
+msgid "Choose your preferred language"
+msgstr "Choisissez votre langue"
+
+#: pe/ui/switch_theme.cpp
+msgid "Back to HOME"
+msgstr "Retour à l'accueil"
+
