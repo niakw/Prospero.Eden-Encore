@@ -2248,6 +2248,10 @@ probes = {
          '    entries.emplace(key, std::move(entry));'),
     ],
     'vk_buffer_cache': [
+        # The first quad index LUT is a fresh buffer, not a resize of an in-flight
+        # buffer. Avoid a full-device Finish while both guest caches are locked.
+        ("        { auto timer = Eden::Performance::VulkanTimer(7); scheduler.Finish(); }\n\n        num_indices = num_indices_;",
+         "        // The very first LUT has no previous device buffer to protect.\n        // Keep the original GPU fence when replacing an already-used buffer.\n        if (buffer) {\n            { auto timer = Eden::Performance::VulkanTimer(7); scheduler.Finish(); }\n        }\n\n        num_indices = num_indices_;"),
         ('#include <algorithm>', '#include <algorithm>\n#include "dev_vulkan.h"'),
         ('bool BufferCacheRuntime::BindMultiRangeStorageBuffer(u64 key, bool is_written) {\n',
          'bool BufferCacheRuntime::BindMultiRangeStorageBuffer(u64 key, bool is_written) {\n'

@@ -172,7 +172,11 @@ public:
             return;
         }
 
-        { auto timer = Eden::Performance::VulkanTimer(7); scheduler.Finish(); }
+        // The very first LUT has no previous device buffer to protect.
+        // Keep the original GPU fence when replacing an already-used buffer.
+        if (buffer) {
+            { auto timer = Eden::Performance::VulkanTimer(7); scheduler.Finish(); }
+        }
 
         num_indices = num_indices_;
         index_type = IndexTypeFromNumElements(device, num_indices);
