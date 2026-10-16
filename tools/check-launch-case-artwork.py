@@ -357,6 +357,14 @@ assert shelf_rim < 1.6 and paper_aspect > european_front_aspect
 assert "uv.w = target / source;" in lib_sleeve
 assert "uv.h = source / target;" in lib_sleeve
 assert 0.94 < european_front_aspect / paper_aspect < 1.0
+# The row label must finish before the detail panel begins. No overprinting
+# text onto the scan, and no loss of the cover's printed header/footer.
+shelf_top, detail_top = 204.0, 590.0
+shelf_bottom = shelf_top + shelf_height
+assert shelf_bottom + 6.0 + 24.0 < detail_top
+assert (european_front_aspect / paper_aspect) > 0.95
+assert 'const Rect detail{72.0f, 590.0f, 1776.0f, 306.0f};' in library
+assert 'constexpr float shelf_y = 551.0f;' in library
 # The 3D caps run the SAME 13px plastic skirt on either projected face.
 assert "float from_cap = min(v_st.y, 1.0 - v_st.y)" in shader
 assert "max(rim_intensity, cap_intensity)" in shader
