@@ -49,10 +49,13 @@ mask_source = mask_begin + dirty.split(mask_begin, 1)[1].split(mask_end, 1)[0]
 
 cpp = r"""
 #include "gpu_dirty_region_split.h"
+#include "core/gpu_dirty_memory_manager.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <limits>
+#include <set>
 #include <utility>
 #include <vector>
 using namespace Eden::GpuDirty;
@@ -86,6 +89,30 @@ void Verify(std::uint64_t address, std::uint64_t bytes) {
     assert((bytes == 0) == (emitted == 0));
 }
 
+// Unlike the mask-only fixture, this path executes the actual pinned
+// GPUDirtyMemoryManager::Collect and Gather implementation after splitting.
+void VerifyCollector(std::uint64_t address, std::uint64_t bytes) {
+    Core::GPUDirtyMemoryManager manager;
+    ForEachRegion(address, bytes, [&](std::uint64_t a, std::uint64_t n) {
+        manager.Collect(a, static_cast<std::size_t>(n));
+    });
+    std::set<std::uint64_t> observed, expected;
+    std::function<void(PAddr, std::size_t)> gather = [&](PAddr a, std::size_t n) {
+        assert((a % 64) == 0 && n != 0 && (n % 64) == 0);
+        for (std::uint64_t part = a; part < a + n; part += 64) {
+            observed.insert(part);
+        }
+    };
+    manager.Gather(gather);
+    if (bytes) {
+        for (std::uint64_t part = address & ~std::uint64_t{63};
+             part < address + bytes; part += 64) {
+            expected.insert(part);
+        }
+    }
+    assert(observed == expected);
+}
+
 int main(int argc, char**) {
     if (argc > 1) {
         // Original 4KiB tracked write: top_bit=64 on a 32-bit mask.
@@ -112,6 +139,22 @@ int main(int argc, char**) {
         {0x100000,65536},{std::numeric_limits<std::uint64_t>::max()-8192,4096}
     }) Verify(addr, bytes);
 
+    for (const auto& [addr, bytes] :
+         std::vector<std::pair<std::uint64_t, std::uint64_t>>{
+            {0,0}, {0x17fc,16}, {0x1000,4096}, {0x1001,4096},
+            {0x17ff,4097}, {0x1800,2048}, {0x10000,65536},
+            {0x3fff,1}, {0x3fff,8193}, {0x1001,0}
+         }) {
+        VerifyCollector(addr, bytes);
+    }
+    std::uint64_t actual_seed = 0xafe93b42db5127ULL;
+    for (unsigned i = 0; i < 256; ++i) {
+        actual_seed = actual_seed * 2862933555777941757ULL + 3037000493ULL;
+        const std::uint64_t addr = 0x100000 + ((actual_seed >> 17) % 8192);
+        const std::uint64_t length = (actual_seed >> 41) % 8193;
+        VerifyCollector(addr, length);
+    }
+
     std::uint64_t seed = 0x56fb984bf129ace3ULL;
     for (unsigned i = 0; i < 5000; ++i) {
         seed = seed * 2862933555777941757ULL + 3037000493ULL;
@@ -128,10 +171,23 @@ with tempfile.TemporaryDirectory(prefix="encore-gpu-dirty-host-") as directory:
     unit = Path(directory) / "dirty.cpp"
     binary = Path(directory) / "dirty"
     unit.write_text(cpp)
+    # Use the actual checked-in GPU dirty collector, with only its unrelated
+    # device address-space header replaced by the same minimal fixture as
+    # check-deferred-native-bridge-contract.py.
+    stub_dir = Path(directory) / "core"
+    stub_dir.mkdir()
+    (stub_dir / "gpu_dirty_memory_manager.h").write_text(dirty)
+    (stub_dir / "device_memory_manager.h").write_text(
+        "#pragma once\\n#include <cstddef>\\n#include <cstdint>\\n"
+        "using PAddr = std::uint64_t;\\nusing u32 = std::uint32_t;\\n"
+        "using u64 = std::uint64_t;\\n"
+        "namespace Core { inline constexpr std::size_t DEVICE_PAGEBITS = 12; }\\n"
+    )
     subprocess.run(
         [clang, "-std=c++20", "-O1", "-g", "-pthread", "-Wall", "-Wextra",
          "-Werror", "-fsanitize=address,undefined", "-fno-sanitize-recover=all",
-         "-I", str(root / "headless"), str(unit), "-o", str(binary)],
+         "-I", str(root / "headless"), "-I", str(directory),
+         str(unit), "-o", str(binary)],
         check=True, timeout=45
     )
     subprocess.run([str(binary)], check=True, timeout=45)
@@ -142,4 +198,4 @@ with tempfile.TemporaryDirectory(prefix="encore-gpu-dirty-host-") as directory:
     assert negative.returncode != 0 and "runtime error" in negative.stderr
     assert "shift exponent" in negative.stderr, negative.stderr
 
-print("NATIVE_GPU_DIRTY_SUBREGION_HOST_PASS regions=2048 mask_bits=32 alignment=64 crossings=1 whole_page=1 randomized=5000 original_4k_ubsan_negative_control=1")
+print("NATIVE_GPU_DIRTY_SUBREGION_HOST_PASS regions=2048 mask_bits=32 alignment=64 crossings=1 whole_page=1 randomized=5000 original_4k_ubsan_negative_control=1 actual_collect_gather=266")
