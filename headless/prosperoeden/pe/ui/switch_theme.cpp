@@ -110,7 +110,8 @@ void Launcher::draw_switch_home(Canvas& c) {
     draw_switch_header(c,"");
     auto& list=c.list;
     const int count=switch_recent_count(home_);
-    const int focus=std::clamp(switch_home_focus_,0,kHomeShortcutFirst+kHomeShortcuts-1);
+    const int focus=count==0 && switch_home_focus_<kHomeShortcutFirst ?
+        kHomeAllSoftware : std::clamp(switch_home_focus_,0,kHomeShortcutFirst+kHomeShortcuts-1);
     const float tile=226.0f,pitch=250.0f,start=85.0f,top=336.0f;
     const char *placeholder=tr("All Software");
     for(int i=0;i<count;++i){
@@ -152,7 +153,8 @@ void Launcher::draw_switch_home(Canvas& c) {
 
 void Launcher::press_switch_home(Key key) {
     const int count=switch_recent_count(home_);
-    const int current=std::clamp(switch_home_focus_,0,kHomeShortcutFirst+kHomeShortcuts-1);
+    const int current=count==0 && switch_home_focus_<kHomeShortcutFirst ?
+        kHomeAllSoftware : std::clamp(switch_home_focus_,0,kHomeShortcutFirst+kHomeShortcuts-1);
     switch(key) {
     case Key::left:
     case Key::right: {
@@ -327,6 +329,98 @@ void Launcher::draw_switch_settings(Canvas& c) {
     text_shrink(c,tr("Press Select to configure"),695.0f,baseline(811,50,20),
                 20,kSubtle,920);
     draw_switch_footer(c,tr("Select a settings category"));
+}
+
+void Launcher::draw_switch_dialog(Canvas& c, Modal modal, float opened) {
+    auto& list=c.list;
+    list.push_opacity(opened);
+    const Rect panel{430.0f,113.0f,1060.0f,854.0f};
+    list.rounded_rect(panel,3.0f,kWhite);
+    list.bordered_rect(panel,3.0f,kWhite,1.5f,kGrey);
+    const char *heading=tr("System Settings");
+    switch(modal) {
+    case Modal::video:heading=tr("Video");break;
+    case Modal::audio:heading=tr("Audio");break;
+    case Modal::controls:heading=tr("Controls");break;
+    case Modal::accessibility:heading=tr("Accessibility");break;
+    case Modal::appearance:heading=tr("Appearance");break;
+    case Modal::diagnostics:heading=tr("Diagnostics");break;
+    default:break;
+    }
+    text_shrink(c,heading,493.0f,baseline(150.0f,72.0f,36.0f),
+                36.0f,kInk,910.0f);
+    list.rounded_rect({493,245,932,2},0,kGrey);
+    const int total=dialog_rows(modal);
+    const int first=modal==Modal::video?std::clamp(option_-2,0,std::max(0,total-5)):0;
+    const int last=std::min(total,first+5);
+    for(int i=first;i<last;++i) {
+        const float y=278.0f+float(i-first)*112.0f;
+        const Rect row{495.0f,y,930.0f,101.0f};
+        if(i==option_) {
+            list.rounded_rect(row,3.0f,gfx::Color::rgb(0xdff8fb));
+            list.bordered_rect(row,3.0f,kPaper.with_alpha(0.0f),3.0f,kFocus);
+        } else list.rounded_rect({row.x,row.y+100,row.w,1},0,kGrey);
+        const char *label="";
+        std::string value;
+        switch(modal) {
+        case Modal::appearance:
+            label=i==0?"Encore":"Switch";
+            value=(prefs_.ui_theme==i)?tr("Active"):tr("Select");
+            break;
+        case Modal::accessibility:
+            label=i==0?tr("Larger text"):i==1?tr("High contrast"):tr("Reduce motion");
+            value=(i==0?prefs_.large_text:i==1?prefs_.high_contrast:prefs_.reduce_motion)?tr("On"):tr("Off");
+            break;
+        case Modal::audio:
+            label=i==0?tr("Game volume"):i==1?tr("Mute"):tr("Menu sounds");
+            value=i==0?std::to_string(prefs_.volume)+"%":
+                  i==1?(prefs_.mute?tr("On"):tr("Off")):std::to_string(prefs_.menu_volume)+"%";
+            break;
+        case Modal::video: {
+            static constexpr const char* labels[]={
+                TR("Renderer"),TR("Video preset"),TR("TV output"),TR("Game resolution"),
+                TR("Upscaling filter"),TR("FSR sharpness"),TR("Anti-aliasing"),
+                TR("Refresh rate"),TR("FPS overlay")};
+            label=tr(labels[i]);
+            switch(i) {
+            case 0:value=prefs_.renderer?"Vulkan":"OpenGL";break;
+            case 1:value=tr("Configure");break;
+            case 2:value=prefs_.output==2?"2160p":prefs_.output==1?"1440p":"1080p";break;
+            case 3:value=tr("Resolution");break;
+            case 4:value=tr("Filter");break;
+            case 5:value=std::to_string(prefs_.fsr_sharpness)+"%";break;
+            case 6:value=tr("Anti-aliasing");break;
+            case 7:value=prefs_.refresh?"120 Hz":"60 Hz";break;
+            default:value=prefs_.hud?tr("On"):tr("Off");break;
+            }
+            break;
+        }
+        case Modal::controls:
+            label=i==0?tr("Button profile"):i==1?tr("Button mapping"):
+                  i==2?tr("Vibration"):i==3?tr("Vibration strength"):tr("Stick deadzone");
+            value=i==0?(prefs_.controller_layout?"Switch":"PlayStation"):
+                i==1?tr("Customize"):i==2?(prefs_.vibration?tr("On"):tr("Off")):
+                i==3?std::to_string(prefs_.vibration_strength)+"%":
+                     std::to_string(prefs_.stick_deadzone)+"%";
+            break;
+        case Modal::diagnostics:
+            label=i==0?tr("Detailed logging"):tr("Clear cache");
+            value=i==0?(prefs_.detailed_logging?tr("On"):tr("Off")):tr("Clear");
+            break;
+        default:
+            label=tr("Select");
+            break;
+        }
+        text_shrink(c,label,row.x+22,baseline(y,101,26),26,kInk,590);
+        text_shrink(c,value,row.x+row.w-25,baseline(y,101,24),24,
+                    i==option_?kInk:kSubtle,294,Align::right);
+    }
+    list.rounded_rect({493,888,932,2},0,kGrey);
+    text_shrink(c,tr("Change"),1252.0f,baseline(901,51,19),
+                19,kInk,180,Align::right);
+    text_shrink(c,tr("Back"),1397.0f,baseline(901,51,19),
+                19,kInk,100,Align::right);
+    list.pop_opacity();
 }
 
 void Launcher::press_switch_settings(Key key) {

@@ -1058,6 +1058,8 @@ void Launcher::draw(gfx::DrawList &list)
             draw_mods(c, opened);
         else if (modal_shown_ == Modal::mapping)
             draw_mapping(c, opened);
+        else if (prefs_.ui_theme == 1)
+            draw_switch_dialog(c, modal_shown_, opened);
         else
             draw_dialog(c, modal_shown_, opened);
     }
