@@ -6,6 +6,9 @@
 
 #pragma once
 
+#ifdef PS5_NATIVE
+#include <cstring>
+#endif
 #include <variant>
 #include <vector>
 #include "video_core/vulkan_common/vulkan_wrapper.h"
@@ -86,6 +89,18 @@ public:
     }
 
     void AddSampledImage(VkImageView image_view, VkSampler sampler) {
+#ifdef PS5_NATIVE
+        if (use_descriptor_buffer) {
+            // Descriptor-buffer reuse compares raw entries. Fully initialize
+            // inactive union bytes and struct padding, not only Vulkan fields.
+            auto* const entry = payload_cursor++;
+            std::memset(entry, 0, sizeof(*entry));
+            entry->image.sampler = sampler;
+            entry->image.imageView = image_view;
+            entry->image.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+            return;
+        }
+#endif
         *(payload_cursor++) = VkDescriptorImageInfo{
             .sampler = sampler,
             .imageView = image_view,
@@ -94,6 +109,16 @@ public:
     }
 
     void AddImage(VkImageView image_view) {
+#ifdef PS5_NATIVE
+        if (use_descriptor_buffer) {
+            auto* const entry = payload_cursor++;
+            std::memset(entry, 0, sizeof(*entry));
+            entry->image.sampler = VK_NULL_HANDLE;
+            entry->image.imageView = image_view;
+            entry->image.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+            return;
+        }
+#endif
         *(payload_cursor++) = VkDescriptorImageInfo{
             .sampler = VK_NULL_HANDLE,
             .imageView = image_view,
@@ -115,11 +140,19 @@ public:
             AddBuffer(buffer, offset, size);
             return;
         }
+#ifdef PS5_NATIVE
+        auto* const entry = payload_cursor++;
+        std::memset(entry, 0, sizeof(*entry));
+        entry->address.address = base_address == 0 ? 0 : base_address + offset;
+        entry->address.range = base_address == 0 ? VK_WHOLE_SIZE : size;
+        entry->address.format = VK_FORMAT_UNDEFINED;
+#else
         *(payload_cursor++) = DescriptorAddress{
             .address = base_address == 0 ? 0 : base_address + offset,
             .range = base_address == 0 ? VK_WHOLE_SIZE : size,
             .format = VK_FORMAT_UNDEFINED,
         };
+#endif
     }
 
     void AddTexelBuffer(VkBufferView texel_buffer) {
@@ -132,11 +165,19 @@ public:
             AddTexelBuffer(texel_buffer);
             return;
         }
+#ifdef PS5_NATIVE
+        auto* const entry = payload_cursor++;
+        std::memset(entry, 0, sizeof(*entry));
+        entry->address.address = base_address == 0 ? 0 : base_address + offset;
+        entry->address.range = base_address == 0 ? VK_WHOLE_SIZE : size;
+        entry->address.format = format;
+#else
         *(payload_cursor++) = DescriptorAddress{
             .address = base_address == 0 ? 0 : base_address + offset,
             .range = base_address == 0 ? VK_WHOLE_SIZE : size,
             .format = format,
         };
+#endif
     }
 
 private:
