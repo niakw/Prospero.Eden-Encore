@@ -33,6 +33,10 @@ constexpr float kSwitchLibraryTilePitch = 276.0f;
 constexpr float kSwitchLibraryTileX = 138.0f;
 constexpr float kSwitchLibraryTileY = 278.0f;
 
+std::string switch_value(const std::vector<std::string>& values,int index) {
+    return index>=0 && index<static_cast<int>(values.size()) ?
+        values[static_cast<std::size_t>(index)] : std::string{"-"};
+}
 int switch_recent_count(const Home& home) {
     return std::min<int>(kHomeGameSlots, static_cast<int>(home.recents.size()));
 }
@@ -407,7 +411,8 @@ void Launcher::draw_switch_settings(Canvas& c) {
     case 0:
         rows={Line{TR("Renderer"),prefs_.renderer?"Vulkan":"OpenGL"},
               Line{TR("TV output"),prefs_.output==2?"2160p":prefs_.output==1?"1440p":"1080p"},
-              Line{TR("FPS overlay"),prefs_.hud?tr("On"):tr("Off")},Line{TR("Video preset"),tr("Configure")}};
+              Line{TR("FPS overlay"),prefs_.hud?tr("On"):tr("Off")},
+              Line{TR("Video preset"),switch_value(services_.performance_profile_labels(),prefs_.performance_profile)}};
         size=4;break;
     case 1:
         rows={Line{TR("Volume"),std::to_string(prefs_.volume)+"%"},
@@ -611,13 +616,13 @@ void Launcher::draw_switch_dialog(Canvas& c, Modal modal, float opened) {
                 TR("Refresh rate"),TR("FPS overlay")};
             label=tr(labels[i]);
             switch(i) {
-            case 0:value=prefs_.renderer?"Vulkan":"OpenGL";break;
-            case 1:value=tr("Configure");break;
+            case 0:value=prefs_.renderer?tr("Vulkan (recommended)"):"OpenGL";break;
+            case 1:value=switch_value(services_.performance_profile_labels(),prefs_.performance_profile);break;
             case 2:value=prefs_.output==2?"2160p":prefs_.output==1?"1440p":"1080p";break;
-            case 3:value=tr("Resolution");break;
-            case 4:value=tr("Filter");break;
+            case 3:value=switch_value(services_.resolution_labels(),prefs_.resolution);break;
+            case 4:value=switch_value(services_.filter_labels(),prefs_.filter);break;
             case 5:value=std::to_string(prefs_.fsr_sharpness)+"%";break;
-            case 6:value=tr("Anti-aliasing");break;
+            case 6:value=switch_value(services_.anti_aliasing_labels(),prefs_.anti_aliasing);break;
             case 7:value=prefs_.refresh?"120 Hz":"60 Hz";break;
             default:value=prefs_.hud?tr("On"):tr("Off");break;
             }

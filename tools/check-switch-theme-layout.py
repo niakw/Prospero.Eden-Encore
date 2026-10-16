@@ -30,6 +30,10 @@ assert "switch_home_last_tile_=current;" in src
 assert "switch_home_focus_=last==kHomeAllSoftware||last>=count?" in src
 assert "press_library(key);" in src, "Switch game launch must respect core validation"
 assert "void Launcher::draw_switch_confirmation" in src
+assert "switch_value(services_.resolution_labels(),prefs_.resolution)" in src
+assert "switch_value(services_.filter_labels(),prefs_.filter)" in src
+assert "switch_value(services_.anti_aliasing_labels(),prefs_.anti_aliasing)" in src
+assert "switch_value(services_.performance_profile_labels(),prefs_.performance_profile)" in src
 preview=(root/"headless/prosperoeden/host/preview_main.cpp").read_text()
 assert "06-switch-exit-confirm" in preview
 assert "Key::right, Key::right, Key::right, Key::right," in preview
