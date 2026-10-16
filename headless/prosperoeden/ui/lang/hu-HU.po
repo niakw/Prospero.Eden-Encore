@@ -1606,8 +1606,6 @@ msgid "Close"
 msgstr "Bezárás"
 
 #: pe/ui/library.cpp
-msgid "Down: view back cover"
-msgstr "Le: hátlap megtekintése"
 
 #: pe/ui/library.cpp
 msgid "Zoom out"
@@ -1728,3 +1726,39 @@ msgstr "Válassz · Encore / Switch. szoftverek / Irányítás — változatlan.
 #: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
 msgid "Choose the launcher interface without changing game or controller settings."
 msgstr "Válassz · felület. szoftverek / Irányítás — változatlan."
+
+#: pe/ui/switch_theme.cpp
+msgid "About"
+msgstr "Névjegy"
+
+#: pe/ui/switch_theme.cpp
+msgid "Multiplayer"
+msgstr "Többjátékos"
+
+#: pe/ui/switch_theme.cpp
+msgid "Volume"
+msgstr "Hangerő"
+
+#: pe/ui/switch_theme.cpp
+msgid "Controller profile"
+msgstr "Vezérlőprofil"
+
+#: pe/ui/switch_theme.cpp
+msgid "Cache"
+msgstr "Gyorsítótár"
+
+#: pe/ui/switch_theme.cpp
+msgid "Manage"
+msgstr "Kezelés"
+
+#: pe/ui/switch_theme.cpp
+msgid "Open folders"
+msgstr "Mappák megnyitása"
+
+#: pe/ui/switch_theme.cpp
+msgid "Filter"
+msgstr "Szűrő"
+
+#: pe/ui/switch_theme.cpp
+msgid "Eden Encore"
+msgstr "Eden Encore"

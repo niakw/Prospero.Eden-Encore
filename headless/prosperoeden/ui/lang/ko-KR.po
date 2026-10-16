@@ -1606,8 +1606,6 @@ msgid "Close"
 msgstr "닫기"
 
 #: pe/ui/library.cpp
-msgid "Down: view back cover"
-msgstr "아래: 뒷면 보기"
 
 #: pe/ui/library.cpp
 msgid "Zoom out"
@@ -1728,3 +1726,39 @@ msgstr "선택 · Encore / Switch. 소프트웨어 / 조작 — 변경 없음."
 #: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
 msgid "Choose the launcher interface without changing game or controller settings."
 msgstr "선택 · 인터페이스. 소프트웨어 / 조작 — 변경 없음."
+
+#: pe/ui/switch_theme.cpp
+msgid "About"
+msgstr "정보"
+
+#: pe/ui/switch_theme.cpp
+msgid "Multiplayer"
+msgstr "멀티플레이"
+
+#: pe/ui/switch_theme.cpp
+msgid "Volume"
+msgstr "음량"
+
+#: pe/ui/switch_theme.cpp
+msgid "Controller profile"
+msgstr "컨트롤러 프로필"
+
+#: pe/ui/switch_theme.cpp
+msgid "Cache"
+msgstr "캐시"
+
+#: pe/ui/switch_theme.cpp
+msgid "Manage"
+msgstr "관리"
+
+#: pe/ui/switch_theme.cpp
+msgid "Open folders"
+msgstr "폴더 열기"
+
+#: pe/ui/switch_theme.cpp
+msgid "Filter"
+msgstr "필터"
+
+#: pe/ui/switch_theme.cpp
+msgid "Eden Encore"
+msgstr "Eden Encore"
