@@ -176,6 +176,11 @@ void advanced_status(Canvas& c,const std::string& message,bool warn,
     text_shrink(c,message.empty()?tr(fallback):message,544,
                 baseline(840,68,20),20,
                 !message.empty()&&warn?gfx::Color::rgb(0xb52733):kSubtle,530);
+    // Keep the alternative console's A/B action grammar inside every
+    // advanced modal, not just in the underlying HOME footer.
+    c.list.ring(996.0f,877.0f,15.0f,2.0f,kSubtle);
+    text(c,"A",996.0f,883.0f,18.0f,kInk,Align::center);
+    text_shrink(c,tr("Select"),1024.0f,884.0f,20.0f,kInk,148.0f);
     c.list.ring(1202.0f,877.0f,15.0f,2.0f,kSubtle);
     text(c,"B",1202.0f,883.0f,18.0f,kInk,Align::center);
     text_shrink(c,tr("Back"),1230.0f,884.0f,20.0f,kInk,138.0f);
