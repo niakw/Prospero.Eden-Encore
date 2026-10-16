@@ -356,7 +356,7 @@ shelf_width = min(277.0, max(175.0, paper_height * european_front_aspect * 1.01)
 shelf_rim = min(2.0, max(0.9, shelf_width * 0.006))
 paper_aspect = (shelf_width - shelf_rim) / paper_height
 assert shelf_rim < 1.6 and 0.98 < european_front_aspect / paper_aspect < 1.02
-assert "const float sleeve_w = std::clamp(paper_height * aspect * 1.01f," in lib_sleeve
+assert "const float sleeve_w = std::clamp(paper_height * aspect * 1.01f," in library
 assert "Rect uv" not in lib_sleeve
 assert "c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f}," in lib_sleeve
 # The row label must finish before the detail panel begins. No overprinting
