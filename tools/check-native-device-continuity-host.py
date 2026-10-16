@@ -15,14 +15,29 @@ workflow=(root/".github/workflows/encore-core-preflight.yml").read_text()
 actual_tu=(root/"vendor/sources/eden/src/video_core/host1x/gpu_device_memory_manager.cpp").read_text()
 
 # The upstream implementation must be untouched; this native override only
-# inserts continuity invalidation points and the bounded predecessor helper.
+# inserts continuity invalidation points, bounded predecessor helper, and\n# exactly two explicit guarded native GetSpan methods.
 edits=difflib.SequenceMatcher(
     None, pinned.splitlines(keepends=True), native.splitlines(keepends=True),
     autojunk=False).get_opcodes()
 assert all(tag in ("equal","insert") for tag,*_ in edits), edits
 inserts=["".join(native.splitlines(keepends=True)[j1:j2])
          for tag,i1,i2,j1,j2 in edits if tag=="insert"]
-assert len(inserts)>=5 and sum(len(s) for s in inserts)<1900, inserts
+# The native override also adds exactly two guarded direct-span reads.
+# Exclude only those source-pinned guards from the historical continuity
+# insertion budget; never raise the limit for unrelated vendor rewrites.
+span_guard = """    // The GPU address space is bounded. Reject empty, overflowing and
+    // out-of-range spans before indexing the sparse page map or calculating
+    // size + subbits, whose unsigned overflow could incorrectly allow a
+    // direct pointer covering unmapped memory.
+    if (size == 0 || src_addr >= device_as_size ||
+        size > device_as_size - src_addr) {
+        return nullptr;
+    }
+"""
+assert native.count(span_guard) == 2
+assert (root/"tools/check-native-device-span-bounds-host.py").is_file()
+assert "python3 -B tools/check-native-device-span-bounds-host.py" in workflow
+assert len(inserts)>=7 and sum(len(s) for s in inserts)-2*len(span_guard)<1900, inserts
 for token in (
     "void TruncateContinuityBefore(Entries& entries, size_t changed_page)",
     "entries.GetAndFault(p).continuity_tracker =",
