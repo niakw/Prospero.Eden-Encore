@@ -256,12 +256,27 @@ void pictures(Stage &s)
         launch_only != nullptr && std::strcmp(launch_only, "1") == 0)
     {
         s.restart(false);
-        s.wait(2.0f); // background Home snapshot has settled
-        // Initial Home snapshot focuses Continue (hero). Use its real Cross
-        // action; Down would instead move focus into the recent-title rail.
-        s.press({Key::cross});
-        if (s.launcher->selected_game().empty()) {
-            std::fprintf(stderr, "launch-preview: the game did not enter the real launch path\n");
+        s.wait(2.0f); // settle UI transitions in virtual frame time
+        // The Home snapshot is assembled asynchronously on a REAL host
+        // thread. Virtual 120-frame waits can complete in milliseconds,
+        // before the worker finishes; one Cross would be discarded.
+        // Pump the launcher and give the worker bounded real time to
+        // complete. Never fake selected_game() or bypass the Cross handler.
+        bool launched = false;
+        for (int attempt = 0; attempt < 30; ++attempt) {
+            s.launcher->update(0.0f);
+            // Initial Home focuses Continue. Only its actual Cross action
+            // may enter the title's normal launch path.
+            s.press({Key::cross});
+            if (!s.launcher->selected_game().empty()) {
+                launched = true;
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+        if (!launched) {
+            std::fprintf(stderr,
+                         "launch-preview: real Cross never launched after waiting for the Home snapshot\n");
             s.ok = false;
             return;
         }
