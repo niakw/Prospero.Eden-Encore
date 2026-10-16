@@ -27,12 +27,17 @@ assert "entries <= 0x400 || entries >= frame_payload_size" in preflights
 start=raster.index("void RasterizerVulkan::PrepareDraw(")
 end=raster.index("void RasterizerVulkan::Draw(",start)
 draw=raster[start:end]
+reuse=draw.index("descriptor_buffer_ring.PreflightFrameReuse(")
+reuse_refresh=draw.index("pipeline = pipeline_cache.CurrentGraphicsPipeline();",reuse)
+reuse_preflight=draw.index("guest_descriptor_queue.PreflightLargeGuestDraw(",reuse_refresh)
 cap=draw.index("descriptor_buffer_ring.PreflightCapacity(")
+assert reuse < reuse_refresh < reuse_preflight < cap
+assert "gpu_memory->FlushCaching();" in draw[reuse:reuse_refresh]
 reselection=draw.index("pipeline = pipeline_cache.CurrentGraphicsPipeline();",cap)
 late=draw.index("guest_descriptor_queue.PreflightLargeGuestDraw(",reselection)
 cache_lock=draw.index("std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};")
 assert cap < reselection < late < cache_lock
-assert draw.count("guest_descriptor_queue.PreflightLargeGuestDraw(")==2
+assert draw.count("guest_descriptor_queue.PreflightLargeGuestDraw(")==3
 post=draw[late:cache_lock]
 assert "gpu_memory->FlushCaching();" in post
 assert "pipeline = pipeline_cache.CurrentGraphicsPipeline();" in post
@@ -78,13 +83,18 @@ int main(){
  assert(!q.PreflightGuestDraw(wait_worker));
  assert(!q.PreflightLargeGuestDraw(wait_worker,1700));
  assert(waits==1);
+ // A frame-reuse fence may change shaders to a larger pipeline, too.
+ q.SetUsed(3000);
+ assert(!q.PreflightLargeGuestDraw(wait_worker,1024));
+ assert(q.PreflightLargeGuestDraw(wait_worker,1200));
+ assert(q.Used()==0 && waits==2);
  // Equality with the end boundary uses the same >= condition as Acquire.
  q.SetUsed(4096-1700);
  assert(q.PreflightLargeGuestDraw(wait_worker,1700));
- assert(q.Used()==0 && waits==2);
+ assert(q.Used()==0 && waits==3);
  // Oversized reservations continue to be handled by Acquire's invariant.
  assert(!q.PreflightLargeGuestDraw(wait_worker,4096));
- assert(waits==2);
+ assert(waits==3);
 }
 """
 cc=shutil.which("clang++-18") or shutil.which("clang++")
@@ -97,4 +107,4 @@ with tempfile.TemporaryDirectory(prefix="encore-late-descriptor-") as folder:
                     "-fsanitize=address,undefined","-fno-sanitize-recover=all",
                     str(code),"-o",str(exe)],check=True,timeout=45)
     subprocess.run([str(exe)],check=True,timeout=30)
-print("LATE_DESCRIPTOR_PREFLIGHT_HOST_PASS old_preflight_gap=1 late_drain=1 no_lock_wait=1 exact_boundary=1 source_order=1")
+print("LATE_DESCRIPTOR_PREFLIGHT_HOST_PASS old_preflight_gap=1 late_drain=1 frame_reuse_refresh=1 no_lock_wait=1 exact_boundary=1 source_order=1")

@@ -44,7 +44,11 @@ for path in blobs:
 rast=patched["src/video_core/renderer_vulkan/vk_rasterizer.cpp"]
 assert "pipeline->CanUseDescriptorBuffer()" in rast
 assert rast.index("descriptor_buffer_ring.PreflightFrameReuse(scheduler)") < rast.index("std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};")
-assert "gpu_memory->FlushCaching();\n    }\n#endif" in rast
+frame = rast.split("descriptor_buffer_ring.PreflightFrameReuse(scheduler)", 1)[1].split(
+    "descriptor_buffer_ring.PreflightCapacity(", 1)[0]
+assert "gpu_memory->FlushCaching();" in frame
+assert frame.count("pipeline = pipeline_cache.CurrentGraphicsPipeline();") == 2
+assert "guest_descriptor_queue.PreflightLargeGuestDraw(" in frame
 hdr=(root/"tools/prepare-vulkan-port.py").read_text()
 assert "return uses_descriptor_buffer && descriptor_set_layout;" in hdr
 cpp=patched["src/video_core/renderer_vulkan/vk_descriptor_buffer.cpp"]

@@ -54,13 +54,13 @@ for raster in (early[0], late[0]):
     assert 'gpu_memory->FlushCaching();' in raster
     assert 'pipeline->DescriptorEntryReservation()' in raster
 assert 'descriptor_buffer_ring.PreflightCapacity(' in late[0]
-assert late[0].index('descriptor_buffer_ring.PreflightCapacity(') < late[0].index(
+assert late[0].index('descriptor_buffer_ring.PreflightCapacity(') < late[0].rindex(
     'guest_descriptor_queue.PreflightLargeGuestDraw(')
 # The versioned native source also keeps the last check before both mutexes.
 native = (root / 'vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp').read_text()
 native_draw = native.split('void RasterizerVulkan::PrepareDraw(', 1)[1].split(
     'void RasterizerVulkan::Draw(', 1)[0]
-assert native_draw.count('guest_descriptor_queue.PreflightLargeGuestDraw(') == 2
+assert native_draw.count('guest_descriptor_queue.PreflightLargeGuestDraw(') == 3
 assert native_draw.index('descriptor_buffer_ring.PreflightCapacity(') < native_draw.rindex(
     'guest_descriptor_queue.PreflightLargeGuestDraw(') < native_draw.index(
     'std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};')

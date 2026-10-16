@@ -227,7 +227,27 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {'''),
     // guest texture writes unblocked while the Vulkan GPU owner waits.
     if (pipeline->CanUseDescriptorBuffer() &&
         descriptor_buffer_ring.PreflightFrameReuse(scheduler)) {
+        // The frame fence can expose pending guest invalidations. Recheck
+        // shader identity before using the pipeline under both cache locks.
         gpu_memory->FlushCaching();
+        pipeline = pipeline_cache.CurrentGraphicsPipeline();
+        if (!pipeline) {
+            ::Eden::Performance::RecordGraphicsDrawDrop(
+                ::Eden::Performance::GraphicsDrawDrop::NoPipeline);
+            return;
+        }
+        // A newly selected pipeline may reserve more guest descriptors.
+        // Keep any worker wait ahead of the paired cache mutexes.
+        if (guest_descriptor_queue.PreflightLargeGuestDraw(
+                [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation())) {
+            gpu_memory->FlushCaching();
+            pipeline = pipeline_cache.CurrentGraphicsPipeline();
+            if (!pipeline) {
+                ::Eden::Performance::RecordGraphicsDrawDrop(
+                    ::Eden::Performance::GraphicsDrawDrop::NoPipeline);
+                return;
+            }
+        }
     }
 #endif
 #ifdef PS5_NATIVE
