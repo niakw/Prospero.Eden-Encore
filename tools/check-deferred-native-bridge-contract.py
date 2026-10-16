@@ -302,12 +302,24 @@ include("__BRIDGE__")
     assert guest.count("ScopedGuestStoreIntent store_intent;") == 5
     block=guest.split("bool WriteBlockImpl(",1)[1].split("bool ZeroBlock(",1)[0]
     assert block.index("ScopedGuestStoreIntent store_intent;") < block.index("HandleRasterizerWrite(")
+    assert block.index("HandleRasterizerWrite(") < block.index(
+        "std::memcpy(ptr, reinterpret_cast<u8 const*>(buffer) + offset, copy_amount);")
+    assert block.index("std::memcpy(ptr, reinterpret_cast<u8 const*>(buffer) + offset, copy_amount);") < block.index(
+        "} else {")
+    assert block.count("std::memcpy(ptr, reinterpret_cast<u8 const*>(buffer) + offset, copy_amount);") == 3
     zero=guest.split("bool ZeroBlock(",1)[1].split("bool CopyBlock(",1)[0]
     assert zero.index("ScopedGuestStoreIntent store_intent;") < zero.index("HandleRasterizerWrite(")
+    assert zero.index("HandleRasterizerWrite(") < zero.rindex("std::memset(ptr, 0, copy_amount);")
     scalar=guest.split("inline void Write(Common::ProcessAddress vaddr,",1)[1].split("bool WriteExclusive(",1)[0]
     assert scalar.count("ScopedGuestStoreIntent store_intent;") == 1
+    assert scalar.index("ScopedGuestStoreIntent store_intent;") < scalar.index("GetPointerImpl(")
+    assert scalar.index("ScopedGuestStoreIntent store_intent;") < scalar.index("std::memcpy(ptr, &data, sizeof(T));")
     exclusive=guest.split("bool WriteExclusive(Common::ProcessAddress vaddr,",1)[1].split("void HandleRasterizerDownload(",1)[0]
     assert exclusive.count("ScopedGuestStoreIntent store_intent;") == 2
+    for fn in (exclusive.split("bool WriteExclusive128(",1)[0],
+               exclusive.split("bool WriteExclusive128(",1)[1]):
+        assert fn.index("ScopedGuestStoreIntent store_intent;") < fn.index("GetPointerImpl(")
+        assert fn.index("ScopedGuestStoreIntent store_intent;") < fn.index("Common::AtomicCompareAndSwap(")
     maintenance=guest.split("Result StoreDataCache(",1)[1].split("void MarkRegionDebug(",1)[0]
     assert maintenance.count("HandleRasterizerWrite(") == 2
     assert maintenance.count("ScopedGuestCacheMaintenanceIntent maintenance_intent;") == 2

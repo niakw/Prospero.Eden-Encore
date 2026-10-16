@@ -225,25 +225,35 @@ void MemoryManager::FlushCaching() {
             message(FATAL_ERROR "Native store-intent anchor changed (${anchor})")
         endif()
     endforeach()
+    # Keep StoreFollows active across the actual memcpy, not just the
+    # pre-store OnCPUWrite callback. Unsafe/untracked writes remain untagged.
     string(REPLACE "${intent_block}" [=[            if (!unsafe) {
                 ::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent;
                 HandleRasterizerWrite(GetInteger(current_vaddr), copy_amount);
-            }
-            std::memcpy(ptr, reinterpret_cast<u8 const*>(buffer) + offset, copy_amount);]=]
+                std::memcpy(ptr, reinterpret_cast<u8 const*>(buffer) + offset, copy_amount);
+            } else {
+                std::memcpy(ptr, reinterpret_cast<u8 const*>(buffer) + offset, copy_amount);
+            }]=]
         bridge_cpu "${bridge_cpu}")
     string(REPLACE "${intent_zero}" [=[            ::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent;
             HandleRasterizerWrite(GetInteger(current_vaddr), copy_amount);
             std::memset(ptr, 0, copy_amount);]=]
         bridge_cpu "${bridge_cpu}")
-    string(REPLACE "${intent_scalar}"
-        "::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent; ${intent_scalar}"
-        bridge_cpu "${bridge_cpu}")
-    string(REPLACE "${intent_exclusive}"
-        "::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent; ${intent_exclusive}"
-        bridge_cpu "${bridge_cpu}")
-    string(REPLACE "${intent_exclusive128}"
-        "::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent; ${intent_exclusive128}"
-        bridge_cpu "${bridge_cpu}")
+    # Scalar and exclusive stores run AFTER GetPointerImpl's callback:
+    # the old marker inside that callback went out of scope too early.
+    # Put the marker at function entry so it also covers the memcpy/CAS.
+    set(store_fn_scalar "inline void Write(Common::ProcessAddress vaddr, const T data) noexcept requires(std::is_trivially_copyable_v<T>) {")
+    set(store_fn_exclusive "bool WriteExclusive(Common::ProcessAddress vaddr, const T data, const T expected) {")
+    set(store_fn_exclusive128 "bool WriteExclusive128(Common::ProcessAddress vaddr, const u128 data, const u128 expected) {")
+    foreach(entry IN ITEMS store_fn_scalar store_fn_exclusive store_fn_exclusive128)
+        string(FIND "${bridge_cpu}" "${${entry}}" found)
+        if(found LESS 0)
+            message(FATAL_ERROR "Native guest store-function anchor changed (${entry})")
+        endif()
+        string(REPLACE "${${entry}}"
+            "${${entry}}\n        ::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent;"
+            bridge_cpu "${bridge_cpu}")
+    endforeach()
     # An unmarked maintenance callback can inherit StoreFollows from an
     # enclosing guest write on the same host thread. Explicitly force NoStore
     # while running either dc cvac or dc civac rasterizer callback.
