@@ -530,6 +530,9 @@ void RasterizerVulkan::DrawTexture() {
         gpu.TickWork();
     };
     FlushWork();
+    // Apply queued guest page remaps before reading cache-owned texture views.
+    // InnerInvalidation itself locks texture_cache.mutex.
+    gpu_memory->FlushCaching();
 
     std::scoped_lock l{texture_cache.mutex};
     texture_cache.SynchronizeDescriptors(false);
