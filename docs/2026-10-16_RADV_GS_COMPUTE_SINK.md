@@ -16,4 +16,3 @@ old null pointers to the guarded branch. No native driver was compiled.
 This does not establish that the known game freezes/HUD issues reached
 this specific geometry-shader path, or that console performance improved.
 Reference: https://github.com/blackbearreloaded/ProsperoEden/commit/80bfd2b67f81
-
