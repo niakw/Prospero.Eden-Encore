@@ -175,43 +175,34 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
     // The pale molded case substrate is BEHIND the printed sleeve. The
     // opening side remains readable against dark UI backgrounds without
     // coating the entire front/back scan in a translucent second layer.
-    c.list.gradient_rect(shell, radius, Color::rgb(0xb6c4d5, 0.78f),
-                         Color::rgb(0x66778c, 0.79f));
+    if (rear)
+        c.list.gradient_rect(shell, radius, Color::rgb(0xb6c4d5, 0.78f),
+                             Color::rgb(0x66778c, 0.79f));
+    else
+        // Any spare margin belongs to the dark cover backing, never a wide
+        // pale-plastic column. Only top/bottom/right retain a clear case rim.
+        c.list.gradient_rect(shell, radius, Color::rgb(0x171126, 0.96f),
+                             Color::rgb(0x0e0a19, 0.97f));
 
     const std::string& scan = rear ? game.box_back : game.box_front;
     if (!scan.empty()) {
-        // Preserve the rear scan fully. The front fills the printable sleeve
-        // without stretching; trim small source margins rather than leaving
-        // a broad clear-plastic strip over the artwork.
+        // Both printed faces are shown in full: never crop artwork titles,
+        // upper banners, age marks or the bottom publisher information.
         const Cover artwork = c.textures.cover(
             scan, std::max(paper.w, paper.h) * texture_scale);
         if (artwork.texture != 0) {
             const float source = std::max(0.01f, artwork.aspect);
             const float target = paper.w / paper.h;
             Rect fitted = paper;
-            Rect uv{0.0f, 0.0f, 1.0f, 1.0f};
-            if (rear) {
-                // The printed back is archival artwork: show its entire scan.
-                if (source > target) {
-                    fitted.h = paper.w / source;
-                    fitted.y += (paper.h - fitted.h) * 0.5f;
-                } else if (source < target) {
-                    fitted.w = paper.h * source;
-                    fitted.x += paper.w - fitted.w;
-                }
-            } else {
-                // The front is a cover tile: aspect-preserving fill instead
-                // of exposing a wide unprinted plastic band at its right.
-                // Crop the source UV evenly; never stretch the cover artwork.
-                if (source > target) {
-                    uv.w = target / source;
-                    uv.x = (1.0f - uv.w) * 0.5f;
-                } else if (source < target) {
-                    uv.h = source / target;
-                    uv.y = (1.0f - uv.h) * 0.5f;
-                }
+            if (source > target) {
+                fitted.h = paper.w / source;
+                fitted.y += (paper.h - fitted.h) * 0.5f;
+            } else if (source < target) {
+                fitted.w = paper.h * source;
+                fitted.x += rear ? paper.w - fitted.w : (paper.w - fitted.w) * 0.5f;
             }
-            c.list.image(artwork.texture, fitted, uv,
+            // Full UVs plus aspect-fit dimensions preserve the entire print.
+            c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f},
                          Color::rgb(0xffffff,
                                     tween::cubic_out(artwork.age / 0.22f)));
         } else {
@@ -1195,7 +1186,7 @@ void Launcher::draw_library(Canvas &c)
     constexpr int slots = 5;
     constexpr float gap = 20.0f;
     constexpr float card_w = (rail_w - gap * (slots - 1)) / float(slots);
-    constexpr float sleeve_w = 218.0f, sleeve_h = 346.0f;
+    constexpr float sleeve_h = 346.0f;
     list.shadow({rail_x + 3.0f, shelf_y, rail_w - 6.0f, 20.0f}, 9.0f,
                 25.0f, theme::kScrim.with_alpha(0.65f));
     list.gradient_rect({rail_x, shelf_y, rail_w, 7.0f}, 3.0f,
@@ -1211,6 +1202,17 @@ void Launcher::draw_library(Canvas &c)
             const int slot = index - first;
             const Game& game = games_[static_cast<std::size_t>(index)];
             const bool selected = index == library_.selected;
+            // Size each front jacket from the actual scan aspect ratio.
+            // Width is constrained to its five-slot cell, while the whole
+            // image (including top and bottom) always remains visible.
+            const Cover front_scan = game.box_front.empty() ? Cover{} :
+                c.textures.cover(game.box_front, sleeve_h * 0.24f);
+            const float aspect = front_scan.texture != 0 ?
+                std::clamp(front_scan.aspect, 0.40f, 0.80f) : 872.0f / 1419.0f;
+            const float paper_height = sleeve_h -
+                2.0f * std::max(2.0f, sleeve_h * 0.008f);
+            const float sleeve_w = std::clamp(paper_height * aspect * 1.01f,
+                                              175.0f, 277.0f);
             const float x = rail_x + float(slot) * (card_w + gap) +
                             (card_w - sleeve_w) * 0.5f;
             const Rect sleeve{x, rail_y, sleeve_w, sleeve_h};
@@ -1237,7 +1239,9 @@ void Launcher::draw_library(Canvas &c)
 
     // ---- selected game: one clean detail surface, no hidden left/right setting changes ----
     const Game* game = count > 0 ? &games_[static_cast<std::size_t>(library_.selected)] : nullptr;
-    const Rect detail{72.0f, 590.0f, 1776.0f, 306.0f};
+    // Give the large cover row, its captions and the details panel three
+    // distinct bands instead of letting the bottom of the jackets touch glass.
+    const Rect detail{72.0f, 620.0f, 1776.0f, 276.0f};
     glass(c, detail, 28.0f, theme::kGlass.with_alpha(0.66f),
           theme::kPanelEdge.with_alpha(0.58f), 0.9f);
     const float shown = tween::clamp01(detail_.value);
@@ -1248,7 +1252,7 @@ void Launcher::draw_library(Canvas &c)
     {
         // Actual rear retail scan, never the old panoramic screenshot.
         // Cross on this jacket opens a full-screen, aspect-preserving preview.
-        const Rect art{99.0f, 606.0f, 181.0f, 276.0f};
+        const Rect art{99.0f, 635.0f, 181.0f, 247.0f};
         flat_retail_sleeve(c, *game, art, true, 0.60f);
         // The focus ring is UI feedback only. No white plastic bezel
         // is drawn around an unfocused square-corner paper cover.
@@ -1257,11 +1261,11 @@ void Launcher::draw_library(Canvas &c)
                                2.5f, theme::kFocusCore);
         if (library_back_focused_)
             text_shrink(c, tr("Enlarge cover"), art.x + art.w * 0.5f,
-                        baseline(882.0f, 17.0f, 13.0f), 15.0f,
+                        baseline(880.0f, 16.0f, 13.0f), 15.0f,
                         theme::kLimePale, 224.0f, Align::center);
         // A two-line title previously overlapped the publisher/date and intro
         // (e.g. Breath of the Wild in French). Keep one readable, scaled line.
-        text_shrink(c, game->name, 337.0f, baseline(604.0f, 52.0f, 40.0f),
+        text_shrink(c, game->name, 337.0f, baseline(633.0f, 52.0f, 40.0f),
                     40.0f, theme::kTitle, 1420.0f);
 
         std::string identity;
@@ -1276,11 +1280,11 @@ void Launcher::draw_library(Canvas &c)
             identity += library_genres(game->categories);
         }
         if (!identity.empty())
-            text_shrink(c, identity, 337.0f, baseline(660.0f, 24.0f, 17.0f), 17.0f,
+            text_shrink(c, identity, 337.0f, baseline(687.0f, 24.0f, 17.0f), 17.0f,
                         theme::kLimePale, 1420.0f);
 
         if (!game->intro.empty())
-            text_block(c, game->intro, 337.0f, baseline(690.0f, 24.0f, 18.0f), 18.0f, 25.0f,
+            text_block(c, game->intro, 337.0f, baseline(711.0f, 24.0f, 18.0f), 18.0f, 25.0f,
                        theme::kCopy, 1420.0f, 2, kShrink);
 
         const std::string addons = addons_line(game->addons, game->mods, game->mods_on, true);
@@ -1296,18 +1300,18 @@ void Launcher::draw_library(Canvas &c)
         for (const auto& chip : chips)
         {
             const float w = std::clamp(text_width(c, chip, 15.0f) + 26.0f, 82.0f, 220.0f);
-            list.bordered_rect({chip_x, 755.0f, w, 34.0f}, 17.0f,
+            list.bordered_rect({chip_x, 759.0f, w, 34.0f}, 17.0f,
                                theme::kPanel.with_alpha(0.54f), 1.0f,
                                theme::kPanelEdge.with_alpha(0.45f));
-            text_shrink(c, chip, chip_x + w * 0.5f, baseline(755.0f, 34.0f, 15.0f), 15.0f,
+            text_shrink(c, chip, chip_x + w * 0.5f, baseline(759.0f, 34.0f, 15.0f), 15.0f,
                         theme::kLimePale, w - 18.0f, Align::center);
             chip_x += w + 9.0f;
             if (chip_x > 1760.0f) break;
         }
 
         // Nlib gameplay strip: three real screenshots at most; loaded lazily by Textures.
-        constexpr float shot_y = 801.0f;
-        constexpr float shot_h = 84.0f;
+        constexpr float shot_y = 803.0f;
+        constexpr float shot_h = 82.0f;
         constexpr float shot_w = 154.0f;
         constexpr float shot_gap = 12.0f;
         const int shot_count = std::min<int>(3, static_cast<int>(game->screenshots.size()));
@@ -1337,8 +1341,8 @@ void Launcher::draw_library(Canvas &c)
         if (game->mods > 0)
         {
             const float on = tween::clamp01(mods_switch_.value);
-            toggle(c, 1792.0f, 775.0f, on);
-            text_shrink(c, tr("Mods"), 1668.0f, baseline(755.0f, 40.0f, 18.0f),
+            toggle(c, 1792.0f, 778.0f, on);
+            text_shrink(c, tr("Mods"), 1668.0f, baseline(759.0f, 40.0f, 18.0f),
                         18.0f, gfx::mix(theme::kMeta, theme::kLimePale, on), 100.0f, Align::right);
         }
     }
