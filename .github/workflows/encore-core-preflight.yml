@@ -63,6 +63,7 @@ jobs:
           python3 -B tools/check-native-gpu-read-core-host.py
           python3 -B tools/check-native-guest-span-host.py
           python3 -B tools/check-native-guest-memory-coherence-host.py
+          python3 -B tools/check-native-gpu-span-range-host.py
           python3 -B tools/check-native-guest-write-span-host.py
           python3 -B tools/check-gpu-deferred-poststore-host.py
           python3 -B tools/check-deferred-native-bridge-contract.py
