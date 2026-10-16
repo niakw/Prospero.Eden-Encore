@@ -2255,6 +2255,8 @@ probes = {
          '    entries.emplace(key, std::move(entry));'),
     ],
     'vk_buffer_cache': [
+        # An inverted/clipped guest vertex-binding range must not wrap u32.
+        ("    const u32 min_binding = (std::min)(bindings.min_index, device_max);\n    const u32 max_binding = (std::min)(bindings.max_index, device_max);\n    const u32 binding_count = max_binding - min_binding;\n    if (binding_count == 0) {\n        return;\n    }", "    const u32 min_binding = (std::min)(bindings.min_index, device_max);\n    const u32 max_binding = (std::min)(bindings.max_index, device_max);\n    // Do not wrap a reversed binding range into a huge Vulkan binding count.\n    if (max_binding <= min_binding) {\n        return;\n    }\n    const u32 binding_count = max_binding - min_binding;"),
         # Incomplete quads and strips use the already-supported null index buffer.
         ("void BufferCacheRuntime::BindQuadIndexBuffer(PrimitiveTopology topology, u32 first, u32 count) {\n    if (count == 0) {", "void BufferCacheRuntime::BindQuadIndexBuffer(PrimitiveTopology topology, u32 first, u32 count) {\n    // A quad or quad strip requires four vertices for one primitive.\n    // Avoid creating a zero-size index LUT for incomplete draws.\n    if (count < 4) {"),
         # The first quad index LUT is a fresh buffer, not a resize of an in-flight
