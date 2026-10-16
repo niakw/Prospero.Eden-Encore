@@ -103,6 +103,8 @@ assert "flat_retail_sleeve(c, game, sleeve, false, 0.24f);" in library
 assert "const Rect paper{shell.x + (rear ? side : 0.0f), shell.y + top," in library
 assert "flat_back_fallback(c, game, paper);" in library
 assert "flat_front_fallback(c, game, paper);" in library
+assert "fit_fallback_art(c, game.cover, art);" in library
+assert "fit_fallback_art(c, game.hero, art);" in library
 assert "shell.y + shell.h - top" in library
 assert "s.press({Key::r1, Key::r1});" in (
     root / "headless/prosperoeden/host/preview_main.cpp").read_text()
