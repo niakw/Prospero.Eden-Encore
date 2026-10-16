@@ -369,6 +369,22 @@ assert shelf_bottom + 6.0 + 24.0 < detail_top
 assert (european_front_aspect / paper_aspect) > 0.95
 assert 'const Rect detail{72.0f, 620.0f, 1776.0f, 276.0f};' in library
 assert 'constexpr float shelf_y = 551.0f;' in library
+# The back-detail case adapts to the genuine rear scan instead of showing
+# the empty 181px-wide plastic substrate left of a narrower image.
+assert "const Cover back_scan = game->box_back.empty() ? Cover{} :" in library
+assert "const float rear_w = std::min(kRearMaxWidth," in library
+assert "const Rect art{280.0f - rear_w, 882.0f - rear_h, rear_w, rear_h};" in library
+assert 'tr("Down: view back cover")' not in library
+# No invented rear-side margin for representative portrait source ratios.
+for source_aspect in (0.50, 0.60, 0.615, 0.72, 0.90):
+    rear_h = min(247.0, (181.0 - 2.5) / source_aspect + 10.0)
+    paper_h = rear_h - 2.0 * max(5.0, rear_h * 0.018)
+    rear_w = min(181.0, paper_h * source_aspect + 2.5)
+    rim = min(5.0, max(1.75, rear_w * 0.012))
+    displayed_aspect = (rear_w - rim) / paper_h
+    assert abs(displayed_aspect / source_aspect - 1.0) < 0.015
+    assert 0 < rear_w <= 181 and 0 < rear_h <= 247
+
 # The 3D caps run the SAME 13px plastic skirt on either projected face.
 assert "float from_cap = min(v_st.y, 1.0 - v_st.y)" in shader
 assert "max(rim_intensity, cap_intensity)" in shader
