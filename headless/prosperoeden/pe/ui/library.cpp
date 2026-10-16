@@ -180,9 +180,9 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
 
     const std::string& scan = rear ? game.box_back : game.box_front;
     if (!scan.empty()) {
-        // Never crop a paper scan's banner, title, or top/bottom logos.
-        // Preserve its complete aspect ratio, with the hinge side touching
-        // the printed spine (front LEFT, back RIGHT) and square paper corners.
+        // Preserve the rear scan fully. The front fills the printable sleeve
+        // without stretching; trim small source margins rather than leaving
+        // a broad clear-plastic strip over the artwork.
         const Cover artwork = c.textures.cover(
             scan, std::max(paper.w, paper.h) * texture_scale);
         if (artwork.texture != 0) {
