@@ -50,6 +50,7 @@
 #ifdef PS5_NATIVE
 // Resolve the foreground console user's cached image only. This is a
 // read-only platform call; no account, PSN, registry or cache modification.
+extern "C" int sceUserServiceInitialize(void* params);
 extern "C" int sceUserServiceGetForegroundUser(std::int32_t* user_id);
 #endif
 
@@ -1430,8 +1431,12 @@ std::string EdenServices::profile_avatar() {
 #ifdef PS5_NATIVE
     // Do not scan another account's cache if the active-user lookup fails.
     // Query is deliberately issued on the launcher's background worker.
+    // The controller can already have initialized UserService; calling
+    // Initialize again must not cause it to be terminated underneath Pad.
+    (void)sceUserServiceInitialize(nullptr);
     std::int32_t user_id = -1;
-    if (sceUserServiceGetForegroundUser(&user_id) != 0 || user_id <= 0)
+    if (sceUserServiceGetForegroundUser(&user_id) != 0 ||
+        user_id == -1 || user_id == 0)
         return {};
 
     // PS5 local profile artwork is cached by foreground user ID. A local
