@@ -51,3 +51,6 @@ assert "VideoPresetForTitle(id" in src
 preview=(root/"headless/prosperoeden/host/preview_main.cpp").read_text()
 for filename in ("07-switch-game-options","08-switch-game-mods","09-switch-button-mapping"):
     assert filename in preview
+
+assert '!message.empty()&&warn?' in src, "stale confirmation must not tint normal modal hint red"
+assert 'text_shrink(c,tr("Back"),1230.0f' in src

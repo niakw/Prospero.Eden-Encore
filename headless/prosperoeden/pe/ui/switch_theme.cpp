@@ -171,8 +171,14 @@ void advanced_row(Canvas& c,float top,bool focus,const std::string& key,
 }
 void advanced_status(Canvas& c,const std::string& message,bool warn,
                      const char* fallback) {
+    // An old confirmation may leave message_warning_ true even when
+    // message_ is cleared. Ordinary actions must never inherit error red.
     text_shrink(c,message.empty()?tr(fallback):message,544,
-                baseline(840,68,20),20,warn?gfx::Color::rgb(0xb52733):kSubtle,825);
+                baseline(840,68,20),20,
+                !message.empty()&&warn?gfx::Color::rgb(0xb52733):kSubtle,530);
+    c.list.ring(1202.0f,877.0f,15.0f,2.0f,kSubtle);
+    text(c,"B",1202.0f,883.0f,18.0f,kInk,Align::center);
+    text_shrink(c,tr("Back"),1230.0f,884.0f,20.0f,kInk,138.0f);
 }
 std::string switch_default(const std::string& value) {
     return fill(tr("Default ({0})"),{value});
