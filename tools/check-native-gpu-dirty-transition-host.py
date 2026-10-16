@@ -25,7 +25,19 @@ fixed = """                    // A concurrent same-region CAS can extend the ma
                     back_buffer.emplace_back(tmp);
                     back_buffer.back() = current.exchange(t, std::memory_order_acq_rel);"""
 assert pinned.count(old.replace("\\n", "\n")) == 1
-assert maintained == pinned.replace(old.replace("\\n", "\n"), fixed)
+sentinel_before = """    bool IsValid(PAddr address) {
+        return address < (1ULL << 39);
+    }"""
+sentinel_after = """    bool IsValid(PAddr address) {
+        // The packed address is u32. Its all-ones default sentinel is always
+        // below 2^39, so the original range check took the mutex on EVERY
+        // first Collect after Gather and queued an empty transform.
+        return address != default_transform.address && address < (1ULL << 39);
+    }"""
+assert pinned.count(sentinel_before) == 1
+assert maintained == pinned.replace(old.replace("\\n", "\n"), fixed).replace(
+    sentinel_before, sentinel_after
+)
 assert 'set(EDEN_NATIVE_DIRTY_HEADER_ROOT' in cmake
 assert 'target_include_directories(core BEFORE PUBLIC "${EDEN_NATIVE_DIRTY_HEADER_ROOT}")' in cmake
 assert 'if(PS5_NATIVE)' in cmake.split('set(EDEN_NATIVE_DIRTY_HEADER_ROOT', 1)[0]
