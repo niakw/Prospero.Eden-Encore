@@ -1606,8 +1606,6 @@ msgid "Close"
 msgstr "ปิด"
 
 #: pe/ui/library.cpp
-msgid "Down: view back cover"
-msgstr "ลง: ดูปกหลัง"
 
 #: pe/ui/library.cpp
 msgid "Zoom out"
@@ -1728,3 +1726,39 @@ msgstr "เลือก · Encore / Switch. ซอฟต์แวร์ / กา
 #: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
 msgid "Choose the launcher interface without changing game or controller settings."
 msgstr "เลือก · หน้าจอ. ซอฟต์แวร์ / การควบคุม — ไม่เปลี่ยนแปลง."
+
+#: pe/ui/switch_theme.cpp
+msgid "About"
+msgstr "เกี่ยวกับ"
+
+#: pe/ui/switch_theme.cpp
+msgid "Multiplayer"
+msgstr "ผู้เล่นหลายคน"
+
+#: pe/ui/switch_theme.cpp
+msgid "Volume"
+msgstr "ระดับเสียง"
+
+#: pe/ui/switch_theme.cpp
+msgid "Controller profile"
+msgstr "โปรไฟล์ตัวควบคุม"
+
+#: pe/ui/switch_theme.cpp
+msgid "Cache"
+msgstr "แคช"
+
+#: pe/ui/switch_theme.cpp
+msgid "Manage"
+msgstr "จัดการ"
+
+#: pe/ui/switch_theme.cpp
+msgid "Open folders"
+msgstr "เปิดโฟลเดอร์"
+
+#: pe/ui/switch_theme.cpp
+msgid "Filter"
+msgstr "ตัวกรอง"
+
+#: pe/ui/switch_theme.cpp
+msgid "Eden Encore"
+msgstr "Eden Encore"

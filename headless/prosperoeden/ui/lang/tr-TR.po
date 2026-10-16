@@ -1606,8 +1606,6 @@ msgid "Close"
 msgstr "Kapat"
 
 #: pe/ui/library.cpp
-msgid "Down: view back cover"
-msgstr "Aşağı: arka kapağı göster"
 
 #: pe/ui/library.cpp
 msgid "Zoom out"
@@ -1728,3 +1726,39 @@ msgstr "Seç · Encore / Switch. yazılımlar / Kontroller — değişmedi."
 #: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
 msgid "Choose the launcher interface without changing game or controller settings."
 msgstr "Seç · arayüz. yazılımlar / Kontroller — değişmedi."
+
+#: pe/ui/switch_theme.cpp
+msgid "About"
+msgstr "Hakkında"
+
+#: pe/ui/switch_theme.cpp
+msgid "Multiplayer"
+msgstr "Çok oyunculu"
+
+#: pe/ui/switch_theme.cpp
+msgid "Volume"
+msgstr "Ses düzeyi"
+
+#: pe/ui/switch_theme.cpp
+msgid "Controller profile"
+msgstr "Kontrolcü profili"
+
+#: pe/ui/switch_theme.cpp
+msgid "Cache"
+msgstr "Önbellek"
+
+#: pe/ui/switch_theme.cpp
+msgid "Manage"
+msgstr "Yönet"
+
+#: pe/ui/switch_theme.cpp
+msgid "Open folders"
+msgstr "Klasörleri aç"
+
+#: pe/ui/switch_theme.cpp
+msgid "Filter"
+msgstr "Filtre"
+
+#: pe/ui/switch_theme.cpp
+msgid "Eden Encore"
+msgstr "Eden Encore"

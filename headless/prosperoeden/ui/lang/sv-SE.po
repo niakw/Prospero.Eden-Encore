@@ -1606,8 +1606,6 @@ msgid "Close"
 msgstr "Stäng"
 
 #: pe/ui/library.cpp
-msgid "Down: view back cover"
-msgstr "Ned: visa omslagets baksida"
 
 #: pe/ui/library.cpp
 msgid "Zoom out"
@@ -1728,3 +1726,39 @@ msgstr "Välj · Encore / Switch. programvara / Kontroller — oförändrade."
 #: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
 msgid "Choose the launcher interface without changing game or controller settings."
 msgstr "Välj · gränssnitt. programvara / Kontroller — oförändrade."
+
+#: pe/ui/switch_theme.cpp
+msgid "About"
+msgstr "Om"
+
+#: pe/ui/switch_theme.cpp
+msgid "Multiplayer"
+msgstr "Flerspelarläge"
+
+#: pe/ui/switch_theme.cpp
+msgid "Volume"
+msgstr "Volym"
+
+#: pe/ui/switch_theme.cpp
+msgid "Controller profile"
+msgstr "Kontrollprofil"
+
+#: pe/ui/switch_theme.cpp
+msgid "Cache"
+msgstr "Cache"
+
+#: pe/ui/switch_theme.cpp
+msgid "Manage"
+msgstr "Hantera"
+
+#: pe/ui/switch_theme.cpp
+msgid "Open folders"
+msgstr "Öppna mappar"
+
+#: pe/ui/switch_theme.cpp
+msgid "Filter"
+msgstr "Filter"
+
+#: pe/ui/switch_theme.cpp
+msgid "Eden Encore"
+msgstr "Eden Encore"
