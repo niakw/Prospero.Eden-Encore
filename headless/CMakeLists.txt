@@ -2604,6 +2604,18 @@ if(EDEN_PS5_OPENGL)
     string(REPLACE "    u64 pending_composite_fence{};" "    bool sync_requests_stopped{}; // Protected by sync_request_mutex.\n    u64 pending_composite_fence{};" gpu_source "${gpu_source}")
     string(REPLACE "        const u64 fence = ++last_sync_fence;" "        if (sync_requests_stopped) return CurrentSyncRequestFence();\n        const u64 fence = ++last_sync_fence;" gpu_source "${gpu_source}")
     string(REPLACE "return CurrentSyncRequestFence() >= fence;" "return sync_requests_stopped || CurrentSyncRequestFence() >= fence;" gpu_source "${gpu_source}")
+    # Queued CPU read flushes must own the download area's address range.
+    # If a worker failure makes WaitForSyncOperation throw, OnCPURead's
+    # stack unwinds while the callback can remain queued. Capturing the
+    # local raster_area by reference would leave a dangling reference.
+    set(gpu_read_capture_original "RequestSyncOperation([this, &raster_area]() {")
+    string(FIND "${gpu_source}" "${gpu_read_capture_original}" gpu_read_capture_at)
+    if(gpu_read_capture_at LESS 0)
+        message(FATAL_ERROR "Pinned GPU read callback lifetime changed")
+    endif()
+    string(REPLACE "${gpu_read_capture_original}"
+        "RequestSyncOperation([this, raster_area]() {"
+        gpu_source "${gpu_source}")
     # A worker exception can stop GPU ticks before a pending CPU fence is
     # acknowledged. The ordinary shutdown cancellation runs only after
     # joining that worker, and cannot rescue a guest already stuck on its
