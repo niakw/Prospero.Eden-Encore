@@ -153,10 +153,13 @@ void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
 void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
                         bool rear, float shadow, float texture_scale = 1.0f)
 {
-    // Fine edge on the opening ONLY: 2.2px on a 181px shelf jacket.
-    // Do not let a fixed 5px rim become a huge transparent column.
-    const float side = std::clamp(shell.w * 0.012f, 1.75f, 5.0f);
-    const float top = std::max(5.0f, shell.h * 0.018f);
+    // Keep the front nearly edge-to-edge: the retail scan should dominate
+    // the jacket, not an oversized clear-plastic strip on its right.
+    // The back retains its original print-preserving proportions.
+    const float side = rear ? std::clamp(shell.w * 0.012f, 1.75f, 5.0f)
+                            : std::clamp(shell.w * 0.006f, 0.9f, 2.0f);
+    const float top = rear ? std::max(5.0f, shell.h * 0.018f)
+                           : std::max(2.0f, shell.h * 0.008f);
     const float radius = std::max(5.0f, shell.w * 0.028f);
     // One continuous square-corner paper wrap, folded directly onto the
     // printed red spine: front touches its LEFT hinge, back its RIGHT hinge.
@@ -186,14 +189,29 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
             const float source = std::max(0.01f, artwork.aspect);
             const float target = paper.w / paper.h;
             Rect fitted = paper;
-            if (source > target) {
-                fitted.h = paper.w / source;
-                fitted.y += (paper.h - fitted.h) * 0.5f;
-            } else if (source < target) {
-                fitted.w = paper.h * source;
-                if (rear) fitted.x += paper.w - fitted.w;
+            Rect uv{0.0f, 0.0f, 1.0f, 1.0f};
+            if (rear) {
+                // The printed back is archival artwork: show its entire scan.
+                if (source > target) {
+                    fitted.h = paper.w / source;
+                    fitted.y += (paper.h - fitted.h) * 0.5f;
+                } else if (source < target) {
+                    fitted.w = paper.h * source;
+                    fitted.x += paper.w - fitted.w;
+                }
+            } else {
+                // The front is a cover tile: aspect-preserving fill instead
+                // of exposing a wide unprinted plastic band at its right.
+                // Crop the source UV evenly; never stretch the cover artwork.
+                if (source > target) {
+                    uv.w = target / source;
+                    uv.x = (1.0f - uv.w) * 0.5f;
+                } else if (source < target) {
+                    uv.h = source / target;
+                    uv.y = (1.0f - uv.h) * 0.5f;
+                }
             }
-            c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f},
+            c.list.image(artwork.texture, fitted, uv,
                          Color::rgb(0xffffff,
                                     tween::cubic_out(artwork.age / 0.22f)));
         } else {
@@ -229,7 +247,8 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
     const float opening_x = rear ? shell.x : shell.x + shell.w - side;
     const float opening_y = shell.y + top;
     const float opening_h = shell.h - 2.0f * top;
-    const float highlight_w = std::max(1.1f, side * 0.25f);
+    const float highlight_w = rear ? std::max(1.1f, side * 0.25f)
+                                   : std::min(side, std::max(0.5f, side * 0.30f));
     // Diffused body plus separate refractive outside highlight and darker
     // inner seal. Gradients reverse with the side, not with the scan UV.
     c.list.hgradient_rect({opening_x, opening_y, side, opening_h}, 0.0f,
@@ -1171,12 +1190,12 @@ void Launcher::draw_library(Canvas &c)
 
     // Five authentic portrait flat covers on a continuous shelf; no square
     // ROM thumbnails or 3D prefab images. The launcher handles depth alone.
-    constexpr float rail_x = 72.0f, rail_y = 205.0f, rail_w = 1776.0f;
-    constexpr float shelf_y = 498.0f;
+    constexpr float rail_x = 72.0f, rail_y = 204.0f, rail_w = 1776.0f;
+    constexpr float shelf_y = 513.0f;
     constexpr int slots = 5;
     constexpr float gap = 20.0f;
     constexpr float card_w = (rail_w - gap * (slots - 1)) / float(slots);
-    constexpr float sleeve_w = 181.0f, sleeve_h = 278.0f;
+    constexpr float sleeve_w = 218.0f, sleeve_h = 308.0f;
     list.shadow({rail_x + 3.0f, shelf_y, rail_w - 6.0f, 20.0f}, 9.0f,
                 25.0f, theme::kScrim.with_alpha(0.65f));
     list.gradient_rect({rail_x, shelf_y, rail_w, 7.0f}, 3.0f,
@@ -1195,9 +1214,9 @@ void Launcher::draw_library(Canvas &c)
             const float x = rail_x + float(slot) * (card_w + gap) +
                             (card_w - sleeve_w) * 0.5f;
             const Rect sleeve{x, rail_y, sleeve_w, sleeve_h};
-            list.push_transform(selected ? 1.045f : 1.0f,
+            list.push_transform(selected ? 1.025f : 1.0f,
                                 x + sleeve_w * 0.5f, rail_y + sleeve_h * 0.5f,
-                                0.0f, selected ? -6.0f : 0.0f);
+                                0.0f, selected ? -4.0f : 0.0f);
             list.shadow({x - 5.0f, rail_y - 4.0f, sleeve_w + 10.0f, sleeve_h + 13.0f},
                         8.0f, selected ? 30.0f : 17.0f,
                         theme::kScrim.with_alpha(0.72f));
