@@ -49,6 +49,10 @@ Launcher::Launcher(Services &services, Textures &textures, const Fonts &fonts, b
     version_ = services_.version();
     prefs_ = services_.preferences();
     clock_ = localized_clock(services_.clock(), services_.language_region(prefs_.language));
+    // Query platform user/cache only once; never block the render or input loop.
+    profile_avatar_scan_ = std::async(std::launch::async, [this] {
+        return services_.profile_avatar();
+    });
     apply_look();
     // Show the existing Home shell immediately; native recent-ROM metadata
     // comes from one background snapshot. This is NOT a failed setup state.
@@ -87,6 +91,8 @@ Launcher::~Launcher()
         media_scan_.wait();
     if (diagnostics_scan_.valid())
         diagnostics_scan_.wait();
+    if (profile_avatar_scan_.valid())
+        profile_avatar_scan_.wait();
 }
 
 std::vector<Cue> Launcher::take_cues()
@@ -396,6 +402,16 @@ void Launcher::update(float dt)
         }
     };
     textures_.pump(dt);
+    if (profile_avatar_scan_.valid() &&
+        profile_avatar_scan_.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+        try {
+            profile_avatar_path_ = profile_avatar_scan_.get();
+            if (!profile_avatar_path_.empty())
+                (void)textures_.cover(profile_avatar_path_, 56.0f);
+        } catch (...) {
+            profile_avatar_path_.clear();
+        }
+    }
     slow_stage("texture_upload", update_stage_begin);
     const auto media_started = std::chrono::steady_clock::now();
     finish_home_scan(); // nonblocking one-time Home application
@@ -644,17 +660,34 @@ void Launcher::draw_top_nav(Canvas &c, int active_tab, int focus_tab, float focu
         }
     }
 
-    // A neutral account glyph is intentional until console account imagery
-    // can be obtained through a verified, permitted platform service.
+    // Use the real foreground console profile when a readable local cache
+    // image exists; otherwise keep a neutral silhouette. No network request.
     constexpr float avatar_x = 1640.0f, avatar_y = 70.0f;
     list.rounded_rect({avatar_x - 27.0f, avatar_y - 27.0f, 54.0f, 54.0f},
                       27.0f, theme::kPanel.with_alpha(0.90f));
+    const Cover avatar = profile_avatar_path_.empty() ? Cover{} :
+        c.textures.cover(profile_avatar_path_, 54.0f);
+    if (avatar.texture != 0) {
+        Rect uv{0.0f, 0.0f, 1.0f, 1.0f};
+        const float aspect = std::max(0.01f, avatar.aspect);
+        if (aspect > 1.0f) {
+            uv.w = 1.0f / aspect;
+            uv.x = (1.0f - uv.w) * 0.5f;
+        } else if (aspect < 1.0f) {
+            uv.h = aspect;
+            uv.y = (1.0f - uv.h) * 0.5f;
+        }
+        list.rounded_image(avatar.texture,
+                           {avatar_x - 25.0f, avatar_y - 25.0f, 50.0f, 50.0f},
+                           uv, 25.0f, kWhite);
+    } else {
+        list.rounded_rect({avatar_x - 8.0f, avatar_y - 16.0f, 16.0f, 16.0f},
+                          8.0f, theme::kTitle.with_alpha(0.94f));
+        list.rounded_rect({avatar_x - 17.0f, avatar_y + 5.0f, 34.0f, 14.0f},
+                          7.0f, theme::kTitle.with_alpha(0.94f));
+    }
     list.ring(avatar_x, avatar_y, 26.0f, 1.8f,
               theme::kPanelEdge.with_alpha(0.88f));
-    list.rounded_rect({avatar_x - 8.0f, avatar_y - 16.0f, 16.0f, 16.0f},
-                      8.0f, theme::kTitle.with_alpha(0.94f));
-    list.rounded_rect({avatar_x - 17.0f, avatar_y + 5.0f, 34.0f, 14.0f},
-                      7.0f, theme::kTitle.with_alpha(0.94f));
 
     text(c, clock_, 1848.0f, baseline(42.0f, 54.0f, theme::kClock), theme::kClock,
          theme::kTitle, Align::right);
