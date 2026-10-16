@@ -91,6 +91,27 @@ std::string library_format(const std::string& format)
     return format.front() == '.' ? format : "." + format;
 }
 
+// Keep generic game artwork intact too when no genuine printed scan exists.
+// A fitted image can have narrow dark gutters, but cannot lose its own title.
+void fit_fallback_art(Canvas& c, const std::string& path, const Rect& bounds)
+{
+    const Cover image = c.textures.cover(path, std::max(bounds.w, bounds.h));
+    if (image.texture == 0)
+        return;
+    const float source = std::max(0.01f, image.aspect);
+    const float target = bounds.w / std::max(1.0f, bounds.h);
+    Rect fit = bounds;
+    if (source > target) {
+        fit.h = bounds.w / source;
+        fit.y += (bounds.h - fit.h) * 0.5f;
+    } else if (source < target) {
+        fit.w = bounds.h * source;
+        fit.x += (bounds.w - fit.w) * 0.5f;
+    }
+    c.list.image(image.texture, fit, {0.0f, 0.0f, 1.0f, 1.0f},
+                 Color::rgb(0xffffff, tween::cubic_out(image.age / 0.22f)));
+}
+
 // Native 2D jacket fallback only where no authentic retail scan exists.
 // The title/known art are displayed, never an invented rear scan or a 3D
 // prefabricated case. Supports both the shelf and the enlarged back view.
@@ -106,8 +127,8 @@ void flat_front_fallback(Canvas& c, const Game& game, const Rect& r)
                 r.w - 20.0f, Align::center);
     const Rect art{r.x + 3.0f, r.y + band + 3.0f,
                    r.w - 6.0f, r.h - band - std::max(38.0f, r.h * 0.19f) - 6.0f};
-    if (!game.cover.empty()) cover_crop(c, game.cover, art, 0.0f, 0.0f);
-    else if (!game.hero.empty()) cover_crop(c, game.hero, art, 2.0f, 0.0f);
+    if (!game.cover.empty()) fit_fallback_art(c, game.cover, art);
+    else if (!game.hero.empty()) fit_fallback_art(c, game.hero, art);
     c.list.gradient_rect({r.x, r.y + r.h - std::max(41.0f, r.h * 0.21f),
                           r.w, std::max(41.0f, r.h * 0.21f)}, 3.0f,
                          theme::kGlass.with_alpha(0.90f),
