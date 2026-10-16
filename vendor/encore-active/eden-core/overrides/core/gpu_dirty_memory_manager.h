@@ -94,7 +94,10 @@ private:
     constexpr static TransformAddress default_transform = {.address = ~0U, .mask = 0U};
 
     bool IsValid(PAddr address) {
-        return address < (1ULL << 39);
+        // The packed address is u32. Its all-ones default sentinel is always
+        // below 2^39, so the original range check took the mutex on EVERY
+        // first Collect after Gather and queued an empty transform.
+        return address != default_transform.address && address < (1ULL << 39);
     }
 
     template <typename T>
