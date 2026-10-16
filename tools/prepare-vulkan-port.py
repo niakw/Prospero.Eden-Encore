@@ -2250,6 +2250,8 @@ probes = {
          '    entries.emplace(key, std::move(entry));'),
     ],
     'vk_buffer_cache': [
+        # Incomplete quads and strips use the already-supported null index buffer.
+        ("void BufferCacheRuntime::BindQuadIndexBuffer(PrimitiveTopology topology, u32 first, u32 count) {\n    if (count == 0) {", "void BufferCacheRuntime::BindQuadIndexBuffer(PrimitiveTopology topology, u32 first, u32 count) {\n    // A quad or quad strip requires four vertices for one primitive.\n    // Avoid creating a zero-size index LUT for incomplete draws.\n    if (count < 4) {"),
         # The first quad index LUT is a fresh buffer, not a resize of an in-flight
         # buffer. Avoid a full-device Finish while both guest caches are locked.
         ("        { auto timer = Eden::Performance::VulkanTimer(7); scheduler.Finish(); }\n\n        num_indices = num_indices_;",

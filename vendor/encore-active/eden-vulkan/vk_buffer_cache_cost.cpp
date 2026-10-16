@@ -617,7 +617,9 @@ void BufferCacheRuntime::BindIndexBuffer(PrimitiveTopology topology, IndexFormat
 }
 
 void BufferCacheRuntime::BindQuadIndexBuffer(PrimitiveTopology topology, u32 first, u32 count) {
-    if (count == 0) {
+    // A quad or quad strip requires four vertices for one primitive.
+    // Avoid creating a zero-size index LUT for incomplete draws.
+    if (count < 4) {
         ReserveNullBuffer();
         scheduler.Record([this](vk::CommandBuffer cmdbuf) {
             cmdbuf.BindIndexBuffer(*null_buffer, 0, VK_INDEX_TYPE_UINT32);
