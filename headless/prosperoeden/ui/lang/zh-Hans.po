@@ -1606,8 +1606,6 @@ msgid "Close"
 msgstr "关闭"
 
 #: pe/ui/library.cpp
-msgid "Down: view back cover"
-msgstr "向下：查看封底"
 
 #: pe/ui/library.cpp
 msgid "Zoom out"
@@ -1728,3 +1726,39 @@ msgstr "选择 · Encore / Switch. 软件 / 操作 — 保持不变."
 #: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
 msgid "Choose the launcher interface without changing game or controller settings."
 msgstr "选择 · 界面. 软件 / 操作 — 保持不变."
+
+#: pe/ui/switch_theme.cpp
+msgid "About"
+msgstr "关于"
+
+#: pe/ui/switch_theme.cpp
+msgid "Multiplayer"
+msgstr "多人游戏"
+
+#: pe/ui/switch_theme.cpp
+msgid "Volume"
+msgstr "音量"
+
+#: pe/ui/switch_theme.cpp
+msgid "Controller profile"
+msgstr "控制器配置"
+
+#: pe/ui/switch_theme.cpp
+msgid "Cache"
+msgstr "缓存"
+
+#: pe/ui/switch_theme.cpp
+msgid "Manage"
+msgstr "管理"
+
+#: pe/ui/switch_theme.cpp
+msgid "Open folders"
+msgstr "打开文件夹"
+
+#: pe/ui/switch_theme.cpp
+msgid "Filter"
+msgstr "筛选"
+
+#: pe/ui/switch_theme.cpp
+msgid "Eden Encore"
+msgstr "Eden Encore"

@@ -1606,8 +1606,6 @@ msgid "Close"
 msgstr "Đóng"
 
 #: pe/ui/library.cpp
-msgid "Down: view back cover"
-msgstr "Xuống: xem mặt sau bìa"
 
 #: pe/ui/library.cpp
 msgid "Zoom out"
@@ -1728,3 +1726,39 @@ msgstr "Chọn · Encore / Switch. phần mềm / Điều khiển — không đ�
 #: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
 msgid "Choose the launcher interface without changing game or controller settings."
 msgstr "Chọn · giao diện. phần mềm / Điều khiển — không đổi."
+
+#: pe/ui/switch_theme.cpp
+msgid "About"
+msgstr "Giới thiệu"
+
+#: pe/ui/switch_theme.cpp
+msgid "Multiplayer"
+msgstr "Nhiều người chơi"
+
+#: pe/ui/switch_theme.cpp
+msgid "Volume"
+msgstr "Âm lượng"
+
+#: pe/ui/switch_theme.cpp
+msgid "Controller profile"
+msgstr "Hồ sơ tay cầm"
+
+#: pe/ui/switch_theme.cpp
+msgid "Cache"
+msgstr "Bộ nhớ đệm"
+
+#: pe/ui/switch_theme.cpp
+msgid "Manage"
+msgstr "Quản lý"
+
+#: pe/ui/switch_theme.cpp
+msgid "Open folders"
+msgstr "Mở thư mục"
+
+#: pe/ui/switch_theme.cpp
+msgid "Filter"
+msgstr "Bộ lọc"
+
+#: pe/ui/switch_theme.cpp
+msgid "Eden Encore"
+msgstr "Eden Encore"
