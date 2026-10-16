@@ -64,6 +64,52 @@ and pre-existing host JIT harness) are checked by
 means its assumptions still match and the bridge is correctly blocked; it
 does not prove GPU/CPU synchronization or runtime JIT correctness.
 
+## Concrete scoped producers and first-tracking hazard
+
+The scoped template in `core/guest_memory.h` is not tied to one
+producer domain. Actual writable GPU-side instantiations are present:
+
+| Consumer | Scoped write flag | Ownership / cache path |
+| --- | --- | --- |
+| `video_core/engines/engine_upload.cpp` | `SafeReadCachedWrite` | GPU upload swizzle; contiguous mapped span may be modified in place |
+| `video_core/engines/maxwell_dma.cpp` | `SafeReadCachedWrite`, `UnsafeReadCachedWrite` | GPU DMA linear/tiled copies; explicit `SetAddressAndSize()` changes the eventual destination in some paths |
+| `video_core/engines/sw_blitter/blitter.cpp` | `SafeReadWrite` | GPU software blit into a writable destination |
+| `video_core/host1x/vic.cpp` | `SafeWrite` | GPU video processing output |
+
+All these aliases use `Tegra::MemoryManager` through
+`GpuGuestMemoryScoped` and are **GPU engine producers**, not proof of
+an uncaptured CPU/JIT store. `Tegra::MemoryManager::GetSpan()`
+returns its mapped backing pointer via `memory.GetSpan()`.
+With a mapped span, `GuestMemoryScoped` performs a **post-write
+`InvalidateRegion()`**, not an ordered CPU reserve/store/publish.
+Fallback copies may instead use `WriteBlockCached()`, which writes
+through to RAM and records the invalidate in `accumulator`; its
+`FlushCaching()` drains the accumulator. The native bridge must
+preserve GPU command order and cache visibility; it must **not**
+automatically classify these GPU-engine writes as CPU transaction
+producers. The inventory is not exhaustive for CPU-side writable
+`GuestMemory` users; further call-site qualification is required.
+
+The more serious native page-transition gap is independent of the
+above GPU engine aliases: `RasterizerMarkRegionCached()` calls
+`host_buffer->Protect()` **before** it marks the PTE. The A32
+`HostMemory::Protect()` function updates the checked access map
+under its own mutex, but a JIT instruction tests that map without
+taking the mutex. A previously passed guard can therefore proceed
+with a direct store while protection/marking is happening. This
+source sequence does not contain an **in-flight JIT writer quiescence
+barrier** before the page becomes GPU-visible. The pre-existing
+`StressFastmemA32()` verifies eventual RAM values under flips; it
+does not assert a per-write callback/notification happened before
+the GPU first used a newly cached page.
+
+Before #187 can be activated, prove a transition protocol satisfying
+both invariants: (a) no untracked direct CPU write still races when a
+page becomes GPU-tracked, and (b) every later tracked write is ordered
+against the GPU consumer. Avoid broad per-instruction locking. A
+candidate epoch/safepoint scheme must have measured cost and a
+concrete memory-model proof before being implemented in native code.
+
 ## Required transaction for an intercepted GPU-tracked store
 
 ```text
@@ -103,7 +149,7 @@ notification ordering does not repair missing producers.
 | A32/A64 cached page through page-table JIT | Generated lookup routes marked stores to callbacks; verify current host execution results and temporal ordering | Source and pre-existing synthetic JIT test coverage; not rerun here |
 | A32 checked fastmem (A64 native has no arena) | Access-byte map selects direct/fallback; test marked, vector, crossing and exclusive cases | Source and pre-existing A32 host JIT test coverage; no new execution claim |
 | Dynamic page transition | Prove no untracked in-flight store can overlap first GPU-cache use; inspect ordering of access-byte protection and PTE marking | Existing A32 concurrent stress test checks backing values; no GPU coherency proof |
-| Writable `GuestMemory` aliases | Classify live users of mutable spans; guarantee lifetime + post-store notification or prohibit direct alias on tracked pages | Not demonstrated |
+| Writable `GuestMemory` aliases | Distinguish GPU engine aliases from CPU-side producers; preserve post-write invalidation and FIFO visibility | GPU DMA/upload/blitter/VIC owners identified, CPU-side call sites not exhausted |
 | Conditional/atomic write | Device-to-CPU read fence, FIFO predecessor wait, CAS success/failure, exactly-once outcome | Host protocol modeled, not joined to native code |
 | GPU work and dirty collection | Confirm no GPU consumer overtakes unpublished writes and that cache invalidation/dirty collection are properly ordered | Not demonstrated |
 | x86-64 build NCE applicability | Conditional compilation in CMake | Excluded under current settings |
