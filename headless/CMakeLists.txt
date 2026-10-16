@@ -1226,6 +1226,20 @@ if(PS5_NATIVE)
     if(NOT unmapped_count EQUAL 11)
         message(FATAL_ERROR "Pinned unmapped memory error sites changed: ${unmapped_count} != 11")
     endif()
+    # GPUDirtyMemoryManager::BuildTransform has a 32-bit mask of 64-byte
+    # cells (2 KiB). HandleRasterizerWrite may pass a whole 4 KiB page.
+    # Split before Collect, keeping the vendored code unchanged.
+    set(eden_dirty_raw "            gpu_dirty_managers[core].Collect(address, size);")
+    string(FIND "${eden_cpu_memory}" "${eden_dirty_raw}" eden_dirty_at)
+    if(eden_dirty_at LESS 0)
+        message(FATAL_ERROR "Pinned native GPUDirty Collect call changed")
+    endif()
+    string(REPLACE "${eden_dirty_raw}" [=[
+            ::Eden::GpuDirty::ForEachRegion(address, size,
+                [&](std::uint64_t subaddress, std::uint64_t span) {
+                    gpu_dirty_managers[core].Collect(subaddress, span);
+                });]=] eden_cpu_memory "${eden_cpu_memory}")
+    string(PREPEND eden_cpu_memory "#include \"${EDEN_PORT_DIR}/gpu_dirty_region_split.h\"\n")
     set(eden_native_memory_tu "${PORT_BUILD_DIR}/memory-ps5.cpp")
     write_derived("${eden_native_memory_tu}"
         "#include \"${EDEN_PORT_DIR}/performance.h\"\n${eden_cpu_memory}")
