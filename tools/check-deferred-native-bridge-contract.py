@@ -302,9 +302,10 @@ include("__BRIDGE__")
     assert guest.count("ScopedGuestStoreIntent store_intent;") == 5
     block=guest.split("bool WriteBlockImpl(",1)[1].split("bool ZeroBlock(",1)[0]
     assert block.index("ScopedGuestStoreIntent store_intent;") < block.index("HandleRasterizerWrite(")
-    assert block.index("HandleRasterizerWrite(") < block.index(
+    tracked_store=block.split("ScopedGuestStoreIntent store_intent;",1)[1]
+    assert tracked_store.index("HandleRasterizerWrite(") < tracked_store.index(
         "std::memcpy(ptr, reinterpret_cast<u8 const*>(buffer) + offset, copy_amount);")
-    assert block.index("std::memcpy(ptr, reinterpret_cast<u8 const*>(buffer) + offset, copy_amount);") < block.index(
+    assert tracked_store.index("std::memcpy(ptr, reinterpret_cast<u8 const*>(buffer) + offset, copy_amount);") < tracked_store.index(
         "} else {")
     assert block.count("std::memcpy(ptr, reinterpret_cast<u8 const*>(buffer) + offset, copy_amount);") == 3
     zero=guest.split("bool ZeroBlock(",1)[1].split("bool CopyBlock(",1)[0]
