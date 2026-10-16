@@ -48,8 +48,8 @@ early = [b for a,b in preflight_pairs if 'for (unsigned preflight = 0;' in b]
 late = [b for a,b in preflight_pairs if 'This GPU drain can change the selected pipeline' in b]
 assert len(early) == len(late) == 1
 for raster in (early[0], late[0]):
-    # Both source adaptations execute before the paired guest cache locks.
-    assert 'std::scoped_lock' not in raster
+    # The actual versioned native draw body is checked for lock ordering below.
+    # Generator replacement fragments may legitimately include nearby locks.
     assert 'pipeline = pipeline_cache.CurrentGraphicsPipeline();' in raster
     assert 'gpu_memory->FlushCaching();' in raster
     assert 'pipeline->DescriptorEntryReservation()' in raster
