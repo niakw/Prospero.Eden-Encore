@@ -405,6 +405,8 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {'''),
     ("    gpu_memory->FlushCaching();\n\n    ComputePipeline* const pipeline{pipeline_cache.CurrentComputePipeline()};",
      "    gpu_memory->FlushCaching();\n#ifdef PS5_NATIVE\n    // Compute Configure runs under both guest cache locks. Drain the common\n    // descriptor queue overflow BEFORE taking those locks, exactly as Draw.\n    // The GPU worker may publish guest invalidations while it drains.\n    if (guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); })) {\n        gpu_memory->FlushCaching();\n    }\n#endif\n\n    ComputePipeline* const pipeline{pipeline_cache.CurrentComputePipeline()};"),
 
+    ("    ComputePipeline* const pipeline{pipeline_cache.CurrentComputePipeline()};\n    if (!pipeline) {\n        return;\n    }\n    SCOPE_EXIT { SyncProbe(scheduler, \"dispatch\", pipeline); };\n    std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};",
+     "    ComputePipeline* pipeline{pipeline_cache.CurrentComputePipeline()};\n    if (!pipeline) {\n        return;\n    }\n#ifdef PS5_NATIVE\n    // Compute always allocates new descriptor-buffer space for a dispatch.\n    // Drain only necessary GPU fences while neither guest cache is locked.\n    // Worker drains can publish guest shader/descriptor invalidations.\n    for (unsigned preflight = 0; preflight != 2; ++preflight) {\n        if (!guest_descriptor_queue.PreflightLargeGuestDraw(\n                [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation()))\n            break;\n        gpu_memory->FlushCaching();\n        pipeline = pipeline_cache.CurrentComputePipeline();\n        if (!pipeline) return;\n    }\n    if (pipeline->CanUseDescriptorBuffer() &&\n        descriptor_buffer_ring.PreflightFrameReuse(scheduler)) {\n        gpu_memory->FlushCaching();\n        pipeline = pipeline_cache.CurrentComputePipeline();\n        if (!pipeline) return;\n        if (guest_descriptor_queue.PreflightLargeGuestDraw(\n                [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation())) {\n            gpu_memory->FlushCaching();\n            pipeline = pipeline_cache.CurrentComputePipeline();\n            if (!pipeline) return;\n        }\n    }\n    if (descriptor_buffer_ring.PreflightCapacity(\n            scheduler, pipeline->DescriptorRingPreflightSize())) {\n        gpu_memory->FlushCaching();\n        pipeline = pipeline_cache.CurrentComputePipeline();\n        if (!pipeline) return;\n        if (guest_descriptor_queue.PreflightLargeGuestDraw(\n                [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation())) {\n            gpu_memory->FlushCaching();\n            pipeline = pipeline_cache.CurrentComputePipeline();\n            if (!pipeline) return;\n        }\n    }\n#endif\n    SCOPE_EXIT { SyncProbe(scheduler, \"dispatch\", pipeline); };\n    std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};"),
 ])
 # Host conditional rendering (VK_EXT_conditional_rendering, dev_vulkan.h hcr_mode): count each
 # decision (EDEN_DEV_GUEST cond= slots 13-19); hcr=exact sends the conditions Eden would draw
@@ -1622,6 +1624,15 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass, VkPipelineCreateFl
 
 # These costs sit outside vkCreateGraphicsPipelines: guest shader translation,
 # worker readiness, and background serialization can block different threads.
+# Native compute gets public immutable descriptors for pre-lock preflights.
+# The upstream header has no tracked fork; keep the ABI-preserving edit in
+# the pinned generated copy used alongside vk_compute_pipeline_cost.cpp.
+adapt('src/video_core/renderer_vulkan/vk_compute_pipeline.h',
+      'include/video_core/renderer_vulkan/vk_compute_pipeline.h', [
+    ("    bool IsBound() const noexcept {\n        return static_cast<bool>(pipeline);\n    }",
+     "#ifdef PS5_NATIVE\n    [[nodiscard]] bool CanUseDescriptorBuffer() const noexcept {\n        return uses_descriptor_buffer;\n    }\n    [[nodiscard]] size_t DescriptorEntryReservation() const noexcept {\n        return num_descriptor_entries != 0 ? num_descriptor_entries : 0x400;\n    }\n    [[nodiscard]] VkDeviceSize DescriptorRingPreflightSize() const noexcept {\n        // Unlike graphics, every descriptor-buffer compute dispatch allocates.\n        return uses_descriptor_buffer ? descriptor_buffer_layout.size : 0;\n    }\n#endif\n    bool IsBound() const noexcept {\n        return static_cast<bool>(pipeline);\n    }"),
+])
+
 for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
     replacements = [
         ('#include <algorithm>', '#include <algorithm>\n#include "performance.h"'),

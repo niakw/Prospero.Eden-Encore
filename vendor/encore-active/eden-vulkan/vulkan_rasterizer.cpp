@@ -798,10 +798,47 @@ void RasterizerVulkan::DispatchCompute() {
     }
 #endif
 
-    ComputePipeline* const pipeline{pipeline_cache.CurrentComputePipeline()};
+    ComputePipeline* pipeline{pipeline_cache.CurrentComputePipeline()};
     if (!pipeline) {
         return;
     }
+#ifdef PS5_NATIVE
+    // Compute always allocates new descriptor-buffer space for a dispatch.
+    // Drain only necessary GPU fences while neither guest cache is locked.
+    // Worker drains can publish guest shader/descriptor invalidations.
+    for (unsigned preflight = 0; preflight != 2; ++preflight) {
+        if (!guest_descriptor_queue.PreflightLargeGuestDraw(
+                [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation()))
+            break;
+        gpu_memory->FlushCaching();
+        pipeline = pipeline_cache.CurrentComputePipeline();
+        if (!pipeline) return;
+    }
+    if (pipeline->CanUseDescriptorBuffer() &&
+        descriptor_buffer_ring.PreflightFrameReuse(scheduler)) {
+        gpu_memory->FlushCaching();
+        pipeline = pipeline_cache.CurrentComputePipeline();
+        if (!pipeline) return;
+        if (guest_descriptor_queue.PreflightLargeGuestDraw(
+                [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation())) {
+            gpu_memory->FlushCaching();
+            pipeline = pipeline_cache.CurrentComputePipeline();
+            if (!pipeline) return;
+        }
+    }
+    if (descriptor_buffer_ring.PreflightCapacity(
+            scheduler, pipeline->DescriptorRingPreflightSize())) {
+        gpu_memory->FlushCaching();
+        pipeline = pipeline_cache.CurrentComputePipeline();
+        if (!pipeline) return;
+        if (guest_descriptor_queue.PreflightLargeGuestDraw(
+                [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation())) {
+            gpu_memory->FlushCaching();
+            pipeline = pipeline_cache.CurrentComputePipeline();
+            if (!pipeline) return;
+        }
+    }
+#endif
     SCOPE_EXIT { SyncProbe(scheduler, "dispatch", pipeline); };
     std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};
     if (!pipeline->Configure(*kepler_compute, *gpu_memory, scheduler, buffer_cache,
