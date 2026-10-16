@@ -110,7 +110,7 @@ void Launcher::draw_switch_home(Canvas& c) {
     auto& list=c.list;
     const int count=switch_recent_count(home_);
     const int focus=std::clamp(switch_home_focus_,0,kHomeShortcutFirst+kHomeShortcuts-1);
-    const float tile=252.0f,pitch=276.0f,start=90.0f,top=336.0f;
+    const float tile=226.0f,pitch=250.0f,start=85.0f,top=336.0f;
     const char *placeholder=tr("All Software");
     for(int i=0;i<count;++i){
         const auto& g=home_.recents[static_cast<std::size_t>(i)];

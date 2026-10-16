@@ -139,6 +139,24 @@ struct Stage
 
 void pictures(Stage &s)
 {
+    if (const char* mode = std::getenv("PE_PREVIEW_SWITCH_THEME");
+        mode != nullptr && std::strcmp(mode, "1") == 0) {
+        s.restart(false);
+        s.wait(1.5f);
+        s.shoot("00-switch-home");
+        s.press({Key::down, Key::cross});
+        s.wait(1.5f);
+        s.shoot("01-switch-all-software");
+        s.press({Key::circle});
+        s.wait(0.5f);
+        s.press({Key::down, Key::right, Key::right, Key::right, Key::cross});
+        s.wait(0.5f);
+        s.shoot("02-switch-settings");
+        s.press({Key::down, Key::down, Key::down, Key::down, Key::cross});
+        s.wait(0.3f);
+        s.shoot("03-switch-appearance");
+        return;
+    }
     // Independently verify the game's real launch transition using the same
     // original C++ draw list, EGL context and shader backend as Home. This
     // takes *screenshots*, not image synthesis or a mock-up of the layout.
@@ -617,6 +635,12 @@ int main(int argc, char **argv)
         preferences.large_text = names.find("large") != std::string_view::npos;
         preferences.high_contrast = names.find("contrast") != std::string_view::npos;
         preferences.reduce_motion = names.find("calm") != std::string_view::npos;
+        services.set_preferences(preferences);
+    }
+    if (const char *mode = std::getenv("PE_PREVIEW_SWITCH_THEME");
+        mode != nullptr && std::strcmp(mode, "1") == 0) {
+        pe::ui::Preferences preferences = services.preferences();
+        preferences.ui_theme = 1;
         services.set_preferences(preferences);
     }
     pe::ui::Textures textures(batch, services);
