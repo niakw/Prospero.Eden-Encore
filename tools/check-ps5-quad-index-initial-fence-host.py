@@ -18,20 +18,9 @@ start = cost.index("void UpdateBuffer(u32 num_indices_)")
 end = cost.index("\n    void BindBuffer(",start)
 method = cost[start:end]
 assert method.count("scheduler.Finish();") == 1
-assert method.index("if (num_indices_ <= num_indices)") < method.index(
-    "if (buffer && !scheduler.IsFree(last_use_tick))")
-assert method.index("if (buffer && !scheduler.IsFree(last_use_tick))") < method.index(
-    "scheduler.Finish();") < method.index("num_indices = num_indices_;")
-assert "last_use_tick = scheduler.CurrentTick();" in method
-bind = cost[cost.index("void BindBuffer(u32 first) {"):cost.index("\nprotected:",end)]
-assert bind.count("last_use_tick = scheduler.CurrentTick();") == 1
-assert bind.index("scheduler.Record(") < bind.index("last_use_tick = scheduler.CurrentTick();")
-assert "u64 last_use_tick{};" in cost
-master=(root / "vendor/sources/eden/src/video_core/renderer_vulkan/vk_master_semaphore.h").read_text()
-scheduler_header=(root / "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_scheduler.h").read_text()
-assert "return KnownGpuTick() >= tick;" in master
-assert "return current_tick.fetch_add(1, std::memory_order_release);" in master
-assert "return master_semaphore->IsFree(tick);" in scheduler_header
+assert method.index("if (num_indices_ <= num_indices)") < method.index("if (buffer)")
+assert method.index("if (buffer)") < method.index("scheduler.Finish();") < method.index(
+    "num_indices = num_indices_;")
 assert method.count("memory_allocator.CreateBuffer(") == 1
 assert "buffer = memory_allocator.CreateBuffer(" in method
 assert "scheduler.Record([src_buffer = staging.buffer" in method
@@ -63,9 +52,7 @@ assert "('vk_buffer_cache', 7, 3)" in oracle
 
 # Reuse the source EXACT guard in an independent host fixture. No GPU is
 # needed to prove an absent VkBuffer requires no lifetime fence.
-guard=after[after.index("        if (buffer && !scheduler.IsFree(last_use_tick)) {"):
-            after.index("\n\n        num_indices",after.index(
-                "        if (buffer && !scheduler.IsFree(last_use_tick)) {"))]
+guard=after[after.index("        if (buffer) {"):after.index("\n\n        num_indices",after.index("        if (buffer) {"))]
 cpp=r"""
 #include <cassert>
 #include <cstdint>
@@ -75,11 +62,7 @@ struct VulkanTimer {explicit VulkanTimer(int) {} ~VulkanTimer() {}};
 }
 struct Scheduler {
     unsigned finishes=0;
-    std::uint64_t current_tick=1;
-    std::uint64_t gpu_tick=0;
-    void Finish() {++finishes; gpu_tick=current_tick++;}
-    bool IsFree(std::uint64_t tick) const {return gpu_tick>=tick;}
-    std::uint64_t CurrentTick() const {return current_tick;}
+    void Finish() {++finishes;}
 };
 struct Buffer {
     bool valid=false;
@@ -89,14 +72,11 @@ struct LUT {
     Buffer buffer{};
     u32 num_indices=0;
     Scheduler& scheduler;
-    std::uint64_t last_use_tick=0;
-    void BindBuffer() { last_use_tick=scheduler.CurrentTick(); }
     void UpdateBuffer(u32 num_indices_) {
         if (num_indices_ <= num_indices) return;
 __GUARD__
         num_indices=num_indices_;
         buffer.valid=true; // the newly created VkBuffer
-        last_use_tick=scheduler.CurrentTick();
     }
 };
 int main() {
@@ -115,22 +95,6 @@ int main() {
     assert(scheduler.finishes==1);
     second.UpdateBuffer(256);
     assert(scheduler.finishes==2);
-
-    Scheduler completed;
-    completed.current_tick=7;
-    LUT recycled{{},0,completed};
-    recycled.UpdateBuffer(16);
-    completed.gpu_tick=7;
-    recycled.UpdateBuffer(32); // old GPU tick is already completed
-    assert(completed.finishes==0 && recycled.num_indices==32);
-    completed.current_tick=8;
-    recycled.BindBuffer(); // fresh use makes the old buffer in flight
-    assert(recycled.last_use_tick==8 && !completed.IsFree(recycled.last_use_tick));
-    recycled.UpdateBuffer(64);
-    assert(completed.finishes==1 && recycled.num_indices==64);
-    completed.gpu_tick=completed.CurrentTick();
-    recycled.UpdateBuffer(128);
-    assert(completed.finishes==1 && recycled.num_indices==128);
 }
 """.replace("__GUARD__",guard)
 cc=shutil.which("clang++-18") or shutil.which("clang++")
@@ -142,4 +106,4 @@ with tempfile.TemporaryDirectory(prefix="encore-quad-lut-fence-") as temp:
                     "-fsanitize=address,undefined","-fno-sanitize-recover=all",
                     str(src),"-o",str(binary)],check=True,timeout=45)
     subprocess.run([str(binary)],check=True,timeout=30)
-print("QUAD_INDEX_INITIAL_FENCE_HOST_PASS first_no_wait=2 resize_wait=2 stable_no_wait=2 completed_tick_no_wait=2 in_flight_bind_wait=1")
+print("QUAD_INDEX_INITIAL_FENCE_HOST_PASS first_no_wait=2 resize_wait=2 stable_no_wait=2")
