@@ -35,6 +35,10 @@ for call in ('draw_top_nav(c, 0','draw_top_nav(c, 1','draw_top_nav(c, 3'):
     assert call in home+library+settings, call
 assert 'list.hgradient_rect(r, 19.0f' in launcher
 assert 'theme::kFocusBlue.with_alpha(0.96f)' in launcher
+assert 'static constexpr const char* labels[] = {TR("Home"), TR("Library"), TR("Recent")};' in launcher
+assert 'settings_gear(c, gx, gy, 19.0f, ink);' in launcher
+assert 'constexpr float avatar_x = 1640.0f, avatar_y = 70.0f;' in launcher
+assert 'localized_clock(services_.clock(), services_.language_region(prefs_.language))' in launcher
 assert 'list.image(c.textures.brand(), {56.0f, 17.0f, 110.0f, 110.0f}' in launcher
 
 # Home composition and controller-first navigation.
@@ -105,7 +109,10 @@ assert 'card_w = (available - gap * 6.0f) / 7.0f' in recent_block
 # The library now shows a 5-slot, controller-navigated retail sleeve shelf.
 # Check the real geometry and navigation instead of a retired comment.
 assert 'constexpr int slots = 5;' in library
-assert 'constexpr float rail_x = 72.0f, rail_y = 205.0f, rail_w = 1776.0f;' in library
+assert 'constexpr float rail_x = 72.0f, rail_y = 204.0f, rail_w = 1776.0f;' in library
+assert 'constexpr float sleeve_w = 218.0f, sleeve_h = 308.0f;' in library
+assert 'const float side = rear ? std::clamp(shell.w * 0.012f, 1.75f, 5.0f)' in library
+assert 'uv.w = target / source;' in library and 'uv.h = source / target;' in library
 assert 'flat_retail_sleeve(c, game, sleeve, false, 0.24f);' in library
 assert 'flat_retail_sleeve(c, *game, art, true, 0.60f);' in library
 assert 'flat_retail_sleeve(c, *game, enlarged, true, 0.92f,' in library
