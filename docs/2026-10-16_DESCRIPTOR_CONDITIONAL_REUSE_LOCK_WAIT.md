@@ -27,6 +27,25 @@ It confirms that the original fallback calls `Finish` while locked, and
 also verifies the successful pre-drain path when generation mismatch
 makes a new allocation certain.
 
+## Native capability and release build gate
+
+The release recipe in `tools/build-package.sh` selects
+`EDEN_PS5_VULKAN=ON EDEN_VULKAN_DRIVER=RADV`. The active vendored RADV source
+(`vendor/encore-active/ps5-mesa/src/amd/vulkan/radv_physical_device.c`)
+advertises `EXT_descriptor_buffer = true` and `descriptorBuffer = true`.
+The native application's `headless/dev_vulkan.h` defaults
+`disable_descriptor_buffer` to `false`, including the title reset.
+The Vulkan device adapter retains the feature when supported by the
+selected physical device, and ring initialization also requires buffer
+device address support and usable host-visible/coherent memory.
+
+The host witness now pins this production source path. Thus the unsafe
+fallback is *source-reachable* on the configured driver, not merely a
+desktop-only code path. It is **not** proof that the feature was enabled
+on a particular boot or that a game's descriptors exhausted the ring.
+Runtime extension negotiation, ring allocation and per-game use remain
+unmeasured. No new console execution is requested.
+
 ## Engineering trade-off
 
 Finishing the GPU unconditionally whenever the ring is full would avoid
