@@ -42,7 +42,11 @@ methods = header[begin:end]
 assert methods.count('wait_worker();') == 2
 assert 'entries >= frame_payload_size' in methods
 raster_pairs = pairs_for('src/video_core/renderer_vulkan/vk_rasterizer.cpp')
-preflight_pairs = [(a,b) for a,b in raster_pairs if 'PreflightLargeGuestDraw(' in b]
+# New compute dispatches also preflight large guest descriptors. R325 only
+# reconstructs the ORIGINAL graphics preparation contract.
+preflight_pairs = [(a,b) for a,b in raster_pairs
+                   if 'PreflightLargeGuestDraw(' in b
+                   and 'pipeline_cache.CurrentGraphicsPipeline()' in b]
 assert len(preflight_pairs) == 2
 early = [b for a,b in preflight_pairs if 'for (unsigned preflight = 0;' in b]
 late = [b for a,b in preflight_pairs if 'This GPU drain can change the selected pipeline' in b]
