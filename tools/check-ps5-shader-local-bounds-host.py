@@ -45,7 +45,7 @@ struct Value32 {
 using U32=Value32;
 struct U1 {bool value{};};
 struct IREmitter {
-    std::array<u32,8> memory{11,22,33,44,55,66,77,88};
+    std::array<u32,4> memory{11,22,33,44};
     u32 reads{},writes{};
     U32 Imm32(u32 n){return {n,true};}
     U1 ILessThan(U32 a,U32 b,bool){return {a.value<b.value};}
