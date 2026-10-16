@@ -205,6 +205,9 @@ class Launcher
     std::chrono::steady_clock::time_point last_ui_hotspot_report_{};
     std::string clock_;
     std::string version_;
+    // Profile cache discovery is I/O and runs once outside the render thread.
+    std::future<std::string> profile_avatar_scan_;
+    std::string profile_avatar_path_;
 
     // navigation
     Screen screen_ = Screen::home;
