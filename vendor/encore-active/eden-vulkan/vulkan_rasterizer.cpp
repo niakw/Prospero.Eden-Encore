@@ -789,6 +789,14 @@ void RasterizerVulkan::DispatchCompute() {
     }
 #endif
     gpu_memory->FlushCaching();
+#ifdef PS5_NATIVE
+    // Compute Configure runs under both guest cache locks. Drain the common
+    // descriptor queue overflow BEFORE taking those locks, exactly as Draw.
+    // The GPU worker may publish guest invalidations while it drains.
+    if (guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); })) {
+        gpu_memory->FlushCaching();
+    }
+#endif
 
     ComputePipeline* const pipeline{pipeline_cache.CurrentComputePipeline()};
     if (!pipeline) {

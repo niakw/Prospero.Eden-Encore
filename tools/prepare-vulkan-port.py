@@ -402,6 +402,9 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {'''),
     ('        const bool is_instanced{regs.vertex_stream_instances.IsInstancingEnabled(binding)};\n',
      '        const bool is_instanced{regs.vertex_stream_instances.IsInstancingEnabled(binding) &&\n'
      '                                input_binding.frequency != 0};\n'),
+    ("    gpu_memory->FlushCaching();\n\n    ComputePipeline* const pipeline{pipeline_cache.CurrentComputePipeline()};",
+     "    gpu_memory->FlushCaching();\n#ifdef PS5_NATIVE\n    // Compute Configure runs under both guest cache locks. Drain the common\n    // descriptor queue overflow BEFORE taking those locks, exactly as Draw.\n    // The GPU worker may publish guest invalidations while it drains.\n    if (guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); })) {\n        gpu_memory->FlushCaching();\n    }\n#endif\n\n    ComputePipeline* const pipeline{pipeline_cache.CurrentComputePipeline()};"),
+
 ])
 # Host conditional rendering (VK_EXT_conditional_rendering, dev_vulkan.h hcr_mode): count each
 # decision (EDEN_DEV_GUEST cond= slots 13-19); hcr=exact sends the conditions Eden would draw
