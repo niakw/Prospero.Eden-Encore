@@ -23,7 +23,21 @@ old = "extent.height = MAX2(extent.width, pdev->info.gfx_level >= GFX12 ? 128 : 
 new = "extent.height = MAX2(extent.height, pdev->info.gfx_level >= GFX12 ? 128 : 64);"
 assert base.count(old) == 1
 expected = module.patch(base.replace(old, new))
-assert expected == active, "PS5 active cmd buffer must exactly replay ALL official fixes"
+# Exactly one additional, reviewed GS-compute pointer initialization is
+# permitted on top of the official bin-height and zero-indirect corrections.
+gs_anchor = ("   poly_vertex_params_init(vp, gsc->vs_outputs, wg_size);\n"
+             "   poly_geometry_params_init(gp, mode, wg_size);\n")
+gs_sink = (
+    "   /* GPU-side setup can drop a draw. Never leave its output pointers at 0. */\n"
+    "   const uint64_t null_sink = radv_gs_compute_upload(cmd_buffer, 256, NULL, NULL);\n"
+    "   vp->output_buffer = null_sink;\n"
+    "   vp->index_buffer = null_sink;\n"
+    "   gp->count_buffer = null_sink;\n"
+    "   gp->output_index_buffer = null_sink;\n"
+)
+assert expected.count(gs_anchor) == 1, "Pinned GS-compute initializer drifted"
+expected = expected.replace(gs_anchor, gs_anchor + gs_sink)
+assert expected == active, "PS5 active cmd buffer must replay official fixes plus one exact GS sink guard"
 generator = (ROOT/"tools/patch-radv-wsi.py").read_text()
 assert "from radv_official_indirect_draw_fix import patch" in generator
 assert "radv_CmdDrawIndirectCount2KHR" in active
