@@ -193,8 +193,13 @@ void Launcher::draw_switch_home(Canvas& c) {
     const char* allTitle=tr("All Software");
     const std::string active=focus==kHomeAllSoftware?allTitle:
         focus<count?home_.recents[static_cast<std::size_t>(focus)].title:"";
-    text_shrink(c,active,112.0f,baseline(222.0f,52.0f,32.0f),
-                32.0f,kInk,1696.0f,Align::center);
+    // text_shrink's center alignment uses x as the anchor, not the width.
+    // Keep the selected software title directly above its tile, in bounds.
+    const float titleCenter=std::clamp(
+        kSwitchHomeTileX+float(target)*kSwitchHomeTilePitch+
+        kSwitchHomeTileSize*0.5f-offset,410.0f,1510.0f);
+    text_shrink(c,active,titleCenter,baseline(222.0f,52.0f,32.0f),
+                32.0f,kInk,800.0f,Align::center);
 
     list.push_clip({0.0f,278.0f,1920.0f,426.0f});
     for(int i=0;i<count;++i) {
@@ -227,7 +232,8 @@ void Launcher::draw_switch_home(Canvas& c) {
             text_shrink(c,tr(names[i]),x,baseline(892.0f,40.0f,24.0f),
                         24.0f,kInk,318.0f,Align::center);
     }
-    draw_switch_footer(c,tr("Select"));
+    // Button hints already say Select; no duplicate label at bottom-left.
+    draw_switch_footer(c,"");
 }
 
 void Launcher::press_switch_home(Key key) {
