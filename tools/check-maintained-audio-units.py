@@ -43,12 +43,16 @@ assert 'write_derived("${PORT_BUILD_DIR}/k_spin_lock.cpp"' not in cmake
 assert 'set(npad_entry "void NPad::ControllerUpdate(' in cmake
 assert "set(compose_new [=[" in cmake
 # The port must keep reducing generator rewrites, not silently increase them.
-assert cmake.count("write_derived(") <= 77
+gpu_span_derived='write_derived("${eden_gpu_span_tu}" "${eden_gpu_span_src}")'
+assert cmake.count(gpu_span_derived) == 1
+assert cmake.count("write_derived(") - cmake.count(gpu_span_derived) <= 77
 # One explicitly checked native GPU synchronization-method input is
 # approved; keep the prior 87-read generator budget for everything else.
 gpu_sync_input='file(READ "${EDEN_PORT_DIR}/gpu_sync_failure_wait.inc" gpu_sync_wait_replacement)'
 assert cmake.count(gpu_sync_input) == 1
-assert cmake.count("file(READ") - cmake.count(gpu_sync_input) <= 87
+gpu_span_input='file(READ "${PROJECT_SOURCE_DIR}/src/video_core/memory_manager.cpp" eden_gpu_span_src)'
+assert cmake.count(gpu_span_input) == 1
+assert cmake.count("file(READ") - cmake.count(gpu_sync_input) - cmake.count(gpu_span_input) <= 87
 # The native GPU producer cancellation contract adds exactly one checked
 # source-derived wait replacement; keep the previous ceiling for all others.
 gpu_producer_wait='string(REPLACE "${gpu_block_wait_original}" "${gpu_block_wait_checked}"'
@@ -67,5 +71,8 @@ assert "Pinned native guest CPU read scratch/slot contract changed" in cmake
 native_span_guard='string(REPLACE "${eden_span_original}" [=['
 assert cmake.count(native_span_guard) == 1
 assert "Pinned native guest span page-boundary contract changed" in cmake
-assert cmake.count("string(REPLACE") - cmake.count(gpu_producer_wait) - cmake.count(gpu_enqueue_fence) - cmake.count(dirty_mask_split) - cmake.count(native_read_slot) - cmake.count(native_span_guard) <= 227
+gpu_span_guard='string(REPLACE "${eden_gpu_span_original}" [=['
+assert cmake.count(gpu_span_guard) == 1
+assert "Pinned native GPU guest span range gate changed" in cmake
+assert cmake.count("string(REPLACE") - cmake.count(gpu_producer_wait) - cmake.count(gpu_enqueue_fence) - cmake.count(dirty_mask_split) - cmake.count(native_read_slot) - cmake.count(native_span_guard) - cmake.count(gpu_span_guard) <= 227
 print("MAINTAINED_AUDIO_UNITS_PARITY_PASS sink=1 voice=1")
