@@ -102,23 +102,13 @@ with tempfile.TemporaryDirectory(prefix="encore-dirty-race-") as tmp:
         instrumented = header.replace(
             "namespace Core {", "namespace Core {\nvoid PinnedRaceGate();", 1
         )
-        mark = (
-            "                    back_buffer.emplace_back(tmp);\n"
-            if not is_fixed else
-            "                    back_buffer.back() = current.exchange(t, std::memory_order_acq_rel);"
+        # Pause AFTER reserving the old vector slot but BEFORE the atomic
+        # exchange in both versions. This is the precise losing interleaving.
+        mark = "                    back_buffer.emplace_back(tmp);\n"
+        assert instrumented.count(mark) == 1
+        instrumented = instrumented.replace(
+            mark, mark + "                    PinnedRaceGate();\n"
         )
-        if is_fixed:
-            assert instrumented.count(mark) == 1
-            instrumented = instrumented.replace(
-                mark, "                    PinnedRaceGate();\n" + mark
-            )
-        else:
-            assert instrumented.count(mark) == 1
-            instrumented = instrumented.replace(
-                mark, mark + "                    PinnedRaceGate();\n"
-            )
-        # The original gate must happen before its exchange. The fixed
-        # gate must happen after emplace and before exchange.
         (include_stub / "gpu_dirty_memory_manager.h").write_text(instrumented)
         binary = stage / label
         command = [clang, "-std=c++20", "-O1", "-g", "-pthread",
