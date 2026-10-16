@@ -62,7 +62,7 @@ __METHOD__
 int main() {
     TranslatorVisitor v;
     auto dyn=[](u32 x){return IR::U32{x,false};};
-    auto imm=[](u32 x){return IR::U32{x,true};};
+    [[maybe_unused]] auto imm=[](u32 x){return IR::U32{x,true};};
     assert(LoadLocal(v,dyn(3),dyn(12)).value==44);
 #ifdef PINNED_UNSAFE
     bool throws=false;
