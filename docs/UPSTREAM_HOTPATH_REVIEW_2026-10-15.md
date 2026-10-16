@@ -264,3 +264,30 @@ backpressure without any GPU job being scheduled. Both code paths now treat
 and waiter notification paths; successful `true` and existing `void` callbacks
 retain their behavior. Source guards and sanitizer host tests cover both APIs,
 including cancelled writes. The native bridge and its runtime gate remain OFF.
+
+## Post-store transaction adapter, host-only (2026-10-16)
+
+`headless/gpu_deferred_store_publication.h` now composes the existing
+`ReserveOrdered`, `PublishAndWake` and `CancelAndWake` operations around
+an explicit noexcept RAM store callback. It reserves a FIFO position before
+executing the operation exactly once, publishes only after a real modification,
+and cancels a failed conditional write. The compiler rejects potentially
+throwing store callbacks to avoid a partially modified but unpublished
+reservation. If the title is closed/poisoned before reservation, no RAM operation
+is attempted. A failed publication after RAM mutation is a fatal caller error;
+there is no safe synchronous fallback.
+
+The source-backed sanitizer test checks pinned ordinary/scalar/zero/CAS/cache
+maintenance call-site ordering and exercises the actual host queue with a
+normal RAM store, failed CAS, cross-core publication gap, saturated queue,
+invalid reservation and explicit rejected scheduler wake. It proves the
+standalone protocol's mechanics, **not** native GPU coherence.
+
+`headless/guest_write_deferred_bridge.cmake` does not call this adapter.
+The current native derived `HandleRasterizerWrite` bridge still eagerly
+enqueues before backing RAM store and the fail-closed
+`kNativePostStorePublicationReady` remains `false`. A real integration must
+separately classify cache maintenance (no subsequent store), synchronize
+reads/atomic RMW before the attempted write, and cover direct fastmem/JIT
+stores and renderer/fence shutdown ordering. No native build, release, console
+test, or claim of FC27 improvement.
