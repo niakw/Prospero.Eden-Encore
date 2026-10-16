@@ -17,9 +17,15 @@ assert active.count("IR::U1 LocalInBounds(")==1
 assert active.count("void WriteLocal(TranslatorVisitor& v,")==1
 assert "v.ir.LoadLocal(safe_word_offset)" in active
 assert "v.ir.WriteLocal(safe_word_offset, safe_value)" in active
-assert "local_size == 0 || (offset.IsImmediate() && offset.U32() >= local_size)" in active
+assert active.count("const u32 max_start{byte_advance < local_size ? local_size - byte_advance : 0};") == 2
+assert active.count("LocalInBounds(v, offset, max_start)") == 2
+ldl=active.split("void TranslatorVisitor::LDL(u64 insn) {",1)[1].split("\nvoid TranslatorVisitor::LDS(",1)[0]
+assert "LoadLocal(*this, sub_word_offset, offset, static_cast<u32>(i * 4))" in ldl
+assert "ir.IAdd(offset, ir.Imm32(i * 4))" not in ldl
 stl=active.split("void TranslatorVisitor::STL(u64 insn) {",1)[1].split("\nvoid TranslatorVisitor::STS(",1)[0]
 assert stl.count("WriteLocal(*this,")==4
+assert "WriteLocal(*this, ir.IAdd(word_offset, ir.Imm32(i)), offset, X(reg + i)," in stl
+assert "ir.IAdd(offset, ir.Imm32(i * 4))" not in stl
 assert "ir.WriteLocal(" not in stl and "ir.LoadLocal(" not in stl
 assert 'list(REMOVE_ITEM eden_shader_sources "frontend/maxwell/translate/impl/load_store_local_shared.cpp")' in cmake
 assert 'list(APPEND eden_shader_sources "' in cmake
@@ -52,6 +58,7 @@ struct IREmitter {
     U32 Select(U1 cond,U32 a,U32 b){return cond.value?a:b;}
     U32 LoadLocal(U32 index){++reads; return {memory.at(index.value),false};}
     void WriteLocal(U32 index,U32 value){++writes;memory.at(index.value)=value.value;}
+    U32 IAdd(U32 a,U32 b){return {static_cast<u32>(a.value+b.value),a.immediate && b.immediate};}
 };
 }
 struct TranslatorVisitor {
@@ -82,6 +89,35 @@ int main() {
     assert(v.ir.memory==before);
     WriteLocal(v,imm(4),imm(16),imm(321));
     assert(v.ir.memory==before);
+    // A negative byte offset and its next word can wrap to zero, exactly
+    // matching scratch word 0: this is the old unsafe multiword call pattern.
+    constexpr u32 outside=0xFFFFFFFCu;
+    assert(static_cast<u32>(outside + 4u)==0u);
+    assert(v.ir.memory[0]==11);
+    assert(LoadLocal(v,dyn(0),dyn(static_cast<u32>(outside+4u))).value==11);
+    // Pass the ORIGINAL byte offset and the word's advance instead.
+    // Neither the read nor the store can now alias scratch word 0.
+    const auto reads_before=v.ir.reads, writes_before=v.ir.writes;
+    assert(LoadLocal(v,dyn(0),dyn(outside),4).value==0);
+    assert(LoadLocal(v,imm(0),imm(outside),4).value==0);
+    WriteLocal(v,dyn(0),dyn(outside),imm(555),4);
+    WriteLocal(v,imm(0),imm(outside),imm(555),4);
+    assert(v.ir.memory==before);
+    assert(v.ir.writes==writes_before);
+    assert(v.ir.reads==reads_before);
+    // A word whose base starts in bounds but whose tail crosses 16 bytes.
+    assert(LoadLocal(v,dyn(0),dyn(12),4).value==0);
+    WriteLocal(v,dyn(0),dyn(12),imm(456),4);
+    assert(v.ir.memory==before);
+    // Positive controls: a second and fourth word still work when they fit.
+    assert(LoadLocal(v,dyn(3),dyn(8),4).value==777);
+    WriteLocal(v,dyn(3),dyn(8),imm(654),4);
+    assert(v.ir.memory[3]==654);
+    v.ir.memory[3]=777;
+    assert(LoadLocal(v,dyn(3),dyn(0),12).value==777);
+    assert(LoadLocal(v,dyn(0),dyn(0),16).value==0);
+    WriteLocal(v,dyn(0),dyn(0),imm(666),16);
+    assert(v.ir.memory==before);
     v.env.bytes=0;
     const auto r=v.ir.reads,w=v.ir.writes;
     assert(LoadLocal(v,dyn(0),dyn(0)).value==0);
@@ -102,4 +138,4 @@ with tempfile.TemporaryDirectory(prefix="encore-shader-local-") as folder:
             "-fsanitize=address,undefined","-fno-sanitize-recover=all",
             *flags,str(cpp),"-o",str(exe)],check=True,timeout=45)
         subprocess.run([str(exe)],check=True,timeout=30)
-print("SHADER_LOCAL_BOUNDS_HOST_PASS pinned_bad_load=1 dynamic_guard=1 immediate_tail=1 store_preserve=1 zero_scratch=1")
+print("SHADER_LOCAL_BOUNDS_HOST_PASS pinned_bad_load=1 dynamic_guard=1 immediate_tail=1 store_preserve=1 zero_scratch=1 tail_wrap=1 tail_cross=1 tail_inrange=1")
