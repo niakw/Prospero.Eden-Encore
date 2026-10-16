@@ -58,6 +58,7 @@ jobs:
           python3 -B tools/check-buffer-write-ahead-host.py
           python3 -B tools/check-gpu-deferred-queue-host.py
           python3 -B tools/check-gpu-deferred-replay-host.py
+          python3 -B tools/check-native-gpu-dirty-subregion-host.py
           python3 -B tools/check-gpu-deferred-poststore-host.py
           python3 -B tools/check-deferred-native-bridge-contract.py
           python3 -B tools/check-deferred-native-access-coverage.py
