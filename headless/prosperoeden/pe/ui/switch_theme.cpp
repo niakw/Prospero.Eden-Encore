@@ -183,6 +183,19 @@ void advanced_status(Canvas& c,const std::string& message,bool warn,
 std::string switch_default(const std::string& value) {
     return fill(tr("Default ({0})"),{value});
 }
+std::string switch_profile_name(int layout,const ButtonMapping& mapping) {
+    const bool custom=mapping_is_custom(mapping,layout);
+    if(layout==1) return custom?tr("Custom Switch"):tr("Switch");
+    return custom?tr("Custom PS5"):tr("PlayStation");
+}
+Pad switch_physical_pad(int pad) {
+    static constexpr Pad icons[kPadButtons]={
+        Pad::cross,Pad::circle,Pad::square,Pad::triangle,
+        Pad::l1,Pad::r1,Pad::l2,Pad::r2,Pad::l3,Pad::r3,
+        Pad::options,Pad::create,Pad::touchpad
+    };
+    return icons[static_cast<std::size_t>(std::clamp(pad,0,kPadButtons-1))];
+}
 std::string switch_pad_label(int p) {
     static const char* names[]={
         TR("Cross"),TR("Circle"),TR("Square"),TR("Triangle"),
@@ -626,10 +639,14 @@ void Launcher::draw_switch_game(Canvas& c,float opened) {
         fallback(g.anti_aliasing,switch_value(services_.anti_aliasing_labels(),baseAa),
             switch_value(services_.anti_aliasing_labels(),g.anti_aliasing)),
         fallback(g.refresh,hertz(baseHz),hertz(g.refresh)),
-        g.own_mapping?tr("Customize"):fallback(g.controller_layout,
-            prefs_.controller_layout?"Switch":"PlayStation",g.controller_layout?"Switch":"PlayStation"),
-        game&&!game->mods_enabled?tr("Off"):
-            mods_.empty()?tr("No mods"):
+        g.own_mapping?
+            switch_profile_name(g.controller_layout>=0?g.controller_layout:prefs_.controller_layout,
+                                g.mapping):
+        g.controller_layout>=0?
+            switch_profile_name(g.controller_layout,Eden::BaseMappingForLayout(g.controller_layout)):
+            fill(tr("Global ({0})"),{switch_profile_name(prefs_.controller_layout,prefs_.mapping)}),
+        mods_.empty()?tr("No mods"):
+            game&&!game->mods_enabled?tr("Off"):
             fill(tr("{0} of {1} on"),{
                 std::to_string(std::count_if(mods_.begin(),mods_.end(),
                     [](const Mod& m){return m.enabled;})),
@@ -687,7 +704,7 @@ void Launcher::draw_switch_mapping(Canvas& c,float opened) {
             game_settings_.mapping).buttons:prefs_.mapping;
     const int layout=mapping_for_game_&&game_settings_.controller_layout>=0?
         game_settings_.controller_layout:prefs_.controller_layout;
-    const std::string profile=layout?"Switch":"PlayStation";
+    const std::string profile=switch_profile_name(layout,buttons);
     advanced_panel(c,tr("Button mapping"),game?game->name+" · "+profile:
                    fill(tr("Global controller profile: {0}"),{profile}));
     static constexpr const char* names[]={"A","B","X","Y","L","R","ZL","ZR","+","-",
@@ -695,10 +712,16 @@ void Launcher::draw_switch_mapping(Canvas& c,float opened) {
     d.push_clip(kAdvancedClip);
     for(int i=mapping_rows_.first_row();i<=mapping_rows_.last_row();++i) {
         if(i<0||i>=kGameButtons)continue;
-        advanced_row(c,318+float(i)*96-mapping_rows_.scroll(),
-            i==mapping_rows_.selected,tr(names[i]),
-            switch_pad_label(buttons[static_cast<std::size_t>(i)]),
-            mapping_rows_.row_alpha(i,92));
+        const float y=318+float(i)*96-mapping_rows_.scroll();
+        const int mapped=buttons[static_cast<std::size_t>(i)];
+        const float opacity=mapping_rows_.row_alpha(i,92);
+        advanced_row(c,y,i==mapping_rows_.selected,tr(names[i]),
+                     switch_pad_label(mapped),opacity);
+        // Match the original functional editor: the real physical pad glyph
+        // stays visible next to the text, even for triggers and touchpad.
+        d.push_opacity(opacity);
+        draw_pad(c,switch_physical_pad(mapped),1035.0f,y+46.0f,30.0f);
+        d.pop_opacity();
     }
     d.pop_clip();
     advanced_status(c,message_,message_warning_,TR("Change"));
