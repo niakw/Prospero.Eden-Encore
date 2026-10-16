@@ -37,8 +37,8 @@ write_block = source.split("bool WriteBlockImpl(", 1)[1].split("bool ZeroBlock("
 assert "std::memcpy(ptr, reinterpret_cast<u8 const*>(buffer) + offset, copy_amount);" in write_block.rsplit(
     "HandleRasterizerWrite(GetInteger(current_vaddr), copy_amount);", 1)[1]
 zero = source.split("bool ZeroBlock(", 1)[1].split("bool CopyBlock(", 1)[0]
-assert zero.index("HandleRasterizerWrite(GetInteger(current_vaddr), copy_amount);") < zero.index(
-    "std::memset(ptr, 0, copy_amount);")
+assert "std::memset(ptr, 0, copy_amount);" in zero.rsplit(
+    "HandleRasterizerWrite(GetInteger(current_vaddr), copy_amount);", 1)[1]
 cache_ops = source.split("Result StoreDataCache(", 1)[1].split("void MarkRegionDebug(", 1)[0]
 assert cache_ops.count("HandleRasterizerWrite(GetInteger(current_vaddr), block_size);") == 2
 assert "std::memcpy(" not in cache_ops and "std::memset(" not in cache_ops
