@@ -242,6 +242,19 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {'''),
                 ::Eden::Performance::GraphicsDrawDrop::NoPipeline);
             return;
         }
+        // This GPU drain can change the selected pipeline after the earlier
+        // descriptor preflight. Check its NEW reservation before taking the
+        // buffer/texture mutex pair, so Acquire cannot wait under both locks.
+        if (guest_descriptor_queue.PreflightLargeGuestDraw(
+                [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation())) {
+            gpu_memory->FlushCaching();
+            pipeline = pipeline_cache.CurrentGraphicsPipeline();
+            if (!pipeline) {
+                ::Eden::Performance::RecordGraphicsDrawDrop(
+                    ::Eden::Performance::GraphicsDrawDrop::NoPipeline);
+                return;
+            }
+        }
     }
 #endif
 #ifdef PS5_NATIVE
