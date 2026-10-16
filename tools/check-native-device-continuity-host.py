@@ -121,6 +121,7 @@ int main(){
 #endif
     assert(d.GetSpan(0,4096)==physical.data());
     assert(d.GetSpan(4096,4096)==replacement.data());
+    e[1].ptr=physical.data()+4096; // restore an actually contiguous prefix
     e[0].continuity_tracker=2;
     e[1].continuity_tracker=1;
     e[2].continuity_tracker=0;
