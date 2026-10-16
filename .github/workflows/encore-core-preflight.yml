@@ -150,6 +150,7 @@ jobs:
           python3 -B tools/check-maintained-logging-loader.py
           python3 -B tools/check-maintained-audio-units.py
           python3 -B tools/check-ps5-title-cache-storage-host.py
+          python3 -B tools/check-ps5-shader-local-bounds-host.py
           python3 -B tools/check-native-manual-run-isolation.py
           python3 -B tools/check-encore-first-parent-revision.py
           python3 -B tools/check-vendored-opengl-deps.py

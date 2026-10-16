@@ -1183,6 +1183,20 @@ get_target_property(eden_savedata_sources core SOURCES)
 list(REMOVE_ITEM eden_savedata_sources "file_sys/savedata_factory.cpp")
 list(APPEND eden_savedata_sources "${EDEN_MAINTAINED_SAVEDATA}")
 set_property(TARGET core PROPERTY SOURCES "${eden_savedata_sources}")
+# Use a maintained bounded shader local-memory translator, keeping the pinned source untouched.
+set(EDEN_MAINTAINED_SHADER_LOCAL
+    "${PORT_ROOT}/vendor/encore-active/eden-shader/src/shader_recompiler/frontend/maxwell/translate/impl/load_store_local_shared.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_SHADER_LOCAL}")
+    message(FATAL_ERROR "Missing maintained shader local scratch translator")
+endif()
+get_target_property(eden_shader_sources shader_recompiler SOURCES)
+list(FIND eden_shader_sources "frontend/maxwell/translate/impl/load_store_local_shared.cpp" eden_shader_local_position)
+if(eden_shader_local_position LESS 0)
+    message(FATAL_ERROR "Pinned shader local translator target changed")
+endif()
+list(REMOVE_ITEM eden_shader_sources "frontend/maxwell/translate/impl/load_store_local_shared.cpp")
+list(APPEND eden_shader_sources "${EDEN_MAINTAINED_SHADER_LOCAL}")
+set_property(TARGET shader_recompiler PROPERTY SOURCES "${eden_shader_sources}")
 # PS5_NATIVE is a CMake option, not a transitive preprocessor definition for
 # core or video_core. Only these two pinned TUs own the address guards below.
 # Do NOT enable it broadly for every upstream C++ source.
