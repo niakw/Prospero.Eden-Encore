@@ -291,3 +291,16 @@ separately classify cache maintenance (no subsequent store), synchronize
 reads/atomic RMW before the attempted write, and cover direct fastmem/JIT
 stores and renderer/fence shutdown ordering. No native build, release, console
 test, or claim of FC27 improvement.
+
+## Developer source write-intent classification (2026-10-16)
+
+The CMake-derived developer-only guest memory source now marks five
+pre-store callbacks: block copy, zero block, scalar write, regular exclusive,
+and 128-bit exclusive. The two cache-maintenance callbacks (StoreDataCache
+and FlushDataCache) have no following RAM store and remain unmarked.
+The GPU memory manager and Vulkan candidate both require the scoped
+StoreFollows intent and the existing guest-core origin. The native bridge
+still uses unsafe eager publication, which remains blocked by the unchanged
+kNativePostStorePublicationReady=false gate. Normal builds are unchanged.
+CMake source derivation tests assert all five marked and two unmarked sites;
+the host sanitizer verifies nested and cross-thread TLS restoration.

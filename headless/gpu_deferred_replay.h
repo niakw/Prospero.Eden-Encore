@@ -28,6 +28,17 @@ struct ScopedGuestWriteOrigin final {
     ScopedGuestWriteOrigin& operator=(const ScopedGuestWriteOrigin&) = delete;
 };
 
+// Guest RAM writes have a follow-up store; cache-maintenance notifications
+// have none. This scoped classification does NOT enable deferred execution.
+enum class GuestWriteIntent { NoStore, StoreFollows };
+inline thread_local GuestWriteIntent guest_write_intent = GuestWriteIntent::NoStore;
+struct ScopedGuestStoreIntent final {
+    const GuestWriteIntent previous{guest_write_intent};
+    ScopedGuestStoreIntent() noexcept { guest_write_intent = GuestWriteIntent::StoreFollows; }
+    ~ScopedGuestStoreIntent() { guest_write_intent = previous; }
+    ScopedGuestStoreIntent(const ScopedGuestStoreIntent&) = delete;
+    ScopedGuestStoreIntent& operator=(const ScopedGuestStoreIntent&) = delete;
+};
 // GPU-owner replay must never defer itself. No process-global session queue.
 inline thread_local bool replaying_guest_write = false;
 struct ScopedReplay final {
