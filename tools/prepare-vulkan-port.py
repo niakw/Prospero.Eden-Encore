@@ -20,6 +20,9 @@ def adapt(relative, destination, replacements):
 adapt('src/core/frontend/emu_window.h', 'include/core/frontend/emu_window.h',
       [('    Xcb,', '    Xcb,\n    PS5,')])
 adapt('src/video_core/renderer_vulkan/vk_rasterizer.cpp', 'vulkan_rasterizer.cpp', [
+    # R: DrawTexture needs the same pending guest memory invalidation drain
+    # as ordinary draw/clear, before its texture-cache mutex acquisition.
+    ("    FlushWork();\n\n    std::scoped_lock l{texture_cache.mutex};\n    texture_cache.SynchronizeDescriptors(false);", "    FlushWork();\n    // Apply queued guest page remaps before reading cache-owned texture views.\n    // InnerInvalidation itself locks texture_cache.mutex.\n    gpu_memory->FlushCaching();\n\n    std::scoped_lock l{texture_cache.mutex};\n    texture_cache.SynchronizeDescriptors(false);"),
     # Guard short unsigned quad strips before subtracting the two lead vertices.
     ("params.num_vertices = (params.num_vertices - 2) / 2 * 6;", "params.num_vertices = params.num_vertices >= 2 ? (params.num_vertices - 2) / 2 * 6 : 0;"),
     # Compute synchronization (dev_vulkan.h compute_barriers): indirect
