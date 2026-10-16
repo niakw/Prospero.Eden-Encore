@@ -1,6 +1,6 @@
 # Selective tracked-page guest writes — design, not an activation approval
 
-Source branch: `dev/ps5-sparse-jit`. Baseline: `3cf279f`; extended source inventory: `0f96500`.
+Source branch: `dev/ps5-sparse-jit`. Baseline: `3cf279f`; selective-source checks added in `0f96500` and `0e732a3`.
 
 **Decision:** Keep `kNativePostStorePublicationReady=false`. Nothing in this
 document changes native execution, GPU scheduling, releases, or gameplay.
@@ -12,19 +12,31 @@ The #187 deferred bridge remains an unqualified candidate.
    `marked` and the `RasterizerCachedMemory` type. `ExtractPointer()`
    returns zero for marked entries unless `ignore_marked=true`.
 2. `core/memory.cpp::RasterizerMarkRegionCached()`: when a region becomes
-   GPU-cached, `host_buffer->Protect(...)` grants **no write permission**
-   to its fastmem mapping. The read permission depends on the reactive
-   flushing setting. Ordinary pages retain a direct write path.
+   GPU-cached, `host_buffer->Protect(...)` removes direct fastmem **write access**.
+   In this x86-64 native port, `EDEN_A32_FASTMEM=ON` changes
+   `HostMemory::Protect()` into updates to a **per-guest-page checked access
+   byte map**, not an OS `mprotect()` call. The JIT checks the blocked-write bit
+   before accessing the A32 fastmem window. The read permission depends on
+   reactive flushing. Ordinary pages retain their direct path. A64 native
+   application processes are excluded from the A32 fastmem arena in the
+   CMake-derived `memory.cpp` (`!process.Is64Bit()` condition).
 3. `core/memory.cpp::GetPointerImpl()`: marked regions take the
    `RasterizerCachedMemory` branch and invoke `on_rasterizer`. Scalar
    `Write<T>()` and conditional writes pass `HandleRasterizerWrite()`
    as that callback.
-4. `core/arm/dynarmic/arm_dynarmic_{32,64}.cpp`: both JIT configurations
-   expose a direct page table and optional fastmem, but also install
-   `MemoryWrite*` callbacks. The exact `page_table_marked_bit=0`
-   behavior in the *pinned Dynarmic backend* must be demonstrated with
-   generated-code/runtime evidence, not inferred just from the
-   `PageEntryData::ExtractPointer()` C++ helper.
+4. `core/arm/dynarmic/arm_dynarmic_{32,64}.cpp` installs
+   `page_table_marked_bit=0` and `MemoryWrite*` callbacks. The actual
+   `dynarmic/backend/x64/emit_x64_memory.h` lookup checks the marked
+   bit and branches to `abort`, where `emit_x64_memory.cpp.inc` calls the
+   memory-write fallback. `headless/CMakeLists.txt` keeps this behavior
+   when generating its optimized bit-zero `test/jnz` check for A32/A64.
+   `headless/checked-fastmem.cmake` routes blocked A32 fastmem stores
+   (including scalar SIMD paths) to a checked page-table lookup and then
+   callbacks when the page is marked. Native A32 exclusive fastmem uses
+   a separately routed page-table path; `EDEN_INLINE_EXCLUSIVES` defaults
+   OFF because forced inline exclusives previously exhibited a hardware
+   soft-hang. This is real generated-store **source** evidence, but not a
+   native deferred-publication implementation.
 5. `core/guest_memory.h`: a mutable `GuestMemory` may hold a direct
    `GetSpan()` alias. This goes through `GetPointerSilent()`, which can
    obtain the underlying pointer to a marked page. `GuestMemoryScoped`
@@ -35,9 +47,22 @@ The #187 deferred bridge remains an unqualified candidate.
    flag is set. NCE is therefore **not** an active x86-64 native producer
    under this build selection. This does not qualify NCE for ARM64 ports.
 
-Source anchoring is checked by
-`tools/check-deferred-native-access-coverage.py`. A green result is
-**a correctly blocked activation**, not a behavioral proof.
+7. `headless/memory_check.cpp` already runs actual synthetic A32 and
+   A64 JIT instructions. Its `Check<false>()` / `Check<true>()` paths
+   assert callbacks on marked pages; `CheckFastmemA32()` covers tracked,
+   unaliased, cross-page, scalar SIMD and fallback cases; and
+   `StressFastmemA32()` concurrently changes page permissions and marking
+   while JIT guest workers execute and checks the final backing RAM.
+   `BenchFastmemA32()` already offers table-versus-checked-fastmem host
+   benchmarks, but no new timing measurements were made in this audit.
+   These are pre-existing test **implementations**; their presence does
+   not assert that this exact commit has executed/passed them.
+
+Source anchors (including the actual JIT emitter, A32 access-byte guard,
+and pre-existing host JIT harness) are checked by
+`tools/check-deferred-native-access-coverage.py`. A green **source preflight**
+means its assumptions still match and the bridge is correctly blocked; it
+does not prove GPU/CPU synchronization or runtime JIT correctness.
 
 ## Required transaction for an intercepted GPU-tracked store
 
@@ -75,14 +100,14 @@ notification ordering does not repair missing producers.
 
 | Boundary | Minimum evidence | Current status |
 | --- | --- | --- |
-| A32/A64 cached page through page-table JIT | Execute real JIT stores on a dynamically marked page and prove callback/slow path | Not demonstrated |
-| A32/A64 cached page through fastmem | Verify write-protect trap/fallback for normal, vector, atomic and boundary-crossing stores | Not demonstrated |
-| Dynamic page transition | Prove no untracked in-flight store survives a transition into GPU-tracked state; inspect ordering around protection and page marking | Not demonstrated |
+| A32/A64 cached page through page-table JIT | Generated lookup routes marked stores to callbacks; verify current host execution results and temporal ordering | Source and pre-existing synthetic JIT test coverage; not rerun here |
+| A32 checked fastmem (A64 native has no arena) | Access-byte map selects direct/fallback; test marked, vector, crossing and exclusive cases | Source and pre-existing A32 host JIT test coverage; no new execution claim |
+| Dynamic page transition | Prove no untracked in-flight store can overlap first GPU-cache use; inspect ordering of access-byte protection and PTE marking | Existing A32 concurrent stress test checks backing values; no GPU coherency proof |
 | Writable `GuestMemory` aliases | Classify live users of mutable spans; guarantee lifetime + post-store notification or prohibit direct alias on tracked pages | Not demonstrated |
 | Conditional/atomic write | Device-to-CPU read fence, FIFO predecessor wait, CAS success/failure, exactly-once outcome | Host protocol modeled, not joined to native code |
 | GPU work and dirty collection | Confirm no GPU consumer overtakes unpublished writes and that cache invalidation/dirty collection are properly ordered | Not demonstrated |
 | x86-64 build NCE applicability | Conditional compilation in CMake | Excluded under current settings |
-| Performance | Actual host-run JIT measured in both untracked and tracked-page paths, with generated-code/fault counts and slowdown | Not measured |
+| Performance | Compare host-run JIT on tracked/untracked pages and under contention | Existing `--fastmem-bench` for table vs checked A32; no new measurements or GPU contention profile |
 
 ### Proposed implementation boundary
 
@@ -90,9 +115,10 @@ Keep fastmem and page-table access active for **untracked pages**. Use
 the existing page-marking / protection machinery to select only
 GPU-tracked pages for a prospective callback-based store transaction.
 No global JIT-wide mutex, no blanket `fastmem_pointer=nullopt`, and
-no all-memory callback conversion. Pin the exact Dynarmic backend
-semantics before code changes; if the backend does not reliably route
-marked pages, this architecture is invalid as stated and must be revised.
+no all-memory callback conversion. The pinned x64 Dynarmic backend and
+native-derived port do have marked-page fallback mechanisms; the open
+task is verifying their interaction with a post-store GPU transaction,
+not rediscovering whether marked pages can reach callbacks.
 
 Introduce no deferred native write until the producer-side post-store
 publication and consumer-side fence are part of the **same proven path**.
@@ -102,14 +128,16 @@ contents.
 
 ### Measurement without another console test
 
-On a host that can build the pinned JIT, exercise a synthetic guest
-program that writes untracked and dynamically GPU-tracked pages.
-For each memory mode, count callback entries, protected-page faults,
-successful conditional stores, failed conditionals and stores observed
-by the consumer. Record store throughput and p50/p95/p99 latency,
-both with and without GPU-cache contention, and compare against the
-existing non-deferred implementation. Do not invent performance claims
-from queue-only benchmarks.
+Reuse `headless/memory_check.cpp` instead of creating another synthetic
+JIT harness: the default test already exercises real A32/A64 marked
+page-table stores plus A32 checked-fastmem and concurrent page flips.
+Its `--fastmem-bench` mode reports `FASTMEM_BENCH kind=... mode=table/checked
+ns_per_iteration=...`; preserve that baseline. If a future developer-only
+host transaction prototype is built, add the missing *post-store*
+publication/consumer visibility/fence assertions on tracked pages and
+compare with existing non-deferred numbers, with p50/p95/p99 under GPU
+contention. Never infer actual runtime wins from source coverage or
+queue-only tests.
 
 If the proof shows an unobservable tracked-page store, a deadlock,
 out-of-order consumer, or an unbounded slowdown, stop: the bridge
@@ -118,10 +146,15 @@ remain independent open problems until game-level evidence exists.
 
 ## Current follow-up
 
-1. Identify the exact Dynarmic source/version used by this fork and
-   prove marked page handling at generated-store level.
-2. Inventory actual mutable `GuestMemory` call sites and ownership.
-3. Only then prototype tracked-store post-publication, behind an
-   opt-in host-only gate with the native gate still false.
+1. Reuse the pinned x64 JIT emitter and `memory_check.cpp` as the
+   actual interception baseline; do **not** disable direct memory broadly.
+2. Inventory actual mutable `GuestMemory` call sites and their lifetime,
+   and determine whether marked-page aliases bypass the write transaction.
+3. Prove the first-tracking transition excludes in-flight direct stores;
+   a successful A32 backing-value stress test alone does not establish
+   GPU-visible ordering.
+4. Only then prototype tracked-store post-publication plus the actual
+   GPU-to-CPU device read fence, behind a host-only gate, keeping the
+   native gate false.
 
 No console build, release or new gameplay test follows from this design.
