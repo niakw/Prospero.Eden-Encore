@@ -43,14 +43,29 @@ assert methods.count('wait_worker();') == 2
 assert 'entries >= frame_payload_size' in methods
 raster_pairs = pairs_for('src/video_core/renderer_vulkan/vk_rasterizer.cpp')
 preflight_pairs = [(a,b) for a,b in raster_pairs if 'PreflightLargeGuestDraw(' in b]
-assert len(preflight_pairs) == 1
-raster = preflight_pairs[0][1]
-assert 'std::scoped_lock' not in raster  # this preflight is added before the lock adapter
-assert 'pipeline = pipeline_cache.CurrentGraphicsPipeline();' in raster
-assert 'gpu_memory->FlushCaching();' in raster
+assert len(preflight_pairs) == 2
+early = [b for a,b in preflight_pairs if 'for (unsigned preflight = 0;' in b]
+late = [b for a,b in preflight_pairs if 'This GPU drain can change the selected pipeline' in b]
+assert len(early) == len(late) == 1
+for raster in (early[0], late[0]):
+    # Both source adaptations execute before the paired guest cache locks.
+    assert 'std::scoped_lock' not in raster
+    assert 'pipeline = pipeline_cache.CurrentGraphicsPipeline();' in raster
+    assert 'gpu_memory->FlushCaching();' in raster
+    assert 'pipeline->DescriptorEntryReservation()' in raster
+assert 'descriptor_buffer_ring.PreflightCapacity(' in late[0]
+assert late[0].index('descriptor_buffer_ring.PreflightCapacity(') < late[0].index(
+    'guest_descriptor_queue.PreflightLargeGuestDraw(')
+# The versioned native source also keeps the last check before both mutexes.
+native = (root / 'vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp').read_text()
+native_draw = native.split('void RasterizerVulkan::PrepareDraw(', 1)[1].split(
+    'void RasterizerVulkan::Draw(', 1)[0]
+assert native_draw.count('guest_descriptor_queue.PreflightLargeGuestDraw(') == 2
+assert native_draw.index('descriptor_buffer_ring.PreflightCapacity(') < native_draw.rindex(
+    'guest_descriptor_queue.PreflightLargeGuestDraw(') < native_draw.index(
+    'std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};')
 # The next original adaptation applies the paired locks to this same function.
 assert 'std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};' in generator
-assert 'pipeline->DescriptorEntryReservation()' in raster
 pipeline_pairs = pairs_for('src/video_core/renderer_vulkan/vk_graphics_pipeline.h')
 getters = [(a,b) for a,b in pipeline_pairs if 'DescriptorEntryReservation() const noexcept' in b]
 assert len(getters) == 1
