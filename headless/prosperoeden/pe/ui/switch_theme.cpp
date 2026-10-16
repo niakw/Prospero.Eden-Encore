@@ -9,6 +9,7 @@
 #include <string>
 
 namespace pe::ui {
+using audio::Cue;
 namespace {
 const gfx::Color kPaper = gfx::Color::rgb(0xf7f7f7);
 const gfx::Color kInk = gfx::Color::rgb(0x292929);
