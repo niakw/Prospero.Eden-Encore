@@ -118,6 +118,13 @@ for relative, replacements in {
         # Use the actual height, not the already clamped width, for GFX10 bin size.
         ('   extent.height = MAX2(extent.width, pdev->info.gfx_level >= GFX12 ? 128 : 64);',
          '   extent.height = MAX2(extent.height, pdev->info.gfx_level >= GFX12 ? 128 : 64);'),
+        ("   poly_vertex_params_init(vp, gsc->vs_outputs, wg_size);\n   poly_geometry_params_init(gp, mode, wg_size);\n",
+         "   poly_vertex_params_init(vp, gsc->vs_outputs, wg_size);\n   poly_geometry_params_init(gp, mode, wg_size);\n   /* GPU-side setup can drop a draw. Never leave its output pointers at 0. */\n   const uint64_t null_sink = radv_gs_compute_upload(cmd_buffer, 256, NULL, NULL);\n   vp->output_buffer = null_sink;\n   vp->index_buffer = null_sink;\n   gp->count_buffer = null_sink;\n   gp->output_index_buffer = null_sink;\n"),
+    ],
+    # Cover rejected GPU-side geometry draws in the pinned-source oracle.
+    'src/amd/vulkan/cl/radv_gs_compute.cl': [
+        ("   if (!ok) {\n      vertex_count = 0;\n      instance_count = 0;\n",
+         "   if (!ok) {\n      vertex_count = 0;\n      instance_count = 0;\n      /* A dropped geometry draw still needs safe non-null scratch pointers. */\n      vp->output_buffer = (uintptr_t)block->ro_sink;\n      p->count_buffer = (global uint *)block->ro_sink;\n      p->output_index_buffer = (global uint *)block->ro_sink;\n"),
     ],
     'src/amd/vulkan/radv_descriptor_update_template.c': [],
     'src/amd/vulkan/radv_descriptor_update_template.h': [],

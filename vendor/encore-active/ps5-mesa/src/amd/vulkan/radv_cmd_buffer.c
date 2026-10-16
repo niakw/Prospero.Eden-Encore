@@ -14401,6 +14401,12 @@ radv_gs_compute_prepare(struct radv_cmd_buffer *cmd_buffer, const struct radv_gs
 
    poly_vertex_params_init(vp, gsc->vs_outputs, wg_size);
    poly_geometry_params_init(gp, mode, wg_size);
+   /* GPU-side setup can drop a draw. Never leave its output pointers at 0. */
+   const uint64_t null_sink = radv_gs_compute_upload(cmd_buffer, 256, NULL, NULL);
+   vp->output_buffer = null_sink;
+   vp->index_buffer = null_sink;
+   gp->count_buffer = null_sink;
+   gp->output_index_buffer = null_sink;
 
    /* Primitives generated and written per stream count into the command
     * buffer's counters, which queries sample. */

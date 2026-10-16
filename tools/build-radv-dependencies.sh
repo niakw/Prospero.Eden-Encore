@@ -96,7 +96,7 @@ sha256sum "$vulkan/.deps/work/radv-src/src/vulkan/wsi/wsi_common_videoout.c" \
     > "$vulkan/.deps/native/radv-release/EDEN_WSI_SHA256"
 # Stamp the complete maintained native compiler input set ONLY after the
 # final incremental link succeeds. Each rebuilt binary must correspond to
-# all eleven checked-in modified units, not just the WSI translation unit.
+# all twelve checked-in modified units, not just the WSI translation unit.
 python3 -B "$root/tools/radv-active-inputs.py" --stamp \
     "$vulkan/.deps/work/radv-src" \
     "$vulkan/.deps/native/radv-release/lib/libvulkan_radeon.ps5.a" \
