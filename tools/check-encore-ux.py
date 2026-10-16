@@ -125,6 +125,8 @@ assert 'const float sleeve_w = std::clamp(paper_height * aspect * 1.01f,' in lib
 assert 'const Rect detail{72.0f, 620.0f, 1776.0f, 276.0f};' in library
 assert 'const float paper_height = sleeve_h -' in library
 assert 'front_scan.aspect' in library
+assert 'fit_fallback_art(c, game.cover, art);' in library
+assert 'fit_fallback_art(c, game.hero, art);' in library
 assert 'const float opening_x = rear ? shell.x : shell.x + shell.w - side;' in library
 assert 'c.list.gradient_rect({shell.x, shell.y, shell.w, top}' in library
 assert 'c.list.gradient_rect({shell.x, shell.y + shell.h - top,' in library
