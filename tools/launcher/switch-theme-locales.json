@@ -21,7 +21,15 @@
       "categories": "الفئات",
       "browse": "تصفح المجلدات",
       "language": "اللغة",
-      "unchanged": "دون تغيير"
+      "unchanged": "دون تغيير",
+      "about": "حول",
+      "multiplayer": "متعدد اللاعبين",
+      "volume": "مستوى الصوت",
+      "controllerProfile": "ملف تعريف وحدة التحكم",
+      "cache": "ذاكرة التخزين المؤقت",
+      "manage": "إدارة",
+      "openFolders": "فتح المجلدات",
+      "filter": "مرشح"
     },
     "cs-CZ": {
       "appearance": "Vzhled",
@@ -43,7 +51,15 @@
       "categories": "kategorie",
       "browse": "Procházet složky",
       "language": "jazyk",
-      "unchanged": "beze změny"
+      "unchanged": "beze změny",
+      "about": "O aplikaci",
+      "multiplayer": "Hra pro více hráčů",
+      "volume": "Hlasitost",
+      "controllerProfile": "Profil ovladače",
+      "cache": "Mezipaměť",
+      "manage": "Spravovat",
+      "openFolders": "Otevřít složky",
+      "filter": "Filtr"
     },
     "da-DK": {
       "appearance": "Udseende",
@@ -65,7 +81,15 @@
       "categories": "kategorier",
       "browse": "Gennemse mapper",
       "language": "sprog",
-      "unchanged": "uændret"
+      "unchanged": "uændret",
+      "about": "Om",
+      "multiplayer": "Multiplayer",
+      "volume": "Lydstyrke",
+      "controllerProfile": "Controllerprofil",
+      "cache": "Cache",
+      "manage": "Administrer",
+      "openFolders": "Åbn mapper",
+      "filter": "Filter"
     },
     "de-DE": {
       "appearance": "Darstellung",
@@ -87,7 +111,15 @@
       "categories": "Kategorien",
       "browse": "Ordner durchsuchen",
       "language": "Sprache",
-      "unchanged": "unverändert"
+      "unchanged": "unverändert",
+      "about": "Über",
+      "multiplayer": "Mehrspieler",
+      "volume": "Lautstärke",
+      "controllerProfile": "Controllerprofil",
+      "cache": "Cache",
+      "manage": "Verwalten",
+      "openFolders": "Ordner öffnen",
+      "filter": "Filter"
     },
     "el-GR": {
       "appearance": "Εμφάνιση",
@@ -109,7 +141,15 @@
       "categories": "κατηγορίες",
       "browse": "Περιήγηση φακέλων",
       "language": "γλώσσα",
-      "unchanged": "χωρίς αλλαγές"
+      "unchanged": "χωρίς αλλαγές",
+      "about": "Σχετικά",
+      "multiplayer": "Πολλοί παίκτες",
+      "volume": "Ένταση",
+      "controllerProfile": "Προφίλ χειριστηρίου",
+      "cache": "Προσωρινή μνήμη",
+      "manage": "Διαχείριση",
+      "openFolders": "Άνοιγμα φακέλων",
+      "filter": "Φίλτρο"
     },
     "es-419": {
       "appearance": "Apariencia",
@@ -131,7 +171,15 @@
       "categories": "categorías",
       "browse": "Explorar carpetas",
       "language": "idioma",
-      "unchanged": "sin cambios"
+      "unchanged": "sin cambios",
+      "about": "Acerca de",
+      "multiplayer": "Multijugador",
+      "volume": "Volumen",
+      "controllerProfile": "Perfil de control",
+      "cache": "Caché",
+      "manage": "Administrar",
+      "openFolders": "Abrir carpetas",
+      "filter": "Filtro"
     },
     "es-ES": {
       "appearance": "Apariencia",
@@ -153,7 +201,15 @@
       "categories": "categorías",
       "browse": "Explorar carpetas",
       "language": "idioma",
-      "unchanged": "sin cambios"
+      "unchanged": "sin cambios",
+      "about": "Acerca de",
+      "multiplayer": "Multijugador",
+      "volume": "Volumen",
+      "controllerProfile": "Perfil del mando",
+      "cache": "Caché",
+      "manage": "Administrar",
+      "openFolders": "Abrir carpetas",
+      "filter": "Filtro"
     },
     "fi-FI": {
       "appearance": "Ulkoasu",
@@ -175,7 +231,15 @@
       "categories": "luokat",
       "browse": "Selaa kansioita",
       "language": "kieli",
-      "unchanged": "ei muutoksia"
+      "unchanged": "ei muutoksia",
+      "about": "Tietoja",
+      "multiplayer": "Moninpeli",
+      "volume": "Äänenvoimakkuus",
+      "controllerProfile": "Ohjainprofiili",
+      "cache": "Välimuisti",
+      "manage": "Hallitse",
+      "openFolders": "Avaa kansiot",
+      "filter": "Suodatin"
     },
     "fr-CA": {
       "appearance": "Apparence",
@@ -197,7 +261,15 @@
       "categories": "catégories",
       "browse": "Parcourir les dossiers",
       "language": "langue",
-      "unchanged": "inchangés"
+      "unchanged": "inchangés",
+      "about": "À propos",
+      "multiplayer": "Multijoueur",
+      "volume": "Volume",
+      "controllerProfile": "Profil de manette",
+      "cache": "Cache",
+      "manage": "Gérer",
+      "openFolders": "Ouvrir les dossiers",
+      "filter": "Filtre"
     },
     "fr-FR": {
       "appearance": "Apparence",
@@ -219,7 +291,15 @@
       "categories": "catégories",
       "browse": "Parcourir les dossiers",
       "language": "langue",
-      "unchanged": "inchangés"
+      "unchanged": "inchangés",
+      "about": "À propos",
+      "multiplayer": "Multijoueur",
+      "volume": "Volume",
+      "controllerProfile": "Profil de manette",
+      "cache": "Cache",
+      "manage": "Gérer",
+      "openFolders": "Ouvrir les dossiers",
+      "filter": "Filtre"
     },
     "hu-HU": {
       "appearance": "Megjelenés",
@@ -241,7 +321,15 @@
       "categories": "kategóriák",
       "browse": "Mappák böngészése",
       "language": "nyelv",
-      "unchanged": "változatlan"
+      "unchanged": "változatlan",
+      "about": "Névjegy",
+      "multiplayer": "Többjátékos",
+      "volume": "Hangerő",
+      "controllerProfile": "Vezérlőprofil",
+      "cache": "Gyorsítótár",
+      "manage": "Kezelés",
+      "openFolders": "Mappák megnyitása",
+      "filter": "Szűrő"
     },
     "id-ID": {
       "appearance": "Tampilan",
@@ -263,7 +351,15 @@
       "categories": "kategori",
       "browse": "Jelajahi folder",
       "language": "bahasa",
-      "unchanged": "tidak berubah"
+      "unchanged": "tidak berubah",
+      "about": "Tentang",
+      "multiplayer": "Multipemain",
+      "volume": "Volume",
+      "controllerProfile": "Profil pengontrol",
+      "cache": "Cache",
+      "manage": "Kelola",
+      "openFolders": "Buka folder",
+      "filter": "Filter"
     },
     "it-IT": {
       "appearance": "Aspetto",
@@ -285,7 +381,15 @@
       "categories": "categorie",
       "browse": "Sfoglia cartelle",
       "language": "lingua",
-      "unchanged": "invariati"
+      "unchanged": "invariati",
+      "about": "Informazioni",
+      "multiplayer": "Multigiocatore",
+      "volume": "Volume",
+      "controllerProfile": "Profilo controller",
+      "cache": "Cache",
+      "manage": "Gestisci",
+      "openFolders": "Apri cartelle",
+      "filter": "Filtro"
     },
     "ja-JP": {
       "appearance": "外観",
@@ -307,7 +411,15 @@
       "categories": "カテゴリー",
       "browse": "フォルダーを参照",
       "language": "言語",
-      "unchanged": "変更なし"
+      "unchanged": "変更なし",
+      "about": "このアプリについて",
+      "multiplayer": "マルチプレイ",
+      "volume": "音量",
+      "controllerProfile": "コントローラープロファイル",
+      "cache": "キャッシュ",
+      "manage": "管理",
+      "openFolders": "フォルダーを開く",
+      "filter": "フィルター"
     },
     "ko-KR": {
       "appearance": "모양",
@@ -329,7 +441,15 @@
       "categories": "범주",
       "browse": "폴더 탐색",
       "language": "언어",
-      "unchanged": "변경 없음"
+      "unchanged": "변경 없음",
+      "about": "정보",
+      "multiplayer": "멀티플레이",
+      "volume": "음량",
+      "controllerProfile": "컨트롤러 프로필",
+      "cache": "캐시",
+      "manage": "관리",
+      "openFolders": "폴더 열기",
+      "filter": "필터"
     },
     "nb-NO": {
       "appearance": "Utseende",
@@ -351,7 +471,15 @@
       "categories": "kategorier",
       "browse": "Bla i mapper",
       "language": "språk",
-      "unchanged": "uendret"
+      "unchanged": "uendret",
+      "about": "Om",
+      "multiplayer": "Flerspiller",
+      "volume": "Volum",
+      "controllerProfile": "Kontrollerprofil",
+      "cache": "Hurtigbuffer",
+      "manage": "Administrer",
+      "openFolders": "Åpne mapper",
+      "filter": "Filter"
     },
     "nl-NL": {
       "appearance": "Weergave",
@@ -373,7 +501,15 @@
       "categories": "categorieën",
       "browse": "Mappen doorzoeken",
       "language": "taal",
-      "unchanged": "ongewijzigd"
+      "unchanged": "ongewijzigd",
+      "about": "Over",
+      "multiplayer": "Multiplayer",
+      "volume": "Volume",
+      "controllerProfile": "Controllerprofiel",
+      "cache": "Cache",
+      "manage": "Beheren",
+      "openFolders": "Mappen openen",
+      "filter": "Filter"
     },
     "pl-PL": {
       "appearance": "Wygląd",
@@ -395,7 +531,15 @@
       "categories": "kategorie",
       "browse": "Przeglądaj foldery",
       "language": "język",
-      "unchanged": "bez zmian"
+      "unchanged": "bez zmian",
+      "about": "Informacje",
+      "multiplayer": "Wieloosobowa",
+      "volume": "Głośność",
+      "controllerProfile": "Profil kontrolera",
+      "cache": "Pamięć podręczna",
+      "manage": "Zarządzaj",
+      "openFolders": "Otwórz foldery",
+      "filter": "Filtr"
     },
     "pt-BR": {
       "appearance": "Aparência",
@@ -417,7 +561,15 @@
       "categories": "categorias",
       "browse": "Explorar pastas",
       "language": "idioma",
-      "unchanged": "sem alterações"
+      "unchanged": "sem alterações",
+      "about": "Sobre",
+      "multiplayer": "Multijogador",
+      "volume": "Volume",
+      "controllerProfile": "Perfil do controle",
+      "cache": "Cache",
+      "manage": "Gerenciar",
+      "openFolders": "Abrir pastas",
+      "filter": "Filtro"
     },
     "pt-PT": {
       "appearance": "Aspeto",
@@ -439,7 +591,15 @@
       "categories": "categorias",
       "browse": "Explorar pastas",
       "language": "idioma",
-      "unchanged": "sem alterações"
+      "unchanged": "sem alterações",
+      "about": "Sobre",
+      "multiplayer": "Multijogador",
+      "volume": "Volume",
+      "controllerProfile": "Perfil do comando",
+      "cache": "Cache",
+      "manage": "Gerir",
+      "openFolders": "Abrir pastas",
+      "filter": "Filtro"
     },
     "ro-RO": {
       "appearance": "Aspect",
@@ -461,7 +621,15 @@
       "categories": "categorii",
       "browse": "Răsfoiește dosare",
       "language": "limbă",
-      "unchanged": "neschimbate"
+      "unchanged": "neschimbate",
+      "about": "Despre",
+      "multiplayer": "Multiplayer",
+      "volume": "Volum",
+      "controllerProfile": "Profil de controler",
+      "cache": "Cache",
+      "manage": "Gestionează",
+      "openFolders": "Deschide dosare",
+      "filter": "Filtru"
     },
     "ru-RU": {
       "appearance": "Оформление",
@@ -483,7 +651,15 @@
       "categories": "категории",
       "browse": "Просмотр папок",
       "language": "язык",
-      "unchanged": "без изменений"
+      "unchanged": "без изменений",
+      "about": "О программе",
+      "multiplayer": "Сетевая игра",
+      "volume": "Громкость",
+      "controllerProfile": "Профиль контроллера",
+      "cache": "Кэш",
+      "manage": "Управление",
+      "openFolders": "Открыть папки",
+      "filter": "Фильтр"
     },
     "sv-SE": {
       "appearance": "Utseende",
@@ -505,7 +681,15 @@
       "categories": "kategorier",
       "browse": "Bläddra i mappar",
       "language": "språk",
-      "unchanged": "oförändrade"
+      "unchanged": "oförändrade",
+      "about": "Om",
+      "multiplayer": "Flerspelarläge",
+      "volume": "Volym",
+      "controllerProfile": "Kontrollprofil",
+      "cache": "Cache",
+      "manage": "Hantera",
+      "openFolders": "Öppna mappar",
+      "filter": "Filter"
     },
     "th-TH": {
       "appearance": "รูปลักษณ์",
@@ -527,7 +711,15 @@
       "categories": "หมวดหมู่",
       "browse": "เรียกดูโฟลเดอร์",
       "language": "ภาษา",
-      "unchanged": "ไม่เปลี่ยนแปลง"
+      "unchanged": "ไม่เปลี่ยนแปลง",
+      "about": "เกี่ยวกับ",
+      "multiplayer": "ผู้เล่นหลายคน",
+      "volume": "ระดับเสียง",
+      "controllerProfile": "โปรไฟล์ตัวควบคุม",
+      "cache": "แคช",
+      "manage": "จัดการ",
+      "openFolders": "เปิดโฟลเดอร์",
+      "filter": "ตัวกรอง"
     },
     "tr-TR": {
       "appearance": "Görünüm",
@@ -549,7 +741,15 @@
       "categories": "kategoriler",
       "browse": "Klasörlere göz at",
       "language": "dil",
-      "unchanged": "değişmedi"
+      "unchanged": "değişmedi",
+      "about": "Hakkında",
+      "multiplayer": "Çok oyunculu",
+      "volume": "Ses düzeyi",
+      "controllerProfile": "Kontrolcü profili",
+      "cache": "Önbellek",
+      "manage": "Yönet",
+      "openFolders": "Klasörleri aç",
+      "filter": "Filtre"
     },
     "uk-UA": {
       "appearance": "Вигляд",
@@ -571,7 +771,15 @@
       "categories": "категорії",
       "browse": "Перегляд тек",
       "language": "мова",
-      "unchanged": "без змін"
+      "unchanged": "без змін",
+      "about": "Про програму",
+      "multiplayer": "Багатокористувацька гра",
+      "volume": "Гучність",
+      "controllerProfile": "Профіль контролера",
+      "cache": "Кеш",
+      "manage": "Керувати",
+      "openFolders": "Відкрити теки",
+      "filter": "Фільтр"
     },
     "vi-VN": {
       "appearance": "Giao diện",
@@ -593,7 +801,15 @@
       "categories": "danh mục",
       "browse": "Duyệt thư mục",
       "language": "ngôn ngữ",
-      "unchanged": "không đổi"
+      "unchanged": "không đổi",
+      "about": "Giới thiệu",
+      "multiplayer": "Nhiều người chơi",
+      "volume": "Âm lượng",
+      "controllerProfile": "Hồ sơ tay cầm",
+      "cache": "Bộ nhớ đệm",
+      "manage": "Quản lý",
+      "openFolders": "Mở thư mục",
+      "filter": "Bộ lọc"
     },
     "zh-Hans": {
       "appearance": "外观",
@@ -615,7 +831,15 @@
       "categories": "分类",
       "browse": "浏览文件夹",
       "language": "语言",
-      "unchanged": "保持不变"
+      "unchanged": "保持不变",
+      "about": "关于",
+      "multiplayer": "多人游戏",
+      "volume": "音量",
+      "controllerProfile": "控制器配置",
+      "cache": "缓存",
+      "manage": "管理",
+      "openFolders": "打开文件夹",
+      "filter": "筛选"
     },
     "zh-Hant": {
       "appearance": "外觀",
@@ -637,7 +861,15 @@
       "categories": "分類",
       "browse": "瀏覽資料夾",
       "language": "語言",
-      "unchanged": "保持不變"
+      "unchanged": "保持不變",
+      "about": "關於",
+      "multiplayer": "多人遊戲",
+      "volume": "音量",
+      "controllerProfile": "控制器設定",
+      "cache": "快取",
+      "manage": "管理",
+      "openFolders": "開啟資料夾",
+      "filter": "篩選"
     }
   }
 }
