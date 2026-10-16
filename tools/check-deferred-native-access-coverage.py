@@ -164,6 +164,23 @@ expect(checked_a32, "code.test(page.cvt32(), 1);", "A32 fallback PTE mark")
 expect(checked_a32, "const auto fastmem_marker = checked_fastmem ? decltype(ShouldFastmem(ctx, inst)){} : ShouldFastmem(ctx, inst);", "A32 exclusives selection")
 expect(host_mem, "std::fill(page_access.begin() + first, page_access.begin() + last + 1, access);", "A32 Protect access map")
 expect(host_mem, "map[page] = Own(page) | Own(page + 1);", "A32 crossing protection")
+# A CAS is a read-modify-write producer, not an eager "write follows"
+# event. Both native WriteExclusive forms currently notify the rasterizer
+# BEFORE AtomicCompareAndSwap, even if comparison fails; they do not perform
+# HandleRasterizerDownload in that path. The *existing* GPU read fence lives
+# in the separate OnCPURead path. The developer-only poststore model is not
+# hooked to the native CAS read + GPU transfer + conditional outcome.
+native_exclusives = memory.split("bool WriteExclusive(Common::ProcessAddress", 1)[1].split(
+    "void HandleRasterizerDownload(", 1)[0]
+expect(native_exclusives, "HandleRasterizerWrite(GetInteger(vaddr), sizeof(T));", "scalar CAS pre-notification")
+expect(native_exclusives, "HandleRasterizerWrite(GetInteger(vaddr), sizeof(u128));", "128-bit CAS pre-notification")
+expect(native_exclusives, "Common::AtomicCompareAndSwap(", "native CAS")
+assert "HandleRasterizerDownload(" not in native_exclusives, "Re-audit native CAS read fence"
+expect(gpu_driver, "WaitForSyncOperation(fence);", "GPU read fence exists separately")
+expect(poststore, "CommitConditionalAfterRead(", "host-only conditional transaction")
+# Absence of a native CAS read fence is a qualification gap, not proof of a
+# game-level fault. Do not activate the deferred bridge on this evidence.
+
 # The repository already has a REAL JIT harness for marked stores, checked
 # A32 fastmem, concurrent page flips, and a table-vs-fastmem benchmark.
 # Source anchors do not assert that any harness was run on this commit.
@@ -209,5 +226,6 @@ print(
     "jit_host_execution_this_commit=0 deferred_gpu_ordering_proof=0 "
     "transition_quiescence_proof=0 gpu_scoped_producers_inventoried=1 "
     "gpu_scoped_ordering_proof=0 "
-    "guest_read_flag_immutable=0"
+    "guest_read_flag_immutable=0 "
+    "cas_prewrite_notification=1 cas_device_read_fence_wired=0"
 )
