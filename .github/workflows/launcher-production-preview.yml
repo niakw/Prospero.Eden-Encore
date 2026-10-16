@@ -242,7 +242,7 @@ jobs:
               with Image.open(folder / filename) as raw:
                   frame=raw.convert("RGB")
                   assert min(frame.getpixel((480,145))) > 220, filename
-                  assert min(frame.getpixel((520,350))) < 170, filename
+                  assert max(frame.getpixel((120,240))) < 205, filename
           print("SWITCH_THEME_NATIVE_HOST_CAPTURE: PASS")
           PY
 
