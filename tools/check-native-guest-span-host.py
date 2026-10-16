@@ -64,6 +64,11 @@ int main(int argc, char**) {
     pages.entries[1].block = 22;
     MemoryFixture fixture{&pages};
     const MemoryFixture& read = fixture;
+    if (argc > 2) {
+        // The pinned final page probes a non-existent following entry.
+        (void)fixture.GetSpan(4096, 4096);
+        return 0; // Checked std::array indexing must abort.
+    }
     if (argc > 1) {
         // At exact end of page 0, original code consults page 1.
         assert(fixture.GetSpan(0, 4096) == nullptr);
@@ -105,4 +110,12 @@ with tempfile.TemporaryDirectory(prefix="encore-guest-span-") as tmp:
         )
         command = [str(binary)] + (["--pinned"] if negative else [])
         subprocess.run(command, check=True, timeout=45)
-print("NATIVE_GUEST_SPAN_HOST_PASS original_exact_boundary_false_negative=1 native_const_mutable=2 last_page=1 crossing=1 zero=1 overflow=1 out_of_bounds=1")
+        if negative:
+            beyond = subprocess.run(
+                [str(binary), "--pinned", "--past-last"], capture_output=True,
+                text=True, timeout=45
+            )
+            assert beyond.returncode != 0, "Pinned last-page overrun was not caught"
+            assert ("Assertion" in beyond.stderr or "out of range" in beyond.stderr
+                    or "runtime error" in beyond.stderr), beyond.stderr
+print("NATIVE_GUEST_SPAN_HOST_PASS original_exact_boundary_false_negative=1 native_const_mutable=2 original_last_page_checked_abort=1 last_page=1 crossing=1 zero=1 overflow=1 out_of_bounds=1")
