@@ -73,7 +73,9 @@ public:
     const u8* GetSpan(DAddr, std::size_t) const;
 };
 }
+namespace Core {
 @@ACTUAL_METHODS@@
+}
 int main(int argc, char**) {
     Core::DeviceMemoryManager<Core::Traits> mgr;
     auto& read = static_cast<const Core::DeviceMemoryManager<Core::Traits>&>(mgr);
