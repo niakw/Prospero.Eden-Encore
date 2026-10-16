@@ -23,6 +23,9 @@ assert "ScopedReplay" in replay and "replaying_guest_write" in replay
 assert "ScopedGuestWriteOrigin" in replay and "guest_write_origin_core = previous" in replay
 assert "enum class GuestWriteIntent { NoStore, StoreFollows };" in replay
 assert "ScopedGuestStoreIntent" in replay
+assert "ScopedGuestCacheMaintenanceIntent" in replay
+assert "guest_write_intent = GuestWriteIntent::NoStore;" in replay
+assert "Expected exactly two cache-maintenance write callbacks" in code
 assert "guest_write_intent = previous;" in replay
 assert "guest_write_intent = GuestWriteIntent::StoreFollows;" in replay
 # Fail-closed runtime qualification, independent of any developer toggle.
@@ -305,6 +308,7 @@ include("__BRIDGE__")
     assert exclusive.count("ScopedGuestStoreIntent store_intent;") == 2
     maintenance=guest.split("Result StoreDataCache(",1)[1].split("void MarkRegionDebug(",1)[0]
     assert maintenance.count("HandleRasterizerWrite(") == 2
+    assert maintenance.count("ScopedGuestCacheMaintenanceIntent maintenance_intent;") == 2
     assert "ScopedGuestStoreIntent store_intent;" not in maintenance
     assert "guest_write_intent" in vk and "guest_write_intent" in mm
     assert "system.GPU().OnCPUWrite(address, size)" in guest

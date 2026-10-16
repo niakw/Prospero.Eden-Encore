@@ -47,6 +47,12 @@ int main() {
     {
         ScopedGuestStoreIntent tracked;
         assert(guest_write_intent==GuestWriteIntent::StoreFollows);
+        { ScopedGuestCacheMaintenanceIntent maintenance;
+          assert(guest_write_intent==GuestWriteIntent::NoStore);
+          { ScopedGuestStoreIntent nested_store;
+            assert(guest_write_intent==GuestWriteIntent::StoreFollows); }
+          assert(guest_write_intent==GuestWriteIntent::NoStore); }
+        assert(guest_write_intent==GuestWriteIntent::StoreFollows);
         { ScopedGuestStoreIntent nested;
           assert(guest_write_intent==GuestWriteIntent::StoreFollows); }
         assert(guest_write_intent==GuestWriteIntent::StoreFollows);

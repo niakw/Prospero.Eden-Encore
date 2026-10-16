@@ -304,3 +304,16 @@ still uses unsafe eager publication, which remains blocked by the unchanged
 kNativePostStorePublicationReady=false gate. Normal builds are unchanged.
 CMake source derivation tests assert all five marked and two unmarked sites;
 the host sanitizer verifies nested and cross-thread TLS restoration.
+
+## Nested cache-maintenance context isolation (2026-10-16)
+
+Unmarked cache-maintenance callbacks could inherit `StoreFollows` from an
+enclosing guest write on the same thread. The developer-only derived guest
+memory source now puts an explicit `ScopedGuestCacheMaintenanceIntent` around
+both `StoreDataCache` and `FlushDataCache` rasterizer callbacks. The scope
+forces `NoStore` even under nested guest writes and restores the previous
+intent on exit. The CMake derivation refuses changed or missing two-site
+anchors; the generated-source contract verifies two tagged maintenance
+callbacks without converting either into a RAM store. The host sanitizer
+tests Store -> Maintenance -> Store nesting and restoration. The native
+runtime bridge remains gated off and normal native sources are unchanged.

@@ -244,6 +244,18 @@ void MemoryManager::FlushCaching() {
     string(REPLACE "${intent_exclusive128}"
         "::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent; ${intent_exclusive128}"
         bridge_cpu "${bridge_cpu}")
+    # An unmarked maintenance callback can inherit StoreFollows from an
+    # enclosing guest write on the same host thread. Explicitly force NoStore
+    # while running either dc cvac or dc civac rasterizer callback.
+    set(intent_maintenance "HandleRasterizerWrite(GetInteger(current_vaddr), block_size);")
+    string(REGEX MATCHALL "HandleRasterizerWrite\\(GetInteger\\(current_vaddr\\), block_size\\);" maintenance_matches "${bridge_cpu}")
+    list(LENGTH maintenance_matches maintenance_count)
+    if(NOT maintenance_count EQUAL 2)
+        message(FATAL_ERROR "Expected exactly two cache-maintenance write callbacks")
+    endif()
+    string(REPLACE "${intent_maintenance}"
+        "::Eden::GpuDeferredWrite::ScopedGuestCacheMaintenanceIntent maintenance_intent; ${intent_maintenance}"
+        bridge_cpu "${bridge_cpu}")
     string(PREPEND bridge_cpu "#include \"${EDEN_PORT_DIR}/gpu_deferred_replay.h\"\n")
     write_derived("${PORT_BUILD_DIR}/memory-ps5-deferred.cpp" "${bridge_cpu}")
     get_target_property(bridge_core_sources core SOURCES)
