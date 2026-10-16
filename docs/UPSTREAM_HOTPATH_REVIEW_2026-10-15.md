@@ -200,3 +200,23 @@ can be introduced safely. Until then it remains OFF in all native builds.
 
 Nested guest-core origin scope and worker TLS isolation are independently
 covered by the sanitizer test of the replay header.
+
+## Post-store FIFO cancellation model (2026-10-16)
+
+The inactive host queue now has `Cancel(Ticket)` and `CancelAndWake(Ticket, RequestGpu)`
+for a reserved write that completed without changing guest backing RAM (for
+example a failed conditional store). Cancellation marks the ordered reservation
+as published/no-op, rather than erasing its sequence and overtaking preceding
+writes. The GPU drain advances the completed watermark past canceled entries
+but never calls the cache invalidation callback for them. Canceling an
+unpublished FIFO head triggers the same shutdown-joined GPU wake contract as
+publishing a completed ordinary store; failed wake callbacks poison the queue.
+
+The sanitizer host test exercises a canceled middle write, FIFO replay around
+that write, a canceled head releasing a published tail, and stale/duplicate
+resolution rejection. The native bridge remains OFF and
+`kNativePostStorePublicationReady = false`: a failed atomic compare first
+READS guest memory, so its read/download ordering must be solved as well as
+post-store cancellation. All store classes, GPU cache ownership, direct
+JIT/fastmem accesses, title shutdown and DMA must be qualified before
+activation. This commit does not address game frame stalls or FC27 HUD.

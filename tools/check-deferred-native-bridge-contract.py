@@ -90,25 +90,31 @@ assert "accepted_ - completed_ >= MaxOutstandingWrites" in queue
 # Publishing thousands of reservations out of order must not turn the FIFO
 # into a quadratic per-frame CPU hotspot. Last-sequence keys are monotone
 # across tail merges and prefix drains, allowing log-time lookup.
-publish_body=queue.split("std::optional<bool> PublishImpl(Ticket ticket, bool arm_wake = false) {",1)[1].split("static std::uint64_t FreshGeneration()",1)[0]
+publish_body=queue.split("std::optional<bool> PublishImpl(Ticket ticket, bool arm_wake = false, bool cancel = false) {",1)[1].split("static std::uint64_t FreshGeneration()",1)[0]
 assert "std::lower_bound(" in publish_body
 assert "write.last_sequence < sequence" in publish_body
 assert "entry->last_sequence != ticket.sequence" in publish_body
 # A post-store producer must wake the GPU when a previously blocked FIFO head
 # first becomes replayable. RequestGpu runs OUTSIDE the queue mutex, so a
 # synchronous callback can acquire the queue and renderer locks safely.
-notify_body=queue.split("bool PublishAndWake(Ticket ticket, RequestGpu&& request_gpu) {",1)[1].split("// Existing opt-in native bridge",1)[0]
-assert "PublishImpl(ticket, true)" in notify_body
+notify_body=queue.split("bool ResolveAndWake(Ticket ticket, bool cancel, RequestGpu&& request_gpu) {",1)[1].split("// Returning true means a blocked/unready FIFO head",1)[0]
+assert "PublishImpl(ticket, true, cancel)" in notify_body
+assert "return ResolveAndWake(ticket, false, std::forward<RequestGpu>(request_gpu));" in queue
+assert "return ResolveAndWake(ticket, true, std::forward<RequestGpu>(request_gpu));" in queue
 assert "std::forward<RequestGpu>(request_gpu)();" in notify_body
 assert "failed_ = true;" in notify_body and "throw;" in notify_body
 assert "const bool became_ready = !was_ready && !queue_.empty()" in publish_body
 assert "if (arm_wake && became_ready) ++pending_wake_callbacks_;" in publish_body
-assert "std::optional<bool> PublishImpl(Ticket ticket, bool arm_wake = false)" in queue
+assert "std::optional<bool> PublishImpl(Ticket ticket, bool arm_wake = false, bool cancel = false)" in queue
+assert "entry->cancelled = cancel;" in publish_body
+assert "bool Cancel(Ticket ticket)" in queue
+assert "bool CancelAndWake(Ticket ticket, RequestGpu&& request_gpu)" in queue
 assert "wake_cv_.wait(lock, [&] { return pending_wake_callbacks_ == 0; });" in queue
 assert "pending_wake_callbacks_ != 0" in queue
 assert "active_wake_callback_ == this" in queue
 assert "active_wake_callback_ = this;" in notify_body
 assert "deferred_cpu_write_queue.PublishAndWake(" not in code
+assert "deferred_cpu_write_queue.CancelAndWake(" not in code
 # Shutdown must be a replay-lifetime barrier, not just a waiter wake-up.
 # Without this, the GPU callback can still touch freed rasterizer resources.
 close_body=queue.split("void Close() {",1)[1].split("bool ResetAfterQuiescence()",1)[0]
@@ -117,6 +123,8 @@ assert "completed_cv_.notify_all()" in close_body
 assert "if (active_consumer_ == this || active_wake_callback_ == this)" in close_body
 drain_body=queue.split("std::uint64_t DrainThrough(Ticket target, Replay&& replay)",1)[1].split("std::uint64_t Drain(Replay&& replay)",1)[0]
 assert "std::unique_lock owner(consumer_mutex_);" in drain_body
+assert "if (item.cancelled) continue;" in drain_body
+assert "return replayed;" in drain_body
 assert "if (closed_ || failed_ || target.generation != generation_" in drain_body
 # A thrown rasterizer callback has potentially non-atomic side effects.
 # Never let the queue acknowledge, retry or accept fresh work after failure.

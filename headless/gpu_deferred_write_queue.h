@@ -23,6 +23,7 @@ struct Write {
     // A merged FIFO entry acknowledges all consecutive enqueues through this id.
     std::uint64_t last_sequence{};
     bool published{true}; // False until producer finishes the guest RAM store.
+    bool cancelled{false}; // Failed conditional store: advances FIFO without cache invalidation.
 };
 
 class Queue {
@@ -63,6 +64,13 @@ public:
         return PublishImpl(ticket).has_value();
     }
 
+    // Resolve a failed conditional write. No-op only at the memory level:
+    // the FIFO ticket stays ordered with all earlier cache invalidations.
+    // Native callers must use CancelAndWake to preserve worker liveness.
+    bool Cancel(Ticket ticket) {
+        return PublishImpl(ticket, false, true).has_value();
+    }
+
     // A native-ready producer needs TWO actions after its actual guest store:
     // publish the payload, then request a GPU-owner wake when the oldest FIFO
     // reservation first becomes replayable. Run the caller's scheduling
@@ -72,40 +80,15 @@ public:
     // does not invoke it or guarantee GPU-thread lifetime/fence ordering.
     template<class RequestGpu>
     bool PublishAndWake(Ticket ticket, RequestGpu&& request_gpu) {
-        const auto became_ready = PublishImpl(ticket, true);
-        if (!became_ready) return false;
-        if (*became_ready) {
-            // A synchronous scheduling callback must never recursively close
-            // this very queue: Close() waits for the callback's own counter.
-            // Keep the owner marker scoped, including exception unwinding.
-            struct RestoreWake {
-                const Queue*& slot;
-                const Queue* prior;
-                ~RestoreWake() { slot = prior; }
-            } restore{active_wake_callback_, active_wake_callback_};
-            active_wake_callback_ = this;
-            try {
-                std::forward<RequestGpu>(request_gpu)();
-            } catch (...) {
-                // A publication without a successful GPU wake cannot safely
-                // satisfy its reader. Fail closed, never assume another GPU
-                // command will eventually rescue this title.
-                {
-                    std::lock_guard lock(mutex_);
-                    failed_ = true;
-                    --pending_wake_callbacks_;
-                }
-                wake_cv_.notify_all();
-                completed_cv_.notify_all();
-                throw;
-            }
-            {
-                std::lock_guard lock(mutex_);
-                --pending_wake_callbacks_;
-            }
-            wake_cv_.notify_all();
-        }
-        return true;
+        return ResolveAndWake(ticket, false, std::forward<RequestGpu>(request_gpu));
+    }
+
+    // A failed conditional write did not change backing RAM. Resolve its
+    // reserved FIFO position without replaying an unnecessary invalidation.
+    // Still request a GPU wake when it unblocks the next published writer.
+    template<class RequestGpu>
+    bool CancelAndWake(Ticket ticket, RequestGpu&& request_gpu) {
+        return ResolveAndWake(ticket, true, std::forward<RequestGpu>(request_gpu));
     }
 
     // Existing opt-in native bridge uses this signature. There is deliberately
@@ -203,9 +186,12 @@ public:
         }
         // Under the consumer mutex no other replay can be in flight.
         // The snapshot includes ONLY the published FIFO prefix.
+        std::uint64_t replayed = 0;
         try {
             for (const auto& item : work) {
+                if (item.cancelled) continue;
                 replay(item.core, item.range.begin, item.range.end - item.range.begin);
+                ++replayed;
             }
         } catch (...) {
             // The callback may have partially modified GPU caches. Never
@@ -223,7 +209,7 @@ public:
             completed_ = work.back().last_sequence;
         }
         completed_cv_.notify_all();
-        return static_cast<std::uint64_t>(work.size());
+        return replayed;
     }
 
     template<class Replay>
@@ -286,10 +272,48 @@ public:
     }
 
 private:
+    template<class RequestGpu>
+    bool ResolveAndWake(Ticket ticket, bool cancel, RequestGpu&& request_gpu) {
+        const auto became_ready = PublishImpl(ticket, true, cancel);
+        if (!became_ready) return false;
+        if (*became_ready) {
+            // A synchronous scheduling callback must never recursively close
+            // this very queue: Close() waits for the callback's own counter.
+            // Keep the owner marker scoped, including exception unwinding.
+            struct RestoreWake {
+                const Queue*& slot;
+                const Queue* prior;
+                ~RestoreWake() { slot = prior; }
+            } restore{active_wake_callback_, active_wake_callback_};
+            active_wake_callback_ = this;
+            try {
+                std::forward<RequestGpu>(request_gpu)();
+            } catch (...) {
+                // A publication without a successful GPU wake cannot safely
+                // satisfy its reader. Fail closed, never assume another GPU
+                // command will eventually rescue this title.
+                {
+                    std::lock_guard lock(mutex_);
+                    failed_ = true;
+                    --pending_wake_callbacks_;
+                }
+                wake_cv_.notify_all();
+                completed_cv_.notify_all();
+                throw;
+            }
+            {
+                std::lock_guard lock(mutex_);
+                --pending_wake_callbacks_;
+            }
+            wake_cv_.notify_all();
+        }
+        return true;
+    }
+
     // Returning true means a blocked/unready FIFO head became published.
     // A later ready tail does NOT schedule an unnecessary second GPU tick.
     // The wake callback itself runs after this queue lock is released.
-    std::optional<bool> PublishImpl(Ticket ticket, bool arm_wake = false) {
+    std::optional<bool> PublishImpl(Ticket ticket, bool arm_wake = false, bool cancel = false) {
         std::lock_guard lock(mutex_);
         if (closed_ || failed_ || ticket.generation != generation_ || ticket.sequence == 0 ||
             ticket.sequence > accepted_) return std::nullopt;
@@ -304,6 +328,7 @@ private:
             entry->published) return std::nullopt;
         const bool was_ready = !queue_.empty() && queue_.front().published;
         entry->published = true;
+        entry->cancelled = cancel;
         const bool became_ready = !was_ready && !queue_.empty() &&
                                   queue_.front().published;
         // Account for the notifier WHILE holding mutex_, before Close() can
