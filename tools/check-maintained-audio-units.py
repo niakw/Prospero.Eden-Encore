@@ -55,5 +55,11 @@ gpu_producer_wait='string(REPLACE "${gpu_block_wait_original}" "${gpu_block_wait
 assert cmake.count(gpu_producer_wait) == 1
 gpu_enqueue_fence='string(REPLACE "${gpu_enqueue_fence_original}" "${gpu_enqueue_fence_atomic}"'
 assert cmake.count(gpu_enqueue_fence) == 1
-assert cmake.count("string(REPLACE") - cmake.count(gpu_producer_wait) - cmake.count(gpu_enqueue_fence) <= 227
+# One bounded native GPU dirty-mask fix uses a separately pinned source
+# replacement. Explicitly account for this exact expression; do not raise the
+# generator-wide budget or grant an anonymous rewrite.
+dirty_mask_split='string(REPLACE "${eden_dirty_raw}" [=['
+assert cmake.count(dirty_mask_split) == 1
+assert 'Pinned native GPUDirty Collect call changed' in cmake
+assert cmake.count("string(REPLACE") - cmake.count(gpu_producer_wait) - cmake.count(gpu_enqueue_fence) - cmake.count(dirty_mask_split) <= 227
 print("MAINTAINED_AUDIO_UNITS_PARITY_PASS sink=1 voice=1")
