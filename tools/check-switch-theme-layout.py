@@ -60,7 +60,9 @@ assert 'text_shrink(c,tr("Back"),1230.0f' in src
 assert "switch_profile_name(int layout,const ButtonMapping& mapping)" in src
 assert "switch_profile_name(g.controller_layout" in src
 assert "switch_physical_pad(mapped)" in src
-assert "draw_pad(c,switch_physical_pad(mapped)" in src
+assert "const Pad icon=switch_physical_pad(mapped);" in src
+assert "draw_pad(c,icon,1035.0f" in src
+assert "if(mapped>=4)" in src, "shoulder/system glyphs need a dark backing on white"
 assert "settings_.wrap=false;" in src
 assert "settings_.wrap=original_wrap;" in src
 assert 'text_shrink(c,tr("Select"),1024.0f' in src
