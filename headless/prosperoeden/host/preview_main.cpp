@@ -155,6 +155,12 @@ void pictures(Stage &s)
         s.press({Key::down, Key::down, Key::down, Key::down, Key::cross});
         s.wait(0.3f);
         s.shoot("03-switch-appearance");
+        s.press({Key::circle, Key::down, Key::down, Key::cross});
+        s.wait(0.3f);
+        s.shoot("04-switch-storage");
+        s.press({Key::circle, Key::down, Key::cross});
+        s.wait(0.3f);
+        s.shoot("05-switch-language");
         return;
     }
     // Independently verify the game's real launch transition using the same

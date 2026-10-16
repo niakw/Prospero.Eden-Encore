@@ -237,7 +237,8 @@ void Launcher::draw_switch_library(Canvas& c) {
     }
     const int selected=std::clamp(library_.selected,0,count-1);
     const int start=(selected/kLibraryPageSize)*kLibraryPageSize;
-    constexpr float tile=232.0f,gap=31.0f,x0=120.0f,y0=236.0f;
+    // Three complete rows must end BEFORE the footer divider (y=979).
+    constexpr float tile=218.0f,gap=25.0f,x0=242.0f,y0=230.0f;
     for(int pos=start;pos<std::min(count,start+kLibraryPageSize);++pos){
         const auto& g=games_[static_cast<std::size_t>(pos)];
         const int local=pos-start,col=local%kLibraryColumns,row=local/kLibraryColumns;
@@ -348,6 +349,87 @@ void Launcher::draw_switch_settings(Canvas& c) {
     text_shrink(c,tr("Press Select to configure"),695.0f,baseline(811,50,20),
                 20,kSubtle,920);
     draw_switch_footer(c,tr("Select a settings category"));
+}
+
+void Launcher::draw_switch_files(Canvas& c) {
+    draw_switch_header(c,tr("Game files"));
+    auto& list=c.list;
+    list.rounded_rect({88,160,1744,2},0,kGrey);
+    text_shrink(c,browse_dir_,110,baseline(188,48,22),22,kSubtle,1660);
+    list.rounded_rect({106,251,1120,675},3,kWhite);
+    list.bordered_rect({106,251,1120,675},3,kPaper.with_alpha(0),1.0f,kGrey);
+    const int count=static_cast<int>(browse_entries_.size());
+    for(int row=files_.first_row();row<=files_.last_row()&&row<count;++row) {
+        if(row<0)continue;
+        const float top=277.0f+float(row)*88.0f-files_.scroll();
+        if(top<260||top>878)continue;
+        const Rect cell{128.0f,top,1062.0f,80.0f};
+        if(row==files_.selected) {
+            list.rounded_rect(cell,3,kFocus);
+        } else {
+            list.rounded_rect({cell.x,cell.y+79,cell.w,1},0,kGrey);
+        }
+        const std::string& name=browse_entries_[static_cast<std::size_t>(row)];
+        const bool selected=row==files_.selected;
+        list.rounded_rect({cell.x+19,cell.y+28,30,23},3,selected?kWhite:kSubtle);
+        text_shrink(c,name,cell.x+73,
+                    baseline(cell.y,80,25),25,selected?kWhite:kInk,960.0f);
+    }
+    list.rounded_rect({1270,252,530,540},3,kWhite);
+    list.bordered_rect({1270,252,530,540},3,kPaper.with_alpha(0),1,kGrey);
+    text_shrink(c,tr("Storage"),1300,baseline(282,56,29),29,kInk,450);
+    list.rounded_rect({1300,352,462,1},0,kGrey);
+    const std::array<std::string,3> info{
+        folder_info_.keys?tr("Keys found"):tr("Keys missing"),
+        folder_info_.firmware>0?tr("Firmware ready"):tr("Setup required"),
+        folder_info_.games>0?tr("Games found"):tr("No games found")
+    };
+    for(int i=0;i<3;++i)
+        text_shrink(c,info[static_cast<std::size_t>(i)],1305,
+            baseline(379+float(i)*105,70,23),23,kSubtle,450);
+    draw_switch_footer(c,tr("Browse folders: D-pad / Open: A"));
+}
+
+void Launcher::draw_switch_language(Canvas& c) {
+    draw_switch_header(c,tr("Language"));
+    auto& list=c.list;
+    list.rounded_rect({90,153,1740,2},0,kGrey);
+    const auto& labels=services_.language_labels();
+    const int count=static_cast<int>(labels.size());
+    text_shrink(c,tr("Choose the language games use"),116,
+                baseline(174,62,23),23,kSubtle,1570);
+    const Rect window{122,260,1676,648};
+    list.push_clip(window);
+    for(int i=language_.first_row();i<=language_.last_row()&&i<count;++i) {
+        if(i<0)continue;
+        const float top=window.y+float(i)*language_.pitch-language_.scroll();
+        const Rect row{146,top,1628,79};
+        const bool selected=i==language_.selected;
+        if(selected) list.rounded_rect(row,3,kFocus);
+        else list.rounded_rect({row.x,row.y+78,row.w,1},0,kGrey);
+        text_shrink(c,labels[static_cast<std::size_t>(i)],row.x+32,
+                    baseline(row.y,79,26),26,selected?kWhite:kInk,1520);
+        if(i==prefs_.language)
+            text(c,"✓",row.x+row.w-52,baseline(row.y,79,27),27,
+                 selected?kWhite:kInk,Align::center);
+    }
+    list.pop_clip();
+    draw_switch_footer(c,tr("Choose your preferred language"));
+}
+
+void Launcher::draw_switch_about(Canvas& c) {
+    draw_switch_header(c,tr("About Eden Encore"));
+    auto& list=c.list;
+    list.rounded_rect({90,163,1740,2},0,kGrey);
+    text_shrink(c,tr("Powered by Eden"),142,baseline(208,76,38),38,kInk,1500);
+    text_block(c,tr("All credit for the Eden emulator goes to its developers and contributors."),
+               146,baseline(318,53,27),27,43,kInk,1530,3);
+    list.rounded_rect({146,492,1624,2},0,kGrey);
+    text_shrink(c,tr("Eden Encore"),146,baseline(537,66,31),31,kInk,1420);
+    text_block(c,tr("Thanks to the whole PS5 homebrew community and to every developer whose drivers, tools and libraries make Eden Encore possible."),
+               146,baseline(623,55,24),24,40,kSubtle,1550,3);
+    text_shrink(c,version_,146,baseline(815,60,23),23,kSubtle,1450);
+    draw_switch_footer(c,tr("Credits and setup"));
 }
 
 void Launcher::draw_switch_dialog(Canvas& c, Modal modal, float opened) {

@@ -511,11 +511,11 @@ void Launcher::draw_screen(Canvas &c, Screen screen)
     case Screen::settings:
         return prefs_.ui_theme == 1 ? draw_switch_settings(c) : draw_settings(c);
     case Screen::files:
-        return draw_files(c);
+        return prefs_.ui_theme == 1 ? draw_switch_files(c) : draw_files(c);
     case Screen::language:
-        return draw_language(c);
+        return prefs_.ui_theme == 1 ? draw_switch_language(c) : draw_language(c);
     case Screen::about:
-        return draw_about(c);
+        return prefs_.ui_theme == 1 ? draw_switch_about(c) : draw_about(c);
     }
 }
 

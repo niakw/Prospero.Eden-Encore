@@ -199,7 +199,8 @@ jobs:
           from PIL import Image, ImageStat
           folder=Path("build/launch-switch-theme")
           expected=["00-switch-home.png","01-switch-all-software.png",
-                    "02-switch-settings.png","03-switch-appearance.png"]
+                    "02-switch-settings.png","03-switch-appearance.png",
+                    "04-switch-storage.png","05-switch-language.png"]
           files=sorted(folder.glob("*.png"))
           assert [f.name for f in files] == expected, files
           for file in files:
