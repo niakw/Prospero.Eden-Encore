@@ -179,6 +179,18 @@ public:
         return failed_;
     }
 
+    // A failed GPU->CPU download compromises guest memory coherence. Unlike
+    // a failed CAS comparison, do not acknowledge or replay its reservation:
+    // poison the whole session and release blocked producer/reader threads.
+    void FailClosed() {
+        {
+            std::lock_guard lock(mutex_);
+            failed_ = true;
+        }
+        completed_cv_.notify_all();
+        wake_cv_.notify_all();
+    }
+
     // Generation-tagged wait for either queued or reserved writes.
     // Caller MUST schedule a GPU-owner drain, without holding any GPU cache
     // lock, before waiting. The result is replay-callback completion only,
