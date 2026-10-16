@@ -95,8 +95,9 @@ assert "flat_retail_sleeve(c, *game, art, true, 0.60f);" in library
 assert "flat_retail_sleeve(c, *game, enlarged, true, 0.92f," in library
 assert "library_back_scale_);" in library
 assert "std::max(paper.w, paper.h) * texture_scale" in library
-assert "if (rear) fitted.x += paper.w - fitted.w;" in library
-assert "c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f}," in library
+assert "fitted.x += paper.w - fitted.w;" in library
+assert "c.list.image(artwork.texture, fitted, uv," in library
+assert "uv.w = target / source;" in library and "uv.h = source / target;" in library
 assert "paper_uv.x = back ? 1.0f - paper_uv.w : 0.0f;" in draw
 assert "flat_retail_sleeve(c, game, sleeve, false, 0.24f);" in library
 assert "const Rect paper{shell.x + (rear ? side : 0.0f), shell.y + top," in library
@@ -336,23 +337,25 @@ assert "const Cover artwork = c.textures.cover(" in lib_sleeve
 assert "scan, std::max(paper.w, paper.h) * texture_scale);" in lib_sleeve
 assert "const float other_x" not in lib_sleeve
 assert "cover(c, scan, paper, 0.0f, 0.0f);" not in lib_sleeve
-assert "c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f}," in lib_sleeve
+assert "c.list.image(artwork.texture, fitted, uv," in lib_sleeve
 assert "Rect fitted = paper;" in lib_sleeve
 assert "fitted.w = paper.h * source;" in lib_sleeve
 assert "fitted.h = paper.w / source;" in lib_sleeve
 assert "if (source > target) {" in lib_sleeve
 assert "if (source < target) {" in lib_sleeve
 assert "fitted.y += (paper.h - fitted.h) * 0.5f;" in lib_sleeve
-assert "if (rear) fitted.x += paper.w - fitted.w;" in lib_sleeve
+assert "fitted.x += paper.w - fitted.w;" in lib_sleeve
 assert "std::clamp(shell.w * 0.012f, 1.75f, 5.0f)" in lib_sleeve
-# A 181x278 retail sleeve must not spend ~10% of its width on an
-# aspect-contain blank column + molded opening. Source pixels UV-cover paper.
-shelf_width, shelf_height = 181.0, 278.0
-shelf_rim = min(5.0, max(1.75, shelf_width * 0.012))
-shelf_cap = max(5.0, shelf_height * 0.018)
+# The larger retail front keeps the printed image as the primary surface.
+# Verify its thin molded edge and bounded aspect-preserving crop.
+shelf_width, shelf_height = 218.0, 308.0
+shelf_rim = min(2.0, max(0.9, shelf_width * 0.006))
+shelf_cap = max(2.0, shelf_height * 0.008)
 paper_aspect = (shelf_width - shelf_rim) / (shelf_height - 2 * shelf_cap)
 european_front_aspect = 872.0 / 1419.0
-assert shelf_rim < 2.3 and paper_aspect > european_front_aspect
+assert shelf_rim < 1.6 and paper_aspect > european_front_aspect
+assert "uv.w = target / source;" in lib_sleeve
+assert "uv.h = source / target;" in lib_sleeve
 assert 0.85 < european_front_aspect / paper_aspect < 1.0
 # The 3D caps run the SAME 13px plastic skirt on either projected face.
 assert "float from_cap = min(v_st.y, 1.0 - v_st.y)" in shader
