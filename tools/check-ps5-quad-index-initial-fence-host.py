@@ -58,7 +58,7 @@ cpp=r"""
 #include <cstdint>
 using u32=std::uint32_t;
 namespace Eden::Performance {
-struct VulkanTimer {explicit VulkanTimer(int) {}};
+struct VulkanTimer {explicit VulkanTimer(int) {} ~VulkanTimer() {}};
 }
 struct Scheduler {
     unsigned finishes=0;
