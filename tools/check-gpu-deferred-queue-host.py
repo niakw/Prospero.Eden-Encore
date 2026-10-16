@@ -749,6 +749,46 @@ int main() {
     assert(scheduled_ticks == 1 && wake_replayed == WakeBacklog);
     assert(!coalesce_wake.Pending());
 
+    // Explicit bool-returning scheduling callbacks must be accepted, not
+    // merely invoked. A false return leaves an already published FIFO head
+    // without a GPU tick; fail closed instead of stranding a reader.
+    Queue bool_wake_ok;
+    const auto bool_ok_ticket = bool_wake_ok.Reserve(0, 0xC000, 8);
+    assert(bool_ok_ticket);
+    assert(bool_wake_ok.PublishAndWake(*bool_ok_ticket, [&]() -> bool {
+        return bool_wake_ok.Drain([](unsigned,std::uint64_t,std::uint64_t) {}) == 1;
+    }));
+    assert(bool_wake_ok.WaitUntil(*bool_ok_ticket) && !bool_wake_ok.Failed());
+
+    Queue bool_wake_rejected;
+    const auto bool_bad_ticket = bool_wake_rejected.Reserve(0, 0xD000, 8);
+    assert(bool_bad_ticket);
+    bool bool_wake_threw = false;
+    try {
+        (void)bool_wake_rejected.PublishAndWake(*bool_bad_ticket, []() -> bool {
+            return false;
+        });
+    } catch (const std::runtime_error&) {
+        bool_wake_threw = true;
+    }
+    assert(bool_wake_threw && bool_wake_rejected.Failed());
+    assert(!bool_wake_rejected.WaitUntil(*bool_bad_ticket));
+    assert(!bool_wake_rejected.Reserve(1, 0xE000, 8));
+
+    Queue bool_cancel_rejected;
+    const auto bool_cancel_ticket = bool_cancel_rejected.Reserve(0, 0xF000, 8);
+    assert(bool_cancel_ticket);
+    bool bool_cancel_threw = false;
+    try {
+        (void)bool_cancel_rejected.CancelAndWake(*bool_cancel_ticket, []() -> bool {
+            return false;
+        });
+    } catch (const std::runtime_error&) {
+        bool_cancel_threw = true;
+    }
+    assert(bool_cancel_threw && bool_cancel_rejected.Failed());
+    assert(!bool_cancel_rejected.WaitUntil(*bool_cancel_ticket));
+
     // A failed GPU wake must poison this title rather than strand a reader.
     Queue wake_failure;
     const auto pending_wake = wake_failure.Reserve(0, 65536, 8);
@@ -961,15 +1001,15 @@ int main() {
         assert(ordered_pressure.EnqueueTracked(unsigned(i % 4),
                0x100000 + i * 4096, 8));
     unsigned older_replayed = 0, pressure_wakes = 0;
-    const auto resumed = ordered_pressure.ReserveOrdered(3, 0x9000000, 8, [&] {
+    const auto resumed = ordered_pressure.ReserveOrdered(3, 0x9000000, 8, [&]() -> bool {
         ++pressure_wakes;
-        assert(ordered_pressure.Drain([&](unsigned core, std::uint64_t addr,
+        return ordered_pressure.Drain([&](unsigned core, std::uint64_t addr,
                                            std::uint64_t size) {
             assert(core == older_replayed % 4 &&
                    addr == 0x100000 + std::uint64_t(older_replayed) * 4096 &&
                    size == 8);
             ++older_replayed;
-        }) == Queue::MaxOutstandingWrites);
+        }) == Queue::MaxOutstandingWrites;
     });
     assert(resumed && pressure_wakes == 1 &&
            older_replayed == Queue::MaxOutstandingWrites &&
@@ -1034,6 +1074,24 @@ int main() {
     }
     assert(pressure_threw && pressure_failure.Failed());
     assert(!pressure_failure.Reserve(0, 0xA200000, 8));
+
+    // Bool-returning scheduling rejection must also release a producer
+    // whose Queue is saturated. The helper must never enter WaitUntil on
+    // an explicit failure or permit an out-of-order cache invalidation.
+    Queue pressure_bool_rejected;
+    for (Queue::Sequence i = 0; i < Queue::MaxOutstandingWrites; ++i)
+        assert(pressure_bool_rejected.EnqueueTracked(unsigned(i % Queue::Cores),
+               0x100000 + i * 4096, 8));
+    bool pressure_bool_threw = false;
+    try {
+        (void)pressure_bool_rejected.ReserveOrdered(0, 0xB100000, 8, []() -> bool {
+            return false;
+        });
+    } catch (const std::runtime_error&) {
+        pressure_bool_threw = true;
+    }
+    assert(pressure_bool_threw && pressure_bool_rejected.Failed());
+    assert(!pressure_bool_rejected.Reserve(0, 0xB200000, 8));
 
     // Coalescing does not create an unbounded accepted-sequence backlog
     // disguised as one vector entry: throttle the outstanding watermark.

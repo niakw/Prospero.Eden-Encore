@@ -10,6 +10,8 @@
 #include <limits>
 #include <mutex>
 #include <optional>
+#include <stdexcept>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -93,7 +95,7 @@ public:
             } restore{active_wake_callback_, active_wake_callback_};
             active_wake_callback_ = this;
             try {
-                request_gpu();
+                RequestGpuOrThrow(request_gpu);
             } catch (...) {
                 {
                     std::lock_guard lock(mutex_);
@@ -329,6 +331,19 @@ public:
     }
 
 private:
+    // The scheduler may expose either a void callback (throw on failure) or
+    // an explicit bool acceptance result. Treat false as failure: otherwise
+    // a published FIFO head can strand readers or a saturated producer.
+    template<class RequestGpu>
+    static void RequestGpuOrThrow(RequestGpu&& request_gpu) {
+        if constexpr (std::is_same_v<std::invoke_result_t<RequestGpu>, bool>) {
+            if (!std::forward<RequestGpu>(request_gpu)())
+                throw std::runtime_error("deferred GPU wake rejected");
+        } else {
+            std::forward<RequestGpu>(request_gpu)();
+        }
+    }
+
     template<class RequestGpu>
     bool ResolveAndWake(Ticket ticket, bool cancel, RequestGpu&& request_gpu) {
         const auto became_ready = PublishImpl(ticket, true, cancel);
@@ -344,7 +359,7 @@ private:
             } restore{active_wake_callback_, active_wake_callback_};
             active_wake_callback_ = this;
             try {
-                std::forward<RequestGpu>(request_gpu)();
+                RequestGpuOrThrow(std::forward<RequestGpu>(request_gpu));
             } catch (...) {
                 // A publication without a successful GPU wake cannot safely
                 // satisfy its reader. Fail closed, never assume another GPU
