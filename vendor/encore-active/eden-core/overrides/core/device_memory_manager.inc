@@ -323,6 +323,14 @@ void DeviceMemoryManager<Traits>::TrackContinuityImpl(DAddr address, VAddr virtu
 }
 template <typename Traits>
 u8* DeviceMemoryManager<Traits>::GetSpan(const DAddr src_addr, const std::size_t size) {
+    // The GPU address space is bounded. Reject empty, overflowing and
+    // out-of-range spans before indexing the sparse page map or calculating
+    // size + subbits, whose unsigned overflow could incorrectly allow a
+    // direct pointer covering unmapped memory.
+    if (size == 0 || src_addr >= device_as_size ||
+        size > device_as_size - src_addr) {
+        return nullptr;
+    }
     size_t page_index = src_addr >> page_bits;
     size_t subbits = src_addr & page_mask;
     if ((static_cast<size_t>(tracked_entries[page_index].continuity_tracker+1) << page_bits) >= size + subbits) {
@@ -333,6 +341,14 @@ u8* DeviceMemoryManager<Traits>::GetSpan(const DAddr src_addr, const std::size_t
 
 template <typename Traits>
 const u8* DeviceMemoryManager<Traits>::GetSpan(const DAddr src_addr, const std::size_t size) const {
+    // The GPU address space is bounded. Reject empty, overflowing and
+    // out-of-range spans before indexing the sparse page map or calculating
+    // size + subbits, whose unsigned overflow could incorrectly allow a
+    // direct pointer covering unmapped memory.
+    if (size == 0 || src_addr >= device_as_size ||
+        size > device_as_size - src_addr) {
+        return nullptr;
+    }
     size_t page_index = src_addr >> page_bits;
     size_t subbits = src_addr & page_mask;
     if ((static_cast<size_t>(tracked_entries[page_index].continuity_tracker+1) << page_bits) >= size + subbits) {
