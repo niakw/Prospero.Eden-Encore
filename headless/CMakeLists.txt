@@ -1271,6 +1271,27 @@ if(PS5_NATIVE)
                     gpu_dirty_managers[core].Collect(subaddress, span);
                 });]=] eden_cpu_memory "${eden_cpu_memory}")
     string(PREPEND eden_cpu_memory "#include \"${EDEN_PORT_DIR}/gpu_dirty_region_split.h\"\n")
+    # Guest spans end at addr + size - 1, not at addr + size.
+    # The pinned expression reads one page too far on exact boundaries,
+    # including one-past-end of the guest page table. Apply only to the
+    # already-derived native memory translation unit.
+    set(eden_span_original [=[        return (current_page_table->entries[addr >> YUZU_PAGEBITS].Block() == current_page_table->entries[(addr + size) >> YUZU_PAGEBITS].Block()) ? GetPointerSilent(addr) : nullptr;]=])
+    string(REGEX MATCHALL "GetPointerSilent\\(addr\\) : nullptr;" eden_span_calls "${eden_cpu_memory}")
+    list(LENGTH eden_span_calls eden_span_count)
+    if(NOT eden_span_count EQUAL 2)
+        message(FATAL_ERROR "Pinned native guest span page-boundary contract changed")
+    endif()
+    string(REPLACE "${eden_span_original}" [=[        if (size == 0 || addr + (size - 1) < addr) {
+            return nullptr;
+        }
+        const auto start_page = addr >> YUZU_PAGEBITS;
+        const auto end_page = (addr + size - 1) >> YUZU_PAGEBITS;
+        const auto& entries = current_page_table->entries;
+        if (start_page >= entries.size() || end_page >= entries.size()) {
+            return nullptr;
+        }
+        return entries[start_page].Block() == entries[end_page].Block()
+            ? GetPointerSilent(addr) : nullptr;]=] eden_cpu_memory "${eden_cpu_memory}")
     set(eden_native_memory_tu "${PORT_BUILD_DIR}/memory-ps5.cpp")
     write_derived("${eden_native_memory_tu}"
         "#include \"${EDEN_PORT_DIR}/performance.h\"\n${eden_cpu_memory}")
