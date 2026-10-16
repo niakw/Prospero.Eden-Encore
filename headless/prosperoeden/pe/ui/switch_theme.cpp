@@ -38,6 +38,34 @@ void outline(gfx::DrawList& list, Rect r, bool selected, float radius = 3.0f) {
         list.bordered_rect(r,radius,kPaper.with_alpha(0.0f),1.0f,kGrey);
     }
 }
+void switch_game_tile(Canvas& c,const std::string& path,const std::string& title,
+                      const Rect& r,int ordinal) {
+    // The art cache fills asynchronously. Never expose an empty black tile:
+    // show a deliberate original vector illustration until genuine art arrives.
+    const Cover image=path.empty()?Cover{}:c.textures.cover(path,std::max(r.w,r.h));
+    if(image.texture!=0) {
+        cover_crop(c,path,r,0.0f,0.0f);
+        return;
+    }
+    static const std::array<gfx::Color,6> tops{
+        gfx::Color::rgb(0x126e86),gfx::Color::rgb(0x523688),
+        gfx::Color::rgb(0xb36b35),gfx::Color::rgb(0x235480),
+        gfx::Color::rgb(0x7b365e),gfx::Color::rgb(0x367459)};
+    static const std::array<gfx::Color,6> bottoms{
+        gfx::Color::rgb(0x172c49),gfx::Color::rgb(0x1d244d),
+        gfx::Color::rgb(0x482a39),gfx::Color::rgb(0x12283a),
+        gfx::Color::rgb(0x352542),gfx::Color::rgb(0x18343a)};
+    const std::size_t index=static_cast<std::size_t>((ordinal%6+6)%6);
+    c.list.gradient_rect(r,0.0f,tops[index],bottoms[index]);
+    // Sun and layered hills: purpose-drawn placeholder, not firmware artwork.
+    c.list.ring(r.x+r.w*.65f,r.y+r.h*.30f,r.w*.115f,10.0f,
+                kWhite.with_alpha(0.88f));
+    c.list.rounded_rect({r.x,r.y+r.h*.66f,r.w,r.h*.34f},0.0f,
+                        kBlack.with_alpha(0.30f));
+    text_shrink(c,title,r.x+r.w*.5f,
+                baseline(r.y+r.h*.68f,r.h*.28f,22.0f),22.0f,
+                kWhite,r.w-26.0f,Align::center);
+}
 void action_circle(Canvas& c, float x, float y, int type, bool focus) {
     const std::array<gfx::Color,4> colors{
         gfx::Color::rgb(0x19b9d1), gfx::Color::rgb(0x7a7a7a),
@@ -100,10 +128,12 @@ void Launcher::draw_switch_header(Canvas& c, const char *heading) {
 void Launcher::draw_switch_footer(Canvas& c,const char *hint) {
     c.list.rounded_rect({92,979,1736,2},0,kGrey);
     text_shrink(c,hint,110.0f,baseline(993.0f,49.0f,20.0f),20,kSubtle,1250.0f);
-    text(c,tr("Back"),1670.0f,baseline(993.0f,49.0f,21.0f),21,kInk,Align::right);
-    c.list.ring(1549,1017,13,2,kSubtle);
-    text(c,tr("Select"),1805.0f,baseline(993.0f,49.0f,21.0f),21,kInk,Align::right);
-    c.list.ring(1691,1017,13,2,kSubtle);
+    c.list.ring(1495.0f,1017.0f,14.0f,2.0f,kSubtle);
+    text(c,"B",1495.0f,1023.0f,17.0f,kInk,Align::center);
+    text_shrink(c,tr("Back"),1525.0f,1025.0f,19.0f,kInk,116.0f);
+    c.list.ring(1690.0f,1017.0f,14.0f,2.0f,kSubtle);
+    text(c,"A",1690.0f,1023.0f,17.0f,kInk,Align::center);
+    text_shrink(c,tr("Select"),1720.0f,1025.0f,19.0f,kInk,170.0f);
 }
 
 void Launcher::draw_switch_home(Canvas& c) {
@@ -117,12 +147,7 @@ void Launcher::draw_switch_home(Canvas& c) {
     for(int i=0;i<count;++i){
         const auto& g=home_.recents[static_cast<std::size_t>(i)];
         const Rect r{start+float(i)*pitch,top,tile,tile};
-        if(!g.cover.empty())cover_crop(c,g.cover,r,0.0f,0.0f);
-        else {
-            list.rounded_rect(r,1.0f,gfx::Color::rgb(0x343c49));
-            text_shrink(c,g.title,r.x+tile*.5f,
-                baseline(r.y+64.0f,120.0f,25.0f),25,kWhite,tile-30,Align::center);
-        }
+        switch_game_tile(c,g.cover,g.title,r,i);
         outline(list,r,focus==i,0.0f);
     }
     // A dedicated All Software tile, positioned immediately after recents.
@@ -217,13 +242,7 @@ void Launcher::draw_switch_library(Canvas& c) {
         const auto& g=games_[static_cast<std::size_t>(pos)];
         const int local=pos-start,col=local%kLibraryColumns,row=local/kLibraryColumns;
         const Rect r{x0+float(col)*(tile+gap),y0+float(row)*(tile+gap),tile,tile};
-        if(!g.cover.empty())cover_crop(c,g.cover,r,0.0f);
-        else if(!g.box_front.empty())cover_crop(c,g.box_front,r,0.0f);
-        else {
-            list.rounded_rect(r,0.0f,gfx::Color::rgb(0x415169));
-            text_shrink(c,g.name,r.x+tile*.5f,
-                        baseline(r.y+53,120,23),23,kWhite,tile-28,Align::center);
-        }
+        switch_game_tile(c,!g.cover.empty()?g.cover:g.box_front,g.name,r,pos);
         outline(list,r,pos==selected,0.0f);
     }
     const Game& game=games_[static_cast<std::size_t>(selected)];
