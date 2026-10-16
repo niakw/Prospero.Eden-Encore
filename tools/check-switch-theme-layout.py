@@ -37,6 +37,8 @@ assert "switch_value(services_.performance_profile_labels(),prefs_.performance_p
 preview=(root/"headless/prosperoeden/host/preview_main.cpp").read_text()
 assert "06-switch-exit-confirm" in preview
 assert "Key::right, Key::right, Key::right, Key::right," in preview
-assert 'if(!message_.empty())' in src, "game errors must remain visible"
+assert "if(confirmation_==Confirmation::none && !message_.empty())" in src
+assert "if(confirmation_==Confirmation::none && !feedback.empty())" in src
+assert "void Launcher::draw_switch_confirmation" in src, "native confirmation must be themed"
 assert "stock_assets.hpp" not in src, "firmware-extracted UI atlas must not be imported"
 print("SWITCH_UI_GEOMETRY_AND_ASSET_ISOLATION: PASS")

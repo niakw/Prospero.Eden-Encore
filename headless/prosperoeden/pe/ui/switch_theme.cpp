@@ -238,7 +238,7 @@ void Launcher::draw_switch_home(Canvas& c) {
     }
     // Preserve launch/permission feedback shown in the original launcher.
     const std::string feedback=!message_.empty()?message_:home_.status;
-    if(!feedback.empty())
+    if(confirmation_==Confirmation::none && !feedback.empty())
         text_shrink(c,feedback,165.0f,baseline(701.0f,46.0f,22.0f),
                     22.0f,!message_.empty()&&message_warning_?
                     gfx::Color::rgb(0xb52733):kSubtle,1585.0f);
@@ -344,7 +344,7 @@ void Launcher::draw_switch_library(Canvas& c) {
     text_shrink(c,game.name,125.0f,baseline(150,55,29),29,kInk,1420.0f);
     text(c,list_position(selected+1,count),1790.0f,baseline(152,50,21),
          21,kSubtle,Align::right);
-    if(!message_.empty())
+    if(confirmation_==Confirmation::none && !message_.empty())
         text_shrink(c,message_,125.0f,baseline(191.0f,48.0f,21.0f),
                     21.0f,message_warning_?gfx::Color::rgb(0xb52733):kSubtle,
                     1530.0f);
