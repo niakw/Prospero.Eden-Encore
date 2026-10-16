@@ -17,6 +17,23 @@ pipeline_impl = (root / "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_c
 raster = (root / "vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp").read_text()
 workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
 
+# Native capability provenance: the release uses the vendored RADV driver,
+# whose source advertises the feature unless runtime negotiation rejects it.
+# These guards prove source reachability, NOT that an actual device enabled it.
+package = (root / "tools/build-package.sh").read_text()
+dev_flags = (root / "headless/dev_vulkan.h").read_text()
+device = (root / "vendor/encore-active/eden-vulkan/vulkan_device.cpp").read_text()
+radv = (root / "vendor/encore-active/ps5-mesa/src/amd/vulkan/radv_physical_device.c").read_text()
+assert "EDEN_PS5_VULKAN=ON EDEN_VULKAN_DRIVER=RADV" in package
+assert "inline bool disable_descriptor_buffer = false;" in dev_flags
+reset = dev_flags.split("inline void ResetForTitle() noexcept {", 1)[1].split("}", 1)[0]
+assert "disable_descriptor_buffer = false;" in reset
+assert ".EXT_descriptor_buffer = true," in radv
+assert ".descriptorBuffer = true," in radv
+assert "extensions.descriptor_buffer = features.descriptor_buffer.descriptorBuffer &&" in device
+assert "!::Eden::DevVulkan::disable_descriptor_buffer;" in device
+assert "if (!device.IsExtDescriptorBufferSupported() || !device.IsBufferDeviceAddressSupported())" in ring
+
 def method(src: str, needle: str) -> str:
     start = src.index(needle)
     open_brace = src.index("{", start)
@@ -185,4 +202,4 @@ with tempfile.TemporaryDirectory(prefix="encore-descriptor-conditional-reuse-") 
                     "-fsanitize=address,undefined", "-fno-sanitize-recover=all",
                     str(path), "-o", str(binary)], check=True, timeout=45)
     subprocess.run([str(binary)], check=True, timeout=30)
-print("DESCRIPTOR_CONDITIONAL_REUSE_HOST_PASS known_in_lock_fallback=1 certain_preflight_outside_locks=1 safe_reuse=1")
+print("DESCRIPTOR_CONDITIONAL_REUSE_HOST_PASS known_in_lock_fallback=1 certain_preflight_outside_locks=1 safe_reuse=1 native_radv_source_gate=1")
