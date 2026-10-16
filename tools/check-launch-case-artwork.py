@@ -348,7 +348,7 @@ assert "fitted.x += paper.w - fitted.w;" in lib_sleeve
 assert "std::clamp(shell.w * 0.012f, 1.75f, 5.0f)" in lib_sleeve
 # The larger retail front keeps the printed image as the primary surface.
 # Verify its thin molded edge and bounded aspect-preserving crop.
-shelf_width, shelf_height = 218.0, 308.0
+shelf_width, shelf_height = 218.0, 346.0
 shelf_rim = min(2.0, max(0.9, shelf_width * 0.006))
 shelf_cap = max(2.0, shelf_height * 0.008)
 paper_aspect = (shelf_width - shelf_rim) / (shelf_height - 2 * shelf_cap)
@@ -356,7 +356,7 @@ european_front_aspect = 872.0 / 1419.0
 assert shelf_rim < 1.6 and paper_aspect > european_front_aspect
 assert "uv.w = target / source;" in lib_sleeve
 assert "uv.h = source / target;" in lib_sleeve
-assert 0.85 < european_front_aspect / paper_aspect < 1.0
+assert 0.94 < european_front_aspect / paper_aspect < 1.0
 # The 3D caps run the SAME 13px plastic skirt on either projected face.
 assert "float from_cap = min(v_st.y, 1.0 - v_st.y)" in shader
 assert "max(rim_intensity, cap_intensity)" in shader
