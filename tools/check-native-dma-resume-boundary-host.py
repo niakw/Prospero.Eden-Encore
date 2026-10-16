@@ -258,8 +258,8 @@ assert compiler, "C++20 compiler required"
 with tempfile.TemporaryDirectory(prefix="encore-dma-resume-") as folder:
     source = Path(folder) / "pinned_dma_resume.cpp"
     executable = Path(folder) / "pinned_dma_resume"
-    source.write_text(prelude + "\n" + dispatcher + "\n" + step + "\n"
-                      + process + "\n" + set_state + "\n" + tests)
+    source.write_text(prelude + "\nnamespace Tegra {\n" + dispatcher + "\n" + step + "\n"
+                      + process + "\n" + set_state + "\n} // namespace Tegra\n" + tests)
     subprocess.run([compiler, "-std=c++20", "-O2", "-Wall", "-Wextra",
                     "-Werror", "-pthread", str(source), "-o", str(executable)],
                    check=True)
