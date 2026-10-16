@@ -635,7 +635,7 @@ void RasterizerVulkan::Clear(u32 layer_count) {
                 return;
             }
             if (offset < 0) {
-                const u32 shrink = (std::min)(extent, static_cast<u32>(-offset));
+                const u32 shrink = (std::min)(extent, static_cast<u32>(-static_cast<s64>(offset)));
                 extent -= shrink;
                 offset = 0;
             }
