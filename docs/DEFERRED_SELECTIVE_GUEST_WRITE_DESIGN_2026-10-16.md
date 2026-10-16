@@ -119,6 +119,28 @@ against the GPU consumer. Avoid broad per-instruction locking. A
 candidate epoch/safepoint scheme must have measured cost and a
 concrete memory-model proof before being implemented in native code.
 
+## Conditional stores: an existing read fence is not a CAS fence
+
+`core/memory.cpp::WriteExclusive<T>()` and `WriteExclusive128()`
+call `HandleRasterizerWrite()` **before**
+`Common::AtomicCompareAndSwap()`, whether or not the comparison
+succeeds. Neither function invokes `HandleRasterizerDownload()` in
+its atomic path. Separately, `video_core/gpu.cpp::OnCPURead()`
+already has an actual GPU read/download synchronization sequence
+(`RequestSyncOperation`, `TickGPU`, `WaitForSyncOperation`).
+
+This does **not** demonstrate that native CAS operations currently
+corrupt game data. It does establish why moving the existing eager
+notification into the deferred queue would be wrong: an unsuccessful
+CAS is not a modified RAM store, and a future deferred CAS must
+synchronize its expected-value read against any GPU-resident data
+before the atomic attempt. `CommitConditionalAfterRead()` models
+this host-side but is not attached to the native CPU/JIT path.
+For the eventual bridge, reserve before the read fence, wait for
+predecessors only, complete the GPU device transfer, attempt CAS
+exactly once, then `PublishAndWake()` on success or
+`CancelAndWake()` on failure. Keep the native gate closed.
+
 ## Required transaction for an intercepted GPU-tracked store
 
 ```text
@@ -159,7 +181,7 @@ notification ordering does not repair missing producers.
 | A32 checked fastmem (A64 native has no arena) | Access-byte map selects direct/fallback; test marked, vector, crossing and exclusive cases | Source and pre-existing A32 host JIT test coverage; no new execution claim |
 | Dynamic page transition | Prove no untracked in-flight store can overlap first GPU-cache use; inspect ordering of access-byte protection and PTE marking | Existing A32 concurrent stress test checks backing values; no GPU coherency proof |
 | Writable `GuestMemory` aliases | Distinguish GPU engine aliases from CPU-side producers; preserve post-write invalidation and FIFO visibility | GPU DMA/upload/blitter/VIC owners identified, CPU-side call sites not exhausted |
-| Conditional/atomic write | Device-to-CPU read fence, FIFO predecessor wait, CAS success/failure, exactly-once outcome | Host protocol modeled, not joined to native code |
+| Conditional/atomic write | GPU-device read fence, predecessor wait, CAS success/failure and exactly-once publication | Native CAS pre-notifies and has no download call in its atomic path; host protocol only |
 | GPU work and dirty collection | Confirm no GPU consumer overtakes unpublished writes and that cache invalidation/dirty collection are properly ordered | Not demonstrated |
 | x86-64 build NCE applicability | Conditional compilation in CMake | Excluded under current settings |
 | Performance | Compare host-run JIT on tracked/untracked pages and under contention | Existing `--fastmem-bench` for table vs checked A32; no new measurements or GPU contention profile |
