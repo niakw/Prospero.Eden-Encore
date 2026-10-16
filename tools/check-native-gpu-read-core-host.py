@@ -154,7 +154,7 @@ with tempfile.TemporaryDirectory(prefix="encore-guest-gpu-read-") as tmp:
         binary = root_dir / label
         unit.write_text(cpp.replace("@@METHOD@@", body))
         subprocess.run(
-            [clang, "-std=c++20", "-O1", "-g", "-Wall", "-Wextra",
+            [clang, "-std=c++20", "-D_GLIBCXX_ASSERTIONS", "-O1", "-g", "-Wall", "-Wextra",
              "-Werror", "-pthread", "-fsanitize=address,undefined",
              "-fno-sanitize-recover=all", str(unit), "-o", str(binary)],
             check=True, timeout=45
@@ -167,6 +167,7 @@ with tempfile.TemporaryDirectory(prefix="encore-guest-gpu-read-") as tmp:
                 text=True, timeout=45
             )
             assert bad.returncode != 0, "Pinned auxiliary read unexpectedly succeeded"
-            assert ("runtime error" in bad.stderr or "AddressSanitizer" in bad.stderr), bad.stderr
+            assert ("Assertion" in bad.stderr or "runtime error" in bad.stderr
+                    or "AddressSanitizer" in bad.stderr), bad.stderr
 
-print("NATIVE_GPU_READ_CORE_HOST_PASS pinned_foreign_index_ubsan=1 native_aux_isolated=8 guest_core_cache=2 gpu_fence_no_shared_scratch=1")
+print("NATIVE_GPU_READ_CORE_HOST_PASS pinned_foreign_index_checked=1 native_aux_isolated=8 guest_core_cache=2 gpu_fence_no_shared_scratch=1")
