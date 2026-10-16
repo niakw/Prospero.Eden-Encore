@@ -178,10 +178,10 @@ with tempfile.TemporaryDirectory(prefix="encore-gpu-dirty-host-") as directory:
     stub_dir.mkdir()
     (stub_dir / "gpu_dirty_memory_manager.h").write_text(dirty)
     (stub_dir / "device_memory_manager.h").write_text(
-        "#pragma once\\n#include <cstddef>\\n#include <cstdint>\\n"
-        "using PAddr = std::uint64_t;\\nusing u32 = std::uint32_t;\\n"
-        "using u64 = std::uint64_t;\\n"
-        "namespace Core { inline constexpr std::size_t DEVICE_PAGEBITS = 12; }\\n"
+        "#pragma once\n#include <cstddef>\n#include <cstdint>\n"
+        "using PAddr = std::uint64_t;\nusing u32 = std::uint32_t;\n"
+        "using u64 = std::uint64_t;\n"
+        "namespace Core { inline constexpr std::size_t DEVICE_PAGEBITS = 12; }\n"
     )
     subprocess.run(
         [clang, "-std=c++20", "-O1", "-g", "-pthread", "-Wall", "-Wextra",
