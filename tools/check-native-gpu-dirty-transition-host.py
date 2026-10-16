@@ -103,11 +103,12 @@ with tempfile.TemporaryDirectory(prefix="encore-dirty-race-") as tmp:
             "namespace Core {", "namespace Core {\nvoid PinnedRaceGate();", 1
         )
         # Pause AFTER reserving the old vector slot but BEFORE the atomic
-        # exchange in both versions. This is the precise losing interleaving.
+        # exchange in both versions. Ignore the initial empty/sentinel mask.
+        # This is the precise losing interleaving.
         mark = "                    back_buffer.emplace_back(tmp);\n"
         assert instrumented.count(mark) == 1
         instrumented = instrumented.replace(
-            mark, mark + "                    PinnedRaceGate();\n"
+            mark, mark + "                    if (tmp.mask != 0) PinnedRaceGate();\n"
         )
         (include_stub / "gpu_dirty_memory_manager.h").write_text(instrumented)
         binary = stage / label
