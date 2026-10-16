@@ -144,6 +144,9 @@ void Launcher::draw_switch_header(Canvas& c, const char *heading) {
     list.rounded_rect({0.0f,0.0f,1920.0f,1080.0f},0.0f,kPaper);
     text_shrink(c,heading,99.0f,baseline(70.0f,62.0f,33.0f),
                 33.0f,kInk,1280.0f);
+    // The reference HOME alone has the account avatar in the top-left
+    // corner. Secondary pages place their titles there instead.
+    if(heading != nullptr && heading[0] == '\0') {
     // Active account remains native and read-only, identical to Encore mode.
     constexpr float px=136.5f,py=98.0f;
     const Cover avatar=profile_avatar_path_.empty()?Cover{}:
@@ -158,6 +161,7 @@ void Launcher::draw_switch_header(Canvas& c, const char *heading) {
         list.rounded_rect({px-36,py-36,72,72},36,kGrey);
         list.ring(px,py-10,14,5,kWhite);
         list.rounded_rect({px-21,py+12,42,17},9,kWhite);
+    }
     }
     text(c,clock_,1814.0f,baseline(80.0f,50.0f,30.0f),30.0f,kInk,Align::right);
 }
