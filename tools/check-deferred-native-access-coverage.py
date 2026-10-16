@@ -16,6 +16,12 @@ memory = read("core/memory.cpp")
 page_table = read("common/page_table.h")
 project_cmake = (root / "vendor/sources/eden/CMakeLists.txt").read_text()
 core_cmake = read("core/CMakeLists.txt")
+jit_emitter = read("dynarmic/src/dynarmic/backend/x64/emit_x64_memory.cpp.inc")
+jit_lookup = read("dynarmic/src/dynarmic/backend/x64/emit_x64_memory.h")
+port_cmake = (root / "headless/CMakeLists.txt").read_text()
+checked_a32 = (root / "headless/checked-fastmem.cmake").read_text()
+host_mem = (root / "src/host_memory.cpp").read_text()
+host_jit_check = (root / "headless/memory_check.cpp").read_text()
 nce = read("core/arm/nce/arm_nce.cpp")
 bridge = (root / "headless/guest_write_deferred_bridge.cmake").read_text()
 replay = (root / "headless/gpu_deferred_replay.h").read_text()
@@ -81,6 +87,36 @@ expect(memory, "HandleRasterizerWrite(addr, sizeof(T));", "scalar tracked store"
 # close the writable GuestMemory alias loophole.
 expect(memory, "GetPointerSilent(addr) : nullptr;", "silent span alias")
 
+# Unlike a bare config-only inventory, the pinned x64 emitter DOES route
+# marked page-table stores to callback fallback. The port's derived emitter
+# replaces the marked-bit-zero test with test/jnz for both A32 and A64.
+expect(jit_lookup, "if (ctx.conf.page_table_marked_bit)", "JIT marked page lookup")
+expect(jit_lookup, "code.jc(abort, code.T_NEAR);", "JIT marked page fallback")
+expect(jit_emitter, "void AxxEmitX64::EmitMemoryWrite(", "JIT store emitter")
+expect(jit_emitter, "const auto dest_ptr = EmitVAddrLookup", "page-table store path")
+expect(jit_emitter, "code.call(wrapped_fn);", "callback fallback")
+expect(port_cmake, "if (*ctx.conf.page_table_marked_bit == 0) {", "derived bit-zero mark check")
+expect(port_cmake, "code.test(page.cvt32(), 1);", "derived bit-zero test")
+expect(port_cmake, "code.jnz(abort, code.T_NEAR);", "derived marked callback branch")
+# Native A32 uses its own checked fastmem byte map. Protect() changes access
+# bits instead of mprotect for these aliases; the blocked path checks its PTE.
+expect(port_cmake, 'option(EDEN_A32_FASTMEM "A32 fastmem window with JIT fault recovery" ON)', "A32 fastmem build")
+expect(port_cmake, "!process.Is64Bit() && Settings::IsFastmemEnabled()", "A64 fastmem exclusion")
+expect(checked_a32, "constexpr u8 checked_read_blocked = 1, checked_write_blocked = 2;", "A32 read/write map bits")
+expect(checked_a32, "EmitCheckedFastmemTest(code, vaddr, index, ${blocked_bit}, *blocked);", "A32 checked fastmem")
+expect(checked_a32, "const auto fallback_ptr = EmitCheckedFallbackLookup", "A32 blocked path")
+expect(checked_a32, "code.test(page.cvt32(), 1);", "A32 fallback PTE mark")
+expect(checked_a32, "const auto fastmem_marker = checked_fastmem ? decltype(ShouldFastmem(ctx, inst)){} : ShouldFastmem(ctx, inst);", "A32 exclusives selection")
+expect(host_mem, "std::fill(page_access.begin() + first, page_access.begin() + last + 1, access);", "A32 Protect access map")
+expect(host_mem, "map[page] = Own(page) | Own(page + 1);", "A32 crossing protection")
+# The repository already has a REAL JIT harness for marked stores, checked
+# A32 fastmem, concurrent page flips, and a table-vs-fastmem benchmark.
+# Source anchors do not assert that any harness was run on this commit.
+for anchor in ("static void CheckFastmemA32()", "static void StressFastmemA32()",
+               "static void BenchFastmemA32()", "CheckFastmemA32();",
+               "StressFastmemA32();", "require(memory.writes == (write ? callbacks : 0));"):
+    expect(host_jit_check, anchor, "existing real JIT host harness")
+
 # NCE is compiled only for ARM64 Linux/Android in the vendored project;
 # its source file is not a native x86-64 console producer in that configuration.
 # This is a build-selection fact, not a blanket claim about future ports.
@@ -113,5 +149,7 @@ print(
     "nce_platform_conditional=1 native_poststore_hook=0 "
     "native_gate_closed=1 "
     "tracked_page_marking=1 tracked_fastmem_write_protection=1 "
-    "tracked_cpu_callback=1 nce_x64_build=0 selective_jit_proof=0"
+    "tracked_cpu_callback=1 nce_x64_build=0 jit_marked_callback_source=1 a32_checked_fastmem_source=1 "
+    "a64_native_fastmem_disabled=1 real_jit_harness_present=1 "
+    "jit_host_execution_this_commit=0 deferred_gpu_ordering_proof=0"
 )
