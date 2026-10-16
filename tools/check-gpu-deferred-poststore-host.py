@@ -45,6 +45,9 @@ assert header.index("queue.ReserveOrdered(core, address, size, request_gpu);",
                         "synchronize_read)(predecessors)")
 assert "CommitConditionalAfterRead(" not in bridge
 assert "GuestStoreOrderGate" not in bridge
+assert "void FailClosed()" in queue
+assert "queue.FailClosed();" in header
+assert "completed_cv_.notify_all();" in queue.split("void FailClosed()",1)[1].split("// Generation-tagged wait",1)[0]
 
 # Source-backed classification: a tracked ordinary/memset store happens
 # AFTER HandleRasterizerWrite, whereas dc cvac/civac only invalidates.
@@ -72,6 +75,7 @@ cpp = r"""
 #include <cassert>
 #include <cstdint>
 #include <stdexcept>
+#include <string>
 #include <thread>
 #include <vector>
 using namespace Eden::GpuDeferredWrite;
@@ -184,28 +188,57 @@ int main() {
            failures_synced == 1 && failures_replayed == 0 &&
            failed_ram.load() == 8 && !conditional_failed.Pending());
 
-    // An explicitly incomplete GPU->CPU download must not reserve or
-    // execute a CAS, nor mistake scheduling acceptance for read completion.
+    // A failed GPU download is FATAL, unlike a failed CAS comparison.
+    // No RAM store, cache invalidation or later guest write may proceed.
     Queue unsynced;
     unsigned forbidden_attempts = 0, forbidden_wakes = 0;
+    Queue::Ticket unsynced_ticket{};
     const auto read_rejected = CommitConditionalAfterRead(
         unsynced, 0, 0x7000, 4,
-        [&]([[maybe_unused]] Queue::Ticket predecessors) -> ReadBarrierResult { return ReadBarrierResult::Failed; },
+        [&](Queue::Ticket predecessors) -> ReadBarrierResult {
+            assert(predecessors.sequence == 0);
+            unsynced_ticket = {predecessors.sequence + 1, predecessors.generation};
+            return ReadBarrierResult::Failed;
+        },
         [&]() noexcept -> StoreOutcome {
             ++forbidden_attempts;
             return StoreOutcome::Modified;
-        }, [&]() -> bool {
-            ++forbidden_wakes;
-            // Scheduling acceptance is not completion: even a cancelled
-            // reservation needs an actual GPU-owner drain to advance FIFO.
-            assert(unsynced.Drain([](unsigned,std::uint64_t,std::uint64_t) {
-                assert(false); // A cancelled CAS cannot invalidate caches.
-            }) == 0);
-            return true;
-        });
+        }, [&]() -> bool { ++forbidden_wakes; return true; });
     assert(!read_rejected && forbidden_attempts == 0 &&
-           forbidden_wakes == 1 && unsynced.AcceptedSequence() == 1 &&
-           unsynced.CompletedSequence() == 1 && !unsynced.Pending());
+           forbidden_wakes == 0 && unsynced.AcceptedSequence() == 1 &&
+           unsynced.CompletedSequence() == 0 && unsynced.Pending() &&
+           unsynced.Failed());
+    assert(!unsynced.WaitUntil(unsynced_ticket));
+    assert(!unsynced.Reserve(0, 0x7004, 4));
+    assert(unsynced.Drain([](unsigned,std::uint64_t,std::uint64_t) {
+        assert(false);
+    }) == 0);
+    unsynced.Close();
+    assert(unsynced.ResetAfterQuiescence());
+    assert(!unsynced.Failed() && !unsynced.Pending());
+
+    // An exception from the GPU read fence is equally fatal. Do not
+    // replace it with an exception from a best-effort cancellation wake.
+    Queue throwing_read;
+    unsigned throw_attempts = 0, throw_wakes = 0;
+    bool read_threw = false;
+    try {
+        (void)CommitConditionalAfterRead(
+            throwing_read, 1, 0x7100, 4,
+            [](Queue::Ticket) -> ReadBarrierResult {
+                throw std::runtime_error("GPU download failed");
+            }, [&]() noexcept -> StoreOutcome {
+                ++throw_attempts;
+                return StoreOutcome::Modified;
+            }, [&]() -> bool { ++throw_wakes; return true; });
+    } catch (const std::runtime_error& err) {
+        read_threw = std::string(err.what()) == "GPU download failed";
+    }
+    assert(read_threw && throw_attempts == 0 && throw_wakes == 0 &&
+           throwing_read.Failed() && throwing_read.Pending() &&
+           !throwing_read.Reserve(1, 0x7200, 4));
+    throwing_read.Close();
+    assert(throwing_read.ResetAfterQuiescence());
 
     // Saturation must drain older work BEFORE, not after, the read fence.
     Queue saturated_read;
@@ -395,4 +428,4 @@ with tempfile.TemporaryDirectory(prefix="encore-poststore-host-") as temp:
                     "-fno-sanitize-recover=all", "-I", str(root / "headless"),
                     str(unit), "-o", str(binary)], check=True, timeout=45)
     subprocess.run([str(binary)], check=True, timeout=45)
-print("GPU_DEFERRED_POSTSTORE_HOST_PASS ordinary=1 cancel=1 fifo=1 pressure=1 scheduler_reject=1 conditional_read_fence=1 cas_success=1 cas_failed=1 read_reject=1 saturation_before_read=1 gated_concurrent_writes=1 no_native_activation=1")
+print("GPU_DEFERRED_POSTSTORE_HOST_PASS ordinary=1 cancel=1 fifo=1 pressure=1 scheduler_reject=1 conditional_read_fence=1 cas_success=1 cas_failed=1 read_fail_poison=1 read_throw_poison=1 saturation_before_read=1 gated_concurrent_writes=1 no_native_activation=1")

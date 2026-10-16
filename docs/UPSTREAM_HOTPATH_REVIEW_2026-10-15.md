@@ -381,3 +381,19 @@ Complete native correctness additionally requires all guest/JIT/fastmem
 producers and readers to participate, a true GPU-to-CPU device fence, and
 safe session-lifetime joins. The developer CMake bridge does NOT use this
 gate and remains disabled via `kNativePostStorePublicationReady=false`.
+
+## Fatal GPU-to-CPU read-barrier errors (2026-10-16)
+
+Prior to this host-only correction, an incomplete or throwing CPU read fence
+was treated as a benign failed CAS comparison: the reserved ticket could be
+cancelled and acknowledged while the title queue continued accepting writes.
+But an uncompleted GPU download makes guest RAM coherence unknown. The
+new `Queue::FailClosed()` immediately marks the session failed, notifies
+blocked waiters and disallows subsequent reservations. It does not falsely
+acknowledge a reserved write, replay invalidations, or schedule GPU work.
+`CommitConditionalAfterRead` now uses it when the blocking read returns
+`ReadBarrierResult::Failed` or throws (preserving the original exception).
+A correctly completed read followed by a CAS mismatch STILL cancels normally
+and does not poison the title. Host sanitizer regressions cover both fatal
+read outcomes, lack of subsequent writes, failed waiter results, and a
+quiescent close/reset. This changes only the inactive model, not FC27.

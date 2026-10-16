@@ -68,12 +68,14 @@ std::optional<StoreOutcome> CommitConditionalAfterRead(
     try {
         read_status = std::forward<SyncRead>(synchronize_read)(predecessors);
     } catch (...) {
-        (void)queue.CancelAndWake(*ticket, request_gpu);
+        // A thrown read fence is a fatal title-coherence failure, not a
+        // harmless failed comparison. Preserve the original exception.
+        queue.FailClosed();
         throw;
     }
     if (read_status != ReadBarrierResult::Complete) {
-        (void)queue.CancelAndWake(*ticket, request_gpu);
-        return std::nullopt; // Caller must abort, not attempt stale-memory CAS.
+        queue.FailClosed();
+        return std::nullopt; // Caller must abort; RAM may be stale.
     }
     const auto outcome = std::forward<Attempt>(attempt)();
     const bool accepted = outcome == StoreOutcome::Modified
