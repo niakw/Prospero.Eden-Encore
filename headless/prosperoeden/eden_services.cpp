@@ -47,6 +47,12 @@
 #include <unordered_map>
 #include <unistd.h>
 
+#ifdef PS5_NATIVE
+// Resolve the foreground console user's cached image only. This is a
+// read-only platform call; no account, PSN, registry or cache modification.
+extern "C" int sceUserServiceGetForegroundUser(std::int32_t* user_id);
+#endif
+
 namespace {
 
 using pe::fill;
@@ -1418,6 +1424,31 @@ std::string EdenServices::clock() {
     if (const std::tm* local = std::localtime(&now))
         (void)std::strftime(label, sizeof(label), "%H:%M", local);
     return label;
+}
+
+std::string EdenServices::profile_avatar() {
+#ifdef PS5_NATIVE
+    // Do not scan another account's cache if the active-user lookup fails.
+    // Query is deliberately issued on the launcher's background worker.
+    std::int32_t user_id = -1;
+    if (sceUserServiceGetForegroundUser(&user_id) != 0 || user_id <= 0)
+        return {};
+
+    // PS5 local profile artwork is cached by foreground user ID. A local
+    // PNG can be decoded by the existing asynchronous stb_image pipeline.
+    // DDS-only accounts gracefully retain the neutral user silhouette.
+    for (const char* digits : {"%08x", "%08X"}) {
+        char id[16]{};
+        if (std::snprintf(id, sizeof(id), digits,
+                          static_cast<unsigned>(user_id)) != 8)
+            continue;
+        const std::string path =
+            std::string("/system_data/priv/cache/profile/0x") + id + "/avatar.png";
+        if (IsFile(path))
+            return path;
+    }
+#endif
+    return {};
 }
 
 unsigned EdenServices::controllers() { return radio_input_controllers(); }
