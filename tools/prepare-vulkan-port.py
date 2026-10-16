@@ -1468,6 +1468,14 @@ adapt('src/video_core/texture_cache/texture_cache.h',
 # Finish fallback or to the original Allocate memory-ordering checks.
 adapt('src/video_core/renderer_vulkan/vk_descriptor_buffer.h',
       'include/video_core/renderer_vulkan/vk_descriptor_buffer.h', [
+    # Reject oversized descriptor layouts BEFORE alignment can wrap VkDeviceSize.
+    ('    [[nodiscard]] bool CanAllocate(VkDeviceSize size) const noexcept {\n'
+     '        return Common::AlignUp(size, alignment) <= chunk_capacity;\n'
+     '    }',
+     '    [[nodiscard]] bool CanAllocate(VkDeviceSize size) const noexcept {\n'
+     '        // Validate unaligned size before AlignUp can overflow VkDeviceSize.\n'
+     '        return size <= chunk_capacity && Common::AlignUp(size, alignment) <= chunk_capacity;\n'
+     '    }'),
     ('    void TouchFrame(Scheduler& scheduler);',
      '    void TouchFrame(Scheduler& scheduler);\n'
      '#ifdef PS5_NATIVE\n'
