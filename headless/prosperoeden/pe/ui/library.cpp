@@ -1191,11 +1191,11 @@ void Launcher::draw_library(Canvas &c)
     // Five authentic portrait flat covers on a continuous shelf; no square
     // ROM thumbnails or 3D prefab images. The launcher handles depth alone.
     constexpr float rail_x = 72.0f, rail_y = 204.0f, rail_w = 1776.0f;
-    constexpr float shelf_y = 513.0f;
+    constexpr float shelf_y = 551.0f;
     constexpr int slots = 5;
     constexpr float gap = 20.0f;
     constexpr float card_w = (rail_w - gap * (slots - 1)) / float(slots);
-    constexpr float sleeve_w = 218.0f, sleeve_h = 308.0f;
+    constexpr float sleeve_w = 218.0f, sleeve_h = 346.0f;
     list.shadow({rail_x + 3.0f, shelf_y, rail_w - 6.0f, 20.0f}, 9.0f,
                 25.0f, theme::kScrim.with_alpha(0.65f));
     list.gradient_rect({rail_x, shelf_y, rail_w, 7.0f}, 3.0f,
@@ -1237,7 +1237,7 @@ void Launcher::draw_library(Canvas &c)
 
     // ---- selected game: one clean detail surface, no hidden left/right setting changes ----
     const Game* game = count > 0 ? &games_[static_cast<std::size_t>(library_.selected)] : nullptr;
-    const Rect detail{72.0f, 546.0f, 1776.0f, 350.0f};
+    const Rect detail{72.0f, 590.0f, 1776.0f, 306.0f};
     glass(c, detail, 28.0f, theme::kGlass.with_alpha(0.66f),
           theme::kPanelEdge.with_alpha(0.58f), 0.9f);
     const float shown = tween::clamp01(detail_.value);
@@ -1248,7 +1248,7 @@ void Launcher::draw_library(Canvas &c)
     {
         // Actual rear retail scan, never the old panoramic screenshot.
         // Cross on this jacket opens a full-screen, aspect-preserving preview.
-        const Rect art{99.0f, 572.0f, 181.0f, 288.0f};
+        const Rect art{99.0f, 606.0f, 181.0f, 276.0f};
         flat_retail_sleeve(c, *game, art, true, 0.60f);
         // The focus ring is UI feedback only. No white plastic bezel
         // is drawn around an unfocused square-corner paper cover.
@@ -1257,11 +1257,11 @@ void Launcher::draw_library(Canvas &c)
                                2.5f, theme::kFocusCore);
         if (library_back_focused_)
             text_shrink(c, tr("Enlarge cover"), art.x + art.w * 0.5f,
-                        baseline(854.0f, 23.0f, 15.0f), 15.0f,
+                        baseline(882.0f, 17.0f, 13.0f), 15.0f,
                         theme::kLimePale, 224.0f, Align::center);
         // A two-line title previously overlapped the publisher/date and intro
         // (e.g. Breath of the Wild in French). Keep one readable, scaled line.
-        text_shrink(c, game->name, 337.0f, baseline(574.0f, 52.0f, 40.0f),
+        text_shrink(c, game->name, 337.0f, baseline(604.0f, 52.0f, 40.0f),
                     40.0f, theme::kTitle, 1420.0f);
 
         std::string identity;
@@ -1276,11 +1276,11 @@ void Launcher::draw_library(Canvas &c)
             identity += library_genres(game->categories);
         }
         if (!identity.empty())
-            text_shrink(c, identity, 337.0f, baseline(632.0f, 24.0f, 17.0f), 17.0f,
+            text_shrink(c, identity, 337.0f, baseline(660.0f, 24.0f, 17.0f), 17.0f,
                         theme::kLimePale, 1420.0f);
 
         if (!game->intro.empty())
-            text_block(c, game->intro, 337.0f, baseline(662.0f, 24.0f, 18.0f), 18.0f, 25.0f,
+            text_block(c, game->intro, 337.0f, baseline(690.0f, 24.0f, 18.0f), 18.0f, 25.0f,
                        theme::kCopy, 1420.0f, 2, kShrink);
 
         const std::string addons = addons_line(game->addons, game->mods, game->mods_on, true);
@@ -1296,18 +1296,18 @@ void Launcher::draw_library(Canvas &c)
         for (const auto& chip : chips)
         {
             const float w = std::clamp(text_width(c, chip, 15.0f) + 26.0f, 82.0f, 220.0f);
-            list.bordered_rect({chip_x, 722.0f, w, 34.0f}, 17.0f,
+            list.bordered_rect({chip_x, 755.0f, w, 34.0f}, 17.0f,
                                theme::kPanel.with_alpha(0.54f), 1.0f,
                                theme::kPanelEdge.with_alpha(0.45f));
-            text_shrink(c, chip, chip_x + w * 0.5f, baseline(722.0f, 34.0f, 15.0f), 15.0f,
+            text_shrink(c, chip, chip_x + w * 0.5f, baseline(755.0f, 34.0f, 15.0f), 15.0f,
                         theme::kLimePale, w - 18.0f, Align::center);
             chip_x += w + 9.0f;
             if (chip_x > 1760.0f) break;
         }
 
         // Nlib gameplay strip: three real screenshots at most; loaded lazily by Textures.
-        constexpr float shot_y = 778.0f;
-        constexpr float shot_h = 86.0f;
+        constexpr float shot_y = 801.0f;
+        constexpr float shot_h = 84.0f;
         constexpr float shot_w = 154.0f;
         constexpr float shot_gap = 12.0f;
         const int shot_count = std::min<int>(3, static_cast<int>(game->screenshots.size()));
@@ -1337,8 +1337,8 @@ void Launcher::draw_library(Canvas &c)
         if (game->mods > 0)
         {
             const float on = tween::clamp01(mods_switch_.value);
-            toggle(c, 1792.0f, 742.0f, on);
-            text_shrink(c, tr("Mods"), 1668.0f, baseline(722.0f, 40.0f, 18.0f),
+            toggle(c, 1792.0f, 775.0f, on);
+            text_shrink(c, tr("Mods"), 1668.0f, baseline(755.0f, 40.0f, 18.0f),
                         18.0f, gfx::mix(theme::kMeta, theme::kLimePale, on), 100.0f, Align::right);
         }
     }
