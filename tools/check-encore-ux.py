@@ -110,9 +110,12 @@ assert 'card_w = (available - gap * 6.0f) / 7.0f' in recent_block
 # Check the real geometry and navigation instead of a retired comment.
 assert 'constexpr int slots = 5;' in library
 assert 'constexpr float rail_x = 72.0f, rail_y = 204.0f, rail_w = 1776.0f;' in library
-assert 'constexpr float sleeve_w = 218.0f, sleeve_h = 346.0f;' in library
+assert 'constexpr float sleeve_h = 346.0f;' in library
+assert 'const float sleeve_w = std::clamp(paper_height * aspect * 1.01f,' in library
+assert 'const Rect detail{72.0f, 620.0f, 1776.0f, 276.0f};' in library
 assert 'const float side = rear ? std::clamp(shell.w * 0.012f, 1.75f, 5.0f)' in library
-assert 'uv.w = target / source;' in library and 'uv.h = source / target;' in library
+assert 'c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f},' in library
+assert 'fitted.x += rear ? paper.w - fitted.w : (paper.w - fitted.w) * 0.5f;' in library
 assert 'flat_retail_sleeve(c, game, sleeve, false, 0.24f);' in library
 assert 'flat_retail_sleeve(c, *game, art, true, 0.60f);' in library
 assert 'flat_retail_sleeve(c, *game, enlarged, true, 0.92f,' in library
@@ -166,8 +169,8 @@ assert 'theme::kBody, kHeroContentWidth, 2, 0.90f)' in home
 assert 'label_area.x + label_area.w * 0.5f' in home
 # Rear jacket remains in the lower details pane; its title begins at x=337,
 # clear of the printed scan and its focus highlight.
-assert 'const Rect art{99.0f, 606.0f, 181.0f, 276.0f};' in library
-assert 'text_shrink(c, game->name, 337.0f, baseline(604.0f, 52.0f, 40.0f)' in library
+assert 'const Rect art{99.0f, 635.0f, 181.0f, 247.0f};' in library
+assert 'text_shrink(c, game->name, 337.0f, baseline(633.0f, 52.0f, 40.0f)' in library
 assert 'text_block(c, game->name, 558.0f' not in library
 assert 'kNlibCacheSchema = 3' in services
 assert 'current_metadata_cache' in services
