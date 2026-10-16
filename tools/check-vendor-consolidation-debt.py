@@ -52,6 +52,8 @@ approved_sync = {
         # This pinned native read-only exception prevents out-of-bounds
         # guest-core indexing by auxiliary host threads.
         'string(REPLACE "${eden_read_original}" "${eden_read_native}"',
+        # End-exclusive guest spans must not probe a one-past-last page.
+        'string(REPLACE "${eden_span_original}" [=[',
     ),
 }
 # The dirty-range rewrite is allowed only while the source-derived native
@@ -59,6 +61,11 @@ approved_sync = {
 assert c.count("Pinned native GPUDirty Collect call changed") == 1
 assert c.count("gpu_dirty_managers[core].Collect(subaddress, span);") == 1
 assert c.count("Pinned native guest CPU read scratch/slot contract changed") == 1
+assert c.count("Pinned native guest span page-boundary contract changed") == 1
+assert c.count("const auto end_page = (addr + size - 1) >> YUZU_PAGEBITS;") == 1
+assert (root / "tools/check-native-guest-span-host.py").is_file()
+assert "python3 -B tools/check-native-guest-span-host.py" in (
+    root / ".github/workflows/encore-core-preflight.yml").read_text()
 assert c.count("thread_local Common::ScratchBuffer<u32> read_scratch;") == 1
 assert c.count("VideoCore::RasterizerDownloadArea auxiliary_read_area{};") == 1
 assert (root / "tools/check-native-gpu-read-core-host.py").is_file()
