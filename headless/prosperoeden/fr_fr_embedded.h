@@ -1751,5 +1751,121 @@ msgstr "Solo"
 #: pe/ui/library.cpp
 msgid "Visual Novel"
 msgstr "Roman visuel"
+
+# Additional optional launcher theme translations
+#: pe/ui/switch_theme.cpp
+msgid "Appearance"
+msgstr "Apparence"
+
+#: pe/ui/switch_theme.cpp
+msgid "System Settings"
+msgstr "Paramètres de la console"
+
+#: pe/ui/switch_theme.cpp
+msgid "All Software"
+msgstr "Tous les logiciels"
+
+#: pe/ui/switch_theme.cpp
+msgid "Choose software or a system function"
+msgstr "Choisir un jeu ou une fonction système"
+
+#: pe/ui/switch_theme.cpp
+msgid "Select a settings category"
+msgstr "Choisir une catégorie de paramètres"
+
+#: pe/ui/switch_theme.cpp
+msgid "Press Select to configure"
+msgstr "Appuyer sur Valider pour configurer"
+
+#: pe/ui/switch_theme.cpp
+msgid "Software options: Triangle"
+msgstr "Options des logiciels : Triangle"
+
+#: pe/ui/switch_theme.cpp
+msgid "Theme"
+msgstr "Thème"
+
+#: pe/ui/switch_theme.cpp
+msgid "Original Encore interface"
+msgstr "Interface Encore originale"
+
+#: pe/ui/switch_theme.cpp
+msgid "Switch-style interface"
+msgstr "Interface de style Switch"
+
+#: pe/ui/switch_theme.cpp
+msgid "Choose Encore or Switch. Your games and control mapping stay unchanged."
+msgstr "Choisissez Encore ou Switch. Vos jeux et commandes restent inchangés."
+
+#: pe/ui/switch_theme.cpp
+msgid "Active"
+msgstr "Actif"
+
+#: pe/ui/switch_theme.cpp
+msgid "Game files"
+msgstr "Fichiers des jeux"
+
+#: pe/ui/switch_theme.cpp
+msgid "Choose the launcher interface without changing game or controller settings."
+msgstr "Choisissez l'interface sans modifier les jeux ni les commandes."
+
+#: pe/ui/switch_theme.cpp
+msgid "Switch home screen"
+msgstr "Accueil Switch"
+
+#: pe/ui/switch_theme.cpp
+msgid "Encore home screen"
+msgstr "Accueil Encore"
+
+#: pe/ui/switch_theme.cpp
+msgid "Configure"
+msgstr "Configurer"
+
+
+# Optional Switch theme: storage and language navigation
+#: pe/ui/switch_theme.cpp
+msgid "Keys found"
+msgstr "Clés présentes"
+
+#: pe/ui/switch_theme.cpp
+msgid "Keys missing"
+msgstr "Clés manquantes"
+
+#: pe/ui/switch_theme.cpp
+msgid "Games found"
+msgstr "Jeux trouvés"
+
+#: pe/ui/switch_theme.cpp
+msgid "No games found"
+msgstr "Aucun jeu trouvé"
+
+#: pe/ui/switch_theme.cpp
+msgid "Browse folders: D-pad / Open: A"
+msgstr "Parcourir : croix directionnelle · Ouvrir : A"
+
+#: pe/ui/switch_theme.cpp
+msgid "Choose your preferred language"
+msgstr "Choisissez votre langue"
+
+#: pe/ui/switch_theme.cpp
+msgid "Back to HOME"
+msgstr "Retour à l'accueil"
+
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "APPEARANCE"
+msgstr "APPARENCE"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "THEME"
+msgstr "THÈME"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "DEFAULT"
+msgstr "PAR DÉFAUT"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "PREVIEW"
+msgstr "APERÇU"
 )FRPO";
 }
