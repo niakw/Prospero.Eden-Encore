@@ -1273,7 +1273,22 @@ void Launcher::draw_library(Canvas &c)
     {
         // Actual rear retail scan, never the old panoramic screenshot.
         // Cross on this jacket opens a full-screen, aspect-preserving preview.
-        const Rect art{99.0f, 635.0f, 181.0f, 247.0f};
+        // A fixed 181px wide rear shell left a broad plastic stripe whenever
+        // the original scan was narrower. Fit the *case* to the complete
+        // artwork instead of letterboxing the artwork inside a large case.
+        // Its right edge stays fixed to preserve the gap before the title.
+        const Cover back_scan = game->box_back.empty() ? Cover{} :
+            c.textures.cover(game->box_back, 150.0f);
+        const float rear_aspect = back_scan.texture != 0 ?
+            std::max(0.01f, back_scan.aspect) : 872.0f / 1419.0f;
+        constexpr float kRearMaxWidth = 181.0f, kRearMaxHeight = 247.0f;
+        const float rear_h = std::min(kRearMaxHeight,
+            (kRearMaxWidth - 2.5f) / rear_aspect + 10.0f);
+        const float rear_paper_h = rear_h -
+            2.0f * std::max(5.0f, rear_h * 0.018f);
+        const float rear_w = std::min(kRearMaxWidth,
+            rear_paper_h * rear_aspect + 2.5f);
+        const Rect art{280.0f - rear_w, 882.0f - rear_h, rear_w, rear_h};
         flat_retail_sleeve(c, *game, art, true, 0.60f);
         // The focus ring is UI feedback only. No white plastic bezel
         // is drawn around an unfocused square-corner paper cover.
@@ -1413,11 +1428,9 @@ void Launcher::draw_library(Canvas &c)
                                              {Pad::circle, TR("Back")}};
         draw_footer(c, kBackHints, 3);
     } else {
-        // The Down action is listed in text, not a fake button icon.
+        // A lone text instruction below the details panel looked like
+        // misplaced metadata. The Down key still focuses the rear cover.
         draw_footer(c, kHints, 6);
-        text_shrink(c, tr("Down: view back cover"), 1550.0f,
-                    baseline(946.0f, 25.0f, 15.0f), 15.0f,
-                    theme::kMeta, 280.0f, Align::right);
     }
 }
 
