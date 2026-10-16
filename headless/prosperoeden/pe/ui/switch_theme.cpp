@@ -232,7 +232,12 @@ void Launcher::draw_switch_home(Canvas& c) {
             text_shrink(c,tr(names[i]),x,baseline(892.0f,40.0f,24.0f),
                         24.0f,kInk,318.0f,Align::center);
     }
-    // Button hints already say Select; no duplicate label at bottom-left.
+    // Preserve launch/permission feedback shown in the original launcher.
+    const std::string feedback=!message_.empty()?message_:home_.status;
+    if(!feedback.empty())
+        text_shrink(c,feedback,165.0f,baseline(701.0f,46.0f,22.0f),
+                    22.0f,!message_.empty()&&message_warning_?
+                    gfx::Color::rgb(0xb52733):kSubtle,1585.0f);
     draw_switch_footer(c,"");
 }
 
@@ -244,22 +249,35 @@ void Launcher::press_switch_home(Key key) {
     case Key::left:
     case Key::right: {
         const int delta=key==Key::right?1:-1;
-        if(current>=kHomeShortcutFirst) {
-            switch_home_focus_=kHomeShortcutFirst+
-                (current-kHomeShortcutFirst+delta+kHomeShortcuts)%kHomeShortcuts;
-        } else {
-            const int position=current==kHomeAllSoftware?count:std::min(current,count);
-            const int next=(position+delta+count+1)%(count+1);
-            switch_home_focus_=next==count?kHomeAllSoftware:next;
+        const int next=current>=kHomeShortcutFirst ?
+            std::clamp(current+delta,kHomeShortcutFirst,
+                       kHomeShortcutFirst+kHomeShortcuts-1) :
+            std::clamp((current==kHomeAllSoftware?count:current)+delta,0,count);
+        const int candidate=current>=kHomeShortcutFirst?next:
+            next==count?kHomeAllSoftware:next;
+        if(candidate==current) {
+            cue(Cue::scroll_limit);
+            return;
         }
+        switch_home_focus_=candidate;
+        if(candidate<=kHomeAllSoftware) switch_home_last_tile_=candidate;
         cue(Cue::focus);return;
     }
     case Key::down:
-        switch_home_focus_=kHomeShortcutFirst;
-        cue(Cue::focus);return;
+        if(current<kHomeShortcutFirst) {
+            switch_home_last_tile_=current;
+            switch_home_focus_=kHomeShortcutFirst;
+            cue(Cue::focus);
+        }
+        return;
     case Key::up:
-        switch_home_focus_=kHomeAllSoftware;
-        cue(Cue::focus);return;
+        if(current>=kHomeShortcutFirst) {
+            const int last=std::clamp(switch_home_last_tile_,0,kHomeAllSoftware);
+            switch_home_focus_=last==kHomeAllSoftware||last>=count?
+                kHomeAllSoftware:last;
+            cue(Cue::focus);
+        }
+        return;
     case Key::circle:
         (void)confirm_action(Confirmation::exit_app);return;
     case Key::triangle:
@@ -324,6 +342,10 @@ void Launcher::draw_switch_library(Canvas& c) {
     text_shrink(c,game.name,125.0f,baseline(150,55,29),29,kInk,1420.0f);
     text(c,list_position(selected+1,count),1790.0f,baseline(152,50,21),
          21,kSubtle,Align::right);
+    if(!message_.empty())
+        text_shrink(c,message_,125.0f,baseline(191.0f,48.0f,21.0f),
+                    21.0f,message_warning_?gfx::Color::rgb(0xb52733):kSubtle,
+                    1530.0f);
     draw_switch_footer(c,tr("Software options: Triangle"));
 }
 
@@ -340,10 +362,10 @@ void Launcher::press_switch_library(Key key) {
     case Key::down:next=std::min(count-1,current+kLibraryColumns);break;
     case Key::l1:next=std::max(0,current-kLibraryPageSize);break;
     case Key::r1:next=std::min(count-1,current+kLibraryPageSize);break;
-    case Key::cross: {
-        const auto& g=games_[static_cast<std::size_t>(current)];
-        launch(g.file,g.name,g.cover);return;
-    }
+    case Key::cross:
+        // Preserve all game-start checks and remote-file handling.
+        press_library(key);
+        return;
     case Key::triangle:
     case Key::square:
     case Key::options:
@@ -504,6 +526,37 @@ void Launcher::draw_switch_about(Canvas& c) {
                146,baseline(623,55,24),24,40,kSubtle,1550,3);
     text_shrink(c,version_,146,baseline(815,60,23),23,kSubtle,1450);
     draw_switch_footer(c,tr("Credits and setup"));
+}
+
+void Launcher::draw_switch_confirmation(Canvas& c) {
+    if(confirmation_==Confirmation::none) return;
+    auto& list=c.list;
+    list.rounded_rect({0,0,1920,1080},0,kInk.with_alpha(0.52f));
+    const Rect panel{512.0f,355.0f,896.0f,345.0f};
+    list.shadow({panel.x-9,panel.y-8,panel.w+18,panel.h+20},
+                9,32,kBlack.with_alpha(0.18f));
+    list.rounded_rect(panel,5,kWhite);
+    const char* title=tr("Confirm");
+    if(confirmation_==Confirmation::exit_app)
+        title=tr("Exit Eden Encore");
+    else if(confirmation_==Confirmation::console_mode)
+        title=tr("Console mode");
+    else if(confirmation_==Confirmation::mapping_reset)
+        title=tr("Controls");
+    else if(confirmation_==Confirmation::shader_caches)
+        title=tr("Diagnostics");
+    text_shrink(c,title,563.0f,baseline(382.0f,67.0f,32.0f),
+                32.0f,kInk,780.0f);
+    list.rounded_rect({563,464,780,2},0,kGrey);
+    text_shrink(c,message_,563.0f,baseline(492.0f,75.0f,26.0f),
+                26.0f,kInk,780.0f);
+    list.rounded_rect({563,607,780,1},0,kGrey);
+    list.ring(1038,651,15,2,kSubtle);
+    text(c,"B",1038,657,18,kInk,Align::center);
+    text_shrink(c,tr("Cancel"),1065,658,21,kInk,112);
+    list.ring(1230,651,15,2,kSubtle);
+    text(c,"A",1230,657,18,kInk,Align::center);
+    text_shrink(c,tr("Confirm"),1258,658,21,kInk,115);
 }
 
 void Launcher::draw_switch_dialog(Canvas& c, Modal modal, float opened) {

@@ -25,5 +25,11 @@ for line in (
 assert "switch_game_tile(c,item.cover,item.title,box,i)" in src
 assert "const Cover avatar=profile_avatar_path_.empty()?Cover{}:" in src
 assert "case 5: { // Power glyph" in src
+assert "std::clamp(current+delta,kHomeShortcutFirst," in src
+assert "switch_home_last_tile_=current;" in src
+assert "switch_home_focus_=last==kHomeAllSoftware||last>=count?" in src
+assert "press_library(key);" in src, "Switch game launch must respect core validation"
+assert "void Launcher::draw_switch_confirmation" in src
+assert 'if(!message_.empty())' in src, "game errors must remain visible"
 assert "stock_assets.hpp" not in src, "firmware-extracted UI atlas must not be imported"
 print("SWITCH_UI_GEOMETRY_AND_ASSET_ISOLATION: PASS")

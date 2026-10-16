@@ -1063,7 +1063,10 @@ void Launcher::draw(gfx::DrawList &list)
         else
             draw_dialog(c, modal_shown_, opened);
     }
-    draw_confirmation(c);
+    if (prefs_.ui_theme == 1)
+        draw_switch_confirmation(c);
+    else
+        draw_confirmation(c);
     list.pop_transform();
     if (launching)
         draw_launch(c);

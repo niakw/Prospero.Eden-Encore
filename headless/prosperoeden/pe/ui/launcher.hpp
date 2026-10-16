@@ -141,6 +141,7 @@ class Launcher
     void draw_switch_language(Canvas &c);
     void draw_switch_about(Canvas &c);
     void draw_switch_dialog(Canvas &c, Modal modal, float open);
+    void draw_switch_confirmation(Canvas &c);
     void press_switch_settings(Key key);
     void draw_switch_header(Canvas &c, const char *heading);
     void draw_switch_footer(Canvas &c, const char *hint);
@@ -319,6 +320,7 @@ class Launcher
     // settings and dialogs
     Preferences prefs_;
     int switch_home_focus_ = 0;
+    int switch_home_last_tile_ = 0; // remember selected title when visiting system shortcuts
     ListView settings_;
     tween::Spring section_;
     int option_ = 0;
