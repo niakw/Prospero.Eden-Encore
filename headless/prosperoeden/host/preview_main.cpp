@@ -144,12 +144,15 @@ void pictures(Stage &s)
         s.restart(false);
         s.wait(1.5f);
         s.shoot("00-switch-home");
-        s.press({Key::down, Key::cross});
+        // Up targets the All Software tile in the actual six-shortcut shell.
+        // Down targets the first circular shortcut (About), not the library.
+        s.press({Key::up, Key::cross});
         s.wait(1.5f);
         s.shoot("01-switch-all-software");
         s.press({Key::circle});
         s.wait(0.5f);
-        s.press({Key::down, Key::right, Key::right, Key::right, Key::cross});
+        // Six bottom icons: About, Files, Multiplayer, Controllers, Settings, Exit.
+        s.press({Key::down, Key::right, Key::right, Key::right, Key::right, Key::cross});
         s.wait(0.5f);
         s.shoot("02-switch-settings");
         s.press({Key::down, Key::down, Key::down, Key::down, Key::cross});
