@@ -49,12 +49,21 @@ approved_sync = {
         # Preserve its pinned 2-KiB dirty-collector correction as ONE
         # audited exception, never an anonymous increase of the budget.
         'string(REPLACE "${eden_dirty_raw}" [=[',
+        # This pinned native read-only exception prevents out-of-bounds
+        # guest-core indexing by auxiliary host threads.
+        'string(REPLACE "${eden_read_original}" "${eden_read_native}"',
     ),
 }
 # The dirty-range rewrite is allowed only while the source-derived native
 # gate and its sanitizer regression remain present and wired to CI.
 assert c.count("Pinned native GPUDirty Collect call changed") == 1
 assert c.count("gpu_dirty_managers[core].Collect(subaddress, span);") == 1
+assert c.count("Pinned native guest CPU read scratch/slot contract changed") == 1
+assert c.count("thread_local Common::ScratchBuffer<u32> read_scratch;") == 1
+assert c.count("VideoCore::RasterizerDownloadArea auxiliary_read_area{};") == 1
+assert (root / "tools/check-native-gpu-read-core-host.py").is_file()
+assert "python3 -B tools/check-native-gpu-read-core-host.py" in (
+    root / ".github/workflows/encore-core-preflight.yml").read_text()
 assert (root / "tools/check-native-gpu-dirty-subregion-host.py").is_file()
 assert "python3 -B tools/check-native-gpu-dirty-subregion-host.py" in (
     root / ".github/workflows/encore-core-preflight.yml").read_text()
