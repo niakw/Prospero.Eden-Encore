@@ -26,7 +26,7 @@ assert pinned.count(old) == 1
 assert native.count(new) == 1
 assert generator.count("return size <= chunk_capacity && Common::AlignUp(size, alignment) <= chunk_capacity;") == 1
 assert 'python3 -B tools/check-ps5-descriptor-ring-overflow-host.py' in workflow
-assert "[[nodiscard]] constexpr T AlignUp(" in (root / "vendor/sources/eden/src/common/alignment.h").read_text()
+assert "[[nodiscard]] constexpr T AlignUp(T value_, size_t size)" in (root / "vendor/sources/eden/src/common/alignment.h").read_text()
 
 # Compile the verbatim native predicate and original upstream predicate.
 # The original admits UINT64_MAX because AlignUp wraps to zero.
