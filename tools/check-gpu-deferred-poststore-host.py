@@ -194,7 +194,15 @@ int main() {
         [&]() noexcept -> StoreOutcome {
             ++forbidden_attempts;
             return StoreOutcome::Modified;
-        }, [&]() -> bool { ++forbidden_wakes; return true; });
+        }, [&]() -> bool {
+            ++forbidden_wakes;
+            // Scheduling acceptance is not completion: even a cancelled
+            // reservation needs an actual GPU-owner drain to advance FIFO.
+            assert(unsynced.Drain([](unsigned,std::uint64_t,std::uint64_t) {
+                assert(false); // A cancelled CAS cannot invalidate caches.
+            }) == 0);
+            return true;
+        });
     assert(!read_rejected && forbidden_attempts == 0 &&
            forbidden_wakes == 1 && unsynced.AcceptedSequence() == 1 &&
            unsynced.CompletedSequence() == 1 && !unsynced.Pending());
