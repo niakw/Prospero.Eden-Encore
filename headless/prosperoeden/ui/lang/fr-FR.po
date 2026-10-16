@@ -1601,8 +1601,6 @@ msgid "Enlarge cover"
 msgstr "Agrandir la jaquette"
 
 #: pe/ui/library.cpp
-msgid "Down: view back cover"
-msgstr "Bas : voir le dos de la jaquette"
 
 #: pe/ui/library.cpp
 msgid "GB"
@@ -1762,8 +1760,6 @@ msgid "All Software"
 msgstr "Tous les logiciels"
 
 #: pe/ui/switch_theme.cpp
-msgid "Choose software or a system function"
-msgstr "Choisir un jeu ou une fonction système"
 
 #: pe/ui/switch_theme.cpp
 msgid "Select a settings category"
@@ -1863,3 +1859,35 @@ msgstr "PAR DÉFAUT"
 #: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
 msgid "PREVIEW"
 msgstr "APERÇU"
+
+#: pe/ui/switch_theme.cpp
+msgid "About"
+msgstr "À propos"
+
+#: pe/ui/switch_theme.cpp
+msgid "Volume"
+msgstr "Volume"
+
+#: pe/ui/switch_theme.cpp
+msgid "Controller profile"
+msgstr "Profil de manette"
+
+#: pe/ui/switch_theme.cpp
+msgid "Cache"
+msgstr "Cache"
+
+#: pe/ui/switch_theme.cpp
+msgid "Manage"
+msgstr "Gérer"
+
+#: pe/ui/switch_theme.cpp
+msgid "Open folders"
+msgstr "Ouvrir les dossiers"
+
+#: pe/ui/switch_theme.cpp
+msgid "Filter"
+msgstr "Filtre"
+
+#: pe/ui/switch_theme.cpp
+msgid "Eden Encore"
+msgstr "Eden Encore"
