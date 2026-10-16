@@ -1215,6 +1215,12 @@ if(PS5_NATIVE)
     if(NOT EXISTS "${EDEN_NATIVE_DIRTY_HEADER_ROOT}/core/guest_memory.h")
         message(FATAL_ERROR "Missing maintained native guest memory bounds")
     endif()
+    # The native device-memory instantiation must discard stale contiguous
+    # mapping metadata on Unmap and default (untracked) Map. Source-only
+    # consumers keep the pinned upstream implementation.
+    if(NOT EXISTS "${EDEN_NATIVE_DIRTY_HEADER_ROOT}/core/device_memory_manager.inc")
+        message(FATAL_ERROR "Missing maintained native device memory continuity")
+    endif()
     target_include_directories(video_core BEFORE PRIVATE "${EDEN_NATIVE_DIRTY_HEADER_ROOT}")
     if(EDEN_A32_FASTMEM)
         set(eden_cpu_memory_tu "${PORT_BUILD_DIR}/memory.cpp")
