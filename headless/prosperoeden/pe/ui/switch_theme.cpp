@@ -21,9 +21,17 @@ const gfx::Color kBlack = gfx::Color::rgb(0x161616);
 constexpr int kHomeGameSlots = 6;
 constexpr int kHomeAllSoftware = 6;
 constexpr int kHomeShortcutFirst = 7;
-constexpr int kHomeShortcuts = 4;
+constexpr int kHomeShortcuts = 6;
 constexpr int kLibraryColumns = 6;
 constexpr int kLibraryPageSize = 18;
+constexpr float kSwitchHomeTileSize = 384.0f;
+constexpr float kSwitchHomeTilePitch = 405.0f;
+constexpr float kSwitchHomeTileX = 160.5f;
+constexpr float kSwitchHomeTileY = 291.0f;
+constexpr float kSwitchLibraryTileSize = 261.0f;
+constexpr float kSwitchLibraryTilePitch = 276.0f;
+constexpr float kSwitchLibraryTileX = 138.0f;
+constexpr float kSwitchLibraryTileY = 278.0f;
 
 int switch_recent_count(const Home& home) {
     return std::min<int>(kHomeGameSlots, static_cast<int>(home.recents.size()));
@@ -67,39 +75,68 @@ void switch_game_tile(Canvas& c,const std::string& path,const std::string& title
                 kWhite,r.w-26.0f,Align::center);
 }
 void action_circle(Canvas& c, float x, float y, int type, bool focus) {
-    const std::array<gfx::Color,4> colors{
-        gfx::Color::rgb(0x19b9d1), gfx::Color::rgb(0x7a7a7a),
-        gfx::Color::rgb(0xe2a33d), gfx::Color::rgb(0x868686)};
-    c.list.rounded_rect({x-36.0f,y-36.0f,72.0f,72.0f},36.0f,
-                        colors[static_cast<std::size_t>(type)]);
-    if (focus) c.list.ring(x,y,43.0f,4.0f,kFocus);
+    // Geometry follows the reference console shell: 132 px circles, 162 px
+    // centers, and 96-132 px ink. Artwork is authored as native vectors.
+    static const std::array<gfx::Color,6> inks{
+        gfx::Color::rgb(0xff4d4d),gfx::Color::rgb(0xffae2e),
+        gfx::Color::rgb(0x4a9bdb),gfx::Color::rgb(0x666666),
+        gfx::Color::rgb(0x555555),gfx::Color::rgb(0x555555)};
+    const gfx::Color ink=inks[static_cast<std::size_t>(type)];
+    c.list.rounded_rect({x-66,y-66,132,132},66,kWhite);
+    c.list.ring(x,y,66,1.6f,kGrey);
+    if(focus)c.list.ring(x,y,72,4,kFocus);
     switch(type) {
-    case 0: // All software: original grid
-        for (int a=0;a<2;++a) for(int b=0;b<2;++b)
-            c.list.rounded_rect({x-19.0f+float(a)*22.0f,y-19.0f+float(b)*22.0f,
-                                 16.0f,16.0f},2.0f,kWhite);
-        break;
-    case 1: // Controller-shaped symbol
-        c.list.rounded_rect({x-26.0f,y-12.0f,52.0f,29.0f},14.0f,kWhite);
-        c.list.rounded_rect({x-15.0f,y-6.0f,4.0f,16.0f},0.0f,kSubtle);
-        c.list.rounded_rect({x-21.0f,y,16.0f,4.0f},0.0f,kSubtle);
-        c.list.ring(x+15.0f,y-1.0f,3.0f,3.0f,kSubtle);
-        break;
-    case 2: // Data folder
-        c.list.rounded_rect({x-24.0f,y-16.0f,48.0f,34.0f},5.0f,kWhite);
-        c.list.rounded_rect({x-21.0f,y-22.0f,22.0f,11.0f},3.0f,kWhite);
-        break;
-    case 3: // System settings
-        for (int a=0;a<8;++a) {
-            const float theta=float(a)*3.14159265f/4.0f;
-            c.list.rounded_rect({x+std::cos(theta)*23.0f-5.0f,
-                                 y+std::sin(theta)*23.0f-5.0f,10.0f,10.0f},
-                                 2.0f,kWhite);
-        }
-        c.list.ring(x,y,17.0f,7.0f,kWhite);
+    case 0: { // News: a framed newspaper with headline and lines
+        c.list.bordered_rect({x-37,y-35,74,70},6,
+                             kWhite.with_alpha(0),6,ink);
+        c.list.rounded_rect({x-28,y-24,28,27},3,ink);
+        for(int i=0;i<3;++i)
+            c.list.rounded_rect({x+8,y-22+float(i)*11,21,4},1,ink);
+        c.list.rounded_rect({x-28,y+12,56,5},1,ink);
+        c.list.rounded_rect({x-28,y+24,46,5},1,ink);
         break;
     }
+    case 1: { // eShop-style bag, no borrowed emblem
+        c.list.bordered_rect({x-34,y-24,68,68},4,
+                             kWhite.with_alpha(0),6,ink);
+        c.list.ring(x,y-29,14,5,ink);
+        c.list.rounded_rect({x-21,y+8,42,6},2,ink);
+        break;
+    }
+    case 2: { // Local multiplayer: two paired user circles
+        c.list.ring(x-17,y-21,16,5,ink);
+        c.list.ring(x+22,y-15,12,4,ink);
+        c.list.rounded_rect({x-43,y+5,55,30},15,ink);
+        c.list.rounded_rect({x+12,y+6,35,24},12,ink);
+        break;
+    }
+    case 3: { // Pair of vertically split controller halves
+        c.list.rounded_rect({x-37,y-45,32,88},17,ink);
+        c.list.rounded_rect({x+5,y-45,32,88},17,ink);
+        c.list.ring(x-21,y-12,8,3,kWhite);
+        c.list.ring(x+21,y+13,8,3,kWhite);
+        c.list.rounded_rect({x+16,y-17,10,10},5,kWhite);
+        break;
+    }
+    case 4: { // Eight-tooth system gear with central bore
+        for(int i=0;i<8;++i) {
+            const float angle=3.1415926535f*float(i)/4.0f;
+            c.list.rounded_rect({x+std::cos(angle)*35-9,
+                                 y+std::sin(angle)*35-9,18,18},3,ink);
+        }
+        c.list.rounded_rect({x-33,y-33,66,66},29,ink);
+        c.list.ring(x,y,14,9,kWhite);
+        break;
+    }
+    case 5: { // Power glyph
+        c.list.ring(x,y+4,33,8,ink);
+        c.list.rounded_rect({x-10,y-45,20,47},10,kWhite);
+        c.list.rounded_rect({x-5,y-43,10,37},4,ink);
+        break;
+    }
+    }
 }
+
 } // namespace
 
 void Launcher::draw_switch_header(Canvas& c, const char *heading) {
@@ -108,21 +145,21 @@ void Launcher::draw_switch_header(Canvas& c, const char *heading) {
     text_shrink(c,heading,99.0f,baseline(70.0f,62.0f,33.0f),
                 33.0f,kInk,1280.0f);
     // Active account remains native and read-only, identical to Encore mode.
-    constexpr float px=1652.0f,py=101.0f;
+    constexpr float px=136.5f,py=98.0f;
     const Cover avatar=profile_avatar_path_.empty()?Cover{}:
-        textures_.cover(profile_avatar_path_,52.0f);
+        textures_.cover(profile_avatar_path_,76.0f);
     if(avatar.texture) {
         Rect uv{0,0,1,1};
         const float aspect=std::max(0.01f,avatar.aspect);
         if(aspect>1){uv.w=1/aspect;uv.x=(1-uv.w)*.5f;}
         if(aspect<1){uv.h=aspect;uv.y=(1-uv.h)*.5f;}
-        list.rounded_image(avatar.texture,{px-23,py-23,46,46},uv,23,kWhite);
+        list.rounded_image(avatar.texture,{px-36,py-36,72,72},uv,36,kWhite);
     } else {
-        list.rounded_rect({px-24,py-24,48,48},24,kGrey);
-        list.ring(px,py-6,9,4,kWhite);
-        list.rounded_rect({px-14,py+8,28,11},6,kWhite);
+        list.rounded_rect({px-36,py-36,72,72},36,kGrey);
+        list.ring(px,py-10,14,5,kWhite);
+        list.rounded_rect({px-21,py+12,42,17},9,kWhite);
     }
-    text(c,clock_,1835.0f,baseline(81.0f,42.0f,24.0f),24.0f,kInk,Align::right);
+    text(c,clock_,1814.0f,baseline(80.0f,50.0f,30.0f),30.0f,kInk,Align::right);
 }
 
 void Launcher::draw_switch_footer(Canvas& c,const char *hint) {
@@ -142,38 +179,51 @@ void Launcher::draw_switch_home(Canvas& c) {
     const int count=switch_recent_count(home_);
     const int focus=count==0 && switch_home_focus_<kHomeShortcutFirst ?
         kHomeAllSoftware : std::clamp(switch_home_focus_,0,kHomeShortcutFirst+kHomeShortcuts-1);
-    const float tile=226.0f,pitch=250.0f,start=85.0f,top=336.0f;
-    const char *placeholder=tr("All Software");
-    for(int i=0;i<count;++i){
-        const auto& g=home_.recents[static_cast<std::size_t>(i)];
-        const Rect r{start+float(i)*pitch,top,tile,tile};
-        switch_game_tile(c,g.cover,g.title,r,i);
-        outline(list,r,focus==i,0.0f);
+    const int target=focus==kHomeAllSoftware?count:std::min(focus,count);
+    const float maxOffset=std::max(0.0f,
+        kSwitchHomeTileX + float(count)*kSwitchHomeTilePitch
+        + kSwitchHomeTileSize - 1778.0f);
+    const float offset=std::clamp(
+        kSwitchHomeTileX + float(target)*kSwitchHomeTilePitch
+        + kSwitchHomeTileSize*0.5f - 960.0f,0.0f,maxOffset);
+    const char* allTitle=tr("All Software");
+    const std::string active=focus==kHomeAllSoftware?allTitle:
+        focus<count?home_.recents[static_cast<std::size_t>(focus)].title:"";
+    text_shrink(c,active,112.0f,baseline(222.0f,52.0f,32.0f),
+                32.0f,kInk,1696.0f,Align::center);
+
+    list.push_clip({0.0f,278.0f,1920.0f,426.0f});
+    for(int i=0;i<count;++i) {
+        const auto& item=home_.recents[static_cast<std::size_t>(i)];
+        const Rect box{kSwitchHomeTileX+float(i)*kSwitchHomeTilePitch-offset,
+                       kSwitchHomeTileY,kSwitchHomeTileSize,kSwitchHomeTileSize};
+        switch_game_tile(c,item.cover,item.title,box,i);
+        outline(list,box,focus==i,0.0f);
     }
-    // A dedicated All Software tile, positioned immediately after recents.
-    const int allIndex=count;
-    const Rect all{start+float(allIndex)*pitch,top,tile,tile};
-    list.rounded_rect(all,0.0f,gfx::Color::rgb(0x17aacc));
-    for(int a=0;a<3;++a)for(int b=0;b<3;++b)
-        list.rounded_rect({all.x+77+float(a)*37,all.y+73+float(b)*37,24,24},2.0f,kWhite);
-    outline(list,all,focus==kHomeAllSoftware,0.0f);
-    const bool highlighted=focus<count||focus==kHomeAllSoftware;
-    if(highlighted) {
-        const std::string name=focus==kHomeAllSoftware?placeholder:
-            home_.recents[static_cast<std::size_t>(focus)].title;
-        text_shrink(c,name,100.0f,baseline(256.0f,51.0f,31.0f),
-                    31,kInk,1600.0f);
+    const Rect all{kSwitchHomeTileX+float(count)*kSwitchHomeTilePitch-offset,
+                   kSwitchHomeTileY+72.0f,240.0f,240.0f};
+    list.rounded_rect(all,120.0f,kWhite);
+    list.ring(all.x+120.0f,all.y+120.0f,118.0f,2.0f,kGrey);
+    for(int row=0;row<3;++row)for(int col=0;col<3;++col)
+        list.rounded_rect({all.x+70.0f+float(col)*36.0f,
+                           all.y+71.0f+float(row)*36.0f,25.0f,25.0f},
+                          2.0f,kInk);
+    outline(list,all,focus==kHomeAllSoftware,120.0f);
+    list.pop_clip();
+
+    // The reference has six HOME functions, centered at these exact x/y
+    // coordinates in the native 1920x1080 coordinate space.
+    const char* names[]={
+        TR("About"),TR("Game files"),TR("Multiplayer"),
+        TR("Controllers"),TR("System Settings"),TR("Exit Eden Encore")};
+    for(int i=0;i<kHomeShortcuts;++i){
+        const float x=555.0f+162.0f*float(i),y=816.0f;
+        action_circle(c,x,y,i,focus==kHomeShortcutFirst+i);
+        if(focus==kHomeShortcutFirst+i)
+            text_shrink(c,tr(names[i]),x,baseline(892.0f,40.0f,24.0f),
+                        24.0f,kInk,318.0f,Align::center);
     }
-    const char *shortcuts[kHomeShortcuts]={TR("All Software"),TR("Controllers"),
-                                         TR("Game files"),TR("System Settings")};
-    constexpr float sx=540.0f,step=210.0f,sy=824.0f;
-    for(int i=0;i<kHomeShortcuts;++i) {
-        const float cx=sx+float(i)*step;
-        action_circle(c,cx,sy,i,focus==kHomeShortcutFirst+i);
-        text_shrink(c,tr(shortcuts[i]),cx,baseline(867.0f,39.0f,18.0f),
-                    18,kInk,198,Align::center);
-    }
-    draw_switch_footer(c,tr("Choose software or a system function"));
+    draw_switch_footer(c,tr("Select"));
 }
 
 void Launcher::press_switch_home(Key key) {
@@ -212,14 +262,21 @@ void Launcher::press_switch_home(Key key) {
             if(home_.setup_ready && services_.game_exists(g.file))
                 launch(g.file,g.title,g.cover);
             else cue(Cue::error);
-        } else if(current==kHomeAllSoftware||current==kHomeShortcutFirst) {
+        } else if(current==kHomeAllSoftware) {
             open(Screen::library,true);enter_library();
+        } else if(current==kHomeShortcutFirst) {
+            open(Screen::about,true);
         } else if(current==kHomeShortcutFirst+1) {
-            open_mapping(false);
-        } else if(current==kHomeShortcutFirst+2) {
             open(Screen::files,true);enter_files();
+        } else if(current==kHomeShortcutFirst+2) {
+            // Online multiplayer is not supported by this port.
+            cue(Cue::error);
         } else if(current==kHomeShortcutFirst+3) {
+            open_mapping(false);
+        } else if(current==kHomeShortcutFirst+4) {
             open(Screen::settings,true);prefs_=services_.preferences();section_.snap(1.0f);
+        } else if(current==kHomeShortcutFirst+5) {
+            (void)confirm_action(Confirmation::exit_app);
         }
         return;
     default:return;
@@ -238,14 +295,21 @@ void Launcher::draw_switch_library(Canvas& c) {
     const int selected=std::clamp(library_.selected,0,count-1);
     const int start=(selected/kLibraryPageSize)*kLibraryPageSize;
     // Three complete rows must end BEFORE the footer divider (y=979).
-    constexpr float tile=218.0f,gap=25.0f,x0=242.0f,y0=230.0f;
+    constexpr float tile=kSwitchLibraryTileSize,gap=kSwitchLibraryTilePitch-kSwitchLibraryTileSize;
+    constexpr float x0=kSwitchLibraryTileX,y0=kSwitchLibraryTileY;
+    const float availableBottom=938.0f;
+    const float selectedRow=float((selected%kLibraryPageSize)/kLibraryColumns);
+    const float scroll=std::max(0.0f,
+        y0+selectedRow*kSwitchLibraryTilePitch+tile-availableBottom);
+    list.push_clip({70.0f,270.0f,1780.0f,670.0f});
     for(int pos=start;pos<std::min(count,start+kLibraryPageSize);++pos){
         const auto& g=games_[static_cast<std::size_t>(pos)];
         const int local=pos-start,col=local%kLibraryColumns,row=local/kLibraryColumns;
-        const Rect r{x0+float(col)*(tile+gap),y0+float(row)*(tile+gap),tile,tile};
+        const Rect r{x0+float(col)*(tile+gap),y0+float(row)*(tile+gap)-scroll,tile,tile};
         switch_game_tile(c,!g.cover.empty()?g.cover:g.box_front,g.name,r,pos);
         outline(list,r,pos==selected,0.0f);
     }
+    list.pop_clip();
     const Game& game=games_[static_cast<std::size_t>(selected)];
     text_shrink(c,game.name,125.0f,baseline(150,55,29),29,kInk,1420.0f);
     text(c,list_position(selected+1,count),1790.0f,baseline(152,50,21),
