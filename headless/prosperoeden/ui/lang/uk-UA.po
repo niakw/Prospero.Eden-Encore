@@ -1692,8 +1692,6 @@ msgid "Select a settings category"
 msgstr "Вибрати · категорії"
 
 #: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
-msgid "Press Select to configure"
-msgstr "Вибрати · Налаштувати"
 
 #: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
 msgid "Software options: Triangle"
