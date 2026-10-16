@@ -95,9 +95,9 @@ assert "flat_retail_sleeve(c, *game, art, true, 0.60f);" in library
 assert "flat_retail_sleeve(c, *game, enlarged, true, 0.92f," in library
 assert "library_back_scale_);" in library
 assert "std::max(paper.w, paper.h) * texture_scale" in library
-assert "fitted.x += paper.w - fitted.w;" in library
-assert "c.list.image(artwork.texture, fitted, uv," in library
-assert "uv.w = target / source;" in library and "uv.h = source / target;" in library
+assert "fitted.x += rear ? paper.w - fitted.w : (paper.w - fitted.w) * 0.5f;" in library
+assert "c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f}," in library
+assert "Rect fitted = paper;" in library and "if (source > target)" in library
 assert "paper_uv.x = back ? 1.0f - paper_uv.w : 0.0f;" in draw
 assert "flat_retail_sleeve(c, game, sleeve, false, 0.24f);" in library
 assert "const Rect paper{shell.x + (rear ? side : 0.0f), shell.y + top," in library
@@ -337,33 +337,35 @@ assert "const Cover artwork = c.textures.cover(" in lib_sleeve
 assert "scan, std::max(paper.w, paper.h) * texture_scale);" in lib_sleeve
 assert "const float other_x" not in lib_sleeve
 assert "cover(c, scan, paper, 0.0f, 0.0f);" not in lib_sleeve
-assert "c.list.image(artwork.texture, fitted, uv," in lib_sleeve
+assert "c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f}," in lib_sleeve
 assert "Rect fitted = paper;" in lib_sleeve
 assert "fitted.w = paper.h * source;" in lib_sleeve
 assert "fitted.h = paper.w / source;" in lib_sleeve
 assert "if (source > target) {" in lib_sleeve
 assert "if (source < target) {" in lib_sleeve
 assert "fitted.y += (paper.h - fitted.h) * 0.5f;" in lib_sleeve
-assert "fitted.x += paper.w - fitted.w;" in lib_sleeve
+assert "fitted.x += rear ? paper.w - fitted.w : (paper.w - fitted.w) * 0.5f;" in lib_sleeve
 assert "std::clamp(shell.w * 0.012f, 1.75f, 5.0f)" in lib_sleeve
-# The larger retail front keeps the printed image as the primary surface.
-# Verify its thin molded edge and bounded aspect-preserving crop.
-shelf_width, shelf_height = 218.0, 346.0
-shelf_rim = min(2.0, max(0.9, shelf_width * 0.006))
-shelf_cap = max(2.0, shelf_height * 0.008)
-paper_aspect = (shelf_width - shelf_rim) / (shelf_height - 2 * shelf_cap)
+# The complete retail front must fit its case, top and bottom included.
+# Case width derives from the loaded scan ratio, not a forced tile crop.
+shelf_height = 346.0
 european_front_aspect = 872.0 / 1419.0
-assert shelf_rim < 1.6 and paper_aspect > european_front_aspect
-assert "uv.w = target / source;" in lib_sleeve
-assert "uv.h = source / target;" in lib_sleeve
-assert 0.94 < european_front_aspect / paper_aspect < 1.0
+shelf_cap = max(2.0, shelf_height * 0.008)
+paper_height = shelf_height - 2.0 * shelf_cap
+shelf_width = min(277.0, max(175.0, paper_height * european_front_aspect * 1.01))
+shelf_rim = min(2.0, max(0.9, shelf_width * 0.006))
+paper_aspect = (shelf_width - shelf_rim) / paper_height
+assert shelf_rim < 1.6 and 0.98 < european_front_aspect / paper_aspect < 1.02
+assert "const float sleeve_w = std::clamp(paper_height * aspect * 1.01f," in lib_sleeve
+assert "Rect uv" not in lib_sleeve
+assert "c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f}," in lib_sleeve
 # The row label must finish before the detail panel begins. No overprinting
 # text onto the scan, and no loss of the cover's printed header/footer.
-shelf_top, detail_top = 204.0, 590.0
+shelf_top, detail_top = 204.0, 620.0
 shelf_bottom = shelf_top + shelf_height
 assert shelf_bottom + 6.0 + 24.0 < detail_top
 assert (european_front_aspect / paper_aspect) > 0.95
-assert 'const Rect detail{72.0f, 590.0f, 1776.0f, 306.0f};' in library
+assert 'const Rect detail{72.0f, 620.0f, 1776.0f, 276.0f};' in library
 assert 'constexpr float shelf_y = 551.0f;' in library
 # The 3D caps run the SAME 13px plastic skirt on either projected face.
 assert "float from_cap = min(v_st.y, 1.0 - v_st.y)" in shader
