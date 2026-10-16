@@ -213,7 +213,9 @@ jobs:
           expected=["00-switch-home.png","01-switch-all-software.png",
                     "02-switch-settings.png","03-switch-appearance.png",
                     "04-switch-storage.png","05-switch-language.png",
-                    "06-switch-exit-confirm.png"]
+                    "06-switch-exit-confirm.png",
+                    "07-switch-game-options.png","08-switch-game-mods.png",
+                    "09-switch-button-mapping.png"]
           files=sorted(folder.glob("*.png"))
           assert [f.name for f in files] == expected, files
           for file in files:
@@ -232,6 +234,15 @@ jobs:
               red=sum(r > 100 and r > g * 1.3 and r > b * 1.12
                       for r,g,b in feedback.getdata())
               assert red < 40, f"stray red confirmation text: {red} pixels"
+          # All advanced surfaces use the light theme while preserving
+          # the real backend controllers and settings navigation.
+          for filename in ("07-switch-game-options.png",
+                           "08-switch-game-mods.png",
+                           "09-switch-button-mapping.png"):
+              with Image.open(folder / filename) as raw:
+                  frame=raw.convert("RGB")
+                  assert min(frame.getpixel((480,145))) > 220, filename
+                  assert min(frame.getpixel((520,350))) < 170, filename
           print("SWITCH_THEME_NATIVE_HOST_CAPTURE: PASS")
           PY
 

@@ -47,3 +47,7 @@ assert "void Launcher::draw_switch_game(Canvas& c,float opened)" in src
 assert "void Launcher::draw_switch_mods(Canvas& c,float opened)" in src
 assert "void Launcher::draw_switch_mapping(Canvas& c,float opened)" in src
 assert "VideoPresetForTitle(id" in src
+
+preview=(root/"headless/prosperoeden/host/preview_main.cpp").read_text()
+for filename in ("07-switch-game-options","08-switch-game-mods","09-switch-button-mapping"):
+    assert filename in preview

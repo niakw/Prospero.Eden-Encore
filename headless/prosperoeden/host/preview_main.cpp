@@ -171,6 +171,24 @@ void pictures(Stage &s)
                  Key::cross});
         s.wait(0.3f);
         s.shoot("06-switch-exit-confirm");
+        s.press({Key::circle, Key::up, Key::cross});
+        s.wait(1.0f);
+        // Triangle opens the real game's per-title settings.
+        s.press({Key::triangle});
+        s.wait(0.3f);
+        s.shoot("07-switch-game-options");
+        // The tenth Down reaches Mods while the options list scrolls.
+        s.press({Key::down,Key::down,Key::down,Key::down,Key::down,
+                 Key::down,Key::down,Key::down,Key::down,Key::down,
+                 Key::cross});
+        s.wait(0.3f);
+        s.shoot("08-switch-game-mods");
+        // Return from mods to game options, then Library and HOME.
+        // Use the same Controllers shortcut as the user.
+        s.press({Key::circle,Key::circle,Key::circle,Key::down,
+                 Key::right,Key::right,Key::right,Key::cross});
+        s.wait(0.3f);
+        s.shoot("09-switch-button-mapping");
         return;
     }
     // Independently verify the game's real launch transition using the same
