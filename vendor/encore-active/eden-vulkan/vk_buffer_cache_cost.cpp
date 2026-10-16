@@ -676,10 +676,11 @@ void BufferCacheRuntime::BindVertexBuffers(VideoCommon::HostBindings<Buffer>& bi
     const u32 device_max = device.GetMaxVertexInputBindings();
     const u32 min_binding = (std::min)(bindings.min_index, device_max);
     const u32 max_binding = (std::min)(bindings.max_index, device_max);
-    const u32 binding_count = max_binding - min_binding;
-    if (binding_count == 0) {
+    // Do not wrap a reversed binding range into a huge Vulkan binding count.
+    if (max_binding <= min_binding) {
         return;
     }
+    const u32 binding_count = max_binding - min_binding;
     if (device.IsExtExtendedDynamicStateSupported()) {
         scheduler.Record([bindings_ = std::move(bindings), buffer_handles_ = std::move(buffer_handles), binding_count](vk::CommandBuffer cmdbuf) {
             cmdbuf.BindVertexBuffers2EXT(bindings_.min_index, binding_count, buffer_handles_.data(), bindings_.offsets.data(), bindings_.sizes.data(), bindings_.strides.data());
