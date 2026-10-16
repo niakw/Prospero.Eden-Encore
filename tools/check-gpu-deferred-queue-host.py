@@ -342,6 +342,25 @@ int main() {
     assert(!cancelled_head.Pending());
     assert(!cancelled_head.CancelAndWake(*cancelled_head_ticket, cancellation_tick));
 
+    // Regression: a canceled conditional store may still be the FIFO tail.
+    // An overlapping same-core real write MUST get a separate replayable
+    // entry, not inherit the canceled flag through eager coalescing.
+    Queue cancelled_tail;
+    const auto failed_compare = cancelled_tail.Reserve(0, 0x1200, 16);
+    assert(failed_compare && cancelled_tail.Cancel(*failed_compare));
+    const auto actual_write = cancelled_tail.EnqueueTracked(0, 0x1200, 16);
+    assert(actual_write && actual_write->sequence == failed_compare->sequence + 1);
+    unsigned real_invalidations = 0;
+    assert(cancelled_tail.Drain([&](unsigned core, std::uint64_t addr,
+                                    std::uint64_t size) {
+        assert(core == 0 && addr == 0x1200 && size == 16);
+        ++real_invalidations;
+    }) == 1);
+    assert(real_invalidations == 1);
+    assert(cancelled_tail.CompletedSequence() == actual_write->sequence);
+    assert(cancelled_tail.WaitUntil(*actual_write));
+    assert(!cancelled_tail.Pending());
+
     // A finished ordinary (non-atomic) CPU store is visible to replay
     // because Publish releases the queue mutex and the consumer acquires it.
     // No callback may execute before publication of this exact ticket.

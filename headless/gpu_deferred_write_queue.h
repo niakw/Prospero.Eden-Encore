@@ -365,7 +365,9 @@ private:
         if (published && !queue_.empty()) {
             auto& tail = queue_.back();
             const auto& last = tail.range;
-            if (tail.published && tail.core == core &&
+            // A cancelled conditional write is a no-op. Never fuse a later
+            // real memory write into it or the replay would skip that write.
+            if (tail.published && !tail.cancelled && tail.core == core &&
                 (address / DirtyRegionBytes) == ((end - 1) / DirtyRegionBytes) &&
                 (last.begin / DirtyRegionBytes) == ((last.end - 1) / DirtyRegionBytes) &&
                 (address / DirtyRegionBytes) == (last.begin / DirtyRegionBytes) &&

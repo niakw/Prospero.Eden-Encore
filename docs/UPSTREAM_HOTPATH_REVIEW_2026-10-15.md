@@ -220,3 +220,15 @@ READS guest memory, so its read/download ordering must be solved as well as
 post-store cancellation. All store classes, GPU cache ownership, direct
 JIT/fastmem accesses, title shutdown and DMA must be qualified before
 activation. This commit does not address game frame stalls or FC27 HUD.
+
+## Cancelled-tail coalescing correctness (2026-10-16)
+
+A cancelled pending conditional write remains in FIFO as a published no-op.
+Before this follow-up, the queue\'s eager same-core coalescing could merge a
+later real write into that cancelled tail. Because replay skips cancelled
+entries, the merged genuine cache invalidation was silently lost. Eager
+coalescing now requires `!tail.cancelled` in addition to its old same-core,
+same-region and overlap checks. A sanitizer regression reproduces a failed
+conditional write followed by a genuine overlapping write and verifies that
+exactly the latter reaches the invalidation callback. No native/runtime bridge
+is enabled, and this is not a gameplay/HUD/performance fix.

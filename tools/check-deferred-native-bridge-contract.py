@@ -107,6 +107,7 @@ assert "const bool became_ready = !was_ready && !queue_.empty()" in publish_body
 assert "if (arm_wake && became_ready) ++pending_wake_callbacks_;" in publish_body
 assert "std::optional<bool> PublishImpl(Ticket ticket, bool arm_wake = false, bool cancel = false)" in queue
 assert "entry->cancelled = cancel;" in publish_body
+assert "tail.published && !tail.cancelled && tail.core == core" in queue
 assert "bool Cancel(Ticket ticket)" in queue
 assert "bool CancelAndWake(Ticket ticket, RequestGpu&& request_gpu)" in queue
 assert "wake_cv_.wait(lock, [&] { return pending_wake_callbacks_ == 0; });" in queue
