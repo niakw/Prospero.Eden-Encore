@@ -98,6 +98,7 @@ for guard in ("if (auto ticket = Reserve(core, address, size)) return ticket;",
 assert ordered.index("barrier = {accepted_, generation_};") < ordered.index("RequestGpuOrThrow(request_gpu);")
 assert ordered.index("RequestGpuOrThrow(request_gpu);") < ordered.index("WaitUntil(barrier)")
 assert "deferred_cpu_write_queue.ReserveOrdered(" not in code
+assert "CommitPostStore(" not in code
 assert "accepted_ - completed_ >= MaxOutstandingWrites" in queue
 # Publishing thousands of reservations out of order must not turn the FIFO
 # into a quadratic per-frame CPU hotspot. Last-sequence keys are monotone
