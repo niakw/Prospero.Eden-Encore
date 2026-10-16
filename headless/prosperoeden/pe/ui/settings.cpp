@@ -24,18 +24,19 @@ enum Category
     kAudio,
     kControls,
     kAccessibility,
+    kAppearance,
     kDiagnostics,
     kStorage,
     kLanguage,
     kCategoryCount,
 };
 constexpr const char *kCategories[kCategoryCount] = {
-    TR("Video"), TR("Audio"), TR("Controls"), TR("Accessibility"), TR("Diagnostics"),
-    TR("Storage"), TR("Language")};
+    TR("Video"), TR("Audio"), TR("Controls"), TR("Accessibility"), TR("Appearance"),
+    TR("Diagnostics"), TR("Storage"), TR("Language")};
 // The same as headings: capitals differ by language, so each is its own text.
 constexpr const char *kHeadings[kCategoryCount] = {
-    TR("VIDEO"), TR("AUDIO"), TR("CONTROLS"), TR("ACCESSIBILITY"), TR("DIAGNOSTICS"),
-    TR("STORAGE"), TR("LANGUAGE")};
+    TR("VIDEO"), TR("AUDIO"), TR("CONTROLS"), TR("ACCESSIBILITY"), TR("APPEARANCE"),
+    TR("DIAGNOSTICS"), TR("STORAGE"), TR("LANGUAGE")};
 
 // The Video dialog's rows, and the window that shows five of them (placed as a game's settings
 // are).
@@ -174,6 +175,11 @@ void Launcher::press_settings(Key key)
         case kAccessibility:
             open_modal(Modal::accessibility);
             break;
+        case kAppearance:
+            open_modal(Modal::appearance);
+            option_ = std::clamp(prefs_.ui_theme, 0, 1);
+            option_cursor_.snap(dialog_row_top(Modal::appearance, option_));
+            break;
         default:
             open_modal(Modal::diagnostics);
             break;
@@ -199,6 +205,7 @@ void Launcher::draw_settings(Canvas &c)
         prefs_.mute ? tr("Muted") : percent(prefs_.volume),
         controller_profile_name(prefs_.controller_layout, prefs_.mapping),
         prefs_.large_text || prefs_.high_contrast || prefs_.reduce_motion ? tr("On") : tr("Off"),
+        prefs_.ui_theme == 1 ? "Switch" : "Encore",
         prefs_.detailed_logging ? tr("Detailed logs on") : tr("Ready"),
         short_path(services_.files_folder(), 18),
         pick(services_.language_labels(), prefs_.language),
@@ -273,6 +280,12 @@ void Launcher::draw_settings(Canvas &c)
         lines = {{tr("LARGER TEXT"), on_off(prefs_.large_text)},
                  {tr("HIGH CONTRAST"), on_off(prefs_.high_contrast)},
                  {tr("REDUCE MOTION"), on_off(prefs_.reduce_motion)}};
+        break;
+    case kAppearance:
+        about = tr("Choose the launcher interface without changing game or controller settings.");
+        lines = {{tr("THEME"), prefs_.ui_theme == 1 ? "Switch" : "Encore"},
+                 {tr("DEFAULT"), "Encore"},
+                 {tr("PREVIEW"), prefs_.ui_theme == 1 ? tr("Switch home screen") : tr("Encore home screen")}};
         break;
     case kDiagnostics:
     {
@@ -372,6 +385,8 @@ int Launcher::dialog_rows(Modal modal) const
     case Modal::audio:
     case Modal::accessibility:
         return 3;
+    case Modal::appearance:
+        return 2;
     case Modal::controls:
         return 5;
     case Modal::diagnostics:
@@ -394,6 +409,8 @@ float Launcher::dialog_row_top(Modal modal, int row) const
     case Modal::audio:
     case Modal::accessibility:
         return 370.0f + 102.0f * static_cast<float>(row);
+    case Modal::appearance:
+        return 404.0f + 112.0f * static_cast<float>(row);
     case Modal::diagnostics:
         return 570.0f + 102.0f * static_cast<float>(row);
     case Modal::video: // five of its rows show; the list scrolls to the others
@@ -542,6 +559,10 @@ void Launcher::press_dialog(Key key)
             sound = Cue::slider;
         }
         break;
+    case Modal::appearance:
+        prefs_.ui_theme = option_;
+        sound = Cue::saved;
+        break;
     case Modal::accessibility:
         if (option_ == 0)
             prefs_.large_text = !prefs_.large_text;
@@ -632,6 +653,10 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
         copy = tr(kAbout[std::clamp(option_, 0, 4)]);
         break;
     }
+    case Modal::appearance:
+        title = tr("Appearance");
+        copy = tr("Choose Encore or Switch. Your games and control mapping stay unchanged.");
+        break;
     case Modal::accessibility:
         title = tr("Accessibility");
         copy = tr("Make the menu easier to see and follow.");
@@ -763,6 +788,12 @@ void Launcher::draw_dialog(Canvas &c, Modal modal, float open)
         level_row(4, tr("Stick deadzone"), percent(prefs_.stick_deadzone), prefs_.stick_deadzone, 20);
         break;
     }
+    case Modal::appearance:
+        for (int row = 0; row < 2; ++row) {
+            const char *value = row == 0 ? "Encore" : "Switch";
+            label(row, value, choice(row, row == prefs_.ui_theme ? tr("Active") : tr("Select")));
+        }
+        break;
     case Modal::accessibility:
     {
         static constexpr const char *kNames[] = {TR("Larger text"), TR("High contrast"),
