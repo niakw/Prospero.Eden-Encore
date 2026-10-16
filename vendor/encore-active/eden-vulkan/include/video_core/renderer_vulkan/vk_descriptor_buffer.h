@@ -43,7 +43,8 @@ public:
 #endif
 
     [[nodiscard]] bool CanAllocate(VkDeviceSize size) const noexcept {
-        return Common::AlignUp(size, alignment) <= chunk_capacity;
+        // Validate unaligned size before AlignUp can overflow VkDeviceSize.
+        return size <= chunk_capacity && Common::AlignUp(size, alignment) <= chunk_capacity;
     }
 
     void TickFrame();
