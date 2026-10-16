@@ -72,6 +72,7 @@ jobs:
           python3 -B tools/check-deferred-native-bridge-contract.py
           python3 -B tools/check-deferred-native-access-coverage.py
           python3 -B tools/check-native-tracked-page-handoff-host.py
+          python3 -B tools/check-native-jit-quiescence-model-host.py
           python3 -B tools/check-ps5-present-phase-timing.py
           python3 -B tools/check-ps5-first-use-draw-preservation.py
           python3 -B tools/check-ps5-gpu-worker-draw-guard.py
