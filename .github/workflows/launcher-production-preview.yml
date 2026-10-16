@@ -238,8 +238,7 @@ jobs:
                   f"advanced preview has repeated heading in {a} and {b}")
           print("SWITCH_ADVANCED_MODAL_TOUR: PASS")
 
-          with Image.open(folder / "10-switch-mods-installed.png") as before_file, \\
-               Image.open(folder / "11-switch-mod-enabled.png") as after_file:
+          with Image.open(folder / "10-switch-mods-installed.png") as before_file, Image.open(folder / "11-switch-mod-enabled.png") as after_file:
               before=before_file.convert("RGB").crop((475,360,1250,525))
               after=after_file.convert("RGB").crop((475,360,1250,525))
               change=sum(ImageStat.Stat(ImageChops.difference(before,after)).mean)
