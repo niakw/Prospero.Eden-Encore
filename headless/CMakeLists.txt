@@ -1235,6 +1235,28 @@ if(PS5_NATIVE)
     if(NOT unmapped_count EQUAL 11)
         message(FATAL_ERROR "Pinned unmapped memory error sites changed: ${unmapped_count} != 11")
     endif()
+    # Native guest CPU reads can also be requested from auxiliary host threads.
+    # Their TLS host ID is outside the four guest-core array slots. Never
+    # use that ID to index rasterizer_read_areas or share mapping scratch
+    # with the GPU-owner/system-core write paths. Avoid a lock over a GPU
+    # read fence: keep the normal guest-core read-area cache unchanged.
+    set(eden_read_original [=[
+        const size_t core = system.GetCurrentHostThreadID();
+        auto& current_area = rasterizer_read_areas[core];
+        gpu_device_memory->ApplyOpOnPointer(p, scratch_buffers[core], [&](DAddr address) {]=])
+    set(eden_read_native [=[
+        const size_t host_core = system.GetCurrentHostThreadID();
+        thread_local Common::ScratchBuffer<u32> read_scratch;
+        VideoCore::RasterizerDownloadArea auxiliary_read_area{};
+        auto& current_area = host_core < Core::Hardware::NUM_CPU_CORES
+            ? rasterizer_read_areas[host_core] : auxiliary_read_area;
+        gpu_device_memory->ApplyOpOnPointer(p, read_scratch, [&](DAddr address) {]=])
+    string(FIND "${eden_cpu_memory}" "${eden_read_original}" eden_read_position)
+    if(eden_read_position LESS 0)
+        message(FATAL_ERROR "Pinned native guest CPU read scratch/slot contract changed")
+    endif()
+    string(REPLACE "${eden_read_original}" "${eden_read_native}"
+        eden_cpu_memory "${eden_cpu_memory}")
     # GPUDirtyMemoryManager::BuildTransform has a 32-bit mask of 64-byte
     # cells (2 KiB). HandleRasterizerWrite may pass a whole 4 KiB page.
     # Split before Collect, keeping the vendored code unchanged.
