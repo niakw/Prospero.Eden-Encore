@@ -103,8 +103,10 @@ int main() {
     WriteLocal(v,dyn(0),dyn(outside),imm(555),4);
     WriteLocal(v,imm(0),imm(outside),imm(555),4);
     assert(v.ir.memory==before);
-    assert(v.ir.writes==writes_before);
-    assert(v.ir.reads==reads_before);
+    // Dynamic masked operations still read/rewrite valid word zero; they
+    // must preserve its VALUE, not skip the modeled memory instructions.
+    assert(v.ir.writes==writes_before+1);
+    assert(v.ir.reads==reads_before+2);
     // A word whose base starts in bounds but whose tail crosses 16 bytes.
     assert(LoadLocal(v,dyn(0),dyn(12),4).value==0);
     WriteLocal(v,dyn(0),dyn(12),imm(456),4);
