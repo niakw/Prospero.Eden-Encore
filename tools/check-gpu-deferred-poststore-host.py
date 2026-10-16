@@ -30,6 +30,14 @@ assert "std::optional<Ticket> ReserveOrdered(" in queue
 assert "inline constexpr bool kNativePostStorePublicationReady = false;" in replay
 assert "CommitPostStore(" not in bridge
 assert "python3 -B tools/check-gpu-deferred-poststore-host.py" in workflow
+for part in ("enum class ReadBarrierResult { Complete, Failed };",
+             "std::optional<StoreOutcome> CommitConditionalAfterRead(",
+             "std::is_same_v<std::invoke_result_t<SyncRead&>, ReadBarrierResult>",
+             "if (std::forward<SyncRead>(synchronize_read)() != ReadBarrierResult::Complete)",
+             "return CommitPostStore(queue, core, address, size,"):
+    assert part in header, part
+assert header.index("synchronize_read)()") < header.index("return CommitPostStore(")
+assert "CommitConditionalAfterRead(" not in bridge
 
 # Source-backed classification: a tracked ordinary/memset store happens
 # AFTER HandleRasterizerWrite, whereas dc cvac/civac only invalidates.
@@ -102,6 +110,84 @@ int main() {
         });
     assert(cas_result == StoreOutcome::Unchanged && cas_invalidations == 0 &&
            atomic_ram.load() == 7 && !failed_cas.Pending());
+
+    // A real conditional read barrier must FIRST replay older published
+    // guest writes / GPU invalidations and complete the download, then the
+    // CAS attempt can inspect the freshly synchronized guest RAM.
+    Queue conditional;
+    std::atomic<int> conditional_ram{7};
+    unsigned prior_invalidations = 0, conditional_invalidations = 0;
+    const auto pending_older = conditional.EnqueueTracked(1, 0x5000, 4);
+    assert(pending_older);
+    const auto conditional_ok = CommitConditionalAfterRead(
+        conditional, 2, 0x5000, 4,
+        [&]() -> ReadBarrierResult {
+            assert(conditional_ram.load() == 7);
+            assert(conditional.Drain([&](unsigned core, std::uint64_t addr,
+                                           std::uint64_t size) {
+                assert(core == 1 && addr == 0x5000 && size == 4);
+                ++prior_invalidations;
+            }) == 1);
+            return ReadBarrierResult::Complete;
+        },
+        [&]() noexcept -> StoreOutcome {
+            assert(prior_invalidations == 1);
+            int expected = 7;
+            return conditional_ram.compare_exchange_strong(expected, 15)
+                       ? StoreOutcome::Modified : StoreOutcome::Unchanged;
+        }, [&]() -> bool {
+            assert(conditional.Drain([&](unsigned core, std::uint64_t addr,
+                                           std::uint64_t size) {
+                assert(core == 2 && addr == 0x5000 && size == 4);
+                assert(conditional_ram.load() == 15);
+                ++conditional_invalidations;
+            }) == 1);
+            return true;
+        });
+    assert(conditional_ok == StoreOutcome::Modified &&
+           prior_invalidations == 1 && conditional_invalidations == 1 &&
+           conditional_ram.load() == 15 && !conditional.Pending());
+
+    // A CAS comparison failure resolves its FIFO position WITHOUT
+    // invalidation, even after a successful prerequisite CPU-read fence.
+    Queue conditional_failed;
+    std::atomic<int> failed_ram{8};
+    unsigned failures_synced = 0, failures_replayed = 0;
+    const auto conditional_noop = CommitConditionalAfterRead(
+        conditional_failed, 1, 0x6000, 4,
+        [&]() -> ReadBarrierResult {
+            ++failures_synced;
+            return ReadBarrierResult::Complete;
+        },
+        [&]() noexcept -> StoreOutcome {
+            assert(failures_synced == 1);
+            int expected = 10;
+            return failed_ram.compare_exchange_strong(expected, 12)
+                       ? StoreOutcome::Modified : StoreOutcome::Unchanged;
+        }, [&]() -> bool {
+            assert(conditional_failed.Drain([&](unsigned,std::uint64_t,std::uint64_t) {
+                ++failures_replayed;
+            }) == 0);
+            return true;
+        });
+    assert(conditional_noop == StoreOutcome::Unchanged &&
+           failures_synced == 1 && failures_replayed == 0 &&
+           failed_ram.load() == 8 && !conditional_failed.Pending());
+
+    // An explicitly incomplete GPU->CPU download must not reserve or
+    // execute a CAS, nor mistake scheduling acceptance for read completion.
+    Queue unsynced;
+    unsigned forbidden_attempts = 0, forbidden_wakes = 0;
+    const auto read_rejected = CommitConditionalAfterRead(
+        unsynced, 0, 0x7000, 4,
+        [&]() -> ReadBarrierResult { return ReadBarrierResult::Failed; },
+        [&]() noexcept -> StoreOutcome {
+            ++forbidden_attempts;
+            return StoreOutcome::Modified;
+        }, [&]() -> bool { ++forbidden_wakes; return true; });
+    assert(!read_rejected && forbidden_attempts == 0 &&
+           forbidden_wakes == 0 && unsynced.AcceptedSequence() == 0 &&
+           !unsynced.Pending());
 
     // Other core's earlier unpublished reservation must not be overtaken.
     Queue ordered;
@@ -196,4 +282,4 @@ with tempfile.TemporaryDirectory(prefix="encore-poststore-host-") as temp:
                     "-fno-sanitize-recover=all", "-I", str(root / "headless"),
                     str(unit), "-o", str(binary)], check=True, timeout=45)
     subprocess.run([str(binary)], check=True, timeout=45)
-print("GPU_DEFERRED_POSTSTORE_HOST_PASS ordinary=1 cancel=1 fifo=1 pressure=1 scheduler_reject=1 no_native_activation=1")
+print("GPU_DEFERRED_POSTSTORE_HOST_PASS ordinary=1 cancel=1 fifo=1 pressure=1 scheduler_reject=1 conditional_read_fence=1 cas_success=1 cas_failed=1 read_reject=1 no_native_activation=1")

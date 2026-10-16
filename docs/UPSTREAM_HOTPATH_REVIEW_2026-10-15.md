@@ -340,3 +340,23 @@ GPU-to-CPU read fence, or conditional-store outcome has been wired. The
 developer-only enqueue path remains blocked by
 `kNativePostStorePublicationReady=false`; shipping Vulkan sources are
 unchanged. No console build, release, gameplay test or performance claim.
+
+## Host conditional guest-write read fence (2026-10-16)
+
+The standalone `CommitConditionalAfterRead` helper now models the missing
+precondition for CAS and 128-bit exclusive stores: an explicit, **blocking**
+guest CPU-read synchronization callback must report `ReadBarrierResult::Complete`
+before any reservation or atomic RAM access. A rejected/incomplete read leaves
+the queue unchanged and does not execute the attempt. Once synchronized,
+`CommitPostStore` reserves, executes exactly one noexcept CAS attempt, then
+publishes the modified range or cancels an unsuccessful comparison.
+
+The host sanitizer now covers earlier GPU invalidations drained before a
+successful CAS, failure without invalidation, and an uncompleted download
+that cannot run the CAS. The test proves operation ordering in the standalone
+queue and callback model, not cache-coherent native CPU reads. Native callers
+would still need a real GPU-to-CPU download fence **and** arbitration against
+concurrent write producers between the read and reservation, all fastmem/JIT
+write paths, correct GPU scheduling, and title-lifetime joins. The developer
+CMake source still does not invoke this helper and
+`kNativePostStorePublicationReady=false`. No FC27 gameplay effect.

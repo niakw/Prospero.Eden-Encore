@@ -39,4 +39,29 @@ std::optional<StoreOutcome> CommitPostStore(
     if (!accepted) return std::nullopt;  // Irrecoverable: caller must stop title.
     return outcome;
 }
+// Conditional stores read guest RAM before attempting modification. A caller
+// MUST synchronously complete all older deferred cache invalidations and the
+// GPU-to-CPU download *before* it provides a ReadBarrierResult::Complete.
+// A mere queued/asynchronous scheduling acceptance is NOT completion.
+// The read fence must also be ordered with competing producers by the caller.
+// This source-only composition intentionally does not enable the native path.
+enum class ReadBarrierResult { Complete, Failed };
+
+template<class SyncRead, class Attempt, class RequestGpu>
+std::optional<StoreOutcome> CommitConditionalAfterRead(
+    Queue& queue, unsigned core, std::uint64_t address, std::uint64_t size,
+    SyncRead&& synchronize_read, Attempt&& attempt,
+    RequestGpu&& request_gpu) {
+    static_assert(std::is_same_v<std::invoke_result_t<SyncRead&>, ReadBarrierResult>,
+                  "Conditional read barrier must explicitly report completion");
+    static_assert(std::is_nothrow_invocable_r_v<StoreOutcome, Attempt&>,
+                  "Atomic store attempt must be noexcept and report modification");
+    // A failed/incomplete read must not reserve an invalidation, touch RAM, or
+    // fall back to a direct unsynchronized CAS. Caller must abort the title.
+    if (std::forward<SyncRead>(synchronize_read)() != ReadBarrierResult::Complete)
+        return std::nullopt;
+    return CommitPostStore(queue, core, address, size,
+                           std::forward<Attempt>(attempt),
+                           std::forward<RequestGpu>(request_gpu));
+}
 } // namespace Eden::GpuDeferredWrite
