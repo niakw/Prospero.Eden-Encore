@@ -30,6 +30,9 @@ assert "switch_home_last_tile_=current;" in src
 assert "switch_home_focus_=last==kHomeAllSoftware||last>=count?" in src
 assert "press_library(key);" in src, "Switch game launch must respect core validation"
 assert "void Launcher::draw_switch_confirmation" in src
+preview=(root/"headless/prosperoeden/host/preview_main.cpp").read_text()
+assert "06-switch-exit-confirm" in preview
+assert "Key::right, Key::right, Key::right, Key::right," in preview
 assert 'if(!message_.empty())' in src, "game errors must remain visible"
 assert "stock_assets.hpp" not in src, "firmware-extracted UI atlas must not be imported"
 print("SWITCH_UI_GEOMETRY_AND_ASSET_ISOLATION: PASS")

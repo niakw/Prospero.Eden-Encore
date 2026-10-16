@@ -144,9 +144,10 @@ void pictures(Stage &s)
         s.restart(false);
         s.wait(1.5f);
         s.shoot("00-switch-home");
-        // Up targets the All Software tile in the actual six-shortcut shell.
-        // Down targets the first circular shortcut (About), not the library.
-        s.press({Key::up, Key::cross});
+        // The HOME top row no longer wraps: move right to the final
+        // All Software item (six recent game slots at most).
+        s.press({Key::right, Key::right, Key::right, Key::right,
+                 Key::right, Key::right, Key::cross});
         s.wait(1.5f);
         s.shoot("01-switch-all-software");
         s.press({Key::circle});
@@ -164,6 +165,12 @@ void pictures(Stage &s)
         s.press({Key::circle, Key::down, Key::cross});
         s.wait(0.3f);
         s.shoot("05-switch-language");
+        // Verify the alternative theme's native confirmation overlay.
+        s.press({Key::circle, Key::circle, Key::down,
+                 Key::right, Key::right, Key::right, Key::right, Key::right,
+                 Key::cross});
+        s.wait(0.3f);
+        s.shoot("06-switch-exit-confirm");
         return;
     }
     // Independently verify the game's real launch transition using the same
