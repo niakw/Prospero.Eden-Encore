@@ -32,6 +32,8 @@ assert code.index("!::Eden::GpuDeferredWrite::kNativePostStorePublicationReady")
 assert "const bool defer_candidate =\n        ::Eden::GpuDeferredWrite::kNativePostStorePublicationReady &&" in code
 assert code.count("::Eden::GpuDeferredWrite::GuestWriteIntent::StoreFollows") == 2
 assert "::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent;" in code
+assert 'string(FIND "${bridge_cpu}" "${${anchor}}" found)' in code
+assert 'string(FIND "${bridge_cpu}" "${NESTED_ANCHOR}" found)' not in code
 # Fail-closed documentation contract: the inactive candidate does not yet
 # synchronize deferred writes before either CPU-read fast path. Pin BOTH bypass
 # sites so a future change must replace this negative proof with a real ordered

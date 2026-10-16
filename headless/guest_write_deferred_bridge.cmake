@@ -220,7 +220,7 @@ void MemoryManager::FlushCaching() {
     set(intent_exclusive128 "HandleRasterizerWrite(GetInteger(vaddr), sizeof(u128));")
     foreach(anchor IN ITEMS intent_block intent_zero intent_scalar
                             intent_exclusive intent_exclusive128)
-        string(FIND "${bridge_cpu}" "${NESTED_ANCHOR}" found)
+        string(FIND "${bridge_cpu}" "${${anchor}}" found)
         if(found LESS 0)
             message(FATAL_ERROR "Native store-intent anchor changed (${anchor})")
         endif()
