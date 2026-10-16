@@ -409,7 +409,7 @@ void Launcher::draw_switch_settings(Canvas& c) {
     case 0:
         rows={Line{TR("Renderer"),prefs_.renderer?"Vulkan":"OpenGL"},
               Line{TR("TV output"),prefs_.output==2?"2160p":prefs_.output==1?"1440p":"1080p"},
-              Line{TR("FPS overlay"),prefs_.hud?tr("On"):tr("Off")},
+              Line{TR("Filter"),switch_value(services_.filter_labels(),prefs_.filter)},
               Line{TR("Video preset"),switch_value(services_.performance_profile_labels(),prefs_.performance_profile)}};
         size=4;break;
     case 1:
@@ -445,7 +445,7 @@ void Launcher::draw_switch_settings(Canvas& c) {
                     1730.0f,y+37,24,kSubtle,450,Align::right);
         list.rounded_rect({696,y+72,1040,1},0,kGrey);
     }
-    text_shrink(c,tr("Press Select to configure"),695.0f,baseline(811,50,20),
+    text_shrink(c,tr("Configure"),695.0f,baseline(811,50,20),
                 20,kSubtle,920);
     draw_switch_footer(c,tr("Select a settings category"));
 }
