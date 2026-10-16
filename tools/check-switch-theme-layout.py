@@ -42,3 +42,8 @@ assert "if(confirmation_==Confirmation::none && !feedback.empty())" in src
 assert "void Launcher::draw_switch_confirmation" in src, "native confirmation must be themed"
 assert "stock_assets.hpp" not in src, "firmware-extracted UI atlas must not be imported"
 print("SWITCH_UI_GEOMETRY_AND_ASSET_ISOLATION: PASS")
+
+assert "void Launcher::draw_switch_game(Canvas& c,float opened)" in src
+assert "void Launcher::draw_switch_mods(Canvas& c,float opened)" in src
+assert "void Launcher::draw_switch_mapping(Canvas& c,float opened)" in src
+assert "VideoPresetForTitle(id" in src

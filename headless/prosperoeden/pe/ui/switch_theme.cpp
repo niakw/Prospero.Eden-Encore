@@ -3,6 +3,7 @@
 // Original vector UI only: no extracted firmware assets, fonts or sounds.
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "pe/ui/launcher.hpp"
+#include "pe/ui/video_presets.hpp"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -139,6 +140,49 @@ void action_circle(Canvas& c, float x, float y, int type, bool focus) {
         break;
     }
     }
+}
+
+
+constexpr Rect kAdvancedClip{530.0f,302.0f,861.0f,498.0f};
+void advanced_panel(Canvas& c,const char* title,const std::string& subtitle) {
+    auto& d=c.list;
+    const Rect panel{467,124,986,831};
+    d.shadow({453,111,1014,862},8,35,kBlack.with_alpha(.15f));
+    d.rounded_rect(panel,5,kWhite);
+    d.bordered_rect(panel,5,kWhite,1,kGrey);
+    text_shrink(c,title,534,baseline(162,64,35),35,kInk,843);
+    text_shrink(c,subtitle,535,baseline(224,52,22),22,kSubtle,838);
+    d.rounded_rect({536,292,846,2},0,kGrey);
+    d.rounded_rect({536,815,846,1},0,kGrey);
+}
+void advanced_row(Canvas& c,float top,bool focus,const std::string& key,
+                  const std::string& value,float opacity=1.0f) {
+    auto& d=c.list;
+    d.push_opacity(opacity);
+    const Rect r{541,top,832,92};
+    if(focus) {
+        d.rounded_rect(r,4,gfx::Color::rgb(0xe7faff));
+        d.bordered_rect(r,4,kWhite.with_alpha(0),3,kFocus);
+    } else d.rounded_rect({r.x+4,r.y+91,r.w-8,1},0,kGrey);
+    text_shrink(c,key,r.x+24,baseline(top,92,23),23,kInk,423);
+    text_shrink(c,value,r.x+r.w-22,baseline(top,92,22),
+                22,focus?kInk:kSubtle,350,Align::right);
+    d.pop_opacity();
+}
+void advanced_status(Canvas& c,const std::string& message,bool warn,
+                     const char* fallback) {
+    text_shrink(c,message.empty()?tr(fallback):message,544,
+                baseline(840,68,20),20,warn?gfx::Color::rgb(0xb52733):kSubtle,825);
+}
+std::string switch_default(const std::string& value) {
+    return fill(tr("Default ({0})"),{value});
+}
+std::string switch_pad_label(int p) {
+    static const char* names[]={
+        TR("Cross"),TR("Circle"),TR("Square"),TR("Triangle"),
+        "L1","R1","L2","R2","L3","R3",TR("Options"),
+        TR("Create"),TR("Touchpad")};
+    return tr(names[std::clamp(p,0,12)]);
 }
 
 } // namespace
@@ -529,6 +573,130 @@ void Launcher::draw_switch_about(Canvas& c) {
                146,baseline(623,55,24),24,40,kSubtle,1550,3);
     text_shrink(c,version_,146,baseline(815,60,23),23,kSubtle,1450);
     draw_switch_footer(c,tr("Credits and setup"));
+}
+
+
+void Launcher::draw_switch_game(Canvas& c,float opened) {
+    auto& d=c.list;
+    d.push_opacity(opened);
+    const Game* game=library_.selected>=0&&library_.selected<static_cast<int>(games_.size())?
+        &games_[static_cast<std::size_t>(library_.selected)]:nullptr;
+    advanced_panel(c,tr("Game settings"),game?game->name:std::string{});
+    const std::uint64_t id=game?game->title_id:0;
+    const bool authored=prefs_.performance_profile>=0&&
+        prefs_.performance_profile<kAuthoredVideoProfiles;
+    const auto base=VideoPresetForTitle(id,authored?prefs_.performance_profile:1);
+    const auto out=[](int v)->const char*{return v==2?"2160p":v==1?"1440p":"1080p";};
+    const int baseRenderer=authored?base.renderer:prefs_.renderer;
+    const int baseOutput=authored?base.output:prefs_.output;
+    const int baseRes=authored?base.resolution:prefs_.resolution;
+    const int baseFilter=authored?base.filter:prefs_.filter;
+    const int baseFsr=authored?base.fsr_sharpness:prefs_.fsr_sharpness;
+    const int baseAa=authored?base.anti_aliasing:prefs_.anti_aliasing;
+    const int baseHz=authored?base.refresh:prefs_.refresh;
+    static constexpr const char* names[]={
+        TR("Console mode"),TR("Renderer"),TR("Video preset"),TR("TV output"),
+        TR("Resolution"),TR("Upscaling filter"),TR("FSR sharpness"),
+        TR("Anti-aliasing"),TR("Refresh rate"),TR("Button mapping"),TR("Mods"),
+        TR("Save data")};
+    const auto fallback=[](int local,const std::string& def,
+                           const std::string& selected)->std::string{
+        return local<0?switch_default(def):selected;
+    };
+    const auto g=game_settings_;
+    const std::array<std::string,12> values={
+        game_docked_?tr("Docked"):tr("Handheld"),
+        fallback(g.renderer,baseRenderer?"Vulkan":"OpenGL",g.renderer?"Vulkan":"OpenGL"),
+        fallback(g.performance_profile,
+            switch_value(services_.performance_profile_labels(),prefs_.performance_profile),
+            switch_value(services_.performance_profile_labels(),g.performance_profile)),
+        fallback(g.output,out(baseOutput),out(g.output)),
+        fallback(g.resolution,switch_value(services_.resolution_labels(),baseRes),
+            switch_value(services_.resolution_labels(),g.resolution)),
+        fallback(g.filter,switch_value(services_.filter_labels(),baseFilter),
+            switch_value(services_.filter_labels(),g.filter)),
+        fallback(g.fsr_sharpness,std::to_string(baseFsr)+"%",
+            std::to_string(g.fsr_sharpness)+"%"),
+        fallback(g.anti_aliasing,switch_value(services_.anti_aliasing_labels(),baseAa),
+            switch_value(services_.anti_aliasing_labels(),g.anti_aliasing)),
+        fallback(g.refresh,hertz(baseHz),hertz(g.refresh)),
+        g.own_mapping?tr("Customize"):fallback(g.controller_layout,
+            prefs_.controller_layout?"Switch":"PlayStation",g.controller_layout?"Switch":"PlayStation"),
+        game&&!game->mods_enabled?tr("Off"):
+            mods_.empty()?tr("No mods"):
+            fill(tr("{0} of {1} on"),{
+                std::to_string(std::count_if(mods_.begin(),mods_.end(),
+                    [](const Mod& m){return m.enabled;})),
+                std::to_string(mods_.size())}),
+        import_source_==SaveSource::ryujinx?tr("Ryujinx save found"):
+            import_source_==SaveSource::folder?tr("Save folder found"):tr("Nothing to import")
+    };
+    d.push_clip(kAdvancedClip);
+    for(int i=game_rows_.first_row();i<=game_rows_.last_row();++i) {
+        if(i<0||i>=12)continue;
+        const float y=318+float(i)*96-game_rows_.scroll();
+        advanced_row(c,y,i==option_,tr(names[i]),values[static_cast<std::size_t>(i)],
+                     game_rows_.row_alpha(i,92));
+    }
+    d.pop_clip();
+    advanced_status(c,message_,message_warning_,option_==11?TR("Import"):
+                    option_==10?TR("Open"):TR("Change"));
+    d.pop_opacity();
+}
+void Launcher::draw_switch_mods(Canvas& c,float opened) {
+    auto& d=c.list;
+    d.push_opacity(opened);
+    const Game* game=library_.selected>=0&&library_.selected<static_cast<int>(games_.size())?
+        &games_[static_cast<std::size_t>(library_.selected)]:nullptr;
+    advanced_panel(c,tr("Mods"),game?game->name:std::string{});
+    if(mods_.empty())
+        text_block(c,fill(tr("No mods for this game yet. Copy each mod's folder to {0}, next to roms/."),
+                    {game?services_.mods_folder(game->title_id):std::string{}}),
+                   546,baseline(332,72,23),23,40,kInk,828,5);
+    else {
+        const bool active=!game||game->mods_enabled;
+        d.push_clip(kAdvancedClip);
+        for(int i=mod_rows_.first_row();i<=mod_rows_.last_row();++i) {
+            if(i<0||i>=static_cast<int>(mods_.size()))continue;
+            const auto& m=mods_[static_cast<std::size_t>(i)];
+            advanced_row(c,318+float(i)*96-mod_rows_.scroll(),
+                i==mod_rows_.selected,m.name+" · "+m.kind,
+                active&&m.enabled?tr("On"):tr("Off"),mod_rows_.row_alpha(i,92));
+        }
+        d.pop_clip();
+    }
+    advanced_status(c,message_,message_warning_,mods_.empty()?
+                    TR("Create the folder"):TR("Turn on or off"));
+    d.pop_opacity();
+}
+void Launcher::draw_switch_mapping(Canvas& c,float opened) {
+    auto& d=c.list;
+    d.push_opacity(opened);
+    const Game* game=mapping_for_game_&&library_.selected>=0&&
+        library_.selected<static_cast<int>(games_.size())?
+        &games_[static_cast<std::size_t>(library_.selected)]:nullptr;
+    const ButtonMapping buttons=mapping_for_game_?
+        Eden::ResolveSessionButtonMapping(prefs_.controller_layout,prefs_.mapping,
+            game_settings_.controller_layout,game_settings_.own_mapping,
+            game_settings_.mapping).buttons:prefs_.mapping;
+    const int layout=mapping_for_game_&&game_settings_.controller_layout>=0?
+        game_settings_.controller_layout:prefs_.controller_layout;
+    const std::string profile=layout?"Switch":"PlayStation";
+    advanced_panel(c,tr("Button mapping"),game?game->name+" · "+profile:
+                   fill(tr("Global controller profile: {0}"),{profile}));
+    static constexpr const char* names[]={"A","B","X","Y","L","R","ZL","ZR","+","-",
+        TR("Left stick press"),TR("Right stick press")};
+    d.push_clip(kAdvancedClip);
+    for(int i=mapping_rows_.first_row();i<=mapping_rows_.last_row();++i) {
+        if(i<0||i>=kGameButtons)continue;
+        advanced_row(c,318+float(i)*96-mapping_rows_.scroll(),
+            i==mapping_rows_.selected,tr(names[i]),
+            switch_pad_label(buttons[static_cast<std::size_t>(i)]),
+            mapping_rows_.row_alpha(i,92));
+    }
+    d.pop_clip();
+    advanced_status(c,message_,message_warning_,TR("Change"));
+    d.pop_opacity();
 }
 
 void Launcher::draw_switch_confirmation(Canvas& c) {

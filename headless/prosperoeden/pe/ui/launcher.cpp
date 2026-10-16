@@ -1053,11 +1053,11 @@ void Launcher::draw(gfx::DrawList &list)
         const float opened = tween::clamp01(modal_open_.value);
         list.rounded_rect(kScreen, 0.0f, theme::kScrim.with_alpha(0.69f * opened));
         if (modal_shown_ == Modal::game)
-            draw_game(c, opened);
+            prefs_.ui_theme == 1 ? draw_switch_game(c, opened) : draw_game(c, opened);
         else if (modal_shown_ == Modal::mods)
-            draw_mods(c, opened);
+            prefs_.ui_theme == 1 ? draw_switch_mods(c, opened) : draw_mods(c, opened);
         else if (modal_shown_ == Modal::mapping)
-            draw_mapping(c, opened);
+            prefs_.ui_theme == 1 ? draw_switch_mapping(c, opened) : draw_mapping(c, opened);
         else if (prefs_.ui_theme == 1)
             draw_switch_dialog(c, modal_shown_, opened);
         else

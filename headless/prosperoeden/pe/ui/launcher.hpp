@@ -142,6 +142,9 @@ class Launcher
     void draw_switch_about(Canvas &c);
     void draw_switch_dialog(Canvas &c, Modal modal, float open);
     void draw_switch_confirmation(Canvas &c);
+    void draw_switch_game(Canvas &c, float opened);
+    void draw_switch_mods(Canvas &c, float opened);
+    void draw_switch_mapping(Canvas &c, float opened);
     void press_switch_settings(Key key);
     void draw_switch_header(Canvas &c, const char *heading);
     void draw_switch_footer(Canvas &c, const char *hint);
