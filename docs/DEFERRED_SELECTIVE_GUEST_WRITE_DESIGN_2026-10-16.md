@@ -66,6 +66,15 @@ does not prove GPU/CPU synchronization or runtime JIT correctness.
 
 ## Concrete scoped producers and first-tracking hazard
 
+The `GuestMemoryFlags` type also does **not** enforce read-only
+access at compile time: `GuestMemory<..., SafeRead>` still offers
+`T* data()`, mutable `operator[]` and a mutable `std::span<T>` from
+`Read()`. Therefore a search restricted to `FLAGS & Write` cannot
+prove the absence of in-place modifications through nominally read-only
+buffers. This is a possible API-level escape, **not** a demonstrated
+write at every read-only call site. Qualify actual mutating uses before
+counting CPU-producer coverage as complete.
+
 The scoped template in `core/guest_memory.h` is not tied to one
 producer domain. Actual writable GPU-side instantiations are present:
 
