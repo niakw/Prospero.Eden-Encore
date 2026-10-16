@@ -54,3 +54,13 @@ for filename in ("07-switch-game-options","08-switch-game-mods","09-switch-butto
 
 assert '!message.empty()&&warn?' in src, "stale confirmation must not tint normal modal hint red"
 assert 'text_shrink(c,tr("Back"),1230.0f' in src
+
+# The visual mapping must use the effective mapped pad (not a fixed platform
+# face glyph), and custom profiles must not be mislabeled as defaults.
+assert "switch_profile_name(int layout,const ButtonMapping& mapping)" in src
+assert "switch_profile_name(g.controller_layout" in src
+assert "switch_physical_pad(mapped)" in src
+assert "draw_pad(c,switch_physical_pad(mapped)" in src
+assert "settings_.wrap=false;" in src
+assert "settings_.wrap=original_wrap;" in src
+assert 'text_shrink(c,tr("Select"),1024.0f' in src
