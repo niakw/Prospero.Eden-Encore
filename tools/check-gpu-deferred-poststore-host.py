@@ -32,12 +32,19 @@ assert "CommitPostStore(" not in bridge
 assert "python3 -B tools/check-gpu-deferred-poststore-host.py" in workflow
 for part in ("enum class ReadBarrierResult { Complete, Failed };",
              "std::optional<StoreOutcome> CommitConditionalAfterRead(",
-             "std::is_same_v<std::invoke_result_t<SyncRead&>, ReadBarrierResult>",
-             "if (std::forward<SyncRead>(synchronize_read)() != ReadBarrierResult::Complete)",
-             "return CommitPostStore(queue, core, address, size,"):
+             "std::invoke_result_t<SyncRead&, Queue::Ticket>",
+             "const auto ticket = queue.ReserveOrdered(core, address, size, request_gpu);",
+             "const Queue::Ticket predecessors{ticket->sequence - 1, ticket->generation};",
+             "synchronize_read)(predecessors)",
+             "queue.CancelAndWake(*ticket, request_gpu)",
+             "class GuestStoreOrderGate final",
+             "std::lock_guard lock(mutex_);"):
     assert part in header, part
-assert header.index("synchronize_read)()") < header.index("return CommitPostStore(")
+assert header.index("queue.ReserveOrdered(core, address, size, request_gpu);", 
+                    header.index("CommitConditionalAfterRead(")) < header.index(
+                        "synchronize_read)(predecessors)")
 assert "CommitConditionalAfterRead(" not in bridge
+assert "GuestStoreOrderGate" not in bridge
 
 # Source-backed classification: a tracked ordinary/memset store happens
 # AFTER HandleRasterizerWrite, whereas dc cvac/civac only invalidates.
@@ -65,6 +72,7 @@ cpp = r"""
 #include <cassert>
 #include <cstdint>
 #include <stdexcept>
+#include <thread>
 #include <vector>
 using namespace Eden::GpuDeferredWrite;
 static_assert(!kNativePostStorePublicationReady);
@@ -121,9 +129,11 @@ int main() {
     assert(pending_older);
     const auto conditional_ok = CommitConditionalAfterRead(
         conditional, 2, 0x5000, 4,
-        [&]() -> ReadBarrierResult {
+        [&]([[maybe_unused]] Queue::Ticket predecessors) -> ReadBarrierResult {
             assert(conditional_ram.load() == 7);
-            assert(conditional.Drain([&](unsigned core, std::uint64_t addr,
+            assert(predecessors.sequence == pending_older->sequence);
+            assert(conditional.AcceptedSequence() == predecessors.sequence + 1);
+            assert(conditional.DrainThrough(predecessors,[&](unsigned core, std::uint64_t addr,
                                            std::uint64_t size) {
                 assert(core == 1 && addr == 0x5000 && size == 4);
                 ++prior_invalidations;
@@ -155,7 +165,7 @@ int main() {
     unsigned failures_synced = 0, failures_replayed = 0;
     const auto conditional_noop = CommitConditionalAfterRead(
         conditional_failed, 1, 0x6000, 4,
-        [&]() -> ReadBarrierResult {
+        [&]([[maybe_unused]] Queue::Ticket predecessors) -> ReadBarrierResult {
             ++failures_synced;
             return ReadBarrierResult::Complete;
         },
@@ -180,14 +190,109 @@ int main() {
     unsigned forbidden_attempts = 0, forbidden_wakes = 0;
     const auto read_rejected = CommitConditionalAfterRead(
         unsynced, 0, 0x7000, 4,
-        [&]() -> ReadBarrierResult { return ReadBarrierResult::Failed; },
+        [&]([[maybe_unused]] Queue::Ticket predecessors) -> ReadBarrierResult { return ReadBarrierResult::Failed; },
         [&]() noexcept -> StoreOutcome {
             ++forbidden_attempts;
             return StoreOutcome::Modified;
         }, [&]() -> bool { ++forbidden_wakes; return true; });
     assert(!read_rejected && forbidden_attempts == 0 &&
-           forbidden_wakes == 0 && unsynced.AcceptedSequence() == 0 &&
-           !unsynced.Pending());
+           forbidden_wakes == 1 && unsynced.AcceptedSequence() == 1 &&
+           unsynced.CompletedSequence() == 1 && !unsynced.Pending());
+
+    // Saturation must drain older work BEFORE, not after, the read fence.
+    Queue saturated_read;
+    for (Queue::Sequence i = 0; i < Queue::MaxOutstandingWrites; ++i)
+        assert(saturated_read.EnqueueTracked(unsigned(i % Queue::Cores),
+                  0x100000 + i * 4096, 4));
+    unsigned drains_before_read = 0, read_barriers = 0;
+    const auto saturation_cas = CommitConditionalAfterRead(
+        saturated_read, 0, 0xF000000, 4,
+        [&](Queue::Ticket prior) -> ReadBarrierResult {
+            assert(drains_before_read == 1);
+            assert(prior.sequence == Queue::MaxOutstandingWrites);
+            assert(saturated_read.AcceptedSequence() == prior.sequence + 1);
+            assert(saturated_read.Drain([](unsigned,std::uint64_t,std::uint64_t) {
+                assert(false);
+            }) == 0); // Our reserved CAS cannot replay before its store.
+            ++read_barriers;
+            return ReadBarrierResult::Complete;
+        }, [&]() noexcept -> StoreOutcome {
+            assert(read_barriers == 1);
+            return StoreOutcome::Modified;
+        }, [&]() -> bool {
+            if (!read_barriers) {
+                ++drains_before_read;
+                assert(saturated_read.Drain(
+                    [](unsigned,std::uint64_t,std::uint64_t) {}) ==
+                    Queue::MaxOutstandingWrites);
+            } else {
+                assert(saturated_read.Drain(
+                    [](unsigned,std::uint64_t,std::uint64_t) {}) == 1);
+            }
+            return true;
+        });
+    assert(saturation_cas == StoreOutcome::Modified &&
+           drains_before_read == 1 && read_barriers == 1 &&
+           !saturated_read.Pending());
+
+    // The per-title gate blocks a second host producer while a conditional
+    // read/download is in flight. Replay itself does not acquire the gate.
+    Queue gated_queue;
+    GuestStoreOrderGate gate(gated_queue);
+    std::atomic<int> shared_value{5};
+    std::atomic<bool> read_entered{false}, release_read{false};
+    std::atomic<bool> writer_started{false}, writer_completed{false};
+    unsigned gated_replays = 0;
+    std::thread first([&] {
+        const auto done = gate.Conditional(1, 0x8000, 4,
+            [&](Queue::Ticket prior) -> ReadBarrierResult {
+                assert(prior.sequence == 0);
+                read_entered.store(true, std::memory_order_release);
+                while (!release_read.load(std::memory_order_acquire))
+                    std::this_thread::yield();
+                assert(shared_value.load() == 5);
+                return ReadBarrierResult::Complete;
+            }, [&]() noexcept -> StoreOutcome {
+                int expected = 5;
+                return shared_value.compare_exchange_strong(expected, 10)
+                           ? StoreOutcome::Modified : StoreOutcome::Unchanged;
+            }, [&]() -> bool {
+                assert(gated_queue.Drain([&](unsigned core,std::uint64_t,std::uint64_t) {
+                    assert(core == 1 && shared_value.load() == 10);
+                    ++gated_replays;
+                }) == 1);
+                return true;
+            });
+        assert(done == StoreOutcome::Modified);
+    });
+    while (!read_entered.load(std::memory_order_acquire))
+        std::this_thread::yield();
+    std::thread second([&] {
+        writer_started.store(true, std::memory_order_release);
+        const auto done = gate.Write(2, 0x8000, 4,
+            [&]() noexcept -> StoreOutcome {
+                assert(shared_value.load() == 10);
+                shared_value.store(12);
+                return StoreOutcome::Modified;
+            }, [&]() -> bool {
+                assert(gated_queue.Drain([&](unsigned core,std::uint64_t,std::uint64_t) {
+                    assert(core == 2 && shared_value.load() == 12);
+                    ++gated_replays;
+                }) == 1);
+                return true;
+            });
+        assert(done == StoreOutcome::Modified);
+        writer_completed.store(true, std::memory_order_release);
+    });
+    while (!writer_started.load(std::memory_order_acquire))
+        std::this_thread::yield();
+    assert(!writer_completed.load(std::memory_order_acquire));
+    release_read.store(true, std::memory_order_release);
+    first.join();
+    second.join();
+    assert(writer_completed.load(std::memory_order_acquire));
+    assert(shared_value.load() == 12 && gated_replays == 2 &&
+           !gated_queue.Pending());
 
     // Other core's earlier unpublished reservation must not be overtaken.
     Queue ordered;
@@ -282,4 +387,4 @@ with tempfile.TemporaryDirectory(prefix="encore-poststore-host-") as temp:
                     "-fno-sanitize-recover=all", "-I", str(root / "headless"),
                     str(unit), "-o", str(binary)], check=True, timeout=45)
     subprocess.run([str(binary)], check=True, timeout=45)
-print("GPU_DEFERRED_POSTSTORE_HOST_PASS ordinary=1 cancel=1 fifo=1 pressure=1 scheduler_reject=1 conditional_read_fence=1 cas_success=1 cas_failed=1 read_reject=1 no_native_activation=1")
+print("GPU_DEFERRED_POSTSTORE_HOST_PASS ordinary=1 cancel=1 fifo=1 pressure=1 scheduler_reject=1 conditional_read_fence=1 cas_success=1 cas_failed=1 read_reject=1 saturation_before_read=1 gated_concurrent_writes=1 no_native_activation=1")

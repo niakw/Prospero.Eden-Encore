@@ -360,3 +360,24 @@ concurrent write producers between the read and reservation, all fastmem/JIT
 write paths, correct GPU scheduling, and title-lifetime joins. The developer
 CMake source still does not invoke this helper and
 `kNativePostStorePublicationReady=false`. No FC27 gameplay effect.
+
+## Reserve-before-read and producer serialization model (2026-10-16)
+
+The earlier `CommitConditionalAfterRead` synchronized CPU RAM before reserving
+its FIFO ticket. Under saturation, the later reservation could drain queued GPU
+invalidations after the read fence, leaving the CAS with stale data. Now an
+unpublished CAS ticket is reserved first, and the blocking read callback receives
+only its predecessor watermark (sequence minus one). It must never wait for the
+CAS's own unpublished ticket. A failed read cancels that ticket without running
+the atomic operation; a successful read proceeds to CAS and publish/cancel.
+
+`GuestStoreOrderGate` provides one address-space-local mutex for participating
+guest CPU writers, held through reservation, read synchronization, backing RAM
+store, resolution and GPU wake. A threaded ASan/UBSan fixture proves a competing
+producer cannot interleave with a conditional read; a full-queue fixture proves
+pressure drain precedes the read, and the unpublished ticket stays excluded.
+The GPU replay worker must never acquire the gate or recursively call it.
+Complete native correctness additionally requires all guest/JIT/fastmem
+producers and readers to participate, a true GPU-to-CPU device fence, and
+safe session-lifetime joins. The developer CMake bridge does NOT use this
+gate and remains disabled via `kNativePostStorePublicationReady=false`.
