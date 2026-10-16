@@ -411,3 +411,32 @@ sanitizer tests cover the first CAS, prior replay, stale/foreign generation,
 fatal session, and reset. The caller remains responsible for scheduling GPU
 replay and completing the actual GPU-to-CPU device transfer. The native
 bridge stays off; no gameplay behavior changes.
+
+## Native guest write coverage blockers — source inventory (2026-10-16)
+
+The CI now runs `tools/check-deferred-native-access-coverage.py`.
+Its `DEFERRED_NATIVE_ACCESS_COVERAGE_BLOCKED` result is explicitly a **NO-GO
+check**, not a GPU functionality qualification. It pins the actual source
+contracts preventing activation of PR #187:
+
+| Path | Confirmed direct-access capability | Required before native enablement |
+| --- | --- | --- |
+| Dynarmic A64 and A32 | `config.page_table` / `absolute_offset_page_table` plus optional `config.fastmem_pointer` and fastmem exclusives; the JIT need not invoke `MemoryWrite*` for every store | Prove direct JIT store participation or a fully qualified callback/trap routing, including load and exclusive paths |
+| Generic `GuestMemory` | `TrySetSpan()` exposes a direct writable span; scoped Safe/Cached destruction calls `InvalidateRegion` afterward instead of a `Memory::WriteBlock` transaction | Audit real instantiations, lifetime, direct writes, and their post-store notification ordering |
+| NCE backend | A separate native execution and fault-handling mechanism exists, conditional on host platform | Determine build applicability; if used, qualify direct writes independently |
+| CPU `memory.cpp` | Tracked `HandleRasterizerWrite` runs before RAM stores; conditional stores and cache-maintenance notifications have distinct outcomes | Wire `ReserveOrdered` before stores, GPU read fence before atomic access, `PublishAndWake` or `CancelAndWake` afterward |
+
+Disabling `fastmem_pointer` alone is **not** evidence of complete coverage:
+the Dynarmic page-table memory access mode remains. Forcing every JIT memory
+access through callbacks would require a deliberately evaluated, probably
+substantial performance compromise. A global guest producer mutex is
+ineffective for JIT instructions which never acquire it, and cannot be
+considered harmless in hot paths.
+
+Keep the native gate `kNativePostStorePublicationReady=false`. The
+CI contract deliberately fails if pinned source assumptions change, so
+the inventory must be audited rather than silently considered qualified.
+Do not ask for new console tests, rebuild a native release, or claim
+the FC27 symptoms were fixed by this audit. The next meaningful task is a
+concrete direct-store interception design, with a measurable host runtime
+path and correct GPU-device fence semantics, not more queue-only microtests.
