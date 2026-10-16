@@ -184,11 +184,39 @@ int main() {
     assert(certain_alloc.host != nullptr);
     assert(certain_scheduler.finishes_locked == 0);
 
-    // Same generation, same count and byte-identical data reuse the prior
-    // allocation and never invoke Allocate at all.
+    // Independent states with the SAME observable pre-lock state:
+    // matching generation, count, full ring and previous payload.
+    // A byte-identical guest payload will reuse the descriptor allocation.
+    DescriptorBufferRing reuse_ring;
+    Scheduler reuse_scheduler;
+    Pipeline reuse_pipeline{reuse_ring};
     const std::array<int, 4> identical{1, 2, 3, 4};
-    assert(std::memcmp(pipeline.last_descriptor_payload.data(), identical.data(),
+    assert(reuse_pipeline.last_descriptor_buffer_generation == reuse_ring.CurrentGeneration());
+    assert(reuse_pipeline.DescriptorRingPreflightSize() == 0);
+    assert(!reuse_ring.PreflightCapacity(reuse_scheduler,
+                                        reuse_pipeline.DescriptorRingPreflightSize()));
+    // The real ConfigureDraw condition chooses the reuse branch here:
+    // Allocate is NOT called and no GPU completion is needed.
+    assert(std::memcmp(reuse_pipeline.last_descriptor_payload.data(), identical.data(),
                        sizeof(identical)) == 0);
+    assert(reuse_scheduler.finishes_locked == 0);
+    assert(reuse_scheduler.finishes_unlocked == 0);
+
+    // If preflight blindly reserved capacity whenever the ring is full,
+    // it would stall unnecessarily even for identical, reusable content.
+    // Running production PreflightCapacity with the full size demonstrates
+    // that cost; do not adopt this as a runtime behavior.
+    DescriptorBufferRing blind_ring;
+    Scheduler blind_scheduler;
+    Pipeline blind_pipeline{blind_ring};
+    assert(blind_pipeline.DescriptorRingPreflightSize() == 0);
+    assert(blind_ring.PreflightCapacity(blind_scheduler,
+                                        blind_pipeline.descriptor_buffer_layout.size));
+    assert(blind_scheduler.finishes_unlocked == 1);
+    assert(blind_scheduler.finishes_locked == 0);
+    // A blind Finish also increments generation, invalidating the otherwise
+    // valid cached allocation. The original unchanged path avoids both.
+    assert(blind_ring.CurrentGeneration() != blind_pipeline.last_descriptor_buffer_generation);
 }
 """
 code = code.replace("__GETTER__", getter).replace("__PREFLIGHT__", preflight).replace("__ALLOCATE__", allocate)
@@ -202,4 +230,4 @@ with tempfile.TemporaryDirectory(prefix="encore-descriptor-conditional-reuse-") 
                     "-fsanitize=address,undefined", "-fno-sanitize-recover=all",
                     str(path), "-o", str(binary)], check=True, timeout=45)
     subprocess.run([str(binary)], check=True, timeout=30)
-print("DESCRIPTOR_CONDITIONAL_REUSE_HOST_PASS known_in_lock_fallback=1 certain_preflight_outside_locks=1 safe_reuse=1 native_radv_source_gate=1")
+print("DESCRIPTOR_CONDITIONAL_REUSE_HOST_PASS known_in_lock_fallback=1 certain_preflight_outside_locks=1 safe_reuse=1 blind_drain_regression=1 same_prelock_state=1 native_radv_source_gate=1")

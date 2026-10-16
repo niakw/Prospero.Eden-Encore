@@ -48,6 +48,22 @@ unmeasured. No new console execution is requested.
 
 ## Engineering trade-off
 
+The host fixture now proves the *two-outcome, same-observation* case with
+production source-extracted `PreflightCapacity` and `Allocate`:
+
+1. An exhausted ring, matching generation and matching entry count,
+   with a byte-identical guest payload: `ConfigureDraw` reuses the old
+   allocation and requires **no GPU wait**.
+2. Exactly the same pre-lock ring and pipeline metadata, but one changed
+   guest descriptor: `ConfigureDraw` allocates and can reach
+   `scheduler.Finish()` **under the cache locks**.
+
+Passing the full layout to preflight to cover the second case necessarily
+causes an unnecessary `Finish` in the first case; it also changes the ring
+generation and invalidates the previously reusable allocation. Therefore,
+changing a getter or making `PreflightCapacity` unconditional does **not**
+provide a no-regression fix.
+
 Finishing the GPU unconditionally whenever the ring is full would avoid
 this particular locked wait, but would force submission/completion on
 otherwise reusable descriptor payloads. That is a potentially severe
@@ -59,6 +75,28 @@ without violating guest-memory/descriptor-lock ownership, or provide a
 retry mechanism that releases the cache mutexes, drains the exact GPU
 fence and then **revalidates** every guest descriptor binding before
 committing the draw. Both require a separate integration review.
+
+## Future redesign acceptance conditions
+
+A real fix must preserve all three properties in the same draw:
+- Cache-dependent descriptor identities and buffer/image lifetimes remain
+  valid from descriptor collection through the GPU command submission.
+- An identical payload still reuses its previous allocation without an
+  unnecessary GPU drain or extra descriptor allocation.
+- A changed payload can reclaim full-ring capacity without holding the
+  guest texture/buffer mutex pair during `scheduler.Finish()` and without
+  dropping or duplicating commands, draws, upload barriers or query updates.
+
+A two-phase staging/retry mechanism would also need to detect invalidations
+between lock release and reacquisition and restart descriptor capture safely.
+`ConfigureImpl` already updates buffer bindings, texture views, render
+targets and scheduler work **before** reaching `ConfigureDraw`: simply
+re-running it is not a proven idempotent retry. Snapshotting raw cache-owned
+image-view pointers without lifetime pinning is likewise unsafe.
+
+The current contract test is deliberately a *negative* safety gate, not an
+emulator performance improvement. No console test is required to establish
+these source-level trade-offs, but host tests cannot establish FC27 behavior.
 
 ## Scope and limits
 
