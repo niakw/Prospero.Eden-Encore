@@ -1606,8 +1606,6 @@ msgid "Close"
 msgstr "Sluiten"
 
 #: pe/ui/library.cpp
-msgid "Down: view back cover"
-msgstr "Omlaag: achterkant hoes bekijken"
 
 #: pe/ui/library.cpp
 msgid "Zoom out"
@@ -1728,3 +1726,39 @@ msgstr "Kies · Encore / Switch. software / Besturing — ongewijzigd."
 #: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
 msgid "Choose the launcher interface without changing game or controller settings."
 msgstr "Kies · interface. software / Besturing — ongewijzigd."
+
+#: pe/ui/switch_theme.cpp
+msgid "About"
+msgstr "Over"
+
+#: pe/ui/switch_theme.cpp
+msgid "Multiplayer"
+msgstr "Multiplayer"
+
+#: pe/ui/switch_theme.cpp
+msgid "Volume"
+msgstr "Volume"
+
+#: pe/ui/switch_theme.cpp
+msgid "Controller profile"
+msgstr "Controllerprofiel"
+
+#: pe/ui/switch_theme.cpp
+msgid "Cache"
+msgstr "Cache"
+
+#: pe/ui/switch_theme.cpp
+msgid "Manage"
+msgstr "Beheren"
+
+#: pe/ui/switch_theme.cpp
+msgid "Open folders"
+msgstr "Mappen openen"
+
+#: pe/ui/switch_theme.cpp
+msgid "Filter"
+msgstr "Filter"
+
+#: pe/ui/switch_theme.cpp
+msgid "Eden Encore"
+msgstr "Eden Encore"
