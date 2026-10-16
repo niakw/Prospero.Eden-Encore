@@ -2248,10 +2248,14 @@ probes = {
          '    entries.emplace(key, std::move(entry));'),
     ],
     'vk_buffer_cache': [
+        # Keep native quad LUT last-use ticks equivalent in regenerated sources.
+        ("        } else {\n            buffer.Flush();\n        }\n    }\n\n    void BindBuffer(u32 first) {", "        } else {\n            buffer.Flush();\n        }\n        // Cover both host writes and any queued GPU staging copy.\n        last_use_tick = scheduler.CurrentTick();\n    }\n\n    void BindBuffer(u32 first) {"),
+        ("        scheduler.Record([buffer_ = *buffer, index_type_, offset](vk::CommandBuffer cmdbuf) {\n            cmdbuf.BindIndexBuffer(buffer_, offset, index_type_);\n        });\n    }\n\nprotected:", "        scheduler.Record([buffer_ = *buffer, index_type_, offset](vk::CommandBuffer cmdbuf) {\n            cmdbuf.BindIndexBuffer(buffer_, offset, index_type_);\n        });\n        // This tick also owns draws using the newly bound index buffer.\n        last_use_tick = scheduler.CurrentTick();\n    }\n\nprotected:"),
+        ("    VkIndexType index_type{};\n    u32 num_indices = 0;\n};", "    VkIndexType index_type{};\n    u32 num_indices = 0;\n    u64 last_use_tick{};\n};"),
         # The first quad index LUT is a fresh buffer, not a resize of an in-flight
         # buffer. Avoid a full-device Finish while both guest caches are locked.
         ("        { auto timer = Eden::Performance::VulkanTimer(7); scheduler.Finish(); }\n\n        num_indices = num_indices_;",
-         "        // The very first LUT has no previous device buffer to protect.\n        // Keep the original GPU fence when replacing an already-used buffer.\n        if (buffer) {\n            { auto timer = Eden::Performance::VulkanTimer(7); scheduler.Finish(); }\n        }\n\n        num_indices = num_indices_;"),
+         "        // The very first LUT has no previous device buffer to protect.\n        // An existing LUT only needs the fence while its last-use tick is in flight.\n        if (buffer && !scheduler.IsFree(last_use_tick)) {\n            { auto timer = Eden::Performance::VulkanTimer(7); scheduler.Finish(); }\n        }\n\n        num_indices = num_indices_;"),
         ('#include <algorithm>', '#include <algorithm>\n#include "dev_vulkan.h"'),
         ('bool BufferCacheRuntime::BindMultiRangeStorageBuffer(u64 key, bool is_written) {\n',
          'bool BufferCacheRuntime::BindMultiRangeStorageBuffer(u64 key, bool is_written) {\n'

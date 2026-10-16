@@ -173,8 +173,8 @@ public:
         }
 
         // The very first LUT has no previous device buffer to protect.
-        // Keep the original GPU fence when replacing an already-used buffer.
-        if (buffer) {
+        // An existing LUT only needs the fence while its last-use tick is in flight.
+        if (buffer && !scheduler.IsFree(last_use_tick)) {
             { auto timer = Eden::Performance::VulkanTimer(7); scheduler.Finish(); }
         }
 
@@ -246,6 +246,8 @@ public:
         } else {
             buffer.Flush();
         }
+        // Cover both host writes and any queued GPU staging copy.
+        last_use_tick = scheduler.CurrentTick();
     }
 
     void BindBuffer(u32 first) {
@@ -256,6 +258,8 @@ public:
         scheduler.Record([buffer_ = *buffer, index_type_, offset](vk::CommandBuffer cmdbuf) {
             cmdbuf.BindIndexBuffer(buffer_, offset, index_type_);
         });
+        // This tick also owns draws using the newly bound index buffer.
+        last_use_tick = scheduler.CurrentTick();
     }
 
 protected:
@@ -272,6 +276,7 @@ protected:
     MemoryCommit memory_commit{};
     VkIndexType index_type{};
     u32 num_indices = 0;
+    u64 last_use_tick{};
 };
 
 class QuadArrayIndexBuffer : public QuadIndexBuffer {
