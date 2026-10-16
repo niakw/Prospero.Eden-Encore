@@ -43,16 +43,29 @@ int main() {
         assert(!replaying_guest_write);
     }
     assert(guest_write_origin_core==NoGuestCore);
+    assert(guest_write_intent==GuestWriteIntent::NoStore);
+    {
+        ScopedGuestStoreIntent tracked;
+        assert(guest_write_intent==GuestWriteIntent::StoreFollows);
+        { ScopedGuestStoreIntent nested;
+          assert(guest_write_intent==GuestWriteIntent::StoreFollows); }
+        assert(guest_write_intent==GuestWriteIntent::StoreFollows);
+    }
+    assert(guest_write_intent==GuestWriteIntent::NoStore);
     std::atomic<bool> other_ok{false};
     std::thread different_worker([&]() {
         assert(guest_write_origin_core==NoGuestCore);
+        assert(guest_write_intent==GuestWriteIntent::NoStore);
         ScopedGuestWriteOrigin own{1};
+        ScopedGuestStoreIntent tracked;
+        assert(guest_write_intent==GuestWriteIntent::StoreFollows);
         assert(guest_write_origin_core==1);
         other_ok.store(true,std::memory_order_release);
     });
     different_worker.join();
     assert(other_ok.load(std::memory_order_acquire));
     assert(guest_write_origin_core==NoGuestCore);
+    assert(guest_write_intent==GuestWriteIntent::NoStore);
 
     Queue queue;
     std::vector<Span> replayed, dirty;

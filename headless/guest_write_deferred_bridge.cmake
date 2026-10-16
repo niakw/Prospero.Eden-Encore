@@ -73,6 +73,8 @@ bool MemoryManager::EnqueueDeferredCPUWrite(u64 address, u64 size) {
     // No runtime setting may activate this until the post-store bridge exists.
     if (!::Eden::GpuDeferredWrite::kNativePostStorePublicationReady ||
         !::Eden::Performance::cpu_write_defer.load(std::memory_order_relaxed) ||
+        ::Eden::GpuDeferredWrite::guest_write_intent !=
+            ::Eden::GpuDeferredWrite::GuestWriteIntent::StoreFollows ||
         ::Eden::GpuDeferredWrite::replaying_guest_write) return false;
     const unsigned core = ::Eden::GpuDeferredWrite::guest_write_origin_core;
     if (core >= ::Eden::GpuDeferredWrite::Queue::Cores) return false;
@@ -117,6 +119,8 @@ void MemoryManager::FlushCaching() {
         ::Eden::GpuDeferredWrite::kNativePostStorePublicationReady &&
         ::Eden::Performance::cpu_write_defer.load(std::memory_order_relaxed) &&
         ::Eden::GpuDeferredWrite::guest_write_origin_core < ::Eden::GpuDeferredWrite::Queue::Cores &&
+        ::Eden::GpuDeferredWrite::guest_write_intent ==
+            ::Eden::GpuDeferredWrite::GuestWriteIntent::StoreFollows &&
         !::Eden::GpuDeferredWrite::replaying_guest_write;]=]
         bridge_vk "${bridge_vk}")
     string(REPLACE "${vk_buffer_lock}" [=[
@@ -203,6 +207,42 @@ void MemoryManager::FlushCaching() {
                     static_cast<unsigned>(core)};
                 auto const do_collection = (address != 0 && size != 0)
                     && system.GPU().OnCPUWrite(address, size);]=]
+        bridge_cpu "${bridge_cpu}")
+    # Only real RAM stores get pre-store intent; cache maintenance has none.
+    set(intent_block [=[            if (!unsafe) {
+                HandleRasterizerWrite(GetInteger(current_vaddr), copy_amount);
+            }
+            std::memcpy(ptr, reinterpret_cast<u8 const*>(buffer) + offset, copy_amount);]=])
+    set(intent_zero [=[            HandleRasterizerWrite(GetInteger(current_vaddr), copy_amount);
+            std::memset(ptr, 0, copy_amount);]=])
+    set(intent_scalar "HandleRasterizerWrite(addr, sizeof(T));")
+    set(intent_exclusive "HandleRasterizerWrite(GetInteger(vaddr), sizeof(T));")
+    set(intent_exclusive128 "HandleRasterizerWrite(GetInteger(vaddr), sizeof(u128));")
+    foreach(anchor IN ITEMS intent_block intent_zero intent_scalar
+                            intent_exclusive intent_exclusive128)
+        string(FIND "${bridge_cpu}" "${NESTED_ANCHOR}" found)
+        if(found LESS 0)
+            message(FATAL_ERROR "Native store-intent anchor changed (${anchor})")
+        endif()
+    endforeach()
+    string(REPLACE "${intent_block}" [=[            if (!unsafe) {
+                ::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent;
+                HandleRasterizerWrite(GetInteger(current_vaddr), copy_amount);
+            }
+            std::memcpy(ptr, reinterpret_cast<u8 const*>(buffer) + offset, copy_amount);]=]
+        bridge_cpu "${bridge_cpu}")
+    string(REPLACE "${intent_zero}" [=[            ::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent;
+            HandleRasterizerWrite(GetInteger(current_vaddr), copy_amount);
+            std::memset(ptr, 0, copy_amount);]=]
+        bridge_cpu "${bridge_cpu}")
+    string(REPLACE "${intent_scalar}"
+        "::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent; ${intent_scalar}"
+        bridge_cpu "${bridge_cpu}")
+    string(REPLACE "${intent_exclusive}"
+        "::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent; ${intent_exclusive}"
+        bridge_cpu "${bridge_cpu}")
+    string(REPLACE "${intent_exclusive128}"
+        "::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent; ${intent_exclusive128}"
         bridge_cpu "${bridge_cpu}")
     string(PREPEND bridge_cpu "#include \"${EDEN_PORT_DIR}/gpu_deferred_replay.h\"\n")
     write_derived("${PORT_BUILD_DIR}/memory-ps5-deferred.cpp" "${bridge_cpu}")

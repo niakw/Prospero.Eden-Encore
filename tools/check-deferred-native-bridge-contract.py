@@ -21,11 +21,17 @@ assert "cpu_write_defer{false}" in perf
 assert "cpu_write_defer.store(true" not in code
 assert "ScopedReplay" in replay and "replaying_guest_write" in replay
 assert "ScopedGuestWriteOrigin" in replay and "guest_write_origin_core = previous" in replay
+assert "enum class GuestWriteIntent { NoStore, StoreFollows };" in replay
+assert "ScopedGuestStoreIntent" in replay
+assert "guest_write_intent = previous;" in replay
+assert "guest_write_intent = GuestWriteIntent::StoreFollows;" in replay
 # Fail-closed runtime qualification, independent of any developer toggle.
 assert "inline constexpr bool kNativePostStorePublicationReady = false;" in replay
 assert code.count("::Eden::GpuDeferredWrite::kNativePostStorePublicationReady") == 2
 assert code.index("!::Eden::GpuDeferredWrite::kNativePostStorePublicationReady") < code.index("deferred_cpu_write_queue.Enqueue(core, address, size)")
 assert "const bool defer_candidate =\n        ::Eden::GpuDeferredWrite::kNativePostStorePublicationReady &&" in code
+assert code.count("::Eden::GpuDeferredWrite::GuestWriteIntent::StoreFollows") == 2
+assert "::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent;" in code
 # Fail-closed documentation contract: the inactive candidate does not yet
 # synchronize deferred writes before either CPU-read fast path. Pin BOTH bypass
 # sites so a future change must replace this negative proof with a real ordered
@@ -286,6 +292,19 @@ include("__BRIDGE__")
     assert "GpuDeferredWrite::Queue deferred_cpu_write_queue" in h
     guest=(stage/"memory-ps5-deferred.cpp").read_text()
     assert guest.count("ScopedGuestWriteOrigin guest_origin") == 1
+    assert guest.count("ScopedGuestStoreIntent store_intent;") == 5
+    block=guest.split("bool WriteBlockImpl(",1)[1].split("bool ZeroBlock(",1)[0]
+    assert block.index("ScopedGuestStoreIntent store_intent;") < block.index("HandleRasterizerWrite(")
+    zero=guest.split("bool ZeroBlock(",1)[1].split("bool CopyBlock(",1)[0]
+    assert zero.index("ScopedGuestStoreIntent store_intent;") < zero.index("HandleRasterizerWrite(")
+    scalar=guest.split("inline void Write(Common::ProcessAddress vaddr,",1)[1].split("bool WriteExclusive(",1)[0]
+    assert scalar.count("ScopedGuestStoreIntent store_intent;") == 1
+    exclusive=guest.split("bool WriteExclusive(Common::ProcessAddress vaddr,",1)[1].split("void HandleRasterizerDownload(",1)[0]
+    assert exclusive.count("ScopedGuestStoreIntent store_intent;") == 2
+    maintenance=guest.split("Result StoreDataCache(",1)[1].split("void MarkRegionDebug(",1)[0]
+    assert maintenance.count("HandleRasterizerWrite(") == 2
+    assert "ScopedGuestStoreIntent store_intent;" not in maintenance
+    assert "guest_write_intent" in vk and "guest_write_intent" in mm
     assert "system.GPU().OnCPUWrite(address, size)" in guest
     assert "GetCurrentHostThreadID()" not in mm.split("bool MemoryManager::EnqueueDeferredCPUWrite",1)[1].split("void MemoryManager::FlushCaching",1)[0]
     assert "guest_write_origin_core" in mm
