@@ -65,6 +65,11 @@ int main() {
     constexpr PAddr first = 0x2000, next = 0x2800;
     Core::GPUDirtyMemoryManager dirty;
     dirty.Collect(first, 64);
+#ifdef EXPECT_FIXED
+    assert(Core::sentinel_lock_hits.load() == 0);
+#else
+    assert(Core::sentinel_lock_hits.load() == 1);
+#endif
     std::thread transition([&] { dirty.Collect(next, 64); });
     while (phase.load(std::memory_order_acquire) != 1) {
         std::this_thread::yield();
@@ -91,6 +96,18 @@ int main() {
     assert(observed.count(first + 64) == 0);
     assert(observed.size() == 2);
 #endif
+    // Each Gather resets the collector to its empty sentinel. The original
+    // header enters the mutex/vector slow path anyway; the native header
+    // must use the initial compare-and-swap, without losing any dirty cell.
+    for (int i = 0; i < 16; ++i) {
+        dirty.Collect(first, 64);
+        dirty.Gather(receive);
+    }
+#ifdef EXPECT_FIXED
+    assert(Core::sentinel_lock_hits.load() == 0);
+#else
+    assert(Core::sentinel_lock_hits.load() == 17);
+#endif
 }
 """
 clang = shutil.which("clang++-18") or shutil.which("clang++")
@@ -112,7 +129,19 @@ with tempfile.TemporaryDirectory(prefix="encore-dirty-race-") as tmp:
         ("maintained_native", maintained, True),
     ):
         instrumented = header.replace(
-            "namespace Core {", "namespace Core {\nvoid PinnedRaceGate();", 1
+            "namespace Core {",
+            "namespace Core {\nvoid PinnedRaceGate();"
+            "\ninline std::atomic<int> sentinel_lock_hits{0};", 1
+        )
+        # Source-only witness: distinguish the original unnecessary mutex
+        # acquisition on an empty sentinel from the maintained fast CAS path.
+        sentinel_guard = "                if (IsValid(tmp.address)) {"
+        assert instrumented.count(sentinel_guard) == 1
+        instrumented = instrumented.replace(
+            sentinel_guard,
+            sentinel_guard +
+            "\n                    if (tmp.address == 0xffffffffU)"
+            " sentinel_lock_hits.fetch_add(1, std::memory_order_relaxed);"
         )
         # Pause AFTER reserving the old vector slot but BEFORE the atomic
         # exchange in both versions. Ignore the initial empty/sentinel mask.
@@ -132,4 +161,4 @@ with tempfile.TemporaryDirectory(prefix="encore-dirty-race-") as tmp:
             command.insert(1, "-DEXPECT_FIXED")
         subprocess.run(command, check=True, timeout=45)
         subprocess.run([str(binary)], check=True, timeout=45)
-print("NATIVE_GPU_DIRTY_TRANSITION_HOST_PASS stale_mask_loss_original=1 exchange_displaced_mask_fixed=1 deterministic_threads=2 sanitizer=address_undefined native_only=1")
+print("NATIVE_GPU_DIRTY_TRANSITION_HOST_PASS stale_mask_loss_original=1 exchange_displaced_mask_fixed=1 deterministic_threads=2 sanitizer=address_undefined native_only=1 sentinel_initial_slowpath_original=17 sentinel_initial_slowpath_native=0")
