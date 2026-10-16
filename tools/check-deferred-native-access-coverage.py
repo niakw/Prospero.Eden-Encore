@@ -61,6 +61,15 @@ for name, source, signature in (
 # generic over M; it must not be claimed to cover only CPU producer paths.
 expect(guest, "m_memory->GetSpan(m_addr, this->size_bytes())", "span")
 expect(guest, "m_data_span = {reinterpret_cast<T*>(ptr), this->size()};", "span")
+# Read-only FLAGS do not make returned aliases immutable: data(), Read()
+# and operator[] expose mutable T or span<T>. Do not infer writer coverage
+# from FLAGS & GuestMemoryFlags::Write call-site searches alone.
+for anchor in (
+    "T* data() noexcept {",
+    "T& operator[](size_t index) noexcept {",
+    "std::span<T> Read(u64 addr, std::size_t size,",
+):
+    expect(guest, anchor, "GuestMemory mutability independent of flags")
 scoped = guest.split("~GuestMemoryScoped()", 1)[1]
 expect(scoped, "this->m_memory->InvalidateRegion(this->m_addr, this->size_bytes());",
        "scoped span")
@@ -199,5 +208,6 @@ print(
     "a64_native_fastmem_disabled=1 real_jit_harness_present=1 "
     "jit_host_execution_this_commit=0 deferred_gpu_ordering_proof=0 "
     "transition_quiescence_proof=0 gpu_scoped_producers_inventoried=1 "
-    "gpu_scoped_ordering_proof=0"
+    "gpu_scoped_ordering_proof=0 "
+    "guest_read_flag_immutable=0"
 )
