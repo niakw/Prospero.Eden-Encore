@@ -193,6 +193,7 @@ jobs:
           python3 -B tools/check-ps5-quad-index-initial-fence-host.py
           python3 -B tools/check-ps5-quad-strip-draw-count-host.py
           python3 -B tools/check-ps5-draw-texture-guest-invalidation-host.py
+          python3 -B tools/check-ps5-clear-scissor-overflow-host.py
           python3 -B tools/check-ps5-large-descriptor-preflight.py
           python3 -B tools/check-ps5-adjacent-texture-view-reuse.py
           python3 -B tools/check-ps5-alias-current-tick.py

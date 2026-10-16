@@ -20,6 +20,8 @@ def adapt(relative, destination, replacements):
 adapt('src/core/frontend/emu_window.h', 'include/core/frontend/emu_window.h',
       [('    Xcb,', '    Xcb,\n    PS5,')])
 adapt('src/video_core/renderer_vulkan/vk_rasterizer.cpp', 'vulkan_rasterizer.cpp', [
+    # Signed INT_MIN scissor offsets must be widened before negation.
+    ("const u32 shrink = (std::min)(extent, static_cast<u32>(-offset));", "const u32 shrink = (std::min)(extent, static_cast<u32>(-static_cast<s64>(offset)));"),
     # R: DrawTexture needs the same pending guest memory invalidation drain
     # as ordinary draw/clear, before its texture-cache mutex acquisition.
     ("    FlushWork();\n\n    std::scoped_lock l{texture_cache.mutex};\n    texture_cache.SynchronizeDescriptors(false);", "    FlushWork();\n    // Apply queued guest page remaps before reading cache-owned texture views.\n    // InnerInvalidation itself locks texture_cache.mutex.\n    gpu_memory->FlushCaching();\n\n    std::scoped_lock l{texture_cache.mutex};\n    texture_cache.SynchronizeDescriptors(false);"),
