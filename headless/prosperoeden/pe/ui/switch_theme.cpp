@@ -259,10 +259,8 @@ void Launcher::press_switch_home(Key key) {
             std::clamp((current==kHomeAllSoftware?count:current)+delta,0,count);
         const int candidate=current>=kHomeShortcutFirst?next:
             next==count?kHomeAllSoftware:next;
-        if(candidate==current) {
-            cue(Cue::scroll_limit);
-            return;
-        }
+        if(candidate==current)
+            return; // native Encore sound table has no scroll-limit cue
         switch_home_focus_=candidate;
         if(candidate<=kHomeAllSoftware) switch_home_last_tile_=candidate;
         cue(Cue::focus);return;
