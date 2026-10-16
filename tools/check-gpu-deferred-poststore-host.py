@@ -40,7 +40,7 @@ for part in ("enum class ReadBarrierResult { Complete, Failed };",
              "class GuestStoreOrderGate final",
              "std::lock_guard lock(mutex_);"):
     assert part in header, part
-assert header.index("queue.ReserveOrdered(core, address, size, request_gpu);", 
+assert header.index("queue.ReserveOrdered(core, address, size, request_gpu);",
                     header.index("CommitConditionalAfterRead(")) < header.index(
                         "synchronize_read)(predecessors)")
 assert "CommitConditionalAfterRead(" not in bridge
