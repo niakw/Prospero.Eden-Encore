@@ -28,6 +28,22 @@ namespace Core {
 
 namespace {
 
+// Partial remaps invalidate contiguous spans beginning BEFORE the changed
+// pages as well. Preserve the still-valid prefix to avoid per-read scanning.
+// Called only while the existing mapping_guard is held.
+template <class Entries>
+void TruncateContinuityBefore(Entries& entries, size_t changed_page) {
+    for (size_t p = changed_page; p != 0;) {
+        --p;
+        const size_t pages_before_change = changed_page - p;
+        if (entries[p].continuity_tracker < pages_before_change) {
+            break;
+        }
+        entries.GetAndFault(p).continuity_tracker =
+            static_cast<u32>(pages_before_change - 1);
+    }
+}
+
 class MultiAddressContainer {
 public:
     MultiAddressContainer() = default;
@@ -210,6 +226,9 @@ void DeviceMemoryManager<Traits>::Map(DAddr address, VAddr virtual_address, size
     size_t num_pages = Common::AlignUp(size, Memory::YUZU_PAGESIZE) >> Memory::YUZU_PAGEBITS;
     std::scoped_lock lk(mapping_guard);
 
+    if (num_pages != 0) {
+        TruncateContinuityBefore(tracked_entries, start_page_d);
+    }
     tracked_entries.CommitRegion(start_page_d, start_page_d + num_pages);
     for (size_t i = 0; i < num_pages; i++) {
         // Remapping without tracking must never inherit an old contiguous run.
@@ -250,6 +269,9 @@ void DeviceMemoryManager<Traits>::Unmap(DAddr address, size_t size) {
     device_inter->InvalidateRegion(address, size);
     std::scoped_lock lk(mapping_guard);
 
+    if (num_pages != 0) {
+        TruncateContinuityBefore(tracked_entries, start_page_d);
+    }
     tracked_entries.CommitRegion(start_page_d, start_page_d + num_pages); // should already be committed, but just in case
     for (size_t i = 0; i < num_pages; i++) {
         auto& entry = tracked_entries.GetUnchecked(start_page_d + i);
