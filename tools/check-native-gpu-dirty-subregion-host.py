@@ -42,11 +42,10 @@ assert port.count("::Eden::GpuDirty::ForEachRegion(address, size,") == 1
 # Embed the ACTUAL pinned original mask builder, rather than a
 # hand-transcribed equivalent. The negative control must trip UBSan at 4KiB
 # while the bounded splitter must keep every call within 32 mask bits.
-mask_begin = "    template <typename T>\\n    T CreateMask("
+mask_begin = "    template <typename T>" + chr(10) + "    T CreateMask("
 mask_end = "    TransformAddress BuildTransform("
 assert dirty.count(mask_begin) == 1 and dirty.count(mask_end) == 1
-mask_source = mask_begin.replace("\\n", "\n") + dirty.split(
-    mask_begin.replace("\\n", "\n"), 1)[1].split(mask_end, 1)[0]
+mask_source = mask_begin + dirty.split(mask_begin, 1)[1].split(mask_end, 1)[0]
 
 cpp = r"""
 #include "gpu_dirty_region_split.h"
