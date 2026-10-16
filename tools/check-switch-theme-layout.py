@@ -64,3 +64,9 @@ assert "draw_pad(c,switch_physical_pad(mapped)" in src
 assert "settings_.wrap=false;" in src
 assert "settings_.wrap=original_wrap;" in src
 assert 'text_shrink(c,tr("Select"),1024.0f' in src
+
+mapping=(root/"headless/prosperoeden/pe/ui/mapping.cpp").read_text()
+assert "screen_ == Screen::home" in mapping
+assert "close_modal();" in mapping
+assert "10-switch-mods-installed" in preview
+assert "11-switch-mod-enabled" in preview

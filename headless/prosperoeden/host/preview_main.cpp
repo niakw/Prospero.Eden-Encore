@@ -189,6 +189,32 @@ void pictures(Stage &s)
                  Key::right,Key::right,Key::right,Key::cross});
         s.wait(0.3f);
         s.shoot("09-switch-button-mapping");
+        // Back from a HOME-launched controller editor must close to HOME.
+        // Then select a title which has three sample mods, including an
+        // initially disabled one. Exercise its REAL save action.
+        s.press({Key::circle,Key::up,Key::cross});
+        s.wait(0.5f);
+        s.press({Key::right,Key::right,Key::triangle});
+        s.wait(0.3f);
+        s.press({Key::down,Key::down,Key::down,Key::down,Key::down,
+                 Key::down,Key::down,Key::down,Key::down,Key::down,
+                 Key::cross});
+        s.wait(0.3f);
+        s.shoot("10-switch-mods-installed");
+        s.press({Key::down,Key::cross});
+        s.wait(0.2f);
+        s.shoot("11-switch-mod-enabled");
+        const auto game_list=s.services.games();
+        const auto game=std::find_if(game_list.begin(),game_list.end(),
+            [](const pe::ui::Game& candidate){
+                return candidate.name=="Echoes of the Valley";
+            });
+        if(game==game_list.end() ||
+           s.services.mods(game->title_id).size()!=3 ||
+           !s.services.mods(game->title_id)[1].enabled) {
+            std::fprintf(stderr,"Switch mods preview: toggle not saved to fixture backend\\n");
+            s.ok=false;
+        }
         return;
     }
     // Independently verify the game's real launch transition using the same

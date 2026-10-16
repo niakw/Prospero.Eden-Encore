@@ -215,7 +215,8 @@ jobs:
                     "04-switch-storage.png","05-switch-language.png",
                     "06-switch-exit-confirm.png",
                     "07-switch-game-options.png","08-switch-game-mods.png",
-                    "09-switch-button-mapping.png"]
+                    "09-switch-button-mapping.png",
+                    "10-switch-mods-installed.png","11-switch-mod-enabled.png"]
           files=sorted(folder.glob("*.png"))
           assert [f.name for f in files] == expected, files
           for file in files:
@@ -236,6 +237,14 @@ jobs:
               assert sum(delta.mean)>10.0, (
                   f"advanced preview has repeated heading in {a} and {b}")
           print("SWITCH_ADVANCED_MODAL_TOUR: PASS")
+
+          with Image.open(folder / "10-switch-mods-installed.png") as before_file, \\
+               Image.open(folder / "11-switch-mod-enabled.png") as after_file:
+              before=before_file.convert("RGB").crop((475,360,1250,525))
+              after=after_file.convert("RGB").crop((475,360,1250,525))
+              change=sum(ImageStat.Stat(ImageChops.difference(before,after)).mean)
+              assert change>3.0, "mod toggle did not update the actual Switch UI"
+          print("SWITCH_MODS_SAVE_AND_VISUAL_FEEDBACK: PASS")
 
           # Confirmation must be an actual light overlay, not a mislabeled
           # screenshot of HOME or an Encore neon dialog.
