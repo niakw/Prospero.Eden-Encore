@@ -295,6 +295,53 @@ int main() {
     assert(two_phase.WaitUntil(*first) && two_phase.WaitUntil(*second));
     assert(!two_phase.Publish(*first) && !two_phase.Pending());
 
+    // Failed conditional/atomic store: cancel its reservation without
+    // triggering an invalidation, but never overtake earlier published work.
+    Queue cancelled_cas;
+    const auto cas_before = cancelled_cas.Reserve(0, 4096, 8);
+    const auto cas_failed = cancelled_cas.Reserve(1, 8192, 8);
+    const auto cas_after = cancelled_cas.Reserve(2, 12288, 8);
+    assert(cas_before && cas_failed && cas_after);
+    assert(cancelled_cas.Publish(*cas_after));
+    assert(cancelled_cas.Cancel(*cas_failed));
+    assert(cancelled_cas.Drain([](unsigned,std::uint64_t,std::uint64_t) {
+        assert(false);
+    }) == 0);
+    assert(cancelled_cas.Publish(*cas_before));
+    std::vector<unsigned> cas_replayed;
+    assert(cancelled_cas.Drain([&](unsigned core, std::uint64_t, std::uint64_t) {
+        cas_replayed.push_back(core);
+    }) == 2);
+    assert((cas_replayed == std::vector<unsigned>{0,2}));
+    assert(cancelled_cas.CompletedSequence() == cas_after->sequence);
+    assert(cancelled_cas.WaitUntil(*cas_failed) && !cancelled_cas.Pending());
+    assert(!cancelled_cas.Publish(*cas_failed));
+    assert(!cancelled_cas.Cancel(*cas_failed));
+    assert(!cancelled_cas.Cancel(*cas_after));
+    // When the FIRST unpublished ticket is cancelled, it must wake the GPU
+    // to replay a published tail. A cancellation is not a dropped sequence.
+    Queue cancelled_head;
+    const auto cancelled_head_ticket = cancelled_head.Reserve(0, 16384, 8);
+    const auto real_tail_ticket = cancelled_head.Reserve(1, 20480, 8);
+    assert(cancelled_head_ticket && real_tail_ticket);
+    unsigned cancellation_wakes = 0;
+    std::vector<unsigned> cancellation_replayed;
+    auto cancellation_tick = [&] {
+        ++cancellation_wakes;
+        cancelled_head.Drain([&](unsigned core,std::uint64_t,std::uint64_t) {
+            cancellation_replayed.push_back(core);
+        });
+    };
+    assert(cancelled_head.PublishAndWake(*real_tail_ticket, cancellation_tick));
+    assert(cancellation_wakes == 0);
+    assert(cancelled_head.CancelAndWake(*cancelled_head_ticket, cancellation_tick));
+    assert(cancellation_wakes == 1);
+    assert((cancellation_replayed == std::vector<unsigned>{1}));
+    assert(cancelled_head.CompletedSequence() == real_tail_ticket->sequence);
+    assert(cancelled_head.WaitUntil(*cancelled_head_ticket));
+    assert(!cancelled_head.Pending());
+    assert(!cancelled_head.CancelAndWake(*cancelled_head_ticket, cancellation_tick));
+
     // A finished ordinary (non-atomic) CPU store is visible to replay
     // because Publish releases the queue mutex and the consumer acquires it.
     // No callback may execute before publication of this exact ticket.
