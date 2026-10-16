@@ -1606,8 +1606,6 @@ msgid "Close"
 msgstr "إغلاق"
 
 #: pe/ui/library.cpp
-msgid "Down: view back cover"
-msgstr "أسفل: عرض الغلاف الخلفي"
 
 #: pe/ui/library.cpp
 msgid "Zoom out"
@@ -1728,3 +1726,39 @@ msgstr "اختر · Encore / Switch. البرامج / التحكم — دون ت
 #: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
 msgid "Choose the launcher interface without changing game or controller settings."
 msgstr "اختر · الواجهة. البرامج / التحكم — دون تغيير."
+
+#: pe/ui/switch_theme.cpp
+msgid "About"
+msgstr "حول"
+
+#: pe/ui/switch_theme.cpp
+msgid "Multiplayer"
+msgstr "متعدد اللاعبين"
+
+#: pe/ui/switch_theme.cpp
+msgid "Volume"
+msgstr "مستوى الصوت"
+
+#: pe/ui/switch_theme.cpp
+msgid "Controller profile"
+msgstr "ملف تعريف وحدة التحكم"
+
+#: pe/ui/switch_theme.cpp
+msgid "Cache"
+msgstr "ذاكرة التخزين المؤقت"
+
+#: pe/ui/switch_theme.cpp
+msgid "Manage"
+msgstr "إدارة"
+
+#: pe/ui/switch_theme.cpp
+msgid "Open folders"
+msgstr "فتح المجلدات"
+
+#: pe/ui/switch_theme.cpp
+msgid "Filter"
+msgstr "مرشح"
+
+#: pe/ui/switch_theme.cpp
+msgid "Eden Encore"
+msgstr "Eden Encore"

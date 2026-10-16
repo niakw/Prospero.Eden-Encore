@@ -1606,8 +1606,6 @@ msgid "Close"
 msgstr "Luk"
 
 #: pe/ui/library.cpp
-msgid "Down: view back cover"
-msgstr "Ned: vis bagsiden af omslaget"
 
 #: pe/ui/library.cpp
 msgid "Zoom out"
@@ -1728,3 +1726,39 @@ msgstr "Vælg · Encore / Switch. software / Styring — uændret."
 #: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
 msgid "Choose the launcher interface without changing game or controller settings."
 msgstr "Vælg · grænseflade. software / Styring — uændret."
+
+#: pe/ui/switch_theme.cpp
+msgid "About"
+msgstr "Om"
+
+#: pe/ui/switch_theme.cpp
+msgid "Multiplayer"
+msgstr "Multiplayer"
+
+#: pe/ui/switch_theme.cpp
+msgid "Volume"
+msgstr "Lydstyrke"
+
+#: pe/ui/switch_theme.cpp
+msgid "Controller profile"
+msgstr "Controllerprofil"
+
+#: pe/ui/switch_theme.cpp
+msgid "Cache"
+msgstr "Cache"
+
+#: pe/ui/switch_theme.cpp
+msgid "Manage"
+msgstr "Administrer"
+
+#: pe/ui/switch_theme.cpp
+msgid "Open folders"
+msgstr "Åbn mapper"
+
+#: pe/ui/switch_theme.cpp
+msgid "Filter"
+msgstr "Filter"
+
+#: pe/ui/switch_theme.cpp
+msgid "Eden Encore"
+msgstr "Eden Encore"

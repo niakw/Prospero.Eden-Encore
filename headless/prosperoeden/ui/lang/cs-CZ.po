@@ -1606,8 +1606,6 @@ msgid "Close"
 msgstr "Zavřít"
 
 #: pe/ui/library.cpp
-msgid "Down: view back cover"
-msgstr "Dolů: zobrazit zadní stranu obalu"
 
 #: pe/ui/library.cpp
 msgid "Zoom out"
@@ -1728,3 +1726,39 @@ msgstr "Vyberte · Encore / Switch. software / Ovládání — beze změny."
 #: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
 msgid "Choose the launcher interface without changing game or controller settings."
 msgstr "Vyberte · rozhraní. software / Ovládání — beze změny."
+
+#: pe/ui/switch_theme.cpp
+msgid "About"
+msgstr "O aplikaci"
+
+#: pe/ui/switch_theme.cpp
+msgid "Multiplayer"
+msgstr "Hra pro více hráčů"
+
+#: pe/ui/switch_theme.cpp
+msgid "Volume"
+msgstr "Hlasitost"
+
+#: pe/ui/switch_theme.cpp
+msgid "Controller profile"
+msgstr "Profil ovladače"
+
+#: pe/ui/switch_theme.cpp
+msgid "Cache"
+msgstr "Mezipaměť"
+
+#: pe/ui/switch_theme.cpp
+msgid "Manage"
+msgstr "Spravovat"
+
+#: pe/ui/switch_theme.cpp
+msgid "Open folders"
+msgstr "Otevřít složky"
+
+#: pe/ui/switch_theme.cpp
+msgid "Filter"
+msgstr "Filtr"
+
+#: pe/ui/switch_theme.cpp
+msgid "Eden Encore"
+msgstr "Eden Encore"

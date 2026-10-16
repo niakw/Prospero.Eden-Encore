@@ -1606,8 +1606,6 @@ msgid "Close"
 msgstr "Κλείσιμο"
 
 #: pe/ui/library.cpp
-msgid "Down: view back cover"
-msgstr "Κάτω: προβολή οπισθόφυλλου"
 
 #: pe/ui/library.cpp
 msgid "Zoom out"
@@ -1728,3 +1726,39 @@ msgstr "Επιλέξτε · Encore / Switch. λογισμικό / Χειρισμ
 #: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
 msgid "Choose the launcher interface without changing game or controller settings."
 msgstr "Επιλέξτε · περιβάλλον. λογισμικό / Χειρισμός — χωρίς αλλαγές."
+
+#: pe/ui/switch_theme.cpp
+msgid "About"
+msgstr "Σχετικά"
+
+#: pe/ui/switch_theme.cpp
+msgid "Multiplayer"
+msgstr "Πολλοί παίκτες"
+
+#: pe/ui/switch_theme.cpp
+msgid "Volume"
+msgstr "Ένταση"
+
+#: pe/ui/switch_theme.cpp
+msgid "Controller profile"
+msgstr "Προφίλ χειριστηρίου"
+
+#: pe/ui/switch_theme.cpp
+msgid "Cache"
+msgstr "Προσωρινή μνήμη"
+
+#: pe/ui/switch_theme.cpp
+msgid "Manage"
+msgstr "Διαχείριση"
+
+#: pe/ui/switch_theme.cpp
+msgid "Open folders"
+msgstr "Άνοιγμα φακέλων"
+
+#: pe/ui/switch_theme.cpp
+msgid "Filter"
+msgstr "Φίλτρο"
+
+#: pe/ui/switch_theme.cpp
+msgid "Eden Encore"
+msgstr "Eden Encore"
