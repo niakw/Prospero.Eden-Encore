@@ -26,6 +26,8 @@ assert "ScopedGuestStoreIntent" in replay
 assert "ScopedGuestCacheMaintenanceIntent" in replay
 assert "guest_write_intent = GuestWriteIntent::NoStore;" in replay
 assert "Expected exactly two cache-maintenance write callbacks" in code
+assert 'string(REPLACE "${intent_maintenance}" "" maintenance_without "${bridge_cpu}")' in code
+assert "math(EXPR maintenance_count" in code
 assert "guest_write_intent = previous;" in replay
 assert "guest_write_intent = GuestWriteIntent::StoreFollows;" in replay
 # Fail-closed runtime qualification, independent of any developer toggle.

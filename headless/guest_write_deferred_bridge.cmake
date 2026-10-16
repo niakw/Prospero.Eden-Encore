@@ -248,8 +248,13 @@ void MemoryManager::FlushCaching() {
     # enclosing guest write on the same host thread. Explicitly force NoStore
     # while running either dc cvac or dc civac rasterizer callback.
     set(intent_maintenance "HandleRasterizerWrite(GetInteger(current_vaddr), block_size);")
-    string(REGEX MATCHALL "HandleRasterizerWrite\\(GetInteger\\(current_vaddr\\), block_size\\);" maintenance_matches "${bridge_cpu}")
-    list(LENGTH maintenance_matches maintenance_count)
+    # Count exact occurrences without CMake-regex backslash interpretation.
+    string(REPLACE "${intent_maintenance}" "" maintenance_without "${bridge_cpu}")
+    string(LENGTH "${bridge_cpu}" maintenance_before_length)
+    string(LENGTH "${maintenance_without}" maintenance_after_length)
+    string(LENGTH "${intent_maintenance}" maintenance_token_length)
+    math(EXPR maintenance_count
+        "(${maintenance_before_length} - ${maintenance_after_length}) / ${maintenance_token_length}")
     if(NOT maintenance_count EQUAL 2)
         message(FATAL_ERROR "Expected exactly two cache-maintenance write callbacks")
     endif()
