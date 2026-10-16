@@ -48,6 +48,7 @@ approved_sync = {
         'string(REPLACE "${gpu_tick_lock_original}" "${gpu_tick_lock_safe}"',
         'string(REPLACE "${gpu_block_wait_original}" "${gpu_block_wait_checked}"',
         'string(REPLACE "${gpu_enqueue_fence_original}" "${gpu_enqueue_fence_atomic}"',
+        'string(REPLACE "${gpu_read_capture_original}"',
         # Native memory is already a derived translation unit for the
         # per-title unmapped-access limiter and optional checked fastmem.
         # Preserve its pinned 2-KiB dirty-collector correction as ONE
@@ -68,6 +69,11 @@ assert c.count("gpu_dirty_managers[core].Collect(subaddress, span);") == 1
 assert c.count("Pinned native guest CPU read scratch/slot contract changed") == 1
 assert c.count("Pinned native guest span page-boundary contract changed") == 1
 assert c.count("Pinned native GPU guest span range gate changed") == 1
+assert c.count("Pinned GPU read callback lifetime changed") == 1
+assert c.count('RequestSyncOperation([this, raster_area]() {') == 1
+assert (root / "tools/check-native-gpu-read-capture-host.py").is_file()
+assert "python3 -B tools/check-native-gpu-read-capture-host.py" in (
+    root / ".github/workflows/encore-core-preflight.yml").read_text()
 assert c.count('list(REMOVE_ITEM video_sources "memory_manager.cpp")') == 1
 assert c.count('list(APPEND video_sources "${eden_gpu_span_tu}")') == 1
 assert (root / "tools/check-native-gpu-span-range-host.py").is_file()
