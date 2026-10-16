@@ -667,8 +667,9 @@ void Launcher::draw_switch_game(Canvas& c,float opened) {
                      game_rows_.row_alpha(i,92));
     }
     d.pop_clip();
-    advanced_status(c,message_,message_warning_,option_==11?TR("Import"):
-                    option_==10?TR("Open"):TR("Change"));
+    if(confirmation_==Confirmation::none)
+        advanced_status(c,message_,message_warning_,option_==11?TR("Import"):
+                        option_==10?TR("Open"):TR("Change"));
     d.pop_opacity();
 }
 void Launcher::draw_switch_mods(Canvas& c,float opened) {
@@ -693,8 +694,9 @@ void Launcher::draw_switch_mods(Canvas& c,float opened) {
         }
         d.pop_clip();
     }
-    advanced_status(c,message_,message_warning_,mods_.empty()?
-                    TR("Create the folder"):TR("Turn on or off"));
+    if(confirmation_==Confirmation::none)
+        advanced_status(c,message_,message_warning_,mods_.empty()?
+                        TR("Create the folder"):TR("Turn on or off"));
     d.pop_opacity();
 }
 void Launcher::draw_switch_mapping(Canvas& c,float opened) {
@@ -729,7 +731,8 @@ void Launcher::draw_switch_mapping(Canvas& c,float opened) {
         d.pop_opacity();
     }
     d.pop_clip();
-    advanced_status(c,message_,message_warning_,TR("Change"));
+    if(confirmation_==Confirmation::none)
+        advanced_status(c,message_,message_warning_,TR("Change"));
     d.pop_opacity();
 }
 
