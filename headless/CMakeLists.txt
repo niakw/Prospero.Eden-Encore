@@ -2226,6 +2226,25 @@ string(REPLACE "    case Settings::RendererBackend::Vulkan:\n        return std:
 endif()
 write_derived("${PORT_BUILD_DIR}/video_core.cpp" "${video_factory}")
 get_target_property(video_sources video_core SOURCES)
+# A guest span must be rejected BEFORE IsContinuousRange walks GPU page tables.
+# An out-of-space or wrapping address would otherwise index the page vectors.
+# Preserve the normal range walk and all GPU cache operations for valid spans.
+if(PS5_NATIVE)
+    file(READ "${PROJECT_SOURCE_DIR}/src/video_core/memory_manager.cpp" eden_gpu_span_src)
+    set(eden_gpu_span_original "    if (!IsContinuousRange(src_addr, size)) {")
+    string(REGEX MATCHALL "if \\(!IsContinuousRange\\(src_addr, size\\)\\)" eden_gpu_span_anchors "${eden_gpu_span_src}")
+    list(LENGTH eden_gpu_span_anchors eden_gpu_span_anchors_count)
+    if(NOT eden_gpu_span_anchors_count EQUAL 2)
+        message(FATAL_ERROR "Pinned native GPU guest span range gate changed")
+    endif()
+    string(REPLACE "${eden_gpu_span_original}" [=[    if (size == 0 || src_addr >= address_space_size ||
+        size > address_space_size - src_addr ||
+        !IsContinuousRange(src_addr, size)) {]=] eden_gpu_span_src "${eden_gpu_span_src}")
+    set(eden_gpu_span_tu "${PORT_BUILD_DIR}/memory-manager-native.cpp")
+    write_derived("${eden_gpu_span_tu}" "${eden_gpu_span_src}")
+    list(REMOVE_ITEM video_sources "memory_manager.cpp")
+    list(APPEND video_sources "${eden_gpu_span_tu}")
+endif()
 # R411: Eden #4473/#4477 are already applied once by the audited
 # version-locked shipping backports to PROJECT_SOURCE_DIR before CMake.
 if(PS5_NATIVE)
