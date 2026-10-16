@@ -36,8 +36,12 @@ counts = {name: c.count(name) for name in baseline}
 # two exact-method rewrites. Do not relax the historical ceilings for any
 # other vendor-derived source. Each exception must occur exactly once.
 approved_sync = {
+    "write_derived(": (
+        'write_derived("${eden_gpu_span_tu}" "${eden_gpu_span_src}")',
+    ),
     "file(READ": (
         'file(READ "${EDEN_PORT_DIR}/gpu_sync_failure_wait.inc" gpu_sync_wait_replacement)',
+        'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/memory_manager.cpp" eden_gpu_span_src)',
     ),
     "string(REPLACE": (
         'string(REPLACE "${gpu_sync_wait_original}" "${gpu_sync_wait_replacement}"',
@@ -54,6 +58,7 @@ approved_sync = {
         'string(REPLACE "${eden_read_original}" "${eden_read_native}"',
         # End-exclusive guest spans must not probe a one-past-last page.
         'string(REPLACE "${eden_span_original}" [=[',
+        'string(REPLACE "${eden_gpu_span_original}" [=[',
     ),
 }
 # The dirty-range rewrite is allowed only while the source-derived native
@@ -62,6 +67,12 @@ assert c.count("Pinned native GPUDirty Collect call changed") == 1
 assert c.count("gpu_dirty_managers[core].Collect(subaddress, span);") == 1
 assert c.count("Pinned native guest CPU read scratch/slot contract changed") == 1
 assert c.count("Pinned native guest span page-boundary contract changed") == 1
+assert c.count("Pinned native GPU guest span range gate changed") == 1
+assert c.count('list(REMOVE_ITEM video_sources "memory_manager.cpp")') == 1
+assert c.count('list(APPEND video_sources "${eden_gpu_span_tu}")') == 1
+assert (root / "tools/check-native-gpu-span-range-host.py").is_file()
+assert "python3 -B tools/check-native-gpu-span-range-host.py" in (
+    root / ".github/workflows/encore-core-preflight.yml").read_text()
 assert c.count("const auto end_page = (addr + size - 1) >> YUZU_PAGEBITS;") == 1
 assert (root / "tools/check-native-guest-span-host.py").is_file()
 assert "python3 -B tools/check-native-guest-span-host.py" in (
