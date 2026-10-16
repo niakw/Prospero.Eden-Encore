@@ -22,6 +22,13 @@ port_cmake = (root / "headless/CMakeLists.txt").read_text()
 checked_a32 = (root / "headless/checked-fastmem.cmake").read_text()
 host_mem = (root / "src/host_memory.cpp").read_text()
 host_jit_check = (root / "headless/memory_check.cpp").read_text()
+gpu_guest = read("video_core/guest_memory.h")
+gpu_manager = read("video_core/memory_manager.cpp")
+gpu_dma = read("video_core/engines/maxwell_dma.cpp")
+gpu_upload = read("video_core/engines/engine_upload.cpp")
+gpu_blitter = read("video_core/engines/sw_blitter/blitter.cpp")
+gpu_vic = read("video_core/host1x/vic.cpp")
+gpu_driver = read("video_core/gpu.cpp")
 nce = read("core/arm/nce/arm_nce.cpp")
 bridge = (root / "headless/guest_write_deferred_bridge.cmake").read_text()
 replay = (root / "headless/gpu_deferred_replay.h").read_text()
@@ -87,6 +94,45 @@ expect(memory, "HandleRasterizerWrite(addr, sizeof(T));", "scalar tracked store"
 # close the writable GuestMemory alias loophole.
 expect(memory, "GetPointerSilent(addr) : nullptr;", "silent span alias")
 
+# The tracked-page transition protects the fastmem view first, then marks
+# the PTE. The byte-map update does NOT synchronously stop JIT workers that
+# already passed the guard; host mapping mutex protects the updater, not JIT.
+# This inventory deliberately does not claim transition linearization.
+assert mark_region.index("host_buffer->Protect(vaddr, size, perm);") < mark_region.index(
+    "entry.MarkRasterizerCached();"), "Re-audit protection/mark order"
+a32_protect = host_mem.split("void Protect(std::size_t offset, std::size_t length, std::uint8_t access)", 1)[1]
+a32_protect = a32_protect.split("\nprivate:", 1)[0]
+expect(a32_protect, "std::fill(page_access.begin() + first, page_access.begin() + last + 1, access);", "A32 permission update")
+expect(a32_protect, "Refresh(first, last);", "A32 checked guard refresh")
+expect(checked_a32, "code.test(code.byte[r13 + index - checked_map_bytes], blocked_bit);", "JIT guard reads map")
+# Compiler/JIT accesses that already read the old byte can still be in flight.
+# No producer epoch/drain is present in this protection operation.
+
+# GPU engines also hold mutable GuestMemory aliases. They are GPU-side
+# producers, not direct evidence of bypassing CPU/JIT callbacks. Categorize
+# them independently: cached writes and scoped post-write invalidation must
+# remain ordered against dependent GPU work, not be mislabeled CPU stores.
+for anchor in (
+    "using GpuGuestMemoryScoped = Core::Memory::GuestMemoryScoped<Tegra::MemoryManager, T, FLAGS>;",
+    "using DeviceGuestMemoryScoped =",
+):
+    expect(gpu_guest, anchor, "GPU scoped memory aliases")
+for anchor in (
+    "Tegra::Memory::GpuGuestMemoryScoped<u8,",
+    "Tegra::Memory::GuestMemoryFlags::SafeReadCachedWrite>",
+):
+    expect(gpu_upload, anchor, "GPU upload writable alias")
+expect(gpu_dma, "Tegra::Memory::GuestMemoryFlags::UnsafeReadCachedWrite>", "GPU DMA scoped write")
+expect(gpu_blitter, "Tegra::Memory::GuestMemoryFlags::SafeReadWrite>", "GPU blitter scoped write")
+expect(gpu_vic, "Core::Memory::GuestMemoryFlags::SafeWrite>", "GPU video scoped write")
+expect(gpu_manager, "return memory.GetSpan(*dev_addr, size);", "GPU to backing span")
+expect(gpu_manager, "accumulator.Add(gpu_dest_addr, size);", "GPU deferred cache invalidation")
+expect(gpu_manager, "rasterizer->InvalidateRegion(dev_addr_base, copy_amount, which);", "GPU eager invalidation")
+expect(gpu_driver, "WaitForSyncOperation(fence);", "existing CPU read synchronization")
+expect(gpu_driver, "return renderer->ReadRasterizer()->OnCPUWrite(addr, size);", "CPU write-to-rasterizer")
+# None of these anchors establishes a device fence for CAS or post-store
+# CPU publication. A green source inventory remains a NO-GO verdict.
+
 # Unlike a bare config-only inventory, the pinned x64 emitter DOES route
 # marked page-table stores to callback fallback. The port's derived emitter
 # replaces the marked-bit-zero test with test/jnz for both A32 and A64.
@@ -151,5 +197,7 @@ print(
     "tracked_page_marking=1 tracked_fastmem_write_protection=1 "
     "tracked_cpu_callback=1 nce_x64_build=0 jit_marked_callback_source=1 a32_checked_fastmem_source=1 "
     "a64_native_fastmem_disabled=1 real_jit_harness_present=1 "
-    "jit_host_execution_this_commit=0 deferred_gpu_ordering_proof=0"
+    "jit_host_execution_this_commit=0 deferred_gpu_ordering_proof=0 "
+    "transition_quiescence_proof=0 gpu_scoped_producers_inventoried=1 "
+    "gpu_scoped_ordering_proof=0"
 )
