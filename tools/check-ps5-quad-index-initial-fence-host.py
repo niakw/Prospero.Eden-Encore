@@ -32,10 +32,14 @@ assert "python3 -B tools/check-ps5-quad-index-initial-fence-host.py" in workflow
 # Confirm the guarded form is exactly an adapter applied after the existing
 # VulkanTimer(7) instrumentation (unchanged exact upstream wait-site count).
 gen=ast.parse(oracle)
-table=next(node for node in ast.walk(gen) if isinstance(node,ast.Assign)
-           and any(isinstance(target,ast.Name) and target.id=="cost_replacements"
-                   for target in node.targets))
-entry=next(v for k,v in zip(table.value.keys,table.value.values)
+# Locate the dict by its stable Vulkan source key, not the variable name
+# used for the generator's performance probes.
+tables=[node for node in ast.walk(gen) if isinstance(node,ast.Dict)
+        and any(isinstance(key,ast.Constant) and key.value=="vk_buffer_cache"
+                for key in node.keys)]
+assert len(tables)==1
+table=tables[0]
+entry=next(v for k,v in zip(table.keys,table.values)
            if isinstance(k,ast.Constant) and k.value=="vk_buffer_cache")
 pairs=[ast.literal_eval(n) for n in entry.elts if isinstance(n,ast.Tuple)]
 guarded=[(before,after) for before,after in pairs if "very first LUT" in after]
