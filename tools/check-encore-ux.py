@@ -38,6 +38,16 @@ assert 'theme::kFocusBlue.with_alpha(0.96f)' in launcher
 assert 'static constexpr const char* labels[] = {TR("Home"), TR("Library"), TR("Recent")};' in launcher
 assert 'settings_gear(c, gx, gy, 19.0f, ink);' in launcher
 assert 'constexpr float avatar_x = 1640.0f, avatar_y = 70.0f;' in launcher
+# Account artwork is discovered read-only for the foreground user. It must
+# never be queried or decoded on the draw path, and must gracefully fall back.
+assert 'profile_avatar_scan_ = std::async(std::launch::async' in launcher
+assert 'profile_avatar_scan_.wait_for(std::chrono::seconds(0))' in launcher
+assert 'profile_avatar_scan_.wait();' in launcher
+assert 'list.rounded_image(avatar.texture,' in launcher
+assert 'std::future<std::string> profile_avatar_scan_;' in launcher_h
+assert 'virtual std::string profile_avatar() { return {}; }' in ui_preferences
+assert 'sceUserServiceGetForegroundUser(&user_id)' in services
+assert '/system_data/priv/cache/profile/0x' in services
 assert 'localized_clock(services_.clock(), services_.language_region(prefs_.language))' in launcher
 assert 'list.image(c.textures.brand(), {56.0f, 17.0f, 110.0f, 110.0f}' in launcher
 
@@ -113,6 +123,11 @@ assert 'constexpr float rail_x = 72.0f, rail_y = 204.0f, rail_w = 1776.0f;' in l
 assert 'constexpr float sleeve_h = 346.0f;' in library
 assert 'const float sleeve_w = std::clamp(paper_height * aspect * 1.01f,' in library
 assert 'const Rect detail{72.0f, 620.0f, 1776.0f, 276.0f};' in library
+assert 'const float paper_height = sleeve_h -' in library
+assert 'front_scan.aspect' in library
+assert 'const float opening_x = rear ? shell.x : shell.x + shell.w - side;' in library
+assert 'c.list.gradient_rect({shell.x, shell.y, shell.w, top}' in library
+assert 'c.list.gradient_rect({shell.x, shell.y + shell.h - top,' in library
 assert 'const float side = rear ? std::clamp(shell.w * 0.012f, 1.75f, 5.0f)' in library
 assert 'c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f},' in library
 assert 'fitted.x += rear ? paper.w - fitted.w : (paper.w - fitted.w) * 0.5f;' in library
