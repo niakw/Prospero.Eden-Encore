@@ -727,7 +727,16 @@ void Launcher::draw_switch_mapping(Canvas& c,float opened) {
         // Match the original functional editor: the real physical pad glyph
         // stays visible next to the text, even for triggers and touchpad.
         d.push_opacity(opacity);
-        draw_pad(c,switch_physical_pad(mapped),1035.0f,y+46.0f,30.0f);
+        const Pad icon=switch_physical_pad(mapped);
+        if(mapped>=4) {
+            // The shared physical-pad renderer uses light symbols for shoulder
+            // and system keys. A dark neutral keycap is required on the
+            // Switch theme's white paper; otherwise L/R are invisible.
+            const float width=pad_width(icon,30.0f);
+            d.rounded_rect({1030.0f,y+25.0f,std::max(44.0f,width+12.0f),42.0f},
+                           9.0f,kInk);
+        }
+        draw_pad(c,icon,1035.0f,y+46.0f,30.0f);
         d.pop_opacity();
     }
     d.pop_clip();
