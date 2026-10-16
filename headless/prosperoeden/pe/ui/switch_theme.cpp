@@ -173,9 +173,12 @@ void advanced_status(Canvas& c,const std::string& message,bool warn,
                      const char* fallback) {
     // An old confirmation may leave message_warning_ true even when
     // message_ is cleared. Ordinary actions must never inherit error red.
-    text_shrink(c,message.empty()?tr(fallback):message,544,
-                baseline(840,68,20),20,
-                !message.empty()&&warn?gfx::Color::rgb(0xb52733):kSubtle,530);
+    // Leave the A/B controls unobstructed even for two-line translated
+    // status messages (e.g. game-saved notifications in French).
+    text_block(c,message.empty()?tr(fallback):message,544.0f,
+               baseline(831.0f,39.0f,18.0f),18.0f,25.0f,
+               !message.empty()&&warn?gfx::Color::rgb(0xb52733):kSubtle,
+               418.0f,2,kShrink);
     // Keep the alternative console's A/B action grammar inside every
     // advanced modal, not just in the underlying HOME footer.
     c.list.ring(996.0f,877.0f,15.0f,2.0f,kSubtle);
@@ -306,7 +309,7 @@ void Launcher::draw_switch_home(Canvas& c) {
     }
     // Preserve launch/permission feedback shown in the original launcher.
     const std::string feedback=!message_.empty()?message_:home_.status;
-    if(confirmation_==Confirmation::none && !feedback.empty())
+    if(modal_==Modal::none && confirmation_==Confirmation::none && !feedback.empty())
         text_shrink(c,feedback,165.0f,baseline(701.0f,46.0f,22.0f),
                     22.0f,!message_.empty()&&message_warning_?
                     gfx::Color::rgb(0xb52733):kSubtle,1585.0f);
@@ -412,7 +415,7 @@ void Launcher::draw_switch_library(Canvas& c) {
     text_shrink(c,game.name,125.0f,baseline(150,55,29),29,kInk,1420.0f);
     text(c,list_position(selected+1,count),1790.0f,baseline(152,50,21),
          21,kSubtle,Align::right);
-    if(confirmation_==Confirmation::none && !message_.empty())
+    if(modal_==Modal::none && confirmation_==Confirmation::none && !message_.empty())
         text_shrink(c,message_,125.0f,baseline(191.0f,48.0f,21.0f),
                     21.0f,message_warning_?gfx::Color::rgb(0xb52733):kSubtle,
                     1530.0f);
