@@ -252,3 +252,15 @@ runtime gate stays `false`. In particular, there is still no proven GPU
 command scheduler wake, read-after-write fence, atomic publication or native
 teardown integration. A caller must not invoke this helper while holding a
 cache mutex or on the GPU consumer thread. No claim of FC27 improvement.
+
+## Explicit failed GPU scheduling callbacks (2026-10-16)
+
+The host-only request/wakeup contract now accepts callbacks returning either
+`void` (an exception signals failure) or `bool` (a `false` result signals
+rejection). Previously a boolean rejection was ignored. That could leave a
+published head with no GPU wake or cause `ReserveOrdered` to wait forever after
+backpressure without any GPU job being scheduled. Both code paths now treat
+`false` as a thrown scheduling error and enter their existing session-poisoning
+and waiter notification paths; successful `true` and existing `void` callbacks
+retain their behavior. Source guards and sanitizer host tests cover both APIs,
+including cancelled writes. The native bridge and its runtime gate remain OFF.

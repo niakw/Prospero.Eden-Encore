@@ -95,8 +95,8 @@ for guard in ("if (auto ticket = Reserve(core, address, size)) return ticket;",
               "if (!WaitUntil(barrier)) return std::nullopt;",
               "failed_ = true;"):
     assert guard in ordered, guard
-assert ordered.index("barrier = {accepted_, generation_};") < ordered.index("request_gpu();")
-assert ordered.index("request_gpu();") < ordered.index("WaitUntil(barrier)")
+assert ordered.index("barrier = {accepted_, generation_};") < ordered.index("RequestGpuOrThrow(request_gpu);")
+assert ordered.index("RequestGpuOrThrow(request_gpu);") < ordered.index("WaitUntil(barrier)")
 assert "deferred_cpu_write_queue.ReserveOrdered(" not in code
 assert "accepted_ - completed_ >= MaxOutstandingWrites" in queue
 # Publishing thousands of reservations out of order must not turn the FIFO
@@ -113,7 +113,12 @@ notify_body=queue.split("bool ResolveAndWake(Ticket ticket, bool cancel, Request
 assert "PublishImpl(ticket, true, cancel)" in notify_body
 assert "return ResolveAndWake(ticket, false, std::forward<RequestGpu>(request_gpu));" in queue
 assert "return ResolveAndWake(ticket, true, std::forward<RequestGpu>(request_gpu));" in queue
-assert "std::forward<RequestGpu>(request_gpu)();" in notify_body
+assert "RequestGpuOrThrow(std::forward<RequestGpu>(request_gpu));" in notify_body
+request_guard=queue.split("static void RequestGpuOrThrow(RequestGpu&& request_gpu) {",1)[1].split("bool ResolveAndWake(",1)[0]
+assert "std::is_same_v<std::invoke_result_t<RequestGpu>, bool>" in request_guard
+assert "if (!std::forward<RequestGpu>(request_gpu)())" in request_guard
+assert "throw std::runtime_error" in request_guard
+assert "std::forward<RequestGpu>(request_gpu)();" in request_guard
 assert "failed_ = true;" in notify_body and "throw;" in notify_body
 assert "const bool became_ready = !was_ready && !queue_.empty()" in publish_body
 assert "if (arm_wake && became_ready) ++pending_wake_callbacks_;" in publish_body
