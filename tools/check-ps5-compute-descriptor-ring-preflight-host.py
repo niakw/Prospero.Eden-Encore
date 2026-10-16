@@ -61,9 +61,12 @@ assert compute.index("guest_descriptor_queue.PreflightGuestDraw(") < compute.ind
 assert compute.index("descriptor_buffer_ring.PreflightFrameReuse(") < compute.index(
     "descriptor_buffer_ring.PreflightCapacity(") < compute.index(pair)
 assert "pipeline = pipeline_cache.CurrentComputePipeline();" in compute
-assert compute.index("descriptor_buffer_ring.PreflightFrameReuse(") < compute.index(
-    "pipeline = pipeline_cache.CurrentComputePipeline();") < compute.index(
-    "descriptor_buffer_ring.PreflightCapacity(")
+between_frame_and_capacity = compute[
+    compute.index("descriptor_buffer_ring.PreflightFrameReuse("):
+    compute.index("descriptor_buffer_ring.PreflightCapacity(")]
+assert "gpu_memory->FlushCaching();" in between_frame_and_capacity
+assert "pipeline = pipeline_cache.CurrentComputePipeline();" in between_frame_and_capacity
+assert "PreflightLargeGuestDraw(" in between_frame_and_capacity
 after_capacity=compute.split("descriptor_buffer_ring.PreflightCapacity(",1)[1].split(pair,1)[0]
 assert "pipeline = pipeline_cache.CurrentComputePipeline();" in after_capacity
 assert "gpu_memory->FlushCaching();" in after_capacity
