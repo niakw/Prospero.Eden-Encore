@@ -1846,3 +1846,19 @@ msgstr "Choisissez votre langue"
 msgid "Back to HOME"
 msgstr "Retour à l'accueil"
 
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "APPEARANCE"
+msgstr "APPARENCE"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "THEME"
+msgstr "THÈME"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "DEFAULT"
+msgstr "PAR DÉFAUT"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "PREVIEW"
+msgstr "APERÇU"
