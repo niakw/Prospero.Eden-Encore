@@ -44,8 +44,20 @@ approved_sync = {
         'string(REPLACE "${gpu_tick_lock_original}" "${gpu_tick_lock_safe}"',
         'string(REPLACE "${gpu_block_wait_original}" "${gpu_block_wait_checked}"',
         'string(REPLACE "${gpu_enqueue_fence_original}" "${gpu_enqueue_fence_atomic}"',
+        # Native memory is already a derived translation unit for the
+        # per-title unmapped-access limiter and optional checked fastmem.
+        # Preserve its pinned 2-KiB dirty-collector correction as ONE
+        # audited exception, never an anonymous increase of the budget.
+        'string(REPLACE "${eden_dirty_raw}" [=[',
     ),
 }
+# The dirty-range rewrite is allowed only while the source-derived native
+# gate and its sanitizer regression remain present and wired to CI.
+assert c.count("Pinned native GPUDirty Collect call changed") == 1
+assert c.count("gpu_dirty_managers[core].Collect(subaddress, span);") == 1
+assert (root / "tools/check-native-gpu-dirty-subregion-host.py").is_file()
+assert "python3 -B tools/check-native-gpu-dirty-subregion-host.py" in (
+    root / ".github/workflows/encore-core-preflight.yml").read_text()
 approved_counts = {}
 for name, fragments in approved_sync.items():
     for fragment in fragments:
