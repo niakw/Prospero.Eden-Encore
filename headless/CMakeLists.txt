@@ -1210,6 +1210,12 @@ if(PS5_NATIVE)
         message(FATAL_ERROR "Missing maintained native GPU dirty collector")
     endif()
     target_include_directories(core BEFORE PUBLIC "${EDEN_NATIVE_DIRTY_HEADER_ROOT}")
+    # The native guest-memory header is shared by core and video_core.
+    # The latter instantiates GPU write-back templates in its own TUs.
+    if(NOT EXISTS "${EDEN_NATIVE_DIRTY_HEADER_ROOT}/core/guest_memory.h")
+        message(FATAL_ERROR "Missing maintained native guest memory bounds")
+    endif()
+    target_include_directories(video_core BEFORE PRIVATE "${EDEN_NATIVE_DIRTY_HEADER_ROOT}")
     if(EDEN_A32_FASTMEM)
         set(eden_cpu_memory_tu "${PORT_BUILD_DIR}/memory.cpp")
     else()
