@@ -208,7 +208,7 @@ jobs:
           bash tools/launcher/preview.sh build/launch-switch-theme 1920 1080 2>&1 | tee build-launch-switch-theme.log
           python3 - <<'PY'
           from pathlib import Path
-          from PIL import Image, ImageStat
+          from PIL import Image, ImageStat, ImageChops
           folder=Path("build/launch-switch-theme")
           expected=["00-switch-home.png","01-switch-all-software.png",
                     "02-switch-settings.png","03-switch-appearance.png",
@@ -222,6 +222,21 @@ jobs:
               with Image.open(file) as image:
                   assert image.size==(1920,1080)
                   assert sum(ImageStat.Stat(image.convert("RGB")).stddev) > 18
+          # A white modal alone is insufficient: the screenshot tour must
+          # reach THREE different native dialogs. Compare the heading region
+          # to reject duplicate screenshots under different filenames.
+          headings=[]
+          for filename in ("07-switch-game-options.png",
+                           "08-switch-game-mods.png",
+                           "09-switch-button-mapping.png"):
+              with Image.open(folder / filename) as source:
+                  headings.append(source.convert("RGB").crop((455,145,1240,250)))
+          for a,b in ((0,1),(1,2),(0,2)):
+              delta=ImageStat.Stat(ImageChops.difference(headings[a],headings[b]))
+              assert sum(delta.mean)>10.0, (
+                  f"advanced preview has repeated heading in {a} and {b}")
+          print("SWITCH_ADVANCED_MODAL_TOUR: PASS")
+
           # Confirmation must be an actual light overlay, not a mislabeled
           # screenshot of HOME or an Encore neon dialog.
           with Image.open(folder / "06-switch-exit-confirm.png") as image:
