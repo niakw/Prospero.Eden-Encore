@@ -5,7 +5,6 @@ Compile the actual two pinned GetSpan methods as the negative control and
 the exact native CMake replacement as the positive control. No console build.
 """
 from pathlib import Path
-import re
 import shutil
 import subprocess
 import tempfile
@@ -25,13 +24,11 @@ old = (
     "? GetPointerSilent(addr) : nullptr;"
 )
 assert methods.count(old) == 2
-match = re.search(
-    r'string\\(REPLACE "\\$\\{eden_span_original\\}" \\[=\\[(.*?)\\]=\\] eden_cpu_memory',
-    cmake,
-    re.DOTALL,
-)
-assert match, "Missing exact native span replacement"
-fixed = match.group(1)
+native_span_anchor = 'string(REPLACE "${eden_span_original}" [=['
+assert cmake.count(native_span_anchor) == 1
+span_start = cmake.index(native_span_anchor) + len(native_span_anchor)
+span_end = cmake.index(']=] eden_cpu_memory "${eden_cpu_memory}")', span_start)
+fixed = cmake[span_start:span_end]
 assert cmake.count("Pinned native guest span page-boundary contract changed") == 1
 assert "if (size == 0 || addr + (size - 1) < addr)" in fixed
 assert "start_page >= entries.size() || end_page >= entries.size()" in fixed
