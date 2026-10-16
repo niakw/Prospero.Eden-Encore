@@ -34,8 +34,8 @@ assert "python3 -B tools/check-gpu-deferred-poststore-host.py" in workflow
 # Source-backed classification: a tracked ordinary/memset store happens
 # AFTER HandleRasterizerWrite, whereas dc cvac/civac only invalidates.
 write_block = source.split("bool WriteBlockImpl(", 1)[1].split("bool ZeroBlock(", 1)[0]
-assert write_block.index("HandleRasterizerWrite(GetInteger(current_vaddr), copy_amount);") < write_block.index(
-    "std::memcpy(ptr, reinterpret_cast<u8 const*>(buffer) + offset, copy_amount);")
+assert "std::memcpy(ptr, reinterpret_cast<u8 const*>(buffer) + offset, copy_amount);" in write_block.rsplit(
+    "HandleRasterizerWrite(GetInteger(current_vaddr), copy_amount);", 1)[1]
 zero = source.split("bool ZeroBlock(", 1)[1].split("bool CopyBlock(", 1)[0]
 assert zero.index("HandleRasterizerWrite(GetInteger(current_vaddr), copy_amount);") < zero.index(
     "std::memset(ptr, 0, copy_amount);")
