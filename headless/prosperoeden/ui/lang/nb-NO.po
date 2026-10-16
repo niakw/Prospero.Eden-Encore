@@ -1692,8 +1692,6 @@ msgid "Select a settings category"
 msgstr "Velg · kategorier"
 
 #: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
-msgid "Press Select to configure"
-msgstr "Velg · Konfigurer"
 
 #: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
 msgid "Software options: Triangle"
