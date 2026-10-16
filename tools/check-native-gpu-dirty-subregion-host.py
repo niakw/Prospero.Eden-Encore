@@ -39,14 +39,27 @@ assert port.index("Pinned native GPUDirty Collect call changed") < port.index(
 assert port.count("gpu_dirty_managers[core].Collect(subaddress, span);") == 1
 assert port.count("::Eden::GpuDirty::ForEachRegion(address, size,") == 1
 
+# Embed the ACTUAL pinned original mask builder, rather than a
+# hand-transcribed equivalent. The negative control must trip UBSan at 4KiB
+# while the bounded splitter must keep every call within 32 mask bits.
+mask_begin = "    template <typename T>\\n    T CreateMask("
+mask_end = "    TransformAddress BuildTransform("
+assert dirty.count(mask_begin) == 1 and dirty.count(mask_end) == 1
+mask_source = mask_begin.replace("\\n", "\n") + dirty.split(
+    mask_begin.replace("\\n", "\n"), 1)[1].split(mask_end, 1)[0]
+
 cpp = r"""
 #include "gpu_dirty_region_split.h"
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <utility>
 #include <vector>
 using namespace Eden::GpuDirty;
+struct ActualPinnedMask {
+@@MASK_SOURCE@@
+};
 
 void Verify(std::uint64_t address, std::uint64_t bytes) {
     std::uint64_t cursor = address, total = 0;
@@ -60,11 +73,7 @@ void Verify(std::uint64_t address, std::uint64_t bytes) {
         const auto high = (offset + size + 63) / 64;
         // Exact GPUDirtyMemoryManager::CreateMask<u32> shifts.
         assert(high > 0 && high <= 32 && low < 32);
-        std::uint32_t mask = ~std::uint32_t{0};
-        mask <<= 32 - high;
-        mask >>= 32 - high;
-        mask >>= low;
-        mask <<= low;
+        const auto mask = ActualPinnedMask{}.CreateMask<std::uint32_t>(high, low);
         for (unsigned cell = 0; cell < 32; ++cell) {
             const bool covered = ((cell + 1) * 64 > offset) &&
                                  (cell * 64 < offset + size);
@@ -78,7 +87,13 @@ void Verify(std::uint64_t address, std::uint64_t bytes) {
     assert((bytes == 0) == (emitted == 0));
 }
 
-int main() {
+int main(int argc, char**) {
+    if (argc > 1) {
+        // Original 4KiB tracked write: top_bit=64 on a 32-bit mask.
+        volatile std::size_t top_bit = 64;
+        (void)ActualPinnedMask{}.CreateMask<std::uint32_t>(top_bit, 0);
+        return 0; // UndefinedBehaviorSanitizer must abort first.
+    }
     unsigned calls = 0;
     ForEachRegion(0x1000, 4096, [&](std::uint64_t a, std::uint64_t n) {
         assert(a == 0x1000 + calls * 2048 && n == 2048);
@@ -107,6 +122,7 @@ int main() {
     }
 }
 """
+cpp = cpp.replace("@@MASK_SOURCE@@", mask_source)
 clang = shutil.which("clang++-18") or shutil.which("clang++")
 assert clang, "Clang C++20 required"
 with tempfile.TemporaryDirectory(prefix="encore-gpu-dirty-host-") as directory:
@@ -120,5 +136,11 @@ with tempfile.TemporaryDirectory(prefix="encore-gpu-dirty-host-") as directory:
         check=True, timeout=45
     )
     subprocess.run([str(binary)], check=True, timeout=45)
+    negative = subprocess.run(
+        [str(binary), "--original-unbounded-4k"], capture_output=True,
+        text=True, timeout=45
+    )
+    assert negative.returncode != 0 and "runtime error" in negative.stderr
+    assert "shift exponent" in negative.stderr, negative.stderr
 
-print("NATIVE_GPU_DIRTY_SUBREGION_HOST_PASS regions=2048 mask_bits=32 alignment=64 crossings=1 whole_page=1 randomized=5000")
+print("NATIVE_GPU_DIRTY_SUBREGION_HOST_PASS regions=2048 mask_bits=32 alignment=64 crossings=1 whole_page=1 randomized=5000 original_4k_ubsan_negative_control=1")
