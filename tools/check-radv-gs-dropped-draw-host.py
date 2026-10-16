@@ -40,7 +40,9 @@ struct Geometry{uint *count_buffer{},*output_index_buffer{};};
 struct Draw{std::uintptr_t ro_sink{0x1000};};
 int main(){
     Vertex v{};Geometry g{};Draw d{};
-    auto* vp=&v;auto* p=&g;auto* block=&d;
+    [[maybe_unused]] auto* vp=&v;
+    [[maybe_unused]] auto* p=&g;
+    [[maybe_unused]] auto* block=&d;
     bool ok=false;
     uint vertex_count=10,instance_count=3;
     __BLOCK__
