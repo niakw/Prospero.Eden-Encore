@@ -89,7 +89,8 @@ assert "library_format(game->format)" in library
 assert "library_size(game->size)" in library
 assert "library_date(game->release_date" in library
 assert "library_genres(game->categories)" in library
-assert 'tr("Down: view back cover")' in library
+# The obsolete footer hint was removed from the UI: keep this invariant
+# in the rear-cover checks below, rather than requiring stale text here.
 assert 'tr("Enlarge cover")' in library
 assert "flat_retail_sleeve(c, *game, art, true, 0.60f);" in library
 assert "flat_retail_sleeve(c, *game, enlarged, true, 0.92f," in library
