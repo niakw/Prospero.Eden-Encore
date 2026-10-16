@@ -954,6 +954,85 @@ int main() {
     assert(bounded.Publish(*post_drain));
     assert(bounded.Drain([](unsigned,std::uint64_t,std::uint64_t) {}) == 1);
 
+    // Ordered producer saturation: all older writes must reach replay
+    // before the newly reserved write can proceed to its guest RAM store.
+    Queue ordered_pressure;
+    for (Queue::Sequence i = 0; i < Queue::MaxOutstandingWrites; ++i)
+        assert(ordered_pressure.EnqueueTracked(unsigned(i % 4),
+               0x100000 + i * 4096, 8));
+    unsigned older_replayed = 0, pressure_wakes = 0;
+    const auto resumed = ordered_pressure.ReserveOrdered(3, 0x9000000, 8, [&] {
+        ++pressure_wakes;
+        assert(ordered_pressure.Drain([&](unsigned core, std::uint64_t addr,
+                                           std::uint64_t size) {
+            assert(core == older_replayed % 4 &&
+                   addr == 0x100000 + std::uint64_t(older_replayed) * 4096 &&
+                   size == 8);
+            ++older_replayed;
+        }) == Queue::MaxOutstandingWrites);
+    });
+    assert(resumed && pressure_wakes == 1 &&
+           older_replayed == Queue::MaxOutstandingWrites &&
+           resumed->sequence == Queue::MaxOutstandingWrites + 1);
+    assert(ordered_pressure.Publish(*resumed));
+    assert(ordered_pressure.Drain([&](unsigned core, std::uint64_t addr,
+                                      std::uint64_t size) {
+        assert(core == 3 && addr == 0x9000000 && size == 8);
+    }) == 1);
+
+    // Saturation while a previous store is still unpublished. The first
+    // wake cannot replay that head; a later PublishAndWake must unblock the
+    // waiting ordered producer without an unsafe synchronous fallback.
+    Queue blocked_pressure;
+    const auto held = blocked_pressure.Reserve(0, 0x500000, 8);
+    assert(held);
+    for (Queue::Sequence i = 1; i < Queue::MaxOutstandingWrites; ++i)
+        assert(blocked_pressure.EnqueueTracked(unsigned(i % 4),
+               0x600000 + i * 4096, 8));
+    std::atomic<bool> pressure_started{false};
+    std::atomic<bool> pressure_finished{false};
+    std::atomic<bool> release_head{false};
+    std::thread blocked_producer([&] {
+        pressure_started.store(true, std::memory_order_release);
+        const auto ticket = blocked_pressure.ReserveOrdered(1, 0xA000000, 8, [&] {
+            // A synchronous GPU owner sees no published prefix yet.
+            blocked_pressure.Drain([](unsigned,std::uint64_t,std::uint64_t) {
+                assert(false);
+            });
+        });
+        assert(ticket);
+        assert(ticket->sequence == Queue::MaxOutstandingWrites + 1);
+        pressure_finished.store(true, std::memory_order_release);
+        assert(blocked_pressure.Publish(*ticket));
+    });
+    while (!pressure_started.load(std::memory_order_acquire))
+        std::this_thread::yield();
+    assert(!pressure_finished.load(std::memory_order_acquire));
+    assert(blocked_pressure.PublishAndWake(*held, [&] {
+        assert(blocked_pressure.Drain([&](unsigned,std::uint64_t,std::uint64_t) {}) ==
+               Queue::MaxOutstandingWrites);
+    }));
+    blocked_producer.join();
+    assert(pressure_finished.load(std::memory_order_acquire));
+    assert(blocked_pressure.Drain([](unsigned,std::uint64_t,std::uint64_t) {}) == 1);
+
+    // A scheduler failure must poison and wake blocked producers, not
+    // silently let them perform an out-of-order cache invalidation.
+    Queue pressure_failure;
+    for (Queue::Sequence i = 0; i < Queue::MaxOutstandingWrites; ++i)
+        assert(pressure_failure.EnqueueTracked(unsigned(i % 4),
+               0x100000 + i * 4096, 8));
+    bool pressure_threw = false;
+    try {
+        (void)pressure_failure.ReserveOrdered(0, 0xA100000, 8, [] {
+            throw std::runtime_error("GPU wake rejected");
+        });
+    } catch (const std::runtime_error&) {
+        pressure_threw = true;
+    }
+    assert(pressure_threw && pressure_failure.Failed());
+    assert(!pressure_failure.Reserve(0, 0xA200000, 8));
+
     // Coalescing does not create an unbounded accepted-sequence backlog
     // disguised as one vector entry: throttle the outstanding watermark.
     Queue coalesced_budget;

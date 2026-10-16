@@ -86,6 +86,18 @@ assert "std::optional<Ticket> EnqueueTracked" in queue
 # must both consume the budget. Rejected reservations require a safe
 # synchronous producer fallback, never a silently lost invalidation.
 assert "static constexpr Sequence MaxOutstandingWrites = 8192;" in queue
+assert "std::optional<Ticket> ReserveOrdered(" in queue
+ordered=queue.split("std::optional<Ticket> ReserveOrdered(",1)[1].split("// Host-only legacy publication",1)[0]
+for guard in ("if (auto ticket = Reserve(core, address, size)) return ticket;",
+              "if (accepted_ - completed_ < MaxOutstandingWrites) continue;",
+              "barrier = {accepted_, generation_};",
+              "++pending_wake_callbacks_;", "--pending_wake_callbacks_;",
+              "if (!WaitUntil(barrier)) return std::nullopt;",
+              "failed_ = true;"):
+    assert guard in ordered, guard
+assert ordered.index("barrier = {accepted_, generation_};") < ordered.index("request_gpu();")
+assert ordered.index("request_gpu();") < ordered.index("WaitUntil(barrier)")
+assert "deferred_cpu_write_queue.ReserveOrdered(" not in code
 assert "accepted_ - completed_ >= MaxOutstandingWrites" in queue
 # Publishing thousands of reservations out of order must not turn the FIFO
 # into a quadratic per-frame CPU hotspot. Last-sequence keys are monotone

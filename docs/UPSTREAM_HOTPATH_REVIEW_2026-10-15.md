@@ -232,3 +232,23 @@ same-region and overlap checks. A sanitizer regression reproduces a failed
 conditional write followed by a genuine overlapping write and verifies that
 exactly the latter reaches the invalidation callback. No native/runtime bridge
 is enabled, and this is not a gameplay/HUD/performance fix.
+
+## Bounded backpressure for future post-store producers (2026-10-16)
+
+The source-only queue now exposes `ReserveOrdered` for a new write arriving
+while 8,192 older writes remain unacknowledged. A plain `Reserve` rejection
+must never allow the native producer to fall through to synchronous cache
+invalidation ahead of older FIFO work. `ReserveOrdered` instead captures
+the accepted watermark, asks the GPU owner to drain OUTSIDE queue locks,
+waits through the older watermark, and retries its reservation. Scheduling
+callbacks are joined during `Close`; callback failures poison the session
+and release waiting readers/producers. An unpublished FIFO head still blocks
+later replay until `PublishAndWake` or `CancelAndWake` resolves it.
+
+The host sanitizer test covers synchronous drain after saturation, a blocked
+unpublished head released by publication, and a failing scheduler callback.
+This interface is NOT used by the inactive CMake bridge, and the native
+runtime gate stays `false`. In particular, there is still no proven GPU
+command scheduler wake, read-after-write fence, atomic publication or native
+teardown integration. A caller must not invoke this helper while holding a
+cache mutex or on the GPU consumer thread. No claim of FC27 improvement.

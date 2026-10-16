@@ -58,6 +58,63 @@ public:
         return EnqueueImpl(core, address, size, false);
     }
 
+    // Backpressure for a prospective post-store producer. A rejected Reserve
+    // MUST NOT fall back to a synchronous write ahead of older FIFO entries.
+    // Request GPU-owner replay outside queue locks, wait through the exact
+    // older watermark, then try reserving again. Never call from the GPU
+    // consumer or while holding a GPU-cache mutex. Producers must be joined
+    // before title destruction; the native integration remains disabled.
+    template<class RequestGpu>
+    std::optional<Ticket> ReserveOrdered(unsigned core, std::uint64_t address,
+                                         std::uint64_t size, RequestGpu&& request_gpu) {
+        if (core >= Cores || size == 0 ||
+            size > std::numeric_limits<std::uint64_t>::max() - address)
+            return std::nullopt;
+        for (;;) {
+            if (auto ticket = Reserve(core, address, size)) return ticket;
+            Ticket barrier;
+            {
+                std::lock_guard lock(mutex_);
+                if (closed_ || failed_ ||
+                    accepted_ == std::numeric_limits<Sequence>::max())
+                    return std::nullopt;
+                // The queue drained after Reserve failed; retry, not fallback.
+                if (accepted_ - completed_ < MaxOutstandingWrites) continue;
+                barrier = {accepted_, generation_};
+                // Join scheduling callbacks at Close, just as PublishAndWake.
+                ++pending_wake_callbacks_;
+            }
+            if (active_consumer_ == this || active_wake_callback_ == this)
+                std::terminate();
+            struct RestoreWake {
+                const Queue*& slot;
+                const Queue* previous;
+                ~RestoreWake() { slot = previous; }
+            } restore{active_wake_callback_, active_wake_callback_};
+            active_wake_callback_ = this;
+            try {
+                request_gpu();
+            } catch (...) {
+                {
+                    std::lock_guard lock(mutex_);
+                    failed_ = true;
+                    --pending_wake_callbacks_;
+                }
+                wake_cv_.notify_all();
+                completed_cv_.notify_all();
+                throw;
+            }
+            {
+                std::lock_guard lock(mutex_);
+                --pending_wake_callbacks_;
+            }
+            wake_cv_.notify_all();
+            // The callback may be asynchronous. WaitUntil also wakes on
+            // title close/failure; no younger guest write may overtake barrier.
+            if (!WaitUntil(barrier)) return std::nullopt;
+        }
+    }
+
     // Host-only legacy publication without GPU wakeup. This is NOT sufficient
     // for a native CPU reader to await the replayed write.
     bool Publish(Ticket ticket) {
