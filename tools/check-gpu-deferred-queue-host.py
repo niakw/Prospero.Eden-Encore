@@ -992,7 +992,6 @@ int main() {
     std::atomic<bool> pressure_started{false};
     std::atomic<bool> pressure_initial_drain{false};
     std::atomic<bool> pressure_finished{false};
-    std::atomic<bool> release_head{false};
     std::thread blocked_producer([&] {
         pressure_started.store(true, std::memory_order_release);
         const auto ticket = blocked_pressure.ReserveOrdered(1, 0xA000000, 8, [&] {
