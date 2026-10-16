@@ -1148,9 +1148,15 @@ if(EDEN_DEV_PROFILE)
     list(REMOVE_ITEM core_sources "hle/kernel/svc/svc_ipc.cpp")
     list(APPEND core_sources "${PORT_BUILD_DIR}/svc_ipc.cpp")
 endif()
+# Versioned memory span bounds, shared by optional A32 and native core sources.
+set(EDEN_CORE_MEMORY_SOURCE
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/memory.cpp")
+if(NOT EXISTS "${EDEN_CORE_MEMORY_SOURCE}")
+    message(FATAL_ERROR "Missing maintained guest memory source")
+endif()
 if(EDEN_A32_FASTMEM)
     # The window spans 4 GiB: only 32-bit applications get it as their fastmem arena.
-    file(READ "${PROJECT_SOURCE_DIR}/src/core/memory.cpp" arena_source)
+    file(READ "${EDEN_CORE_MEMORY_SOURCE}" arena_source)
     set(arena_old "        if (process.IsApplication() && Settings::IsFastmemEnabled()) {")
     string(FIND "${arena_source}" "${arena_old}" arena_at)
     if(arena_at LESS 0)
@@ -1204,7 +1210,7 @@ if(PS5_NATIVE)
     if(EDEN_A32_FASTMEM)
         set(eden_cpu_memory_tu "${PORT_BUILD_DIR}/memory.cpp")
     else()
-        set(eden_cpu_memory_tu "${PROJECT_SOURCE_DIR}/src/core/memory.cpp")
+        set(eden_cpu_memory_tu "${EDEN_CORE_MEMORY_SOURCE}")
     endif()
     # The native console exhibited 38,472 unmapped memory error lines within
     # 1.1 seconds shortly before FC27's halftime crash. Preserve the first
