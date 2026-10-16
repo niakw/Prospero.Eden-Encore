@@ -173,7 +173,7 @@ DrawParams MakeDrawParams(const Tegra::Engines::Maxwell3D::DrawManager::State& d
         params.base_vertex = 0;
         params.is_indexed = true;
     } else if (draw_state.topology == Maxwell::PrimitiveTopology::QuadStrip) {
-        params.num_vertices = (params.num_vertices - 2) / 2 * 6;
+        params.num_vertices = params.num_vertices >= 2 ? (params.num_vertices - 2) / 2 * 6 : 0;
         params.base_vertex = 0;
         params.is_indexed = true;
     }
