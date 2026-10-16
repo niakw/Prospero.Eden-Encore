@@ -239,6 +239,10 @@ class Services
         return home();
     }
     virtual std::string clock() = 0;   // "14:05"
+    // Optional read-only image for the console's foreground user.
+    // Never queries an online account and never creates/modifies profile data.
+    // Native provider may return an absolute path; host previews use the fallback.
+    virtual std::string profile_avatar() { return {}; }
     // The players (bit 0 is player 1) whose controller is connected right now.
     virtual unsigned controllers()
     {
