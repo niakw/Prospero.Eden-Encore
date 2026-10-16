@@ -62,7 +62,8 @@ std::optional<StoreOutcome> CommitConditionalAfterRead(
     const auto ticket = queue.ReserveOrdered(core, address, size, request_gpu);
     if (!ticket) return std::nullopt;
     // Never wait for our own unpublished ticket. The read callback must
-    // complete this predecessor watermark plus the GPU-to-CPU device fence.
+    // check queue.WaitForPredecessors(predecessors), then complete the actual
+    // GPU-to-CPU device fence. Ordinary WaitUntil(0) rejects a first CAS.
     const Queue::Ticket predecessors{ticket->sequence - 1, ticket->generation};
     ReadBarrierResult read_status = ReadBarrierResult::Failed;
     try {

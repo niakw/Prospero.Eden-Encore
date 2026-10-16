@@ -397,3 +397,17 @@ A correctly completed read followed by a CAS mismatch STILL cancels normally
 and does not poison the title. Host sanitizer regressions cover both fatal
 read outcomes, lack of subsequent writes, failed waiter results, and a
 quiescent close/reset. This changes only the inactive model, not FC27.
+
+## Zero predecessor for the first conditional store (2026-10-16)
+
+A first CAS reservation produces a generation-tagged predecessor watermark
+of sequence zero. Ordinary `Queue::WaitUntil` correctly rejects such a ticket,
+but using it as the conditional-read barrier would incorrectly reject a valid
+first CAS. The host-only `Queue::WaitForPredecessors` now accepts a zero
+predecessor ONLY when it belongs to the current generation with a live
+reservation and a healthy, open session. It uses ordinary `WaitUntil` for
+nonzero predecessors and preserves close/failure wakeup behavior. Host
+sanitizer tests cover the first CAS, prior replay, stale/foreign generation,
+fatal session, and reset. The caller remains responsible for scheduling GPU
+replay and completing the actual GPU-to-CPU device transfer. The native
+bridge stays off; no gameplay behavior changes.
