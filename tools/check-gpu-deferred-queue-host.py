@@ -990,22 +990,25 @@ int main() {
         assert(blocked_pressure.EnqueueTracked(unsigned(i % 4),
                0x600000 + i * 4096, 8));
     std::atomic<bool> pressure_started{false};
+    std::atomic<bool> pressure_initial_drain{false};
     std::atomic<bool> pressure_finished{false};
     std::atomic<bool> release_head{false};
     std::thread blocked_producer([&] {
         pressure_started.store(true, std::memory_order_release);
         const auto ticket = blocked_pressure.ReserveOrdered(1, 0xA000000, 8, [&] {
             // A synchronous GPU owner sees no published prefix yet.
-            blocked_pressure.Drain([](unsigned,std::uint64_t,std::uint64_t) {
+            assert(blocked_pressure.Drain([](unsigned,std::uint64_t,std::uint64_t) {
                 assert(false);
-            });
+            }) == 0);
+            pressure_initial_drain.store(true, std::memory_order_release);
         });
         assert(ticket);
         assert(ticket->sequence == Queue::MaxOutstandingWrites + 1);
         pressure_finished.store(true, std::memory_order_release);
         assert(blocked_pressure.Publish(*ticket));
     });
-    while (!pressure_started.load(std::memory_order_acquire))
+    while (!pressure_started.load(std::memory_order_acquire) ||
+           !pressure_initial_drain.load(std::memory_order_acquire))
         std::this_thread::yield();
     assert(!pressure_finished.load(std::memory_order_acquire));
     assert(blocked_pressure.PublishAndWake(*held, [&] {
