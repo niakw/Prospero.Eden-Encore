@@ -61,5 +61,8 @@ assert cmake.count(gpu_enqueue_fence) == 1
 dirty_mask_split='string(REPLACE "${eden_dirty_raw}" [=['
 assert cmake.count(dirty_mask_split) == 1
 assert 'Pinned native GPUDirty Collect call changed' in cmake
-assert cmake.count("string(REPLACE") - cmake.count(gpu_producer_wait) - cmake.count(gpu_enqueue_fence) - cmake.count(dirty_mask_split) <= 227
+native_read_slot='string(REPLACE "${eden_read_original}" "${eden_read_native}"'
+assert cmake.count(native_read_slot) == 1
+assert "Pinned native guest CPU read scratch/slot contract changed" in cmake
+assert cmake.count("string(REPLACE") - cmake.count(gpu_producer_wait) - cmake.count(gpu_enqueue_fence) - cmake.count(dirty_mask_split) - cmake.count(native_read_slot) <= 227
 print("MAINTAINED_AUDIO_UNITS_PARITY_PASS sink=1 voice=1")
