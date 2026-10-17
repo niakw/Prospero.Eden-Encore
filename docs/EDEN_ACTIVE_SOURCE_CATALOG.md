@@ -8,9 +8,9 @@ présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
 - **185 fichiers** de code et d'en-têtes enregistrés.
-- **45 fichiers** possèdent une correspondance de chemin *exacte*
+- **52 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
-- **140 fichiers** n'ont pas encore de ligne de graphe correspondant
+- **133 fichiers** n'ont pas encore de ligne de graphe correspondant
   exactement à leur chemin. Cela **ne prouve pas** qu'ils n'ont jamais été
   examinés, ni qu'ils sont effectivement compilés.
 - Le manifeste des backports verrouille **83 fichiers livrés**, dont
@@ -182,14 +182,14 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-vulkan/include/video_core/vulkan_common/vulkan.h` | `maintained-override` | — |
 | `eden-vulkan/include/video_core/vulkan_common/vulkan_wrapper.h` | `maintained-override` | — |
 | `eden-vulkan/vk_buffer_cache_cost.cpp` | `maintained-override` | R03 |
-| `eden-vulkan/vk_compute_pass_cost.cpp` | `maintained-override` | — |
-| `eden-vulkan/vk_compute_pipeline_cost.cpp` | `maintained-override` | — |
-| `eden-vulkan/vk_descriptor_buffer_cost.cpp` | `maintained-override` | — |
-| `eden-vulkan/vk_fence_manager_cost.cpp` | `maintained-override` | — |
-| `eden-vulkan/vk_graphics_pipeline_cost.cpp` | `maintained-override` | — |
-| `eden-vulkan/vk_multi_range_buffer_cost.cpp` | `maintained-override` | — |
+| `eden-vulkan/vk_compute_pass_cost.cpp` | `maintained-override` | V22 |
+| `eden-vulkan/vk_compute_pipeline_cost.cpp` | `maintained-override` | V18 |
+| `eden-vulkan/vk_descriptor_buffer_cost.cpp` | `maintained-override` | V17 |
+| `eden-vulkan/vk_fence_manager_cost.cpp` | `maintained-override` | V16 |
+| `eden-vulkan/vk_graphics_pipeline_cost.cpp` | `maintained-override` | V21 |
+| `eden-vulkan/vk_multi_range_buffer_cost.cpp` | `maintained-override` | V20 |
 | `eden-vulkan/vk_pipeline_cache_cost.cpp` | `maintained-override` | V07 |
-| `eden-vulkan/vk_texture_cache_cost.cpp` | `maintained-override` | — |
+| `eden-vulkan/vk_texture_cache_cost.cpp` | `maintained-override` | V19 |
 | `eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h` | `maintained-override` | — |
 | `eden-vulkan/vulkan_blit_screen.cpp` | `maintained-override` | — |
 | `eden-vulkan/vulkan_descriptor_buffer.cpp` | `maintained-override` | — |
