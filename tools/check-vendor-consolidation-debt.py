@@ -36,12 +36,8 @@ counts = {name: c.count(name) for name in baseline}
 # two exact-method rewrites. Do not relax the historical ceilings for any
 # other vendor-derived source. Each exception must occur exactly once.
 approved_sync = {
-    "write_derived(": (
-        'write_derived("${eden_gpu_span_tu}" "${eden_gpu_span_src}")',
-    ),
     "file(READ": (
         'file(READ "${EDEN_PORT_DIR}/gpu_sync_failure_wait.inc" gpu_sync_wait_replacement)',
-        'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/memory_manager.cpp" eden_gpu_span_src)',
     ),
     "string(REPLACE": (
         'string(REPLACE "${gpu_sync_wait_original}" "${gpu_sync_wait_replacement}"',
@@ -59,7 +55,6 @@ approved_sync = {
         'string(REPLACE "${eden_read_original}" "${eden_read_native}"',
         # End-exclusive guest spans must not probe a one-past-last page.
         'string(REPLACE "${eden_span_original}" [=[',
-        'string(REPLACE "${eden_gpu_span_original}" [=[',
         # Two exact, drift-checked native command queue slot lifecycle rewrites.
         # Count both separately; leave the historical <=225 ceiling unchanged.
         'string(REPLACE "${queue_slot_construct}" "__ENCORE_GPU_QUEUE_SLOT__"',
@@ -72,14 +67,16 @@ assert c.count("Pinned native GPUDirty Collect call changed") == 1
 assert c.count("gpu_dirty_managers[core].Collect(subaddress, span);") == 1
 assert c.count("Pinned native guest CPU read scratch/slot contract changed") == 1
 assert c.count("Pinned native guest span page-boundary contract changed") == 1
-assert c.count("Pinned native GPU guest span range gate changed") == 1
+assert 'write_derived("${eden_gpu_span_tu}"' not in c
+assert 'native_gpu_granular_bounds.cmake' not in c
+assert not (root / "headless/native_gpu_granular_bounds.cmake").exists()
 assert c.count("Pinned GPU read callback lifetime changed") == 1
 assert c.count('RequestSyncOperation([this, raster_area]() {') == 1
 assert (root / "tools/check-native-gpu-read-capture-host.py").is_file()
 assert "python3 -B tools/check-native-gpu-read-capture-host.py" in (
     root / ".github/workflows/encore-core-preflight.yml").read_text()
 assert c.count('list(REMOVE_ITEM video_sources "memory_manager.cpp")') == 1
-assert c.count('list(APPEND video_sources "${eden_gpu_span_tu}")') == 1
+assert c.count('list(APPEND video_sources "${EDEN_NATIVE_GPU_MEMORY_MANAGER}")') == 1
 assert (root / "tools/check-native-gpu-span-range-host.py").is_file()
 assert "python3 -B tools/check-native-gpu-span-range-host.py" in (
     root / ".github/workflows/encore-core-preflight.yml").read_text()
@@ -786,6 +783,28 @@ for filename, expected_git_blob in vulkan_oracle_sources.items():
 assert (active / "eden-vulkan/vulkan_renderer.cpp").is_file()
 print("ENCORE_VULKAN_ORACLE_SCOPE_PASS", len(vulkan_oracle_sources))
 
+
+# GPU memory manager: exact reconstruction of the retired native CMake source.
+# This is an offline witness, never an alternate generated production file.
+gpu_expected = (root / "vendor/sources/eden/src/video_core/memory_manager.cpp").read_text()
+gpu_hunks = [
+    ("    if (!IsContinuousRange(src_addr, size)) {", "    if (size == 0 || src_addr >= address_space_size ||\n        size > address_space_size - src_addr ||\n        !IsContinuousRange(src_addr, size)) {", 2),
+    ("bool MemoryManager::IsGranularRange(GPUVAddr gpu_addr, std::size_t size) const {\n", "bool MemoryManager::IsGranularRange(GPUVAddr gpu_addr, std::size_t size) const {\n    if (gpu_addr >= address_space_size || size == 0 || size > address_space_size - gpu_addr) {\n        return false;\n    }\n", 1),
+    ("            const std::size_t page{(page_index & big_page_mask) + size};\n            return page <= big_page_size;", "            return size <= big_page_size - (gpu_addr & big_page_mask);", 1),
+    ("const std::size_t page{(gpu_addr & Core::DEVICE_PAGEMASK) + size};\n", "", 2),
+    ("return page <= Core::DEVICE_PAGESIZE;", "return size <= Core::DEVICE_PAGESIZE - (gpu_addr & Core::DEVICE_PAGEMASK);", 2),
+]
+for index, (before, after, expected_count) in enumerate(gpu_hunks):
+    assert gpu_expected.count(before) == expected_count, ("GPU pinned anchor drift", index)
+    gpu_expected = gpu_expected.replace(before, after)
+gpu_maintained = active / "eden-core/src/video_core/memory_manager.cpp"
+assert gpu_maintained.is_file() and gpu_maintained.read_text() == gpu_expected, (
+    "maintained native GPU memory source differs from retired CMake result")
+assert 'list(APPEND video_sources "${EDEN_NATIVE_GPU_MEMORY_MANAGER}")' in c
+assert c.count('list(REMOVE_ITEM video_sources "memory_manager.cpp")') == 1
+assert 'write_derived("${eden_gpu_span_tu}"' not in c
+print("MAINTAINED_GPU_MEMORY_MANAGER_PARITY_PASS patches=5 sites=8 selection=video_core")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -867,7 +886,7 @@ assert len(module_current) == 21, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 68
+assert len(recorded) + len(module_recorded) == 67
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
@@ -881,7 +900,6 @@ indirect_recorded = re.findall(
     inventory.split(indirect_begin)[1].split(indirect_end)[0], re.M)
 indirect_expected = (
     ("headless/checked-fastmem.cmake", ("string(REPLACE", "memory_source", "memory_emitter")),
-    ("headless/native_gpu_granular_bounds.cmake", ("string(REPLACE", "eden_gpu_span_src")),
     ("headless/native_guest_range_overflow.cmake", ("string(REPLACE", "eden_cpu_memory")),
     ("headless/native_jit_memory_read_guard.cmake", ("string(REPLACE", "wrapper")),
     ("headless/physical_core_interrupt_atomic.cmake", ("string(REPLACE", "physical_core_source")),
@@ -891,7 +909,7 @@ assert indirect_recorded == [entry[0] for entry in indirect_expected], (
 for module, required in indirect_expected:
     content = (root / module).read_text()
     assert all(token in content for token in required), ("indirect override changed", module)
-assert len(indirect_recorded) == 5
+assert len(indirect_recorded) == 4
 print(f"VENDOR_INDIRECT_OVERRIDE_INVENTORY_PASS modules={len(indirect_recorded)} (not generator sites)")
 
 # Third independent source-change mechanism: pinned backport patch replays.
