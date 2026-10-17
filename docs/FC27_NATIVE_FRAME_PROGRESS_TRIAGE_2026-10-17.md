@@ -68,6 +68,42 @@ not prove a hardware performance ceiling.
    from final swap/presentation; frame stats above prove both normal
    and late intervals, not the cause of a persistent HUD stall.
 
+## Scoped follow-up: per-present interval counter witness
+
+`headless/present_interval_witness.h` is a native development-only,
+opt-in observer. With detailed logging **and** `vulkan_frame_probe`
+enabled, `GraphicsWindow::OnFrameDisplayed` reads existing 24
+cumulative CPU/JIT/GPU counters once per displayed interval. It retains
+only the widest **>=100 ms** interval in each five-second window.
+`EDEN_PRESENT_INTERVAL_WITNESS` records the corresponding counter
+deltas and prints `scope=between_presents`. No per-frame output,
+guest-memory dereference, locks, allocations, clock probes inside the
+witness, GPU reorder, or change to normal non-profile builds.
+
+These are *overlapping worker counter deltas between two presentation
+callbacks*, **not** a trace of the blocking work owned by one guest
+frame. A high JIT delta and a delayed presentation remain correlation,
+not proof that the JIT was holding the frame. An interval with no valid
+monotonic counter pair produces no witness line.
+
+A separate instrumentation gap matters: `jit_dups=on` only enables
+`eden_jit_phases` duplicate accounting. The standard A64 compiler's
+native development `EdenCompileTimer` calls `eden_jit_compile`
+for aggregate time but, with default `EDEN_SHARED_JIT=OFF` and
+`EDEN_JIT_COMPILE_BATCH=OFF`, does **not** wire the duplicate hook.
+The `EDEN_PERF_JITPATH` hook also belongs to the shared JIT, so its
+zero `flush_all`/`flush_locations` values in that log are **not** a
+measurement of invalidations in standard per-core Dynarmic. The native
+`EDEN_FRAME_JIT_CORE.evacuations` counter separately covers automatic
+whole-cache evacuations, **not** every per-location invalidation. Therefore
+neither zero-valued duplicate/path counters nor zero evacuations prove that
+the default JIT never recompiles. Do not enable shared/batch JIT merely
+to repair these diagnostics.
+
+**Acceptance:** host evidence proves only counter pairing and opt-in
+gating. Until a qualified native run is available, the cause of the
+gameplay freeze, per-frame stalls, and physical GPU ownership is OPEN.
+
 No native renderer/guest semantics are changed by this report.
 The native post-store bridge #187 remains disabled. No console
 build/release/game test is authorized by these observations.

@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "performance.h"
+#ifdef EDEN_DEV_PROFILE
+#include "present_interval_witness.h"
+#endif
 #include "log_pipe.h"
 #include "assets_dir.h"
 #include <glad/glad.h>
@@ -54,8 +57,9 @@ HudClock vulkan_hud_clock;
 double vulkan_hud_stats_time{}, vulkan_hud_speed{};
 #endif
 HudSnapshot vulkan_hud;
-// Never sample clocks or traverse HLE data on each present. These cumulative
-// counters need just 12 relaxed loads plus three JIT totals every five seconds.
+// No new clocks or HLE traversal on present. Ordinary five-second reports
+// read these cumulative counters once; only the explicit native DEV interval
+// witness samples them on each presentation callback (relaxed atomic loads).
 // Their deltas are concurrent worker time, NOT additive wall-clock frame time.
 // R404 captures the four guest JIT cores from the SAME report-boundary reads,
 // avoiding false attribution of parallel compilation to one paused thread.
@@ -84,6 +88,11 @@ FramePressureNumbers CaptureFramePressure() noexcept {
     result[11] = jit_ns;
     return result;
 }
+#ifdef EDEN_DEV_PROFILE
+// Diagnostic-only: the widest present gap in each reporting window, not a
+// guest frame or GPU ownership profile.
+FrameDiagnostics::PresentIntervalWitness<24> vulkan_interval_witness;
+#endif
 bool vulkan_loading{};
 double vulkan_loading_start{-1};
 unsigned vulkan_loading_frames{};
@@ -680,10 +689,34 @@ void GraphicsWindow::OnFrameDisplayed() {
         if (frame_sample_start < 0) {
             frame_sample_start = frame_sample_last = now;
             frame_pressure_previous = CaptureFramePressure();
+#ifdef EDEN_DEV_PROFILE
+            // A new game/window must not inherit the previous title's peak.
+            vulkan_interval_witness.Reset();
+            const bool capture_interval = Eden::NativeLogs::Detailed() &&
+                Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed) &&
+                Experimental::vulkan_frame_probe.load(std::memory_order_relaxed);
+            if (capture_interval)
+                vulkan_interval_witness.Observe(CaptureFramePressure(), 0.0, frame_total);
+            else
+                vulkan_interval_witness.Reset();
+#endif
         } else {
             ++frame_sample_count;
             const double present_interval = now - frame_sample_last;
             frame_sample_worst = std::max(frame_sample_worst, present_interval);
+#ifdef EDEN_DEV_PROFILE
+            // One 24-counter relaxed snapshot per displayed interval only when
+            // BOTH diagnostic detail and the optional frame probe are enabled.
+            // The delayed callback cannot attribute this work to one guest frame.
+            const bool capture_interval = Eden::NativeLogs::Detailed() &&
+                Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed) &&
+                Experimental::vulkan_frame_probe.load(std::memory_order_relaxed);
+            if (capture_interval)
+                vulkan_interval_witness.Observe(CaptureFramePressure(),
+                                                present_interval * 1000.0, frame_total);
+            else
+                vulkan_interval_witness.Reset();
+#endif
             // User-observed FC27 dribble drops: capture how often a nominal 30 FPS
             // frame exceeds 38/50/100 ms without enabling verbose GPU logs.
             // This is a presentation signal, NOT proof that the guest game advances.
@@ -782,6 +815,23 @@ void GraphicsWindow::OnFrameDisplayed() {
                 } else {
                     std::printf("EDEN_FRAME_PRESSURE frame=%u counters_reset=1\n", frame_total);
                 }
+#ifdef EDEN_DEV_PROFILE
+                // Only the largest >=100-ms observed presentation interval of
+                // this window. Worker counters overlap and do NOT identify a
+                // frame's root cause; avoid per-frame logs or new locks.
+                if (vulkan_interval_witness.captured) {
+                    const auto& d = vulkan_interval_witness.peak_delta;
+                    std::printf("EDEN_PRESENT_INTERVAL_WITNESS frame=%u interval_ms=%.3f "
+                                "jit_ns=%llu jit_calls=%llu jit0_ns=%llu jit1_ns=%llu jit2_ns=%llu "
+                                "evacuations=%llu cache_wait_ns=%llu gpu_fence_ns=%llu "
+                                "gpu_dispatch_ns=%llu guest_sync_ns=%llu scope=between_presents\n",
+                        vulkan_interval_witness.peak_frame, vulkan_interval_witness.peak_ms,
+                        d[11], d[16] + d[17] + d[18] + d[19],
+                        d[12], d[13], d[14],
+                        d[20] + d[21] + d[22] + d[23],
+                        d[10], d[2], d[1], d[6]);
+                }
+#endif
                 frame_pressure_previous = pressure_now;
                 Eden::Performance::ReportVulkan();
 #ifdef EDEN_DEV_PROFILE
@@ -803,6 +853,9 @@ void GraphicsWindow::OnFrameDisplayed() {
                     interval_hist = {};
 #endif
                 }
+#ifdef EDEN_DEV_PROFILE
+                vulkan_interval_witness.NextWindow();
+#endif
                 frame_sample_start = now;
                 frame_sample_count = 0;
                 frame_sample_worst = 0;
