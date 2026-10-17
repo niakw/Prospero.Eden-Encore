@@ -24,18 +24,18 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 98 | 81 | 195 |
+| Graphe connu | 98 | 81 | 196 |
 | HOST — preuve ciblée hôte | 28 | 25 | 56 |
-| SOURCE — lecture effectuée, preuve insuffisante | 49 | 42 | 105 |
+| SOURCE — lecture effectuée, preuve insuffisante | 49 | 42 | 106 |
 | OPEN — question technique non résolue | 15 | 15 | 27 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **64** | **56** | **132** |
+| **Encore à qualifier (SOURCE + OPEN)** | **64** | **56** | **133** |
 | Dont priorité P0 (SOURCE + OPEN) | 29 | 24 | 70 |
 
 Le **noyau restant** compte donc 64 critères répartis sur
-56 fichiers et 132 mentions fonction/contrat :
+56 fichiers et 133 mentions fonction/contrat :
 15 OPEN et 49 SOURCE.
-Cela **ne signifie pas 132 fonctions jamais lues** :
+Cela **ne signifie pas 133 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 Le hors-inventaire (HID, IPC, host-syncpoints, variantes vendor...) n'est
 pas chiffrable honnêtement sans un relevé exhaustif supplémentaire.
@@ -308,10 +308,10 @@ function/contract tokens are checked by CI for existence only; the
 | H26 | P0 | H25,H03 | vendor/sources/eden/src/core/hle/kernel/k_server_session.cpp | KServerSession::OnRequest; KServerSession::IsSignaled | SOURCE | docs/EDEN_CORE_AUDIT_DEPENDENCIES.md | New synchronous guest wait boundary: enqueue, NotifyAvailable and BeginWait under scheduler lock; measure actual wake and resumed guest PC separately | 🟡 Source étudiée |
 | H27 | P0 | H26,H23 | vendor/sources/eden/src/core/hle/kernel/k_server_session.cpp | KServerSession::ReceiveRequest; KServerSession::SendReply; KServerSession::CleanupRequests | SOURCE | docs/EDEN_CORE_AUDIT_DEPENDENCIES.md | New reply-to-EndWait/cancellation boundary: sync returns through client-thread EndWait; asynchronous completion signals event instead; shutdown edge cases unqualified | 🟡 Source étudiée |
 | H28 | P1 | H22,H27 | vendor/encore-active/eden-core/src/core/hle/service/service.cpp | ServiceFrameworkBase::HandleSyncRequest; ServiceFrameworkBase::LockService | SOURCE | docs/EDEN_CORE_AUDIT_DEPENDENCIES.md | New service-lock lifetime and outgoing IPC serialization boundary; handler timing does not distinguish lock contention from guest scheduler resume | 🟡 Source étudiée |
-| F05 | P1 | B01 | vendor/encore-active/eden-core/src/common/thread.cpp | Common::SetCurrentThreadName; Eden::Performance::RegisterWorker | SOURCE | tools/check-vendor-consolidation-debt.py | Native-only worker-name registration moved from generated CMake source to maintained C++; exact source parity and selected common target require host qualification, not evidence of worker scheduling | 🟡 Source étudiée |
-| F06 | P1 | F05 | vendor/encore-active/eden-core/src/common/fs/fs.cpp | Common::FS::RemoveDirContentsRecursively; Common::FS::IterateDirEntries | SOURCE | tools/check-vendor-consolidation-debt.py | Native directory iterator override (two call sites) now maintained C++ with a source parity gate; directory enumeration outcome on console still unqualified | 🟡 Source étudiée |
-| F07 | P1 | B01 | vendor/sources/eden/src/common/cpu_features.cpp | Common::X64::g_cpu_caps; X64::EstimateRDTSCFrequency | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Still CMake-generated on native builds: CPUID 0x15 fallback moves outside the leaf gate and avoids zero/too-low invariant-TSC frequency. Next source-migration candidate, validate exact substitution and clock results before moving | 🟡 Source étudiée |
-| F08 | P1 | F06 | vendor/sources/eden/src/common/fs/path_util.cpp | Common::FS::PathManagerImpl::Reinitialize; GenerateLegacyPath | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Still CMake-generated: native writable user/cache/config roots and legacy-folder path patch. Startup-path side effects need source parity and actual root checks before moving | 🟡 Source étudiée |
+| F05 | P1 | B01 | vendor/encore-active/eden-core/src/common/thread.cpp | SetCurrentThreadName; ::Eden::Performance::RegisterWorker | SOURCE | tools/check-vendor-consolidation-debt.py | Native-only worker-name registration moved from generated CMake source to maintained C++; exact source parity and selected common target require host qualification, not evidence of worker scheduling | 🟡 Source étudiée |
+| F06 | P1 | F05 | vendor/encore-active/eden-core/src/common/fs/fs.cpp | RemoveDirContentsRecursively; IterateDirEntries | SOURCE | tools/check-vendor-consolidation-debt.py | Native directory iterator override (two call sites) now maintained C++ with a source parity gate; directory enumeration outcome on console still unqualified | 🟡 Source étudiée |
+| F07 | P1 | B01 | vendor/sources/eden/src/common/cpu_features.cpp | g_cpu_caps; X64::EstimateRDTSCFrequency | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Still CMake-generated on native builds: CPUID 0x15 fallback moves outside the leaf gate and avoids zero/too-low invariant-TSC frequency. Next source-migration candidate, validate exact substitution and clock results before moving | 🟡 Source étudiée |
+| F08 | P1 | F06 | vendor/sources/eden/src/common/fs/path_util.cpp | PathManagerImpl; Reinitialize; GenerateLegacyPath | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Still CMake-generated: native writable user/cache/config roots and legacy-folder path patch. Startup-path side effects need source parity and actual root checks before moving | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
