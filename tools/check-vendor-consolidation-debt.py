@@ -645,6 +645,10 @@ assert 'file(READ "${PROJECT_SOURCE_DIR}/src/hid_core/resources/npad/npad.cpp" n
 print("MAINTAINED_NPAD_SOURCE_PARITY_PASS guards=2 selection=hid_core")
 
 
+# Keep the generator inventory synchronized with every future source migration.
+# It catalogs CMake invocations, not physical output files from variable loops.
+import re
+inventory = (root / "docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md").read_text()
 # Do not hide active non-CMake source transforms behind the CMake-only
 # generator counter. The matching inventory names real build entrypoints,
 # historical replayers and independent source-equivalence oracles.
@@ -672,10 +676,6 @@ assert "if not oracle:" in radv_legacy and "Legacy RADV source rewrite disabled"
 assert 'patch-radv-wsi.py --check' in staging
 print("VENDOR_SCRIPTED_TRANSFORM_ENTRYPOINTS_PASS staged=5 oracles=2 profile_generators=2")
 
-# Keep the generator inventory synchronized with every future source migration.
-# It catalogs CMake invocations, not physical output files from variable loops.
-import re
-inventory = (root / "docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md").read_text()
 begin = "<!-- OVERRIDE_GENERATORS_START -->"
 end = "<!-- OVERRIDE_GENERATORS_END -->"
 assert inventory.count(begin) == inventory.count(end) == 1
