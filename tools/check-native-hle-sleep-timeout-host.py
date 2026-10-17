@@ -12,14 +12,16 @@ root = Path(__file__).resolve().parents[1]
 pinned = (root / "vendor/sources/eden/src/core/hle/kernel/svc/svc_thread.cpp").read_text()
 native = (root / "vendor/encore-active/eden-threading/src/core/hle/kernel/svc/svc_thread.cpp").read_text()
 cmake = (root / "headless/CMakeLists.txt").read_text()
+module = (root / "vendor/encore-active/eden-threading/native-hle-overrides.cmake").read_text()
 workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
-assert 'list(APPEND eden_svc_sleep_sources ' in cmake and 'eden_checked_sleep' in cmake
 assert "python3 -B tools/check-native-hle-sleep-timeout-host.py" in workflow
 yield_contract = (root / "vendor/sources/eden/src/core/hle/kernel/svc_types.h").read_text()
 yield_enum = yield_contract.split("enum class YieldType : s64 {", 1)[1].split("};", 1)[0]
 assert "WithoutCoreMigration = 0," in yield_enum
 assert "WithCoreMigration = -1," in yield_enum
 assert "ToAnyThread = -2," in yield_enum
+assert "native-hle-overrides.cmake" in cmake
+assert "svc_thread.cpp" in module
 compiler = shutil.which("g++") or shutil.which("clang++")
 assert compiler
 
