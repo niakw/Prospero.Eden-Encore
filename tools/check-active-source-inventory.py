@@ -161,6 +161,17 @@ print("ENCORE_ACTIVE_CATALOG_SUMMARY_PASS",
       f"files={len(physical)}", f"covered={linked_count}",
       f"cmake_primary_generators={root_generator_count}")
 
+# Every versioned Vulkan source and ABI header selected through the fork's
+# configure-time copy has an exact source ownership record. This guards
+# coverage, not GPU forward progress or successful native device tests.
+vulkan_family = [p for p in physical if p.startswith("eden-vulkan/")]
+assert len(vulkan_family) == 40, ("Vulkan maintained footprint changed", len(vulkan_family))
+assert all(p in graph for p in vulkan_family), (
+    "Vulkan maintained source lacks owner", [p for p in vulkan_family if p not in graph],
+)
+assert 'file(COPY "${EDEN_ACTIVE_VULKAN}/" DESTINATION "${PORT_BUILD_DIR}")' in vulkan_recipe
+print("ENCORE_VULKAN_WHOLE_FAMILY_OWNER_PASS", f"files={len(vulkan_family)}")
+
 assert len(physical) == len(set(physical))
 print("ENCORE_ACTIVE_SOURCE_CATALOG_PASS",
       f"files={len(physical)}",

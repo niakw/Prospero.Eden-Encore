@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 159
+**Non, this is not an exhaustive repository-wide inventory.** The 173
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,23 +24,23 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 159 | 140 | 336 |
+| Graphe connu | 173 | 154 | 367 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 105 | 96 | 233 |
+| SOURCE — lecture effectuée, preuve insuffisante | 119 | 110 | 264 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **120** | **110** | **261** |
-| Dont priorité P0 (SOURCE + OPEN) | 50 | 45 | 129 |
+| **Encore à qualifier (SOURCE + OPEN)** | **134** | **124** | **292** |
+| Dont priorité P0 (SOURCE + OPEN) | 55 | 50 | 143 |
 
-Le **noyau restant** compte donc 120 critères répartis sur
-110 fichiers et 261 mentions fonction/contrat :
-15 OPEN et 105 SOURCE.
-Cela **ne signifie pas 261 fonctions jamais lues** :
+Le **noyau restant** compte donc 134 critères répartis sur
+124 fichiers et 292 mentions fonction/contrat :
+15 OPEN et 119 SOURCE.
+Cela **ne signifie pas 292 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-187 fichiers de code/en-têtes présents, 81 avec un chemin de
-graphe exact et 106 sans correspondance exacte. Cet écart n'est
+187 fichiers de code/en-têtes présents, 95 avec un chemin de
+graphe exact et 92 sans correspondance exacte. Cet écart n'est
 **pas** le nombre de fonctions non auditées, ni une preuve de code actif.
 Le contrôle hôte vérifie la complétude des chemins et les références,
 mais pas le comportement.
@@ -352,6 +352,20 @@ function/contract tokens are checked by CI for existence only; the
 | V33 | P0 | V17 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_descriptor_buffer.h | PreflightFrameReuse; PreflightCapacity; Allocate(Scheduler& | SOURCE | headless/vulkan.cmake | Ring capacity and frame-reuse contract is shared with maintained descriptor implementation; selected ABI/header inspected, no hardware behavior proven | 🟡 Source étudiée |
 | V34 | P1 | V28 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_blit_screen.h | PrepareFrame; WaitIdle | SOURCE | headless/vulkan.cmake | Blit API synchronization and lifetime are shared with maintained present implementation; selected ABI/header inspected, no hardware behavior proven | 🟡 Source étudiée |
 | V35 | P1 | V26,V28 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/renderer_vulkan.h | CreateDevice; PresentLoading | SOURCE | headless/vulkan.cmake | Renderer Vulkan public ABI and loading presentation contract need consistent full rebuild; selected ABI/header inspected, no hardware behavior proven | 🟡 Source étudiée |
+| V36 | P1 | V35 | vendor/encore-active/eden-vulkan/include/core/frontend/emu_window.h | EmuWindow; WindowSystemType | SOURCE | headless/vulkan.cmake | Window abstraction and PS5 native WSI enum/header ABI; preserve device-facing config; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
+| V37 | P1 | V32 | vendor/encore-active/eden-vulkan/include/video_core/present.h | GetScalingFilter; GetAntiAliasingForAppletCapture | SOURCE | headless/vulkan.cmake | Per-display and applet capture scaling contracts preserve independent filters; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
+| V38 | P0 | V17,V33 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/pipeline_helper.h | WriteDescriptorBuffer; DescriptorLayoutBuilder | SOURCE | headless/vulkan.cmake | Descriptor buffer writes and layout builders must preserve null descriptors and padding; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
+| V39 | P1 | V29 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/present/window_adapt_pass.h | WindowAdaptPass; CreatePipelines | SOURCE | headless/vulkan.cmake | Present adaptation pass descriptor/pipeline header is paired with maintained Vulkan implementation; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
+| V40 | P0 | V21 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/striped_wait.h | StripedMutex; StripedCondition; SlotOf | SOURCE | headless/vulkan.cmake | Striped pipeline completion synchronization avoids per-pipeline native mutex pressure; contention and fairness still unproved; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
+| V41 | P1 | V18 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_compute_pipeline.h | DescriptorRingPreflightSize; Configure | SOURCE | headless/vulkan.cmake | Compute pipeline descriptor ring size and configure ABI contracts; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
+| V42 | P0 | V17,V21 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_update_descriptor.h | PreflightGuestDraw; PreflightLargeGuestDraw; UpdateDescriptorQueue | SOURCE | headless/vulkan.cmake | Guest-draw descriptor preflight before paired cache locks and union-byte initialization; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
+| V43 | P1 | V26 | vendor/encore-active/eden-vulkan/include/video_core/vulkan_common/vulkan.h | VK_NO_PROTOTYPES; PS5_NATIVE | SOURCE | headless/vulkan.cmake | Platform Vulkan extension/header selection avoids desktop WSI in PS5 native profile; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
+| V44 | P1 | V30 | vendor/encore-active/eden-vulkan/include/video_core/vulkan_common/vulkan_wrapper.h | InstanceDispatch; DeviceDispatch | SOURCE | headless/vulkan.cmake | Vulkan loader dispatch ABI and lifetime must match maintained wrapper implementation; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
+| V45 | P0 | V19,V20 | vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h | TextureCache<P>::SynchronizeDescriptors; TextureCache<P>::CreateImageView; TextureCache<P>::ShouldWaitAsyncFlushes | SOURCE | headless/vulkan.cmake | Native texture cache template image lifetime, download waiting and descriptor rebinding; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
+| V46 | P0 | V17 | vendor/encore-active/eden-vulkan/vulkan_descriptor_buffer.cpp | DescriptorBufferRing::TickFrame; DescriptorBufferRing::PreflightFrameReuse; DescriptorBufferRing::PreflightCapacity | SOURCE | headless/vulkan.cmake | Descriptor ring implementation shares tick/wait contract with cost variant; verify selected TU and overlap; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
+| V47 | P2 | V29 | vendor/encore-active/eden-vulkan/vulkan_hud_shaders.h | EDEN_HUD_VERT_SPV; EDEN_HUD_FRAG_SPV | SOURCE | headless/vulkan.cmake | Versioned embedded SPIR-V HUD shader arrays, not a C++ function; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
+| V48 | P1 | V26 | vendor/encore-active/eden-vulkan/vulkan_instance.cpp | CreateInstance; RemoveUnavailableLayers | SOURCE | headless/vulkan.cmake | Native Vulkan dispatch/instance initialization and layer selection; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
+| V49 | P1 | V48 | vendor/encore-active/eden-vulkan/vulkan_library.cpp | OpenLibrary | SOURCE | headless/vulkan.cmake | Native Vulkan library handoff and platform fallback; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
 | F04 | P1 | F02,F03 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_filesystem.cpp | IFileSystem::OpenFile; IFileSystem::OpenDirectory; IFileSystem::GetEntryType | HOST | tools/check-vendor-consolidation-debt.py | Maintained DEV IFileSystem diagnostic replaces G23 CMake patch for three result paths; three call replacements, DEV source selection, and quiet policy passed full host preflight #39048355950; native SDK/gameplay remain unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39048355950) |
 | H20 | P0 | H02,H19 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp | KScheduler::UpdateHighestPriorityThread; KScheduler::UpdateHighestPriorityThreadsImpl | SOURCE | tools/check-upstream-guest-scheduler-locks.py | Runnable queue update precedes per-core highest-priority selection; account for pinned-thread preference, suggested-core migration and eventual context load. Not proof of guest PC progress | 🟡 Source étudiée |
 | H21 | P0 | H14,J14 | vendor/encore-active/eden-core/src/core/hle/kernel/svc/svc_ipc.cpp | SendSyncRequestImpl; SendSyncRequestWithUserBuffer | SOURCE | tools/check-vendor-consolidation-debt.py | DEV sync IPC request/thread attribution now maintained, with exact former CMake code parity; the guest's resumed JIT PC after request completion remains unproved | 🟡 Source étudiée |

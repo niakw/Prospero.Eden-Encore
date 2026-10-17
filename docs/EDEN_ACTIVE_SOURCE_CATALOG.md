@@ -8,9 +8,9 @@ présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
 - **187 fichiers** de code et d'en-têtes enregistrés.
-- **81 fichiers** possèdent une correspondance de chemin *exacte*
+- **95 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
-- **106 fichiers** n'ont pas encore de ligne de graphe correspondant
+- **92 fichiers** n'ont pas encore de ligne de graphe correspondant
   exactement à leur chemin. Cela **ne prouve pas** qu'ils n'ont jamais été
   examinés, ni qu'ils sont effectivement compilés.
 - Le manifeste des backports verrouille **83 fichiers livrés**, dont
@@ -168,21 +168,21 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-threading/src/core/hle/kernel/svc/svc_condition_variable.cpp` | `maintained-override` | H12 |
 | `eden-threading/src/core/hle/kernel/svc/svc_synchronization.cpp` | `maintained-override` | H14 |
 | `eden-threading/src/core/hle/kernel/svc/svc_thread.cpp` | `maintained-override` | H15 |
-| `eden-vulkan/include/core/frontend/emu_window.h` | `maintained-override` | — |
-| `eden-vulkan/include/video_core/present.h` | `maintained-override` | — |
-| `eden-vulkan/include/video_core/renderer_vulkan/pipeline_helper.h` | `maintained-override` | — |
-| `eden-vulkan/include/video_core/renderer_vulkan/present/window_adapt_pass.h` | `maintained-override` | — |
+| `eden-vulkan/include/core/frontend/emu_window.h` | `maintained-override` | V36 |
+| `eden-vulkan/include/video_core/present.h` | `maintained-override` | V37 |
+| `eden-vulkan/include/video_core/renderer_vulkan/pipeline_helper.h` | `maintained-override` | V38 |
+| `eden-vulkan/include/video_core/renderer_vulkan/present/window_adapt_pass.h` | `maintained-override` | V39 |
 | `eden-vulkan/include/video_core/renderer_vulkan/renderer_vulkan.h` | `maintained-override` | V35 |
-| `eden-vulkan/include/video_core/renderer_vulkan/striped_wait.h` | `maintained-override` | — |
+| `eden-vulkan/include/video_core/renderer_vulkan/striped_wait.h` | `maintained-override` | V40 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_blit_screen.h` | `maintained-override` | V34 |
-| `eden-vulkan/include/video_core/renderer_vulkan/vk_compute_pipeline.h` | `maintained-override` | — |
+| `eden-vulkan/include/video_core/renderer_vulkan/vk_compute_pipeline.h` | `maintained-override` | V41 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_descriptor_buffer.h` | `maintained-override` | V33 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_graphics_pipeline.h` | `maintained-override` | V10 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_present_manager.h` | `maintained-override` | V32 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_scheduler.h` | `maintained-override` | V31 |
-| `eden-vulkan/include/video_core/renderer_vulkan/vk_update_descriptor.h` | `maintained-override` | — |
-| `eden-vulkan/include/video_core/vulkan_common/vulkan.h` | `maintained-override` | — |
-| `eden-vulkan/include/video_core/vulkan_common/vulkan_wrapper.h` | `maintained-override` | — |
+| `eden-vulkan/include/video_core/renderer_vulkan/vk_update_descriptor.h` | `maintained-override` | V42 |
+| `eden-vulkan/include/video_core/vulkan_common/vulkan.h` | `maintained-override` | V43 |
+| `eden-vulkan/include/video_core/vulkan_common/vulkan_wrapper.h` | `maintained-override` | V44 |
 | `eden-vulkan/vk_buffer_cache_cost.cpp` | `maintained-override` | R03 |
 | `eden-vulkan/vk_compute_pass_cost.cpp` | `maintained-override` | V22 |
 | `eden-vulkan/vk_compute_pipeline_cost.cpp` | `maintained-override` | V18 |
@@ -192,13 +192,13 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-vulkan/vk_multi_range_buffer_cost.cpp` | `maintained-override` | V20 |
 | `eden-vulkan/vk_pipeline_cache_cost.cpp` | `maintained-override` | V07 |
 | `eden-vulkan/vk_texture_cache_cost.cpp` | `maintained-override` | V19 |
-| `eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h` | `maintained-override` | — |
+| `eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h` | `maintained-override` | V45 |
 | `eden-vulkan/vulkan_blit_screen.cpp` | `maintained-override` | V28 |
-| `eden-vulkan/vulkan_descriptor_buffer.cpp` | `maintained-override` | — |
+| `eden-vulkan/vulkan_descriptor_buffer.cpp` | `maintained-override` | V46 |
 | `eden-vulkan/vulkan_device.cpp` | `maintained-override` | V26 |
-| `eden-vulkan/vulkan_hud_shaders.h` | `maintained-override` | — |
-| `eden-vulkan/vulkan_instance.cpp` | `maintained-override` | — |
-| `eden-vulkan/vulkan_library.cpp` | `maintained-override` | — |
+| `eden-vulkan/vulkan_hud_shaders.h` | `maintained-override` | V47 |
+| `eden-vulkan/vulkan_instance.cpp` | `maintained-override` | V48 |
+| `eden-vulkan/vulkan_library.cpp` | `maintained-override` | V49 |
 | `eden-vulkan/vulkan_present_layer.cpp` | `maintained-override` | V09 |
 | `eden-vulkan/vulkan_present_manager.cpp` | `maintained-override` | V02 |
 | `eden-vulkan/vulkan_query_cache.cpp` | `maintained-override` | V27 |
