@@ -526,6 +526,29 @@ assert '${PORT_BUILD_DIR}/renderer_opengl.cpp' not in vulkan
 assert '${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/renderer_opengl.cpp' in vulkan
 print("VENDOR_OPENGL_RENDERER_IDENTITY_COPY_REMOVED: pinned source selected")
 
+# GL source parity and conditional selection: exact old CMake substitutions.
+native_gl_buffer = "video_core/renderer_opengl/gl_buffer_cache.cpp"
+native_gl_query = "video_core/renderer_opengl/gl_query_cache.cpp"
+pinned_gl_buffer = (sources/"eden/src"/native_gl_buffer).read_text()
+pinned_gl_query = (sources/"eden/src"/native_gl_query).read_text()
+old_buf = "static_cast<GLsizeiptr>(size), GL_RED, GL_UNSIGNED_INT, &value);"
+new_buf = "static_cast<GLsizeiptr>(size), GL_RED_INTEGER, GL_UNSIGNED_INT, &value);"
+old_qry = "const bool slice_counter = WaitPending() && stream.IsEnabled();"
+new_qry = "const bool slice_counter = false; // PS5: do not split cached query reads."
+assert pinned_gl_buffer.count(old_buf) == 1
+assert pinned_gl_query.count(old_qry) == 1
+assert (active/"eden-core/src"/native_gl_buffer).read_text() == pinned_gl_buffer.replace(old_buf,new_buf)
+assert (active/"eden-core/src"/native_gl_query).read_text() == pinned_gl_query.replace(old_qry,new_qry)
+assert c.count('list(APPEND video_sources "${EDEN_MAINTAINED_GL_BUFFER_CACHE}")') == 1
+assert c.count('list(APPEND video_sources "${EDEN_MAINTAINED_GL_QUERY_CACHE}")') == 1
+assert 'if(NOT EXISTS "${EDEN_MAINTAINED_GL_BUFFER_CACHE}")' in c
+assert 'if(NOT EXISTS "${EDEN_MAINTAINED_GL_QUERY_CACHE}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/gl_buffer_cache.cpp"' not in c
+assert 'write_derived("${PORT_BUILD_DIR}/gl_query_cache.cpp"' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/gl_buffer_cache.cpp" buffer_source)' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/gl_query_cache.cpp" query_source)' not in c
+print("VENDOR_MAINTAINED_GL_CACHE_PARITY_PASS buffer=1 native_query=1")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -566,7 +589,7 @@ assert len(module_current) == 21, len(module_current)
 for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     text = (root / module).read_text()
     assert 'file(WRITE ' in text and 'configure_file(' in text, module
-assert len(recorded) + len(module_recorded) == 77
+assert len(recorded) + len(module_recorded) == 75
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
