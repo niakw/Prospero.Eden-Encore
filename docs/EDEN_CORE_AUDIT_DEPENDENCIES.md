@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 310
+**Non, this is not an exhaustive repository-wide inventory.** The 311
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 310 | 289 | 632 |
+| Graphe connu | 311 | 290 | 634 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 255 | 244 | 527 |
+| SOURCE — lecture effectuée, preuve insuffisante | 256 | 245 | 529 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **270** | **258** | **555** |
+| **Encore à qualifier (SOURCE + OPEN)** | **271** | **259** | **557** |
 | Dont priorité P0 (SOURCE + OPEN) | 106 | 101 | 248 |
 
-Le **noyau restant** compte donc 270 critères répartis sur
-258 fichiers et 555 mentions fonction/contrat :
-15 OPEN et 255 SOURCE.
+Le **noyau restant** compte donc 271 critères répartis sur
+259 fichiers et 557 mentions fonction/contrat :
+15 OPEN et 256 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-216 fichiers de code/en-têtes présents et 216 avec un chemin de
+217 fichiers de code/en-têtes présents et 217 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -471,6 +471,7 @@ function/contract tokens are checked by CI for existence only; the
 | H49 | P2 | H03 | vendor/sources/eden/src/core/hle/kernel/k_light_lock.cpp | KLightLock::LockSlowPath; KLightLock::UnlockSlowPath | PARKED | headless/backports/eden-dummy-thread-waits.patch | Dummy-thread waits patch touches lock slowpath; experimental OFF due unsafe wait-queue lifetime | 🟡 Source étudiée |
 | H50 | P0 | H29 | vendor/sources/eden/src/core/hle/service/sm/sm.h | GetService; SessionRequestHandlerFactory | SOURCE | headless/backports/eden-sm-host-wait.patch | Staged GetService patch distinguishes host-dummy from guest wait and releases registry lock; console progress unproved | 🟡 Source étudiée |
 | H51 | P0 | H50 | vendor/encore-active/eden-core/src/core/hle/service/sm/sm.h | GetService; SessionRequestHandlerFactory | SOURCE | tools/install-active-core-backports.py | Maintained SM header equals former host-wait patch; guest wake unproved | 🟡 Source étudiée |
+| H52 | P1 | H03,H51 | vendor/encore-active/eden-core/src/hid_core/resources/npad/npad_pause_diag.cpp | NPad::ControllerUpdate; eden_fullkey_writes | SOURCE | tools/check-ps5-npad-pause-r435.py | PS5 DEV-only Fullkey LIFO witness now one maintained source retaining both native null guards; avoids normal/diagnostic double compilation; on-device proof open | 🟡 Source étudiée |
 | A02 | P1 | A01,H29 | headless/backports/eden-sm-host-wait.patch | IAudioController::GetSetSys; call_once | SOURCE | tools/install-active-core-backports.py | AudioController defers system-setting lookup to first actual request using once_flag; two corresponding audio files are still patched into the staged tree, not maintained directly | 🟡 Source étudiée |
 | A03 | P1 | A01 | vendor/encore-active/eden-core/src/audio_core/sink/sink_stream.cpp | SinkStream::AppendBuffer; SinkStream::ProcessAudioOutAndRender | SOURCE | tools/check-maintained-audio-units.py | Source maintained, original four-rewrite parity and audio_core selection checked by host script; CI result and native audio behavior still required | 🟡 Source étudiée |
 | A04 | P1 | A01 | vendor/encore-active/eden-core/src/audio_core/renderer/voice/voice_info.cpp | VoiceInfo::UpdateParameters; VoiceInfo::UpdatePlayState | SOURCE | headless/CMakeLists.txt | Maintained renderer voice update has native flag position correction; validate voice state and game audio; selected source only, device proof pending | 🟡 Source étudiée |
