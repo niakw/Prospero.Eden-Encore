@@ -591,6 +591,27 @@ assert 'write_derived("${PORT_BUILD_DIR}/memory.cpp"' not in c
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/memory.cpp" arena_source)' not in c
 print("MAINTAINED_A32_MEMORY_PARITY_PASS: complete installed backport source")
 
+# Maintained nvdrv session ownership must match the exact pinned generator.
+nvdrv_rel = "core/hle/service/nvdrv/core/container.cpp"
+nvdrv_pinned = (sources / "eden/src" / nvdrv_rel).read_text()
+nvdrv_expected = "#include \"core/core.h\"\n#include <utility>\n" + nvdrv_pinned
+for before, after in (
+    ("    session.is_active = true;",
+     "    process->Open(impl->host1x.System().Kernel()); // Paired with the final CloseSession after SMMU unregistration.\n    session.is_active = true;"),
+    ("void Container::CloseSession(SessionId session_id) {\n    std::scoped_lock lk(impl->session_guard);",
+     "void Container::CloseSession(SessionId session_id) {\n    std::unique_lock lk(impl->session_guard);"),
+    ("    impl->id_pool.emplace_front(session_id.id);",
+     "    impl->id_pool.emplace_front(session_id.id);\n    auto* process = std::exchange(session.process, nullptr);\n    lk.unlock(); // Process finalization may close other services.\n    process->Close(impl->host1x.System().Kernel());"),
+):
+    assert nvdrv_expected.count(before) == 1, ("nvdrv source anchor drift", before)
+    nvdrv_expected = nvdrv_expected.replace(before, after)
+assert (active / "eden-core/src" / nvdrv_rel).read_text() == nvdrv_expected
+assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_NVDRV_CONTAINER}")') == 1
+assert 'if(NOT EXISTS "${EDEN_MAINTAINED_NVDRV_CONTAINER}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/nvdrv_container.cpp"' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/nvdrv/core/container.cpp" nvcontainer)' not in c
+print("VENDOR_MAINTAINED_NVDRV_SESSION_PARITY_PASS source=1 selections=1")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -631,7 +652,7 @@ assert len(module_current) == 21, len(module_current)
 for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     text = (root / module).read_text()
     assert 'file(WRITE ' in text and 'configure_file(' in text, module
-assert len(recorded) + len(module_recorded) == 72
+assert len(recorded) + len(module_recorded) == 71
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived

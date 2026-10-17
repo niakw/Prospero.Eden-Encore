@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **190 fichiers** de code et d'en-têtes enregistrés.
-- **122 fichiers** possèdent une correspondance de chemin *exacte*
+- **191 fichiers** de code et d'en-têtes enregistrés.
+- **123 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **68 fichiers** n'ont pas encore de ligne de graphe correspondant
   exactement à leur chemin. Cela **ne prouve pas** qu'ils n'ont jamais été
@@ -25,7 +25,7 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 **Important :** une correspondance de chemin n'est ni un test hôte,
 ni une certification console. Le graphe
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` porte les contrats fonctionnels,
-leurs états et les preuves. L'inventaire des 51 générateurs CMake
+leurs états et les preuves. L'inventaire des 50 générateurs CMake
 principaux, 21 générateurs de modules, sept modules indirects et 46 patches
 reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
@@ -139,6 +139,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/core/hle/service/filesystem/fsp/fs_i_file.cpp` | `maintained-override` | F02 |
 | `eden-core/src/core/hle/service/filesystem/fsp/fs_i_filesystem.cpp` | `maintained-override` | F04 |
 | `eden-core/src/core/hle/service/filesystem/fsp/fs_i_storage.cpp` | `maintained-override` | F03 |
+| `eden-core/src/core/hle/service/nvdrv/core/container.cpp` | `maintained-override` | N07 |
 | `eden-core/src/core/hle/service/nvdrv/devices/nvhost_ctrl.cpp` | `maintained-override` | N02,N05 |
 | `eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp` | `maintained-override` | N03 |
 | `eden-core/src/core/hle/service/service.cpp` | `maintained-override` | H22,H28 |
