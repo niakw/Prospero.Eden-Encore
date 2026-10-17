@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 292
+**Non, this is not an exhaustive repository-wide inventory.** The 293
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 292 | 273 | 597 |
+| Graphe connu | 293 | 274 | 599 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 237 | 228 | 492 |
+| SOURCE — lecture effectuée, preuve insuffisante | 238 | 229 | 494 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **252** | **242** | **520** |
+| **Encore à qualifier (SOURCE + OPEN)** | **253** | **243** | **522** |
 | Dont priorité P0 (SOURCE + OPEN) | 105 | 100 | 246 |
 
-Le **noyau restant** compte donc 252 critères répartis sur
-242 fichiers et 520 mentions fonction/contrat :
-15 OPEN et 237 SOURCE.
+Le **noyau restant** compte donc 253 critères répartis sur
+243 fichiers et 522 mentions fonction/contrat :
+15 OPEN et 238 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-198 fichiers de code/en-têtes présents et 198 avec un chemin de
+199 fichiers de code/en-têtes présents et 199 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -89,13 +89,13 @@ sont des sources maintenues sous
 sélectionnées uniquement en `EDEN_DEV_PROFILE`.
 `tools/check-vendor-consolidation-debt.py` vérifie la parité du corps
 C++ avec l'override généré auparavant et recense les sorties CMake dans
-`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **48 sites restants**
+`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **47 sites restants**
 après onze migrations (F02, F03, F04, N02, N03, H21, H22, F05, F06, F07 et F08). Un site à paramètres variables peut
 produire plusieurs fichiers réels. Les ressources générées ne doivent
 pas être confondues avec des overrides de code.
 
 Le second inventaire compte 21 générateurs `write_derived()` dans les modules,
-soit **69 sites au total**, mais n'inclut **pas** les sept modules
+soit **68 sites au total**, mais n'inclut **pas** les sept modules
 `X01–X07` qui créent une sortie par `file(WRITE)` ou transforment
 indirectement une variable-source. Ils sont suivis séparément dans
 `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`, avec contrôle hôte de leur
@@ -502,6 +502,7 @@ function/contract tokens are checked by CI for existence only; the
 | F32 | P1 | V55 | vendor/encore-active/eden-backports/src/common/settings.cpp | IsGPUFenceBehaviorAccurate | SOURCE | tools/check-active-source-inventory.py | Shipping backport removed Strict-only fence helper; runtime correctness unproved | 🟡 Source étudiée |
 | F33 | P0 | F32 | vendor/encore-active/eden-backports/src/common/settings.h | GpuFenceBehavior::Accurate | SOURCE | tools/check-active-source-inventory.py | Shipping backport accurate fence behavior setting; runtime correctness unproved | 🟡 Source étudiée |
 | F34 | P1 | F33 | vendor/encore-active/eden-backports/src/common/settings_enums.h | GpuFenceBehavior; Accurate | SOURCE | tools/check-active-source-inventory.py | Shipping backport updated fence behavior enum; runtime correctness unproved | 🟡 Source étudiée |
+| F35 | P1 | F24 | vendor/encore-active/eden-core/src/core/file_sys/patch_manager.cpp | PatchManager::CollectPatches; PatchManager::PatchRomFS | SOURCE | tools/check-vendor-consolidation-debt.py | Former four CMake rewrites moved verbatim to Encore-owned source; native behavior unproved | 🟡 Source étudiée |
 | L01 | P0 | H47 | vendor/encore-active/eden-backports/src/core/hle/service/am/frontend/applets.cpp | FrontendApplet; child_applets; RequestUpdate | SOURCE | tools/check-active-source-inventory.py | Shipping backport child applet unlink and window update; runtime correctness unproved | 🟡 Source étudiée |
 | L02 | P0 | L01 | vendor/encore-active/eden-backports/src/core/hle/service/am/service/library_applet_accessor.cpp | ILibraryAppletAccessor; RequestFocusStateChangedNotification | SOURCE | tools/check-active-source-inventory.py | Shipping backport frontend focus notification; runtime correctness unproved | 🟡 Source étudiée |
 | L03 | P1 | L02,F25 | vendor/encore-active/eden-backports/src/core/hle/service/am/service/library_applet_creator.cpp | ILibraryAppletCreator; CreateProcess; HOS_VERSION_MAJOR | SOURCE | tools/check-active-source-inventory.py | Shipping backport applet creation with firmware-major argument; runtime correctness unproved | 🟡 Source étudiée |

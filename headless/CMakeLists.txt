@@ -1532,21 +1532,15 @@ eden_patch(ips_source "        } else if (patches.empty()) {\n            LOG_WA
 write_derived("${PORT_BUILD_DIR}/ips_layer.cpp" "${ips_source}")
 # The patch manager: a missing mod root must never enter its sorting and dereference loops, and an
 # .ips patch is named after the build ID in either case.
-file(READ "${PROJECT_SOURCE_DIR}/src/core/file_sys/patch_manager.cpp" patch_source)
-eden_patch(patch_source "std::vector<VirtualDir> patch_dirs = {sdmc_load_dir};"
-    "std::vector<VirtualDir> patch_dirs;\n    if (sdmc_load_dir) patch_dirs.push_back(sdmc_load_dir);")
-eden_patch(patch_source
-    "    std::vector<VirtualDir> patch_dirs = load_dir->GetSubdirectories();\n    if (std::find(disabled.cbegin(), disabled.cend(), \"SDMC\") == disabled.cend()) {"
-    "    std::vector<VirtualDir> patch_dirs;\n    if (load_dir != nullptr) patch_dirs = load_dir->GetSubdirectories();\n    if (sdmc_load_dir != nullptr && std::find(disabled.cbegin(), disabled.cend(), \"SDMC\") == disabled.cend()) {")
-eden_patch(patch_source
-    "const auto this_build_id = fmt::format(\"{:0<64}\", name.substr(0, name.find('.')));"
-    "const auto this_build_id = fmt::format(\"{:0<64}\", Common::ToUpper(name.substr(0, name.find('.'))));")
-# A game without a mods folder is the usual case here, not an error to log for each of its modules.
-eden_patch(patch_source "        LOG_ERROR(Loader, \"Cannot load mods for invalid title_id={:016X}\", title_id);\n" "")
-write_derived("${PORT_BUILD_DIR}/patch_manager.cpp" "${patch_source}")
+# Native patch manager: select a complete Encore-maintained source, never mutate upstream C++ here.
+set(EDEN_MAINTAINED_PATCH_MANAGER
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/file_sys/patch_manager.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_PATCH_MANAGER}")
+    message(FATAL_ERROR "Missing maintained native patch manager")
+endif()
 get_target_property(core_sources core SOURCES)
 list(REMOVE_ITEM core_sources file_sys/ips_layer.cpp file_sys/patch_manager.cpp)
-list(APPEND core_sources "${PORT_BUILD_DIR}/ips_layer.cpp" "${PORT_BUILD_DIR}/patch_manager.cpp")
+list(APPEND core_sources "${PORT_BUILD_DIR}/ips_layer.cpp" "${EDEN_MAINTAINED_PATCH_MANAGER}")
 set_property(TARGET core PROPERTY SOURCES "${core_sources}")
 
 # The rate of the vsync clock a game runs on (60 Hz, or what an FPS patch asks for: 120, 240) is

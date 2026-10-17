@@ -645,6 +645,20 @@ assert 'file(READ "${PROJECT_SOURCE_DIR}/src/hid_core/resources/npad/npad.cpp" n
 print("MAINTAINED_NPAD_SOURCE_PARITY_PASS guards=2 selection=hid_core")
 
 
+
+# Exact parity with the four former pinned CMake patch-manager replacements.
+pm_base = (root / "vendor/sources/eden/src/core/file_sys/patch_manager.cpp").read_text()
+pm_pairs = [["std::vector<VirtualDir> patch_dirs = {sdmc_load_dir};","std::vector<VirtualDir> patch_dirs;\n    if (sdmc_load_dir) patch_dirs.push_back(sdmc_load_dir);"],["    std::vector<VirtualDir> patch_dirs = load_dir->GetSubdirectories();\n    if (std::find(disabled.cbegin(), disabled.cend(), \"SDMC\") == disabled.cend()) {","    std::vector<VirtualDir> patch_dirs;\n    if (load_dir != nullptr) patch_dirs = load_dir->GetSubdirectories();\n    if (sdmc_load_dir != nullptr && std::find(disabled.cbegin(), disabled.cend(), \"SDMC\") == disabled.cend()) {"],["const auto this_build_id = fmt::format(\"{:0<64}\", name.substr(0, name.find('.')));","const auto this_build_id = fmt::format(\"{:0<64}\", Common::ToUpper(name.substr(0, name.find('.'))));"],["        LOG_ERROR(Loader, \"Cannot load mods for invalid title_id={:016X}\", title_id);\n",""]]
+pm_expected = pm_base
+for pos, (old, new) in enumerate(pm_pairs):
+    assert pm_expected.count(old) == (1, 1, 1, 3)[pos], ("pinned patch manager drift", pos)
+    pm_expected = pm_expected.replace(old, new)
+assert (active / "eden-core/src/core/file_sys/patch_manager.cpp").read_text() == pm_expected
+assert 'list(APPEND core_sources "${PORT_BUILD_DIR}/ips_layer.cpp" "${EDEN_MAINTAINED_PATCH_MANAGER}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/patch_manager.cpp"' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/file_sys/patch_manager.cpp" patch_source)' not in c
+print("MAINTAINED_PATCH_MANAGER_PARITY_PASS four substitutions three logs")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -725,7 +739,7 @@ assert len(module_current) == 21, len(module_current)
 for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     text = (root / module).read_text()
     assert 'file(WRITE ' in text and 'configure_file(' in text, module
-assert len(recorded) + len(module_recorded) == 69
+assert len(recorded) + len(module_recorded) == 68
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
