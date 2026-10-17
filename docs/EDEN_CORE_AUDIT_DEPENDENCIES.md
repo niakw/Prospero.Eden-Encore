@@ -160,6 +160,7 @@ function/contract tokens are checked by CI for existence only; the
 | R09 | P1 | H03 | vendor/sources/eden/src/core/hle/kernel/k_memory_manager.cpp | KMemoryManager::Initialize; KMemoryManager::AllocateAndOpen | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Trace guest RAM allocation around stalled synchronization | 🟠 À contrôler |
 | H06 | P0 | H03 | vendor/sources/eden/src/core/hle/kernel/k_thread_queue.cpp | KThreadQueue::NotifyAvailable; KThreadQueue::EndWait | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Verify actual guest runnable transition on wakeup | 🟠 À contrôler |
 | H07 | P0 | H06 | vendor/sources/eden/src/core/hle/kernel/k_address_arbiter.cpp | KAddressArbiter::Signal | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Relate address arbitration to guest thread wait/signal | 🟠 À contrôler |
+| H10 | P1 | H07,R10 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_address_arbiter.cpp | ReadFromUser; DecrementIfLessThan; UpdateIfEqual | OPEN | tools/check-native-hle-arbiter-access-host.py | Native-only unmapped-address guard added; pinned vs active C++ host regression and complete CI pending; no guest wake/freeze or console claim | 🟠 À contrôler |
 | H08 | P1 | H01,R10 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_condition_variable.cpp | ReadFromUser; WriteToUser; UpdateLockAtomic | HOST | tools/check-native-hle-condvar-access-host.py | Full host preflight #39019831224 SUCCESS with pinned/maintained C++ witness and sanitizer gates; CodeQL C++ #39019831206 pending; no console or freeze proof | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39019831224) |
 | H09 | P1 | H08,H01 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_condition_variable.cpp | KConditionVariable::Wait | OPEN | vendor/sources/eden/src/core/hle/kernel/svc/svc_condition_variable.cpp | Wait writes cv-key waiter flag without checking WriteToUser result; SVC aligns key but does not validate live mapping; prove invalid-key blocked-wait outcome before changing lock ownership/order | 🟠 À contrôler |
 | D03 | P1 | Q04 | vendor/sources/eden/src/video_core/cdma_pusher.cpp | CDmaPusher::ExecuteCommand | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Distinguish host-channel DMA from graphics DMA | 🟠 À contrôler |
@@ -173,7 +174,7 @@ function/contract tokens are checked by CI for existence only; the
 
 ## Couverture encore NON exhaustive (à inventorier, pas à déclarer OK)
 
-Outre les **64 lignes du graphe**, le dépôt comprend d'autres composants
+Outre les **65 lignes du graphe**, le dépôt comprend d'autres composants
 susceptibles d'influencer le symptôme observé, dont les interfaces HID/commandes
 en jeu, l'ordonnancement des services IPC, la restitution audio et les chemins
 host-syncpoint. **Ils ne sont pas tous vérifiés par le présent tableau.**
@@ -193,7 +194,7 @@ host-syncpoint. **Ils ne sont pas tous vérifiés par le présent tableau.**
   couvertes par cet audit de stabilité native ; inventaire complet
   du dépôt ≠ assurance de correction de FC27.
 
-**Règle de clôture :** aucune réponse ne doit présenter « 64 lignes »
+**Règle de clôture :** aucune réponse ne doit présenter « 65 lignes »
 comme « toutes les fonctions restantes ». L'inventaire s'étend à mesure
 des véritables appels, et une tâche n'est verte que pour son critère
 de validation nommé.
