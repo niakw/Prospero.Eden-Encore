@@ -52,9 +52,23 @@ for fragment, name in [(fs_file, "guest_fs_file"), (fs_storage, "guest_fs_storag
 assert fs_file.index("backend->Read(") < fs_file.index("if (fs_start)") < fs_file.index("EDEN_FS_FILE_READ")
 assert fs_storage.index("EDEN_FS_SHORT_STORAGE") < fs_storage.index("if (fs_start)")
 assert "fs_read != static_cast<std::size_t>(length)" in fs_storage
-fs_open = section('string(REPLACE "${call_old}"', ' fs_system_source "${fs_system_source}")')
-assert r"if (::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed))\n        LOG_WARNING(Service_FS, \"EDEN_FS_OPEN" in fs_open
-assert 'write_derived("${PORT_BUILD_DIR}/fs_i_filesystem.cpp" "#include \\"${EDEN_PORT_DIR}/performance.h\\"\\n${fs_system_source}")' in cmake
+fs_open = (maintained / "fs_i_filesystem.cpp").read_text()
+assert 'EDEN_MAINTAINED_PROFILE_FS_SYSTEM' in cmake
+assert 'list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_FS_SYSTEM}")' in cmake
+assert 'write_derived("${PORT_BUILD_DIR}/fs_i_filesystem.cpp"' not in cmake
+# All three requested operations must gate their diagnostic logging; no
+# new clock sampling on the quiet (non-profiled) filesystem path.
+guard = "if (::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed))"
+assert fs_open.count(guard) == 3
+for method, kind in (("OpenFile", "file"), ("OpenDirectory", "directory"),
+                     ("GetEntryType", "entry")):
+    start = fs_open.index("Result IFileSystem::" + method + "(")
+    stop = fs_open.find("\nResult IFileSystem::", start + 1)
+    body = fs_open[start:stop if stop >= 0 else len(fs_open)]
+    assert guard in body and "EDEN_FS_OPEN kind=" + kind in body
+    assert body.index("const Result fs_open_result") < body.index(guard)
+    assert body.index(guard) < body.index("R_TRY(fs_open_result)")
+
 
 if sys.platform == "darwin" and platform.machine() == "arm64":
     print("PASS: native clock/IPC/FS source gates; x86 pause mock deferred to Linux CI")
