@@ -19,7 +19,7 @@ any operation, and avoid unrelated files.
 L'inventaire indexe des **contrats/fonctions à vérifier**, pas toutes les
 fonctions C++ du dépôt. Une même source peut couvrir plusieurs contrats ;
 des `SOURCE` ont été lues sans preuve d'exécution matérielle, et des
-`HOST` couvrent seulement la propriété contrôlée. Les 31 validations
+`HOST` couvrent seulement la propriété contrôlée. Les 32 validations
 historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
@@ -42,7 +42,7 @@ pas chiffrable honnêtement sans un relevé exhaustif supplémentaire.
 
 ## Déjà traité — contrôles terminés et preuves accessibles
 
-**31 validations ciblées historiquement établies.** Elles recouvrent en
+**32 validations ciblées historiquement établies.** Elles recouvrent en
 partie les lignes B/Q/D/V/J/M/S du graphe ci-dessous : **ne pas additionner
 ces deux décomptes comme s'il s'agissait de travaux différents**.
 
@@ -84,6 +84,7 @@ démontrent précisément qu'une approche est dangereuse.
 | C29 | Signal d'arbitre jusqu'à Runnable et fin d'attente | `KAddressArbiter::Signal; KThread::EndWait; KThreadQueue::EndWait` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/verify/hle/check-native-hle-address-wake-host.py) | [Prévalidation #39028053859](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39028053859) | Source C++ réelle sur mock hôte : quota d'éveil, adresse, annulation timer et Runnable OK ; reprise du guest JIT sur console non testée |
 | C30 | Retrait des nœuds de synchronisation sans alias UB | `KSynchronizationObject::UnlinkNode` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/verify/hle/check-native-hle-sync-unlink-host.py) | [Prévalidation #39028053859](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39028053859) | Source originale échoue optimisée avec GCC et Clang ; header natif typé conforme aux invariants à O0-O3 ; cause du gel FC27 non attribuée |
 | C31 | Mutualisation des verrous Vulkan de compilation des pipelines | `StripedMutex / StripedCondition` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-vulkan-striped-pipeline-host.py) | [Prévalidation #39032001757](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39032001757) | 8192 pipelines, 96 waiters, 64 mutex et 64 conditions ; GCC/Clang O0/O2 PASS ; contrôle d'équivalence Vulkan 41 fichiers PASS ; gains de FPS non mesurés |
+| C32 | Contexte invité : transfert entre threads hôtes sans mutex propriétaire | `KThread::m_context_guard; KScheduler::ScheduleImplFiber; KScheduler::Unload` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-upstream-guest-scheduler-locks.py) | [Prévalidation #39044658662](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39044658662) | Les sources actives remplacent std::mutex (unlock inter-thread non conforme) par std::binary_semaphore ; transfert et retry hôte C++20 PASS, source/blob identités verrouillées. Build console et reprise réelle JIT non vérifiés |
 
 ### Audits archivés à ne pas recommencer
 
@@ -159,7 +160,7 @@ function/contract tokens are checked by CI for existence only; the
 | J03 | P1 | J02 | vendor/sources/eden/src/core/hle/kernel/physical_core.cpp | PhysicalCore::RunThread; PhysicalCore::Interrupt; PhysicalCore::ClearInterrupt; PhysicalCore::IsInterrupted | HOST | tools/check-native-physical-core-atomic-host.py | Atomic flag fixed in derived build; epoch handoff not implemented | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-physical-core-atomic-host.py) |
 | J04 | P0 | J03 | vendor/sources/eden/src/core/cpu_manager.cpp | MultiCoreRunGuestThread | SOURCE | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Find the guest core wait versus actual resumed JIT execution | 🟡 Source étudiée |
 | H01 | P0 | J04 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_condition_variable.cpp | KConditionVariable::Wait; KConditionVariable::Signal | SOURCE | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Actual PS5_NATIVE compiled source selected by native-hle-overrides.cmake; H09 invalid-key host witness PASS; last-SVC sample not a waiting stack; actual wait ownership and guest progress still unproven | 🟡 Source étudiée |
-| H02 | P0 | H01 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp | KScheduler::Schedule; KScheduler::PreemptSingleCore; KScheduler::OnThreadStateChanged | SOURCE | headless/CMakeLists.txt | Default EDEN_BLOCKING_GUEST_CONTEXT_LOCKS=ON selects this scheduler and matching k_thread.h; runtime wake progress still unproven | 🟡 Source étudiée |
+| H02 | P0 | H01 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp | KScheduler::Schedule; KScheduler::PreemptSingleCore; KScheduler::OnThreadStateChanged | SOURCE | tools/check-upstream-guest-scheduler-locks.py | Default EDEN_BLOCKING_GUEST_CONTEXT_LOCKS=ON selects the maintained scheduler/header. C32 proves cross-worker context permit handoff via binary_semaphore, avoiding the old std::mutex wrong-thread unlock and recursive try_lock; scheduler-to-JIT live progress still unproven | 🟡 Source étudiée |
 | H03 | P0 | H02 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_thread.cpp | KThread::BeginWait; KThread::EndWait; KThread::SetState | OPEN | vendor/encore-active/eden-threading/native-hle-overrides.cmake | Native compiles the maintained source directly; nominal wait/result/queue transitions are demonstrated on host by H16, but actual guest resume/JIT PC progress is not captured; no speculative scheduler patch | 🟠 À contrôler |
 | H04 | P2 | J03 | vendor/sources/eden/src/core/hle/kernel/k_interrupt_manager.cpp | HandleInterrupt; ClearInterrupt | SOURCE | docs/DEFERRED_JIT_QUIESCENCE_ARCHITECTURE_2026-10-17.md | Keep ordinary interrupt clearing independent of future epoch gate | 🟡 Source étudiée |
 | M01 | P2 | J03,V05 | vendor/sources/eden/src/core/guest_memory.h | GetSpan; FlushRegion; ReadBlock | HOST | tools/check-native-guest-memory-coherence-host.py | Direct SafeRead aliases remain mutable; no sealed snapshot | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-guest-memory-coherence-host.py) |
