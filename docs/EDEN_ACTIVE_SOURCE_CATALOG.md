@@ -8,11 +8,10 @@ présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
 - **192 fichiers** de code et d'en-têtes enregistrés.
-- **158 fichiers** possèdent une correspondance de chemin *exacte*
+- **192 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
-- **34 fichiers** n'ont pas encore de ligne de graphe correspondant
-  exactement à leur chemin. Cela **ne prouve pas** qu'ils n'ont jamais été
-  examinés, ni qu'ils sont effectivement compilés.
+- **0 fichier** reste sans correspondance de chemin exacte dans le registre.
+  Cette couverture ne prouve pas la sélection native ni le comportement console.
 - Le manifeste des backports verrouille **83 fichiers livrés**, dont
   **81 fichiers C/C++ enregistrés ci-dessous** et **deux fichiers CMake**
   listés séparément. Les **43 reçus de patches** sont conservés.
@@ -34,11 +33,11 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | --- | --- | --- |
 | `compiler-rt/emutls.c` | `maintained-override` | B04 |
 | `eden-backports/src/audio_core/audio_render_manager.cpp` | `shipping-backport` | A06 |
-| `eden-backports/src/common/logging.cpp` | `shipping-backport` | — |
-| `eden-backports/src/common/net/net.cpp` | `shipping-backport` | — |
-| `eden-backports/src/common/settings.cpp` | `shipping-backport` | — |
-| `eden-backports/src/common/settings.h` | `shipping-backport` | — |
-| `eden-backports/src/common/settings_enums.h` | `shipping-backport` | — |
+| `eden-backports/src/common/logging.cpp` | `shipping-backport` | F30 |
+| `eden-backports/src/common/net/net.cpp` | `shipping-backport` | F31 |
+| `eden-backports/src/common/settings.cpp` | `shipping-backport` | F32 |
+| `eden-backports/src/common/settings.h` | `shipping-backport` | F33 |
+| `eden-backports/src/common/settings_enums.h` | `shipping-backport` | F34 |
 | `eden-backports/src/core/device_memory_manager.h` | `shipping-backport` | M12 |
 | `eden-backports/src/core/device_memory_manager.inc` | `shipping-backport` | M13 |
 | `eden-backports/src/core/file_sys/system_archive/system_version.cpp` | `shipping-backport` | F19 |
@@ -52,52 +51,52 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-backports/src/core/hle/service/acc/acc.cpp` | `shipping-backport` | H45 |
 | `eden-backports/src/core/hle/service/acc/acc.h` | `shipping-backport` | H46 |
 | `eden-backports/src/core/hle/service/am/display_layer_manager.cpp` | `shipping-backport` | N18 |
-| `eden-backports/src/core/hle/service/am/frontend/applets.cpp` | `shipping-backport` | — |
+| `eden-backports/src/core/hle/service/am/frontend/applets.cpp` | `shipping-backport` | L01 |
 | `eden-backports/src/core/hle/service/am/lifecycle_manager.h` | `shipping-backport` | H47 |
 | `eden-backports/src/core/hle/service/am/service/application_creator.cpp` | `shipping-backport` | F22 |
-| `eden-backports/src/core/hle/service/am/service/library_applet_accessor.cpp` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/am/service/library_applet_creator.cpp` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/am/service/self_controller.cpp` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/am/service/self_controller.h` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/audio/audio.cpp` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/bcat/bcat.cpp` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/bpc/bpc.cpp` | `shipping-backport` | — |
+| `eden-backports/src/core/hle/service/am/service/library_applet_accessor.cpp` | `shipping-backport` | L02 |
+| `eden-backports/src/core/hle/service/am/service/library_applet_creator.cpp` | `shipping-backport` | L03 |
+| `eden-backports/src/core/hle/service/am/service/self_controller.cpp` | `shipping-backport` | L04 |
+| `eden-backports/src/core/hle/service/am/service/self_controller.h` | `shipping-backport` | L05 |
+| `eden-backports/src/core/hle/service/audio/audio.cpp` | `shipping-backport` | A07 |
+| `eden-backports/src/core/hle/service/bcat/bcat.cpp` | `shipping-backport` | L06 |
+| `eden-backports/src/core/hle/service/bpc/bpc.cpp` | `shipping-backport` | L07 |
 | `eden-backports/src/core/hle/service/filesystem/filesystem.cpp` | `shipping-backport` | F20 |
 | `eden-backports/src/core/hle/service/filesystem/fsp/fsp_srv.cpp` | `shipping-backport` | F21 |
 | `eden-backports/src/core/hle/service/filesystem/fsp/fsp_srv.h` | `shipping-backport` | F26 |
-| `eden-backports/src/core/hle/service/glue/arp.cpp` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/glue/glue.cpp` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/grc/grc.cpp` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/hid/hid_system_server.cpp` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/ldr/ldr.cpp` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/nfp/nfp.cpp` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/ngc/ngc.cpp` | `shipping-backport` | — |
+| `eden-backports/src/core/hle/service/glue/arp.cpp` | `shipping-backport` | L08 |
+| `eden-backports/src/core/hle/service/glue/glue.cpp` | `shipping-backport` | L09 |
+| `eden-backports/src/core/hle/service/grc/grc.cpp` | `shipping-backport` | L10 |
+| `eden-backports/src/core/hle/service/hid/hid_system_server.cpp` | `shipping-backport` | L11 |
+| `eden-backports/src/core/hle/service/ldr/ldr.cpp` | `shipping-backport` | L12 |
+| `eden-backports/src/core/hle/service/nfp/nfp.cpp` | `shipping-backport` | L13 |
+| `eden-backports/src/core/hle/service/ngc/ngc.cpp` | `shipping-backport` | L14 |
 | `eden-backports/src/core/hle/service/nifm/nifm.cpp` | `shipping-backport` | N17 |
 | `eden-backports/src/core/hle/service/ns/application_manager_interface.cpp` | `shipping-backport` | F23 |
 | `eden-backports/src/core/hle/service/ns/application_manager_interface.h` | `shipping-backport` | F27 |
 | `eden-backports/src/core/hle/service/ns/i_async_result.cpp` | `shipping-backport` | F28 |
 | `eden-backports/src/core/hle/service/ns/i_async_result.h` | `shipping-backport` | F29 |
-| `eden-backports/src/core/hle/service/ns/ns.cpp` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/ns/read_only_application_control_data_interface.cpp` | `shipping-backport` | — |
+| `eden-backports/src/core/hle/service/ns/ns.cpp` | `shipping-backport` | L15 |
+| `eden-backports/src/core/hle/service/ns/read_only_application_control_data_interface.cpp` | `shipping-backport` | L16 |
 | `eden-backports/src/core/hle/service/nvdrv/devices/nvmap.cpp` | `shipping-backport` | N11 |
 | `eden-backports/src/core/hle/service/nvnflinger/buffer_queue_core.cpp` | `shipping-backport` | N12 |
 | `eden-backports/src/core/hle/service/nvnflinger/buffer_queue_core.h` | `shipping-backport` | N14 |
-| `eden-backports/src/core/hle/service/olsc/transfer_task_list_controller.cpp` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/olsc/transfer_task_list_controller.h` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/pctl/parental_control_service.cpp` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/pctl/parental_control_service.h` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/pctl/pctl_types.h` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/pm/pm.cpp` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/ro/ro.cpp` | `shipping-backport` | — |
+| `eden-backports/src/core/hle/service/olsc/transfer_task_list_controller.cpp` | `shipping-backport` | L17 |
+| `eden-backports/src/core/hle/service/olsc/transfer_task_list_controller.h` | `shipping-backport` | L18 |
+| `eden-backports/src/core/hle/service/pctl/parental_control_service.cpp` | `shipping-backport` | L19 |
+| `eden-backports/src/core/hle/service/pctl/parental_control_service.h` | `shipping-backport` | L20 |
+| `eden-backports/src/core/hle/service/pctl/pctl_types.h` | `shipping-backport` | L21 |
+| `eden-backports/src/core/hle/service/pm/pm.cpp` | `shipping-backport` | L22 |
+| `eden-backports/src/core/hle/service/ro/ro.cpp` | `shipping-backport` | L23 |
 | `eden-backports/src/core/hle/service/set/settings.cpp` | `shipping-backport` | F24 |
-| `eden-backports/src/core/hle/service/sm/sm.cpp` | `shipping-backport` | — |
+| `eden-backports/src/core/hle/service/sm/sm.cpp` | `shipping-backport` | L24 |
 | `eden-backports/src/core/hle/service/sockets/bsd.cpp` | `shipping-backport` | N15 |
 | `eden-backports/src/core/hle/service/sockets/bsd.h` | `shipping-backport` | N16 |
 | `eden-backports/src/core/hle/service/sockets/encore_guest_network_policy.h` | `shipping-backport` | N09 |
 | `eden-backports/src/core/hle/service/sockets/sfdnsres.cpp` | `shipping-backport` | N13 |
-| `eden-backports/src/core/hle/service/sockets/sockets.cpp` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/usb/usb.cpp` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/wlan/wlan.cpp` | `shipping-backport` | — |
+| `eden-backports/src/core/hle/service/sockets/sockets.cpp` | `shipping-backport` | L25 |
+| `eden-backports/src/core/hle/service/usb/usb.cpp` | `shipping-backport` | L26 |
+| `eden-backports/src/core/hle/service/wlan/wlan.cpp` | `shipping-backport` | L27 |
 | `eden-backports/src/core/memory.cpp` | `shipping-backport` | M14 |
 | `eden-backports/src/hid_core/resources/npad/npad.cpp` | `shipping-backport` | H40 |
 | `eden-backports/src/video_core/buffer_cache/buffer_cache.h` | `shipping-backport` | V51 |
@@ -106,7 +105,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-backports/src/video_core/dma_pusher.cpp` | `shipping-backport` | V60 |
 | `eden-backports/src/video_core/engines/kepler_compute.cpp` | `shipping-backport` | V58 |
 | `eden-backports/src/video_core/engines/kepler_compute.h` | `shipping-backport` | V59 |
-| `eden-backports/src/video_core/engines/sw_blitter/blitter.cpp` | `shipping-backport` | — |
+| `eden-backports/src/video_core/engines/sw_blitter/blitter.cpp` | `shipping-backport` | V63 |
 | `eden-backports/src/video_core/fence_manager.h` | `shipping-backport` | V56 |
 | `eden-backports/src/video_core/query_cache/query_cache.h` | `shipping-backport` | V55 |
 | `eden-backports/src/video_core/renderer_vulkan/vk_buffer_cache.cpp` | `shipping-backport` | V50 |
@@ -243,7 +242,6 @@ Chaque nouveau fichier C/C++ ou en-tête introduit dans le fork doit figurer
 dans ce tableau, même s'il n'a pas encore été qualifié. Tout déplacement ou
 retrait doit mettre à jour la liste et les liens du graphe.
 
-Pour les lignes « — », le prochain travail consiste à déterminer
-le **propriétaire de compilation**, le fichier épinglé correspondant, les
-fonctions réellement modifiées, les tests et les dépendances, avant de les
-marquer comme vérifiées. Ne pas gonfler artificiellement les résultats HOST.
+Tous les chemins actifs ont une ligne de graphe. La prochaine étape est de
+prouver la sélection native, la parité des transformations et le comportement
+console des changements pertinents. Ne pas gonfler les résultats HOST.
