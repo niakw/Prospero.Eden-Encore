@@ -704,10 +704,10 @@ assert single_source_table("<!-- SINGLE_SOURCE_CMAKE_START -->", "<!-- SINGLE_SO
     "undocumented headless CMake code/override module", candidates_modules)
 assert single_source_table("<!-- SINGLE_SOURCE_FRAGMENTS_START -->", "<!-- SINGLE_SOURCE_FRAGMENTS_END -->") == candidates_fragments, (
     "undocumented headless injected fragment", candidates_fragments)
-assert len(candidates_modules) == 14 and len(candidates_fragments) == 17
+assert len(candidates_modules) == 14 and len(candidates_fragments) == 12
 assert "**47 générateurs**" in single_source_doc and "**21 générateurs**" in single_source_doc
 assert "**68 sites**" in single_source_doc
-assert "**210 sources et en-têtes suivis**" in single_source_doc
+assert "**215 sources et en-têtes suivis**" in single_source_doc
 for deleted_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root/deleted_module).exists(), ("legacy source generator reintroduced", deleted_module)
 print("ENCORE_SINGLE_SOURCE_SCOPE_PASS", f"modules={len(candidates_modules)}", f"fragments={len(candidates_fragments)}")
@@ -767,6 +767,24 @@ assert 'file(READ "${EDEN_SCALAR_INPUT_DIR}/scalar-fold.inc" scalar_fold)' in c
 assert 'set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDEN_SCALAR_INPUTS})' in c
 assert 'set(EDEN_SCALAR_INPUT_DIR' in c
 print("ENCORE_SCALAR_CANONICAL_INPUTS_PASS", len(scalar_canonical_blobs))
+
+
+# The five previous Vulkan injection fragments are retained solely as
+# historical comparison fixtures, never inputs to the shipping renderer.
+vulkan_oracle_sources = {
+    "vulkan_loading.inc": "e96a289531ca44282cd1f2e24fea0c2003c9a08b",
+    "vulkan_hud_prepare.inc": "36c585ed6726206722450450be7f0c5bb3cafb2d",
+    "vulkan_hud_draw.inc": "794563c243b53ecccc4191f2a7de1b7dad0d2b2a",
+    "vulkan_gc_downloads.inc": "77c5ce6e536bfb039e2cbd48795d5f5f0059ebc0",
+    "vulkan_download_batch.inc": "f3e36e0432f7026a65620329f79cbbe20e1c898a",
+}
+for filename, expected_git_blob in vulkan_oracle_sources.items():
+    oracle = active / "eden-vulkan-oracles" / filename
+    assert oracle.is_file() and not (root / "headless" / filename).exists()
+    check_canonical_git_object(oracle, expected_git_blob, "Vulkan oracle")
+    assert filename not in vulkan, ("test fixture is still a native CMake input", filename)
+assert (active / "eden-vulkan/vulkan_renderer.cpp").is_file()
+print("ENCORE_VULKAN_ORACLE_SCOPE_PASS", len(vulkan_oracle_sources))
 
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
