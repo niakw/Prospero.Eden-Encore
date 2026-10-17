@@ -1,9 +1,9 @@
 name: Encore launcher render preview (host only)
 
 on:
-  # The developer branch only; the job below requires [preview-ready] for pushes.
+  # Main development stays opt-in; every isolated UI verification push renders.
   push:
-    branches: [dev/ps5-sparse-jit]
+    branches: [dev/ps5-sparse-jit, ui/encore-topbar-library-cover-20261016]
   workflow_dispatch:
 
 permissions:
@@ -17,8 +17,8 @@ concurrency:
 
 jobs:
   preview:
-    # Do not compile while WIP. Only an explicit final ready marker or manual dispatch.
-    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[preview-ready]') }}
+    # Always validate UI-only pushes; keep core development opt-in.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/ui/encore-topbar-library-cover-20261016' || contains(github.event.head_commit.message, '[preview-ready]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
