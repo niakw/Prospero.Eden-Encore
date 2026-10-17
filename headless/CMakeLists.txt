@@ -1049,16 +1049,15 @@ if(EDEN_DEV_PROFILE)
     list(REMOVE_ITEM core_sources "hle/service/nvnflinger/buffer_queue_producer.cpp")
     list(APPEND core_sources "${PORT_BUILD_DIR}/buffer_queue_producer.cpp")
     # Guest asset streaming: time and bytes of fsp-srv IFile/IStorage backend reads.
-    file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/filesystem/fsp/fs_i_file.cpp" fs_file_source)
-    set(fs_file_old "    R_RETURN(\n        backend->Read(reinterpret_cast<size_t*>(out_size.Get()), offset, out_buffer.data(), size));")
-    string(FIND "${fs_file_source}" "${fs_file_old}" fs_file_at)
-    if(fs_file_at LESS 0)
-        message(FATAL_ERROR "Pinned IFile::Read changed")
+    # Use the reviewed, maintained source directly. The original source stays
+    # pinned; no C++ text replacement or generated translation unit in CMake.
+    set(EDEN_MAINTAINED_PROFILE_FS_FILE
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_file.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_PROFILE_FS_FILE}")
+        message(FATAL_ERROR "Missing maintained IFile profile source")
     endif()
-    string(REPLACE "${fs_file_old}" "    const auto fs_start = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed) ? ::Eden::Performance::NowNs() : 0;\n    const Result fs_result =\n        backend->Read(reinterpret_cast<size_t*>(out_size.Get()), offset, out_buffer.data(), size);\n    if (fs_start) {\n        ::Eden::Performance::AddSince(::Eden::Performance::guest_fs_file, fs_start);\n        ::Eden::Performance::guest_fs_file_bytes.fetch_add(static_cast<unsigned long long>(*out_size.Get()), std::memory_order_relaxed);\n    // Diagnostic only: avoid formatting every file read while quiet.\n        LOG_WARNING(Service_FS, \"EDEN_FS_FILE_READ offset={:#x} size={} read={} result={:#x} ns={}\", offset, size, *out_size.Get(), fs_result.raw, ::Eden::Performance::NowNs() - fs_start);\n    }\n    R_RETURN(fs_result);" fs_file_source "${fs_file_source}")
-    write_derived("${PORT_BUILD_DIR}/fs_i_file.cpp" "#include \"${EDEN_PORT_DIR}/performance.h\"\n${fs_file_source}")
     list(REMOVE_ITEM core_sources "hle/service/filesystem/fsp/fs_i_file.cpp")
-    list(APPEND core_sources "${PORT_BUILD_DIR}/fs_i_file.cpp")
+    list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_FS_FILE}")
     file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/filesystem/fsp/fs_i_storage.cpp" fs_storage_source)
     set(fs_storage_old "    backend->Read(out_bytes.data(), length, offset);")
     string(FIND "${fs_storage_source}" "${fs_storage_old}" fs_storage_at)
