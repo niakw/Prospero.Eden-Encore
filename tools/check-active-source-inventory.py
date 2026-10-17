@@ -59,6 +59,20 @@ assert shipping == shipping_cpp | build_recipes, (
 )
 assert len(shipping) == 83 and len(manifest["shipping_receipts"]) == 43
 assert manifest["excluded_experimental"] == ["EDEN_EXPERIMENTAL_DUMMY_THREAD_WAITS"]
+# All nine selected Vulkan cost translation units have exact graph owners.
+# This is source-ownership coverage, not evidence of GPU progress.
+vulkan_recipe = (root/"headless/vulkan.cmake").read_text()
+cost_modules = ("vk_fence_manager", "vk_buffer_cache", "vk_texture_cache",
+                "vk_descriptor_buffer", "vk_multi_range_buffer", "vk_compute_pass",
+                "vk_graphics_pipeline", "vk_compute_pipeline", "vk_pipeline_cache")
+assert "foreach(name " + " ".join(cost_modules) + ")" in vulkan_recipe
+assert 'list(APPEND video_sources "${PORT_BUILD_DIR}/${name}_cost.cpp")' in vulkan_recipe
+for module in cost_modules:
+    relative = "eden-vulkan/" + module + "_cost.cpp"
+    assert (active/relative).is_file(), ("missing selected Vulkan cost source", relative)
+    assert relative in graph, ("missing indexed Vulkan cost source", relative)
+print("ENCORE_VULKAN_COST_OWNER_PASS", f"selected={len(cost_modules)}")
+
 assert len(physical) == len(set(physical))
 print("ENCORE_ACTIVE_SOURCE_CATALOG_PASS",
       f"files={len(physical)}",
