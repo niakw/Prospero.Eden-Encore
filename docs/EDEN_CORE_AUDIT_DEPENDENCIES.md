@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 98
+**Non, this is not an exhaustive repository-wide inventory.** The 102
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,18 +24,18 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 98 | 81 | 196 |
+| Graphe connu | 102 | 83 | 205 |
 | HOST — preuve ciblée hôte | 28 | 25 | 56 |
-| SOURCE — lecture effectuée, preuve insuffisante | 49 | 42 | 106 |
+| SOURCE — lecture effectuée, preuve insuffisante | 53 | 44 | 115 |
 | OPEN — question technique non résolue | 15 | 15 | 27 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **64** | **56** | **133** |
-| Dont priorité P0 (SOURCE + OPEN) | 29 | 24 | 70 |
+| **Encore à qualifier (SOURCE + OPEN)** | **68** | **58** | **142** |
+| Dont priorité P0 (SOURCE + OPEN) | 31 | 26 | 75 |
 
-Le **noyau restant** compte donc 64 critères répartis sur
-56 fichiers et 133 mentions fonction/contrat :
-15 OPEN et 49 SOURCE.
-Cela **ne signifie pas 133 fonctions jamais lues** :
+Le **noyau restant** compte donc 68 critères répartis sur
+58 fichiers et 142 mentions fonction/contrat :
+15 OPEN et 53 SOURCE.
+Cela **ne signifie pas 142 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 Le hors-inventaire (HID, IPC, host-syncpoints, variantes vendor...) n'est
 pas chiffrable honnêtement sans un relevé exhaustif supplémentaire.
@@ -64,6 +64,13 @@ chemin invité : H25 (`KClientSession::SendSyncRequest`), H26
 H28 (verrou du service et sérialisation de la réponse).
 Le retour d'un handler HLE ne prouve **toujours pas** qu'une instruction
 invitée a été exécutée ensuite.
+
+Deux patches installés sur le snapshot actif, mais **pas encore
+matérialisés comme C++ maintenu**, indexent désormais leurs fonctions
+essentielles : J16/J17 (invalidations du cache d'instructions A64/A32)
+et H29/A02 (attente de service hôte et chargement différé du service
+audio). Leur contenu est traçable dans les patches ; cela ne constitue
+pas une validation console ni un nouveau correctif de freeze.
 
 ## Migration de sources et inventaire de sélection
 
@@ -312,6 +319,10 @@ function/contract tokens are checked by CI for existence only; the
 | F06 | P1 | F05 | vendor/encore-active/eden-core/src/common/fs/fs.cpp | RemoveDirContentsRecursively; IterateDirEntries | SOURCE | tools/check-vendor-consolidation-debt.py | Native directory iterator override (two call sites) now maintained C++ with a source parity gate; directory enumeration outcome on console still unqualified | 🟡 Source étudiée |
 | F07 | P1 | B01 | vendor/sources/eden/src/common/cpu_features.cpp | g_cpu_caps; X64::EstimateRDTSCFrequency | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Still CMake-generated on native builds: CPUID 0x15 fallback moves outside the leaf gate and avoids zero/too-low invariant-TSC frequency. Next source-migration candidate, validate exact substitution and clock results before moving | 🟡 Source étudiée |
 | F08 | P1 | F06 | vendor/sources/eden/src/common/fs/path_util.cpp | PathManagerImpl; Reinitialize; GenerateLegacyPath | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Still CMake-generated: native writable user/cache/config roots and legacy-folder path patch. Startup-path side effects need source parity and actual root checks before moving | 🟡 Source étudiée |
+| J16 | P0 | J01,J02 | headless/backports/eden-dynarmic-icache-coherence.patch | ArmDynarmic64::InvalidateCacheRange; Core::InvalidateInstructionCacheRange | SOURCE | tools/install-active-core-backports.py | Active-core installer stages A64 cross-core i-cache invalidation from a patch, not tracked C++ source; invalidate callback address and propagate process range, while real JIT progress still unproven | 🟡 Source étudiée |
+| J17 | P1 | J16,J13 | headless/backports/eden-dynarmic-icache-coherence.patch | ArmDynarmic32::InvalidateCacheRange; last_code_addr | SOURCE | tools/install-active-core-backports.py | A32 i-cache invalidation resets last dispatched address in staged patch; preserve coherence across guest cores before materializing maintained TU | 🟡 Source étudiée |
+| H29 | P0 | H22,H26 | headless/backports/eden-sm-host-wait.patch | GetService; IsDummyThread; SleepThread | SOURCE | tools/install-active-core-backports.py | SM GetService uses host sleep for dummy threads to avoid parking a host HLE worker with guest SleepThread; staged patch spans service-manager header and must be validated with blocking/unblocking semantics | 🟡 Source étudiée |
+| A02 | P1 | A01,H29 | headless/backports/eden-sm-host-wait.patch | IAudioController::GetSetSys; call_once | SOURCE | tools/install-active-core-backports.py | AudioController defers system-setting lookup to first actual request using once_flag; two corresponding audio files are still patched into the staged tree, not maintained directly | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
