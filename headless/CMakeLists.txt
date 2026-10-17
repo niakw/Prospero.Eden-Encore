@@ -87,39 +87,10 @@ endif()
 list(REMOVE_ITEM eden_common_sources "logging.cpp")
 list(APPEND eden_common_sources "${EDEN_MAINTAINED_LOGGING}")
 set_property(TARGET common PROPERTY SOURCES "${eden_common_sources}")
-# Upstream pair #4436 + #4447: kernel guest context and slab guards use
-# blocking std::mutex instead of CPU-spinning locks. The scheduler's lazy
-# libc++ materialization fix is inseparable from that conversion.
-# Curated source overlays leave the immutable upstream archive untouched.
+# Maintained HLE source selection lives with its code, not in this launcher.
 option(EDEN_BLOCKING_GUEST_CONTEXT_LOCKS
     "Use the paired upstream guest scheduler lock fixes" ON)
-if(EDEN_BLOCKING_GUEST_CONTEXT_LOCKS)
-    set(EDEN_THREAD_ROOT "${PORT_ROOT}/vendor/encore-active/eden-threading/src")
-    foreach(eden_thread_file IN ITEMS k_thread.h k_slab_heap.h k_scheduler.cpp)
-        if(NOT EXISTS "${EDEN_THREAD_ROOT}/core/hle/kernel/${eden_thread_file}")
-            message(FATAL_ERROR "Missing maintained kernel threading source ${eden_thread_file}")
-        endif()
-    endforeach()
-    # KThread is a public core ABI type. Propagate the override to consumers,
-    # not just compilation units inside core, to avoid inconsistent layout.
-    target_include_directories(core BEFORE PUBLIC "${EDEN_THREAD_ROOT}")
-    foreach(eden_thread_target IN ITEMS
-            video_core audio_core hid_core network input_common
-            frontend_common shader_recompiler dynarmic)
-        if(TARGET ${eden_thread_target})
-            target_include_directories(${eden_thread_target} BEFORE PRIVATE "${EDEN_THREAD_ROOT}")
-        endif()
-    endforeach()
-    get_target_property(eden_kernel_sources core SOURCES)
-    list(FIND eden_kernel_sources "hle/kernel/k_scheduler.cpp" eden_pinned_scheduler_idx)
-    if(eden_pinned_scheduler_idx EQUAL -1)
-        message(FATAL_ERROR "Pinned core scheduler source moved; requalify override")
-    endif()
-    list(REMOVE_ITEM eden_kernel_sources "hle/kernel/k_scheduler.cpp")
-    list(APPEND eden_kernel_sources
-        "${EDEN_THREAD_ROOT}/core/hle/kernel/k_scheduler.cpp")
-    set_property(TARGET core PROPERTY SOURCES "${eden_kernel_sources}")
-endif()
+include("${PORT_ROOT}/vendor/encore-active/eden-threading/native-hle-overrides.cmake")
 
 # The full JIT assertion header is versioned under vendor/encore-active.
 # It is byte-equivalent to the previous pinned header + guarded override;
@@ -1758,100 +1729,6 @@ set(worker_header "core/hle/kernel/k_worker_task_manager.h")
 file(READ "${PROJECT_SOURCE_DIR}/src/${worker_header}" worker_source)
 string(REPLACE "    KWorkerTaskManager();" "    KWorkerTaskManager();\n    void WaitForRequests() { m_waiting_thread.WaitForRequests(); }" worker_source "${worker_source}")
 write_derived("${PORT_BUILD_DIR}/include/${worker_header}" "${worker_source}")
-
-# Keep the guest synchronization list's inline C++ memory operations
-# type-correct in native builds. This overlay contains ONLY that header,
-# so it cannot alter the selected scheduler or KThread ABI.
-if(PS5_NATIVE)
-    set(EDEN_NATIVE_SYNC_HEADER_ROOT "${PORT_ROOT}/vendor/encore-active/eden-sync/src")
-    if(NOT EXISTS "${EDEN_NATIVE_SYNC_HEADER_ROOT}/core/hle/kernel/k_synchronization_object.h")
-        message(FATAL_ERROR "Missing maintained native synchronization-list header")
-    endif()
-    target_include_directories(core BEFORE PUBLIC "${EDEN_NATIVE_SYNC_HEADER_ROOT}")
-endif()
-
-# Native guest condition-variable memory guard is retained as a checked,
-# reviewable C++ source, not a further CMake-derived translation unit.
-if(PS5_NATIVE)
-    set(eden_active_cv
-        "${PORT_ROOT}/vendor/encore-active/eden-threading/src/core/hle/kernel/k_condition_variable.cpp")
-    if(NOT EXISTS "${eden_active_cv}")
-        message(FATAL_ERROR "Missing maintained native condition-variable source")
-    endif()
-    get_target_property(eden_cv_core_sources core SOURCES)
-    list(FIND eden_cv_core_sources "hle/kernel/k_condition_variable.cpp" eden_cv_index)
-    if(eden_cv_index EQUAL -1)
-        message(FATAL_ERROR "Pinned condition variable build source moved")
-    endif()
-    list(REMOVE_ITEM eden_cv_core_sources "hle/kernel/k_condition_variable.cpp")
-    list(APPEND eden_cv_core_sources "${eden_active_cv}")
-    set_property(TARGET core PROPERTY SOURCES "${eden_cv_core_sources}")
-    # Keep address-arbiter guest memory checks as a separate maintained native
-    # source. This does not add another CMake read/derived translation unit.
-    set(eden_active_arbiter
-        "${PORT_ROOT}/vendor/encore-active/eden-threading/src/core/hle/kernel/k_address_arbiter.cpp")
-    if(NOT EXISTS "${eden_active_arbiter}")
-        message(FATAL_ERROR "Missing maintained native address arbiter source")
-    endif()
-    get_target_property(eden_arbiter_sources core SOURCES)
-    list(FIND eden_arbiter_sources "hle/kernel/k_address_arbiter.cpp" eden_arbiter_index)
-    if(eden_arbiter_index EQUAL -1)
-        message(FATAL_ERROR "Pinned address arbiter build source moved")
-    endif()
-    list(REMOVE_ITEM eden_arbiter_sources "hle/kernel/k_address_arbiter.cpp")
-    list(APPEND eden_arbiter_sources "${eden_active_arbiter}")
-    set_property(TARGET core PROPERTY SOURCES "${eden_arbiter_sources}")
-
-    # The three guest wait SVCs need signed-overflow-safe deadline conversion.
-    # Source files are maintained verbatim; no new generator read/rewrite.
-    get_target_property(eden_svc_wait_sources core SOURCES)
-    foreach(eden_svc_file IN ITEMS svc_condition_variable.cpp svc_address_arbiter.cpp svc_synchronization.cpp)
-        set(eden_pinned_svc "hle/kernel/svc/${eden_svc_file}")
-        set(eden_checked_svc
-            "${PORT_ROOT}/vendor/encore-active/eden-threading/src/core/hle/kernel/svc/${eden_svc_file}")
-        if(NOT EXISTS "${eden_checked_svc}")
-            message(FATAL_ERROR "Missing maintained native guest wait SVC: ${eden_svc_file}")
-        endif()
-        list(FIND eden_svc_wait_sources "${eden_pinned_svc}" eden_svc_index)
-        if(eden_svc_index EQUAL -1)
-            message(FATAL_ERROR "Pinned guest wait SVC source moved: ${eden_svc_file}")
-        endif()
-        list(REMOVE_ITEM eden_svc_wait_sources "${eden_pinned_svc}")
-        list(APPEND eden_svc_wait_sources "${eden_checked_svc}")
-    endforeach()
-    set_property(TARGET core PROPERTY SOURCES "${eden_svc_wait_sources}")
-    # Native sleep uses the same overflow-safe deadline semantics as the three
-    # checked guest waits. Keep the source explicit, with no CMake generation.
-    set(eden_checked_sleep
-        "${PORT_ROOT}/vendor/encore-active/eden-threading/src/core/hle/kernel/svc/svc_thread.cpp")
-    if(NOT EXISTS "${eden_checked_sleep}")
-        message(FATAL_ERROR "Missing maintained native guest sleep source")
-    endif()
-    get_target_property(eden_svc_sleep_sources core SOURCES)
-    list(FIND eden_svc_sleep_sources "hle/kernel/svc/svc_thread.cpp" eden_sleep_index)
-    if(eden_sleep_index EQUAL -1)
-        message(FATAL_ERROR "Pinned guest sleep SVC source moved")
-    endif()
-    list(REMOVE_ITEM eden_svc_sleep_sources "hle/kernel/svc/svc_thread.cpp")
-    list(APPEND eden_svc_sleep_sources "${eden_checked_sleep}")
-    set_property(TARGET core PROPERTY SOURCES "${eden_svc_sleep_sources}")
-endif()
-
-# Keep service threads until their outer callbacks and C++ destructors finish.
-# Finalization can wait for process/page-table light locks. Holding the outer
-# scheduler lock postpones that wait until its stack-owned queue is already gone.
-file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/kernel/k_thread.cpp" thread_source)
-set(old_finish "        // Acquire the scheduler lock.\n        KScopedSchedulerLock sl{kernel};\n\n        // Signal.\n        m_signaled = true;\n        KSynchronizationObject::NotifyAvailable(kernel);\n\n        // Close the thread.\n        this->Close(kernel);")
-string(FIND "${thread_source}" "${old_finish}" finish_offset)
-if(finish_offset LESS 0)
-    message(FATAL_ERROR "Pinned thread termination changed; review finalization lock scope.")
-endif()
-string(REPLACE "${old_finish}" "        {\n            KScopedSchedulerLock sl{kernel};\n            m_signaled = true;\n            KSynchronizationObject::NotifyAvailable(kernel);\n        }\n\n        // Finalization may block; scheduling must be enabled here.\n        this->Close(kernel);" thread_source "${thread_source}")
-write_derived("${PORT_BUILD_DIR}/k_thread.cpp" "${thread_source}")
-get_target_property(core_sources core SOURCES)
-list(REMOVE_ITEM core_sources hle/kernel/k_thread.cpp)
-list(APPEND core_sources "${PORT_BUILD_DIR}/k_thread.cpp")
-set_property(TARGET core PROPERTY SOURCES "${core_sources}")
 
 # Game exit: the application's page table frees every physical page it maps (~1 s for a 4 GiB
 # game) although the kernel shutdown that finalizes it recreates the memory manager at the next
