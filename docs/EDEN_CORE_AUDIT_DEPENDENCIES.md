@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 81
+**Non, this is not an exhaustive repository-wide inventory.** The 83
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,21 +24,23 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 81 | 68 | 155 |
+| Graphe connu | 83 | 69 | 160 |
 | HOST — preuve ciblée hôte | 27 | 24 | 53 |
-| SOURCE — lecture effectuée, preuve insuffisante | 33 | 30 | 68 |
+| SOURCE — lecture effectuée, preuve insuffisante | 35 | 31 | 73 |
 | OPEN — question technique non résolue | 15 | 15 | 27 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **48** | **44** | **95** |
-| Dont priorité P0 (SOURCE + OPEN) | 21 | 18 | 50 |
+| **Encore à qualifier (SOURCE + OPEN)** | **50** | **45** | **100** |
+| Dont priorité P0 (SOURCE + OPEN) | 22 | 18 | 52 |
 
-Le **noyau restant** compte donc 48 critères répartis sur
-44 fichiers et 95 mentions fonction/contrat :
-15 OPEN et 33 SOURCE.
+Le **noyau restant** compte donc 50 critères répartis sur
+45 fichiers et 100 mentions fonction/contrat :
+15 OPEN et 35 SOURCE.
 Cela **ne signifie pas 95 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 Le hors-inventaire (HID, IPC, host-syncpoints, variantes vendor...) n'est
 pas chiffrable honnêtement sans un relevé exhaustif supplémentaire.
+
+La chaîne CPU/JIT comprend aussi H20 (sélection de priorité et migration de cœur), distincte de H18 (commutation de fibres). Le catalogue inclut F04 pour les trois entrées filesystem maintenant maintenues. Ce sont des périmètres indexés, pas des preuves de gain de FPS.
 
 ## Migration de sources et inventaire de sélection
 
@@ -48,7 +50,7 @@ sont des sources maintenues sous
 sélectionnées uniquement en `EDEN_DEV_PROFILE`.
 `tools/check-vendor-consolidation-debt.py` vérifie la parité du corps
 C++ avec l'override généré auparavant et recense les sorties CMake dans
-`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **73 sites restants**
+`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **72 sites restants**
 après ces deux migrations. Un site à paramètres variables peut
 produire plusieurs fichiers réels. Les ressources générées ne doivent
 pas être confondues avec des overrides de code.
@@ -239,6 +241,8 @@ function/contract tokens are checked by CI for existence only; the
 | F03 | P1 | F02 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_storage.cpp | IStorage::Read | HOST | tools/check-vendor-consolidation-debt.py | IStorage::Read maintained TU source parity and DEV CMake selection passed in full host preflight #39046599831. No native console build, gameplay or FPS conclusion | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39046599831) |
 | N02 | P1 | N01 | vendor/sources/eden/src/core/hle/service/nvdrv/devices/nvhost_ctrl.cpp | nvhost_ctrl::IocCtrlEventWait; nvhost_ctrl::IocCtrlClearEventWait | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Host syncpoint event-wait diagnostic still generated; callback-to-guest wake latency not proven | 🟡 Source étudiée |
 | V11 | P0 | V02,V04 | headless/graphics.cpp | GraphicsWindow::OnFrameDisplayed; CaptureFramePressure | SOURCE | tools/check-ps5-quiet-frame-pressure.py | Presentation-interval witnesses are callback pairs, not guest game logic or GPU ownership | 🟡 Source étudiée |
+| F04 | P1 | F02,F03 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_filesystem.cpp | IFileSystem::OpenFile; IFileSystem::OpenDirectory; IFileSystem::GetEntryType | SOURCE | tools/check-vendor-consolidation-debt.py | Maintained DEV IFileSystem diagnostic replaces G23 CMake patch for three result paths; source parity and native SDK/gameplay qualification pending full host preflight | 🟡 Source étudiée |
+| H20 | P0 | H02,H19 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp | KScheduler::UpdateHighestPriorityThread; KScheduler::UpdateHighestPriorityThreadsImpl | SOURCE | tools/check-upstream-guest-scheduler-locks.py | Runnable queue update precedes per-core highest-priority selection; account for pinned-thread preference, suggested-core migration and eventual context load. Not proof of guest PC progress | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
