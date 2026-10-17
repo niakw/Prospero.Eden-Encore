@@ -35,6 +35,20 @@ for call in ('draw_top_nav(c, 0','draw_top_nav(c, 1','draw_top_nav(c, 3'):
     assert call in home+library+settings, call
 assert 'list.hgradient_rect(r, 19.0f' in launcher
 assert 'theme::kFocusBlue.with_alpha(0.96f)' in launcher
+assert 'static constexpr const char* labels[] = {TR("Home"), TR("Library"), TR("Recent")};' in launcher
+assert 'settings_gear(c, gx, gy, 19.0f, ink);' in launcher
+assert 'constexpr float avatar_x = 1640.0f, avatar_y = 70.0f;' in launcher
+# Account artwork is discovered read-only for the foreground user. It must
+# never be queried or decoded on the draw path, and must gracefully fall back.
+assert 'profile_avatar_scan_ = std::async(std::launch::async' in launcher
+assert 'profile_avatar_scan_.wait_for(std::chrono::seconds(0))' in launcher
+assert 'profile_avatar_scan_.wait();' in launcher
+assert 'list.rounded_image(avatar.texture,' in launcher
+assert 'std::future<std::string> profile_avatar_scan_;' in launcher_h
+assert 'virtual std::string profile_avatar() { return {}; }' in ui_preferences
+assert 'sceUserServiceGetForegroundUser(&user_id)' in services
+assert '/system_data/priv/cache/profile/0x' in services
+assert 'localized_clock(services_.clock(), services_.language_region(prefs_.language))' in launcher
 assert 'list.image(c.textures.brand(), {56.0f, 17.0f, 110.0f, 110.0f}' in launcher
 
 # Home composition and controller-first navigation.
@@ -105,7 +119,20 @@ assert 'card_w = (available - gap * 6.0f) / 7.0f' in recent_block
 # The library now shows a 5-slot, controller-navigated retail sleeve shelf.
 # Check the real geometry and navigation instead of a retired comment.
 assert 'constexpr int slots = 5;' in library
-assert 'constexpr float rail_x = 72.0f, rail_y = 205.0f, rail_w = 1776.0f;' in library
+assert 'constexpr float rail_x = 72.0f, rail_y = 204.0f, rail_w = 1776.0f;' in library
+assert 'constexpr float sleeve_h = 346.0f;' in library
+assert 'const float sleeve_w = std::clamp(paper_height * aspect * 1.01f,' in library
+assert 'const Rect detail{72.0f, 620.0f, 1776.0f, 276.0f};' in library
+assert 'const float paper_height = sleeve_h -' in library
+assert 'front_scan.aspect' in library
+assert 'fit_fallback_art(c, game.cover, art);' in library
+assert 'fit_fallback_art(c, game.hero, art);' in library
+assert 'const float opening_x = rear ? shell.x : shell.x + shell.w - side;' in library
+assert 'c.list.gradient_rect({shell.x, shell.y, shell.w, top}' in library
+assert 'c.list.gradient_rect({shell.x, shell.y + shell.h - top,' in library
+assert 'const float side = rear ? std::clamp(shell.w * 0.012f, 1.75f, 5.0f)' in library
+assert 'c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f},' in library
+assert 'fitted.x += rear ? paper.w - fitted.w : (paper.w - fitted.w) * 0.5f;' in library
 assert 'flat_retail_sleeve(c, game, sleeve, false, 0.24f);' in library
 assert 'flat_retail_sleeve(c, *game, art, true, 0.60f);' in library
 assert 'flat_retail_sleeve(c, *game, enlarged, true, 0.92f,' in library
@@ -157,10 +184,13 @@ assert 'kTitleSize, theme::kTitle, kHeroContentWidth, Align::left, 0.0f, 0.45f)'
 assert 'text_block_semantic(c, hero_caption, kHeroX' in home
 assert 'theme::kBody, kHeroContentWidth, 2, 0.90f)' in home
 assert 'label_area.x + label_area.w * 0.5f' in home
-# Rear jacket now occupies x=99..280; its title begins at x=337,
+# Rear jacket remains in the lower details pane; its title begins at x=337,
 # clear of the printed scan and its focus highlight.
-assert 'const Rect art{99.0f, 572.0f, 181.0f, 288.0f};' in library
-assert 'text_shrink(c, game->name, 337.0f, baseline(574.0f, 52.0f, 40.0f)' in library
+assert 'const float rear_aspect = back_scan.texture != 0 ?' in library
+assert 'const Rect art{280.0f - rear_w, 882.0f - rear_h, rear_w, rear_h};' in library
+assert 'rear_paper_h * rear_aspect + 2.5f' in library
+assert 'tr("Down: view back cover")' not in library
+assert 'text_shrink(c, game->name, 337.0f, baseline(633.0f, 52.0f, 40.0f)' in library
 assert 'text_block(c, game->name, 558.0f' not in library
 assert 'kNlibCacheSchema = 3' in services
 assert 'current_metadata_cache' in services

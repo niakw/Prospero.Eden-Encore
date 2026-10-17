@@ -89,19 +89,23 @@ assert "library_format(game->format)" in library
 assert "library_size(game->size)" in library
 assert "library_date(game->release_date" in library
 assert "library_genres(game->categories)" in library
-assert 'tr("Down: view back cover")' in library
+# The obsolete footer hint was removed from the UI: keep this invariant
+# in the rear-cover checks below, rather than requiring stale text here.
 assert 'tr("Enlarge cover")' in library
 assert "flat_retail_sleeve(c, *game, art, true, 0.60f);" in library
 assert "flat_retail_sleeve(c, *game, enlarged, true, 0.92f," in library
 assert "library_back_scale_);" in library
 assert "std::max(paper.w, paper.h) * texture_scale" in library
-assert "if (rear) fitted.x += paper.w - fitted.w;" in library
+assert "fitted.x += rear ? paper.w - fitted.w : (paper.w - fitted.w) * 0.5f;" in library
 assert "c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f}," in library
+assert "Rect fitted = paper;" in library and "if (source > target)" in library
 assert "paper_uv.x = back ? 1.0f - paper_uv.w : 0.0f;" in draw
 assert "flat_retail_sleeve(c, game, sleeve, false, 0.24f);" in library
 assert "const Rect paper{shell.x + (rear ? side : 0.0f), shell.y + top," in library
 assert "flat_back_fallback(c, game, paper);" in library
 assert "flat_front_fallback(c, game, paper);" in library
+assert "fit_fallback_art(c, game.cover, art);" in library
+assert "fit_fallback_art(c, game.hero, art);" in library
 assert "shell.y + shell.h - top" in library
 assert "s.press({Key::r1, Key::r1});" in (
     root / "headless/prosperoeden/host/preview_main.cpp").read_text()
@@ -343,17 +347,45 @@ assert "fitted.h = paper.w / source;" in lib_sleeve
 assert "if (source > target) {" in lib_sleeve
 assert "if (source < target) {" in lib_sleeve
 assert "fitted.y += (paper.h - fitted.h) * 0.5f;" in lib_sleeve
-assert "if (rear) fitted.x += paper.w - fitted.w;" in lib_sleeve
+assert "fitted.x += rear ? paper.w - fitted.w : (paper.w - fitted.w) * 0.5f;" in lib_sleeve
 assert "std::clamp(shell.w * 0.012f, 1.75f, 5.0f)" in lib_sleeve
-# A 181x278 retail sleeve must not spend ~10% of its width on an
-# aspect-contain blank column + molded opening. Source pixels UV-cover paper.
-shelf_width, shelf_height = 181.0, 278.0
-shelf_rim = min(5.0, max(1.75, shelf_width * 0.012))
-shelf_cap = max(5.0, shelf_height * 0.018)
-paper_aspect = (shelf_width - shelf_rim) / (shelf_height - 2 * shelf_cap)
+# The complete retail front must fit its case, top and bottom included.
+# Case width derives from the loaded scan ratio, not a forced tile crop.
+shelf_height = 346.0
 european_front_aspect = 872.0 / 1419.0
-assert shelf_rim < 2.3 and paper_aspect > european_front_aspect
-assert 0.85 < european_front_aspect / paper_aspect < 1.0
+shelf_cap = max(2.0, shelf_height * 0.008)
+paper_height = shelf_height - 2.0 * shelf_cap
+shelf_width = min(277.0, max(175.0, paper_height * european_front_aspect * 1.01))
+shelf_rim = min(2.0, max(0.9, shelf_width * 0.006))
+paper_aspect = (shelf_width - shelf_rim) / paper_height
+assert shelf_rim < 1.6 and 0.98 < european_front_aspect / paper_aspect < 1.02
+assert "const float sleeve_w = std::clamp(paper_height * aspect * 1.01f," in library
+assert "Rect uv" not in lib_sleeve
+assert "c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f}," in lib_sleeve
+# The row label must finish before the detail panel begins. No overprinting
+# text onto the scan, and no loss of the cover's printed header/footer.
+shelf_top, detail_top = 204.0, 620.0
+shelf_bottom = shelf_top + shelf_height
+assert shelf_bottom + 6.0 + 24.0 < detail_top
+assert (european_front_aspect / paper_aspect) > 0.95
+assert 'const Rect detail{72.0f, 620.0f, 1776.0f, 276.0f};' in library
+assert 'constexpr float shelf_y = 551.0f;' in library
+# The back-detail case adapts to the genuine rear scan instead of showing
+# the empty 181px-wide plastic substrate left of a narrower image.
+assert "const Cover back_scan = game->box_back.empty() ? Cover{} :" in library
+assert "const float rear_w = std::min(kRearMaxWidth," in library
+assert "const Rect art{280.0f - rear_w, 882.0f - rear_h, rear_w, rear_h};" in library
+assert 'tr("Down: view back cover")' not in library
+# No invented rear-side margin for representative portrait source ratios.
+for source_aspect in (0.50, 0.60, 0.615, 0.72, 0.90):
+    rear_h = min(247.0, (181.0 - 2.5) / source_aspect + 10.0)
+    paper_h = rear_h - 2.0 * max(5.0, rear_h * 0.018)
+    rear_w = min(181.0, paper_h * source_aspect + 2.5)
+    rim = min(5.0, max(1.75, rear_w * 0.012))
+    displayed_aspect = (rear_w - rim) / paper_h
+    assert abs(displayed_aspect / source_aspect - 1.0) < 0.015
+    assert 0 < rear_w <= 181 and 0 < rear_h <= 247
+
 # The 3D caps run the SAME 13px plastic skirt on either projected face.
 assert "float from_cap = min(v_st.y, 1.0 - v_st.y)" in shader
 assert "max(rim_intensity, cap_intensity)" in shader

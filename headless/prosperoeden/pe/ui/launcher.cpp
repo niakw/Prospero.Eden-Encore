@@ -6,6 +6,7 @@
 #include "pe/core/log.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <utility>
 
@@ -20,14 +21,38 @@ namespace
 constexpr Rect kScreen{0.0f, 0.0f, 1920.0f, 1080.0f};
 const Color kWhite{1.0f, 1.0f, 1.0f, 1.0f};
 
+// The native clock is local console time in 24-hour form. Format its
+// display for the selected language region, without guessing missing time.
+std::string localized_clock(const std::string& value, const std::string& region)
+{
+    if (region != tr("USA") && region != tr("Australia"))
+        return value;
+    if (value.size() != 5 || value[2] != ':' ||
+        !std::isdigit(static_cast<unsigned char>(value[0])) ||
+        !std::isdigit(static_cast<unsigned char>(value[1])) ||
+        !std::isdigit(static_cast<unsigned char>(value[3])) ||
+        !std::isdigit(static_cast<unsigned char>(value[4])))
+        return value;
+    const int hour = (value[0] - '0') * 10 + value[1] - '0';
+    const int minute = (value[3] - '0') * 10 + value[4] - '0';
+    if (hour > 23 || minute > 59)
+        return value;
+    return std::to_string((hour + 11) % 12 + 1) + value.substr(2) +
+           (hour < 12 ? " AM" : " PM");
+}
+
 } // namespace
 
 Launcher::Launcher(Services &services, Textures &textures, const Fonts &fonts, bool first_start)
     : services_(services), textures_(textures), fonts_(fonts), first_start_(first_start)
 {
     version_ = services_.version();
-    clock_ = services_.clock();
     prefs_ = services_.preferences();
+    clock_ = localized_clock(services_.clock(), services_.language_region(prefs_.language));
+    // Query platform user/cache only once; never block the render or input loop.
+    profile_avatar_scan_ = std::async(std::launch::async, [this] {
+        return services_.profile_avatar();
+    });
     apply_look();
     // Show the existing Home shell immediately; native recent-ROM metadata
     // comes from one background snapshot. This is NOT a failed setup state.
@@ -66,6 +91,8 @@ Launcher::~Launcher()
         media_scan_.wait();
     if (diagnostics_scan_.valid())
         diagnostics_scan_.wait();
+    if (profile_avatar_scan_.valid())
+        profile_avatar_scan_.wait();
 }
 
 std::vector<Cue> Launcher::take_cues()
@@ -375,6 +402,16 @@ void Launcher::update(float dt)
         }
     };
     textures_.pump(dt);
+    if (profile_avatar_scan_.valid() &&
+        profile_avatar_scan_.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+        try {
+            profile_avatar_path_ = profile_avatar_scan_.get();
+            if (!profile_avatar_path_.empty())
+                (void)textures_.cover(profile_avatar_path_, 56.0f);
+        } catch (...) {
+            profile_avatar_path_.clear();
+        }
+    }
     slow_stage("texture_upload", update_stage_begin);
     const auto media_started = std::chrono::steady_clock::now();
     finish_home_scan(); // nonblocking one-time Home application
@@ -452,7 +489,7 @@ void Launcher::update(float dt)
     if (clock_wait_ >= 1.0f)
     {
         clock_wait_ = 0.0f;
-        clock_ = services_.clock();
+        clock_ = localized_clock(services_.clock(), services_.language_region(prefs_.language));
     }
 
     if (!selected_game_.empty())
@@ -573,21 +610,18 @@ void Launcher::draw_top_nav(Canvas &c, int active_tab, int focus_tab, float focu
     text(c, "ENCORE", 176.0f, baseline(76.0f, 21.0f, 17.0f), 17.0f,
          theme::kLimePale, Align::left, 4.0f);
 
-    // Reference uses large icon+label destinations in the right side of the
-    // navigation. Keep the existing functional Recent tab until a real PS5
-    // suspend service is verified; never label Exit as "Sleep".
-    static constexpr const char* labels[] = {TR("Home"), TR("Library"), TR("Recent"), TR("Settings")};
-    static constexpr float xs[] = {715.0f, 918.0f, 1152.0f, 1420.0f};
-    static constexpr float widths[] = {186.0f, 222.0f, 254.0f, 200.0f};
+    // Three principal tabs; Settings is the separate top-right gear.
+    // Four stable focus positions preserve controller navigation and actions.
+    static constexpr const char* labels[] = {TR("Home"), TR("Library"), TR("Recent")};
+    static constexpr float xs[] = {355.0f, 558.0f, 790.0f, 1480.0f};
+    static constexpr float widths[] = {190.0f, 218.0f, 220.0f, 68.0f};
     for (int i = 0; i < 4; ++i)
     {
-        const Rect r{xs[i], 44.0f, widths[i], 54.0f};
+        const Rect r{xs[i], i == 3 ? 40.0f : 44.0f, widths[i], i == 3 ? 60.0f : 54.0f};
         const bool active = i == active_tab;
         const float focused = i == focus_tab ? tween::clamp01(focus_amount) : 0.0f;
         if (active)
         {
-            // Selected navigation has the same dark plum dispersion and neon
-            // edge as the button/card focus, not a flat blue rectangle.
             list.shadow({r.x - 5.0f, r.y - 5.0f, r.w + 10.0f, r.h + 10.0f},
                         23.0f, 27.0f, theme::kLime.with_alpha(0.29f));
             list.hgradient_rect(r, 19.0f,
@@ -600,9 +634,7 @@ void Launcher::draw_top_nav(Canvas &c, int active_tab, int focus_tab, float focu
         }
         if (focused > 0.001f)
             plate_focus(c, kNavPlate, r, focused);
-        // Functional vector icons from the same native DrawList as the PS5
-        // screens; avoid emoji glyph fallbacks on consoles without those fonts.
-        const float gx = r.x + 30.0f;
+        const float gx = i == 3 ? r.x + r.w * 0.5f : r.x + 30.0f;
         const float gy = r.y + r.h * 0.5f;
         const Color ink = active || focused > 0.01f ? theme::kTitle : theme::kMuted;
         if (i == 0) {
@@ -618,13 +650,45 @@ void Launcher::draw_top_nav(Canvas &c, int active_tab, int focus_tab, float focu
             list.line(gx, gy, gx, gy - 8.0f, 2.6f, ink);
             list.line(gx, gy, gx + 7.0f, gy + 5.0f, 2.6f, ink);
         } else {
-            settings_gear(c, gx, gy, 13.0f, ink);
+            settings_gear(c, gx, gy, 19.0f, ink);
         }
-        const float label_width = r.w - 70.0f;
-        text_shrink(c, tr(labels[i]), r.x + 60.0f + label_width * 0.5f,
-                    baseline(r.y, r.h, theme::kSmall), theme::kSmall,
-                    ink, label_width - 8.0f, Align::center);
+        if (i < 3) {
+            const float label_width = r.w - 70.0f;
+            text_shrink(c, tr(labels[i]), r.x + 60.0f + label_width * 0.5f,
+                        baseline(r.y, r.h, theme::kSmall), theme::kSmall,
+                        ink, label_width - 8.0f, Align::center);
+        }
     }
+
+    // Use the real foreground console profile when a readable local cache
+    // image exists; otherwise keep a neutral silhouette. No network request.
+    constexpr float avatar_x = 1640.0f, avatar_y = 70.0f;
+    list.rounded_rect({avatar_x - 27.0f, avatar_y - 27.0f, 54.0f, 54.0f},
+                      27.0f, theme::kPanel.with_alpha(0.90f));
+    const Cover avatar = profile_avatar_path_.empty() ? Cover{} :
+        c.textures.cover(profile_avatar_path_, 54.0f);
+    if (avatar.texture != 0) {
+        Rect uv{0.0f, 0.0f, 1.0f, 1.0f};
+        const float aspect = std::max(0.01f, avatar.aspect);
+        if (aspect > 1.0f) {
+            uv.w = 1.0f / aspect;
+            uv.x = (1.0f - uv.w) * 0.5f;
+        } else if (aspect < 1.0f) {
+            uv.h = aspect;
+            uv.y = (1.0f - uv.h) * 0.5f;
+        }
+        list.rounded_image(avatar.texture,
+                           {avatar_x - 25.0f, avatar_y - 25.0f, 50.0f, 50.0f},
+                           uv, 25.0f, kWhite);
+    } else {
+        list.rounded_rect({avatar_x - 8.0f, avatar_y - 16.0f, 16.0f, 16.0f},
+                          8.0f, theme::kTitle.with_alpha(0.94f));
+        list.rounded_rect({avatar_x - 17.0f, avatar_y + 5.0f, 34.0f, 14.0f},
+                          7.0f, theme::kTitle.with_alpha(0.94f));
+    }
+    list.ring(avatar_x, avatar_y, 26.0f, 1.8f,
+              theme::kPanelEdge.with_alpha(0.88f));
+
     text(c, clock_, 1848.0f, baseline(42.0f, 54.0f, theme::kClock), theme::kClock,
          theme::kTitle, Align::right);
     list.rounded_rect({72.0f, 126.0f, 1776.0f, 1.0f}, 0.0f, theme::kText.with_alpha(0.12f));
