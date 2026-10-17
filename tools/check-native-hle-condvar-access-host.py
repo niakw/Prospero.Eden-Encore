@@ -14,10 +14,11 @@ root = Path(__file__).resolve().parents[1]
 pinned = root / "vendor/sources/eden/src/core/hle/kernel/k_condition_variable.cpp"
 active = root / "vendor/encore-active/eden-threading/src/core/hle/kernel/k_condition_variable.cpp"
 cmake = (root / "headless/CMakeLists.txt").read_text()
+module = (root / "vendor/encore-active/eden-threading/native-hle-overrides.cmake").read_text()
 workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
-assert 'list(APPEND eden_cv_core_sources "${eden_active_cv}")' in cmake
-assert "vendor/encore-active/eden-threading/src/core/hle/kernel/k_condition_variable.cpp" in cmake
 assert "python3 -B tools/check-native-hle-condvar-access-host.py" in workflow
+assert "native-hle-overrides.cmake" in cmake
+assert "k_condition_variable.cpp" in module
 compiler = shutil.which("g++") or shutil.which("clang++")
 assert compiler
 
