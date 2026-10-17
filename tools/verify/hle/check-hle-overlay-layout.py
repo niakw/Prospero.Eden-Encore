@@ -10,7 +10,7 @@ cmake = (root / "headless/CMakeLists.txt").read_text()
 module = (root / "vendor/encore-active/eden-threading/native-hle-overrides.cmake").read_text()
 workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
 assert "python3 -B tools/verify/hle/check-hle-overlay-layout.py" in workflow
-assert cmake.count("native-hle-overrides.cmake") == 1
+assert cmake.count('include("${PORT_ROOT}/vendor/encore-active/eden-threading/native-hle-overrides.cmake")') == 1
 assert 'write_derived("${PORT_BUILD_DIR}/k_thread.cpp"' not in cmake
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/kernel/k_thread.cpp"' not in cmake
 assert not any(
