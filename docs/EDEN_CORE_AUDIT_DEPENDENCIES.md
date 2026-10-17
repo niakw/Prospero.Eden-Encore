@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 65
+**Non, this is not an exhaustive repository-wide inventory.** The 66
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -163,6 +163,7 @@ function/contract tokens are checked by CI for existence only; the
 | H06 | P0 | H03 | vendor/sources/eden/src/core/hle/kernel/k_thread_queue.cpp | KThreadQueue::NotifyAvailable; KThreadQueue::EndWait | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | EndWait stores result, sets Runnable, clears queue and cancels timer; scheduler OnThreadStateChanged receives transition; require concrete wake-to-run evidence before claiming missing notification | 🟠 À contrôler |
 | H07 | P0 | H06 | vendor/sources/eden/src/core/hle/kernel/k_address_arbiter.cpp | KAddressArbiter::Signal | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Relate address arbitration to guest thread wait/signal | 🟠 À contrôler |
 | H10 | P1 | H07,R10 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_address_arbiter.cpp | ReadFromUser; DecrementIfLessThan; UpdateIfEqual | HOST | tools/check-native-hle-arbiter-access-host.py | Pinned/active C++ witnesses PASS in complete host preflight #39021466798; CodeQL #39021358785 in progress; actual console wait/freeze behavior unverified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39021466798) |
+| H11 | P1 | H07,H10 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_address_arbiter.cpp | DecrementIfLessThan; SignalAndIncrementIfEqual; SignalAndModifyByWaitingCountIfEqual | OPEN | tools/check-native-hle-arbiter-wrap-host.py | Define modulo-32 guest counters instead of signed C++ overflow at limits; source-extracted UBSan witness and complete host CI pending; does not prove any guest freeze cause | 🟠 À contrôler |
 | H08 | P1 | H01,R10 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_condition_variable.cpp | ReadFromUser; WriteToUser; UpdateLockAtomic | HOST | tools/check-native-hle-condvar-access-host.py | Full host preflight #39019831224 SUCCESS with pinned/maintained C++ witness and sanitizer gates; CodeQL #39019831206 SUCCESS; no console or freeze proof | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39019831224) |
 | H09 | P1 | H08,H01 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_condition_variable.cpp | KConditionVariable::Wait | HOST | tools/check-native-hle-condvar-key-host.py | Pinned/native C++ Wait witness PASS and complete preflight #39022394512 SUCCESS; new CodeQL #39022367959 in progress; no console or frozen-game cause proven | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39022394512) |
 | D03 | P1 | Q04 | vendor/sources/eden/src/video_core/cdma_pusher.cpp | CDmaPusher::ExecuteCommand | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Distinguish host-channel DMA from graphics DMA | 🟠 À contrôler |
@@ -176,7 +177,7 @@ function/contract tokens are checked by CI for existence only; the
 
 ## Couverture encore NON exhaustive (à inventorier, pas à déclarer OK)
 
-Outre les **65 lignes du graphe**, le dépôt comprend d'autres composants
+Outre les **66 lignes du graphe**, le dépôt comprend d'autres composants
 susceptibles d'influencer le symptôme observé, dont les interfaces HID/commandes
 en jeu, l'ordonnancement des services IPC, la restitution audio et les chemins
 host-syncpoint. **Ils ne sont pas tous vérifiés par le présent tableau.**
@@ -196,7 +197,7 @@ host-syncpoint. **Ils ne sont pas tous vérifiés par le présent tableau.**
   couvertes par cet audit de stabilité native ; inventaire complet
   du dépôt ≠ assurance de correction de FC27.
 
-**Règle de clôture :** aucune réponse ne doit présenter « 65 lignes »
+**Règle de clôture :** aucune réponse ne doit présenter « 66 lignes »
 comme « toutes les fonctions restantes ». L'inventaire s'étend à mesure
 des véritables appels, et une tâche n'est verte que pour son critère
 de validation nommé.
