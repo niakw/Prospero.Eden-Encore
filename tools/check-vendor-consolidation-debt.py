@@ -137,6 +137,21 @@ assert "fs_file_source" not in c
 assert counts["write_derived("] <= 74, counts
 print("VENDOR_MAINTAINED_FS_IFILE_PARITY_PASS: pinned native DEV source, no CMake rewrite")
 
+
+# Keep the generator inventory synchronized with every future source migration.
+# It catalogs CMake invocations, not physical output files from variable loops.
+import re
+inventory = (root / "docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md").read_text()
+begin = "<!-- OVERRIDE_GENERATORS_START -->"
+end = "<!-- OVERRIDE_GENERATORS_END -->"
+assert inventory.count(begin) == inventory.count(end) == 1
+recorded = re.findall(r"^\| G\d\d \| \x60([^\x60]+)\x60 \|",
+                      inventory.split(begin)[1].split(end)[0], re.M)
+current = re.findall(r'write_derived\(\s*"([^"]+)"', c)
+assert recorded == current, "CMake-generated override inventory changed: re-inventory targets"
+assert len(current) == counts["write_derived("], "dynamic or unquoted generator not cataloged"
+print(f"VENDOR_GENERATOR_INVENTORY_PASS entries={len(recorded)}")
+
 print(f"VENDOR_SOURCE_PINNED roots={len(root_names)} manifest_items={len(deps)} "
       f"active_forks={len(fork_names)}")
 print("VENDOR_REWRITE_DEBT_PARTIAL " +
