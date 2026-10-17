@@ -283,9 +283,9 @@ for name, pinned_path in (
         ("HLE_SERVICE", "hle/service/service.cpp"),
         ("SVC_IPC", "hle/kernel/svc/svc_ipc.cpp")):
     assert f'set(EDEN_MAINTAINED_PROFILE_{name}' in c
-    assert f'"${EDEN_MAINTAINED_PROFILE_{name}}"' in c
+    assert ('"${EDEN_MAINTAINED_PROFILE_' + name + '}"') in c
     assert f'"{pinned_path}"' in c
-    assert f'write_derived("${PORT_BUILD_DIR}/{("hle_service" if name == "HLE_SERVICE" else "svc_ipc")}.cpp"' not in c
+    assert ('write_derived("${PORT_BUILD_DIR}' + "/" + ("hle_service" if name == "HLE_SERVICE" else "svc_ipc") + '.cpp"') not in c
 assert c.count('list(REMOVE_ITEM core_sources "hle/service/service.cpp" "hle/kernel/svc/svc_ipc.cpp")') == 1
 for name in ("hle_source", "ipc_source", "hle_call", "ipc_old"):
     assert name not in c, ("legacy configure-time HLE rewrite still referenced", name)
