@@ -662,6 +662,8 @@ for relative in (
     "tools/patch-radv-wsi.py", "tools/sync-encore-overrides.py",
     "tools/sync-glyph-overrides.py", "tools/launcher/strings.py",
     "tools/build-headless-host.sh", "tools/build-opengl-sdk.sh",
+    "tools/build-headless-native.sh", "tools/materialize-openssl-cert.py",
+    "tools/build-radv-dependencies.sh", "tools/radv-active-inputs.py",
 ):
     assert (root / relative).is_file(), ("untracked script entrypoint", relative)
     assert "`" + relative + "`" in inventory, ("script override not catalogued", relative)
@@ -678,6 +680,13 @@ assert 'tools/prepare-vulkan-port.py' not in vulkan
 radv_legacy = (root / "tools/patch-radv-wsi.py").read_text()
 assert "if not oracle:" in radv_legacy and "Legacy RADV source rewrite disabled" in radv_legacy
 assert 'patch-radv-wsi.py --check' in staging
+native_builder = (root / "tools/build-headless-native.sh").read_text()
+assert 'tools/materialize-openssl-cert.py' in native_builder
+radv_builder = (root / "tools/build-radv-dependencies.sh").read_text()
+assert "current.write_text(derived)" in radv_builder
+assert "trap restore_cross_ini EXIT" in radv_builder
+assert 'tools/install-vendored-radv.py' in radv_builder
+
 print("VENDOR_SCRIPTED_TRANSFORM_ENTRYPOINTS_PASS staged=5 oracles=2 profile_generators=2")
 
 begin = "<!-- OVERRIDE_GENERATORS_START -->"
