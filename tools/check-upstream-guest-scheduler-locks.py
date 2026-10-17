@@ -58,7 +58,7 @@ def section(begin: str, end: str) -> str:
 
 retry = section(
     "if (m_state.needs_scheduling.load(std::memory_order_seq_cst)) {\n"
-    "            // libc++",
+    "            // On retry,",
     "goto retry;")
 unload = section("void KScheduler::Unload(", "void KScheduler::Reload(")
 assert "while (!highest_priority_thread->m_context_guard.try_acquire())" in scheduler
