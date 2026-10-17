@@ -179,6 +179,33 @@ et plusieurs sorties sont explicitement conditionnées.
 | M21 | `headless/scalar-memory.cmake` | `${PORT_BUILD_DIR}/scalar_emit_x64_data_processing.cpp` | Emetteur scalaire |
 <!-- MODULE_GENERATORS_END -->
 
+## Overrides indirects sans `write_derived()` local
+
+Ces **7 modules supplémentaires** ne sont pas inclus dans le total de
+**89 appels**. Deux matérialisent leur sortie via `file(WRITE)` ;
+les cinq autres modifient une variable-source écrite ensuite par un
+générateur du CMake principal. Ce sont **7 modules**, pas nécessairement
+7 fichiers réellement produits.
+
+<!-- INDIRECT_OVERRIDES_START -->
+| ID | Module | Origine / source réécrite | Mécanisme | État |
+| --- | --- | --- | --- | --- |
+| X01 | `headless/macro_recovery.cmake` | `MACRO_INPUT` → `MACRO_OUTPUT` | `file(WRITE)` puis `configure_file(COPYONLY)` | Non migré |
+| X02 | `headless/slot_vector_recovery.cmake` | `SLOT_VECTOR_INPUT` → `SLOT_VECTOR_OUTPUT` | `file(WRITE)` puis `configure_file(COPYONLY)` | Non migré |
+| X03 | `headless/checked-fastmem.cmake` | `memory_emitter`, `memory_source` | Modifications de l'émetteur JIT dans les variables CMake | Non migré |
+| X04 | `headless/native_gpu_granular_bounds.cmake` | `eden_gpu_span_src` | Contrôles des plages GPU avant génération | Non migré |
+| X05 | `headless/native_guest_range_overflow.cmake` | `eden_cpu_memory` | Contrôle de débordement des adresses mémoire avant génération | Non migré |
+| X06 | `headless/native_jit_memory_read_guard.cmake` | `wrapper` | Contrôle des lectures de mémoire invitée avant génération | Non migré |
+| X07 | `headless/physical_core_interrupt_atomic.cmake` | `physical_core_source` | Accès atomiques aux interruptions avant génération | Non migré |
+<!-- INDIRECT_OVERRIDES_END -->
+
+Le sélecteur `headless/vulkan.cmake` copie des fichiers déjà maintenus
+dans `vendor/encore-active` : ce n'est pas une réécriture C++ par
+substitution. `headless/inject.cmake` orchestre l'inclusion ; le
+toolchain `headless/ps5.cmake` configure compilation et édition de liens.
+Ils ne sont donc pas ajoutés artificiellement comme huitième ou
+neuvième générateur.
+
 Deux autres modules (`macro_recovery.cmake` et
 `slot_vector_recovery.cmake`) créent une source ou un en-tête dérivé au
 moyen de `file(WRITE)` et `configure_file(COPYONLY)`, **sans appeler**
