@@ -62,6 +62,23 @@ for ident in entries:
 
 for ident in ("Q01", "T01", "T02", "J01", "H01", "H03", "V02", "V04", "M02", "S02"):
     assert ident in entries
+# Every green historic test must point to a real file actually run by CI.
+# Presence of a green badge does NOT imply console-game validation.
+workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
+completed_rows = re.findall(r"^\| C\d\d \|.*$", doc, re.M)
+assert len(completed_rows) >= 19
+for row in completed_rows:
+    assert row.count("img.shields.io/badge/") == 1, row[:60]
+    assert "2ea44f" in row, row[:60]
+    match = re.search(
+        r"https://github\.com/niakw/Prospero\.Eden-Encore/blob/dev/ps5-sparse-jit/(tools/[^)]*\.py)",
+        row,
+    )
+    assert match, ("missing hosted test link", row[:65])
+    relative = match.group(1)
+    assert (root / relative).is_file(), relative
+    assert ("python3 -B " + relative) in workflow, ("green but not in CI", relative)
+
 assert "bridge is still DISABLED" in doc
 print("ENCORE_CORE_AUDIT_REGISTER_PASS", f"entries={len(entries)}",
       "statuses=" + ",".join(f"{key}:{state_totals[key]}" for key in sorted(valid_states)))
