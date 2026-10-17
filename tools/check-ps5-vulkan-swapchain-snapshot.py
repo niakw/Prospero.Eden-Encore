@@ -38,9 +38,11 @@ for path,target in files.items():
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == 'read_text':
             target=node.func.value
             assert isinstance(target, ast.BinOp) and isinstance(target.op, ast.Div)
-            assert isinstance(target.left, ast.Name) and target.left.id == 'port'
+            assert isinstance(target.left, ast.Name) and target.left.id in {'port', 'vulkan_oracle'}
             path_to_read=ast.literal_eval(target.right)
-            return (ROOT/'headless'/path_to_read).read_text()
+            base=(ROOT/'headless' if target.left.id == 'port'
+                  else ROOT/'vendor/encore-active/eden-vulkan-oracles')
+            return (base/path_to_read).read_text()
         return ast.literal_eval(node)
     patches=[(patch_literal(pair.elts[0]),patch_literal(pair.elts[1]))
              for pair in related[0].args[2].elts]
@@ -71,7 +73,7 @@ composite=render[render.index('void RendererVulkan::Composite('):render.index('v
 assert 'swapchain.GetImageCount()' not in composite
 assert 'swapchain.GetImageViewFormat()' not in composite
 assert 'swapchain.GetImageFormat()' not in composite
-loading=(ROOT/'headless/vulkan_loading.inc').read_text()
+loading=(ROOT/'vendor/encore-active/eden-vulkan-oracles/vulkan_loading.inc').read_text()
 assert 'present_manager.SwapchainImageCount()' in loading
 assert 'present_manager.SwapchainImageViewFormat()' in loading
 assert 'swapchain.GetImageCount()' not in loading
