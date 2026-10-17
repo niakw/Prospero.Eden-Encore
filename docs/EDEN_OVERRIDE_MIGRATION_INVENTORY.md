@@ -128,9 +128,10 @@ dans la version normale.
 
 ## Prochain ordre de migration
 
-Les anciens générateurs `hle_service.cpp` et `svc_ipc.cpp` formaient
-un groupe **d'observation** encore généré ; le déplacer exige de conserver
-les points d'échantillonnage, les compteurs et le comportement hors diagnostic.
+Les anciens générateurs `hle_service.cpp` et `svc_ipc.cpp`
+ont été supprimés après migration des deux unités dans `vendor/encore-active`.
+Leurs points d'échantillonnage, traces et garde-fous hors diagnostic
+restent couverts par un test d'identité de transformation.
 Le bloc ordinaire CPU/JIT et les correctifs GPU synchronisés se migrent
 par unités de preuve distinctes, sans réécrire globalement les 3 000+ lignes
 de CMake en une fois.
