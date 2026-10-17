@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 176
+**Non, this is not an exhaustive repository-wide inventory.** The 188
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,23 +24,23 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 176 | 157 | 371 |
+| Graphe connu | 188 | 169 | 400 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 122 | 113 | 268 |
+| SOURCE — lecture effectuée, preuve insuffisante | 134 | 125 | 297 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **137** | **127** | **296** |
-| Dont priorité P0 (SOURCE + OPEN) | 58 | 53 | 147 |
+| **Encore à qualifier (SOURCE + OPEN)** | **149** | **139** | **325** |
+| Dont priorité P0 (SOURCE + OPEN) | 66 | 61 | 167 |
 
-Le **noyau restant** compte donc 137 critères répartis sur
-127 fichiers et 296 mentions fonction/contrat :
-15 OPEN et 122 SOURCE.
-Cela **ne signifie pas 296 fonctions jamais lues** :
+Le **noyau restant** compte donc 149 critères répartis sur
+139 fichiers et 325 mentions fonction/contrat :
+15 OPEN et 134 SOURCE.
+Cela **ne signifie pas 325 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-189 fichiers de code/en-têtes présents, 98 avec un chemin de
-graphe exact et 91 sans correspondance exacte. Cet écart n'est
+190 fichiers de code/en-têtes présents, 110 avec un chemin de
+graphe exact et 80 sans correspondance exacte. Cet écart n'est
 **pas** le nombre de fonctions non auditées, ni une preuve de code actif.
 Le contrôle hôte vérifie la complétude des chemins et les références,
 mais pas le comportement.
@@ -321,6 +321,18 @@ function/contract tokens are checked by CI for existence only; the
 | J12 | P1 | J08 | vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_64.cpp | DynarmicCallbacks64::MemoryRead32; CheckMemoryAccess | HOST | tools/check-native-jit-memory-read-guard-host.py | Pinned vs derived read rejection A64 host PASS in run #38996913209; console unverified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-jit-memory-read-guard-host.py) |
 | J13 | P1 | J08 | vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_32.cpp | DynarmicCallbacks32::MemoryRead32; CheckMemoryAccess | HOST | tools/check-native-jit-memory-read-guard-host.py | Pinned vs derived read rejection A32 host PASS in run #38996913209; console unverified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-jit-memory-read-guard-host.py) |
 | R11 | P1 | R01,R02 | vendor/sources/eden/src/video_core/memory_manager.cpp | MemoryManager::IsGranularRange | HOST | tools/check-native-gpu-granular-bounds-host.py | Native-derived host regression and full preflight #39017376187 SUCCESS; three CodeQL analyses #39017376169 SUCCESS; console/performance unverified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39017376187) |
+| R12 | P0 | V19 | vendor/encore-active/ps5-mesa/src/amd/vulkan/meta/radv_meta_clear.c | radv_is_clear_rect_full; emit_color_clear | SOURCE | tools/install-vendored-radv.py | Color/depth clear rectangles and attachment lifetime; selected via 12-input installer/fingerprint, device behavior unproven | 🟡 Source étudiée |
+| R13 | P0 | R12,V19 | vendor/encore-active/ps5-mesa/src/amd/vulkan/meta/radv_meta_resolve.c | radv_get_resolve_method; radv_decompress_resolve_src | SOURCE | tools/install-vendored-radv.py | Resolve/decompress ordering for compressed MSAA surfaces; selected via 12-input installer/fingerprint, device behavior unproven | 🟡 Source étudiée |
+| R14 | P0 | V16 | vendor/encore-active/ps5-mesa/src/amd/vulkan/radv_cmd_buffer.c | radv_handle_image_transition; radv_get_pm4_cs | SOURCE | tools/install-vendored-radv.py | Command buffer memory transitions and PM4 submission; selected via 12-input installer/fingerprint, device behavior unproven | 🟡 Source étudiée |
+| R15 | P0 | R14,V38 | vendor/encore-active/ps5-mesa/src/amd/vulkan/radv_descriptor_update_template.c | radv_CreateDescriptorUpdateTemplate; radv_update_descriptor_set_with_template_impl | SOURCE | tools/install-vendored-radv.py | Descriptor update template payload bounds and ABI; selected via 12-input installer/fingerprint, device behavior unproven | 🟡 Source étudiée |
+| R16 | P1 | R15 | vendor/encore-active/ps5-mesa/src/amd/vulkan/radv_descriptor_update_template.h | radv_cmd_update_descriptor_set_with_template | SOURCE | tools/install-vendored-radv.py | Descriptor template header contract; selected via 12-input installer/fingerprint, device behavior unproven | 🟡 Source étudiée |
+| R17 | P1 | R14 | vendor/encore-active/ps5-mesa/src/amd/vulkan/radv_physical_device.c | radv_sparse_enabled; radv_video_decode_queue_enabled | SOURCE | tools/install-vendored-radv.py | Physical device sparse and queue capabilities; selected via 12-input installer/fingerprint, device behavior unproven | 🟡 Source étudiée |
+| R18 | P1 | R15 | vendor/encore-active/ps5-mesa/src/amd/vulkan/radv_pipeline.c | radv_pipeline_init; radv_pipeline_destroy; radv_pipeline_report_pso_history | SOURCE | tools/install-vendored-radv.py | Pipeline cache init/destroy and compilation history; selected via 12-input installer/fingerprint, device behavior unproven | 🟡 Source étudiée |
+| R19 | P0 | R17 | vendor/encore-active/ps5-mesa/src/amd/vulkan/winsys/ps5/radv_ps5_platform.c | radv_ps5_memory_alloc; radv_ps5_vrange_bind; radv_ps5_platform_runs_gpu | SOURCE | tools/install-vendored-radv.py | Native physical granule allocation and GPU address binding; selected via 12-input installer/fingerprint, device behavior unproven | 🟡 Source étudiée |
+| R20 | P0 | R19,V16 | vendor/encore-active/ps5-mesa/src/amd/vulkan/winsys/ps5/radv_ps5_winsys.c | radv_ps5_queue_poll; radv_ps5_queue_wait_seq; radv_ps5_ctx_wait_idle | SOURCE | tools/install-vendored-radv.py | Native GPU queue completion and idle wait; selected via 12-input installer/fingerprint, device behavior unproven | 🟡 Source étudiée |
+| R21 | P1 | R17 | vendor/encore-active/ps5-mesa/src/util/disk_cache_os.c | disk_cache_load_item; disk_cache_write_item_to_disk; disk_cache_evict_lru_item | SOURCE | tools/install-vendored-radv.py | Native disk cache read/write and eviction; selected via 12-input installer/fingerprint, device behavior unproven | 🟡 Source étudiée |
+| R22 | P0 | R20,V32 | vendor/encore-active/ps5-mesa/src/vulkan/wsi/wsi_common_videoout.c | videoout_swapchain_wait_for_present; videoout_flip_thread; videoout_swapchain_get_wsi_image | SOURCE | tools/install-vendored-radv.py | Physical display/vblank swapchain ownership and progress; selected via 12-input installer/fingerprint, device behavior unproven | 🟡 Source étudiée |
+| R23 | P0 | R18,V18 | vendor/encore-active/ps5-mesa/src/amd/vulkan/cl/radv_gs_compute.cl | heap_alloc; radv_gs_compute_setup; radv_gs_compute_unroll | SOURCE | tools/install-vendored-radv.py | OpenCL geometry compute heap bounds and dispatch; selected via 12-input installer/fingerprint, device behavior unproven | 🟡 Source étudiée |
 | H18 | P0 | H02,H03 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp | KScheduler::ScheduleImplFiber; KScheduler::SwitchThread; KScheduler::Unload; KScheduler::Reload | SOURCE | tools/check-upstream-guest-scheduler-locks.py | C32 host permit transfer passed; live fiber scheduling and guest PC advancement still unproved | 🟡 Source étudiée |
 | H19 | P0 | H03 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_thread.cpp | KThread::UpdateState; KThread::Continue; KThread::SetState | SOURCE | tools/verify/hle/check-native-hle-address-wake-host.py | Runnable transition and suspension flags need end-to-end guest progression evidence | 🟡 Source étudiée |
 | J14 | P0 | J04,H18 | vendor/sources/eden/src/core/cpu_manager.cpp | CpuManager::RunThread; CpuManager::MultiCoreRunGuestThread; CpuManager::HandleInterrupt | SOURCE | docs/DEFERRED_JIT_QUIESCENCE_ARCHITECTURE_2026-10-17.md | Guest CPU worker resumes by fiber; no native PC sample correlated to wake and JIT entry | 🟡 Source étudiée |

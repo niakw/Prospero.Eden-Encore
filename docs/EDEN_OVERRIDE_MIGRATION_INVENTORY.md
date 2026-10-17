@@ -11,7 +11,7 @@ développement, les options JIT expérimentales, les backends et le build
 natif sélectionnent chacun leur sous-ensemble.
 
 L'inventaire complémentaire `docs/EDEN_ACTIVE_SOURCE_CATALOG.md` suit les
-186 fichiers de code et en-têtes dans `vendor/encore-active`,
+190 fichiers de code et en-têtes dans `vendor/encore-active`,
 y compris les backports de production et la dépendance graphique. Cette
 couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
@@ -115,6 +115,13 @@ dans la version normale.
 <!-- OVERRIDE_GENERATORS_END -->
 
 ## Prochain ordre de migration
+
+- `ps5-mesa` : les **12 entrées réelles du pilote natif**, dont
+  `src/amd/vulkan/cl/radv_gs_compute.cl`, sont maintenant suivies par
+  `R12-R23` et recoupées avec les `PATHS` de
+  `tools/install-vendored-radv.py`. Les empreintes de construction restent
+  gérées par `tools/radv-active-inputs.py`. Aucune source pilote modifiée.
+
 
 - Politique réseau guest : la version livrée `eden-backports` et son manifeste
   demeurent inchangés. Le build `PS5_NATIVE` utilise désormais l'en-tête
