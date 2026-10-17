@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 301
+**Non, this is not an exhaustive repository-wide inventory.** The 304
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 301 | 280 | 615 |
+| Graphe connu | 304 | 283 | 621 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 246 | 235 | 510 |
+| SOURCE — lecture effectuée, preuve insuffisante | 249 | 238 | 516 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **261** | **249** | **538** |
+| **Encore à qualifier (SOURCE + OPEN)** | **264** | **252** | **544** |
 | Dont priorité P0 (SOURCE + OPEN) | 105 | 100 | 246 |
 
-Le **noyau restant** compte donc 261 critères répartis sur
-249 fichiers et 538 mentions fonction/contrat :
-15 OPEN et 246 SOURCE.
+Le **noyau restant** compte donc 264 critères répartis sur
+252 fichiers et 544 mentions fonction/contrat :
+15 OPEN et 249 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-207 fichiers de code/en-têtes présents et 207 avec un chemin de
+210 fichiers de code/en-têtes présents et 210 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -439,6 +439,9 @@ function/contract tokens are checked by CI for existence only; the
 | J24 | P1 | J23 | vendor/encore-active/eden-core/dynarmic/shared-jit/jit_links.inc | EdenEmitLink; EmitTerminalImpl | SOURCE | tools/check-vendor-consolidation-debt.py | Same blob moved from headless to Encore; shared JIT remains experimental OFF and native behavior unproved | 🟡 Source étudiée |
 | J25 | P1 | J24 | vendor/encore-active/eden-core/dynarmic/shared-jit/jit_push_rsb.inc | PushRSBHelper; eden_pending_sites | SOURCE | tools/check-vendor-consolidation-debt.py | Same blob moved from headless to Encore; shared JIT remains experimental OFF and native behavior unproved | 🟡 Source étudiée |
 | J26 | P1 | J23 | vendor/encore-active/eden-core/dynarmic/shared-jit/jit_state_args.inc | EdenStateArg; EdenLoadArg | SOURCE | tools/check-vendor-consolidation-debt.py | Same blob moved from headless to Encore; shared JIT remains experimental OFF and native behavior unproved | 🟡 Source étudiée |
+| J27 | P1 | J02 | vendor/encore-active/eden-core/dynarmic/scalar/scalar-fold.inc | Op::VectorGetElement32; Op::ZeroExtendLongToQuad | SOURCE | tools/check-vendor-consolidation-debt.py | Scalar Dynarmic injection now maintained in Encore as original Git blob, changes in CMake source generator still to migrate | 🟡 Source étudiée |
+| J28 | P1 | J27 | vendor/encore-active/eden-core/dynarmic/scalar/scalar-memory-read.inc | read_fallbacks; EmitVAddrLookup | SOURCE | tools/check-vendor-consolidation-debt.py | Scalar Dynarmic injection now maintained in Encore as original Git blob, changes in CMake source generator still to migrate | 🟡 Source étudiée |
+| J29 | P1 | J28 | vendor/encore-active/eden-core/dynarmic/scalar/scalar-memory-write.inc | write_fallbacks; EmitVAddrLookup | SOURCE | tools/check-vendor-consolidation-debt.py | Scalar Dynarmic injection now maintained in Encore as original Git blob, changes in CMake source generator still to migrate | 🟡 Source étudiée |
 | H29 | P0 | H22,H26 | headless/backports/eden-sm-host-wait.patch | GetService; IsDummyThread; SleepThread | SOURCE | tools/install-active-core-backports.py | SM GetService uses host sleep for dummy threads to avoid parking a host HLE worker with guest SleepThread; staged patch spans service-manager header and must be validated with blocking/unblocking semantics | 🟡 Source étudiée |
 | H30 | P1 | H02 | vendor/encore-active/eden-core/src/core/hle/kernel/k_spin_lock.cpp | KSpinLock::Lock; KSpinLock::TryLock | SOURCE | tools/check-maintained-audio-units.py | Maintained lock source uses SpinAcquire and preserves unlock/try-lock behavior; source parity is checked, not contention or console forward progress | 🟡 Source étudiée |
 | H31 | P1 | H03,H24 | vendor/encore-active/eden-core/src/hid_core/resource_manager.cpp | ResourceManager::Initialize; ResourceManager::CreateAppletResource | SOURCE | headless/CMakeLists.txt | Maintained HID event-lifetime resource manager selected by hid_core; verify event registration, shutdown ownership and applet wake independently | 🟡 Source étudiée |
