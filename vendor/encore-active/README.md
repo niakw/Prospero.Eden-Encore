@@ -14,6 +14,7 @@
 | `eden-build/src/CMakeLists.txt` | Configuration de build maintenue copiée avant compilation |
 | `eden-core/src/common/thread.cpp`, `src/common/fs/fs.cpp` | Sources runtime natives maintenues ; noms de workers et énumération des répertoires |
 | `eden-core/src/common/cpu_features.cpp`, `src/common/fs/path_util.cpp` | Détection de fréquence TSC et racines utilisateur/cache natives, auparavant générées par CMake |
+| `eden-core/src/core/internal_network/network_interface.cpp` | Choix de la branche FreeBSD pour l'énumération des interfaces, sans génération CMake |
 | `eden-core/src/core/hle/kernel/svc/svc_ipc.cpp`, `src/core/hle/service/service.cpp` | Mesures IPC/HLE du profil diagnostic, sélectionnées sans génération CMake |
 | `eden-core/src/core/hle/service/{filesystem,nvdrv,nvnflinger}/` | Sources diagnostiques de fichiers, événements NVDRV et files de présentation |
 | `eden-gpu`, `eden-vulkan`, `eden-core`, `ps5-mesa` et autres dossiers | Autres adaptations maintenues ; voir `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` |
@@ -27,7 +28,7 @@ que sélectionner les unités maintenues et retirer la source d'origine de
 la cible concernée. Il ne doit plus générer de copies C++ pour ces unités.
 Les sources amont épinglées restent inchangées dans `vendor/sources/eden`.
 
-L'inventaire couvre **64 appels générateurs** du CMake principal, **21**
+L'inventaire couvre **63 appels générateurs** du CMake principal, **21**
 dans les modules et **7 modules indirects** suivis séparément ; ce ne sont
 pas des décomptes de fichiers uniques. Chaque nouvelle migration doit
 conserver un test de parité et de sélection native.
