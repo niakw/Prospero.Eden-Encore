@@ -153,7 +153,7 @@ assert storage_maintained == '#include "performance.h"\n' + storage_pinned.repla
 assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_FS_STORAGE}")') == 1
 assert 'write_derived("${PORT_BUILD_DIR}/fs_i_storage.cpp"' not in c
 assert "fs_storage_source" not in c
-assert counts["write_derived("] <= 64, counts
+assert counts["write_derived("] <= 63, counts
 print("VENDOR_MAINTAINED_FS_ISTORAGE_PARITY_PASS: read, short read, quiet policy")
 
 
@@ -384,6 +384,32 @@ assert 'write_derived("${PORT_BUILD_DIR}/path_util.cpp"' not in c
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/common/fs/path_util.cpp" paths_source)' not in c
 print("VENDOR_MAINTAINED_NATIVE_TSC_PATH_PARITY_PASS: CPUID fallback, native roots, DEV build selection")
 
+# Native getifaddrs interface provider: exactly three platform-branch
+# substitutions used to be emitted as a generated CMake translation unit.
+interfaces_rel = "core/internal_network/network_interface.cpp"
+interfaces_pinned = (sources / "eden/src" / interfaces_rel).read_text()
+interfaces_active = (active / "eden-core/src" / interfaces_rel).read_text()
+interface_replacements = (
+    ("defined(__linux__) || defined(__ANDROID__)",
+     "defined(__linux__) || defined(__ANDROID__) || defined(__FreeBSD__)"),
+    ("defined(__ANDROID__) || defined(__linux__)",
+     "defined(__ANDROID__) || defined(__linux__) || defined(__FreeBSD__)"),
+    ("#ifdef __ANDROID__", "#if defined(__ANDROID__) || defined(__FreeBSD__)"),
+)
+interface_expected = interfaces_pinned
+for old_branch, native_branch in interface_replacements:
+    assert interface_expected.count(old_branch) == 1, ("native interface branch changed", old_branch)
+    interface_expected = interface_expected.replace(old_branch, native_branch)
+assert interfaces_active == interface_expected, "Native network interfaces diverge from previous CMake source"
+assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_NATIVE_NET_INTERFACES}")') == 1
+assert 'list(REMOVE_ITEM core_sources internal_network/network_interface.cpp)' in c
+assert 'if(NOT EXISTS "${EDEN_MAINTAINED_NATIVE_NET_INTERFACES}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/network_interface.cpp"' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/internal_network/network_interface.cpp" interfaces_source)' not in c
+print("VENDOR_MAINTAINED_NATIVE_NET_INTERFACES_PARITY_PASS: getifaddrs branch, native-only selection")
+
+
+
 
 
 # Keep the generator inventory synchronized with every future source migration.
@@ -426,7 +452,7 @@ assert len(module_current) == 21, len(module_current)
 for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     text = (root / module).read_text()
     assert 'file(WRITE ' in text and 'configure_file(' in text, module
-assert len(recorded) + len(module_recorded) == 85
+assert len(recorded) + len(module_recorded) == 84
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
