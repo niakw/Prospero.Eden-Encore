@@ -91,18 +91,24 @@ assert "NowNs()" not in snapshot
 assert "mutex" not in snapshot and "malloc" not in snapshot
 assert "std::array<unsigned long long, 24>" in header
 
-# In the pinned CMake HLE-service injector, avoid TWO clock probes and the
-# HleCounters atomic hash-table update for every quiet guest IPC request.
-# Both normal and TIPC dispatches must still run exactly once per call.
-injector = cmake.split('    foreach(hle_call "        InvokeRequest(ctx);"', 1)[1].split(
-    "    write_derived(\"${PORT_BUILD_DIR}/hle_service.cpp\"", 1)[0]
-assert 'const bool profile_hle = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed);' in injector
-assert "const auto hle_start = profile_hle ? ::Eden::Performance::NowNs() : 0;" in injector
-assert 'if (profile_hle)\\n                ::Eden::Performance::RecordHle(' in injector
-assert '${hle_call}\\n            if (profile_hle)' in injector
-assert 'foreach(hle_call "        InvokeRequest(ctx);" "            InvokeRequestTipc(ctx);")' in cmake
-assert '::Eden::Performance::trace_fs_callers.load(std::memory_order_relaxed)' in injector
-assert injector.count('::Eden::Performance::RecordHle(') == 3  # replacement + search + insertion
+# The old CMake HLE injector was moved to a maintained DEV-only source.
+# Check the actual dispatch sites: quiet HLE calls must not sample clocks or
+# update HleCounters, but normal and TIPC dispatch must each execute once.
+service = read("vendor/encore-active/eden-core/src/core/hle/service/service.cpp")
+assert 'set(EDEN_MAINTAINED_PROFILE_HLE_SERVICE' in cmake
+assert 'write_derived("${PORT_BUILD_DIR}/hle_service.cpp"' not in cmake
+handle = service.split("Result ServiceFrameworkBase::HandleSyncRequest(", 1)[1]
+assert handle.count("        InvokeRequest(ctx);") == 1
+assert handle.count("            InvokeRequestTipc(ctx);") == 1
+assert service.count("const bool profile_hle = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed);") == 2
+assert service.count("const auto hle_start = profile_hle ? ::Eden::Performance::NowNs() : 0;") == 2
+assert service.count("if (profile_hle)\n                ::Eden::Performance::RecordHle(") == 2
+assert service.count("::Eden::Performance::trace_fs_callers.load(std::memory_order_relaxed)") == 2
+assert service.count("EDEN_FS_CALLER command=") == 2
+for call in ("InvokeRequest(ctx);", "InvokeRequestTipc(ctx);"):
+    segment = handle[:handle.index(call)]
+    assert segment.rfind("const auto hle_start = profile_hle ?") > segment.rfind("const bool profile_hle")
+assert service.count("::Eden::Performance::RecordHle(") == 2
 
 # OpenGL's one-off DEV pass dump must never trigger after 150 s by default,
 # and its 150-second state belongs to each newly constructed context.
