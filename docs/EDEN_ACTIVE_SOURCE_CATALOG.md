@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **201 fichiers** de code et d'en-têtes enregistrés.
-- **201 fichiers** possèdent une correspondance de chemin *exacte*
+- **207 fichiers** de code et d'en-têtes enregistrés.
+- **207 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -113,6 +113,12 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-backports/src/video_core/texture_cache/texture_cache.h` | `shipping-backport` | V52 |
 | `eden-backports/src/video_core/texture_cache/texture_cache_base.h` | `shipping-backport` | V54 |
 | `eden-backports/src/video_core/texture_cache/util.cpp` | `shipping-backport` | V61 |
+| `eden-core/dynarmic/shared-jit/jit_group.h` | `maintained-override` | J21 |
+| `eden-core/dynarmic/shared-jit/jit_group_support.inc` | `maintained-override` | J22 |
+| `eden-core/dynarmic/shared-jit/jit_impl.inc` | `maintained-override` | J23 |
+| `eden-core/dynarmic/shared-jit/jit_links.inc` | `maintained-override` | J24 |
+| `eden-core/dynarmic/shared-jit/jit_push_rsb.inc` | `maintained-override` | J25 |
+| `eden-core/dynarmic/shared-jit/jit_state_args.inc` | `maintained-override` | J26 |
 | `eden-core/include/core/file_sys/bis_factory.h` | `maintained-override` | F13 |
 | `eden-core/overrides/core/device_memory_manager.inc` | `maintained-override` | M08 |
 | `eden-core/overrides/core/gpu_dirty_memory_manager.h` | `maintained-override` | M09 |
@@ -243,15 +249,15 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
 Ces deux fichiers sont inclus dans les **83 entrées** de
 `vendor/encore-active/eden-backports/manifest.json`, mais ne sont
-pas comptés parmi les 201 fichiers de code et d'en-têtes.
+pas comptés parmi les 207 fichiers de code et d'en-têtes.
 
 ## Inventaire hors `vendor/encore-active`
 
-Les **195 fichiers source/en-tête/fragment** de `headless/` sont suivis
+Les **189 fichiers source/en-tête/fragment** de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
 27 ont désormais un propriétaire exact dans le graphe courant ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
-La couverture de 198/198 ci-dessus ne s'applique **pas** à ce dossier.
+La couverture de 207/207 ci-dessus ne s'applique **pas** à ce dossier.
 
 ## Critères de tenue à jour
 
