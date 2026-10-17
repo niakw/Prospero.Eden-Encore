@@ -88,7 +88,7 @@ memory bridge safety. A HOST property can still have an unmet device gate.
   prerequisite to fixing normal game freezes).
 
 **Next work in order:** H03 using already reviewed H01/H02 and the native-selected scheduler; then
-H06 for the concrete wake transition; then V02 and V04 if there is a
+H06 for the concrete wake transition; then H09 only with a controlled invalid-key witness; then V02 and V04 if there is a
 presentation/HUD stall distinct from guest progress; then J01 and V05
 only for remaining *unattributed* long-frame events. Do not return to
 aggregate JIT/cache statistics already studied.
@@ -136,7 +136,7 @@ function/contract tokens are checked by CI for existence only; the
 | S03 | P0 | S01,V04 | docs/FC27_NATIVE_FRAME_PROGRESS_TRIAGE_2026-10-17.md | Root cause; Vulkan | SOURCE | tools/check-fc27-cache-contention-classifier.py | Do not reclassify existing October 15 logs without new evidence | 🟡 Source étudiée |
 | T01 | P1 | B01 | tools/check-maintained-audio-units.py | cmake.count; gpu_producer_wait; gpu_read_capture | HOST | tools/check-maintained-audio-units.py | The HLE source override initially exceeded native generator limits (preflight #39019066990, #39019396287); corrected integration uses maintained C++ under vendor/encore-active and no additional CMake file read/derived TU; keep historic 77/87/227 ceilings | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39017376187) |
 | T02 | P1 | T01,Q01 | tools/check-native-gpu-queue-slot-lifetime-host.py | PINNED_GPU_QUEUE_SLOT_DESTRUCTOR_REUSE_PASS | HOST | tools/check-native-gpu-queue-slot-lifetime-host.py | Queue regression passed, but whole preflight failed on T01 gate | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-gpu-queue-slot-lifetime-host.py) |
-| H05 | P0 | H01,H02 | vendor/sources/eden/src/core/hle/kernel/k_synchronization_object.cpp | KSynchronizationObject::Wait; Signal | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Check guest multiobject wake paths against frozen-match samples | 🟠 À contrôler |
+| H05 | P0 | H01,H02 | vendor/sources/eden/src/core/hle/kernel/k_synchronization_object.cpp | KSynchronizationObject::Wait; KSynchronizationObject::NotifyAvailable | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Check guest multiobject wake paths against frozen-match samples | 🟠 À contrôler |
 | N01 | P1 | Q04 | vendor/sources/eden/src/core/hle/service/nvdrv/devices/nvhost_gpu.cpp | SubmitGPFIFO; Ioctl | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Trace IOCTL submit and fences only if guest GPU wait is implicated | 🟠 À contrôler |
 | V09 | P0 | V04 | vendor/encore-active/eden-vulkan/vulkan_present_layer.cpp | Layer::UpdateRawImage; Layer::UpdateDescriptorSet | OPEN | docs/PS5_R331_2026-10-11_VULKAN_RAW_VIEW_LIFETIME.md | Check layer resource lifetime only for new present/HUD evidence | 🟠 À contrôler |
 | A01 | P1 | H03 | vendor/sources/eden/src/audio_core/renderer/voice/voice_info.cpp | VoiceInfo::UpdateParameters; VoiceInfo::UpdatePlayState | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Validate audio voice state only if match stall traces demand it | 🟠 À contrôler |
@@ -159,7 +159,8 @@ function/contract tokens are checked by CI for existence only; the
 | R09 | P1 | H03 | vendor/sources/eden/src/core/hle/kernel/k_memory_manager.cpp | KMemoryManager::Initialize; KMemoryManager::AllocateAndOpen | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Trace guest RAM allocation around stalled synchronization | 🟠 À contrôler |
 | H06 | P0 | H03 | vendor/sources/eden/src/core/hle/kernel/k_thread_queue.cpp | KThreadQueue::NotifyAvailable; KThreadQueue::EndWait | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Verify actual guest runnable transition on wakeup | 🟠 À contrôler |
 | H07 | P0 | H06 | vendor/sources/eden/src/core/hle/kernel/k_address_arbiter.cpp | KAddressArbiter::Signal | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Relate address arbitration to guest thread wait/signal | 🟠 À contrôler |
-| H08 | P1 | H01,R10 | vendor/sources/eden/src/core/hle/kernel/k_condition_variable.cpp | ReadFromUser; WriteToUser; UpdateLockAtomic | OPEN | tools/check-native-hle-condvar-access-host.py | Pinned/maintained C++ witness preserves valid 32-bit guest words and rejects unmapped reads/writes/atomics; earlier derived-host test passed but generator policy failed; maintained-source CI and console unverified | 🟠 À contrôler |
+| H08 | P1 | H01,R10 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_condition_variable.cpp | ReadFromUser; WriteToUser; UpdateLockAtomic | OPEN | tools/check-native-hle-condvar-access-host.py | Maintained-source witness + full host preflight #39019831224 SUCCESS; CodeQL #39019831206 C++ pending; console and freeze effects unverified | 🟠 À contrôler |
+| H09 | P1 | H08,H01 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_condition_variable.cpp | KConditionVariable::Wait | OPEN | vendor/sources/eden/src/core/hle/kernel/svc/svc_condition_variable.cpp | Wait writes cv-key waiter flag without checking WriteToUser result; SVC aligns key but does not validate live mapping; prove invalid-key blocked-wait outcome before changing lock ownership/order | 🟠 À contrôler |
 | D03 | P1 | Q04 | vendor/sources/eden/src/video_core/cdma_pusher.cpp | CDmaPusher::ExecuteCommand | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Distinguish host-channel DMA from graphics DMA | 🟠 À contrôler |
 | M05 | P2 | M02 | headless/gpu_deferred_store_publication.h | CommitPostStore | PARKED | docs/DEFERRED_JIT_QUIESCENCE_ARCHITECTURE_2026-10-17.md | Publication experimental bridge still disabled | ⚪ Suspendu |
 | R10 | P1 | R01,R09 | vendor/sources/eden/src/core/memory.cpp | Memory::IsValidVirtualAddressRange | HOST | tools/check-native-guest-range-overflow-host.py | Host regression SUCCESS 38996379440; on-device behavior not verified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-guest-range-overflow-host.py) |
@@ -171,7 +172,7 @@ function/contract tokens are checked by CI for existence only; the
 
 ## Couverture encore NON exhaustive (à inventorier, pas à déclarer OK)
 
-Outre les **63 lignes du graphe**, le dépôt comprend d'autres composants
+Outre les **64 lignes du graphe**, le dépôt comprend d'autres composants
 susceptibles d'influencer le symptôme observé, dont les interfaces HID/commandes
 en jeu, l'ordonnancement des services IPC, la restitution audio et les chemins
 host-syncpoint. **Ils ne sont pas tous vérifiés par le présent tableau.**
@@ -191,7 +192,7 @@ host-syncpoint. **Ils ne sont pas tous vérifiés par le présent tableau.**
   couvertes par cet audit de stabilité native ; inventaire complet
   du dépôt ≠ assurance de correction de FC27.
 
-**Règle de clôture :** aucune réponse ne doit présenter « 63 lignes »
+**Règle de clôture :** aucune réponse ne doit présenter « 64 lignes »
 comme « toutes les fonctions restantes ». L'inventaire s'étend à mesure
 des véritables appels, et une tâche n'est verte que pour son critère
 de validation nommé.
