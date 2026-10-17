@@ -98,8 +98,8 @@ with tempfile.TemporaryDirectory(prefix="eden-jit-quiet-timer-") as tmp:
 
 # R299: test the exact extracted shared-JIT dispatch-counter function in
 # addition to the CMake timer. These counters are diagnostics, not guest state.
-support=(root/"headless/dynarmic/jit_group_support.inc").read_text()
-impl=(root/"headless/dynarmic/jit_impl.inc").read_text()
+support=(root/"vendor/encore-active/eden-core/dynarmic/shared-jit/jit_group_support.inc").read_text()
+impl=(root/"vendor/encore-active/eden-core/dynarmic/shared-jit/jit_impl.inc").read_text()
 assert "if (!eden_native_detailed_logging || !eden_native_detailed_logging()) return;" in support
 assert "const bool timed = eden_native_detailed_logging && eden_native_detailed_logging();" in impl
 assert "const u64 start = timed ? EdenClockNs() : 0;" in impl
