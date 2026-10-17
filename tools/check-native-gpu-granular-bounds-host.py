@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Host regression for native GPU IsGranularRange offset and bounds.
 
-Compiles the pinned C++ method and the real CMake-derived body. The original
+Compiles the pinned method and the actual Encore-maintained native C++ method. The original
 accepts a boundary-crossing continuous big-page span. No device/FPS claim.
 """
 from pathlib import Path
@@ -11,13 +11,15 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 pinned = root / "vendor/sources/eden/src/video_core/memory_manager.cpp"
-helper = root / "headless/native_gpu_granular_bounds.cmake"
+maintained = root / "vendor/encore-active/eden-core/src/video_core/memory_manager.cpp"
 cmake = (root / "headless/CMakeLists.txt").read_text()
 workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
-assert 'include("${EDEN_PORT_DIR}/native_gpu_granular_bounds.cmake")' in cmake
+assert 'list(APPEND video_sources "${EDEN_NATIVE_GPU_MEMORY_MANAGER}")' in cmake
+assert "native_gpu_granular_bounds.cmake" not in cmake
+assert not (root / "headless/native_gpu_granular_bounds.cmake").exists()
 assert "python3 -B tools/check-native-gpu-granular-bounds-host.py" in workflow
 compiler = shutil.which("g++") or shutil.which("clang++")
-assert compiler and shutil.which("cmake")
+assert compiler and maintained.is_file()
 
 def method(source):
     start = "bool MemoryManager::IsGranularRange(GPUVAddr gpu_addr, std::size_t size) const {"
@@ -87,17 +89,8 @@ int main() {
 """
 with tempfile.TemporaryDirectory(prefix="encore-gpu-granularity-") as td:
     temp = Path(td)
-    derivation = temp / "derive.cmake"
-    derived = temp / "native.cpp"
-    derivation.write_text(
-        "cmake_minimum_required(VERSION 3.16)\n"
-        f'file(READ "{pinned.as_posix()}" eden_gpu_span_src)\n'
-        f'include("{helper.as_posix()}")\n'
-        f'file(WRITE "{derived.as_posix()}" "' + '$' + '{eden_gpu_span_src}' + '")\n'
-    )
-    subprocess.run(["cmake", "-P", str(derivation)], check=True, timeout=25)
     original = pinned.read_text()
-    corrected = derived.read_text()
+    corrected = maintained.read_text()
     assert "page_index & big_page_mask) + size" in original
     assert "page_index & big_page_mask) + size" not in corrected
     assert "big_page_size - (gpu_addr & big_page_mask)" in corrected

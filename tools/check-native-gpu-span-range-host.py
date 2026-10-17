@@ -13,6 +13,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 source = (ROOT / "vendor/sources/eden/src/video_core/memory_manager.cpp").read_text()
+maintained = (ROOT / "vendor/encore-active/eden-core/src/video_core/memory_manager.cpp").read_text()
 cmake = (ROOT / "headless/CMakeLists.txt").read_text()
 workflow = (ROOT / ".github/workflows/encore-core-preflight.yml").read_text()
 start = "const u8* MemoryManager::GetSpan(const GPUVAddr src_addr, const std::size_t size) const {"
@@ -21,17 +22,16 @@ assert source.count(start) == 1 and source.count(end) == 1
 methods = source[source.index(start):source.index(end)]
 old = "    if (!IsContinuousRange(src_addr, size)) {"
 assert methods.count(old) == 2
-replacement_anchor = 'string(REPLACE "${eden_gpu_span_original}" [=['
-assert cmake.count(replacement_anchor) == 1
-native_start = cmake.index(replacement_anchor) + len(replacement_anchor)
-native_end = cmake.index(']=] eden_gpu_span_src "${eden_gpu_span_src}")', native_start)
-new = cmake[native_start:native_end]
-assert 'size == 0 || src_addr >= address_space_size' in new
-assert 'size > address_space_size - src_addr' in new
-assert new.count('!IsContinuousRange(src_addr, size)') == 1
-assert cmake.count('Pinned native GPU guest span range gate changed') == 1
+new = """    if (size == 0 || src_addr >= address_space_size ||
+        size > address_space_size - src_addr ||
+        !IsContinuousRange(src_addr, size)) {"""
+assert maintained.count(new) == 2
+assert 'set(EDEN_NATIVE_GPU_MEMORY_MANAGER' in cmake
 assert cmake.count('list(REMOVE_ITEM video_sources "memory_manager.cpp")') == 1
-assert cmake.count('list(APPEND video_sources "${eden_gpu_span_tu}")') == 1
+assert cmake.count('list(APPEND video_sources "${EDEN_NATIVE_GPU_MEMORY_MANAGER}")') == 1
+assert 'write_derived("${eden_gpu_span_tu}"' not in cmake
+native_methods = maintained[maintained.index(start):maintained.index(end)]
+assert native_methods == methods.replace(old, new), "native GetSpan guards differ from old generator"
 assert "python3 -B tools/check-native-gpu-span-range-host.py" in workflow
 
 cpp = r"""
@@ -109,7 +109,7 @@ assert clang, "Clang C++20 is required"
 with tempfile.TemporaryDirectory(prefix="encore-gpu-span-range-") as scratch:
     dest=Path(scratch)
     for name,body,enabled in (("pinned",methods,False),
-                              ("native",methods.replace(old,new),True)):
+                              ("native",native_methods,True)):
         unit=dest / (name + ".cpp")
         unit.write_text(cpp.replace("@@METHODS@@",body))
         exe=dest / name
