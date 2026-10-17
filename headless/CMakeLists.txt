@@ -2107,17 +2107,12 @@ set(EDEN_MAINTAINED_SINK_DETAILS
 if(NOT EXISTS "${EDEN_MAINTAINED_SINK_DETAILS}")
     message(FATAL_ERROR "Missing maintained native audio sink")
 endif()
-# Mirror mono PCM into both hardware channels in the existing upmix path.
-file(READ "${PROJECT_SOURCE_DIR}/src/audio_core/sink/sink_stream.cpp" stream_source)
-string(REPLACE "    if (type == StreamType::In)\n        return;"
-    "    if (type == StreamType::In)\n        return;\n    static_assert(std::is_same_v<decltype(samples_buffer), Common::RingBuffer<s16, 0x10000>>);\n    if (buffer.frames * device_channels > 0x10000 - samples_buffer.Size())\n        throw std::overflow_error(\"Audio PCM queue capacity exceeded\");" stream_source "${stream_source}")
-string(REPLACE "        samples_buffer.Push(new_samples);"
-    "        if (system_channels == 1 && device_channels == 2) {\n            for (std::size_t i = 0; i < new_samples.size(); i += 2) new_samples[i + 1] = new_samples[i];\n        }\n        samples_buffer.Push(new_samples);" stream_source "${stream_source}")
-# Refresh the held frame before a partial hardware block underruns.
-string(REPLACE "    std::memcpy(last_frame.data(), &output_buffer[(frames_written - 1) * frame_size], frame_size_bytes);" "" stream_source "${stream_source}")
-string(REPLACE "        samples_buffer.Pop(&output_buffer[frames_written * frame_size], frames_available * frame_size);"
-    "        samples_buffer.Pop(&output_buffer[frames_written * frame_size], frames_available * frame_size);\n        if (frames_available) std::memcpy(last_frame.data(), &output_buffer[(frames_written + frames_available - 1) * frame_size], frame_size_bytes);" stream_source "${stream_source}")
-write_derived("${PORT_BUILD_DIR}/sink_stream.cpp" "#include <stdexcept>\n${stream_source}")
+# Keep native PCM queue/upmix/held-frame behavior in a tracked C++ source.
+set(EDEN_MAINTAINED_SINK_STREAM
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/audio_core/sink/sink_stream.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_SINK_STREAM}")
+    message(FATAL_ERROR "Missing maintained native audio stream")
+endif()
 # A bitfield expression yields 0/1, so explicitly restore the SRC flag's bit position.
 # Preserve the source bitfield-position fix without regenerating this TU.
 set(EDEN_MAINTAINED_VOICE_INFO
@@ -2127,7 +2122,7 @@ if(NOT EXISTS "${EDEN_MAINTAINED_VOICE_INFO}")
 endif()
 get_target_property(audio_sources audio_core SOURCES)
 list(REMOVE_ITEM audio_sources sink/sink_details.cpp sink/sink_stream.cpp renderer/voice/voice_info.cpp)
-list(APPEND audio_sources "${EDEN_MAINTAINED_SINK_DETAILS}" "${PORT_BUILD_DIR}/sink_stream.cpp" "${EDEN_MAINTAINED_VOICE_INFO}")
+list(APPEND audio_sources "${EDEN_MAINTAINED_SINK_DETAILS}" "${EDEN_MAINTAINED_SINK_STREAM}" "${EDEN_MAINTAINED_VOICE_INFO}")
 set_property(TARGET audio_core PROPERTY SOURCES "${audio_sources}")
 if(PS5_NATIVE)
     target_link_libraries(eden-pad PUBLIC "${sdk}/target/lib/libScePad.so" "${sdk}/target/lib/libSceUserService.so")

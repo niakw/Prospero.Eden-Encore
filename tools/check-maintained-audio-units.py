@@ -23,7 +23,28 @@ updated="flags |= u16(params.flags.IsVoicePitchAndSrcSkippedSupported) << 1;"
 assert original.count(needle)==1
 assert (active/"audio_core/renderer/voice/voice_info.cpp").read_text()==original.replace(needle,updated)
 
-assert 'list(APPEND audio_sources "${EDEN_MAINTAINED_SINK_DETAILS}" "${PORT_BUILD_DIR}/sink_stream.cpp" "${EDEN_MAINTAINED_VOICE_INFO}")' in cmake
+# Historical native sink-stream translation-unit parity. Do not use CMake
+# string rewriting or alter the release audio semantics while consolidating.
+original=(base/"audio_core/sink/sink_stream.cpp").read_text()
+rewrite_cases=(
+    ("    if (type == StreamType::In)\n        return;", "    if (type == StreamType::In)\n        return;\n    static_assert(std::is_same_v<decltype(samples_buffer), Common::RingBuffer<s16, 0x10000>>);\n    if (buffer.frames * device_channels > 0x10000 - samples_buffer.Size())\n        throw std::overflow_error(\"Audio PCM queue capacity exceeded\");"),
+    ("        samples_buffer.Push(new_samples);", "        if (system_channels == 1 && device_channels == 2) {\n            for (std::size_t i = 0; i < new_samples.size(); i += 2) new_samples[i + 1] = new_samples[i];\n        }\n        samples_buffer.Push(new_samples);"),
+    ("    std::memcpy(last_frame.data(), &output_buffer[(frames_written - 1) * frame_size], frame_size_bytes);", ""),
+    ("        samples_buffer.Pop(&output_buffer[frames_written * frame_size], frames_available * frame_size);", "        samples_buffer.Pop(&output_buffer[frames_written * frame_size], frames_available * frame_size);\n        if (frames_available) std::memcpy(last_frame.data(), &output_buffer[(frames_written + frames_available - 1) * frame_size], frame_size_bytes);"),
+)
+for old,new in rewrite_cases:
+    assert original.count(old)==1, ("pinned sink stream drift",old)
+    original=original.replace(old,new)
+assert (active/"audio_core/sink/sink_stream.cpp").read_text() == '#include <stdexcept>\n'+original
+assert 'set(EDEN_MAINTAINED_SINK_STREAM' in cmake
+assert 'if(NOT EXISTS "${EDEN_MAINTAINED_SINK_STREAM}")' in cmake
+assert 'list(REMOVE_ITEM audio_sources sink/sink_details.cpp sink/sink_stream.cpp renderer/voice/voice_info.cpp)' in cmake
+assert cmake.count('list(APPEND audio_sources "${EDEN_MAINTAINED_SINK_DETAILS}" "${EDEN_MAINTAINED_SINK_STREAM}" "${EDEN_MAINTAINED_VOICE_INFO}")')==1
+assert 'write_derived("${PORT_BUILD_DIR}/sink_stream.cpp"' not in cmake
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/audio_core/sink/sink_stream.cpp"' not in cmake
+print("MAINTAINED_AUDIO_STREAM_PARITY_PASS: four historical rewrites and selected source")
+
+
 assert 'write_derived("${PORT_BUILD_DIR}/sink_details.cpp"' not in cmake
 assert 'write_derived("${PORT_BUILD_DIR}/voice_info.cpp"' not in cmake
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/audio_core/sink/sink_details.cpp"' not in cmake
@@ -86,4 +107,4 @@ assert cmake.count(gpu_queue_slot_apply) == 1
 assert 'list(LENGTH queue_slot_matches queue_slot_count)' in cmake
 assert 'if(NOT queue_slot_count EQUAL 2)' in cmake
 assert cmake.count("string(REPLACE") - cmake.count(gpu_producer_wait) - cmake.count(gpu_enqueue_fence) - cmake.count(dirty_mask_split) - cmake.count(native_read_slot) - cmake.count(native_span_guard) - cmake.count(gpu_span_guard) - cmake.count(gpu_read_capture) - cmake.count(gpu_queue_slot_find) - cmake.count(gpu_queue_slot_apply) <= 227
-print("MAINTAINED_AUDIO_UNITS_PARITY_PASS sink=1 voice=1")
+print("MAINTAINED_AUDIO_UNITS_PARITY_PASS sink_details=1 sink_stream=1 voice=1")
