@@ -80,13 +80,13 @@ sont des sources maintenues sous
 sélectionnées uniquement en `EDEN_DEV_PROFILE`.
 `tools/check-vendor-consolidation-debt.py` vérifie la parité du corps
 C++ avec l'override généré auparavant et recense les sorties CMake dans
-`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **64 sites restants**
+`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **63 sites restants**
 après onze migrations (F02, F03, F04, N02, N03, H21, H22, F05, F06, F07 et F08). Un site à paramètres variables peut
 produire plusieurs fichiers réels. Les ressources générées ne doivent
 pas être confondues avec des overrides de code.
 
 Le second inventaire compte 21 générateurs `write_derived()` dans les modules,
-soit **85 sites au total**, mais n'inclut **pas** les sept modules
+soit **84 sites au total**, mais n'inclut **pas** les sept modules
 `X01–X07` qui créent une sortie par `file(WRITE)` ou transforment
 indirectement une variable-source. Ils sont suivis séparément dans
 `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`, avec contrôle hôte de leur
@@ -120,11 +120,7 @@ avec sélection `common` et comparaison contre leur ancienne
 transformation CMake. La preuve d'exécution native de leurs branches
 de démarrage reste à acquérir.
 
-F09 (`network.cpp`) et F10 (`network_interface.cpp`) sont de
-nouveaux chemins générés toujours actifs, désormais catalogués :
-réveil du socket de contrôle hôte et sélection des interfaces
-réseau. Leur migration doit conserver le protocole d'interruption et
-le comportement hors console.
+F09 (`network.cpp`) reste une unité CMake générée pour le réveil du socket de contrôle hôte ; son protocole d'interruption doit rester inchangé. F10 (`network_interface.cpp`) est maintenant un fichier C++ maintenu avec ses trois sélections FreeBSD testées, sans preuve matérielle des interfaces effectivement retournées.
 
 ## Déjà traité — contrôles terminés et preuves accessibles
 
@@ -332,7 +328,7 @@ function/contract tokens are checked by CI for existence only; the
 | H29 | P0 | H22,H26 | headless/backports/eden-sm-host-wait.patch | GetService; IsDummyThread; SleepThread | SOURCE | tools/install-active-core-backports.py | SM GetService uses host sleep for dummy threads to avoid parking a host HLE worker with guest SleepThread; staged patch spans service-manager header and must be validated with blocking/unblocking semantics | 🟡 Source étudiée |
 | A02 | P1 | A01,H29 | headless/backports/eden-sm-host-wait.patch | IAudioController::GetSetSys; call_once | SOURCE | tools/install-active-core-backports.py | AudioController defers system-setting lookup to first actual request using once_flag; two corresponding audio files are still patched into the staged tree, not maintained directly | 🟡 Source étudiée |
 | F09 | P1 | H21,F08 | vendor/sources/eden/src/core/internal_network/network.cpp | Initialize; InterruptSocketOperations; AcknowledgeInterrupt; CancelPendingSocketOperations | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Native internal socket wake uses a generated source with socketpair/send/recv replacing pipe/write/read; first-byte ENOMEM workaround is unqualified on console. Distinguish host I/O wake from guest IPC progress | 🟡 Source étudiée |
-| F10 | P1 | F09 | vendor/sources/eden/src/core/internal_network/network_interface.cpp | GetAvailableNetworkInterfaces; GetSelectedNetworkInterface; SelectFirstNetworkInterface | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Three CMake FreeBSD conditional substitutions choose getifaddrs path and route zero-gateway fallback; validate target selection and real interface snapshot before moving | 🟡 Source étudiée |
+| F10 | P1 | F09 | vendor/encore-active/eden-core/src/core/internal_network/network_interface.cpp | GetAvailableNetworkInterfaces; GetSelectedNetworkInterface; SelectFirstNetworkInterface | SOURCE | tools/check-vendor-consolidation-debt.py | Three FreeBSD conditional substitutions are in maintained native C++ with an exact old-generator parity test and selected core target; actual network-interface snapshot remains unqualified | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
