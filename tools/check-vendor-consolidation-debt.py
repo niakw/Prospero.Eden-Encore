@@ -514,6 +514,15 @@ assert 'write_derived("${PORT_BUILD_DIR}/video_core.cpp"' not in c
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/video_core.cpp" video_factory)' not in c
 print("VENDOR_VIDEO_FACTORY_SELECTION_PASS: pinned Vulkan and maintained OpenGL")
 
+# RendererOpenGL previously passed through an identity CMake file copy.
+# The pinned source already belongs to video_core; do not duplicate objects.
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/renderer_opengl.cpp" renderer_source)' not in c
+assert 'write_derived("${PORT_BUILD_DIR}/renderer_opengl.cpp"' not in c
+assert 'list(REMOVE_ITEM video_sources renderer_opengl/renderer_opengl.cpp)' not in c
+assert 'list(APPEND video_sources "${PORT_BUILD_DIR}/renderer_opengl.cpp")' not in c
+assert 'renderer_opengl/renderer_opengl.cpp' in (sources / "eden/src/video_core/CMakeLists.txt").read_text()
+print("VENDOR_OPENGL_RENDERER_IDENTITY_COPY_REMOVED: pinned source selected")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -554,7 +563,7 @@ assert len(module_current) == 21, len(module_current)
 for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     text = (root / module).read_text()
     assert 'file(WRITE ' in text and 'configure_file(' in text, module
-assert len(recorded) + len(module_recorded) == 78
+assert len(recorded) + len(module_recorded) == 77
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived

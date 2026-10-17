@@ -2260,10 +2260,8 @@ if(EDEN_PS5_OPENGL)
     write_derived("${PORT_BUILD_DIR}/gl_rasterizer.cpp" "${rasterizer_source}")
     list(REMOVE_ITEM video_sources renderer_opengl/gl_rasterizer.cpp)
     list(APPEND video_sources "${PORT_BUILD_DIR}/gl_rasterizer.cpp")
-    file(READ "${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/renderer_opengl.cpp" renderer_source)
-    write_derived("${PORT_BUILD_DIR}/renderer_opengl.cpp" "${renderer_source}")
-    list(REMOVE_ITEM video_sources renderer_opengl/renderer_opengl.cpp)
-    list(APPEND video_sources "${PORT_BUILD_DIR}/renderer_opengl.cpp")
+    # renderer_opengl.cpp is byte-identical to the pinned source. Keep the
+    # original in video_sources: copying it into a derived TU adds no behavior.
     # Join the GPU worker before transferring its context to the teardown thread.
     if(PS5_NATIVE)
         set(MACRO_INPUT "${PROJECT_SOURCE_DIR}/src/video_core/macro.cpp")
