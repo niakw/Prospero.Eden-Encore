@@ -57,8 +57,9 @@ HudClock vulkan_hud_clock;
 double vulkan_hud_stats_time{}, vulkan_hud_speed{};
 #endif
 HudSnapshot vulkan_hud;
-// Never sample clocks or traverse HLE data on each present. These cumulative
-// counters need just 12 relaxed loads plus three JIT totals every five seconds.
+// No new clocks or HLE traversal on present. Ordinary five-second reports
+// read these cumulative counters once; only the explicit native DEV interval
+// witness samples them on each presentation callback (relaxed atomic loads).
 // Their deltas are concurrent worker time, NOT additive wall-clock frame time.
 // R404 captures the four guest JIT cores from the SAME report-boundary reads,
 // avoiding false attribution of parallel compilation to one paused thread.
