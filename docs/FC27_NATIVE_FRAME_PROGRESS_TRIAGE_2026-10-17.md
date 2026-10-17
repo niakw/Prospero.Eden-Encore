@@ -100,6 +100,21 @@ neither zero-valued duplicate/path counters nor zero evacuations prove that
 the default JIT never recompiles. Do not enable shared/batch JIT merely
 to repair these diagnostics.
 
+### Offline consumption of interval witnesses
+
+The existing `tools/analyze-fc27-stutter.py` analyzer now accepts
+`EDEN_PRESENT_INTERVAL_WITNESS` records **only** when they have all
+required counter fields, a matching preceding five-second
+`EDEN_VULKAN_FRAME` report, a witness frame within that window, a
+>=100-ms interval, and the literal `scope=between_presents`.
+It retains the paired interval separately in `present_interval_witnesses`.
+Older logs without this record return an empty list, **not** evidence
+of zero JIT or GPU waits.
+
+These are cumulative changes between two compositor callbacks, not
+individual guest-frame execution timings. The analyzer never treats a
+single observed gap as a proven stalled JIT, GPU fence, or game thread.
+
 **Acceptance:** host evidence proves only counter pairing and opt-in
 gating. Until a qualified native run is available, the cause of the
 gameplay freeze, per-frame stalls, and physical GPU ownership is OPEN.
