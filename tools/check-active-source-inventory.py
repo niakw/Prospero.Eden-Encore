@@ -188,10 +188,10 @@ assert [r[0] for r in headless_rows] == headless_actual, (
 # Headless paths use repository-relative keys and need an independent map.
 headless_graph = {}
 for entry in audit.splitlines():
-    if not re.match(r"^\\| [A-Z][0-9]{2} \\|", entry):
+    if not entry.startswith("| "):
         continue
     cells = [cell.strip() for cell in entry.strip().strip("|").split("|")]
-    if len(cells) == 9 and cells[3].startswith("headless/"):
+    if len(cells) == 9 and re.fullmatch("[A-Z][0-9]{2}", cells[0]) and cells[3].startswith("headless/"):
         headless_graph.setdefault(cells[3], []).append(cells[0])
 headless_linked = sum(p in headless_graph for p in headless_actual)
 for p, family, owner, state in headless_rows:
