@@ -624,6 +624,26 @@ assert 'if(NOT EXISTS "${EDEN_MAINTAINED_RUMBLE_CONTROLLER}")' in c
 assert 'write_derived("${PORT_BUILD_DIR}/emulated_controller.cpp"' not in c
 print("MAINTAINED_RUMBLE_UNIT_PARITY_PASS selection=hid_core")
 
+
+# Exact old-source parity for NPad: this must reproduce the former build
+# generator applied to the immutable shipping-backport snapshot, not an
+# independently rewritten input implementation.
+npad_shipping = (active / "eden-backports/src/hid_core/resources/npad/npad.cpp").read_text()
+npad_old_pair = "        auto& controller = controller_data[aruid_index][controller_idx];\n        const auto is_connected = controller.device->IsConnected();"
+npad_new_pair = "        auto& controller = controller_data[aruid_index][controller_idx];\n        if (controller.device == nullptr) {\n            continue;  // ProsperoEden: this applet resource is not activated yet\n        }\n        const auto is_connected = controller.device->IsConnected();"
+npad_old_entry = "void NPad::ControllerUpdate(Kernel::KernelCore& kernel, Core::HID::ControllerTriggerType type, std::size_t controller_idx) {\n"
+npad_new_entry = "void NPad::ControllerUpdate(Kernel::KernelCore& kernel, Core::HID::ControllerTriggerType type, std::size_t controller_idx) {\n    if (applet_resource_holder.applet_resource == nullptr) {\n        return;\n    }\n"
+assert npad_shipping.count(npad_old_pair) == npad_shipping.count(npad_old_entry) == 1
+npad_expected = npad_shipping.replace(npad_old_pair, npad_new_pair).replace(
+    npad_old_entry, npad_new_entry)
+assert (active / "eden-core/src/hid_core/resources/npad/npad.cpp").read_text() == npad_expected, (
+    "Maintained NPad differs from previous CMake source generator")
+assert c.count('list(APPEND npad_sources "${EDEN_MAINTAINED_NPAD}")') == 1
+assert c.count('list(FILTER npad_sources EXCLUDE REGEX "(^|/)npad\\\\.cpp$")') == 1
+assert 'write_derived("${PORT_BUILD_DIR}/npad.cpp"' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/hid_core/resources/npad/npad.cpp" npad_source)' not in c
+print("MAINTAINED_NPAD_SOURCE_PARITY_PASS guards=2 selection=hid_core")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -664,7 +684,7 @@ assert len(module_current) == 21, len(module_current)
 for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     text = (root / module).read_text()
     assert 'file(WRITE ' in text and 'configure_file(' in text, module
-assert len(recorded) + len(module_recorded) == 70
+assert len(recorded) + len(module_recorded) == 69
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
