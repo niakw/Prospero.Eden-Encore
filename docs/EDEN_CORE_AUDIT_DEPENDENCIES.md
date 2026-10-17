@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 134
+**Non, this is not an exhaustive repository-wide inventory.** The 139
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,23 +24,23 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 134 | 115 | 278 |
+| Graphe connu | 139 | 120 | 289 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 80 | 71 | 175 |
+| SOURCE — lecture effectuée, preuve insuffisante | 85 | 76 | 186 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **95** | **85** | **203** |
+| **Encore à qualifier (SOURCE + OPEN)** | **100** | **90** | **214** |
 | Dont priorité P0 (SOURCE + OPEN) | 40 | 35 | 104 |
 
-Le **noyau restant** compte donc 95 critères répartis sur
-85 fichiers et 203 mentions fonction/contrat :
-15 OPEN et 80 SOURCE.
-Cela **ne signifie pas 203 fonctions jamais lues** :
+Le **noyau restant** compte donc 100 critères répartis sur
+90 fichiers et 214 mentions fonction/contrat :
+15 OPEN et 85 SOURCE.
+Cela **ne signifie pas 214 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-186 fichiers de code/en-têtes présents, 56 avec un chemin de
-graphe exact et 130 sans correspondance exacte. Cet écart n'est
+186 fichiers de code/en-têtes présents, 61 avec un chemin de
+graphe exact et 125 sans correspondance exacte. Cet écart n'est
 **pas** le nombre de fonctions non auditées, ni une preuve de code actif.
 Le contrôle hôte vérifie la complétude des chemins et les références,
 mais pas le comportement.
@@ -336,6 +336,7 @@ function/contract tokens are checked by CI for existence only; the
 | V20 | P0 | R03,V16 | vendor/encore-active/eden-vulkan/vk_multi_range_buffer_cost.cpp | MultiRangeBufferCache::DrainRetired; MultiRangeBufferCache::DropOwner; MultiRangeBufferCache::Invalidate | SOURCE | headless/vulkan.cmake | Verify GPU tick ownership when retiring and dropping multi-range buffers; source indexed, no native proof | 🟡 Source étudiée |
 | V21 | P0 | V05,V17 | vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp | GraphicsPipeline::PreflightDescriptorScratch; GraphicsPipeline::ConfigureImpl; GraphicsPipeline::MakePipeline | SOURCE | headless/vulkan.cmake | Verify descriptor scratch preflight and pipeline compilation lock ordering; source indexed, no native proof | 🟡 Source étudiée |
 | V22 | P1 | V18,V17 | vendor/encore-active/eden-vulkan/vk_compute_pass_cost.cpp | ConditionalRenderingResolvePass::Resolve; ASTCDecoderPass::Assemble | SOURCE | headless/vulkan.cmake | Verify compute descriptor queue and decoder dispatch scheduling; source indexed, no native proof | 🟡 Source étudiée |
+| V23 | P1 | V19 | vendor/encore-active/eden-core/src/video_core/texture_cache/util.h | SwizzleImage; ConvertImage; DeduceBlitImages | SOURCE | headless/CMakeLists.txt | Maintained texture cache header includes Boost compatibility; verify header selection and compile variants; selected source only, device proof pending | 🟡 Source étudiée |
 | F04 | P1 | F02,F03 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_filesystem.cpp | IFileSystem::OpenFile; IFileSystem::OpenDirectory; IFileSystem::GetEntryType | HOST | tools/check-vendor-consolidation-debt.py | Maintained DEV IFileSystem diagnostic replaces G23 CMake patch for three result paths; three call replacements, DEV source selection, and quiet policy passed full host preflight #39048355950; native SDK/gameplay remain unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39048355950) |
 | H20 | P0 | H02,H19 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp | KScheduler::UpdateHighestPriorityThread; KScheduler::UpdateHighestPriorityThreadsImpl | SOURCE | tools/check-upstream-guest-scheduler-locks.py | Runnable queue update precedes per-core highest-priority selection; account for pinned-thread preference, suggested-core migration and eventual context load. Not proof of guest PC progress | 🟡 Source étudiée |
 | H21 | P0 | H14,J14 | vendor/encore-active/eden-core/src/core/hle/kernel/svc/svc_ipc.cpp | SendSyncRequestImpl; SendSyncRequestWithUserBuffer | SOURCE | tools/check-vendor-consolidation-debt.py | DEV sync IPC request/thread attribution now maintained, with exact former CMake code parity; the guest's resumed JIT PC after request completion remains unproved | 🟡 Source étudiée |
@@ -362,6 +363,8 @@ function/contract tokens are checked by CI for existence only; the
 | H32 | P1 | H22,F11 | vendor/encore-active/eden-core/src/core/hle/service/am/service/application_functions.cpp | IApplicationFunctions::GetDisplayVersion; IApplicationFunctions::EnsureSaveData | SOURCE | headless/CMakeLists.txt | Maintained guest metadata and save-data application service; DEV witness and release source selection must be distinguished | 🟡 Source étudiée |
 | A02 | P1 | A01,H29 | headless/backports/eden-sm-host-wait.patch | IAudioController::GetSetSys; call_once | SOURCE | tools/install-active-core-backports.py | AudioController defers system-setting lookup to first actual request using once_flag; two corresponding audio files are still patched into the staged tree, not maintained directly | 🟡 Source étudiée |
 | A03 | P1 | A01 | vendor/encore-active/eden-core/src/audio_core/sink/sink_stream.cpp | SinkStream::AppendBuffer; SinkStream::ProcessAudioOutAndRender | SOURCE | tools/check-maintained-audio-units.py | Source maintained, original four-rewrite parity and audio_core selection checked by host script; CI result and native audio behavior still required | 🟡 Source étudiée |
+| A04 | P1 | A01 | vendor/encore-active/eden-core/src/audio_core/renderer/voice/voice_info.cpp | VoiceInfo::UpdateParameters; VoiceInfo::UpdatePlayState | SOURCE | headless/CMakeLists.txt | Maintained renderer voice update has native flag position correction; validate voice state and game audio; selected source only, device proof pending | 🟡 Source étudiée |
+| A05 | P1 | A03 | vendor/encore-active/eden-core/src/audio_core/sink/sink_details.cpp | CreateSinkFromID; GetDeviceListForSink | SOURCE | headless/CMakeLists.txt | Maintained native audio sink choice is compiled from tracked unit; verify device selection and fallback; selected source only, device proof pending | 🟡 Source étudiée |
 | F09 | P1 | H21,F08 | vendor/sources/eden/src/core/internal_network/network.cpp | Initialize; InterruptSocketOperations; AcknowledgeInterrupt; CancelPendingSocketOperations | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Native internal socket wake uses a generated source with socketpair/send/recv replacing pipe/write/read; first-byte ENOMEM workaround is unqualified on console. Distinguish host I/O wake from guest IPC progress | 🟡 Source étudiée |
 | F10 | P1 | F09 | vendor/encore-active/eden-core/src/core/internal_network/network_interface.cpp | GetAvailableNetworkInterfaces; GetSelectedNetworkInterface; SelectFirstNetworkInterface | HOST | tools/check-vendor-consolidation-debt.py | Three FreeBSD conditional substitutions are in maintained native C++ with an old-generator parity and core selection PASS in preflight #39058024476; native interface snapshot unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39058024476) |
 | F11 | P1 | F08 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/filesystem.cpp | FileSystemController::CreateFactories | SOURCE | tools/check-vendor-consolidation-debt.py | Source maintained and host parity/selection check written; completed CI and device firmware behavior not yet validated | 🟡 Source étudiée |
@@ -370,6 +373,8 @@ function/contract tokens are checked by CI for existence only; the
 | F14 | P1 | F13 | vendor/encore-active/eden-core/src/core/file_sys/bis_factory.cpp | BISFactory::BISFactory; BISFactory::GetModificationLoadRoot | SOURCE | tools/check-vendor-consolidation-debt.py | Maintained constructor, conditional firmware root and read-only modification lookup have exact old-generator parity; native path selection and behavior not yet verified on device | 🟡 Source étudiée |
 | F15 | P1 | F11 | vendor/encore-active/eden-core/src/core/file_sys/savedata_factory.cpp | SaveDataFactory::GetSaveDataSpaceDirectory; SaveDataFactory::GetUserGameSaveDataRoot | SOURCE | headless/CMakeLists.txt | Maintained per-title cache and save-data directory mapping is selected by core; verify owner/zero-ID paths and persistence on device | 🟡 Source étudiée |
 | F16 | P1 | F12 | vendor/encore-active/eden-core/src/core/loader/deconstructed_rom_directory.cpp | AppLoader_DeconstructedRomDirectory::Load; AppLoader_DeconstructedRomDirectory::ReadNSOModules | SOURCE | headless/CMakeLists.txt | Maintained aligned module loader may be selected only under native code-load options; check module alignment and byte accuracy on console | 🟡 Source étudiée |
+| F17 | P1 | F05 | vendor/encore-active/eden-core/src/common/logging.cpp | FormatLogMessage; FmtLogMessageImpl | SOURCE | headless/CMakeLists.txt | Maintained bounded logging avoids per-error expensive flush; verify error burst drain and shutdown; selected source only, device proof pending | 🟡 Source étudiée |
+| F18 | P1 | F17 | vendor/encore-active/eden-core/src/common/assert.h | AssertFailSoftImpl; AssertFatalImpl | SOURCE | headless/CMakeLists.txt | Maintained assert header in source include root; verify selected consumer include precedence and fail-soft behavior; selected source only, device proof pending | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 

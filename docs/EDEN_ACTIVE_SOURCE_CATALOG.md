@@ -8,9 +8,9 @@ présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
 - **186 fichiers** de code et d'en-têtes enregistrés.
-- **56 fichiers** possèdent une correspondance de chemin *exacte*
+- **61 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
-- **130 fichiers** n'ont pas encore de ligne de graphe correspondant
+- **125 fichiers** n'ont pas encore de ligne de graphe correspondant
   exactement à leur chemin. Cela **ne prouve pas** qu'ils n'ont jamais été
   examinés, ni qu'ils sont effectivement compilés.
 - Le manifeste des backports verrouille **83 fichiers livrés**, dont
@@ -118,15 +118,15 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/overrides/core/device_memory_manager.inc` | `maintained-override` | M08 |
 | `eden-core/overrides/core/gpu_dirty_memory_manager.h` | `maintained-override` | M09 |
 | `eden-core/overrides/core/guest_memory.h` | `maintained-override` | M10 |
-| `eden-core/src/audio_core/renderer/voice/voice_info.cpp` | `maintained-override` | — |
-| `eden-core/src/audio_core/sink/sink_details.cpp` | `maintained-override` | — |
+| `eden-core/src/audio_core/renderer/voice/voice_info.cpp` | `maintained-override` | A04 |
+| `eden-core/src/audio_core/sink/sink_details.cpp` | `maintained-override` | A05 |
 | `eden-core/src/audio_core/sink/sink_stream.cpp` | `maintained-override` | A03 |
-| `eden-core/src/common/assert.h` | `maintained-override` | — |
+| `eden-core/src/common/assert.h` | `maintained-override` | F18 |
 | `eden-core/src/common/cpu_features.cpp` | `maintained-override` | F07 |
 | `eden-core/src/common/fiber.cpp` | `maintained-override` | J18 |
 | `eden-core/src/common/fs/fs.cpp` | `maintained-override` | F06 |
 | `eden-core/src/common/fs/path_util.cpp` | `maintained-override` | F08 |
-| `eden-core/src/common/logging.cpp` | `maintained-override` | — |
+| `eden-core/src/common/logging.cpp` | `maintained-override` | F17 |
 | `eden-core/src/common/thread.cpp` | `maintained-override` | F05 |
 | `eden-core/src/core/file_sys/bis_factory.cpp` | `maintained-override` | F14 |
 | `eden-core/src/core/file_sys/fsmitm_romfsbuild.cpp` | `maintained-override` | F12 |
@@ -146,7 +146,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/hid_core/resource_manager.cpp` | `maintained-override` | H31 |
 | `eden-core/src/video_core/renderer_opengl/gl_buffer_cache.cpp` | `maintained-override` | V14 |
 | `eden-core/src/video_core/renderer_opengl/gl_query_cache.cpp` | `maintained-override` | V15 |
-| `eden-core/src/video_core/texture_cache/util.h` | `maintained-override` | — |
+| `eden-core/src/video_core/texture_cache/util.h` | `maintained-override` | V23 |
 | `eden-core/src/video_core/video_core_opengl.cpp` | `maintained-override` | V12 |
 | `eden-gpu/gpu_thread_dev.cpp` | `maintained-override` | Q03 |
 | `eden-gpu/gpu_thread_quiet.cpp` | `maintained-override` | — |
