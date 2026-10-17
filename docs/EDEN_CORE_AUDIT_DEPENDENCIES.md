@@ -42,13 +42,14 @@ pas chiffrable honnêtement sans un relevé exhaustif supplémentaire.
 
 ## Migration de sources et inventaire de sélection
 
-La lecture diagnostique `IFile::Read` (F02) est maintenant une source
-maintenue (`vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_file.cpp`),
-sélectionnée seulement dans l'ancien périmètre `EDEN_DEV_PROFILE`.
+Les lectures diagnostiques `IFile::Read` (F02) et `IStorage::Read` (F03)
+sont des sources maintenues sous
+`vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/`,
+sélectionnées uniquement en `EDEN_DEV_PROFILE`.
 `tools/check-vendor-consolidation-debt.py` vérifie la parité du corps
 C++ avec l'override généré auparavant et recense les sorties CMake dans
-`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **74 sites restants**
-après cette première migration. Un site à paramètres variables peut
+`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **73 sites restants**
+après ces deux migrations. Un site à paramètres variables peut
 produire plusieurs fichiers réels. Les ressources générées ne doivent
 pas être confondues avec des overrides de code.
 
@@ -235,7 +236,7 @@ function/contract tokens are checked by CI for existence only; the
 | J14 | P0 | J04,H18 | vendor/sources/eden/src/core/cpu_manager.cpp | CpuManager::RunThread; CpuManager::MultiCoreRunGuestThread; CpuManager::HandleInterrupt | SOURCE | docs/DEFERRED_JIT_QUIESCENCE_ARCHITECTURE_2026-10-17.md | Guest CPU worker resumes by fiber; no native PC sample correlated to wake and JIT entry | 🟡 Source étudiée |
 | J15 | P0 | J03,H18 | vendor/sources/eden/src/core/hle/kernel/physical_core.cpp | PhysicalCore::LoadContext; PhysicalCore::SaveContext | SOURCE | tools/check-native-physical-core-interrupt-ack-host.py | Need real context restoration proof after migration; interrupt ACK is not JIT resume | 🟡 Source étudiée |
 | F02 | P1 | B01 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_file.cpp | IFile::Read; IFile::Write; IFile::Flush | SOURCE | tools/check-vendor-consolidation-debt.py | IFile DEV override moved to maintained TU; source parity gate and host build required | 🟡 Source étudiée |
-| F03 | P1 | F02 | vendor/sources/eden/src/core/hle/service/filesystem/fsp/fs_i_storage.cpp | IStorage::Read | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | DEV storage diagnostic still generated in CMake; preserve short-read checks when migrating | 🟡 Source étudiée |
+| F03 | P1 | F02 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_storage.cpp | IStorage::Read | SOURCE | tools/check-vendor-consolidation-debt.py | Maintained DEV storage TU has pinned-source text parity, preserving guest result and short-read report; native gameplay still unqualified | 🟡 Source étudiée |
 | N02 | P1 | N01 | vendor/sources/eden/src/core/hle/service/nvdrv/devices/nvhost_ctrl.cpp | nvhost_ctrl::IocCtrlEventWait; nvhost_ctrl::IocCtrlClearEventWait | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Host syncpoint event-wait diagnostic still generated; callback-to-guest wake latency not proven | 🟡 Source étudiée |
 | V11 | P0 | V02,V04 | headless/graphics.cpp | GraphicsWindow::OnFrameDisplayed; CaptureFramePressure | SOURCE | tools/check-ps5-quiet-frame-pressure.py | Presentation-interval witnesses are callback pairs, not guest game logic or GPU ownership | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
