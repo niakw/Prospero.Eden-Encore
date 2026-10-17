@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 114
+**Non, this is not an exhaustive repository-wide inventory.** The 120
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,23 +24,23 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 114 | 95 | 232 |
+| Graphe connu | 120 | 101 | 245 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 60 | 51 | 130 |
+| SOURCE — lecture effectuée, preuve insuffisante | 66 | 57 | 143 |
 | OPEN — question technique non résolue | 15 | 15 | 27 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **75** | **65** | **157** |
+| **Encore à qualifier (SOURCE + OPEN)** | **81** | **71** | **170** |
 | Dont priorité P0 (SOURCE + OPEN) | 33 | 28 | 82 |
 
-Le **noyau restant** compte donc 75 critères répartis sur
-65 fichiers et 157 mentions fonction/contrat :
-15 OPEN et 60 SOURCE.
+Le **noyau restant** compte donc 81 critères répartis sur
+71 fichiers et 170 mentions fonction/contrat :
+15 OPEN et 66 SOURCE.
 Cela **ne signifie pas 138 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-183 fichiers de code/en-têtes présents, 37 avec un chemin de
-graphe exact et 146 sans correspondance exacte. Cet écart n'est
+183 fichiers de code/en-têtes présents, 43 avec un chemin de
+graphe exact et 140 sans correspondance exacte. Cet écart n'est
 **pas** le nombre de fonctions non auditées, ni une preuve de code actif.
 Le contrôle hôte vérifie la complétude des chemins et les références,
 mais pas le comportement.
@@ -341,7 +341,11 @@ function/contract tokens are checked by CI for existence only; the
 | F08 | P1 | F06 | vendor/encore-active/eden-core/src/common/fs/path_util.cpp | PathManagerImpl; Reinitialize; GenerateLegacyPath | HOST | tools/check-vendor-consolidation-debt.py | Native writable user/cache/config root and legacy path selection now maintained C++; source parity and selection PASS in preflight #39058024476; hardware startup paths unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39058024476) |
 | J16 | P0 | J01,J02 | headless/backports/eden-dynarmic-icache-coherence.patch | ArmDynarmic64::InvalidateCacheRange; Core::InvalidateInstructionCacheRange | SOURCE | tools/install-active-core-backports.py | Active-core installer stages A64 cross-core i-cache invalidation from a patch, not tracked C++ source; invalidate callback address and propagate process range, while real JIT progress still unproven | 🟡 Source étudiée |
 | J17 | P1 | J16,J13 | headless/backports/eden-dynarmic-icache-coherence.patch | ArmDynarmic32::InvalidateCacheRange; last_code_addr | SOURCE | tools/install-active-core-backports.py | A32 i-cache invalidation resets last dispatched address in staged patch; preserve coherence across guest cores before materializing maintained TU | 🟡 Source étudiée |
+| J18 | P1 | H18,J03 | vendor/encore-active/eden-core/src/common/fiber.cpp | Fiber::YieldTo; Fiber::Exit; Fiber::ThreadToFiber | SOURCE | headless/CMakeLists.txt | Maintained native fiber unit is selected by common; validate cross-thread context ownership, rewind/exit semantics and actual guest execution separately | 🟡 Source étudiée |
 | H29 | P0 | H22,H26 | headless/backports/eden-sm-host-wait.patch | GetService; IsDummyThread; SleepThread | SOURCE | tools/install-active-core-backports.py | SM GetService uses host sleep for dummy threads to avoid parking a host HLE worker with guest SleepThread; staged patch spans service-manager header and must be validated with blocking/unblocking semantics | 🟡 Source étudiée |
+| H30 | P1 | H02 | vendor/encore-active/eden-core/src/core/hle/kernel/k_spin_lock.cpp | KSpinLock::Lock; KSpinLock::TryLock | SOURCE | tools/check-maintained-audio-units.py | Maintained lock source uses SpinAcquire and preserves unlock/try-lock behavior; source parity is checked, not contention or console forward progress | 🟡 Source étudiée |
+| H31 | P1 | H03,H24 | vendor/encore-active/eden-core/src/hid_core/resource_manager.cpp | ResourceManager::Initialize; ResourceManager::CreateAppletResource | SOURCE | headless/CMakeLists.txt | Maintained HID event-lifetime resource manager selected by hid_core; verify event registration, shutdown ownership and applet wake independently | 🟡 Source étudiée |
+| H32 | P1 | H22,F11 | vendor/encore-active/eden-core/src/core/hle/service/am/service/application_functions.cpp | IApplicationFunctions::GetDisplayVersion; IApplicationFunctions::EnsureSaveData | SOURCE | headless/CMakeLists.txt | Maintained guest metadata and save-data application service; DEV witness and release source selection must be distinguished | 🟡 Source étudiée |
 | A02 | P1 | A01,H29 | headless/backports/eden-sm-host-wait.patch | IAudioController::GetSetSys; call_once | SOURCE | tools/install-active-core-backports.py | AudioController defers system-setting lookup to first actual request using once_flag; two corresponding audio files are still patched into the staged tree, not maintained directly | 🟡 Source étudiée |
 | A03 | P1 | A01 | vendor/encore-active/eden-core/src/audio_core/sink/sink_stream.cpp | SinkStream::AppendBuffer; SinkStream::ProcessAudioOutAndRender | SOURCE | tools/check-maintained-audio-units.py | Source maintained, original four-rewrite parity and audio_core selection checked by host script; CI result and native audio behavior still required | 🟡 Source étudiée |
 | F09 | P1 | H21,F08 | vendor/sources/eden/src/core/internal_network/network.cpp | Initialize; InterruptSocketOperations; AcknowledgeInterrupt; CancelPendingSocketOperations | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Native internal socket wake uses a generated source with socketpair/send/recv replacing pipe/write/read; first-byte ENOMEM workaround is unqualified on console. Distinguish host I/O wake from guest IPC progress | 🟡 Source étudiée |
@@ -350,6 +354,8 @@ function/contract tokens are checked by CI for existence only; the
 | F12 | P1 | F11 | vendor/encore-active/eden-core/src/core/file_sys/fsmitm_romfsbuild.cpp | RomFSBuildContext::AddDirectory; RomFSBuildContext::AddFile | SOURCE | tools/check-vendor-consolidation-debt.py | Previously CMake-generated RomFS parent ownership source is maintained with byte-identical two-field/two-assignment rewrite oracle; completed CI and game mod/ROMFS behavior not yet proven | 🟡 Source étudiée |
 | F13 | P1 | F11 | vendor/encore-active/eden-core/include/core/file_sys/bis_factory.h | BISFactory( | SOURCE | tools/check-vendor-consolidation-debt.py | Native header provides identical constructor default firmware argument and isolated include-root selection; pending successful preflight and native device verification | 🟡 Source étudiée |
 | F14 | P1 | F13 | vendor/encore-active/eden-core/src/core/file_sys/bis_factory.cpp | BISFactory::BISFactory; BISFactory::GetModificationLoadRoot | SOURCE | tools/check-vendor-consolidation-debt.py | Maintained constructor, conditional firmware root and read-only modification lookup have exact old-generator parity; native path selection and behavior not yet verified on device | 🟡 Source étudiée |
+| F15 | P1 | F11 | vendor/encore-active/eden-core/src/core/file_sys/savedata_factory.cpp | SaveDataFactory::GetSaveDataSpaceDirectory; SaveDataFactory::GetUserGameSaveDataRoot | SOURCE | headless/CMakeLists.txt | Maintained per-title cache and save-data directory mapping is selected by core; verify owner/zero-ID paths and persistence on device | 🟡 Source étudiée |
+| F16 | P1 | F12 | vendor/encore-active/eden-core/src/core/loader/deconstructed_rom_directory.cpp | AppLoader_DeconstructedRomDirectory::Load; AppLoader_DeconstructedRomDirectory::ReadNSOModules | SOURCE | headless/CMakeLists.txt | Maintained aligned module loader may be selected only under native code-load options; check module alignment and byte accuracy on console | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
