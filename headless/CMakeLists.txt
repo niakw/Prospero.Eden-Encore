@@ -2905,15 +2905,14 @@ if(PS5_NATIVE)
     write_derived("${PORT_BUILD_DIR}/bis_factory.cpp" "${bis_source}")
     list(REMOVE_ITEM core_sources file_sys/bis_factory.cpp)
     list(APPEND core_sources "${PORT_BUILD_DIR}/bis_factory.cpp")
-    file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/filesystem/filesystem.cpp" fs_service)
-    string(REPLACE "nand_directory, std::move(load_directory), std::move(dump_directory));"
-        "nand_directory, std::move(load_directory), std::move(dump_directory), vfs.OpenDirectory(Eden::AssetsPath(\"firmware\"), FileSys::OpenMode::Read));" fs_service "${fs_service}")
-    # Firmware lives in the player's game files folder (Settings > Game files, assets_dir.h).
-    set(fs_service "#include \"${EDEN_PORT_DIR}/assets_dir.h\"
-${fs_service}")
-    write_derived("${PORT_BUILD_DIR}/filesystem.cpp" "${fs_service}")
+    # Use the tracked source for native firmware lookup.
+    set(EDEN_MAINTAINED_NATIVE_FILESYSTEM
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/service/filesystem/filesystem.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_NATIVE_FILESYSTEM}")
+        message(FATAL_ERROR "Missing maintained native filesystem source")
+    endif()
     list(REMOVE_ITEM core_sources hle/service/filesystem/filesystem.cpp)
-    list(APPEND core_sources "${PORT_BUILD_DIR}/filesystem.cpp")
+    list(APPEND core_sources "${EDEN_MAINTAINED_NATIVE_FILESYSTEM}")
     list(REMOVE_ITEM core_sources internal_network/network.cpp)
     file(READ "${PROJECT_SOURCE_DIR}/src/core/internal_network/network.cpp" network_source)
     string(REPLACE "namespace Network {" "namespace Network {\n#ifndef IPPROTO_DCCP\nconstexpr int IPPROTO_DCCP = 33;\n#endif" network_source "${network_source}")

@@ -412,6 +412,24 @@ print("VENDOR_MAINTAINED_NATIVE_NET_INTERFACES_PARITY_PASS: getifaddrs branch, n
 
 
 
+# Firmware system root: preserved transformation and selected native C++.
+native_fs_rel = "core/hle/service/filesystem/filesystem.cpp"
+native_fs_pinned = (sources / "eden/src" / native_fs_rel).read_text()
+native_fs_active = (active / "eden-core/src" / native_fs_rel).read_text()
+native_fs_old = "nand_directory, std::move(load_directory), std::move(dump_directory));"
+native_fs_new = ('nand_directory, std::move(load_directory), std::move(dump_directory), '
+                 'vfs.OpenDirectory(Eden::AssetsPath("firmware"), FileSys::OpenMode::Read));')
+assert native_fs_pinned.count(native_fs_old) == 1
+assert native_fs_active == ('#include "assets_dir.h"\n'
+                           + native_fs_pinned.replace(native_fs_old, native_fs_new))
+assert c.count('list(REMOVE_ITEM core_sources hle/service/filesystem/filesystem.cpp)') == 1
+assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_NATIVE_FILESYSTEM}")') == 1
+assert 'if(NOT EXISTS "${EDEN_MAINTAINED_NATIVE_FILESYSTEM}")' in c
+assert 'target_include_directories(core PRIVATE "${EDEN_PORT_DIR}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/filesystem.cpp"' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/filesystem/filesystem.cpp" fs_service)' not in c
+print("VENDOR_MAINTAINED_NATIVE_FILESYSTEM_PARITY_PASS: firmware and selection")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -452,7 +470,7 @@ assert len(module_current) == 21, len(module_current)
 for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     text = (root / module).read_text()
     assert 'file(WRITE ' in text and 'configure_file(' in text, module
-assert len(recorded) + len(module_recorded) == 84
+assert len(recorded) + len(module_recorded) == 83
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
