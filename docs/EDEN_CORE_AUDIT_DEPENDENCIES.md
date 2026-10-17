@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 200
+**Non, this is not an exhaustive repository-wide inventory.** The 201
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 200 | 181 | 427 |
+| Graphe connu | 201 | 182 | 429 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 146 | 137 | 324 |
+| SOURCE — lecture effectuée, preuve insuffisante | 147 | 138 | 326 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **161** | **151** | **352** |
-| Dont priorité P0 (SOURCE + OPEN) | 77 | 72 | 192 |
+| **Encore à qualifier (SOURCE + OPEN)** | **162** | **152** | **354** |
+| Dont priorité P0 (SOURCE + OPEN) | 78 | 73 | 194 |
 
-Le **noyau restant** compte donc 161 critères répartis sur
-151 fichiers et 352 mentions fonction/contrat :
-15 OPEN et 146 SOURCE.
-Cela **ne signifie pas 352 fonctions jamais lues** :
+Le **noyau restant** compte donc 162 critères répartis sur
+152 fichiers et 354 mentions fonction/contrat :
+15 OPEN et 147 SOURCE.
+Cela **ne signifie pas 354 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-190 fichiers de code/en-têtes présents, 122 avec un chemin de
+191 fichiers de code/en-têtes présents, 123 avec un chemin de
 graphe exact et 68 sans correspondance exacte. Cet écart n'est
 **pas** le nombre de fonctions non auditées, ni une preuve de code actif.
 Le contrôle hôte vérifie la complétude des chemins et les références,
@@ -88,13 +88,13 @@ sont des sources maintenues sous
 sélectionnées uniquement en `EDEN_DEV_PROFILE`.
 `tools/check-vendor-consolidation-debt.py` vérifie la parité du corps
 C++ avec l'override généré auparavant et recense les sorties CMake dans
-`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **51 sites restants**
+`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **50 sites restants**
 après onze migrations (F02, F03, F04, N02, N03, H21, H22, F05, F06, F07 et F08). Un site à paramètres variables peut
 produire plusieurs fichiers réels. Les ressources générées ne doivent
 pas être confondues avec des overrides de code.
 
 Le second inventaire compte 21 générateurs `write_derived()` dans les modules,
-soit **72 sites au total**, mais n'inclut **pas** les sept modules
+soit **71 sites au total**, mais n'inclut **pas** les sept modules
 `X01–X07` qui créent une sortie par `file(WRITE)` ou transforment
 indirectement une variable-source. Ils sont suivis séparément dans
 `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`, avec contrôle hôte de leur
@@ -399,6 +399,7 @@ function/contract tokens are checked by CI for existence only; the
 | N14 | P0 | N12 | vendor/encore-active/eden-backports/src/core/hle/service/nvnflinger/buffer_queue_core.h | dequeue_epoch | SOURCE | tools/check-active-source-inventory.py | Shipping header defines epoch state paired with BufferQueueCore wakeup implementation; source diff examined, exact runtime owner/console behavior still to prove | 🟡 Source étudiée |
 | N13 | P1 | N10 | vendor/encore-active/eden-backports/src/core/hle/service/sockets/sfdnsres.cpp | SFDNSRES::GetHostByNameRequest; SFDNSRES::GetHostByNameRequestWithOptions | SOURCE | tools/check-active-source-inventory.py | Shipping DNS checks guest policy on both request paths; native policy overlay forces offline; source diff examined, exact runtime owner/console behavior still to prove | 🟡 Source étudiée |
 | N12 | P0 | N03,N06 | vendor/encore-active/eden-backports/src/core/hle/service/nvnflinger/buffer_queue_core.cpp | BufferQueueCore::SignalDequeueCondition; BufferQueueCore::WaitForDequeueCondition | SOURCE | tools/check-active-source-inventory.py | Shipping core substitutes a generation counter for consumable boolean wakeups; source diff examined, exact runtime owner/console behavior still to prove | 🟡 Source étudiée |
+| N07 | P0 | N11 | vendor/encore-active/eden-core/src/core/hle/service/nvdrv/core/container.cpp | Container::OpenSession; Container::CloseSession | SOURCE | tools/check-vendor-consolidation-debt.py | Session retains process until final owner Close after unlocking mutex; exact pinned-generator parity, native event/session teardown unproven | 🟡 Source étudiée |
 | H23 | P0 | H05,N04 | vendor/sources/eden/src/core/hle/kernel/k_readable_event.cpp | KReadableEvent::Signal; KReadableEvent::Clear; KReadableEvent::IsSignaled | SOURCE | tools/verify/hle/check-native-hle-sync-unlink-host.py | Newly cataloged transition from signaled GPU host event to kernel NotifyAvailable. Source uses scheduler lock; no trace yet associates wake with resumed guest PC | 🟡 Source étudiée |
 | H24 | P1 | H23,N05 | vendor/sources/eden/src/core/hle/kernel/k_event.cpp | KEvent::Signal; KEvent::Clear | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Newly cataloged NV event signal/clear forwarding under scheduler lock and destroyed-readable guard. Requires callback/event-lifetime interleaving evidence; do not speculate that the guard proves teardown safe | 🟡 Source étudiée |
 | H25 | P0 | H21 | vendor/sources/eden/src/core/hle/kernel/k_client_session.cpp | KClientSession::SendSyncRequest; KClientSession::SendAsyncRequest | SOURCE | docs/EDEN_CORE_AUDIT_DEPENDENCIES.md | New link from guest SVC to m_parent->OnRequest: scoped request reference and async event distinction; trace kernel wait-result handoff in native run | 🟡 Source étudiée |

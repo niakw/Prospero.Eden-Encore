@@ -1590,18 +1590,14 @@ set_property(TARGET core PROPERTY SOURCES "${core_sources}")
 
 # Nvdrv sessions borrow process memory until their final handles are unmapped.
 # Retain the process across that interval, including service shutdown ordering.
-file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/nvdrv/core/container.cpp" nvcontainer)
-string(PREPEND nvcontainer "#include \"core/core.h\"\n#include <utility>\n")
-string(REPLACE "    session.is_active = true;"
-    "    process->Open(impl->host1x.System().Kernel()); // Paired with the final CloseSession after SMMU unregistration.\n    session.is_active = true;" nvcontainer "${nvcontainer}")
-string(REPLACE "void Container::CloseSession(SessionId session_id) {\n    std::scoped_lock lk(impl->session_guard);"
-    "void Container::CloseSession(SessionId session_id) {\n    std::unique_lock lk(impl->session_guard);" nvcontainer "${nvcontainer}")
-string(REPLACE "    impl->id_pool.emplace_front(session_id.id);"
-    "    impl->id_pool.emplace_front(session_id.id);\n    auto* process = std::exchange(session.process, nullptr);\n    lk.unlock(); // Process finalization may close other services.\n    process->Close(impl->host1x.System().Kernel());" nvcontainer "${nvcontainer}")
-write_derived("${PORT_BUILD_DIR}/nvdrv_container.cpp" "${nvcontainer}")
+set(EDEN_MAINTAINED_NVDRV_CONTAINER
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/service/nvdrv/core/container.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_NVDRV_CONTAINER}")
+    message(FATAL_ERROR "Missing maintained nvdrv session container")
+endif()
 get_target_property(core_sources core SOURCES)
 list(REMOVE_ITEM core_sources hle/service/nvdrv/core/container.cpp)
-list(APPEND core_sources "${PORT_BUILD_DIR}/nvdrv_container.cpp")
+list(APPEND core_sources "${EDEN_MAINTAINED_NVDRV_CONTAINER}")
 set_property(TARGET core PROPERTY SOURCES "${core_sources}")
 # Finalize alone leaves both event references and its owner process open.
 # Use the same paired close as the other HID event owners.
