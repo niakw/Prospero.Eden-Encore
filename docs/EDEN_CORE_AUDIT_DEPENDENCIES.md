@@ -76,7 +76,7 @@ function/contract tokens are checked by CI for existence only; the
 | M04 | P2 | D01,D02,M02 | docs/DEFERRED_GPU_INDIRECT_DEPENDENCY_2026-10-17.md | DmaPusher::Step | PARKED | tools/check-native-gpu-fifo-quiescence-host.py | No unsafe GPU-worker blocking wait or FIFO reorder |
 | S01 | P0 | J01,V05,V02 | tools/analyze-ps5-cache-contention.py | def windows(; def report( | HOST | tools/check-fc27-cache-contention-classifier.py | Five-second aggregates cannot attribute one long frame |
 | S02 | P0 | S01,H01,V04 | tools/analyze-fc27-frozen-workload.py | def analyze(; def self_test( | SOURCE | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Game logic can stop while compositor still emits 30 FPS |
-| S03 | P0 | S01,V04 | docs/FC27_NATIVE_FRAME_PROGRESS_TRIAGE_2026-10-17.md | root cause; Vulkan | SOURCE | tools/check-fc27-cache-contention-classifier.py | Do not reclassify existing October 15 logs without new evidence |
+| S03 | P0 | S01,V04 | docs/FC27_NATIVE_FRAME_PROGRESS_TRIAGE_2026-10-17.md | Root cause; Vulkan | SOURCE | tools/check-fc27-cache-contention-classifier.py | Do not reclassify existing October 15 logs without new evidence |
 | T01 | P1 | B01 | tools/check-maintained-audio-units.py | cmake.count; gpu_producer_wait; gpu_read_capture | HOST | tools/check-maintained-audio-units.py | Allow exactly two named slot-lifetime rewrites; preserve old 227 ceiling |
 | T02 | P1 | T01,Q01 | tools/check-native-gpu-queue-slot-lifetime-host.py | PINNED_GPU_QUEUE_SLOT_DESTRUCTOR_REUSE_PASS | HOST | tools/check-native-gpu-queue-slot-lifetime-host.py | Queue regression passed, but whole preflight failed on T01 gate |
 <!-- AUDIT_ROWS_END -->
