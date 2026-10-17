@@ -387,6 +387,16 @@ et de limiter CMake à la sélection.
 | P46 | `eden-sm-host-wait.patch` | `install-active-core-backports.py` | — | Installation cœur active |
 <!-- SOURCE_PATCH_REPLAYS_END -->
 
+## Couverture des cibles de patches
+
+Les **46 fichiers de patches** touchent **90 chemins distincts**.
+Les backports livrés sous `vendor/encore-active/eden-backports/` sont désormais
+reconnus comme propriétaires. Les deux recettes CMake sont suivies via le
+manifeste versionné ; les quatre sources hors snapshot par `H49`
+(expérimental OFF), `H50`, `A08` et `A09` (SM/audio actifs).
+Le contrôle impose **zéro cible de patch non attribuée**, sans prétendre
+que chaque chemin a été validé sur console.
+
 ## Overrides indirects sans `write_derived()` local
 
 Ces **7 modules supplémentaires** ne sont pas inclus dans le total de
