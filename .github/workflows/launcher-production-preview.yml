@@ -196,7 +196,7 @@ jobs:
           print("ENCORE_LIBRARY_FLAT_JACKETS_ZOOM_PAN_CIRCLE_ONLY: PASS")
           PY
 
-      - name: Capture alternate Switch-style theme (host only)
+      - name: Capture alternate layout theme (host only)
         if: ${{ github.ref == 'refs/heads/ui/encore-switch-theme-20261016' }}
         env:
           PE_LANG: fr-FR
