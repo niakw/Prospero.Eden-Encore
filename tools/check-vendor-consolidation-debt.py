@@ -635,11 +635,42 @@ npad_expected = npad_shipping.replace(npad_old_pair, npad_new_pair).replace(
     npad_old_entry, npad_new_entry)
 assert (active / "eden-core/src/hid_core/resources/npad/npad.cpp").read_text() == npad_expected, (
     "Maintained NPad differs from previous CMake source generator")
-assert c.count('list(APPEND npad_sources "${EDEN_MAINTAINED_NPAD}")') == 1
+assert c.count('list(APPEND npad_sources "${EDEN_NPAD_SELECTED}")') == 1
 assert c.count('list(FILTER npad_sources EXCLUDE REGEX "(^|/)npad\\\\.cpp$")') == 1
 assert 'write_derived("${PORT_BUILD_DIR}/npad.cpp"' not in c
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/hid_core/resources/npad/npad.cpp" npad_source)' not in c
 print("MAINTAINED_NPAD_SOURCE_PARITY_PASS guards=2 selection=hid_core")
+
+# Dev NPad is not another instrumented CMake-generated translation unit.
+# It is the guarded normal source with one scoped Fullkey event witness.
+npad_dev = (active / "eden-core/src/hid_core/resources/npad/npad_pause_diag.cpp").read_text()
+npad_prefix = "#include <atomic>\\n#include <cstdio>\\n".replace("\\n", "\n")
+assert npad_dev.startswith(npad_prefix)
+npad_dev_body = npad_dev[len(npad_prefix):]
+fullkey_start = "                npad->fullkey_lifo.WriteNextEntry(pad_state);\n"
+fullkey_end = "                break;\n            case Core::HID::NpadStyleIndex::Handheld:"
+assert npad_expected.count(fullkey_start + fullkey_end) == 1
+assert npad_dev_body.count(fullkey_end) == 1
+loc = npad_dev_body.index(fullkey_start + "                {")
+tail = npad_dev_body.index(fullkey_end, loc)
+instrumentation = npad_dev_body[loc+len(fullkey_start):tail]
+for essential in (
+    "eden_fullkey_writes.fetch_add(", "eden_fullkey_plus_edges.fetch_add(",
+    "eden_fullkey_last_plus.exchange(", "EDEN_NPAD_PLUS_LIFO edges=%llu",
+    "EDEN_NPAD_PROGRESS fullkey_writes=%llu", "std::memory_order_relaxed",
+):
+    assert essential in instrumentation, ("diagnostic NPad witness missing", essential)
+assert instrumentation.startswith("                {\n") and instrumentation.endswith("                }\n")
+assert npad_dev_body[:loc+len(fullkey_start)] + npad_dev_body[tail:] == npad_expected, (
+    "DEV NPad diverges outside the Fullkey diagnostic witness")
+assert npad_dev_body.count(npad_new_pair) == 1 and npad_dev_body.count(npad_new_entry) == 1
+assert 'set(EDEN_NPAD_SELECTED "${EDEN_MAINTAINED_NPAD_DEV}")' in c
+assert 'set(EDEN_NPAD_SELECTED "${EDEN_MAINTAINED_NPAD}")' in c
+assert c.count('list(APPEND npad_sources "${EDEN_NPAD_SELECTED}")') == 1
+assert 'write_derived("${PORT_BUILD_DIR}/npad_pause_diag.cpp"' not in c
+assert 'list(APPEND eden_npad_sources "${PORT_BUILD_DIR}/npad_pause_diag.cpp")' not in c
+print("MAINTAINED_NPAD_DEV_PARITY_PASS guards=2 scoped_fullkey_witness=1 selection=exclusive")
+
 
 
 

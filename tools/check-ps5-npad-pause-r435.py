@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""R435: prove diagnostic-only Npad fullkey LIFO witness retains original writes."""
+"""R435: DEV Fullkey witness uses one full source with normal null guards."""
 from pathlib import Path
 import shutil
 import subprocess
@@ -7,23 +7,22 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 cmake=(root/'headless/CMakeLists.txt').read_text()
 hid=(root/'vendor/sources/eden/src/hid_core/resources/npad/npad.cpp').read_text()
+normal=(root/'vendor/encore-active/eden-core/src/hid_core/resources/npad/npad.cpp').read_text()
+dev=(root/'vendor/encore-active/eden-core/src/hid_core/resources/npad/npad_pause_diag.cpp').read_text()
 input_src=(root/'headless/pad.cpp').read_text()
 pad_header=(root/'third_party/ps5_pad.hpp').read_text()
 assert 'if(PS5_NATIVE AND EDEN_DEV_PROFILE)' in cmake
-assert 'R435: dev-only guest HID Fullkey Npad LIFO witness' in cmake
-assert 'npad->fullkey_lifo.WriteNextEntry(pad_state);' in cmake
-assert 'list(REMOVE_ITEM eden_npad_sources resources/npad/npad.cpp)' in cmake
-assert 'Pinned Eden fullkey Npad writer changed; requalify R435' in cmake
-assert cmake.count('EDEN_NPAD_PLUS_LIFO edges=%llu') == 1
-assert cmake.count('EDEN_NPAD_PROGRESS fullkey_writes=%llu') == 1
-assert 'std::atomic<bool> eden_fullkey_last_plus' in cmake
-assert 'std::memory_order_relaxed' in cmake
-assert cmake.count('npad->fullkey_lifo.WriteNextEntry(pad_state);') == 2
+assert 'set(EDEN_NPAD_SELECTED "${EDEN_MAINTAINED_NPAD_DEV}")' in cmake
+assert 'set(EDEN_NPAD_SELECTED "${EDEN_MAINTAINED_NPAD}")' in cmake
+assert cmake.count('list(APPEND npad_sources "${EDEN_NPAD_SELECTED}")') == 1
+assert 'write_derived("${PORT_BUILD_DIR}/npad_pause_diag.cpp"' not in cmake
 assert hid.count('                npad->fullkey_lifo.WriteNextEntry(pad_state);') == 2
-assert hid.count('npad->fullkey_lifo.WriteNextEntry(pad_state);\n                break;\n            case Core::HID::NpadStyleIndex::Handheld:') == 1
-assert 'set(eden_npad_write_anchor [=[' in cmake
-assert '                {\n                    // Event has entered emulated HID memory' in cmake
-assert 'EDEN_NPAD_PLUS_LIFO' not in hid
+assert 'EDEN_NPAD_PLUS_LIFO' not in normal
+assert dev.count('EDEN_NPAD_PLUS_LIFO edges=%llu') == 1
+assert dev.count('EDEN_NPAD_PROGRESS fullkey_writes=%llu') == 1
+assert 'std::atomic<bool> eden_fullkey_last_plus' in dev
+assert 'applet_resource_holder.applet_resource == nullptr' in dev
+assert 'controller.device == nullptr' in dev
 assert 'published_plus_edges.fetch_add' in input_src
 assert 'return sample.connected != 0 &&' in pad_header
 assert 'kButtonIntercepted' in pad_header
