@@ -318,6 +318,17 @@ assert 'list(REMOVE_ITEM common_sources fs/fs.cpp)' in c
 assert 'write_derived("${PORT_BUILD_DIR}/fs.cpp"' not in c
 assert "fs_source" not in c
 assert 'target_include_directories(common PRIVATE "${EDEN_PORT_DIR}")' in c
+# Verify native common sources are selected exactly once and originals removed.
+native_common_block = c.split("    get_target_property(common_sources common SOURCES)", 1)[1].split(
+    '    set_property(TARGET common PROPERTY SOURCES "${common_sources}")', 1)[0]
+assert native_common_block.count("list(REMOVE_ITEM common_sources thread.cpp)") == 1
+assert native_common_block.count("list(REMOVE_ITEM common_sources fs/fs.cpp)") == 1
+assert native_common_block.count("list(APPEND common_sources") == 4
+for former_read in ("thread_source", "fs_source"):
+    assert former_read not in native_common_block
+for name in ("EDEN_MAINTAINED_NATIVE_THREAD", "EDEN_MAINTAINED_NATIVE_FS"):
+    assert ('if(NOT EXISTS "${' + name + '}")') in native_common_block
+
 print("VENDOR_MAINTAINED_COMMON_RUNTIME_PARITY_PASS: thread name, two iterators, native-only selection")
 
 # Keep the generator inventory synchronized with every future source migration.
