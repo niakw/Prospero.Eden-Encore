@@ -30,6 +30,7 @@ fixture = r"""
 cmake_minimum_required(VERSION 3.20)
 project(HleSelection LANGUAGES CXX)
 set(PORT_ROOT "@ROOT@")
+set(PORT_BUILD_DIR "${CMAKE_BINARY_DIR}/headless")
 add_library(core STATIC
 @PINNED@
 )
@@ -99,5 +100,11 @@ with tempfile.TemporaryDirectory(prefix="encore-hle-cmake-") as td:
             check = subprocess.run(args, capture_output=True, text=True, timeout=45)
             assert check.returncode == 0, (native, blocking, check.stdout, check.stderr)
             assert "ENCORE_HLE_CMAKE_SELECTION_PASS" in check.stdout, check.stdout
+            for helper in ("slab_helpers.h", "k_worker_task_manager.h"):
+                generated = out / "headless/include/core/hle/kernel" / helper
+                source = root / "vendor/encore-active/eden-threading/src/core/hle/kernel" / helper
+                assert generated.is_file(), ("missing copied helper", native, blocking, helper)
+                assert generated.read_bytes() == source.read_bytes(), (
+                    "staged helper differs from maintained source", helper)
             print("ENCORE_HLE_CMAKE_SELECTION_PASS native=" + native + " blocking=" + blocking)
 print("ENCORE_HLE_CMAKE_CONFIGURATION_ONLY_NO_NATIVE_BINARY_BUILT")

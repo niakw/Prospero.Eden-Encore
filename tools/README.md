@@ -9,6 +9,7 @@
 | Sélection HLE | `vendor/encore-active/eden-threading/native-hle-overrides.cmake` | Choisit les fichiers de `core`, sans modification textuelle du C++ |
 | Orchestration native | `headless/inject.cmake`, `headless/CMakeLists.txt`, `tools/build-headless-native.sh` | Configure et lance la compilation |
 | Préparation avant compilation | `tools/prepare-build.sh`, `tools/install-vendored-eden-build-flags.py` | Installe des copies contrôlées des configurations amont et maintenues |
+| En-têtes HLE copiés | `slab_helpers.h`, `k_worker_task_manager.h` dans `vendor/encore-active/eden-threading/src/` | `configure_file(COPYONLY)` les prépare sans modification textuelle |
 | Vérification HLE uniquement | `tools/verify/hle/*.py` | Lit les vrais fichiers, peut compiler des témoins temporaires sur hôte ; ne modifie pas les sources produites |
 | Autres vérifications héritées | `tools/check-*.py` | Tests et contrôles encore au niveau racine ; migration graduelle |
 
