@@ -16,7 +16,7 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **207 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **210 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
 - `headless/CMakeLists.txt` : **47 générateurs** `write_derived`.
@@ -25,7 +25,7 @@ nouveaux corps C++ destinés à la console.
 - Cinq modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 68.
-- `headless/` contient **20 fragments `.inc`**. Plusieurs contribuent
+- `headless/` contient **17 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
   dépendance. **Leur présence dans `headless` ne vaut pas conformité
@@ -83,9 +83,6 @@ fragments de l'application native qui ne remplacent aucune source upstream.
 | `headless/jit-permissions.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
 | `headless/jit_assert.inc` | Fragment local, sélectionner/qualifier | À vérifier dans les consommateurs / CMake |
 | `headless/native_gpu_thread.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
-| `headless/scalar-fold.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
-| `headless/scalar-memory-read.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
-| `headless/scalar-memory-write.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
 | `headless/shader_cache_reader.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
 | `headless/spin-lock.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
 | `headless/vulkan_download_batch.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
@@ -103,6 +100,15 @@ Le sélecteur de `headless/dynarmic/shared-jit.cmake` lit les fichiers
 maintenus. **Ce module CMake conserve encore des transformations upstream
 à migrer** ; la relocalisation des données d'injection ne supprime pas les
 21 générateurs de modules. Le mode JIT partagé reste OFF par défaut.
+
+## Fragments scalaires centralisés
+
+Les injections Dynarmic `scalar-fold.inc`,
+`scalar-memory-read.inc` et `scalar-memory-write.inc` sont désormais
+maintenues uniquement sous `vendor/encore-active/eden-core/dynarmic/scalar/`.
+CMake charge ces contenus, mais garde encore les règles d'injection et
+les générateurs C++ correspondants : **centralisation des données ne signifie
+pas encore suppression des générateurs**.
 
 ## Conditions de sortie de la dette
 
