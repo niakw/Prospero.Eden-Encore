@@ -114,6 +114,13 @@ dans la version normale.
 
 ## Prochain ordre de migration
 
+- Six backports supplémentaires (`A06`, `N15-N17`, `H40`, `V61`)
+  sont indexés par fonction et par hunk réel : ID de session audio,
+  IPC BSD, contrôle réseau NIFM, échantillonnage NPad, validation TIC.
+  Les fichiers d'entrée du manifeste de production ne sont pas dupliqués.
+  La prévalidation vérifie les marqueurs, pas leur exécution native.
+
+
 - `hid_core/frontend/emulated_controller.cpp` (vibrations virtuelles) :
   source maintenue directement dans `eden-core/src/hid_core/frontend/`.
   Sélection identique dans `hid_core SOURCES`, sans mutation de CMake.

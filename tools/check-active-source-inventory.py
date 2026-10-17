@@ -245,6 +245,23 @@ for rel, marker in gpu_shipping_diffs:
         "production GPU backport drift", shipping, marker)
 print("ENCORE_GPU_SHIPPING_PATCH_OWNER_PASS", f"sources={len(gpu_shipping_diffs)}")
 
+# Indexed shipping sources have stable code anchors from their real
+# patches, not simply a filename in the compiled-source inventory.
+shipping_followups = (
+    ("eden-backports/src/audio_core/audio_render_manager.cpp", ["ASSERT(session_count <= session_ids.size());","s32 Manager::GetSessionId()"]),
+    ("eden-backports/src/core/hle/service/sockets/bsd.cpp", ["void BSD_USA::Ioctl(","Eden::Encore::kGuestNetworkOffline","write_buffer.size() < guest_addrin.len"]),
+    ("eden-backports/src/core/hle/service/sockets/bsd.h", ["void Ioctl(HLERequestContext& ctx);"]),
+    ("eden-backports/src/core/hle/service/nifm/nifm.cpp", ["Eden::Encore::kGuestNetworkOffline","void IGeneralService::SetWirelessCommunicationEnabled(","void IGeneralService::IsAnyInternetRequestAccepted("]),
+    ("eden-backports/src/hid_core/resources/npad/npad.cpp", ["fullkey_lifo.ReadCurrentEntry().state.sampling_number","eden_watchdog_updates","EDEN_HID_NPAD"]),
+    ("eden-backports/src/video_core/texture_cache/util.cpp", ["config.format == static_cast<Tegra::Texture::TextureFormat>(0)","if (config.is_sparse == 0)"]),
+)
+for relative, anchors in shipping_followups:
+    assert relative in graph and (active / relative).is_file(), ("unindexed shipping source", relative)
+    body = (active / relative).read_text()
+    for anchor in anchors:
+        assert anchor in body, ("shipping implementation changed", relative, anchor)
+print("ENCORE_SHIPPING_NET_AUDIO_HID_TEXTURE_OWNER_PASS", f"files={len(shipping_followups)}")
+
 assert len(physical) == len(set(physical))
 print("ENCORE_ACTIVE_SOURCE_CATALOG_PASS",
       f"files={len(physical)}",
