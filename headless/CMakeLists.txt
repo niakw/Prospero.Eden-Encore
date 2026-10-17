@@ -128,10 +128,13 @@ foreach(eden_target common core audio_core video_core hid_core network input_com
 endforeach()
 if(PS5_NATIVE)
     set(COMPILER_RT "${PORT_ROOT}/.deps/compiler-rt-18.1.8")
-    file(READ "${COMPILER_RT}/emutls.c" emutls)
-    string(REPLACE "#define EMUTLS_SKIP_DESTRUCTOR_ROUNDS 0" "#define EMUTLS_SKIP_DESTRUCTOR_ROUNDS 1" emutls "${emutls}")
-    write_derived("${PORT_BUILD_DIR}/emutls.c" "${emutls}")
-    target_sources(common PRIVATE "${PORT_BUILD_DIR}/emutls.c" "${COMPILER_RT}/cpu_model_x86.c")
+    # Versioned compiler-rt native TLS runtime; no CMake source mutation.
+    set(EDEN_MAINTAINED_EMUTLS
+        "${PORT_ROOT}/vendor/encore-active/compiler-rt/emutls.c")
+    if(NOT EXISTS "${EDEN_MAINTAINED_EMUTLS}")
+        message(FATAL_ERROR "Missing maintained emulated TLS implementation")
+    endif()
+    target_sources(common PRIVATE "${EDEN_MAINTAINED_EMUTLS}" "${COMPILER_RT}/cpu_model_x86.c")
     target_include_directories(common PRIVATE "${COMPILER_RT}")
     # RADV's AMD addrlib uses __builtin_cpu_supports(), whose x86 runtime
     # state (__cpu_model/__cpu_features2) lives in compiler-rt. Linux CI gets

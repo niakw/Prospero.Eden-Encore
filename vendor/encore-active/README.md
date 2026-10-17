@@ -11,6 +11,7 @@
 | `eden-threading/src/core/hle/kernel/svc/*.cpp` | Sources SVC natives |
 | `eden-sync/src/core/hle/kernel/k_synchronization_object.h` | En-tête natif de synchronisation, aliasing corrigé |
 | `eden-threading/native-hle-overrides.cmake` | Sélection de sources CMake, **pas** un correctif C++ généré |
+| `compiler-rt/emutls.c` | Source du runtime TLS natif maintenue, `EMUTLS_SKIP_DESTRUCTOR_ROUNDS=1`, sans génération CMake |
 | `eden-build/src/CMakeLists.txt` | Configuration de build maintenue copiée avant compilation |
 | `eden-core/src/common/thread.cpp`, `src/common/fs/fs.cpp` | Sources runtime natives maintenues ; noms de workers et énumération des répertoires |
 | `eden-core/src/common/cpu_features.cpp`, `src/common/fs/path_util.cpp` | Détection de fréquence TSC et racines utilisateur/cache natives, auparavant générées par CMake |
@@ -45,7 +46,7 @@ Le recensement des fichiers n'est pas une validation de leurs fonctions.
 Le générateur `renderer_opengl.cpp` n'est plus nécessaire : le renderer
 original est sélectionné directement, sans créer une copie maintenue identique.
 
-L'inventaire couvre **54 appels générateurs** du CMake principal, **21**
+L'inventaire couvre **53 appels générateurs** du CMake principal, **21**
 dans les modules et **7 modules indirects** suivis séparément ; ce ne sont
 pas des décomptes de fichiers uniques. Chaque nouvelle migration doit
 conserver un test de parité et de sélection native.

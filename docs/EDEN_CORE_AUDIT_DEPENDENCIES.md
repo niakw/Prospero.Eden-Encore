@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 130
+**Non, this is not an exhaustive repository-wide inventory.** The 131
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 130 | 111 | 267 |
+| Graphe connu | 131 | 112 | 269 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 76 | 67 | 164 |
+| SOURCE — lecture effectuée, preuve insuffisante | 77 | 68 | 166 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **91** | **81** | **192** |
+| **Encore à qualifier (SOURCE + OPEN)** | **92** | **82** | **194** |
 | Dont priorité P0 (SOURCE + OPEN) | 38 | 33 | 98 |
 
-Le **noyau restant** compte donc 91 critères répartis sur
-81 fichiers et 192 mentions fonction/contrat :
-15 OPEN et 76 SOURCE.
+Le **noyau restant** compte donc 92 critères répartis sur
+82 fichiers et 194 mentions fonction/contrat :
+15 OPEN et 77 SOURCE.
 Cela **ne signifie pas 192 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-185 fichiers de code/en-têtes présents, 52 avec un chemin de
+186 fichiers de code/en-têtes présents, 53 avec un chemin de
 graphe exact et 133 sans correspondance exacte. Cet écart n'est
 **pas** le nombre de fonctions non auditées, ni une preuve de code actif.
 Le contrôle hôte vérifie la complétude des chemins et les références,
@@ -88,13 +88,13 @@ sont des sources maintenues sous
 sélectionnées uniquement en `EDEN_DEV_PROFILE`.
 `tools/check-vendor-consolidation-debt.py` vérifie la parité du corps
 C++ avec l'override généré auparavant et recense les sorties CMake dans
-`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **54 sites restants**
+`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **53 sites restants**
 après onze migrations (F02, F03, F04, N02, N03, H21, H22, F05, F06, F07 et F08). Un site à paramètres variables peut
 produire plusieurs fichiers réels. Les ressources générées ne doivent
 pas être confondues avec des overrides de code.
 
 Le second inventaire compte 21 générateurs `write_derived()` dans les modules,
-soit **75 sites au total**, mais n'inclut **pas** les sept modules
+soit **74 sites au total**, mais n'inclut **pas** les sept modules
 `X01–X07` qui créent une sortie par `file(WRITE)` ou transforment
 indirectement une variable-source. Ils sont suivis séparément dans
 `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`, avec contrôle hôte de leur
@@ -238,6 +238,7 @@ function/contract tokens are checked by CI for existence only; the
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | B01 | P1 | - | headless/CMakeLists.txt | EDEN_SHARED_JIT; EDEN_JIT_COMPILE_BATCH | SOURCE | tools/check-native-build-recipe.py | Verify selected native build flags before claiming integration | 🟡 Source étudiée |
 | B02 | P1 | B01 | headless/CMakeLists.txt | write_derived; queue_slot_repair | HOST | tools/check-native-gpu-queue-slot-lifetime-host.py | Check native toolchain separately; host regression covers derived slot lifecycle | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-gpu-queue-slot-lifetime-host.py) |
+| B04 | P1 | B01 | vendor/encore-active/compiler-rt/emutls.c | emutls_key_destructor; __emutls_get_address | SOURCE | tools/check-vendor-consolidation-debt.py | One exact pinned compiler-rt TLS destructor-round override is now source-maintained; platform TLS execution and shutdown lifetime remain unproved | 🟡 Source étudiée |
 | B03 | P1 | B01 | vendor/sources/eden/src/common/slot_vector.h | SlotId insert( | SOURCE | headless/slot_vector_recovery.cmake | Direct file(WRITE) output X02 guards throwing constructors and returns the reserved slot to free_list; exact source selected through the recovery include path, no maintained override yet | 🟡 Source étudiée |
 | Q01 | P1 | B02 | vendor/sources/eden/src/common/bounded_threadsafe_queue.h | TryEmplace; Pop; std::construct_at | HOST | tools/check-native-gpu-queue-slot-lifetime-host.py | No claim about a specific game's resource lifetime | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-gpu-queue-slot-lifetime-host.py) |
 | Q02 | P1 | Q01 | headless/gpu_queue_stop_wait.inc | EmplaceWaitWithStopToken | SOURCE | tools/check-gpu-producer-stop.py | Keep stop-aware producer wake and ownership checks | 🟡 Source étudiée |

@@ -549,6 +549,19 @@ assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/gl_buffe
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/gl_query_cache.cpp" query_source)' not in c
 print("VENDOR_MAINTAINED_GL_CACHE_PARITY_PASS buffer=1 native_query=1")
 
+# The native compiler-rt TLS unit is maintained, not rewritten by CMake.
+emutls_upstream = (sources/"compiler-rt/emutls.c").read_text()
+emutls_original = "#define EMUTLS_SKIP_DESTRUCTOR_ROUNDS 0"
+emutls_updated = "#define EMUTLS_SKIP_DESTRUCTOR_ROUNDS 1"
+assert emutls_upstream.count(emutls_original) == 1
+assert (active/"compiler-rt/emutls.c").read_text() == emutls_upstream.replace(emutls_original,emutls_updated)
+assert c.count('target_sources(common PRIVATE "${EDEN_MAINTAINED_EMUTLS}" "${COMPILER_RT}/cpu_model_x86.c")') == 1
+assert 'if(NOT EXISTS "${EDEN_MAINTAINED_EMUTLS}")' in c
+assert 'target_include_directories(common PRIVATE "${COMPILER_RT}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/emutls.c"' not in c
+assert 'file(READ "${COMPILER_RT}/emutls.c" emutls)' not in c
+print("VENDOR_COMPILER_RT_EMUTLS_PARITY_PASS native_rounds=1")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -589,7 +602,7 @@ assert len(module_current) == 21, len(module_current)
 for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     text = (root / module).read_text()
     assert 'file(WRITE ' in text and 'configure_file(' in text, module
-assert len(recorded) + len(module_recorded) == 75
+assert len(recorded) + len(module_recorded) == 74
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
