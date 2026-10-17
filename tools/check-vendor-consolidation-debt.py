@@ -153,7 +153,7 @@ assert storage_maintained == '#include "performance.h"\n' + storage_pinned.repla
 assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_FS_STORAGE}")') == 1
 assert 'write_derived("${PORT_BUILD_DIR}/fs_i_storage.cpp"' not in c
 assert "fs_storage_source" not in c
-assert counts["write_derived("] <= 72, counts
+assert counts["write_derived("] <= 71, counts
 print("VENDOR_MAINTAINED_FS_ISTORAGE_PARITY_PASS: read, short read, quiet policy")
 
 
@@ -186,6 +186,29 @@ assert 'if(NOT EXISTS "${EDEN_MAINTAINED_PROFILE_FS_SYSTEM}")' in c
 assert 'write_derived("${PORT_BUILD_DIR}/fs_i_filesystem.cpp"' not in c
 assert "fs_system_source" not in c
 print("VENDOR_MAINTAINED_FS_IFILESYSTEM_PARITY_PASS: three opens, quiet guard, DEV selection")
+
+
+# Native host-syncpoint callback diagnostic: exact old-generated TU parity.
+nvctrl_rel = "core/hle/service/nvdrv/devices/nvhost_ctrl.cpp"
+nvctrl_pinned = (sources / "eden/src" / nvctrl_rel).read_text()
+nvctrl_maintained = (active / "eden-core/src" / nvctrl_rel).read_text()
+nvctrl_old = """    event.wait_handle =
+        host1x_syncpoint_manager.RegisterHostAction(fence_id, target_value, [this, slot]() {
+            auto& event_ = events[slot];"""
+nvctrl_new = """    const auto wait_start = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed) ? ::Eden::Performance::NowNs() : 0;
+    event.wait_handle =
+        host1x_syncpoint_manager.RegisterHostAction(fence_id, target_value, [this, slot, wait_start]() {
+            if (wait_start) ::Eden::Performance::AddSince(::Eden::Performance::guest_sync_wait, wait_start);
+            auto& event_ = events[slot];"""
+assert nvctrl_pinned.count(nvctrl_old) == 1
+assert nvctrl_maintained == '#include "performance.h"\n' + nvctrl_pinned.replace(nvctrl_old, nvctrl_new), (
+    "Maintained nvhost_ctrl source diverges from original event-wait instrumentation")
+assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_NVCTRL}")') == 1
+assert c.count('list(REMOVE_ITEM core_sources "hle/service/nvdrv/devices/nvhost_ctrl.cpp")') == 1
+assert 'if(NOT EXISTS "${EDEN_MAINTAINED_PROFILE_NVCTRL}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/nvhost_ctrl.cpp"' not in c
+assert "ctrl_source" not in c and "ctrl_old" not in c
+print("VENDOR_MAINTAINED_NVCTRL_PARITY_PASS: async callback capture, quiet clock, DEV selection")
 
 print("VENDOR_MAINTAINED_FS_IFILE_PARITY_PASS: pinned native DEV source, no CMake rewrite")
 
@@ -230,7 +253,7 @@ assert len(module_current) == 21, len(module_current)
 for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     text = (root / module).read_text()
     assert 'file(WRITE ' in text and 'configure_file(' in text, module
-assert len(recorded) + len(module_recorded) == 93
+assert len(recorded) + len(module_recorded) == 92
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 
