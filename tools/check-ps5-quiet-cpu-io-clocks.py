@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Verify R300 quiet CPU/IO clock gates in native generator (host only)."""
+"""Verify R300 quiet CPU/IO clock gates in actual selected native sources (host only)."""
 from pathlib import Path
 import platform, shutil, subprocess, sys, tempfile
 
@@ -39,11 +39,16 @@ assert "AddSince(::Eden::Performance::guest_ipc_wait" not in ipc
 assert (ipc.index("const auto ipc_tid") < ipc.index("BeginGuestIpc(")
         < ipc.index("session->SendSyncRequest(") < ipc.index("FinishGuestIpc("))
 assert "ipc_profile ? GetCurrentThread" in ipc and "ipc_profile ? ::Eden::Performance::BeginGuestIpc" in ipc
-fs_file = section('string(REPLACE "${fs_file_old}"', ' fs_file_source "${fs_file_source}")')
-fs_storage = section('string(REPLACE "${fs_storage_old}"', ' fs_storage_source "${fs_storage_source}")')
+# The diagnostic filesystem units are now maintained C++ sources,
+# no longer strings embedded in headless/CMakeLists.txt.
+maintained = Path(__file__).resolve().parents[1] / "vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp"
+fs_file = (maintained / "fs_i_file.cpp").read_text()
+fs_storage = (maintained / "fs_i_storage.cpp").read_text()
+assert 'EDEN_MAINTAINED_PROFILE_FS_FILE' in cmake
+assert 'EDEN_MAINTAINED_PROFILE_FS_STORAGE' in cmake
 for fragment, name in [(fs_file, "guest_fs_file"), (fs_storage, "guest_fs_storage")]:
     assert "const auto fs_start = ::Eden::Performance::detailed_gpu_profile.load" in fragment
-    assert rf"if (fs_start) {{\n        ::Eden::Performance::AddSince(::Eden::Performance::{name}, fs_start);" in fragment
+    assert f"if (fs_start) {{\n        ::Eden::Performance::AddSince(::Eden::Performance::{name}, fs_start);" in fragment
 assert fs_file.index("backend->Read(") < fs_file.index("if (fs_start)") < fs_file.index("EDEN_FS_FILE_READ")
 assert fs_storage.index("EDEN_FS_SHORT_STORAGE") < fs_storage.index("if (fs_start)")
 assert "fs_read != static_cast<std::size_t>(length)" in fs_storage
@@ -98,5 +103,5 @@ with tempfile.TemporaryDirectory(prefix="eden-quiet-cpuio-") as d:
     subprocess.run([compiler, "-std=c++20", "-O2", "-pthread", "-Wall", "-Wextra",
                     "-Werror", str(src), "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True, timeout=10)
-print("PASS: R300 native CMake CPU, IPC, sync, FS guards; short-read error always checked")
+print("PASS: R300 native CPU/IPC and maintained FS quiet clock guards; short-read still checked")
 print("HOST-ONLY: native PS5 SDK and FC27/BOTW validation pending")
