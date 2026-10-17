@@ -530,6 +530,44 @@ assert registered_patches == legacy_calls + active_core_patches
 assert set(registered_patches) == patch_names
 print("VENDOR_SOURCE_PATCH_REPLAY_INVENTORY_PASS: 44 replay calls, 2 active-core patches, 46 files")
 
+# Independent source-target audit: 46 registered patches may touch more
+# physical translation units than the high-priority function graph names.
+# This reports EXACT path gaps; it does not assert all unlisted functions
+# have never been checked, nor that the pinned file is selected at runtime.
+audit_register = (root / "docs/EDEN_CORE_AUDIT_DEPENDENCIES.md").read_text()
+audit_paths = set()
+for audit_line in audit_register.splitlines():
+    if re.match(r"^\\| [A-Z][0-9]{2} \\|", audit_line):
+        fields = audit_line.split("|")
+        if len(fields) >= 5:
+            audit_paths.add(fields[4].strip())
+patch_target_map = {}
+for patch_name in sorted(patch_names):
+    patch_body = (root / "headless/backports" / patch_name).read_text()
+    target_paths = set(re.findall(r"^\\+\\+\\+ b/(.+)$", patch_body, re.M))
+    assert target_paths, ("patch has no target paths", patch_name)
+    patch_target_map[patch_name] = target_paths
+all_patch_targets = set().union(*patch_target_map.values())
+def has_exact_audit_path(relative):
+    return any(prefix + relative in audit_paths for prefix in (
+        "vendor/sources/eden/", "vendor/encore-active/eden-core/",
+        "vendor/encore-active/eden-vulkan/", "vendor/encore-active/eden-gpu/",
+        "vendor/encore-active/eden-threading/",
+        "vendor/encore-active/eden-sync/",
+        "vendor/encore-active/eden-shader/",
+    ))
+unmatched_patch_targets = sorted(path for path in all_patch_targets
+                                 if not has_exact_audit_path(path))
+assert len(patch_target_map) == 46
+print("VENDOR_PATCH_TARGET_FOOTPRINT_PASS "
+      f"patches={len(patch_target_map)} "
+      f"touched_paths={len(all_patch_targets)} "
+      f"unmatched_exact_graph={len(unmatched_patch_targets)}")
+for missing_path in unmatched_patch_targets:
+    print("VENDOR_PATCH_TARGET_NEEDS_OWNER", missing_path)
+
+
+
 
 
 
