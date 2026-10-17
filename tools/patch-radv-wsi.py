@@ -13,6 +13,11 @@ if sys.argv[1:2] == ['--check']:
     recorded = marker.read_text().split()[0] if marker and marker.is_file() else ''
     sys.exit(0 if expected == recorded else 1)
 oracle = sys.argv[1:2] == ['--oracle']
+# The mutable sibling-tree fallback is legacy and must not run implicitly.
+# Shipping RADV uses tracked vendor/encore-active files via the installer;
+# only a requested, disposable --oracle destination may be rewritten here.
+if not oracle:
+    raise SystemExit('Legacy RADV source rewrite disabled; use --check or --oracle PINNED_ROOT OUTPUT_ROOT')
 if oracle and len(sys.argv) != 4:
     raise SystemExit('usage: patch-radv-wsi.py --oracle PINNED_MESA_ROOT OUTPUT_ROOT')
 original_root = Path(sys.argv[2]) if oracle else root.parent/'mihawk-mesa-review'

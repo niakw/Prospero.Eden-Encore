@@ -61,7 +61,10 @@ spin_expected=spin_original.replace(
 assert (active/"core/hle/kernel/k_spin_lock.cpp").read_text()==spin_expected
 assert 'list(APPEND core_sources "${eden_kernel_spin}")' in cmake
 assert 'write_derived("${PORT_BUILD_DIR}/k_spin_lock.cpp"' not in cmake
-assert 'set(npad_entry "void NPad::ControllerUpdate(' in cmake
+# Native NPad no longer has a CMake generator. Its byte-exact guards
+# and selected hid_core translation unit are checked by the consolidation oracle.
+assert 'list(APPEND npad_sources "${EDEN_MAINTAINED_NPAD}")' in cmake
+assert 'write_derived("${PORT_BUILD_DIR}/npad.cpp"' not in cmake
 assert "set(compose_new [=[" in cmake
 # The port must keep reducing generator rewrites, not silently increase them.
 gpu_span_derived='write_derived("${eden_gpu_span_tu}" "${eden_gpu_span_src}")'

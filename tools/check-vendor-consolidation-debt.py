@@ -644,6 +644,34 @@ assert 'write_derived("${PORT_BUILD_DIR}/npad.cpp"' not in c
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/hid_core/resources/npad/npad.cpp" npad_source)' not in c
 print("MAINTAINED_NPAD_SOURCE_PARITY_PASS guards=2 selection=hid_core")
 
+
+# Do not hide active non-CMake source transforms behind the CMake-only
+# generator counter. The matching inventory names real build entrypoints,
+# historical replayers and independent source-equivalence oracles.
+assert "## Overrides et générateurs hors CMake principal" in inventory
+for relative in (
+    "tools/prepare-build.sh", "tools/install-vendored-eden-backports.py",
+    "tools/install-vendored-eden-build-flags.py",
+    "tools/install-vendored-surface-lifecycle.py",
+    "tools/install-vendored-radv.py", "tools/install-active-core-backports.py",
+    "tools/apply-eden-backports.sh", "tools/prepare-vulkan-port.py",
+    "tools/patch-radv-wsi.py", "tools/sync-encore-overrides.py",
+    "tools/sync-glyph-overrides.py", "tools/launcher/strings.py",
+    "tools/build-headless-host.sh", "tools/build-opengl-sdk.sh",
+):
+    assert (root / relative).is_file(), ("untracked script entrypoint", relative)
+    assert "`" + relative + "`" in inventory, ("script override not catalogued", relative)
+staging = (root / "tools/prepare-build.sh").read_text()
+assert 'python3 -B tools/install-active-core-backports.py "$eden"' in staging
+assert 'python3 -B tools/install-vendored-eden-backports.py "$eden"' in staging
+assert 'python3 -B tools/install-vendored-eden-build-flags.py "$eden"' in staging
+assert 'python3 -B tools/install-vendored-surface-lifecycle.py "$eden"' in staging
+assert 'tools/prepare-vulkan-port.py' not in vulkan
+radv_legacy = (root / "tools/patch-radv-wsi.py").read_text()
+assert "if not oracle:" in radv_legacy and "Legacy RADV source rewrite disabled" in radv_legacy
+assert 'patch-radv-wsi.py --check' in staging
+print("VENDOR_SCRIPTED_TRANSFORM_ENTRYPOINTS_PASS staged=5 oracles=2 profile_generators=2")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
