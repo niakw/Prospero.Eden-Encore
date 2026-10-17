@@ -76,20 +76,20 @@ The native build previously inherited a boilerplate `param.json` without the opt
 <!-- BEGIN AUTO-UPSTREAM-COMPARISON -->
 ### Automated comparison (daily + manual)
 
-Checked in UTC: **2026-10-16 09:52 UTC**. Changes are commits relative to pins, not proven missing fixes.
+Checked in UTC: **2026-10-17 09:23 UTC**. Changes are commits relative to pins, not proven missing fixes.
 This workflow never imports source patches, modifies dependencies, or reads console data.
 
 | Dependency | Source | Pinned revision | Ahead / behind | Status |
 |---|---|---|---:|---|
-| eden | [eden-emulator/mirror](https://github.com/eden-emulator/mirror) | 5f142c7926d0 | +89 / -0 | upstream ahead |
-| ffmpeg | [FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg) | c7b5f1537d9c | +4635 / -0 | upstream ahead |
-| fmt | [fmtlib/fmt](https://github.com/fmtlib/fmt) | 12.1.0 | +354 / -0 | upstream ahead |
+| eden | [eden-emulator/mirror](https://github.com/eden-emulator/mirror) | 5f142c7926d0 | +90 / -0 | upstream ahead |
+| ffmpeg | [FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg) | c7b5f1537d9c | +4668 / -0 | upstream ahead |
+| fmt | [fmtlib/fmt](https://github.com/fmtlib/fmt) | 12.1.0 | +357 / -0 | upstream ahead |
 | zbic | [kinnay/zbic](https://github.com/kinnay/zbic) | 11b08f271226 | +0 / -0 | identical |
 | compiler-rt | [frozen archive / binary](https://github.com/frozen archive / binary) | — | — | not comparable |
 | pacbrew | [frozen archive / binary](https://github.com/frozen archive / binary) | — | — | not comparable |
 | opengl-source | [blackbearreloaded/ps5-opengl](https://github.com/blackbearreloaded/ps5-opengl) | ad2807d41cef | +18 / -0 | upstream ahead |
 | harfbuzz | [frozen archive / binary](https://github.com/frozen archive / binary) | — | — | not comparable |
-| boilerplate | [blackbearreloaded/ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) | dd44bbdc7543 | +43 / -0 | upstream ahead |
+| boilerplate | [blackbearreloaded/ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) | dd44bbdc7543 | +44 / -0 | upstream ahead |
 | ps5-vulkan-tools | [mihawk-99/PS5_Vulkan](https://github.com/mihawk-99/PS5_Vulkan) | 3f3ee6960701 | +19 / -0 | upstream ahead |
 | ps5-mesa | [mihawk-99/PS5_Mesa](https://github.com/mihawk-99/PS5_Mesa) | 0b2d6d1a61d9 | +111 / -103 | diverged |
 | ps5-payload-sdk-fork | [mihawk-99/PS5_PayloadSDK](https://github.com/mihawk-99/PS5_PayloadSDK) | 95c08f27386f | +100 / -48 | diverged |
@@ -97,11 +97,11 @@ This workflow never imports source patches, modifies dependencies, or reads cons
 | opengl-opengnm-psbc | [PS4-OpenGNM/opengnm-psbc](https://github.com/PS4-OpenGNM/opengnm-psbc) | a92a1228ea3a | +0 / -0 | identical |
 | opengl-opengnm | [PS4-OpenGNM/opengnm](https://github.com/PS4-OpenGNM/opengnm) | 4b295ca54c82 | +0 / -0 | identical |
 | opengl-spirv-headers | [KhronosGroup/SPIRV-Headers](https://github.com/KhronosGroup/SPIRV-Headers) | 0d25db97cb9b | +8 / -0 | upstream ahead |
-| opengl-vulkan-headers | [KhronosGroup/Vulkan-Headers](https://github.com/KhronosGroup/Vulkan-Headers) | b51f6b865c18 | +6 / -0 | upstream ahead |
-| opengl-imgui | [ocornut/imgui](https://github.com/ocornut/imgui) | f5befd2d29e6 | +1512 / -0 | upstream ahead |
+| opengl-vulkan-headers | [KhronosGroup/Vulkan-Headers](https://github.com/KhronosGroup/Vulkan-Headers) | b51f6b865c18 | +7 / -0 | upstream ahead |
+| opengl-imgui | [ocornut/imgui](https://github.com/ocornut/imgui) | f5befd2d29e6 | +1513 / -0 | upstream ahead |
 | opengl-nanovg | [memononen/nanovg](https://github.com/memononen/nanovg) | ce3bf745eb2d | +0 / -0 | identical |
 | opengl-sokol | [floooh/sokol](https://github.com/floooh/sokol) | 48c85905aeaa | +219 / -0 | upstream ahead |
-| opengl-native-boilerplate | [blackbearreloaded/ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) | 4f531c4b517f | +52 / -0 | upstream ahead |
+| opengl-native-boilerplate | [blackbearreloaded/ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) | 4f531c4b517f | +53 / -0 | upstream ahead |
 | opengl-mesa-26-2 | [frozen archive / binary](https://github.com/frozen archive / binary) | — | — | not comparable |
 
 ### Source changes requiring review
@@ -109,7 +109,6 @@ This workflow never imports source patches, modifies dependencies, or reads cons
 These are upstream commit titles, not validated Encore integrations.
 
 **eden**
-- [b77308ced62a](https://github.com/eden-emulator/mirror/commit/b77308ced62a) — (applet) ReconfigureControllers fallback unconditional disconnect fix (#4420)
 - [fa4e7c699243](https://github.com/eden-emulator/mirror/commit/fa4e7c699243) — (vk_texture_cache) drop depth comparison sampler fallback (#4408)
 - [a7061eb4c8af](https://github.com/eden-emulator/mirror/commit/a7061eb4c8af) — (ns) Rename i_async_result - async_result (#4439)
 - [d76f8f91c423](https://github.com/eden-emulator/mirror/commit/d76f8f91c423) — (hle) Fix nullptr on ListApplicationIcon (#4438)
@@ -154,6 +153,7 @@ These are upstream commit titles, not validated Encore integrations.
 - [fb51a1253447](https://github.com/eden-emulator/mirror/commit/fb51a1253447) — (input/sdl) nuke SDL_Vibration thread (#4299)
 - [14da4482a466](https://github.com/eden-emulator/mirror/commit/14da4482a466) — (input_common/joycon) Enumerate SDL devices iff SDL signals change (#4486)
 - [d8c6c59b6798](https://github.com/eden-emulator/mirror/commit/d8c6c59b6798) — Fix Check Strings after 4523 (#4534)
+- [e0d47f2790e3](https://github.com/eden-emulator/mirror/commit/e0d47f2790e3) — (cmake) fix macOS compilation by forcing lz4 to be static (#4540)
 
 **ffmpeg** (history excerpt; some commits omitted)
 - [9c51aa182488](https://github.com/FFmpeg/FFmpeg/commit/9c51aa182488) — swscale: add SwsCompiledOp.slice_align
