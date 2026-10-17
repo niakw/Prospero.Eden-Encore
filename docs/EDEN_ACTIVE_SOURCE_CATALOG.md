@@ -246,7 +246,7 @@ pas comptés parmi les 198 fichiers de code et d'en-têtes.
 
 Les **195 fichiers source/en-tête/fragment** de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
-Seuls 15 ont un propriétaire exact dans le graphe courant ; les autres sont
+27 ont désormais un propriétaire exact dans le graphe courant ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
 La couverture de 198/198 ci-dessus ne s'applique **pas** à ce dossier.
 
