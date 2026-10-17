@@ -2388,6 +2388,21 @@ if(EDEN_PS5_OPENGL)
         file(READ "${EDEN_PORT_DIR}/gpu_queue_stop_wait.inc" native_stop_wait)
         string(REPLACE "${queue_wait_anchor}" "${queue_wait_anchor}\n${native_stop_wait}"
             native_queue_header "${native_queue_header}")
+        # SPSCQueue stores a preconstructed std::array<T, Capacity>.
+        # Its placement-new reuse must first destroy the still-live,
+        # moved-from slot. Both normal and stop-aware producers use this
+        # same constructor; preserve FIFO and move semantics.
+        set(queue_slot_construct "std::construct_at(std::addressof(m_data[pos]), std::forward<Args>(args)...);")
+        string(REPLACE "${queue_slot_construct}" "__ENCORE_GPU_QUEUE_SLOT__"
+            native_queue_header "${native_queue_header}")
+        string(REGEX MATCHALL "__ENCORE_GPU_QUEUE_SLOT__" queue_slot_matches "${native_queue_header}")
+        list(LENGTH queue_slot_matches queue_slot_count)
+        if(NOT queue_slot_count EQUAL 2)
+            message(FATAL_ERROR "Pinned GPU queue slot lifetime contract changed: ${queue_slot_count}")
+        endif()
+        set(queue_slot_repair "std::destroy_at(std::addressof(m_data[pos]));\n        ${queue_slot_construct}")
+        string(REPLACE "__ENCORE_GPU_QUEUE_SLOT__" "${queue_slot_repair}"
+            native_queue_header "${native_queue_header}")
         string(PREPEND native_queue_header "#include <memory>\n#include <stop_token>\n")
         write_derived("${PORT_BUILD_DIR}/include/common/bounded_threadsafe_queue.h" "${native_queue_header}")
     endif()
