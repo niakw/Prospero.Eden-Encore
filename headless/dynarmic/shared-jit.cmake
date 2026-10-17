@@ -2,7 +2,10 @@
 # (headless/dynarmic/jit_group.h). Each macro edits a source already read into the caller's
 # variable, just before the caller writes the derived file.
 
-set(EDEN_SHARED_JIT_DIR "${CMAKE_CURRENT_LIST_DIR}")
+set(EDEN_SHARED_JIT_DIR "${PORT_ROOT}/vendor/encore-active/eden-core/dynarmic/shared-jit")
+if(NOT EXISTS "${EDEN_SHARED_JIT_DIR}/jit_group.h")
+    message(FATAL_ERROR "Missing Encore-maintained shared JIT code")
+endif()
 file(GLOB eden_shared_jit_inputs CONFIGURE_DEPENDS "${EDEN_SHARED_JIT_DIR}/*.inc" "${EDEN_SHARED_JIT_DIR}/*.h"
      "${EDEN_SHARED_JIT_DIR}/*.cpp")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${eden_shared_jit_inputs})
