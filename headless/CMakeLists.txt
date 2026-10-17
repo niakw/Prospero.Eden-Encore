@@ -1759,6 +1759,23 @@ file(READ "${PROJECT_SOURCE_DIR}/src/${worker_header}" worker_source)
 string(REPLACE "    KWorkerTaskManager();" "    KWorkerTaskManager();\n    void WaitForRequests() { m_waiting_thread.WaitForRequests(); }" worker_source "${worker_source}")
 write_derived("${PORT_BUILD_DIR}/include/${worker_header}" "${worker_source}")
 
+# Native-only guest HLE condition-variable access guard: rejected addresses
+# must not be reported as successful reads/writes or atomic lock operations.
+# Keep pinned vendor sources unchanged. Strict CMake anchors fail closed.
+if(PS5_NATIVE)
+    file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/kernel/k_condition_variable.cpp" eden_cv_source)
+    include("${EDEN_PORT_DIR}/native_hle_condvar_access.cmake")
+    write_derived("${PORT_BUILD_DIR}/k_condition_variable-native.cpp" "${eden_cv_source}")
+    get_target_property(eden_cv_core_sources core SOURCES)
+    list(FIND eden_cv_core_sources "hle/kernel/k_condition_variable.cpp" eden_cv_index)
+    if(eden_cv_index EQUAL -1)
+        message(FATAL_ERROR "Pinned condition variable build source moved")
+    endif()
+    list(REMOVE_ITEM eden_cv_core_sources "hle/kernel/k_condition_variable.cpp")
+    list(APPEND eden_cv_core_sources "${PORT_BUILD_DIR}/k_condition_variable-native.cpp")
+    set_property(TARGET core PROPERTY SOURCES "${eden_cv_core_sources}")
+endif()
+
 # Keep service threads until their outer callbacks and C++ destructors finish.
 # Finalization can wait for process/page-table light locks. Holding the outer
 # scheduler lock postpones that wait until its stack-owned queue is already gone.
