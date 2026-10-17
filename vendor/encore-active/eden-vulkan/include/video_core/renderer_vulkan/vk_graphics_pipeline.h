@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "common/thread_worker.h"
+#include "video_core/renderer_vulkan/striped_wait.h"
 #include "shader_recompiler/shader_info.h"
 #include "video_core/engines/maxwell_3d.h"
 #include "video_core/renderer_vulkan/fixed_pipeline_state.h"
@@ -221,8 +222,8 @@ private:
     u32 last_descriptor_buffer_chunk{};
     u64 last_descriptor_buffer_generation{};
 
-    std::condition_variable build_condvar;
-    std::mutex build_mutex;
+    ::Eden::StripedCondition build_condvar;
+    ::Eden::StripedMutex build_mutex;
     std::atomic_bool is_built{false};
     bool uses_push_descriptor{false};
     bool uses_descriptor_buffer{false};
