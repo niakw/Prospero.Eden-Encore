@@ -1775,6 +1775,21 @@ if(PS5_NATIVE)
     list(REMOVE_ITEM eden_cv_core_sources "hle/kernel/k_condition_variable.cpp")
     list(APPEND eden_cv_core_sources "${eden_active_cv}")
     set_property(TARGET core PROPERTY SOURCES "${eden_cv_core_sources}")
+    # Keep address-arbiter guest memory checks as a separate maintained native
+    # source. This does not add another CMake read/derived translation unit.
+    set(eden_active_arbiter
+        "${PORT_ROOT}/vendor/encore-active/eden-threading/src/core/hle/kernel/k_address_arbiter.cpp")
+    if(NOT EXISTS "${eden_active_arbiter}")
+        message(FATAL_ERROR "Missing maintained native address arbiter source")
+    endif()
+    get_target_property(eden_arbiter_sources core SOURCES)
+    list(FIND eden_arbiter_sources "hle/kernel/k_address_arbiter.cpp" eden_arbiter_index)
+    if(eden_arbiter_index EQUAL -1)
+        message(FATAL_ERROR "Pinned address arbiter build source moved")
+    endif()
+    list(REMOVE_ITEM eden_arbiter_sources "hle/kernel/k_address_arbiter.cpp")
+    list(APPEND eden_arbiter_sources "${eden_active_arbiter}")
+    set_property(TARGET core PROPERTY SOURCES "${eden_arbiter_sources}")
 endif()
 
 # Keep service threads until their outer callbacks and C++ destructors finish.
