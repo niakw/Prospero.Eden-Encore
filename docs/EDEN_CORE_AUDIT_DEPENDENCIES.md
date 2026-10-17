@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 131
+**Non, this is not an exhaustive repository-wide inventory.** The 134
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,23 +24,23 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 131 | 112 | 269 |
+| Graphe connu | 134 | 115 | 278 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 77 | 68 | 166 |
+| SOURCE — lecture effectuée, preuve insuffisante | 80 | 71 | 175 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **92** | **82** | **194** |
-| Dont priorité P0 (SOURCE + OPEN) | 38 | 33 | 98 |
+| **Encore à qualifier (SOURCE + OPEN)** | **95** | **85** | **203** |
+| Dont priorité P0 (SOURCE + OPEN) | 40 | 35 | 104 |
 
-Le **noyau restant** compte donc 92 critères répartis sur
-82 fichiers et 194 mentions fonction/contrat :
-15 OPEN et 77 SOURCE.
-Cela **ne signifie pas 192 fonctions jamais lues** :
+Le **noyau restant** compte donc 95 critères répartis sur
+85 fichiers et 203 mentions fonction/contrat :
+15 OPEN et 80 SOURCE.
+Cela **ne signifie pas 203 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-186 fichiers de code/en-têtes présents, 53 avec un chemin de
-graphe exact et 133 sans correspondance exacte. Cet écart n'est
+186 fichiers de code/en-têtes présents, 56 avec un chemin de
+graphe exact et 130 sans correspondance exacte. Cet écart n'est
 **pas** le nombre de fonctions non auditées, ni une preuve de code actif.
 Le contrôle hôte vérifie la complétude des chemins et les références,
 mais pas le comportement.
@@ -310,6 +310,9 @@ function/contract tokens are checked by CI for existence only; the
 | M05 | P2 | M02 | headless/gpu_deferred_store_publication.h | CommitPostStore | PARKED | docs/DEFERRED_JIT_QUIESCENCE_ARCHITECTURE_2026-10-17.md | Publication experimental bridge still disabled | ⚪ Suspendu |
 | M06 | P0 | M01,Q04 | vendor/sources/eden/src/core/device_memory_manager.inc | DeviceMemoryManager<Traits>::Map; DeviceMemoryManager<Traits>::Unmap; DeviceMemoryManager<Traits>::GetSpan; DeviceMemoryManager<Traits>::TrackContinuityImpl | SOURCE | headless/backports/eden-ps5-gpu-asid-lifetime-guard.patch | Map/Unmap/ASID/span bounds: reconcile every layered backport and identify actual build source; host and console behavior not yet proven | 🟡 Source étudiée |
 | M07 | P0 | M06 | vendor/sources/eden/src/core/device_memory_manager.h | Map(DAddr; Unmap(DAddr; GetSpan( | SOURCE | headless/backports/eden-ps5-gpu-atomic-forward-table.patch | Header declarations and reverse-table fields are modified by layered patches; verify active header selection, lock order and atomic reverse entries before any migration | 🟡 Source étudiée |
+| M08 | P0 | M06,M07 | vendor/encore-active/eden-core/overrides/core/device_memory_manager.inc | DeviceMemoryManager<Traits>::Map; DeviceMemoryManager<Traits>::Unmap; DeviceMemoryManager<Traits>::TrackContinuityImpl; DeviceMemoryManager<Traits>::GetSpan | SOURCE | headless/CMakeLists.txt | Native active header-resolved GPU map and continuity implementation; verify layered backports, lock order and active source equivalence; source only, no console progress proof | 🟡 Source étudiée |
+| M09 | P0 | M08,V05 | vendor/encore-active/eden-core/overrides/core/gpu_dirty_memory_manager.h | Collect(PAddr; Gather(std::function | SOURCE | headless/CMakeLists.txt | Native atomic GPU dirty collector uses active header override; verify publication and memory-order invariants at real cache boundaries; source only, no console progress proof | 🟡 Source étudiée |
+| M10 | P1 | M01,M08 | vendor/encore-active/eden-core/overrides/core/guest_memory.h | GuestMemoryScoped; TrySetSpan; AddressChanged | SOURCE | headless/CMakeLists.txt | Native guest-memory span ownership header selected by core and video_core; assert consistency of address and writeback behavior; source only, no console progress proof | 🟡 Source étudiée |
 | R10 | P1 | R01,R09 | vendor/sources/eden/src/core/memory.cpp | Memory::IsValidVirtualAddressRange | HOST | tools/check-native-guest-range-overflow-host.py | Host regression SUCCESS 38996379440; on-device behavior not verified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-guest-range-overflow-host.py) |
 | J12 | P1 | J08 | vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_64.cpp | DynarmicCallbacks64::MemoryRead32; CheckMemoryAccess | HOST | tools/check-native-jit-memory-read-guard-host.py | Pinned vs derived read rejection A64 host PASS in run #38996913209; console unverified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-jit-memory-read-guard-host.py) |
 | J13 | P1 | J08 | vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_32.cpp | DynarmicCallbacks32::MemoryRead32; CheckMemoryAccess | HOST | tools/check-native-jit-memory-read-guard-host.py | Pinned vs derived read rejection A32 host PASS in run #38996913209; console unverified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-jit-memory-read-guard-host.py) |

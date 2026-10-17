@@ -73,6 +73,20 @@ for module in cost_modules:
     assert relative in graph, ("missing indexed Vulkan cost source", relative)
 print("ENCORE_VULKAN_COST_OWNER_PASS", f"selected={len(cost_modules)}")
 
+# Keep the native GPU/guest memory header overrides distinguishable from
+# the pinned and materialized backport copies. Selection is native-only.
+native_cmake = (root/"headless/CMakeLists.txt").read_text()
+assert 'set(EDEN_NATIVE_DIRTY_HEADER_ROOT' in native_cmake
+assert 'target_include_directories(core BEFORE PUBLIC "${EDEN_NATIVE_DIRTY_HEADER_ROOT}")' in native_cmake
+assert 'target_include_directories(video_core BEFORE PRIVATE "${EDEN_NATIVE_DIRTY_HEADER_ROOT}")' in native_cmake
+native_mem = ("device_memory_manager.inc", "gpu_dirty_memory_manager.h", "guest_memory.h")
+for name in native_mem:
+    rel = "eden-core/overrides/core/" + name
+    assert (active/rel).is_file(), ("missing native memory override", rel)
+    assert rel in graph, ("native memory override lacks active function owner", rel)
+    assert '${EDEN_NATIVE_DIRTY_HEADER_ROOT}/core/' + name in native_cmake
+print("ENCORE_NATIVE_MEMORY_OWNER_PASS", f"headers={len(native_mem)}")
+
 assert len(physical) == len(set(physical))
 print("ENCORE_ACTIVE_SOURCE_CATALOG_PASS",
       f"files={len(physical)}",
