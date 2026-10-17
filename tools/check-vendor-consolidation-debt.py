@@ -836,6 +836,32 @@ assert c.count('list(REMOVE_ITEM video_sources "memory_manager.cpp")') == 1
 assert 'write_derived("${eden_gpu_span_tu}"' not in c
 print("MAINTAINED_GPU_MEMORY_MANAGER_PARITY_PASS patches=5 sites=8 selection=video_core")
 
+# Exact historical CMake generation witness; never produces production code.
+network_original = (root / "vendor/sources/eden/src/core/internal_network/network.cpp").read_text()
+network_old_start = "void Initialize() {\n    if (pipe("
+network_old_end = "void Finalize() {\n    if (interrupt_pipe_fd"
+network_init = "void Initialize() {\n    if (socketpair(AF_UNIX, SOCK_STREAM, 0, interrupt_pipe_fd) != 0)\n        throw std::runtime_error(\"Native wakeup socketpair failed\");\n    try {\n        unsigned char value = 0x5a, received = 0;\n        errno = 0;\n        const auto written = send(interrupt_pipe_fd[1], &value, 1, MSG_DONTWAIT);\n        const int write_error = errno;\n        errno = 0;\n        const auto count = recv(interrupt_pipe_fd[0], &received, 1, MSG_DONTWAIT);\n        const int read_error = errno;\n        std::printf(\"EDEN_SOCKET_PRIME write=%lld write_errno=%d read=%lld read_errno=%d value=%u\\n\",\n            static_cast<long long>(written), write_error, static_cast<long long>(count), read_error, received);\n        if (written != 1 || count != 1 || received != value)\n            throw std::runtime_error(\"Native wakeup socketpair initialization failed\");\n    } catch (...) {\n        for (int& fd : interrupt_pipe_fd) { close(fd); fd = -1; }\n        throw;\n    }\n}\n\n"
+network_interrupt = "    errno = 0;\n    const auto written = send(interrupt_pipe_fd[1], &value, sizeof(value), MSG_DONTWAIT);\n    const int write_error = errno;\n    // A full nonblocking stream already has a pending wakeup for poll().\n    if (written == -1 && (write_error == EAGAIN || write_error == EWOULDBLOCK)) return;\n    if (written != 1) std::fprintf(stderr, \"EDEN_SOCKET_INTERRUPT result=%lld errno=%d\\n\",\n        static_cast<long long>(written), write_error);\n    ASSERT(written == 1);\n"
+assert network_original.count("namespace Network {") == 1
+assert network_original.count(network_old_start) == 1
+assert network_original.count(network_old_end) >= 1
+network_expected = network_original.replace("namespace Network {",
+    "namespace Network {\\n#ifndef IPPROTO_DCCP\\nconstexpr int IPPROTO_DCCP = 33;\\n#endif".replace("\\n", "\n"))
+begin = network_expected.index(network_old_start)
+ending = network_expected.index(network_old_end, begin)
+network_expected = network_expected[:begin] + network_init + network_expected[ending:]
+old_write = "    ASSERT(write(interrupt_pipe_fd[1], &value, sizeof(value)) == 1);"
+old_read = "ssize_t ret = read(interrupt_pipe_fd[0], &value, sizeof(value));"
+assert network_expected.count(old_write) == 1 and network_expected.count(old_read) == 1
+network_expected = network_expected.replace(old_write, network_interrupt)
+network_expected = network_expected.replace(old_read,
+    "ssize_t ret = recv(interrupt_pipe_fd[0], &value, sizeof(value), MSG_DONTWAIT);")
+network_expected = "#include <cstdio>\\n#include <stdexcept>\\n".replace("\\n", "\n") + network_expected
+assert (active / "eden-core/src/core/internal_network/network.cpp").read_text() == network_expected
+assert 'list(APPEND core_sources "${EDEN_NATIVE_NETWORK_SOURCE}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/network.cpp"' not in c
+print("MAINTAINED_NETWORK_SOURCE_PARITY_PASS transformations=5")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -917,7 +943,7 @@ assert len(module_current) == 21, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 66
+assert len(recorded) + len(module_recorded) == 65
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
