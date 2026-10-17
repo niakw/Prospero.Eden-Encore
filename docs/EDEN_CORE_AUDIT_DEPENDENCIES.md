@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 139
+**Non, this is not an exhaustive repository-wide inventory.** The 146
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,23 +24,23 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 139 | 120 | 289 |
+| Graphe connu | 146 | 127 | 303 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 85 | 76 | 186 |
+| SOURCE — lecture effectuée, preuve insuffisante | 92 | 83 | 200 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **100** | **90** | **214** |
-| Dont priorité P0 (SOURCE + OPEN) | 40 | 35 | 104 |
+| **Encore à qualifier (SOURCE + OPEN)** | **107** | **97** | **228** |
+| Dont priorité P0 (SOURCE + OPEN) | 43 | 38 | 110 |
 
-Le **noyau restant** compte donc 100 critères répartis sur
-90 fichiers et 214 mentions fonction/contrat :
-15 OPEN et 85 SOURCE.
-Cela **ne signifie pas 214 fonctions jamais lues** :
+Le **noyau restant** compte donc 107 critères répartis sur
+97 fichiers et 228 mentions fonction/contrat :
+15 OPEN et 92 SOURCE.
+Cela **ne signifie pas 228 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-186 fichiers de code/en-têtes présents, 61 avec un chemin de
-graphe exact et 125 sans correspondance exacte. Cet écart n'est
+186 fichiers de code/en-têtes présents, 68 avec un chemin de
+graphe exact et 118 sans correspondance exacte. Cet écart n'est
 **pas** le nombre de fonctions non auditées, ni une preuve de code actif.
 Le contrôle hôte vérifie la complétude des chemins et les références,
 mais pas le comportement.
@@ -245,6 +245,9 @@ function/contract tokens are checked by CI for existence only; the
 | Q03 | P1 | Q01,Q02 | vendor/encore-active/eden-gpu/gpu_thread_dev.cpp | ThreadManager::RunWorker; ThreadManager::PushCommand; ThreadManager::Stop | SOURCE | tools/check-vendored-gpu-thread.py | Worker can stall without fatal exception; prove progress separately | 🟡 Source étudiée |
 | Q04 | P1 | Q03 | vendor/sources/eden/src/video_core/gpu.cpp | GPU::OnCPURead; GPU::WaitForSyncOperation; GPU::TickWork | SOURCE | docs/2026-10-16_GPU_SYNC_TICK_SNAPSHOT.md | Check queued CPU read tick dependencies before any FIFO modification | 🟡 Source étudiée |
 | Q05 | P1 | Q04,B03 | vendor/sources/eden/src/video_core/macro.cpp | MacroJIT_SendThunk; MacroJITx64Impl::Execute | SOURCE | headless/macro_recovery.cmake | Direct file(WRITE) X01 catches exceptions in the macro JIT thunk and rethrows after returning to C++; restore exact source ownership and ABI before migration, not a runtime proof | 🟡 Source étudiée |
+| Q06 | P0 | Q03 | vendor/encore-active/eden-gpu/gpu_thread_quiet.cpp | ThreadManager::RunWorker; ThreadManager::Stop | SOURCE | docs/EDEN_ACTIVE_SOURCE_CATALOG.md | Native non-diagnostic GPU worker is a separate maintained variant; verify shutdown and FIFO completion; source-level ownership only, console proof pending | 🟡 Source étudiée |
+| Q07 | P0 | Q02 | vendor/encore-active/eden-gpu/include/common/bounded_threadsafe_queue.h | EmplaceWaitWithStopToken; TryPop | SOURCE | docs/EDEN_ACTIVE_SOURCE_CATALOG.md | Maintained queue stop-token and element lifetime must be consistent in GPU worker variants; source-level ownership only, console proof pending | 🟡 Source étudiée |
+| Q08 | P0 | Q06,Q07 | vendor/encore-active/eden-gpu/include/video_core/gpu_thread.h | PushCommand; RunWorker | SOURCE | docs/EDEN_ACTIVE_SOURCE_CATALOG.md | GPU worker shared ABI and shutdown ordering apply to both quiet and diagnostic implementations; source-level ownership only, console proof pending | 🟡 Source étudiée |
 | D01 | P2 | Q03 | vendor/sources/eden/src/video_core/dma_pusher.cpp | DmaPusher::Step; DmaPusher::DispatchCalls; DmaPusher::ProcessCommands | HOST | tools/check-native-dma-resume-boundary-host.py | Unsafe restart proved; no native replay or partial continuation | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-dma-resume-boundary-host.py) |
 | D02 | P2 | D01 | vendor/sources/eden/src/video_core/dma_pusher.cpp | DmaPusher::Step; DmaPusher::SetState | HOST | tools/check-native-dma-indirect-dependencies-host.py | Late guest-RAM command decoding remains unsealed | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-dma-indirect-dependencies-host.py) |
 | V01 | P0 | Q03 | vendor/encore-active/eden-vulkan/vulkan_scheduler.cpp | Scheduler::WorkerThread; Scheduler::WaitWorker; Scheduler::Finish | SOURCE | docs/FC27_NATIVE_FRAME_PROGRESS_TRIAGE_2026-10-17.md | Separate worker queue drain from physical GPU device fence wait | 🟡 Source étudiée |
@@ -361,6 +364,10 @@ function/contract tokens are checked by CI for existence only; the
 | H30 | P1 | H02 | vendor/encore-active/eden-core/src/core/hle/kernel/k_spin_lock.cpp | KSpinLock::Lock; KSpinLock::TryLock | SOURCE | tools/check-maintained-audio-units.py | Maintained lock source uses SpinAcquire and preserves unlock/try-lock behavior; source parity is checked, not contention or console forward progress | 🟡 Source étudiée |
 | H31 | P1 | H03,H24 | vendor/encore-active/eden-core/src/hid_core/resource_manager.cpp | ResourceManager::Initialize; ResourceManager::CreateAppletResource | SOURCE | headless/CMakeLists.txt | Maintained HID event-lifetime resource manager selected by hid_core; verify event registration, shutdown ownership and applet wake independently | 🟡 Source étudiée |
 | H32 | P1 | H22,F11 | vendor/encore-active/eden-core/src/core/hle/service/am/service/application_functions.cpp | IApplicationFunctions::GetDisplayVersion; IApplicationFunctions::EnsureSaveData | SOURCE | headless/CMakeLists.txt | Maintained guest metadata and save-data application service; DEV witness and release source selection must be distinguished | 🟡 Source étudiée |
+| H33 | P1 | H18 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_slab_heap.h | KSlabHeapBase; Contains( | SOURCE | docs/EDEN_ACTIVE_SOURCE_CATALOG.md | Conditional maintained slab mutex/header ABI; check object allocator ownership and bound checks; source-level ownership only, console proof pending | 🟡 Source étudiée |
+| H34 | P1 | H33,H19 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_thread.h | ContinueIfHasKernelWaiters; Run(KernelCore& kernel) | SOURCE | docs/EDEN_ACTIVE_SOURCE_CATALOG.md | Conditional thread layout and waiters are shared across maintained threading consumers; source-level ownership only, console proof pending | 🟡 Source étudiée |
+| H35 | P1 | H34 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_worker_task_manager.h | WaitForRequests; AddTask(KernelCore | SOURCE | docs/EDEN_ACTIVE_SOURCE_CATALOG.md | Tracked helper header staged COPYONLY; verify requests and shutdown ordering; source-level ownership only, console proof pending | 🟡 Source étudiée |
+| H36 | P1 | H33,H35 | vendor/encore-active/eden-threading/src/core/hle/kernel/slab_helpers.h | KSlabAllocated; KAutoObjectWithSlabHeapAndContainer | SOURCE | docs/EDEN_ACTIVE_SOURCE_CATALOG.md | Tracked slab helper header staged COPYONLY; verify lifetime, free order and registry ownership; source-level ownership only, console proof pending | 🟡 Source étudiée |
 | A02 | P1 | A01,H29 | headless/backports/eden-sm-host-wait.patch | IAudioController::GetSetSys; call_once | SOURCE | tools/install-active-core-backports.py | AudioController defers system-setting lookup to first actual request using once_flag; two corresponding audio files are still patched into the staged tree, not maintained directly | 🟡 Source étudiée |
 | A03 | P1 | A01 | vendor/encore-active/eden-core/src/audio_core/sink/sink_stream.cpp | SinkStream::AppendBuffer; SinkStream::ProcessAudioOutAndRender | SOURCE | tools/check-maintained-audio-units.py | Source maintained, original four-rewrite parity and audio_core selection checked by host script; CI result and native audio behavior still required | 🟡 Source étudiée |
 | A04 | P1 | A01 | vendor/encore-active/eden-core/src/audio_core/renderer/voice/voice_info.cpp | VoiceInfo::UpdateParameters; VoiceInfo::UpdatePlayState | SOURCE | headless/CMakeLists.txt | Maintained renderer voice update has native flag position correction; validate voice state and game audio; selected source only, device proof pending | 🟡 Source étudiée |

@@ -97,6 +97,17 @@ assert all(path in graph for path in maintained_core_paths), (
 )
 print("ENCORE_MAINTAINED_CORE_OWNER_PASS", f"files={len(maintained_core_paths)}")
 
+# GPU variants and the coordinated HLE header overlays are not optional
+# catalogue blind spots, even if selected only by a native build flag.
+for family, size in (("eden-gpu/", 4), ("eden-threading/", 12)):
+    members = [path for path in physical if path.startswith(family)]
+    assert len(members) == size, ("maintained family footprint changed", family, len(members))
+    assert all(path in graph for path in members), (
+        "uncatalogued maintained family file", family,
+        [path for path in members if path not in graph],
+    )
+print("ENCORE_GPU_THREADING_OWNER_PASS", "gpu=4", "threading=12")
+
 assert len(physical) == len(set(physical))
 print("ENCORE_ACTIVE_SOURCE_CATALOG_PASS",
       f"files={len(physical)}",

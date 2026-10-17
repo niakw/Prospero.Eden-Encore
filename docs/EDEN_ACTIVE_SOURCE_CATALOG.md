@@ -8,9 +8,9 @@ présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
 - **186 fichiers** de code et d'en-têtes enregistrés.
-- **61 fichiers** possèdent une correspondance de chemin *exacte*
+- **68 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
-- **125 fichiers** n'ont pas encore de ligne de graphe correspondant
+- **118 fichiers** n'ont pas encore de ligne de graphe correspondant
   exactement à leur chemin. Cela **ne prouve pas** qu'ils n'ont jamais été
   examinés, ni qu'ils sont effectivement compilés.
 - Le manifeste des backports verrouille **83 fichiers livrés**, dont
@@ -149,20 +149,20 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/video_core/texture_cache/util.h` | `maintained-override` | V23 |
 | `eden-core/src/video_core/video_core_opengl.cpp` | `maintained-override` | V12 |
 | `eden-gpu/gpu_thread_dev.cpp` | `maintained-override` | Q03 |
-| `eden-gpu/gpu_thread_quiet.cpp` | `maintained-override` | — |
-| `eden-gpu/include/common/bounded_threadsafe_queue.h` | `maintained-override` | — |
-| `eden-gpu/include/video_core/gpu_thread.h` | `maintained-override` | — |
+| `eden-gpu/gpu_thread_quiet.cpp` | `maintained-override` | Q06 |
+| `eden-gpu/include/common/bounded_threadsafe_queue.h` | `maintained-override` | Q07 |
+| `eden-gpu/include/video_core/gpu_thread.h` | `maintained-override` | Q08 |
 | `eden-shader/src/shader_recompiler/frontend/maxwell/translate/impl/load_store_local_shared.cpp` | `maintained-override` | — |
 | `eden-surface-lifecycle/src/core/hle/service/nvnflinger/surface_flinger.cpp` | `maintained-override` | — |
 | `eden-sync/src/core/hle/kernel/k_synchronization_object.h` | `maintained-override` | H17 |
 | `eden-threading/src/core/hle/kernel/k_address_arbiter.cpp` | `maintained-override` | H07,H10,H11 |
 | `eden-threading/src/core/hle/kernel/k_condition_variable.cpp` | `maintained-override` | H01,H08,H09 |
 | `eden-threading/src/core/hle/kernel/k_scheduler.cpp` | `maintained-override` | H02,H18,H20 |
-| `eden-threading/src/core/hle/kernel/k_slab_heap.h` | `maintained-override` | — |
+| `eden-threading/src/core/hle/kernel/k_slab_heap.h` | `maintained-override` | H33 |
 | `eden-threading/src/core/hle/kernel/k_thread.cpp` | `maintained-override` | H03,H19 |
-| `eden-threading/src/core/hle/kernel/k_thread.h` | `maintained-override` | — |
-| `eden-threading/src/core/hle/kernel/k_worker_task_manager.h` | `maintained-override` | — |
-| `eden-threading/src/core/hle/kernel/slab_helpers.h` | `maintained-override` | — |
+| `eden-threading/src/core/hle/kernel/k_thread.h` | `maintained-override` | H34 |
+| `eden-threading/src/core/hle/kernel/k_worker_task_manager.h` | `maintained-override` | H35 |
+| `eden-threading/src/core/hle/kernel/slab_helpers.h` | `maintained-override` | H36 |
 | `eden-threading/src/core/hle/kernel/svc/svc_address_arbiter.cpp` | `maintained-override` | H13 |
 | `eden-threading/src/core/hle/kernel/svc/svc_condition_variable.cpp` | `maintained-override` | H12 |
 | `eden-threading/src/core/hle/kernel/svc/svc_synchronization.cpp` | `maintained-override` | H14 |
