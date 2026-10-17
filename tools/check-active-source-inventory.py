@@ -154,7 +154,10 @@ print("ENCORE_VULKAN_SHARED_ABI_OWNER_PASS", f"headers={len(abi_headers)}")
 linked_count = sum(path in graph for path in physical)
 assert f"**{len(physical)} fichiers** de code" in document
 assert f"**{linked_count} fichiers** possèdent" in document
-assert f"**{len(physical)-linked_count} fichiers** n'ont" in document
+if linked_count == len(physical):
+    assert "**0 fichier** reste sans correspondance" in document
+else:
+    assert f"**{len(physical)-linked_count} fichiers** n'ont" in document
 root_cmake = (root / "headless/CMakeLists.txt").read_text()
 root_generator_count = len(re.findall(r'write_derived\(\s*"', root_cmake))
 assert f"L'inventaire des {root_generator_count} générateurs CMake" in document
