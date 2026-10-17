@@ -59,7 +59,7 @@ sont des sources maintenues sous
 sélectionnées uniquement en `EDEN_DEV_PROFILE`.
 `tools/check-vendor-consolidation-debt.py` vérifie la parité du corps
 C++ avec l'override généré auparavant et recense les sorties CMake dans
-`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **71 sites restants**
+`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **70 sites restants**
 après ces deux migrations. Un site à paramètres variables peut
 produire plusieurs fichiers réels. Les ressources générées ne doivent
 pas être confondues avec des overrides de code.
@@ -69,6 +69,14 @@ entre thread `Runnable`, fibre sélectionnée, contexte restauré et
 exécution JIT. La correction de propriété du verrou C32 est prouvée
 par le test hôte précédent, **pas** par une exécution native invitée.
 Une reprise du code invité après réveil reste un verrou de validation.
+
+Les observateurs `N02` (`nvhost_ctrl`) et `N03`
+(`BufferQueueProducer::DequeueBuffer`) sont désormais eux aussi des
+unités C++ maintenues dans `vendor/encore-active/eden-core` pour
+`EDEN_DEV_PROFILE`. La source épinglée reste sélectionnée hors DEV.
+La parité avec l'ancienne génération et la politique de mesure silencieuse
+sont exigées par les contrôles hôte. La progression réelle du jeu n'est
+pas démontrée.
 
 ## Déjà traité — contrôles terminés et preuves accessibles
 
@@ -254,7 +262,7 @@ function/contract tokens are checked by CI for existence only; the
 | H20 | P0 | H02,H19 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp | KScheduler::UpdateHighestPriorityThread; KScheduler::UpdateHighestPriorityThreadsImpl | SOURCE | tools/check-upstream-guest-scheduler-locks.py | Runnable queue update precedes per-core highest-priority selection; account for pinned-thread preference, suggested-core migration and eventual context load. Not proof of guest PC progress | 🟡 Source étudiée |
 | H21 | P0 | H14,J14 | vendor/sources/eden/src/core/hle/kernel/svc/svc_ipc.cpp | SendSyncRequestImpl; SendSyncRequestWithUserBuffer | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Normal/DEV IPC synchronous guest wait is still selected through a CMake-derived TU in DEV. Correlate requesting guest thread and actual wait completion rather than interpreting service totals as PC progress | 🟡 Source étudiée |
 | H22 | P0 | H21 | vendor/sources/eden/src/core/hle/service/service.cpp | ServiceFrameworkBase::InvokeRequest; ServiceFrameworkBase::InvokeRequestTipc | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | DEV request-dispatch instrumentation remains CMake-generated; service-call completion is not sufficient evidence that a blocked guest thread resumed execution | 🟡 Source étudiée |
-| N03 | P1 | V02 | vendor/sources/eden/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp | BufferQueueProducer::WaitForFreeSlotThenRelock; BufferQueueProducer::DequeueBuffer | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | DEV dequeue wait is an active CMake-generated observer: separate presentation back-pressure and guest HUD/gamelogic stalls without changing queue ownership/order | 🟡 Source étudiée |
+| N03 | P1 | V02 | vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp | BufferQueueProducer::WaitForFreeSlotThenRelock; BufferQueueProducer::DequeueBuffer | SOURCE | tools/check-vendor-consolidation-debt.py | DEV dequeue timing now comes from maintained TU with pinned generated-source parity gate; hardware slot wake/back-pressure and visible guest progress still unproved | 🟡 Source étudiée |
 | N04 | P0 | N02 | vendor/sources/eden/src/video_core/host1x/syncpoint_manager.cpp | SyncpointManager::RegisterAction; SyncpointManager::DeregisterAction; SyncpointManager::Increment | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Newly indexed host-syncpoint action ownership: increment invokes callbacks while its guard is held; callback, reentrant locking and unregistration order require explicit proof before altering the scheduler | 🟡 Source étudiée |
 | N05 | P1 | N02,N04 | vendor/encore-active/eden-core/src/core/hle/service/nvdrv/devices/nvhost_ctrl.cpp | nvhost_ctrl::FreeEvent; nvhost_ctrl::IocCtrlEventUnregister; nvhost_ctrl::QueryEvent | SOURCE | tools/check-vendor-consolidation-debt.py | Newly indexed event object lifecycle: cancellation, unregister, query and callback signal may overlap. Source selected in DEV but actual native destruction/callback ordering not proven | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
