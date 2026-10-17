@@ -19,7 +19,7 @@ any operation, and avoid unrelated files.
 L'inventaire indexe des **contrats/fonctions à vérifier**, pas toutes les
 fonctions C++ du dépôt. Une même source peut couvrir plusieurs contrats ;
 des `SOURCE` ont été lues sans preuve d'exécution matérielle, et des
-`HOST` couvrent seulement la propriété contrôlée. Les 32 validations
+`HOST` couvrent seulement la propriété contrôlée. Les 34 validations
 historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
@@ -102,7 +102,7 @@ pas démontrée.
 
 ## Déjà traité — contrôles terminés et preuves accessibles
 
-**32 validations ciblées historiquement établies.** Elles recouvrent en
+**34 validations ciblées historiquement établies.** Elles recouvrent en
 partie les lignes B/Q/D/V/J/M/S du graphe ci-dessous : **ne pas additionner
 ces deux décomptes comme s'il s'agissait de travaux différents**.
 
@@ -145,6 +145,8 @@ démontrent précisément qu'une approche est dangereuse.
 | C30 | Retrait des nœuds de synchronisation sans alias UB | `KSynchronizationObject::UnlinkNode` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/verify/hle/check-native-hle-sync-unlink-host.py) | [Prévalidation #39028053859](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39028053859) | Source originale échoue optimisée avec GCC et Clang ; header natif typé conforme aux invariants à O0-O3 ; cause du gel FC27 non attribuée |
 | C31 | Mutualisation des verrous Vulkan de compilation des pipelines | `StripedMutex / StripedCondition` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-vulkan-striped-pipeline-host.py) | [Prévalidation #39032001757](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39032001757) | 8192 pipelines, 96 waiters, 64 mutex et 64 conditions ; GCC/Clang O0/O2 PASS ; contrôle d'équivalence Vulkan 41 fichiers PASS ; gains de FPS non mesurés |
 | C32 | Contexte invité : transfert entre threads hôtes sans mutex propriétaire | `KThread::m_context_guard; KScheduler::ScheduleImplFiber; KScheduler::Unload` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-upstream-guest-scheduler-locks.py) | [Prévalidation #39044658662](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39044658662) | Les sources actives remplacent std::mutex (unlock inter-thread non conforme) par std::binary_semaphore ; transfert et retry hôte C++20 PASS, source/blob identités verrouillées. Build console et reprise réelle JIT non vérifiés |
+| C33 | Sources HLE / IPC DEV sélectionnées, sans génération CMake | `ServiceFrameworkBase::HandleSyncRequest; SendSyncRequestImpl` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-vendor-consolidation-debt.py) | [Prévalidation #39054309660](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39054309660) | Parité exacte des deux anciennes injections; deux dispatches, trace facultative et attribution IPC conservés. Ne prouve pas la reprise des instructions invitées après EndWait |
+| C34 | Inventaire séparé des générateurs et overrides indirects | `write_derived; macro_recovery; checked-fastmem; physical_core_interrupt_atomic` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-vendor-consolidation-debt.py) | [Prévalidation #39054309660](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39054309660) | 68 sites du CMake principal + 21 sites de modules et 7 modules indirects suivis séparément; ne compte ni toutes les sorties variables, ni toute l'arborescence de dépendances |
 
 ### Audits archivés à ne pas recommencer
 
