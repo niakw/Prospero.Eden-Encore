@@ -20,17 +20,16 @@ include("${CMAKE_CURRENT_LIST_DIR}/dynarmic/shared-jit.cmake")
 # Register-allocator bookkeeping visits only the host locations in use (compile time).
 include("${CMAKE_CURRENT_LIST_DIR}/dynarmic/reg_alloc.cmake")
 file(MAKE_DIRECTORY "${PORT_BUILD_DIR}")
-file(MAKE_DIRECTORY "${PORT_BUILD_DIR}/recovery/common")
+# SlotVector's throwing-constructor repair has one tracked implementation.
+# Use a narrow header-only root to avoid shadowing unrelated pinned includes.
+set(EDEN_MAINTAINED_SLOT_VECTOR_ROOT
+    "${PORT_ROOT}/vendor/encore-active/eden-core/overrides/slot-vector")
+if(NOT EXISTS "${EDEN_MAINTAINED_SLOT_VECTOR_ROOT}/common/slot_vector.h")
+    message(FATAL_ERROR "Missing maintained native SlotVector header")
+endif()
 file(REMOVE "${PORT_BUILD_DIR}/include/common/slot_vector.h")
-set(SLOT_VECTOR_INPUT "${PROJECT_SOURCE_DIR}/src/common/slot_vector.h")
-set(SLOT_VECTOR_OUTPUT "${PORT_BUILD_DIR}/recovery/common/slot_vector.h")
-include("${CMAKE_CURRENT_LIST_DIR}/slot_vector_recovery.cmake")
-# A distinct public include path also invalidates Ninja's cached dependencies:
-# adding a shadow header under an existing include path alone would not.
-target_include_directories(common BEFORE PUBLIC "${PORT_BUILD_DIR}/recovery")
-# A consumer's own source include path precedes inherited includes. All current
-# SlotVector users live in video_core, so place its override before that path too.
-target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/recovery")
+target_include_directories(common BEFORE PUBLIC "${EDEN_MAINTAINED_SLOT_VECTOR_ROOT}")
+target_include_directories(video_core BEFORE PRIVATE "${EDEN_MAINTAINED_SLOT_VECTOR_ROOT}")
 file(GLOB overlay_inputs CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/*.inc")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${overlay_inputs})
 function(write_derived path content)

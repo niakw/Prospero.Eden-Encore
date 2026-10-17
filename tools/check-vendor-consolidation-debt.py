@@ -659,6 +659,20 @@ assert 'write_derived("${PORT_BUILD_DIR}/patch_manager.cpp"' not in c
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/file_sys/patch_manager.cpp" patch_source)' not in c
 print("MAINTAINED_PATCH_MANAGER_PARITY_PASS four substitutions three logs")
 
+
+# Former X02 slot-vector source generation: exact pinned input replacement.
+slot_base = (root / "vendor/sources/eden/src/common/slot_vector.h").read_text()
+slot_old = "[[nodiscard]] SlotId insert(Args&&... args) noexcept {\n        const u32 index = FreeValueIndex();\n        new (&values[index].object) T(std::forward<Args>(args)...);"
+slot_new = "[[nodiscard]] SlotId insert(Args&&... args) {\n        const u32 index = FreeValueIndex();\n        try {\n            new (&values[index].object) T(std::forward<Args>(args)...);\n        } catch (...) {\n            free_list.push_back(index); // Restores the popped slot without allocating.\n            throw;\n        }"
+assert slot_base.count(slot_old) == 1, "Pinned SlotVector constructor changed"
+slot_expected = slot_base.replace(slot_old, slot_new)
+slot_maintained = active / "eden-core/overrides/slot-vector/common/slot_vector.h"
+assert slot_maintained.read_text() == slot_expected, "Maintained SlotVector does not match former CMake"
+assert 'target_include_directories(common BEFORE PUBLIC "${EDEN_MAINTAINED_SLOT_VECTOR_ROOT}")' in c
+assert 'target_include_directories(video_core BEFORE PRIVATE "${EDEN_MAINTAINED_SLOT_VECTOR_ROOT}")' in c
+assert "slot_vector_recovery.cmake" not in c
+print("MAINTAINED_SLOT_VECTOR_PARITY_PASS header=common/slot_vector.h")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -753,7 +767,6 @@ indirect_recorded = re.findall(
     inventory.split(indirect_begin)[1].split(indirect_end)[0], re.M)
 indirect_expected = (
     ("headless/macro_recovery.cmake", ("file(WRITE ", "configure_file(")),
-    ("headless/slot_vector_recovery.cmake", ("file(WRITE ", "configure_file(")),
     ("headless/checked-fastmem.cmake", ("string(REPLACE", "memory_source", "memory_emitter")),
     ("headless/native_gpu_granular_bounds.cmake", ("string(REPLACE", "eden_gpu_span_src")),
     ("headless/native_guest_range_overflow.cmake", ("string(REPLACE", "eden_cpu_memory")),
@@ -765,7 +778,7 @@ assert indirect_recorded == [entry[0] for entry in indirect_expected], (
 for module, required in indirect_expected:
     content = (root / module).read_text()
     assert all(token in content for token in required), ("indirect override changed", module)
-assert len(indirect_recorded) == 7
+assert len(indirect_recorded) == 6
 print(f"VENDOR_INDIRECT_OVERRIDE_INVENTORY_PASS modules={len(indirect_recorded)} (not generator sites)")
 
 # Third independent source-change mechanism: pinned backport patch replays.
