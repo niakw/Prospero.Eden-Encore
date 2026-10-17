@@ -316,6 +316,60 @@ for rel, marker in shipping_new_ns:
     assert not (root / "vendor/sources/eden" / rel).exists(), ("new NS source exists upstream", rel)
 print("ENCORE_SHIPPING_NEW_NS_OWNER_PASS", f"paths={len(shipping_new_ns)}")
 
+
+# Previously unowned shipping backports: confirm a real delta against the
+# pinned core, not merely an exact filename in a catalogue. Runtime behavior
+# and selected build targets still require independent validation.
+shipping_remaining_diffs = (
+    ("src/common/logging.cpp", "extern \"C\" bool eden_native_detailed_logging() noexcept;", True),
+    ("src/common/net/net.cpp", "const std::size_t timeout_seconds = url == \"https://api.nlib.cc\" ? 3 : 5;", True),
+    ("src/common/settings.cpp", "bool IsGPUFenceBehaviorStrict() {", False),
+    ("src/common/settings.h", "GpuFenceBehavior::Accurate,", True),
+    ("src/common/settings_enums.h", "ENUM(GpuFenceBehavior, Default, Immediate, Balanced, Accurate);", True),
+    ("src/core/hle/service/audio/audio.cpp", "server_manager->RegisterNamedService(\"aud:a\", std::make_shared<IAudioSystemManagerForApplet>(system), 30);", True),
+    ("src/video_core/engines/sw_blitter/blitter.cpp", "(static_cast<size_t>(in_y) * src_width + static_cast<size_t>(in_x)) *", True),
+    ("src/core/hle/service/am/frontend/applets.cpp", "std::erase(caller_applet->child_applets, applet_);", True),
+    ("src/core/hle/service/am/service/library_applet_accessor.cpp", "else if (is_front_app) caller_applet->lifecycle_manager.RequestFocusStateChangedNotification(system.Kernel());", True),
+    ("src/core/hle/service/am/service/library_applet_creator.cpp", "auto process = CreateProcess(system, program_id, 1, HLE::ApiVersion::HOS_VERSION_MAJOR);", True),
+    ("src/core/hle/service/am/service/self_controller.cpp", "Result ISelfController::Unknown240(u32 in_val) {", True),
+    ("src/core/hle/service/am/service/self_controller.h", "Result Unknown240(u32 in_val);", True),
+    ("src/core/hle/service/bcat/bcat.cpp", "server_manager->RegisterNamedService(\"bcat:a\", std::make_shared<IServiceCreator>(system, \"bcat:a\"), 32);", True),
+    ("src/core/hle/service/bpc/bpc.cpp", "server_manager->RegisterNamedService(\"bpc:ams\", std::make_shared<BPC_AMS>(system), 4);", True),
+    ("src/core/hle/service/glue/arp.cpp", "LOG_ERROR(Service_ARP, \"Attempted to issue registrar, but registrar is already issued!\");", True),
+    ("src/core/hle/service/glue/glue.cpp", "server_manager->RegisterNamedService(\"arp:r\", std::make_shared<ARP_R>(system, system.GetARPManager()), 16);", True),
+    ("src/core/hle/service/grc/grc.cpp", "server_manager->RegisterNamedService(\"grc:c\", std::make_shared<GRC>(system), 4);", True),
+    ("src/core/hle/service/hid/hid_system_server.cpp", "GetRegisteredDevicesForControllerSupport", True),
+    ("src/core/hle/service/ldr/ldr.cpp", "server_manager->RegisterNamedService(\"ldr:dmnt\", std::make_shared<DebugMonitor>(system), 3);", True),
+    ("src/core/hle/service/nfp/nfp.cpp", "{25, &IUser::StartDetection, \"StartDetectionWithFilter\"},", True),
+    ("src/core/hle/service/ngc/ngc.cpp", "server_manager->RegisterNamedService(\"ngct:u\", std::make_shared<IService>(system), 4);", True),
+    ("src/core/hle/service/ns/ns.cpp", "server_manager->RegisterNamedService(\"ns:am2\", std::make_shared<IServiceGetterInterface>(system, \"ns:am2\"), 5);", True),
+    ("src/core/hle/service/ns/read_only_application_control_data_interface.cpp", "GetApplicationControlData3", True),
+    ("src/core/hle/service/olsc/transfer_task_list_controller.cpp", "Result ITransferTaskListController::GetTransferTaskProgress() {", True),
+    ("src/core/hle/service/olsc/transfer_task_list_controller.h", "Result GetTransferTaskProgress();", True),
+    ("src/core/hle/service/pctl/parental_control_service.cpp", "Result IParentalControlService::Unknown1460(u8 in_unk, Out<PlayTimerRemainingTimeDisplayInfo> out_display_info) {", True),
+    ("src/core/hle/service/pctl/parental_control_service.h", "Result Unknown1460(u8 in_unk, Out<PlayTimerRemainingTimeDisplayInfo> out_display_info);", True),
+    ("src/core/hle/service/pctl/pctl_types.h", "struct PlayTimerRemainingTimeDisplayInfo {", True),
+    ("src/core/hle/service/pm/pm.cpp", "server_manager->RegisterNamedService(\"pm:bm\", std::make_shared<BootMode>(system), 4);", True),
+    ("src/core/hle/service/ro/ro.cpp", "server_manager->RegisterNamedService(\"ro:1\", std::make_shared<RoInterface>(system, \"ro:1\", ro, NrrKind::JitPlugin), 2);", True),
+    ("src/core/hle/service/sm/sm.cpp", "Result ServiceManager::RegisterService(Kernel::KServerPort** out_server_port, std::string name, u32 max_sessions, SessionRequestHandlerFactory handler) {", True),
+    ("src/core/hle/service/sockets/sockets.cpp", "server_manager->RegisterNamedService(\"bsd:s\", std::make_shared<BSD_USA>(system, \"bsd:s\", false), 0x7E);", True),
+    ("src/core/hle/service/usb/usb.cpp", "server_manager->RegisterNamedService(\"usb:pd\", std::make_shared<IPdManager>(system), 6);", True),
+    ("src/core/hle/service/wlan/wlan.cpp", "server_manager->RegisterNamedService(\"wlan:lcl\", std::make_shared<ILocalManager>(system), 10);", True),
+)
+for relative, marker, positive in shipping_remaining_diffs:
+    relative_active = "eden-backports/" + relative
+    shipping_path = active / relative_active
+    pinned_path = root / "vendor/sources/eden" / relative
+    assert relative_active in graph and shipping_path.is_file() and pinned_path.is_file()
+    shipping_body, pinned_body = shipping_path.read_text(), pinned_path.read_text()
+    if positive:
+        assert shipping_body.count(marker) == 1 and marker not in pinned_body, (
+            "shipping marker drifted", relative_active, marker)
+    else:
+        assert marker not in shipping_body and pinned_body.count(marker) == 1, (
+            "removed shipping marker drifted", relative_active, marker)
+print("ENCORE_SHIPPING_COMPLETE_OWNER_PASS", f"paths={len(shipping_remaining_diffs)}")
+
 assert len(physical) == len(set(physical))
 print("ENCORE_ACTIVE_SOURCE_CATALOG_PASS",
       f"files={len(physical)}",
