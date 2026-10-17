@@ -153,8 +153,39 @@ assert storage_maintained == '#include "performance.h"\n' + storage_pinned.repla
 assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_FS_STORAGE}")') == 1
 assert 'write_derived("${PORT_BUILD_DIR}/fs_i_storage.cpp"' not in c
 assert "fs_storage_source" not in c
-assert counts["write_derived("] <= 73, counts
+assert counts["write_derived("] <= 72, counts
 print("VENDOR_MAINTAINED_FS_ISTORAGE_PARITY_PASS: read, short read, quiet policy")
+
+
+# FS open diagnostics used to be a CMake loop patching three calls.
+# Compare maintained C++ with that exact previous generated content.
+fs_system_rel = "core/hle/service/filesystem/fsp/fs_i_filesystem.cpp"
+fs_system_pinned = (sources / "eden/src" / fs_system_rel).read_text()
+fs_system_maintained = (active / "eden-core/src" / fs_system_rel).read_text()
+fs_system_expected = '#include "performance.h"\n' + fs_system_pinned
+fs_system_calls = (
+    ("file", """backend->OpenFile(&vfs_file, FileSys::Path(path->str),
+                            static_cast<FileSys::OpenMode>(mode))"""),
+    ("directory", """backend->OpenDirectory(&vfs_dir, FileSys::Path(path->str),
+                                 static_cast<FileSys::OpenDirectoryMode>(mode))"""),
+    ("entry", "backend->GetEntryType(&vfs_entry_type, FileSys::Path(path->str))"),
+)
+for kind, expression in fs_system_calls:
+    before = f"    R_TRY({expression});"
+    after = (f"    const Result fs_open_result = {expression};\n"
+             "    if (::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed))\n"
+             f'        LOG_WARNING(Service_FS, "EDEN_FS_OPEN kind={kind} path={{}} result={{:#x}}", path->str, fs_open_result.raw);\n'
+             "    R_TRY(fs_open_result);")
+    assert fs_system_expected.count(before) == 1, ("unpinned FS-open call", kind)
+    fs_system_expected = fs_system_expected.replace(before, after)
+assert fs_system_maintained == fs_system_expected, (
+    "Maintained IFileSystem diagnostic diverges from former CMake-generated TU")
+assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_FS_SYSTEM}")') == 1
+assert c.count('list(REMOVE_ITEM core_sources "hle/service/filesystem/fsp/fs_i_filesystem.cpp")') == 1
+assert 'if(NOT EXISTS "${EDEN_MAINTAINED_PROFILE_FS_SYSTEM}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/fs_i_filesystem.cpp"' not in c
+assert "fs_system_source" not in c
+print("VENDOR_MAINTAINED_FS_IFILESYSTEM_PARITY_PASS: three opens, quiet guard, DEV selection")
 
 print("VENDOR_MAINTAINED_FS_IFILE_PARITY_PASS: pinned native DEV source, no CMake rewrite")
 
