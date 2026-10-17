@@ -789,9 +789,10 @@ for module in module_files:
                           re.findall(r'write_derived\(\s*"([^"]+)"', content))
 assert module_recorded == module_current, "Module CMake source generator inventory is stale"
 assert len(module_current) == 21, len(module_current)
-for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
-    text = (root / module).read_text()
-    assert 'file(WRITE ' in text and 'configure_file(' in text, module
+# Indirect X01/X02 are no longer CMake generators: full source units
+# live under encore-active, and the parity witnesses above verify them.
+for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
+    assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
 assert len(recorded) + len(module_recorded) == 68
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
