@@ -31,7 +31,7 @@ for line in audit.splitlines():
     graph.setdefault(relative, []).append(fields[0])
 def role(path):
     if path.startswith("eden-backports/"):
-        return "backport-staging"
+        return "shipping-backport"
     if path.startswith("ps5-mesa/"):
         return "driver-fork"
     return "maintained-override"
