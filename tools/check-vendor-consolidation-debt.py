@@ -134,7 +134,28 @@ assert 'list(REMOVE_ITEM core_sources "hle/service/filesystem/fsp/fs_i_file.cpp"
 assert 'target_include_directories(core PRIVATE "${EDEN_PORT_DIR}")' in c
 assert 'write_derived("${PORT_BUILD_DIR}/fs_i_file.cpp"' not in c
 assert "fs_file_source" not in c
-assert counts["write_derived("] <= 74, counts
+
+storage_rel = "core/hle/service/filesystem/fsp/fs_i_storage.cpp"
+storage_pinned = (sources / "eden/src" / storage_rel).read_text()
+storage_maintained = (active / "eden-core/src" / storage_rel).read_text()
+storage_old = "    backend->Read(out_bytes.data(), length, offset);"
+storage_new = """    const auto fs_start = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed) ? ::Eden::Performance::NowNs() : 0;
+    const auto fs_read = backend->Read(out_bytes.data(), length, offset);
+    if (fs_read != static_cast<std::size_t>(length))
+        LOG_ERROR(Service_FS, "EDEN_FS_SHORT_STORAGE offset={:#x} length={} read={} size={}", offset, length, fs_read, backend->GetSize());
+    if (fs_start) {
+        ::Eden::Performance::AddSince(::Eden::Performance::guest_fs_storage, fs_start);
+        ::Eden::Performance::guest_fs_storage_bytes.fetch_add(static_cast<unsigned long long>(length), std::memory_order_relaxed);
+    }"""
+assert storage_pinned.count(storage_old) == 1
+assert storage_maintained == '#include "performance.h"\n' + storage_pinned.replace(storage_old, storage_new), (
+    "Maintained IStorage profile TU diverges from the earlier CMake-generated source")
+assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_FS_STORAGE}")') == 1
+assert 'write_derived("${PORT_BUILD_DIR}/fs_i_storage.cpp"' not in c
+assert "fs_storage_source" not in c
+assert counts["write_derived("] <= 73, counts
+print("VENDOR_MAINTAINED_FS_ISTORAGE_PARITY_PASS: read, short read, quiet policy")
+
 print("VENDOR_MAINTAINED_FS_IFILE_PARITY_PASS: pinned native DEV source, no CMake rewrite")
 
 
