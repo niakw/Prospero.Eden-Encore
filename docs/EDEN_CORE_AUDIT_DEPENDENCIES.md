@@ -37,6 +37,14 @@ Le **noyau restant** compte donc 75 critères répartis sur
 15 OPEN et 60 SOURCE.
 Cela **ne signifie pas 138 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
+L'inventaire exhaustif des sources Encore est suivi séparément dans
+[`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
+183 fichiers de code/en-têtes présents, 37 avec un chemin de
+graphe exact et 146 sans correspondance exacte. Cet écart n'est
+**pas** le nombre de fonctions non auditées, ni une preuve de code actif.
+Le contrôle hôte vérifie la complétude des chemins et les références,
+mais pas le comportement.
+
 Le hors-inventaire (HID, IPC, host-syncpoints, variantes vendor...) n'est
 pas chiffrable honnêtement sans un relevé exhaustif supplémentaire.
 

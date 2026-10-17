@@ -33,6 +33,10 @@ que sélectionner les unités maintenues et retirer la source d'origine de
 la cible concernée. Il ne doit plus générer de copies C++ pour ces unités.
 Les sources amont épinglées restent inchangées dans `vendor/sources/eden`.
 
+Catalogue exhaustif des fichiers C/C++ actifs : `docs/EDEN_ACTIVE_SOURCE_CATALOG.md`
+(183 fichiers enregistrés, 37 chemins présents dans le graphe technique).
+Le recensement des fichiers n'est pas une validation de leurs fonctions.
+
 L'inventaire couvre **57 appels générateurs** du CMake principal, **21**
 dans les modules et **7 modules indirects** suivis séparément ; ce ne sont
 pas des décomptes de fichiers uniques. Chaque nouvelle migration doit
