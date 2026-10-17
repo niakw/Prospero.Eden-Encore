@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 275
+**Non, this is not an exhaustive repository-wide inventory.** The 280
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 275 | 256 | 565 |
+| Graphe connu | 280 | 261 | 574 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 220 | 211 | 460 |
+| SOURCE — lecture effectuée, preuve insuffisante | 225 | 216 | 469 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **235** | **225** | **488** |
-| Dont priorité P0 (SOURCE + OPEN) | 98 | 93 | 233 |
+| **Encore à qualifier (SOURCE + OPEN)** | **240** | **230** | **497** |
+| Dont priorité P0 (SOURCE + OPEN) | 101 | 96 | 238 |
 
-Le **noyau restant** compte donc 235 critères répartis sur
-225 fichiers et 488 mentions fonction/contrat :
-15 OPEN et 220 SOURCE.
+Le **noyau restant** compte donc 240 critères répartis sur
+230 fichiers et 497 mentions fonction/contrat :
+15 OPEN et 225 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-193 fichiers de code/en-têtes présents et 193 avec un chemin de
+198 fichiers de code/en-têtes présents et 198 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -429,6 +429,8 @@ function/contract tokens are checked by CI for existence only; the
 | J16 | P0 | J01,J02 | headless/backports/eden-dynarmic-icache-coherence.patch | ArmDynarmic64::InvalidateCacheRange; Core::InvalidateInstructionCacheRange | SOURCE | tools/install-active-core-backports.py | Active-core installer stages A64 cross-core i-cache invalidation from a patch, not tracked C++ source; invalidate callback address and propagate process range, while real JIT progress still unproven | 🟡 Source étudiée |
 | J17 | P1 | J16,J13 | headless/backports/eden-dynarmic-icache-coherence.patch | ArmDynarmic32::InvalidateCacheRange; last_code_addr | SOURCE | tools/install-active-core-backports.py | A32 i-cache invalidation resets last dispatched address in staged patch; preserve coherence across guest cores before materializing maintained TU | 🟡 Source étudiée |
 | J18 | P1 | H18,J03 | vendor/encore-active/eden-core/src/common/fiber.cpp | Fiber::YieldTo; Fiber::Exit; Fiber::ThreadToFiber | SOURCE | headless/CMakeLists.txt | Maintained native fiber unit is selected by common; validate cross-thread context ownership, rewind/exit semantics and actual guest execution separately | 🟡 Source étudiée |
+| J19 | P0 | J12 | vendor/encore-active/eden-core/src/core/arm/dynarmic/arm_dynarmic_64.cpp | ArmDynarmic64::SignalInterrupt; ArmDynarmic64::InvalidateCacheRange | SOURCE | tools/install-active-core-backports.py | Maintained Dynarmic64 equals exact pinned active I-cache patch; native cache behavior unproved | 🟡 Source étudiée |
+| J20 | P0 | J13 | vendor/encore-active/eden-core/src/core/arm/dynarmic/arm_dynarmic_32.cpp | ArmDynarmic32::InvalidateCacheRange | SOURCE | tools/install-active-core-backports.py | Maintained Dynarmic32 equals exact I-cache patch; native behavior unproved | 🟡 Source étudiée |
 | H29 | P0 | H22,H26 | headless/backports/eden-sm-host-wait.patch | GetService; IsDummyThread; SleepThread | SOURCE | tools/install-active-core-backports.py | SM GetService uses host sleep for dummy threads to avoid parking a host HLE worker with guest SleepThread; staged patch spans service-manager header and must be validated with blocking/unblocking semantics | 🟡 Source étudiée |
 | H30 | P1 | H02 | vendor/encore-active/eden-core/src/core/hle/kernel/k_spin_lock.cpp | KSpinLock::Lock; KSpinLock::TryLock | SOURCE | tools/check-maintained-audio-units.py | Maintained lock source uses SpinAcquire and preserves unlock/try-lock behavior; source parity is checked, not contention or console forward progress | 🟡 Source étudiée |
 | H31 | P1 | H03,H24 | vendor/encore-active/eden-core/src/hid_core/resource_manager.cpp | ResourceManager::Initialize; ResourceManager::CreateAppletResource | SOURCE | headless/CMakeLists.txt | Maintained HID event-lifetime resource manager selected by hid_core; verify event registration, shutdown ownership and applet wake independently | 🟡 Source étudiée |
@@ -451,6 +453,7 @@ function/contract tokens are checked by CI for existence only; the
 | H48 | P0 | H40 | vendor/encore-active/eden-core/src/hid_core/resources/npad/npad.cpp | NPad::ControllerUpdate | SOURCE | tools/check-vendor-consolidation-debt.py | Maintained shipping NPad plus exact two former CMake null guards; parity and native hid_core selection checked, console behavior unproved | 🟡 Source étudiée |
 | H49 | P2 | H03 | vendor/sources/eden/src/core/hle/kernel/k_light_lock.cpp | KLightLock::LockSlowPath; KLightLock::UnlockSlowPath | PARKED | headless/backports/eden-dummy-thread-waits.patch | Dummy-thread waits patch touches lock slowpath; experimental OFF due unsafe wait-queue lifetime | 🟡 Source étudiée |
 | H50 | P0 | H29 | vendor/sources/eden/src/core/hle/service/sm/sm.h | GetService; SessionRequestHandlerFactory | SOURCE | headless/backports/eden-sm-host-wait.patch | Staged GetService patch distinguishes host-dummy from guest wait and releases registry lock; console progress unproved | 🟡 Source étudiée |
+| H51 | P0 | H50 | vendor/encore-active/eden-core/src/core/hle/service/sm/sm.h | GetService; SessionRequestHandlerFactory | SOURCE | tools/install-active-core-backports.py | Maintained SM header equals former host-wait patch; guest wake unproved | 🟡 Source étudiée |
 | A02 | P1 | A01,H29 | headless/backports/eden-sm-host-wait.patch | IAudioController::GetSetSys; call_once | SOURCE | tools/install-active-core-backports.py | AudioController defers system-setting lookup to first actual request using once_flag; two corresponding audio files are still patched into the staged tree, not maintained directly | 🟡 Source étudiée |
 | A03 | P1 | A01 | vendor/encore-active/eden-core/src/audio_core/sink/sink_stream.cpp | SinkStream::AppendBuffer; SinkStream::ProcessAudioOutAndRender | SOURCE | tools/check-maintained-audio-units.py | Source maintained, original four-rewrite parity and audio_core selection checked by host script; CI result and native audio behavior still required | 🟡 Source étudiée |
 | A04 | P1 | A01 | vendor/encore-active/eden-core/src/audio_core/renderer/voice/voice_info.cpp | VoiceInfo::UpdateParameters; VoiceInfo::UpdatePlayState | SOURCE | headless/CMakeLists.txt | Maintained renderer voice update has native flag position correction; validate voice state and game audio; selected source only, device proof pending | 🟡 Source étudiée |
@@ -459,6 +462,8 @@ function/contract tokens are checked by CI for existence only; the
 | A07 | P1 | A06 | vendor/encore-active/eden-backports/src/core/hle/service/audio/audio.cpp | LoopProcess; RegisterNamedService | SOURCE | tools/check-active-source-inventory.py | Shipping backport audio service session limits; runtime correctness unproved | 🟡 Source étudiée |
 | A08 | P1 | A02,H50 | vendor/sources/eden/src/core/hle/service/audio/audio_controller.cpp | IAudioController::GetAudioOutputMode; IAudioController::SetAudioOutputMode | SOURCE | headless/backports/eden-sm-host-wait.patch | Staged audio controller patch lazily resolves set:sys through call_once GetSetSys; device unproved | 🟡 Source étudiée |
 | A09 | P1 | A08 | vendor/sources/eden/src/core/hle/service/audio/audio_controller.h | IAudioController; m_set_sys | SOURCE | headless/backports/eden-sm-host-wait.patch | Staged audio header patch adds once_flag and GetSetSys; native lifetime unproved | 🟡 Source étudiée |
+| A10 | P1 | A08 | vendor/encore-active/eden-core/src/core/hle/service/audio/audio_controller.cpp | IAudioController::GetSetSys; IAudioController::GetAudioOutputMode | SOURCE | tools/install-active-core-backports.py | Maintained audio controller equals lazy set:sys patch; native audio unproved | 🟡 Source étudiée |
+| A11 | P1 | A09 | vendor/encore-active/eden-core/src/core/hle/service/audio/audio_controller.h | IAudioController; m_set_sys_once | SOURCE | tools/install-active-core-backports.py | Maintained audio header equals once_flag source patch; console lifetime unproved | 🟡 Source étudiée |
 | F09 | P1 | H21,F08 | vendor/sources/eden/src/core/internal_network/network.cpp | Initialize; InterruptSocketOperations; AcknowledgeInterrupt; CancelPendingSocketOperations | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Native internal socket wake uses a generated source with socketpair/send/recv replacing pipe/write/read; first-byte ENOMEM workaround is unqualified on console. Distinguish host I/O wake from guest IPC progress | 🟡 Source étudiée |
 | F10 | P1 | F09 | vendor/encore-active/eden-core/src/core/internal_network/network_interface.cpp | GetAvailableNetworkInterfaces; GetSelectedNetworkInterface; SelectFirstNetworkInterface | HOST | tools/check-vendor-consolidation-debt.py | Three FreeBSD conditional substitutions are in maintained native C++ with an old-generator parity and core selection PASS in preflight #39058024476; native interface snapshot unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39058024476) |
 | F11 | P1 | F08 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/filesystem.cpp | FileSystemController::CreateFactories | SOURCE | tools/check-vendor-consolidation-debt.py | Source maintained and host parity/selection check written; completed CI and device firmware behavior not yet validated | 🟡 Source étudiée |

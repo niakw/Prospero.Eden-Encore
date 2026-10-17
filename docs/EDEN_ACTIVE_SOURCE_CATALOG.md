@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **193 fichiers** de code et d'en-têtes enregistrés.
-- **193 fichiers** possèdent une correspondance de chemin *exacte*
+- **198 fichiers** de code et d'en-têtes enregistrés.
+- **198 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -128,12 +128,16 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/common/fs/path_util.cpp` | `maintained-override` | F08 |
 | `eden-core/src/common/logging.cpp` | `maintained-override` | F17 |
 | `eden-core/src/common/thread.cpp` | `maintained-override` | F05 |
+| `eden-core/src/core/arm/dynarmic/arm_dynarmic_32.cpp` | `maintained-override` | J20 |
+| `eden-core/src/core/arm/dynarmic/arm_dynarmic_64.cpp` | `maintained-override` | J19 |
 | `eden-core/src/core/file_sys/bis_factory.cpp` | `maintained-override` | F14 |
 | `eden-core/src/core/file_sys/fsmitm_romfsbuild.cpp` | `maintained-override` | F12 |
 | `eden-core/src/core/file_sys/savedata_factory.cpp` | `maintained-override` | F15 |
 | `eden-core/src/core/hle/kernel/k_spin_lock.cpp` | `maintained-override` | H30 |
 | `eden-core/src/core/hle/kernel/svc/svc_ipc.cpp` | `maintained-override` | H21 |
 | `eden-core/src/core/hle/service/am/service/application_functions.cpp` | `maintained-override` | H32 |
+| `eden-core/src/core/hle/service/audio/audio_controller.cpp` | `maintained-override` | A10 |
+| `eden-core/src/core/hle/service/audio/audio_controller.h` | `maintained-override` | A11 |
 | `eden-core/src/core/hle/service/filesystem/filesystem.cpp` | `maintained-override` | F11 |
 | `eden-core/src/core/hle/service/filesystem/fsp/fs_i_file.cpp` | `maintained-override` | F02 |
 | `eden-core/src/core/hle/service/filesystem/fsp/fs_i_filesystem.cpp` | `maintained-override` | F04 |
@@ -142,6 +146,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/core/hle/service/nvdrv/devices/nvhost_ctrl.cpp` | `maintained-override` | N02,N05 |
 | `eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp` | `maintained-override` | N03 |
 | `eden-core/src/core/hle/service/service.cpp` | `maintained-override` | H22,H28 |
+| `eden-core/src/core/hle/service/sm/sm.h` | `maintained-override` | H51 |
 | `eden-core/src/core/internal_network/network_interface.cpp` | `maintained-override` | F10 |
 | `eden-core/src/core/loader/deconstructed_rom_directory.cpp` | `maintained-override` | F16 |
 | `eden-core/src/core/memory.cpp` | `maintained-override` | M11 |
@@ -235,7 +240,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
 Ces deux fichiers sont inclus dans les **83 entrées** de
 `vendor/encore-active/eden-backports/manifest.json`, mais ne sont
-pas comptés parmi les 193 fichiers de code et d'en-têtes.
+pas comptés parmi les 198 fichiers de code et d'en-têtes.
 
 ## Critères de tenue à jour
 

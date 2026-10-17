@@ -11,7 +11,7 @@ développement, les options JIT expérimentales, les backends et le build
 natif sélectionnent chacun leur sous-ensemble.
 
 L'inventaire complémentaire `docs/EDEN_ACTIVE_SOURCE_CATALOG.md` suit les
-193 fichiers de code et en-têtes dans `vendor/encore-active`,
+198 fichiers de code et en-têtes dans `vendor/encore-active`,
 y compris les backports de production et la dépendance graphique. Cette
 couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
@@ -64,7 +64,7 @@ et non les 458 scripts Python/shell/CMake du seul dossier `tools/`.
 | `tools/install-vendored-eden-build-flags.py` | **ACTIF**, deux recettes suivies | `encore-active/eden-build` | Déjà matérialisé |
 | `tools/install-vendored-surface-lifecycle.py` | **ACTIF**, copie de source complète | `encore-active/eden-surface-lifecycle` | Déjà matérialisé |
 | `tools/install-vendored-radv.py` | **ACTIF**, copie de sources RADV maintenues | `encore-active/ps5-mesa` vers staging | Déjà matérialisé |
-| `tools/install-active-core-backports.py` | **ACTIF**, application de deux patches dans le staging après reconstruction temporaire | **5 chemins** CPU/I-cache et HLE SM/audio | **À migrer** vers source maintenue, sans perdre les contrats |
+| `tools/install-active-core-backports.py` | **ACTIF**, copie de sources maintenues avec replay temporaire de parité | **5 chemins** CPU/I-cache et HLE SM/audio sous `encore-active/eden-core` | **Migré** : sources installées jamais fabriquées par les patches |
 | `tools/refresh-eden-atomic-source-cache.py` | **ACTIF**, échange atomique d'un ancien cache identifié | Restaure archive épinglée, pas une nouvelle modification C++ | Maintenance de cache |
 | `tools/vendor-eden-cpm.py`, `tools/deps.py`, `tools/stage-vendored-opengl-deps.py` | **ACTIF** selon préparation et configuration | Copie d'entrées épinglées, non-patch de C++ | Dépendances |
 | `tools/build-headless-host.sh` | **HÔTE SEUL**, remplace trois lignes FFmpeg dans le cache hôte | `externals/ffmpeg/CMakeLists.txt` en staging | Override de build hôte, **hors console** |
@@ -85,9 +85,10 @@ et non les 458 scripts Python/shell/CMake du seul dossier `tools/`.
 sites `write_derived`, pas les générateurs Python, les copies de dépendances,
 les recettes CMake ni les sorties de ressources. **Zéro source sans propriétaire
 dans le catalogue `vendor/encore-active` n'implique pas zéro override hors de
-ce répertoire.** La prochaine migration effective à prioriser ici est
-`install-active-core-backports.py`, car ses cinq fichiers sont encore
-modifiés dans le cache de compilation.
+ce répertoire.** Les cinq sources CPU/I-cache et HLE SM/audio sont désormais versionnées sous
+`encore-active/eden-core`. Le script conserve un replay temporaire de
+comparaison, mais **ne fabrique plus les fichiers livrés** : il copie les
+sources maintenues après avoir vérifié l'identité exacte des cinq résultats.
 
 ## Générateurs non encore déplacés
 
