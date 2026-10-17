@@ -164,7 +164,7 @@ int main() {
         assert(result == ResultSuccess);
         assert(waiting.handoffs == 1 && next_owner.wakes == 1);
         assert(waiting.begin_waits == 1 && cv.m_tree.inserts == 1);
-        assert(kernel.memory.writes == 1 && kernel.memory.key_word == 0);
+        assert(kernel.memory.writes == 2 && kernel.memory.key_word == 0);
 #endif
     }
     {
