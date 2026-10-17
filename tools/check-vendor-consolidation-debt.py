@@ -735,6 +735,26 @@ shared_jit_selector = (root / "headless/dynarmic/shared-jit.cmake").read_text()
 assert 'set(EDEN_SHARED_JIT_DIR "${PORT_ROOT}/vendor/encore-active/eden-core/dynarmic/shared-jit")' in shared_jit_selector
 print("ENCORE_SHARED_JIT_SOURCE_OWNERS_PASS", len(shared_jit_blobs))
 
+
+# Scalar Dynarmic fragments have one physical authority in encore-active.
+# These are original Git blobs, not regenerated C++ from CMake strings.
+scalar_canonical_blobs = {
+    "scalar-fold.inc": "00dcb6ae900c314c396b61013e2adf9ec42a0fa8",
+    "scalar-memory-read.inc": "4c3c1ad419af0fbd01bb64b2aac9be65b7b31fc0",
+    "scalar-memory-write.inc": "3d86e3e8ca2294a4dfe244063950db583dc22af9",
+}
+for filename, expected in scalar_canonical_blobs.items():
+    source = active / "eden-core/dynarmic/scalar" / filename
+    assert source.is_file() and not (root / "headless" / filename).exists(), (
+        "scalar injection has duplicate or missing authority", filename)
+    contents = source.read_bytes()
+    checksum = hashlib.sha1(b"blob " + str(len(contents)).encode() + b"\x00" + contents).hexdigest()
+    assert checksum == expected, ("canonical scalar fragment drift", filename)
+scalar_module = (root / "headless/scalar-memory.cmake").read_text()
+assert 'file(READ "${PORT_ROOT}/vendor/encore-active/eden-core/dynarmic/scalar/scalar-memory-${lower}.inc" scalar_access)' in scalar_module
+assert 'file(READ "${PORT_ROOT}/vendor/encore-active/eden-core/dynarmic/scalar/scalar-fold.inc" scalar_fold)' in c
+print("ENCORE_SCALAR_CANONICAL_INPUTS_PASS", len(scalar_canonical_blobs))
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
