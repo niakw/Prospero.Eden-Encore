@@ -281,6 +281,41 @@ for rel, anchors in shipping_hle_followups:
         assert anchor in text, ("firmware/HLE backport source drift", rel, anchor)
 print("ENCORE_SHIPPING_FIRMWARE_HLE_OWNER_PASS", f"files={len(shipping_hle_followups)}")
 
+
+# Strict ownership of shipping firmware, account, kernel, filesystem and
+# Vulkan hunks. Pinned comparisons show a real shipped delta, not a new
+# override to copy into CMake; this is not native hardware validation.
+shipping_structural_diffs = (
+    ("src/core/hle/api_version.h", "constexpr u8 HOS_VERSION_MAJOR = 23;"),
+    ("src/core/hle/kernel/k_slab_heap.h", "std::mutex m_lock;"),
+    ("src/core/hle/kernel/svc/svc_info.cpp", "case InfoType::Unknown37:"),
+    ("src/core/hle/kernel/svc_types.h", "TransferMemoryHint = 34,"),
+    ("src/core/hle/service/acc/acc.cpp", "void Module::Interface::LoadOpenContext(HLERequestContext& ctx) {"),
+    ("src/core/hle/service/acc/acc.h", "void LoadOpenContext(HLERequestContext& ctx);"),
+    ("src/core/hle/service/am/lifecycle_manager.h", "void RequestFocusStateChangedNotification(Kernel::KernelCore& kernel) {"),
+    ("src/core/hle/service/filesystem/fsp/fsp_srv.h", "Result OpenDataFileSystemByCurrentProcess(OutInterface<IFileSystem> out_interface);"),
+    ("src/core/hle/service/ns/application_manager_interface.h", "Result Unknown4042(OutInterface<IAsyncResult> out_interface,"),
+    ("src/video_core/renderer_vulkan/vk_buffer_cache.h", "bool IsFree(u64 tick);"),
+)
+for rel, marker in shipping_structural_diffs:
+    shipping_path = active / "eden-backports" / rel
+    pinned_path = root / "vendor/sources/eden" / rel
+    assert ("eden-backports/" + rel) in graph
+    assert shipping_path.is_file() and pinned_path.is_file(), ("missing pinned comparison", rel)
+    assert shipping_path.read_text().count(marker) == 1, ("shipping hunk drift", rel, marker)
+    assert marker not in pinned_path.read_text(), ("hunk not distinct from pinned source", rel, marker)
+print("ENCORE_SHIPPING_STRUCTURAL_OWNER_PASS", f"paths={len(shipping_structural_diffs)}")
+
+shipping_new_ns = (
+    ("src/core/hle/service/ns/i_async_result.cpp", "Result IAsyncResult::Cancel() {"),
+    ("src/core/hle/service/ns/i_async_result.h", "class IAsyncResult final : public ServiceFramework<IAsyncResult> {"),
+)
+for rel, marker in shipping_new_ns:
+    assert ("eden-backports/" + rel) in graph
+    assert (active / "eden-backports" / rel).read_text().count(marker) == 1
+    assert not (root / "vendor/sources/eden" / rel).exists(), ("new NS source exists upstream", rel)
+print("ENCORE_SHIPPING_NEW_NS_OWNER_PASS", f"paths={len(shipping_new_ns)}")
+
 assert len(physical) == len(set(physical))
 print("ENCORE_ACTIVE_SOURCE_CATALOG_PASS",
       f"files={len(physical)}",
