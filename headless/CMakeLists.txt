@@ -2711,16 +2711,12 @@ if(PS5_NATIVE)
     target_compile_definitions(libzstd_static PRIVATE ZSTD_TRACE=0)
     # The native title cannot chdir. Set the shared path manager's data root
     # directly so every core/log/cache path remains inside its writable mount.
-    file(READ "${PROJECT_SOURCE_DIR}/src/common/fs/path_util.cpp" paths_source)
-    string(REPLACE "#else\n        eden_path = GetCurrentDir() / PORTABLE_DIR;"
-        "#elif defined(PS5_NATIVE)\n        eden_path = Eden::UserDir();\n        eden_path_cache = eden_path / CACHE_DIR;\n        eden_path_config = eden_path / CONFIG_DIR;\n#else\n        eden_path = GetCurrentDir() / PORTABLE_DIR;" paths_source "${paths_source}")
-    string(REPLACE "#else\n        // In Ryujinx's infinite wisdom"
-        "#elif defined(PS5_NATIVE)\n        GenerateLegacyPath(EmuPath::RyujinxDir, eden_path / RYUJINX_DIR);\n#else\n        // In Ryujinx's infinite wisdom" paths_source "${paths_source}")
-    # Eden's user folder follows the storage layout (storage_paths.h: /data/prosperoeden/user with
-    # filesystem access, the sandbox's download0 without).
-    set(paths_source "#include \"${EDEN_PORT_DIR}/storage_paths.h\"
-${paths_source}")
-    write_derived("${PORT_BUILD_DIR}/path_util.cpp" "${paths_source}")
+    # The native data/config/cache roots are a tracked C++ override.
+    set(EDEN_MAINTAINED_NATIVE_PATHS
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/common/fs/path_util.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_NATIVE_PATHS}")
+        message(FATAL_ERROR "Missing maintained native filesystem path source")
+    endif()
     get_target_property(common_sources common SOURCES)
     # Compile the native common thread-name diagnostic from maintained C++.
     set(EDEN_MAINTAINED_NATIVE_THREAD
@@ -2732,18 +2728,14 @@ ${paths_source}")
     list(APPEND common_sources "${EDEN_MAINTAINED_NATIVE_THREAD}")
     # PS5 advertises invariant TSC but no CPUID leaf0x15. The original fallback
     # was inside that leaf's branch, leaving frequency zero on this hardware.
-    file(READ "${PROJECT_SOURCE_DIR}/src/common/cpu_features.cpp" features_source)
-    set(old_tsc_fallback "        } else {\n            caps.tsc_frequency = X64::EstimateRDTSCFrequency();\n        }")
-    string(FIND "${features_source}" "${old_tsc_fallback}" tsc_offset)
-    if(tsc_offset LESS 0)
-        message(FATAL_ERROR "Pinned TSC frequency detection changed")
+    # Native invariant TSC fallback is maintained C++, not configure-time surgery.
+    set(EDEN_MAINTAINED_NATIVE_CPU_FEATURES
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/common/cpu_features.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_NATIVE_CPU_FEATURES}")
+        message(FATAL_ERROR "Missing maintained native CPU frequency source")
     endif()
-    string(REPLACE "${old_tsc_fallback}" "        }" features_source "${features_source}")
-    string(REPLACE "    if (max_std_fn >= 0x16) {"
-        "    if (caps.invariant_tsc && caps.tsc_frequency < 1'000'000'000ULL) {\n        caps.tsc_frequency = X64::EstimateRDTSCFrequency();\n    }\n\n    if (max_std_fn >= 0x16) {" features_source "${features_source}")
-    write_derived("${PORT_BUILD_DIR}/cpu_features.cpp" "${features_source}")
     list(REMOVE_ITEM common_sources cpu_features.cpp)
-    list(APPEND common_sources "${PORT_BUILD_DIR}/cpu_features.cpp")
+    list(APPEND common_sources "${EDEN_MAINTAINED_NATIVE_CPU_FEATURES}")
     # Native directory enumeration retains the prior helper verbatim.
     set(EDEN_MAINTAINED_NATIVE_FS
         "${PORT_ROOT}/vendor/encore-active/eden-core/src/common/fs/fs.cpp")
@@ -2753,7 +2745,7 @@ ${paths_source}")
     list(REMOVE_ITEM common_sources fs/fs.cpp)
     list(APPEND common_sources "${EDEN_MAINTAINED_NATIVE_FS}")
     list(REMOVE_ITEM common_sources fs/path_util.cpp)
-    list(APPEND common_sources "${PORT_BUILD_DIR}/path_util.cpp")
+    list(APPEND common_sources "${EDEN_MAINTAINED_NATIVE_PATHS}")
     target_include_directories(common PRIVATE "${EDEN_PORT_DIR}")
     set_property(TARGET common PROPERTY SOURCES "${common_sources}")
     # Prefer this build's matching decoder headers over the C dependency
