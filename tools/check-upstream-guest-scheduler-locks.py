@@ -3,8 +3,8 @@
 """Source and host contracts for the paired upstream guest scheduler locks.
 
 The source tree is based on a pinned upstream archive: replacing only
-k_thread.h, k_slab_heap.h, and k_scheduler.cpp is intentional. Both upstream
-changes are inseparable; an isolated lazy-mutex workaround on SpinLock is wrong.
+k_thread.h, k_slab_heap.h, and k_scheduler.cpp is intentional. The paired slab patch stays pinned; Encore now uses a cross-host-worker
+binary semaphore for the guest context handoff, replacing owner-bound mutex.
 This is not a runtime FPS or title-deadlock qualification.
 """
 from __future__ import annotations
@@ -21,16 +21,19 @@ root = Path(__file__).resolve().parents[1]
 rel = "vendor/encore-active/eden-threading/src/core/hle/kernel"
 directory = root / rel
 expected_hashes = {
-    "k_thread.h": "dafd67c04e9e25fbaf096536fbce0eef3162ef3c046391ff45f138057947b808",
+    "k_thread.h": "git:e2f359a54cb6b879bdd41f092cf1ea19fb03e4e6",
     "k_slab_heap.h": "dc6b2bb0180e8521710422ac27e17c069338c01484f32de69f79a7210549e0f3",
-    "k_scheduler.cpp": "585b84722c6fdc717e0c6d54c5d74af45f2b7da6f482a517642efb8c89399750",
+    "k_scheduler.cpp": "git:41879cf6aef9ff5a855f0eb88af1b1f2866532cb",
 }
 sources = {}
 for name, expected_sha in expected_hashes.items():
     path = directory / name
     assert path.exists(), f"Missing vendored file {path}"
     data = path.read_bytes()
-    assert hashlib.sha256(data).hexdigest() == expected_sha, f"Requalify changed {name}"
+    # Audited modified overlays use exact Git blobs, unchanged slab uses SHA256.
+    digest = (hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+              if expected_sha.startswith("git:") else hashlib.sha256(data).hexdigest())
+    assert digest == expected_sha.removeprefix("git:"), f"Requalify changed {name}"
     sources[name] = data.decode("utf-8")
 
 thread = sources["k_thread.h"]
@@ -39,7 +42,9 @@ scheduler = sources["k_scheduler.cpp"]
 assert "#include \"common/spin_lock.h\"" not in thread + slab
 assert "Common::SpinLock m_context_guard" not in thread
 assert "Common::SpinLock m_lock" not in slab
-assert "std::mutex m_context_guard{};" in thread
+assert "#include <semaphore>" in thread
+assert "std::binary_semaphore m_context_guard{1};" in thread
+assert "std::mutex m_context_guard" not in thread
 assert "std::mutex m_lock;" in slab
 assert "std::destroy_at(obj);" in slab
 assert slab.index("std::destroy_at(obj);") < slab.index("BaseHeap::Free(obj);")
@@ -56,12 +61,13 @@ retry = section(
     "            // libc++",
     "goto retry;")
 unload = section("void KScheduler::Unload(", "void KScheduler::Reload(")
-assert retry.count("highest_priority_thread->m_context_guard.try_lock()") == 1
-assert retry.count("DEBUG_ASSERT(!can_lock)") == 1
-assert retry.index("m_context_guard.try_lock()") < retry.index("m_context_guard.unlock()")
-assert unload.count("thread->m_context_guard.try_lock()") == 1
-assert unload.count("DEBUG_ASSERT(!can_lock)") == 1
-assert unload.index("m_context_guard.try_lock()") < unload.index("m_context_guard.unlock()")
+assert "while (!highest_priority_thread->m_context_guard.try_acquire())" in scheduler
+assert retry.count("highest_priority_thread->m_context_guard.release()") == 1
+assert unload.count("thread->m_context_guard.release()") == 1
+assert "m_context_guard.try_lock()" not in scheduler
+assert "m_context_guard.unlock()" not in scheduler
+assert "m_context_guard.try_acquire()" not in retry + unload
+assert "DEBUG_ASSERT(!can_lock)" not in retry + unload
 
 cmake = (root / "headless/CMakeLists.txt").read_text()
 module = (root / "vendor/encore-active/eden-threading/native-hle-overrides.cmake").read_text()
@@ -87,44 +93,50 @@ for yml in (workflow, native):
 # This test owns only upstream hashes and actual lazy-mutex host semantics.
 assert "python3 -B tools/verify/hle/check-hle-cmake-select-host.py" in workflow
 
-# A deliberately lazy host mutex: unlike a normal std::mutex, unlock before
-# the first try_lock is invalid. These two paths represent the exact upstream
-# guards asserted above. They DO NOT imitate guest thread scheduling.
+# Cross-host-worker release is legal for std::binary_semaphore, not std::mutex.
+# Compile the actual maintained member type and release sites in a finite
+# two-worker interleaving. No emulator or console is run.
 fixture = r"""
 #include <cassert>
 #include <cstdio>
-struct LazyContext {
-    bool initialized = false;
-    bool held = true;
-    bool try_lock() {
-        initialized = true;
-        return !held;
-    }
-    void unlock() {
-        assert(initialized && held);
-        held = false;
-    }
+#include <semaphore>
+#include <thread>
+struct KThread {
+    std::binary_semaphore m_context_guard{1};
 };
-static void retry_after_failed_switch(LazyContext& guard) {
-    [[maybe_unused]] auto const can_lock = guard.try_lock();
-    assert(!can_lock);
-    guard.unlock();
+static void retry_failed_switch(KThread* highest_priority_thread) {
+    highest_priority_thread->m_context_guard.release();
 }
-static void unload_nonterminated_thread(LazyContext& guard) {
-    [[maybe_unused]] auto const can_lock = guard.try_lock();
-    assert(!can_lock);
-    guard.unlock();
+static void unload_thread(KThread* thread) {
+    thread->m_context_guard.release();
 }
 int main() {
-    LazyContext retry{};
-    retry_after_failed_switch(retry);
-    assert(retry.initialized && !retry.held);
-    LazyContext unload{};
-    unload_nonterminated_thread(unload);
-    assert(unload.initialized && !unload.held);
-    std::puts("PASS paired lazy-mutex retry and unload contracts");
+    for (int trial=0; trial<256; ++trial) {
+        KThread guest;
+        std::binary_semaphore ready{0};
+        std::thread worker_acquire([&] {
+            assert(guest.m_context_guard.try_acquire());
+            assert(!guest.m_context_guard.try_acquire());
+            ready.release();
+        });
+        std::thread worker_release([&] {
+            ready.acquire();
+            unload_thread(&guest);
+        });
+        worker_acquire.join();
+        worker_release.join();
+        assert(guest.m_context_guard.try_acquire());
+        retry_failed_switch(&guest);
+        assert(guest.m_context_guard.try_acquire());
+        guest.m_context_guard.release();
+    }
+    std::puts("PASS cross-worker context semaphore acquire/release/retry");
 }
 """
+assert "std::binary_semaphore m_context_guard{1};" in fixture
+for literal in ("highest_priority_thread->m_context_guard.release();",
+                "thread->m_context_guard.release();"):
+    assert literal in scheduler and literal in fixture
 compiler = next((x for x in ("clang++-18", "clang++", "g++") if shutil.which(x)), None)
 assert compiler, "C++20 host compiler required"
 env = os.environ.copy()
@@ -132,13 +144,13 @@ if sys.platform == "darwin" and not env.get("SDKROOT"):
     sdk = Path("/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk")
     if sdk.is_dir():
         env["SDKROOT"] = str(sdk)
-with tempfile.TemporaryDirectory(prefix="encore-scheduler-guard-") as folder:
-    cpp = Path(folder) / "lazy.cpp"
-    exe = Path(folder) / "lazy"
+with tempfile.TemporaryDirectory(prefix="encore-scheduler-handoff-") as folder:
+    cpp = Path(folder) / "handoff.cpp"
+    exe = Path(folder) / "handoff"
     cpp.write_text(fixture)
     subprocess.run([compiler, "-std=c++20", "-Wall", "-Wextra", "-Werror",
-                    str(cpp), "-o", str(exe)], check=True, env=env, timeout=60)
+                    "-pthread", str(cpp), "-o", str(exe)], check=True, env=env, timeout=60)
     subprocess.run([str(exe)], check=True, env=env, timeout=15)
 
-print("PASS paired upstream kernel source overlays + exact hashes + maintained CMake reference")
+print("PASS maintained guest-context semaphore + unchanged slab patch + CMake selection")
 print("HOST ONLY: native build and guest gameplay still require qualification")
