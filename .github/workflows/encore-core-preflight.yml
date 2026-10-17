@@ -43,6 +43,7 @@ jobs:
           python3 -B tools/check-ps5-vulkan-cache-phases.py
           python3 -B tools/check-ps5-build-sha-provenance.py
           python3 -B tools/check-ps5-guest-cache-domains.py
+          python3 -B tools/check-fc27-cache-contention-classifier.py
           python3 -B tools/check-ps5-guest-write-subphases.py
           python3 -B tools/check-ps5-guest-write-batching.py
           python3 -B tools/check-ps5-guest-ipc-thread-profile.py
