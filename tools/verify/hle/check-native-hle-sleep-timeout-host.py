@@ -8,13 +8,13 @@ import shutil
 import subprocess
 import tempfile
 
-root = Path(__file__).resolve().parents[1]
+root = Path(__file__).resolve().parents[3]
 pinned = (root / "vendor/sources/eden/src/core/hle/kernel/svc/svc_thread.cpp").read_text()
 native = (root / "vendor/encore-active/eden-threading/src/core/hle/kernel/svc/svc_thread.cpp").read_text()
 cmake = (root / "headless/CMakeLists.txt").read_text()
 module = (root / "vendor/encore-active/eden-threading/native-hle-overrides.cmake").read_text()
 workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
-assert "python3 -B tools/check-native-hle-sleep-timeout-host.py" in workflow
+assert "python3 -B tools/verify/hle/check-native-hle-sleep-timeout-host.py" in workflow
 yield_contract = (root / "vendor/sources/eden/src/core/hle/kernel/svc_types.h").read_text()
 yield_enum = yield_contract.split("enum class YieldType : s64 {", 1)[1].split("};", 1)[0]
 assert "WithoutCoreMigration = 0," in yield_enum

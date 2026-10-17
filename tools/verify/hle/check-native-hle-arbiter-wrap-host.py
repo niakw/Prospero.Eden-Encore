@@ -12,13 +12,13 @@ import shutil
 import subprocess
 import tempfile
 
-root = Path(__file__).resolve().parents[1]
+root = Path(__file__).resolve().parents[3]
 original = (root / "vendor/sources/eden/src/core/hle/kernel/k_address_arbiter.cpp").read_text()
 native = (root / "vendor/encore-active/eden-threading/src/core/hle/kernel/k_address_arbiter.cpp").read_text()
 workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
 cmake = (root / "headless/CMakeLists.txt").read_text()
 module = (root / "vendor/encore-active/eden-threading/native-hle-overrides.cmake").read_text()
-assert "python3 -B tools/check-native-hle-arbiter-wrap-host.py" in workflow
+assert "python3 -B tools/verify/hle/check-native-hle-arbiter-wrap-host.py" in workflow
 assert "native-hle-overrides.cmake" in cmake
 assert "k_address_arbiter.cpp" in module
 compiler = shutil.which("g++") or shutil.which("clang++")
