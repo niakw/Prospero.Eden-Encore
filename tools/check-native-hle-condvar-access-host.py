@@ -125,6 +125,16 @@ replacements = [["    *out = GetCurrentMemory(kernel).Read32(GetInteger(address)
 for old, new in replacements:
     assert expected.count(old) == 1, "pinned native HLE patch drift"
     expected = expected.replace(old, new)
+# H09 extends the maintained condition-variable source by one checked Wait guard.
+wait_anchor = "        // Update the value and process for the next owner.\n"
+wait_guard = ("        // A missing condition-variable key cannot publish the waiter flag.\n"
+              "        // Reject it before handing off the guest mutex or entering a wait.\n"
+              "        if (!GetCurrentMemory(m_system.Kernel()).IsValidVirtualAddressRange(key, sizeof(u32))) {\n"
+              "            slp.CancelSleep();\n"
+              "            R_THROW(ResultInvalidCurrentMemory);\n"
+              "        }\n\n")
+assert expected.count(wait_anchor) == 1
+expected = expected.replace(wait_anchor, wait_guard + wait_anchor)
 assert corrected == expected, "maintained native HLE source differs from pinned + named fixes"
 assert "        can_access = UpdateLockAtomic(kernel," in corrected
 with tempfile.TemporaryDirectory(prefix="encore-condvar-access-") as td:
