@@ -107,6 +107,36 @@ for name, limit in baseline.items():
         f"baseline={effective_count} > {limit}, total={counts[name]}; "
         "integrate sources under vendor/encore-active instead"
     )
+
+# Regression oracle: the maintained diagnostic IFile TU must be exactly the
+# old pinned file + its former CMake replacement (apart from the normalized
+# include path); prevent silent semantic drift while removing string rewrites.
+fs_rel = "core/hle/service/filesystem/fsp/fs_i_file.cpp"
+fs_pinned = (sources / "eden/src" / fs_rel).read_text()
+fs_maintained = (active / "eden-core/src" / fs_rel).read_text()
+fs_old = """    R_RETURN(
+        backend->Read(reinterpret_cast<size_t*>(out_size.Get()), offset, out_buffer.data(), size));"""
+fs_new = """    const auto fs_start = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed) ? ::Eden::Performance::NowNs() : 0;
+    const Result fs_result =
+        backend->Read(reinterpret_cast<size_t*>(out_size.Get()), offset, out_buffer.data(), size);
+    if (fs_start) {
+        ::Eden::Performance::AddSince(::Eden::Performance::guest_fs_file, fs_start);
+        ::Eden::Performance::guest_fs_file_bytes.fetch_add(static_cast<unsigned long long>(*out_size.Get()), std::memory_order_relaxed);
+    // Diagnostic only: avoid formatting every file read while quiet.
+        LOG_WARNING(Service_FS, "EDEN_FS_FILE_READ offset={:#x} size={} read={} result={:#x} ns={}", offset, size, *out_size.Get(), fs_result.raw, ::Eden::Performance::NowNs() - fs_start);
+    }
+    R_RETURN(fs_result);"""
+assert fs_pinned.count(fs_old) == 1
+assert fs_maintained == '#include "performance.h"\n' + fs_pinned.replace(fs_old, fs_new), (
+    "Maintained IFile profile TU diverges from the already-audited generated source")
+assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_FS_FILE}")') == 1
+assert 'list(REMOVE_ITEM core_sources "hle/service/filesystem/fsp/fs_i_file.cpp")' in c
+assert 'target_include_directories(core PRIVATE "${EDEN_PORT_DIR}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/fs_i_file.cpp"' not in c
+assert "fs_file_source" not in c
+assert counts["write_derived("] <= 74, counts
+print("VENDOR_MAINTAINED_FS_IFILE_PARITY_PASS: pinned native DEV source, no CMake rewrite")
+
 print(f"VENDOR_SOURCE_PINNED roots={len(root_names)} manifest_items={len(deps)} "
       f"active_forks={len(fork_names)}")
 print("VENDOR_REWRITE_DEBT_PARTIAL " +
