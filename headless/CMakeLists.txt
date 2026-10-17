@@ -2142,23 +2142,15 @@ get_target_property(video_sources video_core SOURCES)
 # An out-of-space or wrapping address would otherwise index the page vectors.
 # Preserve the normal range walk and all GPU cache operations for valid spans.
 if(PS5_NATIVE)
-    file(READ "${PROJECT_SOURCE_DIR}/src/video_core/memory_manager.cpp" eden_gpu_span_src)
-    set(eden_gpu_span_original "    if (!IsContinuousRange(src_addr, size)) {")
-    string(REGEX MATCHALL "if \\(!IsContinuousRange\\(src_addr, size\\)\\)" eden_gpu_span_anchors "${eden_gpu_span_src}")
-    list(LENGTH eden_gpu_span_anchors eden_gpu_span_anchors_count)
-    if(NOT eden_gpu_span_anchors_count EQUAL 2)
-        message(FATAL_ERROR "Pinned native GPU guest span range gate changed")
+    # One maintained native source: address-span and granular-page bounds.
+    # No C++ replacement string or helper module is evaluated at configure.
+    set(EDEN_NATIVE_GPU_MEMORY_MANAGER
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/video_core/memory_manager.cpp")
+    if(NOT EXISTS "${EDEN_NATIVE_GPU_MEMORY_MANAGER}")
+        message(FATAL_ERROR "Missing Encore-maintained GPU memory manager")
     endif()
-    string(REPLACE "${eden_gpu_span_original}" [=[    if (size == 0 || src_addr >= address_space_size ||
-        size > address_space_size - src_addr ||
-        !IsContinuousRange(src_addr, size)) {]=] eden_gpu_span_src "${eden_gpu_span_src}")
-    # The mapped span must fit its actual big-page byte offset, not the page index.
-    # Prevent overflowing and out-of-space queries before indexing GPU page vectors.
-    include("${EDEN_PORT_DIR}/native_gpu_granular_bounds.cmake")
-    set(eden_gpu_span_tu "${PORT_BUILD_DIR}/memory-manager-native.cpp")
-    write_derived("${eden_gpu_span_tu}" "${eden_gpu_span_src}")
     list(REMOVE_ITEM video_sources "memory_manager.cpp")
-    list(APPEND video_sources "${eden_gpu_span_tu}")
+    list(APPEND video_sources "${EDEN_NATIVE_GPU_MEMORY_MANAGER}")
 endif()
 # R411: Eden #4473/#4477 are already applied once by the audited
 # version-locked shipping backports to PROJECT_SOURCE_DIR before CMake.
