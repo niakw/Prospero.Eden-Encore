@@ -1037,16 +1037,14 @@ if(EDEN_DEV_PROFILE)
     endif()
     list(REMOVE_ITEM core_sources "hle/service/nvdrv/devices/nvhost_ctrl.cpp")
     list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_NVCTRL}")
-    file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp" producer_source)
-    set(producer_old "        Status status = WaitForFreeSlotThenRelock(async, &found, &return_flags, lock);")
-    string(FIND "${producer_source}" "${producer_old}" producer_at)
-    if(producer_at LESS 0)
-        message(FATAL_ERROR "Pinned buffer queue dequeue changed")
+    # DEV-only buffer dequeue timing comes from a tracked maintained TU.
+    set(EDEN_MAINTAINED_PROFILE_DEQUEUE
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")
+        message(FATAL_ERROR "Missing maintained buffer queue diagnostic source")
     endif()
-    string(REPLACE "${producer_old}" "        const auto dequeue_start = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed) ? ::Eden::Performance::NowNs() : 0;\n${producer_old}\n        if (dequeue_start) ::Eden::Performance::AddSince(::Eden::Performance::guest_dequeue_wait, dequeue_start);" producer_source "${producer_source}")
-    write_derived("${PORT_BUILD_DIR}/buffer_queue_producer.cpp" "#include \"${EDEN_PORT_DIR}/performance.h\"\n${producer_source}")
     list(REMOVE_ITEM core_sources "hle/service/nvnflinger/buffer_queue_producer.cpp")
-    list(APPEND core_sources "${PORT_BUILD_DIR}/buffer_queue_producer.cpp")
+    list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")
     # Guest asset streaming: time and bytes of fsp-srv IFile/IStorage backend reads.
     # Use the reviewed, maintained source directly. The original source stays
     # pinned; no C++ text replacement or generated translation unit in CMake.
