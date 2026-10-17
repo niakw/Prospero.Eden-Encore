@@ -42,6 +42,7 @@ assert derived.count(cleanup) == 2
 assert derived.count(construct) == 2
 
 program = r"""
+#include <array>
 #include <atomic>
 #include <cassert>
 #include <cstdio>
