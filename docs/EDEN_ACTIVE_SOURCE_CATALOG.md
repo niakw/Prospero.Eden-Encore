@@ -8,9 +8,9 @@ présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
 - **187 fichiers** de code et d'en-têtes enregistrés.
-- **71 fichiers** possèdent une correspondance de chemin *exacte*
+- **76 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
-- **116 fichiers** n'ont pas encore de ligne de graphe correspondant
+- **111 fichiers** n'ont pas encore de ligne de graphe correspondant
   exactement à leur chemin. Cela **ne prouve pas** qu'ils n'ont jamais été
   examinés, ni qu'ils sont effectivement compilés.
 - Le manifeste des backports verrouille **83 fichiers livrés**, dont
@@ -193,21 +193,21 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-vulkan/vk_pipeline_cache_cost.cpp` | `maintained-override` | V07 |
 | `eden-vulkan/vk_texture_cache_cost.cpp` | `maintained-override` | V19 |
 | `eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h` | `maintained-override` | — |
-| `eden-vulkan/vulkan_blit_screen.cpp` | `maintained-override` | — |
+| `eden-vulkan/vulkan_blit_screen.cpp` | `maintained-override` | V28 |
 | `eden-vulkan/vulkan_descriptor_buffer.cpp` | `maintained-override` | — |
-| `eden-vulkan/vulkan_device.cpp` | `maintained-override` | — |
+| `eden-vulkan/vulkan_device.cpp` | `maintained-override` | V26 |
 | `eden-vulkan/vulkan_hud_shaders.h` | `maintained-override` | — |
 | `eden-vulkan/vulkan_instance.cpp` | `maintained-override` | — |
 | `eden-vulkan/vulkan_library.cpp` | `maintained-override` | — |
 | `eden-vulkan/vulkan_present_layer.cpp` | `maintained-override` | V09 |
 | `eden-vulkan/vulkan_present_manager.cpp` | `maintained-override` | V02 |
-| `eden-vulkan/vulkan_query_cache.cpp` | `maintained-override` | — |
+| `eden-vulkan/vulkan_query_cache.cpp` | `maintained-override` | V27 |
 | `eden-vulkan/vulkan_rasterizer.cpp` | `maintained-override` | V05,V08 |
 | `eden-vulkan/vulkan_renderer.cpp` | `maintained-override` | V04 |
 | `eden-vulkan/vulkan_scheduler.cpp` | `maintained-override` | V01 |
 | `eden-vulkan/vulkan_swapchain.cpp` | `maintained-override` | V03 |
-| `eden-vulkan/vulkan_window_adapt_pass.cpp` | `maintained-override` | — |
-| `eden-vulkan/vulkan_wrapper.cpp` | `maintained-override` | — |
+| `eden-vulkan/vulkan_window_adapt_pass.cpp` | `maintained-override` | V29 |
+| `eden-vulkan/vulkan_wrapper.cpp` | `maintained-override` | V30 |
 | `ps5-mesa/src/amd/vulkan/meta/radv_meta_clear.c` | `driver-fork` | — |
 | `ps5-mesa/src/amd/vulkan/meta/radv_meta_resolve.c` | `driver-fork` | — |
 | `ps5-mesa/src/amd/vulkan/radv_cmd_buffer.c` | `driver-fork` | — |
