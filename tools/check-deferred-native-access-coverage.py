@@ -156,7 +156,11 @@ expect(port_cmake, "code.jnz(abort, code.T_NEAR);", "derived marked callback bra
 # Native A32 uses its own checked fastmem byte map. Protect() changes access
 # bits instead of mprotect for these aliases; the blocked path checks its PTE.
 expect(port_cmake, 'option(EDEN_A32_FASTMEM "A32 fastmem window with JIT fault recovery" ON)', "A32 fastmem build")
-expect(port_cmake, "!process.Is64Bit() && Settings::IsFastmemEnabled()", "A64 fastmem exclusion")
+native_a32_memory = (root / "vendor/encore-active/eden-core/src/core/memory.cpp").read_text()
+expect(port_cmake, 'list(APPEND core_sources "${EDEN_MAINTAINED_A32_MEMORY}")',
+       "A32 guarded maintained unit selection")
+expect(native_a32_memory, "!process.Is64Bit() && Settings::IsFastmemEnabled()",
+       "A64 fastmem exclusion in maintained source")
 expect(checked_a32, "constexpr u8 checked_read_blocked = 1, checked_write_blocked = 2;", "A32 read/write map bits")
 expect(checked_a32, "EmitCheckedFastmemTest(code, vaddr, index, ${blocked_bit}, *blocked);", "A32 checked fastmem")
 expect(checked_a32, "const auto fallback_ptr = EmitCheckedFallbackLookup", "A32 blocked path")
