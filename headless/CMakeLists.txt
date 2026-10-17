@@ -1622,54 +1622,8 @@ list(APPEND hid_sources "${EDEN_HID_RESOURCE}")
 set_property(TARGET hid_core PROPERTY SOURCES "${hid_sources}")
 
 
-# R435: dev-only guest HID Fullkey Npad LIFO witness. Avoid pinned edits.
-if(PS5_NATIVE AND EDEN_DEV_PROFILE)
-    file(READ "${PROJECT_SOURCE_DIR}/src/hid_core/resources/npad/npad.cpp" eden_npad_source)
-    # The GameCube path also writes fullkey_lifo; constrain to the Fullkey
-    # switch arm and enclose new locals in braces to prevent cross-case jumps.
-    set(eden_npad_write_anchor [=[                npad->fullkey_lifo.WriteNextEntry(pad_state);
-                break;
-            case Core::HID::NpadStyleIndex::Handheld:]=])
-    string(FIND "${eden_npad_source}" "${eden_npad_write_anchor}" eden_npad_write_at)
-    if(eden_npad_write_at LESS 0)
-        message(FATAL_ERROR "Pinned Eden fullkey Npad writer changed; requalify R435")
-    endif()
-    string(REPLACE "${eden_npad_write_anchor}" [=[                npad->fullkey_lifo.WriteNextEntry(pad_state);
-                {
-                    // Event has entered emulated HID memory, NOT guest consumption.
-                    static std::atomic<unsigned long long> eden_fullkey_writes{0};
-                    static std::atomic<unsigned long long> eden_fullkey_plus_edges{0};
-                    static std::atomic<bool> eden_fullkey_last_plus{false};
-                    const bool eden_plus_now = static_cast<bool>(pad_state.npad_buttons.plus);
-                    const bool eden_plus_before = eden_fullkey_last_plus.exchange(
-                        eden_plus_now, std::memory_order_relaxed);
-                    const auto eden_writes = eden_fullkey_writes.fetch_add(
-                        1, std::memory_order_relaxed) + 1;
-                    if (eden_plus_now && !eden_plus_before) {
-                        const auto eden_edges = eden_fullkey_plus_edges.fetch_add(
-                            1, std::memory_order_relaxed) + 1;
-                        if (eden_edges <= 32)
-                            std::fprintf(stderr,
-                                "EDEN_NPAD_PLUS_LIFO edges=%llu writes=%llu aruid=%llu\n",
-                                eden_edges, eden_writes,
-                                static_cast<unsigned long long>(aruid));
-                    }
-                    if (eden_writes % 1500 == 0)
-                        std::fprintf(stderr,
-                            "EDEN_NPAD_PROGRESS fullkey_writes=%llu plus_edges=%llu\n",
-                            eden_writes,
-                            eden_fullkey_plus_edges.load(std::memory_order_relaxed));
-                }
-                break;
-            case Core::HID::NpadStyleIndex::Handheld:]=]
-        eden_npad_source "${eden_npad_source}")
-    write_derived("${PORT_BUILD_DIR}/npad_pause_diag.cpp"
-        "#include <atomic>\n#include <cstdio>\n${eden_npad_source}")
-    get_target_property(eden_npad_sources hid_core SOURCES)
-    list(REMOVE_ITEM eden_npad_sources resources/npad/npad.cpp)
-    list(APPEND eden_npad_sources "${PORT_BUILD_DIR}/npad_pause_diag.cpp")
-    set_property(TARGET hid_core PROPERTY SOURCES "${eden_npad_sources}")
-endif()
+# R435 DEV Fullkey LIFO witness is maintained as complete C++ in encore-active.
+# hid_core selects one variant in the NPad source selector below.
 
 # Clang 18 trips over libstdc++ range constraints for implicit vector-to-span
 # conversions inside these generic lambdas. Use the equivalent pointer/count
@@ -2083,9 +2037,21 @@ set(EDEN_MAINTAINED_NPAD
 if(NOT EXISTS "${EDEN_MAINTAINED_NPAD}")
     message(FATAL_ERROR "Missing maintained native NPad controller")
 endif()
+# Only one NPad implementation is compiled. The DEV instrumentation includes
+# the same two null guards as the normal maintained unit.
+if(PS5_NATIVE AND EDEN_DEV_PROFILE)
+    set(EDEN_MAINTAINED_NPAD_DEV
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/hid_core/resources/npad/npad_pause_diag.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_NPAD_DEV}")
+        message(FATAL_ERROR "Missing maintained diagnostic NPad source")
+    endif()
+    set(EDEN_NPAD_SELECTED "${EDEN_MAINTAINED_NPAD_DEV}")
+else()
+    set(EDEN_NPAD_SELECTED "${EDEN_MAINTAINED_NPAD}")
+endif()
 get_target_property(npad_sources hid_core SOURCES)
 list(FILTER npad_sources EXCLUDE REGEX "(^|/)npad\\.cpp$")
-list(APPEND npad_sources "${EDEN_MAINTAINED_NPAD}")
+list(APPEND npad_sources "${EDEN_NPAD_SELECTED}")
 set_property(TARGET hid_core PROPERTY SOURCES "${npad_sources}")
 add_library(eden-pad STATIC "${EDEN_PORT_DIR}/pad.cpp"
     "${PROJECT_SOURCE_DIR}/src/input_common/input_engine.cpp"
