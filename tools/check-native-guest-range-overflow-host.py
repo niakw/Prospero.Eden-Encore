@@ -81,7 +81,7 @@ with tempfile.TemporaryDirectory(prefix="encore-native-range-") as temp:
     cmake_script.write_text(
         f'file(READ "{pinned.as_posix()}" eden_cpu_memory)\n'
         f'include("{helper.as_posix()}")\n'
-        f'file(WRITE "{derived_path.as_posix()}" "${eden_cpu_memory}")\n'
+        f'file(WRITE "{derived_path.as_posix()}" "${{eden_cpu_memory}}")\n'
     )
     subprocess.run(["cmake", "-P", str(cmake_script)], check=True, timeout=20)
     original_source = pinned.read_text()
