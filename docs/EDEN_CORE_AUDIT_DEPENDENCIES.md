@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 173
+**Non, this is not an exhaustive repository-wide inventory.** The 174
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 173 | 154 | 367 |
+| Graphe connu | 174 | 155 | 369 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 119 | 110 | 264 |
+| SOURCE — lecture effectuée, preuve insuffisante | 120 | 111 | 266 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **134** | **124** | **292** |
+| **Encore à qualifier (SOURCE + OPEN)** | **135** | **125** | **294** |
 | Dont priorité P0 (SOURCE + OPEN) | 55 | 50 | 143 |
 
-Le **noyau restant** compte donc 134 critères répartis sur
-124 fichiers et 292 mentions fonction/contrat :
-15 OPEN et 119 SOURCE.
-Cela **ne signifie pas 292 fonctions jamais lues** :
+Le **noyau restant** compte donc 135 critères répartis sur
+125 fichiers et 294 mentions fonction/contrat :
+15 OPEN et 120 SOURCE.
+Cela **ne signifie pas 294 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-187 fichiers de code/en-têtes présents, 95 avec un chemin de
+188 fichiers de code/en-têtes présents, 96 avec un chemin de
 graphe exact et 92 sans correspondance exacte. Cet écart n'est
 **pas** le nombre de fonctions non auditées, ni une preuve de code actif.
 Le contrôle hôte vérifie la complétude des chemins et les références,
@@ -88,13 +88,13 @@ sont des sources maintenues sous
 sélectionnées uniquement en `EDEN_DEV_PROFILE`.
 `tools/check-vendor-consolidation-debt.py` vérifie la parité du corps
 C++ avec l'override généré auparavant et recense les sorties CMake dans
-`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **52 sites restants**
+`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **51 sites restants**
 après onze migrations (F02, F03, F04, N02, N03, H21, H22, F05, F06, F07 et F08). Un site à paramètres variables peut
 produire plusieurs fichiers réels. Les ressources générées ne doivent
 pas être confondues avec des overrides de code.
 
 Le second inventaire compte 21 générateurs `write_derived()` dans les modules,
-soit **73 sites au total**, mais n'inclut **pas** les sept modules
+soit **72 sites au total**, mais n'inclut **pas** les sept modules
 `X01–X07` qui créent une sortie par `file(WRITE)` ou transforment
 indirectement une variable-source. Ils sont suivis séparément dans
 `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`, avec contrôle hôte de leur
@@ -316,6 +316,7 @@ function/contract tokens are checked by CI for existence only; the
 | M08 | P0 | M06,M07 | vendor/encore-active/eden-core/overrides/core/device_memory_manager.inc | DeviceMemoryManager<Traits>::Map; DeviceMemoryManager<Traits>::Unmap; DeviceMemoryManager<Traits>::TrackContinuityImpl; DeviceMemoryManager<Traits>::GetSpan | SOURCE | headless/CMakeLists.txt | Native active header-resolved GPU map and continuity implementation; verify layered backports, lock order and active source equivalence; source only, no console progress proof | 🟡 Source étudiée |
 | M09 | P0 | M08,V05 | vendor/encore-active/eden-core/overrides/core/gpu_dirty_memory_manager.h | Collect(PAddr; Gather(std::function | SOURCE | headless/CMakeLists.txt | Native atomic GPU dirty collector uses active header override; verify publication and memory-order invariants at real cache boundaries; source only, no console progress proof | 🟡 Source étudiée |
 | M10 | P1 | M01,M08 | vendor/encore-active/eden-core/overrides/core/guest_memory.h | GuestMemoryScoped; TrySetSpan; AddressChanged | SOURCE | headless/CMakeLists.txt | Native guest-memory span ownership header selected by core and video_core; assert consistency of address and writeback behavior; source only, no console progress proof | 🟡 Source étudiée |
+| M11 | P0 | M08,H18 | vendor/encore-active/eden-core/src/core/memory.cpp | Memory::SetCurrentPageTable; IsDirectBackingAlias | SOURCE | tools/check-vendor-consolidation-debt.py | Maintained A32-only fastmem gate matches installed shipping backport plus one guarded replacement; actual guest execution and alias coherence require console proof | 🟡 Source étudiée |
 | R10 | P1 | R01,R09 | vendor/sources/eden/src/core/memory.cpp | Memory::IsValidVirtualAddressRange | HOST | tools/check-native-guest-range-overflow-host.py | Host regression SUCCESS 38996379440; on-device behavior not verified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-guest-range-overflow-host.py) |
 | J12 | P1 | J08 | vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_64.cpp | DynarmicCallbacks64::MemoryRead32; CheckMemoryAccess | HOST | tools/check-native-jit-memory-read-guard-host.py | Pinned vs derived read rejection A64 host PASS in run #38996913209; console unverified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-jit-memory-read-guard-host.py) |
 | J13 | P1 | J08 | vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_32.cpp | DynarmicCallbacks32::MemoryRead32; CheckMemoryAccess | HOST | tools/check-native-jit-memory-read-guard-host.py | Pinned vs derived read rejection A32 host PASS in run #38996913209; console unverified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-jit-memory-read-guard-host.py) |

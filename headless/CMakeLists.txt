@@ -1093,17 +1093,16 @@ if(EDEN_DEV_PROFILE)
 endif()
 if(EDEN_A32_FASTMEM)
     # The window spans 4 GiB: only 32-bit applications get it as their fastmem arena.
-    file(READ "${PROJECT_SOURCE_DIR}/src/core/memory.cpp" arena_source)
-    set(arena_old "        if (process.IsApplication() && Settings::IsFastmemEnabled()) {")
-    string(FIND "${arena_source}" "${arena_old}" arena_at)
-    if(arena_at LESS 0)
-        message(FATAL_ERROR "Pinned fastmem arena selection changed")
+    # The production backport materializes core/memory.cpp before configure.
+    # Maintain the native A32-only fastmem guard as versioned C++, not a
+    # configure-time rewrite of that materialized source.
+    set(EDEN_MAINTAINED_A32_MEMORY
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/memory.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_A32_MEMORY}")
+        message(FATAL_ERROR "Missing maintained A32 fastmem memory source")
     endif()
-    string(REPLACE "${arena_old}" "        if (process.IsApplication() && !process.Is64Bit() && Settings::IsFastmemEnabled()) {"
-        arena_source "${arena_source}")
-    write_derived("${PORT_BUILD_DIR}/memory.cpp" "${arena_source}")
     list(REMOVE_ITEM core_sources "memory.cpp")
-    list(APPEND core_sources "${PORT_BUILD_DIR}/memory.cpp")
+    list(APPEND core_sources "${EDEN_MAINTAINED_A32_MEMORY}")
     # Upstream places code at any 4 KiB offset below 16 MiB, which leaves three of four
     # layouts with every module page out of 16 KiB phase with its backing. Keep the same
     # range with 16 KiB steps so module chunks can alias.
