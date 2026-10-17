@@ -6,6 +6,19 @@ if(NOT EDEN_VULKAN_DRIVER MATCHES "^(CUSTOM|RADV)$")
 endif()
 set(PORT_ROOT "${CMAKE_CURRENT_LIST_DIR}/..")
 set(PORT_BUILD_DIR "${CMAKE_BINARY_DIR}/headless")
+# Canonical scalar-source fragments must trigger configure when they change.
+set(EDEN_SCALAR_INPUT_DIR
+    "${PORT_ROOT}/vendor/encore-active/eden-core/dynarmic/scalar")
+set(EDEN_SCALAR_INPUTS
+    "${EDEN_SCALAR_INPUT_DIR}/scalar-fold.inc"
+    "${EDEN_SCALAR_INPUT_DIR}/scalar-memory-read.inc"
+    "${EDEN_SCALAR_INPUT_DIR}/scalar-memory-write.inc")
+foreach(EDEN_SCALAR_SOURCE IN LISTS EDEN_SCALAR_INPUTS)
+    if(NOT EXISTS "${EDEN_SCALAR_SOURCE}")
+        message(FATAL_ERROR "Missing Encore-maintained scalar source ${EDEN_SCALAR_SOURCE}")
+    endif()
+endforeach()
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDEN_SCALAR_INPUTS})
 # Stability defaults: use Dynarmic's ordinary per-core JIT in production. The cross-core
 # JitGroup and bounded successor compile batching are Encore experiments and stay compile-time
 # off unless a development build explicitly opts in.
@@ -468,7 +481,7 @@ string(FIND "${optimizer}" "${fold_anchor}" fold_offset)
 if(fold_offset LESS 0)
     message(FATAL_ERROR "Pinned scalar folding boundary changed")
 endif()
-file(READ "${PORT_ROOT}/vendor/encore-active/eden-core/dynarmic/scalar/scalar-fold.inc" scalar_fold)
+file(READ "${EDEN_SCALAR_INPUT_DIR}/scalar-fold.inc" scalar_fold)
 string(REPLACE "${fold_anchor}" "${fold_anchor}\n${scalar_fold}" optimizer "${optimizer}")
 write_derived("${PORT_BUILD_DIR}/opt_passes.cpp" "${optimizer}")
 get_target_property(jit_sources dynarmic SOURCES)

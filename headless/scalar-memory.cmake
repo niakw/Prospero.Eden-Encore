@@ -3,7 +3,7 @@
 # branching, and all register allocation remains outside deferred callbacks.
 foreach(direction Read Write)
     string(TOLOWER "${direction}" lower)
-    file(READ "${PORT_ROOT}/vendor/encore-active/eden-core/dynarmic/scalar/scalar-memory-${lower}.inc" scalar_access)
+    file(READ "${EDEN_SCALAR_INPUT_DIR}/scalar-memory-${lower}.inc" scalar_access)
     string(FIND "${memory_source}" "void AxxEmitX64::EmitMemory${direction}(" begin)
     if(begin LESS 0)
         message(FATAL_ERROR "Pinned scalar memory emitter changed")
