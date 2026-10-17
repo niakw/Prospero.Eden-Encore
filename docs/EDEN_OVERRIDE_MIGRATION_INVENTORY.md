@@ -12,10 +12,10 @@ natif sélectionnent chacun leur sous-ensemble.
 
 ## Synthèse vérifiable
 
-- **66 appels générateurs** encore dans CMake ; contre **75 avant**
+- **64 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
-- **77 lectures `file(READ`** et **223 remplacements
+- **75 lectures `file(READ`** et **219 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
 - Les versions diagnostiques de `IFile::Read`, `IStorage::Read` et des appels
@@ -110,18 +110,16 @@ dans la version normale.
 | G52 | `${PORT_BUILD_DIR}/maxwell_3d.cpp` | GPU/vidéo | Unité source | 2645 |
 | G53 | `${PORT_BUILD_DIR}/shader_environment.cpp` | GPU/vidéo | Unité source | 2660 |
 | G54 | `${PORT_BUILD_DIR}/texture_cache_util.cpp` | GPU/vidéo | Unité source | 2701 |
-| G55 | `${PORT_BUILD_DIR}/path_util.cpp` | Runtime/FS/réseau | Unité source | 2723 |
-| G56 | `${PORT_BUILD_DIR}/cpu_features.cpp` | Runtime/FS/réseau | Unité source | 2744 |
-| G57 | `${PORT_BUILD_DIR}/audited_guest_dns.cpp` | Runtime/FS/réseau | Unité source | 2833 |
-| G58 | `${PORT_BUILD_DIR}/audited_guest_bsd.cpp` | Runtime/FS/réseau | Unité source | 2895 |
-| G59 | `${PORT_BUILD_DIR}/include/core/file_sys/bis_factory.h` | Runtime/FS/réseau | En-tête source | 2902 |
-| G60 | `${PORT_BUILD_DIR}/bis_factory.cpp` | Runtime/FS/réseau | Unité source | 2913 |
-| G61 | `${PORT_BUILD_DIR}/filesystem.cpp` | Runtime/FS/réseau | Unité source | 2922 |
-| G62 | `${PORT_BUILD_DIR}/network.cpp` | Runtime/FS/réseau | Unité source | 2974 |
-| G63 | `${PORT_BUILD_DIR}/network_interface.cpp` | Runtime/FS/réseau | Unité source | 2983 |
-| G64 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 3036 |
-| G65 | `${eden_app_crt}` | Runtime/FS/réseau | Cible variable | 3048 |
-| G66 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 3233 |
+| G55 | `${PORT_BUILD_DIR}/audited_guest_dns.cpp` | Runtime/FS/réseau | Unité source | 2825 |
+| G56 | `${PORT_BUILD_DIR}/audited_guest_bsd.cpp` | Runtime/FS/réseau | Unité source | 2887 |
+| G57 | `${PORT_BUILD_DIR}/include/core/file_sys/bis_factory.h` | Runtime/FS/réseau | En-tête source | 2894 |
+| G58 | `${PORT_BUILD_DIR}/bis_factory.cpp` | Runtime/FS/réseau | Unité source | 2905 |
+| G59 | `${PORT_BUILD_DIR}/filesystem.cpp` | Runtime/FS/réseau | Unité source | 2914 |
+| G60 | `${PORT_BUILD_DIR}/network.cpp` | Runtime/FS/réseau | Unité source | 2966 |
+| G61 | `${PORT_BUILD_DIR}/network_interface.cpp` | Runtime/FS/réseau | Unité source | 2975 |
+| G62 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 3028 |
+| G63 | `${eden_app_crt}` | Runtime/FS/réseau | Cible variable | 3040 |
+| G64 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 3225 |
 <!-- OVERRIDE_GENERATORS_END -->
 
 ## Prochain ordre de migration
@@ -149,11 +147,18 @@ pas que le PC invité avance après un réveil HLE.
   restent inchangés ; le test de parité vérifie la capture du worker et
   les deux appels de l'itérateur natif.
 
+- `common/cpu_features.cpp` (fréquence TSC invariante même sans
+  CPUID leaf 0x15) et `common/fs/path_util.cpp` (racines natives
+  utilisateur/cache/configuration) sont désormais maintenus sous
+  `vendor/encore-active/eden-core/src/common/`. Leurs fichiers d'origine
+  demeurent épinglés ; le contrôle compare les transformations exactes
+  et la sélection unique par la cible `common`.
+
 ## Générateurs des modules CMake inclus — inventaire complémentaire
 
 Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules
 inclus par ce fichier contiennent **21 autres appels `write_derived()`**
-dans 6 fichiers. Le total de **87 appels** (66 + 21) est donc un **nombre de
+dans 6 fichiers. Le total de **85 appels** (64 + 21) est donc un **nombre de
 sites CMake**, pas un dénombrement des fichiers réellement produits à
 l'exécution. Un module inclus peut définir des macros sans les exécuter,
 et plusieurs sorties sont explicitement conditionnées.
@@ -187,7 +192,7 @@ et plusieurs sorties sont explicitement conditionnées.
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **87 sites** `write_derived()`, ni dans
+Ils ne sont comptés ni dans les **85 sites** `write_derived()`, ni dans
 les **7 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,
@@ -261,7 +266,7 @@ et de limiter CMake à la sélection.
 ## Overrides indirects sans `write_derived()` local
 
 Ces **7 modules supplémentaires** ne sont pas inclus dans le total de
-**87 appels**. Deux matérialisent leur sortie via `file(WRITE)` ;
+**85 appels**. Deux matérialisent leur sortie via `file(WRITE)` ;
 les cinq autres modifient une variable-source écrite ensuite par un
 générateur du CMake principal. Ce sont **7 modules**, pas nécessairement
 7 fichiers réellement produits.
