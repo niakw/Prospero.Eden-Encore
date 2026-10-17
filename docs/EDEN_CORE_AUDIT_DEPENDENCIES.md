@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 311
+**Non, this is not an exhaustive repository-wide inventory.** The 312
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 311 | 290 | 634 |
+| Graphe connu | 312 | 291 | 637 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 256 | 245 | 529 |
+| SOURCE — lecture effectuée, preuve insuffisante | 257 | 246 | 532 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **271** | **259** | **557** |
+| **Encore à qualifier (SOURCE + OPEN)** | **272** | **260** | **560** |
 | Dont priorité P0 (SOURCE + OPEN) | 106 | 101 | 248 |
 
-Le **noyau restant** compte donc 271 critères répartis sur
-259 fichiers et 557 mentions fonction/contrat :
-15 OPEN et 256 SOURCE.
+Le **noyau restant** compte donc 272 critères répartis sur
+260 fichiers et 560 mentions fonction/contrat :
+15 OPEN et 257 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-217 fichiers de code/en-têtes présents et 217 avec un chemin de
+218 fichiers de code/en-têtes présents et 218 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -421,6 +421,7 @@ function/contract tokens are checked by CI for existence only; the
 | N16 | P1 | N15 | vendor/encore-active/eden-backports/src/core/hle/service/sockets/bsd.h | Ioctl(HLERequestContext& ctx) | SOURCE | tools/check-active-source-inventory.py | Shipping BSD header declares new ioctl IPC handler; source-level modified code only, native execution unproved | 🟡 Source étudiée |
 | N17 | P0 | N10,N13 | vendor/encore-active/eden-backports/src/core/hle/service/nifm/nifm.cpp | IGeneralService::SetWirelessCommunicationEnabled; IGeneralService::IsWirelessCommunicationEnabled; IGeneralService::IsAnyInternetRequestAccepted | SOURCE | tools/check-active-source-inventory.py | Shipping network status and toggle services consume guest-offline policy; source-level modified code only, native execution unproved | 🟡 Source étudiée |
 | N18 | P0 | N12 | vendor/encore-active/eden-backports/src/core/hle/service/am/display_layer_manager.cpp | DisplayLayerManager::CreateManagedDisplayLayer; DisplayLayerManager::IsSystemBufferSharingEnabled | SOURCE | tools/check-active-source-inventory.py | Shipping managed/display-shared layers apply visibility, layer-stack mask and z order; shipping source observed, selected runtime and console behavior pending | 🟡 Source étudiée |
+| N19 | P1 | N10 | vendor/encore-active/eden-core/src/core/internal_network/network.cpp | Network::Initialize; Network::InterruptSocketOperations; Network::AcknowledgeInterrupt | SOURCE | tools/check-vendor-consolidation-debt.py | Native socketpair prime and nonblocking interrupt wakeups now maintained as a complete source; exact generator replay, no console behavior proof | 🟡 Source étudiée |
 | N13 | P1 | N10 | vendor/encore-active/eden-backports/src/core/hle/service/sockets/sfdnsres.cpp | SFDNSRES::GetHostByNameRequest; SFDNSRES::GetHostByNameRequestWithOptions | SOURCE | tools/check-active-source-inventory.py | Shipping DNS checks guest policy on both request paths; native policy overlay forces offline; source diff examined, exact runtime owner/console behavior still to prove | 🟡 Source étudiée |
 | N12 | P0 | N03,N06 | vendor/encore-active/eden-backports/src/core/hle/service/nvnflinger/buffer_queue_core.cpp | BufferQueueCore::SignalDequeueCondition; BufferQueueCore::WaitForDequeueCondition | SOURCE | tools/check-active-source-inventory.py | Shipping core substitutes a generation counter for consumable boolean wakeups; source diff examined, exact runtime owner/console behavior still to prove | 🟡 Source étudiée |
 | N07 | P0 | N11 | vendor/encore-active/eden-core/src/core/hle/service/nvdrv/core/container.cpp | Container::OpenSession; Container::CloseSession | SOURCE | tools/check-vendor-consolidation-debt.py | Session retains process until final owner Close after unlocking mutex; exact pinned-generator parity, native event/session teardown unproven | 🟡 Source étudiée |

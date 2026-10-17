@@ -2862,57 +2862,14 @@ if(PS5_NATIVE)
     endif()
     list(REMOVE_ITEM core_sources hle/service/filesystem/filesystem.cpp)
     list(APPEND core_sources "${EDEN_MAINTAINED_NATIVE_FILESYSTEM}")
-    list(REMOVE_ITEM core_sources internal_network/network.cpp)
-    file(READ "${PROJECT_SOURCE_DIR}/src/core/internal_network/network.cpp" network_source)
-    string(REPLACE "namespace Network {" "namespace Network {\n#ifndef IPPROTO_DCCP\nconstexpr int IPPROTO_DCCP = 33;\n#endif" network_source "${network_source}")
-    # Native pipes can be created but fail their first byte write with ENOMEM.
-    # Preserve Eden's poll/write/read wakeup design using a local socket pair.
-    set(native_network_init [=[
-void Initialize() {
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, interrupt_pipe_fd) != 0)
-        throw std::runtime_error("Native wakeup socketpair failed");
-    try {
-        unsigned char value = 0x5a, received = 0;
-        errno = 0;
-        const auto written = send(interrupt_pipe_fd[1], &value, 1, MSG_DONTWAIT);
-        const int write_error = errno;
-        errno = 0;
-        const auto count = recv(interrupt_pipe_fd[0], &received, 1, MSG_DONTWAIT);
-        const int read_error = errno;
-        std::printf("EDEN_SOCKET_PRIME write=%lld write_errno=%d read=%lld read_errno=%d value=%u\n",
-            static_cast<long long>(written), write_error, static_cast<long long>(count), read_error, received);
-        if (written != 1 || count != 1 || received != value)
-            throw std::runtime_error("Native wakeup socketpair initialization failed");
-    } catch (...) {
-        for (int& fd : interrupt_pipe_fd) { close(fd); fd = -1; }
-        throw;
-    }
-}
-
-]=])
-    string(FIND "${network_source}" "void Initialize() {\n    if (pipe(" init_start)
-    string(FIND "${network_source}" "void Finalize() {\n    if (interrupt_pipe_fd" init_end)
-    if(init_start LESS 0 OR init_end LESS init_start)
-        message(FATAL_ERROR "Pinned network initialization changed")
+    # A single checked-in native socket-wakeup implementation; no CMake C++ rewrites.
+    set(EDEN_NATIVE_NETWORK_SOURCE
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/internal_network/network.cpp")
+    if(NOT EXISTS "${EDEN_NATIVE_NETWORK_SOURCE}")
+        message(FATAL_ERROR "Missing maintained native network source")
     endif()
-    string(SUBSTRING "${network_source}" 0 ${init_start} network_prefix)
-    string(SUBSTRING "${network_source}" ${init_end} -1 network_suffix)
-    set(network_source "${network_prefix}${native_network_init}${network_suffix}")
-    set(native_interrupt [=[
-    errno = 0;
-    const auto written = send(interrupt_pipe_fd[1], &value, sizeof(value), MSG_DONTWAIT);
-    const int write_error = errno;
-    // A full nonblocking stream already has a pending wakeup for poll().
-    if (written == -1 && (write_error == EAGAIN || write_error == EWOULDBLOCK)) return;
-    if (written != 1) std::fprintf(stderr, "EDEN_SOCKET_INTERRUPT result=%lld errno=%d\n",
-        static_cast<long long>(written), write_error);
-    ASSERT(written == 1);
-]=])
-    string(REPLACE "    ASSERT(write(interrupt_pipe_fd[1], &value, sizeof(value)) == 1);" "${native_interrupt}" network_source "${network_source}")
-    string(REPLACE "ssize_t ret = read(interrupt_pipe_fd[0], &value, sizeof(value));" "ssize_t ret = recv(interrupt_pipe_fd[0], &value, sizeof(value), MSG_DONTWAIT);" network_source "${network_source}")
-    string(PREPEND network_source "#include <cstdio>\n#include <stdexcept>\n")
-    write_derived("${PORT_BUILD_DIR}/network.cpp" "${network_source}")
-    list(APPEND core_sources "${PORT_BUILD_DIR}/network.cpp")
+    list(REMOVE_ITEM core_sources internal_network/network.cpp)
+    list(APPEND core_sources "${EDEN_NATIVE_NETWORK_SOURCE}")
     # Reuse the getifaddrs path instead of newer BSD route-format helpers.
     # Keep its existing zero-gateway fallback; PS5 route discovery is unqualified.
     list(REMOVE_ITEM core_sources internal_network/network_interface.cpp)
