@@ -12,15 +12,15 @@ natif sélectionnent chacun leur sous-ensemble.
 
 ## Synthèse vérifiable
 
-- **74 appels générateurs** encore dans CMake ; contre **75 juste avant**
-  la migration de `fs_i_file.cpp`. Le corps de la fonction utilitaire
+- **73 appels générateurs** encore dans CMake ; contre **75 juste avant**
+  les migrations de `fs_i_file.cpp` et `fs_i_storage.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
-- **85 lectures `file(READ`** et **232 remplacements
+- **84 lectures `file(READ`** et **231 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
-- La version diagnostique de `IFile::Read` est maintenant une source
-  maintenue dans `vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/`.
-  La comparaison textuelle avec le CMake généré antérieurement est contrôlée
+- Les versions diagnostiques de `IFile::Read` et `IStorage::Read` sont
+  maintenant des sources maintenues dans `vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/`.
+  Leur comparaison textuelle avec le CMake généré antérieurement est contrôlée
   par `tools/check-vendor-consolidation-debt.py`.
 - **Ne pas supprimer à l'aveugle :** les générateurs de ressources (`glsl`),
   les patchs optionnels OFF et les modifications interdépendantes (mémoire,
@@ -63,65 +63,63 @@ dans la version normale.
 | G20 | `${PORT_BUILD_DIR}/physical_core.cpp` | CPU | Unité source | 1016 |
 | G21 | `${PORT_BUILD_DIR}/nvhost_ctrl.cpp` | Services/HLE diag. | Unité source | 1038 |
 | G22 | `${PORT_BUILD_DIR}/buffer_queue_producer.cpp` | Services/HLE diag. | Unité source | 1048 |
-| G23 | `${PORT_BUILD_DIR}/fs_i_filesystem.cpp` | Services/HLE diag. | Unité source | 1089 |
-| G24 | `${PORT_BUILD_DIR}/fs_i_storage.cpp` | Services/HLE diag. | Unité source | 1092 |
-| G25 | `${PORT_BUILD_DIR}/hle_service.cpp` | Services/HLE diag. | Unité source | 1110 |
-| G26 | `${PORT_BUILD_DIR}/svc_ipc.cpp` | Services/HLE diag. | Unité source | 1122 |
-| G27 | `${PORT_BUILD_DIR}/memory.cpp` | Mémoire/chargement | Unité source | 1136 |
-| G28 | `${eden_native_memory_tu}` | Mémoire/chargement | Cible variable | 1286 |
-| G29 | `${PORT_BUILD_DIR}/core.cpp` | Mémoire/chargement | Unité source | 1367 |
-| G30 | `${PORT_BUILD_DIR}/nso.cpp` | Mémoire/chargement | Unité source | 1442 |
-| G31 | `${PORT_BUILD_DIR}/fsmitm_romfsbuild.cpp` | Mémoire/chargement | Unité source | 1456 |
-| G32 | `${PORT_BUILD_DIR}/ips_layer.cpp` | Mémoire/chargement | Unité source | 1560 |
-| G33 | `${PORT_BUILD_DIR}/patch_manager.cpp` | Mémoire/chargement | Unité source | 1574 |
-| G34 | `${PORT_BUILD_DIR}/vi_conductor.cpp` | Kernel/IPC/entrées | Unité source | 1613 |
-| G35 | `${PORT_BUILD_DIR}/nvdrv_container.cpp` | Kernel/IPC/entrées | Unité source | 1629 |
-| G36 | `${PORT_BUILD_DIR}/npad_pause_diag.cpp` | Kernel/IPC/entrées | Unité source | 1692 |
-| G37 | `${PORT_BUILD_DIR}/include/${ioctl_header}` | Kernel/IPC/entrées | Cible variable | 1709 |
-| G38 | `${PORT_BUILD_DIR}/k_page_table_base.cpp` | Kernel/IPC/entrées | Unité source | 1748 |
-| G39 | `${PORT_BUILD_DIR}/k_process.cpp` | Kernel/IPC/entrées | Unité source | 1971 |
-| G40 | `${PORT_BUILD_DIR}/include/${server_header}` | Kernel/IPC/entrées | Cible variable | 1988 |
-| G41 | `${PORT_BUILD_DIR}/server_manager.cpp` | Kernel/IPC/entrées | Unité source | 2045 |
-| G42 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 2058 |
-| G43 | `${PORT_BUILD_DIR}/emulated_controller.cpp` | Kernel/IPC/entrées | Unité source | 2097 |
-| G44 | `${PORT_BUILD_DIR}/npad.cpp` | Kernel/IPC/entrées | Unité source | 2125 |
-| G45 | `${PORT_BUILD_DIR}/sink_stream.cpp` | Audio/graphique | Unité source | 2155 |
-| G46 | `${PORT_BUILD_DIR}/video_core.cpp` | Audio/graphique | Unité source | 2183 |
-| G47 | `${eden_gpu_span_tu}` | Audio/graphique | Cible variable | 2203 |
-| G48 | `${PORT_BUILD_DIR}/gl_buffer_cache.cpp` | Audio/graphique | Unité source | 2247 |
-| G49 | `${PORT_BUILD_DIR}/gl_query_cache.cpp` | Audio/graphique | Unité source | 2261 |
-| G50 | `${PORT_BUILD_DIR}/gl_texture_cache.cpp` | Audio/graphique | Unité source | 2283 |
-| G51 | `${PORT_BUILD_DIR}/gl_rasterizer.cpp` | Audio/graphique | Unité source | 2295 |
-| G52 | `${PORT_BUILD_DIR}/renderer_opengl.cpp` | Audio/graphique | Unité source | 2299 |
-| G53 | `${PORT_BUILD_DIR}/include/common/bounded_threadsafe_queue.h` | Audio/graphique | En-tête source | 2359 |
-| G54 | `${PORT_BUILD_DIR}/gpu_thread.cpp` | GPU/vidéo | Unité source | 2508 |
-| G55 | `${PORT_BUILD_DIR}/include/video_core/gpu_thread.h` | GPU/vidéo | En-tête source | 2513 |
-| G56 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 2564 |
-| G57 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 2660 |
-| G58 | `${PORT_BUILD_DIR}/maxwell_3d.cpp` | GPU/vidéo | Unité source | 2680 |
-| G59 | `${PORT_BUILD_DIR}/shader_environment.cpp` | GPU/vidéo | Unité source | 2695 |
-| G60 | `${PORT_BUILD_DIR}/texture_cache_util.cpp` | GPU/vidéo | Unité source | 2736 |
-| G61 | `${PORT_BUILD_DIR}/path_util.cpp` | Runtime/FS/réseau | Unité source | 2758 |
-| G62 | `${PORT_BUILD_DIR}/thread.cpp` | Runtime/FS/réseau | Unité source | 2763 |
-| G63 | `${PORT_BUILD_DIR}/cpu_features.cpp` | Runtime/FS/réseau | Unité source | 2777 |
-| G64 | `${PORT_BUILD_DIR}/fs.cpp` | Runtime/FS/réseau | Unité source | 2783 |
-| G65 | `${PORT_BUILD_DIR}/audited_guest_dns.cpp` | Runtime/FS/réseau | Unité source | 2863 |
-| G66 | `${PORT_BUILD_DIR}/audited_guest_bsd.cpp` | Runtime/FS/réseau | Unité source | 2925 |
-| G67 | `${PORT_BUILD_DIR}/include/core/file_sys/bis_factory.h` | Runtime/FS/réseau | En-tête source | 2932 |
-| G68 | `${PORT_BUILD_DIR}/bis_factory.cpp` | Runtime/FS/réseau | Unité source | 2943 |
-| G69 | `${PORT_BUILD_DIR}/filesystem.cpp` | Runtime/FS/réseau | Unité source | 2952 |
-| G70 | `${PORT_BUILD_DIR}/network.cpp` | Runtime/FS/réseau | Unité source | 3004 |
-| G71 | `${PORT_BUILD_DIR}/network_interface.cpp` | Runtime/FS/réseau | Unité source | 3013 |
-| G72 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 3066 |
-| G73 | `${eden_app_crt}` | Runtime/FS/réseau | Cible variable | 3078 |
-| G74 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 3263 |
+| G23 | `${PORT_BUILD_DIR}/fs_i_filesystem.cpp` | Services/HLE diag. | Unité source | 1086 |
+| G24 | `${PORT_BUILD_DIR}/hle_service.cpp` | Services/HLE diag. | Unité source | 1106 |
+| G25 | `${PORT_BUILD_DIR}/svc_ipc.cpp` | Services/HLE diag. | Unité source | 1118 |
+| G26 | `${PORT_BUILD_DIR}/memory.cpp` | Mémoire/chargement | Unité source | 1132 |
+| G27 | `${eden_native_memory_tu}` | Mémoire/chargement | Cible variable | 1282 |
+| G28 | `${PORT_BUILD_DIR}/core.cpp` | Mémoire/chargement | Unité source | 1363 |
+| G29 | `${PORT_BUILD_DIR}/nso.cpp` | Mémoire/chargement | Unité source | 1438 |
+| G30 | `${PORT_BUILD_DIR}/fsmitm_romfsbuild.cpp` | Mémoire/chargement | Unité source | 1452 |
+| G31 | `${PORT_BUILD_DIR}/ips_layer.cpp` | Mémoire/chargement | Unité source | 1556 |
+| G32 | `${PORT_BUILD_DIR}/patch_manager.cpp` | Mémoire/chargement | Unité source | 1570 |
+| G33 | `${PORT_BUILD_DIR}/vi_conductor.cpp` | Kernel/IPC/entrées | Unité source | 1609 |
+| G34 | `${PORT_BUILD_DIR}/nvdrv_container.cpp` | Kernel/IPC/entrées | Unité source | 1625 |
+| G35 | `${PORT_BUILD_DIR}/npad_pause_diag.cpp` | Kernel/IPC/entrées | Unité source | 1688 |
+| G36 | `${PORT_BUILD_DIR}/include/${ioctl_header}` | Kernel/IPC/entrées | Cible variable | 1705 |
+| G37 | `${PORT_BUILD_DIR}/k_page_table_base.cpp` | Kernel/IPC/entrées | Unité source | 1744 |
+| G38 | `${PORT_BUILD_DIR}/k_process.cpp` | Kernel/IPC/entrées | Unité source | 1967 |
+| G39 | `${PORT_BUILD_DIR}/include/${server_header}` | Kernel/IPC/entrées | Cible variable | 1984 |
+| G40 | `${PORT_BUILD_DIR}/server_manager.cpp` | Kernel/IPC/entrées | Unité source | 2041 |
+| G41 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 2054 |
+| G42 | `${PORT_BUILD_DIR}/emulated_controller.cpp` | Kernel/IPC/entrées | Unité source | 2093 |
+| G43 | `${PORT_BUILD_DIR}/npad.cpp` | Kernel/IPC/entrées | Unité source | 2121 |
+| G44 | `${PORT_BUILD_DIR}/sink_stream.cpp` | Audio/graphique | Unité source | 2151 |
+| G45 | `${PORT_BUILD_DIR}/video_core.cpp` | Audio/graphique | Unité source | 2179 |
+| G46 | `${eden_gpu_span_tu}` | Audio/graphique | Cible variable | 2199 |
+| G47 | `${PORT_BUILD_DIR}/gl_buffer_cache.cpp` | Audio/graphique | Unité source | 2243 |
+| G48 | `${PORT_BUILD_DIR}/gl_query_cache.cpp` | Audio/graphique | Unité source | 2257 |
+| G49 | `${PORT_BUILD_DIR}/gl_texture_cache.cpp` | Audio/graphique | Unité source | 2279 |
+| G50 | `${PORT_BUILD_DIR}/gl_rasterizer.cpp` | Audio/graphique | Unité source | 2291 |
+| G51 | `${PORT_BUILD_DIR}/renderer_opengl.cpp` | Audio/graphique | Unité source | 2295 |
+| G52 | `${PORT_BUILD_DIR}/include/common/bounded_threadsafe_queue.h` | Audio/graphique | En-tête source | 2355 |
+| G53 | `${PORT_BUILD_DIR}/gpu_thread.cpp` | GPU/vidéo | Unité source | 2504 |
+| G54 | `${PORT_BUILD_DIR}/include/video_core/gpu_thread.h` | GPU/vidéo | En-tête source | 2509 |
+| G55 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 2560 |
+| G56 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 2656 |
+| G57 | `${PORT_BUILD_DIR}/maxwell_3d.cpp` | GPU/vidéo | Unité source | 2676 |
+| G58 | `${PORT_BUILD_DIR}/shader_environment.cpp` | GPU/vidéo | Unité source | 2691 |
+| G59 | `${PORT_BUILD_DIR}/texture_cache_util.cpp` | GPU/vidéo | Unité source | 2732 |
+| G60 | `${PORT_BUILD_DIR}/path_util.cpp` | Runtime/FS/réseau | Unité source | 2754 |
+| G61 | `${PORT_BUILD_DIR}/thread.cpp` | Runtime/FS/réseau | Unité source | 2759 |
+| G62 | `${PORT_BUILD_DIR}/cpu_features.cpp` | Runtime/FS/réseau | Unité source | 2773 |
+| G63 | `${PORT_BUILD_DIR}/fs.cpp` | Runtime/FS/réseau | Unité source | 2779 |
+| G64 | `${PORT_BUILD_DIR}/audited_guest_dns.cpp` | Runtime/FS/réseau | Unité source | 2859 |
+| G65 | `${PORT_BUILD_DIR}/audited_guest_bsd.cpp` | Runtime/FS/réseau | Unité source | 2921 |
+| G66 | `${PORT_BUILD_DIR}/include/core/file_sys/bis_factory.h` | Runtime/FS/réseau | En-tête source | 2928 |
+| G67 | `${PORT_BUILD_DIR}/bis_factory.cpp` | Runtime/FS/réseau | Unité source | 2939 |
+| G68 | `${PORT_BUILD_DIR}/filesystem.cpp` | Runtime/FS/réseau | Unité source | 2948 |
+| G69 | `${PORT_BUILD_DIR}/network.cpp` | Runtime/FS/réseau | Unité source | 3000 |
+| G70 | `${PORT_BUILD_DIR}/network_interface.cpp` | Runtime/FS/réseau | Unité source | 3009 |
+| G71 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 3062 |
+| G72 | `${eden_app_crt}` | Runtime/FS/réseau | Cible variable | 3074 |
+| G73 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 3259 |
 <!-- OVERRIDE_GENERATORS_END -->
 
 ## Prochain ordre de migration
 
 Le bloc `EDEN_DEV_PROFILE` de `nvhost_ctrl.cpp`,
-`buffer_queue_producer.cpp`, `fs_i_storage.cpp`,
-`fs_i_filesystem.cpp`, `hle_service.cpp`, puis `svc_ipc.cpp` forme
+`buffer_queue_producer.cpp`, `fs_i_filesystem.cpp`, `hle_service.cpp`, puis `svc_ipc.cpp` forme
 un groupe **d'observation** encore généré ; le déplacer exige de conserver
 les points d'échantillonnage, les compteurs et le comportement hors diagnostic.
 Le bloc ordinaire CPU/JIT et les correctifs GPU synchronisés se migrent
