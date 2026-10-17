@@ -184,6 +184,80 @@ et plusieurs sorties sont explicitement conditionnées.
 | M21 | `headless/scalar-memory.cmake` | `${PORT_BUILD_DIR}/scalar_emit_x64_data_processing.cpp` | Emetteur scalaire |
 <!-- MODULE_GENERATORS_END -->
 
+## Patches de sources hors générateurs CMake
+
+**46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
+Ils ne sont comptés ni dans les **87 sites** `write_derived()`, ni dans
+les **7 modules indirects** ci-dessous :
+
+- **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,
+  sous contrôle d'identité et de hash. Il modifie **l'arbre Eden fourni
+  en argument** via `git apply` ; il ne s'agit pas d'un sélecteur de
+  C++ suivi dans `vendor/encore-active`. L'appel à
+  `eden-dummy-thread-waits.patch` est expérimental et OFF par défaut.
+- **2 patches cœur** (`eden-dynarmic-icache-coherence.patch` et
+  `eden-sm-host-wait.patch`) sont installés séparément par
+  `tools/install-active-core-backports.py`, qui prépare cinq fichiers
+  dans l'arbre actif à partir d'une base épinglée.
+
+Ces 46 éléments sont des **artefacts de patches**, et non 46 fichiers
+compilés différents. Certains modifient plusieurs sources, d'autres
+sont conditionnels ; ils ne doivent pas être déplacés en bloc sans
+respecter les dépendances et les règles d'installation. La cible reste
+de matérialiser les sources maintenues dans `vendor/encore-active`
+et de limiter CMake à la sélection.
+
+<!-- SOURCE_PATCH_REPLAYS_START -->
+| ID | Fichier de patch | Mécanisme d'installation | Ligne du script de replay | Statut |
+| --- | --- | --- | ---: | --- |
+| P01 | `eden-4473-4477.patch` | `apply-eden-backports.sh` | 256 | Replay avec validation |
+| P02 | `eden-nvnflinger-dequeue-wakeup.patch` | `apply-eden-backports.sh` | 258 | Replay avec validation |
+| P03 | `eden-4436-spinlock-mutex.patch` | `apply-eden-backports.sh` | 259 | Replay avec validation |
+| P04 | `eden-fw23-services.patch` | `apply-eden-backports.sh` | 260 | Replay avec validation |
+| P05 | `eden-runtime-hid.patch` | `apply-eden-backports.sh` | 261 | Replay avec validation |
+| P06 | `eden-fc27-hle-compat.patch` | `apply-eden-backports.sh` | 283 | Replay avec validation |
+| P07 | `eden-ps5-guest-offline.patch` | `apply-eden-backports.sh` | 313 | Replay avec validation |
+| P08 | `eden-ps5-guest-domain-filter.patch` | `apply-eden-backports.sh` | 333 | Replay avec validation |
+| P09 | `eden-dummy-thread-waits.patch` | `apply-eden-backports.sh` | 339 | Expérimental OFF |
+| P10 | `eden-ps5-hid-watchdog.patch` | `apply-eden-backports.sh` | 369 | Replay avec validation |
+| P11 | `eden-ps5-net-user-agent.patch` | `apply-eden-backports.sh` | 371 | Replay avec validation |
+| P12 | `eden-ps5-launcher-fast-http.patch` | `apply-eden-backports.sh` | 377 | Replay avec validation |
+| P13 | `eden-ps5-bounded-logging.patch` | `apply-eden-backports.sh` | 378 | Replay avec validation |
+| P14 | `eden-ps5-crash-only-logging.patch` | `apply-eden-backports.sh` | 401 | Replay avec validation |
+| P15 | `eden-ps5-gpu-memory-mapping.patch` | `apply-eden-backports.sh` | 442 | Replay avec validation |
+| P16 | `eden-ps5-gpu-remap-reverse.patch` | `apply-eden-backports.sh` | 456 | Replay avec validation |
+| P17 | `eden-ps5-gpu-unmap-reverse-guard.patch` | `apply-eden-backports.sh` | 481 | Replay avec validation |
+| P18 | `eden-ps5-gpu-multi-missing-guard.patch` | `apply-eden-backports.sh` | 494 | Replay avec validation |
+| P19 | `eden-ps5-gpu-map-bounds.patch` | `apply-eden-backports.sh` | 507 | Replay avec validation |
+| P20 | `eden-ps5-gpu-physical-capacity.patch` | `apply-eden-backports.sh` | 520 | Replay avec validation |
+| P21 | `eden-ps5-gpu-remap-cache-invalidate.patch` | `apply-eden-backports.sh` | 535 | Replay avec validation |
+| P22 | `eden-ps5-gpu-empty-multi-head.patch` | `apply-eden-backports.sh` | 547 | Replay avec validation |
+| P23 | `eden-ps5-gpu-physical-read-bounds.patch` | `apply-eden-backports.sh` | 571 | Replay avec validation |
+| P24 | `eden-ps5-gpu-block-flush-bounds.patch` | `apply-eden-backports.sh` | 593 | Replay avec validation |
+| P25 | `eden-ps5-gpu-span-physical-bounds.patch` | `apply-eden-backports.sh` | 620 | Replay avec validation |
+| P26 | `eden-ps5-gpu-reverse-inline-bounds.patch` | `apply-eden-backports.sh` | 636 | Replay avec validation |
+| P27 | `eden-ps5-gpu-atomic-forward-table.patch` | `apply-eden-backports.sh` | 668 | Replay avec validation |
+| P28 | `eden-ps5-gpu-atomic-reverse-table.patch` | `apply-eden-backports.sh` | 695 | Replay avec validation |
+| P29 | `eden-ps5-gpu-asid-lifetime-guard.patch` | `apply-eden-backports.sh` | 732 | Replay avec validation |
+| P30 | `eden-ps5-gpu-asid-no-reuse.patch` | `apply-eden-backports.sh` | 760 | Replay avec validation |
+| P31 | `eden-ps5-guest-mapping-diagnostics.patch` | `apply-eden-backports.sh` | 773 | Replay avec validation |
+| P32 | `eden-ps5-guest-walk.patch` | `apply-eden-backports.sh` | 786 | Replay avec validation |
+| P33 | `eden-ps5-guest-zero-alias.patch` | `apply-eden-backports.sh` | 801 | Replay avec validation |
+| P34 | `eden-ps5-guest-map-null-backing.patch` | `apply-eden-backports.sh` | 823 | Replay avec validation |
+| P35 | `eden-ps5-guest-span.patch` | `apply-eden-backports.sh` | 837 | Replay avec validation |
+| P36 | `eden-ps5-nvmap-alloc-rollback.patch` | `apply-eden-backports.sh` | 870 | Replay avec validation |
+| P37 | `eden-ps5-texture-descriptor-residency.patch` | `apply-eden-backports.sh` | 897 | Replay avec validation |
+| P38 | `eden-ps5-texture-null-view-remap.patch` | `apply-eden-backports.sh` | 936 | Replay avec validation |
+| P39 | `eden-ps5-feedback-loop-view-key.patch` | `apply-eden-backports.sh` | 965 | Replay avec validation |
+| P40 | `eden-ps5-texture-shared-null-new-slot.patch` | `apply-eden-backports.sh` | 986 | Replay avec validation |
+| P41 | `eden-ps5-feedback-loop-no-depth-fastpath.patch` | `apply-eden-backports.sh` | 1007 | Replay avec validation |
+| P42 | `eden-ps5-adjacent-valid-view-reuse.patch` | `apply-eden-backports.sh` | 1027 | Replay avec validation |
+| P43 | `eden-ps5-alias-current-tick-fastpath.patch` | `apply-eden-backports.sh` | 1049 | Replay avec validation |
+| P44 | `eden-ps5-software-bilinear-source-coordinates.patch` | `apply-eden-backports.sh` | 1066 | Replay avec validation |
+| P45 | `eden-dynarmic-icache-coherence.patch` | `install-active-core-backports.py` | — | Installation cœur active |
+| P46 | `eden-sm-host-wait.patch` | `install-active-core-backports.py` | — | Installation cœur active |
+<!-- SOURCE_PATCH_REPLAYS_END -->
+
 ## Overrides indirects sans `write_derived()` local
 
 Ces **7 modules supplémentaires** ne sont pas inclus dans le total de
