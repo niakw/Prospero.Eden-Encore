@@ -64,7 +64,7 @@ Launcher::Launcher(Services &services, Textures &textures, const Fonts &fonts, b
     read_home();
     settings_.visible = 7;
     settings_.pitch = 88.0f;
-    settings_.reset(7, 0);
+    settings_.reset(8, 0);
     section_.snap(1.0f);
     detail_.snap(1.0f);
     // Defer the welcome/recovery cue and ROM enumeration until Home
@@ -364,11 +364,11 @@ void Launcher::press(Key key)
     switch (screen_)
     {
     case Screen::home:
-        return press_home(key);
+        return prefs_.ui_theme == 1 ? press_switch_home(key) : press_home(key);
     case Screen::library:
-        return press_library(key);
+        return prefs_.ui_theme == 1 ? press_switch_library(key) : press_library(key);
     case Screen::settings:
-        return press_settings(key);
+        return prefs_.ui_theme == 1 ? press_switch_settings(key) : press_settings(key);
     case Screen::files:
         return press_files(key);
     case Screen::language:
@@ -505,17 +505,17 @@ void Launcher::draw_screen(Canvas &c, Screen screen)
     switch (screen)
     {
     case Screen::home:
-        return draw_home(c);
+        return prefs_.ui_theme == 1 ? draw_switch_home(c) : draw_home(c);
     case Screen::library:
-        return draw_library(c);
+        return prefs_.ui_theme == 1 ? draw_switch_library(c) : draw_library(c);
     case Screen::settings:
-        return draw_settings(c);
+        return prefs_.ui_theme == 1 ? draw_switch_settings(c) : draw_settings(c);
     case Screen::files:
-        return draw_files(c);
+        return prefs_.ui_theme == 1 ? draw_switch_files(c) : draw_files(c);
     case Screen::language:
-        return draw_language(c);
+        return prefs_.ui_theme == 1 ? draw_switch_language(c) : draw_language(c);
     case Screen::about:
-        return draw_about(c);
+        return prefs_.ui_theme == 1 ? draw_switch_about(c) : draw_about(c);
     }
 }
 
@@ -1012,7 +1012,10 @@ void Launcher::draw_launch(Canvas &c)
 void Launcher::draw(gfx::DrawList &list)
 {
     Canvas c{list, fonts_, textures_, backdrop_, time_};
-    backdrop_.draw(list, textures_, dim_.value);
+    if (prefs_.ui_theme == 1 && selected_game_.empty())
+        list.rounded_rect(kScreen, 0.0f, gfx::Color::rgb(0xf7f7f7));
+    else
+        backdrop_.draw(list, textures_, dim_.value);
 
     // During the game handoff only the selected game's cinematic Hero and
     // rotating box are drawn, not Home/Library controls behind a black scrim.
@@ -1050,15 +1053,20 @@ void Launcher::draw(gfx::DrawList &list)
         const float opened = tween::clamp01(modal_open_.value);
         list.rounded_rect(kScreen, 0.0f, theme::kScrim.with_alpha(0.69f * opened));
         if (modal_shown_ == Modal::game)
-            draw_game(c, opened);
+            prefs_.ui_theme == 1 ? draw_switch_game(c, opened) : draw_game(c, opened);
         else if (modal_shown_ == Modal::mods)
-            draw_mods(c, opened);
+            prefs_.ui_theme == 1 ? draw_switch_mods(c, opened) : draw_mods(c, opened);
         else if (modal_shown_ == Modal::mapping)
-            draw_mapping(c, opened);
+            prefs_.ui_theme == 1 ? draw_switch_mapping(c, opened) : draw_mapping(c, opened);
+        else if (prefs_.ui_theme == 1)
+            draw_switch_dialog(c, modal_shown_, opened);
         else
             draw_dialog(c, modal_shown_, opened);
     }
-    draw_confirmation(c);
+    if (prefs_.ui_theme == 1)
+        draw_switch_confirmation(c);
+    else
+        draw_confirmation(c);
     list.pop_transform();
     if (launching)
         draw_launch(c);

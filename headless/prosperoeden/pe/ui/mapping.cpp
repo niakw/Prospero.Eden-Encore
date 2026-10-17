@@ -66,6 +66,13 @@ void Launcher::press_mapping(Key key)
 
     if (key == Key::circle)
     {
+        // The Switch HOME controller shortcut opens this editor directly,
+        // without a Controls settings dialog behind it. Back must return
+        // HOME rather than manufacturing an unrelated settings modal.
+        if (!mapping_for_game_ && prefs_.ui_theme == 1 && screen_ == Screen::home) {
+            close_modal();
+            return;
+        }
         modal_ = modal_shown_ = mapping_for_game_ ? Modal::game : Modal::controls;
         option_ = mapping_for_game_ ? 9 : 1;
         option_cursor_.snap(dialog_row_top(modal_, option_));

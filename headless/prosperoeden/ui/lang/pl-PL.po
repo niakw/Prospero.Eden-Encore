@@ -1606,8 +1606,6 @@ msgid "Close"
 msgstr "Zamknij"
 
 #: pe/ui/library.cpp
-msgid "Down: view back cover"
-msgstr "W dół: pokaż tył okładki"
 
 #: pe/ui/library.cpp
 msgid "Zoom out"
@@ -1620,3 +1618,145 @@ msgstr "Przybliż"
 #: pe/ui/library.cpp
 msgid "Move cover"
 msgstr "Przesuń okładkę"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Appearance"
+msgstr "Wygląd"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "APPEARANCE"
+msgstr "WYGLĄD"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "THEME"
+msgstr "MOTYW"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Theme"
+msgstr "Motyw"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "DEFAULT"
+msgstr "DOMYŚLNY"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "PREVIEW"
+msgstr "PODGLĄD"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "System Settings"
+msgstr "Ustawienia systemowe"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "All Software"
+msgstr "Wszystkie programy"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Active"
+msgstr "Aktywny"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Configure"
+msgstr "Konfiguruj"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Keys found"
+msgstr "Znaleziono klucze"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Keys missing"
+msgstr "Brak kluczy"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Games found"
+msgstr "Znaleziono gry"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "No games found"
+msgstr "Nie znaleziono gier"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Game files"
+msgstr "Przeglądaj foldery · programy"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Back to HOME"
+msgstr "Wstecz · Ekran główny"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose your preferred language"
+msgstr "Wybierz · język"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Select a settings category"
+msgstr "Wybierz · kategorie"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Software options: Triangle"
+msgstr "programy · Triangle"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Browse folders: D-pad / Open: A"
+msgstr "Przeglądaj foldery · D-pad / A"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Encore home screen"
+msgstr "Ekran główny · Encore"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Switch home screen"
+msgstr "Ekran główny · Switch"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Original Encore interface"
+msgstr "interfejs · Encore"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Switch-style interface"
+msgstr "interfejs · Switch"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose Encore or Switch. Your games and control mapping stay unchanged."
+msgstr "Wybierz · Encore / Switch. programy / Sterowanie — bez zmian."
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose the launcher interface without changing game or controller settings."
+msgstr "Wybierz · interfejs. programy / Sterowanie — bez zmian."
+
+#: pe/ui/switch_theme.cpp
+msgid "About"
+msgstr "Informacje"
+
+#: pe/ui/switch_theme.cpp
+msgid "Multiplayer"
+msgstr "Wieloosobowa"
+
+#: pe/ui/switch_theme.cpp
+msgid "Volume"
+msgstr "Głośność"
+
+#: pe/ui/switch_theme.cpp
+msgid "Controller profile"
+msgstr "Profil kontrolera"
+
+#: pe/ui/switch_theme.cpp
+msgid "Cache"
+msgstr "Pamięć podręczna"
+
+#: pe/ui/switch_theme.cpp
+msgid "Manage"
+msgstr "Zarządzaj"
+
+#: pe/ui/switch_theme.cpp
+msgid "Open folders"
+msgstr "Otwórz foldery"
+
+#: pe/ui/switch_theme.cpp
+msgid "Filter"
+msgstr "Filtr"
+
+#: pe/ui/switch_theme.cpp
+msgid "Eden Encore"
+msgstr "Eden Encore"

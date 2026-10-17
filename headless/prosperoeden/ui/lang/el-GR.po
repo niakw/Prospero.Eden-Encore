@@ -1606,8 +1606,6 @@ msgid "Close"
 msgstr "Κλείσιμο"
 
 #: pe/ui/library.cpp
-msgid "Down: view back cover"
-msgstr "Κάτω: προβολή οπισθόφυλλου"
 
 #: pe/ui/library.cpp
 msgid "Zoom out"
@@ -1620,3 +1618,145 @@ msgstr "Μεγέθυνση"
 #: pe/ui/library.cpp
 msgid "Move cover"
 msgstr "Μετακίνηση εξωφύλλου"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Appearance"
+msgstr "Εμφάνιση"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "APPEARANCE"
+msgstr "ΕΜΦΆΝΙΣΗ"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "THEME"
+msgstr "ΘΈΜΑ"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Theme"
+msgstr "Θέμα"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "DEFAULT"
+msgstr "ΠΡΟΕΠΙΛΟΓΉ"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "PREVIEW"
+msgstr "ΠΡΟΕΠΙΣΚΌΠΗΣΗ"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "System Settings"
+msgstr "Ρυθμίσεις συστήματος"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "All Software"
+msgstr "Όλο το λογισμικό"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Active"
+msgstr "Ενεργό"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Configure"
+msgstr "Ρύθμιση"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Keys found"
+msgstr "Βρέθηκαν κλειδιά"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Keys missing"
+msgstr "Λείπουν κλειδιά"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Games found"
+msgstr "Βρέθηκαν παιχνίδια"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "No games found"
+msgstr "Δεν βρέθηκαν παιχνίδια"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Game files"
+msgstr "Περιήγηση φακέλων · λογισμικό"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Back to HOME"
+msgstr "Πίσω · Αρχική"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose your preferred language"
+msgstr "Επιλέξτε · γλώσσα"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Select a settings category"
+msgstr "Επιλέξτε · κατηγορίες"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Software options: Triangle"
+msgstr "λογισμικό · Triangle"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Browse folders: D-pad / Open: A"
+msgstr "Περιήγηση φακέλων · D-pad / A"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Encore home screen"
+msgstr "Αρχική · Encore"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Switch home screen"
+msgstr "Αρχική · Switch"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Original Encore interface"
+msgstr "περιβάλλον · Encore"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Switch-style interface"
+msgstr "περιβάλλον · Switch"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose Encore or Switch. Your games and control mapping stay unchanged."
+msgstr "Επιλέξτε · Encore / Switch. λογισμικό / Χειρισμός — χωρίς αλλαγές."
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose the launcher interface without changing game or controller settings."
+msgstr "Επιλέξτε · περιβάλλον. λογισμικό / Χειρισμός — χωρίς αλλαγές."
+
+#: pe/ui/switch_theme.cpp
+msgid "About"
+msgstr "Σχετικά"
+
+#: pe/ui/switch_theme.cpp
+msgid "Multiplayer"
+msgstr "Πολλοί παίκτες"
+
+#: pe/ui/switch_theme.cpp
+msgid "Volume"
+msgstr "Ένταση"
+
+#: pe/ui/switch_theme.cpp
+msgid "Controller profile"
+msgstr "Προφίλ χειριστηρίου"
+
+#: pe/ui/switch_theme.cpp
+msgid "Cache"
+msgstr "Προσωρινή μνήμη"
+
+#: pe/ui/switch_theme.cpp
+msgid "Manage"
+msgstr "Διαχείριση"
+
+#: pe/ui/switch_theme.cpp
+msgid "Open folders"
+msgstr "Άνοιγμα φακέλων"
+
+#: pe/ui/switch_theme.cpp
+msgid "Filter"
+msgstr "Φίλτρο"
+
+#: pe/ui/switch_theme.cpp
+msgid "Eden Encore"
+msgstr "Eden Encore"

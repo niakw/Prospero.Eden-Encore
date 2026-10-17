@@ -1606,8 +1606,6 @@ msgid "Close"
 msgstr "Bezárás"
 
 #: pe/ui/library.cpp
-msgid "Down: view back cover"
-msgstr "Le: hátlap megtekintése"
 
 #: pe/ui/library.cpp
 msgid "Zoom out"
@@ -1620,3 +1618,145 @@ msgstr "Nagyítás"
 #: pe/ui/library.cpp
 msgid "Move cover"
 msgstr "Borító mozgatása"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Appearance"
+msgstr "Megjelenés"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "APPEARANCE"
+msgstr "MEGJELENÉS"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "THEME"
+msgstr "TÉMA"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Theme"
+msgstr "Téma"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "DEFAULT"
+msgstr "ALAPÉRTELMEZETT"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "PREVIEW"
+msgstr "ELŐNÉZET"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "System Settings"
+msgstr "Rendszerbeállítások"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "All Software"
+msgstr "Összes szoftver"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Active"
+msgstr "Aktív"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Configure"
+msgstr "Beállítás"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Keys found"
+msgstr "Kulcsok megtalálva"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Keys missing"
+msgstr "Hiányzó kulcsok"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Games found"
+msgstr "Játékok megtalálva"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "No games found"
+msgstr "Nincsenek játékok"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Game files"
+msgstr "Mappák böngészése · szoftverek"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Back to HOME"
+msgstr "Vissza · Kezdőlap"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose your preferred language"
+msgstr "Válassz · nyelv"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Select a settings category"
+msgstr "Válassz · kategóriák"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Software options: Triangle"
+msgstr "szoftverek · Triangle"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Browse folders: D-pad / Open: A"
+msgstr "Mappák böngészése · D-pad / A"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Encore home screen"
+msgstr "Kezdőlap · Encore"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Switch home screen"
+msgstr "Kezdőlap · Switch"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Original Encore interface"
+msgstr "felület · Encore"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Switch-style interface"
+msgstr "felület · Switch"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose Encore or Switch. Your games and control mapping stay unchanged."
+msgstr "Válassz · Encore / Switch. szoftverek / Irányítás — változatlan."
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose the launcher interface without changing game or controller settings."
+msgstr "Válassz · felület. szoftverek / Irányítás — változatlan."
+
+#: pe/ui/switch_theme.cpp
+msgid "About"
+msgstr "Névjegy"
+
+#: pe/ui/switch_theme.cpp
+msgid "Multiplayer"
+msgstr "Többjátékos"
+
+#: pe/ui/switch_theme.cpp
+msgid "Volume"
+msgstr "Hangerő"
+
+#: pe/ui/switch_theme.cpp
+msgid "Controller profile"
+msgstr "Vezérlőprofil"
+
+#: pe/ui/switch_theme.cpp
+msgid "Cache"
+msgstr "Gyorsítótár"
+
+#: pe/ui/switch_theme.cpp
+msgid "Manage"
+msgstr "Kezelés"
+
+#: pe/ui/switch_theme.cpp
+msgid "Open folders"
+msgstr "Mappák megnyitása"
+
+#: pe/ui/switch_theme.cpp
+msgid "Filter"
+msgstr "Szűrő"
+
+#: pe/ui/switch_theme.cpp
+msgid "Eden Encore"
+msgstr "Eden Encore"
