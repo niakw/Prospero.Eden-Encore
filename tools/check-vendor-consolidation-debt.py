@@ -334,6 +334,34 @@ for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.c
 assert len(recorded) + len(module_recorded) == 89
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
+# Separate ledger: these modules modify source without calling write_derived
+# locally. Two materialize an output directly; five mutate source variables
+# that a root CMake generator subsequently writes. Never count them as extra
+# write_derived call sites, but never silently drop them from the inventory.
+indirect_begin, indirect_end = "<!-- INDIRECT_OVERRIDES_START -->", "<!-- INDIRECT_OVERRIDES_END -->"
+assert inventory.count(indirect_begin) == inventory.count(indirect_end) == 1
+indirect_recorded = re.findall(
+    r"^\| X\d\d \| \x60([^\x60]+)\x60 \|",
+    inventory.split(indirect_begin)[1].split(indirect_end)[0], re.M)
+indirect_expected = (
+    ("headless/macro_recovery.cmake", ("file(WRITE ", "configure_file(")),
+    ("headless/slot_vector_recovery.cmake", ("file(WRITE ", "configure_file(")),
+    ("headless/checked-fastmem.cmake", ("string(REPLACE", "memory_source", "memory_emitter")),
+    ("headless/native_gpu_granular_bounds.cmake", ("string(REPLACE", "eden_gpu_span_src")),
+    ("headless/native_guest_range_overflow.cmake", ("string(REPLACE", "eden_cpu_memory")),
+    ("headless/native_jit_memory_read_guard.cmake", ("string(REPLACE", "wrapper")),
+    ("headless/physical_core_interrupt_atomic.cmake", ("string(REPLACE", "physical_core_source")),
+)
+assert indirect_recorded == [entry[0] for entry in indirect_expected], (
+    "Unlisted or reordered indirect CMake override; recheck files and symbols")
+for module, required in indirect_expected:
+    content = (root / module).read_text()
+    assert all(token in content for token in required), ("indirect override changed", module)
+assert len(indirect_recorded) == 7
+print(f"VENDOR_INDIRECT_OVERRIDE_INVENTORY_PASS modules={len(indirect_recorded)} (not generator sites)")
+
+
+
 
 
 print(f"VENDOR_SOURCE_PINNED roots={len(root_names)} manifest_items={len(deps)} "
