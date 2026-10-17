@@ -667,6 +667,10 @@ for relative in (
     assert "`" + relative + "`" in inventory, ("script override not catalogued", relative)
 staging = (root / "tools/prepare-build.sh").read_text()
 assert 'python3 -B tools/install-active-core-backports.py "$eden"' in staging
+active_core_installer = (root / "tools/install-active-core-backports.py").read_text()
+assert 'ACTIVE = ROOT / "vendor/encore-active/eden-core"' in active_core_installer
+assert "shutil.copyfile(maintained, tmp)" in active_core_installer
+assert "maintained.read_bytes() != new" in active_core_installer
 assert 'python3 -B tools/install-vendored-eden-backports.py "$eden"' in staging
 assert 'python3 -B tools/install-vendored-eden-build-flags.py "$eden"' in staging
 assert 'python3 -B tools/install-vendored-surface-lifecycle.py "$eden"' in staging
