@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 94
+**Non, this is not an exhaustive repository-wide inventory.** The 96
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,18 +24,18 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 94 | 77 | 187 |
+| Graphe connu | 96 | 79 | 191 |
 | HOST — preuve ciblée hôte | 28 | 25 | 56 |
-| SOURCE — lecture effectuée, preuve insuffisante | 45 | 38 | 97 |
+| SOURCE — lecture effectuée, preuve insuffisante | 47 | 40 | 101 |
 | OPEN — question technique non résolue | 15 | 15 | 27 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **60** | **52** | **124** |
+| **Encore à qualifier (SOURCE + OPEN)** | **62** | **54** | **128** |
 | Dont priorité P0 (SOURCE + OPEN) | 29 | 24 | 70 |
 
-Le **noyau restant** compte donc 60 critères répartis sur
-52 fichiers et 124 mentions fonction/contrat :
-15 OPEN et 45 SOURCE.
-Cela **ne signifie pas 124 fonctions jamais lues** :
+Le **noyau restant** compte donc 62 critères répartis sur
+54 fichiers et 128 mentions fonction/contrat :
+15 OPEN et 47 SOURCE.
+Cela **ne signifie pas 128 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 Le hors-inventaire (HID, IPC, host-syncpoints, variantes vendor...) n'est
 pas chiffrable honnêtement sans un relevé exhaustif supplémentaire.
@@ -73,13 +73,13 @@ sont des sources maintenues sous
 sélectionnées uniquement en `EDEN_DEV_PROFILE`.
 `tools/check-vendor-consolidation-debt.py` vérifie la parité du corps
 C++ avec l'override généré auparavant et recense les sorties CMake dans
-`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **68 sites restants**
-après sept migrations (F02, F03, F04, N02, N03, H21 et H22). Un site à paramètres variables peut
+`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **66 sites restants**
+après neuf migrations (F02, F03, F04, N02, N03, H21, H22, F05 et F06). Un site à paramètres variables peut
 produire plusieurs fichiers réels. Les ressources générées ne doivent
 pas être confondues avec des overrides de code.
 
 Le second inventaire compte 21 générateurs `write_derived()` dans les modules,
-soit **89 sites au total**, mais n'inclut **pas** les sept modules
+soit **87 sites au total**, mais n'inclut **pas** les sept modules
 `X01–X07` qui créent une sortie par `file(WRITE)` ou transforment
 indirectement une variable-source. Ils sont suivis séparément dans
 `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`, avec contrôle hôte de leur
@@ -99,6 +99,13 @@ unités C++ maintenues dans `vendor/encore-active/eden-core` pour
 La parité avec l'ancienne génération et la politique de mesure silencieuse
 sont exigées par les contrôles hôte. La progression réelle du jeu n'est
 pas démontrée.
+
+F05 et F06 cataloguent le runtime natif auparavant absent du graphe :
+`Common::SetCurrentThreadName`, `Eden::Performance::RegisterWorker`,
+`Common::FS::RemoveDirContentsRecursively` et
+`Common::FS::IterateDirEntries`. Leurs unités de compilation sont
+désormais maintenues dans `vendor/encore-active/eden-core/src/common/`
+au lieu d'être produites par CMake. Les deux fichiers épinglés restent intacts.
 
 ## Déjà traité — contrôles terminés et preuves accessibles
 
@@ -295,6 +302,8 @@ function/contract tokens are checked by CI for existence only; the
 | H26 | P0 | H25,H03 | vendor/sources/eden/src/core/hle/kernel/k_server_session.cpp | KServerSession::OnRequest; KServerSession::IsSignaled | SOURCE | docs/EDEN_CORE_AUDIT_DEPENDENCIES.md | New synchronous guest wait boundary: enqueue, NotifyAvailable and BeginWait under scheduler lock; measure actual wake and resumed guest PC separately | 🟡 Source étudiée |
 | H27 | P0 | H26,H23 | vendor/sources/eden/src/core/hle/kernel/k_server_session.cpp | KServerSession::ReceiveRequest; KServerSession::SendReply; KServerSession::CleanupRequests | SOURCE | docs/EDEN_CORE_AUDIT_DEPENDENCIES.md | New reply-to-EndWait/cancellation boundary: sync returns through client-thread EndWait; asynchronous completion signals event instead; shutdown edge cases unqualified | 🟡 Source étudiée |
 | H28 | P1 | H22,H27 | vendor/encore-active/eden-core/src/core/hle/service/service.cpp | ServiceFrameworkBase::HandleSyncRequest; ServiceFrameworkBase::LockService | SOURCE | docs/EDEN_CORE_AUDIT_DEPENDENCIES.md | New service-lock lifetime and outgoing IPC serialization boundary; handler timing does not distinguish lock contention from guest scheduler resume | 🟡 Source étudiée |
+| F05 | P1 | B01 | vendor/encore-active/eden-core/src/common/thread.cpp | Common::SetCurrentThreadName; Eden::Performance::RegisterWorker | SOURCE | tools/check-vendor-consolidation-debt.py | Native-only worker-name registration moved from generated CMake source to maintained C++; exact source parity and selected common target require host qualification, not evidence of worker scheduling | 🟡 Source étudiée |
+| F06 | P1 | F05 | vendor/encore-active/eden-core/src/common/fs/fs.cpp | Common::FS::RemoveDirContentsRecursively; Common::FS::IterateDirEntries | SOURCE | tools/check-vendor-consolidation-debt.py | Native directory iterator override (two call sites) now maintained C++ with a source parity gate; directory enumeration outcome on console still unqualified | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
