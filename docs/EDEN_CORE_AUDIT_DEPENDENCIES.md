@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 216
+**Non, this is not an exhaustive repository-wide inventory.** The 224
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,23 +24,23 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 216 | 197 | 457 |
+| Graphe connu | 224 | 205 | 469 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 162 | 153 | 354 |
+| SOURCE — lecture effectuée, preuve insuffisante | 170 | 161 | 366 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **177** | **167** | **382** |
-| Dont priorité P0 (SOURCE + OPEN) | 88 | 83 | 214 |
+| **Encore à qualifier (SOURCE + OPEN)** | **185** | **175** | **394** |
+| Dont priorité P0 (SOURCE + OPEN) | 90 | 85 | 218 |
 
-Le **noyau restant** compte donc 177 critères répartis sur
-167 fichiers et 382 mentions fonction/contrat :
-15 OPEN et 162 SOURCE.
-Cela **ne signifie pas 382 fonctions jamais lues** :
+Le **noyau restant** compte donc 185 critères répartis sur
+175 fichiers et 394 mentions fonction/contrat :
+15 OPEN et 170 SOURCE.
+Cela **ne signifie pas 394 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-192 fichiers de code/en-têtes présents, 138 avec un chemin de
-graphe exact et 54 sans correspondance exacte. Cet écart n'est
+192 fichiers de code/en-têtes présents, 146 avec un chemin de
+graphe exact et 46 sans correspondance exacte. Cet écart n'est
 **pas** le nombre de fonctions non auditées, ni une preuve de code actif.
 Le contrôle hôte vérifie la complétude des chemins et les références,
 mais pas le comportement.
@@ -409,6 +409,7 @@ function/contract tokens are checked by CI for existence only; the
 | N15 | P0 | N10,N13 | vendor/encore-active/eden-backports/src/core/hle/service/sockets/bsd.cpp | BSD_USA::Ioctl; BSD_USA::SocketImpl; BSD_USA::GetPeerNameImpl; BSD_USA::GetSockNameImpl | SOURCE | tools/check-active-source-inventory.py | Shipping socket ioctl, guest sockaddr size and immutable guest-offline policy; source-level modified code only, native execution unproved | 🟡 Source étudiée |
 | N16 | P1 | N15 | vendor/encore-active/eden-backports/src/core/hle/service/sockets/bsd.h | BSD_USA::Ioctl | SOURCE | tools/check-active-source-inventory.py | Shipping BSD header declares new ioctl IPC handler; source-level modified code only, native execution unproved | 🟡 Source étudiée |
 | N17 | P0 | N10,N13 | vendor/encore-active/eden-backports/src/core/hle/service/nifm/nifm.cpp | IGeneralService::SetWirelessCommunicationEnabled; IGeneralService::IsWirelessCommunicationEnabled; IGeneralService::IsAnyInternetRequestAccepted | SOURCE | tools/check-active-source-inventory.py | Shipping network status and toggle services consume guest-offline policy; source-level modified code only, native execution unproved | 🟡 Source étudiée |
+| N18 | P0 | N12 | vendor/encore-active/eden-backports/src/core/hle/service/am/display_layer_manager.cpp | DisplayLayerManager::CreateManagedDisplayLayer; DisplayLayerManager::IsSystemBufferSharingEnabled | SOURCE | tools/check-active-source-inventory.py | Shipping managed/display-shared layers apply visibility, layer-stack mask and z order; shipping source observed, selected runtime and console behavior pending | 🟡 Source étudiée |
 | N13 | P1 | N10 | vendor/encore-active/eden-backports/src/core/hle/service/sockets/sfdnsres.cpp | SFDNSRES::GetHostByNameRequest; SFDNSRES::GetHostByNameRequestWithOptions | SOURCE | tools/check-active-source-inventory.py | Shipping DNS checks guest policy on both request paths; native policy overlay forces offline; source diff examined, exact runtime owner/console behavior still to prove | 🟡 Source étudiée |
 | N12 | P0 | N03,N06 | vendor/encore-active/eden-backports/src/core/hle/service/nvnflinger/buffer_queue_core.cpp | BufferQueueCore::SignalDequeueCondition; BufferQueueCore::WaitForDequeueCondition | SOURCE | tools/check-active-source-inventory.py | Shipping core substitutes a generation counter for consumable boolean wakeups; source diff examined, exact runtime owner/console behavior still to prove | 🟡 Source étudiée |
 | N07 | P0 | N11 | vendor/encore-active/eden-core/src/core/hle/service/nvdrv/core/container.cpp | Container::OpenSession; Container::CloseSession | SOURCE | tools/check-vendor-consolidation-debt.py | Session retains process until final owner Close after unlocking mutex; exact pinned-generator parity, native event/session teardown unproven | 🟡 Source étudiée |
@@ -437,6 +438,7 @@ function/contract tokens are checked by CI for existence only; the
 | H38 | P0 | H37 | vendor/encore-active/eden-backports/src/core/hle/kernel/k_thread.h | m_context_guard; RequestDummyThreadWait | SOURCE | tools/check-active-source-inventory.py | Shipping KThread replaces context SpinLock member with std::mutex; ABI must match selected scheduler implementation; source diff examined, exact runtime owner/console behavior still to prove | 🟡 Source étudiée |
 | H39 | P1 | H03 | vendor/encore-active/eden-core/src/hid_core/frontend/emulated_controller.cpp | EmulatedController::LoadDevices; NpadIdTypeToIndex | SOURCE | tools/check-vendor-consolidation-debt.py | Maintained rumble fallback generated verbatim from pinned controller; actual pad vibration on hardware not proved | 🟡 Source étudiée |
 | H40 | P1 | H39 | vendor/encore-active/eden-backports/src/hid_core/resources/npad/npad.cpp | NPad::WriteEmptyEntry; NPad::OnUpdate | SOURCE | tools/check-active-source-inventory.py | Shipping NPad corrects sampling member and logs periodic input update diagnostics; source-level modified code only, native execution unproved | 🟡 Source étudiée |
+| H41 | P1 | H40 | vendor/encore-active/eden-backports/src/core/frontend/applets/controller.cpp | DefaultControllerApplet::ReconfigureControllers | SOURCE | tools/check-active-source-inventory.py | Shipping controller applet preserves valid connected players and fills missing slots; shipping source observed, selected runtime and console behavior pending | 🟡 Source étudiée |
 | A02 | P1 | A01,H29 | headless/backports/eden-sm-host-wait.patch | IAudioController::GetSetSys; call_once | SOURCE | tools/install-active-core-backports.py | AudioController defers system-setting lookup to first actual request using once_flag; two corresponding audio files are still patched into the staged tree, not maintained directly | 🟡 Source étudiée |
 | A03 | P1 | A01 | vendor/encore-active/eden-core/src/audio_core/sink/sink_stream.cpp | SinkStream::AppendBuffer; SinkStream::ProcessAudioOutAndRender | SOURCE | tools/check-maintained-audio-units.py | Source maintained, original four-rewrite parity and audio_core selection checked by host script; CI result and native audio behavior still required | 🟡 Source étudiée |
 | A04 | P1 | A01 | vendor/encore-active/eden-core/src/audio_core/renderer/voice/voice_info.cpp | VoiceInfo::UpdateParameters; VoiceInfo::UpdatePlayState | SOURCE | headless/CMakeLists.txt | Maintained renderer voice update has native flag position correction; validate voice state and game audio; selected source only, device proof pending | 🟡 Source étudiée |
@@ -452,6 +454,12 @@ function/contract tokens are checked by CI for existence only; the
 | F16 | P1 | F12 | vendor/encore-active/eden-core/src/core/loader/deconstructed_rom_directory.cpp | AppLoader_DeconstructedRomDirectory::Load; AppLoader_DeconstructedRomDirectory::ReadNSOModules | SOURCE | headless/CMakeLists.txt | Maintained aligned module loader may be selected only under native code-load options; check module alignment and byte accuracy on console | 🟡 Source étudiée |
 | F17 | P1 | F05 | vendor/encore-active/eden-core/src/common/logging.cpp | FormatLogMessage; FmtLogMessageImpl | SOURCE | headless/CMakeLists.txt | Maintained bounded logging avoids per-error expensive flush; verify error burst drain and shutdown; selected source only, device proof pending | 🟡 Source étudiée |
 | F18 | P1 | F17 | vendor/encore-active/eden-core/src/common/assert.h | AssertFailSoftImpl; AssertFatalImpl | SOURCE | headless/CMakeLists.txt | Maintained assert header in source include root; verify selected consumer include precedence and fail-soft behavior; selected source only, device proof pending | 🟡 Source étudiée |
+| F19 | P1 | F11 | vendor/encore-active/eden-backports/src/core/file_sys/system_archive/system_version.cpp | SystemVersion | SOURCE | tools/check-active-source-inventory.py | Shipping system archive omits digest file when firmware digest is empty; shipping source observed, selected runtime and console behavior pending | 🟡 Source étudiée |
+| F20 | P1 | F11 | vendor/encore-active/eden-backports/src/core/hle/service/filesystem/filesystem.cpp | LoopProcess | SOURCE | tools/check-active-source-inventory.py | Shipping filesystem server registration sets service priority 61; maintained native filesystem TU may supersede; shipping source observed, selected runtime and console behavior pending | 🟡 Source étudiée |
+| F21 | P0 | F20 | vendor/encore-active/eden-backports/src/core/hle/service/filesystem/fsp/fsp_srv.cpp | FSP_SRV::OpenDataFileSystemByCurrentProcess; FSP_SRV::OpenDataStorageByCurrentProcess | SOURCE | tools/check-active-source-inventory.py | Shipping RomFS extraction exposes current process data filesystem and storage IPC; shipping source observed, selected runtime and console behavior pending | 🟡 Source étudiée |
+| F22 | P1 | F19 | vendor/encore-active/eden-backports/src/core/hle/service/am/service/application_creator.cpp | IApplicationCreator::CreateSystemApplication | SOURCE | tools/check-active-source-inventory.py | Shipping creates system application using actual HOS major version instead of hardcoded 22; shipping source observed, selected runtime and console behavior pending | 🟡 Source étudiée |
+| F23 | P1 | F22 | vendor/encore-active/eden-backports/src/core/hle/service/ns/application_manager_interface.cpp | IApplicationManagerInterface::Unknown936; IApplicationManagerInterface::Unknown4042; IApplicationManagerInterface::Unknown4105 | SOURCE | tools/check-active-source-inventory.py | Shipping namespace adds firmware service handlers including async result; shipping source observed, selected runtime and console behavior pending | 🟡 Source étudiée |
+| F24 | P1 | F19 | vendor/encore-active/eden-backports/src/core/hle/service/set/settings.cpp | LoopProcess | SOURCE | tools/check-active-source-inventory.py | Shipping settings service registration uses priority 60; shipping source observed, selected runtime and console behavior pending | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 

@@ -262,6 +262,25 @@ for relative, anchors in shipping_followups:
         assert anchor in body, ("shipping implementation changed", relative, anchor)
 print("ENCORE_SHIPPING_NET_AUDIO_HID_TEXTURE_OWNER_PASS", f"files={len(shipping_followups)}")
 
+# Modified shipping firmware, filesystem, applet and display contracts.
+# Passing here asserts exact owner/hunk presence, not device runtime behavior.
+shipping_hle_followups = (
+    ("eden-backports/src/core/file_sys/system_archive/system_version.cpp", ["VirtualDir SystemVersion()","HLE::ApiVersion::VERSION_DIGEST[0]"]),
+    ("eden-backports/src/core/hle/service/filesystem/filesystem.cpp", ["RegisterNamedService(\"fsp-srv\", std::move(FileSystemProxyFactory), 61);"]),
+    ("eden-backports/src/core/hle/service/filesystem/fsp/fsp_srv.cpp", ["Result FSP_SRV::OpenDataFileSystemByCurrentProcess(","FileSys::ExtractRomFS(romfs)"]),
+    ("eden-backports/src/core/hle/service/am/service/application_creator.cpp", ["IApplicationCreator::CreateSystemApplication(","HLE::ApiVersion::HOS_VERSION_MAJOR"]),
+    ("eden-backports/src/core/hle/service/ns/application_manager_interface.cpp", ["IApplicationManagerInterface::Unknown936(","IApplicationManagerInterface::Unknown4042(","IApplicationManagerInterface::Unknown4105("]),
+    ("eden-backports/src/core/hle/service/set/settings.cpp", ["RegisterNamedService(\"set:sys\", std::make_shared<ISystemSettingsServer>(system), 60);"]),
+    ("eden-backports/src/core/frontend/applets/controller.cpp", ["DefaultControllerApplet::ReconfigureControllers(","keep_connected","max_supported_players"]),
+    ("eden-backports/src/core/hle/service/am/display_layer_manager.cpp", ["DisplayLayerManager::CreateManagedDisplayLayer(","SetLayerStackMask(","SetLayerZIndex(Overlay"]),
+)
+for rel, anchors in shipping_hle_followups:
+    assert rel in graph and (active / rel).is_file(), ("uncatalogued HLE source", rel)
+    text = (active / rel).read_text()
+    for anchor in anchors:
+        assert anchor in text, ("firmware/HLE backport source drift", rel, anchor)
+print("ENCORE_SHIPPING_FIRMWARE_HLE_OWNER_PASS", f"files={len(shipping_hle_followups)}")
+
 assert len(physical) == len(set(physical))
 print("ENCORE_ACTIVE_SOURCE_CATALOG_PASS",
       f"files={len(physical)}",
