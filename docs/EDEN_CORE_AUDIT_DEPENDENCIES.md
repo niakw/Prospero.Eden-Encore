@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 148
+**Non, this is not an exhaustive repository-wide inventory.** The 149
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 148 | 129 | 312 |
+| Graphe connu | 149 | 130 | 313 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 94 | 85 | 209 |
+| SOURCE — lecture effectuée, preuve insuffisante | 95 | 86 | 210 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **109** | **99** | **237** |
+| **Encore à qualifier (SOURCE + OPEN)** | **110** | **100** | **238** |
 | Dont priorité P0 (SOURCE + OPEN) | 44 | 39 | 114 |
 
-Le **noyau restant** compte donc 109 critères répartis sur
-99 fichiers et 237 mentions fonction/contrat :
-15 OPEN et 94 SOURCE.
-Cela **ne signifie pas 237 fonctions jamais lues** :
+Le **noyau restant** compte donc 110 critères répartis sur
+100 fichiers et 238 mentions fonction/contrat :
+15 OPEN et 95 SOURCE.
+Cela **ne signifie pas 238 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-186 fichiers de code/en-têtes présents, 70 avec un chemin de
+187 fichiers de code/en-têtes présents, 71 avec un chemin de
 graphe exact et 116 sans correspondance exacte. Cet écart n'est
 **pas** le nombre de fonctions non auditées, ni une preuve de code actif.
 Le contrôle hôte vérifie la complétude des chemins et les références,
@@ -88,13 +88,13 @@ sont des sources maintenues sous
 sélectionnées uniquement en `EDEN_DEV_PROFILE`.
 `tools/check-vendor-consolidation-debt.py` vérifie la parité du corps
 C++ avec l'override généré auparavant et recense les sorties CMake dans
-`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **53 sites restants**
+`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **52 sites restants**
 après onze migrations (F02, F03, F04, N02, N03, H21, H22, F05, F06, F07 et F08). Un site à paramètres variables peut
 produire plusieurs fichiers réels. Les ressources générées ne doivent
 pas être confondues avec des overrides de code.
 
 Le second inventaire compte 21 générateurs `write_derived()` dans les modules,
-soit **74 sites au total**, mais n'inclut **pas** les sept modules
+soit **73 sites au total**, mais n'inclut **pas** les sept modules
 `X01–X07` qui créent une sortie par `file(WRITE)` ou transforment
 indirectement une variable-source. Ils sont suivis séparément dans
 `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`, avec contrôle hôte de leur
@@ -341,6 +341,7 @@ function/contract tokens are checked by CI for existence only; the
 | V22 | P1 | V18,V17 | vendor/encore-active/eden-vulkan/vk_compute_pass_cost.cpp | ConditionalRenderingResolvePass::Resolve; ASTCDecoderPass::Assemble | SOURCE | headless/vulkan.cmake | Verify compute descriptor queue and decoder dispatch scheduling; source indexed, no native proof | 🟡 Source étudiée |
 | V23 | P1 | V19 | vendor/encore-active/eden-core/src/video_core/texture_cache/util.h | SwizzleImage; ConvertImage; DeduceBlitImages | SOURCE | headless/CMakeLists.txt | Maintained texture cache header includes Boost compatibility; verify header selection and compile variants; selected source only, device proof pending | 🟡 Source étudiée |
 | V24 | P1 | V07 | vendor/encore-active/eden-shader/src/shader_recompiler/frontend/maxwell/translate/impl/load_store_local_shared.cpp | LocalInBounds; TranslatorVisitor::LDL; TranslatorVisitor::LDS; TranslatorVisitor::STL; TranslatorVisitor::STS | SOURCE | headless/CMakeLists.txt | Maintained bounded Maxwell local/shared loads/stores are selected by shader_recompiler; shader correctness, bounds and synchronization require native evidence | 🟡 Source étudiée |
+| V25 | P2 | V14 | vendor/encore-active/eden-core/src/video_core/renderer_opengl/gl_texture_cache.cpp | TextureCacheRuntime::CopyImage | SOURCE | tools/check-vendor-consolidation-debt.py | Development-only bounded GL copy diagnostics moved verbatim from CMake to maintained C++; normal profile preserves upstream unit, no GPU/console proof | 🟡 Source étudiée |
 | F04 | P1 | F02,F03 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_filesystem.cpp | IFileSystem::OpenFile; IFileSystem::OpenDirectory; IFileSystem::GetEntryType | HOST | tools/check-vendor-consolidation-debt.py | Maintained DEV IFileSystem diagnostic replaces G23 CMake patch for three result paths; three call replacements, DEV source selection, and quiet policy passed full host preflight #39048355950; native SDK/gameplay remain unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39048355950) |
 | H20 | P0 | H02,H19 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp | KScheduler::UpdateHighestPriorityThread; KScheduler::UpdateHighestPriorityThreadsImpl | SOURCE | tools/check-upstream-guest-scheduler-locks.py | Runnable queue update precedes per-core highest-priority selection; account for pinned-thread preference, suggested-core migration and eventual context load. Not proof of guest PC progress | 🟡 Source étudiée |
 | H21 | P0 | H14,J14 | vendor/encore-active/eden-core/src/core/hle/kernel/svc/svc_ipc.cpp | SendSyncRequestImpl; SendSyncRequestWithUserBuffer | SOURCE | tools/check-vendor-consolidation-debt.py | DEV sync IPC request/thread attribution now maintained, with exact former CMake code parity; the guest's resumed JIT PC after request completion remains unproved | 🟡 Source étudiée |

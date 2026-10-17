@@ -562,6 +562,20 @@ assert 'write_derived("${PORT_BUILD_DIR}/emutls.c"' not in c
 assert 'file(READ "${COMPILER_RT}/emutls.c" emutls)' not in c
 print("VENDOR_COMPILER_RT_EMUTLS_PARITY_PASS native_rounds=1")
 
+# Native development GL texture diagnostics: preserve old CMake output.
+gl_src = (sources / "eden/src/video_core/renderer_opengl/gl_texture_cache.cpp").read_text()
+gl_anchor = "dst_origin.y, dst_origin.z, region.width, region.height, region.depth);"
+gl_trace = "        static unsigned copy_errors = 0;\n        const GLenum copy_error = copy_errors < 8 ? glGetError() : GL_NO_ERROR;\n        if (copy_error && copy_errors++ < 8) {\n            GLint sw = 0, dw = 0;\n            glGetTextureLevelParameteriv(src_name, src_origin.level, GL_TEXTURE_WIDTH, &sw);\n            glGetTextureLevelParameteriv(dst_name, dst_origin.level, GL_TEXTURE_WIDTH, &dw);\n            std::printf(\"EDEN_DEV_COPY error=%x src=%u target=%x level=%d x=%d width=%d dst=%u target=%x level=%d x=%d width=%d extent=%dx%dx%d\\n\", copy_error, src_name, src_target, src_origin.level, src_origin.x, sw, dst_name, dst_target, dst_origin.level, dst_origin.x, dw, region.width, region.height, region.depth);\n        }"
+assert gl_src.count(gl_anchor) == 1, "Pinned development GL copy site drift"
+gl_old_generated = "#include <cstdio>\n" + gl_src.replace(gl_anchor, gl_anchor + "\n" + gl_trace)
+assert (active / "eden-core/src/video_core/renderer_opengl/gl_texture_cache.cpp").read_text() == gl_old_generated
+assert c.count('list(APPEND video_sources "${EDEN_MAINTAINED_DEV_GL_TEXTURE}")') == 1
+assert 'if(NOT EXISTS "${EDEN_MAINTAINED_DEV_GL_TEXTURE}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/gl_texture_cache.cpp"' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/gl_texture_cache.cpp" texture_source)' not in c
+assert 'renderer_opengl/gl_texture_cache.cpp' in (sources / "eden/src/video_core/CMakeLists.txt").read_text()
+print("MAINTAINED_GL_TEXTURE_DEV_PARITY_PASS: bounded copy instrumentation")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -602,7 +616,7 @@ assert len(module_current) == 21, len(module_current)
 for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     text = (root / module).read_text()
     assert 'file(WRITE ' in text and 'configure_file(' in text, module
-assert len(recorded) + len(module_recorded) == 74
+assert len(recorded) + len(module_recorded) == 73
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived

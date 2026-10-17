@@ -7,8 +7,8 @@ Cet inventaire recense chaque fichier C/C++, en-tête et fragment source
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **186 fichiers** de code et d'en-têtes enregistrés.
-- **70 fichiers** possèdent une correspondance de chemin *exacte*
+- **187 fichiers** de code et d'en-têtes enregistrés.
+- **71 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **116 fichiers** n'ont pas encore de ligne de graphe correspondant
   exactement à leur chemin. Cela **ne prouve pas** qu'ils n'ont jamais été
@@ -146,6 +146,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/hid_core/resource_manager.cpp` | `maintained-override` | H31 |
 | `eden-core/src/video_core/renderer_opengl/gl_buffer_cache.cpp` | `maintained-override` | V14 |
 | `eden-core/src/video_core/renderer_opengl/gl_query_cache.cpp` | `maintained-override` | V15 |
+| `eden-core/src/video_core/renderer_opengl/gl_texture_cache.cpp` | `maintained-override` | V25 |
 | `eden-core/src/video_core/texture_cache/util.h` | `maintained-override` | V23 |
 | `eden-core/src/video_core/video_core_opengl.cpp` | `maintained-override` | V12 |
 | `eden-gpu/gpu_thread_dev.cpp` | `maintained-override` | Q03 |
