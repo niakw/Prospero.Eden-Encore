@@ -23,7 +23,7 @@ physical = sorted(
 )
 graph = {}
 for line in audit.splitlines():
-    if not re.match(r"^\\| [A-Z][0-9]{2} \\|", line):
+    if not re.match(r"^\| [A-Z][0-9]{2} \|", line):
         continue
     fields = [cell.strip() for cell in line.strip().strip("|").split("|")]
     if len(fields) < 4 or not fields[3].startswith("vendor/encore-active/"):
@@ -107,6 +107,23 @@ for family, size in (("eden-gpu/", 4), ("eden-threading/", 12)):
         [path for path in members if path not in graph],
     )
 print("ENCORE_GPU_THREADING_OWNER_PASS", "gpu=4", "threading=12")
+
+# The surface lifecycle and bounded local-memory shader are already
+# maintained sources; require their REAL source selection, not a second copy.
+shader_rel = "eden-shader/src/shader_recompiler/frontend/maxwell/translate/impl/load_store_local_shared.cpp"
+surface_rel = "eden-surface-lifecycle/src/core/hle/service/nvnflinger/surface_flinger.cpp"
+for rel in (shader_rel, surface_rel):
+    assert rel in graph and (active / rel).is_file(), ("missing active owner", rel)
+shader_recipe = (root / "headless/CMakeLists.txt").read_text()
+assert 'list(APPEND eden_shader_sources "${EDEN_MAINTAINED_SHADER_LOCAL}")' in shader_recipe
+assert 'set_property(TARGET shader_recompiler PROPERTY SOURCES "${eden_shader_sources}")' in shader_recipe
+surface_installer = (root / "tools/install-vendored-surface-lifecycle.py").read_text()
+surface_prepare = (root / "tools/prepare-build.sh").read_text()
+assert 'ORIGINAL_GIT_BLOB = "a6136c111d96d2660c28b27c6881e3b671e7eed8"' in surface_installer
+assert 'WaitForComposite();' in surface_installer and 'm_composer.RemoveLayerLocked(' in surface_installer
+assert 'tools/install-vendored-surface-lifecycle.py "$eden"' in surface_prepare
+assert 'if existing not in (before, replacement)' in surface_installer
+print("ENCORE_SHADER_SURFACE_SOURCE_OWNER_PASS sources=2")
 
 assert len(physical) == len(set(physical))
 print("ENCORE_ACTIVE_SOURCE_CATALOG_PASS",
