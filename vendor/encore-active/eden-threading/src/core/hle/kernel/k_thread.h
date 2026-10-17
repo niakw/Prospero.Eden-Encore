@@ -10,6 +10,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
+#include <semaphore>
 #include <span>
 #include <string>
 #include <utility>
@@ -919,7 +920,10 @@ private:
     bool m_resource_limit_release_hint{};
     bool m_is_kernel_address_key{};
     StackParameters m_stack_parameters{};
-    std::mutex m_context_guard{};
+    // A guest fiber can be resumed on a different host CPU worker. The
+    // switcher acquires this permit and a different worker may return it;
+    // unlike std::mutex, a semaphore has no thread-owner restriction.
+    std::binary_semaphore m_context_guard{1};
 
     // For emulation
     std::shared_ptr<Common::Fiber> m_host_context{};
