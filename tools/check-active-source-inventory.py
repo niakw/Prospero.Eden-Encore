@@ -175,9 +175,13 @@ headless_actual = sorted(
     for p in (root / "headless").rglob("*")
     if p.is_file() and p.suffix in headless_exts
 )
-headless_rows = re.findall(
-    r"^\\| \\x60(headless/[^\\x60]+)\\x60 \\| ([^|]+) \\| ([^|]+) \\| ([^|]+) \\|$",
-    headless_doc.split(headless_start, 1)[1].split(headless_end, 1)[0], re.M)
+headless_rows = []
+for entry in headless_doc.split(headless_start, 1)[1].split(headless_end, 1)[0].splitlines():
+    if not entry.startswith("| `headless/"):
+        continue
+    cells = [cell.strip() for cell in entry.strip().strip("|").split("|")]
+    assert len(cells) == 4 and cells[0].startswith("`headless/"), ("malformed headless row", entry)
+    headless_rows.append((cells[0].strip("`"), cells[1], cells[2], cells[3]))
 assert [r[0] for r in headless_rows] == headless_actual, (
     "headless source path catalog drift", len(headless_rows), len(headless_actual))
 headless_linked = sum(p in graph for p in headless_actual)
