@@ -49,6 +49,46 @@ couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
   La cible est une vraie unité maintenue dans `vendor/encore-active`
   avec remplacement de la source sélectionnée et témoin de non-régression.
 
+## Overrides et générateurs hors CMake principal — audit des points d'entrée
+
+La présence d'un script dans `tools/` ne signifie **pas** qu'il participe
+à la compilation : certains opèrent sur l'arbre de travail jetable, d'autres
+reconstruisent un témoin dans un répertoire temporaire, d'autres produisent
+des ressources du launcher. Cette table décrit les **mécanismes identifiés**,
+et non les 458 scripts Python/shell/CMake du seul dossier `tools/`.
+
+| Point d'entrée | Sélection / rôle | Source compilée ou sortie | Dette |
+| --- | --- | --- | --- |
+| `tools/prepare-build.sh` | **ACTIF**, orchestrateur `make prepare` | Arbre Eden jetable, dépendances et RADV | Sélection uniquement |
+| `tools/install-vendored-eden-backports.py` | **ACTIF**, copie vérifiée par manifest SHA | 83 fichiers suivis dans `encore-active/eden-backports` | Déjà matérialisé |
+| `tools/install-vendored-eden-build-flags.py` | **ACTIF**, deux recettes suivies | `encore-active/eden-build` | Déjà matérialisé |
+| `tools/install-vendored-surface-lifecycle.py` | **ACTIF**, copie de source complète | `encore-active/eden-surface-lifecycle` | Déjà matérialisé |
+| `tools/install-vendored-radv.py` | **ACTIF**, copie de sources RADV maintenues | `encore-active/ps5-mesa` vers staging | Déjà matérialisé |
+| `tools/install-active-core-backports.py` | **ACTIF**, application de deux patches dans le staging après reconstruction temporaire | **5 chemins** CPU/I-cache et HLE SM/audio | **À migrer** vers source maintenue, sans perdre les contrats |
+| `tools/refresh-eden-atomic-source-cache.py` | **ACTIF**, échange atomique d'un ancien cache identifié | Restaure archive épinglée, pas une nouvelle modification C++ | Maintenance de cache |
+| `tools/vendor-eden-cpm.py`, `tools/deps.py`, `tools/stage-vendored-opengl-deps.py` | **ACTIF** selon préparation et configuration | Copie d'entrées épinglées, non-patch de C++ | Dépendances |
+| `tools/build-headless-host.sh` | **HÔTE SEUL**, remplace trois lignes FFmpeg dans le cache hôte | `externals/ffmpeg/CMakeLists.txt` en staging | Override de build hôte, **hors console** |
+| `tools/build-opengl-sdk.sh` | **TEST HÔTE macOS**, modifie temporairement le test de surfaces | Copie restaurée après le test, pas source PS5 livrée | Ne pas confondre avec override du moteur |
+| `tools/apply-eden-backports.sh` et `tools/migrate-*-cache.py` | **REPLAY HISTORIQUE** / reprise d'anciens caches | Patches + migration de deux fichiers sur source jetable | Non exécuté par le chemin normal `make prepare` |
+| `tools/prepare-vulkan-port.py` | **ORACLE** dans `check-vendored-vulkan-fork.py` | Sources générées en répertoire de test, comparées au fork `eden-vulkan` | **Pas** de génération durant CMake |
+| `tools/patch-radv-wsi.py` et `tools/radv_official_*_fix.py` | **ORACLE** explicite `--oracle` / `--check` | Vérification du fork `ps5-mesa` ; mutation par défaut désactivée | Aucun patch RADV en build |
+| `tools/apply-upstream-4473.py` | **MANUEL / TEST**, `--dest` obligatoire pour écrire | Quatre unités GPU dérivées dans destination choisie | Pas dans la chaîne normale |
+| `tools/sync-encore-overrides.py` | **RÉGÉNÉRATION EXPLICITE** | `headless/encore_overrides_generated.h` : profils/titres | Données de jeu, distinctes du moteur |
+| `tools/sync-glyph-overrides.py` | **RÉGÉNÉRATION EXPLICITE** | `headless/glyph_overrides_generated.h` | Catalogue visuel, non-mapping HID |
+| `tools/launcher/strings.py` | **RÉGÉNÉRATION EXPLICITE** | Catalogues PO et en-tête français `fr_fr_embedded.h` | Ressources locales |
+| `tools/ps-glyph-*.py` | **OUTILS HORS BUILD** d'analyse/adaptation de mods | Fichiers de recherche / packs externes, pas un patch C++ de l'émulateur | Frontière à conserver |
+| `headless/macro_recovery.cmake`, `slot_vector_recovery.cmake` | **BUILD**, écriture sans `write_derived` | Deux sorties CMake indirectes | Déjà indexées X01/X02 |
+| `headless/checked-fastmem.cmake` et quatre autres modules indirects | **BUILD**, changement de variables source avant écriture | Unités dérivées du CMake principal | Déjà indexées X03–X07 |
+| `headless/vulkan.cmake` | **BUILD**, copie/sélection d'un fork vérifié | `encore-active/eden-vulkan` | Aucun appel au générateur Python |
+
+**Règle de lecture :** le compteur `48 + 21 = 69` décrit uniquement les
+sites `write_derived`, pas les générateurs Python, les copies de dépendances,
+les recettes CMake ni les sorties de ressources. **Zéro source sans propriétaire
+dans le catalogue `vendor/encore-active` n'implique pas zéro override hors de
+ce répertoire.** La prochaine migration effective à prioriser ici est
+`install-active-core-backports.py`, car ses cinq fichiers sont encore
+modifiés dans le cache de compilation.
+
 ## Générateurs non encore déplacés
 
 Les numéros Gxx sont les positions de cet inventaire, **pas** des validations.
