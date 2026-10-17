@@ -8,9 +8,9 @@ présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
 - **186 fichiers** de code et d'en-têtes enregistrés.
-- **68 fichiers** possèdent une correspondance de chemin *exacte*
+- **70 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
-- **118 fichiers** n'ont pas encore de ligne de graphe correspondant
+- **116 fichiers** n'ont pas encore de ligne de graphe correspondant
   exactement à leur chemin. Cela **ne prouve pas** qu'ils n'ont jamais été
   examinés, ni qu'ils sont effectivement compilés.
 - Le manifeste des backports verrouille **83 fichiers livrés**, dont
@@ -25,7 +25,7 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 **Important :** une correspondance de chemin n'est ni un test hôte,
 ni une certification console. Le graphe
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` porte les contrats fonctionnels,
-leurs états et les preuves. L'inventaire des 57 générateurs CMake
+leurs états et les preuves. L'inventaire des 53 générateurs CMake
 principaux, 21 générateurs de modules, sept modules indirects et 46 patches
 reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
@@ -152,8 +152,8 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-gpu/gpu_thread_quiet.cpp` | `maintained-override` | Q06 |
 | `eden-gpu/include/common/bounded_threadsafe_queue.h` | `maintained-override` | Q07 |
 | `eden-gpu/include/video_core/gpu_thread.h` | `maintained-override` | Q08 |
-| `eden-shader/src/shader_recompiler/frontend/maxwell/translate/impl/load_store_local_shared.cpp` | `maintained-override` | — |
-| `eden-surface-lifecycle/src/core/hle/service/nvnflinger/surface_flinger.cpp` | `maintained-override` | — |
+| `eden-shader/src/shader_recompiler/frontend/maxwell/translate/impl/load_store_local_shared.cpp` | `maintained-override` | V24 |
+| `eden-surface-lifecycle/src/core/hle/service/nvnflinger/surface_flinger.cpp` | `maintained-override` | N06 |
 | `eden-sync/src/core/hle/kernel/k_synchronization_object.h` | `maintained-override` | H17 |
 | `eden-threading/src/core/hle/kernel/k_address_arbiter.cpp` | `maintained-override` | H07,H10,H11 |
 | `eden-threading/src/core/hle/kernel/k_condition_variable.cpp` | `maintained-override` | H01,H08,H09 |
@@ -229,7 +229,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
 Ces deux fichiers sont inclus dans les **83 entrées** de
 `vendor/encore-active/eden-backports/manifest.json`, mais ne sont
-pas comptés parmi les 183 fichiers de code et d'en-têtes.
+pas comptés parmi les 186 fichiers de code et d'en-têtes.
 
 ## Critères de tenue à jour
 

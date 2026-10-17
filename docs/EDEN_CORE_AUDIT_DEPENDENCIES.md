@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 146
+**Non, this is not an exhaustive repository-wide inventory.** The 148
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,23 +24,23 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 146 | 127 | 303 |
+| Graphe connu | 148 | 129 | 312 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 92 | 83 | 200 |
+| SOURCE — lecture effectuée, preuve insuffisante | 94 | 85 | 209 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **107** | **97** | **228** |
-| Dont priorité P0 (SOURCE + OPEN) | 43 | 38 | 110 |
+| **Encore à qualifier (SOURCE + OPEN)** | **109** | **99** | **237** |
+| Dont priorité P0 (SOURCE + OPEN) | 44 | 39 | 114 |
 
-Le **noyau restant** compte donc 107 critères répartis sur
-97 fichiers et 228 mentions fonction/contrat :
-15 OPEN et 92 SOURCE.
-Cela **ne signifie pas 228 fonctions jamais lues** :
+Le **noyau restant** compte donc 109 critères répartis sur
+99 fichiers et 237 mentions fonction/contrat :
+15 OPEN et 94 SOURCE.
+Cela **ne signifie pas 237 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-186 fichiers de code/en-têtes présents, 68 avec un chemin de
-graphe exact et 118 sans correspondance exacte. Cet écart n'est
+186 fichiers de code/en-têtes présents, 70 avec un chemin de
+graphe exact et 116 sans correspondance exacte. Cet écart n'est
 **pas** le nombre de fonctions non auditées, ni une preuve de code actif.
 Le contrôle hôte vérifie la complétude des chemins et les références,
 mais pas le comportement.
@@ -340,6 +340,7 @@ function/contract tokens are checked by CI for existence only; the
 | V21 | P0 | V05,V17 | vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp | GraphicsPipeline::PreflightDescriptorScratch; GraphicsPipeline::ConfigureImpl; GraphicsPipeline::MakePipeline | SOURCE | headless/vulkan.cmake | Verify descriptor scratch preflight and pipeline compilation lock ordering; source indexed, no native proof | 🟡 Source étudiée |
 | V22 | P1 | V18,V17 | vendor/encore-active/eden-vulkan/vk_compute_pass_cost.cpp | ConditionalRenderingResolvePass::Resolve; ASTCDecoderPass::Assemble | SOURCE | headless/vulkan.cmake | Verify compute descriptor queue and decoder dispatch scheduling; source indexed, no native proof | 🟡 Source étudiée |
 | V23 | P1 | V19 | vendor/encore-active/eden-core/src/video_core/texture_cache/util.h | SwizzleImage; ConvertImage; DeduceBlitImages | SOURCE | headless/CMakeLists.txt | Maintained texture cache header includes Boost compatibility; verify header selection and compile variants; selected source only, device proof pending | 🟡 Source étudiée |
+| V24 | P1 | V07 | vendor/encore-active/eden-shader/src/shader_recompiler/frontend/maxwell/translate/impl/load_store_local_shared.cpp | LocalInBounds; TranslatorVisitor::LDL; TranslatorVisitor::LDS; TranslatorVisitor::STL; TranslatorVisitor::STS | SOURCE | headless/CMakeLists.txt | Maintained bounded Maxwell local/shared loads/stores are selected by shader_recompiler; shader correctness, bounds and synchronization require native evidence | 🟡 Source étudiée |
 | F04 | P1 | F02,F03 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_filesystem.cpp | IFileSystem::OpenFile; IFileSystem::OpenDirectory; IFileSystem::GetEntryType | HOST | tools/check-vendor-consolidation-debt.py | Maintained DEV IFileSystem diagnostic replaces G23 CMake patch for three result paths; three call replacements, DEV source selection, and quiet policy passed full host preflight #39048355950; native SDK/gameplay remain unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39048355950) |
 | H20 | P0 | H02,H19 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp | KScheduler::UpdateHighestPriorityThread; KScheduler::UpdateHighestPriorityThreadsImpl | SOURCE | tools/check-upstream-guest-scheduler-locks.py | Runnable queue update precedes per-core highest-priority selection; account for pinned-thread preference, suggested-core migration and eventual context load. Not proof of guest PC progress | 🟡 Source étudiée |
 | H21 | P0 | H14,J14 | vendor/encore-active/eden-core/src/core/hle/kernel/svc/svc_ipc.cpp | SendSyncRequestImpl; SendSyncRequestWithUserBuffer | SOURCE | tools/check-vendor-consolidation-debt.py | DEV sync IPC request/thread attribution now maintained, with exact former CMake code parity; the guest's resumed JIT PC after request completion remains unproved | 🟡 Source étudiée |
@@ -347,6 +348,7 @@ function/contract tokens are checked by CI for existence only; the
 | N03 | P1 | V02 | vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp | BufferQueueProducer::WaitForFreeSlotThenRelock; BufferQueueProducer::DequeueBuffer | SOURCE | tools/check-vendor-consolidation-debt.py | DEV dequeue timing now comes from maintained TU with pinned generated-source parity gate; hardware slot wake/back-pressure and visible guest progress still unproved | 🟡 Source étudiée |
 | N04 | P0 | N02 | vendor/sources/eden/src/video_core/host1x/syncpoint_manager.cpp | SyncpointManager::RegisterAction; SyncpointManager::DeregisterAction; SyncpointManager::Increment | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Newly indexed host-syncpoint action ownership: increment invokes callbacks while its guard is held; callback, reentrant locking and unregistration order require explicit proof before altering the scheduler | 🟡 Source étudiée |
 | N05 | P1 | N02,N04 | vendor/encore-active/eden-core/src/core/hle/service/nvdrv/devices/nvhost_ctrl.cpp | nvhost_ctrl::FreeEvent; nvhost_ctrl::IocCtrlEventUnregister; nvhost_ctrl::QueryEvent | SOURCE | tools/check-vendor-consolidation-debt.py | Newly indexed event object lifecycle: cancellation, unregister, query and callback signal may overlap. Source selected in DEV but actual native destruction/callback ordering not proven | 🟡 Source étudiée |
+| N06 | P0 | N03,V02 | vendor/encore-active/eden-surface-lifecycle/src/core/hle/service/nvnflinger/surface_flinger.cpp | SurfaceFlinger::RemoveDisplay; SurfaceFlinger::DestroyLayer; SurfaceFlinger::RemoveLayerFromDisplayStack; SurfaceFlinger::ComposeDisplay | SOURCE | tools/install-vendored-surface-lifecycle.py | Complete maintained unit installed into pinned disposable Eden tree, with exact original Git blob and composite wait checks; display and layer lifetime unproven on console | 🟡 Source étudiée |
 | H23 | P0 | H05,N04 | vendor/sources/eden/src/core/hle/kernel/k_readable_event.cpp | KReadableEvent::Signal; KReadableEvent::Clear; KReadableEvent::IsSignaled | SOURCE | tools/verify/hle/check-native-hle-sync-unlink-host.py | Newly cataloged transition from signaled GPU host event to kernel NotifyAvailable. Source uses scheduler lock; no trace yet associates wake with resumed guest PC | 🟡 Source étudiée |
 | H24 | P1 | H23,N05 | vendor/sources/eden/src/core/hle/kernel/k_event.cpp | KEvent::Signal; KEvent::Clear | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Newly cataloged NV event signal/clear forwarding under scheduler lock and destroyed-readable guard. Requires callback/event-lifetime interleaving evidence; do not speculate that the guard proves teardown safe | 🟡 Source étudiée |
 | H25 | P0 | H21 | vendor/sources/eden/src/core/hle/kernel/k_client_session.cpp | KClientSession::SendSyncRequest; KClientSession::SendAsyncRequest | SOURCE | docs/EDEN_CORE_AUDIT_DEPENDENCIES.md | New link from guest SVC to m_parent->OnRequest: scoped request reference and async event distinction; trace kernel wait-result handoff in native run | 🟡 Source étudiée |

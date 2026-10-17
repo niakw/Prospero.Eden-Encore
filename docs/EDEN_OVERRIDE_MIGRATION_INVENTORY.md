@@ -11,8 +11,8 @@ développement, les options JIT expérimentales, les backends et le build
 natif sélectionnent chacun leur sous-ensemble.
 
 L'inventaire complémentaire `docs/EDEN_ACTIVE_SOURCE_CATALOG.md` suit les
-183 fichiers de code et en-têtes dans `vendor/encore-active`,
-y compris les backports préparés et la dépendance graphique. Cette
+186 fichiers de code et en-têtes dans `vendor/encore-active`,
+y compris les backports de production et la dépendance graphique. Cette
 couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
 ## Synthèse vérifiable
