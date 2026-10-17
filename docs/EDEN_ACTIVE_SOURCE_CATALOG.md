@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **200 fichiers** de code et d'en-têtes enregistrés.
-- **200 fichiers** possèdent une correspondance de chemin *exacte*
+- **201 fichiers** de code et d'en-têtes enregistrés.
+- **201 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -25,7 +25,7 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 ni une certification console. Le graphe
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` porte les contrats fonctionnels,
 leurs états et les preuves. L'inventaire des 47 générateurs CMake
-principaux, 21 générateurs de modules, six modules indirects et 46 patches
+principaux, 21 générateurs de modules, cinq modules indirects et 46 patches
 reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
 <!-- ACTIVE_SOURCE_CATALOG_START -->
@@ -155,6 +155,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/hid_core/frontend/emulated_controller.cpp` | `maintained-override` | H39 |
 | `eden-core/src/hid_core/resource_manager.cpp` | `maintained-override` | H31 |
 | `eden-core/src/hid_core/resources/npad/npad.cpp` | `maintained-override` | H48 |
+| `eden-core/src/video_core/macro.cpp` | `maintained-override` | V65 |
 | `eden-core/src/video_core/renderer_opengl/gl_buffer_cache.cpp` | `maintained-override` | V14 |
 | `eden-core/src/video_core/renderer_opengl/gl_query_cache.cpp` | `maintained-override` | V15 |
 | `eden-core/src/video_core/renderer_opengl/gl_texture_cache.cpp` | `maintained-override` | V25 |
@@ -242,7 +243,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
 Ces deux fichiers sont inclus dans les **83 entrées** de
 `vendor/encore-active/eden-backports/manifest.json`, mais ne sont
-pas comptés parmi les 200 fichiers de code et d'en-têtes.
+pas comptés parmi les 201 fichiers de code et d'en-têtes.
 
 ## Inventaire hors `vendor/encore-active`
 
