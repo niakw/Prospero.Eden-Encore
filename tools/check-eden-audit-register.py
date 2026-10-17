@@ -19,11 +19,15 @@ for raw in table.splitlines():
     if not re.match(r"^\|\s*[A-Z][0-9]{2}\s*\|", raw):
         continue
     cells = [item.strip() for item in raw.strip().strip("|").split("|")]
-    assert len(cells) == 8, (raw, len(cells))
-    ident, priority, deps, source, symbols, state, evidence, acceptance = cells
+    assert len(cells) == 9, (raw, len(cells))
+    ident, priority, deps, source, symbols, state, evidence, acceptance, visual = cells
     assert ident not in entries, ("duplicate", ident)
     assert priority in {"P0", "P1", "P2"}, (ident, priority)
     assert state in valid_states, (ident, state)
+    if state == "HOST":
+        assert "img.shields.io/badge/" in visual and "2ea44f" in visual, ident
+    else:
+        assert "img.shields.io/badge/" not in visual, ident
     assert acceptance not in {"", "-", "TODO", "TBD"}, ident
     source_path = root / source
     evidence_path = root / evidence
@@ -36,7 +40,8 @@ for raw in table.splitlines():
         assert symbol in body, (ident, source, "missing symbol", symbol)
     entries[ident] = [d.strip() for d in deps.split(",") if d.strip() != "-"]
     state_totals[state] += 1
-assert len(entries) >= 30, len(entries)
+assert len(entries) >= 38, len(entries)
+assert doc.count("img.shields.io/badge/") >= 28
 for ident, deps in entries.items():
     assert len(deps) == len(set(deps)), ("repeated dependency", ident)
     for dep in deps:
