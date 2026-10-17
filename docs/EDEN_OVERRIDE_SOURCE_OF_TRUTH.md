@@ -16,12 +16,12 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **216 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **217 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **46 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **45 générateurs** `write_derived`.
 - Six modules CMake supplémentaires totalisent **21 générateurs**
-  `write_derived`, soit **67 sites** au total.
+  `write_derived`, soit **66 sites** au total.
 - Quatre modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 68.
@@ -125,6 +125,16 @@ et la génération `memory-manager-native.cpp` sont supprimés.
 Les vérifications hôtes contrôlent les fonctions maintenues et leur parité
 avec les anciennes transformations ; aucun gain FPS ni résultat console
 n'est inféré.
+
+## Variantes HID exclusives
+
+Le témoin R435 ne génère plus `npad_pause_diag.cpp` dans CMake.
+`hid_core` compile une seule variante : le `npad.cpp` maintenu
+ordinaire, ou `npad_pause_diag.cpp` lorsque `PS5_NATIVE` et
+`EDEN_DEV_PROFILE` sont tous deux activés. La variante de diagnostic
+conserve les deux gardes de pointeurs de la version normale et ne modifie
+ni le mapping ni les commandes. Le contrôle hôte compare le code
+extérieur au témoin Fullkey et vérifie la sélection exclusive.
 
 ## Conditions de sortie de la dette
 
