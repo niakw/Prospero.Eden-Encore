@@ -64,7 +64,7 @@ set_property(SOURCE
 # when introducing the override so the shared struct layout stays consistent.
 set_property(SOURCE
     "${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/present/layer.cpp"
-    "${PORT_BUILD_DIR}/renderer_opengl.cpp"
+    "${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/renderer_opengl.cpp"
     "${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/gl_blit_screen.cpp"
     "${PORT_BUILD_DIR}/vulkan_present_layer.cpp"
     TARGET_DIRECTORY video_core APPEND PROPERTY OBJECT_DEPENDS
