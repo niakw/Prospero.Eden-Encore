@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 102
+**Non, this is not an exhaustive repository-wide inventory.** The 104
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,18 +24,18 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 102 | 83 | 205 |
+| Graphe connu | 104 | 85 | 212 |
 | HOST — preuve ciblée hôte | 30 | 27 | 60 |
-| SOURCE — lecture effectuée, preuve insuffisante | 51 | 42 | 111 |
+| SOURCE — lecture effectuée, preuve insuffisante | 53 | 44 | 118 |
 | OPEN — question technique non résolue | 15 | 15 | 27 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **66** | **56** | **138** |
+| **Encore à qualifier (SOURCE + OPEN)** | **68** | **58** | **145** |
 | Dont priorité P0 (SOURCE + OPEN) | 31 | 26 | 75 |
 
-Le **noyau restant** compte donc 66 critères répartis sur
-56 fichiers et 138 mentions fonction/contrat :
-15 OPEN et 51 SOURCE.
-Cela **ne signifie pas 138 fonctions jamais lues** :
+Le **noyau restant** compte donc 68 critères répartis sur
+58 fichiers et 145 mentions fonction/contrat :
+15 OPEN et 53 SOURCE.
+Cela **ne signifie pas 145 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 Le hors-inventaire (HID, IPC, host-syncpoints, variantes vendor...) n'est
 pas chiffrable honnêtement sans un relevé exhaustif supplémentaire.
@@ -80,13 +80,13 @@ sont des sources maintenues sous
 sélectionnées uniquement en `EDEN_DEV_PROFILE`.
 `tools/check-vendor-consolidation-debt.py` vérifie la parité du corps
 C++ avec l'override généré auparavant et recense les sorties CMake dans
-`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **66 sites restants**
-après neuf migrations (F02, F03, F04, N02, N03, H21, H22, F05 et F06). Un site à paramètres variables peut
+`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **64 sites restants**
+après onze migrations (F02, F03, F04, N02, N03, H21, H22, F05, F06, F07 et F08). Un site à paramètres variables peut
 produire plusieurs fichiers réels. Les ressources générées ne doivent
 pas être confondues avec des overrides de code.
 
 Le second inventaire compte 21 générateurs `write_derived()` dans les modules,
-soit **87 sites au total**, mais n'inclut **pas** les sept modules
+soit **85 sites au total**, mais n'inclut **pas** les sept modules
 `X01–X07` qui créent une sortie par `file(WRITE)` ou transforment
 indirectement une variable-source. Ils sont suivis séparément dans
 `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`, avec contrôle hôte de leur
@@ -114,11 +114,17 @@ F05 et F06 cataloguent le runtime natif auparavant absent du graphe :
 désormais maintenues dans `vendor/encore-active/eden-core/src/common/`
 au lieu d'être produites par CMake. Les deux fichiers épinglés restent intacts.
 
-Deux autres unités natives toujours produites par CMake sont indexées
-sans être comptées comme migrées : F07 (`common/cpu_features.cpp`,
-fréquence TSC sous CPUID) et F08 (`common/fs/path_util.cpp`,
-racines utilisateur/cache et anciens chemins). Chacune exige parité du
-fichier complet et sélection de cible avant d'être déclarée maintenue.
+F07 (`common/cpu_features.cpp`) et F08 (`common/fs/path_util.cpp`)
+sont maintenant des sources maintenues dans `vendor/encore-active`,
+avec sélection `common` et comparaison contre leur ancienne
+transformation CMake. La preuve d'exécution native de leurs branches
+de démarrage reste à acquérir.
+
+F09 (`network.cpp`) et F10 (`network_interface.cpp`) sont de
+nouveaux chemins générés toujours actifs, désormais catalogués :
+réveil du socket de contrôle hôte et sélection des interfaces
+réseau. Leur migration doit conserver le protocole d'interruption et
+le comportement hors console.
 
 ## Déjà traité — contrôles terminés et preuves accessibles
 
@@ -319,12 +325,14 @@ function/contract tokens are checked by CI for existence only; the
 | H28 | P1 | H22,H27 | vendor/encore-active/eden-core/src/core/hle/service/service.cpp | ServiceFrameworkBase::HandleSyncRequest; ServiceFrameworkBase::LockService | SOURCE | docs/EDEN_CORE_AUDIT_DEPENDENCIES.md | New service-lock lifetime and outgoing IPC serialization boundary; handler timing does not distinguish lock contention from guest scheduler resume | 🟡 Source étudiée |
 | F05 | P1 | B01 | vendor/encore-active/eden-core/src/common/thread.cpp | SetCurrentThreadName; ::Eden::Performance::RegisterWorker | HOST | tools/check-vendor-consolidation-debt.py | Native-only worker-name registration moved from generated CMake source to maintained C++; source parity and common-target selection verified in host preflight #39056412307; no runtime proof of worker scheduling or game behavior | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39056412307) |
 | F06 | P1 | F05 | vendor/encore-active/eden-core/src/common/fs/fs.cpp | RemoveDirContentsRecursively; IterateDirEntries | HOST | tools/check-vendor-consolidation-debt.py | Native directory iterator override (two call sites) now maintained C++ with a source parity gate; source parity and native selection host PASS #39056412307; console directory outcomes still unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39056412307) |
-| F07 | P1 | B01 | vendor/sources/eden/src/common/cpu_features.cpp | g_cpu_caps; X64::EstimateRDTSCFrequency | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Still CMake-generated on native builds: CPUID 0x15 fallback moves outside the leaf gate and avoids zero/too-low invariant-TSC frequency. Next source-migration candidate, validate exact substitution and clock results before moving | 🟡 Source étudiée |
-| F08 | P1 | F06 | vendor/sources/eden/src/common/fs/path_util.cpp | PathManagerImpl; Reinitialize; GenerateLegacyPath | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Still CMake-generated: native writable user/cache/config roots and legacy-folder path patch. Startup-path side effects need source parity and actual root checks before moving | 🟡 Source étudiée |
+| F07 | P1 | B01 | vendor/encore-active/eden-core/src/common/cpu_features.cpp | g_cpu_caps; X64::EstimateRDTSCFrequency | SOURCE | tools/check-vendor-consolidation-debt.py | Native TSC fallback now a maintained TU selected into common; parity assertion covers CPUID 0x15 fallback and 0x16 boundary; native clock observations still required | 🟡 Source étudiée |
+| F08 | P1 | F06 | vendor/encore-active/eden-core/src/common/fs/path_util.cpp | PathManagerImpl; Reinitialize; GenerateLegacyPath | SOURCE | tools/check-vendor-consolidation-debt.py | Native writable user/cache/config root and legacy path selection now maintained C++; source parity checked, hardware startup path effect still unqualified | 🟡 Source étudiée |
 | J16 | P0 | J01,J02 | headless/backports/eden-dynarmic-icache-coherence.patch | ArmDynarmic64::InvalidateCacheRange; Core::InvalidateInstructionCacheRange | SOURCE | tools/install-active-core-backports.py | Active-core installer stages A64 cross-core i-cache invalidation from a patch, not tracked C++ source; invalidate callback address and propagate process range, while real JIT progress still unproven | 🟡 Source étudiée |
 | J17 | P1 | J16,J13 | headless/backports/eden-dynarmic-icache-coherence.patch | ArmDynarmic32::InvalidateCacheRange; last_code_addr | SOURCE | tools/install-active-core-backports.py | A32 i-cache invalidation resets last dispatched address in staged patch; preserve coherence across guest cores before materializing maintained TU | 🟡 Source étudiée |
 | H29 | P0 | H22,H26 | headless/backports/eden-sm-host-wait.patch | GetService; IsDummyThread; SleepThread | SOURCE | tools/install-active-core-backports.py | SM GetService uses host sleep for dummy threads to avoid parking a host HLE worker with guest SleepThread; staged patch spans service-manager header and must be validated with blocking/unblocking semantics | 🟡 Source étudiée |
 | A02 | P1 | A01,H29 | headless/backports/eden-sm-host-wait.patch | IAudioController::GetSetSys; call_once | SOURCE | tools/install-active-core-backports.py | AudioController defers system-setting lookup to first actual request using once_flag; two corresponding audio files are still patched into the staged tree, not maintained directly | 🟡 Source étudiée |
+| F09 | P1 | H21,F08 | vendor/sources/eden/src/core/internal_network/network.cpp | Initialize; InterruptSocketOperations; AcknowledgeInterrupt; CancelPendingSocketOperations | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Native internal socket wake uses a generated source with socketpair/send/recv replacing pipe/write/read; first-byte ENOMEM workaround is unqualified on console. Distinguish host I/O wake from guest IPC progress | 🟡 Source étudiée |
+| F10 | P1 | F09 | vendor/sources/eden/src/core/internal_network/network_interface.cpp | GetAvailableNetworkInterfaces; GetSelectedNetworkInterface; SelectFirstNetworkInterface | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Three CMake FreeBSD conditional substitutions choose getifaddrs path and route zero-gateway fallback; validate target selection and real interface snapshot before moving | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
