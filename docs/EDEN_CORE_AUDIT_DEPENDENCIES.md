@@ -19,23 +19,23 @@ any operation, and avoid unrelated files.
 L'inventaire indexe des **contrats/fonctions à vérifier**, pas toutes les
 fonctions C++ du dépôt. Une même source peut couvrir plusieurs contrats ;
 des `SOURCE` ont été lues sans preuve d'exécution matérielle, et des
-`HOST` couvrent seulement la propriété contrôlée. Les 36 validations
+`HOST` couvrent seulement la propriété contrôlée. Les 37 validations
 historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
 | Graphe connu | 104 | 85 | 212 |
-| HOST — preuve ciblée hôte | 30 | 27 | 60 |
-| SOURCE — lecture effectuée, preuve insuffisante | 53 | 44 | 118 |
+| HOST — preuve ciblée hôte | 33 | 30 | 68 |
+| SOURCE — lecture effectuée, preuve insuffisante | 50 | 41 | 110 |
 | OPEN — question technique non résolue | 15 | 15 | 27 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **68** | **58** | **145** |
+| **Encore à qualifier (SOURCE + OPEN)** | **65** | **55** | **137** |
 | Dont priorité P0 (SOURCE + OPEN) | 31 | 26 | 75 |
 
-Le **noyau restant** compte donc 68 critères répartis sur
-58 fichiers et 145 mentions fonction/contrat :
-15 OPEN et 53 SOURCE.
-Cela **ne signifie pas 145 fonctions jamais lues** :
+Le **noyau restant** compte donc 65 critères répartis sur
+55 fichiers et 137 mentions fonction/contrat :
+15 OPEN et 50 SOURCE.
+Cela **ne signifie pas 137 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 Le hors-inventaire (HID, IPC, host-syncpoints, variantes vendor...) n'est
 pas chiffrable honnêtement sans un relevé exhaustif supplémentaire.
@@ -124,7 +124,7 @@ F09 (`network.cpp`) reste une unité CMake générée pour le réveil du socket 
 
 ## Déjà traité — contrôles terminés et preuves accessibles
 
-**36 validations ciblées historiquement établies.** Elles recouvrent en
+**37 validations ciblées historiquement établies.** Elles recouvrent en
 partie les lignes B/Q/D/V/J/M/S du graphe ci-dessous : **ne pas additionner
 ces deux décomptes comme s'il s'agissait de travaux différents**.
 
@@ -171,6 +171,7 @@ démontrent précisément qu'une approche est dangereuse.
 | C34 | Inventaire séparé des générateurs et overrides indirects | `write_derived; macro_recovery; checked-fastmem; physical_core_interrupt_atomic` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-vendor-consolidation-debt.py) | [Prévalidation #39054309660](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39054309660) | 68 sites du CMake principal + 21 sites de modules et 7 modules indirects suivis séparément; ne compte ni toutes les sorties variables, ni toute l'arborescence de dépendances |
 | C35 | Runtime natif commun : sources maintenues, sans objet doublé | `SetCurrentThreadName; RemoveDirContentsRecursively; IterateDirEntries` | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-vendor-consolidation-debt.py) | [Prévalidation #39056412307](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39056412307) | Sources C++ maintenues équivalentes aux injections initiales, deux remplacements d'itérateur et sélection unique de la cible common. Aucun test de comportement console |
 | C36 | Patches de snapshot hors générateurs CMake inventoriés | `apply_one; install-active-core-backports` | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-vendor-consolidation-debt.py) | [Prévalidation #39056412307](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39056412307) | 44 replays + 2 patches cœur, 46 fichiers présents avec contrôle de correspondance des installateurs. Ce contrôle d'inventaire ne qualifie pas leurs fonctions en jeu |
+| C37 | TSC, racines natives et choix des interfaces compilés depuis sources maintenues | `g_cpu_caps; PathManagerImpl; GetAvailableNetworkInterfaces` | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-vendor-consolidation-debt.py) | [Prévalidation #39058024476](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39058024476) | Trois équivalences exactes avec anciens générateurs + sélection native; n'implique pas les mesures de temps ni les chemins réseau/FS constatés sur console |
 
 ### Audits archivés à ne pas recommencer
 
@@ -321,14 +322,14 @@ function/contract tokens are checked by CI for existence only; the
 | H28 | P1 | H22,H27 | vendor/encore-active/eden-core/src/core/hle/service/service.cpp | ServiceFrameworkBase::HandleSyncRequest; ServiceFrameworkBase::LockService | SOURCE | docs/EDEN_CORE_AUDIT_DEPENDENCIES.md | New service-lock lifetime and outgoing IPC serialization boundary; handler timing does not distinguish lock contention from guest scheduler resume | 🟡 Source étudiée |
 | F05 | P1 | B01 | vendor/encore-active/eden-core/src/common/thread.cpp | SetCurrentThreadName; ::Eden::Performance::RegisterWorker | HOST | tools/check-vendor-consolidation-debt.py | Native-only worker-name registration moved from generated CMake source to maintained C++; source parity and common-target selection verified in host preflight #39056412307; no runtime proof of worker scheduling or game behavior | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39056412307) |
 | F06 | P1 | F05 | vendor/encore-active/eden-core/src/common/fs/fs.cpp | RemoveDirContentsRecursively; IterateDirEntries | HOST | tools/check-vendor-consolidation-debt.py | Native directory iterator override (two call sites) now maintained C++ with a source parity gate; source parity and native selection host PASS #39056412307; console directory outcomes still unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39056412307) |
-| F07 | P1 | B01 | vendor/encore-active/eden-core/src/common/cpu_features.cpp | g_cpu_caps; X64::EstimateRDTSCFrequency | SOURCE | tools/check-vendor-consolidation-debt.py | Native TSC fallback now a maintained TU selected into common; parity assertion covers CPUID 0x15 fallback and 0x16 boundary; native clock observations still required | 🟡 Source étudiée |
-| F08 | P1 | F06 | vendor/encore-active/eden-core/src/common/fs/path_util.cpp | PathManagerImpl; Reinitialize; GenerateLegacyPath | SOURCE | tools/check-vendor-consolidation-debt.py | Native writable user/cache/config root and legacy path selection now maintained C++; source parity checked, hardware startup path effect still unqualified | 🟡 Source étudiée |
+| F07 | P1 | B01 | vendor/encore-active/eden-core/src/common/cpu_features.cpp | g_cpu_caps; X64::EstimateRDTSCFrequency | HOST | tools/check-vendor-consolidation-debt.py | Native TSC fallback now a maintained TU selected into common; parity and CMake selection PASS in preflight #39058024476; native clock observations still required | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39058024476) |
+| F08 | P1 | F06 | vendor/encore-active/eden-core/src/common/fs/path_util.cpp | PathManagerImpl; Reinitialize; GenerateLegacyPath | HOST | tools/check-vendor-consolidation-debt.py | Native writable user/cache/config root and legacy path selection now maintained C++; source parity and selection PASS in preflight #39058024476; hardware startup paths unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39058024476) |
 | J16 | P0 | J01,J02 | headless/backports/eden-dynarmic-icache-coherence.patch | ArmDynarmic64::InvalidateCacheRange; Core::InvalidateInstructionCacheRange | SOURCE | tools/install-active-core-backports.py | Active-core installer stages A64 cross-core i-cache invalidation from a patch, not tracked C++ source; invalidate callback address and propagate process range, while real JIT progress still unproven | 🟡 Source étudiée |
 | J17 | P1 | J16,J13 | headless/backports/eden-dynarmic-icache-coherence.patch | ArmDynarmic32::InvalidateCacheRange; last_code_addr | SOURCE | tools/install-active-core-backports.py | A32 i-cache invalidation resets last dispatched address in staged patch; preserve coherence across guest cores before materializing maintained TU | 🟡 Source étudiée |
 | H29 | P0 | H22,H26 | headless/backports/eden-sm-host-wait.patch | GetService; IsDummyThread; SleepThread | SOURCE | tools/install-active-core-backports.py | SM GetService uses host sleep for dummy threads to avoid parking a host HLE worker with guest SleepThread; staged patch spans service-manager header and must be validated with blocking/unblocking semantics | 🟡 Source étudiée |
 | A02 | P1 | A01,H29 | headless/backports/eden-sm-host-wait.patch | IAudioController::GetSetSys; call_once | SOURCE | tools/install-active-core-backports.py | AudioController defers system-setting lookup to first actual request using once_flag; two corresponding audio files are still patched into the staged tree, not maintained directly | 🟡 Source étudiée |
 | F09 | P1 | H21,F08 | vendor/sources/eden/src/core/internal_network/network.cpp | Initialize; InterruptSocketOperations; AcknowledgeInterrupt; CancelPendingSocketOperations | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Native internal socket wake uses a generated source with socketpair/send/recv replacing pipe/write/read; first-byte ENOMEM workaround is unqualified on console. Distinguish host I/O wake from guest IPC progress | 🟡 Source étudiée |
-| F10 | P1 | F09 | vendor/encore-active/eden-core/src/core/internal_network/network_interface.cpp | GetAvailableNetworkInterfaces; GetSelectedNetworkInterface; SelectFirstNetworkInterface | SOURCE | tools/check-vendor-consolidation-debt.py | Three FreeBSD conditional substitutions are in maintained native C++ with an exact old-generator parity test and selected core target; actual network-interface snapshot remains unqualified | 🟡 Source étudiée |
+| F10 | P1 | F09 | vendor/encore-active/eden-core/src/core/internal_network/network_interface.cpp | GetAvailableNetworkInterfaces; GetSelectedNetworkInterface; SelectFirstNetworkInterface | HOST | tools/check-vendor-consolidation-debt.py | Three FreeBSD conditional substitutions are in maintained native C++ with an old-generator parity and core selection PASS in preflight #39058024476; native interface snapshot unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39058024476) |
 <!-- AUDIT_ROWS_END -->
 
 
