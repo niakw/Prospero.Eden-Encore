@@ -8,9 +8,9 @@ présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
 - **186 fichiers** de code et d'en-têtes enregistrés.
-- **53 fichiers** possèdent une correspondance de chemin *exacte*
+- **56 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
-- **133 fichiers** n'ont pas encore de ligne de graphe correspondant
+- **130 fichiers** n'ont pas encore de ligne de graphe correspondant
   exactement à leur chemin. Cela **ne prouve pas** qu'ils n'ont jamais été
   examinés, ni qu'ils sont effectivement compilés.
 - Le manifeste des backports verrouille **83 fichiers livrés**, dont
@@ -115,9 +115,9 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-backports/src/video_core/texture_cache/texture_cache_base.h` | `shipping-backport` | — |
 | `eden-backports/src/video_core/texture_cache/util.cpp` | `shipping-backport` | — |
 | `eden-core/include/core/file_sys/bis_factory.h` | `maintained-override` | F13 |
-| `eden-core/overrides/core/device_memory_manager.inc` | `maintained-override` | — |
-| `eden-core/overrides/core/gpu_dirty_memory_manager.h` | `maintained-override` | — |
-| `eden-core/overrides/core/guest_memory.h` | `maintained-override` | — |
+| `eden-core/overrides/core/device_memory_manager.inc` | `maintained-override` | M08 |
+| `eden-core/overrides/core/gpu_dirty_memory_manager.h` | `maintained-override` | M09 |
+| `eden-core/overrides/core/guest_memory.h` | `maintained-override` | M10 |
 | `eden-core/src/audio_core/renderer/voice/voice_info.cpp` | `maintained-override` | — |
 | `eden-core/src/audio_core/sink/sink_details.cpp` | `maintained-override` | — |
 | `eden-core/src/audio_core/sink/sink_stream.cpp` | `maintained-override` | A03 |
