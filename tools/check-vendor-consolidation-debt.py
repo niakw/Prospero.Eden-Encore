@@ -751,8 +751,10 @@ for filename, expected in scalar_canonical_blobs.items():
     checksum = hashlib.sha1(b"blob " + str(len(contents)).encode() + b"\x00" + contents).hexdigest()
     assert checksum == expected, ("canonical scalar fragment drift", filename)
 scalar_module = (root / "headless/scalar-memory.cmake").read_text()
-assert 'file(READ "${PORT_ROOT}/vendor/encore-active/eden-core/dynarmic/scalar/scalar-memory-${lower}.inc" scalar_access)' in scalar_module
-assert 'file(READ "${PORT_ROOT}/vendor/encore-active/eden-core/dynarmic/scalar/scalar-fold.inc" scalar_fold)' in c
+assert 'file(READ "${EDEN_SCALAR_INPUT_DIR}/scalar-memory-${lower}.inc" scalar_access)' in scalar_module
+assert 'file(READ "${EDEN_SCALAR_INPUT_DIR}/scalar-fold.inc" scalar_fold)' in c
+assert 'set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDEN_SCALAR_INPUTS})' in c
+assert 'set(EDEN_SCALAR_INPUT_DIR' in c
 print("ENCORE_SCALAR_CANONICAL_INPUTS_PASS", len(scalar_canonical_blobs))
 
 # Keep the generator inventory synchronized with every future source migration.
