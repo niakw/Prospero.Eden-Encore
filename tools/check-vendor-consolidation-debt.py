@@ -521,6 +521,9 @@ assert 'write_derived("${PORT_BUILD_DIR}/renderer_opengl.cpp"' not in c
 assert 'list(REMOVE_ITEM video_sources renderer_opengl/renderer_opengl.cpp)' not in c
 assert 'list(APPEND video_sources "${PORT_BUILD_DIR}/renderer_opengl.cpp")' not in c
 assert 'renderer_opengl/renderer_opengl.cpp' in (sources / "eden/src/video_core/CMakeLists.txt").read_text()
+# Stale generated renderer must not remain an explicit Vulkan rebuild dependency.
+assert '${PORT_BUILD_DIR}/renderer_opengl.cpp' not in vulkan
+assert '${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/renderer_opengl.cpp' in vulkan
 print("VENDOR_OPENGL_RENDERER_IDENTITY_COPY_REMOVED: pinned source selected")
 
 # Keep the generator inventory synchronized with every future source migration.
