@@ -56,6 +56,27 @@ def report(rows: list[dict[str, float]]) -> str:
             f"late50_windows={count(lambda r: r.get('late50', 0)>0)} "
             f"max_worst_ms={max(r.get('worst_ms', 0) for r in subset):.3f}"
         )
+    # Long-frame triage is observational: cumulative multi-core JIT compile
+    # and blocked mutex waits share a reporting window, NOT per-frame identity.
+    stable = [r for r in rows if r.get("fps", 0) >= 29.9
+              and r.get("worst_ms", float("inf")) < 50]
+    extreme = [r for r in rows if r.get("worst_ms", 0) >= 300]
+    low_cache = [r for r in extreme if "cache_wait_ms" in r
+                 and r["cache_wait_ms"] < 10]
+    high_jit = [r for r in extreme if r.get("jit_ms", 0) >= 500]
+    out.append(
+        f"long_frame_triage: stable30_worst_below50={len(stable)} "
+        f"worst_ge300={len(extreme)} "
+        f"worst_ge300_cache_below10ms={len(low_cache)} "
+        f"worst_ge300_jit_ge500ms={len(high_jit)} "
+        f"median_stable_jit_ms={med(stable, 'jit_ms')} "
+        f"median_slow_jit_ms={med(extreme, 'jit_ms')} "
+        f"median_stable_cache_ms={med(stable, 'cache_wait_ms')} "
+        f"median_slow_cache_ms={med(extreme, 'cache_wait_ms')}"
+    )
+    out.append("NOTE: JIT and cache times aggregate many guest threads across "
+               "a reporting window; concurrent peaks do not establish the "
+               "precise cause of an individual late frame.")
     out.append("NOTE: try_lock failures are instrumented, not per-frame mutex latency; "
                "blocked_ms sums waits across guest threads. FPS near 30 is not smoothness.")
     return "\n".join(out)
