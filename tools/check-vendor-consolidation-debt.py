@@ -153,7 +153,7 @@ assert storage_maintained == '#include "performance.h"\n' + storage_pinned.repla
 assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_FS_STORAGE}")') == 1
 assert 'write_derived("${PORT_BUILD_DIR}/fs_i_storage.cpp"' not in c
 assert "fs_storage_source" not in c
-assert counts["write_derived("] <= 70, counts
+assert counts["write_derived("] <= 68, counts
 print("VENDOR_MAINTAINED_FS_ISTORAGE_PARITY_PASS: read, short read, quiet policy")
 
 
@@ -233,6 +233,64 @@ print("VENDOR_MAINTAINED_NVCTRL_PARITY_PASS: async callback capture, quiet clock
 print("VENDOR_MAINTAINED_FS_IFILE_PARITY_PASS: pinned native DEV source, no CMake rewrite")
 
 
+
+# HLE request dispatch: reproduce both historical CMake substitutions against
+# the pinned file. The filesystem caller probe is applied to BOTH dispatch
+# wrappers, even though we intentionally make no new runtime behavior changes.
+hle_rel = "core/hle/service/service.cpp"
+hle_pinned = (sources / "eden/src" / hle_rel).read_text()
+hle_maintained = (active / "eden-core/src" / hle_rel).read_text()
+hle_expected = '#include "performance.h"\n#include "core/arm/debug.h"\n' + hle_pinned
+hle_calls = ("        InvokeRequest(ctx);", "            InvokeRequestTipc(ctx);")
+hle_metric = """            if (profile_hle)
+                ::Eden::Performance::RecordHle(service_name, ctx.GetCommand(), ::Eden::Performance::NowNs() - hle_start);
+"""
+for call in hle_calls:
+    assert hle_expected.count(call) == 1, ("missing pinned HLE request dispatch", call)
+    wrapper = ("""        {
+            const bool profile_hle = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed);
+            const auto hle_start = profile_hle ? ::Eden::Performance::NowNs() : 0;
+""" + call + "\n" + hle_metric + "        }")
+    hle_expected = hle_expected.replace(call, wrapper)
+assert hle_expected.count(hle_metric) == 2
+hle_trace = """            if (::Eden::Performance::trace_fs_callers.load(std::memory_order_relaxed) && std::string_view{service_name} == "IFileSystem") {
+                std::string frames;
+                for (const auto& entry : Core::GetBacktrace(&ctx.GetThread()))
+                    frames += fmt::format(" {}+{:X}", entry.module, entry.offset);
+                LOG_WARNING(Service_FS, "EDEN_FS_CALLER command={} thread={} name={} frames={}", ctx.GetCommand(),
+                            ctx.GetThread().GetThreadId(), Core::GetThreadName(&ctx.GetThread()).value_or("-"), frames);
+            }
+"""
+hle_expected = hle_expected.replace(hle_metric, hle_metric + hle_trace)
+assert hle_maintained == hle_expected, "Maintained service dispatch diverges from former CMake-generated HLE source"
+# Synchronous IPC: request ID and timing are captured BEFORE the potentially
+# blocking call; the exact historical body is maintained, not regenerated.
+ipc_rel = "core/hle/kernel/svc/svc_ipc.cpp"
+ipc_pinned = (sources / "eden/src" / ipc_rel).read_text()
+ipc_maintained = (active / "eden-core/src" / ipc_rel).read_text()
+ipc_old = "    R_RETURN(session->SendSyncRequest(kernel, message, buffer_size));"
+ipc_new = """    const bool ipc_profile = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed);
+    const auto ipc_start = ipc_profile ? ::Eden::Performance::NowNs() : 0;
+    const auto ipc_tid = ipc_profile ? GetCurrentThread(kernel).GetThreadId() : 0;
+    auto* const ipc_slot = ipc_profile ? ::Eden::Performance::BeginGuestIpc(ipc_tid, ipc_start) : nullptr;
+    const Result ipc_result = session->SendSyncRequest(kernel, message, buffer_size);
+    if (ipc_profile) ::Eden::Performance::FinishGuestIpc(ipc_slot, ipc_tid, ipc_start, ::Eden::Performance::NowNs() - ipc_start);
+    R_RETURN(ipc_result);"""
+assert ipc_pinned.count(ipc_old) == 1
+assert ipc_maintained == '#include "performance.h"\n' + ipc_pinned.replace(ipc_old, ipc_new), (
+    "Maintained IPC source diverges from former generated source")
+for name, pinned_path in (
+        ("HLE_SERVICE", "hle/service/service.cpp"),
+        ("SVC_IPC", "hle/kernel/svc/svc_ipc.cpp")):
+    assert f'set(EDEN_MAINTAINED_PROFILE_{name}' in c
+    assert f'"${EDEN_MAINTAINED_PROFILE_{name}}"' in c
+    assert f'"{pinned_path}"' in c
+    assert f'write_derived("${PORT_BUILD_DIR}/{("hle_service" if name == "HLE_SERVICE" else "svc_ipc")}.cpp"' not in c
+assert c.count('list(REMOVE_ITEM core_sources "hle/service/service.cpp" "hle/kernel/svc/svc_ipc.cpp")') == 1
+for name in ("hle_source", "ipc_source", "hle_call", "ipc_old"):
+    assert name not in c, ("legacy configure-time HLE rewrite still referenced", name)
+print("VENDOR_MAINTAINED_HLE_IPC_PARITY_PASS: both dispatches, caller traces, guest IPC attribution, DEV selection")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -273,7 +331,7 @@ assert len(module_current) == 21, len(module_current)
 for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     text = (root / module).read_text()
     assert 'file(WRITE ' in text and 'configure_file(' in text, module
-assert len(recorded) + len(module_recorded) == 91
+assert len(recorded) + len(module_recorded) == 89
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 
