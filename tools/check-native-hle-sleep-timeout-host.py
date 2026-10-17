@@ -15,6 +15,11 @@ cmake = (root / "headless/CMakeLists.txt").read_text()
 workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
 assert 'list(APPEND eden_svc_sleep_sources ' in cmake and 'eden_checked_sleep' in cmake
 assert "python3 -B tools/check-native-hle-sleep-timeout-host.py" in workflow
+yield_contract = (root / "vendor/sources/eden/src/core/hle/kernel/svc_types.h").read_text()
+yield_enum = yield_contract.split("enum class YieldType : s64 {", 1)[1].split("};", 1)[0]
+assert "WithoutCoreMigration = 0," in yield_enum
+assert "WithCoreMigration = -1," in yield_enum
+assert "ToAnyThread = -2," in yield_enum
 compiler = shutil.which("g++") or shutil.which("clang++")
 assert compiler
 
@@ -71,7 +76,7 @@ struct KScheduler {
 };
 namespace Svc {
 enum class YieldType : s64 {
-    WithoutCoreMigration = -1, WithCoreMigration = -2, ToAnyThread = -3
+    WithoutCoreMigration = 0, WithCoreMigration = -1, ToAnyThread = -2
 };
 }
 }
@@ -97,14 +102,13 @@ int main(int argc, char** argv) {
         Kernel::Svc::SleepThread(system, 5);
         assert(kernel.sleep_calls == 1 && kernel.last_deadline == 107);
         Kernel::Svc::SleepThread(system, 0);
-        assert(kernel.sleep_calls == 1 && kernel.yield_kind == 0);
+        assert(kernel.sleep_calls == 1 && kernel.yield_kind == 1);
         Kernel::Svc::SleepThread(system, -1);
-        assert(kernel.yield_kind == 1);
-        Kernel::Svc::SleepThread(system, -2);
         assert(kernel.yield_kind == 2);
+        Kernel::Svc::SleepThread(system, -2);
+        assert(kernel.yield_kind == 3);
         Kernel::Svc::SleepThread(system, -3);
         assert(kernel.yield_kind == 3);
-        Kernel::Svc::SleepThread(system, -4);
         assert(kernel.yield_kind == 3 && kernel.sleep_calls == 1);
     } else if (mode == 1) {
         kernel.timer.now = 100;
