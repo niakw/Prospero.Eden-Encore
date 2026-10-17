@@ -64,22 +64,28 @@ assert unload.count("DEBUG_ASSERT(!can_lock)") == 1
 assert unload.index("m_context_guard.try_lock()") < unload.index("m_context_guard.unlock()")
 
 cmake = (root / "headless/CMakeLists.txt").read_text()
+module = (root / "vendor/encore-active/eden-threading/native-hle-overrides.cmake").read_text()
 workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
 native = (root / ".github/workflows/build-040-zbic.yml").read_text()
+
 assert "option(EDEN_BLOCKING_GUEST_CONTEXT_LOCKS" in cmake
-assert "if(EDEN_BLOCKING_GUEST_CONTEXT_LOCKS)" in cmake
-assert "eden_pinned_scheduler_idx EQUAL -1" in cmake
+assert "native-hle-overrides.cmake" in cmake
+assert "if(EDEN_BLOCKING_GUEST_CONTEXT_LOCKS)" in module
+assert "k_thread.h k_slab_heap.h k_scheduler.cpp" in module
+assert "target_include_directories(core BEFORE PUBLIC" in module
+assert "encore_replace_core_source(" in module
 assert 'file(REMOVE "${PORT_BUILD_DIR}/include/core/hle/kernel/k_slab_heap.h")' in cmake
-assert 'target_include_directories(core BEFORE PUBLIC "${EDEN_THREAD_ROOT}")' in cmake
-assert 'list(REMOVE_ITEM eden_kernel_sources "hle/kernel/k_scheduler.cpp")' in cmake
-assert 'set_property(TARGET core PROPERTY SOURCES "${eden_kernel_sources}")' in cmake
 for name in expected_hashes:
-    assert name in cmake
+    assert name in module
 for target in ("core", "video_core", "audio_core", "hid_core", "network",
                "input_common", "frontend_common", "shader_recompiler", "dynarmic"):
-    assert target in cmake
+    assert target in module
 for yml in (workflow, native):
     assert "tools/check-upstream-guest-scheduler-locks.py" in yml
+
+# The separate HLE CMake smoke configures all four source-selection variants.
+# This test owns only upstream hashes and actual lazy-mutex host semantics.
+assert "python3 -B tools/verify/hle/check-hle-cmake-select-host.py" in workflow
 
 # A deliberately lazy host mutex: unlike a normal std::mutex, unlock before
 # the first try_lock is invalid. These two paths represent the exact upstream
@@ -134,57 +140,5 @@ with tempfile.TemporaryDirectory(prefix="encore-scheduler-guard-") as folder:
                     str(cpp), "-o", str(exe)], check=True, env=env, timeout=60)
     subprocess.run([str(exe)], check=True, env=env, timeout=15)
 
-# Configure the *actual* CMake override fragment with mocked target source
-# lists both ON and OFF. This catches accidental duplicate scheduler TUs,
-# wrong include visibility and breaks in source-list replacement.
-cmake_exe = shutil.which("cmake")
-assert cmake_exe, "CMake required to check native source-selection contract"
-fragment_start = "# Upstream pair #4436 + #4447:"
-fragment_end = "# The full JIT assertion header is versioned"
-assert cmake.count(fragment_start) == 1 and cmake.count(fragment_end) == 1
-fragment = cmake.split(fragment_start, 1)[1].split(fragment_end, 1)[0]
-fragment = fragment_start + fragment
-with tempfile.TemporaryDirectory(prefix="encore-thread-cmake-") as folder:
-    source_dir = Path(folder) / "source"
-    source_dir.mkdir()
-    (source_dir / "hle/kernel").mkdir(parents=True)
-    (source_dir / "hle/kernel/k_scheduler.cpp").write_text("void fake_scheduler() {}\n")
-    (source_dir / "dummy.cpp").write_text("void unused_dummy() {}\n")
-    prefix = """cmake_minimum_required(VERSION 3.22)
-project(EncoreSchedulerProbe LANGUAGES CXX)
-add_library(core STATIC hle/kernel/k_scheduler.cpp)
-foreach(t IN ITEMS video_core audio_core hid_core network input_common
-                   frontend_common shader_recompiler dynarmic)
-  add_library(${t} STATIC dummy.cpp)
-endforeach()
-set(PORT_ROOT "@PORT_ROOT@")
-""".replace("@PORT_ROOT@", str(root))
-    verify = """
-get_target_property(actual_sources core SOURCES)
-if(EDEN_BLOCKING_GUEST_CONTEXT_LOCKS)
-  list(FIND actual_sources
-    "${EDEN_THREAD_ROOT}/core/hle/kernel/k_scheduler.cpp" active_idx)
-  list(FIND actual_sources "hle/kernel/k_scheduler.cpp" legacy_idx)
-  if(active_idx EQUAL -1 OR NOT legacy_idx EQUAL -1)
-    message(FATAL_ERROR "Native core scheduler source override lost")
-  endif()
-  get_target_property(exported core INTERFACE_INCLUDE_DIRECTORIES)
-  if(NOT "${EDEN_THREAD_ROOT}" IN_LIST exported)
-    message(FATAL_ERROR "Native KThread header layout not propagated")
-  endif()
-else()
-  list(FIND actual_sources "hle/kernel/k_scheduler.cpp" legacy_idx)
-  if(legacy_idx EQUAL -1)
-    message(FATAL_ERROR "Original scheduler not restored when option is OFF")
-  endif()
-endif()
-"""
-    (source_dir / "CMakeLists.txt").write_text(prefix + fragment + verify)
-    for enabled in ("ON", "OFF"):
-        subprocess.run([cmake_exe, "-S", str(source_dir),
-                        "-B", str(Path(folder) / ("build_" + enabled)),
-                        "-DEDEN_BLOCKING_GUEST_CONTEXT_LOCKS=" + enabled],
-                       check=True, env=env, timeout=50, stdout=subprocess.DEVNULL)
-
-print("PASS paired upstream kernel source overlays + exact hashes + CMake/CI wiring")
+print("PASS paired upstream kernel source overlays + exact hashes + maintained CMake reference")
 print("HOST ONLY: native build and guest gameplay still require qualification")
