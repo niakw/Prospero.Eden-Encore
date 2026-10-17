@@ -1809,6 +1809,21 @@ if(PS5_NATIVE)
         list(APPEND eden_svc_wait_sources "${eden_checked_svc}")
     endforeach()
     set_property(TARGET core PROPERTY SOURCES "${eden_svc_wait_sources}")
+    # Native sleep uses the same overflow-safe deadline semantics as the three
+    # checked guest waits. Keep the source explicit, with no CMake generation.
+    set(eden_checked_sleep
+        "${PORT_ROOT}/vendor/encore-active/eden-threading/src/core/hle/kernel/svc/svc_thread.cpp")
+    if(NOT EXISTS "${eden_checked_sleep}")
+        message(FATAL_ERROR "Missing maintained native guest sleep source")
+    endif()
+    get_target_property(eden_svc_sleep_sources core SOURCES)
+    list(FIND eden_svc_sleep_sources "hle/kernel/svc/svc_thread.cpp" eden_sleep_index)
+    if(eden_sleep_index EQUAL -1)
+        message(FATAL_ERROR "Pinned guest sleep SVC source moved")
+    endif()
+    list(REMOVE_ITEM eden_svc_sleep_sources "hle/kernel/svc/svc_thread.cpp")
+    list(APPEND eden_svc_sleep_sources "${eden_checked_sleep}")
+    set_property(TARGET core PROPERTY SOURCES "${eden_svc_sleep_sources}")
 endif()
 
 # Keep service threads until their outer callbacks and C++ destructors finish.
