@@ -116,6 +116,13 @@ dans la version normale.
 
 ## Prochain ordre de migration
 
+- Politique réseau guest : la version livrée `eden-backports` et son manifeste
+  demeurent inchangés. Le build `PS5_NATIVE` utilise désormais l'en-tête
+  prioritaire `eden-core/overrides/core/hle/service/sockets/encore_guest_network_policy.h`
+  avec `kGuestNetworkOffline=true`. Vérifier séparément le trafic console :
+  le test hôte assure les consommateurs DNS, BSD, NIFM et la sélection des includes.
+
+
 - `core/memory.cpp` : sélection directe de la source maintenue
   `vendor/encore-active/eden-core/src/core/memory.cpp` **uniquement**
   lorsque `EDEN_A32_FASTMEM` est activé. Elle reproduit exactement le

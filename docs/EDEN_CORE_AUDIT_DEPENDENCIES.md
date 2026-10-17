@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 174
+**Non, this is not an exhaustive repository-wide inventory.** The 176
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,23 +24,23 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 174 | 155 | 369 |
+| Graphe connu | 176 | 157 | 371 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 120 | 111 | 266 |
+| SOURCE — lecture effectuée, preuve insuffisante | 122 | 113 | 268 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **135** | **125** | **294** |
-| Dont priorité P0 (SOURCE + OPEN) | 55 | 50 | 143 |
+| **Encore à qualifier (SOURCE + OPEN)** | **137** | **127** | **296** |
+| Dont priorité P0 (SOURCE + OPEN) | 58 | 53 | 147 |
 
-Le **noyau restant** compte donc 135 critères répartis sur
-125 fichiers et 294 mentions fonction/contrat :
-15 OPEN et 120 SOURCE.
-Cela **ne signifie pas 294 fonctions jamais lues** :
+Le **noyau restant** compte donc 137 critères répartis sur
+127 fichiers et 296 mentions fonction/contrat :
+15 OPEN et 122 SOURCE.
+Cela **ne signifie pas 296 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-188 fichiers de code/en-têtes présents, 96 avec un chemin de
-graphe exact et 92 sans correspondance exacte. Cet écart n'est
+189 fichiers de code/en-têtes présents, 98 avec un chemin de
+graphe exact et 91 sans correspondance exacte. Cet écart n'est
 **pas** le nombre de fonctions non auditées, ni une preuve de code actif.
 Le contrôle hôte vérifie la complétude des chemins et les références,
 mais pas le comportement.
@@ -375,6 +375,8 @@ function/contract tokens are checked by CI for existence only; the
 | N04 | P0 | N02 | vendor/sources/eden/src/video_core/host1x/syncpoint_manager.cpp | SyncpointManager::RegisterAction; SyncpointManager::DeregisterAction; SyncpointManager::Increment | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Newly indexed host-syncpoint action ownership: increment invokes callbacks while its guard is held; callback, reentrant locking and unregistration order require explicit proof before altering the scheduler | 🟡 Source étudiée |
 | N05 | P1 | N02,N04 | vendor/encore-active/eden-core/src/core/hle/service/nvdrv/devices/nvhost_ctrl.cpp | nvhost_ctrl::FreeEvent; nvhost_ctrl::IocCtrlEventUnregister; nvhost_ctrl::QueryEvent | SOURCE | tools/check-vendor-consolidation-debt.py | Newly indexed event object lifecycle: cancellation, unregister, query and callback signal may overlap. Source selected in DEV but actual native destruction/callback ordering not proven | 🟡 Source étudiée |
 | N06 | P0 | N03,V02 | vendor/encore-active/eden-surface-lifecycle/src/core/hle/service/nvnflinger/surface_flinger.cpp | SurfaceFlinger::RemoveDisplay; SurfaceFlinger::DestroyLayer; SurfaceFlinger::RemoveLayerFromDisplayStack; SurfaceFlinger::ComposeDisplay | SOURCE | tools/install-vendored-surface-lifecycle.py | Complete maintained unit installed into pinned disposable Eden tree, with exact original Git blob and composite wait checks; display and layer lifetime unproven on console | 🟡 Source étudiée |
+| N09 | P0 | N06 | vendor/encore-active/eden-backports/src/core/hle/service/sockets/encore_guest_network_policy.h | kGuestNetworkOffline | SOURCE | tools/check-active-source-inventory.py | Shipping header defaults false despite offline-only design; native header shadows it, manifest remains immutable | 🟡 Source étudiée |
+| N10 | P0 | N09 | vendor/encore-active/eden-core/overrides/core/hle/service/sockets/encore_guest_network_policy.h | kGuestNetworkOffline | SOURCE | tools/check-active-source-inventory.py | Native header enforces guest-offline for BSD DNS NIFM without changing host launcher client; real network capture unproved | 🟡 Source étudiée |
 | H23 | P0 | H05,N04 | vendor/sources/eden/src/core/hle/kernel/k_readable_event.cpp | KReadableEvent::Signal; KReadableEvent::Clear; KReadableEvent::IsSignaled | SOURCE | tools/verify/hle/check-native-hle-sync-unlink-host.py | Newly cataloged transition from signaled GPU host event to kernel NotifyAvailable. Source uses scheduler lock; no trace yet associates wake with resumed guest PC | 🟡 Source étudiée |
 | H24 | P1 | H23,N05 | vendor/sources/eden/src/core/hle/kernel/k_event.cpp | KEvent::Signal; KEvent::Clear | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Newly cataloged NV event signal/clear forwarding under scheduler lock and destroyed-readable guard. Requires callback/event-lifetime interleaving evidence; do not speculate that the guard proves teardown safe | 🟡 Source étudiée |
 | H25 | P0 | H21 | vendor/sources/eden/src/core/hle/kernel/k_client_session.cpp | KClientSession::SendSyncRequest; KClientSession::SendAsyncRequest | SOURCE | docs/EDEN_CORE_AUDIT_DEPENDENCIES.md | New link from guest SVC to m_parent->OnRequest: scoped request reference and async event distinction; trace kernel wait-result handoff in native run | 🟡 Source étudiée |

@@ -1151,6 +1151,11 @@ if(PS5_NATIVE)
     if(NOT EXISTS "${EDEN_NATIVE_DIRTY_HEADER_ROOT}/core/gpu_dirty_memory_manager.h")
         message(FATAL_ERROR "Missing maintained native GPU dirty collector")
     endif()
+    # Override the immutable shipping guest policy on native builds without
+    # changing the backport manifest or the host launcher's network clients.
+    if(NOT EXISTS "${EDEN_NATIVE_DIRTY_HEADER_ROOT}/core/hle/service/sockets/encore_guest_network_policy.h")
+        message(FATAL_ERROR "Missing maintained native guest offline policy")
+    endif()
     target_include_directories(core BEFORE PUBLIC "${EDEN_NATIVE_DIRTY_HEADER_ROOT}")
     # The native guest-memory header is shared by core and video_core.
     # The latter instantiates GPU write-back templates in its own TUs.
