@@ -153,7 +153,7 @@ assert storage_maintained == '#include "performance.h"\n' + storage_pinned.repla
 assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_FS_STORAGE}")') == 1
 assert 'write_derived("${PORT_BUILD_DIR}/fs_i_storage.cpp"' not in c
 assert "fs_storage_source" not in c
-assert counts["write_derived("] <= 71, counts
+assert counts["write_derived("] <= 70, counts
 print("VENDOR_MAINTAINED_FS_ISTORAGE_PARITY_PASS: read, short read, quiet policy")
 
 
@@ -208,6 +208,26 @@ assert c.count('list(REMOVE_ITEM core_sources "hle/service/nvdrv/devices/nvhost_
 assert 'if(NOT EXISTS "${EDEN_MAINTAINED_PROFILE_NVCTRL}")' in c
 assert 'write_derived("${PORT_BUILD_DIR}/nvhost_ctrl.cpp"' not in c
 assert "ctrl_source" not in c and "ctrl_old" not in c
+
+# The previous one-line CMake wrapper of DequeueBuffer's blocking wait is
+# now a real maintained source, identical apart from the necessary include.
+dequeue_rel = "core/hle/service/nvnflinger/buffer_queue_producer.cpp"
+dequeue_pinned = (sources / "eden/src" / dequeue_rel).read_text()
+dequeue_maintained = (active / "eden-core/src" / dequeue_rel).read_text()
+dequeue_old = "        Status status = WaitForFreeSlotThenRelock(async, &found, &return_flags, lock);"
+dequeue_new = """        const auto dequeue_start = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed) ? ::Eden::Performance::NowNs() : 0;
+        Status status = WaitForFreeSlotThenRelock(async, &found, &return_flags, lock);
+        if (dequeue_start) ::Eden::Performance::AddSince(::Eden::Performance::guest_dequeue_wait, dequeue_start);"""
+assert dequeue_pinned.count(dequeue_old) == 1
+assert dequeue_maintained == '#include "performance.h"\n' + dequeue_pinned.replace(dequeue_old, dequeue_new), (
+    "Maintained queue-dequeue diagnostic diverges from prior generated source")
+assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")') == 1
+assert c.count('list(REMOVE_ITEM core_sources "hle/service/nvnflinger/buffer_queue_producer.cpp")') == 1
+assert 'if(NOT EXISTS "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/buffer_queue_producer.cpp"' not in c
+assert "producer_source" not in c and "producer_old" not in c
+print("VENDOR_MAINTAINED_DEQUEUE_PARITY_PASS: wait timing, quiet guard, DEV selection")
+
 print("VENDOR_MAINTAINED_NVCTRL_PARITY_PASS: async callback capture, quiet clock, DEV selection")
 
 print("VENDOR_MAINTAINED_FS_IFILE_PARITY_PASS: pinned native DEV source, no CMake rewrite")
@@ -253,7 +273,7 @@ assert len(module_current) == 21, len(module_current)
 for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     text = (root / module).read_text()
     assert 'file(WRITE ' in text and 'configure_file(' in text, module
-assert len(recorded) + len(module_recorded) == 92
+assert len(recorded) + len(module_recorded) == 91
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 
