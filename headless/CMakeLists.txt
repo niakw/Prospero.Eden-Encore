@@ -2135,12 +2135,13 @@ else()
     target_link_libraries(audio_core PUBLIC eden-device-mock)
 endif()
 
-file(READ "${PROJECT_SOURCE_DIR}/src/video_core/video_core.cpp" video_factory)
-if(NOT EDEN_PS5_VULKAN)
-string(REPLACE "#include \"video_core/renderer_vulkan/renderer_vulkan.h\"" "" video_factory "${video_factory}")
-string(REPLACE "    case Settings::RendererBackend::Vulkan:\n        return std::make_unique<Vulkan::RendererVulkan>(emu_window, device_memory, gpu, std::move(context));\n" "" video_factory "${video_factory}")
+# The Vulkan factory is byte-identical to the pinned source; only the
+# OpenGL-only build requires a distinct maintained unit without Vulkan symbols.
+set(EDEN_MAINTAINED_GL_VIDEO_FACTORY
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/video_core/video_core_opengl.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_GL_VIDEO_FACTORY}")
+    message(FATAL_ERROR "Missing maintained OpenGL-only video core factory")
 endif()
-write_derived("${PORT_BUILD_DIR}/video_core.cpp" "${video_factory}")
 get_target_property(video_sources video_core SOURCES)
 # A guest span must be rejected BEFORE IsContinuousRange walks GPU page tables.
 # An out-of-space or wrapping address would otherwise index the page vectors.
@@ -2190,7 +2191,11 @@ else()
     include("${EDEN_PORT_DIR}/vulkan.cmake")
 endif()
 list(REMOVE_ITEM video_sources video_core.cpp gpu.cpp)
-list(APPEND video_sources "${PORT_BUILD_DIR}/video_core.cpp")
+if(EDEN_PS5_VULKAN)
+    list(APPEND video_sources video_core.cpp)
+else()
+    list(APPEND video_sources "${EDEN_MAINTAINED_GL_VIDEO_FACTORY}")
+endif()
 # Remove a derived header left by the isolated classic-uniform experiment.
 file(REMOVE "${PORT_BUILD_DIR}/include/video_core/buffer_cache/buffer_cache_base.h")
 # Join the worker before its renderer/context and scheduler are destroyed.
