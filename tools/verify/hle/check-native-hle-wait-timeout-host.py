@@ -12,13 +12,15 @@ import shutil
 import subprocess
 import tempfile
 
-root = Path(__file__).resolve().parents[1]
+root = Path(__file__).resolve().parents[3]
 base = root / "vendor/sources/eden/src/core/hle/kernel/svc"
 native = root / "vendor/encore-active/eden-threading/src/core/hle/kernel/svc"
 cmake = (root / "headless/CMakeLists.txt").read_text()
 workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
-assert "python3 -B tools/check-native-hle-wait-timeout-host.py" in workflow
-assert 'foreach(eden_svc_file IN ITEMS svc_condition_variable.cpp svc_address_arbiter.cpp svc_synchronization.cpp)' in cmake
+assert "python3 -B tools/verify/hle/check-native-hle-wait-timeout-host.py" in workflow
+module = (root/"vendor/encore-active/eden-threading/native-hle-overrides.cmake").read_text()
+assert "native-hle-overrides.cmake" in cmake
+assert all(name in module for name in ("svc_condition_variable.cpp", "svc_address_arbiter.cpp", "svc_synchronization.cpp"))
 compiler = shutil.which("g++") or shutil.which("clang++")
 assert compiler
 
