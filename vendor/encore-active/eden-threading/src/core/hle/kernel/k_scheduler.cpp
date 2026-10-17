@@ -449,7 +449,7 @@ void KScheduler::ScheduleImplFiber(KernelCore& kernel) {
 
         // We want to try to lock the highest priority thread's context.
         // Try to take it.
-        while (!highest_priority_thread->m_context_guard.try_lock()) {
+        while (!highest_priority_thread->m_context_guard.try_acquire()) {
             // The highest priority thread's context is already locked.
             // Check if we need scheduling. If we don't, we can retry directly.
             if (m_state.needs_scheduling.load(std::memory_order_seq_cst)) {
@@ -465,14 +465,10 @@ void KScheduler::ScheduleImplFiber(KernelCore& kernel) {
         // Check if we need scheduling. If we do, then we can't complete the switch and should
         // retry.
         if (m_state.needs_scheduling.load(std::memory_order_seq_cst)) {
-            // libc++ may lazily create the backing mutex only on first lock attempt.
-            // This upstream guard fix must accompany the std::mutex conversion.
-            [[maybe_unused]] auto const can_lock = highest_priority_thread->m_context_guard.try_lock();
-            DEBUG_ASSERT(!can_lock);
-
-            // Our switch failed.
-            // We should unlock the thread context, and then retry.
-            highest_priority_thread->m_context_guard.unlock();
+            // On retry, release the permit even if a host CPU worker
+            // changes. This is cross-thread safe, unlike mutex::unlock.
+            // Our switch failed; give the next scheduler attempt the permit.
+            highest_priority_thread->m_context_guard.release();
             goto retry;
         } else {
             break;
@@ -501,12 +497,9 @@ void KScheduler::Unload(KernelCore& kernel, KThread* thread) {
 
     // Check if the thread is terminated by checking the DPC flags.
     if ((thread->GetStackParameters().dpc_flags & static_cast<u32>(DpcFlag::Terminated)) == 0) {
-        // Materialize the lazy libc++ mutex before unlocking the guest context.
-        [[maybe_unused]] auto const can_lock = thread->m_context_guard.try_lock();
-        DEBUG_ASSERT(!can_lock);
-
-        // The thread isn't terminated, so we want to unlock it.
-        thread->m_context_guard.unlock();
+        // A guest fiber can migrate between host CPU workers.
+        // Returning the semaphore permit has no thread-owner restriction.
+        thread->m_context_guard.release();
     }
 }
 
