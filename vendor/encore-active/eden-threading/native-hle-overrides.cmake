@@ -67,5 +67,17 @@ if(PS5_NATIVE)
     endforeach()
 endif()
 
+# Keep the existing build/include precedence, but copy already-reviewed
+# kernel helper headers rather than generating C++ in the CMake file.
+file(MAKE_DIRECTORY "${PORT_BUILD_DIR}/include/core/hle/kernel")
+foreach(name IN ITEMS slab_helpers.h k_worker_task_manager.h)
+    set(maintained_header "${_encore_thread_root}/core/hle/kernel/${name}")
+    if(NOT EXISTS "${maintained_header}")
+        message(FATAL_ERROR "Missing maintained kernel helper: ${name}")
+    endif()
+    configure_file("${maintained_header}"
+        "${PORT_BUILD_DIR}/include/core/hle/kernel/${name}" COPYONLY)
+endforeach()
+
 unset(_encore_thread_root)
 unset(_encore_sync_root)

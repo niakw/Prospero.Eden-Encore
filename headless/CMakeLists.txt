@@ -1715,20 +1715,8 @@ target_include_directories(core BEFORE PRIVATE "${PORT_BUILD_DIR}/include")
 # mutex and object destructor. Purge only the derived build-tree copy.
 file(REMOVE "${PORT_BUILD_DIR}/include/core/hle/kernel/k_slab_heap.h")
 
-# PostDestroy can release an owner process and enter the scheduler using the
-# current dummy thread's mutex. Keep that thread alive through this cleanup.
-set(slab_helpers "core/hle/kernel/slab_helpers.h")
-file(READ "${PROJECT_SOURCE_DIR}/src/${slab_helpers}" helpers_source)
-string(REPLACE "        Free(kernel, static_cast<Derived*>(this));\n        if (is_initialized) {\n            Derived::PostDestroy(kernel, arg);\n        }"
-    "        if (is_initialized) {\n            Derived::PostDestroy(kernel, arg);\n        }\n        Free(kernel, static_cast<Derived*>(this));" helpers_source "${helpers_source}")
-write_derived("${PORT_BUILD_DIR}/include/${slab_helpers}" "${helpers_source}")
-
-# Finish queued process/thread finalizers before shutting down their kernel
-# dependencies or reusing slab storage for the next session.
-set(worker_header "core/hle/kernel/k_worker_task_manager.h")
-file(READ "${PROJECT_SOURCE_DIR}/src/${worker_header}" worker_source)
-string(REPLACE "    KWorkerTaskManager();" "    KWorkerTaskManager();\n    void WaitForRequests() { m_waiting_thread.WaitForRequests(); }" worker_source "${worker_source}")
-write_derived("${PORT_BUILD_DIR}/include/${worker_header}" "${worker_source}")
+# Thread finalization helpers are complete tracked headers in encore-active.
+# native-hle-overrides.cmake stages those headers without text replacements.
 
 # Game exit: the application's page table frees every physical page it maps (~1 s for a 4 GiB
 # game) although the kernel shutdown that finalizes it recreates the memory manager at the next
