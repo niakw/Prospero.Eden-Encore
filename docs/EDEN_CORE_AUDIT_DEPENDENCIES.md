@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 304
+**Non, this is not an exhaustive repository-wide inventory.** The 309
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 304 | 283 | 621 |
+| Graphe connu | 309 | 288 | 630 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 249 | 238 | 516 |
+| SOURCE — lecture effectuée, preuve insuffisante | 254 | 243 | 525 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **264** | **252** | **544** |
+| **Encore à qualifier (SOURCE + OPEN)** | **269** | **257** | **553** |
 | Dont priorité P0 (SOURCE + OPEN) | 105 | 100 | 246 |
 
-Le **noyau restant** compte donc 264 critères répartis sur
-252 fichiers et 544 mentions fonction/contrat :
-15 OPEN et 249 SOURCE.
+Le **noyau restant** compte donc 269 critères répartis sur
+257 fichiers et 553 mentions fonction/contrat :
+15 OPEN et 254 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-210 fichiers de code/en-têtes présents et 210 avec un chemin de
+215 fichiers de code/en-têtes présents et 215 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -398,6 +398,11 @@ function/contract tokens are checked by CI for existence only; the
 | V63 | P1 | V54 | vendor/encore-active/eden-backports/src/video_core/engines/sw_blitter/blitter.cpp | Blit; src_width; src_height | SOURCE | tools/check-active-source-inventory.py | Shipping backport row-major software blit coordinate fix; runtime correctness unproved | 🟡 Source étudiée |
 | V64 | P1 | V54 | vendor/encore-active/eden-core/overrides/slot-vector/common/slot_vector.h | SlotId insert; FreeValueIndex | SOURCE | tools/check-vendor-consolidation-debt.py | Old X02 throwing-constructor repair now maintained as exact header, with isolated include root; device recovery unproved | 🟡 Source étudiée |
 | V65 | P1 | V64 | vendor/encore-active/eden-core/src/video_core/macro.cpp | MacroJIT_SendThunk; JITState | SOURCE | tools/check-vendor-consolidation-debt.py | All five former X01 MacroJIT exception unwind replacements now owned by maintained Encore C++; GPU/JIT behavior unproved | 🟡 Source étudiée |
+| V66 | P2 | V50 | vendor/encore-active/eden-vulkan-oracles/vulkan_loading.inc | RendererVulkan::PresentLoading | SOURCE | tools/check-vendored-vulkan-fork.py | Historical Vulkan loading-scene generator fragment; not compiled, production source is eden-vulkan fork | 🟡 Oracle historique |
+| V67 | P2 | V50 | vendor/encore-active/eden-vulkan-oracles/vulkan_hud_prepare.inc | hud_pipeline; VkPushConstantRange | SOURCE | tools/check-vendored-vulkan-fork.py | Historical HUD pipeline oracle only; executable renderer remains the maintained Vulkan fork | 🟡 Oracle historique |
+| V68 | P2 | V50 | vendor/encore-active/eden-vulkan-oracles/vulkan_hud_draw.inc | hud_graphics_pipeline; cmdbuf.PushConstants | SOURCE | tools/check-vendored-vulkan-fork.py | Historical HUD draw oracle only; no independent CMake injection | 🟡 Oracle historique |
+| V69 | P2 | V50 | vendor/encore-active/eden-vulkan-oracles/vulkan_gc_downloads.inc | gc_prefetch_limit; PrefetchDownloads | SOURCE | tools/check-vendored-vulkan-fork.py | Historical GPU texture-eviction oracle, verified against maintained Vulkan fork; not compiled | 🟡 Oracle historique |
+| V70 | P2 | V50 | vendor/encore-active/eden-vulkan-oracles/vulkan_download_batch.inc | readback_batch_limit; finish_batch | SOURCE | tools/check-vendored-vulkan-fork.py | Historical Vulkan readback batch oracle, no CMake source mutation | 🟡 Oracle historique |
 | V51 | P0 | V50,M13 | vendor/encore-active/eden-backports/src/video_core/buffer_cache/buffer_cache.h | BufferCache<P>::SynchronizeBufferWrites; BufferCache<P>::DMACopy; BufferCache<P>::MarkWrittenBuffer | SOURCE | tools/check-active-source-inventory.py | Shipping GPU buffer template changes DMA sync policy and write-tick lifetime; source diff examined, exact runtime owner/console behavior still to prove | 🟡 Source étudiée |
 | F04 | P1 | F02,F03 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_filesystem.cpp | IFileSystem::OpenFile; IFileSystem::OpenDirectory; IFileSystem::GetEntryType | HOST | tools/check-vendor-consolidation-debt.py | Maintained DEV IFileSystem diagnostic replaces G23 CMake patch for three result paths; three call replacements, DEV source selection, and quiet policy passed full host preflight #39048355950; native SDK/gameplay remain unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39048355950) |
 | H20 | P0 | H02,H19 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp | KScheduler::UpdateHighestPriorityThread; KScheduler::UpdateHighestPriorityThreadsImpl | SOURCE | tools/check-upstream-guest-scheduler-locks.py | Runnable queue update precedes per-core highest-priority selection; account for pinned-thread preference, suggested-core migration and eventual context load. Not proof of guest PC progress | 🟡 Source étudiée |
