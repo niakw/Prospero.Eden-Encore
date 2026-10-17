@@ -77,5 +77,13 @@ assert "Pinned native guest span page-boundary contract changed" in cmake
 gpu_span_guard='string(REPLACE "${eden_gpu_span_original}" [=['
 assert cmake.count(gpu_span_guard) == 1
 assert "Pinned native GPU guest span range gate changed" in cmake
-assert cmake.count("string(REPLACE") - cmake.count(gpu_producer_wait) - cmake.count(gpu_enqueue_fence) - cmake.count(dirty_mask_split) - cmake.count(native_read_slot) - cmake.count(native_span_guard) - cmake.count(gpu_span_guard) - cmake.count(gpu_read_capture) <= 227
+# Explicitly exempt ONLY the two pinned native queue-slot destructor rewrites.
+# This preserves the old 227 unapproved generator-rewrite ceiling.
+gpu_queue_slot_find='string(REPLACE "${queue_slot_construct}" "__ENCORE_GPU_QUEUE_SLOT__"'
+gpu_queue_slot_apply='string(REPLACE "__ENCORE_GPU_QUEUE_SLOT__" "${queue_slot_repair}"'
+assert cmake.count(gpu_queue_slot_find) == 1
+assert cmake.count(gpu_queue_slot_apply) == 1
+assert 'list(LENGTH queue_slot_matches queue_slot_count)' in cmake
+assert 'if(NOT queue_slot_count EQUAL 2)' in cmake
+assert cmake.count("string(REPLACE") - cmake.count(gpu_producer_wait) - cmake.count(gpu_enqueue_fence) - cmake.count(dirty_mask_split) - cmake.count(native_read_slot) - cmake.count(native_span_guard) - cmake.count(gpu_span_guard) - cmake.count(gpu_read_capture) - cmake.count(gpu_queue_slot_find) - cmake.count(gpu_queue_slot_apply) <= 227
 print("MAINTAINED_AUDIO_UNITS_PARITY_PASS sink=1 voice=1")
