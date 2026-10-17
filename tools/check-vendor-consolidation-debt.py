@@ -489,6 +489,31 @@ assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/file_sys/bis_factory.cpp"' not
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/file_sys/bis_factory.h"' not in c
 print("VENDOR_MAINTAINED_BIS_PAIR_PARITY_PASS: API, firmware root, mods and native selection")
 
+# Renderer factory parity: Vulkan keeps the untouched source while the
+# OpenGL-only native profile selects the tracked two-removal variant.
+pinned_factory = (sources / "eden/src/video_core/video_core.cpp").read_text()
+maintained_gl_factory = (active / "eden-core/src/video_core/video_core_opengl.cpp").read_text()
+gl_removals = (
+    '#include "video_core/renderer_vulkan/renderer_vulkan.h"',
+    '    case Settings::RendererBackend::Vulkan:\n'
+    '        return std::make_unique<Vulkan::RendererVulkan>(emu_window, device_memory, gpu, std::move(context));\n',
+)
+for removed in gl_removals:
+    assert pinned_factory.count(removed) == 1, ("pinned factory drift",removed)
+    pinned_factory = pinned_factory.replace(removed, "")
+assert maintained_gl_factory == pinned_factory
+factory_select = ('list(REMOVE_ITEM video_sources video_core.cpp gpu.cpp)\n'
+                  'if(EDEN_PS5_VULKAN)\n'
+                  '    list(APPEND video_sources video_core.cpp)\n'
+                  'else()\n'
+                  '    list(APPEND video_sources "${EDEN_MAINTAINED_GL_VIDEO_FACTORY}")\n'
+                  'endif()')
+assert factory_select in c
+assert 'if(NOT EXISTS "${EDEN_MAINTAINED_GL_VIDEO_FACTORY}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/video_core.cpp"' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/video_core.cpp" video_factory)' not in c
+print("VENDOR_VIDEO_FACTORY_SELECTION_PASS: pinned Vulkan and maintained OpenGL")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -529,7 +554,7 @@ assert len(module_current) == 21, len(module_current)
 for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     text = (root / module).read_text()
     assert 'file(WRITE ' in text and 'configure_file(' in text, module
-assert len(recorded) + len(module_recorded) == 79
+assert len(recorded) + len(module_recorded) == 78
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived

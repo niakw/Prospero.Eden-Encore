@@ -12,10 +12,10 @@ natif sélectionnent chacun leur sous-ensemble.
 
 ## Synthèse vérifiable
 
-- **58 appels générateurs** encore dans CMake ; contre **75 avant**
+- **57 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
-- **69 lectures `file(READ`** et **206 remplacements
+- **68 lectures `file(READ`** et **204 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
 - Les versions diagnostiques de `IFile::Read`, `IStorage::Read` et des appels
@@ -93,30 +93,36 @@ dans la version normale.
 | G35 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 2023 |
 | G36 | `${PORT_BUILD_DIR}/emulated_controller.cpp` | Kernel/IPC/entrées | Unité source | 2062 |
 | G37 | `${PORT_BUILD_DIR}/npad.cpp` | Kernel/IPC/entrées | Unité source | 2090 |
-| G38 | `${PORT_BUILD_DIR}/video_core.cpp` | Audio/graphique | Unité source | 2143 |
-| G39 | `${eden_gpu_span_tu}` | Audio/graphique | Cible variable | 2163 |
-| G40 | `${PORT_BUILD_DIR}/gl_buffer_cache.cpp` | Audio/graphique | Unité source | 2207 |
-| G41 | `${PORT_BUILD_DIR}/gl_query_cache.cpp` | Audio/graphique | Unité source | 2221 |
-| G42 | `${PORT_BUILD_DIR}/gl_texture_cache.cpp` | Audio/graphique | Unité source | 2243 |
-| G43 | `${PORT_BUILD_DIR}/gl_rasterizer.cpp` | Audio/graphique | Unité source | 2255 |
-| G44 | `${PORT_BUILD_DIR}/renderer_opengl.cpp` | Audio/graphique | Unité source | 2259 |
-| G45 | `${PORT_BUILD_DIR}/include/common/bounded_threadsafe_queue.h` | Audio/graphique | En-tête source | 2319 |
-| G46 | `${PORT_BUILD_DIR}/gpu_thread.cpp` | GPU/vidéo | Unité source | 2468 |
-| G47 | `${PORT_BUILD_DIR}/include/video_core/gpu_thread.h` | GPU/vidéo | En-tête source | 2473 |
-| G48 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 2524 |
-| G49 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 2620 |
-| G50 | `${PORT_BUILD_DIR}/maxwell_3d.cpp` | GPU/vidéo | Unité source | 2640 |
-| G51 | `${PORT_BUILD_DIR}/shader_environment.cpp` | GPU/vidéo | Unité source | 2655 |
-| G52 | `${PORT_BUILD_DIR}/texture_cache_util.cpp` | GPU/vidéo | Unité source | 2696 |
-| G53 | `${PORT_BUILD_DIR}/audited_guest_dns.cpp` | Runtime/FS/réseau | Unité source | 2820 |
-| G54 | `${PORT_BUILD_DIR}/audited_guest_bsd.cpp` | Runtime/FS/réseau | Unité source | 2882 |
-| G55 | `${PORT_BUILD_DIR}/network.cpp` | Runtime/FS/réseau | Unité source | 2960 |
-| G56 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 3023 |
-| G57 | `${eden_app_crt}` | Runtime/FS/réseau | Cible variable | 3035 |
-| G58 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 3220 |
+| G38 | `${eden_gpu_span_tu}` | Audio/graphique | Cible variable | 2164 |
+| G39 | `${PORT_BUILD_DIR}/gl_buffer_cache.cpp` | Audio/graphique | Unité source | 2212 |
+| G40 | `${PORT_BUILD_DIR}/gl_query_cache.cpp` | Audio/graphique | Unité source | 2226 |
+| G41 | `${PORT_BUILD_DIR}/gl_texture_cache.cpp` | Audio/graphique | Unité source | 2248 |
+| G42 | `${PORT_BUILD_DIR}/gl_rasterizer.cpp` | Audio/graphique | Unité source | 2260 |
+| G43 | `${PORT_BUILD_DIR}/renderer_opengl.cpp` | Audio/graphique | Unité source | 2264 |
+| G44 | `${PORT_BUILD_DIR}/include/common/bounded_threadsafe_queue.h` | Audio/graphique | En-tête source | 2324 |
+| G45 | `${PORT_BUILD_DIR}/gpu_thread.cpp` | GPU/vidéo | Unité source | 2473 |
+| G46 | `${PORT_BUILD_DIR}/include/video_core/gpu_thread.h` | GPU/vidéo | En-tête source | 2478 |
+| G47 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 2529 |
+| G48 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 2625 |
+| G49 | `${PORT_BUILD_DIR}/maxwell_3d.cpp` | GPU/vidéo | Unité source | 2645 |
+| G50 | `${PORT_BUILD_DIR}/shader_environment.cpp` | GPU/vidéo | Unité source | 2660 |
+| G51 | `${PORT_BUILD_DIR}/texture_cache_util.cpp` | GPU/vidéo | Unité source | 2701 |
+| G52 | `${PORT_BUILD_DIR}/audited_guest_dns.cpp` | Runtime/FS/réseau | Unité source | 2825 |
+| G53 | `${PORT_BUILD_DIR}/audited_guest_bsd.cpp` | Runtime/FS/réseau | Unité source | 2887 |
+| G54 | `${PORT_BUILD_DIR}/network.cpp` | Runtime/FS/réseau | Unité source | 2965 |
+| G55 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 3028 |
+| G56 | `${eden_app_crt}` | Runtime/FS/réseau | Cible variable | 3040 |
+| G57 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 3225 |
 <!-- OVERRIDE_GENERATORS_END -->
 
 ## Prochain ordre de migration
+
+- `video_core/video_core.cpp` n'est plus généré : le profil Vulkan utilise
+  le fichier épinglé original, tandis que le profil sans Vulkan compile
+  `vendor/encore-active/eden-core/src/video_core/video_core_opengl.cpp`,
+  une version suivie identique aux deux anciennes suppressions CMake. La
+  sélection explicite et la parité font partie du test hôte.
+
 
 - `core/file_sys/bis_factory.h` et `.cpp` sont compilés depuis
   `vendor/encore-active/eden-core/` sans génération de contenu : l'en-tête
@@ -184,7 +190,7 @@ pas que le PC invité avance après un réveil HLE.
 
 Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules
 inclus par ce fichier contiennent **21 autres appels `write_derived()`**
-dans 6 fichiers. Le total de **79 appels** (63 + 21) est donc un **nombre de
+dans 6 fichiers. Le total de **78 appels** (63 + 21) est donc un **nombre de
 sites CMake**, pas un dénombrement des fichiers réellement produits à
 l'exécution. Un module inclus peut définir des macros sans les exécuter,
 et plusieurs sorties sont explicitement conditionnées.
@@ -218,7 +224,7 @@ et plusieurs sorties sont explicitement conditionnées.
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **79 sites** `write_derived()`, ni dans
+Ils ne sont comptés ni dans les **78 sites** `write_derived()`, ni dans
 les **7 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,
@@ -292,7 +298,7 @@ et de limiter CMake à la sélection.
 ## Overrides indirects sans `write_derived()` local
 
 Ces **7 modules supplémentaires** ne sont pas inclus dans le total de
-**79 appels**. Deux matérialisent leur sortie via `file(WRITE)` ;
+**78 appels**. Deux matérialisent leur sortie via `file(WRITE)` ;
 les cinq autres modifient une variable-source écrite ensuite par un
 générateur du CMake principal. Ce sont **7 modules**, pas nécessairement
 7 fichiers réellement produits.

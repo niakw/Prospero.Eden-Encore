@@ -14,6 +14,7 @@
 | `eden-build/src/CMakeLists.txt` | Configuration de build maintenue copiée avant compilation |
 | `eden-core/src/common/thread.cpp`, `src/common/fs/fs.cpp` | Sources runtime natives maintenues ; noms de workers et énumération des répertoires |
 | `eden-core/src/common/cpu_features.cpp`, `src/common/fs/path_util.cpp` | Détection de fréquence TSC et racines utilisateur/cache natives, auparavant générées par CMake |
+| `eden-core/src/video_core/video_core_opengl.cpp` | Fabrique OpenGL-only maintenue ; fabrique Vulkan épinglée sélectionnée intacte |
 | `eden-core/include/core/file_sys/bis_factory.h`, `eden-core/src/core/file_sys/bis_factory.cpp` | ABI BIS et choix du firmware/dossiers mods maintenus hors génération CMake |
 | `eden-core/src/core/file_sys/fsmitm_romfsbuild.cpp` | Contextes RomFS sans cycles de propriété ; deux types de remplacement désormais en C++ maintenu |
 | `eden-core/src/audio_core/sink/sink_stream.cpp` | File PCM, upmix et trame de maintien via source audio maintenue ; anciens générateurs supprimés |
@@ -32,7 +33,7 @@ que sélectionner les unités maintenues et retirer la source d'origine de
 la cible concernée. Il ne doit plus générer de copies C++ pour ces unités.
 Les sources amont épinglées restent inchangées dans `vendor/sources/eden`.
 
-L'inventaire couvre **58 appels générateurs** du CMake principal, **21**
+L'inventaire couvre **57 appels générateurs** du CMake principal, **21**
 dans les modules et **7 modules indirects** suivis séparément ; ce ne sont
 pas des décomptes de fichiers uniques. Chaque nouvelle migration doit
 conserver un test de parité et de sélection native.
