@@ -16,7 +16,7 @@ any operation, and avoid unrelated files.
 
 ## Déjà traité — contrôles terminés et preuves accessibles
 
-**20 validations ciblées historiquement établies.** Elles recouvrent en
+**21 validations ciblées historiquement établies.** Elles recouvrent en
 partie les lignes B/Q/D/V/J/M/S du graphe ci-dessous : **ne pas additionner
 ces deux décomptes comme s'il s'agissait de travaux différents**.
 
@@ -47,6 +47,7 @@ démontrent précisément qu'une approche est dangereuse.
 | C18 | Classification des fenêtres de stutter FC27 | `analyze-ps5-cache-contention.py` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-fc27-cache-contention-classifier.py) | [Preuve / CI](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38989960870) | Analyse offline vérifiée ; attribution à une seule frame interdite |
 | C19 | File GPU : attente producteur interrompable | `ThreadManager::PushCommand` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-ps5-gpu-producer-wake.py) | [Preuve / CI](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38986808108) | Test source/hôte ; pas de conclusion hardware |
 | C20 | Débordement des bornes RAM invitée | `Memory::IsValidVirtualAddressRange` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-guest-range-overflow-host.py) | [Prévalidation #38996379440](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38996379440) | Ancienne plage invalidement acceptée ; la version native rejette le dépassement 64 bits, sans test console |
+| C21 | Lectures mémoire JIT respectent un refus d'accès | `DynarmicCallbacks32/64::MemoryRead*` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-jit-memory-read-guard-host.py) | [Prévalidation #38996913209](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38996913209) | A32/A64 : test hôte positif et témoin négatif ; pas de confirmation console |
 
 ### Audits archivés à ne pas recommencer
 
@@ -160,14 +161,15 @@ function/contract tokens are checked by CI for existence only; the
 | D03 | P1 | Q04 | vendor/sources/eden/src/video_core/cdma_pusher.cpp | CDmaPusher::ExecuteCommand | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Distinguish host-channel DMA from graphics DMA | 🟠 À contrôler |
 | M05 | P2 | M02 | headless/gpu_deferred_store_publication.h | CommitPostStore | PARKED | docs/DEFERRED_JIT_QUIESCENCE_ARCHITECTURE_2026-10-17.md | Publication experimental bridge still disabled | ⚪ Suspendu |
 | R10 | P1 | R01,R09 | vendor/sources/eden/src/core/memory.cpp | Memory::IsValidVirtualAddressRange | HOST | tools/check-native-guest-range-overflow-host.py | Host regression SUCCESS 38996379440; on-device behavior not verified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-guest-range-overflow-host.py) |
-| J12 | P1 | J08 | vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_64.cpp | DynarmicCallbacks64::MemoryRead32; CheckMemoryAccess | OPEN | tools/check-native-jit-memory-read-guard-host.py | Reject guest reads after reported abort without affecting permitted reads | 🟠 À contrôler |
-| J13 | P1 | J08 | vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_32.cpp | DynarmicCallbacks32::MemoryRead32; CheckMemoryAccess | OPEN | tools/check-native-jit-memory-read-guard-host.py | Check A32 read rejection and unchanged successful access | 🟠 À contrôler |
+| J12 | P1 | J08 | vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_64.cpp | DynarmicCallbacks64::MemoryRead32; CheckMemoryAccess | HOST | tools/check-native-jit-memory-read-guard-host.py | Pinned vs derived read rejection A64 host PASS in run #38996913209; console unverified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-jit-memory-read-guard-host.py) |
+| J13 | P1 | J08 | vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_32.cpp | DynarmicCallbacks32::MemoryRead32; CheckMemoryAccess | HOST | tools/check-native-jit-memory-read-guard-host.py | Pinned vs derived read rejection A32 host PASS in run #38996913209; console unverified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-jit-memory-read-guard-host.py) |
+| R11 | P1 | R01,R02 | vendor/sources/eden/src/video_core/memory_manager.cpp | MemoryManager::IsGranularRange | OPEN | tools/check-native-gpu-granular-bounds-host.py | Verify big-page byte offset, bounds, overflow and unmapped fallbacks in native derived range | 🟠 À contrôler |
 <!-- AUDIT_ROWS_END -->
 
 
 ## Couverture encore NON exhaustive (à inventorier, pas à déclarer OK)
 
-Outre les **61 lignes du graphe**, le dépôt comprend d'autres composants
+Outre les **62 lignes du graphe**, le dépôt comprend d'autres composants
 susceptibles d'influencer le symptôme observé, dont les interfaces HID/commandes
 en jeu, l'ordonnancement des services IPC, la restitution audio et les chemins
 host-syncpoint. **Ils ne sont pas tous vérifiés par le présent tableau.**
@@ -187,7 +189,7 @@ host-syncpoint. **Ils ne sont pas tous vérifiés par le présent tableau.**
   couvertes par cet audit de stabilité native ; inventaire complet
   du dépôt ≠ assurance de correction de FC27.
 
-**Règle de clôture :** aucune réponse ne doit présenter « 61 lignes »
+**Règle de clôture :** aucune réponse ne doit présenter « 62 lignes »
 comme « toutes les fonctions restantes ». L'inventaire s'étend à mesure
 des véritables appels, et une tâche n'est verte que pour son critère
 de validation nommé.

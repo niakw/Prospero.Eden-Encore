@@ -2254,6 +2254,9 @@ if(PS5_NATIVE)
     string(REPLACE "${eden_gpu_span_original}" [=[    if (size == 0 || src_addr >= address_space_size ||
         size > address_space_size - src_addr ||
         !IsContinuousRange(src_addr, size)) {]=] eden_gpu_span_src "${eden_gpu_span_src}")
+    # The mapped span must fit its actual big-page byte offset, not the page index.
+    # Prevent overflowing and out-of-space queries before indexing GPU page vectors.
+    include("${EDEN_PORT_DIR}/native_gpu_granular_bounds.cmake")
     set(eden_gpu_span_tu "${PORT_BUILD_DIR}/memory-manager-native.cpp")
     write_derived("${eden_gpu_span_tu}" "${eden_gpu_span_src}")
     list(REMOVE_ITEM video_sources "memory_manager.cpp")

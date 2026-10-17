@@ -40,7 +40,7 @@ for raw in table.splitlines():
         assert symbol in body, (ident, source, "missing symbol", symbol)
     entries[ident] = [d.strip() for d in deps.split(",") if d.strip() != "-"]
     state_totals[state] += 1
-assert len(entries) >= 58, len(entries)
+assert len(entries) >= 62, len(entries)
 assert doc.count("img.shields.io/badge/") >= 28
 for ident, deps in entries.items():
     assert len(deps) == len(set(deps)), ("repeated dependency", ident)

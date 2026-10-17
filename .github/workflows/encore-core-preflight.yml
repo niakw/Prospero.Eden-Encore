@@ -70,6 +70,7 @@ jobs:
           python3 -B tools/check-native-device-continuity-host.py
           python3 -B tools/check-native-device-span-bounds-host.py
           python3 -B tools/check-native-gpu-span-range-host.py
+          python3 -B tools/check-native-gpu-granular-bounds-host.py
           python3 -B tools/check-native-guest-write-span-host.py
           python3 -B tools/check-gpu-deferred-poststore-host.py
           python3 -B tools/check-deferred-native-bridge-contract.py
