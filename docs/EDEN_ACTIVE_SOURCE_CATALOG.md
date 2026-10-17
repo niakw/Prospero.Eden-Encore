@@ -8,9 +8,9 @@ présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
 - **183 fichiers** de code et d'en-têtes enregistrés.
-- **37 fichiers** possèdent une correspondance de chemin *exacte*
+- **43 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
-- **146 fichiers** n'ont pas encore de ligne de graphe correspondant
+- **140 fichiers** n'ont pas encore de ligne de graphe correspondant
   exactement à leur chemin. Cela **ne prouve pas** qu'ils n'ont jamais été
   examinés, ni qu'ils sont effectivement compilés.
 - Les `backport-staging` sont des sources de snapshot préparées ;
@@ -117,17 +117,17 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/audio_core/sink/sink_stream.cpp` | `maintained-override` | A03 |
 | `eden-core/src/common/assert.h` | `maintained-override` | — |
 | `eden-core/src/common/cpu_features.cpp` | `maintained-override` | F07 |
-| `eden-core/src/common/fiber.cpp` | `maintained-override` | — |
+| `eden-core/src/common/fiber.cpp` | `maintained-override` | J18 |
 | `eden-core/src/common/fs/fs.cpp` | `maintained-override` | F06 |
 | `eden-core/src/common/fs/path_util.cpp` | `maintained-override` | F08 |
 | `eden-core/src/common/logging.cpp` | `maintained-override` | — |
 | `eden-core/src/common/thread.cpp` | `maintained-override` | F05 |
 | `eden-core/src/core/file_sys/bis_factory.cpp` | `maintained-override` | F14 |
 | `eden-core/src/core/file_sys/fsmitm_romfsbuild.cpp` | `maintained-override` | F12 |
-| `eden-core/src/core/file_sys/savedata_factory.cpp` | `maintained-override` | — |
-| `eden-core/src/core/hle/kernel/k_spin_lock.cpp` | `maintained-override` | — |
+| `eden-core/src/core/file_sys/savedata_factory.cpp` | `maintained-override` | F15 |
+| `eden-core/src/core/hle/kernel/k_spin_lock.cpp` | `maintained-override` | H30 |
 | `eden-core/src/core/hle/kernel/svc/svc_ipc.cpp` | `maintained-override` | H21 |
-| `eden-core/src/core/hle/service/am/service/application_functions.cpp` | `maintained-override` | — |
+| `eden-core/src/core/hle/service/am/service/application_functions.cpp` | `maintained-override` | H32 |
 | `eden-core/src/core/hle/service/filesystem/filesystem.cpp` | `maintained-override` | F11 |
 | `eden-core/src/core/hle/service/filesystem/fsp/fs_i_file.cpp` | `maintained-override` | F02 |
 | `eden-core/src/core/hle/service/filesystem/fsp/fs_i_filesystem.cpp` | `maintained-override` | F04 |
@@ -136,8 +136,8 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp` | `maintained-override` | N03 |
 | `eden-core/src/core/hle/service/service.cpp` | `maintained-override` | H22,H28 |
 | `eden-core/src/core/internal_network/network_interface.cpp` | `maintained-override` | F10 |
-| `eden-core/src/core/loader/deconstructed_rom_directory.cpp` | `maintained-override` | — |
-| `eden-core/src/hid_core/resource_manager.cpp` | `maintained-override` | — |
+| `eden-core/src/core/loader/deconstructed_rom_directory.cpp` | `maintained-override` | F16 |
+| `eden-core/src/hid_core/resource_manager.cpp` | `maintained-override` | H31 |
 | `eden-core/src/video_core/texture_cache/util.h` | `maintained-override` | — |
 | `eden-core/src/video_core/video_core_opengl.cpp` | `maintained-override` | V12 |
 | `eden-gpu/gpu_thread_dev.cpp` | `maintained-override` | Q03 |
