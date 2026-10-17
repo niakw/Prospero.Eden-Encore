@@ -16,8 +16,8 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 - Le manifeste des backports verrouille **83 fichiers livrés**, dont
   **81 fichiers C/C++ enregistrés ci-dessous** et **deux fichiers CMake**
   listés séparément. Les **43 reçus de patches** sont conservés.
-- Les `shipping-backport` sont des sources de backports de production, précompilées dans un
-  arbre épinglé par `tools/install-vendored-eden-backports.py` avec
+- Les `shipping-backport` sont des sources de backports de production, matérialisées en fichiers
+  complets et installées dans un arbre épinglé par `tools/install-vendored-eden-backports.py` avec
   contrôle d'empreintes, sans replay `git apply` pendant le build ;
   `driver-fork` représente la dépendance graphique modifiée ;
   `maintained-override` les unités et en-têtes Encore.
