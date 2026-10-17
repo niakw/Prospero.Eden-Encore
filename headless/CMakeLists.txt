@@ -1028,16 +1028,15 @@ list(APPEND core_sources "${eden_kernel_spin}")
 if(EDEN_DEV_PROFILE)
     # Guest-visible waits: syncpoint event registration to signal (GPU-pipeline latency
     # the game waits on) and buffer-queue dequeue waits (presentation back-pressure).
-    file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/nvdrv/devices/nvhost_ctrl.cpp" ctrl_source)
-    set(ctrl_old "    event.wait_handle =\n        host1x_syncpoint_manager.RegisterHostAction(fence_id, target_value, [this, slot]() {\n            auto& event_ = events[slot];")
-    string(FIND "${ctrl_source}" "${ctrl_old}" ctrl_at)
-    if(ctrl_at LESS 0)
-        message(FATAL_ERROR "Pinned nvhost_ctrl event wait changed")
+    # Host-syncpoint event-wait diagnostics are maintained C++ (DEV only).
+    # Selecting a tracked source is preferable to generating code at configure time.
+    set(EDEN_MAINTAINED_PROFILE_NVCTRL
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/service/nvdrv/devices/nvhost_ctrl.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_PROFILE_NVCTRL}")
+        message(FATAL_ERROR "Missing maintained nvhost_ctrl profile source")
     endif()
-    string(REPLACE "${ctrl_old}" "    const auto wait_start = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed) ? ::Eden::Performance::NowNs() : 0;\n    event.wait_handle =\n        host1x_syncpoint_manager.RegisterHostAction(fence_id, target_value, [this, slot, wait_start]() {\n            if (wait_start) ::Eden::Performance::AddSince(::Eden::Performance::guest_sync_wait, wait_start);\n            auto& event_ = events[slot];" ctrl_source "${ctrl_source}")
-    write_derived("${PORT_BUILD_DIR}/nvhost_ctrl.cpp" "#include \"${EDEN_PORT_DIR}/performance.h\"\n${ctrl_source}")
     list(REMOVE_ITEM core_sources "hle/service/nvdrv/devices/nvhost_ctrl.cpp")
-    list(APPEND core_sources "${PORT_BUILD_DIR}/nvhost_ctrl.cpp")
+    list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_NVCTRL}")
     file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp" producer_source)
     set(producer_old "        Status status = WaitForFreeSlotThenRelock(async, &found, &return_flags, lock);")
     string(FIND "${producer_source}" "${producer_old}" producer_at)
