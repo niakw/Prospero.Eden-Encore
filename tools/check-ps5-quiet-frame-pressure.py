@@ -5,6 +5,9 @@
 Pure source regression check. A PS5 build and hardware A/B are still required.
 """
 from pathlib import Path
+import shutil
+import subprocess
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 read = lambda path: (ROOT / path).read_text(encoding="utf-8")
@@ -64,8 +67,9 @@ assert '::Eden::Performance::DiagnosticActiveTimer semaphore_timer(' in cmake
 assert 'message(FATAL_ERROR "Pinned guest GPU puller semaphore acquire changed")' in cmake
 assert 'message(FATAL_ERROR "Pinned guest GPU DMA fence wait changed")' in cmake
 
-# A fixed count of atomic loads at five-second boundaries; no new per-frame
-# filesystem calls, mallocs, locks, kernel memory walks, or clock probes.
+# Standard mode uses only five-second aggregate loads; opt-in DEV interval
+# observations additionally load counters once per present, never allocating,
+# locking, traversing guest memory or sampling clocks in the helper.
 snapshot = graphics.split("FramePressureNumbers CaptureFramePressure()", 1)[1].split(
     "bool vulkan_loading{};", 1)[0]
 for metric in ("gpu_queue_wait.nanoseconds", "gpu_dispatch.nanoseconds",
@@ -108,6 +112,85 @@ assert "static const double capture_start = now;" not in graphics
 assert "detailed_gpu_profile.load(std::memory_order_relaxed) &&" in graphics
 assert "!captured_passes) {" in graphics
 assert "EDEN_DEV_PASS_REQUEST time=%.3f" in graphics
+
+
+# Optional per-present interval witness: between-callback deltas are evidence
+# of overlapping worker activity, never automatic attribution to a guest frame.
+witness = read("headless/present_interval_witness.h")
+assert 'template <std::size_t N>' in witness
+assert 'interval_ms >= 100.0' in witness
+assert 'if (current[i] < previous[i])' in witness
+assert 'previous = current;' in witness
+assert 'void NextWindow() noexcept' in witness
+assert "mutex" not in witness and "new " not in witness
+assert '#ifdef EDEN_DEV_PROFILE\n#include "present_interval_witness.h"\n#endif' in graphics
+assert "FrameDiagnostics::PresentIntervalWitness<24> vulkan_interval_witness;" in graphics
+assert present.count("vulkan_interval_witness.Observe(CaptureFramePressure()") == 2
+assert present.count("vulkan_interval_witness.Reset();") == 3  # new title + two quiet gates
+assert "if (Eden::NativeLogs::Detailed() &&" not in present  # runtime capture has compound bool
+assert present.count("Eden::NativeLogs::Detailed() &&") == 2
+assert present.count("Experimental::vulkan_frame_probe.load(std::memory_order_relaxed)") >= 2
+assert "if (vulkan_interval_witness.captured) {" in present
+assert "EDEN_PRESENT_INTERVAL_WITNESS frame=%u interval_ms=%.3f" in present
+assert "scope=between_presents\\n" in present
+assert 'vulkan_interval_witness.NextWindow();' in present
+
+# Compile the exact C++ header on a host and exercise sampling, supersession,
+# reset/invalid counters, and quiet-mode opt-out. No graphics/SDK compilation.
+compiler = shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
+assert compiler
+harness = r"""
+#include <array>
+#include <cassert>
+#include <cstdio>
+#include "present_interval_witness.h"
+using Witness = Eden::FrameDiagnostics::PresentIntervalWitness<24>;
+using Counts = Witness::Counts;
+int main() {
+    Witness witness{};
+    Counts first{};
+    witness.Observe(first, 0, 100);
+    assert(witness.seeded && !witness.captured);
+    Counts a = first;
+    a[11] = 250000000; a[16] = 160; a[2] = 1000000;
+    witness.Observe(a, 120.0, 101);
+    assert(witness.captured && witness.peak_frame == 101);
+    assert(witness.peak_delta[11] == 250000000 && witness.peak_delta[16] == 160);
+    Counts b = a;
+    b[11] += 100000000; b[16] += 60; b[2] += 4000000;
+    witness.Observe(b, 111.0, 102);
+    assert(witness.peak_frame == 101);
+    Counts c = b;
+    c[11] += 500000000; c[16] += 230; c[2] += 20000000;
+    witness.Observe(c, 205.0, 103);
+    assert(witness.peak_frame == 103 && witness.peak_delta[11] == 500000000);
+    assert(witness.peak_delta[2] == 20000000);
+    witness.NextWindow();
+    assert(!witness.captured && witness.seeded);
+    Counts d = c;
+    d[11] += 999;
+    witness.Observe(d, 99.9, 104);
+    assert(!witness.captured);
+    witness.Observe(first, 250.0, 105); // counter reset is not a negative delta
+    assert(!witness.captured);
+    witness.Observe(a, 125.0, 106);
+    assert(witness.captured && witness.peak_delta[11] == 250000000);
+    witness.Reset(); // profiling disabled at runtime
+    assert(!witness.seeded && !witness.captured);
+    witness.Observe(c, 400.0, 107); // no stale quiet-session baseline
+    assert(!witness.captured);
+    std::puts("PASS: passive native present-interval witness");
+}
+"""
+with tempfile.TemporaryDirectory(prefix="encore-present-jit-host-") as folder:
+    directory = Path(folder)
+    source = directory / "witness.cpp"
+    output = directory / "witness"
+    source.write_text(harness)
+    subprocess.run([compiler, "-std=c++20", "-O2", "-Wall", "-Wextra", "-Werror",
+                    "-I", str(ROOT / "headless"), str(source), "-o", str(output)],
+                   check=True)
+    subprocess.run([str(output)], check=True, timeout=10)
 
 print("PASS: quiet GPU frame callback, HLE hot-path bypass, per-title counters")
 print("SOURCE-ONLY: no native PS5 compilation or measured FPS improvement")
