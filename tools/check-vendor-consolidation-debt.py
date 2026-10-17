@@ -701,7 +701,7 @@ assert single_source_table("<!-- SINGLE_SOURCE_CMAKE_START -->", "<!-- SINGLE_SO
     "undocumented headless CMake code/override module", candidates_modules)
 assert single_source_table("<!-- SINGLE_SOURCE_FRAGMENTS_START -->", "<!-- SINGLE_SOURCE_FRAGMENTS_END -->") == candidates_fragments, (
     "undocumented headless injected fragment", candidates_fragments)
-assert len(candidates_modules) == 14 and len(candidates_fragments) == 12
+assert len(candidates_modules) == 13 and len(candidates_fragments) == 12
 assert "**47 générateurs**" in single_source_doc and "**21 générateurs**" in single_source_doc
 assert "**68 sites**" in single_source_doc
 assert "**215 sources et en-têtes suivis**" in single_source_doc
