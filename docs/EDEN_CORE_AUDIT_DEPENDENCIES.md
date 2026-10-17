@@ -158,12 +158,13 @@ function/contract tokens are checked by CI for existence only; the
 | H07 | P0 | H06 | vendor/sources/eden/src/core/hle/kernel/k_address_arbiter.cpp | KAddressArbiter::Signal | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Relate address arbitration to guest thread wait/signal | 🟠 À contrôler |
 | D03 | P1 | Q04 | vendor/sources/eden/src/video_core/cdma_pusher.cpp | CDmaPusher::ExecuteCommand | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Distinguish host-channel DMA from graphics DMA | 🟠 À contrôler |
 | M05 | P2 | M02 | headless/gpu_deferred_store_publication.h | CommitPostStore | PARKED | docs/DEFERRED_JIT_QUIESCENCE_ARCHITECTURE_2026-10-17.md | Publication experimental bridge still disabled | ⚪ Suspendu |
+| R10 | P1 | R01,R09 | vendor/sources/eden/src/core/memory.cpp | Memory::IsValidVirtualAddressRange | OPEN | tools/check-native-guest-range-overflow-host.py | Verify native-derived endpoint overflow guard and preserve normal page scans; console not validated | 🟠 À contrôler |
 <!-- AUDIT_ROWS_END -->
 
 
 ## Couverture encore NON exhaustive (à inventorier, pas à déclarer OK)
 
-Outre les **58 lignes du graphe**, le dépôt comprend d'autres composants
+Outre les **59 lignes du graphe**, le dépôt comprend d'autres composants
 susceptibles d'influencer le symptôme observé, dont les interfaces HID/commandes
 en jeu, l'ordonnancement des services IPC, la restitution audio et les chemins
 host-syncpoint. **Ils ne sont pas tous vérifiés par le présent tableau.**
@@ -183,7 +184,7 @@ host-syncpoint. **Ils ne sont pas tous vérifiés par le présent tableau.**
   couvertes par cet audit de stabilité native ; inventaire complet
   du dépôt ≠ assurance de correction de FC27.
 
-**Règle de clôture :** aucune réponse ne doit présenter « 58 lignes »
+**Règle de clôture :** aucune réponse ne doit présenter « 59 lignes »
 comme « toutes les fonctions restantes ». L'inventaire s'étend à mesure
 des véritables appels, et une tâche n'est verte que pour son critère
 de validation nommé.
