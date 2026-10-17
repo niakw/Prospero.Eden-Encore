@@ -2241,11 +2241,14 @@ if(EDEN_PS5_OPENGL)
     # original in video_sources: copying it into a derived TU adds no behavior.
     # Join the GPU worker before transferring its context to the teardown thread.
     if(PS5_NATIVE)
-        set(MACRO_INPUT "${PROJECT_SOURCE_DIR}/src/video_core/macro.cpp")
-        set(MACRO_OUTPUT "${PORT_BUILD_DIR}/macro_recovery.cpp")
-        include("${EDEN_PORT_DIR}/macro_recovery.cmake")
+        # Native MacroJIT exception recovery is selected from Encore, not generated.
+        set(EDEN_MAINTAINED_MACRO
+            "${PORT_ROOT}/vendor/encore-active/eden-core/src/video_core/macro.cpp")
+        if(NOT EXISTS "${EDEN_MAINTAINED_MACRO}")
+            message(FATAL_ERROR "Missing maintained native macro unit")
+        endif()
         list(REMOVE_ITEM video_sources macro.cpp)
-        list(APPEND video_sources "${MACRO_OUTPUT}")
+        list(APPEND video_sources "${EDEN_MAINTAINED_MACRO}")
     endif()
     # R345: PS5 compiles our versioned, complete GPU worker and queue sources.
     # No source-code string rewrites execute during native configuration.

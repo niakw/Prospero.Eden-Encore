@@ -673,6 +673,19 @@ assert 'target_include_directories(video_core BEFORE PRIVATE "${EDEN_MAINTAINED_
 assert "slot_vector_recovery.cmake" not in c
 print("MAINTAINED_SLOT_VECTOR_PARITY_PASS header=common/slot_vector.h")
 
+
+# X01 historical MacroJIT recovery -- complete source equals old generator.
+macro_original = (root / "vendor/sources/eden/src/video_core/macro.cpp").read_text()
+macro_replacements = [["        u32 carry_flag{};","        u32 carry_flag{};\n        std::exception_ptr failure;\n        bool failed{};"],["    program(&state, parameters.data(), parameters.data() + parameters.size());","    program(&state, parameters.data(), parameters.data() + parameters.size());\n    if (state.failure) std::rethrow_exception(state.failure);"],["static void MacroJIT_SendThunk(Core::System* system, Engines::Maxwell3D* maxwell3d, Macro::MethodAddress method_address, u32 value) {\n    maxwell3d->CallMethod(*system, method_address.address, value, true);\n}","static void MacroJIT_SendThunk(MacroJITx64Impl::JITState* state, Macro::MethodAddress method_address, u32 value) noexcept {\n    try {\n        state->maxwell3d->CallMethod(*state->system, method_address.address, value, true);\n    } catch (...) {\n        state->failure = std::current_exception();\n        state->failed = true;\n    }\n}"],["    mov(Common::X64::ABI_PARAM1, qword[STATE + offsetof(JITState, system)]);\n    mov(Common::X64::ABI_PARAM2, qword[STATE + offsetof(JITState, maxwell3d)]);\n    mov(Common::X64::ABI_PARAM3.cvt32(), METHOD_ADDRESS);\n    mov(Common::X64::ABI_PARAM4.cvt32(), value);","    mov(Common::X64::ABI_PARAM3.cvt32(), value);\n    mov(Common::X64::ABI_PARAM2.cvt32(), METHOD_ADDRESS);\n    mov(Common::X64::ABI_PARAM1, STATE);"],["    Common::X64::ABI_PopRegistersAndAdjustStack(*this, PersistentCallerSavedRegs(), 0);\n\n    Xbyak::Label dont_process{};","    Common::X64::ABI_PopRegistersAndAdjustStack(*this, PersistentCallerSavedRegs(), 0);\n    cmp(byte[STATE + offsetof(JITState, failed)], 0);\n    jne(end_of_code, T_NEAR);\n\n    Xbyak::Label dont_process{};"]]
+macro_derived = "#include <exception>\n" + macro_original
+for idx, (before, after) in enumerate(macro_replacements):
+    assert macro_derived.count(before) == 1, ("MacroJIT pinned hunk drift", idx)
+    macro_derived = macro_derived.replace(before, after)
+assert (active / "eden-core/src/video_core/macro.cpp").read_text() == macro_derived
+assert 'list(APPEND video_sources "${EDEN_MAINTAINED_MACRO}")' in c
+assert 'macro_recovery.cmake' not in c
+print("MAINTAINED_MACRO_RECOVERY_PARITY_PASS anchors=5")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -766,7 +779,6 @@ indirect_recorded = re.findall(
     r"^\| X\d\d \| \x60([^\x60]+)\x60 \|",
     inventory.split(indirect_begin)[1].split(indirect_end)[0], re.M)
 indirect_expected = (
-    ("headless/macro_recovery.cmake", ("file(WRITE ", "configure_file(")),
     ("headless/checked-fastmem.cmake", ("string(REPLACE", "memory_source", "memory_emitter")),
     ("headless/native_gpu_granular_bounds.cmake", ("string(REPLACE", "eden_gpu_span_src")),
     ("headless/native_guest_range_overflow.cmake", ("string(REPLACE", "eden_cpu_memory")),
@@ -778,7 +790,7 @@ assert indirect_recorded == [entry[0] for entry in indirect_expected], (
 for module, required in indirect_expected:
     content = (root / module).read_text()
     assert all(token in content for token in required), ("indirect override changed", module)
-assert len(indirect_recorded) == 6
+assert len(indirect_recorded) == 5
 print(f"VENDOR_INDIRECT_OVERRIDE_INVENTORY_PASS modules={len(indirect_recorded)} (not generator sites)")
 
 # Third independent source-change mechanism: pinned backport patch replays.
