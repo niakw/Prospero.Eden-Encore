@@ -60,6 +60,10 @@ approved_sync = {
         # End-exclusive guest spans must not probe a one-past-last page.
         'string(REPLACE "${eden_span_original}" [=[',
         'string(REPLACE "${eden_gpu_span_original}" [=[',
+        # Two exact, drift-checked native command queue slot lifecycle rewrites.
+        # Count both separately; leave the historical <=225 ceiling unchanged.
+        'string(REPLACE "${queue_slot_construct}" "__ENCORE_GPU_QUEUE_SLOT__"',
+        'string(REPLACE "__ENCORE_GPU_QUEUE_SLOT__" "${queue_slot_repair}"',
     ),
 }
 # The dirty-range rewrite is allowed only while the source-derived native
