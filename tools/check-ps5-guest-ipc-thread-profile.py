@@ -24,10 +24,15 @@ assert "std::array<GuestIpcThread, guest_ipc_thread_slots>" in impl
 assert "std::memory_order_relaxed" in impl
 assert "std::printf(" not in impl and "NowNs()" not in impl
 assert "GetThreadName" not in impl and "mutex" not in impl.lower()
-anchor = cmake.index('const auto ipc_tid = ipc_profile ? GetCurrentThread(kernel).GetThreadId() : 0;')
-assert anchor < cmake.index("session->SendSyncRequest(kernel, message, buffer_size);", anchor)
-assert "if (ipc_profile) ::Eden::Performance::FinishGuestIpc(" in cmake
-assert "BeginGuestIpc(ipc_tid, ipc_start)" in cmake
+# The actual DEV IPC instrumentation is a maintained C++ source, not a
+# configure-time CMake replacement. The quiet/active counters stay native.
+ipc = (root / "vendor/encore-active/eden-core/src/core/hle/kernel/svc/svc_ipc.cpp").read_text()
+assert 'set(EDEN_MAINTAINED_PROFILE_SVC_IPC' in cmake
+assert 'write_derived("${PORT_BUILD_DIR}/svc_ipc.cpp"' not in cmake
+anchor = ipc.index('const auto ipc_tid = ipc_profile ? GetCurrentThread(kernel).GetThreadId() : 0;')
+assert anchor < ipc.index("session->SendSyncRequest(kernel, message, buffer_size);", anchor)
+assert "if (ipc_profile) ::Eden::Performance::FinishGuestIpc(" in ipc
+assert "BeginGuestIpc(ipc_tid, ipc_start)" in ipc
 assert "EDEN_DEV_IPC_THREAD tid=%llu calls=%llu ns=%llu max_ns=%llu" in report
 assert "EDEN_DEV_IPC_ACTIVE tid=%llu age_ms=%.3f" in report
 assert "std::array<ActiveIpcRow, 8>" in report
