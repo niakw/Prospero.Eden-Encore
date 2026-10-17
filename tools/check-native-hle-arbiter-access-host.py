@@ -138,6 +138,24 @@ anchors = [
 for anchor in anchors:
     assert expected.count(anchor) == 1, "pinned arbiter contract drift"
     expected = expected.replace(anchor, anchor + guard)
+# Boundary arithmetic must retain the 32-bit guest word's modulo behavior
+# without invoking C++ signed-overflow UB in native builds.
+wrap_replacements = [
+    ("const s32 decrement_value = current_value - 1;",
+     "const s32 decrement_value = static_cast<s32>(static_cast<u32>(current_value) - 1u);", 1),
+    ("std::addressof(user_value), addr, value, value + 1)",
+     "std::addressof(user_value), addr, value,\n"
+     "                                static_cast<s32>(static_cast<u32>(value) + 1u))", 1),
+    ("new_value = value - 2;",
+     "new_value = static_cast<s32>(static_cast<u32>(value) - 2u);", 1),
+    ("new_value = value - 1;",
+     "new_value = static_cast<s32>(static_cast<u32>(value) - 1u);", 1),
+    ("new_value = value + 1;",
+     "new_value = static_cast<s32>(static_cast<u32>(value) + 1u);", 2),
+]
+for old, new, count in wrap_replacements:
+    assert expected.count(old) == count, "pinned arithmetic contract drift"
+    expected = expected.replace(old, new)
 assert active == expected, "native arbiter differs from pinned + three guards"
 with tempfile.TemporaryDirectory(prefix="encore-arbiter-access-") as td:
     temp = Path(td)
