@@ -35,7 +35,7 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 Le **noyau restant** compte donc 66 critères répartis sur
 56 fichiers et 138 mentions fonction/contrat :
 15 OPEN et 51 SOURCE.
-Cela **ne signifie pas 137 fonctions jamais lues** :
+Cela **ne signifie pas 138 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 Le hors-inventaire (HID, IPC, host-syncpoints, variantes vendor...) n'est
 pas chiffrable honnêtement sans un relevé exhaustif supplémentaire.
@@ -420,6 +420,39 @@ to enable experimental synchronization or produce a console build.
 5. Native post-store #187 bridge is still DISABLED. Negative
    host witnesses for FIFO, aliases or DMA are not permission to
    enable the bridge or request a console build.
+
+## Backport patch source-target coverage — audited 2026-10-17
+
+All **46** source patch files were inspected for their `+++ b/` targets.
+This is a complementary file-level view, **not** proof that each impacted
+function has been read or exercised. The existing P01–P46 replay list
+tracks *patch installation*, not complete source/function coverage.
+A tracked active override can already subsume a patched original; therefore
+"no exact graph row" means **needs source-owner reconciliation**, not
+"definitely unfixed" or "needs another patch".
+
+The existing `tools/check-vendor-consolidation-debt.py` now recalculates
+the complete patch target footprint and reports target files without an
+exact pinned/active path in the function register; its result is a
+catalogue-health check, not a native runtime test.
+
+| Priority | Patch family / representative patches | Exact pinned source paths to reconcile | Acceptance |
+| --- | --- | --- | --- |
+| P0 | `eden-ps5-gpu-*memory*`, `eden-ps5-gpu-*asid*`, `eden-ps5-gpu-*table*` | `src/core/device_memory_manager.inc`, `src/core/device_memory_manager.h` | Match all mapping, unmapping, ASID lifetime and physical bounds paths to current compiled owners, then index actual functions |
+| P0 | `eden-sm-host-wait.patch` | `src/core/hle/service/sm/sm.h`, `src/core/hle/service/audio/audio_controller.cpp`, `audio_controller.h` | Confirm source/replay order for GetService, dummy-thread handling and deferred audio; preserve blocked/awake distinction |
+| P0 | `eden-nvnflinger-dequeue-wakeup.patch` | `src/core/hle/service/nvnflinger/buffer_queue_core.cpp`, `buffer_queue_core.h` | Link queue-core notification ownership to N03 and track producer → consumer wake separately |
+| P1 | `eden-4473-4477.patch` | `src/video_core/buffer_cache/buffer_cache_base.h`, `src/video_core/fence_manager.h`, `src/video_core/query_cache/query_cache.h`, `src/video_core/renderer_vulkan/vk_buffer_cache.cpp` | Reconcile the multi-file buffer, fence and query changes with the actively selected renderer; do not infer missing behavior from path differences |
+| P1 | `eden-fw23-services.patch`, `eden-fc27-hle-compat.patch` | `src/core/hle/service/*`, `src/core/hle/api_version.h`, `src/core/file_sys/system_archive/system_version.cpp`, `src/audio_core/audio_render_manager.cpp` | Expand service-by-service function catalogue; this one backport touches dozens of files, not a single contract |
+| P1 | `eden-runtime-hid.patch`, `eden-ps5-hid-watchdog.patch` | `src/hid_core/resources/npad/npad.cpp`, `src/core/hle/service/hid/hid_system_server.cpp`, `src/core/hle/service/am/lifecycle_manager.h` | Separate HID input/wake delivery from UI glyph rendering and mark optional diagnostic versions |
+| P1 | `eden-ps5-guest-offline.patch`, `eden-ps5-guest-domain-filter.patch` | `src/core/hle/service/sockets/sfdnsres.cpp`, `src/core/hle/service/sockets/bsd.cpp`, `src/core/hle/service/sockets/encore_guest_network_policy.h` | Map guest-network policy to exact active DNS/BSD translation units without mixing launcher networking |
+| P1 | `eden-ps5-nvmap-alloc-rollback.patch`, `eden-ps5-software-bilinear-source-coordinates.patch` | `src/core/hle/service/nvdrv/devices/nvmap.cpp`, `src/video_core/engines/sw_blitter/blitter.cpp` | Identify owning functions and preserve lifetime/coordinate regression witnesses |
+| P2 | `eden-ps5-bounded-logging.patch`, `eden-ps5-crash-only-logging.patch`, `eden-ps5-launcher-fast-http.patch`, `eden-ps5-net-user-agent.patch` | `src/common/logging.cpp`, `src/common/net/net.cpp` | Reconcile observability and HTTP timeout paths, without moving launcher/UI responsibility into the performance graph |
+
+This **does not close** any of these entries. Some files have exact
+function rows elsewhere, while others are only present through an
+umbrella contract; the next pass must identify the real source owner
+and function boundaries before marking the path HOST or removing a patch.
+No new GPU/JIT/network behavior is authorized by this catalogue.
 
 ## How to update after each task
 
