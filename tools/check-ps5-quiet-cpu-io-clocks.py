@@ -20,13 +20,23 @@ assert "m_on_interrupt.wait(lk, [this] { return m_is_interrupted; });" in idle
 assert "__atomic_load_n(&m_is_interrupted" not in cmake
 
 for start, end, metric, name in [
-    ('string(REPLACE "${ctrl_old}"', ' ctrl_source "${ctrl_source}")', "wait_start", "guest_sync_wait"),
     ('string(REPLACE "${producer_old}"', ' producer_source "${producer_source}")', "dequeue_start", "guest_dequeue_wait"),
 ]:
     fragment = section(start, end)
     assert f"const auto {metric} = ::Eden::Performance::detailed_gpu_profile.load" in fragment
     assert f"if ({metric}) ::Eden::Performance::AddSince(::Eden::Performance::{name}, {metric});" in fragment
     assert fragment.index("::Eden::Performance::NowNs()") < fragment.index(f"if ({metric})")
+# Host-syncpoint event-wait callback is now maintained C++ (DEV only).
+nvctrl = (Path(__file__).resolve().parents[1] /
+          "vendor/encore-active/eden-core/src/core/hle/service/nvdrv/devices/nvhost_ctrl.cpp").read_text()
+assert 'list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_NVCTRL}")' in cmake
+assert 'write_derived("${PORT_BUILD_DIR}/nvhost_ctrl.cpp"' not in cmake
+assert "const auto wait_start = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed) ? ::Eden::Performance::NowNs() : 0;" in nvctrl
+assert "RegisterHostAction(fence_id, target_value, [this, slot, wait_start]()" in nvctrl
+assert "if (wait_start) ::Eden::Performance::AddSince(::Eden::Performance::guest_sync_wait, wait_start);" in nvctrl
+assert nvctrl.index("const auto wait_start") < nvctrl.index("RegisterHostAction(fence_id")
+assert nvctrl.index("RegisterHostAction(fence_id") < nvctrl.index("if (wait_start)")
+
 ipc = section('string(REPLACE "${ipc_old}"', ' ipc_source "${ipc_source}")')
 # R393 additionally attributes sync IPC latency to its original guest thread.
 # Quiet gameplay must still skip the clock and thread ID lookup entirely.
