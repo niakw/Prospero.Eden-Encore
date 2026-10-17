@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# One-shot authenticated cleanup. Remove this workflow after the successful run.
+name: Cleanup merged work branches
+on:
+  push:
+    branches:
+      - dev/ps5-sparse-jit
+    paths:
+      - .github/workflows/remove-merged-work-branches-once.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  clean-merged:
+    if: github.repository == 'niakw/Prospero.Eden-Encore' && github.ref == 'refs/heads/dev/ps5-sparse-jit'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify merged source references and remove obsolete branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidates=(
+            "12|ui/encore-topbar-library-cover-20261016|1e41e670231fda33223b03cf30fd7bb804c3ec29"
+            "13|ui/encore-switch-theme-20261016|c9a9522172e1c3e3f23bcc80d00d85dde335cf8e"
+            "14|audit/core-evidence-alignment-20261017|76c348621481f6d0511687fc0f4c56ae092f388f"
+            "15|audit/native-present-jit-window-20261017|afe1bcb27e95798ca57de5441527193823ef6a03"
+          )
+          default="$(gh api "repos/$REPO" --jq .default_branch)"
+          test "$default" = "dev/ps5-sparse-jit"
+          for spec in "${candidates[@]}"; do
+            IFS='|' read -r number branch expected_sha <<<"$spec"
+            [[ "$branch" != "$default" && "$branch" != "main" ]]
+            pr_state="$(gh api "repos/$REPO/pulls/$number" --jq .merged)"
+            pr_branch="$(gh api "repos/$REPO/pulls/$number" --jq .head.ref)"
+            test "$pr_state" = true
+            test "$pr_branch" = "$branch"
+            actual_sha="$(gh api "repos/$REPO/git/ref/heads/$branch" --jq .object.sha)"
+            test "$actual_sha" = "$expected_sha"
+            if [[ "$(gh api "repos/$REPO/pulls?state=open&per_page=100" --jq "[.[] | select(.head.ref == \"$branch\" or .base.ref == \"$branch\")] | length")" != "0" ]]; then
+              echo "Branch has an open pull request: $branch" >&2
+              exit 1
+            fi
+            gh api --method DELETE "repos/$REPO/git/refs/heads/$branch"
+            echo "REMOVED_MERGED_BRANCH pr=$number branch=$branch"
+          done
