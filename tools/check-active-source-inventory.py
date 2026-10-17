@@ -184,13 +184,25 @@ for entry in headless_doc.split(headless_start, 1)[1].split(headless_end, 1)[0].
     headless_rows.append((cells[0].strip("`"), cells[1], cells[2], cells[3]))
 assert [r[0] for r in headless_rows] == headless_actual, (
     "headless source path catalog drift", len(headless_rows), len(headless_actual))
-headless_linked = sum(p in graph for p in headless_actual)
+# The vendor-active graph above intentionally stores vendor-relative keys.
+# Headless paths use repository-relative keys and need an independent map.
+headless_graph = {}
+for entry in audit.splitlines():
+    if not re.match(r"^\\| [A-Z][0-9]{2} \\|", entry):
+        continue
+    cells = [cell.strip() for cell in entry.strip().strip("|").split("|")]
+    if len(cells) == 9 and cells[3].startswith("headless/"):
+        headless_graph.setdefault(cells[3], []).append(cells[0])
+headless_linked = sum(p in headless_graph for p in headless_actual)
 for p, family, owner, state in headless_rows:
-    if p in graph:
-        assert owner != "—" and state.strip().startswith("Chemin indexé"), ("headless owner absent", p)
+    if p in headless_graph:
+        assert owner == ",".join(headless_graph[p]) and state.strip().startswith("Chemin indexé"), (
+            "headless graph owner stale", p)
     else:
         assert owner == "—" and state.strip() == "À qualifier", ("headless owner stale", p)
 assert "**195** chemins" in headless_doc
+assert f"**{headless_linked}** chemins déjà présents" in headless_doc
+assert f"**{len(headless_actual)-headless_linked}** chemins sans propriétaire exact" in headless_doc
 print("ENCORE_HEADLESS_SOURCE_CATALOG_PASS",
       f"paths={len(headless_actual)}", f"graph_exact={headless_linked}",
       f"unlinked={len(headless_actual)-headless_linked}")
