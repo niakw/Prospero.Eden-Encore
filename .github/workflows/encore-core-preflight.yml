@@ -70,6 +70,7 @@ jobs:
           python3 -B tools/verify/hle/check-native-hle-arbiter-access-host.py
           python3 -B tools/verify/hle/check-native-hle-arbiter-wrap-host.py
           python3 -B tools/verify/hle/check-native-hle-address-wake-host.py
+          python3 -B tools/verify/hle/check-hle-overlay-layout.py
           python3 -B tools/verify/hle/check-native-hle-sync-unlink-host.py
           python3 -B tools/verify/hle/check-native-hle-wait-timeout-host.py
           python3 -B tools/verify/hle/check-native-hle-sleep-timeout-host.py
