@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 72
+**Non, this is not an exhaustive repository-wide inventory.** The 73
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -147,6 +147,7 @@ function/contract tokens are checked by CI for existence only; the
 | H05 | P0 | H01,H02 | vendor/sources/eden/src/core/hle/kernel/k_synchronization_object.cpp | KSynchronizationObject::Wait; KSynchronizationObject::NotifyAvailable | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Source: NotifyAvailable unlinks wait nodes through the waiting queue while scheduler lock is held; H17 now has an optimized C++ alias-UB repro in UnlinkNode; code fixed native-only pending CI; guest wait stack still absent | 🟠 À contrôler |
 | N01 | P1 | Q04 | vendor/sources/eden/src/core/hle/service/nvdrv/devices/nvhost_gpu.cpp | SubmitGPFIFO; Ioctl | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Trace IOCTL submit and fences only if guest GPU wait is implicated | 🟠 À contrôler |
 | V09 | P0 | V04 | vendor/encore-active/eden-vulkan/vulkan_present_layer.cpp | Layer::UpdateRawImage; Layer::UpdateDescriptorSet | OPEN | docs/PS5_R331_2026-10-11_VULKAN_RAW_VIEW_LIFETIME.md | Check layer resource lifetime only for new present/HUD evidence | 🟠 À contrôler |
+| V10 | P1 | V05,V07 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_graphics_pipeline.h | Eden::StripedCondition; Eden::StripedMutex | OPEN | tools/check-native-vulkan-striped-pipeline-host.py | Upstream 737152f: bound Vulkan pipeline build mutexes and conditions to 64 shared slots; new checked-in native headers only, original source retained, exact fork oracle and concurrent host regression pending CI; no claimed FC27 FPS uplift | 🟠 À contrôler |
 | A01 | P1 | H03 | vendor/sources/eden/src/audio_core/renderer/voice/voice_info.cpp | VoiceInfo::UpdateParameters; VoiceInfo::UpdatePlayState | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Validate audio voice state only if match stall traces demand it | 🟠 À contrôler |
 | F01 | P1 | Q04 | vendor/sources/eden/src/video_core/host1x/host1x.cpp | Host1x | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Trace actual host syncpoint progression if GPU command progress stops | 🟠 À contrôler |
 | J05 | P1 | J01 | headless/jit-sparse-commit.h | PlanSparseCommit | SOURCE | tools/check-jit-sparse-host.py | Check sparse JIT commit bounds and live native transitions | 🟡 Source étudiée |
@@ -188,7 +189,7 @@ function/contract tokens are checked by CI for existence only; the
 
 ## Couverture encore NON exhaustive (à inventorier, pas à déclarer OK)
 
-Outre les **72 lignes du graphe**, le dépôt comprend d'autres composants
+Outre les **73 lignes du graphe**, le dépôt comprend d'autres composants
 susceptibles d'influencer le symptôme observé, dont les interfaces HID/commandes
 en jeu, l'ordonnancement des services IPC, la restitution audio et les chemins
 host-syncpoint. **Ils ne sont pas tous vérifiés par le présent tableau.**
@@ -208,10 +209,29 @@ host-syncpoint. **Ils ne sont pas tous vérifiés par le présent tableau.**
   couvertes par cet audit de stabilité native ; inventaire complet
   du dépôt ≠ assurance de correction de FC27.
 
-**Règle de clôture :** aucune réponse ne doit présenter « 72 lignes »
+**Règle de clôture :** aucune réponse ne doit présenter « 73 lignes »
 comme « toutes les fonctions restantes ». L'inventaire s'étend à mesure
 des véritables appels, et une tâche n'est verte que pour son critère
 de validation nommé.
+
+## Upstream dependency review — 17 October 2026
+
+Compare code diffs, not commit headlines. Do not broadly repin the frozen,
+reproducible vendor archives. Candidate ports belong to `vendor/encore-active`
+and require a source-specific host witness; this list is not a permission
+to enable experimental synchronization or produce a console build.
+
+| Repo / commit | Finding | Decision |
+| --- | --- | --- |
+| [Core upstream 737152f](https://github.com/blackbearreloaded/ProsperoEden/commit/737152f6f9835ee311bfe54de5bcd130dd40087f) | One condition and mutex per Vulkan pipeline can exhaust native thread objects; 64 shared slots preserve predicates and broadcast when aliases collide | **V10 native backport under test**; no generic source rewriting |
+| [Core upstream 4372034](https://github.com/blackbearreloaded/ProsperoEden/commit/437203458063cbb313d89d088eb137bd88382c42) | Checked A32 fastmem site demotions and 2-MiB aliases; currently absent in our host handler and checked-fastmem gate | **Defer**: multi-part JIT retirement, alias coherency, console memory mapping; cannot equate with FPS fix |
+| [Core upstream b942163](https://github.com/blackbearreloaded/ProsperoEden/commit/b94216347b9a327e2a25fb589daeaaca1301ad90) | Direct guest-page lookup and grouped A64 accesses; `jit-page-table.cmake` absent here | **Defer**: changed JIT opcodes and memory-table invalidation contract; model/host parity insufficient |
+| [Core upstream 207e77f](https://github.com/blackbearreloaded/ProsperoEden/commit/207e77fe422f738a4cad31e9e5ec3cdc47737e6f) | Crash-safe persistence for pipeline caches across restarts | **Later**: addresses cache loss/repeated compilation, not proven present-tense frozen-game liveness |
+| [Core upstream 629c8bb](https://github.com/blackbearreloaded/ProsperoEden/commit/629c8bb9764a20a232dbb05ca49f9522ad55e4f0) | Lazy guest-memory commit/compaction; new page-fault and backing-memory lifetime policy | **Defer**: invasive, requires memory ownership and concurrency proof |
+| [Mesa d0d7325](https://github.com/mihawk-99/PS5_Mesa/commit/d0d7325e447b99) | Optional threaded command-buffer recording | **Do not enable**: separate worker queue/replay may change ordering and freeze modes; GPU #187 remains off |
+| [Mesa 1ba9874](https://github.com/mihawk-99/PS5_Mesa/commit/1ba9874f4786) | Shader barycentric/per-vertex order correctness | **Not a stutter or freeze optimization**; reassess only with matching rendering defect |
+| [Eden 6352612](https://github.com/eden-emulator/mirror/commit/6352612425ae) | Vulkan buffer update correction limited to query cache | **Review only upon matching source-path regression**, not a general speed patch |
+| OpenGL and native template updates, October 2026 | Several launcher, framework, distribution and OpenGL changes | **Outside current native Vulkan freeze scope** |
 
 ## Established findings — do not re-run without changed evidence
 
