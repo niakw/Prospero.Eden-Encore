@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 293
+**Non, this is not an exhaustive repository-wide inventory.** The 294
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 293 | 274 | 599 |
+| Graphe connu | 294 | 275 | 601 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 238 | 229 | 494 |
+| SOURCE — lecture effectuée, preuve insuffisante | 239 | 230 | 496 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **253** | **243** | **522** |
+| **Encore à qualifier (SOURCE + OPEN)** | **254** | **244** | **524** |
 | Dont priorité P0 (SOURCE + OPEN) | 105 | 100 | 246 |
 
-Le **noyau restant** compte donc 253 critères répartis sur
-243 fichiers et 522 mentions fonction/contrat :
-15 OPEN et 238 SOURCE.
+Le **noyau restant** compte donc 254 critères répartis sur
+244 fichiers et 524 mentions fonction/contrat :
+15 OPEN et 239 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-199 fichiers de code/en-têtes présents et 199 avec un chemin de
+200 fichiers de code/en-têtes présents et 200 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -95,7 +95,7 @@ produire plusieurs fichiers réels. Les ressources générées ne doivent
 pas être confondues avec des overrides de code.
 
 Le second inventaire compte 21 générateurs `write_derived()` dans les modules,
-soit **68 sites au total**, mais n'inclut **pas** les sept modules
+soit **68 sites au total**, mais n'inclut **pas** les six modules
 `X01–X07` qui créent une sortie par `file(WRITE)` ou transforment
 indirectement une variable-source. Ils sont suivis séparément dans
 `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`, avec contrôle hôte de leur
@@ -396,6 +396,7 @@ function/contract tokens are checked by CI for existence only; the
 | V61 | P0 | V52 | vendor/encore-active/eden-backports/src/video_core/texture_cache/util.cpp | IsValidEntry | SOURCE | tools/check-active-source-inventory.py | Shipping texture validator rejects zero format and missing non-sparse TIC address; source-level modified code only, native execution unproved | 🟡 Source étudiée |
 | V62 | P0 | V50 | vendor/encore-active/eden-backports/src/video_core/renderer_vulkan/vk_buffer_cache.h | IsFree; Wait | SOURCE | tools/check-active-source-inventory.py | Shipping Vulkan buffer fence API declares tick-based IsFree/Wait; native GPU progress unproved | 🟡 Source étudiée |
 | V63 | P1 | V54 | vendor/encore-active/eden-backports/src/video_core/engines/sw_blitter/blitter.cpp | Blit; src_width; src_height | SOURCE | tools/check-active-source-inventory.py | Shipping backport row-major software blit coordinate fix; runtime correctness unproved | 🟡 Source étudiée |
+| V64 | P1 | V54 | vendor/encore-active/eden-core/overrides/slot-vector/common/slot_vector.h | SlotId insert; FreeValueIndex | SOURCE | tools/check-vendor-consolidation-debt.py | Old X02 throwing-constructor repair now maintained as exact header, with isolated include root; device recovery unproved | 🟡 Source étudiée |
 | V51 | P0 | V50,M13 | vendor/encore-active/eden-backports/src/video_core/buffer_cache/buffer_cache.h | BufferCache<P>::SynchronizeBufferWrites; BufferCache<P>::DMACopy; BufferCache<P>::MarkWrittenBuffer | SOURCE | tools/check-active-source-inventory.py | Shipping GPU buffer template changes DMA sync policy and write-tick lifetime; source diff examined, exact runtime owner/console behavior still to prove | 🟡 Source étudiée |
 | F04 | P1 | F02,F03 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_filesystem.cpp | IFileSystem::OpenFile; IFileSystem::OpenDirectory; IFileSystem::GetEntryType | HOST | tools/check-vendor-consolidation-debt.py | Maintained DEV IFileSystem diagnostic replaces G23 CMake patch for three result paths; three call replacements, DEV source selection, and quiet policy passed full host preflight #39048355950; native SDK/gameplay remain unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39048355950) |
 | H20 | P0 | H02,H19 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp | KScheduler::UpdateHighestPriorityThread; KScheduler::UpdateHighestPriorityThreadsImpl | SOURCE | tools/check-upstream-guest-scheduler-locks.py | Runnable queue update precedes per-core highest-priority selection; account for pinned-thread preference, suggested-core migration and eventual context load. Not proof of guest PC progress | 🟡 Source étudiée |
