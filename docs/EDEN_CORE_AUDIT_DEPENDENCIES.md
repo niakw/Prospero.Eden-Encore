@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 88
+**Non, this is not an exhaustive repository-wide inventory.** The 90
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,18 +24,18 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 88 | 73 | 172 |
+| Graphe connu | 90 | 75 | 177 |
 | HOST — preuve ciblée hôte | 28 | 25 | 56 |
-| SOURCE — lecture effectuée, preuve insuffisante | 39 | 34 | 82 |
+| SOURCE — lecture effectuée, preuve insuffisante | 41 | 36 | 87 |
 | OPEN — question technique non résolue | 15 | 15 | 27 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **54** | **48** | **109** |
-| Dont priorité P0 (SOURCE + OPEN) | 25 | 21 | 59 |
+| **Encore à qualifier (SOURCE + OPEN)** | **56** | **50** | **114** |
+| Dont priorité P0 (SOURCE + OPEN) | 26 | 22 | 62 |
 
-Le **noyau restant** compte donc 54 critères répartis sur
-48 fichiers et 109 mentions fonction/contrat :
-15 OPEN et 39 SOURCE.
-Cela **ne signifie pas 109 fonctions jamais lues** :
+Le **noyau restant** compte donc 56 critères répartis sur
+50 fichiers et 114 mentions fonction/contrat :
+15 OPEN et 41 SOURCE.
+Cela **ne signifie pas 114 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 Le hors-inventaire (HID, IPC, host-syncpoints, variantes vendor...) n'est
 pas chiffrable honnêtement sans un relevé exhaustif supplémentaire.
@@ -50,6 +50,12 @@ ainsi que la durée de vie des événements `nvhost_ctrl` (N05).
 Les rappels sont invoqués sous `guard` dans le code source épinglé ;
 une réentrance ou une course annulation/rappel n'est pas encore prouvée.
 Ne pas convertir cette observation en correctif sans reproduction.
+
+Le trajet GPU→invité intègre aussi H23 et H24 :
+`KEvent::Signal` → `KReadableEvent::Signal` →
+`KSynchronizationObject::NotifyAvailable`. Les verrous scheduler
+et la destruction des événements sont maintenant explicitement suivis ;
+la reprise du PC invité après cette chaîne demeure non démontrée.
 
 ## Migration de sources et inventaire de sélection
 
@@ -265,6 +271,8 @@ function/contract tokens are checked by CI for existence only; the
 | N03 | P1 | V02 | vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp | BufferQueueProducer::WaitForFreeSlotThenRelock; BufferQueueProducer::DequeueBuffer | SOURCE | tools/check-vendor-consolidation-debt.py | DEV dequeue timing now comes from maintained TU with pinned generated-source parity gate; hardware slot wake/back-pressure and visible guest progress still unproved | 🟡 Source étudiée |
 | N04 | P0 | N02 | vendor/sources/eden/src/video_core/host1x/syncpoint_manager.cpp | SyncpointManager::RegisterAction; SyncpointManager::DeregisterAction; SyncpointManager::Increment | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Newly indexed host-syncpoint action ownership: increment invokes callbacks while its guard is held; callback, reentrant locking and unregistration order require explicit proof before altering the scheduler | 🟡 Source étudiée |
 | N05 | P1 | N02,N04 | vendor/encore-active/eden-core/src/core/hle/service/nvdrv/devices/nvhost_ctrl.cpp | nvhost_ctrl::FreeEvent; nvhost_ctrl::IocCtrlEventUnregister; nvhost_ctrl::QueryEvent | SOURCE | tools/check-vendor-consolidation-debt.py | Newly indexed event object lifecycle: cancellation, unregister, query and callback signal may overlap. Source selected in DEV but actual native destruction/callback ordering not proven | 🟡 Source étudiée |
+| H23 | P0 | H05,N04 | vendor/sources/eden/src/core/hle/kernel/k_readable_event.cpp | KReadableEvent::Signal; KReadableEvent::Clear; KReadableEvent::IsSignaled | SOURCE | tools/verify/hle/check-native-hle-sync-unlink-host.py | Newly cataloged transition from signaled GPU host event to kernel NotifyAvailable. Source uses scheduler lock; no trace yet associates wake with resumed guest PC | 🟡 Source étudiée |
+| H24 | P1 | H23,N05 | vendor/sources/eden/src/core/hle/kernel/k_event.cpp | KEvent::Signal; KEvent::Clear | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Newly cataloged NV event signal/clear forwarding under scheduler lock and destroyed-readable guard. Requires callback/event-lifetime interleaving evidence; do not speculate that the guard proves teardown safe | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
