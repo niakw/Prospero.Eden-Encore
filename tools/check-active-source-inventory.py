@@ -149,6 +149,18 @@ for header in abi_headers:
     assert (active/rel).is_file() and rel in graph, ("missing selected Vulkan ABI owner", rel)
 print("ENCORE_VULKAN_SHARED_ABI_OWNER_PASS", f"headers={len(abi_headers)}")
 
+# Summary prose is itself an audit contract, not a manually stale count.
+linked_count = sum(path in graph for path in physical)
+assert f"**{len(physical)} fichiers** de code" in document
+assert f"**{linked_count} fichiers** possèdent" in document
+assert f"**{len(physical)-linked_count} fichiers** n'ont" in document
+root_cmake = (root / "headless/CMakeLists.txt").read_text()
+root_generator_count = len(re.findall(r'write_derived\(\s*"', root_cmake))
+assert f"L'inventaire des {root_generator_count} générateurs CMake" in document
+print("ENCORE_ACTIVE_CATALOG_SUMMARY_PASS",
+      f"files={len(physical)}", f"covered={linked_count}",
+      f"cmake_primary_generators={root_generator_count}")
+
 assert len(physical) == len(set(physical))
 print("ENCORE_ACTIVE_SOURCE_CATALOG_PASS",
       f"files={len(physical)}",
