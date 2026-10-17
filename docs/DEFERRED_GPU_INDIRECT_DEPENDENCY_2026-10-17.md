@@ -64,3 +64,28 @@ No real Dynarmic + GPU DmaPusher integration test, no native device
 memory visibility proof, no CAS/store postpublication, no mutable
 GuestMemory alias coverage, and no quantitative performance outcome.
 Keep #187 OFF. This host experiment does not justify console or FC27 tests.
+
+
+## Additional host evidence: safe command reads are not always snapshots
+
+The pinned \`core/guest_memory.h\` \`GuestMemory::Read()\` tries
+\`GetSpan()\` first. When that succeeds, \`SafeRead\` calls \`FlushRegion()\`
+but exposes a mutable, backing-RAM \`std::span\` rather than copying command
+bytes. This is an important distinction: safe cache synchronization does not
+freeze an immutable command payload for pre-decode analysis.
+
+The existing \`tools/check-native-guest-memory-coherence-host.py\` now executes
+two additional actual-template C++ checks with aligned 32-bit words:
+
+- A contiguous \`SafeRead\` invokes \`FlushRegion\`, holds a live pointer
+  into guest backing memory, and observes a subsequent backing-store update.
+- A noncontiguous \`SafeRead\` copies via \`ReadBlock\` and retains the
+  original word despite the same subsequent RAM update.
+
+These controlled single-thread updates demonstrate alias-vs-copy *semantics*,
+not a specific racy runtime write, cache stale-read occurrence, or Vulkan
+device-coherence failure. Real GPU command dependencies cannot be considered
+sealed just because \`SafeRead\` ran at pre-scan time. A future snapshot
+design must guarantee ownership/lifetime and coverage of every indirect
+command word, map/unmap generation, and dependent resource before authorizing
+any reordered first-use GPU operation. The bridge remains disabled.

@@ -39,7 +39,7 @@ using u64=std::uint64_t;
 
 struct FakeGpuMemory {
     static constexpr bool HAS_FLUSH_INVALIDATION=true;
-    std::array<u8,64> bytes{};
+    alignas(u32) std::array<u8,64> bytes{};
     bool contiguous=true;
     unsigned flushes=0, safe_reads=0, unsafe_reads=0;
     unsigned safe_writes=0, unsafe_writes=0, invalidations=0, cached_writes=0;
@@ -127,6 +127,33 @@ int main() {
     assert(c.flushes==1 && c.safe_writes==1 && c.invalidations==0);
     assert(c.bytes[20]==4 && c.bytes[27]==11);
 
+    // A safe guest command read can be a *live alias* after FlushRegion.
+    // It does not freeze command words against later guest RAM mutation.
+    FakeGpuMemory live_words;
+    {
+        GuestMemory<FakeGpuMemory,u32,GuestMemoryFlags::SafeRead>
+            commands(live_words,16,2);
+        assert(live_words.flushes==1 && live_words.safe_reads==0);
+        assert(commands.data()==reinterpret_cast<u32*>(live_words.bytes.data()+16));
+        const u32 observed=commands[0];
+        const u32 replacement=0xdecafbad;
+        std::memcpy(live_words.bytes.data()+16,&replacement,sizeof(replacement));
+        assert(commands[0]==replacement && commands[0]!=observed);
+    }
+
+    // The copied fallback snapshots its source at construction time.
+    FakeGpuMemory copied_words;
+    copied_words.contiguous=false;
+    {
+        GuestMemory<FakeGpuMemory,u32,GuestMemoryFlags::SafeRead>
+            commands(copied_words,16,2);
+        assert(copied_words.safe_reads==1 && copied_words.flushes==0);
+        const u32 observed=commands[0];
+        const u32 replacement=0xdecafbad;
+        std::memcpy(copied_words.bytes.data()+16,&replacement,sizeof(replacement));
+        assert(commands[0]==observed && commands[0]!=replacement);
+    }
+
     FakeGpuMemory d;
     {
         GuestMemory<FakeGpuMemory,u8,GuestMemoryFlags::UnsafeRead> data(d,4,8);
@@ -161,4 +188,4 @@ with tempfile.TemporaryDirectory(prefix="encore-guest-coherence-") as tmp:
          str(unit),"-o",str(binary)],check=True,timeout=45
     )
     subprocess.run([str(binary)],check=True,timeout=45)
-print("NATIVE_GUEST_MEMORY_COHERENCE_HOST_PASS direct_safe_read_flush=1 direct_safe_write_invalidate=2 copied_safe_read=2 copied_safe_write=2 relocated_write=1 unsafe_alias_no_flush=1")
+print("NATIVE_GUEST_MEMORY_COHERENCE_HOST_PASS direct_safe_read_flush=1 direct_safe_write_invalidate=2 copied_safe_read=2 copied_safe_write=2 relocated_write=1 unsafe_alias_no_flush=1 safe_read_live_alias=1 copied_read_stable_snapshot=1")
