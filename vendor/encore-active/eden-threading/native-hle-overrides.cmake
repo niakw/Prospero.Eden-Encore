@@ -5,7 +5,7 @@
 # Called from headless/CMakeLists.txt after the core and dependent targets exist.
 
 set(_encore_thread_root "${CMAKE_CURRENT_LIST_DIR}/src")
-set(_encore_sync_root "${CMAKE_CURRENT_LIST_DIR}/../eden-sync/src")
+get_filename_component(_encore_sync_root "${CMAKE_CURRENT_LIST_DIR}/../eden-sync/src" ABSOLUTE)
 
 function(encore_replace_core_source pinned relative)
     set(maintained "${_encore_thread_root}/${relative}")
