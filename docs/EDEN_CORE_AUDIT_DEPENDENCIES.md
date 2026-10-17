@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 96
+**Non, this is not an exhaustive repository-wide inventory.** The 98
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,18 +24,18 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 96 | 79 | 191 |
+| Graphe connu | 98 | 81 | 195 |
 | HOST — preuve ciblée hôte | 28 | 25 | 56 |
-| SOURCE — lecture effectuée, preuve insuffisante | 47 | 40 | 101 |
+| SOURCE — lecture effectuée, preuve insuffisante | 49 | 42 | 105 |
 | OPEN — question technique non résolue | 15 | 15 | 27 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **62** | **54** | **128** |
+| **Encore à qualifier (SOURCE + OPEN)** | **64** | **56** | **132** |
 | Dont priorité P0 (SOURCE + OPEN) | 29 | 24 | 70 |
 
-Le **noyau restant** compte donc 62 critères répartis sur
-54 fichiers et 128 mentions fonction/contrat :
-15 OPEN et 47 SOURCE.
-Cela **ne signifie pas 128 fonctions jamais lues** :
+Le **noyau restant** compte donc 64 critères répartis sur
+56 fichiers et 132 mentions fonction/contrat :
+15 OPEN et 49 SOURCE.
+Cela **ne signifie pas 132 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 Le hors-inventaire (HID, IPC, host-syncpoints, variantes vendor...) n'est
 pas chiffrable honnêtement sans un relevé exhaustif supplémentaire.
@@ -106,6 +106,12 @@ F05 et F06 cataloguent le runtime natif auparavant absent du graphe :
 `Common::FS::IterateDirEntries`. Leurs unités de compilation sont
 désormais maintenues dans `vendor/encore-active/eden-core/src/common/`
 au lieu d'être produites par CMake. Les deux fichiers épinglés restent intacts.
+
+Deux autres unités natives toujours produites par CMake sont indexées
+sans être comptées comme migrées : F07 (`common/cpu_features.cpp`,
+fréquence TSC sous CPUID) et F08 (`common/fs/path_util.cpp`,
+racines utilisateur/cache et anciens chemins). Chacune exige parité du
+fichier complet et sélection de cible avant d'être déclarée maintenue.
 
 ## Déjà traité — contrôles terminés et preuves accessibles
 
@@ -304,6 +310,8 @@ function/contract tokens are checked by CI for existence only; the
 | H28 | P1 | H22,H27 | vendor/encore-active/eden-core/src/core/hle/service/service.cpp | ServiceFrameworkBase::HandleSyncRequest; ServiceFrameworkBase::LockService | SOURCE | docs/EDEN_CORE_AUDIT_DEPENDENCIES.md | New service-lock lifetime and outgoing IPC serialization boundary; handler timing does not distinguish lock contention from guest scheduler resume | 🟡 Source étudiée |
 | F05 | P1 | B01 | vendor/encore-active/eden-core/src/common/thread.cpp | Common::SetCurrentThreadName; Eden::Performance::RegisterWorker | SOURCE | tools/check-vendor-consolidation-debt.py | Native-only worker-name registration moved from generated CMake source to maintained C++; exact source parity and selected common target require host qualification, not evidence of worker scheduling | 🟡 Source étudiée |
 | F06 | P1 | F05 | vendor/encore-active/eden-core/src/common/fs/fs.cpp | Common::FS::RemoveDirContentsRecursively; Common::FS::IterateDirEntries | SOURCE | tools/check-vendor-consolidation-debt.py | Native directory iterator override (two call sites) now maintained C++ with a source parity gate; directory enumeration outcome on console still unqualified | 🟡 Source étudiée |
+| F07 | P1 | B01 | vendor/sources/eden/src/common/cpu_features.cpp | Common::X64::g_cpu_caps; X64::EstimateRDTSCFrequency | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Still CMake-generated on native builds: CPUID 0x15 fallback moves outside the leaf gate and avoids zero/too-low invariant-TSC frequency. Next source-migration candidate, validate exact substitution and clock results before moving | 🟡 Source étudiée |
+| F08 | P1 | F06 | vendor/sources/eden/src/common/fs/path_util.cpp | Common::FS::PathManagerImpl::Reinitialize; GenerateLegacyPath | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Still CMake-generated: native writable user/cache/config roots and legacy-folder path patch. Startup-path side effects need source parity and actual root checks before moving | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
