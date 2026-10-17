@@ -56,7 +56,7 @@ bool DecrementIfLessThan(KernelCore& kernel, s32* out, KProcessAddress address, 
         // Compare it to the desired one.
         if (current_value < value) {
             // If less than, we want to try to decrement.
-            const s32 decrement_value = current_value - 1;
+            const s32 decrement_value = static_cast<s32>(static_cast<u32>(current_value) - 1u);
 
             // Decrement and try to store.
             if (monitor.ExclusiveWrite32(current_core, GetInteger(address),
@@ -173,7 +173,8 @@ Result KAddressArbiter::SignalAndIncrementIfEqual(uint64_t addr, s32 value, s32 
 
         // Check the userspace value.
         s32 user_value{};
-        R_UNLESS(UpdateIfEqual(system.Kernel(), std::addressof(user_value), addr, value, value + 1),
+        R_UNLESS(UpdateIfEqual(system.Kernel(), std::addressof(user_value), addr, value,
+                                static_cast<s32>(static_cast<u32>(value) + 1u)),
                  ResultInvalidCurrentMemory);
         R_UNLESS(user_value == value, ResultInvalidState);
 
@@ -205,9 +206,9 @@ Result KAddressArbiter::SignalAndModifyByWaitingCountIfEqual(uint64_t addr, s32 
         s32 new_value{};
         if (count <= 0) {
             if (it != m_tree.end() && it->GetAddressArbiterKey() == addr) {
-                new_value = value - 2;
+                new_value = static_cast<s32>(static_cast<u32>(value) - 2u);
             } else {
-                new_value = value + 1;
+                new_value = static_cast<s32>(static_cast<u32>(value) + 1u);
             }
         } else {
             if (it != m_tree.end() && it->GetAddressArbiterKey() == addr) {
@@ -220,12 +221,12 @@ Result KAddressArbiter::SignalAndModifyByWaitingCountIfEqual(uint64_t addr, s32 
                 }
 
                 if (tmp_num_waiters < count) {
-                    new_value = value - 1;
+                    new_value = static_cast<s32>(static_cast<u32>(value) - 1u);
                 } else {
                     new_value = value;
                 }
             } else {
-                new_value = value + 1;
+                new_value = static_cast<s32>(static_cast<u32>(value) + 1u);
             }
         }
 
