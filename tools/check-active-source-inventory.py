@@ -36,6 +36,9 @@ def role(path):
         return "shipping-backport"
     if path.startswith("ps5-mesa/"):
         return "driver-fork"
+    # Test-only historical generator snippets are NOT shipping overrides.
+    if path.startswith("eden-vulkan-oracles/"):
+        return "oracle-only"
     return "maintained-override"
 expected = [
     f"| `{path}` | `{role(path)}` | {','.join(graph[path]) if path in graph else '—'} |"
