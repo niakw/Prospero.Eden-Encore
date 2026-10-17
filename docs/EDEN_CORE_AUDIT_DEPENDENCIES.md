@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 71
+**Non, this is not an exhaustive repository-wide inventory.** The 72
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -142,7 +142,7 @@ function/contract tokens are checked by CI for existence only; the
 | S03 | P0 | S01,V04 | docs/FC27_NATIVE_FRAME_PROGRESS_TRIAGE_2026-10-17.md | Root cause; Vulkan | SOURCE | tools/check-fc27-cache-contention-classifier.py | Do not reclassify existing October 15 logs without new evidence | 🟡 Source étudiée |
 | T01 | P1 | B01 | tools/check-maintained-audio-units.py | cmake.count; gpu_producer_wait; gpu_read_capture | HOST | tools/check-maintained-audio-units.py | The HLE source override initially exceeded native generator limits (preflight #39019066990, #39019396287); corrected integration uses maintained C++ under vendor/encore-active and no additional CMake file read/derived TU; keep historic 77/87/227 ceilings | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39017376187) |
 | T02 | P1 | T01,Q01 | tools/check-native-gpu-queue-slot-lifetime-host.py | PINNED_GPU_QUEUE_SLOT_DESTRUCTOR_REUSE_PASS | HOST | tools/check-native-gpu-queue-slot-lifetime-host.py | Queue regression passed, but whole preflight failed on T01 gate | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-gpu-queue-slot-lifetime-host.py) |
-| H05 | P0 | H01,H02 | vendor/sources/eden/src/core/hle/kernel/k_synchronization_object.cpp | KSynchronizationObject::Wait; KSynchronizationObject::NotifyAvailable | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Source: NotifyAvailable unlinks wait nodes through the waiting queue while scheduler lock is held; no reproduced invalid traversal or lost wake, and no game wait stack; avoid speculative list rework | 🟠 À contrôler |
+| H05 | P0 | H01,H02 | vendor/sources/eden/src/core/hle/kernel/k_synchronization_object.cpp | KSynchronizationObject::Wait; KSynchronizationObject::NotifyAvailable | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Source: NotifyAvailable unlinks wait nodes through the waiting queue while scheduler lock is held; H17 now has an optimized C++ alias-UB repro in UnlinkNode; code fixed native-only pending CI; guest wait stack still absent | 🟠 À contrôler |
 | N01 | P1 | Q04 | vendor/sources/eden/src/core/hle/service/nvdrv/devices/nvhost_gpu.cpp | SubmitGPFIFO; Ioctl | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Trace IOCTL submit and fences only if guest GPU wait is implicated | 🟠 À contrôler |
 | V09 | P0 | V04 | vendor/encore-active/eden-vulkan/vulkan_present_layer.cpp | Layer::UpdateRawImage; Layer::UpdateDescriptorSet | OPEN | docs/PS5_R331_2026-10-11_VULKAN_RAW_VIEW_LIFETIME.md | Check layer resource lifetime only for new present/HUD evidence | 🟠 À contrôler |
 | A01 | P1 | H03 | vendor/sources/eden/src/audio_core/renderer/voice/voice_info.cpp | VoiceInfo::UpdateParameters; VoiceInfo::UpdatePlayState | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Validate audio voice state only if match stall traces demand it | 🟠 À contrôler |
@@ -172,6 +172,7 @@ function/contract tokens are checked by CI for existence only; the
 | H14 | P1 | H05,H06 | vendor/encore-active/eden-threading/src/core/hle/kernel/svc/svc_synchronization.cpp | WaitSynchronization | HOST | tools/check-native-hle-wait-timeout-host.py | SVC multiobject wait deadline: original/native host witness PASS in complete preflight #39024494681; CodeQL #39024471278 SUCCESS; console wait progress unverified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39024494681) |
 | H15 | P1 | H12,H13,H14 | vendor/encore-active/eden-threading/src/core/hle/kernel/svc/svc_thread.cpp | SleepThread | HOST | tools/check-native-hle-sleep-timeout-host.py | Full host preflight #39026035356 SUCCESS; actual SleepThread original/native UBSan and pinned YieldType 0/-1/-2 PASS; CodeQL #39026019170 SUCCESS (C/C++, Python, Actions); no console or frozen gameplay proof | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39026035356) |
 | H16 | P0 | H03,H06,H07 | vendor/sources/eden/src/core/hle/kernel/k_address_arbiter.cpp | KAddressArbiter::Signal; KThread::BeginWait; KThread::EndWait; KThread::SetState; KThreadQueue::EndWait | OPEN | tools/check-native-hle-address-wake-host.py | Real source-derived C++ functions from k_address_arbiter.cpp, k_thread.cpp, k_thread_queue.cpp passed bounded-count/address/Runnable/timer host witness in prior run; register single-source schema fixed, complete host preflight pending; guest JIT progression not proven | 🟠 À contrôler |
+| H17 | P0 | H05,H16 | vendor/encore-active/eden-sync/src/core/hle/kernel/k_synchronization_object.h | KSynchronizationObject::LinkNode; KSynchronizationObject::UnlinkNode | OPEN | tools/check-native-hle-sync-unlink-host.py | Original waiter-head reinterpret_cast has strict-aliasing UB and local optimized GCC/Clang list invariants failed; native typed pointer-to-pointer unlink committed with unchanged traversal next links; full pinned-vs-native host CI pending; not proof of console freeze | 🟠 À contrôler |
 | H08 | P1 | H01,R10 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_condition_variable.cpp | ReadFromUser; WriteToUser; UpdateLockAtomic | HOST | tools/check-native-hle-condvar-access-host.py | Full host preflight #39019831224 SUCCESS with pinned/maintained C++ witness and sanitizer gates; CodeQL #39019831206 SUCCESS; no console or freeze proof | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39019831224) |
 | H09 | P1 | H08,H01 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_condition_variable.cpp | KConditionVariable::Wait | HOST | tools/check-native-hle-condvar-key-host.py | Pinned/native C++ Wait witness PASS and complete preflight #39022394512 SUCCESS; CodeQL #39022367959 SUCCESS for earlier source revision; no console or frozen-game cause proven | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39022394512) |
 | D03 | P1 | Q04 | vendor/sources/eden/src/video_core/cdma_pusher.cpp | CDmaPusher::ExecuteCommand | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Distinguish host-channel DMA from graphics DMA | 🟠 À contrôler |
@@ -185,7 +186,7 @@ function/contract tokens are checked by CI for existence only; the
 
 ## Couverture encore NON exhaustive (à inventorier, pas à déclarer OK)
 
-Outre les **71 lignes du graphe**, le dépôt comprend d'autres composants
+Outre les **72 lignes du graphe**, le dépôt comprend d'autres composants
 susceptibles d'influencer le symptôme observé, dont les interfaces HID/commandes
 en jeu, l'ordonnancement des services IPC, la restitution audio et les chemins
 host-syncpoint. **Ils ne sont pas tous vérifiés par le présent tableau.**
@@ -205,7 +206,7 @@ host-syncpoint. **Ils ne sont pas tous vérifiés par le présent tableau.**
   couvertes par cet audit de stabilité native ; inventaire complet
   du dépôt ≠ assurance de correction de FC27.
 
-**Règle de clôture :** aucune réponse ne doit présenter « 71 lignes »
+**Règle de clôture :** aucune réponse ne doit présenter « 72 lignes »
 comme « toutes les fonctions restantes ». L'inventaire s'étend à mesure
 des véritables appels, et une tâche n'est verte que pour son critère
 de validation nommé.
