@@ -125,6 +125,19 @@ assert 'tools/install-vendored-surface-lifecycle.py "$eden"' in surface_prepare
 assert 'if existing not in (before, replacement)' in surface_installer
 print("ENCORE_SHADER_SURFACE_SOURCE_OWNER_PASS sources=2")
 
+# Core native Vulkan device, query and presentation implementation units
+# are versioned sources selected into the disposable build tree by the Vulkan
+# recipe. Exact source ownership is not a successful native GPU execution.
+native_vk_sources = (
+    "vulkan_device.cpp", "vulkan_query_cache.cpp", "vulkan_blit_screen.cpp",
+    "vulkan_window_adapt_pass.cpp", "vulkan_wrapper.cpp",
+)
+for unit in native_vk_sources:
+    rel = "eden-vulkan/" + unit
+    assert rel in graph and (active / rel).is_file(), ("uncatalogued Vulkan unit", rel)
+    assert '"${PORT_BUILD_DIR}/' + unit + '"' in vulkan_recipe, ("source selection lost", unit)
+print("ENCORE_VULKAN_DEVICE_PRESENT_OWNER_PASS", f"sources={len(native_vk_sources)}")
+
 assert len(physical) == len(set(physical))
 print("ENCORE_ACTIVE_SOURCE_CATALOG_PASS",
       f"files={len(physical)}",
