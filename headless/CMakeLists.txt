@@ -1759,6 +1759,17 @@ file(READ "${PROJECT_SOURCE_DIR}/src/${worker_header}" worker_source)
 string(REPLACE "    KWorkerTaskManager();" "    KWorkerTaskManager();\n    void WaitForRequests() { m_waiting_thread.WaitForRequests(); }" worker_source "${worker_source}")
 write_derived("${PORT_BUILD_DIR}/include/${worker_header}" "${worker_source}")
 
+# Keep the guest synchronization list's inline C++ memory operations
+# type-correct in native builds. This overlay contains ONLY that header,
+# so it cannot alter the selected scheduler or KThread ABI.
+if(PS5_NATIVE)
+    set(EDEN_NATIVE_SYNC_HEADER_ROOT "${PORT_ROOT}/vendor/encore-active/eden-sync/src")
+    if(NOT EXISTS "${EDEN_NATIVE_SYNC_HEADER_ROOT}/core/hle/kernel/k_synchronization_object.h")
+        message(FATAL_ERROR "Missing maintained native synchronization-list header")
+    endif()
+    target_include_directories(core BEFORE PUBLIC "${EDEN_NATIVE_SYNC_HEADER_ROOT}")
+endif()
+
 # Native guest condition-variable memory guard is retained as a checked,
 # reviewable C++ source, not a further CMake-derived translation unit.
 if(PS5_NATIVE)
