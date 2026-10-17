@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 106
+**Non, this is not an exhaustive repository-wide inventory.** The 108
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,17 +24,17 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 106 | 87 | 215 |
+| Graphe connu | 108 | 89 | 222 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 52 | 43 | 113 |
+| SOURCE — lecture effectuée, preuve insuffisante | 54 | 45 | 120 |
 | OPEN — question technique non résolue | 15 | 15 | 27 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **67** | **57** | **140** |
-| Dont priorité P0 (SOURCE + OPEN) | 31 | 26 | 75 |
+| **Encore à qualifier (SOURCE + OPEN)** | **69** | **59** | **147** |
+| Dont priorité P0 (SOURCE + OPEN) | 33 | 28 | 82 |
 
-Le **noyau restant** compte donc 67 critères répartis sur
-57 fichiers et 140 mentions fonction/contrat :
-15 OPEN et 52 SOURCE.
+Le **noyau restant** compte donc 69 critères répartis sur
+59 fichiers et 147 mentions fonction/contrat :
+15 OPEN et 54 SOURCE.
 Cela **ne signifie pas 138 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 Le hors-inventaire (HID, IPC, host-syncpoints, variantes vendor...) n'est
@@ -297,6 +297,8 @@ function/contract tokens are checked by CI for existence only; the
 | H09 | P1 | H08,H01 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_condition_variable.cpp | KConditionVariable::Wait | HOST | tools/verify/hle/check-native-hle-condvar-key-host.py | Pinned/native C++ Wait witness PASS and complete preflight #39022394512 SUCCESS; CodeQL #39022367959 SUCCESS for earlier source revision; no console or frozen-game cause proven | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39022394512) |
 | D03 | P1 | Q04 | vendor/sources/eden/src/video_core/cdma_pusher.cpp | CDmaPusher::ExecuteCommand | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Distinguish host-channel DMA from graphics DMA | 🟠 À contrôler |
 | M05 | P2 | M02 | headless/gpu_deferred_store_publication.h | CommitPostStore | PARKED | docs/DEFERRED_JIT_QUIESCENCE_ARCHITECTURE_2026-10-17.md | Publication experimental bridge still disabled | ⚪ Suspendu |
+| M06 | P0 | M01,Q04 | vendor/sources/eden/src/core/device_memory_manager.inc | DeviceMemoryManager<Traits>::Map; DeviceMemoryManager<Traits>::Unmap; DeviceMemoryManager<Traits>::GetSpan; DeviceMemoryManager<Traits>::TrackContinuityImpl | SOURCE | headless/backports/eden-ps5-gpu-asid-lifetime-guard.patch | Map/Unmap/ASID/span bounds: reconcile every layered backport and identify actual build source; host and console behavior not yet proven | 🟡 Source étudiée |
+| M07 | P0 | M06 | vendor/sources/eden/src/core/device_memory_manager.h | Map(DAddr; Unmap(DAddr; GetSpan( | SOURCE | headless/backports/eden-ps5-gpu-atomic-forward-table.patch | Header declarations and reverse-table fields are modified by layered patches; verify active header selection, lock order and atomic reverse entries before any migration | 🟡 Source étudiée |
 | R10 | P1 | R01,R09 | vendor/sources/eden/src/core/memory.cpp | Memory::IsValidVirtualAddressRange | HOST | tools/check-native-guest-range-overflow-host.py | Host regression SUCCESS 38996379440; on-device behavior not verified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-guest-range-overflow-host.py) |
 | J12 | P1 | J08 | vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_64.cpp | DynarmicCallbacks64::MemoryRead32; CheckMemoryAccess | HOST | tools/check-native-jit-memory-read-guard-host.py | Pinned vs derived read rejection A64 host PASS in run #38996913209; console unverified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-jit-memory-read-guard-host.py) |
 | J13 | P1 | J08 | vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_32.cpp | DynarmicCallbacks32::MemoryRead32; CheckMemoryAccess | HOST | tools/check-native-jit-memory-read-guard-host.py | Pinned vs derived read rejection A32 host PASS in run #38996913209; console unverified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-jit-memory-read-guard-host.py) |
@@ -421,6 +423,17 @@ to enable experimental synchronization or produce a console build.
 5. Native post-store #187 bridge is still DISABLED. Negative
    host witnesses for FIFO, aliases or DMA are not permission to
    enable the bridge or request a console build.
+
+### GPU map/reverse-table patch ownership (M06–M07)
+
+Les fichiers épinglés `src/core/device_memory_manager.inc` et
+`src/core/device_memory_manager.h` disposent maintenant de points de
+contrôle dédiés. Leurs fonctions sont identifiées, mais le code compilé
+résulte de plusieurs patches successifs : **ceci n'est pas une validation
+du chemin GPU actif**. Avant tout déplacement vers `vendor/encore-active`,
+vérifier l'ordre de replay, la propriété des verrous ASID, les tables de
+mappage inversé, les limites physiques et les unités effectivement
+sélectionnées par le build.
 
 ## Backport patch source-target coverage — audited 2026-10-17
 
