@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """C++ host witness: fail invalid guest-memory condition-variable accesses.
 
-Execute exact pinned and CMake-derived helpers with mapped and unmapped mock
+Execute exact pinned and maintained native helpers with mapped and unmapped mock
 memory, reproducing the memory facade's no-op write/zero-read semantics.
 No console, frame progression, or deadlock claim.
 """
@@ -12,13 +12,14 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 pinned = root / "vendor/sources/eden/src/core/hle/kernel/k_condition_variable.cpp"
-helper = root / "headless/native_hle_condvar_access.cmake"
+active = root / "vendor/encore-active/eden-threading/src/core/hle/kernel/k_condition_variable.cpp"
 cmake = (root / "headless/CMakeLists.txt").read_text()
 workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
-assert 'include("${EDEN_PORT_DIR}/native_hle_condvar_access.cmake")' in cmake
+assert 'list(APPEND eden_cv_core_sources "${eden_active_cv}")' in cmake
+assert "vendor/encore-active/eden-threading/src/core/hle/kernel/k_condition_variable.cpp" in cmake
 assert "python3 -B tools/check-native-hle-condvar-access-host.py" in workflow
 compiler = shutil.which("g++") or shutil.which("clang++")
-assert compiler and shutil.which("cmake")
+assert compiler
 
 def real_helpers(source):
     start = "bool ReadFromUser(KernelCore& kernel, u32* out, KProcessAddress address) {"
@@ -116,22 +117,18 @@ int main() {
         : "PINNED_CONDVAR_FALSE_SUCCESS_WITNESS_PASS\n");
 }
 """
+original = pinned.read_text()
+corrected = active.read_text()
+# Reject accidental upstream drift or unrelated maintained-source edits.
+expected = original
+replacements = [["    *out = GetCurrentMemory(kernel).Read32(GetInteger(address));\n    return true;","    auto& memory = GetCurrentMemory(kernel);\n    if (!memory.IsValidVirtualAddressRange(address, sizeof(u32))) {\n        return false;\n    }\n    *out = memory.Read32(GetInteger(address));\n    return true;"],["    GetCurrentMemory(kernel).Write32(GetInteger(address), val);\n    return true;","    auto& memory = GetCurrentMemory(kernel);\n    if (!memory.IsValidVirtualAddressRange(address, sizeof(u32))) {\n        return false;\n    }\n    memory.Write32(GetInteger(address), val);\n    return true;"],["    auto& monitor = GetCurrentProcess(kernel).GetExclusiveMonitor();","    if (!GetCurrentMemory(kernel).IsValidVirtualAddressRange(address, sizeof(u32))) {\n        return false;\n    }\n    auto& monitor = GetCurrentProcess(kernel).GetExclusiveMonitor();"],["        can_access = true;\n        if (can_access) {\n            UpdateLockAtomic(kernel, std::addressof(prev_tag), address, own_tag, Svc::HandleWaitMask);\n        }","        can_access = UpdateLockAtomic(kernel, std::addressof(prev_tag), address,\n                                      own_tag, Svc::HandleWaitMask);"]]
+for old, new in replacements:
+    assert expected.count(old) == 1, "pinned native HLE patch drift"
+    expected = expected.replace(old, new)
+assert corrected == expected, "maintained native HLE source differs from pinned + named fixes"
+assert "        can_access = UpdateLockAtomic(kernel," in corrected
 with tempfile.TemporaryDirectory(prefix="encore-condvar-access-") as td:
     temp = Path(td)
-    derivation = temp / "derive.cmake"
-    derived = temp / "native.cpp"
-    derivation.write_text(
-        "cmake_minimum_required(VERSION 3.16)\n"
-        f'file(READ "{pinned.as_posix()}" eden_cv_source)\n'
-        f'include("{helper.as_posix()}")\n'
-        f'file(WRITE "{derived.as_posix()}" "' + '$' + '{eden_cv_source}' + '")\n'
-    )
-    subprocess.run(["cmake", "-P", str(derivation)], check=True, timeout=25)
-    original = pinned.read_text()
-    corrected = derived.read_text()
-    assert "        can_access = true;" in original
-    assert "        can_access = true;" not in corrected
-    assert "        can_access = UpdateLockAtomic(kernel," in corrected
     for name, source, fixed in (("pinned", original, False), ("native", corrected, True)):
         cpp, exe = temp / f"{name}.cpp", temp / name
         cpp.write_text(prelude + real_helpers(source) + postlude)
