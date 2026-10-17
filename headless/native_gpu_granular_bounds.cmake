@@ -29,7 +29,9 @@ string(REPLACE "${granular_big_old}" "${granular_big_new}"
     eden_gpu_span_src "${eden_gpu_span_src}")
 
 set(granular_short_old "const std::size_t page{(gpu_addr & Core::DEVICE_PAGEMASK) + size};\n")
-string(REGEX MATCHALL "const std::size_t page\\{\\(gpu_addr & Core::DEVICE_PAGEMASK\\) \\+ size\\};" short_matches "${eden_gpu_span_src}")
+# Match without the trailing semicolon: CMake lists otherwise split
+# each regex result into two elements under modern list policies.
+string(REGEX MATCHALL "const std::size_t page\\{\\(gpu_addr & Core::DEVICE_PAGEMASK\\) \\+ size\\}" short_matches "${eden_gpu_span_src}")
 list(LENGTH short_matches short_count)
 if(NOT short_count EQUAL 2)
     message(FATAL_ERROR "Pinned GPU short-page span calculations changed")
