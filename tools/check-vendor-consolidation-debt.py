@@ -686,6 +686,32 @@ assert 'list(APPEND video_sources "${EDEN_MAINTAINED_MACRO}")' in c
 assert 'macro_recovery.cmake' not in c
 print("MAINTAINED_MACRO_RECOVERY_PARITY_PASS anchors=5")
 
+
+# A single canonical override root does not mean every native frontend .inc
+# is an upstream patch. Make ALL headless CMake modules and fragments visible,
+# so no additional source mutation can appear without review.
+single_source_doc = (root / "docs/EDEN_OVERRIDE_SOURCE_OF_TRUTH.md").read_text()
+def single_source_table(begin_tag, end_tag):
+    assert single_source_doc.count(begin_tag) == single_source_doc.count(end_tag) == 1
+    return [
+        line.split("`", 2)[1]
+        for line in single_source_doc.split(begin_tag)[1].split(end_tag)[0].splitlines()
+        if line.startswith("| `headless/")
+    ]
+candidates_modules = sorted(p.relative_to(root).as_posix() for p in (root/"headless").rglob("*.cmake"))
+candidates_fragments = sorted(p.relative_to(root).as_posix() for p in (root/"headless").rglob("*.inc"))
+assert single_source_table("<!-- SINGLE_SOURCE_CMAKE_START -->", "<!-- SINGLE_SOURCE_CMAKE_END -->") == candidates_modules, (
+    "undocumented headless CMake code/override module", candidates_modules)
+assert single_source_table("<!-- SINGLE_SOURCE_FRAGMENTS_START -->", "<!-- SINGLE_SOURCE_FRAGMENTS_END -->") == candidates_fragments, (
+    "undocumented headless injected fragment", candidates_fragments)
+assert len(candidates_modules) == 14 and len(candidates_fragments) == 25
+assert "**47 générateurs**" in single_source_doc and "**21 générateurs**" in single_source_doc
+assert "**68 sites**" in single_source_doc
+assert "**201 sources et en-têtes suivis**" in single_source_doc
+for deleted_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
+    assert not (root/deleted_module).exists(), ("legacy source generator reintroduced", deleted_module)
+print("ENCORE_SINGLE_SOURCE_SCOPE_PASS", f"modules={len(candidates_modules)}", f"fragments={len(candidates_fragments)}")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
