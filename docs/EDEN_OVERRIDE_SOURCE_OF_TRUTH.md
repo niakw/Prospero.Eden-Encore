@@ -16,7 +16,7 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **210 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **215 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
 - `headless/CMakeLists.txt` : **47 générateurs** `write_derived`.
@@ -25,7 +25,7 @@ nouveaux corps C++ destinés à la console.
 - Cinq modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 68.
-- `headless/` contient **17 fragments `.inc`**. Plusieurs contribuent
+- `headless/` contient **12 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
   dépendance. **Leur présence dans `headless` ne vaut pas conformité
@@ -85,11 +85,6 @@ fragments de l'application native qui ne remplacent aucune source upstream.
 | `headless/native_gpu_thread.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
 | `headless/shader_cache_reader.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
 | `headless/spin-lock.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
-| `headless/vulkan_download_batch.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
-| `headless/vulkan_gc_downloads.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
-| `headless/vulkan_hud_draw.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
-| `headless/vulkan_hud_prepare.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
-| `headless/vulkan_loading.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
 <!-- SINGLE_SOURCE_FRAGMENTS_END -->
 
 ## Groupe JIT partagé centralisé
@@ -109,6 +104,17 @@ maintenues uniquement sous `vendor/encore-active/eden-core/dynarmic/scalar/`.
 CMake charge ces contenus, mais garde encore les règles d'injection et
 les générateurs C++ correspondants : **centralisation des données ne signifie
 pas encore suppression des générateurs**.
+
+## Oracles Vulkan historiques
+
+Les cinq anciens fragments Vulkan ont été déplacés **sans modifier leurs blobs
+Git** vers `vendor/encore-active/eden-vulkan-oracles/`. Ils ne constituent
+pas une seconde version compilée de Vulkan : `tools/prepare-vulkan-port.py`
+ne les charge que pour reconstituer les sorties historiques, tandis que
+le binaire choisit exclusivement `vendor/encore-active/eden-vulkan/`.
+`headless/vulkan.cmake` ne les surveille plus inutilement comme dépendances
+de configuration. Leur conservation sert la preuve de parité, pas la
+construction du moteur.
 
 ## Conditions de sortie de la dette
 

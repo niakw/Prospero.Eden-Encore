@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **210 fichiers** de code et d'en-têtes enregistrés.
-- **210 fichiers** possèdent une correspondance de chemin *exacte*
+- **215 fichiers** de code et d'en-têtes enregistrés.
+- **215 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -189,6 +189,11 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-threading/src/core/hle/kernel/svc/svc_condition_variable.cpp` | `maintained-override` | H12 |
 | `eden-threading/src/core/hle/kernel/svc/svc_synchronization.cpp` | `maintained-override` | H14 |
 | `eden-threading/src/core/hle/kernel/svc/svc_thread.cpp` | `maintained-override` | H15 |
+| `eden-vulkan-oracles/vulkan_download_batch.inc` | `oracle-only` | V70 |
+| `eden-vulkan-oracles/vulkan_gc_downloads.inc` | `oracle-only` | V69 |
+| `eden-vulkan-oracles/vulkan_hud_draw.inc` | `oracle-only` | V68 |
+| `eden-vulkan-oracles/vulkan_hud_prepare.inc` | `oracle-only` | V67 |
+| `eden-vulkan-oracles/vulkan_loading.inc` | `oracle-only` | V66 |
 | `eden-vulkan/include/core/frontend/emu_window.h` | `maintained-override` | V36 |
 | `eden-vulkan/include/video_core/present.h` | `maintained-override` | V37 |
 | `eden-vulkan/include/video_core/renderer_vulkan/pipeline_helper.h` | `maintained-override` | V38 |
@@ -252,15 +257,15 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
 Ces deux fichiers sont inclus dans les **83 entrées** de
 `vendor/encore-active/eden-backports/manifest.json`, mais ne sont
-pas comptés parmi les 210 fichiers de code et d'en-têtes.
+pas comptés parmi les 215 fichiers de code et d'en-têtes.
 
 ## Inventaire hors `vendor/encore-active`
 
-Les **186 fichiers source/en-tête/fragment** de `headless/` sont suivis
+Les **181 fichiers source/en-tête/fragment** de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
 27 ont désormais un propriétaire exact dans le graphe courant ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
-La couverture de 210/210 ci-dessus ne s'applique **pas** à ce dossier.
+La couverture de 215/215 ci-dessus ne s'applique **pas** à ce dossier.
 
 ## Critères de tenue à jour
 
