@@ -689,6 +689,8 @@ void GraphicsWindow::OnFrameDisplayed() {
             frame_sample_start = frame_sample_last = now;
             frame_pressure_previous = CaptureFramePressure();
 #ifdef EDEN_DEV_PROFILE
+            // A new game/window must not inherit the previous title's peak.
+            vulkan_interval_witness.Reset();
             const bool capture_interval = Eden::NativeLogs::Detailed() &&
                 Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed) &&
                 Experimental::vulkan_frame_probe.load(std::memory_order_relaxed);
