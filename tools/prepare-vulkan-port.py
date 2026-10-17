@@ -6,6 +6,7 @@ import subprocess
 import sys
 source, output = map(Path, sys.argv[1:])
 port = Path(__file__).resolve().parents[1] / 'headless'
+vulkan_oracle = Path(__file__).resolve().parents[1] / 'vendor/encore-active/eden-vulkan-oracles'
 def adapt(relative, destination, replacements):
     text = (source / relative).read_text()
     for old, new in replacements:
@@ -1124,7 +1125,7 @@ adapt('src/video_core/renderer_vulkan/renderer_vulkan.cpp', 'vulkan_renderer.cpp
     ('swapchain.GetImageViewFormat());', 'present_manager.SwapchainImageViewFormat(), true);'),
     ('layout, 1, format);', 'layout, 1, format, true);'),
     ('void RendererVulkan::Report() const {',
-     (port / 'vulkan_loading.inc').read_text() + '\nvoid RendererVulkan::Report() const {'),
+     (vulkan_oracle / 'vulkan_loading.inc').read_text() + '\nvoid RendererVulkan::Report() const {'),
     # Present() only records the hand-off into a fresh chunk. Dispatch it now so
     # the present thread gets this frame immediately instead of after the
     # producer's next 8-draw dispatch (upstream does this only with LSFG).
@@ -1150,9 +1151,9 @@ adapt('src/video_core/renderer_vulkan/present/window_adapt_pass.cpp', 'vulkan_wi
     ('const Layout::FramebufferLayout& layout, Frame* dst) {',
      'const Layout::FramebufferLayout& layout, Frame* dst, bool draw_hud) {'),
     ('    scheduler.Record([=](vk::CommandBuffer cmdbuf) {',
-     (port / 'vulkan_hud_prepare.inc').read_text() + '\n    scheduler.Record([=](vk::CommandBuffer cmdbuf) {'),
+     (vulkan_oracle / 'vulkan_hud_prepare.inc').read_text() + '\n    scheduler.Record([=](vk::CommandBuffer cmdbuf) {'),
     ('        cmdbuf.EndRenderPass();',
-     (port / 'vulkan_hud_draw.inc').read_text() + '\n        cmdbuf.EndRenderPass();'),
+     (vulkan_oracle / 'vulkan_hud_draw.inc').read_text() + '\n        cmdbuf.EndRenderPass();'),
 ])
 # R328: Framebuffer dimension / format changes and runtime antialias setting
 # changes can destroy old FXAA/SMAA images and descriptors with GPU work still
@@ -1317,7 +1318,7 @@ gc_setup = '''    const auto ReclaimedBytes = [&](const ImageBase& image) {
         u64 bytes = 0;
 ''' + reclaimed_bytes + '''        return bytes;
     };
-''' + (port / 'vulkan_gc_downloads.inc').read_text()
+''' + (vulkan_oracle / 'vulkan_gc_downloads.inc').read_text()
 for old, new in [
     ('    const auto Cleanup = [this, &num_iterations, &high_priority_mode, &aggressive_mode]',
      gc_setup + '\n    const auto Cleanup = [&, this]'),
@@ -1433,7 +1434,7 @@ adapt('src/video_core/texture_cache/texture_cache.h',
     # R433: publish monotonic page occupancy before a slot-map entry exists.
     ("        auto map_id =\n            slot_map_views.insert(image.gpu_addr, image.cpu_addr, image.guest_size_bytes, image_id);", "        ::Eden::ImagePages::Mark(image.cpu_addr, image.guest_size_bytes);\n        auto map_id =\n            slot_map_views.insert(image.gpu_addr, image.cpu_addr, image.guest_size_bytes, image_id);"),
     ("            auto map_id = slot_map_views.insert(gpu_addr, cpu_addr, size, image_id);", "            ::Eden::ImagePages::Mark(cpu_addr, size);\n            auto map_id = slot_map_views.insert(gpu_addr, cpu_addr, size, image_id);"),
-    (download_prefix, download_prefix + (port / 'vulkan_download_batch.inc').read_text() + '\n'),
+    (download_prefix, download_prefix + (vulkan_oracle / 'vulkan_download_batch.inc').read_text() + '\n'),
     (gc_original, gc),
     # Vulkan's total_used_memory may be a driver-reported snapshot rather than
     # the exact sum of per-image logical costs. Never allow a DeleteImage

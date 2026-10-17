@@ -36,6 +36,15 @@ with tempfile.TemporaryDirectory(prefix='eden-vulkan-fork-compare-') as d:
         assert (active/f'vulkan_hud.{stage}.spv').is_file()
     env=os.environ.copy()
     env['EDEN_VULKAN_ORACLE_SPV_DIR']=str(active)
+    oracle_script=(root/'tools/prepare-vulkan-port.py').read_text()
+    vulkan_cmake=(root/'headless/vulkan.cmake').read_text()
+    assert "vulkan_oracle = Path(__file__).resolve().parents[1] / 'vendor/encore-active/eden-vulkan-oracles'" in oracle_script
+    for part in ("vulkan_loading.inc", "vulkan_hud_prepare.inc", "vulkan_hud_draw.inc",
+                 "vulkan_gc_downloads.inc", "vulkan_download_batch.inc"):
+        assert (root/'vendor/encore-active/eden-vulkan-oracles'/part).is_file()
+        assert not (root/'headless'/part).exists()
+        assert (f"vulkan_oracle / '{part}'") in oracle_script
+        assert part not in vulkan_cmake, ("oracle accidentally tracked as compiled Vulkan input", part)
     subprocess.run([sys.executable,'-B',str(root/'tools/prepare-vulkan-port.py'),str(patched),str(temp/'generated')],check=True,timeout=150,env=env)
     actual={str(p.relative_to(temp/'generated')):p for p in (temp/'generated').rglob('*') if p.is_file()}
     expected={str(p.relative_to(active)):p for p in active.rglob('*') if p.is_file()}
