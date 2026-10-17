@@ -1305,6 +1305,9 @@ if(PS5_NATIVE)
         }
         return entries[start_page].Block() == entries[end_page].Block()
             ? GetPointerSilent(addr) : nullptr;]=] eden_cpu_memory "${eden_cpu_memory}")
+    # Bound guest range arithmetic in the already-generated native memory TU.
+    # A wrapped end can otherwise let an invalid address range pass unchecked.
+    include("${EDEN_PORT_DIR}/native_guest_range_overflow.cmake")
     set(eden_native_memory_tu "${PORT_BUILD_DIR}/memory-ps5.cpp")
     write_derived("${eden_native_memory_tu}"
         "#include \"${EDEN_PORT_DIR}/performance.h\"\n${eden_cpu_memory}")
