@@ -25,16 +25,16 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
 | Graphe connu | 86 | 72 | 166 |
-| HOST — preuve ciblée hôte | 27 | 24 | 53 |
-| SOURCE — lecture effectuée, preuve insuffisante | 38 | 34 | 79 |
+| HOST — preuve ciblée hôte | 28 | 25 | 56 |
+| SOURCE — lecture effectuée, preuve insuffisante | 37 | 33 | 76 |
 | OPEN — question technique non résolue | 15 | 15 | 27 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **53** | **48** | **106** |
+| **Encore à qualifier (SOURCE + OPEN)** | **52** | **47** | **103** |
 | Dont priorité P0 (SOURCE + OPEN) | 24 | 20 | 56 |
 
-Le **noyau restant** compte donc 53 critères répartis sur
-48 fichiers et 106 mentions fonction/contrat :
-15 OPEN et 38 SOURCE.
+Le **noyau restant** compte donc 52 critères répartis sur
+47 fichiers et 103 mentions fonction/contrat :
+15 OPEN et 37 SOURCE.
 Cela **ne signifie pas 95 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 Le hors-inventaire (HID, IPC, host-syncpoints, variantes vendor...) n'est
@@ -46,7 +46,7 @@ La poursuite HLE/IPC ajoute H21 et H22, reliant l'entrée `SendSyncRequestImpl` 
 
 ## Migration de sources et inventaire de sélection
 
-Les lectures diagnostiques `IFile::Read` (F02) et `IStorage::Read` (F03)
+Les lectures diagnostiques `IFile::Read` (F02), `IStorage::Read` (F03) et les trois opérations `IFileSystem` (F04)
 sont des sources maintenues sous
 `vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/`,
 sélectionnées uniquement en `EDEN_DEV_PROFILE`.
@@ -243,7 +243,7 @@ function/contract tokens are checked by CI for existence only; the
 | F03 | P1 | F02 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_storage.cpp | IStorage::Read | HOST | tools/check-vendor-consolidation-debt.py | IStorage::Read maintained TU source parity and DEV CMake selection passed in full host preflight #39046599831. No native console build, gameplay or FPS conclusion | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39046599831) |
 | N02 | P1 | N01 | vendor/sources/eden/src/core/hle/service/nvdrv/devices/nvhost_ctrl.cpp | nvhost_ctrl::IocCtrlEventWait; nvhost_ctrl::IocCtrlClearEventWait | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Host syncpoint event-wait diagnostic still generated; callback-to-guest wake latency not proven | 🟡 Source étudiée |
 | V11 | P0 | V02,V04 | headless/graphics.cpp | GraphicsWindow::OnFrameDisplayed; CaptureFramePressure | SOURCE | tools/check-ps5-quiet-frame-pressure.py | Presentation-interval witnesses are callback pairs, not guest game logic or GPU ownership | 🟡 Source étudiée |
-| F04 | P1 | F02,F03 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_filesystem.cpp | IFileSystem::OpenFile; IFileSystem::OpenDirectory; IFileSystem::GetEntryType | SOURCE | tools/check-vendor-consolidation-debt.py | Maintained DEV IFileSystem diagnostic replaces G23 CMake patch for three result paths; source parity and native SDK/gameplay qualification pending full host preflight | 🟡 Source étudiée |
+| F04 | P1 | F02,F03 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_filesystem.cpp | IFileSystem::OpenFile; IFileSystem::OpenDirectory; IFileSystem::GetEntryType | HOST | tools/check-vendor-consolidation-debt.py | Maintained DEV IFileSystem diagnostic replaces G23 CMake patch for three result paths; three call replacements, DEV source selection, and quiet policy passed full host preflight #39048355950; native SDK/gameplay remain unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39048355950) |
 | H20 | P0 | H02,H19 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp | KScheduler::UpdateHighestPriorityThread; KScheduler::UpdateHighestPriorityThreadsImpl | SOURCE | tools/check-upstream-guest-scheduler-locks.py | Runnable queue update precedes per-core highest-priority selection; account for pinned-thread preference, suggested-core migration and eventual context load. Not proof of guest PC progress | 🟡 Source étudiée |
 | H21 | P0 | H14,J14 | vendor/sources/eden/src/core/hle/kernel/svc/svc_ipc.cpp | SendSyncRequestImpl; SendSyncRequestWithUserBuffer | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Normal/DEV IPC synchronous guest wait is still selected through a CMake-derived TU in DEV. Correlate requesting guest thread and actual wait completion rather than interpreting service totals as PC progress | 🟡 Source étudiée |
 | H22 | P0 | H21 | vendor/sources/eden/src/core/hle/service/service.cpp | ServiceFrameworkBase::InvokeRequest; ServiceFrameworkBase::InvokeRequestTipc | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | DEV request-dispatch instrumentation remains CMake-generated; service-call completion is not sufficient evidence that a blocked guest thread resumed execution | 🟡 Source étudiée |
