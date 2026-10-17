@@ -2054,18 +2054,16 @@ if(NOT pad_hash STREQUAL "6a9708fe7ab59afa69899e1981e84decf1492a97e8ebd08194f8e2
 endif()
 # Guest rumble: with no mapped buttons (this frontend binds the virtual_gamepad engine), send each
 # player's left and right vibration to the PS5 controller engine (headless/pad.cpp).
-file(READ "${PROJECT_SOURCE_DIR}/src/hid_core/frontend/emulated_controller.cpp" controller_source)
-set(rumble_outputs "    output_params[LeftIndex] = left_joycon;\n    output_params[RightIndex] = right_joycon;\n")
-string(FIND "${controller_source}" "${rumble_outputs}" rumble_outputs_at)
-if(rumble_outputs_at LESS 0)
-    message(FATAL_ERROR "Pinned controller output parameters changed")
+# Rumble fallback is a tracked, versioned C++ source rather than a
+# configure-time copy with substitutions. Preserve the hid_core source list.
+set(EDEN_MAINTAINED_RUMBLE_CONTROLLER
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/hid_core/frontend/emulated_controller.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_RUMBLE_CONTROLLER}")
+    message(FATAL_ERROR "Missing maintained native rumble controller")
 endif()
-string(REPLACE "${rumble_outputs}" "${rumble_outputs}    if (output_params[LeftIndex].Get(\"engine\", \"\").empty()) {\n        const auto rumble_port = std::to_string(Service::HID::NpadIdTypeToIndex(npad_id_type));\n        output_params[LeftIndex] = Common::ParamPackage{\"engine:virtual_gamepad,port:\" + rumble_port + \",pad:1\"};\n        output_params[RightIndex] = Common::ParamPackage{\"engine:virtual_gamepad,port:\" + rumble_port + \",pad:2\"};\n    }\n"
-    controller_source "${controller_source}")
-write_derived("${PORT_BUILD_DIR}/emulated_controller.cpp" "#include <string>\n${controller_source}")
 get_target_property(controller_sources hid_core SOURCES)
 list(FILTER controller_sources EXCLUDE REGEX "(^|/)emulated_controller\\.cpp$")
-list(APPEND controller_sources "${PORT_BUILD_DIR}/emulated_controller.cpp")
+list(APPEND controller_sources "${EDEN_MAINTAINED_RUMBLE_CONTROLLER}")
 set_property(TARGET hid_core PROPERTY SOURCES "${controller_sources}")
 # A controller update reaches every applet resource that is assigned. One that is assigned but not
 # activated yet has no controllers set up (NPad::Activate fills them in), and upstream calls

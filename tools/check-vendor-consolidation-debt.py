@@ -612,6 +612,18 @@ assert 'write_derived("${PORT_BUILD_DIR}/nvdrv_container.cpp"' not in c
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/nvdrv/core/container.cpp" nvcontainer)' not in c
 print("VENDOR_MAINTAINED_NVDRV_SESSION_PARITY_PASS source=1 selections=1")
 
+# The direct controller TU must reproduce the previous CMake-generated TU.
+rumble_original = (sources / "eden/src/hid_core/frontend/emulated_controller.cpp").read_text()
+rumble_site = "    output_params[LeftIndex] = left_joycon;\n    output_params[RightIndex] = right_joycon;\n"
+rumble_insert = "    if (output_params[LeftIndex].Get(\"engine\", \"\").empty()) {\n        const auto rumble_port = std::to_string(Service::HID::NpadIdTypeToIndex(npad_id_type));\n        output_params[LeftIndex] = Common::ParamPackage{\"engine:virtual_gamepad,port:\" + rumble_port + \",pad:1\"};\n        output_params[RightIndex] = Common::ParamPackage{\"engine:virtual_gamepad,port:\" + rumble_port + \",pad:2\"};\n    }\n"
+assert rumble_original.count(rumble_site) == 1, "pinned rumble source site changed"
+rumble_generated = "#include <string>\n" + rumble_original.replace(rumble_site, rumble_site + rumble_insert)
+assert (active / "eden-core/src/hid_core/frontend/emulated_controller.cpp").read_text() == rumble_generated
+assert 'list(APPEND controller_sources "${EDEN_MAINTAINED_RUMBLE_CONTROLLER}")' in c
+assert 'if(NOT EXISTS "${EDEN_MAINTAINED_RUMBLE_CONTROLLER}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/emulated_controller.cpp"' not in c
+print("MAINTAINED_RUMBLE_UNIT_PARITY_PASS selection=hid_core")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -652,7 +664,7 @@ assert len(module_current) == 21, len(module_current)
 for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     text = (root / module).read_text()
     assert 'file(WRITE ' in text and 'configure_file(' in text, module
-assert len(recorded) + len(module_recorded) == 71
+assert len(recorded) + len(module_recorded) == 70
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
