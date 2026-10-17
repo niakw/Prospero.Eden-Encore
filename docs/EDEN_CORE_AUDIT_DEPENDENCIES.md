@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 280
+**Non, this is not an exhaustive repository-wide inventory.** The 292
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,17 +24,17 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 280 | 261 | 574 |
+| Graphe connu | 292 | 273 | 597 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 225 | 216 | 469 |
+| SOURCE — lecture effectuée, preuve insuffisante | 237 | 228 | 492 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **240** | **230** | **497** |
-| Dont priorité P0 (SOURCE + OPEN) | 101 | 96 | 238 |
+| **Encore à qualifier (SOURCE + OPEN)** | **252** | **242** | **520** |
+| Dont priorité P0 (SOURCE + OPEN) | 105 | 100 | 246 |
 
-Le **noyau restant** compte donc 240 critères répartis sur
-230 fichiers et 497 mentions fonction/contrat :
-15 OPEN et 225 SOURCE.
+Le **noyau restant** compte donc 252 critères répartis sur
+242 fichiers et 520 mentions fonction/contrat :
+15 OPEN et 237 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
@@ -464,6 +464,18 @@ function/contract tokens are checked by CI for existence only; the
 | A09 | P1 | A08 | vendor/sources/eden/src/core/hle/service/audio/audio_controller.h | IAudioController; m_set_sys | SOURCE | headless/backports/eden-sm-host-wait.patch | Staged audio header patch adds once_flag and GetSetSys; native lifetime unproved | 🟡 Source étudiée |
 | A10 | P1 | A08 | vendor/encore-active/eden-core/src/core/hle/service/audio/audio_controller.cpp | IAudioController::GetSetSys; IAudioController::GetAudioOutputMode | SOURCE | tools/install-active-core-backports.py | Maintained audio controller equals lazy set:sys patch; native audio unproved | 🟡 Source étudiée |
 | A11 | P1 | A09 | vendor/encore-active/eden-core/src/core/hle/service/audio/audio_controller.h | IAudioController; m_set_sys_once | SOURCE | tools/install-active-core-backports.py | Maintained audio header equals once_flag source patch; console lifetime unproved | 🟡 Source étudiée |
+| U01 | P0 | M01 | headless/main.cpp | int main(int argc, char** argv); eden_native_logging_generation | SOURCE | tools/check-active-source-inventory.py | Native application main, lifecycle and logging generation; boot and in-game behavior unproved | 🟡 Source étudiée |
+| U02 | P0 | M02 | headless/heap_pages.cpp | eden_heap_commit_growth; eden_heap_rollback_growth | SOURCE | tools/check-active-source-inventory.py | Native direct-heap ownership, growth and rollback bridge; device heap ABI unproved | 🟡 Source étudiée |
+| U03 | P1 | H03 | headless/pad.cpp | PadEngine::SetButtonState; PadEngine::TakeRumble | SOURCE | tools/check-active-source-inventory.py | Native pad engine input and rumble queue; mapping and controller behavior unproved | 🟡 Source étudiée |
+| U04 | P1 | A02 | headless/audio.cpp | AudioStream::AppendBuffer; AudioStream::Finalize | SOURCE | tools/check-active-source-inventory.py | Native audio sink buffer publication and stream lifecycle; device audio unproved | 🟡 Source étudiée |
+| U05 | P1 | N15 | headless/network_audit.c | eden_network_audit_init; eden_network_audit_event | SOURCE | tools/check-active-source-inventory.py | Native bounded network audit recording; logging and network effect unproved | 🟡 Source étudiée |
+| U06 | P1 | N15 | headless/network_audit_sockets.c | __wrap_connect; __wrap_recv | SOURCE | tools/check-active-source-inventory.py | Native socket wrappers record guest network operations; link selection unproved | 🟡 Source étudiée |
+| U07 | P1 | N17 | headless/network_domain_rules.c | eden_network_filter_load; eden_network_host_blocked | SOURCE | tools/check-active-source-inventory.py | Guest network domain filter; policy correctness on device unproved | 🟡 Source étudiée |
+| U08 | P1 | N16 | headless/ps5_net_compat.c | getaddrinfo; __wrap_fcntl | SOURCE | tools/check-active-source-inventory.py | Native platform DNS/socket compatibility functions; runtime behavior unproved | 🟡 Source étudiée |
+| U09 | P0 | V02 | headless/vulkan_surface.cpp | CreateSurface; requested_hz | SOURCE | tools/check-active-source-inventory.py | Native Vulkan display surface and mode selection; device presentation unproved | 🟡 Source étudiée |
+| U10 | P1 | V02 | headless/vulkan_allocator.cpp | VMA_IMPLEMENTATION | SOURCE | tools/check-active-source-inventory.py | Native allocator implementation macro TU, no function defined in file; unique VMA ownership unproved | 🟡 Source étudiée |
+| U11 | P1 | M01 | headless/crash_report.cpp | void WriteReport; void Handle | SOURCE | tools/check-active-source-inventory.py | Crash signal/report and restart handling; console provenance unproved | 🟡 Source étudiée |
+| U12 | P0 | J02 | headless/dynarmic/block_range_information.cpp | BlockRangeInformation<P>::AddRange; BlockRangeInformation<P>::ClearCache | SOURCE | tools/check-active-source-inventory.py | Dynarmic block-range tracker and invalidation; JIT runtime use unproved | 🟡 Source étudiée |
 | F09 | P1 | H21,F08 | vendor/sources/eden/src/core/internal_network/network.cpp | Initialize; InterruptSocketOperations; AcknowledgeInterrupt; CancelPendingSocketOperations | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Native internal socket wake uses a generated source with socketpair/send/recv replacing pipe/write/read; first-byte ENOMEM workaround is unqualified on console. Distinguish host I/O wake from guest IPC progress | 🟡 Source étudiée |
 | F10 | P1 | F09 | vendor/encore-active/eden-core/src/core/internal_network/network_interface.cpp | GetAvailableNetworkInterfaces; GetSelectedNetworkInterface; SelectFirstNetworkInterface | HOST | tools/check-vendor-consolidation-debt.py | Three FreeBSD conditional substitutions are in maintained native C++ with an old-generator parity and core selection PASS in preflight #39058024476; native interface snapshot unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39058024476) |
 | F11 | P1 | F08 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/filesystem.cpp | FileSystemController::CreateFactories | SOURCE | tools/check-vendor-consolidation-debt.py | Source maintained and host parity/selection check written; completed CI and device firmware behavior not yet validated | 🟡 Source étudiée |

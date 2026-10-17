@@ -14,8 +14,8 @@ l'audit moteur. Un chemin noté « À qualifier » peut avoir été audité sous
 une autre forme : il manque seulement la référence de chemin exacte.
 
 - **195** chemins sous `headless/`, dont **59** sources C/C++ et **136** en-têtes/fragments.
-- **15** chemins déjà présents dans le graphe moteur.
-- **180** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
+- **27** chemins déjà présents dans le graphe moteur.
+- **168** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
 - Les deux générateurs de profils `headless/encore_overrides_generated.h`,
   `headless/glyph_overrides_generated.h` et les autres ressources générées
   sont des entrées de l'inventaire, **pas** de nouveaux patchs CMake.
@@ -29,7 +29,7 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | Chemin | Domaine indicatif | IDs du graphe (chemin exact) | Statut documentaire |
 | --- | --- | --- | --- |
 | `headless/assets_dir.h` | en-tête/fragment | — | À qualifier |
-| `headless/audio.cpp` | runtime/bridge | — | À qualifier |
+| `headless/audio.cpp` | runtime/bridge | U04 | Chemin indexé, preuve dépend du graphe |
 | `headless/audio_out_init.h` | en-tête/fragment | — | À qualifier |
 | `headless/boot_trace.h` | en-tête/fragment | — | À qualifier |
 | `headless/buffer_pages.h` | en-tête/fragment | R05 | Chemin indexé, preuve dépend du graphe |
@@ -37,7 +37,7 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/button_mapping.h` | en-tête/fragment | — | À qualifier |
 | `headless/cache_budget.h` | en-tête/fragment | — | À qualifier |
 | `headless/controller_applet.h` | en-tête/fragment | — | À qualifier |
-| `headless/crash_report.cpp` | runtime/bridge | — | À qualifier |
+| `headless/crash_report.cpp` | runtime/bridge | U11 | Chemin indexé, preuve dépend du graphe |
 | `headless/crash_report.h` | en-tête/fragment | — | À qualifier |
 | `headless/crash_site.h` | en-tête/fragment | — | À qualifier |
 | `headless/crash_trigger.h` | en-tête/fragment | — | À qualifier |
@@ -53,7 +53,7 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/direct_pool_probe_policy.h` | en-tête/fragment | — | À qualifier |
 | `headless/direct_pool_region_scan.h` | en-tête/fragment | — | À qualifier |
 | `headless/display_refresh.h` | en-tête/fragment | — | À qualifier |
-| `headless/dynarmic/block_range_information.cpp` | JIT/expérimental | — | À qualifier |
+| `headless/dynarmic/block_range_information.cpp` | JIT/expérimental | U12 | Chemin indexé, preuve dépend du graphe |
 | `headless/dynarmic/block_range_information.h` | JIT/expérimental | — | À qualifier |
 | `headless/dynarmic/jit_group.h` | JIT/expérimental | — | À qualifier |
 | `headless/dynarmic/jit_group_support.inc` | JIT/expérimental | — | À qualifier |
@@ -92,7 +92,7 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/guest_fault.h` | en-tête/fragment | — | À qualifier |
 | `headless/heap_arenas.inc` | en-tête/fragment | — | À qualifier |
 | `headless/heap_guard.h` | en-tête/fragment | — | À qualifier |
-| `headless/heap_pages.cpp` | runtime/bridge | — | À qualifier |
+| `headless/heap_pages.cpp` | runtime/bridge | U02 | Chemin indexé, preuve dépend du graphe |
 | `headless/hle_counters.h` | en-tête/fragment | — | À qualifier |
 | `headless/hud.h` | en-tête/fragment | — | À qualifier |
 | `headless/image_pages.h` | en-tête/fragment | — | À qualifier |
@@ -104,7 +104,7 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/jit_assert.inc` | en-tête/fragment | — | À qualifier |
 | `headless/jit_list.h` | en-tête/fragment | J11 | Chemin indexé, preuve dépend du graphe |
 | `headless/log_pipe.h` | en-tête/fragment | — | À qualifier |
-| `headless/main.cpp` | runtime/bridge | — | À qualifier |
+| `headless/main.cpp` | runtime/bridge | U01 | Chemin indexé, preuve dépend du graphe |
 | `headless/memory_check.cpp` | harness/test | J08 | Chemin indexé, preuve dépend du graphe |
 | `headless/metadata_bridge.cpp` | runtime/bridge | — | À qualifier |
 | `headless/metadata_bridge.h` | en-tête/fragment | — | À qualifier |
@@ -114,12 +114,12 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/mods_check.cpp` | harness/test | — | À qualifier |
 | `headless/native_directory.h` | en-tête/fragment | — | À qualifier |
 | `headless/native_gpu_thread.inc` | en-tête/fragment | — | À qualifier |
-| `headless/network_audit.c` | runtime/bridge | — | À qualifier |
+| `headless/network_audit.c` | runtime/bridge | U05 | Chemin indexé, preuve dépend du graphe |
 | `headless/network_audit.h` | en-tête/fragment | — | À qualifier |
-| `headless/network_audit_sockets.c` | runtime/bridge | — | À qualifier |
-| `headless/network_domain_rules.c` | runtime/bridge | — | À qualifier |
+| `headless/network_audit_sockets.c` | runtime/bridge | U06 | Chemin indexé, preuve dépend du graphe |
+| `headless/network_domain_rules.c` | runtime/bridge | U07 | Chemin indexé, preuve dépend du graphe |
 | `headless/network_domain_rules.h` | en-tête/fragment | — | À qualifier |
-| `headless/pad.cpp` | runtime/bridge | — | À qualifier |
+| `headless/pad.cpp` | runtime/bridge | U03 | Chemin indexé, preuve dépend du graphe |
 | `headless/pad_diagnostics.h` | en-tête/fragment | — | À qualifier |
 | `headless/performance.cpp` | runtime/bridge | J01 | Chemin indexé, preuve dépend du graphe |
 | `headless/performance.h` | en-tête/fragment | — | À qualifier |
@@ -193,7 +193,7 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/ps5_amd_topology_evidence.h` | en-tête/fragment | — | À qualifier |
 | `headless/ps5_cpu_topology.h` | en-tête/fragment | — | À qualifier |
 | `headless/ps5_guest_system_button_route.h` | en-tête/fragment | — | À qualifier |
-| `headless/ps5_net_compat.c` | runtime/bridge | — | À qualifier |
+| `headless/ps5_net_compat.c` | runtime/bridge | U08 | Chemin indexé, preuve dépend du graphe |
 | `headless/romfs_check.cpp` | harness/test | — | À qualifier |
 | `headless/ryujinx_check.cpp` | harness/test | — | À qualifier |
 | `headless/ryujinx_saves.h` | en-tête/fragment | — | À qualifier |
@@ -211,7 +211,7 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/stop_limit.h` | en-tête/fragment | — | À qualifier |
 | `headless/storage_paths.h` | en-tête/fragment | — | À qualifier |
 | `headless/title_id_fallback.h` | en-tête/fragment | — | À qualifier |
-| `headless/vulkan_allocator.cpp` | runtime/bridge | — | À qualifier |
+| `headless/vulkan_allocator.cpp` | runtime/bridge | U10 | Chemin indexé, preuve dépend du graphe |
 | `headless/vulkan_download_batch.inc` | en-tête/fragment | — | À qualifier |
 | `headless/vulkan_gc_budget.h` | en-tête/fragment | — | À qualifier |
 | `headless/vulkan_gc_downloads.inc` | en-tête/fragment | — | À qualifier |
@@ -219,7 +219,7 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/vulkan_hud_prepare.inc` | en-tête/fragment | — | À qualifier |
 | `headless/vulkan_loading.inc` | en-tête/fragment | — | À qualifier |
 | `headless/vulkan_pool_capacity.h` | en-tête/fragment | — | À qualifier |
-| `headless/vulkan_surface.cpp` | runtime/bridge | — | À qualifier |
+| `headless/vulkan_surface.cpp` | runtime/bridge | U09 | Chemin indexé, preuve dépend du graphe |
 | `headless/watch.h` | en-tête/fragment | — | À qualifier |
 | `headless/zbic_compression.cpp` | runtime/bridge | — | À qualifier |
 | `headless/zbic_compression.h` | en-tête/fragment | — | À qualifier |
