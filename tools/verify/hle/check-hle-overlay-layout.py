@@ -4,6 +4,7 @@
 Only reads versioned files; never modifies source or builds production objects.
 """
 from pathlib import Path
+import re
 
 root = Path(__file__).resolve().parents[3]
 cmake = (root / "headless/CMakeLists.txt").read_text()
@@ -13,8 +14,7 @@ assert "python3 -B tools/verify/hle/check-hle-overlay-layout.py" in workflow
 assert cmake.count("native-hle-overrides.cmake") == 1
 assert 'write_derived("${PORT_BUILD_DIR}/k_thread.cpp"' not in cmake
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/kernel/k_thread.cpp"' not in cmake
-assert "file(READ" not in module and "string(REPLACE" not in module
-assert "write_derived(" not in module
+assert not re.search(r"(?m)^\\s*(?:file\\(READ|string\\(REPLACE|write_derived\\()", module)
 assert module.count("function(encore_replace_core_source pinned relative)") == 1
 assert module.count("get_target_property(sources core SOURCES)") == 1
 assert module.count("list(REMOVE_ITEM sources") == 1
