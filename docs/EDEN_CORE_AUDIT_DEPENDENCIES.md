@@ -74,9 +74,17 @@ sélectionnées uniquement en `EDEN_DEV_PROFILE`.
 `tools/check-vendor-consolidation-debt.py` vérifie la parité du corps
 C++ avec l'override généré auparavant et recense les sorties CMake dans
 `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **68 sites restants**
-après cinq migrations (F02, F03, F04, N02 et N03). Un site à paramètres variables peut
+après sept migrations (F02, F03, F04, N02, N03, H21 et H22). Un site à paramètres variables peut
 produire plusieurs fichiers réels. Les ressources générées ne doivent
 pas être confondues avec des overrides de code.
+
+Le second inventaire compte 21 générateurs `write_derived()` dans les modules,
+soit **89 sites au total**, mais n'inclut **pas** les sept modules
+`X01–X07` qui créent une sortie par `file(WRITE)` ou transforment
+indirectement une variable-source. Ils sont suivis séparément dans
+`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`, avec contrôle hôte de leur
+présence et de leurs variables. Ces nombres sont des **sites et modules**, pas
+un décompte exhaustif de fichiers C++ distincts.
 
 Les chemins H18/H19/J14/J15 ont été catalogués pour éviter l'angle mort
 entre thread `Runnable`, fibre sélectionnée, contexte restauré et
