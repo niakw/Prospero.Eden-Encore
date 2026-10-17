@@ -153,7 +153,7 @@ assert storage_maintained == '#include "performance.h"\n' + storage_pinned.repla
 assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_FS_STORAGE}")') == 1
 assert 'write_derived("${PORT_BUILD_DIR}/fs_i_storage.cpp"' not in c
 assert "fs_storage_source" not in c
-assert counts["write_derived("] <= 68, counts
+assert counts["write_derived("] <= 66, counts
 print("VENDOR_MAINTAINED_FS_ISTORAGE_PARITY_PASS: read, short read, quiet policy")
 
 
@@ -291,6 +291,35 @@ for name in ("hle_source", "ipc_source", "hle_call", "ipc_old"):
     assert name not in c, ("legacy configure-time HLE rewrite still referenced", name)
 print("VENDOR_MAINTAINED_HLE_IPC_PARITY_PASS: both dispatches, caller traces, guest IPC attribution, DEV selection")
 
+# Native common/runtime unit selection must be real maintained C++, not
+# transient CMake string-rewritten source. Exact source parity is checked,
+# with the former absolute include replaced by the tracked include directory.
+thread_rel = "common/thread.cpp"
+thread_original = (sources / "eden/src" / thread_rel).read_text()
+thread_maintained = (active / "eden-core/src" / thread_rel).read_text()
+thread_old = "void SetCurrentThreadName(const char* name) {"
+thread_new = thread_old + "\n    ::Eden::Performance::RegisterWorker(name);"
+assert thread_original.count(thread_old) == 1
+assert thread_maintained == '#include "performance.h"\n' + thread_original.replace(thread_old, thread_new)
+assert c.count('list(APPEND common_sources "${EDEN_MAINTAINED_NATIVE_THREAD}")') == 1
+assert 'list(REMOVE_ITEM common_sources thread.cpp)' in c
+assert 'write_derived("${PORT_BUILD_DIR}/thread.cpp"' not in c
+assert "thread_source" not in c
+fs_native_rel = "common/fs/fs.cpp"
+fs_native_original = (sources / "eden/src" / fs_native_rel).read_text()
+fs_native_maintained = (active / "eden-core/src" / fs_native_rel).read_text()
+fs_native_old = "fs::directory_iterator(path, ec)"
+assert fs_native_original.count(fs_native_old) == 2
+fs_native_expected = '#include "native_directory.h"\n' + fs_native_original.replace(
+    fs_native_old, "Eden::ReadNativeDirectory(path, ec)")
+assert fs_native_maintained == fs_native_expected
+assert c.count('list(APPEND common_sources "${EDEN_MAINTAINED_NATIVE_FS}")') == 1
+assert 'list(REMOVE_ITEM common_sources fs/fs.cpp)' in c
+assert 'write_derived("${PORT_BUILD_DIR}/fs.cpp"' not in c
+assert "fs_source" not in c
+assert 'target_include_directories(common PRIVATE "${EDEN_PORT_DIR}")' in c
+print("VENDOR_MAINTAINED_COMMON_RUNTIME_PARITY_PASS: thread name, two iterators, native-only selection")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -331,7 +360,7 @@ assert len(module_current) == 21, len(module_current)
 for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     text = (root / module).read_text()
     assert 'file(WRITE ' in text and 'configure_file(' in text, module
-assert len(recorded) + len(module_recorded) == 89
+assert len(recorded) + len(module_recorded) == 87
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
