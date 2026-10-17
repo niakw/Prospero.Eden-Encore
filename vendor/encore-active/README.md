@@ -33,7 +33,8 @@ que sélectionner les unités maintenues et retirer la source d'origine de
 la cible concernée. Il ne doit plus générer de copies C++ pour ces unités.
 Les sources amont épinglées restent inchangées dans `vendor/sources/eden`.
 
-Les 81 sources et en-têtes de `eden-backports` sont des backports livrés en
+Les 81 sources et en-têtes de `eden-backports`, et deux fichiers CMake
+supplémentaires, forment 83 fichiers de backports livrés en
 production depuis le snapshot épinglé, contrôlés par empreintes et installés
 par `tools/install-vendored-eden-backports.py` (pas de `git apply` au build).
 
