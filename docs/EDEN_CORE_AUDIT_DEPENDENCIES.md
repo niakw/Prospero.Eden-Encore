@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 86
+**Non, this is not an exhaustive repository-wide inventory.** The 88
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,17 +24,17 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 86 | 72 | 166 |
+| Graphe connu | 88 | 73 | 172 |
 | HOST — preuve ciblée hôte | 28 | 25 | 56 |
-| SOURCE — lecture effectuée, preuve insuffisante | 37 | 33 | 76 |
+| SOURCE — lecture effectuée, preuve insuffisante | 39 | 34 | 82 |
 | OPEN — question technique non résolue | 15 | 15 | 27 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **52** | **47** | **103** |
-| Dont priorité P0 (SOURCE + OPEN) | 24 | 20 | 56 |
+| **Encore à qualifier (SOURCE + OPEN)** | **54** | **48** | **109** |
+| Dont priorité P0 (SOURCE + OPEN) | 25 | 21 | 59 |
 
-Le **noyau restant** compte donc 52 critères répartis sur
-47 fichiers et 103 mentions fonction/contrat :
-15 OPEN et 37 SOURCE.
+Le **noyau restant** compte donc 54 critères répartis sur
+48 fichiers et 109 mentions fonction/contrat :
+15 OPEN et 39 SOURCE.
 Cela **ne signifie pas 95 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 Le hors-inventaire (HID, IPC, host-syncpoints, variantes vendor...) n'est
@@ -44,6 +44,13 @@ La chaîne CPU/JIT comprend aussi H20 (sélection de priorité et migration de c
 
 La poursuite HLE/IPC ajoute H21 et H22, reliant l'entrée `SendSyncRequestImpl` au traitement des requêtes de service ; N03 isole l'attente d'un slot de présentation. Les trois unités sont encore dérivées par CMake en mode diagnostic, leur exécution en jeu n'étant pas qualifiée.
 
+L'inventaire HLE/NVDRV inclut désormais les appels de synchronisation hôte
+`SyncpointManager::RegisterAction / DeregisterAction / Increment` (N04)
+ainsi que la durée de vie des événements `nvhost_ctrl` (N05).
+Les rappels sont invoqués sous `guard` dans le code source épinglé ;
+une réentrance ou une course annulation/rappel n'est pas encore prouvée.
+Ne pas convertir cette observation en correctif sans reproduction.
+
 ## Migration de sources et inventaire de sélection
 
 Les lectures diagnostiques `IFile::Read` (F02), `IStorage::Read` (F03) et les trois opérations `IFileSystem` (F04)
@@ -52,7 +59,7 @@ sont des sources maintenues sous
 sélectionnées uniquement en `EDEN_DEV_PROFILE`.
 `tools/check-vendor-consolidation-debt.py` vérifie la parité du corps
 C++ avec l'override généré auparavant et recense les sorties CMake dans
-`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **72 sites restants**
+`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **71 sites restants**
 après ces deux migrations. Un site à paramètres variables peut
 produire plusieurs fichiers réels. Les ressources générées ne doivent
 pas être confondues avec des overrides de code.
@@ -241,13 +248,15 @@ function/contract tokens are checked by CI for existence only; the
 | J15 | P0 | J03,H18 | vendor/sources/eden/src/core/hle/kernel/physical_core.cpp | PhysicalCore::LoadContext; PhysicalCore::SaveContext | SOURCE | tools/check-native-physical-core-interrupt-ack-host.py | Need real context restoration proof after migration; interrupt ACK is not JIT resume | 🟡 Source étudiée |
 | F02 | P1 | B01 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_file.cpp | IFile::Read; IFile::Write; IFile::Flush | HOST | tools/check-vendor-consolidation-debt.py | IFile::Read maintained TU source parity and DEV CMake selection passed in full host preflight #39046599831. No native console build, gameplay or FPS conclusion | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39046599831) |
 | F03 | P1 | F02 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_storage.cpp | IStorage::Read | HOST | tools/check-vendor-consolidation-debt.py | IStorage::Read maintained TU source parity and DEV CMake selection passed in full host preflight #39046599831. No native console build, gameplay or FPS conclusion | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39046599831) |
-| N02 | P1 | N01 | vendor/sources/eden/src/core/hle/service/nvdrv/devices/nvhost_ctrl.cpp | nvhost_ctrl::IocCtrlEventWait; nvhost_ctrl::IocCtrlClearEventWait | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Host syncpoint event-wait diagnostic still generated; callback-to-guest wake latency not proven | 🟡 Source étudiée |
+| N02 | P1 | N01 | vendor/encore-active/eden-core/src/core/hle/service/nvdrv/devices/nvhost_ctrl.cpp | nvhost_ctrl::IocCtrlEventWait; nvhost_ctrl::IocCtrlClearEventWait | SOURCE | tools/check-vendor-consolidation-debt.py | DEV event-wait diagnostic now maintained as a real TU and exact CMake-generated parity is guarded; callback-to-guest-wake latency and cancel/register race still need native evidence | 🟡 Source étudiée |
 | V11 | P0 | V02,V04 | headless/graphics.cpp | GraphicsWindow::OnFrameDisplayed; CaptureFramePressure | SOURCE | tools/check-ps5-quiet-frame-pressure.py | Presentation-interval witnesses are callback pairs, not guest game logic or GPU ownership | 🟡 Source étudiée |
 | F04 | P1 | F02,F03 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_filesystem.cpp | IFileSystem::OpenFile; IFileSystem::OpenDirectory; IFileSystem::GetEntryType | HOST | tools/check-vendor-consolidation-debt.py | Maintained DEV IFileSystem diagnostic replaces G23 CMake patch for three result paths; three call replacements, DEV source selection, and quiet policy passed full host preflight #39048355950; native SDK/gameplay remain unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39048355950) |
 | H20 | P0 | H02,H19 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp | KScheduler::UpdateHighestPriorityThread; KScheduler::UpdateHighestPriorityThreadsImpl | SOURCE | tools/check-upstream-guest-scheduler-locks.py | Runnable queue update precedes per-core highest-priority selection; account for pinned-thread preference, suggested-core migration and eventual context load. Not proof of guest PC progress | 🟡 Source étudiée |
 | H21 | P0 | H14,J14 | vendor/sources/eden/src/core/hle/kernel/svc/svc_ipc.cpp | SendSyncRequestImpl; SendSyncRequestWithUserBuffer | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Normal/DEV IPC synchronous guest wait is still selected through a CMake-derived TU in DEV. Correlate requesting guest thread and actual wait completion rather than interpreting service totals as PC progress | 🟡 Source étudiée |
 | H22 | P0 | H21 | vendor/sources/eden/src/core/hle/service/service.cpp | ServiceFrameworkBase::InvokeRequest; ServiceFrameworkBase::InvokeRequestTipc | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | DEV request-dispatch instrumentation remains CMake-generated; service-call completion is not sufficient evidence that a blocked guest thread resumed execution | 🟡 Source étudiée |
 | N03 | P1 | V02 | vendor/sources/eden/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp | BufferQueueProducer::WaitForFreeSlotThenRelock; BufferQueueProducer::DequeueBuffer | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | DEV dequeue wait is an active CMake-generated observer: separate presentation back-pressure and guest HUD/gamelogic stalls without changing queue ownership/order | 🟡 Source étudiée |
+| N04 | P0 | N02 | vendor/sources/eden/src/video_core/host1x/syncpoint_manager.cpp | SyncpointManager::RegisterAction; SyncpointManager::DeregisterAction; SyncpointManager::Increment | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Newly indexed host-syncpoint action ownership: increment invokes callbacks while its guard is held; callback, reentrant locking and unregistration order require explicit proof before altering the scheduler | 🟡 Source étudiée |
+| N05 | P1 | N02,N04 | vendor/encore-active/eden-core/src/core/hle/service/nvdrv/devices/nvhost_ctrl.cpp | nvhost_ctrl::FreeEvent; nvhost_ctrl::IocCtrlEventUnregister; nvhost_ctrl::QueryEvent | SOURCE | tools/check-vendor-consolidation-debt.py | Newly indexed event object lifecycle: cancellation, unregister, query and callback signal may overlap. Source selected in DEV but actual native destruction/callback ordering not proven | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
