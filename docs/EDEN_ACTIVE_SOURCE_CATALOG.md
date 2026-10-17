@@ -8,9 +8,9 @@ présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
 - **191 fichiers** de code et d'en-têtes enregistrés.
-- **123 fichiers** possèdent une correspondance de chemin *exacte*
+- **131 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
-- **68 fichiers** n'ont pas encore de ligne de graphe correspondant
+- **60 fichiers** n'ont pas encore de ligne de graphe correspondant
   exactement à leur chemin. Cela **ne prouve pas** qu'ils n'ont jamais été
   examinés, ni qu'ils sont effectivement compilés.
 - Le manifeste des backports verrouille **83 fichiers livrés**, dont
@@ -101,18 +101,18 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-backports/src/core/memory.cpp` | `shipping-backport` | M14 |
 | `eden-backports/src/hid_core/resources/npad/npad.cpp` | `shipping-backport` | — |
 | `eden-backports/src/video_core/buffer_cache/buffer_cache.h` | `shipping-backport` | V51 |
-| `eden-backports/src/video_core/buffer_cache/buffer_cache_base.h` | `shipping-backport` | — |
-| `eden-backports/src/video_core/control/channel_state_cache.h` | `shipping-backport` | — |
-| `eden-backports/src/video_core/dma_pusher.cpp` | `shipping-backport` | — |
-| `eden-backports/src/video_core/engines/kepler_compute.cpp` | `shipping-backport` | — |
-| `eden-backports/src/video_core/engines/kepler_compute.h` | `shipping-backport` | — |
+| `eden-backports/src/video_core/buffer_cache/buffer_cache_base.h` | `shipping-backport` | V53 |
+| `eden-backports/src/video_core/control/channel_state_cache.h` | `shipping-backport` | V57 |
+| `eden-backports/src/video_core/dma_pusher.cpp` | `shipping-backport` | V60 |
+| `eden-backports/src/video_core/engines/kepler_compute.cpp` | `shipping-backport` | V58 |
+| `eden-backports/src/video_core/engines/kepler_compute.h` | `shipping-backport` | V59 |
 | `eden-backports/src/video_core/engines/sw_blitter/blitter.cpp` | `shipping-backport` | — |
-| `eden-backports/src/video_core/fence_manager.h` | `shipping-backport` | — |
-| `eden-backports/src/video_core/query_cache/query_cache.h` | `shipping-backport` | — |
+| `eden-backports/src/video_core/fence_manager.h` | `shipping-backport` | V56 |
+| `eden-backports/src/video_core/query_cache/query_cache.h` | `shipping-backport` | V55 |
 | `eden-backports/src/video_core/renderer_vulkan/vk_buffer_cache.cpp` | `shipping-backport` | V50 |
 | `eden-backports/src/video_core/renderer_vulkan/vk_buffer_cache.h` | `shipping-backport` | — |
 | `eden-backports/src/video_core/texture_cache/texture_cache.h` | `shipping-backport` | V52 |
-| `eden-backports/src/video_core/texture_cache/texture_cache_base.h` | `shipping-backport` | — |
+| `eden-backports/src/video_core/texture_cache/texture_cache_base.h` | `shipping-backport` | V54 |
 | `eden-backports/src/video_core/texture_cache/util.cpp` | `shipping-backport` | — |
 | `eden-core/include/core/file_sys/bis_factory.h` | `maintained-override` | F13 |
 | `eden-core/overrides/core/device_memory_manager.inc` | `maintained-override` | M08 |

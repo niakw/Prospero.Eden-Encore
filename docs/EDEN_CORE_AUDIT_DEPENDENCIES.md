@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 201
+**Non, this is not an exhaustive repository-wide inventory.** The 209
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,23 +24,23 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 201 | 182 | 429 |
+| Graphe connu | 209 | 190 | 443 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 147 | 138 | 326 |
+| SOURCE — lecture effectuée, preuve insuffisante | 155 | 146 | 340 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **162** | **152** | **354** |
-| Dont priorité P0 (SOURCE + OPEN) | 78 | 73 | 194 |
+| **Encore à qualifier (SOURCE + OPEN)** | **170** | **160** | **368** |
+| Dont priorité P0 (SOURCE + OPEN) | 85 | 80 | 206 |
 
-Le **noyau restant** compte donc 162 critères répartis sur
-152 fichiers et 354 mentions fonction/contrat :
-15 OPEN et 147 SOURCE.
-Cela **ne signifie pas 354 fonctions jamais lues** :
+Le **noyau restant** compte donc 170 critères répartis sur
+160 fichiers et 368 mentions fonction/contrat :
+15 OPEN et 155 SOURCE.
+Cela **ne signifie pas 368 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-191 fichiers de code/en-têtes présents, 123 avec un chemin de
-graphe exact et 68 sans correspondance exacte. Cet écart n'est
+191 fichiers de code/en-têtes présents, 131 avec un chemin de
+graphe exact et 60 sans correspondance exacte. Cet écart n'est
 **pas** le nombre de fonctions non auditées, ni une preuve de code actif.
 Le contrôle hôte vérifie la complétude des chemins et les références,
 mais pas le comportement.
@@ -384,6 +384,14 @@ function/contract tokens are checked by CI for existence only; the
 | V49 | P1 | V48 | vendor/encore-active/eden-vulkan/vulkan_library.cpp | OpenLibrary | SOURCE | headless/vulkan.cmake | Native Vulkan library handoff and platform fallback; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
 | V50 | P0 | R03 | vendor/encore-active/eden-backports/src/video_core/renderer_vulkan/vk_buffer_cache.cpp | BufferCacheRuntime::CurrentTick; BufferCacheRuntime::Wait | SOURCE | tools/check-active-source-inventory.py | Shipping Vulkan buffer cache changes CurrentTick contract; native cost unit supersedes it for active Vulkan builds; source diff examined, exact runtime owner/console behavior still to prove | 🟡 Source étudiée |
 | V52 | P0 | V45 | vendor/encore-active/eden-backports/src/video_core/texture_cache/texture_cache.h | TextureCache<P>::VisitImageView; TextureCache<P>::FillImageViews; TextureCache<P>::SynchronizeAliases | SOURCE | tools/check-active-source-inventory.py | Shipping texture template guards missing image views, repeated bindings and alias synchronization; source diff examined, exact runtime owner/console behavior still to prove | 🟡 Source étudiée |
+| V53 | P0 | V51 | vendor/encore-active/eden-backports/src/video_core/buffer_cache/buffer_cache_base.h | SynchronizeBufferWrites; MarkWrittenBuffer | SOURCE | tools/check-active-source-inventory.py | Shipping buffer ABI changes write sync method and adds needs_sync to MarkWrittenBuffer; changed backport hunk differs from upstream, native GPU progress not measured | 🟡 Source étudiée |
+| V54 | P0 | V52 | vendor/encore-active/eden-backports/src/video_core/texture_cache/texture_cache_base.h | last_feedback_view_ids; CheckFeedbackLoop | SOURCE | tools/check-active-source-inventory.py | Shipping texture feedback barrier records actual sampled view IDs; changed backport hunk differs from upstream, native GPU progress not measured | 🟡 Source étudiée |
+| V55 | P0 | V16 | vendor/encore-active/eden-backports/src/video_core/query_cache/query_cache.h | QueryCacheBase<Traits>::CounterReport | SOURCE | tools/check-active-source-inventory.py | Shipping query counter changes guest synchronization policy; changed backport hunk differs from upstream, native GPU progress not measured | 🟡 Source étudiée |
+| V56 | P0 | V16 | vendor/encore-active/eden-backports/src/video_core/fence_manager.h | FenceManager::SignalFence | SOURCE | tools/check-active-source-inventory.py | Shipping fence delays depend on balanced or accurate fence behavior; changed backport hunk differs from upstream, native GPU progress not measured | 🟡 Source étudiée |
+| V57 | P1 | V53 | vendor/encore-active/eden-backports/src/video_core/control/channel_state_cache.h | ChannelSetupCaches; channel_state | SOURCE | tools/check-active-source-inventory.py | Shipping channel state pointer is null-initialized before first binding; changed backport hunk differs from upstream, native GPU progress not measured | 🟡 Source étudiée |
+| V58 | P0 | V51,V57 | vendor/encore-active/eden-backports/src/video_core/engines/kepler_compute.cpp | KeplerCompute::CallMethod; KeplerCompute::CallMultiMethod | SOURCE | tools/check-active-source-inventory.py | Shipping KeplerCompute retains dirty upload state through indirect compute launch; changed backport hunk differs from upstream, native GPU progress not measured | 🟡 Source étudiée |
+| V59 | P0 | V58 | vendor/encore-active/eden-backports/src/video_core/engines/kepler_compute.h | upload_dirty; was_dirty | SOURCE | tools/check-active-source-inventory.py | Shipping compute upload header stores dirty state consumed by KeplerCompute; changed backport hunk differs from upstream, native GPU progress not measured | 🟡 Source étudiée |
+| V60 | P0 | V59,Q04 | vendor/encore-active/eden-backports/src/video_core/dma_pusher.cpp | DmaPusher::Step; DmaPusher::SetState | SOURCE | tools/check-active-source-inventory.py | Shipping command decoder distinguishes Kepler inlined data before dispatch; changed backport hunk differs from upstream, native GPU progress not measured | 🟡 Source étudiée |
 | V51 | P0 | V50,M13 | vendor/encore-active/eden-backports/src/video_core/buffer_cache/buffer_cache.h | BufferCache<P>::SynchronizeBufferWrites; BufferCache<P>::DMACopy; BufferCache<P>::MarkWrittenBuffer | SOURCE | tools/check-active-source-inventory.py | Shipping GPU buffer template changes DMA sync policy and write-tick lifetime; source diff examined, exact runtime owner/console behavior still to prove | 🟡 Source étudiée |
 | F04 | P1 | F02,F03 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_filesystem.cpp | IFileSystem::OpenFile; IFileSystem::OpenDirectory; IFileSystem::GetEntryType | HOST | tools/check-vendor-consolidation-debt.py | Maintained DEV IFileSystem diagnostic replaces G23 CMake patch for three result paths; three call replacements, DEV source selection, and quiet policy passed full host preflight #39048355950; native SDK/gameplay remain unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39048355950) |
 | H20 | P0 | H02,H19 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp | KScheduler::UpdateHighestPriorityThread; KScheduler::UpdateHighestPriorityThreadsImpl | SOURCE | tools/check-upstream-guest-scheduler-locks.py | Runnable queue update precedes per-core highest-priority selection; account for pinned-thread preference, suggested-core migration and eventual context load. Not proof of guest PC progress | 🟡 Source étudiée |
