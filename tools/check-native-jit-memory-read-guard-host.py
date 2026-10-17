@@ -109,6 +109,9 @@ int main() {{
 #else
     assert(r8==8 && r16==16 && r32==32 && r64==64);
     assert(c.m_memory.reads==2*before);
+    #if GUEST_BITS == 64
+    assert(r128[0]==64 && r128[1]==64);
+#endif
 #endif
     std::puts(EXPECT_FIXED ? "PINNED_JIT_READ_ABORT_GUARD_PASS" :
                              "PINNED_JIT_READ_IGNORED_ABORT_NEGATIVE_PASS");
@@ -119,7 +122,7 @@ int main() {{
             cpp.write_text(prelude + cl + "\n".join(definitions) + main)
             subprocess.run(
                 [compiler,"-std=c++20","-O2","-Wall","-Wextra","-Werror",
-                 "-DEXPECT_FIXED="+str(int(fixed)),str(cpp),"-o",str(exe)],
+                 "-DEXPECT_FIXED="+str(int(fixed)), "-DGUEST_BITS="+str(bits),str(cpp),"-o",str(exe)],
                 check=True,timeout=30)
             result=subprocess.run([str(exe)],check=True,capture_output=True,text=True,timeout=10)
             print(f"A{bits}: "+result.stdout,end="")

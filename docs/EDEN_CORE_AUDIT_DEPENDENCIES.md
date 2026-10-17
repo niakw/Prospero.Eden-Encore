@@ -16,7 +16,7 @@ any operation, and avoid unrelated files.
 
 ## Déjà traité — contrôles terminés et preuves accessibles
 
-**19 validations ciblées historiquement établies.** Elles recouvrent en
+**20 validations ciblées historiquement établies.** Elles recouvrent en
 partie les lignes B/Q/D/V/J/M/S du graphe ci-dessous : **ne pas additionner
 ces deux décomptes comme s'il s'agissait de travaux différents**.
 
@@ -46,6 +46,7 @@ démontrent précisément qu'une approche est dangereuse.
 | C17 | Transitions de couches Vulkan | `BlitScreen::DrawToFrame` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-ps5-vulkan-layer-lifetime.py) | [Preuve / CI](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38986808108) | Test de cycle de vie des couches |
 | C18 | Classification des fenêtres de stutter FC27 | `analyze-ps5-cache-contention.py` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-fc27-cache-contention-classifier.py) | [Preuve / CI](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38989960870) | Analyse offline vérifiée ; attribution à une seule frame interdite |
 | C19 | File GPU : attente producteur interrompable | `ThreadManager::PushCommand` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-ps5-gpu-producer-wake.py) | [Preuve / CI](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38986808108) | Test source/hôte ; pas de conclusion hardware |
+| C20 | Débordement des bornes RAM invitée | `Memory::IsValidVirtualAddressRange` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-guest-range-overflow-host.py) | [Prévalidation #38996379440](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38996379440) | Ancienne plage invalidement acceptée ; la version native rejette le dépassement 64 bits, sans test console |
 
 ### Audits archivés à ne pas recommencer
 
@@ -158,7 +159,7 @@ function/contract tokens are checked by CI for existence only; the
 | H07 | P0 | H06 | vendor/sources/eden/src/core/hle/kernel/k_address_arbiter.cpp | KAddressArbiter::Signal | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Relate address arbitration to guest thread wait/signal | 🟠 À contrôler |
 | D03 | P1 | Q04 | vendor/sources/eden/src/video_core/cdma_pusher.cpp | CDmaPusher::ExecuteCommand | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Distinguish host-channel DMA from graphics DMA | 🟠 À contrôler |
 | M05 | P2 | M02 | headless/gpu_deferred_store_publication.h | CommitPostStore | PARKED | docs/DEFERRED_JIT_QUIESCENCE_ARCHITECTURE_2026-10-17.md | Publication experimental bridge still disabled | ⚪ Suspendu |
-| R10 | P1 | R01,R09 | vendor/sources/eden/src/core/memory.cpp | Memory::IsValidVirtualAddressRange | OPEN | tools/check-native-guest-range-overflow-host.py | Verify native-derived endpoint overflow guard and preserve normal page scans; console not validated | 🟠 À contrôler |
+| R10 | P1 | R01,R09 | vendor/sources/eden/src/core/memory.cpp | Memory::IsValidVirtualAddressRange | HOST | tools/check-native-guest-range-overflow-host.py | Host regression SUCCESS 38996379440; on-device behavior not verified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-guest-range-overflow-host.py) |
 | J12 | P1 | J08 | vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_64.cpp | DynarmicCallbacks64::MemoryRead32; CheckMemoryAccess | OPEN | tools/check-native-jit-memory-read-guard-host.py | Reject guest reads after reported abort without affecting permitted reads | 🟠 À contrôler |
 | J13 | P1 | J08 | vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_32.cpp | DynarmicCallbacks32::MemoryRead32; CheckMemoryAccess | OPEN | tools/check-native-jit-memory-read-guard-host.py | Check A32 read rejection and unchanged successful access | 🟠 À contrôler |
 <!-- AUDIT_ROWS_END -->
