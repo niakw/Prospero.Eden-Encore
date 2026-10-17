@@ -1790,6 +1790,25 @@ if(PS5_NATIVE)
     list(REMOVE_ITEM eden_arbiter_sources "hle/kernel/k_address_arbiter.cpp")
     list(APPEND eden_arbiter_sources "${eden_active_arbiter}")
     set_property(TARGET core PROPERTY SOURCES "${eden_arbiter_sources}")
+
+    # The three guest wait SVCs need signed-overflow-safe deadline conversion.
+    # Source files are maintained verbatim; no new generator read/rewrite.
+    get_target_property(eden_svc_wait_sources core SOURCES)
+    foreach(eden_svc_file IN ITEMS svc_condition_variable.cpp svc_address_arbiter.cpp svc_synchronization.cpp)
+        set(eden_pinned_svc "hle/kernel/svc/${eden_svc_file}")
+        set(eden_checked_svc
+            "${PORT_ROOT}/vendor/encore-active/eden-threading/src/core/hle/kernel/svc/${eden_svc_file}")
+        if(NOT EXISTS "${eden_checked_svc}")
+            message(FATAL_ERROR "Missing maintained native guest wait SVC: ${eden_svc_file}")
+        endif()
+        list(FIND eden_svc_wait_sources "${eden_pinned_svc}" eden_svc_index)
+        if(eden_svc_index EQUAL -1)
+            message(FATAL_ERROR "Pinned guest wait SVC source moved: ${eden_svc_file}")
+        endif()
+        list(REMOVE_ITEM eden_svc_wait_sources "${eden_pinned_svc}")
+        list(APPEND eden_svc_wait_sources "${eden_checked_svc}")
+    endforeach()
+    set_property(TARGET core PROPERTY SOURCES "${eden_svc_wait_sources}")
 endif()
 
 # Keep service threads until their outer callbacks and C++ destructors finish.
