@@ -161,6 +161,36 @@ else:
 root_cmake = (root / "headless/CMakeLists.txt").read_text()
 root_generator_count = len(re.findall(r'write_derived\(\s*"', root_cmake))
 assert f"L'inventaire des {root_generator_count} générateurs CMake" in document
+
+# Separate headless C/C++ footprint: active Encore sources are not the only
+# potential implementation units. Track ALL paths without inventing
+# native compile coverage or marking launcher work as validated.
+headless_doc = (root / "docs/EDEN_HEADLESS_SOURCE_CATALOG.md").read_text()
+headless_start = "<!-- HEADLESS_SOURCE_CATALOG_START -->"
+headless_end = "<!-- HEADLESS_SOURCE_CATALOG_END -->"
+assert headless_doc.count(headless_start) == headless_doc.count(headless_end) == 1
+headless_exts = {".c", ".cc", ".cpp", ".h", ".hpp", ".inc", ".cl"}
+headless_actual = sorted(
+    p.relative_to(root).as_posix()
+    for p in (root / "headless").rglob("*")
+    if p.is_file() and p.suffix in headless_exts
+)
+headless_rows = re.findall(
+    r"^\\| \\x60(headless/[^\\x60]+)\\x60 \\| ([^|]+) \\| ([^|]+) \\| ([^|]+) \\|$",
+    headless_doc.split(headless_start, 1)[1].split(headless_end, 1)[0], re.M)
+assert [r[0] for r in headless_rows] == headless_actual, (
+    "headless source path catalog drift", len(headless_rows), len(headless_actual))
+headless_linked = sum(p in graph for p in headless_actual)
+for p, family, owner, state in headless_rows:
+    if p in graph:
+        assert owner != "—" and state.strip().startswith("Chemin indexé"), ("headless owner absent", p)
+    else:
+        assert owner == "—" and state.strip() == "À qualifier", ("headless owner stale", p)
+assert "**195** chemins" in headless_doc
+print("ENCORE_HEADLESS_SOURCE_CATALOG_PASS",
+      f"paths={len(headless_actual)}", f"graph_exact={headless_linked}",
+      f"unlinked={len(headless_actual)-headless_linked}")
+
 print("ENCORE_ACTIVE_CATALOG_SUMMARY_PASS",
       f"files={len(physical)}", f"covered={linked_count}",
       f"cmake_primary_generators={root_generator_count}")

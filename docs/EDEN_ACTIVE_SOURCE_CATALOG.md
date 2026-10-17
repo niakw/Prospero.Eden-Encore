@@ -242,6 +242,14 @@ Ces deux fichiers sont inclus dans les **83 entrées** de
 `vendor/encore-active/eden-backports/manifest.json`, mais ne sont
 pas comptés parmi les 198 fichiers de code et d'en-têtes.
 
+## Inventaire hors `vendor/encore-active`
+
+Les **195 fichiers source/en-tête/fragment** de `headless/` sont suivis
+dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
+Seuls 15 ont un propriétaire exact dans le graphe courant ; les autres sont
+triés séparément entre moteur, JIT, tests, ressources et launcher.
+La couverture de 198/198 ci-dessus ne s'applique **pas** à ce dossier.
+
 ## Critères de tenue à jour
 
 Chaque nouveau fichier C/C++ ou en-tête introduit dans le fork doit figurer
