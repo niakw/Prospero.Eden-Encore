@@ -3298,6 +3298,7 @@ endif()
                 "${launcher_dir}/pe/ui/library.cpp"
                 "${launcher_dir}/pe/ui/mapping.cpp"
                 "${launcher_dir}/pe/ui/settings.cpp"
+                "${launcher_dir}/pe/ui/switch_theme.cpp"
                 "${launcher_dir}/pe/ui/textures.cpp"
                 "${launcher_dir}/pe/ui/widgets.cpp")
             target_sources(eden-headless PRIVATE ${launcher_sources})

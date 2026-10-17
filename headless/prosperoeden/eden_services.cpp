@@ -1842,6 +1842,7 @@ pe::ui::Preferences EdenServices::preferences() {
     result.large_text = saved.large_text;
     result.high_contrast = saved.high_contrast;
     result.reduce_motion = saved.reduce_motion;
+    result.ui_theme = saved.ui_theme;
     return result;
 }
 
@@ -1869,6 +1870,7 @@ bool EdenServices::set_preferences(const pe::ui::Preferences& preferences) {
     value.large_text = preferences.large_text;
     value.high_contrast = preferences.high_contrast;
     value.reduce_motion = preferences.reduce_motion;
+    value.ui_theme = preferences.ui_theme;
     const bool saved = Eden::SavePreferences(value);
     if (!saved) Eden::Report("settings", "Could not write preferences");
 #ifdef PS5_NATIVE

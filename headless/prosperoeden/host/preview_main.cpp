@@ -139,6 +139,84 @@ struct Stage
 
 void pictures(Stage &s)
 {
+    if (const char* mode = std::getenv("PE_PREVIEW_SWITCH_THEME");
+        mode != nullptr && std::strcmp(mode, "1") == 0) {
+        s.restart(false);
+        s.wait(1.5f);
+        s.shoot("00-switch-home");
+        // The HOME top row no longer wraps: move right to the final
+        // All Software item (six recent game slots at most).
+        s.press({Key::right, Key::right, Key::right, Key::right,
+                 Key::right, Key::right, Key::cross});
+        s.wait(1.5f);
+        s.shoot("01-switch-all-software");
+        s.press({Key::circle});
+        s.wait(0.5f);
+        // Six bottom icons: About, Files, Multiplayer, Controllers, Settings, Exit.
+        s.press({Key::down, Key::right, Key::right, Key::right, Key::right, Key::cross});
+        s.wait(0.5f);
+        s.shoot("02-switch-settings");
+        s.press({Key::down, Key::down, Key::down, Key::down, Key::cross});
+        s.wait(0.3f);
+        s.shoot("03-switch-appearance");
+        s.press({Key::circle, Key::down, Key::down, Key::cross});
+        s.wait(0.3f);
+        s.shoot("04-switch-storage");
+        s.press({Key::circle, Key::down, Key::cross});
+        s.wait(0.3f);
+        s.shoot("05-switch-language");
+        // Verify the alternative theme's native confirmation overlay.
+        s.press({Key::circle, Key::circle, Key::down,
+                 Key::right, Key::right, Key::right, Key::right, Key::right,
+                 Key::cross});
+        s.wait(0.3f);
+        s.shoot("06-switch-exit-confirm");
+        s.press({Key::circle, Key::up, Key::cross});
+        s.wait(1.0f);
+        // Triangle opens the real game's per-title settings.
+        s.press({Key::triangle});
+        s.wait(0.3f);
+        s.shoot("07-switch-game-options");
+        // The tenth Down reaches Mods while the options list scrolls.
+        s.press({Key::down,Key::down,Key::down,Key::down,Key::down,
+                 Key::down,Key::down,Key::down,Key::down,Key::down,
+                 Key::cross});
+        s.wait(0.3f);
+        s.shoot("08-switch-game-mods");
+        // Return from mods to game options, then Library and HOME.
+        // Use the same Controllers shortcut as the user.
+        s.press({Key::circle,Key::circle,Key::circle,Key::down,
+                 Key::right,Key::right,Key::right,Key::cross});
+        s.wait(0.3f);
+        s.shoot("09-switch-button-mapping");
+        // Back from a HOME-launched controller editor must close to HOME.
+        // Then select a title which has three sample mods, including an
+        // initially disabled one. Exercise its REAL save action.
+        s.press({Key::circle,Key::up,Key::cross});
+        s.wait(0.5f);
+        s.press({Key::right,Key::right,Key::triangle});
+        s.wait(0.3f);
+        s.press({Key::down,Key::down,Key::down,Key::down,Key::down,
+                 Key::down,Key::down,Key::down,Key::down,Key::down,
+                 Key::cross});
+        s.wait(0.3f);
+        s.shoot("10-switch-mods-installed");
+        s.press({Key::down,Key::cross});
+        s.wait(0.2f);
+        s.shoot("11-switch-mod-enabled");
+        const auto game_list=s.services.games();
+        const auto game=std::find_if(game_list.begin(),game_list.end(),
+            [](const pe::ui::Game& candidate){
+                return candidate.name=="Echoes of the Valley";
+            });
+        if(game==game_list.end() ||
+           s.services.mods(game->title_id).size()!=3 ||
+           !s.services.mods(game->title_id)[1].enabled) {
+            std::fprintf(stderr,"Switch mods preview: toggle not saved to fixture backend\\n");
+            s.ok=false;
+        }
+        return;
+    }
     // Independently verify the game's real launch transition using the same
     // original C++ draw list, EGL context and shader backend as Home. This
     // takes *screenshots*, not image synthesis or a mock-up of the layout.
@@ -222,12 +300,27 @@ void pictures(Stage &s)
         launch_only != nullptr && std::strcmp(launch_only, "1") == 0)
     {
         s.restart(false);
-        s.wait(2.0f); // background Home snapshot has settled
-        // Initial Home snapshot focuses Continue (hero). Use its real Cross
-        // action; Down would instead move focus into the recent-title rail.
-        s.press({Key::cross});
-        if (s.launcher->selected_game().empty()) {
-            std::fprintf(stderr, "launch-preview: the game did not enter the real launch path\n");
+        s.wait(2.0f); // settle UI transitions in virtual frame time
+        // The Home snapshot is assembled asynchronously on a REAL host
+        // thread. Virtual 120-frame waits can complete in milliseconds,
+        // before the worker finishes; one Cross would be discarded.
+        // Pump the launcher and give the worker bounded real time to
+        // complete. Never fake selected_game() or bypass the Cross handler.
+        bool launched = false;
+        for (int attempt = 0; attempt < 30; ++attempt) {
+            s.launcher->update(0.0f);
+            // Initial Home focuses Continue. Only its actual Cross action
+            // may enter the title's normal launch path.
+            s.press({Key::cross});
+            if (!s.launcher->selected_game().empty()) {
+                launched = true;
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+        if (!launched) {
+            std::fprintf(stderr,
+                         "launch-preview: real Cross never launched after waiting for the Home snapshot\n");
             s.ok = false;
             return;
         }
@@ -617,6 +710,12 @@ int main(int argc, char **argv)
         preferences.large_text = names.find("large") != std::string_view::npos;
         preferences.high_contrast = names.find("contrast") != std::string_view::npos;
         preferences.reduce_motion = names.find("calm") != std::string_view::npos;
+        services.set_preferences(preferences);
+    }
+    if (const char *mode = std::getenv("PE_PREVIEW_SWITCH_THEME");
+        mode != nullptr && std::strcmp(mode, "1") == 0) {
+        pe::ui::Preferences preferences = services.preferences();
+        preferences.ui_theme = 1;
         services.set_preferences(preferences);
     }
     pe::ui::Textures textures(batch, services);

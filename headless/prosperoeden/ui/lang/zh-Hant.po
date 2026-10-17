@@ -1606,8 +1606,6 @@ msgid "Close"
 msgstr "關閉"
 
 #: pe/ui/library.cpp
-msgid "Down: view back cover"
-msgstr "向下：查看封底"
 
 #: pe/ui/library.cpp
 msgid "Zoom out"
@@ -1620,3 +1618,145 @@ msgstr "放大"
 #: pe/ui/library.cpp
 msgid "Move cover"
 msgstr "移動封面"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Appearance"
+msgstr "外觀"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "APPEARANCE"
+msgstr "外觀"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "THEME"
+msgstr "主題"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Theme"
+msgstr "主題"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "DEFAULT"
+msgstr "預設"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "PREVIEW"
+msgstr "預覽"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "System Settings"
+msgstr "系統設定"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "All Software"
+msgstr "所有軟體"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Active"
+msgstr "已啟用"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Configure"
+msgstr "設定"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Keys found"
+msgstr "已找到金鑰"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Keys missing"
+msgstr "缺少金鑰"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Games found"
+msgstr "已找到遊戲"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "No games found"
+msgstr "未找到遊戲"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Game files"
+msgstr "瀏覽資料夾 · 軟體"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Back to HOME"
+msgstr "返回 · 主頁"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose your preferred language"
+msgstr "選擇 · 語言"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Select a settings category"
+msgstr "選擇 · 分類"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Software options: Triangle"
+msgstr "軟體 · Triangle"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Browse folders: D-pad / Open: A"
+msgstr "瀏覽資料夾 · D-pad / A"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Encore home screen"
+msgstr "主頁 · Encore"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Switch home screen"
+msgstr "主頁 · Switch"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Original Encore interface"
+msgstr "介面 · Encore"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Switch-style interface"
+msgstr "介面 · Switch"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose Encore or Switch. Your games and control mapping stay unchanged."
+msgstr "選擇 · Encore / Switch. 軟體 / 操作 — 保持不變."
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose the launcher interface without changing game or controller settings."
+msgstr "選擇 · 介面. 軟體 / 操作 — 保持不變."
+
+#: pe/ui/switch_theme.cpp
+msgid "About"
+msgstr "關於"
+
+#: pe/ui/switch_theme.cpp
+msgid "Multiplayer"
+msgstr "多人遊戲"
+
+#: pe/ui/switch_theme.cpp
+msgid "Volume"
+msgstr "音量"
+
+#: pe/ui/switch_theme.cpp
+msgid "Controller profile"
+msgstr "控制器設定"
+
+#: pe/ui/switch_theme.cpp
+msgid "Cache"
+msgstr "快取"
+
+#: pe/ui/switch_theme.cpp
+msgid "Manage"
+msgstr "管理"
+
+#: pe/ui/switch_theme.cpp
+msgid "Open folders"
+msgstr "開啟資料夾"
+
+#: pe/ui/switch_theme.cpp
+msgid "Filter"
+msgstr "篩選"
+
+#: pe/ui/switch_theme.cpp
+msgid "Eden Encore"
+msgstr "Eden Encore"

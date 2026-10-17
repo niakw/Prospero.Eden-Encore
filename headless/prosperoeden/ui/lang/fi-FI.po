@@ -1606,8 +1606,6 @@ msgid "Close"
 msgstr "Sulje"
 
 #: pe/ui/library.cpp
-msgid "Down: view back cover"
-msgstr "Alas: näytä takakansi"
 
 #: pe/ui/library.cpp
 msgid "Zoom out"
@@ -1620,3 +1618,145 @@ msgstr "Lähennä"
 #: pe/ui/library.cpp
 msgid "Move cover"
 msgstr "Siirrä kantta"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Appearance"
+msgstr "Ulkoasu"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "APPEARANCE"
+msgstr "ULKOASU"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "THEME"
+msgstr "TEEMA"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Theme"
+msgstr "Teema"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "DEFAULT"
+msgstr "OLETUS"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "PREVIEW"
+msgstr "ESIKATSELU"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "System Settings"
+msgstr "Järjestelmäasetukset"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "All Software"
+msgstr "Kaikki ohjelmistot"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Active"
+msgstr "Käytössä"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Configure"
+msgstr "Määritä"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Keys found"
+msgstr "Avaimet löytyivät"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Keys missing"
+msgstr "Avaimet puuttuvat"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Games found"
+msgstr "Pelit löytyivät"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "No games found"
+msgstr "Ei pelejä"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Game files"
+msgstr "Selaa kansioita · ohjelmistot"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Back to HOME"
+msgstr "Takaisin · Koti"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose your preferred language"
+msgstr "Valitse · kieli"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Select a settings category"
+msgstr "Valitse · luokat"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Software options: Triangle"
+msgstr "ohjelmistot · Triangle"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Browse folders: D-pad / Open: A"
+msgstr "Selaa kansioita · D-pad / A"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Encore home screen"
+msgstr "Koti · Encore"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Switch home screen"
+msgstr "Koti · Switch"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Original Encore interface"
+msgstr "käyttöliittymä · Encore"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Switch-style interface"
+msgstr "käyttöliittymä · Switch"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose Encore or Switch. Your games and control mapping stay unchanged."
+msgstr "Valitse · Encore / Switch. ohjelmistot / Ohjaus — ei muutoksia."
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose the launcher interface without changing game or controller settings."
+msgstr "Valitse · käyttöliittymä. ohjelmistot / Ohjaus — ei muutoksia."
+
+#: pe/ui/switch_theme.cpp
+msgid "About"
+msgstr "Tietoja"
+
+#: pe/ui/switch_theme.cpp
+msgid "Multiplayer"
+msgstr "Moninpeli"
+
+#: pe/ui/switch_theme.cpp
+msgid "Volume"
+msgstr "Äänenvoimakkuus"
+
+#: pe/ui/switch_theme.cpp
+msgid "Controller profile"
+msgstr "Ohjainprofiili"
+
+#: pe/ui/switch_theme.cpp
+msgid "Cache"
+msgstr "Välimuisti"
+
+#: pe/ui/switch_theme.cpp
+msgid "Manage"
+msgstr "Hallitse"
+
+#: pe/ui/switch_theme.cpp
+msgid "Open folders"
+msgstr "Avaa kansiot"
+
+#: pe/ui/switch_theme.cpp
+msgid "Filter"
+msgstr "Suodatin"
+
+#: pe/ui/switch_theme.cpp
+msgid "Eden Encore"
+msgstr "Eden Encore"

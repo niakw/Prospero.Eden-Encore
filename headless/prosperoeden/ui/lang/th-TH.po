@@ -1606,8 +1606,6 @@ msgid "Close"
 msgstr "ปิด"
 
 #: pe/ui/library.cpp
-msgid "Down: view back cover"
-msgstr "ลง: ดูปกหลัง"
 
 #: pe/ui/library.cpp
 msgid "Zoom out"
@@ -1620,3 +1618,145 @@ msgstr "ขยาย"
 #: pe/ui/library.cpp
 msgid "Move cover"
 msgstr "ย้ายปก"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Appearance"
+msgstr "รูปลักษณ์"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "APPEARANCE"
+msgstr "รูปลักษณ์"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "THEME"
+msgstr "ธีม"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Theme"
+msgstr "ธีม"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "DEFAULT"
+msgstr "ค่าเริ่มต้น"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "PREVIEW"
+msgstr "ตัวอย่าง"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "System Settings"
+msgstr "การตั้งค่าระบบ"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "All Software"
+msgstr "ซอฟต์แวร์ทั้งหมด"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Active"
+msgstr "ใช้งานอยู่"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Configure"
+msgstr "กำหนดค่า"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Keys found"
+msgstr "พบคีย์"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Keys missing"
+msgstr "ไม่พบคีย์"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Games found"
+msgstr "พบเกม"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "No games found"
+msgstr "ไม่พบเกม"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Game files"
+msgstr "เรียกดูโฟลเดอร์ · ซอฟต์แวร์"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Back to HOME"
+msgstr "กลับ · หน้าหลัก"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose your preferred language"
+msgstr "เลือก · ภาษา"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Select a settings category"
+msgstr "เลือก · หมวดหมู่"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Software options: Triangle"
+msgstr "ซอฟต์แวร์ · Triangle"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Browse folders: D-pad / Open: A"
+msgstr "เรียกดูโฟลเดอร์ · D-pad / A"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Encore home screen"
+msgstr "หน้าหลัก · Encore"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Switch home screen"
+msgstr "หน้าหลัก · Switch"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Original Encore interface"
+msgstr "หน้าจอ · Encore"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Switch-style interface"
+msgstr "หน้าจอ · Switch"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose Encore or Switch. Your games and control mapping stay unchanged."
+msgstr "เลือก · Encore / Switch. ซอฟต์แวร์ / การควบคุม — ไม่เปลี่ยนแปลง."
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose the launcher interface without changing game or controller settings."
+msgstr "เลือก · หน้าจอ. ซอฟต์แวร์ / การควบคุม — ไม่เปลี่ยนแปลง."
+
+#: pe/ui/switch_theme.cpp
+msgid "About"
+msgstr "เกี่ยวกับ"
+
+#: pe/ui/switch_theme.cpp
+msgid "Multiplayer"
+msgstr "ผู้เล่นหลายคน"
+
+#: pe/ui/switch_theme.cpp
+msgid "Volume"
+msgstr "ระดับเสียง"
+
+#: pe/ui/switch_theme.cpp
+msgid "Controller profile"
+msgstr "โปรไฟล์ตัวควบคุม"
+
+#: pe/ui/switch_theme.cpp
+msgid "Cache"
+msgstr "แคช"
+
+#: pe/ui/switch_theme.cpp
+msgid "Manage"
+msgstr "จัดการ"
+
+#: pe/ui/switch_theme.cpp
+msgid "Open folders"
+msgstr "เปิดโฟลเดอร์"
+
+#: pe/ui/switch_theme.cpp
+msgid "Filter"
+msgstr "ตัวกรอง"
+
+#: pe/ui/switch_theme.cpp
+msgid "Eden Encore"
+msgstr "Eden Encore"

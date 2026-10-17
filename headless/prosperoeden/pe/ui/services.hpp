@@ -167,6 +167,7 @@ struct Preferences
     bool large_text = false;
     bool high_contrast = false;
     bool reduce_motion = false;
+    int ui_theme = 0; // 0 Encore (default), 1 Switch
 };
 
 // One game's overrides; -1 uses Settings > Video.

@@ -1606,8 +1606,6 @@ msgid "Close"
 msgstr "إغلاق"
 
 #: pe/ui/library.cpp
-msgid "Down: view back cover"
-msgstr "أسفل: عرض الغلاف الخلفي"
 
 #: pe/ui/library.cpp
 msgid "Zoom out"
@@ -1620,3 +1618,145 @@ msgstr "تكبير"
 #: pe/ui/library.cpp
 msgid "Move cover"
 msgstr "تحريك الغلاف"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Appearance"
+msgstr "المظهر"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "APPEARANCE"
+msgstr "المظهر"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "THEME"
+msgstr "السمة"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Theme"
+msgstr "السمة"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "DEFAULT"
+msgstr "الافتراضي"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "PREVIEW"
+msgstr "معاينة"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "System Settings"
+msgstr "إعدادات النظام"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "All Software"
+msgstr "جميع البرامج"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Active"
+msgstr "نشط"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Configure"
+msgstr "تهيئة"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Keys found"
+msgstr "المفاتيح موجودة"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Keys missing"
+msgstr "المفاتيح مفقودة"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Games found"
+msgstr "تم العثور على ألعاب"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "No games found"
+msgstr "لا توجد ألعاب"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Game files"
+msgstr "تصفح المجلدات · البرامج"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Back to HOME"
+msgstr "رجوع · الرئيسية"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose your preferred language"
+msgstr "اختر · اللغة"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Select a settings category"
+msgstr "اختر · الفئات"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Software options: Triangle"
+msgstr "البرامج · Triangle"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Browse folders: D-pad / Open: A"
+msgstr "تصفح المجلدات · D-pad / A"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Encore home screen"
+msgstr "الرئيسية · Encore"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Switch home screen"
+msgstr "الرئيسية · Switch"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Original Encore interface"
+msgstr "الواجهة · Encore"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Switch-style interface"
+msgstr "الواجهة · Switch"
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose Encore or Switch. Your games and control mapping stay unchanged."
+msgstr "اختر · Encore / Switch. البرامج / التحكم — دون تغيير."
+
+#: pe/ui/switch_theme.cpp, pe/ui/settings.cpp
+msgid "Choose the launcher interface without changing game or controller settings."
+msgstr "اختر · الواجهة. البرامج / التحكم — دون تغيير."
+
+#: pe/ui/switch_theme.cpp
+msgid "About"
+msgstr "حول"
+
+#: pe/ui/switch_theme.cpp
+msgid "Multiplayer"
+msgstr "متعدد اللاعبين"
+
+#: pe/ui/switch_theme.cpp
+msgid "Volume"
+msgstr "مستوى الصوت"
+
+#: pe/ui/switch_theme.cpp
+msgid "Controller profile"
+msgstr "ملف تعريف وحدة التحكم"
+
+#: pe/ui/switch_theme.cpp
+msgid "Cache"
+msgstr "ذاكرة التخزين المؤقت"
+
+#: pe/ui/switch_theme.cpp
+msgid "Manage"
+msgstr "إدارة"
+
+#: pe/ui/switch_theme.cpp
+msgid "Open folders"
+msgstr "فتح المجلدات"
+
+#: pe/ui/switch_theme.cpp
+msgid "Filter"
+msgstr "مرشح"
+
+#: pe/ui/switch_theme.cpp
+msgid "Eden Encore"
+msgstr "Eden Encore"

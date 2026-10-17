@@ -116,6 +116,7 @@ struct Preferences {
     bool large_text = false;             // Settings > Accessibility: the launcher's look
     bool high_contrast = false;
     bool reduce_motion = false;
+    int ui_theme = 0; // 0 Encore (default), 1 Switch-style
 };
 
 inline int KeyIndex(const std::string& value, const char* const* keys, int count, int fallback) {
@@ -343,6 +344,7 @@ inline Preferences LoadPreferences(const std::string& file = SettingsFile()) {
     result.large_text = Settings::Bool(document, Json::json_pointer("/accessibility/large_text"), false);
     result.high_contrast = Settings::Bool(document, Json::json_pointer("/accessibility/high_contrast"), false);
     result.reduce_motion = Settings::Bool(document, Json::json_pointer("/accessibility/reduce_motion"), false);
+    result.ui_theme = Settings::String(document, Json::json_pointer("/appearance/theme")) == "switch" ? 1 : 0;
     return result;
 }
 
@@ -367,7 +369,8 @@ inline bool SavePreferences(const Preferences& value, const std::string& file = 
         !ValidMapping(value.mapping) ||
         value.vibration_strength < 0 || value.vibration_strength > 100 ||
         value.stick_deadzone < 0 || value.stick_deadzone > 20 ||
-        value.language < 0 || value.language >= int(std::size(kLanguageKeys))) return false;
+        value.language < 0 || value.language >= int(std::size(kLanguageKeys)) ||
+        value.ui_theme < 0 || value.ui_theme > 1) return false;
     Settings::Json document = Settings::Load(file);
     document["version"] = 1;
     document["video"]["renderer"] = value.backend == GraphicsBackend::Vulkan ? "vulkan" : "opengl";
@@ -394,6 +397,7 @@ inline bool SavePreferences(const Preferences& value, const std::string& file = 
     document["accessibility"]["large_text"] = value.large_text;
     document["accessibility"]["high_contrast"] = value.high_contrast;
     document["accessibility"]["reduce_motion"] = value.reduce_motion;
+    document["appearance"]["theme"] = value.ui_theme == 1 ? "switch" : "encore";
     return Settings::Write(document, file);
 }
 

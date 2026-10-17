@@ -85,6 +85,7 @@ class Launcher
         audio,
         controls,
         accessibility,
+        appearance,
         diagnostics,
         game,
         mods, // a game's mods, opened from its settings
@@ -131,6 +132,22 @@ class Launcher
     void press_home(Key key);
     void update_controllers(float dt);
     void draw_home(Canvas &c);
+    void draw_switch_home(Canvas &c);
+    void press_switch_home(Key key);
+    void draw_switch_library(Canvas &c);
+    void press_switch_library(Key key);
+    void draw_switch_settings(Canvas &c);
+    void draw_switch_files(Canvas &c);
+    void draw_switch_language(Canvas &c);
+    void draw_switch_about(Canvas &c);
+    void draw_switch_dialog(Canvas &c, Modal modal, float open);
+    void draw_switch_confirmation(Canvas &c);
+    void draw_switch_game(Canvas &c, float opened);
+    void draw_switch_mods(Canvas &c, float opened);
+    void draw_switch_mapping(Canvas &c, float opened);
+    void press_switch_settings(Key key);
+    void draw_switch_header(Canvas &c, const char *heading);
+    void draw_switch_footer(Canvas &c, const char *hint);
     void draw_controllers(Canvas &c);
     void open_library_at_file(const std::string &file);
     void refresh_home_hero();
@@ -305,6 +322,8 @@ class Launcher
 
     // settings and dialogs
     Preferences prefs_;
+    int switch_home_focus_ = 0;
+    int switch_home_last_tile_ = 0; // remember selected title when visiting system shortcuts
     ListView settings_;
     tween::Spring section_;
     int option_ = 0;
