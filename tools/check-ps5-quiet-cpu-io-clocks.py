@@ -19,13 +19,16 @@ assert "m_on_interrupt.wait(lk, [this] { return m_is_interrupted; });" in idle
 # Do not permit an unlocked atomic builtin read in native development code.
 assert "__atomic_load_n(&m_is_interrupted" not in cmake
 
-for start, end, metric, name in [
-    ('string(REPLACE "${producer_old}"', ' producer_source "${producer_source}")', "dequeue_start", "guest_dequeue_wait"),
-]:
-    fragment = section(start, end)
-    assert f"const auto {metric} = ::Eden::Performance::detailed_gpu_profile.load" in fragment
-    assert f"if ({metric}) ::Eden::Performance::AddSince(::Eden::Performance::{name}, {metric});" in fragment
-    assert fragment.index("::Eden::Performance::NowNs()") < fragment.index(f"if ({metric})")
+# Buffer dequeue diagnostics also live in a tracked DEV-only source now.
+dequeue = (Path(__file__).resolve().parents[1] /
+           "vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp").read_text()
+assert 'list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")' in cmake
+assert 'write_derived("${PORT_BUILD_DIR}/buffer_queue_producer.cpp"' not in cmake
+assert "const auto dequeue_start = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed) ? ::Eden::Performance::NowNs() : 0;" in dequeue
+assert "if (dequeue_start) ::Eden::Performance::AddSince(::Eden::Performance::guest_dequeue_wait, dequeue_start);" in dequeue
+assert dequeue.index("const auto dequeue_start") < dequeue.index("Status status = WaitForFreeSlotThenRelock(async")
+assert dequeue.index("Status status = WaitForFreeSlotThenRelock(async") < dequeue.index("if (dequeue_start)")
+
 # Host-syncpoint event-wait callback is now maintained C++ (DEV only).
 nvctrl = (Path(__file__).resolve().parents[1] /
           "vendor/encore-active/eden-core/src/core/hle/service/nvdrv/devices/nvhost_ctrl.cpp").read_text()
