@@ -173,6 +173,37 @@ assert recorded == current, "CMake-generated override inventory changed: re-inve
 assert len(current) == counts["write_derived("], "dynamic or unquoted generator not cataloged"
 print(f"VENDOR_GENERATOR_INVENTORY_PASS entries={len(recorded)}")
 
+# Indirect CMake includes can generate more source units than the primary
+# CMake file. Keep the second table exhaustive and order-stable as well.
+module_begin = "<!-- MODULE_GENERATORS_START -->"
+module_end = "<!-- MODULE_GENERATORS_END -->"
+assert inventory.count(module_begin) == inventory.count(module_end) == 1
+module_recorded = re.findall(
+    r"^\| M\d\d \| \x60([^\x60]+)\x60 \| \x60([^\x60]+)\x60 \|",
+    inventory.split(module_begin)[1].split(module_end)[0], re.M)
+module_files = (
+    "headless/dynarmic/reg_alloc.cmake",
+    "headless/dynarmic/shared-jit.cmake",
+    "headless/gpu_native_observability.cmake",
+    "headless/guest_write_deferred_bridge.cmake",
+    "headless/jit-alias.cmake",
+    "headless/scalar-memory.cmake",
+)
+module_current = []
+for module in module_files:
+    content = (root / module).read_text()
+    module_current.extend((module, target) for target in
+                          re.findall(r'write_derived\(\s*"([^"]+)"', content))
+assert module_recorded == module_current, "Module CMake source generator inventory is stale"
+assert len(module_current) == 21, len(module_current)
+for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
+    text = (root / module).read_text()
+    assert 'file(WRITE ' in text and 'configure_file(' in text, module
+assert len(recorded) + len(module_recorded) == 94
+print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
+
+
+
 print(f"VENDOR_SOURCE_PINNED roots={len(root_names)} manifest_items={len(deps)} "
       f"active_forks={len(fork_names)}")
 print("VENDOR_REWRITE_DEBT_PARTIAL " +
