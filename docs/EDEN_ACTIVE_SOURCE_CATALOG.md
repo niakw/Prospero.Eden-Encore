@@ -7,10 +7,10 @@ Cet inventaire recense chaque fichier C/C++, en-tête et fragment source
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **188 fichiers** de code et d'en-têtes enregistrés.
-- **96 fichiers** possèdent une correspondance de chemin *exacte*
+- **189 fichiers** de code et d'en-têtes enregistrés.
+- **98 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
-- **92 fichiers** n'ont pas encore de ligne de graphe correspondant
+- **91 fichiers** n'ont pas encore de ligne de graphe correspondant
   exactement à leur chemin. Cela **ne prouve pas** qu'ils n'ont jamais été
   examinés, ni qu'ils sont effectivement compilés.
 - Le manifeste des backports verrouille **83 fichiers livrés**, dont
@@ -93,7 +93,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-backports/src/core/hle/service/sm/sm.cpp` | `shipping-backport` | — |
 | `eden-backports/src/core/hle/service/sockets/bsd.cpp` | `shipping-backport` | — |
 | `eden-backports/src/core/hle/service/sockets/bsd.h` | `shipping-backport` | — |
-| `eden-backports/src/core/hle/service/sockets/encore_guest_network_policy.h` | `shipping-backport` | — |
+| `eden-backports/src/core/hle/service/sockets/encore_guest_network_policy.h` | `shipping-backport` | N09 |
 | `eden-backports/src/core/hle/service/sockets/sfdnsres.cpp` | `shipping-backport` | — |
 | `eden-backports/src/core/hle/service/sockets/sockets.cpp` | `shipping-backport` | — |
 | `eden-backports/src/core/hle/service/usb/usb.cpp` | `shipping-backport` | — |
@@ -118,6 +118,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/overrides/core/device_memory_manager.inc` | `maintained-override` | M08 |
 | `eden-core/overrides/core/gpu_dirty_memory_manager.h` | `maintained-override` | M09 |
 | `eden-core/overrides/core/guest_memory.h` | `maintained-override` | M10 |
+| `eden-core/overrides/core/hle/service/sockets/encore_guest_network_policy.h` | `maintained-override` | N10 |
 | `eden-core/src/audio_core/renderer/voice/voice_info.cpp` | `maintained-override` | A04 |
 | `eden-core/src/audio_core/sink/sink_details.cpp` | `maintained-override` | A05 |
 | `eden-core/src/audio_core/sink/sink_stream.cpp` | `maintained-override` | A03 |

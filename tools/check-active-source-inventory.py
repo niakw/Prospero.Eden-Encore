@@ -90,7 +90,7 @@ print("ENCORE_NATIVE_MEMORY_OWNER_PASS", f"headers={len(native_mem)}")
 # Maintained core code and headers must never be silently omitted from the
 # function-owner register. Do not confuse an indexed path with a HOST proof.
 maintained_core_paths = [path for path in physical if path.startswith("eden-core/")]
-assert len(maintained_core_paths) == 36, ("maintained core source set changed", len(maintained_core_paths))
+assert len(maintained_core_paths) == 37, ("maintained core source set changed", len(maintained_core_paths))
 assert all(path in graph for path in maintained_core_paths), (
     "uncatalogued maintained core source paths",
     [path for path in maintained_core_paths if path not in graph],
@@ -171,6 +171,22 @@ assert all(p in graph for p in vulkan_family), (
 )
 assert 'file(COPY "${EDEN_ACTIVE_VULKAN}/" DESTINATION "${PORT_BUILD_DIR}")' in vulkan_recipe
 print("ENCORE_VULKAN_WHOLE_FAMILY_OWNER_PASS", f"files={len(vulkan_family)}")
+
+# The immutable guest-network shipping header is disabled by a native-only
+# include-root override. Guest BSD, DNS and NIFM must all consult this policy.
+native_offline = "eden-core/overrides/core/hle/service/sockets/encore_guest_network_policy.h"
+shipping_online = "eden-backports/src/core/hle/service/sockets/encore_guest_network_policy.h"
+assert native_offline in graph and shipping_online in graph
+assert (active / shipping_online).read_text().count(
+    "inline constexpr bool kGuestNetworkOffline = false;") == 1
+assert (active / native_offline).read_text().count(
+    "inline constexpr bool kGuestNetworkOffline = true;") == 1
+assert '${EDEN_NATIVE_DIRTY_HEADER_ROOT}/core/hle/service/sockets/encore_guest_network_policy.h' in native_cmake
+assert 'target_include_directories(core BEFORE PUBLIC "${EDEN_NATIVE_DIRTY_HEADER_ROOT}")' in native_cmake
+for consumer in ("sockets/bsd.cpp", "sockets/sfdnsres.cpp", "nifm/nifm.cpp"):
+    body = (active / "eden-backports/src/core/hle/service" / consumer).read_text()
+    assert 'Eden::Encore::kGuestNetworkOffline' in body, ("guest network policy not used", consumer)
+print("ENCORE_NATIVE_GUEST_NETWORK_POLICY_PASS consumers=3")
 
 assert len(physical) == len(set(physical))
 print("ENCORE_ACTIVE_SOURCE_CATALOG_PASS",
