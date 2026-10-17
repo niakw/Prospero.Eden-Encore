@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Install validated CPU I-cache and host service-wait patches unconditionally.
+"""Install maintained CPU I-cache and host service-wait sources unconditionally.
 
-Unlike the old opt-in experiments, these are now part of every *active*
-native source tree. Fail closed if the pinned baseline or an existing staged
-file differs. Do not include the quarantined dummy-thread wait patch, which
-can leave a dangling scheduler wait-queue pointer.
+Production copies complete checked-in sources from vendor/encore-active.
+The two historical patches are replayed only into a temporary comparison
+tree to prove byte-for-byte parity. Any difference fails closed.
+The quarantined dummy-thread workaround remains excluded (unsafe wait queue).
 """
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 ORIGINAL = ROOT / "vendor/sources/eden"
+ACTIVE = ROOT / "vendor/encore-active/eden-core"
 PATCHES = (
     ROOT / "headless/backports/eden-dynarmic-icache-coherence.patch",
     ROOT / "headless/backports/eden-sm-host-wait.patch",
@@ -79,18 +80,25 @@ def stage_source(destination: Path, expected: dict[str, tuple[bytes, bytes]], *,
     changed = 0
     for relative, (old, new) in expected.items():
         target = destination / relative
+        # The old patches are replayed to a temporary tree as a parity oracle.
+        # The source installed into the native build comes only from Encore.
+        maintained = ACTIVE / relative
+        if not maintained.is_file() or maintained.read_bytes() != new:
+            raise RuntimeError(
+                f"Maintained active-core source differs from audited patch: {relative}"
+            )
         current = target.read_bytes()
         if current == new:
             continue
         if check or current != old:
             raise RuntimeError(
-                f"Active patch missing/unknown revision: {relative} "
+                f"Active source missing/unknown revision: {relative} "
                 f"current={sha(current)} base={sha(old)} active={sha(new)}"
             )
         with tempfile.NamedTemporaryFile(dir=target.parent, delete=False) as handle:
             tmp = Path(handle.name)
         try:
-            tmp.write_bytes(new)
+            shutil.copyfile(maintained, tmp)
             tmp.replace(target)
         finally:
             tmp.unlink(missing_ok=True)
