@@ -80,6 +80,8 @@ def analyze(log: str) -> dict:
     guest: dict[int, dict] = {}
     preflights: dict[int, dict] = {}
     jit_cores: dict[int, dict[int, dict]] = defaultdict(dict)
+    present_witnesses: dict[int, dict] = {}
+    previous_report_frame = 0
     dma_sync: dict[int, dict] = {}
     puller_semaphore: dict[int, dict] = {}
     current_frame: int | None = None
@@ -114,7 +116,9 @@ def analyze(log: str) -> dict:
         if line.startswith("EDEN_VULKAN_FRAME "):
             value = values(line)
             if "total" in value:
-                current_frame = int(value["total"])
+                new_frame = int(value["total"])
+                previous_report_frame = current_frame if current_frame is not None and new_frame > current_frame else 0
+                current_frame = new_frame
                 frames[current_frame] = value
         elif line.startswith("EDEN_FRAME_PRESSURE "):
             value = values(line)
@@ -141,6 +145,40 @@ def analyze(log: str) -> dict:
             if ({"frame", "core", "compile_ns", "compile_calls", "evacuations"} <= value.keys()
                     and int(value["core"]) in range(4)):
                 jit_cores[int(value["frame"])][int(value["core"])] = value
+        elif line.startswith("EDEN_PRESENT_INTERVAL_WITNESS "):
+            # A pair of *compositor callbacks* measured by the opt-in native
+            # witness. It is not a guest frame, mutex ownership or GPU proof.
+            # The native record is emitted after the matching 5-s report.
+            value = values(line)
+            required = {"frame", "interval_ms", "jit_ns", "jit_calls",
+                        "jit0_ns", "jit1_ns", "jit2_ns", "evacuations",
+                        "cache_wait_ns", "gpu_fence_ns", "gpu_dispatch_ns",
+                        "guest_sync_ns"}
+            if (current_frame is not None and
+                    "scope=between_presents" in line.split() and
+                    required <= value.keys() and
+                    previous_report_frame < value["frame"] <= current_frame and
+                    value["frame"].is_integer() and
+                    value["interval_ms"] >= 100.0 and
+                    all(math.isfinite(value[k]) and value[k] >= 0 for k in required)):
+                witness = {
+                    "report_frame": current_frame,
+                    "present_frame": int(value["frame"]),
+                    "interval_ms": value["interval_ms"],
+                    "jit_ms": value["jit_ns"] / 1e6,
+                    "jit_calls": int(value["jit_calls"]),
+                    "jit_core_ms": {
+                        core: value[f"jit{core}_ns"] / 1e6 for core in range(3)
+                    },
+                    "evacuations": int(value["evacuations"]),
+                    "cache_wait_ms": value["cache_wait_ns"] / 1e6,
+                    "gpu_fence_ms": value["gpu_fence_ns"] / 1e6,
+                    "gpu_dispatch_ms": value["gpu_dispatch_ns"] / 1e6,
+                    "guest_sync_ms": value["guest_sync_ns"] / 1e6,
+                }
+                previous = present_witnesses.get(current_frame)
+                if previous is None or witness["interval_ms"] > previous["interval_ms"]:
+                    present_witnesses[current_frame] = witness
         elif line.startswith("EDEN_DEV_GUEST "):
             # The original report omits frame=. It is emitted directly
             # after EDEN_DEV_GPU for the same renderer snapshot.
@@ -213,6 +251,8 @@ def analyze(log: str) -> dict:
             row["domain_wait_ms:" + domain] = snap.get("window_wait_ns", 0) / 1e6
             row["domain_contended:" + domain] = snap.get("window_contended", 0)
             row["domain_blocked:" + domain] = snap.get("window_blocked", 0)
+        if frame in present_witnesses:
+            row["present_interval_witness"] = present_witnesses[frame]
         # Each core is already an exact 5s delta; NEVER delta it again.
         # Missing snapshots stay unknown, not zero; four workers can run
         # simultaneously and must never be mistaken for 20s of frame stall.
@@ -273,6 +313,9 @@ def analyze(log: str) -> dict:
             round(correlation(rows, "preflight_dispatches", "late50"), 3)
             if sum("preflight_dispatches" in row for row in rows) >= 3 else None
         ),
+        "present_interval_witnesses": [
+            present_witnesses[f] for f in keys if f in present_witnesses
+        ],
         "jit_core_summary": {
             core: {
                 "observed_windows": len(observed),
@@ -386,6 +429,7 @@ def self_test() -> None:
         "EDEN_FRAME_PRESSURE frame=150 gpu_full_ms=20 gpu_idle_ms=3500 gpu_dispatch_ms=1200 jit_ms=5",
         "EDEN_FRAME_JIT_CORE frame=150 core=0 compile_ns=3000000 compile_calls=5 evacuations=1",
         "EDEN_FRAME_JIT_CORE frame=150 core=1 compile_ns=2000000 compile_calls=8 evacuations=0",
+        "EDEN_PRESENT_INTERVAL_WITNESS frame=149 interval_ms=180.000 jit_ns=3000000 jit_calls=5 jit0_ns=1500000 jit1_ns=1500000 jit2_ns=0 evacuations=1 cache_wait_ns=2000000 gpu_fence_ns=500000 gpu_dispatch_ns=700000 guest_sync_ns=0 scope=between_presents",
         "EDEN_DEV_GPU frame=150 dispatch_calls=500 full_calls=10 full_ns=20000000 draws=100",
         "EDEN_SCHEDULER_PREFLIGHT frame=150 dispatched=3",
         "EDEN_GPU_DMA_SYNC frame=150 calls=1 ns=2500000 active_ns=3000000",
@@ -397,6 +441,7 @@ def self_test() -> None:
         "EDEN_FRAME_PRESSURE frame=300 gpu_full_ms=0 gpu_idle_ms=3800 gpu_dispatch_ms=1050 jit_ms=7",
         "EDEN_FRAME_JIT_CORE frame=300 core=0 compile_ns=2000000 compile_calls=2 evacuations=0",
         "EDEN_FRAME_JIT_CORE frame=300 core=1 compile_ns=5000000 compile_calls=4 evacuations=1",
+        "EDEN_PRESENT_INTERVAL_WITNESS frame=299 interval_ms=125.000 jit_ns=1000000 jit_calls=3 jit0_ns=0 jit1_ns=1000000 jit2_ns=0 evacuations=0 cache_wait_ns=0 gpu_fence_ns=7000000 gpu_dispatch_ns=100000 guest_sync_ns=0 scope=between_presents",
         "EDEN_DEV_GPU frame=300 dispatch_calls=900 full_calls=10 full_ns=20000000 draws=280",
         "EDEN_SCHEDULER_PREFLIGHT frame=300 dispatched=11",
         "EDEN_GPU_DMA_SYNC frame=300 calls=3 ns=13000000 active_ns=0",
@@ -449,6 +494,19 @@ def self_test() -> None:
     assert result["gpu_dma_sync"]["wait_calls"] == 2
     assert result["gpu_dma_sync"]["worst_frame_correlation"] is None
     assert analyze(sample.replace("EDEN_GPU_DMA_SYNC", "NO_DMA_SYNC"))["gpu_dma_sync"] is None
+    witnesses = result["present_interval_witnesses"]
+    assert len(witnesses) == 2
+    assert witnesses[0]["report_frame"] == 150
+    assert witnesses[0]["present_frame"] == 149
+    assert witnesses[0]["jit_ms"] == 3.0
+    assert witnesses[0]["jit_core_ms"][0] == 1.5
+    assert witnesses[0]["cache_wait_ms"] == 2.0
+    assert witnesses[1]["gpu_fence_ms"] == 7.0
+    assert result["rows"][0]["present_interval_witness"] == witnesses[0]
+    assert analyze(sample.replace("EDEN_PRESENT_INTERVAL_WITNESS", "OLD_WITNESS"))["present_interval_witnesses"] == []
+    assert len(analyze(sample.replace("scope=between_presents", "scope=unverified"))["present_interval_witnesses"]) == 0
+    assert len(analyze(sample.replace("frame=149 interval_ms=180.000", "frame=151 interval_ms=180.000"))["present_interval_witnesses"]) == 1
+    assert len(analyze(sample.replace("interval_ms=125.000", "interval_ms=99.000"))["present_interval_witnesses"]) == 1
     assert result["jit_core_summary"][0]["compile_ms"] == 5
     assert result["jit_core_summary"][0]["compile_calls"] == 7
     assert result["jit_core_summary"][0]["evacuations"] == 1
@@ -547,6 +605,15 @@ def main() -> None:
               " wait; do not add it to completed time or infer deadlock alone.")
     else:
         print("GPU_PULLER_SEMAPHORE unavailable (pre-R406 logs)")
+    if report["present_interval_witnesses"]:
+        print("PRESENT_INTERVAL_WITNESSES count=" + str(len(report["present_interval_witnesses"])))
+        for witness in sorted(report["present_interval_witnesses"],
+                              key=lambda entry: entry["interval_ms"], reverse=True)[:5]:
+            print("PRESENT_INTERVAL_WITNESS", witness)
+        print("NOTE: These are worker-counter deltas BETWEEN TWO PRESENTATIONS,"
+              " not per-guest-frame timing, GPU ownership or a proven freeze cause.")
+    else:
+        print("PRESENT_INTERVAL_WITNESSES unavailable (no validated opt-in pair)")
     if report["jit_core_summary"]:
         print("GUEST_JIT_CORE_INTERVALS", report["jit_core_summary"])
         print("NOTE: JIT per-core intervals are overlapping CPU work, not wall-clock"
