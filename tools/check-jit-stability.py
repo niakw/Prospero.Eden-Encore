@@ -7,7 +7,7 @@ root = Path(__file__).resolve().parents[1]
 cmake = (root / 'headless/CMakeLists.txt').read_text()
 main = (root / 'headless/main.cpp').read_text()
 jit_list = (root / 'headless/jit_list.h').read_text()
-jit_links = (root / 'headless/dynarmic/jit_links.inc').read_text()
+jit_links = (root / 'vendor/encore-active/eden-core/dynarmic/shared-jit/jit_links.inc').read_text()
 
 assert 'option(EDEN_SHARED_JIT "Enable the experimental cross-core A64 JIT" OFF)' in cmake
 assert 'option(EDEN_JIT_COMPILE_BATCH "Compile bounded A64 successor chains on a cache miss" OFF)' in cmake
