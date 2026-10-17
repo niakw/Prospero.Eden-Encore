@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 109
+**Non, this is not an exhaustive repository-wide inventory.** The 111
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,17 +24,17 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 109 | 90 | 224 |
+| Graphe connu | 111 | 92 | 227 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 55 | 46 | 122 |
+| SOURCE — lecture effectuée, preuve insuffisante | 57 | 48 | 125 |
 | OPEN — question technique non résolue | 15 | 15 | 27 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **70** | **60** | **149** |
+| **Encore à qualifier (SOURCE + OPEN)** | **72** | **62** | **152** |
 | Dont priorité P0 (SOURCE + OPEN) | 33 | 28 | 82 |
 
-Le **noyau restant** compte donc 70 critères répartis sur
-60 fichiers et 149 mentions fonction/contrat :
-15 OPEN et 55 SOURCE.
+Le **noyau restant** compte donc 72 critères répartis sur
+62 fichiers et 152 mentions fonction/contrat :
+15 OPEN et 57 SOURCE.
 Cela **ne signifie pas 138 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 Le hors-inventaire (HID, IPC, host-syncpoints, variantes vendor...) n'est
@@ -80,13 +80,13 @@ sont des sources maintenues sous
 sélectionnées uniquement en `EDEN_DEV_PROFILE`.
 `tools/check-vendor-consolidation-debt.py` vérifie la parité du corps
 C++ avec l'override généré auparavant et recense les sorties CMake dans
-`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **60 sites restants**
+`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **58 sites restants**
 après onze migrations (F02, F03, F04, N02, N03, H21, H22, F05, F06, F07 et F08). Un site à paramètres variables peut
 produire plusieurs fichiers réels. Les ressources générées ne doivent
 pas être confondues avec des overrides de code.
 
 Le second inventaire compte 21 générateurs `write_derived()` dans les modules,
-soit **81 sites au total**, mais n'inclut **pas** les sept modules
+soit **79 sites au total**, mais n'inclut **pas** les sept modules
 `X01–X07` qui créent une sortie par `file(WRITE)` ou transforment
 indirectement une variable-source. Ils sont suivis séparément dans
 `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`, avec contrôle hôte de leur
@@ -337,6 +337,8 @@ function/contract tokens are checked by CI for existence only; the
 | F10 | P1 | F09 | vendor/encore-active/eden-core/src/core/internal_network/network_interface.cpp | GetAvailableNetworkInterfaces; GetSelectedNetworkInterface; SelectFirstNetworkInterface | HOST | tools/check-vendor-consolidation-debt.py | Three FreeBSD conditional substitutions are in maintained native C++ with an old-generator parity and core selection PASS in preflight #39058024476; native interface snapshot unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39058024476) |
 | F11 | P1 | F08 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/filesystem.cpp | FileSystemController::CreateFactories | SOURCE | tools/check-vendor-consolidation-debt.py | Source maintained and host parity/selection check written; completed CI and device firmware behavior not yet validated | 🟡 Source étudiée |
 | F12 | P1 | F11 | vendor/encore-active/eden-core/src/core/file_sys/fsmitm_romfsbuild.cpp | RomFSBuildContext::AddDirectory; RomFSBuildContext::AddFile | SOURCE | tools/check-vendor-consolidation-debt.py | Previously CMake-generated RomFS parent ownership source is maintained with byte-identical two-field/two-assignment rewrite oracle; completed CI and game mod/ROMFS behavior not yet proven | 🟡 Source étudiée |
+| F13 | P1 | F11 | vendor/encore-active/eden-core/include/core/file_sys/bis_factory.h | BISFactory( | SOURCE | tools/check-vendor-consolidation-debt.py | Native header provides identical constructor default firmware argument and isolated include-root selection; pending successful preflight and native device verification | 🟡 Source étudiée |
+| F14 | P1 | F13 | vendor/encore-active/eden-core/src/core/file_sys/bis_factory.cpp | BISFactory::BISFactory; BISFactory::GetModificationLoadRoot | SOURCE | tools/check-vendor-consolidation-debt.py | Maintained constructor, conditional firmware root and read-only modification lookup have exact old-generator parity; native path selection and behavior not yet verified on device | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
