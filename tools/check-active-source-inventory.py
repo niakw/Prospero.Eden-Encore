@@ -7,6 +7,7 @@ It is not a function audit, compiler check or console-test certificate.
 from pathlib import Path
 import json
 import re
+import runpy
 
 root = Path(__file__).resolve().parents[1]
 active = root / "vendor/encore-active"
@@ -15,7 +16,7 @@ audit = (root / "docs/EDEN_CORE_AUDIT_DEPENDENCIES.md").read_text()
 begin, end = "<!-- ACTIVE_SOURCE_CATALOG_START -->", "<!-- ACTIVE_SOURCE_CATALOG_END -->"
 assert document.count(begin) == document.count(end) == 1
 section = document.split(begin, 1)[1].split(end, 1)[0]
-suffixes = {".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".inc", ".inl", ".s", ".S", ".asm"}
+suffixes = {".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".inc", ".inl", ".s", ".S", ".asm", ".cl"}
 physical = sorted(
     p.relative_to(active).as_posix()
     for p in active.rglob("*")
@@ -187,6 +188,17 @@ for consumer in ("sockets/bsd.cpp", "sockets/sfdnsres.cpp", "nifm/nifm.cpp"):
     body = (active / "eden-backports/src/core/hle/service" / consumer).read_text()
     assert 'Eden::Encore::kGuestNetworkOffline' in body, ("guest network policy not used", consumer)
 print("ENCORE_NATIVE_GUEST_NETWORK_POLICY_PASS consumers=3")
+
+# Native RADV is installed from exactly twelve versioned inputs,
+# including an OpenCL geometry shader that the C/C++ scanner once omitted.
+installer_inputs = runpy.run_path(str(root / "tools/install-vendored-radv.py"))["PATHS"]
+mesa_inputs = {"ps5-mesa/" + path for path in installer_inputs}
+mesa_physical = {path for path in physical if path.startswith("ps5-mesa/")}
+assert len(mesa_inputs) == 12 and mesa_inputs == mesa_physical
+assert all(path in graph for path in mesa_inputs), (
+    "missing RADV source owner", sorted(path for path in mesa_inputs if path not in graph))
+assert "ps5-mesa/src/amd/vulkan/cl/radv_gs_compute.cl" in mesa_inputs
+print("ENCORE_DRIVER_INPUT_COVERAGE_PASS", f"inputs={len(mesa_inputs)}", "opencl=1")
 
 assert len(physical) == len(set(physical))
 print("ENCORE_ACTIVE_SOURCE_CATALOG_PASS",

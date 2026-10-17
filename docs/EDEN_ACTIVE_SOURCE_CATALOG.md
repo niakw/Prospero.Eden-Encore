@@ -2,15 +2,15 @@
 
 **Branche :** `dev/ps5-sparse-jit`. **Relevé :** 17 octobre 2026.
 
-Cet inventaire recense chaque fichier C/C++, en-tête et fragment source
-(`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, ainsi que les variantes voisines)
+Cet inventaire recense chaque fichier C/C++, en-tête, fragment source et
+source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **189 fichiers** de code et d'en-têtes enregistrés.
-- **98 fichiers** possèdent une correspondance de chemin *exacte*
+- **190 fichiers** de code et d'en-têtes enregistrés.
+- **110 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
-- **91 fichiers** n'ont pas encore de ligne de graphe correspondant
+- **80 fichiers** n'ont pas encore de ligne de graphe correspondant
   exactement à leur chemin. Cela **ne prouve pas** qu'ils n'ont jamais été
   examinés, ni qu'ils sont effectivement compilés.
 - Le manifeste des backports verrouille **83 fichiers livrés**, dont
@@ -210,17 +210,18 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-vulkan/vulkan_swapchain.cpp` | `maintained-override` | V03 |
 | `eden-vulkan/vulkan_window_adapt_pass.cpp` | `maintained-override` | V29 |
 | `eden-vulkan/vulkan_wrapper.cpp` | `maintained-override` | V30 |
-| `ps5-mesa/src/amd/vulkan/meta/radv_meta_clear.c` | `driver-fork` | — |
-| `ps5-mesa/src/amd/vulkan/meta/radv_meta_resolve.c` | `driver-fork` | — |
-| `ps5-mesa/src/amd/vulkan/radv_cmd_buffer.c` | `driver-fork` | — |
-| `ps5-mesa/src/amd/vulkan/radv_descriptor_update_template.c` | `driver-fork` | — |
-| `ps5-mesa/src/amd/vulkan/radv_descriptor_update_template.h` | `driver-fork` | — |
-| `ps5-mesa/src/amd/vulkan/radv_physical_device.c` | `driver-fork` | — |
-| `ps5-mesa/src/amd/vulkan/radv_pipeline.c` | `driver-fork` | — |
-| `ps5-mesa/src/amd/vulkan/winsys/ps5/radv_ps5_platform.c` | `driver-fork` | — |
-| `ps5-mesa/src/amd/vulkan/winsys/ps5/radv_ps5_winsys.c` | `driver-fork` | — |
-| `ps5-mesa/src/util/disk_cache_os.c` | `driver-fork` | — |
-| `ps5-mesa/src/vulkan/wsi/wsi_common_videoout.c` | `driver-fork` | — |
+| `ps5-mesa/src/amd/vulkan/cl/radv_gs_compute.cl` | `driver-fork` | R23 |
+| `ps5-mesa/src/amd/vulkan/meta/radv_meta_clear.c` | `driver-fork` | R12 |
+| `ps5-mesa/src/amd/vulkan/meta/radv_meta_resolve.c` | `driver-fork` | R13 |
+| `ps5-mesa/src/amd/vulkan/radv_cmd_buffer.c` | `driver-fork` | R14 |
+| `ps5-mesa/src/amd/vulkan/radv_descriptor_update_template.c` | `driver-fork` | R15 |
+| `ps5-mesa/src/amd/vulkan/radv_descriptor_update_template.h` | `driver-fork` | R16 |
+| `ps5-mesa/src/amd/vulkan/radv_physical_device.c` | `driver-fork` | R17 |
+| `ps5-mesa/src/amd/vulkan/radv_pipeline.c` | `driver-fork` | R18 |
+| `ps5-mesa/src/amd/vulkan/winsys/ps5/radv_ps5_platform.c` | `driver-fork` | R19 |
+| `ps5-mesa/src/amd/vulkan/winsys/ps5/radv_ps5_winsys.c` | `driver-fork` | R20 |
+| `ps5-mesa/src/util/disk_cache_os.c` | `driver-fork` | R21 |
+| `ps5-mesa/src/vulkan/wsi/wsi_common_videoout.c` | `driver-fork` | R22 |
 <!-- ACTIVE_SOURCE_CATALOG_END -->
 
 ## Fichiers de build du snapshot de backports (hors sources C/C++)
