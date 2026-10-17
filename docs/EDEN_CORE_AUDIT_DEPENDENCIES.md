@@ -24,16 +24,16 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 295 | 276 | 603 |
+| Graphe connu | 295 | 274 | 603 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 240 | 231 | 498 |
+| SOURCE — lecture effectuée, preuve insuffisante | 240 | 229 | 498 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **255** | **245** | **526** |
+| **Encore à qualifier (SOURCE + OPEN)** | **255** | **243** | **526** |
 | Dont priorité P0 (SOURCE + OPEN) | 105 | 100 | 246 |
 
 Le **noyau restant** compte donc 255 critères répartis sur
-245 fichiers et 526 mentions fonction/contrat :
+243 fichiers et 526 mentions fonction/contrat :
 15 OPEN et 240 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
@@ -240,12 +240,12 @@ function/contract tokens are checked by CI for existence only; the
 | B01 | P1 | - | headless/CMakeLists.txt | EDEN_SHARED_JIT; EDEN_JIT_COMPILE_BATCH | SOURCE | tools/check-native-build-recipe.py | Verify selected native build flags before claiming integration | 🟡 Source étudiée |
 | B02 | P1 | B01 | headless/CMakeLists.txt | write_derived; queue_slot_repair | HOST | tools/check-native-gpu-queue-slot-lifetime-host.py | Check native toolchain separately; host regression covers derived slot lifecycle | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-gpu-queue-slot-lifetime-host.py) |
 | B04 | P1 | B01 | vendor/encore-active/compiler-rt/emutls.c | emutls_key_destructor; __emutls_get_address | SOURCE | tools/check-vendor-consolidation-debt.py | One exact pinned compiler-rt TLS destructor-round override is now source-maintained; platform TLS execution and shutdown lifetime remain unproved | 🟡 Source étudiée |
-| B03 | P1 | B01 | vendor/sources/eden/src/common/slot_vector.h | SlotId insert( | SOURCE | headless/slot_vector_recovery.cmake | Direct file(WRITE) output X02 guards throwing constructors and returns the reserved slot to free_list; exact source selected through the recovery include path, no maintained override yet | 🟡 Source étudiée |
+| B03 | P1 | B01 | vendor/encore-active/eden-core/overrides/slot-vector/common/slot_vector.h | SlotId insert( | SOURCE | tools/check-vendor-consolidation-debt.py | Former X02 recovery is maintained as exact Encore header with isolated include priority; native exception behavior unproved | 🟡 Source étudiée |
 | Q01 | P1 | B02 | vendor/sources/eden/src/common/bounded_threadsafe_queue.h | TryEmplace; Pop; std::construct_at | HOST | tools/check-native-gpu-queue-slot-lifetime-host.py | No claim about a specific game's resource lifetime | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-gpu-queue-slot-lifetime-host.py) |
 | Q02 | P1 | Q01 | headless/gpu_queue_stop_wait.inc | EmplaceWaitWithStopToken | SOURCE | tools/check-gpu-producer-stop.py | Keep stop-aware producer wake and ownership checks | 🟡 Source étudiée |
 | Q03 | P1 | Q01,Q02 | vendor/encore-active/eden-gpu/gpu_thread_dev.cpp | ThreadManager::RunWorker; ThreadManager::PushCommand; ThreadManager::Stop | SOURCE | tools/check-vendored-gpu-thread.py | Worker can stall without fatal exception; prove progress separately | 🟡 Source étudiée |
 | Q04 | P1 | Q03 | vendor/sources/eden/src/video_core/gpu.cpp | GPU::OnCPURead; GPU::WaitForSyncOperation; GPU::TickWork | SOURCE | docs/2026-10-16_GPU_SYNC_TICK_SNAPSHOT.md | Check queued CPU read tick dependencies before any FIFO modification | 🟡 Source étudiée |
-| Q05 | P1 | Q04,B03 | vendor/sources/eden/src/video_core/macro.cpp | MacroJIT_SendThunk; MacroJITx64Impl::Execute | SOURCE | headless/macro_recovery.cmake | Direct file(WRITE) X01 catches exceptions in the macro JIT thunk and rethrows after returning to C++; restore exact source ownership and ABI before migration, not a runtime proof | 🟡 Source étudiée |
+| Q05 | P1 | Q04,B03 | vendor/encore-active/eden-core/src/video_core/macro.cpp | MacroJIT_SendThunk; MacroJITx64Impl::Execute | SOURCE | tools/check-vendor-consolidation-debt.py | Former X01 MacroJIT exception recovery is maintained as exact Encore source, with byte-parity oracle; native unwind unproved | 🟡 Source étudiée |
 | Q06 | P0 | Q03 | vendor/encore-active/eden-gpu/gpu_thread_quiet.cpp | ThreadManager::RunWorker; ThreadManager::Stop | SOURCE | docs/EDEN_ACTIVE_SOURCE_CATALOG.md | Native non-diagnostic GPU worker is a separate maintained variant; verify shutdown and FIFO completion; source-level ownership only, console proof pending | 🟡 Source étudiée |
 | Q07 | P0 | Q02 | vendor/encore-active/eden-gpu/include/common/bounded_threadsafe_queue.h | EmplaceWaitWithStopToken; TryPop | SOURCE | docs/EDEN_ACTIVE_SOURCE_CATALOG.md | Maintained queue stop-token and element lifetime must be consistent in GPU worker variants; source-level ownership only, console proof pending | 🟡 Source étudiée |
 | Q08 | P0 | Q06,Q07 | vendor/encore-active/eden-gpu/include/video_core/gpu_thread.h | PushCommand; RunWorker | SOURCE | docs/EDEN_ACTIVE_SOURCE_CATALOG.md | GPU worker shared ABI and shutdown ordering apply to both quiet and diagnostic implementations; source-level ownership only, console proof pending | 🟡 Source étudiée |
@@ -633,19 +633,11 @@ sélectionnées par le build.
 
 ### Overrides à matérialisation directe — fonctions identifiées
 
-- **X01** (`macro_recovery.cmake`) crée un `macro_recovery.cpp` via
-  `file(WRITE)` : les fonctions `MacroJIT_SendThunk` et
-  `MacroJITx64Impl::Execute` sont maintenant suivies par Q05. Les captures
-  d'exceptions dans le thunk, l'arrêt du programme et la remontée de l'erreur
-  sont interdépendants.
-- **X02** (`slot_vector_recovery.cmake`) produit un en-tête
-  `slot_vector.h` dans un chemin de récupération distinct. La méthode
-  `SlotId insert(Args&&... args)` est suivie par B03 ; elle restaure un
-  emplacement de la free-list lorsque la construction échoue.
-
-Les deux modules restent **non migrés** : ils modifient du code, même s'ils
-n'utilisent pas `write_derived()`. Les remplacer exige une parité de
-contenu et le maintien des chemins d'inclusion en build incrémental.
+Les deux anciennes transformations indirectes X01 (MacroJIT) et X02
+(SlotVector) sont maintenant **migrées** vers les sources maintenues dans
+`vendor/encore-active/eden-core`. Q05 et B03 suivent désormais les chemins
+compilés ; les vérifications hôtes reconstruisent strictement les anciens
+résultats sans les générer pendant CMake. La validation console reste ouverte.
 
 ## Backport patch source-target coverage — audited 2026-10-17
 
