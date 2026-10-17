@@ -293,6 +293,13 @@ Result KConditionVariable::Wait(KProcessAddress addr, u64 key, u32 value, s64 ti
             R_THROW(ResultTerminationRequested);
         }
 
+        // A missing condition-variable key cannot publish the waiter flag.
+        // Reject it before handing off the guest mutex or entering a wait.
+        if (!GetCurrentMemory(m_system.Kernel()).IsValidVirtualAddressRange(key, sizeof(u32))) {
+            slp.CancelSleep();
+            R_THROW(ResultInvalidCurrentMemory);
+        }
+
         // Update the value and process for the next owner.
         {
             // Remove waiter thread.
