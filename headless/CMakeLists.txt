@@ -1072,36 +1072,21 @@ if(EDEN_DEV_PROFILE)
     list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_FS_SYSTEM}")
     list(REMOVE_ITEM core_sources "hle/service/filesystem/fsp/fs_i_storage.cpp")
     list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_FS_STORAGE}")
-    # HLE service requests: handling time per service command, and the guest's
-    # svcSendSyncRequest latency (queueing behind other requests included).
-    file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/service.cpp" hle_source)
-    foreach(hle_call "        InvokeRequest(ctx);" "            InvokeRequestTipc(ctx);")
-        string(FIND "${hle_source}" "${hle_call}" hle_at)
-        if(hle_at LESS 0)
-            message(FATAL_ERROR "Pinned HLE request dispatch changed")
+    # DEV-only HLE service/IPC diagnostics: select maintained translation units,
+    # never edit pinned upstream C++ using configure-time text replacements.
+    set(EDEN_MAINTAINED_PROFILE_HLE_SERVICE
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/service/service.cpp")
+    set(EDEN_MAINTAINED_PROFILE_SVC_IPC
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/kernel/svc/svc_ipc.cpp")
+    foreach(maintained_source IN ITEMS
+            "${EDEN_MAINTAINED_PROFILE_HLE_SERVICE}" "${EDEN_MAINTAINED_PROFILE_SVC_IPC}")
+        if(NOT EXISTS "${maintained_source}")
+            message(FATAL_ERROR "Missing maintained HLE/IPC DEV source: ${maintained_source}")
         endif()
-        string(REPLACE "${hle_call}" "        {\n            const bool profile_hle = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed);\n            const auto hle_start = profile_hle ? ::Eden::Performance::NowNs() : 0;\n${hle_call}\n            if (profile_hle)\n                ::Eden::Performance::RecordHle(service_name, ctx.GetCommand(), ::Eden::Performance::NowNs() - hle_start);\n        }" hle_source "${hle_source}")
     endforeach()
-    # Named-path filesystem requests (save data): the requesting guest thread and its
-    # return chain, from its context saved at svcSendSyncRequest (boot-race probe).
-    string(REPLACE "            if (profile_hle)\n                ::Eden::Performance::RecordHle(service_name, ctx.GetCommand(), ::Eden::Performance::NowNs() - hle_start);\n"
-        "            if (profile_hle)\n                ::Eden::Performance::RecordHle(service_name, ctx.GetCommand(), ::Eden::Performance::NowNs() - hle_start);\n            if (::Eden::Performance::trace_fs_callers.load(std::memory_order_relaxed) && std::string_view{service_name} == \"IFileSystem\") {\n                std::string frames;\n                for (const auto& entry : Core::GetBacktrace(&ctx.GetThread()))\n                    frames += fmt::format(\" {}+{:X}\", entry.module, entry.offset);\n                LOG_WARNING(Service_FS, \"EDEN_FS_CALLER command={} thread={} name={} frames={}\", ctx.GetCommand(),\n                            ctx.GetThread().GetThreadId(), Core::GetThreadName(&ctx.GetThread()).value_or(\"-\"), frames);\n            }\n"
-        hle_source "${hle_source}")
-    write_derived("${PORT_BUILD_DIR}/hle_service.cpp" "#include \"${EDEN_PORT_DIR}/performance.h\"\n#include \"core/arm/debug.h\"\n${hle_source}")
-    list(REMOVE_ITEM core_sources "hle/service/service.cpp")
-    list(APPEND core_sources "${PORT_BUILD_DIR}/hle_service.cpp")
-    file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/kernel/svc/svc_ipc.cpp" ipc_source)
-    set(ipc_old "    R_RETURN(session->SendSyncRequest(kernel, message, buffer_size));")
-    string(FIND "${ipc_source}" "${ipc_old}" ipc_at)
-    if(ipc_at LESS 0)
-        message(FATAL_ERROR "Pinned SendSyncRequest changed")
-    endif()
-    # Per-thread attribution only when Detailed Logging is on. Capture the
-    # requesting thread BEFORE SendSyncRequest can block or reschedule it.
-    string(REPLACE "${ipc_old}" "    const bool ipc_profile = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed);\n    const auto ipc_start = ipc_profile ? ::Eden::Performance::NowNs() : 0;\n    const auto ipc_tid = ipc_profile ? GetCurrentThread(kernel).GetThreadId() : 0;\n    auto* const ipc_slot = ipc_profile ? ::Eden::Performance::BeginGuestIpc(ipc_tid, ipc_start) : nullptr;\n    const Result ipc_result = session->SendSyncRequest(kernel, message, buffer_size);\n    if (ipc_profile) ::Eden::Performance::FinishGuestIpc(ipc_slot, ipc_tid, ipc_start, ::Eden::Performance::NowNs() - ipc_start);\n    R_RETURN(ipc_result);" ipc_source "${ipc_source}")
-    write_derived("${PORT_BUILD_DIR}/svc_ipc.cpp" "#include \"${EDEN_PORT_DIR}/performance.h\"\n${ipc_source}")
-    list(REMOVE_ITEM core_sources "hle/kernel/svc/svc_ipc.cpp")
-    list(APPEND core_sources "${PORT_BUILD_DIR}/svc_ipc.cpp")
+    list(REMOVE_ITEM core_sources "hle/service/service.cpp" "hle/kernel/svc/svc_ipc.cpp")
+    list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_HLE_SERVICE}"
+                             "${EDEN_MAINTAINED_PROFILE_SVC_IPC}")
 endif()
 if(EDEN_A32_FASTMEM)
     # The window spans 4 GiB: only 32-bit applications get it as their fastmem arena.
