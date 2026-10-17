@@ -90,6 +90,7 @@ with tempfile.TemporaryDirectory(prefix="encore-gpu-granularity-") as td:
     derivation = temp / "derive.cmake"
     derived = temp / "native.cpp"
     derivation.write_text(
+        "cmake_minimum_required(VERSION 3.16)\n"
         f'file(READ "{pinned.as_posix()}" eden_gpu_span_src)\n'
         f'include("{helper.as_posix()}")\n'
         f'file(WRITE "{derived.as_posix()}" "' + '$' + '{eden_gpu_span_src}' + '")\n'
