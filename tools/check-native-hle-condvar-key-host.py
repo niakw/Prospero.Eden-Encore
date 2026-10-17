@@ -64,6 +64,7 @@ constexpr Result ResultSuccess = 0;
 constexpr Result ResultInvalidCurrentMemory = 1;
 constexpr Result ResultTerminationRequested = 2;
 constexpr Result ResultTimedOut = 3;
+namespace Svc { constexpr u32 HandleWaitMask = 0x80000000U; }
 #define R_THROW(r) return (r)
 #define R_UNLESS(condition, r) do { if (!(condition)) return (r); } while (0)
 #define R_RETURN(r) return (r)
