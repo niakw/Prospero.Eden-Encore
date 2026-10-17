@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 73
+**Non, this is not an exhaustive repository-wide inventory.** The 81
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,18 +24,18 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 73 | 64 | 135 |
+| Graphe connu | 81 | 68 | 155 |
 | HOST — preuve ciblée hôte | 25 | 22 | 49 |
-| SOURCE — lecture effectuée, preuve insuffisante | 27 | 26 | 52 |
+| SOURCE — lecture effectuée, preuve insuffisante | 35 | 32 | 72 |
 | OPEN — question technique non résolue | 15 | 15 | 27 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **42** | **|** | **41** | **|** | **79** |
-| Dont priorité P0 (SOURCE + OPEN) | 16 | 16 | 36 |
+| **Encore à qualifier (SOURCE + OPEN)** | **50** | **46** | **99** |
+| Dont priorité P0 (SOURCE + OPEN) | 21 | 18 | 50 |
 
-Le **noyau restant** compte donc 42 critères répartis sur
-41 fichiers et 79 mentions fonction/contrat :
-15 OPEN et 27 SOURCE.
-Cela **ne signifie pas 79 fonctions jamais lues** :
+Le **noyau restant** compte donc 50 critères répartis sur
+46 fichiers et 99 mentions fonction/contrat :
+15 OPEN et 35 SOURCE.
+Cela **ne signifie pas 99 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 Le hors-inventaire (HID, IPC, host-syncpoints, variantes vendor...) n'est
 pas chiffrable honnêtement sans un relevé exhaustif supplémentaire.
@@ -212,12 +212,20 @@ function/contract tokens are checked by CI for existence only; the
 | J12 | P1 | J08 | vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_64.cpp | DynarmicCallbacks64::MemoryRead32; CheckMemoryAccess | HOST | tools/check-native-jit-memory-read-guard-host.py | Pinned vs derived read rejection A64 host PASS in run #38996913209; console unverified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-jit-memory-read-guard-host.py) |
 | J13 | P1 | J08 | vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_32.cpp | DynarmicCallbacks32::MemoryRead32; CheckMemoryAccess | HOST | tools/check-native-jit-memory-read-guard-host.py | Pinned vs derived read rejection A32 host PASS in run #38996913209; console unverified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-jit-memory-read-guard-host.py) |
 | R11 | P1 | R01,R02 | vendor/sources/eden/src/video_core/memory_manager.cpp | MemoryManager::IsGranularRange | HOST | tools/check-native-gpu-granular-bounds-host.py | Native-derived host regression and full preflight #39017376187 SUCCESS; three CodeQL analyses #39017376169 SUCCESS; console/performance unverified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39017376187) |
+| H18 | P0 | H02,H03 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp | KScheduler::ScheduleImplFiber; KScheduler::SwitchThread; KScheduler::Unload; KScheduler::Reload | SOURCE | tools/check-upstream-guest-scheduler-locks.py | C32 host permit transfer passed; live fiber scheduling and guest PC advancement still unproved | 🟡 Source étudiée |
+| H19 | P0 | H03 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_thread.cpp | KThread::UpdateState; KThread::Continue; KThread::SetState | SOURCE | tools/verify/hle/check-native-hle-address-wake-host.py | Runnable transition and suspension flags need end-to-end guest progression evidence | 🟡 Source étudiée |
+| J14 | P0 | J04,H18 | vendor/sources/eden/src/core/cpu_manager.cpp | CpuManager::RunThread; CpuManager::MultiCoreRunGuestThread; CpuManager::HandleInterrupt | SOURCE | docs/DEFERRED_JIT_QUIESCENCE_ARCHITECTURE_2026-10-17.md | Guest CPU worker resumes by fiber; no native PC sample correlated to wake and JIT entry | 🟡 Source étudiée |
+| J15 | P0 | J03,H18 | vendor/sources/eden/src/core/hle/kernel/physical_core.cpp | PhysicalCore::LoadContext; PhysicalCore::SaveContext | SOURCE | tools/check-native-physical-core-interrupt-ack-host.py | Need real context restoration proof after migration; interrupt ACK is not JIT resume | 🟡 Source étudiée |
+| F02 | P1 | B01 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_file.cpp | IFile::Read; IFile::Write; IFile::Flush | SOURCE | tools/check-vendor-consolidation-debt.py | IFile DEV override moved to maintained TU; source parity gate and host build required | 🟡 Source étudiée |
+| F03 | P1 | F02 | vendor/sources/eden/src/core/hle/service/filesystem/fsp/fs_i_storage.cpp | IStorage::Read | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | DEV storage diagnostic still generated in CMake; preserve short-read checks when migrating | 🟡 Source étudiée |
+| N02 | P1 | N01 | vendor/sources/eden/src/core/hle/service/nvdrv/devices/nvhost_ctrl.cpp | nvhost_ctrl::IocCtrlEventWait; nvhost_ctrl::IocCtrlClearEventWait | SOURCE | docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md | Host syncpoint event-wait diagnostic still generated; callback-to-guest wake latency not proven | 🟡 Source étudiée |
+| V11 | P0 | V02,V04 | headless/graphics.cpp | GraphicsWindow::OnFrameDisplayed; CaptureFramePressure | SOURCE | tools/check-ps5-quiet-frame-pressure.py | Presentation-interval witnesses are callback pairs, not guest game logic or GPU ownership | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
 ## Couverture encore NON exhaustive (à inventorier, pas à déclarer OK)
 
-Outre les **73 lignes du graphe**, le dépôt comprend d'autres composants
+Outre les **81 lignes du graphe**, le dépôt comprend d'autres composants
 susceptibles d'influencer le symptôme observé, dont les interfaces HID/commandes
 en jeu, l'ordonnancement des services IPC, la restitution audio et les chemins
 host-syncpoint. **Ils ne sont pas tous vérifiés par le présent tableau.**
@@ -237,7 +245,7 @@ host-syncpoint. **Ils ne sont pas tous vérifiés par le présent tableau.**
   couvertes par cet audit de stabilité native ; inventaire complet
   du dépôt ≠ assurance de correction de FC27.
 
-**Règle de clôture :** aucune réponse ne doit présenter « 73 lignes »
+**Règle de clôture :** aucune réponse ne doit présenter « 81 lignes »
 comme « toutes les fonctions restantes ». L'inventaire s'étend à mesure
 des véritables appels, et une tâche n'est verte que pour son critère
 de validation nommé.
