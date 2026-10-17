@@ -821,7 +821,7 @@ void GraphicsWindow::OnFrameDisplayed() {
                     std::printf("EDEN_PRESENT_INTERVAL_WITNESS frame=%u interval_ms=%.3f "
                                 "jit_ns=%llu jit_calls=%llu jit0_ns=%llu jit1_ns=%llu jit2_ns=%llu "
                                 "evacuations=%llu cache_wait_ns=%llu gpu_fence_ns=%llu "
-                                "gpu_dispatch_ns=%llu guest_sync_ns=%llu scope=between_presents\\n",
+                                "gpu_dispatch_ns=%llu guest_sync_ns=%llu scope=between_presents\n",
                         vulkan_interval_witness.peak_frame, vulkan_interval_witness.peak_ms,
                         d[11], d[16] + d[17] + d[18] + d[19],
                         d[12], d[13], d[14],
