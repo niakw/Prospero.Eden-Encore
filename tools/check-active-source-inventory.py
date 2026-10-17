@@ -200,6 +200,30 @@ assert all(path in graph for path in mesa_inputs), (
 assert "ps5-mesa/src/amd/vulkan/cl/radv_gs_compute.cl" in mesa_inputs
 print("ENCORE_DRIVER_INPUT_COVERAGE_PASS", f"inputs={len(mesa_inputs)}", "opencl=1")
 
+# Patch-hunk owners in the versioned production backports; this checks
+# known modified code sites, not the final runtime branch or GPU correctness.
+modified_shipping = (
+    ("eden-backports/src/core/device_memory_manager.h", ["std::shared_lock registry_lk(process_registry_guard);","AtomicLoadPhysical"]),
+    ("eden-backports/src/core/device_memory_manager.inc", ["std::unique_lock lk(mapping_guard);","AtomicStoreReverse"]),
+    ("eden-backports/src/core/memory.cpp", ["IsDirectBackingAlias","AddressSpaceContains"]),
+    ("eden-backports/src/core/hle/kernel/k_scheduler.cpp", ["m_context_guard.try_lock()"]),
+    ("eden-backports/src/core/hle/kernel/k_thread.h", ["std::mutex m_context_guard{};"]),
+    ("eden-backports/src/core/hle/service/nvdrv/devices/nvmap.cpp", ["EDEN_NVMAP_REJECT_ZERO_ADDRESS","LockForMapDeviceAddressSpace"]),
+    ("eden-backports/src/core/hle/service/nvnflinger/buffer_queue_core.cpp", ["dequeue_epoch.fetch_add","dequeue_epoch.load"]),
+    ("eden-backports/src/core/hle/service/nvnflinger/buffer_queue_core.h", ["dequeue_epoch"]),
+    ("eden-backports/src/core/hle/service/sockets/sfdnsres.cpp", ["kGuestNetworkOffline"]),
+    ("eden-backports/src/video_core/renderer_vulkan/vk_buffer_cache.cpp", ["return scheduler.CurrentTick();"]),
+    ("eden-backports/src/video_core/buffer_cache/buffer_cache.h", ["SynchronizeBufferWrites","gpu_modified_ranges"]),
+    ("eden-backports/src/video_core/texture_cache/texture_cache.h", ["NULL_IMAGE_VIEW_ID","modification_tick == modification_tick"]),
+)
+for relative, anchors in modified_shipping:
+    assert relative in graph and (active / relative).is_file(), (
+        "missing function owner in production backport", relative)
+    body = (active / relative).read_text()
+    for anchor in anchors:
+        assert anchor in body, ("shipping patch hunk moved", relative, anchor)
+print("ENCORE_SHIPPING_BACKPORT_HOTPATH_OWNER_PASS", f"paths={len(modified_shipping)}")
+
 assert len(physical) == len(set(physical))
 print("ENCORE_ACTIVE_SOURCE_CATALOG_PASS",
       f"files={len(physical)}",

@@ -116,6 +116,15 @@ dans la version normale.
 
 ## Prochain ordre de migration
 
+- Les **12 backports prioritaires** `M12-M14`, `H37-H38`,
+  `N11-N14` et `V50-V52` ont leurs fonctions réellement modifiées
+  enregistrées après comparaison des fichiers complets avec les sources
+  épinglées : mappings, scheduler, nvmap, queue, DNS, caches GPU.
+  Ces sources sont installées avant les overrides natifs optionnels ;
+  leur présence sur disque ne prouve pas qu'elles sont la dernière unité
+  effectivement compilée. Les marqueurs de hunks sont gardés par un test hôte.
+
+
 - `ps5-mesa` : les **12 entrées réelles du pilote natif**, dont
   `src/amd/vulkan/cl/radv_gs_compute.cl`, sont maintenant suivies par
   `R12-R23` et recoupées avec les `PATHS` de
