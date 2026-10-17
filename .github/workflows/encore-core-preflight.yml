@@ -66,6 +66,7 @@ jobs:
           python3 -B tools/check-native-guest-span-host.py
           python3 -B tools/check-native-guest-range-overflow-host.py
           python3 -B tools/check-native-hle-condvar-access-host.py
+          python3 -B tools/check-native-hle-arbiter-access-host.py
           python3 -B tools/check-native-jit-memory-read-guard-host.py
           python3 -B tools/check-native-guest-memory-coherence-host.py
           python3 -B tools/check-native-device-continuity-host.py
