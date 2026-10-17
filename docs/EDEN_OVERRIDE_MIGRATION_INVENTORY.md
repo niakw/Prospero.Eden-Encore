@@ -21,7 +21,9 @@ natif sélectionnent chacun leur sous-ensemble.
 - Les versions diagnostiques de `IFile::Read` et `IStorage::Read` sont
   maintenant des sources maintenues dans `vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/`.
   Leur comparaison textuelle avec le CMake généré antérieurement est contrôlée
-  par `tools/check-vendor-consolidation-debt.py`.
+  par `tools/check-vendor-consolidation-debt.py`, et leurs horloges
+  de profilage restent vérifiées par `tools/check-ps5-quiet-cpu-io-clocks.py`
+  directement à partir des fichiers maintenus.
 - **Ne pas supprimer à l'aveugle :** les générateurs de ressources (`glsl`),
   les patchs optionnels OFF et les modifications interdépendantes (mémoire,
   JIT, GPU) demandent des critères de sélection et une preuve d'équivalence.
