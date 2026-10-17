@@ -29,6 +29,7 @@ thread_root = root / "vendor/encore-active/eden-threading/src/core/hle/kernel"
 sync_root = root / "vendor/encore-active/eden-sync/src/core/hle/kernel"
 for relative in (
     "k_thread.cpp", "k_thread.h", "k_slab_heap.h", "k_scheduler.cpp",
+    "slab_helpers.h", "k_worker_task_manager.h",
     "k_condition_variable.cpp", "k_address_arbiter.cpp",
     "svc/svc_condition_variable.cpp", "svc/svc_address_arbiter.cpp",
     "svc/svc_synchronization.cpp", "svc/svc_thread.cpp",
@@ -58,4 +59,25 @@ fixed = """        {
         this->Close(kernel);"""
 assert pinned.count(old) == 1
 assert active == pinned.replace(old, fixed), "Unexpected maintained KThread drift"
-print("ENCORE_HLE_SOURCE_LAYOUT_PASS source_files=11 generated_k_thread=0")
+slab_pinned = (root / "vendor/sources/eden/src/core/hle/kernel/slab_helpers.h").read_text()
+slab_active = (thread_root / "slab_helpers.h").read_text()
+slab_before = """        Free(kernel, static_cast<Derived*>(this));
+        if (is_initialized) {
+            Derived::PostDestroy(kernel, arg);
+        }"""
+slab_after = """        if (is_initialized) {
+            Derived::PostDestroy(kernel, arg);
+        }
+        Free(kernel, static_cast<Derived*>(this));"""
+assert slab_pinned.count(slab_before) == 2
+assert slab_active == slab_pinned.replace(slab_before, slab_after)
+worker_pinned = (root / "vendor/sources/eden/src/core/hle/kernel/k_worker_task_manager.h").read_text()
+worker_active = (thread_root / "k_worker_task_manager.h").read_text()
+worker_old = "    KWorkerTaskManager();"
+worker_new = "    KWorkerTaskManager();\n    void WaitForRequests() { m_waiting_thread.WaitForRequests(); }"
+assert worker_pinned.count(worker_old) == 1
+assert worker_active == worker_pinned.replace(worker_old, worker_new)
+assert "configure_file(" in module and "COPYONLY)" in module
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/kernel/slab_helpers.h"' not in cmake
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/kernel/k_worker_task_manager.h"' not in cmake
+print("ENCORE_HLE_SOURCE_LAYOUT_PASS source_files=13 generated_k_thread=0")
