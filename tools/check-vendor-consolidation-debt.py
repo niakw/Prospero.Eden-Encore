@@ -153,7 +153,7 @@ assert storage_maintained == '#include "performance.h"\n' + storage_pinned.repla
 assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_FS_STORAGE}")') == 1
 assert 'write_derived("${PORT_BUILD_DIR}/fs_i_storage.cpp"' not in c
 assert "fs_storage_source" not in c
-assert counts["write_derived("] <= 66, counts
+assert counts["write_derived("] <= 64, counts
 print("VENDOR_MAINTAINED_FS_ISTORAGE_PARITY_PASS: read, short read, quiet policy")
 
 
@@ -331,6 +331,61 @@ for name in ("EDEN_MAINTAINED_NATIVE_THREAD", "EDEN_MAINTAINED_NATIVE_FS"):
 
 print("VENDOR_MAINTAINED_COMMON_RUNTIME_PARITY_PASS: thread name, two iterators, native-only selection")
 
+# Native CPU feature detection: move the CPUID 0x15 fallback out of its
+# leaf-specific block without changing the existing host frequency heuristic.
+cpu_rel = "common/cpu_features.cpp"
+cpu_pinned = (sources / "eden/src" / cpu_rel).read_text()
+cpu_active = (active / "eden-core/src" / cpu_rel).read_text()
+cpu_fallback = """        } else {
+            caps.tsc_frequency = X64::EstimateRDTSCFrequency();
+        }"""
+cpu_leaf16 = "    if (max_std_fn >= 0x16) {"
+cpu_leaf16_new = """    if (caps.invariant_tsc && caps.tsc_frequency < 1'000'000'000ULL) {
+        caps.tsc_frequency = X64::EstimateRDTSCFrequency();
+    }
+
+    if (max_std_fn >= 0x16) {"""
+assert cpu_pinned.count(cpu_fallback) == cpu_pinned.count(cpu_leaf16) == 1
+cpu_expected = cpu_pinned.replace(cpu_fallback, "        }").replace(cpu_leaf16, cpu_leaf16_new)
+assert cpu_active == cpu_expected, "TSC source differs from previous configure-time transformation"
+assert c.count('list(APPEND common_sources "${EDEN_MAINTAINED_NATIVE_CPU_FEATURES}")') == 1
+assert 'list(REMOVE_ITEM common_sources cpu_features.cpp)' in c
+assert 'if(NOT EXISTS "${EDEN_MAINTAINED_NATIVE_CPU_FEATURES}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/cpu_features.cpp"' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/common/cpu_features.cpp" features_source)' not in c
+
+# Native writable/cache/config roots and the legacy-compatibility folder.
+# Header normalization is safe because the common target carries the same
+# EDEN_PORT_DIR private include root used by the previous generated file.
+paths_rel = "common/fs/path_util.cpp"
+paths_pinned = (sources / "eden/src" / paths_rel).read_text()
+paths_active = (active / "eden-core/src" / paths_rel).read_text()
+paths_old = "#else\n        eden_path = GetCurrentDir() / PORTABLE_DIR;"
+paths_new = """#elif defined(PS5_NATIVE)
+        eden_path = Eden::UserDir();
+        eden_path_cache = eden_path / CACHE_DIR;
+        eden_path_config = eden_path / CONFIG_DIR;
+#else
+        eden_path = GetCurrentDir() / PORTABLE_DIR;"""
+legacy_old = "#else\n        // In Ryujinx's infinite wisdom"
+legacy_new = """#elif defined(PS5_NATIVE)
+        GenerateLegacyPath(EmuPath::RyujinxDir, eden_path / RYUJINX_DIR);
+#else
+        // In Ryujinx's infinite wisdom"""
+assert paths_pinned.count(paths_old) == paths_pinned.count(legacy_old) == 1
+paths_expected = '#include "storage_paths.h"\n' + paths_pinned.replace(
+    paths_old, paths_new).replace(legacy_old, legacy_new)
+assert paths_active == paths_expected, "Native user/config path source differs from prior generator"
+assert c.count('list(APPEND common_sources "${EDEN_MAINTAINED_NATIVE_PATHS}")') == 1
+assert 'list(REMOVE_ITEM common_sources fs/path_util.cpp)' in c
+assert 'if(NOT EXISTS "${EDEN_MAINTAINED_NATIVE_PATHS}")' in c
+assert 'target_include_directories(common PRIVATE "${EDEN_PORT_DIR}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/path_util.cpp"' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/common/fs/path_util.cpp" paths_source)' not in c
+print("VENDOR_MAINTAINED_NATIVE_TSC_PATH_PARITY_PASS: CPUID fallback, native roots, DEV build selection")
+
+
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -371,7 +426,7 @@ assert len(module_current) == 21, len(module_current)
 for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     text = (root / module).read_text()
     assert 'file(WRITE ' in text and 'configure_file(' in text, module
-assert len(recorded) + len(module_recorded) == 87
+assert len(recorded) + len(module_recorded) == 85
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
