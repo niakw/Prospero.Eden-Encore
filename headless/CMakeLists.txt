@@ -1037,6 +1037,7 @@ string(REPLACE "${prefetch_old}" [=[            } else {
             }
             thread->RequestSuspend(kernel, SuspendType::Debug);]=]
     physical_core_source "${physical_core_source}")
+include("${CMAKE_CURRENT_LIST_DIR}/physical_core_interrupt_atomic.cmake")
 write_derived("${PORT_BUILD_DIR}/physical_core.cpp"
     "#include <cstdio>\n#include \"${EDEN_PORT_DIR}/guest_fault.h\"\n#include \"${EDEN_PORT_DIR}/performance.h\"\n#include \"core/hle/kernel/k_process.h\"\n#include \"core/arm/debug.h\"\n${physical_core_source}")
 list(REMOVE_ITEM core_sources "hle/kernel/physical_core.cpp")
