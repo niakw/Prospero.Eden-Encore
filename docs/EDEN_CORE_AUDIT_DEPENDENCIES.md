@@ -40,6 +40,24 @@ plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 Le hors-inventaire (HID, IPC, host-syncpoints, variantes vendor...) n'est
 pas chiffrable honnêtement sans un relevé exhaustif supplémentaire.
 
+## Migration de sources et inventaire de sélection
+
+La lecture diagnostique `IFile::Read` (F02) est maintenant une source
+maintenue (`vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_file.cpp`),
+sélectionnée seulement dans l'ancien périmètre `EDEN_DEV_PROFILE`.
+`tools/check-vendor-consolidation-debt.py` vérifie la parité du corps
+C++ avec l'override généré auparavant et recense les sorties CMake dans
+`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **74 sites restants**
+après cette première migration. Un site à paramètres variables peut
+produire plusieurs fichiers réels. Les ressources générées ne doivent
+pas être confondues avec des overrides de code.
+
+Les chemins H18/H19/J14/J15 ont été catalogués pour éviter l'angle mort
+entre thread `Runnable`, fibre sélectionnée, contexte restauré et
+exécution JIT. La correction de propriété du verrou C32 est prouvée
+par le test hôte précédent, **pas** par une exécution native invitée.
+Une reprise du code invité après réveil reste un verrou de validation.
+
 ## Déjà traité — contrôles terminés et preuves accessibles
 
 **32 validations ciblées historiquement établies.** Elles recouvrent en
