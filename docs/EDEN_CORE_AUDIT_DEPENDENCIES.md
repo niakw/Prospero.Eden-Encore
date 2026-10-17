@@ -16,7 +16,7 @@ any operation, and avoid unrelated files.
 
 ## Déjà traité — contrôles terminés et preuves accessibles
 
-**21 validations ciblées historiquement établies.** Elles recouvrent en
+**22 validations ciblées historiquement établies.** Elles recouvrent en
 partie les lignes B/Q/D/V/J/M/S du graphe ci-dessous : **ne pas additionner
 ces deux décomptes comme s'il s'agissait de travaux différents**.
 
@@ -48,6 +48,7 @@ démontrent précisément qu'une approche est dangereuse.
 | C19 | File GPU : attente producteur interrompable | `ThreadManager::PushCommand` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-ps5-gpu-producer-wake.py) | [Preuve / CI](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38986808108) | Test source/hôte ; pas de conclusion hardware |
 | C20 | Débordement des bornes RAM invitée | `Memory::IsValidVirtualAddressRange` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-guest-range-overflow-host.py) | [Prévalidation #38996379440](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38996379440) | Ancienne plage invalidement acceptée ; la version native rejette le dépassement 64 bits, sans test console |
 | C21 | Lectures mémoire JIT respectent un refus d'accès | `DynarmicCallbacks32/64::MemoryRead*` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-jit-memory-read-guard-host.py) | [Prévalidation #38996913209](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38996913209) | A32/A64 : test hôte positif et témoin négatif ; pas de confirmation console |
+| C22 | Plages GPU granulaires : offset réel et overflow | `MemoryManager::IsGranularRange` | [![OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-gpu-granular-bounds-host.py) | [Prévalidation #39017376187](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39017376187) · [CodeQL #39017376169](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39017376169) | Témoins hôte / générateur CMake et analyses sécurité réussis ; aucun test console |
 
 ### Audits archivés à ne pas recommencer
 
@@ -163,7 +164,7 @@ function/contract tokens are checked by CI for existence only; the
 | R10 | P1 | R01,R09 | vendor/sources/eden/src/core/memory.cpp | Memory::IsValidVirtualAddressRange | HOST | tools/check-native-guest-range-overflow-host.py | Host regression SUCCESS 38996379440; on-device behavior not verified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-guest-range-overflow-host.py) |
 | J12 | P1 | J08 | vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_64.cpp | DynarmicCallbacks64::MemoryRead32; CheckMemoryAccess | HOST | tools/check-native-jit-memory-read-guard-host.py | Pinned vs derived read rejection A64 host PASS in run #38996913209; console unverified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-jit-memory-read-guard-host.py) |
 | J13 | P1 | J08 | vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_32.cpp | DynarmicCallbacks32::MemoryRead32; CheckMemoryAccess | HOST | tools/check-native-jit-memory-read-guard-host.py | Pinned vs derived read rejection A32 host PASS in run #38996913209; console unverified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-jit-memory-read-guard-host.py) |
-| R11 | P1 | R01,R02 | vendor/sources/eden/src/video_core/memory_manager.cpp | MemoryManager::IsGranularRange | OPEN | tools/check-native-gpu-granular-bounds-host.py | Native derived regression and preflight #39017376187 PASS; CodeQL #39017376169 C/C++ pending at last check; keep OPEN for full CI and device verification | 🟠 À contrôler |
+| R11 | P1 | R01,R02 | vendor/sources/eden/src/video_core/memory_manager.cpp | MemoryManager::IsGranularRange | HOST | tools/check-native-gpu-granular-bounds-host.py | Native-derived host regression and full preflight #39017376187 SUCCESS; three CodeQL analyses #39017376169 SUCCESS; console/performance unverified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39017376187) |
 <!-- AUDIT_ROWS_END -->
 
 
