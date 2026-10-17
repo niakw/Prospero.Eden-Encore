@@ -11,16 +11,16 @@ développement, les options JIT expérimentales, les backends et le build
 natif sélectionnent chacun leur sous-ensemble.
 
 L'inventaire complémentaire `docs/EDEN_ACTIVE_SOURCE_CATALOG.md` suit les
-198 fichiers de code et en-têtes dans `vendor/encore-active`,
+199 fichiers de code et en-têtes dans `vendor/encore-active`,
 y compris les backports de production et la dépendance graphique. Cette
 couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
 ## Synthèse vérifiable
 
-- **48 appels générateurs** encore dans CMake ; contre **75 avant**
+- **47 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
-- **59 lectures `file(READ`** et **194 remplacements
+- **58 lectures `file(READ`** et **194 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
 - Les versions diagnostiques de `IFile::Read`, `IStorage::Read` et des appels
@@ -84,7 +84,7 @@ et non les 458 scripts Python/shell/CMake du seul dossier `tools/`.
 | `headless/checked-fastmem.cmake` et quatre autres modules indirects | **BUILD**, changement de variables source avant écriture | Unités dérivées du CMake principal | Déjà indexées X03–X07 |
 | `headless/vulkan.cmake` | **BUILD**, copie/sélection d'un fork vérifié | `encore-active/eden-vulkan` | Aucun appel au générateur Python |
 
-**Règle de lecture :** le compteur `48 + 21 = 69` décrit uniquement les
+**Règle de lecture :** le compteur `47 + 21 = 68` décrit uniquement les
 sites `write_derived`, pas les générateurs Python, les copies de dépendances,
 les recettes CMake ni les sorties de ressources. **Zéro source sans propriétaire
 dans le catalogue `vendor/encore-active` n'implique pas zéro override hors de
@@ -128,31 +128,30 @@ dans la version normale.
 | G21 | `${PORT_BUILD_DIR}/core.cpp` | Mémoire/chargement | Unité source | 1339 |
 | G22 | `${PORT_BUILD_DIR}/nso.cpp` | Mémoire/chargement | Unité source | 1414 |
 | G23 | `${PORT_BUILD_DIR}/ips_layer.cpp` | Mémoire/chargement | Unité source | 1532 |
-| G24 | `${PORT_BUILD_DIR}/patch_manager.cpp` | Mémoire/chargement | Unité source | 1546 |
-| G25 | `${PORT_BUILD_DIR}/vi_conductor.cpp` | Kernel/IPC/entrées | Unité source | 1585 |
-| G26 | `${PORT_BUILD_DIR}/npad_pause_diag.cpp` | Kernel/IPC/entrées | Unité source | 1660 |
-| G27 | `${PORT_BUILD_DIR}/include/${ioctl_header}` | Kernel/IPC/entrées | Cible variable | 1677 |
-| G28 | `${PORT_BUILD_DIR}/k_page_table_base.cpp` | Kernel/IPC/entrées | Unité source | 1716 |
-| G29 | `${PORT_BUILD_DIR}/k_process.cpp` | Kernel/IPC/entrées | Unité source | 1939 |
-| G30 | `${PORT_BUILD_DIR}/include/${server_header}` | Kernel/IPC/entrées | Cible variable | 1956 |
-| G31 | `${PORT_BUILD_DIR}/server_manager.cpp` | Kernel/IPC/entrées | Unité source | 2013 |
-| G32 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 2026 |
-| G33 | `${eden_gpu_span_tu}` | Audio/graphique | Cible variable | 2153 |
-| G34 | `${PORT_BUILD_DIR}/gl_rasterizer.cpp` | Audio/graphique | Unité source | 2244 |
-| G35 | `${PORT_BUILD_DIR}/include/common/bounded_threadsafe_queue.h` | Audio/graphique | En-tête source | 2306 |
-| G36 | `${PORT_BUILD_DIR}/gpu_thread.cpp` | GPU/vidéo | Unité source | 2455 |
-| G37 | `${PORT_BUILD_DIR}/include/video_core/gpu_thread.h` | GPU/vidéo | En-tête source | 2460 |
-| G38 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 2511 |
-| G39 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 2607 |
-| G40 | `${PORT_BUILD_DIR}/maxwell_3d.cpp` | GPU/vidéo | Unité source | 2627 |
-| G41 | `${PORT_BUILD_DIR}/shader_environment.cpp` | GPU/vidéo | Unité source | 2642 |
-| G42 | `${PORT_BUILD_DIR}/texture_cache_util.cpp` | GPU/vidéo | Unité source | 2683 |
-| G43 | `${PORT_BUILD_DIR}/audited_guest_dns.cpp` | Runtime/FS/réseau | Unité source | 2807 |
-| G44 | `${PORT_BUILD_DIR}/audited_guest_bsd.cpp` | Runtime/FS/réseau | Unité source | 2869 |
-| G45 | `${PORT_BUILD_DIR}/network.cpp` | Runtime/FS/réseau | Unité source | 2947 |
-| G46 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 3010 |
-| G47 | `${eden_app_crt}` | Runtime/FS/réseau | Cible variable | 3022 |
-| G48 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 3207 |
+| G24 | `${PORT_BUILD_DIR}/vi_conductor.cpp` | Kernel/IPC/entrées | Unité source | 1579 |
+| G25 | `${PORT_BUILD_DIR}/npad_pause_diag.cpp` | Kernel/IPC/entrées | Unité source | 1654 |
+| G26 | `${PORT_BUILD_DIR}/include/${ioctl_header}` | Kernel/IPC/entrées | Cible variable | 1671 |
+| G27 | `${PORT_BUILD_DIR}/k_page_table_base.cpp` | Kernel/IPC/entrées | Unité source | 1710 |
+| G28 | `${PORT_BUILD_DIR}/k_process.cpp` | Kernel/IPC/entrées | Unité source | 1933 |
+| G29 | `${PORT_BUILD_DIR}/include/${server_header}` | Kernel/IPC/entrées | Cible variable | 1950 |
+| G30 | `${PORT_BUILD_DIR}/server_manager.cpp` | Kernel/IPC/entrées | Unité source | 2007 |
+| G31 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 2020 |
+| G32 | `${eden_gpu_span_tu}` | Audio/graphique | Cible variable | 2147 |
+| G33 | `${PORT_BUILD_DIR}/gl_rasterizer.cpp` | Audio/graphique | Unité source | 2238 |
+| G34 | `${PORT_BUILD_DIR}/include/common/bounded_threadsafe_queue.h` | Audio/graphique | En-tête source | 2300 |
+| G35 | `${PORT_BUILD_DIR}/gpu_thread.cpp` | GPU/vidéo | Unité source | 2449 |
+| G36 | `${PORT_BUILD_DIR}/include/video_core/gpu_thread.h` | GPU/vidéo | En-tête source | 2454 |
+| G37 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 2505 |
+| G38 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 2601 |
+| G39 | `${PORT_BUILD_DIR}/maxwell_3d.cpp` | GPU/vidéo | Unité source | 2621 |
+| G40 | `${PORT_BUILD_DIR}/shader_environment.cpp` | GPU/vidéo | Unité source | 2636 |
+| G41 | `${PORT_BUILD_DIR}/texture_cache_util.cpp` | GPU/vidéo | Unité source | 2677 |
+| G42 | `${PORT_BUILD_DIR}/audited_guest_dns.cpp` | Runtime/FS/réseau | Unité source | 2801 |
+| G43 | `${PORT_BUILD_DIR}/audited_guest_bsd.cpp` | Runtime/FS/réseau | Unité source | 2863 |
+| G44 | `${PORT_BUILD_DIR}/network.cpp` | Runtime/FS/réseau | Unité source | 2941 |
+| G45 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 3004 |
+| G46 | `${eden_app_crt}` | Runtime/FS/réseau | Cible variable | 3016 |
+| G47 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 3201 |
 <!-- OVERRIDE_GENERATORS_END -->
 
 ## Prochain ordre de migration
@@ -326,7 +325,7 @@ pas que le PC invité avance après un réveil HLE.
 
 Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules
 inclus par ce fichier contiennent **21 autres appels `write_derived()`**
-dans 6 fichiers. Le total de **69 appels** (48 + 21) est donc un **nombre de
+dans 6 fichiers. Le total de **68 appels** (47 + 21) est donc un **nombre de
 sites CMake**, pas un dénombrement des fichiers réellement produits à
 l'exécution. Un module inclus peut définir des macros sans les exécuter,
 et plusieurs sorties sont explicitement conditionnées.
@@ -360,7 +359,7 @@ et plusieurs sorties sont explicitement conditionnées.
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **69 sites** `write_derived()`, ni dans
+Ils ne sont comptés ni dans les **68 sites** `write_derived()`, ni dans
 les **7 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,
@@ -444,7 +443,7 @@ que chaque chemin a été validé sur console.
 ## Overrides indirects sans `write_derived()` local
 
 Ces **7 modules supplémentaires** ne sont pas inclus dans le total de
-**69 appels**. Deux matérialisent leur sortie via `file(WRITE)` ;
+**68 appels**. Deux matérialisent leur sortie via `file(WRITE)` ;
 les cinq autres modifient une variable-source écrite ensuite par un
 générateur du CMake principal. Ce sont **7 modules**, pas nécessairement
 7 fichiers réellement produits.

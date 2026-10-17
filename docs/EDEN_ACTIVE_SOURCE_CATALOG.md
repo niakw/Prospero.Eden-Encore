@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **198 fichiers** de code et d'en-têtes enregistrés.
-- **198 fichiers** possèdent une correspondance de chemin *exacte*
+- **199 fichiers** de code et d'en-têtes enregistrés.
+- **199 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -24,7 +24,7 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 **Important :** une correspondance de chemin n'est ni un test hôte,
 ni une certification console. Le graphe
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` porte les contrats fonctionnels,
-leurs états et les preuves. L'inventaire des 48 générateurs CMake
+leurs états et les preuves. L'inventaire des 47 générateurs CMake
 principaux, 21 générateurs de modules, sept modules indirects et 46 patches
 reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
@@ -132,6 +132,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/core/arm/dynarmic/arm_dynarmic_64.cpp` | `maintained-override` | J19 |
 | `eden-core/src/core/file_sys/bis_factory.cpp` | `maintained-override` | F14 |
 | `eden-core/src/core/file_sys/fsmitm_romfsbuild.cpp` | `maintained-override` | F12 |
+| `eden-core/src/core/file_sys/patch_manager.cpp` | `maintained-override` | F35 |
 | `eden-core/src/core/file_sys/savedata_factory.cpp` | `maintained-override` | F15 |
 | `eden-core/src/core/hle/kernel/k_spin_lock.cpp` | `maintained-override` | H30 |
 | `eden-core/src/core/hle/kernel/svc/svc_ipc.cpp` | `maintained-override` | H21 |
@@ -240,7 +241,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
 Ces deux fichiers sont inclus dans les **83 entrées** de
 `vendor/encore-active/eden-backports/manifest.json`, mais ne sont
-pas comptés parmi les 198 fichiers de code et d'en-têtes.
+pas comptés parmi les 199 fichiers de code et d'en-têtes.
 
 ## Inventaire hors `vendor/encore-active`
 
