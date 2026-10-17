@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 270
+**Non, this is not an exhaustive repository-wide inventory.** The 271
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 270 | 251 | 556 |
+| Graphe connu | 271 | 252 | 557 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 216 | 207 | 453 |
+| SOURCE — lecture effectuée, preuve insuffisante | 217 | 208 | 454 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **231** | **221** | **481** |
-| Dont priorité P0 (SOURCE + OPEN) | 96 | 91 | 230 |
+| **Encore à qualifier (SOURCE + OPEN)** | **232** | **222** | **482** |
+| Dont priorité P0 (SOURCE + OPEN) | 97 | 92 | 231 |
 
-Le **noyau restant** compte donc 231 critères répartis sur
-221 fichiers et 481 mentions fonction/contrat :
-15 OPEN et 216 SOURCE.
+Le **noyau restant** compte donc 232 critères répartis sur
+222 fichiers et 482 mentions fonction/contrat :
+15 OPEN et 217 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-192 fichiers de code/en-têtes présents et 192 avec un chemin de
+193 fichiers de code/en-têtes présents et 193 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -89,13 +89,13 @@ sont des sources maintenues sous
 sélectionnées uniquement en `EDEN_DEV_PROFILE`.
 `tools/check-vendor-consolidation-debt.py` vérifie la parité du corps
 C++ avec l'override généré auparavant et recense les sorties CMake dans
-`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **49 sites restants**
+`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **48 sites restants**
 après onze migrations (F02, F03, F04, N02, N03, H21, H22, F05, F06, F07 et F08). Un site à paramètres variables peut
 produire plusieurs fichiers réels. Les ressources générées ne doivent
 pas être confondues avec des overrides de code.
 
 Le second inventaire compte 21 générateurs `write_derived()` dans les modules,
-soit **70 sites au total**, mais n'inclut **pas** les sept modules
+soit **69 sites au total**, mais n'inclut **pas** les sept modules
 `X01–X07` qui créent une sortie par `file(WRITE)` ou transforment
 indirectement une variable-source. Ils sont suivis séparément dans
 `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`, avec contrôle hôte de leur
@@ -448,6 +448,7 @@ function/contract tokens are checked by CI for existence only; the
 | H45 | P1 | H41 | vendor/encore-active/eden-backports/src/core/hle/service/acc/acc.cpp | Module::Interface::LoadOpenContext; ACC_U0::LoadOpenContext | SOURCE | tools/check-active-source-inventory.py | Shipping account service restores stored existing users and registers IPC command 130; suspend/resume unproved | 🟡 Source étudiée |
 | H46 | P1 | H45 | vendor/encore-active/eden-backports/src/core/hle/service/acc/acc.h | LoadOpenContext | SOURCE | tools/check-active-source-inventory.py | Shipping account interface declares stored-user restore IPC handler; native behavior unproved | 🟡 Source étudiée |
 | H47 | P1 | N18 | vendor/encore-active/eden-backports/src/core/hle/service/am/lifecycle_manager.h | RequestFocusStateChangedNotification | SOURCE | tools/check-active-source-inventory.py | Shipping lifecycle header signals subscribed focus-state changes; native focus notifications unproved | 🟡 Source étudiée |
+| H48 | P0 | H40 | vendor/encore-active/eden-core/src/hid_core/resources/npad/npad.cpp | NPad::ControllerUpdate | SOURCE | tools/check-vendor-consolidation-debt.py | Maintained shipping NPad plus exact two former CMake null guards; parity and native hid_core selection checked, console behavior unproved | 🟡 Source étudiée |
 | A02 | P1 | A01,H29 | headless/backports/eden-sm-host-wait.patch | IAudioController::GetSetSys; call_once | SOURCE | tools/install-active-core-backports.py | AudioController defers system-setting lookup to first actual request using once_flag; two corresponding audio files are still patched into the staged tree, not maintained directly | 🟡 Source étudiée |
 | A03 | P1 | A01 | vendor/encore-active/eden-core/src/audio_core/sink/sink_stream.cpp | SinkStream::AppendBuffer; SinkStream::ProcessAudioOutAndRender | SOURCE | tools/check-maintained-audio-units.py | Source maintained, original four-rewrite parity and audio_core selection checked by host script; CI result and native audio behavior still required | 🟡 Source étudiée |
 | A04 | P1 | A01 | vendor/encore-active/eden-core/src/audio_core/renderer/voice/voice_info.cpp | VoiceInfo::UpdateParameters; VoiceInfo::UpdatePlayState | SOURCE | headless/CMakeLists.txt | Maintained renderer voice update has native flag position correction; validate voice state and game audio; selected source only, device proof pending | 🟡 Source étudiée |

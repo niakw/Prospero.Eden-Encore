@@ -2070,28 +2070,16 @@ set_property(TARGET hid_core PROPERTY SOURCES "${controller_sources}")
 # through its null device. Buttons rarely changed in that window; the motion sensors change with
 # every sample, so a game that registers a second applet resource crashed a few seconds after it
 # started (seen on the console: page fault in NPad::ControllerUpdate from the pad thread).
-file(READ "${PROJECT_SOURCE_DIR}/src/hid_core/resources/npad/npad.cpp" npad_source)
-set(npad_update "        auto& controller = controller_data[aruid_index][controller_idx];\n        const auto is_connected = controller.device->IsConnected();")
-string(FIND "${npad_source}" "${npad_update}" npad_update_at)
-if(npad_update_at LESS 0)
-    message(FATAL_ERROR "Pinned NPad controller update changed")
+# The active shipping NPad implementation plus the two original native
+# null-pointer guards are maintained directly; no CMake source mutation.
+set(EDEN_MAINTAINED_NPAD
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/hid_core/resources/npad/npad.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_NPAD}")
+    message(FATAL_ERROR "Missing maintained native NPad controller")
 endif()
-string(REPLACE "${npad_update}"
-    "        auto& controller = controller_data[aruid_index][controller_idx];\n        if (controller.device == nullptr) {\n            continue;  // ProsperoEden: this applet resource is not activated yet\n        }\n        const auto is_connected = controller.device->IsConnected();"
-    npad_source "${npad_source}")
-# Motion callbacks may precede the HID applet-resource assignment (first frame).
-set(npad_entry "void NPad::ControllerUpdate(Kernel::KernelCore& kernel, Core::HID::ControllerTriggerType type, std::size_t controller_idx) {\n")
-string(FIND "${npad_source}" "${npad_entry}" npad_entry_at)
-if(npad_entry_at LESS 0)
-    message(FATAL_ERROR "Pinned NPad::ControllerUpdate entry changed")
-endif()
-eden_patch(npad_source "${npad_entry}"
-    "${npad_entry}    if (applet_resource_holder.applet_resource == nullptr) {\n        return;\n    }\n"
-)
-write_derived("${PORT_BUILD_DIR}/npad.cpp" "${npad_source}")
 get_target_property(npad_sources hid_core SOURCES)
 list(FILTER npad_sources EXCLUDE REGEX "(^|/)npad\\.cpp$")
-list(APPEND npad_sources "${PORT_BUILD_DIR}/npad.cpp")
+list(APPEND npad_sources "${EDEN_MAINTAINED_NPAD}")
 set_property(TARGET hid_core PROPERTY SOURCES "${npad_sources}")
 add_library(eden-pad STATIC "${EDEN_PORT_DIR}/pad.cpp"
     "${PROJECT_SOURCE_DIR}/src/input_common/input_engine.cpp"
