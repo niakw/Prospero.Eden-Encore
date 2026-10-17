@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 154
+**Non, this is not an exhaustive repository-wide inventory.** The 159
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,23 +24,23 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 154 | 135 | 323 |
+| Graphe connu | 159 | 140 | 336 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 100 | 91 | 220 |
+| SOURCE — lecture effectuée, preuve insuffisante | 105 | 96 | 233 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **115** | **105** | **248** |
-| Dont priorité P0 (SOURCE + OPEN) | 47 | 42 | 120 |
+| **Encore à qualifier (SOURCE + OPEN)** | **120** | **110** | **261** |
+| Dont priorité P0 (SOURCE + OPEN) | 50 | 45 | 129 |
 
-Le **noyau restant** compte donc 115 critères répartis sur
-105 fichiers et 248 mentions fonction/contrat :
-15 OPEN et 100 SOURCE.
-Cela **ne signifie pas 248 fonctions jamais lues** :
+Le **noyau restant** compte donc 120 critères répartis sur
+110 fichiers et 261 mentions fonction/contrat :
+15 OPEN et 105 SOURCE.
+Cela **ne signifie pas 261 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-187 fichiers de code/en-têtes présents, 76 avec un chemin de
-graphe exact et 111 sans correspondance exacte. Cet écart n'est
+187 fichiers de code/en-têtes présents, 81 avec un chemin de
+graphe exact et 106 sans correspondance exacte. Cet écart n'est
 **pas** le nombre de fonctions non auditées, ni une preuve de code actif.
 Le contrôle hôte vérifie la complétude des chemins et les références,
 mais pas le comportement.
@@ -347,6 +347,11 @@ function/contract tokens are checked by CI for existence only; the
 | V28 | P0 | V26,V02 | vendor/encore-active/eden-vulkan/vulkan_blit_screen.cpp | BlitScreen::PrepareFrame; BlitScreen::DrawToFrame | SOURCE | headless/vulkan.cmake | Blit and present handoff may wait for frames; identify stage-specific stalls, no reorder without logs; source/selector examined, no completed device-runtime proof | 🟡 Source étudiée |
 | V29 | P1 | V28 | vendor/encore-active/eden-vulkan/vulkan_window_adapt_pass.cpp | WindowAdaptPass::Draw; WindowAdaptPass::CreatePipelines | SOURCE | headless/vulkan.cmake | Adaptation pass descriptor and pipeline lifecycle must preserve present layer ordering; source/selector examined, no completed device-runtime proof | 🟡 Source étudiée |
 | V30 | P1 | V26 | vendor/encore-active/eden-vulkan/vulkan_wrapper.cpp | Instance::Create; Device::GetQueue | SOURCE | headless/vulkan.cmake | Vulkan instance and queue wrappers selected through native fork; check native device wrappers before changing; source/selector examined, no completed device-runtime proof | 🟡 Source étudiée |
+| V31 | P0 | V01,V16 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_scheduler.h | PreflightDrawCommands; Wait(u64 tick; SubmitExecution | SOURCE | headless/vulkan.cmake | Scheduler owner queue, preflight and completion API are compiled through maintained header; verify wait paths under workload; selected ABI/header inspected, no hardware behavior proven | 🟡 Source étudiée |
+| V32 | P0 | V28 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_present_manager.h | WaitPresent; CopyToSwapchain; RecreateSwapchain | SOURCE | headless/vulkan.cmake | Present thread resource layout and swapchain retry ABI must agree with maintained implementation; selected ABI/header inspected, no hardware behavior proven | 🟡 Source étudiée |
+| V33 | P0 | V17 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_descriptor_buffer.h | PreflightFrameReuse; PreflightCapacity; Allocate(Scheduler& | SOURCE | headless/vulkan.cmake | Ring capacity and frame-reuse contract is shared with maintained descriptor implementation; selected ABI/header inspected, no hardware behavior proven | 🟡 Source étudiée |
+| V34 | P1 | V28 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_blit_screen.h | PrepareFrame; WaitIdle | SOURCE | headless/vulkan.cmake | Blit API synchronization and lifetime are shared with maintained present implementation; selected ABI/header inspected, no hardware behavior proven | 🟡 Source étudiée |
+| V35 | P1 | V26,V28 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/renderer_vulkan.h | CreateDevice; PresentLoading | SOURCE | headless/vulkan.cmake | Renderer Vulkan public ABI and loading presentation contract need consistent full rebuild; selected ABI/header inspected, no hardware behavior proven | 🟡 Source étudiée |
 | F04 | P1 | F02,F03 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_filesystem.cpp | IFileSystem::OpenFile; IFileSystem::OpenDirectory; IFileSystem::GetEntryType | HOST | tools/check-vendor-consolidation-debt.py | Maintained DEV IFileSystem diagnostic replaces G23 CMake patch for three result paths; three call replacements, DEV source selection, and quiet policy passed full host preflight #39048355950; native SDK/gameplay remain unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39048355950) |
 | H20 | P0 | H02,H19 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp | KScheduler::UpdateHighestPriorityThread; KScheduler::UpdateHighestPriorityThreadsImpl | SOURCE | tools/check-upstream-guest-scheduler-locks.py | Runnable queue update precedes per-core highest-priority selection; account for pinned-thread preference, suggested-core migration and eventual context load. Not proof of guest PC progress | 🟡 Source étudiée |
 | H21 | P0 | H14,J14 | vendor/encore-active/eden-core/src/core/hle/kernel/svc/svc_ipc.cpp | SendSyncRequestImpl; SendSyncRequestWithUserBuffer | SOURCE | tools/check-vendor-consolidation-debt.py | DEV sync IPC request/thread attribution now maintained, with exact former CMake code parity; the guest's resumed JIT PC after request completion remains unproved | 🟡 Source étudiée |

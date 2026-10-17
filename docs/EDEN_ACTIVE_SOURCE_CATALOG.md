@@ -8,9 +8,9 @@ présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
 - **187 fichiers** de code et d'en-têtes enregistrés.
-- **76 fichiers** possèdent une correspondance de chemin *exacte*
+- **81 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
-- **111 fichiers** n'ont pas encore de ligne de graphe correspondant
+- **106 fichiers** n'ont pas encore de ligne de graphe correspondant
   exactement à leur chemin. Cela **ne prouve pas** qu'ils n'ont jamais été
   examinés, ni qu'ils sont effectivement compilés.
 - Le manifeste des backports verrouille **83 fichiers livrés**, dont
@@ -172,14 +172,14 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-vulkan/include/video_core/present.h` | `maintained-override` | — |
 | `eden-vulkan/include/video_core/renderer_vulkan/pipeline_helper.h` | `maintained-override` | — |
 | `eden-vulkan/include/video_core/renderer_vulkan/present/window_adapt_pass.h` | `maintained-override` | — |
-| `eden-vulkan/include/video_core/renderer_vulkan/renderer_vulkan.h` | `maintained-override` | — |
+| `eden-vulkan/include/video_core/renderer_vulkan/renderer_vulkan.h` | `maintained-override` | V35 |
 | `eden-vulkan/include/video_core/renderer_vulkan/striped_wait.h` | `maintained-override` | — |
-| `eden-vulkan/include/video_core/renderer_vulkan/vk_blit_screen.h` | `maintained-override` | — |
+| `eden-vulkan/include/video_core/renderer_vulkan/vk_blit_screen.h` | `maintained-override` | V34 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_compute_pipeline.h` | `maintained-override` | — |
-| `eden-vulkan/include/video_core/renderer_vulkan/vk_descriptor_buffer.h` | `maintained-override` | — |
+| `eden-vulkan/include/video_core/renderer_vulkan/vk_descriptor_buffer.h` | `maintained-override` | V33 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_graphics_pipeline.h` | `maintained-override` | V10 |
-| `eden-vulkan/include/video_core/renderer_vulkan/vk_present_manager.h` | `maintained-override` | — |
-| `eden-vulkan/include/video_core/renderer_vulkan/vk_scheduler.h` | `maintained-override` | — |
+| `eden-vulkan/include/video_core/renderer_vulkan/vk_present_manager.h` | `maintained-override` | V32 |
+| `eden-vulkan/include/video_core/renderer_vulkan/vk_scheduler.h` | `maintained-override` | V31 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_update_descriptor.h` | `maintained-override` | — |
 | `eden-vulkan/include/video_core/vulkan_common/vulkan.h` | `maintained-override` | — |
 | `eden-vulkan/include/video_core/vulkan_common/vulkan_wrapper.h` | `maintained-override` | — |

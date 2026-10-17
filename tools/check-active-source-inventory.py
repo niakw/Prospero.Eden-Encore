@@ -138,6 +138,17 @@ for unit in native_vk_sources:
     assert '"${PORT_BUILD_DIR}/' + unit + '"' in vulkan_recipe, ("source selection lost", unit)
 print("ENCORE_VULKAN_DEVICE_PRESENT_OWNER_PASS", f"sources={len(native_vk_sources)}")
 
+# Vulkan headers are shipped as an ABI-consistent set with the selected
+# maintained translation units; do not let include-root owners disappear.
+assert 'file(COPY "${EDEN_ACTIVE_VULKAN}/" DESTINATION "${PORT_BUILD_DIR}")' in vulkan_recipe
+assert 'target_include_directories(video_core BEFORE PUBLIC "${PORT_BUILD_DIR}/include")' in vulkan_recipe
+abi_headers = ("vk_scheduler.h", "vk_present_manager.h", "vk_descriptor_buffer.h",
+               "vk_blit_screen.h", "renderer_vulkan.h")
+for header in abi_headers:
+    rel = "eden-vulkan/include/video_core/renderer_vulkan/" + header
+    assert (active/rel).is_file() and rel in graph, ("missing selected Vulkan ABI owner", rel)
+print("ENCORE_VULKAN_SHARED_ABI_OWNER_PASS", f"headers={len(abi_headers)}")
+
 assert len(physical) == len(set(physical))
 print("ENCORE_ACTIVE_SOURCE_CATALOG_PASS",
       f"files={len(physical)}",
