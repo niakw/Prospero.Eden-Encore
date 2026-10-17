@@ -50,6 +50,7 @@ public:
             }) || stop_token.stop_requested()) return false;
         }
         const std::size_t pos = write_index % Capacity;
+        std::destroy_at(std::addressof(m_data[pos]));
         std::construct_at(std::addressof(m_data[pos]), std::forward<Args>(args)...);
         ++producer.index;
         std::scoped_lock lock{consumer.cv_mutex};
@@ -116,6 +117,7 @@ private:
         // Determine the position to write to.
         const std::size_t pos = write_index % Capacity;
         // Emplace into the queue.
+        std::destroy_at(std::addressof(m_data[pos]));
         std::construct_at(std::addressof(m_data[pos]), std::forward<Args>(args)...);
         // Increment the write index.
         ++producer.index;

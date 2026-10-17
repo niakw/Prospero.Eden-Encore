@@ -138,12 +138,32 @@ function/contract tokens are checked by CI for existence only; the
 | V09 | P0 | V04 | vendor/encore-active/eden-vulkan/vulkan_present_layer.cpp | Layer::UpdateRawImage; Layer::UpdateDescriptorSet | OPEN | docs/PS5_R331_2026-10-11_VULKAN_RAW_VIEW_LIFETIME.md | Check layer resource lifetime only for new present/HUD evidence | 🟠 À contrôler |
 | A01 | P1 | H03 | vendor/sources/eden/src/audio_core/renderer/voice/voice_info.cpp | VoiceInfo::UpdateParameters; VoiceInfo::UpdatePlayState | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Validate audio voice state only if match stall traces demand it | 🟠 À contrôler |
 | F01 | P1 | Q04 | vendor/sources/eden/src/video_core/host1x/host1x.cpp | Host1x | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Trace actual host syncpoint progression if GPU command progress stops | 🟠 À contrôler |
+| J05 | P1 | J01 | headless/jit-sparse-commit.h | PlanSparseCommit | SOURCE | tools/check-jit-sparse-host.py | Check sparse JIT commit bounds and live native transitions | 🟡 Source étudiée |
+| J06 | P1 | J05 | headless/jit-allocator.h | ReserveSparseJitCode; CommitSparseJitCode | SOURCE | tools/check-jit-allocator.py | Validate native allocator reserve commit and release lifetime | 🟡 Source étudiée |
+| J07 | P1 | J05 | headless/fastmem_handler.cpp | ExceptionHandler::Register | OPEN | tools/check-jit-protection.py | Check fastmem trap context and retired code region safety | 🟠 À contrôler |
+| J08 | P1 | J07 | headless/memory_check.cpp | MemoryRead8; MemoryRead32 | SOURCE | tools/check-ps5-sparse-jit-va-lifetime.py | Relate checked fastmem to real guest RAM and GPU mapping | 🟡 Source étudiée |
+| J09 | P1 | J07 | headless/jit-permissions.inc | BlockOfCode::EnableWriting; BlockOfCode::DisableWriting | SOURCE | tools/check-jit-protection.py | Revalidate executable and writable page transitions | 🟡 Source étudiée |
+| J10 | P2 | J05 | headless/jit-compile-batch.inc | EnsureMemoryCommitted | PARKED | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Batch compilation disabled in shipping | ⚪ Suspendu |
+| J11 | P2 | J05 | headless/jit_list.h | EDEN_SHARED_JIT_AVAILABLE | PARKED | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Shared JIT and precompile disabled in shipping | ⚪ Suspendu |
+| R01 | P1 | B01 | vendor/sources/eden/src/video_core/memory_manager.cpp | MemoryManager::Map; MemoryManager::MapSparse | OPEN | tools/check-gpu-memory-mapping-source.py | Verify GPU VA mapping and physical alias invalidation | 🟠 À contrôler |
+| R02 | P1 | R01,M01 | vendor/sources/eden/src/video_core/guest_memory.h | GpuGuestMemory; GpuGuestMemoryScoped | SOURCE | tools/check-native-gpu-span-range-host.py | Check GPU guest span lifetime and aliasing | 🟡 Source étudiée |
+| R03 | P0 | R02,V05 | vendor/sources/eden/src/video_core/renderer_vulkan/vk_buffer_cache.cpp | BufferCacheRuntime::TickFrame; BufferCacheRuntime::UploadStagingBuffer | OPEN | docs/FC27_NATIVE_FRAME_PROGRESS_TRIAGE_2026-10-17.md | Identify buffer-cache owner and CPU wait or fence boundary | 🟠 À contrôler |
+| R04 | P1 | R01 | headless/gpu_dirty_region_split.h | ForEachRegion | SOURCE | tools/check-native-gpu-dirty-subregion-host.py | Maintain dirty subregion boundaries and publication order | 🟡 Source étudiée |
+| R05 | P1 | R03 | headless/buffer_pages.h | Eden::BufferPages | OPEN | tools/check-ps5-buffer-pages-r437.py | Verify tracked buffer pages and invalidation generations | 🟠 À contrôler |
+| R06 | P1 | R03 | headless/buffer_write_ahead.h | MarkFollowingPages | SOURCE | tools/check-buffer-write-ahead-host.py | Limit write-ahead region and prevent false invalidations | 🟡 Source étudiée |
+| R07 | P1 | V07 | vendor/sources/eden/src/video_core/renderer_vulkan/vk_descriptor_buffer.cpp | DescriptorBufferRing::Allocate; DescriptorBufferRing::TouchFrame | SOURCE | tools/check-ps5-descriptor-queue-preflight.py | Verify descriptor ring lifetime across in-flight GPU work | 🟡 Source étudiée |
+| R08 | P1 | R03 | vendor/sources/eden/src/video_core/renderer_vulkan/vk_staging_buffer_pool.cpp | StagingBufferPool::Request; StagingBufferPool::TickFrame | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Verify staging reuse is gated by GPU completion | 🟠 À contrôler |
+| R09 | P1 | H03 | vendor/sources/eden/src/core/hle/kernel/k_memory_manager.cpp | KMemoryManager::Initialize; KMemoryManager::AllocateAndOpen | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Trace guest RAM allocation around stalled synchronization | 🟠 À contrôler |
+| H06 | P0 | H03 | vendor/sources/eden/src/core/hle/kernel/k_thread_queue.cpp | KThreadQueue::NotifyAvailable; KThreadQueue::EndWait | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Verify actual guest runnable transition on wakeup | 🟠 À contrôler |
+| H07 | P0 | H06 | vendor/sources/eden/src/core/hle/kernel/k_address_arbiter.cpp | KAddressArbiter::Signal | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Relate address arbitration to guest thread wait/signal | 🟠 À contrôler |
+| D03 | P1 | Q04 | vendor/sources/eden/src/video_core/cdma_pusher.cpp | CDmaPusher::ExecuteCommand | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Distinguish host-channel DMA from graphics DMA | 🟠 À contrôler |
+| M05 | P2 | M02 | headless/gpu_deferred_store_publication.h | CommitPostStore | PARKED | docs/DEFERRED_JIT_QUIESCENCE_ARCHITECTURE_2026-10-17.md | Publication experimental bridge still disabled | ⚪ Suspendu |
 <!-- AUDIT_ROWS_END -->
 
 
 ## Couverture encore NON exhaustive (à inventorier, pas à déclarer OK)
 
-Outre les **38 lignes du graphe**, le dépôt comprend d'autres composants
+Outre les **58 lignes du graphe**, le dépôt comprend d'autres composants
 susceptibles d'influencer le symptôme observé, dont les interfaces HID/commandes
 en jeu, l'ordonnancement des services IPC, la restitution audio et les chemins
 host-syncpoint. **Ils ne sont pas tous vérifiés par le présent tableau.**
@@ -163,7 +183,7 @@ host-syncpoint. **Ils ne sont pas tous vérifiés par le présent tableau.**
   couvertes par cet audit de stabilité native ; inventaire complet
   du dépôt ≠ assurance de correction de FC27.
 
-**Règle de clôture :** aucune réponse ne doit présenter « 38 lignes »
+**Règle de clôture :** aucune réponse ne doit présenter « 58 lignes »
 comme « toutes les fonctions restantes ». L'inventaire s'étend à mesure
 des véritables appels, et une tâche n'est verte que pour son critère
 de validation nommé.
