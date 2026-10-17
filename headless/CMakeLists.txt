@@ -1412,16 +1412,16 @@ list(REMOVE_ITEM core_sources core.cpp)
 list(APPEND core_sources "${PORT_BUILD_DIR}/core.cpp")
 set_property(TARGET core PROPERTY SOURCES "${core_sources}")
 
-# The builder's vectors own every context through serialization. Parent links
-# only navigate that live tree; owning them creates parent/child cycles.
-file(READ "${PROJECT_SOURCE_DIR}/src/core/file_sys/fsmitm_romfsbuild.cpp" romfs_source)
-string(REPLACE "    std::shared_ptr<RomFSBuildDirectoryContext> parent;"
-    "    RomFSBuildDirectoryContext* parent = nullptr;" romfs_source "${romfs_source}")
-string(REPLACE "parent = std::move(parent_dir_ctx);" "parent = parent_dir_ctx.get();" romfs_source "${romfs_source}")
-write_derived("${PORT_BUILD_DIR}/fsmitm_romfsbuild.cpp" "${romfs_source}")
+# RomFS builder parents are non-owning: the tracked source retains both
+# original shared_ptr-to-pointer replacements without CMake rewriting.
+set(EDEN_MAINTAINED_ROMFS_BUILDER
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/file_sys/fsmitm_romfsbuild.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_ROMFS_BUILDER}")
+    message(FATAL_ERROR "Missing maintained RomFS builder source")
+endif()
 get_target_property(core_sources core SOURCES)
 list(REMOVE_ITEM core_sources file_sys/fsmitm_romfsbuild.cpp)
-list(APPEND core_sources "${PORT_BUILD_DIR}/fsmitm_romfsbuild.cpp")
+list(APPEND core_sources "${EDEN_MAINTAINED_ROMFS_BUILDER}")
 set_property(TARGET core PROPERTY SOURCES "${core_sources}")
 
 # One change to a pinned Eden source; the build stops when the text it replaces is gone.

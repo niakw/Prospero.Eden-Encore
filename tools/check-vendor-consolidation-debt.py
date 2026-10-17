@@ -430,6 +430,27 @@ assert 'write_derived("${PORT_BUILD_DIR}/filesystem.cpp"' not in c
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/filesystem/filesystem.cpp" fs_service)' not in c
 print("VENDOR_MAINTAINED_NATIVE_FILESYSTEM_PARITY_PASS: firmware and selection")
 
+# Source parity for non-owning RomFS builder parents: the old CMake
+# substitutions targeted TWO directory/file contexts and TWO assignments.
+romfs_rel = "core/file_sys/fsmitm_romfsbuild.cpp"
+romfs_pinned = (sources / "eden/src" / romfs_rel).read_text()
+romfs_active = (active / "eden-core/src" / romfs_rel).read_text()
+romfs_rewrites = (
+    ("    std::shared_ptr<RomFSBuildDirectoryContext> parent;",
+     "    RomFSBuildDirectoryContext* parent = nullptr;"),
+    ("parent = std::move(parent_dir_ctx);", "parent = parent_dir_ctx.get();"),
+)
+for old,new in romfs_rewrites:
+    assert romfs_pinned.count(old) == 2, ("pinned RomFS parent drift", old)
+    romfs_pinned = romfs_pinned.replace(old,new)
+assert romfs_active == romfs_pinned, "maintained RomFS builder differs from former CMake unit"
+assert c.count('list(REMOVE_ITEM core_sources file_sys/fsmitm_romfsbuild.cpp)') == 1
+assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_ROMFS_BUILDER}")') == 1
+assert 'if(NOT EXISTS "${EDEN_MAINTAINED_ROMFS_BUILDER}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/fsmitm_romfsbuild.cpp"' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/file_sys/fsmitm_romfsbuild.cpp"' not in c
+print("VENDOR_MAINTAINED_ROMFS_BUILDER_PARITY_PASS: two non-owning links, two assignments")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
