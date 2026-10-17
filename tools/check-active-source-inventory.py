@@ -5,6 +5,7 @@ This verifies file-level coverage and exact graph cross-links only.
 It is not a function audit, compiler check or console-test certificate.
 """
 from pathlib import Path
+import json
 import re
 
 root = Path(__file__).resolve().parents[1]
@@ -45,8 +46,23 @@ assert present == expected, (
     len(present), len(expected),
     next(((a, b) for a, b in zip(present, expected) if a != b), None),
 )
+# The shipping backport manifest also carries two build recipes that are not
+# C/C++ source files; track them explicitly rather than silently omitting them.
+manifest = json.loads((active / "eden-backports/manifest.json").read_text())
+shipping = set(manifest["entries"])
+shipping_cpp = {"src/" + p.removeprefix("eden-backports/src/")
+                for p in physical if p.startswith("eden-backports/src/")}
+build_recipes = {"src/common/CMakeLists.txt", "src/core/CMakeLists.txt"}
+assert shipping == shipping_cpp | build_recipes, (
+    "Shipping backport source/build manifest coverage drift",
+    sorted(shipping ^ (shipping_cpp | build_recipes)),
+)
+assert len(shipping) == 83 and len(manifest["shipping_receipts"]) == 43
+assert manifest["excluded_experimental"] == ["EDEN_EXPERIMENTAL_DUMMY_THREAD_WAITS"]
 assert len(physical) == len(set(physical))
 print("ENCORE_ACTIVE_SOURCE_CATALOG_PASS",
       f"files={len(physical)}",
       f"graph_exact={sum(path in graph for path in physical)}",
-      f"unlinked={sum(path not in graph for path in physical)}")
+      f"unlinked={sum(path not in graph for path in physical)}",
+      f"shipping_sources={len(shipping_cpp)}",
+      f"shipping_build_recipes={len(build_recipes)}")

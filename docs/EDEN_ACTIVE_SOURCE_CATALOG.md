@@ -13,6 +13,9 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 - **140 fichiers** n'ont pas encore de ligne de graphe correspondant
   exactement à leur chemin. Cela **ne prouve pas** qu'ils n'ont jamais été
   examinés, ni qu'ils sont effectivement compilés.
+- Le manifeste des backports verrouille **83 fichiers livrés**, dont
+  **81 fichiers C/C++ enregistrés ci-dessous** et **deux fichiers CMake**
+  listés séparément. Les **43 reçus de patches** sont conservés.
 - Les `shipping-backport` sont des sources de backports de production, précompilées dans un
   arbre épinglé par `tools/install-vendored-eden-backports.py` avec
   contrôle d'empreintes, sans replay `git apply` pendant le build ;
@@ -213,6 +216,17 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `ps5-mesa/src/util/disk_cache_os.c` | `driver-fork` | — |
 | `ps5-mesa/src/vulkan/wsi/wsi_common_videoout.c` | `driver-fork` | — |
 <!-- ACTIVE_SOURCE_CATALOG_END -->
+
+## Fichiers de build du snapshot de backports (hors sources C/C++)
+
+| Chemin | Rôle |
+| --- | --- |
+| `eden-backports/src/common/CMakeLists.txt` | Adaptation des cibles communes du snapshot épinglé |
+| `eden-backports/src/core/CMakeLists.txt` | Adaptation des sources du cœur du snapshot épinglé |
+
+Ces deux fichiers sont inclus dans les **83 entrées** de
+`vendor/encore-active/eden-backports/manifest.json`, mais ne sont
+pas comptés parmi les 183 fichiers de code et d'en-têtes.
 
 ## Critères de tenue à jour
 
