@@ -106,3 +106,40 @@ and control-plane progress mechanism. Do not pump arbitrary GPU commands,
 call `TickWork` out of order, or bypass graphics FIFO merely to avoid
 the deadlock. Both approaches still require real hardware/device-fence
 qualification. The native deferred bridge gate remains false.
+
+
+## Real PhysicalCore method boundary: interrupt request versus exit acknowledgment
+
+The added host fixture \`tools/check-native-physical-core-interrupt-ack-host.py\`
+compiles the **unchanged source method bodies** of
+\`PhysicalCore::RunThread()\`, \`PhysicalCore::Interrupt()\`, and
+\`PhysicalCore::ClearInterrupt()\` from the pinned native core.
+A narrow fake \`ArmInterface\` blocks inside its JIT \`RunThread()\` method
+and reports entry, interrupt calls and final guest-thread unlocks.
+This is a real *core control flow* test but not a real Dynarmic JIT build.
+
+Expected finite scenarios:
+
+- With one RUN deliberately blocked, \`Interrupt()\` returns and calls
+  \`SignalInterrupt()\` while \`ExitContext()\` has not yet unlocked the
+  guest thread. Interrupt REQUEST is therefore not the quiescence ACK.
+- Once the mocked JIT returns \`BreakLoop\`, the original
+  \`ExitContext()\` unlocks the guest thread and clears active members.
+- Calling \`RunThread()\` while its interrupt flag remains set returns
+  without another JIT RUN admission.
+- Calling \`ClearInterrupt()\` and then \`RunThread()\` permits a second
+  execution. The current source does not hold a separate page-transition
+  epoch or conditional admission barrier across that restart.
+
+This is the precise native insertion opportunity for future design:
+ACK must be recorded only after the actual \`ExitContext\` work completes;
+RESUME must consult an independently controlled transition generation
+before clearing the interrupt or allowing another JIT admission.
+A naive ACK inside \`Interrupt()\` or unconditional \`ClearInterrupt()\`
+would reintroduce a stale direct-write/first-GPU-use window.
+
+Strict limits: mock \`SignalInterrupt()\` simply records a request; it
+does not execute Dynarmic, guarantee interrupt latency, exercise code
+patching, handle multi-core migration, prove any memory or GPU fence,
+or implement the barrier. Existing Source/JIT native gate remains OFF,
+and no gameplay improvement is claimed.
