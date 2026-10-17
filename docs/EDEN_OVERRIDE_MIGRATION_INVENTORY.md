@@ -11,16 +11,16 @@ développement, les options JIT expérimentales, les backends et le build
 natif sélectionnent chacun leur sous-ensemble.
 
 L'inventaire complémentaire `docs/EDEN_ACTIVE_SOURCE_CATALOG.md` suit les
-199 fichiers de code et en-têtes dans `vendor/encore-active`,
+216 fichiers de code et en-têtes dans `vendor/encore-active`,
 y compris les backports de production et la dépendance graphique. Cette
 couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
 ## Synthèse vérifiable
 
-- **47 appels générateurs** encore dans CMake ; contre **75 avant**
+- **46 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
-- **58 lectures `file(READ`** et **194 remplacements
+- **57 lectures `file(READ`** et **193 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
 - Les versions diagnostiques de `IFile::Read`, `IStorage::Read` et des appels
@@ -84,7 +84,7 @@ et non les 458 scripts Python/shell/CMake du seul dossier `tools/`.
 | `headless/checked-fastmem.cmake` et quatre autres modules indirects | **BUILD**, changement de variables source avant écriture | Unités dérivées du CMake principal | Déjà indexées X03–X07 |
 | `headless/vulkan.cmake` | **BUILD**, copie/sélection d'un fork vérifié | `encore-active/eden-vulkan` | Aucun appel au générateur Python |
 
-**Règle de lecture :** le compteur `47 + 21 = 68` décrit uniquement les
+**Règle de lecture :** le compteur `46 + 21 = 67` décrit uniquement les
 sites `write_derived`, pas les générateurs Python, les copies de dépendances,
 les recettes CMake ni les sorties de ressources. **Zéro source sans propriétaire
 dans le catalogue `vendor/encore-active` n'implique pas zéro override hors de
@@ -105,53 +105,52 @@ dans la version normale.
 <!-- OVERRIDE_GENERATORS_START -->
 | ID | Sortie `write_derived` | Domaine indicatif | Catégorie | Ligne CMake |
 | --- | --- | --- | --- | ---: |
-| G01 | `${PORT_BUILD_DIR}/buffer-pages/video_core/buffer_cache/buffer_cache.h` | Cache/outil natif | En-tête source | 62 |
-| G02 | `${PORT_BUILD_DIR}/sparse/common/sparse_large_vector.h` | Dynarmic/JIT | En-tête source | 254 |
-| G03 | `${PORT_BUILD_DIR}/include/${code_relative}.h` | Dynarmic/JIT | En-tête source | 288 |
-| G04 | `${PORT_BUILD_DIR}/block_of_code.cpp` | Dynarmic/JIT | Unité source | 352 |
-| G05 | `${PORT_BUILD_DIR}/include/dynarmic/backend/x64/a64_emit_x64.h` | Dynarmic/JIT | En-tête source | 376 |
-| G06 | `${PORT_BUILD_DIR}/a${bits}_emit_x64.cpp` | Dynarmic/JIT | Unité source | 388 |
-| G07 | `${PORT_BUILD_DIR}/include/dynarmic/backend/block_range_information.h` | Dynarmic/JIT | En-tête source | 400 |
-| G08 | `${PORT_BUILD_DIR}/emit_x64.cpp` | Dynarmic/JIT | Unité source | 430 |
-| G09 | `${PORT_BUILD_DIR}/scalar_impl.cpp` | Dynarmic/JIT | Unité source | 455 |
-| G10 | `${PORT_BUILD_DIR}/a64_translate.cpp` | Dynarmic/JIT | Unité source | 458 |
-| G11 | `${PORT_BUILD_DIR}/opt_passes.cpp` | Dynarmic/JIT | Unité source | 474 |
-| G12 | `${PORT_BUILD_DIR}/include/${memory_inc}` | Dynarmic/JIT | Cible variable | 596 |
-| G13 | `${PORT_BUILD_DIR}/include/${memory_relative}` | Dynarmic/JIT | Cible variable | 616 |
-| G14 | `${PORT_BUILD_DIR}/${memory_unit}` | Dynarmic/JIT | Cible variable | 627 |
-| G15 | `${PORT_BUILD_DIR}/spin_lock_x64.cpp` | Dynarmic/JIT | Unité source | 642 |
-| G16 | `${PORT_BUILD_DIR}/a64_interface.cpp` | Dynarmic/JIT | Unité source | 737 |
-| G17 | `${PORT_BUILD_DIR}/a32_interface.cpp` | Dynarmic/JIT | Unité source | 765 |
-| G18 | `${derived}` | CPU | Cible variable | 937 |
-| G19 | `${PORT_BUILD_DIR}/physical_core.cpp` | CPU | Unité source | 1019 |
-| G20 | `${eden_native_memory_tu}` | Mémoire/chargement | Cible variable | 1258 |
-| G21 | `${PORT_BUILD_DIR}/core.cpp` | Mémoire/chargement | Unité source | 1339 |
-| G22 | `${PORT_BUILD_DIR}/nso.cpp` | Mémoire/chargement | Unité source | 1414 |
-| G23 | `${PORT_BUILD_DIR}/ips_layer.cpp` | Mémoire/chargement | Unité source | 1532 |
-| G24 | `${PORT_BUILD_DIR}/vi_conductor.cpp` | Kernel/IPC/entrées | Unité source | 1579 |
-| G25 | `${PORT_BUILD_DIR}/npad_pause_diag.cpp` | Kernel/IPC/entrées | Unité source | 1654 |
-| G26 | `${PORT_BUILD_DIR}/include/${ioctl_header}` | Kernel/IPC/entrées | Cible variable | 1671 |
-| G27 | `${PORT_BUILD_DIR}/k_page_table_base.cpp` | Kernel/IPC/entrées | Unité source | 1710 |
-| G28 | `${PORT_BUILD_DIR}/k_process.cpp` | Kernel/IPC/entrées | Unité source | 1933 |
-| G29 | `${PORT_BUILD_DIR}/include/${server_header}` | Kernel/IPC/entrées | Cible variable | 1950 |
-| G30 | `${PORT_BUILD_DIR}/server_manager.cpp` | Kernel/IPC/entrées | Unité source | 2007 |
-| G31 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 2020 |
-| G32 | `${eden_gpu_span_tu}` | Audio/graphique | Cible variable | 2147 |
-| G33 | `${PORT_BUILD_DIR}/gl_rasterizer.cpp` | Audio/graphique | Unité source | 2238 |
-| G34 | `${PORT_BUILD_DIR}/include/common/bounded_threadsafe_queue.h` | Audio/graphique | En-tête source | 2300 |
-| G35 | `${PORT_BUILD_DIR}/gpu_thread.cpp` | GPU/vidéo | Unité source | 2449 |
-| G36 | `${PORT_BUILD_DIR}/include/video_core/gpu_thread.h` | GPU/vidéo | En-tête source | 2454 |
-| G37 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 2505 |
-| G38 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 2601 |
-| G39 | `${PORT_BUILD_DIR}/maxwell_3d.cpp` | GPU/vidéo | Unité source | 2621 |
-| G40 | `${PORT_BUILD_DIR}/shader_environment.cpp` | GPU/vidéo | Unité source | 2636 |
-| G41 | `${PORT_BUILD_DIR}/texture_cache_util.cpp` | GPU/vidéo | Unité source | 2677 |
-| G42 | `${PORT_BUILD_DIR}/audited_guest_dns.cpp` | Runtime/FS/réseau | Unité source | 2801 |
-| G43 | `${PORT_BUILD_DIR}/audited_guest_bsd.cpp` | Runtime/FS/réseau | Unité source | 2863 |
-| G44 | `${PORT_BUILD_DIR}/network.cpp` | Runtime/FS/réseau | Unité source | 2941 |
-| G45 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 3004 |
-| G46 | `${eden_app_crt}` | Runtime/FS/réseau | Cible variable | 3016 |
-| G47 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 3201 |
+| G01 | `${PORT_BUILD_DIR}/buffer-pages/video_core/buffer_cache/buffer_cache.h` | Cache/outil natif | En-tête source | 74 |
+| G02 | `${PORT_BUILD_DIR}/sparse/common/sparse_large_vector.h` | Dynarmic/JIT | En-tête source | 266 |
+| G03 | `${PORT_BUILD_DIR}/include/${code_relative}.h` | Dynarmic/JIT | En-tête source | 300 |
+| G04 | `${PORT_BUILD_DIR}/block_of_code.cpp` | Dynarmic/JIT | Unité source | 364 |
+| G05 | `${PORT_BUILD_DIR}/include/dynarmic/backend/x64/a64_emit_x64.h` | Dynarmic/JIT | En-tête source | 388 |
+| G06 | `${PORT_BUILD_DIR}/a${bits}_emit_x64.cpp` | Dynarmic/JIT | Unité source | 400 |
+| G07 | `${PORT_BUILD_DIR}/include/dynarmic/backend/block_range_information.h` | Dynarmic/JIT | En-tête source | 412 |
+| G08 | `${PORT_BUILD_DIR}/emit_x64.cpp` | Dynarmic/JIT | Unité source | 442 |
+| G09 | `${PORT_BUILD_DIR}/scalar_impl.cpp` | Dynarmic/JIT | Unité source | 467 |
+| G10 | `${PORT_BUILD_DIR}/a64_translate.cpp` | Dynarmic/JIT | Unité source | 470 |
+| G11 | `${PORT_BUILD_DIR}/opt_passes.cpp` | Dynarmic/JIT | Unité source | 486 |
+| G12 | `${PORT_BUILD_DIR}/include/${memory_inc}` | Dynarmic/JIT | Cible variable | 608 |
+| G13 | `${PORT_BUILD_DIR}/include/${memory_relative}` | Dynarmic/JIT | Cible variable | 628 |
+| G14 | `${PORT_BUILD_DIR}/${memory_unit}` | Dynarmic/JIT | Cible variable | 639 |
+| G15 | `${PORT_BUILD_DIR}/spin_lock_x64.cpp` | Dynarmic/JIT | Unité source | 654 |
+| G16 | `${PORT_BUILD_DIR}/a64_interface.cpp` | Dynarmic/JIT | Unité source | 749 |
+| G17 | `${PORT_BUILD_DIR}/a32_interface.cpp` | Dynarmic/JIT | Unité source | 777 |
+| G18 | `${derived}` | CPU | Cible variable | 949 |
+| G19 | `${PORT_BUILD_DIR}/physical_core.cpp` | CPU | Unité source | 1031 |
+| G20 | `${eden_native_memory_tu}` | Mémoire/chargement | Cible variable | 1270 |
+| G21 | `${PORT_BUILD_DIR}/core.cpp` | Mémoire/chargement | Unité source | 1351 |
+| G22 | `${PORT_BUILD_DIR}/nso.cpp` | Mémoire/chargement | Unité source | 1426 |
+| G23 | `${PORT_BUILD_DIR}/ips_layer.cpp` | Mémoire/chargement | Unité source | 1544 |
+| G24 | `${PORT_BUILD_DIR}/vi_conductor.cpp` | Kernel/IPC/entrées | Unité source | 1591 |
+| G25 | `${PORT_BUILD_DIR}/npad_pause_diag.cpp` | Kernel/IPC/entrées | Unité source | 1666 |
+| G26 | `${PORT_BUILD_DIR}/include/${ioctl_header}` | Kernel/IPC/entrées | Cible variable | 1683 |
+| G27 | `${PORT_BUILD_DIR}/k_page_table_base.cpp` | Kernel/IPC/entrées | Unité source | 1722 |
+| G28 | `${PORT_BUILD_DIR}/k_process.cpp` | Kernel/IPC/entrées | Unité source | 1945 |
+| G29 | `${PORT_BUILD_DIR}/include/${server_header}` | Kernel/IPC/entrées | Cible variable | 1962 |
+| G30 | `${PORT_BUILD_DIR}/server_manager.cpp` | Kernel/IPC/entrées | Unité source | 2019 |
+| G31 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 2032 |
+| G32 | `${PORT_BUILD_DIR}/gl_rasterizer.cpp` | Audio/graphique | Unité source | 2242 |
+| G33 | `${PORT_BUILD_DIR}/include/common/bounded_threadsafe_queue.h` | Audio/graphique | En-tête source | 2307 |
+| G34 | `${PORT_BUILD_DIR}/gpu_thread.cpp` | GPU/vidéo | Unité source | 2456 |
+| G35 | `${PORT_BUILD_DIR}/include/video_core/gpu_thread.h` | GPU/vidéo | En-tête source | 2461 |
+| G36 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 2512 |
+| G37 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 2608 |
+| G38 | `${PORT_BUILD_DIR}/maxwell_3d.cpp` | GPU/vidéo | Unité source | 2628 |
+| G39 | `${PORT_BUILD_DIR}/shader_environment.cpp` | GPU/vidéo | Unité source | 2643 |
+| G40 | `${PORT_BUILD_DIR}/texture_cache_util.cpp` | GPU/vidéo | Unité source | 2684 |
+| G41 | `${PORT_BUILD_DIR}/audited_guest_dns.cpp` | Runtime/FS/réseau | Unité source | 2808 |
+| G42 | `${PORT_BUILD_DIR}/audited_guest_bsd.cpp` | Runtime/FS/réseau | Unité source | 2870 |
+| G43 | `${PORT_BUILD_DIR}/network.cpp` | Runtime/FS/réseau | Unité source | 2948 |
+| G44 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 3011 |
+| G45 | `${eden_app_crt}` | Runtime/FS/réseau | Cible variable | 3023 |
+| G46 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 3208 |
 <!-- OVERRIDE_GENERATORS_END -->
 
 ## Prochain ordre de migration
@@ -325,7 +324,7 @@ pas que le PC invité avance après un réveil HLE.
 
 Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules
 inclus par ce fichier contiennent **21 autres appels `write_derived()`**
-dans 6 fichiers. Le total de **68 appels** (47 + 21) est donc un **nombre de
+dans 6 fichiers. Le total de **67 appels** (46 + 21) est donc un **nombre de
 sites CMake**, pas un dénombrement des fichiers réellement produits à
 l'exécution. Un module inclus peut définir des macros sans les exécuter,
 et plusieurs sorties sont explicitement conditionnées.
@@ -359,8 +358,8 @@ et plusieurs sorties sont explicitement conditionnées.
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **68 sites** `write_derived()`, ni dans
-les **7 modules indirects** ci-dessous :
+Ils ne sont comptés ni dans les **67 sites** `write_derived()`, ni dans
+les **4 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,
   sous contrôle d'identité et de hash. Il modifie **l'arbre Eden fourni
@@ -442,15 +441,14 @@ que chaque chemin a été validé sur console.
 
 ## Overrides indirects sans `write_derived()` local
 
-Ces **5 modules supplémentaires** ne sont pas inclus dans les **68 appels**.
+Ces **4 modules supplémentaires** ne sont pas inclus dans les **67 appels**.
 Tous modifient des variables-source ensuite écrites par le CMake principal.
-Ils ne sont pas cinq sources C++ distinctes.
+Ils ne sont pas quatre sources C++ distinctes.
 
 <!-- INDIRECT_OVERRIDES_START -->
 | ID | Module | Origine / source réécrite | Mécanisme | État |
 | --- | --- | --- | --- | --- |
 | X03 | `headless/checked-fastmem.cmake` | `memory_emitter`, `memory_source` | Modifications de l'émetteur JIT dans les variables CMake | Non migré |
-| X04 | `headless/native_gpu_granular_bounds.cmake` | `eden_gpu_span_src` | Contrôles des plages GPU avant génération | Non migré |
 | X05 | `headless/native_guest_range_overflow.cmake` | `eden_cpu_memory` | Contrôle de débordement des adresses mémoire avant génération | Non migré |
 | X06 | `headless/native_jit_memory_read_guard.cmake` | `wrapper` | Contrôle des lectures de mémoire invitée avant génération | Non migré |
 | X07 | `headless/physical_core_interrupt_atomic.cmake` | `physical_core_source` | Accès atomiques aux interruptions avant génération | Non migré |
@@ -468,12 +466,13 @@ Les deux générateurs indirects `macro_recovery.cmake` et
 maintenues dans `vendor/encore-active/eden-core`, sélectionnées directement.
 Leurs transformations historiques servent désormais uniquement de parité.
 
-Les modules `checked-fastmem.cmake`,
-`native_gpu_granular_bounds.cmake`, `native_guest_range_overflow.cmake`,
-`native_jit_memory_read_guard.cmake` et
-`physical_core_interrupt_atomic.cmake` modifient des variables-source
-qui sont générées ensuite dans le CMake principal : **absence d'appel
-`write_derived()` local ne signifie donc pas absence d'override**.
+Les quatre modules encore actifs `checked-fastmem.cmake`,
+`native_guest_range_overflow.cmake`, `native_jit_memory_read_guard.cmake`
+et `physical_core_interrupt_atomic.cmake` modifient des variables-source
+qui sont ensuite écrites par CMake. Le correctif GPU des plages et de
+`IsGranularRange` n'est plus dans un module : il vit dans la source C++
+maintenue `vendor/encore-active/eden-core/src/video_core/memory_manager.cpp`.
+Les tests hôtes comparent l'ancienne génération et la source sélectionnée.
 
 À l'inverse, `headless/vulkan.cmake` copie déjà les sources réellement
 maintenues dans `vendor/encore-active/eden-vulkan`, et le module HLE

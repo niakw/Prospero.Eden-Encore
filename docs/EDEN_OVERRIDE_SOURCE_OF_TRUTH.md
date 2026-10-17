@@ -16,13 +16,13 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **215 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **216 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **47 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **46 générateurs** `write_derived`.
 - Six modules CMake supplémentaires totalisent **21 générateurs**
-  `write_derived`, soit **68 sites** au total.
-- Cinq modules CMake procèdent encore à des substitutions **indirectes**
+  `write_derived`, soit **67 sites** au total.
+- Quatre modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 68.
 - `headless/` contient **12 fragments `.inc`**. Plusieurs contribuent
@@ -55,7 +55,6 @@ nouveaux corps C++ destinés à la console.
 | `headless/guest_write_deferred_bridge.cmake` | Générateur de source dérivée, à déplacer | Dette de migration |
 | `headless/inject.cmake` | Orchestration ou toolchain | Sélecteur / configuration |
 | `headless/jit-alias.cmake` | Générateur de source dérivée, à déplacer | Dette de migration |
-| `headless/native_gpu_granular_bounds.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
 | `headless/native_guest_range_overflow.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
 | `headless/native_jit_memory_read_guard.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
 | `headless/physical_core_interrupt_atomic.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
@@ -115,6 +114,17 @@ le binaire choisit exclusivement `vendor/encore-active/eden-vulkan/`.
 `headless/vulkan.cmake` ne les surveille plus inutilement comme dépendances
 de configuration. Leur conservation sert la preuve de parité, pas la
 construction du moteur.
+
+## Correction GPU réellement centralisée
+
+`video_core/memory_manager.cpp` est désormais maintenu dans
+`vendor/encore-active/eden-core/src/video_core/`, avec les huit sites
+de correction de plages, débordements et pages GPU. `PS5_NATIVE` sélectionne
+directement cette source. Le module `native_gpu_granular_bounds.cmake`
+et la génération `memory-manager-native.cpp` sont supprimés.
+Les vérifications hôtes contrôlent les fonctions maintenues et leur parité
+avec les anciennes transformations ; aucun gain FPS ni résultat console
+n'est inféré.
 
 ## Conditions de sortie de la dette
 
