@@ -143,3 +143,38 @@ does not execute Dynarmic, guarantee interrupt latency, exercise code
 patching, handle multi-core migration, prove any memory or GPU fence,
 or implement the barrier. Existing Source/JIT native gate remains OFF,
 and no gameplay improvement is claimed.
+
+
+## IsInterrupted: eliminate a real host data race without ABI changes
+
+Core::PhysicalCore was storing m_is_interrupted under m_guard and
+reading it without a lock in IsInterrupted(), including the guest CPU
+scheduler's MultiCoreRunGuestThread loop. Under the C++ memory model
+that is a conflicting concurrent plain read/write, even though the
+writers take a mutex. This is independent of the disabled #187 bridge.
+
+The native-only CMake source derivation now includes
+headless/physical_core_interrupt_atomic.cmake immediately before the
+existing physical_core.cpp output. The helper requires exactly five
+pinned accesses (six in the diagnostic profile variant), replacing
+ALL reads and writes with std::atomic_ref<bool> / atomic_ref<const bool>
+relaxed load/store. The original bool field and its layout remain
+unchanged; no vendored file is modified. The existing m_guard mutex
+continues to protect active ArmInterface/thread pointers and
+the Idle condition-variable predicate. Relaxed atomic operations are
+sufficient for this flag's standalone visibility; they do not provide
+a JIT-exit acknowledgment, release a page epoch or synchronize GPU
+memory. If the pinned source grows new accesses, CMake aborts rather
+than allowing new unsynchronized mixed atomic/plain accesses.
+
+The host-only test tools/check-native-physical-core-atomic-host.py
+actually runs CMake -P against the pinned native source for both
+shipping and diagnostic profile variants, checks every transformed
+access, and compiles/runs the unchanged derived RunThread, Interrupt,
+ClearInterrupt and IsInterrupted C++ method bodies. It injects a
+bounded two-thread flag reader/toggler, while retaining the existing
+mocked JIT interrupt/exit/reentry witness. It does not execute
+the native console binary or prove Dynarmic/GPU handoff safety.
+
+This is a concrete fix for a C++ data race in the native-derived code,
+NOT a claim that the freezes/HUD stalls are fixed. #187 stays disabled.
