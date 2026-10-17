@@ -41,8 +41,10 @@ par `tools/install-vendored-eden-backports.py` (pas de `git apply` au build).
 Catalogue exhaustif des fichiers C/C++ actifs : `docs/EDEN_ACTIVE_SOURCE_CATALOG.md`
 (183 fichiers enregistrés, 37 chemins présents dans le graphe technique).
 Le recensement des fichiers n'est pas une validation de leurs fonctions.
+Le générateur `renderer_opengl.cpp` n'est plus nécessaire : le renderer
+original est sélectionné directement, sans créer une copie maintenue identique.
 
-L'inventaire couvre **57 appels générateurs** du CMake principal, **21**
+L'inventaire couvre **56 appels générateurs** du CMake principal, **21**
 dans les modules et **7 modules indirects** suivis séparément ; ce ne sont
 pas des décomptes de fichiers uniques. Chaque nouvelle migration doit
 conserver un test de parité et de sélection native.
