@@ -576,6 +576,21 @@ assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/gl_textu
 assert 'renderer_opengl/gl_texture_cache.cpp' in (sources / "eden/src/video_core/CMakeLists.txt").read_text()
 print("MAINTAINED_GL_TEXTURE_DEV_PARITY_PASS: bounded copy instrumentation")
 
+# A32 fastmem must derive from the *installed shipping backport*, not from
+# the original pinned Eden file that is overwritten before CMake configure.
+shipping_memory = (active / "eden-backports/src/core/memory.cpp").read_text()
+a32_memory = (active / "eden-core/src/core/memory.cpp").read_text()
+old_fastmem_guard = "        if (process.IsApplication() && Settings::IsFastmemEnabled()) {"
+new_fastmem_guard = "        if (process.IsApplication() && !process.Is64Bit() && Settings::IsFastmemEnabled()) {"
+assert shipping_memory.count(old_fastmem_guard) == 1, "shipping memory ABI/input changed"
+assert a32_memory == shipping_memory.replace(old_fastmem_guard, new_fastmem_guard)
+assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_A32_MEMORY}")') == 1
+assert 'if(NOT EXISTS "${EDEN_MAINTAINED_A32_MEMORY}")' in c
+assert 'if(EDEN_A32_FASTMEM)' in c
+assert 'write_derived("${PORT_BUILD_DIR}/memory.cpp"' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/memory.cpp" arena_source)' not in c
+print("MAINTAINED_A32_MEMORY_PARITY_PASS: complete installed backport source")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -616,7 +631,7 @@ assert len(module_current) == 21, len(module_current)
 for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     text = (root / module).read_text()
     assert 'file(WRITE ' in text and 'configure_file(' in text, module
-assert len(recorded) + len(module_recorded) == 73
+assert len(recorded) + len(module_recorded) == 72
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
