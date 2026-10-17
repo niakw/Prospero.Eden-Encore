@@ -2206,26 +2206,23 @@ string(REPLACE ", is_async{is_async_}" ", is_async{is_async_}\n        , gpu_thr
 string(REPLACE "    // Destruction of thread must be done before all (non trivial)\n    // previous members has been destroyed\n    VideoCommon::GPUThread::ThreadManager gpu_thread;\n" "" gpu_source "${gpu_source}")
 string(REPLACE "    u64 pending_composite_fence{};" "    u64 pending_composite_fence{};\n    VideoCommon::GPUThread::ThreadManager gpu_thread;" gpu_source "${gpu_source}")
 if(EDEN_PS5_OPENGL)
-    file(READ "${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/gl_buffer_cache.cpp" buffer_source)
-    string(REPLACE "static_cast<GLsizeiptr>(size), GL_RED, GL_UNSIGNED_INT, &value);"
-        "static_cast<GLsizeiptr>(size), GL_RED_INTEGER, GL_UNSIGNED_INT, &value);" buffer_source "${buffer_source}")
-    write_derived("${PORT_BUILD_DIR}/gl_buffer_cache.cpp" "${buffer_source}")
+    set(EDEN_MAINTAINED_GL_BUFFER_CACHE
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/video_core/renderer_opengl/gl_buffer_cache.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_GL_BUFFER_CACHE}")
+        message(FATAL_ERROR "Missing maintained OpenGL buffer cache source")
+    endif()
     list(REMOVE_ITEM video_sources renderer_opengl/gl_buffer_cache.cpp)
-    list(APPEND video_sources "${PORT_BUILD_DIR}/gl_buffer_cache.cpp")
+    list(APPEND video_sources "${EDEN_MAINTAINED_GL_BUFFER_CACHE}")
     if(PS5_NATIVE)
         # PS5 permits reading an ended query while another query is active.
         # Retain the upstream NVIDIA workaround on all other builds.
-        file(READ "${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/gl_query_cache.cpp" query_source)
-        set(query_slice "const bool slice_counter = WaitPending() && stream.IsEnabled();")
-        string(FIND "${query_source}" "${query_slice}" query_slice_offset)
-        if(query_slice_offset LESS 0)
-            message(FATAL_ERROR "Pinned query slicing workaround changed")
+        set(EDEN_MAINTAINED_GL_QUERY_CACHE
+            "${PORT_ROOT}/vendor/encore-active/eden-core/src/video_core/renderer_opengl/gl_query_cache.cpp")
+        if(NOT EXISTS "${EDEN_MAINTAINED_GL_QUERY_CACHE}")
+            message(FATAL_ERROR "Missing maintained native OpenGL query cache")
         endif()
-        string(REPLACE "${query_slice}" "const bool slice_counter = false; // PS5: do not split cached query reads."
-            query_source "${query_source}")
-        write_derived("${PORT_BUILD_DIR}/gl_query_cache.cpp" "${query_source}")
         list(REMOVE_ITEM video_sources renderer_opengl/gl_query_cache.cpp)
-        list(APPEND video_sources "${PORT_BUILD_DIR}/gl_query_cache.cpp")
+        list(APPEND video_sources "${EDEN_MAINTAINED_GL_QUERY_CACHE}")
     endif()
     # Record actual guest draw submission, separately from the startup GL oracle.
     file(READ "${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/gl_rasterizer.cpp" rasterizer_source)

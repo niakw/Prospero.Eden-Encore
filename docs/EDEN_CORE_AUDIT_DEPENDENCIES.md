@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 121
+**Non, this is not an exhaustive repository-wide inventory.** The 123
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,17 +24,17 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 121 | 102 | 246 |
+| Graphe connu | 123 | 104 | 248 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 67 | 58 | 144 |
+| SOURCE — lecture effectuée, preuve insuffisante | 69 | 60 | 146 |
 | OPEN — question technique non résolue | 15 | 15 | 27 |
 | PARKED — expérimentation suspendue | 6 | 6 | 7 |
-| **Encore à qualifier (SOURCE + OPEN)** | **82** | **72** | **171** |
+| **Encore à qualifier (SOURCE + OPEN)** | **84** | **74** | **173** |
 | Dont priorité P0 (SOURCE + OPEN) | 33 | 28 | 82 |
 
-Le **noyau restant** compte donc 82 critères répartis sur
-72 fichiers et 171 mentions fonction/contrat :
-15 OPEN et 67 SOURCE.
+Le **noyau restant** compte donc 84 critères répartis sur
+74 fichiers et 173 mentions fonction/contrat :
+15 OPEN et 69 SOURCE.
 Cela **ne signifie pas 138 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
@@ -88,13 +88,13 @@ sont des sources maintenues sous
 sélectionnées uniquement en `EDEN_DEV_PROFILE`.
 `tools/check-vendor-consolidation-debt.py` vérifie la parité du corps
 C++ avec l'override généré auparavant et recense les sorties CMake dans
-`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **56 sites restants**
+`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **54 sites restants**
 après onze migrations (F02, F03, F04, N02, N03, H21, H22, F05, F06, F07 et F08). Un site à paramètres variables peut
 produire plusieurs fichiers réels. Les ressources générées ne doivent
 pas être confondues avec des overrides de code.
 
 Le second inventaire compte 21 générateurs `write_derived()` dans les modules,
-soit **77 sites au total**, mais n'inclut **pas** les sept modules
+soit **75 sites au total**, mais n'inclut **pas** les sept modules
 `X01–X07` qui créent une sortie par `file(WRITE)` ou transforment
 indirectement une variable-source. Ils sont suivis séparément dans
 `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`, avec contrôle hôte de leur
@@ -323,6 +323,8 @@ function/contract tokens are checked by CI for existence only; the
 | V11 | P0 | V02,V04 | headless/graphics.cpp | GraphicsWindow::OnFrameDisplayed; CaptureFramePressure | SOURCE | tools/check-ps5-quiet-frame-pressure.py | Presentation-interval witnesses are callback pairs, not guest game logic or GPU ownership | 🟡 Source étudiée |
 | V12 | P1 | V04,B01 | vendor/encore-active/eden-core/src/video_core/video_core_opengl.cpp | CreateRenderer; CreateGPU | SOURCE | tools/check-vendor-consolidation-debt.py | OpenGL-only factory source has exact historical two-removal parity; Vulkan selects unchanged pinned source, no native backend-selection or runtime proof yet | 🟡 Source étudiée |
 | V13 | P1 | V12 | vendor/sources/eden/src/video_core/renderer_opengl/renderer_opengl.cpp | RendererOpenGL::Composite | SOURCE | tools/check-vendor-consolidation-debt.py | Pinned OpenGL renderer source was copied byte-for-byte by an unnecessary CMake generator; original source now stays in video_core, no native runtime renderer validation inferred | 🟡 Source étudiée |
+| V14 | P1 | V13 | vendor/encore-active/eden-core/src/video_core/renderer_opengl/gl_buffer_cache.cpp | BufferCacheRuntime::ClearBuffer | SOURCE | tools/check-vendor-consolidation-debt.py | Former one-replacement GL_RED_INTEGER unit maintained and source-selected under EDEN_PS5_OPENGL; no console proof | 🟡 Source étudiée |
+| V15 | P1 | V14 | vendor/encore-active/eden-core/src/video_core/renderer_opengl/gl_query_cache.cpp | CachedQuery::Flush | SOURCE | tools/check-vendor-consolidation-debt.py | Former query slicing bypass maintained and source-selected only with native OpenGL; no console proof | 🟡 Source étudiée |
 | F04 | P1 | F02,F03 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_filesystem.cpp | IFileSystem::OpenFile; IFileSystem::OpenDirectory; IFileSystem::GetEntryType | HOST | tools/check-vendor-consolidation-debt.py | Maintained DEV IFileSystem diagnostic replaces G23 CMake patch for three result paths; three call replacements, DEV source selection, and quiet policy passed full host preflight #39048355950; native SDK/gameplay remain unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39048355950) |
 | H20 | P0 | H02,H19 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp | KScheduler::UpdateHighestPriorityThread; KScheduler::UpdateHighestPriorityThreadsImpl | SOURCE | tools/check-upstream-guest-scheduler-locks.py | Runnable queue update precedes per-core highest-priority selection; account for pinned-thread preference, suggested-core migration and eventual context load. Not proof of guest PC progress | 🟡 Source étudiée |
 | H21 | P0 | H14,J14 | vendor/encore-active/eden-core/src/core/hle/kernel/svc/svc_ipc.cpp | SendSyncRequestImpl; SendSyncRequestWithUserBuffer | SOURCE | tools/check-vendor-consolidation-debt.py | DEV sync IPC request/thread attribution now maintained, with exact former CMake code parity; the guest's resumed JIT PC after request completion remains unproved | 🟡 Source étudiée |
