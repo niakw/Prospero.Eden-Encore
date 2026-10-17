@@ -712,6 +712,29 @@ for deleted_module in ("headless/macro_recovery.cmake", "headless/slot_vector_re
     assert not (root/deleted_module).exists(), ("legacy source generator reintroduced", deleted_module)
 print("ENCORE_SINGLE_SOURCE_SCOPE_PASS", f"modules={len(candidates_modules)}", f"fragments={len(candidates_fragments)}")
 
+
+# Byte-exact relocation of six shared-JIT inputs. Do not permit another
+# physical owner under headless after moving the authoritative source.
+import hashlib
+shared_jit_blobs = {
+    "jit_group.h": "50e7f0993ea3db6902bd11bfac496659dce54fb3",
+    "jit_group_support.inc": "22cf4c406003cbe2fe1295503dc879086f2ee65e",
+    "jit_impl.inc": "d13505bab1908a05503fcf7bd802f1c3ac626d3",
+    "jit_links.inc": "7dfe9cf7eabaabe90c61e74e1242c7712cec3503",
+    "jit_push_rsb.inc": "08d4ab5765ef788748ba1c7b283a9cbcfad0d047",
+    "jit_state_args.inc": "bee5fe16657a46647690f69c73596b8ee1d03ea4",
+}
+for filename, original_blob in shared_jit_blobs.items():
+    source = active / "eden-core/dynarmic/shared-jit" / filename
+    assert source.is_file() and not (root / "headless/dynarmic" / filename).exists(), (
+        "duplicate shared JIT fragment or missing canonical owner", filename)
+    raw = source.read_bytes()
+    git_blob = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\x00" + raw).hexdigest()
+    assert git_blob == original_blob, ("JIT source blob changed after relocation", filename)
+shared_jit_selector = (root / "headless/dynarmic/shared-jit.cmake").read_text()
+assert 'set(EDEN_SHARED_JIT_DIR "${PORT_ROOT}/vendor/encore-active/eden-core/dynarmic/shared-jit")' in shared_jit_selector
+print("ENCORE_SHARED_JIT_SOURCE_OWNERS_PASS", len(shared_jit_blobs))
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
