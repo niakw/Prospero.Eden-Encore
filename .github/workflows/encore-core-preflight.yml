@@ -69,6 +69,7 @@ jobs:
           python3 -B tools/check-native-hle-condvar-key-host.py
           python3 -B tools/check-native-hle-arbiter-access-host.py
           python3 -B tools/check-native-hle-arbiter-wrap-host.py
+          python3 -B tools/check-native-hle-wait-timeout-host.py
           python3 -B tools/check-native-jit-memory-read-guard-host.py
           python3 -B tools/check-native-guest-memory-coherence-host.py
           python3 -B tools/check-native-device-continuity-host.py
