@@ -2237,17 +2237,15 @@ if(EDEN_PS5_OPENGL)
     string(REPLACE "${draw_end}"
         "        }\n        static unsigned traced_draws{};\n        if (traced_draws < 3) {\n            ++traced_draws;\n            LOG_INFO(Render_OpenGL, \"EDEN_GUEST_GL_DRAW count={} error={}\", traced_draws, glGetError());\n        }\n    });\n}\n\nvoid RasterizerOpenGL::DrawIndirect()" rasterizer_source "${rasterizer_source}")
     if(EDEN_DEV_PROFILE)
-        file(READ "${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/gl_texture_cache.cpp" texture_source)
-        set(copy_end "dst_origin.y, dst_origin.z, region.width, region.height, region.depth);")
-        string(FIND "${texture_source}" "${copy_end}" copy_offset)
-        if(copy_offset LESS 0)
-            message(FATAL_ERROR "Pinned texture copy changed")
+        # The development-only OpenGL copy diagnostics are a tracked C++
+        # source, byte-for-byte equivalent to the old CMake substitution.
+        set(EDEN_MAINTAINED_DEV_GL_TEXTURE
+            "${PORT_ROOT}/vendor/encore-active/eden-core/src/video_core/renderer_opengl/gl_texture_cache.cpp")
+        if(NOT EXISTS "${EDEN_MAINTAINED_DEV_GL_TEXTURE}")
+            message(FATAL_ERROR "Missing maintained development GL texture cache")
         endif()
-        string(REPLACE "${copy_end}" "${copy_end}\n        static unsigned copy_errors = 0;\n        const GLenum copy_error = copy_errors < 8 ? glGetError() : GL_NO_ERROR;\n        if (copy_error && copy_errors++ < 8) {\n            GLint sw = 0, dw = 0;\n            glGetTextureLevelParameteriv(src_name, src_origin.level, GL_TEXTURE_WIDTH, &sw);\n            glGetTextureLevelParameteriv(dst_name, dst_origin.level, GL_TEXTURE_WIDTH, &dw);\n            std::printf(\"EDEN_DEV_COPY error=%x src=%u target=%x level=%d x=%d width=%d dst=%u target=%x level=%d x=%d width=%d extent=%dx%dx%d\\n\", copy_error, src_name, src_target, src_origin.level, src_origin.x, sw, dst_name, dst_target, dst_origin.level, dst_origin.x, dw, region.width, region.height, region.depth);\n        }" texture_source "${texture_source}")
-        string(PREPEND texture_source "#include <cstdio>\n")
-        write_derived("${PORT_BUILD_DIR}/gl_texture_cache.cpp" "${texture_source}")
         list(REMOVE_ITEM video_sources renderer_opengl/gl_texture_cache.cpp)
-        list(APPEND video_sources "${PORT_BUILD_DIR}/gl_texture_cache.cpp")
+        list(APPEND video_sources "${EDEN_MAINTAINED_DEV_GL_TEXTURE}")
         string(PREPEND rasterizer_source "#include \"${EDEN_PORT_DIR}/performance.h\"\n")
         string(PREPEND rasterizer_source "#include \"${EDEN_PORT_DIR}/dev_render_passes.inc\"\n")
         string(REPLACE "        static unsigned traced_draws{};"
