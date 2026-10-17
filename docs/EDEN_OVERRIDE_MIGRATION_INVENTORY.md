@@ -114,6 +114,13 @@ dans la version normale.
 
 ## Prochain ordre de migration
 
+- Huit sources de backport HLE ont des propriétaires `F19-F24`, `H41`,
+  `N18` : firmware `SystemVersion`, enregistrement des services,
+  création d'applications, RomFS et interfaces NS, sélection des manettes,
+  couches d'affichage. Les marqueurs fonctionnels sont vérifiés contre
+  la copie de production ; aucune source n'est dupliquée sous `eden-core`.
+
+
 - Six backports supplémentaires (`A06`, `N15-N17`, `H40`, `V61`)
   sont indexés par fonction et par hunk réel : ID de session audio,
   IPC BSD, contrôle réseau NIFM, échantillonnage NPad, validation TIC.
