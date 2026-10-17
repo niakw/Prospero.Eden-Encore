@@ -159,6 +159,7 @@ function/contract tokens are checked by CI for existence only; the
 | R09 | P1 | H03 | vendor/sources/eden/src/core/hle/kernel/k_memory_manager.cpp | KMemoryManager::Initialize; KMemoryManager::AllocateAndOpen | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Trace guest RAM allocation around stalled synchronization | 🟠 À contrôler |
 | H06 | P0 | H03 | vendor/sources/eden/src/core/hle/kernel/k_thread_queue.cpp | KThreadQueue::NotifyAvailable; KThreadQueue::EndWait | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Verify actual guest runnable transition on wakeup | 🟠 À contrôler |
 | H07 | P0 | H06 | vendor/sources/eden/src/core/hle/kernel/k_address_arbiter.cpp | KAddressArbiter::Signal | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Relate address arbitration to guest thread wait/signal | 🟠 À contrôler |
+| H08 | P1 | H01,R10 | vendor/sources/eden/src/core/hle/kernel/k_condition_variable.cpp | ReadFromUser; WriteToUser; UpdateLockAtomic | OPEN | tools/check-native-hle-condvar-access-host.py | Native guest-word validity guard added with pinned-vs-derived host witness; await full preflight and CodeQL; no evidence of guest freeze recovery | 🟠 À contrôler |
 | D03 | P1 | Q04 | vendor/sources/eden/src/video_core/cdma_pusher.cpp | CDmaPusher::ExecuteCommand | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Distinguish host-channel DMA from graphics DMA | 🟠 À contrôler |
 | M05 | P2 | M02 | headless/gpu_deferred_store_publication.h | CommitPostStore | PARKED | docs/DEFERRED_JIT_QUIESCENCE_ARCHITECTURE_2026-10-17.md | Publication experimental bridge still disabled | ⚪ Suspendu |
 | R10 | P1 | R01,R09 | vendor/sources/eden/src/core/memory.cpp | Memory::IsValidVirtualAddressRange | HOST | tools/check-native-guest-range-overflow-host.py | Host regression SUCCESS 38996379440; on-device behavior not verified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-guest-range-overflow-host.py) |
@@ -170,7 +171,7 @@ function/contract tokens are checked by CI for existence only; the
 
 ## Couverture encore NON exhaustive (à inventorier, pas à déclarer OK)
 
-Outre les **62 lignes du graphe**, le dépôt comprend d'autres composants
+Outre les **63 lignes du graphe**, le dépôt comprend d'autres composants
 susceptibles d'influencer le symptôme observé, dont les interfaces HID/commandes
 en jeu, l'ordonnancement des services IPC, la restitution audio et les chemins
 host-syncpoint. **Ils ne sont pas tous vérifiés par le présent tableau.**
@@ -190,7 +191,7 @@ host-syncpoint. **Ils ne sont pas tous vérifiés par le présent tableau.**
   couvertes par cet audit de stabilité native ; inventaire complet
   du dépôt ≠ assurance de correction de FC27.
 
-**Règle de clôture :** aucune réponse ne doit présenter « 62 lignes »
+**Règle de clôture :** aucune réponse ne doit présenter « 63 lignes »
 comme « toutes les fonctions restantes ». L'inventaire s'étend à mesure
 des véritables appels, et une tâche n'est verte que pour son critère
 de validation nommé.
