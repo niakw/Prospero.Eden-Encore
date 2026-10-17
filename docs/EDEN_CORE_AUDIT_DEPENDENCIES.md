@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 295
+**Non, this is not an exhaustive repository-wide inventory.** The 301
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 295 | 274 | 603 |
+| Graphe connu | 301 | 280 | 615 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 240 | 229 | 498 |
+| SOURCE — lecture effectuée, preuve insuffisante | 246 | 235 | 510 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **255** | **243** | **526** |
+| **Encore à qualifier (SOURCE + OPEN)** | **261** | **249** | **538** |
 | Dont priorité P0 (SOURCE + OPEN) | 105 | 100 | 246 |
 
-Le **noyau restant** compte donc 255 critères répartis sur
-243 fichiers et 526 mentions fonction/contrat :
-15 OPEN et 240 SOURCE.
+Le **noyau restant** compte donc 261 critères répartis sur
+249 fichiers et 538 mentions fonction/contrat :
+15 OPEN et 246 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-201 fichiers de code/en-têtes présents et 201 avec un chemin de
+207 fichiers de code/en-têtes présents et 207 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -433,6 +433,12 @@ function/contract tokens are checked by CI for existence only; the
 | J18 | P1 | H18,J03 | vendor/encore-active/eden-core/src/common/fiber.cpp | Fiber::YieldTo; Fiber::Exit; Fiber::ThreadToFiber | SOURCE | headless/CMakeLists.txt | Maintained native fiber unit is selected by common; validate cross-thread context ownership, rewind/exit semantics and actual guest execution separately | 🟡 Source étudiée |
 | J19 | P0 | J12 | vendor/encore-active/eden-core/src/core/arm/dynarmic/arm_dynarmic_64.cpp | ArmDynarmic64::SignalInterrupt; ArmDynarmic64::InvalidateCacheRange | SOURCE | tools/install-active-core-backports.py | Maintained Dynarmic64 equals exact pinned active I-cache patch; native cache behavior unproved | 🟡 Source étudiée |
 | J20 | P0 | J13 | vendor/encore-active/eden-core/src/core/arm/dynarmic/arm_dynarmic_32.cpp | ArmDynarmic32::InvalidateCacheRange | SOURCE | tools/install-active-core-backports.py | Maintained Dynarmic32 equals exact I-cache patch; native behavior unproved | 🟡 Source étudiée |
+| J21 | P1 | J02 | vendor/encore-active/eden-core/dynarmic/shared-jit/jit_group.h | JitGroup; JitGroupLock | SOURCE | tools/check-vendor-consolidation-debt.py | Same blob moved from headless to Encore; shared JIT remains experimental OFF and native behavior unproved | 🟡 Source étudiée |
+| J22 | P1 | J21 | vendor/encore-active/eden-core/dynarmic/shared-jit/jit_group_support.inc | eden_jit_shared; eden_jit_path_counters | SOURCE | tools/check-vendor-consolidation-debt.py | Same blob moved from headless to Encore; shared JIT remains experimental OFF and native behavior unproved | 🟡 Source étudiée |
+| J23 | P1 | J21 | vendor/encore-active/eden-core/dynarmic/shared-jit/jit_impl.inc | Jit::Impl; JitGroup::Block | SOURCE | tools/check-vendor-consolidation-debt.py | Same blob moved from headless to Encore; shared JIT remains experimental OFF and native behavior unproved | 🟡 Source étudiée |
+| J24 | P1 | J23 | vendor/encore-active/eden-core/dynarmic/shared-jit/jit_links.inc | EdenEmitLink; EmitTerminalImpl | SOURCE | tools/check-vendor-consolidation-debt.py | Same blob moved from headless to Encore; shared JIT remains experimental OFF and native behavior unproved | 🟡 Source étudiée |
+| J25 | P1 | J24 | vendor/encore-active/eden-core/dynarmic/shared-jit/jit_push_rsb.inc | EmitPushRSB; eden_pending_sites | SOURCE | tools/check-vendor-consolidation-debt.py | Same blob moved from headless to Encore; shared JIT remains experimental OFF and native behavior unproved | 🟡 Source étudiée |
+| J26 | P1 | J23 | vendor/encore-active/eden-core/dynarmic/shared-jit/jit_state_args.inc | EdenStateArg; EdenLoadArg | SOURCE | tools/check-vendor-consolidation-debt.py | Same blob moved from headless to Encore; shared JIT remains experimental OFF and native behavior unproved | 🟡 Source étudiée |
 | H29 | P0 | H22,H26 | headless/backports/eden-sm-host-wait.patch | GetService; IsDummyThread; SleepThread | SOURCE | tools/install-active-core-backports.py | SM GetService uses host sleep for dummy threads to avoid parking a host HLE worker with guest SleepThread; staged patch spans service-manager header and must be validated with blocking/unblocking semantics | 🟡 Source étudiée |
 | H30 | P1 | H02 | vendor/encore-active/eden-core/src/core/hle/kernel/k_spin_lock.cpp | KSpinLock::Lock; KSpinLock::TryLock | SOURCE | tools/check-maintained-audio-units.py | Maintained lock source uses SpinAcquire and preserves unlock/try-lock behavior; source parity is checked, not contention or console forward progress | 🟡 Source étudiée |
 | H31 | P1 | H03,H24 | vendor/encore-active/eden-core/src/hid_core/resource_manager.cpp | ResourceManager::Initialize; ResourceManager::CreateAppletResource | SOURCE | headless/CMakeLists.txt | Maintained HID event-lifetime resource manager selected by hid_core; verify event registration, shutdown ownership and applet wake independently | 🟡 Source étudiée |

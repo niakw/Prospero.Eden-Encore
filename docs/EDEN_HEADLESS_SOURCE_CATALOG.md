@@ -2,9 +2,9 @@
 
 **Branche :** `dev/ps5-sparse-jit`. **Date du relevé :** 17 octobre 2026.
 
-Ce registre complémentaire couvre les **195 chemins** de code, en-têtes et
+Ce registre complémentaire couvre les **189 chemins** de code, en-têtes et
 fragments `.c/.cc/.cpp/.h/.hpp/.inc/.cl` du dossier `headless/`.
-Il ne remplace pas `EDEN_ACTIVE_SOURCE_CATALOG.md` : les 198 fichiers
+Il ne remplace pas `EDEN_ACTIVE_SOURCE_CATALOG.md` : les 207 fichiers
 de `vendor/encore-active` sont déjà inventoriés séparément.
 
 **Attention :** une entrée ici ne prouve pas que le fichier est compilé ni
@@ -13,9 +13,9 @@ pour suivi séparé et n'autorise aucune modification du launcher depuis
 l'audit moteur. Un chemin noté « À qualifier » peut avoir été audité sous
 une autre forme : il manque seulement la référence de chemin exacte.
 
-- **195** chemins sous `headless/`, dont **59** sources C/C++ et **136** en-têtes/fragments.
+- **189** chemins sous `headless/`, dont **59** sources C/C++ et **130** en-têtes/fragments.
 - **27** chemins déjà présents dans le graphe moteur.
-- **168** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
+- **162** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
 - Les deux générateurs de profils `headless/encore_overrides_generated.h`,
   `headless/glyph_overrides_generated.h` et les autres ressources générées
   sont des entrées de l'inventaire, **pas** de nouveaux patchs CMake.
@@ -55,12 +55,6 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/display_refresh.h` | en-tête/fragment | — | À qualifier |
 | `headless/dynarmic/block_range_information.cpp` | JIT/expérimental | U12 | Chemin indexé, preuve dépend du graphe |
 | `headless/dynarmic/block_range_information.h` | JIT/expérimental | — | À qualifier |
-| `headless/dynarmic/jit_group.h` | JIT/expérimental | — | À qualifier |
-| `headless/dynarmic/jit_group_support.inc` | JIT/expérimental | — | À qualifier |
-| `headless/dynarmic/jit_impl.inc` | JIT/expérimental | — | À qualifier |
-| `headless/dynarmic/jit_links.inc` | JIT/expérimental | — | À qualifier |
-| `headless/dynarmic/jit_push_rsb.inc` | JIT/expérimental | — | À qualifier |
-| `headless/dynarmic/jit_state_args.inc` | JIT/expérimental | — | À qualifier |
 | `headless/elevation/elevation.cpp` | outil auxiliaire | — | À qualifier |
 | `headless/elevation/elevation.hpp` | outil auxiliaire | — | À qualifier |
 | `headless/elevation/helper/main.cpp` | outil auxiliaire | — | À qualifier |
