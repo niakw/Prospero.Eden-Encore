@@ -126,7 +126,7 @@ assert "mutex" not in witness and "new " not in witness
 assert '#ifdef EDEN_DEV_PROFILE\n#include "present_interval_witness.h"\n#endif' in graphics
 assert "FrameDiagnostics::PresentIntervalWitness<24> vulkan_interval_witness;" in graphics
 assert present.count("vulkan_interval_witness.Observe(CaptureFramePressure()") == 2
-assert present.count("vulkan_interval_witness.Reset();") == 2
+assert present.count("vulkan_interval_witness.Reset();") == 3  # new title + two quiet gates
 assert "if (Eden::NativeLogs::Detailed() &&" not in present  # runtime capture has compound bool
 assert present.count("Eden::NativeLogs::Detailed() &&") == 2
 assert present.count("Experimental::vulkan_frame_probe.load(std::memory_order_relaxed)") >= 2
