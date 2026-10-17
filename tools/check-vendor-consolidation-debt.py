@@ -765,13 +765,19 @@ all_patch_targets = set().union(*patch_target_map.values())
 def has_exact_audit_path(relative):
     return any(prefix + relative in audit_paths for prefix in (
         "vendor/sources/eden/", "vendor/encore-active/eden-core/",
+        "vendor/encore-active/eden-backports/",
         "vendor/encore-active/eden-vulkan/", "vendor/encore-active/eden-gpu/",
         "vendor/encore-active/eden-threading/",
         "vendor/encore-active/eden-sync/",
         "vendor/encore-active/eden-shader/",
     ))
+shipping_manifest = json.loads((active / "eden-backports/manifest.json").read_text())
+shipping_build_recipes = {"src/common/CMakeLists.txt", "src/core/CMakeLists.txt"}
+assert shipping_build_recipes <= set(shipping_manifest["entries"])
 unmatched_patch_targets = sorted(path for path in all_patch_targets
-                                 if not has_exact_audit_path(path))
+                                 if path not in shipping_build_recipes
+                                 and not has_exact_audit_path(path))
+assert not unmatched_patch_targets, ("unowned source patch targets", unmatched_patch_targets)
 assert len(patch_target_map) == 46
 print("VENDOR_PATCH_TARGET_FOOTPRINT_PASS "
       f"patches={len(patch_target_map)} "
