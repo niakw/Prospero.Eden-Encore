@@ -2722,12 +2722,14 @@ if(PS5_NATIVE)
 ${paths_source}")
     write_derived("${PORT_BUILD_DIR}/path_util.cpp" "${paths_source}")
     get_target_property(common_sources common SOURCES)
-    file(READ "${PROJECT_SOURCE_DIR}/src/common/thread.cpp" thread_source)
-    string(REPLACE "void SetCurrentThreadName(const char* name) {"
-        "void SetCurrentThreadName(const char* name) {\n    ::Eden::Performance::RegisterWorker(name);" thread_source "${thread_source}")
-    write_derived("${PORT_BUILD_DIR}/thread.cpp" "#include \"${EDEN_PORT_DIR}/performance.h\"\n${thread_source}")
+    # Compile the native common thread-name diagnostic from maintained C++.
+    set(EDEN_MAINTAINED_NATIVE_THREAD
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/common/thread.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_NATIVE_THREAD}")
+        message(FATAL_ERROR "Missing maintained common thread source")
+    endif()
     list(REMOVE_ITEM common_sources thread.cpp)
-    list(APPEND common_sources "${PORT_BUILD_DIR}/thread.cpp")
+    list(APPEND common_sources "${EDEN_MAINTAINED_NATIVE_THREAD}")
     # PS5 advertises invariant TSC but no CPUID leaf0x15. The original fallback
     # was inside that leaf's branch, leaving frequency zero on this hardware.
     file(READ "${PROJECT_SOURCE_DIR}/src/common/cpu_features.cpp" features_source)
@@ -2742,14 +2744,17 @@ ${paths_source}")
     write_derived("${PORT_BUILD_DIR}/cpu_features.cpp" "${features_source}")
     list(REMOVE_ITEM common_sources cpu_features.cpp)
     list(APPEND common_sources "${PORT_BUILD_DIR}/cpu_features.cpp")
-    file(READ "${PROJECT_SOURCE_DIR}/src/common/fs/fs.cpp" fs_source)
-    string(REPLACE "fs::directory_iterator(path, ec)" "Eden::ReadNativeDirectory(path, ec)" fs_source "${fs_source}")
-    string(PREPEND fs_source "#include \"${EDEN_PORT_DIR}/native_directory.h\"\n")
-    write_derived("${PORT_BUILD_DIR}/fs.cpp" "${fs_source}")
+    # Native directory enumeration retains the prior helper verbatim.
+    set(EDEN_MAINTAINED_NATIVE_FS
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/common/fs/fs.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_NATIVE_FS}")
+        message(FATAL_ERROR "Missing maintained common filesystem source")
+    endif()
     list(REMOVE_ITEM common_sources fs/fs.cpp)
-    list(APPEND common_sources "${PORT_BUILD_DIR}/fs.cpp")
+    list(APPEND common_sources "${EDEN_MAINTAINED_NATIVE_FS}")
     list(REMOVE_ITEM common_sources fs/path_util.cpp)
     list(APPEND common_sources "${PORT_BUILD_DIR}/path_util.cpp")
+    target_include_directories(common PRIVATE "${EDEN_PORT_DIR}")
     set_property(TARGET common PROPERTY SOURCES "${common_sources}")
     # Prefer this build's matching decoder headers over the C dependency
     # bundle's older FFmpeg headers exposed through OpenSSL's include root.
