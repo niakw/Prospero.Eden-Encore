@@ -2968,12 +2968,13 @@ void Initialize() {
     # Reuse the getifaddrs path instead of newer BSD route-format helpers.
     # Keep its existing zero-gateway fallback; PS5 route discovery is unqualified.
     list(REMOVE_ITEM core_sources internal_network/network_interface.cpp)
-    file(READ "${PROJECT_SOURCE_DIR}/src/core/internal_network/network_interface.cpp" interfaces_source)
-    string(REPLACE "defined(__linux__) || defined(__ANDROID__)" "defined(__linux__) || defined(__ANDROID__) || defined(__FreeBSD__)" interfaces_source "${interfaces_source}")
-    string(REPLACE "defined(__ANDROID__) || defined(__linux__)" "defined(__ANDROID__) || defined(__linux__) || defined(__FreeBSD__)" interfaces_source "${interfaces_source}")
-    string(REPLACE "#ifdef __ANDROID__" "#if defined(__ANDROID__) || defined(__FreeBSD__)" interfaces_source "${interfaces_source}")
-    write_derived("${PORT_BUILD_DIR}/network_interface.cpp" "${interfaces_source}")
-    list(APPEND core_sources "${PORT_BUILD_DIR}/network_interface.cpp")
+    # Native interface enumeration selects the maintained FreeBSD branch.
+    set(EDEN_MAINTAINED_NATIVE_NET_INTERFACES
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/internal_network/network_interface.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_NATIVE_NET_INTERFACES}")
+        message(FATAL_ERROR "Missing maintained native network interface source")
+    endif()
+    list(APPEND core_sources "${EDEN_MAINTAINED_NATIVE_NET_INTERFACES}")
     set_property(TARGET core PROPERTY SOURCES "${core_sources}")
     # Eden only uses Boost.Process v1's header-only async_pipe. Its unused v2
     # library assumes newer FreeBSD process APIs than the PS5 SDK supplies.
