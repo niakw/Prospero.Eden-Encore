@@ -53,11 +53,11 @@ with tempfile.TemporaryDirectory(prefix='eden-vulkan-fork-compare-') as d:
         'include/video_core/renderer_vulkan/vk_compute_pipeline.h',
     ):
         source=actual[name].read_text()
-        old='    std::condition_variable build_condvar;\\n    std::mutex build_mutex;'
-        new='    ::Eden::StripedCondition build_condvar;\\n    ::Eden::StripedMutex build_mutex;'
+        old='    std::condition_variable build_condvar;\n    std::mutex build_mutex;'
+        new='    ::Eden::StripedCondition build_condvar;\n    ::Eden::StripedMutex build_mutex;'
         inc='#include "common/thread_worker.h"'
         assert source.count(old)==source.count(inc)==1, ('pipeline source moved',name)
-        modified=source.replace(inc,inc+'\\n#include "video_core/renderer_vulkan/striped_wait.h"').replace(old,new)
+        modified=source.replace(inc,inc+'\n#include "video_core/renderer_vulkan/striped_wait.h"').replace(old,new)
         actual[name].write_text(modified)
     mismatches=[name for name in sorted(actual) if not filecmp.cmp(actual[name],expected[name],shallow=False)]
     if mismatches:
