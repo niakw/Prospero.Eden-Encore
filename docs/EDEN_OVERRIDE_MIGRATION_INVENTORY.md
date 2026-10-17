@@ -115,6 +115,13 @@ dans la version normale.
 
 ## Prochain ordre de migration
 
+- **V53–V60** : huit nouveaux backports GPU/compute ont leurs fonctions et
+  différences effectives enregistrées (buffer/texture/query/fence caches,
+  état de canal, Kepler et DMA). Chaque marqueur source est vérifié contre
+  le backport livré et contre l'original Eden. Ces entrées ne prouvent pas
+  la disparition des blocages GPU sur la console.
+
+
 - `core/hle/service/nvdrv/core/container.cpp` : session ownership
   `Container::OpenSession` et `CloseSession` repris en C++ maintenu,
   avec parité exacte des trois corrections et de l'ajout d'en-têtes.

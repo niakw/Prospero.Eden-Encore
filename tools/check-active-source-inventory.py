@@ -224,6 +224,27 @@ for relative, anchors in modified_shipping:
         assert anchor in body, ("shipping patch hunk moved", relative, anchor)
 print("ENCORE_SHIPPING_BACKPORT_HOTPATH_OWNER_PASS", f"paths={len(modified_shipping)}")
 
+# Source-owner proofs for eight additional production cache/fence/compute
+# backports: changed marker appears once in shipping and not in pinned Eden.
+gpu_shipping_diffs = (
+    ("src/video_core/buffer_cache/buffer_cache_base.h", "void SynchronizeBufferWrites(Buffer& buffer);"),
+    ("src/video_core/texture_cache/texture_cache_base.h", "std::vector<ImageViewId> last_feedback_view_ids;"),
+    ("src/video_core/query_cache/query_cache.h", "!Settings::IsGPUFenceBehaviorBalanced() && !Settings::IsGPUFenceBehaviorAccurate()) && is_fence;"),
+    ("src/video_core/fence_manager.h", "Settings::IsGPUFenceBehaviorBalanced() || Settings::IsGPUFenceBehaviorAccurate();"),
+    ("src/video_core/control/channel_state_cache.h", "P* channel_state = nullptr;"),
+    ("src/video_core/engines/kepler_compute.cpp", "if (data.was_dirty || source_dirty) {"),
+    ("src/video_core/engines/kepler_compute.h", "bool upload_dirty{};"),
+    ("src/video_core/dma_pusher.cpp", "const bool kepler_payload = engine == Engines::EngineTypes::KeplerCompute"),
+)
+for rel, marker in gpu_shipping_diffs:
+    shipping = "eden-backports/" + rel
+    assert shipping in graph, ("missing backport graph row", shipping)
+    patched = (active / shipping).read_text()
+    pinned = (root / "vendor/sources/eden" / rel).read_text()
+    assert patched.count(marker) == 1 and marker not in pinned, (
+        "production GPU backport drift", shipping, marker)
+print("ENCORE_GPU_SHIPPING_PATCH_OWNER_PASS", f"sources={len(gpu_shipping_diffs)}")
+
 assert len(physical) == len(set(physical))
 print("ENCORE_ACTIVE_SOURCE_CATALOG_PASS",
       f"files={len(physical)}",
