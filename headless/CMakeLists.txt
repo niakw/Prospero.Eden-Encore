@@ -1058,15 +1058,12 @@ if(EDEN_DEV_PROFILE)
     endif()
     list(REMOVE_ITEM core_sources "hle/service/filesystem/fsp/fs_i_file.cpp")
     list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_FS_FILE}")
-    file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/filesystem/fsp/fs_i_storage.cpp" fs_storage_source)
-    set(fs_storage_old "    backend->Read(out_bytes.data(), length, offset);")
-    string(FIND "${fs_storage_source}" "${fs_storage_old}" fs_storage_at)
-    if(fs_storage_at LESS 0)
-        message(FATAL_ERROR "Pinned IStorage::Read changed")
+    # Maintained version of the previously generated IStorage::Read witness.
+    set(EDEN_MAINTAINED_PROFILE_FS_STORAGE
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_storage.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_PROFILE_FS_STORAGE}")
+        message(FATAL_ERROR "Missing maintained IStorage profile source")
     endif()
-    # The pinned handler ignores the backend's byte count and reports success; report any
-    # short storage read (the guest would get stale buffer bytes).
-    string(REPLACE "${fs_storage_old}" "    const auto fs_start = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed) ? ::Eden::Performance::NowNs() : 0;\n    const auto fs_read = backend->Read(out_bytes.data(), length, offset);\n    if (fs_read != static_cast<std::size_t>(length))\n        LOG_ERROR(Service_FS, \"EDEN_FS_SHORT_STORAGE offset={:#x} length={} read={} size={}\", offset, length, fs_read, backend->GetSize());\n    if (fs_start) {\n        ::Eden::Performance::AddSince(::Eden::Performance::guest_fs_storage, fs_start);\n        ::Eden::Performance::guest_fs_storage_bytes.fetch_add(static_cast<unsigned long long>(length), std::memory_order_relaxed);\n    }" fs_storage_source "${fs_storage_source}")
     # Open/entry results for the few named-path requests (save data, BCAT, SD).
     file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/filesystem/fsp/fs_i_filesystem.cpp" fs_system_source)
     # (Statements carry semicolons, so no CMake lists here; quoted arguments keep them.)
@@ -1089,9 +1086,8 @@ if(EDEN_DEV_PROFILE)
     write_derived("${PORT_BUILD_DIR}/fs_i_filesystem.cpp" "#include \"${EDEN_PORT_DIR}/performance.h\"\n${fs_system_source}")
     list(REMOVE_ITEM core_sources "hle/service/filesystem/fsp/fs_i_filesystem.cpp")
     list(APPEND core_sources "${PORT_BUILD_DIR}/fs_i_filesystem.cpp")
-    write_derived("${PORT_BUILD_DIR}/fs_i_storage.cpp" "#include \"${EDEN_PORT_DIR}/performance.h\"\n${fs_storage_source}")
     list(REMOVE_ITEM core_sources "hle/service/filesystem/fsp/fs_i_storage.cpp")
-    list(APPEND core_sources "${PORT_BUILD_DIR}/fs_i_storage.cpp")
+    list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_FS_STORAGE}")
     # HLE service requests: handling time per service command, and the guest's
     # svcSendSyncRequest latency (queueing behind other requests included).
     file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/service.cpp" hle_source)
