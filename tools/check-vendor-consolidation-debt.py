@@ -304,7 +304,7 @@ assert thread_maintained == '#include "performance.h"\n' + thread_original.repla
 assert c.count('list(APPEND common_sources "${EDEN_MAINTAINED_NATIVE_THREAD}")') == 1
 assert 'list(REMOVE_ITEM common_sources thread.cpp)' in c
 assert 'write_derived("${PORT_BUILD_DIR}/thread.cpp"' not in c
-assert "thread_source" not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/common/thread.cpp" thread_source)' not in c
 fs_native_rel = "common/fs/fs.cpp"
 fs_native_original = (sources / "eden/src" / fs_native_rel).read_text()
 fs_native_maintained = (active / "eden-core/src" / fs_native_rel).read_text()
@@ -316,7 +316,7 @@ assert fs_native_maintained == fs_native_expected
 assert c.count('list(APPEND common_sources "${EDEN_MAINTAINED_NATIVE_FS}")') == 1
 assert 'list(REMOVE_ITEM common_sources fs/fs.cpp)' in c
 assert 'write_derived("${PORT_BUILD_DIR}/fs.cpp"' not in c
-assert "fs_source" not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/common/fs/fs.cpp" fs_source)' not in c
 assert 'target_include_directories(common PRIVATE "${EDEN_PORT_DIR}")' in c
 # Verify native common sources are selected exactly once and originals removed.
 native_common_block = c.split("    get_target_property(common_sources common SOURCES)", 1)[1].split(
@@ -399,6 +399,39 @@ for module, required in indirect_expected:
     assert all(token in content for token in required), ("indirect override changed", module)
 assert len(indirect_recorded) == 7
 print(f"VENDOR_INDIRECT_OVERRIDE_INVENTORY_PASS modules={len(indirect_recorded)} (not generator sites)")
+
+# Third independent source-change mechanism: pinned backport patch replays.
+# Count checked calls, not the number of files they touch or optional runs.
+replay_begin = "<!-- SOURCE_PATCH_REPLAYS_START -->"
+replay_end = "<!-- SOURCE_PATCH_REPLAYS_END -->"
+assert inventory.count(replay_begin) == inventory.count(replay_end) == 1
+registered_patches = re.findall(
+    r"^\| P\d\d \| \x60([^\x60]+\.patch)\x60 \|",
+    inventory.split(replay_begin)[1].split(replay_end)[0], re.M)
+legacy_replay_source = (root / "tools/apply-eden-backports.sh").read_text()
+legacy_calls = re.findall(
+    r'^[ \t]*apply_one "\$root/headless/backports/([^"]+\.patch)"',
+    legacy_replay_source, re.M)
+active_core_installer = (root / "tools/install-active-core-backports.py").read_text()
+patch_names = {p.name for p in (root / "headless/backports").glob("*.patch")}
+assert len(legacy_calls) == len(set(legacy_calls)) == 44
+active_core_patches = sorted(patch_names.difference(legacy_calls))
+assert active_core_patches == [
+    "eden-dynarmic-icache-coherence.patch",
+    "eden-sm-host-wait.patch",
+]
+assert all(f'headless/backports/{name}' in active_core_installer
+           for name in active_core_patches)
+assert "if len(names) != 5:" in active_core_installer
+assert "git apply --check" not in legacy_replay_source or "git apply" in legacy_replay_source
+assert 'git apply "$patch"' in legacy_replay_source
+assert "EDEN_EXPERIMENTAL_DUMMY_THREAD_WAITS:-OFF" in legacy_replay_source
+assert len(patch_names) == len(registered_patches) == 46
+assert registered_patches == legacy_calls + active_core_patches
+assert set(registered_patches) == patch_names
+print("VENDOR_SOURCE_PATCH_REPLAY_INVENTORY_PASS: 44 replay calls, 2 active-core patches, 46 files")
+
+
 
 
 
