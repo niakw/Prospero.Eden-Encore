@@ -35,14 +35,14 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 Le **noyau restant** compte donc 54 critères répartis sur
 48 fichiers et 109 mentions fonction/contrat :
 15 OPEN et 39 SOURCE.
-Cela **ne signifie pas 95 fonctions jamais lues** :
+Cela **ne signifie pas 109 fonctions jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 Le hors-inventaire (HID, IPC, host-syncpoints, variantes vendor...) n'est
 pas chiffrable honnêtement sans un relevé exhaustif supplémentaire.
 
 La chaîne CPU/JIT comprend aussi H20 (sélection de priorité et migration de cœur), distincte de H18 (commutation de fibres). Le catalogue inclut F04 pour les trois entrées filesystem maintenant maintenues. Ce sont des périmètres indexés, pas des preuves de gain de FPS.
 
-La poursuite HLE/IPC ajoute H21 et H22, reliant l'entrée `SendSyncRequestImpl` au traitement des requêtes de service ; N03 isole l'attente d'un slot de présentation. Les trois unités sont encore dérivées par CMake en mode diagnostic, leur exécution en jeu n'étant pas qualifiée.
+La poursuite HLE/IPC ajoute H21 et H22, reliant `SendSyncRequestImpl` au traitement des requêtes de service ; ces deux unités restent générées par CMake en mode diagnostic. N03 isole l'attente d'un slot de présentation : son unité est maintenant maintenue sous `vendor/encore-active`. Aucun de ces chemins n'est qualifié en jeu.
 
 L'inventaire HLE/NVDRV inclut désormais les appels de synchronisation hôte
 `SyncpointManager::RegisterAction / DeregisterAction / Increment` (N04)
@@ -60,7 +60,7 @@ sélectionnées uniquement en `EDEN_DEV_PROFILE`.
 `tools/check-vendor-consolidation-debt.py` vérifie la parité du corps
 C++ avec l'override généré auparavant et recense les sorties CMake dans
 `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **70 sites restants**
-après ces deux migrations. Un site à paramètres variables peut
+après cinq migrations (F02, F03, F04, N02 et N03). Un site à paramètres variables peut
 produire plusieurs fichiers réels. Les ressources générées ne doivent
 pas être confondues avec des overrides de code.
 
