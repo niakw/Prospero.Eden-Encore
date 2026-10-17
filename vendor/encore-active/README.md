@@ -30,3 +30,11 @@ L'inventaire couvre **66 appels générateurs** du CMake principal, **21**
 dans les modules et **7 modules indirects** suivis séparément ; ce ne sont
 pas des décomptes de fichiers uniques. Chaque nouvelle migration doit
 conserver un test de parité et de sélection native.
+
+**Dette non encore consolidée ici :** `headless/backports/` contient
+46 patches sur le snapshot Eden épinglé : 44 appels `apply_one` depuis
+`tools/apply-eden-backports.sh` et deux patches installés depuis
+`tools/install-active-core-backports.py`. Leurs chemins et leur statut
+sont catalogués dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
+Ils ne sont **pas** des sources C++ maintenues, et il ne faut pas les
+compter comme 46 fichiers de compilation supplémentaires.
