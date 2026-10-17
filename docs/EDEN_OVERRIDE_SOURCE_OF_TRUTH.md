@@ -16,7 +16,7 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **201 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **207 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
 - `headless/CMakeLists.txt` : **47 générateurs** `write_derived`.
@@ -25,7 +25,7 @@ nouveaux corps C++ destinés à la console.
 - Cinq modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 68.
-- `headless/` contient **25 fragments `.inc`**. Plusieurs contribuent
+- `headless/` contient **20 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
   dépendance. **Leur présence dans `headless` ne vaut pas conformité
@@ -74,11 +74,6 @@ fragments de l'application native qui ne remplacent aucune source upstream.
 | Chemin | Hypothèse de rôle | Qualification |
 | --- | --- | --- |
 | `headless/dev_render_passes.inc` | Fragment local, sélectionner/qualifier | À vérifier dans les consommateurs / CMake |
-| `headless/dynarmic/jit_group_support.inc` | Fragment Dynarmic injecté, candidat à migrer | À vérifier dans les consommateurs / CMake |
-| `headless/dynarmic/jit_impl.inc` | Fragment Dynarmic injecté, candidat à migrer | À vérifier dans les consommateurs / CMake |
-| `headless/dynarmic/jit_links.inc` | Fragment Dynarmic injecté, candidat à migrer | À vérifier dans les consommateurs / CMake |
-| `headless/dynarmic/jit_push_rsb.inc` | Fragment Dynarmic injecté, candidat à migrer | À vérifier dans les consommateurs / CMake |
-| `headless/dynarmic/jit_state_args.inc` | Fragment Dynarmic injecté, candidat à migrer | À vérifier dans les consommateurs / CMake |
 | `headless/gpu_native_probe.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
 | `headless/gpu_probe.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
 | `headless/gpu_queue_stop_wait.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
@@ -99,6 +94,15 @@ fragments de l'application native qui ne remplacent aucune source upstream.
 | `headless/vulkan_hud_prepare.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
 | `headless/vulkan_loading.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
 <!-- SINGLE_SOURCE_FRAGMENTS_END -->
+
+## Groupe JIT partagé centralisé
+
+Les cinq fragments `jit_*.inc` et `jit_group.h` ont été déplacés à
+blobs Git identiques dans `vendor/encore-active/eden-core/dynarmic/shared-jit/`.
+Le sélecteur de `headless/dynarmic/shared-jit.cmake` lit les fichiers
+maintenus. **Ce module CMake conserve encore des transformations upstream
+à migrer** ; la relocalisation des données d'injection ne supprime pas les
+21 générateurs de modules. Le mode JIT partagé reste OFF par défaut.
 
 ## Conditions de sortie de la dette
 
