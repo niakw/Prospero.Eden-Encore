@@ -14,6 +14,32 @@ evidence. Other chats may change the branch concurrently; re-read HEAD before
 any operation, and avoid unrelated files.
 
 
+## Couverture quantifiée (registre courant)
+
+L'inventaire indexe des **contrats/fonctions à vérifier**, pas toutes les
+fonctions C++ du dépôt. Une même source peut couvrir plusieurs contrats ;
+des `SOURCE` ont été lues sans preuve d'exécution matérielle, et des
+`HOST` couvrent seulement la propriété contrôlée. Les 31 validations
+historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
+
+| Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
+| --- | ---: | ---: | ---: |
+| Graphe connu | 73 | 64 | 135 |
+| HOST — preuve ciblée hôte | 25 | 22 | 49 |
+| SOURCE — lecture effectuée, preuve insuffisante | 27 | 26 | 52 |
+| OPEN — question technique non résolue | 15 | 15 | 27 |
+| PARKED — expérimentation suspendue | 6 | 6 | 7 |
+| **Encore à qualifier (SOURCE + OPEN)** | **42** | **|** | **41** | **|** | **79** |
+| Dont priorité P0 (SOURCE + OPEN) | 16 | 16 | 36 |
+
+Le **noyau restant** compte donc 42 critères répartis sur
+41 fichiers et 79 mentions fonction/contrat :
+15 OPEN et 27 SOURCE.
+Cela **ne signifie pas 79 fonctions jamais lues** :
+plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
+Le hors-inventaire (HID, IPC, host-syncpoints, variantes vendor...) n'est
+pas chiffrable honnêtement sans un relevé exhaustif supplémentaire.
+
 ## Déjà traité — contrôles terminés et preuves accessibles
 
 **31 validations ciblées historiquement établies.** Elles recouvrent en
