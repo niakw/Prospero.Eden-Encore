@@ -40,18 +40,28 @@ assert "if (wait_start) ::Eden::Performance::AddSince(::Eden::Performance::guest
 assert nvctrl.index("const auto wait_start") < nvctrl.index("RegisterHostAction(fence_id")
 assert nvctrl.index("RegisterHostAction(fence_id") < nvctrl.index("if (wait_start)")
 
-ipc = section('string(REPLACE "${ipc_old}"', ' ipc_source "${ipc_source}")')
-# R393 additionally attributes sync IPC latency to its original guest thread.
-# Quiet gameplay must still skip the clock and thread ID lookup entirely.
+# IPC and service request clocks are now in maintained DEV-only C++.
+root = Path(__file__).resolve().parents[1]
+ipc = (root / "vendor/encore-active/eden-core/src/core/hle/kernel/svc/svc_ipc.cpp").read_text()
+service = (root / "vendor/encore-active/eden-core/src/core/hle/service/service.cpp").read_text()
+assert 'set(EDEN_MAINTAINED_PROFILE_SVC_IPC' in cmake
+assert 'set(EDEN_MAINTAINED_PROFILE_HLE_SERVICE' in cmake
+assert '"${EDEN_MAINTAINED_PROFILE_SVC_IPC}"' in cmake
+assert '"${EDEN_MAINTAINED_PROFILE_HLE_SERVICE}"' in cmake
+assert 'write_derived("${PORT_BUILD_DIR}/svc_ipc.cpp"' not in cmake
+assert 'write_derived("${PORT_BUILD_DIR}/hle_service.cpp"' not in cmake
+# Per-thread attribution only after the Detailed gate and before a blocking call.
 assert "const bool ipc_profile = ::Eden::Performance::detailed_gpu_profile.load" in ipc
 assert "const auto ipc_start = ipc_profile ? ::Eden::Performance::NowNs() : 0;" in ipc
 assert "const auto ipc_tid = ipc_profile ? GetCurrentThread(kernel).GetThreadId() : 0;" in ipc
 assert "auto* const ipc_slot = ipc_profile ? ::Eden::Performance::BeginGuestIpc(ipc_tid, ipc_start) : nullptr;" in ipc
 assert "if (ipc_profile) ::Eden::Performance::FinishGuestIpc(ipc_slot, ipc_tid, ipc_start," in ipc
 assert "AddSince(::Eden::Performance::guest_ipc_wait" not in ipc
-assert (ipc.index("const auto ipc_tid") < ipc.index("BeginGuestIpc(")
-        < ipc.index("session->SendSyncRequest(") < ipc.index("FinishGuestIpc("))
-assert "ipc_profile ? GetCurrentThread" in ipc and "ipc_profile ? ::Eden::Performance::BeginGuestIpc" in ipc
+assert ipc.index("const auto ipc_tid") < ipc.index("BeginGuestIpc(") < ipc.index("session->SendSyncRequest(") < ipc.index("FinishGuestIpc(")
+assert service.count("const auto hle_start = profile_hle ? ::Eden::Performance::NowNs() : 0;") == 2
+assert service.count("if (profile_hle)\n                ::Eden::Performance::RecordHle(") == 2
+assert service.count("if (::Eden::Performance::trace_fs_callers.load(std::memory_order_relaxed)") == 2
+assert service.count("EDEN_FS_CALLER command=") == 2
 # The diagnostic filesystem units are now maintained C++ sources,
 # no longer strings embedded in headless/CMakeLists.txt.
 maintained = Path(__file__).resolve().parents[1] / "vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp"
