@@ -39,7 +39,26 @@ with tempfile.TemporaryDirectory(prefix='eden-vulkan-fork-compare-') as d:
     subprocess.run([sys.executable,'-B',str(root/'tools/prepare-vulkan-port.py'),str(patched),str(temp/'generated')],check=True,timeout=150,env=env)
     actual={str(p.relative_to(temp/'generated')):p for p in (temp/'generated').rglob('*') if p.is_file()}
     expected={str(p.relative_to(active)):p for p in active.rglob('*') if p.is_file()}
-    assert actual.keys()==expected.keys(),f'missing: {actual.keys()-expected.keys()}, extras: {expected.keys()-actual.keys()}'
+    # One intentional upstream backport is now a native source override, not
+    # a generator change. Reconstruct precisely the two header edits, leaving
+    # every other generated translation unit byte-identical.
+    helper='include/video_core/renderer_vulkan/striped_wait.h'
+    assert set(actual)==set(expected)-{helper}, (
+        f'missing: {set(actual)-set(expected)}, extras: {set(expected)-set(actual)}')
+    helper_file=expected[helper]
+    assert subprocess.check_output(['git','hash-object',str(helper_file)],text=True).strip()==(
+        '16749faa8c0f1047de0485af53ff2de65d66be7d'), 'upstream wait primitive drift'
+    for name in (
+        'include/video_core/renderer_vulkan/vk_graphics_pipeline.h',
+        'include/video_core/renderer_vulkan/vk_compute_pipeline.h',
+    ):
+        source=actual[name].read_text()
+        old='    std::condition_variable build_condvar;\\n    std::mutex build_mutex;'
+        new='    ::Eden::StripedCondition build_condvar;\\n    ::Eden::StripedMutex build_mutex;'
+        inc='#include "common/thread_worker.h"'
+        assert source.count(old)==source.count(inc)==1, ('pipeline source moved',name)
+        modified=source.replace(inc,inc+'\\n#include "video_core/renderer_vulkan/striped_wait.h"').replace(old,new)
+        actual[name].write_text(modified)
     mismatches=[name for name in sorted(actual) if not filecmp.cmp(actual[name],expected[name],shallow=False)]
     if mismatches:
         # Print a tightly bounded exact diff before failing. The generator and
