@@ -91,9 +91,14 @@ A separate instrumentation gap matters: `jit_dups=on` only enables
 native development `EdenCompileTimer` calls `eden_jit_compile`
 for aggregate time but, with default `EDEN_SHARED_JIT=OFF` and
 `EDEN_JIT_COMPILE_BATCH=OFF`, does **not** wire the duplicate hook.
-Hence the zero `EDEN_PERF_DUPLICATES` records in the October 15 log
-must not be treated as evidence that the standard JIT never recompiles.
-Do not enable shared/batch JIT merely to repair these diagnostics.
+The `EDEN_PERF_JITPATH` hook also belongs to the shared JIT, so its
+zero `flush_all`/`flush_locations` values in that log are **not** a
+measurement of invalidations in standard per-core Dynarmic. The native
+`EDEN_FRAME_JIT_CORE.evacuations` counter separately covers automatic
+whole-cache evacuations, **not** every per-location invalidation. Therefore
+neither zero-valued duplicate/path counters nor zero evacuations prove that
+the default JIT never recompiles. Do not enable shared/batch JIT merely
+to repair these diagnostics.
 
 **Acceptance:** host evidence proves only counter pairing and opt-in
 gating. Until a qualified native run is available, the cause of the
