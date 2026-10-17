@@ -135,3 +135,59 @@ de CMake en une fois.
 `KThread`, sont désormais référencés dans
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md`. Une existence de code ne prouve
 pas que le PC invité avance après un réveil HLE.
+
+## Générateurs des modules CMake inclus — inventaire complémentaire
+
+Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules
+inclus par ce fichier contiennent **21 autres appels `write_derived()`**
+dans 6 fichiers. Le total de **94 appels** (73 + 21) est donc un **nombre de
+sites CMake**, pas un dénombrement des fichiers réellement produits à
+l'exécution. Un module inclus peut définir des macros sans les exécuter,
+et plusieurs sorties sont explicitement conditionnées.
+
+<!-- MODULE_GENERATORS_START -->
+| ID | Module CMake | Sortie dérivée | Porte / périmètre |
+| --- | --- | --- | --- |
+| M01 | `headless/dynarmic/reg_alloc.cmake` | `${PORT_BUILD_DIR}/include/dynarmic/backend/x64/reg_alloc.h` | Dynarmic |
+| M02 | `headless/dynarmic/reg_alloc.cmake` | `${PORT_BUILD_DIR}/reg_alloc.cpp` | Dynarmic |
+| M03 | `headless/dynarmic/shared-jit.cmake` | `${PORT_BUILD_DIR}/include/${eden_jitstate_relative}` | Shared JIT OFF par défaut |
+| M04 | `headless/dynarmic/shared-jit.cmake` | `${PORT_BUILD_DIR}/include/dynarmic/backend/x64/jit_group.h` | Shared JIT OFF par défaut |
+| M05 | `headless/dynarmic/shared-jit.cmake` | `${PORT_BUILD_DIR}/callback.cpp` | Shared JIT OFF par défaut |
+| M06 | `headless/gpu_native_observability.cmake` | `${PORT_BUILD_DIR}/maxwell_prmt_observed.cpp` | PS5_NATIVE |
+| M07 | `headless/gpu_native_observability.cmake` | `${PORT_BUILD_DIR}/sw_blitter_sized.cpp` | PS5_NATIVE |
+| M08 | `headless/gpu_native_observability.cmake` | `${PORT_BUILD_DIR}/fermi_2d_observed.cpp` | PS5_NATIVE |
+| M09 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/include/video_core/memory_manager.h` | Pont différé OFF |
+| M10 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/deferred-core/core/gpu_dirty_memory_manager.h` | Pont différé OFF |
+| M11 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/memory_manager_deferred.cpp` | Pont différé OFF |
+| M12 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/vulkan_rasterizer_deferred.cpp` | Pont différé OFF |
+| M13 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/dma_pusher_deferred.cpp` | Pont différé OFF |
+| M14 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/maxwell_dma_deferred.cpp` | Pont différé OFF |
+| M15 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/kepler_compute_deferred.cpp` | Pont différé OFF |
+| M16 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/engine_upload_deferred.cpp` | Pont différé OFF |
+| M17 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/memory-ps5-deferred.cpp` | Pont différé OFF |
+| M18 | `headless/jit-alias.cmake` | `${PORT_BUILD_DIR}/include/xbyak/xbyak.h` | JIT/alias |
+| M19 | `headless/jit-alias.cmake` | `${PORT_BUILD_DIR}/constant_pool.cpp` | JIT/alias |
+| M20 | `headless/scalar-memory.cmake` | `${PORT_BUILD_DIR}/scalar_emit_x64_vector.cpp` | Emetteur scalaire |
+| M21 | `headless/scalar-memory.cmake` | `${PORT_BUILD_DIR}/scalar_emit_x64_data_processing.cpp` | Emetteur scalaire |
+<!-- MODULE_GENERATORS_END -->
+
+Deux autres modules (`macro_recovery.cmake` et
+`slot_vector_recovery.cmake`) créent une source ou un en-tête dérivé au
+moyen de `file(WRITE)` et `configure_file(COPYONLY)`, **sans appeler**
+`write_derived()`. Les modules `checked-fastmem.cmake`,
+`native_gpu_granular_bounds.cmake`, `native_guest_range_overflow.cmake`,
+`native_jit_memory_read_guard.cmake` et
+`physical_core_interrupt_atomic.cmake` modifient des variables-source
+qui sont générées ensuite dans le CMake principal : **absence d'appel
+`write_derived()` local ne signifie donc pas absence d'override**.
+
+À l'inverse, `headless/vulkan.cmake` copie déjà les sources réellement
+maintenues dans `vendor/encore-active/eden-vulkan`, et le module HLE
+`vendor/encore-active/eden-threading/native-hle-overrides.cmake`
+sélectionne des sources et en-têtes maintenus. Leur CMake est un
+sélecteur de build, pas un nouveau patch C++ par remplacement de texte.
+
+**Priorité de migration :** garder le pont différé expérimental OFF,
+ne pas activer le JIT partagé pour réduire artificiellement le nombre
+de générateurs, migrer d'abord les unités normales/DEV réellement
+sélectionnées avec preuve d'identité et sans changer leur comportement.
