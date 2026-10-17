@@ -715,7 +715,22 @@ print("ENCORE_SINGLE_SOURCE_SCOPE_PASS", f"modules={len(candidates_modules)}", f
 
 # Byte-exact relocation of six shared-JIT inputs. Do not permit another
 # physical owner under headless after moving the authoritative source.
-import hashlib
+import subprocess
+
+
+def check_canonical_git_object(source, expected, label):
+    """Prove stored Git object identity and working-tree consistency."""
+    relative = source.relative_to(root).as_posix()
+    actual = subprocess.run(
+        ["git", "rev-parse", f"HEAD:{relative}"], cwd=root,
+        check=True, capture_output=True, text=True).stdout.strip()
+    assert actual == expected, (label, "Git source blob drift", relative, actual)
+    # git diff uses tracked text filters, so this does not mistake a
+    # checkout EOL conversion for an intentional source modification.
+    result = subprocess.run(["git", "diff", "--quiet", "HEAD", "--", relative], cwd=root)
+    assert result.returncode == 0, (label, "dirty canonical source", relative)
+
+
 shared_jit_blobs = {
     "jit_group.h": "50e7f0993ea3db6902bd11bfac496659dce54fb3",
     "jit_group_support.inc": "22cf4c406003cbe2fe1295503dc879086f2ee65e",
@@ -728,9 +743,7 @@ for filename, original_blob in shared_jit_blobs.items():
     source = active / "eden-core/dynarmic/shared-jit" / filename
     assert source.is_file() and not (root / "headless/dynarmic" / filename).exists(), (
         "duplicate shared JIT fragment or missing canonical owner", filename)
-    raw = source.read_bytes()
-    git_blob = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\x00" + raw).hexdigest()
-    assert git_blob == original_blob, ("JIT source blob changed after relocation", filename)
+    check_canonical_git_object(source, original_blob, "JIT")
 shared_jit_selector = (root / "headless/dynarmic/shared-jit.cmake").read_text()
 assert 'set(EDEN_SHARED_JIT_DIR "${PORT_ROOT}/vendor/encore-active/eden-core/dynarmic/shared-jit")' in shared_jit_selector
 print("ENCORE_SHARED_JIT_SOURCE_OWNERS_PASS", len(shared_jit_blobs))
@@ -747,9 +760,7 @@ for filename, expected in scalar_canonical_blobs.items():
     source = active / "eden-core/dynarmic/scalar" / filename
     assert source.is_file() and not (root / "headless" / filename).exists(), (
         "scalar injection has duplicate or missing authority", filename)
-    contents = source.read_bytes()
-    checksum = hashlib.sha1(b"blob " + str(len(contents)).encode() + b"\x00" + contents).hexdigest()
-    assert checksum == expected, ("canonical scalar fragment drift", filename)
+    check_canonical_git_object(source, expected, "scalar")
 scalar_module = (root / "headless/scalar-memory.cmake").read_text()
 assert 'file(READ "${EDEN_SCALAR_INPUT_DIR}/scalar-memory-${lower}.inc" scalar_access)' in scalar_module
 assert 'file(READ "${EDEN_SCALAR_INPUT_DIR}/scalar-fold.inc" scalar_fold)' in c
