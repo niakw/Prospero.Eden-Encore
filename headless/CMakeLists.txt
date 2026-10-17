@@ -2884,22 +2884,22 @@ if(PS5_NATIVE)
     list(APPEND core_sources "${PORT_BUILD_DIR}/audited_guest_bsd.cpp")
 
     # Keep immutable firmware outside the small writable title-data quota.
-    file(READ "${PROJECT_SOURCE_DIR}/src/core/file_sys/bis_factory.h" bis_header)
-    string(REPLACE "VirtualDir dump_root);" "VirtualDir dump_root, VirtualDir firmware_root = {});" bis_header "${bis_header}")
-    write_derived("${PORT_BUILD_DIR}/include/core/file_sys/bis_factory.h" "${bis_header}")
-    file(READ "${PROJECT_SOURCE_DIR}/src/core/file_sys/bis_factory.cpp" bis_source)
-    string(REPLACE "VirtualDir dump_root_)" "VirtualDir dump_root_, VirtualDir firmware_root)" bis_source "${bis_source}")
-    string(REPLACE "GetOrCreateDirectoryRelative(nand_root, \"/system/Contents/registered\")"
-        "firmware_root ? std::move(firmware_root) : GetOrCreateDirectoryRelative(nand_root, \"/system/Contents/registered\")" bis_source "${bis_source}")
-    # A game's mods folder is the player's (headless/mods.h): found whatever the case of its name,
-    # and never created here (Eden makes one for every game that starts).
-    eden_patch(bis_source
-        "    return GetOrCreateDirectoryRelative(load_root, fmt::format(\"/{:016X}\", title_id));\n}\n\nVirtualDir BISFactory::GetModificationDumpRoot"
-        "    const auto wanted = fmt::format(\"{:016X}\", title_id);\n    if (load_root != nullptr)\n        for (const auto& folder : load_root->GetSubdirectories())\n            if (Common::ToUpper(folder->GetName()) == wanted) return folder;\n    return nullptr;\n}\n\nVirtualDir BISFactory::GetModificationDumpRoot")
-    string(PREPEND bis_source "#include \"common/string_util.h\"\n")
-    write_derived("${PORT_BUILD_DIR}/bis_factory.cpp" "${bis_source}")
+    # Native BISFactory declaration is kept in a narrowly scoped include root.
+    # Do not expose the whole encore-core/src tree as an include override.
+    set(EDEN_MAINTAINED_BIS_INCLUDE_ROOT
+        "${PORT_ROOT}/vendor/encore-active/eden-core/include")
+    set(EDEN_MAINTAINED_BIS_HEADER
+        "${EDEN_MAINTAINED_BIS_INCLUDE_ROOT}/core/file_sys/bis_factory.h")
+    set(EDEN_MAINTAINED_BIS_SOURCE
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/file_sys/bis_factory.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_BIS_HEADER}" OR NOT EXISTS "${EDEN_MAINTAINED_BIS_SOURCE}")
+        message(FATAL_ERROR "Missing maintained native BISFactory pair")
+    endif()
+    # Prevent an older configure's derived header shadowing the tracked ABI.
+    file(REMOVE "${PORT_BUILD_DIR}/include/core/file_sys/bis_factory.h")
+    target_include_directories(core BEFORE PUBLIC "${EDEN_MAINTAINED_BIS_INCLUDE_ROOT}")
     list(REMOVE_ITEM core_sources file_sys/bis_factory.cpp)
-    list(APPEND core_sources "${PORT_BUILD_DIR}/bis_factory.cpp")
+    list(APPEND core_sources "${EDEN_MAINTAINED_BIS_SOURCE}")
     # Use the tracked source for native firmware lookup.
     set(EDEN_MAINTAINED_NATIVE_FILESYSTEM
         "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/service/filesystem/filesystem.cpp")

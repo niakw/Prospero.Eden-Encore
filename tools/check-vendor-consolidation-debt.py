@@ -451,6 +451,44 @@ assert 'write_derived("${PORT_BUILD_DIR}/fsmitm_romfsbuild.cpp"' not in c
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/file_sys/fsmitm_romfsbuild.cpp"' not in c
 print("VENDOR_MAINTAINED_ROMFS_BUILDER_PARITY_PASS: two non-owning links, two assignments")
 
+# Native BISFactory is a coordinated header/source pair: constructors and
+# firmware root, plus the lookup-only mod directory behavior, match the
+# former configure-time substitutions byte-for-byte.
+bis_header_pinned = (sources / "eden/src/core/file_sys/bis_factory.h").read_text()
+bis_header_maintained = (active / "eden-core/include/core/file_sys/bis_factory.h").read_text()
+bis_header_old = "VirtualDir dump_root);"
+bis_header_new = "VirtualDir dump_root, VirtualDir firmware_root = {});"
+assert bis_header_pinned.count(bis_header_old) == 1
+assert bis_header_maintained == bis_header_pinned.replace(bis_header_old,bis_header_new)
+bis_cpp_pinned = (sources / "eden/src/core/file_sys/bis_factory.cpp").read_text()
+bis_cpp_maintained = (active / "eden-core/src/core/file_sys/bis_factory.cpp").read_text()
+bis_rewrites = (
+    ("VirtualDir dump_root_)", "VirtualDir dump_root_, VirtualDir firmware_root)"),
+    ('GetOrCreateDirectoryRelative(nand_root, "/system/Contents/registered")',
+     'firmware_root ? std::move(firmware_root) : GetOrCreateDirectoryRelative(nand_root, "/system/Contents/registered")'),
+    ('    return GetOrCreateDirectoryRelative(load_root, fmt::format("/{:016X}", title_id));\n'
+     '}\n\nVirtualDir BISFactory::GetModificationDumpRoot',
+     '    const auto wanted = fmt::format("{:016X}", title_id);\n'
+     '    if (load_root != nullptr)\n'
+     '        for (const auto& folder : load_root->GetSubdirectories())\n'
+     '            if (Common::ToUpper(folder->GetName()) == wanted) return folder;\n'
+     '    return nullptr;\n'
+     '}\n\nVirtualDir BISFactory::GetModificationDumpRoot'),
+)
+for old,new in bis_rewrites:
+    assert bis_cpp_pinned.count(old) == 1, ("pinned BISFactory contract drift",old)
+    bis_cpp_pinned = bis_cpp_pinned.replace(old,new)
+assert bis_cpp_maintained == '#include "common/string_util.h"\n' + bis_cpp_pinned
+assert c.count('list(REMOVE_ITEM core_sources file_sys/bis_factory.cpp)') == 1
+assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_BIS_SOURCE}")') == 1
+assert 'target_include_directories(core BEFORE PUBLIC "${EDEN_MAINTAINED_BIS_INCLUDE_ROOT}")' in c
+assert 'file(REMOVE "${PORT_BUILD_DIR}/include/core/file_sys/bis_factory.h")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/bis_factory.cpp"' not in c
+assert 'write_derived("${PORT_BUILD_DIR}/include/core/file_sys/bis_factory.h"' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/file_sys/bis_factory.cpp"' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/file_sys/bis_factory.h"' not in c
+print("VENDOR_MAINTAINED_BIS_PAIR_PARITY_PASS: API, firmware root, mods and native selection")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -491,7 +529,7 @@ assert len(module_current) == 21, len(module_current)
 for module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     text = (root / module).read_text()
     assert 'file(WRITE ' in text and 'configure_file(' in text, module
-assert len(recorded) + len(module_recorded) == 81
+assert len(recorded) + len(module_recorded) == 79
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
