@@ -791,7 +791,33 @@ for filename, expected in scalar_canonical_blobs.items():
     check_canonical_git_object(source, expected, "scalar")
 scalar_module = (root / "headless/scalar-memory.cmake").read_text()
 assert 'file(READ "${EDEN_SCALAR_INPUT_DIR}/scalar-memory-${lower}.inc" scalar_access)' in scalar_module
-assert 'file(READ "${EDEN_SCALAR_INPUT_DIR}/scalar-fold.inc" scalar_fold)' in c
+# Dynarmic scalar source-only equivalence, no generator in CMake.
+scalar_root = sources / "eden/src/dynarmic/src/dynarmic"
+base_impl = (scalar_root / "frontend/A64/translate/impl/impl.cpp").read_text()
+old_r = "    return ir.VectorGetElement(bitsize, ir.GetQ(vec), 0);"
+new_r = "    return ir.VectorGetElement(bitsize, bitsize == 32 || bitsize == 64 ? V(bitsize, vec) : ir.GetQ(vec), 0);"
+old_w = "    ir.SetQ(vec, ir.ZeroExtendToQuad(value));"
+new_w = ("    if (bitsize == 32 || bitsize == 64) {\n"
+         "        V(bitsize, vec, ir.ZeroExtendToQuad(value));\n"
+         "    } else {\n"
+         "        ir.SetQ(vec, ir.ZeroExtendToQuad(value));\n"
+         "    }")
+assert base_impl.count(old_r) == base_impl.count(old_w) == 1
+assert (active / "eden-core/src/dynarmic/frontend/A64/translate/impl/impl.cpp").read_text() == base_impl.replace(old_r, new_r).replace(old_w, new_w)
+base_trans = (scalar_root / "frontend/A64/translate/a64_translate.cpp").read_text()
+old_inc = '"dynarmic/frontend/A64/translate/impl/impl.cpp"'
+assert base_trans.count(old_inc) == 1
+assert (active / "eden-core/src/dynarmic/frontend/A64/translate/a64_translate.cpp").read_text() == base_trans.replace(old_inc, '"impl/impl.cpp"')
+base_opt = (scalar_root / "ir/opt_passes.cpp").read_text()
+opt_anchor = "        case Op::LeastSignificantWord:\n            FoldLeastSignificantWord(inst);\n            break;"
+assert base_opt.count(opt_anchor) == 1
+fold_oracle = (active / "eden-core/dynarmic/scalar/scalar-fold.inc").read_text()
+assert (active / "eden-core/src/dynarmic/ir/opt_passes.cpp").read_text() == base_opt.replace(opt_anchor, opt_anchor + "\n" + fold_oracle)
+assert 'target_sources(dynarmic PRIVATE\n    "${EDEN_MAINTAINED_SCALAR_TRANSLATOR}"\n    "${EDEN_MAINTAINED_SCALAR_OPT}")' in c
+for retired in ("scalar_impl.cpp", "a64_translate.cpp", "opt_passes.cpp"):
+    assert 'write_derived("${PORT_BUILD_DIR}/' + retired + '"' not in c
+assert 'file(READ "${EDEN_SCALAR_INPUT_DIR}/scalar-fold.inc" scalar_fold)' not in c
+print("VENDOR_MAINTAINED_SCALAR_TUS_PARITY_PASS: scalar lanes, local impl include, IR folding")
 assert 'set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDEN_SCALAR_INPUTS})' in c
 assert 'set(EDEN_SCALAR_INPUT_DIR' in c
 print("ENCORE_SCALAR_CANONICAL_INPUTS_PASS", len(scalar_canonical_blobs))
@@ -1128,7 +1154,7 @@ assert len(module_current) == 21, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 52
+assert len(recorded) + len(module_recorded) == 49
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived

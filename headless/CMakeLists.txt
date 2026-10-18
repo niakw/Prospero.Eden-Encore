@@ -6,11 +6,10 @@ if(NOT EDEN_VULKAN_DRIVER MATCHES "^(CUSTOM|RADV)$")
 endif()
 set(PORT_ROOT "${CMAKE_CURRENT_LIST_DIR}/..")
 set(PORT_BUILD_DIR "${CMAKE_BINARY_DIR}/headless")
-# Canonical scalar-source fragments must trigger configure when they change.
+# Scalar-memory source fragments still consumed by modules trigger configure.
 set(EDEN_SCALAR_INPUT_DIR
     "${PORT_ROOT}/vendor/encore-active/eden-core/dynarmic/scalar")
 set(EDEN_SCALAR_INPUTS
-    "${EDEN_SCALAR_INPUT_DIR}/scalar-fold.inc"
     "${EDEN_SCALAR_INPUT_DIR}/scalar-memory-read.inc"
     "${EDEN_SCALAR_INPUT_DIR}/scalar-memory-write.inc")
 foreach(EDEN_SCALAR_SOURCE IN LISTS EDEN_SCALAR_INPUTS)
@@ -434,49 +433,29 @@ list(FILTER jit_sources EXCLUDE REGEX "(^|/)emit_x64\\.cpp$")
 set_property(TARGET dynarmic PROPERTY SOURCES "${jit_sources}")
 target_sources(dynarmic PRIVATE "${PORT_BUILD_DIR}/emit_x64.cpp")
 
-# Scalar loads use S/D register tracking; scalar arithmetic must use the same
-# widths so GetSetElimination can retain their values instead of spilling Q.
-set(translator_relative "dynarmic/frontend/A64/translate")
-file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/${translator_relative}/impl/impl.cpp" scalar_source)
-set(scalar_read "    return ir.VectorGetElement(bitsize, ir.GetQ(vec), 0);")
-set(scalar_write "    ir.SetQ(vec, ir.ZeroExtendToQuad(value));")
-foreach(anchor IN ITEMS scalar_read scalar_write)
-    string(FIND "${scalar_source}" "${${anchor}}" offset)
-    if(offset LESS 0)
-        message(FATAL_ERROR "Pinned scalar register helper changed")
+# Dynarmic scalar translation and optimizer are tracked complete sources.
+# impl/impl.cpp is included once by its adjacent translator.
+set(EDEN_MAINTAINED_SCALAR_IMPL
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/dynarmic/frontend/A64/translate/impl/impl.cpp")
+set(EDEN_MAINTAINED_SCALAR_TRANSLATOR
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/dynarmic/frontend/A64/translate/a64_translate.cpp")
+set(EDEN_MAINTAINED_SCALAR_OPT
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/dynarmic/ir/opt_passes.cpp")
+foreach(EDEN_MAINTAINED_SCALAR_SOURCE IN ITEMS
+        "${EDEN_MAINTAINED_SCALAR_IMPL}"
+        "${EDEN_MAINTAINED_SCALAR_TRANSLATOR}"
+        "${EDEN_MAINTAINED_SCALAR_OPT}")
+    if(NOT EXISTS "${EDEN_MAINTAINED_SCALAR_SOURCE}")
+        message(FATAL_ERROR "Missing maintained Dynarmic scalar file ${EDEN_MAINTAINED_SCALAR_SOURCE}")
     endif()
 endforeach()
-string(REPLACE "${scalar_read}"
-    "    return ir.VectorGetElement(bitsize, bitsize == 32 || bitsize == 64 ? V(bitsize, vec) : ir.GetQ(vec), 0);" scalar_source "${scalar_source}")
-string(REPLACE "${scalar_write}" [=[    if (bitsize == 32 || bitsize == 64) {
-        V(bitsize, vec, ir.ZeroExtendToQuad(value));
-    } else {
-        ir.SetQ(vec, ir.ZeroExtendToQuad(value));
-    }]=] scalar_source "${scalar_source}")
-write_derived("${PORT_BUILD_DIR}/scalar_impl.cpp" "${scalar_source}")
-file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/${translator_relative}/a64_translate.cpp" translator)
-string(REPLACE "${translator_relative}/impl/impl.cpp" "${PORT_BUILD_DIR}/scalar_impl.cpp" translator "${translator}")
-write_derived("${PORT_BUILD_DIR}/a64_translate.cpp" "${translator}")
 get_target_property(jit_sources dynarmic SOURCES)
 list(FILTER jit_sources EXCLUDE REGEX "(^|/)a64_translate\\.cpp$")
-set_property(TARGET dynarmic PROPERTY SOURCES "${jit_sources}")
-target_sources(dynarmic PRIVATE "${PORT_BUILD_DIR}/a64_translate.cpp")
-
-# Cancel low-lane extraction of a scalar that was just zero-extended to Q.
-# Preserve other lanes, arbitrary vectors and all floating-point operations.
-file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/dynarmic/ir/opt_passes.cpp" optimizer)
-set(fold_anchor "        case Op::LeastSignificantWord:\n            FoldLeastSignificantWord(inst);\n            break;")
-string(FIND "${optimizer}" "${fold_anchor}" fold_offset)
-if(fold_offset LESS 0)
-    message(FATAL_ERROR "Pinned scalar folding boundary changed")
-endif()
-file(READ "${EDEN_SCALAR_INPUT_DIR}/scalar-fold.inc" scalar_fold)
-string(REPLACE "${fold_anchor}" "${fold_anchor}\n${scalar_fold}" optimizer "${optimizer}")
-write_derived("${PORT_BUILD_DIR}/opt_passes.cpp" "${optimizer}")
-get_target_property(jit_sources dynarmic SOURCES)
 list(FILTER jit_sources EXCLUDE REGEX "(^|/)opt_passes\\.cpp$")
 set_property(TARGET dynarmic PROPERTY SOURCES "${jit_sources}")
-target_sources(dynarmic PRIVATE "${PORT_BUILD_DIR}/opt_passes.cpp")
+target_sources(dynarmic PRIVATE
+    "${EDEN_MAINTAINED_SCALAR_TRANSLATOR}"
+    "${EDEN_MAINTAINED_SCALAR_OPT}")
 
 # Keep the checked page-table path, but use x86 scaled addressing and avoid a
 # 64-bit mask load for Eden's packed pointer. Apply to both A32 and A64 emitters.
