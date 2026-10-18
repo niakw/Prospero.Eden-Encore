@@ -742,11 +742,26 @@ assert single_source_table("<!-- SINGLE_SOURCE_CMAKE_START -->", "<!-- SINGLE_SO
 assert single_source_table("<!-- SINGLE_SOURCE_FRAGMENTS_START -->", "<!-- SINGLE_SOURCE_FRAGMENTS_END -->") == candidates_fragments, (
     "undocumented headless injected fragment", candidates_fragments)
 assert len(candidates_modules) == 13 and len(candidates_fragments) == 8
-# Assert the documented inventory against the real generator count, never
-# a permanently frozen count from an earlier migration milestone.
-assert "**26 générateurs**" in single_source_doc and "**16 générateurs**" in single_source_doc
-assert "**42 sites**" in single_source_doc
-assert "**242 sources et en-têtes suivis**" in single_source_doc
+# Derive the expected scope counters from the actual tracked inputs, then
+# compare their rendered values with the architecture document. Do not freeze
+# migration-stage totals into a separate test (which goes stale every move).
+import re
+main_generators = len(re.findall(r'write_derived\\(\\s*"([^"]+)"', c))
+module_generators = sum(
+    len(re.findall(r'write_derived\\(\\s*"([^"]+)"', (root / name).read_text()))
+    for name in candidates_modules
+)
+source_catalog = (root / "docs/EDEN_ACTIVE_SOURCE_CATALOG.md").read_text()
+catalog_start = "<!-- ACTIVE_SOURCE_CATALOG_START -->"
+catalog_end = "<!-- ACTIVE_SOURCE_CATALOG_END -->"
+assert source_catalog.count(catalog_start) == source_catalog.count(catalog_end) == 1
+catalog_rows = re.findall(
+    r"^\\| \\x60[^\\x60]+\\x60 \\|", source_catalog.split(catalog_start)[1].split(catalog_end)[0], re.M
+)
+assert f"**{main_generators} générateurs**" in single_source_doc
+assert f"**{module_generators} générateurs**" in single_source_doc
+assert f"**{main_generators + module_generators} sites**" in single_source_doc
+assert f"**{len(catalog_rows)} sources et en-têtes suivis**" in single_source_doc
 for deleted_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root/deleted_module).exists(), ("legacy source generator reintroduced", deleted_module)
 print("ENCORE_SINGLE_SOURCE_SCOPE_PASS", f"modules={len(candidates_modules)}", f"fragments={len(candidates_fragments)}")
