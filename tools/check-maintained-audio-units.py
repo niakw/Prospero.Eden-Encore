@@ -70,7 +70,7 @@ assert "set(compose_new [=[" in cmake
 # The port must keep reducing generator rewrites, not silently increase them.
 gpu_span_derived='write_derived("${eden_gpu_span_tu}" "${eden_gpu_span_src}")'
 assert gpu_span_derived not in cmake
-assert 'list(APPEND video_sources "${EDEN_MAINTAINED_NATIVE_GPU_MEMORY}")' in cmake
+assert 'list(APPEND video_sources "${EDEN_NATIVE_GPU_MEMORY_MANAGER}")' in cmake
 assert cmake.count("write_derived(") <= 77
 # One explicitly checked native GPU synchronization-method input is
 # approved; keep the prior 87-read generator budget for everything else.
