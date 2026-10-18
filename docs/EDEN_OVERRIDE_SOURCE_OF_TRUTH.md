@@ -16,12 +16,12 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **264 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **266 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **17 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **16 générateurs** `write_derived`.
 - Deux modules CMake générateurs totalisent **12 générateurs**
-  `write_derived`, soit **29 sites** au total.
+  `write_derived`, soit **28 sites** au total.
 - Cinq modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 34.
@@ -142,6 +142,16 @@ Les unités du JIT partagé liées à l'état et aux callbacks
 (M01–M03) ainsi que les transformations mémoire G06–G08 restent
 à consolider. Les tests de parité et de sélection sont des preuves
 hôte, **pas** une preuve de compilation ou d'exécution console.
+
+## Émetteur x64 commun : source complète par profil (G05)
+
+L'ancien générateur G05 de `emit_x64.cpp` est retiré. La correction
+`patch_information.find(target_desc)` est identique dans les deux unités
+maintenues `emit_x64_host.cpp` et `emit_x64_native.cpp`; seul le profil
+natif retire le coût de formatage associé à `PerfMapRegister`.
+Le sélecteur CMake copie l'unité choisie vers le chemin de compilation
+existant. Le test hôte compare les deux variantes à la source épinglée
+et vérifie leur sélection sans annoncer de qualification console.
 
 ## BlockOfCode : W^X, alias mémoire et permissions JIT
 
