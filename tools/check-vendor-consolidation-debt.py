@@ -906,6 +906,18 @@ assert 'write_derived("${PORT_BUILD_DIR}/spin_lock_x64.cpp"' not in c
 assert not (root/"headless/spin-lock.inc").exists()
 print("ENCORE_NATIVE_SPIN_LOCK_SOURCE_PASS")
 
+# Historical CMake IPS/patch-text fixes (eight eden_patch substitutions plus
+# the function-body splice) now have one canonical C++ owner. This SHA is
+# the exact Git blob calculated from the old generator on the pinned source.
+ips_layer = active / "eden-core/src/core/file_sys/ips_layer.cpp"
+check_canonical_git_object(ips_layer, "f6687abf25ef2874c06c2523c530b5ba197e6d45", "IPS")
+assert 'set(EDEN_MAINTAINED_IPS_LAYER' in c
+assert 'list(APPEND core_sources "${EDEN_MAINTAINED_IPS_LAYER}" "${EDEN_MAINTAINED_PATCH_MANAGER}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/ips_layer.cpp"' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/file_sys/ips_layer.cpp" ips_source)' not in c
+assert "set(ips_escape [=[" not in c
+print("MAINTAINED_IPS_LAYER_SOURCE_PASS pinned_generator_blob=f6687abf")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -987,7 +999,7 @@ assert len(module_current) == 21, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 63
+assert len(recorded) + len(module_recorded) == 62
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived

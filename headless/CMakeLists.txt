@@ -1458,88 +1458,13 @@ endfunction()
 # takes every line as a record or a flag: the credits at the end of a real patch file then wrote
 # over the start of the game's code. Only records and known flags are read here
 # (headless/mods_check.cpp checks all of it).
-file(READ "${PROJECT_SOURCE_DIR}/src/core/file_sys/ips_layer.cpp" ips_source)
-eden_patch(ips_source "magic.size() > 3 &&" "magic.size() >= 3 &&")
-eden_patch(ips_source "magic.size() > 4 &&" "magic.size() >= 4 &&")
-eden_patch(ips_source
-    "    auto in_data = in->ReadAllBytes();\n    auto const type = IdentifyMagic(in_data);\n    if (type == IPSFileType::Error)\n        return nullptr;"
-    "    auto const type = IdentifyMagic(ips->ReadBytes(0x5));\n    if (type == IPSFileType::Error)\n        return nullptr;\n    auto in_data = in->ReadAllBytes();\n    if (in_data.empty())\n        return nullptr;")
-eden_patch(ips_source
-    "struct IPSwitchRecord {\n    std::array<uint8_t, 256 - sizeof(size_t)> data;\n    size_t count;\n};"
-    "struct IPSwitchRecord {\n    std::vector<uint8_t> data;\n};")
-set(ips_escape_begin "static IPSwitchRecord EscapeStringSequences(std::string_view sv) {")
-set(ips_escape_end "void IPSwitchCompiler::Parse(")
-string(FIND "${ips_source}" "${ips_escape_begin}" ips_escape_at)
-string(FIND "${ips_source}" "${ips_escape_end}" ips_parse_at)
-if(ips_escape_at LESS 0 OR ips_parse_at LESS ips_escape_at)
-    message(FATAL_ERROR "Pinned IPSwitch text parsing changed")
+# This IPS/pchtxt parser is a complete, audited Encore source; CMake only
+# selects it and must never mutate its functions during configuration.
+set(EDEN_MAINTAINED_IPS_LAYER
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/file_sys/ips_layer.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_IPS_LAYER}")
+    message(FATAL_ERROR "Missing maintained native IPS layer")
 endif()
-string(SUBSTRING "${ips_source}" 0 ${ips_escape_at} ips_before)
-string(SUBSTRING "${ips_source}" ${ips_parse_at} -1 ips_after)
-set(ips_escape [=[// A patch record is its offset in hex digits, blanks, then the value: an even number of hex digits or
-// quoted text. Patch files also carry credits and links after their records; the reference tool
-// skips those, and reading them as records wrote stray bytes over the start of the game's code.
-static bool IsPatchRecord(std::string_view line) {
-    std::size_t at = 0;
-    while (at < line.size() && std::isxdigit(static_cast<unsigned char>(line[at]))) ++at;
-    if (at == 0 || at > 16 || at == line.size() || (line[at] != ' ' && line[at] != '\t')) return false;
-    while (at < line.size() && (line[at] == ' ' || line[at] == '\t')) ++at;
-    if (at == line.size()) return false;
-    if (line[at] == '"' || line[at] == '\'') return true;
-    const std::size_t value = at;
-    while (at < line.size() && std::isxdigit(static_cast<unsigned char>(line[at]))) ++at;
-    return at == line.size() && (at - value) % 2 == 0;
-}
-
-// The flags a patch file may carry. An author's "@name" in the credits is not one: taken by its
-// second letter alone it could end the file early, flip the byte order or replace the build ID.
-static bool IsPatchFlag(std::string_view line) {
-    static constexpr std::string_view kFlags[] = {"@nsobid-", "@stop", "@enabled", "@disabled", "@flag ",
-                                                  "@little-endian", "@big-endian"};
-    for (const std::string_view flag : kFlags) {
-        bool same = line.size() >= flag.size();
-        for (std::size_t i = 0; same && i < flag.size(); ++i)
-            same = std::tolower(static_cast<unsigned char>(line[i])) == flag[i];
-        if (same) return true;
-    }
-    return false;
-}
-
-static IPSwitchRecord EscapeStringSequences(std::string_view sv) {
-    IPSwitchRecord r{};
-    for (auto it = sv.cbegin(); it < sv.cend(); ) {
-        if (*it == '\\' && it + 1 < sv.cend()) {
-            switch (it[1]) {
-            case 'a': r.data.push_back('\a'); break;
-            case 'b': r.data.push_back('\b'); break;
-            case 'e': r.data.push_back('\x1b'); break;
-            case 'f': r.data.push_back('\f'); break;
-            case 'n': r.data.push_back('\n'); break;
-            case 'r': r.data.push_back('\r'); break;
-            case 't': r.data.push_back('\t'); break;
-            case 'v': r.data.push_back('\v'); break;
-            default: r.data.push_back(static_cast<uint8_t>(it[1])); break;
-            }
-            it += 2;
-        } else {
-            r.data.push_back(static_cast<uint8_t>(*it));
-            ++it;
-        }
-    }
-    return r;
-}
-
-]=])
-set(ips_source "${ips_before}${ips_escape}${ips_after}")
-eden_patch(ips_source
-    "                    std::memcpy(r.data.data(), hs.data(), hs.size());\n                    r.count = hs.size();"
-    "                    r.data.assign(hs.begin(), hs.end());")
-eden_patch(ips_source "auto replace_size = record.second.count;" "auto replace_size = record.second.data.size();")
-eden_patch(ips_source "        if (line.size() > 2 && line[0] == '@') {\n            switch (line[1]) {"
-    "        if (line.size() > 2 && line[0] == '@') {\n            if (!IsPatchFlag(line)) return true;\n            switch (line[1]) {")
-eden_patch(ips_source "        } else if (patches.empty()) {\n            LOG_WARNING(Loader, \"Invalid line not in a patch {}\", line);"
-    "        } else if (!IsPatchRecord(line)) {\n            // Credits, links, anything that is not a record.\n        } else if (patches.empty()) {\n            LOG_WARNING(Loader, \"Invalid line not in a patch {}\", line);")
-write_derived("${PORT_BUILD_DIR}/ips_layer.cpp" "${ips_source}")
 # The patch manager: a missing mod root must never enter its sorting and dereference loops, and an
 # .ips patch is named after the build ID in either case.
 # Native patch manager: select a complete Encore-maintained source, never mutate upstream C++ here.
@@ -1550,7 +1475,7 @@ if(NOT EXISTS "${EDEN_MAINTAINED_PATCH_MANAGER}")
 endif()
 get_target_property(core_sources core SOURCES)
 list(REMOVE_ITEM core_sources file_sys/ips_layer.cpp file_sys/patch_manager.cpp)
-list(APPEND core_sources "${PORT_BUILD_DIR}/ips_layer.cpp" "${EDEN_MAINTAINED_PATCH_MANAGER}")
+list(APPEND core_sources "${EDEN_MAINTAINED_IPS_LAYER}" "${EDEN_MAINTAINED_PATCH_MANAGER}")
 set_property(TARGET core PROPERTY SOURCES "${core_sources}")
 
 # The rate of the vsync clock a game runs on (60 Hz, or what an FPS patch asks for: 120, 240) is
