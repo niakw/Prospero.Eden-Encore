@@ -25,7 +25,7 @@ nouveaux corps C++ destinés à la console.
 - Six modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 35.
-- `headless/` contient **8 fragments `.inc`**. Plusieurs contribuent
+- `headless/` contient **7 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
   dépendance. **Leur présence dans `headless` ne vaut pas conformité
@@ -95,7 +95,6 @@ fragments de l'application native qui ne remplacent aucune source upstream.
 | `headless/jit-compile-batch.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
 | `headless/jit-permissions.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
 | `headless/jit_assert.inc` | Fragment local, sélectionner/qualifier | À vérifier dans les consommateurs / CMake |
-| `headless/native_gpu_thread.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
 <!-- SINGLE_SOURCE_FRAGMENTS_END -->
 
 ## Groupe JIT partagé centralisé
@@ -161,6 +160,14 @@ reconstruire un correctif dans CMake. Le profil normal demeure sur
 l'unité Eden épinglée. Parité de contenu vérifiable hors console.
 
 ## Injections GPU centralisées
+
+Le fragment historique `headless/native_gpu_thread.inc` a été supprimé :
+son implémentation de `ThreadManager::StartThread` et `ThreadManager::Stop`
+était déjà présente à l'identique dans les deux sources complètes
+`vendor/encore-active/eden-gpu/gpu_thread_quiet.cpp` et
+`gpu_thread_dev.cpp`. Le test de sélection native vérifie désormais
+l'identité du cycle de vie dans ces deux variantes et l'absence de
+la copie historique. Il ne s'agit pas d'une nouvelle modification GPU.
 
 La file GPU utilise exclusivement
 `vendor/encore-active/eden-gpu/include/common/bounded_threadsafe_queue.h`
