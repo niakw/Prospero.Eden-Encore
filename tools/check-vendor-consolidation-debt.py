@@ -732,10 +732,10 @@ assert single_source_table("<!-- SINGLE_SOURCE_CMAKE_START -->", "<!-- SINGLE_SO
     "undocumented headless CMake code/override module", candidates_modules)
 assert single_source_table("<!-- SINGLE_SOURCE_FRAGMENTS_START -->", "<!-- SINGLE_SOURCE_FRAGMENTS_END -->") == candidates_fragments, (
     "undocumented headless injected fragment", candidates_fragments)
-assert len(candidates_modules) == 13 and len(candidates_fragments) == 10
+assert len(candidates_modules) == 13 and len(candidates_fragments) == 9
 assert "**45 générateurs**" in single_source_doc and "**21 générateurs**" in single_source_doc
 assert "**66 sites**" in single_source_doc
-assert "**220 sources et en-têtes suivis**" in single_source_doc
+assert "**227 sources et en-têtes suivis**" in single_source_doc
 for deleted_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root/deleted_module).exists(), ("legacy source generator reintroduced", deleted_module)
 print("ENCORE_SINGLE_SOURCE_SCOPE_PASS", f"modules={len(candidates_modules)}", f"fragments={len(candidates_fragments)}")
@@ -947,6 +947,27 @@ assert 'configure_file("${EDEN_MAINTAINED_HOST_GPU_HEADER}"' in c
 assert 'write_derived("${PORT_BUILD_DIR}/include/video_core/gpu_thread.h"' not in c
 print("MAINTAINED_HOST_GPU_HEADER_PARITY_PASS slots=8 stop_join=1")
 
+
+# The previous CMake shader cache generator used a pinned source prefix,
+# one recovery include and the original namespace tail. Compare the
+# directly selected complete source to that exact old textual contract.
+shader_pinned = (root / "vendor/sources/eden/src/video_core/shader_environment.cpp").read_text()
+shader_begin = shader_pinned.find("void LoadPipelines(")
+shader_end = shader_pinned.rfind("} // namespace VideoCommon")
+assert shader_begin > 0 and shader_end > shader_begin
+shader_prefix = "#include <cstdio>\n#include <new>\n#include <stdexcept>\n#include <system_error>\n"
+shader_expected = (shader_prefix + shader_pinned[:shader_begin] +
+                   '#include "shader_cache_reader.inc"\n\n' +
+                   shader_pinned[shader_end:])
+shader_maintained = active / "eden-core/src/video_core/shader_environment.cpp"
+reader_maintained = active / "eden-core/src/video_core/shader_cache_reader.inc"
+assert shader_maintained.read_text() == shader_expected, "Shader cache source not equivalent to old CMake"
+assert reader_maintained.is_file() and not (root / "headless/shader_cache_reader.inc").exists()
+check_canonical_git_object(reader_maintained, "5d652ca5cd6d8ec919c04902a18d87247673e523", "shader cache reader")
+assert 'list(APPEND video_sources "${EDEN_MAINTAINED_SHADER_ENVIRONMENT}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/shader_environment.cpp"' not in c
+print("ENCORE_SHADER_CACHE_SOURCE_PARITY_PASS", "source and reader canonical")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -1028,7 +1049,7 @@ assert len(module_current) == 21, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 58
+assert len(recorded) + len(module_recorded) == 57
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
