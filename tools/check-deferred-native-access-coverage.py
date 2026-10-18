@@ -19,7 +19,11 @@ core_cmake = read("core/CMakeLists.txt")
 jit_emitter = read("dynarmic/src/dynarmic/backend/x64/emit_x64_memory.cpp.inc")
 jit_lookup = read("dynarmic/src/dynarmic/backend/x64/emit_x64_memory.h")
 port_cmake = (root / "headless/CMakeLists.txt").read_text()
-checked_a32 = (root / "headless/checked-fastmem.cmake").read_text()
+maintained_header = (root / "vendor/encore-active/eden-core/src/dynarmic/backend/x64/emit_x64_memory.h").read_text()
+maintained_body = (root / "vendor/encore-active/eden-core/src/dynarmic/backend/x64/emit_x64_memory_checked.cpp.inc").read_text()
+checked_a32 = maintained_header + "\n" + maintained_body
+jit_lookup = maintained_header
+jit_emitter = maintained_body
 host_mem = (root / "src/host_memory.cpp").read_text()
 host_jit_check = (root / "headless/memory_check.cpp").read_text()
 gpu_guest = read("video_core/guest_memory.h")
@@ -150,9 +154,9 @@ expect(jit_lookup, "code.jc(abort, code.T_NEAR);", "JIT marked page fallback")
 expect(jit_emitter, "void AxxEmitX64::EmitMemoryWrite(", "JIT store emitter")
 expect(jit_emitter, "const auto dest_ptr = EmitVAddrLookup", "page-table store path")
 expect(jit_emitter, "code.call(wrapped_fn);", "callback fallback")
-expect(port_cmake, "if (*ctx.conf.page_table_marked_bit == 0) {", "derived bit-zero mark check")
-expect(port_cmake, "code.test(page.cvt32(), 1);", "derived bit-zero test")
-expect(port_cmake, "code.jnz(abort, code.T_NEAR);", "derived marked callback branch")
+expect(maintained_header, "if (*ctx.conf.page_table_marked_bit == 0) {", "derived bit-zero mark check")
+expect(maintained_header, "code.test(page.cvt32(), 1);", "derived bit-zero test")
+expect(maintained_header, "code.jnz(abort, code.T_NEAR);", "derived marked callback branch")
 # Native A32 uses its own checked fastmem byte map. Protect() changes access
 # bits instead of mprotect for these aliases; the blocked path checks its PTE.
 expect(port_cmake, 'option(EDEN_A32_FASTMEM "A32 fastmem window with JIT fault recovery" ON)', "A32 fastmem build")
@@ -162,7 +166,8 @@ expect(port_cmake, 'list(APPEND core_sources "${EDEN_MAINTAINED_A32_MEMORY}")',
 expect(native_a32_memory, "!process.Is64Bit() && Settings::IsFastmemEnabled()",
        "A64 fastmem exclusion in maintained source")
 expect(checked_a32, "constexpr u8 checked_read_blocked = 1, checked_write_blocked = 2;", "A32 read/write map bits")
-expect(checked_a32, "EmitCheckedFastmemTest(code, vaddr, index, ${blocked_bit}, *blocked);", "A32 checked fastmem")
+expect(maintained_body, "EmitCheckedFastmemTest(code, vaddr, index, checked_read_blocked, *blocked);", "A32 checked read")
+expect(maintained_body, "EmitCheckedFastmemTest(code, vaddr, index, checked_write_blocked, *blocked);", "A32 checked write")
 expect(checked_a32, "const auto fallback_ptr = EmitCheckedFallbackLookup", "A32 blocked path")
 expect(checked_a32, "code.test(page.cvt32(), 1);", "A32 fallback PTE mark")
 expect(checked_a32, "const auto fastmem_marker = checked_fastmem ? decltype(ShouldFastmem(ctx, inst)){} : ShouldFastmem(ctx, inst);", "A32 exclusives selection")
