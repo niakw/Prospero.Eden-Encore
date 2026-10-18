@@ -40,14 +40,41 @@ for stamp in ('clock_gettime(CLOCK_REALTIME', 'clock_gettime(CLOCK_MONOTONIC',
     assert stamp in audit_source, stamp
 assert 'dns-denied-summary target=aggregated bytes=0 status=0 count=%llu' in audit_source
 assert 'if (eden_network_audit_active()' in observer or 'eden_network_audit_active())' in observer
-# The generated guest service inherits the existing DNS denylist, not a new resolver.
-assert 'eden_network_host_blocked(host.c_str())' in cmake
-assert '"guest", "tx"' not in cmake or 'eden_network_audit_event' in cmake
-assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/sockets/bsd.cpp" audited_bsd)' in cmake
-for source in ("audited_guest_dns.cpp","audited_guest_bsd.cpp"):
-    assert 'list(APPEND core_sources "${PORT_BUILD_DIR}/'+source+'")' in cmake
-for key in ("new_dns_gate","bsd_audit_connect","bsd_send_audit","bsd_sendto_audit"):
-    assert "string(CONCAT "+key in cmake, "CMake set() would introduce semicolons into C++"
+# Guest DNS/BSD audit code now belongs to full Encore-maintained sources.
+# Verify their actual native selection and that auditing never bypasses
+# either the guest-offline policy or accepted-packet delivery.
+dns=(root/"vendor/encore-active/eden-core/src/core/hle/service/sockets/sfdnsres.cpp").read_text()
+bsd=(root/"vendor/encore-active/eden-core/src/core/hle/service/sockets/bsd.cpp").read_text()
+for label, relative in (
+    ("DNS", "sfdnsres.cpp"), ("BSD", "bsd.cpp"),
+):
+    variable="EDEN_MAINTAINED_GUEST_"+label
+    assert 'set('+variable in cmake
+    assert 'list(REMOVE_ITEM core_sources hle/service/sockets/'+relative+')' in cmake
+    assert 'list(APPEND core_sources "${'+variable+'}")' in cmake
+assert 'write_derived("${PORT_BUILD_DIR}/audited_guest_dns.cpp"' not in cmake
+assert 'write_derived("${PORT_BUILD_DIR}/audited_guest_bsd.cpp"' not in cmake
+# Both resolver entry points must deny guest DNS before the host resolver,
+# with audit events reflecting the real decision.
+assert dns.count('if (Eden::Encore::kGuestNetworkOffline) return {0, GetAddrInfoError::NODATA};') == 2
+assert dns.count('const bool encore_denied = eden_network_host_blocked(host.c_str()) != 0;') == 2
+assert dns.count('if (encore_denied) return {0, GetAddrInfoError::NODATA};') == 2
+assert dns.count('eden_network_audit_event("guest", encore_denied ? "dns-denied" : "dns-allowed"') == 2
+for marker in ('Network::GetAddressInfo(host, /*service*/ std::nullopt)',
+               'Network::GetAddressInfo(host, service)'):
+    at=dns.index(marker)
+    preceding=dns[:at]
+    assert preceding.rfind('if (encore_denied) return {0, GetAddrInfoError::NODATA};') > preceding.rfind('const std::string host =')
+for event,guard in (
+    ('connect','result == Errno::SUCCESS || result == Errno::ISCONN'),
+    ('rx','eden_network_audit_active()'),
+    ('tx','eden_network_audit_active()'),
+):
+    assert '"guest", "'+event+'"' in bsd
+    assert guard in bsd
+assert 'send_result.first > 0 && eden_network_audit_active()' in bsd
+assert 'sent.first > 0 && eden_network_audit_active()' in bsd
+assert 'return send_result;' in bsd and 'return sent;' in bsd
 
 c=r"""
 #include "network_audit.h"
