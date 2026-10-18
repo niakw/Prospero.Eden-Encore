@@ -17,10 +17,10 @@ couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
 ## Synthèse vérifiable
 
-- **10 appels générateurs** encore dans CMake ; contre **75 avant**
+- **8 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
-- **14 lectures `file(READ`** et **88 remplacements
+- **12 lectures `file(READ`** et **84 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
 - Les versions diagnostiques de `IFile::Read`, `IStorage::Read` et des appels
@@ -182,6 +182,10 @@ Le sélecteur conserve le chemin normal et la variante DEV avec
 Un oracle hôte reconstruit les anciennes variantes pour la parité ;
 la compilation native et les performances console sont non qualifiées.
 
+## ServerManager : G17/G18 déplacés vers les sources maintenues
+
+L'en-tête de service et les deux variantes de `server_manager.cpp` vivent désormais dans `vendor/encore-active/eden-core/src/core/hle/service/`. Le profil normal et le profil DEV sélectionnent chacun un couple source/en-tête complet, sans fabriquer du C++ depuis CMake. Le test `tools/check-maintained-server-manager.py` rejoue l'ancienne transformation du snapshot épinglé et vérifie l'équivalence exacte des deux profils ; il ne constitue pas une validation sur console.
+
 ## Générateurs non encore déplacés
 
 Les numéros Gxx sont les positions de cet inventaire, **pas** des validations.
@@ -198,15 +202,13 @@ dans la version normale.
 | G13 | `${eden_native_memory_tu}` | Mémoire/chargement | Cible variable | 863 |
 | G14 | `${PORT_BUILD_DIR}/core.cpp` | Mémoire/chargement | Unité source | 944 |
 | G15 | `${PORT_BUILD_DIR}/nso.cpp` | Mémoire/chargement | Unité source | 1019 |
-| G17 | `${PORT_BUILD_DIR}/include/${server_header}` | Kernel/IPC/entrées | Cible variable | 1342 |
-| G18 | `${PORT_BUILD_DIR}/server_manager.cpp` | Kernel/IPC/entrées | Unité source | 1399 |
 | G19 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 1412 |
 | G20 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 1725 |
 | G21 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 1822 |
 | G23 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2201 |
 <!-- OVERRIDE_GENERATORS_END -->
 
-Les identifiants historiques `G01`, `G02`, `G03`, `G04`, `G05`, `G06`, `G07`, `G08`, `G09` et `G16` sont retirés, avec G09 maintenu dans les unités A64 standard/partagée ; `G01`/`G02` sont retirés avec X09 (sources complètes `BlockOfCode` sous `encore-active`).
+Les identifiants historiques `G01`, `G02`, `G03`, `G04`, `G05`, `G06`, `G07`, `G08`, `G09`, `G16`, `G17` et `G18` sont retirés, avec G09 maintenu dans les unités A64 standard/partagée ; `G01`/`G02` sont retirés avec X09 (sources complètes `BlockOfCode` sous `encore-active`).
 L'identifiant historique `G22` est retiré : les deux variantes de l'allocateur
 sont maintenues sous `vendor/encore-active/eden-build/tooling/native/`.
 Les IDs G01–G23 sont stables et ne sont pas renumérotés.
@@ -470,7 +472,7 @@ et plusieurs sorties sont explicitement conditionnées.
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **22 sites** `write_derived()`, ni dans
+Ils ne sont comptés ni dans les **20 sites** `write_derived()`, ni dans
 les **2 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,

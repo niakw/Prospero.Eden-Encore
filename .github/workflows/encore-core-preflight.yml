@@ -266,6 +266,7 @@ jobs:
           python3 -B tools/check-maintained-block-range.py
           python3 -B tools/check-maintained-kprocess-dev.py
           python3 -B tools/check-maintained-page-table-finalize.py
+          python3 -B tools/check-maintained-server-manager.py
           python3 -B tools/check-maintained-xbyak-alias.py
           python3 -B tools/check-maintained-constant-pool.py
           python3 -B tools/check-maintained-reg-alloc.py
