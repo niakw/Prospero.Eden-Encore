@@ -15,7 +15,7 @@ header = (root / "headless/direct_pool_accounting.h").read_text()
 probe_policy = (root / "headless/direct_pool_probe_policy.h").read_text()
 region_policy = (root / "headless/direct_pool_region_scan.h").read_text()
 perf = (root / "headless/performance.cpp").read_text()
-heap = (root / "headless/heap_arenas.inc").read_text()
+heap = (root / "vendor/encore-active/eden-build/tooling/native/app_heap_arenas.c").read_text()
 pages = (root / "src/memory_pages.cpp").read_text()
 bridge = (root / "headless/heap_pages.cpp").read_text()
 cmake = (root / "headless/CMakeLists.txt").read_text()
@@ -78,7 +78,9 @@ assert 'eden_heap_pages_physical_size(block)' in heap
 assert 'AllocatedMemoryPagesSpan(const void* pointer)' in pages
 assert 'header_of(pointer, static_cast<std::size_t>(page)).total' in pages
 assert 'Common::AllocatedMemoryPagesSpan(base)' in bridge
-assert 'size_t eden_heap_pages_physical_size(void *);' in cmake
+assert 'size_t eden_heap_pages_physical_size(void *);' in heap
+assert 'set(EDEN_HEAP_SOURCE "${EDEN_ACTIVE_HEAP_DIR}/${EDEN_HEAP_UNIT}")' in cmake
+assert '"${EDEN_HEAP_SOURCE}")' in cmake
 assert perf.index("void ReportDirectMemoryState(") < perf.index("EDEN_DIRECT_POOL_OWNERS")
 assert perf.index("EDEN_DIRECT_POOL_OWNERS") < perf.index("void ReportGpuThread(")
 compiler = next((name for name in ("clang++-18", "clang++", "g++")
