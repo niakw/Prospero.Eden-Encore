@@ -741,7 +741,7 @@ assert single_source_table("<!-- SINGLE_SOURCE_CMAKE_START -->", "<!-- SINGLE_SO
     "undocumented headless CMake code/override module", candidates_modules)
 assert single_source_table("<!-- SINGLE_SOURCE_FRAGMENTS_START -->", "<!-- SINGLE_SOURCE_FRAGMENTS_END -->") == candidates_fragments, (
     "undocumented headless injected fragment", candidates_fragments)
-assert len(candidates_modules) == 13 and len(candidates_fragments) == 5
+assert len(candidates_modules) == 13 and len(candidates_fragments) == 4
 # Derive the expected scope counters from the actual tracked inputs, then
 # compare their rendered values with the architecture document. Do not freeze
 # migration-stage totals into a separate test (which goes stale every move).
@@ -1303,7 +1303,6 @@ indirect_expected = (
     ("headless/native_jit_memory_read_guard.cmake", ("string(REPLACE", "wrapper")),
     ("headless/physical_core_interrupt_atomic.cmake", ("string(REPLACE", "physical_core_source")),
     ("headless/scalar-memory.cmake", ("set(memory_source", "scalar-memory-${lower}.inc")),
-    ("headless/jit-alias.cmake", ("string(REPLACE", "code_source")),
 )
 assert indirect_recorded == [entry[0] for entry in indirect_expected], (
     "Unlisted or reordered indirect CMake override; recheck files and symbols")

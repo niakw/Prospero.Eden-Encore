@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 327
+**Non, this is not an exhaustive repository-wide inventory.** The 329
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 327 | 305 | 670 |
+| Graphe connu | 329 | 307 | 674 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 272 | 260 | 565 |
+| SOURCE — lecture effectuée, preuve insuffisante | 274 | 262 | 569 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **287** | **274** | **593** |
+| **Encore à qualifier (SOURCE + OPEN)** | **289** | **276** | **597** |
 | Dont priorité P0 (SOURCE + OPEN) | 108 | 103 | 252 |
 
-Le **noyau restant** compte donc 284 critères répartis sur
-271 fichiers et 587 mentions fonction/contrat :
-15 OPEN et 269 SOURCE.
+Le **noyau restant** compte donc 289 critères répartis sur
+276 fichiers et 597 mentions fonction/contrat :
+15 OPEN et 274 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-230 fichiers de code/en-têtes présents et 230 avec un chemin de
+257 fichiers de code/en-têtes présents et 257 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -244,6 +244,8 @@ function/contract tokens are checked by CI for existence only; the
 | B06 | P1 | B01 | vendor/encore-active/eden-build/tooling/native/app_heap_arenas.c | ps5_heap_ready; eden_heap_grow | SOURCE | tools/check-maintained-heap-sources.py | Complete arena source selected directly, historical body identity gated; console unqualified | 🟡 Source étudiée |
 | B07 | P1 | B01 | vendor/encore-active/eden-build/tooling/native/app_heap_flat.c | ps5_heap_ready; __wrap_malloc | SOURCE | tools/check-maintained-heap-sources.py | Full non-arena source parity gated, console fallback unqualified | 🟡 Source étudiée |
 | B08 | P1 | B06,B07 | vendor/encore-active/eden-build/tooling/native/heap_guard.h | eden_guard_check; eden_quarantine | SOURCE | tools/check-maintained-heap-sources.py | Optional diagnostic macro header has canonical owner and guarded syntax proof only | 🟡 Source étudiée |
+| B09 | P1 | J09 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code_host.cpp | BlockOfCode::EnableWriting; BlockOfCode::DisableWriting | SOURCE | tools/check-maintained-block-of-code.py | Complete Linux W^X source and exact CMake stage validated; guest execution unqualified | 🟡 Source étudiée |
+| B10 | P1 | J09 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code.h | protection_end; patch_pages | SOURCE | tools/check-maintained-block-of-code.py | Maintained W^X header selected by copy with matching CPP variants; console unqualified | 🟡 Source étudiée |
 | B03 | P1 | B01 | vendor/encore-active/eden-core/overrides/slot-vector/common/slot_vector.h | SlotId insert( | SOURCE | tools/check-vendor-consolidation-debt.py | Former X02 recovery is maintained as exact Encore header with isolated include priority; native exception behavior unproved | 🟡 Source étudiée |
 | Q01 | P1 | B02 | vendor/sources/eden/src/common/bounded_threadsafe_queue.h | TryEmplace; Pop; std::construct_at | HOST | tools/check-native-gpu-queue-slot-lifetime-host.py | No claim about a specific game's resource lifetime | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-gpu-queue-slot-lifetime-host.py) |
 | Q02 | P1 | Q01 | vendor/encore-active/eden-gpu/include/common/bounded_threadsafe_queue.h | EmplaceWaitWithStopToken | SOURCE | tools/check-gpu-producer-stop.py | Stop-aware producer wake owned by the selected complete queue header; obsolete .inc retired, console unqualified | 🟡 Source étudiée |
@@ -291,7 +293,7 @@ function/contract tokens are checked by CI for existence only; the
 | J06 | P1 | J05 | headless/jit-allocator.h | ReserveSparseJitCode; CommitSparseJitCode | SOURCE | tools/check-jit-allocator.py | Validate native allocator reserve commit and release lifetime | 🟡 Source étudiée |
 | J07 | P1 | J05 | headless/fastmem_handler.cpp | ExceptionHandler::Register | OPEN | tools/check-jit-protection.py | Check fastmem trap context and retired code region safety | 🟠 À contrôler |
 | J08 | P1 | J07 | headless/memory_check.cpp | MemoryRead8; MemoryRead32 | SOURCE | tools/check-ps5-sparse-jit-va-lifetime.py | Relate checked fastmem to real guest RAM and GPU mapping | 🟡 Source étudiée |
-| J09 | P1 | J07 | headless/jit-permissions.inc | BlockOfCode::EnableWriting; BlockOfCode::DisableWriting | SOURCE | tools/check-jit-protection.py | Revalidate executable and writable page transitions | 🟡 Source étudiée |
+| J09 | P1 | J07 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code_native.cpp | BlockOfCode::EnableWriting; BlockOfCode::DisableWriting | SOURCE | tools/check-jit-protection.py | Maintained native W^X source selected; host protection checks remain required, native console unqualified | 🟡 Source étudiée |
 | J10 | P2 | J05 | headless/jit-compile-batch.inc | EnsureMemoryCommitted | PARKED | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Batch compilation disabled in shipping | ⚪ Suspendu |
 | J11 | P2 | J05 | headless/jit_list.h | EDEN_SHARED_JIT_AVAILABLE | PARKED | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Shared JIT and precompile disabled in shipping | ⚪ Suspendu |
 | R01 | P1 | B01 | vendor/sources/eden/src/video_core/memory_manager.cpp | MemoryManager::Map; MemoryManager::MapSparse | OPEN | tools/check-gpu-memory-mapping-source.py | Verify GPU VA mapping and physical alias invalidation | 🟠 À contrôler |
@@ -480,7 +482,7 @@ function/contract tokens are checked by CI for existence only; the
 | J37 | P1 | J05,J35 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/constant_pool.cpp | ConstantPool::GetConstant | SOURCE | tools/check-maintained-constant-pool.py | Maintained pool matches retired writable-alias CMake rewrite exactly; Xbyak header generator remains distinct; console unqualified | 🟡 Source étudiée |
 | J38 | P1 | J31,J35 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/emit_x64_vector.cpp | EmitX64::EmitVectorGetElement32; EmitX64::EmitVectorGetElement64 | SOURCE | tools/check-maintained-scalar-emitters.py | SIMD low-lane extraction now compiled from complete source with exact former CMake edit parity; native unqualified | 🟡 Source étudiée |
 | J39 | P1 | J38 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/emit_x64_data_processing.cpp | EmitX64::EmitZeroExtendWordToLong | SOURCE | tools/check-maintained-scalar-emitters.py | Scalar zero extension retained in complete maintained TU, exact parity with previous generator; native unqualified | 🟡 Source étudiée |
-| J40 | P1 | J35,J37 | vendor/encore-active/eden-build/third_party/xbyak/xbyak.h | writableAddress; writeTop_ | SOURCE | tools/check-maintained-xbyak-alias.py | Complete v7.40.1 tagged header with eight former CMake replacements, selected via COPYONLY; indirect code_source rewrite still X09, native unqualified | 🟡 Source étudiée |
+| J40 | P1 | J35,J37 | vendor/encore-active/eden-build/third_party/xbyak/xbyak.h | writableAddress; writeTop_ | SOURCE | tools/check-maintained-xbyak-alias.py | Complete v7.40.1 tagged header with eight former CMake replacements, selected via COPYONLY; indirect X09 retired into maintained BlockOfCode sources, native unqualified | 🟡 Source étudiée |
 | J41 | P1 | U12,J05 | vendor/encore-active/eden-core/src/dynarmic/backend/block_range_information.h | BlockRangeInformation; page_bits | SOURCE | tools/check-maintained-block-range.py | Full maintained header shadows upstream layout via unchanged copied include and retains 4-KiB tracking; console unqualified | 🟡 Source étudiée |
 | H29 | P0 | H22,H26 | headless/backports/eden-sm-host-wait.patch | GetService; IsDummyThread; SleepThread | SOURCE | tools/install-active-core-backports.py | SM GetService uses host sleep for dummy threads to avoid parking a host HLE worker with guest SleepThread; staged patch spans service-manager header and must be validated with blocking/unblocking semantics | 🟡 Source étudiée |
 | H30 | P1 | H02 | vendor/encore-active/eden-core/src/core/hle/kernel/k_spin_lock.cpp | KSpinLock::Lock; KSpinLock::TryLock | SOURCE | tools/check-maintained-audio-units.py | Maintained lock source uses SpinAcquire and preserves unlock/try-lock behavior; source parity is checked, not contention or console forward progress | 🟡 Source étudiée |

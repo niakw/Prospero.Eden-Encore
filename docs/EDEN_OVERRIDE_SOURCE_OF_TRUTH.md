@@ -19,13 +19,13 @@ nouveaux corps C++ destinés à la console.
 - `vendor/encore-active` : **254 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **22 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **20 générateurs** `write_derived`.
 - Deux modules CMake générateurs totalisent **12 générateurs**
-  `write_derived`, soit **34 sites** au total.
-- Six modules CMake procèdent encore à des substitutions **indirectes**
+  `write_derived`, soit **32 sites** au total.
+- Cinq modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 34.
-- `headless/` contient **5 fragments `.inc`**. Plusieurs contribuent
+- `headless/` contient **4 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
   dépendance. **Leur présence dans `headless` ne vaut pas conformité
@@ -54,7 +54,7 @@ nouveaux corps C++ destinés à la console.
 | `headless/gpu_native_observability.cmake` | Sélection de sources Encore maintenues | Sélecteur conforme |
 | `headless/guest_write_deferred_bridge.cmake` | Générateur de source dérivée, à déplacer | Dette de migration |
 | `headless/inject.cmake` | Orchestration ou toolchain | Sélecteur / configuration |
-| `headless/jit-alias.cmake` | Sélection Xbyak complète ; code_source encore muté (X09) | Dette indirecte X09 |
+| `headless/jit-alias.cmake` | Sélection/copie de l'en-tête Xbyak et de ConstantPool complets | Sélecteur conforme ; X09 retiré |
 | `headless/native_guest_range_overflow.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
 | `headless/native_jit_memory_read_guard.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
 | `headless/physical_core_interrupt_atomic.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
@@ -102,7 +102,6 @@ fragments de l'application native qui ne remplacent aucune source upstream.
 | `headless/gpu_native_probe.inc` | Diagnostic GPU natif local | Inclus transitivement par `gpu_probe.inc` ; pas un override de dépendance |
 | `headless/gpu_probe.inc` | Diagnostic graphique local | Inclus par `graphics.cpp` sous `EDEN_GPU_PROBE` ; reste dans le runtime de l'application |
 | `headless/jit-compile-batch.inc` | Bloc de compilation JIT injecté | **Dette confirmée G09** : remplacement de la région `a64_interface.cpp` sous `EDEN_JIT_COMPILE_BATCH` |
-| `headless/jit-permissions.inc` | Méthodes de permissions JIT injectées | **Dette confirmée G02** : remplacement dans `block_of_code.cpp` ; dépend aussi de l'en-tête G01 et de X09 |
 <!-- SINGLE_SOURCE_FRAGMENTS_END -->
 
 ### Frontières des six fragments résiduels
@@ -114,6 +113,18 @@ l'application, non des patches cachés dans une dépendance ; leur présence
 sous `headless/` est autorisée. Le fragment de capture OpenGL est
 **non qualifié**, pas déclaré inutilisé sans recherche exhaustive des consommateurs.
 Le nombre de six fichiers physiques ne mesure donc pas six overrides à migrer.
+
+## BlockOfCode : W^X, alias mémoire et permissions JIT
+
+Les générateurs G01/G02 et la mutation indirecte X09 sont retirés ensemble.
+`vendor/encore-active/eden-core/src/dynarmic/backend/x64/` possède
+`block_of_code.h`, `block_of_code_host.cpp` et
+`block_of_code_native.cpp`. CMake choisit la variante, puis la copie
+sans réécriture dans `${PORT_BUILD_DIR}` pour préserver les tests de
+protection JIT et l'arbre de compilation. L'ancien fragment
+`headless/jit-permissions.inc` est intégré aux unités complètes et supprimé.
+Un contrôle hôte exerce les sélections CMake Linux/native et vérifie les
+invariants W^X ; aucun progrès guest/console n'est revendiqué.
 
 ## Assertion JIT centralisée
 
@@ -225,7 +236,7 @@ Le header épinglé `xbyak.h` est maintenu sous
 `vendor/encore-active/eden-build/third_party/xbyak/` avec la licence
 BSD d'origine et les huit adaptations d'alias mémoire. CMake ne fait plus
 que le copier. Le module `jit-alias.cmake` conserve une modification
-indirecte de `code_source` (X09), explicitement non migrée.
+indirecte de `code_source` (X09) retirée : les deux variantes complètes de `BlockOfCode` sont maintenues dans `encore-active`.
 
 ## Dynarmic : suivi des blocs centralisé
 
