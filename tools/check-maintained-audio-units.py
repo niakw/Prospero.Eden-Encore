@@ -74,7 +74,7 @@ assert 'list(APPEND video_sources "${EDEN_NATIVE_GPU_MEMORY_MANAGER}")' in cmake
 assert cmake.count("write_derived(") <= 77
 # One explicitly checked native GPU synchronization-method input is
 # approved; keep the prior 87-read generator budget for everything else.
-gpu_sync_input='file(READ "${EDEN_PORT_DIR}/gpu_sync_failure_wait.inc" gpu_sync_wait_replacement)'
+gpu_sync_input='file(READ "${PORT_ROOT}/vendor/encore-active/eden-core/gpu-injections/gpu_sync_failure_wait.inc" gpu_sync_wait_replacement)'
 assert cmake.count(gpu_sync_input) == 1
 gpu_span_input='file(READ "${PROJECT_SOURCE_DIR}/src/video_core/memory_manager.cpp" eden_gpu_span_src)'
 assert gpu_span_input not in cmake

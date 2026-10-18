@@ -2,9 +2,9 @@
 
 **Branche :** `dev/ps5-sparse-jit`. **Date du relevé :** 17 octobre 2026.
 
-Ce registre complémentaire couvre les **181 chemins** de code, en-têtes et
+Ce registre complémentaire couvre les **179 chemins** de code, en-têtes et
 fragments `.c/.cc/.cpp/.h/.hpp/.inc/.cl` du dossier `headless/`.
-Il ne remplace pas `EDEN_ACTIVE_SOURCE_CATALOG.md` : les 215 fichiers
+Il ne remplace pas `EDEN_ACTIVE_SOURCE_CATALOG.md` : les 220 fichiers
 de `vendor/encore-active` sont déjà inventoriés séparément.
 
 **Attention :** une entrée ici ne prouve pas que le fichier est compilé ni
@@ -13,9 +13,9 @@ pour suivi séparé et n'autorise aucune modification du launcher depuis
 l'audit moteur. Un chemin noté « À qualifier » peut avoir été audité sous
 une autre forme : il manque seulement la référence de chemin exacte.
 
-- **181** chemins sous `headless/`, dont **59** sources C/C++ et **122** en-têtes/fragments.
+- **179** chemins sous `headless/`, dont **59** sources C/C++ et **120** en-têtes/fragments.
 - **27** chemins déjà présents dans le graphe moteur.
-- **154** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
+- **152** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
 - Les deux générateurs de profils `headless/encore_overrides_generated.h`,
   `headless/glyph_overrides_generated.h` et les autres ressources générées
   sont des entrées de l'inventaire, **pas** de nouveaux patchs CMake.
@@ -79,8 +79,6 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/gpu_fault_rate_limit.h` | en-tête/fragment | — | À qualifier |
 | `headless/gpu_native_probe.inc` | en-tête/fragment | — | À qualifier |
 | `headless/gpu_probe.inc` | en-tête/fragment | — | À qualifier |
-| `headless/gpu_queue_stop_wait.inc` | en-tête/fragment | Q02 | Chemin indexé, preuve dépend du graphe |
-| `headless/gpu_sync_failure_wait.inc` | en-tête/fragment | — | À qualifier |
 | `headless/graphics.cpp` | runtime/bridge | V11 | Chemin indexé, preuve dépend du graphe |
 | `headless/graphics.h` | en-tête/fragment | — | À qualifier |
 | `headless/guest_fault.h` | en-tête/fragment | — | À qualifier |

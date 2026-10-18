@@ -37,7 +37,7 @@ counts = {name: c.count(name) for name in baseline}
 # other vendor-derived source. Each exception must occur exactly once.
 approved_sync = {
     "file(READ": (
-        'file(READ "${EDEN_PORT_DIR}/gpu_sync_failure_wait.inc" gpu_sync_wait_replacement)',
+        'file(READ "${PORT_ROOT}/vendor/encore-active/eden-core/gpu-injections/gpu_sync_failure_wait.inc" gpu_sync_wait_replacement)',
     ),
     "string(REPLACE": (
         'string(REPLACE "${gpu_sync_wait_original}" "${gpu_sync_wait_replacement}"',
@@ -732,10 +732,10 @@ assert single_source_table("<!-- SINGLE_SOURCE_CMAKE_START -->", "<!-- SINGLE_SO
     "undocumented headless CMake code/override module", candidates_modules)
 assert single_source_table("<!-- SINGLE_SOURCE_FRAGMENTS_START -->", "<!-- SINGLE_SOURCE_FRAGMENTS_END -->") == candidates_fragments, (
     "undocumented headless injected fragment", candidates_fragments)
-assert len(candidates_modules) == 13 and len(candidates_fragments) == 12
+assert len(candidates_modules) == 13 and len(candidates_fragments) == 10
 assert "**45 générateurs**" in single_source_doc and "**21 générateurs**" in single_source_doc
 assert "**66 sites**" in single_source_doc
-assert "**217 sources et en-têtes suivis**" in single_source_doc
+assert "**220 sources et en-têtes suivis**" in single_source_doc
 for deleted_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root/deleted_module).exists(), ("legacy source generator reintroduced", deleted_module)
 print("ENCORE_SINGLE_SOURCE_SCOPE_PASS", f"modules={len(candidates_modules)}", f"fragments={len(candidates_fragments)}")
@@ -861,6 +861,18 @@ assert (active / "eden-core/src/core/internal_network/network.cpp").read_text() 
 assert 'list(APPEND core_sources "${EDEN_NATIVE_NETWORK_SOURCE}")' in c
 assert 'write_derived("${PORT_BUILD_DIR}/network.cpp"' not in c
 print("MAINTAINED_NETWORK_SOURCE_PARITY_PASS transformations=5")
+
+
+gpu_injection_blobs = {
+    "gpu_queue_stop_wait.inc": "2de5f07a9e4ecd4400cae804c20e94d2fcb0ff44",
+    "gpu_sync_failure_wait.inc": "8840ab6d3e440321191765a823496e7f68d7feb3",
+}
+for filename, expected_blob in gpu_injection_blobs.items():
+    input_source = active / "eden-core/gpu-injections" / filename
+    assert input_source.is_file() and not (root / "headless" / filename).exists()
+    check_canonical_git_object(input_source, expected_blob, "GPU injection")
+    assert f'/eden-core/gpu-injections/{filename}"' in c
+print("ENCORE_GPU_INJECTIONS_CANONICAL_PASS", len(gpu_injection_blobs))
 
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.

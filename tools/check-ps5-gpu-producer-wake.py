@@ -12,14 +12,14 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-inc = (root / "headless/gpu_queue_stop_wait.inc").read_text()
+inc = (root / "vendor/encore-active/eden-core/gpu-injections/gpu_queue_stop_wait.inc").read_text()
 cmake = (root / "headless/CMakeLists.txt").read_text()
 assert "EmplaceWaitWithStopToken" in inc
 assert "producer.cv.wait(lock, stop_token" in inc
 assert "consumer.index.load(std::memory_order_acquire)" in inc
 assert "std::construct_at" in inc
 assert "consumer.cv.notify_one()" in inc
-assert "file(READ \"${EDEN_PORT_DIR}/gpu_queue_stop_wait.inc\"" in cmake
+assert "file(READ \"${PORT_ROOT}/vendor/encore-active/eden-core/gpu-injections/gpu_queue_stop_wait.inc\"" in cmake
 assert "write_derived(\"${PORT_BUILD_DIR}/include/common/bounded_threadsafe_queue.h\"" in cmake
 assert "state.queue.TryEmplace(std::move(command_data), fence, block)" in cmake
 assert "state.queue.EmplaceWaitWithStopToken(stop_source.get_token()," in cmake

@@ -15,7 +15,7 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 original = (root / "vendor/sources/eden/src/common/bounded_threadsafe_queue.h").read_text()
 cmake = (root / "headless/CMakeLists.txt").read_text()
-addon = (root / "headless/gpu_queue_stop_wait.inc").read_text()
+addon = (root / "vendor/encore-active/eden-core/gpu-injections/gpu_queue_stop_wait.inc").read_text()
 workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
 
 construct = "std::construct_at(std::addressof(m_data[pos]), std::forward<Args>(args)...);"
