@@ -4,20 +4,30 @@
 from pathlib import Path
 import platform, shutil, subprocess, sys, tempfile
 
-cmake = (Path(__file__).resolve().parents[1] / "headless/CMakeLists.txt").read_text()
-def section(start, end):
-    assert cmake.count(start) == 1, start
-    return cmake.split(start, 1)[1].split(end, 1)[0]
+root = Path(__file__).resolve().parents[1]
+cmake = (root / "headless/CMakeLists.txt").read_text()
+# The quiet/DEV implementation belongs to maintained C++, not CMake.
+core_dir = root / "vendor/encore-active/eden-core/src/core/hle/kernel"
+dev_source = (core_dir / "physical_core_dev.cpp").read_text()
+standard_source = (core_dir / "physical_core_standard.cpp").read_text()
+idle_start = dev_source.index("void PhysicalCore::Idle() {")
+idle_end = dev_source.index("\nbool PhysicalCore::IsInterrupted()", idle_start)
+idle = dev_source[idle_start:idle_end].strip()
+assert "physical_core_dev.cpp" in cmake and "physical_core_standard.cpp" in cmake
+assert any("configure_file" in line and "EDEN_PHYSICAL_CORE_SOURCE" in line
+           and "physical_core.cpp" in line for line in cmake.splitlines())
+assert "void PhysicalCore::Idle() {" in standard_source
+assert "Eden::Performance::NowNs()" not in standard_source
 
-idle = section('string(REPLACE "${idle_old}" [=[', ']=] physical_core_source').strip()
 assert idle.startswith("void PhysicalCore::Idle() {")
 assert "const bool profile_idle = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed);" in idle
 assert "const long long start = profile_idle ? ::Eden::Performance::NowNs() : 0;" in idle
 assert "if (profile_idle)\n            ::Eden::Performance::CountIdle(" in idle
-assert "m_on_interrupt.wait(lk, [this] { return m_is_interrupted; });" in idle
+assert "m_on_interrupt.wait(lk, [this] { return std::atomic_ref<const bool>{m_is_interrupted}.load(std::memory_order_relaxed); });" in idle
 # The writer modifies m_is_interrupted under m_guard using ordinary stores.
 # Do not permit an unlocked atomic builtin read in native development code.
-assert "__atomic_load_n(&m_is_interrupted" not in cmake
+assert "__atomic_load_n(&m_is_interrupted" not in dev_source
+assert "std::atomic_ref<const bool>{m_is_interrupted}.load(std::memory_order_relaxed)" in idle
 
 # Buffer dequeue diagnostics also live in a tracked DEV-only source now.
 dequeue = (Path(__file__).resolve().parents[1] /
