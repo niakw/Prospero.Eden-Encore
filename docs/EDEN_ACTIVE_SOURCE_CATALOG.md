@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **247 fichiers** de code et d'en-têtes enregistrés.
-- **247 fichiers** possèdent une correspondance de chemin *exacte*
+- **246 fichiers** de code et d'en-têtes enregistrés.
+- **246 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -124,7 +124,6 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/dynarmic/shared-jit/jit_links.inc` | `maintained-override` | J24 |
 | `eden-core/dynarmic/shared-jit/jit_push_rsb.inc` | `maintained-override` | J25 |
 | `eden-core/dynarmic/shared-jit/jit_state_args.inc` | `maintained-override` | J26 |
-| `eden-core/gpu-injections/gpu_queue_stop_wait.inc` | `maintained-override` | Q02,V72 |
 | `eden-core/gpu-injections/gpu_sync_failure_wait.inc` | `maintained-override` | V73 |
 | `eden-core/host-gpu/include/video_core/gpu_thread.h` | `maintained-override` | Q09 |
 | `eden-core/include/core/file_sys/bis_factory.h` | `maintained-override` | F13 |
@@ -204,7 +203,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/video_core/video_core_opengl.cpp` | `maintained-override` | V12 |
 | `eden-gpu/gpu_thread_dev.cpp` | `maintained-override` | Q03 |
 | `eden-gpu/gpu_thread_quiet.cpp` | `maintained-override` | Q06 |
-| `eden-gpu/include/common/bounded_threadsafe_queue.h` | `maintained-override` | Q07 |
+| `eden-gpu/include/common/bounded_threadsafe_queue.h` | `maintained-override` | Q02,Q07,V72 |
 | `eden-gpu/include/video_core/gpu_thread.h` | `maintained-override` | Q08 |
 | `eden-shader/src/shader_recompiler/frontend/maxwell/translate/impl/load_store_local_shared.cpp` | `maintained-override` | V24 |
 | `eden-surface-lifecycle/src/core/hle/service/nvnflinger/surface_flinger.cpp` | `maintained-override` | N06 |
