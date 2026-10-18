@@ -18,7 +18,7 @@ target_include_directories(common BEFORE PUBLIC "${PORT_BUILD_DIR}/include")
 # Change consumer commands as well so no old CodeArray layout survives incrementally.
 target_compile_definitions(dynarmic PUBLIC EDEN_JIT_ALIAS_LAYOUT=1)
 
-string(REPLACE "    memset(ret, 0, alloc_size);" "    memset(writableAddress(ret), 0, alloc_size);" code_source "${code_source}")
+# Writable-alias memset already resides in both maintained BlockOfCode units.
 set(EDEN_MAINTAINED_CONSTANT_POOL
     "${PORT_ROOT}/vendor/encore-active/eden-core/src/dynarmic/backend/x64/constant_pool.cpp")
 if(NOT EXISTS "${EDEN_MAINTAINED_CONSTANT_POOL}")
