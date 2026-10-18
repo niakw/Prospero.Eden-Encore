@@ -1309,7 +1309,7 @@ assert indirect_recorded == [entry[0] for entry in indirect_expected], (
 for module, required in indirect_expected:
     content = (root / module).read_text()
     assert all(token in content for token in required), ("indirect override changed", module)
-assert len(indirect_recorded) == 6
+assert len(indirect_recorded) == len(indirect_expected), (len(indirect_recorded), len(indirect_expected))
 print(f"VENDOR_INDIRECT_OVERRIDE_INVENTORY_PASS modules={len(indirect_recorded)} (not generator sites)")
 
 # Third independent source-change mechanism: pinned backport patch replays.
