@@ -66,7 +66,10 @@ assert 'write_derived("${PORT_BUILD_DIR}/k_spin_lock.cpp"' not in cmake
 assert 'list(APPEND npad_sources "${EDEN_NPAD_SELECTED}")' in cmake
 assert 'list(FILTER npad_sources EXCLUDE REGEX "(^|/)npad\\\\.cpp$")' in cmake
 assert 'write_derived("${PORT_BUILD_DIR}/npad.cpp"' not in cmake
-assert "set(compose_new [=[" in cmake
+# VSync/compose is a maintained native unit now, not a CMake string patch.
+assert 'list(APPEND core_sources "${EDEN_MAINTAINED_VI_CONDUCTOR}")' in cmake
+assert 'set(EDEN_MAINTAINED_VI_CONDUCTOR' in cmake
+assert 'set(compose_new [=[' not in cmake
 # The port must keep reducing generator rewrites, not silently increase them.
 gpu_span_derived='write_derived("${eden_gpu_span_tu}" "${eden_gpu_span_src}")'
 assert gpu_span_derived not in cmake
