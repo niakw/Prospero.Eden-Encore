@@ -11,16 +11,16 @@ développement, les options JIT expérimentales, les backends et le build
 natif sélectionnent chacun leur sous-ensemble.
 
 L'inventaire complémentaire `docs/EDEN_ACTIVE_SOURCE_CATALOG.md` suit les
-231 fichiers de code et en-têtes dans `vendor/encore-active`,
+232 fichiers de code et en-têtes dans `vendor/encore-active`,
 y compris les backports de production et la dépendance graphique. Cette
 couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
 ## Synthèse vérifiable
 
-- **32 appels générateurs** encore dans CMake ; contre **75 avant**
+- **31 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
-- **42 lectures `file(READ`** et **158 remplacements
+- **41 lectures `file(READ`** et **157 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
 - Les versions diagnostiques de `IFile::Read`, `IStorage::Read` et des appels
@@ -84,7 +84,7 @@ et non les 458 scripts Python/shell/CMake du seul dossier `tools/`.
 | `headless/checked-fastmem.cmake` et quatre autres modules indirects | **BUILD**, changement de variables source avant écriture | Unités dérivées du CMake principal | Déjà indexées X03–X07 |
 | `headless/vulkan.cmake` | **BUILD**, copie/sélection d'un fork vérifié | `encore-active/eden-vulkan` | Aucun appel au générateur Python |
 
-**Règle de lecture :** le compteur `32 + 21 = 53` décrit uniquement les
+**Règle de lecture :** le compteur `31 + 21 = 52` décrit uniquement les
 sites `write_derived`, pas les générateurs Python, les copies de dépendances,
 les recettes CMake ni les sorties de ressources. **Zéro source sans propriétaire
 dans le catalogue `vendor/encore-active` n'implique pas zéro override hors de
@@ -116,6 +116,15 @@ dans `vendor/encore-active/eden-core/src/video_core/buffer_cache/`, à partir
 du backport de production. CMake ne fait qu'une copie des octets suivis
 dans son arbre d'inclusion. Le témoin R437 reconstruit l'ancienne transformation
 et vérifie la parité, sans prétendre valider le comportement console.
+
+## Runtime de démarrage RADV : sélection directe
+
+Le profil natif RADV utilise désormais
+`vendor/encore-active/eden-build/tooling/native/app_crt_radv.cpp`
+comme source C++ maintenue. La variante réplique exactement l'ancienne
+substitution de l'initialiseur IEEE dans le boilerplate épinglé et le
+CMake ne produit plus `radv_app_crt.cpp` au moment de la configuration.
+La parité source ne vaut pas validation d'exécution sur console.
 
 ## Générateurs non encore déplacés
 
@@ -159,8 +168,7 @@ dans la version normale.
 | G28 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 2292 |
 | G29 | `${PORT_BUILD_DIR}/maxwell_3d.cpp` | GPU/vidéo | Unité source | 2312 |
 | G30 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 2510 |
-| G31 | `${eden_app_crt}` | Runtime/FS/réseau | Cible variable | 2522 |
-| G32 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2707 |
+| G31 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2705 |
 <!-- OVERRIDE_GENERATORS_END -->
 
 ## Prochain ordre de migration
@@ -368,7 +376,7 @@ et plusieurs sorties sont explicitement conditionnées.
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **53 sites** `write_derived()`, ni dans
+Ils ne sont comptés ni dans les **52 sites** `write_derived()`, ni dans
 les **4 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,
