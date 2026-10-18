@@ -16,12 +16,12 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **230 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **231 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **33 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **32 générateurs** `write_derived`.
 - Six modules CMake supplémentaires totalisent **21 générateurs**
-  `write_derived`, soit **54 sites** au total.
+  `write_derived`, soit **53 sites** au total.
 - Quatre modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 54.
@@ -62,6 +62,15 @@ nouveaux corps C++ destinés à la console.
 | `headless/scalar-memory.cmake` | Générateur de source dérivée, à déplacer | Dette de migration |
 | `headless/vulkan.cmake` | Sélection/copie de sources Encore maintenues | Sélecteur / configuration |
 <!-- SINGLE_SOURCE_CMAKE_END -->
+
+## Cache GPU R437 maintenu
+
+Le header natif `video_core/buffer_cache/buffer_cache.h`, initialement créé
+par substitutions dans CMake, est maintenant la version complète suivie dans
+`vendor/encore-active/eden-core/src/video_core/buffer_cache/`. La compilation
+PS5 sélectionne une copie identique de ce header ; la comparaison avec
+`eden-backports` et le témoin R437 empêchent le retour de l'ancien générateur.
+Le helper applicatif `headless/buffer_pages.h` reste un composant distinct.
 
 ## Fragments inclus ou injectés : vérifier leur propriétaire réel
 
