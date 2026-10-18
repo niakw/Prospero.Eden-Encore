@@ -12,7 +12,9 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-batch = (root / "headless/vulkan_download_batch.inc").read_text(encoding="utf-8")
+batch = (root / "vendor/encore-active/eden-vulkan-oracles/vulkan_download_batch.inc").read_text(encoding="utf-8")
+maintained = (root / "vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h").read_text(encoding="utf-8")
+assert batch in maintained, "reviewed Vulkan readback body is not selected in maintained cache"
 generator = (root / "tools/prepare-vulkan-port.py").read_text(encoding="utf-8")
 expected = "boost::container::small_vector<std::pair<ImageId, Map>, readback_batch_limit> pending;"
 assert expected in batch
@@ -21,7 +23,7 @@ assert "std::vector<std::pair<ImageId, Map>> pending;" not in batch
 assert "pending.reserve(40);" not in batch
 assert "pending.size() == readback_batch_limit" in batch
 assert "finish_batch();" in batch
-assert "(port / 'vulkan_download_batch.inc').read_text()" in generator
+assert "(vulkan_oracle / 'vulkan_download_batch.inc').read_text()" in generator
 
 compiler = next((exe for exe in ("clang++-18", "clang++", "g++")
                  if shutil.which(exe)), None)

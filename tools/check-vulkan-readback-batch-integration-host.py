@@ -2,7 +2,7 @@
 """Compile the EXACT PS5 Vulkan DownloadMemory readback batch under sanitizers.
 
 Unlike the small_vector-only check, this includes the actual source snippet
-from headless/vulkan_download_batch.inc inside a mocked texture cache and
+from the byte-matched Encore-maintained readback snippet inside a mocked texture cache and
 checks GPU Finish ordering, image byte integrity, 40-map/32-MiB batching,
 zero-sized images, and oversized standalone transfers. Not a native PS5 run.
 """
@@ -12,14 +12,16 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-snippet = (root / "headless/vulkan_download_batch.inc").read_text()
+snippet = (root / "vendor/encore-active/eden-vulkan-oracles/vulkan_download_batch.inc").read_text()
+maintained = (root / "vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h").read_text()
+assert snippet in maintained, "compiled readback differs from historical integration oracle"
 generator = (root / "tools/prepare-vulkan-port.py").read_text()
 assert "boost::container::small_vector<std::pair<ImageId, Map>, readback_batch_limit> pending;" in snippet
 assert "constexpr size_t readback_batch_limit = 40;" in snippet
 assert "runtime.Finish();" in snippet
 assert "bytes > batch_limit - batch_bytes" in snippet
 assert "pending.size() == readback_batch_limit" in snippet
-assert "(port / 'vulkan_download_batch.inc').read_text()" in generator
+assert "(vulkan_oracle / 'vulkan_download_batch.inc').read_text()" in generator
 compiler = next((c for c in ("clang++-18", "clang++", "g++")
                  if shutil.which(c)), None)
 if not compiler:
