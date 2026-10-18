@@ -788,11 +788,12 @@ def check_canonical_git_object(source, expected, label):
 shared_jit_blobs = {
     "jit_group.h": "50e7f0993ea3db6902bd11bfac496659dce54fb3",
     "jit_group_support.inc": "22cf4c406003cbe2fe1295503dc879086f2ee65e",
-    "jit_impl.inc": "d13505bab1908a05503fcf7bd802f1c3ac626d3",
+    "jit_impl.inc": "d13505bab1908a05503fcf7bd802f1c3ac626d3e",
     "jit_links.inc": "7dfe9cf7eabaabe90c61e74e1242c7712cec3503",
     "jit_push_rsb.inc": "08d4ab5765ef788748ba1c7b283a9cbcfad0d047",
     "jit_state_args.inc": "bee5fe16657a46647690f69c73596b8ee1d03ea4",
 }
+assert all(re.fullmatch(r"[0-9a-f]{40}", sha) for sha in shared_jit_blobs.values()), "Malformed canonical JIT Git object ID"
 for filename, original_blob in shared_jit_blobs.items():
     source = active / "eden-core/dynarmic/shared-jit" / filename
     assert source.is_file() and not (root / "headless/dynarmic" / filename).exists(), (
