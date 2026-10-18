@@ -16,15 +16,15 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **239 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **240 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
 - `headless/CMakeLists.txt` : **26 générateurs** `write_derived`.
-- Cinq modules CMake générateurs totalisent **19 générateurs**
-  `write_derived`, soit **45 sites** au total.
+- Cinq modules CMake générateurs totalisent **18 générateurs**
+  `write_derived`, soit **44 sites** au total.
 - Quatre modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
-  nombre 45.
+  nombre 44.
 - `headless/` contient **8 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
@@ -105,7 +105,7 @@ blobs Git identiques dans `vendor/encore-active/eden-core/dynarmic/shared-jit/`.
 Le sélecteur de `headless/dynarmic/shared-jit.cmake` lit les fichiers
 maintenus. **Ce module CMake conserve encore des transformations upstream
 à migrer** ; la relocalisation des données d'injection ne supprime pas les
-21 générateurs de modules. Le mode JIT partagé reste OFF par défaut.
+18 générateurs de modules. Le mode JIT partagé reste OFF par défaut.
 
 ## Fragments scalaires centralisés
 
@@ -173,6 +173,13 @@ Le header `sparse_large_vector.h` ne doit plus être généré depuis des
 substitutions CMake. L'implémentation complète est maintenue sous
 `vendor/encore-active/eden-core/src/common/`; l'ancienne priorité d'include
 demeure, avec comparaison textuelle complète dans un oracle hôte.
+
+## Pool de constantes JIT maintenu
+
+`constant_pool.cpp` est une unité C++ versionnée dans
+`encore-active/eden-core/src/dynarmic/backend/x64/`.
+Le sélecteur `jit-alias.cmake` ne modifie plus cette unité à la configuration.
+La variante `xbyak.h` reste une migration différente, non masquée ici.
 
 ## Verrou natif Dynarmic centralisé
 

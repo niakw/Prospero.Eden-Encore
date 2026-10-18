@@ -22,11 +22,12 @@ target_include_directories(common BEFORE PUBLIC "${PORT_BUILD_DIR}/include")
 target_compile_definitions(dynarmic PUBLIC EDEN_JIT_ALIAS_LAYOUT=1)
 
 string(REPLACE "    memset(ret, 0, alloc_size);" "    memset(writableAddress(ret), 0, alloc_size);" code_source "${code_source}")
-file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/dynarmic/backend/x64/constant_pool.cpp" pool_source)
-string(REPLACE "        target_constant = constant;"
-    "        *reinterpret_cast<ConstantT*>(code.writableAddress(&target_constant)) = constant;" pool_source "${pool_source}")
-write_derived("${PORT_BUILD_DIR}/constant_pool.cpp" "${pool_source}")
+set(EDEN_MAINTAINED_CONSTANT_POOL
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/dynarmic/backend/x64/constant_pool.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_CONSTANT_POOL}")
+    message(FATAL_ERROR "Missing maintained JIT constant-pool source")
+endif()
 get_target_property(alias_sources dynarmic SOURCES)
 list(FILTER alias_sources EXCLUDE REGEX "(^|/)constant_pool\\.cpp$")
 set_property(TARGET dynarmic PROPERTY SOURCES "${alias_sources}")
-target_sources(dynarmic PRIVATE "${PORT_BUILD_DIR}/constant_pool.cpp")
+target_sources(dynarmic PRIVATE "${EDEN_MAINTAINED_CONSTANT_POOL}")
