@@ -34,7 +34,11 @@ assert "constexpr bool checked_fastmem" not in normal
 assert checked.count("EmitCheckedFastmemTest(code, vaddr") >= 2
 assert "EmitCheckedFallbackLookup(code, ctx" in checked
 assert header.count("ctx.conf.page_table_log2_stride <= 3") >= 2
-assert header.count("if (*ctx.conf.page_table_marked_bit == 0)") == 2
+# Both ordinary address lookup variants and checked A32 page-table fallback
+# must honor a marked page; this is three paths, not just the upstream pair.
+regular, checked_helper = header.split("#if defined(EDEN_A32_CHECKED_FASTMEM)", 1)
+assert regular.count("if (*ctx.conf.page_table_marked_bit == 0)") == 2
+assert checked_helper.split("#endif", 1)[0].count("if (*ctx.conf.page_table_marked_bit == 0)") == 1
 assert "EmitExclusiveVAddrLookup(BlockOfCode& code" in header
 assert "#if defined(EDEN_A32_CHECKED_FASTMEM)" in header
 assert "#if defined(EDEN_SHARED_JIT_LAYOUT)" in header
