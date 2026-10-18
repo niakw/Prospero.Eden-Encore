@@ -261,8 +261,8 @@ foreach(bits 32 64)
     target_sources(dynarmic PRIVATE "${PORT_BUILD_DIR}/a${bits}_emit_x64.cpp")
 endforeach()
 if(EDEN_SHARED_JIT OR EDEN_JIT_COMPILE_BATCH)
-    set_property(SOURCE "${PORT_BUILD_DIR}/a64_emit_x64.cpp"
-        TARGET_DIRECTORY dynarmic APPEND PROPERTY COMPILE_DEFINITIONS "EDEN_JIT_A64_PUBLISH=1")
+    # The source and its A64 caller share this public C++ function signature.
+    target_compile_definitions(dynarmic PRIVATE EDEN_JIT_A64_PUBLISH=1)
 endif()
 
 endif()
