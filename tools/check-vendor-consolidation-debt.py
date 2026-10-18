@@ -1282,7 +1282,10 @@ assert len(module_current) == 12, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 35
+# Verify the two independently extracted inventories against the generated
+# scope counters, rather than pinning a migration-stage total.
+assert len(recorded) == main_generators, (len(recorded), main_generators)
+assert len(module_recorded) == module_generators, (len(module_recorded), module_generators)
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
