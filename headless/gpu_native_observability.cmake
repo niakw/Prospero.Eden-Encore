@@ -27,149 +27,18 @@ unsigned EdenGpuBoundedSample(std::atomic<unsigned>& samples) noexcept {
 }
 ]=])
 
-set(prmt_relative "frontend/maxwell/translate/impl/not_implemented.cpp")
-file(READ "${PROJECT_SOURCE_DIR}/src/shader_recompiler/${prmt_relative}" prmt_source)
-set(prmt_old [=[
-void TranslatorVisitor::PRMT_imm(u64) {
-    ThrowNotImplemented(Opcode::PRMT_imm);
-}
-]=])
-set(prmt_new [=[
-void TranslatorVisitor::PRMT_imm(u64 insn) {
-    // Maxwell SASS PRMT immediate (0x36c0) uses:
-    // A = R[8:15], B = R[39:46], selector = bits[20:35],
-    // mode = bits[48:50], D = R[0:7].
-    // Only mode 0 (index byte permutation) is translated here.
-    // Each nibble selects one of eight source bytes and its high bit
-    // requests *sign replication* of that byte, not its raw value.
-    const unsigned mode = static_cast<unsigned>((insn >> 48) & 7ULL);
-    if (mode != 0) {
-        static std::atomic<unsigned> unsupported_samples{0};
-        const unsigned index = EdenGpuBoundedSample(unsupported_samples);
-        if (index < 8)
-            std::fprintf(stderr, "EDEN_GPU_PRMT_IMM raw=%016llx mode=%u sample=%u\n",
-                         static_cast<unsigned long long>(insn), mode, index + 1);
-        ThrowNotImplemented(Opcode::PRMT_imm);
-    }
-
-    const unsigned selector = static_cast<unsigned>((insn >> 20) & 0xffffULL);
-    const IR::U32 a{GetReg8(insn)};
-    const IR::U32 b{GetReg39(insn)};
-    IR::U32 result{ir.Imm32(0)};
-    for (unsigned output_byte = 0; output_byte < 4; ++output_byte) {
-        const unsigned nibble = (selector >> (output_byte * 4)) & 15u;
-        const IR::U32 source = (nibble & 4u) ? b : a;
-        const unsigned src_offset = (nibble & 3u) * 8u;
-        // When nibble[3] is set, the NVIDIA byte sign bit
-        // becomes either 0x00 or 0xff in the output.
-        const IR::U32 extracted = (nibble & 8u)
-            ? ir.BitFieldExtract(source, ir.Imm32(src_offset + 7u), ir.Imm32(1), true)
-            : ir.BitFieldExtract(source, ir.Imm32(src_offset), ir.Imm32(8), false);
-        const IR::U32 value = ir.BitwiseAnd(extracted, ir.Imm32(255));
-        const IR::U32 shifted = output_byte == 0 ? value :
-            IR::U32{ir.ShiftLeftLogical(value, ir.Imm32(output_byte * 8u))};
-        result = ir.BitwiseOr(result, shifted);
-    }
-    X(static_cast<IR::Reg>(insn & 255ULL), result);
-
-    static std::atomic<unsigned> implemented_samples{0};
-    const unsigned implemented = EdenGpuBoundedSample(implemented_samples);
-    if (implemented < 8)
-        std::fprintf(stderr, "EDEN_GPU_PRMT_IMM_INDEX raw=%016llx selector=%04x sample=%u\n",
-                     static_cast<unsigned long long>(insn), selector, implemented + 1);
-}
-]=])
-string(FIND "${prmt_source}" "${prmt_old}" prmt_at)
-if(prmt_at LESS 0)
-    message(FATAL_ERROR "Pinned Maxwell PRMT_imm exception anchor changed")
+# Native Maxwell PRMT mode-0 translation is a complete tracked source.
+# Diagnostic sample helper remains temporarily for the separate Fermi2D
+# generator below; never regenerate this shader unit in CMake.
+set(EDEN_MAINTAINED_NATIVE_PRMT
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/shader_recompiler/frontend/maxwell/translate/impl/not_implemented.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_NATIVE_PRMT}")
+    message(FATAL_ERROR "Missing maintained PRMT shader source")
 endif()
-string(REPLACE "${prmt_old}" "${prmt_new}" prmt_source "${prmt_source}")
-
-set(prmt_reg_old [=[
-void TranslatorVisitor::PRMT_reg(u64) {
-    ThrowNotImplemented(Opcode::PRMT_reg);
-}
-]=])
-set(prmt_reg_new [=[
-void TranslatorVisitor::PRMT_reg(u64 insn) {
-    // Maxwell SASS PRMT register selector opcode (0x5bc0).
-    // Dynamic selector is R[20:27]; A=R8, B=R39, mode[48:50].
-    const unsigned mode = static_cast<unsigned>((insn >> 48) & 7ULL);
-    if (mode != 0) {
-        static std::atomic<unsigned> unsupported_samples{0};
-        const unsigned sample = EdenGpuBoundedSample(unsupported_samples);
-        if (sample < 8)
-            std::fprintf(stderr, "EDEN_GPU_PRMT_REG_UNSUPPORTED raw=%016llx mode=%u sample=%u\n",
-                         static_cast<unsigned long long>(insn), mode, sample + 1);
-        ThrowNotImplemented(Opcode::PRMT_reg);
-    }
-
-    const IR::U32 a{GetReg8(insn)};
-    const IR::U32 b{GetReg39(insn)};
-    const IR::U32 selector{GetReg20(insn)};
-    IR::U32 result{ir.Imm32(0)};
-    for (unsigned i = 0; i < 4; ++i) {
-        const IR::U32 nibble{ir.BitwiseAnd(
-            ir.ShiftRightLogical(selector, ir.Imm32(i * 4u)), ir.Imm32(15))};
-        const IR::U1 from_b{ir.INotEqual(
-            ir.BitwiseAnd(nibble, ir.Imm32(4)), ir.Imm32(0))};
-        const IR::U32 source{ir.Select(from_b, b, a)};
-        const IR::U32 byte_shift{ir.ShiftLeftLogical(
-            ir.BitwiseAnd(nibble, ir.Imm32(3)), ir.Imm32(3))};
-        const IR::U32 selected_byte{ir.BitwiseAnd(
-            ir.ShiftRightLogical(source, byte_shift), ir.Imm32(255))};
-        const IR::U1 signed_replication{ir.INotEqual(
-            ir.BitwiseAnd(nibble, ir.Imm32(8)), ir.Imm32(0))};
-        const IR::U1 negative{ir.INotEqual(
-            ir.BitwiseAnd(selected_byte, ir.Imm32(128)), ir.Imm32(0))};
-        const IR::U32 replicated{ir.Select(negative, ir.Imm32(255), ir.Imm32(0))};
-        const IR::U32 byte{ir.Select(signed_replication, replicated, selected_byte)};
-        const IR::U32 shifted{i == 0 ? byte :
-            IR::U32{ir.ShiftLeftLogical(byte, ir.Imm32(i * 8u))}};
-        result = ir.BitwiseOr(result, shifted);
-    }
-    X(static_cast<IR::Reg>(insn & 255ULL), result);
-    static std::atomic<unsigned> successes{0};
-    const unsigned sample = EdenGpuBoundedSample(successes);
-    if (sample < 8)
-        std::fprintf(stderr, "EDEN_GPU_PRMT_REG_INDEX raw=%016llx sample=%u\n",
-                     static_cast<unsigned long long>(insn), sample + 1);
-}
-]=])
-string(FIND "${prmt_source}" "${prmt_reg_old}" prmt_reg_at)
-if(prmt_reg_at LESS 0)
-    message(FATAL_ERROR "Pinned Maxwell PRMT_reg exception anchor changed")
-endif()
-string(REPLACE "${prmt_reg_old}" "${prmt_reg_new}" prmt_source "${prmt_source}")
-# Embed executable-at-compile-time NVIDIA PRMT Index golden vectors
-# into the pinned shader translation TU. This catches byte-order/sign nibble
-# regressions on the next authorized native build (no runtime overhead).
-set(prmt_reference [=[
-namespace {
-constexpr unsigned EdenPrmtIndexReference(unsigned a, unsigned b, unsigned selector) {
-    unsigned result = 0;
-    for (unsigned output = 0; output < 4; ++output) {
-        const unsigned nibble = (selector >> (4u * output)) & 15u;
-        const unsigned source = (nibble & 4u) ? b : a;
-        unsigned byte = (source >> (8u * (nibble & 3u))) & 255u;
-        if (nibble & 8u)
-            byte = (byte & 128u) ? 255u : 0u;
-        result |= byte << (8u * output);
-    }
-    return result;
-}
-static_assert(EdenPrmtIndexReference(0x11223344u, 0x55667788u, 0x3210u) == 0x11223344u);
-static_assert(EdenPrmtIndexReference(0x11223344u, 0x55667788u, 0x7654u) == 0x55667788u);
-static_assert(EdenPrmtIndexReference(0x80abcdefu, 0u, 0xbbbbu) == 0xffffffffu);
-static_assert(EdenPrmtIndexReference(0x11223344u, 0x55667788u, 0xffffu) == 0u);
-}
-]=])
-write_derived("${PORT_BUILD_DIR}/maxwell_prmt_observed.cpp"
-    "#include <atomic>\n#include <cstdio>\n${gpu_bounded_sample_helper}\n${prmt_reference}\n${prmt_source}")
 get_target_property(shader_sources shader_recompiler SOURCES)
 list(FILTER shader_sources EXCLUDE REGEX "frontend/maxwell/translate/impl/not_implemented[.]cpp$")
 set_property(TARGET shader_recompiler PROPERTY SOURCES "${shader_sources}")
-target_sources(shader_recompiler PRIVATE "${PORT_BUILD_DIR}/maxwell_prmt_observed.cpp")
+target_sources(shader_recompiler PRIVATE "${EDEN_MAINTAINED_NATIVE_PRMT}")
 
 set(fermi_relative "engines/fermi_2d.cpp")
 file(READ "${PROJECT_SOURCE_DIR}/src/video_core/${fermi_relative}" fermi_source)
