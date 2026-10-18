@@ -500,99 +500,34 @@ if(PS5_NATIVE)
     target_sources(dynarmic PRIVATE "${EDEN_MAINTAINED_SPIN_LOCK}")
 endif()
 
-# Diagnostics record actual automatic cache evacuation, not explicit clears.
-    set(jit_interface "${PROJECT_SOURCE_DIR}/src/dynarmic/src/dynarmic/backend/x64/a64_interface.cpp")
-    file(READ "${jit_interface}" jit_source)
-    if(EDEN_JIT_COMPILE_BATCH AND (PS5_NATIVE OR CMAKE_SYSTEM_NAME STREQUAL "Linux"))
-        set(compile_begin "        const auto get_code = [this](u64 vaddr) { return conf.callbacks->MemoryReadCode(vaddr); };")
-        set(compile_end "        return emitter.Emit(ir_block).entrypoint;")
-        string(FIND "${jit_source}" "${compile_begin}" begin)
-        string(FIND "${jit_source}" "${compile_end}" end)
-        if(begin LESS 0 OR end LESS begin)
-            message(FATAL_ERROR "Pinned JIT compilation boundary changed")
-        endif()
-        string(LENGTH "${compile_end}" end_length)
-        math(EXPR end "${end} + ${end_length}")
-        string(SUBSTRING "${jit_source}" 0 ${begin} prefix)
-        string(SUBSTRING "${jit_source}" ${end} -1 suffix)
-        file(READ "${EDEN_PORT_DIR}/jit-compile-batch.inc" compile_batch)
-        set(jit_source "${prefix}${compile_batch}${suffix}")
+# A64 runtime variants are complete maintained C++ units.
+# Compile-batch and DEV are source-defined gates rather than textual CMake rewrites.
+set(EDEN_A64_INTERFACE_ROOT "${PORT_ROOT}/vendor/encore-active/eden-core/src/dynarmic/backend/x64")
+if(EDEN_SHARED_JIT)
+    set(EDEN_A64_INTERFACE_UNIT "${EDEN_A64_INTERFACE_ROOT}/a64_interface_shared.cpp")
+else()
+    set(EDEN_A64_INTERFACE_UNIT "${EDEN_A64_INTERFACE_ROOT}/a64_interface_standard.cpp")
+endif()
+if(NOT EXISTS "${EDEN_A64_INTERFACE_UNIT}")
+    message(FATAL_ERROR "Missing maintained A64 interface ${EDEN_A64_INTERFACE_UNIT}")
+endif()
+configure_file("${EDEN_A64_INTERFACE_UNIT}" "${PORT_BUILD_DIR}/a64_interface.cpp" COPYONLY)
+get_target_property(jit_sources dynarmic SOURCES)
+list(FILTER jit_sources EXCLUDE REGEX "(^|/)a64_interface\\.cpp$")
+set_property(TARGET dynarmic PROPERTY SOURCES "${jit_sources}")
+target_sources(dynarmic PRIVATE "${PORT_BUILD_DIR}/a64_interface.cpp")
+if(EDEN_JIT_COMPILE_BATCH AND (PS5_NATIVE OR CMAKE_SYSTEM_NAME STREQUAL "Linux"))
+    set_property(SOURCE "${PORT_BUILD_DIR}/a64_interface.cpp"
+        TARGET_DIRECTORY dynarmic APPEND PROPERTY COMPILE_DEFINITIONS "EDEN_JIT_A64_BATCH=1")
+endif()
+if(PS5_NATIVE)
+    set_property(SOURCE "${PORT_BUILD_DIR}/a64_interface.cpp"
+        TARGET_DIRECTORY dynarmic APPEND PROPERTY COMPILE_DEFINITIONS "PS5_NATIVE=1")
+    if(EDEN_DEV_PROFILE)
+        set_property(SOURCE "${PORT_BUILD_DIR}/a64_interface.cpp"
+            TARGET_DIRECTORY dynarmic APPEND PROPERTY COMPILE_DEFINITIONS "EDEN_JIT_A64_DEV_PROFILE=1")
     endif()
-    set(pressure_site "            // Immediately evacuate cache")
-    string(FIND "${jit_source}" "${pressure_site}" pressure_offset)
-    if(pressure_offset LESS 0)
-        message(FATAL_ERROR "Pinned JIT cache evacuation changed.")
-    endif()
-    set(pressure_log "            std::fprintf(stderr, \"EDEN_JIT_PRESSURE core=%u capacity=%u remaining=%zu\\n\", unsigned(conf.processor_id), unsigned(conf.code_cache_size), block_of_code.SpaceRemaining());")
-    if(PS5_NATIVE)
-        # Every whole-cache evacuation (first 200 per core, with the monotonic time the
-        # performance reports use) and a counter for them (eden_jit_evacuation).
-        set(pressure_log "            static thread_local unsigned pressure_count;\n            if (eden_native_detailed_logging && eden_native_detailed_logging() && ++pressure_count <= 200) std::printf(\"EDEN_JIT_PRESSURE core=%u capacity=%u remaining=%zu count=%u mono_ns=%lld\\n\", unsigned(conf.processor_id), unsigned(conf.code_cache_size), block_of_code.SpaceRemaining(), pressure_count, static_cast<long long>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count()));\n            if (eden_jit_evacuation) eden_jit_evacuation(unsigned(conf.processor_id));")
-    endif()
-    string(REPLACE "${pressure_site}"
-        "${pressure_log}\n${pressure_site}"
-        jit_source "${jit_source}")
-    if(PS5_NATIVE AND EDEN_DEV_PROFILE)
-        # Development: time every block compilation (cache misses) per guest core.
-        set(compile_site "        if (auto block = emitter.GetBasicBlock(descriptor))\n            return block->entrypoint;\n")
-        string(FIND "${jit_source}" "${compile_site}" compile_site_at)
-        if(compile_site_at LESS 0)
-            message(FATAL_ERROR "Pinned JIT block lookup changed.")
-        endif()
-        # R298: zero per-block clock reads with Detailed Logging OFF.
-        # Keep per-core compilation timings with logging ON, where the
-        # diagnostic collection is explicitly requested by the user.
-        set(quiet_jit_timer [=[
-        struct EdenCompileTimer {
-            unsigned core;
-            bool active;
-            std::chrono::steady_clock::time_point start{};
-            explicit EdenCompileTimer(unsigned c) : core(c),
-                active(eden_native_detailed_logging && eden_native_detailed_logging()) {
-                if (active) start = std::chrono::steady_clock::now();
-            }
-            ~EdenCompileTimer() {
-                if (active && eden_jit_compile)
-                    eden_jit_compile(core, static_cast<unsigned long long>(
-                        std::chrono::duration_cast<std::chrono::nanoseconds>(
-                            std::chrono::steady_clock::now() - start).count()));
-            }
-        } eden_compile_timer{unsigned(conf.processor_id)};
-]=])
-        string(REPLACE "${compile_site}" "${compile_site}${quiet_jit_timer}" jit_source "${jit_source}")
-        if(EDEN_JIT_COMPILE_BATCH)
-            # Development: the compile phases of every block (eden_jit_phases).
-            set(phase_old "            A64::Translate(ir_block, arch_descriptor, get_code, {conf.define_unpredictable_behaviour, conf.wall_clock_cntpct});\n            Optimization::Optimize(ir_block, conf, polyfill_options);\n            const auto entrypoint = emitter.Emit(ir_block, false).entrypoint;")
-            string(FIND "${jit_source}" "${phase_old}" phase_at)
-            if(phase_at LESS 0)
-                message(FATAL_ERROR "Pinned JIT compile batch changed.")
-            endif()
-            string(REPLACE "${phase_old}" "            const auto eden_t0 = std::chrono::steady_clock::now();\n            A64::Translate(ir_block, arch_descriptor, get_code, {conf.define_unpredictable_behaviour, conf.wall_clock_cntpct});\n            const auto eden_t1 = std::chrono::steady_clock::now();\n            Optimization::Optimize(ir_block, conf, polyfill_options);\n            const auto eden_t2 = std::chrono::steady_clock::now();\n            const auto entrypoint = emitter.Emit(ir_block, false).entrypoint;\n            if (eden_jit_phases) {\n                const auto eden_ns = [](auto a, auto b) { return static_cast<unsigned long long>(std::chrono::duration_cast<std::chrono::nanoseconds>(b - a).count()); };\n                eden_jit_phases(unsigned(conf.processor_id), eden_ns(eden_t0, eden_t1), eden_ns(eden_t1, eden_t2), eden_ns(eden_t2, std::chrono::steady_clock::now()), descriptor.Value());\n            }" jit_source "${jit_source}")
-            string(PREPEND jit_source "extern \"C\" void eden_jit_phases(unsigned core, unsigned long long translate, unsigned long long optimize, unsigned long long emit, unsigned long long location) __attribute__((weak));\n")
-        endif()
-    endif()
-    if(PS5_NATIVE)
-        # If a demand-committed code arena cannot get another physical
-        # 2 MiB chunk, use Dynarmic's existing whole-cache invalidation
-        # protocol to reuse pages already committed. Retrying once avoids
-        # an unconditional process abort on recoverable JIT memory pressure.
-        set(jit_retry_site "        block_of_code.EnsureMemoryCommitted(MINIMUM_REMAINING_CODESIZE);")
-        string(FIND "${jit_source}" "${jit_retry_site}" jit_retry_at)
-        if(jit_retry_at LESS 0)
-            message(FATAL_ERROR "Pinned A64 JIT commit checkpoint changed")
-        endif()
-        set(jit_retry_replacement
-            "        try {\n            block_of_code.EnsureMemoryCommitted(MINIMUM_REMAINING_CODESIZE);\n        } catch (const std::bad_alloc&) {\n            invalidate_entire_cache = true;\n            PerformRequestedCacheInvalidation(HaltReason::CacheInvalidation);\n            block_of_code.EnsureMemoryCommitted(MINIMUM_REMAINING_CODESIZE);\n        }")
-        string(REPLACE "${jit_retry_site}" "${jit_retry_replacement}" jit_source "${jit_source}")
-    endif()
-    if(EDEN_SHARED_JIT)
-        eden_shared_jit_interface()
-    endif()
-    write_derived("${PORT_BUILD_DIR}/a64_interface.cpp" "#include <chrono>\n#include <cstdio>\n#include <new>\nextern \"C\" bool eden_native_detailed_logging() noexcept __attribute__((weak));\nextern \"C\" void eden_jit_evacuation(unsigned core) __attribute__((weak));\nextern \"C\" void eden_jit_compile(unsigned core, unsigned long long ns) __attribute__((weak));\n${jit_source}")
-    get_target_property(jit_sources dynarmic SOURCES)
-    list(FILTER jit_sources EXCLUDE REGEX "(^|/)a64_interface\\.cpp$")
-    set_property(TARGET dynarmic PROPERTY SOURCES "${jit_sources}")
-    target_sources(dynarmic PRIVATE "${PORT_BUILD_DIR}/a64_interface.cpp")
+endif()
 
 if(PS5_NATIVE)
     file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/dynarmic/backend/x64/a32_interface.cpp" a32_interface)
