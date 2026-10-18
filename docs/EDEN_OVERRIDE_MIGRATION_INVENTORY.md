@@ -481,7 +481,7 @@ et plusieurs sorties sont explicitement conditionnées.
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
 Ils ne sont comptés ni dans les **32 sites** `write_derived()`, ni dans
-les **4 modules indirects** ci-dessous :
+les **5 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,
   sous contrôle d'identité et de hash. Il modifie **l'arbre Eden fourni
@@ -563,9 +563,9 @@ que chaque chemin a été validé sur console.
 
 ## Overrides indirects sans `write_derived()` local
 
-Ces **5 modules supplémentaires** ne sont pas inclus dans les **37 appels**.
+Ces **5 modules supplémentaires** ne sont pas inclus dans les **32 appels**.
 Tous modifient des variables-source ensuite écrites par le CMake principal.
-Ils ne sont pas quatre sources C++ distinctes.
+Ils ne correspondent pas chacun à une unité C++ distincte.
 
 <!-- INDIRECT_OVERRIDES_START -->
 | ID | Module | Origine / source réécrite | Mécanisme | État |
