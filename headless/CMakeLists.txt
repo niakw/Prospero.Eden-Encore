@@ -644,18 +644,16 @@ set_property(TARGET dynarmic PROPERTY SOURCES "${jit_sources}")
 
 
 if(PS5_NATIVE)
-    file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/dynarmic/common/spin_lock_x64.cpp" spin_source)
-    string(FIND "${spin_source}" "namespace {\nstruct SpinLockImpl" spin_offset)
-    if(spin_offset LESS 0)
-        message(FATAL_ERROR "Pinned JIT monitor lock implementation changed")
+    # The native spin-lock adjustment is a complete Encore source.
+    set(EDEN_MAINTAINED_SPIN_LOCK
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/dynarmic/common/spin_lock_x64.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_SPIN_LOCK}")
+        message(FATAL_ERROR "Missing maintained native Dynarmic spin lock")
     endif()
-    string(SUBSTRING "${spin_source}" 0 ${spin_offset} spin_source)
-    file(READ "${EDEN_PORT_DIR}/spin-lock.inc" spin_methods)
-    write_derived("${PORT_BUILD_DIR}/spin_lock_x64.cpp" "${spin_source}${spin_methods}\n} // namespace Dynarmic\n")
     get_target_property(jit_sources dynarmic SOURCES)
     list(FILTER jit_sources EXCLUDE REGEX "(^|/)spin_lock_x64\\.cpp$")
     set_property(TARGET dynarmic PROPERTY SOURCES "${jit_sources}")
-    target_sources(dynarmic PRIVATE "${PORT_BUILD_DIR}/spin_lock_x64.cpp")
+    target_sources(dynarmic PRIVATE "${EDEN_MAINTAINED_SPIN_LOCK}")
 endif()
 
 # Diagnostics record actual automatic cache evacuation, not explicit clears.
