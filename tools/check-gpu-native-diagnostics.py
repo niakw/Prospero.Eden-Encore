@@ -24,11 +24,19 @@ def extract(name: str):
     m = re.search(r"set\(" + name + r" \[=\[(.*?)\]=\]\)", cmake, re.S)
     assert m, name
     return m.group(1)
-prmt_old = extract("prmt_old")
-prmt_new = extract("prmt_new")
-prmt_reg_old = extract("prmt_reg_old")
-prmt_reg_new = extract("prmt_reg_new")
-prmt_reference = extract("prmt_reference")
+# PRMT is now compiled from a full maintained shader unit, while Fermi
+# below still carries one isolated CMake generator.
+prmt = (ROOT / "vendor/encore-active/eden-core/src/shader_recompiler/frontend/maxwell/translate/impl/not_implemented.cpp").read_text()
+pinned_prmt = (ROOT / "vendor/sources/eden/src/shader_recompiler/frontend/maxwell/translate/impl/not_implemented.cpp").read_text()
+def extract_method(text: str, sig: str) -> str:
+    match = re.search(r"^void TranslatorVisitor::" + sig + r"\([^\n]*\) \{\n.*?^\}\n", text, re.S | re.M)
+    assert match, sig
+    return match.group(0)
+prmt_old = extract_method(pinned_prmt, "PRMT_imm")
+prmt_reg_old = extract_method(pinned_prmt, "PRMT_reg")
+prmt_new = extract_method(prmt, "PRMT_imm")
+prmt_reg_new = extract_method(prmt, "PRMT_reg")
+prmt_reference = prmt
 fermi_old = extract("fermi_old")
 fermi_new = extract("fermi_new")
 fermi_layer_old = extract("fermi_layer_old")
@@ -77,7 +85,9 @@ assert prmt_index(0x11223344, 0x55667788, 0xffff) == 0
 assert prmt_index(0xff000000, 0, 0x000b) == 0xff
 assert "constexpr unsigned EdenPrmtIndexReference(" in prmt_reference
 assert prmt_reference.count("static_assert(EdenPrmtIndexReference(") >= 4
-assert "${gpu_bounded_sample_helper}\\n${prmt_reference}\\n${prmt_source}" in cmake
+assert "EdenPrmtIndexReference" in prmt
+assert 'target_sources(shader_recompiler PRIVATE "${EDEN_MAINTAINED_NATIVE_PRMT}")' in cmake
+assert 'write_derived("${PORT_BUILD_DIR}/maxwell_prmt_observed.cpp"' not in cmake
 # A register selector uses identical nibble semantics, but is evaluated
 # dynamically in the shader IR rather than once at translation time.
 assert prmt_reg_old.count("ThrowNotImplemented(Opcode::PRMT_reg);") == 1
@@ -94,7 +104,7 @@ assert "ir.Select(signed_replication, replicated, selected_byte)" in prmt_reg_ne
 assert "X(static_cast<IR::Reg>(insn & 255ULL), result);" in prmt_reg_new
 assert "EDEN_GPU_PRMT_REG_INDEX raw=%016llx sample=%u" in prmt_reg_new
 assert "EDEN_GPU_PRMT_REG_UNSUPPORTED raw=%016llx mode=%u sample=%u" in prmt_reg_new
-assert 'message(FATAL_ERROR "Pinned Maxwell PRMT_reg exception anchor changed")' in cmake
+assert 'target_sources(shader_recompiler PRIVATE "${EDEN_MAINTAINED_NATIVE_PRMT}")' in cmake
 assert prmt_index(0x01234567, 0x89abcdef, 0x1111) == 0x45454545
 
 assert "if (index < 8)" in prmt_new
@@ -104,7 +114,8 @@ assert "unsigned EdenGpuBoundedSample(std::atomic<unsigned>& samples) noexcept" 
 assert "compare_exchange_weak(current, current + 1u," in cmake
 assert "while (current < 8u)" in cmake
 assert "return 8u;" in cmake
-assert cmake.count("${gpu_bounded_sample_helper}") == 2
+assert cmake.count("${gpu_bounded_sample_helper}") == 1
+assert "EdenGpuBoundedSample" in prmt
 for part in (prmt_new, prmt_reg_new, fermi_new, fermi_layer_new, fermi_copy_new):
     assert ".fetch_add(1, std::memory_order_relaxed)" not in part
 assert prmt_new.count("EdenGpuBoundedSample(") == 2
@@ -227,15 +238,19 @@ assert "sw_blitter->Blit(src, dst, config);" in fermi_copy_new
 assert "else if (!rasterizer->AccelerateSurfaceCopy(src, regs.dst, config))" in fermi_copy_new
 assert "regs.src.depth = 1;" not in fermi_copy_new
 assert "regs.dst.depth = 1;" not in fermi_copy_new
-assert "sw_source_depth_at LESS 0 OR sw_dest_depth_at LESS 0 OR" in cmake
-assert "sw_pitch_arithmetic_at LESS 0 OR sw_src_copy_arithmetic_at LESS 0 OR" in cmake
-assert "sw_dst_copy_arithmetic_at LESS 0 OR sw_z0_at LESS 0" in cmake
-assert '"static_cast<size_t>(surface.pitch) * surface.height"' in cmake
-assert '"const size_t src_copy_size = static_cast<size_t>(src_extent_x) * src_extent_y * src_bytes_per_pixel;"' in cmake
-assert '"const size_t dst_copy_size = static_cast<size_t>(dst_extent_x) * dst_extent_y * dst_bytes_per_pixel;"' in cmake
-assert 'write_derived("${PORT_BUILD_DIR}/sw_blitter_sized.cpp"' in cmake
+# The widened software blitter is a tracked source built from the shipping
+# backport, not a CMake-generated translation unit.
+blitter = (ROOT / "vendor/encore-active/eden-core/src/video_core/engines/sw_blitter/blitter.cpp").read_text()
+for token in (
+    "src.depth, config.src_x0", "dst.depth, config.dst_x0",
+    "static_cast<size_t>(surface.pitch) * surface.height",
+    "const size_t src_copy_size = static_cast<size_t>(src_extent_x) * src_extent_y * src_bytes_per_pixel;",
+    "const size_t dst_copy_size = static_cast<size_t>(dst_extent_x) * dst_extent_y * dst_bytes_per_pixel;",
+):
+    assert token in blitter, token
+assert 'write_derived("${PORT_BUILD_DIR}/sw_blitter_sized.cpp"' not in cmake
 assert 'list(FILTER sw_blitter_sources EXCLUDE REGEX "engines/sw_blitter/blitter[.]cpp$")' in cmake
-assert 'target_sources(video_core PRIVATE "${PORT_BUILD_DIR}/sw_blitter_sized.cpp")' in cmake
+assert 'target_sources(video_core PRIVATE "${EDEN_MAINTAINED_NATIVE_BLITTER}")' in cmake
 
 # Regressions that were once silent truncation in the pinned software blitter.
 # The widened intermediate must match arbitrary-precision math for these cases.
@@ -250,13 +265,11 @@ assert safe_product(65536, 65536, 4) == 1 << 34  # not 32-bit-wrapped
 assert safe_product(65536, 65536, 4) != (safe_product(65536, 65536, 4) & 0xffffffff)
 
 
-# Three generated translation units: Maxwell PRMT, widened software blitter,
-# and Fermi2D. The extra blitter is intentional, not a duplicate generated
-# file or a lost GPU compatibility path.
-assert "file(READ" in cmake and cmake.count("write_derived(") == 3
-for output in ("maxwell_prmt_observed.cpp", "sw_blitter_sized.cpp", "fermi_2d_observed.cpp"):
-    assert 'write_derived("${PORT_BUILD_DIR}/' + output + '"' in cmake
-assert 'target_sources(shader_recompiler PRIVATE' in cmake
-assert 'target_sources(video_core PRIVATE' in cmake
+# PRMT and blitter compile directly from Encore; only the separate
+# Fermi2D compatibility generator remains in this native module.
+assert cmake.count("write_derived(") == 1
+assert 'write_derived("${PORT_BUILD_DIR}/fermi_2d_observed.cpp"' in cmake
+assert 'target_sources(shader_recompiler PRIVATE "${EDEN_MAINTAINED_NATIVE_PRMT}")' in cmake
+assert 'target_sources(video_core PRIVATE "${EDEN_MAINTAINED_NATIVE_BLITTER}")' in cmake
 print("GPU SOURCE CONTRACT: PRMT immediate/register Index implemented; original Fermi2D transfer path restored by default; extended software copies unqualified and gated")
 print("NOTE graphics correctness and PS5 native CMake build remain to be qualified")
