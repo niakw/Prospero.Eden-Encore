@@ -741,10 +741,12 @@ assert single_source_table("<!-- SINGLE_SOURCE_CMAKE_START -->", "<!-- SINGLE_SO
     "undocumented headless CMake code/override module", candidates_modules)
 assert single_source_table("<!-- SINGLE_SOURCE_FRAGMENTS_START -->", "<!-- SINGLE_SOURCE_FRAGMENTS_END -->") == candidates_fragments, (
     "undocumented headless injected fragment", candidates_fragments)
-assert len(candidates_modules) == 13 and len(candidates_fragments) == 9
-assert "**33 générateurs**" in single_source_doc and "**21 générateurs**" in single_source_doc
-assert "**54 sites**" in single_source_doc
-assert "**230 sources et en-têtes suivis**" in single_source_doc
+assert len(candidates_modules) == 13 and len(candidates_fragments) == 8
+# Assert the documented inventory against the real generator count, never
+# a permanently frozen count from an earlier migration milestone.
+assert "**26 générateurs**" in single_source_doc and "**16 générateurs**" in single_source_doc
+assert "**42 sites**" in single_source_doc
+assert "**242 sources et en-têtes suivis**" in single_source_doc
 for deleted_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root/deleted_module).exists(), ("legacy source generator reintroduced", deleted_module)
 print("ENCORE_SINGLE_SOURCE_SCOPE_PASS", f"modules={len(candidates_modules)}", f"fragments={len(candidates_fragments)}")
