@@ -741,7 +741,8 @@ assert single_source_table("<!-- SINGLE_SOURCE_CMAKE_START -->", "<!-- SINGLE_SO
     "undocumented headless CMake code/override module", candidates_modules)
 assert single_source_table("<!-- SINGLE_SOURCE_FRAGMENTS_START -->", "<!-- SINGLE_SOURCE_FRAGMENTS_END -->") == candidates_fragments, (
     "undocumented headless injected fragment", candidates_fragments)
-assert len(candidates_modules) == 13 and len(candidates_fragments) == 3
+# Both module and fragment inventories are checked by exact path equality above;
+# a second migration-stage numeric assertion would become stale after deletions.
 # Derive the expected scope counters from the actual tracked inputs, then
 # compare their rendered values with the architecture document. Do not freeze
 # migration-stage totals into a separate test (which goes stale every move).
