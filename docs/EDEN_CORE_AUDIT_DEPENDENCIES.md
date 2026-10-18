@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 346 | 324 | 699 |
+| Graphe connu | 350 | 328 | 707 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 291 | 279 | 594 |
+| SOURCE — lecture effectuée, preuve insuffisante | 295 | 283 | 602 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **306** | **293** | **622** |
+| **Encore à qualifier (SOURCE + OPEN)** | **310** | **297** | **630** |
 | Dont priorité P0 (SOURCE + OPEN) | 108 | 103 | 252 |
 
-Le **noyau restant** compte donc 306 critères répartis sur
-293 fichiers et 622 mentions fonction/contrat :
-15 OPEN et 291 SOURCE.
+Le **noyau restant** compte donc 310 critères répartis sur
+297 fichiers et 630 mentions fonction/contrat :
+15 OPEN et 295 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-275 fichiers de code/en-têtes présents et 275 avec un chemin de
+279 fichiers de code/en-têtes présents et 279 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -526,6 +526,10 @@ function/contract tokens are checked by CI for existence only; the
 | H51 | P0 | H50 | vendor/encore-active/eden-core/src/core/hle/service/sm/sm.h | GetService; SessionRequestHandlerFactory | SOURCE | tools/install-active-core-backports.py | Maintained SM header equals former host-wait patch; guest wake unproved | 🟡 Source étudiée |
 | H52 | P1 | H03,H51 | vendor/encore-active/eden-core/src/hid_core/resources/npad/npad_pause_diag.cpp | NPad::ControllerUpdate; eden_fullkey_writes | SOURCE | tools/check-ps5-npad-pause-r435.py | PS5 DEV-only Fullkey LIFO witness now one maintained source retaining both native null guards; avoids normal/diagnostic double compilation; on-device proof open | 🟡 Source étudiée |
 | H53 | P1 | H03 | vendor/encore-active/eden-core/src/core/hle/kernel/k_process.cpp | KProcess::Finalize; eden_mark | SOURCE | tools/check-maintained-kprocess-dev.py | DEV-only process teardown diagnostics from complete source, exact five former scoped CMake patches; normal profile preserved, console unqualified | 🟡 Source étudiée |
+| H54 | P1 | H03 | vendor/encore-active/eden-core/src/core/hle/service/server_manager.h | RequestStop; LoopProcess | SOURCE | tools/check-maintained-server-manager.py | Normal service header selected by copy only; RequestStop declaration parity checked, native shutdown unqualified | 🟡 Source étudiée |
+| H55 | P1 | H54 | vendor/encore-active/eden-core/src/core/hle/service/server_manager_dev.h | m_eden_names; RequestStop | SOURCE | tools/check-maintained-server-manager.py | DEV service header preserves diagnostic state and matches previous generator exactly | 🟡 Source étudiée |
+| H56 | P1 | H54 | vendor/encore-active/eden-core/src/core/hle/service/server_manager.cpp | ServerManager::RequestStop; ServerManager::~ServerManager | SOURCE | tools/check-maintained-server-manager.py | Normal server stop/destruction unit directly compiled, parity checked; service wake still needs console testing | 🟡 Source étudiée |
+| H57 | P1 | H55,H56 | vendor/encore-active/eden-core/src/core/hle/service/server_manager_dev.cpp | ServerManager::RequestStop; EDEN_SHUTDOWN_DTOR | SOURCE | tools/check-maintained-server-manager.py | DEV destructor instrumentation retained byte-for-byte, selected without CMake C++ generation | 🟡 Source étudiée |
 | A02 | P1 | A01,H29 | headless/backports/eden-sm-host-wait.patch | IAudioController::GetSetSys; call_once | SOURCE | tools/install-active-core-backports.py | AudioController defers system-setting lookup to first actual request using once_flag; two corresponding audio files are still patched into the staged tree, not maintained directly | 🟡 Source étudiée |
 | A03 | P1 | A01 | vendor/encore-active/eden-core/src/audio_core/sink/sink_stream.cpp | SinkStream::AppendBuffer; SinkStream::ProcessAudioOutAndRender | SOURCE | tools/check-maintained-audio-units.py | Source maintained, original four-rewrite parity and audio_core selection checked by host script; CI result and native audio behavior still required | 🟡 Source étudiée |
 | A04 | P1 | A01 | vendor/encore-active/eden-core/src/audio_core/renderer/voice/voice_info.cpp | VoiceInfo::UpdateParameters; VoiceInfo::UpdatePlayState | SOURCE | headless/CMakeLists.txt | Maintained renderer voice update has native flag position correction; validate voice state and game audio; selected source only, device proof pending | 🟡 Source étudiée |

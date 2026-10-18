@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **275 fichiers** de code et d'en-têtes enregistrés.
-- **275 fichiers** possèdent une correspondance de chemin *exacte*
+- **279 fichiers** de code et d'en-têtes enregistrés.
+- **279 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -24,7 +24,7 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 **Important :** une correspondance de chemin n'est ni un test hôte,
 ni une certification console. Le graphe
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` porte les contrats fonctionnels,
-leurs états et les preuves. L'inventaire des 10 générateurs CMake
+leurs états et les preuves. L'inventaire des 8 générateurs CMake
 principaux, 12 générateurs de modules, deux modules indirects et 46 patches
 reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
@@ -170,6 +170,10 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/core/hle/service/nvdrv/devices/ioctl_serialization.h` | `maintained-override` | N22 |
 | `eden-core/src/core/hle/service/nvdrv/devices/nvhost_ctrl.cpp` | `maintained-override` | N02,N05 |
 | `eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp` | `maintained-override` | N03 |
+| `eden-core/src/core/hle/service/server_manager.cpp` | `maintained-override` | H56 |
+| `eden-core/src/core/hle/service/server_manager.h` | `maintained-override` | H54 |
+| `eden-core/src/core/hle/service/server_manager_dev.cpp` | `maintained-override` | H57 |
+| `eden-core/src/core/hle/service/server_manager_dev.h` | `maintained-override` | H55 |
 | `eden-core/src/core/hle/service/service.cpp` | `maintained-override` | H22,H28 |
 | `eden-core/src/core/hle/service/sm/sm.h` | `maintained-override` | H51 |
 | `eden-core/src/core/hle/service/sockets/bsd.cpp` | `maintained-override` | N20 |
@@ -325,7 +329,7 @@ Les fichiers source/en-tête/fragment de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
 Les chemins du graphe moteur y ont un propriétaire exact ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
-La couverture de 275/275 ci-dessus ne s'applique **pas** à ce dossier.
+La couverture de 279/279 ci-dessus ne s'applique **pas** à ce dossier.
 
 ## Critères de tenue à jour
 

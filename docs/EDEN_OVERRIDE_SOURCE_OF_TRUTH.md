@@ -16,10 +16,10 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 19 octobre 2026
 
-- `vendor/encore-active` : **275 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **279 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **10 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **8 générateurs** `write_derived`.
 - Deux modules CMake générateurs totalisent **12 générateurs**
   `write_derived`, soit **22 sites** au total.
 - Deux modules CMake procèdent encore à des substitutions **indirectes**
@@ -212,6 +212,10 @@ natif retire le coût de formatage associé à `PerfMapRegister`.
 Le sélecteur CMake copie l'unité choisie vers le chemin de compilation
 existant. Le test hôte compare les deux variantes à la source épinglée
 et vérifie leur sélection sans annoncer de qualification console.
+
+## G17/G18 — gestionnaire de services
+
+Les variantes normales et diagnostiques de `ServerManager` ont chacune leur C++ et leur en-tête complets sous `vendor/encore-active/eden-core/src/core/hle/service/`. CMake choisit simplement la paire et copie son en-tête dans l'overlay d'inclusion historique. Un test de parité reconstruit les sept anciennes injections DEV depuis l'original épinglé ; ni re-génération ni compilation double du gestionnaire n'est permise. G19 (`kernel.cpp`) reste encore généré et doit être migré séparément.
 
 ## G16 — finalisation des pages mémoire kernel
 

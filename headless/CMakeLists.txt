@@ -1333,73 +1333,33 @@ endif()
 string(REPLACE "        if (impl->is_shutting_down) {\n            return;\n        }\n\n        impl->server_managers.emplace_back(std::move(server_manager));"
     "        if (!impl->services_closing && !impl->is_shutting_down) {\n            impl->server_managers.emplace_back(std::move(server_manager));\n        }" kernel_source "${kernel_source}")
 string(REPLACE "    manager->LoopProcess();" "    if (server_manager) manager->RequestStop();\n    manager->LoopProcess();" kernel_source "${kernel_source}")
+# ServerManager is maintained as exact full C++ sources, with explicit
+# normal/DEV selection. Kernel shutdown calls RequestStop on both variants.
 set(server_header "core/hle/service/server_manager.h")
-file(READ "${PROJECT_SOURCE_DIR}/src/${server_header}" server_header_source)
-string(REPLACE "    Result LoopProcess();" "    void RequestStop();\n    Result LoopProcess();" server_header_source "${server_header_source}")
+set(EDEN_MAINTAINED_SERVER_ROOT
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/service")
 if(EDEN_DEV_PROFILE)
-    string(REPLACE "    Mutex m_selection_mutex;" "    Mutex m_selection_mutex;\n    std::string m_eden_names;" server_header_source "${server_header_source}")
+    set(EDEN_MAINTAINED_SERVER_HEADER "${EDEN_MAINTAINED_SERVER_ROOT}/server_manager_dev.h")
+    set(EDEN_MAINTAINED_SERVER_SOURCE "${EDEN_MAINTAINED_SERVER_ROOT}/server_manager_dev.cpp")
+else()
+    set(EDEN_MAINTAINED_SERVER_HEADER "${EDEN_MAINTAINED_SERVER_ROOT}/server_manager.h")
+    set(EDEN_MAINTAINED_SERVER_SOURCE "${EDEN_MAINTAINED_SERVER_ROOT}/server_manager.cpp")
 endif()
-write_derived("${PORT_BUILD_DIR}/include/${server_header}" "${server_header_source}")
-file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/server_manager.cpp" server_source)
-string(REPLACE "ServerManager::~ServerManager() {\n    // Signal stop.\n    m_stop_source.request_stop();\n    m_wakeup_event->Signal(m_system.Kernel());"
-    "void ServerManager::RequestStop() {\n    m_stop_source.request_stop();\n    m_wakeup_event->Signal(m_system.Kernel());\n}\n\nServerManager::~ServerManager() {\n    RequestStop();" server_source "${server_source}")
-if(EDEN_DEV_PROFILE)
-    # Development: split a slow manager destruction into its phases.
-    string(PREPEND server_source "#include <chrono>\n#include <cstdio>\n")
-    function(eden_patch_server match replacement)
-        string(FIND "${server_source}" "${match}" found_at)
-        if(found_at LESS 0)
-            message(FATAL_ERROR "Pinned ServerManager destructor changed")
-        endif()
-        string(REPLACE "${match}" "${replacement}" patched "${server_source}")
-        set(server_source "${patched}" PARENT_SCOPE)
-    endfunction()
-    eden_patch_server([=[    // Add the new server to sm: and get the moved server port.
-    Kernel::KServerPort* server_port{};]=] [=[    // Add the new server to sm: and get the moved server port.
-    Kernel::KServerPort* server_port{};
-    m_eden_names += service_name + " ";]=])
-    eden_patch_server([=[    // Create a new port.
-    auto* port = Kernel::KPort::Create(m_system.Kernel());]=] [=[    // Create a new port.
-    auto* port = Kernel::KPort::Create(m_system.Kernel());
-    m_eden_names += service_name + " ";]=])
-    eden_patch_server([=[ServerManager::~ServerManager() {
-    RequestStop();]=] [=[ServerManager::~ServerManager() {
-    RequestStop();
-    const auto eden_t0 = std::chrono::steady_clock::now();]=])
-    eden_patch_server([=[    m_stopped.Wait();
-    m_threads.clear();]=] [=[    m_stopped.Wait();
-    const auto eden_t1 = std::chrono::steady_clock::now();
-    m_threads.clear();
-    const auto eden_t2 = std::chrono::steady_clock::now();]=])
-    eden_patch_server([=[    // Clean up sessions.]=] [=[    const auto eden_t3 = std::chrono::steady_clock::now();
-    size_t eden_sessions = 0;
-    // Clean up sessions.]=])
-    eden_patch_server([=[        delete session;
-    }
-
-    // Close wakeup event.]=] [=[        delete session;
-        ++eden_sessions;
-    }
-    const auto eden_t4 = std::chrono::steady_clock::now();
-
-    // Close wakeup event.]=])
-    eden_patch_server([=[        // Write event is owned by ServiceManager
-    }
-}]=] [=[        // Write event is owned by ServiceManager
-    }
-    const auto eden_t5 = std::chrono::steady_clock::now();
-    const auto eden_span = [](auto a, auto b) { return std::chrono::duration<double, std::milli>(b - a).count(); };
-    if (eden_span(eden_t0, eden_t5) >= 10.0) {
-        std::fprintf(stderr, "EDEN_SHUTDOWN_DTOR manager=%p services=%s stopped=%.1f threads=%.1f ports=%.1f sessions=%.1f n=%zu events=%.1f\n",
-                     static_cast<void*>(this), m_eden_names.c_str(), eden_span(eden_t0, eden_t1), eden_span(eden_t1, eden_t2),
-                     eden_span(eden_t2, eden_t3), eden_span(eden_t3, eden_t4), eden_sessions, eden_span(eden_t4, eden_t5));
-    }
-}]=])
+if(NOT EXISTS "${EDEN_MAINTAINED_SERVER_HEADER}" OR
+   NOT EXISTS "${EDEN_MAINTAINED_SERVER_SOURCE}")
+    message(FATAL_ERROR "Missing maintained server-manager source/header pair")
 endif()
-write_derived("${PORT_BUILD_DIR}/server_manager.cpp" "${server_source}")
+file(MAKE_DIRECTORY "${PORT_BUILD_DIR}/include/core/hle/service")
+file(REMOVE "${PORT_BUILD_DIR}/include/${server_header}.in")
+configure_file("${EDEN_MAINTAINED_SERVER_HEADER}"
+    "${PORT_BUILD_DIR}/include/${server_header}" COPYONLY)
 get_target_property(core_sources core SOURCES)
+list(FIND core_sources hle/service/server_manager.cpp eden_server_original)
+if(eden_server_original EQUAL -1)
+    message(FATAL_ERROR "Pinned server-manager source moved; requalify Encore selector")
+endif()
 list(REMOVE_ITEM core_sources hle/service/server_manager.cpp)
-list(APPEND core_sources "${PORT_BUILD_DIR}/server_manager.cpp")
+list(APPEND core_sources "${EDEN_MAINTAINED_SERVER_SOURCE}")
 set_property(TARGET core PROPERTY SOURCES "${core_sources}")
 foreach(thread main_thread idle_thread)
     string(REPLACE "            KThread::Register(system.Kernel(), ${thread});"
