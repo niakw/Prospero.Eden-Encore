@@ -2322,19 +2322,16 @@ if(EDEN_DEV_PROFILE)
 endif()
 # Upstream ProsperoEden 673f675 (#72), adapted to pinned Eden 5f142c79:
 # salvage complete shader pipeline entries after a damaged tail.
-file(READ "${PROJECT_SOURCE_DIR}/src/video_core/shader_environment.cpp" shader_environment_source)
-string(FIND "${shader_environment_source}" "void LoadPipelines(" shader_reader_begin)
-string(FIND "${shader_environment_source}" "} // namespace VideoCommon" shader_reader_end REVERSE)
-if(shader_reader_begin LESS 0 OR shader_reader_end LESS shader_reader_begin)
-    message(FATAL_ERROR "Pinned shader cache reader changed")
+# Shader cache tail recovery is maintained directly in Encore C++.
+# CMake selects the source; the adjacent .inc is a tracked, sole-owner header.
+set(EDEN_MAINTAINED_SHADER_ENVIRONMENT
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/video_core/shader_environment.cpp")
+set(EDEN_MAINTAINED_SHADER_READER
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/video_core/shader_cache_reader.inc")
+if(NOT EXISTS "${EDEN_MAINTAINED_SHADER_ENVIRONMENT}" OR
+   NOT EXISTS "${EDEN_MAINTAINED_SHADER_READER}")
+    message(FATAL_ERROR "Missing maintained shader cache recovery source")
 endif()
-string(SUBSTRING "${shader_environment_source}" 0 ${shader_reader_begin} shader_environment_head)
-string(SUBSTRING "${shader_environment_source}" ${shader_reader_end} -1 shader_environment_tail)
-string(PREPEND shader_environment_head "#include <cstdio>\n#include <new>\n#include <stdexcept>\n#include <system_error>\n")
-write_derived("${PORT_BUILD_DIR}/shader_environment.cpp"
-    "${shader_environment_head}#include \"${EDEN_PORT_DIR}/shader_cache_reader.inc\"\n\n${shader_environment_tail}")
-set_property(SOURCE "${PORT_BUILD_DIR}/shader_environment.cpp" APPEND PROPERTY OBJECT_DEPENDS
-    "${EDEN_PORT_DIR}/shader_cache_reader.inc")
 # R428: port upstream d7f2764 ASTC per-layer scratch without modifying
 # the immutable Eden source package. Keep the converted pixel order and BC
 # output offsets; only the temporary decode batch width changes.
@@ -2348,7 +2345,7 @@ endif()
 list(REMOVE_ITEM video_sources texture_cache/util.cpp)
 list(APPEND video_sources "${EDEN_MAINTAINED_TEXTURE_UTIL}")
 list(REMOVE_ITEM video_sources shader_environment.cpp)
-list(APPEND video_sources "${PORT_BUILD_DIR}/shader_environment.cpp")
+list(APPEND video_sources "${EDEN_MAINTAINED_SHADER_ENVIRONMENT}")
 # Eden #4473/#4477 are already applied once to the pinned source by
 # tools/apply-eden-backports.sh and validated there; never shadow headers twice.
 set_property(TARGET video_core PROPERTY SOURCES "${video_sources}")
