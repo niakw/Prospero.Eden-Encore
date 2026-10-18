@@ -428,29 +428,15 @@ if(PS5_NATIVE)
     endif()
 endif()
 
+# Complete A32 native interface is Encore-owned; host uses the pinned original.
 if(PS5_NATIVE)
-    file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/dynarmic/backend/x64/a32_interface.cpp" a32_interface)
-    string(REPLACE "            invalidate_entire_cache = true;"
-        "            static thread_local unsigned pressure_count;\n            if (++pressure_count <= 3) std::printf(\"EDEN_JIT_PRESSURE bits=32 core=%u capacity=%u remaining=%zu\\n\", unsigned(conf.processor_id), unsigned(conf.code_cache_size), block_of_code.SpaceRemaining());\n            invalidate_entire_cache = true;"
-        a32_interface "${a32_interface}")
-    # Mirror the same retry for A32 guest code; avoid a title whitelist.
-    set(jit_retry_site "        block_of_code.EnsureMemoryCommitted(MINIMUM_REMAINING_CODESIZE);")
-    string(FIND "${a32_interface}" "${jit_retry_site}" a32_retry_at)
-    if(a32_retry_at LESS 0)
-        message(FATAL_ERROR "Pinned A32 JIT commit checkpoint changed")
+    set(EDEN_MAINTAINED_A32_INTERFACE
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/dynarmic/backend/x64/a32_interface_native.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_A32_INTERFACE}")
+        message(FATAL_ERROR "Missing Encore-maintained native A32 JIT interface")
     endif()
-    set(jit_retry_replacement
-        "        try {\n            block_of_code.EnsureMemoryCommitted(MINIMUM_REMAINING_CODESIZE);\n        } catch (const std::bad_alloc&) {\n            invalidate_entire_cache = true;\n            PerformRequestedCacheInvalidation(HaltReason::CacheInvalidation);\n            block_of_code.EnsureMemoryCommitted(MINIMUM_REMAINING_CODESIZE);\n        }")
-    string(REPLACE "${jit_retry_site}" "${jit_retry_replacement}" a32_interface "${a32_interface}")
-    set(a32_emit "        return emitter.Emit(ir_block);\n    }")
-    string(FIND "${a32_interface}" "${a32_emit}" a32_emit_at)
-    if(a32_emit_at LESS 0)
-        message(FATAL_ERROR "Pinned A32 block emission changed")
-    endif()
-    string(REPLACE "${a32_emit}"
-        "        const auto emitted = emitter.Emit(ir_block);\n        if (eden_jit_block)\n            eden_jit_block(unsigned(conf.processor_id), descriptor.Value(), reinterpret_cast<const void*>(emitted.entrypoint), emitted.size);\n        return emitted;\n    }"
-        a32_interface "${a32_interface}")
-    write_derived("${PORT_BUILD_DIR}/a32_interface.cpp" "#include <cstdio>\n#include <new>\nextern \"C\" void eden_jit_block(unsigned core, unsigned long long location, const void* entry, unsigned long long size) __attribute__((weak));\n${a32_interface}")
+    configure_file("${EDEN_MAINTAINED_A32_INTERFACE}"
+        "${PORT_BUILD_DIR}/a32_interface.cpp" COPYONLY)
     get_target_property(jit_sources dynarmic SOURCES)
     list(FILTER jit_sources EXCLUDE REGEX "(^|/)a32_interface\\.cpp$")
     set_property(TARGET dynarmic PROPERTY SOURCES "${jit_sources}")

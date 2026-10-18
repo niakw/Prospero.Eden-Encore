@@ -31,6 +31,7 @@ def main() -> None:
     cmake = read("headless/CMakeLists.txt")
     native_boc = read("vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code_native.cpp")
     a64_unit = read("vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_interface_standard.cpp")
+    a32_native = read("vendor/encore-active/eden-core/src/dynarmic/backend/x64/a32_interface_native.cpp")
     worker_script = read("tools/prepare-vulkan-port.py")
     jit_policy = read("headless/experimental_performance.h")
 
@@ -154,9 +155,10 @@ def main() -> None:
     require('throw std::bad_alloc{};' in native_boc and
             'block_of_code.EnsureMemoryCommitted(MINIMUM_REMAINING_CODESIZE);' in a64_unit and
             'catch (const std::bad_alloc&)' in a64_unit and
-            'Pinned A32 JIT commit checkpoint changed' in cmake,
+            'catch (const std::bad_alloc&)' in a32_native and
+            'configure_file("${EDEN_MAINTAINED_A32_INTERFACE}"' in cmake,
             "A64 and A32 need recoverable one-shot sparse allocation fallback")
-    require(cmake.count('catch (const std::bad_alloc&)') >= 1 and
+    require(a32_native.count('catch (const std::bad_alloc&)') >= 1 and
             a64_unit.count('catch (const std::bad_alloc&)') >= 1,
             "Both guest architectures must recycle committed code pages on OOM")
     require('CountDenseJitDirect(void* writable, bool acquire) noexcept' in native and
