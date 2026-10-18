@@ -22,4 +22,3 @@ for variant in ("fermi_2d_observed.cpp", "fermi_2d_experimental.cpp"):
 assert "set(gpu_bounded_sample_helper [=[" not in module
 assert 'target_sources(video_core PRIVATE "${EDEN_MAINTAINED_FERMI_FILE}")' in module
 print("VENDOR_MAINTAINED_PRMT_PARITY_PASS: both opcode translations, bounded diagnostic and golden vectors")
-

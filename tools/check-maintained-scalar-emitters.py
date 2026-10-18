@@ -18,4 +18,3 @@ assert "write_derived(" not in selector
 assert 'file(READ "${EDEN_SCALAR_INPUT_DIR}/scalar-memory-${lower}.inc" scalar_access)' in selector
 assert 'set(memory_source "${prefix}${before}${scalar_access}${after}")' in selector
 print("VENDOR_MAINTAINED_SCALAR_EMITTERS_PARITY_PASS: exact 3 edits, 2 compiled units")
-
