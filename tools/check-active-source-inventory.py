@@ -187,6 +187,15 @@ for entry in headless_doc.split(headless_start, 1)[1].split(headless_end, 1)[0].
     headless_rows.append((cells[0].strip("`"), cells[1], cells[2], cells[3]))
 assert [r[0] for r in headless_rows] == headless_actual, (
     "headless source path catalog drift", len(headless_rows), len(headless_actual))
+# The vendor-active graph above intentionally stores vendor-relative keys.
+# Headless paths use repository-relative keys and need an independent map.
+headless_graph = {}
+for entry in audit.splitlines():
+    if not entry.startswith("| "):
+        continue
+    cells = [cell.strip() for cell in entry.strip().strip("|").split("|")]
+    if len(cells) == 9 and re.fullmatch("[A-Z][0-9]{2}", cells[0]) and cells[3].startswith("headless/"):
+        headless_graph.setdefault(cells[3], []).append(cells[0])
 # These three headless runtime translation units are application-owned,
 # not third-party dependency overrides. They must remain indexed and selected
 # by their actual CMake targets; moving them into vendor would be misleading.
@@ -208,15 +217,6 @@ for path in ("headless/metadata_bridge.h", "headless/stop_limit.h",
 print("ENCORE_HEADLESS_RUNTIME_OWNERS_PASS",
       f"compiled={len(runtime_headless)}", "headers=6")
 
-# The vendor-active graph above intentionally stores vendor-relative keys.
-# Headless paths use repository-relative keys and need an independent map.
-headless_graph = {}
-for entry in audit.splitlines():
-    if not entry.startswith("| "):
-        continue
-    cells = [cell.strip() for cell in entry.strip().strip("|").split("|")]
-    if len(cells) == 9 and re.fullmatch("[A-Z][0-9]{2}", cells[0]) and cells[3].startswith("headless/"):
-        headless_graph.setdefault(cells[3], []).append(cells[0])
 headless_linked = sum(p in headless_graph for p in headless_actual)
 for p, family, owner, state in headless_rows:
     if p in headless_graph:
