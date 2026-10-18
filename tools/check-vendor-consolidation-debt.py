@@ -746,9 +746,9 @@ assert len(candidates_modules) == 13 and len(candidates_fragments) == 8
 # compare their rendered values with the architecture document. Do not freeze
 # migration-stage totals into a separate test (which goes stale every move).
 import re
-main_generators = len(re.findall(r'write_derived\\(\\s*"([^"]+)"', c))
+main_generators = len(re.findall(r'write_derived\(\s*"([^"]+)"', c))
 module_generators = sum(
-    len(re.findall(r'write_derived\\(\\s*"([^"]+)"', (root / name).read_text()))
+    len(re.findall(r'write_derived\(\s*"([^"]+)"', (root / name).read_text()))
     for name in candidates_modules
 )
 source_catalog = (root / "docs/EDEN_ACTIVE_SOURCE_CATALOG.md").read_text()
@@ -756,7 +756,7 @@ catalog_start = "<!-- ACTIVE_SOURCE_CATALOG_START -->"
 catalog_end = "<!-- ACTIVE_SOURCE_CATALOG_END -->"
 assert source_catalog.count(catalog_start) == source_catalog.count(catalog_end) == 1
 catalog_rows = re.findall(
-    r"^\\| \\x60[^\\x60]+\\x60 \\|", source_catalog.split(catalog_start)[1].split(catalog_end)[0], re.M
+    r"^\| \x60[^\x60]+\x60 \|", source_catalog.split(catalog_start)[1].split(catalog_end)[0], re.M
 )
 assert f"**{main_generators} générateurs**" in single_source_doc
 assert f"**{module_generators} générateurs**" in single_source_doc
