@@ -347,46 +347,22 @@ if(EDEN_A32_FASTMEM)
     target_compile_definitions(dynarmic PRIVATE EDEN_A32_CHECKED_FASTMEM=1)
 endif()
 
-    set(memory_inc "dynarmic/backend/x64/emit_x64_memory.cpp.inc")
-    file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/${memory_inc}" memory_source)
-    # Exclusive operations already allocated these two registers before their
-    # monitor/early-exit branches. Never introduce a conditional allocator spill.
-    string(FIND "${memory_source}" "void AxxEmitX64::EmitExclusiveReadMemoryInline" exclusive_start)
-    string(SUBSTRING "${memory_source}" 0 ${exclusive_start} memory_prefix)
-    string(SUBSTRING "${memory_source}" ${exclusive_start} -1 memory_exclusive)
-    # Keep upstream's monitor and compare/exchange implementation, but allow
-    # checked page-table addresses when direct fastmem is unavailable.
-    string(REPLACE "ASSERT(conf.global_monitor && conf.fastmem_pointer);"
-        "ASSERT(conf.global_monitor && (conf.fastmem_pointer || conf.page_table));"
-        memory_exclusive "${memory_exclusive}")
-    string(REPLACE "if (!exception_handler.SupportsFastmem())"
-        "if (!conf.page_table && !exception_handler.SupportsFastmem())"
-        memory_exclusive "${memory_exclusive}")
-    string(REPLACE "if (fastmem_marker) {" "if (fastmem_marker || conf.page_table) {"
-        memory_exclusive "${memory_exclusive}")
-    string(REPLACE "bool require_abort_handling = false;" "bool require_abort_handling = !fastmem_marker;"
-        memory_exclusive "${memory_exclusive}")
-    foreach(arguments IN ITEMS "" ", tmp")
-        set(old "= EmitFastmemVAddr(code, ctx, *abort, vaddr, require_abort_handling${arguments});")
-        string(FIND "${memory_exclusive}" "${old}" site)
-        if(site LESS 0)
-            message(FATAL_ERROR "Pinned exclusive lookup changed")
-        endif()
-        string(REPLACE "${old}"
-            "= fastmem_marker ? EmitFastmemVAddr(code, ctx, *abort, vaddr, require_abort_handling${arguments}) : EmitExclusiveVAddrLookup(code, ctx, bitsize, *abort, vaddr, tmp2, tmp);"
-            memory_exclusive "${memory_exclusive}")
-    endforeach()
-    string(REPLACE "fastmem_patch_info.emplace(" "if (fastmem_marker) fastmem_patch_info.emplace("
-        memory_exclusive "${memory_exclusive}")
-    set(memory_source "${memory_prefix}${memory_exclusive}")
-    include("${EDEN_PORT_DIR}/scalar-memory.cmake")
-    if(EDEN_A32_FASTMEM)
-        include("${EDEN_PORT_DIR}/checked-fastmem.cmake")
-    endif()
-    if(EDEN_SHARED_JIT)
-        eden_shared_jit_memory_inc()
-    endif()
-    write_derived("${PORT_BUILD_DIR}/include/${memory_inc}" "${memory_source}")
+# G06: complete C++ include bodies; checked A32 and standard mode are
+# explicit Encore-owned variants. Shared JIT uses compile-time guards.
+set(EDEN_MAINTAINED_MEMORY_IMPL_ROOT
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/dynarmic/backend/x64")
+if(EDEN_A32_FASTMEM)
+    set(EDEN_MAINTAINED_MEMORY_IMPL
+        "${EDEN_MAINTAINED_MEMORY_IMPL_ROOT}/emit_x64_memory_checked.cpp.inc")
+else()
+    set(EDEN_MAINTAINED_MEMORY_IMPL
+        "${EDEN_MAINTAINED_MEMORY_IMPL_ROOT}/emit_x64_memory_standard.cpp.inc")
+endif()
+if(NOT EXISTS "${EDEN_MAINTAINED_MEMORY_IMPL}")
+    message(FATAL_ERROR "Missing maintained Dynarmic memory method unit ${EDEN_MAINTAINED_MEMORY_IMPL}")
+endif()
+configure_file("${EDEN_MAINTAINED_MEMORY_IMPL}"
+    "${PORT_BUILD_DIR}/include/dynarmic/backend/x64/emit_x64_memory.cpp.inc" COPYONLY)
 # New include overlays do not invalidate objects whose depfile still names
 # upstream headers. Derive both translation units so the first build cannot
 # silently keep old objects; subsequent depfiles track the overlay normally.

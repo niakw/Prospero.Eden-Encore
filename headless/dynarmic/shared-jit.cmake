@@ -19,20 +19,6 @@ endfunction()
 
 # a64_emit_x64.h: the group and the guest range of the last Emit.
 # emit_x64_memory.cpp.inc: the running core's monitor slots and configuration.
-macro(eden_shared_jit_memory_inc)
-    set(eden_address "code.mov(tmp, std::bit_cast<u64>(GetExclusiveMonitorAddressPointer(conf.global_monitor, conf.processor_id)));")
-    set(eden_value "code.mov(tmp, std::bit_cast<u64>(GetExclusiveMonitorValuePointer(conf.global_monitor, conf.processor_id)));")
-    set(eden_conf_cast "code.mov(code.ABI_PARAM1, reinterpret_cast<u64>(&conf));")
-    set(eden_conf_plain "code.mov(code.ABI_PARAM1, u64(&conf));")
-    foreach(anchor eden_address eden_value eden_conf_cast eden_conf_plain)
-        eden_shared_jit_require("${memory_source}" "${${anchor}}" "exclusive monitor emission (${anchor})")
-    endforeach()
-    string(REPLACE "${eden_address}" "EDEN_EXCLUSIVE_ADDRESS(tmp);" memory_source "${memory_source}")
-    string(REPLACE "${eden_value}" "EDEN_EXCLUSIVE_VALUE(tmp);" memory_source "${memory_source}")
-    string(REPLACE "${eden_conf_cast}" "EDEN_CONF_ARG();" memory_source "${memory_source}")
-    string(REPLACE "${eden_conf_plain}" "EDEN_CONF_ARG();" memory_source "${memory_source}")
-endmacro()
-
 # The shared memory header policy is now inside Encore's maintained header.
 
 # a64_interface.cpp: upstream's Impl replaced by jit_impl.inc, with the group helpers before it.
