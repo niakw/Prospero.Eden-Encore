@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **254 fichiers** de code et d'en-têtes enregistrés.
-- **254 fichiers** possèdent une correspondance de chemin *exacte*
+- **257 fichiers** de code et d'en-têtes enregistrés.
+- **257 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -24,7 +24,7 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 **Important :** une correspondance de chemin n'est ni un test hôte,
 ni une certification console. Le graphe
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` porte les contrats fonctionnels,
-leurs états et les preuves. L'inventaire des 22 générateurs CMake
+leurs états et les preuves. L'inventaire des 20 générateurs CMake
 principaux, 12 générateurs de modules, six modules indirects et 46 patches
 reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
@@ -178,6 +178,9 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/core/memory.cpp` | `maintained-override` | M11 |
 | `eden-core/src/dynarmic/backend/block_range_information.cpp` | `maintained-override` | U12 |
 | `eden-core/src/dynarmic/backend/block_range_information.h` | `maintained-override` | J41 |
+| `eden-core/src/dynarmic/backend/x64/block_of_code.h` | `maintained-override` | B10 |
+| `eden-core/src/dynarmic/backend/x64/block_of_code_host.cpp` | `maintained-override` | B09 |
+| `eden-core/src/dynarmic/backend/x64/block_of_code_native.cpp` | `maintained-override` | J09 |
 | `eden-core/src/dynarmic/backend/x64/constant_pool.cpp` | `maintained-override` | J37 |
 | `eden-core/src/dynarmic/backend/x64/emit_x64_data_processing.cpp` | `maintained-override` | J39 |
 | `eden-core/src/dynarmic/backend/x64/emit_x64_vector.cpp` | `maintained-override` | J38 |
@@ -300,11 +303,11 @@ pas comptés parmi les 227 fichiers de code et d'en-têtes.
 
 ## Inventaire hors `vendor/encore-active`
 
-Les **171 fichiers source/en-tête/fragment** de `headless/` sont suivis
+Les **170 fichiers source/en-tête/fragment** de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
 34 ont désormais un propriétaire exact dans le graphe courant ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
-La couverture de 254/254 ci-dessus ne s'applique **pas** à ce dossier.
+La couverture de 257/257 ci-dessus ne s'applique **pas** à ce dossier.
 
 ## Critères de tenue à jour
 

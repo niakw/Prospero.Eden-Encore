@@ -2,7 +2,7 @@
 
 **Branche :** `dev/ps5-sparse-jit`. **Date du relevé :** 18 octobre 2026.
 
-Ce registre complémentaire couvre les **171 chemins** de code, en-têtes et
+Ce registre complémentaire couvre les **170 chemins** de code, en-têtes et
 fragments `.c/.cc/.cpp/.h/.hpp/.inc/.cl` du dossier `headless/`.
 Il ne remplace pas `EDEN_ACTIVE_SOURCE_CATALOG.md` : les 251 fichiers
 de `vendor/encore-active` sont déjà inventoriés séparément.
@@ -13,8 +13,8 @@ pour suivi séparé et n'autorise aucune modification du launcher depuis
 l'audit moteur. Un chemin noté « À qualifier » peut avoir été audité sous
 une autre forme : il manque seulement la référence de chemin exacte.
 
-- **171** chemins sous `headless/`, dont **58** sources C/C++ et **113** en-têtes/fragments.
-- **34** chemins déjà présents dans le graphe moteur.
+- **170** chemins sous `headless/`, dont **58** sources C/C++ et **112** en-têtes/fragments.
+- **33** chemins déjà présents dans le graphe moteur.
 - **137** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
 - Les deux générateurs de profils `headless/encore_overrides_generated.h`,
   `headless/glyph_overrides_generated.h` et les autres ressources générées
@@ -86,7 +86,6 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/image_pages.h` | en-tête/fragment | — | À qualifier |
 | `headless/jit-allocator.h` | en-tête/fragment | J06 | Chemin indexé, preuve dépend du graphe |
 | `headless/jit-compile-batch.inc` | en-tête/fragment | J10 | Chemin indexé, preuve dépend du graphe |
-| `headless/jit-permissions.inc` | en-tête/fragment | J09 | Chemin indexé, preuve dépend du graphe |
 | `headless/jit-sparse-commit.h` | en-tête/fragment | J05 | Chemin indexé, preuve dépend du graphe |
 | `headless/jit-startup-retry.h` | en-tête/fragment | — | À qualifier |
 | `headless/jit_list.h` | en-tête/fragment | J11 | Chemin indexé, preuve dépend du graphe |
