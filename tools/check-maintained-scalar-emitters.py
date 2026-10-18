@@ -15,6 +15,11 @@ for filename,changes in (("emit_x64_vector.cpp",edits[0]),("emit_x64_data_proces
     assert (active/filename).read_text()==content, ("maintained scalar emitter differs",filename)
 assert 'list(APPEND jit_sources "${EDEN_MAINTAINED_SCALAR_BACKEND}/emit_x64_${unit}.cpp")' in selector
 assert "write_derived(" not in selector
-assert 'file(READ "${EDEN_SCALAR_INPUT_DIR}/scalar-memory-${lower}.inc" scalar_access)' in selector
-assert 'set(memory_source "${prefix}${before}${scalar_access}${after}")' in selector
+assert 'file(READ "${EDEN_SCALAR_INPUT_DIR}/scalar-memory-${lower}.inc" scalar_access)' not in selector
+for variant in ("standard", "checked"):
+    compiled = (active / f"emit_x64_memory_{variant}.cpp.inc").read_text()
+    for direction in ("read", "write"):
+        oracle = (root / f"vendor/encore-active/eden-core/dynarmic/scalar/scalar-memory-{direction}.inc").read_text()
+        assert oracle in compiled
+assert "set(memory_source" not in selector
 print("VENDOR_MAINTAINED_SCALAR_EMITTERS_PARITY_PASS: exact 3 edits, 2 compiled units")

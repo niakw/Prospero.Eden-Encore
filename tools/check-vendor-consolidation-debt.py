@@ -817,7 +817,14 @@ for filename, expected in scalar_canonical_blobs.items():
         "scalar injection has duplicate or missing authority", filename)
     check_canonical_git_object(source, expected, "scalar")
 scalar_module = (root / "headless/scalar-memory.cmake").read_text()
-assert 'file(READ "${EDEN_SCALAR_INPUT_DIR}/scalar-memory-${lower}.inc" scalar_access)' in scalar_module
+assert 'file(READ "${EDEN_SCALAR_INPUT_DIR}/scalar-memory-${lower}.inc" scalar_access)' not in scalar_module
+assert "set(memory_source" not in scalar_module
+for variant in ("standard", "checked"):
+    compiled = (active / f"eden-core/src/dynarmic/backend/x64/emit_x64_memory_{variant}.cpp.inc").read_text()
+    for direction in ("read", "write"):
+        oracle = (active / f"eden-core/dynarmic/scalar/scalar-memory-{direction}.inc").read_text()
+        assert oracle in compiled, ("lost scalar fallback", variant, direction)
+assert not (root / "headless/checked-fastmem.cmake").exists()
 assert 'write_derived("' not in scalar_module
 assert 'list(APPEND jit_sources "${EDEN_MAINTAINED_SCALAR_BACKEND}/emit_x64_${unit}.cpp")' in scalar_module
 for unit in ("vector", "data_processing"):
@@ -1289,7 +1296,7 @@ assert len(module_recorded) == module_generators, (len(module_recorded), module_
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
-# locally. Two materialize an output directly; five mutate source variables
+# locally. Two materialize an output directly; three mutate source variables
 # that a root CMake generator subsequently writes. Never count them as extra
 # write_derived call sites, but never silently drop them from the inventory.
 indirect_begin, indirect_end = "<!-- INDIRECT_OVERRIDES_START -->", "<!-- INDIRECT_OVERRIDES_END -->"
@@ -1298,11 +1305,9 @@ indirect_recorded = re.findall(
     r"^\| X\d\d \| \x60([^\x60]+)\x60 \|",
     inventory.split(indirect_begin)[1].split(indirect_end)[0], re.M)
 indirect_expected = (
-    ("headless/checked-fastmem.cmake", ("string(REPLACE", "memory_source", "memory_emitter")),
     ("headless/native_guest_range_overflow.cmake", ("string(REPLACE", "eden_cpu_memory")),
     ("headless/native_jit_memory_read_guard.cmake", ("string(REPLACE", "wrapper")),
     ("headless/physical_core_interrupt_atomic.cmake", ("string(REPLACE", "physical_core_source")),
-    ("headless/scalar-memory.cmake", ("set(memory_source", "scalar-memory-${lower}.inc")),
 )
 assert indirect_recorded == [entry[0] for entry in indirect_expected], (
     "Unlisted or reordered indirect CMake override; recheck files and symbols")
