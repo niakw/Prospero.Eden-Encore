@@ -1297,7 +1297,7 @@ assert len(module_recorded) == module_generators, (len(module_recorded), module_
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
-# locally. Two materialize an output directly; three mutate source variables
+# locally. Two materialize an output directly; two mutate source variables
 # that a root CMake generator subsequently writes. Never count them as extra
 # write_derived call sites, but never silently drop them from the inventory.
 indirect_begin, indirect_end = "<!-- INDIRECT_OVERRIDES_START -->", "<!-- INDIRECT_OVERRIDES_END -->"
@@ -1308,7 +1308,6 @@ indirect_recorded = re.findall(
 indirect_expected = (
     ("headless/native_guest_range_overflow.cmake", ("string(REPLACE", "eden_cpu_memory")),
     ("headless/native_jit_memory_read_guard.cmake", ("string(REPLACE", "wrapper")),
-    ("headless/physical_core_interrupt_atomic.cmake", ("string(REPLACE", "physical_core_source")),
 )
 assert indirect_recorded == [entry[0] for entry in indirect_expected], (
     "Unlisted or reordered indirect CMake override; recheck files and symbols")
