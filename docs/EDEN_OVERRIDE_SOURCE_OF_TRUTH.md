@@ -16,15 +16,15 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **243 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **244 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
 - `headless/CMakeLists.txt` : **26 générateurs** `write_derived`.
-- Quatre modules CMake générateurs totalisent **15 générateurs**
-  `write_derived`, soit **41 sites** au total.
+- Quatre modules CMake générateurs totalisent **14 générateurs**
+  `write_derived`, soit **40 sites** au total.
 - Cinq modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
-  nombre 41.
+  nombre 40.
 - `headless/` contient **8 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
@@ -105,7 +105,7 @@ blobs Git identiques dans `vendor/encore-active/eden-core/dynarmic/shared-jit/`.
 Le sélecteur de `headless/dynarmic/shared-jit.cmake` lit les fichiers
 maintenus. **Ce module CMake conserve encore des transformations upstream
 à migrer** ; la relocalisation des données d'injection ne supprime pas les
-15 générateurs de modules. Le mode JIT partagé reste OFF par défaut.
+14 générateurs de modules. Le mode JIT partagé reste OFF par défaut.
 
 ## Fragments scalaires centralisés
 
@@ -199,6 +199,14 @@ La variante native complète de `sw_blitter/blitter.cpp` est dans
 Elle conserve le backport de production et élargit trois calculs de taille ;
 le module natif ne fait plus d'injection C++. Le test de parité vérifie
 les deux héritages, sans prouver les performances sur console.
+
+## Shader PRMT natif maintenu
+
+`shader_recompiler/frontend/maxwell/translate/impl/not_implemented.cpp`
+contient désormais directement la traduction PRMT mode 0 de l'ancien
+générateur CMake. L'oracle hôte compare les corps PRMT, les diagnostics
+bornés et les assertions de référence. Les cas non pris en charge
+continuent de déclencher le même chemin d'échec.
 
 ## Correction de cache de shaders centralisée
 

@@ -251,6 +251,7 @@ jobs:
           python3 -B tools/check-vulkan-pipeline-persistence.py
           python3 -B tools/check-vulkan-cache-atomic.py
           python3 -B tools/check-jit-dense-alias-host.py
+          python3 -B tools/check-maintained-maxwell-prmt.py
           python3 -B tools/check-maintained-sw-blitter.py
           python3 -B tools/check-maintained-scalar-emitters.py
           python3 -B tools/check-maintained-constant-pool.py
