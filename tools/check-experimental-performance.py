@@ -14,6 +14,7 @@ read = lambda name: (root / name).read_text()
 header = read("headless/experimental_performance.h")
 main = read("headless/main.cpp")
 cmake = read("headless/CMakeLists.txt")
+native_boc = read("vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code_native.cpp")
 cpu = read("headless/performance.cpp")
 graphics = read("headless/graphics.cpp")
 graphics_h = read("headless/graphics.h")
@@ -52,11 +53,13 @@ assert "ChooseJitMemoryPlan(" in main and "ApplyJitMemoryPlan(" in main
 # Every explicit sparse JIT allocation is sparse-or-fail, never dense.
 # CommitSparseJitCode itself verifies the region with the native mutex;
 # do not lock/lookup the same code pointer twice for each compiled block.
-assert "IsSparseJitCode(getCode())" not in cmake
-assert "::Eden::Jit::PlanSparseCommit(written, codesize, maxSize_)" in cmake
-assert "::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), target.bytes)" in cmake
-assert "EDEN_JIT_SPARSE_PRECOMMIT_CLAMPED" in cmake
-assert "written > maxSize_ || codesize > maxSize_ - written" not in cmake
+assert "IsSparseJitCode(getCode())" not in native_boc
+assert "::Eden::Jit::PlanSparseCommit(written, codesize, maxSize_)" in native_boc
+assert "::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), target.bytes)" in native_boc
+assert "EDEN_JIT_SPARSE_PRECOMMIT_CLAMPED" in native_boc
+assert "written > maxSize_ || codesize > maxSize_ - written" not in native_boc
+assert 'set(EDEN_BOC_UNIT "${EDEN_MAINTAINED_BOC_ROOT}/block_of_code_native.cpp")' in cmake
+assert 'configure_file("${EDEN_BOC_UNIT}" "${PORT_BUILD_DIR}/block_of_code.cpp" COPYONLY)' in cmake
 jit_alloc = read("headless/jit-allocator.h")
 assert "fallback=smaller_virtual_arena" in jit_alloc
 assert "Common::ReserveSparseJitCode(sparse_span, &writable)" in jit_alloc
