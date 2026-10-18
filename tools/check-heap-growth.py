@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Host check of the heap that grows by pieces (headless/heap_arenas.inc).
+"""Host check of the real native heap in vendor/encore-active.
 
-Builds the app's heap source as headless/CMakeLists.txt derives it and runs it on Linux over a
+Builds the selected native heap source and runs it on Linux over a
 stand-in for the console's mspace functions: a first-fit allocator with checked block headers.
 Eight threads allocate, resize and free blocks of every size, each filled with a pattern that
 is checked when the block changes hands, so an owner looked up wrongly, a block handed out
@@ -18,18 +18,9 @@ import sys
 import tempfile
 
 root = pathlib.Path(__file__).resolve().parents[1]
-heap = (root / 'third_party/app_heap.c').read_text()
-for old, new in (
-    ('128 MiB', '3072 MiB'),
-    ('(128u * 1024u * 1024u)', '(3072u * 1024u * 1024u)'),
-    ('#include <sys/mman.h>', '#include <sys/mman.h>\nvoid *eden_heap_pages(size_t);\nvoid eden_heap_pages_free(void *, size_t);\nsize_t eden_heap_pages_physical_size(void *);'),
-    ('"PS5-OpenGL"', '"Eden-headless"'),
-):
-    assert old in heap, old
-    heap = heap.replace(old, new)
-begin = heap.index('static int ps5_heap_ready(void) {')
-end = heap.index('void ps5_opengl_heap_stats_print(unsigned iteration) {')
-heap = heap[:begin] + (root / 'headless/heap_arenas.inc').read_text() + heap[end:]
+heap = (root / 'vendor/encore-active/eden-build/tooling/native/app_heap_arenas.c').read_text()
+assert not (root / 'headless/heap_arenas.inc').exists()
+assert not (root / 'headless/heap_guard.h').exists()
 for required in (
     '3072 MiB', 'eden_heap_commit', 'eden_heap_pages', 'eden_heap_pages_free',
     'eden_heap_arenas_created', 'eden_heap_committed',

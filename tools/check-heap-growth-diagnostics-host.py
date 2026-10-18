@@ -11,7 +11,7 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-source = (root / "headless/heap_arenas.inc").read_text()
+source = (root / "vendor/encore-active/eden-build/tooling/native/app_heap_arenas.c").read_text()
 begin = source.index("static int eden_heap_append_decimal(")
 end = source.index("/* Adds a space with room for", begin)
 body = source[begin:end]

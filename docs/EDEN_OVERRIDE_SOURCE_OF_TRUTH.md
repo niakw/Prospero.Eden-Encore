@@ -16,16 +16,16 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **251 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **254 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **23 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **22 générateurs** `write_derived`.
 - Deux modules CMake générateurs totalisent **12 générateurs**
-  `write_derived`, soit **35 sites** au total.
+  `write_derived`, soit **34 sites** au total.
 - Six modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
-  nombre 35.
-- `headless/` contient **6 fragments `.inc`**. Plusieurs contribuent
+  nombre 34.
+- `headless/` contient **5 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
   dépendance. **Leur présence dans `headless` ne vaut pas conformité
@@ -63,6 +63,16 @@ nouveaux corps C++ destinés à la console.
 | `headless/vulkan.cmake` | Sélection/copie de sources Encore maintenues | Sélecteur / configuration |
 <!-- SINGLE_SOURCE_CMAKE_END -->
 
+## Allocateur natif maintenu
+
+L'ancien générateur G22 de `app_heap.c` a été supprimé. Le compilateur
+sélectionne la source complète `eden-build/tooling/native/app_heap_arenas.c`
+(normale) ou `app_heap_flat.c` (sans arènes) directement dans
+`vendor/encore-active/`. Le diagnostic optionnel `heap_guard.h` est
+maintenu au même endroit ; `third_party/app_heap.c` demeure épinglé et
+immuable. Parité et compilation syntaxique des quatre combinaisons sont
+contrôlées sur hôte, pas sur console.
+
 ## Cache GPU R437 maintenu
 
 Le header natif `video_core/buffer_cache/buffer_cache.h`, initialement créé
@@ -91,7 +101,6 @@ fragments de l'application native qui ne remplacent aucune source upstream.
 | `headless/dev_render_passes.inc` | Diagnostic OpenGL local (`CaptureDevelopmentPass`) | Consommateur non identifié dans le CMake principal et `graphics.cpp` ; vérifier les autres points d'entrée avant retrait |
 | `headless/gpu_native_probe.inc` | Diagnostic GPU natif local | Inclus transitivement par `gpu_probe.inc` ; pas un override de dépendance |
 | `headless/gpu_probe.inc` | Diagnostic graphique local | Inclus par `graphics.cpp` sous `EDEN_GPU_PROBE` ; reste dans le runtime de l'application |
-| `headless/heap_arenas.inc` | Corps complet de wrappers allocateur injecté | **Dette confirmée G22** : assemblage de `app_heap.c` par CMake ; maintenir les variantes ON/OFF et `EDEN_HEAP_GUARD` lors de la migration |
 | `headless/jit-compile-batch.inc` | Bloc de compilation JIT injecté | **Dette confirmée G09** : remplacement de la région `a64_interface.cpp` sous `EDEN_JIT_COMPILE_BATCH` |
 | `headless/jit-permissions.inc` | Méthodes de permissions JIT injectées | **Dette confirmée G02** : remplacement dans `block_of_code.cpp` ; dépend aussi de l'en-tête G01 et de X09 |
 <!-- SINGLE_SOURCE_FRAGMENTS_END -->

@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **251 fichiers** de code et d'en-têtes enregistrés.
-- **251 fichiers** possèdent une correspondance de chemin *exacte*
+- **254 fichiers** de code et d'en-têtes enregistrés.
+- **254 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -24,7 +24,7 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 **Important :** une correspondance de chemin n'est ni un test hôte,
 ni une certification console. Le graphe
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` porte les contrats fonctionnels,
-leurs états et les preuves. L'inventaire des 23 générateurs CMake
+leurs états et les preuves. L'inventaire des 22 générateurs CMake
 principaux, 12 générateurs de modules, six modules indirects et 46 patches
 reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
@@ -115,6 +115,9 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-backports/src/video_core/texture_cache/util.cpp` | `shipping-backport` | V61 |
 | `eden-build/third_party/xbyak/xbyak.h` | `maintained-override` | J40 |
 | `eden-build/tooling/native/app_crt_radv.cpp` | `maintained-override` | B05 |
+| `eden-build/tooling/native/app_heap_arenas.c` | `maintained-override` | B06 |
+| `eden-build/tooling/native/app_heap_flat.c` | `maintained-override` | B07 |
+| `eden-build/tooling/native/heap_guard.h` | `maintained-override` | B08 |
 | `eden-core/dynarmic/scalar/scalar-fold.inc` | `maintained-override` | J27 |
 | `eden-core/dynarmic/scalar/scalar-memory-read.inc` | `maintained-override` | J28 |
 | `eden-core/dynarmic/scalar/scalar-memory-write.inc` | `maintained-override` | J29 |
@@ -297,11 +300,11 @@ pas comptés parmi les 227 fichiers de code et d'en-têtes.
 
 ## Inventaire hors `vendor/encore-active`
 
-Les **173 fichiers source/en-tête/fragment** de `headless/` sont suivis
+Les **171 fichiers source/en-tête/fragment** de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
 34 ont désormais un propriétaire exact dans le graphe courant ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
-La couverture de 251/251 ci-dessus ne s'applique **pas** à ce dossier.
+La couverture de 254/254 ci-dessus ne s'applique **pas** à ce dossier.
 
 ## Critères de tenue à jour
 
