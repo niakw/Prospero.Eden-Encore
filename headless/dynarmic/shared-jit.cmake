@@ -33,15 +33,7 @@ macro(eden_shared_jit_memory_inc)
     string(REPLACE "${eden_conf_plain}" "EDEN_CONF_ARG();" memory_source "${memory_source}")
 endmacro()
 
-# emit_x64_memory.h: A64 code may run on any core, so an exclusive store clears every
-# reservation of its address (its own included, which the store consumes anyway).
-macro(eden_shared_jit_memory_header)
-    set(eden_skip_own "        if (processor_index == conf.processor_id) {\n            continue;\n        }")
-    eden_shared_jit_require("${memory_emitter}" "${eden_skip_own}" "exclusive reservation clearing")
-    string(REPLACE "${eden_skip_own}"
-        "        if constexpr (!requires(const UserConfig& c) { c.tpidr_el0; }) {\n            if (processor_index == conf.processor_id) {\n                continue;\n            }\n        }"
-        memory_emitter "${memory_emitter}")
-endmacro()
+# The shared memory header policy is now inside Encore's maintained header.
 
 # a64_interface.cpp: upstream's Impl replaced by jit_impl.inc, with the group helpers before it.
 
