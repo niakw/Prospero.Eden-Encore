@@ -11,7 +11,7 @@ développement, les options JIT expérimentales, les backends et le build
 natif sélectionnent chacun leur sous-ensemble.
 
 L'inventaire complémentaire `docs/EDEN_ACTIVE_SOURCE_CATALOG.md` suit les
-244 fichiers de code et en-têtes dans `vendor/encore-active`,
+246 fichiers de code et en-têtes dans `vendor/encore-active`,
 y compris les backports de production et la dépendance graphique. Cette
 couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
@@ -84,7 +84,7 @@ et non les 458 scripts Python/shell/CMake du seul dossier `tools/`.
 | `headless/checked-fastmem.cmake` et quatre autres modules indirects | **BUILD**, changement de variables source avant écriture | Unités dérivées du CMake principal | Déjà indexées X03–X07 |
 | `headless/vulkan.cmake` | **BUILD**, copie/sélection d'un fork vérifié | `encore-active/eden-vulkan` | Aucun appel au générateur Python |
 
-**Règle de lecture :** le compteur `26 + 14 = 40` décrit uniquement les
+**Règle de lecture :** le compteur `26 + 13 = 39` décrit uniquement les
 sites `write_derived`, pas les générateurs Python, les copies de dépendances,
 les recettes CMake ni les sorties de ressources. **Zéro source sans propriétaire
 dans le catalogue `vendor/encore-active` n'implique pas zéro override hors de
@@ -403,11 +403,20 @@ avec ses deux traductions PRMT mode 0, échantillonnage borné et
 assertions de référence. Le module conserve le générateur indépendant
 Fermi2D, qui sera migré séparément.
 
+## Fermi2D : module GPU réduit à un sélecteur
+
+Le module `gpu_native_observability.cmake` ne construit plus aucun C++.
+Deux variantes complètes sous `vendor/encore-active/eden-core/src/video_core/engines/`
+reproduisent l'ancien code par défaut et les trois transformations du mode
+`EDEN_UNQUALIFIED_FERMI2D_COPY`, toujours désactivé par défaut. Le contrôle
+de parité hôte garantit les deux résultats compilés historiques, sans
+promettre le comportement console ni activer la voie expérimentale.
+
 ## Générateurs des modules CMake inclus — inventaire complémentaire
 
 Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules
-inclus par ce fichier contiennent **14 autres appels `write_derived()`**
-dans 4 fichiers. Le total de **40 appels** (26 + 14) est donc un **nombre de
+inclus par ce fichier contiennent **13 autres appels `write_derived()`**
+dans 3 fichiers. Le total de **39 appels** (26 + 13) est donc un **nombre de
 sites CMake**, pas un dénombrement des fichiers réellement produits à
 l'exécution. Un module inclus peut définir des macros sans les exécuter,
 et plusieurs sorties sont explicitement conditionnées.
@@ -418,23 +427,22 @@ et plusieurs sorties sont explicitement conditionnées.
 | M01 | `headless/dynarmic/shared-jit.cmake` | `${PORT_BUILD_DIR}/include/${eden_jitstate_relative}` | Shared JIT OFF par défaut |
 | M02 | `headless/dynarmic/shared-jit.cmake` | `${PORT_BUILD_DIR}/include/dynarmic/backend/x64/jit_group.h` | Shared JIT OFF par défaut |
 | M03 | `headless/dynarmic/shared-jit.cmake` | `${PORT_BUILD_DIR}/callback.cpp` | Shared JIT OFF par défaut |
-| M04 | `headless/gpu_native_observability.cmake` | `${PORT_BUILD_DIR}/fermi_2d_observed.cpp` | PS5_NATIVE |
-| M05 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/include/video_core/memory_manager.h` | Pont différé OFF |
-| M06 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/deferred-core/core/gpu_dirty_memory_manager.h` | Pont différé OFF |
-| M07 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/memory_manager_deferred.cpp` | Pont différé OFF |
-| M08 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/vulkan_rasterizer_deferred.cpp` | Pont différé OFF |
-| M09 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/dma_pusher_deferred.cpp` | Pont différé OFF |
-| M10 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/maxwell_dma_deferred.cpp` | Pont différé OFF |
-| M11 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/kepler_compute_deferred.cpp` | Pont différé OFF |
-| M12 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/engine_upload_deferred.cpp` | Pont différé OFF |
-| M13 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/memory-ps5-deferred.cpp` | Pont différé OFF |
-| M14 | `headless/jit-alias.cmake` | `${PORT_BUILD_DIR}/include/xbyak/xbyak.h` | JIT/alias |
+| M04 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/include/video_core/memory_manager.h` | Pont différé OFF |
+| M05 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/deferred-core/core/gpu_dirty_memory_manager.h` | Pont différé OFF |
+| M06 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/memory_manager_deferred.cpp` | Pont différé OFF |
+| M07 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/vulkan_rasterizer_deferred.cpp` | Pont différé OFF |
+| M08 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/dma_pusher_deferred.cpp` | Pont différé OFF |
+| M09 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/maxwell_dma_deferred.cpp` | Pont différé OFF |
+| M10 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/kepler_compute_deferred.cpp` | Pont différé OFF |
+| M11 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/engine_upload_deferred.cpp` | Pont différé OFF |
+| M12 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/memory-ps5-deferred.cpp` | Pont différé OFF |
+| M13 | `headless/jit-alias.cmake` | `${PORT_BUILD_DIR}/include/xbyak/xbyak.h` | JIT/alias |
 <!-- MODULE_GENERATORS_END -->
 
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **40 sites** `write_derived()`, ni dans
+Ils ne sont comptés ni dans les **39 sites** `write_derived()`, ni dans
 les **4 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,

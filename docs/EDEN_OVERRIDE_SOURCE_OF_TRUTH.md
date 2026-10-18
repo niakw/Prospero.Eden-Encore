@@ -16,15 +16,15 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **244 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **246 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
 - `headless/CMakeLists.txt` : **26 générateurs** `write_derived`.
-- Quatre modules CMake générateurs totalisent **14 générateurs**
-  `write_derived`, soit **40 sites** au total.
+- Trois modules CMake générateurs totalisent **13 générateurs**
+  `write_derived`, soit **39 sites** au total.
 - Cinq modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
-  nombre 40.
+  nombre 39.
 - `headless/` contient **8 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
@@ -51,7 +51,7 @@ nouveaux corps C++ destinés à la console.
 | `headless/checked-fastmem.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
 | `headless/dynarmic/reg_alloc.cmake` | Sélection/copie de deux sources Encore maintenues | Sélecteur conforme |
 | `headless/dynarmic/shared-jit.cmake` | Générateur de source dérivée, à déplacer | Dette de migration |
-| `headless/gpu_native_observability.cmake` | Générateur de source dérivée, à déplacer | Dette de migration |
+| `headless/gpu_native_observability.cmake` | Sélection de sources Encore maintenues | Sélecteur conforme |
 | `headless/guest_write_deferred_bridge.cmake` | Générateur de source dérivée, à déplacer | Dette de migration |
 | `headless/inject.cmake` | Orchestration ou toolchain | Sélecteur / configuration |
 | `headless/jit-alias.cmake` | Générateur de source dérivée, à déplacer | Dette de migration |
@@ -105,7 +105,7 @@ blobs Git identiques dans `vendor/encore-active/eden-core/dynarmic/shared-jit/`.
 Le sélecteur de `headless/dynarmic/shared-jit.cmake` lit les fichiers
 maintenus. **Ce module CMake conserve encore des transformations upstream
 à migrer** ; la relocalisation des données d'injection ne supprime pas les
-14 générateurs de modules. Le mode JIT partagé reste OFF par défaut.
+13 générateurs de modules. Le mode JIT partagé reste OFF par défaut.
 
 ## Fragments scalaires centralisés
 
@@ -207,6 +207,14 @@ contient désormais directement la traduction PRMT mode 0 de l'ancien
 générateur CMake. L'oracle hôte compare les corps PRMT, les diagnostics
 bornés et les assertions de référence. Les cas non pris en charge
 continuent de déclencher le même chemin d'échec.
+
+## Module GPU d'observabilité sans code dérivé
+
+`gpu_native_observability.cmake` choisit désormais des unités complètes
+pour PRMT, blitter et Fermi2D. Le mode Fermi2D expérimental reste OFF
+par défaut, et la source `fermi_2d_observed.cpp` préserve le
+comportement de compatibilité normal. Les deux variantes sont comparées
+au résultat historique de génération par l'oracle hôte.
 
 ## Correction de cache de shaders centralisée
 
