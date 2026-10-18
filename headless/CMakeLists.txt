@@ -1527,13 +1527,17 @@ set_property(TARGET hid_core PROPERTY SOURCES "${hid_sources}")
 # Clang 18 trips over libstdc++ range constraints for implicit vector-to-span
 # conversions inside these generic lambdas. Use the equivalent pointer/count
 # constructor for every variable-argument wrapper.
+# Native nvdrv span conversion has one maintained, complete header.
+# Keep the existing staged include priority, but never rewrite the header in CMake.
 set(ioctl_header "core/hle/service/nvdrv/devices/ioctl_serialization.h")
-file(READ "${PROJECT_SOURCE_DIR}/src/${ioctl_header}" ioctl_source)
-string(REPLACE "(fixed, inl_out," "(fixed, std::span<InlOutVarArg>{inl_out.data(), inl_out.size()}," ioctl_source "${ioctl_source}")
-string(REPLACE "(var, std::forward" "(std::span<VarArg>{var.data(), var.size()}, std::forward" ioctl_source "${ioctl_source}")
-string(REPLACE "(fixed, var," "(fixed, std::span<VarArg>{var.data(), var.size()}," ioctl_source "${ioctl_source}")
-string(REPLACE "(fixed, inl_in," "(fixed, std::span<InlInVarArg>{inl_in.data(), inl_in.size()}," ioctl_source "${ioctl_source}")
-write_derived("${PORT_BUILD_DIR}/include/${ioctl_header}" "${ioctl_source}")
+set(EDEN_MAINTAINED_IOCTL
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/${ioctl_header}")
+if(NOT EXISTS "${EDEN_MAINTAINED_IOCTL}")
+    message(FATAL_ERROR "Missing maintained nvdrv ioctl serialization header")
+endif()
+file(MAKE_DIRECTORY "${PORT_BUILD_DIR}/include/core/hle/service/nvdrv/devices")
+configure_file("${EDEN_MAINTAINED_IOCTL}"
+    "${PORT_BUILD_DIR}/include/${ioctl_header}" COPYONLY)
 target_include_directories(core BEFORE PRIVATE "${PORT_BUILD_DIR}/include")
 
 # Cached build trees may still hold the old generated slab header even after
