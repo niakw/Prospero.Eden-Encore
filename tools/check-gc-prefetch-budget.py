@@ -3,14 +3,15 @@
 """R442: GC staging budget must mirror the actual eviction budget."""
 from pathlib import Path
 root = Path(__file__).resolve().parents[1]
-included = (root / "headless/vulkan_gc_downloads.inc").read_text()
+included = (root / "vendor/encore-active/eden-vulkan-oracles/vulkan_gc_downloads.inc").read_text()
 active = (root / "vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h").read_text()
 port = (root / "tools/prepare-vulkan-port.py").read_text()
 gc_begin = active.index("void TextureCache<P>::RunGarbageCollector() {")
 gc_end = active.index("\ntemplate <class P>", gc_begin)
 gc = active[gc_begin:gc_end]
-# The include is the canonical source used by the pinned port generator.
-assert "(port / 'vulkan_gc_downloads.inc').read_text()" in port
+# The historical oracle remains tracked under encore-active, whereas the
+# maintained Vulkan texture cache is the actual compiled source. Check both.
+assert "(vulkan_oracle / 'vulkan_gc_downloads.inc').read_text()" in port
 for statement in (
     "size_t remaining = num_iterations;",
     "size_t scanned = 0;",
