@@ -18,65 +18,6 @@ function(eden_shared_jit_require source anchor what)
 endfunction()
 
 # a64_emit_x64.h: the group and the guest range of the last Emit.
-macro(eden_shared_jit_emitter_header)
-    eden_shared_jit_require("${emitter_header}" "    A64::Jit* jit_interface = nullptr;" "A64 emitter members")
-    eden_shared_jit_require("${emitter_header}" "#include \"dynarmic/backend/x64/emit_x64.h\"" "A64 emitter includes")
-    string(REPLACE "#include \"dynarmic/backend/x64/emit_x64.h\""
-        "#include \"dynarmic/backend/x64/emit_x64.h\"\n#include \"dynarmic/backend/x64/jit_group.h\""
-        emitter_header "${emitter_header}")
-    string(REPLACE "    A64::Jit* jit_interface = nullptr;"
-        "    A64::Jit* jit_interface = nullptr;\n    // ProsperoEden: the process's shared blocks (the JIT sets it), and the guest range and\n    // unlinked branch sites of the last Emit, registered by the JIT.\n    JitGroup* eden_group = nullptr;\n    u64 eden_range_first = 0;\n    u64 eden_range_last = 0;\n    std::vector<JitGroup::PendingSite> eden_pending_sites;"
-        emitter_header "${emitter_header}")
-endmacro()
-
-# a64_emit_x64.cpp: per-core values from the JIT state, linking through the group, no
-# registration in Emit (the JIT registers the block).
-macro(eden_shared_jit_emitter)
-    set(eden_register "    const auto range = boost::icl::discrete_interval<u64>::closed(descriptor.PC(), end_location.PC() - 1);\n    block_ranges.AddRange(range, descriptor);\n\n    auto bdesc = RegisterBlock(descriptor, entrypoint, size);")
-    set(eden_dispatch "        code.mov(r8, u64(fast_dispatch_table.data()));")
-    set(eden_get_tpidr "        code.mov(result, u64(conf.tpidr_el0));")
-    set(eden_get_tpidrro "        code.mov(result, u64(conf.tpidrro_el0));")
-    set(eden_set_tpidr "        code.mov(addr, u64(conf.tpidr_el0));")
-    set(eden_push_rsb "    EmitX64::EmitPushRSB(ctx, inst);\n}")
-    set(eden_links_begin "bool EmitTerminalImpl(A64EmitX64& e, IR::Term::LinkBlock terminal, IR::LocationDescriptor, bool is_single_step) {")
-    set(eden_opcode_call "opcode_branch:\n        (this->*opcode_handlers[size_t(opcode)])(ctx, &inst);")
-    set(eden_links_end "bool EmitTerminalImpl(A64EmitX64& e, IR::Term::PopRSBHint, IR::LocationDescriptor, bool is_single_step) {")
-    foreach(anchor eden_register eden_dispatch eden_get_tpidr eden_get_tpidrro eden_set_tpidr eden_push_rsb eden_links_begin eden_links_end eden_opcode_call)
-        eden_shared_jit_require("${emitter}" "${${anchor}}" "A64 emitter (${anchor})")
-    endforeach()
-    string(REPLACE "${eden_register}"
-        "    // ProsperoEden: the JIT publishes the block in its JitGroup (a64_interface.cpp).\n    eden_range_first = descriptor.PC();\n    eden_range_last = end_location.PC() - 1;\n    const BlockDescriptor bdesc{entrypoint, size};"
-        emitter "${emitter}")
-    string(REPLACE "${eden_dispatch}"
-        "        code.mov(r8, qword[code.ABI_JIT_PTR + offsetof(A64JitState, eden_fast_dispatch)]);"
-        emitter "${emitter}")
-    string(REPLACE "${eden_get_tpidr}"
-        "        code.mov(result, qword[code.ABI_JIT_PTR + offsetof(A64JitState, eden_tpidr_el0)]);"
-        emitter "${emitter}")
-    string(REPLACE "${eden_get_tpidrro}"
-        "        code.mov(result, qword[code.ABI_JIT_PTR + offsetof(A64JitState, eden_tpidrro_el0)]);"
-        emitter "${emitter}")
-    string(REPLACE "${eden_set_tpidr}"
-        "        code.mov(addr, qword[code.ABI_JIT_PTR + offsetof(A64JitState, eden_tpidr_el0)]);"
-        emitter "${emitter}")
-    # Common opcodes go through EmitX64 member pointers (the base versions): the return stack
-    # push must use A64EmitX64::EmitPushRSB, whose target is linked through the JitGroup.
-    string(REPLACE "${eden_opcode_call}"
-        "opcode_branch:\n        if (opcode == IR::Opcode::PushRSB)\n            A64EmitX64::EmitPushRSB(ctx, &inst);\n        else\n            (this->*opcode_handlers[size_t(opcode)])(ctx, &inst);"
-        emitter "${emitter}")
-    file(READ "${EDEN_SHARED_JIT_DIR}/jit_push_rsb.inc" eden_push_rsb_body)
-    string(REPLACE "${eden_push_rsb}" "${eden_push_rsb_body}" emitter "${emitter}")
-    string(FIND "${emitter}" "${eden_links_begin}" eden_links_at)
-    string(FIND "${emitter}" "${eden_links_end}" eden_links_stop)
-    if(eden_links_stop LESS eden_links_at)
-        message(FATAL_ERROR "Pinned A64 link terminals changed for the shared JIT")
-    endif()
-    string(SUBSTRING "${emitter}" 0 ${eden_links_at} eden_links_prefix)
-    string(SUBSTRING "${emitter}" ${eden_links_stop} -1 eden_links_suffix)
-    file(READ "${EDEN_SHARED_JIT_DIR}/jit_links.inc" eden_links)
-    set(emitter "${eden_links_prefix}${eden_links}\n${eden_links_suffix}")
-endmacro()
-
 # emit_x64_memory.cpp.inc: the running core's monitor slots and configuration.
 macro(eden_shared_jit_memory_inc)
     set(eden_address "code.mov(tmp, std::bit_cast<u64>(GetExclusiveMonitorAddressPointer(conf.global_monitor, conf.processor_id)));")
