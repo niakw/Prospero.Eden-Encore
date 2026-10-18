@@ -42,7 +42,6 @@ approved_sync = {
     "string(REPLACE": (
         'string(REPLACE "${gpu_sync_wait_original}" "${gpu_sync_wait_replacement}"',
         'string(REPLACE "${gpu_tick_lock_original}" "${gpu_tick_lock_safe}"',
-        'string(REPLACE "${gpu_block_wait_original}" "${gpu_block_wait_checked}"',
         'string(REPLACE "${gpu_enqueue_fence_original}" "${gpu_enqueue_fence_atomic}"',
         'string(REPLACE "${gpu_read_capture_original}"',
         # Native memory is already a derived translation unit for the
@@ -127,6 +126,16 @@ assert 'list(REMOVE_ITEM core_sources "hle/service/filesystem/fsp/fs_i_file.cpp"
 assert 'target_include_directories(core PRIVATE "${EDEN_PORT_DIR}")' in c
 assert 'write_derived("${PORT_BUILD_DIR}/gpu_thread.cpp"' not in c
 assert 'write_derived("${PORT_BUILD_DIR}/include/common/bounded_threadsafe_queue.h"' not in c
+# The stop-aware producer's single implementation is the selected GPU source,
+# not a fresh CMake string rewrite or a historical injection fragment.
+producer_header = (active / "eden-gpu/include/common/bounded_threadsafe_queue.h").read_text()
+assert producer_header.count("bool EmplaceWaitWithStopToken(") == 1
+assert "producer.cv.wait(lock, stop_token" in producer_header
+for variant in ("gpu_thread_dev.cpp", "gpu_thread_quiet.cpp"):
+    gpu_worker = (active / "eden-gpu" / variant).read_text()
+    assert "state.queue.EmplaceWaitWithStopToken(stop_source.get_token()," in gpu_worker
+assert 'configure_file("${EDEN_ACTIVE_GPU}/include/common/bounded_threadsafe_queue.h"' in c
+assert 'string(REPLACE "${gpu_block_wait_original}" "${gpu_block_wait_checked}"' not in c
 assert 'configure_file("${EDEN_ACTIVE_GPU}/include/common/bounded_threadsafe_queue.h"' in c
 assert 'configure_file("${EDEN_ACTIVE_GPU}/${EDEN_GPU_WORKER_VARIANT}"' in c
 assert 'write_derived("${PORT_BUILD_DIR}/fs_i_file.cpp"' not in c
