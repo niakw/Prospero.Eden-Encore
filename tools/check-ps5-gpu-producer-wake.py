@@ -13,7 +13,7 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 # Extract the real producer method from the complete, shipping GPU header.
-# Historical gpu-injections/*.inc must never be authoritative test inputs.
+# The old gpu_queue_stop_wait.inc has been retired; the selected full queue header is authoritative.
 active_gpu = root / "vendor/encore-active/eden-gpu"
 header = (active_gpu / "include/common/bounded_threadsafe_queue.h").read_text()
 quiet = (active_gpu / "gpu_thread_quiet.cpp").read_text()

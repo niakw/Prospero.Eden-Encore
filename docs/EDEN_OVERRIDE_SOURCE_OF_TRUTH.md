@@ -16,7 +16,7 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **247 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **246 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
 - `headless/CMakeLists.txt` : **26 générateurs** `write_derived`.
@@ -162,12 +162,13 @@ l'unité Eden épinglée. Parité de contenu vérifiable hors console.
 
 ## Injections GPU centralisées
 
-Les deux fragments `gpu_queue_stop_wait.inc` et `gpu_sync_failure_wait.inc`
-sont des entrées de code maintenues exclusivement dans
-`vendor/encore-active/eden-core/gpu-injections/`. Leur contenu reste
-bit-à-bit identique aux blobs Git déplacés. CMake charge ces fichiers
-comme données d'injection en attendant la migration des unités C++ dérivées,
-avec dépendances explicites pour toute modification.
+La file GPU utilise exclusivement
+`vendor/encore-active/eden-gpu/include/common/bounded_threadsafe_queue.h`
+et les deux variantes du worker, directement sélectionnées dans CMake.
+L'ancien fragment `gpu_queue_stop_wait.inc`, redondant et non compilé,
+a été supprimé. Le seul fragment encore injecté dans cette famille est
+`gpu_sync_failure_wait.inc`, en attendant la migration du `gpu.cpp`
+complet vers `encore-active`.
 
 ## Table mémoire sparse maintenue
 

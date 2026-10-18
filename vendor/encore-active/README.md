@@ -69,7 +69,7 @@ production depuis le snapshot épinglé, contrôlés par empreintes et installé
 par `tools/install-vendored-eden-backports.py` (pas de `git apply` au build).
 
 Catalogue exhaustif des fichiers C/C++ actifs : `docs/EDEN_ACTIVE_SOURCE_CATALOG.md`
-(247 fichiers enregistrés et rattachés au graphe technique ; ce lien n’atteste pas leur exécution sur console).
+(246 fichiers enregistrés et rattachés au graphe technique ; ce lien n’atteste pas leur exécution sur console).
 Le recensement des fichiers n'est pas une validation de leurs fonctions.
 Le générateur `renderer_opengl.cpp` n'est plus nécessaire : le renderer
 original est sélectionné directement, sans créer une copie maintenue identique.
