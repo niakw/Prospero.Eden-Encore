@@ -24,8 +24,8 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 **Important :** une correspondance de chemin n'est ni un test hôte,
 ni une certification console. Le graphe
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` porte les contrats fonctionnels,
-leurs états et les preuves. L'inventaire des 20 générateurs CMake
-principaux, 12 générateurs de modules, six modules indirects et 46 patches
+leurs états et les preuves. L'inventaire des 19 générateurs CMake
+principaux, 12 générateurs de modules, cinq modules indirects et 46 patches
 reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
 <!-- ACTIVE_SOURCE_CATALOG_START -->
