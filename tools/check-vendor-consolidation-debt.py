@@ -822,6 +822,13 @@ assert 'list(APPEND jit_sources "${EDEN_MAINTAINED_SCALAR_BACKEND}/emit_x64_${un
 for unit in ("vector", "data_processing"):
     assert (active / f"eden-core/src/dynarmic/backend/x64/emit_x64_{unit}.cpp").is_file()
 assert (root / "tools/check-maintained-scalar-emitters.py").is_file()
+# Native GPU software blitter has a tracked complete source based on the
+# shipping backport; the former three edits are tested outside CMake.
+assert (active / "eden-core/src/video_core/engines/sw_blitter/blitter.cpp").is_file()
+assert 'target_sources(video_core PRIVATE "${EDEN_MAINTAINED_NATIVE_BLITTER}")' in (root / "headless/gpu_native_observability.cmake").read_text()
+assert (root / "tools/check-maintained-sw-blitter.py").is_file()
+print("VENDOR_MAINTAINED_SW_BLITTER_OWNER_PASS")
+
 # Native JIT constant pool has a complete tracked source and explicit selector.
 assert (active / "eden-core/src/dynarmic/backend/x64/constant_pool.cpp").is_file()
 assert 'target_sources(dynarmic PRIVATE "${EDEN_MAINTAINED_CONSTANT_POOL}")' in (root / "headless/jit-alias.cmake").read_text()
@@ -1212,12 +1219,12 @@ for module in module_files:
     module_current.extend((module, target) for target in
                           re.findall(r'write_derived\(\s*"([^"]+)"', content))
 assert module_recorded == module_current, "Module CMake source generator inventory is stale"
-assert len(module_current) == 16, len(module_current)
+assert len(module_current) == 15, len(module_current)
 # Indirect X01/X02 are no longer CMake generators: full source units
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 42
+assert len(recorded) + len(module_recorded) == 41
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
