@@ -15,35 +15,27 @@ assert 'EDEN_GUEST_FAULT_RETRY' not in s
 assert 'EDEN_GUEST_CODE_RANGE entry=0x%llx end=0x%llx bytes=%llu' in s
 assert 'const u64 code_start = GetInteger(process->GetEntryPoint());' in s
 assert 'code_end = info.m_address + info.m_size;' in s
-# A prefetch abort used to report only the thread name. Require the native
-# CMake replacement to capture the stopped guest context exactly once on the
-# fault path, never per guest JIT entry or normal frame.
-cmake = (Path(__file__).resolve().parents[1] / "headless/CMakeLists.txt").read_text()
-prefetch = cmake.split('string(REPLACE "${prefetch_old}" [=[', 1)[1].split(']=]', 1)[0]
-assert 'if (prefetch_abort) {' in prefetch
-assert 'interface->GetContext(thread->GetContext());' in prefetch
-assert 'thread->GetThreadId()' in prefetch
-assert 'const auto& fault_context = thread->GetContext();' in prefetch
-assert 'fault_context.pc' in prefetch
-assert 'fault_context.lr' in prefetch
-assert 'fault_context.sp' in prefetch
-assert 'fault_context.fp' in prefetch
-assert 'EDEN_GUEST_FAULT_LR_MAP lr=0x%llx query=%s' in prefetch
-assert 'process->GetPageTable().QueryInfo(' in prefetch
-assert '&lr_info, &lr_page, fault_context.lr' in prefetch
-assert 'Kernel::KMemoryInfo lr_info{};' in prefetch
-assert 'Kernel::Svc::PageInfo lr_page{};' in prefetch
-assert '#include \\"core/hle/kernel/k_process.h\\"' in cmake
-assert prefetch.index('const auto& fault_context') < prefetch.index('GetPageTable().QueryInfo(')
-assert prefetch.index('GetPageTable().QueryInfo(') < prefetch.index('RecordGuestFault(eden_fault);')
-for register in ('pc', 'lr', 'sp', 'fp'):
-    assert f'{register}=0x%llx' in prefetch
-# The registers are captured after the fatal context save, but before
-# publishing the one-shot fault to the launcher.
-assert prefetch.index('interface->GetContext(thread->GetContext());') < prefetch.index('const auto& fault_context')
-assert prefetch.index('const auto& fault_context') < prefetch.index('RecordGuestFault(eden_fault);')
-assert 'RecordGuestFault(eden_fault);' in prefetch
-assert prefetch.index('interface->GetContext(thread->GetContext());') < prefetch.index('RecordGuestFault(eden_fault);')
-assert '#include <cstdio>' in cmake
+# G12 has one maintained PhysicalCore translation unit per build profile.
+# Both must capture the fatal guest context at the actual stopped prefetch path.
+base = Path(__file__).resolve().parents[1]
+cmake = (base / "headless/CMakeLists.txt").read_text()
+assert 'configure_file("${EDEN_PHYSICAL_CORE_SOURCE}" "${PORT_BUILD_DIR}/physical_core.cpp" COPYONLY)' in cmake
+for mode in ("standard", "dev"):
+    source = (base / f"vendor/encore-active/eden-core/src/core/hle/kernel/physical_core_{mode}.cpp").read_text()
+    prefetch = source.split('if (prefetch_abort) {', 1)[1].split('::Eden::RecordGuestFault(eden_fault);', 1)[0]
+    assert "interface->GetContext(thread->GetContext());" in prefetch
+    assert "thread->GetThreadId()" in prefetch
+    assert "const auto& fault_context = thread->GetContext();" in prefetch
+    assert "process->GetPageTable().QueryInfo(" in prefetch
+    assert "&lr_info, &lr_page, fault_context.lr" in prefetch
+    assert "Kernel::KMemoryInfo lr_info{};" in prefetch
+    assert "Kernel::Svc::PageInfo lr_page{};" in prefetch
+    assert "EDEN_GUEST_FAULT_LR_MAP lr=0x%llx query=%s" in prefetch
+    for reg in ("pc", "lr", "sp", "fp"):
+        assert f"{reg}=0x%llx" in prefetch
+    assert prefetch.index("interface->GetContext(thread->GetContext());") < prefetch.index("const auto& fault_context")
+    assert prefetch.index("const auto& fault_context") < prefetch.index("GetPageTable().QueryInfo(")
+    assert '#include "guest_fault.h"' in source
+    assert '#include <cstdio>' in source
 print("PASS PS5 guest fault returns to library without automatic restart")
 print("CI is source evidence only; FC27 on-console GPU and launcher tests still required")

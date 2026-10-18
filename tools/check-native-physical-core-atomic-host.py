@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the native CMake atomic-ref derivation through actual core methods.
+"""Run maintained PhysicalCore atomic-ref implementation through actual core methods.
 
 The pinned bool ABI is unchanged. Every source access must be atomic; the
 host fixture confirms interrupt observation under concurrent toggles.
@@ -15,16 +15,19 @@ root = Path(__file__).resolve().parents[1]
 header = (root / "vendor/sources/eden/src/core/hle/kernel/physical_core.h").read_text()
 pinned = (root / "vendor/sources/eden/src/core/hle/kernel/physical_core.cpp").read_text()
 cmake_source = (root / "headless/CMakeLists.txt").read_text()
-helper = root / "headless/physical_core_interrupt_atomic.cmake"
+owned = root / "vendor/encore-active/eden-core/src/core/hle/kernel"
 existing_fixture = root / "tools/check-native-physical-core-interrupt-ack-host.py"
 workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
 assert "    bool m_is_interrupted{};" in header
-assert "#include <atomic>" in helper.read_text()
-assert "include(\"${CMAKE_CURRENT_LIST_DIR}/physical_core_interrupt_atomic.cmake\")" in cmake_source
+assert not (root / "headless/physical_core_interrupt_atomic.cmake").exists()
+assert 'configure_file("${EDEN_PHYSICAL_CORE_SOURCE}" "${PORT_BUILD_DIR}/physical_core.cpp" COPYONLY)' in cmake_source
 assert "python3 -B tools/check-native-physical-core-atomic-host.py" in workflow
 assert pinned.count("m_is_interrupted") == 5
 assert "std::atomic_ref" not in pinned
-assert "std::atomic_ref<const bool>" in helper.read_text()
+for filename in ("physical_core_standard.cpp", "physical_core_dev.cpp"):
+    derived = (owned / filename).read_text()
+    assert derived.startswith("#include <atomic>\\n")
+    assert "std::atomic_ref<const bool>" in derived
 
 compiler = shutil.which("g++") or shutil.which("clang++")
 assert compiler and shutil.which("cmake"), "CMake and C++20 compiler required"
@@ -54,21 +57,21 @@ with tempfile.TemporaryDirectory(prefix="encore-physical-atomic-") as folder:
     for profile in (False, True):
         path = base / ("profile.cpp" if profile else "default.cpp")
         build_script = base / ("profile.cmake" if profile else "default.cmake")
-        # A diagnostic-only read is also required to participate atomically.
-        extra = (
-            'string(REPLACE "void PhysicalCore::Idle() {" '
-            '"void PhysicalCore::Idle() {\\n    bool slept = !m_is_interrupted; (void)slept;" '
-            'physical_core_source "${physical_core_source}")\n'
-        ) if profile else ""
+        maintained = owned / ("physical_core_dev.cpp" if profile else "physical_core_standard.cpp")
+        selection_begin = cmake_source.index('set(EDEN_PHYSICAL_CORE_DIR "')
+        selection_end = cmake_source.index('list(REMOVE_ITEM core_sources "hle/kernel/physical_core.cpp")', selection_begin)
+        selection = cmake_source[selection_begin:selection_end]
         build_script.write_text(
-            f'set(EDEN_DEV_PROFILE {"ON" if profile else "OFF"})\n'
-            f'file(READ "{(root / "vendor/sources/eden/src/core/hle/kernel/physical_core.cpp").as_posix()}" physical_core_source)\n'
-            + extra +
-            f'include("{helper.as_posix()}")\n'
-            f'file(WRITE "{path.as_posix()}" "${{physical_core_source}}")\n'
+            "cmake_minimum_required(VERSION 3.25)\\n"
+            + f'set(PORT_ROOT "{root.as_posix()}")\\n'
+            + f'set(PORT_BUILD_DIR "{base.as_posix()}")\\n'
+            + f'set(EDEN_DEV_PROFILE {"ON" if profile else "OFF"})\\n'
+            + selection
         )
         subprocess.run(["cmake", "-P", str(build_script)], check=True, timeout=20)
-        derived = path.read_text()
+        staged = base / "physical_core.cpp"
+        assert staged.read_bytes() == maintained.read_bytes()
+        derived = staged.read_text()
         assert derived.startswith("#include <atomic>\n")
         assert derived.count("m_is_interrupted") == (6 if profile else 5)
         assert derived.count("std::atomic_ref<const bool>{m_is_interrupted}.load(std::memory_order_relaxed)") == (4 if profile else 3)
