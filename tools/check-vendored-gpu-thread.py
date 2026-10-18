@@ -55,8 +55,8 @@ def main() -> None:
     # assertion: the resulting compiler inputs must match both committed
     # variants, and none may require the historical replacement pipeline.
     marker='    if(PS5_NATIVE)\n        set(EDEN_ACTIVE_GPU'
-    after='    else()\\n'
-    assert cmake.count(marker)==cmake.count(after)==1
+    after='    else()\n'
+    assert cmake.count(marker)==1
     native=cmake[cmake.index(marker):cmake.index(after,cmake.index(marker))]+'    endif()\n'
     with tempfile.TemporaryDirectory(prefix='eden-gpu-cmake-contract-') as d:
         work=Path(d)
