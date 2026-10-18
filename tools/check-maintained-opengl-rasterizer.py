@@ -20,7 +20,8 @@ assert (maintained / "gl_rasterizer_dev.cpp").read_text() == dev
 assert "CaptureDevelopmentPass();" not in baseline
 assert "rasterizer_draw" not in baseline
 assert 'list(APPEND video_sources "${EDEN_MAINTAINED_GL_RASTERIZER}")' in cmake
-assert '"/gl_rasterizer_dev.cpp"' in cmake
+assert '"${EDEN_MAINTAINED_GL_RASTERIZER_ROOT}/gl_rasterizer_dev.cpp"' in cmake
+assert '"${EDEN_MAINTAINED_GL_RASTERIZER_ROOT}/gl_rasterizer.cpp"' in cmake
 assert 'target_include_directories(video_core PRIVATE "${EDEN_PORT_DIR}")' in cmake
 assert 'write_derived("${PORT_BUILD_DIR}/gl_rasterizer.cpp"' not in cmake
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/gl_rasterizer.cpp"' not in cmake
