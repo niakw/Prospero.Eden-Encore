@@ -101,7 +101,7 @@ Les variantes volontairement distinctes doivent chacune avoir une **sélection c
 
 - `vendor/encore-active/` : inventaire de sources et fragments maintenus dans [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) ; la couverture de chemins n'est pas une preuve d'exécution.
 - `headless/CMakeLists.txt` : générateurs `write_derived()` restants et positions exactes dans [`EDEN_OVERRIDE_MIGRATION_INVENTORY.md`](EDEN_OVERRIDE_MIGRATION_INVENTORY.md) ; les modules indirects y sont suivis séparément.
-- Modules CMake secondaires : **12 appels** supplémentaires, soit **37 sites** documentés au total ; ces appels ne représentent pas nécessairement 68 fichiers distincts.
+- Modules CMake secondaires : **12 appels** supplémentaires, soit **36 sites** documentés au total ; ces appels ne représentent pas nécessairement 68 fichiers distincts.
 - Plusieurs modules changent encore indirectement une variable contenant du code C++ avant génération, sans nécessairement appeler eux-mêmes `write_derived()`.
 - `headless/` : fragments `.inc` résiduels à classer par **consommateur effectif**, inventoriés dans [`EDEN_OVERRIDE_SOURCE_OF_TRUTH.md`](EDEN_OVERRIDE_SOURCE_OF_TRUTH.md) ; les patches historiques restent comptés distinctement.
 - `tools/` comporte des centaines de scripts ; **les scripts de préparation/installation et leurs effets sur le staging** doivent être vérifiés, pas classés « tests uniquement » par leur répertoire.

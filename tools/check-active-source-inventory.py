@@ -94,7 +94,7 @@ print("ENCORE_NATIVE_MEMORY_OWNER_PASS", f"headers={len(native_mem)}")
 # Maintained core code and headers must never be silently omitted from the
 # function-owner register. Do not confuse an indexed path with a HOST proof.
 maintained_core_paths = [path for path in physical if path.startswith("eden-core/")]
-assert len(maintained_core_paths) == 87, ("maintained core source set changed", len(maintained_core_paths))
+assert len(maintained_core_paths) == 89, ("maintained core source set changed", len(maintained_core_paths))
 assert all(path in graph for path in maintained_core_paths), (
     "uncatalogued maintained core source paths",
     [path for path in maintained_core_paths if path not in graph],
@@ -203,7 +203,7 @@ for p, family, owner, state in headless_rows:
             "headless graph owner stale", p)
     else:
         assert owner == "—" and state.strip() == "À qualifier", ("headless owner stale", p)
-assert "**177** chemins" in headless_doc
+assert "**175** chemins" in headless_doc
 assert f"**{headless_linked}** chemins déjà présents" in headless_doc
 assert f"**{len(headless_actual)-headless_linked}** chemins sans propriétaire exact" in headless_doc
 print("ENCORE_HEADLESS_SOURCE_CATALOG_PASS",

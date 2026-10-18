@@ -16,15 +16,15 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **247 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **249 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **25 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **24 générateurs** `write_derived`.
 - Deux modules CMake générateurs totalisent **12 générateurs**
-  `write_derived`, soit **37 sites** au total.
+  `write_derived`, soit **36 sites** au total.
 - Six modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
-  nombre 37.
+  nombre 36.
 - `headless/` contient **8 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
@@ -192,6 +192,14 @@ Le header épinglé `xbyak.h` est maintenu sous
 BSD d'origine et les huit adaptations d'alias mémoire. CMake ne fait plus
 que le copier. Le module `jit-alias.cmake` conserve une modification
 indirecte de `code_source` (X09), explicitement non migrée.
+
+## Dynarmic : suivi des blocs centralisé
+
+Les unités `block_range_information.cpp` et `.h` ne sont plus
+dupliquées dans `headless/dynarmic/`. Elles résident sous
+`vendor/encore-active/eden-core/src/dynarmic/backend/` ;
+CMake sélectionne le .cpp et copie le header pour préserver le
+chemin d'inclusion prioritaire. La logique et le profil JIT ne changent pas.
 
 ## Pool de constantes JIT maintenu
 
