@@ -202,82 +202,29 @@ endif()
   # Page-local W^X: constants stay RW/NX; old code stays RX unless patched.
   # Apply the same derivative to Linux host correctness/pressure tests.
 if(PS5_NATIVE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
-set(code_relative "dynarmic/backend/x64/block_of_code")
-file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/${code_relative}.h" code_header)
-string(REPLACE "    bool prelude_complete = false;"
-      "    size_t protection_end = 0;\n    size_t executable_end = 0;\n    size_t write_begin = 0;\n    bool writing = true;\n    std::vector<size_t> patch_pages;\n    bool prelude_complete = false;" code_header "${code_header}")
-  write_derived("${PORT_BUILD_DIR}/include/${code_relative}.h" "#include <vector>\n${code_header}")
-target_include_directories(dynarmic BEFORE PUBLIC "${PORT_BUILD_DIR}/include")
-file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/${code_relative}.cpp" code_source)
+# Complete BlockOfCode sources are maintained in Encore, staged as byte-exact copies.
 include("${EDEN_PORT_DIR}/jit-alias.cmake")
-    string(REPLACE "#include \"dynarmic/backend/x64/block_of_code.h\""
-        "#include \"dynarmic/backend/x64/block_of_code.h\"\n#include \"${EDEN_PORT_DIR}/jit-allocator.h\"\n#include \"${EDEN_PORT_DIR}/jit-sparse-commit.h\"" code_source "${code_source}")
-    string(REPLACE "        , nullptr)\n    , constant_pool"
-        "        , EdenJitAllocator())\n    , constant_pool" code_source "${code_source}")
+set(EDEN_MAINTAINED_BOC_ROOT "${PORT_ROOT}/vendor/encore-active/eden-core/src/dynarmic/backend/x64")
+set(EDEN_BOC_HEADER "${EDEN_MAINTAINED_BOC_ROOT}/block_of_code.h")
 if(PS5_NATIVE)
-    string(PREPEND code_source "#define EDEN_JIT_ALIAS_NATIVE 1\n")
-    string(REPLACE "    GenRunCode(rcp);"
-        "    std::printf(\"EDEN_JIT_FEATURES mask=%x cache_bytes=%zu\\n\", unsigned(GetHostFeatures()), total_code_size);\n    GenRunCode(rcp);" code_source "${code_source}")
-    # Unix Dynarmic assumes memory is eagerly backed. The PS5 sparse path
-    # commits each new executable chunk at its existing virtual address.
-    # A selected sparse allocator NEVER falls back to dense RX; the commit
-    # implementation already checks region ownership/capacity under its lock.
-    # Skip the earlier redundant IsSparseJitCode() map lookup and mutex lock
-    # for each compiled guest block (4 guest workers compete otherwise).
-    set(jit_commit_anchor "void BlockOfCode::EnsureMemoryCommitted([[maybe_unused]] size_t codesize) {\n")
-    string(FIND "${code_source}" "${jit_commit_anchor}" jit_commit_at)
-    if(jit_commit_at LESS 0)
-        message(FATAL_ERROR "Pinned Dynarmic JIT commit boundary changed")
-    endif()
-    string(REPLACE "${jit_commit_anchor}"
-        "${jit_commit_anchor}#ifdef PS5_NATIVE\n    if (::Eden::Experimental::sparse_jit_cache.load(std::memory_order_relaxed)) {\n        const size_t written = getSize();\n        const auto target = ::Eden::Jit::PlanSparseCommit(written, codesize, maxSize_);\n        if (!target.valid ||\n            !::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), target.bytes)) {\n            std::fprintf(stderr, \"EDEN_JIT_SPARSE_COMMIT_FAILED used=%zu next=%zu capacity=%zu\\n\", written, codesize, maxSize_);\n            throw std::bad_alloc{};\n        }\n        if (target.clamped)\n            std::fprintf(stderr, \"EDEN_JIT_SPARSE_PRECOMMIT_CLAMPED used=%zu hint=%zu target=%zu capacity=%zu\\n\",\n                         written, codesize, target.bytes, maxSize_);\n        return;\n    }\n#endif\n"
-        code_source "${code_source}")
+    set(EDEN_BOC_UNIT "${EDEN_MAINTAINED_BOC_ROOT}/block_of_code_native.cpp")
+else()
+    set(EDEN_BOC_UNIT "${EDEN_MAINTAINED_BOC_ROOT}/block_of_code_host.cpp")
 endif()
-  # ConstantPool has completed construction before this body. Isolate its last
-  # page from executable prelude, without accessing fields during construction.
-  string(REPLACE "    EnableWriting();\n    EnsureMemoryCommitted(PRELUDE_COMMIT_SIZE);"
-      "    align(sysconf(_SC_PAGESIZE));\n    write_begin = getSize();\n    executable_end = write_begin;\n    if (hasWritableAlias() && mprotect(const_cast<u8*>(getCode()), write_begin, PROT_READ) != 0) std::abort();\n    EnableWriting();\n    EnsureMemoryCommitted(PRELUDE_COMMIT_SIZE);" code_source "${code_source}")
-  # Keep generated helper routines RX even while guest blocks are being patched.
-  string(REPLACE "    prelude_complete = true;"
-      "    align(sysconf(_SC_PAGESIZE));\n    prelude_complete = true;" code_source "${code_source}")
-  file(READ "${EDEN_PORT_DIR}/jit-permissions.inc" permission_methods)
-  string(FIND "${code_source}" "void BlockOfCode::EnableWriting()" permission_start)
-  string(FIND "${code_source}" "size_t BlockOfCode::SpaceRemaining()" permission_end)
-  if(permission_start LESS 0 OR permission_end LESS permission_start)
-      message(FATAL_ERROR "Pinned JIT permission methods changed")
-  endif()
-  string(SUBSTRING "${code_source}" 0 ${permission_start} code_prefix)
-  string(SUBSTRING "${code_source}" ${permission_end} -1 code_suffix)
-  set(code_source "${code_prefix}${permission_methods}\n${code_suffix}")
-  string(REPLACE "    setSize(required_size);" [=[    ASSERT(writing);
-    ASSERT(!prelude_complete || required_size >= size_t(reinterpret_cast<const u8*>(code_begin) - getCode()));
-    protection_end = std::max(protection_end, getSize());
-    // Backward cursor moves are EmitX64::Patch sites, at most 23 bytes.
-    static const size_t page = sysconf(_SC_PAGESIZE);
-    const size_t patch_end = std::min(write_begin, required_size + 23);
-    size_t first_new = patch_end, last_new = patch_end;
-    for (size_t offset = required_size & ~(page - 1); !hasWritableAlias() && offset < patch_end; offset += page) {
-        if (std::find(patch_pages.begin(), patch_pages.end(), offset) == patch_pages.end()) {
-            patch_pages.push_back(offset);
-            first_new = std::min(first_new, offset);
-            last_new = offset + page;
-        }
-    }
-    if (last_new > first_new) ProtectMemory(getCode() + first_new, last_new - first_new, false);
-    setSize(required_size);
-    protection_end = std::max(protection_end, getSize());]=] code_source "${code_source}")
-  string(REPLACE "    size_t current_size = getCurr<const u8*>()"
-      "    ASSERT(size <= 23);\n    size_t current_size = getCurr<const u8*>()" code_source "${code_source}")
-string(REPLACE "    mprotect(reinterpret_cast<void*>(roundAddr), size + (iaddr - roundAddr), mode);"
-    "    const size_t span = (size + (iaddr - roundAddr) + pageSize - 1) & ~(pageSize - 1);\n    if (mprotect(reinterpret_cast<void*>(roundAddr), span, mode) != 0) std::abort();" code_source "${code_source}")
-  write_derived("${PORT_BUILD_DIR}/block_of_code.cpp" "#include <algorithm>\n#include <cstdio>\n#include <cstdlib>\n#include <new>\n#include <unistd.h>\n${code_source}")
+foreach(EDEN_BOC_INPUT IN ITEMS "${EDEN_BOC_HEADER}" "${EDEN_BOC_UNIT}")
+    if(NOT EXISTS "${EDEN_BOC_INPUT}")
+        message(FATAL_ERROR "Missing maintained BlockOfCode input ${EDEN_BOC_INPUT}")
+    endif()
+endforeach()
+configure_file("${EDEN_BOC_HEADER}"
+    "${PORT_BUILD_DIR}/include/dynarmic/backend/x64/block_of_code.h" COPYONLY)
+configure_file("${EDEN_BOC_UNIT}" "${PORT_BUILD_DIR}/block_of_code.cpp" COPYONLY)
+target_include_directories(dynarmic BEFORE PUBLIC "${PORT_BUILD_DIR}/include")
+target_include_directories(dynarmic PRIVATE "${EDEN_PORT_DIR}")
 get_target_property(jit_sources dynarmic SOURCES)
 list(FILTER jit_sources EXCLUDE REGEX "(^|/)block_of_code\\.cpp$")
 set_property(TARGET dynarmic PROPERTY SOURCES "${jit_sources}")
 target_sources(dynarmic PRIVATE "${PORT_BUILD_DIR}/block_of_code.cpp")
-# The native PS5 code-commit branch is inside this generated Dynarmic unit.
-# PS5_NATIVE is not inherited from eden-headless/common by this target.
-# Scope the definition to the one source that owns the kernel mapping hook.
 if(PS5_NATIVE)
     set_property(SOURCE "${PORT_BUILD_DIR}/block_of_code.cpp"
         TARGET_DIRECTORY dynarmic APPEND PROPERTY COMPILE_DEFINITIONS "PS5_NATIVE=1")
