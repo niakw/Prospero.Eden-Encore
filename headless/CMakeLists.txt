@@ -334,83 +334,19 @@ target_sources(dynarmic PRIVATE
     "${EDEN_MAINTAINED_SCALAR_TRANSLATOR}"
     "${EDEN_MAINTAINED_SCALAR_OPT}")
 
-# Keep the checked page-table path, but use x86 scaled addressing and avoid a
-# 64-bit mask load for Eden's packed pointer. Apply to both A32 and A64 emitters.
-set(memory_relative "dynarmic/backend/x64/emit_x64_memory.h")
-file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/${memory_relative}" memory_emitter)
-foreach(index IN ITEMS "tmp.cvt64()" "tmp")
-    set(lookup "    code.shl(tmp, int(ctx.conf.page_table_log2_stride));\n    code.mov(page, qword[r14 + ${index}]);")
-    string(FIND "${memory_emitter}" "${lookup}" offset)
-    if(offset LESS 0)
-        message(FATAL_ERROR "Pinned page-table indexing changed")
-    endif()
-    string(REPLACE "${lookup}" [=[    if (ctx.conf.page_table_log2_stride <= 3) {
-        code.mov(page, qword[r14 + tmp * (1 << ctx.conf.page_table_log2_stride)]);
-    } else {
-        code.shl(tmp, int(ctx.conf.page_table_log2_stride));
-        code.mov(page, qword[r14 + tmp]);
-    }]=] memory_emitter "${memory_emitter}")
-endforeach()
-set(pointer_mask "    // mask away attributes\n    if (ctx.conf.page_table_pointer_mask == 0) {")
-set(pointer_end "        code.sar(page, *ctx.conf.page_table_sign_extension);\n    }\n\n    code.jz")
-foreach(anchor IN ITEMS pointer_mask pointer_end)
-    string(FIND "${memory_emitter}" "${${anchor}}" offset)
-    if(offset LESS 0)
-        message(FATAL_ERROR "Pinned page-table pointer decoding changed")
-    endif()
-endforeach()
-string(REPLACE "${pointer_mask}" [=[    // Eden packs pointer bits 12..55. Sign extension removes the upper
-    // attributes first, leaving a page mask that fits an x86 immediate.
-    if (ctx.conf.page_table_pointer_mask == 0x00fffffffffff000ULL &&
-        ctx.conf.page_table_sign_extension == 8) {
-        code.shl(page, 8);
-        code.sar(page, 8);
-        code.and_(page, -4096);
-    } else {
-    // mask away attributes
-    if (ctx.conf.page_table_pointer_mask == 0) {]=] memory_emitter "${memory_emitter}")
-string(REPLACE "${pointer_end}" "        code.sar(page, *ctx.conf.page_table_sign_extension);\n    }\n    }\n\n    code.jz"
-    memory_emitter "${memory_emitter}")
-# The packed-pointer decoder above uses only immediates. Like upstream's
-# unmasked absolute-offset path, it can reuse the index register for the page.
-# Relative offsets and other pointer formats still need two scratch registers.
-set(reuse_index "ctx.conf.absolute_offset_page_table && ctx.conf.page_table_pointer_mask == 0 ? page")
-string(FIND "${memory_emitter}" "${reuse_index}" reuse_offset)
-if(reuse_offset LESS 0)
-    message(FATAL_ERROR "Pinned page-table scratch allocation changed")
+# G07: single Encore-owned address decoder header, with C++ guards for
+# checked A32 and the process-wide shared-JIT reservation policy.
+set(EDEN_MAINTAINED_MEMORY_HEADER
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/dynarmic/backend/x64/emit_x64_memory.h")
+if(NOT EXISTS "${EDEN_MAINTAINED_MEMORY_HEADER}")
+    message(FATAL_ERROR "Missing maintained Dynarmic memory decoder header")
 endif()
-string(REPLACE "${reuse_index}"
-    "ctx.conf.absolute_offset_page_table && (ctx.conf.page_table_pointer_mask == 0 || (ctx.conf.page_table_pointer_mask == 0x00fffffffffff000ULL && ctx.conf.page_table_sign_extension == 8)) ? page"
-    memory_emitter "${memory_emitter}")
-# Eden's mark is bit zero: use a normal test/branch instead of extracting carry.
-# Keep the upstream bit-test path for every other configured mark position.
-set(mark_test "        code.bt(page, *ctx.conf.page_table_marked_bit);\n        code.jc(abort, code.T_NEAR);")
-string(FIND "${memory_emitter}" "${mark_test}" mark_offset)
-if(mark_offset LESS 0)
-    message(FATAL_ERROR "Pinned page-table mark check changed")
+configure_file("${EDEN_MAINTAINED_MEMORY_HEADER}"
+    "${PORT_BUILD_DIR}/include/dynarmic/backend/x64/emit_x64_memory.h" COPYONLY)
+if(EDEN_A32_FASTMEM)
+    target_compile_definitions(dynarmic PRIVATE EDEN_A32_CHECKED_FASTMEM=1)
 endif()
-string(REPLACE "${mark_test}" [=[        if (*ctx.conf.page_table_marked_bit == 0) {
-            code.test(page.cvt32(), 1);
-            code.jnz(abort, code.T_NEAR);
-        } else {
-            code.bt(page, *ctx.conf.page_table_marked_bit);
-            code.jc(abort, code.T_NEAR);
-        }]=] memory_emitter "${memory_emitter}")
-# Retain the ordinary page-table lookup on window misses. Reserve scratch
-    # registers before branching: allocator spills must run on both paths.
-    set(lookup_args "Xbyak::Label& abort, Xbyak::Reg64 vaddr)")
-    string(REPLACE "${lookup_args};"
-        "Xbyak::Label& abort, Xbyak::Reg64 vaddr, std::optional<std::pair<Xbyak::Reg64, Xbyak::Reg64>> scratch = std::nullopt);"
-        memory_emitter "${memory_emitter}")
-    string(REPLACE "${lookup_args} {"
-        "Xbyak::Label& abort, Xbyak::Reg64 vaddr, std::optional<std::pair<Xbyak::Reg64, Xbyak::Reg64>> scratch) {"
-        memory_emitter "${memory_emitter}")
-    string(REPLACE "const Xbyak::Reg64 page = ctx.reg_alloc.ScratchGpr(code);"
-        "const Xbyak::Reg64 page = scratch ? scratch->first : ctx.reg_alloc.ScratchGpr(code);"
-        memory_emitter "${memory_emitter}")
-    string(REPLACE "const Xbyak::Reg64 tmp = ctx.conf.absolute_offset_page_table"
-        "const Xbyak::Reg64 tmp = scratch ? scratch->second : ctx.conf.absolute_offset_page_table"
-        memory_emitter "${memory_emitter}")
+
     set(memory_inc "dynarmic/backend/x64/emit_x64_memory.cpp.inc")
     file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/${memory_inc}" memory_source)
     # Exclusive operations already allocated these two registers before their
@@ -451,26 +387,6 @@ string(REPLACE "${mark_test}" [=[        if (*ctx.conf.page_table_marked_bit == 
         eden_shared_jit_memory_inc()
     endif()
     write_derived("${PORT_BUILD_DIR}/include/${memory_inc}" "${memory_source}")
-set(exclusive_lookup [=[template<typename EmitContext>
-Xbyak::RegExp EmitExclusiveVAddrLookup(BlockOfCode& code, EmitContext& ctx, size_t bitsize,
-        Xbyak::Label& abort, Xbyak::Reg64 vaddr, Xbyak::Reg64 page, Xbyak::Reg64 tmp) {
-    if (bitsize > 8) {
-        code.test(vaddr, u32(bitsize / 8 - 1));
-        code.jnz(abort, code.T_NEAR);
-    }
-    // Natural alignment excludes page crossings, including CMPXCHG16B's
-    // stricter alignment requirement. Skip the duplicate generic check.
-    return EmitVAddrLookup(code, ctx, 8, abort, vaddr, std::make_optional(std::pair{page, tmp}));
-}
-
-]=])
-set(fastmem_declaration "template<typename EmitContext>\nXbyak::RegExp EmitFastmemVAddr")
-string(REPLACE "${fastmem_declaration}" "${exclusive_lookup}${fastmem_declaration}"
-    memory_emitter "${memory_emitter}")
-if(EDEN_SHARED_JIT)
-    eden_shared_jit_memory_header()
-endif()
-write_derived("${PORT_BUILD_DIR}/include/${memory_relative}" "${memory_emitter}")
 # New include overlays do not invalidate objects whose depfile still names
 # upstream headers. Derive both translation units so the first build cannot
 # silently keep old objects; subsequent depfiles track the overlay normally.
