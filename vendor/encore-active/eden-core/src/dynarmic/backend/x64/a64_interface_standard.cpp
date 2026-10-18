@@ -278,7 +278,7 @@ private:
             if (eden_native_detailed_logging && eden_native_detailed_logging() && ++pressure_count <= 200) std::printf("EDEN_JIT_PRESSURE core=%u capacity=%u remaining=%zu count=%u mono_ns=%lld\n", unsigned(conf.processor_id), unsigned(conf.code_cache_size), block_of_code.SpaceRemaining(), pressure_count, static_cast<long long>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count()));
             if (eden_jit_evacuation) eden_jit_evacuation(unsigned(conf.processor_id));
 #else
-            std::fprintf(stderr, "EDEN_JIT_PRESSURE core=%u capacity=%u remaining=%zu\n", unsigned(conf.processor_id), unsigned(conf.code_cache_size, block_of_code.SpaceRemaining());
+            std::fprintf(stderr, "EDEN_JIT_PRESSURE core=%u capacity=%u remaining=%zu\n", unsigned(conf.processor_id), unsigned(conf.code_cache_size), block_of_code.SpaceRemaining());
 #endif
             // Immediately evacuate cache
             invalidate_entire_cache = true;
