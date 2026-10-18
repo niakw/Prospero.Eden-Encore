@@ -43,15 +43,6 @@ macro(eden_shared_jit_memory_header)
         memory_emitter "${memory_emitter}")
 endmacro()
 
-# a32/a64_emit_x64_memory.cpp: what the macros above load.
-macro(eden_shared_jit_memory_unit bits)
-    if(${bits} EQUAL 64)
-        string(PREPEND memory_source "#define EDEN_EXCLUSIVE_ADDRESS(reg) code.mov(reg, code.qword[code.ABI_JIT_PTR + offsetof(A64JitState, eden_exclusive_address)])\n#define EDEN_EXCLUSIVE_VALUE(reg) code.mov(reg, code.qword[code.ABI_JIT_PTR + offsetof(A64JitState, eden_exclusive_value)])\n#define EDEN_CONF_ARG() code.mov(code.ABI_PARAM1, code.qword[code.ABI_JIT_PTR + offsetof(A64JitState, eden_conf)])\n")
-    else()
-        string(PREPEND memory_source "#define EDEN_EXCLUSIVE_ADDRESS(reg) code.mov(reg, std::bit_cast<u64>(GetExclusiveMonitorAddressPointer(conf.global_monitor, conf.processor_id)))\n#define EDEN_EXCLUSIVE_VALUE(reg) code.mov(reg, std::bit_cast<u64>(GetExclusiveMonitorValuePointer(conf.global_monitor, conf.processor_id)))\n#define EDEN_CONF_ARG() code.mov(code.ABI_PARAM1, reinterpret_cast<u64>(&conf))\n")
-    endif()
-endmacro()
-
 # a64_interface.cpp: upstream's Impl replaced by jit_impl.inc, with the group helpers before it.
 
 # The JIT state layout, the group header and the callback argument registry, all compiled for
