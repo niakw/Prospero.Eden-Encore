@@ -1091,6 +1091,18 @@ assert "current.write_text(derived)" in radv_builder
 assert "trap restore_cross_ini EXIT" in radv_builder
 assert 'tools/install-vendored-radv.py' in radv_builder
 
+# Maxwell conditional-render diagnostic: exact former generated DEV code.
+maxwell_pinned = (sources / "eden/src/video_core/engines/maxwell_3d.cpp").read_text()
+maxwell_old_accel = "    if (rasterizer->AccelerateConditionalRendering()) {\n        execute_on = true;\n        return;\n    }"
+maxwell_new_accel = "    if (rasterizer->AccelerateConditionalRendering()) {\n        execute_on = true;\n        ::Eden::Performance::CountCondition(0);\n        return;\n    }"
+maxwell_old_end = "    }\n    }\n}\n\nvoid Maxwell3D::ProcessCounterReset() {"
+maxwell_new_end = "    }\n    }\n    ::Eden::Performance::CountCondition(\n        regs.render_enable_override == Regs::RenderEnable::Override::AlwaysRender ? 1u :\n        regs.render_enable_override == Regs::RenderEnable::Override::NeverRender ? 2u :\n        3u + static_cast<unsigned>(regs.render_enable.mode) * 2u + (execute_on ? 1u : 0u));\n}\n\nvoid Maxwell3D::ProcessCounterReset() {"
+assert maxwell_pinned.count(maxwell_old_accel) == maxwell_pinned.count(maxwell_old_end) == 1
+maxwell_expected = '#include "performance.h"\n' + maxwell_pinned.replace(maxwell_old_accel, maxwell_new_accel).replace(maxwell_old_end, maxwell_new_end)
+assert (active / "eden-core/src/video_core/engines/maxwell_3d.cpp").read_text() == maxwell_expected
+assert 'list(APPEND video_sources "${EDEN_MAINTAINED_DEV_MAXWELL}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/maxwell_3d.cpp"' not in c
+print("VENDOR_MAINTAINED_MAXWELL_DEV_PARITY_PASS: two render-condition instruments")
 # Native RADV startup: previously generated from the pinned boilerplate,
 # with one ps5_fp_ieee call before C++ static initializers.
 radv_crt_original = (sources / "boilerplate/tooling/native/app_crt.cpp").read_text()
@@ -1154,7 +1166,7 @@ assert len(module_current) == 21, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 49
+assert len(recorded) + len(module_recorded) == 48
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived

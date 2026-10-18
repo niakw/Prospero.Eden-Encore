@@ -16,12 +16,12 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **235 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **236 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **28 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **27 générateurs** `write_derived`.
 - Six modules CMake supplémentaires totalisent **21 générateurs**
-  `write_derived`, soit **49 sites** au total.
+  `write_derived`, soit **48 sites** au total.
 - Quatre modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 54.
@@ -150,6 +150,13 @@ ordinaire, ou `npad_pause_diag.cpp` lorsque `PS5_NATIVE` et
 conserve les deux gardes de pointeurs de la version normale et ne modifie
 ni le mapping ni les commandes. Le contrôle hôte compare le code
 extérieur au témoin Fullkey et vérifie la sélection exclusive.
+
+## Diagnostic conditionnel GPU versionné
+
+Le profil `EDEN_DEV_PROFILE` utilise une unité `Maxwell3D` complète
+sous `encore-active/eden-core/src/video_core/engines/`, au lieu de
+reconstruire un correctif dans CMake. Le profil normal demeure sur
+l'unité Eden épinglée. Parité de contenu vérifiable hors console.
 
 ## Injections GPU centralisées
 
