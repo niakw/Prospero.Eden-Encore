@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """R302 upstream-fix source gates and an executable salvage test.
 
-The real shader_cache_reader.inc is compiled in a C++20 host fixture with a
+The maintained shader_cache_reader.inc is compiled in a C++20 host fixture with a
 minimal compatible environment. The full source itself, not a rewritten
 copy of LoadPipelines, is executed. Native PS5 Vulkan/Mesa builds are separate.
 """
@@ -15,7 +15,7 @@ root = Path(__file__).resolve().parents[1]
 port = (root/"tools/prepare-vulkan-port.py").read_text()
 wsi = (root/"tools/patch-radv-wsi.py").read_text()
 cmake = (root/"headless/CMakeLists.txt").read_text()
-reader = root/"headless/shader_cache_reader.inc"
+reader = root/"vendor/encore-active/eden-core/src/video_core/shader_cache_reader.inc"
 checks = (root/"headless/shader_cache_check.cpp").read_text()
 host_builder = (root/"tools/build-headless-host.sh").read_text()
 
@@ -138,7 +138,7 @@ compiler = next((s for s in ("clang++-18","clang++","g++") if shutil.which(s)),N
 assert compiler,"C++20 compiler required"
 with tempfile.TemporaryDirectory(prefix="eden-r302-fixes-") as tmp:
     temp=Path(tmp)
-    # The compiled content is the identical inc that native source generation uses.
+    # The compiled fixture is the maintained source selected by the native build.
     (temp/"reader.inc").write_bytes(reader.read_bytes())
     (temp/"check.cpp").write_text(fixture)
     executable=temp/"check"
