@@ -29,6 +29,7 @@ def main() -> None:
     perf = read("headless/performance.cpp")
     perf_h = read("headless/performance.h")
     cmake = read("headless/CMakeLists.txt")
+    native_boc = read("vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code_native.cpp")
     worker_script = read("tools/prepare-vulkan-port.py")
     jit_policy = read("headless/experimental_performance.h")
 
@@ -119,11 +120,11 @@ def main() -> None:
     # CommitSparseJitCode itself verifies that the RX address belongs to an
     # actual sparse mapping and fails closed if not.
     require('bool IsSparseJitCode(const void* executable) noexcept' in native and
-            'if (::Eden::Experimental::sparse_jit_cache.load(std::memory_order_relaxed))' in cmake and
-            '::Eden::Jit::PlanSparseCommit(written, codesize, maxSize_)' in cmake and
-            '::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), target.bytes)' in cmake and
-            'jit-sparse-commit.h' in cmake and
-            '::Common::IsSparseJitCode(getCode())' not in cmake,
+            'if (::Eden::Experimental::sparse_jit_cache.load(std::memory_order_relaxed))' in native_boc and
+            '::Eden::Jit::PlanSparseCommit(written, codesize, maxSize_)' in native_boc and
+            '::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), target.bytes)' in native_boc and
+            'jit-sparse-commit.h' in native_boc and
+            '::Common::IsSparseJitCode(getCode())' not in native_boc,
             "Sparse translated-code commits must validate mapping ownership without per-block duplicate locks")
     require('std::size_t ExecutableAliasSpan(void* writable) noexcept' in native and
             'Common::ExecutableAliasSpan(writable)' in native_alloc and
@@ -145,10 +146,11 @@ def main() -> None:
             'Common::FreeMemoryPages(writable);' in native_alloc and
             'return static_cast<std::uint8_t*>(writable);' not in native_alloc,
             "Failed native RX alias must release dense direct pages, never return RW/NX as code")
-    require('set_property(SOURCE "${PORT_BUILD_DIR}/block_of_code.cpp"' in cmake and
+    require('configure_file("${EDEN_BOC_UNIT}" "${PORT_BUILD_DIR}/block_of_code.cpp" COPYONLY)' in cmake and
+            'set_property(SOURCE "${PORT_BUILD_DIR}/block_of_code.cpp"' in cmake and
             'TARGET_DIRECTORY dynarmic APPEND PROPERTY COMPILE_DEFINITIONS "PS5_NATIVE=1"' in cmake,
             "Native sparse JIT page commits must be compiled, not excluded by preprocessor")
-    require('throw std::bad_alloc{};' in cmake and
+    require('throw std::bad_alloc{};' in native_boc and
             'Pinned A64 JIT commit checkpoint changed' in cmake and
             'Pinned A32 JIT commit checkpoint changed' in cmake,
             "A64 and A32 need recoverable one-shot sparse allocation fallback")
