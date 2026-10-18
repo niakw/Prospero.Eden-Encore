@@ -349,7 +349,7 @@ jobs:
 
       - name: Restore staged app from a previous failed run
         if: ${{ env.RESUME_STAGE_RUN_ID != '' }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: Prospero.Eden-Encore-staged-app
           path: build/release/PPSA99008
@@ -388,7 +388,7 @@ jobs:
 
       - name: Upload resumable staged app
         if: ${{ steps.stage.outcome == 'success' && env.EDEN_TEST_ALL_ON != '1' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Prospero.Eden-Encore-staged-app
           path: ${{ env.EDEN_STAGE_DIR }}/
@@ -439,7 +439,7 @@ jobs:
 
       - name: Upload validated native development package
         if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Prospero.Eden-Encore-PS5-all-on-test
           # upload-artifact strips the chosen root directory. Upload its PARENT
@@ -452,7 +452,7 @@ jobs:
       # tree. This catches upload-artifact flattening PPSA99008 by mistake.
       - name: Verify downloadable application archive layout
         if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v4.1.8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v4.1.8
         with:
           name: Prospero.Eden-Encore-PS5-all-on-test
           path: build/zip-layout-verification
@@ -476,7 +476,7 @@ jobs:
 
       - name: Upload native development debug symbols
         if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Prospero.Eden-Encore-PS5-all-on-symbols
           path: |
@@ -496,7 +496,7 @@ jobs:
 
       - name: Upload compiled release bundle
         if: ${{ success() && env.EDEN_TEST_ALL_ON != '1' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Prospero.Eden-Encore-release
           path: |
@@ -531,7 +531,7 @@ jobs:
       contents: write
     steps:
       - name: Download compiled bundle
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: Prospero.Eden-Encore-release
           path: release-bundle
@@ -575,7 +575,7 @@ jobs:
       actions: read
     steps:
       - name: Download immutable successful test artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: Prospero.Eden-Encore-PS5-all-on-test
           run-id: 38743260411
