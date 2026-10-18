@@ -16,15 +16,15 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **246 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **247 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
 - `headless/CMakeLists.txt` : **26 générateurs** `write_derived`.
-- Trois modules CMake générateurs totalisent **13 générateurs**
-  `write_derived`, soit **39 sites** au total.
-- Cinq modules CMake procèdent encore à des substitutions **indirectes**
+- Deux modules CMake générateurs totalisent **12 générateurs**
+  `write_derived`, soit **38 sites** au total.
+- Six modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
-  nombre 39.
+  nombre 38.
 - `headless/` contient **8 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
@@ -54,7 +54,7 @@ nouveaux corps C++ destinés à la console.
 | `headless/gpu_native_observability.cmake` | Sélection de sources Encore maintenues | Sélecteur conforme |
 | `headless/guest_write_deferred_bridge.cmake` | Générateur de source dérivée, à déplacer | Dette de migration |
 | `headless/inject.cmake` | Orchestration ou toolchain | Sélecteur / configuration |
-| `headless/jit-alias.cmake` | Générateur de source dérivée, à déplacer | Dette de migration |
+| `headless/jit-alias.cmake` | Sélection Xbyak complète ; code_source encore muté (X09) | Dette indirecte X09 |
 | `headless/native_guest_range_overflow.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
 | `headless/native_jit_memory_read_guard.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
 | `headless/physical_core_interrupt_atomic.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
@@ -105,7 +105,7 @@ blobs Git identiques dans `vendor/encore-active/eden-core/dynarmic/shared-jit/`.
 Le sélecteur de `headless/dynarmic/shared-jit.cmake` lit les fichiers
 maintenus. **Ce module CMake conserve encore des transformations upstream
 à migrer** ; la relocalisation des données d'injection ne supprime pas les
-13 générateurs de modules. Le mode JIT partagé reste OFF par défaut.
+12 générateurs de modules. Le mode JIT partagé reste OFF par défaut.
 
 ## Fragments scalaires centralisés
 
@@ -175,6 +175,14 @@ Le header `sparse_large_vector.h` ne doit plus être généré depuis des
 substitutions CMake. L'implémentation complète est maintenue sous
 `vendor/encore-active/eden-core/src/common/`; l'ancienne priorité d'include
 demeure, avec comparaison textuelle complète dans un oracle hôte.
+
+## Xbyak maintenu en source complète
+
+Le header épinglé `xbyak.h` est maintenu sous
+`vendor/encore-active/eden-build/third_party/xbyak/` avec la licence
+BSD d'origine et les huit adaptations d'alias mémoire. CMake ne fait plus
+que le copier. Le module `jit-alias.cmake` conserve une modification
+indirecte de `code_source` (X09), explicitement non migrée.
 
 ## Pool de constantes JIT maintenu
 

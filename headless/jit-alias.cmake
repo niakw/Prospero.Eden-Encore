@@ -1,17 +1,14 @@
 # Keep instruction addresses in the executable view; redirect only byte writes.
 set(xbyak_root "${PROJECT_SOURCE_DIR}/.cache/cpm/xbyak/v7.40.1/xbyak")
-file(READ "${xbyak_root}/xbyak.h" xbyak_header)
-string(REPLACE "virtual void free(uint8_t *p) { AlignedFree(p); }"
-    "virtual uint8_t *writableAddress(uint8_t *p) { return p; }\n\tvirtual void free(uint8_t *p) { AlignedFree(p); }" xbyak_header "${xbyak_header}")
-string(REPLACE "uint8_t *top_;" "uint8_t *top_;\n\tuint8_t *writeTop_;" xbyak_header "${xbyak_header}")
-string(REPLACE ", size_(0)" ", writeTop_(type_ == USER_BUF ? top_ : alloc_->writableAddress(top_))\n\t\t, size_(0)" xbyak_header "${xbyak_header}")
-string(REPLACE "newTop[i] = top_[i]" "alloc_->writableAddress(newTop)[i] = top_[i]" xbyak_header "${xbyak_header}")
-string(REPLACE "top_ = newTop;" "top_ = newTop;\n\t\twriteTop_ = alloc_->writableAddress(top_);" xbyak_header "${xbyak_header}")
-string(REPLACE "top_[size_++] =" "writeTop_[size_++] =" xbyak_header "${xbyak_header}")
-string(REPLACE "uint8_t *const data = top_ + offset;" "uint8_t *const data = writeTop_ + offset;" xbyak_header "${xbyak_header}")
-string(REPLACE "const uint8_t *getCode() const { return top_; }"
-    "bool hasWritableAlias() const { return writeTop_ != top_; }\n\tuint8_t *writableAddress(const void *p) const { return writeTop_ + (static_cast<const uint8_t*>(p) - top_); }\n\tconst uint8_t *getCode() const { return top_; }" xbyak_header "${xbyak_header}")
-write_derived("${PORT_BUILD_DIR}/include/xbyak/xbyak.h" "${xbyak_header}")
+# Full Xbyak v7.40.1 header is maintained in Encore. Keep sibling
+# headers from the pinned CPM dependency; no C++ replacement in CMake.
+set(EDEN_MAINTAINED_XBYAK_HEADER
+    "${PORT_ROOT}/vendor/encore-active/eden-build/third_party/xbyak/xbyak.h")
+if(NOT EXISTS "${EDEN_MAINTAINED_XBYAK_HEADER}")
+    message(FATAL_ERROR "Missing maintained Xbyak writable alias header")
+endif()
+configure_file("${EDEN_MAINTAINED_XBYAK_HEADER}"
+    "${PORT_BUILD_DIR}/include/xbyak/xbyak.h" COPYONLY)
 # xbyak_util includes its sibling header: keep every consumer on the same layout.
 foreach(sibling xbyak_mnemonic.h xbyak_util.h)
     configure_file("${xbyak_root}/${sibling}" "${PORT_BUILD_DIR}/include/xbyak/${sibling}" COPYONLY)
