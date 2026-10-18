@@ -39,7 +39,7 @@ Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-280 fichiers de code/en-têtes présents et 280 avec un chemin de
+282 fichiers de code/en-têtes présents et 282 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -591,6 +591,8 @@ function/contract tokens are checked by CI for existence only; the
 | F36 | P1 | F35 | vendor/encore-active/eden-core/src/core/hle/service/vi/conductor.cpp | Conductor::ProcessVsync; Conductor::GetFramePeriodNs | SOURCE | tools/check-vendor-consolidation-debt.py | Native VSync composition delay and published game FPS from former generator, exact source-parity test; console behavior unproved | 🟡 Source étudiée |
 | F37 | P1 | F35 | vendor/encore-active/eden-core/src/core/file_sys/ips_layer.cpp | PatchIPS; IPSwitchCompiler::Parse | SOURCE | tools/check-vendor-consolidation-debt.py | Complete IPS and patch-text parser now selected from Encore; output matches pinned historical CMake generator Git blob, device behavior unproved | 🟡 Source étudiée |
 | F38 | P1 | F16 | vendor/encore-active/eden-core/src/core/loader/nso.cpp | AppLoader_NSO::LoadModule; AppLoader_NSO::Load | SOURCE | tools/check-maintained-nso.py | Native NSO loader relocated with byte-exact historical CMake replay and preserved build path; CI/native SDK and console runtime still pending | 🟡 Source étudiée |
+| F39 | P1 | F11,F16 | vendor/encore-active/eden-core/src/core/core_standard.cpp | GameSettings::LoadOverrides; ShutdownMainProcess | SOURCE | tools/check-maintained-core-system.py | Normal Core::System full-source parity and existing load/unwind ordering; CI and native gameplay not yet proven | 🟡 Source étudiée |
+| F40 | P0 | F39,F38 | vendor/encore-active/eden-core/src/core/core_native.cpp | ::Eden::ReportStep; GameSettings::LoadOverrides | SOURCE | tools/check-maintained-core-system.py | Native shutdown diagnostics and memory lifecycle preserved in maintained full-source variant; parity test added, runtime still unqualified | 🟡 Source étudiée |
 | L01 | P0 | H47 | vendor/encore-active/eden-backports/src/core/hle/service/am/frontend/applets.cpp | FrontendApplet; child_applets; RequestUpdate | SOURCE | tools/check-active-source-inventory.py | Shipping backport child applet unlink and window update; runtime correctness unproved | 🟡 Source étudiée |
 | L02 | P0 | L01 | vendor/encore-active/eden-backports/src/core/hle/service/am/service/library_applet_accessor.cpp | ILibraryAppletAccessor; RequestFocusStateChangedNotification | SOURCE | tools/check-active-source-inventory.py | Shipping backport frontend focus notification; runtime correctness unproved | 🟡 Source étudiée |
 | L03 | P1 | L02,F25 | vendor/encore-active/eden-backports/src/core/hle/service/am/service/library_applet_creator.cpp | ILibraryAppletCreator; CreateProcess; HOS_VERSION_MAJOR | SOURCE | tools/check-active-source-inventory.py | Shipping backport applet creation with firmware-major argument; runtime correctness unproved | 🟡 Source étudiée |

@@ -17,7 +17,7 @@ couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
 ## Synthèse vérifiable
 
-- **7 appels générateurs** encore dans CMake ; contre **75 avant**
+- **6 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
 - **12 lectures `file(READ`** et **84 remplacements
@@ -199,6 +199,20 @@ en répertoire temporaire et compare octet par octet les deux sources.
 Le stress mémoire existant `tools/check-nso-memory.py` conserve son chemin
 de lecture ; compilation native et exécution console restent à qualifier.
 
+
+## Core::System : G14 retiré
+
+Les profils normal et natif utilisent désormais deux unités complètes,
+`vendor/encore-active/eden-core/src/core/core_standard.cpp` et
+`core_native.cpp`, sélectionnées en COPYONLY vers `PORT_BUILD_DIR/core.cpp`.
+Les changements communs de chargeur, de durée de vie DeviceMemory et de
+fermeture de services sont maintenus une fois par variante. Le diagnostic
+natif de fermeture est conservé sans chemin absolu dans son `#include`.
+Le test `tools/check-maintained-core-system.py` rejoue le générateur G14
+historique en répertoire temporaire pour chaque profil, avec une seule
+normalisation de chemin pour l'en-tête de diagnostic. Ce témoin ne
+certifie ni la compilation native ni les durées de fermeture sur console.
+
 ## Générateurs non encore déplacés
 
 Les numéros Gxx sont les positions de cet inventaire, **pas** des validations.
@@ -213,14 +227,13 @@ dans la version normale.
 | --- | --- | --- | --- | ---: |
 | G11 | `${derived}` | CPU | Cible variable | 611 |
 | G13 | `${eden_native_memory_tu}` | Mémoire/chargement | Cible variable | 863 |
-| G14 | `${PORT_BUILD_DIR}/core.cpp` | Mémoire/chargement | Unité source | 944 |
-| G19 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 1307 |
-| G20 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 1620 |
-| G21 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 1717 |
-| G23 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2096 |
+| G19 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 1276 |
+| G20 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 1589 |
+| G21 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 1686 |
+| G23 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2065 |
 <!-- OVERRIDE_GENERATORS_END -->
 
-Les identifiants historiques `G01`, `G02`, `G03`, `G04`, `G05`, `G06`, `G07`, `G08`, `G09`, `G15`, `G16`, `G17` et `G18` sont retirés, avec G09 maintenu dans les unités A64 standard/partagée ; `G01`/`G02` sont retirés avec X09 (sources complètes `BlockOfCode` sous `encore-active`).
+Les identifiants historiques `G01`, `G02`, `G03`, `G04`, `G05`, `G06`, `G07`, `G08`, `G09`, `G14`, `G15`, `G16`, `G17` et `G18` sont retirés, avec G09 maintenu dans les unités A64 standard/partagée ; `G01`/`G02` sont retirés avec X09 (sources complètes `BlockOfCode` sous `encore-active`).
 L'identifiant historique `G22` est retiré : les deux variantes de l'allocateur
 sont maintenues sous `vendor/encore-active/eden-build/tooling/native/`.
 Les IDs G01–G23 sont stables et ne sont pas renumérotés.
