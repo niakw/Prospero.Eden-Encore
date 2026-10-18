@@ -1558,40 +1558,16 @@ set_property(TARGET core PROPERTY SOURCES "${core_sources}")
 # The rate of the vsync clock a game runs on (60 Hz, or what an FPS patch asks for: 120, 240) is
 # published for the renderer: frames a display has no refresh for are not presented
 # (headless/display_refresh.h).
-file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/vi/conductor.cpp" conductor_source)
-# Guest VSync notification can precede composition in multicore mode (0 = original order).
-set(compose_old [=[    for (auto& [display_id, manager] : m_vsync_managers) {
-        m_container.ComposeOnDisplay(&m_swap_interval, &m_compose_speed_scale, display_id);
-        manager.SignalVsync(m_system.Kernel());
-    }]=])
-string(FIND "${conductor_source}" "${compose_old}" compose_at)
-if(compose_at LESS 0)
-    message(FATAL_ERROR "Pinned VI conductor composition loop changed")
+# Encore's native VSync/compose correction is a complete maintained unit.
+set(EDEN_MAINTAINED_VI_CONDUCTOR
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/service/vi/conductor.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_VI_CONDUCTOR}")
+    message(FATAL_ERROR "Missing maintained VI conductor")
 endif()
-set(compose_new [=[    if (const int compose_delay = ::Eden::Performance::compose_delay_us.load(std::memory_order_relaxed);
-        compose_delay > 0 && m_system.IsMulticore()) {
-        for (auto& [display_id, manager] : m_vsync_managers) {
-            manager.SignalVsync(m_system.Kernel());
-        }
-        std::this_thread::sleep_for(std::chrono::microseconds(compose_delay));
-        for (auto& [display_id, manager] : m_vsync_managers) {
-            m_container.ComposeOnDisplay(&m_swap_interval, &m_compose_speed_scale, display_id);
-        }
-        return;
-    }
-    for (auto& [display_id, manager] : m_vsync_managers) {
-        m_container.ComposeOnDisplay(&m_swap_interval, &m_compose_speed_scale, display_id);
-        manager.SignalVsync(m_system.Kernel());
-    }]=])
-eden_patch(conductor_source "${compose_old}" "${compose_new}")
-string(PREPEND conductor_source "#include \"${EDEN_PORT_DIR}/display_refresh.h\"\n#include \"${EDEN_PORT_DIR}/performance.h\"\n#include <thread>\n")
-eden_patch(conductor_source
-    "    const f32 effective_fps = 60.f / static_cast<f32>(m_swap_interval);\n    return static_cast<s64>(speed_scale * (1000000000.f / effective_fps));"
-    "    const f32 effective_fps = 60.f / static_cast<f32>(m_swap_interval);\n    ::Eden::Display::game_millihertz.store(static_cast<int>(effective_fps * 1000.f / speed_scale),\n                                           std::memory_order_relaxed);\n    return static_cast<s64>(speed_scale * (1000000000.f / effective_fps));")
-write_derived("${PORT_BUILD_DIR}/vi_conductor.cpp" "${conductor_source}")
+target_include_directories(core PRIVATE "${EDEN_PORT_DIR}")
 get_target_property(core_sources core SOURCES)
 list(REMOVE_ITEM core_sources hle/service/vi/conductor.cpp)
-list(APPEND core_sources "${PORT_BUILD_DIR}/vi_conductor.cpp")
+list(APPEND core_sources "${EDEN_MAINTAINED_VI_CONDUCTOR}")
 set_property(TARGET core PROPERTY SOURCES "${core_sources}")
 
 # Nvdrv sessions borrow process memory until their final handles are unmapped.

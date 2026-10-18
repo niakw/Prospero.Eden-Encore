@@ -874,6 +874,20 @@ for filename, expected_blob in gpu_injection_blobs.items():
     assert f'/eden-core/gpu-injections/{filename}"' in c
 print("ENCORE_GPU_INJECTIONS_CANONICAL_PASS", len(gpu_injection_blobs))
 
+
+# Historical CMake transformations are an exact oracle only, never compiled.
+vi_pinned = (root/"vendor/sources/eden/src/core/hle/service/vi/conductor.cpp").read_text()
+vi_pairs = [["    for (auto& [display_id, manager] : m_vsync_managers) {\n        m_container.ComposeOnDisplay(&m_swap_interval, &m_compose_speed_scale, display_id);\n        manager.SignalVsync(m_system.Kernel());\n    }","    if (const int compose_delay = ::Eden::Performance::compose_delay_us.load(std::memory_order_relaxed);\n        compose_delay > 0 && m_system.IsMulticore()) {\n        for (auto& [display_id, manager] : m_vsync_managers) {\n            manager.SignalVsync(m_system.Kernel());\n        }\n        std::this_thread::sleep_for(std::chrono::microseconds(compose_delay));\n        for (auto& [display_id, manager] : m_vsync_managers) {\n            m_container.ComposeOnDisplay(&m_swap_interval, &m_compose_speed_scale, display_id);\n        }\n        return;\n    }\n    for (auto& [display_id, manager] : m_vsync_managers) {\n        m_container.ComposeOnDisplay(&m_swap_interval, &m_compose_speed_scale, display_id);\n        manager.SignalVsync(m_system.Kernel());\n    }"],["    const f32 effective_fps = 60.f / static_cast<f32>(m_swap_interval);\n    return static_cast<s64>(speed_scale * (1000000000.f / effective_fps));","    const f32 effective_fps = 60.f / static_cast<f32>(m_swap_interval);\n    ::Eden::Display::game_millihertz.store(static_cast<int>(effective_fps * 1000.f / speed_scale),\n                                           std::memory_order_relaxed);\n    return static_cast<s64>(speed_scale * (1000000000.f / effective_fps));"]]
+for old, new in vi_pairs:
+    assert vi_pinned.count(old)==1, ("pinned VI source drift", old[:65])
+    vi_pinned=vi_pinned.replace(old,new)
+vi_expected="#include \"display_refresh.h\"\n#include \"performance.h\"\n#include <thread>\n"+vi_pinned
+assert (active/"eden-core/src/core/hle/service/vi/conductor.cpp").read_text()==vi_expected, "VI source parity mismatch"
+assert 'list(APPEND core_sources "${EDEN_MAINTAINED_VI_CONDUCTOR}")' in c
+assert 'target_include_directories(core PRIVATE "${EDEN_PORT_DIR}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/vi_conductor.cpp"' not in c
+print("ENCORE_VI_CONDUCTOR_PARITY_PASS",len(vi_pairs))
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -955,7 +969,7 @@ assert len(module_current) == 21, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 65
+assert len(recorded) + len(module_recorded) == 64
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
