@@ -13,9 +13,14 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-gc = (root / "headless/vulkan_gc_downloads.inc").read_text(encoding="utf-8")
+maintained = (root / "vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h").read_text(encoding="utf-8")
+begin = maintained.index("void TextureCache<P>::RunGarbageCollector() {")
+end = maintained.index("\ntemplate <class P>", begin)
+gc = maintained[begin:end]
+oracle = (root / "vendor/encore-active/eden-vulkan-oracles/vulkan_gc_downloads.inc").read_text(encoding="utf-8")
+assert "const bool prefetch_dirty = DirtyEvictions();" in oracle and "const bool prefetch_dirty = DirtyEvictions();" in gc
 generator = (root / "tools/prepare-vulkan-port.py").read_text(encoding="utf-8")
-assert "(port / 'vulkan_gc_downloads.inc').read_text()" in generator
+assert "(vulkan_oracle / 'vulkan_gc_downloads.inc').read_text()" in generator
 begin = gc.index("    using DownloadMap = decltype(runtime.DownloadStagingBuffer(size_t{}));")
 end = gc.index(" gc_downloads;", begin) + len(" gc_downloads;")
 declaration = gc[begin:end]
