@@ -163,95 +163,16 @@ list(REMOVE_ITEM common_sources host_memory.cpp sparse_large_vector.cpp)
 set_property(TARGET common PROPERTY SOURCES "${common_sources}")
 target_sources(common PRIVATE "${PORT_ROOT}/src/host_memory.cpp" "${PORT_ROOT}/src/memory_pages.cpp")
 
-# Eden's large tables (the guest page table, the GPU's address tables) stay sparse on the PS5:
-# their vector reserves its range with AllocateSparsePages and announces a first write to
-# CommitSparsePage (src/memory_pages.cpp) where upstream maps anonymous memory and calls
-# mprotect. A dense 39-bit page table alone was 1 GiB of the 12 GiB the CPU shares with the GPU.
-file(READ "${PROJECT_SOURCE_DIR}/src/common/sparse_large_vector.h" sparse_header)
-function(eden_sparse_replace old new count)
-    string(REPLACE "${old}" "" without "${sparse_header}")
-    string(LENGTH "${sparse_header}" before)
-    string(LENGTH "${without}" after)
-    string(LENGTH "${old}" each)
-    math(EXPR found "(${before} - ${after}) / ${each}")
-    if(NOT found EQUAL count)
-        message(FATAL_ERROR "Pinned sparse_large_vector.h changed: ${found} of '${old}', expected ${count}")
-    endif()
-    string(REPLACE "${old}" "${new}" changed "${sparse_header}")
-    set(sparse_header "${changed}" PARENT_SCOPE)
-endfunction()
-eden_sparse_replace("AllocateMemoryPages(alloc_size)" "AllocateSparsePages(alloc_size)" 2)
-eden_sparse_replace("FreeMemoryPages(base_ptr, alloc_size)" "FreeSparsePages(base_ptr, alloc_size)" 2)
-eden_sparse_replace("mprotect(reinterpret_cast<void*>(page), HostPageSize, PROT_READ | PROT_WRITE)"
-    "CommitSparsePage(page)" 1)
-# ZeroRegion (an unmap) asks whether the page of entry `start / sizeof(T)` was committed where it
-# means the page of entry `start`. A wrong "yes" writes zeroes into a part of the table nothing
-# was ever written to: harmless in a dense table, a fault in a read-only one. A wrong "no" leaves
-# the first entries of the unmapped range as they were.
-eden_sparse_replace("if (IsCommittedPage(start / sizeof(T))) {" "if (IsCommittedPage(start)) {" 1)
-# Upstream SparseLargeVector uses > instead of >= for element count (three
-# places). Index exactly count is outside the array and must not dereference
-# or attempt to commit an extra 2-MiB sparse PS5 table slot. Preserve the
-# original zero/last valid element fast paths.
-eden_sparse_replace("if (index > alloc_size / sizeof(T)) {"
-    "if (index >= alloc_size / sizeof(T)) {" 3)
-# Protect one table's bitmap scan/decommit from another worker's first commit.
-# Ordinary mapped reads and writes still run without the lock.
-eden_sparse_replace("#include <atomic>\n"
-    "#include <atomic>\n#include <mutex>\n" 1)
-eden_sparse_replace("void ZeroRegion(std::size_t start, std::size_t end_) noexcept {"
-    "void ZeroRegion(std::size_t start, std::size_t end_) noexcept {\n        std::lock_guard<std::mutex> mutation_lock{sparse_mutation_mutex};" 1)
-eden_sparse_replace("void FreeMemoryPages(void* base, std::size_t size) noexcept;"
-    "void FreeMemoryPages(void* base, std::size_t size) noexcept;\nvoid* AllocateSparsePages(std::size_t size) noexcept;\nvoid FreeSparsePages(void* base, std::size_t size) noexcept;\nvoid CommitSparsePage(std::uintptr_t page) noexcept;\nvoid DecommitSparsePage(std::uintptr_t page) noexcept;\nstd::size_t SparseCommitSpan() noexcept;" 1)
-# Upstream #4471 decommits complete host pages. Encore's PS5 sparse backing is coarser (2 MiB),
-# so clear the host-page bit first and release the private slot only when no committed page in
-# that slot remains. Partial first/last host pages are still zeroed in place.
-set(sparse_zero_loop [=[            std::memset(reinterpret_cast<void*>(page), 0, (std::min)( HostPageSize, end - page));]=])
-set(sparse_zero_release [=[            const auto index = (page - reinterpret_cast<u64>(base_ptr)) / sizeof(T);
-            if (end - page >= HostPageSize) {
-                DecommitPage(index);
-            } else {
-                std::memset(reinterpret_cast<void*>(page), 0, end - page);
-            }]=])
-eden_sparse_replace("${sparse_zero_loop}" "${sparse_zero_release}" 1)
-set(sparse_private_anchor [=[    constexpr void CommitPage(std::size_t index) noexcept {
-        auto page_index = (index * sizeof(T)) >> HostPageBits;]=])
-set(sparse_private_replacement [=[    void DecommitPage(std::size_t index) noexcept {
-        const auto page_index = (index * sizeof(T)) >> HostPageBits;
-        const auto vector_base = reinterpret_cast<std::uintptr_t>(base_ptr);
-        const auto page_address = reinterpret_cast<std::uintptr_t>(base_ptr + index) & HostPageMask;
-        // A host page may be cleared while *other* pages in its 2 MiB
-        // physical slot remain in use. Clearing only the commit bitmap then
-        // retains stale PageEntryData in the still-writable private backing.
-        // CommitSparsePage does not re-zero an already owned slot, so remap
-        // would resurrect old CPU/GPU address translations. Also zero the
-        // dense fallback, where DecommitSparsePage intentionally does nothing.
-        // ZeroRegion holds sparse_mutation_mutex and only calls here for a
-        // committed/writable host page.
-        std::memset(reinterpret_cast<void*>(page_address), 0, HostPageSize);
-        committed_pages[page_index >> 6].fetch_and(~(1ULL << (page_index & 63)), std::memory_order_acq_rel);
-
-        const std::size_t span = SparseCommitSpan();
-        const std::size_t slot_offset = ((page_address - vector_base) / span) * span;
-        const std::size_t first_page = slot_offset / HostPageSize;
-        const std::size_t last_page = (std::min)(first_page + span / HostPageSize,
-                                                  (alloc_size + HostPageSize - 1) / HostPageSize);
-        for (std::size_t candidate = first_page; candidate < last_page; ++candidate) {
-            const auto bits = committed_pages[candidate >> 6].load(std::memory_order_acquire);
-            if ((bits >> (candidate & 63)) & 1) return;
-        }
-        DecommitSparsePage(vector_base + slot_offset);
-    }
-
-    void CommitPage(std::size_t index) noexcept {
-        std::lock_guard<std::mutex> mutation_lock{sparse_mutation_mutex};
-        if (IsCommittedPage(index)) return;
-        auto page_index = (index * sizeof(T)) >> HostPageBits;]=])
-eden_sparse_replace("${sparse_private_anchor}" "${sparse_private_replacement}" 1)
-# Read-only paths stay lock-free. Only table mutations acquire this.
-eden_sparse_replace("    std::size_t alloc_size{};"
-    "    std::mutex sparse_mutation_mutex;\n    std::size_t alloc_size{};" 1)
-write_derived("${PORT_BUILD_DIR}/sparse/common/sparse_large_vector.h" "${sparse_header}")
+# Complete native sparse vector header is owned by Encore, not constructed
+# at configure time. Preserve the prior include-overlay selection order.
+set(EDEN_MAINTAINED_SPARSE_VECTOR
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/common/sparse_large_vector.h")
+if(NOT EXISTS "${EDEN_MAINTAINED_SPARSE_VECTOR}")
+    message(FATAL_ERROR "Missing maintained sparse vector header")
+endif()
+file(MAKE_DIRECTORY "${PORT_BUILD_DIR}/sparse/common")
+configure_file("${EDEN_MAINTAINED_SPARSE_VECTOR}"
+    "${PORT_BUILD_DIR}/sparse/common/sparse_large_vector.h" COPYONLY)
 
 # The fiber transition fix is a complete, versioned C++ translation unit.
 # It was previously regenerated by CMake string(REPLACE) at each configure.

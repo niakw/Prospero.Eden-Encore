@@ -791,6 +791,13 @@ for filename, expected in scalar_canonical_blobs.items():
     check_canonical_git_object(source, expected, "scalar")
 scalar_module = (root / "headless/scalar-memory.cmake").read_text()
 assert 'file(READ "${EDEN_SCALAR_INPUT_DIR}/scalar-memory-${lower}.inc" scalar_access)' in scalar_module
+# Sparse memory table is maintained as a full header; replay lives in a standalone host oracle.
+assert (active / "eden-core/src/common/sparse_large_vector.h").is_file()
+assert 'configure_file("${EDEN_MAINTAINED_SPARSE_VECTOR}"' in c
+assert 'write_derived("${PORT_BUILD_DIR}/sparse/common/sparse_large_vector.h"' not in c
+assert (root / "tools/check-maintained-sparse-vector.py").is_file()
+print("VENDOR_MAINTAINED_SPARSE_OWNER_PASS")
+
 # Dynarmic scalar source-only equivalence, no generator in CMake.
 scalar_root = sources / "eden/src/dynarmic/src/dynarmic"
 base_impl = (scalar_root / "frontend/A64/translate/impl/impl.cpp").read_text()
@@ -1166,7 +1173,7 @@ assert len(module_current) == 21, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 48
+assert len(recorded) + len(module_recorded) == 47
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
