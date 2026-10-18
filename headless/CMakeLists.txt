@@ -1143,38 +1143,20 @@ file(REMOVE "${PORT_BUILD_DIR}/include/core/hle/kernel/k_slab_heap.h")
 # Thread finalization helpers are complete tracked headers in encore-active.
 # native-hle-overrides.cmake stages those headers without text replacements.
 
-# Game exit: the application's page table frees every physical page it maps (~1 s for a 4 GiB
-# game) although the kernel shutdown that finalizes it recreates the memory manager at the next
-# initialization. Skip those frees during a kernel shutdown; an in-game process exit (applets)
-# still frees its pages.
-file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/kernel/k_page_table_base.cpp" page_table_source)
-set(page_free_old [=[        // Get physical pages.
-        KPageGroup pg(m_system.Kernel(), m_block_info_manager);
-        this->MakePageGroup(pg, addr, size / PageSize);
-
-        // Free the pages.
-        pg.CloseAndReset(m_system.Kernel());
-    };]=])
-string(FIND "${page_table_source}" "${page_free_old}" page_free_at)
-if(page_free_at LESS 0)
-    message(FATAL_ERROR "Pinned page table finalization changed")
+# Complete kernel page-table finalizer is maintained under encore-active.
+# No configure-time C++ lambda rewrites.
+set(EDEN_MAINTAINED_PAGE_TABLE
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/kernel/k_page_table_base.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_PAGE_TABLE}")
+    message(FATAL_ERROR "Missing maintained page-table finalization source")
 endif()
-string(REPLACE "${page_free_old}" [=[        // The memory manager is recreated after a kernel shutdown.
-        if (m_system.Kernel().IsShuttingDown()) {
-            return;
-        }
-
-        // Get physical pages.
-        KPageGroup pg(m_system.Kernel(), m_block_info_manager);
-        this->MakePageGroup(pg, addr, size / PageSize);
-
-        // Free the pages.
-        pg.CloseAndReset(m_system.Kernel());
-    };]=] page_table_source "${page_table_source}")
-write_derived("${PORT_BUILD_DIR}/k_page_table_base.cpp" "${page_table_source}")
 get_target_property(page_table_core_sources core SOURCES)
+list(FIND page_table_core_sources hle/kernel/k_page_table_base.cpp eden_original_page_table)
+if(eden_original_page_table EQUAL -1)
+    message(FATAL_ERROR "Pinned page-table source not present in core SOURCES")
+endif()
 list(REMOVE_ITEM page_table_core_sources hle/kernel/k_page_table_base.cpp)
-list(APPEND page_table_core_sources "${PORT_BUILD_DIR}/k_page_table_base.cpp")
+list(APPEND page_table_core_sources "${EDEN_MAINTAINED_PAGE_TABLE}")
 set_property(TARGET core PROPERTY SOURCES "${page_table_core_sources}")
 
 # A server's stopped flag only covers its inner request loop; stopping the CPU
