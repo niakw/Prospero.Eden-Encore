@@ -13,7 +13,7 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 read = lambda path: (root / path).read_text()
-checked = read("headless/checked-fastmem.cmake")
+checked = read("vendor/encore-active/eden-core/src/dynarmic/backend/x64/emit_x64_memory.h")
 host = read("src/host_memory.cpp")
 memory = read("vendor/sources/eden/src/core/memory.cpp")
 page = read("vendor/sources/eden/src/common/page_table.h")
