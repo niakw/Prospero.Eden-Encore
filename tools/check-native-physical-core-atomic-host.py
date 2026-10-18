@@ -62,10 +62,10 @@ with tempfile.TemporaryDirectory(prefix="encore-physical-atomic-") as folder:
         selection_end = cmake_source.index('list(REMOVE_ITEM core_sources "hle/kernel/physical_core.cpp")', selection_begin)
         selection = cmake_source[selection_begin:selection_end]
         build_script.write_text(
-            "cmake_minimum_required(VERSION 3.25)\\n"
-            + f'set(PORT_ROOT "{root.as_posix()}")\\n'
-            + f'set(PORT_BUILD_DIR "{base.as_posix()}")\\n'
-            + f'set(EDEN_DEV_PROFILE {"ON" if profile else "OFF"})\\n'
+            "cmake_minimum_required(VERSION 3.25)\n"
+            + f'set(PORT_ROOT "{root.as_posix()}")\n'
+            + f'set(PORT_BUILD_DIR "{base.as_posix()}")\n'
+            + f'set(EDEN_DEV_PROFILE {"ON" if profile else "OFF"})\n'
             + selection
         )
         subprocess.run(["cmake", "-P", str(build_script)], check=True, timeout=20)
