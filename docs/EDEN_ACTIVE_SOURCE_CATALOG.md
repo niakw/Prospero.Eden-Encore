@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **271 fichiers** de code et d'en-têtes enregistrés.
-- **271 fichiers** possèdent une correspondance de chemin *exacte*
+- **272 fichiers** de code et d'en-têtes enregistrés.
+- **272 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -180,6 +180,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/dynarmic/backend/block_range_information.h` | `maintained-override` | J41 |
 | `eden-core/src/dynarmic/backend/x64/a32_emit_x64.cpp` | `maintained-override` | B12 |
 | `eden-core/src/dynarmic/backend/x64/a32_emit_x64_memory.cpp` | `maintained-override` | B19 |
+| `eden-core/src/dynarmic/backend/x64/a32_interface_native.cpp` | `maintained-override` | B24 |
 | `eden-core/src/dynarmic/backend/x64/a64_emit_x64_memory.cpp` | `maintained-override` | B20 |
 | `eden-core/src/dynarmic/backend/x64/a64_emit_x64_shared.cpp` | `maintained-override` | B14 |
 | `eden-core/src/dynarmic/backend/x64/a64_emit_x64_shared.h` | `maintained-override` | B16 |
@@ -313,7 +314,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
 Ces deux fichiers sont inclus dans les **83 entrées** de
 `vendor/encore-active/eden-backports/manifest.json`, mais ne sont
-pas comptés parmi les 271 fichiers de code et d'en-têtes.
+pas comptés parmi les 272 fichiers de code et d'en-têtes.
 
 ## Inventaire hors `vendor/encore-active`
 
@@ -321,7 +322,7 @@ Les **170 fichiers source/en-tête/fragment** de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
 34 ont désormais un propriétaire exact dans le graphe courant ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
-La couverture de 271/271 ci-dessus ne s'applique **pas** à ce dossier.
+La couverture de 272/272 ci-dessus ne s'applique **pas** à ce dossier.
 
 ## Critères de tenue à jour
 
