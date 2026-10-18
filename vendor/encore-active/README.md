@@ -52,9 +52,9 @@ Le recensement des fichiers n'est pas une validation de leurs fonctions.
 Le générateur `renderer_opengl.cpp` n'est plus nécessaire : le renderer
 original est sélectionné directement, sans créer une copie maintenue identique.
 
-L'inventaire couvre **50 appels générateurs** du CMake principal, **21**
-dans les modules et **7 modules indirects** suivis séparément ; ce ne sont
-pas des décomptes de fichiers uniques. Chaque nouvelle migration doit
+L'inventaire couvre **32 appels générateurs** du CMake principal et **21**
+dans les modules, avec **4 modules indirects** de substitution suivis
+séparément ; ce ne sont pas des décomptes de fichiers uniques. Chaque nouvelle migration doit
 conserver un test de parité et de sélection native.
 
 **Dette non encore consolidée ici :** `headless/backports/` contient
