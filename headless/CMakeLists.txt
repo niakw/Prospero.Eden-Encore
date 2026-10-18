@@ -2141,19 +2141,15 @@ if(EDEN_PS5_OPENGL)
         string(PREPEND gpu_source "#include <glad/glad.h>\n")
     else()
     # PS5 GPU queue is already copied from the complete eden-gpu source above.
-    file(READ "${PROJECT_SOURCE_DIR}/src/video_core/gpu_thread.h" gpu_thread_header)
-    # R333: the eight-command PS5 override is demonstrably saturating in FC27.
-    # Allow a bounded short command burst without restoring the upstream 4096
-    # slots (which can hide large latency). Preserve all fences, FIFO and
-    # stop-aware producer waking; leave non-native host budgeting unchanged.
-    set(eden_gpu_queue_capacity 8)  # Host-only fallback; native header is maintained.
-    string(REPLACE "using CommandQueue = Common::SPSCQueue<CommandDataContainer>;"
-        "using CommandQueue = Common::SPSCQueue<CommandDataContainer, ${eden_gpu_queue_capacity}>;"
-        gpu_thread_header "${gpu_thread_header}")
-    string(REPLACE "    ~ThreadManager();" "    ~ThreadManager();\n    void Stop() { thread.request_stop(); if (thread.joinable()) thread.join(); }" gpu_thread_header "${gpu_thread_header}")
-    # Host-only fallback keeps its 8-slot header generator; native uses the
-    # committed quiet/dev worker and header selected by configure_file above.
-    write_derived("${PORT_BUILD_DIR}/include/video_core/gpu_thread.h" "${gpu_thread_header}")
+    # Host-specific GPU header is a tracked source, not generated C++.
+    set(EDEN_MAINTAINED_HOST_GPU_HEADER
+        "${PORT_ROOT}/vendor/encore-active/eden-core/host-gpu/include/video_core/gpu_thread.h")
+    if(NOT EXISTS "${EDEN_MAINTAINED_HOST_GPU_HEADER}")
+        message(FATAL_ERROR "Missing maintained host GPU header")
+    endif()
+    file(MAKE_DIRECTORY "${PORT_BUILD_DIR}/include/video_core")
+    configure_file("${EDEN_MAINTAINED_HOST_GPU_HEADER}"
+        "${PORT_BUILD_DIR}/include/video_core/gpu_thread.h" COPYONLY)
     endif()
     target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/include")
     string(REPLACE "    ~Impl() = default;" "    ~Impl() { gpu_thread.Stop(); if (renderer && Settings::IsOpenGL()) { renderer->Context().MakeCurrent(); glFinish(); } }" gpu_source "${gpu_source}")
