@@ -33,7 +33,7 @@ for native in (False, True):
         filename = "core_native.cpp" if native else "core_standard.cpp"
         actual = (active / filename).read_text()
         assert generated == actual, ("G14 byte parity", filename)
-        assert actual.count("process.reset();\\n            ShutdownMainProcess()") == 2
+        assert actual.count("process.reset();\n            ShutdownMainProcess()") == 2
         assert 'GameSettings::LoadOverrides(params.program_id,' in actual
         assert ("::Eden::ReportStep" in actual) == native
 print("ENCORE_MAINTAINED_CORE_SYSTEM_PARITY_PASS G14=retired variants=2")
