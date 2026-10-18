@@ -224,7 +224,7 @@ for p, family, owner, state in headless_rows:
             "headless graph owner stale", p)
     else:
         assert owner == "—" and state.strip() == "À qualifier", ("headless owner stale", p)
-assert "**174** chemins" in headless_doc
+assert "**173** chemins" in headless_doc
 assert f"**{headless_linked}** chemins déjà présents" in headless_doc
 assert f"**{len(headless_actual)-headless_linked}** chemins sans propriétaire exact" in headless_doc
 print("ENCORE_HEADLESS_SOURCE_CATALOG_PASS",

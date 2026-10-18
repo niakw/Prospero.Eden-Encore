@@ -25,7 +25,7 @@ nouveaux corps C++ destinés à la console.
 - Six modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 35.
-- `headless/` contient **7 fragments `.inc`**. Plusieurs contribuent
+- `headless/` contient **6 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
   dépendance. **Leur présence dans `headless` ne vaut pas conformité
@@ -94,8 +94,16 @@ fragments de l'application native qui ne remplacent aucune source upstream.
 | `headless/heap_arenas.inc` | Runtime natif (non nécessairement override) | À vérifier dans les consommateurs / CMake |
 | `headless/jit-compile-batch.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
 | `headless/jit-permissions.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
-| `headless/jit_assert.inc` | Fragment local, sélectionner/qualifier | À vérifier dans les consommateurs / CMake |
 <!-- SINGLE_SOURCE_FRAGMENTS_END -->
+
+## Assertion JIT centralisée
+
+`headless/jit_assert.inc` a été retiré : son contenu était déjà intégré
+mot pour mot dans l'en-tête complet
+`vendor/encore-active/eden-core/src/common/assert.h`, sélectionné par
+la priorité d'inclusion du JIT. Le test de parité compare le préfixe Eden
+épinglé et verrouille le bloc de diagnostic intégré par son empreinte Git,
+sans conserver un fragment C++ concurrent hors `encore-active`.
 
 ## Groupe JIT partagé centralisé
 
