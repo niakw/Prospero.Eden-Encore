@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 318
+**Non, this is not an exhaustive repository-wide inventory.** The 319
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 318 | 296 | 649 |
+| Graphe connu | 319 | 297 | 651 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 263 | 251 | 544 |
+| SOURCE — lecture effectuée, preuve insuffisante | 264 | 252 | 546 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **278** | **265** | **572** |
+| **Encore à qualifier (SOURCE + OPEN)** | **279** | **266** | **574** |
 | Dont priorité P0 (SOURCE + OPEN) | 108 | 103 | 252 |
 
-Le **noyau restant** compte donc 278 critères répartis sur
-265 fichiers et 572 mentions fonction/contrat :
-15 OPEN et 263 SOURCE.
+Le **noyau restant** compte donc 279 critères répartis sur
+266 fichiers et 574 mentions fonction/contrat :
+15 OPEN et 264 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-224 fichiers de code/en-têtes présents et 224 avec un chemin de
+225 fichiers de code/en-têtes présents et 225 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -249,6 +249,7 @@ function/contract tokens are checked by CI for existence only; the
 | Q06 | P0 | Q03 | vendor/encore-active/eden-gpu/gpu_thread_quiet.cpp | ThreadManager::RunWorker; ThreadManager::Stop | SOURCE | docs/EDEN_ACTIVE_SOURCE_CATALOG.md | Native non-diagnostic GPU worker is a separate maintained variant; verify shutdown and FIFO completion; source-level ownership only, console proof pending | 🟡 Source étudiée |
 | Q07 | P0 | Q02 | vendor/encore-active/eden-gpu/include/common/bounded_threadsafe_queue.h | EmplaceWaitWithStopToken; TryPop | SOURCE | docs/EDEN_ACTIVE_SOURCE_CATALOG.md | Maintained queue stop-token and element lifetime must be consistent in GPU worker variants; source-level ownership only, console proof pending | 🟡 Source étudiée |
 | Q08 | P0 | Q06,Q07 | vendor/encore-active/eden-gpu/include/video_core/gpu_thread.h | PushCommand; RunWorker | SOURCE | docs/EDEN_ACTIVE_SOURCE_CATALOG.md | GPU worker shared ABI and shutdown ordering apply to both quiet and diagnostic implementations; source-level ownership only, console proof pending | 🟡 Source étudiée |
+| Q09 | P2 | Q08 | vendor/encore-active/eden-core/host-gpu/include/video_core/gpu_thread.h | ThreadManager::Stop; CommandQueue | SOURCE | tools/check-vendor-consolidation-debt.py | Exact host fallback source with eight queue slots and explicit stop/join; PS5 native remains owned by eden-gpu | 🟡 Source étudiée |
 | D01 | P2 | Q03 | vendor/sources/eden/src/video_core/dma_pusher.cpp | DmaPusher::Step; DmaPusher::DispatchCalls; DmaPusher::ProcessCommands | HOST | tools/check-native-dma-resume-boundary-host.py | Unsafe restart proved; no native replay or partial continuation | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-dma-resume-boundary-host.py) |
 | D02 | P2 | D01 | vendor/sources/eden/src/video_core/dma_pusher.cpp | DmaPusher::Step; DmaPusher::SetState | HOST | tools/check-native-dma-indirect-dependencies-host.py | Late guest-RAM command decoding remains unsealed | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-dma-indirect-dependencies-host.py) |
 | V01 | P0 | Q03 | vendor/encore-active/eden-vulkan/vulkan_scheduler.cpp | Scheduler::WorkerThread; Scheduler::WaitWorker; Scheduler::Finish | SOURCE | docs/FC27_NATIVE_FRAME_PROGRESS_TRIAGE_2026-10-17.md | Separate worker queue drain from physical GPU device fence wait | 🟡 Source étudiée |

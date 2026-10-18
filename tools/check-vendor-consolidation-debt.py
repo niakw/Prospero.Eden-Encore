@@ -931,6 +931,22 @@ assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/texture_cache/util.cpp" 
 assert 'set(eden_astc_decode_old [=[' not in c
 print("MAINTAINED_ASTC_TEXTURE_PARITY_PASS R428")
 
+
+# The host-only GPU header is tracked in Encore too: byte-for-byte
+# equivalence to the old CMake fallback (8 queue slots plus stop/join).
+host_original = (root / "vendor/sources/eden/src/video_core/gpu_thread.h").read_text()
+host_queue_old = "using CommandQueue = Common::SPSCQueue<CommandDataContainer>;"
+host_queue_new = "using CommandQueue = Common::SPSCQueue<CommandDataContainer, 8>;"
+host_stop_old = "    ~ThreadManager();"
+host_stop_new = "    ~ThreadManager();\\n    void Stop() { thread.request_stop(); if (thread.joinable()) thread.join(); }".replace("\\n", "\n")
+assert host_original.count(host_queue_old) == host_original.count(host_stop_old) == 1
+host_expected = host_original.replace(host_queue_old, host_queue_new).replace(host_stop_old, host_stop_new)
+host_canonical = active / "eden-core/host-gpu/include/video_core/gpu_thread.h"
+assert host_canonical.read_text() == host_expected, "Host GPU header parity drift"
+assert 'configure_file("${EDEN_MAINTAINED_HOST_GPU_HEADER}"' in c
+assert 'write_derived("${PORT_BUILD_DIR}/include/video_core/gpu_thread.h"' not in c
+print("MAINTAINED_HOST_GPU_HEADER_PARITY_PASS slots=8 stop_join=1")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -1012,7 +1028,7 @@ assert len(module_current) == 21, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 59
+assert len(recorded) + len(module_recorded) == 58
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
