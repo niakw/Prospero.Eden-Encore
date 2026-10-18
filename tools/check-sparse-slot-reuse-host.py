@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Compile and execute the actual derived PS5 sparse decommit code on a host.
+"""Compile and execute the actual Encore-maintained sparse decommit code on a host.
 
 One 2 MiB slot backs 128 host pages of 16 KiB each. Clearing a page with
 another still mapped must erase its contents, even without releasing the slot.
@@ -12,12 +12,12 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-cmake = (root / "headless/CMakeLists.txt").read_text()
-anchor = "set(sparse_private_replacement [=["
-assert cmake.count(anchor) == 1
-body = cmake.split(anchor, 1)[1].split("]=])", 1)[0]
-method = body.split("    void CommitPage(std::size_t index) noexcept {", 1)[0]
-assert method.startswith("    void DecommitPage(std::size_t index) noexcept {")
+sparse = (root / "vendor/encore-active/eden-core/src/common/sparse_large_vector.h").read_text()
+anchor = "    void DecommitPage(std::size_t index) noexcept {"
+assert sparse.count(anchor) == 1
+method = anchor + sparse.split(anchor, 1)[1].split(
+    "    void CommitPage(std::size_t index) noexcept {", 1)[0]
+assert method.startswith(anchor)
 assert "std::memset(reinterpret_cast<void*>(page_address), 0, HostPageSize);" in method
 compiler = (shutil.which("clang++-18") or shutil.which("clang++") or
             shutil.which("g++"))
