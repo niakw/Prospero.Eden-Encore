@@ -159,8 +159,8 @@ int main() {
         producer.join(); consumer.join();
     }
     // 64 independent title-like lifecycles with bursty GPU producers and
-    // deliberately delayed consumers. The REAL native stop-aware method is
-    // still injected from gpu_queue_stop_wait.inc, not reimplemented here.
+    // deliberately delayed consumers. The native stop-aware method is
+    // extracted from the maintained eden-gpu queue header, not reimplemented here.
     for (int session=0; session<64; ++session) {
         Queue<int,256> q;
         constexpr int items=384;

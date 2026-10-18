@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Replay observed native GPU command counts under 1x/4x/8x host stress.
 
-The native SPSC stop-aware producer code is copied verbatim from the actual
-build injection. The ring shim is the existing regression fixture, NOT the
+The native SPSC stop-aware producer method is extracted from the complete
+GPU queue header selected for production. The ring shim is the existing regression fixture, NOT the
 PS5 GPU or the guest's HLE implementation. The 28-minute stalled scenario is
 advanced in virtual counters; we do NOT claim 28 minutes of wall-clock testing
 or emulate the firmware scheduler/driver.
@@ -47,15 +47,26 @@ assert pad_delta["samples_delta"] > pad_delta["polls_delta"]
 ipc_per_second = ipc_delta / ((stalls[-1]["age_ms"]-stalls[0]["age_ms"])/1000)
 assert 750 < ipc_per_second < 760
 
-# Keep the real source-backed queue STOP-WAIT shim used by native All-On.
+# Keep the existing SPSC host harness but inject the actual maintained
+# queue member, not a retired CMake injection fragment. All producer tests
+# share the same source of truth.
 host = (root / "tools/check-ps5-gpu-producer-wake.py").read_text()
 start = host.index('cpp = r"""') + len('cpp = r"""')
 end = host.index('""".replace("STOP_CODE", inc)', start)
 cpp = host[start:end]
 assert cpp.count("int main() {") == 1
-queue_source = cpp.split("int main() {")[0]
-queue_source = queue_source.replace("STOP_CODE", (root / "vendor/encore-active/eden-core/gpu-injections/gpu_queue_stop_wait.inc").read_text())
-assert 'producer.cv.wait(lock, stop_token' in queue_source
+queue_header = (root / "vendor/encore-active/eden-gpu/include/common/bounded_threadsafe_queue.h").read_text()
+method_start = "    template <typename... Args>\n    bool EmplaceWaitWithStopToken("
+method_end = "\n\n    bool TryPop("
+assert queue_header.count(method_start) == 1
+begin = queue_header.index(method_start)
+end_method = queue_header.index(method_end, begin)
+method = queue_header[begin:end_method].strip()
+assert "producer.cv.wait(lock, stop_token" in method
+assert "std::destroy_at(std::addressof(m_data[pos]))" in method
+assert "std::construct_at(std::addressof(m_data[pos])" in method
+queue_source = cpp.split("int main() {")[0].replace("STOP_CODE", method)
+assert "STOP_CODE" not in queue_source
 
 # One queue item corresponds to one observed GPU-tick-sized source workload
 # rather than a draw, CPU instruction, guest write or IPC service call.
