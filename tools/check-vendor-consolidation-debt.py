@@ -791,6 +791,13 @@ for filename, expected in scalar_canonical_blobs.items():
     check_canonical_git_object(source, expected, "scalar")
 scalar_module = (root / "headless/scalar-memory.cmake").read_text()
 assert 'file(READ "${EDEN_SCALAR_INPUT_DIR}/scalar-memory-${lower}.inc" scalar_access)' in scalar_module
+# RegAlloc now has complete tracked sources and one explicit selector.
+regalloc_dir = active / "eden-core/src/dynarmic/backend/x64"
+assert (regalloc_dir / "reg_alloc.h").is_file() and (regalloc_dir / "reg_alloc.cpp").is_file()
+assert "write_derived(" not in (root / "headless/dynarmic/reg_alloc.cmake").read_text()
+assert (root / "tools/check-maintained-reg-alloc.py").is_file()
+print("VENDOR_MAINTAINED_REGALLOC_OWNER_PASS")
+
 # Sparse memory table is maintained as a full header; replay lives in a standalone host oracle.
 assert (active / "eden-core/src/common/sparse_large_vector.h").is_file()
 assert 'configure_file("${EDEN_MAINTAINED_SPARSE_VECTOR}"' in c
@@ -1168,12 +1175,12 @@ for module in module_files:
     module_current.extend((module, target) for target in
                           re.findall(r'write_derived\(\s*"([^"]+)"', content))
 assert module_recorded == module_current, "Module CMake source generator inventory is stale"
-assert len(module_current) == 21, len(module_current)
+assert len(module_current) == 19, len(module_current)
 # Indirect X01/X02 are no longer CMake generators: full source units
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 47
+assert len(recorded) + len(module_recorded) == 45
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
