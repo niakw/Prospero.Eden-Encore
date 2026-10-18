@@ -474,19 +474,25 @@ write_derived("${PORT_BUILD_DIR}/include/${memory_relative}" "${memory_emitter}"
 # New include overlays do not invalidate objects whose depfile still names
 # upstream headers. Derive both translation units so the first build cannot
 # silently keep old objects; subsequent depfiles track the overlay normally.
+# Memory emitter units are complete Encore sources. Shared mode uses the
+# existing target-wide EDEN_SHARED_JIT_LAYOUT compile definition, so
+# its three monitor/configuration macros live in the source units.
+set(EDEN_MAINTAINED_MEMORY_UNIT_DIR
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/dynarmic/backend/x64")
 get_target_property(jit_sources dynarmic SOURCES)
 foreach(bits 32 64)
     set(memory_unit "a${bits}_emit_x64_memory.cpp")
-    file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/dynarmic/backend/x64/${memory_unit}" memory_source)
-    if(EDEN_SHARED_JIT)
-        eden_shared_jit_memory_unit(${bits})
+    set(EDEN_MAINTAINED_MEMORY_UNIT
+        "${EDEN_MAINTAINED_MEMORY_UNIT_DIR}/${memory_unit}")
+    if(NOT EXISTS "${EDEN_MAINTAINED_MEMORY_UNIT}")
+        message(FATAL_ERROR "Missing maintained memory emitter ${memory_unit}")
     endif()
-    write_derived("${PORT_BUILD_DIR}/${memory_unit}" "${memory_source}")
+    configure_file("${EDEN_MAINTAINED_MEMORY_UNIT}"
+        "${PORT_BUILD_DIR}/${memory_unit}" COPYONLY)
     list(FILTER jit_sources EXCLUDE REGEX "(^|/)a${bits}_emit_x64_memory\\.cpp$")
     list(APPEND jit_sources "${PORT_BUILD_DIR}/${memory_unit}")
 endforeach()
 set_property(TARGET dynarmic PROPERTY SOURCES "${jit_sources}")
-
 
 if(PS5_NATIVE)
     # The native spin-lock adjustment is a complete Encore source.
