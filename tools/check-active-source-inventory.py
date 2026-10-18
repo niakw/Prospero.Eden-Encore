@@ -187,6 +187,27 @@ for entry in headless_doc.split(headless_start, 1)[1].split(headless_end, 1)[0].
     headless_rows.append((cells[0].strip("`"), cells[1], cells[2], cells[3]))
 assert [r[0] for r in headless_rows] == headless_actual, (
     "headless source path catalog drift", len(headless_rows), len(headless_actual))
+# These three headless runtime translation units are application-owned,
+# not third-party dependency overrides. They must remain indexed and selected
+# by their actual CMake targets; moving them into vendor would be misleading.
+runtime_headless = {
+    "headless/metadata_bridge.cpp":
+        'add_library(eden-metadata STATIC "${EDEN_PORT_DIR}/metadata_bridge.cpp")',
+    "headless/stop_limit.cpp":
+        '"${EDEN_PORT_DIR}/crash_report.cpp" "${EDEN_PORT_DIR}/stop_limit.cpp"',
+    "headless/zbic_compression.cpp":
+        'target_sources(common PRIVATE "${EDEN_PORT_DIR}/zbic_compression.cpp")',
+}
+for path, selection in runtime_headless.items():
+    assert path in headless_graph, ("runtime source lacks functional audit entry", path)
+    assert selection in native_cmake, ("tracked runtime unit lost compile selection", path)
+for path in ("headless/metadata_bridge.h", "headless/stop_limit.h",
+             "headless/zbic_compression.h", "headless/graphics.h",
+             "headless/gpu_failure.h", "headless/gpu_deferred_write_queue.h"):
+    assert path in headless_graph, ("runtime interface lacks graph owner", path)
+print("ENCORE_HEADLESS_RUNTIME_OWNERS_PASS",
+      f"compiled={len(runtime_headless)}", "headers=6")
+
 # The vendor-active graph above intentionally stores vendor-relative keys.
 # Headless paths use repository-relative keys and need an independent map.
 headless_graph = {}
