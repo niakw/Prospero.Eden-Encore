@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **220 fichiers** de code et d'en-têtes enregistrés.
-- **220 fichiers** possèdent une correspondance de chemin *exacte*
+- **221 fichiers** de code et d'en-têtes enregistrés.
+- **221 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -24,7 +24,7 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 **Important :** une correspondance de chemin n'est ni un test hôte,
 ni une certification console. Le graphe
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` porte les contrats fonctionnels,
-leurs états et les preuves. L'inventaire des 45 générateurs CMake
+leurs états et les preuves. L'inventaire des 43 générateurs CMake
 principaux, 21 générateurs de modules, quatre modules indirects et 46 patches
 reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
@@ -160,6 +160,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp` | `maintained-override` | N03 |
 | `eden-core/src/core/hle/service/service.cpp` | `maintained-override` | H22,H28 |
 | `eden-core/src/core/hle/service/sm/sm.h` | `maintained-override` | H51 |
+| `eden-core/src/core/hle/service/vi/conductor.cpp` | `maintained-override` | F36 |
 | `eden-core/src/core/internal_network/network.cpp` | `maintained-override` | N19 |
 | `eden-core/src/core/internal_network/network_interface.cpp` | `maintained-override` | F10 |
 | `eden-core/src/core/loader/deconstructed_rom_directory.cpp` | `maintained-override` | F16 |
@@ -262,7 +263,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
 Ces deux fichiers sont inclus dans les **83 entrées** de
 `vendor/encore-active/eden-backports/manifest.json`, mais ne sont
-pas comptés parmi les 220 fichiers de code et d'en-têtes.
+pas comptés parmi les 221 fichiers de code et d'en-têtes.
 
 ## Inventaire hors `vendor/encore-active`
 
@@ -270,7 +271,7 @@ Les **179 fichiers source/en-tête/fragment** de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
 27 ont désormais un propriétaire exact dans le graphe courant ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
-La couverture de 220/220 ci-dessus ne s'applique **pas** à ce dossier.
+La couverture de 221/221 ci-dessus ne s'applique **pas** à ce dossier.
 
 ## Critères de tenue à jour
 
