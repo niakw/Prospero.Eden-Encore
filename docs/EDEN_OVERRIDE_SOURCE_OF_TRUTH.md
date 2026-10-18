@@ -16,15 +16,15 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **240 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **242 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
 - `headless/CMakeLists.txt` : **26 générateurs** `write_derived`.
-- Cinq modules CMake générateurs totalisent **18 générateurs**
-  `write_derived`, soit **44 sites** au total.
-- Quatre modules CMake procèdent encore à des substitutions **indirectes**
+- Quatre modules CMake générateurs totalisent **16 générateurs**
+  `write_derived`, soit **42 sites** au total.
+- Cinq modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
-  nombre 44.
+  nombre 42.
 - `headless/` contient **8 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
@@ -59,7 +59,7 @@ nouveaux corps C++ destinés à la console.
 | `headless/native_jit_memory_read_guard.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
 | `headless/physical_core_interrupt_atomic.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
 | `headless/ps5.cmake` | Orchestration ou toolchain | Sélecteur / configuration |
-| `headless/scalar-memory.cmake` | Générateur de source dérivée, à déplacer | Dette de migration |
+| `headless/scalar-memory.cmake` | Modification indirecte de memory_source, à déplacer | Dette de migration |
 | `headless/vulkan.cmake` | Sélection/copie de sources Encore maintenues | Sélecteur / configuration |
 <!-- SINGLE_SOURCE_CMAKE_END -->
 
@@ -105,7 +105,7 @@ blobs Git identiques dans `vendor/encore-active/eden-core/dynarmic/shared-jit/`.
 Le sélecteur de `headless/dynarmic/shared-jit.cmake` lit les fichiers
 maintenus. **Ce module CMake conserve encore des transformations upstream
 à migrer** ; la relocalisation des données d'injection ne supprime pas les
-18 générateurs de modules. Le mode JIT partagé reste OFF par défaut.
+16 générateurs de modules. Le mode JIT partagé reste OFF par défaut.
 
 ## Fragments scalaires centralisés
 
@@ -115,9 +115,11 @@ maintenus sous `vendor/encore-active/eden-core/src/dynarmic/`.
 CMake choisit directement les unités `a64_translate.cpp` et
 `opt_passes.cpp`, avec `impl/impl.cpp` inclus exclusivement par le
 traducteur. `scalar-fold.inc` est un témoin historique de parité, non
-une entrée de compilation. Les fragments `scalar-memory-read.inc` et
-`scalar-memory-write.inc` restent consommés par le module secondaire
-`scalar-memory.cmake`, dette distincte.
+une entrée de compilation. Les deux émetteurs scalaires `emit_x64_vector.cpp` et
+`emit_x64_data_processing.cpp` sont des sources complètes maintenues.
+Les fragments `scalar-memory-read.inc` et `scalar-memory-write.inc`
+restent injectés dans `memory_source` par `scalar-memory.cmake` (X08) ;
+cette dette indirecte n'est pas considérée comme supprimée.
 
 ## Oracles Vulkan historiques
 
