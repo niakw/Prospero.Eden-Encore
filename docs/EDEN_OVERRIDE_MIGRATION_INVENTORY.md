@@ -1,6 +1,6 @@
 # Eden Encore — inventaire des transformations CMake encore actives
 
-**Branche :** `dev/ps5-sparse-jit`. **Dernière revue :** 18 octobre 2026.
+**Branche :** `dev/ps5-sparse-jit`. **Dernière revue :** 19 octobre 2026.
 
 Ce document inventorie **les appels restants à `write_derived()` dans
 `headless/CMakeLists.txt`**, dans leur ordre réel. Il ne confond pas
@@ -11,7 +11,7 @@ développement, les options JIT expérimentales, les backends et le build
 natif sélectionnent chacun leur sous-ensemble.
 
 L'inventaire complémentaire `docs/EDEN_ACTIVE_SOURCE_CATALOG.md` suit les
-274 fichiers de code et en-têtes dans `vendor/encore-active`,
+les fichiers de code et en-têtes dans `vendor/encore-active`,
 y compris les backports de production et la dépendance graphique. Cette
 couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
@@ -84,8 +84,8 @@ et non les 458 scripts Python/shell/CMake du seul dossier `tools/`.
 | Deux modules indirects encore actifs (X05–X06) | **BUILD**, changement de variables source avant écriture | Unités dérivées du CMake principal | Indexées X05–X07 ; X03 et X08 retirés |
 | `headless/vulkan.cmake` | **BUILD**, copie/sélection d'un fork vérifié | `encore-active/eden-vulkan` | Aucun appel au générateur Python |
 
-**Règle de lecture :** le compteur `23 + 12 = 35` décrit uniquement les
-sites `write_derived`, pas les générateurs Python, les copies de dépendances,
+**Règle de lecture :** le compteur de synthèse additionne uniquement les
+sites `write_derived` du CMake principal et des modules, pas les générateurs Python, les copies de dépendances,
 les recettes CMake ni les sorties de ressources. **Zéro source sans propriétaire
 dans le catalogue `vendor/encore-active` n'implique pas zéro override hors de
 ce répertoire.** Les cinq sources CPU/I-cache et HLE SM/audio sont désormais versionnées sous
@@ -445,7 +445,7 @@ complètes de `BlockOfCode` sont maintenues sous `encore-active`.
 
 Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules
 inclus par ce fichier contiennent **12 autres appels `write_derived()`**
-dans 2 fichiers. Le total de **23 appels** (12 + 12) est donc un **nombre de
+dans 2 fichiers. Leur somme avec les générateurs du CMake principal est un **nombre de
 sites CMake**, pas un dénombrement des fichiers réellement produits à
 l'exécution. Un module inclus peut définir des macros sans les exécuter,
 et plusieurs sorties sont explicitement conditionnées.
@@ -553,7 +553,7 @@ que chaque chemin a été validé sur console.
 
 ## Overrides indirects sans `write_derived()` local
 
-Ces **2 modules supplémentaires** ne sont pas inclus dans les **23 appels**.
+Ces **2 modules supplémentaires** ne sont pas inclus dans les appels `write_derived()`.
 Tous modifient des variables-source ensuite écrites par le CMake principal.
 Ils ne correspondent pas chacun à une unité C++ distincte.
 
