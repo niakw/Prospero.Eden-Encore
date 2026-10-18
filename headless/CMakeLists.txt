@@ -51,29 +51,18 @@ function(write_derived path content)
     file(WRITE "${path}.in" "${content}")
     configure_file("${path}.in" "${path}" COPYONLY)
 endfunction()
-# R437: derived buffer-cache header, immutable vendor source. On registration,
-# publish all occupied physical pages BEFORE the buffer page_table entry.
+# R437: the shipping BufferCache backport is adapted in a single maintained header.
+# This only copies tracked bytes into the native include overlay.
 if(PS5_NATIVE)
-    file(READ "${PROJECT_SOURCE_DIR}/src/video_core/buffer_cache/buffer_cache.h"
-         eden_buffer_cache_source)
-    set(eden_buf_reg_old [=[    const auto size = buffer.SizeBytes();
-    if (insert) {
-        total_used_memory += Common::AlignUp(size, 1024);]=])
-    set(eden_buf_reg_new [=[    const auto size = buffer.SizeBytes();
-    if (insert) {
-        ::Eden::BufferPages::Mark(buffer.CpuAddr(), size);
-        total_used_memory += Common::AlignUp(size, 1024);]=])
-    string(FIND "${eden_buffer_cache_source}" "${eden_buf_reg_old}" eden_buf_reg_at)
-    if(eden_buf_reg_at LESS 0)
-        message(FATAL_ERROR "Pinned BufferCache ChangeRegister changed; requalify R437")
+    set(EDEN_MAINTAINED_BUFFER_PAGES
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/video_core/buffer_cache/buffer_cache.h")
+    if(NOT EXISTS "${EDEN_MAINTAINED_BUFFER_PAGES}")
+        message(FATAL_ERROR "Missing maintained R437 BufferCache header")
     endif()
-    string(REPLACE "${eden_buf_reg_old}" "${eden_buf_reg_new}"
-           eden_buffer_cache_source "${eden_buffer_cache_source}")
-    string(PREPEND eden_buffer_cache_source
-           "#include \"${CMAKE_CURRENT_LIST_DIR}/buffer_pages.h\"\n")
-    write_derived("${PORT_BUILD_DIR}/buffer-pages/video_core/buffer_cache/buffer_cache.h"
-                  "${eden_buffer_cache_source}")
-    target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/buffer-pages")
+    file(MAKE_DIRECTORY "${PORT_BUILD_DIR}/buffer-pages/video_core/buffer_cache")
+    configure_file("${EDEN_MAINTAINED_BUFFER_PAGES}"
+        "${PORT_BUILD_DIR}/buffer-pages/video_core/buffer_cache/buffer_cache.h" COPYONLY)
+    target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/buffer-pages" "${EDEN_PORT_DIR}")
 endif()
 # The texture-cache small-vector Boost version dependency is a complete
 # tracked header under vendor/encore-active, not a configure-time replacement.
