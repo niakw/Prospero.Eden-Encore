@@ -30,6 +30,8 @@
 | `eden-core/src/core/hle/service/{filesystem,nvdrv,nvnflinger}/` | Sources diagnostiques de fichiers, événements NVDRV et files de présentation |
 | `eden-gpu`, `eden-vulkan`, `eden-core`, `ps5-mesa` et autres dossiers | Autres adaptations maintenues ; voir `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` |
 
+| `eden-core/src/video_core/buffer_cache/buffer_cache.h` | Header GPU R437 complet et maintenu ; sélection PS5 par copie sans réécriture CMake |
+
 Chaîne HLE : `headless/CMakeLists.txt` -> `eden-threading/native-hle-overrides.cmake` -> fichiers C++/en-têtes maintenus.
 
 Tests associés : `tools/verify/hle/`. Ces tests ne sont pas inclus dans l'application native.
@@ -45,7 +47,7 @@ production depuis le snapshot épinglé, contrôlés par empreintes et installé
 par `tools/install-vendored-eden-backports.py` (pas de `git apply` au build).
 
 Catalogue exhaustif des fichiers C/C++ actifs : `docs/EDEN_ACTIVE_SOURCE_CATALOG.md`
-(183 fichiers enregistrés, 37 chemins présents dans le graphe technique).
+(231 fichiers enregistrés et rattachés au graphe technique ; ce lien n’atteste pas leur exécution sur console).
 Le recensement des fichiers n'est pas une validation de leurs fonctions.
 Le générateur `renderer_opengl.cpp` n'est plus nécessaire : le renderer
 original est sélectionné directement, sans créer une copie maintenue identique.
