@@ -42,6 +42,8 @@
 
 | `eden-core/src/dynarmic/backend/x64/{reg_alloc.h,reg_alloc.cpp}` | Deux unités maintenues du gestionnaire de registres ; sélection explicite et parité des cinq anciennes injections |
 
+| `eden-core/src/dynarmic/backend/x64/constant_pool.cpp` | Alias mémoire du pool JIT, source versionnée avec sélection exclusive |
+
 Chaîne HLE : `headless/CMakeLists.txt` -> `eden-threading/native-hle-overrides.cmake` -> fichiers C++/en-têtes maintenus.
 
 Tests associés : `tools/verify/hle/`. Ces tests ne sont pas inclus dans l'application native.
@@ -57,12 +59,12 @@ production depuis le snapshot épinglé, contrôlés par empreintes et installé
 par `tools/install-vendored-eden-backports.py` (pas de `git apply` au build).
 
 Catalogue exhaustif des fichiers C/C++ actifs : `docs/EDEN_ACTIVE_SOURCE_CATALOG.md`
-(239 fichiers enregistrés et rattachés au graphe technique ; ce lien n’atteste pas leur exécution sur console).
+(240 fichiers enregistrés et rattachés au graphe technique ; ce lien n’atteste pas leur exécution sur console).
 Le recensement des fichiers n'est pas une validation de leurs fonctions.
 Le générateur `renderer_opengl.cpp` n'est plus nécessaire : le renderer
 original est sélectionné directement, sans créer une copie maintenue identique.
 
-L'inventaire couvre **26 appels générateurs** du CMake principal et **19**
+L'inventaire couvre **26 appels générateurs** du CMake principal et **18**
 dans les modules, avec **4 modules indirects** de substitution suivis
 séparément ; ce ne sont pas des décomptes de fichiers uniques. Chaque nouvelle migration doit
 conserver un test de parité et de sélection native.
