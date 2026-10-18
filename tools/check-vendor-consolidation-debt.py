@@ -888,6 +888,24 @@ assert 'target_include_directories(core PRIVATE "${EDEN_PORT_DIR}")' in c
 assert 'write_derived("${PORT_BUILD_DIR}/vi_conductor.cpp"' not in c
 print("ENCORE_VI_CONDUCTOR_PARITY_PASS",len(vi_pairs))
 
+
+# Earlier pinned spin-lock generator is retired. The owned translation unit
+# is a byte-exact copy of its old emitted C++ at migration; this Git blob
+# locks the accepted source, while the prefix remains from pinned Dynarmic.
+spin_source = active / "eden-core/src/dynarmic/common/spin_lock_x64.cpp"
+check_canonical_git_object(spin_source, "a64e6302d78be07870038ba990c3487c4ce6bd75", "native spin lock")
+spin_pinned = (root/"vendor/sources/eden/src/dynarmic/src/dynarmic/common/spin_lock_x64.cpp").read_text()
+spin_marker = "namespace {\\nstruct SpinLockImpl".replace("\\n","\n")
+assert spin_pinned.count(spin_marker)==1
+assert spin_source.read_text().startswith(spin_pinned.split(spin_marker,1)[0])
+assert spin_source.read_text().count("void SpinLock::Lock() noexcept") == 1
+assert spin_source.read_text().count("void SpinLock::Unlock() noexcept") == 1
+assert "__atomic_exchange_n(&storage, 1, __ATOMIC_SEQ_CST)" in spin_source.read_text()
+assert 'target_sources(dynarmic PRIVATE "${EDEN_MAINTAINED_SPIN_LOCK}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/spin_lock_x64.cpp"' not in c
+assert not (root/"headless/spin-lock.inc").exists()
+print("ENCORE_NATIVE_SPIN_LOCK_SOURCE_PASS")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -969,7 +987,7 @@ assert len(module_current) == 21, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 64
+assert len(recorded) + len(module_recorded) == 63
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
