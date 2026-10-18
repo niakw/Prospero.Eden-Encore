@@ -19,9 +19,9 @@ nouveaux corps C++ destinés à la console.
 - `vendor/encore-active` : **222 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **38 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **37 générateurs** `write_derived`.
 - Six modules CMake supplémentaires totalisent **21 générateurs**
-  `write_derived`, soit **59 sites** au total.
+  `write_derived`, soit **58 sites** au total.
 - Quatre modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 68.

@@ -11,16 +11,16 @@ développement, les options JIT expérimentales, les backends et le build
 natif sélectionnent chacun leur sous-ensemble.
 
 L'inventaire complémentaire `docs/EDEN_ACTIVE_SOURCE_CATALOG.md` suit les
-224 fichiers de code et en-têtes dans `vendor/encore-active`,
+225 fichiers de code et en-têtes dans `vendor/encore-active`,
 y compris les backports de production et la dépendance graphique. Cette
 couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
 ## Synthèse vérifiable
 
-- **38 appels générateurs** encore dans CMake ; contre **75 avant**
+- **37 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
-- **46 lectures `file(READ`** et **165 remplacements
+- **45 lectures `file(READ`** et **163 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
 - Les versions diagnostiques de `IFile::Read`, `IStorage::Read` et des appels
@@ -100,8 +100,10 @@ Le chemin natif sélectionne déjà directement les quatre fichiers de
 Les deux anciennes branches `if(PS5_NATIVE)` imbriquées dans le
 `else()` non natif étaient inaccessibles ; leurs générateurs
 `bounded_threadsafe_queue.h` et `gpu_thread.cpp` ont été supprimés.
-Le générateur **non natif** `gpu_thread.h` reste visible dans les 38
-sites tant que son override hôte n'est pas centralisé.
+Le dernier générateur GPU non natif `gpu_thread.h` a lui aussi été remplacé
+par un fichier complet dans `eden-core/host-gpu`. La sélection CMake copie
+ce fichier sans modification ; un test assure sa parité exacte avec les
+deux anciennes substitutions et conserve distinctes les variantes GPU natives.
 
 Les tests utilisent désormais les sources maintenues et exercent les
 `configure_file` du véritable chemin natif ; le test hôte de durée
@@ -147,16 +149,15 @@ dans la version normale.
 | G26 | `${PORT_BUILD_DIR}/server_manager.cpp` | Kernel/IPC/entrées | Unité source | 1872 |
 | G27 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 1885 |
 | G28 | `${PORT_BUILD_DIR}/gl_rasterizer.cpp` | Audio/graphique | Unité source | 2107 |
-| G29 | `${PORT_BUILD_DIR}/include/video_core/gpu_thread.h` | GPU/vidéo | En-tête source | 2156 |
-| G30 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 2206 |
-| G31 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 2303 |
-| G32 | `${PORT_BUILD_DIR}/maxwell_3d.cpp` | GPU/vidéo | Unité source | 2323 |
-| G33 | `${PORT_BUILD_DIR}/shader_environment.cpp` | GPU/vidéo | Unité source | 2338 |
-| G34 | `${PORT_BUILD_DIR}/audited_guest_dns.cpp` | Runtime/FS/réseau | Unité source | 2475 |
-| G35 | `${PORT_BUILD_DIR}/audited_guest_bsd.cpp` | Runtime/FS/réseau | Unité source | 2537 |
-| G36 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 2635 |
-| G37 | `${eden_app_crt}` | Runtime/FS/réseau | Cible variable | 2647 |
-| G38 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2832 |
+| G29 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 2202 |
+| G30 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 2299 |
+| G31 | `${PORT_BUILD_DIR}/maxwell_3d.cpp` | GPU/vidéo | Unité source | 2319 |
+| G32 | `${PORT_BUILD_DIR}/shader_environment.cpp` | GPU/vidéo | Unité source | 2334 |
+| G33 | `${PORT_BUILD_DIR}/audited_guest_dns.cpp` | Runtime/FS/réseau | Unité source | 2471 |
+| G34 | `${PORT_BUILD_DIR}/audited_guest_bsd.cpp` | Runtime/FS/réseau | Unité source | 2533 |
+| G35 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 2631 |
+| G36 | `${eden_app_crt}` | Runtime/FS/réseau | Cible variable | 2643 |
+| G37 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2828 |
 <!-- OVERRIDE_GENERATORS_END -->
 
 ## Prochain ordre de migration
@@ -330,7 +331,7 @@ pas que le PC invité avance après un réveil HLE.
 
 Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules
 inclus par ce fichier contiennent **21 autres appels `write_derived()`**
-dans 6 fichiers. Le total de **59 appels** (38 + 21) est donc un **nombre de
+dans 6 fichiers. Le total de **58 appels** (37 + 21) est donc un **nombre de
 sites CMake**, pas un dénombrement des fichiers réellement produits à
 l'exécution. Un module inclus peut définir des macros sans les exécuter,
 et plusieurs sorties sont explicitement conditionnées.
@@ -364,7 +365,7 @@ et plusieurs sorties sont explicitement conditionnées.
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **59 sites** `write_derived()`, ni dans
+Ils ne sont comptés ni dans les **58 sites** `write_derived()`, ni dans
 les **4 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,
@@ -447,7 +448,7 @@ que chaque chemin a été validé sur console.
 
 ## Overrides indirects sans `write_derived()` local
 
-Ces **4 modules supplémentaires** ne sont pas inclus dans les **59 appels**.
+Ces **4 modules supplémentaires** ne sont pas inclus dans les **58 appels**.
 Tous modifient des variables-source ensuite écrites par le CMake principal.
 Ils ne sont pas quatre sources C++ distinctes.
 
