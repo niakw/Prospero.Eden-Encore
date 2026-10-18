@@ -16,13 +16,13 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **268 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **271 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **15 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **13 générateurs** `write_derived`.
 - Deux modules CMake générateurs totalisent **12 générateurs**
-  `write_derived`, soit **27 sites** au total.
-- Cinq modules CMake procèdent encore à des substitutions **indirectes**
+  `write_derived`, soit **25 sites** au total.
+- Trois modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 34.
 - `headless/` contient **3 fragments `.inc`**. Plusieurs contribuent
@@ -48,7 +48,6 @@ nouveaux corps C++ destinés à la console.
 <!-- SINGLE_SOURCE_CMAKE_START -->
 | Fichier | Nature | Position |
 | --- | --- | --- |
-| `headless/checked-fastmem.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
 | `headless/dynarmic/reg_alloc.cmake` | Sélection/copie de deux sources Encore maintenues | Sélecteur conforme |
 | `headless/dynarmic/shared-jit.cmake` | Générateur de source dérivée, à déplacer | Dette de migration |
 | `headless/gpu_native_observability.cmake` | Sélection de sources Encore maintenues | Sélecteur conforme |
@@ -59,7 +58,7 @@ nouveaux corps C++ destinés à la console.
 | `headless/native_jit_memory_read_guard.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
 | `headless/physical_core_interrupt_atomic.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
 | `headless/ps5.cmake` | Orchestration ou toolchain | Sélecteur / configuration |
-| `headless/scalar-memory.cmake` | Modification indirecte de memory_source, à déplacer | Dette de migration |
+| `headless/scalar-memory.cmake` | Sélection des émetteurs vectoriel et data processing maintenus | Sélecteur conforme ; X08 retiré |
 | `headless/vulkan.cmake` | Sélection/copie de sources Encore maintenues | Sélecteur / configuration |
 <!-- SINGLE_SOURCE_CMAKE_END -->
 
@@ -139,8 +138,8 @@ pas de cette signature. Les transitions de fast-dispatch, liens,
 RSB et propriétés de protection RW/RX sont conservées.
 
 Les unités du JIT partagé liées à l'état et aux callbacks
-(M01–M03) ainsi que les transformations mémoire G06–G08 restent
-à consolider. Les tests de parité et de sélection sont des preuves
+(M01–M03) restent à consolider ; les unités mémoire G06–G08
+sont désormais maintenues dans `encore-active`. Les tests de parité et de sélection sont des preuves
 hôte, **pas** une preuve de compilation ou d'exécution console.
 
 ## Unités de mémoire A32/A64 — G08 centralisé
@@ -155,12 +154,32 @@ exactement les unités maintenues pour A32/A64 sans réécriture.
 La parité de chaque corps épinglé et la sélection ont un contrôle hôte ;
 l'exécution native/guest reste non qualifiée.
 
-**À ne pas confondre avec la clôture de G06/G07 :** les transformations
-du fragment `emit_x64_memory.cpp.inc` et de
-`emit_x64_memory.h` continuent de dépendre des modules
-`scalar-memory.cmake`, `checked-fastmem.cmake` et
-`shared-jit.cmake`. Elles nécessitent une migration coordonnée
-avec les fallbacks, les accès exclusifs et le registre A32.
+La migration G06/G07 a été effectuée ensemble avec la cartographie
+des fallbacks, accès exclusifs et du registre A32 ; elle n'a pas été
+validée par un build natif.
+
+## Mémoire x64 complète : G06 et G07 centralisés
+
+L'en-tête `emit_x64_memory.h` est une source complète maintenue sous
+`vendor/encore-active/eden-core/src/dynarmic/backend/x64/`. Il contient
+les chemins page-table A32/A64, le pointeur packed, les registres scratch,
+le fallback exclusif et les helpers checked-fastmem conditionnés en C++.
+
+Les deux variantes complètes du corps inclus sont
+`emit_x64_memory_standard.cpp.inc` et
+`emit_x64_memory_checked.cpp.inc`. CMake ne fait que sélectionner selon
+`EDEN_A32_FASTMEM` puis copier vers le chemin d'inclusion attendu.
+Les chemins normal/JIT partagé sont distingués dans le C++ sous
+`EDEN_SHARED_JIT_LAYOUT`. Les fragments scalaires historiques ne sont
+plus assemblés dans CMake et servent uniquement à la parité.
+
+`checked-fastmem.cmake` est supprimé, `scalar-memory.cmake` conserve
+seulement la sélection des deux sources indépendantes vectorielles, et
+`shared-jit.cmake` n'injecte plus d'édition dans les sources mémoire.
+G06/G07 et les dettes indirectes X03/X08 sont retirés des registres.
+`tools/check-maintained-memory-g06-g07.py` vérifie les corps et les
+huit combinaisons de sélection CMake ; **la compilation native et les
+preuves de fonctionnement sur console restent à obtenir**.
 
 ## Émetteur x64 commun : source complète par profil (G05)
 
@@ -213,8 +232,10 @@ traducteur. `scalar-fold.inc` est un témoin historique de parité, non
 une entrée de compilation. Les deux émetteurs scalaires `emit_x64_vector.cpp` et
 `emit_x64_data_processing.cpp` sont des sources complètes maintenues.
 Les fragments `scalar-memory-read.inc` et `scalar-memory-write.inc`
-restent injectés dans `memory_source` par `scalar-memory.cmake` (X08) ;
-cette dette indirecte n'est pas considérée comme supprimée.
+sont désormais des témoins de parité sous `encore-active` ; leurs
+corps sont inclus dans les deux variantes de
+`emit_x64_memory_*.cpp.inc`. Le sélecteur
+`scalar-memory.cmake` n'assemble plus de code C++ (X08 retiré).
 
 ## Oracles Vulkan historiques
 
