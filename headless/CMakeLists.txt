@@ -1628,70 +1628,16 @@ if(EDEN_DEV_PROFILE)
 ]=])
 endif()
 if(EDEN_DEV_PROFILE)
-    # Development: time the application process teardown steps (>= 20 ms each).
-    file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/kernel/k_process.cpp" process_source)
-    string(PREPEND process_source "#include <chrono>\n#include <cstdio>\n")
-    # First occurrence after KProcess::Finalize only: the comments recur in other functions.
-    function(eden_patch_process match replacement)
-        string(FIND "${process_source}" "void KProcess::Finalize(KernelCore& kernel) {" finalize_at)
-        string(SUBSTRING "${process_source}" ${finalize_at} -1 tail)
-        string(FIND "${tail}" "${match}" found_at)
-        if(finalize_at LESS 0 OR found_at LESS 0)
-            message(FATAL_ERROR "Pinned process finalization changed")
-        endif()
-        math(EXPR found_at "${finalize_at} + ${found_at}")
-        string(LENGTH "${match}" match_length)
-        math(EXPR after_at "${found_at} + ${match_length}")
-        string(SUBSTRING "${process_source}" 0 ${found_at} head)
-        string(SUBSTRING "${process_source}" ${after_at} -1 rest)
-        set(process_source "${head}${replacement}${rest}" PARENT_SCOPE)
-    endfunction()
-    eden_patch_process([=[void KProcess::Finalize(KernelCore& kernel) {
-    // Delete the process local region.
-    this->DeleteThreadLocalRegion(kernel, m_plr_address);
-]=] [=[void KProcess::Finalize(KernelCore& kernel) {
-    auto eden_last = std::chrono::steady_clock::now();
-    const auto eden_mark = [&eden_last](const char* step) {
-        const auto now = std::chrono::steady_clock::now();
-        const double ms = std::chrono::duration<double, std::milli>(now - eden_last).count();
-        if (ms >= 20.0) std::fprintf(stderr, "EDEN_SHUTDOWN_PROCESS step=%s ms=%.1f\n", step, ms);
-        eden_last = std::chrono::steady_clock::now();
-    };
-    // Delete the process local region.
-    this->DeleteThreadLocalRegion(kernel, m_plr_address);
-    eden_mark("local_region");
-]=])
-    eden_patch_process([=[    m_page_table.Finalize();
-]=] [=[    eden_mark("used_memory_size");
-    m_page_table.Finalize();
-    eden_mark("page_table");
-]=])
-    eden_patch_process([=[    // Free all shared memory infos.
-]=] [=[    eden_mark("system_resource");
-    // Free all shared memory infos.
-]=])
-    eden_patch_process([=[    // Our thread local page list must be empty at this point.
-]=] [=[    eden_mark("shared_memory");
-    // Our thread local page list must be empty at this point.
-]=])
-    eden_patch_process([=[    // Clear expensive resources, as the destructor is not called for guest objects.
-    for (auto& interface : m_arm_interfaces) {
-        interface.reset();
-    }
-    m_exclusive_monitor.reset();
-]=] [=[    eden_mark("resource_limit");
-    // Clear expensive resources, as the destructor is not called for guest objects.
-    for (auto& interface : m_arm_interfaces) {
-        interface.reset();
-    }
-    eden_mark("arm_interfaces");
-    m_exclusive_monitor.reset();
-    eden_mark("exclusive_monitor");
-]=])
-    write_derived("${PORT_BUILD_DIR}/k_process.cpp" "${process_source}")
+    # Select the complete Encore-maintained diagnostic variant of KProcess.
+    # The normal profile continues to compile the untouched pinned source.
+    set(EDEN_MAINTAINED_DEV_PROCESS
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/kernel/k_process.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_DEV_PROCESS}")
+        message(FATAL_ERROR "Missing maintained KProcess shutdown diagnostic source")
+    endif()
     get_target_property(process_core_sources core SOURCES)
     list(REMOVE_ITEM process_core_sources hle/kernel/k_process.cpp)
-    list(APPEND process_core_sources "${PORT_BUILD_DIR}/k_process.cpp")
+    list(APPEND process_core_sources "${EDEN_MAINTAINED_DEV_PROCESS}")
     set_property(TARGET core PROPERTY SOURCES "${process_core_sources}")
 endif()
 # Never wait for service fibers while holding their registration mutex. A late

@@ -16,15 +16,15 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **246 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **247 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **26 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **25 générateurs** `write_derived`.
 - Deux modules CMake générateurs totalisent **12 générateurs**
-  `write_derived`, soit **38 sites** au total.
+  `write_derived`, soit **37 sites** au total.
 - Six modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
-  nombre 38.
+  nombre 37.
 - `headless/` contient **8 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
@@ -176,6 +176,14 @@ Le header `sparse_large_vector.h` ne doit plus être généré depuis des
 substitutions CMake. L'implémentation complète est maintenue sous
 `vendor/encore-active/eden-core/src/common/`; l'ancienne priorité d'include
 demeure, avec comparaison textuelle complète dans un oracle hôte.
+
+## Diagnostic KProcess maintenu
+
+Le fichier `eden-core/src/core/hle/kernel/k_process.cpp` contient
+les cinq marqueurs chronométrés de finalisation du processus, selon
+le profil `EDEN_DEV_PROFILE`. La sélection CMake ne génère plus
+cette unité. Le profil normal et ses méthodes ne changent pas ;
+les seules preuves disponibles sont des contrôles de source hôte.
 
 ## Xbyak maintenu en source complète
 
