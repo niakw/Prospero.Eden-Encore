@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **232 fichiers** de code et d'en-têtes enregistrés.
-- **232 fichiers** possèdent une correspondance de chemin *exacte*
+- **235 fichiers** de code et d'en-têtes enregistrés.
+- **235 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -24,7 +24,7 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 **Important :** une correspondance de chemin n'est ni un test hôte,
 ni une certification console. Le graphe
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` porte les contrats fonctionnels,
-leurs états et les preuves. L'inventaire des 31 générateurs CMake
+leurs états et les preuves. L'inventaire des 28 générateurs CMake
 principaux, 21 générateurs de modules, quatre modules indirects et 46 patches
 reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
@@ -172,6 +172,9 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/core/loader/deconstructed_rom_directory.cpp` | `maintained-override` | F16 |
 | `eden-core/src/core/memory.cpp` | `maintained-override` | M11 |
 | `eden-core/src/dynarmic/common/spin_lock_x64.cpp` | `maintained-override` | J30 |
+| `eden-core/src/dynarmic/frontend/A64/translate/a64_translate.cpp` | `maintained-override` | J32 |
+| `eden-core/src/dynarmic/frontend/A64/translate/impl/impl.cpp` | `maintained-override` | J31 |
+| `eden-core/src/dynarmic/ir/opt_passes.cpp` | `maintained-override` | J33 |
 | `eden-core/src/hid_core/frontend/emulated_controller.cpp` | `maintained-override` | H39 |
 | `eden-core/src/hid_core/resource_manager.cpp` | `maintained-override` | H31 |
 | `eden-core/src/hid_core/resources/npad/npad.cpp` | `maintained-override` | H48 |
