@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 319
+**Non, this is not an exhaustive repository-wide inventory.** The 321
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 319 | 297 | 651 |
+| Graphe connu | 321 | 299 | 654 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 264 | 252 | 546 |
+| SOURCE — lecture effectuée, preuve insuffisante | 266 | 254 | 549 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **279** | **266** | **574** |
+| **Encore à qualifier (SOURCE + OPEN)** | **281** | **268** | **577** |
 | Dont priorité P0 (SOURCE + OPEN) | 108 | 103 | 252 |
 
-Le **noyau restant** compte donc 279 critères répartis sur
-266 fichiers et 574 mentions fonction/contrat :
-15 OPEN et 264 SOURCE.
+Le **noyau restant** compte donc 281 critères répartis sur
+268 fichiers et 577 mentions fonction/contrat :
+15 OPEN et 266 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-225 fichiers de code/en-têtes présents et 225 avec un chemin de
+227 fichiers de code/en-têtes présents et 227 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -408,6 +408,8 @@ function/contract tokens are checked by CI for existence only; the
 | V72 | P0 | V71 | vendor/encore-active/eden-core/gpu-injections/gpu_queue_stop_wait.inc | EmplaceWaitWithStopToken; producer.cv.wait | SOURCE | tools/check-vendor-consolidation-debt.py | Stop-aware GPU producer wait preserved as exact Encore input; native execution unproved | 🟡 Source étudiée |
 | V73 | P0 | V71 | vendor/encore-active/eden-core/gpu-injections/gpu_sync_failure_wait.inc | WaitForSyncOperation; Eden::PeekGpuFailure | SOURCE | tools/check-vendor-consolidation-debt.py | GPU worker failure fence guard preserved as exact Encore input; native execution unproved | 🟡 Source étudiée |
 | V74 | P1 | V71 | vendor/encore-active/eden-core/src/video_core/texture_cache/util.cpp | ConvertImage; ASTC::Decompress | SOURCE | tools/check-vendor-consolidation-debt.py | Existing per-layer ASTC scratch allocation optimization R428 now a maintained complete C++ unit, native performance unproved | 🟡 Source étudiée |
+| V75 | P1 | V74 | vendor/encore-active/eden-core/src/video_core/shader_environment.cpp | #include "shader_cache_reader.inc" | SOURCE | tools/check-vendor-consolidation-debt.py | Complete shader cache recovery TU replaces CMake generator; exact text replay test, native behavior unproved | 🟡 Source étudiée |
+| V76 | P1 | V74 | vendor/encore-active/eden-core/src/video_core/shader_cache_reader.inc | CheckEnvironment; LoadPipelines | SOURCE | tools/check-vendor-consolidation-debt.py | Crash-tolerant shader loader now adjacent to canonical source as unchanged Git blob; console cache replay unproved | 🟡 Source étudiée |
 | V51 | P0 | V50,M13 | vendor/encore-active/eden-backports/src/video_core/buffer_cache/buffer_cache.h | BufferCache<P>::SynchronizeBufferWrites; BufferCache<P>::DMACopy; BufferCache<P>::MarkWrittenBuffer | SOURCE | tools/check-active-source-inventory.py | Shipping GPU buffer template changes DMA sync policy and write-tick lifetime; source diff examined, exact runtime owner/console behavior still to prove | 🟡 Source étudiée |
 | F04 | P1 | F02,F03 | vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_filesystem.cpp | IFileSystem::OpenFile; IFileSystem::OpenDirectory; IFileSystem::GetEntryType | HOST | tools/check-vendor-consolidation-debt.py | Maintained DEV IFileSystem diagnostic replaces G23 CMake patch for three result paths; three call replacements, DEV source selection, and quiet policy passed full host preflight #39048355950; native SDK/gameplay remain unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39048355950) |
 | H20 | P0 | H02,H19 | vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp | KScheduler::UpdateHighestPriorityThread; KScheduler::UpdateHighestPriorityThreadsImpl | SOURCE | tools/check-upstream-guest-scheduler-locks.py | Runnable queue update precedes per-core highest-priority selection; account for pinned-thread preference, suggested-core migration and eventual context load. Not proof of guest PC progress | 🟡 Source étudiée |

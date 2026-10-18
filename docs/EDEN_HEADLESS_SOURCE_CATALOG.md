@@ -2,9 +2,9 @@
 
 **Branche :** `dev/ps5-sparse-jit`. **Date du relevé :** 17 octobre 2026.
 
-Ce registre complémentaire couvre les **178 chemins** de code, en-têtes et
+Ce registre complémentaire couvre les **177 chemins** de code, en-têtes et
 fragments `.c/.cc/.cpp/.h/.hpp/.inc/.cl` du dossier `headless/`.
-Il ne remplace pas `EDEN_ACTIVE_SOURCE_CATALOG.md` : les 222 fichiers
+Il ne remplace pas `EDEN_ACTIVE_SOURCE_CATALOG.md` : les 227 fichiers
 de `vendor/encore-active` sont déjà inventoriés séparément.
 
 **Attention :** une entrée ici ne prouve pas que le fichier est compilé ni
@@ -13,9 +13,9 @@ pour suivi séparé et n'autorise aucune modification du launcher depuis
 l'audit moteur. Un chemin noté « À qualifier » peut avoir été audité sous
 une autre forme : il manque seulement la référence de chemin exacte.
 
-- **178** chemins sous `headless/`, dont **59** sources C/C++ et **119** en-têtes/fragments.
+- **177** chemins sous `headless/`, dont **59** sources C/C++ et **118** en-têtes/fragments.
 - **26** chemins déjà présents dans le graphe moteur.
-- **152** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
+- **151** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
 - Les deux générateurs de profils `headless/encore_overrides_generated.h`,
   `headless/glyph_overrides_generated.h` et les autres ressources générées
   sont des entrées de l'inventaire, **pas** de nouveaux patchs CMake.
@@ -193,7 +193,6 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/sdk_audit.h` | en-tête/fragment | — | À qualifier |
 | `headless/settings_store.h` | en-tête/fragment | — | À qualifier |
 | `headless/shader_cache_check.cpp` | harness/test | — | À qualifier |
-| `headless/shader_cache_reader.inc` | en-tête/fragment | — | À qualifier |
 | `headless/stall_watchdog.h` | en-tête/fragment | — | À qualifier |
 | `headless/stop_limit.cpp` | runtime/bridge | — | À qualifier |
 | `headless/stop_limit.h` | en-tête/fragment | — | À qualifier |

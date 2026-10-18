@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **225 fichiers** de code et d'en-têtes enregistrés.
-- **225 fichiers** possèdent une correspondance de chemin *exacte*
+- **227 fichiers** de code et d'en-têtes enregistrés.
+- **227 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -177,6 +177,8 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/video_core/renderer_opengl/gl_buffer_cache.cpp` | `maintained-override` | V14 |
 | `eden-core/src/video_core/renderer_opengl/gl_query_cache.cpp` | `maintained-override` | V15 |
 | `eden-core/src/video_core/renderer_opengl/gl_texture_cache.cpp` | `maintained-override` | V25 |
+| `eden-core/src/video_core/shader_cache_reader.inc` | `maintained-override` | V76 |
+| `eden-core/src/video_core/shader_environment.cpp` | `maintained-override` | V75 |
 | `eden-core/src/video_core/texture_cache/util.cpp` | `maintained-override` | V74 |
 | `eden-core/src/video_core/texture_cache/util.h` | `maintained-override` | V23 |
 | `eden-core/src/video_core/video_core_opengl.cpp` | `maintained-override` | V12 |
@@ -267,11 +269,11 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
 Ces deux fichiers sont inclus dans les **83 entrées** de
 `vendor/encore-active/eden-backports/manifest.json`, mais ne sont
-pas comptés parmi les 225 fichiers de code et d'en-têtes.
+pas comptés parmi les 227 fichiers de code et d'en-têtes.
 
 ## Inventaire hors `vendor/encore-active`
 
-Les **178 fichiers source/en-tête/fragment** de `headless/` sont suivis
+Les **177 fichiers source/en-tête/fragment** de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
 27 ont désormais un propriétaire exact dans le graphe courant ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
