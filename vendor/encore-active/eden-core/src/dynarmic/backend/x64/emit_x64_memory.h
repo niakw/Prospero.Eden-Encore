@@ -234,7 +234,7 @@ Xbyak::RegExp EmitExclusiveVAddrLookup(BlockOfCode& code, EmitContext& ctx, size
 }
 
 #if defined(EDEN_A32_CHECKED_FASTMEM)
-// Checked A32 fastmem: see headless/checked-fastmem.cmake.
+// Checked A32 fastmem: Encore-owned helper; no CMake source rewriting.
 constexpr int checked_map_bytes = 1 << 20;
 constexpr u8 checked_read_blocked = 1, checked_write_blocked = 2;
 
