@@ -7,13 +7,13 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **240 fichiers** de code et d'en-têtes enregistrés.
-- **240 fichiers** possèdent une correspondance de chemin *exacte*
+- **242 fichiers** de code et d'en-têtes enregistrés.
+- **242 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
 - Le manifeste des backports verrouille **83 fichiers livrés**, dont
-  **81 fichiers C/C++ enregistrés ci-dessous** et **deux fichiers CMake**
+  **83 fichiers C/C++ enregistrés ci-dessous** et **deux fichiers CMake**
   listés séparément. Les **43 reçus de patches** sont conservés.
 - Les `shipping-backport` sont des sources de backports de production, matérialisées en fichiers
   complets et installées dans un arbre épinglé par `tools/install-vendored-eden-backports.py` avec
@@ -25,7 +25,7 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 ni une certification console. Le graphe
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` porte les contrats fonctionnels,
 leurs états et les preuves. L'inventaire des 26 générateurs CMake
-principaux, 18 générateurs de modules, quatre modules indirects et 46 patches
+principaux, 16 générateurs de modules, cinq modules indirects et 46 patches
 reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
 <!-- ACTIVE_SOURCE_CATALOG_START -->
@@ -173,6 +173,8 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/core/loader/deconstructed_rom_directory.cpp` | `maintained-override` | F16 |
 | `eden-core/src/core/memory.cpp` | `maintained-override` | M11 |
 | `eden-core/src/dynarmic/backend/x64/constant_pool.cpp` | `maintained-override` | J37 |
+| `eden-core/src/dynarmic/backend/x64/emit_x64_data_processing.cpp` | `maintained-override` | J39 |
+| `eden-core/src/dynarmic/backend/x64/emit_x64_vector.cpp` | `maintained-override` | J38 |
 | `eden-core/src/dynarmic/backend/x64/reg_alloc.cpp` | `maintained-override` | J36 |
 | `eden-core/src/dynarmic/backend/x64/reg_alloc.h` | `maintained-override` | J35 |
 | `eden-core/src/dynarmic/common/spin_lock_x64.cpp` | `maintained-override` | J30 |
