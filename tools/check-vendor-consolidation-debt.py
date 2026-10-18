@@ -1006,6 +1006,23 @@ assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/sockets/sfdnsres.c
 assert 'target_include_directories(core PRIVATE "${EDEN_PORT_DIR}")' in c
 print("MAINTAINED_GUEST_DNS_SOURCE_PARITY_PASS old_rewrites=5 denied_policy=retained")
 
+
+# Exact parity of the four former CMake C++ span-constructor fixes.
+# Production only copies the complete versioned nvdrv header.
+ioctl_pinned = (root / "vendor/sources/eden/src/core/hle/service/nvdrv/devices/ioctl_serialization.h").read_text()
+ioctl_pairs = [["(fixed, inl_out,","(fixed, std::span<InlOutVarArg>{inl_out.data(), inl_out.size()},"],["(var, std::forward","(std::span<VarArg>{var.data(), var.size()}, std::forward"],["(fixed, var,","(fixed, std::span<VarArg>{var.data(), var.size()},"],["(fixed, inl_in,","(fixed, std::span<InlInVarArg>{inl_in.data(), inl_in.size()},"]]
+ioctl_expected = ioctl_pinned
+for before, after in ioctl_pairs:
+    assert ioctl_expected.count(before) == 1, ("ioctl header baseline drift", before)
+    ioctl_expected = ioctl_expected.replace(before, after)
+ioctl_active = active / "eden-core/src/core/hle/service/nvdrv/devices/ioctl_serialization.h"
+assert ioctl_active.read_text() == ioctl_expected, "ioctl maintained header differs from former generated source"
+assert 'configure_file("${EDEN_MAINTAINED_IOCTL}"' in c
+assert 'target_include_directories(core BEFORE PRIVATE "${PORT_BUILD_DIR}/include")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/include/${ioctl_header}"' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/${ioctl_header}" ioctl_source)' not in c
+print("ENCORE_MAINTAINED_NVDRV_IOCTL_PARITY_PASS replacements=4")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -1087,7 +1104,7 @@ assert len(module_current) == 21, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 55
+assert len(recorded) + len(module_recorded) == 54
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
