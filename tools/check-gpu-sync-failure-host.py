@@ -48,6 +48,7 @@ with tempfile.TemporaryDirectory(prefix="encore-gpu-sync-derive-") as d:
     cmakefile.write_text(
         'cmake_minimum_required(VERSION 3.25)\n'
         + f'set(EDEN_PORT_DIR "{(root / "headless").as_posix()}")\n'
+        + f'set(PORT_ROOT "{root.as_posix()}")\n'
         + f'file(READ "{(root / "vendor/sources/eden/src/video_core/gpu.cpp").as_posix()}" gpu_source)\n'
         + 'string(REPLACE "return CurrentSyncRequestFence() >= fence;" '
         + '"return sync_requests_stopped || CurrentSyncRequestFence() >= fence;" '
