@@ -14,6 +14,12 @@ assert "EdenGpuBoundedSample" in actual and "EdenPrmtIndexReference" in actual
 assert "static_assert(EdenPrmtIndexReference" in actual
 assert 'target_sources(shader_recompiler PRIVATE "${EDEN_MAINTAINED_NATIVE_PRMT}")' in module
 assert 'write_derived("${PORT_BUILD_DIR}/maxwell_prmt_observed.cpp"' not in module
-assert 'set(gpu_bounded_sample_helper [=[' in module, "Fermi2D still needs diagnostic sample helper"
+# Both Fermi2D variants now embed the bounded diagnostic helper directly.
+# The native selector must not re-create it as an injected CMake fragment.
+for variant in ("fermi_2d_observed.cpp", "fermi_2d_experimental.cpp"):
+    fermi = (root / "vendor/encore-active/eden-core/src/video_core/engines" / variant).read_text()
+    assert helper.strip() in fermi, ("maintained diagnostic helper missing", variant)
+assert "set(gpu_bounded_sample_helper [=[" not in module
+assert 'target_sources(video_core PRIVATE "${EDEN_MAINTAINED_FERMI_FILE}")' in module
 print("VENDOR_MAINTAINED_PRMT_PARITY_PASS: both opcode translations, bounded diagnostic and golden vectors")
 
