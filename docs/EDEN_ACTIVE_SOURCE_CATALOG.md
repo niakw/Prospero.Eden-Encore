@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **272 fichiers** de code et d'en-têtes enregistrés.
-- **272 fichiers** possèdent une correspondance de chemin *exacte*
+- **274 fichiers** de code et d'en-têtes enregistrés.
+- **274 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -24,8 +24,8 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 **Important :** une correspondance de chemin n'est ni un test hôte,
 ni une certification console. Le graphe
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` porte les contrats fonctionnels,
-leurs états et les preuves. L'inventaire des 12 générateurs CMake
-principaux, 12 générateurs de modules, trois modules indirects et 46 patches
+leurs états et les preuves. L'inventaire des 11 générateurs CMake
+principaux, 12 générateurs de modules, deux modules indirects et 46 patches
 reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
 <!-- ACTIVE_SOURCE_CATALOG_START -->
@@ -35,9 +35,9 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-backports/src/audio_core/audio_render_manager.cpp` | `shipping-backport` | A06 |
 | `eden-backports/src/common/logging.cpp` | `shipping-backport` | F30 |
 | `eden-backports/src/common/net/net.cpp` | `shipping-backport` | F31 |
+| `eden-backports/src/common/settings_enums.h` | `shipping-backport` | F34 |
 | `eden-backports/src/common/settings.cpp` | `shipping-backport` | F32 |
 | `eden-backports/src/common/settings.h` | `shipping-backport` | F33 |
-| `eden-backports/src/common/settings_enums.h` | `shipping-backport` | F34 |
 | `eden-backports/src/core/device_memory_manager.h` | `shipping-backport` | M12 |
 | `eden-backports/src/core/device_memory_manager.inc` | `shipping-backport` | M13 |
 | `eden-backports/src/core/file_sys/system_archive/system_version.cpp` | `shipping-backport` | F19 |
@@ -46,8 +46,8 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-backports/src/core/hle/kernel/k_scheduler.cpp` | `shipping-backport` | H37 |
 | `eden-backports/src/core/hle/kernel/k_slab_heap.h` | `shipping-backport` | H42 |
 | `eden-backports/src/core/hle/kernel/k_thread.h` | `shipping-backport` | H38 |
-| `eden-backports/src/core/hle/kernel/svc/svc_info.cpp` | `shipping-backport` | H43 |
 | `eden-backports/src/core/hle/kernel/svc_types.h` | `shipping-backport` | H44 |
+| `eden-backports/src/core/hle/kernel/svc/svc_info.cpp` | `shipping-backport` | H43 |
 | `eden-backports/src/core/hle/service/acc/acc.cpp` | `shipping-backport` | H45 |
 | `eden-backports/src/core/hle/service/acc/acc.h` | `shipping-backport` | H46 |
 | `eden-backports/src/core/hle/service/am/display_layer_manager.cpp` | `shipping-backport` | N18 |
@@ -99,8 +99,8 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-backports/src/core/hle/service/wlan/wlan.cpp` | `shipping-backport` | L27 |
 | `eden-backports/src/core/memory.cpp` | `shipping-backport` | M14 |
 | `eden-backports/src/hid_core/resources/npad/npad.cpp` | `shipping-backport` | H40 |
-| `eden-backports/src/video_core/buffer_cache/buffer_cache.h` | `shipping-backport` | V51 |
 | `eden-backports/src/video_core/buffer_cache/buffer_cache_base.h` | `shipping-backport` | V53 |
+| `eden-backports/src/video_core/buffer_cache/buffer_cache.h` | `shipping-backport` | V51 |
 | `eden-backports/src/video_core/control/channel_state_cache.h` | `shipping-backport` | V57 |
 | `eden-backports/src/video_core/dma_pusher.cpp` | `shipping-backport` | V60 |
 | `eden-backports/src/video_core/engines/kepler_compute.cpp` | `shipping-backport` | V58 |
@@ -110,8 +110,8 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-backports/src/video_core/query_cache/query_cache.h` | `shipping-backport` | V55 |
 | `eden-backports/src/video_core/renderer_vulkan/vk_buffer_cache.cpp` | `shipping-backport` | V50 |
 | `eden-backports/src/video_core/renderer_vulkan/vk_buffer_cache.h` | `shipping-backport` | V62 |
-| `eden-backports/src/video_core/texture_cache/texture_cache.h` | `shipping-backport` | V52 |
 | `eden-backports/src/video_core/texture_cache/texture_cache_base.h` | `shipping-backport` | V54 |
+| `eden-backports/src/video_core/texture_cache/texture_cache.h` | `shipping-backport` | V52 |
 | `eden-backports/src/video_core/texture_cache/util.cpp` | `shipping-backport` | V61 |
 | `eden-build/third_party/xbyak/xbyak.h` | `maintained-override` | J40 |
 | `eden-build/tooling/native/app_crt_radv.cpp` | `maintained-override` | B05 |
@@ -121,8 +121,8 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/dynarmic/scalar/scalar-fold.inc` | `maintained-override` | J27 |
 | `eden-core/dynarmic/scalar/scalar-memory-read.inc` | `maintained-override` | J28 |
 | `eden-core/dynarmic/scalar/scalar-memory-write.inc` | `maintained-override` | J29 |
-| `eden-core/dynarmic/shared-jit/jit_group.h` | `maintained-override` | J21 |
 | `eden-core/dynarmic/shared-jit/jit_group_support.inc` | `maintained-override` | J22 |
+| `eden-core/dynarmic/shared-jit/jit_group.h` | `maintained-override` | J21 |
 | `eden-core/dynarmic/shared-jit/jit_impl.inc` | `maintained-override` | J23 |
 | `eden-core/dynarmic/shared-jit/jit_links.inc` | `maintained-override` | J24 |
 | `eden-core/dynarmic/shared-jit/jit_push_rsb.inc` | `maintained-override` | J25 |
@@ -155,6 +155,8 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/core/file_sys/savedata_factory.cpp` | `maintained-override` | F15 |
 | `eden-core/src/core/hle/kernel/k_process.cpp` | `maintained-override` | H53 |
 | `eden-core/src/core/hle/kernel/k_spin_lock.cpp` | `maintained-override` | H30 |
+| `eden-core/src/core/hle/kernel/physical_core_dev.cpp` | `maintained-override` | B26 |
+| `eden-core/src/core/hle/kernel/physical_core_standard.cpp` | `maintained-override` | B25 |
 | `eden-core/src/core/hle/kernel/svc/svc_ipc.cpp` | `maintained-override` | H21 |
 | `eden-core/src/core/hle/service/am/service/application_functions.cpp` | `maintained-override` | H32 |
 | `eden-core/src/core/hle/service/audio/audio_controller.cpp` | `maintained-override` | A10 |
@@ -172,14 +174,14 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/core/hle/service/sockets/bsd.cpp` | `maintained-override` | N20 |
 | `eden-core/src/core/hle/service/sockets/sfdnsres.cpp` | `maintained-override` | N21 |
 | `eden-core/src/core/hle/service/vi/conductor.cpp` | `maintained-override` | F36 |
-| `eden-core/src/core/internal_network/network.cpp` | `maintained-override` | N19 |
 | `eden-core/src/core/internal_network/network_interface.cpp` | `maintained-override` | F10 |
+| `eden-core/src/core/internal_network/network.cpp` | `maintained-override` | N19 |
 | `eden-core/src/core/loader/deconstructed_rom_directory.cpp` | `maintained-override` | F16 |
 | `eden-core/src/core/memory.cpp` | `maintained-override` | M11 |
 | `eden-core/src/dynarmic/backend/block_range_information.cpp` | `maintained-override` | U12 |
 | `eden-core/src/dynarmic/backend/block_range_information.h` | `maintained-override` | J41 |
-| `eden-core/src/dynarmic/backend/x64/a32_emit_x64.cpp` | `maintained-override` | B12 |
 | `eden-core/src/dynarmic/backend/x64/a32_emit_x64_memory.cpp` | `maintained-override` | B19 |
+| `eden-core/src/dynarmic/backend/x64/a32_emit_x64.cpp` | `maintained-override` | B12 |
 | `eden-core/src/dynarmic/backend/x64/a32_interface_native.cpp` | `maintained-override` | B24 |
 | `eden-core/src/dynarmic/backend/x64/a64_emit_x64_memory.cpp` | `maintained-override` | B20 |
 | `eden-core/src/dynarmic/backend/x64/a64_emit_x64_shared.cpp` | `maintained-override` | B14 |
@@ -188,15 +190,15 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/dynarmic/backend/x64/a64_emit_x64_standard.h` | `maintained-override` | B15 |
 | `eden-core/src/dynarmic/backend/x64/a64_interface_shared.cpp` | `maintained-override` | B11 |
 | `eden-core/src/dynarmic/backend/x64/a64_interface_standard.cpp` | `maintained-override` | J10 |
-| `eden-core/src/dynarmic/backend/x64/block_of_code.h` | `maintained-override` | B10 |
 | `eden-core/src/dynarmic/backend/x64/block_of_code_host.cpp` | `maintained-override` | B09 |
 | `eden-core/src/dynarmic/backend/x64/block_of_code_native.cpp` | `maintained-override` | J09 |
+| `eden-core/src/dynarmic/backend/x64/block_of_code.h` | `maintained-override` | B10 |
 | `eden-core/src/dynarmic/backend/x64/constant_pool.cpp` | `maintained-override` | J37 |
 | `eden-core/src/dynarmic/backend/x64/emit_x64_data_processing.cpp` | `maintained-override` | J39 |
 | `eden-core/src/dynarmic/backend/x64/emit_x64_host.cpp` | `maintained-override` | B17 |
-| `eden-core/src/dynarmic/backend/x64/emit_x64_memory.h` | `maintained-override` | B21 |
 | `eden-core/src/dynarmic/backend/x64/emit_x64_memory_checked.cpp.inc` | `maintained-override` | B23 |
 | `eden-core/src/dynarmic/backend/x64/emit_x64_memory_standard.cpp.inc` | `maintained-override` | B22 |
+| `eden-core/src/dynarmic/backend/x64/emit_x64_memory.h` | `maintained-override` | B21 |
 | `eden-core/src/dynarmic/backend/x64/emit_x64_native.cpp` | `maintained-override` | B18 |
 | `eden-core/src/dynarmic/backend/x64/emit_x64_vector.cpp` | `maintained-override` | J38 |
 | `eden-core/src/dynarmic/backend/x64/reg_alloc.cpp` | `maintained-override` | J36 |
@@ -207,8 +209,8 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/dynarmic/ir/opt_passes.cpp` | `maintained-override` | J33 |
 | `eden-core/src/hid_core/frontend/emulated_controller.cpp` | `maintained-override` | H39 |
 | `eden-core/src/hid_core/resource_manager.cpp` | `maintained-override` | H31 |
-| `eden-core/src/hid_core/resources/npad/npad.cpp` | `maintained-override` | H48 |
 | `eden-core/src/hid_core/resources/npad/npad_pause_diag.cpp` | `maintained-override` | H52 |
+| `eden-core/src/hid_core/resources/npad/npad.cpp` | `maintained-override` | H48 |
 | `eden-core/src/shader_recompiler/frontend/maxwell/translate/impl/not_implemented.cpp` | `maintained-override` | V80 |
 | `eden-core/src/video_core/buffer_cache/buffer_cache.h` | `maintained-override` | V77 |
 | `eden-core/src/video_core/engines/fermi_2d_experimental.cpp` | `maintained-override` | V82 |
@@ -219,8 +221,8 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/video_core/memory_manager.cpp` | `maintained-override` | V71 |
 | `eden-core/src/video_core/renderer_opengl/gl_buffer_cache.cpp` | `maintained-override` | V14 |
 | `eden-core/src/video_core/renderer_opengl/gl_query_cache.cpp` | `maintained-override` | V15 |
-| `eden-core/src/video_core/renderer_opengl/gl_rasterizer.cpp` | `maintained-override` | V83 |
 | `eden-core/src/video_core/renderer_opengl/gl_rasterizer_dev.cpp` | `maintained-override` | V84 |
+| `eden-core/src/video_core/renderer_opengl/gl_rasterizer.cpp` | `maintained-override` | V83 |
 | `eden-core/src/video_core/renderer_opengl/gl_texture_cache.cpp` | `maintained-override` | V25 |
 | `eden-core/src/video_core/shader_cache_reader.inc` | `maintained-override` | V76 |
 | `eden-core/src/video_core/shader_environment.cpp` | `maintained-override` | V75 |
@@ -264,8 +266,8 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_present_manager.h` | `maintained-override` | V32 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_scheduler.h` | `maintained-override` | V31 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_update_descriptor.h` | `maintained-override` | V42 |
-| `eden-vulkan/include/video_core/vulkan_common/vulkan.h` | `maintained-override` | V43 |
 | `eden-vulkan/include/video_core/vulkan_common/vulkan_wrapper.h` | `maintained-override` | V44 |
+| `eden-vulkan/include/video_core/vulkan_common/vulkan.h` | `maintained-override` | V43 |
 | `eden-vulkan/vk_buffer_cache_cost.cpp` | `maintained-override` | R03 |
 | `eden-vulkan/vk_compute_pass_cost.cpp` | `maintained-override` | V22 |
 | `eden-vulkan/vk_compute_pipeline_cost.cpp` | `maintained-override` | V18 |
@@ -275,7 +277,6 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-vulkan/vk_multi_range_buffer_cost.cpp` | `maintained-override` | V20 |
 | `eden-vulkan/vk_pipeline_cache_cost.cpp` | `maintained-override` | V07 |
 | `eden-vulkan/vk_texture_cache_cost.cpp` | `maintained-override` | V19 |
-| `eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h` | `maintained-override` | V45 |
 | `eden-vulkan/vulkan_blit_screen.cpp` | `maintained-override` | V28 |
 | `eden-vulkan/vulkan_descriptor_buffer.cpp` | `maintained-override` | V46 |
 | `eden-vulkan/vulkan_device.cpp` | `maintained-override` | V26 |
@@ -291,6 +292,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-vulkan/vulkan_swapchain.cpp` | `maintained-override` | V03 |
 | `eden-vulkan/vulkan_window_adapt_pass.cpp` | `maintained-override` | V29 |
 | `eden-vulkan/vulkan_wrapper.cpp` | `maintained-override` | V30 |
+| `eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h` | `maintained-override` | V45 |
 | `ps5-mesa/src/amd/vulkan/cl/radv_gs_compute.cl` | `driver-fork` | R23 |
 | `ps5-mesa/src/amd/vulkan/meta/radv_meta_clear.c` | `driver-fork` | R12 |
 | `ps5-mesa/src/amd/vulkan/meta/radv_meta_resolve.c` | `driver-fork` | R13 |
@@ -314,7 +316,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
 Ces deux fichiers sont inclus dans les **83 entrées** de
 `vendor/encore-active/eden-backports/manifest.json`, mais ne sont
-pas comptés parmi les 272 fichiers de code et d'en-têtes.
+pas comptés parmi les 274 fichiers de code et d'en-têtes.
 
 ## Inventaire hors `vendor/encore-active`
 
@@ -322,7 +324,7 @@ Les **170 fichiers source/en-tête/fragment** de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
 34 ont désormais un propriétaire exact dans le graphe courant ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
-La couverture de 272/272 ci-dessus ne s'applique **pas** à ce dossier.
+La couverture de 274/274 ci-dessus ne s'applique **pas** à ce dossier.
 
 ## Critères de tenue à jour
 
