@@ -82,9 +82,23 @@ with tempfile.TemporaryDirectory(prefix="encore-physical-atomic-") as folder:
         snapshots[profile] = derived
 
     source = snapshots[False]
-    actual_run = method(source,
+    maintained_run = method(source,
         "void PhysicalCore::RunThread(KernelCore& kernel, Kernel::KThread* thread) {",
         "\nvoid PhysicalCore::LoadContext(")
+    # This fixture stubs only the scheduler/JIT handoff ABI. The maintained
+    # RunThread additionally captures a fatal page-table/guest context, which
+    # is checked against both full sources by check-ps5-guest-fault-recovery.py.
+    # For the concurrent atomic harness, preserve the exact pinned scheduler
+    # method and substitute only its single interrupted-load site.
+    actual_run = method(pinned,
+        "void PhysicalCore::RunThread(KernelCore& kernel, Kernel::KThread* thread) {",
+        "\nvoid PhysicalCore::LoadContext(").replace(
+            "if (m_is_interrupted)",
+            "if (std::atomic_ref<const bool>{m_is_interrupted}.load(std::memory_order_relaxed))"
+        )
+    assert "if (std::atomic_ref<const bool>{m_is_interrupted}.load(std::memory_order_relaxed))" in maintained_run
+    assert "if (prefetch_abort)" in maintained_run
+    assert "::Eden::RecordGuestFault(eden_fault);" in maintained_run
     actual_interrupt = method(source, "void PhysicalCore::Interrupt() {",
         "\nvoid PhysicalCore::ClearInterrupt() {")
     actual_clear = method(source, "void PhysicalCore::ClearInterrupt() {",
