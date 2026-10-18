@@ -2307,47 +2307,19 @@ if(PS5_NATIVE)
     target_include_directories(core PRIVATE "$<TARGET_PROPERTY:boost_process,INTERFACE_INCLUDE_DIRECTORIES>")
     target_link_libraries(core PRIVATE "$<TARGET_PROPERTY:boost_process,INTERFACE_LINK_LIBRARIES>")
     set(native_template "${PORT_ROOT}/../ps5-native-app-boilerplate")
-    set(heap_source "${PORT_ROOT}/third_party/app_heap.c")
-    file(SHA256 "${heap_source}" heap_hash)
-    if(NOT heap_hash STREQUAL "df61acb51502c3b75c4fda62859c42eac6d19a6690f9b68c0e2dfbf20ae72c0f")
-        message(FATAL_ERROR "The shared heap changed since G6; qualify it before using it here.")
-    endif()
-    # The heap may grow to 3 GiB: with guest cores 1/2 at 192 MiB of code, a large game's
-    # blocks (~0.5 KiB of metadata each) once exhausted 2 GiB. That is its address range, not its
-    # memory: the heap commits 128 MiB pieces as allocations need them (heap_arenas.inc), because
-    # everything the CPU holds comes out of the 12 GiB it shares with the GPU. Taken whole at
-    # start, guest RAM, a dense page table, this heap and the A64 code caches were 8.6 GiB of it.
-    file(READ "${heap_source}" heap)
-    string(REPLACE "128 MiB" "3072 MiB" heap "${heap}")
-    string(REPLACE "(128u * 1024u * 1024u)" "(3072u * 1024u * 1024u)" heap "${heap}")
-    string(REPLACE "#include <sys/mman.h>" "#include <sys/mman.h>\nvoid *eden_heap_pages(size_t);\nvoid eden_heap_pages_free(void *, size_t);\nsize_t eden_heap_pages_physical_size(void *);" heap "${heap}")
-    string(REPLACE "mmap(NULL, PS5_OPENGL_HEAP_SIZE, PROT_READ | PROT_WRITE,\n                    MAP_PRIVATE | MAP_ANON, -1, 0)" "eden_heap_pages(PS5_OPENGL_HEAP_SIZE)" heap "${heap}")
-    string(REPLACE "if (base == MAP_FAILED)" "if (base == NULL)" heap "${heap}")
-    string(REPLACE "munmap(base, PS5_OPENGL_HEAP_SIZE)" "eden_heap_pages_free(base, PS5_OPENGL_HEAP_SIZE)" heap "${heap}")
-    string(REPLACE "\"PS5-OpenGL\"" "\"Eden-headless\"" heap "${heap}")
-    # Replace the single-mspace wrappers with per-thread arenas over the same heap
-    # (headless/heap_arenas.inc). The shared source above stays pinned/unchanged.
+    # Compile one complete maintained allocator variant; never synthesize C here.
     option(EDEN_HEAP_ARENAS "Per-thread arenas inside the owned heap" ON)
-    if(EDEN_HEAP_ARENAS)
-        set(heap_wrappers_begin "static int ps5_heap_ready(void) {")
-        set(heap_wrappers_end "void ps5_opengl_heap_stats_print(unsigned iteration) {")
-        string(FIND "${heap}" "${heap_wrappers_begin}" heap_begin_at)
-        string(FIND "${heap}" "${heap_wrappers_end}" heap_end_at)
-        if(heap_begin_at LESS 0 OR heap_end_at LESS heap_begin_at)
-            message(FATAL_ERROR "Pinned heap wrapper layout changed")
-        endif()
-        string(SUBSTRING "${heap}" 0 ${heap_begin_at} heap_prefix)
-        string(SUBSTRING "${heap}" ${heap_end_at} -1 heap_suffix)
-        file(READ "${EDEN_PORT_DIR}/heap_arenas.inc" heap_arenas)
-        set(heap "${heap_prefix}${heap_arenas}${heap_suffix}")
-        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${EDEN_PORT_DIR}/heap_arenas.inc")
-    endif()
     option(EDEN_HEAP_GUARD "Development trailing heap corruption guards" OFF)
-    if(EDEN_HEAP_GUARD)
-        string(REPLACE "static atomic_int ps5_heap_state;"
-            "#include \"${EDEN_PORT_DIR}/heap_guard.h\"\nstatic atomic_int ps5_heap_state;" heap "${heap}")
+    set(EDEN_ACTIVE_HEAP_DIR "${PORT_ROOT}/vendor/encore-active/eden-build/tooling/native")
+    if(EDEN_HEAP_ARENAS)
+        set(EDEN_HEAP_UNIT "app_heap_arenas.c")
+    else()
+        set(EDEN_HEAP_UNIT "app_heap_flat.c")
     endif()
-    write_derived("${PORT_BUILD_DIR}/app_heap.c" "${heap}")
+    set(EDEN_HEAP_SOURCE "${EDEN_ACTIVE_HEAP_DIR}/${EDEN_HEAP_UNIT}")
+    if(NOT EXISTS "${EDEN_HEAP_SOURCE}" OR NOT EXISTS "${EDEN_ACTIVE_HEAP_DIR}/heap_guard.h")
+        message(FATAL_ERROR "Missing maintained Encore heap source or guard header")
+    endif()
     set(eden_app_crt "${native_template}/tooling/native/app_crt.cpp")
     if(EDEN_PS5_VULKAN AND EDEN_VULKAN_DRIVER STREQUAL "RADV")
         # The native RADV startup is a complete, reviewed boilerplate override.
@@ -2367,12 +2339,16 @@ if(PS5_NATIVE)
         "${EDEN_PORT_DIR}/network_audit.c"
         "${EDEN_PORT_DIR}/network_audit_sockets.c"
         "${eden_app_crt}" "${PORT_ROOT}/src/lifecycle.c"
-        "${PORT_BUILD_DIR}/app_heap.c")
+        "${EDEN_HEAP_SOURCE}")
     # Guest DNS IPC and native launcher both call eden_network_host_blocked(),
     # supplied once by eden-headless's native network_domain_rules.c.
     # The guest derived DNS source includes the matching policy prototype.
     target_include_directories(core PRIVATE "${EDEN_PORT_DIR}")
     target_compile_definitions(eden-headless PRIVATE PS5_NATIVE=1)
+    if(EDEN_HEAP_GUARD)
+        set_property(SOURCE "${EDEN_HEAP_SOURCE}" TARGET_DIRECTORY eden-headless
+            APPEND PROPERTY COMPILE_DEFINITIONS EDEN_HEAP_GUARD=1)
+    endif()
     # Only main.cpp needs to recompile when the SHA changes. The stable
     # video_core and other native app objects keep their incremental caches.
     if(NOT DEFINED EDEN_ENCORE_SOURCE_COMMIT)

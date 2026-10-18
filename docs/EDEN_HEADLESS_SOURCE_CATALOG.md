@@ -2,7 +2,7 @@
 
 **Branche :** `dev/ps5-sparse-jit`. **Date du relevé :** 18 octobre 2026.
 
-Ce registre complémentaire couvre les **173 chemins** de code, en-têtes et
+Ce registre complémentaire couvre les **171 chemins** de code, en-têtes et
 fragments `.c/.cc/.cpp/.h/.hpp/.inc/.cl` du dossier `headless/`.
 Il ne remplace pas `EDEN_ACTIVE_SOURCE_CATALOG.md` : les 251 fichiers
 de `vendor/encore-active` sont déjà inventoriés séparément.
@@ -13,9 +13,9 @@ pour suivi séparé et n'autorise aucune modification du launcher depuis
 l'audit moteur. Un chemin noté « À qualifier » peut avoir été audité sous
 une autre forme : il manque seulement la référence de chemin exacte.
 
-- **173** chemins sous `headless/`, dont **58** sources C/C++ et **115** en-têtes/fragments.
+- **171** chemins sous `headless/`, dont **58** sources C/C++ et **113** en-têtes/fragments.
 - **34** chemins déjà présents dans le graphe moteur.
-- **139** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
+- **137** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
 - Les deux générateurs de profils `headless/encore_overrides_generated.h`,
   `headless/glyph_overrides_generated.h` et les autres ressources générées
   sont des entrées de l'inventaire, **pas** de nouveaux patchs CMake.
@@ -80,8 +80,6 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/graphics.cpp` | runtime/bridge | V11 | Chemin indexé, preuve dépend du graphe |
 | `headless/graphics.h` | en-tête/fragment | U19 | Chemin indexé, preuve dépend du graphe |
 | `headless/guest_fault.h` | en-tête/fragment | — | À qualifier |
-| `headless/heap_arenas.inc` | en-tête/fragment | — | À qualifier |
-| `headless/heap_guard.h` | en-tête/fragment | — | À qualifier |
 | `headless/heap_pages.cpp` | runtime/bridge | U02 | Chemin indexé, preuve dépend du graphe |
 | `headless/hle_counters.h` | en-tête/fragment | — | À qualifier |
 | `headless/hud.h` | en-tête/fragment | — | À qualifier |

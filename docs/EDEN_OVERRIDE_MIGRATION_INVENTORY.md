@@ -17,10 +17,10 @@ couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
 ## Synthèse vérifiable
 
-- **23 appels générateurs** encore dans CMake ; contre **75 avant**
+- **22 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
-- **30 lectures `file(READ`** et **138 remplacements
+- **28 lectures `file(READ`** et **130 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
 - Les versions diagnostiques de `IFile::Read`, `IStorage::Read` et des appels
@@ -215,9 +215,13 @@ dans la version normale.
 | G19 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 1732 |
 | G20 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 2045 |
 | G21 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 2142 |
-| G22 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 2350 |
-| G23 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2545 |
+| G23 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2521 |
 <!-- OVERRIDE_GENERATORS_END -->
+
+L'identifiant historique `G22` est retiré : les deux variantes de l'allocateur
+sont maintenues sous `vendor/encore-active/eden-build/tooling/native/`.
+Les IDs G01–G23 sont stables et ne sont pas renumérotés.
+
 
 ## Prochain ordre de migration
 
@@ -452,7 +456,7 @@ La modification `code_source` du même module reste enregistrée sous
 
 Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules
 inclus par ce fichier contiennent **12 autres appels `write_derived()`**
-dans 2 fichiers. Le total de **35 appels** (23 + 12) est donc un **nombre de
+dans 2 fichiers. Le total de **34 appels** (22 + 12) est donc un **nombre de
 sites CMake**, pas un dénombrement des fichiers réellement produits à
 l'exécution. Un module inclus peut définir des macros sans les exécuter,
 et plusieurs sorties sont explicitement conditionnées.
@@ -477,7 +481,7 @@ et plusieurs sorties sont explicitement conditionnées.
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **35 sites** `write_derived()`, ni dans
+Ils ne sont comptés ni dans les **34 sites** `write_derived()`, ni dans
 les **4 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,

@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 324
+**Non, this is not an exhaustive repository-wide inventory.** The 327
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,12 +24,12 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 324 | 302 | 664 |
+| Graphe connu | 327 | 305 | 670 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 269 | 257 | 559 |
+| SOURCE — lecture effectuée, preuve insuffisante | 272 | 260 | 565 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **284** | **271** | **587** |
+| **Encore à qualifier (SOURCE + OPEN)** | **287** | **274** | **593** |
 | Dont priorité P0 (SOURCE + OPEN) | 108 | 103 | 252 |
 
 Le **noyau restant** compte donc 284 critères répartis sur
@@ -241,6 +241,9 @@ function/contract tokens are checked by CI for existence only; the
 | B02 | P1 | B01 | headless/CMakeLists.txt | configure_file; EDEN_ACTIVE_GPU | HOST | tools/check-native-gpu-queue-slot-lifetime-host.py | Native uses canonical Encore queue; host test validates lifetime | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-gpu-queue-slot-lifetime-host.py) |
 | B04 | P1 | B01 | vendor/encore-active/compiler-rt/emutls.c | emutls_key_destructor; __emutls_get_address | SOURCE | tools/check-vendor-consolidation-debt.py | One exact pinned compiler-rt TLS destructor-round override is now source-maintained; platform TLS execution and shutdown lifetime remain unproved | 🟡 Source étudiée |
 | B05 | P1 | B01,B04 | vendor/encore-active/eden-build/tooling/native/app_crt_radv.cpp | _init; ps5_fp_ieee | SOURCE | tools/check-vendor-consolidation-debt.py | Complete maintained RADV startup copied from the pinned boilerplate with one IEEE initializer; parity checked, native console unqualified | 🟡 Source étudiée |
+| B06 | P1 | B01 | vendor/encore-active/eden-build/tooling/native/app_heap_arenas.c | ps5_heap_ready; eden_heap_grow | SOURCE | tools/check-maintained-heap-sources.py | Complete arena source selected directly, historical body identity gated; console unqualified | 🟡 Source étudiée |
+| B07 | P1 | B01 | vendor/encore-active/eden-build/tooling/native/app_heap_flat.c | ps5_heap_ready; __wrap_malloc | SOURCE | tools/check-maintained-heap-sources.py | Full non-arena source parity gated, console fallback unqualified | 🟡 Source étudiée |
+| B08 | P1 | B06,B07 | vendor/encore-active/eden-build/tooling/native/heap_guard.h | eden_guard_check; eden_quarantine | SOURCE | tools/check-maintained-heap-sources.py | Optional diagnostic macro header has canonical owner and guarded syntax proof only | 🟡 Source étudiée |
 | B03 | P1 | B01 | vendor/encore-active/eden-core/overrides/slot-vector/common/slot_vector.h | SlotId insert( | SOURCE | tools/check-vendor-consolidation-debt.py | Former X02 recovery is maintained as exact Encore header with isolated include priority; native exception behavior unproved | 🟡 Source étudiée |
 | Q01 | P1 | B02 | vendor/sources/eden/src/common/bounded_threadsafe_queue.h | TryEmplace; Pop; std::construct_at | HOST | tools/check-native-gpu-queue-slot-lifetime-host.py | No claim about a specific game's resource lifetime | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-gpu-queue-slot-lifetime-host.py) |
 | Q02 | P1 | Q01 | vendor/encore-active/eden-gpu/include/common/bounded_threadsafe_queue.h | EmplaceWaitWithStopToken | SOURCE | tools/check-gpu-producer-stop.py | Stop-aware producer wake owned by the selected complete queue header; obsolete .inc retired, console unqualified | 🟡 Source étudiée |
