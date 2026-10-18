@@ -34,15 +34,17 @@ for arch in (32, 64):
     assert "offsetof(A64JitState, eden_conf)" in prelude if arch == 64 else (
         "reinterpret_cast<u64>(&conf)" in prelude
     )
-    assert f'configure_file("[object Object]"'
+    assert 'configure_file("${EDEN_MAINTAINED_MEMORY_UNIT}"' in cm
     assert "EDEN_EXCLUSIVE_ADDRESS" not in original
     assert "EDEN_CONF_ARG" not in original
 
 # Stage the actual selection loop through CMake with target actions isolated.
 first = cm.index('set(EDEN_MAINTAINED_MEMORY_UNIT_DIR\n')
-last = cm.index('get_target_property(jit_sources dynarmic SOURCES)', first)
-first_stage = cm[first:last]
-assert "vendor/encore-active/eden-core/src/dynarmic/backend/x64" in first_stage
+last = cm.index('set_property(TARGET dynarmic PROPERTY SOURCES "${jit_sources}")', first)
+selection = cm[first:last]
+assert selection.count("get_target_property(jit_sources dynarmic SOURCES)") == 1
+selection = selection.replace("get_target_property(jit_sources dynarmic SOURCES)", 'set(jit_sources "")')
+assert "vendor/encore-active/eden-core/src/dynarmic/backend/x64" in selection
 assert shutil.which("cmake"), "CMake missing"
 with tempfile.TemporaryDirectory(prefix="eden-memory-unit-") as tmp:
     tmp = Path(tmp)
@@ -57,12 +59,7 @@ with tempfile.TemporaryDirectory(prefix="eden-memory-unit-") as tmp:
                 + f'set(PORT_BUILD_DIR "{output.as_posix()}")\n'
                 + f'set(EDEN_SHARED_JIT {"ON" if shared else "OFF"})\n'
                 + f'set(PS5_NATIVE {"ON" if native else "OFF"})\n'
-                + first_stage
-                + 'foreach(bits 32 64)\n'
-                + '  set(memory_unit "a${bits}_emit_x64_memory.cpp")\n'
-                + '  configure_file("${EDEN_MAINTAINED_MEMORY_UNIT_DIR}/${memory_unit}"'
-                  ' "${PORT_BUILD_DIR}/${memory_unit}" COPYONLY)\n'
-                + 'endforeach()\n'
+                + selection
             )
             subprocess.run(["cmake", "-P", str(script)], check=True, timeout=30)
             for arch in (32, 64):
