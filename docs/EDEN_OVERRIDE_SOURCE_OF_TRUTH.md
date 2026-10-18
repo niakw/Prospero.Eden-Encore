@@ -16,13 +16,13 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **272 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **274 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **12 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **11 générateurs** `write_derived`.
 - Deux modules CMake générateurs totalisent **12 générateurs**
-  `write_derived`, soit **24 sites** au total.
-- Trois modules CMake procèdent encore à des substitutions **indirectes**
+  `write_derived`, soit **23 sites** au total.
+- Deux modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 34.
 - `headless/` contient **3 fragments `.inc`**. Plusieurs contribuent
@@ -56,7 +56,6 @@ nouveaux corps C++ destinés à la console.
 | `headless/jit-alias.cmake` | Sélection/copie de l'en-tête Xbyak et de ConstantPool complets | Sélecteur conforme ; X09 retiré |
 | `headless/native_guest_range_overflow.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
 | `headless/native_jit_memory_read_guard.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
-| `headless/physical_core_interrupt_atomic.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
 | `headless/ps5.cmake` | Orchestration ou toolchain | Sélecteur / configuration |
 | `headless/scalar-memory.cmake` | Sélection des émetteurs vectoriel et data processing maintenus | Sélecteur conforme ; X08 retiré |
 | `headless/vulkan.cmake` | Sélection/copie de sources Encore maintenues | Sélecteur / configuration |
@@ -123,6 +122,18 @@ commit après épuisement mémoire et la notification des blocs compilés.
 CMake copie cette unité sans réécriture et le test
 `tools/check-maintained-a32-native-interface.py` vérifie l'identité
 des transformations historiques. Aucune qualification PS5 n'est revendiquée.
+
+## PhysicalCore : deux sources maintenues (G12/X07)
+
+Le générateur G12 et la réécriture indirecte X07 sont retirés.
+`physical_core_standard.cpp` et `physical_core_dev.cpp` résident
+sous `vendor/encore-active/eden-core/src/core/hle/kernel/`.
+Les deux conservent le drapeau ABI `bool`, mais chaque accès utilise
+`std::atomic_ref`; les traces guest fault ne sont émises que dans le
+chemin de faute. Le profil DEV ajoute le chronométrage de l'attente CPU.
+CMake ne fait qu'une sélection et une copie, sans transformer de C++.
+Les tests hôte vérifient le comportement atomique et les deux variantes,
+mais ne certifient pas l'exécution console.
 
 ## Interface A64 : unité complète par mode
 
