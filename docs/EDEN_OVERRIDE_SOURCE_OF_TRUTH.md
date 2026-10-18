@@ -104,15 +104,16 @@ fragments de l'application native qui ne remplacent aucune source upstream.
 | `headless/jit-compile-batch.inc` | Bloc de compilation JIT injecté | **Dette confirmée G09** : remplacement de la région `a64_interface.cpp` sous `EDEN_JIT_COMPILE_BATCH` |
 <!-- SINGLE_SOURCE_FRAGMENTS_END -->
 
-### Frontières des six fragments résiduels
+### Frontières des quatre fragments résiduels
 
-Les trois injections confirmées restent de la **dette d'implémentation**
-(migration en fichier source complet, sélection unique, parité normale/DEV
-et validation hôte/native). Les deux diagnostics GPU sont du code de
+La seule injection `.inc` résiduelle identifiée est `jit-compile-batch.inc`
+(G09). Sa migration doit être groupée avec la signature de l'émetteur A64
+(G03/G04), les profils `EDEN_JIT_COMPILE_BATCH` et `EDEN_SHARED_JIT`,
+et les variantes normales/DEV, afin de ne pas recréer des sources concurrentes. Les deux diagnostics GPU sont du code de
 l'application, non des patches cachés dans une dépendance ; leur présence
 sous `headless/` est autorisée. Le fragment de capture OpenGL est
 **non qualifié**, pas déclaré inutilisé sans recherche exhaustive des consommateurs.
-Le nombre de six fichiers physiques ne mesure donc pas six overrides à migrer.
+Les quatre fichiers physiques restants ne représentent pas quatre overrides à migrer : un seul est une injection de dépendance confirmée.
 
 ## BlockOfCode : W^X, alias mémoire et permissions JIT
 
