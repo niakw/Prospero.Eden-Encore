@@ -16,12 +16,12 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **232 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **235 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **31 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **28 générateurs** `write_derived`.
 - Six modules CMake supplémentaires totalisent **21 générateurs**
-  `write_derived`, soit **52 sites** au total.
+  `write_derived`, soit **49 sites** au total.
 - Quatre modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 54.
@@ -109,12 +109,15 @@ maintenus. **Ce module CMake conserve encore des transformations upstream
 
 ## Fragments scalaires centralisés
 
-Les injections Dynarmic `scalar-fold.inc`,
-`scalar-memory-read.inc` et `scalar-memory-write.inc` sont désormais
-maintenues uniquement sous `vendor/encore-active/eden-core/dynarmic/scalar/`.
-CMake charge ces contenus, mais garde encore les règles d'injection et
-les générateurs C++ correspondants : **centralisation des données ne signifie
-pas encore suppression des générateurs**.
+Le traducteur scalaire, son implémentation de lecture/écriture des
+registres et l'optimiseur IR sont désormais trois fichiers complets
+maintenus sous `vendor/encore-active/eden-core/src/dynarmic/`.
+CMake choisit directement les unités `a64_translate.cpp` et
+`opt_passes.cpp`, avec `impl/impl.cpp` inclus exclusivement par le
+traducteur. `scalar-fold.inc` est un témoin historique de parité, non
+une entrée de compilation. Les fragments `scalar-memory-read.inc` et
+`scalar-memory-write.inc` restent consommés par le module secondaire
+`scalar-memory.cmake`, dette distincte.
 
 ## Oracles Vulkan historiques
 
