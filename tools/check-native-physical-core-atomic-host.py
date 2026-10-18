@@ -26,7 +26,7 @@ assert pinned.count("m_is_interrupted") == 5
 assert "std::atomic_ref" not in pinned
 for filename in ("physical_core_standard.cpp", "physical_core_dev.cpp"):
     derived = (owned / filename).read_text()
-    assert derived.startswith("#include <atomic>\\n")
+    assert derived.startswith("#include <atomic>\n")
     assert "std::atomic_ref<const bool>" in derived
 
 compiler = shutil.which("g++") or shutil.which("clang++")
