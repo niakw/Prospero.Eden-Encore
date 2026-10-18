@@ -1,7 +1,7 @@
 # Eden Encore — architecture du dépôt et contrat de source unique
 
-**Statut : décision d'architecture / cible obligatoire, migration en cours.**  
-**Référence :** `dev/ps5-sparse-jit`, relevé structurel du 18 octobre 2026.  
+**Statut : décision d'architecture / cible obligatoire, migration en cours.**
+**Référence :** `dev/ps5-sparse-jit`, relevé structurel du 18 octobre 2026.
 **Périmètre :** moteur natif, dépendances, JIT, CPU/HLE, mémoire, GPU, backend vidéo, build, scripts et CI. Le launcher reste un chantier fonctionnel distinct.
 
 > **Principe : une modification de code d'une dépendance = une source maintenue dans `vendor/encore-active/` = un seul chemin réellement sélectionné par le compilateur.**

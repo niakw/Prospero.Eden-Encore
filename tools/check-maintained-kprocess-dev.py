@@ -23,4 +23,3 @@ assert 'write_derived("${PORT_BUILD_DIR}/k_process.cpp"' not in cmake
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/kernel/k_process.cpp" process_source)' not in cmake
 assert "eden_patch_process(" not in cmake
 print("VENDOR_MAINTAINED_KPROCESS_DEV_PARITY_PASS: 5 scoped edits, DEV-only selection")
-
