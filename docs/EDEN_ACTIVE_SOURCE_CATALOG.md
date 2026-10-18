@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **236 fichiers** de code et d'en-têtes enregistrés.
-- **236 fichiers** possèdent une correspondance de chemin *exacte*
+- **237 fichiers** de code et d'en-têtes enregistrés.
+- **237 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -24,7 +24,7 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 **Important :** une correspondance de chemin n'est ni un test hôte,
 ni une certification console. Le graphe
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` porte les contrats fonctionnels,
-leurs états et les preuves. L'inventaire des 27 générateurs CMake
+leurs états et les preuves. L'inventaire des 26 générateurs CMake
 principaux, 21 générateurs de modules, quatre modules indirects et 46 patches
 reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
@@ -141,6 +141,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/common/fs/fs.cpp` | `maintained-override` | F06 |
 | `eden-core/src/common/fs/path_util.cpp` | `maintained-override` | F08 |
 | `eden-core/src/common/logging.cpp` | `maintained-override` | F17 |
+| `eden-core/src/common/sparse_large_vector.h` | `maintained-override` | J34 |
 | `eden-core/src/common/thread.cpp` | `maintained-override` | F05 |
 | `eden-core/src/core/arm/dynarmic/arm_dynarmic_32.cpp` | `maintained-override` | J20 |
 | `eden-core/src/core/arm/dynarmic/arm_dynarmic_64.cpp` | `maintained-override` | J19 |

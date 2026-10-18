@@ -16,15 +16,15 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **236 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **237 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **27 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **26 générateurs** `write_derived`.
 - Six modules CMake supplémentaires totalisent **21 générateurs**
-  `write_derived`, soit **48 sites** au total.
+  `write_derived`, soit **47 sites** au total.
 - Quatre modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
-  nombre 48.
+  nombre 47.
 - `headless/` contient **8 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
@@ -166,6 +166,13 @@ sont des entrées de code maintenues exclusivement dans
 bit-à-bit identique aux blobs Git déplacés. CMake charge ces fichiers
 comme données d'injection en attendant la migration des unités C++ dérivées,
 avec dépendances explicites pour toute modification.
+
+## Table mémoire sparse maintenue
+
+Le header `sparse_large_vector.h` ne doit plus être généré depuis des
+substitutions CMake. L'implémentation complète est maintenue sous
+`vendor/encore-active/eden-core/src/common/`; l'ancienne priorité d'include
+demeure, avec comparaison textuelle complète dans un oracle hôte.
 
 ## Verrou natif Dynarmic centralisé
 
