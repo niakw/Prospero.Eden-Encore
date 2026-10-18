@@ -112,21 +112,6 @@ macro(eden_shared_jit_memory_unit bits)
 endmacro()
 
 # a64_interface.cpp: upstream's Impl replaced by jit_impl.inc, with the group helpers before it.
-macro(eden_shared_jit_interface)
-    set(eden_impl_begin "struct Jit::Impl final {")
-    set(eden_impl_end "Jit::Jit(UserConfig conf)")
-    string(FIND "${jit_source}" "${eden_impl_begin}" eden_impl_at)
-    string(FIND "${jit_source}" "${eden_impl_end}" eden_impl_stop)
-    if(eden_impl_at LESS 0 OR eden_impl_stop LESS eden_impl_at)
-        message(FATAL_ERROR "Pinned A64 JIT implementation changed for the shared JIT")
-    endif()
-    string(SUBSTRING "${jit_source}" 0 ${eden_impl_at} eden_impl_prefix)
-    string(SUBSTRING "${jit_source}" ${eden_impl_stop} -1 eden_impl_suffix)
-    file(READ "${EDEN_SHARED_JIT_DIR}/jit_group_support.inc" eden_group_support)
-    file(READ "${EDEN_SHARED_JIT_DIR}/jit_impl.inc" eden_impl)
-    set(jit_source "${eden_impl_prefix}${eden_group_support}\n${eden_impl}\n${eden_impl_suffix}")
-    string(PREPEND jit_source "#include <algorithm>\n#include <atomic>\n#include <chrono>\n#include <cstddef>\n#include <cstdio>\n#include <memory>\n#include <thread>\n#include <vector>\n#include \"dynarmic/backend/x64/exclusive_monitor_friend.h\"\n#include \"dynarmic/backend/x64/jit_group.h\"\nextern \"C\" void eden_jit_phases(unsigned core, unsigned long long translate, unsigned long long optimize, unsigned long long emit, unsigned long long location) __attribute__((weak));\nextern \"C\" unsigned long long eden_jit_clock_ns() __attribute__((weak));\n")
-endmacro()
 
 # The JIT state layout, the group header and the callback argument registry, all compiled for
 # every dynarmic object (the definition recompiles objects that saw the upstream layout).
