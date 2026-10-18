@@ -189,6 +189,7 @@ jobs:
           python3 -B tools/check-ps5-shader-local-bounds-host.py
           python3 -B tools/check-native-manual-run-isolation.py
           python3 -B tools/check-encore-first-parent-revision.py
+          python3 -B tools/check-maintained-opengl-rasterizer.py
           python3 -B tools/check-vendored-opengl-deps.py
           python3 -B tools/vendor-eden-cpm.py --check
           python3 -B tools/install-vendored-eden-backports.py --replay

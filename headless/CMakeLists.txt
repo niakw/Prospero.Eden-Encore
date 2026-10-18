@@ -1923,15 +1923,7 @@ if(EDEN_PS5_OPENGL)
         list(REMOVE_ITEM video_sources renderer_opengl/gl_query_cache.cpp)
         list(APPEND video_sources "${EDEN_MAINTAINED_GL_QUERY_CACHE}")
     endif()
-    # Record actual guest draw submission, separately from the startup GL oracle.
-    file(READ "${PROJECT_SOURCE_DIR}/src/video_core/renderer_opengl/gl_rasterizer.cpp" rasterizer_source)
-    set(draw_end "        }\n    });\n}\n\nvoid RasterizerOpenGL::DrawIndirect()")
-    string(FIND "${rasterizer_source}" "${draw_end}" draw_end_offset)
-    if(draw_end_offset LESS 0)
-        message(FATAL_ERROR "Pinned guest draw callback changed")
-    endif()
-    string(REPLACE "${draw_end}"
-        "        }\n        static unsigned traced_draws{};\n        if (traced_draws < 3) {\n            ++traced_draws;\n            LOG_INFO(Render_OpenGL, \"EDEN_GUEST_GL_DRAW count={} error={}\", traced_draws, glGetError());\n        }\n    });\n}\n\nvoid RasterizerOpenGL::DrawIndirect()" rasterizer_source "${rasterizer_source}")
+        # Guest draw instrumentation is selected from complete Encore sources.
     if(EDEN_DEV_PROFILE)
         # The development-only OpenGL copy diagnostics are a tracked C++
         # source, byte-for-byte equivalent to the old CMake substitution.
@@ -1942,18 +1934,22 @@ if(EDEN_PS5_OPENGL)
         endif()
         list(REMOVE_ITEM video_sources renderer_opengl/gl_texture_cache.cpp)
         list(APPEND video_sources "${EDEN_MAINTAINED_DEV_GL_TEXTURE}")
-        string(PREPEND rasterizer_source "#include \"${EDEN_PORT_DIR}/performance.h\"\n")
-        string(PREPEND rasterizer_source "#include \"${EDEN_PORT_DIR}/dev_render_passes.inc\"\n")
-        string(REPLACE "        static unsigned traced_draws{};"
-            "        CaptureDevelopmentPass();\n        static unsigned traced_draws{};"
-            rasterizer_source "${rasterizer_source}")
-        string(REPLACE "void RasterizerOpenGL::Draw(bool is_indexed, u32 instance_count) {"
-            "void RasterizerOpenGL::Draw(bool is_indexed, u32 instance_count) {\n    ::Eden::Performance::Timer draw_timer(::Eden::Performance::rasterizer_draw);"
-            rasterizer_source "${rasterizer_source}")
+        target_include_directories(video_core PRIVATE "${EDEN_PORT_DIR}")
     endif()
-    write_derived("${PORT_BUILD_DIR}/gl_rasterizer.cpp" "${rasterizer_source}")
+    # Each profile selects one full translation unit; never splice C++ in CMake.
+    set(EDEN_MAINTAINED_GL_RASTERIZER_ROOT
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/video_core/renderer_opengl")
+    set(EDEN_MAINTAINED_GL_RASTERIZER
+        "${EDEN_MAINTAINED_GL_RASTERIZER_ROOT}/gl_rasterizer.cpp")
+    if(EDEN_DEV_PROFILE)
+        set(EDEN_MAINTAINED_GL_RASTERIZER
+            "${EDEN_MAINTAINED_GL_RASTERIZER_ROOT}/gl_rasterizer_dev.cpp")
+    endif()
+    if(NOT EXISTS "${EDEN_MAINTAINED_GL_RASTERIZER}")
+        message(FATAL_ERROR "Missing maintained OpenGL rasterizer variant")
+    endif()
     list(REMOVE_ITEM video_sources renderer_opengl/gl_rasterizer.cpp)
-    list(APPEND video_sources "${PORT_BUILD_DIR}/gl_rasterizer.cpp")
+    list(APPEND video_sources "${EDEN_MAINTAINED_GL_RASTERIZER}")
     # renderer_opengl.cpp is byte-identical to the pinned source. Keep the
     # original in video_sources: copying it into a derived TU adds no behavior.
     # Join the GPU worker before transferring its context to the teardown thread.
