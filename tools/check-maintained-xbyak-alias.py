@@ -16,7 +16,7 @@ selector = (root / "headless/jit-alias.cmake").read_text()
 text = maintained.read_text()
 edits = json.loads(r'''[["virtual void free(uint8_t *p) { AlignedFree(p); }","virtual uint8_t *writableAddress(uint8_t *p) { return p; }\n\tvirtual void free(uint8_t *p) { AlignedFree(p); }"],["uint8_t *top_;","uint8_t *top_;\n\tuint8_t *writeTop_;"],[", size_(0)",", writeTop_(type_ == USER_BUF ? top_ : alloc_->writableAddress(top_))\n\t\t, size_(0)"],["newTop[i] = top_[i]","alloc_->writableAddress(newTop)[i] = top_[i]"],["top_ = newTop;","top_ = newTop;\n\t\twriteTop_ = alloc_->writableAddress(top_);"],["top_[size_++] =","writeTop_[size_++] ="],["uint8_t *const data = top_ + offset;","uint8_t *const data = writeTop_ + offset;"],["const uint8_t *getCode() const { return top_; }","bool hasWritableAlias() const { return writeTop_ != top_; }\n\tuint8_t *writableAddress(const void *p) const { return writeTop_ + (static_cast<const uint8_t*>(p) - top_); }\n\tconst uint8_t *getCode() const { return top_; }"]]''')
 def git_blob(raw: bytes) -> str:
-    return hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\\0" + raw).hexdigest()
+    return hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
 # The tag is herumi/xbyak v7.40.1, commit 964adcd198c716c0691c7d73f6c2be73db6682bd.
 pinned = root / ".cache/cpm/xbyak/v7.40.1/xbyak/xbyak.h"
 if pinned.is_file():
