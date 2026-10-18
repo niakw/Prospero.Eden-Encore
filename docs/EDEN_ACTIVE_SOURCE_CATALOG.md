@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **227 fichiers** de code et d'en-têtes enregistrés.
-- **227 fichiers** possèdent une correspondance de chemin *exacte*
+- **228 fichiers** de code et d'en-têtes enregistrés.
+- **228 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -162,6 +162,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp` | `maintained-override` | N03 |
 | `eden-core/src/core/hle/service/service.cpp` | `maintained-override` | H22,H28 |
 | `eden-core/src/core/hle/service/sm/sm.h` | `maintained-override` | H51 |
+| `eden-core/src/core/hle/service/sockets/bsd.cpp` | `maintained-override` | N20 |
 | `eden-core/src/core/hle/service/vi/conductor.cpp` | `maintained-override` | F36 |
 | `eden-core/src/core/internal_network/network.cpp` | `maintained-override` | N19 |
 | `eden-core/src/core/internal_network/network_interface.cpp` | `maintained-override` | F10 |

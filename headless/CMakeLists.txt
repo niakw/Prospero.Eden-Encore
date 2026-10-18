@@ -2469,67 +2469,15 @@ if(PS5_NATIVE)
     list(REMOVE_ITEM core_sources hle/service/sockets/sfdnsres.cpp)
     list(APPEND core_sources "${PORT_BUILD_DIR}/audited_guest_dns.cpp")
 
-    file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/sockets/bsd.cpp" audited_bsd)
-    set(bsd_connect_call
-        "    const Errno result = Translate(file_descriptors[fd]->socket->Connect(Translate(addr_in)));")
-    string(FIND "${audited_bsd}" "${bsd_connect_call}" bsd_connect_pos)
-    if(bsd_connect_pos LESS 0)
-        message(FATAL_ERROR "Pinned guest BSD connect changed")
+    # Guest socket audit instrumentation is a complete Encore-maintained source.
+    # Preserve shipping BSD backports; do not rewrite C++ during configure.
+    set(EDEN_MAINTAINED_GUEST_BSD
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/service/sockets/bsd.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_GUEST_BSD}")
+        message(FATAL_ERROR "Missing maintained audited guest BSD source")
     endif()
-    string(CONCAT bsd_audit_connect
-        "${bsd_connect_call}\n"
-        "    if ((result == Errno::SUCCESS || result == Errno::ISCONN) && eden_network_audit_active()) {\n"
-        "        const auto peer = Translate(addr_in);\n"
-        "        const std::string host = Network::IPv4AddressToString(peer.ip) + \":\" + std::to_string(peer.portno);\n"
-        "        eden_network_audit_event(\"guest\", \"connect\", host.c_str(), 0, 0);\n"
-        "    }")
-    string(REPLACE "${bsd_connect_call}" "${bsd_audit_connect}" audited_bsd "${audited_bsd}")
-    set(bsd_send_call "    return Translate(file_descriptors[fd]->socket->Send(message, flags));")
-    string(FIND "${audited_bsd}" "${bsd_send_call}" bsd_send_pos)
-    if(bsd_send_pos LESS 0)
-        message(FATAL_ERROR "Pinned guest BSD send changed")
-    endif()
-    string(CONCAT bsd_send_audit
-        "    const auto send_result = Translate(file_descriptors[fd]->socket->Send(message, flags));\n"
-        "    if (send_result.first > 0 && eden_network_audit_active()) {\n"
-        "        const std::string descriptor = \"fd:\" + std::to_string(fd);\n"
-        "        eden_network_audit_event(\"guest\", \"tx\", descriptor.c_str(), send_result.first, 0);\n"
-        "    }\n"
-        "    return send_result;")
-    string(REPLACE "${bsd_send_call}" "${bsd_send_audit}" audited_bsd "${audited_bsd}")
-    set(bsd_sendto_call "    return Translate(file_descriptors[fd]->socket->SendTo(flags, message, p_addr_in));")
-    string(FIND "${audited_bsd}" "${bsd_sendto_call}" bsd_sendto_pos)
-    if(bsd_sendto_pos LESS 0)
-        message(FATAL_ERROR "Pinned guest BSD sendto changed")
-    endif()
-    string(CONCAT bsd_sendto_audit
-        "    const auto sent = Translate(file_descriptors[fd]->socket->SendTo(flags, message, p_addr_in));\n"
-        "    if (sent.first > 0 && eden_network_audit_active()) {\n"
-        "        const std::string target = p_addr_in ? Network::IPv4AddressToString(p_addr_in->ip) + \":\" + std::to_string(p_addr_in->portno) : \"fd:\" + std::to_string(fd);\n"
-        "        eden_network_audit_event(\"guest\", \"tx\", target.c_str(), sent.first, 0);\n"
-        "    }\n"
-        "    return sent;")
-    string(REPLACE "${bsd_sendto_call}" "${bsd_sendto_audit}" audited_bsd "${audited_bsd}")
-    set(bsd_recv_call "    const auto [ret, bsd_errno] = Translate(descriptor.socket->Recv(flags, message));")
-    string(FIND "${audited_bsd}" "${bsd_recv_call}" bsd_recv_pos)
-    if(bsd_recv_pos LESS 0)
-        message(FATAL_ERROR "Pinned guest BSD recv changed")
-    endif()
-    string(REPLACE "${bsd_recv_call}"
-        "${bsd_recv_call}\n    if (ret > 0 && eden_network_audit_active()) {\n        const std::string descriptor = \"fd:\" + std::to_string(fd);\n        eden_network_audit_event(\"guest\", \"rx\", descriptor.c_str(), ret, 0);\n    }"
-        audited_bsd "${audited_bsd}")
-    set(bsd_recvfrom_call "    const auto [ret, bsd_errno] = Translate(descriptor.socket->RecvFrom(flags, message, p_addr_in));")
-    string(FIND "${audited_bsd}" "${bsd_recvfrom_call}" bsd_recvfrom_pos)
-    if(bsd_recvfrom_pos LESS 0)
-        message(FATAL_ERROR "Pinned guest BSD recvfrom changed")
-    endif()
-    string(REPLACE "${bsd_recvfrom_call}"
-        "${bsd_recvfrom_call}\n    if (ret > 0 && eden_network_audit_active()) {\n        const std::string target = p_addr_in ? Network::IPv4AddressToString(p_addr_in->ip) + \":\" + std::to_string(p_addr_in->portno) : \"fd:\" + std::to_string(fd);\n        eden_network_audit_event(\"guest\", \"rx\", target.c_str(), ret, 0);\n    }"
-        audited_bsd "${audited_bsd}")
-    string(PREPEND audited_bsd "#include \"${EDEN_PORT_DIR}/network_audit.h\"\n")
-    write_derived("${PORT_BUILD_DIR}/audited_guest_bsd.cpp" "${audited_bsd}")
     list(REMOVE_ITEM core_sources hle/service/sockets/bsd.cpp)
-    list(APPEND core_sources "${PORT_BUILD_DIR}/audited_guest_bsd.cpp")
+    list(APPEND core_sources "${EDEN_MAINTAINED_GUEST_BSD}")
 
     # Keep immutable firmware outside the small writable title-data quota.
     # Native BISFactory declaration is kept in a narrowly scoped include root.

@@ -968,6 +968,24 @@ assert 'list(APPEND video_sources "${EDEN_MAINTAINED_SHADER_ENVIRONMENT}")' in c
 assert 'write_derived("${PORT_BUILD_DIR}/shader_environment.cpp"' not in c
 print("ENCORE_SHADER_CACHE_SOURCE_PARITY_PASS", "source and reader canonical")
 
+
+# The selected BSD source equals all five previous CMake instrumentation
+# replacements on top of the immutable shipping backport, modulo the
+# equivalent quoted header resolved through core's headless include path.
+bsd_shipping = (active / "eden-backports/src/core/hle/service/sockets/bsd.cpp").read_text()
+bsd_expected = '#include "network_audit.h"\n' + bsd_shipping
+bsd_replacements = [["    const Errno result = Translate(file_descriptors[fd]->socket->Connect(Translate(addr_in)));","    const Errno result = Translate(file_descriptors[fd]->socket->Connect(Translate(addr_in)));\n    if ((result == Errno::SUCCESS || result == Errno::ISCONN) && eden_network_audit_active()) {\n        const auto peer = Translate(addr_in);\n        const std::string host = Network::IPv4AddressToString(peer.ip) + \":\" + std::to_string(peer.portno);\n        eden_network_audit_event(\"guest\", \"connect\", host.c_str(), 0, 0);\n    }"],["    return Translate(file_descriptors[fd]->socket->Send(message, flags));","    const auto send_result = Translate(file_descriptors[fd]->socket->Send(message, flags));\n    if (send_result.first > 0 && eden_network_audit_active()) {\n        const std::string descriptor = \"fd:\" + std::to_string(fd);\n        eden_network_audit_event(\"guest\", \"tx\", descriptor.c_str(), send_result.first, 0);\n    }\n    return send_result;"],["    return Translate(file_descriptors[fd]->socket->SendTo(flags, message, p_addr_in));","    const auto sent = Translate(file_descriptors[fd]->socket->SendTo(flags, message, p_addr_in));\n    if (sent.first > 0 && eden_network_audit_active()) {\n        const std::string target = p_addr_in ? Network::IPv4AddressToString(p_addr_in->ip) + \":\" + std::to_string(p_addr_in->portno) : \"fd:\" + std::to_string(fd);\n        eden_network_audit_event(\"guest\", \"tx\", target.c_str(), sent.first, 0);\n    }\n    return sent;"],["    const auto [ret, bsd_errno] = Translate(descriptor.socket->Recv(flags, message));","    const auto [ret, bsd_errno] = Translate(descriptor.socket->Recv(flags, message));\n    if (ret > 0 && eden_network_audit_active()) {\n        const std::string descriptor = \"fd:\" + std::to_string(fd);\n        eden_network_audit_event(\"guest\", \"rx\", descriptor.c_str(), ret, 0);\n    }"],["    const auto [ret, bsd_errno] = Translate(descriptor.socket->RecvFrom(flags, message, p_addr_in));","    const auto [ret, bsd_errno] = Translate(descriptor.socket->RecvFrom(flags, message, p_addr_in));\n    if (ret > 0 && eden_network_audit_active()) {\n        const std::string target = p_addr_in ? Network::IPv4AddressToString(p_addr_in->ip) + \":\" + std::to_string(p_addr_in->portno) : \"fd:\" + std::to_string(fd);\n        eden_network_audit_event(\"guest\", \"rx\", target.c_str(), ret, 0);\n    }"]]
+for i, (needle, replacement) in enumerate(bsd_replacements):
+    assert bsd_expected.count(needle) == 1, ("shipping guest BSD anchor changed", i)
+    bsd_expected = bsd_expected.replace(needle, replacement)
+assert (active / "eden-core/src/core/hle/service/sockets/bsd.cpp").read_text() == bsd_expected, (
+    "audited guest BSD no longer matches the old CMake transformation")
+assert 'list(APPEND core_sources "${EDEN_MAINTAINED_GUEST_BSD}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/audited_guest_bsd.cpp"' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/sockets/bsd.cpp" audited_bsd)' not in c
+assert 'target_include_directories(core PRIVATE "${EDEN_PORT_DIR}")' in c
+print("MAINTAINED_GUEST_BSD_PARITY_PASS rewrites=5 shipping_backport=preserved")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -1049,7 +1067,7 @@ assert len(module_current) == 21, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 57
+assert len(recorded) + len(module_recorded) == 56
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
