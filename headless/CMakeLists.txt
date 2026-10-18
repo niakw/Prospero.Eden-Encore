@@ -612,86 +612,17 @@ foreach(bits 32 64)
     list(REMOVE_ITEM core_sources "${relative}")
     list(APPEND core_sources "${derived}")
 endforeach()
-# A prefetch abort (guest jump to an unmapped address) parks the thread for a debugger; with
-# none attached, record it so the frontend ends the session instead of showing a black screen
-# forever (headless/guest_fault.h).
-file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/kernel/physical_core.cpp" physical_core_source)
-set(prefetch_old "            } else {\n                interface->LogBacktrace(process);\n            }\n            thread->RequestSuspend(kernel, SuspendType::Debug);")
-string(FIND "${physical_core_source}" "${prefetch_old}" prefetch_at)
-if(prefetch_at LESS 0)
-    message(FATAL_ERROR "Pinned prefetch-abort handling changed")
-endif()
-# Guest core idle: count each wait and how long it lasted, and spin on the
-# interrupt flag for a bounded time before sleeping on the condition variable, because waking a
-# sleeping host thread puts the host scheduler's latency on the guest's critical path.
-set(idle_old "void PhysicalCore::Idle() {\n    std::unique_lock lk{m_guard};\n    m_on_interrupt.wait(lk, [this] { return m_is_interrupted; });\n}")
-string(FIND "${physical_core_source}" "${idle_old}" idle_at)
-if(idle_at LESS 0)
-    message(FATAL_ERROR "Pinned PhysicalCore::Idle changed")
-endif()
-# Keep Eden's exact mutex/condition-variable idle path in shipping builds.
-# Profiling annotations and experimental spin-before-sleep exist only in diagnostic builds.
+# G12: complete maintained PhysicalCore sources. No build-time C++ patches.
+set(EDEN_PHYSICAL_CORE_DIR "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/kernel")
 if(EDEN_DEV_PROFILE)
-    string(REPLACE "${idle_old}" [=[void PhysicalCore::Idle() {
-        const bool profile_idle = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed);
-        const long long start = profile_idle ? ::Eden::Performance::NowNs() : 0;
-        // The interrupt flag is guarded by m_guard. An unlocked atomic
-        // builtin read races with Interrupt()/ClearInterrupt() plain stores.
-        // Diagnostic idle sampling uses the original condition variable.
-        bool slept;
-        {
-            std::unique_lock lk{m_guard};
-            slept = !m_is_interrupted;
-            m_on_interrupt.wait(lk, [this] { return m_is_interrupted; });
-        }
-        if (profile_idle)
-            ::Eden::Performance::CountIdle(m_core_index, ::Eden::Performance::NowNs() - start, slept);
-    }]=] physical_core_source "${physical_core_source}")
+    set(EDEN_PHYSICAL_CORE_SOURCE "${EDEN_PHYSICAL_CORE_DIR}/physical_core_dev.cpp")
+else()
+    set(EDEN_PHYSICAL_CORE_SOURCE "${EDEN_PHYSICAL_CORE_DIR}/physical_core_standard.cpp")
 endif()
-string(REPLACE "${prefetch_old}" [=[            } else {
-                interface->LogBacktrace(process);
-                if (prefetch_abort) {
-                    // ExitContext saves guest registers only for attached debuggers.
-                    // Capture the faulting PC at the actual prefetch abort before
-                    // the suspended thread can be unloaded or switched.
-                    interface->GetContext(thread->GetContext());
-                    const auto eden_name = Core::GetThreadName(thread).value_or("?");
-                    // A faulting PC alone cannot identify a corrupt
-                    // indirect-branch target vs a stale JIT return. Preserve
-                    // the original guest return address and stack registers
-                    // on this single fatal path; never sample per-frame.
-                    const auto& fault_context = thread->GetContext();
-                    // One bounded page-table query at the fatal fault only.
-                    // Never dereference an untrusted guest address or alter JIT.
-                    Kernel::KMemoryInfo lr_info{};
-                    Kernel::Svc::PageInfo lr_page{};
-                    const bool lr_query = process &&
-                        !process->GetPageTable().QueryInfo(
-                            &lr_info, &lr_page, fault_context.lr).IsError();
-                    std::fprintf(stderr,
-                        "EDEN_GUEST_FAULT_LR_MAP lr=0x%llx query=%s start=0x%llx size=0x%llx state=%u\n",
-                        static_cast<unsigned long long>(fault_context.lr),
-                        lr_query ? "ok" : "failed",
-                        static_cast<unsigned long long>(lr_info.m_address),
-                        static_cast<unsigned long long>(lr_info.m_size),
-                        static_cast<unsigned>(lr_info.m_state));
-                    char eden_fault[320]{};
-                    std::snprintf(eden_fault, sizeof(eden_fault),
-                        "guest thread %.64s tid=%llu pc=0x%llx lr=0x%llx sp=0x%llx fp=0x%llx jumped to an unmapped address",
-                        eden_name.c_str(),
-                        static_cast<unsigned long long>(thread->GetThreadId()),
-                        static_cast<unsigned long long>(fault_context.pc),
-                        static_cast<unsigned long long>(fault_context.lr),
-                        static_cast<unsigned long long>(fault_context.sp),
-                        static_cast<unsigned long long>(fault_context.fp));
-                    ::Eden::RecordGuestFault(eden_fault);
-                }
-            }
-            thread->RequestSuspend(kernel, SuspendType::Debug);]=]
-    physical_core_source "${physical_core_source}")
-include("${CMAKE_CURRENT_LIST_DIR}/physical_core_interrupt_atomic.cmake")
-write_derived("${PORT_BUILD_DIR}/physical_core.cpp"
-    "#include <cstdio>\n#include \"${EDEN_PORT_DIR}/guest_fault.h\"\n#include \"${EDEN_PORT_DIR}/performance.h\"\n#include \"core/hle/kernel/k_process.h\"\n#include \"core/arm/debug.h\"\n${physical_core_source}")
+if(NOT EXISTS "${EDEN_PHYSICAL_CORE_SOURCE}")
+    message(FATAL_ERROR "Missing maintained PhysicalCore source ${EDEN_PHYSICAL_CORE_SOURCE}")
+endif()
+configure_file("${EDEN_PHYSICAL_CORE_SOURCE}" "${PORT_BUILD_DIR}/physical_core.cpp" COPYONLY)
 list(REMOVE_ITEM core_sources "hle/kernel/physical_core.cpp")
 list(APPEND core_sources "${PORT_BUILD_DIR}/physical_core.cpp")
 # Guest scheduler spin lock is maintained as a complete qualified source, not a CMake rewrite.
