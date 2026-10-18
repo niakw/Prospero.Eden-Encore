@@ -15,28 +15,24 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 original = (root / "vendor/sources/eden/src/common/bounded_threadsafe_queue.h").read_text()
 cmake = (root / "headless/CMakeLists.txt").read_text()
-addon = (root / "vendor/encore-active/eden-core/gpu-injections/gpu_queue_stop_wait.inc").read_text()
 workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
-
+canonical_path = root / "vendor/encore-active/eden-gpu/include/common/bounded_threadsafe_queue.h"
+canonical = canonical_path.read_text()
 construct = "std::construct_at(std::addressof(m_data[pos]), std::forward<Args>(args)...);"
 cleanup = "std::destroy_at(std::addressof(m_data[pos]));\n        " + construct
-canonical = (root / "vendor/encore-active/eden-gpu/include/common/bounded_threadsafe_queue.h").read_text()
-assert original.count(construct) == 1
-assert addon.count(construct) == 1
-assert "python3 -B tools/check-native-gpu-queue-slot-lifetime-host.py" in workflow
 
-# Mirror the derived native header from the same pinned two original paths,
-# with exactly the production replacement. Both enqueue APIs must be fixed.
-injected = original.replace(
-    "        Emplace<PushMode::Wait>(std::forward<Args>(args)...);\n    }",
-    "        Emplace<PushMode::Wait>(std::forward<Args>(args)...);\n    }\n" + addon,
-    1)
-assert injected.count(construct) == 2
-derived = injected.replace(construct, cleanup)
-assert derived.count(cleanup) == 2
-assert derived.count(construct) == 2
-assert canonical == "#include <memory>\n#include <stop_token>\n" + derived
+# Keep the broken pinned source only as a negative regression witness. The
+# corrected compiled queue must be the same full header selected in CMake.
+assert original.count(construct) == 1
+assert original.count("std::destroy_at(std::addressof(m_data[pos]));") == 0
+assert canonical.count(construct) == 2
+assert canonical.count(cleanup) == 2
+assert canonical.count("bool EmplaceWaitWithStopToken(") == 1
+assert "producer.cv.wait(lock, stop_token" in canonical
+assert "python3 -B tools/check-native-gpu-queue-slot-lifetime-host.py" in workflow
+assert 'configure_file("${EDEN_ACTIVE_GPU}/include/common/bounded_threadsafe_queue.h"' in cmake
 assert 'write_derived("${PORT_BUILD_DIR}/include/common/bounded_threadsafe_queue.h"' not in cmake
+assert not (root / "vendor/encore-active/eden-core/gpu-injections/gpu_queue_stop_wait.inc").exists()
 
 program = r"""
 #include <array>
@@ -111,7 +107,7 @@ with tempfile.TemporaryDirectory(prefix="encore-native-queue-lifetime-") as fold
     code.write_text(program)
     for name, source, repaired in (
         ("original", original, False),
-        ("derived", derived, True),
+        ("maintained", canonical, True),
     ):
         (inc / "bounded_threadsafe_queue.h").write_text(
             "#include <memory>\n#include <stop_token>\n" + source
