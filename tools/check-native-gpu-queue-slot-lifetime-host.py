@@ -20,15 +20,10 @@ workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
 
 construct = "std::construct_at(std::addressof(m_data[pos]), std::forward<Args>(args)...);"
 cleanup = "std::destroy_at(std::addressof(m_data[pos]));\n        " + construct
-anchor = 'string(PREPEND native_queue_header "#include <memory>\\n#include <stop_token>\\n")'
+canonical = (root / "vendor/encore-active/eden-gpu/include/common/bounded_threadsafe_queue.h").read_text()
 assert original.count(construct) == 1
 assert addon.count(construct) == 1
-assert cmake.count(anchor) == 1
 assert "python3 -B tools/check-native-gpu-queue-slot-lifetime-host.py" in workflow
-assert cmake.count("set(queue_slot_construct") == 1
-assert cmake.count("set(queue_slot_repair") == 1
-assert cmake.count("list(LENGTH queue_slot_matches queue_slot_count)") == 1
-assert cmake.count("if(NOT queue_slot_count EQUAL 2)") == 1
 
 # Mirror the derived native header from the same pinned two original paths,
 # with exactly the production replacement. Both enqueue APIs must be fixed.
@@ -40,6 +35,8 @@ assert injected.count(construct) == 2
 derived = injected.replace(construct, cleanup)
 assert derived.count(cleanup) == 2
 assert derived.count(construct) == 2
+assert canonical == "#include <memory>\\n#include <stop_token>\\n".replace("\\n", "\n") + derived
+assert 'write_derived("${PORT_BUILD_DIR}/include/common/bounded_threadsafe_queue.h"' not in cmake
 
 program = r"""
 #include <array>
