@@ -14,14 +14,14 @@ une autre source de vérité. Les scripts d'installation peuvent copier les
 fichiers maintenus et refuser toute dérive SHA, mais pas inventer de
 nouveaux corps C++ destinés à la console.
 
-## État concret au 18 octobre 2026
+## État concret au 19 octobre 2026
 
-- `vendor/encore-active` : **274 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **275 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **11 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **10 générateurs** `write_derived`.
 - Deux modules CMake générateurs totalisent **12 générateurs**
-  `write_derived`, soit **23 sites** au total.
+  `write_derived`, soit **22 sites** au total.
 - Deux modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 34.
@@ -212,6 +212,17 @@ natif retire le coût de formatage associé à `PerfMapRegister`.
 Le sélecteur CMake copie l'unité choisie vers le chemin de compilation
 existant. Le test hôte compare les deux variantes à la source épinglée
 et vérifie leur sélection sans annoncer de qualification console.
+
+## G16 — finalisation des pages mémoire kernel
+
+La garde de `KPageTableBase::Finalize` est maintenant une source C++ complète
+dans `vendor/encore-active/eden-core/src/core/hle/kernel/k_page_table_base.cpp`.
+Le processus ordinaire continue de libérer ses pages physiques ; la
+finalisation d'un kernel en arrêt ne les libère plus, car le gestionnaire
+mémoire sera recréé. L'ancienne réécriture G16 est supprimée de CMake.
+La parité exacte avec la source épinglée et le chemin compilé font l'objet du
+test `tools/check-maintained-page-table-finalize.py`. Le résultat sur
+console reste non qualifié.
 
 ## BlockOfCode : W^X, alias mémoire et permissions JIT
 

@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **274 fichiers** de code et d'en-têtes enregistrés.
-- **274 fichiers** possèdent une correspondance de chemin *exacte*
+- **275 fichiers** de code et d'en-têtes enregistrés.
+- **275 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -24,7 +24,7 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 **Important :** une correspondance de chemin n'est ni un test hôte,
 ni une certification console. Le graphe
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` porte les contrats fonctionnels,
-leurs états et les preuves. L'inventaire des 11 générateurs CMake
+leurs états et les preuves. L'inventaire des 10 générateurs CMake
 principaux, 12 générateurs de modules, deux modules indirects et 46 patches
 reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
@@ -153,6 +153,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/core/file_sys/ips_layer.cpp` | `maintained-override` | F37 |
 | `eden-core/src/core/file_sys/patch_manager.cpp` | `maintained-override` | F35 |
 | `eden-core/src/core/file_sys/savedata_factory.cpp` | `maintained-override` | F15 |
+| `eden-core/src/core/hle/kernel/k_page_table_base.cpp` | `maintained-override` | B27 |
 | `eden-core/src/core/hle/kernel/k_process.cpp` | `maintained-override` | H53 |
 | `eden-core/src/core/hle/kernel/k_spin_lock.cpp` | `maintained-override` | H30 |
 | `eden-core/src/core/hle/kernel/physical_core_dev.cpp` | `maintained-override` | B26 |
@@ -324,7 +325,7 @@ Les **170 fichiers source/en-tête/fragment** de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
 34 ont désormais un propriétaire exact dans le graphe courant ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
-La couverture de 274/274 ci-dessus ne s'applique **pas** à ce dossier.
+La couverture de 275/275 ci-dessus ne s'applique **pas** à ce dossier.
 
 ## Critères de tenue à jour
 

@@ -17,10 +17,10 @@ couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
 ## Synthèse vérifiable
 
-- **11 appels générateurs** encore dans CMake ; contre **75 avant**
+- **10 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
-- **15 lectures `file(READ`** et **89 remplacements
+- **14 lectures `file(READ`** et **88 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
 - Les versions diagnostiques de `IFile::Read`, `IStorage::Read` et des appels
@@ -198,16 +198,15 @@ dans la version normale.
 | G13 | `${eden_native_memory_tu}` | Mémoire/chargement | Cible variable | 863 |
 | G14 | `${PORT_BUILD_DIR}/core.cpp` | Mémoire/chargement | Unité source | 944 |
 | G15 | `${PORT_BUILD_DIR}/nso.cpp` | Mémoire/chargement | Unité source | 1019 |
-| G16 | `${PORT_BUILD_DIR}/k_page_table_base.cpp` | Kernel/IPC/entrées | Unité source | 1174 |
-| G17 | `${PORT_BUILD_DIR}/include/${server_header}` | Kernel/IPC/entrées | Cible variable | 1360 |
-| G18 | `${PORT_BUILD_DIR}/server_manager.cpp` | Kernel/IPC/entrées | Unité source | 1417 |
-| G19 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 1430 |
-| G20 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 1743 |
-| G21 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 1840 |
-| G23 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2219 |
+| G17 | `${PORT_BUILD_DIR}/include/${server_header}` | Kernel/IPC/entrées | Cible variable | 1342 |
+| G18 | `${PORT_BUILD_DIR}/server_manager.cpp` | Kernel/IPC/entrées | Unité source | 1399 |
+| G19 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 1412 |
+| G20 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 1725 |
+| G21 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 1822 |
+| G23 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2201 |
 <!-- OVERRIDE_GENERATORS_END -->
 
-Les identifiants historiques `G01`, `G02`, `G03`, `G04`, `G05`, `G06`, `G07`, `G08` et `G09` sont retirés, avec G09 maintenu dans les unités A64 standard/partagée ; `G01`/`G02` sont retirés avec X09 (sources complètes `BlockOfCode` sous `encore-active`).
+Les identifiants historiques `G01`, `G02`, `G03`, `G04`, `G05`, `G06`, `G07`, `G08`, `G09` et `G16` sont retirés, avec G09 maintenu dans les unités A64 standard/partagée ; `G01`/`G02` sont retirés avec X09 (sources complètes `BlockOfCode` sous `encore-active`).
 L'identifiant historique `G22` est retiré : les deux variantes de l'allocateur
 sont maintenues sous `vendor/encore-active/eden-build/tooling/native/`.
 Les IDs G01–G23 sont stables et ne sont pas renumérotés.
@@ -471,7 +470,7 @@ et plusieurs sorties sont explicitement conditionnées.
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **23 sites** `write_derived()`, ni dans
+Ils ne sont comptés ni dans les **22 sites** `write_derived()`, ni dans
 les **2 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,
