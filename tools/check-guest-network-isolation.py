@@ -20,17 +20,22 @@ assert "enable == 0 || Eden::Encore::kGuestNetworkOffline" in guest
 assert "const auto has_connection = !Eden::Encore::kGuestNetworkOffline" in guest
 assert "eden-ps5-guest-offline.patch" in apply
 assert "eden-ps5-guest-domain-filter.patch" in apply
-# PS5's built-in upstream substring domain blocker must not coexist with
-# network-hosts.txt: an Eden-allowed domain must reach the normal DNS layer.
+# The shipped guest resolver is a complete maintained source; the old
+# substring-domain blocker must not survive there. CMake merely selects it.
 cmake = (root / "headless/CMakeLists.txt").read_text()
-assert "static const constexpr std::array blockedDomains = {" in cmake
-assert "old_dns_list_start" in cmake and "old_dns_list_end" in cmake
-assert "remaining_legacy_dns" in cmake and "IsBlockedHost" in cmake
-assert "GetAddressInfo(host, /*service*/ std::nullopt)" in cmake
-assert "GetAddressInfo(host, service)" in cmake
-assert "dns-resolved" in cmake and "dns-error" in cmake
-assert "foreach(guest_dns_entry IN ITEMS by_name by_address)" in cmake
-assert "if(guest_dns_entry STREQUAL" in cmake
+dns = (root / "vendor/encore-active/eden-core/src/core/hle/service/sockets/sfdnsres.cpp").read_text()
+assert 'set(EDEN_MAINTAINED_GUEST_DNS' in cmake
+assert 'list(REMOVE_ITEM core_sources hle/service/sockets/sfdnsres.cpp)' in cmake
+assert 'list(APPEND core_sources "${EDEN_MAINTAINED_GUEST_DNS}")' in cmake
+assert 'write_derived("${PORT_BUILD_DIR}/audited_guest_dns.cpp"' not in cmake
+assert 'static const constexpr std::array blockedDomains = {' not in dns
+assert 'IsBlockedHost(' not in dns
+assert dns.count('eden_network_host_blocked(host.c_str())') == 2
+assert dns.count('if (Eden::Encore::kGuestNetworkOffline) return {0, GetAddrInfoError::NODATA};') == 2
+assert 'Network::GetAddressInfo(host, /*service*/ std::nullopt)' in dns
+assert 'Network::GetAddressInfo(host, service)' in dns
+assert '"dns-resolved"' in dns and '"dns-error"' in dns
+assert 'eden_network_audit_event("guest", encore_denied ? "dns-denied" : "dns-allowed"' in dns
 assert '.encore-backport-guest-domain-filter.sha256' in apply
 assert 'inline constexpr bool kGuestNetworkOffline = false;' in domains
 assert domains.count('if (eden_network_host_blocked(host.c_str())) return {0, GetAddrInfoError::NODATA};') == 2
