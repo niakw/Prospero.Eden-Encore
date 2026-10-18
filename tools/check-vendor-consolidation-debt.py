@@ -1065,6 +1065,19 @@ assert "current.write_text(derived)" in radv_builder
 assert "trap restore_cross_ini EXIT" in radv_builder
 assert 'tools/install-vendored-radv.py' in radv_builder
 
+# R437: the native BufferCache is a tracked header, never reassembled by CMake.
+r437_rel = "eden-core/src/video_core/buffer_cache/buffer_cache.h"
+r437_back = (active / "eden-backports/src/video_core/buffer_cache/buffer_cache.h").read_text()
+r437_before = ("    const auto size = buffer.SizeBytes();\n    if (insert) {\n"
+                "        total_used_memory += Common::AlignUp(size, 1024);")
+r437_after = ("    const auto size = buffer.SizeBytes();\n    if (insert) {\n"
+               "        ::Eden::BufferPages::Mark(buffer.CpuAddr(), size);\n"
+               "        total_used_memory += Common::AlignUp(size, 1024);")
+assert r437_back.count(r437_before) == 1
+assert (active / r437_rel).read_text() == '#include "buffer_pages.h"\n' + r437_back.replace(r437_before, r437_after)
+assert 'configure_file("${EDEN_MAINTAINED_BUFFER_PAGES}"' in c
+assert 'write_derived("${PORT_BUILD_DIR}/buffer-pages/video_core/buffer_cache/buffer_cache.h"' not in c
+print("VENDOR_MAINTAINED_BUFFER_PAGES_PARITY_PASS: shipping backport and native-only selection")
 print("VENDOR_SCRIPTED_TRANSFORM_ENTRYPOINTS_PASS staged=5 oracles=2 profile_generators=2")
 
 begin = "<!-- OVERRIDE_GENERATORS_START -->"
@@ -1104,7 +1117,7 @@ assert len(module_current) == 21, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 54
+assert len(recorded) + len(module_recorded) == 53
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived

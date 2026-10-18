@@ -6,11 +6,17 @@ root=Path(__file__).resolve().parents[1]
 cm=(root/'headless/CMakeLists.txt').read_text()
 r=(root/'vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp').read_text()
 g=(root/'tools/prepare-vulkan-port.py').read_text()
-source=(root/'vendor/sources/eden/src/video_core/buffer_cache/buffer_cache.h').read_text()
-assert 'Pinned BufferCache ChangeRegister changed' in cm
-assert '::Eden::BufferPages::Mark(buffer.CpuAddr(), size);' in cm
+source=(root/'vendor/encore-active/eden-backports/src/video_core/buffer_cache/buffer_cache.h').read_text()
+maintained=(root/'vendor/encore-active/eden-core/src/video_core/buffer_cache/buffer_cache.h').read_text()
+assert 'write_derived("${PORT_BUILD_DIR}/buffer-pages/video_core/buffer_cache/buffer_cache.h"' not in cm
+assert 'configure_file("${EDEN_MAINTAINED_BUFFER_PAGES}"' in cm
+assert 'target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/buffer-pages" "${EDEN_PORT_DIR}")' in cm
+old_reg = '    const auto size = buffer.SizeBytes();\n    if (insert) {\n        total_used_memory += Common::AlignUp(size, 1024);'
+new_reg = '    const auto size = buffer.SizeBytes();\n    if (insert) {\n        ::Eden::BufferPages::Mark(buffer.CpuAddr(), size);\n        total_used_memory += Common::AlignUp(size, 1024);'
+assert source.count(old_reg)==1
+assert maintained == '#include "buffer_pages.h"\n' + source.replace(old_reg, new_reg), "R437 maintained header differs from shipping-backport transform"
+assert maintained.count('::Eden::BufferPages::Mark(buffer.CpuAddr(), size);') == 1
 assert 'buffer-pages/video_core/buffer_cache/buffer_cache.h' in cm
-assert source.count('        total_used_memory += Common::AlignUp(size, 1024);')==1
 assert r.count('::Eden::BufferPages::NeverRegistered(addr, size)')==1
 witness=(root/'headless/buffer_pages.h').read_text()
 assert 'registered[word].load(std::memory_order_acquire) & mask' in witness
