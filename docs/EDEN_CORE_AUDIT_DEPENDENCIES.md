@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 329
+**Non, this is not an exhaustive repository-wide inventory.** The 330
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 329 | 307 | 674 |
+| Graphe connu | 330 | 308 | 676 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 274 | 262 | 569 |
+| SOURCE — lecture effectuée, preuve insuffisante | 275 | 263 | 571 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **289** | **276** | **597** |
+| **Encore à qualifier (SOURCE + OPEN)** | **290** | **277** | **599** |
 | Dont priorité P0 (SOURCE + OPEN) | 108 | 103 | 252 |
 
-Le **noyau restant** compte donc 289 critères répartis sur
-276 fichiers et 597 mentions fonction/contrat :
-15 OPEN et 274 SOURCE.
+Le **noyau restant** compte donc 290 critères répartis sur
+277 fichiers et 599 mentions fonction/contrat :
+15 OPEN et 275 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-257 fichiers de code/en-têtes présents et 257 avec un chemin de
+259 fichiers de code/en-têtes présents et 259 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -246,6 +246,7 @@ function/contract tokens are checked by CI for existence only; the
 | B08 | P1 | B06,B07 | vendor/encore-active/eden-build/tooling/native/heap_guard.h | eden_guard_check; eden_quarantine | SOURCE | tools/check-maintained-heap-sources.py | Optional diagnostic macro header has canonical owner and guarded syntax proof only | 🟡 Source étudiée |
 | B09 | P1 | J09 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code_host.cpp | BlockOfCode::EnableWriting; BlockOfCode::DisableWriting | SOURCE | tools/check-maintained-block-of-code.py | Complete Linux W^X source and exact CMake stage validated; guest execution unqualified | 🟡 Source étudiée |
 | B10 | P1 | J09 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code.h | protection_end; patch_pages | SOURCE | tools/check-maintained-block-of-code.py | Maintained W^X header selected by copy with matching CPP variants; console unqualified | 🟡 Source étudiée |
+| B11 | P1 | J10 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_interface_shared.cpp | Jit::Impl; EdenJoinGroup | SOURCE | tools/check-maintained-a64-interface.py | Shared implementation selected directly, historical group body preserved; mode OFF by default, console unqualified | 🟡 Source étudiée |
 | B03 | P1 | B01 | vendor/encore-active/eden-core/overrides/slot-vector/common/slot_vector.h | SlotId insert( | SOURCE | tools/check-vendor-consolidation-debt.py | Former X02 recovery is maintained as exact Encore header with isolated include priority; native exception behavior unproved | 🟡 Source étudiée |
 | Q01 | P1 | B02 | vendor/sources/eden/src/common/bounded_threadsafe_queue.h | TryEmplace; Pop; std::construct_at | HOST | tools/check-native-gpu-queue-slot-lifetime-host.py | No claim about a specific game's resource lifetime | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-gpu-queue-slot-lifetime-host.py) |
 | Q02 | P1 | Q01 | vendor/encore-active/eden-gpu/include/common/bounded_threadsafe_queue.h | EmplaceWaitWithStopToken | SOURCE | tools/check-gpu-producer-stop.py | Stop-aware producer wake owned by the selected complete queue header; obsolete .inc retired, console unqualified | 🟡 Source étudiée |
@@ -294,7 +295,7 @@ function/contract tokens are checked by CI for existence only; the
 | J07 | P1 | J05 | headless/fastmem_handler.cpp | ExceptionHandler::Register | OPEN | tools/check-jit-protection.py | Check fastmem trap context and retired code region safety | 🟠 À contrôler |
 | J08 | P1 | J07 | headless/memory_check.cpp | MemoryRead8; MemoryRead32 | SOURCE | tools/check-ps5-sparse-jit-va-lifetime.py | Relate checked fastmem to real guest RAM and GPU mapping | 🟡 Source étudiée |
 | J09 | P1 | J07 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code_native.cpp | BlockOfCode::EnableWriting; BlockOfCode::DisableWriting | SOURCE | tools/check-jit-protection.py | Maintained native W^X source selected; host protection checks remain required, native console unqualified | 🟡 Source étudiée |
-| J10 | P2 | J05 | headless/jit-compile-batch.inc | EnsureMemoryCommitted | PARKED | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Batch compilation disabled in shipping | ⚪ Suspendu |
+| J10 | P2 | J05 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_interface_standard.cpp | GetBlock; EnsureMemoryCommitted | PARKED | tools/check-maintained-a64-interface.py | Batch OFF in shipping; exact 2557-byte historical fragment validated; console unqualified | ⚪ Suspendu |
 | J11 | P2 | J05 | headless/jit_list.h | EDEN_SHARED_JIT_AVAILABLE | PARKED | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Shared JIT and precompile disabled in shipping | ⚪ Suspendu |
 | R01 | P1 | B01 | vendor/sources/eden/src/video_core/memory_manager.cpp | MemoryManager::Map; MemoryManager::MapSparse | OPEN | tools/check-gpu-memory-mapping-source.py | Verify GPU VA mapping and physical alias invalidation | 🟠 À contrôler |
 | R02 | P1 | R01,M01 | vendor/sources/eden/src/video_core/guest_memory.h | GpuGuestMemory; GpuGuestMemoryScoped | SOURCE | tools/check-native-gpu-span-range-host.py | Check GPU guest span lifetime and aliasing | 🟡 Source étudiée |

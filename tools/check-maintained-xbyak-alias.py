@@ -33,6 +33,6 @@ else:
     assert "XBYAK_XBYAK_H_" in text and "hasWritableAlias() const" in text
 assert 'configure_file("${EDEN_MAINTAINED_XBYAK_HEADER}"' in selector
 assert 'write_derived("${PORT_BUILD_DIR}/include/xbyak/xbyak.h"' not in selector
-assert selector.count('string(REPLACE') == 1, "Only the indirect code_source rewrite should remain"
+assert selector.count('string(REPLACE') == 0, "Xbyak selector must not mutate BlockOfCode"
 assert "target_compile_definitions(dynarmic PUBLIC EDEN_JIT_ALIAS_LAYOUT=1)" in selector
 print("VENDOR_MAINTAINED_XBYAK_ALIAS_PASS: eight edits, explicit COPYONLY selection")
