@@ -35,6 +35,8 @@ flowchart TB
 
 Les fichiers CMake maintenus eux-mêmes peuvent figurer dans `encore-active` lorsque ce sont des **recettes de build versionnées** : ce n'est pas une permission de réintroduire des fonctions C++ sous forme de chaînes dans CMake.
 
+Les volumes changent à chaque migration : les chiffres courants sont dans les registres de sources et de générateurs, pour éviter de figer plusieurs totaux contradictoires dans l'architecture.
+
 ## 2. Inventaire récursif des dossiers : rôle et frontière
 
 L'arbre Git a été interrogé pour les **racines du dépôt et leurs sous-arbres**. Cette carte couvre les familles de répertoires, y compris celles qui ne contiennent pas de code C++. Elle ne signifie pas que chaque fonction de chaque dépendance a été relue, ni que les chemins de build ont été prouvés par compilation.
@@ -97,11 +99,11 @@ Les variantes volontairement distinctes doivent chacune avoir une **sélection c
 
 **Photographie des registres datés du 17–18 octobre 2026, susceptible de changer entre deux commits :**
 
-- `vendor/encore-active/` : **201 fichiers C/C++/en-têtes/fragments catalogués** dans l'inventaire du moteur ; couverture de chemins, pas preuve de leur exécution.
-- `headless/CMakeLists.txt` : **47 appels** générateurs `write_derived()` identifiés.
+- `vendor/encore-active/` : inventaire de sources et fragments maintenus dans [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) ; la couverture de chemins n'est pas une preuve d'exécution.
+- `headless/CMakeLists.txt` : générateurs `write_derived()` restants et positions exactes dans [`EDEN_OVERRIDE_MIGRATION_INVENTORY.md`](EDEN_OVERRIDE_MIGRATION_INVENTORY.md) ; les modules indirects y sont suivis séparément.
 - Modules CMake secondaires : **21 appels** supplémentaires, soit **68 sites** documentés au total ; ces appels ne représentent pas nécessairement 68 fichiers distincts.
 - Plusieurs modules changent encore indirectement une variable contenant du code C++ avant génération, sans nécessairement appeler eux-mêmes `write_derived()`.
-- `headless/` : **25 fragments `.inc`** à classer par **consommateur effectif** ; 46 patches de backport historiques sous `headless/backports/`.
+- `headless/` : fragments `.inc` résiduels à classer par **consommateur effectif**, inventoriés dans [`EDEN_OVERRIDE_SOURCE_OF_TRUTH.md`](EDEN_OVERRIDE_SOURCE_OF_TRUTH.md) ; les patches historiques restent comptés distinctement.
 - `tools/` comporte des centaines de scripts ; **les scripts de préparation/installation et leurs effets sur le staging** doivent être vérifiés, pas classés « tests uniquement » par leur répertoire.
 - Les catalogues `EDEN_HEADLESS_SOURCE_CATALOG.md` et `EDEN_ACTIVE_SOURCE_CATALOG.md` inventorient les unités connues ; ils ne prouvent pas encore les entrées effectives du compilateur.
 
