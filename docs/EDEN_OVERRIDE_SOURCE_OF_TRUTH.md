@@ -16,12 +16,12 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **271 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **272 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **13 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **12 générateurs** `write_derived`.
 - Deux modules CMake générateurs totalisent **12 générateurs**
-  `write_derived`, soit **25 sites** au total.
+  `write_derived`, soit **24 sites** au total.
 - Trois modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 34.
@@ -112,6 +112,17 @@ l'application, non des patches cachés dans une dépendance ; leur présence
 sous `headless/` est autorisée. Le fragment de capture OpenGL est
 **non qualifié**, pas déclaré inutilisé sans recherche exhaustive des consommateurs.
 Les trois fragments restants ne sont pas des overrides de dépendance confirmés ; le diagnostic OpenGL conserve une qualification ouverte.
+
+## Interface A32 native : génération G10 supprimée
+
+La variante hôte conserve la source Dynarmic épinglée. Le profil natif
+sélectionne une unité complète maintenue sous
+`vendor/encore-active/eden-core/src/dynarmic/backend/x64/a32_interface_native.cpp`.
+Elle conserve le diagnostic de pression JIT, la seconde tentative de
+commit après épuisement mémoire et la notification des blocs compilés.
+CMake copie cette unité sans réécriture et le test
+`tools/check-maintained-a32-native-interface.py` vérifie l'identité
+des transformations historiques. Aucune qualification PS5 n'est revendiquée.
 
 ## Interface A64 : unité complète par mode
 
