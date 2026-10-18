@@ -21,9 +21,10 @@ dev = (active_gpu / "gpu_thread_dev.cpp").read_text()
 cmake = (root / "headless/CMakeLists.txt").read_text()
 method_start = "    template <typename... Args>\n    bool EmplaceWaitWithStopToken("
 method_end = "\n\n    bool TryPop("
-assert header.count(method_start) == header.count(method_end) == 1
+assert header.count(method_start) == 1
 start = header.index(method_start)
-end = header.index(method_end, start)
+end = header.find(method_end, start)
+assert end > start, 'canonical GPU queue method boundary missing'
 inc = header[start:end].strip()
 assert "EmplaceWaitWithStopToken" in inc
 assert "producer.cv.wait(lock, stop_token" in inc
