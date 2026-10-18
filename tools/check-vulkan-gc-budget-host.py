@@ -13,7 +13,16 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 header = (root / "headless/vulkan_gc_budget.h").read_text(encoding="utf-8")
 pool_header = (root / "headless/vulkan_pool_capacity.h").read_text(encoding="utf-8")
-gc = (root / "headless/vulkan_gc_downloads.inc").read_text(encoding="utf-8")
+# Validate the maintained collector CMake actually stages into the PS5 build.
+# The old injection is retained only as an oracle, never shipping code.
+maintained = (root / "vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h").read_text(encoding="utf-8")
+begin = maintained.index("void TextureCache<P>::RunGarbageCollector() {")
+end = maintained.index("\ntemplate <class P>", begin)
+gc = maintained[begin:end]
+oracle = (root / "vendor/encore-active/eden-vulkan-oracles/vulkan_gc_downloads.inc").read_text(encoding="utf-8")
+vulkan_cmake = (root / "headless/vulkan.cmake").read_text(encoding="utf-8")
+assert 'file(COPY "${EDEN_ACTIVE_VULKAN}/" DESTINATION "${PORT_BUILD_DIR}")' in vulkan_cmake
+assert 'set(EDEN_ACTIVE_VULKAN "${PORT_ROOT}/vendor/encore-active/eden-vulkan")' in vulkan_cmake
 generator = (root / "tools/prepare-vulkan-port.py").read_text(encoding="utf-8")
 assert "constexpr std::uint64_t AfterProjectedEviction(" in header
 assert "class PoolCapacityLatch" in pool_header
@@ -42,6 +51,16 @@ assert "if (frame_tick < ticks_to_destroy) return;" in gc
 assert gc.index("if (frame_tick < ticks_to_destroy) return;") < gc.index("const bool prefetch_dirty = DirtyEvictions();")
 assert "const u64 projected_stop = (aggressive_mode || ::Eden::Performance::KeepDirtyTextures())" in gc
 assert "return usage < projected_stop;" in gc
+# Both the historical oracle and the selected source must retain the
+# overflow-safe GC budget and the age-gated cleanup contract.
+for contract in (
+    "usage = ::Eden::VulkanMemory::AfterProjectedEviction(",
+    "if (frame_tick < ticks_to_destroy) return;",
+    "const bool prefetch_dirty = DirtyEvictions();",
+    "const u64 projected_stop = (aggressive_mode || ::Eden::Performance::KeepDirtyTextures())",
+    "return usage < projected_stop;",
+):
+    assert contract in oracle and contract in gc, contract
 # A saturated zero is inclusive in the pinned LRU cache. The wrapper MUST
 # skip both cleanup passes and Vulkan's lookahead until the age threshold.
 assert "constexpr std::uint64_t OldestEvictionTick(" in header
