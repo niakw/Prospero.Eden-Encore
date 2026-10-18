@@ -124,6 +124,29 @@ sont conditionnés au niveau C++ sans réécriture CMake. L'identité du
 bloc historique et la sélection des profils sont vérifiées sur hôte ;
 la compilation native et l'exécution console ne sont pas certifiées.
 
+### Dépendances restantes à migrer ensemble : G03/G04
+
+La migration A64 G09 ne clôt **pas** la chaîne des émetteurs. G03
+(`a64_emit_x64.h`) et G04 (`a32_emit_x64.cpp` /
+`a64_emit_x64.cpp`) sont encore préparés par CMake. Le changement
+de signature `Emit(IR::Block&, bool publish)` doit rester cohérent
+avec les branches batch et JIT partagé de la nouvelle interface A64.
+L'émission différée de `DisableWriting()` est liée au même contrat.
+
+G04 comprend également le retrait des transitions de protection autour
+des invalidations de fast-dispatch **sur A32 comme sur A64**. Le mode partagé
+ajoute des pointeurs de groupe, des transitions de dispatch, la gestion RSB
+et des liens de blocs via `eden_shared_jit_emitter_header` et
+`eden_shared_jit_emitter`. Les unités de `shared-jit.cmake` pour
+l'état A64 et les callbacks (M01–M03), ainsi que les transformations
+mémoire G06–G08, restent liées à cet ensemble.
+
+**Périmètre de migration suivant :** traiter G03/G04 avec toutes leurs
+variantes normales / batch / partagées ; conserver la sélection A32,
+la parité des liens/RSB et les tests de protection RW/RX. Aucun générateur
+n'est considéré supprimé avant que la sélection source complète et ces
+contrats soient prouvés.
+
 ## BlockOfCode : W^X, alias mémoire et permissions JIT
 
 Les générateurs G01/G02 et la mutation indirecte X09 sont retirés ensemble.
