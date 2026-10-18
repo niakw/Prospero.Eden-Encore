@@ -2,7 +2,7 @@
 
 **Branche :** `dev/ps5-sparse-jit`. **Date du relevé :** 17 octobre 2026.
 
-Ce registre complémentaire couvre les **177 chemins** de code, en-têtes et
+Ce registre complémentaire couvre les **175 chemins** de code, en-têtes et
 fragments `.c/.cc/.cpp/.h/.hpp/.inc/.cl` du dossier `headless/`.
 Il ne remplace pas `EDEN_ACTIVE_SOURCE_CATALOG.md` : les 227 fichiers
 de `vendor/encore-active` sont déjà inventoriés séparément.
@@ -13,9 +13,9 @@ pour suivi séparé et n'autorise aucune modification du launcher depuis
 l'audit moteur. Un chemin noté « À qualifier » peut avoir été audité sous
 une autre forme : il manque seulement la référence de chemin exacte.
 
-- **177** chemins sous `headless/`, dont **59** sources C/C++ et **118** en-têtes/fragments.
-- **26** chemins déjà présents dans le graphe moteur.
-- **151** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
+- **175** chemins sous `headless/`, dont **58** sources C/C++ et **117** en-têtes/fragments.
+- **25** chemins déjà présents dans le graphe moteur.
+- **150** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
 - Les deux générateurs de profils `headless/encore_overrides_generated.h`,
   `headless/glyph_overrides_generated.h` et les autres ressources générées
   sont des entrées de l'inventaire, **pas** de nouveaux patchs CMake.
@@ -53,8 +53,6 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/direct_pool_probe_policy.h` | en-tête/fragment | — | À qualifier |
 | `headless/direct_pool_region_scan.h` | en-tête/fragment | — | À qualifier |
 | `headless/display_refresh.h` | en-tête/fragment | — | À qualifier |
-| `headless/dynarmic/block_range_information.cpp` | JIT/expérimental | U12 | Chemin indexé, preuve dépend du graphe |
-| `headless/dynarmic/block_range_information.h` | JIT/expérimental | — | À qualifier |
 | `headless/elevation/elevation.cpp` | outil auxiliaire | — | À qualifier |
 | `headless/elevation/elevation.hpp` | outil auxiliaire | — | À qualifier |
 | `headless/elevation/helper/main.cpp` | outil auxiliaire | — | À qualifier |

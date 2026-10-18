@@ -314,17 +314,25 @@ foreach(bits 32 64)
 endforeach()
 endif()
 
-# Compiled-block code ranges by 4 KiB guest page (headless/dynarmic/block_range_information.*):
-# upstream's interval map of hash sets split intervals and copied sets on every compilation that
-# overlaps earlier blocks, ~8% of A64 compile time on the console.
-file(READ "${CMAKE_CURRENT_LIST_DIR}/dynarmic/block_range_information.h" range_header)
-write_derived("${PORT_BUILD_DIR}/include/dynarmic/backend/block_range_information.h" "${range_header}")
+# Compiled guest block ranges by 4 KiB page. Both the header and its
+# translation unit have exactly one maintained owner in encore-active.
+# This remains selected regardless of EDEN_SHARED_JIT.
+set(EDEN_MAINTAINED_BLOCK_RANGE_DIR
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/dynarmic/backend")
+foreach(EDEN_BLOCK_RANGE_FILE IN ITEMS block_range_information.cpp block_range_information.h)
+    if(NOT EXISTS "${EDEN_MAINTAINED_BLOCK_RANGE_DIR}/${EDEN_BLOCK_RANGE_FILE}")
+        message(FATAL_ERROR "Missing maintained Dynarmic block-range ${EDEN_BLOCK_RANGE_FILE}")
+    endif()
+endforeach()
+configure_file(
+    "${EDEN_MAINTAINED_BLOCK_RANGE_DIR}/block_range_information.h"
+    "${PORT_BUILD_DIR}/include/dynarmic/backend/block_range_information.h" COPYONLY)
 get_target_property(range_sources dynarmic SOURCES)
 list(FILTER range_sources EXCLUDE REGEX "(^|/)block_range_information\\.cpp$")
 set_property(TARGET dynarmic PROPERTY SOURCES "${range_sources}")
-target_sources(dynarmic PRIVATE "${CMAKE_CURRENT_LIST_DIR}/dynarmic/block_range_information.cpp")
-# The override header shadows upstream's only by include order, which build tools do not track:
-# a definition on the target recompiles every dynarmic object that saw the upstream layout.
+target_sources(dynarmic PRIVATE
+    "${EDEN_MAINTAINED_BLOCK_RANGE_DIR}/block_range_information.cpp")
+# Keep the native header's original include shadowing and target-wide layout ABI.
 target_compile_definitions(dynarmic PRIVATE EDEN_BLOCK_RANGE_PAGES=1)
 if(EDEN_SHARED_JIT)
     eden_shared_jit_sources()

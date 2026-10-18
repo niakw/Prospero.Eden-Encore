@@ -860,6 +860,14 @@ assert 'configure_file("${EDEN_MAINTAINED_XBYAK_HEADER}"' in (root / "headless/j
 assert (root / "tools/check-maintained-xbyak-alias.py").is_file()
 print("VENDOR_MAINTAINED_XBYAK_OWNER_PASS")
 
+# Dynarmic block-range pair is maintained and the old headless source pair
+# is retired. The build selects the complete units directly.
+assert (active / "eden-core/src/dynarmic/backend/block_range_information.cpp").is_file()
+assert (active / "eden-core/src/dynarmic/backend/block_range_information.h").is_file()
+assert 'target_sources(dynarmic PRIVATE\n    "${EDEN_MAINTAINED_BLOCK_RANGE_DIR}/block_range_information.cpp")' in c
+assert (root / "tools/check-maintained-block-range.py").is_file()
+print("VENDOR_MAINTAINED_BLOCK_RANGE_OWNER_PASS")
+
 # Native JIT constant pool has a complete tracked source and explicit selector.
 assert (active / "eden-core/src/dynarmic/backend/x64/constant_pool.cpp").is_file()
 assert 'target_sources(dynarmic PRIVATE "${EDEN_MAINTAINED_CONSTANT_POOL}")' in (root / "headless/jit-alias.cmake").read_text()
@@ -1265,7 +1273,7 @@ assert len(module_current) == 12, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 37
+assert len(recorded) + len(module_recorded) == 36
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
