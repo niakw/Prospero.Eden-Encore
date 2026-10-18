@@ -44,6 +44,19 @@ def main() -> None:
     assert b'EmplaceWaitWithStopToken' in generated['include/common/bounded_threadsafe_queue.h']
     assert b'DiagnosticTimer' in generated['gpu_thread_dev.cpp']
     assert b'DiagnosticTimer' not in generated['gpu_thread_quiet.cpp']
+    # The historical headless/native_gpu_thread.inc was already byte-identical
+    # to the common tail of both maintained full compilation units. It must
+    # never return as a parallel third implementation of the native worker.
+    marker = b'#include <memory>\\n'.replace(b'\\n', b'\n')
+    quiet, dev = (generated[f'gpu_thread_{kind}.cpp'] for kind in ('quiet', 'dev'))
+    assert quiet.count(marker) == dev.count(marker) == 1
+    native_quiet = quiet[quiet.index(marker):]
+    native_dev = dev[dev.index(marker):]
+    assert native_quiet == native_dev, 'GPU worker lifecycle differs across maintained variants'
+    assert native_quiet.count(b'void ThreadManager::StartThread(') == 1
+    assert native_quiet.count(b'void ThreadManager::Stop()') == 1
+    assert b'pthread_join(thread, nullptr)' in native_quiet
+    assert not (ROOT / 'headless/native_gpu_thread.inc').exists(), 'obsolete duplicate GPU worker reintroduced'
     cmake = CMAKE_SOURCE.read_text()
     assert 'vendor/encore-active/eden-gpu' in cmake
     assert cmake.count('configure_file("${EDEN_ACTIVE_GPU}/') == 3

@@ -297,11 +297,11 @@ pas comptés parmi les 227 fichiers de code et d'en-têtes.
 
 ## Inventaire hors `vendor/encore-active`
 
-Les **177 fichiers source/en-tête/fragment** de `headless/` sont suivis
+Les **174 fichiers source/en-tête/fragment** de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
-27 ont désormais un propriétaire exact dans le graphe courant ; les autres sont
+34 ont désormais un propriétaire exact dans le graphe courant ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
-La couverture de 222/222 ci-dessus ne s'applique **pas** à ce dossier.
+La couverture de 251/251 ci-dessus ne s'applique **pas** à ce dossier.
 
 ## Critères de tenue à jour
 
