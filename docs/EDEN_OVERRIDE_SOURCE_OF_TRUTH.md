@@ -16,16 +16,16 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **231 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **232 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **32 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **31 générateurs** `write_derived`.
 - Six modules CMake supplémentaires totalisent **21 générateurs**
-  `write_derived`, soit **53 sites** au total.
+  `write_derived`, soit **52 sites** au total.
 - Quatre modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 54.
-- `headless/` contient **9 fragments `.inc`**. Plusieurs contribuent
+- `headless/` contient **8 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
   dépendance. **Leur présence dans `headless` ne vaut pas conformité
@@ -71,6 +71,13 @@ par substitutions dans CMake, est maintenant la version complète suivie dans
 PS5 sélectionne une copie identique de ce header ; la comparaison avec
 `eden-backports` et le témoin R437 empêchent le retour de l'ancien générateur.
 Le helper applicatif `headless/buffer_pages.h` reste un composant distinct.
+
+## Runtime RADV maintenu
+
+Le fichier de démarrage natif `app_crt_radv.cpp` est maintenu
+dans `vendor/encore-active/eden-build/tooling/native/` et choisi
+explicitement par le profil RADV ; la branche CMake ne transforme plus
+le boilerplate en C++.
 
 ## Fragments inclus ou injectés : vérifier leur propriétaire réel
 

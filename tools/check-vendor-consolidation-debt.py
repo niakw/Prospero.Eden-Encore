@@ -1065,6 +1065,17 @@ assert "current.write_text(derived)" in radv_builder
 assert "trap restore_cross_ini EXIT" in radv_builder
 assert 'tools/install-vendored-radv.py' in radv_builder
 
+# Native RADV startup: previously generated from the pinned boilerplate,
+# with one ps5_fp_ieee call before C++ static initializers.
+radv_crt_original = (sources / "boilerplate/tooling/native/app_crt.cpp").read_text()
+radv_old = 'extern "C" void _init()\n{'
+radv_new = 'extern "C" void ps5_fp_ieee();\nextern "C" void _init()\n{\n    ps5_fp_ieee();'
+assert radv_crt_original.count(radv_old) == 1
+assert (active / "eden-build/tooling/native/app_crt_radv.cpp").read_text() == radv_crt_original.replace(radv_old, radv_new)
+assert 'set(eden_app_crt "${EDEN_MAINTAINED_RADV_CRT}")' in c
+assert 'write_derived("${eden_app_crt}"' not in c
+print("VENDOR_MAINTAINED_RADV_CRT_PARITY_PASS: pinned startup and native-only variant")
+
 # R437: the native BufferCache is a tracked header, never reassembled by CMake.
 r437_rel = "eden-core/src/video_core/buffer_cache/buffer_cache.h"
 r437_back = (active / "eden-backports/src/video_core/buffer_cache/buffer_cache.h").read_text()
@@ -1117,7 +1128,7 @@ assert len(module_current) == 21, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 53
+assert len(recorded) + len(module_recorded) == 52
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived

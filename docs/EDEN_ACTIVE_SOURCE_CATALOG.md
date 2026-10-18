@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **231 fichiers** de code et d'en-têtes enregistrés.
-- **231 fichiers** possèdent une correspondance de chemin *exacte*
+- **232 fichiers** de code et d'en-têtes enregistrés.
+- **232 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -24,7 +24,7 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 **Important :** une correspondance de chemin n'est ni un test hôte,
 ni une certification console. Le graphe
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` porte les contrats fonctionnels,
-leurs états et les preuves. L'inventaire des 32 générateurs CMake
+leurs états et les preuves. L'inventaire des 31 générateurs CMake
 principaux, 21 générateurs de modules, quatre modules indirects et 46 patches
 reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
@@ -113,6 +113,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-backports/src/video_core/texture_cache/texture_cache.h` | `shipping-backport` | V52 |
 | `eden-backports/src/video_core/texture_cache/texture_cache_base.h` | `shipping-backport` | V54 |
 | `eden-backports/src/video_core/texture_cache/util.cpp` | `shipping-backport` | V61 |
+| `eden-build/tooling/native/app_crt_radv.cpp` | `maintained-override` | B05 |
 | `eden-core/dynarmic/scalar/scalar-fold.inc` | `maintained-override` | J27 |
 | `eden-core/dynarmic/scalar/scalar-memory-read.inc` | `maintained-override` | J28 |
 | `eden-core/dynarmic/scalar/scalar-memory-write.inc` | `maintained-override` | J29 |

@@ -2510,16 +2510,14 @@ if(PS5_NATIVE)
     write_derived("${PORT_BUILD_DIR}/app_heap.c" "${heap}")
     set(eden_app_crt "${native_template}/tooling/native/app_crt.cpp")
     if(EDEN_PS5_VULKAN AND EDEN_VULKAN_DRIVER STREQUAL "RADV")
-        file(READ "${eden_app_crt}" radv_crt)
-        string(FIND "${radv_crt}" "extern \"C\" void _init()\n{" fp_init_at)
-        if(fp_init_at EQUAL -1)
-            message(FATAL_ERROR "Native CRT initialization changed; review IEEE startup placement")
+        # The native RADV startup is a complete, reviewed boilerplate override.
+        # CMake selects it directly; no inline source rewriting.
+        set(EDEN_MAINTAINED_RADV_CRT
+            "${PORT_ROOT}/vendor/encore-active/eden-build/tooling/native/app_crt_radv.cpp")
+        if(NOT EXISTS "${EDEN_MAINTAINED_RADV_CRT}")
+            message(FATAL_ERROR "Missing maintained native RADV CRT")
         endif()
-        string(REPLACE "extern \"C\" void _init()\n{"
-            "extern \"C\" void ps5_fp_ieee();\nextern \"C\" void _init()\n{\n    ps5_fp_ieee();"
-            radv_crt "${radv_crt}")
-        set(eden_app_crt "${PORT_BUILD_DIR}/radv_app_crt.cpp")
-        write_derived("${eden_app_crt}" "${radv_crt}")
+        set(eden_app_crt "${EDEN_MAINTAINED_RADV_CRT}")
     endif()
     add_executable(eden-headless "${EDEN_PORT_DIR}/main.cpp" "${PORT_ROOT}/src/aligned_alloc.c"
         "${EDEN_PORT_DIR}/heap_pages.cpp" "${EDEN_PORT_DIR}/performance.cpp"
