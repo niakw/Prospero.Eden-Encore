@@ -14,22 +14,25 @@ import tempfile
 
 root=Path(__file__).resolve().parents[1]
 cmake=(root/"headless/CMakeLists.txt").read_text()
-start=cmake.index("        set(quiet_jit_timer [=[")
-end=cmake.index("]=])",start)
-snippet=cmake[start:end].split("[=[",1)[1]
+source=(root/"vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_interface_standard.cpp").read_text()
+start=source.index("        struct EdenCompileTimer {")
+timer_end="        } eden_compile_timer{unsigned(conf.processor_id)};"
+end=source.index(timer_end,start)+len(timer_end)
+snippet=source[start:end]
+assert "#if defined(EDEN_JIT_A64_DEV_PROFILE)" in source
 assert "bool active;" in snippet
 assert "active(eden_native_detailed_logging && eden_native_detailed_logging())" in snippet
 assert "if (active) start = std::chrono::steady_clock::now();" in snippet
 assert "if (active && eden_jit_compile)" in snippet
-assert 'extern \\"C\\" bool eden_native_detailed_logging() noexcept __attribute__((weak));' in cmake
-assert "if (eden_native_detailed_logging && eden_native_detailed_logging() && ++pressure_count <= 200)" in cmake
-assert "std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now()" not in cmake
+assert 'extern "C" bool eden_native_detailed_logging() noexcept __attribute__((weak));' in source
+assert "if (eden_native_detailed_logging && eden_native_detailed_logging() && ++pressure_count <= 200)" in source
+assert "std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now()" not in source
 perf=(root/"headless/performance.h").read_text()
 services=(root/"headless/prosperoeden/eden_services.cpp").read_text()
 assert "if (detailed_gpu_profile.load(std::memory_order_relaxed))\n        counter.fetch_add(1, std::memory_order_relaxed);" in perf
 assert "detailed_gpu_profile.store(value.detailed_logging" in services
 
-assert 'string(REPLACE "${compile_site}" "${compile_site}${quiet_jit_timer}"' in cmake
+assert 'string(REPLACE "${compile_site}" "${compile_site}${quiet_jit_timer}"' not in cmake
 
 program=r"""
 #include <cassert>

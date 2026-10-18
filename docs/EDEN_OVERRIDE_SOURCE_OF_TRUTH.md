@@ -16,16 +16,16 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **257 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **259 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **20 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **19 générateurs** `write_derived`.
 - Deux modules CMake générateurs totalisent **12 générateurs**
-  `write_derived`, soit **32 sites** au total.
+  `write_derived`, soit **31 sites** au total.
 - Cinq modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 34.
-- `headless/` contient **4 fragments `.inc`**. Plusieurs contribuent
+- `headless/` contient **3 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
   dépendance. **Leur présence dans `headless` ne vaut pas conformité
@@ -101,19 +101,28 @@ fragments de l'application native qui ne remplacent aucune source upstream.
 | `headless/dev_render_passes.inc` | Diagnostic OpenGL local (`CaptureDevelopmentPass`) | Consommateur non identifié dans le CMake principal et `graphics.cpp` ; vérifier les autres points d'entrée avant retrait |
 | `headless/gpu_native_probe.inc` | Diagnostic GPU natif local | Inclus transitivement par `gpu_probe.inc` ; pas un override de dépendance |
 | `headless/gpu_probe.inc` | Diagnostic graphique local | Inclus par `graphics.cpp` sous `EDEN_GPU_PROBE` ; reste dans le runtime de l'application |
-| `headless/jit-compile-batch.inc` | Bloc de compilation JIT injecté | **Dette confirmée G09** : remplacement de la région `a64_interface.cpp` sous `EDEN_JIT_COMPILE_BATCH` |
 <!-- SINGLE_SOURCE_FRAGMENTS_END -->
 
-### Frontières des quatre fragments résiduels
+### Frontières des trois fragments résiduels
 
-La seule injection `.inc` résiduelle identifiée est `jit-compile-batch.inc`
-(G09). Sa migration doit être groupée avec la signature de l'émetteur A64
-(G03/G04), les profils `EDEN_JIT_COMPILE_BATCH` et `EDEN_SHARED_JIT`,
-et les variantes normales/DEV, afin de ne pas recréer des sources concurrentes. Les deux diagnostics GPU sont du code de
+L'injection G09 est intégrée à `a64_interface_standard.cpp` sous un garde
+C++ explicite. L'unité `a64_interface_shared.cpp` conserve la variante
+partagée déjà distincte dans l'ancien CMake. Les trois fragments restants
+sont des diagnostics locaux ou un candidat encore à qualifier. Les deux diagnostics GPU sont du code de
 l'application, non des patches cachés dans une dépendance ; leur présence
 sous `headless/` est autorisée. Le fragment de capture OpenGL est
 **non qualifié**, pas déclaré inutilisé sans recherche exhaustive des consommateurs.
-Les quatre fichiers physiques restants ne représentent pas quatre overrides à migrer : un seul est une injection de dépendance confirmée.
+Les trois fragments restants ne sont pas des overrides de dépendance confirmés ; le diagnostic OpenGL conserve une qualification ouverte.
+
+## Interface A64 : unité complète par mode
+
+Le générateur G09 et `headless/jit-compile-batch.inc` sont retirés.
+`vendor/encore-active/eden-core/src/dynarmic/backend/x64/` possède
+`a64_interface_standard.cpp` et `a64_interface_shared.cpp`.
+CMake copie uniquement la variante choisie ; le batch et les mesures DEV
+sont conditionnés au niveau C++ sans réécriture CMake. L'identité du
+bloc historique et la sélection des profils sont vérifiées sur hôte ;
+la compilation native et l'exécution console ne sont pas certifiées.
 
 ## BlockOfCode : W^X, alias mémoire et permissions JIT
 
