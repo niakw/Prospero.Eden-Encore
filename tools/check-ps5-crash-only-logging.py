@@ -72,13 +72,23 @@ assert 'Eden::Crash::Install(Eden::LogsDir()' in main
 crash_header = read("headless/crash_report.h")
 crash_source = read("headless/crash_report.cpp")
 gpu_worker_generator = read("headless/CMakeLists.txt")
+# The production GPU worker is no longer constructed inside CMake:
+# both maintained variants are selected by CMake but compiled from Encore.
+gpu_worker_sources = {
+    profile: read(f"vendor/encore-active/eden-gpu/gpu_thread_{profile}.cpp")
+    for profile in ("dev", "quiet")
+}
+assert 'set(EDEN_GPU_WORKER_VARIANT "gpu_thread_dev.cpp")' in gpu_worker_generator
+assert 'set(EDEN_GPU_WORKER_VARIANT "gpu_thread_quiet.cpp")' in gpu_worker_generator
+assert 'configure_file("${EDEN_ACTIVE_GPU}/${EDEN_GPU_WORKER_VARIANT}"' in gpu_worker_generator
 watchdog = read("headless/stall_watchdog.h")
 assert 'inline std::atomic<std::uint64_t> gpu_completed_commands{0};' in crash_header
 assert 'inline std::atomic<unsigned> gpu_stall_suspicions{0};' in crash_header
 assert 'gpu_completed_commands.load(std::memory_order_relaxed)' in crash_source
 assert 'gpu_stall_suspicions.load(std::memory_order_relaxed)' in crash_source
-assert '(++completed_gpu_commands & 63u) == 0u' in gpu_worker_generator
-assert 'gpu_completed_commands.fetch_add(64, std::memory_order_relaxed);' in gpu_worker_generator
+for profile, gpu_worker_source in gpu_worker_sources.items():
+    assert '(++completed_gpu_commands & 63u) == 0u' in gpu_worker_source, profile
+    assert 'gpu_completed_commands.fetch_add(64, std::memory_order_relaxed);' in gpu_worker_source, profile
 assert 'Crash::gpu_completed_commands.load(std::memory_order_relaxed)' in watchdog
 assert 'Crash::gpu_stall_suspicions.fetch_add(1, std::memory_order_relaxed)' in watchdog
 assert 'if (!Performance::detailed_gpu_profile.load(std::memory_order_relaxed)) return;' in watchdog
