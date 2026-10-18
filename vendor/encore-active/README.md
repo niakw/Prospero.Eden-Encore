@@ -46,6 +46,8 @@
 
 | `eden-core/src/dynarmic/backend/x64/{emit_x64_vector.cpp,emit_x64_data_processing.cpp}` | Deux émetteurs scalaires complets, trois anciennes substitutions de CMake supprimées ; injection mémoire toujours X08 |
 
+| `eden-core/src/video_core/engines/sw_blitter/blitter.cpp` | Blitter logiciel natif : backport de production préservé et trois tailles élargies, sans reconstruction CMake |
+
 Chaîne HLE : `headless/CMakeLists.txt` -> `eden-threading/native-hle-overrides.cmake` -> fichiers C++/en-têtes maintenus.
 
 Tests associés : `tools/verify/hle/`. Ces tests ne sont pas inclus dans l'application native.
@@ -61,12 +63,12 @@ production depuis le snapshot épinglé, contrôlés par empreintes et installé
 par `tools/install-vendored-eden-backports.py` (pas de `git apply` au build).
 
 Catalogue exhaustif des fichiers C/C++ actifs : `docs/EDEN_ACTIVE_SOURCE_CATALOG.md`
-(242 fichiers enregistrés et rattachés au graphe technique ; ce lien n’atteste pas leur exécution sur console).
+(243 fichiers enregistrés et rattachés au graphe technique ; ce lien n’atteste pas leur exécution sur console).
 Le recensement des fichiers n'est pas une validation de leurs fonctions.
 Le générateur `renderer_opengl.cpp` n'est plus nécessaire : le renderer
 original est sélectionné directement, sans créer une copie maintenue identique.
 
-L'inventaire couvre **26 appels générateurs** du CMake principal et **16**
+L'inventaire couvre **26 appels générateurs** du CMake principal et **15**
 dans les modules, avec **5 modules indirects** de substitution suivis
 séparément ; ce ne sont pas des décomptes de fichiers uniques. Chaque nouvelle migration doit
 conserver un test de parité et de sélection native.

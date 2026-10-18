@@ -261,38 +261,18 @@ endif()
 # The pinned software blitter must really honor 3D block-depth layout and
 # read only the z=0 rectangle. Refuse this compatibility implementation if
 # upstream changes those semantics; never silently copy the wrong slice.
-file(READ "${PROJECT_SOURCE_DIR}/src/video_core/engines/sw_blitter/blitter.cpp" sw_blit_source)
-file(READ "${PROJECT_SOURCE_DIR}/src/video_core/textures/decoders.cpp" swizzle_source)
-string(FIND "${sw_blit_source}" "src.depth, config.src_x0" sw_source_depth_at)
-string(FIND "${sw_blit_source}" "dst.depth, config.dst_x0" sw_dest_depth_at)
-string(FIND "${sw_blit_source}" "static_cast<size_t>(surface.pitch * surface.height)" sw_pitch_arithmetic_at)
-string(FIND "${sw_blit_source}" "const size_t src_copy_size = src_extent_x * src_extent_y * src_bytes_per_pixel;" sw_src_copy_arithmetic_at)
-string(FIND "${sw_blit_source}" "const size_t dst_copy_size = dst_extent_x * dst_extent_y * dst_bytes_per_pixel;" sw_dst_copy_arithmetic_at)
-string(FIND "${swizzle_source}" "static constexpr u32 origin_z = 0;" sw_z0_at)
-if(sw_source_depth_at LESS 0 OR sw_dest_depth_at LESS 0 OR
-   sw_pitch_arithmetic_at LESS 0 OR sw_src_copy_arithmetic_at LESS 0 OR
-   sw_dst_copy_arithmetic_at LESS 0 OR sw_z0_at LESS 0)
-    message(FATAL_ERROR "Pinned Fermi2D software base-layer copy contract changed")
+# Blitter arithmetic is maintained as one complete source, derived from
+# the SHIPPING backport (not from the older pristine Eden baseline).
+# Keep the native-only module gate and the exact target replacement.
+set(EDEN_MAINTAINED_NATIVE_BLITTER
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/video_core/engines/sw_blitter/blitter.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_NATIVE_BLITTER}")
+    message(FATAL_ERROR "Missing maintained native software blitter")
 endif()
-
-# The shared software blitter silently overflowed 32-bit source/destination
-# rectangle byte counts and pitch * height before casting to size_t.
-# Widen the FIRST multiplier. This applies to every native Fermi fallback,
-# not only to the new 3D base-layer/pitch copy subset above.
-string(REPLACE "static_cast<size_t>(surface.pitch * surface.height)"
-               "static_cast<size_t>(surface.pitch) * surface.height"
-               sw_blit_source "${sw_blit_source}")
-string(REPLACE "const size_t src_copy_size = src_extent_x * src_extent_y * src_bytes_per_pixel;"
-               "const size_t src_copy_size = static_cast<size_t>(src_extent_x) * src_extent_y * src_bytes_per_pixel;"
-               sw_blit_source "${sw_blit_source}")
-string(REPLACE "const size_t dst_copy_size = dst_extent_x * dst_extent_y * dst_bytes_per_pixel;"
-               "const size_t dst_copy_size = static_cast<size_t>(dst_extent_x) * dst_extent_y * dst_bytes_per_pixel;"
-               sw_blit_source "${sw_blit_source}")
-write_derived("${PORT_BUILD_DIR}/sw_blitter_sized.cpp" "${sw_blit_source}")
 get_target_property(sw_blitter_sources video_core SOURCES)
 list(FILTER sw_blitter_sources EXCLUDE REGEX "engines/sw_blitter/blitter[.]cpp$")
 set_property(TARGET video_core PROPERTY SOURCES "${sw_blitter_sources}")
-target_sources(video_core PRIVATE "${PORT_BUILD_DIR}/sw_blitter_sized.cpp")
+target_sources(video_core PRIVATE "${EDEN_MAINTAINED_NATIVE_BLITTER}")
 
 if(EDEN_UNQUALIFIED_FERMI2D_COPY)
 set(fermi_copy_old [=[
