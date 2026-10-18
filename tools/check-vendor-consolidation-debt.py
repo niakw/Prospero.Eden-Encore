@@ -846,6 +846,13 @@ assert 'target_sources(video_core PRIVATE "${EDEN_MAINTAINED_NATIVE_BLITTER}")' 
 assert (root / "tools/check-maintained-sw-blitter.py").is_file()
 print("VENDOR_MAINTAINED_SW_BLITTER_OWNER_PASS")
 
+# KProcess finalization timing is selected from a complete DEV-only TU.
+assert (active / "eden-core/src/core/hle/kernel/k_process.cpp").is_file()
+assert 'list(APPEND process_core_sources "${EDEN_MAINTAINED_DEV_PROCESS}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/k_process.cpp"' not in c
+assert (root / "tools/check-maintained-kprocess-dev.py").is_file()
+print("VENDOR_MAINTAINED_KPROCESS_DEV_OWNER_PASS")
+
 # Xbyak writable alias uses a complete tagged header. Only the separate
 # code_source transformation remains indirect, explicitly inventoried.
 assert (active / "eden-build/third_party/xbyak/xbyak.h").is_file()
@@ -1258,7 +1265,7 @@ assert len(module_current) == 12, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 38
+assert len(recorded) + len(module_recorded) == 37
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived

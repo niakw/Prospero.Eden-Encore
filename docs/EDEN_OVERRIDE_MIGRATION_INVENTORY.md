@@ -11,16 +11,16 @@ développement, les options JIT expérimentales, les backends et le build
 natif sélectionnent chacun leur sous-ensemble.
 
 L'inventaire complémentaire `docs/EDEN_ACTIVE_SOURCE_CATALOG.md` suit les
-246 fichiers de code et en-têtes dans `vendor/encore-active`,
+247 fichiers de code et en-têtes dans `vendor/encore-active`,
 y compris les backports de production et la dépendance graphique. Cette
 couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
 ## Synthèse vérifiable
 
-- **26 appels générateurs** encore dans CMake ; contre **75 avant**
+- **25 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
-- **33 lectures `file(READ`** et **141 remplacements
+- **32 lectures `file(READ`** et **141 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
 - Les versions diagnostiques de `IFile::Read`, `IStorage::Read` et des appels
@@ -84,7 +84,7 @@ et non les 458 scripts Python/shell/CMake du seul dossier `tools/`.
 | `headless/checked-fastmem.cmake` et quatre autres modules indirects | **BUILD**, changement de variables source avant écriture | Unités dérivées du CMake principal | Déjà indexées X03–X07 |
 | `headless/vulkan.cmake` | **BUILD**, copie/sélection d'un fork vérifié | `encore-active/eden-vulkan` | Aucun appel au générateur Python |
 
-**Règle de lecture :** le compteur `26 + 12 = 38` décrit uniquement les
+**Règle de lecture :** le compteur `25 + 12 = 37` décrit uniquement les
 sites `write_derived`, pas les générateurs Python, les copies de dépendances,
 les recettes CMake ni les sorties de ressources. **Zéro source sans propriétaire
 dans le catalogue `vendor/encore-active` n'implique pas zéro override hors de
@@ -153,6 +153,16 @@ C++ par `string(REPLACE)`. Le témoin de parité rejoue les onze substitutions
 historiques uniquement dans `tools/check-maintained-sparse-vector.py`.
 Les contrôles de compilation/console sont des qualifications distinctes.
 
+## Finalisation KProcess : diagnostics DEV maintenus
+
+`k_process.cpp` est une unité C++ complète maintenue dans
+`vendor/encore-active/eden-core/src/core/hle/kernel/`. Le profil
+`EDEN_DEV_PROFILE` la sélectionne directement, sans reconstituer les
+cinq horodatages de finalisation via une fonction CMake. Le profil
+normal compile toujours la source épinglée. Le témoin de parité hôte
+rejoue exactement les cinq substitutions, à partir de
+`KProcess::Finalize`, hors du chemin de production.
+
 ## Générateurs non encore déplacés
 
 Les numéros Gxx sont les positions de cet inventaire, **pas** des validations.
@@ -182,15 +192,14 @@ dans la version normale.
 | G15 | `${PORT_BUILD_DIR}/core.cpp` | Mémoire/chargement | Unité source | 1238 |
 | G16 | `${PORT_BUILD_DIR}/nso.cpp` | Mémoire/chargement | Unité source | 1313 |
 | G17 | `${PORT_BUILD_DIR}/k_page_table_base.cpp` | Kernel/IPC/entrées | Unité source | 1468 |
-| G18 | `${PORT_BUILD_DIR}/k_process.cpp` | Kernel/IPC/entrées | Unité source | 1691 |
-| G19 | `${PORT_BUILD_DIR}/include/${server_header}` | Kernel/IPC/entrées | Cible variable | 1708 |
-| G20 | `${PORT_BUILD_DIR}/server_manager.cpp` | Kernel/IPC/entrées | Unité source | 1765 |
-| G21 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 1778 |
-| G22 | `${PORT_BUILD_DIR}/gl_rasterizer.cpp` | Audio/graphique | Unité source | 2000 |
-| G23 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 2095 |
-| G24 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 2192 |
-| G25 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 2400 |
-| G26 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2595 |
+| G18 | `${PORT_BUILD_DIR}/include/${server_header}` | Kernel/IPC/entrées | Cible variable | 1654 |
+| G19 | `${PORT_BUILD_DIR}/server_manager.cpp` | Kernel/IPC/entrées | Unité source | 1711 |
+| G20 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 1724 |
+| G21 | `${PORT_BUILD_DIR}/gl_rasterizer.cpp` | Audio/graphique | Unité source | 1946 |
+| G22 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 2041 |
+| G23 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 2138 |
+| G24 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 2346 |
+| G25 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2541 |
 <!-- OVERRIDE_GENERATORS_END -->
 
 ## Prochain ordre de migration
@@ -426,7 +435,7 @@ La modification `code_source` du même module reste enregistrée sous
 
 Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules
 inclus par ce fichier contiennent **12 autres appels `write_derived()`**
-dans 2 fichiers. Le total de **38 appels** (26 + 12) est donc un **nombre de
+dans 2 fichiers. Le total de **37 appels** (25 + 12) est donc un **nombre de
 sites CMake**, pas un dénombrement des fichiers réellement produits à
 l'exécution. Un module inclus peut définir des macros sans les exécuter,
 et plusieurs sorties sont explicitement conditionnées.
@@ -451,7 +460,7 @@ et plusieurs sorties sont explicitement conditionnées.
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **38 sites** `write_derived()`, ni dans
+Ils ne sont comptés ni dans les **37 sites** `write_derived()`, ni dans
 les **4 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,
@@ -534,7 +543,7 @@ que chaque chemin a été validé sur console.
 
 ## Overrides indirects sans `write_derived()` local
 
-Ces **6 modules supplémentaires** ne sont pas inclus dans les **38 appels**.
+Ces **6 modules supplémentaires** ne sont pas inclus dans les **37 appels**.
 Tous modifient des variables-source ensuite écrites par le CMake principal.
 Ils ne sont pas quatre sources C++ distinctes.
 

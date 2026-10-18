@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **246 fichiers** de code et d'en-têtes enregistrés.
-- **246 fichiers** possèdent une correspondance de chemin *exacte*
+- **247 fichiers** de code et d'en-têtes enregistrés.
+- **247 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -24,7 +24,7 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 **Important :** une correspondance de chemin n'est ni un test hôte,
 ni une certification console. Le graphe
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` porte les contrats fonctionnels,
-leurs états et les preuves. L'inventaire des 26 générateurs CMake
+leurs états et les preuves. L'inventaire des 25 générateurs CMake
 principaux, 12 générateurs de modules, six modules indirects et 46 patches
 reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
@@ -150,6 +150,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/core/file_sys/ips_layer.cpp` | `maintained-override` | F37 |
 | `eden-core/src/core/file_sys/patch_manager.cpp` | `maintained-override` | F35 |
 | `eden-core/src/core/file_sys/savedata_factory.cpp` | `maintained-override` | F15 |
+| `eden-core/src/core/hle/kernel/k_process.cpp` | `maintained-override` | H53 |
 | `eden-core/src/core/hle/kernel/k_spin_lock.cpp` | `maintained-override` | H30 |
 | `eden-core/src/core/hle/kernel/svc/svc_ipc.cpp` | `maintained-override` | H21 |
 | `eden-core/src/core/hle/service/am/service/application_functions.cpp` | `maintained-override` | H32 |
