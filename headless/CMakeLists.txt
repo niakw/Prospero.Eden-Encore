@@ -2140,192 +2140,20 @@ if(EDEN_PS5_OPENGL)
         list(APPEND video_sources "${PORT_BUILD_DIR}/gpu_thread.cpp")
         string(PREPEND gpu_source "#include <glad/glad.h>\n")
     else()
-    # PS5-only stop-aware producer wait; the pinned upstream queue has a
-    # condition variable for free slots, but no stop-token overload.
-    # Keep the plain host and other consumers on upstream's original queue.
-    if(PS5_NATIVE)
-        file(READ "${PROJECT_SOURCE_DIR}/src/common/bounded_threadsafe_queue.h" native_queue_header)
-        set(queue_wait_anchor "    template <typename... Args>\n    void EmplaceWait(Args&&... args) noexcept {\n        Emplace<PushMode::Wait>(std::forward<Args>(args)...);\n    }")
-        string(FIND "${native_queue_header}" "${queue_wait_anchor}" queue_wait_offset)
-        if(queue_wait_offset LESS 0)
-            message(FATAL_ERROR "Pinned SPSC queue EmplaceWait contract changed")
-        endif()
-        file(READ "${PORT_ROOT}/vendor/encore-active/eden-core/gpu-injections/gpu_queue_stop_wait.inc" native_stop_wait)
-        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${PORT_ROOT}/vendor/encore-active/eden-core/gpu-injections/gpu_queue_stop_wait.inc")
-        string(REPLACE "${queue_wait_anchor}" "${queue_wait_anchor}\n${native_stop_wait}"
-            native_queue_header "${native_queue_header}")
-        # SPSCQueue stores a preconstructed std::array<T, Capacity>.
-        # Its placement-new reuse must first destroy the still-live,
-        # moved-from slot. Both normal and stop-aware producers use this
-        # same constructor; preserve FIFO and move semantics.
-        set(queue_slot_construct "std::construct_at(std::addressof(m_data[pos]), std::forward<Args>(args)...);")
-        string(REPLACE "${queue_slot_construct}" "__ENCORE_GPU_QUEUE_SLOT__"
-            native_queue_header "${native_queue_header}")
-        string(REGEX MATCHALL "__ENCORE_GPU_QUEUE_SLOT__" queue_slot_matches "${native_queue_header}")
-        list(LENGTH queue_slot_matches queue_slot_count)
-        if(NOT queue_slot_count EQUAL 2)
-            message(FATAL_ERROR "Pinned GPU queue slot lifetime contract changed: ${queue_slot_count}")
-        endif()
-        set(queue_slot_repair "std::destroy_at(std::addressof(m_data[pos]));\n        ${queue_slot_construct}")
-        string(REPLACE "__ENCORE_GPU_QUEUE_SLOT__" "${queue_slot_repair}"
-            native_queue_header "${native_queue_header}")
-        string(PREPEND native_queue_header "#include <memory>\n#include <stop_token>\n")
-        write_derived("${PORT_BUILD_DIR}/include/common/bounded_threadsafe_queue.h" "${native_queue_header}")
-    endif()
+    # PS5 GPU queue is already copied from the complete eden-gpu source above.
     file(READ "${PROJECT_SOURCE_DIR}/src/video_core/gpu_thread.h" gpu_thread_header)
     # R333: the eight-command PS5 override is demonstrably saturating in FC27.
     # Allow a bounded short command burst without restoring the upstream 4096
     # slots (which can hide large latency). Preserve all fences, FIFO and
     # stop-aware producer waking; leave non-native host budgeting unchanged.
-    if(PS5_NATIVE)
-        set(eden_gpu_queue_capacity 256)
-    else()
-        set(eden_gpu_queue_capacity 8)
-    endif()
+    set(eden_gpu_queue_capacity 8)  # Host-only fallback; native header is maintained.
     string(REPLACE "using CommandQueue = Common::SPSCQueue<CommandDataContainer>;"
         "using CommandQueue = Common::SPSCQueue<CommandDataContainer, ${eden_gpu_queue_capacity}>;"
         gpu_thread_header "${gpu_thread_header}")
     string(REPLACE "    ~ThreadManager();" "    ~ThreadManager();\n    void Stop() { thread.request_stop(); if (thread.joinable()) thread.join(); }" gpu_thread_header "${gpu_thread_header}")
-    if(PS5_NATIVE)
-        string(PREPEND gpu_thread_header "#include <pthread.h>\n")
-        string(REPLACE "    void Stop() { thread.request_stop(); if (thread.joinable()) thread.join(); }"
-            "    void Stop();" gpu_thread_header "${gpu_thread_header}")
-        string(REPLACE "    std::jthread thread;"
-            "    void RunWorker(VideoCore::RendererBase&, Core::Frontend::GraphicsContext&, Tegra::Control::Scheduler&);\n    pthread_t thread{};\n    std::stop_source stop_source;\n    bool thread_joinable{};" gpu_thread_header "${gpu_thread_header}")
-        file(READ "${PROJECT_SOURCE_DIR}/src/video_core/gpu_thread.cpp" gpu_worker)
-        # A lock-free crash breadcrumb, not a per-command DEV metric. The GPU
-        # owner publishes once per 64 completed commands. No filesystem work.
-        set(gpu_done "            state.signaled_fence.store(next.fence);")
-        string(FIND "${gpu_worker}" "${gpu_done}" gpu_done_at)
-        if(gpu_done_at LESS 0)
-            message(FATAL_ERROR "Pinned GPU worker completed-fence marker changed")
-        endif()
-        string(REPLACE "${gpu_done}"
-            "${gpu_done}\n            if ((++completed_gpu_commands & 63u) == 0u)\n                ::Eden::Crash::gpu_completed_commands.fetch_add(64, std::memory_order_relaxed);"
-            gpu_worker "${gpu_worker}")
-        string(REPLACE "        CommandDataContainer next;"
-            "        unsigned completed_gpu_commands = 0;\n        CommandDataContainer next;"
-            gpu_worker "${gpu_worker}")
-        string(PREPEND gpu_worker "#include \"${EDEN_PORT_DIR}/crash_report.h\"\n")
-        string(PREPEND gpu_worker "#include \"${EDEN_PORT_DIR}/gpu_failure.h\"\n")
-        set(worker_start "void ThreadManager::StartThread(VideoCore::RendererBase& renderer, Core::Frontend::GraphicsContext& context, Tegra::Control::Scheduler& scheduler) {\n    rasterizer = renderer.ReadRasterizer();\n    thread = std::jthread([&](std::stop_token stop_token) {")
-        string(FIND "${gpu_worker}" "${worker_start}" worker_start_offset)
-        if(worker_start_offset LESS 0)
-            message(FATAL_ERROR "Pinned GPU worker entry changed")
-        endif()
-        string(REPLACE "${worker_start}"
-            "void ThreadManager::RunWorker(VideoCore::RendererBase& renderer, Core::Frontend::GraphicsContext& context, Tegra::Control::Scheduler& scheduler) {\n    const auto stop_token = stop_source.get_token();" gpu_worker "${gpu_worker}")
-        string(REPLACE "    });\n}" "}" gpu_worker "${gpu_worker}")
-        string(REPLACE "thread.get_stop_token()" "stop_source.get_token()" gpu_worker "${gpu_worker}")
-        string(REPLACE "ThreadManager::~ThreadManager() = default;" "ThreadManager::~ThreadManager() { Stop(); }" gpu_worker "${gpu_worker}")
-        string(REPLACE "        CommandDataContainer next;" "        unsigned dispatches = 0;\n        CommandDataContainer next;" gpu_worker "${gpu_worker}")
-        set(dispatch_call "                scheduler.Push(system.GPU(), submit_list->channel, std::move(submit_list->entries));")
-        string(REPLACE "${dispatch_call}"
-            "                const auto count = ++dispatches;\n                if (count <= 3) LOG_INFO(Render_OpenGL, \"EDEN_GPU_DISPATCH_BEGIN count={}\", count);\n${dispatch_call}\n                if (count <= 3) LOG_INFO(Render_OpenGL, \"EDEN_GPU_DISPATCH_END count={}\", count);" gpu_worker "${gpu_worker}")
-        # A full queue now sleeps on its OWN producer condition variable,
-        # which the consumer signals after popping. On Stop, the stop_token
-        # wakes the waiter even when the GPU consumer is permanently blocked.
-        # A cheap TryEmplace keeps the uncontended fast path lock-free.
-        set(producer_wait "        pushed = state.queue.EmplaceWaitWithStopToken(stop_source.get_token(),\n            std::move(command_data), fence, block);")
-        string(FIND "${gpu_worker}" "    state.queue.EmplaceWait(std::move(command_data), fence, block);" old_producer_at)
-        if(old_producer_at LESS 0)
-            message(FATAL_ERROR "Pinned GPU producer source changed")
-        endif()
-        set(producer_rewrite "    bool pushed = false;\n    if (!stop_source.stop_requested()) {\n        pushed = state.queue.TryEmplace(std::move(command_data), fence, block);\n        if (!pushed) {\n${producer_wait}\n        }\n    }\n    if (!pushed) {\n        if (stop_source.stop_requested()) {\n            if (const auto failure = Eden::PeekGpuFailure()) {\n                std::rethrow_exception(failure);\n            }\n        }\n        return state.signaled_fence.load(std::memory_order_acquire);\n    }")
-        string(REPLACE "    state.queue.EmplaceWait(std::move(command_data), fence, block);"
-            "${producer_rewrite}" gpu_worker "${gpu_worker}")
-        # Cancellation of a synchronous GPU submission is not fence completion.
-        # A recorded fatal worker error must propagate to ALL CPU producers.
-        set(gpu_block_wait_original [=[
-    if (block) {
-        state.cv.wait(lk, stop_source.get_token(), [this, fence] {
-            return fence <= state.signaled_fence.load(std::memory_order_relaxed);
-        });
-    }
-]=])
-        set(gpu_block_wait_checked [=[
-    if (block) {
-        const bool completed = state.cv.wait(lk, stop_source.get_token(), [this, fence] {
-            return fence <= state.signaled_fence.load(std::memory_order_acquire);
-        });
-        if (!completed) {
-            if (const auto failure = Eden::PeekGpuFailure()) {
-                std::rethrow_exception(failure);
-            }
-            return state.signaled_fence.load(std::memory_order_acquire);
-        }
-    }
-]=])
-        string(FIND "${gpu_worker}" "${gpu_block_wait_original}" gpu_block_wait_at)
-        if(gpu_block_wait_at LESS 0)
-            message(FATAL_ERROR "Pinned GPU producer fence wait changed")
-        endif()
-        string(REPLACE "${gpu_block_wait_original}" "${gpu_block_wait_checked}" gpu_worker "${gpu_worker}")
-        file(READ "${EDEN_PORT_DIR}/native_gpu_thread.inc" native_gpu_lifecycle)
-        string(REPLACE "#include \"diagnostics.h\"" "#include \"${EDEN_PORT_DIR}/diagnostics.h\""
-            native_gpu_lifecycle "${native_gpu_lifecycle}")
-        string(REPLACE "#include \"gpu_failure.h\"" "#include \"${EDEN_PORT_DIR}/gpu_failure.h\""
-            native_gpu_lifecycle "${native_gpu_lifecycle}")
-        string(APPEND gpu_worker "\n${native_gpu_lifecycle}")
-        # Animate only until guest presentation, on the renderer-owning worker.
-        set(hud_wait "            state.queue.PopWait(next, stop_token);")
-        string(FIND "${gpu_worker}" "${hud_wait}" hud_wait_offset)
-        if(hud_wait_offset LESS 0)
-            message(FATAL_ERROR "Pinned GPU queue wait changed")
-        endif()
-        string(PREPEND gpu_worker "namespace VideoCore { class RendererBase; }\nnamespace Eden { bool LoadingTick(VideoCore::RendererBase&, bool idle); }\n")
-        string(REPLACE "${hud_wait}"
-            "            if (Eden::LoadingTick(renderer, false)) {\n                if (!state.queue.TryPop(next)) {\n                    Eden::LoadingTick(renderer, true);\n                    std::this_thread::sleep_for(std::chrono::milliseconds(1));\n                    continue;\n                }\n            } else {\n${hud_wait}\n            }" gpu_worker "${gpu_worker}")
-        if(EDEN_DEV_PROFILE)
-            string(PREPEND gpu_worker "#include \"${EDEN_PORT_DIR}/performance.h\"\n")
-            string(REPLACE "${hud_wait}"
-                "            { ::Eden::Performance::DiagnosticTimer idle_timer(::Eden::Performance::gpu_queue_wait);\n${hud_wait}\n            }"
-                gpu_worker "${gpu_worker}")
-            string(REPLACE "${dispatch_call}"
-                "                { ::Eden::Performance::DiagnosticTimer dispatch_timer(::Eden::Performance::gpu_dispatch);\n${dispatch_call}\n                }"
-                gpu_worker "${gpu_worker}")
-            # Distinguish a genuinely slow submit from a command-level
-            # TickWork/FlushRegion/InvalidateRegion stall. This source rewrite
-            # touches timing only; command order, fences, and queue depth stay.
-            foreach(entry IN ITEMS tick flush invalidate)
-                if(entry STREQUAL "tick")
-                    set(gpu_call "                system.GPU().TickWork();")
-                    set(metric "gpu_command_tick")
-                elseif(entry STREQUAL "flush")
-                    set(gpu_call "                renderer.ReadRasterizer()->FlushRegion(flush->addr, flush->size);")
-                    set(metric "gpu_command_flush")
-                else()
-                    set(gpu_call "                renderer.ReadRasterizer()->OnCacheInvalidation(invalidate->addr, invalidate->size);")
-                    set(metric "gpu_command_invalidate")
-                endif()
-                string(FIND "${gpu_worker}" "${gpu_call}" gpu_call_at)
-                if(gpu_call_at LESS 0)
-                    message(FATAL_ERROR "Pinned GPU worker ${entry} dispatch changed")
-                endif()
-                string(REPLACE "${gpu_call}"
-                    "                { ::Eden::Performance::DiagnosticTimer category_timer(::Eden::Performance::${metric});\n${gpu_call}\n                }"
-                    gpu_worker "${gpu_worker}")
-            endforeach()
-            string(REPLACE "if (count <= 3) LOG_INFO(Render_OpenGL, \"EDEN_GPU_DISPATCH_"
-                "if (count <= 3 || ::Eden::Performance::BootTrace()) LOG_INFO(Render_OpenGL, \"EDEN_GPU_DISPATCH_"
-                gpu_worker "${gpu_worker}")
-            # Measure ONLY genuinely full-queue waits; no clocks when quiet.
-            string(FIND "${gpu_worker}" "${producer_wait}" full_wait_at)
-            if(full_wait_at LESS 0)
-                message(FATAL_ERROR "Pinned stop-aware GPU producer wait changed")
-            endif()
-            set(profiled_producer_wait
-                "        { ::Eden::Performance::DiagnosticTimer full_timer(::Eden::Performance::gpu_queue_full);\n${producer_wait}\n        }")
-            string(REPLACE "${producer_wait}" "${profiled_producer_wait}"
-                gpu_worker "${gpu_worker}")
-        endif()
-        write_derived("${PORT_BUILD_DIR}/gpu_thread.cpp" "${gpu_worker}")
-        list(REMOVE_ITEM video_sources gpu_thread.cpp)
-        list(APPEND video_sources "${PORT_BUILD_DIR}/gpu_thread.cpp")
-    endif()
-    string(PREPEND gpu_source "#include <glad/glad.h>\n")
+    # Host-only fallback keeps its 8-slot header generator; native uses the
+    # committed quiet/dev worker and header selected by configure_file above.
     write_derived("${PORT_BUILD_DIR}/include/video_core/gpu_thread.h" "${gpu_thread_header}")
-    # R345_LEGACY_SOURCE_END
     endif()
     target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/include")
     string(REPLACE "    ~Impl() = default;" "    ~Impl() { gpu_thread.Stop(); if (renderer && Settings::IsOpenGL()) { renderer->Context().MakeCurrent(); glFinish(); } }" gpu_source "${gpu_source}")
