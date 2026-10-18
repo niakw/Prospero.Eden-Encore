@@ -918,6 +918,19 @@ assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/file_sys/ips_layer.cpp" ips_so
 assert "set(ips_escape [=[" not in c
 print("MAINTAINED_IPS_LAYER_SOURCE_PASS pinned_generator_blob=f6687abf")
 
+
+# R428 per-layer ASTC scratch is now a canonical, selected C++ source. Its
+# Git blob was derived by applying the single historical CMake raw-string
+# replacement against the pinned Eden texture utility.
+astc_maintained = active / "eden-core/src/video_core/texture_cache/util.cpp"
+check_canonical_git_object(astc_maintained, "8f393887e88d7e38681fea109074338bba5b26fc", "ASTC")
+assert 'list(APPEND video_sources "${EDEN_MAINTAINED_TEXTURE_UTIL}")' in c
+assert 'set(EDEN_MAINTAINED_TEXTURE_UTIL' in c
+assert 'write_derived("${PORT_BUILD_DIR}/texture_cache_util.cpp"' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/texture_cache/util.cpp" eden_texture_util)' not in c
+assert 'set(eden_astc_decode_old [=[' not in c
+print("MAINTAINED_ASTC_TEXTURE_PARITY_PASS R428")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -999,7 +1012,7 @@ assert len(module_current) == 21, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 62
+assert len(recorded) + len(module_recorded) == 61
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived

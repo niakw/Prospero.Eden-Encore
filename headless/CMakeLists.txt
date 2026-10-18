@@ -2514,43 +2514,15 @@ set_property(SOURCE "${PORT_BUILD_DIR}/shader_environment.cpp" APPEND PROPERTY O
 # R428: port upstream d7f2764 ASTC per-layer scratch without modifying
 # the immutable Eden source package. Keep the converted pixel order and BC
 # output offsets; only the temporary decode batch width changes.
-file(READ "${PROJECT_SOURCE_DIR}/src/video_core/texture_cache/util.cpp" eden_texture_util)
-set(eden_astc_decode_old [=[            decode_scratch.resize_destructive(level_size);
-
-            Tegra::Texture::ASTC::Decompress(
-                input_offset, copy.image_extent.width, copy.image_extent.height,
-                copy.image_subresource.num_layers * copy.image_extent.depth, tile_size.width,
-                tile_size.height, decode_scratch);
-
-            compress(decode_scratch, copy.image_extent.width, copy.image_extent.height,
-                     copy.image_subresource.num_layers * copy.image_extent.depth,
-                     output.subspan(output_offset));
-]=])
-string(FIND "${eden_texture_util}" "${eden_astc_decode_old}" eden_astc_at)
-if(eden_astc_at LESS 0)
-    message(FATAL_ERROR "Pinned Eden ASTC ConvertImage changed; requalify R428")
+# The one-layer ASTC scratch optimization is a complete Encore source.
+# Keep the original pinned package immutable; CMake only selects this TU.
+set(EDEN_MAINTAINED_TEXTURE_UTIL
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/video_core/texture_cache/util.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_TEXTURE_UTIL}")
+    message(FATAL_ERROR "Missing maintained ASTC texture utility")
 endif()
-string(REPLACE "${eden_astc_decode_old}" [=[            // d7f2764: decode a single ASTC array/depth layer at a time.
-            // The original per-mip temporary allocation scaled to hundreds
-            // of MiB on tall arrays, competing with PS5's graphics memory.
-            const u32 layers = copy.image_subresource.num_layers * copy.image_extent.depth;
-            const u32 layer_input = Common::DivideUp(copy.image_extent.width, tile_size.width) *
-                                    Common::DivideUp(copy.image_extent.height, tile_size.height) * 16;
-            const u32 layer_output = Common::AlignUp(copy.image_extent.width, 4) *
-                                     Common::AlignUp(copy.image_extent.height, 4) / bpp_div;
-            decode_scratch.resize_destructive(level_size / (std::max)(layers, 1u));
-            for (u32 layer = 0; layer < layers; ++layer) {
-                Tegra::Texture::ASTC::Decompress(
-                    input_offset.subspan(layer * layer_input), copy.image_extent.width,
-                    copy.image_extent.height, 1, tile_size.width, tile_size.height, decode_scratch);
-                compress(decode_scratch, copy.image_extent.width, copy.image_extent.height, 1,
-                         output.subspan(output_offset + layer * layer_output));
-            }
-]=]
-    eden_texture_util "${eden_texture_util}")
-write_derived("${PORT_BUILD_DIR}/texture_cache_util.cpp" "${eden_texture_util}")
 list(REMOVE_ITEM video_sources texture_cache/util.cpp)
-list(APPEND video_sources "${PORT_BUILD_DIR}/texture_cache_util.cpp")
+list(APPEND video_sources "${EDEN_MAINTAINED_TEXTURE_UTIL}")
 list(REMOVE_ITEM video_sources shader_environment.cpp)
 list(APPEND video_sources "${PORT_BUILD_DIR}/shader_environment.cpp")
 # Eden #4473/#4477 are already applied once to the pinned source by
