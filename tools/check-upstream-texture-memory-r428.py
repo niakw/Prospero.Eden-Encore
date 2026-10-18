@@ -17,8 +17,10 @@ assert active_header == original_header.replace(
 assert '#include <boost/version.hpp>' in active_header
 assert 'target_include_directories(video_core BEFORE PRIVATE "${EDEN_SMALL_VECTOR_ROOT}")' in cmake
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/texture_cache/util.h"' not in cmake
-assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/texture_cache/util.cpp"' in cmake
-assert 'Pinned Eden ASTC ConvertImage changed; requalify R428' in cmake
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/texture_cache/util.cpp"' not in cmake
+assert 'set(EDEN_MAINTAINED_TEXTURE_UTIL' in cmake
+assert 'Pinned Eden ASTC ConvertImage changed; requalify R428' not in cmake
+astc = (root / "vendor/encore-active/eden-core/src/video_core/texture_cache/util.cpp").read_text()
 # Logging was moved to the maintained versioned unit. Keep R428's
 # bounded-flush semantics and assert exact pinned-source transformation parity,
 # instead of requiring the removed configure-time CMake generator.
@@ -34,13 +36,13 @@ assert 'write_limit_exceeded ||' in logging
 assert original_logging.count("            file->Flush();") >= 1
 assert logging.count("            file->Flush();") >= 1
 assert "std::atomic<long long> error_flushed_ms{-1000};" in logging
-assert 'const u32 layers = copy.image_subresource.num_layers * copy.image_extent.depth;' in cmake
-assert 'input_offset.subspan(layer * layer_input)' in cmake
-assert 'output.subspan(output_offset + layer * layer_output)' in cmake
-assert 'decode_scratch.resize_destructive(level_size / (std::max)(layers, 1u));' in cmake
+assert 'const u32 layers = copy.image_subresource.num_layers * copy.image_extent.depth;' in astc
+assert 'input_offset.subspan(layer * layer_input)' in astc
+assert 'output.subspan(output_offset + layer * layer_output)' in astc
+assert 'decode_scratch.resize_destructive(level_size / (std::max)(layers, 1u));' in astc
 assert 'list(REMOVE_ITEM video_sources texture_cache/util.cpp)' in cmake
-assert 'list(APPEND video_sources "${PORT_BUILD_DIR}/texture_cache_util.cpp")' in cmake
-assert cmake.index('list(APPEND video_sources "${PORT_BUILD_DIR}/texture_cache_util.cpp")') < cmake.index(
+assert 'list(APPEND video_sources "${EDEN_MAINTAINED_TEXTURE_UTIL}")' in cmake
+assert cmake.index('list(APPEND video_sources "${EDEN_MAINTAINED_TEXTURE_UTIL}")') < cmake.index(
     'set_property(TARGET video_core PROPERTY SOURCES "${video_sources}")')
 cxx = shutil.which("c++") or shutil.which("g++") or shutil.which("clang++")
 assert cxx, "C++ host compiler unavailable"
