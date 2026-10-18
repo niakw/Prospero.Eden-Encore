@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 330
+**Non, this is not an exhaustive repository-wide inventory.** The 335
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 330 | 308 | 676 |
+| Graphe connu | 335 | 313 | 683 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 275 | 263 | 571 |
+| SOURCE — lecture effectuée, preuve insuffisante | 280 | 268 | 578 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **290** | **277** | **599** |
+| **Encore à qualifier (SOURCE + OPEN)** | **295** | **282** | **606** |
 | Dont priorité P0 (SOURCE + OPEN) | 108 | 103 | 252 |
 
-Le **noyau restant** compte donc 290 critères répartis sur
-277 fichiers et 599 mentions fonction/contrat :
-15 OPEN et 275 SOURCE.
+Le **noyau restant** compte donc 295 critères répartis sur
+282 fichiers et 606 mentions fonction/contrat :
+15 OPEN et 280 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-259 fichiers de code/en-têtes présents et 259 avec un chemin de
+264 fichiers de code/en-têtes présents et 264 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -247,6 +247,11 @@ function/contract tokens are checked by CI for existence only; the
 | B09 | P1 | J09 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code_host.cpp | BlockOfCode::EnableWriting; BlockOfCode::DisableWriting | SOURCE | tools/check-maintained-block-of-code.py | Complete Linux W^X source and exact CMake stage validated; guest execution unqualified | 🟡 Source étudiée |
 | B10 | P1 | J09 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code.h | protection_end; patch_pages | SOURCE | tools/check-maintained-block-of-code.py | Maintained W^X header selected by copy with matching CPP variants; console unqualified | 🟡 Source étudiée |
 | B11 | P1 | J10 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_interface_shared.cpp | Jit::Impl; EdenJoinGroup | SOURCE | tools/check-maintained-a64-interface.py | Shared implementation selected directly, historical group body preserved; mode OFF by default, console unqualified | 🟡 Source étudiée |
+| B12 | P1 | J09 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/a32_emit_x64.cpp | A32EmitX64::Emit | SOURCE | tools/check-maintained-emitters.py | Complete A32 emitter, fast-dispatch transition removed exactly; console unqualified | 🟡 Source étudiée |
+| B13 | P1 | J10 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_emit_x64_standard.cpp | A64EmitX64::Emit | SOURCE | tools/check-maintained-emitters.py | Complete standard emitter with batch-only publish signature and unchanged JIT publication semantics; console unqualified | 🟡 Source étudiée |
+| B14 | P1 | J21 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_emit_x64_shared.cpp | A64EmitX64::Emit; EmitTerminalImpl | SOURCE | tools/check-maintained-emitters.py | Complete shared emitter with JitGroup RSB and links preserved; experimental OFF, console unqualified | 🟡 Source étudiée |
+| B15 | P1 | B13 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_emit_x64_standard.h | Emit(IR::Block& block | SOURCE | tools/check-maintained-emitters.py | Normal/batch signature compile-time selection; console unqualified | 🟡 Source étudiée |
+| B16 | P1 | B14 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_emit_x64_shared.h | eden_group; eden_pending_sites | SOURCE | tools/check-maintained-emitters.py | Shared group and deferred link fields in canonical header; console unqualified | 🟡 Source étudiée |
 | B03 | P1 | B01 | vendor/encore-active/eden-core/overrides/slot-vector/common/slot_vector.h | SlotId insert( | SOURCE | tools/check-vendor-consolidation-debt.py | Former X02 recovery is maintained as exact Encore header with isolated include priority; native exception behavior unproved | 🟡 Source étudiée |
 | Q01 | P1 | B02 | vendor/sources/eden/src/common/bounded_threadsafe_queue.h | TryEmplace; Pop; std::construct_at | HOST | tools/check-native-gpu-queue-slot-lifetime-host.py | No claim about a specific game's resource lifetime | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-gpu-queue-slot-lifetime-host.py) |
 | Q02 | P1 | Q01 | vendor/encore-active/eden-gpu/include/common/bounded_threadsafe_queue.h | EmplaceWaitWithStopToken | SOURCE | tools/check-gpu-producer-stop.py | Stop-aware producer wake owned by the selected complete queue header; obsolete .inc retired, console unqualified | 🟡 Source étudiée |

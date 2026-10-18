@@ -16,12 +16,12 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **259 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **264 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **19 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **17 générateurs** `write_derived`.
 - Deux modules CMake générateurs totalisent **12 générateurs**
-  `write_derived`, soit **31 sites** au total.
+  `write_derived`, soit **29 sites** au total.
 - Cinq modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 34.
@@ -124,28 +124,24 @@ sont conditionnés au niveau C++ sans réécriture CMake. L'identité du
 bloc historique et la sélection des profils sont vérifiées sur hôte ;
 la compilation native et l'exécution console ne sont pas certifiées.
 
-### Dépendances restantes à migrer ensemble : G03/G04
+### Émetteurs A32/A64 — G03/G04 transférés
 
-La migration A64 G09 ne clôt **pas** la chaîne des émetteurs. G03
-(`a64_emit_x64.h`) et G04 (`a32_emit_x64.cpp` /
-`a64_emit_x64.cpp`) sont encore préparés par CMake. Le changement
-de signature `Emit(IR::Block&, bool publish)` doit rester cohérent
-avec les branches batch et JIT partagé de la nouvelle interface A64.
-L'émission différée de `DisableWriting()` est liée au même contrat.
+Les générateurs historiques G03/G04 ont été retirés du CMake principal.
+Les sources complètes `a32_emit_x64.cpp`,
+`a64_emit_x64_standard.cpp`, `a64_emit_x64_shared.cpp`,
+`a64_emit_x64_standard.h` et `a64_emit_x64_shared.h`
+résident dans `vendor/encore-active/eden-core/src/dynarmic/backend/x64/`.
+CMake sélectionne uniquement la variante normale ou partagée et copie
+l'en-tête correspondant, avec le même chemin de build qu'avant.
+Le booléen de publication `Emit(..., bool publish)` n'est exposé en
+mode standard que lorsque batch ou shared sont activés. A32 ne dépend
+pas de cette signature. Les transitions de fast-dispatch, liens,
+RSB et propriétés de protection RW/RX sont conservées.
 
-G04 comprend également le retrait des transitions de protection autour
-des invalidations de fast-dispatch **sur A32 comme sur A64**. Le mode partagé
-ajoute des pointeurs de groupe, des transitions de dispatch, la gestion RSB
-et des liens de blocs via `eden_shared_jit_emitter_header` et
-`eden_shared_jit_emitter`. Les unités de `shared-jit.cmake` pour
-l'état A64 et les callbacks (M01–M03), ainsi que les transformations
-mémoire G06–G08, restent liées à cet ensemble.
-
-**Périmètre de migration suivant :** traiter G03/G04 avec toutes leurs
-variantes normales / batch / partagées ; conserver la sélection A32,
-la parité des liens/RSB et les tests de protection RW/RX. Aucun générateur
-n'est considéré supprimé avant que la sélection source complète et ces
-contrats soient prouvés.
+Les unités du JIT partagé liées à l'état et aux callbacks
+(M01–M03) ainsi que les transformations mémoire G06–G08 restent
+à consolider. Les tests de parité et de sélection sont des preuves
+hôte, **pas** une preuve de compilation ou d'exécution console.
 
 ## BlockOfCode : W^X, alias mémoire et permissions JIT
 
