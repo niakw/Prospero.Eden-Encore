@@ -16,12 +16,12 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 19 octobre 2026
 
-- `vendor/encore-active` : **279 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **280 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **8 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **7 générateurs** `write_derived`.
 - Deux modules CMake générateurs totalisent **12 générateurs**
-  `write_derived`, soit **22 sites** au total.
+  `write_derived`, soit **19 sites** au total.
 - Deux modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 34.
@@ -60,6 +60,17 @@ nouveaux corps C++ destinés à la console.
 | `headless/scalar-memory.cmake` | Sélection des émetteurs vectoriel et data processing maintenus | Sélecteur conforme ; X08 retiré |
 | `headless/vulkan.cmake` | Sélection/copie de sources Encore maintenues | Sélecteur / configuration |
 <!-- SINGLE_SOURCE_CMAKE_END -->
+
+## Chargeur NSO G15 maintenu
+
+Le chargeur natif de segments (LZ4/ZBIC, contrôles de bornes, BSS en mémoire
+guest, arguments et patches) vit désormais sous
+`vendor/encore-active/eden-core/src/core/loader/nso.cpp`.
+CMake sélectionne une copie exacte en `PORT_BUILD_DIR/nso.cpp`, sans mutation
+de code ; le profil non natif conserve le fichier épinglé. L'ancien
+`write_derived` est archivé uniquement comme oracle testable en répertoire
+temporaire, sans participation au build. La parité octet par octet ne
+remplace pas une vérification native sur console.
 
 ## Allocateur natif maintenu
 

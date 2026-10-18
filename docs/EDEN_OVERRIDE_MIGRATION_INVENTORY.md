@@ -17,7 +17,7 @@ couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
 ## Synthèse vérifiable
 
-- **8 appels générateurs** encore dans CMake ; contre **75 avant**
+- **7 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
 - **12 lectures `file(READ`** et **84 remplacements
@@ -186,6 +186,19 @@ la compilation native et les performances console sont non qualifiées.
 
 L'en-tête de service et les deux variantes de `server_manager.cpp` vivent désormais dans `vendor/encore-active/eden-core/src/core/hle/service/`. Le profil normal et le profil DEV sélectionnent chacun un couple source/en-tête complet, sans fabriquer du C++ depuis CMake. Le test `tools/check-maintained-server-manager.py` rejoue l'ancienne transformation du snapshot épinglé et vérifie l'équivalence exacte des deux profils ; il ne constitue pas une validation sur console.
 
+
+## Chargeur NSO natif : G15 retiré
+
+La variante native de `loader/nso.cpp` est une source complète suivie sous
+`vendor/encore-active/eden-core/src/core/loader/nso.cpp`. Le profil normal
+conserve le fichier Eden d'origine ; `PS5_NATIVE` copie exactement la source
+maintenue sur l'ancien chemin `PORT_BUILD_DIR/nso.cpp`, sans `file(READ)`,
+`string(REPLACE)` ni `write_derived` sur cette unité. Le témoin
+`tools/check-maintained-nso.py` exécute l'ancien générateur **uniquement**
+en répertoire temporaire et compare octet par octet les deux sources.
+Le stress mémoire existant `tools/check-nso-memory.py` conserve son chemin
+de lecture ; compilation native et exécution console restent à qualifier.
+
 ## Générateurs non encore déplacés
 
 Les numéros Gxx sont les positions de cet inventaire, **pas** des validations.
@@ -201,14 +214,13 @@ dans la version normale.
 | G11 | `${derived}` | CPU | Cible variable | 611 |
 | G13 | `${eden_native_memory_tu}` | Mémoire/chargement | Cible variable | 863 |
 | G14 | `${PORT_BUILD_DIR}/core.cpp` | Mémoire/chargement | Unité source | 944 |
-| G15 | `${PORT_BUILD_DIR}/nso.cpp` | Mémoire/chargement | Unité source | 1019 |
-| G19 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 1412 |
-| G20 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 1725 |
-| G21 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 1822 |
-| G23 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2201 |
+| G19 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 1307 |
+| G20 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 1620 |
+| G21 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 1717 |
+| G23 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2096 |
 <!-- OVERRIDE_GENERATORS_END -->
 
-Les identifiants historiques `G01`, `G02`, `G03`, `G04`, `G05`, `G06`, `G07`, `G08`, `G09`, `G16`, `G17` et `G18` sont retirés, avec G09 maintenu dans les unités A64 standard/partagée ; `G01`/`G02` sont retirés avec X09 (sources complètes `BlockOfCode` sous `encore-active`).
+Les identifiants historiques `G01`, `G02`, `G03`, `G04`, `G05`, `G06`, `G07`, `G08`, `G09`, `G15`, `G16`, `G17` et `G18` sont retirés, avec G09 maintenu dans les unités A64 standard/partagée ; `G01`/`G02` sont retirés avec X09 (sources complètes `BlockOfCode` sous `encore-active`).
 L'identifiant historique `G22` est retiré : les deux variantes de l'allocateur
 sont maintenues sous `vendor/encore-active/eden-build/tooling/native/`.
 Les IDs G01–G23 sont stables et ne sont pas renumérotés.
