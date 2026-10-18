@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 316
+**Non, this is not an exhaustive repository-wide inventory.** The 317
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 316 | 294 | 645 |
+| Graphe connu | 317 | 295 | 647 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 261 | 249 | 540 |
+| SOURCE — lecture effectuée, preuve insuffisante | 262 | 250 | 542 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **276** | **263** | **568** |
+| **Encore à qualifier (SOURCE + OPEN)** | **277** | **264** | **570** |
 | Dont priorité P0 (SOURCE + OPEN) | 108 | 103 | 252 |
 
-Le **noyau restant** compte donc 276 critères répartis sur
-263 fichiers et 568 mentions fonction/contrat :
-15 OPEN et 261 SOURCE.
+Le **noyau restant** compte donc 277 critères répartis sur
+264 fichiers et 570 mentions fonction/contrat :
+15 OPEN et 262 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-222 fichiers de code/en-têtes présents et 222 avec un chemin de
+223 fichiers de code/en-têtes présents et 223 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -526,6 +526,7 @@ function/contract tokens are checked by CI for existence only; the
 | F34 | P1 | F33 | vendor/encore-active/eden-backports/src/common/settings_enums.h | GpuFenceBehavior; Accurate | SOURCE | tools/check-active-source-inventory.py | Shipping backport updated fence behavior enum; runtime correctness unproved | 🟡 Source étudiée |
 | F35 | P1 | F24 | vendor/encore-active/eden-core/src/core/file_sys/patch_manager.cpp | PatchManager::CollectPatches; PatchManager::PatchRomFS | SOURCE | tools/check-vendor-consolidation-debt.py | Former four CMake rewrites moved verbatim to Encore-owned source; native behavior unproved | 🟡 Source étudiée |
 | F36 | P1 | F35 | vendor/encore-active/eden-core/src/core/hle/service/vi/conductor.cpp | Conductor::ProcessVsync; Conductor::GetFramePeriodNs | SOURCE | tools/check-vendor-consolidation-debt.py | Native VSync composition delay and published game FPS from former generator, exact source-parity test; console behavior unproved | 🟡 Source étudiée |
+| F37 | P1 | F35 | vendor/encore-active/eden-core/src/core/file_sys/ips_layer.cpp | PatchIPS; IPSwitchCompiler::Parse | SOURCE | tools/check-vendor-consolidation-debt.py | Complete IPS and patch-text parser now selected from Encore; output matches pinned historical CMake generator Git blob, device behavior unproved | 🟡 Source étudiée |
 | L01 | P0 | H47 | vendor/encore-active/eden-backports/src/core/hle/service/am/frontend/applets.cpp | FrontendApplet; child_applets; RequestUpdate | SOURCE | tools/check-active-source-inventory.py | Shipping backport child applet unlink and window update; runtime correctness unproved | 🟡 Source étudiée |
 | L02 | P0 | L01 | vendor/encore-active/eden-backports/src/core/hle/service/am/service/library_applet_accessor.cpp | ILibraryAppletAccessor; RequestFocusStateChangedNotification | SOURCE | tools/check-active-source-inventory.py | Shipping backport frontend focus notification; runtime correctness unproved | 🟡 Source étudiée |
 | L03 | P1 | L02,F25 | vendor/encore-active/eden-backports/src/core/hle/service/am/service/library_applet_creator.cpp | ILibraryAppletCreator; CreateProcess; HOS_VERSION_MAJOR | SOURCE | tools/check-active-source-inventory.py | Shipping backport applet creation with firmware-major argument; runtime correctness unproved | 🟡 Source étudiée |
