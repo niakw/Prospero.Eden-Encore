@@ -35,7 +35,7 @@ assert injected.count(construct) == 2
 derived = injected.replace(construct, cleanup)
 assert derived.count(cleanup) == 2
 assert derived.count(construct) == 2
-assert canonical == "#include <memory>\\n#include <stop_token>\\n".replace("\\n", "\n") + derived
+assert canonical == "#include <memory>\n#include <stop_token>\n" + derived
 assert 'write_derived("${PORT_BUILD_DIR}/include/common/bounded_threadsafe_queue.h"' not in cmake
 
 program = r"""
