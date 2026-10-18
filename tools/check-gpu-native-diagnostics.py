@@ -15,15 +15,12 @@ assert cmake.count('if(NOT PS5_NATIVE)') == 1
 # FC27 hardware regression: unqualified 3D/pitch software blits can skip
 # texture writes and stall the GPU frame. They must not be compiled by default.
 assert 'option(EDEN_UNQUALIFIED_FERMI2D_COPY "3D software blit experiments" OFF)' in cmake
-assert cmake.count('if(EDEN_UNQUALIFIED_FERMI2D_COPY)') == 2
-assert 'if(EDEN_UNQUALIFIED_FERMI2D_COPY)\nset(fermi_old' in cmake
-assert 'if(EDEN_UNQUALIFIED_FERMI2D_COPY)\nset(fermi_copy_old' in cmake
-assert 'string(REPLACE "${fermi_layer_old}" "${fermi_layer_new}" fermi_source "${fermi_source}")\nendif()' in cmake
-assert 'string(REPLACE "${fermi_copy_old}" "${fermi_copy_new}" fermi_source "${fermi_source}")\nendif()' in cmake
-def extract(name: str):
-    m = re.search(r"set\(" + name + r" \[=\[(.*?)\]=\]\)", cmake, re.S)
-    assert m, name
-    return m.group(1)
+assert cmake.count('if(EDEN_UNQUALIFIED_FERMI2D_COPY)') == 1
+assert 'if(EDEN_UNQUALIFIED_FERMI2D_COPY)\n    set(EDEN_MAINTAINED_FERMI_FILE' in cmake
+assert 'target_sources(video_core PRIVATE "${EDEN_MAINTAINED_FERMI_FILE}")' in cmake
+assert 'target_sources(shader_recompiler PRIVATE "${EDEN_MAINTAINED_NATIVE_PRMT}")' in cmake
+assert 'target_sources(video_core PRIVATE "${EDEN_MAINTAINED_NATIVE_BLITTER}")' in cmake
+assert 'write_derived(' not in cmake and 'string(REPLACE' not in cmake
 # PRMT is now compiled from a full maintained shader unit, while Fermi
 # below still carries one isolated CMake generator.
 prmt = (ROOT / "vendor/encore-active/eden-core/src/shader_recompiler/frontend/maxwell/translate/impl/not_implemented.cpp").read_text()
@@ -37,12 +34,26 @@ prmt_reg_old = extract_method(pinned_prmt, "PRMT_reg")
 prmt_new = extract_method(prmt, "PRMT_imm")
 prmt_reg_new = extract_method(prmt, "PRMT_reg")
 prmt_reference = prmt
-fermi_old = extract("fermi_old")
-fermi_new = extract("fermi_new")
-fermi_layer_old = extract("fermi_layer_old")
-fermi_layer_new = extract("fermi_layer_new")
-fermi_copy_old = extract("fermi_copy_old")
-fermi_copy_new = extract("fermi_copy_new")
+fermi_pinned = (ROOT / "vendor/sources/eden/src/video_core/engines/fermi_2d.cpp").read_text()
+fermi_default = (ROOT / "vendor/encore-active/eden-core/src/video_core/engines/fermi_2d_observed.cpp").read_text()
+fermi_experimental = (ROOT / "vendor/encore-active/eden-core/src/video_core/engines/fermi_2d_experimental.cpp").read_text()
+assert fermi_pinned in fermi_default
+def extract_range(src: str, beginning: str, ending: str) -> str:
+    start = src.index(beginning)
+    finish = src.index(ending, start)
+    return src[start:finish]
+fermi_old = fermi_pinned
+fermi_layer_old = fermi_pinned
+fermi_copy_old = fermi_pinned
+fermi_layer_new = extract_range(fermi_experimental,
+    "    // For pitch-linear images, one layer starts exactly pitch*height",
+    "    // The software swizzler already handles the z=0 subrectangle")
+fermi_new = extract_range(fermi_experimental,
+    "    // The software swizzler already handles the z=0 subrectangle",
+    '    UNIMPLEMENTED_IF_MSG(regs.clip_enable != 0, "Clipped blit enabled");')
+fermi_copy_new = extract_range(fermi_experimental,
+    "    if (base_layer_3d_copy || pitch_layer_copy) {",
+    "\n}\n\n} // namespace")
 assert prmt_old.count("ThrowNotImplemented(Opcode::PRMT_imm);") == 1
 assert prmt_new.count("ThrowNotImplemented(Opcode::PRMT_imm);") == 1
 assert "u64 insn" in prmt_new
@@ -110,11 +121,12 @@ assert prmt_index(0x01234567, 0x89abcdef, 0x1111) == 0x45454545
 assert "if (index < 8)" in prmt_new
 # Diagnostic counters must saturate at eight instead of performing atomic
 # read-modify-write on every repeated shader translation or Fermi blit.
-assert "unsigned EdenGpuBoundedSample(std::atomic<unsigned>& samples) noexcept" in cmake
-assert "compare_exchange_weak(current, current + 1u," in cmake
-assert "while (current < 8u)" in cmake
-assert "return 8u;" in cmake
-assert cmake.count("${gpu_bounded_sample_helper}") == 1
+for source in (prmt, fermi_default, fermi_experimental):
+    assert "unsigned EdenGpuBoundedSample(std::atomic<unsigned>& samples) noexcept" in source
+    assert "compare_exchange_weak(current, current + 1u," in source
+    assert "while (current < 8u)" in source
+    assert "return 8u;" in source
+assert "${gpu_bounded_sample_helper}" not in cmake
 assert "EdenGpuBoundedSample" in prmt
 for part in (prmt_new, prmt_reg_new, fermi_new, fermi_layer_new, fermi_copy_new):
     assert ".fetch_add(1, std::memory_order_relaxed)" not in part
@@ -229,7 +241,8 @@ assert pitch_layer_address((1 << 64) - 2, 2048, 1080, 1, 2) is None
 assert pitch_layer_address(0x1000, 0, 1080, 1, 2) is None
 
 assert "return;" in fermi_copy_new
-assert 'message(FATAL_ERROR "Pinned Fermi2D source/destination layer exception anchors changed")' in cmake
+assert (ROOT / "tools/check-maintained-fermi2d-variants.py").is_file()
+assert 'option(EDEN_UNQUALIFIED_FERMI2D_COPY "3D software blit experiments" OFF)' in cmake
 assert "src.depth = 1;" in fermi_copy_new
 assert "Surface dst = regs.dst;" in fermi_copy_new
 assert "dst.depth = 1;" in fermi_copy_new
@@ -265,11 +278,11 @@ assert safe_product(65536, 65536, 4) == 1 << 34  # not 32-bit-wrapped
 assert safe_product(65536, 65536, 4) != (safe_product(65536, 65536, 4) & 0xffffffff)
 
 
-# PRMT and blitter compile directly from Encore; only the separate
-# Fermi2D compatibility generator remains in this native module.
-assert cmake.count("write_derived(") == 1
-assert 'write_derived("${PORT_BUILD_DIR}/fermi_2d_observed.cpp"' in cmake
+# All three native GPU units compile from full Encore-maintained sources.
+# The last diagnostic module has no CMake source rewriting left.
+assert "write_derived(" not in cmake
 assert 'target_sources(shader_recompiler PRIVATE "${EDEN_MAINTAINED_NATIVE_PRMT}")' in cmake
 assert 'target_sources(video_core PRIVATE "${EDEN_MAINTAINED_NATIVE_BLITTER}")' in cmake
+assert 'target_sources(video_core PRIVATE "${EDEN_MAINTAINED_FERMI_FILE}")' in cmake
 print("GPU SOURCE CONTRACT: PRMT immediate/register Index implemented; original Fermi2D transfer path restored by default; extended software copies unqualified and gated")
 print("NOTE graphics correctness and PS5 native CMake build remain to be qualified")
