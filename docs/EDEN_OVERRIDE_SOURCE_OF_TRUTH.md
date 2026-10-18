@@ -16,12 +16,12 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 19 octobre 2026
 
-- `vendor/encore-active` : **280 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **282 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **7 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **6 générateurs** `write_derived`.
 - Deux modules CMake générateurs totalisent **12 générateurs**
-  `write_derived`, soit **19 sites** au total.
+  `write_derived`, soit **18 sites** au total.
 - Deux modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 34.
@@ -60,6 +60,15 @@ nouveaux corps C++ destinés à la console.
 | `headless/scalar-memory.cmake` | Sélection des émetteurs vectoriel et data processing maintenus | Sélecteur conforme ; X08 retiré |
 | `headless/vulkan.cmake` | Sélection/copie de sources Encore maintenues | Sélecteur / configuration |
 <!-- SINGLE_SOURCE_CMAKE_END -->
+
+## Core::System G14 maintenu
+
+Les variantes normale et native du cœur de système sont suivies comme
+fichiers entiers sous `eden-core/src/core/core_{standard,native}.cpp`.
+CMake ne garde que les deux sélections et la copie, et n'injecte plus
+les corps de shutdown/loader/IPC ; le témoin hôte rejoue exactement les
+transformations historiques dans les deux modes, sans prétendre à une
+qualification matérielle.
 
 ## Chargeur NSO G15 maintenu
 
