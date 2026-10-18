@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **244 fichiers** de code et d'en-têtes enregistrés.
-- **244 fichiers** possèdent une correspondance de chemin *exacte*
+- **246 fichiers** de code et d'en-têtes enregistrés.
+- **246 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -25,7 +25,7 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 ni une certification console. Le graphe
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` porte les contrats fonctionnels,
 leurs états et les preuves. L'inventaire des 26 générateurs CMake
-principaux, 14 générateurs de modules, cinq modules indirects et 46 patches
+principaux, 13 générateurs de modules, cinq modules indirects et 46 patches
 reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
 <!-- ACTIVE_SOURCE_CATALOG_START -->
@@ -187,6 +187,8 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/hid_core/resources/npad/npad_pause_diag.cpp` | `maintained-override` | H52 |
 | `eden-core/src/shader_recompiler/frontend/maxwell/translate/impl/not_implemented.cpp` | `maintained-override` | V80 |
 | `eden-core/src/video_core/buffer_cache/buffer_cache.h` | `maintained-override` | V77 |
+| `eden-core/src/video_core/engines/fermi_2d_experimental.cpp` | `maintained-override` | V82 |
+| `eden-core/src/video_core/engines/fermi_2d_observed.cpp` | `maintained-override` | V81 |
 | `eden-core/src/video_core/engines/maxwell_3d.cpp` | `maintained-override` | V78 |
 | `eden-core/src/video_core/engines/sw_blitter/blitter.cpp` | `maintained-override` | V79 |
 | `eden-core/src/video_core/macro.cpp` | `maintained-override` | Q05,V65 |

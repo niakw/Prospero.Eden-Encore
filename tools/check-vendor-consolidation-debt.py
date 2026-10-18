@@ -822,6 +822,16 @@ assert 'list(APPEND jit_sources "${EDEN_MAINTAINED_SCALAR_BACKEND}/emit_x64_${un
 for unit in ("vector", "data_processing"):
     assert (active / f"eden-core/src/dynarmic/backend/x64/emit_x64_{unit}.cpp").is_file()
 assert (root / "tools/check-maintained-scalar-emitters.py").is_file()
+# Both Fermi2D variants are full tracked sources; native CMake selects,
+# and the ordinary mode remains OFF for unqualified layered copies.
+for fermi_variant in ("fermi_2d_observed.cpp", "fermi_2d_experimental.cpp"):
+    assert (active / "eden-core/src/video_core/engines" / fermi_variant).is_file()
+fermi_selector = (root / "headless/gpu_native_observability.cmake").read_text()
+assert 'option(EDEN_UNQUALIFIED_FERMI2D_COPY "3D software blit experiments" OFF)' in fermi_selector
+assert 'write_derived(' not in fermi_selector
+assert (root / "tools/check-maintained-fermi2d-variants.py").is_file()
+print("VENDOR_MAINTAINED_FERMI2D_VARIANTS_OWNER_PASS")
+
 # Maxwell PRMT translations now live in the complete tracked shader unit.
 assert (active / "eden-core/src/shader_recompiler/frontend/maxwell/translate/impl/not_implemented.cpp").is_file()
 assert 'target_sources(shader_recompiler PRIVATE "${EDEN_MAINTAINED_NATIVE_PRMT}")' in (root / "headless/gpu_native_observability.cmake").read_text()
@@ -1225,12 +1235,12 @@ for module in module_files:
     module_current.extend((module, target) for target in
                           re.findall(r'write_derived\(\s*"([^"]+)"', content))
 assert module_recorded == module_current, "Module CMake source generator inventory is stale"
-assert len(module_current) == 14, len(module_current)
+assert len(module_current) == 13, len(module_current)
 # Indirect X01/X02 are no longer CMake generators: full source units
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 40
+assert len(recorded) + len(module_recorded) == 39
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
