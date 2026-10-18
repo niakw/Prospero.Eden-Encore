@@ -294,22 +294,17 @@ if(PS5_NATIVE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     eden_reg_alloc_sources()
 endif()
 
-# Patch lookup must not create a large empty record for every compiled block.
-# Keep the upstream implementation and change only its absent-target path.
-file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/dynarmic/backend/x64/emit_x64.cpp" emitter)
-set(patch_lookup "    const PatchInformation& patch_info = patch_information[target_desc];")
-string(FIND "${emitter}" "${patch_lookup}" patch_lookup_offset)
-if(patch_lookup_offset LESS 0)
-    message(FATAL_ERROR "Pinned JIT patch lookup changed")
-endif()
-string(REPLACE "${patch_lookup}"
-    "    const auto patch = patch_information.find(target_desc);\n    if (patch == patch_information.end()) return;\n    const PatchInformation& patch_info = patch->second;" emitter "${emitter}")
+# Complete x64 patch-lookup units; native omits perf-map formatting entirely.
+set(EDEN_MAINTAINED_EMIT_X64_ROOT "${PORT_ROOT}/vendor/encore-active/eden-core/src/dynarmic/backend/x64")
 if(PS5_NATIVE)
-    # PS5 has no perf-map writer. Its no-op still evaluates the formatted name.
-    string(REPLACE "    PerfMapRegister(entrypoint, code.getCurr(), LocationDescriptorToFriendlyName(descriptor));"
-        "" emitter "${emitter}")
+    set(EDEN_EMIT_X64_SOURCE "${EDEN_MAINTAINED_EMIT_X64_ROOT}/emit_x64_native.cpp")
+else()
+    set(EDEN_EMIT_X64_SOURCE "${EDEN_MAINTAINED_EMIT_X64_ROOT}/emit_x64_host.cpp")
 endif()
-write_derived("${PORT_BUILD_DIR}/emit_x64.cpp" "${emitter}")
+if(NOT EXISTS "${EDEN_EMIT_X64_SOURCE}")
+    message(FATAL_ERROR "Missing maintained common x64 emitter ${EDEN_EMIT_X64_SOURCE}")
+endif()
+configure_file("${EDEN_EMIT_X64_SOURCE}" "${PORT_BUILD_DIR}/emit_x64.cpp" COPYONLY)
 get_target_property(jit_sources dynarmic SOURCES)
 list(FILTER jit_sources EXCLUDE REGEX "(^|/)emit_x64\\.cpp$")
 set_property(TARGET dynarmic PROPERTY SOURCES "${jit_sources}")
