@@ -11,16 +11,16 @@ développement, les options JIT expérimentales, les backends et le build
 natif sélectionnent chacun leur sous-ensemble.
 
 L'inventaire complémentaire `docs/EDEN_ACTIVE_SOURCE_CATALOG.md` suit les
-268 fichiers de code et en-têtes dans `vendor/encore-active`,
+271 fichiers de code et en-têtes dans `vendor/encore-active`,
 y compris les backports de production et la dépendance graphique. Cette
 couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
 ## Synthèse vérifiable
 
-- **15 appels générateurs** encore dans CMake ; contre **75 avant**
+- **13 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
-- **19 lectures `file(READ`** et **110 remplacements
+- **17 lectures `file(READ`** et **94 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
 - Les versions diagnostiques de `IFile::Read`, `IStorage::Read` et des appels
@@ -81,7 +81,7 @@ et non les 458 scripts Python/shell/CMake du seul dossier `tools/`.
 | `tools/launcher/strings.py` | **RÉGÉNÉRATION EXPLICITE** | Catalogues PO et en-tête français `fr_fr_embedded.h` | Ressources locales |
 | `tools/ps-glyph-*.py` | **OUTILS HORS BUILD** d'analyse/adaptation de mods | Fichiers de recherche / packs externes, pas un patch C++ de l'émulateur | Frontière à conserver |
 | `headless/macro_recovery.cmake`, `slot_vector_recovery.cmake` | **BUILD**, écriture sans `write_derived` | Deux sorties CMake indirectes | Déjà indexées X01/X02 |
-| `headless/checked-fastmem.cmake` et quatre autres modules indirects | **BUILD**, changement de variables source avant écriture | Unités dérivées du CMake principal | Déjà indexées X03–X07 |
+| Trois modules indirects encore actifs (X05–X07) | **BUILD**, changement de variables source avant écriture | Unités dérivées du CMake principal | Indexées X05–X07 ; X03 et X08 retirés |
 | `headless/vulkan.cmake` | **BUILD**, copie/sélection d'un fork vérifié | `encore-active/eden-vulkan` | Aucun appel au générateur Python |
 
 **Règle de lecture :** le compteur `23 + 12 = 35` décrit uniquement les
@@ -194,24 +194,22 @@ dans la version normale.
 <!-- OVERRIDE_GENERATORS_START -->
 | ID | Sortie `write_derived` | Domaine indicatif | Catégorie | Ligne CMake |
 | --- | --- | --- | --- | ---: |
-| G06 | `${PORT_BUILD_DIR}/include/${memory_inc}` | Dynarmic/JIT | Cible variable | 453 |
-| G07 | `${PORT_BUILD_DIR}/include/${memory_relative}` | Dynarmic/JIT | Cible variable | 473 |
-| G10 | `${PORT_BUILD_DIR}/a32_interface.cpp` | Dynarmic/JIT | Unité source | 561 |
-| G11 | `${derived}` | CPU | Cible variable | 733 |
-| G12 | `${PORT_BUILD_DIR}/physical_core.cpp` | CPU | Unité source | 815 |
-| G13 | `${eden_native_memory_tu}` | Mémoire/chargement | Cible variable | 1054 |
-| G14 | `${PORT_BUILD_DIR}/core.cpp` | Mémoire/chargement | Unité source | 1135 |
-| G15 | `${PORT_BUILD_DIR}/nso.cpp` | Mémoire/chargement | Unité source | 1210 |
-| G16 | `${PORT_BUILD_DIR}/k_page_table_base.cpp` | Kernel/IPC/entrées | Unité source | 1365 |
-| G17 | `${PORT_BUILD_DIR}/include/${server_header}` | Kernel/IPC/entrées | Cible variable | 1551 |
-| G18 | `${PORT_BUILD_DIR}/server_manager.cpp` | Kernel/IPC/entrées | Unité source | 1608 |
-| G19 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 1621 |
-| G20 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 1934 |
-| G21 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 2031 |
-| G23 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2410 |
+| G10 | `${PORT_BUILD_DIR}/a32_interface.cpp` | Dynarmic/JIT | Unité source | 453 |
+| G11 | `${derived}` | CPU | Cible variable | 625 |
+| G12 | `${PORT_BUILD_DIR}/physical_core.cpp` | CPU | Unité source | 707 |
+| G13 | `${eden_native_memory_tu}` | Mémoire/chargement | Cible variable | 946 |
+| G14 | `${PORT_BUILD_DIR}/core.cpp` | Mémoire/chargement | Unité source | 1027 |
+| G15 | `${PORT_BUILD_DIR}/nso.cpp` | Mémoire/chargement | Unité source | 1102 |
+| G16 | `${PORT_BUILD_DIR}/k_page_table_base.cpp` | Kernel/IPC/entrées | Unité source | 1257 |
+| G17 | `${PORT_BUILD_DIR}/include/${server_header}` | Kernel/IPC/entrées | Cible variable | 1443 |
+| G18 | `${PORT_BUILD_DIR}/server_manager.cpp` | Kernel/IPC/entrées | Unité source | 1500 |
+| G19 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 1513 |
+| G20 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 1826 |
+| G21 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 1923 |
+| G23 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2302 |
 <!-- OVERRIDE_GENERATORS_END -->
 
-Les identifiants historiques `G01`, `G02`, `G03`, `G04`, `G05`, `G08` et `G09` sont retirés, avec G09 maintenu dans les unités A64 standard/partagée ; `G01`/`G02` sont retirés avec X09 (sources complètes `BlockOfCode` sous `encore-active`).
+Les identifiants historiques `G01`, `G02`, `G03`, `G04`, `G05`, `G06`, `G07`, `G08` et `G09` sont retirés, avec G09 maintenu dans les unités A64 standard/partagée ; `G01`/`G02` sont retirés avec X09 (sources complètes `BlockOfCode` sous `encore-active`).
 L'identifiant historique `G22` est retiré : les deux variantes de l'allocateur
 sont maintenues sous `vendor/encore-active/eden-build/tooling/native/`.
 Les IDs G01–G23 sont stables et ne sont pas renumérotés.
@@ -407,7 +405,7 @@ Les émetteurs `emit_x64_vector.cpp` et `emit_x64_data_processing.cpp`
 sont désormais versionnés sous `vendor/encore-active/eden-core/src/dynarmic/backend/x64/`.
 Le module CMake ne les réécrit plus ; les trois anciens remplacements ne
 servent qu'au témoin de parité hôte. Sa transformation restante de
-`memory_source` est enregistrée comme dette indirecte X08 et doit être
+`memory_source` (X08) est désormais retirée de CMake et doit être
 traitée avec l'ensemble de l'émetteur mémoire, sans la masquer.
 
 ## Blitter logiciel GPU : source maintenue
@@ -450,7 +448,7 @@ complètes de `BlockOfCode` sont maintenues sous `encore-active`.
 
 Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules
 inclus par ce fichier contiennent **12 autres appels `write_derived()`**
-dans 2 fichiers. Le total de **27 appels** (15 + 12) est donc un **nombre de
+dans 2 fichiers. Le total de **25 appels** (13 + 12) est donc un **nombre de
 sites CMake**, pas un dénombrement des fichiers réellement produits à
 l'exécution. Un module inclus peut définir des macros sans les exécuter,
 et plusieurs sorties sont explicitement conditionnées.
@@ -475,8 +473,8 @@ et plusieurs sorties sont explicitement conditionnées.
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **27 sites** `write_derived()`, ni dans
-les **5 modules indirects** ci-dessous :
+Ils ne sont comptés ni dans les **25 sites** `write_derived()`, ni dans
+les **3 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,
   sous contrôle d'identité et de hash. Il modifie **l'arbre Eden fourni
@@ -558,18 +556,16 @@ que chaque chemin a été validé sur console.
 
 ## Overrides indirects sans `write_derived()` local
 
-Ces **5 modules supplémentaires** ne sont pas inclus dans les **32 appels**.
+Ces **3 modules supplémentaires** ne sont pas inclus dans les **25 appels**.
 Tous modifient des variables-source ensuite écrites par le CMake principal.
 Ils ne correspondent pas chacun à une unité C++ distincte.
 
 <!-- INDIRECT_OVERRIDES_START -->
 | ID | Module | Origine / source réécrite | Mécanisme | État |
 | --- | --- | --- | --- | --- |
-| X03 | `headless/checked-fastmem.cmake` | `memory_emitter`, `memory_source` | Modifications de l'émetteur JIT dans les variables CMake | Non migré |
 | X05 | `headless/native_guest_range_overflow.cmake` | `eden_cpu_memory` | Contrôle de débordement des adresses mémoire avant génération | Non migré |
 | X06 | `headless/native_jit_memory_read_guard.cmake` | `wrapper` | Contrôle des lectures de mémoire invitée avant génération | Non migré |
 | X07 | `headless/physical_core_interrupt_atomic.cmake` | `physical_core_source` | Accès atomiques aux interruptions avant génération | Non migré |
-| X08 | `headless/scalar-memory.cmake` | `memory_source` | Insertion scalaire dans la variable source de l'émetteur mémoire CMake | Non migré |
 <!-- INDIRECT_OVERRIDES_END -->
 
 Le sélecteur `headless/vulkan.cmake` copie des fichiers déjà maintenus
@@ -584,9 +580,9 @@ Les deux générateurs indirects `macro_recovery.cmake` et
 maintenues dans `vendor/encore-active/eden-core`, sélectionnées directement.
 Leurs transformations historiques servent désormais uniquement de parité.
 
-Les quatre modules encore actifs `checked-fastmem.cmake`,
-`native_guest_range_overflow.cmake`, `native_jit_memory_read_guard.cmake`
-et `physical_core_interrupt_atomic.cmake` modifient des variables-source
+Les trois modules encore actifs `native_guest_range_overflow.cmake`,
+`native_jit_memory_read_guard.cmake` et
+`physical_core_interrupt_atomic.cmake` modifient des variables-source
 qui sont ensuite écrites par CMake. Le correctif GPU des plages et de
 `IsGranularRange` n'est plus dans un module : il vit dans la source C++
 maintenue `vendor/encore-active/eden-core/src/video_core/memory_manager.cpp`.

@@ -1,6 +1,6 @@
 # G06–G07 — frontières de migration des émetteurs mémoire Dynarmic
 
-Date : 2026-10-18. Statut : **cartographié, migration des deux corps G06/G07 encore ouverte**.
+Date : 2026-10-18. Statut : **sources G06/G07 migrées, validation hôte et native encore ouverte**.
 
 ## But et sources d'autorité
 
@@ -32,7 +32,7 @@ build existants ; aucun `string(REPLACE)` de code C++ ne doit rester.
 | `EDEN_EXCLUSIVE_ADDRESS` / `VALUE` / `CONF_ARG` | `headless/dynarmic/shared-jit.cmake`, G06 + G08 | Adressage du monitor et de la configuration par l'état JIT A64 partagé ; adresse locale A32 en mode normal |
 | Nettoyage des réservations exclusives | `eden_shared_jit_memory_header`, G07 | Suppression des réservations de tous les cœurs pour l'état partagé, sans changer les règles A32 ordinaires |
 
-Les fragments `scalar-memory-*.inc` sont des **entrées actives de
+Les fragments `scalar-memory-*.inc` sont des **oracles de parité historiques, plus des entrées actives de
 l'assemblage CMake** conservées sous `vendor/encore-active/eden-core/dynarmic/scalar/`.
 Ils ne deviennent de simples oracles historiques qu'après le retrait effectif
 de leurs insertions CMake. Le futur corps maintenu de G06 doit intégrer leur
