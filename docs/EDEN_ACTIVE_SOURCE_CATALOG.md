@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **224 fichiers** de code et d'en-têtes enregistrés.
-- **224 fichiers** possèdent une correspondance de chemin *exacte*
+- **225 fichiers** de code et d'en-têtes enregistrés.
+- **225 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -124,6 +124,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/dynarmic/shared-jit/jit_state_args.inc` | `maintained-override` | J26 |
 | `eden-core/gpu-injections/gpu_queue_stop_wait.inc` | `maintained-override` | Q02,V72 |
 | `eden-core/gpu-injections/gpu_sync_failure_wait.inc` | `maintained-override` | V73 |
+| `eden-core/host-gpu/include/video_core/gpu_thread.h` | `maintained-override` | Q09 |
 | `eden-core/include/core/file_sys/bis_factory.h` | `maintained-override` | F13 |
 | `eden-core/overrides/core/device_memory_manager.inc` | `maintained-override` | M08 |
 | `eden-core/overrides/core/gpu_dirty_memory_manager.h` | `maintained-override` | M09 |
@@ -266,7 +267,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
 Ces deux fichiers sont inclus dans les **83 entrées** de
 `vendor/encore-active/eden-backports/manifest.json`, mais ne sont
-pas comptés parmi les 224 fichiers de code et d'en-têtes.
+pas comptés parmi les 225 fichiers de code et d'en-têtes.
 
 ## Inventaire hors `vendor/encore-active`
 
