@@ -986,6 +986,26 @@ assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/sockets/bsd.cpp" a
 assert 'target_include_directories(core PRIVATE "${EDEN_PORT_DIR}")' in c
 print("MAINTAINED_GUEST_BSD_PARITY_PASS rewrites=5 shipping_backport=preserved")
 
+
+# Former CMake guest DNS substitutions are now a host-only equality oracle.
+dns_base = (active / "eden-backports/src/core/hle/service/sockets/sfdnsres.cpp").read_text()
+dns_first = dns_base.find("static const constexpr std::array blockedDomains = {")
+dns_last = dns_base.find("static NetDbError GetAddrInfoErrorToNetDbError")
+assert dns_first >= 0 and dns_last > dns_first
+dns_expected = dns_base[:dns_first] + dns_base[dns_last:]
+dns_pairs = [["    // Prevent resolution of Nintendo servers\n    if (IsBlockedHost(host)) {\n        LOG_WARNING(Network, \"Resolution of hostname {} requested, returning EAI_AGAIN\", host);\n        return {0, GetAddrInfoError::AGAIN};\n    }\n\n","",2],["    if (eden_network_host_blocked(host.c_str())) return {0, GetAddrInfoError::NODATA};","    const bool encore_denied = eden_network_host_blocked(host.c_str()) != 0;\n    eden_network_audit_event(\"guest\", encore_denied ? \"dns-denied\" : \"dns-allowed\", host.c_str(), 0, encore_denied ? 1 : 0);\n    if (encore_denied) return {0, GetAddrInfoError::NODATA};",2],["    auto res_v = Network::GetAddressInfo(host, /*service*/ std::nullopt);","    auto res_v = Network::GetAddressInfo(host, /*service*/ std::nullopt);\n    if (eden_network_audit_active()) {\n        const bool found = std::get_if<std::vector<Network::AddrInfo>>(&res_v) != nullptr;\n        eden_network_audit_event(\"guest\", found ? \"dns-resolved\" : \"dns-error\", host.c_str(), 0, found ? 0 : 1);\n    }",1],["    auto res_v = Network::GetAddressInfo(host, service);","    auto res_v = Network::GetAddressInfo(host, service);\n    if (eden_network_audit_active()) {\n        const bool found = std::get_if<std::vector<Network::AddrInfo>>(&res_v) != nullptr;\n        eden_network_audit_event(\"guest\", found ? \"dns-resolved\" : \"dns-error\", host.c_str(), 0, found ? 0 : 1);\n    }",1]]
+for i, (old, new, occurrences) in enumerate(dns_pairs):
+    assert dns_expected.count(old) == occurrences, ("shipping guest DNS drift", i)
+    dns_expected = dns_expected.replace(old, new)
+assert "IsBlockedHost" not in dns_expected
+dns_expected = '#include "network_audit.h"\n' + dns_expected
+assert (active / "eden-core/src/core/hle/service/sockets/sfdnsres.cpp").read_text() == dns_expected
+assert 'list(APPEND core_sources "${EDEN_MAINTAINED_GUEST_DNS}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/audited_guest_dns.cpp"' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/service/sockets/sfdnsres.cpp" audited_dns)' not in c
+assert 'target_include_directories(core PRIVATE "${EDEN_PORT_DIR}")' in c
+print("MAINTAINED_GUEST_DNS_SOURCE_PARITY_PASS old_rewrites=5 denied_policy=retained")
+
 # Keep the generator inventory synchronized with every future source migration.
 # It catalogs CMake invocations, not physical output files from variable loops.
 import re
@@ -1067,7 +1087,7 @@ assert len(module_current) == 21, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 56
+assert len(recorded) + len(module_recorded) == 55
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
