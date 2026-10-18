@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **264 fichiers** de code et d'en-têtes enregistrés.
-- **264 fichiers** possèdent une correspondance de chemin *exacte*
+- **266 fichiers** de code et d'en-têtes enregistrés.
+- **266 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -185,6 +185,8 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/dynarmic/backend/x64/a64_emit_x64_standard.h` | `maintained-override` | B15 |
 | `eden-core/src/dynarmic/backend/x64/a64_interface_shared.cpp` | `maintained-override` | B11 |
 | `eden-core/src/dynarmic/backend/x64/a64_interface_standard.cpp` | `maintained-override` | J10 |
+| `eden-core/src/dynarmic/backend/x64/emit_x64_host.cpp` | `maintained-override` | B17 |
+| `eden-core/src/dynarmic/backend/x64/emit_x64_native.cpp` | `maintained-override` | B18 |
 | `eden-core/src/dynarmic/backend/x64/block_of_code.h` | `maintained-override` | B10 |
 | `eden-core/src/dynarmic/backend/x64/block_of_code_host.cpp` | `maintained-override` | B09 |
 | `eden-core/src/dynarmic/backend/x64/block_of_code_native.cpp` | `maintained-override` | J09 |
@@ -306,7 +308,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
 Ces deux fichiers sont inclus dans les **83 entrées** de
 `vendor/encore-active/eden-backports/manifest.json`, mais ne sont
-pas comptés parmi les 264 fichiers de code et d'en-têtes.
+pas comptés parmi les 266 fichiers de code et d'en-têtes.
 
 ## Inventaire hors `vendor/encore-active`
 
@@ -314,7 +316,7 @@ Les **170 fichiers source/en-tête/fragment** de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
 34 ont désormais un propriétaire exact dans le graphe courant ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
-La couverture de 264/264 ci-dessus ne s'applique **pas** à ce dossier.
+La couverture de 266/266 ci-dessus ne s'applique **pas** à ce dossier.
 
 ## Critères de tenue à jour
 
