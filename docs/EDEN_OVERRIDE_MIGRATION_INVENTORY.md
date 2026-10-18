@@ -11,16 +11,16 @@ développement, les options JIT expérimentales, les backends et le build
 natif sélectionnent chacun leur sous-ensemble.
 
 L'inventaire complémentaire `docs/EDEN_ACTIVE_SOURCE_CATALOG.md` suit les
-225 fichiers de code et en-têtes dans `vendor/encore-active`,
+227 fichiers de code et en-têtes dans `vendor/encore-active`,
 y compris les backports de production et la dépendance graphique. Cette
 couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
 ## Synthèse vérifiable
 
-- **37 appels générateurs** encore dans CMake ; contre **75 avant**
+- **36 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
-- **45 lectures `file(READ`** et **163 remplacements
+- **44 lectures `file(READ`** et **163 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
 - Les versions diagnostiques de `IFile::Read`, `IStorage::Read` et des appels
@@ -152,12 +152,11 @@ dans la version normale.
 | G29 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 2202 |
 | G30 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 2299 |
 | G31 | `${PORT_BUILD_DIR}/maxwell_3d.cpp` | GPU/vidéo | Unité source | 2319 |
-| G32 | `${PORT_BUILD_DIR}/shader_environment.cpp` | GPU/vidéo | Unité source | 2334 |
-| G33 | `${PORT_BUILD_DIR}/audited_guest_dns.cpp` | Runtime/FS/réseau | Unité source | 2471 |
-| G34 | `${PORT_BUILD_DIR}/audited_guest_bsd.cpp` | Runtime/FS/réseau | Unité source | 2533 |
-| G35 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 2631 |
-| G36 | `${eden_app_crt}` | Runtime/FS/réseau | Cible variable | 2643 |
-| G37 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2828 |
+| G32 | `${PORT_BUILD_DIR}/audited_guest_dns.cpp` | Runtime/FS/réseau | Unité source | 2468 |
+| G33 | `${PORT_BUILD_DIR}/audited_guest_bsd.cpp` | Runtime/FS/réseau | Unité source | 2530 |
+| G34 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 2628 |
+| G35 | `${eden_app_crt}` | Runtime/FS/réseau | Cible variable | 2640 |
+| G36 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2825 |
 <!-- OVERRIDE_GENERATORS_END -->
 
 ## Prochain ordre de migration
@@ -331,7 +330,7 @@ pas que le PC invité avance après un réveil HLE.
 
 Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules
 inclus par ce fichier contiennent **21 autres appels `write_derived()`**
-dans 6 fichiers. Le total de **58 appels** (37 + 21) est donc un **nombre de
+dans 6 fichiers. Le total de **57 appels** (37 + 21) est donc un **nombre de
 sites CMake**, pas un dénombrement des fichiers réellement produits à
 l'exécution. Un module inclus peut définir des macros sans les exécuter,
 et plusieurs sorties sont explicitement conditionnées.
@@ -365,7 +364,7 @@ et plusieurs sorties sont explicitement conditionnées.
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **58 sites** `write_derived()`, ni dans
+Ils ne sont comptés ni dans les **57 sites** `write_derived()`, ni dans
 les **4 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,
@@ -448,7 +447,7 @@ que chaque chemin a été validé sur console.
 
 ## Overrides indirects sans `write_derived()` local
 
-Ces **4 modules supplémentaires** ne sont pas inclus dans les **58 appels**.
+Ces **4 modules supplémentaires** ne sont pas inclus dans les **57 appels**.
 Tous modifient des variables-source ensuite écrites par le CMake principal.
 Ils ne sont pas quatre sources C++ distinctes.
 
