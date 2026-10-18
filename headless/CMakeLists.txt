@@ -2271,26 +2271,16 @@ endif()
 write_derived("${PORT_BUILD_DIR}/gpu.cpp" "${gpu_source}")
 list(APPEND video_sources "${PORT_BUILD_DIR}/gpu.cpp")
 if(EDEN_DEV_PROFILE)
-    # Render-enable evaluations per mode and result (EDEN_DEV_GUEST cond=), to tell GPU
-    # render conditions apart from the game's own LOD choices (LOD swaps).
-    file(READ "${PROJECT_SOURCE_DIR}/src/video_core/engines/maxwell_3d.cpp" maxwell_source)
-    set(condition_accelerated "    if (rasterizer->AccelerateConditionalRendering()) {\n        execute_on = true;\n        return;\n    }")
-    set(condition_end "    }\n    }\n}\n\nvoid Maxwell3D::ProcessCounterReset() {")
-    foreach(anchor IN ITEMS condition_accelerated condition_end)
-        string(FIND "${maxwell_source}" "${${anchor}}" anchor_at)
-        if(anchor_at LESS 0)
-            message(FATAL_ERROR "Pinned Maxwell3D::ProcessQueryCondition changed (${anchor})")
-        endif()
-    endforeach()
-    string(REPLACE "${condition_accelerated}"
-        "    if (rasterizer->AccelerateConditionalRendering()) {\n        execute_on = true;\n        ::Eden::Performance::CountCondition(0);\n        return;\n    }"
-        maxwell_source "${maxwell_source}")
-    string(REPLACE "${condition_end}"
-        "    }\n    }\n    ::Eden::Performance::CountCondition(\n        regs.render_enable_override == Regs::RenderEnable::Override::AlwaysRender ? 1u :\n        regs.render_enable_override == Regs::RenderEnable::Override::NeverRender ? 2u :\n        3u + static_cast<unsigned>(regs.render_enable.mode) * 2u + (execute_on ? 1u : 0u));\n}\n\nvoid Maxwell3D::ProcessCounterReset() {"
-        maxwell_source "${maxwell_source}")
-    write_derived("${PORT_BUILD_DIR}/maxwell_3d.cpp" "#include \"${EDEN_PORT_DIR}/performance.h\"\n${maxwell_source}")
+    # Complete Encore-maintained conditional-render diagnostic; do not
+    # generate a source by injecting text into the pinned Maxwell engine.
+    set(EDEN_MAINTAINED_DEV_MAXWELL
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/video_core/engines/maxwell_3d.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_DEV_MAXWELL}")
+        message(FATAL_ERROR "Missing maintained Maxwell diagnostic source")
+    endif()
+    target_include_directories(video_core PRIVATE "${EDEN_PORT_DIR}")
     list(REMOVE_ITEM video_sources engines/maxwell_3d.cpp)
-    list(APPEND video_sources "${PORT_BUILD_DIR}/maxwell_3d.cpp")
+    list(APPEND video_sources "${EDEN_MAINTAINED_DEV_MAXWELL}")
 endif()
 # Upstream ProsperoEden 673f675 (#72), adapted to pinned Eden 5f142c79:
 # salvage complete shader pipeline entries after a damaged tail.

@@ -11,16 +11,16 @@ développement, les options JIT expérimentales, les backends et le build
 natif sélectionnent chacun leur sous-ensemble.
 
 L'inventaire complémentaire `docs/EDEN_ACTIVE_SOURCE_CATALOG.md` suit les
-235 fichiers de code et en-têtes dans `vendor/encore-active`,
+236 fichiers de code et en-têtes dans `vendor/encore-active`,
 y compris les backports de production et la dépendance graphique. Cette
 couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
 ## Synthèse vérifiable
 
-- **28 appels générateurs** encore dans CMake ; contre **75 avant**
+- **27 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
-- **35 lectures `file(READ`** et **145 remplacements
+- **34 lectures `file(READ`** et **143 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
 - Les versions diagnostiques de `IFile::Read`, `IStorage::Read` et des appels
@@ -84,7 +84,7 @@ et non les 458 scripts Python/shell/CMake du seul dossier `tools/`.
 | `headless/checked-fastmem.cmake` et quatre autres modules indirects | **BUILD**, changement de variables source avant écriture | Unités dérivées du CMake principal | Déjà indexées X03–X07 |
 | `headless/vulkan.cmake` | **BUILD**, copie/sélection d'un fork vérifié | `encore-active/eden-vulkan` | Aucun appel au générateur Python |
 
-**Règle de lecture :** le compteur `28 + 21 = 49` décrit uniquement les
+**Règle de lecture :** le compteur `27 + 21 = 48` décrit uniquement les
 sites `write_derived`, pas les générateurs Python, les copies de dépendances,
 les recettes CMake ni les sorties de ressources. **Zéro source sans propriétaire
 dans le catalogue `vendor/encore-active` n'implique pas zéro override hors de
@@ -135,6 +135,15 @@ Le compilateur sélectionne les deux unités et leur include relatif.
 `scalar-fold.inc` reste témoin de parité, non injecté par CMake.
 La politique JIT reste inchangée. Build et essais console encore requis.
 
+## Diagnostic conditionnel Maxwell : source maintenue
+
+Le profil `EDEN_DEV_PROFILE` sélectionne désormais
+`vendor/encore-active/eden-core/src/video_core/engines/maxwell_3d.cpp`.
+Cette unité complète reproduit les deux compteurs de rendu conditionnel de
+l'ancienne génération CMake. Le profil normal utilise toujours la source
+Eden d'origine. Le contrôle de parité vérifie exactement les modifications,
+sans conclure à une amélioration GPU sur console.
+
 ## Générateurs non encore déplacés
 
 Les numéros Gxx sont les positions de cet inventaire, **pas** des validations.
@@ -172,9 +181,8 @@ dans la version normale.
 | G23 | `${PORT_BUILD_DIR}/gl_rasterizer.cpp` | Audio/graphique | Unité source | 2079 |
 | G24 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 2174 |
 | G25 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 2271 |
-| G26 | `${PORT_BUILD_DIR}/maxwell_3d.cpp` | GPU/vidéo | Unité source | 2291 |
-| G27 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 2489 |
-| G28 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2684 |
+| G26 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 2479 |
+| G27 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2674 |
 <!-- OVERRIDE_GENERATORS_END -->
 
 ## Prochain ordre de migration
@@ -382,7 +390,7 @@ et plusieurs sorties sont explicitement conditionnées.
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **49 sites** `write_derived()`, ni dans
+Ils ne sont comptés ni dans les **48 sites** `write_derived()`, ni dans
 les **4 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,
