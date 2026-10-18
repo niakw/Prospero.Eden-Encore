@@ -14,8 +14,8 @@ l'audit moteur. Un chemin noté « À qualifier » peut avoir été audité sous
 une autre forme : il manque seulement la référence de chemin exacte.
 
 - **175** chemins sous `headless/`, dont **58** sources C/C++ et **117** en-têtes/fragments.
-- **25** chemins déjà présents dans le graphe moteur.
-- **150** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
+- **34** chemins déjà présents dans le graphe moteur.
+- **141** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
 - Les deux générateurs de profils `headless/encore_overrides_generated.h`,
   `headless/glyph_overrides_generated.h` et les autres ressources générées
   sont des entrées de l'inventaire, **pas** de nouveaux patchs CMake.
@@ -71,14 +71,14 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/glyph_version.h` | en-tête/fragment | — | À qualifier |
 | `headless/gpu_deferred_replay.h` | en-tête/fragment | M02 | Chemin indexé, preuve dépend du graphe |
 | `headless/gpu_deferred_store_publication.h` | en-tête/fragment | M05 | Chemin indexé, preuve dépend du graphe |
-| `headless/gpu_deferred_write_queue.h` | en-tête/fragment | — | À qualifier |
+| `headless/gpu_deferred_write_queue.h` | en-tête/fragment | U21 | Chemin indexé, preuve dépend du graphe |
 | `headless/gpu_dirty_region_split.h` | en-tête/fragment | R04 | Chemin indexé, preuve dépend du graphe |
-| `headless/gpu_failure.h` | en-tête/fragment | — | À qualifier |
+| `headless/gpu_failure.h` | en-tête/fragment | U20 | Chemin indexé, preuve dépend du graphe |
 | `headless/gpu_fault_rate_limit.h` | en-tête/fragment | — | À qualifier |
 | `headless/gpu_native_probe.inc` | en-tête/fragment | — | À qualifier |
 | `headless/gpu_probe.inc` | en-tête/fragment | — | À qualifier |
 | `headless/graphics.cpp` | runtime/bridge | V11 | Chemin indexé, preuve dépend du graphe |
-| `headless/graphics.h` | en-tête/fragment | — | À qualifier |
+| `headless/graphics.h` | en-tête/fragment | U19 | Chemin indexé, preuve dépend du graphe |
 | `headless/guest_fault.h` | en-tête/fragment | — | À qualifier |
 | `headless/heap_arenas.inc` | en-tête/fragment | — | À qualifier |
 | `headless/heap_guard.h` | en-tête/fragment | — | À qualifier |
@@ -96,8 +96,8 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/log_pipe.h` | en-tête/fragment | — | À qualifier |
 | `headless/main.cpp` | runtime/bridge | U01 | Chemin indexé, preuve dépend du graphe |
 | `headless/memory_check.cpp` | harness/test | J08 | Chemin indexé, preuve dépend du graphe |
-| `headless/metadata_bridge.cpp` | runtime/bridge | — | À qualifier |
-| `headless/metadata_bridge.h` | en-tête/fragment | — | À qualifier |
+| `headless/metadata_bridge.cpp` | runtime/bridge | U13 | Chemin indexé, preuve dépend du graphe |
+| `headless/metadata_bridge.h` | en-tête/fragment | U14 | Chemin indexé, preuve dépend du graphe |
 | `headless/mock_devices.cpp` | harness/test | — | À qualifier |
 | `headless/mock_devices.h` | harness/test | — | À qualifier |
 | `headless/mods.h` | en-tête/fragment | — | À qualifier |
@@ -192,8 +192,8 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/settings_store.h` | en-tête/fragment | — | À qualifier |
 | `headless/shader_cache_check.cpp` | harness/test | — | À qualifier |
 | `headless/stall_watchdog.h` | en-tête/fragment | — | À qualifier |
-| `headless/stop_limit.cpp` | runtime/bridge | — | À qualifier |
-| `headless/stop_limit.h` | en-tête/fragment | — | À qualifier |
+| `headless/stop_limit.cpp` | runtime/bridge | U15 | Chemin indexé, preuve dépend du graphe |
+| `headless/stop_limit.h` | en-tête/fragment | U16 | Chemin indexé, preuve dépend du graphe |
 | `headless/storage_paths.h` | en-tête/fragment | — | À qualifier |
 | `headless/title_id_fallback.h` | en-tête/fragment | — | À qualifier |
 | `headless/vulkan_allocator.cpp` | runtime/bridge | U10 | Chemin indexé, preuve dépend du graphe |
@@ -201,8 +201,8 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/vulkan_pool_capacity.h` | en-tête/fragment | — | À qualifier |
 | `headless/vulkan_surface.cpp` | runtime/bridge | U09 | Chemin indexé, preuve dépend du graphe |
 | `headless/watch.h` | en-tête/fragment | — | À qualifier |
-| `headless/zbic_compression.cpp` | runtime/bridge | — | À qualifier |
-| `headless/zbic_compression.h` | en-tête/fragment | — | À qualifier |
+| `headless/zbic_compression.cpp` | runtime/bridge | U17 | Chemin indexé, preuve dépend du graphe |
+| `headless/zbic_compression.h` | en-tête/fragment | U18 | Chemin indexé, preuve dépend du graphe |
 <!-- HEADLESS_SOURCE_CATALOG_END -->
 
 ## Priorités de qualification
