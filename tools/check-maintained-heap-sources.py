@@ -20,14 +20,14 @@ assert not (root / "headless/heap_arenas.inc").exists()
 assert not (root / "headless/heap_guard.h").exists()
 
 def git_blob(content: bytes) -> str:
-    return hashlib.sha1(b"blob " + str(len(content)).encode() + b"\\0" + content).hexdigest()
+    return hashlib.sha1(b"blob " + str(len(content)).encode() + b"\0" + content).hexdigest()
 
 assert git_blob(guard) == "56e4b920c93878d15c05a920f0119c1a23934a80"
 for old, new in (
     ("128 MiB", "3072 MiB"),
     ("(128u * 1024u * 1024u)", "(3072u * 1024u * 1024u)"),
-    ("#include <sys/mman.h>", "#include <sys/mman.h>\\nvoid *eden_heap_pages(size_t);\\nvoid eden_heap_pages_free(void *, size_t);\\nsize_t eden_heap_pages_physical_size(void *);"),
-    ("mmap(NULL, PS5_OPENGL_HEAP_SIZE, PROT_READ | PROT_WRITE,\\n                    MAP_PRIVATE | MAP_ANON, -1, 0)", "eden_heap_pages(PS5_OPENGL_HEAP_SIZE)"),
+    ("#include <sys/mman.h>", "#include <sys/mman.h>\nvoid *eden_heap_pages(size_t);\nvoid eden_heap_pages_free(void *, size_t);\nsize_t eden_heap_pages_physical_size(void *);"),
+    ("mmap(NULL, PS5_OPENGL_HEAP_SIZE, PROT_READ | PROT_WRITE,\n                    MAP_PRIVATE | MAP_ANON, -1, 0)", "eden_heap_pages(PS5_OPENGL_HEAP_SIZE)"),
     ("if (base == MAP_FAILED)", "if (base == NULL)"),
     ("munmap(base, PS5_OPENGL_HEAP_SIZE)", "eden_heap_pages_free(base, PS5_OPENGL_HEAP_SIZE)"),
     ('"PS5-OpenGL"', '"Eden-headless"'),
@@ -37,7 +37,7 @@ for old, new in (
 assert pinned.count("static atomic_int ps5_heap_state;") == 1
 pinned = pinned.replace(
     "static atomic_int ps5_heap_state;",
-    '#ifdef EDEN_HEAP_GUARD\\n#include "heap_guard.h"\\n#endif\\nstatic atomic_int ps5_heap_state;',
+    '#ifdef EDEN_HEAP_GUARD\n#include "heap_guard.h"\n#endif\nstatic atomic_int ps5_heap_state;',
 )
 assert flat == pinned, "flat source differs from former CMake output"
 start = pinned.index("static int ps5_heap_ready(void) {")
