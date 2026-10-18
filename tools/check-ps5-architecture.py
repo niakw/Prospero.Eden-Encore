@@ -30,6 +30,7 @@ def main() -> None:
     perf_h = read("headless/performance.h")
     cmake = read("headless/CMakeLists.txt")
     native_boc = read("vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code_native.cpp")
+    a64_unit = read("vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_interface_standard.cpp")
     worker_script = read("tools/prepare-vulkan-port.py")
     jit_policy = read("headless/experimental_performance.h")
 
@@ -151,10 +152,12 @@ def main() -> None:
             'TARGET_DIRECTORY dynarmic APPEND PROPERTY COMPILE_DEFINITIONS "PS5_NATIVE=1"' in cmake,
             "Native sparse JIT page commits must be compiled, not excluded by preprocessor")
     require('throw std::bad_alloc{};' in native_boc and
-            'Pinned A64 JIT commit checkpoint changed' in cmake and
+            'block_of_code.EnsureMemoryCommitted(MINIMUM_REMAINING_CODESIZE);' in a64_unit and
+            'catch (const std::bad_alloc&)' in a64_unit and
             'Pinned A32 JIT commit checkpoint changed' in cmake,
             "A64 and A32 need recoverable one-shot sparse allocation fallback")
-    require(cmake.count('catch (const std::bad_alloc&)') >= 2,
+    require(cmake.count('catch (const std::bad_alloc&)') >= 1 and
+            a64_unit.count('catch (const std::bad_alloc&)') >= 1,
             "Both guest architectures must recycle committed code pages on OOM")
     require('CountDenseJitDirect(void* writable, bool acquire) noexcept' in native and
             'DenseJitDirectBytes() noexcept' in native,
