@@ -16,16 +16,16 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **221 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **222 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **43 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **42 générateurs** `write_derived`.
 - Six modules CMake supplémentaires totalisent **21 générateurs**
-  `write_derived`, soit **64 sites** au total.
+  `write_derived`, soit **63 sites** au total.
 - Quatre modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 68.
-- `headless/` contient **10 fragments `.inc`**. Plusieurs contribuent
+- `headless/` contient **9 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
   dépendance. **Leur présence dans `headless` ne vaut pas conformité
@@ -81,7 +81,6 @@ fragments de l'application native qui ne remplacent aucune source upstream.
 | `headless/jit_assert.inc` | Fragment local, sélectionner/qualifier | À vérifier dans les consommateurs / CMake |
 | `headless/native_gpu_thread.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
 | `headless/shader_cache_reader.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
-| `headless/spin-lock.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
 <!-- SINGLE_SOURCE_FRAGMENTS_END -->
 
 ## Groupe JIT partagé centralisé
@@ -142,6 +141,15 @@ sont des entrées de code maintenues exclusivement dans
 bit-à-bit identique aux blobs Git déplacés. CMake charge ces fichiers
 comme données d'injection en attendant la migration des unités C++ dérivées,
 avec dépendances explicites pour toute modification.
+
+## Verrou natif Dynarmic centralisé
+
+Le fragment historique `headless/spin-lock.inc` est supprimé. Les fonctions
+`SpinLock::Lock()` et `SpinLock::Unlock()` résident dans l'unique source
+`vendor/encore-active/eden-core/src/dynarmic/common/spin_lock_x64.cpp`.
+Le build natif sélectionne cette source directement et n'assemble plus
+le corps C++ dans CMake. La vérification de provenance protège son
+identité Git ; le comportement console reste à confirmer.
 
 ## Conditions de sortie de la dette
 
