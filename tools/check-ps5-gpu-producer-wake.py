@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Exercise PS5 stop-aware SPSC producer with full queue, cancellation and FIFO.
 
-The template method is the REAL one injected by the native CMake generator.
+The template method is the real one selected from the maintained GPU source.
 The host shim reproduces the pinned SPSC queue's indexes and CV protocols.
 Native SDK compilation remains a separate PS5 build gate.
 """
