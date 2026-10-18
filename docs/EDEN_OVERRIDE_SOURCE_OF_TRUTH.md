@@ -16,12 +16,12 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **266 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **268 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **16 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **15 générateurs** `write_derived`.
 - Deux modules CMake générateurs totalisent **12 générateurs**
-  `write_derived`, soit **28 sites** au total.
+  `write_derived`, soit **27 sites** au total.
 - Cinq modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 34.
@@ -142,6 +142,25 @@ Les unités du JIT partagé liées à l'état et aux callbacks
 (M01–M03) ainsi que les transformations mémoire G06–G08 restent
 à consolider. Les tests de parité et de sélection sont des preuves
 hôte, **pas** une preuve de compilation ou d'exécution console.
+
+## Unités de mémoire A32/A64 — G08 centralisé
+
+L'ancien générateur G08 et le préfixage CMake des macros du JIT partagé
+sont retirés. Les unités C++ complètes
+`a32_emit_x64_memory.cpp` et `a64_emit_x64_memory.cpp` sont maintenues
+sous `vendor/encore-active/eden-core/src/dynarmic/backend/x64/`.
+Les trois macros de monitor/conf du JIT partagé sont définies
+uniquement sous `EDEN_SHARED_JIT_LAYOUT` ; la sélection CMake copie
+exactement les unités maintenues pour A32/A64 sans réécriture.
+La parité de chaque corps épinglé et la sélection ont un contrôle hôte ;
+l'exécution native/guest reste non qualifiée.
+
+**À ne pas confondre avec la clôture de G06/G07 :** les transformations
+du fragment `emit_x64_memory.cpp.inc` et de
+`emit_x64_memory.h` continuent de dépendre des modules
+`scalar-memory.cmake`, `checked-fastmem.cmake` et
+`shared-jit.cmake`. Elles nécessitent une migration coordonnée
+avec les fallbacks, les accès exclusifs et le registre A32.
 
 ## Émetteur x64 commun : source complète par profil (G05)
 
