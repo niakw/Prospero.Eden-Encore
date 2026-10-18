@@ -972,7 +972,19 @@ for filename, expected_blob in gpu_injection_blobs.items():
     input_source = active / "eden-core/gpu-injections" / filename
     assert input_source.is_file() and not (root / "headless" / filename).exists()
     check_canonical_git_object(input_source, expected_blob, "GPU injection")
-    assert f'/eden-core/gpu-injections/{filename}"' in c
+    # The queue fragment is retained as a historical artifact, not a build
+    # input: the active stop-token implementation is selected from eden-gpu.
+    # The sync failure fragment is still injected into generated gpu.cpp.
+    if filename == "gpu_queue_stop_wait.inc":
+        assert f'/eden-core/gpu-injections/{filename}"' not in c
+        queue_header = (active / "eden-gpu/include/common/bounded_threadsafe_queue.h").read_text()
+        assert queue_header.count("bool EmplaceWaitWithStopToken(") == 1
+        for variant in ("gpu_thread_dev.cpp", "gpu_thread_quiet.cpp"):
+            worker = (active / "eden-gpu" / variant).read_text()
+            assert "state.queue.EmplaceWaitWithStopToken(stop_source.get_token()," in worker
+        assert 'configure_file("${EDEN_ACTIVE_GPU}/include/common/bounded_threadsafe_queue.h"' in c
+    else:
+        assert f'/eden-core/gpu-injections/{filename}"' in c
 print("ENCORE_GPU_INJECTIONS_CANONICAL_PASS", len(gpu_injection_blobs))
 
 
