@@ -682,7 +682,7 @@ for pos, (old, new) in enumerate(pm_pairs):
     assert pm_expected.count(old) == (1, 1, 1, 3)[pos], ("pinned patch manager drift", pos)
     pm_expected = pm_expected.replace(old, new)
 assert (active / "eden-core/src/core/file_sys/patch_manager.cpp").read_text() == pm_expected
-assert 'list(APPEND core_sources "${PORT_BUILD_DIR}/ips_layer.cpp" "${EDEN_MAINTAINED_PATCH_MANAGER}")' in c
+assert 'list(APPEND core_sources "${EDEN_MAINTAINED_IPS_LAYER}" "${EDEN_MAINTAINED_PATCH_MANAGER}")' in c
 assert 'write_derived("${PORT_BUILD_DIR}/patch_manager.cpp"' not in c
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/file_sys/patch_manager.cpp" patch_source)' not in c
 print("MAINTAINED_PATCH_MANAGER_PARITY_PASS four substitutions three logs")
