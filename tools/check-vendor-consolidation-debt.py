@@ -839,6 +839,15 @@ assert 'target_sources(shader_recompiler PRIVATE "${EDEN_MAINTAINED_NATIVE_PRMT}
 assert (root / "tools/check-maintained-maxwell-prmt.py").is_file()
 print("VENDOR_MAINTAINED_PRMT_OWNER_PASS")
 
+# OpenGL rasterizer diagnostics now compile from one selected full source.
+gl_rasterizer_dir = active / "eden-core/src/video_core/renderer_opengl"
+assert (gl_rasterizer_dir / "gl_rasterizer.cpp").is_file()
+assert (gl_rasterizer_dir / "gl_rasterizer_dev.cpp").is_file()
+assert 'list(APPEND video_sources "${EDEN_MAINTAINED_GL_RASTERIZER}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/gl_rasterizer.cpp"' not in c
+assert (root / "tools/check-maintained-opengl-rasterizer.py").is_file()
+print("VENDOR_MAINTAINED_GL_RASTERIZER_OWNER_PASS")
+
 # Native GPU software blitter has a tracked complete source based on the
 # shipping backport; the former three edits are tested outside CMake.
 assert (active / "eden-core/src/video_core/engines/sw_blitter/blitter.cpp").is_file()
@@ -1273,7 +1282,7 @@ assert len(module_current) == 12, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 36
+assert len(recorded) + len(module_recorded) == 35
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived

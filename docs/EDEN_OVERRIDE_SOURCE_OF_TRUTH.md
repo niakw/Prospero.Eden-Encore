@@ -16,15 +16,15 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **249 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **251 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **24 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **23 générateurs** `write_derived`.
 - Deux modules CMake générateurs totalisent **12 générateurs**
-  `write_derived`, soit **36 sites** au total.
+  `write_derived`, soit **35 sites** au total.
 - Six modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
-  nombre 36.
+  nombre 35.
 - `headless/` contient **8 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
@@ -232,6 +232,14 @@ contient désormais directement la traduction PRMT mode 0 de l'ancien
 générateur CMake. L'oracle hôte compare les corps PRMT, les diagnostics
 bornés et les assertions de référence. Les cas non pris en charge
 continuent de déclencher le même chemin d'échec.
+
+## Rasterizer OpenGL : variantes compilées depuis Encore
+
+Le rasterizer normal et le rasterizer DEV sont deux unités complètes
+sous `vendor/encore-active/eden-core/src/video_core/renderer_opengl/`,
+avec sélection exclusive dans `headless/CMakeLists.txt`.
+La journalisation limitée à trois tirages et les fonctions de diagnostic
+DEV restent exactement équivalentes aux anciennes sources générées.
 
 ## Module GPU d'observabilité sans code dérivé
 

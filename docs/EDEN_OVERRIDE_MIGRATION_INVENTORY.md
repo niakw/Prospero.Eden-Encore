@@ -11,16 +11,16 @@ développement, les options JIT expérimentales, les backends et le build
 natif sélectionnent chacun leur sous-ensemble.
 
 L'inventaire complémentaire `docs/EDEN_ACTIVE_SOURCE_CATALOG.md` suit les
-249 fichiers de code et en-têtes dans `vendor/encore-active`,
+251 fichiers de code et en-têtes dans `vendor/encore-active`,
 y compris les backports de production et la dépendance graphique. Cette
 couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
 ## Synthèse vérifiable
 
-- **24 appels générateurs** encore dans CMake ; contre **75 avant**
+- **23 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
-- **31 lectures `file(READ`** et **141 remplacements
+- **30 lectures `file(READ`** et **138 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
 - Les versions diagnostiques de `IFile::Read`, `IStorage::Read` et des appels
@@ -84,7 +84,7 @@ et non les 458 scripts Python/shell/CMake du seul dossier `tools/`.
 | `headless/checked-fastmem.cmake` et quatre autres modules indirects | **BUILD**, changement de variables source avant écriture | Unités dérivées du CMake principal | Déjà indexées X03–X07 |
 | `headless/vulkan.cmake` | **BUILD**, copie/sélection d'un fork vérifié | `encore-active/eden-vulkan` | Aucun appel au générateur Python |
 
-**Règle de lecture :** le compteur `24 + 12 = 36` décrit uniquement les
+**Règle de lecture :** le compteur `23 + 12 = 35` décrit uniquement les
 sites `write_derived`, pas les générateurs Python, les copies de dépendances,
 les recettes CMake ni les sorties de ressources. **Zéro source sans propriétaire
 dans le catalogue `vendor/encore-active` n'implique pas zéro override hors de
@@ -172,6 +172,16 @@ sélectionne directement le nouveau .cpp et copie le .h sans générer du code.
 Le test d'identité vérifie les blobs d'origine et l'absence des anciens
 propriétaires. Le suivi par pages de 4 KiB et le profil JIT restent inchangés.
 
+## OpenGL : sources normales et DEV maintenues
+
+Le rasterizer OpenGL n'est plus produit par substitutions CMake.
+Deux unités complètes, `gl_rasterizer.cpp` et `gl_rasterizer_dev.cpp`,
+sont maintenues dans `vendor/encore-active/eden-core/src/video_core/renderer_opengl/`.
+Le sélecteur conserve le chemin normal et la variante DEV avec
+`CaptureDevelopmentPass` et timer, sans générer du code C++.
+Un oracle hôte reconstruit les anciennes variantes pour la parité ;
+la compilation native et les performances console sont non qualifiées.
+
 ## Générateurs non encore déplacés
 
 Les numéros Gxx sont les positions de cet inventaire, **pas** des validations.
@@ -203,11 +213,10 @@ dans la version normale.
 | G17 | `${PORT_BUILD_DIR}/include/${server_header}` | Kernel/IPC/entrées | Cible variable | 1662 |
 | G18 | `${PORT_BUILD_DIR}/server_manager.cpp` | Kernel/IPC/entrées | Unité source | 1719 |
 | G19 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 1732 |
-| G20 | `${PORT_BUILD_DIR}/gl_rasterizer.cpp` | Audio/graphique | Unité source | 1954 |
-| G21 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 2049 |
-| G22 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 2146 |
-| G23 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 2354 |
-| G24 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2549 |
+| G20 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 2045 |
+| G21 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 2142 |
+| G22 | `${PORT_BUILD_DIR}/app_heap.c` | Runtime/FS/réseau | Unité source | 2350 |
+| G23 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2545 |
 <!-- OVERRIDE_GENERATORS_END -->
 
 ## Prochain ordre de migration
@@ -443,7 +452,7 @@ La modification `code_source` du même module reste enregistrée sous
 
 Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules
 inclus par ce fichier contiennent **12 autres appels `write_derived()`**
-dans 2 fichiers. Le total de **36 appels** (24 + 12) est donc un **nombre de
+dans 2 fichiers. Le total de **35 appels** (23 + 12) est donc un **nombre de
 sites CMake**, pas un dénombrement des fichiers réellement produits à
 l'exécution. Un module inclus peut définir des macros sans les exécuter,
 et plusieurs sorties sont explicitement conditionnées.
@@ -468,7 +477,7 @@ et plusieurs sorties sont explicitement conditionnées.
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **36 sites** `write_derived()`, ni dans
+Ils ne sont comptés ni dans les **35 sites** `write_derived()`, ni dans
 les **4 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,
