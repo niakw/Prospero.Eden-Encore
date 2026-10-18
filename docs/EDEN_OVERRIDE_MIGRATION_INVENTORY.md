@@ -11,7 +11,7 @@ développement, les options JIT expérimentales, les backends et le build
 natif sélectionnent chacun leur sous-ensemble.
 
 L'inventaire complémentaire `docs/EDEN_ACTIVE_SOURCE_CATALOG.md` suit les
-237 fichiers de code et en-têtes dans `vendor/encore-active`,
+239 fichiers de code et en-têtes dans `vendor/encore-active`,
 y compris les backports de production et la dépendance graphique. Cette
 couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
@@ -84,7 +84,7 @@ et non les 458 scripts Python/shell/CMake du seul dossier `tools/`.
 | `headless/checked-fastmem.cmake` et quatre autres modules indirects | **BUILD**, changement de variables source avant écriture | Unités dérivées du CMake principal | Déjà indexées X03–X07 |
 | `headless/vulkan.cmake` | **BUILD**, copie/sélection d'un fork vérifié | `encore-active/eden-vulkan` | Aucun appel au générateur Python |
 
-**Règle de lecture :** le compteur `26 + 21 = 47` décrit uniquement les
+**Règle de lecture :** le compteur `26 + 19 = 45` décrit uniquement les
 sites `write_derived`, pas les générateurs Python, les copies de dépendances,
 les recettes CMake ni les sorties de ressources. **Zéro source sans propriétaire
 dans le catalogue `vendor/encore-active` n'implique pas zéro override hors de
@@ -360,11 +360,20 @@ pas que le PC invité avance après un réveil HLE.
   sélections de compilation FreeBSD ont été déplacées depuis CMake sans
   réécrire l'algorithme `getifaddrs` ni son fallback de route.
 
+## Register allocator Dynarmic : source maintenue
+
+Les versions complètes `reg_alloc.h` et `reg_alloc.cpp` sont désormais
+maintenues dans `vendor/encore-active/eden-core/src/dynarmic/backend/x64/`.
+Le module CMake `reg_alloc.cmake` sélectionne et copie ces sources,
+sans réinjecter de méthodes C++. Le profil `EDEN_REGALLOC_VERIFY`
+reste réservé à l'hôte. Un test de parité rejoue les cinq transformations
+uniquement comme oracle, pas comme entrée de compilation.
+
 ## Générateurs des modules CMake inclus — inventaire complémentaire
 
 Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules
-inclus par ce fichier contiennent **21 autres appels `write_derived()`**
-dans 6 fichiers. Le total de **47 appels** (26 + 21) est donc un **nombre de
+inclus par ce fichier contiennent **19 autres appels `write_derived()`**
+dans 5 fichiers. Le total de **45 appels** (26 + 19) est donc un **nombre de
 sites CMake**, pas un dénombrement des fichiers réellement produits à
 l'exécution. Un module inclus peut définir des macros sans les exécuter,
 et plusieurs sorties sont explicitement conditionnées.
@@ -372,33 +381,31 @@ et plusieurs sorties sont explicitement conditionnées.
 <!-- MODULE_GENERATORS_START -->
 | ID | Module CMake | Sortie dérivée | Porte / périmètre |
 | --- | --- | --- | --- |
-| M01 | `headless/dynarmic/reg_alloc.cmake` | `${PORT_BUILD_DIR}/include/dynarmic/backend/x64/reg_alloc.h` | Dynarmic |
-| M02 | `headless/dynarmic/reg_alloc.cmake` | `${PORT_BUILD_DIR}/reg_alloc.cpp` | Dynarmic |
-| M03 | `headless/dynarmic/shared-jit.cmake` | `${PORT_BUILD_DIR}/include/${eden_jitstate_relative}` | Shared JIT OFF par défaut |
-| M04 | `headless/dynarmic/shared-jit.cmake` | `${PORT_BUILD_DIR}/include/dynarmic/backend/x64/jit_group.h` | Shared JIT OFF par défaut |
-| M05 | `headless/dynarmic/shared-jit.cmake` | `${PORT_BUILD_DIR}/callback.cpp` | Shared JIT OFF par défaut |
-| M06 | `headless/gpu_native_observability.cmake` | `${PORT_BUILD_DIR}/maxwell_prmt_observed.cpp` | PS5_NATIVE |
-| M07 | `headless/gpu_native_observability.cmake` | `${PORT_BUILD_DIR}/sw_blitter_sized.cpp` | PS5_NATIVE |
-| M08 | `headless/gpu_native_observability.cmake` | `${PORT_BUILD_DIR}/fermi_2d_observed.cpp` | PS5_NATIVE |
-| M09 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/include/video_core/memory_manager.h` | Pont différé OFF |
-| M10 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/deferred-core/core/gpu_dirty_memory_manager.h` | Pont différé OFF |
-| M11 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/memory_manager_deferred.cpp` | Pont différé OFF |
-| M12 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/vulkan_rasterizer_deferred.cpp` | Pont différé OFF |
-| M13 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/dma_pusher_deferred.cpp` | Pont différé OFF |
-| M14 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/maxwell_dma_deferred.cpp` | Pont différé OFF |
-| M15 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/kepler_compute_deferred.cpp` | Pont différé OFF |
-| M16 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/engine_upload_deferred.cpp` | Pont différé OFF |
-| M17 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/memory-ps5-deferred.cpp` | Pont différé OFF |
-| M18 | `headless/jit-alias.cmake` | `${PORT_BUILD_DIR}/include/xbyak/xbyak.h` | JIT/alias |
-| M19 | `headless/jit-alias.cmake` | `${PORT_BUILD_DIR}/constant_pool.cpp` | JIT/alias |
-| M20 | `headless/scalar-memory.cmake` | `${PORT_BUILD_DIR}/scalar_emit_x64_vector.cpp` | Emetteur scalaire |
-| M21 | `headless/scalar-memory.cmake` | `${PORT_BUILD_DIR}/scalar_emit_x64_data_processing.cpp` | Emetteur scalaire |
+| M01 | `headless/dynarmic/shared-jit.cmake` | `${PORT_BUILD_DIR}/include/${eden_jitstate_relative}` | Shared JIT OFF par défaut |
+| M02 | `headless/dynarmic/shared-jit.cmake` | `${PORT_BUILD_DIR}/include/dynarmic/backend/x64/jit_group.h` | Shared JIT OFF par défaut |
+| M03 | `headless/dynarmic/shared-jit.cmake` | `${PORT_BUILD_DIR}/callback.cpp` | Shared JIT OFF par défaut |
+| M04 | `headless/gpu_native_observability.cmake` | `${PORT_BUILD_DIR}/maxwell_prmt_observed.cpp` | PS5_NATIVE |
+| M05 | `headless/gpu_native_observability.cmake` | `${PORT_BUILD_DIR}/sw_blitter_sized.cpp` | PS5_NATIVE |
+| M06 | `headless/gpu_native_observability.cmake` | `${PORT_BUILD_DIR}/fermi_2d_observed.cpp` | PS5_NATIVE |
+| M07 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/include/video_core/memory_manager.h` | Pont différé OFF |
+| M08 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/deferred-core/core/gpu_dirty_memory_manager.h` | Pont différé OFF |
+| M09 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/memory_manager_deferred.cpp` | Pont différé OFF |
+| M10 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/vulkan_rasterizer_deferred.cpp` | Pont différé OFF |
+| M11 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/dma_pusher_deferred.cpp` | Pont différé OFF |
+| M12 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/maxwell_dma_deferred.cpp` | Pont différé OFF |
+| M13 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/kepler_compute_deferred.cpp` | Pont différé OFF |
+| M14 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/engine_upload_deferred.cpp` | Pont différé OFF |
+| M15 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/memory-ps5-deferred.cpp` | Pont différé OFF |
+| M16 | `headless/jit-alias.cmake` | `${PORT_BUILD_DIR}/include/xbyak/xbyak.h` | JIT/alias |
+| M17 | `headless/jit-alias.cmake` | `${PORT_BUILD_DIR}/constant_pool.cpp` | JIT/alias |
+| M18 | `headless/scalar-memory.cmake` | `${PORT_BUILD_DIR}/scalar_emit_x64_vector.cpp` | Emetteur scalaire |
+| M19 | `headless/scalar-memory.cmake` | `${PORT_BUILD_DIR}/scalar_emit_x64_data_processing.cpp` | Emetteur scalaire |
 <!-- MODULE_GENERATORS_END -->
 
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **47 sites** `write_derived()`, ni dans
+Ils ne sont comptés ni dans les **45 sites** `write_derived()`, ni dans
 les **4 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,
@@ -481,7 +488,7 @@ que chaque chemin a été validé sur console.
 
 ## Overrides indirects sans `write_derived()` local
 
-Ces **4 modules supplémentaires** ne sont pas inclus dans les **47 appels**.
+Ces **4 modules supplémentaires** ne sont pas inclus dans les **45 appels**.
 Tous modifient des variables-source ensuite écrites par le CMake principal.
 Ils ne sont pas quatre sources C++ distinctes.
 

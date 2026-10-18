@@ -16,15 +16,15 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **237 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **239 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
 - `headless/CMakeLists.txt` : **26 générateurs** `write_derived`.
-- Six modules CMake supplémentaires totalisent **21 générateurs**
-  `write_derived`, soit **47 sites** au total.
+- Cinq modules CMake générateurs totalisent **19 générateurs**
+  `write_derived`, soit **45 sites** au total.
 - Quatre modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
-  nombre 47.
+  nombre 45.
 - `headless/` contient **8 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
@@ -49,7 +49,7 @@ nouveaux corps C++ destinés à la console.
 | Fichier | Nature | Position |
 | --- | --- | --- |
 | `headless/checked-fastmem.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
-| `headless/dynarmic/reg_alloc.cmake` | Générateur de source dérivée, à déplacer | Dette de migration |
+| `headless/dynarmic/reg_alloc.cmake` | Sélection/copie de deux sources Encore maintenues | Sélecteur conforme |
 | `headless/dynarmic/shared-jit.cmake` | Générateur de source dérivée, à déplacer | Dette de migration |
 | `headless/gpu_native_observability.cmake` | Générateur de source dérivée, à déplacer | Dette de migration |
 | `headless/guest_write_deferred_bridge.cmake` | Générateur de source dérivée, à déplacer | Dette de migration |
