@@ -11,7 +11,7 @@ développement, les options JIT expérimentales, les backends et le build
 natif sélectionnent chacun leur sous-ensemble.
 
 L'inventaire complémentaire `docs/EDEN_ACTIVE_SOURCE_CATALOG.md` suit les
-246 fichiers de code et en-têtes dans `vendor/encore-active`,
+247 fichiers de code et en-têtes dans `vendor/encore-active`,
 y compris les backports de production et la dépendance graphique. Cette
 couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
@@ -84,7 +84,7 @@ et non les 458 scripts Python/shell/CMake du seul dossier `tools/`.
 | `headless/checked-fastmem.cmake` et quatre autres modules indirects | **BUILD**, changement de variables source avant écriture | Unités dérivées du CMake principal | Déjà indexées X03–X07 |
 | `headless/vulkan.cmake` | **BUILD**, copie/sélection d'un fork vérifié | `encore-active/eden-vulkan` | Aucun appel au générateur Python |
 
-**Règle de lecture :** le compteur `26 + 13 = 39` décrit uniquement les
+**Règle de lecture :** le compteur `26 + 12 = 38` décrit uniquement les
 sites `write_derived`, pas les générateurs Python, les copies de dépendances,
 les recettes CMake ni les sorties de ressources. **Zéro source sans propriétaire
 dans le catalogue `vendor/encore-active` n'implique pas zéro override hors de
@@ -412,11 +412,21 @@ reproduisent l'ancien code par défaut et les trois transformations du mode
 de parité hôte garantit les deux résultats compilés historiques, sans
 promettre le comportement console ni activer la voie expérimentale.
 
+## Xbyak 7.40.1 : en-tête complet maintenu
+
+`headless/jit-alias.cmake` ne construit plus `xbyak.h` via huit
+substitutions. Le fichier complet, conservant sa licence originale, réside
+dans `vendor/encore-active/eden-build/third_party/xbyak/xbyak.h`.
+Un contrôle vérifie les huit modifications et, si le cache CPM épinglé
+est disponible, reconstruit l'ancien résultat pour comparer chaque octet.
+La modification `code_source` du même module reste enregistrée sous
+**X09**, jusqu'à la migration de son unité C++ complète.
+
 ## Générateurs des modules CMake inclus — inventaire complémentaire
 
 Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules
-inclus par ce fichier contiennent **13 autres appels `write_derived()`**
-dans 3 fichiers. Le total de **39 appels** (26 + 13) est donc un **nombre de
+inclus par ce fichier contiennent **12 autres appels `write_derived()`**
+dans 2 fichiers. Le total de **38 appels** (26 + 12) est donc un **nombre de
 sites CMake**, pas un dénombrement des fichiers réellement produits à
 l'exécution. Un module inclus peut définir des macros sans les exécuter,
 et plusieurs sorties sont explicitement conditionnées.
@@ -436,13 +446,12 @@ et plusieurs sorties sont explicitement conditionnées.
 | M10 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/kepler_compute_deferred.cpp` | Pont différé OFF |
 | M11 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/engine_upload_deferred.cpp` | Pont différé OFF |
 | M12 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/memory-ps5-deferred.cpp` | Pont différé OFF |
-| M13 | `headless/jit-alias.cmake` | `${PORT_BUILD_DIR}/include/xbyak/xbyak.h` | JIT/alias |
 <!-- MODULE_GENERATORS_END -->
 
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **39 sites** `write_derived()`, ni dans
+Ils ne sont comptés ni dans les **38 sites** `write_derived()`, ni dans
 les **4 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,
@@ -525,7 +534,7 @@ que chaque chemin a été validé sur console.
 
 ## Overrides indirects sans `write_derived()` local
 
-Ces **5 modules supplémentaires** ne sont pas inclus dans les **42 appels**.
+Ces **6 modules supplémentaires** ne sont pas inclus dans les **38 appels**.
 Tous modifient des variables-source ensuite écrites par le CMake principal.
 Ils ne sont pas quatre sources C++ distinctes.
 
@@ -537,6 +546,7 @@ Ils ne sont pas quatre sources C++ distinctes.
 | X06 | `headless/native_jit_memory_read_guard.cmake` | `wrapper` | Contrôle des lectures de mémoire invitée avant génération | Non migré |
 | X07 | `headless/physical_core_interrupt_atomic.cmake` | `physical_core_source` | Accès atomiques aux interruptions avant génération | Non migré |
 | X08 | `headless/scalar-memory.cmake` | `memory_source` | Insertion scalaire dans la variable source de l'émetteur mémoire CMake | Non migré |
+| X09 | `headless/jit-alias.cmake` | `code_source` | Injection de l’alias mémoire dans une unité JIT générée par CMake | Non migré |
 <!-- INDIRECT_OVERRIDES_END -->
 
 Le sélecteur `headless/vulkan.cmake` copie des fichiers déjà maintenus

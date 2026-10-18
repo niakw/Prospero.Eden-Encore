@@ -846,6 +846,13 @@ assert 'target_sources(video_core PRIVATE "${EDEN_MAINTAINED_NATIVE_BLITTER}")' 
 assert (root / "tools/check-maintained-sw-blitter.py").is_file()
 print("VENDOR_MAINTAINED_SW_BLITTER_OWNER_PASS")
 
+# Xbyak writable alias uses a complete tagged header. Only the separate
+# code_source transformation remains indirect, explicitly inventoried.
+assert (active / "eden-build/third_party/xbyak/xbyak.h").is_file()
+assert 'configure_file("${EDEN_MAINTAINED_XBYAK_HEADER}"' in (root / "headless/jit-alias.cmake").read_text()
+assert (root / "tools/check-maintained-xbyak-alias.py").is_file()
+print("VENDOR_MAINTAINED_XBYAK_OWNER_PASS")
+
 # Native JIT constant pool has a complete tracked source and explicit selector.
 assert (active / "eden-core/src/dynarmic/backend/x64/constant_pool.cpp").is_file()
 assert 'target_sources(dynarmic PRIVATE "${EDEN_MAINTAINED_CONSTANT_POOL}")' in (root / "headless/jit-alias.cmake").read_text()
@@ -1248,12 +1255,12 @@ for module in module_files:
     module_current.extend((module, target) for target in
                           re.findall(r'write_derived\(\s*"([^"]+)"', content))
 assert module_recorded == module_current, "Module CMake source generator inventory is stale"
-assert len(module_current) == 13, len(module_current)
+assert len(module_current) == 12, len(module_current)
 # Indirect X01/X02 are no longer CMake generators: full source units
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 39
+assert len(recorded) + len(module_recorded) == 38
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
@@ -1271,13 +1278,14 @@ indirect_expected = (
     ("headless/native_jit_memory_read_guard.cmake", ("string(REPLACE", "wrapper")),
     ("headless/physical_core_interrupt_atomic.cmake", ("string(REPLACE", "physical_core_source")),
     ("headless/scalar-memory.cmake", ("set(memory_source", "scalar-memory-${lower}.inc")),
+    ("headless/jit-alias.cmake", ("string(REPLACE", "code_source")),
 )
 assert indirect_recorded == [entry[0] for entry in indirect_expected], (
     "Unlisted or reordered indirect CMake override; recheck files and symbols")
 for module, required in indirect_expected:
     content = (root / module).read_text()
     assert all(token in content for token in required), ("indirect override changed", module)
-assert len(indirect_recorded) == 5
+assert len(indirect_recorded) == 6
 print(f"VENDOR_INDIRECT_OVERRIDE_INVENTORY_PASS modules={len(indirect_recorded)} (not generator sites)")
 
 # Third independent source-change mechanism: pinned backport patch replays.
