@@ -14,8 +14,8 @@ l'audit moteur. Un chemin noté « À qualifier » peut avoir été audité sous
 une autre forme : il manque seulement la référence de chemin exacte.
 
 - **178** chemins sous `headless/`, dont **59** sources C/C++ et **119** en-têtes/fragments.
-- **27** chemins déjà présents dans le graphe moteur.
-- **151** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
+- **26** chemins déjà présents dans le graphe moteur.
+- **152** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
 - Les deux générateurs de profils `headless/encore_overrides_generated.h`,
   `headless/glyph_overrides_generated.h` et les autres ressources générées
   sont des entrées de l'inventaire, **pas** de nouveaux patchs CMake.
