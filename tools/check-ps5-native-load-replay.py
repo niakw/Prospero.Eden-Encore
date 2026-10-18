@@ -54,7 +54,7 @@ end = host.index('""".replace("STOP_CODE", inc)', start)
 cpp = host[start:end]
 assert cpp.count("int main() {") == 1
 queue_source = cpp.split("int main() {")[0]
-queue_source = queue_source.replace("STOP_CODE", (root / "headless/gpu_queue_stop_wait.inc").read_text())
+queue_source = queue_source.replace("STOP_CODE", (root / "vendor/encore-active/eden-core/gpu-injections/gpu_queue_stop_wait.inc").read_text())
 assert 'producer.cv.wait(lock, stop_token' in queue_source
 
 # One queue item corresponds to one observed GPU-tick-sized source workload
