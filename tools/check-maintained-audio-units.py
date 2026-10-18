@@ -63,20 +63,22 @@ assert 'list(APPEND core_sources "${eden_kernel_spin}")' in cmake
 assert 'write_derived("${PORT_BUILD_DIR}/k_spin_lock.cpp"' not in cmake
 # Native NPad no longer has a CMake generator. Its byte-exact guards
 # and selected hid_core translation unit are checked by the consolidation oracle.
-assert 'list(APPEND npad_sources "${EDEN_MAINTAINED_NPAD}")' in cmake
+assert 'list(APPEND npad_sources "${EDEN_NPAD_SELECTED}")' in cmake
+assert 'list(FILTER npad_sources EXCLUDE REGEX "(^|/)npad\\\\.cpp$")' in cmake
 assert 'write_derived("${PORT_BUILD_DIR}/npad.cpp"' not in cmake
 assert "set(compose_new [=[" in cmake
 # The port must keep reducing generator rewrites, not silently increase them.
 gpu_span_derived='write_derived("${eden_gpu_span_tu}" "${eden_gpu_span_src}")'
-assert cmake.count(gpu_span_derived) == 1
-assert cmake.count("write_derived(") - cmake.count(gpu_span_derived) <= 77
+assert gpu_span_derived not in cmake
+assert 'list(APPEND video_sources "${EDEN_MAINTAINED_NATIVE_GPU_MEMORY}")' in cmake
+assert cmake.count("write_derived(") <= 77
 # One explicitly checked native GPU synchronization-method input is
 # approved; keep the prior 87-read generator budget for everything else.
 gpu_sync_input='file(READ "${EDEN_PORT_DIR}/gpu_sync_failure_wait.inc" gpu_sync_wait_replacement)'
 assert cmake.count(gpu_sync_input) == 1
 gpu_span_input='file(READ "${PROJECT_SOURCE_DIR}/src/video_core/memory_manager.cpp" eden_gpu_span_src)'
-assert cmake.count(gpu_span_input) == 1
-assert cmake.count("file(READ") - cmake.count(gpu_sync_input) - cmake.count(gpu_span_input) <= 87
+assert gpu_span_input not in cmake
+assert cmake.count("file(READ") - cmake.count(gpu_sync_input) <= 87
 # The native GPU producer cancellation contract adds exactly one checked
 # source-derived wait replacement; keep the previous ceiling for all others.
 gpu_producer_wait='string(REPLACE "${gpu_block_wait_original}" "${gpu_block_wait_checked}"'
@@ -99,8 +101,8 @@ native_span_guard='string(REPLACE "${eden_span_original}" [=['
 assert cmake.count(native_span_guard) == 1
 assert "Pinned native guest span page-boundary contract changed" in cmake
 gpu_span_guard='string(REPLACE "${eden_gpu_span_original}" [=['
-assert cmake.count(gpu_span_guard) == 1
-assert "Pinned native GPU guest span range gate changed" in cmake
+assert gpu_span_guard not in cmake
+assert "Pinned native GPU guest span range gate changed" not in cmake
 # Explicitly exempt ONLY the two pinned native queue-slot destructor rewrites.
 # This preserves the old 227 unapproved generator-rewrite ceiling.
 gpu_queue_slot_find='string(REPLACE "${queue_slot_construct}" "__ENCORE_GPU_QUEUE_SLOT__"'
@@ -109,5 +111,5 @@ assert cmake.count(gpu_queue_slot_find) == 1
 assert cmake.count(gpu_queue_slot_apply) == 1
 assert 'list(LENGTH queue_slot_matches queue_slot_count)' in cmake
 assert 'if(NOT queue_slot_count EQUAL 2)' in cmake
-assert cmake.count("string(REPLACE") - cmake.count(gpu_producer_wait) - cmake.count(gpu_enqueue_fence) - cmake.count(dirty_mask_split) - cmake.count(native_read_slot) - cmake.count(native_span_guard) - cmake.count(gpu_span_guard) - cmake.count(gpu_read_capture) - cmake.count(gpu_queue_slot_find) - cmake.count(gpu_queue_slot_apply) <= 227
+assert cmake.count("string(REPLACE") - cmake.count(gpu_producer_wait) - cmake.count(gpu_enqueue_fence) - cmake.count(dirty_mask_split) - cmake.count(native_read_slot) - cmake.count(native_span_guard) - cmake.count(gpu_read_capture) - cmake.count(gpu_queue_slot_find) - cmake.count(gpu_queue_slot_apply) <= 227
 print("MAINTAINED_AUDIO_UNITS_PARITY_PASS sink_details=1 sink_stream=1 voice=1")
