@@ -317,13 +317,13 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
 Ces deux fichiers sont inclus dans les **83 entrées** de
 `vendor/encore-active/eden-backports/manifest.json`, mais ne sont
-pas comptés parmi les 274 fichiers de code et d'en-têtes.
+pas comptés parmi les fichiers de code et d'en-têtes ci-dessus.
 
 ## Inventaire hors `vendor/encore-active`
 
-Les **170 fichiers source/en-tête/fragment** de `headless/` sont suivis
+Les fichiers source/en-tête/fragment de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
-34 ont désormais un propriétaire exact dans le graphe courant ; les autres sont
+Les chemins du graphe moteur y ont un propriétaire exact ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
 La couverture de 275/275 ci-dessus ne s'applique **pas** à ce dossier.
 
