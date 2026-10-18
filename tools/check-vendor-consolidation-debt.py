@@ -55,10 +55,6 @@ approved_sync = {
         'string(REPLACE "${eden_read_original}" "${eden_read_native}"',
         # End-exclusive guest spans must not probe a one-past-last page.
         'string(REPLACE "${eden_span_original}" [=[',
-        # Two exact, drift-checked native command queue slot lifecycle rewrites.
-        # Count both separately; leave the historical <=225 ceiling unchanged.
-        'string(REPLACE "${queue_slot_construct}" "__ENCORE_GPU_QUEUE_SLOT__"',
-        'string(REPLACE "__ENCORE_GPU_QUEUE_SLOT__" "${queue_slot_repair}"',
     ),
 }
 # The dirty-range rewrite is allowed only while the source-derived native
@@ -129,6 +125,10 @@ assert fs_maintained == '#include "performance.h"\n' + fs_pinned.replace(fs_old,
 assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_FS_FILE}")') == 1
 assert 'list(REMOVE_ITEM core_sources "hle/service/filesystem/fsp/fs_i_file.cpp")' in c
 assert 'target_include_directories(core PRIVATE "${EDEN_PORT_DIR}")' in c
+assert 'write_derived("${PORT_BUILD_DIR}/gpu_thread.cpp"' not in c
+assert 'write_derived("${PORT_BUILD_DIR}/include/common/bounded_threadsafe_queue.h"' not in c
+assert 'configure_file("${EDEN_ACTIVE_GPU}/include/common/bounded_threadsafe_queue.h"' in c
+assert 'configure_file("${EDEN_ACTIVE_GPU}/${EDEN_GPU_WORKER_VARIANT}"' in c
 assert 'write_derived("${PORT_BUILD_DIR}/fs_i_file.cpp"' not in c
 assert "fs_file_source" not in c
 
@@ -1012,7 +1012,7 @@ assert len(module_current) == 21, len(module_current)
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root / old_module).exists(), ("removed CMake mutator returned", old_module)
-assert len(recorded) + len(module_recorded) == 61
+assert len(recorded) + len(module_recorded) == 59
 print(f"VENDOR_MODULE_GENERATOR_INVENTORY_PASS entries={len(module_recorded)}")
 
 # Separate ledger: these modules modify source without calling write_derived
