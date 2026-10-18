@@ -178,7 +178,7 @@ with tempfile.TemporaryDirectory(prefix="eden-gpu-readback-batch-") as temp:
     subprocess.run([compiler, "-std=c++20", "-O1", "-g",
                     "-Wall", "-Wextra", "-Werror",
                     "-fsanitize=address,undefined", "-fno-sanitize-recover=all",
-                    "-I", str(root / "headless"), str(src), "-o", str(exe)],
+                    "-I", str(root / "vendor/encore-active/eden-vulkan-oracles"), str(src), "-o", str(exe)],
                    check=True, timeout=120)
     subprocess.run([str(exe)], check=True, timeout=180)
 print("PASS production Vulkan guest readback batch C++: ordered publication, 40 POD maps, 32MiB, Finish fences, oversized cases")
