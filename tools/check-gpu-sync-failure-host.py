@@ -13,7 +13,7 @@ root = Path(__file__).resolve().parents[1]
 pinned = (root / "vendor/sources/eden/src/video_core/gpu.cpp").read_text()
 cmake = (root / "headless/CMakeLists.txt").read_text()
 header = (root / "headless/gpu_failure.h").read_text()
-native_method = (root / "headless/gpu_sync_failure_wait.inc").read_text()
+native_method = (root / "vendor/encore-active/eden-core/gpu-injections/gpu_sync_failure_wait.inc").read_text()
 original = """    void WaitForSyncOperation(const u64 fence) {
         std::unique_lock lck{sync_request_mutex};
         sync_request_cv.wait(lck, [this, fence] { return sync_requests_stopped || CurrentSyncRequestFence() >= fence; });
@@ -23,7 +23,7 @@ stopped_pinned = pinned.replace(
     "return sync_requests_stopped || CurrentSyncRequestFence() >= fence;"
 )
 assert stopped_pinned.count(original) == 1
-assert "file(READ \"${EDEN_PORT_DIR}/gpu_sync_failure_wait.inc\" gpu_sync_wait_replacement)" in cmake
+assert "file(READ \"${PORT_ROOT}/vendor/encore-active/eden-core/gpu-injections/gpu_sync_failure_wait.inc\" gpu_sync_wait_replacement)" in cmake
 assert 'string(FIND "${gpu_source}" "${gpu_sync_wait_original}" gpu_sync_wait_position)' in cmake
 assert "std::rethrow_exception(failure);" in native_method
 assert "sync_request_cv.wait_for(lck, std::chrono::milliseconds(100));" in native_method

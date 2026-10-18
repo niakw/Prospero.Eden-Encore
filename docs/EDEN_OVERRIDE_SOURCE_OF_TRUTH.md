@@ -16,16 +16,16 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 18 octobre 2026
 
-- `vendor/encore-active` : **217 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **220 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **45 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **44 générateurs** `write_derived`.
 - Six modules CMake supplémentaires totalisent **21 générateurs**
-  `write_derived`, soit **66 sites** au total.
+  `write_derived`, soit **65 sites** au total.
 - Quatre modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   nombre 68.
-- `headless/` contient **12 fragments `.inc`**. Plusieurs contribuent
+- `headless/` contient **10 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
   dépendance. **Leur présence dans `headless` ne vaut pas conformité
@@ -75,8 +75,6 @@ fragments de l'application native qui ne remplacent aucune source upstream.
 | `headless/dev_render_passes.inc` | Fragment local, sélectionner/qualifier | À vérifier dans les consommateurs / CMake |
 | `headless/gpu_native_probe.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
 | `headless/gpu_probe.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
-| `headless/gpu_queue_stop_wait.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
-| `headless/gpu_sync_failure_wait.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
 | `headless/heap_arenas.inc` | Runtime natif (non nécessairement override) | À vérifier dans les consommateurs / CMake |
 | `headless/jit-compile-batch.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
 | `headless/jit-permissions.inc` | Fragment technique, tracer l'inclusion | À vérifier dans les consommateurs / CMake |
@@ -135,6 +133,15 @@ ordinaire, ou `npad_pause_diag.cpp` lorsque `PS5_NATIVE` et
 conserve les deux gardes de pointeurs de la version normale et ne modifie
 ni le mapping ni les commandes. Le contrôle hôte compare le code
 extérieur au témoin Fullkey et vérifie la sélection exclusive.
+
+## Injections GPU centralisées
+
+Les deux fragments `gpu_queue_stop_wait.inc` et `gpu_sync_failure_wait.inc`
+sont des entrées de code maintenues exclusivement dans
+`vendor/encore-active/eden-core/gpu-injections/`. Leur contenu reste
+bit-à-bit identique aux blobs Git déplacés. CMake charge ces fichiers
+comme données d'injection en attendant la migration des unités C++ dérivées,
+avec dépendances explicites pour toute modification.
 
 ## Conditions de sortie de la dette
 
