@@ -17,7 +17,7 @@ WAIT = ("        while (!synced && !system.IsShuttingDown())\n"
         "            sync_cv.wait_for(lk, std::chrono::milliseconds(10));")
 OLD_SEM = "    while (word != value) {"
 SEM = "    while (word != value && !dma_pusher.system.IsShuttingDown()) {"
-GPU_FAULT_INC = '#ifdef PS5_NATIVE\\n#include "gpu_failure.h"\\n#endif\\n#include "common/assert.h"'
+GPU_FAULT_INC = '#ifdef PS5_NATIVE\n#include "gpu_failure.h"\n#endif\n#include "common/assert.h"'
 GPU_FAULT_INIT = """    const auto value = regs.semaphore_acquire;
 #ifdef PS5_NATIVE
     // On a failed graphics worker, a stale GPU semaphore can never progress.
