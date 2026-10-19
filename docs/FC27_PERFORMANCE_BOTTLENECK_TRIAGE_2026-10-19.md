@@ -160,3 +160,26 @@ toutes les branches, dont les lots mixtes et les bornes hors espace.
 Ce test démontre une réduction **structurelle** d'acquisitions
 pour les pages jamais possédées, **pas** un gain de FPS mesuré sur
 PS5 ni une correction attestée des freezes.
+
+
+## Vulkan — accélération des copies inline vers la mémoire invitée
+
+19 octobre 2026 : `RasterizerVulkan::AccelerateInlineToMemory` ne prend
+plus le mutex texture pour une copie vers un espace CPU dont les pages
+**n'ont jamais été enregistrées comme images** (preuve monotone
+`ImagePages::NeverHeld`). Une image connue, une plage de plus de 256 KiB,
+une plage inconnue/hors suivi ou un chevauchement enregistré déclenchent
+toujours l'invalidation verrouillée originale.
+
+Important : `buffer_cache.InlineMemory / WriteMemory`, la copie RAM
+invitée, les invalidations shader et query et le chemin de translation
+impossible restent inchangés. `BufferCache::WriteMemory` marque en
+effet la région CPU modifiée même quand aucun buffer n'est enregistré :
+**il serait incorrect d'éliminer ce traitement** par un indice de pages
+jamais enregistrées.
+
+Le témoin C++ `tools/check-ps5-inline-texture-elision-host.py` extrait
+la méthode réelle, compile sous ASan/UBSan et contrôle les domaines
+mémoire, texture, buffer, shader/query, l'absence de traduction et
+le retour conservateur pour les bornes. Aucun gain de FPS / disparition
+de freeze n'est revendiqué sans benchmark console à SHA identique.
