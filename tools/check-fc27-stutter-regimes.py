@@ -63,6 +63,40 @@ def grouped(rows:list[dict])->dict:
         }
     return d
 
+def bottleneck_signals(rows: list[dict]) -> dict:
+    """Report independent observational signals, never frame-causality.
+
+    Per-window jit_ms sums CPU work across multiple cores. cache_wait_ms
+    sums blocked threads; neither may be equated to the worst present gap.
+    Thresholds are triage bins, not prescriptions for JIT or GPU tuning.
+    """
+    near30 = [r for r in rows if r["fps"] >= 29.9]
+    slow = [r for r in rows if r["fps"] < 25]
+    extreme = [r for r in rows if r["worst_ms"] >= 500]
+    high_jit = [r for r in rows if r["jit_ms"] >= 500]
+    high_cache = [r for r in rows if r["cache_wait_ms"] >= 100]
+    extreme_jit = [r for r in extreme if r["jit_ms"] >= 500]
+    extreme_without_high_jit = [r for r in extreme if r["jit_ms"] < 500]
+    assert len(rows) > 0
+    return {
+        "windows": len(rows),
+        "near30_windows": len(near30),
+        "near30_late50": round(sum(r["late50"] for r in near30)),
+        "below25_windows": len(slow),
+        "below25_late50": round(sum(r["late50"] for r in slow)),
+        "high_jit_windows": len(high_jit),
+        "high_cache_wait_windows": len(high_cache),
+        "extreme_ge500ms_windows": len(extreme),
+        "extreme_with_jit_ge500ms": len(extreme_jit),
+        "extreme_without_jit_ge500ms": len(extreme_without_high_jit),
+        "extreme_without_jit_ge500ms_frames": [
+            round(r["total"]) for r in extreme_without_high_jit
+        ],
+        "gpu_queue_full_windows": sum(r["gpu_full_ms"] > 0.01 for r in rows),
+        "proof_level": "five_second_association_only_not_frame_cause",
+    }
+
+
 def synthetic_progress_pause(ms:int,compositor_fps:int=30)->dict:
     """A deterministic counterexample: GPU can present stale images smoothly.
 
@@ -106,6 +140,19 @@ def self_test(rows):
     assert [stage[k]["late50"] for k,_,_ in STAGES]==[109,679,70]
     assert [stage[k]["late500"] for k,_,_ in STAGES]==[7,3,0]
     # A GPU-only queue-size check incorrectly calls this real baseline clean.
+    signals = bottleneck_signals(rows)
+    assert (signals["near30_windows"], signals["near30_late50"]) == (341, 5)
+    assert (signals["below25_windows"], signals["below25_late50"]) == (28, 668)
+    assert (signals["high_jit_windows"], signals["high_cache_wait_windows"]) == (25, 17)
+    assert (signals["extreme_ge500ms_windows"],
+            signals["extreme_with_jit_ge500ms"],
+            signals["extreme_without_jit_ge500ms"]) == (10, 8, 2)
+    assert signals["extreme_without_jit_ge500ms_frames"] == [19562, 19633]
+    assert signals["gpu_queue_full_windows"] == 0
+    assert signals["proof_level"] == "five_second_association_only_not_frame_cause"
+    # The classifier must still report structural populations for a clean
+    # set of present intervals, not invent a successful JIT/cache fix.
+    assert bottleneck_signals(rows)["extreme_ge500ms_windows"] == 10
     assert stage["gameplay"]["median_jit_ms_per_window"] < 50
     assert stage["gameplay"]["median_cache_wait_ms_per_window"] > 10
     # A true clean fixture must not get a false alarm.
@@ -137,6 +184,7 @@ def main():
         t,st,model=status(rows),grouped(rows),synthetic_progress_pause(750)
     result={"source_sha":"2efd8b3c96608667a2b22f1751eed1a475091cce",
             "known_bad_telemetry":t,"stage_summary":st,
+            "bottleneck_signals":bottleneck_signals(rows),
             "independent_guest_pause_simulation":model,
             "limitations":"Five-second sums cannot assign cause to individual frames. "
             "No recent build was measured on console. GPU queue and content "
@@ -145,6 +193,7 @@ def main():
     else:
         print("REAL_CAPTURE",t)
         for k,v in st.items():print("STAGE",k,v)
+        print("BOTTLENECK_SIGNALS",bottleneck_signals(rows))
         print("SYNTHETIC_CONTENT_LIVENESS",model)
         print("NO_GAMEPLAY_FIX_CLAIMED")
 
