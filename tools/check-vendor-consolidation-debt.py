@@ -833,7 +833,9 @@ main_noun = "générateur" if main_generators == 1 else "générateurs"
 assert f"**{main_generators} {main_noun}**" in single_source_doc
 module_noun = "générateur" if module_generators == 1 else "générateurs"
 assert f"**{module_generators} {module_noun}**" in single_source_doc
-assert f"**{main_generators + module_generators} sites**" in single_source_doc
+total_sites = main_generators + module_generators
+site_noun = "site" if total_sites == 1 else "sites"
+assert f"**{total_sites} {site_noun}**" in single_source_doc
 assert f"**{len(catalog_rows)} sources et en-têtes suivis**" in single_source_doc
 for deleted_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
     assert not (root/deleted_module).exists(), ("legacy source generator reintroduced", deleted_module)
