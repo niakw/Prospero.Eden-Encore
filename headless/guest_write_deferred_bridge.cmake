@@ -75,25 +75,20 @@ if(EDEN_GUEST_WRITE_BRIDGE_DEV)
     write_derived("${PORT_BUILD_DIR}/vulkan_rasterizer_deferred.cpp" "${bridge_vk}")
 
     # At the producer and fence boundaries, queued guest writes must drain.
-    if(NOT EXISTS "${PORT_BUILD_DIR}/dma_pusher.cpp")
-        message(FATAL_ERROR "Missing derived native DMA pusher")
+    # M08: source-complete DEV DMA processor based on G20's actual selected
+    # maintained source. No synthetic PORT_BUILD_DIR/dma_pusher.cpp exists.
+    set(EDEN_DEFERRED_DMA_SOURCE
+        "${PORT_ROOT}/vendor/encore-active/eden-core/guest-bridge/dma_pusher.cpp")
+    set(EDEN_EXPECTED_DEV_DMA_SOURCE
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/video_core/dma_pusher_dev.cpp")
+    if(NOT EDEN_MAINTAINED_GPU_DMA STREQUAL EDEN_EXPECTED_DEV_DMA_SOURCE)
+        message(FATAL_ERROR "Deferred DMA bridge requires G20 DEV maintained source")
     endif()
-    file(READ "${PORT_BUILD_DIR}/dma_pusher.cpp" bridge_dma)
-    string(FIND "${bridge_dma}" "void DmaPusher::DispatchCalls() {" found)
-    if(found LESS 0)
-        message(FATAL_ERROR "Pinned DMA dispatch entry changed")
+    if(NOT EXISTS "${EDEN_DEFERRED_DMA_SOURCE}")
+        message(FATAL_ERROR "Missing maintained M08 deferred DMA source")
     endif()
-    string(REPLACE "void DmaPusher::DispatchCalls() {"
-        "void DmaPusher::DispatchCalls() {\n    memory_manager.FlushCaching();"
-        bridge_dma "${bridge_dma}")
-    string(FIND "${bridge_dma}" "    system.GPU().OnCommandListEnd();" found)
-    if(found LESS 0)
-        message(FATAL_ERROR "Pinned DMA command fence changed")
-    endif()
-    string(REPLACE "    system.GPU().OnCommandListEnd();"
-        "    memory_manager.FlushCaching();\n    system.GPU().OnCommandListEnd();"
-        bridge_dma "${bridge_dma}")
-    write_derived("${PORT_BUILD_DIR}/dma_pusher_deferred.cpp" "${bridge_dma}")
+    configure_file("${EDEN_DEFERRED_DMA_SOURCE}"
+        "${PORT_BUILD_DIR}/dma_pusher_deferred.cpp" COPYONLY)
 
     # The buffer clear fast path bypasses the old conditional DMA flush.
     # M09: select a complete experimental Encore-maintained source.
@@ -223,7 +218,7 @@ if(EDEN_GUEST_WRITE_BRIDGE_DEV)
     foreach(old IN ITEMS
         "memory_manager.cpp"
         "${PORT_BUILD_DIR}/vulkan_rasterizer.cpp"
-        "${PORT_BUILD_DIR}/dma_pusher.cpp"
+        "${EDEN_MAINTAINED_GPU_DMA}"
         "engines/maxwell_dma.cpp"
         "engines/kepler_compute.cpp"
         "engines/engine_upload.cpp")

@@ -12,10 +12,12 @@ root=Path(__file__).resolve().parents[1]
 bridge=root/"headless/guest_write_deferred_bridge.cmake"
 code=bridge.read_text()
 maintained_m06 = root/"vendor/encore-active/eden-core/guest-bridge/memory_manager.cpp"
+maintained_m08 = root/"vendor/encore-active/eden-core/guest-bridge/dma_pusher.cpp"
 maintained_m09 = root/"vendor/encore-active/eden-core/guest-bridge/maxwell_dma.cpp"
 maintained_m10 = root/"vendor/encore-active/eden-core/guest-bridge/kepler_compute.cpp"
 maintained_m11 = root/"vendor/encore-active/eden-core/guest-bridge/engine_upload.cpp"
 bridge_runtime = (code + "\n" + maintained_m06.read_text() +
+                  "\n" + maintained_m08.read_text() +
                   "\n" + maintained_m09.read_text() + "\n" +
                   maintained_m10.read_text() + "\n" + maintained_m11.read_text())
 base=(root/"headless/CMakeLists.txt").read_text()
@@ -273,6 +275,21 @@ assert 'configure_file("${EDEN_DEFERRED_MEMORY_SOURCE}"' in code
 assert 'write_derived("${PORT_BUILD_DIR}/memory_manager_deferred.cpp"' not in code
 print("ENCORE_M06_MAINTAINED_MEMORY_SOURCE_PARITY_PASS")
 
+# M08: DEV G20 DMA source plus two exact former bridge flush insertions.
+g20_dev_dma = (root/"vendor/encore-active/eden-core/src/video_core/dma_pusher_dev.cpp").read_text()
+m08_entry = "void DmaPusher::DispatchCalls() {"
+m08_fence = "    system.GPU().OnCommandListEnd();"
+assert g20_dev_dma.count(m08_entry) == g20_dev_dma.count(m08_fence) == 1
+expected_m08 = g20_dev_dma.replace(
+    m08_entry, m08_entry + "\n    memory_manager.FlushCaching();").replace(
+    m08_fence, "    memory_manager.FlushCaching();\n" + m08_fence)
+assert maintained_m08.read_text() == expected_m08, "M08 maintained DEV DMA source drift"
+assert 'configure_file("${EDEN_DEFERRED_DMA_SOURCE}"' in code
+assert 'write_derived("${PORT_BUILD_DIR}/dma_pusher_deferred.cpp"' not in code
+assert '"${EDEN_MAINTAINED_GPU_DMA}"' in code
+assert 'list(APPEND video_sources "${EDEN_MAINTAINED_GPU_DMA}" "${EDEN_MAINTAINED_GPU_PULLER}")' in base
+print("ENCORE_M08_MAINTAINED_DMA_PARITY_PASS")
+
 # M09-M11: parity oracles; no source rewriting in CMake.
 original_m09 = (root/"vendor/sources/eden/src/video_core/engines/maxwell_dma.cpp").read_text()
 anchor_m09 = "void MaxwellDMA::Launch() {"
@@ -330,8 +347,6 @@ with tempfile.TemporaryDirectory(prefix="encore-bridge-on-") as d:
     (fake/"empty.cpp").write_text("int bridge_host_stub() { return 0; }\n")
     stage=fake/"stage"
     stage.mkdir()
-    source=root/"vendor/sources/eden/src/video_core/dma_pusher.cpp"
-    (stage/"dma_pusher.cpp").write_bytes(source.read_bytes())
     (stage/"memory-ps5.cpp").write_bytes((root/"vendor/sources/eden/src/core/memory.cpp").read_bytes())
     project=r"""cmake_minimum_required(VERSION 3.24)
 project(InactiveBridgeConfigure LANGUAGES CXX)
@@ -343,13 +358,14 @@ set(PORT_ROOT "__ROOT__")
 set(EDEN_PORT_DIR "__ROOT__/headless")
 set(PROJECT_SOURCE_DIR "__ROOT__/vendor/sources/eden")
 set(PORT_BUILD_DIR "__STAGE__")
+set(EDEN_MAINTAINED_GPU_DMA "__ROOT__/vendor/encore-active/eden-core/src/video_core/dma_pusher_dev.cpp")
 add_library(video_core STATIC "@{CMAKE_CURRENT_SOURCE_DIR}/empty.cpp")
 add_library(core STATIC "@{CMAKE_CURRENT_SOURCE_DIR}/empty.cpp")
 set_property(TARGET core PROPERTY SOURCES "@{PORT_BUILD_DIR}/memory-ps5.cpp")
 set_property(TARGET video_core PROPERTY SOURCES
     "memory_manager.cpp"
     "@{PORT_BUILD_DIR}/vulkan_rasterizer.cpp"
-    "@{PORT_BUILD_DIR}/dma_pusher.cpp"
+    "@{EDEN_MAINTAINED_GPU_DMA}"
     "engines/maxwell_dma.cpp"
     "engines/kepler_compute.cpp"
     "engines/engine_upload.cpp")
@@ -372,6 +388,7 @@ include("__BRIDGE__")
         assert name in sources and len(sources[name])>200,name
     mm=sources["memory_manager_deferred.cpp"]
     assert mm == maintained_m06.read_text(), "M06 staged source differs from maintained cpp"
+    assert not (stage/"dma_pusher.cpp").exists(), "M08 must not rely on a synthetic DMA source"
     assert "deferred_cpu_write_queue.Enqueue(core, address, size)" in mm
     assert "rasterizer->OnCPUWrite(address, size)" in mm
     assert "dirty[core].Collect(address, size)" in mm
@@ -382,7 +399,7 @@ include("__BRIDGE__")
     assert "!::Eden::GpuDeferredWrite::replaying_guest_write" in vk
     assert "std::lock_guard lock{buffer_cache.mutex, std::adopt_lock};" in vk
     assert "std::lock_guard lock{texture_cache.mutex, std::adopt_lock};" in vk
-    assert sources["dma_pusher_deferred.cpp"].count("memory_manager.FlushCaching()") >= 2
+    assert sources["dma_pusher_deferred.cpp"] == maintained_m08.read_text()
     assert sources["maxwell_dma_deferred.cpp"] == maintained_m09.read_text()
     assert sources["kepler_compute_deferred.cpp"] == maintained_m10.read_text()
     upload=sources["engine_upload_deferred.cpp"]
