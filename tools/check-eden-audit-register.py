@@ -17,7 +17,7 @@ entries = {}
 state_totals = Counter()
 records = []
 for raw in table.splitlines():
-    if not re.match(r"^\|\s*[A-Z][0-9]{2}\s*\|", raw):
+    if not re.match(r"^\|\s*[A-Z][0-9]{2,3}\s*\|", raw):
         continue
     cells = [item.strip() for item in raw.strip().strip("|").split("|")]
     assert len(cells) == 9, (raw, len(cells))
