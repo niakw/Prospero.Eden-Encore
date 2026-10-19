@@ -1770,6 +1770,23 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
                          '#ifdef PS5_NATIVE\n'
                          '        ::Eden::Performance::ProbeSchedulerOnce("VkPipelineBuilder");\n'
                          '#endif\n'))
+    # Completed async graphics pipelines may become ready before their
+    # ordered GPU callback is dequeued. Their release-published completion
+    # makes the build mutex and condition wait unnecessary in that case.
+    # The same callback still waits normally while compilation is unfinished.
+    if name == 'vk_graphics_pipeline':
+        replacements.append((
+            "        scheduler.Record([this](vk::CommandBuffer) {\\n"
+            "            auto timer = Eden::Performance::VulkanTimer(16);\n"
+            "            std::unique_lock lock{build_mutex};",
+            "        scheduler.Record([this](vk::CommandBuffer) {\\n"
+            "            // Builder published the pipeline before this ordered GPU callback.\\n"
+            "            // Acquire its completion without taking a redundant build mutex.\\n"
+            "            // An unfinished build still follows the original condition wait.\\n"
+            "            if (is_built.load(std::memory_order_acquire)) return;\\n"
+            "            auto timer = Eden::Performance::VulkanTimer(16);\n"
+            "            std::unique_lock lock{build_mutex};",
+        ))
     adapt(f'src/video_core/renderer_vulkan/{name}.cpp', name + '_cost.cpp', replacements)
 shader_costs = [
     ('#include <algorithm>', '#include <algorithm>\n#include <cstdio>\n#include "pipeline_trace_registry.h"\n'
