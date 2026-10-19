@@ -205,3 +205,22 @@ les plages incertaines et toutes les autres invalidations. Le
 générateur historique et le pont expérimental désactivé conservent la
 parité exacte. Pas de gain FPS ou de freeze corrigé revendiqué sans
 benchmark natif au même SHA.
+
+
+## Vulkan — contrôles de readback sans cache texture inscrit
+
+19 octobre 2026. `FlushRegion` et `MustFlushRegion` utilisent la
+preuve monotone CPU `ImagePages::NeverHeld` pour éviter le mutex et
+le parcours texture uniquement lorsqu'aucune image n'a jamais occupé
+la plage. Les demandes inconnues, enregistrées ou trop grandes gardent
+le traitement original. Les tailles nulles de `MustFlushRegion`
+conservent également le passage verrouillé, sans changer l'ordre
+buffer → texture. Les téléchargements buffers et notifications de
+requêtes ne sont pas supprimés.
+
+Témoin `tools/check-ps5-texture-flush-elision-host.py` compilant les
+vraies méthodes C++ sous ASan/UBSan : plages inconnues, images
+enregistrées, dépassements, buffers GPU-modifiés, niveau GPU bas et
+requêtes de taille zéro. La variante expérimentale désactivée et le
+générateur historique sont synchronisés. Aucun gain de FPS démontré
+avant benchmark PS5 comparable au même SHA.

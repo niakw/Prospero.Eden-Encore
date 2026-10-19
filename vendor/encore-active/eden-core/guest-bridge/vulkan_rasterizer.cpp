@@ -947,7 +947,10 @@ void RasterizerVulkan::FlushRegion(DAddr addr, u64 size, VideoCommon::CacheType 
     if (addr == 0 || size == 0) {
         return;
     }
-    if (True(which & VideoCommon::CacheType::TextureCache)) {
+    // No guest image ever overlapped these CPU pages: no texture readback.
+    // Unknown, large or previously registered pages keep the original lock.
+    if (True(which & VideoCommon::CacheType::TextureCache) &&
+        !::Eden::ImagePages::NeverHeld(addr, size)) {
         std::scoped_lock lock{texture_cache.mutex};
         texture_cache.DownloadMemory(addr, size);
     }
@@ -970,7 +973,10 @@ bool RasterizerVulkan::MustFlushRegion(DAddr addr, u64 size, VideoCommon::CacheT
     if (!Settings::IsGPULevelHigh()) {
         return false;
     }
-    if (True(which & VideoCommon::CacheType::TextureCache)) {
+    // Zero-size queries preserve old behavior; known-empty valid pages
+    // cannot contain any GPU-modified texture requiring a guest readback.
+    if (True(which & VideoCommon::CacheType::TextureCache) &&
+        (size == 0 || !::Eden::ImagePages::NeverHeld(addr, size))) {
         std::scoped_lock lock{texture_cache.mutex};
         return texture_cache.IsRegionGpuModified(addr, size);
     }
