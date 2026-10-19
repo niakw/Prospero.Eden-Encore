@@ -14,6 +14,7 @@ method=active[method_start:method_end]
 assert 'ShouldSampleGuestWrite()' in method
 assert method.count('CachePhaseTimer') == 5
 assert method.count('GuestCacheLock(') == 2
+assert 'if (!::Eden::ImagePages::NeverHeld(addr, size))' in method
 assert 'cpu_write_ahead{0}' in perf
 assert method.count('BufferWriteAhead::MarkFollowingPages') == 1
 assert method.index('GuestWriteBufferWait') < method.index('GuestWriteBufferWork')
@@ -43,6 +44,7 @@ cpp=r"""
 #include <cstddef>
 #include <cstdint>
 #include "buffer_write_ahead.h"
+#include "image_pages.h"
 #include <mutex>
 #include <cstdio>
 #if !defined(__x86_64__)
@@ -111,6 +113,11 @@ __ON_CPU_WRITE__
 int main() {
     using namespace Eden::Performance;
     RasterizerVulkan r;
+    // This legacy latency/sampling fixture models an image that has
+    // already been registered. Its texture invalidation assertions must
+    // therefore take the conservative locked route after the new page gate.
+    ::Eden::ImagePages::Mark(1,4);
+    assert(!::Eden::ImagePages::NeverHeld(1,4));
     for (int i=0;i<128;++i) assert(!r.OnCPUWrite(1,4));
     assert(Common::g_wall_clock.calls.load()==0);
     assert(guest_cpu_write.calls.load()==0);
@@ -154,8 +161,9 @@ int main() {
         const auto count=cache_phase_totals[static_cast<unsigned>(groups[i])].samples.load();
         assert(count==(i<2?3u:2u));
     }
-    // R437: empty buffer pages skip ONLY the buffer mutex and OnCPUWrite.
-    // The GPU texture cache and shader cache must still observe the write.
+    // R437: empty BUFFER pages skip that mutex and OnCPUWrite.
+    // This fixture's registered IMAGE page still needs the texture mutex;
+    // the independent never-held-image case has its own extracted-host test.
     r.buffer_cache.hazard=false;
     const auto before_buffer=r.buffer_cache.writes;
     const auto before_texture=r.texture_cache.writes;
