@@ -24,7 +24,9 @@ assert 'return n <= 8 || (n & (n - 1)) == 0;' in h
 assert 'target_include_directories(video_core PRIVATE "${EDEN_PORT_DIR}")' in c
 # Upstream core/video_core do not inherit PS5_NATIVE from the executable/common.
 # Scope the define to precisely the rewritten memory.cpp and GPU manager TU.
-assert 'set(eden_cpu_memory_tu "${PORT_BUILD_DIR}/memory.cpp")' in c
+assert 'set(eden_cpu_memory_tu "${EDEN_MAINTAINED_A32_MEMORY}")' in c
+assert 'list(REMOVE_ITEM core_sources "${EDEN_MAINTAINED_A32_MEMORY}")' in c
+assert 'set(eden_cpu_memory_tu "${PORT_BUILD_DIR}/memory.cpp")' not in c
 assert 'set(eden_cpu_memory_tu "${PROJECT_SOURCE_DIR}/src/core/memory.cpp")' in c
 assert 'set_property(SOURCE "${eden_native_memory_tu}" TARGET_DIRECTORY core' in c
 assert 'file(READ "${eden_cpu_memory_tu}" eden_cpu_memory)' in c
