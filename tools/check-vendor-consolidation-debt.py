@@ -34,14 +34,13 @@ assert 'execute_process(COMMAND python3 "${PORT_ROOT}/tools/prepare-vulkan-port.
 # consolidated source tree. Match the remaining reviewed CMake generation
 # sites and leave room only for removing them, never for adding new ones.
 # For READ/REPLACE the approved pinned exceptions below are subtracted first.
-baseline = {"write_derived(": 2, "file(READ": 5, "string(REPLACE": 25}
+baseline = {"write_derived(": 1, "file(READ": 4, "string(REPLACE": 3}
 counts = {name: c.count(name) for name in baseline}
 # All generation targets still permitted in the main CMake recipe.
 # These are a shrinking allowlist: a migrated target needs no new exemption.
 # G23 produces a GLSL resource and is deliberately not treated as C++ debt.
 import re
 allowed_generated_targets = {
-    "${derived}",  # G11: A32/A64 callback variants
     "${PORT_BUILD_DIR}/include/loading_scene_glsl.h",  # G23: GLSL resource
 }
 generated_targets = re.findall(r'^\s*write_derived\(\s*"([^"]+)"', c, re.M)
@@ -53,6 +52,18 @@ assert set(generated_targets) <= allowed_generated_targets, (
     "Unreviewed generated CMake source: migrate to vendor/encore-active",
     sorted(set(generated_targets) - allowed_generated_targets))
 
+# G11/X06: the last generated C++ has one complete Encore owner per profile.
+assert 'write_derived("${derived}"' not in c
+assert 'include("${EDEN_PORT_DIR}/native_jit_memory_read_guard.cmake")' not in c
+assert 'list(APPEND core_sources "${EDEN_G11_SOURCE}")' in c
+assert 'set_source_files_properties("${EDEN_G11_SOURCE}" PROPERTIES' in c
+for bits in (32,64):
+    for platform in ("host","native"):
+        for profile in ("normal","dev"):
+            name = f"arm_dynarmic_{bits}_{platform}_{profile}.cpp"
+            assert (active/"eden-core/src/core/arm/dynarmic/g11"/name).is_file(), name
+assert 'write_derived("${derived}"' in (
+    root/"tools/fixtures/legacy-g11-jit.cmake").read_text()
 # G19: direct ownership from a single full Encore kernel translation unit.
 assert 'write_derived("${PORT_BUILD_DIR}/kernel.cpp"' not in c
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/kernel/kernel.cpp" kernel_source)' not in c
@@ -1414,9 +1425,10 @@ assert inventory.count(indirect_begin) == inventory.count(indirect_end) == 1
 indirect_recorded = re.findall(
     r"^\| X\d\d \| \x60([^\x60]+)\x60 \|",
     inventory.split(indirect_begin)[1].split(indirect_end)[0], re.M)
-indirect_expected = (
-    ("headless/native_jit_memory_read_guard.cmake", ("string(REPLACE", "wrapper")),
-)
+indirect_expected = ()
+assert not (root/"headless/native_jit_memory_read_guard.cmake").exists()
+x06_oracle = (root/"tools/fixtures/legacy-x06-native-jit-memory-read-guard.cmake").read_text()
+assert "string(REPLACE" in x06_oracle and "wrapper" in x06_oracle
 assert indirect_recorded == [entry[0] for entry in indirect_expected], (
     "Unlisted or reordered indirect CMake override; recheck files and symbols")
 for module, required in indirect_expected:

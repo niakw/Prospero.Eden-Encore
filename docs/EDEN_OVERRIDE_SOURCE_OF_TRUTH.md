@@ -19,12 +19,11 @@ nouveaux corps C++ destinés à la console.
 - `vendor/encore-active` : **315 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **2 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **1 générateur** `write_derived`.
 - Le module CMake expérimental de pont différé contient **0 générateurs**
-  `write_derived`, soit **2 sites** au total.
-- Un module CMake procède encore à des substitutions **indirectes**
-  dans des variables source. **Dette restante**, non cachée par le
-  compteur des générations CMake.
+  `write_derived`, soit **1 site** au total.
+- Aucun module actif ne procède encore aux substitutions **indirectes**
+  de C++ recensées. X06 est conservé comme oracle sous `tools/fixtures/`.
 - `headless/` contient **3 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de

@@ -12,12 +12,21 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 cmake = (root / "headless/CMakeLists.txt").read_text()
+legacy = (root/"tools/fixtures/legacy-g11-jit.cmake").read_text()
+assert 'write_derived("${derived}"' not in cmake
+assert 'native_jit_memory_read_guard.cmake")' not in cmake
+assert 'set_source_files_properties("${EDEN_G11_SOURCE}" PROPERTIES' in cmake
 start = 'foreach(bits 32 64)\n    set(relative "arm/dynarmic/arm_dynarmic_${bits}.cpp")'
 finish = 'endforeach()\n# G12: complete maintained PhysicalCore sources.'
-assert cmake.count(start) == cmake.count(finish) == 1
-recipe = cmake[cmake.index(start):cmake.index(finish)+len("endforeach()")]
+assert legacy.count(start) == 1
+recipe = legacy[legacy.index(start):]
+live_begin = '# G11 + X06: one complete Encore JIT translation unit per guest ISA.'
+assert cmake.count(live_begin) == 1
+selector = cmake[cmake.index(live_begin):]
+selector = selector[:selector.index('endforeach()')+len('endforeach()')]
+assert 'list(APPEND core_sources "${EDEN_G11_SOURCE}")' in selector
 assert recipe.count('write_derived("${derived}" "#include <bit>\\n${wrapper}")') == 1
-assert 'include("${EDEN_PORT_DIR}/native_jit_memory_read_guard.cmake")' in recipe
+assert 'include("${PORT_ROOT}/tools/fixtures/legacy-x06-native-jit-memory-read-guard.cmake")' in recipe
 assert recipe.count("foreach(bits 32 64)") == 1
 
 # Production installs these qualified I-cache owners into the prepared
@@ -164,11 +173,46 @@ file(WRITE "${PORT_BUILD_DIR}/selected.txt" "${g11_sources}")
                         print("ENCORE_G11_PATCH_END", label, bits, flush=True)
 
                 assert len(owners) == 2, (label,owners)
+                # Compare the new selector with historical generation
+                # for every guest ISA, platform, DEV and inline option.
+                live = temp/(label+"-selected")
+                live.mkdir()
+                live_stage = live/"stage"
+                live_stage.mkdir()
+                (live/"empty.cpp").write_text("int g11_live_fixture() { return 0; }\n")
+                live_setup = setup.replace(str(stage),str(live_stage))
+                (live/"CMakeLists.txt").write_text(live_setup+'''
+get_target_property(core_sources core SOURCES)
+'''+selector+'''
+set_property(TARGET core PROPERTY SOURCES "${core_sources}")
+get_target_property(g11_sources core SOURCES)
+file(WRITE "${PORT_BUILD_DIR}/selected.txt" "${g11_sources}")
+foreach(bits 32 64)
+  set(name "${EDEN_G11_ROOT}/arm_dynarmic_${bits}_${EDEN_G11_PLATFORM}_${EDEN_G11_PROFILE}.cpp")
+  get_source_file_property(macro "${name}" COMPILE_DEFINITIONS)
+  file(WRITE "${PORT_BUILD_DIR}/compile${bits}.txt" "${macro}")
+endforeach()
+''')
+                result_live = subprocess.run(["cmake","-S",str(live),"-B",str(live/"build")],
+                                            capture_output=True,text=True,timeout=60)
+                if result_live.returncode:
+                    print(result_live.stdout[-2500:], result_live.stderr[-4500:])
+                    raise AssertionError("G11 maintained selector configure failed: "+label)
+                live_sources = (live_stage/"selected.txt").read_text().split(";")
+                assert len(live_sources) == 2, (label,live_sources)
+                for bits in (32,64):
+                    expected_owner = root/"vendor/encore-active/eden-core/src/core/arm/dynarmic/g11"/(
+                        f"arm_dynarmic_{bits}_{'native' if native else 'host'}_{'dev' if dev else 'normal'}.cpp")
+                    assert live_sources.count(str(expected_owner)) == 1, (label,bits)
+                    assert f"arm/dynarmic/arm_dynarmic_{bits}.cpp" not in live_sources
+                    assert (live_stage/f"compile{bits}.txt").read_text() == (
+                        "EDEN_INLINE_EXCLUSIVES=1" if inline else "EDEN_INLINE_EXCLUSIVES=0")
+
     for bits in (32,64):
         assert len({hashlib.sha256(value.encode()).digest()
                     for (native,dev,inline,arch),value in outputs.items()
                     if arch == bits}) == 8
-print("ENCORE_G11_MAINTAINED_SOURCE_PARITY_PASS variants=8 profiles=16")
+print("ENCORE_G11_MAINTAINED_SOURCE_PARITY_PASS variants=8 profiles=16 selectors=16")
 print("ENCORE_G11_X06_REAL_CMAKE_PROFILE_MATRIX_PASS cases=8 units=16")
 print("ENCORE_G11_NATIVE_MEMORY_READ_GUARD_MATRIX_PASS widths32=4 widths64=5")
 print("ENCORE_G11_SOURCE_OWNER_MATRIX_PASS exact_core_owners=2 host_only=1")

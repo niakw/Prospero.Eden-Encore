@@ -17,19 +17,19 @@ couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
 ## Synthèse vérifiable
 
-- **2 appels générateurs** encore dans CMake ; contre **75 avant**
+- **1 appel générateur** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
 - **Garde-fou de non-régression renforcé (19 octobre 2026) :**
   `tools/check-vendor-consolidation-debt.py` limite désormais les sites
-  de génération du CMake principal aux deux destinations G11/G23
-  recensées ci-dessous. Son plafond descendant est de **2** générations,
-  **5** lectures et **25** remplacements après déduction des exceptions
+  de génération du CMake principal à l'unique destination G23
+  recensées ci-dessous. Son plafond descendant est de **1** génération,
+  **4** lectures et **3** remplacements après déduction des exceptions
   déjà justifiées ; il ne permet plus le retour aux budgets historiques.
   G23 reste une ressource GLSL, non une réécriture du moteur. Le module
   expérimental de pont différé ne génère plus de C++ ; le module
   Shared JIT ne fait plus que sélectionner les sources Encore.
-- **5 lectures `file(READ`** et **25 remplacements
+- **4 lectures `file(READ`** et **3 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
 - Les versions diagnostiques de `IFile::Read`, `IStorage::Read` et des appels
@@ -90,7 +90,7 @@ et non les 458 scripts Python/shell/CMake du seul dossier `tools/`.
 | `tools/launcher/strings.py` | **RÉGÉNÉRATION EXPLICITE** | Catalogues PO et en-tête français `fr_fr_embedded.h` | Ressources locales |
 | `tools/ps-glyph-*.py` | **OUTILS HORS BUILD** d'analyse/adaptation de mods | Fichiers de recherche / packs externes, pas un patch C++ de l'émulateur | Frontière à conserver |
 | `headless/macro_recovery.cmake`, `slot_vector_recovery.cmake` | **BUILD**, écriture sans `write_derived` | Deux sorties CMake indirectes | Déjà indexées X01/X02 |
-| Un module indirect encore actif (X06) | **BUILD**, garde de lecture JIT avant génération | Unité G11 dérivée du CMake principal | X05 retiré avec G13/M12 ; X03, X07 et X08 retirés |
+| Aucun module indirect actif | Les corrections JIT sont des sources Encore | G11/X06 retirés du build | Oracles historiques séparés |
 | `headless/vulkan.cmake` | **BUILD**, copie/sélection d'un fork vérifié | `encore-active/eden-vulkan` | Aucun appel au générateur Python |
 
 **Règle de lecture :** le compteur de synthèse additionne uniquement les
@@ -244,7 +244,6 @@ dans la version normale.
 <!-- OVERRIDE_GENERATORS_START -->
 | ID | Sortie `write_derived` | Domaine indicatif | Catégorie | Ligne CMake |
 | --- | --- | --- | --- | ---: |
-| G11 | `${derived}` | CPU | Cible variable | 611 |
 | G23 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2065 |
 <!-- OVERRIDE_GENERATORS_END -->
 
@@ -274,8 +273,9 @@ Les huit candidates complètes G11 sont enregistrées sous
 `eden-core/src/core/arm/dynarmic/g11/` : A32/A64 × hôte/natif ×
 normal/DEV. L'option `EDEN_INLINE_EXCLUSIVES` garde deux expressions
 conditionnelles en C++ dans chacune : la matrice doit prouver leur
-équivalence aux seize sorties historiques. Le build actif utilise
-encore G11 tant que cette parité n'est pas verte.
+équivalence aux seize sorties historiques. Le build actif sélectionne directement les huit variantes G11.
+L'ancienne génération est archivée dans `tools/fixtures/legacy-g11-jit.cmake`
+uniquement pour le test de parité.
 
 Les unités `eden-core/src/core/arm/dynarmic/arm_dynarmic_{32,64}.cpp`
 déjà cataloguées constituent **la base préparée** (I-cache incluse),
@@ -737,14 +737,12 @@ que chaque chemin a été validé sur console.
 
 ## Overrides indirects sans `write_derived()` local
 
-Ces **2 modules supplémentaires** ne sont pas inclus dans les appels `write_derived()`.
-Tous modifient des variables-source ensuite écrites par le CMake principal.
-Ils ne correspondent pas chacun à une unité C++ distincte.
+Il ne reste **aucun module CMake indirect actif** modifiant du C++.
+X06 est conservé comme oracle hôte hors du build.
 
 <!-- INDIRECT_OVERRIDES_START -->
 | ID | Module | Origine / source réécrite | Mécanisme | État |
 | --- | --- | --- | --- | --- |
-| X06 | `headless/native_jit_memory_read_guard.cmake` | `wrapper` | Contrôle des lectures de mémoire invitée avant génération | Non migré |
 <!-- INDIRECT_OVERRIDES_END -->
 
 Le sélecteur `headless/vulkan.cmake` copie des fichiers déjà maintenus
@@ -759,12 +757,10 @@ Les deux générateurs indirects `macro_recovery.cmake` et
 maintenues dans `vendor/encore-active/eden-core`, sélectionnées directement.
 Leurs transformations historiques servent désormais uniquement de parité.
 
-Les deux modules encore actifs `native_guest_range_overflow.cmake` et
-`native_jit_memory_read_guard.cmake` modifient des variables-source
-qui sont ensuite écrites par CMake. Le correctif GPU des plages et de
-`IsGranularRange` n'est plus dans un module : il vit dans la source C++
-maintenue `vendor/encore-active/eden-core/src/video_core/memory_manager.cpp`.
-Les tests hôtes comparent l'ancienne génération et la source sélectionnée.
+Les modules historiques de correction mémoire/JIT ne modifient plus
+les sources C++ du build. L'ancien X06 est archivé sous
+`tools/fixtures/legacy-x06-native-jit-memory-read-guard.cmake`.
+Ses protections sont intégrées aux variantes G11 maintenues.
 
 À l'inverse, `headless/vulkan.cmake` copie déjà les sources réellement
 maintenues dans `vendor/encore-active/eden-vulkan`, et le module HLE
