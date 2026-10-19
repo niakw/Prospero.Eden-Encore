@@ -746,16 +746,7 @@ list(REMOVE_ITEM core_sources file_sys/fsmitm_romfsbuild.cpp)
 list(APPEND core_sources "${EDEN_MAINTAINED_ROMFS_BUILDER}")
 set_property(TARGET core PROPERTY SOURCES "${core_sources}")
 
-# One change to a pinned Eden source; the build stops when the text it replaces is gone.
-function(eden_patch source old new)
-    string(FIND "${${source}}" "${old}" patch_at)
-    if(patch_at LESS 0)
-        message(FATAL_ERROR "Pinned Eden source changed; not found: ${old}")
-    endif()
-    string(REPLACE "${old}" "${new}" patched "${${source}}")
-    set(${source} "${patched}" PARENT_SCOPE)
-endfunction()
-
+# Pinned source fixes below are direct Encore file selections only.
 # Mods (headless/mods.h). The pinned patch code cannot apply an .ips patch (it looks for the
 # patch's magic in the game's code, and its end marker test never passes) and writes zeros for
 # the text of a .pchtxt string patch, whose record also had a fixed size that a long line

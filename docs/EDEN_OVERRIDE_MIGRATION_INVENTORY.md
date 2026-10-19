@@ -24,12 +24,12 @@ couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
   `tools/check-vendor-consolidation-debt.py` limite désormais les sites
   de génération du CMake principal à l'unique destination G23
   recensées ci-dessous. Son plafond descendant est de **1** génération,
-  **4** lectures et **3** remplacements après déduction des exceptions
+  **4** lectures et **2** remplacements après déduction des exceptions
   déjà justifiées ; il ne permet plus le retour aux budgets historiques.
   G23 reste une ressource GLSL, non une réécriture du moteur. Le module
   expérimental de pont différé ne génère plus de C++ ; le module
   Shared JIT ne fait plus que sélectionner les sources Encore.
-- **4 lectures `file(READ`** et **3 remplacements
+- **4 lectures `file(READ`** et **2 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
 - Les versions diagnostiques de `IFile::Read`, `IStorage::Read` et des appels

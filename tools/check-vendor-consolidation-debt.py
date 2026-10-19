@@ -34,7 +34,7 @@ assert 'execute_process(COMMAND python3 "${PORT_ROOT}/tools/prepare-vulkan-port.
 # consolidated source tree. Match the remaining reviewed CMake generation
 # sites and leave room only for removing them, never for adding new ones.
 # For READ/REPLACE the approved pinned exceptions below are subtracted first.
-baseline = {"write_derived(": 1, "file(READ": 4, "string(REPLACE": 3}
+baseline = {"write_derived(": 1, "file(READ": 4, "string(REPLACE": 2}
 counts = {name: c.count(name) for name in baseline}
 # All generation targets still permitted in the main CMake recipe.
 # These are a shrinking allowlist: a migrated target needs no new exemption.
@@ -52,6 +52,7 @@ assert set(generated_targets) <= allowed_generated_targets, (
     "Unreviewed generated CMake source: migrate to vendor/encore-active",
     sorted(set(generated_targets) - allowed_generated_targets))
 
+assert 'function(eden_patch source old new)' not in c
 # G11/X06: the last generated C++ has one complete Encore owner per profile.
 assert 'write_derived("${derived}"' not in c
 assert 'include("${EDEN_PORT_DIR}/native_jit_memory_read_guard.cmake")' not in c
