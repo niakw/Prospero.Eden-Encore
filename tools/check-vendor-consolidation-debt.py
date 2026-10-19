@@ -1102,8 +1102,17 @@ for filename, expected_blob in gpu_injection_blobs.items():
     input_source = active / "eden-core/gpu-injections" / filename
     assert input_source.is_file() and not (root / "headless" / filename).exists()
     check_canonical_git_object(input_source, expected_blob, "GPU injection")
-    # The remaining sync failure fragment is still injected in gpu.cpp.
-    assert f'/eden-core/gpu-injections/{filename}"' in c
+    # G21 no longer injects this historic method from active CMake.
+    # Preserve its canonical blob only as a parity oracle while proving the
+    # full native GPU owners contain the same failure-aware wait.
+    legacy_g21 = (root / "tools/fixtures/legacy-g21-gpu.cmake").read_text()
+    assert f'/eden-core/gpu-injections/{filename}"' in legacy_g21
+    assert f'/eden-core/gpu-injections/{filename}"' not in c
+    historic_wait = input_source.read_text().strip()
+    for gpu_name in ("gpu_gl_host.cpp", "gpu_gl_host_dev.cpp",
+                     "gpu_gl_native.cpp", "gpu_gl_native_dev.cpp"):
+        unit = (active/"eden-core/src/video_core"/gpu_name).read_text()
+        assert historic_wait in unit, ("G21 wait drift", gpu_name)
 # The old queue injection was redundant and has been removed outright:
 # the same stop-aware method has a single shipping owner in eden-gpu.
 assert not (active / "eden-core/gpu-injections/gpu_queue_stop_wait.inc").exists()
