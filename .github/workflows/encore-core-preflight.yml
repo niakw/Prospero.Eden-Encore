@@ -205,6 +205,7 @@ jobs:
           python3 -B tools/check-ps5-vertex-identity-host.py
           python3 -B tools/check-ps5-late-descriptor-preflight-host.py
           python3 -B tools/check-active-cmake-source-boundary.py
+          python3 -B tools/check-headless-fragment-ownership.py
           python3 -B tools/check-vendor-consolidation-debt.py
           python3 -B tools/check-vendored-native-build-cmake.py
           python3 -B tools/check-vendored-fiber-source.py
