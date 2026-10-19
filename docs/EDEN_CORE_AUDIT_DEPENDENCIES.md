@@ -1,11 +1,11 @@
 # Eden Encore — active native dependency audit register
 
-**Branch:** dev/ps5-sparse-jit. **Updated:** 2026-10-17. **Baseline reviewed:** 436a102 (sources précédant cet enregistrement).
+**Branch:** dev/ps5-sparse-jit. **Updated:** 2026-10-19. **Baseline reviewed:** 436a102 (sources précédant cet enregistrement).
 **Technical scope:** guest CPU/HLE, JIT, GPU worker, Vulkan, memory coherency,
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 346
+**Non, this is not an exhaustive repository-wide inventory.** The 387
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,17 +24,17 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 354 | 332 | 715 |
+| Graphe connu | 387 | 364 | 781 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 299 | 287 | 610 |
+| SOURCE — lecture effectuée, preuve insuffisante | 332 | 319 | 676 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **314** | **301** | **638** |
-| Dont priorité P0 (SOURCE + OPEN) | 110 | 105 | 256 |
+| **Encore à qualifier (SOURCE + OPEN)** | **347** | **333** | **704** |
+| Dont priorité P0 (SOURCE + OPEN) | 113 | 107 | 263 |
 
-Le **noyau restant** compte donc 314 critères répartis sur
-301 fichiers et 638 mentions fonction/contrat :
-15 OPEN et 299 SOURCE.
+Le **noyau restant** compte donc 347 critères répartis sur
+333 fichiers et 704 mentions fonction/contrat :
+15 OPEN et 332 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
@@ -89,18 +89,14 @@ sont des sources maintenues sous
 sélectionnées uniquement en `EDEN_DEV_PROFILE`.
 `tools/check-vendor-consolidation-debt.py` vérifie la parité du corps
 C++ avec l'override généré auparavant et recense les sorties CMake dans
-`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **47 sites restants**
-après onze migrations (F02, F03, F04, N02, N03, H21, H22, F05, F06, F07 et F08). Un site à paramètres variables peut
-produire plusieurs fichiers réels. Les ressources générées ne doivent
-pas être confondues avec des overrides de code.
-
-Le second inventaire compte 21 générateurs `write_derived()` dans les modules,
-soit **68 sites au total**, mais n'inclut **pas** les cinq modules
-`X01–X07` qui créent une sortie par `file(WRITE)` ou transforment
-indirectement une variable-source. Ils sont suivis séparément dans
-`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`, avec contrôle hôte de leur
-présence et de leurs variables. Ces nombres sont des **sites et modules**, pas
-un décompte exhaustif de fichiers C++ distincts.
+`docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **5 sites principaux**
+`write_derived()` restent après migration de G20. Les modules inclus
+ajoutent **12 sites** (pont différé et JIT partagé, désactivés par défaut)
+et **2 modules de mutation indirecte** sont suivis séparément (X05–X06).
+Les ressources légitimes et les modes expérimentaux OFF ne sont pas des
+preuves de dette exécutée en production. Une cible variable peut générer
+plusieurs fichiers physiques ; les compteurs ne mesurent pas directement
+la dette en fonctions C++ ni une couverture console.
 
 Les chemins H18/H19/J14/J15 ont été catalogués pour éviter l'angle mort
 entre thread `Runnable`, fibre sélectionnée, contexte restauré et

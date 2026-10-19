@@ -15,6 +15,7 @@ table = doc.split(begin, 1)[1].split(end, 1)[0]
 valid_states = {"HOST", "SOURCE", "OPEN", "PARKED"}
 entries = {}
 state_totals = Counter()
+records = []
 for raw in table.splitlines():
     if not re.match(r"^\|\s*[A-Z][0-9]{2}\s*\|", raw):
         continue
@@ -40,6 +41,7 @@ for raw in table.splitlines():
         assert symbol in body, (ident, source, "missing symbol", symbol)
     entries[ident] = [d.strip() for d in deps.split(",") if d.strip() != "-"]
     state_totals[state] += 1
+    records.append((priority, source, len(symbols_list), state))
 assert len(entries) >= 62, len(entries)
 assert doc.count("img.shields.io/badge/") >= 28
 for ident, deps in entries.items():
@@ -78,6 +80,38 @@ for row in completed_rows:
     relative = match.group(1)
     assert (root / relative).is_file(), relative
     assert ("python3 -B " + relative) in workflow, ("green but not in CI", relative)
+
+
+# The summary table is computed from the actual rows, not from a stale
+# manually maintained snapshot. A new owner must update both layers at once.
+def coverage(rows):
+    return (len(rows), len({source for _, source, _, _ in rows}),
+            sum(symbols for _, _, symbols, _ in rows))
+
+def expect_coverage(label, rows, bold=False):
+    numbers = coverage(rows)
+    if bold:
+        values = " | ".join(f"**{number}**" for number in numbers)
+    else:
+        values = " | ".join(str(number) for number in numbers)
+    expected = f"| {label} | {values} |"
+    assert expected in doc, ("stale quantified audit summary", expected, numbers)
+
+expect_coverage("Graphe connu", records)
+expect_coverage("HOST — preuve ciblée hôte", [r for r in records if r[3] == "HOST"])
+expect_coverage("SOURCE — lecture effectuée, preuve insuffisante",
+                [r for r in records if r[3] == "SOURCE"])
+expect_coverage("OPEN — question technique non résolue",
+                [r for r in records if r[3] == "OPEN"])
+expect_coverage("PARKED — expérimentation suspendue",
+                [r for r in records if r[3] == "PARKED"])
+pending = [r for r in records if r[3] in {"SOURCE", "OPEN"}]
+expect_coverage("**Encore à qualifier (SOURCE + OPEN)**", pending, bold=True)
+expect_coverage("Dont priorité P0 (SOURCE + OPEN)",
+                [r for r in pending if r[0] == "P0"])
+pcount, pfiles, psymbols = coverage(pending)
+assert f"{pcount} critères répartis sur\\n{pfiles} fichiers et {psymbols} mentions".replace("\\n", "\n") in doc
+assert f"{state_totals['OPEN']} OPEN et {state_totals['SOURCE']} SOURCE." in doc
 
 assert "bridge is still DISABLED" in doc
 print("ENCORE_CORE_AUDIT_REGISTER_PASS", f"entries={len(entries)}",
