@@ -43,12 +43,17 @@ public:
     bool EmplaceWaitWithStopToken(std::stop_token stop_token, Args&&... args) noexcept {
         if (stop_token.stop_requested()) return false;
         const std::size_t write_index = producer.index.load(std::memory_order_relaxed);
-        {
+        // The consumer may have freed a slot after TryEmplace reported full.
+        // Do not register a stop-aware condition wait or acquire its mutex
+        // when the single producer already has sufficient capacity.
+        if ((write_index - consumer.index.load(std::memory_order_acquire)) >= Capacity) {
             std::unique_lock lock{producer.cv_mutex};
             if (!producer.cv.wait(lock, stop_token, [this, write_index] {
                 return (write_index - consumer.index.load(std::memory_order_acquire)) < Capacity;
-            }) || stop_token.stop_requested()) return false;
+            })) return false;
         }
+        // Keep the original shutdown gate even on the unlocked fast path.
+        if (stop_token.stop_requested()) return false;
         const std::size_t pos = write_index % Capacity;
         std::destroy_at(std::addressof(m_data[pos]));
         std::construct_at(std::addressof(m_data[pos]), std::forward<Args>(args)...);
