@@ -31,6 +31,7 @@ assert 'jit_duplicate_tracking.store(false, std::memory_order_relaxed)' in MAIN
 assert 'entry == "jit_dups=on"' in MAIN
 
 CPP = r"""
+#include <cstddef>
 #include <cstdint>
 #include <mutex>
 #include <unordered_map>
@@ -43,13 +44,17 @@ using Eden::Performance::JitDuplicateHistory;
 
 int main() {
     JitDuplicateHistory tracker;
-    tracker.Reset(); // Does not preallocate the 2-million-entry map.
+    tracker.Reset(); // Must not allocate any buckets on an unused title.
+    assert(tracker.BucketsForHostTest() <= 2);
     constexpr unsigned long long kLocation = 0x1000;
     assert(tracker.Record(0, kLocation, 1000) == 0);  // first block in title A
+    const auto initial_buckets = tracker.BucketsForHostTest();
+    assert(initial_buckets >= 16384 && initial_buckets < 65536);
     assert(tracker.Record(0, kLocation, 2000) == 1);  // repeat within title A
     assert(tracker.Record(1, kLocation, 3000) == 2);  // second guest core
     assert(tracker.Record(2, kLocation + 4, 4000) == 0);
     tracker.Reset(); // title B may use exactly the same virtual addresses
+    assert(tracker.BucketsForHostTest() <= 2); // no retained large hash table
     assert(tracker.Record(0, kLocation, 5000) == 0);
     assert(tracker.Record(1, kLocation, 6000) == 2);
     assert(tracker.Record(2, kLocation + 4, 7000) == 0);
@@ -71,7 +76,17 @@ int main() {
     for (auto& worker : workers) worker.join();
     assert(first == 1 && other == 3);
     tracker.Reset(); // joined workers; no stale owner in subsequent title
+    assert(tracker.BucketsForHostTest() <= 2);
     assert(tracker.Record(0, kLocation, 20000) == 0);
+    // A very large diagnostic session can still grow without a hard cap,
+    // and the following title must relinquish that peak capacity.
+    for (unsigned i = 0; i < 50000; ++i)
+        assert(tracker.Record(0, kLocation + 0x10000ULL + i, 30000 + i) == 0);
+    assert(tracker.BucketsForHostTest() > initial_buckets);
+    tracker.Reset();
+    assert(tracker.BucketsForHostTest() <= 2);
+    assert(tracker.Record(0, kLocation, 80000) == 0);
+    assert(tracker.BucketsForHostTest() < 65536);
 }
 """
 compiler = os.environ.get("CXX") or shutil.which("clang++") or shutil.which("g++")
@@ -82,10 +97,11 @@ with tempfile.TemporaryDirectory(prefix="encore-jit-title-reset-") as tmp:
     source.write_text(CPP.replace("INJECT_CLASS", CLASS))
     subprocess.run(
         [compiler, "-std=c++20", "-O1", "-pthread", "-Wall", "-Wextra",
+         "-DEDEN_JIT_DUP_HISTORY_HOST_TEST=1",
          "-fsanitize=address,undefined", "-fno-sanitize-recover=all",
          "-I", str(ROOT / "headless"), str(source), "-o", str(binary)],
         check=True, capture_output=True, text=True, timeout=70)
     for _ in range(2):
         done = subprocess.run([str(binary)], capture_output=True, text=True, timeout=30)
         assert done.returncode == 0, (done.returncode, done.stdout[-700:], done.stderr[-1000:])
-print("ENCORE_JIT_DUPLICATE_TITLE_RESET_PASS session_isolation=1 concurrency=1 sanitized=1 wiring=1")
+print("ENCORE_JIT_DUPLICATE_TITLE_RESET_PASS session_isolation=1 concurrency=1 sanitized=1 wiring=1 bucket_lifecycle=1")

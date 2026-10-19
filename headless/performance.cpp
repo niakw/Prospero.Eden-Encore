@@ -1990,7 +1990,10 @@ public:
     unsigned Record(unsigned core, std::uint64_t location, long long now_ns) {
         std::lock_guard lock{mutex_};
         if (!reserved_) {
-            compiled_.reserve(1u << 21);
+            // A diagnostic title must not precommit two million hash buckets
+            // (~16 MiB on 64-bit hosts) before its first recorded block.
+            // Rehash naturally if explicit profiling actually needs more.
+            compiled_.reserve(1u << 14);
             reserved_ = true;
         }
         auto [it, inserted] = compiled_.try_emplace(location, First{1u << core, now_ns});
@@ -2013,8 +2016,19 @@ public:
     // workers have joined. The lock also serializes any diagnostic call.
     void Reset() noexcept {
         std::lock_guard lock{mutex_};
-        compiled_.clear();
+        // Release both nodes and the bucket array between titles. clear()
+        // alone keeps the peak number of buckets resident for the next game.
+        decltype(compiled_) empty;
+        compiled_.swap(empty);
+        reserved_ = false;
     }
+
+#if defined(EDEN_JIT_DUP_HISTORY_HOST_TEST)
+    std::size_t BucketsForHostTest() {
+        std::lock_guard lock{mutex_};
+        return compiled_.bucket_count();
+    }
+#endif
 
 private:
     struct First {
