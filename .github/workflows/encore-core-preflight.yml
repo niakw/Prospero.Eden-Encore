@@ -229,7 +229,7 @@ jobs:
           python3 -B tools/check-vendored-gpu-thread.py
           python3 -B tools/check-g21-gpu-profile-matrix-host.py
           python3 -B tools/check-g19-kernel-profile-matrix-host.py
-          ENCORE_EXPORT_G11_PATCHES=1 python3 -B tools/check-g11-jit-profile-matrix-host.py
+          python3 -B tools/check-g11-jit-profile-matrix-host.py
           python3 -B tools/check-gpu-sync-failure-host.py
           python3 -B tools/check-gpu-producer-failure-host.py
           python3 -B tools/analyze-fc27-stutter.py --self-test

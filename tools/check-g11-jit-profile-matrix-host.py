@@ -199,7 +199,10 @@ endforeach()
                     print(result_live.stdout[-2500:], result_live.stderr[-4500:])
                     raise AssertionError("G11 maintained selector configure failed: "+label)
                 live_sources = (live_stage/"selected.txt").read_text().split(";")
-                assert len(live_sources) == 2, (label,live_sources)
+                # The fixture's own dummy TU remains alongside exactly
+                # one A32 and one A64 Encore owner.
+                assert len(live_sources) == 3, (label,live_sources)
+                assert live_sources.count(str(live/"empty.cpp")) == 1, (label,live_sources)
                 for bits in (32,64):
                     expected_owner = root/"vendor/encore-active/eden-core/src/core/arm/dynarmic/g11"/(
                         f"arm_dynarmic_{bits}_{'native' if native else 'host'}_{'dev' if dev else 'normal'}.cpp")
