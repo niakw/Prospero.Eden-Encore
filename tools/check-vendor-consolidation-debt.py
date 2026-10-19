@@ -884,7 +884,7 @@ def check_canonical_git_object(source, expected, label):
 shared_jit_blobs = {
     "jit_group.h": "50e7f0993ea3db6902bd11bfac496659dce54fb3",
     "jit_group_support.inc": "22cf4c406003cbe2fe1295503dc879086f2ee65e",
-    "jit_impl.inc": "d13505bab1908a05503fcf7bd802f1c3ac626d3e",
+    "jit_impl.inc": "19deec882492cadff590e689a01ee400611ad0c7",
     "jit_links.inc": "7dfe9cf7eabaabe90c61e74e1242c7712cec3503",
     "jit_push_rsb.inc": "08d4ab5765ef788748ba1c7b283a9cbcfad0d047",
     "jit_state_args.inc": "bee5fe16657a46647690f69c73596b8ee1d03ea4",
