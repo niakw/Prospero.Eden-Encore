@@ -450,8 +450,8 @@ endif()
 if(PS5_NATIVE)
     target_link_libraries(core PRIVATE xbyak::xbyak)
 endif()
-# Carry both qualified JIT configuration changes into the real core wrappers.
-# Generate local derivatives; the pinned dependency itself remains unchanged.
+# Carry both qualified JIT configurations into the maintained core wrappers.
+# Select complete Encore source owners; never generate JIT C++ at configure time.
 get_target_property(core_sources core SOURCES)
 # G11 + X06: one complete Encore JIT translation unit per guest ISA.
 # G11's historical C++ transformations are retained as host-test fixtures only.
