@@ -58,6 +58,21 @@ couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
   La cible est une vraie unité maintenue dans `vendor/encore-active`
   avec remplacement de la source sélectionnée et témoin de non-régression.
 
+## Ressource OpenSSL native : source maintenue, plus de reconstruction au build
+
+Le header CA natif (`inline constexpr char kCert[]`, 147 certificats)
+est maintenu intégralement sous
+`vendor/encore-active/eden-build/openssl/cert.h`. Le script
+`tools/materialize-openssl-cert.py` vérifie l'identité de son contenu
+avec `vendor/sources/eden/.patch/openssl/0001-add-bundled-cert.patch`
+puis copie uniquement la version maintenue dans
+`cdeps/include/openssl/cert.h`. La liste de confiance demeure
+strictement identique ; la validation TLS n'est pas désactivée.
+
+Le contrôle hôte `tools/check-maintained-openssl-cert.py` vérifie
+la copie identique, sa stabilité à une deuxième exécution et le refus
+d'un patch amont modifié. Ceci ne qualifie pas TLS sur console.
+
 ## Overrides et générateurs hors CMake principal — audit des points d'entrée
 
 La présence d'un script dans `tools/` ne signifie **pas** qu'il participe
@@ -76,7 +91,7 @@ et non les 458 scripts Python/shell/CMake du seul dossier `tools/`.
 | `tools/install-active-core-backports.py` | **ACTIF**, copie de sources maintenues avec replay temporaire de parité | **5 chemins** CPU/I-cache et HLE SM/audio sous `encore-active/eden-core` | **Migré** : sources installées jamais fabriquées par les patches |
 | `tools/refresh-eden-atomic-source-cache.py` | **ACTIF**, échange atomique d'un ancien cache identifié | Restaure archive épinglée, pas une nouvelle modification C++ | Maintenance de cache |
 | `tools/vendor-eden-cpm.py`, `tools/deps.py`, `tools/stage-vendored-opengl-deps.py` | **ACTIF** selon préparation et configuration | Copie d'entrées épinglées, non-patch de C++ | Dépendances |
-| `tools/build-headless-native.sh`, `tools/materialize-openssl-cert.py` | **ACTIF**, génération d'en-tête CA depuis un patch Eden épinglé | `cdeps/include/openssl/cert.h` en cache natif | Ressource OpenSSL requise ; **pas** une réécriture des fonctions du moteur |
+| `tools/build-headless-native.sh`, `tools/materialize-openssl-cert.py` | **ACTIF**, copie de l'en-tête CA maintenu dans `encore-active/eden-build/openssl/cert.h` | `cdeps/include/openssl/cert.h` en cache natif | Parité octet pour octet avec le patch Eden épinglé ; **pas** de transformation C++ pendant le build |
 | `tools/build-radv-dependencies.sh` | **ACTIF**, remplace provisoirement deux paramètres du cross-file Meson pour `ccache` puis restaure sur `EXIT` | `tooling/radv/ps5-cross.ini` dans la dépendance externe | Override de configuration temporaire, **pas** une source RADV suivie |
 | `tools/radv-active-inputs.py` | **ACTIF**, vérifie/écrit l'empreinte des inputs compilés RADV | `EDEN_ACTIVE_INPUTS_SHA256` | Reçu de build, aucun patch C++ |
 | `tools/build-headless-host.sh` | **HÔTE SEUL**, remplace trois lignes FFmpeg dans le cache hôte | `externals/ffmpeg/CMakeLists.txt` en staging | Override de build hôte, **hors console** |
