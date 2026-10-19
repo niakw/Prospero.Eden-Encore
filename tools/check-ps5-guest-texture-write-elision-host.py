@@ -48,7 +48,7 @@ enum class CachePhase {
     GuestWriteTextureWait, GuestWriteTextureWork,
     GuestWriteShaderInvalidate
 };
-struct BatchedGuestWriteTimer {};
+struct BatchedGuestWriteTimer { ~BatchedGuestWriteTimer() {} };
 struct CachePhaseTimer {
     CachePhaseTimer(CachePhase, bool) {}
     void Stop() {}
