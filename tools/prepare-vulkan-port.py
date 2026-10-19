@@ -103,6 +103,10 @@ void RasterizerVulkan::DispatchCompute() {"""),
      '            ::Eden::Performance::CachePhase::GuestWriteBufferWork, sample_guest_write};\n'
      '        if (buffer_cache.OnCPUWrite(addr, size)) {'),
     ('        std::scoped_lock lock{texture_cache.mutex};\n        texture_cache.WriteMemory(addr, size);\n    }\n    pipeline_cache.InvalidateRegion(addr, size);',
+     '        // ImagePages is monotonically published before texture slot insertion.\n'
+     '        // Only never-held small ranges may skip the texture-cache mutex; unknown\n'
+     '        // and previously registered pages retain the full invalidation path.\n'
+     '        if (!::Eden::ImagePages::NeverHeld(addr, size)) {\n'
      '        ::Eden::Performance::CachePhaseTimer texture_wait{\n'
      '            ::Eden::Performance::CachePhase::GuestWriteTextureWait, sample_guest_write};\n'
      '        ::Eden::Performance::GuestCacheLock(texture_cache.mutex, true);\n'
@@ -140,7 +144,7 @@ void RasterizerVulkan::DispatchCompute() {"""),
     # mutex when no page in the small write was EVER registered. The image
     # and shader invalidations remain unconditional on this code path.
     ('DEBUG_ASSERT(addr != 0 || size != 0);\n    {\n        ::Eden::Performance::CachePhaseTimer buffer_wait',
-     'DEBUG_ASSERT(addr != 0 || size != 0);\n    // Buffer lock elision applies only to never-registered pages.\n    // Texture/shader invalidations below always run.\n    if (!::Eden::BufferPages::NeverRegistered(addr, size)) {\n        ::Eden::Performance::CachePhaseTimer buffer_wait'),
+     'DEBUG_ASSERT(addr != 0 || size != 0);\n    // Buffer and texture page evidence independently guards their mutexes.\n    // Shader invalidation always runs, even if neither cache ever owned a page.\n    if (!::Eden::BufferPages::NeverRegistered(addr, size)) {\n        ::Eden::Performance::CachePhaseTimer buffer_wait'),
     # R309 PS5 watchdog: upstream checked the dispatch cadence BEFORE the 512-draw
     # ceiling. At mask 7 it therefore flushed on draw 519, not 512; at mask 63
     # on draw 575. Enforce the hard ceiling independently of dispatch cadence.

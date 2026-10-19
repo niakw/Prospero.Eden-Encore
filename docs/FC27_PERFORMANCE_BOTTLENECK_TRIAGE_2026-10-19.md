@@ -95,3 +95,41 @@ L'âge ou la fraîcheur des pixels n'est pas mesuré dans ce fichier.
 graphique n'est revendiqué par ce relevé.** Son utilité est de
 prioriser les changements les moins spéculatifs et de prévenir
 les « optimisations » qui masqueraient la véritable cause.
+
+
+## Premier correctif moteur candidat : écriture CPU sans texture enregistrée
+
+**Changement de code maintenu** :
+`vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp`,
+`RasterizerVulkan::OnCPUWrite`.
+
+La voie CPU-write native avait déjà une preuve monotone des pages
+tampon jamais enregistrées, mais prenait systématiquement le mutex du
+cache texture, même si la plage n'avait jamais appartenu à une image.
+`ImagePages::NeverHeld(addr,size)` existait déjà pour la lecture
+`GetFlushArea`. `TextureCache::RegisterImage` publie
+`ImagePages::Mark` **avant** de remplir `slot_map_views`, y compris
+pour les images clairsemées. `TextureCache::WriteMemory` ne visite que
+les images actuellement enregistrées dans ce mapping.
+
+`OnCPUWrite` évite désormais le mutex et la recherche texture pour
+une écriture jamais vue dans une image, bornée à 256 KiB et dans l'espace
+suivi. Dès qu'une page a été enregistrée, que la plage est inconnue,
+hors bornes ou trop grande, le chemin verrouillé original est utilisé.
+Les invalidations de shaders restent **toujours exécutées** lorsque
+le buffer cache ne retourne pas la condition de sortie historique.
+Aucun changement aux fences, barrières GPU, identités de textures,
+allocations, paramètres du jeu ou cadence de présentation.
+
+Tests : `check-ps5-image-pages-r433.py` valide l'ordre de publication,
+les limites et la monotonie du témoin ; le nouveau
+`check-ps5-guest-texture-write-elision-host.py` compile le corps C++
+**extrait de la véritable méthode**, sous ASan/UBSan, et compare les
+effets sur les caches tampon/texture/shader pour petites pages inconnues,
+pages enregistrées, plages trop grandes et sortie anticipée.
+
+Cette optimisation élimine une acquisition de mutex sur les écritures
+dont l'absence de texture est prouvée. Un **gain mesuré de frametime,
+FPS ou correction du freeze n'est PAS encore démontré sur console**.
+Comparer le même jeu et le même profil avec un package identifié,
+sans attribuer à ce seul changement un éventuel résultat mélangé.
