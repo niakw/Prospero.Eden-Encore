@@ -17,11 +17,11 @@ assert source.count(old_reg)==1
 assert maintained == '#include "buffer_pages.h"\n' + source.replace(old_reg, new_reg), "R437 maintained header differs from shipping-backport transform"
 assert maintained.count('::Eden::BufferPages::Mark(buffer.CpuAddr(), size);') == 1
 assert 'buffer-pages/video_core/buffer_cache/buffer_cache.h' in cm
-assert r.count('::Eden::BufferPages::NeverRegistered(addr, size)')==1
+assert r.count('::Eden::BufferPages::NeverRegistered(addr, size)')==3
 witness=(root/'headless/buffer_pages.h').read_text()
 assert 'registered[word].load(std::memory_order_acquire) & mask' in witness
 assert 'registered[word].fetch_or(mask,std::memory_order_release)' in witness
-assert g.count('::Eden::BufferPages::NeverRegistered(addr, size)')==1
+assert g.count('::Eden::BufferPages::NeverRegistered(addr, size)')==3
 pos=r.index('bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size)')
 body=r[pos:r.index('void RasterizerVulkan::OnCacheInvalidation',pos)]
 assert body.index('::Eden::BufferPages::NeverRegistered') < body.index(

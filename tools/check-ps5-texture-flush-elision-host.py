@@ -37,6 +37,7 @@ cpp=r"""
 #include <cstdint>
 #include <mutex>
 #include "image_pages.h"
+#include "buffer_pages.h"
 using DAddr=std::uint64_t;
 using u64=std::uint64_t;
 namespace VideoCommon {enum class CacheType: unsigned {TextureCache=1,BufferCache=2,QueryCache=4};}
@@ -73,6 +74,10 @@ __BODY__
 int main(){
  constexpr DAddr p=4096;
  RasterizerVulkan x;
+ // Keep registered buffer coverage in the independent texture witness.
+ Eden::BufferPages::Mark(10*p,p);
+ Eden::BufferPages::Mark(20*p,p);
+ Eden::BufferPages::Mark(50*p,p);
  auto all=static_cast<VideoCommon::CacheType>(7);
  auto tex=VideoCommon::CacheType::TextureCache;
  x.FlushRegion(10*p,p,all);
