@@ -55,3 +55,24 @@ des buckets entre jeux et la classification multithread des doublons.
 Le code fonctionne seulement sous profil développeur et seulement lorsque
 `jit_dups` est activé : ce gain mémoire du **diagnostic** ne saurait être
 présenté comme une amélioration des FPS en mode release.
+
+## 20 octobre — vidanges JIT réellement appliquées (standard A64)
+
+La voie A64 standard distingue désormais les vidanges **effectives** :
+`EDEN_PERF_JIT_CACHE core=N flush_all=X flush_ranges=Y
+scope=standard_a64_applied` sous profil DEV. L'instrumentation
+n'incrémente le compteur qu'après le traitement du cache, lorsqu'une
+invalidation non vide a été appliquée : l'absence de doublons dans
+`jit_dups` n'était auparavant pas une mesure de cohérence du cache.
+Les requêtes fusionnées peuvent donner une seule invalidation de plages.
+Les vidanges complètes incluent la pression code-cache et les effacements
+explicites ; ces compteurs **ne déduisent pas** l'origine exacte du flush.
+
+Le hook est compilé uniquement en profil développeur A64 standard, et
+l'appel n'est réalisé que lorsque la journalisation détaillée est active.
+Les compteurs sont remis à zéro à la frontière de session après arrêt
+des workers précédents. Un test hôte compile la méthode C++ exacte sous
+ASan/UBSan dans ses variantes release/DEV et couvre les invalidations
+vides, totales, par plage, combinées et le mode silencieux. Ni le JIT
+partagé, ni les mutex, ni les caches GPU, ni le chemin release ne changent.
+Aucune preuve d'amélioration en jeu sans capture native instrumentée.

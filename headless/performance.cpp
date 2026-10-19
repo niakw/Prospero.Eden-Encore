@@ -1763,6 +1763,10 @@ void Snapshot() {
                         dups[2].load(std::memory_order_relaxed), dups[3].load(std::memory_order_relaxed),
                         dups[4].load(std::memory_order_relaxed), dups[5].load(std::memory_order_relaxed),
                         dups[6].load(std::memory_order_relaxed), dups[7].load(std::memory_order_relaxed));
+            const auto& cache_events = jit_cache_events[i];
+            std::printf("EDEN_PERF_JIT_CACHE mono_ns=%lld core=%u flush_all=%llu flush_ranges=%llu scope=standard_a64_applied\n",
+                        mono, i, cache_events[0].load(std::memory_order_relaxed),
+                        cache_events[1].load(std::memory_order_relaxed));
             if (eden_jit_path_counters) {
                 unsigned long long path[8]{};
                 eden_jit_path_counters(i, path);
@@ -2058,6 +2062,19 @@ void Eden::Performance::ResetJitDuplicateTrackingForTitle() noexcept {
             bucket.store(0, std::memory_order_relaxed);
         }
     }
+    for (auto& core : jit_cache_events) {
+        for (auto& event : core) {
+            event.store(0, std::memory_order_relaxed);
+        }
+    }
+}
+
+// The default A64 JIT records actual applied full/range invalidations only
+// when detailed logging is enabled at the call site.
+extern "C" void eden_jit_cache_event(unsigned core, unsigned kind) {
+    if (core < Eden::Performance::jit_cache_events.size() && kind < 2)
+        Eden::Performance::jit_cache_events[core][kind].fetch_add(
+            1, std::memory_order_relaxed);
 }
 
 // Development builds only (the per-phase and duplicate counters exist there).

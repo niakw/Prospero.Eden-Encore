@@ -57,6 +57,9 @@ inline std::array<std::array<std::atomic<unsigned long long>, 4>, 4> jit_phase_n
 // jit_dups=on (a process-wide lock and map insert per compiled block).
 inline std::array<std::array<std::atomic<unsigned long long>, 8>, 4> jit_duplicates{};
 inline std::atomic<bool> jit_duplicate_tracking{false};
+// Only nonempty, applied standard-A64 invalidations in detailed DEV:
+// 0=whole code cache, 1=coalesced partial-range batch.
+inline std::array<std::array<std::atomic<unsigned long long>, 2>, 4> jit_cache_events{};
 // Called before the next title starts, after the previous guest workers joined.
 void ResetJitDuplicateTrackingForTitle() noexcept;
 // Guest core whose host PCs the development sampler collects (dev-settings pc_core=N, default 0).

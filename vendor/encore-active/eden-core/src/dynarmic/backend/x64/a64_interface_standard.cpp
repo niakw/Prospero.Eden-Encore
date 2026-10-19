@@ -7,6 +7,9 @@ extern "C" bool eden_native_detailed_logging() noexcept __attribute__((weak));
 extern "C" void eden_jit_evacuation(unsigned core) __attribute__((weak));
 extern "C" void eden_jit_compile(unsigned core, unsigned long long ns) __attribute__((weak));
 extern "C" void eden_jit_phases(unsigned core, unsigned long long translate, unsigned long long optimize, unsigned long long emit, unsigned long long location) __attribute__((weak));
+#if defined(EDEN_JIT_A64_DEV_PROFILE)
+extern "C" void eden_jit_cache_event(unsigned core, unsigned kind) __attribute__((weak));
+#endif
 // SPDX-FileCopyrightText: Copyright 2026 Eden Emulator Project
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -422,6 +425,16 @@ private:
             } else {
                 emitter.InvalidateCacheRanges(invalid_cache_ranges);
             }
+#if defined(EDEN_JIT_A64_DEV_PROFILE)
+            // Emit a count only for an actual applied invalidation, not for a
+            // queued request or a redundant halt. No clocks, release impact,
+            // or instrumentation in quiet native gameplay.
+            if (eden_native_detailed_logging && eden_native_detailed_logging() &&
+                eden_jit_cache_event) {
+                eden_jit_cache_event(unsigned(conf.processor_id),
+                                     invalidate_entire_cache ? 0u : 1u);
+            }
+#endif
             invalid_cache_ranges.clear();
             invalidate_entire_cache = false;
         }
