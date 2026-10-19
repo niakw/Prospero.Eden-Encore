@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 429
+**Non, this is not an exhaustive repository-wide inventory.** The 430
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 429 | 406 | 866 |
+| Graphe connu | 430 | 407 | 868 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 374 | 361 | 761 |
+| SOURCE — lecture effectuée, preuve insuffisante | 375 | 362 | 763 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **389** | **375** | **789** |
+| **Encore à qualifier (SOURCE + OPEN)** | **390** | **376** | **791** |
 | Dont priorité P0 (SOURCE + OPEN) | 114 | 108 | 265 |
 
-Le **noyau restant** compte donc 389 critères répartis sur
-375 fichiers et 789 mentions fonction/contrat :
-15 OPEN et 374 SOURCE.
+Le **noyau restant** compte donc 390 critères répartis sur
+376 fichiers et 791 mentions fonction/contrat :
+15 OPEN et 375 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-316 fichiers de code/en-têtes présents et 316 avec un chemin de
+317 fichiers de code/en-têtes présents et 317 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -662,6 +662,7 @@ function/contract tokens are checked by CI for existence only; the
 | U31 | P2 | U19 | headless/gpu_native_probe.inc | ProbeClock(; ProbeNativeQueue( | SOURCE | tools/check-headless-critical-interface-owners.py | Diagnostic native command queue implementation included transitively by gpu_probe.inc only | 🟡 Source étudiée |
 | U32 | P1 | J01 | headless/direct_pool_accounting.h | IsKernelFreeSpanValid(; Summarize( | SOURCE | tools/check-headless-critical-interface-owners.py | App-owned direct-memory accounting and bounded extent calculations consumed by performance.cpp | 🟡 Source étudiée |
 | U33 | P1 | J01 | headless/ps5_cpu_topology.h | FreeBsdMask(; ParseSmtGroups( | SOURCE | tools/check-headless-critical-interface-owners.py | App-owned read-only SMT/cpuset parser consumed by performance.cpp; console topology unqualified | 🟡 Source étudiée |
+| B28 | P2 | B01 | vendor/encore-active/eden-build/openssl/cert.h | inline constexpr char kCert[]; -----BEGIN CERTIFICATE----- | SOURCE | tools/check-maintained-openssl-cert.py | Canonical 147-certificate native TLS trust source, parity-proven byte-for-byte against pinned Eden patch and staged without C++ transformation; TLS execution on console unqualified | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 

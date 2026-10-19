@@ -93,6 +93,7 @@ jobs:
           python3 -B tools/check-native-gpu-queue-slot-lifetime-host.py
           python3 -B tools/check-eden-audit-register.py
           python3 -B tools/check-active-source-inventory.py
+          python3 -B tools/check-maintained-openssl-cert.py
           python3 -B tools/check-native-dma-indirect-dependencies-host.py
           python3 -B tools/check-native-dma-resume-boundary-host.py
           python3 -B tools/check-ps5-present-phase-timing.py

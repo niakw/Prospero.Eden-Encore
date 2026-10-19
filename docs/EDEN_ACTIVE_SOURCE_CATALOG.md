@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **316 fichiers** de code et d'en-têtes enregistrés.
-- **316 fichiers** possèdent une correspondance de chemin *exacte*
+- **317 fichiers** de code et d'en-têtes enregistrés.
+- **317 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -113,6 +113,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-backports/src/video_core/texture_cache/texture_cache.h` | `shipping-backport` | V52 |
 | `eden-backports/src/video_core/texture_cache/texture_cache_base.h` | `shipping-backport` | V54 |
 | `eden-backports/src/video_core/texture_cache/util.cpp` | `shipping-backport` | V61 |
+| `eden-build/openssl/cert.h` | `maintained-override` | B28 |
 | `eden-build/third_party/xbyak/xbyak.h` | `maintained-override` | J40 |
 | `eden-build/tooling/native/app_crt_radv.cpp` | `maintained-override` | B05 |
 | `eden-build/tooling/native/app_heap_arenas.c` | `maintained-override` | B06 |
@@ -366,7 +367,7 @@ Les fichiers source/en-tête/fragment de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
 Les chemins du graphe moteur y ont un propriétaire exact ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
-La couverture de 316/316 ci-dessus ne s'applique **pas** à ce dossier.
+La couverture de 317/317 ci-dessus ne s'applique **pas** à ce dossier.
 
 ## Critères de tenue à jour
 
