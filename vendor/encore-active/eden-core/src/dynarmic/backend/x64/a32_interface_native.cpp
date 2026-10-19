@@ -113,8 +113,17 @@ struct Jit::Impl {
     }
 
     void InvalidateCacheRange(std::uint32_t start_address, std::size_t length) {
+        if (length == 0) {
+            return;
+        }
         std::unique_lock lock{invalidation_mutex};
-        invalid_cache_ranges.add(boost::icl::discrete_interval<u32>::closed(start_address, static_cast<u32>(start_address + length - 1)));
+        // A wrapped or unrepresentable A32 range must not leave stale compiled blocks.
+        if (length - 1 > (~u32{0} - start_address)) {
+            invalidate_entire_cache = true;
+        } else {
+            const u32 end_address = start_address + static_cast<u32>(length - 1);
+            invalid_cache_ranges.add(boost::icl::discrete_interval<u32>::closed(start_address, end_address));
+        }
         HaltExecution(HaltReason::CacheInvalidation);
     }
 

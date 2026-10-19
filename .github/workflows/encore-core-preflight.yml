@@ -119,6 +119,7 @@ jobs:
           python3 -B tools/check-ps5-upstream-fixes-r302.py
           python3 -B tools/check-maintained-a64-interface.py
           python3 -B tools/check-maintained-a32-native-interface.py
+          python3 -B tools/check-jit-invalidation-extents-host.py
           python3 -B tools/check-maintained-emitters.py
           python3 -B tools/check-maintained-common-emit-x64.py
           python3 -B tools/check-maintained-memory-units.py

@@ -35,9 +35,29 @@ metered=(
  '            eden_jit_block(unsigned(conf.processor_id), descriptor.Value(), reinterpret_cast<const void*>(emitted.entrypoint), emitted.size);\n'
  '        return emitted;\n    }'
 )
+extent_original = '''    void InvalidateCacheRange(std::uint32_t start_address, std::size_t length) {
+        std::unique_lock lock{invalidation_mutex};
+        invalid_cache_ranges.add(boost::icl::discrete_interval<u32>::closed(start_address, static_cast<u32>(start_address + length - 1)));
+        HaltExecution(HaltReason::CacheInvalidation);
+    }'''
+extent_checked = '''    void InvalidateCacheRange(std::uint32_t start_address, std::size_t length) {
+        if (length == 0) {
+            return;
+        }
+        std::unique_lock lock{invalidation_mutex};
+        // A wrapped or unrepresentable A32 range must not leave stale compiled blocks.
+        if (length - 1 > (~u32{0} - start_address)) {
+            invalidate_entire_cache = true;
+        } else {
+            const u32 end_address = start_address + static_cast<u32>(length - 1);
+            invalid_cache_ranges.add(boost::icl::discrete_interval<u32>::closed(start_address, end_address));
+        }
+        HaltExecution(HaltReason::CacheInvalidation);
+    }'''
+assert source.count(extent_original) == 1, "pinned A32 invalidate extent changed"
 for anchor in (pressure,commit,emit):
     assert source.count(anchor)==1,("pinned A32 interface changed",anchor)
-expected=prefix+source.replace(pressure,pressure_replacement).replace(commit,retry).replace(emit,metered)
+expected=prefix+source.replace(pressure,pressure_replacement).replace(commit,retry).replace(emit,metered).replace(extent_original,extent_checked)
 assert maintained.read_text()==expected, "A32 maintained source must exactly match historical generator"
 assert 'write_derived("${PORT_BUILD_DIR}/a32_interface.cpp"' not in cm
 assert 'configure_file("${EDEN_MAINTAINED_A32_INTERFACE}"' in cm

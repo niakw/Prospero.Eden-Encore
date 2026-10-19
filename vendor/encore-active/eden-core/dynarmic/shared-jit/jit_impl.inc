@@ -98,10 +98,18 @@ public:
     }
 
     void InvalidateCacheRange(u64 start_address, size_t length) {
+        if (length == 0) {
+            return;
+        }
         std::unique_lock lock{invalidation_mutex};
-        const auto end_address = static_cast<u64>(start_address + length - 1);
-        const auto range = boost::icl::discrete_interval<u64>::closed(start_address, end_address);
-        invalid_cache_ranges.add(range);
+        // A wrapped or unrepresentable address range must invalidate conservatively.
+        if (length - 1 > (~u64{0} - start_address)) {
+            invalidate_entire_cache = true;
+        } else {
+            const u64 end_address = start_address + static_cast<u64>(length - 1);
+            const auto range = boost::icl::discrete_interval<u64>::closed(start_address, end_address);
+            invalid_cache_ranges.add(range);
+        }
         HaltExecution(HaltReason::CacheInvalidation);
     }
 
