@@ -210,6 +210,7 @@ jobs:
           python3 -B tools/check-headless-critical-interface-owners.py
           python3 -B tools/check-headless-runtime-header-owners.py
           python3 -B tools/check-headless-app-policy-owners.py
+          python3 -B tools/check-headless-specialized-owners.py
           python3 -B tools/check-vendor-consolidation-debt.py
           python3 -B tools/check-vendored-native-build-cmake.py
           python3 -B tools/check-vendored-fiber-source.py
