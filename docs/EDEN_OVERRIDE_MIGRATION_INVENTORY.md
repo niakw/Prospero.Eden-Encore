@@ -24,10 +24,10 @@ couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
   `tools/check-vendor-consolidation-debt.py` limite désormais les sites
   de génération du CMake principal aux quatre destinations G11/G19/G21/G23
   recensées ci-dessous. Son plafond descendant est de **4** générations,
-  **7** lectures et **48** remplacements après déduction des exceptions
+  **7** lectures et **51** remplacements après déduction des exceptions
   déjà justifiées ; il ne permet plus le retour aux budgets historiques.
   G23 reste une ressource GLSL, non une réécriture du moteur. Le module
-  expérimental de pont différé conserve ses sites de génération ; le module
+  expérimental de pont différé ne génère plus de C++ ; le module
   Shared JIT ne fait plus que sélectionner les sources Encore.
 - **8 lectures `file(READ`** et **55 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
@@ -90,7 +90,7 @@ et non les 458 scripts Python/shell/CMake du seul dossier `tools/`.
 | `tools/launcher/strings.py` | **RÉGÉNÉRATION EXPLICITE** | Catalogues PO et en-tête français `fr_fr_embedded.h` | Ressources locales |
 | `tools/ps-glyph-*.py` | **OUTILS HORS BUILD** d'analyse/adaptation de mods | Fichiers de recherche / packs externes, pas un patch C++ de l'émulateur | Frontière à conserver |
 | `headless/macro_recovery.cmake`, `slot_vector_recovery.cmake` | **BUILD**, écriture sans `write_derived` | Deux sorties CMake indirectes | Déjà indexées X01/X02 |
-| Deux modules indirects encore actifs (X05–X06) | **BUILD**, changement de variables source avant écriture | Unités dérivées du CMake principal | Indexées X05/X06 ; X03, X07 et X08 retirés |
+| Un module indirect encore actif (X06) | **BUILD**, garde de lecture JIT avant génération | Unité G11 dérivée du CMake principal | X05 retiré avec G13/M12 ; X03, X07 et X08 retirés |
 | `headless/vulkan.cmake` | **BUILD**, copie/sélection d'un fork vérifié | `encore-active/eden-vulkan` | Aucun appel au générateur Python |
 
 **Règle de lecture :** le compteur de synthèse additionne uniquement les

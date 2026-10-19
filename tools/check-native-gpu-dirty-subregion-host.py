@@ -25,19 +25,27 @@ for source, token in (
     (dirty, "TransformAddress BuildTransform(PAddr address, size_t size)"),
     (dirty, "T mask = ~T(0);"),
     (memory, "gpu_dirty_managers[core].Collect(address, size);"),
-    (port, "Pinned native GPUDirty Collect call changed"),
-    (port, "::Eden::GpuDirty::ForEachRegion(address, size,"),
-    (port, 'string(PREPEND eden_cpu_memory "#include'),
+    (port, 'memory_native_a32.cpp'),
+    (port, 'memory_native_standard.cpp'),
     (header, "inline constexpr std::uint64_t kRegionBytes = 2048;"),
     (replay, "inline constexpr std::uint64_t kDirtyRegionBytes = 2048;"),
     (workflow, "python3 -B tools/check-native-gpu-dirty-subregion-host.py"),
 ):
     assert token in source, token
 
-assert port.index("Pinned native GPUDirty Collect call changed") < port.index(
-    "set(eden_native_memory_tu")
-assert port.count("gpu_dirty_managers[core].Collect(subaddress, span);") == 1
-assert port.count("::Eden::GpuDirty::ForEachRegion(address, size,") == 1
+# G13 and X05 corrections now belong to the two full native memory TUs,
+# never CMake-generated replacements. Both ISA modes must retain the exact
+# pre-mask split, rather than depending on a diagnostic build flag.
+native_units = [
+    (root/"vendor/encore-active/eden-core/src/core"/name).read_text()
+    for name in ("memory_native_standard.cpp", "memory_native_a32.cpp")
+]
+for native in native_units:
+    assert native.count("gpu_dirty_managers[core].Collect(subaddress, span);") == 1
+    assert native.count("::Eden::GpuDirty::ForEachRegion(address, size,") == 1
+    assert "gpu_dirty_managers[core].Collect(address, size);" not in native
+    assert '#include "gpu_dirty_region_split.h"' in native
+assert 'write_derived("${eden_native_memory_tu}"' not in port
 
 # Embed the ACTUAL pinned original mask builder, rather than a
 # hand-transcribed equivalent. The negative control must trip UBSan at 4KiB
