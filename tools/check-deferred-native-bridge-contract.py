@@ -506,8 +506,8 @@ include("__BRIDGE__")
         deferred_path=(root/"vendor/encore-active/eden-core/guest-bridge"/deferred_file)
         actual=actual.replace(
             'set_property(TARGET core PROPERTY SOURCES "${PORT_BUILD_DIR}/memory-ps5.cpp")',
-            'set(EDEN_A32_FASTMEM '+('ON' if mode=="a32" else 'OFF')+')\\n'
-            'set(EDEN_NATIVE_GUEST_SOURCE "'+str(native_path)+'")\\n'
+            'set(EDEN_A32_FASTMEM '+('ON' if mode=="a32" else 'OFF')+')\n'
+            'set(EDEN_NATIVE_GUEST_SOURCE "'+str(native_path)+'")\n'
             'set_property(TARGET core PROPERTY SOURCES "${EDEN_NATIVE_GUEST_SOURCE}")')
         actual+='''
 get_target_property(eden_selected_core core SOURCES)

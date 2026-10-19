@@ -774,11 +774,6 @@ if(PS5_NATIVE)
         message(FATAL_ERROR "Missing maintained native device memory continuity")
     endif()
     target_include_directories(video_core BEFORE PRIVATE "${EDEN_NATIVE_DIRTY_HEADER_ROOT}")
-    if(EDEN_A32_FASTMEM)
-        set(eden_cpu_memory_tu "${EDEN_MAINTAINED_A32_MEMORY}")
-    else()
-        set(eden_cpu_memory_tu "${PROJECT_SOURCE_DIR}/src/core/memory.cpp")
-    endif()
     # G13/X05 consolidated: source-complete native memory units, no
     # source string manipulation and no generator under headless CMake.
     set(EDEN_NATIVE_MEMORY_ROOT "${PORT_ROOT}/vendor/encore-active/eden-core/src/core")
