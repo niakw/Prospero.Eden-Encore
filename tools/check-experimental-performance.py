@@ -81,10 +81,27 @@ assert 'std::string_view{name} == "nro_loaded"' in main
 assert 'std::string_view{name} == "cpu_manager_ready"' in main
 assert "Eden::Performance::ReportJitCodeState(name);" in main
 
-assert "A64CacheBytes(m_core_index" in cmake
-assert "A32CacheBytes(m_core_index" in cmake
-assert 'string(PREPEND wrapper "#include' in cmake
-assert "experimental_performance.h" in cmake
+# G11/X06 now compile exact maintained A32/A64 units, not CMake
+# rewritten strings. Native code sizing and failure-aware JIT allocation
+# must remain present in the source actually selected by core.
+assert 'list(APPEND core_sources "${EDEN_G11_SOURCE}")' in cmake
+assert 'write_derived("${derived}"' not in cmake
+assert 'string(PREPEND wrapper "#include' not in cmake
+for bits in (32,64):
+    root_src = "vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/"
+    native = read(root_src+f"arm_dynarmic_{bits}_native_normal.cpp")
+    native_dev = read(root_src+f"arm_dynarmic_{bits}_native_dev.cpp")
+    host_src = read(root_src+f"arm_dynarmic_{bits}_host_normal.cpp")
+    cache_policy = f"A{bits}CacheBytes(m_core_index"
+    assert cache_policy in native and cache_policy in native_dev
+    assert cache_policy not in host_src
+    assert '#include "experimental_performance.h"' in native
+    assert '#include "jit-startup-retry.h"' in native
+    assert "ConstructWithCapacityFallback(" in native and "ConstructWithCapacityFallback(" in native_dev
+    assert '#include "performance.h"' in native_dev
+    assert '#include "performance.h"' not in native
+    assert native.count("if (!CheckMemoryAccess(vaddr") == (4 if bits==32 else 5)
+print("ENCORE_EXPERIMENTAL_G11_MAINTAINED_SOURCE_OWNER_PASS native_profiles=4")
 assert 'option(EDEN_SHARED_JIT "Enable the experimental cross-core A64 JIT" OFF)' in cmake
 assert 'option(EDEN_JIT_COMPILE_BATCH "Compile bounded A64 successor chains on a cache miss" OFF)' in cmake
 
