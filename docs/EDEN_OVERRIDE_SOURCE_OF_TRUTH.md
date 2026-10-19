@@ -42,6 +42,17 @@ nouveaux corps C++ destinés à la console.
   overrides C++ ; elles sont documentées dans
   `EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
+Le contrôle `tools/check-active-cmake-source-boundary.py`, intégré à la
+prévalidation hôte, explore récursivement les modules CMake actifs de
+`headless/` et `vendor/encore-active/` : aucun ne peut désormais
+réintroduire `file(WRITE)`, `string(REPLACE)`, `execute_process` ou
+`write_derived` pour fabriquer du code. Le seul appel autorisé du
+CMake racine demeure G23 (en-tête de ressource GLSL).
+Le script vérifie aussi que `prepare-vulkan-port.py` reste un ancien
+outil de reconstruction pour les tests, jamais invoqué dans les chemins
+de compilation native. Cette preuve couvre les frontières de build
+énumérées, pas l'exécution effective sur console.
+
 ## Recensement des modules CMake hors CMake principal
 
 <!-- SINGLE_SOURCE_CMAKE_START -->
