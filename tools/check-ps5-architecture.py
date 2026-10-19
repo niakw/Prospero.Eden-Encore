@@ -193,14 +193,28 @@ def main() -> None:
             "Both A64/A32 paths must participate in global budgeting")
     require(jit_policy.count('static_assert(ChooseJitMemoryPlan(') >= 6,
             "Guest JIT admission boundary assertions missing")
-    require('A64CacheBytes(m_core_index' in cmake and 'A32CacheBytes(m_core_index' in cmake,
-            "Both Dynarmic core wrappers must consume the runtime memory budget")
+    # G11/X06 now selects complete translation units. Check the selected
+    # native owners themselves, not the retired CMake source generator.
+    require('list(APPEND core_sources "${EDEN_G11_SOURCE}")' in cmake and
+            'set_source_files_properties("${EDEN_G11_SOURCE}" TARGET_DIRECTORY core PROPERTIES' in cmake and
+            'write_derived("${derived}"' not in cmake,
+            "G11 must select maintained JIT sources, never generate C++")
+    for bits in (32, 64):
+        for profile in ("normal", "dev"):
+            unit = read(
+                f"vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/"
+                f"arm_dynarmic_{bits}_native_{profile}.cpp")
+            budget = f"A{bits}CacheBytes(m_core_index"
+            require(budget in unit,
+                    f"Native A{bits} {profile} wrapper must consume runtime JIT memory budget")
+            require('ConstructWithCapacityFallback(' in unit and
+                    f"kA{bits}Baseline[m_core_index]" in unit,
+                    f"Native A{bits} {profile} startup retry must retain its per-core baseline")
+            require(unit.count('if (!CheckMemoryAccess(vaddr') == (4 if bits == 32 else 5),
+                    f"Native A{bits} {profile} memory reads must honor abort guards")
     startup = read("headless/jit-startup-retry.h")
     require('target_link_libraries(core PRIVATE xbyak::xbyak)' in cmake,
             "PS5 core wrapper requires pinned private Xbyak target for typed retries")
-    require('ConstructWithCapacityFallback(' in cmake and
-            'Pinned Dynarmic guest JIT construction changed' in cmake,
-            "Dynarmic constructor integration must be source-anchored")
     require('Xbyak::ERR_CANT_ALLOC' in startup and
             'catch (const std::bad_alloc&)' in startup,
             "Startup retry must only catch actual code allocator failures")
