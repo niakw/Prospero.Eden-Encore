@@ -131,3 +131,22 @@ long-frame/JIT/lock classification with exact frame pairing.
 `tools/check-fc27-cache-contention-classifier.py` exercises it
 with synthetic records in host preflight. The original console
 logs are private evidence, **not added to Git**.
+
+## 20 octobre 2026 — Isolation du diagnostic JIT entre deux jeux
+
+Le suivi facultatif `jit_dups=on` conservait son `unordered_map` de
+localisations compilées dans une durée de vie statique commune à toutes les
+sessions. Sur un autre jeu utilisant les mêmes adresses virtuelles, des
+premières compilations pouvaient être classées comme doublons ; la mémoire
+occupée par les anciennes entrées restait inutilement allouée.
+
+`JitDuplicateHistory` détient désormais l'historique sous mutex, alloué
+uniquement au premier enregistrement réel. Sa remise à zéro s'exécute à
+la frontière de lancement, après arrêt des workers précédents, et réinitialise
+les compteurs de doublons. Le suivi des compilations *dans* un même titre
+reste identique ; les séries cumulatives de temps de compilation ne sont pas
+remises à zéro par ce correctif. Le témoin C++ source réel vérifie ASan/UBSan,
+plusieurs cœurs, sessions successives et sélection DEV.
+
+Cette correction rend les prochaines captures `jit_dups` interprétables ;
+elle ne prouve aucune baisse de frametime sur PS5.

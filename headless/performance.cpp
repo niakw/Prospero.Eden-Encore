@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "performance.h"
+#ifdef EDEN_DEV_PROFILE
+#include "jit_duplicate_history.h"
+#endif
 #include "ps5_cpu_topology.h"
 #include "direct_pool_accounting.h"
 #include "direct_pool_probe_policy.h"
@@ -1981,6 +1984,23 @@ extern "C" void eden_jit_evacuation(unsigned core) {
         Eden::Performance::evacuations[core].fetch_add(1, std::memory_order_relaxed);
 }
 #ifdef EDEN_DEV_PROFILE
+namespace {
+Eden::Performance::JitDuplicateHistory& JitHistory() {
+    static Eden::Performance::JitDuplicateHistory history;
+    return history;
+}
+} // namespace
+
+void Eden::Performance::ResetJitDuplicateTrackingForTitle() noexcept {
+    // The previous guest CPU/JIT workers have joined at this launch boundary.
+    JitHistory().Reset();
+    for (auto& core : jit_duplicates) {
+        for (auto& bucket : core) {
+            bucket.store(0, std::memory_order_relaxed);
+        }
+    }
+}
+
 // Development builds only (the per-phase and duplicate counters exist there).
 extern "C" void eden_jit_phases(unsigned core, unsigned long long translate, unsigned long long optimize,
                                 unsigned long long emit, unsigned long long location) {
@@ -1990,30 +2010,9 @@ extern "C" void eden_jit_phases(unsigned core, unsigned long long translate, uns
     phases[1].fetch_add(optimize, std::memory_order_relaxed);
     phases[2].fetch_add(emit, std::memory_order_relaxed);
     if (!Eden::Performance::jit_duplicate_tracking.load(std::memory_order_relaxed)) return;
-    // Which cores compiled each location, and when the first one did.
-    struct First { unsigned cores; long long ns; };
-    static std::mutex mutex;
-    static auto* compiled = [] {
-        auto* map = new std::unordered_map<unsigned long long, First>;
-        map->reserve(1u << 21);
-        return map;
-    }();
-    const long long now = Common::g_wall_clock.GetTimeNS().count();
-    unsigned index = 0;
-    {
-        std::lock_guard lock{mutex};
-        auto [it, inserted] = compiled->try_emplace(location, First{1u << core, now});
-        if (!inserted) {
-            if (it->second.cores & (1u << core)) {
-                index = 1;
-            } else {
-                it->second.cores |= 1u << core;
-                const long long lead = now - it->second.ns;
-                index = 2;
-                for (long long bound = 1'000'000; index < 7 && lead >= bound; bound *= 10) ++index;
-            }
-        }
-    }
+    // Track duplicates per title; never classify another game's same address.
+    const unsigned index = JitHistory().Record(core, location,
+                                               Common::g_wall_clock.GetTimeNS().count());
     Eden::Performance::jit_duplicates[core][index].fetch_add(1, std::memory_order_relaxed);
 }
 extern "C" void eden_jit_ranges(unsigned core, unsigned long long ns) {
