@@ -254,6 +254,26 @@ sont maintenues sous `vendor/encore-active/eden-build/tooling/native/`.
 Les IDs G01–G23 sont stables et ne sont pas renumérotés.
 
 
+## G11 + X06 — preuve des variantes avant centralisation
+
+Le dernier générateur C++ actif `G11` produit `arm_dynarmic_32.cpp` et
+`arm_dynarmic_64.cpp` selon hôte/natif, normal/DEV et l'option
+`EDEN_INLINE_EXCLUSIVES`. Le module indirect X06 ajoute ses gardes de
+lecture RAM native à cette même chaîne de génération.
+
+Le nouveau témoin `tools/check-g11-jit-profile-matrix-host.py` configure
+la vraie recette G11 sur **huit profils**, soit **16 unités** A32/A64. Il
+contrôle les propriétaires compilés une seule fois, les gardes de lecture
+X06, les tailles des caches et le fallback JIT natif, les marqueurs DEV,
+et les exclusivités monitor ou inline. Cette première preuve reste
+entièrement **hôte**.
+
+Les unités `eden-core/src/core/arm/dynarmic/arm_dynarmic_{32,64}.cpp`
+déjà cataloguées n'incluent pas toutes ces modifications et ne doivent
+pas être substituées aveuglément. Toute future centralisation devra
+maintenir les variantes nécessaires dans `encore-active`, sans activer
+les exclusivités inline qui restent désactivées par défaut.
+
 ## G19 — matrice kernel avant centralisation
 
 Le générateur historique G19 produisait une unité `kernel.cpp` distincte pour le
