@@ -93,6 +93,22 @@ int main() {
         p.InvalidateCacheRange(ADDR(2), std::numeric_limits<std::size_t>::max());
         if (p.halt_count != 1 || !p.invalidate_entire_cache || !p.invalid_cache_ranges.values.empty()) return 5;
     }
+    {
+        Probe p;
+        p.invalidate_entire_cache = true;
+        p.InvalidateCacheRange(ADDR(0x100), 4);
+        p.InvalidateCacheRange(max_address - 1, 3);
+        if (p.halt_count != 2 || !p.invalidate_entire_cache || !p.invalid_cache_ranges.values.empty()) return 6;
+    }
+    {
+        Probe p;
+        p.InvalidateCacheRange(ADDR(0x100), 4);
+        p.InvalidateCacheRange(max_address - 1, 3);
+        p.InvalidateCacheRange(ADDR(0x200), 4);
+        if (p.halt_count != 3 || !p.invalidate_entire_cache ||
+            p.invalid_cache_ranges.values.size() != 1 ||
+            p.invalid_cache_ranges.values[0] != std::make_pair(ADDR(0x100), ADDR(0x103))) return 7;
+    }
     return 0;
 }
 """
