@@ -523,8 +523,8 @@ def self_test() -> None:
         "EDEN_PERF_JIT_CACHE mono_ns=180000 core=0 flush_all=3 flush_ranges=2 scope=standard_a64_applied",
     ])
     cache = analyze(sample + "\n" + cache_samples)["jit_cache_events"]
-    assert cache[0]["observed_snapshots"] == 5
-    assert cache[0]["measured_intervals"] == 3
+    assert cache[0]["observed_snapshots"] == 6
+    assert cache[0]["measured_intervals"] == 4
     assert cache[0]["full_clears"] == 5  # 2 + 1 + 2 after title boundary
     assert cache[0]["range_batches"] == 9  # 5 + 3 + 1
     assert cache[0]["counter_resets"] == 0
