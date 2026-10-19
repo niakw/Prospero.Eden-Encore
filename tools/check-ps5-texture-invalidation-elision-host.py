@@ -54,6 +54,7 @@ code = r"""
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <mutex>
 #include <span>
 #include <utility>
@@ -71,7 +72,18 @@ constexpr bool True(VideoCommon::CacheType which) { return static_cast<unsigned>
 struct CountingMutex {
     std::mutex m;
     int locks{};
-    void lock() { m.lock(); ++locks; }
+    std::function<void()> before_lock;
+    void lock() {
+        // Deterministically model image registration after batch precheck
+        // but before acquiring the cache lock.
+        if (before_lock) {
+            auto publish = std::move(before_lock);
+            before_lock = {};
+            publish();
+        }
+        m.lock();
+        ++locks;
+    }
     void unlock() { m.unlock(); }
 };
 struct Cache {
@@ -157,9 +169,20 @@ int main() {
     assert(x.texture_cache.mutex.locks == 7 && x.texture_cache.writes == 7);
     assert(x.buffer_cache.writes == 9 && x.query_cache.writes == 7);
     assert(x.pipeline_cache.writes == 9);
+    // A concurrent registration can publish its monotonic page bit after
+    // the outer mixed-batch scan, before we own the texture mutex.
+    // The inner check MUST observe it and keep its invalidation.
+    x.texture_cache.mutex.before_lock = [&] { ImagePages::Mark(150*p, p); };
+    std::array<std::pair<DAddr, std::size_t>, 2> newly_registered{{
+        {150*p, p}, {20*p, p}
+    }};
+    x.InnerInvalidation(newly_registered);
+    assert(x.texture_cache.mutex.locks == 8 && x.texture_cache.writes == 9);
+    assert(x.buffer_cache.writes == 11 && x.query_cache.writes == 9);
+    assert(x.pipeline_cache.writes == 11);
     std::array<std::pair<DAddr, std::size_t>, 0> empty{};
     x.InnerInvalidation(empty);
-    assert(x.texture_cache.mutex.locks == 7 && x.buffer_cache.writes == 9);
+    assert(x.texture_cache.mutex.locks == 8 && x.buffer_cache.writes == 11);
 }
 """.replace("__EXTRACT__", real_methods)
 compiler = shutil.which("clang++-18") or shutil.which("clang++")
@@ -175,4 +198,4 @@ with tempfile.TemporaryDirectory(prefix="encore-invalidation-elision-") as td:
     subprocess.run([str(binary)], check=True, timeout=20)
 print("VULKAN_TEXTURE_INVALIDATION_ELISION_HOST_PASS real_methods=3 "
       "never_registered=1 known=1 mixed_batch=1 oversized=1 out_of_range=1 "
-      "all_other_caches_preserved=1 asan_ubsan=1")
+      "all_other_caches_preserved=1 concurrent_registration=1 asan_ubsan=1")
