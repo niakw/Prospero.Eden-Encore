@@ -34,7 +34,7 @@ assert 'execute_process(COMMAND python3 "${PORT_ROOT}/tools/prepare-vulkan-port.
 # consolidated source tree. Match the remaining reviewed CMake generation
 # sites and leave room only for removing them, never for adding new ones.
 # For READ/REPLACE the approved pinned exceptions below are subtracted first.
-baseline = {"write_derived(": 3, "file(READ": 6, "string(REPLACE": 38}
+baseline = {"write_derived(": 2, "file(READ": 5, "string(REPLACE": 25}
 counts = {name: c.count(name) for name in baseline}
 # All generation targets still permitted in the main CMake recipe.
 # These are a shrinking allowlist: a migrated target needs no new exemption.
@@ -42,7 +42,6 @@ counts = {name: c.count(name) for name in baseline}
 import re
 allowed_generated_targets = {
     "${derived}",  # G11: A32/A64 callback variants
-    "${PORT_BUILD_DIR}/kernel.cpp",  # G19
     "${PORT_BUILD_DIR}/include/loading_scene_glsl.h",  # G23: GLSL resource
 }
 generated_targets = re.findall(r'^\s*write_derived\(\s*"([^"]+)"', c, re.M)
@@ -54,6 +53,15 @@ assert set(generated_targets) <= allowed_generated_targets, (
     "Unreviewed generated CMake source: migrate to vendor/encore-active",
     sorted(set(generated_targets) - allowed_generated_targets))
 
+# G19: direct ownership from a single full Encore kernel translation unit.
+assert 'write_derived("${PORT_BUILD_DIR}/kernel.cpp"' not in c
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/kernel/kernel.cpp" kernel_source)' not in c
+assert 'list(APPEND core_sources "${EDEN_MAINTAINED_KERNEL_SOURCE}")' in c
+assert 'list(FIND core_sources hle/kernel/kernel.cpp eden_g19_pinned_owner)' in c
+for name in ("kernel_standard.cpp", "kernel_dev.cpp"):
+    assert (active/"eden-core/src/core/hle/kernel"/name).is_file(), name
+assert 'write_derived("${PORT_BUILD_DIR}/kernel.cpp"' in (
+    root/"tools/fixtures/legacy-g19-kernel.cmake").read_text()
 # G21 no longer injects source-level GPU sync code from CMake.
 # All five host/native/DEV variants are maintained as complete C++ sources.
 approved_sync = {"file(READ": (), "string(REPLACE": ()}

@@ -6,13 +6,22 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 cmake = (root / "headless/CMakeLists.txt").read_text()
+legacy = (root / "tools/fixtures/legacy-g19-kernel.cmake").read_text()
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/kernel/kernel.cpp" kernel_source)' not in cmake
+assert 'write_derived("${PORT_BUILD_DIR}/kernel.cpp"' not in cmake
+assert 'list(APPEND core_sources "${EDEN_MAINTAINED_KERNEL_SOURCE}")' in cmake
 pinned = (root / "vendor/sources/eden/src/core/hle/kernel/kernel.cpp").read_text()
 begin = 'file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/kernel/kernel.cpp" kernel_source)'
 finish = 'list(APPEND core_sources "${PORT_BUILD_DIR}/kernel.cpp")\nset_property(TARGET core PROPERTY SOURCES "${core_sources}")'
-assert cmake.count(begin) == 1
-start = cmake.index(begin)
-end = cmake.index(finish, start) + len(finish)
-legacy = cmake[start:end]
+assert legacy.count(begin) == legacy.count(finish) == 1
+start = legacy.index(begin)
+end = legacy.index(finish, start) + len(finish)
+legacy = legacy[start:end]
+selector_start = '# G19: full maintained kernel units; legacy source rewrite is test-only.'
+selector_end = 'list(APPEND core_sources "${EDEN_MAINTAINED_KERNEL_SOURCE}")\nset_property(TARGET core PROPERTY SOURCES "${core_sources}")'
+assert cmake.count(selector_start) == cmake.count(selector_end) == 1
+selection = cmake[cmake.index(selector_start):
+                  cmake.index(selector_end, cmake.index(selector_start)) + len(selector_end)]
 assert legacy.count('write_derived("${PORT_BUILD_DIR}/kernel.cpp" "${kernel_source}")') == 1
 assert legacy.count("eden_patch_kernel([=[") == 7
 assert pinned.count("    void Shutdown(KernelCore& kernel) {") == 1
@@ -86,6 +95,43 @@ file(WRITE "${PORT_BUILD_DIR}/selected.txt" "${g19_selected}")
                        "EDEN_SHUTDOWN_WRITE_PROBE", "eden_mark(", "closing_names"):
             assert (anchor in unit) == dev, (name, anchor)
         units[name] = unit
+        # Validate the CURRENT CMake selector independently of the retired
+        # generation fixture, including both upstream side-unit choices.
+        select_dir = temp / (name + "-selected")
+        select_dir.mkdir()
+        select_stage = select_dir / "stage"
+        select_stage.mkdir()
+        (select_dir / "empty.cpp").write_text("int g19_select_probe() { return 0; }\n")
+        (select_dir / "hle/kernel").mkdir(parents=True)
+        (select_dir / "hle/kernel/k_process.cpp").write_text("// pinned KProcess stub\n")
+        live_header = header.replace(str(stage), str(select_stage))
+        (select_dir / "CMakeLists.txt").write_text(
+            live_header + selection + '''
+get_target_property(g19_selected core SOURCES)
+file(WRITE "${PORT_BUILD_DIR}/selected.txt" "${g19_selected}")
+''')
+        live_result = subprocess.run(
+            ["cmake", "-S", str(select_dir), "-B", str(select_dir / "build")],
+            capture_output=True, text=True, timeout=60)
+        if live_result.returncode:
+            print(live_result.stdout[-3000:], live_result.stderr[-5000:])
+            raise AssertionError("G19 direct selection failed: " + name)
+        live_sources = (select_stage / "selected.txt").read_text().split(";")
+        owned_kernel = root / "vendor/encore-active/eden-core/src/core/hle/kernel"/(
+            "kernel_dev.cpp" if dev else "kernel_standard.cpp")
+        assert live_sources.count(str(owned_kernel)) == 1, name
+        assert "hle/kernel/kernel.cpp" not in live_sources
+        assert str(stage / "kernel.cpp") not in live_sources
+        assert str(select_stage / "kernel.cpp") not in live_sources
+        assert "hle/service/server_manager.cpp" not in live_sources
+        assert any(p.endswith("/" + server) for p in live_sources), name
+        if dev:
+            assert any("vendor/encore-active/" in p and p.endswith("/k_process.cpp")
+                       for p in live_sources), name
+        else:
+            assert "hle/kernel/k_process.cpp" in live_sources
+        assert owned_kernel.read_text() == unit, name
+
     # Compare maintained G19 translation units against historical CMake
     # output byte-for-byte; the active selector is migrated only afterwards.
     for name in ("standard", "dev"):
@@ -95,4 +141,4 @@ file(WRITE "${PORT_BUILD_DIR}/selected.txt" "${g19_selected}")
     print("ENCORE_G19_MAINTAINED_KERNEL_PARITY_PASS profiles=2")
     assert units["standard"] != units["dev"]
     assert len(units["dev"]) > len(units["standard"])
-print("ENCORE_G19_REAL_CMAKE_PROFILE_MATRIX_PASS profiles=2 native_not_qualified=1")
+print("ENCORE_G19_REAL_CMAKE_PROFILE_MATRIX_PASS profiles=2 selectors=2 native_not_qualified=1")

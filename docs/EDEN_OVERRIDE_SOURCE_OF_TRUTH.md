@@ -19,9 +19,9 @@ nouveaux corps C++ destinés à la console.
 - `vendor/encore-active` : **307 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **3 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **2 générateurs** `write_derived`.
 - Le module CMake expérimental de pont différé contient **0 générateurs**
-  `write_derived`, soit **3 sites** au total.
+  `write_derived`, soit **2 sites** au total.
 - Un module CMake procède encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   compteur des générations CMake.
@@ -246,7 +246,7 @@ et vérifie leur sélection sans annoncer de qualification console.
 
 ## G17/G18 — gestionnaire de services
 
-Les variantes normales et diagnostiques de `ServerManager` ont chacune leur C++ et leur en-tête complets sous `vendor/encore-active/eden-core/src/core/hle/service/`. CMake choisit simplement la paire et copie son en-tête dans l'overlay d'inclusion historique. Un test de parité reconstruit les sept anciennes injections DEV depuis l'original épinglé ; ni re-génération ni compilation double du gestionnaire n'est permise. G19 (`kernel.cpp`) reste encore généré et doit être migré séparément.
+Les variantes normales et diagnostiques de `ServerManager` ont chacune leur C++ et leur en-tête complets sous `vendor/encore-active/eden-core/src/core/hle/service/`. CMake choisit simplement la paire et copie son en-tête dans l'overlay d'inclusion historique. Un test de parité reconstruit les sept anciennes injections DEV depuis l'original épinglé ; ni re-génération ni compilation double du gestionnaire n'est permise. G19 (`kernel.cpp`) sélectionne désormais les deux sources maintenues `kernel_standard.cpp` et `kernel_dev.cpp`, sans génération C++ dans le CMake actif.
 
 ## G16 — finalisation des pages mémoire kernel
 
