@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **305 fichiers** de code et d'en-têtes enregistrés.
-- **305 fichiers** possèdent une correspondance de chemin *exacte*
+- **307 fichiers** de code et d'en-têtes enregistrés.
+- **307 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -170,6 +170,8 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/core/hle/kernel/k_page_table_base.cpp` | `maintained-override` | B27 |
 | `eden-core/src/core/hle/kernel/k_process.cpp` | `maintained-override` | H53 |
 | `eden-core/src/core/hle/kernel/k_spin_lock.cpp` | `maintained-override` | H30 |
+| `eden-core/src/core/hle/kernel/kernel_dev.cpp` | `maintained-override` | V106 |
+| `eden-core/src/core/hle/kernel/kernel_standard.cpp` | `maintained-override` | V105 |
 | `eden-core/src/core/hle/kernel/physical_core_dev.cpp` | `maintained-override` | B26 |
 | `eden-core/src/core/hle/kernel/physical_core_standard.cpp` | `maintained-override` | B25 |
 | `eden-core/src/core/hle/kernel/svc/svc_ipc.cpp` | `maintained-override` | H21 |
@@ -355,7 +357,7 @@ Les fichiers source/en-tête/fragment de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
 Les chemins du graphe moteur y ont un propriétaire exact ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
-La couverture de 305/305 ci-dessus ne s'applique **pas** à ce dossier.
+La couverture de 307/307 ci-dessus ne s'applique **pas** à ce dossier.
 
 ## Critères de tenue à jour
 

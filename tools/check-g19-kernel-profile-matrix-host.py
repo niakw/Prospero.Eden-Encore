@@ -82,6 +82,13 @@ file(WRITE "${PORT_BUILD_DIR}/selected.txt" "${g19_selected}")
                        "EDEN_SHUTDOWN_WRITE_PROBE", "eden_mark(", "closing_names"):
             assert (anchor in unit) == dev, (name, anchor)
         units[name] = unit
+    # Compare maintained G19 translation units against historical CMake
+    # output byte-for-byte; the active selector is migrated only afterwards.
+    for name in ("standard", "dev"):
+        maintained = root/"vendor/encore-active/eden-core/src/core/hle/kernel"/(
+            "kernel_standard.cpp" if name == "standard" else "kernel_dev.cpp")
+        assert maintained.read_text() == units[name], "G19 maintained kernel drift " + name
+    print("ENCORE_G19_MAINTAINED_KERNEL_PARITY_PASS profiles=2")
     assert units["standard"] != units["dev"]
     assert len(units["dev"]) > len(units["standard"])
 print("ENCORE_G19_REAL_CMAKE_PROFILE_MATRIX_PASS profiles=2 native_not_qualified=1")
