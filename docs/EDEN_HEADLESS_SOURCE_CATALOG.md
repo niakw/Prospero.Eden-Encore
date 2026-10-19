@@ -1,10 +1,10 @@
 # Eden Encore — catalogue des fichiers C/C++ hors encore-active : headless
 
-**Branche :** `dev/ps5-sparse-jit`. **Date du relevé :** 18 octobre 2026.
+**Branche :** `dev/ps5-sparse-jit`. **Date du relevé :** 19 octobre 2026.
 
-Ce registre complémentaire couvre les **169 chemins** de code, en-têtes et
+Ce registre complémentaire couvre les **168 chemins** de code, en-têtes et
 fragments `.c/.cc/.cpp/.h/.hpp/.inc/.cl` du dossier `headless/`.
-Il ne remplace pas `EDEN_ACTIVE_SOURCE_CATALOG.md` : les 286 fichiers
+Il ne remplace pas `EDEN_ACTIVE_SOURCE_CATALOG.md` : les 316 fichiers
 de `vendor/encore-active` sont déjà inventoriés séparément.
 
 **Attention :** une entrée ici ne prouve pas que le fichier est compilé ni
@@ -13,9 +13,9 @@ pour suivi séparé et n'autorise aucune modification du launcher depuis
 l'audit moteur. Un chemin noté « À qualifier » peut avoir été audité sous
 une autre forme : il manque seulement la référence de chemin exacte.
 
-- **169** chemins sous `headless/`, dont **58** sources C/C++ et **111** en-têtes/fragments.
+- **168** chemins sous `headless/`, dont **58** sources C/C++ et **110** en-têtes/fragments.
 - **32** chemins déjà présents dans le graphe moteur.
-- **137** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
+- **136** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
 - Les deux générateurs de profils `headless/encore_overrides_generated.h`,
   `headless/glyph_overrides_generated.h` et les autres ressources générées
   sont des entrées de l'inventaire, **pas** de nouveaux patchs CMake.
@@ -42,7 +42,6 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/crash_site.h` | en-tête/fragment | — | À qualifier |
 | `headless/crash_trigger.h` | en-tête/fragment | — | À qualifier |
 | `headless/dev_launch_policy.h` | en-tête/fragment | — | À qualifier |
-| `headless/dev_render_passes.inc` | en-tête/fragment | — | À qualifier |
 | `headless/dev_replay_policy.h` | en-tête/fragment | — | À qualifier |
 | `headless/dev_vulkan.h` | en-tête/fragment | — | À qualifier |
 | `headless/development_input.h` | en-tête/fragment | — | À qualifier |
