@@ -261,7 +261,9 @@ Le dernier générateur C++ actif `G11` produit `arm_dynarmic_32.cpp` et
 `EDEN_INLINE_EXCLUSIVES`. Le module indirect X06 ajoute ses gardes de
 lecture RAM native à cette même chaîne de génération.
 
-Le nouveau témoin `tools/check-g11-jit-profile-matrix-host.py` configure
+Le nouveau témoin `tools/check-g11-jit-profile-matrix-host.py` reconstitue
+d'abord la source native réellement préparée, avec les patchs I-cache
+J19/J20 **installés depuis `encore-active` avant CMake**, puis configure
 la vraie recette G11 sur **huit profils**, soit **16 unités** A32/A64. Il
 contrôle les propriétaires compilés une seule fois, les gardes de lecture
 X06, les tailles des caches et le fallback JIT natif, les marqueurs DEV,
@@ -269,8 +271,11 @@ et les exclusivités monitor ou inline. Cette première preuve reste
 entièrement **hôte**.
 
 Les unités `eden-core/src/core/arm/dynarmic/arm_dynarmic_{32,64}.cpp`
-déjà cataloguées n'incluent pas toutes ces modifications et ne doivent
-pas être substituées aveuglément. Toute future centralisation devra
+déjà cataloguées constituent **la base préparée** (I-cache incluse),
+mais n'incluent pas encore toutes les modifications ultérieures de G11.
+Le témoin interdit leur substitution directe comme sources finales.
+L'ancienne hypothèse d'un G11 basé uniquement sur la source épinglée
+brute aurait perdu la cohérence I-cache de production. Toute future centralisation devra
 maintenir les variantes nécessaires dans `encore-active`, sans activer
 les exclusivités inline qui restent désactivées par défaut.
 

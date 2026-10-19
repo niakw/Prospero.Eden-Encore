@@ -19,8 +19,15 @@ assert recipe.count('write_derived("${derived}" "#include <bit>\\n${wrapper}")')
 assert 'include("${EDEN_PORT_DIR}/native_jit_memory_read_guard.cmake")' in recipe
 assert recipe.count("foreach(bits 32 64)") == 1
 
-pinned = {bits:(root/f"vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_{bits}.cpp").read_text()
+# Production installs these qualified I-cache owners into the prepared
+# upstream tree BEFORE the native CMake recipe reads PROJECT_SOURCE_DIR.
+# Starting from raw vendor/sources/eden would silently drop J19/J20.
+backport_root = root/"vendor/encore-active/eden-core/src/core/arm/dynarmic"
+pinned = {bits:(backport_root/f"arm_dynarmic_{bits}.cpp").read_text()
           for bits in (32,64)}
+assert "Core::InvalidateInstructionCacheRange" in pinned[64]
+assert '#include "core/arm/debug.h"' in pinned[64]
+assert pinned[32].count("m_cb->last_code_addr = u64(-1);") >= 2
 for bits in (32,64):
     existing = (root/f"vendor/encore-active/eden-core/src/core/arm/dynarmic/arm_dynarmic_{bits}.cpp").read_text()
     assert "ConstructWithCapacityFallback" not in existing
@@ -29,6 +36,11 @@ for bits in (32,64):
 outputs = {}
 with tempfile.TemporaryDirectory(prefix="encore-g11-matrix-") as tempdir:
     temp = Path(tempdir)
+    prepared = temp/"prepared-core"
+    for bits in (32,64):
+        staged = prepared/f"src/core/arm/dynarmic/arm_dynarmic_{bits}.cpp"
+        staged.parent.mkdir(parents=True, exist_ok=True)
+        staged.write_text(pinned[bits])
     for native in (False, True):
         for dev in (False, True):
             for inline in (False, True):
@@ -41,7 +53,7 @@ with tempfile.TemporaryDirectory(prefix="encore-g11-matrix-") as tempdir:
                 setup = r'''cmake_minimum_required(VERSION 3.24)
 project(EncoreG11Matrix LANGUAGES CXX)
 set(PORT_ROOT "__ROOT__")
-set(PROJECT_SOURCE_DIR "__ROOT__/vendor/sources/eden")
+set(PROJECT_SOURCE_DIR "__PREPARED__")
 set(EDEN_PORT_DIR "__ROOT__/headless")
 set(PORT_BUILD_DIR "__STAGE__")
 set(PS5_NATIVE __NATIVE__)
@@ -55,6 +67,7 @@ endfunction()
 '''
                 setup = (setup.replace("__ROOT__", str(root))
                               .replace("__STAGE__", str(stage))
+                              .replace("__PREPARED__", str(prepared))
                               .replace("__NATIVE__", "ON" if native else "OFF")
                               .replace("__DEV__", "ON" if dev else "OFF")
                               .replace("__INLINE__", "ON" if inline else "OFF"))
@@ -80,6 +93,11 @@ file(WRITE "${PORT_BUILD_DIR}/selected.txt" "${g11_sources}")
                     assert src.startswith("#include <bit>\n"), (label,bits)
                     assert src.count("std::countl_zero(Common::PageTable::ATTRIBUTE_MASK)") == 1
                     assert "Common::PageTable::SIGN_BIT" not in src
+                    if bits == 64:
+                        assert "Core::InvalidateInstructionCacheRange" in src
+                        assert '#include "core/arm/debug.h"' in src
+                    else:
+                        assert src.count("m_cb->last_code_addr = u64(-1);") >= 2
                     assert "std::uint32_t(512_MiB)" not in src
                     assert ('config.fastmem_exclusive_access = true;' in src) == inline, (label,bits)
                     assert ('/performance.h"' in src) == dev, (label,bits)
