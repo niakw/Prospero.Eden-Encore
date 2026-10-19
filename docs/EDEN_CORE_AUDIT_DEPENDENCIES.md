@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 401
+**Non, this is not an exhaustive repository-wide inventory.** The 406
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 401 | 378 | 811 |
+| Graphe connu | 406 | 383 | 821 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 346 | 333 | 706 |
+| SOURCE — lecture effectuée, preuve insuffisante | 351 | 338 | 716 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **361** | **347** | **734** |
+| **Encore à qualifier (SOURCE + OPEN)** | **366** | **352** | **744** |
 | Dont priorité P0 (SOURCE + OPEN) | 113 | 107 | 263 |
 
-Le **noyau restant** compte donc 361 critères répartis sur
-347 fichiers et 734 mentions fonction/contrat :
-15 OPEN et 346 SOURCE.
+Le **noyau restant** compte donc 366 critères répartis sur
+352 fichiers et 744 mentions fonction/contrat :
+15 OPEN et 351 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-300 fichiers de code/en-têtes présents et 300 avec un chemin de
+305 fichiers de code/en-têtes présents et 305 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -634,6 +634,11 @@ function/contract tokens are checked by CI for existence only; the
 | V98 | P1 | V97 | vendor/encore-active/eden-core/src/core/memory_native_a32.cpp | Memory::IsValidVirtualAddressRange; SetCurrentPageTable | SOURCE | tools/check-deferred-native-bridge-contract.py | G13/X05 A32 memory selected as complete native source; historical parity host only, console unqualified | 🟡 Source étudiée |
 | V99 | P2 | V98,V91 | vendor/encore-active/eden-core/guest-bridge/memory_ps5_a32.cpp | WriteBlockImpl; WriteExclusive | SOURCE | tools/check-deferred-native-bridge-contract.py | M12 A32 DEV OFF source directly selected by build option; not console qualified | 🟡 Source étudiée |
 | W01 | P2 | V97,V91 | vendor/encore-active/eden-core/guest-bridge/memory_ps5_standard.cpp | WriteBlockImpl; WriteExclusive | SOURCE | tools/check-deferred-native-bridge-contract.py | M12 standard DEV OFF source directly selected by build option; not console qualified | 🟡 Source étudiée |
+| V100 | P2 | V73,Q06 | vendor/encore-active/eden-core/src/video_core/gpu_gl_host.cpp | GPU::Impl::NotifyShutdown; GPU::OnCPURead | SOURCE | tools/check-g21-gpu-profile-matrix-host.py | Host GL generated profile staged as full owned Encore source; historical CMake parity, not selected in build or qualified on console | 🟡 Source étudiée |
+| V101 | P2 | V100,Q03 | vendor/encore-active/eden-core/src/video_core/gpu_gl_host_dev.cpp | GPU::Impl::NotifyShutdown; GPU::PushGPUEntries | SOURCE | tools/check-g21-gpu-profile-matrix-host.py | Host GL DEV diagnostics candidate, source parity only; not selected nor console qualified | 🟡 Source étudiée |
+| V102 | P1 | V100,Q06 | vendor/encore-active/eden-core/src/video_core/gpu_gl_native.cpp | GPU::Impl::WaitForSyncOperation; GPU::Impl::TickWork | SOURCE | tools/check-g21-gpu-profile-matrix-host.py | Native GL GPU cancellation/fatal-wait candidate, staged only until G21 source selector cutover; not console qualified | 🟡 Source étudiée |
+| V103 | P2 | V102,Q03 | vendor/encore-active/eden-core/src/video_core/gpu_gl_native_dev.cpp | GPU::Impl::WaitForSyncOperation; GPU::PushGPUEntries | SOURCE | tools/check-g21-gpu-profile-matrix-host.py | Native GL DEV diagnostics candidate, staged historical parity; not selected nor console qualified | 🟡 Source étudiée |
+| V104 | P1 | V102,V96 | vendor/encore-active/eden-core/src/video_core/gpu_vulkan.cpp | GPU::Impl::OnCPURead; GPU::Impl::NotifyShutdown | SOURCE | tools/check-g21-gpu-profile-matrix-host.py | Vulkan-native G21 historical variant retains its pinned read-capture and destructor behavior; staged only, no console qualification | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
