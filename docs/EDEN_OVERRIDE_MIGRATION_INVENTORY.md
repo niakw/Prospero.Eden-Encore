@@ -505,6 +505,12 @@ A32 réellement sélectionnée. Le résultat doit être identique à l'exception
 du garde-fou A32 de fastmem ; les contrats de publication, de journalisation
 et de lecture auxiliaire sont exigés dans les deux cas.
 
+Les quatre variantes complètes `memory_native_standard.cpp`,
+`memory_native_a32.cpp`, `memory_ps5_standard.cpp` et
+`memory_ps5_a32.cpp` sont préparées dans `encore-active`. La parité
+octet par octet compare chacune aux sorties G13/X05/M12 réelles,
+pour A32 et standard. Elles ne sont **pas encore sélectionnées**.
+
 M12 reste une dette de génération C++ : il dépend de la sortie G13 et
 de ses deux variantes avant de pouvoir être déplacé proprement en
 source complète. Ne pas supprimer le générateur M12 sans matérialiser

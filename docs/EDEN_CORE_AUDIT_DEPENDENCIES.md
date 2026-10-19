@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 397
+**Non, this is not an exhaustive repository-wide inventory.** The 401
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 397 | 374 | 803 |
+| Graphe connu | 401 | 378 | 811 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 342 | 329 | 698 |
+| SOURCE — lecture effectuée, preuve insuffisante | 346 | 333 | 706 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **357** | **343** | **726** |
+| **Encore à qualifier (SOURCE + OPEN)** | **361** | **347** | **734** |
 | Dont priorité P0 (SOURCE + OPEN) | 113 | 107 | 263 |
 
-Le **noyau restant** compte donc 357 critères répartis sur
-343 fichiers et 726 mentions fonction/contrat :
-15 OPEN et 342 SOURCE.
+Le **noyau restant** compte donc 361 critères répartis sur
+347 fichiers et 734 mentions fonction/contrat :
+15 OPEN et 346 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-296 fichiers de code/en-têtes présents et 296 avec un chemin de
+300 fichiers de code/en-têtes présents et 300 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -630,6 +630,10 @@ function/contract tokens are checked by CI for existence only; the
 | V94 | P2 | V91 | vendor/encore-active/eden-core/guest-bridge/engine_upload.cpp | State::ProcessData; memory_manager.FlushCaching() | SOURCE | tools/check-deferred-native-bridge-contract.py | M11 complete deferred upload engine source selected COPYONLY; historical parity only, experimental OFF and not console qualified | 🟡 Source étudiée |
 | V95 | P2 | V85,V91 | vendor/encore-active/eden-core/guest-bridge/dma_pusher.cpp | DmaPusher::DispatchCalls; memory_manager.FlushCaching() | SOURCE | tools/check-deferred-native-bridge-contract.py | M08 full G20 DEV-based DMA unit selected COPYONLY, unlike stale staging file; parity host only, experimental OFF and unqualified on console | 🟡 Source étudiée |
 | V96 | P2 | V91,V95 | vendor/encore-active/eden-core/guest-bridge/vulkan_rasterizer.cpp | RasterizerVulkan::OnCPUWrite; defer_candidate | SOURCE | tools/check-deferred-native-bridge-contract.py | M07 full deferred Vulkan variant with prior two transformations and portable include path, selected only in opt-in DEV bridge; parity host only, native GPU behavior unqualified | 🟡 Source étudiée |
+| V97 | P1 | V91,V95 | vendor/encore-active/eden-core/src/core/memory_native_standard.cpp | Memory::IsValidVirtualAddressRange; HandleRasterizerWrite | SOURCE | tools/check-deferred-native-bridge-contract.py | G13/X05 standard memory staged for byte parity; production selection remains pending | 🟡 Source étudiée |
+| V98 | P1 | V97 | vendor/encore-active/eden-core/src/core/memory_native_a32.cpp | Memory::IsValidVirtualAddressRange; SetCurrentPageTable | SOURCE | tools/check-deferred-native-bridge-contract.py | G13/X05 A32 memory staged for byte parity; production selection remains pending | 🟡 Source étudiée |
+| V99 | P2 | V98,V91 | vendor/encore-active/eden-core/guest-bridge/memory_ps5_a32.cpp | Memory::WriteBlockImpl; Memory::WriteExclusive | SOURCE | tools/check-deferred-native-bridge-contract.py | M12 A32 DEV OFF source staged for parity, not console qualified | 🟡 Source étudiée |
+| W01 | P2 | V97,V91 | vendor/encore-active/eden-core/guest-bridge/memory_ps5_standard.cpp | Memory::WriteBlockImpl; Memory::WriteExclusive | SOURCE | tools/check-deferred-native-bridge-contract.py | M12 standard DEV OFF source staged for parity, not console qualified | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 

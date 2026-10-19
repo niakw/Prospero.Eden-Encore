@@ -558,6 +558,26 @@ include("__BRIDGE__")
     assert (a32_stage/"dma_pusher_deferred.cpp").read_text() == maintained_m08.read_text()
     print("ENCORE_M12_BOTH_NATIVE_MEMORY_PROFILES_PASS default=1 a32=1 bridge_disabled_by_default=1")
 
+    # Verify four full Encore sources against CMake-generated historical
+    # code, including both native A32/standard memory profiles. Only absolute
+    # local header prefixes are normalized for the maintained include search.
+    def normalize_native_legacy(source):
+        for header in ("performance.h", "gpu_dirty_region_split.h",
+                       "gpu_deferred_replay.h"):
+            source = source.replace(
+                '#include "' + str(root/"headless"/header) + '"',
+                '#include "' + header + '"')
+        return source
+    for owner, historic in (
+        ("eden-core/src/core/memory_native_standard.cpp", native_default),
+        ("eden-core/src/core/memory_native_a32.cpp", native_a32),
+        ("eden-core/guest-bridge/memory_ps5_standard.cpp", guest),
+        ("eden-core/guest-bridge/memory_ps5_a32.cpp", a32_guest)):
+        maintained = (root/"vendor/encore-active"/owner).read_text()
+        assert maintained == normalize_native_legacy(historic), (
+            "G13 X05 M12 historical source parity drift", owner)
+    print("ENCORE_FOUR_NATIVE_GUEST_MEMORY_VARIANTS_PARITY_PASS")
+
     dirty_h=(stage/"deferred-core/core/gpu_dirty_memory_manager.h").read_text()
     assert dirty_h == maintained_dirty.read_text()
     assert dirty_h.count("void Collect(PAddr address, size_t size) {") == 1

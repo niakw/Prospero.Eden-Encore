@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **296 fichiers** de code et d'en-têtes enregistrés.
-- **296 fichiers** possèdent une correspondance de chemin *exacte*
+- **300 fichiers** de code et d'en-têtes enregistrés.
+- **300 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -137,6 +137,8 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/guest-bridge/maxwell_dma.cpp` | `maintained-override` | V92 |
 | `eden-core/guest-bridge/memory_manager.cpp` | `maintained-override` | V91 |
 | `eden-core/guest-bridge/memory_manager.h` | `maintained-override` | V89 |
+| `eden-core/guest-bridge/memory_ps5_a32.cpp` | `maintained-override` | V99 |
+| `eden-core/guest-bridge/memory_ps5_standard.cpp` | `maintained-override` | W01 |
 | `eden-core/guest-bridge/vulkan_rasterizer.cpp` | `maintained-override` | V96 |
 | `eden-core/host-gpu/include/video_core/gpu_thread.h` | `maintained-override` | Q09 |
 | `eden-core/include/core/file_sys/bis_factory.h` | `maintained-override` | F13 |
@@ -196,6 +198,8 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/core/loader/deconstructed_rom_directory.cpp` | `maintained-override` | F16 |
 | `eden-core/src/core/loader/nso.cpp` | `maintained-override` | F38 |
 | `eden-core/src/core/memory.cpp` | `maintained-override` | M11 |
+| `eden-core/src/core/memory_native_a32.cpp` | `maintained-override` | V98 |
+| `eden-core/src/core/memory_native_standard.cpp` | `maintained-override` | V97 |
 | `eden-core/src/dynarmic/backend/block_range_information.cpp` | `maintained-override` | U12 |
 | `eden-core/src/dynarmic/backend/block_range_information.h` | `maintained-override` | J41 |
 | `eden-core/src/dynarmic/backend/x64/a32_emit_x64.cpp` | `maintained-override` | B12 |
@@ -346,7 +350,7 @@ Les fichiers source/en-tête/fragment de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
 Les chemins du graphe moteur y ont un propriétaire exact ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
-La couverture de 296/296 ci-dessus ne s'applique **pas** à ce dossier.
+La couverture de 300/300 ci-dessus ne s'applique **pas** à ce dossier.
 
 ## Critères de tenue à jour
 
