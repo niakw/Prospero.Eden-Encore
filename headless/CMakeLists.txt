@@ -574,6 +574,17 @@ if(EDEN_DEV_PROFILE)
     list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_HLE_SERVICE}"
                              "${EDEN_MAINTAINED_PROFILE_SVC_IPC}")
 endif()
+# Both normal and DEV IPC paths use maintained source owners. The
+# DEV-only request profiler remains isolated to its existing unit.
+if(NOT EDEN_DEV_PROFILE)
+    set(EDEN_MAINTAINED_SVC_IPC_STANDARD
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/kernel/svc/svc_ipc_standard.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_SVC_IPC_STANDARD}")
+        message(FATAL_ERROR "Missing maintained normal IPC SVC source")
+    endif()
+    list(REMOVE_ITEM core_sources "hle/kernel/svc/svc_ipc.cpp")
+    list(APPEND core_sources "${EDEN_MAINTAINED_SVC_IPC_STANDARD}")
+endif()
 if(EDEN_A32_FASTMEM)
     # The window spans 4 GiB: only 32-bit applications get it as their fastmem arena.
     # The production backport materializes core/memory.cpp before configure.
