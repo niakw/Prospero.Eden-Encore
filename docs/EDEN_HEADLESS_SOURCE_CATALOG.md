@@ -20,6 +20,29 @@ une autre forme : il manque seulement la référence de chemin exacte.
   `headless/glyph_overrides_generated.h` et les autres ressources générées
   sont des entrées de l'inventaire, **pas** de nouveaux patchs CMake.
 
+### Répartition des chemins sans propriétaire de fonction exact
+
+Ce décompte distingue l'incomplétude du **graphe de fonctions** des
+déplacements de sources réellement nécessaires. Le registre physique couvre
+toujours 168/168 chemins ; il n'y a pas 124 overrides de dépendances oubliés.
+
+| Rôle indicatif | Chemins sans ID exact |
+| --- | ---: |
+| `launcher/UI` | **63** |
+| `harness/test` | **9** |
+| `outil auxiliaire` | **4** |
+| `données générées` | **2** |
+| `en-tête/fragment` | **46** |
+| **Total non indexé** | **124** |
+
+Les 63 chemins du launcher sont réservés au périmètre UI séparé.
+Les 9 harnais, 4 outils et 2 ressources générées ne sont pas déclarés
+comme unités de correction moteur. Les 46 en-têtes/fragments doivent
+être contrôlés selon leurs consommateurs et gardes, pas déplacés par
+défaut. Les **17 unités `runtime/bridge`** sont toutes rattachées à
+un ID exact ; cela reste une preuve documentaire, pas une preuve
+d'exécution sur console.
+
 Le contrôle `tools/check-active-source-inventory.py` confronte les chemins
 physiques, la table ci-dessous et les propriétaires du graphe ; il interdit
 que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
