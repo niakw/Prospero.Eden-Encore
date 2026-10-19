@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **290 fichiers** de code et d'en-têtes enregistrés.
-- **290 fichiers** possèdent une correspondance de chemin *exacte*
+- **291 fichiers** de code et d'en-têtes enregistrés.
+- **291 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -25,7 +25,7 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 ni une certification console. Le graphe
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` porte les contrats fonctionnels,
 leurs états et les preuves. L'inventaire des 5 générateurs CMake
-principaux, 7 générateurs de modules, deux modules indirects et 46 patches
+principaux, 6 générateurs de modules, deux modules indirects et 46 patches
 reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
 <!-- ACTIVE_SOURCE_CATALOG_START -->
@@ -131,6 +131,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/dynarmic/shared-jit/jit_state_args.inc` | `maintained-override` | J26 |
 | `eden-core/gpu-injections/gpu_sync_failure_wait.inc` | `maintained-override` | V73 |
 | `eden-core/guest-bridge/gpu_dirty_memory_manager.h` | `maintained-override` | V90 |
+| `eden-core/guest-bridge/memory_manager.cpp` | `maintained-override` | V91 |
 | `eden-core/guest-bridge/memory_manager.h` | `maintained-override` | V89 |
 | `eden-core/host-gpu/include/video_core/gpu_thread.h` | `maintained-override` | Q09 |
 | `eden-core/include/core/file_sys/bis_factory.h` | `maintained-override` | F13 |
