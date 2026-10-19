@@ -16,7 +16,7 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 19 octobre 2026
 
-- `vendor/encore-active` : **296 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **300 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
 - `headless/CMakeLists.txt` : **5 générateurs** `write_derived`.
