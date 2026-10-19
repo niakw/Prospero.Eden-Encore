@@ -55,6 +55,9 @@ endfunction()
                               .replace("__DEV__", "ON" if dev else "OFF")
                               .replace("__INLINE__", "ON" if inline else "OFF"))
                 (project/"CMakeLists.txt").write_text(setup + recipe + '''
+# The real root CMake batches core_sources changes before applying the
+# target property later. Reproduce that finalization in this focused fixture.
+set_property(TARGET core PROPERTY SOURCES "${core_sources}")
 get_target_property(g11_sources core SOURCES)
 file(WRITE "${PORT_BUILD_DIR}/selected.txt" "${g11_sources}")
 ''')
