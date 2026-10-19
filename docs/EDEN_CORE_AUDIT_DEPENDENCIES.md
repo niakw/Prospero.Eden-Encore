@@ -24,17 +24,17 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 454 | 431 | 912 |
+| Graphe connu | 462 | 439 | 929 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 399 | 386 | 807 |
+| SOURCE — lecture effectuée, preuve insuffisante | 407 | 394 | 824 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **414** | **400** | **835** |
+| **Encore à qualifier (SOURCE + OPEN)** | **422** | **408** | **852** |
 | Dont priorité P0 (SOURCE + OPEN) | 114 | 108 | 265 |
 
-Le **noyau restant** compte donc 414 critères répartis sur
-400 fichiers et 835 mentions fonction/contrat :
-15 OPEN et 399 SOURCE.
+Le **noyau restant** compte donc 422 critères répartis sur
+408 fichiers et 852 mentions fonction/contrat :
+15 OPEN et 407 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
@@ -687,6 +687,14 @@ function/contract tokens are checked by CI for existence only; the
 | U55 | P1 | U01 | headless/encore_performance_policy.h | struct Policy; inline constexpr Policy ForTier( | SOURCE | tools/check-headless-app-policy-owners.py | Constrained user-facing performance tier mapping; no implicit experimental profile promotion | 🟡 Source étudiée |
 | U56 | P1 | J01 | headless/hle_counters.h | class HleCounters; void Record( | SOURCE | tools/check-headless-app-policy-owners.py | Bounded telemetry table for app HLE service and command latency; no hardware performance proof | 🟡 Source étudiée |
 | U57 | P2 | U19 | headless/hud.h | struct HudClock; inline HudSnapshot MakeHudSnapshot( | SOURCE | tools/check-headless-app-policy-owners.py | App-owned presentation-frame HUD statistics and loading view, separated from launcher theme ownership | 🟡 Source étudiée |
+| U58 | P1 | U03 | headless/controller_applet.h | ControllerStyle(; class PadControllerApplet final | SOURCE | tools/check-headless-specialized-owners.py | Non-UI guest controller applet limits active controllers to game capacity; hardware behavior unqualified | 🟡 Source étudiée |
+| U59 | P2 | U19 | headless/dev_vulkan.h | inline bool static_vertex_input = true;; inline void ResetForTitle() | SOURCE | tools/check-headless-specialized-owners.py | Native DEV Vulkan runtime feature flags reset for each title; no renderer override ownership | 🟡 Source étudiée |
+| U60 | P1 | U01 | headless/error_applet.h | class LoggedErrorApplet final; void ShowError(Result error, | SOURCE | tools/check-headless-specialized-owners.py | Guest error-applet immediate completion and bounded diagnostic logging; console behavior unqualified | 🟡 Source étudiée |
+| U61 | P2 | U01 | headless/glyph_overrides_runtime.h | inline bool ParseCatalogue(; kMaxGraphicPackBytes | SOURCE | tools/check-headless-specialized-owners.py | Version-scoped bounded in-game artwork catalogue, unrelated to controller input mappings | 🟡 Source étudiée |
+| U62 | P2 | U01 | headless/mods.h | inline std::vector<Mod> List(; inline std::string Summary( | SOURCE | tools/check-headless-specialized-owners.py | App-owned per-title mod discovery and disabled-mod summary; no new vendor source patch | 🟡 Source étudiée |
+| U63 | P2 | U13 | headless/ryujinx_saves.h | inline std::vector<Save> FindSaves(; inline std::vector<Save> FindFolderSaves( | SOURCE | tools/check-headless-specialized-owners.py | Metadata-bridge save import from index and plain folders; launcher interface separately owned | 🟡 Source étudiée |
+| U64 | P2 | U01 | headless/sdk_audit.h | inline void AuditSdkThread(; inline void AuditSdk() | SOURCE | tools/check-headless-specialized-owners.py | Bounded opt-in SDK runtime diagnostics; does not validate console behavior | 🟡 Source étudiée |
+| U65 | P1 | U01,J50 | headless/watch.h | inline bool Parse(; inline bool Hit( | SOURCE | tools/check-headless-specialized-owners.py | Explicit DEV guest write-watch interval; not a default native fast path | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
