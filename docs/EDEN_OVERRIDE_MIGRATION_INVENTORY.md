@@ -256,6 +256,32 @@ sont maintenues sous `vendor/encore-active/eden-build/tooling/native/`.
 Les IDs G01–G23 sont stables et ne sont pas renumérotés.
 
 
+## G21 — matrice de dépendances avant centralisation
+
+G21 génère encore une unité `gpu.cpp` à partir de la source GPU épinglée.
+Le témoin `tools/check-g21-gpu-profile-matrix-host.py` configure **la vraie
+recette G21** dans six combinaisons représentatives, plutôt que de supposer
+que le profil normal, DEV et les deux moteurs graphiques sont équivalents.
+Le test vérifie également la durée de vie du worker, les clôtures
+synchrones, l'annulation des attentes, la capture par valeur, les erreurs
+du worker et les traces DEV. C'est une preuve hôte de génération uniquement.
+
+Les propriétaires de la future migration sont `video_core/gpu.cpp`
+(source épinglée), `eden-gpu/gpu_thread_{quiet,dev}.cpp` (workers),
+`eden-core/src/video_core/{dma_pusher,engines/puller}*.cpp` (G20),
+`eden-core/gpu-injections/gpu_sync_failure_wait.inc` (ancien oracle
+de clôture) et `headless/CMakeLists.txt` (sélection). La parité doit être
+vérifiée pour les sorties OpenGL hôte/natif normales et DEV ainsi que
+Vulkan natif ; l'option DEV ne produit pas de différence G21 avec Vulkan
+dans la recette actuelle. Aucun changement de moteur ou de GPU worker
+n'est autorisé par ce relevé.
+
+Pour retirer G21, maintenir les unités C++ finales exclusivement sous
+`vendor/encore-active`, archiver les substitutions CMake uniquement
+comme oracle hôte, basculer le sélecteur vers une unique unité par profil
+et adapter en une seule passe les vérifications de synchronisation et de
+capture GPU. La compilation native et les essais console resteront requis.
+
 ## Prochain ordre de migration
 
 - Huit sources de backport HLE ont des propriétaires `F19-F24`, `H41`,
