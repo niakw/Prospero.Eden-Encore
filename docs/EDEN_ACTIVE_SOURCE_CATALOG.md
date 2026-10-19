@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **317 fichiers** de code et d'en-têtes enregistrés.
-- **317 fichiers** possèdent une correspondance de chemin *exacte*
+- **318 fichiers** de code et d'en-têtes enregistrés.
+- **318 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -184,6 +184,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/core/hle/kernel/physical_core_dev.cpp` | `maintained-override` | B26 |
 | `eden-core/src/core/hle/kernel/physical_core_standard.cpp` | `maintained-override` | B25 |
 | `eden-core/src/core/hle/kernel/svc/svc_ipc.cpp` | `maintained-override` | H21 |
+| `eden-core/src/core/hle/kernel/svc/svc_ipc_standard.cpp` | `maintained-override` | U80 |
 | `eden-core/src/core/hle/service/am/service/application_functions.cpp` | `maintained-override` | H32 |
 | `eden-core/src/core/hle/service/audio/audio_controller.cpp` | `maintained-override` | A10 |
 | `eden-core/src/core/hle/service/audio/audio_controller.h` | `maintained-override` | A11 |
@@ -367,7 +368,7 @@ Les fichiers source/en-tête/fragment de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
 Les chemins du graphe moteur y ont un propriétaire exact ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
-La couverture de 317/317 ci-dessus ne s'applique **pas** à ce dossier.
+La couverture de 318/318 ci-dessus ne s'applique **pas** à ce dossier.
 
 ## Critères de tenue à jour
 
