@@ -116,11 +116,14 @@ int main() {
     assert(r.texture_cache.writes == 5);
     assert(Performance::texture_lock_calls == 5);
     assert(r.pipeline_cache.writes == 6);
+    // Above-cap and out-of-range writes intentionally fall back to the
+    // original BUFFER mutex as well; count them separately from textures.
+    assert(r.buffer_cache.writes == 2);
 
     // Buffer and texture ownership are independent evidence domains.
     BufferPages::Mark(400 * page, page);
     assert(!write(400 * page, page));
-    assert(r.buffer_cache.writes == 1);
+    assert(r.buffer_cache.writes == 3);
     assert(r.texture_cache.writes == 5);
     assert(r.pipeline_cache.writes == 7);
 
@@ -128,7 +131,7 @@ int main() {
     r.buffer_cache.early_exit = true;
     BufferPages::Mark(500 * page, page);
     assert(write(500 * page, page));
-    assert(r.buffer_cache.writes == 2);
+    assert(r.buffer_cache.writes == 4);
     assert(r.texture_cache.writes == 5);
     assert(r.pipeline_cache.writes == 7);
 }
