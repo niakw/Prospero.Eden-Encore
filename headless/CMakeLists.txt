@@ -1550,46 +1550,24 @@ if(EDEN_PS5_OPENGL)
     string(REPLACE "${old_gpu_shutdown}"
         "    void NotifyShutdown() {\n        {\n            std::unique_lock lk{sync_mutex};\n            shutting_down.store(true, std::memory_order::relaxed);\n            sync_cv.notify_all();\n        }\n        gpu_thread.Stop();\n    }" gpu_source "${gpu_source}")
     # In-flight guest waits must also unwind before Stop can join the worker.
-    foreach(unit dma_pusher engines/puller)
-        # Prepared Eden source already has #4473/#4477; apply only native
-        # shutdown-aware sync and profiling adaptations below.
-        file(READ "${PROJECT_SOURCE_DIR}/src/video_core/${unit}.cpp" command_source)
-        string(REPLACE "        sync_cv.wait(lk, [this]() { return synced; });"
-            "        while (!synced && !system.IsShuttingDown())\n            sync_cv.wait_for(lk, std::chrono::milliseconds(10));\n        if (system.IsShuttingDown()) return false;" command_source "${command_source}")
-        if(unit STREQUAL "dma_pusher" AND EDEN_DEV_PROFILE)
-            # R405: time the genuine GPU fence wait, preserving the existing
-            # bounded shutdown-aware CV loop and all guest synchronization.
-            set(dma_fence_wait "        while (!synced && !system.IsShuttingDown())\n            sync_cv.wait_for(lk, std::chrono::milliseconds(10));")
-            string(FIND "${command_source}" "${dma_fence_wait}" fence_at)
-            if(fence_at LESS 0)
-                message(FATAL_ERROR "Pinned guest GPU DMA fence wait changed")
-            endif()
-            string(REPLACE "${dma_fence_wait}"
-                "        { ::Eden::Performance::DiagnosticActiveTimer dma_fence_timer(\n            ::Eden::Performance::gpu_dma_sync_wait, ::Eden::Performance::gpu_dma_sync_active_since_ns,\n            !synced && !system.IsShuttingDown());\n${dma_fence_wait}\n        }"
-                command_source "${command_source}")
-            string(PREPEND command_source "#include \"${EDEN_PORT_DIR}/performance.h\"\n")
-        endif()
-        string(REPLACE "    while (word != value) {" "    while (word != value && !dma_pusher.system.IsShuttingDown()) {" command_source "${command_source}")
-        if(unit STREQUAL "engines/puller" AND EDEN_DEV_PROFILE)
-            # R406: an unmatched guest semaphore can keep the GPU worker in
-            # ReleaseFences() indefinitely. Observe entry/exit ONCE, never
-            # poll clocks, write counters or change wait semantics per loop.
-            set(puller_semaphore_loop "    while (word != value && !dma_pusher.system.IsShuttingDown()) {")
-            string(FIND "${command_source}" "${puller_semaphore_loop}" puller_sem_at)
-            if(puller_sem_at LESS 0)
-                message(FATAL_ERROR "Pinned guest GPU puller semaphore acquire changed")
-            endif()
-            string(REPLACE "${puller_semaphore_loop}"
-                "    ::Eden::Performance::DiagnosticActiveTimer semaphore_timer(\n        ::Eden::Performance::gpu_puller_semaphore_wait,\n        ::Eden::Performance::gpu_puller_semaphore_active_since_ns,\n        word != value && !dma_pusher.system.IsShuttingDown());\n${puller_semaphore_loop}"
-                command_source "${command_source}")
-            string(PREPEND command_source "#include \"${EDEN_PORT_DIR}/performance.h\"\n")
-        endif()
-        string(PREPEND command_source "#include <chrono>\n")
-        string(REPLACE "/" "_" unit_name "${unit}")
-        write_derived("${PORT_BUILD_DIR}/${unit_name}.cpp" "${command_source}")
-        list(REMOVE_ITEM video_sources "${unit}.cpp")
-        list(APPEND video_sources "${PORT_BUILD_DIR}/${unit_name}.cpp")
-    endforeach()
+    # G20: select maintained normal/DEV guest GPU command processor units.
+    # The DMA input already contains the shipping #4473/#4477 backport.
+    set(EDEN_MAINTAINED_GUEST_GPU_ROOT
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/video_core")
+    if(EDEN_DEV_PROFILE)
+        set(EDEN_MAINTAINED_GPU_DMA "${EDEN_MAINTAINED_GUEST_GPU_ROOT}/dma_pusher_dev.cpp")
+        set(EDEN_MAINTAINED_GPU_PULLER "${EDEN_MAINTAINED_GUEST_GPU_ROOT}/engines/puller_dev.cpp")
+        target_include_directories(video_core PRIVATE "${EDEN_PORT_DIR}")
+    else()
+        set(EDEN_MAINTAINED_GPU_DMA "${EDEN_MAINTAINED_GUEST_GPU_ROOT}/dma_pusher.cpp")
+        set(EDEN_MAINTAINED_GPU_PULLER "${EDEN_MAINTAINED_GUEST_GPU_ROOT}/engines/puller.cpp")
+    endif()
+    if(NOT EXISTS "${EDEN_MAINTAINED_GPU_DMA}" OR
+       NOT EXISTS "${EDEN_MAINTAINED_GPU_PULLER}")
+        message(FATAL_ERROR "Missing maintained GPU command processor variants")
+    endif()
+    list(REMOVE_ITEM video_sources dma_pusher.cpp engines/puller.cpp)
+    list(APPEND video_sources "${EDEN_MAINTAINED_GPU_DMA}" "${EDEN_MAINTAINED_GPU_PULLER}")
     # Once the worker has joined, queued callbacks can never execute. Drop them
     # before waking waiters: some callbacks borrow their callers' stack storage.
     string(REPLACE "        gpu_thread.Stop();\n    }"

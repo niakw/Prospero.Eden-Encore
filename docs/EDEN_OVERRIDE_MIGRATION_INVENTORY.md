@@ -17,7 +17,7 @@ couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
 ## Synthèse vérifiable
 
-- **6 appels générateurs** encore dans CMake ; contre **75 avant**
+- **5 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
 - **12 lectures `file(READ`** et **84 remplacements
@@ -213,6 +213,16 @@ historique en répertoire temporaire pour chaque profil, avec une seule
 normalisation de chemin pour l'en-tête de diagnostic. Ce témoin ne
 certifie ni la compilation native ni les durées de fermeture sur console.
 
+## Commandes GPU invité : G20 migré
+
+Les quatre sources complètes normal/DEV de `dma_pusher` et
+`engines/puller` résident sous `vendor/encore-active/eden-core/src/video_core/`.
+Les gardes d'arrêt et les compteurs R405/R406 sont conservés exactement.
+La version DMA part du backport de production #4473/#4477, tandis que
+Puller part de l'original épinglé. `tools/check-maintained-guest-gpu-sync.py`
+est l'oracle de parité des anciennes substitutions ; CMake ne sélectionne
+plus que les unités suivies. Reste à prouver le comportement en jeu.
+
 ## Générateurs non encore déplacés
 
 Les numéros Gxx sont les positions de cet inventaire, **pas** des validations.
@@ -228,12 +238,11 @@ dans la version normale.
 | G11 | `${derived}` | CPU | Cible variable | 611 |
 | G13 | `${eden_native_memory_tu}` | Mémoire/chargement | Cible variable | 863 |
 | G19 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 1276 |
-| G20 | `${PORT_BUILD_DIR}/${unit_name}.cpp` | GPU/vidéo | Unité source | 1589 |
 | G21 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 1686 |
 | G23 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2065 |
 <!-- OVERRIDE_GENERATORS_END -->
 
-Les identifiants historiques `G01`, `G02`, `G03`, `G04`, `G05`, `G06`, `G07`, `G08`, `G09`, `G14`, `G15`, `G16`, `G17` et `G18` sont retirés, avec G09 maintenu dans les unités A64 standard/partagée ; `G01`/`G02` sont retirés avec X09 (sources complètes `BlockOfCode` sous `encore-active`).
+Les identifiants historiques `G01`, `G02`, `G03`, `G04`, `G05`, `G06`, `G07`, `G08`, `G09`, `G14`, `G15`, `G16`, `G17`, `G18` et `G20` sont retirés, avec G09 maintenu dans les unités A64 standard/partagée ; `G01`/`G02` sont retirés avec X09 (sources complètes `BlockOfCode` sous `encore-active`).
 L'identifiant historique `G22` est retiré : les deux variantes de l'allocateur
 sont maintenues sous `vendor/encore-active/eden-build/tooling/native/`.
 Les IDs G01–G23 sont stables et ne sont pas renumérotés.
