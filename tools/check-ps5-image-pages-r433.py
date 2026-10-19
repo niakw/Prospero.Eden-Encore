@@ -11,7 +11,18 @@ raster = (root / "vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp").read_
 cache = (root / "vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h").read_text()
 generator = (root / "tools/prepare-vulkan-port.py").read_text()
 ast.parse(generator)
-assert raster.count("::Eden::ImagePages::NeverHeld(addr, size)") == 1
+assert raster.count("::Eden::ImagePages::NeverHeld(addr, size)") == 2
+write_start = raster.index("bool RasterizerVulkan::OnCPUWrite")
+write_end = raster.index("void RasterizerVulkan::OnCacheInvalidation", write_start)
+write_method = raster[write_start:write_end]
+assert write_method.count("::Eden::ImagePages::NeverHeld(addr, size)") == 1
+assert write_method.index("::Eden::BufferPages::NeverRegistered") < write_method.index(
+    "::Eden::ImagePages::NeverHeld")
+assert write_method.index("::Eden::ImagePages::NeverHeld") < write_method.index(
+    "::Eden::Performance::GuestCacheLock(texture_cache.mutex, true)")
+assert write_method.index("texture_cache.WriteMemory(addr, size)") < write_method.index(
+    "pipeline_cache.InvalidateRegion(addr, size)")
+assert write_method.count("pipeline_cache.InvalidateRegion(addr, size)") == 1
 assert raster.index("::Eden::ImagePages::NeverHeld(addr, size)") < raster.index(
     "::Eden::Performance::GuestCacheLock(texture_cache.mutex, true)",
     raster.index("RasterizerVulkan::GetFlushArea"))
