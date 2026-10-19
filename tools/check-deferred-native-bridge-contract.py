@@ -387,11 +387,14 @@ with tempfile.TemporaryDirectory(prefix="encore-bridge-on-") as d:
     # previous bridge fixture copied the original pinned source directly,
     # skipping the shipping backport and all G13 safeguards.
     g13_start = '    file(READ "${eden_cpu_memory_tu}" eden_cpu_memory)'
-    g13_stop = '    if(EDEN_A32_FASTMEM)\n        list(REMOVE_ITEM core_sources "${EDEN_MAINTAINED_A32_MEMORY}")'
+    g13_stop = '    # Fail closed when a build-recipe update changes the true memory owner.'
     assert base.count(g13_start) == base.count(g13_stop) == 1
     g13_source = g13_start + base.split(g13_start, 1)[1].split(g13_stop, 1)[0]
     assert g13_source.count('write_derived("${eden_native_memory_tu}"') == 1
     assert 'set(eden_cpu_memory_tu "${EDEN_MAINTAINED_A32_MEMORY}")' in base
+    assert 'get_target_property(core_sources core SOURCES)' in base
+    assert 'list(FIND core_sources "${eden_native_memory_owner}" eden_native_memory_owner_index)' in base
+    assert 'message(FATAL_ERROR "G13 native memory owner missing from core target")' in base
     assert 'set(eden_cpu_memory_tu "${PORT_BUILD_DIR}/memory.cpp")' not in base
     def generate_g13(source, output_dir, label):
         output_dir.mkdir(parents=True, exist_ok=True)

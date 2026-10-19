@@ -65,7 +65,10 @@ nouveaux corps C++ destinés à la console.
 
 Quand `EDEN_A32_FASTMEM` est actif, G13 dérive désormais sa source à partir
 de `EDEN_MAINTAINED_A32_MEMORY`, et enlève ce même chemin de `core_sources`
-pour éviter une double compilation. Le chemin provisoire
+pour éviter une double compilation. Le sélectionneur relit désormais la
+liste effective du target `core` et refuse de poursuivre si le
+propriétaire normal ou A32 attendu est absent, au lieu d'effacer
+silencieusement un chemin périmé. Le chemin provisoire
 `${PORT_BUILD_DIR}/memory.cpp` ne doit plus être lu comme source A32.
 Le générateur G13 reste à migrer, conjointement avec X05 et M12.
 
