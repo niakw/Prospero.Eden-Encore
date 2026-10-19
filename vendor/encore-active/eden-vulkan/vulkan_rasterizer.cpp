@@ -952,7 +952,11 @@ void RasterizerVulkan::FlushRegion(DAddr addr, u64 size, VideoCommon::CacheType 
         std::scoped_lock lock{texture_cache.mutex};
         texture_cache.DownloadMemory(addr, size);
     }
-    if ((True(which & VideoCommon::CacheType::BufferCache))) {
+    // DownloadMemory visits registered buffers only. Pages with no
+    // registration history cannot require a buffer readback or mutex.
+    // Unknown/large spans conservatively execute the original path.
+    if (True(which & VideoCommon::CacheType::BufferCache) &&
+        !::Eden::BufferPages::NeverRegistered(addr, size)) {
         std::scoped_lock lock{buffer_cache.mutex};
         buffer_cache.DownloadMemory(addr, size);
     }
@@ -962,7 +966,10 @@ void RasterizerVulkan::FlushRegion(DAddr addr, u64 size, VideoCommon::CacheType 
 }
 
 bool RasterizerVulkan::MustFlushRegion(DAddr addr, u64 size, VideoCommon::CacheType which) {
-    if ((True(which & VideoCommon::CacheType::BufferCache))) {
+    // A buffer GPU-dirty range requires a registered buffer. Never skip
+    // the test for an unknown or formerly registered CPU page.
+    if (True(which & VideoCommon::CacheType::BufferCache) &&
+        !::Eden::BufferPages::NeverRegistered(addr, size)) {
         std::scoped_lock lock{buffer_cache.mutex};
         if (buffer_cache.IsRegionGpuModified(addr, size)) {
             return true;

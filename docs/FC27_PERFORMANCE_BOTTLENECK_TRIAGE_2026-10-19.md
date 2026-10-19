@@ -224,3 +224,30 @@ enregistrées, dépassements, buffers GPU-modifiés, niveau GPU bas et
 requêtes de taille zéro. La variante expérimentale désactivée et le
 générateur historique sont synchronisés. Aucun gain de FPS démontré
 avant benchmark PS5 comparable au même SHA.
+
+
+## Vulkan — lecture des buffers jamais enregistrés
+
+19 octobre 2026, troisième passe. Dans `FlushRegion` et
+`MustFlushRegion`, l'indice CPU `BufferPages::NeverRegistered`
+dispense du mutex de cache buffer et du scan des plages GPU modifiées
+**uniquement pour une région qui n'a jamais été enregistrée comme
+buffer**. L'indice est publié dans la source complète maintenue
+`buffer_cache.h` avant publication de la plage en page table.
+Toute image connue, taille zéro, plage de plus de 64 KiB, adresse
+invalide ou incertitude repasse par l'ancien traitement.
+
+**Exception impérative : `buffer_cache.WriteMemory` et
+`buffer_cache.OnCPUWrite` ne sont pas supprimés ni reclassifiés ici.**
+Les transferts CPU doivent conserver leurs marques de cohérence,
+même lorsqu'aucun buffer n'existe encore. L'optimisation ne cible
+que le readback/bilan GPU; elle ne saute ni les requêtes QueryCache ni
+les traitements texture, ni les synchronisations ou fences.
+
+Le témoin ASan/UBSan `tools/check-ps5-buffer-readback-elision-host.py`
+extrait les méthodes réelles et teste pages absentes, enregistrées,
+histoire monotone, borne 64 KiB, taille zéro, buffers GPU-modifiés et
+l'indépendance du cache texture. Le test de texture existant
+marque explicitement ses buffers enregistrés : ses invariants
+ne sont donc pas affaiblis. Les gains réels de frametime restent
+à mesurer sur matériel, sans activer d'option expérimentale.
