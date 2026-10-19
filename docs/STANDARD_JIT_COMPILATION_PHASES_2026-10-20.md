@@ -37,3 +37,21 @@ hook. The user still needs an identified native PS5 diagnostic build
 and same-scene frametime/guest-progress evidence before claiming that
 repeat compiles cause a freeze or that FPS improved. Do not activate
 shared or batch JIT just to collect diagnostics.
+
+## 20 octobre — diagnostic mémoire borné au lancement
+
+Le suivi de recompilation `jit_dups=on` réservait initialement
+`2^21` buckets d'une table de hachage, environ **16 MiB pour le seul
+tableau de buckets** sur une implémentation 64 bits classique, avant
+d'enregistrer le premier bloc. Il réserve désormais `2^14` buckets au
+premier enregistrement (~128 KiB de tableau), puis grandit normalement
+si une session de diagnostic collecte beaucoup de blocs. Après arrêt
+des workers, la remise à zéro du titre détruit la table et sa capacité
+au lieu de conserver les buckets du plus gros jeu précédent.
+
+Le test hôte compile la classe C++ effective avec ASan/UBSan, vérifie
+les premiers buckets, la croissance sur 50 000 localisations, la libération
+des buckets entre jeux et la classification multithread des doublons.
+Le code fonctionne seulement sous profil développeur et seulement lorsque
+`jit_dups` est activé : ce gain mémoire du **diagnostic** ne saurait être
+présenté comme une amélioration des FPS en mode release.
