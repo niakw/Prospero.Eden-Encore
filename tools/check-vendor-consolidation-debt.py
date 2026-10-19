@@ -36,7 +36,7 @@ assert 'execute_process(COMMAND python3 "${PORT_ROOT}/tools/prepare-vulkan-port.
 # For READ/REPLACE the approved pinned exceptions below are subtracted first.
 baseline = {"write_derived(": 5, "file(READ": 8, "string(REPLACE": 52}
 counts = {name: c.count(name) for name in baseline}
-# All C++ generation targets still permitted in the main CMake recipe.
+# All generation targets still permitted in the main CMake recipe.
 # These are a shrinking allowlist: a migrated target needs no new exemption.
 # G23 produces a GLSL resource and is deliberately not treated as C++ debt.
 import re
@@ -47,7 +47,7 @@ allowed_generated_targets = {
     "${PORT_BUILD_DIR}/gpu.cpp",  # G21
     "${PORT_BUILD_DIR}/include/loading_scene_glsl.h",  # G23: GLSL resource
 }
-generated_targets = re.findall(r'^\\s*write_derived\\(\\s*"([^"]+)"', c, re.M)
+generated_targets = re.findall(r'^\s*write_derived\(\s*"([^"]+)"', c, re.M)
 assert len(generated_targets) == counts["write_derived("], (
     "Unrecognized CMake write_derived site", generated_targets)
 assert len(generated_targets) == len(set(generated_targets)), (
