@@ -1986,8 +1986,10 @@ extern "C" void eden_jit_evacuation(unsigned core) {
 #ifdef EDEN_DEV_PROFILE
 namespace {
 Eden::Performance::JitDuplicateHistory& JitHistory() {
-    static Eden::Performance::JitDuplicateHistory history;
-    return history;
+    // Preserve the prior diagnostic history's process-lifetime ownership:
+    // avoid static destruction racing with late thread teardown.
+    static auto* history = new Eden::Performance::JitDuplicateHistory;
+    return *history;
 }
 } // namespace
 
