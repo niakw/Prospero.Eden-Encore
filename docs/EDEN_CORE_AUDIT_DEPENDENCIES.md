@@ -24,17 +24,17 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 430 | 407 | 868 |
+| Graphe connu | 442 | 419 | 889 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 375 | 362 | 763 |
+| SOURCE — lecture effectuée, preuve insuffisante | 387 | 374 | 784 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **390** | **376** | **791** |
+| **Encore à qualifier (SOURCE + OPEN)** | **402** | **388** | **812** |
 | Dont priorité P0 (SOURCE + OPEN) | 114 | 108 | 265 |
 
-Le **noyau restant** compte donc 390 critères répartis sur
-376 fichiers et 791 mentions fonction/contrat :
-15 OPEN et 375 SOURCE.
+Le **noyau restant** compte donc 402 critères répartis sur
+388 fichiers et 812 mentions fonction/contrat :
+15 OPEN et 387 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
@@ -663,6 +663,18 @@ function/contract tokens are checked by CI for existence only; the
 | U32 | P1 | J01 | headless/direct_pool_accounting.h | IsKernelFreeSpanValid(; Summarize( | SOURCE | tools/check-headless-critical-interface-owners.py | App-owned direct-memory accounting and bounded extent calculations consumed by performance.cpp | 🟡 Source étudiée |
 | U33 | P1 | J01 | headless/ps5_cpu_topology.h | FreeBsdMask(; ParseSmtGroups( | SOURCE | tools/check-headless-critical-interface-owners.py | App-owned read-only SMT/cpuset parser consumed by performance.cpp; console topology unqualified | 🟡 Source étudiée |
 | B28 | P2 | B01 | vendor/encore-active/eden-build/openssl/cert.h | inline constexpr char kCert[]; -----BEGIN CERTIFICATE----- | SOURCE | tools/check-maintained-openssl-cert.py | Canonical 147-certificate native TLS trust source, parity-proven byte-for-byte against pinned Eden patch and staged without C++ transformation; TLS execution on console unqualified | 🟡 Source étudiée |
+| U34 | P1 | U01 | headless/boot_trace.h | inline void Begin(; inline void OnFatal( | SOURCE | tools/check-headless-runtime-header-owners.py | Early boot and fatal signal logging from native app startup; console recovery not qualified | 🟡 Source étudiée |
+| U35 | P1 | U01 | headless/filesystem_probe.h | inline bool ProbeWritableRoot( | SOURCE | tools/check-headless-runtime-header-owners.py | Application-owned symlink-safe writable filesystem root capability probe | 🟡 Source étudiée |
+| U36 | P2 | U01,U13 | headless/diagnostics.h | inline void Report(; inline void ReportStep( | SOURCE | tools/check-headless-runtime-header-owners.py | Bounded lifecycle and shutdown-step diagnostics included by app runtime and metadata bridge | 🟡 Source étudiée |
+| U37 | P1 | U01,U19 | headless/log_pipe.h | bool Attach(; void Detach() | SOURCE | tools/check-headless-runtime-header-owners.py | Bounded app log pipe worker and descriptor teardown; console shutdown races unqualified | 🟡 Source étudiée |
+| U38 | P1 | U07 | headless/network_domain_rules.h | int eden_network_filter_load(; int eden_network_host_blocked( | SOURCE | tools/check-headless-runtime-header-owners.py | Shared C DNS deny-policy API used by launcher native resolver and implementation; guest isolation qualification separate | 🟡 Source étudiée |
+| U39 | P1 | U05,U06 | headless/network_audit.h | int eden_network_audit_init(; void eden_network_audit_event( | SOURCE | tools/check-headless-runtime-header-owners.py | App-scoped optional network metadata audit shared by main and native socket wrappers | 🟡 Source étudiée |
+| U40 | P1 | U01 | headless/title_id_fallback.h | TitleIdFromRomFilename(; ResolveGameTitleId( | SOURCE | tools/check-headless-runtime-header-owners.py | App fallback title identity for ROM paths and per-title preferences; UI managed separately | 🟡 Source étudiée |
+| U41 | P1 | U01,U13 | headless/native_directory.h | ReadNativeDirectory( | SOURCE | tools/check-headless-runtime-header-owners.py | Native directory traversal and bounded kernel dirent records consumed by app and metadata bridge | 🟡 Source étudiée |
+| U42 | P2 | U19 | headless/present_interval_witness.h | struct PresentIntervalWitness; void Observe( | SOURCE | tools/check-headless-runtime-header-owners.py | Passive window timing witness selected by graphics diagnostics; not console frame validation | 🟡 Source étudiée |
+| U43 | P1 | J01 | headless/direct_pool_probe_policy.h | ProbeIntervalNs( | SOURCE | tools/check-headless-runtime-header-owners.py | OS-confirmed direct-memory query cadence contract in app performance runtime | 🟡 Source étudiée |
+| U44 | P1 | J01 | headless/direct_pool_region_scan.h | struct RegionScan; FreeUpperBound( | SOURCE | tools/check-headless-runtime-header-owners.py | Conservative direct-memory occupancy scan; an upper free bound is not allocatable RAM | 🟡 Source étudiée |
+| U45 | P2 | U01 | headless/dev_replay_policy.h | ReplayRequestedAfter(; ScriptedReplayEnabled( | SOURCE | tools/check-headless-runtime-header-owners.py | Opt-in diagnostic replay requires an exact profile title match; native input unqualified | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
