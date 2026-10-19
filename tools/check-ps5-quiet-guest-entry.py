@@ -14,28 +14,32 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 cmake = (root / "headless/CMakeLists.txt").read_text()
-anchor = 'string(REPLACE "    return TranslateHaltReason(m_jit->Run());"'
-assert cmake.count(anchor) == 1
-injection = cmake.split(anchor, 1)[1].split('wrapper "${wrapper}")', 1)[0]
-# CMake quoted string is the replacement body; verify no unexpected quotes.
-assert injection.count('"') == 2
-escaped = injection.split('"')[1]
-assert escaped.count(r"\n") >= 6
-assert escaped.count("::Eden::Performance::SampleCpu(") == 2
-assert escaped.count("if (eden_detailed_cpu_sample && ::Eden::Performance::CpuSampleDue(m_core_index))") == 2
-assert escaped.count("Kernel::GetCurrentThread(m_system.Kernel()).GetThreadId()") == 2
-assert escaped.count("m_jit->Run()") == 1
-assert escaped.count("cpu_state[m_core_index].phase.store(") == 2
-assert escaped.count("return TranslateHaltReason(halt);") == 1
-assert "detailed_gpu_profile.load(std::memory_order_relaxed)" in escaped
+assert 'list(APPEND core_sources "${EDEN_G11_SOURCE}")' in cmake
+assert 'string(REPLACE "    return TranslateHaltReason(m_jit->Run());"' not in cmake
+assert "EDEN_G11_PROFILE" in cmake
 
-body = escaped.replace(r"\n", "\n")
 def generated(bits: int) -> str:
-    if bits == 64:
-        pc, fp = "m_jit->GetPC()", "m_jit->GetFpcr()"
-    else:
-        pc, fp = "m_jit->Regs()[15]", "m_jit->Fpscr()"
-    return body.replace("${sample_pc}", pc).replace("${sample_fp}", fp)
+    owned = root/"vendor/encore-active/eden-core/src/core/arm/dynarmic/g11"
+    host_unit = (owned/f"arm_dynarmic_{bits}_host_dev.cpp").read_text()
+    native_unit = (owned/f"arm_dynarmic_{bits}_native_dev.cpp").read_text()
+    signature = f"HaltReason ArmDynarmic{bits}::RunThread(Kernel::KThread* thread) {{"
+    def body(unit: str) -> str:
+        assert unit.count(signature) == 1
+        start = unit.index(signature) + len(signature)
+        finish = unit.index("\n}", start)
+        inner = unit[start:finish]
+        assert inner.count("m_jit->ClearExclusiveState();") == 1
+        return inner.split("m_jit->ClearExclusiveState();", 1)[1].lstrip("\n") + "\n"
+    selected = body(host_unit)
+    assert selected == body(native_unit), ("DEV JIT CPU sampling platform drift", bits)
+    for token in ("const bool eden_detailed_cpu_sample =",
+                  "cpu_state[m_core_index].phase.store(",
+                  "return TranslateHaltReason(halt);"):
+        assert token in selected
+    assert selected.count("::Eden::Performance::SampleCpu(") == 2
+    assert selected.count("m_jit->Run()") == 1
+    assert selected.count("if (eden_detailed_cpu_sample &&") == 2
+    return selected
 
 host = r"""
 #include <array>
