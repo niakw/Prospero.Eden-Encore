@@ -8,7 +8,7 @@ root = Path(__file__).resolve().parents[1]
 cmake = (root / "headless/CMakeLists.txt").read_text()
 pinned = (root / "vendor/sources/eden/src/core/hle/kernel/kernel.cpp").read_text()
 begin = 'file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/kernel/kernel.cpp" kernel_source)'
-finish = 'set_property(TARGET core PROPERTY SOURCES "${core_sources}")'
+finish = 'list(APPEND core_sources "${PORT_BUILD_DIR}/kernel.cpp")\nset_property(TARGET core PROPERTY SOURCES "${core_sources}")'
 assert cmake.count(begin) == 1
 start = cmake.index(begin)
 end = cmake.index(finish, start) + len(finish)
