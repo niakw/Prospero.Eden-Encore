@@ -805,7 +805,8 @@ catalog_rows = re.findall(
     r"^\| \x60[^\x60]+\x60 \|", source_catalog.split(catalog_start)[1].split(catalog_end)[0], re.M
 )
 assert f"**{main_generators} générateurs**" in single_source_doc
-assert f"**{module_generators} générateurs**" in single_source_doc
+module_noun = "générateur" if module_generators == 1 else "générateurs"
+assert f"**{module_generators} {module_noun}**" in single_source_doc
 assert f"**{main_generators + module_generators} sites**" in single_source_doc
 assert f"**{len(catalog_rows)} sources et en-têtes suivis**" in single_source_doc
 for deleted_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
