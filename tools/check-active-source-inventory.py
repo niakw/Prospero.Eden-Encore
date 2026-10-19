@@ -248,7 +248,7 @@ assert all(path.startswith("headless/prosperoeden/")
 assert all(path in headless_graph for path, role, _, _ in headless_rows
            if role == "runtime/bridge")
 for role, count in unlinked_by_role.items():
-    assert f"| \`{role}\` | **{count}** |" in headless_doc, (
+    assert f"| `{role}` | **{count}** |" in headless_doc, (
         "unlinked headless role summary stale", role, count)
 assert f"| **Total non indexé** | **{sum(unlinked_by_role.values())}** |" in headless_doc
 
