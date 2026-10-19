@@ -30,7 +30,7 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
 | **Encore à qualifier (SOURCE + OPEN)** | **368** | **354** | **748** |
-| Dont priorité P0 (SOURCE + OPEN) | 113 | 107 | 263 |
+| Dont priorité P0 (SOURCE + OPEN) | 114 | 108 | 265 |
 
 Le **noyau restant** compte donc 368 critères répartis sur
 354 fichiers et 748 mentions fonction/contrat :
