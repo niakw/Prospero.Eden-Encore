@@ -26,9 +26,9 @@ couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
   recensées ci-dessous. Son plafond descendant est de **5** générations,
   **8** lectures et **52** remplacements après déduction des exceptions
   déjà justifiées ; il ne permet plus le retour aux budgets historiques.
-  G23 reste une ressource GLSL, non une réécriture du moteur. Les deux modules
-  expérimentaux restent suivis séparément, sans compter leurs sites comme
-  actifs dans le CMake principal.
+  G23 reste une ressource GLSL, non une réécriture du moteur. Le module
+  expérimental de pont différé conserve ses sites de génération ; le module
+  Shared JIT ne fait plus que sélectionner les sources Encore.
 - **9 lectures `file(READ`** et **59 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
@@ -90,7 +90,7 @@ et non les 458 scripts Python/shell/CMake du seul dossier `tools/`.
 | `tools/launcher/strings.py` | **RÉGÉNÉRATION EXPLICITE** | Catalogues PO et en-tête français `fr_fr_embedded.h` | Ressources locales |
 | `tools/ps-glyph-*.py` | **OUTILS HORS BUILD** d'analyse/adaptation de mods | Fichiers de recherche / packs externes, pas un patch C++ de l'émulateur | Frontière à conserver |
 | `headless/macro_recovery.cmake`, `slot_vector_recovery.cmake` | **BUILD**, écriture sans `write_derived` | Deux sorties CMake indirectes | Déjà indexées X01/X02 |
-| Deux modules indirects encore actifs (X05–X06) | **BUILD**, changement de variables source avant écriture | Unités dérivées du CMake principal | Indexées X05–X07 ; X03 et X08 retirés |
+| Deux modules indirects encore actifs (X05–X06) | **BUILD**, changement de variables source avant écriture | Unités dérivées du CMake principal | Indexées X05/X06 ; X03, X07 et X08 retirés |
 | `headless/vulkan.cmake` | **BUILD**, copie/sélection d'un fork vérifié | `encore-active/eden-vulkan` | Aucun appel au générateur Python |
 
 **Règle de lecture :** le compteur de synthèse additionne uniquement les
@@ -490,7 +490,7 @@ complètes de `BlockOfCode` sont maintenues sous `encore-active`.
 
 Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules
 inclus par ce fichier contiennent **9 autres appels `write_derived()`**
-dans 2 fichiers. Leur somme avec les générateurs du CMake principal est un **nombre de
+dans un seul fichier (`headless/guest_write_deferred_bridge.cmake`). Leur somme avec les générateurs du CMake principal est un **nombre de
 sites CMake**, pas un dénombrement des fichiers réellement produits à
 l'exécution. Un module inclus peut définir des macros sans les exécuter,
 et plusieurs sorties sont explicitement conditionnées.

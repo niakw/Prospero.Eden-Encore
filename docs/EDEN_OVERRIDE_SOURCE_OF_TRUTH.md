@@ -20,7 +20,7 @@ nouveaux corps C++ destinés à la console.
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
 - `headless/CMakeLists.txt` : **5 générateurs** `write_derived`.
-- Deux modules CMake générateurs totalisent **9 générateurs**
+- Le module CMake expérimental de pont différé contient **9 générateurs**
   `write_derived`, soit **14 sites** au total.
 - Deux modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
@@ -49,7 +49,7 @@ nouveaux corps C++ destinés à la console.
 | Fichier | Nature | Position |
 | --- | --- | --- |
 | `headless/dynarmic/reg_alloc.cmake` | Sélection/copie de deux sources Encore maintenues | Sélecteur conforme |
-| `headless/dynarmic/shared-jit.cmake` | Générateur de source dérivée, à déplacer | Dette de migration |
+| `headless/dynarmic/shared-jit.cmake` | Sélection/copie de trois fichiers Encore complets | Sélecteur conforme ; M01–M03 retirés |
 | `headless/gpu_native_observability.cmake` | Sélection de sources Encore maintenues | Sélecteur conforme |
 | `headless/guest_write_deferred_bridge.cmake` | Générateur de source dérivée, à déplacer | Dette de migration |
 | `headless/inject.cmake` | Orchestration ou toolchain | Sélecteur / configuration |
