@@ -509,7 +509,7 @@ chemins absolus d'en-têtes.
 
 Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules
 inclus par ce fichier contiennent **0 autre appel `write_derived()`**
-dans un seul fichier (`headless/guest_write_deferred_bridge.cmake`). Leur somme avec les générateurs du CMake principal est un **nombre de
+dans aucun module CMake secondaire. Leur somme avec les générateurs du CMake principal est un **nombre de
 sites CMake**, pas un dénombrement des fichiers réellement produits à
 l'exécution. Un module inclus peut définir des macros sans les exécuter,
 et plusieurs sorties sont explicitement conditionnées.
