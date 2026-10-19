@@ -14,8 +14,8 @@ l'audit moteur. Un chemin noté « À qualifier » peut avoir été audité sous
 une autre forme : il manque seulement la référence de chemin exacte.
 
 - **168** chemins sous `headless/`, dont **58** sources C/C++ et **110** en-têtes/fragments.
-- **89** chemins déjà présents dans le graphe moteur.
-- **79** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
+- **90** chemins déjà présents dans le graphe moteur.
+- **78** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
 - Les deux générateurs de profils `headless/encore_overrides_generated.h`,
   `headless/glyph_overrides_generated.h` et les autres ressources générées
   sont des entrées de l'inventaire, **pas** de nouveaux patchs CMake.
@@ -24,7 +24,7 @@ une autre forme : il manque seulement la référence de chemin exacte.
 
 Ce décompte distingue l'incomplétude du **graphe de fonctions** des
 déplacements de sources réellement nécessaires. Le registre physique couvre
-toujours 168/168 chemins ; il n'y a pas 79 overrides de dépendances oubliés.
+toujours 168/168 chemins ; il n'y a pas 78 overrides de dépendances oubliés.
 
 | Rôle indicatif | Chemins sans ID exact |
 | --- | ---: |
@@ -32,14 +32,16 @@ toujours 168/168 chemins ; il n'y a pas 79 overrides de dépendances oubliés.
 | `harness/test` | **9** |
 | `outil auxiliaire` | **4** |
 | `données générées` | **2** |
-| `en-tête/fragment` | **1** |
-| **Total non indexé** | **79** |
+| `en-tête/fragment` | **0** |
+| **Total non indexé** | **78** |
 
 Les 63 chemins du launcher sont réservés au périmètre UI séparé.
 Les 9 harnais, 4 outils et 2 ressources générées ne sont pas déclarés
-comme unités de correction moteur. Le dernier en-tête sans propriétaire exact, `ps5_amd_topology_evidence.h`,
-reste à qualifier : sa présence ne prouve pas une sélection dans le chemin
-natif. Ne pas lui inventer de consommateur ni le déplacer par défaut. Les **17 unités `runtime/bridge`** sont toutes rattachées à
+comme unités de correction moteur. `ps5_amd_topology_evidence.h` porte désormais l'ID U79 au statut
+**PARKED** : ses fonctions sont inventoriées, mais le commit d'origine
+`45f9c01` précise « no runtime pinning ». Aucun consommateur natif
+n'est revendiqué, aucun test matériel n'est prétendu et ce fichier ne
+doit pas être confondu avec un override de dépendance compilé. Les **17 unités `runtime/bridge`** sont toutes rattachées à
 un ID exact ; cela reste une preuve documentaire, pas une preuve
 d'exécution sur console.
 
@@ -204,7 +206,7 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/prosperoeden/radio_input.h` | launcher/UI | — | À qualifier |
 | `headless/prosperoeden/runtime_shims.cpp` | launcher/UI | — | À qualifier |
 | `headless/prosperoeden/version.h` | launcher/UI | — | À qualifier |
-| `headless/ps5_amd_topology_evidence.h` | en-tête/fragment | — | À qualifier |
+| `headless/ps5_amd_topology_evidence.h` | en-tête/fragment | U79 | Chemin indexé, preuve dépend du graphe |
 | `headless/ps5_cpu_topology.h` | en-tête/fragment | U33 | Chemin indexé, preuve dépend du graphe |
 | `headless/ps5_guest_system_button_route.h` | en-tête/fragment | U74 | Chemin indexé, preuve dépend du graphe |
 | `headless/ps5_net_compat.c` | runtime/bridge | U08 | Chemin indexé, preuve dépend du graphe |
