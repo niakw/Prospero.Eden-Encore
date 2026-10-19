@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PERFORMANCE = (ROOT / "headless/performance.cpp").read_text()
 DECL = (ROOT / "headless/performance.h").read_text()
 MAIN = (ROOT / "headless/main.cpp").read_text()
-begin = PERFORMANCE.index("namespace Eden::Performance {\nclass JitDuplicateHistory final {")
+begin = PERFORMANCE.rfind("namespace Eden::Performance {", 0, PERFORMANCE.index("class JitDuplicateHistory final {"))
 end = PERFORMANCE.index("} // namespace Eden::Performance", begin) + len("} // namespace Eden::Performance")
 CLASS = PERFORMANCE[begin:end]
 assert "#ifdef EDEN_DEV_PROFILE\\nnamespace Eden::Performance" not in CLASS
