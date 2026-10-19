@@ -337,13 +337,20 @@ ipc_timeout_fixed = """                s64 absolute{};
                     timeout = absolute;
                 }"""
 assert ipc_pinned.count(ipc_timeout_old) == 1
+ipc_index_old = """            s32 index;
+            Result result = KSynchronizationObject::Wait(kernel, std::addressof(index), objs, num_objects, timeout);"""
+ipc_index_fixed = """            // Wait may return cancellation/termination before setting the index.
+            // Never propagate an indeterminate slot on non-timeout failures.
+            s32 index{-1};
+            Result result = KSynchronizationObject::Wait(kernel, std::addressof(index), objs, num_objects, timeout);"""
+assert ipc_pinned.count(ipc_index_old) == 1
 ipc_expected = ('#include "performance.h"\n' +
-                ipc_pinned.replace(ipc_old, ipc_new).replace(ipc_timeout_old, ipc_timeout_fixed))
+                ipc_pinned.replace(ipc_old, ipc_new).replace(ipc_timeout_old, ipc_timeout_fixed).replace(ipc_index_old, ipc_index_fixed))
 assert ipc_maintained == ipc_expected, (
-    "Maintained DEV IPC source diverges from pinned + profiler + deadline guard")
+    "Maintained DEV IPC source diverges from pinned + profiler + deadline and slot guards")
 ipc_standard = (active / "eden-core/src/core/hle/kernel/svc/svc_ipc_standard.cpp").read_text()
-assert ipc_standard == ipc_pinned.replace(ipc_timeout_old, ipc_timeout_fixed), (
-    "Maintained normal IPC source diverges from pinned + deadline guard")
+assert ipc_standard == ipc_pinned.replace(ipc_timeout_old, ipc_timeout_fixed).replace(ipc_index_old, ipc_index_fixed), (
+    "Maintained normal IPC source diverges from pinned + deadline and slot guards")
 assert 'list(APPEND core_sources "${EDEN_MAINTAINED_SVC_IPC_STANDARD}")' in c
 assert 'list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_HLE_SERVICE}"' in c
 for name, pinned_path in (
