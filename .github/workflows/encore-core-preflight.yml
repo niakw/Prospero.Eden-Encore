@@ -61,6 +61,7 @@ jobs:
           python3 -B tools/check-ps5-texture-unmap-elision-host.py
           python3 -B tools/check-ps5-texture-flush-elision-host.py
           python3 -B tools/check-ps5-buffer-readback-elision-host.py
+          python3 -B tools/check-native-dma-extent-host.py
           python3 -B tools/check-ps5-buffer-pages-r437.py
           python3 -B tools/check-buffer-write-ahead-host.py
           python3 -B tools/check-gpu-deferred-queue-host.py
