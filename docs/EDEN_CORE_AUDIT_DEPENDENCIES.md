@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 396
+**Non, this is not an exhaustive repository-wide inventory.** The 397
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 396 | 373 | 801 |
+| Graphe connu | 397 | 374 | 803 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 341 | 328 | 696 |
+| SOURCE — lecture effectuée, preuve insuffisante | 342 | 329 | 698 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **356** | **342** | **724** |
+| **Encore à qualifier (SOURCE + OPEN)** | **357** | **343** | **726** |
 | Dont priorité P0 (SOURCE + OPEN) | 113 | 107 | 263 |
 
-Le **noyau restant** compte donc 356 critères répartis sur
-342 fichiers et 724 mentions fonction/contrat :
-15 OPEN et 341 SOURCE.
+Le **noyau restant** compte donc 357 critères répartis sur
+343 fichiers et 726 mentions fonction/contrat :
+15 OPEN et 342 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-295 fichiers de code/en-têtes présents et 295 avec un chemin de
+296 fichiers de code/en-têtes présents et 296 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -629,6 +629,7 @@ function/contract tokens are checked by CI for existence only; the
 | V93 | P2 | V91 | vendor/encore-active/eden-core/guest-bridge/kepler_compute.cpp | KeplerCompute::ProcessLaunch; memory_manager.FlushCaching() | SOURCE | tools/check-deferred-native-bridge-contract.py | M10 complete deferred compute engine source selected COPYONLY; historical parity only, experimental OFF and not console qualified | 🟡 Source étudiée |
 | V94 | P2 | V91 | vendor/encore-active/eden-core/guest-bridge/engine_upload.cpp | State::ProcessData; memory_manager.FlushCaching() | SOURCE | tools/check-deferred-native-bridge-contract.py | M11 complete deferred upload engine source selected COPYONLY; historical parity only, experimental OFF and not console qualified | 🟡 Source étudiée |
 | V95 | P2 | V85,V91 | vendor/encore-active/eden-core/guest-bridge/dma_pusher.cpp | DmaPusher::DispatchCalls; memory_manager.FlushCaching() | SOURCE | tools/check-deferred-native-bridge-contract.py | M08 full G20 DEV-based DMA unit selected COPYONLY, unlike stale staging file; parity host only, experimental OFF and unqualified on console | 🟡 Source étudiée |
+| V96 | P2 | V91,V95 | vendor/encore-active/eden-core/guest-bridge/vulkan_rasterizer.cpp | RasterizerVulkan::OnCPUWrite; defer_candidate | SOURCE | tools/check-deferred-native-bridge-contract.py | M07 full deferred Vulkan variant with prior two transformations and portable include path, selected only in opt-in DEV bridge; parity host only, native GPU behavior unqualified | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 

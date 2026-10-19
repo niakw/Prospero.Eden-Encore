@@ -489,7 +489,7 @@ complètes de `BlockOfCode` sont maintenues sous `encore-active`.
 ## Générateurs des modules CMake inclus — inventaire complémentaire
 
 Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules
-inclus par ce fichier contiennent **2 autres appels `write_derived()`**
+inclus par ce fichier contiennent **1 autre appel `write_derived()`**
 dans un seul fichier (`headless/guest_write_deferred_bridge.cmake`). Leur somme avec les générateurs du CMake principal est un **nombre de
 sites CMake**, pas un dénombrement des fichiers réellement produits à
 l'exécution. Un module inclus peut définir des macros sans les exécuter,
@@ -503,9 +503,15 @@ n'autorise pas la substitution silencieuse d'une cible C++ ou d'un module.
 <!-- MODULE_GENERATORS_START -->
 | ID | Module CMake | Sortie dérivée | Porte / périmètre |
 | --- | --- | --- | --- |
-| M07 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/vulkan_rasterizer_deferred.cpp` | Pont différé OFF |
 | M12 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/memory-ps5-deferred.cpp` | Pont différé OFF |
 <!-- MODULE_GENERATORS_END -->
+
+M07 est retiré : la variante complète de `vulkan_rasterizer.cpp` est
+maintenue dans `vendor/encore-active/eden-core/guest-bridge/` ; le
+sélecteur ne modifie plus le corps Vulkan et copie uniquement les octets
+versionnés. Le test hôte vérifie la parité des deux transformations
+historiques avec normalisation de l'include de la racine du port ;
+cette variante reste DEV OFF, non qualifiée sur console.
 
 M08 est retiré : la version diagnostique G20 de `DmaPusher::DispatchCalls`
 est maintenant la base réelle de la variante complète, maintenue sous
@@ -541,7 +547,7 @@ sont contrôlées par les témoins de parité M01 et M03. Shared JIT reste OFF.
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **7 sites** `write_derived()`, ni dans
+Ils ne sont comptés ni dans les **6 sites** `write_derived()`, ni dans
 les **2 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,

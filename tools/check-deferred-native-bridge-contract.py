@@ -12,11 +12,13 @@ root=Path(__file__).resolve().parents[1]
 bridge=root/"headless/guest_write_deferred_bridge.cmake"
 code=bridge.read_text()
 maintained_m06 = root/"vendor/encore-active/eden-core/guest-bridge/memory_manager.cpp"
+maintained_m07 = root/"vendor/encore-active/eden-core/guest-bridge/vulkan_rasterizer.cpp"
 maintained_m08 = root/"vendor/encore-active/eden-core/guest-bridge/dma_pusher.cpp"
 maintained_m09 = root/"vendor/encore-active/eden-core/guest-bridge/maxwell_dma.cpp"
 maintained_m10 = root/"vendor/encore-active/eden-core/guest-bridge/kepler_compute.cpp"
 maintained_m11 = root/"vendor/encore-active/eden-core/guest-bridge/engine_upload.cpp"
 bridge_runtime = (code + "\n" + maintained_m06.read_text() +
+                  "\n" + maintained_m07.read_text() +
                   "\n" + maintained_m08.read_text() +
                   "\n" + maintained_m09.read_text() + "\n" +
                   maintained_m10.read_text() + "\n" + maintained_m11.read_text())
@@ -43,7 +45,7 @@ assert "guest_write_intent = GuestWriteIntent::StoreFollows;" in replay
 assert "inline constexpr bool kNativePostStorePublicationReady = false;" in replay
 assert bridge_runtime.count("::Eden::GpuDeferredWrite::kNativePostStorePublicationReady") == 2
 assert bridge_runtime.index("!::Eden::GpuDeferredWrite::kNativePostStorePublicationReady") < bridge_runtime.index("deferred_cpu_write_queue.Enqueue(core, address, size)")
-assert "const bool defer_candidate =\n        ::Eden::GpuDeferredWrite::kNativePostStorePublicationReady &&" in code
+assert "const bool defer_candidate =\n        ::Eden::GpuDeferredWrite::kNativePostStorePublicationReady &&" in maintained_m07.read_text()
 assert bridge_runtime.count("::Eden::GpuDeferredWrite::GuestWriteIntent::StoreFollows") == 2
 assert "::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent;" in code
 assert 'string(FIND "${bridge_cpu}" "${${anchor}}" found)' in code
@@ -275,6 +277,40 @@ assert 'configure_file("${EDEN_DEFERRED_MEMORY_SOURCE}"' in code
 assert 'write_derived("${PORT_BUILD_DIR}/memory_manager_deferred.cpp"' not in code
 print("ENCORE_M06_MAINTAINED_MEMORY_SOURCE_PARITY_PASS")
 
+# M07 is the historic two-replacement Vulkan source, now owned as a
+# full experimental translation unit. Normalize only the old absolute
+# configure-time include path to the existing explicit video_core include root.
+original_m07 = (root/"vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp").read_text()
+m07_entry = "bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {"
+m07_buffer_lock = "        ::Eden::Performance::GuestCacheLock(buffer_cache.mutex, false);"
+assert original_m07.count(m07_entry) == original_m07.count(m07_buffer_lock) == 1
+m07_entry_with_guard = """bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {
+    const bool defer_candidate =
+        ::Eden::GpuDeferredWrite::kNativePostStorePublicationReady &&
+        ::Eden::Performance::cpu_write_defer.load(std::memory_order_relaxed) &&
+        ::Eden::GpuDeferredWrite::guest_write_origin_core < ::Eden::GpuDeferredWrite::Queue::Cores &&
+        ::Eden::GpuDeferredWrite::guest_write_intent ==
+            ::Eden::GpuDeferredWrite::GuestWriteIntent::StoreFollows &&
+        !::Eden::GpuDeferredWrite::replaying_guest_write;"""
+m07_lock_with_fallback = """
+        if (!defer_candidate) {
+            ::Eden::Performance::GuestCacheLock(buffer_cache.mutex, false);
+        } else if (!buffer_cache.mutex.try_lock()) {
+            if (gpu_memory->EnqueueDeferredCPUWrite(addr, size)) return false;
+            ::Eden::Performance::GuestCacheLock(buffer_cache.mutex, false);
+        }"""
+expected_m07 = ('#include "gpu_deferred_replay.h"\n'
+                '#include "video_core/memory_manager.h"\n' +
+                original_m07.replace(m07_entry, m07_entry_with_guard).replace(
+                    m07_buffer_lock, m07_lock_with_fallback))
+assert maintained_m07.read_text() == expected_m07, "M07 maintained Vulkan variant parity drift"
+assert 'configure_file("${EDEN_DEFERRED_VULKAN_SOURCE}"' in code
+assert 'write_derived("${PORT_BUILD_DIR}/vulkan_rasterizer_deferred.cpp"' not in code
+assert 'target_include_directories(video_core PRIVATE "${EDEN_PORT_DIR}")' in base
+assert '"${PORT_BUILD_DIR}/vulkan_rasterizer.cpp"' in code
+assert '"${PORT_BUILD_DIR}/vulkan_rasterizer_deferred.cpp"' in code
+print("ENCORE_M07_MAINTAINED_VULKAN_PARITY_PASS")
+
 # M08: DEV G20 DMA source plus two exact former bridge flush insertions.
 g20_dev_dma = (root/"vendor/encore-active/eden-core/src/video_core/dma_pusher_dev.cpp").read_text()
 m08_entry = "void DmaPusher::DispatchCalls() {"
@@ -393,6 +429,7 @@ include("__BRIDGE__")
     assert "rasterizer->OnCPUWrite(address, size)" in mm
     assert "dirty[core].Collect(address, size)" in mm
     vk=sources["vulkan_rasterizer_deferred.cpp"]
+    assert vk == maintained_m07.read_text(), "M07 configured Vulkan source differs from maintained variant"
     assert vk.count("EnqueueDeferredCPUWrite(addr, size)") == 1
     assert vk.count("GuestCacheLock(texture_cache.mutex, true)") >= 2
     assert "texture_cache.mutex.try_lock()" not in vk
