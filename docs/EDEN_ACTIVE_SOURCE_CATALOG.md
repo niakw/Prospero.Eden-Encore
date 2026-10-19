@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **291 fichiers** de code et d'en-têtes enregistrés.
-- **291 fichiers** possèdent une correspondance de chemin *exacte*
+- **294 fichiers** de code et d'en-têtes enregistrés.
+- **294 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -130,7 +130,10 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/dynarmic/shared-jit/jit_push_rsb.inc` | `maintained-override` | J25 |
 | `eden-core/dynarmic/shared-jit/jit_state_args.inc` | `maintained-override` | J26 |
 | `eden-core/gpu-injections/gpu_sync_failure_wait.inc` | `maintained-override` | V73 |
+| `eden-core/guest-bridge/engine_upload.cpp` | `maintained-override` | V94 |
 | `eden-core/guest-bridge/gpu_dirty_memory_manager.h` | `maintained-override` | V90 |
+| `eden-core/guest-bridge/kepler_compute.cpp` | `maintained-override` | V93 |
+| `eden-core/guest-bridge/maxwell_dma.cpp` | `maintained-override` | V92 |
 | `eden-core/guest-bridge/memory_manager.cpp` | `maintained-override` | V91 |
 | `eden-core/guest-bridge/memory_manager.h` | `maintained-override` | V89 |
 | `eden-core/host-gpu/include/video_core/gpu_thread.h` | `maintained-override` | Q09 |
@@ -341,7 +344,7 @@ Les fichiers source/en-tête/fragment de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
 Les chemins du graphe moteur y ont un propriétaire exact ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
-La couverture de 279/279 ci-dessus ne s'applique **pas** à ce dossier.
+La couverture de 294/294 ci-dessus ne s'applique **pas** à ce dossier.
 
 ## Critères de tenue à jour
 

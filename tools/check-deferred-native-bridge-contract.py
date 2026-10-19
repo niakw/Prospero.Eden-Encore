@@ -12,7 +12,12 @@ root=Path(__file__).resolve().parents[1]
 bridge=root/"headless/guest_write_deferred_bridge.cmake"
 code=bridge.read_text()
 maintained_m06 = root/"vendor/encore-active/eden-core/guest-bridge/memory_manager.cpp"
-bridge_runtime = code + "\n" + maintained_m06.read_text()
+maintained_m09 = root/"vendor/encore-active/eden-core/guest-bridge/maxwell_dma.cpp"
+maintained_m10 = root/"vendor/encore-active/eden-core/guest-bridge/kepler_compute.cpp"
+maintained_m11 = root/"vendor/encore-active/eden-core/guest-bridge/engine_upload.cpp"
+bridge_runtime = (code + "\n" + maintained_m06.read_text() +
+                  "\n" + maintained_m09.read_text() + "\n" +
+                  maintained_m10.read_text() + "\n" + maintained_m11.read_text())
 base=(root/"headless/CMakeLists.txt").read_text()
 replay=(root/"headless/gpu_deferred_replay.h").read_text()
 perf=(root/"headless/performance.h").read_text()
@@ -268,6 +273,37 @@ assert 'configure_file("${EDEN_DEFERRED_MEMORY_SOURCE}"' in code
 assert 'write_derived("${PORT_BUILD_DIR}/memory_manager_deferred.cpp"' not in code
 print("ENCORE_M06_MAINTAINED_MEMORY_SOURCE_PARITY_PASS")
 
+# M09-M11: parity oracles; no source rewriting in CMake.
+original_m09 = (root/"vendor/sources/eden/src/video_core/engines/maxwell_dma.cpp").read_text()
+anchor_m09 = "void MaxwellDMA::Launch() {"
+assert original_m09.count(anchor_m09) == 1, "M09 original anchor drift"
+expected_m09 = original_m09.replace(anchor_m09,
+    anchor_m09 + "\n    memory_manager.FlushCaching();")
+assert maintained_m09.read_text() == expected_m09, "M09 maintained source parity drift"
+assert 'configure_file("${EDEN_DEFERRED_MAXWELL_SOURCE}"' in code
+assert 'write_derived("${PORT_BUILD_DIR}/maxwell_dma_deferred.cpp"' not in code
+print("ENCORE_M09_MAINTAINED_ENGINE_PARITY_PASS")
+
+original_m10 = (root/"vendor/sources/eden/src/video_core/engines/kepler_compute.cpp").read_text()
+anchor_m10 = "void KeplerCompute::ProcessLaunch() {"
+assert original_m10.count(anchor_m10) == 1, "M10 original anchor drift"
+expected_m10 = original_m10.replace(anchor_m10,
+    anchor_m10 + "\n    memory_manager.FlushCaching();")
+assert maintained_m10.read_text() == expected_m10, "M10 maintained source parity drift"
+assert 'configure_file("${EDEN_DEFERRED_KEPLER_SOURCE}"' in code
+assert 'write_derived("${PORT_BUILD_DIR}/kepler_compute_deferred.cpp"' not in code
+print("ENCORE_M10_MAINTAINED_ENGINE_PARITY_PASS")
+
+original_m11 = (root/"vendor/sources/eden/src/video_core/engines/engine_upload.cpp").read_text()
+anchor_m11 = "void State::ProcessData(std::span<const u8> read_buffer) {"
+assert original_m11.count(anchor_m11) == 1, "M11 original anchor drift"
+expected_m11 = original_m11.replace(anchor_m11,
+    anchor_m11 + "\n    memory_manager.FlushCaching();")
+assert maintained_m11.read_text() == expected_m11, "M11 maintained source parity drift"
+assert 'configure_file("${EDEN_DEFERRED_UPLOAD_SOURCE}"' in code
+assert 'write_derived("${PORT_BUILD_DIR}/engine_upload_deferred.cpp"' not in code
+print("ENCORE_M11_MAINTAINED_ENGINE_PARITY_PASS")
+
 pins={
     "video_core/memory_manager.h":["    void FlushCaching();","    Core::System& system;"],
     "video_core/memory_manager.cpp":['#include "memory_manager.h"',"void MemoryManager::FlushCaching() {"],
@@ -347,10 +383,10 @@ include("__BRIDGE__")
     assert "std::lock_guard lock{buffer_cache.mutex, std::adopt_lock};" in vk
     assert "std::lock_guard lock{texture_cache.mutex, std::adopt_lock};" in vk
     assert sources["dma_pusher_deferred.cpp"].count("memory_manager.FlushCaching()") >= 2
-    assert "memory_manager.FlushCaching();" in sources["maxwell_dma_deferred.cpp"]
-    assert "memory_manager.FlushCaching();" in sources["kepler_compute_deferred.cpp"]
+    assert sources["maxwell_dma_deferred.cpp"] == maintained_m09.read_text()
+    assert sources["kepler_compute_deferred.cpp"] == maintained_m10.read_text()
     upload=sources["engine_upload_deferred.cpp"]
-    assert "void State::ProcessData(std::span<const u8> read_buffer) {\n    memory_manager.FlushCaching();" in upload
+    assert upload == maintained_m11.read_text()
     h=(stage/"include/video_core/memory_manager.h").read_text()
     assert h == maintained_m04.read_text()
     assert "GpuDeferredWrite::Queue deferred_cpu_write_queue" in h

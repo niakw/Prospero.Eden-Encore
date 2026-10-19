@@ -96,38 +96,34 @@ if(EDEN_GUEST_WRITE_BRIDGE_DEV)
     write_derived("${PORT_BUILD_DIR}/dma_pusher_deferred.cpp" "${bridge_dma}")
 
     # The buffer clear fast path bypasses the old conditional DMA flush.
-    file(READ "${PROJECT_SOURCE_DIR}/src/video_core/engines/maxwell_dma.cpp" bridge_maxwell)
-    string(FIND "${bridge_maxwell}" "void MaxwellDMA::Launch() {" found)
-    if(found LESS 0)
-        message(FATAL_ERROR "Pinned Maxwell DMA launch changed")
+    # M09: select a complete experimental Encore-maintained source.
+    set(EDEN_DEFERRED_MAXWELL_SOURCE
+        "${PORT_ROOT}/vendor/encore-active/eden-core/guest-bridge/maxwell_dma.cpp")
+    if(NOT EXISTS "${EDEN_DEFERRED_MAXWELL_SOURCE}")
+        message(FATAL_ERROR "Missing maintained M09 guest bridge source")
     endif()
-    string(REPLACE "void MaxwellDMA::Launch() {"
-        "void MaxwellDMA::Launch() {\n    memory_manager.FlushCaching();"
-        bridge_maxwell "${bridge_maxwell}")
-    write_derived("${PORT_BUILD_DIR}/maxwell_dma_deferred.cpp" "${bridge_maxwell}")
+    configure_file("${EDEN_DEFERRED_MAXWELL_SOURCE}"
+        "${PORT_BUILD_DIR}/maxwell_dma_deferred.cpp" COPYONLY)
 
-    file(READ "${PROJECT_SOURCE_DIR}/src/video_core/engines/kepler_compute.cpp" bridge_kepler)
-    string(FIND "${bridge_kepler}" "void KeplerCompute::ProcessLaunch() {" found)
-    if(found LESS 0)
-        message(FATAL_ERROR "Pinned Kepler launch changed")
+    # M10: select a complete experimental Encore-maintained source.
+    set(EDEN_DEFERRED_KEPLER_SOURCE
+        "${PORT_ROOT}/vendor/encore-active/eden-core/guest-bridge/kepler_compute.cpp")
+    if(NOT EXISTS "${EDEN_DEFERRED_KEPLER_SOURCE}")
+        message(FATAL_ERROR "Missing maintained M10 guest bridge source")
     endif()
-    string(REPLACE "void KeplerCompute::ProcessLaunch() {"
-        "void KeplerCompute::ProcessLaunch() {\n    memory_manager.FlushCaching();"
-        bridge_kepler "${bridge_kepler}")
-    write_derived("${PORT_BUILD_DIR}/kepler_compute_deferred.cpp" "${bridge_kepler}")
+    configure_file("${EDEN_DEFERRED_KEPLER_SOURCE}"
+        "${PORT_BUILD_DIR}/kepler_compute_deferred.cpp" COPYONLY)
 
     # An inline memory upload can touch cached guest data BEFORE the next
     # renderer draw/dispatch. Drain ahead of linear and tiled uploads alike.
-    file(READ "${PROJECT_SOURCE_DIR}/src/video_core/engines/engine_upload.cpp" bridge_upload)
-    set(upload_anchor "void State::ProcessData(std::span<const u8> read_buffer) {")
-    string(FIND "${bridge_upload}" "${upload_anchor}" found)
-    if(found LESS 0)
-        message(FATAL_ERROR "Pinned upload State::ProcessData moved")
+    # M11: select a complete experimental Encore-maintained source.
+    set(EDEN_DEFERRED_UPLOAD_SOURCE
+        "${PORT_ROOT}/vendor/encore-active/eden-core/guest-bridge/engine_upload.cpp")
+    if(NOT EXISTS "${EDEN_DEFERRED_UPLOAD_SOURCE}")
+        message(FATAL_ERROR "Missing maintained M11 guest bridge source")
     endif()
-    string(REPLACE "${upload_anchor}"
-        "void State::ProcessData(std::span<const u8> read_buffer) {\n    memory_manager.FlushCaching();"
-        bridge_upload "${bridge_upload}")
-    write_derived("${PORT_BUILD_DIR}/engine_upload_deferred.cpp" "${bridge_upload}")
+    configure_file("${EDEN_DEFERRED_UPLOAD_SOURCE}"
+        "${PORT_BUILD_DIR}/engine_upload_deferred.cpp" COPYONLY)
 
     # Only a real guest-memory write may produce deferred work. The original
     # HandleRasterizerWrite knows the exact guest core, including syscore 3.

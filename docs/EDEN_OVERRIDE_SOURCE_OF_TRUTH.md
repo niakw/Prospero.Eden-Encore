@@ -16,12 +16,12 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 19 octobre 2026
 
-- `vendor/encore-active` : **291 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **294 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
 - `headless/CMakeLists.txt` : **5 générateurs** `write_derived`.
-- Le module CMake expérimental de pont différé contient **6 générateurs**
-  `write_derived`, soit **11 sites** au total.
+- Le module CMake expérimental de pont différé contient **3 générateurs**
+  `write_derived`, soit **8 sites** au total.
 - Deux modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   compteur des générations CMake.
@@ -277,7 +277,7 @@ Le module `headless/dynarmic/shared-jit.cmake` sélectionne désormais les
 sources complètes `a64_jitstate.h`, `jit_group.h` et `callback.cpp` maintenues
 dans Encore. Les anciennes transformations M01 et M03 sont reproduites
 exactement par des tests de parité ; CMake ne fait que copier ces fichiers.
-Ce module ne possède plus aucun site `write_derived` ; les **6 générateurs
+Ce module ne possède plus aucun site `write_derived` ; les **3 générateurs
 secondaires** restants appartiennent au pont différé expérimental.
 Shared JIT reste OFF par défaut, sans qualification matérielle.
 
