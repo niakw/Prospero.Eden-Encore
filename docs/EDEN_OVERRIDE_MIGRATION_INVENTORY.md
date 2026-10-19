@@ -17,19 +17,19 @@ couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
 ## Synthèse vérifiable
 
-- **3 appels générateurs** encore dans CMake ; contre **75 avant**
+- **2 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
 - **Garde-fou de non-régression renforcé (19 octobre 2026) :**
   `tools/check-vendor-consolidation-debt.py` limite désormais les sites
-  de génération du CMake principal aux trois destinations G11/G19/G23
-  recensées ci-dessous. Son plafond descendant est de **3** générations,
-  **6** lectures et **38** remplacements après déduction des exceptions
+  de génération du CMake principal aux deux destinations G11/G23
+  recensées ci-dessous. Son plafond descendant est de **2** générations,
+  **5** lectures et **25** remplacements après déduction des exceptions
   déjà justifiées ; il ne permet plus le retour aux budgets historiques.
   G23 reste une ressource GLSL, non une réécriture du moteur. Le module
   expérimental de pont différé ne génère plus de C++ ; le module
   Shared JIT ne fait plus que sélectionner les sources Encore.
-- **6 lectures `file(READ`** et **38 remplacements
+- **5 lectures `file(READ`** et **25 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
 - Les versions diagnostiques de `IFile::Read`, `IStorage::Read` et des appels
@@ -245,7 +245,6 @@ dans la version normale.
 | ID | Sortie `write_derived` | Domaine indicatif | Catégorie | Ligne CMake |
 | --- | --- | --- | --- | ---: |
 | G11 | `${derived}` | CPU | Cible variable | 611 |
-| G19 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 1276 |
 | G23 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2065 |
 <!-- OVERRIDE_GENERATORS_END -->
 
@@ -257,7 +256,7 @@ Les IDs G01–G23 sont stables et ne sont pas renumérotés.
 
 ## G19 — matrice kernel avant centralisation
 
-Le générateur G19 produit encore une unité `kernel.cpp` distincte pour le
+Le générateur historique G19 produisait une unité `kernel.cpp` distincte pour le
 profil normal et le profil DEV. Le témoin
 `tools/check-g19-kernel-profile-matrix-host.py` exécute la vraie recette
 CMake et vérifie la provenance effective de `KProcess`, `ServerManager`
@@ -270,9 +269,10 @@ Les deux variantes C++ complètes sont désormais présentes sous
 exige leur parité exacte avec les sorties de G19, mais elles ne sont pas
 encore sélectionnées par le build.
 
-La migration suivante devra déplacer les deux C++ complets dans
-`vendor/encore-active` et comparer les octets de ces sources aux sorties
-CMake historiques, avant de retirer le générateur G19.
+G19 sélectionne maintenant directement les deux C++ complets dans
+`vendor/encore-active`. L'ancienne recette est archivée exclusivement dans
+`tools/fixtures/legacy-g19-kernel.cmake` ; le témoin compare les deux sorties
+et vérifie que le nouveau sélecteur ne compile jamais un kernel en double.
 
 ## G21 — matrice de dépendances avant centralisation
 
