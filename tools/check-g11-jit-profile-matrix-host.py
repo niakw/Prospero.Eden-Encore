@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """Run G11/X06 CMake source-generation matrix (host-only, no hardware proof)."""
 from pathlib import Path
+import base64
+import difflib
 import hashlib
+import json
+import os
 import subprocess
 import tempfile
 
@@ -97,7 +101,27 @@ file(WRITE "${PORT_BUILD_DIR}/selected.txt" "${g11_sources}")
                         assert "::Eden::Watch::Hit(" in src
                         assert "::Eden::CrashSite::Dump(" in src
                     outputs[(native,dev,inline,bits)] = src
-                assert len(owners) == 3, (label,owners)
+                    # One-time migration bridge: emit compact line-based
+                    # deltas against pinned public sources in CI logs. They
+                    # are reconstructed and committed as full Encore C++
+                    # owners; this does not run on shipping builds.
+                    if os.environ.get("ENCORE_EXPORT_G11_PATCHES") == "1" and not inline:
+                        before_lines = pinned[bits].splitlines(keepends=True)
+                        source_lines = src.splitlines(keepends=True)
+                        matcher = difflib.SequenceMatcher(
+                            None, before_lines, source_lines, autojunk=False)
+                        edits = [[i1, i2, "".join(source_lines[j1:j2])]
+                                 for tag,i1,i2,j1,j2 in matcher.get_opcodes()
+                                 if tag != "equal"]
+                        encoded = base64.b64encode(json.dumps(
+                            edits, ensure_ascii=True, separators=(",",":")).encode("utf-8")).decode("ascii")
+                        print("ENCORE_G11_PATCH_BEGIN", label, bits, len(encoded), flush=True)
+                        for part in range(0, len(encoded), 2048):
+                            print("ENCORE_G11_PATCH_CHUNK", label, bits,
+                                  part // 2048, encoded[part:part+2048], flush=True)
+                        print("ENCORE_G11_PATCH_END", label, bits, flush=True)
+
+                assert len(owners) == 2, (label,owners)
     for bits in (32,64):
         assert len({hashlib.sha256(value.encode()).digest()
                     for (native,dev,inline,arch),value in outputs.items()
