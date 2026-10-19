@@ -772,10 +772,31 @@ assert single_source_table("<!-- SINGLE_SOURCE_FRAGMENTS_START -->", "<!-- SINGL
 # migration-stage totals into a separate test (which goes stale every move).
 import re
 main_generators = len(re.findall(r'write_derived\(\s*"([^"]+)"', c))
-module_generators = sum(
-    len(re.findall(r'write_derived\(\s*"([^"]+)"', (root / name).read_text()))
+# Count exact targets, not just the number of writes: a new generator in
+# a previously reviewed module must never hide behind an unchanged total.
+module_sites = [
+    (name, target)
     for name in candidates_modules
+    for target in re.findall(
+        r'^\s*write_derived\(\s*"([^"]+)"',
+        (root / name).read_text(), re.M
+    )
+]
+module_generators = len(module_sites)
+migration_doc = (root / "docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md").read_text()
+module_begin = "<!-- MODULE_GENERATORS_START -->"
+module_end = "<!-- MODULE_GENERATORS_END -->"
+assert migration_doc.count(module_begin) == migration_doc.count(module_end) == 1
+documented_module_sites = re.findall(
+    r'^\|\s*M\d+\s*\|\s*\x60([^\x60]+)\x60\s*\|\s*\x60([^\x60]+)\x60\s*\|',
+    migration_doc.split(module_begin)[1].split(module_end)[0], re.M
 )
+assert module_sites == documented_module_sites, (
+    "Undocumented CMake module-generated source: migrate to Encore or "
+    "review and document its exact owner/target",
+    module_sites, documented_module_sites
+)
+print("ENCORE_MODULE_GENERATOR_OWNER_PASS", f"sites={module_generators}")
 source_catalog = (root / "docs/EDEN_ACTIVE_SOURCE_CATALOG.md").read_text()
 catalog_start = "<!-- ACTIVE_SOURCE_CATALOG_START -->"
 catalog_end = "<!-- ACTIVE_SOURCE_CATALOG_END -->"
