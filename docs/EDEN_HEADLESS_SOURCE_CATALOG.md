@@ -4,7 +4,7 @@
 
 Ce registre complémentaire couvre les **169 chemins** de code, en-têtes et
 fragments `.c/.cc/.cpp/.h/.hpp/.inc/.cl` du dossier `headless/`.
-Il ne remplace pas `EDEN_ACTIVE_SOURCE_CATALOG.md` : les 259 fichiers
+Il ne remplace pas `EDEN_ACTIVE_SOURCE_CATALOG.md` : les 286 fichiers
 de `vendor/encore-active` sont déjà inventoriés séparément.
 
 **Attention :** une entrée ici ne prouve pas que le fichier est compilé ni
