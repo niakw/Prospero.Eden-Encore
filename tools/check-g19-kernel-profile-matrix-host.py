@@ -25,6 +25,10 @@ with tempfile.TemporaryDirectory(prefix="encore-g19-oracle-") as td:
         stage = project / "stage"
         stage.mkdir()
         (project / "empty.cpp").write_text("int g19_probe() { return 0; }\n")
+        # CMake validates still-selected pinned units during generation.
+        # Only the kernel and server-manager are replaced by the G19 recipe.
+        (project / "hle/kernel").mkdir(parents=True)
+        (project / "hle/kernel/k_process.cpp").write_text("// stub pinned KProcess for target source resolution\n")
         header = r'''cmake_minimum_required(VERSION 3.24)
 project(EncoreG19Oracle LANGUAGES CXX)
 set(PORT_ROOT "__ROOT__")
