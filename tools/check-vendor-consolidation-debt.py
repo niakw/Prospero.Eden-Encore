@@ -869,9 +869,12 @@ print("ENCORE_SHARED_JIT_STATE_PARITY_PASS M01 exact historical layout, direct m
 callback_original = (sources / "eden/src/dynarmic/src/dynarmic/backend/x64/callback.cpp").read_text()
 callback_args = (active / "eden-core/dynarmic/shared-jit/jit_state_args.inc").read_text()
 callback_changes = (
-"namespace Dynarmic::Backend::X64 {\n" , "namespace Dynarmic::Backend::X64 {\n" + callback_args,
-"    code.mov(code.ABI_PARAM1, arg);\n    code.CallFunction(fn);\n}" , "    EdenLoadArg(code, code.ABI_PARAM1, arg);\n    code.CallFunction(fn);\n}",
-"    code.mov(code.ABI_PARAM2, arg);\n#endif" , "    EdenLoadArg(code, code.ABI_PARAM2, arg);\n#endif",
+    ("namespace Dynarmic::Backend::X64 {\n",
+     "namespace Dynarmic::Backend::X64 {\n" + callback_args),
+    ("    code.mov(code.ABI_PARAM1, arg);\n    code.CallFunction(fn);\n}",
+     "    EdenLoadArg(code, code.ABI_PARAM1, arg);\n    code.CallFunction(fn);\n}"),
+    ("    code.mov(code.ABI_PARAM2, arg);\n#endif",
+     "    EdenLoadArg(code, code.ABI_PARAM2, arg);\n#endif"),
 )
 callback_expected = callback_original
 for before, after in callback_changes:
