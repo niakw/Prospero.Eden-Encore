@@ -69,8 +69,8 @@ endfunction()
         actual = (stage / "gpu.cpp").read_text()
         assert len(actual) >= len(upstream) - 2048, (name, len(actual))
         assert actual.count("VideoCommon::GPUThread::ThreadManager gpu_thread;") == 1, name
-        assert "RequestSyncOperation([this, &raster_area]()" not in actual, name if gl else ""
         if gl:
+            assert "RequestSyncOperation([this, &raster_area]()" not in actual, name
             assert "GPU::~GPU() { impl->NotifyShutdown(); }" in actual, name
             assert "RequestSyncOperation([this, raster_area]()" in actual, name
             assert "sync_requests_stopped" in actual, name
@@ -81,6 +81,7 @@ endfunction()
             assert ('#include <glad/glad.h>' in actual) == native, name
             assert ("::Eden::Performance::BootTrace()" in actual) == dev, name
         else:
+            assert "RequestSyncOperation([this, &raster_area]()" in actual, name
             assert "GPU::~GPU() = default;" in actual, name
             assert '#include <glad/glad.h>' not in actual, name
             assert "::Eden::Performance::BootTrace()" not in actual, name
