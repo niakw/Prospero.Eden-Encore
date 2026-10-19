@@ -1,5 +1,5 @@
-# Experimental cross-core JIT: state and group headers come from complete
-# maintained Encore sources. callback.cpp is the remaining derived unit.
+# Experimental cross-core JIT: all state, callback and group units come from
+# complete maintained Encore sources. No C++ is reconstructed by CMake.
 
 set(EDEN_SHARED_JIT_DIR "${PORT_ROOT}/vendor/encore-active/eden-core/dynarmic/shared-jit")
 if(NOT EXISTS "${EDEN_SHARED_JIT_DIR}/jit_group.h")
@@ -36,18 +36,12 @@ macro(eden_shared_jit_sources)
     # COPYONLY preserves its exact bytes without a second generated source.
     configure_file("${EDEN_SHARED_JIT_DIR}/jit_group.h"
         "${PORT_BUILD_DIR}/include/dynarmic/backend/x64/jit_group.h" COPYONLY)
-    file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/dynarmic/backend/x64/callback.cpp" eden_callback)
-    set(eden_call_arg "    code.mov(code.ABI_PARAM1, arg);\n    code.CallFunction(fn);\n}")
-    set(eden_return_arg "    code.mov(code.ABI_PARAM2, arg);\n#endif")
-    set(eden_callback_namespace "namespace Dynarmic::Backend::X64 {\n")
-    foreach(anchor eden_call_arg eden_return_arg eden_callback_namespace)
-        eden_shared_jit_require("${eden_callback}" "${${anchor}}" "callback emission (${anchor})")
-    endforeach()
-    file(READ "${EDEN_SHARED_JIT_DIR}/jit_state_args.inc" eden_state_args)
-    string(REPLACE "${eden_callback_namespace}" "${eden_callback_namespace}${eden_state_args}" eden_callback "${eden_callback}")
-    string(REPLACE "${eden_call_arg}" "    EdenLoadArg(code, code.ABI_PARAM1, arg);\n    code.CallFunction(fn);\n}" eden_callback "${eden_callback}")
-    string(REPLACE "${eden_return_arg}" "    EdenLoadArg(code, code.ABI_PARAM2, arg);\n#endif" eden_callback "${eden_callback}")
-    write_derived("${PORT_BUILD_DIR}/callback.cpp" "#include <array>\n#include <atomic>\n#include <cstdlib>\n#include <optional>\n${eden_callback}")
+    # M03 retired: compile the tracked full callback unit, not CMake edits.
+    if(NOT EXISTS "${EDEN_SHARED_JIT_DIR}/callback.cpp")
+        message(FATAL_ERROR "Missing Encore-maintained shared JIT callback unit")
+    endif()
+    configure_file("${EDEN_SHARED_JIT_DIR}/callback.cpp"
+        "${PORT_BUILD_DIR}/callback.cpp" COPYONLY)
     get_target_property(eden_jit_sources dynarmic SOURCES)
     list(FILTER eden_jit_sources EXCLUDE REGEX "(^|/)callback\\.cpp$")
     set_property(TARGET dynarmic PROPERTY SOURCES "${eden_jit_sources}")

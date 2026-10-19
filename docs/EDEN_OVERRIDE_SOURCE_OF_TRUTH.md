@@ -20,8 +20,8 @@ nouveaux corps C++ destinés à la console.
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
 - `headless/CMakeLists.txt` : **5 générateurs** `write_derived`.
-- Deux modules CMake générateurs totalisent **10 générateurs**
-  `write_derived`, soit **15 sites** au total.
+- Deux modules CMake générateurs totalisent **9 générateurs**
+  `write_derived`, soit **14 sites** au total.
 - Deux modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   compteur des générations CMake.
@@ -273,11 +273,13 @@ sans conserver un fragment C++ concurrent hors `encore-active`.
 
 Les cinq fragments `jit_*.inc` et `jit_group.h` ont été déplacés à
 blobs Git identiques dans `vendor/encore-active/eden-core/dynarmic/shared-jit/`.
-Le sélecteur `headless/dynarmic/shared-jit.cmake` copie les sources complètes
-`a64_jitstate.h` et `jit_group.h`, sans recomposer leur contenu en CMake.
-L'ancien M01 est recoupé par un témoin de parité exacte. **M03 transforme
-encore `callback.cpp` : la consolidation reste incomplète.** Les deux
-modules possèdent 10 générateurs en tout ; Shared JIT reste OFF par défaut.
+Le module `headless/dynarmic/shared-jit.cmake` sélectionne désormais les
+sources complètes `a64_jitstate.h`, `jit_group.h` et `callback.cpp` maintenues
+dans Encore. Les anciennes transformations M01 et M03 sont reproduites
+exactement par des tests de parité ; CMake ne fait que copier ces fichiers.
+Ce module ne possède plus aucun site `write_derived` ; les **9 générateurs
+secondaires** restants appartiennent au pont différé expérimental.
+Shared JIT reste OFF par défaut, sans qualification matérielle.
 
 ## Fragments scalaires centralisés
 

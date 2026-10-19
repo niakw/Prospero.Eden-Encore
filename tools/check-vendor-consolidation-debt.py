@@ -864,6 +864,27 @@ assert ('configure_file("${EDEN_SHARED_JIT_DIR}/a64_jitstate.h"\n'
 assert 'write_derived("${PORT_BUILD_DIR}/include/${eden_jitstate_relative}"' not in shared_jit_selector
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/${eden_jitstate_relative}"' not in shared_jit_selector
 print("ENCORE_SHARED_JIT_STATE_PARITY_PASS M01 exact historical layout, direct maintained copy")
+# M03 exact parity: the canonical callback translation unit reproduces
+# the previous generated includes, args registry and two call substitutions.
+callback_original = (sources / "eden/src/dynarmic/src/dynarmic/backend/x64/callback.cpp").read_text()
+callback_args = (active / "eden-core/dynarmic/shared-jit/jit_state_args.inc").read_text()
+callback_changes = (
+"namespace Dynarmic::Backend::X64 {\n" , "namespace Dynarmic::Backend::X64 {\n" + callback_args,
+"    code.mov(code.ABI_PARAM1, arg);\n    code.CallFunction(fn);\n}" , "    EdenLoadArg(code, code.ABI_PARAM1, arg);\n    code.CallFunction(fn);\n}",
+"    code.mov(code.ABI_PARAM2, arg);\n#endif" , "    EdenLoadArg(code, code.ABI_PARAM2, arg);\n#endif",
+)
+callback_expected = callback_original
+for before, after in callback_changes:
+    assert callback_expected.count(before) == 1, ("Pinned shared-JIT callback anchor drift", before)
+    callback_expected = callback_expected.replace(before, after)
+callback_expected = "#include <array>\n#include <atomic>\n#include <cstdlib>\n#include <optional>\n" + callback_expected
+assert (active / "eden-core/dynarmic/shared-jit/callback.cpp").read_text() == callback_expected, (
+    "Maintained shared-JIT callback differs from M03 output")
+assert ('configure_file("${EDEN_SHARED_JIT_DIR}/callback.cpp"\n'
+        '        "${PORT_BUILD_DIR}/callback.cpp" COPYONLY)') in shared_jit_selector
+assert 'write_derived("${PORT_BUILD_DIR}/callback.cpp"' not in shared_jit_selector
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/dynarmic/backend/x64/callback.cpp"' not in shared_jit_selector
+print("ENCORE_SHARED_JIT_CALLBACK_PARITY_PASS M03 full tracked C++")
 print("ENCORE_SHARED_JIT_SOURCE_OWNERS_PASS", len(shared_jit_blobs))
 
 
@@ -1347,7 +1368,7 @@ for module in module_files:
     module_current.extend((module, target) for target in
                           re.findall(r'write_derived\(\s*"([^"]+)"', content))
 assert module_recorded == module_current, "Module CMake source generator inventory is stale"
-assert len(module_current) == 10, len(module_current)
+assert len(module_current) == 9, len(module_current)
 # Indirect X01/X02 are no longer CMake generators: full source units
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):
