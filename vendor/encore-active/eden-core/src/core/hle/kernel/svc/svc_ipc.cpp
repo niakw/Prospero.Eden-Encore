@@ -66,9 +66,14 @@ Result ReplyAndReceiveImpl(KernelCore& kernel, int32_t* out_index, uintptr_t mes
         if (timeout_ns > 0) {
             const s64 offset_tick(timeout_ns);
             if (offset_tick > 0) {
-                timeout = kernel.HardwareTimer().GetTick() + offset_tick + 2;
-                if (timeout <= 0) {
+                s64 absolute{};
+                if (__builtin_add_overflow(kernel.HardwareTimer().GetTick(), offset_tick,
+                                           &absolute) ||
+                    __builtin_add_overflow(absolute, s64{2}, &absolute) ||
+                    absolute <= 0) {
                     timeout = (std::numeric_limits<s64>::max)();
+                } else {
+                    timeout = absolute;
                 }
             } else {
                 timeout = (std::numeric_limits<s64>::max)();
