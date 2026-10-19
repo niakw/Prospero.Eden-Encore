@@ -24,17 +24,17 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 442 | 419 | 889 |
+| Graphe connu | 454 | 431 | 912 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 387 | 374 | 784 |
+| SOURCE — lecture effectuée, preuve insuffisante | 399 | 386 | 807 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **402** | **388** | **812** |
+| **Encore à qualifier (SOURCE + OPEN)** | **414** | **400** | **835** |
 | Dont priorité P0 (SOURCE + OPEN) | 114 | 108 | 265 |
 
-Le **noyau restant** compte donc 402 critères répartis sur
-388 fichiers et 812 mentions fonction/contrat :
-15 OPEN et 387 SOURCE.
+Le **noyau restant** compte donc 414 critères répartis sur
+400 fichiers et 835 mentions fonction/contrat :
+15 OPEN et 399 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
@@ -675,6 +675,18 @@ function/contract tokens are checked by CI for existence only; the
 | U43 | P1 | J01 | headless/direct_pool_probe_policy.h | ProbeIntervalNs( | SOURCE | tools/check-headless-runtime-header-owners.py | OS-confirmed direct-memory query cadence contract in app performance runtime | 🟡 Source étudiée |
 | U44 | P1 | J01 | headless/direct_pool_region_scan.h | struct RegionScan; FreeUpperBound( | SOURCE | tools/check-headless-runtime-header-owners.py | Conservative direct-memory occupancy scan; an upper free bound is not allocatable RAM | 🟡 Source étudiée |
 | U45 | P2 | U01 | headless/dev_replay_policy.h | ReplayRequestedAfter(; ScriptedReplayEnabled( | SOURCE | tools/check-headless-runtime-header-owners.py | Opt-in diagnostic replay requires an exact profile title match; native input unqualified | 🟡 Source étudiée |
+| U46 | P2 | U01,U19 | headless/assets_dir.h | inline std::string ResolveAssetsDir(); inline std::string AssetsPath( | SOURCE | tools/check-headless-app-policy-owners.py | Single application assets/storage root shared by native app, graphics and launcher; launcher separately owned | 🟡 Source étudiée |
+| U47 | P1 | U04 | headless/audio_out_init.h | inline bool AudioOutReady() | SOURCE | tools/check-headless-app-policy-owners.py | Shared once-only native audio initialization across game audio and launcher, without a second vendor override | 🟡 Source étudiée |
+| U48 | P1 | U11 | headless/crash_report.h | void Install(; void SetSession( | SOURCE | tools/check-headless-app-policy-owners.py | App native crash handler declarations, session state and performance diagnostics; console restart unqualified | 🟡 Source étudiée |
+| U49 | P2 | U11 | headless/crash_trigger.h | inline void BadWrite(); inline void DevelopmentRequest( | SOURCE | tools/check-headless-app-policy-owners.py | Opt-in development crash marker shared by game and launcher; never a shipping auto-trigger | 🟡 Source étudiée |
+| U50 | P2 | U01 | headless/dev_launch_policy.h | struct BootIntent; constexpr bool ShouldAutoboot( | SOURCE | tools/check-headless-app-policy-owners.py | Development autoboot respects explicit launcher-first and previous-crash state | 🟡 Source étudiée |
+| U51 | P2 | U03 | headless/development_input.h | struct DevelopmentInput; std::optional<ps5::pad::Data> Sample( | SOURCE | tools/check-headless-app-policy-owners.py | Time-bounded diagnostic input samples across launcher and native app, not normal controller remapping | 🟡 Source étudiée |
+| U52 | P1 | U03,U04 | headless/devices.h | class PadEngine final; void ResetControllers() | SOURCE | tools/check-headless-app-policy-owners.py | Application device bridge and multi-player pad state shared by audio, input and game startup | 🟡 Source étudiée |
+| U53 | P1 | U19 | headless/display_refresh.h | inline void ResetSkipFrameTracking(); inline bool SkipFrame() | SOURCE | tools/check-headless-app-policy-owners.py | App-owned output refresh and guarded frame-skip telemetry; target display mode remains unqualified | 🟡 Source étudiée |
+| U54 | P1 | U01 | headless/encore_overrides_runtime.h | inline bool ParseManifestText(; inline State LoadCachedState() | SOURCE | tools/check-headless-app-policy-owners.py | Runtime reading of authored game/profile snapshots; generated data not a C++ dependency patch | 🟡 Source étudiée |
+| U55 | P1 | U01 | headless/encore_performance_policy.h | struct Policy; inline constexpr Policy ForTier( | SOURCE | tools/check-headless-app-policy-owners.py | Constrained user-facing performance tier mapping; no implicit experimental profile promotion | 🟡 Source étudiée |
+| U56 | P1 | J01 | headless/hle_counters.h | class HleCounters; void Record( | SOURCE | tools/check-headless-app-policy-owners.py | Bounded telemetry table for app HLE service and command latency; no hardware performance proof | 🟡 Source étudiée |
+| U57 | P2 | U19 | headless/hud.h | struct HudClock; inline HudSnapshot MakeHudSnapshot( | SOURCE | tools/check-headless-app-policy-owners.py | App-owned presentation-frame HUD statistics and loading view, separated from launcher theme ownership | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
