@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 408
+**Non, this is not an exhaustive repository-wide inventory.** The 416
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 408 | 385 | 825 |
+| Graphe connu | 416 | 393 | 841 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 353 | 340 | 720 |
+| SOURCE — lecture effectuée, preuve insuffisante | 361 | 348 | 736 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **368** | **354** | **748** |
+| **Encore à qualifier (SOURCE + OPEN)** | **376** | **362** | **764** |
 | Dont priorité P0 (SOURCE + OPEN) | 114 | 108 | 265 |
 
-Le **noyau restant** compte donc 368 critères répartis sur
-354 fichiers et 748 mentions fonction/contrat :
-15 OPEN et 353 SOURCE.
+Le **noyau restant** compte donc 376 critères répartis sur
+362 fichiers et 764 mentions fonction/contrat :
+15 OPEN et 361 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-307 fichiers de code/en-têtes présents et 307 avec un chemin de
+315 fichiers de code/en-têtes présents et 315 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -641,6 +641,14 @@ function/contract tokens are checked by CI for existence only; the
 | V104 | P1 | V102,V96 | vendor/encore-active/eden-core/src/video_core/gpu_vulkan.cpp | OnCPURead(; NotifyShutdown( | SOURCE | tools/check-g21-gpu-profile-matrix-host.py | Vulkan-native G21 historical variant retains its pinned read-capture and destructor behavior; staged only, no console qualification | 🟡 Source étudiée |
 | V105 | P0 | H54,H56 | vendor/encore-active/eden-core/src/core/hle/kernel/kernel_standard.cpp | worker_task_manager.WaitForRequests(); closing_managers.swap(server_managers) | SOURCE | tools/check-g19-kernel-profile-matrix-host.py | G19 standard kernel source directly selected; historical CMake parity passed on host, native/console not qualified | 🟡 Source étudiée |
 | V106 | P1 | V105,H57 | vendor/encore-active/eden-core/src/core/hle/kernel/kernel_dev.cpp | EDEN_SHUTDOWN_SERVICES; EDEN_SHUTDOWN_KERNEL | SOURCE | tools/check-g19-kernel-profile-matrix-host.py | G19 DEV kernel directly selected; historical CMake parity passed on host, console not qualified | 🟡 Source étudiée |
+| J44 | P1 | J20,J13 | vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_32_host_dev.cpp | DynarmicCallbacks32::MemoryRead8; config.fastmem_exclusive_access | SOURCE | tools/check-g11-jit-profile-matrix-host.py | G11 host/dev A32 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; currently not selected or console qualified | 🟡 Source étudiée |
+| J45 | P1 | J20,J13 | vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_32_host_normal.cpp | DynarmicCallbacks32::MemoryRead8; config.fastmem_exclusive_access | SOURCE | tools/check-g11-jit-profile-matrix-host.py | G11 host/normal A32 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; currently not selected or console qualified | 🟡 Source étudiée |
+| J46 | P1 | J20,J13 | vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_32_native_dev.cpp | DynarmicCallbacks32::MemoryRead8; config.fastmem_exclusive_access | SOURCE | tools/check-g11-jit-profile-matrix-host.py | G11 native/dev A32 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; currently not selected or console qualified | 🟡 Source étudiée |
+| J47 | P1 | J20,J13 | vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_32_native_normal.cpp | DynarmicCallbacks32::MemoryRead8; config.fastmem_exclusive_access | SOURCE | tools/check-g11-jit-profile-matrix-host.py | G11 native/normal A32 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; currently not selected or console qualified | 🟡 Source étudiée |
+| J48 | P1 | J19,J13 | vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_64_host_dev.cpp | DynarmicCallbacks64::MemoryRead8; config.fastmem_exclusive_access | SOURCE | tools/check-g11-jit-profile-matrix-host.py | G11 host/dev A64 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; currently not selected or console qualified | 🟡 Source étudiée |
+| J49 | P1 | J19,J13 | vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_64_host_normal.cpp | DynarmicCallbacks64::MemoryRead8; config.fastmem_exclusive_access | SOURCE | tools/check-g11-jit-profile-matrix-host.py | G11 host/normal A64 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; currently not selected or console qualified | 🟡 Source étudiée |
+| J50 | P1 | J19,J13 | vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_64_native_dev.cpp | DynarmicCallbacks64::MemoryRead8; config.fastmem_exclusive_access | SOURCE | tools/check-g11-jit-profile-matrix-host.py | G11 native/dev A64 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; currently not selected or console qualified | 🟡 Source étudiée |
+| J51 | P1 | J19,J13 | vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_64_native_normal.cpp | DynarmicCallbacks64::MemoryRead8; config.fastmem_exclusive_access | SOURCE | tools/check-g11-jit-profile-matrix-host.py | G11 native/normal A64 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; currently not selected or console qualified | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 

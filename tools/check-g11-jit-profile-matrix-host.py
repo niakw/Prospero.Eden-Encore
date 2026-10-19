@@ -6,6 +6,7 @@ import difflib
 import hashlib
 import json
 import os
+import re
 import subprocess
 import tempfile
 
@@ -118,6 +119,29 @@ file(WRITE "${PORT_BUILD_DIR}/selected.txt" "${g11_sources}")
                     if dev and bits==64:
                         assert "::Eden::Watch::Hit(" in src
                         assert "::Eden::CrashSite::Dump(" in src
+                    # G11 candidate parity for every current CMake profile.
+                    # Only absolute private includes and the compile-time
+                    # inline/exclusive dispatch are normalized.
+                    owner = root/"vendor/encore-active/eden-core/src/core/arm/dynarmic/g11"/(
+                        f"arm_dynarmic_{bits}_{'native' if native else 'host'}_{'dev' if dev else 'normal'}.cpp")
+                    candidate = owner.read_text()
+                    expected = src
+                    for header in ("experimental_performance.h", "performance.h",
+                                   "jit-startup-retry.h", "crash_site.h", "watch.h"):
+                        expected = expected.replace(
+                            '#include "'+str(root/"headless"/header)+'"',
+                            '#include "'+header+'"')
+                    match = re.search(
+                        r'(?m)^([ \t]*)#if defined\(EDEN_INLINE_EXCLUSIVES\) && EDEN_INLINE_EXCLUSIVES\n'
+                        r'\1config\.fastmem_exclusive_access = true;\n'
+                        r'\1#else\n'
+                        r'(?P<fallback>[ \t]*config\.fastmem_exclusive_access = config\.fastmem_pointer +!= std::nullopt;)\n'
+                        r'\1#endif', candidate)
+                    assert match is not None, (label,bits,"inline guard missing")
+                    chosen = (match.group(1)+"config.fastmem_exclusive_access = true;"
+                              if inline else match.group("fallback"))
+                    assert candidate.replace(match.group(0),chosen) == expected, (
+                        label,bits,"G11 maintained source parity drift")
                     outputs[(native,dev,inline,bits)] = src
                     # One-time migration bridge: emit compact line-based
                     # deltas against pinned public sources in CI logs. They
@@ -144,6 +168,7 @@ file(WRITE "${PORT_BUILD_DIR}/selected.txt" "${g11_sources}")
         assert len({hashlib.sha256(value.encode()).digest()
                     for (native,dev,inline,arch),value in outputs.items()
                     if arch == bits}) == 8
+print("ENCORE_G11_MAINTAINED_SOURCE_PARITY_PASS variants=8 profiles=16")
 print("ENCORE_G11_X06_REAL_CMAKE_PROFILE_MATRIX_PASS cases=8 units=16")
 print("ENCORE_G11_NATIVE_MEMORY_READ_GUARD_MATRIX_PASS widths32=4 widths64=5")
 print("ENCORE_G11_SOURCE_OWNER_MATRIX_PASS exact_core_owners=2 host_only=1")
