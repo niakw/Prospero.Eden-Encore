@@ -102,7 +102,7 @@ void RasterizerVulkan::DispatchCompute() {"""),
      '        ::Eden::Performance::CachePhaseTimer buffer_work{\n'
      '            ::Eden::Performance::CachePhase::GuestWriteBufferWork, sample_guest_write};\n'
      '        if (buffer_cache.OnCPUWrite(addr, size)) {'),
-    ('        std::scoped_lock lock{texture_cache.mutex};\n        texture_cache.WriteMemory(addr, size);\n    }\n    pipeline_cache.InvalidateRegion(addr, size);',
+    ('    {\n        std::scoped_lock lock{texture_cache.mutex};\n        texture_cache.WriteMemory(addr, size);\n    }\n    pipeline_cache.InvalidateRegion(addr, size);',
      '    // ImagePages is monotonically published before texture slot insertion.\n'
      '    // Only never-held small ranges may skip the texture-cache mutex; unknown\n'
      '    // and previously registered pages retain the full invalidation path.\n'
