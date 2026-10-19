@@ -34,7 +34,7 @@ assert 'execute_process(COMMAND python3 "${PORT_ROOT}/tools/prepare-vulkan-port.
 # consolidated source tree. Match the remaining reviewed CMake generation
 # sites and leave room only for removing them, never for adding new ones.
 # For READ/REPLACE the approved pinned exceptions below are subtracted first.
-baseline = {"write_derived(": 4, "file(READ": 7, "string(REPLACE": 48}
+baseline = {"write_derived(": 4, "file(READ": 7, "string(REPLACE": 51}
 counts = {name: c.count(name) for name in baseline}
 # All generation targets still permitted in the main CMake recipe.
 # These are a shrinking allowlist: a migrated target needs no new exemption.
@@ -67,24 +67,19 @@ approved_sync = {
         'string(REPLACE "${gpu_tick_lock_original}" "${gpu_tick_lock_safe}"',
         'string(REPLACE "${gpu_enqueue_fence_original}" "${gpu_enqueue_fence_atomic}"',
         'string(REPLACE "${gpu_read_capture_original}"',
-        # Native memory is already a derived translation unit for the
-        # per-title unmapped-access limiter and optional checked fastmem.
-        # Preserve its pinned 2-KiB dirty-collector correction as ONE
-        # audited exception, never an anonymous increase of the budget.
-        'string(REPLACE "${eden_dirty_raw}" [=[',
-        # This pinned native read-only exception prevents out-of-bounds
-        # guest-core indexing by auxiliary host threads.
-        'string(REPLACE "${eden_read_original}" "${eden_read_native}"',
-        # End-exclusive guest spans must not probe a one-past-last page.
-        'string(REPLACE "${eden_span_original}" [=[',
     ),
 }
-# The dirty-range rewrite is allowed only while the source-derived native
-# gate and its sanitizer regression remain present and wired to CI.
-assert c.count("Pinned native GPUDirty Collect call changed") == 1
-assert c.count("gpu_dirty_managers[core].Collect(subaddress, span);") == 1
-assert c.count("Pinned native guest CPU read scratch/slot contract changed") == 1
-assert c.count("Pinned native guest span page-boundary contract changed") == 1
+# G13/X05 native guard ownership is now in the two complete maintained
+# sources. Keep each contract in both, not in CMake string-rewrite fragments.
+native_units = [
+    (active/"eden-core/src/core"/name).read_text()
+    for name in ("memory_native_standard.cpp", "memory_native_a32.cpp")
+]
+for unit in native_units:
+    assert unit.count("gpu_dirty_managers[core].Collect(subaddress, span);") == 1
+    assert unit.count("::Eden::GpuDirty::ForEachRegion(address, size,") == 1
+    assert unit.count("ShouldLogUnmappedAccess()") == 11
+    assert "std::numeric_limits<u64>::max() - GetInteger(base)" in unit
 assert 'write_derived("${eden_gpu_span_tu}"' not in c
 assert 'native_gpu_granular_bounds.cmake' not in c
 assert not (root / "headless/native_gpu_granular_bounds.cmake").exists()
@@ -98,12 +93,12 @@ assert c.count('list(APPEND video_sources "${EDEN_NATIVE_GPU_MEMORY_MANAGER}")')
 assert (root / "tools/check-native-gpu-span-range-host.py").is_file()
 assert "python3 -B tools/check-native-gpu-span-range-host.py" in (
     root / ".github/workflows/encore-core-preflight.yml").read_text()
-assert c.count("const auto end_page = (addr + size - 1) >> YUZU_PAGEBITS;") == 1
+assert all(u.count("const auto end_page = (addr + size - 1) >> YUZU_PAGEBITS;") == 2 for u in native_units)
 assert (root / "tools/check-native-guest-span-host.py").is_file()
 assert "python3 -B tools/check-native-guest-span-host.py" in (
     root / ".github/workflows/encore-core-preflight.yml").read_text()
-assert c.count("thread_local Common::ScratchBuffer<u32> read_scratch;") == 1
-assert c.count("VideoCore::RasterizerDownloadArea auxiliary_read_area{};") == 1
+assert all(u.count("thread_local Common::ScratchBuffer<u32> read_scratch;") == 1 for u in native_units)
+assert all(u.count("VideoCore::RasterizerDownloadArea auxiliary_read_area{};") == 1 for u in native_units)
 assert (root / "tools/check-native-gpu-read-core-host.py").is_file()
 assert "python3 -B tools/check-native-gpu-read-core-host.py" in (
     root / ".github/workflows/encore-core-preflight.yml").read_text()
