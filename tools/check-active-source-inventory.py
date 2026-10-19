@@ -233,6 +233,25 @@ for p, family, owner, state in headless_rows:
             "headless graph owner stale", p)
     else:
         assert owner == "—" and state.strip() == "À qualifier", ("headless owner stale", p)
+# Separate intentionally unlinked application/UI and test roles from
+# vendor-source overrides. Count from actual catalog/graph, not a guessed
+# TODO total or a second manually maintained ownership register.
+from collections import Counter
+unlinked_by_role = Counter(role for path, role, _, _ in headless_rows
+                           if path not in headless_graph)
+assert sum(unlinked_by_role.values()) == len(headless_actual)-headless_linked
+assert set(unlinked_by_role) == {
+    "launcher/UI", "harness/test", "outil auxiliaire",
+    "données générées", "en-tête/fragment"}
+assert all(path.startswith("headless/prosperoeden/")
+           for path, role, _, _ in headless_rows if role == "launcher/UI")
+assert all(path in headless_graph for path, role, _, _ in headless_rows
+           if role == "runtime/bridge")
+for role, count in unlinked_by_role.items():
+    assert f"| \`{role}\` | **{count}** |" in headless_doc, (
+        "unlinked headless role summary stale", role, count)
+assert f"| **Total non indexé** | **{sum(unlinked_by_role.values())}** |" in headless_doc
+
 assert "**168** chemins" in headless_doc
 assert f"**{headless_linked}** chemins déjà présents" in headless_doc
 assert f"**{len(headless_actual)-headless_linked}** chemins sans propriétaire exact" in headless_doc
