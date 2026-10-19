@@ -1444,7 +1444,7 @@ print("VENDOR_SOURCE_PATCH_REPLAY_INVENTORY_PASS: 44 replay calls, 2 active-core
 audit_register = (root / "docs/EDEN_CORE_AUDIT_DEPENDENCIES.md").read_text()
 audit_paths = set()
 for audit_line in audit_register.splitlines():
-    if audit_line.startswith("| ") and len(audit_line.split("|")) > 4 and re.fullmatch(r"[A-Z][0-9]{2}", audit_line.split("|")[1].strip()):
+    if audit_line.startswith("| ") and len(audit_line.split("|")) > 4 and re.fullmatch(r"[A-Z][0-9]{2,3}", audit_line.split("|")[1].strip()):
         fields = audit_line.split("|")
         if len(fields) >= 5:
             audit_paths.add(fields[4].strip())

@@ -24,7 +24,7 @@ physical = sorted(
 )
 graph = {}
 for line in audit.splitlines():
-    if not re.match(r"^\| [A-Z][0-9]{2} \|", line):
+    if not re.match(r"^\| [A-Z][0-9]{2,3} \|", line):
         continue
     fields = [cell.strip() for cell in line.strip().strip("|").split("|")]
     if len(fields) < 4 or not fields[3].startswith("vendor/encore-active/"):
@@ -199,7 +199,7 @@ for entry in audit.splitlines():
     if not entry.startswith("| "):
         continue
     cells = [cell.strip() for cell in entry.strip().strip("|").split("|")]
-    if len(cells) == 9 and re.fullmatch("[A-Z][0-9]{2}", cells[0]) and cells[3].startswith("headless/"):
+    if len(cells) == 9 and re.fullmatch("[A-Z][0-9]{2,3}", cells[0]) and cells[3].startswith("headless/"):
         headless_graph.setdefault(cells[3], []).append(cells[0])
 # These three headless runtime translation units are application-owned,
 # not third-party dependency overrides. They must remain indexed and selected
