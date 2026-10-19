@@ -489,7 +489,7 @@ complètes de `BlockOfCode` sont maintenues sous `encore-active`.
 ## Générateurs des modules CMake inclus — inventaire complémentaire
 
 Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules
-inclus par ce fichier contiennent **12 autres appels `write_derived()`**
+inclus par ce fichier contiennent **11 autres appels `write_derived()`**
 dans 2 fichiers. Leur somme avec les générateurs du CMake principal est un **nombre de
 sites CMake**, pas un dénombrement des fichiers réellement produits à
 l'exécution. Un module inclus peut définir des macros sans les exécuter,
@@ -504,7 +504,6 @@ n'autorise pas la substitution silencieuse d'une cible C++ ou d'un module.
 | ID | Module CMake | Sortie dérivée | Porte / périmètre |
 | --- | --- | --- | --- |
 | M01 | `headless/dynarmic/shared-jit.cmake` | `${PORT_BUILD_DIR}/include/${eden_jitstate_relative}` | Shared JIT OFF par défaut |
-| M02 | `headless/dynarmic/shared-jit.cmake` | `${PORT_BUILD_DIR}/include/dynarmic/backend/x64/jit_group.h` | Shared JIT OFF par défaut |
 | M03 | `headless/dynarmic/shared-jit.cmake` | `${PORT_BUILD_DIR}/callback.cpp` | Shared JIT OFF par défaut |
 | M04 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/include/video_core/memory_manager.h` | Pont différé OFF |
 | M05 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/deferred-core/core/gpu_dirty_memory_manager.h` | Pont différé OFF |
@@ -517,10 +516,15 @@ n'autorise pas la substitution silencieuse d'une cible C++ ou d'un module.
 | M12 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/memory-ps5-deferred.cpp` | Pont différé OFF |
 <!-- MODULE_GENERATORS_END -->
 
+M02 est retiré : `jit_group.h` est une source déjà maintenue dans
+`vendor/encore-active/eden-core/dynarmic/shared-jit/`. Le module CMake
+le copie désormais par `configure_file(COPYONLY)` sans lecture, mutation ou
+`write_derived`. Le mode JIT partagé reste expérimental et OFF par défaut.
+
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **20 sites** `write_derived()`, ni dans
+Ils ne sont comptés ni dans les **16 sites** `write_derived()`, ni dans
 les **2 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,
