@@ -100,6 +100,7 @@ jobs:
           python3 -B tools/check-native-physical-core-atomic-host.py
           python3 -B tools/check-native-gpu-fifo-quiescence-host.py
           python3 -B tools/check-native-gpu-queue-slot-lifetime-host.py
+          python3 -B tools/check-native-gpu-queue-stop-fastpath-host.py
           python3 -B tools/check-eden-audit-register.py
           python3 -B tools/check-eden-audit-verification-matrix.py
           python3 -B tools/check-active-source-inventory.py

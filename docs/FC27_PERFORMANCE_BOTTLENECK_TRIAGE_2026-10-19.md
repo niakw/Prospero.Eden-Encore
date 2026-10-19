@@ -308,3 +308,24 @@ antérieur de saturation du timeout conserve la parité au code amont
 épinglé, en tenant compte uniquement de ces deux modifications natives.
 L'amélioration concerne la sûreté du protocole HLE ; aucune baisse de
 frametime ou réparation du gel FC27 n'est affirmée sans validation console.
+
+## 20 octobre — file GPU : éviter le verrou quand un slot est déjà libre
+
+La production GPU utilise la file SPSC avec un producteur sérialisé.
+Après un `TryEmplace` ayant observé une file pleine, le consommateur
+peut libérer un slot avant `EmplaceWaitWithStopToken`. L'ancien chemin
+reprenait quand même le verrou de condition variable et enregistrait une
+attente stoppable, même si la capacité était déjà disponible.
+
+Le nouveau chemin relit l'index consommateur avec `acquire` ; si un slot
+est maintenant libre, il conserve l'écriture et la notification FIFO
+mais **évite** ce verrou et la registration de l'attente. Si la file
+reste pleine, il conserve le mutex, la condition variable et l'annulation
+par `stop_token` tels quels. Le contrôle du stop avant insertion reste
+présent dans tous les cas. Un témoin C++ compile l'en-tête réellement
+maintenu, vérifie réutilisation, file pleine, réveil du producteur,
+annulation et absence d'insertion après arrêt avec ASan/UBSan.
+
+Cette réduction n'affecte que le cas de course « pleine puis libérée ».
+Elle ne doit pas être interprétée comme un gain FPS démontré ni comme
+un correctif des attentes du GPU en général.
