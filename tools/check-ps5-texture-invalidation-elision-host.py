@@ -34,11 +34,10 @@ new = methods(raster)
 assert methods(bridge) == new, "inactive bridge invalidation methods drifted"
 original = methods(pinned)
 assert new != original
-assert new[0].count("::Eden::ImagePages::NeverHeld(addr, size)") == 2
+assert new[0].count("::Eden::ImagePages::NeverHeld(addr, size)") == 3
 assert new[1].count("::Eden::ImagePages::NeverHeld(addr, size)") == 1
 assert "bool texture_may_overlap = false;" in new[0]
 assert "Recheck under the texture mutex" in new[0]
-assert new[0].count("::Eden::ImagePages::NeverHeld(addr, size)") == 3
 assert "if (texture_may_overlap)" in new[0]
 assert "R: skip provably unnecessary Vulkan texture-cache invalidation locks" in oracle
 assert oracle.count("texture_may_overlap = false;") == 1
