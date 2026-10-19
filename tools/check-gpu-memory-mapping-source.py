@@ -25,7 +25,11 @@ assert 'target_include_directories(video_core PRIVATE "${EDEN_PORT_DIR}")' in c
 # Upstream core/video_core do not inherit PS5_NATIVE from the executable/common.
 # Scope the define to precisely the rewritten memory.cpp and GPU manager TU.
 assert 'set(eden_cpu_memory_tu "${EDEN_MAINTAINED_A32_MEMORY}")' in c
-assert 'list(REMOVE_ITEM core_sources "${EDEN_MAINTAINED_A32_MEMORY}")' in c
+assert 'set(eden_native_memory_owner "${EDEN_MAINTAINED_A32_MEMORY}")' in c
+assert 'set(eden_native_memory_owner "memory.cpp")' in c
+assert 'list(FIND core_sources "${eden_native_memory_owner}" eden_native_memory_owner_index)' in c
+assert 'if(eden_native_memory_owner_index EQUAL -1)' in c
+assert 'list(REMOVE_ITEM core_sources "${eden_native_memory_owner}")' in c
 assert 'set(eden_cpu_memory_tu "${PORT_BUILD_DIR}/memory.cpp")' not in c
 assert 'set(eden_cpu_memory_tu "${PROJECT_SOURCE_DIR}/src/core/memory.cpp")' in c
 assert 'set_property(SOURCE "${eden_native_memory_tu}" TARGET_DIRECTORY core' in c

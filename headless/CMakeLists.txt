@@ -862,11 +862,19 @@ if(PS5_NATIVE)
     set(eden_native_memory_tu "${PORT_BUILD_DIR}/memory-ps5.cpp")
     write_derived("${eden_native_memory_tu}"
         "#include \"${EDEN_PORT_DIR}/performance.h\"\n${eden_cpu_memory}")
+    # Fail closed when a build-recipe update changes the true memory owner.
+    # Remove exactly that owner, never a guessed generated/stale file.
     if(EDEN_A32_FASTMEM)
-        list(REMOVE_ITEM core_sources "${EDEN_MAINTAINED_A32_MEMORY}")
+        set(eden_native_memory_owner "${EDEN_MAINTAINED_A32_MEMORY}")
     else()
-        list(REMOVE_ITEM core_sources "memory.cpp")
+        set(eden_native_memory_owner "memory.cpp")
     endif()
+    get_target_property(core_sources core SOURCES)
+    list(FIND core_sources "${eden_native_memory_owner}" eden_native_memory_owner_index)
+    if(eden_native_memory_owner_index EQUAL -1)
+        message(FATAL_ERROR "G13 native memory owner missing from core target")
+    endif()
+    list(REMOVE_ITEM core_sources "${eden_native_memory_owner}")
     list(APPEND core_sources "${eden_native_memory_tu}")
     set_property(TARGET core PROPERTY SOURCES "${core_sources}")
     set_property(SOURCE "${eden_native_memory_tu}" TARGET_DIRECTORY core

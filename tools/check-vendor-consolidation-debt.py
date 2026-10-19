@@ -621,7 +621,12 @@ assert 'if(EDEN_A32_FASTMEM)' in c
 # remove it from the core target. A stale PORT_BUILD_DIR/memory.cpp was
 # neither the active A32 unit nor guaranteed to exist on a clean configure.
 assert 'set(eden_cpu_memory_tu "${EDEN_MAINTAINED_A32_MEMORY}")' in c
-assert 'list(REMOVE_ITEM core_sources "${EDEN_MAINTAINED_A32_MEMORY}")' in c
+assert 'set(eden_native_memory_owner "${EDEN_MAINTAINED_A32_MEMORY}")' in c
+assert 'set(eden_native_memory_owner "memory.cpp")' in c
+assert 'get_target_property(core_sources core SOURCES)' in c
+assert 'list(FIND core_sources "${eden_native_memory_owner}" eden_native_memory_owner_index)' in c
+assert 'if(eden_native_memory_owner_index EQUAL -1)' in c
+assert 'list(REMOVE_ITEM core_sources "${eden_native_memory_owner}")' in c
 assert 'set(eden_cpu_memory_tu "${PORT_BUILD_DIR}/memory.cpp")' not in c
 assert 'list(REMOVE_ITEM core_sources "${PORT_BUILD_DIR}/memory.cpp")' not in c
 assert 'write_derived("${PORT_BUILD_DIR}/memory.cpp"' not in c
