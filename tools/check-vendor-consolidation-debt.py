@@ -323,8 +323,29 @@ ipc_new = """    const bool ipc_profile = ::Eden::Performance::detailed_gpu_prof
     if (ipc_profile) ::Eden::Performance::FinishGuestIpc(ipc_slot, ipc_tid, ipc_start, ::Eden::Performance::NowNs() - ipc_start);
     R_RETURN(ipc_result);"""
 assert ipc_pinned.count(ipc_old) == 1
-assert ipc_maintained == '#include "performance.h"\n' + ipc_pinned.replace(ipc_old, ipc_new), (
-    "Maintained IPC source diverges from former generated source")
+ipc_timeout_old = """                timeout = kernel.HardwareTimer().GetTick() + offset_tick + 2;
+                if (timeout <= 0) {
+                    timeout = (std::numeric_limits<s64>::max)();
+                }"""
+ipc_timeout_fixed = """                s64 absolute{};
+                if (__builtin_add_overflow(kernel.HardwareTimer().GetTick(), offset_tick,
+                                           &absolute) ||
+                    __builtin_add_overflow(absolute, s64{2}, &absolute) ||
+                    absolute <= 0) {
+                    timeout = (std::numeric_limits<s64>::max)();
+                } else {
+                    timeout = absolute;
+                }"""
+assert ipc_pinned.count(ipc_timeout_old) == 1
+ipc_expected = ('#include "performance.h"\n' +
+                ipc_pinned.replace(ipc_old, ipc_new).replace(ipc_timeout_old, ipc_timeout_fixed))
+assert ipc_maintained == ipc_expected, (
+    "Maintained DEV IPC source diverges from pinned + profiler + deadline guard")
+ipc_standard = (active / "eden-core/src/core/hle/kernel/svc/svc_ipc_standard.cpp").read_text()
+assert ipc_standard == ipc_pinned.replace(ipc_timeout_old, ipc_timeout_fixed), (
+    "Maintained normal IPC source diverges from pinned + deadline guard")
+assert 'list(APPEND core_sources "${EDEN_MAINTAINED_SVC_IPC_STANDARD}")' in c
+assert 'list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_HLE_SERVICE}"' in c
 for name, pinned_path in (
         ("HLE_SERVICE", "hle/service/service.cpp"),
         ("SVC_IPC", "hle/kernel/svc/svc_ipc.cpp")):
