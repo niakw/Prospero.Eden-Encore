@@ -83,6 +83,7 @@ jobs:
           python3 -B tools/verify/hle/check-native-hle-wait-timeout-host.py
           python3 -B tools/verify/hle/check-native-hle-sleep-timeout-host.py
           python3 -B tools/verify/hle/check-native-hle-ipc-timeout-host.py
+          python3 -B tools/verify/hle/check-native-hle-ipc-receive-index-host.py
           python3 -B tools/check-native-jit-memory-read-guard-host.py
           python3 -B tools/check-native-guest-memory-coherence-host.py
           python3 -B tools/check-native-device-continuity-host.py

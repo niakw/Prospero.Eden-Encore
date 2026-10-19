@@ -289,3 +289,22 @@ vérifient les lots entièrement vides, mixtes, inconnus et surdimensionnés,
 le nombre de verrous, de recherches texture et les autres caches.
 C'est une réduction structurelle du travail des invalidations mixtes ;
 elle ne démontre pas un gain FPS sur PS5.
+
+## 20 octobre — réception IPC : index initialisé sur échec avant signalement
+
+Lors de `ReplyAndReceiveImpl`, `KSynchronizationObject::Wait` peut
+retourner une annulation ou une demande de terminaison **sans avoir rempli**
+l'index de l'objet synchronisé. Ces chemins d'erreur passaient malgré tout
+par `*out_index = index`, avec une variable locale précédemment non initialisée.
+La voie native standard et la voie diagnostique initialisent désormais
+l'index à `-1`, sans changer les durées d'attente, la signalisation,
+les mutex, les renvois d'erreur ni l'index sur succès. Un timeout
+continue de sortir avant la recopie de l'index.
+
+Le nouveau témoin C++ compile la boucle réelle des deux variantes avec
+ASan/UBSan, vérifie les erreurs immédiates, le succès et la reprise de
+boucle lorsque `ReceiveRequest` renvoie `ResultNotFound`. Le test
+antérieur de saturation du timeout conserve la parité au code amont
+épinglé, en tenant compte uniquement de ces deux modifications natives.
+L'amélioration concerne la sûreté du protocole HLE ; aucune baisse de
+frametime ou réparation du gel FC27 n'est affirmée sans validation console.
