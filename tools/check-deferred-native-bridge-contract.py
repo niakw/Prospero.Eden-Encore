@@ -11,13 +11,15 @@ import tempfile
 root=Path(__file__).resolve().parents[1]
 bridge=root/"headless/guest_write_deferred_bridge.cmake"
 code=bridge.read_text()
+legacy_bridge=root/"tools/fixtures/legacy-guest-write-deferred-bridge.cmake"
+legacy_code=legacy_bridge.read_text()
 maintained_m06 = root/"vendor/encore-active/eden-core/guest-bridge/memory_manager.cpp"
 maintained_m07 = root/"vendor/encore-active/eden-core/guest-bridge/vulkan_rasterizer.cpp"
 maintained_m08 = root/"vendor/encore-active/eden-core/guest-bridge/dma_pusher.cpp"
 maintained_m09 = root/"vendor/encore-active/eden-core/guest-bridge/maxwell_dma.cpp"
 maintained_m10 = root/"vendor/encore-active/eden-core/guest-bridge/kepler_compute.cpp"
 maintained_m11 = root/"vendor/encore-active/eden-core/guest-bridge/engine_upload.cpp"
-bridge_runtime = (code + "\n" + maintained_m06.read_text() +
+bridge_runtime = (legacy_code + "\n" + maintained_m06.read_text() +
                   "\n" + maintained_m07.read_text() +
                   "\n" + maintained_m08.read_text() +
                   "\n" + maintained_m09.read_text() + "\n" +
@@ -36,9 +38,9 @@ assert "enum class GuestWriteIntent { NoStore, StoreFollows };" in replay
 assert "ScopedGuestStoreIntent" in replay
 assert "ScopedGuestCacheMaintenanceIntent" in replay
 assert "guest_write_intent = GuestWriteIntent::NoStore;" in replay
-assert "Expected exactly two cache-maintenance write callbacks" in code
-assert 'string(REPLACE "${intent_maintenance}" "" maintenance_without "${bridge_cpu}")' in code
-assert "math(EXPR maintenance_count" in code
+assert "Expected exactly two cache-maintenance write callbacks" in legacy_code
+assert 'string(REPLACE "${intent_maintenance}" "" maintenance_without "${bridge_cpu}")' in legacy_code
+assert "math(EXPR maintenance_count" in legacy_code
 assert "guest_write_intent = previous;" in replay
 assert "guest_write_intent = GuestWriteIntent::StoreFollows;" in replay
 # Fail-closed runtime qualification, independent of any developer toggle.
@@ -47,9 +49,9 @@ assert bridge_runtime.count("::Eden::GpuDeferredWrite::kNativePostStorePublicati
 assert bridge_runtime.index("!::Eden::GpuDeferredWrite::kNativePostStorePublicationReady") < bridge_runtime.index("deferred_cpu_write_queue.Enqueue(core, address, size)")
 assert "const bool defer_candidate =\n        ::Eden::GpuDeferredWrite::kNativePostStorePublicationReady &&" in maintained_m07.read_text()
 assert bridge_runtime.count("::Eden::GpuDeferredWrite::GuestWriteIntent::StoreFollows") == 2
-assert "::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent;" in code
-assert 'string(FIND "${bridge_cpu}" "${${anchor}}" found)' in code
-assert 'string(FIND "${bridge_cpu}" "${NESTED_ANCHOR}" found)' not in code
+assert "::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent;" in legacy_code
+assert 'string(FIND "${bridge_cpu}" "${${anchor}}" found)' in legacy_code
+assert 'string(FIND "${bridge_cpu}" "${NESTED_ANCHOR}" found)' not in legacy_code
 # Fail-closed documentation contract: the inactive candidate does not yet
 # synchronize deferred writes before either CPU-read fast path. Pin BOTH bypass
 # sites so a future change must replace this negative proof with a real ordered
@@ -387,18 +389,16 @@ with tempfile.TemporaryDirectory(prefix="encore-bridge-on-") as d:
     # previous bridge fixture copied the original pinned source directly,
     # skipping the shipping backport and all G13 safeguards.
     g13_start = '    file(READ "${eden_cpu_memory_tu}" eden_cpu_memory)'
-    g13_stop = '    # Fail closed when a build-recipe update changes the true memory owner.'
-    assert base.count(g13_start) == base.count(g13_stop) == 1
-    g13_source = g13_start + base.split(g13_start, 1)[1].split(g13_stop, 1)[0]
+    g13_source = (root/"tools/fixtures/legacy-native-memory-g13.cmake").read_text()
+    assert g13_source.count(g13_start) == 1
     assert g13_source.count('write_derived("${eden_native_memory_tu}"') == 1
-    assert 'set(eden_cpu_memory_tu "${EDEN_MAINTAINED_A32_MEMORY}")' in base
-    assert 'get_target_property(core_sources core SOURCES)' in base
-    assert 'list(FIND core_sources "${eden_native_memory_owner}" eden_native_memory_owner_index)' in base
-    assert 'message(FATAL_ERROR "G13 native memory owner missing from core target")' in base
-    assert 'set(eden_cpu_memory_tu "${PORT_BUILD_DIR}/memory.cpp")' not in base
+    assert 'set(EDEN_NATIVE_GUEST_SOURCE "${EDEN_NATIVE_MEMORY_ROOT}/memory_native_a32.cpp")' in base
+    assert 'set(EDEN_NATIVE_GUEST_SOURCE "${EDEN_NATIVE_MEMORY_ROOT}/memory_native_standard.cpp")' in base
+    assert 'set_property(SOURCE "${EDEN_NATIVE_GUEST_SOURCE}" TARGET_DIRECTORY core' in base
     def generate_g13(source, output_dir, label):
         output_dir.mkdir(parents=True, exist_ok=True)
         config = """set(EDEN_PORT_DIR "__ROOT__/headless")
+set(PORT_ROOT "__ROOT__")
 set(PORT_BUILD_DIR "__STAGE__")
 set(eden_cpu_memory_tu "__SOURCE__")
 function(write_derived path content)
@@ -455,7 +455,7 @@ function(write_derived path content)
     file(WRITE "@{path}" "@{content}")
 endfunction()
 include("__BRIDGE__")
-""".replace("@{",chr(36)+"{").replace("__ROOT__",str(root)).replace("__STAGE__",str(stage)).replace("__BRIDGE__",str(bridge))
+""".replace("@{",chr(36)+"{").replace("__ROOT__",str(root)).replace("__STAGE__",str(stage)).replace("__BRIDGE__",str(legacy_bridge))
     (fake/"CMakeLists.txt").write_text(project)
     result=subprocess.run(["cmake","-S",str(fake),"-B",str(fake/"build")],
                           capture_output=True,text=True,timeout=45)
@@ -491,6 +491,46 @@ include("__BRIDGE__")
     assert h == maintained_m04.read_text()
     assert "GpuDeferredWrite::Queue deferred_cpu_write_queue" in h
     guest=(stage/"memory-ps5-deferred.cpp").read_text()
+    assert 'write_derived("' not in code
+    assert 'set(bridge_cpu_source "${EDEN_NATIVE_GUEST_SOURCE}")' in code
+    assert 'list(APPEND bridge_core_sources "${EDEN_DEFERRED_CPU_SOURCE}")' in code
+    assert 'set_property(SOURCE "${EDEN_DEFERRED_CPU_SOURCE}" TARGET_DIRECTORY core' in code
+    for mode, native_file, deferred_file in (
+        ("standard","memory_native_standard.cpp","memory_ps5_standard.cpp"),
+        ("a32","memory_native_a32.cpp","memory_ps5_a32.cpp")):
+        actual_stage=fake/("actual-"+mode)
+        actual_stage.mkdir()
+        actual=project.replace(str(stage),str(actual_stage))
+        actual=actual.replace(str(legacy_bridge),str(bridge))
+        native_path=(root/"vendor/encore-active/eden-core/src/core"/native_file)
+        deferred_path=(root/"vendor/encore-active/eden-core/guest-bridge"/deferred_file)
+        actual=actual.replace(
+            'set_property(TARGET core PROPERTY SOURCES "${PORT_BUILD_DIR}/memory-ps5.cpp")',
+            'set(EDEN_A32_FASTMEM '+('ON' if mode=="a32" else 'OFF')+')\\n'
+            'set(EDEN_NATIVE_GUEST_SOURCE "'+str(native_path)+'")\\n'
+            'set_property(TARGET core PROPERTY SOURCES "${EDEN_NATIVE_GUEST_SOURCE}")')
+        actual+='''
+get_target_property(eden_selected_core core SOURCES)
+list(FIND eden_selected_core "${EDEN_NATIVE_GUEST_SOURCE}" eden_old_idx)
+list(FIND eden_selected_core "${EDEN_DEFERRED_CPU_SOURCE}" eden_new_idx)
+if(NOT eden_old_idx EQUAL -1 OR eden_new_idx EQUAL -1)
+    message(FATAL_ERROR "DEV memory profile selection drift")
+endif()
+get_source_file_property(eden_defs "${EDEN_DEFERRED_CPU_SOURCE}"
+    TARGET_DIRECTORY core COMPILE_DEFINITIONS)
+if(NOT eden_defs MATCHES "PS5_NATIVE=1")
+    message(FATAL_ERROR "M12 DEV source lost native per-TU define")
+endif()
+'''
+        (fake/"CMakeLists.txt").write_text(actual)
+        result=subprocess.run(
+            ["cmake","-S",str(fake),"-B",str(fake/("actual-build-"+mode))],
+            capture_output=True,text=True,timeout=45)
+        if result.returncode:
+            print(result.stdout[-2500:],result.stderr[-2500:])
+            raise AssertionError("M12 selected DEV profile CMake failed: "+mode)
+        assert deferred_path.is_file()
+    print("ENCORE_M12_REAL_SELECTOR_BOTH_PROFILES_PASS per_tu_native_define=1")
     assert guest.count("ScopedGuestWriteOrigin guest_origin") == 1
     assert guest.count("ScopedGuestStoreIntent store_intent;") == 5
     block=guest.split("bool WriteBlockImpl(",1)[1].split("bool ZeroBlock(",1)[0]

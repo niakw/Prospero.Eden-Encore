@@ -97,99 +97,33 @@ if(EDEN_GUEST_WRITE_BRIDGE_DEV)
     configure_file("${EDEN_DEFERRED_UPLOAD_SOURCE}"
         "${PORT_BUILD_DIR}/engine_upload_deferred.cpp" COPYONLY)
 
-    # Only a real guest-memory write may produce deferred work. The original
-    # HandleRasterizerWrite knows the exact guest core, including syscore 3.
-    # Preserve that origin across GPU::OnCPUWrite, rather than inferring a core
-    # from whichever host thread later invokes the Vulkan rasterizer.
-    set(bridge_cpu_source "${PORT_BUILD_DIR}/memory-ps5.cpp")
-    if(NOT EXISTS "${bridge_cpu_source}")
-        message(FATAL_ERROR "Missing canonical native guest memory translation unit")
+    # M12 consolidated: select a full experimental source matching the G13
+    # native profile, without transforming guest C++ in this module.
+    set(bridge_cpu_source "${EDEN_NATIVE_GUEST_SOURCE}")
+    if(NOT bridge_cpu_source OR NOT EXISTS "${bridge_cpu_source}")
+        message(FATAL_ERROR "Missing canonical Encore-native guest memory source")
     endif()
-    file(READ "${bridge_cpu_source}" bridge_cpu)
-    set(bridge_guest_origin [=[                auto const do_collection = (address != 0 && size != 0)
-                    && system.GPU().OnCPUWrite(address, size);]=])
-    string(FIND "${bridge_cpu}" "${bridge_guest_origin}" found)
-    if(found LESS 0)
-        message(FATAL_ERROR "Pinned HandleRasterizerWrite guest origin changed")
+    if(EDEN_A32_FASTMEM)
+        set(EDEN_DEFERRED_CPU_SOURCE
+            "${PORT_ROOT}/vendor/encore-active/eden-core/guest-bridge/memory_ps5_a32.cpp")
+    else()
+        set(EDEN_DEFERRED_CPU_SOURCE
+            "${PORT_ROOT}/vendor/encore-active/eden-core/guest-bridge/memory_ps5_standard.cpp")
     endif()
-    string(REPLACE "${bridge_guest_origin}" [=[                ::Eden::GpuDeferredWrite::ScopedGuestWriteOrigin guest_origin{
-                    static_cast<unsigned>(core)};
-                auto const do_collection = (address != 0 && size != 0)
-                    && system.GPU().OnCPUWrite(address, size);]=]
-        bridge_cpu "${bridge_cpu}")
-    # Only real RAM stores get pre-store intent; cache maintenance has none.
-    set(intent_block [=[            if (!unsafe) {
-                HandleRasterizerWrite(GetInteger(current_vaddr), copy_amount);
-            }
-            std::memcpy(ptr, reinterpret_cast<u8 const*>(buffer) + offset, copy_amount);]=])
-    set(intent_zero [=[            HandleRasterizerWrite(GetInteger(current_vaddr), copy_amount);
-            std::memset(ptr, 0, copy_amount);]=])
-    set(intent_scalar "HandleRasterizerWrite(addr, sizeof(T));")
-    set(intent_exclusive "HandleRasterizerWrite(GetInteger(vaddr), sizeof(T));")
-    set(intent_exclusive128 "HandleRasterizerWrite(GetInteger(vaddr), sizeof(u128));")
-    foreach(anchor IN ITEMS intent_block intent_zero intent_scalar
-                            intent_exclusive intent_exclusive128)
-        string(FIND "${bridge_cpu}" "${${anchor}}" found)
-        if(found LESS 0)
-            message(FATAL_ERROR "Native store-intent anchor changed (${anchor})")
-        endif()
-    endforeach()
-    # Keep StoreFollows active across the actual memcpy, not just the
-    # pre-store OnCPUWrite callback. Unsafe/untracked writes remain untagged.
-    string(REPLACE "${intent_block}" [=[            if (!unsafe) {
-                ::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent;
-                HandleRasterizerWrite(GetInteger(current_vaddr), copy_amount);
-                std::memcpy(ptr, reinterpret_cast<u8 const*>(buffer) + offset, copy_amount);
-            } else {
-                std::memcpy(ptr, reinterpret_cast<u8 const*>(buffer) + offset, copy_amount);
-            }]=]
-        bridge_cpu "${bridge_cpu}")
-    string(REPLACE "${intent_zero}" [=[            ::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent;
-            HandleRasterizerWrite(GetInteger(current_vaddr), copy_amount);
-            std::memset(ptr, 0, copy_amount);]=]
-        bridge_cpu "${bridge_cpu}")
-    # Scalar and exclusive stores run AFTER GetPointerImpl's callback:
-    # the old marker inside that callback went out of scope too early.
-    # Put the marker at function entry so it also covers the memcpy/CAS.
-    set(store_fn_scalar "inline void Write(Common::ProcessAddress vaddr, const T data) noexcept requires(std::is_trivially_copyable_v<T>) {")
-    set(store_fn_exclusive "bool WriteExclusive(Common::ProcessAddress vaddr, const T data, const T expected) {")
-    set(store_fn_exclusive128 "bool WriteExclusive128(Common::ProcessAddress vaddr, const u128 data, const u128 expected) {")
-    foreach(entry IN ITEMS store_fn_scalar store_fn_exclusive store_fn_exclusive128)
-        string(FIND "${bridge_cpu}" "${${entry}}" found)
-        if(found LESS 0)
-            message(FATAL_ERROR "Native guest store-function anchor changed (${entry})")
-        endif()
-        string(REPLACE "${${entry}}"
-            "${${entry}}\n        ::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent;"
-            bridge_cpu "${bridge_cpu}")
-    endforeach()
-    # An unmarked maintenance callback can inherit StoreFollows from an
-    # enclosing guest write on the same host thread. Explicitly force NoStore
-    # while running either dc cvac or dc civac rasterizer callback.
-    set(intent_maintenance "HandleRasterizerWrite(GetInteger(current_vaddr), block_size);")
-    # Count exact occurrences without CMake-regex backslash interpretation.
-    string(REPLACE "${intent_maintenance}" "" maintenance_without "${bridge_cpu}")
-    string(LENGTH "${bridge_cpu}" maintenance_before_length)
-    string(LENGTH "${maintenance_without}" maintenance_after_length)
-    string(LENGTH "${intent_maintenance}" maintenance_token_length)
-    math(EXPR maintenance_count
-        "(${maintenance_before_length} - ${maintenance_after_length}) / ${maintenance_token_length}")
-    if(NOT maintenance_count EQUAL 2)
-        message(FATAL_ERROR "Expected exactly two cache-maintenance write callbacks")
+    if(NOT EXISTS "${EDEN_DEFERRED_CPU_SOURCE}")
+        message(FATAL_ERROR "Missing maintained M12 guest bridge source")
     endif()
-    string(REPLACE "${intent_maintenance}"
-        "::Eden::GpuDeferredWrite::ScopedGuestCacheMaintenanceIntent maintenance_intent; ${intent_maintenance}"
-        bridge_cpu "${bridge_cpu}")
-    string(PREPEND bridge_cpu "#include \"${EDEN_PORT_DIR}/gpu_deferred_replay.h\"\n")
-    write_derived("${PORT_BUILD_DIR}/memory-ps5-deferred.cpp" "${bridge_cpu}")
     get_target_property(bridge_core_sources core SOURCES)
     list(FIND bridge_core_sources "${bridge_cpu_source}" core_memory_index)
     if(core_memory_index EQUAL -1)
         message(FATAL_ERROR "Canonical native guest memory TU missing from core target")
     endif()
     list(REMOVE_ITEM bridge_core_sources "${bridge_cpu_source}")
-    list(APPEND bridge_core_sources "${PORT_BUILD_DIR}/memory-ps5-deferred.cpp")
+    list(APPEND bridge_core_sources "${EDEN_DEFERRED_CPU_SOURCE}")
     set_property(TARGET core PROPERTY SOURCES "${bridge_core_sources}")
+    # Preserve the native guest memory translation-unit-scoped ABI guards.
+    set_property(SOURCE "${EDEN_DEFERRED_CPU_SOURCE}" TARGET_DIRECTORY core
+        APPEND PROPERTY COMPILE_DEFINITIONS "PS5_NATIVE=1")
 
     get_target_property(bridge_sources video_core SOURCES)
     foreach(old IN ITEMS

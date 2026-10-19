@@ -34,7 +34,7 @@ assert 'execute_process(COMMAND python3 "${PORT_ROOT}/tools/prepare-vulkan-port.
 # consolidated source tree. Match the remaining reviewed CMake generation
 # sites and leave room only for removing them, never for adding new ones.
 # For READ/REPLACE the approved pinned exceptions below are subtracted first.
-baseline = {"write_derived(": 5, "file(READ": 8, "string(REPLACE": 52}
+baseline = {"write_derived(": 4, "file(READ": 7, "string(REPLACE": 48}
 counts = {name: c.count(name) for name in baseline}
 # All generation targets still permitted in the main CMake recipe.
 # These are a shrinking allowlist: a migrated target needs no new exemption.
@@ -42,7 +42,6 @@ counts = {name: c.count(name) for name in baseline}
 import re
 allowed_generated_targets = {
     "${derived}",  # G11: A32/A64 callback variants
-    "${eden_native_memory_tu}",  # G13: native guest memory
     "${PORT_BUILD_DIR}/kernel.cpp",  # G19
     "${PORT_BUILD_DIR}/gpu.cpp",  # G21
     "${PORT_BUILD_DIR}/include/loading_scene_glsl.h",  # G23: GLSL resource
@@ -617,21 +616,18 @@ assert a32_memory == shipping_memory.replace(old_fastmem_guard, new_fastmem_guar
 assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_A32_MEMORY}")') == 1
 assert 'if(NOT EXISTS "${EDEN_MAINTAINED_A32_MEMORY}")' in c
 assert 'if(EDEN_A32_FASTMEM)' in c
-# G13 must derive the same maintained A32 source selected above, then
-# remove it from the core target. A stale PORT_BUILD_DIR/memory.cpp was
-# neither the active A32 unit nor guaranteed to exist on a clean configure.
-assert 'set(eden_cpu_memory_tu "${EDEN_MAINTAINED_A32_MEMORY}")' in c
-assert 'set(eden_native_memory_owner "${EDEN_MAINTAINED_A32_MEMORY}")' in c
-assert 'set(eden_native_memory_owner "memory.cpp")' in c
-assert 'get_target_property(core_sources core SOURCES)' in c
-assert 'list(FIND core_sources "${eden_native_memory_owner}" eden_native_memory_owner_index)' in c
-assert 'if(eden_native_memory_owner_index EQUAL -1)' in c
-assert 'list(REMOVE_ITEM core_sources "${eden_native_memory_owner}")' in c
-assert 'set(eden_cpu_memory_tu "${PORT_BUILD_DIR}/memory.cpp")' not in c
-assert 'list(REMOVE_ITEM core_sources "${PORT_BUILD_DIR}/memory.cpp")' not in c
-assert 'write_derived("${PORT_BUILD_DIR}/memory.cpp"' not in c
-assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/memory.cpp" arena_source)' not in c
-print("MAINTAINED_A32_MEMORY_PARITY_PASS: complete installed backport source")
+# G13/X05 no longer derives source in CMake: one selected full native TU.
+for label in ("a32","standard"):
+    chosen = 'memory_native_'+label+'.cpp'
+    assert 'set(EDEN_NATIVE_GUEST_SOURCE "${EDEN_NATIVE_MEMORY_ROOT}/'+chosen+'")' in c
+    unit = (active/"eden-core/src/core"/chosen).read_text()
+    assert unit.count("ShouldLogUnmappedAccess()") == 11
+    assert "std::numeric_limits<u64>::max() - GetInteger(base)" in unit
+assert 'file(READ "${eden_cpu_memory_tu}" eden_cpu_memory)' not in c
+assert 'include("${EDEN_PORT_DIR}/native_guest_range_overflow.cmake")' not in c
+assert 'set_property(SOURCE "${EDEN_NATIVE_GUEST_SOURCE}" TARGET_DIRECTORY core' in c
+assert not (root/"headless/native_guest_range_overflow.cmake").exists()
+print("MAINTAINED_NATIVE_MEMORY_SOURCE_OWNER_PASS profiles=2")
 
 # Maintained nvdrv session ownership must match the exact pinned generator.
 nvdrv_rel = "core/hle/service/nvdrv/core/container.cpp"
@@ -1405,7 +1401,6 @@ indirect_recorded = re.findall(
     r"^\| X\d\d \| \x60([^\x60]+)\x60 \|",
     inventory.split(indirect_begin)[1].split(indirect_end)[0], re.M)
 indirect_expected = (
-    ("headless/native_guest_range_overflow.cmake", ("string(REPLACE", "eden_cpu_memory")),
     ("headless/native_jit_memory_read_guard.cmake", ("string(REPLACE", "wrapper")),
 )
 assert indirect_recorded == [entry[0] for entry in indirect_expected], (

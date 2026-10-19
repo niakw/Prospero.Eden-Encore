@@ -24,20 +24,20 @@ assert 'return n <= 8 || (n & (n - 1)) == 0;' in h
 assert 'target_include_directories(video_core PRIVATE "${EDEN_PORT_DIR}")' in c
 # Upstream core/video_core do not inherit PS5_NATIVE from the executable/common.
 # Scope the define to precisely the rewritten memory.cpp and GPU manager TU.
-assert 'set(eden_cpu_memory_tu "${EDEN_MAINTAINED_A32_MEMORY}")' in c
+assert 'set(EDEN_NATIVE_GUEST_SOURCE "${EDEN_NATIVE_MEMORY_ROOT}/memory_native_a32.cpp")' in c
 assert 'set(eden_native_memory_owner "${EDEN_MAINTAINED_A32_MEMORY}")' in c
 assert 'set(eden_native_memory_owner "memory.cpp")' in c
 assert 'list(FIND core_sources "${eden_native_memory_owner}" eden_native_memory_owner_index)' in c
 assert 'if(eden_native_memory_owner_index EQUAL -1)' in c
 assert 'list(REMOVE_ITEM core_sources "${eden_native_memory_owner}")' in c
-assert 'set(eden_cpu_memory_tu "${PORT_BUILD_DIR}/memory.cpp")' not in c
-assert 'set(eden_cpu_memory_tu "${PROJECT_SOURCE_DIR}/src/core/memory.cpp")' in c
-assert 'set_property(SOURCE "${eden_native_memory_tu}" TARGET_DIRECTORY core' in c
-assert 'file(READ "${eden_cpu_memory_tu}" eden_cpu_memory)' in c
-assert 'set(unmapped_log "LOG_ERROR(HW_Memory,' in c
-assert 'if(NOT unmapped_count EQUAL 11)' in c
-assert 'memory-ps5.cpp' in c
-assert 'Eden::Performance::ShouldLogUnmappedAccess()' in c
+assert 'write_derived("${eden_native_memory_tu}"' not in c
+assert 'set(EDEN_NATIVE_GUEST_SOURCE "${EDEN_NATIVE_MEMORY_ROOT}/memory_native_standard.cpp")' in c
+assert 'set_property(SOURCE "${EDEN_NATIVE_GUEST_SOURCE}" TARGET_DIRECTORY core' in c
+assert 'file(READ "${eden_cpu_memory_tu}" eden_cpu_memory)' not in c
+assert 'set(unmapped_log "LOG_ERROR(HW_Memory,' not in c
+assert 'if(NOT unmapped_count EQUAL 11)' not in c
+assert 'memory_native_standard.cpp' in c and 'memory_native_a32.cpp' in c
+assert (r/'vendor/encore-active/eden-core/src/core/memory_native_standard.cpp').read_text().count('ShouldLogUnmappedAccess()') == 11
 assert 'set_property(SOURCE "${PROJECT_SOURCE_DIR}/src/video_core/host1x/gpu_device_memory_manager.cpp"' in c
 assert c.count('APPEND PROPERTY COMPILE_DEFINITIONS "PS5_NATIVE=1"') >= 2
 assert 'validate_ps5_gpu_memory_mapping' in apply

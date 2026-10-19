@@ -1,3 +1,4 @@
+# TEST-ONLY original X05 replay oracle, NEVER used for production.
 # SPDX-License-Identifier: GPL-3.0-or-later
 # The native CPU memory source is already derived for page-span safety.
 # Reject overflowing guest VA ranges before the page-alignment loop.

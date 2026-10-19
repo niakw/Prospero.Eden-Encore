@@ -17,19 +17,19 @@ couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
 ## Synthèse vérifiable
 
-- **5 appels générateurs** encore dans CMake ; contre **75 avant**
+- **4 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
 - **Garde-fou de non-régression renforcé (19 octobre 2026) :**
   `tools/check-vendor-consolidation-debt.py` limite désormais les sites
-  de génération du CMake principal aux cinq destinations G11/G13/G19/G21/G23
-  recensées ci-dessous. Son plafond descendant est de **5** générations,
-  **8** lectures et **52** remplacements après déduction des exceptions
+  de génération du CMake principal aux quatre destinations G11/G19/G21/G23
+  recensées ci-dessous. Son plafond descendant est de **4** générations,
+  **7** lectures et **48** remplacements après déduction des exceptions
   déjà justifiées ; il ne permet plus le retour aux budgets historiques.
   G23 reste une ressource GLSL, non une réécriture du moteur. Le module
   expérimental de pont différé conserve ses sites de génération ; le module
   Shared JIT ne fait plus que sélectionner les sources Encore.
-- **9 lectures `file(READ`** et **59 remplacements
+- **8 lectures `file(READ`** et **55 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
 - Les versions diagnostiques de `IFile::Read`, `IStorage::Read` et des appels
@@ -245,7 +245,6 @@ dans la version normale.
 | ID | Sortie `write_derived` | Domaine indicatif | Catégorie | Ligne CMake |
 | --- | --- | --- | --- | ---: |
 | G11 | `${derived}` | CPU | Cible variable | 611 |
-| G13 | `${eden_native_memory_tu}` | Mémoire/chargement | Cible variable | 863 |
 | G19 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 1276 |
 | G21 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 1686 |
 | G23 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2065 |
@@ -486,40 +485,30 @@ est disponible, reconstruit l'ancien résultat pour comparer chaque octet.
 La modification historique `code_source` X09 est retirée : les variantes
 complètes de `BlockOfCode` sont maintenues sous `encore-active`.
 
-## G13 / M12 — provenance mémoire native et blocage de migration
+## G13 / X05 / M12 — sélection maintenue
 
-La branche A32 de G13 lit désormais directement la source versionnée
-`EDEN_MAINTAINED_A32_MEMORY`, puis retire cette **même** unité de la
-cible `core` avant d'y insérer la source native dérivée. L'ancien chemin
-`${PORT_BUILD_DIR}/memory.cpp` n'était pas le propriétaire sélectionné,
-et pouvait manquer sur une configuration propre.
+Les unités natives `memory_native_standard.cpp` et `memory_native_a32.cpp`
+sont maintenant sélectionnées directement sous `vendor/encore-active/eden-core/src/core/`.
+Elles conservent les onze limites de journalisation, les deux gardes de page,
+la lecture auxiliaire et le contrôle de débordement historiquement X05.
+Le choix entre les profils retire exactement l'ancien propriétaire de
+`core` et maintient la définition `PS5_NATIVE=1` sur l'unité retenue.
 
-Le témoin `tools/check-deferred-native-bridge-contract.py` reconstruit la
-transformation G13 depuis la version de backport livrée et depuis la variante
-A32 maintenue, avec ses protections de lecture, de plage et de journalisation,
-avant de tester l'ancien pont M12 en mode DEV. Cette preuve reste **hôte**.
+Le module DEV M12 choisit les fichiers complets
+`guest-bridge/memory_ps5_{standard,a32}.cpp` et ne réécrit plus
+`memory-ps5.cpp` au moment de configurer CMake. Ce pont reste
+**désactivé par défaut**, sans validation du fonctionnement sur console.
 
-Le témoin de configuration DEV M12 vérifie aussi les deux chemins : la
-variante mémoire standard issue du backport de production, puis la variante
-A32 réellement sélectionnée. Le résultat doit être identique à l'exception
-du garde-fou A32 de fastmem ; les contrats de publication, de journalisation
-et de lecture auxiliaire sont exigés dans les deux cas.
-
-Les quatre variantes complètes `memory_native_standard.cpp`,
-`memory_native_a32.cpp`, `memory_ps5_standard.cpp` et
-`memory_ps5_a32.cpp` sont préparées dans `encore-active`. La parité
-octet par octet compare chacune aux sorties G13/X05/M12 réelles,
-pour A32 et standard. Elles ne sont **pas encore sélectionnées**.
-
-M12 reste une dette de génération C++ : il dépend de la sortie G13 et
-de ses deux variantes avant de pouvoir être déplacé proprement en
-source complète. Ne pas supprimer le générateur M12 sans matérialiser
-les deux variantes et les comparer à la sortie réelle G13.
+Les trois recettes CMake d'origine sont archivées dans
+`tools/fixtures/legacy-*` uniquement comme **oracles historiques de tests**,
+jamais sur un chemin de compilation. La prévalidation compare les quatre
+variantes maintenues aux anciennes sorties après normalisation des
+chemins absolus d'en-têtes.
 
 ## Générateurs des modules CMake inclus — inventaire complémentaire
 
 Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules
-inclus par ce fichier contiennent **1 autre appel `write_derived()`**
+inclus par ce fichier contiennent **0 autre appel `write_derived()`**
 dans un seul fichier (`headless/guest_write_deferred_bridge.cmake`). Leur somme avec les générateurs du CMake principal est un **nombre de
 sites CMake**, pas un dénombrement des fichiers réellement produits à
 l'exécution. Un module inclus peut définir des macros sans les exécuter,
@@ -533,7 +522,6 @@ n'autorise pas la substitution silencieuse d'une cible C++ ou d'un module.
 <!-- MODULE_GENERATORS_START -->
 | ID | Module CMake | Sortie dérivée | Porte / périmètre |
 | --- | --- | --- | --- |
-| M12 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/memory-ps5-deferred.cpp` | Pont différé OFF |
 <!-- MODULE_GENERATORS_END -->
 
 M07 est retiré : la variante complète de `vulkan_rasterizer.cpp` est
@@ -577,7 +565,7 @@ sont contrôlées par les témoins de parité M01 et M03. Shared JIT reste OFF.
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **6 sites** `write_derived()`, ni dans
+Ils ne sont comptés ni dans les **4 sites** `write_derived()`, ni dans
 les **2 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,
@@ -667,7 +655,6 @@ Ils ne correspondent pas chacun à une unité C++ distincte.
 <!-- INDIRECT_OVERRIDES_START -->
 | ID | Module | Origine / source réécrite | Mécanisme | État |
 | --- | --- | --- | --- | --- |
-| X05 | `headless/native_guest_range_overflow.cmake` | `eden_cpu_memory` | Contrôle de débordement des adresses mémoire avant génération | Non migré |
 | X06 | `headless/native_jit_memory_read_guard.cmake` | `wrapper` | Contrôle des lectures de mémoire invitée avant génération | Non migré |
 <!-- INDIRECT_OVERRIDES_END -->
 
