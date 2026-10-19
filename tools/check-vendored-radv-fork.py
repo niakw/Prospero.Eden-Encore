@@ -8,7 +8,6 @@ import sys
 import tempfile
 import shutil
 import os
-import time
 
 ROOT = Path(__file__).resolve().parents[1]
 ACTIVE = ROOT / 'vendor/encore-active/ps5-mesa'
@@ -45,9 +44,13 @@ with tempfile.TemporaryDirectory(prefix='eden-radv-fork-equivalence-') as tmp:
     wsi_input = source_stage / 'src/vulkan/wsi/wsi_common_videoout.c'
     assert module.digest(wsi_input) != module.digest(ACTIVE / 'src/vulkan/wsi/wsi_common_videoout.c')
     os.utime(wsi_input, ns=(1_000_000_000, 1_000_000_000))
-    started_ns = time.time_ns()
+    # copy2 alone would preserve the checkout timestamp on the canonical
+    # source. Verify that installation makes the compiled input newer than
+    # those unchanged source bytes; comparing to a wall-clock nanosecond
+    # sampled just before os.utime can race filesystem clock precision.
+    canonical_mtime_ns = (ACTIVE / 'src/vulkan/wsi/wsi_common_videoout.c').stat().st_mtime_ns
     module.install(source_stage, provenance)
-    assert wsi_input.stat().st_mtime_ns >= started_ns, 'Native source changed but Ninja input timestamp stayed stale'
+    assert wsi_input.stat().st_mtime_ns > canonical_mtime_ns, 'Native source changed but Ninja input timestamp stayed stale'
     assert not provenance.exists() and provenance.with_suffix('.base.txt').exists()
     module.install(source_stage, provenance)
     for relative in before:
