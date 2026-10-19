@@ -3,7 +3,7 @@
 
 Compile actual maintained methods, including original buffer/query/shader
 invalidation paths. An unowned texture range may skip ONLY texture work.
-A batch with one possibly owned range must process EVERY original element.
+A mixed batch retains the texture mutex but skips each provably unowned texture lookup.
 """
 from pathlib import Path
 import shutil
@@ -37,9 +37,12 @@ assert new != original
 assert new[0].count("::Eden::ImagePages::NeverHeld(addr, size)") == 2
 assert new[1].count("::Eden::ImagePages::NeverHeld(addr, size)") == 1
 assert "bool texture_may_overlap = false;" in new[0]
+assert "Recheck under the texture mutex" in new[0]
+assert new[0].count("::Eden::ImagePages::NeverHeld(addr, size)") == 3
 assert "if (texture_may_overlap)" in new[0]
 assert "R: skip provably unnecessary Vulkan texture-cache invalidation locks" in oracle
 assert oracle.count("texture_may_overlap = false;") == 1
+assert "Recheck under the texture mutex" in oracle
 for source in (raster, bridge):
     assert "void RasterizerVulkan::InnerInvalidation(" in source
     assert source.index("if (texture_may_overlap)") < source.index(
@@ -137,21 +140,22 @@ int main() {
     assert(x.buffer_cache.writes == 5 && x.query_cache.writes == 3);
     assert(x.pipeline_cache.writes == 5);
 
-    // Any previously registered page forces ALL original texture writes.
+    // A mixed batch keeps the mutex but skips image-free individual ranges.
     std::array<std::pair<DAddr, std::size_t>, 2> mixed{{
         {120*p, p}, {20*p, p}
     }};
     x.InnerInvalidation(mixed);
-    assert(x.texture_cache.mutex.locks == 6 && x.texture_cache.writes == 7);
+    assert(x.texture_cache.mutex.locks == 6 && x.texture_cache.writes == 6);
     assert(x.buffer_cache.writes == 7 && x.query_cache.writes == 5);
     assert(x.pipeline_cache.writes == 7);
 
-    // Unknown/large batch still locks, even without a registered image.
+    // An unknown/large range still gets texture invalidation, unlike a
+    // separate provably unowned page in the same mixed batch.
     std::array<std::pair<DAddr, std::size_t>, 2> uncertain{{
         {130*p, p}, {140*p, 256*1024+1}
     }};
     x.InnerInvalidation(uncertain);
-    assert(x.texture_cache.mutex.locks == 7 && x.texture_cache.writes == 9);
+    assert(x.texture_cache.mutex.locks == 7 && x.texture_cache.writes == 7);
     assert(x.buffer_cache.writes == 9 && x.query_cache.writes == 7);
     assert(x.pipeline_cache.writes == 9);
     std::array<std::pair<DAddr, std::size_t>, 0> empty{};
