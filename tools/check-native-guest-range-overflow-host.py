@@ -11,10 +11,11 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 pinned = root / "vendor/sources/eden/src/core/memory.cpp"
-helper = root / "headless/native_guest_range_overflow.cmake"
+helper = root / "tools/fixtures/legacy-native-guest-range-overflow.cmake"
 main_cmake = (root / "headless/CMakeLists.txt").read_text()
 workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
-assert 'include("${EDEN_PORT_DIR}/native_guest_range_overflow.cmake")' in main_cmake
+assert 'include("${EDEN_PORT_DIR}/native_guest_range_overflow.cmake")' not in main_cmake
+assert 'set(EDEN_NATIVE_GUEST_SOURCE "${EDEN_NATIVE_MEMORY_ROOT}/memory_native_standard.cpp")' in main_cmake
 assert "python3 -B tools/check-native-guest-range-overflow-host.py" in workflow
 assert pinned.read_text().count("Common::ProcessAddress end = base + size;") == 1
 assert helper.read_text().count("std::numeric_limits<u64>::max() - GetInteger(base)") == 1
@@ -86,6 +87,8 @@ with tempfile.TemporaryDirectory(prefix="encore-native-range-") as temp:
     subprocess.run(["cmake", "-P", str(cmake_script)], check=True, timeout=20)
     original_source = pinned.read_text()
     derived_source = derived_path.read_text()
+    maintained = (root/"vendor/encore-active/eden-core/src/core/memory_native_standard.cpp").read_text()
+    assert real_method(maintained) == real_method(derived_source)
     assert derived_source.count("std::numeric_limits<u64>::max() - GetInteger(base)") == 1
     assert original_source.count("std::numeric_limits<u64>::max() - GetInteger(base)") == 0
     for name, src, fixed in (

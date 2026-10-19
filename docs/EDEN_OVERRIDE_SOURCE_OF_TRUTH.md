@@ -19,10 +19,10 @@ nouveaux corps C++ destinés à la console.
 - `vendor/encore-active` : **300 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **5 générateurs** `write_derived`.
-- Le module CMake expérimental de pont différé contient **1 générateur**
-  `write_derived`, soit **6 sites** au total.
-- Deux modules CMake procèdent encore à des substitutions **indirectes**
+- `headless/CMakeLists.txt` : **4 générateurs** `write_derived`.
+- Le module CMake expérimental de pont différé contient **0 générateurs**
+  `write_derived`, soit **4 sites** au total.
+- Un module CMake procède encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   compteur des générations CMake.
 - `headless/` contient **3 fragments `.inc`**. Plusieurs contribuent
@@ -51,26 +51,26 @@ nouveaux corps C++ destinés à la console.
 | `headless/dynarmic/reg_alloc.cmake` | Sélection/copie de deux sources Encore maintenues | Sélecteur conforme |
 | `headless/dynarmic/shared-jit.cmake` | Sélection/copie de trois fichiers Encore complets | Sélecteur conforme ; M01–M03 retirés |
 | `headless/gpu_native_observability.cmake` | Sélection de sources Encore maintenues | Sélecteur conforme |
-| `headless/guest_write_deferred_bridge.cmake` | Générateur de source dérivée, à déplacer | Dette de migration |
+| `headless/guest_write_deferred_bridge.cmake` | Sélection de six variantes expérimentales maintenues | Sélecteur conforme ; M12 retiré |
 | `headless/inject.cmake` | Orchestration ou toolchain | Sélecteur / configuration |
 | `headless/jit-alias.cmake` | Sélection/copie de l'en-tête Xbyak et de ConstantPool complets | Sélecteur conforme ; X09 retiré |
-| `headless/native_guest_range_overflow.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
 | `headless/native_jit_memory_read_guard.cmake` | Réécriture indirecte de code, à déplacer | Dette de migration |
 | `headless/ps5.cmake` | Orchestration ou toolchain | Sélecteur / configuration |
 | `headless/scalar-memory.cmake` | Sélection des émetteurs vectoriel et data processing maintenus | Sélecteur conforme ; X08 retiré |
 | `headless/vulkan.cmake` | Sélection/copie de sources Encore maintenues | Sélecteur / configuration |
 <!-- SINGLE_SOURCE_CMAKE_END -->
 
-## G13 : sélection effective de la source mémoire A32
+## G13/X05/M12 : unité native complète
 
-Quand `EDEN_A32_FASTMEM` est actif, G13 dérive désormais sa source à partir
-de `EDEN_MAINTAINED_A32_MEMORY`, et enlève ce même chemin de `core_sources`
-pour éviter une double compilation. Le sélectionneur relit désormais la
-liste effective du target `core` et refuse de poursuivre si le
-propriétaire normal ou A32 attendu est absent, au lieu d'effacer
-silencieusement un chemin périmé. Le chemin provisoire
-`${PORT_BUILD_DIR}/memory.cpp` ne doit plus être lu comme source A32.
-Le générateur G13 reste à migrer, conjointement avec X05 et M12.
+Les deux sources `memory_native_{standard,a32}.cpp` sont versionnées et
+choisies directement depuis `eden-core/src/core`, sans génération ni
+substitution de C++ dans CMake. La cible `core` retire explicitement la
+source préexistante et conserve `PS5_NATIVE=1` sur l'unité compilée.
+M12 choisit les variantes DEV complètes `guest-bridge/memory_ps5_*.cpp`
+uniquement si le pont expérimental est activé ; aucune fonctionnalité
+n'autorise son activation en production. X05 n'est plus inclus au build.
+Les anciennes recettes CMake sont des oracles confinés à `tools/fixtures`.
+Parité historique hôte et sélection sont distinctes de la validation PS5.
 
 ## Core::System G14 maintenu
 
@@ -288,7 +288,7 @@ Le module `headless/dynarmic/shared-jit.cmake` sélectionne désormais les
 sources complètes `a64_jitstate.h`, `jit_group.h` et `callback.cpp` maintenues
 dans Encore. Les anciennes transformations M01 et M03 sont reproduites
 exactement par des tests de parité ; CMake ne fait que copier ces fichiers.
-Ce module ne possède plus aucun site `write_derived` ; le **1 générateur
+Ce module ne possède plus aucun site `write_derived` ; les **0 générateurs
 secondaire** restant appartiennent au pont différé expérimental.
 Shared JIT reste OFF par défaut, sans qualification matérielle.
 
