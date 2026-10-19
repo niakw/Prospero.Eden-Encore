@@ -1057,8 +1057,8 @@ bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {
     ::Eden::Performance::BatchedGuestWriteTimer guest_write_timer;
     const bool sample_guest_write = ::Eden::Performance::ShouldSampleGuestWrite();
     DEBUG_ASSERT(addr != 0 || size != 0);
-    // Buffer lock elision applies only to never-registered pages.
-    // Texture/shader invalidations below always run.
+    // Buffer and texture page evidence independently guards their mutexes.
+    // Shader invalidation always runs, even if neither cache ever owned a page.
     if (!::Eden::BufferPages::NeverRegistered(addr, size)) {
         ::Eden::Performance::CachePhaseTimer buffer_wait{
             ::Eden::Performance::CachePhase::GuestWriteBufferWait, sample_guest_write};
@@ -1086,7 +1086,10 @@ bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {
                 return buffer_cache.OnCPUWrite(static_cast<DAddr>(page), span);
             });
     }
-    {
+    // ImagePages is monotonically published before texture slot insertion.
+    // Only never-held small ranges may skip the texture-cache mutex; unknown
+    // and previously registered pages retain the full invalidation path.
+    if (!::Eden::ImagePages::NeverHeld(addr, size)) {
         ::Eden::Performance::CachePhaseTimer texture_wait{
             ::Eden::Performance::CachePhase::GuestWriteTextureWait, sample_guest_write};
         ::Eden::Performance::GuestCacheLock(texture_cache.mutex, true);
