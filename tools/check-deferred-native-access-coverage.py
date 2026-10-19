@@ -34,7 +34,13 @@ gpu_blitter = read("video_core/engines/sw_blitter/blitter.cpp")
 gpu_vic = read("video_core/host1x/vic.cpp")
 gpu_driver = read("video_core/gpu.cpp")
 nce = read("core/arm/nce/arm_nce.cpp")
-bridge = (root / "headless/guest_write_deferred_bridge.cmake").read_text()
+bridge_recipe = (root / "headless/guest_write_deferred_bridge.cmake").read_text()
+bridge_source = (root / "vendor/encore-active/eden-core/guest-bridge/memory_manager.cpp").read_text()
+# M06 is a maintained C++ translation unit; the source gate must inspect the
+# selected implementation as well as the (now selection-only) CMake recipe.
+expect_selected_m06 = 'configure_file("${EDEN_DEFERRED_MEMORY_SOURCE}"'
+assert expect_selected_m06 in bridge_recipe, "M06 maintained source selection lost"
+bridge = bridge_recipe + "\n" + bridge_source
 replay = (root / "headless/gpu_deferred_replay.h").read_text()
 poststore = (root / "headless/gpu_deferred_store_publication.h").read_text()
 workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
