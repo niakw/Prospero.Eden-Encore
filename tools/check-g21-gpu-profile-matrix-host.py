@@ -11,11 +11,19 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 cmake = (root / "headless/CMakeLists.txt").read_text()
+legacy = (root / "tools/fixtures/legacy-g21-gpu.cmake").read_text()
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/gpu.cpp" gpu_source)' not in cmake
+assert 'write_derived("${PORT_BUILD_DIR}/gpu.cpp"' not in cmake
+assert 'list(APPEND video_sources "${EDEN_MAINTAINED_G21_GPU}")' in cmake
 upstream = (root / "vendor/sources/eden/src/video_core/gpu.cpp").read_text()
 begin = 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/gpu.cpp" gpu_source)'
 finish = 'list(APPEND video_sources "${PORT_BUILD_DIR}/gpu.cpp")'
-assert cmake.count(begin) == cmake.count(finish) == 1
-body = begin + cmake.split(begin, 1)[1].split(finish, 1)[0] + finish
+assert legacy.count(begin) == legacy.count(finish) == 1
+body = begin + legacy.split(begin, 1)[1].split(finish, 1)[0] + finish
+selector_begin = 'set(EDEN_G21_GPU_ROOT "${PORT_ROOT}/vendor/encore-active/eden-core/src/video_core")'
+selector_end = 'list(APPEND video_sources "${EDEN_MAINTAINED_G21_GPU}")'
+assert cmake.count(selector_begin) == cmake.count(selector_end) == 1
+selection = selector_begin + cmake.split(selector_begin, 1)[1].split(selector_end, 1)[0] + selector_end
 assert body.count('write_derived("${PORT_BUILD_DIR}/gpu.cpp" "${gpu_source}")') == 1
 assert upstream.count("GPU::~GPU() = default;") == 1
 
@@ -59,7 +67,9 @@ endfunction()
                           .replace("__GL__", "ON" if gl else "OFF")
                           .replace("__NATIVE__", "ON" if native else "OFF")
                           .replace("__DEV__", "ON" if dev else "OFF"))
-        (directory / "CMakeLists.txt").write_text(prelude + body + "\n")
+        (directory / "CMakeLists.txt").write_text(
+            prelude + body + "\n" + selection +
+            '\nfile(WRITE "${PORT_BUILD_DIR}/g21_selected.txt" "${EDEN_MAINTAINED_G21_GPU}")\n')
         result = subprocess.run(
             ["cmake", "-S", str(directory), "-B", str(directory / "build")],
             capture_output=True, text=True, timeout=45)
@@ -67,6 +77,12 @@ endfunction()
             print(result.stdout[-2500:], result.stderr[-3500:])
             raise AssertionError("G21 CMake generation failed: " + name)
         actual = (stage / "gpu.cpp").read_text()
+        selected = (stage / "g21_selected.txt").read_text()
+        expected_selected = (root/"vendor/encore-active/eden-core/src/video_core"/
+            ("gpu_vulkan.cpp" if not gl else
+             "gpu_gl_" + ("native" if native else "host") + ("_dev" if dev else "") + ".cpp"))
+        assert selected == str(expected_selected), (name, selected)
+        assert 'gpu_failure.h' in actual if gl else True
         assert len(actual) >= len(upstream) - 2048, (name, len(actual))
         assert actual.count("VideoCommon::GPUThread::ThreadManager gpu_thread;") == 1, name
         if gl:
@@ -111,5 +127,5 @@ for profile, filename in owners.items():
     assert maintained == expected, "G21 maintained source parity drift: " + profile
     assert maintained.count("VideoCommon::GPUThread::ThreadManager gpu_thread;") == 1
 assert results["vulkan_native_dev"] == results["vulkan_native"] if "vulkan_native_dev" in results else True
-print("ENCORE_G21_FIVE_MAINTAINED_SOURCE_PARITY_PASS profiles=5")
+print("ENCORE_G21_FIVE_MAINTAINED_SOURCE_PARITY_PASS profiles=5 selectors=6")
 print("ENCORE_G21_REAL_CMAKE_PROFILE_MATRIX_PASS cases=6 variant_owners=5 host_only=1")

@@ -23,9 +23,15 @@ body = start + gpu.split(start, 1)[1].split(end, 1)[0]
 old = "RequestSyncOperation([this, &raster_area]() {"
 fixed = "RequestSyncOperation([this, raster_area]() {"
 assert body.count(old) == 1
-assert cmake.count('set(gpu_read_capture_original "' + old + '")') == 1
-assert cmake.count('string(REPLACE "${gpu_read_capture_original}"') == 1
-assert cmake.count("Pinned GPU read callback lifetime changed") == 1
+assert 'list(APPEND video_sources "${EDEN_MAINTAINED_G21_GPU}")' in cmake
+assert 'gpu_read_capture_original' not in cmake
+for filename in ("gpu_gl_host.cpp", "gpu_gl_host_dev.cpp",
+                 "gpu_gl_native.cpp", "gpu_gl_native_dev.cpp"):
+    maintained = (root/"vendor/encore-active/eden-core/src/video_core"/filename).read_text()
+    assert maintained.count(fixed) == 1, filename
+    assert old not in maintained, filename
+vulkan = (root/"vendor/encore-active/eden-core/src/video_core/gpu_vulkan.cpp").read_text()
+assert vulkan.count(old) == 1 and fixed not in vulkan
 assert "python3 -B tools/check-native-gpu-read-capture-host.py" in workflow
 
 cpp = r"""

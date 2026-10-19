@@ -19,9 +19,9 @@ nouveaux corps C++ destinés à la console.
 - `vendor/encore-active` : **305 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
-- `headless/CMakeLists.txt` : **4 générateurs** `write_derived`.
+- `headless/CMakeLists.txt` : **3 générateurs** `write_derived`.
 - Le module CMake expérimental de pont différé contient **0 générateurs**
-  `write_derived`, soit **4 sites** au total.
+  `write_derived`, soit **3 sites** au total.
 - Un module CMake procède encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   compteur des générations CMake.
@@ -318,6 +318,16 @@ le binaire choisit exclusivement `vendor/encore-active/eden-vulkan/`.
 `headless/vulkan.cmake` ne les surveille plus inutilement comme dépendances
 de configuration. Leur conservation sert la preuve de parité, pas la
 construction du moteur.
+
+## G21 : processeur GPU maintenu en cinq variantes
+
+Les cinq sources GPU (OpenGL hôte et natif normal/DEV, Vulkan) sont
+complètes dans `eden-core/src/video_core/`. Le CMake actif choisit
+une seule unité par profil ; il ne lit plus ni ne réécrit le code
+`gpu.cpp` épinglé. L'ancienne recette CMake n'existe que comme
+oracle sous `tools/fixtures/legacy-g21-gpu.cmake`. Les contrats de
+parité sont hôte uniquement ; aucun comportement console n'est
+déclaré qualifié.
 
 ## Correction GPU réellement centralisée
 
