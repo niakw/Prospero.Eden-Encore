@@ -499,6 +499,12 @@ transformation G13 depuis la version de backport livrée et depuis la variante
 A32 maintenue, avec ses protections de lecture, de plage et de journalisation,
 avant de tester l'ancien pont M12 en mode DEV. Cette preuve reste **hôte**.
 
+Le témoin de configuration DEV M12 vérifie aussi les deux chemins : la
+variante mémoire standard issue du backport de production, puis la variante
+A32 réellement sélectionnée. Le résultat doit être identique à l'exception
+du garde-fou A32 de fastmem ; les contrats de publication, de journalisation
+et de lecture auxiliaire sont exigés dans les deux cas.
+
 M12 reste une dette de génération C++ : il dépend de la sortie G13 et
 de ses deux variantes avant de pouvoir être déplacé proprement en
 source complète. Ne pas supprimer le générateur M12 sans matérialiser
