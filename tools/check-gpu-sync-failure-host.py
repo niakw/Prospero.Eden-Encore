@@ -12,6 +12,10 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 pinned = (root / "vendor/sources/eden/src/video_core/gpu.cpp").read_text()
 cmake = (root / "headless/CMakeLists.txt").read_text()
+legacy = (root / "tools/fixtures/legacy-g21-gpu.cmake").read_text()
+maintained_gpu = (root / "vendor/encore-active/eden-core/src/video_core/gpu_gl_native.cpp").read_text()
+assert 'list(APPEND video_sources "${EDEN_MAINTAINED_G21_GPU}")' in cmake
+assert 'gpu_sync_wait_original' not in cmake
 header = (root / "headless/gpu_failure.h").read_text()
 native_method = (root / "vendor/encore-active/eden-core/gpu-injections/gpu_sync_failure_wait.inc").read_text()
 original = """    void WaitForSyncOperation(const u64 fence) {
@@ -23,8 +27,9 @@ stopped_pinned = pinned.replace(
     "return sync_requests_stopped || CurrentSyncRequestFence() >= fence;"
 )
 assert stopped_pinned.count(original) == 1
-assert "file(READ \"${PORT_ROOT}/vendor/encore-active/eden-core/gpu-injections/gpu_sync_failure_wait.inc\" gpu_sync_wait_replacement)" in cmake
-assert 'string(FIND "${gpu_source}" "${gpu_sync_wait_original}" gpu_sync_wait_position)' in cmake
+assert 'file(READ "${PORT_ROOT}/vendor/encore-active/eden-core/gpu-injections/gpu_sync_failure_wait.inc" gpu_sync_wait_replacement)' in legacy
+assert 'string(FIND "${gpu_source}" "${gpu_sync_wait_original}" gpu_sync_wait_position)' in legacy
+assert native_method.strip() in maintained_gpu
 assert "std::rethrow_exception(failure);" in native_method
 assert "sync_request_cv.wait_for(lck, std::chrono::milliseconds(100));" in native_method
 assert "std::exception_ptr PeekGpuFailure()" in header
@@ -38,9 +43,9 @@ assert derived.count("sync_request_cv.wait_for(lck, std::chrono::milliseconds(10
 # even when the selected renderer backend is Vulkan.
 assert '-DEDEN_PS5_OPENGL="$graphics"' in (root / "tools/build-headless-native.sh").read_text()
 assert 'tools/build-headless-native.sh --graphics' in (root / "tools/build-package.sh").read_text()
-start = cmake.index("    set(gpu_sync_wait_original [=[")
-end = cmake.index('    string(REPLACE "GPU::~GPU() = default;"', start)
-fragment = cmake[start:end]
+start = legacy.index("    set(gpu_sync_wait_original [=[")
+end = legacy.index('    string(REPLACE "GPU::~GPU() = default;"', start)
+fragment = legacy[start:end]
 with tempfile.TemporaryDirectory(prefix="encore-gpu-sync-derive-") as d:
     directory = Path(d)
     outfile = directory / "native_gpu.cpp"

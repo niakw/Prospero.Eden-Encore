@@ -43,7 +43,6 @@ import re
 allowed_generated_targets = {
     "${derived}",  # G11: A32/A64 callback variants
     "${PORT_BUILD_DIR}/kernel.cpp",  # G19
-    "${PORT_BUILD_DIR}/gpu.cpp",  # G21
     "${PORT_BUILD_DIR}/include/loading_scene_glsl.h",  # G23: GLSL resource
 }
 generated_targets = re.findall(r'^\s*write_derived\(\s*"([^"]+)"', c, re.M)
@@ -55,20 +54,18 @@ assert set(generated_targets) <= allowed_generated_targets, (
     "Unreviewed generated CMake source: migrate to vendor/encore-active",
     sorted(set(generated_targets) - allowed_generated_targets))
 
-# One source-pinned fatal GPU worker wait needs a checked CMake input and
-# two exact-method rewrites. Do not relax the historical ceilings for any
-# other vendor-derived source. Each exception must occur exactly once.
-approved_sync = {
-    "file(READ": (
-        'file(READ "${PORT_ROOT}/vendor/encore-active/eden-core/gpu-injections/gpu_sync_failure_wait.inc" gpu_sync_wait_replacement)',
-    ),
-    "string(REPLACE": (
-        'string(REPLACE "${gpu_sync_wait_original}" "${gpu_sync_wait_replacement}"',
-        'string(REPLACE "${gpu_tick_lock_original}" "${gpu_tick_lock_safe}"',
-        'string(REPLACE "${gpu_enqueue_fence_original}" "${gpu_enqueue_fence_atomic}"',
-        'string(REPLACE "${gpu_read_capture_original}"',
-    ),
-}
+# G21 no longer injects source-level GPU sync code from CMake.
+# All five host/native/DEV variants are maintained as complete C++ sources.
+approved_sync = {"file(READ": (), "string(REPLACE": ()}
+assert 'gpu_sync_wait_original' not in c
+assert 'gpu_tick_lock_original' not in c
+assert 'gpu_read_capture_original' not in c
+assert 'write_derived("${PORT_BUILD_DIR}/gpu.cpp"' not in c
+assert 'list(APPEND video_sources "${EDEN_MAINTAINED_G21_GPU}")' in c
+for name in ("gpu_gl_host.cpp", "gpu_gl_host_dev.cpp", "gpu_gl_native.cpp",
+             "gpu_gl_native_dev.cpp", "gpu_vulkan.cpp"):
+    assert (active/"eden-core/src/video_core"/name).is_file(), name
+
 # G13/X05 native guard ownership is now in the two complete maintained
 # sources. Keep each contract in both, not in CMake string-rewrite fragments.
 native_units = [
@@ -83,8 +80,13 @@ for unit in native_units:
 assert 'write_derived("${eden_gpu_span_tu}"' not in c
 assert 'native_gpu_granular_bounds.cmake' not in c
 assert not (root / "headless/native_gpu_granular_bounds.cmake").exists()
-assert c.count("Pinned GPU read callback lifetime changed") == 1
-assert c.count('RequestSyncOperation([this, raster_area]() {') == 1
+assert "Pinned GPU read callback lifetime changed" not in c
+for name in ("gpu_gl_host.cpp", "gpu_gl_host_dev.cpp",
+             "gpu_gl_native.cpp", "gpu_gl_native_dev.cpp"):
+    unit = (active/"eden-core/src/video_core"/name).read_text()
+    assert unit.count('RequestSyncOperation([this, raster_area]() {') == 1
+assert 'RequestSyncOperation([this, &raster_area]() {' in (
+    active/"eden-core/src/video_core/gpu_vulkan.cpp").read_text()
 assert (root / "tools/check-native-gpu-read-capture-host.py").is_file()
 assert "python3 -B tools/check-native-gpu-read-capture-host.py" in (
     root / ".github/workflows/encore-core-preflight.yml").read_text()

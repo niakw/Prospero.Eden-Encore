@@ -17,7 +17,7 @@ couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 
 ## Synthèse vérifiable
 
-- **4 appels générateurs** encore dans CMake ; contre **75 avant**
+- **3 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
 - **Garde-fou de non-régression renforcé (19 octobre 2026) :**
@@ -246,7 +246,6 @@ dans la version normale.
 | --- | --- | --- | --- | ---: |
 | G11 | `${derived}` | CPU | Cible variable | 611 |
 | G19 | `${PORT_BUILD_DIR}/kernel.cpp` | Kernel/IPC/entrées | Unité source | 1276 |
-| G21 | `${PORT_BUILD_DIR}/gpu.cpp` | GPU/vidéo | Unité source | 1686 |
 | G23 | `${PORT_BUILD_DIR}/include/loading_scene_glsl.h` | Ressources | Ressource générée | 2065 |
 <!-- OVERRIDE_GENERATORS_END -->
 
@@ -258,7 +257,8 @@ Les IDs G01–G23 sont stables et ne sont pas renumérotés.
 
 ## G21 — matrice de dépendances avant centralisation
 
-G21 génère encore une unité `gpu.cpp` à partir de la source GPU épinglée.
+G21 ne génère plus `gpu.cpp` au build : la recette historique est archivée
+dans `tools/fixtures/legacy-g21-gpu.cmake`, où elle sert d'oracle de parité.
 Le témoin `tools/check-g21-gpu-profile-matrix-host.py` configure **la vraie
 recette G21** dans six combinaisons représentatives, plutôt que de supposer
 que le profil normal, DEV et les deux moteurs graphiques sont équivalents.
@@ -280,8 +280,13 @@ Les cinq candidates G21 sont maintenant archivées en fichiers C++ complets
 sous `eden-core/src/video_core/gpu_{gl_host,gl_host_dev,gl_native,gl_native_dev,vulkan}.cpp`.
 Le témoin compare chacun des cinq fichiers aux octets produits par CMake
 après normalisation des anciens chemins d'en-têtes absolus. Les candidates
-ne sont pas encore sélectionnées par le build : le retrait de G21 vient
-**après** le passage du témoin hôte.
+sont sélectionnées directement par le build. Le témoin de six configurations
+vérifie également que la cible `video_core` utilise l'unique variante
+attendue, et non un ancien fichier dérivé.
+
+La migration G21 a retiré le générateur C++ et l'intégralité de ses
+substitutions CMake, tout en conservant la sélection OpenGL des autres
+sources GPU, G20 DMA/puller et les différences Vulkan/DEV.
 
 Pour retirer G21, maintenir les unités C++ finales exclusivement sous
 `vendor/encore-active`, archiver les substitutions CMake uniquement
