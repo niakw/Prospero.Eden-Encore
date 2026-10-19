@@ -503,7 +503,6 @@ n'autorise pas la substitution silencieuse d'une cible C++ ou d'un module.
 <!-- MODULE_GENERATORS_START -->
 | ID | Module CMake | Sortie dérivée | Porte / périmètre |
 | --- | --- | --- | --- |
-| M04 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/include/video_core/memory_manager.h` | Pont différé OFF |
 | M05 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/deferred-core/core/gpu_dirty_memory_manager.h` | Pont différé OFF |
 | M06 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/memory_manager_deferred.cpp` | Pont différé OFF |
 | M07 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/vulkan_rasterizer_deferred.cpp` | Pont différé OFF |
@@ -514,6 +513,11 @@ n'autorise pas la substitution silencieuse d'une cible C++ ou d'un module.
 | M12 | `headless/guest_write_deferred_bridge.cmake` | `${PORT_BUILD_DIR}/memory-ps5-deferred.cpp` | Pont différé OFF |
 <!-- MODULE_GENERATORS_END -->
 
+M04 est retiré : `guest-bridge/memory_manager.h` est une source complète maintenue
+sous `vendor/encore-active/eden-core` et sélectionnée par `COPYONLY`.
+Le test du pont différé vérifie la parité et les octets de la sortie CMake.
+Le pont reste expérimental et OFF par défaut.
+
 M01/M02/M03 sont retirés : `a64_jitstate.h`, `jit_group.h` et `callback.cpp`
 sont trois fichiers complets sous `vendor/encore-active/eden-core/dynarmic/shared-jit/`.
 Le module CMake ne reconstruit plus de C++ : les copies `configure_file(COPYONLY)`
@@ -522,7 +526,7 @@ sont contrôlées par les témoins de parité M01 et M03. Shared JIT reste OFF.
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **14 sites** `write_derived()`, ni dans
+Ils ne sont comptés ni dans les **13 sites** `write_derived()`, ni dans
 les **2 modules indirects** ci-dessous :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,

@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 389
+**Non, this is not an exhaustive repository-wide inventory.** The 390
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 389 | 366 | 787 |
+| Graphe connu | 390 | 367 | 789 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 334 | 321 | 682 |
+| SOURCE — lecture effectuée, preuve insuffisante | 335 | 322 | 684 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **349** | **335** | **710** |
+| **Encore à qualifier (SOURCE + OPEN)** | **350** | **336** | **712** |
 | Dont priorité P0 (SOURCE + OPEN) | 113 | 107 | 263 |
 
-Le **noyau restant** compte donc 349 critères répartis sur
-335 fichiers et 710 mentions fonction/contrat :
-15 OPEN et 334 SOURCE.
+Le **noyau restant** compte donc 350 critères répartis sur
+336 fichiers et 712 mentions fonction/contrat :
+15 OPEN et 335 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-288 fichiers de code/en-têtes présents et 288 avec un chemin de
+289 fichiers de code/en-têtes présents et 289 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -622,6 +622,7 @@ function/contract tokens are checked by CI for existence only; the
 | V86 | P1 | V85 | vendor/encore-active/eden-core/src/video_core/dma_pusher_dev.cpp | DmaPusher::Step; dma_fence_timer | SOURCE | tools/check-maintained-guest-gpu-sync.py | G20 DEV: conditional DMA fence timer, preserved diagnostics, console unqualified | 🟡 Source étudiée |
 | V87 | P0 | V85 | vendor/encore-active/eden-core/src/video_core/engines/puller.cpp | Puller::ProcessSemaphoreTriggerMethod; IsShuttingDown() | SOURCE | tools/check-maintained-guest-gpu-sync.py | G20 normal: guest semaphore shutdown-aware loop; console unqualified | 🟡 Source étudiée |
 | V88 | P1 | V87 | vendor/encore-active/eden-core/src/video_core/engines/puller_dev.cpp | Puller::ProcessSemaphoreTriggerMethod; semaphore_timer | SOURCE | tools/check-maintained-guest-gpu-sync.py | G20 DEV: conditional semaphore timer with stop guard; console unqualified | 🟡 Source étudiée |
+| V89 | P2 | M02,R01 | vendor/encore-active/eden-core/guest-bridge/memory_manager.h | Tegra::MemoryManager::EnqueueDeferredCPUWrite; deferred_cpu_write_queue | SOURCE | tools/check-deferred-native-bridge-contract.py | M04 full header maintained; historical rewrite parity with normalized include; experimental OFF; console unqualified | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
