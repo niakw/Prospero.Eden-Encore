@@ -34,7 +34,7 @@ assert 'execute_process(COMMAND python3 "${PORT_ROOT}/tools/prepare-vulkan-port.
 # consolidated source tree. Match the remaining reviewed CMake generation
 # sites and leave room only for removing them, never for adding new ones.
 # For READ/REPLACE the approved pinned exceptions below are subtracted first.
-baseline = {"write_derived(": 4, "file(READ": 7, "string(REPLACE": 51}
+baseline = {"write_derived(": 3, "file(READ": 6, "string(REPLACE": 38}
 counts = {name: c.count(name) for name in baseline}
 # All generation targets still permitted in the main CMake recipe.
 # These are a shrinking allowlist: a migrated target needs no new exemption.
