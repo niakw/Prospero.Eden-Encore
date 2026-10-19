@@ -4,8 +4,8 @@
 
 ## Objectif et limite vérifiable
 
-La cartographie actuelle compte **477 contrats**, **454 chemins de
-sources distincts**, **957 ancres de symbole**. Chacun est contrôlé par
+La cartographie actuelle compte **478 contrats**, **455 chemins de
+sources distincts**, **959 ancres de symbole**. Chacun est contrôlé par
 `tools/check-eden-audit-register.py` et
 `tools/check-eden-audit-verification-matrix.py`. Le premier vérifie
 l'existence et les ancres de fonctions, les dépendances et l'absence de
@@ -13,7 +13,7 @@ cycles. Le second produit une **fiche explicite pour chaque contrat**
 avec propriétaire, priorité, état, lien de preuve, exécution directe en
 CI, dépendances suspendues et absence de qualification matérielle.
 
-**Exporter les 477 fiches :**
+**Exporter les 478 fiches :**
 
 ```bash
 python3 -B tools/check-eden-audit-verification-matrix.py --json > /tmp/encore-audit-verification.json
@@ -29,18 +29,18 @@ preuve `HOST` invoquée en CI disparaît.
 | État | Contrats | Preuve acquise |
 |---|---:|---|
 | HOST | 33 | Invariant précis sur hôte ; **pas** de jeu sur console |
-| SOURCE | 421 | Source étudiée, comportement natif non qualifié |
+| SOURCE | 422 | Source étudiée, comportement natif non qualifié |
 | OPEN | 15 | Question de comportement/propriété non résolue |
 | PARKED | 8 | Expérimentation suspendue, ne pas activer |
-| **Total** | **477** | **0 certification de gain de FPS par ce registre** |
+| **Total** | **478** | **0 certification de gain de FPS par ce registre** |
 
-**436 critères SOURCE + OPEN**, dont **114 P0**, ont encore besoin
+**437 critères SOURCE + OPEN**, dont **115 P0**, ont encore besoin
 d'une qualification supplémentaire. Leur présence n'invalide pas les
 corrections hôte : elle interdit seulement d'affirmer que leurs
 performances ou leur effet sur les freezes sont démontrés.
 
-Sur les **390 références à un script Python** parmi les preuves des
-contrats, **373 sont appelées directement** par la prévalidation et
+Sur les **391 références à un script Python** parmi les preuves des
+contrats, **374 sont appelées directement** par la prévalidation et
 **17 ne le sont pas directement** (16 SOURCE et 1 OPEN). Les 17
 références correspondent à cinq chemins distincts :
 
