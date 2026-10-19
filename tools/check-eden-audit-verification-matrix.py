@@ -126,6 +126,7 @@ def build_matrix(rows: list[dict], workflow: str, catalog: str) -> tuple[list[di
 
 
     statuses = Counter(r["status"] for r in rows)
+    pending_rows = [r for r in rows if r["status"] in {"SOURCE", "OPEN"}]
     priorities = Counter(r["priority"] for r in rows)
     lane_counts: dict[str, dict] = {}
     for row in rows:
@@ -151,6 +152,9 @@ def build_matrix(rows: list[dict], workflow: str, catalog: str) -> tuple[list[di
     stats = {
         "contracts": len(rows),
         "distinct_source_paths": len({r["path"] for r in rows}),
+        "pending_distinct_source_paths": len({r["path"] for r in pending_rows}),
+        "pending_p0_distinct_source_paths": len({r["path"] for r in pending_rows if r["priority"] == "P0"}),
+        "pending_active_distinct_source_paths": len({r["path"] for r in pending_rows if r["path"].startswith("vendor/encore-active/")}),
         "symbol_anchors": sum(len(r["symbols"]) for r in rows),
         "status": dict(sorted(statuses.items())),
         "priority": dict(sorted(priorities.items())),
@@ -186,6 +190,9 @@ def main() -> None:
         print("ENCORE_AUDIT_VERIFICATION_MATRIX_PASS",
               f"contracts={stats['contracts']}",
               f"paths={stats['distinct_source_paths']}",
+              f"pending_paths={stats['pending_distinct_source_paths']}",
+              f"pending_p0_paths={stats['pending_p0_distinct_source_paths']}",
+              f"pending_active_paths={stats['pending_active_distinct_source_paths']}",
               f"anchors={stats['symbol_anchors']}",
               f"host={stats['status']['HOST']}",
               f"pending={stats['pending_source_or_open']}",

@@ -45,12 +45,15 @@ extent_checked = '''    void InvalidateCacheRange(std::uint32_t start_address, s
             return;
         }
         std::unique_lock lock{invalidation_mutex};
-        // A wrapped or unrepresentable A32 range must not leave stale compiled blocks.
-        if (length - 1 > (~u32{0} - start_address)) {
-            invalidate_entire_cache = true;
-        } else {
-            const u32 end_address = start_address + static_cast<u32>(length - 1);
-            invalid_cache_ranges.add(boost::icl::discrete_interval<u32>::closed(start_address, end_address));
+        // A pending full clear already supersedes every narrower invalidation.
+        if (!invalidate_entire_cache) {
+            // A wrapped or unrepresentable A32 range must not leave stale compiled blocks.
+            if (length - 1 > (~u32{0} - start_address)) {
+                invalidate_entire_cache = true;
+            } else {
+                const u32 end_address = start_address + static_cast<u32>(length - 1);
+                invalid_cache_ranges.add(boost::icl::discrete_interval<u32>::closed(start_address, end_address));
+            }
         }
         HaltExecution(HaltReason::CacheInvalidation);
     }'''

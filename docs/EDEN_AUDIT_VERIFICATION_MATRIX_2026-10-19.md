@@ -34,7 +34,8 @@ preuve `HOST` invoquée en CI disparaît.
 | PARKED | 8 | Expérimentation suspendue, ne pas activer |
 | **Total** | **478** | **0 certification de gain de FPS par ce registre** |
 
-**437 critères SOURCE + OPEN**, dont **115 P0**, ont encore besoin
+**423 chemins distincts SOURCE + OPEN** (dont **109 chemins P0** et
+**303 dans `vendor/encore-active`**) correspondent à **437 critères SOURCE + OPEN**, dont **115 P0**, ont encore besoin
 d'une qualification supplémentaire. Leur présence n'invalide pas les
 corrections hôte : elle interdit seulement d'affirmer que leurs
 performances ou leur effet sur les freezes sont démontrés.
