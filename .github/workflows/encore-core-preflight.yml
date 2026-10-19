@@ -119,6 +119,7 @@ jobs:
           python3 -B tools/check-ps5-upstream-fixes-r302.py
           python3 -B tools/check-maintained-a64-interface.py
           python3 -B tools/check-native-a64-default-phases-host.py
+          python3 -B tools/check-native-a64-cache-invalidation-host.py
           python3 -B tools/check-jit-duplicate-title-reset-host.py
           python3 -B tools/check-maintained-a32-native-interface.py
           python3 -B tools/check-jit-invalidation-extents-host.py
