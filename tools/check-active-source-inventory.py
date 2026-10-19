@@ -164,6 +164,11 @@ else:
 root_cmake = (root / "headless/CMakeLists.txt").read_text()
 root_generator_count = len(re.findall(r'write_derived\(\s*"', root_cmake))
 assert f"L'inventaire des {root_generator_count} générateurs CMake" in document
+# The CMake debt summary must count actual call sites, not an obsolete snapshot.
+override_inventory = (root / "docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md").read_text()
+assert f"**{root_generator_count} appels générateurs**" in override_inventory
+assert f"**{root_cmake.count('file(READ')} lectures `file(READ`**" in override_inventory
+assert f"**{root_cmake.count('string(REPLACE')} remplacements" in override_inventory
 
 # Separate headless C/C++ footprint: active Encore sources are not the only
 # potential implementation units. Track ALL paths without inventing
