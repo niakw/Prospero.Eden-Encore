@@ -101,8 +101,21 @@ assert "return n <= 64 || (n & (n - 1)) == 0;" in perf_header
 assert "ResetUnmappedAccessCount()" in main
 assert "unmapped_access_count.load(std::memory_order_relaxed)" in crash
 assert '#include "performance.h"' in crash
-assert "if(NOT unmapped_count EQUAL 11)" in gpu_worker_generator
-assert 'set(eden_native_memory_tu "${PORT_BUILD_DIR}/memory-ps5.cpp")' in gpu_worker_generator
+# G13/X05 now compile source-complete variants. The log throttle must
+# belong to each selected native TU, not a retired CMake text injection.
+assert 'set(EDEN_NATIVE_GUEST_SOURCE "${EDEN_NATIVE_MEMORY_ROOT}/memory_native_standard.cpp")' in gpu_worker_generator
+assert 'set(EDEN_NATIVE_GUEST_SOURCE "${EDEN_NATIVE_MEMORY_ROOT}/memory_native_a32.cpp")' in gpu_worker_generator
+assert 'list(APPEND core_sources "${EDEN_NATIVE_GUEST_SOURCE}")' in gpu_worker_generator
+for variant in ("memory_native_standard.cpp", "memory_native_a32.cpp"):
+    native_memory = read(f"vendor/encore-active/eden-core/src/core/{variant}")
+    assert native_memory.count("::Eden::Performance::ShouldLogUnmappedAccess()") == 11, variant
+    assert native_memory.count('LOG_ERROR(HW_Memory, "Unmapped ') == 11, variant
+    assert '#include "performance.h"' in native_memory, variant
+for variant in ("memory_ps5_standard.cpp", "memory_ps5_a32.cpp"):
+    deferred_memory = read(f"vendor/encore-active/eden-core/guest-bridge/{variant}")
+    assert deferred_memory.count("::Eden::Performance::ShouldLogUnmappedAccess()") == 11, variant
+    assert deferred_memory.count('LOG_ERROR(HW_Memory, "Unmapped ') == 11, variant
+print("ENCORE_NATIVE_MEMORY_CRASH_ONLY_LOG_SOURCE_PASS profiles=4 throttled_sites=11")
 
 
 source = r"""
