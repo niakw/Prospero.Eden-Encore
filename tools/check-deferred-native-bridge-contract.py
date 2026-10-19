@@ -232,6 +232,21 @@ assert 'target_include_directories(core PRIVATE "${EDEN_PORT_DIR}")' in base
 assert 'target_include_directories(video_core PRIVATE "${EDEN_PORT_DIR}")' in base
 print("ENCORE_M04_MAINTAINED_HEADER_PARITY_PASS")
 
+# M05: preserve the exactly generated experimental GPU-dirty collector.
+pinned_dirty = (root/"vendor/sources/eden/src/core/gpu_dirty_memory_manager.h").read_text()
+dirty_entry = "    void Collect(PAddr address, size_t size) {\n        TransformAddress t = BuildTransform(address, size);"
+dirty_nested = "                    std::scoped_lock lk(guard);\n                    back_buffer.emplace_back(tmp);"
+assert pinned_dirty.count(dirty_entry) == 1
+assert pinned_dirty.count(dirty_nested) == 1
+expected_dirty = pinned_dirty.replace(dirty_entry,
+    "    void Collect(PAddr address, size_t size) {\n        std::scoped_lock lk(guard);\n        TransformAddress t = BuildTransform(address, size);").replace(
+    dirty_nested, "                    back_buffer.emplace_back(tmp);")
+maintained_dirty = root/"vendor/encore-active/eden-core/guest-bridge/gpu_dirty_memory_manager.h"
+assert maintained_dirty.read_text() == expected_dirty, "M05 maintained source differs from generated source"
+assert 'configure_file("${EDEN_DEFERRED_DIRTY_HEADER}"' in code
+assert 'write_derived("${PORT_BUILD_DIR}/deferred-core/core/gpu_dirty_memory_manager.h"' not in code
+print("ENCORE_M05_MAINTAINED_DIRTY_HEADER_PARITY_PASS")
+
 pins={
     "video_core/memory_manager.h":["    void FlushCaching();","    Core::System& system;"],
     "video_core/memory_manager.cpp":['#include "memory_manager.h"',"void MemoryManager::FlushCaching() {"],
@@ -351,11 +366,12 @@ include("__BRIDGE__")
     assert "guest_write_origin_core" in mm
     assert "guest_write_origin_core < ::Eden::GpuDeferredWrite::Queue::Cores" in vk
     dirty_h=(stage/"deferred-core/core/gpu_dirty_memory_manager.h").read_text()
+    assert dirty_h == maintained_dirty.read_text()
     assert dirty_h.count("void Collect(PAddr address, size_t size) {") == 1
     assert "void Collect(PAddr address, size_t size) {\n        std::scoped_lock lk(guard);" in dirty_h
     assert "std::scoped_lock lk(guard);\n                    back_buffer.emplace_back(tmp);" not in dirty_h
     assert '#include "core/gpu_dirty_memory_manager.h"' in mm
-    # Compile the generated (not hand-reimplemented) GPU-dirty collector
+    # Compile the historically equivalent maintained GPU-dirty collector
     # against a minimal pinned-page-size shim under ASan and UBSan.
     stub=stage/"fixture/core"
     stub.mkdir(parents=True,exist_ok=True)
