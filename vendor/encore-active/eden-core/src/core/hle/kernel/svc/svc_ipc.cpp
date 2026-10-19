@@ -85,7 +85,9 @@ Result ReplyAndReceiveImpl(KernelCore& kernel, int32_t* out_index, uintptr_t mes
         // Wait for a message.
         while (true) {
             // Wait for an object.
-            s32 index;
+            // Wait may return cancellation/termination before setting the index.
+            // Never propagate an indeterminate slot on non-timeout failures.
+            s32 index{-1};
             Result result = KSynchronizationObject::Wait(kernel, std::addressof(index), objs, num_objects, timeout);
             if (ResultTimedOut == result) {
                 R_THROW(result);

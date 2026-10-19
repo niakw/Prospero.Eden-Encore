@@ -30,7 +30,15 @@ fixed="""                s64 absolute{};
                 } else {
                     timeout = absolute;
                 }"""
-assert pinned.count(old)==1 and normal==pinned.replace(old,fixed)
+old_index="""            s32 index;
+            Result result = KSynchronizationObject::Wait(kernel, std::addressof(index), objs, num_objects, timeout);"""
+fixed_index="""            // Wait may return cancellation/termination before setting the index.
+            // Never propagate an indeterminate slot on non-timeout failures.
+            s32 index{-1};
+            Result result = KSynchronizationObject::Wait(kernel, std::addressof(index), objs, num_objects, timeout);"""
+assert pinned.count(old)==1 and pinned.count(old_index)==1
+assert normal==pinned.replace(old,fixed).replace(old_index,fixed_index)
+assert dev.count(fixed_index)==1
 assert old not in dev and dev.count(fixed)==1
 assert "BeginGuestIpc(ipc_tid, ipc_start)" in dev
 assert "BeginGuestIpc(ipc_tid, ipc_start)" not in normal
