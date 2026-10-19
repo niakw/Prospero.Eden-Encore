@@ -22,14 +22,14 @@ couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
   `write_derived` n'est pas compté comme une invocation.
 - **Garde-fou de non-régression renforcé (19 octobre 2026) :**
   `tools/check-vendor-consolidation-debt.py` limite désormais les sites
-  de génération du CMake principal aux quatre destinations G11/G19/G21/G23
-  recensées ci-dessous. Son plafond descendant est de **4** générations,
-  **7** lectures et **51** remplacements après déduction des exceptions
+  de génération du CMake principal aux trois destinations G11/G19/G23
+  recensées ci-dessous. Son plafond descendant est de **3** générations,
+  **6** lectures et **38** remplacements après déduction des exceptions
   déjà justifiées ; il ne permet plus le retour aux budgets historiques.
   G23 reste une ressource GLSL, non une réécriture du moteur. Le module
   expérimental de pont différé ne génère plus de C++ ; le module
   Shared JIT ne fait plus que sélectionner les sources Encore.
-- **8 lectures `file(READ`** et **55 remplacements
+- **6 lectures `file(READ`** et **38 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
 - Les versions diagnostiques de `IFile::Read`, `IStorage::Read` et des appels
