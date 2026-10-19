@@ -183,3 +183,25 @@ la méthode réelle, compile sous ASan/UBSan et contrôle les domaines
 mémoire, texture, buffer, shader/query, l'absence de traduction et
 le retour conservateur pour les bornes. Aucun gain de FPS / disparition
 de freeze n'est revendiqué sans benchmark console à SHA identique.
+
+
+## Vulkan — déverrouillage évité lors d'une libération de plage CPU jamais enregistrée
+
+19 octobre 2026. `RasterizerVulkan::UnmapMemory` n'acquiert plus le
+mutex texture si `ImagePages::NeverHeld(addr, size)` établit que la
+plage CPU n'a jamais hébergé d'image. Les plages connues, grandes,
+inconnues ou hors de l'espace suivi conservent le parcours complet
+`TextureCache::UnmapMemory` sous verrou ; celui-ci désenregistre les
+images et libère leurs ressources. L'invalidation du buffer
+`buffer_cache.WriteMemory` et du pipeline
+`pipeline_cache.OnCacheInvalidation` **reste toujours exécutée**.
+
+`ModifyGPUMemory` n'est **pas** optimisée par cet indice : sa plage
+est indexée en adresses **GPU**, et la preuve CPU ne doit pas être
+utilisée pour sa table d'images GPU. Le test source-extrait
+`tools/check-ps5-texture-unmap-elision-host.py` utilise ASan/UBSan et
+vérifie expressément cette séparation de domaines, les chevauchements,
+les plages incertaines et toutes les autres invalidations. Le
+générateur historique et le pont expérimental désactivé conservent la
+parité exacte. Pas de gain FPS ou de freeze corrigé revendiqué sans
+benchmark natif au même SHA.

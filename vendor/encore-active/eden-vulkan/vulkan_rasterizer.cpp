@@ -1126,7 +1126,10 @@ void RasterizerVulkan::InvalidateGPUCache() {
 }
 
 void RasterizerVulkan::UnmapMemory(DAddr addr, u64 size) {
-    {
+    // ImagePages tracks CPU-addressed registered images monotonically.
+    // Do not contend on the texture mutex if this unmapped CPU range
+    // could never own an image; unknown/large ranges retain full work.
+    if (!::Eden::ImagePages::NeverHeld(addr, size)) {
         std::scoped_lock lock{texture_cache.mutex};
         texture_cache.UnmapMemory(addr, size);
     }

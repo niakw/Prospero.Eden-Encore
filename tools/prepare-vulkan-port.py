@@ -21,6 +21,8 @@ def adapt(relative, destination, replacements):
 adapt('src/core/frontend/emu_window.h', 'include/core/frontend/emu_window.h',
       [('    Xcb,', '    Xcb,\n    PS5,')])
 adapt('src/video_core/renderer_vulkan/vk_rasterizer.cpp', 'vulkan_rasterizer.cpp', [
+    # CPU-addressed unmapping: do not lock an image cache for never-held pages.
+    ("void RasterizerVulkan::UnmapMemory(DAddr addr, u64 size) {\n    {\n        std::scoped_lock lock{texture_cache.mutex};\n        texture_cache.UnmapMemory(addr, size);\n    }", "void RasterizerVulkan::UnmapMemory(DAddr addr, u64 size) {\n    // ImagePages tracks CPU-addressed registered images monotonically.\n    // Do not contend on the texture mutex if this unmapped CPU range\n    // could never own an image; unknown/large ranges retain full work.\n    if (!::Eden::ImagePages::NeverHeld(addr, size)) {\n        std::scoped_lock lock{texture_cache.mutex};\n        texture_cache.UnmapMemory(addr, size);\n    }"),
     # Conservative native inline-upload texture lock elision (CPU occupancy only).
     ("    {\n        std::scoped_lock lock_texture{texture_cache.mutex};\n        texture_cache.WriteMemory(*cpu_addr, copy_size);\n    }", "    // DMA inline writes do not need the texture mutex when these CPU pages\n    // have never belonged to an image. Unknown and large ranges fail closed.\n    if (!::Eden::ImagePages::NeverHeld(*cpu_addr, copy_size)) {\n        std::scoped_lock lock_texture{texture_cache.mutex};\n        texture_cache.WriteMemory(*cpu_addr, copy_size);\n    }"),
     # R: skip provably unnecessary Vulkan texture-cache invalidation locks.
