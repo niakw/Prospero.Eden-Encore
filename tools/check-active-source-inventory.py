@@ -163,10 +163,12 @@ else:
     assert f"**{len(physical)-linked_count} fichiers** n'ont" in document
 root_cmake = (root / "headless/CMakeLists.txt").read_text()
 root_generator_count = len(re.findall(r'write_derived\(\s*"', root_cmake))
-assert f"L'inventaire des {root_generator_count} générateurs CMake" in document
+root_noun = "générateur" if root_generator_count == 1 else "générateurs"
+assert f"L'inventaire des {root_generator_count} {root_noun} CMake" in document
 # The CMake debt summary must count actual call sites, not an obsolete snapshot.
 override_inventory = (root / "docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md").read_text()
-assert f"**{root_generator_count} appels générateurs**" in override_inventory
+root_call = "appel générateur" if root_generator_count == 1 else "appels générateurs"
+assert f"**{root_generator_count} {root_call}**" in override_inventory
 assert f"**{root_cmake.count('file(READ')} lectures `file(READ`**" in override_inventory
 assert f"**{root_cmake.count('string(REPLACE')} remplacements" in override_inventory
 

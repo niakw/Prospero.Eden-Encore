@@ -828,7 +828,8 @@ assert source_catalog.count(catalog_start) == source_catalog.count(catalog_end) 
 catalog_rows = re.findall(
     r"^\| \x60[^\x60]+\x60 \|", source_catalog.split(catalog_start)[1].split(catalog_end)[0], re.M
 )
-assert f"**{main_generators} générateurs**" in single_source_doc
+main_noun = "générateur" if main_generators == 1 else "générateurs"
+assert f"**{main_generators} {main_noun}**" in single_source_doc
 module_noun = "générateur" if module_generators == 1 else "générateurs"
 assert f"**{module_generators} {module_noun}**" in single_source_doc
 assert f"**{main_generators + module_generators} sites**" in single_source_doc
