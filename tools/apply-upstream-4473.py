@@ -6,7 +6,6 @@ Origin dbeb73ee011416cffc6c203945f5ccc6b90621f6.
 Upstream copyrights remain in derived files. Vendored archives stay immutable.
 """
 import argparse
-import argparse
 from pathlib import Path
 import shutil
 import subprocess
@@ -197,8 +196,19 @@ if __name__ == "__main__":
         marker = 'target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/gpu-memory-4473")'
         assert cmake_file.count(marker) == 0
         assert 'Eden #4473/#4477 are already applied once' in cmake_file
-        assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/${unit}.cpp" command_source)' in cmake_file
+        # G20 replaced the historical CMake command-source generator with
+        # fully maintained normal/DEV GPU command processing units. The
+        # offline backport oracle must never require that old generator.
+        assert 'file(READ "${PROJECT_SOURCE_DIR}/src/video_core/${unit}.cpp" command_source)' not in cmake_file
         assert 'Prepared Eden source lacks #4473/#4477' in cmake_file
+        assert 'set(EDEN_MAINTAINED_GUEST_GPU_ROOT' in cmake_file
+        assert 'list(REMOVE_ITEM video_sources dma_pusher.cpp engines/puller.cpp)' in cmake_file
+        assert 'list(APPEND video_sources "${EDEN_MAINTAINED_GPU_DMA}" "${EDEN_MAINTAINED_GPU_PULLER}")' in cmake_file
+        assert 'write_derived("${PORT_BUILD_DIR}/dma_pusher.cpp"' not in cmake_file
+        active_gpu = Path(__file__).resolve().parents[1] / "vendor/encore-active/eden-core/src/video_core"
+        for unit in ("dma_pusher.cpp", "dma_pusher_dev.cpp",
+                     "engines/puller.cpp", "engines/puller_dev.cpp"):
+            assert (active_gpu / unit).is_file(), f"missing maintained GPU unit: {unit}"
         self_test(args.source)
     else:
         if args.dest is None:
