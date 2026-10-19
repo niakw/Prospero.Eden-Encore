@@ -89,7 +89,7 @@ et non les 458 scripts Python/shell/CMake du seul dossier `tools/`.
 | `tools/sync-glyph-overrides.py` | **RÉGÉNÉRATION EXPLICITE** | `headless/glyph_overrides_generated.h` | Catalogue visuel, non-mapping HID |
 | `tools/launcher/strings.py` | **RÉGÉNÉRATION EXPLICITE** | Catalogues PO et en-tête français `fr_fr_embedded.h` | Ressources locales |
 | `tools/ps-glyph-*.py` | **OUTILS HORS BUILD** d'analyse/adaptation de mods | Fichiers de recherche / packs externes, pas un patch C++ de l'émulateur | Frontière à conserver |
-| `headless/macro_recovery.cmake`, `slot_vector_recovery.cmake` | **BUILD**, écriture sans `write_derived` | Deux sorties CMake indirectes | Déjà indexées X01/X02 |
+| X01/X02 : anciens `macro_recovery.cmake` / `slot_vector_recovery.cmake` | **RETIRÉS du build**, fichiers absents | `eden-core/src/video_core/macro.cpp` et `eden-core/overrides/slot-vector/common/slot_vector.h` | Sources complètes sélectionnées, parité historique contrôlée |
 | Aucun module indirect actif | Les corrections JIT sont des sources Encore | G11/X06 retirés du build | Oracles historiques séparés |
 | `headless/vulkan.cmake` | **BUILD**, copie/sélection d'un fork vérifié | `encore-active/eden-vulkan` | Aucun appel au générateur Python |
 

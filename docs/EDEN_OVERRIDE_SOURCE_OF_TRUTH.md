@@ -136,7 +136,7 @@ fragments de l'application native qui ne remplacent aucune source upstream.
 <!-- SINGLE_SOURCE_FRAGMENTS_START -->
 | Chemin | Hypothèse de rôle | Qualification |
 | --- | --- | --- |
-| `headless/dev_render_passes.inc` | Diagnostic OpenGL local (`CaptureDevelopmentPass`) | Consommateur non identifié dans le CMake principal et `graphics.cpp` ; vérifier les autres points d'entrée avant retrait |
+| `headless/dev_render_passes.inc` | Ancien diagnostic OpenGL local (`CaptureDevelopmentPass`) | Candidat orphelin : le contrôle hôte vérifie l'absence de référence dans les sources applicatives et `encore-active` ; hors chemin de compilation connu |
 | `headless/gpu_native_probe.inc` | Diagnostic GPU natif local | Inclus transitivement par `gpu_probe.inc` ; pas un override de dépendance |
 | `headless/gpu_probe.inc` | Diagnostic graphique local | Inclus par `graphics.cpp` sous `EDEN_GPU_PROBE` ; reste dans le runtime de l'application |
 <!-- SINGLE_SOURCE_FRAGMENTS_END -->
@@ -145,12 +145,14 @@ fragments de l'application native qui ne remplacent aucune source upstream.
 
 L'injection G09 est intégrée à `a64_interface_standard.cpp` sous un garde
 C++ explicite. L'unité `a64_interface_shared.cpp` conserve la variante
-partagée déjà distincte dans l'ancien CMake. Les trois fragments restants
-sont des diagnostics locaux ou un candidat encore à qualifier. Les deux diagnostics GPU sont du code de
-l'application, non des patches cachés dans une dépendance ; leur présence
-sous `headless/` est autorisée. Le fragment de capture OpenGL est
-**non qualifié**, pas déclaré inutilisé sans recherche exhaustive des consommateurs.
-Les trois fragments restants ne sont pas des overrides de dépendance confirmés ; le diagnostic OpenGL conserve une qualification ouverte.
+partagée déjà distincte dans l'ancien CMake. Les deux fragments `gpu_probe.inc` / `gpu_native_probe.inc` sont des diagnostics
+applicatifs effectivement inclus par `graphics.cpp` sous `EDEN_GPU_PROBE`.
+L'ancien `dev_render_passes.inc` n'a **aucun consommateur trouvé dans les
+sources applicatives/Encore surveillées** : `tools/check-headless-fragment-ownership.py`
+bloque sa réintroduction silencieuse et vérifie l'inclusion des deux sondes.
+Son statut est « diagnostic local orphelin », et **non override de dépendance**.
+Un test de source hôte ne prouve ni le contenu des caches natifs ni une
+exécution console ; le fichier n'est pas supprimé par simple déduction.
 
 ## Interface A32 native : génération G10 supprimée
 
