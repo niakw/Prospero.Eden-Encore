@@ -847,6 +847,10 @@ for filename, original_blob in shared_jit_blobs.items():
     check_canonical_git_object(source, original_blob, "JIT")
 shared_jit_selector = (root / "headless/dynarmic/shared-jit.cmake").read_text()
 assert 'set(EDEN_SHARED_JIT_DIR "${PORT_ROOT}/vendor/encore-active/eden-core/dynarmic/shared-jit")' in shared_jit_selector
+assert ('configure_file("${EDEN_SHARED_JIT_DIR}/jit_group.h"\n'
+        '        "${PORT_BUILD_DIR}/include/dynarmic/backend/x64/jit_group.h" COPYONLY)') in shared_jit_selector
+assert 'file(READ "${EDEN_SHARED_JIT_DIR}/jit_group.h" eden_group_header)' not in shared_jit_selector
+assert 'write_derived("${PORT_BUILD_DIR}/include/dynarmic/backend/x64/jit_group.h"' not in shared_jit_selector
 print("ENCORE_SHARED_JIT_SOURCE_OWNERS_PASS", len(shared_jit_blobs))
 
 
@@ -1330,7 +1334,7 @@ for module in module_files:
     module_current.extend((module, target) for target in
                           re.findall(r'write_derived\(\s*"([^"]+)"', content))
 assert module_recorded == module_current, "Module CMake source generator inventory is stale"
-assert len(module_current) == 12, len(module_current)
+assert len(module_current) == 11, len(module_current)
 # Indirect X01/X02 are no longer CMake generators: full source units
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):

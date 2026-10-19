@@ -44,8 +44,10 @@ macro(eden_shared_jit_sources)
     void* eden_fast_dispatch = nullptr;
 " eden_jitstate "${eden_jitstate}")
     write_derived("${PORT_BUILD_DIR}/include/${eden_jitstate_relative}" "${eden_jitstate}")
-    file(READ "${EDEN_SHARED_JIT_DIR}/jit_group.h" eden_group_header)
-    write_derived("${PORT_BUILD_DIR}/include/dynarmic/backend/x64/jit_group.h" "${eden_group_header}")
+    # M02 retired: the canonical header is already maintained in encore-active.
+    # COPYONLY preserves its exact bytes without a second generated source.
+    configure_file("${EDEN_SHARED_JIT_DIR}/jit_group.h"
+        "${PORT_BUILD_DIR}/include/dynarmic/backend/x64/jit_group.h" COPYONLY)
     file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/dynarmic/backend/x64/callback.cpp" eden_callback)
     set(eden_call_arg "    code.mov(code.ABI_PARAM1, arg);\n    code.CallFunction(fn);\n}")
     set(eden_return_arg "    code.mov(code.ABI_PARAM2, arg);\n#endif")

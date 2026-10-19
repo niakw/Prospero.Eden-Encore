@@ -20,8 +20,8 @@ nouveaux corps C++ destinés à la console.
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
 - `headless/CMakeLists.txt` : **5 générateurs** `write_derived`.
-- Deux modules CMake générateurs totalisent **12 générateurs**
-  `write_derived`, soit **17 sites** au total.
+- Deux modules CMake générateurs totalisent **11 générateurs**
+  `write_derived`, soit **16 sites** au total.
 - Deux modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
   compteur des générations CMake.
@@ -276,7 +276,7 @@ blobs Git identiques dans `vendor/encore-active/eden-core/dynarmic/shared-jit/`.
 Le sélecteur de `headless/dynarmic/shared-jit.cmake` lit les fichiers
 maintenus. **Ce module CMake conserve encore des transformations upstream
 à migrer** ; la relocalisation des données d'injection ne supprime pas les
-12 générateurs de modules. Le mode JIT partagé reste OFF par défaut.
+11 générateurs de modules ; M02 est devenu une simple copie de `jit_group.h` depuis `encore-active`. Le mode JIT partagé reste OFF par défaut.
 
 ## Fragments scalaires centralisés
 
