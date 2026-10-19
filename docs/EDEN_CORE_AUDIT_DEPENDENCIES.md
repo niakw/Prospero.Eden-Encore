@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 475
+**Non, this is not an exhaustive repository-wide inventory.** The 476
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,11 +24,11 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 475 | 452 | 953 |
+| Graphe connu | 476 | 453 | 955 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
 | SOURCE — lecture effectuée, preuve insuffisante | 420 | 407 | 848 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
-| PARKED — expérimentation suspendue | 7 | 7 | 9 |
+| PARKED — expérimentation suspendue | 8 | 8 | 11 |
 | **Encore à qualifier (SOURCE + OPEN)** | **435** | **421** | **876** |
 | Dont priorité P0 (SOURCE + OPEN) | 114 | 108 | 265 |
 
@@ -708,6 +708,7 @@ function/contract tokens are checked by CI for existence only; the
 | U76 | P1 | U01 | headless/storage_paths.h | inline std::string ConfigDir(); inline std::string ConfigFile( | SOURCE | tools/check-headless-final-owners.py | Native application config and storage path resolution with sandbox fallback; not a dependency rewrite | 🟡 Source étudiée |
 | U77 | P1 | U19 | headless/vulkan_gc_budget.h | constexpr std::uint64_t AfterProjectedEviction(; constexpr std::uint64_t OldestEvictionTick( | SOURCE | tools/check-headless-final-owners.py | Saturating Vulkan GC budget arithmetic linked to maintained texture cache; no device-memory proof | 🟡 Source étudiée |
 | U78 | P1 | U19 | headless/vulkan_pool_capacity.h | class PoolCapacityLatch; std::uint64_t Observe( | SOURCE | tools/check-headless-final-owners.py | Native GPU free-memory capacity latch in maintained Vulkan device source; not an observed capacity guarantee | 🟡 Source étudiée |
+| U79 | P2 | J01 | headless/ps5_amd_topology_evidence.h | struct AmdCpuEvidence; inline AmdCpuEvidenceResult ValidateAmdSmtEvidence( | PARKED | tools/check-headless-final-owners.py | Isolated Sony/AMD topology evidence validator, introduced without native runtime pinning; no certified caller, defer integration until qualified | ⚪ Suspendu |
 <!-- AUDIT_ROWS_END -->
 
 

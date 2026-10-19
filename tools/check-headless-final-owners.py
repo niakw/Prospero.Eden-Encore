@@ -171,14 +171,16 @@ for owner in OWNERS:
     for path in owner["consumers"]:
         consumer = (ROOT / path).read_text(encoding="utf-8")
         assert expected in consumer, (owner["id"], "direct include missing", path)
-# The last unlinked native-app topology helper is not promoted to a
-# compiled/runtime owner without a qualified direct consumer.
-orphan = (ROOT / "headless/ps5_amd_topology_evidence.h").read_text()
-assert "ValidateAmdSmtEvidence(" in orphan
-assert "std::uint64_t permitted" in orphan
+# U79 is a PARKED source-contract owner, not an active native caller.
+topology = (ROOT / "headless/ps5_amd_topology_evidence.h").read_text()
+assert "struct AmdCpuEvidence" in topology
+assert "inline AmdCpuEvidenceResult ValidateAmdSmtEvidence(" in topology
+for path in ("headless/performance.cpp", "headless/ps5_cpu_topology.h"):
+    assert '#include "ps5_amd_topology_evidence.h"' not in (
+        ROOT / path).read_text(), ("U79 unexpectedly wired", path)
 assert "class FirstUseRegistry final" in (ROOT/"headless/pipeline_trace_registry.h").read_text()
 assert "std::mutex mutex_" in (ROOT/"headless/pipeline_trace_registry.h").read_text()
 assert "inline bool NeverHeld(" in (ROOT/"headless/image_pages.h").read_text()
 print("ENCORE_HEADLESS_FINAL_OWNERS_PASS headers=13 direct_consumers=" +
       str(sum(len(row["consumers"]) for row in OWNERS)) +
-      " unresolved_topology=1 native_runtime_unqualified=1")
+      " parked_topology=1 native_runtime_unqualified=1")

@@ -242,7 +242,9 @@ unlinked_by_role = Counter(role for path, role, _, _ in headless_rows
 assert sum(unlinked_by_role.values()) == len(headless_actual)-headless_linked
 assert set(unlinked_by_role) == {
     "launcher/UI", "harness/test", "outil auxiliaire",
-    "données générées", "en-tête/fragment"}
+    "données générées"}
+assert unlinked_by_role.get("en-tête/fragment", 0) == 0, (
+    "new unowned headless header or fragment", unlinked_by_role)
 assert all(path.startswith("headless/prosperoeden/")
            for path, role, _, _ in headless_rows if role == "launcher/UI")
 assert all(path in headless_graph for path, role, _, _ in headless_rows
