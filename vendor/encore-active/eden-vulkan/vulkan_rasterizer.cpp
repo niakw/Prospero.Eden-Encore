@@ -1040,9 +1040,9 @@ void RasterizerVulkan::InvalidateRegion(DAddr addr, u64 size, VideoCommon::Cache
 }
 
 void RasterizerVulkan::InnerInvalidation(std::span<const std::pair<DAddr, std::size_t>> sequences) {
-    // Do not take the texture cache mutex for a batch of never-held pages.
-    // If even one range is registered, unknown, or too large, preserve the
-    // original locked path and process ALL ranges in their original order.
+    // Omit the texture lock entirely if no range could own an image.
+    // For mixed batches keep the original lock and order, but avoid expensive
+    // image-slot searches for individual pages never registered as textures.
     bool texture_may_overlap = false;
     for (const auto& [addr, size] : sequences) {
         if (!::Eden::ImagePages::NeverHeld(addr, size)) {
@@ -1053,7 +1053,11 @@ void RasterizerVulkan::InnerInvalidation(std::span<const std::pair<DAddr, std::s
     if (texture_may_overlap) {
         std::scoped_lock lock{texture_cache.mutex};
         for (const auto& [addr, size] : sequences) {
-            texture_cache.WriteMemory(addr, size);
+            // Recheck under the texture mutex, so a concurrent registration
+            // cannot be mistaken for an image-free page in a mixed batch.
+            if (!::Eden::ImagePages::NeverHeld(addr, size)) {
+                texture_cache.WriteMemory(addr, size);
+            }
         }
     }
     {

@@ -270,3 +270,22 @@ callback réel et vérifie sous ASan/UBSan l'absence de prise de verrou
 lorsque le pipeline est prêt, puis le réveil correct lorsque la compilation
 est encore en cours. Pas de mutation des fences, cache images ou ordres
 GPU/guest. Le gain de latence PS5 reste à mesurer sur un paquet identifié.
+
+## 20 octobre — recherche texture évitée dans les lots d'invalidation mixtes
+
+`RasterizerVulkan::InnerInvalidation` évitait déjà complètement son
+verrou texture si **toutes** les plages étaient exemptes d'image selon
+`ImagePages::NeverHeld`. Lorsqu'une plage enregistrée (ou incertaine)
+apparaissait, il conservait correctement ce verrou mais parcourait
+**également** le cache texture pour les plages prouvées sans image.
+
+Le code actif, sa copie de compatibilité et la recette de génération
+recherchent maintenant uniquement les plages potentiellement enregistrées,
+avec une vérification par plage **sous** le mutex texture. Les pages
+connues, inconnues et trop grandes gardent le traitement complet.
+L'ordre des recherches conservées et les invalidations buffer, query
+et shader restent inchangés. Les tests source-extraits ASan/UBSan
+vérifient les lots entièrement vides, mixtes, inconnus et surdimensionnés,
+le nombre de verrous, de recherches texture et les autres caches.
+C'est une réduction structurelle du travail des invalidations mixtes ;
+elle ne démontre pas un gain FPS sur PS5.
