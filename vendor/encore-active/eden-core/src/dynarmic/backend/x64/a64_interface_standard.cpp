@@ -366,9 +366,39 @@ private:
         // LocationDescriptor ctor() does important ops (like tflags) do not skip
         auto const arch_descriptor = A64::LocationDescriptor{descriptor};
         ir_block.Reset(arch_descriptor);
+#if defined(EDEN_JIT_A64_DEV_PROFILE)
+        // Detailed-only phase measurements for the default per-core compiler.
+        // The release path and quiet DEV path do not read any clocks here.
+        const bool eden_phase_timing = eden_compile_timer.active && eden_jit_phases;
+        const auto eden_phase_begin = eden_phase_timing ? std::chrono::steady_clock::now() :
+            std::chrono::steady_clock::time_point{};
+#endif
         A64::Translate(ir_block, arch_descriptor, get_code, {conf.define_unpredictable_behaviour, conf.wall_clock_cntpct});
+#if defined(EDEN_JIT_A64_DEV_PROFILE)
+        const auto eden_phase_translated = eden_phase_timing ? std::chrono::steady_clock::now() :
+            std::chrono::steady_clock::time_point{};
+#endif
         Optimization::Optimize(ir_block, conf, polyfill_options);
-        return emitter.Emit(ir_block).entrypoint;
+#if defined(EDEN_JIT_A64_DEV_PROFILE)
+        const auto eden_phase_optimized = eden_phase_timing ? std::chrono::steady_clock::now() :
+            std::chrono::steady_clock::time_point{};
+#endif
+        const auto entrypoint = emitter.Emit(ir_block).entrypoint;
+#if defined(EDEN_JIT_A64_DEV_PROFILE)
+        if (eden_phase_timing) {
+            const auto eden_phase_emitted = std::chrono::steady_clock::now();
+            const auto eden_phase_ns = [](auto a, auto b) {
+                return static_cast<unsigned long long>(
+                    std::chrono::duration_cast<std::chrono::nanoseconds>(b - a).count());
+            };
+            eden_jit_phases(unsigned(conf.processor_id),
+                            eden_phase_ns(eden_phase_begin, eden_phase_translated),
+                            eden_phase_ns(eden_phase_translated, eden_phase_optimized),
+                            eden_phase_ns(eden_phase_optimized, eden_phase_emitted),
+                            descriptor.Value());
+        }
+#endif
+        return entrypoint;
 #endif
     }
 

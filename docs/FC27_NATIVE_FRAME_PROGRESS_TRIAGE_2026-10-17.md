@@ -87,10 +87,13 @@ not proof that the JIT was holding the frame. An interval with no valid
 monotonic counter pair produces no witness line.
 
 A separate instrumentation gap matters: `jit_dups=on` only enables
-`eden_jit_phases` duplicate accounting. The standard A64 compiler's
-native development `EdenCompileTimer` calls `eden_jit_compile`
-for aggregate time but, with default `EDEN_SHARED_JIT=OFF` and
-`EDEN_JIT_COMPILE_BATCH=OFF`, does **not** wire the duplicate hook.
+`eden_jit_phases` duplicate accounting. Historically, the standard A64 compiler's development `EdenCompileTimer`
+reported aggregate time without the phase/duplicate hook. Since the
+20 October source change, default per-core A64 DEV now emits
+`eden_jit_phases` only with detailed logging enabled, allowing phase
+accumulation and opt-in `jit_dups` accounting without enabling shared
+or batch JIT. The historical 15 October hardware logs did **not** have
+this instrumentation; their zero duplicate values are still inconclusive.
 The `EDEN_PERF_JITPATH` hook also belongs to the shared JIT, so its
 zero `flush_all`/`flush_locations` values in that log are **not** a
 measurement of invalidations in standard per-core Dynarmic. The native
