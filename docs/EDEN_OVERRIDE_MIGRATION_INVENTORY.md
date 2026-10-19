@@ -270,6 +270,13 @@ X06, les tailles des caches et le fallback JIT natif, les marqueurs DEV,
 et les exclusivités monitor ou inline. Cette première preuve reste
 entièrement **hôte**.
 
+Les huit candidates complètes G11 sont enregistrées sous
+`eden-core/src/core/arm/dynarmic/g11/` : A32/A64 × hôte/natif ×
+normal/DEV. L'option `EDEN_INLINE_EXCLUSIVES` garde deux expressions
+conditionnelles en C++ dans chacune : la matrice doit prouver leur
+équivalence aux seize sorties historiques. Le build actif utilise
+encore G11 tant que cette parité n'est pas verte.
+
 Les unités `eden-core/src/core/arm/dynarmic/arm_dynarmic_{32,64}.cpp`
 déjà cataloguées constituent **la base préparée** (I-cache incluse),
 mais n'incluent pas encore toutes les modifications ultérieures de G11.
