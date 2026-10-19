@@ -20,6 +20,15 @@ couverture ne s'additionne pas aux sites de génération CMake ci-dessous.
 - **5 appels générateurs** encore dans CMake ; contre **75 avant**
   les migrations de `fs_i_file.cpp`, `fs_i_storage.cpp`, `fs_i_filesystem.cpp`, `nvhost_ctrl.cpp` et `buffer_queue_producer.cpp`, puis `service.cpp` et `svc_ipc.cpp`. Le corps de la fonction utilitaire
   `write_derived` n'est pas compté comme une invocation.
+- **Garde-fou de non-régression renforcé (19 octobre 2026) :**
+  `tools/check-vendor-consolidation-debt.py` limite désormais les sites
+  de génération du CMake principal aux cinq destinations G11/G13/G19/G21/G23
+  recensées ci-dessous. Son plafond descendant est de **5** générations,
+  **8** lectures et **52** remplacements après déduction des exceptions
+  déjà justifiées ; il ne permet plus le retour aux budgets historiques.
+  G23 reste une ressource GLSL, non une réécriture du moteur. Les deux modules
+  expérimentaux restent suivis séparément, sans compter leurs sites comme
+  actifs dans le CMake principal.
 - **9 lectures `file(READ`** et **59 remplacements
   `string(REPLACE`**, incluant certains usages de configuration ordinaires,
   pas seulement des réécritures de C++.
