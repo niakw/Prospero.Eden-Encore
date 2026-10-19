@@ -7,13 +7,13 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 cmake = (root / "headless/CMakeLists.txt").read_text()
 pinned = (root / "vendor/sources/eden/src/core/hle/kernel/kernel.cpp").read_text()
-begin = 'file(READ "\${PROJECT_SOURCE_DIR}/src/core/hle/kernel/kernel.cpp" kernel_source)'
-finish = 'set_property(TARGET core PROPERTY SOURCES "\${core_sources}")'
+begin = 'file(READ "${PROJECT_SOURCE_DIR}/src/core/hle/kernel/kernel.cpp" kernel_source)'
+finish = 'set_property(TARGET core PROPERTY SOURCES "${core_sources}")'
 assert cmake.count(begin) == 1
 start = cmake.index(begin)
 end = cmake.index(finish, start) + len(finish)
 legacy = cmake[start:end]
-assert legacy.count('write_derived("\${PORT_BUILD_DIR}/kernel.cpp" "\${kernel_source}")') == 1
+assert legacy.count('write_derived("${PORT_BUILD_DIR}/kernel.cpp" "${kernel_source}")') == 1
 assert legacy.count("eden_patch_kernel([=[") == 7
 assert pinned.count("    void Shutdown(KernelCore& kernel) {") == 1
 with tempfile.TemporaryDirectory(prefix="encore-g19-oracle-") as td:
@@ -32,12 +32,12 @@ set(PROJECT_SOURCE_DIR "__ROOT__/vendor/sources/eden")
 set(PORT_BUILD_DIR "__STAGE__")
 set(EDEN_DEV_PROFILE __DEV__)
 add_library(core STATIC
-    "\${CMAKE_CURRENT_SOURCE_DIR}/empty.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/empty.cpp"
     hle/kernel/kernel.cpp
     hle/kernel/k_process.cpp
     hle/service/server_manager.cpp)
 function(write_derived path content)
-    file(WRITE "\${path}" "\${content}")
+    file(WRITE "${path}" "${content}")
 endfunction()
 '''
         header = (header.replace("__ROOT__", str(root))
@@ -46,7 +46,7 @@ endfunction()
         (project / "CMakeLists.txt").write_text(
             header + legacy + '''
 get_target_property(g19_selected core SOURCES)
-file(WRITE "\${PORT_BUILD_DIR}/selected.txt" "\${g19_selected}")
+file(WRITE "${PORT_BUILD_DIR}/selected.txt" "${g19_selected}")
 ''')
         result = subprocess.run(
             ["cmake", "-S", str(project), "-B", str(project / "build")],
