@@ -168,11 +168,21 @@ void Fermi2D::Blit() {
     };
 
     const auto need_align_to_pitch =
+        bytes_per_pixel != 0 &&
         src.linear == Tegra::Engines::Fermi2D::MemoryLayout::Pitch &&
         static_cast<s32>(src.width) == config.src_x1 &&
         config.src_x1 > static_cast<s32>(src.pitch / bytes_per_pixel) && config.src_x0 > 0;
     if (need_align_to_pitch) {
-        auto address = src.Address() + config.src_x0 * bytes_per_pixel;
+        // Widen both operands before multiplying, not merely the result.
+        // Reject a guest address that would wrap when advancing the row.
+        const u64 x_offset = static_cast<u64>(config.src_x0) *
+                             static_cast<u64>(bytes_per_pixel);
+        const u64 base_address = src.Address();
+        if (x_offset > ~u64{0} - base_address) {
+            AssertFailSoftImpl();
+            return;
+        }
+        const u64 address = base_address + x_offset;
         src.addr_upper = static_cast<u32>(address >> 32);
         src.addr_lower = static_cast<u32>(address);
         src.width -= config.src_x0;
