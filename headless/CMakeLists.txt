@@ -487,7 +487,7 @@ foreach(bits 32 64)
     list(REMOVE_ITEM core_sources "${relative}")
     list(APPEND core_sources "${EDEN_G11_SOURCE}")
     # The experimental opt-in is scoped to this translation unit only.
-    set_source_files_properties("${EDEN_G11_SOURCE}" PROPERTIES
+    set_source_files_properties("${EDEN_G11_SOURCE}" TARGET_DIRECTORY core PROPERTIES
         COMPILE_DEFINITIONS "EDEN_INLINE_EXCLUSIVES=${EDEN_G11_INLINE_VALUE}")
 endforeach()
 # G12: complete maintained PhysicalCore sources. No build-time C++ patches.

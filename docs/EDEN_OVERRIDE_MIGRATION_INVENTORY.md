@@ -269,6 +269,10 @@ X06, les tailles des caches et le fallback JIT natif, les marqueurs DEV,
 et les exclusivités monitor ou inline. Cette première preuve reste
 entièrement **hôte**.
 
+La macro des exclusivités inline est configurée **sur la directory de la cible `core`**
+via `TARGET_DIRECTORY core`, exclusivement sur les deux sources JIT sélectionnées :
+ce contrôle évite une validation trompeuse du seul répertoire `headless`.
+
 Les huit candidates complètes G11 sont enregistrées sous
 `eden-core/src/core/arm/dynarmic/g11/` : A32/A64 × hôte/natif ×
 normal/DEV. L'option `EDEN_INLINE_EXCLUSIVES` garde deux expressions

@@ -57,7 +57,7 @@ assert 'function(eden_patch source old new)' not in c
 assert 'write_derived("${derived}"' not in c
 assert 'include("${EDEN_PORT_DIR}/native_jit_memory_read_guard.cmake")' not in c
 assert 'list(APPEND core_sources "${EDEN_G11_SOURCE}")' in c
-assert 'set_source_files_properties("${EDEN_G11_SOURCE}" PROPERTIES' in c
+assert 'set_source_files_properties("${EDEN_G11_SOURCE}" TARGET_DIRECTORY core PROPERTIES' in c
 for bits in (32,64):
     for platform in ("host","native"):
         for profile in ("normal","dev"):
