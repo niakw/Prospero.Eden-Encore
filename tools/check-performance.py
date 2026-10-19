@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Keep diagnostic collection out of production guest, JIT and storage hot paths."""
+"""Verify maintained guest JIT profiles and production diagnostic hot-path guards."""
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
@@ -10,24 +10,45 @@ development = 'EDEN_DEV_PROFILE:BOOL=ON' in cache_text
 shared_jit_enabled = 'EDEN_SHARED_JIT:BOOL=ON' in cache_text
 compile_batch_enabled = 'EDEN_JIT_COMPILE_BATCH:BOOL=ON' in cache_text
 
-# Production Dynarmic and its wrapper must contain no CPU sampling/phase atomics.
-# Only EDEN_DEV_PROFILE builds may wrap guest runs with owner-written snapshots.
-# Regenerate native-local sources before running this generated-output test; cached
-# output from the previous hardware build still contains the removed instrumentation.
+# Only the copied dependency interfaces still live under .local.
+# G11/X06's complete guest JIT wrappers are now maintained sources.
 for name in ('a32_interface.cpp', 'a64_interface.cpp', 'block_of_code.cpp'):
     source = (generated / name).read_text()
     assert 'Eden::Performance::Timer' not in source
     assert 'Eden::Performance::SampleCpu' not in source
     assert 'Eden::Performance::cpu_state' not in source
 
+# Verify ALL maintained owners, not stale pre-G11 generated wrapper files.
+cmake = (root / 'headless/CMakeLists.txt').read_text()
+assert 'list(APPEND core_sources "${EDEN_G11_SOURCE}")' in cmake
+assert 'write_derived("${derived}"' not in cmake
+jit_root = root/'vendor/encore-active/eden-core/src/core/arm/dynarmic/g11'
 for bits in (32, 64):
-    wrapper = (generated / f'arm_dynarmic_{bits}.cpp').read_text()
-    assert 'Eden::Performance::Timer' not in wrapper
-    expected_samples = 2 if development else 0
-    assert wrapper.count('::Eden::Performance::SampleCpu(') == expected_samples
-    assert wrapper.count('::Eden::Performance::cpu_state[m_core_index].phase.store(') == expected_samples
-    if development:
-        assert 'CpuPhase::Guest' in wrapper and 'CpuPhase::Kernel' in wrapper
+    for platform in ('host','native'):
+        for profile in ('normal','dev'):
+            wrapper = (jit_root/f'arm_dynarmic_{bits}_{platform}_{profile}.cpp').read_text()
+            expected_samples = 2 if profile == 'dev' else 0
+            assert 'Eden::Performance::Timer' not in wrapper
+            assert wrapper.count('::Eden::Performance::SampleCpu(') == expected_samples
+            assert wrapper.count('::Eden::Performance::cpu_state[m_core_index].phase.store(') == expected_samples
+            assert ('CpuPhase::Guest' in wrapper) == (profile == 'dev')
+            assert ('CpuPhase::Kernel' in wrapper) == (profile == 'dev')
+            assert (f'EDEN_DEV_JIT bits={bits}' in wrapper) == (profile == 'dev')
+            assert 'config.code_cache_size = std::uint32_t(8_MiB);' in wrapper
+            baseline = (
+                'm_core_index == 0 ? 256_MiB : m_core_index < 3 ? 192_MiB : 16_MiB'
+                if bits == 64 else
+                'm_core_index == 0 ? 512_MiB : m_core_index < 3 ? 64_MiB : 16_MiB'
+            )
+            assert baseline in wrapper
+            if platform == 'native':
+                assert f'A{bits}CacheBytes(m_core_index' in wrapper
+                assert 'ConstructWithCapacityFallback(' in wrapper
+                assert wrapper.count('if (!CheckMemoryAccess(vaddr') == (4 if bits == 32 else 5)
+            else:
+                assert f'A{bits}CacheBytes(m_core_index' not in wrapper
+                assert 'ConstructWithCapacityFallback(' not in wrapper
+                assert 'if (!CheckMemoryAccess(vaddr' not in wrapper
 
 jit = (generated / 'a64_interface.cpp').read_text()
 if not development:
@@ -51,14 +72,7 @@ elif compile_batch_enabled:
 else:
     assert 'return emitter.Emit(ir_block).entrypoint;' in block
 
-for bits in (32, 64):
-    wrapper = (generated / f'arm_dynarmic_{bits}.cpp').read_text()
-    assert ('m_core_index == 0 ? 256_MiB : m_core_index < 3 ? 192_MiB : 16_MiB' if bits == 64 else
-            'm_core_index == 0 ? 512_MiB : m_core_index < 3 ? 64_MiB : 16_MiB') in wrapper
-    assert 'config.code_cache_size = std::uint32_t(8_MiB);' in wrapper  # Null JIT stays small.
-    if development:
-        assert f'EDEN_DEV_JIT bits={bits}' in wrapper
-        assert 'Eden::Performance::SampleCpu' in wrapper
+# Null-JIT baseline and diagnostics are checked in all eight owned wrappers.
 
 cmake = (root / 'headless/CMakeLists.txt').read_text()
 assert 'Timer read_timer' not in cmake
@@ -83,4 +97,5 @@ main = (root / 'headless/main.cpp').read_text()
 assert 'Performance::Reset()' not in main
 assert 'Performance::Report()' not in main
 assert 'Settings::values.renderer_debug = false;' in main
+print('ENCORE_G11_MAINTAINED_PERFORMANCE_PROFILE_PASS profiles=8')
 print('ARM32/ARM64 JIT budgets and development-only CPU sampling PASS')
