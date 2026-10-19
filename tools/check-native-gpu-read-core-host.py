@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Native GPU-read host-slot regression, without a console or full core build.
 
-Compile the real pinned HandleRasterizerDownload function before and after
-the exact CMake source patch, with minimal host-index and GPU callback stubs.
+Compile the real pinned HandleRasterizerDownload function and the full
+Encore-maintained native version, with host-index and GPU callback stubs.
 The original must fail under sanitizers for an auxiliary host ID; the native
 variant must preserve guest-core caching and isolate scratch across threads.
 """
@@ -31,11 +31,16 @@ method_end = "    void HandleRasterizerWrite(VAddr v_address, size_t size) {"
 assert upstream.count(method_start) == 1 and upstream.count(method_end) == 1
 method = method_start + upstream.split(method_start, 1)[1].split(method_end, 1)[0]
 assert method.count(old) == 1
-assert cmake.count("set(eden_read_original [=[") == 1
-assert cmake.count("set(eden_read_native [=[") == 1
-assert cmake.count('string(REPLACE "${eden_read_original}" "${eden_read_native}"') == 1
-assert cmake.count("Pinned native guest CPU read scratch/slot contract changed") == 1
-assert native in cmake and old in cmake
+assert 'memory_native_standard.cpp' in cmake and 'memory_native_a32.cpp' in cmake
+assert 'write_derived("${eden_native_memory_tu}"' not in cmake
+normal_memory=(root/"vendor/encore-active/eden-core/src/core/memory_native_standard.cpp").read_text()
+a32_memory=(root/"vendor/encore-active/eden-core/src/core/memory_native_a32.cpp").read_text()
+for source in (normal_memory, a32_memory):
+    assert source.count(native) == 1
+    assert old not in source
+maintained_method = method_start + normal_memory.split(method_start,1)[1].split(method_end,1)[0]
+a32_method = method_start + a32_memory.split(method_start,1)[1].split(method_end,1)[0]
+assert maintained_method == a32_method
 assert 'return tls_data.host_thread_id;' in kernel
 assert 'tls_data.host_thread_id = u8(core_id);' in kernel
 assert 'if (core_id >= Core::Hardware::NUM_CPU_CORES)' in kernel
@@ -148,7 +153,7 @@ with tempfile.TemporaryDirectory(prefix="encore-guest-gpu-read-") as tmp:
     root_dir = Path(tmp)
     for label, body, fixed in (
         ("pinned", method, False),
-        ("native", method.replace(old, native), True),
+        ("native", maintained_method, True),
     ):
         unit = root_dir / (label + ".cpp")
         binary = root_dir / label
