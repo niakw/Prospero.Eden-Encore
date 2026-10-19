@@ -73,6 +73,55 @@ def phase_summary(rows: list[dict], phase: str) -> dict:
     }
 
 
+def jit_cache_deltas(log: str) -> dict[int, dict]:
+    """Separate scope-tagged, cumulative JIT-cache snapshots per guest core.
+
+    No frame field exists in EDEN_PERF_JIT_CACHE. Its two counters MUST NOT be
+    merged with EDEN_VULKAN_FRAME windows or inferred to cause an individual
+    presentation gap. Only increasing adjacent native snapshots yield deltas.
+    """
+    fields = re.compile(r"\b(mono_ns|core|flush_all|flush_ranges)=(\d+)(?=\s|$)")
+    prior: dict[int, tuple[int, int, int]] = {}
+    data: dict[int, dict] = {}
+    for line in log.splitlines():
+        if "EDEN_GAME_SESSION_BEGIN" in line:
+            # Multiple titles can reuse one native application process.
+            prior.clear()
+        if not line.startswith("EDEN_PERF_JIT_CACHE "):
+            continue
+        if "scope=standard_a64_applied" not in line.split():
+            continue
+        raw = fields.findall(line)
+        parsed = dict(raw)
+        if len(raw) != 4 or len(parsed) != 4:
+            continue
+        mono, core, full, ranges = (int(parsed[key]) for key in
+                                     ("mono_ns", "core", "flush_all", "flush_ranges"))
+        if core not in range(4):
+            continue
+        s = data.setdefault(core, {
+            "observed_snapshots": 0, "measured_intervals": 0,
+            "full_clears": None, "range_batches": None,
+            "counter_resets": 0, "scope": "standard_a64_applied_not_frame_paired",
+        })
+        previous = prior.get(core)
+        if previous is not None and mono <= previous[0]:
+            # Invalid, duplicate or out-of-order sample: do not rebaseline.
+            continue
+        s["observed_snapshots"] += 1
+        if previous is not None:
+            _, prev_full, prev_ranges = previous
+            if full >= prev_full and ranges >= prev_ranges:
+                s["measured_intervals"] += 1
+                s["full_clears"] = (s["full_clears"] or 0) + full - prev_full
+                s["range_batches"] = (s["range_batches"] or 0) + ranges - prev_ranges
+            else:
+                # A new title or a diagnostic reset. Never sum the negative delta.
+                s["counter_resets"] += 1
+        prior[core] = (mono, full, ranges)
+    return data
+
+
 def analyze(log: str) -> dict:
     frames: dict[int, dict] = {}
     pressure: dict[int, dict] = {}
@@ -316,6 +365,7 @@ def analyze(log: str) -> dict:
         "present_interval_witnesses": [
             present_witnesses[f] for f in keys if f in present_witnesses
         ],
+        "jit_cache_events": jit_cache_deltas(log),
         "jit_core_summary": {
             core: {
                 "observed_windows": len(observed),
@@ -458,6 +508,36 @@ def self_test() -> None:
     ])
     result = analyze(sample)
     assert result["windows"] == 2
+    assert result["jit_cache_events"] == {}  # older telemetry must remain unknown
+    cache_samples = "\n".join([
+        "EDEN_PERF_JIT_CACHE mono_ns=100000 core=0 flush_all=2 flush_ranges=3 scope=standard_a64_applied",
+        "EDEN_PERF_JIT_CACHE mono_ns=110000 core=1 flush_all=5 flush_ranges=10 scope=standard_a64_applied",
+        "EDEN_PERF_JIT_CACHE mono_ns=130000 core=0 flush_all=4 flush_ranges=8 scope=standard_a64_applied",
+        "EDEN_PERF_JIT_CACHE mono_ns=140000 core=0 flush_all=4 flush_ranges=8 scope=standard_a64_applied",
+        "EDEN_PERF_JIT_CACHE mono_ns=135000 core=0 flush_all=500 flush_ranges=500 scope=standard_a64_applied",
+        "EDEN_PERF_JIT_CACHE mono_ns=150000 core=0 flush_all=5 flush_ranges=11 scope=standard_a64_applied",
+        "EDEN_PERF_JIT_CACHE mono_ns=151000 core=1 flush_all=0 flush_ranges=0 scope=standard_a64_applied",
+        "EDEN_PERF_JIT_CACHE mono_ns=160000 core=1 flush_all=1 flush_ranges=2 scope=standard_a64_applied",
+        "EDEN_GAME_SESSION_BEGIN title=another",
+        "EDEN_PERF_JIT_CACHE mono_ns=170000 core=0 flush_all=1 flush_ranges=1 scope=standard_a64_applied",
+        "EDEN_PERF_JIT_CACHE mono_ns=180000 core=0 flush_all=3 flush_ranges=2 scope=standard_a64_applied",
+    ])
+    cache = analyze(sample + "\n" + cache_samples)["jit_cache_events"]
+    assert cache[0]["observed_snapshots"] == 5
+    assert cache[0]["measured_intervals"] == 3
+    assert cache[0]["full_clears"] == 5  # 2 + 1 + 2 after title boundary
+    assert cache[0]["range_batches"] == 9  # 5 + 3 + 1
+    assert cache[0]["counter_resets"] == 0
+    assert cache[1]["observed_snapshots"] == 3
+    assert cache[1]["measured_intervals"] == 1
+    assert cache[1]["counter_resets"] == 1
+    assert cache[1]["full_clears"] == 1 and cache[1]["range_batches"] == 2
+    assert cache[0]["scope"] == "standard_a64_applied_not_frame_paired"
+    assert jit_cache_deltas(cache_samples.replace("scope=standard_a64_applied",
+                                                  "scope=unspecified")) == {}
+    assert jit_cache_deltas("EDEN_PERF_JIT_CACHE mono_ns=2 core=8 flush_all=1 flush_ranges=2 scope=standard_a64_applied") == {}
+    assert jit_cache_deltas("EDEN_PERF_JIT_CACHE mono_ns=2 core=0 flush_all=1 scope=standard_a64_applied") == {}
+
     expected_sha = "0f1e2d3c4b5a6978877665544332211000aabbcc"
     assert result["source_commit"] == expected_sha
     assert analyze(sample.replace("EDEN_BUILD_SOURCE", "NO_BUILD_SOURCE"))["source_commit"] is None
@@ -614,6 +694,12 @@ def main() -> None:
               " not per-guest-frame timing, GPU ownership or a proven freeze cause.")
     else:
         print("PRESENT_INTERVAL_WITNESSES unavailable (no validated opt-in pair)")
+    if report["jit_cache_events"]:
+        print("JIT_CACHE_APPLIED_SNAPSHOT_DELTAS", report["jit_cache_events"])
+        print("NOTE: Per-core JIT cache snapshots have no renderer frame ID;"
+              " they are NOT attributable to individual presents or freezes.")
+    else:
+        print("JIT_CACHE_APPLIED_SNAPSHOT_DELTAS unavailable (no matching tagged native DEV logs)")
     if report["jit_core_summary"]:
         print("GUEST_JIT_CORE_INTERVALS", report["jit_core_summary"])
         print("NOTE: JIT per-core intervals are overlapping CPU work, not wall-clock"
