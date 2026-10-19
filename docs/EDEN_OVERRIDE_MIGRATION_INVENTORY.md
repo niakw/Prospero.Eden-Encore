@@ -495,6 +495,11 @@ sites CMake**, pas un dénombrement des fichiers réellement produits à
 l'exécution. Un module inclus peut définir des macros sans les exécuter,
 et plusieurs sorties sont explicitement conditionnées.
 
+Chaque couple exact **module → destination générée** est maintenant comparé
+à ce tableau par `tools/check-vendor-consolidation-debt.py` lors de la
+prévalidation hôte. Le simple maintien du nombre total de générateurs
+n'autorise pas la substitution silencieuse d'une cible C++ ou d'un module.
+
 <!-- MODULE_GENERATORS_START -->
 | ID | Module CMake | Sortie dérivée | Porte / périmètre |
 | --- | --- | --- | --- |
