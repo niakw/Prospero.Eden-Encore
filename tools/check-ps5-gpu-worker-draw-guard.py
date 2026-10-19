@@ -75,8 +75,14 @@ int main() {
         for(int i=0;i<4;++i)worker_record(&ok,draws);
     });
     std::thread creator([&]{
-        ok.pipeline=true;
-        ok.is_built.store(true,std::memory_order_release);
+        // Publish under the same mutex as cv.wait. Without this lock,
+        // notify_all() may precede the waiter's actual sleep even though
+        // its predicate is atomic, causing an intermittent host-test hang.
+        {
+            std::lock_guard lock(m);
+            ok.pipeline=true;
+            ok.is_built.store(true,std::memory_order_release);
+        }
         cv.notify_all();
     });
     waiter.join();creator.join();
