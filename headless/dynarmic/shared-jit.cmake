@@ -1,6 +1,5 @@
-# ProsperoEden: one compiled-code namespace per guest process for the A64 JITs
-# (headless/dynarmic/jit_group.h). Each macro edits a source already read into the caller's
-# variable, just before the caller writes the derived file.
+# Experimental cross-core JIT: state and group headers come from complete
+# maintained Encore sources. callback.cpp is the remaining derived unit.
 
 set(EDEN_SHARED_JIT_DIR "${PORT_ROOT}/vendor/encore-active/eden-core/dynarmic/shared-jit")
 if(NOT EXISTS "${EDEN_SHARED_JIT_DIR}/jit_group.h")
@@ -27,23 +26,12 @@ endfunction()
 # every dynarmic object (the definition recompiles objects that saw the upstream layout).
 macro(eden_shared_jit_sources)
     set(eden_jitstate_relative "dynarmic/backend/x64/a64_jitstate.h")
-    file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/${eden_jitstate_relative}" eden_jitstate)
-    set(eden_jitstate_anchor "    std::array<u64, RSB_SIZE> rsb_codeptrs;\n")
-    eden_shared_jit_require("${eden_jitstate}" "${eden_jitstate_anchor}" "A64 JIT state")
-    string(REPLACE "${eden_jitstate_anchor}" "${eden_jitstate_anchor}
-    // ProsperoEden: what generated code reads instead of embedding it, so that any core can run
-    // code another core compiled (jit_group.h): this core's callbacks and JIT object, TPIDR
-    // registers, exclusive monitor slots, configuration and fast dispatch table.
-    void* eden_callbacks = nullptr;
-    void* eden_jit = nullptr;
-    u64* eden_tpidr_el0 = nullptr;
-    const u64* eden_tpidrro_el0 = nullptr;
-    void* eden_exclusive_address = nullptr;
-    void* eden_exclusive_value = nullptr;
-    const void* eden_conf = nullptr;
-    void* eden_fast_dispatch = nullptr;
-" eden_jitstate "${eden_jitstate}")
-    write_derived("${PORT_BUILD_DIR}/include/${eden_jitstate_relative}" "${eden_jitstate}")
+    # M01 retired: canonical complete A64JitState matches the old derived output.
+    if(NOT EXISTS "${EDEN_SHARED_JIT_DIR}/a64_jitstate.h")
+        message(FATAL_ERROR "Missing Encore-maintained shared JIT state layout")
+    endif()
+    configure_file("${EDEN_SHARED_JIT_DIR}/a64_jitstate.h"
+        "${PORT_BUILD_DIR}/include/${eden_jitstate_relative}" COPYONLY)
     # M02 retired: the canonical header is already maintained in encore-active.
     # COPYONLY preserves its exact bytes without a second generated source.
     configure_file("${EDEN_SHARED_JIT_DIR}/jit_group.h"

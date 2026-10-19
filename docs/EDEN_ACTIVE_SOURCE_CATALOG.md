@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **286 fichiers** de code et d'en-têtes enregistrés.
-- **286 fichiers** possèdent une correspondance de chemin *exacte*
+- **287 fichiers** de code et d'en-têtes enregistrés.
+- **287 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -25,7 +25,7 @@ et contrôlé par `tools/check-active-source-inventory.py`.
 ni une certification console. Le graphe
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` porte les contrats fonctionnels,
 leurs états et les preuves. L'inventaire des 5 générateurs CMake
-principaux, 11 générateurs de modules, deux modules indirects et 46 patches
+principaux, 10 générateurs de modules, deux modules indirects et 46 patches
 reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 
 <!-- ACTIVE_SOURCE_CATALOG_START -->
@@ -121,6 +121,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/dynarmic/scalar/scalar-fold.inc` | `maintained-override` | J27 |
 | `eden-core/dynarmic/scalar/scalar-memory-read.inc` | `maintained-override` | J28 |
 | `eden-core/dynarmic/scalar/scalar-memory-write.inc` | `maintained-override` | J29 |
+| `eden-core/dynarmic/shared-jit/a64_jitstate.h` | `maintained-override` | J42 |
 | `eden-core/dynarmic/shared-jit/jit_group.h` | `maintained-override` | J21 |
 | `eden-core/dynarmic/shared-jit/jit_group_support.inc` | `maintained-override` | J22 |
 | `eden-core/dynarmic/shared-jit/jit_impl.inc` | `maintained-override` | J23 |
