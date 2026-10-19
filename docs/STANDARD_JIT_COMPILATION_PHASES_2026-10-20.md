@@ -76,3 +76,21 @@ ASan/UBSan dans ses variantes release/DEV et couvre les invalidations
 vides, totales, par plage, combinées et le mode silencieux. Ni le JIT
 partagé, ni les mutex, ni les caches GPU, ni le chemin release ne changent.
 Aucune preuve d'amélioration en jeu sans capture native instrumentée.
+
+## Analyse hors ligne des événements JIT (capture suivante)
+
+`python3 -B tools/analyze-fc27-stutter.py <fichier.log>` produit désormais
+`JIT_CACHE_APPLIED_SNAPSHOT_DELTAS` à partir des lignes natives
+`EDEN_PERF_JIT_CACHE`. Il soustrait seulement des compteurs cumulatifs
+monotones par cœur, exclut les échantillons malformés/doublons et sépare
+les nouveaux jeux via `EDEN_GAME_SESSION_BEGIN`. Les compteurs qui
+redescendent sont traités comme des remises à zéro ; sans deux mesures
+consécutives, la valeur reste **inconnue** (et non zéro). Les logs
+antérieurs à ce hook conservent un résultat vide.
+
+La ligne native ne contient pas de numéro de frame : l'analyse ne
+rattache donc **jamais** une vidange à une frame ou un intervalle de
+présentation. Une association causale avec FC27 nécessitera un témoin
+natif possédant des timestamps et identifiants de progression communs.
+Le self-test existant valide également les journaux anciens, les pertes
+d'échantillons, les resets et la stricte exigence de `scope`.
