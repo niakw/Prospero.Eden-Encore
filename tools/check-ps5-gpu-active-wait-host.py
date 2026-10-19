@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
 """R406: compile the exact production active-wait timer under host ASan/UBSan.
-Also check source-generated native GPU DMA and puller callsites.
+Also check the selected maintained normal/DEV GPU DMA and puller callsites.
 No Sony SDK, binary build, console or guest synchronization changes.
 """
 from pathlib import Path
@@ -23,12 +23,23 @@ assert "active->store(0, std::memory_order_release);" in impl
 assert "if (!totals) return;" in impl
 assert "std::memory_order_acquire" in impl
 assert "while (" not in impl and "std::printf(" not in impl
-assert 'if(unit STREQUAL "dma_pusher" AND EDEN_DEV_PROFILE)' in cmake
-assert 'if(unit STREQUAL "engines/puller" AND EDEN_DEV_PROFILE)' in cmake
-assert "word != value && !dma_pusher.system.IsShuttingDown()" in cmake
-assert "sync_cv.wait_for(lk, std::chrono::milliseconds(10))" in cmake
-assert "gpu_dma_sync_active_since_ns" in cmake
-assert "gpu_puller_semaphore_active_since_ns" in cmake
+gpu_root = root / "vendor/encore-active/eden-core/src/video_core"
+dma_normal = (gpu_root / "dma_pusher.cpp").read_text()
+dma_dev = (gpu_root / "dma_pusher_dev.cpp").read_text()
+puller_normal = (gpu_root / "engines/puller.cpp").read_text()
+puller_dev = (gpu_root / "engines/puller_dev.cpp").read_text()
+assert 'list(APPEND video_sources "${EDEN_MAINTAINED_GPU_DMA}" "${EDEN_MAINTAINED_GPU_PULLER}")' in cmake
+assert 'dma_pusher_dev.cpp' in cmake and 'engines/puller_dev.cpp' in cmake
+for text in (dma_normal, dma_dev):
+    assert "sync_cv.wait_for(lk, std::chrono::milliseconds(10))" in text
+for text in (puller_normal, puller_dev):
+    assert "word != value && !dma_pusher.system.IsShuttingDown()" in text
+assert "gpu_dma_sync_active_since_ns" in dma_dev
+assert "gpu_puller_semaphore_active_since_ns" in puller_dev
+for text in (dma_normal, puller_normal):
+    assert "DiagnosticActiveTimer" not in text
+for text in (dma_dev, puller_dev):
+    assert "DiagnosticActiveTimer" in text
 assert "EDEN_GPU_PULLER_SEMAPHORE frame=%u calls=%llu ns=%llu active_ns=%llu" in report
 assert "EDEN_GPU_DMA_SYNC frame=%u calls=%llu ns=%llu active_ns=%llu" in report
 
