@@ -24,11 +24,11 @@ nouveaux corps C++ destinés à la console.
   `write_derived`, soit **1 site** au total.
 - Aucun module actif ne procède encore aux substitutions **indirectes**
   de C++ recensées. X06 est conservé comme oracle sous `tools/fixtures/`.
-- `headless/` contient **3 fragments `.inc`**. Plusieurs contribuent
-  aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
-  selon qu'il s'agit d'un runtime natif autonome ou d'un override de
-  dépendance. **Leur présence dans `headless` ne vaut pas conformité
-  à la règle de centralisation.**
+- `headless/` contient **3 fragments `.inc`** : deux appartiennent aux
+  diagnostics GPU de l'application (dont un inclus transitivement),
+  le troisième est un ancien diagnostic OpenGL dont aucun consommateur
+  actif n'est confirmé. Aucun n'est un override tiers identifié ; toute
+  nouvelle inclusion doit néanmoins être auditée.
 - Les fichiers `src/`, `third_party/`, `assets/`, `data/`,
   `fixtures/` et `sce_sys/` sont distincts : code natif original,
   contrats ABI, ressources ou tests. Ils ne sont pas automatiquement

@@ -255,10 +255,10 @@ Les IDs G01–G23 sont stables et ne sont pas renumérotés.
 
 ## G11 + X06 — preuve des variantes avant centralisation
 
-Le dernier générateur C++ actif `G11` produit `arm_dynarmic_32.cpp` et
+Le générateur C++ historique G11 produisait `arm_dynarmic_32.cpp` et
 `arm_dynarmic_64.cpp` selon hôte/natif, normal/DEV et l'option
-`EDEN_INLINE_EXCLUSIVES`. Le module indirect X06 ajoute ses gardes de
-lecture RAM native à cette même chaîne de génération.
+`EDEN_INLINE_EXCLUSIVES`. Le module X06 ajoutait ses gardes de lecture
+RAM native à cette même chaîne ; tous deux sont retirés du build actif.
 
 Le nouveau témoin `tools/check-g11-jit-profile-matrix-host.py` reconstitue
 d'abord la source native réellement préparée, avec les patchs I-cache
@@ -273,11 +273,12 @@ La macro des exclusivités inline est configurée **sur la directory de la cible
 via `TARGET_DIRECTORY core`, exclusivement sur les deux sources JIT sélectionnées :
 ce contrôle évite une validation trompeuse du seul répertoire `headless`.
 
-Les huit candidates complètes G11 sont enregistrées sous
+Les huit sources complètes G11 sont maintenues sous
 `eden-core/src/core/arm/dynarmic/g11/` : A32/A64 × hôte/natif ×
 normal/DEV. L'option `EDEN_INLINE_EXCLUSIVES` garde deux expressions
-conditionnelles en C++ dans chacune : la matrice doit prouver leur
-équivalence aux seize sorties historiques. Le build actif sélectionne directement les huit variantes G11.
+conditionnelles en C++ dans chacune : la matrice contrôle leur
+équivalence aux seize sorties historiques. Le build actif sélectionne
+directement les huit variantes G11.
 L'ancienne génération est archivée dans `tools/fixtures/legacy-g11-jit.cmake`
 uniquement pour le test de parité.
 
@@ -286,9 +287,8 @@ déjà cataloguées constituent **la base préparée** (I-cache incluse),
 mais n'incluent pas encore toutes les modifications ultérieures de G11.
 Le témoin interdit leur substitution directe comme sources finales.
 L'ancienne hypothèse d'un G11 basé uniquement sur la source épinglée
-brute aurait perdu la cohérence I-cache de production. Toute future centralisation devra
-maintenir les variantes nécessaires dans `encore-active`, sans activer
-les exclusivités inline qui restent désactivées par défaut.
+brute aurait perdu la cohérence I-cache de production. Toute évolution devra préserver les variantes dans `encore-active`,
+sans activer les exclusivités inline, désactivées par défaut.
 
 ## G19 — matrice kernel avant centralisation
 
@@ -658,13 +658,15 @@ sont contrôlées par les témoins de parité M01 et M03. Shared JIT reste OFF.
 ## Patches de sources hors générateurs CMake
 
 **46 fichiers `.patch`** se trouvent encore dans `headless/backports/`.
-Ils ne sont comptés ni dans les **4 sites** `write_derived()`, ni dans
-les **2 modules indirects** ci-dessous :
+Ils ne sont comptés ni dans **l'unique site** `write_derived()` (G23 GLSL),
+ni dans des modules indirects actifs, désormais au nombre de **0** :
 
 - **44 appels `apply_one`** dans `tools/apply-eden-backports.sh`,
   sous contrôle d'identité et de hash. Il modifie **l'arbre Eden fourni
-  en argument** via `git apply` ; il ne s'agit pas d'un sélecteur de
-  C++ suivi dans `vendor/encore-active`. L'appel à
+  en argument** via `git apply` lorsqu'il est rejoué explicitement comme
+  oracle historique. Le build courant installe, sans `git apply`, les
+  **sources complètes** versionnées dans `vendor/encore-active/eden-backports`
+  après vérification de leurs empreintes. L'appel à
   `eden-dummy-thread-waits.patch` est expérimental et OFF par défaut.
 - **2 patches cœur** (`eden-dynarmic-icache-coherence.patch` et
   `eden-sm-host-wait.patch`) sont installés séparément par

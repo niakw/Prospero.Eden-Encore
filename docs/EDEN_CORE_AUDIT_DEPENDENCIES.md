@@ -90,8 +90,9 @@ sélectionnées uniquement en `EDEN_DEV_PROFILE`.
 `tools/check-vendor-consolidation-debt.py` vérifie la parité du corps
 C++ avec l'override généré auparavant et recense les sorties CMake dans
 `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **1 site principal**
-`write_derived()` restent après migration de G20. Les modules inclus
-ajoutent **0 site** ; les modules X05/X06 sont retirés du build et leurs preuves historiques restent hors compilation.
+`write_derived()` subsiste pour la ressource GLSL G23. Les modules inclus
+ajoutent **0 site** ; les anciens X05/X06 sont retirés du build,
+avec leurs oracles historiques conservés hors compilation.
 Les ressources légitimes et les modes expérimentaux OFF ne sont pas des
 preuves de dette exécutée en production. Une cible variable peut générer
 plusieurs fichiers physiques ; les compteurs ne mesurent pas directement
