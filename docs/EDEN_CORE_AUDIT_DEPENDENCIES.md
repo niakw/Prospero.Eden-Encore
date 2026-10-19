@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 416
+**Non, this is not an exhaustive repository-wide inventory.** The 417
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 416 | 393 | 841 |
+| Graphe connu | 417 | 394 | 842 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 361 | 348 | 736 |
+| SOURCE — lecture effectuée, preuve insuffisante | 362 | 349 | 737 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **376** | **362** | **764** |
+| **Encore à qualifier (SOURCE + OPEN)** | **377** | **363** | **765** |
 | Dont priorité P0 (SOURCE + OPEN) | 114 | 108 | 265 |
 
-Le **noyau restant** compte donc 376 critères répartis sur
-362 fichiers et 764 mentions fonction/contrat :
-15 OPEN et 361 SOURCE.
+Le **noyau restant** compte donc 377 critères répartis sur
+363 fichiers et 765 mentions fonction/contrat :
+15 OPEN et 362 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-315 fichiers de code/en-têtes présents et 315 avec un chemin de
+316 fichiers de code/en-têtes présents et 316 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -649,6 +649,7 @@ function/contract tokens are checked by CI for existence only; the
 | J49 | P1 | J19,J13 | vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_64_host_normal.cpp | DynarmicCallbacks64::MemoryRead8; config.fastmem_exclusive_access | SOURCE | tools/check-g11-jit-profile-matrix-host.py | G11 host/normal A64 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; directly selected, host-parity qualified; console not qualified | 🟡 Source étudiée |
 | J50 | P1 | J19,J13 | vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_64_native_dev.cpp | DynarmicCallbacks64::MemoryRead8; config.fastmem_exclusive_access | SOURCE | tools/check-g11-jit-profile-matrix-host.py | G11 native/dev A64 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; directly selected, host-parity qualified; console not qualified | 🟡 Source étudiée |
 | J51 | P1 | J19,J13 | vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_64_native_normal.cpp | DynarmicCallbacks64::MemoryRead8; config.fastmem_exclusive_access | SOURCE | tools/check-g11-jit-profile-matrix-host.py | G11 native/normal A64 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; directly selected, host-parity qualified; console not qualified | 🟡 Source étudiée |
+| V107 | P2 | V84 | vendor/encore-active/eden-core/src/video_core/renderer_opengl/dev_render_passes.inc | CaptureDevelopmentPass | SOURCE | tools/check-headless-fragment-ownership.py | Former headless DEV OpenGL capture fragment moved byte-for-byte into same renderer source directory; local include by maintained rasterizer DEV only, no native console proof | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 

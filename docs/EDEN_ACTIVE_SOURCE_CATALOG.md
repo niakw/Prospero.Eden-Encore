@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **315 fichiers** de code et d'en-têtes enregistrés.
-- **315 fichiers** possèdent une correspondance de chemin *exacte*
+- **316 fichiers** de code et d'en-têtes enregistrés.
+- **316 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -260,6 +260,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/video_core/gpu_vulkan.cpp` | `maintained-override` | V104 |
 | `eden-core/src/video_core/macro.cpp` | `maintained-override` | Q05,V65 |
 | `eden-core/src/video_core/memory_manager.cpp` | `maintained-override` | V71 |
+| `eden-core/src/video_core/renderer_opengl/dev_render_passes.inc` | `maintained-override` | V107 |
 | `eden-core/src/video_core/renderer_opengl/gl_buffer_cache.cpp` | `maintained-override` | V14 |
 | `eden-core/src/video_core/renderer_opengl/gl_query_cache.cpp` | `maintained-override` | V15 |
 | `eden-core/src/video_core/renderer_opengl/gl_rasterizer.cpp` | `maintained-override` | V83 |
@@ -365,7 +366,7 @@ Les fichiers source/en-tête/fragment de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
 Les chemins du graphe moteur y ont un propriétaire exact ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
-La couverture de 315/315 ci-dessus ne s'applique **pas** à ce dossier.
+La couverture de 316/316 ci-dessus ne s'applique **pas** à ce dossier.
 
 ## Critères de tenue à jour
 

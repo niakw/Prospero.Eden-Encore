@@ -16,7 +16,7 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 19 octobre 2026
 
-- `vendor/encore-active` : **315 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **316 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
 - `headless/CMakeLists.txt` : **1 générateur** `write_derived`.
@@ -24,11 +24,10 @@ nouveaux corps C++ destinés à la console.
   `write_derived`, soit **1 site** au total.
 - Aucun module actif ne procède encore aux substitutions **indirectes**
   de C++ recensées. X06 est conservé comme oracle sous `tools/fixtures/`.
-- `headless/` contient **3 fragments `.inc`** : deux appartiennent aux
-  diagnostics GPU de l'application (dont un inclus transitivement),
-  le troisième est un ancien diagnostic OpenGL dont aucun consommateur
-  actif n'est confirmé. Aucun n'est un override tiers identifié ; toute
-  nouvelle inclusion doit néanmoins être auditée.
+- `headless/` contient **2 fragments `.inc`**, tous deux diagnostics GPU
+  de l'application (l'un inclus transitivement). L'ancien diagnostic
+  OpenGL DEV a été déplacé sans réécriture dans `encore-active` et est
+  inclus exclusivement par le rasterizer DEV maintenu.
 - Les fichiers `src/`, `third_party/`, `assets/`, `data/`,
   `fixtures/` et `sce_sys/` sont distincts : code natif original,
   contrats ABI, ressources ou tests. Ils ne sont pas automatiquement
@@ -136,23 +135,23 @@ fragments de l'application native qui ne remplacent aucune source upstream.
 <!-- SINGLE_SOURCE_FRAGMENTS_START -->
 | Chemin | Hypothèse de rôle | Qualification |
 | --- | --- | --- |
-| `headless/dev_render_passes.inc` | Ancien diagnostic OpenGL local (`CaptureDevelopmentPass`) | Candidat orphelin : le contrôle hôte vérifie l'absence de référence dans les sources applicatives et `encore-active` ; hors chemin de compilation connu |
 | `headless/gpu_native_probe.inc` | Diagnostic GPU natif local | Inclus transitivement par `gpu_probe.inc` ; pas un override de dépendance |
 | `headless/gpu_probe.inc` | Diagnostic graphique local | Inclus par `graphics.cpp` sous `EDEN_GPU_PROBE` ; reste dans le runtime de l'application |
 <!-- SINGLE_SOURCE_FRAGMENTS_END -->
 
-### Frontières des trois fragments résiduels
+### Frontières des deux fragments résiduels
 
 L'injection G09 est intégrée à `a64_interface_standard.cpp` sous un garde
 C++ explicite. L'unité `a64_interface_shared.cpp` conserve la variante
 partagée déjà distincte dans l'ancien CMake. Les deux fragments `gpu_probe.inc` / `gpu_native_probe.inc` sont des diagnostics
-applicatifs effectivement inclus par `graphics.cpp` sous `EDEN_GPU_PROBE`.
-L'ancien `dev_render_passes.inc` n'a **aucun consommateur trouvé dans les
-sources applicatives/Encore surveillées** : `tools/check-headless-fragment-ownership.py`
-bloque sa réintroduction silencieuse et vérifie l'inclusion des deux sondes.
-Son statut est « diagnostic local orphelin », et **non override de dépendance**.
-Un test de source hôte ne prouve ni le contenu des caches natifs ni une
-exécution console ; le fichier n'est pas supprimé par simple déduction.
+applicatifs inclus par `graphics.cpp` sous `EDEN_GPU_PROBE`.
+Le contrôle de compilation a révélé que `gl_rasterizer_dev.cpp` incluait
+`headless/dev_render_passes.inc` : c'était donc un **override DEV réel**,
+non un fichier orphelin. Ce fragment complet vit désormais sous
+`vendor/encore-active/eden-core/src/video_core/renderer_opengl/`, près du
+rasterizer DEV qui l'inclut. `tools/check-headless-fragment-ownership.py`
+verrouille cette provenance et rejette d'autres consommateurs actifs.
+Le déplacement est à contenu identique, sans qualification console.
 
 ## Interface A32 native : génération G10 supprimée
 
