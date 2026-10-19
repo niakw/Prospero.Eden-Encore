@@ -74,7 +74,7 @@ assert '::Eden::Performance::DiagnosticActiveTimer semaphore_timer(' in puller_d
 for quiet in (dma_normal, puller_normal):
     assert "DiagnosticActiveTimer" not in quiet
 for diagnostic in (dma_dev, puller_dev):
-    assert diagnostic.startswith('#include <chrono>\\n#include "performance.h"\\n')
+    assert diagnostic.startswith('#include <chrono>\n#include "performance.h"\n')
 assert "sync_cv.wait_for(lk, std::chrono::milliseconds(10));" in dma_normal
 assert "sync_cv.wait_for(lk, std::chrono::milliseconds(10));" in dma_dev
 assert "word != value && !dma_pusher.system.IsShuttingDown()" in puller_normal
