@@ -208,6 +208,7 @@ jobs:
           python3 -B tools/check-active-cmake-source-boundary.py
           python3 -B tools/check-headless-fragment-ownership.py
           python3 -B tools/check-headless-critical-interface-owners.py
+          python3 -B tools/check-headless-runtime-header-owners.py
           python3 -B tools/check-vendor-consolidation-debt.py
           python3 -B tools/check-vendored-native-build-cmake.py
           python3 -B tools/check-vendored-fiber-source.py
