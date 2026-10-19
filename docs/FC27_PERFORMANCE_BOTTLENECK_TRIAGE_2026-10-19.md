@@ -251,3 +251,22 @@ l'indépendance du cache texture. Le test de texture existant
 marque explicitement ses buffers enregistrés : ses invariants
 ne sont donc pas affaiblis. Les gains réels de frametime restent
 à mesurer sur matériel, sans activer d'option expérimentale.
+
+## 20 octobre — ne pas reprendre le verrou pour une compilation Vulkan terminée
+
+`GraphicsPipeline::ConfigureDraw` conserve le callback GPU ordonné et le
+`build_condvar.wait` pour les shaders réellement en cours de construction.
+Mais si le constructeur a déjà publié `is_built=true` avec une écriture
+`release` avant que le callback soit dépilé, le chemin active lit ce bit
+avec `acquire` et revient immédiatement, sans relocker `build_mutex`
+ou démarrer un timer de blocage inutile. Une publication encore absente
+utilise exactement la condition variable et le verrou d'origine. Les shaders
+échoués restent refusés par les contrôles de draw déjà en place.
+
+La recette `tools/prepare-vulkan-port.py` est mise à jour simultanément
+avec la source `vendor/encore-active` afin de conserver la stricte parité
+des 43 backports et de l'oracle Vulkan. Le nouveau test C++ extrait le
+callback réel et vérifie sous ASan/UBSan l'absence de prise de verrou
+lorsque le pipeline est prêt, puis le réveil correct lorsque la compilation
+est encore en cours. Pas de mutation des fences, cache images ou ordres
+GPU/guest. Le gain de latence PS5 reste à mesurer sur un paquet identifié.
