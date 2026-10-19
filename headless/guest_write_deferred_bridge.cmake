@@ -31,51 +31,15 @@ if(EDEN_GUEST_WRITE_BRIDGE_DEV)
     target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/deferred-core")
 
 
-    # Derive the actual GPU memory manager, explicitly using the shadow header.
-    file(READ "${PROJECT_SOURCE_DIR}/src/video_core/memory_manager.cpp" bridge_mm)
-    string(FIND "${bridge_mm}" "#include \"memory_manager.h\"" found)
-    if(found LESS 0)
-        message(FATAL_ERROR "Pinned GPU MemoryManager local header changed")
+    # M06 migrated: complete experimental translation unit is maintained
+    # in encore-active. This recipe only selects/copies it.
+    set(EDEN_DEFERRED_MEMORY_SOURCE
+        "${PORT_ROOT}/vendor/encore-active/eden-core/guest-bridge/memory_manager.cpp")
+    if(NOT EXISTS "${EDEN_DEFERRED_MEMORY_SOURCE}")
+        message(FATAL_ERROR "Missing maintained deferred memory manager source")
     endif()
-    string(REPLACE "#include \"memory_manager.h\""
-        "#include \"video_core/memory_manager.h\"" bridge_mm "${bridge_mm}")
-    set(flush_api "void MemoryManager::FlushCaching() {")
-    string(FIND "${bridge_mm}" "${flush_api}" found)
-    if(found LESS 0)
-        message(FATAL_ERROR "Pinned GPU FlushCaching entry changed")
-    endif()
-    set(bridge_flush [=[
-bool MemoryManager::EnqueueDeferredCPUWrite(u64 address, u64 size) {
-    // The native producer still enqueues BEFORE writing guest backing RAM.
-    // No runtime setting may activate this until the post-store bridge exists.
-    if (!::Eden::GpuDeferredWrite::kNativePostStorePublicationReady ||
-        !::Eden::Performance::cpu_write_defer.load(std::memory_order_relaxed) ||
-        ::Eden::GpuDeferredWrite::guest_write_intent !=
-            ::Eden::GpuDeferredWrite::GuestWriteIntent::StoreFollows ||
-        ::Eden::GpuDeferredWrite::replaying_guest_write) return false;
-    const unsigned core = ::Eden::GpuDeferredWrite::guest_write_origin_core;
-    if (core >= ::Eden::GpuDeferredWrite::Queue::Cores) return false;
-    return deferred_cpu_write_queue.Enqueue(core, address, size);
-}
-void MemoryManager::FlushCaching() {
-    // A failed replay may have partially modified cache state. Never allow
-    // a later GPU command to proceed through this developer-only bridge.
-    if (deferred_cpu_write_queue.Failed()) std::terminate();
-    if (deferred_cpu_write_queue.Pending()) {
-        ::Eden::GpuDeferredWrite::ScopedReplay replay_guard;
-        auto dirty = system.GetGPUDirtyMemoryManager();
-        ::Eden::GpuDeferredWrite::ReplayQueued(deferred_cpu_write_queue,
-            [&](std::uint64_t address, std::uint64_t size) {
-                return rasterizer->OnCPUWrite(address, size);
-            },
-            [&](unsigned core, std::uint64_t address, std::uint64_t size) {
-                dirty[core].Collect(address, size);
-            });
-    }
-]=])
-    string(REPLACE "${flush_api}" "${bridge_flush}" bridge_mm "${bridge_mm}")
-    string(PREPEND bridge_mm "#include \"core/gpu_dirty_memory_manager.h\"\n#include \"${EDEN_PORT_DIR}/performance.h\"\n#include \"${EDEN_PORT_DIR}/gpu_deferred_replay.h\"\n")
-    write_derived("${PORT_BUILD_DIR}/memory_manager_deferred.cpp" "${bridge_mm}")
+    configure_file("${EDEN_DEFERRED_MEMORY_SOURCE}"
+        "${PORT_BUILD_DIR}/memory_manager_deferred.cpp" COPYONLY)
 
     # Use maintained Vulkan implementation; do not mutate its byte-pinned
     # active file or the generator/source parity contract.

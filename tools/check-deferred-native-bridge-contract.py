@@ -11,6 +11,8 @@ import tempfile
 root=Path(__file__).resolve().parents[1]
 bridge=root/"headless/guest_write_deferred_bridge.cmake"
 code=bridge.read_text()
+maintained_m06 = root/"vendor/encore-active/eden-core/guest-bridge/memory_manager.cpp"
+bridge_runtime = code + "\n" + maintained_m06.read_text()
 base=(root/"headless/CMakeLists.txt").read_text()
 replay=(root/"headless/gpu_deferred_replay.h").read_text()
 perf=(root/"headless/performance.h").read_text()
@@ -32,10 +34,10 @@ assert "guest_write_intent = previous;" in replay
 assert "guest_write_intent = GuestWriteIntent::StoreFollows;" in replay
 # Fail-closed runtime qualification, independent of any developer toggle.
 assert "inline constexpr bool kNativePostStorePublicationReady = false;" in replay
-assert code.count("::Eden::GpuDeferredWrite::kNativePostStorePublicationReady") == 2
-assert code.index("!::Eden::GpuDeferredWrite::kNativePostStorePublicationReady") < code.index("deferred_cpu_write_queue.Enqueue(core, address, size)")
+assert bridge_runtime.count("::Eden::GpuDeferredWrite::kNativePostStorePublicationReady") == 2
+assert bridge_runtime.index("!::Eden::GpuDeferredWrite::kNativePostStorePublicationReady") < bridge_runtime.index("deferred_cpu_write_queue.Enqueue(core, address, size)")
 assert "const bool defer_candidate =\n        ::Eden::GpuDeferredWrite::kNativePostStorePublicationReady &&" in code
-assert code.count("::Eden::GpuDeferredWrite::GuestWriteIntent::StoreFollows") == 2
+assert bridge_runtime.count("::Eden::GpuDeferredWrite::GuestWriteIntent::StoreFollows") == 2
 assert "::Eden::GpuDeferredWrite::ScopedGuestStoreIntent store_intent;" in code
 assert 'string(FIND "${bridge_cpu}" "${${anchor}}" found)' in code
 assert 'string(FIND "${bridge_cpu}" "${NESTED_ANCHOR}" found)' not in code
@@ -110,8 +112,8 @@ for guard in ("if (auto ticket = Reserve(core, address, size)) return ticket;",
     assert guard in ordered, guard
 assert ordered.index("barrier = {accepted_, generation_};") < ordered.index("RequestGpuOrThrow(request_gpu);")
 assert ordered.index("RequestGpuOrThrow(request_gpu);") < ordered.index("WaitUntil(barrier)")
-assert "deferred_cpu_write_queue.ReserveOrdered(" not in code
-assert "CommitPostStore(" not in code
+assert "deferred_cpu_write_queue.ReserveOrdered(" not in bridge_runtime
+assert "CommitPostStore(" not in bridge_runtime
 assert "accepted_ - completed_ >= MaxOutstandingWrites" in queue
 # Publishing thousands of reservations out of order must not turn the FIFO
 # into a quadratic per-frame CPU hotspot. Last-sequence keys are monotone
@@ -145,8 +147,8 @@ assert "wake_cv_.wait(lock, [&] { return pending_wake_callbacks_ == 0; });" in q
 assert "pending_wake_callbacks_ != 0" in queue
 assert "active_wake_callback_ == this" in queue
 assert "active_wake_callback_ = this;" in notify_body
-assert "deferred_cpu_write_queue.PublishAndWake(" not in code
-assert "deferred_cpu_write_queue.CancelAndWake(" not in code
+assert "deferred_cpu_write_queue.PublishAndWake(" not in bridge_runtime
+assert "deferred_cpu_write_queue.CancelAndWake(" not in bridge_runtime
 # Shutdown must be a replay-lifetime barrier, not just a waiter wake-up.
 # Without this, the GPU callback can still touch freed rasterizer resources.
 close_body=queue.split("void Close() {",1)[1].split("bool ResetAfterQuiescence()",1)[0]
@@ -182,20 +184,20 @@ assert "close_completed_ = false;" in queue
 assert "close_completed_ = true;" in close_body
 assert close_body.index("std::lock_guard owner(consumer_mutex_);") < close_body.index("close_completed_ = true;")
 assert "completed_cv_.notify_all()" in queue
-assert "WaitUntil(" not in code
+assert "WaitUntil(" not in bridge_runtime
 # The host candidate now has a publish-after-store contract; the real bridge
 # still uses eager Enqueue and must NOT be presented as correctly integrated.
 for symbol in ("struct Ticket", "Reserve(", "Publish(Ticket", "WaitUntil(Ticket",
                "generation_", "queue_[ready].published"):
     assert symbol in queue, symbol
-assert "deferred_cpu_write_queue.Enqueue(core, address, size)" in code
+assert "deferred_cpu_write_queue.Enqueue(core, address, size)" in bridge_runtime
 # A GPU replay exception poisons the session; even if upstream catches it,
 # no later native command may silently proceed through FlushCaching().
-assert "if (deferred_cpu_write_queue.Failed()) std::terminate();" in code
-assert code.index("if (deferred_cpu_write_queue.Failed()) std::terminate();") < code.index("if (deferred_cpu_write_queue.Pending())")
+assert "if (deferred_cpu_write_queue.Failed()) std::terminate();" in bridge_runtime
+assert bridge_runtime.index("if (deferred_cpu_write_queue.Failed()) std::terminate();") < bridge_runtime.index("if (deferred_cpu_write_queue.Pending())")
 
-assert "deferred_cpu_write_queue.Reserve(" not in code
-assert "deferred_cpu_write_queue.Publish(" not in code
+assert "deferred_cpu_write_queue.Reserve(" not in bridge_runtime
+assert "deferred_cpu_write_queue.Publish(" not in bridge_runtime
 assert "cpu_write_defer{false}" in perf
 for signature in (
     "EnqueueDeferredCPUWrite",
@@ -212,7 +214,7 @@ for signature in (
     "void DmaPusher::DispatchCalls()",
     "system.GPU().OnCommandListEnd();",
 ):
-    assert signature in code, signature
+    assert signature in bridge_runtime, signature
 # M04: maintained complete header must equal its former two pinned rewrites.
 # Only the absolute CMake-specific include prefix is normalized to the
 # existing headless include directory of core and video_core.
@@ -246,6 +248,25 @@ assert maintained_dirty.read_text() == expected_dirty, "M05 maintained source di
 assert 'configure_file("${EDEN_DEFERRED_DIRTY_HEADER}"' in code
 assert 'write_derived("${PORT_BUILD_DIR}/deferred-core/core/gpu_dirty_memory_manager.h"' not in code
 print("ENCORE_M05_MAINTAINED_DIRTY_HEADER_PARITY_PASS")
+
+# M06: independently replay the former CMake replacement from a test-only
+# oracle. CMake must never consume this fixture during a normal build.
+original_m06 = (root/"vendor/sources/eden/src/video_core/memory_manager.cpp").read_text()
+oracle_m06 = (root/"tools/fixtures/deferred-memory-manager-flush-oracle.inc").read_text()
+assert original_m06.count('#include "memory_manager.h"') == 1
+assert original_m06.count("void MemoryManager::FlushCaching() {") == 1
+assert oracle_m06.count("bool MemoryManager::EnqueueDeferredCPUWrite(") == 1
+assert oracle_m06.count("void MemoryManager::FlushCaching() {") == 1
+expected_m06 = ('#include "core/gpu_dirty_memory_manager.h"\n'
+    '#include "performance.h"\n'
+    '#include "gpu_deferred_replay.h"\n' +
+    original_m06.replace('#include "memory_manager.h"',
+        '#include "video_core/memory_manager.h"').replace(
+        "void MemoryManager::FlushCaching() {", oracle_m06))
+assert maintained_m06.read_text() == expected_m06, "M06 source deviates from former generator"
+assert 'configure_file("${EDEN_DEFERRED_MEMORY_SOURCE}"' in code
+assert 'write_derived("${PORT_BUILD_DIR}/memory_manager_deferred.cpp"' not in code
+print("ENCORE_M06_MAINTAINED_MEMORY_SOURCE_PARITY_PASS")
 
 pins={
     "video_core/memory_manager.h":["    void FlushCaching();","    Core::System& system;"],
@@ -314,6 +335,7 @@ include("__BRIDGE__")
                  "kepler_compute_deferred.cpp","engine_upload_deferred.cpp"):
         assert name in sources and len(sources[name])>200,name
     mm=sources["memory_manager_deferred.cpp"]
+    assert mm == maintained_m06.read_text(), "M06 staged source differs from maintained cpp"
     assert "deferred_cpu_write_queue.Enqueue(core, address, size)" in mm
     assert "rasterizer->OnCPUWrite(address, size)" in mm
     assert "dirty[core].Collect(address, size)" in mm
