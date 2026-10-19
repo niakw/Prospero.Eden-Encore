@@ -2,7 +2,7 @@
 """Host regression for native memory GetSpan's exclusive-end page boundary.
 
 Compile the actual two pinned GetSpan methods as the negative control and
-the exact native CMake replacement as the positive control. No console build.
+both complete maintained native C++ sources as positive controls. No console build.
 """
 from pathlib import Path
 import shutil
@@ -24,15 +24,17 @@ old = (
     "? GetPointerSilent(addr) : nullptr;"
 )
 assert methods.count(old) == 2
-native_span_anchor = 'string(REPLACE "${eden_span_original}" [=['
-assert cmake.count(native_span_anchor) == 1
-span_start = cmake.index(native_span_anchor) + len(native_span_anchor)
-span_end = cmake.index(']=] eden_cpu_memory "${eden_cpu_memory}")', span_start)
-fixed = cmake[span_start:span_end]
-assert cmake.count("Pinned native guest span page-boundary contract changed") == 1
-assert "if (size == 0 || addr + (size - 1) < addr)" in fixed
-assert "start_page >= entries.size() || end_page >= entries.size()" in fixed
-assert cmake.count('set(eden_span_original [=[') == 1
+native_source = (root/"vendor/encore-active/eden-core/src/core/memory_native_standard.cpp").read_text()
+a32_source = (root/"vendor/encore-active/eden-core/src/core/memory_native_a32.cpp").read_text()
+assert 'memory_native_standard.cpp' in cmake and 'memory_native_a32.cpp' in cmake
+assert 'write_derived("${eden_native_memory_tu}"' not in cmake
+assert native_source.count(begin) == a32_source.count(begin) == 1
+maintained_methods = begin + native_source.split(begin,1)[1].split(end,1)[0]
+a32_methods = begin + a32_source.split(begin,1)[1].split(end,1)[0]
+assert maintained_methods == a32_methods, "native GetSpan must not vary by A32 profile"
+assert maintained_methods.count("if (size == 0 || addr + (size - 1) < addr)") == 2
+assert maintained_methods.count("start_page >= entries.size() || end_page >= entries.size()") == 2
+assert old not in maintained_methods
 assert "python3 -B tools/check-native-guest-span-host.py" in workflow
 
 cpp = r"""
@@ -97,7 +99,7 @@ with tempfile.TemporaryDirectory(prefix="encore-guest-span-") as tmp:
     work = Path(tmp)
     for label, text, negative in (
         ("pinned", methods, True),
-        ("native", methods.replace(old, fixed), False),
+        ("native", maintained_methods, False),
     ):
         source = work / (label + ".cpp")
         binary = work / label
