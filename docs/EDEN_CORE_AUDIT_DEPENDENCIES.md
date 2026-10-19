@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 395
+**Non, this is not an exhaustive repository-wide inventory.** The 396
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 395 | 372 | 799 |
+| Graphe connu | 396 | 373 | 801 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 340 | 327 | 694 |
+| SOURCE — lecture effectuée, preuve insuffisante | 341 | 328 | 696 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **355** | **341** | **722** |
+| **Encore à qualifier (SOURCE + OPEN)** | **356** | **342** | **724** |
 | Dont priorité P0 (SOURCE + OPEN) | 113 | 107 | 263 |
 
-Le **noyau restant** compte donc 355 critères répartis sur
-341 fichiers et 722 mentions fonction/contrat :
-15 OPEN et 340 SOURCE.
+Le **noyau restant** compte donc 356 critères répartis sur
+342 fichiers et 724 mentions fonction/contrat :
+15 OPEN et 341 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-294 fichiers de code/en-têtes présents et 294 avec un chemin de
+295 fichiers de code/en-têtes présents et 295 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -91,7 +91,7 @@ sélectionnées uniquement en `EDEN_DEV_PROFILE`.
 C++ avec l'override généré auparavant et recense les sorties CMake dans
 `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md` : **5 sites principaux**
 `write_derived()` restent après migration de G20. Les modules inclus
-ajoutent **12 sites** (pont différé et JIT partagé, désactivés par défaut)
+ajoutent **2 sites** (pont différé et JIT partagé, désactivés par défaut)
 et **2 modules de mutation indirecte** sont suivis séparément (X05–X06).
 Les ressources légitimes et les modes expérimentaux OFF ne sont pas des
 preuves de dette exécutée en production. Une cible variable peut générer
@@ -628,6 +628,7 @@ function/contract tokens are checked by CI for existence only; the
 | V92 | P2 | V91 | vendor/encore-active/eden-core/guest-bridge/maxwell_dma.cpp | MaxwellDMA::Launch; memory_manager.FlushCaching() | SOURCE | tools/check-deferred-native-bridge-contract.py | M09 complete deferred DMA engine source selected COPYONLY; historical parity only, experimental OFF and not console qualified | 🟡 Source étudiée |
 | V93 | P2 | V91 | vendor/encore-active/eden-core/guest-bridge/kepler_compute.cpp | KeplerCompute::ProcessLaunch; memory_manager.FlushCaching() | SOURCE | tools/check-deferred-native-bridge-contract.py | M10 complete deferred compute engine source selected COPYONLY; historical parity only, experimental OFF and not console qualified | 🟡 Source étudiée |
 | V94 | P2 | V91 | vendor/encore-active/eden-core/guest-bridge/engine_upload.cpp | State::ProcessData; memory_manager.FlushCaching() | SOURCE | tools/check-deferred-native-bridge-contract.py | M11 complete deferred upload engine source selected COPYONLY; historical parity only, experimental OFF and not console qualified | 🟡 Source étudiée |
+| V95 | P2 | V85,V91 | vendor/encore-active/eden-core/guest-bridge/dma_pusher.cpp | DmaPusher::DispatchCalls; memory_manager.FlushCaching() | SOURCE | tools/check-deferred-native-bridge-contract.py | M08 full G20 DEV-based DMA unit selected COPYONLY, unlike stale staging file; parity host only, experimental OFF and unqualified on console | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
