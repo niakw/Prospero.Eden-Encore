@@ -1284,7 +1284,9 @@ void RasterizerVulkan::AccelerateInlineToMemory(GPUVAddr address, size_t copy_si
             buffer_cache.WriteMemory(*cpu_addr, copy_size);
         }
     }
-    {
+    // DMA inline writes do not need the texture mutex when these CPU pages
+    // have never belonged to an image. Unknown and large ranges fail closed.
+    if (!::Eden::ImagePages::NeverHeld(*cpu_addr, copy_size)) {
         std::scoped_lock lock_texture{texture_cache.mutex};
         texture_cache.WriteMemory(*cpu_addr, copy_size);
     }
