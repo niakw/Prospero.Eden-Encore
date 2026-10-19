@@ -1,5 +1,25 @@
 # Eden Encore — migration coordonnée CPU/JIT G11–G12 et X06/X07
 
+**Actualisation au 19 octobre 2026 : migration de source effectuée ; plan
+ci-dessous conservé comme historique, et non comme travaux à recommencer.**
+Le sélecteur actif `headless/CMakeLists.txt` utilise désormais des unités
+entières et exclusives `vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/`
+pour A32/A64 × hôte/natif × DEV/normal (8 fichiers, 16 combinaisons
+avec l'option inline OFF/ON), au lieu de construire leurs fonctions
+par `write_derived`. Le contrôle `tools/check-g11-jit-profile-matrix-host.py`
+rejoue la sélection et compare les variantes à l'ancien générateur.
+La compilation G12 sélectionne
+`vendor/encore-active/eden-core/src/core/hle/kernel/physical_core_{dev,standard}.cpp`
+par copie sans transformation C++, avec l'atomicité X07 incluse aux
+sources maintenues. Les anciennes recettes X06/X07 ne sont plus incluses
+en tant que générateurs de fonctions.
+
+**La prochaine étape n'est pas une migration supplémentaire de G11/G12 :
+c'est l'analyse des compilations, invalidations, prises de verrous et
+attentes constatées en exécution.** Les tests hôte et la sélection CMake
+ne qualifient ni les FPS ni la progression de FC27 sur console.
+
+
 **État au 18 octobre 2026 :** cartographie de la prochaine frontière ; sources
 G11, G12 et substitutions indirectes X06/X07 **non migrées**. G10 (interface
 native A32) a été déplacée dans `encore-active` et possède son contrôle de

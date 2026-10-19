@@ -47,8 +47,10 @@ L'âge ou la fraîcheur des pixels n'est pas mesuré dans ce fichier.
 1. **P0 — JIT A32/A64 et temps de compilation initiale** :
    reconstituer le chemin réellement sélectionné pour les variantes
    native/release/DEV, distinguer re-traduction, invalidation, création
-   de blocs et compilation simultanée. Le dossier G11/X06 et ses
-   sélecteurs restent des frontières à vérifier. Le compteur de
+   de blocs et compilation simultanée. Le sélecteur source G11/X06
+   est déjà migré et son tableau de variantes possède un témoin CMake ;
+   restent à qualifier les invalidations effectives et les attentes
+   JIT en exécution. Le compteur de
    compilation cumule plusieurs cœurs ; un pic ne prouve pas que le
    compositeur attendait un bloc donné. Priorité : trouver pourquoi
    8 des 10 grandes interruptions partagent de fortes compilations.
