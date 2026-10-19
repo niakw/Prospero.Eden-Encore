@@ -297,6 +297,7 @@ jobs:
           python3 -B tools/check-maintained-page-table-finalize.py
           python3 -B tools/check-maintained-server-manager.py
           python3 -B tools/check-maintained-guest-gpu-sync.py
+          python3 -B tools/check-gpu-puller-acquire-failure-host.py
           python3 -B tools/check-maintained-nso.py
           python3 -B tools/check-maintained-core-system.py
           python3 -B tools/check-maintained-xbyak-alias.py

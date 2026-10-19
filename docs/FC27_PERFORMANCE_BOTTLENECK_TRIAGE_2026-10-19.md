@@ -329,3 +329,26 @@ annulation et absence d'insertion après arrêt avec ASan/UBSan.
 Cette réduction n'affecte que le cas de course « pleine puis libérée ».
 Elle ne doit pas être interprétée comme un gain FPS démontré ni comme
 un correctif des attentes du GPU en général.
+
+## 20 octobre — sémaphore GPU en cas d'échec fatal du worker
+
+Le puller d'acquisition GPU (`Puller::ProcessSemaphoreAcquire`) conservait
+une boucle tant que la valeur mémoire n'était pas atteinte et que le
+système n'avait pas commencé son arrêt. Un autre worker GPU pouvait
+pourtant publier une exception fatale sans que cette boucle, qui appelle
+`ReleaseFences`, ne vérifie l'état d'échec. En cas de valeur qui ne
+progressera plus, cette attente risquait de monopoliser son thread.
+
+Sur PS5, cette acquisition consulte maintenant le registre d'échecs
+GPU partagé au premier essai, puis une fois tous les 64 essais infructueux.
+Elle propage l'exception existante sans fabriquer d'acquittement de
+sémaphore, sans modifier le timeout invité, les fences, la mémoire
+invitée, ni l'ordre des commandes. Les chemins hôte ne changent pas.
+Les fichiers normal et DEV restent strictement dérivés de la source
+épinglée via `check-maintained-guest-gpu-sync.py`.
+
+Le témoin C++ ASan/UBSan extrait la vraie méthode dans les quatre
+combinaisons PS5/hôte et normal/DEV ; il vérifie l'arrivée du sémaphore,
+l'arrêt, l'erreur apparue pendant l'attente et une erreur déjà publiée.
+C'est une protection contre une attente sans issue **après échec GPU**,
+non une accélération mesurée ni une suppression prouvée du gel FC27.

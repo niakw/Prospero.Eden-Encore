@@ -17,6 +17,22 @@ WAIT = ("        while (!synced && !system.IsShuttingDown())\n"
         "            sync_cv.wait_for(lk, std::chrono::milliseconds(10));")
 OLD_SEM = "    while (word != value) {"
 SEM = "    while (word != value && !dma_pusher.system.IsShuttingDown()) {"
+GPU_FAULT_INC = '#ifdef PS5_NATIVE\\n#include "gpu_failure.h"\\n#endif\\n#include "common/assert.h"'
+GPU_FAULT_INIT = """    const auto value = regs.semaphore_acquire;
+#ifdef PS5_NATIVE
+    // On a failed graphics worker, a stale GPU semaphore can never progress.
+    // Sample failure once per 64 unsuccessful polls, starting with the first.
+    unsigned acquire_polls = 0;
+#endif
+"""
+GPU_FAULT_LOOP = """    while (word != value && !dma_pusher.system.IsShuttingDown()) {
+#ifdef PS5_NATIVE
+        if ((acquire_polls++ & 63u) == 0u) {
+            if (auto failure = ::Eden::PeekGpuFailure())
+                std::rethrow_exception(failure);
+        }
+#endif
+"""
 
 def expected(kind, dev):
     if kind == "dma":
@@ -28,6 +44,9 @@ def expected(kind, dev):
             source = once(source, WAIT, timer)
     else:
         source = once(PULLER, OLD_SEM, SEM)
+        source = once(source, '#include "common/assert.h"', GPU_FAULT_INC)
+        source = once(source, '    const auto value = regs.semaphore_acquire;\n', GPU_FAULT_INIT)
+        source = once(source, SEM + '\n', GPU_FAULT_LOOP)
         if dev:
             timer = ("    ::Eden::Performance::DiagnosticActiveTimer semaphore_timer(\n"
                      "        ::Eden::Performance::gpu_puller_semaphore_wait,\n"
