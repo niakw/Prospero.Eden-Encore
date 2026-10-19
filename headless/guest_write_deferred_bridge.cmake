@@ -41,38 +41,15 @@ if(EDEN_GUEST_WRITE_BRIDGE_DEV)
     configure_file("${EDEN_DEFERRED_MEMORY_SOURCE}"
         "${PORT_BUILD_DIR}/memory_manager_deferred.cpp" COPYONLY)
 
-    # Use maintained Vulkan implementation; do not mutate its byte-pinned
-    # active file or the generator/source parity contract.
-    file(READ "${PORT_ROOT}/vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp" bridge_vk)
-    set(vk_entry "bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {")
-    set(vk_buffer_lock "        ::Eden::Performance::GuestCacheLock(buffer_cache.mutex, false);")
-    # The texture lock MUST retain the original blocking path. Once
-    # buffer_cache.OnCPUWrite runs, postponing the texture invalidation
-    # would replay an operation whose first half already mutated cache state.
-    foreach(anchor IN ITEMS vk_entry vk_buffer_lock)
-        string(FIND "${bridge_vk}" "${${anchor}}" found)
-        if(found LESS 0)
-            message(FATAL_ERROR "Pinned Vulkan guest write anchor changed (${anchor})")
-        endif()
-    endforeach()
-    string(REPLACE "${vk_entry}" [=[bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {
-    const bool defer_candidate =
-        ::Eden::GpuDeferredWrite::kNativePostStorePublicationReady &&
-        ::Eden::Performance::cpu_write_defer.load(std::memory_order_relaxed) &&
-        ::Eden::GpuDeferredWrite::guest_write_origin_core < ::Eden::GpuDeferredWrite::Queue::Cores &&
-        ::Eden::GpuDeferredWrite::guest_write_intent ==
-            ::Eden::GpuDeferredWrite::GuestWriteIntent::StoreFollows &&
-        !::Eden::GpuDeferredWrite::replaying_guest_write;]=]
-        bridge_vk "${bridge_vk}")
-    string(REPLACE "${vk_buffer_lock}" [=[
-        if (!defer_candidate) {
-            ::Eden::Performance::GuestCacheLock(buffer_cache.mutex, false);
-        } else if (!buffer_cache.mutex.try_lock()) {
-            if (gpu_memory->EnqueueDeferredCPUWrite(addr, size)) return false;
-            ::Eden::Performance::GuestCacheLock(buffer_cache.mutex, false);
-        }]=] bridge_vk "${bridge_vk}")
-    string(PREPEND bridge_vk "#include \"${EDEN_PORT_DIR}/gpu_deferred_replay.h\"\n#include \"video_core/memory_manager.h\"\n")
-    write_derived("${PORT_BUILD_DIR}/vulkan_rasterizer_deferred.cpp" "${bridge_vk}")
+    # M07: the developer-only Vulkan replay variant is a full, maintained
+    # source. The original Vulkan fork and normal build stay untouched.
+    set(EDEN_DEFERRED_VULKAN_SOURCE
+        "${PORT_ROOT}/vendor/encore-active/eden-core/guest-bridge/vulkan_rasterizer.cpp")
+    if(NOT EXISTS "${EDEN_DEFERRED_VULKAN_SOURCE}")
+        message(FATAL_ERROR "Missing maintained M07 deferred Vulkan source")
+    endif()
+    configure_file("${EDEN_DEFERRED_VULKAN_SOURCE}"
+        "${PORT_BUILD_DIR}/vulkan_rasterizer_deferred.cpp" COPYONLY)
 
     # At the producer and fence boundaries, queued guest writes must drain.
     # M08: source-complete DEV DMA processor based on G20's actual selected
