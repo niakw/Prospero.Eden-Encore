@@ -255,6 +255,20 @@ sont maintenues sous `vendor/encore-active/eden-build/tooling/native/`.
 Les IDs G01–G23 sont stables et ne sont pas renumérotés.
 
 
+## G19 — matrice kernel avant centralisation
+
+Le générateur G19 produit encore une unité `kernel.cpp` distincte pour le
+profil normal et le profil DEV. Le témoin
+`tools/check-g19-kernel-profile-matrix-host.py` exécute la vraie recette
+CMake et vérifie la provenance effective de `KProcess`, `ServerManager`
+et de l'unité kernel, sans double compilation. Il préserve les gardes de
+clôture, les références des threads, l'arrêt des services et les marqueurs
+de diagnostic DEV. Les résultats restent des preuves **hôte** uniquement.
+
+La migration suivante devra déplacer les deux C++ complets dans
+`vendor/encore-active` et comparer les octets de ces sources aux sorties
+CMake historiques, avant de retirer le générateur G19.
+
 ## G21 — matrice de dépendances avant centralisation
 
 G21 ne génère plus `gpu.cpp` au build : la recette historique est archivée
