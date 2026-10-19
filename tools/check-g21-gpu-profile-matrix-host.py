@@ -91,4 +91,25 @@ assert results["gl_host"] != results["gl_host_dev"]
 assert results["gl_native"] != results["gl_native_dev"]
 assert results["vulkan_native"] == results["vulkan_native_dev"]
 assert results["vulkan_native"] != results["gl_native"]
+# The migration candidates are full, versioned Encore sources. Prove
+# byte-for-byte parity with G21's actual CMake output for every profile,
+# after normalizing former absolute private header paths.
+owners = {
+    "gl_host": "gpu_gl_host.cpp",
+    "gl_host_dev": "gpu_gl_host_dev.cpp",
+    "gl_native": "gpu_gl_native.cpp",
+    "gl_native_dev": "gpu_gl_native_dev.cpp",
+    "vulkan_native": "gpu_vulkan.cpp",
+}
+for profile, filename in owners.items():
+    expected = results[profile]
+    for header in ("gpu_failure.h", "performance.h"):
+        expected = expected.replace(
+            '#include "' + str(root / "headless" / header) + '"',
+            '#include "' + header + '"')
+    maintained = (root/"vendor/encore-active/eden-core/src/video_core"/filename).read_text()
+    assert maintained == expected, "G21 maintained source parity drift: " + profile
+    assert maintained.count("VideoCommon::GPUThread::ThreadManager gpu_thread;") == 1
+assert results["vulkan_native_dev"] == results["vulkan_native"] if "vulkan_native_dev" in results else True
+print("ENCORE_G21_FIVE_MAINTAINED_SOURCE_PARITY_PASS profiles=5")
 print("ENCORE_G21_REAL_CMAKE_PROFILE_MATRIX_PASS cases=6 variant_owners=5 host_only=1")

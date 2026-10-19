@@ -276,6 +276,13 @@ Vulkan natif ; l'option DEV ne produit pas de différence G21 avec Vulkan
 dans la recette actuelle. Aucun changement de moteur ou de GPU worker
 n'est autorisé par ce relevé.
 
+Les cinq candidates G21 sont maintenant archivées en fichiers C++ complets
+sous `eden-core/src/video_core/gpu_{gl_host,gl_host_dev,gl_native,gl_native_dev,vulkan}.cpp`.
+Le témoin compare chacun des cinq fichiers aux octets produits par CMake
+après normalisation des anciens chemins d'en-têtes absolus. Les candidates
+ne sont pas encore sélectionnées par le build : le retrait de G21 vient
+**après** le passage du témoin hôte.
+
 Pour retirer G21, maintenir les unités C++ finales exclusivement sous
 `vendor/encore-active`, archiver les substitutions CMake uniquement
 comme oracle hôte, basculer le sélecteur vers une unique unité par profil
