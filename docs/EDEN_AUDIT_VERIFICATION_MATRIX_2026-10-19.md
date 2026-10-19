@@ -48,9 +48,6 @@ références correspondent à cinq chemins distincts :
   *installateur d'entrées compilateur*, contrôlé séparément par les
   empreintes RADV et son vérificateur de fork. **Ne pas exécuter sans
   destination Meson jetable.**
-- `tools/install-vendored-surface-lifecycle.py` : **1** référence
-  maintenant exécutée directement par la CI en mode **lecture seule**
-  `--check`, avec provenance SHA validée.
 - `tools/check-jit-protection.py` : **2** références à un
   banc fondé sur les fichiers générés dans
   `.local/headless-cache`, absents d'une prévalidation hôte
@@ -65,6 +62,10 @@ références correspondent à cinq chemins distincts :
   désigne comme *staged only*, non comme une validation native ;
   ne pas confondre sa réussite éventuelle avec une preuve de
   mémoire physique disponible ou de fluidité.
+
+Le témoin de provenance `tools/install-vendored-surface-lifecycle.py
+--check` est désormais directement exécuté et a réussi sur la CI
+[39316703898](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39316703898).
 
 Les **87 autres références** pointent vers des documents, recettes
 CMake, patches ou autres fichiers non exécutables : existence et
