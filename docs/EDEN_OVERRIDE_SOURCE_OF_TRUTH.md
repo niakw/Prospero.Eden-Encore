@@ -16,7 +16,7 @@ nouveaux corps C++ destinés à la console.
 
 ## État concret au 19 octobre 2026
 
-- `vendor/encore-active` : **282 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **286 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
 - `headless/CMakeLists.txt` : **5 générateurs** `write_derived`.
@@ -24,7 +24,7 @@ nouveaux corps C++ destinés à la console.
   `write_derived`, soit **17 sites** au total.
 - Deux modules CMake procèdent encore à des substitutions **indirectes**
   dans des variables source. **Dette restante**, non cachée par le
-  nombre 34.
+  compteur des générations CMake.
 - `headless/` contient **3 fragments `.inc`**. Plusieurs contribuent
   aux sources dérivées JIT/GPU/mémoire. Les autres doivent être classés
   selon qu'il s'agit d'un runtime natif autonome ou d'un override de
