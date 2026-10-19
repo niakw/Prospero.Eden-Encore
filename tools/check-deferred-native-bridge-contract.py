@@ -383,7 +383,50 @@ with tempfile.TemporaryDirectory(prefix="encore-bridge-on-") as d:
     (fake/"empty.cpp").write_text("int bridge_host_stub() { return 0; }\n")
     stage=fake/"stage"
     stage.mkdir()
-    (stage/"memory-ps5.cpp").write_bytes((root/"vendor/sources/eden/src/core/memory.cpp").read_bytes())
+    # Reconstruct the real G13 native memory TU before testing M12. The
+    # previous bridge fixture copied the original pinned source directly,
+    # skipping the shipping backport and all G13 safeguards.
+    g13_start = '    file(READ "${eden_cpu_memory_tu}" eden_cpu_memory)'
+    g13_stop = '    if(EDEN_A32_FASTMEM)\n        list(REMOVE_ITEM core_sources "${EDEN_MAINTAINED_A32_MEMORY}")'
+    assert base.count(g13_start) == base.count(g13_stop) == 1
+    g13_source = g13_start + base.split(g13_start, 1)[1].split(g13_stop, 1)[0]
+    assert g13_source.count('write_derived("${eden_native_memory_tu}"') == 1
+    assert 'set(eden_cpu_memory_tu "${EDEN_MAINTAINED_A32_MEMORY}")' in base
+    assert 'set(eden_cpu_memory_tu "${PORT_BUILD_DIR}/memory.cpp")' not in base
+    def generate_g13(source, output_dir, label):
+        output_dir.mkdir(parents=True, exist_ok=True)
+        config = """set(EDEN_PORT_DIR "__ROOT__/headless")
+set(PORT_BUILD_DIR "__STAGE__")
+set(eden_cpu_memory_tu "__SOURCE__")
+function(write_derived path content)
+    file(WRITE "${path}" "${content}")
+endfunction()
+""" + g13_source
+        config = (config.replace("__ROOT__", str(root))
+                        .replace("__STAGE__", str(output_dir))
+                        .replace("__SOURCE__", str(source)))
+        script = fake/("g13-" + label + ".cmake")
+        script.write_text(config)
+        result = subprocess.run(["cmake", "-P", str(script)], cwd=fake,
+                                capture_output=True, text=True, timeout=45)
+        if result.returncode:
+            print(result.stdout[-3000:], result.stderr[-3000:])
+            raise AssertionError("G13 " + label + " materialization failed")
+        generated = (output_dir/"memory-ps5.cpp").read_text()
+        assert generated.count("ShouldLogUnmappedAccess()") == 11, label
+        assert "thread_local Common::ScratchBuffer<u32> read_scratch;" in generated
+        assert "::Eden::GpuDirty::ForEachRegion(address, size," in generated
+        assert "const auto end_page = (addr + size - 1) >> YUZU_PAGEBITS;" in generated
+        assert "std::numeric_limits<u64>::max() - GetInteger(base)" in generated
+        return generated
+    shipping = root/"vendor/encore-active/eden-backports/src/core/memory.cpp"
+    a32 = root/"vendor/encore-active/eden-core/src/core/memory.cpp"
+    native_default = generate_g13(shipping, stage, "shipping")
+    native_a32 = generate_g13(a32, fake/"g13-a32", "a32")
+    assert native_default != native_a32, "G13 A32 source identity lost"
+    assert "process.IsApplication() && !process.Is64Bit()" not in native_default
+    assert "process.IsApplication() && !process.Is64Bit()" in native_a32
+
     project=r"""cmake_minimum_required(VERSION 3.24)
 project(InactiveBridgeConfigure LANGUAGES CXX)
 set(PS5_NATIVE ON)

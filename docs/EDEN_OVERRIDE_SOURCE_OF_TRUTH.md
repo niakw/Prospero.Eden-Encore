@@ -61,6 +61,14 @@ nouveaux corps C++ destinés à la console.
 | `headless/vulkan.cmake` | Sélection/copie de sources Encore maintenues | Sélecteur / configuration |
 <!-- SINGLE_SOURCE_CMAKE_END -->
 
+## G13 : sélection effective de la source mémoire A32
+
+Quand `EDEN_A32_FASTMEM` est actif, G13 dérive désormais sa source à partir
+de `EDEN_MAINTAINED_A32_MEMORY`, et enlève ce même chemin de `core_sources`
+pour éviter une double compilation. Le chemin provisoire
+`${PORT_BUILD_DIR}/memory.cpp` ne doit plus être lu comme source A32.
+Le générateur G13 reste à migrer, conjointement avec X05 et M12.
+
 ## Core::System G14 maintenu
 
 Les variantes normale et native du cœur de système sont suivies comme
