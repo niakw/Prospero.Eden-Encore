@@ -851,6 +851,19 @@ assert ('configure_file("${EDEN_SHARED_JIT_DIR}/jit_group.h"\n'
         '        "${PORT_BUILD_DIR}/include/dynarmic/backend/x64/jit_group.h" COPYONLY)') in shared_jit_selector
 assert 'file(READ "${EDEN_SHARED_JIT_DIR}/jit_group.h" eden_group_header)' not in shared_jit_selector
 assert 'write_derived("${PORT_BUILD_DIR}/include/dynarmic/backend/x64/jit_group.h"' not in shared_jit_selector
+# Exact M01 parity: an A64JitState header, not a build-time string rewrite.
+jit_state_pinned = (sources / "eden/src/dynarmic/src/dynarmic/backend/x64/a64_jitstate.h").read_text()
+jit_state_anchor = "    std::array<u64, RSB_SIZE> rsb_codeptrs;\n"
+jit_state_added = "\n    // ProsperoEden: what generated code reads instead of embedding it, so that any core can run\n    // code another core compiled (jit_group.h): this core's callbacks and JIT object, TPIDR\n    // registers, exclusive monitor slots, configuration and fast dispatch table.\n    void* eden_callbacks = nullptr;\n    void* eden_jit = nullptr;\n    u64* eden_tpidr_el0 = nullptr;\n    const u64* eden_tpidrro_el0 = nullptr;\n    void* eden_exclusive_address = nullptr;\n    void* eden_exclusive_value = nullptr;\n    const void* eden_conf = nullptr;\n    void* eden_fast_dispatch = nullptr;\n"
+assert jit_state_pinned.count(jit_state_anchor) == 1, "Pinned A64JitState layout drift"
+jit_state_expected = jit_state_pinned.replace(jit_state_anchor, jit_state_anchor + jit_state_added)
+assert (active / "eden-core/dynarmic/shared-jit/a64_jitstate.h").read_text() == jit_state_expected, (
+    "Maintained A64JitState differs from historical M01 generation")
+assert ('configure_file("${EDEN_SHARED_JIT_DIR}/a64_jitstate.h"\n'
+        '        "${PORT_BUILD_DIR}/include/${eden_jitstate_relative}" COPYONLY)') in shared_jit_selector
+assert 'write_derived("${PORT_BUILD_DIR}/include/${eden_jitstate_relative}"' not in shared_jit_selector
+assert 'file(READ "${PROJECT_SOURCE_DIR}/src/dynarmic/src/${eden_jitstate_relative}"' not in shared_jit_selector
+print("ENCORE_SHARED_JIT_STATE_PARITY_PASS M01 exact historical layout, direct maintained copy")
 print("ENCORE_SHARED_JIT_SOURCE_OWNERS_PASS", len(shared_jit_blobs))
 
 
@@ -1334,7 +1347,7 @@ for module in module_files:
     module_current.extend((module, target) for target in
                           re.findall(r'write_derived\(\s*"([^"]+)"', content))
 assert module_recorded == module_current, "Module CMake source generator inventory is stale"
-assert len(module_current) == 11, len(module_current)
+assert len(module_current) == 10, len(module_current)
 # Indirect X01/X02 are no longer CMake generators: full source units
 # live under encore-active, and the parity witnesses above verify them.
 for old_module in ("headless/macro_recovery.cmake", "headless/slot_vector_recovery.cmake"):

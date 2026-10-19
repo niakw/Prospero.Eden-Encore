@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 387
+**Non, this is not an exhaustive repository-wide inventory.** The 388
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 387 | 364 | 781 |
+| Graphe connu | 388 | 365 | 784 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 332 | 319 | 676 |
+| SOURCE — lecture effectuée, preuve insuffisante | 333 | 320 | 679 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **347** | **333** | **704** |
+| **Encore à qualifier (SOURCE + OPEN)** | **348** | **334** | **707** |
 | Dont priorité P0 (SOURCE + OPEN) | 113 | 107 | 263 |
 
-Le **noyau restant** compte donc 347 critères répartis sur
-333 fichiers et 704 mentions fonction/contrat :
-15 OPEN et 332 SOURCE.
+Le **noyau restant** compte donc 348 critères répartis sur
+334 fichiers et 707 mentions fonction/contrat :
+15 OPEN et 333 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-286 fichiers de code/en-têtes présents et 286 avec un chemin de
+287 fichiers de code/en-têtes présents et 287 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -497,6 +497,7 @@ function/contract tokens are checked by CI for existence only; the
 | J39 | P1 | J38 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/emit_x64_data_processing.cpp | EmitX64::EmitZeroExtendWordToLong | SOURCE | tools/check-maintained-scalar-emitters.py | Scalar zero extension retained in complete maintained TU, exact parity with previous generator; native unqualified | 🟡 Source étudiée |
 | J40 | P1 | J35,J37 | vendor/encore-active/eden-build/third_party/xbyak/xbyak.h | writableAddress; writeTop_ | SOURCE | tools/check-maintained-xbyak-alias.py | Complete v7.40.1 tagged header with eight former CMake replacements, selected via COPYONLY; indirect X09 retired into maintained BlockOfCode sources, native unqualified | 🟡 Source étudiée |
 | J41 | P1 | U12,J05 | vendor/encore-active/eden-core/src/dynarmic/backend/block_range_information.h | BlockRangeInformation; page_bits | SOURCE | tools/check-maintained-block-range.py | Full maintained header shadows upstream layout via unchanged copied include and retains 4-KiB tracking; console unqualified | 🟡 Source étudiée |
+| J42 | P1 | J21 | vendor/encore-active/eden-core/dynarmic/shared-jit/a64_jitstate.h | A64JitState; eden_callbacks; eden_fast_dispatch | SOURCE | tools/check-vendor-consolidation-debt.py | Exact historical M01 header now maintained in Encore, selected via CMake COPYONLY; Shared JIT OFF and console behavior not qualified | 🟡 Source étudiée |
 | H29 | P0 | H22,H26 | headless/backports/eden-sm-host-wait.patch | GetService; IsDummyThread; SleepThread | SOURCE | tools/install-active-core-backports.py | SM GetService uses host sleep for dummy threads to avoid parking a host HLE worker with guest SleepThread; staged patch spans service-manager header and must be validated with blocking/unblocking semantics | 🟡 Source étudiée |
 | H30 | P1 | H02 | vendor/encore-active/eden-core/src/core/hle/kernel/k_spin_lock.cpp | KSpinLock::Lock; KSpinLock::TryLock | SOURCE | tools/check-maintained-audio-units.py | Maintained lock source uses SpinAcquire and preserves unlock/try-lock behavior; source parity is checked, not contention or console forward progress | 🟡 Source étudiée |
 | H31 | P1 | H03,H24 | vendor/encore-active/eden-core/src/hid_core/resource_manager.cpp | ResourceManager::Initialize; ResourceManager::CreateAppletResource | SOURCE | headless/CMakeLists.txt | Maintained HID event-lifetime resource manager selected by hid_core; verify event registration, shutdown ownership and applet wake independently | 🟡 Source étudiée |
