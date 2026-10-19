@@ -1379,7 +1379,12 @@ bool AccelerateDMA::DmaBufferImageCopy(const Tegra::DMA::ImageCopy& copy_info,
     if (image_id == VideoCommon::NULL_IMAGE_ID) {
         return false;
     }
-    const u32 buffer_size = static_cast<u32>(buffer_operand.pitch * buffer_operand.height);
+    // Widen before multiplying, then respect the u32 buffer-cache span.
+    const u64 buffer_size_wide = static_cast<u64>(buffer_operand.pitch) * buffer_operand.height;
+    if (buffer_size_wide > static_cast<u64>(~u32{0})) {
+        return false;
+    }
+    const u32 buffer_size = static_cast<u32>(buffer_size_wide);
     static constexpr auto sync_info = VideoCommon::ObtainBufferSynchronize::FullSynchronize;
     const auto post_op = IS_IMAGE_UPLOAD ? VideoCommon::ObtainBufferOperation::DoNothing
                                          : VideoCommon::ObtainBufferOperation::MarkAsWritten;

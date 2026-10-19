@@ -1273,6 +1273,16 @@ list(REMOVE_ITEM video_sources shader_environment.cpp)
 list(APPEND video_sources "${EDEN_MAINTAINED_SHADER_ENVIRONMENT}")
 # Eden #4473/#4477 are already applied once to the pinned source by
 # tools/apply-eden-backports.sh and validated there; never shadow headers twice.
+# Complete native Maxwell DMA owner; the pinned source remains for host.
+if(PS5_NATIVE)
+    set(EDEN_MAINTAINED_MAXWELL_DMA
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/video_core/engines/maxwell_dma.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_MAXWELL_DMA}")
+        message(FATAL_ERROR "Missing maintained native Maxwell DMA")
+    endif()
+    list(REMOVE_ITEM video_sources engines/maxwell_dma.cpp)
+    list(APPEND video_sources "${EDEN_MAINTAINED_MAXWELL_DMA}")
+endif()
 set_property(TARGET video_core PROPERTY SOURCES "${video_sources}")
 
 if(PS5_NATIVE)

@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 477
+**Non, this is not an exhaustive repository-wide inventory.** The 478
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 477 | 454 | 957 |
+| Graphe connu | 478 | 455 | 959 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 421 | 408 | 850 |
+| SOURCE — lecture effectuée, preuve insuffisante | 422 | 409 | 852 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 8 | 8 | 11 |
-| **Encore à qualifier (SOURCE + OPEN)** | **436** | **422** | **878** |
-| Dont priorité P0 (SOURCE + OPEN) | 114 | 108 | 265 |
+| **Encore à qualifier (SOURCE + OPEN)** | **437** | **423** | **880** |
+| Dont priorité P0 (SOURCE + OPEN) | 115 | 109 | 267 |
 
-Le **noyau restant** compte donc 436 critères répartis sur
-422 fichiers et 878 mentions fonction/contrat :
-15 OPEN et 421 SOURCE.
+Le **noyau restant** compte donc 437 critères répartis sur
+423 fichiers et 880 mentions fonction/contrat :
+15 OPEN et 422 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-318 fichiers de code/en-têtes présents et 318 avec un chemin de
+319 fichiers de code/en-têtes présents et 319 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -710,6 +710,7 @@ function/contract tokens are checked by CI for existence only; the
 | U78 | P1 | U19 | headless/vulkan_pool_capacity.h | class PoolCapacityLatch; std::uint64_t Observe( | SOURCE | tools/check-headless-final-owners.py | Native GPU free-memory capacity latch in maintained Vulkan device source; not an observed capacity guarantee | 🟡 Source étudiée |
 | U79 | P2 | J01 | headless/ps5_amd_topology_evidence.h | struct AmdCpuEvidence; inline AmdCpuEvidenceResult ValidateAmdSmtEvidence( | PARKED | tools/check-headless-final-owners.py | Isolated Sony/AMD topology evidence validator, introduced without native runtime pinning; no certified caller, defer integration until qualified | ⚪ Suspendu |
 | U80 | P1 | H21 | vendor/encore-active/eden-core/src/core/hle/kernel/svc/svc_ipc_standard.cpp | ReplyAndReceiveImpl(; SendSyncRequestImpl( | SOURCE | tools/verify/hle/check-native-hle-ipc-timeout-host.py | Normal IPC SVC signed deadline overflow repaired in maintained source; DEV profiler preserved separately; host sanitizer does not prove FC27 freeze recovery | 🟡 Source étudiée |
+| U81 | P0 | V01,M01 | vendor/encore-active/eden-core/src/video_core/engines/maxwell_dma.cpp | MaxwellDMA::CopyBlockLinearToPitch(; MaxwellDMA::CopyPitchToBlockLinear( | SOURCE | tools/check-native-dma-extent-host.py | Native accelerated and fallback DMA extent checks, UBSan host source extraction; console gameplay unverified | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
