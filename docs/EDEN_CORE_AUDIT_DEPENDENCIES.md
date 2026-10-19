@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 406
+**Non, this is not an exhaustive repository-wide inventory.** The 408
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 406 | 383 | 821 |
+| Graphe connu | 408 | 385 | 825 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 351 | 338 | 716 |
+| SOURCE — lecture effectuée, preuve insuffisante | 353 | 340 | 720 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **366** | **352** | **744** |
+| **Encore à qualifier (SOURCE + OPEN)** | **368** | **354** | **748** |
 | Dont priorité P0 (SOURCE + OPEN) | 113 | 107 | 263 |
 
-Le **noyau restant** compte donc 366 critères répartis sur
-352 fichiers et 744 mentions fonction/contrat :
-15 OPEN et 351 SOURCE.
+Le **noyau restant** compte donc 368 critères répartis sur
+354 fichiers et 748 mentions fonction/contrat :
+15 OPEN et 353 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-305 fichiers de code/en-têtes présents et 305 avec un chemin de
+307 fichiers de code/en-têtes présents et 307 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -639,6 +639,8 @@ function/contract tokens are checked by CI for existence only; the
 | V102 | P1 | V100,Q06 | vendor/encore-active/eden-core/src/video_core/gpu_gl_native.cpp | WaitForSyncOperation(; TickWork( | SOURCE | tools/check-g21-gpu-profile-matrix-host.py | Native GL GPU cancellation/fatal-wait candidate, staged only until G21 source selector cutover; not console qualified | 🟡 Source étudiée |
 | V103 | P2 | V102,Q03 | vendor/encore-active/eden-core/src/video_core/gpu_gl_native_dev.cpp | WaitForSyncOperation(; ::Eden::Performance::BootTrace() | SOURCE | tools/check-g21-gpu-profile-matrix-host.py | Native GL DEV diagnostics candidate, staged historical parity; not selected nor console qualified | 🟡 Source étudiée |
 | V104 | P1 | V102,V96 | vendor/encore-active/eden-core/src/video_core/gpu_vulkan.cpp | OnCPURead(; NotifyShutdown( | SOURCE | tools/check-g21-gpu-profile-matrix-host.py | Vulkan-native G21 historical variant retains its pinned read-capture and destructor behavior; staged only, no console qualification | 🟡 Source étudiée |
+| V105 | P0 | H54,H56 | vendor/encore-active/eden-core/src/core/hle/kernel/kernel_standard.cpp | worker_task_manager.WaitForRequests(); closing_managers.swap(server_managers) | SOURCE | tools/check-g19-kernel-profile-matrix-host.py | G19 standard kernel source staged, full preserved shutdown recipe and service ownership; host parity pending, native/console not qualified | 🟡 Source étudiée |
+| V106 | P1 | V105,H57 | vendor/encore-active/eden-core/src/core/hle/kernel/kernel_dev.cpp | EDEN_SHUTDOWN_SERVICES; EDEN_SHUTDOWN_KERNEL | SOURCE | tools/check-g19-kernel-profile-matrix-host.py | G19 DEV kernel source staged, adds teardown timing without changing normal profile; host parity pending, console not qualified | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 

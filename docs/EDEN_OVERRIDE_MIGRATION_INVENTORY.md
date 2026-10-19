@@ -265,6 +265,11 @@ et de l'unité kernel, sans double compilation. Il préserve les gardes de
 clôture, les références des threads, l'arrêt des services et les marqueurs
 de diagnostic DEV. Les résultats restent des preuves **hôte** uniquement.
 
+Les deux variantes C++ complètes sont désormais présentes sous
+`vendor/encore-active/eden-core/src/core/hle/kernel/` ; le contrôle hôte
+exige leur parité exacte avec les sorties de G19, mais elles ne sont pas
+encore sélectionnées par le build.
+
 La migration suivante devra déplacer les deux C++ complets dans
 `vendor/encore-active` et comparer les octets de ces sources aux sorties
 CMake historiques, avant de retirer le générateur G19.
