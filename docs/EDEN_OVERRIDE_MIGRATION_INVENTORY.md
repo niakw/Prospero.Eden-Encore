@@ -486,6 +486,24 @@ est disponible, reconstruit l'ancien résultat pour comparer chaque octet.
 La modification historique `code_source` X09 est retirée : les variantes
 complètes de `BlockOfCode` sont maintenues sous `encore-active`.
 
+## G13 / M12 — provenance mémoire native et blocage de migration
+
+La branche A32 de G13 lit désormais directement la source versionnée
+`EDEN_MAINTAINED_A32_MEMORY`, puis retire cette **même** unité de la
+cible `core` avant d'y insérer la source native dérivée. L'ancien chemin
+`${PORT_BUILD_DIR}/memory.cpp` n'était pas le propriétaire sélectionné,
+et pouvait manquer sur une configuration propre.
+
+Le témoin `tools/check-deferred-native-bridge-contract.py` reconstruit la
+transformation G13 depuis la version de backport livrée et depuis la variante
+A32 maintenue, avec ses protections de lecture, de plage et de journalisation,
+avant de tester l'ancien pont M12 en mode DEV. Cette preuve reste **hôte**.
+
+M12 reste une dette de génération C++ : il dépend de la sortie G13 et
+de ses deux variantes avant de pouvoir être déplacé proprement en
+source complète. Ne pas supprimer le générateur M12 sans matérialiser
+les deux variantes et les comparer à la sortie réelle G13.
+
 ## Générateurs des modules CMake inclus — inventaire complémentaire
 
 Le tableau principal n'indexe que `headless/CMakeLists.txt`. Les modules

@@ -617,6 +617,13 @@ assert a32_memory == shipping_memory.replace(old_fastmem_guard, new_fastmem_guar
 assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_A32_MEMORY}")') == 1
 assert 'if(NOT EXISTS "${EDEN_MAINTAINED_A32_MEMORY}")' in c
 assert 'if(EDEN_A32_FASTMEM)' in c
+# G13 must derive the same maintained A32 source selected above, then
+# remove it from the core target. A stale PORT_BUILD_DIR/memory.cpp was
+# neither the active A32 unit nor guaranteed to exist on a clean configure.
+assert 'set(eden_cpu_memory_tu "${EDEN_MAINTAINED_A32_MEMORY}")' in c
+assert 'list(REMOVE_ITEM core_sources "${EDEN_MAINTAINED_A32_MEMORY}")' in c
+assert 'set(eden_cpu_memory_tu "${PORT_BUILD_DIR}/memory.cpp")' not in c
+assert 'list(REMOVE_ITEM core_sources "${PORT_BUILD_DIR}/memory.cpp")' not in c
 assert 'write_derived("${PORT_BUILD_DIR}/memory.cpp"' not in c
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/core/memory.cpp" arena_source)' not in c
 print("MAINTAINED_A32_MEMORY_PARITY_PASS: complete installed backport source")
