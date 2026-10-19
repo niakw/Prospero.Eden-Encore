@@ -520,6 +520,41 @@ include("__BRIDGE__")
     assert "GetCurrentHostThreadID()" not in mm.split("bool MemoryManager::EnqueueDeferredCPUWrite",1)[1].split("void MemoryManager::FlushCaching",1)[0]
     assert "guest_write_origin_core" in mm
     assert "guest_write_origin_core < ::Eden::GpuDeferredWrite::Queue::Cores" in vk
+    # Validate M12 against BOTH real native G13 variants. The prior
+    # host fixture materialized A32 but only configured the bridge for
+    # shipping/default memory, so an A32-only source drift could go unseen.
+    a32_stage = fake/"g13-a32"
+    assert (a32_stage/"memory-ps5.cpp").read_text() == native_a32
+    a32_project = project.replace(str(stage), str(a32_stage))
+    assert a32_project != project and str(stage) not in a32_project
+    (fake/"CMakeLists.txt").write_text(a32_project)
+    result_a32 = subprocess.run(
+        ["cmake", "-S", str(fake), "-B", str(fake/"build-a32")],
+        capture_output=True, text=True, timeout=45)
+    if result_a32.returncode:
+        print(result_a32.stdout[-3500:])
+        print(result_a32.stderr[-3500:])
+        raise AssertionError("M12 A32 native ON CMake source translation failed")
+    a32_guest = (a32_stage/"memory-ps5-deferred.cpp").read_text()
+    assert a32_guest != guest, "M12 ignored selected A32 memory variant"
+    a32_guard = "process.IsApplication() && !process.Is64Bit() && Settings::IsFastmemEnabled()"
+    normal_guard = "process.IsApplication() && Settings::IsFastmemEnabled()"
+    assert a32_guest.count(a32_guard) == 1
+    assert guest.count(normal_guard) == 1
+    assert a32_guest.replace(a32_guard, normal_guard) == guest, (
+        "M12 A32/standard divergence beyond intended fastmem guard")
+    for token in ("ScopedGuestWriteOrigin guest_origin",
+                  "ScopedGuestStoreIntent store_intent;",
+                  "ScopedGuestCacheMaintenanceIntent maintenance_intent;",
+                  "ShouldLogUnmappedAccess()",
+                  "thread_local Common::ScratchBuffer<u32> read_scratch;",
+                  "std::numeric_limits<u64>::max() - GetInteger(base)"):
+        assert a32_guest.count(token) == guest.count(token), (
+            "M12 lost shared native contract", token)
+    assert (a32_stage/"vulkan_rasterizer_deferred.cpp").read_text() == maintained_m07.read_text()
+    assert (a32_stage/"dma_pusher_deferred.cpp").read_text() == maintained_m08.read_text()
+    print("ENCORE_M12_BOTH_NATIVE_MEMORY_PROFILES_PASS default=1 a32=1 bridge_disabled_by_default=1")
+
     dirty_h=(stage/"deferred-core/core/gpu_dirty_memory_manager.h").read_text()
     assert dirty_h == maintained_dirty.read_text()
     assert dirty_h.count("void Collect(PAddr address, size_t size) {") == 1
