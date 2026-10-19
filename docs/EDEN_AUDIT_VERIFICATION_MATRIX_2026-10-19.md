@@ -40,17 +40,17 @@ corrections hôte : elle interdit seulement d'affirmer que leurs
 performances ou leur effet sur les freezes sont démontrés.
 
 Sur les **390 références à un script Python** parmi les preuves des
-contrats, **372 sont appelées directement** par la prévalidation et
-**18 ne le sont pas directement** (17 SOURCE et 1 OPEN). Les 18
-références correspondent à six chemins distincts :
+contrats, **373 sont appelées directement** par la prévalidation et
+**17 ne le sont pas directement** (16 SOURCE et 1 OPEN). Les 17
+références correspondent à cinq chemins distincts :
 
 - `tools/install-vendored-radv.py` : **12** références à un
   *installateur d'entrées compilateur*, contrôlé séparément par les
   empreintes RADV et son vérificateur de fork. **Ne pas exécuter sans
   destination Meson jetable.**
 - `tools/install-vendored-surface-lifecycle.py` : **1** référence
-  à un installateur. Son mode `--check`, en lecture seule,
-  peut être exécuté directement en prévalidation.
+  maintenant exécutée directement par la CI en mode **lecture seule**
+  `--check`, avec provenance SHA validée.
 - `tools/check-jit-protection.py` : **2** références à un
   banc fondé sur les fichiers générés dans
   `.local/headless-cache`, absents d'une prévalidation hôte
