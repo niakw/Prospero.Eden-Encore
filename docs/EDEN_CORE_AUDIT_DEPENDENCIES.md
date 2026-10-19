@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 417
+**Non, this is not an exhaustive repository-wide inventory.** The 429
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,17 +24,17 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 417 | 394 | 842 |
+| Graphe connu | 429 | 406 | 866 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 362 | 349 | 737 |
+| SOURCE — lecture effectuée, preuve insuffisante | 374 | 361 | 761 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **377** | **363** | **765** |
+| **Encore à qualifier (SOURCE + OPEN)** | **389** | **375** | **789** |
 | Dont priorité P0 (SOURCE + OPEN) | 114 | 108 | 265 |
 
-Le **noyau restant** compte donc 377 critères répartis sur
-363 fichiers et 765 mentions fonction/contrat :
-15 OPEN et 362 SOURCE.
+Le **noyau restant** compte donc 389 critères répartis sur
+375 fichiers et 789 mentions fonction/contrat :
+15 OPEN et 374 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
@@ -650,6 +650,18 @@ function/contract tokens are checked by CI for existence only; the
 | J50 | P1 | J19,J13 | vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_64_native_dev.cpp | DynarmicCallbacks64::MemoryRead8; config.fastmem_exclusive_access | SOURCE | tools/check-g11-jit-profile-matrix-host.py | G11 native/dev A64 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; directly selected, host-parity qualified; console not qualified | 🟡 Source étudiée |
 | J51 | P1 | J19,J13 | vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_64_native_normal.cpp | DynarmicCallbacks64::MemoryRead8; config.fastmem_exclusive_access | SOURCE | tools/check-g11-jit-profile-matrix-host.py | G11 native/normal A64 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; directly selected, host-parity qualified; console not qualified | 🟡 Source étudiée |
 | V107 | P2 | V84 | vendor/encore-active/eden-core/src/video_core/renderer_opengl/dev_render_passes.inc | CaptureDevelopmentPass | SOURCE | tools/check-headless-fragment-ownership.py | Former headless DEV OpenGL capture fragment moved byte-for-byte into same renderer source directory; local include by maintained rasterizer DEV only, no native console proof | 🟡 Source étudiée |
+| U22 | P1 | J13 | headless/jit-startup-retry.h | NextCapacity(; ConstructWithCapacityFallback( | SOURCE | tools/check-headless-critical-interface-owners.py | A32/A64 JIT startup fallback header, consumed by native Encore G11 sources; file ownership only | 🟡 Source étudiée |
+| U23 | P1 | J01 | headless/experimental_performance.h | ChooseJitMemoryPlan(; A64CacheBytes( | SOURCE | tools/check-headless-critical-interface-owners.py | Memory plan and per-core JIT cache budget interface included by native G11 and native app; hardware admission unqualified | 🟡 Source étudiée |
+| U24 | P1 | J01 | headless/performance.h | CpuSampleDue(; ShouldLogUnmappedAccess() | SOURCE | tools/check-headless-critical-interface-owners.py | Application performance declarations shared with maintained guest sources; no duplicate header owner | 🟡 Source étudiée |
+| U25 | P1 | U01 | headless/gpu_fault_rate_limit.h | ShouldReportRead(); ResetTitleCounters() | SOURCE | tools/check-headless-critical-interface-owners.py | Runtime fault counters and bounded log-report policy owned by app main, not a vendor override | 🟡 Source étudiée |
+| U26 | P1 | U01 | headless/guest_fault.h | RecordGuestFault(; TakeGuestFault( | SOURCE | tools/check-headless-critical-interface-owners.py | Guest fault publication from selected physical-core unit to app lifecycle; console handoff unqualified | 🟡 Source étudiée |
+| U27 | P1 | J50 | headless/crash_site.h | void Dump(; void DumpThreads( | SOURCE | tools/check-headless-critical-interface-owners.py | Native DEV A64 crash-site helper included only by diagnostic JIT owner; runtime dump unqualified | 🟡 Source étudiée |
+| U28 | P2 | U01 | headless/cache_budget.h | TrimShaderCache(; available >= reserve | SOURCE | tools/check-headless-critical-interface-owners.py | App-owned session-boundary cache trimming contract; not a vendor override or source generator | 🟡 Source étudiée |
+| U29 | P1 | U11,U01 | headless/stall_watchdog.h | void Start(); void ArmGame() | SOURCE | tools/check-headless-critical-interface-owners.py | Native DEV-only stalled-game watchdog, app-owned and compiled under explicit diagnostic gate | 🟡 Source étudiée |
+| U30 | P2 | U19,U31 | headless/gpu_probe.inc | GraphicsWindow::RunGpuProbe(); ProbeNativeQueue( | SOURCE | tools/check-headless-critical-interface-owners.py | Opt-in graphics diagnostic included only by graphics.cpp with EDEN_GPU_PROBE; app-owned fragment | 🟡 Source étudiée |
+| U31 | P2 | U19 | headless/gpu_native_probe.inc | ProbeClock(; ProbeNativeQueue( | SOURCE | tools/check-headless-critical-interface-owners.py | Diagnostic native command queue implementation included transitively by gpu_probe.inc only | 🟡 Source étudiée |
+| U32 | P1 | J01 | headless/direct_pool_accounting.h | IsKernelFreeSpanValid(; Summarize( | SOURCE | tools/check-headless-critical-interface-owners.py | App-owned direct-memory accounting and bounded extent calculations consumed by performance.cpp | 🟡 Source étudiée |
+| U33 | P1 | J01 | headless/ps5_cpu_topology.h | FreeBsdMask(; ParseSmtGroups( | SOURCE | tools/check-headless-critical-interface-owners.py | App-owned read-only SMT/cpuset parser consumed by performance.cpp; console topology unqualified | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 

@@ -14,8 +14,8 @@ l'audit moteur. Un chemin noté « À qualifier » peut avoir été audité sous
 une autre forme : il manque seulement la référence de chemin exacte.
 
 - **168** chemins sous `headless/`, dont **58** sources C/C++ et **110** en-têtes/fragments.
-- **32** chemins déjà présents dans le graphe moteur.
-- **136** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
+- **44** chemins déjà présents dans le graphe moteur.
+- **124** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
 - Les deux générateurs de profils `headless/encore_overrides_generated.h`,
   `headless/glyph_overrides_generated.h` et les autres ressources générées
   sont des entrées de l'inventaire, **pas** de nouveaux patchs CMake.
@@ -35,11 +35,11 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/buffer_pages.h` | en-tête/fragment | R05 | Chemin indexé, preuve dépend du graphe |
 | `headless/buffer_write_ahead.h` | en-tête/fragment | R06 | Chemin indexé, preuve dépend du graphe |
 | `headless/button_mapping.h` | en-tête/fragment | — | À qualifier |
-| `headless/cache_budget.h` | en-tête/fragment | — | À qualifier |
+| `headless/cache_budget.h` | en-tête/fragment | U28 | Chemin indexé, preuve dépend du graphe |
 | `headless/controller_applet.h` | en-tête/fragment | — | À qualifier |
 | `headless/crash_report.cpp` | runtime/bridge | U11 | Chemin indexé, preuve dépend du graphe |
 | `headless/crash_report.h` | en-tête/fragment | — | À qualifier |
-| `headless/crash_site.h` | en-tête/fragment | — | À qualifier |
+| `headless/crash_site.h` | en-tête/fragment | U27 | Chemin indexé, preuve dépend du graphe |
 | `headless/crash_trigger.h` | en-tête/fragment | — | À qualifier |
 | `headless/dev_launch_policy.h` | en-tête/fragment | — | À qualifier |
 | `headless/dev_replay_policy.h` | en-tête/fragment | — | À qualifier |
@@ -48,7 +48,7 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/devices.h` | en-tête/fragment | — | À qualifier |
 | `headless/devices_check.cpp` | harness/test | — | À qualifier |
 | `headless/diagnostics.h` | en-tête/fragment | — | À qualifier |
-| `headless/direct_pool_accounting.h` | en-tête/fragment | — | À qualifier |
+| `headless/direct_pool_accounting.h` | en-tête/fragment | U32 | Chemin indexé, preuve dépend du graphe |
 | `headless/direct_pool_probe_policy.h` | en-tête/fragment | — | À qualifier |
 | `headless/direct_pool_region_scan.h` | en-tête/fragment | — | À qualifier |
 | `headless/display_refresh.h` | en-tête/fragment | — | À qualifier |
@@ -60,7 +60,7 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/encore_overrides_runtime.h` | en-tête/fragment | — | À qualifier |
 | `headless/encore_performance_policy.h` | en-tête/fragment | — | À qualifier |
 | `headless/error_applet.h` | en-tête/fragment | — | À qualifier |
-| `headless/experimental_performance.h` | en-tête/fragment | — | À qualifier |
+| `headless/experimental_performance.h` | en-tête/fragment | U23 | Chemin indexé, preuve dépend du graphe |
 | `headless/fastmem_handler.cpp` | runtime/bridge | J07 | Chemin indexé, preuve dépend du graphe |
 | `headless/filesystem_probe.h` | en-tête/fragment | — | À qualifier |
 | `headless/game_liveness.h` | en-tête/fragment | — | À qualifier |
@@ -73,19 +73,19 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/gpu_deferred_write_queue.h` | en-tête/fragment | U21 | Chemin indexé, preuve dépend du graphe |
 | `headless/gpu_dirty_region_split.h` | en-tête/fragment | R04 | Chemin indexé, preuve dépend du graphe |
 | `headless/gpu_failure.h` | en-tête/fragment | U20 | Chemin indexé, preuve dépend du graphe |
-| `headless/gpu_fault_rate_limit.h` | en-tête/fragment | — | À qualifier |
-| `headless/gpu_native_probe.inc` | en-tête/fragment | — | À qualifier |
-| `headless/gpu_probe.inc` | en-tête/fragment | — | À qualifier |
+| `headless/gpu_fault_rate_limit.h` | en-tête/fragment | U25 | Chemin indexé, preuve dépend du graphe |
+| `headless/gpu_native_probe.inc` | en-tête/fragment | U31 | Chemin indexé, preuve dépend du graphe |
+| `headless/gpu_probe.inc` | en-tête/fragment | U30 | Chemin indexé, preuve dépend du graphe |
 | `headless/graphics.cpp` | runtime/bridge | V11 | Chemin indexé, preuve dépend du graphe |
 | `headless/graphics.h` | en-tête/fragment | U19 | Chemin indexé, preuve dépend du graphe |
-| `headless/guest_fault.h` | en-tête/fragment | — | À qualifier |
+| `headless/guest_fault.h` | en-tête/fragment | U26 | Chemin indexé, preuve dépend du graphe |
 | `headless/heap_pages.cpp` | runtime/bridge | U02 | Chemin indexé, preuve dépend du graphe |
 | `headless/hle_counters.h` | en-tête/fragment | — | À qualifier |
 | `headless/hud.h` | en-tête/fragment | — | À qualifier |
 | `headless/image_pages.h` | en-tête/fragment | — | À qualifier |
 | `headless/jit-allocator.h` | en-tête/fragment | J06 | Chemin indexé, preuve dépend du graphe |
 | `headless/jit-sparse-commit.h` | en-tête/fragment | J05 | Chemin indexé, preuve dépend du graphe |
-| `headless/jit-startup-retry.h` | en-tête/fragment | — | À qualifier |
+| `headless/jit-startup-retry.h` | en-tête/fragment | U22 | Chemin indexé, preuve dépend du graphe |
 | `headless/jit_list.h` | en-tête/fragment | J11 | Chemin indexé, preuve dépend du graphe |
 | `headless/log_pipe.h` | en-tête/fragment | — | À qualifier |
 | `headless/main.cpp` | runtime/bridge | U01 | Chemin indexé, preuve dépend du graphe |
@@ -105,7 +105,7 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/pad.cpp` | runtime/bridge | U03 | Chemin indexé, preuve dépend du graphe |
 | `headless/pad_diagnostics.h` | en-tête/fragment | — | À qualifier |
 | `headless/performance.cpp` | runtime/bridge | J01 | Chemin indexé, preuve dépend du graphe |
-| `headless/performance.h` | en-tête/fragment | — | À qualifier |
+| `headless/performance.h` | en-tête/fragment | U24 | Chemin indexé, preuve dépend du graphe |
 | `headless/pipeline_trace_registry.h` | en-tête/fragment | — | À qualifier |
 | `headless/preferences.h` | en-tête/fragment | — | À qualifier |
 | `headless/preferences_check.cpp` | harness/test | — | À qualifier |
@@ -174,7 +174,7 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/prosperoeden/runtime_shims.cpp` | launcher/UI | — | À qualifier |
 | `headless/prosperoeden/version.h` | launcher/UI | — | À qualifier |
 | `headless/ps5_amd_topology_evidence.h` | en-tête/fragment | — | À qualifier |
-| `headless/ps5_cpu_topology.h` | en-tête/fragment | — | À qualifier |
+| `headless/ps5_cpu_topology.h` | en-tête/fragment | U33 | Chemin indexé, preuve dépend du graphe |
 | `headless/ps5_guest_system_button_route.h` | en-tête/fragment | — | À qualifier |
 | `headless/ps5_net_compat.c` | runtime/bridge | U08 | Chemin indexé, preuve dépend du graphe |
 | `headless/romfs_check.cpp` | harness/test | — | À qualifier |
@@ -184,7 +184,7 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/sdk_audit.h` | en-tête/fragment | — | À qualifier |
 | `headless/settings_store.h` | en-tête/fragment | — | À qualifier |
 | `headless/shader_cache_check.cpp` | harness/test | — | À qualifier |
-| `headless/stall_watchdog.h` | en-tête/fragment | — | À qualifier |
+| `headless/stall_watchdog.h` | en-tête/fragment | U29 | Chemin indexé, preuve dépend du graphe |
 | `headless/stop_limit.cpp` | runtime/bridge | U15 | Chemin indexé, preuve dépend du graphe |
 | `headless/stop_limit.h` | en-tête/fragment | U16 | Chemin indexé, preuve dépend du graphe |
 | `headless/storage_paths.h` | en-tête/fragment | — | À qualifier |
@@ -197,6 +197,22 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/zbic_compression.cpp` | runtime/bridge | U17 | Chemin indexé, preuve dépend du graphe |
 | `headless/zbic_compression.h` | en-tête/fragment | U18 | Chemin indexé, preuve dépend du graphe |
 <!-- HEADLESS_SOURCE_CATALOG_END -->
+
+## Interfaces critiques du moteur qualifiées au niveau des chemins
+
+Douze interfaces de `headless/` ont un propriétaire précis dans le graphe
+(`U22–U33`) et un consommateur vérifié par
+`tools/check-headless-critical-interface-owners.py`. Ce sont des
+composants **de l'application**, non des overrides de sources vendor.
+Les déplacements vers `encore-active` seraient ici une erreur de
+séparation des responsabilités. Le test contrôle les inclusions directes
+(JIT A32/A64, runtime, watchdog, comptabilité mémoire et diagnostics GPU)
+et les gardes DEV/probe ; il ne prouve pas leur exécution console.
+
+La majorité des chemins restants sans entrée fonctionnelle comprend des
+modules de launcher, des harnais de test et des interfaces applicatives.
+Ils demeurent inventoriés, mais ne sont pas déclarés comme correctifs
+moteur ni comme preuves de performance.
 
 ## Priorités de qualification
 
