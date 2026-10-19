@@ -352,3 +352,27 @@ combinaisons PS5/hôte et normal/DEV ; il vérifie l'arrivée du sémaphore,
 l'arrêt, l'erreur apparue pendant l'attente et une erreur déjà publiée.
 C'est une protection contre une attente sans issue **après échec GPU**,
 non une accélération mesurée ni une suppression prouvée du gel FC27.
+
+## 20 octobre — conserver la cause GPU après sa livraison au launcher
+
+Une seconde revue a montré une dépendance importante du correctif de
+sémaphore : le thread de commandes du launcher utilise `TakeGpuFailure()`
+pour signaler la panne au menu. Jusqu'ici cette fonction retirait la seule
+référence de l'exception ; un autre thread CPU/GPU qui appelait
+`PeekGpuFailure()` après cette livraison pouvait **manquer** la panne et
+rester bloqué en attente d'un sémaphore ou d'un fence jamais confirmé.
+
+Le registre `headless/gpu_failure.h` a maintenant deux rôles distincts :
+un message d'erreur **livrable une seule fois** au launcher et une cause
+fatale **conservée pour tous les waiters de la session**. Le launcher
+réinitialise les deux uniquement au début d'un nouveau titre, à la
+frontière où les anciens GPU workers ont été arrêtés. Le même diagnostic
+reste accessible après livraison du message UI ; aucune fausse
+confirmation GPU, aucun saut de fence ou nouveau timeout n'est introduit.
+
+Les témoins GPU producer et sync existants vérifient la sémantique du
+`Take` séparée du `Peek`. Le nouveau témoin C++ sous ASan/UBSan
+contrôle huit lecteurs concurrents, deux exceptions successives, une
+livraison unique et l'absence de propagation au titre suivant. Le
+correctif est spécifique aux scénarios de panne fatale, non aux coûts
+normaux de frametime.

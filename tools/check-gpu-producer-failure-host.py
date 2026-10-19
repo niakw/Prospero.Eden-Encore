@@ -67,7 +67,7 @@ void await_enqueue(CommandQueue& q, unsigned count) {
     assert(q.enqueued.load(std::memory_order_acquire) >= count);
 }
 int main() {
-    (void) Eden::TakeGpuFailure();
+    Eden::ResetGpuFailureForTitle();
     ThreadManager normal;
     std::atomic<u64> normal_result{};
     std::thread completed([&] {
@@ -113,7 +113,10 @@ int main() {
     catch (const std::runtime_error&) { saw_failure = true; }
     assert(saw_failure);
     assert(failed.state.queue.enqueued.load() == 2);
-    (void) Eden::TakeGpuFailure();
+    assert(Eden::TakeGpuFailure());
+    assert(Eden::PeekGpuFailure());
+    Eden::ResetGpuFailureForTitle();
+    assert(!Eden::PeekGpuFailure());
 }
 """.replace("__METHOD__", method(quiet))
 with tempfile.TemporaryDirectory(prefix="eden-gpu-producer-") as d:

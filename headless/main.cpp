@@ -1544,6 +1544,9 @@ int main(int argc, char** argv) {
             // The previous game's Vulkan pressure snapshot belongs to its
             // destroyed renderer, not to this title's direct-memory budget.
             // Prior GPU workers have joined before this launcher path.
+            // Previous GPU/renderer workers are gone: only now release
+            // the fatal error latched for outstanding CPU/GPU waiters.
+            Eden::ResetGpuFailureForTitle();
             Eden::Performance::ResetDirectMemoryProbeForTitle();
             Eden::Performance::ResetGpuReportForTitle();
 #ifdef EDEN_DEV_PROFILE
