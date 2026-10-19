@@ -37,7 +37,25 @@ prmt_reference = prmt
 fermi_pinned = (ROOT / "vendor/sources/eden/src/video_core/engines/fermi_2d.cpp").read_text()
 fermi_default = (ROOT / "vendor/encore-active/eden-core/src/video_core/engines/fermi_2d_observed.cpp").read_text()
 fermi_experimental = (ROOT / "vendor/encore-active/eden-core/src/video_core/engines/fermi_2d_experimental.cpp").read_text()
-assert fermi_pinned in fermi_default
+# The shipping variant adds an audited CodeQL #55 security-only
+# replacement of the pitch-alignment address block. Reverse that one
+# replacement before comparing to the immutable pinned baseline.
+# check-maintained-fermi2d-variants.py separately enforces full parity.
+pitch_anchor = "    const auto need_align_to_pitch ="
+pitch_end = "\n    memory_manager.FlushCaching();"
+def alignment_block(text: str) -> str:
+    begin = text.index(pitch_anchor)
+    end = text.index(pitch_end, begin)
+    return text[begin:end]
+secure_pitch = alignment_block(fermi_default)
+pinned_pitch = alignment_block(fermi_pinned)
+assert secure_pitch == alignment_block(fermi_experimental)
+assert "static_cast<u64>(config.src_x0) *" in secure_pitch
+assert "static_cast<u64>(bytes_per_pixel)" in secure_pitch
+assert "x_offset > ~u64{0} - base_address" in secure_pitch
+assert "bytes_per_pixel != 0 &&" in secure_pitch
+assert fermi_default.count(secure_pitch) == 1
+assert fermi_pinned in fermi_default.replace(secure_pitch, pinned_pitch, 1)
 def extract_range(src: str, beginning: str, ending: str) -> str:
     start = src.index(beginning)
     finish = src.index(ending, start)
