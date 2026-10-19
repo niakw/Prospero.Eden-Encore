@@ -102,12 +102,12 @@ Les variantes volontairement distinctes doivent chacune avoir une **sélection c
 - `vendor/encore-active/` : inventaire de sources et fragments maintenus dans [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) ; la couverture de chemins n'est pas une preuve d'exécution.
 - `headless/CMakeLists.txt` : générateurs `write_derived()` restants et positions exactes dans [`EDEN_OVERRIDE_MIGRATION_INVENTORY.md`](EDEN_OVERRIDE_MIGRATION_INVENTORY.md) ; les modules indirects y sont suivis séparément.
 - Modules CMake secondaires : **0 appel** supplémentaires ; le total courant (principal + modules) figure dans l'inventaire de migration. Un site ne représente pas nécessairement un fichier unique.
-- Plusieurs modules changent encore indirectement une variable contenant du code C++ avant génération, sans nécessairement appeler eux-mêmes `write_derived()`.
+- Aucun module CMake actif ne modifie indirectement une variable contenant du C++ ; X05/X06 sont migrés et leurs oracles sont hors build.
 - `headless/` : fragments `.inc` résiduels à classer par **consommateur effectif**, inventoriés dans [`EDEN_OVERRIDE_SOURCE_OF_TRUTH.md`](EDEN_OVERRIDE_SOURCE_OF_TRUTH.md) ; les patches historiques restent comptés distinctement.
 - `tools/` comporte des centaines de scripts ; **les scripts de préparation/installation et leurs effets sur le staging** doivent être vérifiés, pas classés « tests uniquement » par leur répertoire.
 - Les catalogues `EDEN_HEADLESS_SOURCE_CATALOG.md` et `EDEN_ACTIVE_SOURCE_CATALOG.md` inventorient les unités connues ; ils ne prouvent pas encore les entrées effectives du compilateur.
 
-**Exemple concret de dette encore active :** `headless/native_guest_range_overflow.cmake` et `headless/native_jit_memory_read_guard.cmake` modifient des variables contenant du C++ avant génération. Leurs corrections doivent devenir des sources complètes maintenues dans `encore-active`, sans simplement déplacer ces modules vers un autre dossier. `checked-fastmem.cmake` a, lui, déjà été retiré lors de la migration G06/G07.
+**Dette C++ G11/X06 migrée :** huit variantes JIT complètes sont directement sélectionnées dans `vendor/encore-active`. Les anciennes transformations G11/X06 servent seulement d'oracles dans `tools/fixtures`. Le site `write_derived` restant fabrique une ressource GLSL G23, pas du C++.
 
 **Exemple du bon sens de migration :** `eden-threading/native-hle-overrides.cmake` choisit explicitement un vrai fichier C++ versionné et refuse l'absence de la source d'origine. Il ne compose pas le corps d'une fonction.
 

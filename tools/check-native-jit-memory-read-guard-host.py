@@ -6,10 +6,11 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-helper = root / "headless/native_jit_memory_read_guard.cmake"
+helper = root / "tools/fixtures/legacy-x06-native-jit-memory-read-guard.cmake"
 cmake = (root / "headless/CMakeLists.txt").read_text()
 workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
-assert 'native_jit_memory_read_guard.cmake")' in cmake
+assert 'native_jit_memory_read_guard.cmake")' not in cmake
+assert "EDEN_G11_ROOT" in cmake
 assert "python3 -B tools/check-native-jit-memory-read-guard-host.py" in workflow
 compiler = shutil.which("g++") or shutil.which("clang++")
 assert compiler and shutil.which("cmake")
