@@ -24,22 +24,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 350 | 328 | 707 |
+| Graphe connu | 354 | 332 | 715 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 295 | 283 | 602 |
+| SOURCE — lecture effectuée, preuve insuffisante | 299 | 287 | 610 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **310** | **297** | **630** |
-| Dont priorité P0 (SOURCE + OPEN) | 108 | 103 | 252 |
+| **Encore à qualifier (SOURCE + OPEN)** | **314** | **301** | **638** |
+| Dont priorité P0 (SOURCE + OPEN) | 110 | 105 | 256 |
 
-Le **noyau restant** compte donc 310 critères répartis sur
-297 fichiers et 630 mentions fonction/contrat :
-15 OPEN et 295 SOURCE.
+Le **noyau restant** compte donc 314 critères répartis sur
+301 fichiers et 638 mentions fonction/contrat :
+15 OPEN et 299 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-282 fichiers de code/en-têtes présents et 282 avec un chemin de
+286 fichiers de code/en-têtes présents et 286 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -620,6 +620,10 @@ function/contract tokens are checked by CI for existence only; the
 | L25 | P1 | N15 | vendor/encore-active/eden-backports/src/core/hle/service/sockets/sockets.cpp | LoopProcess; RegisterNamedService | SOURCE | tools/check-active-source-inventory.py | Shipping backport BSD service admission caps; runtime correctness unproved | 🟡 Source étudiée |
 | L26 | P1 | L22 | vendor/encore-active/eden-backports/src/core/hle/service/usb/usb.cpp | LoopProcess; RegisterNamedService | SOURCE | tools/check-active-source-inventory.py | Shipping backport USB service session caps; runtime correctness unproved | 🟡 Source étudiée |
 | L27 | P1 | N17 | vendor/encore-active/eden-backports/src/core/hle/service/wlan/wlan.cpp | LoopProcess; RegisterNamedService | SOURCE | tools/check-active-source-inventory.py | Shipping backport WLAN service session caps; runtime correctness unproved | 🟡 Source étudiée |
+| V85 | P0 | V71 | vendor/encore-active/eden-core/src/video_core/dma_pusher.cpp | DmaPusher::Step; sync_cv.wait_for | SOURCE | tools/check-maintained-guest-gpu-sync.py | G20 normal: bounded DMA fence and shutdown, source parity only; console unqualified | 🟡 Source étudiée |
+| V86 | P1 | V85 | vendor/encore-active/eden-core/src/video_core/dma_pusher_dev.cpp | DmaPusher::Step; dma_fence_timer | SOURCE | tools/check-maintained-guest-gpu-sync.py | G20 DEV: conditional DMA fence timer, preserved diagnostics, console unqualified | 🟡 Source étudiée |
+| V87 | P0 | V85 | vendor/encore-active/eden-core/src/video_core/engines/puller.cpp | Puller::ProcessSemaphoreTriggerMethod; IsShuttingDown() | SOURCE | tools/check-maintained-guest-gpu-sync.py | G20 normal: guest semaphore shutdown-aware loop; console unqualified | 🟡 Source étudiée |
+| V88 | P1 | V87 | vendor/encore-active/eden-core/src/video_core/engines/puller_dev.cpp | Puller::ProcessSemaphoreTriggerMethod; semaphore_timer | SOURCE | tools/check-maintained-guest-gpu-sync.py | G20 DEV: conditional semaphore timer with stop guard; console unqualified | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
