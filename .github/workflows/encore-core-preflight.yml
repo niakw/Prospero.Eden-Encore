@@ -56,6 +56,7 @@ jobs:
           python3 -B tools/check-upstream-texture-memory-r428.py
           python3 -B tools/check-ps5-image-pages-r433.py
           python3 -B tools/check-ps5-guest-texture-write-elision-host.py
+          python3 -B tools/check-ps5-texture-invalidation-elision-host.py
           python3 -B tools/check-ps5-buffer-pages-r437.py
           python3 -B tools/check-buffer-write-ahead-host.py
           python3 -B tools/check-gpu-deferred-queue-host.py
