@@ -1776,14 +1776,14 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
     # The same callback still waits normally while compilation is unfinished.
     if name == 'vk_graphics_pipeline':
         replacements.append((
-            "        scheduler.Record([this](vk::CommandBuffer) {\\n"
+            "        scheduler.Record([this](vk::CommandBuffer) {\n"
             "            auto timer = Eden::Performance::VulkanTimer(16);\n"
             "            std::unique_lock lock{build_mutex};",
-            "        scheduler.Record([this](vk::CommandBuffer) {\\n"
-            "            // Builder published the pipeline before this ordered GPU callback.\\n"
-            "            // Acquire its completion without taking a redundant build mutex.\\n"
-            "            // An unfinished build still follows the original condition wait.\\n"
-            "            if (is_built.load(std::memory_order_acquire)) return;\\n"
+            "        scheduler.Record([this](vk::CommandBuffer) {\n"
+            "            // Builder published the pipeline before this ordered GPU callback.\n"
+            "            // Acquire its completion without taking a redundant build mutex.\n"
+            "            // An unfinished build still follows the original condition wait.\n"
+            "            if (is_built.load(std::memory_order_acquire)) return;\n"
             "            auto timer = Eden::Performance::VulkanTimer(16);\n"
             "            std::unique_lock lock{build_mutex};",
         ))
