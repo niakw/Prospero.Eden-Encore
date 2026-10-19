@@ -15,7 +15,7 @@ cmake = (root / "headless/CMakeLists.txt").read_text()
 legacy = (root/"tools/fixtures/legacy-g11-jit.cmake").read_text()
 assert 'write_derived("${derived}"' not in cmake
 assert 'native_jit_memory_read_guard.cmake")' not in cmake
-assert 'set_source_files_properties("${EDEN_G11_SOURCE}" PROPERTIES' in cmake
+assert 'set_source_files_properties("${EDEN_G11_SOURCE}" TARGET_DIRECTORY core PROPERTIES' in cmake
 start = 'foreach(bits 32 64)\n    set(relative "arm/dynarmic/arm_dynarmic_${bits}.cpp")'
 finish = 'endforeach()\n# G12: complete maintained PhysicalCore sources.'
 assert legacy.count(start) == 1
