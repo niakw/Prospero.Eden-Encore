@@ -28,7 +28,7 @@ assert cache.index("::Eden::ImagePages::Mark(image.cpu_addr") < cache.index(
     "slot_map_views.insert(image.gpu_addr")
 assert cache.index("::Eden::ImagePages::Mark(cpu_addr, size)") < cache.index(
     "slot_map_views.insert(gpu_addr, cpu_addr")
-assert oracle.count("if (!::Eden::ImagePages::NeverHeld(addr, size))") == 4
+assert oracle.count("if (!::Eden::ImagePages::NeverHeld(addr, size))") == 5
 assert "python3 -B tools/check-ps5-guest-texture-write-elision-host.py" in workflow
 
 cpp = r"""
