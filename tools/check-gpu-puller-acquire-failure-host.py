@@ -106,7 +106,7 @@ public:
 };
 INJECT
 int main() {
-    (void)Eden::TakeGpuFailure();
+    Eden::ResetGpuFailureForTitle();
     Puller p;
     DmaPusher matched;
     matched.memory_manager.word = 7;
@@ -131,7 +131,7 @@ int main() {
     assert(caught && failed.rasterizer->calls >= 2 &&
            failed.rasterizer->calls <= 64);
     assert(Eden::PeekGpuFailure());
-    (void)Eden::TakeGpuFailure();
+    Eden::ResetGpuFailureForTitle();
     DmaPusher already_failed;
     Eden::RecordGpuFailure(std::make_exception_ptr(
         std::runtime_error("persisted GPU builder failed")));
@@ -139,7 +139,7 @@ int main() {
     try { p.ProcessSemaphoreAcquire(already_failed); }
     catch (const std::runtime_error&) { caught = true; }
     assert(caught && already_failed.rasterizer->calls == 0);
-    (void)Eden::TakeGpuFailure();
+    Eden::ResetGpuFailureForTitle();
 #else
     // Non-console builds have no added fault check; shutdown is authoritative.
     DmaPusher host_failed;
@@ -147,7 +147,7 @@ int main() {
     host_failed.rasterizer->stop_after = 3;
     p.ProcessSemaphoreAcquire(host_failed);
     assert(host_failed.rasterizer->calls == 3);
-    (void)Eden::TakeGpuFailure();
+    Eden::ResetGpuFailureForTitle();
 #endif
 }
 """

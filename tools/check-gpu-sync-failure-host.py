@@ -241,6 +241,10 @@ int main() {
     assert(failed.CurrentSyncRequestFence() == 0);
     assert(Eden::PeekGpuFailure());
     assert(Eden::TakeGpuFailure());
+    // UI delivery must not hide the same failure from late GPU waiters.
+    assert(Eden::PeekGpuFailure());
+    assert(!Eden::TakeGpuFailure());
+    Eden::ResetGpuFailureForTitle();
     assert(!Eden::PeekGpuFailure());
 
     // An orderly title shutdown preserves the existing cancellation
