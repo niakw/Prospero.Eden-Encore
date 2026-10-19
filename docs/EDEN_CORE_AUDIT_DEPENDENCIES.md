@@ -5,7 +5,7 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
-**Non, this is not an exhaustive repository-wide inventory.** The 430
+**Non, this is not an exhaustive repository-wide inventory.** The 475
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -24,17 +24,17 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 462 | 439 | 928 |
+| Graphe connu | 475 | 452 | 953 |
 | HOST — preuve ciblée hôte | 33 | 30 | 68 |
-| SOURCE — lecture effectuée, preuve insuffisante | 407 | 394 | 823 |
+| SOURCE — lecture effectuée, preuve insuffisante | 420 | 407 | 848 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 7 | 7 | 9 |
-| **Encore à qualifier (SOURCE + OPEN)** | **422** | **408** | **851** |
+| **Encore à qualifier (SOURCE + OPEN)** | **435** | **421** | **876** |
 | Dont priorité P0 (SOURCE + OPEN) | 114 | 108 | 265 |
 
-Le **noyau restant** compte donc 422 critères répartis sur
-408 fichiers et 851 mentions fonction/contrat :
-15 OPEN et 407 SOURCE.
+Le **noyau restant** compte donc 435 critères répartis sur
+421 fichiers et 876 mentions fonction/contrat :
+15 OPEN et 420 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
@@ -695,6 +695,19 @@ function/contract tokens are checked by CI for existence only; the
 | U63 | P2 | U13 | headless/ryujinx_saves.h | inline std::vector<Save> FindSaves(; inline std::vector<Save> FindFolderSaves( | SOURCE | tools/check-headless-specialized-owners.py | Metadata-bridge save import from index and plain folders; launcher interface separately owned | 🟡 Source étudiée |
 | U64 | P2 | U01 | headless/sdk_audit.h | inline void AuditSdkThread(; inline void AuditSdk() | SOURCE | tools/check-headless-specialized-owners.py | Bounded opt-in SDK runtime diagnostics; does not validate console behavior | 🟡 Source étudiée |
 | U65 | P1 | U01,J50 | headless/watch.h | inline bool Parse(; inline bool Hit( | SOURCE | tools/check-headless-specialized-owners.py | Explicit DEV guest write-watch interval; not a default native fast path | 🟡 Source étudiée |
+| U66 | P1 | U03 | headless/button_mapping.h | inline constexpr SessionButtonMapping ResolveSessionButtonMapping(; inline ButtonMapping Assign( | SOURCE | tools/check-headless-final-owners.py | Controller-to-guest action translation used by native pad and stored game settings; not a vendor override | 🟡 Source étudiée |
+| U67 | P2 | U01 | headless/game_liveness.h | class Probe; Result Observe( | SOURCE | tools/check-headless-final-owners.py | DEV-only watchdog progress witness with bounded stall notices; does not kill or recover guest | 🟡 Source étudiée |
+| U68 | P2 | U61 | headless/glyph_sha256.h | class Sha256; inline std::optional<std::string> FileSha256( | SOURCE | tools/check-headless-final-owners.py | Bounded integrity check for game artwork files; no catalogue authenticity or native execution proof | 🟡 Source étudiée |
+| U69 | P2 | U13 | headless/glyph_version.h | namespace Eden::GlyphVersion; inline std::string FromNacp( | SOURCE | tools/check-headless-final-owners.py | Game NACP display-version extraction for metadata; not a runtime glyph remap | 🟡 Source étudiée |
+| U70 | P1 | U19 | headless/image_pages.h | inline void Mark(; inline bool NeverHeld( | SOURCE | tools/check-headless-final-owners.py | Application-shared monotonic occupancy hint consumed by maintained Vulkan texture cache and rasterizer; compilation not proven | 🟡 Source étudiée |
+| U71 | P2 | U03 | headless/pad_diagnostics.h | struct PadEdgeDiagnostics; void Observe( | SOURCE | tools/check-headless-final-owners.py | Input edge accounting guarded by diagnostic settings; no change to controller mapping | 🟡 Source étudiée |
+| U72 | P1 | U19 | headless/pipeline_trace_registry.h | class FirstUseRegistry final; std::size_t Record( | SOURCE | tools/check-headless-final-owners.py | Mutex-guarded DEV first-use pipeline registry consumed by a maintained Vulkan unit; not a PS5 race proof | 🟡 Source étudiée |
+| U73 | P2 | U01 | headless/preferences.h | #include "settings_store.h" | SOURCE | tools/check-headless-final-owners.py | Application compatibility include alias for settings-store; no independent function body or launcher edit | 🟡 Source étudiée |
+| U74 | P1 | U03 | headless/ps5_guest_system_button_route.h | struct GuestSystemButtonRoute; bool Observe( | SOURCE | tools/check-headless-final-owners.py | App-owned guest HOME chord suppression, distinct from console-reserved system key and launcher glyphs | 🟡 Source étudiée |
+| U75 | P1 | U01 | headless/settings_store.h | inline Preferences LoadPreferences(; inline bool SavePreferences( | SOURCE | tools/check-headless-final-owners.py | Shared app JSON preferences and per-title settings; UI presentation remains out of audit scope | 🟡 Source étudiée |
+| U76 | P1 | U01 | headless/storage_paths.h | inline std::string ConfigDir(); inline std::string ConfigFile( | SOURCE | tools/check-headless-final-owners.py | Native application config and storage path resolution with sandbox fallback; not a dependency rewrite | 🟡 Source étudiée |
+| U77 | P1 | U19 | headless/vulkan_gc_budget.h | constexpr std::uint64_t AfterProjectedEviction(; constexpr std::uint64_t OldestEvictionTick( | SOURCE | tools/check-headless-final-owners.py | Saturating Vulkan GC budget arithmetic linked to maintained texture cache; no device-memory proof | 🟡 Source étudiée |
+| U78 | P1 | U19 | headless/vulkan_pool_capacity.h | class PoolCapacityLatch; std::uint64_t Observe( | SOURCE | tools/check-headless-final-owners.py | Native GPU free-memory capacity latch in maintained Vulkan device source; not an observed capacity guarantee | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 
