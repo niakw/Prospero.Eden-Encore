@@ -213,6 +213,25 @@ for signature in (
     "system.GPU().OnCommandListEnd();",
 ):
     assert signature in code, signature
+# M04: maintained complete header must equal its former two pinned rewrites.
+# Only the absolute CMake-specific include prefix is normalized to the
+# existing headless include directory of core and video_core.
+maintained_m04 = root/"vendor/encore-active/eden-core/guest-bridge/memory_manager.h"
+pinned_m04 = (root/"vendor/sources/eden/src/video_core/memory_manager.h").read_text()
+assert pinned_m04.count("    void FlushCaching();") == 1
+assert pinned_m04.count("    Core::System& system;") == 1
+expected_m04 = ('#include "gpu_deferred_replay.h"\n' +
+    pinned_m04.replace("    void FlushCaching();",
+        "    bool EnqueueDeferredCPUWrite(u64 address, u64 size);\n    void FlushCaching();").replace(
+        "    Core::System& system;",
+        "    ::Eden::GpuDeferredWrite::Queue deferred_cpu_write_queue;\n    Core::System& system;"))
+assert maintained_m04.read_text() == expected_m04, "M04 maintained header parity drift"
+assert 'configure_file("${EDEN_DEFERRED_MEMORY_HEADER}"' in code
+assert 'write_derived("${PORT_BUILD_DIR}/include/video_core/memory_manager.h"' not in code
+assert 'target_include_directories(core PRIVATE "${EDEN_PORT_DIR}")' in base
+assert 'target_include_directories(video_core PRIVATE "${EDEN_PORT_DIR}")' in base
+print("ENCORE_M04_MAINTAINED_HEADER_PARITY_PASS")
+
 pins={
     "video_core/memory_manager.h":["    void FlushCaching();","    Core::System& system;"],
     "video_core/memory_manager.cpp":['#include "memory_manager.h"',"void MemoryManager::FlushCaching() {"],
@@ -296,6 +315,7 @@ include("__BRIDGE__")
     upload=sources["engine_upload_deferred.cpp"]
     assert "void State::ProcessData(std::span<const u8> read_buffer) {\n    memory_manager.FlushCaching();" in upload
     h=(stage/"include/video_core/memory_manager.h").read_text()
+    assert h == maintained_m04.read_text()
     assert "GpuDeferredWrite::Queue deferred_cpu_write_queue" in h
     guest=(stage/"memory-ps5-deferred.cpp").read_text()
     assert guest.count("ScopedGuestWriteOrigin guest_origin") == 1

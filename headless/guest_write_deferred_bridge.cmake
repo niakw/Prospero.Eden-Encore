@@ -6,25 +6,15 @@ if(EDEN_GUEST_WRITE_BRIDGE_DEV)
     endif()
     target_compile_definitions(video_core PRIVATE EDEN_GUEST_WRITE_BRIDGE_DEV=1)
 
-    # The queue belongs to the guest GPU address space, not a process-global.
-    file(READ "${PROJECT_SOURCE_DIR}/src/video_core/memory_manager.h" bridge_h)
-    set(h_api "    void FlushCaching();")
-    set(h_owner "    Core::System& system;")
-    foreach(anchor IN ITEMS h_api h_owner)
-        string(FIND "${bridge_h}" "${${anchor}}" found)
-        if(found LESS 0)
-            message(FATAL_ERROR "Pinned GPU memory manager layout changed (${anchor})")
-        endif()
-    endforeach()
-    string(REPLACE "${h_api}"
-        "    bool EnqueueDeferredCPUWrite(u64 address, u64 size);\n    void FlushCaching();"
-        bridge_h "${bridge_h}")
-    string(REPLACE "${h_owner}"
-        "    ::Eden::GpuDeferredWrite::Queue deferred_cpu_write_queue;\n    Core::System& system;"
-        bridge_h "${bridge_h}")
-    string(PREPEND bridge_h "#include \"${EDEN_PORT_DIR}/gpu_deferred_replay.h\"\n")
+    # M04 migrated: complete experimental header maintained in Encore.
+    set(EDEN_DEFERRED_MEMORY_HEADER
+        "${PORT_ROOT}/vendor/encore-active/eden-core/guest-bridge/memory_manager.h")
+    if(NOT EXISTS "${EDEN_DEFERRED_MEMORY_HEADER}")
+        message(FATAL_ERROR "Missing maintained experimental memory manager header")
+    endif()
     file(MAKE_DIRECTORY "${PORT_BUILD_DIR}/include/video_core")
-    write_derived("${PORT_BUILD_DIR}/include/video_core/memory_manager.h" "${bridge_h}")
+    configure_file("${EDEN_DEFERRED_MEMORY_HEADER}"
+        "${PORT_BUILD_DIR}/include/video_core/memory_manager.h" COPYONLY)
     target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/include")
     target_include_directories(core BEFORE PRIVATE "${PORT_BUILD_DIR}/include")
     # The pinned GPU-dirty collector has an unsafe read/exchange handoff:
