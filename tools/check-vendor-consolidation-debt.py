@@ -30,8 +30,32 @@ for name in ("eden-backports", "eden-build", "eden-core", "eden-gpu",
 assert 'file(COPY "${EDEN_ACTIVE_VULKAN}/" DESTINATION "${PORT_BUILD_DIR}")' in vulkan
 assert (active/"eden-build/src/CMakeLists.txt").is_file(), "missing maintained native CMake"
 assert 'execute_process(COMMAND python3 "${PORT_ROOT}/tools/prepare-vulkan-port.py"' not in vulkan
-baseline = {"write_derived(": 77, "file(READ": 87, "string(REPLACE": 225}
+# Migration budget: historical ceilings (77/87/225) no longer protect a
+# consolidated source tree. Match the remaining reviewed CMake generation
+# sites and leave room only for removing them, never for adding new ones.
+# For READ/REPLACE the approved pinned exceptions below are subtracted first.
+baseline = {"write_derived(": 5, "file(READ": 8, "string(REPLACE": 52}
 counts = {name: c.count(name) for name in baseline}
+# All C++ generation targets still permitted in the main CMake recipe.
+# These are a shrinking allowlist: a migrated target needs no new exemption.
+# G23 produces a GLSL resource and is deliberately not treated as C++ debt.
+import re
+allowed_generated_targets = {
+    "${derived}",  # G11: A32/A64 callback variants
+    "${eden_native_memory_tu}",  # G13: native guest memory
+    "${PORT_BUILD_DIR}/kernel.cpp",  # G19
+    "${PORT_BUILD_DIR}/gpu.cpp",  # G21
+    "${PORT_BUILD_DIR}/include/loading_scene_glsl.h",  # G23: GLSL resource
+}
+generated_targets = re.findall(r'^\\s*write_derived\\(\\s*"([^"]+)"', c, re.M)
+assert len(generated_targets) == counts["write_derived("], (
+    "Unrecognized CMake write_derived site", generated_targets)
+assert len(generated_targets) == len(set(generated_targets)), (
+    "Duplicated CMake generation target", generated_targets)
+assert set(generated_targets) <= allowed_generated_targets, (
+    "Unreviewed generated CMake source: migrate to vendor/encore-active",
+    sorted(set(generated_targets) - allowed_generated_targets))
+
 # One source-pinned fatal GPU worker wait needs a checked CMake input and
 # two exact-method rewrites. Do not relax the historical ceilings for any
 # other vendor-derived source. Each exception must occur exactly once.
