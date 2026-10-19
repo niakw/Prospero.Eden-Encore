@@ -1007,7 +1007,10 @@ void RasterizerVulkan::InvalidateRegion(DAddr addr, u64 size, VideoCommon::Cache
     if (addr == 0 || size == 0) {
         return;
     }
-    if (True(which & VideoCommon::CacheType::TextureCache)) {
+    // The monotonic image page map is published before registration.
+    // Only bypass the texture mutex when the range never held an image.
+    if (True(which & VideoCommon::CacheType::TextureCache) &&
+        !::Eden::ImagePages::NeverHeld(addr, size)) {
         std::scoped_lock lock{texture_cache.mutex};
         texture_cache.WriteMemory(addr, size);
     }
@@ -1024,7 +1027,17 @@ void RasterizerVulkan::InvalidateRegion(DAddr addr, u64 size, VideoCommon::Cache
 }
 
 void RasterizerVulkan::InnerInvalidation(std::span<const std::pair<DAddr, std::size_t>> sequences) {
-    {
+    // Do not take the texture cache mutex for a batch of never-held pages.
+    // If even one range is registered, unknown, or too large, preserve the
+    // original locked path and process ALL ranges in their original order.
+    bool texture_may_overlap = false;
+    for (const auto& [addr, size] : sequences) {
+        if (!::Eden::ImagePages::NeverHeld(addr, size)) {
+            texture_may_overlap = true;
+            break;
+        }
+    }
+    if (texture_may_overlap) {
         std::scoped_lock lock{texture_cache.mutex};
         for (const auto& [addr, size] : sequences) {
             texture_cache.WriteMemory(addr, size);
@@ -1095,7 +1108,9 @@ void RasterizerVulkan::OnCacheInvalidation(DAddr addr, u64 size) {
         return;
     }
 
-    {
+    // A never-owned image page cannot have texture descriptors to evict.
+    // Unknown, large and previously mapped spans still acquire the mutex.
+    if (!::Eden::ImagePages::NeverHeld(addr, size)) {
         std::scoped_lock lock{texture_cache.mutex};
         texture_cache.WriteMemory(addr, size);
     }

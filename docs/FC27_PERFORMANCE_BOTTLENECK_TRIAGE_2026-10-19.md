@@ -133,3 +133,30 @@ dont l'absence de texture est prouvée. Un **gain mesuré de frametime,
 FPS ou correction du freeze n'est PAS encore démontré sur console**.
 Comparer le même jeu et le même profil avec un package identifié,
 sans attribuer à ce seul changement un éventuel résultat mélangé.
+
+
+## Vulkan — invocations d'invalidation sans image inscrite
+
+19 octobre 2026 : les chemins maintenus
+`RasterizerVulkan::InvalidateRegion`,
+`RasterizerVulkan::InnerInvalidation` et
+`RasterizerVulkan::OnCacheInvalidation` réutilisent l'indice
+monotone `ImagePages::NeverHeld` déjà éprouvé pour le CPU-write et le
+flush-area. Les petites plages dont aucune page n'a jamais hébergé
+d'image évitent l'acquisition du mutex de texture. En lot, si **une**
+plage est enregistrée, inconnue ou trop grande, toutes les écritures
+texture sont exécutées dans leur ordre d'origine avec le mutex.
+
+**Inchangés** : invalidations buffer, query et shader ; vérification
+d'adresse/zéro ; traitement des plages connues/grandes/hors bornes,
+arbitrage du pipeline, fences, worker GPU et mode différé OFF.
+Le pont expérimental suit la source maintenue à code identique pour
+ces trois méthodes, sans être activé.
+
+Le témoin `check-ps5-texture-invalidation-elision-host.py` compile
+les **trois méthodes extraites des sources C++ réelles**, en
+ASan/UBSan, et vérifie les appels et acquisitions de mutex dans
+toutes les branches, dont les lots mixtes et les bornes hors espace.
+Ce test démontre une réduction **structurelle** d'acquisitions
+pour les pages jamais possédées, **pas** un gain de FPS mesuré sur
+PS5 ni une correction attestée des freezes.

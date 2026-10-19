@@ -11,7 +11,7 @@ raster = (root / "vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp").read_
 cache = (root / "vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h").read_text()
 generator = (root / "tools/prepare-vulkan-port.py").read_text()
 ast.parse(generator)
-assert raster.count("::Eden::ImagePages::NeverHeld(addr, size)") == 2
+assert raster.count("::Eden::ImagePages::NeverHeld(addr, size)") == 5
 write_start = raster.index("bool RasterizerVulkan::OnCPUWrite")
 write_end = raster.index("void RasterizerVulkan::OnCacheInvalidation", write_start)
 write_method = raster[write_start:write_end]
