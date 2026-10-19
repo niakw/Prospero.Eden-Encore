@@ -17,29 +17,16 @@ if(EDEN_GUEST_WRITE_BRIDGE_DEV)
         "${PORT_BUILD_DIR}/include/video_core/memory_manager.h" COPYONLY)
     target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/include")
     target_include_directories(core BEFORE PRIVATE "${PORT_BUILD_DIR}/include")
-    # The pinned GPU-dirty collector has an unsafe read/exchange handoff:
-    # concurrent Collect from the guest and renderer can discard another
-    # producer's pending transform. Derive a host-tested synchronized version
-    # ONLY when this opt-in bridge is compiled, leaving pinned sources intact.
-    file(READ "${PROJECT_SOURCE_DIR}/src/core/gpu_dirty_memory_manager.h" bridge_dirty)
-    set(dirty_entry "    void Collect(PAddr address, size_t size) {\n        TransformAddress t = BuildTransform(address, size);")
-    set(dirty_nested "                    std::scoped_lock lk(guard);\n                    back_buffer.emplace_back(tmp);")
-    foreach(anchor IN ITEMS dirty_entry dirty_nested)
-        string(FIND "${bridge_dirty}" "${${anchor}}" found)
-        if(found LESS 0)
-            message(FATAL_ERROR "Pinned GPU-dirty collector changed (${anchor})")
-        endif()
-    endforeach()
-    string(REPLACE "${dirty_entry}"
-        "    void Collect(PAddr address, size_t size) {\n        std::scoped_lock lk(guard);\n        TransformAddress t = BuildTransform(address, size);"
-        bridge_dirty "${bridge_dirty}")
-    # Do not recursively acquire guard inside the now-serialized Collect.
-    string(REPLACE "${dirty_nested}"
-        "                    back_buffer.emplace_back(tmp);"
-        bridge_dirty "${bridge_dirty}")
+    # M05: the synchronized dirty collector is a complete Encore-maintained
+    # experimental header. No C++ lock rewriting is allowed in this module.
+    set(EDEN_DEFERRED_DIRTY_HEADER
+        "${PORT_ROOT}/vendor/encore-active/eden-core/guest-bridge/gpu_dirty_memory_manager.h")
+    if(NOT EXISTS "${EDEN_DEFERRED_DIRTY_HEADER}")
+        message(FATAL_ERROR "Missing maintained deferred dirty collector header")
+    endif()
     file(MAKE_DIRECTORY "${PORT_BUILD_DIR}/deferred-core/core")
-    write_derived("${PORT_BUILD_DIR}/deferred-core/core/gpu_dirty_memory_manager.h"
-        "${bridge_dirty}")
+    configure_file("${EDEN_DEFERRED_DIRTY_HEADER}"
+        "${PORT_BUILD_DIR}/deferred-core/core/gpu_dirty_memory_manager.h" COPYONLY)
     target_include_directories(core BEFORE PRIVATE "${PORT_BUILD_DIR}/deferred-core")
     target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/deferred-core")
 
