@@ -28,20 +28,20 @@ preuve `HOST` invoquée en CI disparaît.
 
 | État | Contrats | Preuve acquise |
 |---|---:|---|
-| HOST | 55 | Invariant précis sur hôte ; **pas** de jeu sur console |
-| SOURCE | 400 | Source étudiée, comportement natif non qualifié |
+| HOST | 56 | Invariant précis sur hôte ; **pas** de jeu sur console |
+| SOURCE | 399 | Source étudiée, comportement natif non qualifié |
 | OPEN | 15 | Question de comportement/propriété non résolue |
 | PARKED | 8 | Expérimentation suspendue, ne pas activer |
 | **Total** | **478** | **0 certification de gain de FPS par ce registre** |
 
-**404 chemins distincts SOURCE + OPEN** (dont **102 chemins P0** et
-**285 dans `vendor/encore-active`**) correspondent à **415 critères SOURCE + OPEN**, dont **107 P0**, ont encore besoin
+**403 chemins distincts SOURCE + OPEN** (dont **101 chemins P0** et
+**284 dans `vendor/encore-active`**) correspondent à **414 critères SOURCE + OPEN**, dont **106 P0**, ont encore besoin
 d'une qualification supplémentaire. Leur présence n'invalide pas les
 corrections hôte : elle interdit seulement d'affirmer que leurs
 performances ou leur effet sur les freezes sont démontrés.
 
-Sur les **395 références à un script Python** parmi les preuves des
-contrats, **379 sont appelées directement** par la prévalidation et
+Sur les **396 références à un script Python** parmi les preuves des
+contrats, **380 sont appelées directement** par la prévalidation et
 **16 ne le sont pas directement** (15 SOURCE et 1 OPEN). Les 16
 références correspondent à quatre chemins distincts :
 
@@ -66,7 +66,7 @@ Le témoin de provenance `tools/install-vendored-surface-lifecycle.py
 --check` est désormais directement exécuté et a réussi sur la CI
 [39316703898](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39316703898).
 
-Les **83 autres références** pointent vers des documents, recettes
+Les **82 autres références** pointent vers des documents, recettes
 CMake, patches ou autres fichiers non exécutables : existence et
 ancres documentaires ne constituent **pas** un benchmark.
 
@@ -173,3 +173,9 @@ extraite et compilée avec ASan/UBSan. Restent **404 fichiers**
 La diffusion hôte des invalidations I-cache entre interfaces CPU est
 prouvée par `tools/check-native-jit-icache-broadcast-host.py`; **404 fichiers** restent à
 qualifier dont **102 P0**, représentant **415 contrats**.
+
+## 20 octobre — condition de compilation partagée V40
+
+V40 dispose désormais d'un témoin source-extrait C++ hôte pour
+les conditions partagées. **403 fichiers** restent à
+qualifier (dont **101 P0**) sur **414 contrats**.

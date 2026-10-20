@@ -78,16 +78,16 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
 | Graphe connu | 478 | 455 | 959 |
-| HOST — preuve ciblée hôte | 55 | 50 | 107 |
-| SOURCE — lecture effectuée, preuve insuffisante | 400 | 390 | 813 |
+| HOST — preuve ciblée hôte | 56 | 51 | 110 |
+| SOURCE — lecture effectuée, preuve insuffisante | 399 | 389 | 810 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 8 | 8 | 11 |
-| **Encore à qualifier (SOURCE + OPEN)** | **415** | **404** | **841** |
-| Dont priorité P0 (SOURCE + OPEN) | 107 | 102 | 248 |
+| **Encore à qualifier (SOURCE + OPEN)** | **414** | **403** | **838** |
+| Dont priorité P0 (SOURCE + OPEN) | 106 | 101 | 245 |
 
-Le **noyau restant** compte donc 415 critères répartis sur
-404 fichiers et 841 mentions fonction/contrat :
-15 OPEN et 400 SOURCE.
+Le **noyau restant** compte donc 414 critères répartis sur
+403 fichiers et 838 mentions fonction/contrat :
+15 OPEN et 399 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
@@ -446,7 +446,7 @@ function/contract tokens are checked by CI for existence only; the
 | V37 | P1 | V32 | vendor/encore-active/eden-vulkan/include/video_core/present.h | GetScalingFilter; GetAntiAliasingForAppletCapture | SOURCE | headless/vulkan.cmake | Per-display and applet capture scaling contracts preserve independent filters; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
 | V38 | P0 | V17,V33 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/pipeline_helper.h | WriteDescriptorBuffer; DescriptorLayoutBuilder | SOURCE | headless/vulkan.cmake | Descriptor buffer writes and layout builders must preserve null descriptors and padding; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
 | V39 | P1 | V29 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/present/window_adapt_pass.h | WindowAdaptPass; CreatePipelines | SOURCE | headless/vulkan.cmake | Present adaptation pass descriptor/pipeline header is paired with maintained Vulkan implementation; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
-| V40 | P0 | V21 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/striped_wait.h | StripedMutex; StripedCondition; SlotOf | SOURCE | headless/vulkan.cmake | Striped pipeline completion synchronization avoids per-pipeline native mutex pressure; contention and fairness still unproved; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
+| V40 | P0 | V21 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/striped_wait.h | StripedMutex; StripedCondition; SlotOf | HOST | tools/check-native-vulkan-striped-wait-host.py | Hôte: véritable en-tête compilé avec ASan/UBSan, files de complétion compute/graphics reliées, partage de condition, réveil correct à prédicats distincts et nombre fixe de stripes prouvés; équité/performance GPU et FPS PS5 non qualifiés | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-vulkan-striped-wait-host.py) |
 | V41 | P1 | V18 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_compute_pipeline.h | DescriptorRingPreflightSize; Configure | SOURCE | headless/vulkan.cmake | Compute pipeline descriptor ring size and configure ABI contracts; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
 | V42 | P0 | V17,V21 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_update_descriptor.h | PreflightGuestDraw; PreflightLargeGuestDraw; UpdateDescriptorQueue | SOURCE | headless/vulkan.cmake | Guest-draw descriptor preflight before paired cache locks and union-byte initialization; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
 | V43 | P1 | V26 | vendor/encore-active/eden-vulkan/include/video_core/vulkan_common/vulkan.h | VK_NO_PROTOTYPES; PS5_NATIVE | SOURCE | headless/vulkan.cmake | Platform Vulkan extension/header selection avoids desktop WSI in PS5 native profile; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |
