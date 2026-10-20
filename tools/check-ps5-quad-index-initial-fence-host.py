@@ -34,15 +34,23 @@ assert "python3 -B tools/check-ps5-quad-index-initial-fence-host.py" in workflow
 gen=ast.parse(oracle)
 # Locate the dict by its stable Vulkan source key, not the variable name
 # used for the generator's performance probes.
+# Another independently-owned deferred-copy dictionary now contains the
+# same file key. Resolve the source-rewrite table by the actual LUT-fence
+# invariant, rather than incorrectly requiring that file key to be unique.
 tables=[node for node in ast.walk(gen) if isinstance(node,ast.Dict)
         and any(isinstance(key,ast.Constant) and key.value=="vk_buffer_cache"
                 for key in node.keys)]
-assert len(tables)==1
-table=tables[0]
-entry=next(v for k,v in zip(table.keys,table.values)
-           if isinstance(k,ast.Constant) and k.value=="vk_buffer_cache")
-pairs=[ast.literal_eval(n) for n in entry.elts if isinstance(n,ast.Tuple)]
-guarded=[(before,after) for before,after in pairs if "very first LUT" in after]
+guard_tables=[]
+for table in tables:
+    entry=next(v for k,v in zip(table.keys,table.values)
+               if isinstance(k,ast.Constant) and k.value=="vk_buffer_cache")
+    pairs=[ast.literal_eval(n) for n in entry.elts
+           if isinstance(n,ast.Tuple) and len(n.elts)==2]
+    matching=[(before,after) for before,after in pairs if "very first LUT" in after]
+    if matching:
+        guard_tables.append(matching)
+assert len(guard_tables)==1
+guarded=guard_tables[0]
 assert len(guarded)==1
 before,after=guarded[0]
 assert before.count("scheduler.Finish();")==after.count("scheduler.Finish();")==1
