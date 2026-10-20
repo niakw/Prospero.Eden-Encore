@@ -14,6 +14,13 @@ cmake=(ROOT/"headless/CMakeLists.txt").read_text()
 workflow=(ROOT/".github/workflows/encore-core-preflight.yml").read_text()
 start="    void ZeroRegion(std::size_t start, std::size_t end_) noexcept {"
 end="    constexpr void CommitRegion(size_t index, size_t end_) {"
+commit_start="    constexpr void CommitRegion(size_t index, size_t end_) {"
+commit_end="    constexpr T& GetUnchecked(size_t index) {"
+assert text.count(commit_start)==1 and text.count(commit_end)==1
+commit_method=text[text.index(commit_start):text.index(commit_end)]
+assert "if (index >= end_ || index >= limit) return;" in commit_method
+assert "end_ = (std::min)(end_, limit);" in commit_method
+assert commit_method.index("index >= end_") < commit_method.index("static_cast<u64>(index) * sizeof(T)")
 assert text.count(start)==1 and text.count(end)==1
 method=text[text.index(start):text.index(end)]
 assert "if (start >= end_ || start >= limit) return;" in method
@@ -36,15 +43,23 @@ constexpr std::size_t HostPageSize=16384;
 static u64 AlignUp(u64 value,std::size_t alignment) {
     return (value + alignment - 1) & ~(alignment - 1);
 }
+static u64 AlignDown(u64 value,std::size_t alignment) {
+    return value & ~(alignment - 1);
+}
 struct Table {
     using T=u64;
     std::mutex sparse_mutation_mutex;
     std::size_t alloc_size;
     T* base_ptr;
-    unsigned decommits=0;
+    unsigned decommits=0, commits=0;
+    bool uncommitted_mode=false;
     bool IsCommittedPage(std::size_t index) const {
         assert(index < alloc_size/sizeof(T));
-        return true;
+        return !uncommitted_mode;
+    }
+    void CommitPage(std::size_t index) {
+        assert(index < alloc_size/sizeof(T));
+        ++commits;
     }
     void DecommitPage(std::size_t index) {
         assert(index < alloc_size/sizeof(T));
@@ -53,6 +68,7 @@ struct Table {
         std::memset(page,0,HostPageSize);
     }
 INJECT
+INJECT_COMMIT
 };
 int main() {
     constexpr std::size_t Capacity=2*HostPageSize/sizeof(u64);
@@ -77,10 +93,19 @@ int main() {
     t.ZeroRegion(0,HostPageSize/sizeof(u64));
     assert(t.decommits==1);
     for(std::size_t i=0;i<HostPageSize;++i) assert(bytes[i]==0);
+    t.uncommitted_mode=true;
+    t.CommitRegion(0,0);
+    t.CommitRegion(Capacity,Capacity+100);
+    t.CommitRegion(Capacity-5,Capacity-7);
+    assert(t.commits==0);
+    t.CommitRegion(Capacity-5,Capacity+100);
+    assert(t.commits==1);
+    t.CommitRegion(0,Capacity+100);
+    assert(t.commits==3);
     std::free(bytes);
-    std::puts("ENCORE_SPARSE_ZERO_BOUNDS_PASS");
+    std::puts("ENCORE_SPARSE_ZERO_COMMIT_BOUNDS_PASS");
 }
-""".replace("INJECT",method)
+""".replace("INJECT",method).replace("INJECT_COMMIT",commit_method)
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
 assert compiler,"C++20 host compiler required"
 with tempfile.TemporaryDirectory(prefix="encore-sparse-zero-bounds-") as folder:
@@ -92,4 +117,4 @@ with tempfile.TemporaryDirectory(prefix="encore-sparse-zero-bounds-") as folder:
                     "-fno-sanitize-recover=all",str(src),"-o",str(exe)],
                     check=True,timeout=90)
     subprocess.run([str(exe)],check=True,timeout=30)
-print("HOST_SPARSE_ZERO_BOUNDS_PASS; console runtime unqualified")
+print("HOST_SPARSE_ZERO_COMMIT_BOUNDS_PASS; console runtime unqualified")

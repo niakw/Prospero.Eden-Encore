@@ -150,6 +150,12 @@ public:
     }
 
     constexpr void CommitRegion(size_t index, size_t end_) {
+        // The same sparse backing is shared by CPU and GPU page-table owners.
+        // An invalid range must never overflow the byte conversion or spin
+        // over the entire virtual address space while committing pages.
+        const std::size_t limit = alloc_size / sizeof(T);
+        if (index >= end_ || index >= limit) return;
+        end_ = (std::min)(end_, limit);
         const u64 base = static_cast<u64>(index) * sizeof(T);
         const u64 end = static_cast<u64>(end_) * sizeof(T);
 
