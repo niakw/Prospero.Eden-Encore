@@ -141,8 +141,8 @@ int main() {
     Eden::ResetGpuFailureForTitle();
 #endif
 }
-""";
-const compiler = os.environ.get("CXX") or shutil.which("clang++") or shutil.which("g++")
+"""
+compiler = os.environ.get("CXX") or shutil.which("clang++") or shutil.which("g++")
 assert compiler, "C++20 compiler required"
 with tempfile.TemporaryDirectory(prefix="eden-gpu-dma-failed-fence-") as tmp:
     p = Path(tmp)
