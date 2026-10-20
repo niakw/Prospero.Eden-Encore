@@ -58,3 +58,35 @@ Au HEAD `05846723c` (optimisation GPU `db6b6a6` et réparation CI `0584672`), l'
 **Couverture effective : 41 fichiers de code traités/examinés ; reste à traiter dans le chantier d'optimisation : 450 fichiers (491 − 41).**
 
 Cette mesure est un **compteur de travail d'optimisation**, pas de validation. Chaque nouveau fichier analysé pour ses points chauds ou corrigé une seule fois doit être ajouté au [manifeste des propriétaires](EDEN_OPTIMIZATION_COVERAGE_2026-10-20.json) : il fait alors baisser le compteur même s'il ne nécessite pas de patch. Cela évite de fabriquer des optimisations inutiles simplement pour faire diminuer un chiffre. Le nombre de fichiers qui **nécessitent impérativement un changement C++** reste inconnu jusqu'à leur diagnostic. Contrôle CI : `python3 -B tools/check-eden-optimization-coverage.py`.
+
+## Accélération — sources déjà couvertes par des travaux antérieurs
+
+**Lot du 20 octobre — sans nouveau patch moteur.** L'inventaire a recoupé
+le manifeste de 41 chemins avec le registre central. **61 chemins distincts**
+supplémentaires de `vendor/encore-active` disposent d'une attribution
+historique explicite : **35** contrats `HOST` ciblés (tests/parité
+ou propriétés précises) et **26** unités sources complètes déjà
+maintenues, backportées ou sélectionnées (`SOURCE`; niveau de preuve
+hôte et console non nécessairement atteint).
+
+Ces 61 chemins n'ont **pas** été déclarés « FPS optimisé ».
+Ils ont été retirés de la **première analyse de code à refaire**,
+parce que leur propriétaire, leur intervention passée et une référence
+de preuve sont déjà consignés. Tout nouveau défaut documenté rouvrira
+le chemin pertinent sans cacher le problème.
+
+| Comptage optimisation de code | Précédent | Maintenant |
+| --- | ---: | ---: |
+| Sources/en-têtes maintenus directement par Encore | 491 | 491 |
+| Déjà modifiés ou examinés dans la passe récente | 41 | 41 |
+| Revus par réception hôte existante | 0 | **35** |
+| Revus par source déjà intégrée avec justificatif | 0 | **26** |
+| **Restent à traiter dans la passe** | **450** | **389** |
+
+**Ce nombre 389 n'est pas le nombre de correctifs nouveaux prouvés
+nécessaires.** Le registre de qualification SOURCE/OPEN n'a pas changé.
+Le contrôle CI exige que chacun de ces 61 chemins conserve son ID,
+son statut et sa référence de preuve historique dans
+`docs/EDEN_CORE_AUDIT_DEPENDENCIES.md`.
+Le nombre de nouvelles modifications de code obligatoires demeure
+inconnu avant diagnostic des sources non traitées.
