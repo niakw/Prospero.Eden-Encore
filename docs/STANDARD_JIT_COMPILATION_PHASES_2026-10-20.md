@@ -94,3 +94,13 @@ présentation. Une association causale avec FC27 nécessitera un témoin
 natif possédant des timestamps et identifiants de progression communs.
 Le self-test existant valide également les journaux anciens, les pertes
 d'échantillons, les resets et la stricte exigence de `scope`.
+
+## 20 octobre — invalidation JIT native A32/A64
+
+La voie A32 refusait de préserver la signification de l'adresse si elle
+dépassait la largeur d'un `u32`. Elle exige désormais une purge
+conservative du cache compilé au lieu de tronquer l'adresse. A32 et
+A64 ignorent les invalidations de longueur nulle, ce qui conserve la
+cache d'adresse décodée. Le patch de provenance est synchronisé avec
+les sources actives. `tools/check-native-dynarmic-icache-range-host.py` compile les méthodes C++
+réelles sous ASan/UBSan. Pas de gain FPS sur PS5 démontré.

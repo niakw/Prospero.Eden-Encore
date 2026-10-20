@@ -146,7 +146,7 @@ def build_matrix(rows: list[dict], workflow: str, catalog: str) -> tuple[list[di
     undirect = sorted(set(r["evidence"] for r in indirect))
     assert sum(statuses.values()) == len(rows)
     # Each new HOST claim needs a precise in-CI proof and native-limit statement.
-    assert statuses["HOST"] == 52, "HOST claims changed: review evidence before modifying guard"
+    assert statuses["HOST"] == 54, "HOST claims changed: review evidence before modifying guard"
     ownership_closures = set(["B06","B07","B08","B09","B10","B12","B13","B15","B17","B18","B19","B20"])
     for row in rows:
         if row["id"] not in ownership_closures:
@@ -155,6 +155,12 @@ def build_matrix(rows: list[dict], workflow: str, catalog: str) -> tuple[list[di
         assert row["evidence_kind"] == "python-in-preflight", row["id"]
         assert "Hôte:" in row["acceptance"] and "PS5" in row["acceptance"], row["id"]
     assert len(ownership_closures) == 12
+    for name in ("J19", "J20"):
+        claim = keyed[name]
+        assert claim["status"] == "HOST" and claim["priority"] == "P0"
+        assert claim["evidence"] == "tools/check-native-dynarmic-icache-range-host.py"
+        assert claim["evidence_kind"] == "python-in-preflight"
+        assert "Hôte:" in claim["acceptance"] and "PS5" in claim["acceptance"]
     sparse_retirement = keyed["J34"]
     assert sparse_retirement["status"] == "HOST" and sparse_retirement["priority"] == "P0"
     assert sparse_retirement["evidence"] == "tools/check-sparse-slot-reuse-host.py"
