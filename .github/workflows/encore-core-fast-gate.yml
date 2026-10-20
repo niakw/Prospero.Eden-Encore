@@ -9,6 +9,9 @@ on:
       - 'vendor/encore-active/eden-core/src/common/sparse_large_vector.h'
       - 'tools/check-sparse-zero-bounds-host.py'
       - 'vendor/encore-active/eden-vulkan/**'
+      - 'vendor/encore-active/eden-threading/src/core/hle/kernel/k_thread.cpp'
+      - 'tools/check-native-hle-wait-queue-publication-host.py'
+      - 'tools/verify/hle/check-hle-overlay-layout.py'
       - 'tools/check-vulkan-multirange-overflow-host.py'
       - 'tools/check-vulkan-renderpass-clear-bounds-host.py'
       - 'tools/check-vulkan-worker-fatal-drain-host.py'
@@ -50,6 +53,11 @@ jobs:
           python3 -B tools/check-jit-sparse-host.py
           python3 -B tools/check-sparse-zero-bounds-host.py
           python3 -B tools/check-maintained-sparse-vector.py
+      - name: Native HLE waiter publication and overlay parity
+        run: |
+          set -euo pipefail
+          python3 -B tools/check-native-hle-wait-queue-publication-host.py
+          python3 -B tools/verify/hle/check-hle-overlay-layout.py
       - name: Boundary
         run: |
           echo 'Host source-derived checks only; native package, GPU and FPS remain unqualified.'
