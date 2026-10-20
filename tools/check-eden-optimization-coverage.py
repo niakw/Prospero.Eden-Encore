@@ -28,7 +28,7 @@ assert all(x["disposition"] in
 needs_review=owners-handled
 count_by_status={x:sum(e["disposition"]==x for e in entries)
                  for x in {"code_changed_in_batch","reviewed_without_new_code_edit"}}
-assert len(owners)>=538,"owned source inventory unexpectedly shrank"
+assert len(owners)==STATE["owned_code_count_at_snapshot"],("owned code inventory changed",len(owners),STATE["owned_code_count_at_snapshot"])
 assert len(owners)==len(handled)+len(needs_review)
 print("EDEN_OPTIMIZATION_REVIEW_BACKLOG_PASS",
       "owned_code="+str(len(owners)),

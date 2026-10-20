@@ -16,7 +16,7 @@ de contrats HOST, ni d'une affirmation selon laquelle ils sont tous optimisés.
 
 **Bilan de la passe de traitement de code** : 6 chemins actifs nouvellement
 examinés sans patch ; le registre global d'optimisation passe à 41 chemins
-traités ou examinés sur 538 et **497 chemins encore à traiter pour
-l'optimisation**. Il ne faut pas dire « 497 correctifs requis » : le véritable
-nombre de nouveaux patches dépend de l'analyse de ces 497 sources.
+traités ou examinés sur 491 et **450 chemins encore à traiter pour
+l'optimisation**. Il ne faut pas dire « 450 correctifs requis » : le véritable
+nombre de nouveaux patches dépend de l'analyse de ces 450 sources.
 Les 397 en qualification et les 95 P0 sont **exclus de ce compteur**.
