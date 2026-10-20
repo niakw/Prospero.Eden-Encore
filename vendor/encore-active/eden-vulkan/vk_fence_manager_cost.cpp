@@ -35,9 +35,11 @@ bool InnerFence::IsSignaled() const {
 }
 
 void InnerFence::Wait() {
-    if (is_stubbed) {
+    if (is_stubbed || scheduler.IsFree(wait_tick)) {
         return;
     }
+    // Completed timeline ticks cannot become pending again. Avoid another
+    // scheduler wait, queue flush check and blocking host semaphore call.
     { auto timer = Eden::Performance::VulkanTimer(6); scheduler.Wait(wait_tick); }
 }
 

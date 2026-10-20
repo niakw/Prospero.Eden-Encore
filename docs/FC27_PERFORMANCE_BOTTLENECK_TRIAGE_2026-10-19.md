@@ -546,3 +546,17 @@ Le témoin `tools/check-native-gpu-worker-restart-drain-host.py` compile sous AS
 identique des variantes silencieuse/diagnostic avec la vraie SPSC,
 teste la destruction des propriétaires, l'arrêt répété et le nouveau
 cycle. Un gel à mi-temps et les FPS sur PS5 restent à mesurer.
+
+## 20 octobre — retour anticipé sur une fence Vulkan déjà terminée
+
+`InnerFence::Wait` appelait `Scheduler::Wait` même lorsque
+`Scheduler::IsFree(wait_tick)` indiquait un tick de timeline achevé.
+Le tick terminé étant monotone, la nouvelle voie quitte la fonction
+avant le coût de synchronisation; les ticks en attente conservent
+leur vraie attente GPU et la mesure de coût existante. Les fences
+`stubbed` restent des opérations nulles. Le témoin
+`tools/check-vulkan-fence-completed-wait-host.py` compile les deux méthodes native/épinglée sous
+ASan/UBSan; sur un scénario de quatre appels dont un seul réellement
+en attente, le témoin hôte passe de quatre appels d'attente à un seul.
+Cela **ne prouve pas** que ce scénario se produit fréquemment en jeu
+ni un gain de FPS sur PS5.
