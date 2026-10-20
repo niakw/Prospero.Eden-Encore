@@ -1,5 +1,8 @@
 # Eden Encore — Project Memory
 
+- ENGINE-ONLY OPTIMIZATION PRIMARY COUNT (21 Oct): launcher under `headless/prosperoeden` contains 63 C/C++/header paths; 62 are UI/launcher only and excluded from engine optimization count; `runtime_shims.cpp` is **used by all native apps** and remains engine-runtime. `tools/check-eden-optimization-coverage.py` prints engine-first numbers. At f730753 before new source review: 49 engine pending, 62 launcher pending, 111 overall; +12 Git-blob-locked reviewed test/mock/elevation/inactive deferred sources in `docs/EDEN_NATIVE_NON_HOT_OPTIMIZATION_REVIEW_2026-10-21.md` yields 37 engine optimization-review pending, 62 launcher separate, 392/491 handled total, 99 all-components pending. No additional C++ engine optimization patch or PS5 FPS proof from this triage.
+
+
 - NATIVE STARTUP/DIAGNOSTIC SOURCE REVIEW (2026-10-21): 20 source files (`headless/dev_vulkan.h`, input/overrides/glyphs, gpu_native_probe/gpu_probe, fault/HUD/log_pipe, metadata, mods, native directory, network headers, pad diagnostics, pipeline trace registry, preferences, sdk_audit) source-inspected for actual optimization need, no new code patches. Exact blob SHAs and contract IDs pinned in `docs/EDEN_OPTIMIZATION_COVERAGE_2026-10-20.json`; document `docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md`. Progress 368/491, **123 remaining = 61 motor/runtime +62 launcher**. Live FPS/correctness not proven, critical CPU/JIT/HLE/Vulkan owners remain pending.
 
 
