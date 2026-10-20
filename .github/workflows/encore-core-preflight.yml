@@ -48,6 +48,7 @@ jobs:
           python3 -B tools/check-eden-audit-register.py
           python3 -B tools/check-eden-audit-verification-matrix.py
           python3 -B tools/audit-eden-progress-state.py
+          python3 -B tools/check-eden-optimization-coverage.py
           python3 -B tools/check-ps5-quad-index-initial-fence-host.py
 
       - name: Audit generic graphics, JIT, runtime and filtered game networking
