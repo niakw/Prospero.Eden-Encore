@@ -21,6 +21,18 @@ Le passage 400 → 398, 98 → 96 et 411 → 409 provient uniquement de `M08` et
 `V77`, qualifiés pour leur propriété hôte décrite dans les lignes du registre.
 Ils ne certifient pas les freezes, les graphismes ou les frametimes sur PS5.
 
+**Suite — présentation Vulkan :** les trois tableaux par image sont regroupés
+dans une liste de couches, transférée à la commande différée. Une couche tient
+directement dans la liste : **6 → 0 allocations par présentation** dans le témoin.
+Pour 2, 8 et 32 couches, **6 → 1**. La vraie méthode `Draw` et les vrais blocs de
+commandes sont exécutés sous ASan/UBSan : 15 configurations (0/1/2/8/32 couches,
+HUD absent/texte/chargement), trois images différées, ordre des commandes et
+données identiques, destruction des données appelantes, débordement et réemploi
+des blocs. Les cinq autres contrôles ciblés passent ; le premier essai du nouveau
+témoin a nécessité l’alignement de sa politique de warnings Vulkan sur le build
+natif. La compilation native de cette suite reste à terminer. Pas de clôture
+supplémentaire de contrat graphique ou de frametime sur ces seules preuves.
+
 **Nouveau lot — textures 3D et audio :** le décalage des mipmaps convertis
 inclut désormais la profondeur dans les branches ASTC décompressé et BCn.
 Le témoin extrait de `ConvertImage` reproduit les deux chevauchements anciens
@@ -85,6 +97,8 @@ Mesures des scénarios hôte du lot :
 
 | Travail mesuré | Avant | Après |
 | --- | ---: | ---: |
+| Allocations par présentation Vulkan avec une couche | 6 | 0 |
+| Allocations par présentation Vulkan avec plusieurs couches | 6 | 1 |
 | Allocations pour 512 blocs PCM upmix après amorçage | 512 | 0 |
 | Lectures du réglage pour une conversion à trois mips | 3 | 1 |
 | Comparaisons pour 1 024 pages de requêtes monotones | 523 776 | 1 023 |

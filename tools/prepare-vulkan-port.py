@@ -1208,6 +1208,8 @@ adapt('src/video_core/renderer_vulkan/present/window_adapt_pass.h',
     ('    vk::Pipeline coverage_pipeline;',
      '    vk::Pipeline coverage_pipeline;\n    vk::PipelineLayout hud_layout;\n    vk::Pipeline hud_pipeline;'),
 ])
+# Deferred presentation metadata: one owning small vector, inline single layer.
+present_draw_edits = [('#include "core/frontend/framebuffer_layout.h"', '#include <boost/container/small_vector.hpp>\n\n#include "core/frontend/framebuffer_layout.h"'), ('    std::vector<PresentPushConstants> push_constants(layer_count);\n    std::vector<VkDescriptorSet> descriptor_sets(layer_count);\n    std::vector<VkPipeline> graphics_pipelines(layer_count);', '    struct LayerDraw {\n        PresentPushConstants push_constants;\n        VkDescriptorSet descriptor_set;\n        VkPipeline graphics_pipeline;\n    };\n    // The usual single-layer frame needs no heap storage. Larger frames\n    // share one allocation, transferred to the deferred draw command.\n    boost::container::small_vector<LayerDraw, 1> draws(layer_count);'), ('        switch (configs[i].blending) {', '        auto& draw = draws[i];\n        switch (configs[i].blending) {'), ('            graphics_pipelines[i] = *opaque_pipeline;', '            draw.graphics_pipeline = *opaque_pipeline;'), ('            graphics_pipelines[i] = *premultiplied_pipeline;', '            draw.graphics_pipeline = *premultiplied_pipeline;'), ('            graphics_pipelines[i] = *coverage_pipeline;', '            draw.graphics_pipeline = *coverage_pipeline;'), ('            cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipelines[i]);', '            cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, draw.graphics_pipeline);'), ('&push_constants[i], &descriptor_sets[i]', '&draw.push_constants, &draw.descriptor_set'), ('    scheduler.Record([=](vk::CommandBuffer cmdbuf) {', '    scheduler.Record([=, draws = std::move(draws)](vk::CommandBuffer cmdbuf) {'), ('        for (size_t i = 0; i < layer_count; i++) {\n            cmdbuf.BindPipeline', '        for (size_t i = 0; i < layer_count; i++) {\n            const auto& draw = draws[i];\n            cmdbuf.BindPipeline'), ('                                 push_constants[i]);', '                                 draw.push_constants);'), ('                                      descriptor_sets[i], {});', '                                      draw.descriptor_set, {});')]
 adapt('src/video_core/renderer_vulkan/present/window_adapt_pass.cpp', 'vulkan_window_adapt_pass.cpp', [
     ('#include "core/frontend/framebuffer_layout.h"',
      '#include "core/frontend/framebuffer_layout.h"\n#include "hud.h"\n#include "vulkan_hud_shaders.h"'),
@@ -1217,6 +1219,7 @@ adapt('src/video_core/renderer_vulkan/present/window_adapt_pass.cpp', 'vulkan_wi
      (vulkan_oracle / 'vulkan_hud_prepare.inc').read_text() + '\n    scheduler.Record([=](vk::CommandBuffer cmdbuf) {'),
     ('        cmdbuf.EndRenderPass();',
      (vulkan_oracle / 'vulkan_hud_draw.inc').read_text() + '\n        cmdbuf.EndRenderPass();'),
+    *present_draw_edits,
 ])
 # R328: Framebuffer dimension / format changes and runtime antialias setting
 # changes can destroy old FXAA/SMAA images and descriptors with GPU work still

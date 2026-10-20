@@ -6,6 +6,22 @@ pas une CI distante ni un binaire PS5 qualifié.
 **Compteur courant : 398 fichiers / 96 P0 / 409 contrats.**
 Les chiffres 400 / 98 / 411 ci-dessous décrivent le relevé initial.
 
+**Suite présentation Vulkan : hôte vérifié, compilation native à terminer.**
+Les constantes, descripteurs et pipelines de chaque couche partagent une liste
+possédée par la commande différée. Sa première entrée est stockée sans tas :
+**6 → 0 allocations** pour une couche ; **6 → 1** pour 2/8/32 couches dans le témoin.
+La vraie méthode `Draw` et les vrais blocs de commandes passent ASan/UBSan avec
+comparaison exacte des commandes/données, trois images différées et quinze
+configurations de couches/HUD, y compris suppression avant exécution des données
+appelantes, débordement et réemploi du bloc. Le premier essai du témoin a buté sur
+les initialiseurs Vulkan partiels existants ; sa politique de warnings a été
+alignée sur celle du build natif. Les cinq autres contrôles ciblés passent.
+Le rejeu depuis les backports natifs reproduit exactement le propriétaire modifié ;
+les quatre écarts historiques non concernés restent inchangés. Voir
+`results/present-storage-batch-2026-10-20/host-final-summary.json` et `replay-verified.json`.
+Les compteurs restent **398 / 96 / 409** ; les pixels GPU réels et frametimes PS5
+ne sont pas qualifiés par ces comparaisons de commandes hôte.
+
 **Dernier lot publié : `fa30dc23e4` — contrôles hôte et paquet natif réussis.**
 Deux propriétaires maintenus changent. Les décalages des mipmaps ASTC décompressés
 et BCn incluent la profondeur ; les anciennes branches se recouvraient en 3D.
