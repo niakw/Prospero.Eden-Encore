@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Verify the combined native link's selected driver and platform ownership."""
 from pathlib import Path
+import json
 import subprocess
 
 root = Path(__file__).resolve().parents[1]
@@ -40,6 +41,12 @@ assert not weak_undefined, 'weak native imports survived static link:\n' + '\n'.
 sdk = root.parent/'mihawk-vulkan-review/.deps/native/ps5-payload-sdk'
 for name in ('libc++.a', 'libc++abi.a', 'libunwind.a'):
     subprocess.run(['cmp', str(cache/'sdk/target/lib'/name), str(sdk/'target/lib'/name)], check=True)
-crt = (build/'headless/radv_app_crt.cpp').read_text()
+crt_path = root/'vendor/encore-active/eden-build/tooling/native/app_crt_radv.cpp'
+records = json.loads((build/'compile_commands.json').read_text())
+crt_entries = [entry for entry in records
+               if Path(entry['file']).name == 'app_crt_radv.cpp']
+assert len(crt_entries) == 1 and Path(crt_entries[0]['file']).resolve() == crt_path.resolve(), (
+    'Native RADV startup must compile its maintained owner', crt_entries)
+crt = crt_path.read_text()
 assert crt.index('ps5_fp_ieee();', crt.index('void _init()')) < crt.index('__preinit_array_start', crt.index('void _init()'))
 print('RADV/OpenGL native link: driver selection, entrypoints, heap ownership, C++/unwind ABI and IEEE startup PASS')
