@@ -26,6 +26,7 @@ on:
       - 'tools/check-native-hle-state-transition-fastpath-host.py'
       - 'tools/check-native-hle-suspend-noop-host.py'
       - 'tools/check-native-ipc-wake-chain-host.py'
+      - 'tools/audit-eden-progress-state.py'
       - 'tools/verify/hle/**'
       - 'tools/check-vulkan-multirange-overflow-host.py'
       - 'tools/check-vulkan-fence-completed-wait-host.py'
@@ -124,6 +125,7 @@ jobs:
           python3 -B tools/check-native-hle-state-transition-fastpath-host.py
           python3 -B tools/check-native-hle-suspend-noop-host.py
           python3 -B tools/check-native-ipc-wake-chain-host.py
+          python3 -B tools/audit-eden-progress-state.py
           python3 -B tools/check-native-hle-wait-null-queue-host.py
           python3 -B tools/check-native-hle-cv-key-write-host.py
           python3 -B tools/verify/hle/check-native-hle-condvar-access-host.py

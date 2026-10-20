@@ -112,3 +112,7 @@ Voir [EDEN_P0_VULKAN_REVIEW_2026-10-20.md](EDEN_P0_VULKAN_REVIEW_2026-10-20.md).
 Désormais **20 chemins P0 distincts sont inscrits comme examinés dans ces
 lots de revue**, sans suppression artificielle de dette de qualification.
 Le triage n'a pas établi de nouvelle correction moteur sûre sans preuve native.
+
+## Export dynamique fichier par fichier
+
+`python3 -B tools/audit-eden-progress-state.py --json` couvre les 455 chemins enregistrés avec états de contrats, catégories de références CI, appartenance aux deux lots P0 examinés et, si l'historique Git est disponible, changements depuis la base et le dernier paquet natif. Les historiques absents apparaissent avec la valeur `null`, et non avec zéro. Cet export n'atteste jamais les FPS ou la progression native et ne devine pas un nombre de fichiers exigeant réellement un correctif.
