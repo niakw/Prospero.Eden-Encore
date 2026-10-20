@@ -28,20 +28,20 @@ preuve `HOST` invoquée en CI disparaît.
 
 | État | Contrats | Preuve acquise |
 |---|---:|---|
-| HOST | 59 | Invariant précis sur hôte ; **pas** de jeu sur console |
-| SOURCE | 396 | Source étudiée, comportement natif non qualifié |
+| HOST | 61 | Invariant précis sur hôte ; **pas** de jeu sur console |
+| SOURCE | 394 | Source étudiée, comportement natif non qualifié |
 | OPEN | 15 | Question de comportement/propriété non résolue |
 | PARKED | 8 | Expérimentation suspendue, ne pas activer |
 | **Total** | **478** | **0 certification de gain de FPS par ce registre** |
 
-**400 chemins distincts SOURCE + OPEN** (dont **98 chemins P0** et
-**281 dans `vendor/encore-active`**) correspondent à **411 critères SOURCE + OPEN**, dont **103 P0**, ont encore besoin
+**398 chemins distincts SOURCE + OPEN** (dont **96 chemins P0** et
+**279 dans `vendor/encore-active`**) correspondent à **409 critères SOURCE + OPEN**, dont **101 P0**, ont encore besoin
 d'une qualification supplémentaire. Leur présence n'invalide pas les
 corrections hôte : elle interdit seulement d'affirmer que leurs
 performances ou leur effet sur les freezes sont démontrés.
 
-Sur les **399 références à un script Python** parmi les preuves des
-contrats, **383 sont appelées directement** par la prévalidation et
+Sur les **398 références à un script Python** parmi les preuves des
+contrats, **382 sont appelées directement** par la prévalidation et
 **16 ne le sont pas directement** (15 SOURCE et 1 OPEN). Les 16
 références correspondent à quatre chemins distincts :
 
@@ -66,7 +66,7 @@ Le témoin de provenance `tools/install-vendored-surface-lifecycle.py
 --check` est désormais directement exécuté et a réussi sur la CI
 [39316703898](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39316703898).
 
-Les **79 autres références** pointent vers des documents, recettes
+Les **80 autres références** pointent vers des documents, recettes
 CMake, patches ou autres fichiers non exécutables : existence et
 ancres documentaires ne constituent **pas** un benchmark.
 
@@ -200,3 +200,13 @@ libération différée en fonction du tick achevé. Le test
 le repli gathered et 300 cycles avec capacité MAX_RETIRED=256.
 **Les attentes réelles du GPU ne sont pas mesurées sur PS5.**
 Restent 400 fichiers, dont 98 P0, et 411 contrats.
+
+## 20 octobre — mise en cohérence après les lots Codex
+
+Les deux propriétés hôte `M08` et `V77` possèdent désormais une
+preuve exécutable directement reliée au registre et invoquée en CI.
+Les compteurs recalculés sont **398 chemins SOURCE ou OPEN**, dont
+**96 P0**, pour **409 contrats**, dont **101 P0**. Les tests ciblés
+n'attestent ni disparition des gels sur console ni gains de FPS.
+Le paquet natif documenté correspond au lot de code `7ab0279711`
+et non à un test matériel des jeux.
