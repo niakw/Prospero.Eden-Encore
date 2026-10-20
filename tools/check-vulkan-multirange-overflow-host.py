@@ -96,7 +96,7 @@ hash_body = source[source.index(hash_start):source.index(hash_end, source.index(
 for field in ("source.handle", "source.memory", "source.memory_offset",
               "source.memory_type", "source.offset", "source.size"):
     assert f"mix(u64({field}));" in hash_body
-assert "source.memory_offset" in generator and "HashSources" in generator
+assert "mix(u64(source.memory_offset));" in generator and "mix(u64(source.memory_type));" in generator
 hash_program = r"""
 #include <cassert>
 #include <cstdint>
