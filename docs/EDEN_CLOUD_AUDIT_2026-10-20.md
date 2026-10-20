@@ -6,7 +6,7 @@ pas une CI distante ni un binaire PS5 qualifié.
 **Compteur courant : 398 fichiers / 96 P0 / 409 contrats.**
 Les chiffres 400 / 98 / 411 ci-dessous décrivent le relevé initial.
 
-**Suite TFB : hôte et rejeu vérifiés, compilation native à terminer.**
+**Dernier lot publié : `0b3e0436e5` — hôte, rejeu et paquet natif vérifiés.**
 La synchronisation des compteurs transform feedback utilise directement le
 résultat d’insertion dans la table des banques, supprimant une recherche par
 requête retenue. Vraie méthode extraite, vraie table Boost et hasher instrumenté
@@ -19,7 +19,15 @@ Preuves : `results/tfb-lookup-batch-2026-10-20/host-summary.json` et
 `replay-verified.json`. Les compteurs restent **398 / 96 / 409**. Le témoin ne
 qualifie ni la progression GPU réelle ni les frametimes PS5.
 
-**Dernier lot publié : `67c0a42c55` — hôte et paquet natif vérifiés.**
+Le paquet natif de `0b3e0436e51f33c03ca2cf731e9802dffdf34b6b` passe après sept étapes incrémentales,
+avec le SHA retrouvé dans l’ELF et tous les contrôles après compilation activés :
+sparse 379 objets, verrou JIT 200 000 opérations/code machine, RADV/OpenGL/ABI,
+inventaire du paquet, imports, alignement et intégrité. Aucun build actif.
+`eboot.bin` : `9e17c2abe27b182d1933ce74f917cce636a804ae0233bde099e8fb1133b6fb77`.
+Journal : `/workspace/shared/eden-native-package-tfb-lookup.log` ; preuve :
+`results/tfb-lookup-batch-2026-10-20/native-package.json`.
+
+**Lot présentation précédent : `67c0a42c55` — hôte et paquet natif vérifiés.**
 Les constantes, descripteurs et pipelines de chaque couche partagent une liste
 possédée par la commande différée. Sa première entrée est stockée sans tas :
 **6 → 0 allocations** pour une couche ; **6 → 1** pour 2/8/32 couches dans le témoin.
@@ -44,8 +52,8 @@ présent dans `build/headless-native/eboot.elf`. Aucun build actif.
 Journal : `/workspace/shared/eden-native-package-present-storage.log` ; preuve :
 `results/present-storage-batch-2026-10-20/native-package.json`.
 Depuis la reprise `82c531d`, 19 fichiers C/C++ maintenus/headless/src ont changé
-(correctifs, optimisations et variantes) ; les deux derniers lots concernent
-trois de ces propriétaires. Le compteur de qualification reste 398 / 96 / 409.
+(correctifs, optimisations et variantes) ; les lots textures/audio et présentation
+concernent trois de ces propriétaires. Le compteur de qualification reste 398 / 96 / 409.
 
 **Lot textures/audio précédent : `fa30dc23e4` — hôte et paquet natif réussis.**
 Deux propriétaires maintenus changent. Les décalages des mipmaps ASTC décompressés

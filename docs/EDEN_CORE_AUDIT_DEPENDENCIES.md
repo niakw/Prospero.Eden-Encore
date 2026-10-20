@@ -29,15 +29,16 @@ qui produit les mêmes valeurs. Pour 1 024 requêtes d’une banque : **2 048 �
 de table incluses. Les données, l’ordre des banques, les drapeaux, les filtres
 invalidé/réécrit et la fermeture du compteur vide restent identiques sous
 ASan/UBSan. Les cinq contrôles ciblés passent et le rejeu reproduit exactement
-le fichier maintenu. Compilation native de cette suite à terminer ; aucun
-contrat de progression GPU ou de frametime n’est clôturé sur ces seules preuves.
+le fichier maintenu. Le build release et le paquet natif de `0b3e0436e5` passent
+aussi leurs contrôles après sept étapes incrémentales, SHA vérifié dans l’ELF.
+Les critères de progression GPU et de frametime restent à démontrer.
 
 **Avancement des sources depuis la reprise `82c531d` : 19 fichiers C/C++
 modifiés**, incluant optimisations, correctifs et variantes maintenues, plus
 les recettes de compilation et contrôles associés. Le compteur 398 / 96 / 409
 mesure les fichiers et contrats restant à qualifier selon leurs critères.
-Les deux lots les plus récents traitent trois propriétaires C/C++ : textures,
-audio et présentation Vulkan. L’inventaire couvre toujours 538 chemins C/C++,
+Les lots textures/audio et présentation traitent trois propriétaires C/C++ ;
+la suite TFB revisite le propriétaire des requêtes Vulkan. L’inventaire couvre toujours 538 chemins C/C++,
 dont 83 fichiers possédés hors du graphe des contrats.
 
 **Suite — présentation Vulkan :** les trois tableaux par image sont regroupés
@@ -88,7 +89,7 @@ scheduler ; bornage et réduction des lectures du bitmap fastmem ; fusion
 linéaire des requêtes GPU ; remise en cohérence de la mémoire GPU native et
 réutilisation de l’adresse physique validée ; clear DMA en octets ; corrections
 de compilation native. L’application et son paquet natif passent les contrôles
-locaux sur `67c0a42c55` (dernière suite). Les preuves et
+locaux sur `0b3e0436e5` (dernière suite). Les preuves et
 limites sont détaillées dans [le rapport du lot](EDEN_CLOUD_AUDIT_2026-10-20.md).
 
 **Optimisations supplémentaires vérifiées sur hôte en fin de lot :**
@@ -102,7 +103,7 @@ ces copies sous le verrou. Le vrai code des fibres effectue 128 transferts
 sur deux threads : environ 2 Mio contre 4 Mio alloués par fibre invitée,
 et zéro pile dédiée aux fibres hôtes. Ces mesures ne sont pas des FPS PS5.
 Les 23 unités du précontrôle syntaxique PS5 passent. Le build release complet
-et le paquet courant de `67c0a42c55` sont validés hors console : 379 dépendances sparse,
+et le paquet courant de `0b3e0436e5` sont validés hors console : 379 dépendances sparse,
 code machine du verrou JIT, liaison RADV/OpenGL, inventaire, imports et alignement.
 Le SHA publié est présent dans le binaire ; les commits documentaires suivants
 ne modifient pas ce code. Aucun résultat de CI distante n’est revendiqué.
