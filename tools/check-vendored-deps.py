@@ -14,11 +14,11 @@ def digest(path):
   for part in iter(lambda:f.read(1024*1024),b''):h.update(part)
  return h.hexdigest()
 
-def assert_blob(name, expected_sha=None):
+def assert_blob(name, expected_sha=None, expected_sha512=None):
  folder=V/'objects'/name
  spec=json.loads((folder/'chunks.json').read_text())
  assert spec['name']==name,(name,spec.get('name'))
- sha=hashlib.sha256();length=0
+ sha=hashlib.sha256();sha512=hashlib.sha512();length=0
  for ch in spec['chunks']:
   assert 0<ch['size']<=40*1024*1024,(name,ch)
   file=folder/ch['file']
@@ -26,9 +26,10 @@ def assert_blob(name, expected_sha=None):
   assert digest(file)==ch['sha256'],file
   with open(file,'rb') as f:
    for block in iter(lambda:f.read(1024*1024),b''):
-    sha.update(block);length+=len(block)
+    sha.update(block);sha512.update(block);length+=len(block)
  assert length==spec['size'] and sha.hexdigest()==spec['sha256'],name
- if expected_sha:assert spec['sha256']==expected_sha,name
+ if expected_sha:assert spec['sha256']==expected_sha,(name,'manifest SHA256 mismatch')
+ if expected_sha512:assert sha512.hexdigest()==expected_sha512,(name,'manifest SHA512 mismatch')
  return spec
 
 for item in ITEMS:
@@ -41,7 +42,8 @@ for item in ITEMS:
   header=(V/'objects'/name/bundle['chunks'][0]['file']).open('rb').read(180)
   assert header.startswith(b'# v2 git bundle\n') and (item['commit']+' HEAD').encode() in header,name
  elif item['kind']=='archive':
-  assert_blob(name)
+  # Compare against independent dependency pins, not only vault-local hashes.
+  assert_blob(name,item.get('sha256'),item.get('sha512'))
   if name!='pacbrew':
    meta=json.loads((src/'VENDOR-ORIGIN.json').read_text())
    assert meta['name']==name,name
