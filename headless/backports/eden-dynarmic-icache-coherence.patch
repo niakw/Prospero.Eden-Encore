@@ -24,21 +24,32 @@
      default:
          LOG_DEBUG(Core_ARM, "Unprocesseed instruction cache operation: {}", op);
          break;
-@@ -458,6 +459,7 @@
+@@ -458,6 +459,10 @@
  }
  
  void ArmDynarmic64::InvalidateCacheRange(u64 addr, std::size_t size) {
++    if (size == 0) {
++        return;
++    }
 +    m_cb->last_code_addr = u64(-1);
      m_jit->InvalidateCacheRange(addr, size);
  }
  
 --- a/src/core/arm/dynarmic/arm_dynarmic_32.cpp
 +++ b/src/core/arm/dynarmic/arm_dynarmic_32.cpp
-@@ -432,6 +432,7 @@
+@@ -432,6 +432,14 @@
  }
  
  void ArmDynarmic32::InvalidateCacheRange(u64 addr, std::size_t size) {
++    if (size == 0) {
++        return;
++    }
 +    m_cb->last_code_addr = u64(-1);
++    // Do not alias a 64-bit invalidation to unrelated 32-bit guest code.
++    if (addr > static_cast<u64>(~u32{0})) {
++        m_jit->ClearCache();
++        return;
++    }
      m_jit->InvalidateCacheRange(static_cast<u32>(addr), size);
  }
  

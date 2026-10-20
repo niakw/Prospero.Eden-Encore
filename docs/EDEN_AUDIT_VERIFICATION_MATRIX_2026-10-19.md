@@ -28,20 +28,20 @@ preuve `HOST` invoquée en CI disparaît.
 
 | État | Contrats | Preuve acquise |
 |---|---:|---|
-| HOST | 52 | Invariant précis sur hôte ; **pas** de jeu sur console |
-| SOURCE | 403 | Source étudiée, comportement natif non qualifié |
+| HOST | 54 | Invariant précis sur hôte ; **pas** de jeu sur console |
+| SOURCE | 401 | Source étudiée, comportement natif non qualifié |
 | OPEN | 15 | Question de comportement/propriété non résolue |
 | PARKED | 8 | Expérimentation suspendue, ne pas activer |
 | **Total** | **478** | **0 certification de gain de FPS par ce registre** |
 
-**406 chemins distincts SOURCE + OPEN** (dont **105 chemins P0** et
-**287 dans `vendor/encore-active`**) correspondent à **418 critères SOURCE + OPEN**, dont **110 P0**, ont encore besoin
+**404 chemins distincts SOURCE + OPEN** (dont **103 chemins P0** et
+**285 dans `vendor/encore-active`**) correspondent à **416 critères SOURCE + OPEN**, dont **108 P0**, ont encore besoin
 d'une qualification supplémentaire. Leur présence n'invalide pas les
 corrections hôte : elle interdit seulement d'affirmer que leurs
 performances ou leur effet sur les freezes sont démontrés.
 
-Sur les **393 références à un script Python** parmi les preuves des
-contrats, **377 sont appelées directement** par la prévalidation et
+Sur les **395 références à un script Python** parmi les preuves des
+contrats, **379 sont appelées directement** par la prévalidation et
 **16 ne le sont pas directement** (15 SOURCE et 1 OPEN). Les 16
 références correspondent à quatre chemins distincts :
 
@@ -66,7 +66,7 @@ Le témoin de provenance `tools/install-vendored-surface-lifecycle.py
 --check` est désormais directement exécuté et a réussi sur la CI
 [39316703898](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39316703898).
 
-Les **85 autres références** pointent vers des documents, recettes
+Les **83 autres références** pointent vers des documents, recettes
 CMake, patches ou autres fichiers non exécutables : existence et
 ancres documentaires ne constituent **pas** un benchmark.
 
@@ -161,3 +161,9 @@ pour l'exécution réelle sur PS5. Restent **406 fichiers à qualifier
 dont 105 P0**, soit **418 contrats SOURCE + OPEN**.
 Le scan par mots limite les chargements de bitmap ; aucun chiffre de FPS
 n'a été mesuré sur console.
+
+## 20 octobre — validation ciblée JIT A32/A64
+
+J19 et J20 sont HOST pour la méthode native de demande d'invalidation,
+extraite et compilée avec ASan/UBSan. Restent **404 fichiers**
+(dont **103 P0**) et **416 contrats** : aucun gain console certifié.
