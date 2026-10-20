@@ -6,6 +6,9 @@
 
 ## CI/source handoff after the Codex batch — 20 October 2026
 
+- NEXT VULKAN PERFORMANCE BATCH: `53fc995728e72a8ef7074cf8662f88fa537975b6` skips `InnerFence::Wait` on monotone completed timeline ticks; `30ccec33` fixes its source-extracted host timer fixture. `7e9d1f57c4ed53a673c97ea0f28f01208509f934` snapshots `MasterSemaphore::KnownGpuTick()` once per `BufferCacheRuntime::TickFrame` instead of reloading it per buffer; `84b61dec` normalizes this independent change before checking deferred-copy SHA1 provenance. Both source-extracted ASan/UBSan tests and the 7-site deferred-copy ownership test passed in fast gate run `39490132953`. Full host source preflight run `39490133056` and security run `39490132960` were in progress at handoff. No native PS5 build/console measurements for these commits, and counts remain 398 pending distinct files / 96 P0 / 409 contracts. Do not reapply these source edits or treat isolated host operations as measured FPS gains.
+
+
 - NEXT HLE HOTPATH BATCH: `c5683e0067db957e817653aa7c3edca60ed79211` changes the selected `KThread::SetState` to avoid the redundant second atomic load and no-op atomic store under the scheduler lock. Exact pinned/native source-extracted ASan/UBSan fixture `tools/check-native-hle-state-transition-fastpath-host.py` passed 80 state/suspension combinations (20 no-ops and 60 transitions), with scheduler notifications and debug reset preserved. Fast gate run `39487073961` and full source preflight `39487073913` both green. Security run `39487074050` was still ongoing at the last check. No native PS5 compile of this HEAD, hardware liveness or FPS proof yet. P0 backlog remains 398 files / 96 P0 / 409 contracts.
 
 
