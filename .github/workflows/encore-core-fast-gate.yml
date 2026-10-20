@@ -57,6 +57,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -B tools/check-native-hle-wait-queue-publication-host.py
+          python3 -B tools/check-native-hle-wait-null-queue-host.py
           python3 -B tools/verify/hle/check-hle-overlay-layout.py
       - name: Boundary
         run: |
