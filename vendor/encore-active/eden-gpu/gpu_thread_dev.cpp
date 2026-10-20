@@ -78,7 +78,8 @@ void ThreadManager::RunWorker(VideoCore::RendererBase& renderer, Core::Frontend:
             } else {
                 ASSERT(false);
             }
-            state.signaled_fence.store(next.fence);
+            // Release publishes completed GPU work to acquire-side fence readers.
+            state.signaled_fence.store(next.fence, std::memory_order_release);
             if ((++completed_gpu_commands & 63u) == 0u)
                 ::Eden::Crash::gpu_completed_commands.fetch_add(64, std::memory_order_relaxed);
             if (next.block) {

@@ -67,11 +67,14 @@ untraced = untraced.replace(loading_wait, '            state.queue.PopWait(next,
 # The native crash-only breadcrumb is coarse (one relaxed atomic per 64
 # completed GPU commands); strip it solely for the upstream-body comparison.
 progress_marker = (
-    '            state.signaled_fence.store(next.fence);\n'
+    '            // Release publishes completed GPU work to acquire-side fence readers.\n'\n    '            state.signaled_fence.store(next.fence, std::memory_order_release);\n'
     '            if ((++completed_gpu_commands & 63u) == 0u)\n'
     '                ::Eden::Crash::gpu_completed_commands.fetch_add(64, std::memory_order_relaxed);'
 )
 assert untraced.count(progress_marker) == 1
+# Normalize the maintained release-store fast path to the pinned seq_cst
+# publication only for this legacy full-body parity oracle. The separate
+# source-extracted concurrency fixture verifies its acquire/release protocol.
 untraced = untraced.replace(progress_marker, '            state.signaled_fence.store(next.fence);')
 assert untraced.count('        unsigned completed_gpu_commands = 0;\n') == 1
 untraced = untraced.replace('        unsigned completed_gpu_commands = 0;\n', '')

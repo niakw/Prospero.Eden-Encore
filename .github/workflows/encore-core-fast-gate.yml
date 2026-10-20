@@ -16,6 +16,7 @@ on:
       - 'tools/check-fastmem-window-bounds-host.py'
       - 'tools/check-sparse-zero-bounds-host.py'
       - 'vendor/encore-active/eden-vulkan/**'
+      - 'vendor/encore-active/eden-gpu/**'
       - 'vendor/encore-active/eden-threading/src/core/hle/kernel/k_thread.cpp'
       - 'vendor/encore-active/eden-threading/src/core/hle/kernel/k_condition_variable.cpp'
       - 'vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp'
@@ -29,6 +30,7 @@ on:
       - 'tools/audit-eden-progress-state.py'
       - 'tools/verify/hle/**'
       - 'tools/check-vulkan-multirange-overflow-host.py'
+      - 'tools/check-native-gpu-fence-release-publication-host.py'
       - 'tools/check-vulkan-fence-completed-wait-host.py'
       - 'tools/check-vulkan-buffer-frame-tick-snapshot-host.py'
       - 'tools/check-ps5-quad-index-initial-fence-host.py'
@@ -85,6 +87,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -B tools/check-vulkan-renderpass-clear-bounds-host.py
+          python3 -B tools/check-native-gpu-fence-release-publication-host.py
           python3 -B tools/check-vulkan-multirange-overflow-host.py
           python3 -B tools/check-vulkan-fence-completed-wait-host.py
           python3 -B tools/check-vulkan-buffer-frame-tick-snapshot-host.py
