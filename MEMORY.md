@@ -6,6 +6,8 @@
 
 ## Cloud source work — 20 October 2026 (host-checked, not console-qualified)
 
+- FOLLOW-UP GPU COPY BATCH: three Vulkan units now move seven owning copy-vector captures into deferred commands; two download paths reserve destination containers. Sample-result reserve is capped at min(slot count, pending query count), so it never exceeds the previous estimate. Actual captures + real scheduler command classes/Record/ExecuteAll pass ASan/UBSan deferred lifetime, forced chunk overflow and reuse: flat capture allocations1→0, nested32-destination capture33→0. Source replay with actual native backports reproduces all three changed units; four unrelated preexisting legacy replay output differences remain unchanged and recorded. Fast/preflight workflows include the new witness. Current native package615510b predates this batch; new incremental native qualification pending. Counters398/96/409 unchanged; PS5 deferred until the end.
+
 - Resume from [docs/EDEN_CLOUD_AUDIT_2026-10-20.md](docs/EDEN_CLOUD_AUDIT_2026-10-20.md) for this HLE/memory/Vulkan batch; the October 14 headline below is historical.
 - Restore exact HLE parity for b8793d2 and exercise full Wait with a key mapping lost after initial validation. New fast gate includes these checks.
 - Bound A32 fastmem window page arithmetic before addition; native console effect unmeasured. Query sync sorts indices/coalesces spans and reserves destination metadata before locking; host witnesses count work, not PS5 frame time.

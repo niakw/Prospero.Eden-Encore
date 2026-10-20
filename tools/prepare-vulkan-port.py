@@ -441,6 +441,10 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {'''),
 # unconditionally, or predicate from a pending host query, to the exact CPU evaluation;
 # hcr=cpu evaluates every condition on the CPU and predicates from constant 0/1 buffers.
 adapt('src/video_core/renderer_vulkan/vk_query_cache.cpp', 'vulkan_query_cache.cpp', [
+    ('        sync_values->reserve(num_slots_used);',
+     '        // A pending query contributes at most one result. Cap the slot-based\n'
+     '        // estimate without enlarging it when many queries share a few slots.\n'
+     '        sync_values->reserve((std::min)(num_slots_used, pending_sync.size()));'),
     # Page-spanning query results require a complete and overflow-checked destination span.
     ("#include <cstddef>\n#include <limits>", "#include <algorithm>\n#include <cstddef>\n#include <limits>"),
     ("#include <span>\n#include <type_traits>", "#include <span>\n#include <stdexcept>\n#include <type_traits>"),
@@ -2384,6 +2388,23 @@ probes = {
          '    has_custom_border_colors = samples_border && device.IsCustomBorderColorUsable();'),
     ],
 }
+# Deferred commands own their final copy metadata; avoid copying heap-backed vectors.
+deferred_copy_edits = {
+    'vk_buffer_cache': [
+        ('[src_buffer, dst_buffer, vk_copies](',
+         '[src_buffer, dst_buffer, vk_copies = std::move(vk_copies)](', 1),
+        ('[src_buffer, dst_buffer, vk_copies, barrier](',
+         '[src_buffer, dst_buffer, vk_copies = std::move(vk_copies), barrier](', 1),
+    ],
+    'vk_texture_cache': [
+        ('vk_copies](vk::CommandBuffer cmdbuf) {',
+         'vk_copies = std::move(vk_copies)](vk::CommandBuffer cmdbuf) {', 5),
+        ('            vk_copies;\n        for (size_t index = 0; index < buffers_span.size(); index++) {',
+         '            vk_copies;\n        buffers_vector.reserve(buffers_span.size());\n        vk_copies.reserve(buffers_span.size());\n        for (size_t index = 0; index < buffers_span.size(); index++) {', 1),
+        ('                vk_copies;\n            for (size_t index = 0; index < buffers_span.size(); index++) {',
+         '                vk_copies;\n            buffers_vector.reserve(buffers_span.size());\n            vk_copies.reserve(buffers_span.size());\n            for (size_t index = 0; index < buffers_span.size(); index++) {', 1),
+    ],
+}
 for name, index, expected in (
     ('vk_fence_manager', 6, 1), ('vk_buffer_cache', 7, 3),
     ('vk_texture_cache', 8, 1), ('vk_swapchain', 9, 6),
@@ -2445,6 +2466,10 @@ for name, index, expected in (
         if text.count(probe_old) != 1:
             raise RuntimeError(f'Probe anchor changed: {name}: {probe_old[:60]}')
         text = text.replace(probe_old, probe_new)
+    for copy_old, copy_new, copy_count in deferred_copy_edits.get(name, []):
+        if text.count(copy_old) != copy_count:
+            raise RuntimeError(f'Deferred copy anchor changed: {name}: {copy_old[:60]}')
+        text = text.replace(copy_old, copy_new)
     text = '#include "performance.h"\n' + text
     if not path.exists() or path.read_text() != text:
         path.write_text(text)
