@@ -77,6 +77,9 @@ u64 MultiRangeBufferCache::HashSources(std::span<const MultiRangeSource> sources
     };
     for (const MultiRangeSource& source : sources) {
         mix(u64(source.handle));
+        mix(u64(source.memory));
+        mix(u64(source.memory_offset));
+        mix(u64(source.memory_type));
         mix(u64(source.offset));
         mix(u64(source.size));
     }

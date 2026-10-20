@@ -85,3 +85,64 @@ with tempfile.TemporaryDirectory(prefix="encore-sparse-bounds-") as folder:
                     str(src),"-o",str(exe)],check=True,timeout=90)
     subprocess.run([str(exe)],check=True,timeout=30)
 print("HOST_MULTIRANGE_BOUNDS_PASS; native device and FPS unmeasured")
+
+
+# Geometry identity must include actual Vulkan memory backing, not merely the
+# buffer handle/offset/size. Rebinding one handle must invalidate sparse reuse.
+hash_start = "u64 MultiRangeBufferCache::HashSources(std::span<const MultiRangeSource> sources) const {"
+hash_end = "\nu64 MultiRangeBufferCache::HashContent("
+assert source.count(hash_start) == 1
+hash_body = source[source.index(hash_start):source.index(hash_end, source.index(hash_start))]
+for field in ("source.handle", "source.memory", "source.memory_offset",
+              "source.memory_type", "source.offset", "source.size"):
+    assert f"mix(u64({field}));" in hash_body
+assert "source.memory_offset" in generator and "HashSources" in generator
+hash_program = r"""
+#include <cassert>
+#include <cstdint>
+#include <cstdio>
+#include <span>
+using u32 = std::uint32_t;
+using u64 = std::uint64_t;
+using VkDeviceSize = u64;
+using VkBuffer = u64;
+using VkDeviceMemory = u64;
+struct MultiRangeSource {
+    VkBuffer handle{};
+    VkDeviceMemory memory{};
+    VkDeviceSize memory_offset{};
+    VkDeviceSize offset{};
+    VkDeviceSize size{};
+    u64 write_tick{};
+    u32 memory_type{};
+};
+class MultiRangeBufferCache {
+public:
+    u64 HashSources(std::span<const MultiRangeSource>) const;
+};
+INJECT_HASH
+int main() {
+    MultiRangeBufferCache cache;
+    MultiRangeSource a{17, 23, 0, 0, 65536, 4, 1};
+    const u64 baseline = cache.HashSources({&a, 1});
+    a.write_tick = 19;
+    assert(cache.HashSources({&a, 1}) == baseline);
+    a.memory = 29; assert(cache.HashSources({&a, 1}) != baseline); a.memory=23;
+    a.memory_offset=65536; assert(cache.HashSources({&a, 1}) != baseline); a.memory_offset=0;
+    a.memory_type=2; assert(cache.HashSources({&a, 1}) != baseline); a.memory_type=1;
+    a.offset=65536; assert(cache.HashSources({&a, 1}) != baseline); a.offset=0;
+    a.size=131072; assert(cache.HashSources({&a, 1}) != baseline); a.size=65536;
+    a.handle=18; assert(cache.HashSources({&a, 1}) != baseline); a.handle=17;
+    assert(cache.HashSources({&a, 1}) == baseline);
+    std::puts("ENCORE_MULTIRANGE_BACKING_IDENTITY_PASS");
+}
+""".replace("INJECT_HASH", hash_body)
+with tempfile.TemporaryDirectory(prefix="encore-multirange-geometry-") as folder:
+    src = Path(folder) / "geometry.cpp"
+    exe = Path(folder) / "geometry"
+    src.write_text(hash_program)
+    subprocess.run([compiler, "-std=c++20","-O2","-Wall","-Wextra","-Werror",
+                    "-fsanitize=address,undefined","-fno-sanitize-recover=all",
+                    str(src),"-o",str(exe)],check=True,timeout=90)
+    subprocess.run([str(exe)],check=True,timeout=30)
+print("HOST_MULTIRANGE_BACKING_IDENTITY_PASS; console not tested")
