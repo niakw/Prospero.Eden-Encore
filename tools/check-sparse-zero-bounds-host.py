@@ -105,7 +105,7 @@ int main() {
     std::free(bytes);
     std::puts("ENCORE_SPARSE_ZERO_COMMIT_BOUNDS_PASS");
 }
-""".replace("INJECT",method).replace("INJECT_COMMIT",commit_method)
+""".replace("INJECT_COMMIT",commit_method).replace("INJECT",method)
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
 assert compiler,"C++20 host compiler required"
 with tempfile.TemporaryDirectory(prefix="encore-sparse-zero-bounds-") as folder:
