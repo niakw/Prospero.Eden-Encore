@@ -148,6 +148,7 @@ jobs:
           python3 -B tools/check-vulkan-renderpass-clear-bounds-host.py
           python3 -B tools/check-vulkan-present-missing-guest-host.py
           python3 -B tools/check-vulkan-multirange-overflow-host.py
+          python3 -B tools/check-vulkan-multirange-owner-lifetime-host.py
           python3 -B tools/check-ps5-crash-only-logging.py
           python3 -B tools/check-log-pipe-unit.py
           python3 -B tools/check-performance-policy.py

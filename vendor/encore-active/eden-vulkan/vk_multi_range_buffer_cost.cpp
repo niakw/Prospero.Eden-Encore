@@ -286,14 +286,14 @@ MultiRangeRef MultiRangeBufferCache::Get(const Device& device, Scheduler& schedu
     entry.geometry = geometry;
     entry.content = content;
     entry.size = total;
+    // Both sparse and gathered bindings keep their source owners. Otherwise
+    // DropOwner cannot retire a gathered buffer after its input is destroyed.
+    entry.owners.reserve(sources.size());
+    for (const MultiRangeSource& source : sources) {
+        entry.owners.push_back(source.handle);
+    }
     if (CanBindSparse(sources)) {
         entry.sparse_handle = CreateSparse(device, scheduler, sources, total);
-        if (entry.sparse_handle) {
-            entry.owners.reserve(sources.size());
-            for (const MultiRangeSource& source : sources) {
-                entry.owners.push_back(source.handle);
-            }
-        }
     }
     if (!entry.sparse_handle) {
         VkBufferUsageFlags flags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT |

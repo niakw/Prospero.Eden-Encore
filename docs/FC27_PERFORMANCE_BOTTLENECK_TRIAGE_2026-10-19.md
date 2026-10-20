@@ -474,3 +474,16 @@ et son flush, sans nouveau travail. Un test C++ ASan/UBSan extrait les
 fragments d'origine et maintenu, reproduit l'ancien comportement et
 vérifie les cas source absente/présente ainsi que les tranches voisines.
 Aucun gain FPS ou réparation complète du HUD PS5 n'est revendiqué.
+
+## 20 octobre — correctif durée de vie du cache Vulkan multi-plages
+
+Le chemin `MultiRangeBufferCache::Get` enregistrait les `owners`
+**uniquement** si un bind sparse avait réussi. Lorsque le GPU utilisait
+le fallback `gathered`, `DropOwner` ne retrouvait donc jamais le
+buffer à retirer à la destruction d'une source. Les propriétaires sont
+maintenant enregistrés pour les deux formes, et leur libération reste
+déférée jusqu'à l'achèvement du tick via les méthodes d'origine.
+Un témoin extrait du code natif, compilé sous ASan/UBSan, exerce les
+deux chemins, les invalidations et le seuil de 256 retraits.
+Cette correction cible les risques de textures/états GPU périmés,
+sans démontrer de gain de FPS ni de réparation du HUD sur PS5.

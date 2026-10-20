@@ -28,20 +28,20 @@ preuve `HOST` invoquée en CI disparaît.
 
 | État | Contrats | Preuve acquise |
 |---|---:|---|
-| HOST | 58 | Invariant précis sur hôte ; **pas** de jeu sur console |
-| SOURCE | 397 | Source étudiée, comportement natif non qualifié |
+| HOST | 59 | Invariant précis sur hôte ; **pas** de jeu sur console |
+| SOURCE | 396 | Source étudiée, comportement natif non qualifié |
 | OPEN | 15 | Question de comportement/propriété non résolue |
 | PARKED | 8 | Expérimentation suspendue, ne pas activer |
 | **Total** | **478** | **0 certification de gain de FPS par ce registre** |
 
-**401 chemins distincts SOURCE + OPEN** (dont **99 chemins P0** et
-**282 dans `vendor/encore-active`**) correspondent à **412 critères SOURCE + OPEN**, dont **104 P0**, ont encore besoin
+**400 chemins distincts SOURCE + OPEN** (dont **98 chemins P0** et
+**281 dans `vendor/encore-active`**) correspondent à **411 critères SOURCE + OPEN**, dont **103 P0**, ont encore besoin
 d'une qualification supplémentaire. Leur présence n'invalide pas les
 corrections hôte : elle interdit seulement d'affirmer que leurs
 performances ou leur effet sur les freezes sont démontrés.
 
-Sur les **398 références à un script Python** parmi les preuves des
-contrats, **382 sont appelées directement** par la prévalidation et
+Sur les **399 références à un script Python** parmi les preuves des
+contrats, **383 sont appelées directement** par la prévalidation et
 **16 ne le sont pas directement** (15 SOURCE et 1 OPEN). Les 16
 références correspondent à quatre chemins distincts :
 
@@ -66,7 +66,7 @@ Le témoin de provenance `tools/install-vendored-surface-lifecycle.py
 --check` est désormais directement exécuté et a réussi sur la CI
 [39316703898](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39316703898).
 
-Les **80 autres références** pointent vers des documents, recettes
+Les **79 autres références** pointent vers des documents, recettes
 CMake, patches ou autres fichiers non exécutables : existence et
 ancres documentaires ne constituent **pas** un benchmark.
 
@@ -189,3 +189,14 @@ verrous subsiste. Aucune amélioration FPS sur PS5 démontrée.
 
 **401 fichiers** encore à qualifier, dont **99 P0**
 (**412 contrats**).
+
+## 20 octobre — retrait des buffers Vulkan multi-plages
+
+`V20` est qualifié HOST pour la possession des buffers gathered/sparse,
+l'invalidation des entrées dont l'entrée propriétaire disparaît et la
+libération différée en fonction du tick achevé. Le test
+`tools/check-vulkan-multirange-owner-lifetime-host.py` compile `RetireEntry`, `DrainRetired`,
+`DropOwner` et `Invalidate` réels sous ASan/UBSan, y compris
+le repli gathered et 300 cycles avec capacité MAX_RETIRED=256.
+**Les attentes réelles du GPU ne sont pas mesurées sur PS5.**
+Restent 400 fichiers, dont 98 P0, et 411 contrats.
