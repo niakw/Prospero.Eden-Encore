@@ -453,3 +453,12 @@ obsolète. Ces trois propriétés rejoignent la clé de géométrie ;
 déclenche pas de reconstruction physique inutile. Le témoin compilé
 ASan/UBSan couvre les changements indépendants de mémoire, d'offset,
 de type et de taille. Aucun gain FPS PS5 n'est encore mesuré.
+
+## Vulkan — completion pipelines partagée (20 octobre 2026)
+
+Le témoin `tools/check-native-vulkan-striped-wait-host.py` compile l'en-tête natif réellement
+utilisé par les pipelines graphiques et compute, sous ASan/UBSan.
+Il crée une collision contrôlée dans les 64 conditions partagées :
+le réveil d'un pipeline ne doit ni terminer incorrectement l'autre
+ni le bloquer indéfiniment. Seule cette propriété de concurrence
+est qualifiée. **Aucun gain de FPS n'a été mesuré sur console.**
