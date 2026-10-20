@@ -6,6 +6,8 @@ on:
       - dev/ps5-sparse-jit
     paths:
       - 'vendor/encore-active/eden-core/src/dynarmic/**'
+      - 'vendor/encore-active/eden-core/src/common/sparse_large_vector.h'
+      - 'tools/check-sparse-zero-bounds-host.py'
       - 'vendor/encore-active/eden-vulkan/**'
       - 'tools/check-vulkan-multirange-overflow-host.py'
       - 'tools/check-vulkan-renderpass-clear-bounds-host.py'
@@ -46,6 +48,8 @@ jobs:
           python3 -B tools/check-native-a64-default-phases-host.py
           python3 -B tools/check-native-a64-cache-invalidation-host.py
           python3 -B tools/check-jit-sparse-host.py
+          python3 -B tools/check-sparse-zero-bounds-host.py
+          python3 -B tools/check-maintained-sparse-vector.py
       - name: Boundary
         run: |
           echo 'Host source-derived checks only; native package, GPU and FPS remain unqualified.'

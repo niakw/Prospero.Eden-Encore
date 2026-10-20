@@ -113,6 +113,12 @@ public:
     }
 
     void ZeroRegion(std::size_t start, std::size_t end_) noexcept {
+        // Callers normally provide a half-open in-bounds interval. Reject
+        // reversed/empty ranges and clip an oversized tail before constructing
+        // pointers, so untrusted guest extents cannot wrap into a huge memset.
+        const std::size_t limit = alloc_size / sizeof(T);
+        if (start >= end_ || start >= limit) return;
+        end_ = (std::min)(end_, limit);
         std::lock_guard<std::mutex> mutation_lock{sparse_mutation_mutex};
         u64 base = reinterpret_cast<u64>(&base_ptr[start]);
         const u64 end = reinterpret_cast<u64>(&base_ptr[end_]);
