@@ -531,3 +531,18 @@ la mémoire GPU. Le test `tools/check-vulkan-query-page-span-host.py` compile la
 extraite sous ASan/UBSan et vérifie les cas valides et limites.
 Le correctif empêche un débordement logique du buffer de résultats ;
 aucune mesure de saccades ni de FPS sur PS5 n'a été effectuée.
+
+## 20 octobre — vidage de file lors du redémarrage du worker GPU
+
+Les deux variantes natives `ThreadManager::Stop` rejoignaient le thread
+sans retirer les commandes déjà placées dans la file SPSC. Sur un
+redémarrage, celles-ci pouvaient donc être exécutées avec un nouveau
+contexte graphique, ou retenir de la mémoire après fermeture. Le worker
+est maintenant rejoint **avant** qu'une lecture de file avec le verrou
+producteur ne détruise les commandes abandonnées. L'ordre FIFO du travail
+normal et la gestion des exceptions du worker sont inchangés.
+
+Le témoin `tools/check-native-gpu-worker-restart-drain-host.py` compile sous ASan/UBSan la méthode native
+identique des variantes silencieuse/diagnostic avec la vraie SPSC,
+teste la destruction des propriétaires, l'arrêt répété et le nouveau
+cycle. Un gel à mi-temps et les FPS sur PS5 restent à mesurer.

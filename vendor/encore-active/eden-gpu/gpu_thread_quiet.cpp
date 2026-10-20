@@ -214,5 +214,12 @@ void ThreadManager::Stop() {
         if (pthread_join(thread, nullptr)) std::terminate();
         thread_joinable = false;
     }
+    // The worker has exited: it is now safe to discard old queued commands.
+    // Otherwise a later StartThread can execute stale work in a new GPU context.
+    // The producer lock prevents a concurrent PushCommand from racing the drain.
+    std::scoped_lock lock{state.write_lock};
+    CommandDataContainer abandoned;
+    while (state.queue.TryPop(abandoned)) {
+    }
 }
 } // namespace VideoCommon::GPUThread
