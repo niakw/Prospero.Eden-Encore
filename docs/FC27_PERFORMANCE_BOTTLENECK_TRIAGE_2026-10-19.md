@@ -376,3 +376,25 @@ contrôle huit lecteurs concurrents, deux exceptions successives, une
 livraison unique et l'absence de propagation au titre suivant. Le
 correctif est spécifique aux scénarios de panne fatale, non aux coûts
 normaux de frametime.
+
+## 20 octobre — présentation synchrone : rendre la frame libre sous mutex
+
+`PresentManager::GetRenderFrame` attend sur `free_cv` en contrôlant
+`free_queue` sous `free_mutex`. Sur le mode `async_presentation=OFF`,
+`PresentManager::Present` réintroduisait jusqu'ici la frame directement
+dans cette file **sans** le mutex et **sans notification**. Un lecteur
+concurrent pouvait donc ne pas se réveiller et l'accès à `free_queue`
+était non synchronisé. Le chemin asynchrone possédait déjà son
+publication correcte dans `PresentThread`.
+
+Le chemin synchrone garde `scheduler.WaitWorker` puis
+`CopyToSwapchain` dans leur ordre d'origine. Un court verrou
+`free_mutex` protège désormais uniquement `free_queue.push_back`,
+suivi de `free_cv.notify_one()` après libération du verrou. Le mode
+asynchrone, les fences, les erreurs de copie et les appels Vulkan ne
+changent pas. Source active et recette de génération sont modifiées
+ensemble ; le replay sur la source amont épinglée vérifie cette parité.
+Un témoin C++ construit les méthodes natives extraites sous ASan/UBSan
+et vérifie le réveil d'un consommateur, le verrouillage, l'absence de
+recyclage après échec et l'absence de changement de la file asynchrone.
+Il ne prouve pas encore un gain de FPS ni la disparition des gels FC27.

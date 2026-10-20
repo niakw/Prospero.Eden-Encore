@@ -226,7 +226,13 @@ void PresentManager::Present(Frame* frame) {
     } else {
         scheduler.WaitWorker();
         CopyToSwapchain(frame);
-        free_queue.push_back(frame);
+        // The synchronous presenter must obey GetRenderFrame's free_mutex
+        // and wake a concurrent frame waiter just like PresentThread does.
+        {
+            std::scoped_lock lock{free_mutex};
+            free_queue.push_back(frame);
+        }
+        free_cv.notify_one();
     }
 }
 

@@ -836,6 +836,21 @@ void PresentManager::CopyToSwapchain(Frame* frame) {'''),
      'frame_cv.wait(queue_lock, [this] { return present_failure || '
      '(present_queue.empty() && !present_in_flight); });\n'
      '        if (present_failure) std::rethrow_exception(present_failure);'),
+    # Synchronous presentation must publish its recycled frame under the
+    # same mutex as GetRenderFrame and wake blocked frame consumers.
+    # Do not hold the mutex across CopyToSwapchain or GPU fences.
+    ('        scheduler.WaitWorker();\n'
+     '        CopyToSwapchain(frame);\n'
+     '        free_queue.push_back(frame);',
+     '        scheduler.WaitWorker();\n'
+     '        CopyToSwapchain(frame);\n'
+     '        // The synchronous presenter must obey GetRenderFrame\'s free_mutex\n'
+     '        // and wake a concurrent frame waiter just like PresentThread does.\n'
+     '        {\n'
+     '            std::scoped_lock lock{free_mutex};\n'
+     '            free_queue.push_back(frame);\n'
+     '        }\n'
+     '        free_cv.notify_one();'),
     # R316 PS5: swapchain and present frame use the SAME VkFormat.
     # When extents already match, vkCmdCopyImage is exact and avoids a
     # redundant filtered blit. Keep the linear blit for actual scaling,
