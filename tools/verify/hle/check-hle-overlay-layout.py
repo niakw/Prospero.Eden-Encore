@@ -58,7 +58,26 @@ fixed = """        {
         // Finalization may block; scheduling must be enabled here.
         this->Close(kernel);"""
 assert pinned.count(old) == 1
-assert active == pinned.replace(old, fixed), "Unexpected maintained KThread drift"
+# The maintained wait lifecycle also publishes the wait queue before the
+# state transition. Check both narrow deviations from the pinned source.
+wait_before = """    void KThread::BeginWait(KernelCore& kernel, KThreadQueue* queue) {
+        // Set our state as waiting.
+        this->SetState(kernel, ThreadState::Waiting);
+
+        // Set our wait queue.
+        m_wait_queue = queue;
+    }"""
+wait_after = """    void KThread::BeginWait(KernelCore& kernel, KThreadQueue* queue) {
+        // Publish the wait queue before exposing the waiting state.
+        // A scheduler state-change observer must not see a waiting thread
+        // with no queue to route its wakeup/cancellation to.
+        m_wait_queue = queue;
+        this->SetState(kernel, ThreadState::Waiting);
+    }"""
+assert pinned.count(wait_before) == 1
+assert active == pinned.replace(old, fixed).replace(wait_before, wait_after), (
+    "Unexpected maintained KThread drift"
+)
 slab_pinned = (root / "vendor/sources/eden/src/core/hle/kernel/slab_helpers.h").read_text()
 slab_active = (thread_root / "slab_helpers.h").read_text()
 slab_before = """        Free(kernel, static_cast<Derived*>(this));
