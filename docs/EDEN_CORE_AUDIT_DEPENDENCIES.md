@@ -30,8 +30,8 @@ Le témoin ASan/UBSan utilise les captures réelles et les blocs de commandes :
 **1 → 0 allocation** pour une liste simple et **33 → 0** pour le scénario
 multi-destination, avec destruction des sources avant exécution, débordement
 et recyclage du bloc. Les trois unités sont reproduites exactement par le
-rejeu avec les backports natifs. La validation native du nouveau lot reste
-à effectuer ; le paquet `615510b20e` ci-dessous correspond au lot précédent.
+rejeu avec les backports natifs. Le paquet natif de `033bff0b4f` passe aussi ses contrôles locaux, après neuf
+étapes incrémentales. Les tests console restent différés.
 Les compteurs restent **398 / 96 / 409**, sans preuve PS5 ajoutée.
 
 Travail effectué : correction des transferts CV et du permis initial du
@@ -39,7 +39,7 @@ scheduler ; bornage et réduction des lectures du bitmap fastmem ; fusion
 linéaire des requêtes GPU ; remise en cohérence de la mémoire GPU native et
 réutilisation de l’adresse physique validée ; clear DMA en octets ; corrections
 de compilation native. L’application et son paquet natif passent les contrôles
-locaux sur `615510b20e`. Les preuves et
+locaux sur `033bff0b4f` (dernière suite). Les preuves et
 limites sont détaillées dans [le rapport du lot](EDEN_CLOUD_AUDIT_2026-10-20.md).
 
 **Optimisations supplémentaires vérifiées sur hôte en fin de lot :**
@@ -53,7 +53,7 @@ ces copies sous le verrou. Le vrai code des fibres effectue 128 transferts
 sur deux threads : environ 2 Mio contre 4 Mio alloués par fibre invitée,
 et zéro pile dédiée aux fibres hôtes. Ces mesures ne sont pas des FPS PS5.
 Les 23 unités du précontrôle syntaxique PS5 passent. Le build release complet
-et le paquet de `615510b20e` sont validés hors console : 379 dépendances sparse,
+et le paquet courant de `033bff0b4f` sont validés hors console : 379 dépendances sparse,
 code machine du verrou JIT, liaison RADV/OpenGL, inventaire, imports et alignement.
 Le SHA publié est présent dans le binaire ; les commits documentaires suivants
 ne modifient pas ce code. Aucun résultat de CI distante n’est revendiqué.
@@ -70,6 +70,8 @@ Mesures des scénarios hôte du lot :
 | --- | ---: | ---: |
 | Comparaisons pour 1 024 pages de requêtes monotones | 523 776 | 1 023 |
 | Allocations des copies pour 1 024 destinations GPU | 1 024 | 1 |
+| Capture différée d’une liste de 128 copies | 1 allocation | 0 |
+| Capture différée du scénario 32 destinations × 64 copies | 33 allocations | 0 |
 | Piles dédiées par fibre invitée | environ 4 Mio | environ 2 Mio |
 | Piles dédiées pour deux fibres de threads hôtes | environ 8 Mio | 0 |
 | Invalidations pour 2 Mio contigus | 1 024 | 8 |

@@ -6,7 +6,17 @@ pas une CI distante ni un binaire PS5 qualifié.
 **Compteur courant : 398 fichiers / 96 P0 / 409 contrats.**
 Les chiffres 400 / 98 / 411 ci-dessous décrivent le relevé initial.
 
-**État final local : build release et paquet réussis sur
+**Dernier lot publié : `033bff0b4f` — paquet natif validé hors console.**
+Les trois unités Vulkan et la provenance ont été reconstruites en neuf étapes
+incrémentales. Les contrôles après compilation et du paquet passent ;
+le SHA `033bff0b4f515503fcbc612ce5f9ceb2a7655714` est présent dans l’ELF.
+`eboot.bin` : `b9bf16cb80b8f29a1887c146e62495df6ecdb65e70ebd610ffef162cd3843270`.
+Journal : `/workspace/shared/eden-native-package-deferred-copy.log` ; preuve :
+`results/gpu-copy-batch-2026-10-20/native-package.json`. Le build précédent
+ci-dessous est conservé comme historique. Aucun test PS5 ou résultat CI distant
+n’est déduit de ces résultats locaux.
+
+**État local du premier lot : build release et paquet réussis sur
 `615510b20edb161517c096e90b186a41db571ab6`.** Les lots de code ont été publiés
 sur `dev/ps5-sparse-jit`. Les 939 étapes de recompilation Zen2 ont terminé,
 puis cinq étapes incrémentales ont actualisé la provenance du binaire sans
@@ -332,3 +342,8 @@ historique ne remplacent pas les propriétaires C++ compilés.
 Le nouveau témoin rejoint les deux workflows. Les compteurs restent
 **398 fichiers / 96 P0 / 409 contrats** ; la nouvelle compilation native est
 regroupée après le lot, et le test PS5 reste reporté à la fin.
+
+La validation native de cette suite a terminé : neuf étapes incrémentales,
+contrôles sparse et verrou JIT, liaison RADV/OpenGL et ABI, puis inventaire,
+imports, alignement et intégrité du paquet sont verts. Le nouveau paquet
+remplace localement celui de `615510b20e` ; aucun build ne reste actif.
