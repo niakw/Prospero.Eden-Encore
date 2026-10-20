@@ -28,22 +28,22 @@ preuve `HOST` invoquée en CI disparaît.
 
 | État | Contrats | Preuve acquise |
 |---|---:|---|
-| HOST | 47 | Invariant précis sur hôte ; **pas** de jeu sur console |
-| SOURCE | 408 | Source étudiée, comportement natif non qualifié |
+| HOST | 49 | Invariant précis sur hôte ; **pas** de jeu sur console |
+| SOURCE | 406 | Source étudiée, comportement natif non qualifié |
 | OPEN | 15 | Question de comportement/propriété non résolue |
 | PARKED | 8 | Expérimentation suspendue, ne pas activer |
 | **Total** | **478** | **0 certification de gain de FPS par ce registre** |
 
-**410 chemins distincts SOURCE + OPEN** (dont **108 chemins P0** et
-**290 dans `vendor/encore-active`**) correspondent à **423 critères SOURCE + OPEN**, dont **113 P0**, ont encore besoin
+**409 chemins distincts SOURCE + OPEN** (dont **107 chemins P0** et
+**289 dans `vendor/encore-active`**) correspondent à **421 critères SOURCE + OPEN**, dont **112 P0**, ont encore besoin
 d'une qualification supplémentaire. Leur présence n'invalide pas les
 corrections hôte : elle interdit seulement d'affirmer que leurs
 performances ou leur effet sur les freezes sont démontrés.
 
 Sur les **392 références à un script Python** parmi les preuves des
-contrats, **375 sont appelées directement** par la prévalidation et
-**17 ne le sont pas directement** (16 SOURCE et 1 OPEN). Les 17
-références correspondent à cinq chemins distincts :
+contrats, **376 sont appelées directement** par la prévalidation et
+**16 ne le sont pas directement** (15 SOURCE et 1 OPEN). Les 16
+références correspondent à quatre chemins distincts :
 
 - `tools/install-vendored-radv.py` : **12** références à un
   *installateur d'entrées compilateur*, contrôlé séparément par les
@@ -56,8 +56,6 @@ références correspondent à cinq chemins distincts :
 - `tools/check-jit-allocator.py` : **1** référence, avec
   même dépendance à l'arbre de compilation généré et tests
   d'alias mémoire.
-- `tools/check-gpu-producer-stop.py` : **1** référence au
-  producteur GPU généré, avec la même contrainte de staging.
 - `tools/check-ps5-sparse-jit-va-lifetime.py` : **1** référence
   à un témoin de politique JIT expérimental. Son en-tête le
   désigne comme *staged only*, non comme une validation native ;
@@ -128,3 +126,11 @@ l'effet sur les blocages du jeu et le temps de frame PS5 reste inconnu.
 Les décomptes courants sont 410 fichiers encore à qualifier, dont 108
 en priorité P0. Le total de chemins reste à 455 et celui des contrats
 à 478 : aucun chemin n'a été effacé du graphe.
+
+## 20 octobre — dossier SPSC qualifié
+
+Les deux contrats `Q02` et `V72`, auparavant SOURCE, sont désormais
+HOST pour la propriété de file et de réveil déjà démontrée dans
+`check-native-gpu-queue-stop-fastpath-host.py`. Le registre contient
+**421 critères SOURCE + OPEN sur 409 fichiers, dont 107 P0**.
+La validation console et les gains de FPS restent à produire.
