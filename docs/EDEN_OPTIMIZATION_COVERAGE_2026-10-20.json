@@ -994,12 +994,30 @@
       "evidence": "Existing modified and installed shipping backport; pinned source/active SHA256 and bytes in vendor/encore-active/eden-backports/manifest.json; exact contract V61. No new FPS or native progress claim."
     },
     {
+      "path": "vendor/encore-active/eden-build/openssl/cert.h",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "B28",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-openssl-cert.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract B28: Canonical 147-certificate native TLS trust source, parity-proven byte-for-byte against pinned Eden patch and staged without C++ transformation; TLS execution on console unqualified. CI witness retained. No FPS claim."
+    },
+    {
       "path": "vendor/encore-active/eden-build/third_party/xbyak/xbyak.h",
       "disposition": "previously_integrated_source_change",
       "contract_id": "J40",
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-maintained-xbyak-alias.py",
       "evidence": "Previously maintained/ported source J40: Complete v7.40.1 tagged header with eight former CMake replacements, selected via COPYONLY; indirect X09 retired into maintained BlockOfCode sources, native unqualified"
+    },
+    {
+      "path": "vendor/encore-active/eden-build/tooling/native/app_crt_radv.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "B05",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract B05: Complete maintained RADV startup copied from the pinned boilerplate with one IEEE initializer; parity checked, native console unqualified. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-build/tooling/native/app_heap_arenas.c",
@@ -1026,6 +1044,105 @@
       "evidence": "Previous audit host contract B08: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-heap-sources.py ; exécution native PS5, FPS et comportement invité non qualifiés"
     },
     {
+      "path": "vendor/encore-active/eden-core/dynarmic/scalar/scalar-fold.inc",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "J27",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J27: Scalar fold fragment is now a historical parity oracle, not a CMake producer; production optimizer is a full maintained source. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/dynarmic/shared-jit/a64_jitstate.h",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "J42",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J42: Exact historical M01 header now maintained in Encore, selected via CMake COPYONLY; Shared JIT OFF and console behavior not qualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/dynarmic/shared-jit/callback.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "J43",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J43: Complete shared-JIT callback matches former M03 generated unit byte-for-byte, is selected by COPYONLY; experimental OFF and console not qualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/dynarmic/shared-jit/jit_group_support.inc",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "J22",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J22: Same blob moved from headless to Encore; shared JIT remains experimental OFF and native behavior unproved. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/dynarmic/shared-jit/jit_group.h",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "J21",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J21: Same blob moved from headless to Encore; shared JIT remains experimental OFF and native behavior unproved. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/dynarmic/shared-jit/jit_impl.inc",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "J23",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J23: Same blob moved from headless to Encore; shared JIT remains experimental OFF and native behavior unproved. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/dynarmic/shared-jit/jit_links.inc",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "J24",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J24: Same blob moved from headless to Encore; shared JIT remains experimental OFF and native behavior unproved. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/dynarmic/shared-jit/jit_push_rsb.inc",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "J25",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J25: Same blob moved from headless to Encore; shared JIT remains experimental OFF and native behavior unproved. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/dynarmic/shared-jit/jit_state_args.inc",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "J26",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J26: Same blob moved from headless to Encore; shared JIT remains experimental OFF and native behavior unproved. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/gpu-injections/gpu_sync_failure_wait.inc",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V73",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V73: GPU worker failure fence guard preserved as exact Encore input; native execution unproved. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/host-gpu/include/video_core/gpu_thread.h",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "Q09",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract Q09: Exact host fallback source with eight queue slots and explicit stop/join; PS5 native remains owned by eden-gpu. CI witness retained. No FPS claim."
+    },
+    {
       "path": "vendor/encore-active/eden-core/include/core/file_sys/bis_factory.h",
       "disposition": "previously_integrated_source_change",
       "contract_id": "F13",
@@ -1042,6 +1159,15 @@
       "path": "vendor/encore-active/eden-core/overrides/core/gpu_dirty_memory_manager.h",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/overrides/slot-vector/common/slot_vector.h",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "B03",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract B03: Former X02 recovery is maintained as exact Encore header with isolated include priority; native exception behavior unproved. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/src/audio_core/sink/sink_stream.cpp",
@@ -1174,12 +1300,111 @@
       "evidence": "Previously maintained/ported source J51: G11 native/normal A64 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; directly selected, host-parity qualified; console not qualified"
     },
     {
+      "path": "vendor/encore-active/eden-core/src/core/core_native.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "F40",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-core-system.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract F40: Native shutdown diagnostics and memory lifecycle preserved in maintained full-source variant; parity test added, runtime still unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/core_standard.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "F39",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-core-system.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract F39: Normal Core::System full-source parity and existing load/unwind ordering; CI and native gameplay not yet proven. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/file_sys/bis_factory.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "F14",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract F14: Maintained constructor, conditional firmware root and read-only modification lookup have exact old-generator parity; native path selection and behavior not yet verified on device. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/file_sys/fsmitm_romfsbuild.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "F12",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract F12: Previously CMake-generated RomFS parent ownership source is maintained with byte-identical two-field/two-assignment rewrite oracle; completed CI and game mod/ROMFS behavior not yet proven. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/file_sys/ips_layer.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "F37",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract F37: Complete IPS and patch-text parser now selected from Encore; output matches pinned historical CMake generator Git blob, device behavior unproved. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/file_sys/patch_manager.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "F35",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract F35: Former four CMake rewrites moved verbatim to Encore-owned source; native behavior unproved. CI witness retained. No FPS claim."
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/core/file_sys/savedata_factory.cpp",
       "disposition": "previously_integrated_source_change",
       "contract_id": "F15",
       "prior_status": "SOURCE",
       "proof_ref": "headless/CMakeLists.txt",
       "evidence": "Previously maintained/ported source F15: Maintained per-title cache and save-data directory mapping is selected by core; verify owner/zero-ID paths and persistence on device"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/kernel/k_page_table_base.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "B27",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-page-table-finalize.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract B27: Kernel-shutdown-only page release guard, exact pinned-source parity and direct CMake owner; native behavior unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/kernel/k_process.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "H53",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-kprocess-dev.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract H53: DEV-only process teardown diagnostics from complete source, exact five former scoped CMake patches; normal profile preserved, console unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/kernel/k_spin_lock.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "H30",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-audio-units.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract H30: Maintained lock source uses SpinAcquire and preserves unlock/try-lock behavior; source parity is checked, not contention or console forward progress. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/kernel/kernel_dev.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V106",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-g19-kernel-profile-matrix-host.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V106: G19 DEV kernel directly selected; historical CMake parity passed on host, console not qualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/kernel/kernel_standard.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V105",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-g19-kernel-profile-matrix-host.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V105: G19 standard kernel source directly selected; historical CMake parity passed on host, native/console not qualified. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/src/core/hle/kernel/physical_core_dev.cpp",
@@ -1190,6 +1415,24 @@
       "path": "vendor/encore-active/eden-core/src/core/hle/kernel/physical_core_standard.cpp",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/kernel/svc/svc_ipc.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "H21",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract H21: DEV sync IPC request/thread attribution now maintained, with exact former CMake code parity; the guest's resumed JIT PC after request completion remains unproved. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/filesystem/filesystem.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "F11",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract F11: Source maintained and host parity/selection check written; completed CI and device firmware behavior not yet validated. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_file.cpp",
@@ -1216,12 +1459,111 @@
       "evidence": "Previous audit host contract F03: IStorage::Read maintained TU source parity and DEV CMake selection passed in full host preflight #39046599831. No native console build, gameplay or FPS conclusion"
     },
     {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/nvdrv/core/container.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "N07",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract N07: Session retains process until final owner Close after unlocking mutex; exact pinned-generator parity, native event/session teardown unproven. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/nvdrv/devices/ioctl_serialization.h",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "N22",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract N22: Four former CMake span conversion substitutions moved to one maintained ioctl header; host parity checked, native behavior unproved. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/nvdrv/devices/nvhost_ctrl.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "N02",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract N02: DEV event-wait diagnostic now maintained as a real TU and exact CMake-generated parity is guarded; callback-to-guest-wake latency and cancel/register race still need native evidence. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "N03",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract N03: DEV dequeue timing now comes from maintained TU with pinned generated-source parity gate; hardware slot wake/back-pressure and visible guest progress still unproved. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/server_manager_dev.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "H57",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-server-manager.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract H57: DEV destructor instrumentation retained byte-for-byte, selected without CMake C++ generation. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/server_manager_dev.h",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "H55",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-server-manager.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract H55: DEV service header preserves diagnostic state and matches previous generator exactly. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/server_manager.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "H56",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-server-manager.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract H56: Normal server stop/destruction unit directly compiled, parity checked; service wake still needs console testing. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/server_manager.h",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "H54",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-server-manager.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract H54: Normal service header selected by copy only; RequestStop declaration parity checked, native shutdown unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/service.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "H22",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract H22: DEV service dispatch/caller traces now maintained and source-parity checked; handler return while service lock is held is not proof that the blocked guest resumed execution. CI witness retained. No FPS claim."
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/core/hle/service/sockets/bsd.cpp",
       "disposition": "previously_integrated_source_change",
       "contract_id": "N20",
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendor-consolidation-debt.py",
       "evidence": "Previously maintained/ported source N20: Complete audited guest BSD source replaces five runtime CMake rewrites atop shipping backport; console network telemetry not proven"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/sockets/sfdnsres.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "N21",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract N21: Audited guest DNS filters and resolution outcomes are maintained C++; exact source parity, native runtime unproved. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/vi/conductor.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "F36",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract F36: Native VSync composition delay and published game FPS from former generator, exact source-parity test; console behavior unproved. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/src/core/internal_network/network_interface.cpp",
@@ -1232,12 +1574,48 @@
       "evidence": "Previous audit host contract F10: Three FreeBSD conditional substitutions are in maintained native C++ with an old-generator parity and core selection PASS in preflight #39058024476; native interface snapshot unqualified"
     },
     {
+      "path": "vendor/encore-active/eden-core/src/core/internal_network/network.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "N19",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract N19: Native socketpair prime and nonblocking interrupt wakeups now maintained as a complete source; exact generator replay, no console behavior proof. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/loader/nso.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "F38",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-nso.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract F38: Native NSO loader relocated with byte-exact historical CMake replay and preserved build path; CI/native SDK and console runtime still pending. CI witness retained. No FPS claim."
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/core/memory.cpp",
       "disposition": "previously_integrated_source_change",
       "contract_id": "M11",
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendor-consolidation-debt.py",
       "evidence": "Previously maintained/ported source M11: Maintained A32-only fastmem gate matches installed shipping backport plus one guarded replacement; actual guest execution and alias coherence require console proof"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/block_range_information.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "U12",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-block-range.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract U12: Maintained Dynarmic block-range implementation with source-identity proof, native timing still unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/block_range_information.h",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "J41",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-block-range.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J41: Full maintained header shadows upstream layout via unchanged copied include and retains 4-KiB tracking; console unqualified. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/a32_emit_x64_memory.cpp",
@@ -1256,12 +1634,39 @@
       "evidence": "Previous audit host contract B12: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-emitters.py ; exécution native PS5, FPS et comportement invité non qualifiés"
     },
     {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/a32_interface_native.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "B24",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-a32-native-interface.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract B24: Native-only A32 JIT source and exact legacy transforms maintained; console unqualified. CI witness retained. No FPS claim."
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_emit_x64_memory.cpp",
       "disposition": "historical_host_contract_reviewed",
       "contract_id": "B20",
       "prior_status": "HOST",
       "proof_ref": "tools/check-maintained-memory-units.py",
       "evidence": "Previous audit host contract B20: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-memory-units.py ; exécution native PS5, FPS et comportement invité non qualifiés"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_emit_x64_shared.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "B14",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-emitters.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract B14: Complete shared emitter with JitGroup RSB and links preserved; experimental OFF, console unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_emit_x64_shared.h",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "B16",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-emitters.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract B16: Shared group and deferred link fields in canonical header; console unqualified. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_emit_x64_standard.cpp",
@@ -1275,6 +1680,15 @@
       "prior_status": "HOST",
       "proof_ref": "tools/check-maintained-emitters.py",
       "evidence": "Previous audit host contract B15: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-emitters.py ; exécution native PS5, FPS et comportement invité non qualifiés"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_interface_shared.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "B11",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-a64-interface.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract B11: Shared implementation selected directly, historical group body preserved; mode OFF by default, console unqualified. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code_host.cpp",
@@ -1293,12 +1707,57 @@
       "evidence": "Previous audit host contract B10: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-block-of-code.py ; exécution native PS5, FPS et comportement invité non qualifiés"
     },
     {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/constant_pool.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "J37",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-constant-pool.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J37: Maintained pool matches retired writable-alias CMake rewrite exactly; Xbyak header generator remains distinct; console unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/emit_x64_data_processing.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "J39",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-scalar-emitters.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J39: Scalar zero extension retained in complete maintained TU, exact parity with previous generator; native unqualified. CI witness retained. No FPS claim."
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/emit_x64_host.cpp",
       "disposition": "historical_host_contract_reviewed",
       "contract_id": "B17",
       "prior_status": "HOST",
       "proof_ref": "tools/check-maintained-common-emit-x64.py",
       "evidence": "Previous audit host contract B17: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-common-emit-x64.py ; exécution native PS5, FPS et comportement invité non qualifiés"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/emit_x64_memory_checked.cpp.inc",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "B23",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-memory-g06-g07.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract B23: Checked A32 fastmem and vector fallbacks in full source, native runtime unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/emit_x64_memory_standard.cpp.inc",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "B22",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-memory-g06-g07.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract B22: Standard scalar/exclusive body and shared layout guards, native runtime unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/emit_x64_memory.h",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "B21",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-memory-g06-g07.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract B21: Complete page-table decoder and checked helpers; native runtime unqualified. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/emit_x64_native.cpp",
@@ -1309,9 +1768,162 @@
       "evidence": "Previous audit host contract B18: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-common-emit-x64.py ; exécution native PS5, FPS et comportement invité non qualifiés"
     },
     {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/emit_x64_vector.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "J38",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-scalar-emitters.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J38: SIMD low-lane extraction now compiled from complete source with exact former CMake edit parity; native unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/reg_alloc.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "J36",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-reg-alloc.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J36: Complete allocator unit, source parity and selection checked without generating C++; native/JIT behavior unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/reg_alloc.h",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "J35",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-reg-alloc.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J35: Tracked RegAlloc layout with exact prior CMake parity; only changed and live host locations visited, native performance unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/common/spin_lock_x64.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "J30",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J30: Native atomic lock source equals the former CMake generated pinned-prefix plus spin-lock fragment, published as one source; console fairness unproved. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/frontend/A64/translate/a64_translate.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "J32",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J32: Translator selects local maintained impl.cpp, not generated absolute path; native unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/frontend/A64/translate/impl/impl.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "J31",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J31: Complete tracked scalar helper, exact text parity with prior generated code; native unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/ir/opt_passes.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "J33",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J33: Complete optimizer with exactly reproduced fold oracle; native unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/hid_core/frontend/emulated_controller.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "H39",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract H39: Maintained rumble fallback generated verbatim from pinned controller; actual pad vibration on hardware not proved. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/hid_core/resources/npad/npad.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "H48",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract H48: Maintained shipping NPad plus exact two former CMake null guards; parity and native hid_core selection checked, console behavior unproved. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/shader_recompiler/frontend/maxwell/translate/impl/not_implemented.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V80",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-maxwell-prmt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V80: Complete PRMT mode-zero translations, bounded samples and golden vectors preserve retired CMake variant; unimplemented modes unchanged; native console unqualified. CI witness retained. No FPS claim."
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/video_core/buffer_cache/buffer_cache.h",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/dma_pusher_dev.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V86",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-guest-gpu-sync.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V86: G20 DEV: conditional DMA fence timer, preserved diagnostics, console unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/dma_pusher.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V85",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-guest-gpu-sync.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V85: G20 normal: bounded DMA fence and shutdown, source parity only; console unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/engines/fermi_2d_experimental.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V82",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-fermi2d-variants.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V82: Experimental 3D/pitch layer copy guarded OFF, exact three former rewrites including unsupported-case checks; CodeQL #56: same widened pitch-row offset guard; experimental copy still OFF; console unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/engines/fermi_2d_observed.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V81",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-fermi2d-variants.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V81: Native default matches original pinned Fermi2D plus bounded telemetry, CodeQL #55: widened pitch-row offset and 64-bit address overflow rejection with host sanitizer witness; no experimental copy paths; native behavior unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/engines/maxwell_3d.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V78",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V78: Complete DEV-only render-condition diagnostic; exact parity with retired CMake rewriting; console behavior unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/engines/puller_dev.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V88",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-guest-gpu-sync.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V88: G20 DEV: conditional semaphore timer with stop guard; console unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/engines/puller.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V87",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-guest-gpu-sync.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V87: G20 normal: guest semaphore shutdown-aware loop; console unqualified. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/src/video_core/engines/sw_blitter/blitter.cpp",
@@ -1320,6 +1932,51 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-maintained-sw-blitter.py",
       "evidence": "Previously maintained/ported source V79: Complete blitter preserves production backport pixel indexing and three former widening edits; native console unqualified"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/gpu_gl_host_dev.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V101",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-g21-gpu-profile-matrix-host.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V101: Host GL DEV diagnostics candidate, source parity only; not selected nor console qualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/gpu_gl_host.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V100",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-g21-gpu-profile-matrix-host.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V100: Host GL generated profile staged as full owned Encore source; historical CMake parity, not selected in build or qualified on console. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/gpu_gl_native_dev.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V103",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-g21-gpu-profile-matrix-host.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V103: Native GL DEV diagnostics candidate, staged historical parity; not selected nor console qualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/gpu_gl_native.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V102",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-g21-gpu-profile-matrix-host.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V102: Native GL GPU cancellation/fatal-wait candidate, staged only until G21 source selector cutover; not console qualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/gpu_vulkan.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V104",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-g21-gpu-profile-matrix-host.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V104: Vulkan-native G21 historical variant retains its pinned read-capture and destructor behavior; staged only, no console qualification. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/src/video_core/macro.cpp",
@@ -1341,6 +1998,42 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendor-consolidation-debt.py",
       "evidence": "Previously maintained/ported source V14: Former one-replacement GL_RED_INTEGER unit maintained and source-selected under EDEN_PS5_OPENGL; no console proof"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/renderer_opengl/gl_query_cache.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V15",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V15: Former query slicing bypass maintained and source-selected only with native OpenGL; no console proof. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/renderer_opengl/gl_rasterizer_dev.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V84",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-opengl-rasterizer.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V84: Exclusive DEV profile retains pass capture and rasterizer timer; native console unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/renderer_opengl/gl_rasterizer.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V83",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-opengl-rasterizer.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V83: Normal guest-GL draw bounded logs, exact parity with old CMake source; native console unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/renderer_opengl/gl_texture_cache.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V25",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V25: Development-only bounded GL copy diagnostics moved verbatim from CMake to maintained C++; normal profile preserves upstream unit, no GPU/console proof. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/src/video_core/shader_cache_reader.inc",
@@ -1370,6 +2063,15 @@
       "prior_status": "SOURCE",
       "proof_ref": "headless/CMakeLists.txt",
       "evidence": "Previously maintained/ported source V23: Maintained texture cache header includes Boost compatibility; verify header selection and compile variants; selected source only, device proof pending"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/video_core_opengl.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V12",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V12: OpenGL-only factory source has exact historical two-removal parity; Vulkan selects unchanged pinned source, no native backend-selection or runtime proof yet. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-gpu/gpu_thread_dev.cpp",
@@ -1647,5 +2349,11 @@
     "source_manifest": "vendor/encore-active/eden-backports/manifest.json",
     "pinned_eden_commit": "5f142c7926d0c7fcbbd0ce30794d72f638a43b2a",
     "how": "Source owner plus active SHA256 differs from upstream SHA256, whole shipping tree already installed by preflight. Does NOT qualify runtime."
+  },
+  "historical_source_profile_fast_pass": {
+    "unique_added": 78,
+    "registrar": "docs/EDEN_CORE_AUDIT_DEPENDENCIES.md",
+    "full_preflight": ".github/workflows/encore-core-preflight.yml",
+    "claim": "Previously handled source/profile code; not hardware-qualified."
   }
 }
