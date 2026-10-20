@@ -4,11 +4,13 @@
 // SPDX-FileCopyrightText: Copyright 2023 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#include <algorithm>
 #include <cstddef>
 #include <limits>
 #include <map>
 #include <memory>
 #include <span>
+#include <stdexcept>
 #include <type_traits>
 #include "common/container/unordered_map.h"
 #include <utility>
@@ -1674,10 +1676,22 @@ void QueryCacheRuntime::SyncValues(std::span<SyncValuesType> values, VkBuffer ba
     impl->little_cache.clear();
     size_t total_size = 0;
     for (auto& sync_val : values) {
+        if (sync_val.size == 0 ||
+            sync_val.size > std::numeric_limits<DAddr>::max() - sync_val.address ||
+            sync_val.size > std::numeric_limits<size_t>::max() - total_size) {
+            throw std::overflow_error("Query sync value range overflow");
+        }
         total_size += sync_val.size;
         bool found = false;
-        DAddr base = Common::AlignDown(sync_val.address, Core::DEVICE_PAGESIZE);
-        DAddr base_end = base + Core::DEVICE_PAGESIZE;
+        const DAddr base = Common::AlignDown(sync_val.address, Core::DEVICE_PAGESIZE);
+        // A query result may straddle a device-memory page. ObtainCPUBuffer
+        // must cover the complete value, not only the page containing its start.
+        const DAddr last_page = Common::AlignDown(
+            sync_val.address + sync_val.size - 1, Core::DEVICE_PAGESIZE);
+        if (last_page > std::numeric_limits<DAddr>::max() - Core::DEVICE_PAGESIZE) {
+            throw std::overflow_error("Query sync page end overflow");
+        }
+        const DAddr base_end = last_page + Core::DEVICE_PAGESIZE;
         for (size_t i = 0; i < impl->little_cache.size(); i++) {
             const auto set_found = [&] {
                 impl->redirect_cache.push_back(i);
@@ -1685,6 +1699,8 @@ void QueryCacheRuntime::SyncValues(std::span<SyncValuesType> values, VkBuffer ba
             };
             auto& loc = impl->little_cache[i];
             if (base < loc.second && loc.first < base_end) {
+                loc.first = (std::min)(loc.first, base);
+                loc.second = (std::max)(loc.second, base_end);
                 set_found();
                 break;
             }
@@ -1702,6 +1718,13 @@ void QueryCacheRuntime::SyncValues(std::span<SyncValuesType> values, VkBuffer ba
         if (!found) {
             impl->redirect_cache.push_back(impl->little_cache.size());
             impl->little_cache.emplace_back(base, base_end);
+        }
+    }
+    // ObtainCPUBuffer takes a u32 length. Never truncate a combined page
+    // span to a shorter buffer and then record copies beyond its end.
+    for (const auto& range : impl->little_cache) {
+        if (range.second - range.first > std::numeric_limits<u32>::max()) {
+            throw std::overflow_error("Query sync buffer span exceeds u32");
         }
     }
 
