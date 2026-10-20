@@ -47,7 +47,7 @@ bool WriteToUser(KernelCore&,u64,u32){
 #define R_THROW(reason) return reason
 struct WaitSimulation{
     System m_system;
-    int Execute(u64 key,Slp& slp){
+    int Execute(u64 key,[[maybe_unused]] Slp& slp){
 INJECT
         return 0;
     }
