@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Verify maintained guest JIT profiles and production diagnostic hot-path guards."""
 from pathlib import Path
+import json
+import shlex
 
 root = Path(__file__).resolve().parents[1]
 cache = Path((root / '.local/headless-cache').read_text().strip())
@@ -40,24 +42,47 @@ for bits in (32, 64):
                 if bits == 64 else
                 'm_core_index == 0 ? 512_MiB : m_core_index < 3 ? 64_MiB : 16_MiB'
             )
-            assert baseline in wrapper
             if platform == 'native':
+                assert baseline in wrapper
                 assert f'A{bits}CacheBytes(m_core_index' in wrapper
                 assert 'ConstructWithCapacityFallback(' in wrapper
                 assert wrapper.count('if (!CheckMemoryAccess(vaddr') == (4 if bits == 32 else 5)
             else:
+                # Host fixtures retain the reviewed 512 -> 16 MiB x64
+                # reduction; PS5's asymmetric budgets are native-only.
+                pinned = (root / f'vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_{bits}.cpp').read_text()
+                def cache_policy(text):
+                    return text.split('    // Code cache size\n', 1)[1].split(
+                        '    // Allow memory fault handling', 1)[0]
+                expected_policy = cache_policy(pinned)
+                assert expected_policy.count('std::uint32_t(512_MiB)') == 1
+                expected_policy = expected_policy.replace(
+                    'std::uint32_t(512_MiB)', 'std::uint32_t(16_MiB)')
+                assert cache_policy(wrapper) == expected_policy
                 assert f'A{bits}CacheBytes(m_core_index' not in wrapper
                 assert 'ConstructWithCapacityFallback(' not in wrapper
                 assert 'if (!CheckMemoryAccess(vaddr' not in wrapper
 
 jit = (generated / 'a64_interface.cpp').read_text()
+interface_root = root / 'vendor/encore-active/eden-core/src/dynarmic/backend/x64'
+selected = 'a64_interface_shared.cpp' if shared_jit_enabled else 'a64_interface_standard.cpp'
+assert jit == (interface_root / selected).read_text(), 'configured A64 owner differs'
+# Complete units now contain guarded batch/DEV code even when disabled.
+# Check the actual command definitions, rather than absence from raw C++.
+records = json.loads((generated.parent / 'compile_commands.json').read_text())
+entries = [row for row in records if Path(row['file']).resolve() == (generated / 'a64_interface.cpp').resolve()]
+assert len(entries) == 1, 'expected one configured A64 compilation'
+argv = entries[0].get('arguments') or shlex.split(entries[0]['command'])
+assert '-DPS5_NATIVE=1' in argv
+assert ('-DEDEN_JIT_A64_BATCH=1' in argv) == compile_batch_enabled
+assert ('-DEDEN_JIT_A64_DEV_PROFILE=1' in argv) == development
 if not development:
     # Shipping builds must be the stability path: ordinary per-core Dynarmic, one block per miss.
     assert not shared_jit_enabled
     assert not compile_batch_enabled
     assert 'JitGroup' not in jit
-    assert 'std::array<std::optional<IR::LocationDescriptor>, 32> pending' not in jit
-    assert 'return emitter.Emit(ir_block).entrypoint;' in jit
+    assert 'const auto entrypoint = emitter.Emit(ir_block).entrypoint;' in jit
+    assert 'return entrypoint;' in jit
 block = jit.split('    CodePtr GetBlock(', 1)[1].split(
     '    void PerformRequestedCacheInvalidation', 1)[0]
 for statement in (
@@ -70,7 +95,8 @@ if shared_jit_enabled:
 elif compile_batch_enabled:
     assert 'const auto entrypoint = emitter.Emit(ir_block, false).entrypoint;' in block
 else:
-    assert 'return emitter.Emit(ir_block).entrypoint;' in block
+    assert 'const auto entrypoint = emitter.Emit(ir_block).entrypoint;' in block
+    assert 'return entrypoint;' in block
 
 # Null-JIT baseline and diagnostics are checked in all eight owned wrappers.
 
@@ -78,12 +104,13 @@ cmake = (root / 'headless/CMakeLists.txt').read_text()
 assert 'Timer read_timer' not in cmake
 assert 'Timer compile_timer' not in cmake
 assert 'protection_timer' not in cmake
-shared_jit = (root / 'headless/dynarmic/jit_group_support.inc').read_text()
+shared_root = root / 'vendor/encore-active/eden-core/dynarmic/shared-jit'
+shared_jit = (shared_root / 'jit_group_support.inc').read_text()
 assert 'bool eden_jit_shared = false;' in shared_jit
 assert 'option(EDEN_SHARED_JIT "Enable the experimental cross-core A64 JIT" OFF)' in cmake
 assert 'option(EDEN_JIT_COMPILE_BATCH "Compile bounded A64 successor chains on a cache miss" OFF)' in cmake
-jit_group = (root / 'headless/dynarmic/jit_group.h').read_text()
-jit_impl = (root / 'headless/dynarmic/jit_impl.inc').read_text()
+jit_group = (shared_root / 'jit_group.h').read_text()
+jit_impl = (shared_root / 'jit_impl.inc').read_text()
 # Production JIT waits must yield the CPU after their short spin. On PS5 real-time workers,
 # std::this_thread::yield() can repeatedly reschedule the waiter and starve the owner.
 assert 'std::this_thread::yield()' not in jit_group
@@ -91,7 +118,7 @@ assert 'std::this_thread::yield()' not in jit_impl
 assert 'sleep_for(std::chrono::microseconds(50))' in jit_group
 assert 'sleep_for(std::chrono::microseconds(50))' in jit_impl
 assert 'EDEN_JIT_CLEAR_BEGIN' in jit_impl and 'EDEN_JIT_CLEAR_END' in jit_impl
-monitor_lock = (root / 'headless/spin-lock.inc').read_text()
+monitor_lock = (root / 'vendor/encore-active/eden-core/src/dynarmic/common/spin_lock_x64.cpp').read_text()
 assert 'sceKernelUsleep(50);' in monitor_lock
 main = (root / 'headless/main.cpp').read_text()
 assert 'Performance::Reset()' not in main

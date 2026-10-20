@@ -104,8 +104,18 @@ target_include_directories(dynarmic BEFORE PRIVATE "${EDEN_JIT_ASSERT_ROOT}")
 # rest of the native application on its qualified non-LTO build path.
 target_compile_options(dynarmic PRIVATE -flto=thin)
 if(PS5_NATIVE)
-    # Limit ThinLTO and Zen2 tuning to the GPU code; preserve core/common fiber behavior.
+    # The PS5 CPU is Zen2. Keep the established GPU ThinLTO policy, and tune
+    # host scheduling without widening the core/common/fiber instruction set.
     target_compile_options(video_core PRIVATE -flto=thin -march=znver2)
+    foreach(eden_cpu_target common core dynarmic)
+        target_compile_options(${eden_cpu_target} PRIVATE -mtune=znver2)
+    endforeach()
+    # DSP and shader translation contain substantial vector/integer work.
+    # Enable the CPU's native ISA here while keeping separate multiply/add
+    # rounding; this does not enable fast-math or change guest JIT features.
+    foreach(eden_simd_target audio_core shader_recompiler)
+        target_compile_options(${eden_simd_target} PRIVATE -march=znver2 -ffp-contract=off)
+    endforeach()
 endif()
 if(NOT PS5_NATIVE)
     target_link_options(dynarmic INTERFACE -fuse-ld=lld-18)

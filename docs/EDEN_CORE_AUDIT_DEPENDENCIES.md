@@ -1,6 +1,6 @@
 # Eden Encore — active native dependency audit register
 
-**Branch:** dev/ps5-sparse-jit. **Updated:** 2026-10-19. **Baseline reviewed:** 436a102 (sources précédant cet enregistrement).
+**Branch:** dev/ps5-sparse-jit. **Updated:** 2026-10-20. **Baseline reviewed:** 436a102 (sources précédant cet enregistrement).
 **Technical scope:** guest CPU/HLE, JIT, GPU worker, Vulkan, memory coherency,
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
@@ -13,6 +13,39 @@ previously reviewed files without naming a concrete new source change or new
 evidence. Other chats may change the branch concurrently; re-read HEAD before
 any operation, and avoid unrelated files.
 
+
+## Avancement courant — lot cloud du 20 octobre 2026
+
+**Reste à qualifier : 398 fichiers, dont 96 P0, pour 409 contrats.**
+Le passage 400 → 398, 98 → 96 et 411 → 409 provient uniquement de `M08` et
+`V77`, qualifiés pour leur propriété hôte décrite dans les lignes du registre.
+Ils ne certifient pas les freezes, les graphismes ou les frametimes sur PS5.
+
+Travail effectué : correction des transferts CV et du permis initial du
+scheduler ; bornage et réduction des lectures du bitmap fastmem ; fusion
+linéaire des requêtes GPU ; remise en cohérence de la mémoire GPU native et
+réutilisation de l’adresse physique validée ; clear DMA en octets ; corrections
+de compilation native. Le premier exécutable PS5 a été lié. Les preuves et
+limites sont détaillées dans [le rapport du lot](EDEN_CLOUD_AUDIT_2026-10-20.md).
+
+**Optimisations supplémentaires vérifiées sur hôte en fin de lot :**
+stockage contigu des copies de requêtes Vulkan, préallocation des métadonnées avant
+le verrou du cache (ordre des uploads GPU conservé), lecture directe d’un ou deux mots des bitmaps de pages,
+tuning CPU PS5, instruction pause dans la contention du scheduler, et piles de fibres allouées uniquement quand nécessaires
+(suppression de la pile rewind inutilisée de 2 Mio par fibre invitée).
+Les 20 contrôles hôte ciblés passent, après deux ajustements des fixtures.
+Le témoin de copies mesure 1 allocation contre 1 024, et aucune allocation de
+ces copies sous le verrou. Le vrai code des fibres effectue 128 transferts
+sur deux threads : environ 2 Mio contre 4 Mio alloués par fibre invitée,
+et zéro pile dédiée aux fibres hôtes. Ces mesures ne sont pas des FPS PS5.
+Les 23 unités du précontrôle syntaxique PS5 passent. La compilation complète
+native de ce dernier lot est en cours ; le package construit
+avant ces dernières modifications ne qualifie pas celles-ci.
+
+Restent notamment la progression réveil → scheduler → fibre/JIT → instruction
+invitée, les attentes GPU réelles et la stabilité/présentation en jeu, ainsi que
+les autres contrats SOURCE/OPEN listés ci-dessous. Aucun compteur n’est réduit
+sur la seule base d’un fichier modifié ou d’un build réussi.
 
 ## Qualification hôte renforcée — 20 octobre 2026
 
@@ -67,6 +100,21 @@ Le contrôle complémentaire compile `ZeroRegion` et `CommitRegion`
 avec bornage des plages. La qualification HOST est limitée à ces
 propriétés et ne certifie ni l'exécution GPU/guest ni un gain FPS.
 
+## Lot cloud HLE / mémoire / requêtes Vulkan — 20 octobre 2026
+
+La [reprise cloud](EDEN_CLOUD_AUDIT_2026-10-20.md) conserve une liste
+recalculable incluant les sources hors graphe. Les nouveaux témoins hôte
+vérifient le [transfert de mutex après publication du drapeau CV](EDEN_HLE_CV_HANDOFF_2026-10-20.md),
+les [bornes de la fenêtre A32](EDEN_FASTMEM_WINDOW_BOUNDS_2026-10-20.md)
+et le [regroupement / les allocations de résultats GPU](EDEN_QUERY_SYNC_ALLOCATIONS_2026-10-20.md).
+Les contrôles hôte passent localement ; aucun résultat de CI distante ou
+console n’est ajouté. H03/H05/H06/H07 et les preuves GPU restent ouverts.
+Aucune pastille HOST ni réduction de compteur n’est déduite du seul inventaire.
+Le lot natif suivant restaure les backports DeviceMemoryManager effectivement
+sélectionnés, réutilise la page physique validée dans GetSpan et corrige la
+plage en octets du clear DMA ; voir le même rapport cloud. Les preuves hôte
+restent ciblées, les critères de gameplay restent ouverts.
+
 ## Couverture quantifiée (registre courant)
 
 L'inventaire indexe des **contrats/fonctions à vérifier**, pas toutes les
@@ -78,16 +126,16 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
 | Graphe connu | 478 | 455 | 959 |
-| HOST — preuve ciblée hôte | 59 | 54 | 119 |
-| SOURCE — lecture effectuée, preuve insuffisante | 396 | 386 | 801 |
+| HOST — preuve ciblée hôte | 61 | 56 | 124 |
+| SOURCE — lecture effectuée, preuve insuffisante | 394 | 384 | 796 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 8 | 8 | 11 |
-| **Encore à qualifier (SOURCE + OPEN)** | **411** | **400** | **829** |
-| Dont priorité P0 (SOURCE + OPEN) | 103 | 98 | 236 |
+| **Encore à qualifier (SOURCE + OPEN)** | **409** | **398** | **824** |
+| Dont priorité P0 (SOURCE + OPEN) | 101 | 96 | 231 |
 
-Le **noyau restant** compte donc 411 critères répartis sur
-400 fichiers et 829 mentions fonction/contrat :
-15 OPEN et 396 SOURCE.
+Le **noyau restant** compte donc 409 critères répartis sur
+398 fichiers et 824 mentions fonction/contrat :
+15 OPEN et 394 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
@@ -99,8 +147,9 @@ certification de la sélection du code à l'exécution.
 Le contrôle hôte vérifie la complétude des chemins et les références,
 mais pas le comportement.
 
-Le hors-inventaire (HID, IPC, host-syncpoints, variantes vendor...) n'est
-pas chiffrable honnêtement sans un relevé exhaustif supplémentaire.
+Le relevé cloud recense également 83 sources Encore hors de ce graphe,
+soit 538 chemins C/C++ indexés ou appartenant au projet. Ces fichiers sont
+recensés individuellement ; ils ne sont pas tous qualifiés ou optimisés.
 
 La chaîne CPU/JIT comprend aussi H20 (sélection de priorité et migration de cœur), distincte de H18 (commutation de fibres). Le catalogue inclut F04 pour les trois entrées filesystem maintenant maintenues. Ce sont des périmètres indexés, pas des preuves de gain de FPS.
 
@@ -387,7 +436,7 @@ function/contract tokens are checked by CI for existence only; the
 | M05 | P2 | M02 | headless/gpu_deferred_store_publication.h | CommitPostStore | PARKED | docs/DEFERRED_JIT_QUIESCENCE_ARCHITECTURE_2026-10-17.md | Publication experimental bridge still disabled | ⚪ Suspendu |
 | M06 | P0 | M01,Q04 | vendor/sources/eden/src/core/device_memory_manager.inc | DeviceMemoryManager<Traits>::Map; DeviceMemoryManager<Traits>::Unmap; DeviceMemoryManager<Traits>::GetSpan; DeviceMemoryManager<Traits>::TrackContinuityImpl | SOURCE | headless/backports/eden-ps5-gpu-asid-lifetime-guard.patch | Map/Unmap/ASID/span bounds: reconcile every layered backport and identify actual build source; host and console behavior not yet proven | 🟡 Source étudiée |
 | M07 | P0 | M06 | vendor/sources/eden/src/core/device_memory_manager.h | Map(DAddr; Unmap(DAddr; GetSpan( | SOURCE | headless/backports/eden-ps5-gpu-atomic-forward-table.patch | Header declarations and reverse-table fields are modified by layered patches; verify active header selection, lock order and atomic reverse entries before any migration | 🟡 Source étudiée |
-| M08 | P0 | M06,M07 | vendor/encore-active/eden-core/overrides/core/device_memory_manager.inc | DeviceMemoryManager<Traits>::Map; DeviceMemoryManager<Traits>::Unmap; DeviceMemoryManager<Traits>::TrackContinuityImpl; DeviceMemoryManager<Traits>::GetSpan | SOURCE | headless/CMakeLists.txt | Native active header-resolved GPU map and continuity implementation; verify layered backports, lock order and active source equivalence; source only, no console progress proof | 🟡 Source étudiée |
+| M08 | P0 | M06,M07 | vendor/encore-active/eden-core/overrides/core/device_memory_manager.inc | DeviceMemoryManager<Traits>::Map; DeviceMemoryManager<Traits>::Unmap; DeviceMemoryManager<Traits>::TrackContinuityImpl; DeviceMemoryManager<Traits>::GetSpan | HOST | tools/check-native-device-span-bounds-host.py | Hôte: implémentation native alignée intégralement sur le backport maintenu sauf deux retours GetSpan vérifiés; ordre registry puis mapping préservé; vraies méthodes GetSpan/registre compilées ASan/UBSan, bornes et remappages négatifs; PS5: progression GPU et gameplay non qualifiés | 🟢 Propriété hôte vérifiée localement |
 | M09 | P0 | M08,V05 | vendor/encore-active/eden-core/overrides/core/gpu_dirty_memory_manager.h | Collect(PAddr; Gather(std::function | SOURCE | headless/CMakeLists.txt | Native atomic GPU dirty collector uses active header override; verify publication and memory-order invariants at real cache boundaries; source only, no console progress proof | 🟡 Source étudiée |
 | M10 | P1 | M01,M08 | vendor/encore-active/eden-core/overrides/core/guest_memory.h | GuestMemoryScoped; TrySetSpan; AddressChanged | SOURCE | headless/CMakeLists.txt | Native guest-memory span ownership header selected by core and video_core; assert consistency of address and writeback behavior; source only, no console progress proof | 🟡 Source étudiée |
 | M11 | P0 | M08,H18 | vendor/encore-active/eden-core/src/core/memory.cpp | Memory::SetCurrentPageTable; IsDirectBackingAlias | SOURCE | tools/check-vendor-consolidation-debt.py | Maintained A32-only fastmem gate matches installed shipping backport plus one guarded replacement; actual guest execution and alias coherence require console proof | 🟡 Source étudiée |
@@ -482,7 +531,7 @@ function/contract tokens are checked by CI for existence only; the
 | V74 | P1 | V71 | vendor/encore-active/eden-core/src/video_core/texture_cache/util.cpp | ConvertImage; ASTC::Decompress | SOURCE | tools/check-vendor-consolidation-debt.py | Existing per-layer ASTC scratch allocation optimization R428 now a maintained complete C++ unit, native performance unproved | 🟡 Source étudiée |
 | V75 | P1 | V74 | vendor/encore-active/eden-core/src/video_core/shader_environment.cpp | #include "shader_cache_reader.inc" | SOURCE | tools/check-vendor-consolidation-debt.py | Complete shader cache recovery TU replaces CMake generator; exact text replay test, native behavior unproved | 🟡 Source étudiée |
 | V76 | P1 | V74 | vendor/encore-active/eden-core/src/video_core/shader_cache_reader.inc | CheckEnvironment; LoadPipelines | SOURCE | tools/check-vendor-consolidation-debt.py | Crash-tolerant shader loader now adjacent to canonical source as unchanged Git blob; console cache replay unproved | 🟡 Source étudiée |
-| V77 | P0 | V51,R05 | vendor/encore-active/eden-core/src/video_core/buffer_cache/buffer_cache.h | BufferCache<P>::ChangeRegister | SOURCE | tools/check-ps5-buffer-pages-r437.py | En-tête R437 natif maintenu, copie sans réécriture ; parité avec le backport livré, console non qualifiée | 🟡 Source étudiée |
+| V77 | P0 | V51,R05 | vendor/encore-active/eden-core/src/video_core/buffer_cache/buffer_cache.h | BufferCache<P>::ChangeRegister | HOST | tools/check-ps5-buffer-pages-r437.py | Hôte: copie native R437 et comparaison intégrale avec transformations nommées; témoin concurrent du bitmap de registration réussi, clear DMA couvert séparément; PS5: fences physiques, graphismes et frametimes non qualifiés | 🟢 Propriété hôte vérifiée localement |
 | V78 | P2 | V01 | vendor/encore-active/eden-core/src/video_core/engines/maxwell_3d.cpp | Maxwell3D::ProcessQueryCondition | SOURCE | tools/check-vendor-consolidation-debt.py | Complete DEV-only render-condition diagnostic; exact parity with retired CMake rewriting; console behavior unqualified | 🟡 Source étudiée |
 | V79 | P1 | V63,V78 | vendor/encore-active/eden-core/src/video_core/engines/sw_blitter/blitter.cpp | SoftwareBlitEngine::Blit | SOURCE | tools/check-maintained-sw-blitter.py | Complete blitter preserves production backport pixel indexing and three former widening edits; native console unqualified | 🟡 Source étudiée |
 | V80 | P1 | V78 | vendor/encore-active/eden-core/src/shader_recompiler/frontend/maxwell/translate/impl/not_implemented.cpp | TranslatorVisitor::PRMT_imm; TranslatorVisitor::PRMT_reg | SOURCE | tools/check-maintained-maxwell-prmt.py | Complete PRMT mode-zero translations, bounded samples and golden vectors preserve retired CMake variant; unimplemented modes unchanged; native console unqualified | 🟡 Source étudiée |

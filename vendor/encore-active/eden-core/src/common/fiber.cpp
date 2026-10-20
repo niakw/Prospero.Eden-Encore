@@ -21,13 +21,23 @@ constexpr size_t DEFAULT_STACK_SIZE = 512 * 4096;
 #endif
 constexpr u32 CANARY_VALUE = 0xDEADBEEF;
 
-struct Fiber::FiberImpl {
-    FiberImpl() {}
+namespace {
+struct FiberStack {
+    // Native thread stacks need writable storage, not zero-filled payloads.
+    // Keep both canaries adjacent to the allocated stack itself.
+    FiberStack() noexcept : canary_1{CANARY_VALUE}, canary_2{CANARY_VALUE} {}
+    u32 canary_1;
+    std::array<u8, DEFAULT_STACK_SIZE> bytes;
+    u32 canary_2;
+};
+} // namespace
 
-    u32 canary_1 = CANARY_VALUE;
-    std::array<u8, DEFAULT_STACK_SIZE> stack{};
-    std::array<u8, DEFAULT_STACK_SIZE> rewind_stack{};
-    u32 canary_2 = CANARY_VALUE;
+struct Fiber::FiberImpl {
+    FiberImpl() = default;
+
+    // Host-thread fibers already use their OS stack. Guest/switch fibers
+    // allocate just their active stack; the old rewind array was unused.
+    std::unique_ptr<FiberStack> stack;
 
     boost::context::detail::fcontext_t context{};
     boost::context::detail::fcontext_t rewind_context{};
@@ -49,14 +59,14 @@ void Fiber::SetRewindPoint(std::function<void()>&& rewind_func) {
 
 Fiber::Fiber(std::function<void()>&& entry_point_func) : impl{std::make_unique<FiberImpl>()} {
     impl->entry_point = std::move(entry_point_func);
-    impl->stack_limit = impl->stack.data();
-    impl->rewind_stack_limit = impl->rewind_stack.data();
+    impl->stack = std::make_unique<FiberStack>();
+    impl->stack_limit = impl->stack->bytes.data();
     u8* stack_base = impl->stack_limit + DEFAULT_STACK_SIZE;
-    impl->context = boost::context::detail::make_fcontext(stack_base, impl->stack.size(), [](boost::context::detail::transfer_t transfer) -> void {
+    impl->context = boost::context::detail::make_fcontext(stack_base, impl->stack->bytes.size(), [](boost::context::detail::transfer_t transfer) -> void {
         auto* fiber = static_cast<Fiber*>(transfer.data);
         ASSERT(fiber && fiber->impl && fiber->impl->previous_fiber && fiber->impl->previous_fiber->impl);
-        ASSERT(fiber->impl->canary_1 == CANARY_VALUE);
-        ASSERT(fiber->impl->canary_2 == CANARY_VALUE);
+        ASSERT(fiber->impl->stack->canary_1 == CANARY_VALUE);
+        ASSERT(fiber->impl->stack->canary_2 == CANARY_VALUE);
         fiber->impl->previous_fiber->impl->context = transfer.fctx;
         fiber->impl->previous_fiber->impl->guard.unlock();
         fiber->impl->previous_fiber.reset();

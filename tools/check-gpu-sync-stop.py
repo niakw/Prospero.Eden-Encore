@@ -1,7 +1,7 @@
 from pathlib import Path
 import subprocess,tempfile
 r=Path(__file__).resolve().parents[1];c=Path((r/'.local/headless-cache').read_text().strip())
-t=(c/'native-local/headless/gpu.cpp').read_text()
+t=(r/'vendor/encore-active/eden-core/src/video_core/gpu_gl_native.cpp').read_text()
 def method(start,end): return t[t.index(start):t.index(end,t.index(start))]
 methods=method('    template <typename Func>','    [[nodiscard]] u64 GetTicks()')+method('    void NotifyShutdown()', '    /// Obtain the CPU Context')
 code=r'''
@@ -57,11 +57,12 @@ with tempfile.TemporaryDirectory() as tmp:
  subprocess.run(['g++','-std=c++20','-pthread','-fsanitize=address,undefined','-g','-I',str(r/'headless'),str(p/'test.cpp'),'-o',str(p/'test')],check=True)
  subprocess.run([str(p/'test')],check=True,timeout=10)
 print('Actual GPU sync methods: cancelled/pending/active requests, callback lifetime, repeated shutdown PASS')# Execute the actual in-flight wait code with absent signals and shutdown.
-dma=(c/'native-local/headless/dma_pusher.cpp').read_text()
-puller=(c/'native-local/headless/engines_puller.cpp').read_text()
+dma=(r/'vendor/encore-active/eden-core/src/video_core/dma_pusher.cpp').read_text()
+puller=(r/'vendor/encore-active/eden-core/src/video_core/engines/puller.cpp').read_text()
 wait=dma.split('    if (signal_sync && !synced) {',1)[1].split('        signal_sync = false;',1)[0]
 acquire=puller.split('void Puller::ProcessSemaphoreAcquire(DmaPusher& dma_pusher) {',1)[1].split('\n}\n',1)[0]
 code=r'''
+#include "gpu_failure.h"
 #include <atomic>
 #include <cassert>
 #include <condition_variable>
@@ -92,6 +93,6 @@ int main(){
 '''
 with tempfile.TemporaryDirectory() as tmp:
  p=Path(tmp);(p/'wait.cpp').write_text(code)
- subprocess.run(['g++','-std=c++20','-pthread','-fsanitize=address,undefined','-g',str(p/'wait.cpp'),'-o',str(p/'wait')],check=True)
+ subprocess.run(['g++','-std=c++20','-pthread','-fsanitize=address,undefined','-g','-I',str(r/'headless'),str(p/'wait.cpp'),'-o',str(p/'wait')],check=True)
  subprocess.run([str(p/'wait')],check=True,timeout=10)
 print('Actual DMA fence and semaphore waits: normal completion and unsignalled shutdown PASS')

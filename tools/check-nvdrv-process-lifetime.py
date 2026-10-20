@@ -2,7 +2,7 @@
 from pathlib import Path
 import subprocess,tempfile
 r=Path(__file__).resolve().parents[1];cache=Path((r/'.local/headless-cache').read_text().strip())
-s=(cache/'native-local/headless/nvdrv_container.cpp').read_text()
+s=(r/'vendor/encore-active/eden-core/src/core/hle/service/nvdrv/core/container.cpp').read_text()
 opening=s[s.index('SessionId Container::OpenSession'):s.index('    // Optimization')]+ '    return SessionId{new_id};\n}\n'
 closing=s[s.index('void Container::CloseSession'):s.index('Session* Container::GetSession')]
 code=r'''

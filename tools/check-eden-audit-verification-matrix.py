@@ -146,7 +146,7 @@ def build_matrix(rows: list[dict], workflow: str, catalog: str) -> tuple[list[di
     undirect = sorted(set(r["evidence"] for r in indirect))
     assert sum(statuses.values()) == len(rows)
     # Each new HOST claim needs a precise in-CI proof and native-limit statement.
-    assert statuses["HOST"] == 59, "HOST claims changed: review evidence before modifying guard"
+    assert statuses["HOST"] == 61, "HOST claims changed: review evidence before modifying guard"
     ownership_closures = set(["B06","B07","B08","B09","B10","B12","B13","B15","B17","B18","B19","B20"])
     for row in rows:
         if row["id"] not in ownership_closures:
@@ -202,6 +202,8 @@ def build_matrix(rows: list[dict], workflow: str, catalog: str) -> tuple[list[di
     # Newly qualified P0 properties are source-linked host witnesses only.
     # They do not certify device progress, guest liveness or FPS.
     for ident, (expected, priority) in {
+        "M08": ("tools/check-native-device-span-bounds-host.py", "P0"),
+        "V77": ("tools/check-ps5-buffer-pages-r437.py", "P0"),
         "Q02": ("tools/check-native-gpu-queue-stop-fastpath-host.py", "P1"),
         "Q07": ("tools/check-native-gpu-queue-stop-fastpath-host.py", "P0"),
         "V02": ("tools/check-vulkan-present-wait-host.py", "P0"),

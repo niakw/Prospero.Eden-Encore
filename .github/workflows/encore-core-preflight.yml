@@ -72,6 +72,7 @@ jobs:
           python3 -B tools/check-native-gpu-read-capture-host.py
           python3 -B tools/check-native-guest-span-host.py
           python3 -B tools/check-native-guest-range-overflow-host.py
+          python3 -B tools/check-fastmem-window-bounds-host.py
           python3 -B tools/verify/hle/check-native-hle-condvar-access-host.py
           python3 -B tools/verify/hle/check-native-hle-condvar-key-host.py
           python3 -B tools/verify/hle/check-native-hle-arbiter-access-host.py
@@ -104,6 +105,7 @@ jobs:
           python3 -B tools/check-native-gpu-worker-restart-drain-host.py
           python3 -B tools/check-eden-audit-register.py
           python3 -B tools/check-eden-audit-verification-matrix.py
+          python3 -B tools/audit-cloud-worklist.py
           python3 -B tools/check-active-source-inventory.py
           python3 -B tools/check-maintained-openssl-cert.py
           python3 -B tools/check-native-dma-indirect-dependencies-host.py
@@ -118,6 +120,8 @@ jobs:
           python3 -B tools/check-ps5-quiet-cpu-io-clocks.py
           python3 -B tools/check-ps5-quiet-guest-entry.py
           python3 -B tools/check-upstream-guest-scheduler-locks.py
+          python3 -B tools/check-native-bootstrap-permit-host.py
+          python3 -B tools/check-native-dma-clear-span-host.py
           python3 -B tools/check-ps5-quiet-gpu-hotpaths.py
           python3 -B tools/check-ps5-upstream-fixes-r302.py
           python3 -B tools/check-maintained-a64-interface.py
@@ -151,6 +155,9 @@ jobs:
           python3 -B tools/check-vulkan-multirange-overflow-host.py
           python3 -B tools/check-vulkan-query-conditional-inversion-host.py
           python3 -B tools/check-vulkan-query-page-span-host.py
+          python3 -B tools/check-vulkan-query-allocation-host.py
+          python3 -B tools/check-vulkan-query-grouping-host.py
+          python3 -B tools/check-vulkan-query-copy-plan-host.py
           python3 -B tools/check-vulkan-multirange-gather-bounds-host.py
           python3 -B tools/check-vulkan-multirange-owner-lifetime-host.py
           python3 -B tools/check-ps5-crash-only-logging.py

@@ -24,6 +24,7 @@ if timer_start in body:
 main=(root/'headless/main.cpp').read_text()
 assert 'system.Pause();' not in main
 code=r'''
+#include "gpu_failure.h"
 #include <array>
 #include <atomic>
 #include <cassert>
@@ -71,6 +72,7 @@ with tempfile.TemporaryDirectory() as tmp:
  # Native generated queue header adds the cancellable producer method;
  # the plain pinned upstream header intentionally does not have that method.
  subprocess.run(['c++','-std=c++20','-pthread','-fsanitize=address,undefined',
+                 '-I'+str(root/'headless'),
                  '-I'+str(cache/'native-local/headless/include'),
                  '-I'+str(cache/'source/src'),str(p),'-o',str(exe)],check=True)
  subprocess.run([str(exe)],check=True,timeout=10)

@@ -4,6 +4,24 @@
 > Read this file before changing architecture, UX, build/release behaviour or performance policy.
 > Keep it concise but authoritative. Update it whenever a project-level decision changes.
 
+## Cloud source work — 20 October 2026 (host-checked, not console-qualified)
+
+- Resume from [docs/EDEN_CLOUD_AUDIT_2026-10-20.md](docs/EDEN_CLOUD_AUDIT_2026-10-20.md) for this HLE/memory/Vulkan batch; the October 14 headline below is historical.
+- Restore exact HLE parity for b8793d2 and exercise full Wait with a key mapping lost after initial validation. New fast gate includes these checks.
+- Bound A32 fastmem window page arithmetic before addition; native console effect unmeasured. Query sync sorts indices/coalesces spans and reserves destination metadata before locking; host witnesses count work, not PS5 frame time.
+- Complete worklist command: `python3 -B tools/audit-cloud-worklist.py --json`. It includes 538 indexed/Encore paths, 83 owned files outside the core graph. Inventory is not semantic or hardware qualification.
+- Current recalculated backlog: 398 pending files / 96 P0 files / 409 contracts. M08 and V77 have precise HOST property proofs; gameplay remains unqualified. User requests batched work and one PS5 validation at the very end; do not request intermediate console tests or enable shared/batch experimental JIT.
+- Bootstrap scheduler context now claims its semaphore permit before direct activation; the source-extracted Initialize/Unload fixture passes 64 cycles and rejects the old initialization. See docs/EDEN_SCHEDULER_BOOTSTRAP_PERMIT_2026-10-20.md.
+- Native release preflight: 21 controls passed after updating obsolete generated-file references to maintained source owners; real PS5 compiler syntax passed for 19 units, including the changed HLE/memory/query units and A64 emitter.
+- Native build discovered an invalid preprocessor placement in the standard A64 emitter signature. Corrected complete declarations; full parity plus compiled normal/publish/shared signature boundaries and old-source rejection now join the fast gate. Normal algorithms and experimental flags are unchanged.
+- Native device override was stale against its backported header (id_pool compile failure and lost mapping/ASID guards). It now equals the full maintained backport except two explicit GetSpan returns reusing the validated physical page, avoiding a second atomic lookup/remap boundary. Source-extracted const/mutable bounds, remap and ASID tests pass.
+- DMA clear now checks registration in bytes, with empty/u32-span guards; a real-method witness reproduces late-overlap omission. PhysicalCore uses SDK-supported compiler atomics on the same bool ABI; memory_manager.cpp uses its existing qualified include.
+- Latest native application link: /workspace/shared/eden-native-app-compile-resume7.log, before the final optimization batch. The previous package attempt failed its sparse-header gate. One final supported build is running in /workspace/shared/eden-native-package-optimization-final.log; all 23 native syntax preflight units passed. User requests tests grouped at batch end.
+- Native SDK, FFmpeg, OpenGL and RADV dependency preparation passed; current app/package qualification is in progress. A failed CV waiter-flag publication now precedes mutex-owner handoff; see docs/EDEN_HLE_CV_HANDOFF_2026-10-20.md.
+
+- FINAL BATCH: 20 targeted host checks pass (18 initially, two fixture repairs and reruns). FiberImpl lazily owns only the active 2 MiB guarded stack; real Boost context assembly/UBSan passes 128 transfers across two workers, guest allocations ~4→2 MiB and host-thread stacks ~8→0 MiB for two hosts. Flat query copies reduce first-batch copy allocations 1024→1, zero locked copy allocations, with actual full-method deferred/retry tests. Payload copies stay under lock and GPU staging follows buffer consolidation to preserve tick ownership. Direct two-word BufferPages/ImagePages probes and source parity pass. Native CPU tuning: mtune for core/common/dynarmic; march Zen2 with no FP contraction for DSP/shader translation; shared/batch JIT remains off. Actual native build and gameplay results still pending.
+- The sparse-header gate now accepts only exact canonical/derived paths after checking their bytes match, rejecting pinned originals/foreign paths. Final native validation is pending; no current final package is qualified.
+
 ## Latest verified status — 14 October 2026 (pre-test source audit)
 
 ### Pre-test diagnostics and FPS policy (14 October, follow-up)

@@ -36,8 +36,14 @@ publish_sig = "A64EmitX64::Emit(IR::Block& block, bool publish) noexcept"
 ending = "    code.DisableWriting();\n    shared_labels.clear();"
 publish_end = "    if (publish) code.DisableWriting();\n    shared_labels.clear();"
 assert original.count(sig) == original.count(ending) == 1
+# Replace complete declarations: directives cannot split return type/name
+# or share the #endif line with the function's opening brace.
+full_sig = "A64EmitX64::BlockDescriptor " + sig + " {"
+full_publish_sig = "A64EmitX64::BlockDescriptor " + publish_sig + " {"
+assert original.count(full_sig) == 1
 expected_std = original.replace(
-    sig, "#if defined(EDEN_JIT_A64_PUBLISH)\n" + publish_sig + "\n#else\n" + sig + "\n#endif"
+    full_sig, "#if defined(EDEN_JIT_A64_PUBLISH)\n" + full_publish_sig
+    + "\n#else\n" + full_sig + "\n#endif"
 ).replace(
     ending, "#if defined(EDEN_JIT_A64_PUBLISH)\n" + publish_end + "\n#else\n" + ending + "\n#endif"
 )
@@ -94,3 +100,35 @@ with tempfile.TemporaryDirectory(prefix="encore-emitters-") as tmp:
                     assert (output / "a64_emit_x64.cpp").read_text() == (shared if shared_mode else a64)
                     assert (output / "include/dynarmic/backend/x64/a64_emit_x64.h").read_text() == (shared_h if shared_mode else normal_h)
 print("ENCORE_EMITTER_OWNERS_PASS sources=3 headers=2 selection_modes=16")
+
+# Compile actual header/implementation signature boundaries in both standard
+# modes and the shared mode. Full-unit parity alone reproduced the malformed
+# historical preprocessor placement and therefore could not detect this bug.
+compiler = shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
+assert compiler, "C++20 compiler required"
+old_signature = "A64EmitX64::BlockDescriptor #if defined(EDEN_JIT_A64_PUBLISH)\n" + publish_sig + "\n#else\n" + sig + "\n#endif {\n"
+normal_proto = "#if defined(EDEN_JIT_A64_PUBLISH)\n" + normal_h.split(
+    "#if defined(EDEN_JIT_A64_PUBLISH)\n", 1)[1].split("#endif", 1)[0] + "#endif\n"
+def signature(unit):
+    return unit.split("A64EmitX64::~A64EmitX64() = default;", 1)[1].split(
+        "    if (conf.very_verbose_debugging_output)", 1)[0]
+with tempfile.TemporaryDirectory(prefix="encore-emit-signature-") as folder:
+    folder = Path(folder)
+    for mode, proto_text, implementation, flags in (
+        ("old", normal_proto, old_signature, []),
+        ("normal", normal_proto, signature(a64), []),
+        ("publish", normal_proto, signature(a64), ["-DEDEN_JIT_A64_PUBLISH=1"]),
+        ("shared", pub_proto, signature(shared), ["-DEDEN_JIT_A64_PUBLISH=1"]),
+    ):
+        path = folder / (mode + ".cpp")
+        path.write_text("namespace IR { struct Block {}; }\n"
+                        "struct A64EmitX64 { struct BlockDescriptor {};\n" + proto_text
+                        + "\n};\n" + implementation + "    return {};\n}\n"
+                        "int main() { IR::Block block; A64EmitX64 emitter; emitter.Emit(block); }\n")
+        result = subprocess.run([compiler, "-std=c++20", "-Werror", "-fsyntax-only",
+                                 *flags, str(path)], capture_output=True, text=True, timeout=30)
+        if mode == "old":
+            assert result.returncode != 0 and "#" in result.stderr, result.stderr
+        else:
+            assert result.returncode == 0, (mode, result.stderr)
+print("EMITTER_SIGNATURE_COMPILE_PASS modes=normal,publish,shared old_signature=rejected")

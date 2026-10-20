@@ -1354,7 +1354,10 @@ struct QueryCacheRuntimeImpl {
     std::vector<std::pair<DAddr, DAddr>> little_cache;
     std::vector<std::pair<VkBuffer, VkDeviceSize>> buffers_to_upload_to;
     std::vector<size_t> redirect_cache;
-    std::vector<std::vector<VkBufferCopy>> copies_setup;
+    std::vector<size_t> sync_order;
+    std::vector<VkBufferCopy> copies_setup;
+    std::vector<size_t> copy_offsets;
+    std::vector<size_t> copy_cursors;
 
     // Host conditional rendering data
     std::optional<ConditionalRenderingResolvePass> conditional_resolve_pass;
@@ -1673,52 +1676,49 @@ void QueryCacheRuntime::SyncValues(std::span<SyncValuesType> values, VkBuffer ba
         return;
     }
     impl->redirect_cache.clear();
+    impl->redirect_cache.resize(values.size());
     impl->little_cache.clear();
+    impl->sync_order.resize(values.size());
     size_t total_size = 0;
-    for (auto& sync_val : values) {
+    for (size_t i = 0; i < values.size(); ++i) {
+        const auto& sync_val = values[i];
         if (sync_val.size == 0 ||
             sync_val.size > std::numeric_limits<DAddr>::max() - sync_val.address ||
             sync_val.size > std::numeric_limits<size_t>::max() - total_size) {
             throw std::overflow_error("Query sync value range overflow");
         }
         total_size += sync_val.size;
-        bool found = false;
+        impl->sync_order[i] = i;
+    }
+    // Sort indices, not values: copies retain the original query order.
+    // Separated pages otherwise require a quadratic scan of earlier groups.
+    const auto by_page = [&](size_t a, size_t b) {
+        return Common::AlignDown(values[a].address, Core::DEVICE_PAGESIZE) <
+               Common::AlignDown(values[b].address, Core::DEVICE_PAGESIZE);
+    };
+    // Monotonic pages, including arbitrary addresses within one page, need
+    // only a linear scan. Sort only batches whose page order differs.
+    if (!std::is_sorted(impl->sync_order.begin(), impl->sync_order.end(), by_page)) {
+        std::sort(impl->sync_order.begin(), impl->sync_order.end(), by_page);
+    }
+    for (const size_t i : impl->sync_order) {
+        const auto& sync_val = values[i];
         const DAddr base = Common::AlignDown(sync_val.address, Core::DEVICE_PAGESIZE);
-        // A query result may straddle a device-memory page. ObtainCPUBuffer
-        // must cover the complete value, not only the page containing its start.
         const DAddr last_page = Common::AlignDown(
             sync_val.address + sync_val.size - 1, Core::DEVICE_PAGESIZE);
         if (last_page > std::numeric_limits<DAddr>::max() - Core::DEVICE_PAGESIZE) {
             throw std::overflow_error("Query sync page end overflow");
         }
         const DAddr base_end = last_page + Core::DEVICE_PAGESIZE;
-        for (size_t i = 0; i < impl->little_cache.size(); i++) {
-            const auto set_found = [&] {
-                impl->redirect_cache.push_back(i);
-                found = true;
-            };
-            auto& loc = impl->little_cache[i];
-            if (base < loc.second && loc.first < base_end) {
-                loc.first = (std::min)(loc.first, base);
-                loc.second = (std::max)(loc.second, base_end);
-                set_found();
-                break;
-            }
-            if (loc.first == base_end) {
-                loc.first = base;
-                set_found();
-                break;
-            }
-            if (loc.second == base) {
-                loc.second = base_end;
-                set_found();
-                break;
-            }
-        }
-        if (!found) {
-            impl->redirect_cache.push_back(impl->little_cache.size());
+        if (impl->little_cache.empty() || impl->little_cache.back().second < base) {
             impl->little_cache.emplace_back(base, base_end);
+        } else {
+            // Sorted starts make the last group the only possible match,
+            // including a result connecting two formerly separate groups.
+            auto& loc = impl->little_cache.back();
+            loc.second = (std::max)(loc.second, base_end);
         }
+        impl->redirect_cache[i] = impl->little_cache.size() - 1;
     }
     // ObtainCPUBuffer takes a u32 length. Never truncate a combined page
     // span to a shorter buffer and then record copies beyond its end.
@@ -1728,9 +1728,32 @@ void QueryCacheRuntime::SyncValues(std::span<SyncValuesType> values, VkBuffer ba
         }
     }
 
+    // Prepare all query metadata before taking the buffer cache mutex.
+    // One flat copy array replaces one allocation per destination group.
+    const size_t groups = impl->little_cache.size();
+    impl->copy_cursors.assign(groups, 0);
+    for (const size_t group : impl->redirect_cache) {
+        ++impl->copy_cursors[group];
+    }
+    impl->copy_offsets.resize(groups + 1);
+    size_t next_copy = 0;
+    for (size_t group = 0; group < groups; ++group) {
+        impl->copy_offsets[group] = next_copy;
+        const size_t count = impl->copy_cursors[group];
+        impl->copy_cursors[group] = next_copy;
+        next_copy += count;
+    }
+    impl->copy_offsets[groups] = next_copy;
+    impl->copies_setup.resize(values.size());
+
     // Vulkan part.
+    // Keep buffers protected through recording. Metadata storage grows above;
+    // staging retains its original tick ownership AFTER buffer consolidation.
+    impl->buffers_to_upload_to.clear();
+    impl->buffers_to_upload_to.reserve(groups);
     std::scoped_lock lk(impl->buffer_cache.mutex);
     impl->buffer_cache.BufferOperations([&] {
+        // BufferOperations retries when a merge invalidates earlier handles.
         impl->buffers_to_upload_to.clear();
         for (auto& pair : impl->little_cache) {
             static constexpr auto sync_info = VideoCommon::ObtainBufferSynchronize::FullSynchronize;
@@ -1741,45 +1764,45 @@ void QueryCacheRuntime::SyncValues(std::span<SyncValuesType> values, VkBuffer ba
         }
     });
 
-    VkBuffer src_buffer;
+    VkBuffer src_buffer = base_src_buffer;
     [[maybe_unused]] StagingBufferRef ref;
-    impl->copies_setup.clear();
-    impl->copies_setup.resize(impl->little_cache.size());
     if constexpr (SyncValuesType::GeneratesBaseBuffer) {
         ref = impl->staging_pool.Request(total_size, MemoryUsage::Upload);
-        size_t current_offset = ref.offset;
-        size_t accumulated_size = 0;
-        for (size_t i = 0; i < values.size(); i++) {
-            size_t which_copy = impl->redirect_cache[i];
-            impl->copies_setup[which_copy].emplace_back(VkBufferCopy{
-                .srcOffset = current_offset + accumulated_size,
-                .dstOffset = impl->buffers_to_upload_to[which_copy].second + values[i].address -
-                             impl->little_cache[which_copy].first,
-                .size = values[i].size,
-            });
-            std::memcpy(ref.mapped_span.data() + accumulated_size, &values[i].value,
-                        values[i].size);
-            accumulated_size += values[i].size;
-        }
         src_buffer = ref.buffer;
-    } else {
-        for (size_t i = 0; i < values.size(); i++) {
-            size_t which_copy = impl->redirect_cache[i];
-            impl->copies_setup[which_copy].emplace_back(VkBufferCopy{
-                .srcOffset = values[i].offset,
-                .dstOffset = impl->buffers_to_upload_to[which_copy].second + values[i].address -
-                             impl->little_cache[which_copy].first,
-                .size = values[i].size,
-            });
+    }
+    [[maybe_unused]] size_t accumulated_size = 0;
+    for (size_t i = 0; i < values.size(); ++i) {
+        const size_t group = impl->redirect_cache[i];
+        VkDeviceSize source_offset;
+        if constexpr (SyncValuesType::GeneratesBaseBuffer) {
+            source_offset = ref.offset + accumulated_size;
+            if (values[i].size == sizeof(values[i].value)) {
+                std::memcpy(ref.mapped_span.data() + accumulated_size, &values[i].value,
+                            sizeof(values[i].value));
+            } else {
+                std::memcpy(ref.mapped_span.data() + accumulated_size, &values[i].value,
+                            values[i].size);
+            }
+            accumulated_size += values[i].size;
+        } else {
+            source_offset = values[i].offset;
         }
-        src_buffer = base_src_buffer;
+        impl->copies_setup[impl->copy_cursors[group]++] = VkBufferCopy{
+            .srcOffset = source_offset,
+            .dstOffset = impl->buffers_to_upload_to[group].second + values[i].address -
+                         impl->little_cache[group].first,
+            .size = values[i].size,
+        };
     }
 
     impl->scheduler.RequestOutsideRenderPassOperationContext();
-    impl->scheduler.Record([src_buffer, dst_buffers = std::move(impl->buffers_to_upload_to), vk_copies = std::move(impl->copies_setup)](vk::CommandBuffer cmdbuf) {
-        size_t size = dst_buffers.size();
-        for (size_t i = 0; i < size; i++) {
-            cmdbuf.CopyBuffer(src_buffer, dst_buffers[i].first, vk_copies[i]);
+    impl->scheduler.Record([src_buffer, dst_buffers = std::move(impl->buffers_to_upload_to),
+                            vk_copies = std::move(impl->copies_setup),
+                            copy_offsets = std::move(impl->copy_offsets)](vk::CommandBuffer cmdbuf) {
+        const std::span<const VkBufferCopy> copies{vk_copies};
+        for (size_t i = 0; i < dst_buffers.size(); ++i) {
+            cmdbuf.CopyBuffer(src_buffer, dst_buffers[i].first,
+                             copies.subspan(copy_offsets[i], copy_offsets[i + 1] - copy_offsets[i]));
         }
     });
 }

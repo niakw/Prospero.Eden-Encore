@@ -7,16 +7,32 @@ on:
     paths:
       - 'vendor/encore-active/eden-core/src/dynarmic/**'
       - 'vendor/encore-active/eden-core/src/common/sparse_large_vector.h'
+      - 'src/host_memory.cpp'
+      - 'vendor/encore-active/eden-core/src/video_core/buffer_cache/buffer_cache.h'
+      - 'tools/check-native-dma-clear-span-host.py'
+      - 'tools/check-fastmem-window-bounds-host.py'
       - 'tools/check-sparse-zero-bounds-host.py'
       - 'vendor/encore-active/eden-vulkan/**'
       - 'vendor/encore-active/eden-threading/src/core/hle/kernel/k_thread.cpp'
       - 'vendor/encore-active/eden-threading/src/core/hle/kernel/k_condition_variable.cpp'
+      - 'vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp'
+      - 'tools/check-native-bootstrap-permit-host.py'
       - 'tools/check-native-hle-cv-key-write-host.py'
+      - 'tools/check-native-hle-wait-null-queue-host.py'
       - 'tools/check-native-hle-wait-queue-publication-host.py'
-      - 'tools/verify/hle/check-hle-overlay-layout.py'
+      - 'tools/verify/hle/**'
       - 'tools/check-vulkan-multirange-overflow-host.py'
       - 'tools/check-vulkan-renderpass-clear-bounds-host.py'
       - 'tools/check-vulkan-worker-fatal-drain-host.py'
+      - 'tools/check-vulkan-query-allocation-host.py'
+      - 'tools/check-vulkan-query-grouping-host.py'
+      - 'tools/check-vulkan-query-copy-plan-host.py'
+      - 'headless/buffer_pages.h'
+      - 'headless/image_pages.h'
+      - 'vendor/encore-active/eden-core/src/common/fiber.cpp'
+      - 'tools/check-vendored-fiber-source.py'
+      - 'tools/fixtures/query-sync-linear-grouping.inc'
+      - 'tools/check-maintained-emitters.py'
       - 'tools/check-native-a64-default-phases-host.py'
       - 'tools/check-native-a64-cache-invalidation-host.py'
       - 'tools/prepare-vulkan-port.py'
@@ -47,21 +63,31 @@ jobs:
           python3 -B tools/check-vulkan-renderpass-clear-bounds-host.py
           python3 -B tools/check-vulkan-multirange-overflow-host.py
           python3 -B tools/check-vulkan-worker-fatal-drain-host.py
+          python3 -B tools/check-vulkan-query-allocation-host.py
+          python3 -B tools/check-vulkan-query-grouping-host.py
+          python3 -B tools/check-vulkan-query-copy-plan-host.py
+          python3 -B tools/check-native-dma-clear-span-host.py
       - name: Default JIT compiler and cache invalidation guards
         run: |
           set -euo pipefail
+          python3 -B tools/check-maintained-emitters.py
           python3 -B tools/check-native-a64-default-phases-host.py
           python3 -B tools/check-native-a64-cache-invalidation-host.py
           python3 -B tools/check-jit-sparse-host.py
           python3 -B tools/check-sparse-zero-bounds-host.py
           python3 -B tools/check-maintained-sparse-vector.py
+          python3 -B tools/check-fastmem-window-bounds-host.py
+          python3 -B tools/check-vendored-fiber-source.py
       - name: Native HLE waiter publication and overlay parity
         run: |
           set -euo pipefail
           python3 -B tools/check-native-hle-wait-queue-publication-host.py
           python3 -B tools/check-native-hle-wait-null-queue-host.py
           python3 -B tools/check-native-hle-cv-key-write-host.py
+          python3 -B tools/verify/hle/check-native-hle-condvar-access-host.py
+          python3 -B tools/verify/hle/check-native-hle-condvar-key-host.py
           python3 -B tools/verify/hle/check-hle-overlay-layout.py
+          python3 -B tools/check-native-bootstrap-permit-host.py
       - name: Boundary
         run: |
           echo 'Host source-derived checks only; native package, GPU and FPS remain unqualified.'

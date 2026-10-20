@@ -268,12 +268,17 @@ bool BufferCache<P>::DMAClear(GPUVAddr dst_address, u64 amount, u32 value) {
     if (!cpu_dst_address) {
         return false;
     }
-    const bool dest_dirty = IsRegionRegistered(*cpu_dst_address, amount);
+    // FindBuffer accepts a u32 byte span; never truncate or issue an empty fill.
+    if (amount == 0 || amount > static_cast<u64>(~u32{0}) / sizeof(u32)) {
+        return false;
+    }
+    // The DMA amount counts u32 values; registration is measured in bytes.
+    const size_t size = amount * sizeof(u32);
+    const bool dest_dirty = IsRegionRegistered(*cpu_dst_address, size);
     if (!dest_dirty) {
         return false;
     }
 
-    const size_t size = amount * sizeof(u32);
     ClearDownload(*cpu_dst_address, size);
     gpu_modified_ranges.Subtract(*cpu_dst_address, size);
 

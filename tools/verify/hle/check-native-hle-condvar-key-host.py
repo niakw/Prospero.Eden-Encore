@@ -46,7 +46,31 @@ anchor = "        // Update the value and process for the next owner.\n"
 assert pinned.count(anchor) == active.count(anchor) == 1
 assert active.count(guard) == 1
 assert guard not in pinned
-assert wait(active) == wait(pinned).replace(anchor, guard + anchor)
+old_write = """            // Write to the cv key.
+            {
+                constexpr u32 HasWaiterFlag = 1;
+                WriteToUser(m_system.Kernel(), key, HasWaiterFlag);
+"""
+checked_write = """            // Publishing the waiter flag can fail even after address validation.
+            // Do not enter a wait that cannot be signaled through guest memory.
+            {
+                constexpr u32 HasWaiterFlag = 1;
+                if (!WriteToUser(m_system.Kernel(), key, HasWaiterFlag)) {
+                    slp.CancelSleep();
+                    R_THROW(ResultInvalidCurrentMemory);
+                }
+"""
+expected_wait = wait(pinned).replace(anchor, guard + anchor)
+assert expected_wait.count(old_write) == 1, "pinned CV waiter-flag write drift"
+expected_wait = expected_wait.replace(old_write, checked_write)
+# Publish before transferring the owner, so a failed flag write has no
+# detached/runnable next owner while guest memory still names the old owner.
+old_publication = checked_write + "                std::atomic_thread_fence(std::memory_order_seq_cst);\n            }\n\n"
+new_publication = '        // Publish the waiter flag before relinquishing mutex ownership.\n        // A failed write must not detach or wake the next mutex owner.\n        {\n            constexpr u32 HasWaiterFlag = 1;\n            if (!WriteToUser(m_system.Kernel(), key, HasWaiterFlag)) {\n                slp.CancelSleep();\n                R_THROW(ResultInvalidCurrentMemory);\n            }\n            std::atomic_thread_fence(std::memory_order_seq_cst);\n        }\n\n'
+assert expected_wait.count(old_publication) == 1
+expected_wait = expected_wait.replace(old_publication, "")
+expected_wait = expected_wait.replace(anchor, new_publication + anchor)
+assert wait(active) == expected_wait
 
 prelude = r"""
 #include <atomic>
@@ -77,20 +101,26 @@ struct ThreadTree {
 };
 struct Memory {
     int writes{};
+    bool lose_key_mapping{};
+    mutable int key_validations{};
     u32 mutex_word{9};
     u32 key_word{};
     bool IsValidVirtualAddressRange(KProcessAddress addr, u64 size) const {
+        if (addr == 0x2000 && lose_key_mapping && ++key_validations > 1) {
+            return false;
+        }
         return size == sizeof(u32) && (addr == 0x1000 || addr == 0x2000);
     }
     void Write32(u64 addr, u32 word) {
         ++writes;
         if (addr == 0x1000) mutex_word = word;
-        else if (addr == 0x2000) key_word = word;
+        else if (addr == 0x2000 && !lose_key_mapping) key_word = word;
     }
 };
 struct KernelCore {
     Memory memory;
     KThread* current{};
+    int cancelled_sleeps{};
 };
 struct KHardwareTimer {};
 struct KThread {
@@ -122,8 +152,10 @@ struct ThreadQueueImplForKConditionVariableWaitConditionVariable {
     void SetHardwareTimer(KHardwareTimer*) {}
 };
 struct KScopedSchedulerLockAndSleep {
-    KScopedSchedulerLockAndSleep(KernelCore&, KHardwareTimer** t, KThread*, s64) { *t = nullptr; }
-    void CancelSleep() {}
+    KernelCore& kernel;
+    KScopedSchedulerLockAndSleep(KernelCore& k, KHardwareTimer** t, KThread*, s64)
+        : kernel(k) { *t = nullptr; }
+    void CancelSleep() { ++kernel.cancelled_sleeps; }
 };
 } // namespace Kernel
 namespace Core {
@@ -161,6 +193,7 @@ int main() {
         assert(waiting.handoffs == 0 && next_owner.wakes == 0);
         assert(waiting.begin_waits == 0 && waiting.set_condvar == 0);
         assert(cv.m_tree.inserts == 0 && kernel.memory.writes == 0);
+        assert(kernel.cancelled_sleeps == 1);
 #else
         // Pinned implementation erroneously claims a successful blocked wait
         // even though the missing cv key never receives HasWaiterFlag.
@@ -184,6 +217,34 @@ int main() {
         assert(cv.m_tree.inserts == 1);
         assert(kernel.memory.writes == 2);
         assert(kernel.memory.key_word == 1 && kernel.memory.mutex_word == 17);
+        assert(kernel.cancelled_sleeps == 0);
+    }
+    {
+        // The initial key check succeeds, but WriteToUser's check fails.
+        // Exercise the whole Wait method, including its later sleep/tree steps.
+        KernelCore kernel;
+        kernel.memory.lose_key_mapping = true;
+        Core::System sys{kernel};
+        KConditionVariable cv{sys};
+        KThread waiting, next_owner;
+        waiting.next_owner = &next_owner;
+        kernel.current = &waiting;
+        const auto result = cv.Wait(0x1000, 0x2000, 17, -1);
+        assert(kernel.memory.key_word == 0);
+#if EXPECT_FIXED
+        assert(result == ResultInvalidCurrentMemory);
+        assert(waiting.handoffs == 0 && next_owner.wakes == 0);
+        assert(kernel.memory.key_validations == 2);
+        assert(kernel.cancelled_sleeps == 1);
+        assert(waiting.begin_waits == 0 && waiting.set_condvar == 0);
+        assert(cv.m_tree.inserts == 0 && kernel.memory.writes == 0);
+#else
+        assert(result == ResultSuccess);
+        assert(waiting.handoffs == 1 && next_owner.wakes == 1);
+        assert(kernel.cancelled_sleeps == 0);
+        assert(waiting.begin_waits == 1 && waiting.set_condvar == 1);
+        assert(cv.m_tree.inserts == 1 && kernel.memory.writes == 2);
+#endif
     }
     std::cout << (EXPECT_FIXED ? "NATIVE_CV_KEY_INVALID_ACCESS_REJECTED_PASS\n"
                                : "PINNED_CV_KEY_LOST_WAIT_WITNESS_PASS\n");
@@ -195,6 +256,7 @@ with tempfile.TemporaryDirectory(prefix="encore-cv-key-") as td:
         cpp, exe = temp / f"{label}.cpp", temp / label
         cpp.write_text(prelude + helper(text) + middle + wait(text) + postlude)
         subprocess.run([compiler, "-std=c++20", "-O2", "-Wall", "-Wextra", "-Werror",
+                        "-fsanitize=address,undefined", "-fno-sanitize-recover=all",
                         "-DEXPECT_FIXED=" + str(int(fixed)), str(cpp), "-o", str(exe)],
                        check=True, timeout=30)
         result = subprocess.run([str(exe)], capture_output=True, text=True, check=True, timeout=10)

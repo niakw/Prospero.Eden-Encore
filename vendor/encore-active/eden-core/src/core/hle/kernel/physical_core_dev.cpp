@@ -41,7 +41,7 @@ void PhysicalCore::RunThread(KernelCore& kernel, Kernel::KThread* thread) {
         std::scoped_lock lk{m_guard};
 
         // Check if we are already interrupted. If we are, we can just stop immediately.
-        if (std::atomic_ref<const bool>{m_is_interrupted}.load(std::memory_order_relaxed)) {
+        if (__atomic_load_n(&m_is_interrupted, __ATOMIC_RELAXED)) {
             return false;
         }
 
@@ -272,15 +272,15 @@ void PhysicalCore::Idle() {
         bool slept;
         {
             std::unique_lock lk{m_guard};
-            slept = !std::atomic_ref<const bool>{m_is_interrupted}.load(std::memory_order_relaxed);
-            m_on_interrupt.wait(lk, [this] { return std::atomic_ref<const bool>{m_is_interrupted}.load(std::memory_order_relaxed); });
+            slept = !__atomic_load_n(&m_is_interrupted, __ATOMIC_RELAXED);
+            m_on_interrupt.wait(lk, [this] { return __atomic_load_n(&m_is_interrupted, __ATOMIC_RELAXED); });
         }
         if (profile_idle)
             ::Eden::Performance::CountIdle(m_core_index, ::Eden::Performance::NowNs() - start, slept);
     }
 
 bool PhysicalCore::IsInterrupted() const {
-    return std::atomic_ref<const bool>{m_is_interrupted}.load(std::memory_order_relaxed);
+    return __atomic_load_n(&m_is_interrupted, __ATOMIC_RELAXED);
 }
 
 void PhysicalCore::Interrupt() {
@@ -292,7 +292,7 @@ void PhysicalCore::Interrupt() {
     auto* thread = m_current_thread;
 
     // Add interrupt flag.
-    std::atomic_ref<bool>{m_is_interrupted}.store(true, std::memory_order_relaxed);
+    __atomic_store_n(&m_is_interrupted, true, __ATOMIC_RELAXED);
 
     // Interrupt ourselves.
     m_on_interrupt.notify_one();
@@ -308,7 +308,7 @@ void PhysicalCore::Interrupt() {
 
 void PhysicalCore::ClearInterrupt() {
     std::scoped_lock lk{m_guard};
-    std::atomic_ref<bool>{m_is_interrupted}.store(false, std::memory_order_relaxed);
+    __atomic_store_n(&m_is_interrupted, false, __ATOMIC_RELAXED);
 }
 
 } // namespace Kernel

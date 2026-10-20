@@ -27,13 +27,26 @@ TARGETS = (
     "headless/prosperoeden/pe/ui/library.cpp",
     "headless/prosperoeden/pe/ui/launcher.cpp",
     "headless/prosperoeden/pe/ui/settings.cpp",
+    "src/host_memory.cpp",
 )
-# CMake derives these translation units from pinned Eden sources. Compile them
-# before Ninja to reject cross-type shader IR and Fermi2D ABI errors early.
+# These former generated units are now selected directly from maintained C++.
+# Keep checking the actual sources instead of nonexistent historical outputs.
+MAINTAINED_CORE_TARGETS = (
+    "vendor/encore-active/eden-core/src/shader_recompiler/frontend/maxwell/translate/impl/not_implemented.cpp",
+    "vendor/encore-active/eden-core/src/video_core/engines/fermi_2d_observed.cpp",
+    "vendor/encore-active/eden-core/src/video_core/engines/sw_blitter/blitter.cpp",
+    "vendor/encore-active/eden-threading/src/core/hle/kernel/k_condition_variable.cpp",
+    "vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp",
+    "vendor/encore-active/eden-core/src/video_core/memory_manager.cpp",
+    "vendor/encore-active/eden-core/src/common/fiber.cpp",
+)
+PINNED_CACHE_TARGETS = (
+    "video_core/host1x/gpu_device_memory_manager.cpp",
+)
 GENERATED_TARGETS = (
-    "headless/maxwell_prmt_observed.cpp",
-    "headless/fermi_2d_observed.cpp",
-    "headless/sw_blitter_sized.cpp",
+    "headless/vulkan_query_cache.cpp",
+    "headless/a64_emit_x64.cpp",
+    "headless/physical_core.cpp",
 )
 
 def syntax_check_flags(argv: list[str], generated: bool) -> list[str]:
@@ -56,8 +69,11 @@ def main() -> int:
         parser.error(f"native CMake compile database missing: {db}")
     records = json.loads(db.read_text())
     failures = []
-    for relative in (*TARGETS, *GENERATED_TARGETS):
-        source = (args.native_build_dir.resolve() if relative in GENERATED_TARGETS else ROOT) / relative
+    for relative in (*TARGETS, *MAINTAINED_CORE_TARGETS, *GENERATED_TARGETS, *PINNED_CACHE_TARGETS):
+        source_root = (args.native_build_dir.resolve() if relative in GENERATED_TARGETS else
+                       args.native_build_dir.resolve().parent / "source/src"
+                       if relative in PINNED_CACHE_TARGETS else ROOT)
+        source = source_root / relative
         entries = [row for row in records if Path(row["file"]).as_posix().endswith("/" + relative)]
         if not entries and args.allow_stale and relative.endswith(".c"):
             # Older cached CMake configuration predates the newly added native C unit.
@@ -96,7 +112,8 @@ def main() -> int:
         # checking any generated GPU code. Drop only that unsupported flag.
         # Match real native warning severity: generated shader/Fermi objects
         # compile without -Werror, unlike the fork-owned launcher objects.
-        argv = syntax_check_flags(argv, generated=relative in GENERATED_TARGETS)
+        argv = syntax_check_flags(
+            argv, generated=relative in (*MAINTAINED_CORE_TARGETS, *GENERATED_TARGETS, *PINNED_CACHE_TARGETS))
         try:
             check = subprocess.run(argv, cwd=entry["directory"], text=True,
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
@@ -110,7 +127,8 @@ def main() -> int:
     if failures:
         print("\n".join(failures), file=sys.stderr, flush=True)
         return 1
-    print(f"PS5 native syntax preflight PASS ({len(TARGETS) + len(GENERATED_TARGETS)} translation units; no app build)")
+    count = len(TARGETS) + len(MAINTAINED_CORE_TARGETS) + len(GENERATED_TARGETS) + len(PINNED_CACHE_TARGETS)
+    print(f"PS5 native syntax preflight PASS ({count} translation units; no app build)")
     return 0
 
 if __name__ == "__main__":

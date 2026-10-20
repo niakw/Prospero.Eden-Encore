@@ -300,6 +300,17 @@ Result KConditionVariable::Wait(KProcessAddress addr, u64 key, u32 value, s64 ti
             R_THROW(ResultInvalidCurrentMemory);
         }
 
+        // Publish the waiter flag before relinquishing mutex ownership.
+        // A failed write must not detach or wake the next mutex owner.
+        {
+            constexpr u32 HasWaiterFlag = 1;
+            if (!WriteToUser(m_system.Kernel(), key, HasWaiterFlag)) {
+                slp.CancelSleep();
+                R_THROW(ResultInvalidCurrentMemory);
+            }
+            std::atomic_thread_fence(std::memory_order_seq_cst);
+        }
+
         // Update the value and process for the next owner.
         {
             // Remove waiter thread.
@@ -318,17 +329,6 @@ Result KConditionVariable::Wait(KProcessAddress addr, u64 key, u32 value, s64 ti
 
                 // Wake up the next owner.
                 next_owner_thread->EndWait(m_system.Kernel(), ResultSuccess);
-            }
-
-            // Publishing the waiter flag can fail even after address validation.
-            // Do not enter a wait that cannot be signaled through guest memory.
-            {
-                constexpr u32 HasWaiterFlag = 1;
-                if (!WriteToUser(m_system.Kernel(), key, HasWaiterFlag)) {
-                    slp.CancelSleep();
-                    R_THROW(ResultInvalidCurrentMemory);
-                }
-                std::atomic_thread_fence(std::memory_order_seq_cst);
             }
 
             // Write the value to userspace.

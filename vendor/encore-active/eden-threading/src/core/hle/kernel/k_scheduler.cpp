@@ -146,6 +146,12 @@ void KScheduler::RescheduleCurrentCoreImpl(KernelCore& kernel) {
 }
 
 void KScheduler::Initialize(KernelCore& kernel, KThread* main_thread, KThread* idle_thread, s32 core_id) {
+    // CPU workers enter the bootstrap fiber before the normal acquisition loop.
+    // Its first Unload must return an owned context permit.
+    if (!main_thread->m_context_guard.try_acquire()) {
+        UNREACHABLE_MSG("Bootstrap thread context permit is already held");
+    }
+
     // Set core ID/idle thread/interrupt task manager.
     m_core_id = core_id;
     m_idle_thread = idle_thread;
@@ -456,6 +462,11 @@ void KScheduler::ScheduleImplFiber(KernelCore& kernel) {
                 // If we do, another core is interfering, and we must start again.
                 goto retry;
             }
+#if defined(ARCHITECTURE_x86_64)
+            // The owner may run on the sibling Zen2 hardware thread. Avoid
+            // hammering its context semaphore while preserving retry checks.
+            __builtin_ia32_pause();
+#endif
         }
 
         // It's time to switch the thread.

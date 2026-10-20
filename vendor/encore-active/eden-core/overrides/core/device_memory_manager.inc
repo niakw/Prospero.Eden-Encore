@@ -23,26 +23,14 @@
 #include "core/device_memory.h"
 #include "core/device_memory_manager.h"
 #include "core/memory.h"
+#ifdef PS5_NATIVE
+#include "core/hle/kernel/board/nintendo/nx/k_system_control.h"
+#include "gpu_fault_rate_limit.h"
+#endif
 
 namespace Core {
 
 namespace {
-
-// Partial remaps invalidate contiguous spans beginning BEFORE the changed
-// pages as well. Preserve the still-valid prefix to avoid per-read scanning.
-// Called only while the existing mapping_guard is held.
-template <class Entries>
-void TruncateContinuityBefore(Entries& entries, size_t changed_page) {
-    for (size_t p = changed_page; p != 0;) {
-        --p;
-        const size_t pages_before_change = changed_page - p;
-        if (entries[p].continuity_tracker < pages_before_change) {
-            break;
-        }
-        entries.GetAndFault(p).continuity_tracker =
-            static_cast<u32>(pages_before_change - 1);
-    }
-}
 
 class MultiAddressContainer {
 public:
@@ -84,6 +72,21 @@ public:
         }
         current->next_entry = entry_id;
     }
+
+
+#ifdef PS5_NATIVE
+    // The old Unregister assumes its value is always present. A stale/cyclic
+    // reverse map must never walk past the end of storage into an invalid node.
+    [[nodiscard]] bool Contains(u32 value, u32 start_entry) const noexcept {
+        for (size_t steps = 0; start_entry && steps < storage.size(); ++steps) {
+            if (start_entry > storage.size()) return false;
+            const auto& node = storage[start_entry - 1];
+            if (node.value == value) return true;
+            start_entry = node.next_entry;
+        }
+        return false;
+    }
+#endif
 
     std::pair<bool, u32> Unregister(u32 value, u32 start_entry) {
         u32 iter_entry = start_entry;
@@ -188,7 +191,15 @@ template <typename Traits>
 DeviceMemoryManager<Traits>::DeviceMemoryManager(const DeviceMemory& device_memory_)
     : physical_base{uintptr_t(device_memory_.buffer.BackingBasePointer())}
     , device_inter{nullptr}
-    , compressed_device_addr(1ULL << ((Settings::values.memory_layout_mode.GetValue() == Settings::MemoryLayout::Memory_4Gb ? physical_min_bits : physical_max_bits) - Memory::YUZU_PAGEBITS))
+    , compressed_device_addr(
+#ifdef PS5_NATIVE
+        // Reverse mappings need actual configured 4/6/8/10/12 GiB DRAM.
+        // SparseLargeVector reserves virtual space; it does not commit it.
+        Kernel::Board::Nintendo::Nx::KSystemControl::Init::GetIntendedMemorySize() >> Memory::YUZU_PAGEBITS
+#else
+        1ULL << ((Settings::values.memory_layout_mode.GetValue() == Settings::MemoryLayout::Memory_4Gb ? physical_min_bits : physical_max_bits) - Memory::YUZU_PAGEBITS)
+#endif
+    )
     , tracked_entries(device_as_size >> Memory::YUZU_PAGEBITS)
 {
     impl = std::make_unique<DeviceMemoryManagerAllocator<Traits>>();
@@ -221,38 +232,123 @@ void DeviceMemoryManager<Traits>::Free(DAddr start, size_t size) {
 template <typename Traits>
 void DeviceMemoryManager<Traits>::Map(DAddr address, VAddr virtual_address, size_t size, Asid asid,
                                       bool track) {
+#ifdef PS5_NATIVE
+    if (size == 0) return;
+    if (address >= device_as_size || size > device_as_size - address ||
+        virtual_address >= guest_as_size || size > guest_as_size - virtual_address) {
+        if (::Eden::GpuFault::ShouldReportBadMapRange())
+            LOG_ERROR(HW_Memory, "EDEN_GPU_MAP_BAD_RANGE gpu={:#x} guest={:#x} bytes={:#x}",
+                      address, virtual_address, size);
+        return;
+    }
+#endif
+    // Keep the process alive in this registry during GPU map publication.
+    // Lock order: registry (shared) before mapping_guard. Registration and
+    // unregister use the registry's exclusive lock, never mapping_guard.
+    std::shared_lock registry_lk(process_registry_guard);
+    if (asid.id >= registered_processes.size() || registered_processes[asid.id] == nullptr) {
+#ifdef PS5_NATIVE
+        if (::Eden::GpuFault::ShouldReportBadMapRange())
+            LOG_WARNING(HW_Memory, "EDEN_GPU_MAP_BAD_ASID id={} registered={}",
+                        asid.id, registered_processes.size());
+#endif
+        return;
+    }
     Core::Memory::Memory* process_memory = registered_processes[asid.id];
     size_t start_page_d = address >> Memory::YUZU_PAGEBITS;
     size_t num_pages = Common::AlignUp(size, Memory::YUZU_PAGESIZE) >> Memory::YUZU_PAGEBITS;
+#ifdef PS5_NATIVE
+    bool replaced_gpu_mapping = false;
+    std::unique_lock lk(mapping_guard);
+#else
     std::scoped_lock lk(mapping_guard);
+#endif
 
-    if (num_pages != 0) {
-        TruncateContinuityBefore(tracked_entries, start_page_d);
-    }
     tracked_entries.CommitRegion(start_page_d, start_page_d + num_pages);
     for (size_t i = 0; i < num_pages; i++) {
-        // Remapping without tracking must never inherit an old contiguous run.
-        // TrackContinuityImpl rebuilds this only when explicitly requested.
-        tracked_entries.GetUnchecked(start_page_d + i).continuity_tracker = 0;
         const VAddr new_vaddress = virtual_address + i * Memory::YUZU_PAGESIZE;
         auto* ptr = process_memory->GetPointerSilent(Common::ProcessAddress(new_vaddress));
+#ifdef PS5_NATIVE
+        const auto host = reinterpret_cast<std::uintptr_t>(ptr);
+        const auto physical_size = compressed_device_addr.size() << Memory::YUZU_PAGEBITS;
+        if (ptr && (host < physical_base || host - physical_base >= physical_size)) {
+            if (::Eden::GpuFault::ShouldReportBadPhysical())
+                LOG_WARNING(HW_Memory, "EDEN_GPU_MAP_OUTSIDE_DRAM guest={:#x} host={:#x}",
+                            new_vaddress, host);
+            ptr = nullptr;
+        }
+#endif
+#ifdef PS5_NATIVE
+        // Map may replace an existing GPU-page mapping without an Unmap call.
+        // The previous forward page is NOT sufficient: unlink its reverse
+        // physical->GPU association before installing the replacement.
+        const u32 device_page = static_cast<u32>(start_page_d + i);
+        auto& old_entry = tracked_entries.GetUnchecked(start_page_d + i);
+        const u32 previous_physical = AtomicLoadPhysical(old_entry);
+        const u32 replacement_physical = ptr
+            ? static_cast<u32>(GetRawPhysicalAddr(ptr) >> Memory::YUZU_PAGEBITS) + 1U : 0U;
+        if (previous_physical != 0 && previous_physical != replacement_physical)
+            replaced_gpu_mapping = true;
+        if (previous_physical != 0 && previous_physical == replacement_physical) {
+            // Re-registering the same backing must not add a second reverse
+            // address to MultiAddressContainer. Refresh its CPU-side alias.
+            AtomicStoreContinuity(old_entry, 0);
+            AtomicStoreBacking(old_entry, 0);
+            InsertCPUBacking(start_page_d + i, new_vaddress, asid);
+            continue;
+        }
+        if (previous_physical != 0) {
+            u32& reverse = compressed_device_addr.GetAndFault(previous_physical - 1U);
+            if ((AtomicLoadReverse(reverse) >> MULTI_FLAG_BITS) == 0) {
+                if (AtomicLoadReverse(reverse) == device_page) {
+                    AtomicStoreReverse(reverse, 0);
+                    ::Eden::GpuFault::remap_replaced.fetch_add(1, std::memory_order_relaxed);
+                } else if (::Eden::GpuFault::ShouldReportRemapMismatch()) {
+                    LOG_WARNING(HW_Memory,
+                        "EDEN_GPU_REMAP_REVERSE_MISMATCH guest={:#x} old_phys_page={:#x} reverse={:#x}",
+                        device_page, previous_physical - 1U, AtomicLoadReverse(reverse));
+                }
+            } else {
+                if (!impl->multi_dev_address.Contains(device_page, AtomicLoadReverse(reverse) & MULTI_MASK)) {
+                    if (::Eden::GpuFault::ShouldReportRemapMismatch())
+                        LOG_WARNING(HW_Memory,
+                            "EDEN_GPU_REMAP_MULTI_MISSING guest={:#x} old_phys_page={:#x} head={:#x}",
+                            device_page, previous_physical - 1U, AtomicLoadReverse(reverse) & MULTI_MASK);
+                } else {
+                    const auto [multiple, first] = impl->multi_dev_address.Unregister(
+                        device_page, AtomicLoadReverse(reverse) & MULTI_MASK);
+                    if (!multiple)
+                        AtomicStoreReverse(reverse, first != 0 ? impl->multi_dev_address.ReleaseEntry(first) : 0);
+                    else
+                        AtomicStoreReverse(reverse, first | MULTI_FLAG);
+                    ::Eden::GpuFault::remap_replaced.fetch_add(1, std::memory_order_relaxed);
+                }
+            }
+        }
+#endif
         if (ptr == nullptr) [[unlikely]] {
-            tracked_entries.GetUnchecked(start_page_d + i).compressed_physical_ptr = 0;
+            auto& invalid = tracked_entries.GetUnchecked(start_page_d + i);
+            AtomicStorePhysical(invalid, 0);
+            AtomicStoreBacking(invalid, 0);
+            AtomicStoreContinuity(invalid, 0);
             continue;
         }
         auto phys_addr = static_cast<u32>(GetRawPhysicalAddr(ptr) >> Memory::YUZU_PAGEBITS) + 1U;
-        tracked_entries.GetUnchecked(start_page_d + i).compressed_physical_ptr = phys_addr;
+        auto& valid = tracked_entries.GetUnchecked(start_page_d + i);
+        AtomicStoreContinuity(valid, 0);
+        AtomicStoreBacking(valid, 0);
+        AtomicStorePhysical(valid, phys_addr);
         InsertCPUBacking(start_page_d + i, new_vaddress, asid);
-        const u32 base_dev = compressed_device_addr[phys_addr - 1U];
+        const u32 base_dev = AtomicLoadReverse(compressed_device_addr[phys_addr - 1U]);
         const u32 new_dev = static_cast<u32>(start_page_d + i);
         if (base_dev == 0) [[likely]] {
-            compressed_device_addr.GetAndFault(phys_addr - 1U) = new_dev;
+            AtomicStoreReverse(compressed_device_addr.GetAndFault(phys_addr - 1U), new_dev);
             continue;
         }
         u32 start_id = base_dev & MULTI_MASK;
         if ((base_dev >> MULTI_FLAG_BITS) == 0) {
             start_id = impl->multi_dev_address.Register(base_dev);
-            compressed_device_addr.GetAndFault(phys_addr - 1U) = MULTI_FLAG | start_id;
+            AtomicStoreReverse(compressed_device_addr.GetAndFault(phys_addr - 1U), MULTI_FLAG | start_id);
         }
         impl->multi_dev_address.Register(new_dev, start_id);
     }
@@ -260,39 +356,76 @@ void DeviceMemoryManager<Traits>::Map(DAddr address, VAddr virtual_address, size
     if (track) {
         TrackContinuityImpl(address, virtual_address, size, asid);
     }
+#ifdef PS5_NATIVE
+    // Invalidate only real remaps, outside mapping_guard because the
+    // renderer callback may itself gather translated GPU addresses.
+    lk.unlock();
+    if (replaced_gpu_mapping && device_inter != nullptr) {
+        device_inter->InvalidateRegion(address, size);
+        ::Eden::GpuFault::remap_cache_evictions.fetch_add(1, std::memory_order_relaxed);
+    }
+#endif
 }
 
 template <typename Traits>
 void DeviceMemoryManager<Traits>::Unmap(DAddr address, size_t size) {
+#ifdef PS5_NATIVE
+    if (size == 0) return;
+    if (address >= device_as_size || size > device_as_size - address) {
+        if (::Eden::GpuFault::ShouldReportBadUnmapRange())
+            LOG_ERROR(HW_Memory, "EDEN_GPU_UNMAP_BAD_RANGE gpu={:#x} bytes={:#x}", address, size);
+        return;
+    }
+#endif
     size_t start_page_d = address >> Memory::YUZU_PAGEBITS;
     size_t num_pages = Common::AlignUp(size, Memory::YUZU_PAGESIZE) >> Memory::YUZU_PAGEBITS;
     device_inter->InvalidateRegion(address, size);
     std::scoped_lock lk(mapping_guard);
 
-    if (num_pages != 0) {
-        TruncateContinuityBefore(tracked_entries, start_page_d);
-    }
     tracked_entries.CommitRegion(start_page_d, start_page_d + num_pages); // should already be committed, but just in case
     for (size_t i = 0; i < num_pages; i++) {
         auto& entry = tracked_entries.GetUnchecked(start_page_d + i);
-        // An unmapped page must not retain cross-page direct-span metadata.
-        entry.continuity_tracker = 0;
-        auto phys_addr = entry.compressed_physical_ptr;
-        entry.compressed_physical_ptr = 0;
-        entry.cpu_backing_address = 0;
+        auto phys_addr = AtomicLoadPhysical(entry);
+        AtomicStorePhysical(entry, 0);
+        AtomicStoreBacking(entry, 0);
+        AtomicStoreContinuity(entry, 0);
         if (phys_addr != 0) [[likely]] {
             u32& base_dev = compressed_device_addr.GetAndFault(phys_addr - 1U);
-            if ((base_dev >> MULTI_FLAG_BITS) == 0) [[likely]] {
-                base_dev = 0;
+            if ((AtomicLoadReverse(base_dev) >> MULTI_FLAG_BITS) == 0) [[likely]] {
+#ifdef PS5_NATIVE
+                // Never erase a different GPU page's reverse mapping.
+                // This can occur after malformed or repeated guest remaps.
+                const u32 retiring_page = static_cast<u32>(start_page_d + i);
+                if (AtomicLoadReverse(base_dev) != retiring_page) {
+                    if (::Eden::GpuFault::ShouldReportRemapMismatch())
+                        LOG_WARNING(HW_Memory,
+                            "EDEN_GPU_UNMAP_REVERSE_MISMATCH guest={:#x} old_phys_page={:#x} reverse={:#x}",
+                            retiring_page, phys_addr - 1U, AtomicLoadReverse(base_dev));
+                    continue;
+                }
+#endif
+                AtomicStoreReverse(base_dev, 0);
                 continue;
             }
+#ifdef PS5_NATIVE
+            // An invalid stale multi-list used to index storage[-1] and crash
+            // in Unregister(). Preserve the unrelated reverse association.
+            if (!impl->multi_dev_address.Contains(static_cast<u32>(start_page_d + i),
+                                                    AtomicLoadReverse(base_dev) & MULTI_MASK)) {
+                if (::Eden::GpuFault::ShouldReportRemapMismatch())
+                    LOG_WARNING(HW_Memory,
+                        "EDEN_GPU_UNMAP_MULTI_MISSING guest={:#x} old_phys_page={:#x} head={:#x}",
+                        static_cast<u32>(start_page_d + i), phys_addr - 1U, AtomicLoadReverse(base_dev) & MULTI_MASK);
+                continue;
+            }
+#endif
             const auto [more_entries, new_start] = impl->multi_dev_address.Unregister(
-                static_cast<u32>(start_page_d + i), base_dev & MULTI_MASK);
+                static_cast<u32>(start_page_d + i), AtomicLoadReverse(base_dev) & MULTI_MASK);
             if (!more_entries) {
-                base_dev = impl->multi_dev_address.ReleaseEntry(new_start);
+                AtomicStoreReverse(base_dev, new_start != 0 ? impl->multi_dev_address.ReleaseEntry(new_start) : 0);
                 continue;
             }
-            base_dev = new_start | MULTI_FLAG;
+            AtomicStoreReverse(base_dev, new_start | MULTI_FLAG);
         }
     }
     t_slot = {};
@@ -300,6 +433,12 @@ void DeviceMemoryManager<Traits>::Unmap(DAddr address, size_t size) {
 template <typename Traits>
 void DeviceMemoryManager<Traits>::TrackContinuityImpl(DAddr address, VAddr virtual_address,
                                                       size_t size, Asid asid) {
+    // Called with process_registry_guard held by Map or TrackContinuity.
+    // Do not decode stale ASIDs or underflow/overflow page intervals.
+    if (size == 0 || address >= device_as_size || size > device_as_size - address ||
+        virtual_address >= guest_as_size || size > guest_as_size - virtual_address ||
+        asid.id >= registered_processes.size() || registered_processes[asid.id] == nullptr)
+        return;
     Core::Memory::Memory* process_memory = registered_processes[asid.id];
     size_t start_page_d = address >> Memory::YUZU_PAGEBITS;
     size_t num_pages = Common::AlignUp(size, Memory::YUZU_PAGESIZE) >> Memory::YUZU_PAGEBITS;
@@ -312,57 +451,79 @@ void DeviceMemoryManager<Traits>::TrackContinuityImpl(DAddr address, VAddr virtu
         const VAddr new_vaddress = virtual_address + index * Memory::YUZU_PAGESIZE;
         const uintptr_t new_ptr = reinterpret_cast<uintptr_t>(
             process_memory->GetPointerSilent(Common::ProcessAddress(new_vaddress)));
-        if (new_ptr + page_size == last_ptr) {
+        if (new_ptr != 0 && last_ptr != 0 && new_ptr + page_size == last_ptr) {
             page_count++;
         } else {
             page_count = 1;
         }
         last_ptr = new_ptr;
-        tracked_entries.GetUnchecked(start_page_d + index).continuity_tracker = static_cast<u32>(page_count) - 1;
+        AtomicStoreContinuity(tracked_entries.GetUnchecked(start_page_d + index), static_cast<u32>(page_count) - 1);
     }
 }
 template <typename Traits>
 u8* DeviceMemoryManager<Traits>::GetSpan(const DAddr src_addr, const std::size_t size) {
-    // The GPU address space is bounded. Reject empty, overflowing and
-    // out-of-range spans before indexing the sparse page map or calculating
-    // size + subbits, whose unsigned overflow could incorrectly allow a
-    // direct pointer covering unmapped memory.
-    if (size == 0 || src_addr >= device_as_size ||
-        size > device_as_size - src_addr) {
+    if (size == 0 || src_addr >= device_as_size || size > device_as_size - src_addr)
         return nullptr;
+    const size_t first_page = src_addr >> page_bits;
+    const size_t page_count = 1 + ((size - 1 + (src_addr & page_mask)) >> page_bits);
+    const u32 backing = AtomicLoadPhysical(tracked_entries[first_page]);
+    if (backing == 0) return nullptr;
+#ifdef PS5_NATIVE
+    // Matching forward-page numbers do not by themselves prove that the
+    // complete multi-page span fits in the host DRAM backing.
+    const size_t first_phys = static_cast<size_t>(backing - 1U);
+    if (first_phys >= compressed_device_addr.size() ||
+        page_count > compressed_device_addr.size() - first_phys)
+        return nullptr;
+#endif
+    // Validate each physical page, not a potentially stale continuity hint.
+    for (size_t i = 1; i < page_count; ++i) {
+        if (AtomicLoadPhysical(tracked_entries[first_page + i]) != backing + i)
+            return nullptr;
     }
-    size_t page_index = src_addr >> page_bits;
-    size_t subbits = src_addr & page_mask;
-    if ((static_cast<size_t>(tracked_entries[page_index].continuity_tracker+1) << page_bits) >= size + subbits) {
-        return GetPointer<u8>(src_addr);
-    }
-    return nullptr;
+    // Reuse the validated physical backing instead of loading the page again.
+    return GetPointerFromRaw<u8>((PAddr(backing - 1U) << page_bits) + (src_addr & page_mask));
 }
 
 template <typename Traits>
 const u8* DeviceMemoryManager<Traits>::GetSpan(const DAddr src_addr, const std::size_t size) const {
-    // The GPU address space is bounded. Reject empty, overflowing and
-    // out-of-range spans before indexing the sparse page map or calculating
-    // size + subbits, whose unsigned overflow could incorrectly allow a
-    // direct pointer covering unmapped memory.
-    if (size == 0 || src_addr >= device_as_size ||
-        size > device_as_size - src_addr) {
+    if (size == 0 || src_addr >= device_as_size || size > device_as_size - src_addr)
         return nullptr;
+    const size_t first_page = src_addr >> page_bits;
+    const size_t page_count = 1 + ((size - 1 + (src_addr & page_mask)) >> page_bits);
+    const u32 backing = AtomicLoadPhysical(tracked_entries[first_page]);
+    if (backing == 0) return nullptr;
+#ifdef PS5_NATIVE
+    // Matching forward-page numbers do not by themselves prove that the
+    // complete multi-page span fits in the host DRAM backing.
+    const size_t first_phys = static_cast<size_t>(backing - 1U);
+    if (first_phys >= compressed_device_addr.size() ||
+        page_count > compressed_device_addr.size() - first_phys)
+        return nullptr;
+#endif
+    // Validate each physical page, not a potentially stale continuity hint.
+    for (size_t i = 1; i < page_count; ++i) {
+        if (AtomicLoadPhysical(tracked_entries[first_page + i]) != backing + i)
+            return nullptr;
     }
-    size_t page_index = src_addr >> page_bits;
-    size_t subbits = src_addr & page_mask;
-    if ((static_cast<size_t>(tracked_entries[page_index].continuity_tracker+1) << page_bits) >= size + subbits) {
-        return GetPointer<u8>(src_addr);
-    }
-    return nullptr;
+    // Reuse the validated physical backing instead of loading the page again.
+    return GetPointerFromRaw<u8>((PAddr(backing - 1U) << page_bits) + (src_addr & page_mask));
 }
 
 template <typename Traits>
 void DeviceMemoryManager<Traits>::InnerGatherDeviceAddresses(Common::ScratchBuffer<u32>& buffer,
                                                              PAddr address) {
     size_t phys_addr = address >> page_bits;
+#ifdef PS5_NATIVE
+    if (phys_addr >= compressed_device_addr.size()) {
+        if (::Eden::GpuFault::ShouldReportBadPhysical())
+            LOG_WARNING(HW_Memory, "EDEN_GPU_REVERSE_PHYS_OOB phys={:#x}", address);
+        buffer.resize(0);
+        return;
+    }
+#endif
     std::scoped_lock lk(mapping_guard);
-    u32 backing = compressed_device_addr[phys_addr];
+    u32 backing = AtomicLoadReverse(compressed_device_addr[phys_addr]);
     if ((backing >> MULTI_FLAG_BITS) != 0) {
         impl->multi_dev_address.GatherValues(backing & MULTI_MASK, buffer);
         return;
@@ -374,9 +535,19 @@ void DeviceMemoryManager<Traits>::InnerGatherDeviceAddresses(Common::ScratchBuff
 template <typename Traits>
 template <typename T>
 T* DeviceMemoryManager<Traits>::GetPointer(DAddr address) {
+#ifdef PS5_NATIVE
+    if (address >= device_as_size) return nullptr;
+#endif
     const size_t index = address >> Memory::YUZU_PAGEBITS;
     const size_t offset = address & Memory::YUZU_PAGEMASK;
-    auto phys_addr = tracked_entries[index].compressed_physical_ptr;
+    auto phys_addr = AtomicLoadPhysical(tracked_entries[index]);
+#ifdef PS5_NATIVE
+    if (phys_addr == 0 || static_cast<size_t>(phys_addr - 1U) >= compressed_device_addr.size())
+        return nullptr;
+    const auto raw = (static_cast<PAddr>(phys_addr - 1U) << Memory::YUZU_PAGEBITS) + offset;
+    const auto backing_size = compressed_device_addr.size() << Memory::YUZU_PAGEBITS;
+    if (raw >= backing_size || sizeof(T) > backing_size - raw) return nullptr;
+#endif
     if (phys_addr == 0) [[unlikely]]
         return nullptr;
     return GetPointerFromRaw<T>((PAddr(phys_addr - 1) << Memory::YUZU_PAGEBITS) + offset);
@@ -385,9 +556,19 @@ T* DeviceMemoryManager<Traits>::GetPointer(DAddr address) {
 template <typename Traits>
 template <typename T>
 const T* DeviceMemoryManager<Traits>::GetPointer(DAddr address) const {
+#ifdef PS5_NATIVE
+    if (address >= device_as_size) return nullptr;
+#endif
     const size_t index = address >> Memory::YUZU_PAGEBITS;
     const size_t offset = address & Memory::YUZU_PAGEMASK;
-    auto phys_addr = tracked_entries[index].compressed_physical_ptr;
+    auto phys_addr = AtomicLoadPhysical(tracked_entries[index]);
+#ifdef PS5_NATIVE
+    if (phys_addr == 0 || static_cast<size_t>(phys_addr - 1U) >= compressed_device_addr.size())
+        return nullptr;
+    const auto raw = (static_cast<PAddr>(phys_addr - 1U) << Memory::YUZU_PAGEBITS) + offset;
+    const auto backing_size = compressed_device_addr.size() << Memory::YUZU_PAGEBITS;
+    if (raw >= backing_size || sizeof(T) > backing_size - raw) return nullptr;
+#endif
     if (phys_addr == 0)
         return nullptr;
     return GetPointerFromRaw<T>((PAddr(phys_addr - 1) << Memory::YUZU_PAGEBITS) + offset);
@@ -417,11 +598,40 @@ T DeviceMemoryManager<Traits>::Read(DAddr address) const {
 
 template <typename Traits>
 void DeviceMemoryManager<Traits>::WalkBlock(DAddr addr, std::size_t size, auto on_unmapped, auto on_memory, auto increment) {
+    if (size == 0) return;
+#ifdef PS5_NATIVE
+    // Guest command streams can supply a corrupt GPU virtual address. Never
+    // index sparse translation tables beyond their advertised address space.
+    if (addr >= device_as_size || size > device_as_size - addr) {
+        on_unmapped(size, addr);
+        increment(size);
+        return;
+    }
+#endif
     std::size_t remaining_size = size;
     std::size_t page_index = addr >> Memory::YUZU_PAGEBITS;
     std::size_t page_offset = addr & Memory::YUZU_PAGEMASK;
     while (remaining_size) {
-        const size_t next_pages = std::size_t(tracked_entries[page_index].continuity_tracker+1);
+        const auto first_backing = AtomicLoadPhysical(tracked_entries[page_index]);
+        // A remap can invalidate continuity even on a preceding page.
+        const size_t hint = static_cast<size_t>(AtomicLoadContinuity(tracked_entries[page_index])) + 1;
+        const size_t remaining_pages = 1 + ((remaining_size - 1 + page_offset) >> Memory::YUZU_PAGEBITS);
+        size_t next_pages = (std::min)({hint, remaining_pages, tracked_entries.size() - page_index});
+#ifdef PS5_NATIVE
+        // A continuity hint does not prove that all decoded physical pages
+        // fit inside the configured 4/6/8/10/12-GiB backing allocation.
+        // Split exactly at the physical boundary; keep the single-page path O(1).
+        if (first_backing != 0) {
+            const size_t first_phys = static_cast<size_t>(first_backing - 1U);
+            next_pages = first_phys >= compressed_device_addr.size()
+                ? 1 : (std::min)(next_pages, compressed_device_addr.size() - first_phys);
+        }
+#endif
+        for (size_t n = 1; n < next_pages; ++n) {
+            const auto observed = AtomicLoadPhysical(tracked_entries[page_index + n]);
+            const bool contiguous = first_backing == 0 ? observed == 0 : observed == first_backing + n;
+            if (!contiguous) { next_pages = n; break; }
+        }
         const std::size_t copy_amount = (std::min)((next_pages << Memory::YUZU_PAGEBITS) - page_offset, remaining_size);
         const auto current_vaddr = u64((page_index << Memory::YUZU_PAGEBITS) + page_offset);
         SCOPE_EXIT{
@@ -431,7 +641,18 @@ void DeviceMemoryManager<Traits>::WalkBlock(DAddr addr, std::size_t size, auto o
             remaining_size -= copy_amount;
         };
 
-        auto phys_addr = tracked_entries[page_index].compressed_physical_ptr;
+        auto phys_addr = AtomicLoadPhysical(tracked_entries[page_index]);
+#ifdef PS5_NATIVE
+        if (phys_addr != 0 &&
+            static_cast<size_t>(phys_addr - 1U) >= compressed_device_addr.size()) {
+            if (::Eden::GpuFault::ShouldReportBadPhysical())
+                LOG_WARNING(HW_Memory,
+                    "EDEN_GPU_READ_WRITE_PHYS_OOB gpu={:#x} phys_page={:#x}",
+                    current_vaddr, phys_addr - 1U);
+            on_unmapped(copy_amount, current_vaddr);
+            continue;
+        }
+#endif
         if (phys_addr == 0) {
             on_unmapped(copy_amount, current_vaddr);
             continue;
@@ -443,23 +664,48 @@ void DeviceMemoryManager<Traits>::WalkBlock(DAddr addr, std::size_t size, auto o
 
 template <typename Traits>
 void DeviceMemoryManager<Traits>::ReadBlock(DAddr address, void* dest_pointer, size_t size) {
+#ifdef PS5_NATIVE
+    if (size == 0) return;
+    // Do not flush an invalid GPU virtual extent through the renderer.
+    // The ordinary unmapped path zero-fills destination without a GPU fetch.
+    if (address >= device_as_size || size > device_as_size - address) {
+        if (::Eden::GpuFault::ShouldReportRead())
+            LOG_ERROR(HW_Memory,
+                      "Unmapped Device ReadBlock @ {:#016x} (start address = {:#016x}, size = {})",
+                      address, address, size);
+        std::memset(dest_pointer, 0, size);
+        return;
+    }
+#endif
     device_inter->FlushRegion(address, size);
     const std::size_t page_offset = address & Memory::YUZU_PAGEMASK;
-    if (size <= Memory::YUZU_PAGESIZE - page_offset) {
+    if (size <= Memory::YUZU_PAGESIZE - page_offset
+#ifdef PS5_NATIVE
+        && address < device_as_size && size <= device_as_size - address
+#endif
+    ) {
         const DAddr guest_page = address & ~static_cast<DAddr>(Memory::YUZU_PAGEMASK);
+#ifndef PS5_NATIVE
         for (size_t i = 0; i < 4; ++i) {
             if (t_slot[i].guest_page == guest_page && t_slot[i].host_ptr != nullptr) {
                 std::memcpy(dest_pointer, t_slot[i].host_ptr + page_offset, size);
                 return;
             }
         }
+#endif
 
         const std::size_t page_index = address >> Memory::YUZU_PAGEBITS;
-        const auto phys_addr = tracked_entries[page_index].compressed_physical_ptr;
-        if (phys_addr != 0) {
+        const auto phys_addr = AtomicLoadPhysical(tracked_entries[page_index]);
+        if (phys_addr != 0
+#ifdef PS5_NATIVE
+            && static_cast<size_t>(phys_addr - 1U) < compressed_device_addr.size()
+#endif
+        ) {
             auto* const mem_ptr = GetPointerFromRaw<u8>((PAddr(phys_addr - 1) << Memory::YUZU_PAGEBITS));
+#ifndef PS5_NATIVE
             t_slot[cache_cursor % t_slot.size()] = TranslationEntry{.guest_page = guest_page, .host_ptr = mem_ptr};
             cache_cursor = (cache_cursor + 1) & 3U;
+#endif
             std::memcpy(dest_pointer, mem_ptr + page_offset, size);
             return;
         }
@@ -467,6 +713,9 @@ void DeviceMemoryManager<Traits>::ReadBlock(DAddr address, void* dest_pointer, s
     WalkBlock(
         address, size,
         [&](size_t copy_amount, DAddr current_vaddr) {
+#ifdef PS5_NATIVE
+            if (::Eden::GpuFault::ShouldReportRead())
+#endif
             LOG_ERROR(
                 HW_Memory,
                 "Unmapped Device ReadBlock @ {:#016x} (start address = {:#016x}, size = {})",
@@ -486,6 +735,9 @@ void DeviceMemoryManager<Traits>::WriteBlock(DAddr address, const void* src_poin
     WalkBlock(
         address, size,
         [&](size_t copy_amount, DAddr current_vaddr) {
+#ifdef PS5_NATIVE
+            if (::Eden::GpuFault::ShouldReportWrite())
+#endif
             LOG_ERROR(
                 HW_Memory,
                 "Unmapped Device WriteBlock @ {:#016x} (start address = {:#016x}, size = {})",
@@ -497,27 +749,44 @@ void DeviceMemoryManager<Traits>::WriteBlock(DAddr address, const void* src_poin
         [&](const std::size_t copy_amount) {
             src_pointer = static_cast<const u8*>(src_pointer) + copy_amount;
         });
-    device_inter->InvalidateRegion(address, size);
+#ifdef PS5_NATIVE
+    // WalkBlock already dropped and counted invalid writes. Do not pass the
+    // rejected virtual range into renderer cache invalidation afterwards.
+    if (size != 0 && address < device_as_size && size <= device_as_size - address)
+#endif
+        device_inter->InvalidateRegion(address, size);
 }
 
 template <typename Traits>
 void DeviceMemoryManager<Traits>::ReadBlockUnsafe(DAddr address, void* dest_pointer, size_t size) {
     const std::size_t page_offset = address & Memory::YUZU_PAGEMASK;
-    if (size <= Memory::YUZU_PAGESIZE - page_offset) {
+    if (size <= Memory::YUZU_PAGESIZE - page_offset
+#ifdef PS5_NATIVE
+        && address < device_as_size && size <= device_as_size - address
+#endif
+    ) {
         const DAddr guest_page = address & ~static_cast<DAddr>(Memory::YUZU_PAGEMASK);
+#ifndef PS5_NATIVE
         for (size_t i = 0; i < 4; ++i) {
             if (t_slot[i].guest_page == guest_page && t_slot[i].host_ptr != nullptr) {
                 std::memcpy(dest_pointer, t_slot[i].host_ptr + page_offset, size);
                 return;
             }
         }
+#endif
 
         const std::size_t page_index = address >> Memory::YUZU_PAGEBITS;
-        const auto phys_addr = tracked_entries[page_index].compressed_physical_ptr;
-        if (phys_addr != 0) {
+        const auto phys_addr = AtomicLoadPhysical(tracked_entries[page_index]);
+        if (phys_addr != 0
+#ifdef PS5_NATIVE
+            && static_cast<size_t>(phys_addr - 1U) < compressed_device_addr.size()
+#endif
+        ) {
             auto* const mem_ptr = GetPointerFromRaw<u8>((PAddr(phys_addr - 1) << Memory::YUZU_PAGEBITS));
+#ifndef PS5_NATIVE
             t_slot[cache_cursor % t_slot.size()] = TranslationEntry{.guest_page = guest_page, .host_ptr = mem_ptr};
             cache_cursor = (cache_cursor + 1) & 3U;
+#endif
             std::memcpy(dest_pointer, mem_ptr + page_offset, size);
             return;
         }
@@ -525,6 +794,9 @@ void DeviceMemoryManager<Traits>::ReadBlockUnsafe(DAddr address, void* dest_poin
     WalkBlock(
         address, size,
         [&](size_t copy_amount, DAddr current_vaddr) {
+#ifdef PS5_NATIVE
+            if (::Eden::GpuFault::ShouldReportRead())
+#endif
             LOG_ERROR(
                 HW_Memory,
                 "Unmapped Device ReadBlock @ {:#016x} (start address = {:#016x}, size = {})",
@@ -545,6 +817,9 @@ void DeviceMemoryManager<Traits>::WriteBlockUnsafe(DAddr address, const void* sr
     WalkBlock(
         address, size,
         [&](size_t copy_amount, DAddr current_vaddr) {
+#ifdef PS5_NATIVE
+            if (::Eden::GpuFault::ShouldReportWrite())
+#endif
             LOG_ERROR(
                 HW_Memory,
                 "Unmapped Device WriteBlock @ {:#016x} (start address = {:#016x}, size = {})",
@@ -560,26 +835,32 @@ void DeviceMemoryManager<Traits>::WriteBlockUnsafe(DAddr address, const void* sr
 
 template <typename Traits>
 Asid DeviceMemoryManager<Traits>::RegisterProcess(Memory::Memory* memory_device_inter) {
-    size_t new_id{};
-    if (!id_pool.empty()) {
-        new_id = id_pool.front();
-        id_pool.pop_front();
-        registered_processes[new_id] = memory_device_inter;
-    } else {
-        registered_processes.emplace_back(memory_device_inter);
-        new_id = registered_processes.size() - 1U;
-    }
-    return Asid{new_id};
+    std::unique_lock registry_lk(process_registry_guard);
+    // A recycled ASID can alias a delayed GPU mapping from an old process.
+    // Keep unregistered entries as tombstones until the manager is destroyed.
+    // One pointer-sized slot per process is cheaper than a stale GPU alias.
+    constexpr size_t max_ids = size_t{1} << (sizeof(VAddr) * 8 - guest_max_as_bits);
+    if (memory_device_inter == nullptr || registered_processes.size() >= max_ids)
+        return Asid{static_cast<size_t>(-1)};
+    registered_processes.emplace_back(memory_device_inter);
+    return Asid{registered_processes.size() - 1U};
 }
 
 template <typename Traits>
 void DeviceMemoryManager<Traits>::UnregisterProcess(Asid asid) {
+    std::unique_lock registry_lk(process_registry_guard);
+    // A duplicated unregister previously enqueued the same ASID twice,
+    // permitting two live processes to share one registry index.
+    if (asid.id >= registered_processes.size() || registered_processes[asid.id] == nullptr)
+        return;
+    // Never recycle this index: stale tracked GPU pages retain its ASID.
     registered_processes[asid.id] = nullptr;
-    id_pool.push_front(asid.id);
 }
 
 template <typename Traits>
 void DeviceMemoryManager<Traits>::UpdatePagesCachedCountNoLock(DAddr addr, size_t size, s32 delta) {
+    if (size == 0 || addr >= device_as_size || size > device_as_size - addr)
+        return;
     u64 uncache_begin = 0;
     u64 cache_begin = 0;
     u64 uncache_bytes = 0;
@@ -590,7 +871,8 @@ void DeviceMemoryManager<Traits>::UpdatePagesCachedCountNoLock(DAddr addr, size_
     const size_t page_end = Common::DivCeil(addr + size, Memory::YUZU_PAGESIZE);
     size_t page = addr >> Memory::YUZU_PAGEBITS;
     auto [asid, base_vaddress] = ExtractCPUBacking(page);
-    auto* memory_device_inter = registered_processes[asid.id];
+    auto* memory_device_inter = asid.id < registered_processes.size()
+        ? registered_processes[asid.id] : nullptr;
     const auto release_pending = [&] {
         if (uncache_bytes > 0) {
             if (memory_device_inter != nullptr) {
@@ -613,13 +895,15 @@ void DeviceMemoryManager<Traits>::UpdatePagesCachedCountNoLock(DAddr addr, size_
         auto [asid_2, vpage] = ExtractCPUBacking(page);
         vpage >>= Memory::YUZU_PAGEBITS;
 
-        if (vpage == 0) [[unlikely]] {
+        if (vpage == 0 || asid_2.id >= registered_processes.size() ||
+            registered_processes[asid_2.id] == nullptr) [[unlikely]] {
             release_pending();
             continue;
         }
 
         if (asid.id != asid_2.id) [[unlikely]] {
             release_pending();
+            asid = asid_2;
             memory_device_inter = registered_processes[asid_2.id];
         }
 
@@ -639,8 +923,9 @@ void DeviceMemoryManager<Traits>::UpdatePagesCachedCountNoLock(DAddr addr, size_
             }
             uncache_bytes += Memory::YUZU_PAGESIZE;
         } else if (uncache_bytes > 0) {
-            MarkRegionCaching(memory_device_inter, uncache_begin << Memory::YUZU_PAGEBITS,
-                              uncache_bytes, false);
+            if (memory_device_inter != nullptr)
+                MarkRegionCaching(memory_device_inter, uncache_begin << Memory::YUZU_PAGEBITS,
+                                  uncache_bytes, false);
             uncache_bytes = 0;
         }
         if (count.load(std::memory_order::relaxed) == 1 && delta > 0) {
@@ -649,8 +934,9 @@ void DeviceMemoryManager<Traits>::UpdatePagesCachedCountNoLock(DAddr addr, size_
             }
             cache_bytes += Memory::YUZU_PAGESIZE;
         } else if (cache_bytes > 0) {
-            MarkRegionCaching(memory_device_inter, cache_begin << Memory::YUZU_PAGEBITS,
-                              cache_bytes, true);
+            if (memory_device_inter != nullptr)
+                MarkRegionCaching(memory_device_inter, cache_begin << Memory::YUZU_PAGEBITS,
+                                  cache_bytes, true);
             cache_bytes = 0;
         }
     }
@@ -659,6 +945,9 @@ void DeviceMemoryManager<Traits>::UpdatePagesCachedCountNoLock(DAddr addr, size_
 
 template <typename Traits>
 void DeviceMemoryManager<Traits>::UpdatePagesCachedCount(DAddr addr, size_t size, s32 delta) {
+    if (size == 0 || addr >= device_as_size || size > device_as_size - addr)
+        return;
+    std::shared_lock registry_lk(process_registry_guard);
     Common::ScopedRangeLock lk(counter_guard, addr, size);
     UpdatePagesCachedCountNoLock(addr, size, delta);
 }
@@ -668,6 +957,11 @@ void DeviceMemoryManager<Traits>::UpdatePagesCachedBatch(std::span<const std::pa
     if (ranges.empty()) {
         return;
     }
+    // Reject malformed GPU ranges before any lock or wrapped addr+size.
+    for (const auto& [start, length] : ranges)
+        if (start >= device_as_size || length > device_as_size - start)
+            return;
+    std::shared_lock registry_lk(process_registry_guard);
     // Make a local copy and sort by address
     std::vector<std::pair<DAddr, size_t>> tmp(ranges.begin(), ranges.end());
     std::sort(tmp.begin(), tmp.end(), [](const auto& a, const auto& b) { return a.first < b.first; });

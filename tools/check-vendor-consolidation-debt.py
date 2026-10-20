@@ -1102,6 +1102,7 @@ print("ENCORE_VULKAN_ORACLE_SCOPE_PASS", len(vulkan_oracle_sources))
 # This is an offline witness, never an alternate generated production file.
 gpu_expected = (root / "vendor/sources/eden/src/video_core/memory_manager.cpp").read_text()
 gpu_hunks = [
+    ('#include "memory_manager.h"\n', "", 1),
     ("    if (!IsContinuousRange(src_addr, size)) {", "    if (size == 0 || src_addr >= address_space_size ||\n        size > address_space_size - src_addr ||\n        !IsContinuousRange(src_addr, size)) {", 2),
     ("bool MemoryManager::IsGranularRange(GPUVAddr gpu_addr, std::size_t size) const {\n", "bool MemoryManager::IsGranularRange(GPUVAddr gpu_addr, std::size_t size) const {\n    if (gpu_addr >= address_space_size || size == 0 || size > address_space_size - gpu_addr) {\n        return false;\n    }\n", 1),
     ("            const std::size_t page{(page_index & big_page_mask) + size};\n            return page <= big_page_size;", "            return size <= big_page_size - (gpu_addr & big_page_mask);", 1),
@@ -1399,7 +1400,22 @@ r437_after = ("    const auto size = buffer.SizeBytes();\n    if (insert) {\n"
                "        ::Eden::BufferPages::Mark(buffer.CpuAddr(), size);\n"
                "        total_used_memory += Common::AlignUp(size, 1024);")
 assert r437_back.count(r437_before) == 1
-assert (active / r437_rel).read_text() == '#include "buffer_pages.h"\n' + r437_back.replace(r437_before, r437_after)
+r437_expected = '#include "buffer_pages.h"\n' + r437_back.replace(r437_before, r437_after)
+clear_start = r437_expected.index('bool BufferCache<P>::DMAClear(')
+clear_end = r437_expected.index('\ntemplate <class P>', clear_start)
+clear_body = r437_expected[clear_start:clear_end]
+clear_old = '    const bool dest_dirty = IsRegionRegistered(*cpu_dst_address, amount);'
+assert clear_body.count(clear_old) == 1
+clear_body = clear_body.replace('    const size_t size = amount * sizeof(u32);\n', '').replace(
+    clear_old, '    // FindBuffer accepts a u32 byte span; never truncate or issue an empty fill.\n'
+    '    if (amount == 0 || amount > static_cast<u64>(~u32{0}) / sizeof(u32)) {\n'
+    '        return false;\n'
+    '    }\n'
+    '    // The DMA amount counts u32 values; registration is measured in bytes.\n'
+    '    const size_t size = amount * sizeof(u32);\n'
+    '    const bool dest_dirty = IsRegionRegistered(*cpu_dst_address, size);')
+r437_expected = r437_expected[:clear_start] + clear_body + r437_expected[clear_end:]
+assert (active / r437_rel).read_text() == r437_expected
 assert 'configure_file("${EDEN_MAINTAINED_BUFFER_PAGES}"' in c
 assert 'write_derived("${PORT_BUILD_DIR}/buffer-pages/video_core/buffer_cache/buffer_cache.h"' not in c
 print("VENDOR_MAINTAINED_BUFFER_PAGES_PARITY_PASS: shipping backport and native-only selection")

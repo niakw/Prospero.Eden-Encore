@@ -7,7 +7,7 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 cache = Path((root / '.local/headless-cache').read_text().strip())
 original = (cache / 'source/src/common/cpu_features.cpp').read_text()
-derived = (cache / 'native-local/headless/cpu_features.cpp').read_text()
+derived = (root / 'vendor/encore-active/eden-core/src' / 'common/cpu_features.cpp').read_text()
 expected = original.replace('        } else {\n            caps.tsc_frequency = X64::EstimateRDTSCFrequency();\n        }', '        }').replace(
     '    if (max_std_fn >= 0x16) {',
     "    if (caps.invariant_tsc && caps.tsc_frequency < 1'000'000'000ULL) {\n        caps.tsc_frequency = X64::EstimateRDTSCFrequency();\n    }\n\n    if (max_std_fn >= 0x16) {")

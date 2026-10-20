@@ -72,11 +72,11 @@ A64EmitX64::A64EmitX64(BlockOfCode& code, A64::UserConfig conf, A64::Jit* jit_in
 
 A64EmitX64::~A64EmitX64() = default;
 
-A64EmitX64::BlockDescriptor #if defined(EDEN_JIT_A64_PUBLISH)
-A64EmitX64::Emit(IR::Block& block, bool publish) noexcept
+#if defined(EDEN_JIT_A64_PUBLISH)
+A64EmitX64::BlockDescriptor A64EmitX64::Emit(IR::Block& block, bool publish) noexcept {
 #else
-A64EmitX64::Emit(IR::Block& block) noexcept
-#endif {
+A64EmitX64::BlockDescriptor A64EmitX64::Emit(IR::Block& block) noexcept {
+#endif
     if (conf.very_verbose_debugging_output) [[unlikely]] {
         std::puts(IR::DumpBlock(block).c_str());
     }

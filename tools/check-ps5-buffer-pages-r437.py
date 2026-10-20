@@ -14,7 +14,23 @@ assert 'target_include_directories(video_core BEFORE PRIVATE "${PORT_BUILD_DIR}/
 old_reg = '    const auto size = buffer.SizeBytes();\n    if (insert) {\n        total_used_memory += Common::AlignUp(size, 1024);'
 new_reg = '    const auto size = buffer.SizeBytes();\n    if (insert) {\n        ::Eden::BufferPages::Mark(buffer.CpuAddr(), size);\n        total_used_memory += Common::AlignUp(size, 1024);'
 assert source.count(old_reg)==1
-assert maintained == '#include "buffer_pages.h"\n' + source.replace(old_reg, new_reg), "R437 maintained header differs from shipping-backport transform"
+expected = '#include "buffer_pages.h"\n' + source.replace(old_reg, new_reg)
+# DMA clear's amount is a word count, unlike byte-based cache registration.
+begin = expected.index('bool BufferCache<P>::DMAClear(')
+end = expected.index('\ntemplate <class P>', begin)
+clear = expected[begin:end]
+old_clear = '    const bool dest_dirty = IsRegionRegistered(*cpu_dst_address, amount);'
+assert clear.count(old_clear) == 1
+clear = clear.replace('    const size_t size = amount * sizeof(u32);\n', '').replace(
+    old_clear, '    // FindBuffer accepts a u32 byte span; never truncate or issue an empty fill.\n'
+    '    if (amount == 0 || amount > static_cast<u64>(~u32{0}) / sizeof(u32)) {\n'
+    '        return false;\n'
+    '    }\n'
+    '    // The DMA amount counts u32 values; registration is measured in bytes.\n'
+    '    const size_t size = amount * sizeof(u32);\n'
+    '    const bool dest_dirty = IsRegionRegistered(*cpu_dst_address, size);')
+expected = expected[:begin] + clear + expected[end:]
+assert maintained == expected, "R437 maintained header differs from reviewed transforms"
 assert maintained.count('::Eden::BufferPages::Mark(buffer.CpuAddr(), size);') == 1
 assert 'buffer-pages/video_core/buffer_cache/buffer_cache.h' in cm
 assert r.count('::Eden::BufferPages::NeverRegistered(addr, size)')==3
