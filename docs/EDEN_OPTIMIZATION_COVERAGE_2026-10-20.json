@@ -26,6 +26,78 @@
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
     },
     {
+      "path": "vendor/encore-active/compiler-rt/emutls.c",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "B04",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "evidence": "Previously maintained/ported source B04: One exact pinned compiler-rt TLS destructor-round override is now source-maintained; platform TLS execution and shutdown lifetime remain unproved"
+    },
+    {
+      "path": "vendor/encore-active/eden-backports/src/audio_core/audio_render_manager.cpp",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "A06",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-active-source-inventory.py",
+      "evidence": "Previously maintained/ported source A06: Shipping audio session ID guard avoids invalid session freelist reuse; source-level modified code only, native execution unproved"
+    },
+    {
+      "path": "vendor/encore-active/eden-backports/src/core/hle/service/nvdrv/devices/nvmap.cpp",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "N11",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-active-source-inventory.py",
+      "evidence": "Previously maintained/ported source N11: Shipping nvmap rejects zero CPU backing and checks failed map locks and allocation rollback; source diff examined, exact runtime owner/console behavior still to prove"
+    },
+    {
+      "path": "vendor/encore-active/eden-backports/src/video_core/renderer_vulkan/vk_buffer_cache.cpp",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "V50",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-active-source-inventory.py",
+      "evidence": "Previously maintained/ported source V50: Shipping Vulkan buffer cache changes CurrentTick contract; native cost unit supersedes it for active Vulkan builds; source diff examined, exact runtime owner/console behavior still to prove"
+    },
+    {
+      "path": "vendor/encore-active/eden-build/third_party/xbyak/xbyak.h",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "J40",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-xbyak-alias.py",
+      "evidence": "Previously maintained/ported source J40: Complete v7.40.1 tagged header with eight former CMake replacements, selected via COPYONLY; indirect X09 retired into maintained BlockOfCode sources, native unqualified"
+    },
+    {
+      "path": "vendor/encore-active/eden-build/tooling/native/app_heap_arenas.c",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "B06",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-maintained-heap-sources.py",
+      "evidence": "Previous audit host contract B06: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-heap-sources.py ; exécution native PS5, FPS et comportement invité non qualifiés"
+    },
+    {
+      "path": "vendor/encore-active/eden-build/tooling/native/app_heap_flat.c",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "B07",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-maintained-heap-sources.py",
+      "evidence": "Previous audit host contract B07: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-heap-sources.py ; exécution native PS5, FPS et comportement invité non qualifiés"
+    },
+    {
+      "path": "vendor/encore-active/eden-build/tooling/native/heap_guard.h",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "B08",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-maintained-heap-sources.py",
+      "evidence": "Previous audit host contract B08: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-heap-sources.py ; exécution native PS5, FPS et comportement invité non qualifiés"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/include/core/file_sys/bis_factory.h",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "F13",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "evidence": "Previously maintained/ported source F13: Native header provides identical constructor default firmware argument and isolated include-root selection; pending successful preflight and native device verification"
+    },
+    {
       "path": "vendor/encore-active/eden-core/overrides/core/device_memory_manager.inc",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
@@ -41,9 +113,137 @@
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
     },
     {
+      "path": "vendor/encore-active/eden-core/src/common/cpu_features.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "F07",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "evidence": "Previous audit host contract F07: Native TSC fallback now a maintained TU selected into common; parity and CMake selection PASS in preflight #39058024476; native clock observations still required"
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/common/fiber.cpp",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/common/fs/fs.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "F06",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "evidence": "Previous audit host contract F06: Native directory iterator override (two call sites) now maintained C++ with a source parity gate; source parity and native selection host PASS #39056412307; console directory outcomes still unqualified"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/common/fs/path_util.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "F08",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "evidence": "Previous audit host contract F08: Native writable user/cache/config root and legacy path selection now maintained C++; source parity and selection PASS in preflight #39058024476; hardware startup paths unqualified"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/common/sparse_large_vector.h",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "J34",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-sparse-slot-reuse-host.py",
+      "evidence": "Previous audit host contract J34: Hôte: DecommitPage compilé depuis source réelle, limites de mots bitmap, slot final et fallback dense testés; ZeroRegion/CommitRegion bornés par un témoin distinct et 14 transformations vérifiées. Intégrité de l'exécution console, GPU et FPS PS5 non qualifiés"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/common/thread.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "F05",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "evidence": "Previous audit host contract F05: Native-only worker-name registration moved from generated CMake source to maintained C++; source parity and common-target selection verified in host preflight #39056412307; no runtime proof of worker scheduling or game behavior"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/arm/dynarmic/arm_dynarmic_32.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "J20",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-native-dynarmic-icache-range-host.py",
+      "evidence": "Previous audit host contract J20: Hôte: méthode A32 effective extraite et exécutée sous ASan/UBSan; longueur zéro ignorée, hors plage 32 bits purgé sans alias; JIT PS5 et FPS non qualifiés"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/arm/dynarmic/arm_dynarmic_64.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "J19",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-native-dynarmic-icache-range-host.py",
+      "evidence": "Previous audit host contract J19: Hôte: méthode A64 effective extraite et exécutée sous ASan/UBSan; longueur zéro sans toucher le décodage, adresse 64 bits intacte; JIT PS5 et FPS non qualifiés"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_32_host_dev.cpp",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "J44",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-g11-jit-profile-matrix-host.py",
+      "evidence": "Previously maintained/ported source J44: G11 host/dev A32 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; directly selected, host-parity qualified; console not qualified"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_32_host_normal.cpp",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "J45",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-g11-jit-profile-matrix-host.py",
+      "evidence": "Previously maintained/ported source J45: G11 host/normal A32 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; directly selected, host-parity qualified; console not qualified"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_32_native_dev.cpp",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "J46",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-g11-jit-profile-matrix-host.py",
+      "evidence": "Previously maintained/ported source J46: G11 native/dev A32 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; directly selected, host-parity qualified; console not qualified"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_32_native_normal.cpp",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "J47",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-g11-jit-profile-matrix-host.py",
+      "evidence": "Previously maintained/ported source J47: G11 native/normal A32 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; directly selected, host-parity qualified; console not qualified"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_64_host_dev.cpp",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "J48",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-g11-jit-profile-matrix-host.py",
+      "evidence": "Previously maintained/ported source J48: G11 host/dev A64 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; directly selected, host-parity qualified; console not qualified"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_64_host_normal.cpp",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "J49",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-g11-jit-profile-matrix-host.py",
+      "evidence": "Previously maintained/ported source J49: G11 host/normal A64 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; directly selected, host-parity qualified; console not qualified"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_64_native_dev.cpp",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "J50",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-g11-jit-profile-matrix-host.py",
+      "evidence": "Previously maintained/ported source J50: G11 native/dev A64 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; directly selected, host-parity qualified; console not qualified"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_64_native_normal.cpp",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "J51",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-g11-jit-profile-matrix-host.py",
+      "evidence": "Previously maintained/ported source J51: G11 native/normal A64 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; directly selected, host-parity qualified; console not qualified"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/file_sys/savedata_factory.cpp",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "F15",
+      "prior_status": "SOURCE",
+      "proof_ref": "headless/CMakeLists.txt",
+      "evidence": "Previously maintained/ported source F15: Maintained per-title cache and save-data directory mapping is selected by core; verify owner/zero-ID paths and persistence on device"
     },
     {
       "path": "vendor/encore-active/eden-core/src/core/hle/kernel/physical_core_dev.cpp",
@@ -56,9 +256,121 @@
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
     },
     {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_file.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "F02",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "evidence": "Previous audit host contract F02: IFile::Read maintained TU source parity and DEV CMake selection passed in full host preflight #39046599831. No native console build, gameplay or FPS conclusion"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_filesystem.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "F04",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "evidence": "Previous audit host contract F04: Maintained DEV IFileSystem diagnostic replaces G23 CMake patch for three result paths; three call replacements, DEV source selection, and quiet policy passed full host preflight #39048355950; native SDK/gameplay remain unqualified"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/filesystem/fsp/fs_i_storage.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "F03",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "evidence": "Previous audit host contract F03: IStorage::Read maintained TU source parity and DEV CMake selection passed in full host preflight #39046599831. No native console build, gameplay or FPS conclusion"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/sockets/bsd.cpp",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "N20",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "evidence": "Previously maintained/ported source N20: Complete audited guest BSD source replaces five runtime CMake rewrites atop shipping backport; console network telemetry not proven"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/internal_network/network_interface.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "F10",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "evidence": "Previous audit host contract F10: Three FreeBSD conditional substitutions are in maintained native C++ with an old-generator parity and core selection PASS in preflight #39058024476; native interface snapshot unqualified"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/memory.cpp",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "M11",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "evidence": "Previously maintained/ported source M11: Maintained A32-only fastmem gate matches installed shipping backport plus one guarded replacement; actual guest execution and alias coherence require console proof"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/a32_emit_x64_memory.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "B19",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-maintained-memory-units.py",
+      "evidence": "Previous audit host contract B19: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-memory-units.py ; exécution native PS5, FPS et comportement invité non qualifiés"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/a32_emit_x64.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "B12",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-maintained-emitters.py",
+      "evidence": "Previous audit host contract B12: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-emitters.py ; exécution native PS5, FPS et comportement invité non qualifiés"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_emit_x64_memory.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "B20",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-maintained-memory-units.py",
+      "evidence": "Previous audit host contract B20: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-memory-units.py ; exécution native PS5, FPS et comportement invité non qualifiés"
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_emit_x64_standard.cpp",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_emit_x64_standard.h",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "B15",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-maintained-emitters.py",
+      "evidence": "Previous audit host contract B15: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-emitters.py ; exécution native PS5, FPS et comportement invité non qualifiés"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code_host.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "B09",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-maintained-block-of-code.py",
+      "evidence": "Previous audit host contract B09: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-block-of-code.py ; exécution native PS5, FPS et comportement invité non qualifiés"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code.h",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "B10",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-maintained-block-of-code.py",
+      "evidence": "Previous audit host contract B10: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-block-of-code.py ; exécution native PS5, FPS et comportement invité non qualifiés"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/emit_x64_host.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "B17",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-maintained-common-emit-x64.py",
+      "evidence": "Previous audit host contract B17: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-common-emit-x64.py ; exécution native PS5, FPS et comportement invité non qualifiés"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/emit_x64_native.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "B18",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-maintained-common-emit-x64.py",
+      "evidence": "Previous audit host contract B18: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-common-emit-x64.py ; exécution native PS5, FPS et comportement invité non qualifiés"
     },
     {
       "path": "vendor/encore-active/eden-core/src/video_core/buffer_cache/buffer_cache.h",
@@ -66,14 +378,62 @@
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
     },
     {
+      "path": "vendor/encore-active/eden-core/src/video_core/engines/sw_blitter/blitter.cpp",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "V79",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-sw-blitter.py",
+      "evidence": "Previously maintained/ported source V79: Complete blitter preserves production backport pixel indexing and three former widening edits; native console unqualified"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/macro.cpp",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "V65",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "evidence": "Previously maintained/ported source V65: All five former X01 MacroJIT exception unwind replacements now owned by maintained Encore C++; GPU/JIT behavior unproved"
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/video_core/memory_manager.cpp",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
     },
     {
+      "path": "vendor/encore-active/eden-core/src/video_core/renderer_opengl/gl_buffer_cache.cpp",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "V14",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "evidence": "Previously maintained/ported source V14: Former one-replacement GL_RED_INTEGER unit maintained and source-selected under EDEN_PS5_OPENGL; no console proof"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/shader_cache_reader.inc",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "V76",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "evidence": "Previously maintained/ported source V76: Crash-tolerant shader loader now adjacent to canonical source as unchanged Git blob; console cache replay unproved"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/shader_environment.cpp",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "V75",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "evidence": "Previously maintained/ported source V75: Complete shader cache recovery TU replaces CMake generator; exact text replay test, native behavior unproved"
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/video_core/texture_cache/util.cpp",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/texture_cache/util.h",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "V23",
+      "prior_status": "SOURCE",
+      "proof_ref": "headless/CMakeLists.txt",
+      "evidence": "Previously maintained/ported source V23: Maintained texture cache header includes Boost compatibility; verify header selection and compile variants; selected source only, device proof pending"
     },
     {
       "path": "vendor/encore-active/eden-gpu/gpu_thread_dev.cpp",
@@ -96,6 +456,14 @@
       "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
     },
     {
+      "path": "vendor/encore-active/eden-sync/src/core/hle/kernel/k_synchronization_object.h",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "H17",
+      "prior_status": "HOST",
+      "proof_ref": "tools/verify/hle/check-native-hle-sync-unlink-host.py",
+      "evidence": "Previous audit host contract H17: Full host preflight #39028053859 SUCCESS; original C++ waiter list violated aliasing and fails optimized GCC/Clang, native typed links pass O0-O3; CodeQL #39027884581 SUCCESS; no console or FC27 proof"
+    },
+    {
       "path": "vendor/encore-active/eden-threading/src/core/hle/kernel/k_address_arbiter.cpp",
       "disposition": "reviewed_without_new_code_edit",
       "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
@@ -116,9 +484,65 @@
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
     },
     {
+      "path": "vendor/encore-active/eden-threading/src/core/hle/kernel/svc/svc_address_arbiter.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "H13",
+      "prior_status": "HOST",
+      "proof_ref": "tools/verify/hle/check-native-hle-wait-timeout-host.py",
+      "evidence": "Previous audit host contract H13: SVC arbiter wait deadline: original/native host witness PASS in complete preflight #39024494681; CodeQL #39024471278 SUCCESS; console wait progress unverified"
+    },
+    {
+      "path": "vendor/encore-active/eden-threading/src/core/hle/kernel/svc/svc_condition_variable.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "H12",
+      "prior_status": "HOST",
+      "proof_ref": "tools/verify/hle/check-native-hle-wait-timeout-host.py",
+      "evidence": "Previous audit host contract H12: SVC condition variable deadline: original/native host witness PASS in complete preflight #39024494681; CodeQL #39024471278 SUCCESS; console wait progress unverified"
+    },
+    {
+      "path": "vendor/encore-active/eden-threading/src/core/hle/kernel/svc/svc_synchronization.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "H14",
+      "prior_status": "HOST",
+      "proof_ref": "tools/verify/hle/check-native-hle-wait-timeout-host.py",
+      "evidence": "Previous audit host contract H14: SVC multiobject wait deadline: original/native host witness PASS in complete preflight #39024494681; CodeQL #39024471278 SUCCESS; console wait progress unverified"
+    },
+    {
+      "path": "vendor/encore-active/eden-threading/src/core/hle/kernel/svc/svc_thread.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "H15",
+      "prior_status": "HOST",
+      "proof_ref": "tools/verify/hle/check-native-hle-sleep-timeout-host.py",
+      "evidence": "Previous audit host contract H15: Full host preflight #39026035356 SUCCESS; actual SleepThread original/native UBSan and pinned YieldType 0/-1/-2 PASS; CodeQL #39026019170 SUCCESS (C/C++, Python, Actions); no console or frozen gameplay proof"
+    },
+    {
       "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/pipeline_helper.h",
       "disposition": "reviewed_without_new_code_edit",
       "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/striped_wait.h",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "V40",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-native-vulkan-striped-wait-host.py",
+      "evidence": "Previous audit host contract V40: Hôte: véritable en-tête compilé avec ASan/UBSan, files de complétion compute/graphics reliées, partage de condition, réveil correct à prédicats distincts et nombre fixe de stripes prouvés; équité/performance GPU et FPS PS5 non qualifiés"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_descriptor_buffer.h",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "V33",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-ps5-compute-descriptor-ring-preflight-host.py",
+      "evidence": "Previous audit host contract V33: Hôte: prévalidation/allocation extraites des sources natives avec en-tête maintenu, phases d'attente et générations couvertes sous ASan/UBSan; exécution GPU/FPS PS5 non qualifiés"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_graphics_pipeline.h",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "V10",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-native-vulkan-striped-pipeline-host.py",
+      "evidence": "Previous audit host contract V10: Upstream 737152f backport only in native maintained headers; preflight #39032001757 SUCCESS: 8192 pipelines, 96 waiters, GCC/Clang O0/O2, 64 mutex + 64 conditions, exact Vulkan fork equivalence PASS; no console or FC27 FPS proof"
     },
     {
       "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_present_manager.h",
@@ -141,6 +565,14 @@
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
     },
     {
+      "path": "vendor/encore-active/eden-vulkan/vk_descriptor_buffer_cost.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "V17",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-ps5-descriptor-conditional-reuse-host.py",
+      "evidence": "Previous audit host contract V17: Hôte: prévalidation frame/capacité et allocation réelles testées sous ASan/UBSan, fichier instrumenté relié au générateur; repli Finish sous verrou conservé, progression GPU/FPS PS5 non qualifiés"
+    },
+    {
       "path": "vendor/encore-active/eden-vulkan/vk_fence_manager_cost.cpp",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
@@ -149,6 +581,14 @@
       "path": "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp",
       "disposition": "reviewed_without_new_code_edit",
       "evidence": "Source-level P0 optimization triage; docs/EDEN_OPTIMIZATION_REVIEW_MESA_VULKAN_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vk_multi_range_buffer_cost.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "V20",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-vulkan-multirange-owner-lifetime-host.py",
+      "evidence": "Previous audit host contract V20: Hôte: propriétaires enregistrés pour sparse et gathered, DropOwner et Invalidate natifs extraits exécutés sous ASan/UBSan, libération après tick et débordement des 256 retraits éprouvés; temps d'attente GPU et progression PS5 non démontrés"
     },
     {
       "path": "vendor/encore-active/eden-vulkan/vk_texture_cache_cost.cpp",
@@ -176,6 +616,14 @@
       "evidence": "Source-level P0 optimization triage; docs/EDEN_OPTIMIZATION_REVIEW_MESA_VULKAN_2026-10-20.md"
     },
     {
+      "path": "vendor/encore-active/eden-vulkan/vulkan_present_manager.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "V02",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-vulkan-present-wait-host.py",
+      "evidence": "Previous audit host contract V02: Hôte: modèle C++ ASan/UBSan/TSan des attentes et erreurs de présentation, désormais lié explicitement au code natif maintenu: dépilement libre avant attente fence, attente queue+in_flight et publication après recyclage. Progrès du HUD/jeu et frametime PS5 non "
+    },
+    {
       "path": "vendor/encore-active/eden-vulkan/vulkan_query_cache.cpp",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
@@ -191,6 +639,22 @@
       "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
     },
     {
+      "path": "vendor/encore-active/eden-vulkan/vulkan_scheduler.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "V01",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-vulkan-worker-fatal-drain-host.py",
+      "evidence": "Previous audit host contract V01: Hôte: constructeur, WorkerThread et WaitWorker maintenus exécutés sous ASan/UBSan, drain FIFO, publication de panne et réveil des waiters démontrés. Attente physique GPU, progression invitée et FPS PS5 non qualifiés"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vulkan_swapchain.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "V03",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-ps5-vulkan-swapchain-acquire-bounds.py",
+      "evidence": "Previous audit host contract V03: Acquire retries bounded; no device-liveness claim"
+    },
+    {
       "path": "vendor/encore-active/eden-vulkan/vulkan_window_adapt_pass.cpp",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
@@ -201,9 +665,33 @@
       "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
     },
     {
+      "path": "vendor/encore-active/ps5-mesa/src/amd/vulkan/radv_pipeline.c",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "R18",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/install-vendored-radv.py",
+      "evidence": "Previously maintained/ported source R18: Pipeline cache init/destroy and compilation history; selected via 12-input installer/fingerprint, device behavior unproven"
+    },
+    {
+      "path": "vendor/encore-active/ps5-mesa/src/amd/vulkan/winsys/ps5/radv_ps5_platform.c",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "R19",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/install-vendored-radv.py",
+      "evidence": "Previously maintained/ported source R19: Native physical granule allocation and GPU address binding; selected via 12-input installer/fingerprint, device behavior unproven"
+    },
+    {
       "path": "vendor/encore-active/ps5-mesa/src/amd/vulkan/winsys/ps5/radv_ps5_winsys.c",
       "disposition": "reviewed_without_new_code_edit",
       "evidence": "Source-level P0 optimization triage; docs/EDEN_OPTIMIZATION_REVIEW_MESA_VULKAN_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/ps5-mesa/src/util/disk_cache_os.c",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "R21",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/install-vendored-radv.py",
+      "evidence": "Previously maintained/ported source R21: Native disk cache read/write and eviction; selected via 12-input installer/fingerprint, device behavior unproven"
     },
     {
       "path": "vendor/encore-active/ps5-mesa/src/vulkan/wsi/wsi_common_videoout.c",
@@ -211,5 +699,11 @@
       "evidence": "Source-level P0 optimization triage; docs/EDEN_OPTIMIZATION_REVIEW_MESA_VULKAN_2026-10-20.md"
     }
   ],
-  "inventoried_including_pinned": 538
+  "inventoried_including_pinned": 538,
+  "historical_fast_review_from_audit": {
+    "host_contracts": 35,
+    "integrated_source_contracts": 26,
+    "review_sha": "60f6c6133c2a05fc31dd1d09270f6674c7e111a0",
+    "meaning": "Prior handling and source-selected behavior already documented; not new optimization/PS5 validation"
+  }
 }
