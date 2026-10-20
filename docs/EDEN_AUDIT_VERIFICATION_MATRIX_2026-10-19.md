@@ -28,14 +28,14 @@ preuve `HOST` invoquée en CI disparaît.
 
 | État | Contrats | Preuve acquise |
 |---|---:|---|
-| HOST | 33 | Invariant précis sur hôte ; **pas** de jeu sur console |
-| SOURCE | 422 | Source étudiée, comportement natif non qualifié |
+| HOST | 45 | Invariant précis sur hôte ; **pas** de jeu sur console |
+| SOURCE | 410 | Source étudiée, comportement natif non qualifié |
 | OPEN | 15 | Question de comportement/propriété non résolue |
 | PARKED | 8 | Expérimentation suspendue, ne pas activer |
 | **Total** | **478** | **0 certification de gain de FPS par ce registre** |
 
-**423 chemins distincts SOURCE + OPEN** (dont **109 chemins P0** et
-**303 dans `vendor/encore-active`**) correspondent à **437 critères SOURCE + OPEN**, dont **115 P0**, ont encore besoin
+**411 chemins distincts SOURCE + OPEN** (dont **109 chemins P0** et
+**291 dans `vendor/encore-active`**) correspondent à **425 critères SOURCE + OPEN**, dont **115 P0**, ont encore besoin
 d'une qualification supplémentaire. Leur présence n'invalide pas les
 corrections hôte : elle interdit seulement d'affirmer que leurs
 performances ou leur effet sur les freezes sont démontrés.
@@ -111,3 +111,7 @@ Les branches de thèmes/launcher et les fonctions de rendu UX sont
 hors modifications de cette passe ; les options post-store
 différées, affinités SMT non vérifiées et JIT expérimental
 restent désactivées.
+
+## 20 octobre — clôture des propriétés d'intégration hôte
+
+12 contrats P1 des sources maintenues (heap, JIT W^X, émetteurs A32/A64 et unités de mémoire) passent de SOURCE à HOST avec leurs tests déjà sélectionnés dans la CI. Le statut qualifie uniquement parité/compilation/staging. Le compteur de sources à qualifier devient **411** (auparavant 423), et les **109 P0** sont inchangés. Aucun contrat n'est requalifié comme amélioration FPS ni preuve de runtime console.
