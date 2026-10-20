@@ -33,6 +33,10 @@ def extract(start,end):
     assert SRC.count(start)==1 and SRC.count(end)==1, (start,end)
     return SRC[SRC.index(start):SRC.index(end,SRC.index(start))]
 retire=extract("void MultiRangeBufferCache::RetireEntry(","void MultiRangeBufferCache::DrainRetired(")
+# In production this RAII timer is meaningful through its real destructor.
+# The host double has no destructor side effect; suppress only its warning.
+retire=retire.replace("auto timer = Eden::Performance::VulkanTimer(11);",
+                      "[[maybe_unused]] auto timer = Eden::Performance::VulkanTimer(11);")
 drain=extract("void MultiRangeBufferCache::DrainRetired(","MultiRangeRef MultiRangeBufferCache::Get(")
 drop=extract("void MultiRangeBufferCache::DropOwner(","void MultiRangeBufferCache::Invalidate(")
 invalidate=SRC[SRC.index("void MultiRangeBufferCache::Invalidate("):SRC.rindex("} // namespace Vulkan")]
