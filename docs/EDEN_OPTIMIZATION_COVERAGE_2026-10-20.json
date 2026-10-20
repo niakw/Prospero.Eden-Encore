@@ -462,6 +462,14 @@
       "evidence": "Exact Git blob source inspected; Exécutable eden-memory-check dédié aux instructions/JIT hôte ; sa longue batterie de stress n'est pas exécutée dans le jeu. Rouvrir uniquement sur changement de blob, problème reproductible ou usage hotpath constaté."
     },
     {
+      "path": "headless/metadata_bridge.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U13",
+      "reviewed_source_git_blob": "c15a5f3bac31d6206e61cfc39317be280a129c48",
+      "source_review_document": "docs/EDEN_NATIVE_CONFIG_METADATA_REVIEW_2026-10-21.md",
+      "evidence": "Source code checked; Extraction métadonnées NSP/XCI et gestion des sauvegardes, avec publication du snapshot addons après scan hors mutex ; opérations de bibliothèque/lancement et non par frame de jeu. Any mutation, reproducible failure or measured gameplay hotpath usage reopens this decision."
+    },
+    {
       "path": "headless/metadata_bridge.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U14",
@@ -641,6 +649,14 @@
       "evidence": "Exact Git blob source inspected; Exécutable eden-ryujinx-check distinct ; génère et valide des sauvegardes de test, non lié à eden-headless. Rouvrir uniquement sur changement de blob, problème reproductible ou usage hotpath constaté."
     },
     {
+      "path": "headless/ryujinx_saves.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U63",
+      "reviewed_source_git_blob": "1e1d82fa182747e99f91e95c95d2e31f9cb96123",
+      "source_review_document": "docs/EDEN_NATIVE_CONFIG_METADATA_REVIEW_2026-10-21.md",
+      "evidence": "Source code checked; Import/export de fichiers Ryujinx via filesystem, avec interdiction de suivre les symlinks. N'est pas parcouru pendant les instructions invitées ni les commandes GPU ; associé à la gestion des sauvegardes depuis l'interface. Any mutation, reproducible failure or measured gameplay hotpath usage reopens this decision."
+    },
+    {
       "path": "headless/scalar_check.cpp",
       "disposition": "reviewed_without_new_code_edit",
       "review_scope": "host-only-test",
@@ -655,6 +671,14 @@
       "reviewed_source_git_blob": "ac190be7fcc49cbe6faddedf41640abb6e972cb6",
       "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
       "evidence": "Source inspected: Audit de runtime opt-in, effectue volontairement des tests mémoire lourds, pas lancé à chaque frame. Ne jamais activer en production pour optimiser. Reopen if: Exécution de l’audit sur le chemin de rendu normal."
+    },
+    {
+      "path": "headless/settings_store.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U75",
+      "reviewed_source_git_blob": "ec168add36f89f8800b32e875a8f7bd7b95cdf99",
+      "source_review_document": "docs/EDEN_NATIVE_CONFIG_METADATA_REVIEW_2026-10-21.md",
+      "evidence": "Source code checked; Lecture/migration/écriture atomique du JSON de configuration, effectuées lors des actions de paramètres ou de lancement. Le fichier n'est pas décodé pour chaque instruction ou draw. Any mutation, reproducible failure or measured gameplay hotpath usage reopens this decision."
     },
     {
       "path": "headless/shader_cache_check.cpp",
@@ -737,6 +761,14 @@
       "contract_id": "U09",
       "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
       "evidence": "Source-read optimization triage, no additional hotpath edit justified: Vulkan surface enumerates display modes once at initialization and chooses 60/120 mode; loop and vector allocations are not a per-frame rendering bottleneck."
+    },
+    {
+      "path": "headless/watch.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U65",
+      "reviewed_source_git_blob": "c8aa84f9c9896447a6bef78101f58a729817bd0c",
+      "source_review_document": "docs/EDEN_NATIVE_CONFIG_METADATA_REVIEW_2026-10-21.md",
+      "evidence": "Source code checked; Trace facultative de mémoire JIT activée par dev-settings watch=... ; callbacks et dumps volontairement coûteux seulement lorsque la sonde explicite est activée. Any mutation, reproducible failure or measured gameplay hotpath usage reopens this decision."
     },
     {
       "path": "headless/zbic_compression.cpp",
