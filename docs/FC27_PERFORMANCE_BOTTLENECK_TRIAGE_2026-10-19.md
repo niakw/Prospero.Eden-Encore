@@ -499,3 +499,20 @@ Un test ASan/UBSan extrait et compile la vérification native,
 y compris la plage finale, les sources nulles et une destination trop
 petite ; les demandes valides avec padding restent acceptées.
 La parité générateur/Vulkan est conservée. Pas de gain FPS certifié.
+
+## 20 octobre — inversion de condition de rendu conservée à tort
+
+`QueryCacheRuntime::HostConditionalRenderingCompareValueImpl` retournait
+sans reconfigurer le rendu conditionnel dès que le `VkBuffer` et son offset
+restaient les mêmes. Or deux comparaisons consécutives peuvent inverser
+`is_equal` sans changer le buffer de prédicat : conserver le flag précédent
+peut supprimer un dessin valide ou afficher un dessin interdit.
+La clé de réutilisation compare maintenant aussi les flags
+`VK_CONDITIONAL_RENDERING_INVERTED_BIT_EXT`. Si la polarité change,
+le code de pause/reprise existant rebâtit le prédicat; si elle ne change pas,
+il conserve le retour anticipé performant.
+
+`tools/check-vulkan-query-conditional-inversion-host.py` compile la méthode source exacte sous ASan/UBSan et
+reproduit l'erreur ancienne (inversion non prise en compte) avant de
+vérifier la transition dans la nouvelle. Aucune causalité spécifique
+avec le HUD de FC27 ou gain de FPS n'est encore établie matériellement.

@@ -441,6 +441,9 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {'''),
 # unconditionally, or predicate from a pending host query, to the exact CPU evaluation;
 # hcr=cpu evaluates every condition on the CPU and predicates from constant 0/1 buffers.
 adapt('src/video_core/renderer_vulkan/vk_query_cache.cpp', 'vulkan_query_cache.cpp', [
+    # Predicate inversion is part of the cached conditional-render state.
+    ("    if (impl->hcr_is_set) {\n        if (impl->hcr_setup.buffer == impl->hcr_buffer &&\n            impl->hcr_setup.offset == impl->hcr_offset) {\n            return;\n        }\n    }", "    // The same predicate buffer can be reused with inverted comparison.\n    // A changed comparison must re-record the conditional rendering state.\n    const VkConditionalRenderingFlagsEXT flags =\n        is_equal ? VK_CONDITIONAL_RENDERING_INVERTED_BIT_EXT : 0;\n    if (impl->hcr_is_set) {\n        if (impl->hcr_setup.buffer == impl->hcr_buffer &&\n            impl->hcr_setup.offset == impl->hcr_offset &&\n            impl->hcr_setup.flags == flags) {\n            return;\n        }\n    }"),
+    ("    impl->hcr_setup.flags = is_equal ? VK_CONDITIONAL_RENDERING_INVERTED_BIT_EXT : 0;", "    impl->hcr_setup.flags = flags;"),
     # Upstream Eden #4499: UpdateBuffers here can change the TFB counter
     # buffer count after BeginTransformFeedbackEXT has already recorded it.
     # Keep the existing refresh in FlushBeginTFB only.
