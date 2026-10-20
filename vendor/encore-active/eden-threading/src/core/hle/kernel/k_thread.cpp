@@ -1343,11 +1343,11 @@ namespace Kernel {
     }
 
     void KThread::BeginWait(KernelCore& kernel, KThreadQueue* queue) {
-        // Set our state as waiting.
-        this->SetState(kernel, ThreadState::Waiting);
-
-        // Set our wait queue.
+        // Publish the wait queue before exposing the waiting state.
+        // A scheduler state-change observer must not see a waiting thread
+        // with no queue to route its wakeup/cancellation to.
         m_wait_queue = queue;
+        this->SetState(kernel, ThreadState::Waiting);
     }
 
     void KThread::NotifyAvailable(KernelCore& kernel, KSynchronizationObject* signaled_object, Result wait_result) {

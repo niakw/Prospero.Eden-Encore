@@ -150,3 +150,16 @@ plusieurs cœurs, sessions successives et sélection DEV.
 
 Cette correction rend les prochaines captures `jit_dups` interprétables ;
 elle ne prouve aucune baisse de frametime sur PS5.
+
+## 20 octobre — publication de file avant l'état d'attente HLE
+
+La méthode `KThread::BeginWait` exposait `ThreadState::Waiting`
+dans `SetState` **avant** d'initialiser `m_wait_queue`. Un
+observateur synchrone de changement d'état pouvait voir le thread en
+attente sans destination pour son réveil. La source native maintenue
+publie la file en premier, puis change l'état, sans modifier l'ordre
+des notifications ultérieures ni l'ABI. Le test hôte
+`tools/check-native-hle-wait-queue-publication-host.py` compile la méthode C++ extraite avec ASan/UBSan :
+la source d'origine échoue sur l'invariant d'observation, la nouvelle
+version le respecte. Ce test **ne valide pas** encore la progression
+invité/HLE de FC27 ni les attentes réelles sur PS5.
