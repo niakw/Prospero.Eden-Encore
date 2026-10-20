@@ -462,3 +462,15 @@ Il crée une collision contrôlée dans les 64 conditions partagées :
 le réveil d'un pipeline ne doit ni terminer incorrectement l'autre
 ni le bloquer indéfiniment. Seule cette propriété de concurrence
 est qualifiée. **Aucun gain de FPS n'a été mesuré sur console.**
+
+## 20 octobre — framebuffer invité absent, données upload périmées
+
+`Layer::UpdateRawImage` copiait le buffer d'upload Vulkan même lorsque
+`GetPointer` ne retournait aucun backing mémoire invité, risquant de
+recopier les octets d'une ancienne frame. La nouvelle branche efface
+uniquement la tranche correspondant à l'image absente, puis la flush
+avant la commande de copie. Le chemin valide garde le désentrelacement
+et son flush, sans nouveau travail. Un test C++ ASan/UBSan extrait les
+fragments d'origine et maintenu, reproduit l'ancien comportement et
+vérifie les cas source absente/présente ainsi que les tranches voisines.
+Aucun gain FPS ou réparation complète du HUD PS5 n'est revendiqué.
