@@ -229,3 +229,7 @@ Voir [EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md](EDEN_NATIVE_STARTUP_D
 ## 21 octobre — douze sources natives auxiliaires examinées
 
 Voir [EDEN_NATIVE_LIGHTWEIGHT_SOURCE_REVIEW_2026-10-21.md](EDEN_NATIVE_LIGHTWEIGHT_SOURCE_REVIEW_2026-10-21.md). Les trois exécutables de test indépendants, deux profils constexpr générés, l'API d'élévation démarrage, le pont d'allocation native et le contrôle du ZBIC ne justifient aucun nouveau patch en l'absence d'un défaut mesuré. **380/491 pris en charge : 111 restants, dont 49 moteur et 62 lanceur.** Tous les examens sont verrouillés par empreinte Git ; les propriétaires JIT, HLE et GPU restent à traiter sans assimilation à la validation matérielle.
+
+## 21 octobre — compteur moteur corrigé et lot de douze sources
+
+Le compteur principal **exclut les 62 unités de l'interface du lanceur** `headless/prosperoeden/`. L'exception `runtime_shims.cpp` reste du côté moteur : elle définit des fonctions libc/pthread globales effectivement liées dans chaque application native. Au HEAD `f73075323`, la revue [EDEN_NATIVE_NON_HOT_OPTIMIZATION_REVIEW_2026-10-21.md](EDEN_NATIVE_NON_HOT_OPTIMIZATION_REVIEW_2026-10-21.md) examine sept sources de tests hôte, deux fichiers du helper de démarrage et trois composants GPU différés maintenus OFF. **392/491 traités ; 37 moteur/runtime à traiter ; 62 lanceur suivis séparément ; 99 globalement.** Ne pas présenter les 62 comme des sources du moteur à optimiser, ni les 12 comme de nouvelles optimisations FPS.

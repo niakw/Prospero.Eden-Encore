@@ -149,6 +149,14 @@
       "evidence": "Source inspected: Commandes de test par fichier/istream et identifiants monotones, uniquement en simulation DEV. Pas de boucle d’attente ajoutée au polling HID normal. Reopen if: Une surcharge mesurée du lecteur DEV ou des commandes rejouées."
     },
     {
+      "path": "headless/devices_check.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "review_scope": "host-only-test",
+      "reviewed_source_git_blob": "c9a8b4e737e6b2238cab90de06e4ddaf5cd48aef",
+      "source_review_document": "docs/EDEN_NATIVE_NON_HOT_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Exact Git blob source inspected; Cible eden-devices-check séparée du jeu ; scénarios de manette/audio et ABI, aucun traitement dans une frame normale. Rouvrir uniquement sur changement de blob, problème reproductible ou usage hotpath constaté."
+    },
+    {
       "path": "headless/devices.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U52",
@@ -192,12 +200,28 @@
       "evidence": "Previously maintained GPU/memory performance guard reviewed; Checks monotone interval coverage with overflow-safe extent bounds; conservatively reports only an upper free bound. No additional correction justified without new failing evidence."
     },
     {
+      "path": "headless/elevation/elevation.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "review_scope": "startup-shim",
+      "reviewed_source_git_blob": "22fe355cd0b228662ceb2dcc7bfbbc53f9c4c61c",
+      "source_review_document": "docs/EDEN_NATIVE_NON_HOT_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Exact Git blob source inspected; Client d'élévation lié à eden-headless mais sollicité à l'initialisation/handshake ; pas de polling en boucle de rendu GPU. Rouvrir uniquement sur changement de blob, problème reproductible ou usage hotpath constaté."
+    },
+    {
       "path": "headless/elevation/elevation.hpp",
       "disposition": "reviewed_without_new_code_edit",
       "review_scope": "startup-interface",
       "reviewed_source_git_blob": "8c6142d7f79654bae6648d5127f1e51cd71323b9",
       "source_review_document": "docs/EDEN_NATIVE_LIGHTWEIGHT_SOURCE_REVIEW_2026-10-21.md",
       "evidence": "Source inspected: Startup-only elevation request declaration, explicitly single-threaded before worker creation. No per-frame cost. Reopen if: this Git blob changes, new failure is reproduced, or a measured owner-specific cost appears."
+    },
+    {
+      "path": "headless/elevation/helper/main.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "review_scope": "startup-shim",
+      "reviewed_source_git_blob": "6165f70ae5bc51a3fe419802b589aed7ab0b5488",
+      "source_review_document": "docs/EDEN_NATIVE_NON_HOT_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Exact Git blob source inspected; Exécutable helper d'élévation pour une requête et opérations kernel délimitées ; hors exécution normale des frames. Rouvrir uniquement sur changement de blob, problème reproductible ou usage hotpath constaté."
     },
     {
       "path": "headless/elevation/protocol.hpp",
@@ -290,6 +314,30 @@
       "proof_ref": "tools/check-headless-final-owners.py",
       "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
       "evidence": "Source read: Title display-version extraction is metadata work, not runtime shader input. Contract U69; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
+    },
+    {
+      "path": "headless/gpu_deferred_replay.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "M02",
+      "reviewed_source_git_blob": "f3bdd23f36d430697f1c939195b2341531fc819d",
+      "source_review_document": "docs/EDEN_NATIVE_NON_HOT_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Exact Git blob source inspected; Post-store readiness fixé explicitement à false ; source expérimentale, activation sûre non prouvée, ne pas l'activer pour gagner du FPS. Rouvrir uniquement sur changement de blob, problème reproductible ou usage hotpath constaté."
+    },
+    {
+      "path": "headless/gpu_deferred_store_publication.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "M05",
+      "reviewed_source_git_blob": "3c956ed37a3b59791da4626aa3cd6a05d1937bf8",
+      "source_review_document": "docs/EDEN_NATIVE_NON_HOT_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Exact Git blob source inspected; API de publication après écriture documentée comme source-only non branchée au cœur livré ; contrat de concurrence encore à prouver avant activation. Rouvrir uniquement sur changement de blob, problème reproductible ou usage hotpath constaté."
+    },
+    {
+      "path": "headless/gpu_deferred_write_queue.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U21",
+      "reviewed_source_git_blob": "5abb7fa8c75264a50b6f3db87bd353293b309645",
+      "source_review_document": "docs/EDEN_NATIVE_NON_HOT_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Exact Git blob source inspected; File FIFO GPU différée utilisée par les essais du pont DEV ; EDEN_GUEST_WRITE_BRIDGE_DEV reste OFF dans le profil normal. Rouvrir uniquement sur changement de blob, problème reproductible ou usage hotpath constaté."
     },
     {
       "path": "headless/gpu_dirty_region_split.h",
@@ -406,12 +454,44 @@
       "evidence": "Source inspected: Redirection de logs vers un pipe et écrivain de fond : évite les écritures synchrones du stockage PS5 sur les workers. Le mode détaillé reste facultatif. Reopen if: Backpressure prouvée lors d’un blocage de pipe ou perte de journal."
     },
     {
+      "path": "headless/memory_check.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "J08",
+      "reviewed_source_git_blob": "ba2684e1356b07102cfb6fc3a4015c7deea3b819",
+      "source_review_document": "docs/EDEN_NATIVE_NON_HOT_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Exact Git blob source inspected; Exécutable eden-memory-check dédié aux instructions/JIT hôte ; sa longue batterie de stress n'est pas exécutée dans le jeu. Rouvrir uniquement sur changement de blob, problème reproductible ou usage hotpath constaté."
+    },
+    {
       "path": "headless/metadata_bridge.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U14",
       "reviewed_source_git_blob": "56c19ed56e14a70139463eb01f3f92ce40d5ed4a",
       "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
       "evidence": "Source inspected: Déclarations C de chargement métadonnées et contrôles d’erreur ; l’extraction concrète est dans metadata_bridge.cpp, pas dans cet ABI header. Reopen if: Mismatch ABI entre l’extracteur natif et ses consommateurs."
+    },
+    {
+      "path": "headless/mock_devices.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "review_scope": "host-only-test",
+      "reviewed_source_git_blob": "b02962ea08c0c6cd8591a0459728173324a5c7c2",
+      "source_review_document": "docs/EDEN_NATIVE_NON_HOT_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Exact Git blob source inspected; Bibliothèque eden-device-mock dans la branche non-PS5 ; faux pad/audio pour tests, hors binaire natif normal. Rouvrir uniquement sur changement de blob, problème reproductible ou usage hotpath constaté."
+    },
+    {
+      "path": "headless/mock_devices.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "review_scope": "host-only-test",
+      "reviewed_source_git_blob": "66a1a0bdc5bb5820cdd8a9d2b8e867b54ba423f7",
+      "source_review_document": "docs/EDEN_NATIVE_NON_HOT_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Exact Git blob source inspected; Déclarations et état des faux devices partagés par la bibliothèque de simulation, pas les périphériques PS5 réels. Rouvrir uniquement sur changement de blob, problème reproductible ou usage hotpath constaté."
+    },
+    {
+      "path": "headless/mods_check.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "review_scope": "host-only-test",
+      "reviewed_source_git_blob": "1c9813901fcffa5e476b17c83573a25bdcfd0172",
+      "source_review_document": "docs/EDEN_NATIVE_NON_HOT_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Exact Git blob source inspected; Exécutable eden-mods-check distinct ; construit des fixtures IPS/pchtxt et vérifie les paramètres, absent du chemin jeu. Rouvrir uniquement sur changement de blob, problème reproductible ou usage hotpath constaté."
     },
     {
       "path": "headless/mods.h",
@@ -490,6 +570,14 @@
       "evidence": "Source inspected: Registre de première utilisation pipeline limité à 65 536 entrées, mutex uniquement lorsque la trace DEV est active ; protège l’ancien unordered_set concurrent. Reopen if: Coût mesuré de trace-pipeline activée ou accès hors trace."
     },
     {
+      "path": "headless/preferences_check.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "review_scope": "host-only-test",
+      "reviewed_source_git_blob": "3e48c14325e018e6ca9d0e6235dbcf5308ea7b9a",
+      "source_review_document": "docs/EDEN_NATIVE_NON_HOT_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Exact Git blob source inspected; Exécutable eden-settings-check distinct ; assertions JSON et migration de profils, pas d'itération par frame. Rouvrir uniquement sur changement de blob, problème reproductible ou usage hotpath constaté."
+    },
+    {
       "path": "headless/preferences.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U73",
@@ -543,6 +631,14 @@
       "reviewed_source_git_blob": "901e5a7cedd19bfa875ca85695fcf9103f43d5e3",
       "source_review_document": "docs/EDEN_NATIVE_LIGHTWEIGHT_SOURCE_REVIEW_2026-10-21.md",
       "evidence": "Source inspected: Separate eden-romfs-check executable with isolated allocation-accounting and fiber ownership assertions; not the gameplay app target. Reopen if: this Git blob changes, new failure is reproduced, or a measured owner-specific cost appears."
+    },
+    {
+      "path": "headless/ryujinx_check.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "review_scope": "host-only-test",
+      "reviewed_source_git_blob": "de98528acb19da8af75fbd6a959ab6d187c4b2c7",
+      "source_review_document": "docs/EDEN_NATIVE_NON_HOT_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Exact Git blob source inspected; Exécutable eden-ryujinx-check distinct ; génère et valide des sauvegardes de test, non lié à eden-headless. Rouvrir uniquement sur changement de blob, problème reproductible ou usage hotpath constaté."
     },
     {
       "path": "headless/scalar_check.cpp",

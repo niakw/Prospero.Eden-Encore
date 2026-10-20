@@ -160,7 +160,7 @@ for e in entries:
     else:
         assert e.get("review_scope") in {
             "host-only-test","startup-shim","shutdown-only",
-            "generated-configuration","startup-interface",
+            "generated-configuration","startup-interface","inactive-experimental",
         }
         assert e["path"] not in {r["path"] for r in by_id.values()}
     source_review=ROOT/e["source_review_document"]
@@ -217,7 +217,7 @@ print("EDEN_OPTIMIZATION_REVIEW_BACKLOG_PASS",
       "new_code_fixes="+str(status["new_source_issue_corrected"]),
       "native_selected="+str(status["historical_native_selected_unit"]),
       "preexisting_inactive_oracle="+str(status["preexisting_generated_or_inactive_unit"]),
-      "remaining_to_triage="+str(len(owners-handled)),
-      "remaining_active_emulator_non_launcher="+str(len(pending_code-launcher_pending)),
-      "launcher_separately_pending="+str(len(launcher_pending)),
+      "remaining_emulator_to_optimize_review="+str(len(pending_code-launcher_pending)),
+      "launcher_ui_pending_separate="+str(len(launcher_pending)),
+      "all_component_triage_remaining="+str(len(owners-handled)),
       "new_code_fixes_required=UNKNOWN native_console_validation=SEPARATE")
