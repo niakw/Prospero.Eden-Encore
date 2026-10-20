@@ -1729,6 +1729,13 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
         ('#include <algorithm>', '#include <algorithm>\n#include "performance.h"'),
         ('            std::unique_lock lock{build_mutex};',
          '            auto timer = Eden::Performance::VulkanTimer(16);\n            std::unique_lock lock{build_mutex};'),
+        # Both graphics and compute can skip the queued wait entirely when
+        # their builder already release-published the pipeline. The ready
+        # check must acquire that publication, just as the queued callback does.
+        ("    if (!is_built.load(std::memory_order::relaxed)) {",
+         "    // Match the builder's release publication before using its pipeline handle.\n"
+         "    // A ready fast path skips the queued wait, so relaxed is insufficient here.\n"
+         "    if (!is_built.load(std::memory_order_acquire)) {"),
     ]
     if name == 'vk_graphics_pipeline':
         replacements.extend([
