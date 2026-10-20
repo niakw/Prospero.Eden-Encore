@@ -20,6 +20,18 @@ Cette passe clôt **12 contrats de propriété source/compilation**, sur **12 fi
 
 Contrats passés de SOURCE à HOST : `B06`, `B07`, `B08`, `B09`, `B10`, `B12`, `B13`, `B15`, `B17`, `B18`, `B19`, `B20`. Ce sont des familles d'intégration bas niveau, non douze nouvelles accélérations du moteur. Le registre et le test de matrice sont mis à jour ensemble ; toute preuve disparue fait échouer la CI.
 
+## Qualification hôte supplémentaire — 20 octobre 2026
+
+Deux contrats P0 déjà corrigés et déjà équipés de témoins hôte sont
+désormais qualifiés **uniquement pour leur propriété démontrée** :
+`Q07` (file SPSC, réveil et arrêt du producteur; source C++ réelle
+sous ASan/UBSan) et `V02` (protocole de présentation, attente
+d'image recyclée et propagation d'erreur sous ASan/UBSan/TSan).
+Le témoin V02 inspecte aussi désormais la source maintenue effective ;
+une assertion toujours vraie (`or True`) a été supprimée. Cette
+requalification n'est **ni** un gain de FPS mesuré **ni** une preuve
+de disparition des gels en jeu. Les autres contrats P0 restent ouverts.
+
 ## Couverture quantifiée (registre courant)
 
 L'inventaire indexe des **contrats/fonctions à vérifier**, pas toutes les
@@ -31,16 +43,16 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
 | Graphe connu | 478 | 455 | 959 |
-| HOST — preuve ciblée hôte | 45 | 42 | 86 |
-| SOURCE — lecture effectuée, preuve insuffisante | 410 | 397 | 834 |
+| HOST — preuve ciblée hôte | 47 | 44 | 91 |
+| SOURCE — lecture effectuée, preuve insuffisante | 408 | 396 | 829 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 8 | 8 | 11 |
-| **Encore à qualifier (SOURCE + OPEN)** | **425** | **411** | **862** |
-| Dont priorité P0 (SOURCE + OPEN) | 115 | 109 | 267 |
+| **Encore à qualifier (SOURCE + OPEN)** | **423** | **410** | **857** |
+| Dont priorité P0 (SOURCE + OPEN) | 113 | 108 | 262 |
 
-Le **noyau restant** compte donc 425 critères répartis sur
-411 fichiers et 862 mentions fonction/contrat :
-15 OPEN et 410 SOURCE.
+Le **noyau restant** compte donc 423 critères répartis sur
+410 fichiers et 857 mentions fonction/contrat :
+15 OPEN et 408 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
@@ -272,13 +284,13 @@ function/contract tokens are checked by CI for existence only; the
 | Q04 | P1 | Q03 | vendor/sources/eden/src/video_core/gpu.cpp | GPU::OnCPURead; GPU::WaitForSyncOperation; GPU::TickWork | SOURCE | docs/2026-10-16_GPU_SYNC_TICK_SNAPSHOT.md | Check queued CPU read tick dependencies before any FIFO modification | 🟡 Source étudiée |
 | Q05 | P1 | Q04,B03 | vendor/encore-active/eden-core/src/video_core/macro.cpp | MacroJIT_SendThunk; MacroJITx64Impl::Execute | SOURCE | tools/check-vendor-consolidation-debt.py | Former X01 MacroJIT exception recovery is maintained as exact Encore source, with byte-parity oracle; native unwind unproved | 🟡 Source étudiée |
 | Q06 | P0 | Q03 | vendor/encore-active/eden-gpu/gpu_thread_quiet.cpp | ThreadManager::RunWorker; ThreadManager::Stop | SOURCE | docs/EDEN_ACTIVE_SOURCE_CATALOG.md | Native non-diagnostic GPU worker is a separate maintained variant; verify shutdown and FIFO completion; source-level ownership only, console proof pending | 🟡 Source étudiée |
-| Q07 | P0 | Q02 | vendor/encore-active/eden-gpu/include/common/bounded_threadsafe_queue.h | EmplaceWaitWithStopToken; TryPop | SOURCE | docs/EDEN_ACTIVE_SOURCE_CATALOG.md | Maintained queue stop-token and element lifetime must be consistent in GPU worker variants; source-level ownership only, console proof pending | 🟡 Source étudiée |
+| Q07 | P0 | Q02 | vendor/encore-active/eden-gpu/include/common/bounded_threadsafe_queue.h | EmplaceWaitWithStopToken; TryPop | HOST | tools/check-native-gpu-queue-stop-fastpath-host.py | Hôte: véritable en-tête SPSC compilé sous ASan/UBSan; TryPop, slot réutilisé sans attente, file pleine/réveil et arrêt du producteur vérifiés. Le test de durée de vie des slots est distinct; comportements de la variante GPU et FPS PS5 non qualifiés | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-gpu-queue-stop-fastpath-host.py) |
 | Q08 | P0 | Q06,Q07 | vendor/encore-active/eden-gpu/include/video_core/gpu_thread.h | PushCommand; RunWorker | SOURCE | docs/EDEN_ACTIVE_SOURCE_CATALOG.md | GPU worker shared ABI and shutdown ordering apply to both quiet and diagnostic implementations; source-level ownership only, console proof pending | 🟡 Source étudiée |
 | Q09 | P2 | Q08 | vendor/encore-active/eden-core/host-gpu/include/video_core/gpu_thread.h | void Stop(); CommandQueue | SOURCE | tools/check-vendor-consolidation-debt.py | Exact host fallback source with eight queue slots and explicit stop/join; PS5 native remains owned by eden-gpu | 🟡 Source étudiée |
 | D01 | P2 | Q03 | vendor/sources/eden/src/video_core/dma_pusher.cpp | DmaPusher::Step; DmaPusher::DispatchCalls; DmaPusher::ProcessCommands | HOST | tools/check-native-dma-resume-boundary-host.py | Unsafe restart proved; no native replay or partial continuation | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-dma-resume-boundary-host.py) |
 | D02 | P2 | D01 | vendor/sources/eden/src/video_core/dma_pusher.cpp | DmaPusher::Step; DmaPusher::SetState | HOST | tools/check-native-dma-indirect-dependencies-host.py | Late guest-RAM command decoding remains unsealed | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-dma-indirect-dependencies-host.py) |
 | V01 | P0 | Q03 | vendor/encore-active/eden-vulkan/vulkan_scheduler.cpp | Scheduler::WorkerThread; Scheduler::WaitWorker; Scheduler::Finish | SOURCE | docs/FC27_NATIVE_FRAME_PROGRESS_TRIAGE_2026-10-17.md | Separate worker queue drain from physical GPU device fence wait | 🟡 Source étudiée |
-| V02 | P0 | V01 | vendor/encore-active/eden-vulkan/vulkan_present_manager.cpp | PresentManager::GetRenderFrame; PresentManager::PresentThread; PresentManager::WaitPresent | SOURCE | tools/check-vulkan-present-wait-host.py | Identify actual presentation stall boundary versus guest HUD | 🟡 Source étudiée |
+| V02 | P0 | V01 | vendor/encore-active/eden-vulkan/vulkan_present_manager.cpp | PresentManager::GetRenderFrame; PresentManager::PresentThread; PresentManager::WaitPresent | HOST | tools/check-vulkan-present-wait-host.py | Hôte: modèle C++ ASan/UBSan/TSan des attentes et erreurs de présentation, désormais lié explicitement au code natif maintenu: dépilement libre avant attente fence, attente queue+in_flight et publication après recyclage. Progrès du HUD/jeu et frametime PS5 non qualifiés | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-vulkan-present-wait-host.py) |
 | V03 | P0 | V02 | vendor/encore-active/eden-vulkan/vulkan_swapchain.cpp | Swapchain::AcquireNextImage | HOST | tools/check-ps5-vulkan-swapchain-acquire-bounds.py | Acquire retries bounded; no device-liveness claim | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-ps5-vulkan-swapchain-acquire-bounds.py) |
 | V04 | P0 | V02 | vendor/encore-active/eden-vulkan/vulkan_renderer.cpp | RendererVulkan::Composite; RendererVulkan::PresentLoading | SOURCE | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Prove compositor remains alive when guest match is frozen | 🟡 Source étudiée |
 | V05 | P0 | V01,V04 | vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp | RasterizerVulkan::PrepareDraw; RasterizerVulkan::OnCPUWrite; RasterizerVulkan::GetFlushArea | SOURCE | tools/check-ps5-vulkan-cache-phases.py | Identify mutex owner for rare 285-ms texture wait; no guessing | 🟡 Source étudiée |
