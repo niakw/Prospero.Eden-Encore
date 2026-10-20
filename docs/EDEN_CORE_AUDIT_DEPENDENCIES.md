@@ -21,6 +21,17 @@ Le passage 400 → 398, 98 → 96 et 411 → 409 provient uniquement de `M08` et
 `V77`, qualifiés pour leur propriété hôte décrite dans les lignes du registre.
 Ils ne certifient pas les freezes, les graphismes ou les frametimes sur PS5.
 
+**Suite — synchronisation TFB :** une seule recherche de banque remplace
+`try_emplace` suivi de `operator[]`. Le témoin extrait la vraie méthode
+`SyncWrites` et utilise la table Boost épinglée avec un hasher instrumenté
+qui produit les mêmes valeurs. Pour 1 024 requêtes d’une banque : **2 048 →
+1 024 appels au hasher**. Pour 32 banques : **2 077 → 1 053**, réorganisations
+de table incluses. Les données, l’ordre des banques, les drapeaux, les filtres
+invalidé/réécrit et la fermeture du compteur vide restent identiques sous
+ASan/UBSan. Les cinq contrôles ciblés passent et le rejeu reproduit exactement
+le fichier maintenu. Compilation native de cette suite à terminer ; aucun
+contrat de progression GPU ou de frametime n’est clôturé sur ces seules preuves.
+
 **Avancement des sources depuis la reprise `82c531d` : 19 fichiers C/C++
 modifiés**, incluant optimisations, correctifs et variantes maintenues, plus
 les recettes de compilation et contrôles associés. Le compteur 398 / 96 / 409
@@ -106,6 +117,8 @@ Mesures des scénarios hôte du lot :
 
 | Travail mesuré | Avant | Après |
 | --- | ---: | ---: |
+| Hashs TFB pour 1 024 requêtes / 1 banque | 2 048 | 1 024 |
+| Hashs TFB pour 1 024 requêtes / 32 banques | 2 077 | 1 053 |
 | Allocations par présentation Vulkan avec une couche | 6 | 0 |
 | Allocations par présentation Vulkan avec plusieurs couches | 6 | 1 |
 | Allocations pour 512 blocs PCM upmix après amorçage | 512 | 0 |
