@@ -441,3 +441,15 @@ vidage de la file et une exception pendant la réallocation de commandes.
 La source active et la recette de génération Vulkan sont synchronisées.
 Cela ne valide ni le traitement des attentes d'un tick matériel perdu,
 ni le comportement du pilote PS5 ; aucune mesure de FPS n'en découle.
+
+## 20 octobre — intégrité de la clé Vulkan multi-plages
+
+`MultiRangeBufferCache::HashSources` distinguait le buffer et son
+décalage, mais omettait l'identité `VkDeviceMemory`, son offset physique
+et le type mémoire. La réutilisation sous le même `VkBuffer` après
+modification de l'adossement risquait de conserver une association sparse
+obsolète. Ces trois propriétés rejoignent la clé de géométrie ;
+`write_tick` reste exclusivement une invalidation du contenu et ne
+déclenche pas de reconstruction physique inutile. Le témoin compilé
+ASan/UBSan couvre les changements indépendants de mémoire, d'offset,
+de type et de taille. Aucun gain FPS PS5 n'est encore mesuré.
