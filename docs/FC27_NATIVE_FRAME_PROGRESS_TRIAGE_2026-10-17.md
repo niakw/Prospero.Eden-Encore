@@ -175,3 +175,16 @@ attente sans file. Les chemins normaux sont inchangés. Le test
 vérifie que la version épinglée échoue sur le cas absent, puis
 les réveils/annulations valides et invalides de la version corrigée.
 Il ne constitue **pas** une preuve d'absence de deadlock sur PS5.
+
+## 20 octobre — publication du drapeau d'attente CV
+
+La branche native `KConditionVariable::Wait` faisait une écriture
+`WriteToUser(key, HasWaiterFlag)` sans vérifier son résultat, puis
+continuait le transfert du verrou et l'entrée en attente. La vérification
+de plage faite précédemment ne prouve pas que l'écriture a réussi.
+La méthode annule désormais le sommeil et retourne
+`ResultInvalidCurrentMemory` si la publication du drapeau échoue.
+`tools/check-native-hle-cv-key-write-host.py` compile le fragment C++ réel en ASan/UBSan,
+vérifie le retour sain et reproduit l'ancien échec silencieux.
+Le changement ne garantit pas l'absence de freeze en jeu, et ne
+modifie pas le fonctionnement d'un drapeau écrit correctement.
