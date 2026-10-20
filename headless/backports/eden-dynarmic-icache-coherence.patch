@@ -37,7 +37,7 @@
  
 --- a/src/core/arm/dynarmic/arm_dynarmic_32.cpp
 +++ b/src/core/arm/dynarmic/arm_dynarmic_32.cpp
-@@ -432,6 +432,14 @@
+@@ -432,6 +432,15 @@
  }
  
  void ArmDynarmic32::InvalidateCacheRange(u64 addr, std::size_t size) {
