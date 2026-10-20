@@ -12,6 +12,7 @@ pairs = json.loads(r'''[["AllocateMemoryPages(alloc_size)","AllocateSparsePages(
 # The checked source retains every historical transformation and one
 # additional half-open interval bounds guard for ZeroRegion.
 pairs.append(("    void ZeroRegion(std::size_t start, std::size_t end_) noexcept {\n        std::lock_guard<std::mutex> mutation_lock{sparse_mutation_mutex};", "    void ZeroRegion(std::size_t start, std::size_t end_) noexcept {\n        // Callers normally provide a half-open in-bounds interval. Reject\n        // reversed/empty ranges and clip an oversized tail before constructing\n        // pointers, so untrusted guest extents cannot wrap into a huge memset.\n        const std::size_t limit = alloc_size / sizeof(T);\n        if (start >= end_ || start >= limit) return;\n        end_ = (std::min)(end_, limit);\n        std::lock_guard<std::mutex> mutation_lock{sparse_mutation_mutex};", 1))
+pairs.append(("    constexpr void CommitRegion(size_t index, size_t end_) {\n        const u64 base = static_cast<u64>(index) * sizeof(T);", "    constexpr void CommitRegion(size_t index, size_t end_) {\n        // The same sparse backing is shared by CPU and GPU page-table owners.\n        // An invalid range must never overflow the byte conversion or spin\n        // over the entire virtual address space while committing pages.\n        const std::size_t limit = alloc_size / sizeof(T);\n        if (index >= end_ || index >= limit) return;\n        end_ = (std::min)(end_, limit);\n        const u64 base = static_cast<u64>(index) * sizeof(T);", 1))
 for old, new, expected in pairs:
     assert upstream.count(old) == expected, ("pinned sparse origin changed", old[:80], expected)
     upstream = upstream.replace(old, new)
@@ -21,4 +22,4 @@ assert 'write_derived("${PORT_BUILD_DIR}/sparse/common/sparse_large_vector.h"' n
 assert "function(eden_sparse_replace" not in cmake
 assert 'include_directories(BEFORE "${CMAKE_BINARY_DIR}/headless/sparse")' in selector
 assert '${PORT_BUILD_DIR}/sparse/common/sparse_large_vector.h" COPYONLY' in cmake
-print("MAINTAINED_SPARSE_VECTOR_PARITY_PASS: 12 verified rewrites, selected header overlay")
+print("MAINTAINED_SPARSE_VECTOR_PARITY_PASS: 13 verified rewrites, selected header overlay")
