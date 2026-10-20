@@ -3,8 +3,12 @@
 Branche `dev/ps5-sparse-jit`, base `82c531d08641d8b28124bd2cebf37fcf85674179`.
 Les preuves de cette passe proviennent de contrôles locaux ; elles ne constituent
 pas une CI distante ni un binaire PS5 qualifié.
-**Compteur courant : 398 fichiers / 96 P0 / 409 contrats.**
+**Compteur courant : 397 fichiers / 95 P0 / 408 contrats.**
 Les chiffres 400 / 98 / 411 ci-dessous décrivent le relevé initial.
+Depuis le dernier lot natif, `V16` passe HOST pour son protocole hôte de
+fence sous ASan/UBSan, avec l'ensemble des délégations `FenceManager`.
+Les chiffres historiques 398 / 96 / 409 plus bas désignent les lots précédents,
+non une mesure de progression des jeux PS5.
 
 **Dernier lot publié : `7ab0279711` — hôte, rejeu et paquet natif vérifiés.**
 Les deux listes de métadonnées de résultats GPU sont recyclées après consommation
