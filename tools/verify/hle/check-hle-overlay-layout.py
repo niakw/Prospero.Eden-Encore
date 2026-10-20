@@ -75,9 +75,14 @@ wait_after = """    void KThread::BeginWait(KernelCore& kernel, KThreadQueue* qu
         this->SetState(kernel, ThreadState::Waiting);
     }"""
 assert pinned.count(wait_before) == 1
-assert active == pinned.replace(old, fixed).replace(wait_before, wait_after), (
-    "Unexpected maintained KThread drift"
-)
+notify_before = "    void KThread::NotifyAvailable(KernelCore& kernel, KSynchronizationObject* signaled_object, Result wait_result) {\n        // Lock the scheduler.\n        KScopedSchedulerLock sl(kernel);\n        // If we're waiting, notify our queue that we're available.\n        if (this->GetState() == ThreadState::Waiting) {\n            m_wait_queue->NotifyAvailable(kernel, this, signaled_object, wait_result);\n        }\n    }"
+notify_after = "    void KThread::NotifyAvailable(KernelCore& kernel, KSynchronizationObject* signaled_object, Result wait_result) {\n        // Lock the scheduler.\n        KScopedSchedulerLock sl(kernel);\n        // If we're waiting, notify our queue that we're available.\n        if (this->GetState() == ThreadState::Waiting) {\n            if (m_wait_queue == nullptr) {\n                ASSERT_MSG(false, \"wait_queue is nullptr!\");\n                return;\n            }\n            m_wait_queue->NotifyAvailable(kernel, this, signaled_object, wait_result);\n        }\n    }"
+cancel_before = "    void KThread::CancelWait(KernelCore& kernel, Result wait_result, bool cancel_timer_task) {\n        // Lock the scheduler.\n        KScopedSchedulerLock sl(kernel);\n        // If we're waiting, notify our queue that we're available.\n        if (this->GetState() == ThreadState::Waiting) {\n            m_wait_queue->CancelWait(kernel, this, wait_result, cancel_timer_task);\n        }\n    }"
+cancel_after = "    void KThread::CancelWait(KernelCore& kernel, Result wait_result, bool cancel_timer_task) {\n        // Lock the scheduler.\n        KScopedSchedulerLock sl(kernel);\n        // If we're waiting, notify our queue that we're available.\n        if (this->GetState() == ThreadState::Waiting) {\n            if (m_wait_queue == nullptr) {\n                ASSERT_MSG(false, \"wait_queue is nullptr!\");\n                return;\n            }\n            m_wait_queue->CancelWait(kernel, this, wait_result, cancel_timer_task);\n        }\n    }"
+assert pinned.count(notify_before) == pinned.count(cancel_before) == 1
+assert active == (pinned.replace(old, fixed).replace(wait_before, wait_after)
+                  .replace(notify_before, notify_after)
+                  .replace(cancel_before, cancel_after)), "Unexpected maintained KThread drift"
 slab_pinned = (root / "vendor/sources/eden/src/core/hle/kernel/slab_helpers.h").read_text()
 slab_active = (thread_root / "slab_helpers.h").read_text()
 slab_before = """        Free(kernel, static_cast<Derived*>(this));

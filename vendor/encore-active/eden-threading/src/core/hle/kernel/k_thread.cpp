@@ -1355,6 +1355,10 @@ namespace Kernel {
         KScopedSchedulerLock sl(kernel);
         // If we're waiting, notify our queue that we're available.
         if (this->GetState() == ThreadState::Waiting) {
+            if (m_wait_queue == nullptr) {
+                ASSERT_MSG(false, "wait_queue is nullptr!");
+                return;
+            }
             m_wait_queue->NotifyAvailable(kernel, this, signaled_object, wait_result);
         }
     }
@@ -1379,6 +1383,10 @@ namespace Kernel {
         KScopedSchedulerLock sl(kernel);
         // If we're waiting, notify our queue that we're available.
         if (this->GetState() == ThreadState::Waiting) {
+            if (m_wait_queue == nullptr) {
+                ASSERT_MSG(false, "wait_queue is nullptr!");
+                return;
+            }
             m_wait_queue->CancelWait(kernel, this, wait_result, cancel_timer_task);
         }
     }

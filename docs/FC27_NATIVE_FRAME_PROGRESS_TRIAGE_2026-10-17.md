@@ -163,3 +163,15 @@ des notifications ultérieures ni l'ABI. Le test hôte
 la source d'origine échoue sur l'invariant d'observation, la nouvelle
 version le respecte. Ce test **ne valide pas** encore la progression
 invité/HLE de FC27 ni les attentes réelles sur PS5.
+
+## 20 octobre — sécurité des réveils HLE à file absente
+
+Les fonctions `KThread::NotifyAvailable` et `KThread::CancelWait`
+déférencaient `m_wait_queue` sans contrôle, contrairement au chemin
+`EndWait`. Elles utilisent désormais le même garde d'invariant
+que `EndWait` : diagnostic et retour si un thread se déclare en
+attente sans file. Les chemins normaux sont inchangés. Le test
+`tools/check-native-hle-wait-null-queue-host.py` compile les méthodes natives sous ASan/UBSan,
+vérifie que la version épinglée échoue sur le cas absent, puis
+les réveils/annulations valides et invalides de la version corrigée.
+Il ne constitue **pas** une preuve d'absence de deadlock sur PS5.
