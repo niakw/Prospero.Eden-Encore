@@ -27,6 +27,7 @@ CODE=r"""
 #include <cassert>
 #include <chrono>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -97,7 +98,7 @@ with tempfile.TemporaryDirectory(prefix="encore-striped-wait-") as temp:
     subprocess.run([compiler,"-std=c++20","-O1","-g","-pthread",
                     "-Wall","-Wextra","-Werror",
                     "-fsanitize=address,undefined","-fno-sanitize-recover=all",
-                    "-I",str(HEADER.parents[3]),str(src),"-o",str(exe)],
+                    "-I",str(HEADER.parents[2]),str(src),"-o",str(exe)],
                    check=True,timeout=90)
     subprocess.run([str(exe)],check=True,timeout=30)
 print("ENCORE_VULKAN_STRIPED_WAIT_HOST_PASS; console latency unmeasured")
