@@ -131,12 +131,12 @@ int main() {
     }
     Eden::ResetGpuFailureForTitle();
     {
+        // Pre-satisfied fence enters neither the wait nor its failure check.
+        // This test must not confuse a completed fence with a pending one.
         Dma d;
         d.Satisfy();
         Eden::RecordGpuFailure(std::make_exception_ptr(std::runtime_error("GPU failed")));
-        bool caught=false;
-        try { d.Go(); } catch (const std::runtime_error&) { caught=true; }
-        assert(caught && d.synced && d.acknowledges==0);
+        assert(d.Go() && d.synced && d.acknowledges==1);
     }
     Eden::ResetGpuFailureForTitle();
 #endif
