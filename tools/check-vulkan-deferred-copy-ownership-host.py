@@ -14,6 +14,12 @@ tree = ast.parse((ROOT / 'tools/prepare-vulkan-port.py').read_text())
 edits = next(ast.literal_eval(n.value) for n in tree.body
              if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and
              t.id == 'deferred_copy_edits' for t in n.targets))
+probes = next(ast.literal_eval(n.value) for n in tree.body
+              if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and
+              t.id == 'probes' for t in n.targets))
+tick_snapshot = [(old, new) for old, new in probes['vk_buffer_cache']
+                 if "BufferCacheRuntime::TickFrame(" in new]
+assert len(tick_snapshot) == 1
 before_blobs = {'vk_buffer_cache': '626873afa8918cf40264d8650489c7a2e2a628fa',
                 'vk_texture_cache': 'fdc8267b6b02f841dc435cfcc3a7b68bffa80750'}
 captures = []
@@ -23,6 +29,12 @@ for module, changes in edits.items():
     for old, new, count in reversed(changes):
         assert previous.count(new) == count, (module, new)
         previous = previous.replace(new, old)
+    if module == 'vk_buffer_cache':
+        # This later, independent frame-snapshot optimization must not
+        # invalidate the historical fingerprint of deferred-copy ownership.
+        snapshot_before, snapshot_after = tick_snapshot[0]
+        assert previous.count(snapshot_after) == 1
+        previous = previous.replace(snapshot_after, snapshot_before)
     encoded = previous.encode()
     assert hashlib.sha1(b'blob ' + str(len(encoded)).encode() + b'\0' + encoded).hexdigest() == before_blobs[module]
     pattern = r'\[([^\[\]]*\bvk_copies\b[^\[\]]*)\]\('
