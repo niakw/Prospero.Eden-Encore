@@ -146,7 +146,7 @@ def build_matrix(rows: list[dict], workflow: str, catalog: str) -> tuple[list[di
     undirect = sorted(set(r["evidence"] for r in indirect))
     assert sum(statuses.values()) == len(rows)
     # Each new HOST claim needs a precise in-CI proof and native-limit statement.
-    assert statuses["HOST"] == 58, "HOST claims changed: review evidence before modifying guard"
+    assert statuses["HOST"] == 59, "HOST claims changed: review evidence before modifying guard"
     ownership_closures = set(["B06","B07","B08","B09","B10","B12","B13","B15","B17","B18","B19","B20"])
     for row in rows:
         if row["id"] not in ownership_closures:
@@ -155,6 +155,11 @@ def build_matrix(rows: list[dict], workflow: str, catalog: str) -> tuple[list[di
         assert row["evidence_kind"] == "python-in-preflight", row["id"]
         assert "Hôte:" in row["acceptance"] and "PS5" in row["acceptance"], row["id"]
     assert len(ownership_closures) == 12
+    multirange = keyed["V20"]
+    assert multirange["status"] == "HOST" and multirange["priority"] == "P0"
+    assert multirange["evidence"] == "tools/check-vulkan-multirange-owner-lifetime-host.py"
+    assert multirange["evidence_kind"] == "python-in-preflight"
+    assert "Hôte:" in multirange["acceptance"] and "PS5" in multirange["acceptance"]
     for ident, proof in {
         "V17": "tools/check-ps5-descriptor-conditional-reuse-host.py",
         "V33": "tools/check-ps5-compute-descriptor-ring-preflight-host.py",
