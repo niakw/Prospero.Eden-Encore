@@ -36,11 +36,12 @@ inline bool NeverRegistered(std::uint64_t address,std::uint64_t size) noexcept {
   if(coverage_unknown.load(std::memory_order_acquire))return false;
   if(!size || size>64*1024 || address>=kSpace || size>kSpace-address)return false;
   const auto first=address>>kPageBits,last=(address+size-1)>>kPageBits;
-  for(auto word=first/64;word<=last/64;++word){
-    const auto mask=Bits(word==first/64?first%64:0,
-                         word==last/64?last%64:63);
-    if(registered[word].load(std::memory_order_acquire)&mask)return false;
-  }
+  // The 64 KiB cap spans at most two bitmap words, including unaligned ends.
+  const auto first_word=first/64,last_word=last/64;
+  const auto first_mask=Bits(first%64,first_word==last_word?last%64:63);
+  if(registered[first_word].load(std::memory_order_acquire)&first_mask)return false;
+  if(first_word!=last_word &&
+     (registered[last_word].load(std::memory_order_acquire)&Bits(0,last%64)))return false;
   return !coverage_unknown.load(std::memory_order_acquire);
 }
 } // namespace Eden::BufferPages

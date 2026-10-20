@@ -23,11 +23,12 @@ assert idle.startswith("void PhysicalCore::Idle() {")
 assert "const bool profile_idle = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed);" in idle
 assert "const long long start = profile_idle ? ::Eden::Performance::NowNs() : 0;" in idle
 assert "if (profile_idle)\n            ::Eden::Performance::CountIdle(" in idle
-assert "m_on_interrupt.wait(lk, [this] { return std::atomic_ref<const bool>{m_is_interrupted}.load(std::memory_order_relaxed); });" in idle
-# The writer modifies m_is_interrupted under m_guard using ordinary stores.
-# Do not permit an unlocked atomic builtin read in native development code.
-assert "__atomic_load_n(&m_is_interrupted" not in dev_source
-assert "std::atomic_ref<const bool>{m_is_interrupted}.load(std::memory_order_relaxed)" in idle
+assert "m_on_interrupt.wait(lk, [this] { return __atomic_load_n(&m_is_interrupted, __ATOMIC_RELAXED); });" in idle
+# Every reader and writer uses the same compiler atomic operations; the
+# PS5 SDK does not provide std::atomic_ref, and the bool ABI stays unchanged.
+assert "std::atomic_ref" not in dev_source
+assert dev_source.count("__atomic_store_n(&m_is_interrupted,") == 2
+assert "__atomic_load_n(&m_is_interrupted, __ATOMIC_RELAXED)" in idle
 
 # Buffer dequeue diagnostics also live in a tracked DEV-only source now.
 dequeue = (Path(__file__).resolve().parents[1] /

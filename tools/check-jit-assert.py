@@ -5,7 +5,10 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-macro = (root / 'headless/jit_assert.inc').read_text()
+pinned = (root / 'vendor/sources/eden/src/common/assert.h').read_text() + '\n'
+maintained = (root / 'vendor/encore-active/eden-core/src/common/assert.h').read_text()
+assert maintained.startswith(pinned)
+macro = maintained[len(pinned):]
 source = r'''
 #include <cassert>
 #define YUZU_NO_INLINE __attribute__((noinline))

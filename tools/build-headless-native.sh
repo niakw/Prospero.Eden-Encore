@@ -170,6 +170,7 @@ if [[ ${EDEN_SKIP_SOURCE_CHECKS:-0} != 1 && ${EDEN_SKIP_PREBUILD_SOURCE_CHECKS:-
     python3 -B "$root/tools/check-storage-contract.py"
     python3 -B "$root/tools/check-nso-memory.py"
     python3 -B "$root/tools/check-performance.py"
+    python3 -B "$root/tools/check-native-fiber-stack-host.py"
     python3 -B "$root/tools/check-startup-performance.py"
     python3 -B "$root/tools/check-worker-affinity.py"
     python3 -B "$root/tools/check-tsc-fallback.py"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run maintained PhysicalCore atomic-ref implementation through actual core methods.
+"""Run maintained PhysicalCore compiler-atomic implementation through actual core methods.
 
 The pinned bool ABI is unchanged. Every source access must be atomic; the
 host fixture confirms interrupt observation under concurrent toggles.
@@ -27,7 +27,8 @@ assert "std::atomic_ref" not in pinned
 for filename in ("physical_core_standard.cpp", "physical_core_dev.cpp"):
     derived = (owned / filename).read_text()
     assert derived.startswith("#include <atomic>\n")
-    assert "std::atomic_ref<const bool>" in derived
+    assert "std::atomic_ref" not in derived
+    assert "__atomic_load_n(&m_is_interrupted" in derived
 
 compiler = shutil.which("g++") or shutil.which("clang++")
 assert compiler and shutil.which("cmake"), "CMake and C++20 compiler required"
@@ -74,8 +75,8 @@ with tempfile.TemporaryDirectory(prefix="encore-physical-atomic-") as folder:
         derived = staged.read_text()
         assert derived.startswith("#include <atomic>\n")
         assert derived.count("m_is_interrupted") == (6 if profile else 5)
-        assert derived.count("std::atomic_ref<const bool>{m_is_interrupted}.load(std::memory_order_relaxed)") == (4 if profile else 3)
-        assert derived.count("std::atomic_ref<bool>{m_is_interrupted}.store(") == 2
+        assert derived.count("__atomic_load_n(&m_is_interrupted, __ATOMIC_RELAXED)") == (4 if profile else 3)
+        assert derived.count("__atomic_store_n(&m_is_interrupted,") == 2
         assert "return m_is_interrupted;" not in derived
         assert "m_is_interrupted = true;" not in derived
         assert "m_is_interrupted = false;" not in derived
@@ -94,9 +95,9 @@ with tempfile.TemporaryDirectory(prefix="encore-physical-atomic-") as folder:
         "void PhysicalCore::RunThread(KernelCore& kernel, Kernel::KThread* thread) {",
         "\nvoid PhysicalCore::LoadContext(").replace(
             "if (m_is_interrupted)",
-            "if (std::atomic_ref<const bool>{m_is_interrupted}.load(std::memory_order_relaxed))"
+            "if (__atomic_load_n(&m_is_interrupted, __ATOMIC_RELAXED))"
         )
-    assert "if (std::atomic_ref<const bool>{m_is_interrupted}.load(std::memory_order_relaxed))" in maintained_run
+    assert "if (__atomic_load_n(&m_is_interrupted, __ATOMIC_RELAXED))" in maintained_run
     assert "if (prefetch_abort)" in maintained_run
     assert "::Eden::RecordGuestFault(eden_fault);" in maintained_run
     actual_interrupt = method(source, "void PhysicalCore::Interrupt() {",

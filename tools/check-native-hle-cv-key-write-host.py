@@ -23,7 +23,10 @@ def grab(text,first):
     assert text.count(first)==1
     return text[text.index(first):text.index(ending,text.index(first))]
 baseline=grab(PINNED,anchor)
-active=grab(ACTIVE,"            // Publishing the waiter flag")
+active_start="        // Publish the waiter flag before relinquishing mutex ownership."
+active_end="\n\n        // Update the value and process for the next owner."
+assert ACTIVE.count(active_start)==ACTIVE.count(active_end)==1
+active=ACTIVE[ACTIVE.index(active_start):ACTIVE.index(active_end,ACTIVE.index(active_start))]
 assert "!WriteToUser(" not in baseline and "!WriteToUser(" in active
 assert "slp.CancelSleep();" in active
 assert "R_THROW(ResultInvalidCurrentMemory);" in active

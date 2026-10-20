@@ -6,7 +6,7 @@ root = Path(__file__).resolve().parents[1]
 main = (root / 'headless/main.cpp').read_text()
 graphics = (root / 'headless/graphics.cpp').read_text()
 cache = Path((root / '.local/headless-cache').read_text().strip())
-renderer = (cache / 'native-local/headless/renderer_opengl.cpp').read_text()
+renderer = (cache / 'source/src/video_core/renderer_opengl/renderer_opengl.cpp').read_text()
 
 assert 'm_current_frame != 29' not in renderer
 assert 'EDEN_GAME_CAPTURE_TARGET' not in renderer

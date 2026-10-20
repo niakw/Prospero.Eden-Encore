@@ -261,7 +261,9 @@ private:
     static bool Pages(std::size_t offset, std::size_t length, std::size_t& first, std::size_t& last) {
         if (offset >= WindowBytes || !length) return false;
         first = offset / GuestPage;
-        last = (std::min(offset + length, WindowBytes) - 1) / GuestPage;
+        // Clip before adding: Unmap/Protect may receive a length whose sum
+        // with offset wraps, producing an out-of-window page or iterator.
+        last = (offset + std::min(length, WindowBytes - offset) - 1) / GuestPage;
         return true;
     }
 
@@ -283,8 +285,13 @@ private:
     }
     // A page's byte also carries its successor's blocks: direct accesses may cross into it.
     void Refresh(std::size_t first, std::size_t last) {
-        for (std::size_t page = first ? first - 1 : 0; page <= last; ++page)
-            map[page] = Own(page) | Own(page + 1);
+        const std::size_t begin = first ? first - 1 : 0;
+        auto own = Own(begin);
+        for (std::size_t page = begin; page <= last; ++page) {
+            const auto next = Own(page + 1);
+            map[page] = own | next;
+            own = next;
+        }
     }
     void Block(std::size_t chunk, std::size_t count) {
         const std::size_t first = chunk * PagesPerGranule, last = (chunk + count) * PagesPerGranule - 1;

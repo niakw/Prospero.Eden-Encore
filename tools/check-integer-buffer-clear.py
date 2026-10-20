@@ -17,7 +17,7 @@ def check(source):
     return len(calls)
 
 original = (cache / 'source/src/video_core/renderer_opengl/gl_buffer_cache.cpp').read_text()
-fixed = (cache / 'native-local/headless/gl_buffer_cache.cpp').read_text()
+fixed = (root / 'vendor/encore-active/eden-core/src' / 'video_core/renderer_opengl/gl_buffer_cache.cpp').read_text()
 assert fixed == original.replace('static_cast<GLsizeiptr>(size), GL_RED, GL_UNSIGNED_INT, &value);',
                                 'static_cast<GLsizeiptr>(size), GL_RED_INTEGER, GL_UNSIGNED_INT, &value);')
 assert check(fixed) == 1

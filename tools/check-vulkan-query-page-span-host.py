@@ -18,11 +18,12 @@ assert "Query sync value range overflow" in SRC and "Query sync buffer span exce
 assert "Query sync value range overflow" in GEN and "Query sync buffer span exceeds u32" in GEN
 mark="void QueryCacheRuntime::SyncValues("
 st="    impl->redirect_cache.clear();"
-en="    // Vulkan part."
+en="    // Prepare all query metadata"
 def extract(text):
     part=text[text.index(mark):]
-    assert part.count(st)==part.count(en)==1
-    return part[part.index(st):part.index(en)]
+    finish = en if en in part else "    // Vulkan part."
+    assert part.count(st)==part.count(finish)==1
+    return part[part.index(st):part.index(finish)]
 current=extract(SRC)
 pinned=extract(PIN)
 assert "last_page" not in pinned and "last_page" in current
@@ -48,6 +49,7 @@ DAddr AlignDown(DAddr v,DAddr a){return v-(v%a);}
 struct Sync {DAddr address;std::size_t size;};
 struct Impl {
     std::vector<std::size_t> redirect_cache;
+    std::vector<std::size_t> sync_order;
     std::vector<std::pair<DAddr,DAddr>> little_cache;
 };
 struct QueryCacheRuntime {

@@ -42,31 +42,17 @@ for metric, call in (
                '::Eden::Performance::' + metric + ');\n' + call + '\n                }')
     assert untraced.count(wrapped) == int(development)
     untraced = untraced.replace(wrapped, call)
-# PS5 stop-aware event wait replaces upstream's polling-independent EmplaceWait.
-producer_original = '    state.queue.EmplaceWait(std::move(command_data), fence, block);'
-# Audit the whole stop-aware producer region, independent of formatting or
-# profile-only brace placement. The exact source is compiled in native CI.
-producer_start = untraced.index('    bool pushed = false;')
-producer_end_marker = '        return state.signaled_fence.load(std::memory_order_relaxed);'
-producer_end = untraced.index(producer_end_marker, producer_start) + len(producer_end_marker)
-native_producer = untraced[producer_start:producer_end]
-for required in (
-    'bool pushed = false;',
-    'if (!stop_source.stop_requested())',
-    'state.queue.TryEmplace(std::move(command_data), fence, block)',
-    'if (!pushed)',
-    'state.queue.EmplaceWaitWithStopToken(stop_source.get_token(),',
-    'std::move(command_data), fence, block)',
-    'return state.signaled_fence.load(std::memory_order_relaxed);',
-):
-    assert required in native_producer, (required, native_producer)
-assert native_producer.count('TryEmplace(') == 1
-assert native_producer.count('EmplaceWaitWithStopToken(') == 1
-if development:
-    assert native_producer.count('DiagnosticTimer full_timer(') == 1
-else:
-    assert 'DiagnosticTimer full_timer(' not in native_producer
-untraced = untraced[:producer_start] + producer_original + untraced[producer_end:]
+# The producer is outside the upstream worker body. Compare its complete
+# compiled TU to the selected maintained source, including failure propagation
+# and acquire loads, rather than normalizing an obsolete relaxed-load fragment.
+profile = 'dev' if development else 'quiet'
+maintained_worker = root / f'vendor/encore-active/eden-gpu/gpu_thread_{profile}.cpp'
+assert generated.read_bytes() == maintained_worker.read_bytes()
+producer = worker.split('u64 ThreadManager::PushCommand(', 1)[1].split('\n} // namespace', 1)[0]
+assert producer.count('TryEmplace(') == 1
+assert producer.count('EmplaceWaitWithStopToken(') == 1
+assert producer.count('Eden::PeekGpuFailure()') == 2
+assert 'std::memory_order_relaxed' not in producer
 loading_wait = """            if (Eden::LoadingTick(renderer, false)) {
                 if (!state.queue.TryPop(next)) {
                     Eden::LoadingTick(renderer, true);
@@ -93,7 +79,7 @@ assert body in untraced, 'GPU worker semantics changed beyond dispatch markers a
 
 assert 'stop_source.get_token()' in worker and 'thread.get_stop_token()' not in worker
 assert 'ThreadManager::~ThreadManager() { Stop(); }' in worker
-gpu = (cache / 'native-local/headless/gpu.cpp').read_text()
+gpu = (root / 'vendor/encore-active/eden-core/src' / ('video_core/gpu_gl_native_dev.cpp' if development else 'video_core/gpu_gl_native.cpp')).read_text()
 assert 'GPU::~GPU() { impl->NotifyShutdown(); }' in gpu
 shutdown = gpu.split('    void NotifyShutdown() {', 1)[1].split('    /// Obtain', 1)[0]
 assert 'sync_cv.notify_all();\n        }\n        gpu_thread.Stop();' in shutdown
@@ -110,6 +96,11 @@ if sys.platform == 'darwin':
     print('Native GPU generated lifecycle/ordering contract PASS (Linux pthread runtime harness deferred to CI)')
     raise SystemExit(0)
 code = r'''
+#include "gpu_failure.h"
+#include "diagnostics.h"
+#include <cstdio>
+#include <mutex>
+#include <string>
 #include <cassert>
 #include <cerrno>
 #include <memory>
@@ -148,7 +139,8 @@ public:
     ~ThreadManager() { Stop(); }
     void StartThread(VideoCore::RendererBase&, Core::Frontend::GraphicsContext&, Tegra::Control::Scheduler&);
     void Stop();
-    Common::SPSCQueue<int, 4> queue;
+    using CommandDataContainer = int;
+    struct { std::mutex write_lock; Common::SPSCQueue<int, 4> queue; } state;
     std::binary_semaphore ready{0};
     bool finished{};
     std::function<void()> command;
@@ -160,11 +152,11 @@ private:
         assert(pthread_attr_getstacksize(&a, &size) == 0 && size == 1024 * 1024);
         assert(pthread_attr_destroy(&a) == 0);
         int value = 0;
-        queue.PopWait(value, stop_source.get_token());
+        state.queue.PopWait(value, stop_source.get_token());
         assert(value == 42 && !stop_source.stop_requested());
         if (command) { command(); finished = true; return; }
         ready.release();
-        queue.PopWait(value, stop_source.get_token());
+        state.queue.PopWait(value, stop_source.get_token());
         assert(stop_source.stop_requested());
         finished = true;
     }
@@ -179,7 +171,7 @@ private:
 #define pthread_attr_destroy destroy
 #define pthread_create create
 #define pthread_join join
-#include "native_gpu_thread.inc"
+LIFECYCLE
 int main(int argc, char**) {
     VideoCore::RendererBase renderer;
     Core::Frontend::GraphicsContext context;
@@ -188,10 +180,18 @@ int main(int argc, char**) {
     if (argc > 1) {
         ThreadManager manager;
         manager.command = [&] { manager.ready.release(); throw std::runtime_error("injected worker failure"); };
-        manager.queue.EmplaceWait(42);
         manager.StartThread(renderer, context, scheduler);
+        manager.state.queue.EmplaceWait(42);
         manager.ready.acquire();
         manager.Stop();
+        assert(Eden::PeekGpuFailure());
+        assert(Eden::TakeGpuFailure());
+        assert(Eden::PeekGpuFailure() && !Eden::TakeGpuFailure());
+        try { std::rethrow_exception(Eden::PeekGpuFailure()); }
+        catch (const std::runtime_error& error) {
+            assert(std::string(error.what()) == "injected worker failure");
+            return 0;
+        }
         return 1;
     }
     for (fault = 1; fault <= 3; ++fault) {
@@ -204,16 +204,17 @@ int main(int argc, char**) {
     ThreadManager manager;
     for (int i = 1; i <= 3; ++i) {
         manager.finished = false;
-        manager.queue.EmplaceWait(42);
+        manager.state.queue.EmplaceWait(7);
         manager.StartThread(renderer, context, scheduler);
+        manager.state.queue.EmplaceWait(42);
         manager.ready.acquire();
         manager.Stop();
         manager.Stop();
         assert(manager.finished && joins == i && attributes_live == 0);
     }
     { ThreadManager implicit;
-      implicit.queue.EmplaceWait(42);
       implicit.StartThread(renderer, context, scheduler);
+      implicit.state.queue.EmplaceWait(42);
       implicit.ready.acquire(); }
     assert(joins == 4 && attributes_live == 0);
     // A command already executing must exit before the protected owner goes.
@@ -234,8 +235,8 @@ int main(int argc, char**) {
             release.acquire();
             pointer_alive = owner != nullptr && !owner_destroyed;
         };
-        owner->worker.queue.EmplaceWait(42);
         owner->worker.StartThread(renderer, context, scheduler);
+        owner->worker.state.queue.EmplaceWait(42);
         entered.acquire();
         joining = &join_started;
         std::thread teardown([&] {
@@ -251,6 +252,9 @@ int main(int argc, char**) {
     }
 }
 '''
+lifecycle = worker.split('// PS5-only ThreadManager lifecycle;', 1)[1]
+lifecycle = lifecycle[lifecycle.index('namespace VideoCommon::GPUThread {'):]
+code = code.replace('LIFECYCLE', lifecycle)
 with tempfile.TemporaryDirectory(prefix='eden-gpu-thread-') as folder:
     temp = Path(folder)
     (temp / 'check.cpp').write_text(code)
@@ -259,5 +263,5 @@ with tempfile.TemporaryDirectory(prefix='eden-gpu-thread-') as folder:
                     '-o', str(temp / 'check')], check=True)
     subprocess.run([str(temp / 'check')], check=True, timeout=15)
     failed = subprocess.run([str(temp / 'check'), 'throw'], capture_output=True, text=True, timeout=15)
-    assert failed.returncode != 0 and '[ProsperoEden] GPU worker: injected worker failure' in failed.stderr
+    assert failed.returncode == 0 and '[ProsperoEden] GPU worker: injected worker failure' in failed.stderr
 print('Native GPU stack, stop/wake/join, creation failures and blocked-command teardown ordering/rejection PASS')

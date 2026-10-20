@@ -11,7 +11,7 @@ assert not re.search(r'\b(?:__syscall|syscall)\s*\(', (root / 'headless/performa
 cache = Path((root / '.local/headless-cache').read_text().strip())
 source = cache / 'source/src'
 original = (source / 'common/thread.cpp').read_text()
-derived = (cache / 'native-local/headless/thread.cpp').read_text()
+derived = (root / 'vendor/encore-active/eden-core/src' / 'common/thread.cpp').read_text()
 include_line, derived_body = derived.split('\n', 1)
 assert include_line.startswith('#include "') and include_line.endswith('"')
 # Cached CI/native derivatives can remember the checkout path they were generated from.

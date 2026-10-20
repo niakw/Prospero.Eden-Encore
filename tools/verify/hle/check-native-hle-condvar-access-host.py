@@ -136,6 +136,29 @@ wait_guard = ("        // A missing condition-variable key cannot publish the wa
               "        }\n\n")
 assert expected.count(wait_anchor) == 1
 expected = expected.replace(wait_anchor, wait_guard + wait_anchor)
+old_write = """            // Write to the cv key.
+            {
+                constexpr u32 HasWaiterFlag = 1;
+                WriteToUser(m_system.Kernel(), key, HasWaiterFlag);
+"""
+checked_write = """            // Publishing the waiter flag can fail even after address validation.
+            // Do not enter a wait that cannot be signaled through guest memory.
+            {
+                constexpr u32 HasWaiterFlag = 1;
+                if (!WriteToUser(m_system.Kernel(), key, HasWaiterFlag)) {
+                    slp.CancelSleep();
+                    R_THROW(ResultInvalidCurrentMemory);
+                }
+"""
+assert expected.count(old_write) == 1, "pinned CV waiter-flag write drift"
+expected = expected.replace(old_write, checked_write)
+# Publish before transferring the owner, so a failed flag write has no
+# detached/runnable next owner while guest memory still names the old owner.
+old_publication = checked_write + "                std::atomic_thread_fence(std::memory_order_seq_cst);\n            }\n\n"
+new_publication = '        // Publish the waiter flag before relinquishing mutex ownership.\n        // A failed write must not detach or wake the next mutex owner.\n        {\n            constexpr u32 HasWaiterFlag = 1;\n            if (!WriteToUser(m_system.Kernel(), key, HasWaiterFlag)) {\n                slp.CancelSleep();\n                R_THROW(ResultInvalidCurrentMemory);\n            }\n            std::atomic_thread_fence(std::memory_order_seq_cst);\n        }\n\n'
+assert expected.count(old_publication) == 1
+expected = expected.replace(old_publication, "")
+expected = expected.replace(wait_anchor, new_publication + wait_anchor)
 assert corrected == expected, "maintained native HLE source differs from pinned + named fixes"
 assert "        can_access = UpdateLockAtomic(kernel," in corrected
 with tempfile.TemporaryDirectory(prefix="encore-condvar-access-") as td:

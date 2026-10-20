@@ -23,7 +23,7 @@ directory = root / rel
 expected_hashes = {
     "k_thread.h": "git:e2f359a54cb6b879bdd41f092cf1ea19fb03e4e6",
     "k_slab_heap.h": "dc6b2bb0180e8521710422ac27e17c069338c01484f32de69f79a7210549e0f3",
-    "k_scheduler.cpp": "git:41879cf6aef9ff5a855f0eb88af1b1f2866532cb",
+    "k_scheduler.cpp": "git:6bf49c0165ecac602628679adbb8cee8d8407190",
 }
 sources = {}
 for name, expected_sha in expected_hashes.items():

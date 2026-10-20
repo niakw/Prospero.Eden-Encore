@@ -36,11 +36,12 @@ inline bool NeverHeld(std::uint64_t address, std::uint64_t size) noexcept {
     if (size > 256 * 1024) return false;
     const auto first = address >> kPageBits;
     const auto last = (address + size - 1) >> kPageBits;
-    for (auto word = first / 64; word <= last / 64; ++word) {
-        const auto bits = Bits(word == first / 64 ? first % 64 : 0,
-                               word == last / 64 ? last % 64 : 63);
-        if (held[word].load(std::memory_order_acquire) & bits) return false;
-    }
-    return true;
+    // The 256 KiB cap covers at most 65 pages and two bitmap words.
+    const auto first_word = first / 64;
+    const auto last_word = last / 64;
+    const auto first_bits = Bits(first % 64, first_word == last_word ? last % 64 : 63);
+    if (held[first_word].load(std::memory_order_acquire) & first_bits) return false;
+    return first_word == last_word ||
+           !(held[last_word].load(std::memory_order_acquire) & Bits(0, last % 64));
 }
 } // namespace Eden::ImagePages
