@@ -78,16 +78,16 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
 | Graphe connu | 478 | 455 | 959 |
-| HOST — preuve ciblée hôte | 54 | 49 | 105 |
-| SOURCE — lecture effectuée, preuve insuffisante | 401 | 390 | 815 |
+| HOST — preuve ciblée hôte | 55 | 50 | 107 |
+| SOURCE — lecture effectuée, preuve insuffisante | 400 | 390 | 813 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 8 | 8 | 11 |
-| **Encore à qualifier (SOURCE + OPEN)** | **416** | **404** | **843** |
-| Dont priorité P0 (SOURCE + OPEN) | 108 | 103 | 250 |
+| **Encore à qualifier (SOURCE + OPEN)** | **415** | **404** | **841** |
+| Dont priorité P0 (SOURCE + OPEN) | 107 | 102 | 248 |
 
-Le **noyau restant** compte donc 416 critères répartis sur
-404 fichiers et 843 mentions fonction/contrat :
-15 OPEN et 401 SOURCE.
+Le **noyau restant** compte donc 415 critères répartis sur
+404 fichiers et 841 mentions fonction/contrat :
+15 OPEN et 400 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
@@ -524,7 +524,7 @@ function/contract tokens are checked by CI for existence only; the
 | F06 | P1 | F05 | vendor/encore-active/eden-core/src/common/fs/fs.cpp | RemoveDirContentsRecursively; IterateDirEntries | HOST | tools/check-vendor-consolidation-debt.py | Native directory iterator override (two call sites) now maintained C++ with a source parity gate; source parity and native selection host PASS #39056412307; console directory outcomes still unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39056412307) |
 | F07 | P1 | B01 | vendor/encore-active/eden-core/src/common/cpu_features.cpp | g_cpu_caps; X64::EstimateRDTSCFrequency | HOST | tools/check-vendor-consolidation-debt.py | Native TSC fallback now a maintained TU selected into common; parity and CMake selection PASS in preflight #39058024476; native clock observations still required | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39058024476) |
 | F08 | P1 | F06 | vendor/encore-active/eden-core/src/common/fs/path_util.cpp | PathManagerImpl; Reinitialize; GenerateLegacyPath | HOST | tools/check-vendor-consolidation-debt.py | Native writable user/cache/config root and legacy path selection now maintained C++; source parity and selection PASS in preflight #39058024476; hardware startup paths unqualified | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39058024476) |
-| J16 | P0 | J01,J02 | headless/backports/eden-dynarmic-icache-coherence.patch | ArmDynarmic64::InvalidateCacheRange; Core::InvalidateInstructionCacheRange | SOURCE | tools/install-active-core-backports.py | Active-core installer stages A64 cross-core i-cache invalidation from a patch, not tracked C++ source; invalidate callback address and propagate process range, while real JIT progress still unproven | 🟡 Source étudiée |
+| J16 | P0 | J01,J02 | headless/backports/eden-dynarmic-icache-coherence.patch | ArmDynarmic64::InvalidateCacheRange; Core::InvalidateInstructionCacheRange | HOST | tools/check-native-jit-icache-broadcast-host.py | Hôte: callback A64 et fonction réelle de diffusion process C++ extraits et compilés sous ASan/UBSan; alignement ligne, tous cœurs présents et HALT prouvés. Aucun acquittement de sortie du JIT ni FPS PS5 prouvé | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-jit-icache-broadcast-host.py) |
 | J17 | P1 | J16,J13 | headless/backports/eden-dynarmic-icache-coherence.patch | ArmDynarmic32::InvalidateCacheRange; last_code_addr | SOURCE | tools/install-active-core-backports.py | A32 i-cache invalidation resets last dispatched address in staged patch; preserve coherence across guest cores before materializing maintained TU | 🟡 Source étudiée |
 | J18 | P1 | H18,J03 | vendor/encore-active/eden-core/src/common/fiber.cpp | Fiber::YieldTo; Fiber::Exit; Fiber::ThreadToFiber | SOURCE | headless/CMakeLists.txt | Maintained native fiber unit is selected by common; validate cross-thread context ownership, rewind/exit semantics and actual guest execution separately | 🟡 Source étudiée |
 | J19 | P0 | J12 | vendor/encore-active/eden-core/src/core/arm/dynarmic/arm_dynarmic_64.cpp | ArmDynarmic64::SignalInterrupt; ArmDynarmic64::InvalidateCacheRange | HOST | tools/check-native-dynarmic-icache-range-host.py | Hôte: méthode A64 effective extraite et exécutée sous ASan/UBSan; longueur zéro sans toucher le décodage, adresse 64 bits intacte; JIT PS5 et FPS non qualifiés | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-dynarmic-icache-range-host.py) |

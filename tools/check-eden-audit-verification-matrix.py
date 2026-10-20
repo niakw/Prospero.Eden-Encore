@@ -146,7 +146,7 @@ def build_matrix(rows: list[dict], workflow: str, catalog: str) -> tuple[list[di
     undirect = sorted(set(r["evidence"] for r in indirect))
     assert sum(statuses.values()) == len(rows)
     # Each new HOST claim needs a precise in-CI proof and native-limit statement.
-    assert statuses["HOST"] == 54, "HOST claims changed: review evidence before modifying guard"
+    assert statuses["HOST"] == 55, "HOST claims changed: review evidence before modifying guard"
     ownership_closures = set(["B06","B07","B08","B09","B10","B12","B13","B15","B17","B18","B19","B20"])
     for row in rows:
         if row["id"] not in ownership_closures:
@@ -155,6 +155,11 @@ def build_matrix(rows: list[dict], workflow: str, catalog: str) -> tuple[list[di
         assert row["evidence_kind"] == "python-in-preflight", row["id"]
         assert "Hôte:" in row["acceptance"] and "PS5" in row["acceptance"], row["id"]
     assert len(ownership_closures) == 12
+    broadcast = keyed["J16"]
+    assert broadcast["status"] == "HOST" and broadcast["priority"] == "P0"
+    assert broadcast["evidence"] == "tools/check-native-jit-icache-broadcast-host.py"
+    assert broadcast["evidence_kind"] == "python-in-preflight"
+    assert "Hôte:" in broadcast["acceptance"] and "PS5" in broadcast["acceptance"]
     for name in ("J19", "J20"):
         claim = keyed[name]
         assert claim["status"] == "HOST" and claim["priority"] == "P0"

@@ -28,14 +28,14 @@ preuve `HOST` invoquée en CI disparaît.
 
 | État | Contrats | Preuve acquise |
 |---|---:|---|
-| HOST | 54 | Invariant précis sur hôte ; **pas** de jeu sur console |
-| SOURCE | 401 | Source étudiée, comportement natif non qualifié |
+| HOST | 55 | Invariant précis sur hôte ; **pas** de jeu sur console |
+| SOURCE | 400 | Source étudiée, comportement natif non qualifié |
 | OPEN | 15 | Question de comportement/propriété non résolue |
 | PARKED | 8 | Expérimentation suspendue, ne pas activer |
 | **Total** | **478** | **0 certification de gain de FPS par ce registre** |
 
-**404 chemins distincts SOURCE + OPEN** (dont **103 chemins P0** et
-**285 dans `vendor/encore-active`**) correspondent à **416 critères SOURCE + OPEN**, dont **108 P0**, ont encore besoin
+**404 chemins distincts SOURCE + OPEN** (dont **102 chemins P0** et
+**285 dans `vendor/encore-active`**) correspondent à **415 critères SOURCE + OPEN**, dont **107 P0**, ont encore besoin
 d'une qualification supplémentaire. Leur présence n'invalide pas les
 corrections hôte : elle interdit seulement d'affirmer que leurs
 performances ou leur effet sur les freezes sont démontrés.
@@ -167,3 +167,9 @@ n'a été mesuré sur console.
 J19 et J20 sont HOST pour la méthode native de demande d'invalidation,
 extraite et compilée avec ASan/UBSan. Restent **404 fichiers**
 (dont **103 P0**) et **416 contrats** : aucun gain console certifié.
+
+## 20 octobre — qualification ciblée J16
+
+La diffusion hôte des invalidations I-cache entre interfaces CPU est
+prouvée par `tools/check-native-jit-icache-broadcast-host.py`; **404 fichiers** restent à
+qualifier dont **102 P0**, représentant **415 contrats**.

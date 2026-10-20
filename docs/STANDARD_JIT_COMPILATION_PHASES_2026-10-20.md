@@ -104,3 +104,13 @@ A64 ignorent les invalidations de longueur nulle, ce qui conserve la
 cache d'adresse décodée. Le patch de provenance est synchronisé avec
 les sources actives. `tools/check-native-dynarmic-icache-range-host.py` compile les méthodes C++
 réelles sous ASan/UBSan. Pas de gain FPS sur PS5 démontré.
+
+## 20 octobre — diffusion cohérente des invalidations entre cœurs
+
+Le callback A64 `InstructionCacheOperationRaised` et la fonction
+`Core::InvalidateInstructionCacheRange` ont été compilés ensemble
+sous ASan/UBSan. Le test vérifie la diffusion de chaque ligne de 64 octets
+aux interfaces CPU du processus, le traitement des interfaces absentes,
+la purge complète pour les deux opérations globales et l'interruption JIT.
+Cette propriété hôte qualifie uniquement le routage J16, **pas**
+l'acquittement de la sortie des cœurs, ni un gain FPS natif.
