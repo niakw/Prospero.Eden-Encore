@@ -3,21 +3,32 @@ name: Encore source preflight (host only)
 on:
   push:
     branches: [dev/ps5-sparse-jit]
+    # Run on actual native source/test edits, including commits authored in
+    # other tools without special message suffixes. Docs-only/UI-only pushes
+    # should not interrupt a running core validation.
+    paths:
+      - 'vendor/encore-active/**'
+      - 'vendor/sources/eden/**'
+      - 'headless/**'
+      - 'src/host_memory.cpp'
+      - 'src/memory_pages.cpp'
+      - 'src/jit*.cpp'
+      - 'src/*_performance.cpp'
+      - 'tools/**'
+      - '.github/workflows/encore-core-preflight.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# Normal UI/docs pushes do not execute core-tests; they must not cancel
-# an already running explicit [core-ready] source validation. A newer
-# deliberate core-ready push still supersedes its older diagnostic run.
+# Only real core source/test changes enter this workflow. New commits
+# supersede old checks; documentation and launcher-only pushes are excluded.
 concurrency:
-  group: encore-core-preflight-${{ github.ref }}-${{ github.event_name }}-${{ (github.event_name == 'push' && !contains(github.event.head_commit.message || '', '[core-ready]')) && 'skip-only' || 'test-capable' }}
+  group: encore-core-preflight-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
   core-tests:
-    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[core-ready]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -29,10 +40,18 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends nlohmann-json3-dev libboost-container-dev clang-18
 
+      - name: Early audit and native source boundary witnesses
+        run: |
+          set -euo pipefail
+          python3 -B tools/check-python-source-syntax.py
+          python3 -B tools/check-deferred-native-access-coverage.py
+          python3 -B tools/check-eden-audit-register.py
+          python3 -B tools/check-eden-audit-verification-matrix.py
+          python3 -B tools/check-ps5-quad-index-initial-fence-host.py
+
       - name: Audit generic graphics, JIT, runtime and filtered game networking
         run: |
           set -euxo pipefail
-          python3 -B tools/check-python-source-syntax.py
           python3 -B tools/check-ci-neutral-labels.py
           python3 -B tools/check-upstream-coverage-inventory.py
           python3 -B tools/update-upstream-comparison.py --self-test
@@ -96,7 +115,6 @@ jobs:
           python3 -B tools/check-native-guest-write-span-host.py
           python3 -B tools/check-gpu-deferred-poststore-host.py
           python3 -B tools/check-deferred-native-bridge-contract.py
-          python3 -B tools/check-deferred-native-access-coverage.py
           python3 -B tools/check-native-tracked-page-handoff-host.py
           python3 -B tools/check-native-jit-quiescence-model-host.py
           python3 -B tools/check-native-physical-core-interrupt-ack-host.py
@@ -105,8 +123,6 @@ jobs:
           python3 -B tools/check-native-gpu-queue-slot-lifetime-host.py
           python3 -B tools/check-native-gpu-queue-stop-fastpath-host.py
           python3 -B tools/check-native-gpu-worker-restart-drain-host.py
-          python3 -B tools/check-eden-audit-register.py
-          python3 -B tools/check-eden-audit-verification-matrix.py
           python3 -B tools/audit-cloud-worklist.py
           python3 -B tools/check-active-source-inventory.py
           python3 -B tools/check-maintained-openssl-cert.py
@@ -293,7 +309,6 @@ jobs:
           python3 -B tools/check-ps5-descriptor-queue-preflight.py
           python3 -B tools/check-ps5-compute-guest-descriptor-preflight-host.py
           python3 -B tools/check-ps5-compute-descriptor-ring-preflight-host.py
-          python3 -B tools/check-ps5-quad-index-initial-fence-host.py
           python3 -B tools/check-ps5-quad-strip-draw-count-host.py
           python3 -B tools/check-ps5-draw-texture-guest-invalidation-host.py
           python3 -B tools/check-ps5-clear-scissor-overflow-host.py
