@@ -6,6 +6,9 @@
 
 ## CI/source handoff after the Codex batch — 20 October 2026
 
+- NEXT HLE HOTPATH BATCH: `c5683e0067db957e817653aa7c3edca60ed79211` changes the selected `KThread::SetState` to avoid the redundant second atomic load and no-op atomic store under the scheduler lock. Exact pinned/native source-extracted ASan/UBSan fixture `tools/check-native-hle-state-transition-fastpath-host.py` passed 80 state/suspension combinations (20 no-ops and 60 transitions), with scheduler notifications and debug reset preserved. Fast gate run `39487073961` and full source preflight `39487073913` both green. Security run `39487074050` was still ongoing at the last check. No native PS5 compile of this HEAD, hardware liveness or FPS proof yet. P0 backlog remains 398 files / 96 P0 / 409 contracts.
+
+
 - Continue on `dev/ps5-sparse-jit` only; launcher/theme ownership remains separate. Codex's 15 commits through `077025dc52d` are the baseline: the last native code commit `7ab02797110` had a documented local PS5 release/package and source-embedded SHA, but there is **no console frametime, HUD or freeze proof**.
 - Canonical remaining audit coverage: **398 distinct files / 96 P0 files / 409 SOURCE+OPEN contracts**. Two precise host-only contracts M08 and V77 were qualified; their executable CI witness badges and the verification report were synchronized. Do not lower counts merely for modified code.
 - The core fast gate now installs Boost.Container/JSON host fixture headers, so the full texture/audio path can run on a fresh runner. A former failure was a missing runner dependency, not a native graphics regression.
