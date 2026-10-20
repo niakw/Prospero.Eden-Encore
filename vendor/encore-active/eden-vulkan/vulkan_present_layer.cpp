@@ -4,6 +4,7 @@
 // SPDX-FileCopyrightText: Copyright 2024 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+#include <algorithm>
 #include <variant>
 #include "video_core/present.h"
 #include "video_core/renderer_vulkan/present/anti_alias_pass.h"
@@ -317,12 +318,16 @@ void Layer::UpdateRawImage(const Tegra::FramebufferConfig& framebuffer, size_t i
     const u64 linear_size{GetSizeInBytes(framebuffer)};
     const u64 tiled_size{Tegra::Texture::CalculateSize(
         true, bytes_per_pixel, framebuffer.stride, framebuffer.height, 1, block_height_log2, 0)};
+    const std::span<u8> linear_span = mapped_span.subspan(image_offset, linear_size);
     if (host_ptr) {
         Tegra::Texture::UnswizzleTexture(
-            mapped_span.subspan(image_offset, linear_size), std::span(host_ptr, tiled_size),
+            linear_span, std::span(host_ptr, tiled_size),
             bytes_per_pixel, framebuffer.width, framebuffer.height, 1, block_height_log2, 0);
-        buffer.Flush();  // Ensure host writes are visible before the GPU copy.
+    } else {
+        // Never upload stale staging bytes if the guest framebuffer is missing.
+        std::fill(linear_span.begin(), linear_span.end(), u8{0});
     }
+    buffer.Flush();  // Both the upload and missing-memory clear need visibility.
 
     const VkBufferImageCopy copy{
         .bufferOffset = image_offset,
