@@ -178,7 +178,11 @@ expect(checked_a32, "const auto fallback_ptr = EmitCheckedFallbackLookup", "A32 
 expect(checked_a32, "code.test(page.cvt32(), 1);", "A32 fallback PTE mark")
 expect(checked_a32, "const auto fastmem_marker = checked_fastmem ? decltype(ShouldFastmem(ctx, inst)){} : ShouldFastmem(ctx, inst);", "A32 exclusives selection")
 expect(host_mem, "std::fill(page_access.begin() + first, page_access.begin() + last + 1, access);", "A32 Protect access map")
-expect(host_mem, "map[page] = Own(page) | Own(page + 1);", "A32 crossing protection")
+# The maintained Refresh carries the next page's access bits forward;
+# checking the old two-Own() expression would reject the equivalent, faster form.
+expect(host_mem, "const auto next = Own(page + 1);", "A32 successor-page protection")
+expect(host_mem, "map[page] = own | next;", "A32 crossing protection")
+expect(host_mem, "own = next;", "A32 per-page carry of next permissions")
 # A CAS is a read-modify-write producer, not an eager "write follows"
 # event. Both native WriteExclusive forms currently notify the rasterizer
 # BEFORE AtomicCompareAndSwap, even if comparison fails; they do not perform
