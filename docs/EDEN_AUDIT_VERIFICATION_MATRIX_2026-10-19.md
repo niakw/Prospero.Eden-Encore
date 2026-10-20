@@ -28,20 +28,20 @@ preuve `HOST` invoquée en CI disparaît.
 
 | État | Contrats | Preuve acquise |
 |---|---:|---|
-| HOST | 49 | Invariant précis sur hôte ; **pas** de jeu sur console |
-| SOURCE | 406 | Source étudiée, comportement natif non qualifié |
+| HOST | 50 | Invariant précis sur hôte ; **pas** de jeu sur console |
+| SOURCE | 405 | Source étudiée, comportement natif non qualifié |
 | OPEN | 15 | Question de comportement/propriété non résolue |
 | PARKED | 8 | Expérimentation suspendue, ne pas activer |
 | **Total** | **478** | **0 certification de gain de FPS par ce registre** |
 
-**409 chemins distincts SOURCE + OPEN** (dont **107 chemins P0** et
-**289 dans `vendor/encore-active`**) correspondent à **421 critères SOURCE + OPEN**, dont **112 P0**, ont encore besoin
+**408 chemins distincts SOURCE + OPEN** (dont **106 chemins P0** et
+**288 dans `vendor/encore-active`**) correspondent à **420 critères SOURCE + OPEN**, dont **111 P0**, ont encore besoin
 d'une qualification supplémentaire. Leur présence n'invalide pas les
 corrections hôte : elle interdit seulement d'affirmer que leurs
 performances ou leur effet sur les freezes sont démontrés.
 
-Sur les **392 références à un script Python** parmi les preuves des
-contrats, **376 sont appelées directement** par la prévalidation et
+Sur les **393 références à un script Python** parmi les preuves des
+contrats, **377 sont appelées directement** par la prévalidation et
 **16 ne le sont pas directement** (15 SOURCE et 1 OPEN). Les 16
 références correspondent à quatre chemins distincts :
 
@@ -66,7 +66,7 @@ Le témoin de provenance `tools/install-vendored-surface-lifecycle.py
 --check` est désormais directement exécuté et a réussi sur la CI
 [39316703898](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39316703898).
 
-Les **86 autres références** pointent vers des documents, recettes
+Les **85 autres références** pointent vers des documents, recettes
 CMake, patches ou autres fichiers non exécutables : existence et
 ancres documentaires ne constituent **pas** un benchmark.
 
@@ -134,3 +134,12 @@ HOST pour la propriété de file et de réveil déjà démontrée dans
 `check-native-gpu-queue-stop-fastpath-host.py`. Le registre contient
 **421 critères SOURCE + OPEN sur 409 fichiers, dont 107 P0**.
 La validation console et les gains de FPS restent à produire.
+
+## 20 octobre — lot unique Vulkan
+
+`V01` devient HOST pour la propriété hôte de drain/échec du
+worker. Le registre compte désormais **408 fichiers restants,
+dont 106 P0**. Dans une autre unité Vulkan, les tailles et offsets
+de binding mémoire multi-plages sont contrôlés avant création des
+objets Vulkan, avec test ASan/UBSan et génération reproductible.
+Pas de gain FPS sur PS5 revendiqué.

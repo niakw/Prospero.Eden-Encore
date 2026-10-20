@@ -41,6 +41,12 @@ attente, annulation et recyclage correct des slots. Cette qualification
 ne constitue pas trois gains de FPS; le comportement sur console et
 le gel du jeu restent à vérifier.
 
+## Validation hôte ciblée de V01 — 20 octobre 2026
+
+Le test source-extrait `check-vulkan-worker-fatal-drain-host.py`
+prouve le réveil des attentes et la publication des exceptions du worker
+sous ASan/UBSan. Il ne mesure pas les fences physiques ni les FPS PS5.
+
 ## Couverture quantifiée (registre courant)
 
 L'inventaire indexe des **contrats/fonctions à vérifier**, pas toutes les
@@ -52,16 +58,16 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
 | Graphe connu | 478 | 455 | 959 |
-| HOST — preuve ciblée hôte | 49 | 44 | 94 |
-| SOURCE — lecture effectuée, preuve insuffisante | 406 | 395 | 826 |
+| HOST — preuve ciblée hôte | 50 | 45 | 97 |
+| SOURCE — lecture effectuée, preuve insuffisante | 405 | 394 | 823 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 8 | 8 | 11 |
-| **Encore à qualifier (SOURCE + OPEN)** | **421** | **409** | **854** |
-| Dont priorité P0 (SOURCE + OPEN) | 112 | 107 | 260 |
+| **Encore à qualifier (SOURCE + OPEN)** | **420** | **408** | **851** |
+| Dont priorité P0 (SOURCE + OPEN) | 111 | 106 | 257 |
 
-Le **noyau restant** compte donc 421 critères répartis sur
-409 fichiers et 854 mentions fonction/contrat :
-15 OPEN et 406 SOURCE.
+Le **noyau restant** compte donc 420 critères répartis sur
+408 fichiers et 851 mentions fonction/contrat :
+15 OPEN et 405 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
@@ -298,7 +304,7 @@ function/contract tokens are checked by CI for existence only; the
 | Q09 | P2 | Q08 | vendor/encore-active/eden-core/host-gpu/include/video_core/gpu_thread.h | void Stop(); CommandQueue | SOURCE | tools/check-vendor-consolidation-debt.py | Exact host fallback source with eight queue slots and explicit stop/join; PS5 native remains owned by eden-gpu | 🟡 Source étudiée |
 | D01 | P2 | Q03 | vendor/sources/eden/src/video_core/dma_pusher.cpp | DmaPusher::Step; DmaPusher::DispatchCalls; DmaPusher::ProcessCommands | HOST | tools/check-native-dma-resume-boundary-host.py | Unsafe restart proved; no native replay or partial continuation | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-dma-resume-boundary-host.py) |
 | D02 | P2 | D01 | vendor/sources/eden/src/video_core/dma_pusher.cpp | DmaPusher::Step; DmaPusher::SetState | HOST | tools/check-native-dma-indirect-dependencies-host.py | Late guest-RAM command decoding remains unsealed | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-dma-indirect-dependencies-host.py) |
-| V01 | P0 | Q03 | vendor/encore-active/eden-vulkan/vulkan_scheduler.cpp | Scheduler::WorkerThread; Scheduler::WaitWorker; Scheduler::Finish | SOURCE | docs/FC27_NATIVE_FRAME_PROGRESS_TRIAGE_2026-10-17.md | Separate worker queue drain from physical GPU device fence wait | 🟡 Source étudiée |
+| V01 | P0 | Q03 | vendor/encore-active/eden-vulkan/vulkan_scheduler.cpp | Scheduler::WorkerThread; Scheduler::WaitWorker; Scheduler::Finish | HOST | tools/check-vulkan-worker-fatal-drain-host.py | Hôte: constructeur, WorkerThread et WaitWorker maintenus exécutés sous ASan/UBSan, drain FIFO, publication de panne et réveil des waiters démontrés. Attente physique GPU, progression invitée et FPS PS5 non qualifiés | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-vulkan-worker-fatal-drain-host.py) |
 | V02 | P0 | V01 | vendor/encore-active/eden-vulkan/vulkan_present_manager.cpp | PresentManager::GetRenderFrame; PresentManager::PresentThread; PresentManager::WaitPresent | HOST | tools/check-vulkan-present-wait-host.py | Hôte: modèle C++ ASan/UBSan/TSan des attentes et erreurs de présentation, désormais lié explicitement au code natif maintenu: dépilement libre avant attente fence, attente queue+in_flight et publication après recyclage. Progrès du HUD/jeu et frametime PS5 non qualifiés | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-vulkan-present-wait-host.py) |
 | V03 | P0 | V02 | vendor/encore-active/eden-vulkan/vulkan_swapchain.cpp | Swapchain::AcquireNextImage | HOST | tools/check-ps5-vulkan-swapchain-acquire-bounds.py | Acquire retries bounded; no device-liveness claim | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-ps5-vulkan-swapchain-acquire-bounds.py) |
 | V04 | P0 | V02 | vendor/encore-active/eden-vulkan/vulkan_renderer.cpp | RendererVulkan::Composite; RendererVulkan::PresentLoading | SOURCE | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Prove compositor remains alive when guest match is frozen | 🟡 Source étudiée |

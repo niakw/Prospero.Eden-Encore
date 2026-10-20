@@ -146,7 +146,7 @@ def build_matrix(rows: list[dict], workflow: str, catalog: str) -> tuple[list[di
     undirect = sorted(set(r["evidence"] for r in indirect))
     assert sum(statuses.values()) == len(rows)
     # Each new HOST claim needs a precise in-CI proof and native-limit statement.
-    assert statuses["HOST"] == 49, "HOST claims changed: review evidence before modifying guard"
+    assert statuses["HOST"] == 50, "HOST claims changed: review evidence before modifying guard"
     ownership_closures = set(["B06","B07","B08","B09","B10","B12","B13","B15","B17","B18","B19","B20"])
     for row in rows:
         if row["id"] not in ownership_closures:
@@ -155,6 +155,11 @@ def build_matrix(rows: list[dict], workflow: str, catalog: str) -> tuple[list[di
         assert row["evidence_kind"] == "python-in-preflight", row["id"]
         assert "Hôte:" in row["acceptance"] and "PS5" in row["acceptance"], row["id"]
     assert len(ownership_closures) == 12
+    native_worker = keyed["V01"]
+    assert native_worker["status"] == "HOST" and native_worker["priority"] == "P0"
+    assert native_worker["evidence"] == "tools/check-vulkan-worker-fatal-drain-host.py"
+    assert native_worker["evidence_kind"] == "python-in-preflight"
+    assert "Hôte:" in native_worker["acceptance"] and "PS5" in native_worker["acceptance"]
     # Newly qualified P0 properties are source-linked host witnesses only.
     # They do not certify device progress, guest liveness or FPS.
     for ident, (expected, priority) in {
