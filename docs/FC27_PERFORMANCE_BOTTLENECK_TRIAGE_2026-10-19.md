@@ -487,3 +487,15 @@ Un témoin extrait du code natif, compilé sous ASan/UBSan, exerce les
 deux chemins, les invalidations et le seuil de 256 retraits.
 Cette correction cible les risques de textures/états GPU périmés,
 sans démontrer de gain de FPS ni de réparation du HUD sur PS5.
+
+## 20 octobre — garde GPU pour multi-plages gathered
+
+`MultiRangeBufferCache::Get` valide désormais les handles, les tailles et
+les débordements `offset + size` ainsi que la somme des copies **avant**
+l'allocation et l'émission des commandes de repli `gathered`. Auparavant
+le chemin sparse vérifiait ces limites, mais le chemin gathered ne les
+appliquait pas, malgré une destination de taille `total`.
+Un test ASan/UBSan extrait et compile la vérification native,
+y compris la plage finale, les sources nulles et une destination trop
+petite ; les demandes valides avec padding restent acceptées.
+La parité générateur/Vulkan est conservée. Pas de gain FPS certifié.
