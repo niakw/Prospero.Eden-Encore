@@ -76,20 +76,20 @@ The native build previously inherited a boilerplate `param.json` without the opt
 <!-- BEGIN AUTO-UPSTREAM-COMPARISON -->
 ### Automated comparison (daily + manual)
 
-Checked in UTC: **2026-10-19 10:48 UTC**. Changes are commits relative to pins, not proven missing fixes.
+Checked in UTC: **2026-10-20 10:06 UTC**. Changes are commits relative to pins, not proven missing fixes.
 This workflow never imports source patches, modifies dependencies, or reads console data.
 
 | Dependency | Source | Pinned revision | Ahead / behind | Status |
 |---|---|---|---:|---|
-| eden | [eden-emulator/mirror](https://github.com/eden-emulator/mirror) | 5f142c7926d0 | +91 / -0 | upstream ahead |
-| ffmpeg | [FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg) | c7b5f1537d9c | +4748 / -0 | upstream ahead |
+| eden | [eden-emulator/mirror](https://github.com/eden-emulator/mirror) | 5f142c7926d0 | +92 / -0 | upstream ahead |
+| ffmpeg | [FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg) | c7b5f1537d9c | +4835 / -0 | upstream ahead |
 | fmt | [fmtlib/fmt](https://github.com/fmtlib/fmt) | 12.1.0 | +364 / -0 | upstream ahead |
 | zbic | [kinnay/zbic](https://github.com/kinnay/zbic) | 11b08f271226 | +0 / -0 | identical |
 | compiler-rt | [frozen archive / binary](https://github.com/frozen archive / binary) | — | — | not comparable |
 | pacbrew | [frozen archive / binary](https://github.com/frozen archive / binary) | — | — | not comparable |
-| opengl-source | [blackbearreloaded/ps5-opengl](https://github.com/blackbearreloaded/ps5-opengl) | ad2807d41cef | +18 / -0 | upstream ahead |
+| opengl-source | [blackbearreloaded/ps5-opengl](https://github.com/blackbearreloaded/ps5-opengl) | ad2807d41cef | — | repository unavailable |
 | harfbuzz | [frozen archive / binary](https://github.com/frozen archive / binary) | — | — | not comparable |
-| boilerplate | [blackbearreloaded/ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) | dd44bbdc7543 | +44 / -0 | upstream ahead |
+| boilerplate | [blackbearreloaded/ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) | dd44bbdc7543 | — | repository unavailable |
 | ps5-vulkan-tools | [mihawk-99/PS5_Vulkan](https://github.com/mihawk-99/PS5_Vulkan) | 3f3ee6960701 | +19 / -0 | upstream ahead |
 | ps5-mesa | [mihawk-99/PS5_Mesa](https://github.com/mihawk-99/PS5_Mesa) | 0b2d6d1a61d9 | +111 / -103 | diverged |
 | ps5-payload-sdk-fork | [mihawk-99/PS5_PayloadSDK](https://github.com/mihawk-99/PS5_PayloadSDK) | 95c08f27386f | +100 / -48 | diverged |
@@ -101,7 +101,7 @@ This workflow never imports source patches, modifies dependencies, or reads cons
 | opengl-imgui | [ocornut/imgui](https://github.com/ocornut/imgui) | f5befd2d29e6 | +1513 / -0 | upstream ahead |
 | opengl-nanovg | [memononen/nanovg](https://github.com/memononen/nanovg) | ce3bf745eb2d | +0 / -0 | identical |
 | opengl-sokol | [floooh/sokol](https://github.com/floooh/sokol) | 48c85905aeaa | +223 / -0 | upstream ahead |
-| opengl-native-boilerplate | [blackbearreloaded/ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) | 4f531c4b517f | +53 / -0 | upstream ahead |
+| opengl-native-boilerplate | [blackbearreloaded/ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) | 4f531c4b517f | — | repository unavailable |
 | opengl-mesa-26-2 | [frozen archive / binary](https://github.com/frozen archive / binary) | — | — | not comparable |
 
 ### Source changes requiring review
@@ -109,7 +109,6 @@ This workflow never imports source patches, modifies dependencies, or reads cons
 These are upstream commit titles, not validated Encore integrations.
 
 **eden**
-- [a7061eb4c8af](https://github.com/eden-emulator/mirror/commit/a7061eb4c8af) — (ns) Rename i_async_result - async_result (#4439)
 - [d76f8f91c423](https://github.com/eden-emulator/mirror/commit/d76f8f91c423) — (hle) Fix nullptr on ListApplicationIcon (#4438)
 - [fd34024f0e1f](https://github.com/eden-emulator/mirror/commit/fd34024f0e1f) — (hle/ns) fix build error due to missing async_result.h (#4440)
 - [4ce45b3b37d1](https://github.com/eden-emulator/mirror/commit/4ce45b3b37d1) — (hle) Fix crash on MK8D and SM3DW LDN (#4417)
@@ -154,6 +153,7 @@ These are upstream commit titles, not validated Encore integrations.
 - [d8c6c59b6798](https://github.com/eden-emulator/mirror/commit/d8c6c59b6798) — Fix Check Strings after 4523 (#4534)
 - [e0d47f2790e3](https://github.com/eden-emulator/mirror/commit/e0d47f2790e3) — (cmake) fix macOS compilation by forcing lz4 to be static (#4540)
 - [de7e6e01d43e](https://github.com/eden-emulator/mirror/commit/de7e6e01d43e) — Revert 	(input_common/joycon) Enumerate SDL devices iff SDL signals change (#4486) (#4545)
+- [989768aa4672](https://github.com/eden-emulator/mirror/commit/989768aa4672) — Fix (core, gpu, threads) Multithreading refactor (#4254) (#4548)
 
 **ffmpeg** (history excerpt; some commits omitted)
 - [9c51aa182488](https://github.com/FFmpeg/FFmpeg/commit/9c51aa182488) — swscale: add SwsCompiledOp.slice_align
@@ -174,21 +174,6 @@ These are upstream commit titles, not validated Encore integrations.
 - [d04c9801a751](https://github.com/fmtlib/fmt/commit/d04c9801a751) — Dedup compile check enforcement
 - [39e15aff74a9](https://github.com/fmtlib/fmt/commit/39e15aff74a9) — Fix template argument ordering
 - [2eda43e9be17](https://github.com/fmtlib/fmt/commit/2eda43e9be17) — Add FMT_USE_FLOCKFILE macro to force has_flockfile trait to false (#4666)
-
-**opengl-source**
-- [c288f588086d](https://github.com/blackbearreloaded/ps5-opengl/commit/c288f588086d) — Keep a compiler cache snapshot in the build-cache release
-- [00ea837b6954](https://github.com/blackbearreloaded/ps5-opengl/commit/00ea837b6954) — Publish the compiler cache snapshot from its own workflow
-- [87336ebac1c4](https://github.com/blackbearreloaded/ps5-opengl/commit/87336ebac1c4) — Declare Mesa's thread-local variables without C++ initializers on the PS5 (#13)
-- [a51956162693](https://github.com/blackbearreloaded/ps5-opengl/commit/a51956162693) — Prepare SDK 1.0.2 with the program query, retirement wait and statistics fixes (#14)
-
-**boilerplate**
-- [b9778a5523cc](https://github.com/blackbearreloaded/ps5-native-app-boilerplate/commit/b9778a5523cc) — Switch the ffpfsc image off for now: CI and releases build the ZIP only (#8)
-- [2963fc7bcbea](https://github.com/blackbearreloaded/ps5-native-app-boilerplate/commit/2963fc7bcbea) — Remove the .ffpfsc image and its MkPFS tooling: the build makes the app folder and its ZIP (optional .ffpkg unchang
-- [7c6c4f513e77](https://github.com/blackbearreloaded/ps5-native-app-boilerplate/commit/7c6c4f513e77) — Remove the .ffpkg image and its UFS2Tool tooling: the build makes the app folder and its ZIP, nothing else
-- [616275889b7e](https://github.com/blackbearreloaded/ps5-native-app-boilerplate/commit/616275889b7e) — Keep a compiler cache snapshot in the build-cache release
-- [e79502f4ce3c](https://github.com/blackbearreloaded/ps5-native-app-boilerplate/commit/e79502f4ce3c) — Publish the compiler cache snapshot from its own workflow
-- [20f7da2e5a22](https://github.com/blackbearreloaded/ps5-native-app-boilerplate/commit/20f7da2e5a22) — Add the licence header to the issue forms and the build-cache workflow
-- [df84e9f8ff98](https://github.com/blackbearreloaded/ps5-native-app-boilerplate/commit/df84e9f8ff98) — No video mode change at launch: declare HDR output and no VRR in param.json (#10)
 
 **ps5-vulkan-tools**
 - [403ea46701eb](https://github.com/mihawk-99/PS5_Vulkan/commit/403ea46701eb) — Provide a shared GPU broker and optional Windows Zink build
@@ -276,15 +261,6 @@ These are upstream commit titles, not validated Encore integrations.
 - [6c731a4f64ff](https://github.com/floooh/sokol/commit/6c731a4f64ff) — sokol_gfx.h: sg_copy_buffer_to_image wip
 - [a05979d7955b](https://github.com/floooh/sokol/commit/a05979d7955b) — sokol_gfx.h: validate sg_copy_buffer_to_buffer src/dst offset to be multiple of 4
 - [e0ca0b5c297c](https://github.com/floooh/sokol/commit/e0ca0b5c297c) — sokol_gfx.h: sg_copy_buffer_to_image desc-defaults and validation
-
-**opengl-native-boilerplate**
-- [b9778a5523cc](https://github.com/blackbearreloaded/ps5-native-app-boilerplate/commit/b9778a5523cc) — Switch the ffpfsc image off for now: CI and releases build the ZIP only (#8)
-- [2963fc7bcbea](https://github.com/blackbearreloaded/ps5-native-app-boilerplate/commit/2963fc7bcbea) — Remove the .ffpfsc image and its MkPFS tooling: the build makes the app folder and its ZIP (optional .ffpkg unchang
-- [7c6c4f513e77](https://github.com/blackbearreloaded/ps5-native-app-boilerplate/commit/7c6c4f513e77) — Remove the .ffpkg image and its UFS2Tool tooling: the build makes the app folder and its ZIP, nothing else
-- [616275889b7e](https://github.com/blackbearreloaded/ps5-native-app-boilerplate/commit/616275889b7e) — Keep a compiler cache snapshot in the build-cache release
-- [e79502f4ce3c](https://github.com/blackbearreloaded/ps5-native-app-boilerplate/commit/e79502f4ce3c) — Publish the compiler cache snapshot from its own workflow
-- [20f7da2e5a22](https://github.com/blackbearreloaded/ps5-native-app-boilerplate/commit/20f7da2e5a22) — Add the licence header to the issue forms and the build-cache workflow
-- [df84e9f8ff98](https://github.com/blackbearreloaded/ps5-native-app-boilerplate/commit/df84e9f8ff98) — No video mode change at launch: declare HDR output and no VRR in param.json (#10)
 
 Unavailable comparisons are not equivalent to zero changes.
 The API can truncate changed-file lists beyond 300 files.
