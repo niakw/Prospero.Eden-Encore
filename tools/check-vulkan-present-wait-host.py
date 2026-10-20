@@ -30,7 +30,34 @@ assert "'    lock.unlock();')," in generator
 assert generator.index("    free_queue.pop_front();\\n") < generator.index("    lock.unlock();'),")
 assert generator.index("lock.unlock();\\n") < generator.index("present_in_flight = false;\\n")
 assert "return present_failure || present_queue.empty(); });" not in generator
-assert "std::scoped_lock swapchain_lock{swapchain_mutex};" not in generator or True
+# Prove the installed, maintained native presenter carries these same
+# waiter and ownership boundaries. The former `... not in generator or True`
+# assertion was tautological, allowing a broken native source to pass.
+native = (root / "vendor/encore-active/eden-vulkan/vulkan_present_manager.cpp").read_text()
+def section(start: str, end: str) -> str:
+    assert native.count(start) == 1, start
+    return native.split(start, 1)[1].split(end, 1)[0]
+
+render_frame = section("Frame* PresentManager::GetRenderFrame() {",
+                       "void PresentManager::Present(Frame* frame)")
+wait_present = section("void PresentManager::WaitPresent() {",
+                       "void PresentManager::PresentThread(std::stop_token token)")
+present_thread = section("void PresentManager::PresentThread(std::stop_token token) {",
+                         "void PresentManager::RecreateSwapchain(Frame* frame)")
+assert "free_cv.wait(lock, [this] { return present_failure || !free_queue.empty(); });" in render_frame
+assert "if (present_failure) std::rethrow_exception(present_failure);" in render_frame
+assert "free_queue.pop_front();\\n    }" in render_frame
+assert render_frame.index("free_queue.pop_front();") < render_frame.index("frame->present_done.Wait();")
+assert "present_failure || (present_queue.empty() && !present_in_flight)" in wait_present
+assert wait_present.index("frame_cv.wait(") < wait_present.index(
+    "std::scoped_lock swapchain_lock{swapchain_mutex};")
+assert "present_in_flight = true;" in present_thread
+assert "present_in_flight = false;" in present_thread
+assert present_thread.index("lock.unlock();") < present_thread.index(
+    "present_in_flight = false;")
+assert present_thread.index("free_queue.push_back(frame);") < present_thread.index(
+    "present_in_flight = false;")
+
 
 code = r"""
 #include <atomic>
