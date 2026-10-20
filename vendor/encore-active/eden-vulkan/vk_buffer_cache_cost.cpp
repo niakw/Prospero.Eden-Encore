@@ -417,8 +417,11 @@ u32 BufferCacheRuntime::GetStorageBufferAlignment() const {
 }
 
 void BufferCacheRuntime::TickFrame(Common::SlotVector<Buffer>& slot_buffers) noexcept {
+    // One monotone GPU completion snapshot per pass instead of an atomic load
+    // per resident buffer. A completion during this pass is reclaimed next frame.
+    const u64 completed_tick = scheduler.GetMasterSemaphore().KnownGpuTick();
     for (auto it = slot_buffers.begin(); it != slot_buffers.end(); it++) {
-        if (scheduler.IsFree(it->LastUsageTick())) {
+        if (it->LastUsageTick() <= completed_tick) {
             it->ResetUsageTracking();
         }
     }

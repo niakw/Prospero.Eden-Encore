@@ -560,3 +560,19 @@ ASan/UBSan; sur un scénario de quatre appels dont un seul réellement
 en attente, le témoin hôte passe de quatre appels d'attente à un seul.
 Cela **ne prouve pas** que ce scénario se produit fréquemment en jeu
 ni un gain de FPS sur PS5.
+
+## 20 octobre — tick GPU complété chargé une seule fois par frame
+
+`BufferCacheRuntime::TickFrame` interrogeait `Scheduler::IsFree`
+pour chaque buffer résident, répétant une lecture atomique de
+`MasterSemaphore::KnownGpuTick`. Le code actif lit maintenant le tick
+GPU monotone une fois, puis le compare localement aux derniers ticks
+d'utilisation des buffers. Cela évite les lectures atomiques répétées.
+Une complétion concurrente ne sera relâchée qu'au prochain passage,
+ce qui est conservateur (jamais une libération anticipée).
+
+Le témoin `tools/check-vulkan-buffer-frame-tick-snapshot-host.py` extrait et compile les sources natives et
+épinglées sous ASan/UBSan. Sur six buffers, les états de recyclage
+restent identiques avec 1 lecture au lieu de 6; il vérifie aussi le
+passage suivant et une liste vide. Aucun gain matériel ou FPS PS5
+n'est pour l'instant prouvé.
