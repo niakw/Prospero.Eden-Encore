@@ -29,8 +29,12 @@ calls=[n.value for n in program.body if isinstance(n,ast.Expr) and isinstance(n.
        and n.value.args[0].value==rel]
 assert len(calls)==1
 assert ast.literal_eval(calls[0].args[1])=='vulkan_present_layer.cpp'
-pairs=ast.literal_eval(calls[0].args[2])
-assert len(pairs)==4
+all_pairs=ast.literal_eval(calls[0].args[2])
+# Verify the raw image/view lifetime transform specifically, not the
+# historical number of unrelated layer transforms in the same generator.
+pairs=[(before,after) for before,after in all_pairs
+       if 'raw_image_views.clear();' in after and 'raw_image_views.clear();' not in before]
+assert len(pairs)==1
 patched=original
 for before,after in pairs:
     assert patched.count(before)==1,before[:100]
