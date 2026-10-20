@@ -28,14 +28,14 @@ preuve `HOST` invoquée en CI disparaît.
 
 | État | Contrats | Preuve acquise |
 |---|---:|---|
-| HOST | 50 | Invariant précis sur hôte ; **pas** de jeu sur console |
-| SOURCE | 405 | Source étudiée, comportement natif non qualifié |
+| HOST | 51 | Invariant précis sur hôte ; **pas** de jeu sur console |
+| SOURCE | 404 | Source étudiée, comportement natif non qualifié |
 | OPEN | 15 | Question de comportement/propriété non résolue |
 | PARKED | 8 | Expérimentation suspendue, ne pas activer |
 | **Total** | **478** | **0 certification de gain de FPS par ce registre** |
 
-**408 chemins distincts SOURCE + OPEN** (dont **106 chemins P0** et
-**288 dans `vendor/encore-active`**) correspondent à **420 critères SOURCE + OPEN**, dont **111 P0**, ont encore besoin
+**407 chemins distincts SOURCE + OPEN** (dont **106 chemins P0** et
+**288 dans `vendor/encore-active`**) correspondent à **419 critères SOURCE + OPEN**, dont **111 P0**, ont encore besoin
 d'une qualification supplémentaire. Leur présence n'invalide pas les
 corrections hôte : elle interdit seulement d'affirmer que leurs
 performances ou leur effet sur les freezes sont démontrés.
@@ -143,3 +143,11 @@ dont 106 P0**. Dans une autre unité Vulkan, les tailles et offsets
 de binding mémoire multi-plages sont contrôlés avant création des
 objets Vulkan, avec test ASan/UBSan et génération reproductible.
 Pas de gain FPS sur PS5 revendiqué.
+
+## 20 octobre — JIT sparse et preuve d'allocation hôte
+
+Le contrat `J05` passe à HOST pour la propriété de dimensionnement de
+`PlanSparseCommit` exécutée dans le mock natif complet. Les compteurs
+passent à **407 chemins restant à qualifier**, dont **106 P0**,
+et **419 contrats SOURCE + OPEN**. La preuve ne certifie ni
+les FPS ni le comportement physique console.
