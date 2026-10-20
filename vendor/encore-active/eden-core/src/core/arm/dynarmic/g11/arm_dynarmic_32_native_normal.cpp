@@ -449,7 +449,15 @@ void ArmDynarmic32::ClearInstructionCache() {
 }
 
 void ArmDynarmic32::InvalidateCacheRange(u64 addr, std::size_t size) {
+    if (size == 0) {
+        return;
+    }
     m_cb->last_code_addr = u64(-1);
+    // Do not alias a 64-bit invalidation to unrelated 32-bit guest code.
+    if (addr > static_cast<u64>(~u32{0})) {
+        m_jit->ClearCache();
+        return;
+    }
     m_jit->InvalidateCacheRange(static_cast<u32>(addr), size);
 }
 
