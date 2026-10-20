@@ -6,7 +6,27 @@ pas une CI distante ni un binaire PS5 qualifié.
 **Compteur courant : 398 fichiers / 96 P0 / 409 contrats.**
 Les chiffres 400 / 98 / 411 ci-dessous décrivent le relevé initial.
 
-**Dernier lot publié : `033bff0b4f` — paquet natif validé hors console.**
+**Lot textures/audio suivant : contrôles hôte réussis, compilation native à terminer.**
+Deux propriétaires maintenus changent. Les décalages des mipmaps ASTC décompressés
+et BCn incluent la profondeur ; les anciennes branches se recouvraient en 3D.
+Le témoin compile la vraie méthode avec des décodeurs substitués qui écrivent
+la taille volumique attendue : il démontre la disposition des sorties, pas la
+qualité des pixels décodés. Les tableaux 2D et sorties recompressées BC1/BC3
+conservent leur disposition. Les lectures du réglage de recompression passent
+de trois à une pour trois mips, et restent nulles pour une conversion vide.
+
+L’upmix audio conserve un vecteur par thread producteur au lieu de le réallouer
+à chaque bloc. Le témoin utilise la vraie méthode et le vrai ring PCM : deux
+producteurs, quatre paires de canaux, deux volumes et bouclage du ring, avec
+**512 allocations supprimées sur 512 blocs d’upmix après amorçage**, PCM identique
+et ordre de publication inchangé. La première allocation et les agrandissements
+restent nécessaires ; la capacité maximale est retenue jusqu’à la fin du thread.
+Les deux témoins ASan/UBSan et cinq contrôles de parité/inventaire/syntaxe passent.
+Résultats locaux : `results/texture-audio-batch-2026-10-20/host-summary.json`.
+Les workflows rapide et exhaustif les intègrent. **398 / 96 / 409** restent ouverts
+à la qualification : ces preuves ne mesurent ni les frametimes PS5 ni les gels.
+
+**Lot GPU précédent : `033bff0b4f` — paquet natif validé hors console.**
 Les trois unités Vulkan et la provenance ont été reconstruites en neuf étapes
 incrémentales. Les contrôles après compilation et du paquet passent ;
 le SHA `033bff0b4f515503fcbc612ce5f9ceb2a7655714` est présent dans l’ELF.

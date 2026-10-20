@@ -924,9 +924,15 @@ boost::container::small_vector<BufferImageCopy, 16> UnswizzleImage(Tegra::Memory
 
 void ConvertImage(std::span<const u8> input, const ImageInfo& info, std::span<u8> output,
                   std::span<BufferImageCopy> copies) {
+    if (copies.empty()) {
+        return;
+    }
     u32 output_offset = 0;
     Common::ScratchBuffer<u8> decode_scratch;
 
+    // One conversion must use one format policy for all its mip levels.
+    const auto recompression_setting = Settings::values.astc_recompression.GetValue();
+    const bool astc = IsPixelFormatASTC(info.format);
     const Extent2D tile_size = DefaultBlockSize(info.format);
     for (BufferImageCopy& copy : copies) {
         const u32 level = copy.image_subresource.base_level;
@@ -940,9 +946,6 @@ void ConvertImage(std::span<const u8> input, const ImageInfo& info, std::span<u8
         const auto input_offset = input.subspan(copy.buffer_offset);
         copy.buffer_offset = output_offset;
 
-        const auto recompression_setting = Settings::values.astc_recompression.GetValue();
-        const bool astc = IsPixelFormatASTC(info.format);
-
         if (astc && recompression_setting == Settings::AstcRecompression::Uncompressed) {
             Tegra::Texture::ASTC::Decompress(
                 input_offset, copy.image_extent.width, copy.image_extent.height,
@@ -950,7 +953,7 @@ void ConvertImage(std::span<const u8> input, const ImageInfo& info, std::span<u8
                 tile_size.height, output.subspan(output_offset));
 
             output_offset += copy.image_extent.width * copy.image_extent.height *
-                             copy.image_subresource.num_layers *
+                             copy.image_extent.depth * copy.image_subresource.num_layers *
                              BytesPerBlock(PixelFormat::A8B8G8R8_UNORM);
         } else if (astc) {
             // BC1 uses 0.5 bytes per texel
@@ -991,7 +994,7 @@ void ConvertImage(std::span<const u8> input, const ImageInfo& info, std::span<u8
         } else {
             DecompressBCn(input_offset, output.subspan(output_offset), copy, info.format);
             output_offset += copy.image_extent.width * copy.image_extent.height *
-                             copy.image_subresource.num_layers *
+                             copy.image_extent.depth * copy.image_subresource.num_layers *
                              ConvertedBytesPerBlock(info.format);
         }
 

@@ -27,6 +27,7 @@ assert (active/"audio_core/renderer/voice/voice_info.cpp").read_text()==original
 # string rewriting or alter the release audio semantics while consolidating.
 original=(base/"audio_core/sink/sink_stream.cpp").read_text()
 rewrite_cases=(
+    ('        std::vector<s16> new_samples(samples.size() / system_channels * device_channels);', "        // AppendBuffer does not call back into producers. Reuse this thread's\n        // expansion storage across streams while preserving one PCM publication.\n        thread_local std::vector<s16> new_samples;\n        new_samples.assign(samples.size() / system_channels * device_channels, 0);"),
     ("    if (type == StreamType::In)\n        return;", "    if (type == StreamType::In)\n        return;\n    static_assert(std::is_same_v<decltype(samples_buffer), Common::RingBuffer<s16, 0x10000>>);\n    if (buffer.frames * device_channels > 0x10000 - samples_buffer.Size())\n        throw std::overflow_error(\"Audio PCM queue capacity exceeded\");"),
     ("        samples_buffer.Push(new_samples);", "        if (system_channels == 1 && device_channels == 2) {\n            for (std::size_t i = 0; i < new_samples.size(); i += 2) new_samples[i + 1] = new_samples[i];\n        }\n        samples_buffer.Push(new_samples);"),
     ("    std::memcpy(last_frame.data(), &output_buffer[(frames_written - 1) * frame_size], frame_size_bytes);", ""),
@@ -42,7 +43,7 @@ assert 'list(REMOVE_ITEM audio_sources sink/sink_details.cpp sink/sink_stream.cp
 assert cmake.count('list(APPEND audio_sources "${EDEN_MAINTAINED_SINK_DETAILS}" "${EDEN_MAINTAINED_SINK_STREAM}" "${EDEN_MAINTAINED_VOICE_INFO}")')==1
 assert 'write_derived("${PORT_BUILD_DIR}/sink_stream.cpp"' not in cmake
 assert 'file(READ "${PROJECT_SOURCE_DIR}/src/audio_core/sink/sink_stream.cpp"' not in cmake
-print("MAINTAINED_AUDIO_STREAM_PARITY_PASS: four historical rewrites and selected source")
+print("MAINTAINED_AUDIO_STREAM_PARITY_PASS: historical rewrites, reusable scratch and selected source")
 
 
 assert 'write_derived("${PORT_BUILD_DIR}/sink_details.cpp"' not in cmake

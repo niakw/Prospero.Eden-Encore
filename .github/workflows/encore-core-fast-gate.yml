@@ -31,6 +31,12 @@ on:
       - 'tools/check-vulkan-query-grouping-host.py'
       - 'tools/check-vulkan-query-copy-plan-host.py'
       - 'tools/check-vulkan-deferred-copy-ownership-host.py'
+      - 'vendor/encore-active/eden-core/src/video_core/texture_cache/util.cpp'
+      - 'vendor/encore-active/eden-core/src/audio_core/sink/sink_stream.cpp'
+      - 'tools/check-texture-convert-volume-host.py'
+      - 'tools/check-audio-upmix-scratch-host.py'
+      - 'tools/check-maintained-audio-units.py'
+      - 'tools/check-upstream-texture-memory-r428.py'
       - 'headless/buffer_pages.h'
       - 'headless/image_pages.h'
       - 'vendor/encore-active/eden-core/src/common/fiber.cpp'
@@ -74,6 +80,13 @@ jobs:
           python3 -B tools/check-native-dma-clear-span-host.py
           python3 -B tools/check-native-gpu-dirty-transition-host.py
           python3 -B tools/check-native-gpu-dirty-gather-host.py
+      - name: Texture volume layout and audio scratch reuse
+        run: |
+          set -euo pipefail
+          python3 -B tools/check-texture-convert-volume-host.py
+          python3 -B tools/check-audio-upmix-scratch-host.py
+          python3 -B tools/check-maintained-audio-units.py
+          python3 -B tools/check-upstream-texture-memory-r428.py
       - name: Default JIT compiler and cache invalidation guards
         run: |
           set -euo pipefail
