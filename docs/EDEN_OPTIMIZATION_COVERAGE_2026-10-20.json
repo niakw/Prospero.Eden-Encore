@@ -2952,5 +2952,8 @@
     "full_preflight": ".github/workflows/encore-core-preflight.yml",
     "claim": "Previously handled source/profile code; not hardware-qualified."
   },
-  "active_emulation_priority_excludes_launcher_prefix": "headless/prosperoeden/"
+  "active_emulation_priority_excludes_launcher_prefix": "headless/prosperoeden/",
+  "launcher_global_runtime_exceptions": [
+    "headless/prosperoeden/runtime_shims.cpp"
+  ]
 }
