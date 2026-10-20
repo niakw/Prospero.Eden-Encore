@@ -1,5 +1,8 @@
 # Eden Encore — Project Memory
 
+- NATIVE GPU MEMORY POLICY SOURCE PASS (21 Oct 2026): 8 existing owned native GPU/memory headers reviewed with exact SOURCE contract and CI evidence in `docs/EDEN_GPU_MEMORY_POLICY_REVIEW_2026-10-21.md`: direct pool query/scan/accounting, Vulkan GC budget/capacity, cache trim, bounded write-ahead and 2KiB GPU-dirty split. All current guard/fastpaths already exist, so no speculative C++ edits. Triage **332/491 handled, 159 left** = **97 native/emulator priority + 62 launcher separately**. Does not demonstrate PS5 performance or close SOURCE/OPEN host qualification.
+
+
 - EMULATION OPTIMIZATION PRIORITY SCOPE (21 Oct 2026): 16 native policy/boot/error/audio/storage/controller/diagnostic C++ headers were individually source-reviewed and exact SOURCE contract plus existing CI owner witness recorded in `docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md`. Full code pass: **324/491 handled, 167 left**. The 167 contain **63 headless/prosperoeden launcher/frontend files** (not edited, not called optimized); **105 native/emulation source files** remain (including `headless/prosperoeden/runtime_shims.cpp`, which supplies process-global pthread_once/libc shims); 62 launcher-only files remain in prioritized emulation perf triage. `tools/check-eden-optimization-coverage.py` emits both and checks exact contract evidence, CI and full inventory; native PS5 gains still unproven.
 
 

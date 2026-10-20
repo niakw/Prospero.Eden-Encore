@@ -213,3 +213,7 @@ de l'identification de véritables points chauds.
 ## Revue native et périmètre prioritaire (21 octobre)
 
 [EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md](EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md) enregistre 16 fichiers natifs lus et leurs témoins CI. **324 / 491 traités ; 167 encore à examiner.** Parmi eux, 62 relèvent du frontend `headless/prosperoeden/` (hors `runtime_shims.cpp`, commun à tout l'exécutable) et sont suivis séparément. **105 sources moteur et infrastructure native** (dont `runtime_shims.cpp`) composent la file prioritaire CPU/JIT/GPU/HLE et infrastructure native ; elles ne sont pas 104 correctifs C++ confirmés.
+
+## 21 octobre — huit politiques GPU/mémoire déjà optimisées
+
+[EDEN_GPU_MEMORY_POLICY_REVIEW_2026-10-21.md](EDEN_GPU_MEMORY_POLICY_REVIEW_2026-10-21.md) contient l'inspection ciblée de huit chemins (direct pool, budgets GC, capacity latch, write-ahead et régions dirty) et leurs propriétaires CI. Aucun patch C++ supplémentaire n'est justifié sans nouvelle panne reproductible. **332 / 491 traités ; 159 restants dans le périmètre complet, dont 97 moteur/runtime prioritaires et 62 lanceur séparé.**

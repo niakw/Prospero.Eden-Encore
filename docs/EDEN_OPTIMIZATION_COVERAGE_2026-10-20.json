@@ -45,6 +45,15 @@
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
     },
     {
+      "path": "headless/buffer_write_ahead.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "R06",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-buffer-write-ahead-host.py",
+      "source_review_document": "docs/EDEN_GPU_MEMORY_POLICY_REVIEW_2026-10-21.md",
+      "evidence": "Previously maintained GPU/memory performance guard reviewed; Bounded write-ahead of 64 pages, rejects unregistered pages and overflow before marking dirty. No additional correction justified without new failing evidence."
+    },
+    {
       "path": "headless/button_mapping.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U66",
@@ -52,6 +61,15 @@
       "proof_ref": "tools/check-headless-final-owners.py",
       "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
       "evidence": "Source read: Static/constexpr translation and bounded uniqueness validation; no additional hotpath allocation identified. Contract U66; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
+    },
+    {
+      "path": "headless/cache_budget.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U28",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-critical-interface-owners.py",
+      "source_review_document": "docs/EDEN_GPU_MEMORY_POLICY_REVIEW_2026-10-21.md",
+      "evidence": "Previously maintained GPU/memory performance guard reviewed; Shader cache trims only at session boundary and only when verified free disk space drops below reserve. No additional correction justified without new failing evidence."
     },
     {
       "path": "headless/controller_applet.h",
@@ -115,6 +133,33 @@
       "evidence": "Source read: Constexpr title-qualified developer replay policy; opt-in, not per-frame workload. Contract U45; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
     },
     {
+      "path": "headless/direct_pool_accounting.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U32",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-critical-interface-owners.py",
+      "source_review_document": "docs/EDEN_GPU_MEMORY_POLICY_REVIEW_2026-10-21.md",
+      "evidence": "Previously maintained GPU/memory performance guard reviewed; Checks physical-ownership accounting without overflowing start + allocation span; virtual reservations are excluded. No additional correction justified without new failing evidence."
+    },
+    {
+      "path": "headless/direct_pool_probe_policy.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U43",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-runtime-header-owners.py",
+      "source_review_document": "docs/EDEN_GPU_MEMORY_POLICY_REVIEW_2026-10-21.md",
+      "evidence": "Previously maintained GPU/memory performance guard reviewed; Bounded policy: 100 ms polls under pressure; 250 ms only with a prior valid >=4 GiB free observation, avoiding frequent driver syscalls. No additional correction justified without new failing evidence."
+    },
+    {
+      "path": "headless/direct_pool_region_scan.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U44",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-runtime-header-owners.py",
+      "source_review_document": "docs/EDEN_GPU_MEMORY_POLICY_REVIEW_2026-10-21.md",
+      "evidence": "Previously maintained GPU/memory performance guard reviewed; Checks monotone interval coverage with overflow-safe extent bounds; conservatively reports only an upper free bound. No additional correction justified without new failing evidence."
+    },
+    {
       "path": "headless/error_applet.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U60",
@@ -149,6 +194,15 @@
       "proof_ref": "tools/check-headless-final-owners.py",
       "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
       "evidence": "Source read: Title display-version extraction is metadata work, not runtime shader input. Contract U69; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
+    },
+    {
+      "path": "headless/gpu_dirty_region_split.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "R04",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-native-gpu-dirty-subregion-host.py",
+      "source_review_document": "docs/EDEN_GPU_MEMORY_POLICY_REVIEW_2026-10-21.md",
+      "evidence": "Previously maintained GPU/memory performance guard reviewed; 32-bit dirty mask split into 2 KiB regions with overflow check before any callback; preserves per-region order. No additional correction justified without new failing evidence."
     },
     {
       "path": "headless/graphics.cpp",
@@ -226,6 +280,24 @@
       "contract_id": "U10",
       "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
       "evidence": "Source-read optimization triage, no additional hotpath edit justified: Single VMA_IMPLEMENTATION ownership TU contains no hotpath logic to optimize; verify no double implementation rather than replacing allocator source."
+    },
+    {
+      "path": "headless/vulkan_gc_budget.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U77",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-final-owners.py",
+      "source_review_document": "docs/EDEN_GPU_MEMORY_POLICY_REVIEW_2026-10-21.md",
+      "evidence": "Previously maintained GPU/memory performance guard reviewed; Saturating arithmetic prevents unsigned wrap on projected reclaim and frame-age eviction tests. No additional correction justified without new failing evidence."
+    },
+    {
+      "path": "headless/vulkan_pool_capacity.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U78",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-final-owners.py",
+      "source_review_document": "docs/EDEN_GPU_MEMORY_POLICY_REVIEW_2026-10-21.md",
+      "evidence": "Previously maintained GPU/memory performance guard reviewed; One-time atomic latch of first valid device-free estimate; repeated probes are driven elsewhere by existing throttle. No additional correction justified without new failing evidence."
     },
     {
       "path": "headless/vulkan_surface.cpp",
