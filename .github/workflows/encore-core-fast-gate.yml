@@ -10,6 +10,9 @@ on:
       - 'src/host_memory.cpp'
       - 'vendor/encore-active/eden-core/src/video_core/buffer_cache/buffer_cache.h'
       - 'tools/check-native-dma-clear-span-host.py'
+      - 'vendor/encore-active/eden-core/overrides/core/gpu_dirty_memory_manager.h'
+      - 'tools/check-native-gpu-dirty-transition-host.py'
+      - 'tools/check-native-gpu-dirty-gather-host.py'
       - 'tools/check-fastmem-window-bounds-host.py'
       - 'tools/check-sparse-zero-bounds-host.py'
       - 'vendor/encore-active/eden-vulkan/**'
@@ -67,6 +70,8 @@ jobs:
           python3 -B tools/check-vulkan-query-grouping-host.py
           python3 -B tools/check-vulkan-query-copy-plan-host.py
           python3 -B tools/check-native-dma-clear-span-host.py
+          python3 -B tools/check-native-gpu-dirty-transition-host.py
+          python3 -B tools/check-native-gpu-dirty-gather-host.py
       - name: Default JIT compiler and cache invalidation guards
         run: |
           set -euo pipefail

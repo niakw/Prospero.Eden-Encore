@@ -68,6 +68,7 @@ jobs:
           python3 -B tools/check-gpu-deferred-replay-host.py
           python3 -B tools/check-native-gpu-dirty-subregion-host.py
           python3 -B tools/check-native-gpu-dirty-transition-host.py
+          python3 -B tools/check-native-gpu-dirty-gather-host.py
           python3 -B tools/check-native-gpu-read-core-host.py
           python3 -B tools/check-native-gpu-read-capture-host.py
           python3 -B tools/check-native-guest-span-host.py

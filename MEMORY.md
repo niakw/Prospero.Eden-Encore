@@ -22,6 +22,8 @@
 - FINAL BATCH: 20 targeted host checks pass (18 initially, two fixture repairs and reruns). FiberImpl lazily owns only the active 2 MiB guarded stack; real Boost context assembly/UBSan passes 128 transfers across two workers, guest allocations ~4→2 MiB and host-thread stacks ~8→0 MiB for two hosts. Flat query copies reduce first-batch copy allocations 1024→1, zero locked copy allocations, with actual full-method deferred/retry tests. Payload copies stay under lock and GPU staging follows buffer consolidation to preserve tick ownership. Direct two-word BufferPages/ImagePages probes and source parity pass. Native CPU tuning: mtune for core/common/dynarmic; march Zen2 with no FP contraction for DSP/shader translation; shared/batch JIT remains off. Actual native build and gameplay results still pending.
 - The sparse-header gate now accepts only exact canonical/derived paths after checking their bytes match, rejecting pinned originals/foreign paths. Final native validation is pending; no current final package is qualified.
 
+- GPU follow-up: dirty Gather rejoins adjacent 2 KiB masks into at most 256 KiB callbacks, matching the ImagePages probe cap. Host actual-class ASan/UBSan witness measures 1024→8 callbacks for 2 MiB, preserving exact ordered coverage, gaps, address-zero rasterizer filtering and collection epochs. Whole-header parity and displaced-mask race checks retained; M09 remains open for actual GPU cache-boundary proof. See the cloud batch report.
+
 ## Latest verified status — 14 October 2026 (pre-test source audit)
 
 ### Pre-test diagnostics and FPS policy (14 October, follow-up)

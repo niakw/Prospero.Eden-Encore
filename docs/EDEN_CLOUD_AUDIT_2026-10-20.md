@@ -254,3 +254,24 @@ réservés au test PS5 final.
 Le précontrôle Clang avec les vrais arguments PS5 a terminé : **23/23 unités
 acceptées**, fibres et query cache actuels compris. La compilation complète
 et les contrôles post-build restent en cours.
+
+## Complément GPU — regroupement des invalidations dirty
+
+`GPUDirtyMemoryManager::Gather` reconstitue les plages contiguës qui avaient
+été divisées en masques de 2 Kio par le producteur. Il conserve l’ordre, les
+trous et les doublons ; aucune allocation, aucun tri ni verrou n’est ajouté.
+Chaque appel est limité à 256 Kio, borne du probe ImagePages, pour conserver
+son filtrage et borner le travail des caches par appel. Les plages commençant
+à zéro restent séparées : les deux rasterizers ignorent explicitement ces
+invalidations et leur fusion ne doit pas absorber une plage non nulle.
+
+Le témoin compile les classes complètes épinglée et maintenue sous ASan/UBSan.
+Pour 2 Mio contigus, il mesure **1 024 → 8 appels**, puis compare exactement
+la séquence de cellules couvertes sur 8 192 écritures dispersées, avec trous,
+retours en arrière, doublons et filtrage de l’adresse zéro. Les collectes
+vides, les époques successives et une écriture depuis le callback sont couvertes.
+L’oracle intégral et le scénario concurrent de masque déplacé sont conservés.
+Les trois contrôles du complément passent dans
+`results/gpu-dirty-gather-2026-10-20/`. Le fast gate et la prévalidation incluent
+le nouveau témoin. Le compteur reste **398 / 96 / 409** : M09 exige encore
+une preuve aux frontières réelles des caches, sans gain FPS PS5 revendiqué.
