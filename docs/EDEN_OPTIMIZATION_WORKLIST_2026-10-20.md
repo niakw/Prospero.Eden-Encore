@@ -190,3 +190,22 @@ sources à trier, pas 212 correctifs nécessaires.
 ## 21 octobre — dix propriétaires natifs déjà examinés
 
 Voir [EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md](EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md). Les dix sources `U02`–`U11` ont été lues directement, en distinguant leurs fast paths déjà présents et leurs fonctions seulement utilisées au démarrage, à l'arrêt ou en cas de crash. Sans anomalie de performance reproduite sur ces sources, aucun patch C++ additionnel n'a été créé. **289 sur 491 fichiers traités ; 202 restent à traiter pour l'optimisation.**
+
+## 21 octobre — accélération des fragments historiques et profils désactivés
+
+**19 fichiers maintenus supplémentaires** disposent d'un propriétaire exact
+et d'un témoin exécuté par la CI : 5 fragments d'oracle Vulkan utilisés
+uniquement pour reproduire le fork, 2 fragments du générateur scalaire
+Dynarmic (dette CMake à surveiller), 9 unités du pont GPU différé
+désactivé, 2 unités mémoire natives maintenues et 1 fragment de diagnostic
+OpenGL DEV.
+
+Ces chemins sont examinés pour leur **pertinence de performance dans le
+profil livré**, pas déclarés « optimisations FPS ». L'expérience GPU différée
+reste **OFF** ; le statut d'un fragment de génération n'est pas un correctif
+du moteur. Tous les contrats originaux et scripts de preuve demeurent vérifiés.
+
+**Avancement du chantier : 308 fichiers traités ou qualifiés pour le tri
+sur 491, 183 fichiers restant à traiter pour l'optimisation.**
+Le compteur de nouvelles corrections obligatoires reste à établir à mesure
+de l'identification de véritables points chauds.

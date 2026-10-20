@@ -26,7 +26,8 @@ assert len(entries)==len(handled),"duplicate optimization owner"
 assert handled<=owners,sorted(handled-owners)
 allowed={"code_changed_in_batch","reviewed_without_new_code_edit",
          "historical_host_contract_reviewed","previously_integrated_source_change",
-         "shipping_backport_integrated_previously","historical_maintained_unit_parity","new_source_issue_corrected","historical_native_selected_unit"}
+         "shipping_backport_integrated_previously","historical_maintained_unit_parity","new_source_issue_corrected","historical_native_selected_unit",
+         "preexisting_generated_or_inactive_unit"}
 assert all(e["disposition"] in allowed and e["evidence"] for e in entries)
 audit=(ROOT/"docs/EDEN_CORE_AUDIT_DEPENDENCIES.md").read_text()
 rows=audit.split("<!-- AUDIT_ROWS_START -->",1)[1].split("<!-- AUDIT_ROWS_END -->",1)[0]
@@ -49,7 +50,9 @@ for e in entries:
     row=by_id[cid]
     assert row["path"]==e["path"]
     assert row["status"]==e["prior_status"]
-    # Original registry witness may be an installer/CMake selector, whereas\n    # the direct CI parity witness is a separate script. Verify both.\n    assert row["evidence"]==e.get("contract_evidence",e["proof_ref"])
+    # Registry evidence can reference a source installer while the separate
+    # host CI witness checks parity. Both references are kept when different.
+    assert row["evidence"]==e.get("contract_evidence",e["proof_ref"])
     assert row["status"]==("HOST" if e["disposition"]=="historical_host_contract_reviewed"
                           else "SOURCE")
     assert e["path"].startswith("vendor/encore-active/")
@@ -129,6 +132,37 @@ for e in entries:
     source_review=ROOT/e["source_review_document"]
     assert source_review.is_file()
     assert "| `"+e["path"]+"` |" in source_review.read_text(),e["path"]
+# Generated fragments and opt-in sources are not production runtime hot paths.
+# They count as source-triaged, but never as FPS-optimized. Verify their
+# original ownership and that every asserted witness still runs in CI.
+vulkan_generator=(ROOT/"tools/prepare-vulkan-port.py").read_text()
+for e in entries:
+    if e["disposition"]!="preexisting_generated_or_inactive_unit": continue
+    ident=e["contract_id"]
+    assert ident in by_id and by_id[ident]["path"]==e["path"]
+    assert by_id[ident]["status"]==e["prior_status"]=="SOURCE"
+    assert by_id[ident]["evidence"]==e["proof_ref"]
+    assert "python3 -B "+e["proof_ref"] in preflight
+    assert (ROOT/e["path"]).is_file()
+    kind=e["profile_visibility"]
+    if kind=="vulkan_oracle_not_compiled":
+        assert e["path"].startswith("vendor/encore-active/eden-vulkan-oracles/")
+        basename=Path(e["path"]).name
+        assert "(vulkan_oracle / '"+basename+"').read_text()" in vulkan_generator
+    elif kind=="dynarmic_scalar_generator_fragment":
+        assert e["contract_id"] in {"J28","J29"}
+    elif kind=="maintained_standard_memory":
+        assert e["contract_id"] in {"V97","V98"}
+    elif kind=="opengl_dev_capture_fragment":
+        assert e["contract_id"]=="V107"
+    elif kind=="deferred_guest_bridge_off":
+        assert e["contract_id"] in {"V89","V90","V91","V92","V93",
+                                   "V94","V95","V96","V99"}
+        bridge=(ROOT/"headless/guest_write_deferred_bridge.cmake").read_text()
+        assert 'option(EDEN_GUEST_WRITE_BRIDGE_DEV "Compile inactive native deferred-write bridge" OFF)' in bridge
+    else: raise AssertionError(("unexpected profile",kind))
+assert sum(e["disposition"]=="preexisting_generated_or_inactive_unit"
+           for e in entries)==19
 status=Counter(e["disposition"] for e in entries)
 assert len(owners)==STATE["owned_code_count_at_snapshot"],("source inventory changed",len(owners),STATE["owned_code_count_at_snapshot"])
 assert len(owners)==len(handled)+len(owners-handled)
@@ -143,5 +177,6 @@ print("EDEN_OPTIMIZATION_REVIEW_BACKLOG_PASS",
       "historical_maintained="+str(status["historical_maintained_unit_parity"]),
       "new_code_fixes="+str(status["new_source_issue_corrected"]),
       "native_selected="+str(status["historical_native_selected_unit"]),
+      "preexisting_inactive_oracle="+str(status["preexisting_generated_or_inactive_unit"]),
       "remaining_to_triage="+str(len(owners-handled)),
       "new_code_fixes_required=UNKNOWN native_console_validation=SEPARATE")

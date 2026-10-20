@@ -1,5 +1,8 @@
 # Eden Encore — Project Memory
 
+- OPTIMIZATION FAST-TRIAGE ORACLES (21 Oct 2026): +19 distinct documented Encore C/C++/inc owners: five Vulkan generated-source oracles (not compiled), two scalar Dynarmic fragments, nine experimental OFF deferred GPU bridge units, two maintained native memory files and one OpenGL DEV fragment. `tools/check-eden-optimization-coverage.py` now restores a disabled-by-literal-backslash-n registry evidence assertion and validates all 19 IDs and CI evidence; handled 308/491, **183 code sources remain to optimize-triage**. These are *not* 19 new performance fixes, FPS or console proof. Preserve OFF defaults.
+
+
 - HEADLESS RUNTIME CODE TRIAGE (21 Oct): ten actual source-read owners U02..U11, heap, gamepad, audio, network audit/socket/domain/DNS, display surface, VMA and crash report, written in `docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md`. Existing fastpaths retained; no speculative hotpath C++ changes or FPS claim. Source-reviewed 289/491, **202 optimization-triage files remain**. `tools/check-eden-optimization-coverage.py` checks source review provenance for all ten.
 
 
