@@ -56,6 +56,17 @@ leur rollback. Il ne représente ni un nouveau gain de FPS, ni une
 preuve d'exécution sur le firmware cible. Le JIT runtime reste à
 mesurer en conditions réelles.
 
+## J34 — bitmap sparse accéléré et preuve hôte, 20 octobre 2026
+
+Le scan de retrait utilise maintenant au plus deux chargements atomiques
+pour un slot de 2 Mio contenant 128 pages de 16 Kio, contre jusqu'à 128
+sur l'ancien scan, lorsque seule la dernière page reste occupée.
+Le test C++ extrait `DecommitPage` et contrôle le nettoyage des pages,
+la fin de slot, la limite partielle et la conservation du fallback dense.
+Le contrôle complémentaire compile `ZeroRegion` et `CommitRegion`
+avec bornage des plages. La qualification HOST est limitée à ces
+propriétés et ne certifie ni l'exécution GPU/guest ni un gain FPS.
+
 ## Couverture quantifiée (registre courant)
 
 L'inventaire indexe des **contrats/fonctions à vérifier**, pas toutes les
@@ -67,16 +78,16 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
 | Graphe connu | 478 | 455 | 959 |
-| HOST — preuve ciblée hôte | 51 | 46 | 98 |
-| SOURCE — lecture effectuée, preuve insuffisante | 404 | 393 | 822 |
+| HOST — preuve ciblée hôte | 52 | 47 | 102 |
+| SOURCE — lecture effectuée, preuve insuffisante | 403 | 392 | 818 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 8 | 8 | 11 |
-| **Encore à qualifier (SOURCE + OPEN)** | **419** | **407** | **850** |
-| Dont priorité P0 (SOURCE + OPEN) | 111 | 106 | 257 |
+| **Encore à qualifier (SOURCE + OPEN)** | **418** | **406** | **846** |
+| Dont priorité P0 (SOURCE + OPEN) | 110 | 105 | 253 |
 
-Le **noyau restant** compte donc 419 critères répartis sur
-407 fichiers et 850 mentions fonction/contrat :
-15 OPEN et 404 SOURCE.
+Le **noyau restant** compte donc 418 critères répartis sur
+406 fichiers et 846 mentions fonction/contrat :
+15 OPEN et 403 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
@@ -531,7 +542,7 @@ function/contract tokens are checked by CI for existence only; the
 | J31 | P1 | J27 | vendor/encore-active/eden-core/src/dynarmic/frontend/A64/translate/impl/impl.cpp | TranslatorVisitor::V_scalar | SOURCE | tools/check-vendor-consolidation-debt.py | Complete tracked scalar helper, exact text parity with prior generated code; native unqualified | 🟡 Source étudiée |
 | J32 | P1 | J31 | vendor/encore-active/eden-core/src/dynarmic/frontend/A64/translate/a64_translate.cpp | void Translate(; bool TranslateSingleInstruction( | SOURCE | tools/check-vendor-consolidation-debt.py | Translator selects local maintained impl.cpp, not generated absolute path; native unqualified | 🟡 Source étudiée |
 | J33 | P1 | J27,J32 | vendor/encore-active/eden-core/src/dynarmic/ir/opt_passes.cpp | FoldLeastSignificantWord; Op::VectorGetElement32 | SOURCE | tools/check-vendor-consolidation-debt.py | Complete optimizer with exactly reproduced fold oracle; native unqualified | 🟡 Source étudiée |
-| J34 | P0 | J05,M08 | vendor/encore-active/eden-core/src/common/sparse_large_vector.h | SparseLargeVector; ZeroRegion; CommitPage; DecommitPage | SOURCE | tools/check-maintained-sparse-vector.py | Sparse-vector 11-edit transform now a complete source with checked exact parity and original include priority; GPU/CPU behavior on console unqualified | 🟡 Source étudiée |
+| J34 | P0 | J05,M08 | vendor/encore-active/eden-core/src/common/sparse_large_vector.h | SparseLargeVector; ZeroRegion; CommitPage; DecommitPage | HOST | tools/check-sparse-slot-reuse-host.py | Hôte: DecommitPage compilé depuis source réelle, limites de mots bitmap, slot final et fallback dense testés; ZeroRegion/CommitRegion bornés par un témoin distinct et 14 transformations vérifiées. Intégrité de l'exécution console, GPU et FPS PS5 non qualifiés | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-sparse-slot-reuse-host.py) |
 | J35 | P1 | J34 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/reg_alloc.h | EndOfAllocScope; LocInfo; eden_touched; eden_live | SOURCE | tools/check-maintained-reg-alloc.py | Tracked RegAlloc layout with exact prior CMake parity; only changed and live host locations visited, native performance unqualified | 🟡 Source étudiée |
 | J36 | P1 | J35 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/reg_alloc.cpp | RegAlloc::ValueLocation | SOURCE | tools/check-maintained-reg-alloc.py | Complete allocator unit, source parity and selection checked without generating C++; native/JIT behavior unqualified | 🟡 Source étudiée |
 | J37 | P1 | J05,J35 | vendor/encore-active/eden-core/src/dynarmic/backend/x64/constant_pool.cpp | ConstantPool::GetConstant | SOURCE | tools/check-maintained-constant-pool.py | Maintained pool matches retired writable-alias CMake rewrite exactly; Xbyak header generator remains distinct; console unqualified | 🟡 Source étudiée |

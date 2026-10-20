@@ -28,14 +28,14 @@ preuve `HOST` invoquée en CI disparaît.
 
 | État | Contrats | Preuve acquise |
 |---|---:|---|
-| HOST | 51 | Invariant précis sur hôte ; **pas** de jeu sur console |
-| SOURCE | 404 | Source étudiée, comportement natif non qualifié |
+| HOST | 52 | Invariant précis sur hôte ; **pas** de jeu sur console |
+| SOURCE | 403 | Source étudiée, comportement natif non qualifié |
 | OPEN | 15 | Question de comportement/propriété non résolue |
 | PARKED | 8 | Expérimentation suspendue, ne pas activer |
 | **Total** | **478** | **0 certification de gain de FPS par ce registre** |
 
-**407 chemins distincts SOURCE + OPEN** (dont **106 chemins P0** et
-**288 dans `vendor/encore-active`**) correspondent à **419 critères SOURCE + OPEN**, dont **111 P0**, ont encore besoin
+**406 chemins distincts SOURCE + OPEN** (dont **105 chemins P0** et
+**287 dans `vendor/encore-active`**) correspondent à **418 critères SOURCE + OPEN**, dont **110 P0**, ont encore besoin
 d'une qualification supplémentaire. Leur présence n'invalide pas les
 corrections hôte : elle interdit seulement d'affirmer que leurs
 performances ou leur effet sur les freezes sont démontrés.
@@ -151,3 +151,13 @@ Le contrat `J05` passe à HOST pour la propriété de dimensionnement de
 passent à **407 chemins restant à qualifier**, dont **106 P0**,
 et **419 contrats SOURCE + OPEN**. La preuve ne certifie ni
 les FPS ni le comportement physique console.
+
+## 20 octobre — sparse decommit qualifié sur hôte
+
+La source `J34` possède maintenant deux témoins C++ réellement exécutés
+dans le fast gate pour les bornes et la libération de slot, et le contrôle
+de parité en prévalidation. `J34` passe HOST pour cette propriété, pas
+pour l'exécution réelle sur PS5. Restent **406 fichiers à qualifier
+dont 105 P0**, soit **418 contrats SOURCE + OPEN**.
+Le scan par mots limite les chargements de bitmap ; aucun chiffre de FPS
+n'a été mesuré sur console.
