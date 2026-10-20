@@ -206,3 +206,20 @@ compte 2 lectures + 1 écriture auparavant contre 1 lecture + 0 écriture
 pour 20 appels sans changement. Cela réduit le travail hôte de ce
 chemin ; ce n'est pas une preuve de déblocage CPU, de gain FPS ou de
 progression invité sur PS5.
+
+## 20 octobre — suspension HLE sans publication atomique identique
+
+`KThread::UpdateState` sous le verrou scheduler calculait déjà l'état exact
+et ne prévenait le scheduler qu'en cas de changement, mais exécutait encore
+une écriture atomique relaxed identique pour chaque appel sans changement.
+La source native maintenue n'effectue maintenant l'écriture que lors d'une
+transition réelle. L'ordre état écrit → notification est inchangé ;
+`KThread::Continue`, les files d'attente, la suspension et les réveils
+ne sont pas modifiés. Le témoin source-extrait
+`tools/check-native-hle-suspend-noop-host.py` compile l'ancien et le
+nouveau `UpdateState` sous ASan/UBSan, couvre 100 combinaisons
+état/suspension (80 transitions, 20 cas identiques), et rappelle chaque
+mise à jour une deuxième fois : le nombre d'écritures sur les no-op
+passe de 1 à 0 à chaque appel. La parité complète du fichier est
+maintenue dans l'oracle HLE. Cette preuve structurelle n'établit pas
+la progression invitée ni l'absence de freeze sur PS5.

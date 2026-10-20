@@ -83,11 +83,45 @@ assert pinned.count(notify_before) == pinned.count(cancel_before) == 1
 # A no-op state transition must not publish an identical atomic state.
 state_before = "        const ThreadState old_state = m_thread_state.load(std::memory_order_relaxed);\n        m_thread_state.store(\n            static_cast<ThreadState>((old_state & ~ThreadState::Mask) | (state & ThreadState::Mask)),\n            std::memory_order_relaxed);\n        if (m_thread_state.load(std::memory_order_relaxed) != old_state) {\n            KScheduler::OnThreadStateChanged(kernel, this, old_state);\n        }"
 state_after = "        const ThreadState old_state = m_thread_state.load(std::memory_order_relaxed);\n        const ThreadState next_state = static_cast<ThreadState>(\n            (old_state & ~ThreadState::Mask) | (state & ThreadState::Mask));\n        // Scheduler lock serializes state transitions. Avoid an atomic store\n        // and second atomic load for an unchanged runnable/waiting state.\n        if (next_state != old_state) {\n            m_thread_state.store(next_state, std::memory_order_relaxed);\n            KScheduler::OnThreadStateChanged(kernel, this, old_state);\n        }"
+# Suspend flag updates already check whether scheduler notification is necessary.
+# Their relaxed atomic store must follow the same non-noop condition.
+update_before = """    void KThread::UpdateState(KernelCore& kernel) {
+        ASSERT(KScheduler::IsSchedulerLockedByCurrentThread(kernel));
+
+        // Set our suspend flags in state.
+        const ThreadState old_state = m_thread_state.load(std::memory_order_relaxed);
+        const auto new_state =
+            static_cast<ThreadState>(this->GetSuspendFlags()) | (old_state & ThreadState::Mask);
+        m_thread_state.store(new_state, std::memory_order_relaxed);
+
+        // Note the state change in scheduler.
+        if (new_state != old_state) {
+            KScheduler::OnThreadStateChanged(kernel, this, old_state);
+        }
+    }"""
+update_after = """    void KThread::UpdateState(KernelCore& kernel) {
+        ASSERT(KScheduler::IsSchedulerLockedByCurrentThread(kernel));
+
+        // Set our suspend flags in state.
+        const ThreadState old_state = m_thread_state.load(std::memory_order_relaxed);
+        const auto new_state =
+            static_cast<ThreadState>(this->GetSuspendFlags()) | (old_state & ThreadState::Mask);
+
+        // The scheduler lock serializes updates. Avoid a redundant relaxed
+        // atomic store when the suspend flags already match the requested state.
+        if (new_state != old_state) {
+            m_thread_state.store(new_state, std::memory_order_relaxed);
+            // Note the actual state change in scheduler.
+            KScheduler::OnThreadStateChanged(kernel, this, old_state);
+        }
+    }"""
+assert pinned.count(update_before) == 1
 assert pinned.count(state_before) == 1
 assert active == (pinned.replace(old, fixed).replace(wait_before, wait_after)
                   .replace(notify_before, notify_after)
                   .replace(cancel_before, cancel_after)
-                  .replace(state_before, state_after)), "Unexpected maintained KThread drift"
+                  .replace(state_before, state_after)
+                  .replace(update_before, update_after)), "Unexpected maintained KThread drift"
 slab_pinned = (root / "vendor/sources/eden/src/core/hle/kernel/slab_helpers.h").read_text()
 slab_active = (thread_root / "slab_helpers.h").read_text()
 slab_before = """        Free(kernel, static_cast<Derived*>(this));

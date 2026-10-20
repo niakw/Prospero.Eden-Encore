@@ -814,10 +814,12 @@ namespace Kernel {
         const ThreadState old_state = m_thread_state.load(std::memory_order_relaxed);
         const auto new_state =
             static_cast<ThreadState>(this->GetSuspendFlags()) | (old_state & ThreadState::Mask);
-        m_thread_state.store(new_state, std::memory_order_relaxed);
 
-        // Note the state change in scheduler.
+        // The scheduler lock serializes updates. Avoid a redundant relaxed
+        // atomic store when the suspend flags already match the requested state.
         if (new_state != old_state) {
+            m_thread_state.store(new_state, std::memory_order_relaxed);
+            // Note the actual state change in scheduler.
             KScheduler::OnThreadStateChanged(kernel, this, old_state);
         }
     }
