@@ -419,3 +419,25 @@ branches de `Step`, compile les quatre variantes avec ASan/UBSan, et
 vérifie l'acquittement normal, l'arrêt, la panne antérieure/pendant
 l'attente et la livraison unique au launcher. Il ne mesure pas les
 frametimes FC27 ni les performances réelles sur console.
+
+## 20 octobre — le worker Vulkan publie ses erreurs avant de rendre le verrou
+
+L'absence de `catch` dans la boucle Vulkan permettait à une exception
+émise par `CommandChunk::ExecuteAll`, `AllocateWorkerCommandBuffer`
+ou un appel Vulkan de terminer le thread via `std::terminate`, alors
+que `Scheduler::WaitWorker` attend une file qui peut demeurer non vide.
+Sur PS5, le worker capture désormais l'exception **pendant que
+`execution_mutex` est encore détenu** et la transmet au registre
+`RecordGpuFailure`, puis notifie les attenteurs sur `event_cv`.
+Le prédicat de vidage du producteur observe aussi le registre fatal et
+réémet la cause sans fabriquer une soumission, un tick GPU ou une frame.
+Un `catch` autour de l'entrée `std::jthread` couvre également les
+exceptions d'initialisation, avant la prise des verrous d'exécution.
+La variante non PS5 conserve son comportement d'origine.
+
+Le test hôte extrait la vraie entrée du thread, sa boucle et
+`WaitWorker`, et couvre les commandes normales, une exception avant
+vidage de la file et une exception pendant la réallocation de commandes.
+La source active et la recette de génération Vulkan sont synchronisées.
+Cela ne valide ni le traitement des attentes d'un tick matériel perdu,
+ni le comportement du pilote PS5 ; aucune mesure de FPS n'en découle.

@@ -20,6 +20,9 @@
 #include "common/settings.h"
 #include "common/thread.h"
 #include "performance.h"
+#ifdef PS5_NATIVE
+#include "gpu_failure.h"
+#endif
 #include "video_core/gpu_logging/gpu_logging.h"
 #include "video_core/renderer_vulkan/vk_command_pool.h"
 #include "video_core/renderer_vulkan/vk_graphics_pipeline.h"
@@ -150,7 +153,19 @@ Scheduler::Scheduler(const Device& device_, StateTracker& state_tracker_)
 
     AcquireNewChunk();
     AllocateWorkerCommandBuffer();
-    worker_thread = std::jthread([this](std::stop_token token) { WorkerThread(token); });
+    worker_thread = std::jthread([this](std::stop_token token) {
+#ifdef PS5_NATIVE
+        try {
+            WorkerThread(token);
+        } catch (...) {
+            // Background setup failures must also reach native GPU observers.
+            ::Eden::RecordGpuFailure(std::current_exception());
+            event_cv.notify_all();
+        }
+#else
+        WorkerThread(token);
+#endif
+    });
 }
 
 Scheduler::~Scheduler() {
@@ -188,12 +203,27 @@ void Scheduler::WaitWorker() {
     {
         std::unique_lock ql{queue_mutex};
         ++queue_drain_waiters;
-        event_cv.wait(ql, [this] { return work_queue.empty(); });
+        event_cv.wait(ql, [this] {
+#ifdef PS5_NATIVE
+            return work_queue.empty() || static_cast<bool>(::Eden::PeekGpuFailure());
+#else
+            return work_queue.empty();
+#endif
+        });
         --queue_drain_waiters;
+#ifdef PS5_NATIVE
+        if (auto failure = ::Eden::PeekGpuFailure())
+            std::rethrow_exception(failure);
+#endif
     }
 
     // Now wait for execution to finish.
     std::scoped_lock el{execution_mutex};
+#ifdef PS5_NATIVE
+    // In-flight work publishes errors before releasing execution_mutex.
+    if (auto failure = ::Eden::PeekGpuFailure())
+        std::rethrow_exception(failure);
+#endif
 }
 
 void Scheduler::DispatchWork() {
@@ -425,13 +455,25 @@ void Scheduler::WorkerThread(std::stop_token stop_token) {
 
             // Perform the work, tracking whether the chunk was a submission
             // before executing.
-            const bool has_submit = work->HasSubmit();
-            work->ExecuteAll(current_cmdbuf, current_upload_cmdbuf);
+#ifdef PS5_NATIVE
+            try {
+#endif
+                const bool has_submit = work->HasSubmit();
+                work->ExecuteAll(current_cmdbuf, current_upload_cmdbuf);
 
-            // If the chunk was a submission, reallocate the command buffer.
-            if (has_submit) {
-                AllocateWorkerCommandBuffer();
+                // If the chunk was a submission, reallocate the command buffer.
+                if (has_submit) {
+                    AllocateWorkerCommandBuffer();
+                }
+#ifdef PS5_NATIVE
+            } catch (...) {
+                // Publish failure before releasing execution_mutex. A
+                // WaitWorker drain can never mistake this chunk for success.
+                ::Eden::RecordGpuFailure(std::current_exception());
+                event_cv.notify_all();
+                return;
             }
+#endif
         }
 
         {
