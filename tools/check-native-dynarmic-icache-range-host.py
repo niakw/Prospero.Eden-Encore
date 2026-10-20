@@ -13,6 +13,7 @@ FLOW=(ROOT/".github/workflows/encore-core-preflight.yml").read_text()
 assert "python3 -B tools/check-native-dynarmic-icache-range-host.py" in FLOW
 assert "static_cast<u64>(~u32{0})" in PATCH
 assert PATCH.count("+    if (size == 0) {")==2
+assert "@@ -432,6 +432,15 @@" in PATCH and "@@ -458,6 +459,10 @@" in PATCH
 
 def method(text,name):
     anchor=f"void {name}::InvalidateCacheRange(u64 addr, std::size_t size) {{"
