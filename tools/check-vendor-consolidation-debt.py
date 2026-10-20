@@ -1226,7 +1226,20 @@ print("MAINTAINED_IPS_LAYER_SOURCE_PASS pinned_generator_blob=f6687abf")
 # Git blob was derived by applying the single historical CMake raw-string
 # replacement against the pinned Eden texture utility.
 astc_maintained = active / "eden-core/src/video_core/texture_cache/util.cpp"
-check_canonical_git_object(astc_maintained, "8f393887e88d7e38681fea109074338bba5b26fc", "ASTC")
+# Preserve the complete R428 source except named 3D-layout/policy changes.
+import hashlib
+astc_previous = astc_maintained.read_text()
+astc_layout_edits = [
+    ('    u32 output_offset = 0;\n    Common::ScratchBuffer<u8> decode_scratch;\n\n    const Extent2D tile_size = DefaultBlockSize(info.format);', '    if (copies.empty()) {\n        return;\n    }\n    u32 output_offset = 0;\n    Common::ScratchBuffer<u8> decode_scratch;\n\n    // One conversion must use one format policy for all its mip levels.\n    const auto recompression_setting = Settings::values.astc_recompression.GetValue();\n    const bool astc = IsPixelFormatASTC(info.format);\n    const Extent2D tile_size = DefaultBlockSize(info.format);'),
+    ('        const auto recompression_setting = Settings::values.astc_recompression.GetValue();\n        const bool astc = IsPixelFormatASTC(info.format);\n\n        if (astc && recompression_setting == Settings::AstcRecompression::Uncompressed) {', '        if (astc && recompression_setting == Settings::AstcRecompression::Uncompressed) {'),
+    ('                             copy.image_subresource.num_layers *\n                             BytesPerBlock(PixelFormat::A8B8G8R8_UNORM);', '                             copy.image_extent.depth * copy.image_subresource.num_layers *\n                             BytesPerBlock(PixelFormat::A8B8G8R8_UNORM);'),
+    ('                             copy.image_subresource.num_layers *\n                             ConvertedBytesPerBlock(info.format);', '                             copy.image_extent.depth * copy.image_subresource.num_layers *\n                             ConvertedBytesPerBlock(info.format);'),
+]
+for before, after in reversed(astc_layout_edits):
+    assert astc_previous.count(after) == 1, 'texture layout delta drift'
+    astc_previous = astc_previous.replace(after, before)
+astc_blob = astc_previous.encode()
+assert hashlib.sha1(b'blob ' + str(len(astc_blob)).encode() + b'\0' + astc_blob).hexdigest() == '8f393887e88d7e38681fea109074338bba5b26fc', 'unreviewed texture utility drift'
 assert 'list(APPEND video_sources "${EDEN_MAINTAINED_TEXTURE_UTIL}")' in c
 assert 'set(EDEN_MAINTAINED_TEXTURE_UTIL' in c
 assert 'write_derived("${PORT_BUILD_DIR}/texture_cache_util.cpp"' not in c

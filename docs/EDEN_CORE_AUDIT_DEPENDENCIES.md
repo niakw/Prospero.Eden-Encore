@@ -21,6 +21,22 @@ Le passage 400 → 398, 98 → 96 et 411 → 409 provient uniquement de `M08` et
 `V77`, qualifiés pour leur propriété hôte décrite dans les lignes du registre.
 Ils ne certifient pas les freezes, les graphismes ou les frametimes sur PS5.
 
+**Nouveau lot — textures 3D et audio :** le décalage des mipmaps convertis
+inclut désormais la profondeur dans les branches ASTC décompressé et BCn.
+Le témoin extrait de `ConvertImage` reproduit les deux chevauchements anciens
+et vérifie les plages corrigées, les tableaux 2D et la recompression BC1/BC3.
+Ses décodeurs sont des substituts de taille/écriture : la qualité des pixels
+reste à vérifier avec les vrais décodeurs et sur console. La politique de
+recompression est lue une fois par conversion, contre une fois par mip.
+Le tampon d’upmix PCM est réutilisé par thread producteur : **512 → 0
+allocations** sur les 512 blocs d’upmix après amorçage du témoin à deux
+producteurs, avec PCM identique et une seule publication par bloc. Sa capacité
+maximale reste allouée jusqu’à la fin du thread. Les sept contrôles ciblés
+passent, dont les deux nouveaux témoins sous ASan/UBSan ; ils sont intégrés
+aux workflows rapide et exhaustif. La compilation native de ce lot reste à
+terminer ; le paquet précédent reste identifié ci-dessous.
+**Compteurs inchangés : 398 fichiers / 96 P0 / 409 contrats.**
+
 **Suite — métadonnées des transferts GPU :** trois unités Vulkan sont optimisées.
 Sept captures transfèrent leurs tableaux à la commande différée, au lieu de
 les recopier ; les deux téléchargements multiples préallouent aussi leurs
@@ -68,6 +84,8 @@ Mesures des scénarios hôte du lot :
 
 | Travail mesuré | Avant | Après |
 | --- | ---: | ---: |
+| Allocations pour 512 blocs PCM upmix après amorçage | 512 | 0 |
+| Lectures du réglage pour une conversion à trois mips | 3 | 1 |
 | Comparaisons pour 1 024 pages de requêtes monotones | 523 776 | 1 023 |
 | Allocations des copies pour 1 024 destinations GPU | 1 024 | 1 |
 | Capture différée d’une liste de 128 copies | 1 allocation | 0 |

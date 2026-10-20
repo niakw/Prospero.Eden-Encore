@@ -54,6 +54,7 @@ jobs:
           python3 -B tools/check-ps5-pipeline-build-wait.py
           python3 -B tools/check-ps5-pipeline-fairness.py
           python3 -B tools/check-upstream-texture-memory-r428.py
+          python3 -B tools/check-texture-convert-volume-host.py
           python3 -B tools/check-ps5-image-pages-r433.py
           python3 -B tools/check-ps5-guest-texture-write-elision-host.py
           python3 -B tools/check-ps5-texture-invalidation-elision-host.py
@@ -231,6 +232,7 @@ jobs:
           python3 -B tools/check-vendored-guest-title-version.py
           python3 -B tools/check-maintained-logging-loader.py
           python3 -B tools/check-maintained-audio-units.py
+          python3 -B tools/check-audio-upmix-scratch-host.py
           python3 -B tools/check-ps5-title-cache-storage-host.py
           python3 -B tools/check-ps5-shader-local-bounds-host.py
           python3 -B tools/check-native-manual-run-isolation.py
