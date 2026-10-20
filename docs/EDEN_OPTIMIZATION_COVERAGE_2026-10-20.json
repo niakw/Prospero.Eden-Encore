@@ -160,6 +160,14 @@
       "evidence": "Previously maintained GPU/memory performance guard reviewed; Checks monotone interval coverage with overflow-safe extent bounds; conservatively reports only an upper free bound. No additional correction justified without new failing evidence."
     },
     {
+      "path": "headless/encore_performance_policy.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U55",
+      "reviewed_source_git_blob": "fc7d603d74e55b84f41e0e90b0c8516ff7b6c61f",
+      "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
+      "evidence": "Current source inspected: La table des quatre profils est constexpr ; compilation anticipée désactivée dans les builds de référence, et réglages dangereux CPU/DMA/invalidation non activés. Choix déjà conservateur ; ne pas activer de raccourcis risqués pour gagner artificiellement du temps. Rerun this review only on source drift or Nouvelle donnée mesurée établissant un profil réellement trop conservateur."
+    },
+    {
       "path": "headless/error_applet.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U60",
@@ -176,6 +184,14 @@
       "proof_ref": "tools/check-headless-runtime-header-owners.py",
       "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
       "evidence": "Source read: Writable-root capability probe on startup only; no frame-time filesystem check. Contract U35; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
+    },
+    {
+      "path": "headless/game_liveness.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U67",
+      "reviewed_source_git_blob": "446f2ab07896604cf4c46c42509a569ae7bab1a4",
+      "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
+      "evidence": "Current source inspected: Observateur passif ; soupçonne l’absence de progression GPU sans tuer ni relancer le jeu, et plafonne les rapports à quatre par session. Rerun this review only on source drift or Faux signal répétable en jeu ou compteur de progression trompeur."
     },
     {
       "path": "headless/glyph_sha256.h",
@@ -205,9 +221,33 @@
       "evidence": "Previously maintained GPU/memory performance guard reviewed; 32-bit dirty mask split into 2 KiB regions with overflow check before any callback; preserves per-region order. No additional correction justified without new failing evidence."
     },
     {
+      "path": "headless/gpu_failure.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U20",
+      "reviewed_source_git_blob": "dc75e61672f968ae458848def562c5f1ef4a3f04",
+      "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
+      "evidence": "Current source inspected: Verrou autour d’une exception et de son état fatal persistant ; le verrou est sur le signalement et l’observation d’erreur, pas par dessin GPU. Rerun this review only on source drift or Deadlock ou interblocage prouvé autour du verrou fatal."
+    },
+    {
+      "path": "headless/gpu_fault_rate_limit.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U25",
+      "reviewed_source_git_blob": "e8491635b9b817fc37991551bb96c34d54877d9c",
+      "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
+      "evidence": "Current source inspected: Compteurs relaxés, journalisation limitée aux huit premiers puis aux puissances de deux ; aucun verrou ni formatage obligatoire en régime normal hors erreur. Rerun this review only on source drift or Panne montrant une tempête de défauts ou coût excessif du compteur."
+    },
+    {
       "path": "headless/graphics.cpp",
       "disposition": "reviewed_without_new_code_edit",
       "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
+    },
+    {
+      "path": "headless/graphics.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U19",
+      "reviewed_source_git_blob": "6d1a4fe17e1ea638d6de2f0dd07d06aa8792356e",
+      "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
+      "evidence": "Current source inspected: Déclarations de fenêtre et lignes de base des pressions de frame par instance ; pas de travail GPU dans ce header, pas de mémoire globale de mesures entre deux jeux. Rerun this review only on source drift or Défaut de propriété/contexte EGL prouvé dans l’implémentation."
     },
     {
       "path": "headless/heap_pages.cpp",
@@ -217,9 +257,33 @@
       "evidence": "Source-read optimization triage, no additional hotpath edit justified: Heap C bridge already delegates allocation, reservation and rollback to its single owned backend; initial direct-memory provenance is startup-only, no redundant per-allocation lookup found."
     },
     {
+      "path": "headless/hle_counters.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U56",
+      "reviewed_source_git_blob": "85eed229a6d49dba5bb23edea2283368761ea031",
+      "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
+      "evidence": "Current source inspected: Table de 4 096 emplacements, 64 sondes maximum et compteurs atomiques sans mutex sur les commandes HLE déjà enregistrées ; premier enregistrement sérialisé seulement. Rerun this review only on source drift or Profil hôte ou PS5 montrant que les statistiques DEV ralentissent HLE."
+    },
+    {
       "path": "headless/image_pages.h",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "headless/jit-sparse-commit.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "J05",
+      "reviewed_source_git_blob": "e3edecb51e99239d0976c0255e69f4e1919b7c24",
+      "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
+      "evidence": "Current source inspected: Plan de préengagement physique constexpr, borné par capacité virtuelle et budget restant ; ancien contrat hôte J05 déjà acquis. Ce n’est pas une autorisation d’activer le JIT sparse en production. Rerun this review only on source drift or Mesure native de pages sous-engagées ou dépassées."
+    },
+    {
+      "path": "headless/jit-startup-retry.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U22",
+      "reviewed_source_git_blob": "c079d146d267d42fed09f42f3b0394955043ff51",
+      "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
+      "evidence": "Current source inspected: Repli de capacité JIT uniquement lors d’un échec de construction ; réduit par paliers bornés et ne publie pas de pointeur exécutable avant succès. Aucun polling en jeu. Rerun this review only on source drift or Échec d’allocation reproductible malgré la stratégie de repli."
     },
     {
       "path": "headless/network_audit_sockets.c",
@@ -250,11 +314,67 @@
       "evidence": "Source-read optimization triage, no additional hotpath edit justified: Controller input and rumble path has release/acquire pending hint before mutex; no hotpath locking on silent polls, preserve paired publication."
     },
     {
+      "path": "headless/present_interval_witness.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U42",
+      "reviewed_source_git_blob": "afe132ab9c2024a90f80acec28d5cf05b6895689",
+      "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
+      "evidence": "Current source inspected: Témoin de différence entre compteurs cumulés sur deux présentations ; type constexpr sans horloge, allocation ou verrou, branché uniquement aux diagnostics. Rerun this review only on source drift or Écart mesuré entre progression guest et compteur de présentations."
+    },
+    {
+      "path": "headless/ps5_amd_topology_evidence.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U79",
+      "reviewed_source_git_blob": "8c74efd83a6ec09c59055a6de63d6a8cb082a6e3",
+      "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
+      "evidence": "Current source inspected: Validation pure et bornée des données CPUID/APIC ; ne fabrique pas 16 threads à partir d’hypothèses. Fonction PARKED, pas une accélération de scheduler active. Rerun this review only on source drift or Preuve matérielle SMT disponible et vérifiée."
+    },
+    {
+      "path": "headless/ps5_cpu_topology.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U33",
+      "reviewed_source_git_blob": "19986304301b892c47392530cc8c4cc925a286ae",
+      "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
+      "evidence": "Current source inspected: Analyseur de groupe SMT borné à 64 CPU et à 65 536 caractères ; ne publie la topologie qu’après validation complète de la couverture autorisée. Ce n’est pas une boucle par frame. Rerun this review only on source drift or Nouvelle topologie PS5 vérifiée qui démontre un mauvais regroupement."
+    },
+    {
+      "path": "headless/ps5_guest_system_button_route.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U74",
+      "reviewed_source_git_blob": "44fe45a39d2bebb5b5a2ebc6a7dec811b9426a54",
+      "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
+      "evidence": "Current source inspected: L’état HOME est un booléen sans allocation ; la combinaison Touchpad+Options masque les boutons jusqu’au relâchement des deux. Aucun travail d’optimisation identifiable. Rerun this review only on source drift or Reproduction d’une perte de contrôle manette liée à cette route."
+    },
+    {
       "path": "headless/ps5_net_compat.c",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U08",
       "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
       "evidence": "Source-read optimization triage, no additional hotpath edit justified: Native resolver and fcntl compatibility wrappers preserve special console ABI; resolver setup could be profiled but blind caching could change lifecycle and errno."
+    },
+    {
+      "path": "headless/stall_watchdog.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U29",
+      "reviewed_source_git_blob": "2ac43ae31f54618a73655bc160fba8f0cab98fdc",
+      "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
+      "evidence": "Current source inspected: Watchdog compilé seulement en DEV/PS5 ; échantillonne à 1 Hz, journalise sous réglage détaillé. Aucun coût par instruction invitée lorsqu’il est désactivé. Rerun this review only on source drift or Mesure d’une surcharge sur la boucle watchdog DEV."
+    },
+    {
+      "path": "headless/stop_limit.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U15",
+      "reviewed_source_git_blob": "c9679be936ac40821e045704c7c688b00ad66cec",
+      "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
+      "evidence": "Current source inspected: Watchdog de fin de session à condition_variable avec échéance ; thread process-lifetime volontaire pour éviter les races de destruction. Hors hot path des frames. Rerun this review only on source drift or Gel d’arrêt de session corrélé à cet état, pas à HLE."
+    },
+    {
+      "path": "headless/stop_limit.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U16",
+      "reviewed_source_git_blob": "e0c52c641ab357c7f39758fcc61e1aa895eb64d5",
+      "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
+      "evidence": "Current source inspected: Interface réduite à Start/Begin/End et constante de dix secondes ; pas de boucle ni allocation dans le header. Rerun this review only on source drift or Changement documenté de sémantique du délai d’arrêt."
     },
     {
       "path": "headless/storage_paths.h",
@@ -2542,6 +2662,14 @@
       "path": "vendor/encore-active/eden-threading/src/core/hle/kernel/k_thread.cpp",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-threading/src/core/hle/kernel/k_worker_task_manager.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "H35",
+      "reviewed_source_git_blob": "58cc1e9ad5bc00ee8361b9077ada8bd89a2e93fe",
+      "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
+      "evidence": "Current source inspected: Interface mince du worker de tâches kernel, délègue la gestion d’attente au thread worker ; pas de nouvelle allocation ni verrou dans ce header. Rerun this review only on source drift or Attente HLE reproduite avec stack pointant sur le manager."
     },
     {
       "path": "vendor/encore-active/eden-threading/src/core/hle/kernel/svc/svc_address_arbiter.cpp",
