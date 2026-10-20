@@ -1,0 +1,214 @@
+{
+  "schema_version": 1,
+  "description": "Code optimization handling, not validation or inferred need for code edits",
+  "base_commit": "82c531d08641d8b28124bd2cebf37fcf85674179",
+  "snapshot_commit": "05846723c40c4ebfc593b4be2e3496079c25167c",
+  "owned_code_count_at_snapshot": 538,
+  "handled_paths": [
+    {
+      "path": "headless/buffer_pages.h",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "headless/graphics.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
+    },
+    {
+      "path": "headless/image_pages.h",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "src/host_memory.cpp",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/overrides/core/device_memory_manager.inc",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/overrides/core/gpu_dirty_memory_manager.h",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/audio_core/sink/sink_stream.cpp",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/common/fiber.cpp",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/kernel/physical_core_dev.cpp",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/kernel/physical_core_standard.cpp",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_emit_x64_standard.cpp",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/buffer_cache/buffer_cache.h",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/memory_manager.cpp",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/texture_cache/util.cpp",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-gpu/gpu_thread_dev.cpp",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-gpu/gpu_thread_quiet.cpp",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-gpu/include/common/bounded_threadsafe_queue.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "evidence": "Source-level P0 optimization triage; docs/EDEN_OPTIMIZATION_REVIEW_MESA_VULKAN_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/eden-gpu/include/video_core/gpu_thread.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/eden-threading/src/core/hle/kernel/k_address_arbiter.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/eden-threading/src/core/hle/kernel/k_condition_variable.cpp",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-threading/src/core/hle/kernel/k_thread.cpp",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/pipeline_helper.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_present_manager.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_scheduler.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_update_descriptor.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vk_buffer_cache_cost.cpp",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vk_fence_manager_cost.cpp",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "evidence": "Source-level P0 optimization triage; docs/EDEN_OPTIMIZATION_REVIEW_MESA_VULKAN_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vk_texture_cache_cost.cpp",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vulkan_blit_screen.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vulkan_descriptor_buffer.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vulkan_device.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vulkan_present_layer.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "evidence": "Source-level P0 optimization triage; docs/EDEN_OPTIMIZATION_REVIEW_MESA_VULKAN_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vulkan_query_cache.cpp",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "evidence": "Source-level P0 optimization triage; docs/EDEN_OPTIMIZATION_REVIEW_MESA_VULKAN_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vulkan_renderer.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vulkan_window_adapt_pass.cpp",
+      "disposition": "code_changed_in_batch",
+      "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/ps5-mesa/src/amd/vulkan/winsys/ps5/radv_ps5_winsys.c",
+      "disposition": "reviewed_without_new_code_edit",
+      "evidence": "Source-level P0 optimization triage; docs/EDEN_OPTIMIZATION_REVIEW_MESA_VULKAN_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/ps5-mesa/src/vulkan/wsi/wsi_common_videoout.c",
+      "disposition": "reviewed_without_new_code_edit",
+      "evidence": "Source-level P0 optimization triage; docs/EDEN_OPTIMIZATION_REVIEW_MESA_VULKAN_2026-10-20.md"
+    }
+  ]
+}

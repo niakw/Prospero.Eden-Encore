@@ -51,3 +51,11 @@ optimisation s'avérera nécessaire est **encore inconnu** sans examen
 effectif de l'ensemble de la cartographie (538 chemins). Ce document
 présente un chiffre exact et vérifiable **pour les besoins identifiés**,
 et non un faux « reste = total des fichiers non validés ».
+
+## Couverture d'optimisation de code — compteur principal de traitement
+
+Au HEAD `05846723c` (optimisation GPU `db6b6a6` et réparation CI `0584672`), l'inventaire versionné `tools/audit-cloud-worklist.py` recense **538 sources/en-têtes maintenus** sous `headless/`, `src/`, `vendor/encore-active/`. Par comparaison GitHub avec `82c531d08` : **23 chemins de code réellement modifiés**, sans prétendre qu'ils sont tous des gains de performance. Les revues P0 antérieures ajoutent **12 chemins actifs examinés sans modification** (13 chemins recensés, dont un recouvert par les 23), et la nouvelle [revue de six chemins GPU/Mesa](EDEN_OPTIMIZATION_REVIEW_MESA_VULKAN_2026-10-20.md) ajoute **6 chemins sans nouveau correctif**.
+
+**Couverture effective : 41 fichiers de code traités/examinés ; reste à traiter dans le chantier d'optimisation : 497 fichiers (538 − 41).**
+
+Cette mesure est un **compteur de travail d'optimisation**, pas de validation. Chaque nouveau fichier analysé pour ses points chauds ou corrigé une seule fois doit être ajouté au [manifeste des propriétaires](EDEN_OPTIMIZATION_COVERAGE_2026-10-20.json) : il fait alors baisser le compteur même s'il ne nécessite pas de patch. Cela évite de fabriquer des optimisations inutiles simplement pour faire diminuer un chiffre. Le nombre de fichiers qui **nécessitent impérativement un changement C++** reste inconnu jusqu'à leur diagnostic. Contrôle CI : `python3 -B tools/check-eden-optimization-coverage.py`.
