@@ -21,6 +21,19 @@ Le passage 400 → 398, 98 → 96 et 411 → 409 provient uniquement de `M08` et
 `V77`, qualifiés pour leur propriété hôte décrite dans les lignes du registre.
 Ils ne certifient pas les freezes, les graphismes ou les frametimes sur PS5.
 
+**Suite — recyclage des métadonnées de samples :** les deux listes de résultats
+sont réutilisées après copie dans les commandes différées. Le témoin hôte
+mesure **820 → 0 allocations après amorçage sur 128 lots**. Il exécute les
+fragments réels de préparation/conversion/recyclage et la méthode `SyncWrites`
+complète, avec sorties et drapeaux identiques sous ASan/UBSan. Lots vides,
+appels répétés, remplacement avant consommation et trois exclusions de pilotes
+sont couverts. Le témoin existant de `SyncValues` vérifie séparément la possession
+des copies différées. La capacité maximale observée de chacune des deux listes
+reste allouée jusqu’à la destruction du streamer ; allocation initiale et
+agrandissements demeurent possibles. Les six contrôles ciblés et le rejeu passent.
+La compilation native de ce lot reste à terminer. **398 / 96 / 409** restent à
+qualifier selon leurs critères, sans mesure de frametime ou de progression PS5.
+
 **Suite — synchronisation TFB :** une seule recherche de banque remplace
 `try_emplace` suivi de `operator[]`. Le témoin extrait la vraie méthode
 `SyncWrites` et utilise la table Boost épinglée avec un hasher instrumenté
@@ -118,6 +131,7 @@ Mesures des scénarios hôte du lot :
 
 | Travail mesuré | Avant | Après |
 | --- | ---: | ---: |
+| Allocations de métadonnées samples sur 128 lots après amorçage | 820 | 0 |
 | Hashs TFB pour 1 024 requêtes / 1 banque | 2 048 | 1 024 |
 | Hashs TFB pour 1 024 requêtes / 32 banques | 2 077 | 1 053 |
 | Allocations par présentation Vulkan avec une couche | 6 | 0 |

@@ -14,6 +14,12 @@ edits=next(ast.literal_eval(n.value) for n in tree.body if isinstance(n,ast.Assi
            and any(isinstance(t,ast.Name) and t.id=='tfb_sync_edits' for t in n.targets))
 current=(active/'vulkan_query_cache.cpp').read_text()
 previous=current
+# Retain the earlier full-file oracle after the explicit samples scratch delta.
+recycle_edits=next(ast.literal_eval(n.value) for n in tree.body if isinstance(n,ast.Assign)
+                  and any(isinstance(t,ast.Name) and t.id=='samples_recycle_edits' for t in n.targets))
+for old,new in reversed(recycle_edits):
+    assert previous.count(new)==1
+    previous=previous.replace(new,old)
 for old,new in reversed(edits):
     assert previous.count(new)==1
     previous=previous.replace(new,old)

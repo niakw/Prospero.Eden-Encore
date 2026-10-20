@@ -6,6 +6,21 @@ pas une CI distante ni un binaire PS5 qualifié.
 **Compteur courant : 398 fichiers / 96 P0 / 409 contrats.**
 Les chiffres 400 / 98 / 411 ci-dessous décrivent le relevé initial.
 
+**Suite samples : hôte et rejeu vérifiés, compilation native à terminer.**
+Les deux listes de métadonnées de résultats GPU sont recyclées après consommation
+par `SyncValues`, qui possède les copies différées. Le témoin extrait les fragments
+réels de préparation/conversion/recyclage et toute la méthode `SyncWrites` :
+**820 → 0 allocations après amorçage sur 128 lots**, métadonnées, ordre d’envoi
+et drapeaux identiques sous ASan/UBSan. Il couvre aussi lots vides, appels répétés,
+remplacement avant consommation et trois exclusions de pilotes. La preuve de
+possession des copies de `SyncValues` reste assurée séparément par son vrai code.
+Chaque liste garde sa capacité maximale jusqu’à destruction du streamer ; les
+premières allocations et agrandissements ne sont pas supprimés.
+Les six contrôles ciblés passent, ainsi que le rejeu exact du fichier modifié
+(les quatre différences historiques non concernées sont conservées).
+Preuves locales : `results/samples-scratch-batch-2026-10-20/host-summary.json`
+et `replay-verified.json`. Compteurs **398 / 96 / 409**, sans preuve console ajoutée.
+
 **Dernier lot publié : `0b3e0436e5` — hôte, rejeu et paquet natif vérifiés.**
 La synchronisation des compteurs transform feedback utilise directement le
 résultat d’insertion dans la table des banques, supprimant une recherche par

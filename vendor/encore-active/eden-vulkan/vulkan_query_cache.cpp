@@ -231,7 +231,7 @@ public:
                                                         *buffers[resolve_buffers[i]]);
         }
 
-        sync_values_stash.clear();
+        RecycleSyncValues();
     }
 
     void PresyncWrites() override {
@@ -243,11 +243,11 @@ public:
         if (driver_id == VK_DRIVER_ID_QUALCOMM_PROPRIETARY ||
             driver_id == VK_DRIVER_ID_ARM_PROPRIETARY || driver_id == VK_DRIVER_ID_MESA_TURNIP) {
             pending_sync.clear();
-            sync_values_stash.clear();
+            RecycleSyncValues();
             return;
         }
-        sync_values_stash.clear();
-        sync_values_stash.emplace_back();
+        RecycleSyncValues();
+        sync_values_stash.emplace_back().swap(sync_values_cache[0]);
         std::vector<HostSyncValues>* sync_values = &sync_values_stash.back();
         // A pending query contributes at most one result. Cap the slot-based
         // estimate without enlarging it when many queries share a few slots.
@@ -303,7 +303,7 @@ public:
             if (accumulation_since_last_sync || query->size_slots > 1) {
                 if (!has_multi_queries) {
                     has_multi_queries = true;
-                    sync_values_stash.emplace_back();
+                    sync_values_stash.emplace_back().swap(sync_values_cache[1]);
                 }
                 sync_value_slot = 1;
             }
@@ -412,6 +412,18 @@ public:
     }
 
 private:
+    // SyncValues copies result metadata into its own deferred command before
+    // returning. Keep the two producer vectors for the next batch instead of
+    // repeatedly freeing their backing allocations.
+    void RecycleSyncValues() {
+        ASSERT(sync_values_stash.size() <= sync_values_cache.size());
+        for (size_t i = 0; i < sync_values_stash.size(); ++i) {
+            sync_values_stash[i].swap(sync_values_cache[i]);
+            sync_values_cache[i].clear();
+        }
+        sync_values_stash.clear();
+    }
+
     template <typename Func>
     void ApplyBankOp(VideoCommon::HostQueryBase* query, Func&& func) {
         size_t size_slots = query->size_slots;
@@ -592,6 +604,7 @@ private:
     std::array<size_t, 32> intermediary_table{};
     vk::Buffer accumulation_buffer;
     std::deque<std::vector<HostSyncValues>> sync_values_stash;
+    std::array<std::vector<HostSyncValues>, 2> sync_values_cache;
     std::vector<size_t> resolve_buffers;
 
     // syncing queue
