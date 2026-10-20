@@ -1,5 +1,7 @@
 # Eden Encore — Project Memory
 
+- HLE SUSPENSION HOTPATH (20 October): new native source change in `KThread::UpdateState` suppresses identical relaxed atomic state stores under the scheduler lock while retaining all changed-state notifications. `tools/check-native-hle-suspend-noop-host.py` exercises pinned/maintained C++ under ASan/UBSan across 100 state/flag pairs plus 100 repeat calls; full pinned source parity oracle updated. H19 remains SOURCE pending guest progress proof; this does not certify FC27 freeze recovery. Backlog stays 397 distinct files / 95 P0 / 408 contracts pending host/native qualification. See `docs/FC27_NATIVE_FRAME_PROGRESS_TRIAGE_2026-10-17.md`.
+
 - LATEST FENCE HOST QUALIFICATION (20 October): V16's actual maintained/pinned `InnerFence::Queue`, `IsSignaled`, `Wait` and FenceManager delegation are exercised together under ASan/UBSan by `tools/check-vulkan-fence-completed-wait-host.py`. It validates stubbed fences, queued tick capture, pending waits and completed-tick elision; it does **not** prove native GPU timing, resumed guest frames or FC27 freeze relief. Register HOST 62, SOURCE 393, OPEN 15, PARKED 8; **397 files / 95 P0 files / 408 SOURCE+OPEN contracts remain**. Earlier 398/96/409 notes below are historical snapshots. Only the designated development branch is used.
 
 > Continuity file for work on `niakw/Prospero.Eden-Encore`.

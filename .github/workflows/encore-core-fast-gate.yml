@@ -24,6 +24,7 @@ on:
       - 'tools/check-native-hle-wait-null-queue-host.py'
       - 'tools/check-native-hle-wait-queue-publication-host.py'
       - 'tools/check-native-hle-state-transition-fastpath-host.py'
+      - 'tools/check-native-hle-suspend-noop-host.py'
       - 'tools/verify/hle/**'
       - 'tools/check-vulkan-multirange-overflow-host.py'
       - 'tools/check-vulkan-fence-completed-wait-host.py'
@@ -120,6 +121,7 @@ jobs:
           set -euo pipefail
           python3 -B tools/check-native-hle-wait-queue-publication-host.py
           python3 -B tools/check-native-hle-state-transition-fastpath-host.py
+          python3 -B tools/check-native-hle-suspend-noop-host.py
           python3 -B tools/check-native-hle-wait-null-queue-host.py
           python3 -B tools/check-native-hle-cv-key-write-host.py
           python3 -B tools/verify/hle/check-native-hle-condvar-access-host.py
