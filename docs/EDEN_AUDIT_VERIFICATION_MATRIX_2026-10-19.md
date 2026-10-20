@@ -28,20 +28,20 @@ preuve `HOST` invoquée en CI disparaît.
 
 | État | Contrats | Preuve acquise |
 |---|---:|---|
-| HOST | 61 | Invariant précis sur hôte ; **pas** de jeu sur console |
-| SOURCE | 394 | Source étudiée, comportement natif non qualifié |
+| HOST | 62 | Invariant précis sur hôte ; **pas** de jeu sur console |
+| SOURCE | 393 | Source étudiée, comportement natif non qualifié |
 | OPEN | 15 | Question de comportement/propriété non résolue |
 | PARKED | 8 | Expérimentation suspendue, ne pas activer |
 | **Total** | **478** | **0 certification de gain de FPS par ce registre** |
 
-**398 chemins distincts SOURCE + OPEN** (dont **96 chemins P0** et
-**279 dans `vendor/encore-active`**) correspondent à **409 critères SOURCE + OPEN**, dont **101 P0**, ont encore besoin
+**397 chemins distincts SOURCE + OPEN** (dont **95 chemins P0** et
+**278 dans `vendor/encore-active`**) correspondent à **408 critères SOURCE + OPEN**, dont **100 P0**, ont encore besoin
 d'une qualification supplémentaire. Leur présence n'invalide pas les
 corrections hôte : elle interdit seulement d'affirmer que leurs
 performances ou leur effet sur les freezes sont démontrés.
 
-Sur les **398 références à un script Python** parmi les preuves des
-contrats, **382 sont appelées directement** par la prévalidation et
+Sur les **399 références à un script Python** parmi les preuves des
+contrats, **383 sont appelées directement** par la prévalidation et
 **16 ne le sont pas directement** (15 SOURCE et 1 OPEN). Les 16
 références correspondent à quatre chemins distincts :
 
@@ -66,7 +66,7 @@ Le témoin de provenance `tools/install-vendored-surface-lifecycle.py
 --check` est désormais directement exécuté et a réussi sur la CI
 [39316703898](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39316703898).
 
-Les **80 autres références** pointent vers des documents, recettes
+Les **79 autres références** pointent vers des documents, recettes
 CMake, patches ou autres fichiers non exécutables : existence et
 ancres documentaires ne constituent **pas** un benchmark.
 
@@ -210,3 +210,15 @@ Les compteurs recalculés sont **398 chemins SOURCE ou OPEN**, dont
 n'attestent ni disparition des gels sur console ni gains de FPS.
 Le paquet natif documenté correspond au lot de code `7ab0279711`
 et non à un test matériel des jeux.
+
+## 20 octobre — qualification hôte du protocole de fences V16
+
+Le témoin `tools/check-vulkan-fence-completed-wait-host.py` exécute désormais
+les méthodes source-extraites `InnerFence::Queue`, `IsSignaled`, `Wait`,
+`FenceManager::QueueFence`, `IsFenceSignaled` et `WaitFence` des versions
+épinglée et maintenue sous ASan/UBSan. Il couvre la fence neutralisée,
+le tick capturé lors de la mise en file, l'attente réellement nécessaire,
+la réutilisation du tick complété et les appels par le gestionnaire.
+La propriété HOST `V16` est limitée à ce protocole ; le comportement du
+sémaphore GPU natif, la progression de FC27, les freezes et FPS PS5
+restent non certifiés. Total actuel : **397 fichiers / 95 P0 / 408 contrats**.

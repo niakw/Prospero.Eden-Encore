@@ -1,5 +1,7 @@
 # Eden Encore — Project Memory
 
+- LATEST FENCE HOST QUALIFICATION (20 October): V16's actual maintained/pinned `InnerFence::Queue`, `IsSignaled`, `Wait` and FenceManager delegation are exercised together under ASan/UBSan by `tools/check-vulkan-fence-completed-wait-host.py`. It validates stubbed fences, queued tick capture, pending waits and completed-tick elision; it does **not** prove native GPU timing, resumed guest frames or FC27 freeze relief. Register HOST 62, SOURCE 393, OPEN 15, PARKED 8; **397 files / 95 P0 files / 408 SOURCE+OPEN contracts remain**. Earlier 398/96/409 notes below are historical snapshots. Only the designated development branch is used.
+
 > Continuity file for work on `niakw/Prospero.Eden-Encore`.
 > Read this file before changing architecture, UX, build/release behaviour or performance policy.
 > Keep it concise but authoritative. Update it whenever a project-level decision changes.

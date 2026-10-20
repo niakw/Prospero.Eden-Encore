@@ -16,9 +16,13 @@ any operation, and avoid unrelated files.
 
 ## Avancement courant — lot cloud du 20 octobre 2026
 
-**Reste à qualifier : 398 fichiers, dont 96 P0, pour 409 contrats.**
-Le passage 400 → 398, 98 → 96 et 411 → 409 provient uniquement de `M08` et
+**Reste à qualifier : 397 fichiers, dont 95 P0, pour 408 contrats.**
+Le passage initial 400 → 398, 98 → 96 et 411 → 409 provenait uniquement de `M08` et
 `V77`, qualifiés pour leur propriété hôte décrite dans les lignes du registre.
+Le contrat P0 `V16` est maintenant qualifié HOST pour le seul protocole hôte
+Queue/IsSignaled/Wait/FenceManager testé sur les méthodes C++ réelles sous ASan/UBSan :
+398 → 397 fichiers, 96 → 95 P0, 409 → 408 contrats. Il n'établit toujours
+pas la durée des attentes natives ni une disparition du gel FC27.
 Ils ne certifient pas les freezes, les graphismes ou les frametimes sur PS5.
 
 **Suite — recyclage des métadonnées de samples :** les deux listes de résultats
@@ -236,16 +240,16 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
 | Graphe connu | 478 | 455 | 959 |
-| HOST — preuve ciblée hôte | 61 | 56 | 124 |
-| SOURCE — lecture effectuée, preuve insuffisante | 394 | 384 | 796 |
+| HOST — preuve ciblée hôte | 62 | 57 | 127 |
+| SOURCE — lecture effectuée, preuve insuffisante | 393 | 383 | 793 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 8 | 8 | 11 |
-| **Encore à qualifier (SOURCE + OPEN)** | **409** | **398** | **824** |
-| Dont priorité P0 (SOURCE + OPEN) | 101 | 96 | 231 |
+| **Encore à qualifier (SOURCE + OPEN)** | **408** | **397** | **821** |
+| Dont priorité P0 (SOURCE + OPEN) | 100 | 95 | 228 |
 
-Le **noyau restant** compte donc 409 critères répartis sur
-398 fichiers et 824 mentions fonction/contrat :
-15 OPEN et 394 SOURCE.
+Le **noyau restant** compte donc 408 critères répartis sur
+397 fichiers et 821 mentions fonction/contrat :
+15 OPEN et 393 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
@@ -581,7 +585,7 @@ function/contract tokens are checked by CI for existence only; the
 | V13 | P1 | V12 | vendor/sources/eden/src/video_core/renderer_opengl/renderer_opengl.cpp | RendererOpenGL::Composite | SOURCE | tools/check-vendor-consolidation-debt.py | Pinned OpenGL renderer source was copied byte-for-byte by an unnecessary CMake generator; original source now stays in video_core, no native runtime renderer validation inferred | 🟡 Source étudiée |
 | V14 | P1 | V13 | vendor/encore-active/eden-core/src/video_core/renderer_opengl/gl_buffer_cache.cpp | BufferCacheRuntime::ClearBuffer | SOURCE | tools/check-vendor-consolidation-debt.py | Former one-replacement GL_RED_INTEGER unit maintained and source-selected under EDEN_PS5_OPENGL; no console proof | 🟡 Source étudiée |
 | V15 | P1 | V14 | vendor/encore-active/eden-core/src/video_core/renderer_opengl/gl_query_cache.cpp | CachedQuery::Flush | SOURCE | tools/check-vendor-consolidation-debt.py | Former query slicing bypass maintained and source-selected only with native OpenGL; no console proof | 🟡 Source étudiée |
-| V16 | P0 | V01,V02 | vendor/encore-active/eden-vulkan/vk_fence_manager_cost.cpp | InnerFence::Wait; FenceManager::WaitFence; FenceManager::QueueFence | SOURCE | headless/vulkan.cmake | Distinguish stubbed fences from scheduler completion stalls; source indexed, no native proof | 🟡 Source étudiée |
+| V16 | P0 | V01,V02 | vendor/encore-active/eden-vulkan/vk_fence_manager_cost.cpp | InnerFence::Wait; FenceManager::WaitFence; FenceManager::QueueFence | HOST | tools/check-vulkan-fence-completed-wait-host.py | Hôte: Queue, IsSignaled, Wait et délégation FenceManager extraits des sources maintenue/épinglée, exécutés sous ASan/UBSan; fence stubbed sans Flush/Wait, tick mémorisé, attente requise conservée, ticks déjà complétés sans Wait redondant. Durée des sémaphores natifs, progression du jeu, freeze et FPS PS5 non qualifiés | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-vulkan-fence-completed-wait-host.py) |
 | V17 | P0 | V05,V16 | vendor/encore-active/eden-vulkan/vk_descriptor_buffer_cost.cpp | DescriptorBufferRing::PreflightFrameReuse; DescriptorBufferRing::PreflightCapacity; DescriptorBufferRing::Allocate | HOST | tools/check-ps5-descriptor-conditional-reuse-host.py | Hôte: prévalidation frame/capacité et allocation réelles testées sous ASan/UBSan, fichier instrumenté relié au générateur; repli Finish sous verrou conservé, progression GPU/FPS PS5 non qualifiés | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-ps5-descriptor-conditional-reuse-host.py) |
 | V18 | P1 | V07,V17 | vendor/encore-active/eden-vulkan/vk_compute_pipeline_cost.cpp | ComputePipeline::Configure | SOURCE | headless/vulkan.cmake | Verify compute descriptor queue acquire and binding ownership; source indexed, no native proof | 🟡 Source étudiée |
 | V19 | P0 | V05,V16 | vendor/encore-active/eden-vulkan/vk_texture_cache_cost.cpp | TextureCacheRuntime::DownloadStagingBuffer; TextureCacheRuntime::ReinterpretImage; TextureCacheRuntime::GetValidResolveShadow | SOURCE | headless/vulkan.cmake | Verify download staging and MSAA resolve shadow lifetime; source indexed, no native proof | 🟡 Source étudiée |
