@@ -4,6 +4,7 @@
 // SPDX-FileCopyrightText: Copyright 2019 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+#include <algorithm>
 #include <memory>
 #include <array>
 #include <chrono>
@@ -253,10 +254,14 @@ void Scheduler::BeginRenderPassImpl(const Framebuffer* framebuffer, VkRenderPass
     }
 
     std::array<VkClearValue, 9> values{};
-    for (u32 i = 0; i < clear_value_count && i < values.size(); ++i) {
+    // The Vulkan pointer below owns exactly these nine entries. Never publish
+    // the caller's unchecked clearValueCount after clipping the copy.
+    const u32 bounded_clear_value_count =
+        clear_values ? (std::min)(clear_value_count, static_cast<u32>(values.size())) : 0;
+    for (u32 i = 0; i < bounded_clear_value_count; ++i) {
         values[i] = clear_values[i];
     }
-    Record([renderpass, framebuffer_handle, render_area, values, clear_value_count](
+    Record([renderpass, framebuffer_handle, render_area, values, bounded_clear_value_count](
                vk::CommandBuffer cmdbuf) {
         const VkRenderPassBeginInfo renderpass_bi{
             .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -268,8 +273,8 @@ void Scheduler::BeginRenderPassImpl(const Framebuffer* framebuffer, VkRenderPass
                     .offset = {.x = 0, .y = 0},
                     .extent = render_area,
                 },
-            .clearValueCount = clear_value_count,
-            .pClearValues = clear_value_count != 0 ? values.data() : nullptr,
+            .clearValueCount = bounded_clear_value_count,
+            .pClearValues = bounded_clear_value_count != 0 ? values.data() : nullptr,
         };
         cmdbuf.BeginRenderPass(renderpass_bi, VK_SUBPASS_CONTENTS_INLINE);
     });
