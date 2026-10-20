@@ -145,7 +145,16 @@ def build_matrix(rows: list[dict], workflow: str, catalog: str) -> tuple[list[di
                 if r["evidence_kind"] == "python-not-directly-in-preflight"]
     undirect = sorted(set(r["evidence"] for r in indirect))
     assert sum(statuses.values()) == len(rows)
-    assert statuses["HOST"] == 33, "HOST claims changed: review evidence before modifying guard"
+    # Each new HOST claim needs a precise in-CI proof and native-limit statement.
+    assert statuses["HOST"] == 45, "HOST claims changed: review evidence before modifying guard"
+    ownership_closures = set(["B06","B07","B08","B09","B10","B12","B13","B15","B17","B18","B19","B20"])
+    for row in rows:
+        if row["id"] not in ownership_closures:
+            continue
+        assert row["status"] == "HOST" and row["priority"] == "P1", row["id"]
+        assert row["evidence_kind"] == "python-in-preflight", row["id"]
+        assert "Hôte:" in row["acceptance"] and "PS5" in row["acceptance"], row["id"]
+    assert len(ownership_closures) == 12
     assert all(r["status"] != "HOST" for r in indirect)
     assert not any(r["native_game_validation"] or r["measured_frametime_improvement"]
                    for r in rows), "host coverage cannot certify console performance"
