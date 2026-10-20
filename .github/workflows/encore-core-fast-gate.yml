@@ -27,6 +27,7 @@ on:
       - 'tools/verify/hle/**'
       - 'tools/check-vulkan-multirange-overflow-host.py'
       - 'tools/check-vulkan-fence-completed-wait-host.py'
+      - 'tools/check-vulkan-buffer-frame-tick-snapshot-host.py'
       - 'tools/check-ps5-quad-index-initial-fence-host.py'
       - 'tools/check-vulkan-renderpass-clear-bounds-host.py'
       - 'tools/check-vulkan-worker-fatal-drain-host.py'
@@ -83,6 +84,7 @@ jobs:
           python3 -B tools/check-vulkan-renderpass-clear-bounds-host.py
           python3 -B tools/check-vulkan-multirange-overflow-host.py
           python3 -B tools/check-vulkan-fence-completed-wait-host.py
+          python3 -B tools/check-vulkan-buffer-frame-tick-snapshot-host.py
           python3 -B tools/check-ps5-quad-index-initial-fence-host.py
           python3 -B tools/check-vulkan-worker-fatal-drain-host.py
           python3 -B tools/check-vulkan-query-allocation-host.py
