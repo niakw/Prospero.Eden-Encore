@@ -6,7 +6,7 @@ pas une CI distante ni un binaire PS5 qualifié.
 **Compteur courant : 398 fichiers / 96 P0 / 409 contrats.**
 Les chiffres 400 / 98 / 411 ci-dessous décrivent le relevé initial.
 
-**Suite présentation Vulkan : hôte vérifié, compilation native à terminer.**
+**Dernier lot publié : `67c0a42c55` — hôte et paquet natif vérifiés.**
 Les constantes, descripteurs et pipelines de chaque couche partagent une liste
 possédée par la commande différée. Sa première entrée est stockée sans tas :
 **6 → 0 allocations** pour une couche ; **6 → 1** pour 2/8/32 couches dans le témoin.
@@ -22,7 +22,19 @@ les quatre écarts historiques non concernés restent inchangés. Voir
 Les compteurs restent **398 / 96 / 409** ; les pixels GPU réels et frametimes PS5
 ne sont pas qualifiés par ces comparaisons de commandes hôte.
 
-**Dernier lot publié : `fa30dc23e4` — contrôles hôte et paquet natif réussis.**
+Le build release et le paquet de `67c0a42c55421b69408ded6826d20c196df5da3d` passent après sept
+étapes incrémentales. Tous les contrôles après compilation restent activés :
+sparse 379 objets, verrou JIT 200 000 opérations et code machine, liaison
+RADV/OpenGL/ABI, inventaire, imports, alignement et intégrité. Le SHA est
+présent dans `build/headless-native/eboot.elf`. Aucun build actif.
+`eboot.bin` : `d118347e18735bd4e5d666dade2d9021af2d25a1723941a9b8071f1a58833361`.
+Journal : `/workspace/shared/eden-native-package-present-storage.log` ; preuve :
+`results/present-storage-batch-2026-10-20/native-package.json`.
+Depuis la reprise `82c531d`, 19 fichiers C/C++ maintenus/headless/src ont changé
+(correctifs, optimisations et variantes) ; les deux derniers lots concernent
+trois de ces propriétaires. Le compteur de qualification reste 398 / 96 / 409.
+
+**Lot textures/audio précédent : `fa30dc23e4` — hôte et paquet natif réussis.**
 Deux propriétaires maintenus changent. Les décalages des mipmaps ASTC décompressés
 et BCn incluent la profondeur ; les anciennes branches se recouvraient en 3D.
 Le témoin compile la vraie méthode avec des décodeurs substitués qui écrivent

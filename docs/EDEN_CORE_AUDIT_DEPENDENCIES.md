@@ -21,6 +21,14 @@ Le passage 400 → 398, 98 → 96 et 411 → 409 provient uniquement de `M08` et
 `V77`, qualifiés pour leur propriété hôte décrite dans les lignes du registre.
 Ils ne certifient pas les freezes, les graphismes ou les frametimes sur PS5.
 
+**Avancement des sources depuis la reprise `82c531d` : 19 fichiers C/C++
+modifiés**, incluant optimisations, correctifs et variantes maintenues, plus
+les recettes de compilation et contrôles associés. Le compteur 398 / 96 / 409
+mesure les fichiers et contrats restant à qualifier selon leurs critères.
+Les deux lots les plus récents traitent trois propriétaires C/C++ : textures,
+audio et présentation Vulkan. L’inventaire couvre toujours 538 chemins C/C++,
+dont 83 fichiers possédés hors du graphe des contrats.
+
 **Suite — présentation Vulkan :** les trois tableaux par image sont regroupés
 dans une liste de couches, transférée à la commande différée. Une couche tient
 directement dans la liste : **6 → 0 allocations par présentation** dans le témoin.
@@ -30,8 +38,9 @@ HUD absent/texte/chargement), trois images différées, ordre des commandes et
 données identiques, destruction des données appelantes, débordement et réemploi
 des blocs. Les cinq autres contrôles ciblés passent ; le premier essai du nouveau
 témoin a nécessité l’alignement de sa politique de warnings Vulkan sur le build
-natif. La compilation native de cette suite reste à terminer. Pas de clôture
-supplémentaire de contrat graphique ou de frametime sur ces seules preuves.
+natif. Le build release et le paquet de `67c0a42c55` passent après sept étapes
+incrémentales, tous les contrôles après compilation activés et SHA vérifié
+dans l’ELF. Les contrats graphiques et de frametime conservent leurs critères.
 
 **Nouveau lot — textures 3D et audio :** le décalage des mipmaps convertis
 inclut désormais la profondeur dans les branches ASTC décompressé et BCn.
@@ -68,7 +77,7 @@ scheduler ; bornage et réduction des lectures du bitmap fastmem ; fusion
 linéaire des requêtes GPU ; remise en cohérence de la mémoire GPU native et
 réutilisation de l’adresse physique validée ; clear DMA en octets ; corrections
 de compilation native. L’application et son paquet natif passent les contrôles
-locaux sur `fa30dc23e4` (dernière suite). Les preuves et
+locaux sur `67c0a42c55` (dernière suite). Les preuves et
 limites sont détaillées dans [le rapport du lot](EDEN_CLOUD_AUDIT_2026-10-20.md).
 
 **Optimisations supplémentaires vérifiées sur hôte en fin de lot :**
@@ -82,7 +91,7 @@ ces copies sous le verrou. Le vrai code des fibres effectue 128 transferts
 sur deux threads : environ 2 Mio contre 4 Mio alloués par fibre invitée,
 et zéro pile dédiée aux fibres hôtes. Ces mesures ne sont pas des FPS PS5.
 Les 23 unités du précontrôle syntaxique PS5 passent. Le build release complet
-et le paquet courant de `fa30dc23e4` sont validés hors console : 379 dépendances sparse,
+et le paquet courant de `67c0a42c55` sont validés hors console : 379 dépendances sparse,
 code machine du verrou JIT, liaison RADV/OpenGL, inventaire, imports et alignement.
 Le SHA publié est présent dans le binaire ; les commits documentaires suivants
 ne modifient pas ce code. Aucun résultat de CI distante n’est revendiqué.
