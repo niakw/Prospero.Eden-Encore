@@ -6,7 +6,7 @@ pas une CI distante ni un binaire PS5 qualifié.
 **Compteur courant : 398 fichiers / 96 P0 / 409 contrats.**
 Les chiffres 400 / 98 / 411 ci-dessous décrivent le relevé initial.
 
-**Lot textures/audio suivant : contrôles hôte réussis, compilation native à terminer.**
+**Dernier lot publié : `fa30dc23e4` — contrôles hôte et paquet natif réussis.**
 Deux propriétaires maintenus changent. Les décalages des mipmaps ASTC décompressés
 et BCn incluent la profondeur ; les anciennes branches se recouvraient en 3D.
 Le témoin compile la vraie méthode avec des décodeurs substitués qui écrivent
@@ -25,6 +25,16 @@ Les deux témoins ASan/UBSan et cinq contrôles de parité/inventaire/syntaxe pa
 Résultats locaux : `results/texture-audio-batch-2026-10-20/host-summary.json`.
 Les workflows rapide et exhaustif les intègrent. **398 / 96 / 409** restent ouverts
 à la qualification : ces preuves ne mesurent ni les frametimes PS5 ni les gels.
+
+Le build release et le paquet natif de `fa30dc23e4c77af12d0b7d671e0d28282b7c295e` passent,
+après neuf étapes incrémentales, avec tous les contrôles après compilation
+activés : sparse 379 objets, verrou JIT 200 000 opérations/code machine,
+RADV/OpenGL/ABI, inventaire, imports, alignement et intégrité du paquet.
+Le SHA source a été retrouvé dans `build/headless-native/eboot.elf`.
+`eboot.bin` : `09d495e4112243866899e044e1398700bbf28cdb1a95b42d087f8dac2baad650`.
+Journal : `/workspace/shared/eden-native-package-texture-audio.log` ; preuve :
+`results/texture-audio-batch-2026-10-20/native-package.json`. Aucun build actif.
+Le test PS5 reste différé à la fin ; aucune CI distante n’est qualifiée ici.
 
 **Lot GPU précédent : `033bff0b4f` — paquet natif validé hors console.**
 Les trois unités Vulkan et la provenance ont été reconstruites en neuf étapes
