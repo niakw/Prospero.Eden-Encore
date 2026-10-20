@@ -60,6 +60,27 @@ public:
                 front_buffer.emplace_back(t);
             }
         }
+        // Collect splits writes into 2-KiB masks. Rejoin adjacent runs before
+        // invalidating caches, without sorting or spanning clean gaps. Bound
+        // each callback to the image-page probe limit and keep address zero
+        // separate: rasterizers deliberately ignore invalidations starting there.
+        constexpr size_t max_batch_size = 256 * 1024;
+        static_assert(page_size <= max_batch_size);
+        PAddr pending_address = 0;
+        size_t pending_size = 0;
+        const auto emit = [&](PAddr address, size_t size) {
+            if (pending_size != 0 && pending_address != 0 &&
+                pending_address + pending_size == address &&
+                size <= max_batch_size - pending_size) {
+                pending_size += size;
+                return;
+            }
+            if (pending_size != 0) {
+                callback(pending_address, pending_size);
+            }
+            pending_address = address;
+            pending_size = size;
+        };
         for (auto& transform : front_buffer) {
             size_t offset = 0;
             u64 mask = transform.mask;
@@ -69,11 +90,14 @@ public:
                 mask = mask >> empty_bits;
 
                 const size_t continuous_bits = std::countr_one(mask);
-                callback((static_cast<PAddr>(transform.address) << page_bits) + offset,
-                         continuous_bits << align_bits);
+                emit((static_cast<PAddr>(transform.address) << page_bits) + offset,
+                     continuous_bits << align_bits);
                 mask = continuous_bits < align_size ? (mask >> continuous_bits) : 0;
                 offset += continuous_bits << align_bits;
             }
+        }
+        if (pending_size != 0) {
+            callback(pending_address, pending_size);
         }
         front_buffer.clear();
     }

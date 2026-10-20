@@ -42,6 +42,12 @@ Les 23 unités du précontrôle syntaxique PS5 passent. La compilation complète
 native de ce dernier lot est en cours ; le package construit
 avant ces dernières modifications ne qualifie pas celles-ci.
 
+Le complément GPU regroupe aussi les invalidations contiguës issues des
+masques dirty de 2 Kio : **1 024 → 8 appels** pour 2 Mio, par blocs limités
+à 256 Kio. Les trous, l’ordre, le traitement spécial de l’adresse zéro et les
+époques de collecte sont conservés dans le témoin hôte. M09 reste ouvert
+pour la preuve aux frontières réelles des caches GPU.
+
 Restent notamment la progression réveil → scheduler → fibre/JIT → instruction
 invitée, les attentes GPU réelles et la stabilité/présentation en jeu, ainsi que
 les autres contrats SOURCE/OPEN listés ci-dessous. Aucun compteur n’est réduit

@@ -35,9 +35,47 @@ sentinel_after = """    bool IsValid(PAddr address) {
         return address != default_transform.address && address < (1ULL << 39);
     }"""
 assert pinned.count(sentinel_before) == 1
-assert maintained == pinned.replace(old.replace("\\n", "\n"), fixed).replace(
+expected = pinned.replace(old.replace("\\n", "\n"), fixed).replace(
     sentinel_before, sentinel_after
 )
+gather_prefix = """        // Collect splits writes into 2-KiB masks. Rejoin adjacent runs before
+        // invalidating caches, without sorting or spanning clean gaps. Bound
+        // each callback to the image-page probe limit and keep address zero
+        // separate: rasterizers deliberately ignore invalidations starting there.
+        constexpr size_t max_batch_size = 256 * 1024;
+        static_assert(page_size <= max_batch_size);
+        PAddr pending_address = 0;
+        size_t pending_size = 0;
+        const auto emit = [&](PAddr address, size_t size) {
+            if (pending_size != 0 && pending_address != 0 &&
+                pending_address + pending_size == address &&
+                size <= max_batch_size - pending_size) {
+                pending_size += size;
+                return;
+            }
+            if (pending_size != 0) {
+                callback(pending_address, pending_size);
+            }
+            pending_address = address;
+            pending_size = size;
+        };
+"""
+gather_deltas = (
+    ('        for (auto& transform : front_buffer) {',
+     gather_prefix + '        for (auto& transform : front_buffer) {'),
+    ('                callback((static_cast<PAddr>(transform.address) << page_bits) + offset,\n'
+     '                         continuous_bits << align_bits);',
+     '                emit((static_cast<PAddr>(transform.address) << page_bits) + offset,\n'
+     '                     continuous_bits << align_bits);'),
+    ('        front_buffer.clear();',
+     '        if (pending_size != 0) {\n'
+     '            callback(pending_address, pending_size);\n'
+     '        }\n        front_buffer.clear();'),
+)
+for before, after in gather_deltas:
+    assert expected.count(before) == 1
+    expected = expected.replace(before, after)
+assert maintained == expected
 assert 'set(EDEN_NATIVE_DIRTY_HEADER_ROOT' in cmake
 assert 'target_include_directories(core BEFORE PUBLIC "${EDEN_NATIVE_DIRTY_HEADER_ROOT}")' in cmake
 assert 'if(PS5_NATIVE)' in cmake.split('set(EDEN_NATIVE_DIRTY_HEADER_ROOT', 1)[0]
