@@ -5,6 +5,7 @@ Fast-skip previously maintained sources with a specific historical proof, but
 never confuse code triage with host or console performance validation.
 """
 import json
+import hashlib
 import subprocess
 from collections import Counter
 from pathlib import Path
@@ -24,7 +25,8 @@ handled={e["path"] for e in entries}
 assert len(entries)==len(handled),"duplicate optimization owner"
 assert handled<=owners,sorted(handled-owners)
 allowed={"code_changed_in_batch","reviewed_without_new_code_edit",
-         "historical_host_contract_reviewed","previously_integrated_source_change"}
+         "historical_host_contract_reviewed","previously_integrated_source_change",
+         "shipping_backport_integrated_previously"}
 assert all(e["disposition"] in allowed and e["evidence"] for e in entries)
 audit=(ROOT/"docs/EDEN_CORE_AUDIT_DEPENDENCIES.md").read_text()
 rows=audit.split("<!-- AUDIT_ROWS_START -->",1)[1].split("<!-- AUDIT_ROWS_END -->",1)[0]
@@ -38,7 +40,8 @@ for line in rows.splitlines():
     by_id[cells[0]]=dict(path=cells[3],status=cells[5],evidence=cells[6])
 for e in entries:
     if e["disposition"] not in {"historical_host_contract_reviewed",
-                               "previously_integrated_source_change"}:
+                               "previously_integrated_source_change",
+                               "shipping_backport_integrated_previously"}:
         continue
     cid=e["contract_id"]
     assert cid in by_id,("historical contract missing",cid)
@@ -51,6 +54,29 @@ for e in entries:
     assert e["path"].startswith("vendor/encore-active/")
     # A skipped *first code review* still leaves independent test/console debt.
     assert "PS5" not in e.get("claimed_performance","")
+# Shipping backports are a code-modification fact, not a HOST label.
+# Lock every fast-triaged source to its installed bytes, its immutable
+# previous source digest, and the exact register owner (verified above).
+shipping=json.loads((ROOT/"vendor/encore-active/eden-backports/manifest.json").read_text())
+upstream=json.loads((ROOT/"UPSTREAM.json").read_text())
+assert shipping["pinned_eden_commit"]==upstream["eden_commit"]
+assert len(shipping["entries"])==83
+for e in entries:
+    if e["disposition"]!="shipping_backport_integrated_previously":
+        continue
+    assert e["path"]=="vendor/encore-active/eden-backports/"+e["shipping_relpath"]
+    assert e["prior_status"]=="SOURCE"
+    record=shipping["entries"][e["shipping_relpath"]]
+    active=ROOT/e["path"]
+    assert active.is_file()
+    assert hashlib.sha256(active.read_bytes()).hexdigest()==record["active"]
+    assert active.stat().st_size==record["bytes"]
+    assert e["shipping_active_sha256"]==record["active"]
+    assert e["shipping_upstream_sha256"]==record["upstream"]
+    assert e["shipping_bytes"]==record["bytes"]
+    assert record["active"]!=record["upstream"],("not a changed backport",e["path"])
+assert sum(e["disposition"]=="shipping_backport_integrated_previously"
+           for e in entries)==78
 status=Counter(e["disposition"] for e in entries)
 assert len(owners)==STATE["owned_code_count_at_snapshot"],("source inventory changed",len(owners),STATE["owned_code_count_at_snapshot"])
 assert len(owners)==len(handled)+len(owners-handled)
@@ -61,5 +87,6 @@ print("EDEN_OPTIMIZATION_REVIEW_BACKLOG_PASS",
       "source_reviewed="+str(status["reviewed_without_new_code_edit"]),
       "prior_host="+str(status["historical_host_contract_reviewed"]),
       "prior_source="+str(status["previously_integrated_source_change"]),
+      "shipping_integrated="+str(status["shipping_backport_integrated_previously"]),
       "remaining_to_triage="+str(len(owners-handled)),
       "new_code_fixes_required=UNKNOWN native_console_validation=SEPARATE")

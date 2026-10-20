@@ -1,5 +1,8 @@
 # Eden Encore — Project Memory
 
+- FAST SHIPPING BACKPORT TRIAGE (20 Oct): 78 already-modified production C/C++ files in `vendor/encore-active/eden-backports/src` with SHA256 active != upstream, unique SOURCE contract owners, exact pinned `manifest.json` and size per file; integrated code already ships in selected backport installer. `tools/check-eden-optimization-coverage.py` asserts original pinned SHA and active bytes for each. Optimization triage handled 102->180 /491, remain 389->311. These are not new fixes, HOST contract changes, native PS5 certification, or measured FPS gain.
+
+
 - FAST HISTORICAL SOURCE TRIAGE (20 Oct): `docs/EDEN_OPTIMIZATION_COVERAGE_2026-10-20.json` now has 102 distinct owned code files handled for optimization review (23 code-changed + 18 examined recently + 35 historical HOST-qualified code owners + 26 previously integrated SOURCE code owners). Optimisation review backlog **389 / 491**; these 61 are fast-skipped using exact contract ID, audited status and evidence file rechecked in `tools/check-eden-optimization-coverage.py`. Do NOT label all as newly optimized, nor as PS5 runtime proven. Vendor dependency pins/oracles remain a separate ownership classification.
 
 
