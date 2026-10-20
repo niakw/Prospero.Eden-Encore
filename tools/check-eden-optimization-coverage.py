@@ -122,6 +122,15 @@ for e in entries:
         assert 'PATH = Path("src/core/hle/service/nvnflinger/surface_flinger.cpp")' in surface_sel
     else: raise AssertionError(("unknown source selector",kind))
 assert sum(e["disposition"]=="historical_native_selected_unit" for e in entries)==20
+# The native emulator optimization queue excludes the separately owned UI
+# launcher. This is a presentation/scheduling filter, NEVER a claim that
+# those source files are optimized or absent from the full inventory.
+launcher_prefix=STATE.get("active_emulation_priority_excludes_launcher_prefix")
+assert launcher_prefix=="headless/prosperoeden/"
+pending_code=owners-handled
+launcher_pending={p for p in pending_code if p.startswith(launcher_prefix)}
+# Assert the runtime/launcher boundary against actual versioned paths.
+assert len(pending_code)==len(launcher_pending)+len(pending_code-launcher_pending)
 # New per-source review decisions must remain traceable to the exact
 # current contract path and a real file entry in the written source review.
 for e in entries:
@@ -132,6 +141,11 @@ for e in entries:
     source_review=ROOT/e["source_review_document"]
     assert source_review.is_file()
     assert "| `"+e["path"]+"` |" in source_review.read_text(),e["path"]
+    if e.get("proof_ref") and e.get("prior_status"):
+        row=by_id[e["contract_id"]]
+        assert row["status"]==e["prior_status"]
+        assert row["evidence"]==e["proof_ref"]
+        assert "python3 -B "+e["proof_ref"] in preflight
 # Generated fragments and opt-in sources are not production runtime hot paths.
 # They count as source-triaged, but never as FPS-optimized. Verify their
 # original ownership and that every asserted witness still runs in CI.
@@ -179,4 +193,6 @@ print("EDEN_OPTIMIZATION_REVIEW_BACKLOG_PASS",
       "native_selected="+str(status["historical_native_selected_unit"]),
       "preexisting_inactive_oracle="+str(status["preexisting_generated_or_inactive_unit"]),
       "remaining_to_triage="+str(len(owners-handled)),
+      "remaining_active_emulator_non_launcher="+str(len(pending_code-launcher_pending)),
+      "launcher_separately_pending="+str(len(launcher_pending)),
       "new_code_fixes_required=UNKNOWN native_console_validation=SEPARATE")
