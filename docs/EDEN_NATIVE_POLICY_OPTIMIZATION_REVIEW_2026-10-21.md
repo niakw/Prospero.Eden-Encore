@@ -43,14 +43,20 @@ Le suivi était à **308 traités / 183 encore ouverts** avant cette revue.
 Après ces 16 inspections : **324 fichiers traités ou examinés sur 491,
 167 fichiers encore ouverts**.
 
-Parmi ces 167 restants, **63 appartiennent au préfixe
-`headless/prosperoeden/`**, correspondant au lanceur, au frontend
-et à ses composants visuels/plateforme. Ils sont **toujours dans le
-registre complet**, mais exclus de la file de travail prioritaire des
-optimisations d'émulation en jeu conformément à l'architecture
-précédemment fixée. Cela laisse **104 sources non-lanceur
-à traiter prioritairement**, sans prouver que chacune demande un patch.
+Parmi ces 167 restants, **63 se trouvent sous
+`headless/prosperoeden/`**. Leur chemin ne suffit toutefois
+pas à déterminer leur effet en jeu : **`runtime_shims.cpp`**
+fournit le `pthread_once` et des shims de libc **pour le programme
+natif entier**, selon `headless/CMakeLists.txt`. Il reste donc
+dans la priorité de maintenance CPU/runtime.
 
-C'est une séparation de priorité, pas une soustraction frauduleuse :
-`167 = 104 non-lanceur + 63 lanceur`. Les 63 resteront auditables
-lorsque l'optimisation du lanceur sera un chantier séparé.
+Les **62 autres fichiers** de ce sous-arbre correspondent au
+lanceur/frontend, à son rendu, à ses entrées et à ses services :
+ils restent suivis mais sont placés dans un chantier distinct.
+**105 chemins** restent dans la file d'optimisation du moteur et
+de l'infrastructure native, **62** dans celle du lanceur.
+
+Cette distinction est une **priorité**, pas un gain FPS :
+`167 = 105 moteur/natif + 62 lanceur`. Un fichier dont la
+compilation ou l'usage traverse cette frontière doit être réintégré
+au périmètre moteur. Aucun chemin n'est retiré de l'inventaire total.

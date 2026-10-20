@@ -128,7 +128,14 @@ assert sum(e["disposition"]=="historical_native_selected_unit" for e in entries)
 launcher_prefix=STATE.get("active_emulation_priority_excludes_launcher_prefix")
 assert launcher_prefix=="headless/prosperoeden/"
 pending_code=owners-handled
-launcher_pending={p for p in pending_code if p.startswith(launcher_prefix)}
+# One source in the launcher directory is linked into EVERY native app build:
+# it defines global pthread_once/libc shims. Never dismiss it as UI-only.
+shared=set(STATE.get("launcher_global_runtime_exceptions",[]))
+assert shared=={"headless/prosperoeden/runtime_shims.cpp"}
+assert shared<=pending_code
+cmake=(ROOT/"headless/CMakeLists.txt").read_text()
+assert '"${launcher_dir}/runtime_shims.cpp"' in cmake
+launcher_pending={p for p in pending_code if p.startswith(launcher_prefix) and p not in shared}
 # Assert the runtime/launcher boundary against actual versioned paths.
 assert len(pending_code)==len(launcher_pending)+len(pending_code-launcher_pending)
 # New per-source review decisions must remain traceable to the exact
