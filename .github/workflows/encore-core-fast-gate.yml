@@ -66,6 +66,10 @@ jobs:
         with:
           submodules: false
           persist-credentials: false
+      - name: Install host-only C++ fixture headers
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libboost-container-dev nlohmann-json3-dev
       - name: C++ compiler version
         run: |
           g++ --version
