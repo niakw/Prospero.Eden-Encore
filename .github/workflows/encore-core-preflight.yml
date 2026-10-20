@@ -162,6 +162,7 @@ jobs:
           python3 -B tools/check-vulkan-query-copy-plan-host.py
           python3 -B tools/check-vulkan-deferred-copy-ownership-host.py
           python3 -B tools/check-vulkan-present-draw-storage-host.py
+          python3 -B tools/check-vulkan-tfb-bank-lookup-host.py
           python3 -B tools/check-vulkan-multirange-gather-bounds-host.py
           python3 -B tools/check-vulkan-multirange-owner-lifetime-host.py
           python3 -B tools/check-ps5-crash-only-logging.py

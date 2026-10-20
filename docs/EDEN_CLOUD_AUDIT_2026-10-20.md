@@ -6,6 +6,19 @@ pas une CI distante ni un binaire PS5 qualifié.
 **Compteur courant : 398 fichiers / 96 P0 / 409 contrats.**
 Les chiffres 400 / 98 / 411 ci-dessous décrivent le relevé initial.
 
+**Suite TFB : hôte et rejeu vérifiés, compilation native à terminer.**
+La synchronisation des compteurs transform feedback utilise directement le
+résultat d’insertion dans la table des banques, supprimant une recherche par
+requête retenue. Vraie méthode extraite, vraie table Boost et hasher instrumenté
+à valeurs identiques : **2 048 → 1 024 appels** pour 1 024 requêtes d’une banque,
+**2 077 → 1 053** pour 32 banques, réorganisations de table incluses. Sept
+scénarios ASan/UBSan préservent ordre et données d’envoi, drapeaux, filtres et
+fermeture vide. Les cinq contrôles ciblés passent ; le rejeu reproduit exactement
+le fichier modifié, avec les quatre écarts historiques non concernés conservés.
+Preuves : `results/tfb-lookup-batch-2026-10-20/host-summary.json` et
+`replay-verified.json`. Les compteurs restent **398 / 96 / 409**. Le témoin ne
+qualifie ni la progression GPU réelle ni les frametimes PS5.
+
 **Dernier lot publié : `67c0a42c55` — hôte et paquet natif vérifiés.**
 Les constantes, descripteurs et pipelines de chaque couche partagent une liste
 possédée par la commande différée. Sa première entrée est stockée sans tas :

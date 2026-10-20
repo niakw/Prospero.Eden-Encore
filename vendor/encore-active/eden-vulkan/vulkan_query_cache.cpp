@@ -773,8 +773,8 @@ public:
                 continue;
             }
             query->flags |= VideoCommon::QueryFlagBits::IsHostSynced;
-            sync_values_stash.try_emplace(query->start_bank_id);
-            sync_values_stash[query->start_bank_id].emplace_back(HostSyncValues{
+            auto& bank_values = sync_values_stash.try_emplace(query->start_bank_id).first->second;
+            bank_values.emplace_back(HostSyncValues{
                 .address = query->guest_address,
                 .size = TFBQueryBank::QUERY_SIZE,
                 .offset = query->start_slot * TFBQueryBank::QUERY_SIZE,
