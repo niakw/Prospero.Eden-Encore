@@ -10,6 +10,8 @@ on:
       - 'tools/check-sparse-zero-bounds-host.py'
       - 'vendor/encore-active/eden-vulkan/**'
       - 'vendor/encore-active/eden-threading/src/core/hle/kernel/k_thread.cpp'
+      - 'vendor/encore-active/eden-threading/src/core/hle/kernel/k_condition_variable.cpp'
+      - 'tools/check-native-hle-cv-key-write-host.py'
       - 'tools/check-native-hle-wait-queue-publication-host.py'
       - 'tools/verify/hle/check-hle-overlay-layout.py'
       - 'tools/check-vulkan-multirange-overflow-host.py'
@@ -58,6 +60,7 @@ jobs:
           set -euo pipefail
           python3 -B tools/check-native-hle-wait-queue-publication-host.py
           python3 -B tools/check-native-hle-wait-null-queue-host.py
+          python3 -B tools/check-native-hle-cv-key-write-host.py
           python3 -B tools/verify/hle/check-hle-overlay-layout.py
       - name: Boundary
         run: |

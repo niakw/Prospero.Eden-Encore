@@ -320,10 +320,14 @@ Result KConditionVariable::Wait(KProcessAddress addr, u64 key, u32 value, s64 ti
                 next_owner_thread->EndWait(m_system.Kernel(), ResultSuccess);
             }
 
-            // Write to the cv key.
+            // Publishing the waiter flag can fail even after address validation.
+            // Do not enter a wait that cannot be signaled through guest memory.
             {
                 constexpr u32 HasWaiterFlag = 1;
-                WriteToUser(m_system.Kernel(), key, HasWaiterFlag);
+                if (!WriteToUser(m_system.Kernel(), key, HasWaiterFlag)) {
+                    slp.CancelSleep();
+                    R_THROW(ResultInvalidCurrentMemory);
+                }
                 std::atomic_thread_fence(std::memory_order_seq_cst);
             }
 
