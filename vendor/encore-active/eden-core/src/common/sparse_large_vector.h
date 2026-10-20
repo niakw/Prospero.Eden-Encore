@@ -212,11 +212,21 @@ private:
         const std::size_t span = SparseCommitSpan();
         const std::size_t slot_offset = ((page_address - vector_base) / span) * span;
         const std::size_t first_page = slot_offset / HostPageSize;
+        const std::size_t total_pages = alloc_size / HostPageSize +
+                                        (alloc_size % HostPageSize != 0);
         const std::size_t last_page = (std::min)(first_page + span / HostPageSize,
-                                                  (alloc_size + HostPageSize - 1) / HostPageSize);
-        for (std::size_t candidate = first_page; candidate < last_page; ++candidate) {
-            const auto bits = committed_pages[candidate >> 6].load(std::memory_order_acquire);
-            if ((bits >> (candidate & 63)) & 1) return;
+                                                  total_pages);
+        if (last_page <= first_page) return;
+        // The caller owns sparse_mutation_mutex. Read each 64-page bitmap word
+        // once instead of re-reading it for every retired host page.
+        const std::size_t last_word = (last_page - 1) >> 6;
+        for (std::size_t word = first_page >> 6; word <= last_word; ++word) {
+            u64 bits = committed_pages[word].load(std::memory_order_acquire);
+            if (word == (first_page >> 6))
+                bits &= ~u64{0} << (first_page & 63);
+            if (word == last_word && (last_page & 63) != 0)
+                bits &= (u64{1} << (last_page & 63)) - 1;
+            if (bits != 0) return;
         }
         DecommitSparsePage(vector_base + slot_offset);
     }

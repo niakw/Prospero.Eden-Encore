@@ -19,6 +19,8 @@ method = anchor + sparse.split(anchor, 1)[1].split(
     "    void CommitPage(std::size_t index) noexcept {", 1)[0]
 assert method.startswith(anchor)
 assert "std::memset(reinterpret_cast<void*>(page_address), 0, HostPageSize);" in method
+assert "for (std::size_t word = first_page >> 6; word <= last_word; ++word)" in method
+assert "u64 bits = committed_pages[word].load(std::memory_order_acquire);" in method
 compiler = (shutil.which("clang++-18") or shutil.which("clang++") or
             shutil.which("g++"))
 assert compiler, "A host C++20 compiler is required"
@@ -38,6 +40,23 @@ constexpr std::size_t HostPageBits = 14;
 constexpr std::uintptr_t HostPageMask = ~(std::uintptr_t(HostPageSize) - 1);
 constexpr std::size_t Slot = 2 * 1024 * 1024;
 static unsigned releases = 0;
+static unsigned bitmap_reads = 0;
+struct TrackedAtomic {
+    std::atomic<u64> state{};
+    u64 load(std::memory_order order) const noexcept {
+        ++bitmap_reads;
+        return state.load(order);
+    }
+    u64 fetch_or(u64 bits, std::memory_order order) noexcept {
+        return state.fetch_or(bits, order);
+    }
+    u64 fetch_and(u64 bits, std::memory_order order) noexcept {
+        return state.fetch_and(bits, order);
+    }
+    void store(u64 bits, std::memory_order order) noexcept {
+        state.store(bits, order);
+    }
+};
 static bool dense = false;
 std::size_t SparseCommitSpan() noexcept { return Slot; }
 void DecommitSparsePage(std::uintptr_t p) noexcept {
@@ -49,9 +68,9 @@ struct Table {
     using T = u64;
     u64* base_ptr;
     std::size_t alloc_size;
-    std::vector<std::atomic<u64>> committed_pages;
-    Table(void* p)
-      : base_ptr(static_cast<u64*>(p)), alloc_size(Slot),
+    std::vector<TrackedAtomic> committed_pages;
+    Table(void* p, std::size_t bytes = Slot)
+      : base_ptr(static_cast<u64*>(p)), alloc_size(bytes),
         committed_pages(Slot / HostPageSize / 64) {
         for (auto& bit : committed_pages)
             bit.store(0, std::memory_order_relaxed);
@@ -86,13 +105,38 @@ int main() {
         t.DecommitPage(0);      // last mapped host page
         assert(releases == 1);
     }
+    {
+        // Keep the last slot page occupied. The original loop reloaded its
+        // two bitmap words up to 128 times. The new scan loads at most twice.
+        Table t(raw);
+        constexpr auto last_page_index = Slot / HostPageSize - 1;
+        t.mark(0);
+        t.mark(last_page_index);
+        bitmap_reads = 0;
+        t.DecommitPage(0);
+        assert(releases == 1 && bitmap_reads <= 2);
+        bitmap_reads = 0;
+        t.DecommitPage(last_page_index * (HostPageSize / sizeof(u64)));
+        assert(releases == 2 && bitmap_reads <= 2);
+    }
+    {
+        // Partial last bitmap word must mask bits outside the table.
+        Table t(raw, HostPageSize + 4);
+        t.mark(0);
+        t.mark(1);
+        bitmap_reads = 0;
+        t.DecommitPage(0);
+        assert(releases == 2 && bitmap_reads <= 1);
+        t.DecommitPage(second);
+        assert(releases == 3);
+    }
     dense = true;                // fallback never releases the slot
     std::memset(raw, 0xCE, HostPageSize);
     {
         Table t(raw);
         t.mark(0);
         t.DecommitPage(0);
-        assert(releases == 1);
+        assert(releases == 3);
         for (std::size_t i = 0; i < HostPageSize; ++i)
             assert(raw[i] == 0);
     }
@@ -106,4 +150,4 @@ with tempfile.TemporaryDirectory(prefix="eden-sparse-reuse-") as td:
     subprocess.run([compiler, "-std=c++20", "-O1", "-Wall", "-Wextra",
                     "-Werror", str(path), "-o", str(program)], check=True)
     subprocess.run([str(program)], check=True)
-print("PASS: host C++ sparse table page clearing, 2-MiB release and dense fallback")
+print("PASS: host C++ sparse table word scan, partial-slot masks and dense fallback")
