@@ -3,7 +3,7 @@
   "description": "Code optimization handling, not validation or inferred need for code edits",
   "base_commit": "82c531d08641d8b28124bd2cebf37fcf85674179",
   "snapshot_commit": "05846723c40c4ebfc593b4be2e3496079c25167c",
-  "owned_code_count_at_snapshot": 538,
+  "owned_code_count_at_snapshot": 491,
   "handled_paths": [
     {
       "path": "headless/buffer_pages.h",
@@ -210,5 +210,6 @@
       "disposition": "reviewed_without_new_code_edit",
       "evidence": "Source-level P0 optimization triage; docs/EDEN_OPTIMIZATION_REVIEW_MESA_VULKAN_2026-10-20.md"
     }
-  ]
+  ],
+  "inventoried_including_pinned": 538
 }
