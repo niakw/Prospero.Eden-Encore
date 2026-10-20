@@ -32,9 +32,12 @@ assert ast.literal_eval(calls[0].args[1]) == 'vulkan_present_layer.cpp'
 # R329 introduces an independent stride-capacity guard in the same generated
 # translation unit. This fixture isolates R328 AA lifetime, while the separate
 # R329 exact-source fixture tests all three production generator edits.
-all_pairs = ast.literal_eval(calls[0].args[2]); assert len(all_pairs) == 4
+all_pairs = ast.literal_eval(calls[0].args[2])
+# This fixture tests only the two AA resource lifetime transitions. The
+# independent stride, upload and header transforms can evolve separately.
+assert len(all_pairs) >= 4
 pairs = [(old, new) for old, new in all_pairs
-         if 'buffer.Mapped().size()' not in new and 'raw_image_views.clear()' not in new]
+         if 'scheduler.Finish();' in new and 'device.GetLogical().WaitIdle();' in new]
 assert len(pairs) == 2
 patched = source
 for old, new in pairs:

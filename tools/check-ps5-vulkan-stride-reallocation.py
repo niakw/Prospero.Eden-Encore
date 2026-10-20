@@ -31,7 +31,9 @@ calls = [n.value for n in program.body if isinstance(n, ast.Expr)
 assert len(calls) == 1
 assert ast.literal_eval(calls[0].args[1]) == 'vulkan_present_layer.cpp'
 pairs = ast.literal_eval(calls[0].args[2])
-assert len(pairs) == 4
+# Other independently verified layer transformations may be appended; require
+# the exact stride-capacity guard, not an obsolete adapter count.
+assert len(pairs) >= 4
 assert len([x for x in pairs if 'buffer.Mapped().size() == CalculateBufferSize' in x[1]]) == 1
 updated = original
 for before, after in pairs:
