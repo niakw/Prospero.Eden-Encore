@@ -32,6 +32,15 @@ une assertion toujours vraie (`or True`) a été supprimée. Cette
 requalification n'est **ni** un gain de FPS mesuré **ni** une preuve
 de disparition des gels en jeu. Les autres contrats P0 restent ouverts.
 
+## Consolidation finale de la file GPU — 20 octobre 2026
+
+Les contrats `Q02` (P1), `Q07` (P0) et `V72` (P0) décrivent des
+frontières distinctes du même en-tête SPSC maintenu. Ils ont maintenant
+la même preuve directe ASan/UBSan d'une file réelle compilée avec réveil,
+attente, annulation et recyclage correct des slots. Cette qualification
+ne constitue pas trois gains de FPS; le comportement sur console et
+le gel du jeu restent à vérifier.
+
 ## Couverture quantifiée (registre courant)
 
 L'inventaire indexe des **contrats/fonctions à vérifier**, pas toutes les
@@ -43,16 +52,16 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
 | Graphe connu | 478 | 455 | 959 |
-| HOST — preuve ciblée hôte | 47 | 44 | 91 |
-| SOURCE — lecture effectuée, preuve insuffisante | 408 | 396 | 829 |
+| HOST — preuve ciblée hôte | 49 | 44 | 94 |
+| SOURCE — lecture effectuée, preuve insuffisante | 406 | 395 | 826 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 8 | 8 | 11 |
-| **Encore à qualifier (SOURCE + OPEN)** | **423** | **410** | **857** |
-| Dont priorité P0 (SOURCE + OPEN) | 113 | 108 | 262 |
+| **Encore à qualifier (SOURCE + OPEN)** | **421** | **409** | **854** |
+| Dont priorité P0 (SOURCE + OPEN) | 112 | 107 | 260 |
 
-Le **noyau restant** compte donc 423 critères répartis sur
-410 fichiers et 857 mentions fonction/contrat :
-15 OPEN et 408 SOURCE.
+Le **noyau restant** compte donc 421 critères répartis sur
+409 fichiers et 854 mentions fonction/contrat :
+15 OPEN et 406 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
@@ -279,7 +288,7 @@ function/contract tokens are checked by CI for existence only; the
 | B27 | P1 | H53 | vendor/encore-active/eden-core/src/core/hle/kernel/k_page_table_base.cpp | KPageTableBase::Finalize | SOURCE | tools/check-maintained-page-table-finalize.py | Kernel-shutdown-only page release guard, exact pinned-source parity and direct CMake owner; native behavior unqualified | 🟡 Source étudiée |
 | B03 | P1 | B01 | vendor/encore-active/eden-core/overrides/slot-vector/common/slot_vector.h | SlotId insert( | SOURCE | tools/check-vendor-consolidation-debt.py | Former X02 recovery is maintained as exact Encore header with isolated include priority; native exception behavior unproved | 🟡 Source étudiée |
 | Q01 | P1 | B02 | vendor/sources/eden/src/common/bounded_threadsafe_queue.h | TryEmplace; Pop; std::construct_at | HOST | tools/check-native-gpu-queue-slot-lifetime-host.py | No claim about a specific game's resource lifetime | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-gpu-queue-slot-lifetime-host.py) |
-| Q02 | P1 | Q01 | vendor/encore-active/eden-gpu/include/common/bounded_threadsafe_queue.h | EmplaceWaitWithStopToken | SOURCE | tools/check-gpu-producer-stop.py | Stop-aware producer wake owned by the selected complete queue header; obsolete .inc retired, console unqualified | 🟡 Source étudiée |
+| Q02 | P1 | Q01 | vendor/encore-active/eden-gpu/include/common/bounded_threadsafe_queue.h | EmplaceWaitWithStopToken | HOST | tools/check-native-gpu-queue-stop-fastpath-host.py | Hôte: source SPSC réellement compilée en ASan/UBSan; producteur bloqué, arrêt, réveil et réemploi de slots vérifiés. Comportement GPU réel, gel invité et FPS PS5 non qualifiés | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-gpu-queue-stop-fastpath-host.py) |
 | Q03 | P1 | Q01,Q02 | vendor/encore-active/eden-gpu/gpu_thread_dev.cpp | ThreadManager::RunWorker; ThreadManager::PushCommand; ThreadManager::Stop | SOURCE | tools/check-vendored-gpu-thread.py | Worker can stall without fatal exception; prove progress separately | 🟡 Source étudiée |
 | Q04 | P1 | Q03 | vendor/sources/eden/src/video_core/gpu.cpp | GPU::OnCPURead; GPU::WaitForSyncOperation; GPU::TickWork | SOURCE | docs/2026-10-16_GPU_SYNC_TICK_SNAPSHOT.md | Check queued CPU read tick dependencies before any FIFO modification | 🟡 Source étudiée |
 | Q05 | P1 | Q04,B03 | vendor/encore-active/eden-core/src/video_core/macro.cpp | MacroJIT_SendThunk; MacroJITx64Impl::Execute | SOURCE | tools/check-vendor-consolidation-debt.py | Former X01 MacroJIT exception recovery is maintained as exact Encore source, with byte-parity oracle; native unwind unproved | 🟡 Source étudiée |
@@ -442,7 +451,7 @@ function/contract tokens are checked by CI for existence only; the
 | V69 | P2 | V50 | vendor/encore-active/eden-vulkan-oracles/vulkan_gc_downloads.inc | gc_prefetch_limit; PrefetchDownloads | SOURCE | tools/check-vendored-vulkan-fork.py | Historical GPU texture-eviction oracle, verified against maintained Vulkan fork; not compiled | 🟡 Oracle historique |
 | V70 | P2 | V50 | vendor/encore-active/eden-vulkan-oracles/vulkan_download_batch.inc | readback_batch_limit; finish_batch | SOURCE | tools/check-vendored-vulkan-fork.py | Historical Vulkan readback batch oracle, no CMake source mutation | 🟡 Oracle historique |
 | V71 | P0 | V50,V69 | vendor/encore-active/eden-core/src/video_core/memory_manager.cpp | MemoryManager::IsGranularRange; MemoryManager::GetSpan | SOURCE | tools/check-native-gpu-granular-bounds-host.py | Native GPU bounds and overflow guards now one maintained source; old generator byte parity and host checks do not prove console GPU progress | 🟡 Source étudiée |
-| V72 | P0 | V71 | vendor/encore-active/eden-gpu/include/common/bounded_threadsafe_queue.h | EmplaceWaitWithStopToken; producer.cv.wait | SOURCE | tools/check-vendor-consolidation-debt.py | Stop-aware wait implemented once in the selected GPU queue header, old injection deleted; native execution unproved | 🟡 Source étudiée |
+| V72 | P0 | V71 | vendor/encore-active/eden-gpu/include/common/bounded_threadsafe_queue.h | EmplaceWaitWithStopToken; producer.cv.wait | HOST | tools/check-native-gpu-queue-stop-fastpath-host.py | Hôte: EmplaceWaitWithStopToken et producer.cv.wait validés sur le vrai en-tête compilé en ASan/UBSan; source consolidée et injection retirée. Comportement GPU/PS5 et FPS non qualifiés | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-native-gpu-queue-stop-fastpath-host.py) |
 | V73 | P0 | V71 | vendor/encore-active/eden-core/gpu-injections/gpu_sync_failure_wait.inc | WaitForSyncOperation; Eden::PeekGpuFailure | SOURCE | tools/check-vendor-consolidation-debt.py | GPU worker failure fence guard preserved as exact Encore input; native execution unproved | 🟡 Source étudiée |
 | V74 | P1 | V71 | vendor/encore-active/eden-core/src/video_core/texture_cache/util.cpp | ConvertImage; ASTC::Decompress | SOURCE | tools/check-vendor-consolidation-debt.py | Existing per-layer ASTC scratch allocation optimization R428 now a maintained complete C++ unit, native performance unproved | 🟡 Source étudiée |
 | V75 | P1 | V74 | vendor/encore-active/eden-core/src/video_core/shader_environment.cpp | #include "shader_cache_reader.inc" | SOURCE | tools/check-vendor-consolidation-debt.py | Complete shader cache recovery TU replaces CMake generator; exact text replay test, native behavior unproved | 🟡 Source étudiée |
