@@ -233,3 +233,7 @@ Voir [EDEN_NATIVE_LIGHTWEIGHT_SOURCE_REVIEW_2026-10-21.md](EDEN_NATIVE_LIGHTWEIG
 ## 21 octobre — compteur moteur corrigé et lot de douze sources
 
 Le compteur principal **exclut les 62 unités de l'interface du lanceur** `headless/prosperoeden/`. L'exception `runtime_shims.cpp` reste du côté moteur : elle définit des fonctions libc/pthread globales effectivement liées dans chaque application native. Au HEAD `f73075323`, la revue [EDEN_NATIVE_NON_HOT_OPTIMIZATION_REVIEW_2026-10-21.md](EDEN_NATIVE_NON_HOT_OPTIMIZATION_REVIEW_2026-10-21.md) examine sept sources de tests hôte, deux fichiers du helper de démarrage et trois composants GPU différés maintenus OFF. **392/491 traités ; 37 moteur/runtime à traiter ; 62 lanceur suivis séparément ; 99 globalement.** Ne pas présenter les 62 comme des sources du moteur à optimiser, ni les 12 comme de nouvelles optimisations FPS.
+
+## 21 octobre — configuration, métadonnées, sauvegardes et sondes
+
+La [revue de quatre unités natives](EDEN_NATIVE_CONFIG_METADATA_REVIEW_2026-10-21.md) vérifie les chemins de settings, imports de sauvegardes, métadonnées et watch DEV. Ces opérations sont associées aux actions de configuration/lancement ou à des sondes explicitement activées, pas à la boucle normale par frame. Chaque chemin reste verrouillé par son Git blob. **396/491 fichiers pris en charge, 33 moteur/runtime encore à traiter, 62 UI du lanceur séparés, 95 globaux.** Zéro correctif moteur ajouté à cette revue.

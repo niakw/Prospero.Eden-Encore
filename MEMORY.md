@@ -1,5 +1,8 @@
 # Eden Encore — Project Memory
 
+- NATIVE CONFIG/METADATA SOURCE TRIAGE (21 Oct): 4 more Git-blob-pinned reviewed code paths (`headless/ryujinx_saves.h`, `settings_store.h`, `watch.h`, `metadata_bridge.cpp`) handle save imports, JSON settings, dev memory watch, game metadata/library extraction, not normal guest frames. Documented in `docs/EDEN_NATIVE_CONFIG_METADATA_REVIEW_2026-10-21.md`. Counters: 396/491 handled, 33 engine/runtime review pending, 62 launcher UI separate, 95 all. These four are not new performance improvements or PS5 validation.
+
+
 - ENGINE-ONLY OPTIMIZATION PRIMARY COUNT (21 Oct): launcher under `headless/prosperoeden` contains 63 C/C++/header paths; 62 are UI/launcher only and excluded from engine optimization count; `runtime_shims.cpp` is **used by all native apps** and remains engine-runtime. `tools/check-eden-optimization-coverage.py` prints engine-first numbers. At f730753 before new source review: 49 engine pending, 62 launcher pending, 111 overall; +12 Git-blob-locked reviewed test/mock/elevation/inactive deferred sources in `docs/EDEN_NATIVE_NON_HOT_OPTIMIZATION_REVIEW_2026-10-21.md` yields 37 engine optimization-review pending, 62 launcher separate, 392/491 handled total, 99 all-components pending. No additional C++ engine optimization patch or PS5 FPS proof from this triage.
 
 
