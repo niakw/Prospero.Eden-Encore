@@ -31,6 +31,7 @@ on:
       - 'tools/check-vulkan-query-grouping-host.py'
       - 'tools/check-vulkan-query-copy-plan-host.py'
       - 'tools/check-vulkan-deferred-copy-ownership-host.py'
+      - 'tools/check-vulkan-present-draw-storage-host.py'
       - 'vendor/encore-active/eden-core/src/video_core/texture_cache/util.cpp'
       - 'vendor/encore-active/eden-core/src/audio_core/sink/sink_stream.cpp'
       - 'tools/check-texture-convert-volume-host.py'
@@ -77,6 +78,7 @@ jobs:
           python3 -B tools/check-vulkan-query-grouping-host.py
           python3 -B tools/check-vulkan-query-copy-plan-host.py
           python3 -B tools/check-vulkan-deferred-copy-ownership-host.py
+          python3 -B tools/check-vulkan-present-draw-storage-host.py
           python3 -B tools/check-native-dma-clear-span-host.py
           python3 -B tools/check-native-gpu-dirty-transition-host.py
           python3 -B tools/check-native-gpu-dirty-gather-host.py

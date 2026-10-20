@@ -4,6 +4,8 @@
 // SPDX-FileCopyrightText: Copyright 2024 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+#include <boost/container/small_vector.hpp>
+
 #include "core/frontend/framebuffer_layout.h"
 #include "hud.h"
 #include "vulkan_hud_shaders.h"
@@ -47,26 +49,32 @@ void WindowAdaptPass::Draw(const Device& device, RasterizerVulkan& rasterizer, S
     };
 
     const size_t layer_count = configs.size();
-    std::vector<PresentPushConstants> push_constants(layer_count);
-    std::vector<VkDescriptorSet> descriptor_sets(layer_count);
-    std::vector<VkPipeline> graphics_pipelines(layer_count);
+    struct LayerDraw {
+        PresentPushConstants push_constants;
+        VkDescriptorSet descriptor_set;
+        VkPipeline graphics_pipeline;
+    };
+    // The usual single-layer frame needs no heap storage. Larger frames
+    // share one allocation, transferred to the deferred draw command.
+    boost::container::small_vector<LayerDraw, 1> draws(layer_count);
 
     auto layer_it = layers.begin();
     for (size_t i = 0; i < layer_count; i++) {
+        auto& draw = draws[i];
         switch (configs[i].blending) {
         case Tegra::BlendMode::Opaque:
         default:
-            graphics_pipelines[i] = *opaque_pipeline;
+            draw.graphics_pipeline = *opaque_pipeline;
             break;
         case Tegra::BlendMode::Premultiplied:
-            graphics_pipelines[i] = *premultiplied_pipeline;
+            draw.graphics_pipeline = *premultiplied_pipeline;
             break;
         case Tegra::BlendMode::Coverage:
-            graphics_pipelines[i] = *coverage_pipeline;
+            draw.graphics_pipeline = *coverage_pipeline;
             break;
         }
 
-        layer_it->ConfigureDraw(device, &push_constants[i], &descriptor_sets[i], rasterizer, *sampler,
+        layer_it->ConfigureDraw(device, &draw.push_constants, &draw.descriptor_set, rasterizer, *sampler,
                                 image_index, configs[i], layout);
         layer_it++;
     }
@@ -87,7 +95,7 @@ void WindowAdaptPass::Draw(const Device& device, RasterizerVulkan& rasterizer, S
     const VkPipeline hud_graphics_pipeline = *hud_pipeline;
     const VkPipelineLayout hud_pipeline_layout = *hud_layout;
 
-    scheduler.Record([=](vk::CommandBuffer cmdbuf) {
+    scheduler.Record([=, draws = std::move(draws)](vk::CommandBuffer cmdbuf) {
         const f32 bg_red = Settings::values.bg_red.GetValue() / 255.0f;
         const f32 bg_green = Settings::values.bg_green.GetValue() / 255.0f;
         const f32 bg_blue = Settings::values.bg_blue.GetValue() / 255.0f;
@@ -113,11 +121,12 @@ void WindowAdaptPass::Draw(const Device& device, RasterizerVulkan& rasterizer, S
         cmdbuf.ClearAttachments({clear_attachment}, {clear_rect});
 
         for (size_t i = 0; i < layer_count; i++) {
-            cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipelines[i]);
+            const auto& draw = draws[i];
+            cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, draw.graphics_pipeline);
             cmdbuf.PushConstants(graphics_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT,
-                                 push_constants[i]);
+                                 draw.push_constants);
             cmdbuf.BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline_layout, 0,
-                                      descriptor_sets[i], {});
+                                      draw.descriptor_set, {});
             cmdbuf.Draw(4, 1, 0, 0);
         }
 
