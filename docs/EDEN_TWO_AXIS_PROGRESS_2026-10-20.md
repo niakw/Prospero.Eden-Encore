@@ -97,3 +97,11 @@ L'état **hardware et FPS de ce SHA** reste inconnu.
 Le prochain travail substantiel n'est pas un autre compteur artificiellement
 diminué, mais la **qualification native du lot courant**, puis la validation
 de progression invitée → nouveau rendu → présentation, au protocole décidé.
+
+## Lot P0 — inspection de la chaîne IPC/GPU (10 sources)
+
+Voir [EDEN_P0_SOURCE_REVIEW_2026-10-20.md](EDEN_P0_SOURCE_REVIEW_2026-10-20.md).
+Dix sources P0 ont été examinées et consignées, sans modification spéculative du moteur.
+Le nouveau témoin C++ d'envoi IPC / sortie de file d'attente qualifie
+uniquement des transitions hôte ciblées, pas la reprise d'exécution invitée.
+Les compteurs SOURCE+OPEN restent inchangés.
