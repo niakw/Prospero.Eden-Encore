@@ -1,5 +1,8 @@
 # Eden Encore — Project Memory
 
+- NATIVE STARTUP/DIAGNOSTIC SOURCE REVIEW (2026-10-21): 20 source files (`headless/dev_vulkan.h`, input/overrides/glyphs, gpu_native_probe/gpu_probe, fault/HUD/log_pipe, metadata, mods, native directory, network headers, pad diagnostics, pipeline trace registry, preferences, sdk_audit) source-inspected for actual optimization need, no new code patches. Exact blob SHAs and contract IDs pinned in `docs/EDEN_OPTIMIZATION_COVERAGE_2026-10-20.json`; document `docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md`. Progress 368/491, **123 remaining = 61 motor/runtime +62 launcher**. Live FPS/correctness not proven, critical CPU/JIT/HLE/Vulkan owners remain pending.
+
+
 - NATIVE POLICY HOTPATH FAST REVIEW (2026-10-21): `docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md` records 16 distinct C++ headers/code already bounded/no extra speculative performance patch (JIT policy/fallback, GPU fault latch, HLE counters, DEV watchdog, SMT topology, lifecycle stop); each tied to exact audit contract and Git blob in `docs/EDEN_OPTIMIZATION_COVERAGE_2026-10-20.json`, CI checker requires unchanged Git blob. Total 348/491 handled; **143 remain (81 engine/runtime, 62 launcher)**. This is triage, not new FPS optimizations or gameplay fix. P0 SM service 1ms poll and JIT/memory translation owners stay open for true runtime diagnosis.
 
 

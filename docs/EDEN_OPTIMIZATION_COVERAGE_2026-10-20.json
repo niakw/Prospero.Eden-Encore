@@ -133,6 +133,38 @@
       "evidence": "Source read: Constexpr title-qualified developer replay policy; opt-in, not per-frame workload. Contract U45; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
     },
     {
+      "path": "headless/dev_vulkan.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U59",
+      "reviewed_source_git_blob": "af176474dd17505cee9248859ee3d370c1e7acd2",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Drapeaux de développement configurés avant la création du device ; fast-first désactivé dans le profil livré. Les booléens hors instrumentation ne réalisent pas de travail par frame. Reopen if: Une preuve de mutation concurrente des options avant création GPU."
+    },
+    {
+      "path": "headless/development_input.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U51",
+      "reviewed_source_git_blob": "010c838f1e7535b5dc2d8b40d30f81c3bc2b40a7",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Commandes de test par fichier/istream et identifiants monotones, uniquement en simulation DEV. Pas de boucle d’attente ajoutée au polling HID normal. Reopen if: Une surcharge mesurée du lecteur DEV ou des commandes rejouées."
+    },
+    {
+      "path": "headless/devices.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U52",
+      "reviewed_source_git_blob": "0a819622e35d9d89ce83c3937190fae6dc822ae6",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: L’interface manette borne le nombre de joueurs et le chemin vibration utilise une indication atomique sur les polls silencieux. Le mapping réel reste dans les implémentations et mérite ses tests de jeu. Reopen if: Une régression d’actions FC27 imputable à la définition des états HID."
+    },
+    {
+      "path": "headless/diagnostics.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U36",
+      "reviewed_source_git_blob": "0bc6a2c89def2a5be80df854e5ced443cb3c2e3d",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Sortie bornée à 1 024 caractères, journalisation d'étape explicite ; aucune boucle de profiling dans le header. Ne pas transformer un traceur d’erreurs en logging par frame. Reopen if: Un appel démontré sur le chemin fréquent de présentation."
+    },
+    {
       "path": "headless/direct_pool_accounting.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U32",
@@ -158,6 +190,14 @@
       "proof_ref": "tools/check-headless-runtime-header-owners.py",
       "source_review_document": "docs/EDEN_GPU_MEMORY_POLICY_REVIEW_2026-10-21.md",
       "evidence": "Previously maintained GPU/memory performance guard reviewed; Checks monotone interval coverage with overflow-safe extent bounds; conservatively reports only an upper free bound. No additional correction justified without new failing evidence."
+    },
+    {
+      "path": "headless/encore_overrides_runtime.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U54",
+      "reviewed_source_git_blob": "911b3b2c87b7c1edecc633e683f312934ddf902a",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Analyse du JSON des profils depuis un manifeste externe borné puis sélection par jeu, et non une relecture JSON par commande GPU. La politique native reste séparée du snapshot. Reopen if: Une relecture de profil répétée dans la boucle de jeu."
     },
     {
       "path": "headless/encore_performance_policy.h",
@@ -192,6 +232,14 @@
       "reviewed_source_git_blob": "446f2ab07896604cf4c46c42509a569ae7bab1a4",
       "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
       "evidence": "Current source inspected: Observateur passif ; soupçonne l’absence de progression GPU sans tuer ni relancer le jeu, et plafonne les rapports à quatre par session. Rerun this review only on source drift or Faux signal répétable en jeu ou compteur de progression trompeur."
+    },
+    {
+      "path": "headless/glyph_overrides_runtime.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U61",
+      "reviewed_source_git_blob": "ba2b853c21f62402b442bf3f69acd46eff0689f6",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Catalogue graphique et version de jeu validés au chargement ; budgets explicites des fichiers/packs et chemin fallback sans forcer un mod non vérifié. Reopen if: Coût de lecture d’un pack répété après lancement."
     },
     {
       "path": "headless/glyph_sha256.h",
@@ -237,6 +285,22 @@
       "evidence": "Current source inspected: Compteurs relaxés, journalisation limitée aux huit premiers puis aux puissances de deux ; aucun verrou ni formatage obligatoire en régime normal hors erreur. Rerun this review only on source drift or Panne montrant une tempête de défauts ou coût excessif du compteur."
     },
     {
+      "path": "headless/gpu_native_probe.inc",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U31",
+      "reviewed_source_git_blob": "00817ac975fd091e73744b2e47fc0d3974459ae0",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Fragment de sondage AGC natif, avec échantillons et polling de diagnostic, uniquement sur sollicitation explicite ; pas de worker GPU normal. Reopen if: Erreur du mode sonde ou inclusion inattendue dans le profil livré."
+    },
+    {
+      "path": "headless/gpu_probe.inc",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U30",
+      "reviewed_source_git_blob": "4e7fee02e9492341b31c74492acfa4741e2b9265",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Fragment EGL/AGC de tests graphiques compilé sur la cible probe explicitement sélectionnée. Boucles d’essai exclues des frames utilisateur. Reopen if: Profil normal lié par erreur à la cible probe."
+    },
+    {
       "path": "headless/graphics.cpp",
       "disposition": "reviewed_without_new_code_edit",
       "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
@@ -248,6 +312,14 @@
       "reviewed_source_git_blob": "6d1a4fe17e1ea638d6de2f0dd07d06aa8792356e",
       "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
       "evidence": "Current source inspected: Déclarations de fenêtre et lignes de base des pressions de frame par instance ; pas de travail GPU dans ce header, pas de mémoire globale de mesures entre deux jeux. Rerun this review only on source drift or Défaut de propriété/contexte EGL prouvé dans l’implémentation."
+    },
+    {
+      "path": "headless/guest_fault.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U26",
+      "reviewed_source_git_blob": "411100e4dffda04e45e3ffa174fb1c1b76b233a7",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Notification du premier défaut invité conservée sous mutex ; le chemin est celui d’une erreur irrécupérable et non d’une transition de frame saine. Reopen if: Perte de rapport ou deadlock observé sur erreur invitée."
     },
     {
       "path": "headless/heap_pages.cpp",
@@ -263,6 +335,14 @@
       "reviewed_source_git_blob": "85eed229a6d49dba5bb23edea2283368761ea031",
       "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
       "evidence": "Current source inspected: Table de 4 096 emplacements, 64 sondes maximum et compteurs atomiques sans mutex sur les commandes HLE déjà enregistrées ; premier enregistrement sérialisé seulement. Rerun this review only on source drift or Profil hôte ou PS5 montrant que les statistiques DEV ralentissent HLE."
+    },
+    {
+      "path": "headless/hud.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U57",
+      "reviewed_source_git_blob": "9a688e1a03d618eda86f5430f3be6959ce902912",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Format HUD et glyphes en tableaux de taille fixe ; la métrique FPS exclut les pauses de présentation. Aucun I/O ou allocation dans le formateur. Reopen if: Coût par frame de composition HUD prouvé par profilage."
     },
     {
       "path": "headless/image_pages.h",
@@ -286,6 +366,38 @@
       "evidence": "Current source inspected: Repli de capacité JIT uniquement lors d’un échec de construction ; réduit par paliers bornés et ne publie pas de pointeur exécutable avant succès. Aucun polling en jeu. Rerun this review only on source drift or Échec d’allocation reproductible malgré la stratégie de repli."
     },
     {
+      "path": "headless/log_pipe.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U37",
+      "reviewed_source_git_blob": "275a75da7baadbcb95be91996adb5cbdf35c59c2",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Redirection de logs vers un pipe et écrivain de fond : évite les écritures synchrones du stockage PS5 sur les workers. Le mode détaillé reste facultatif. Reopen if: Backpressure prouvée lors d’un blocage de pipe ou perte de journal."
+    },
+    {
+      "path": "headless/metadata_bridge.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U14",
+      "reviewed_source_git_blob": "56c19ed56e14a70139463eb01f3f92ce40d5ed4a",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Déclarations C de chargement métadonnées et contrôles d’erreur ; l’extraction concrète est dans metadata_bridge.cpp, pas dans cet ABI header. Reopen if: Mismatch ABI entre l’extracteur natif et ses consommateurs."
+    },
+    {
+      "path": "headless/mods.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U62",
+      "reviewed_source_git_blob": "a8ab3fe9da35e362a75674af56a08014c407b23b",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Inventaire filesystem des mods par dossier de titre avant exécution. Aucun balayage de répertoire pour chaque draw ou sync invité. Reopen if: Traçage montrant une rescannérisation de mods en jeu."
+    },
+    {
+      "path": "headless/native_directory.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U41",
+      "reviewed_source_git_blob": "5b0c96dfc98f7d25b3fb602f4ad68b03e125ec7d",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Lecture native getdents par tampon 64 KiB, vérification d’enregistrements bornés ; cette traversée est d’infrastructure fichier, pas un accès GPU. Reopen if: Erreur ou surcharge observée sur grands répertoires."
+    },
+    {
       "path": "headless/network_audit_sockets.c",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U06",
@@ -300,6 +412,14 @@
       "evidence": "Source-read optimization triage, no additional hotpath edit justified: Network audit disabled path returns after atomic acquire; duplicate DNS denies suppressed before file lock and writes batched, so quiet-mode bottleneck not evident."
     },
     {
+      "path": "headless/network_audit.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U39",
+      "reviewed_source_git_blob": "df460cb201395e322f627031f2ad6a19dffa3a41",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Interface de contrôle optionnel des métadonnées réseau ; OFF ne déclenche pas d’I/O ; la filtration DNS réelle est dans un propriétaire distinct. Reopen if: I/O réseau déclenchée alors que le détail est désactivé."
+    },
+    {
       "path": "headless/network_domain_rules.c",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U07",
@@ -307,11 +427,43 @@
       "evidence": "Source-read optimization triage, no additional hotpath edit justified: Guest domain policy is immutable after release-ready publication and no heap/socket work in lookup; linear scan is bounded but needs DNS workload measurements to justify indexing."
     },
     {
+      "path": "headless/network_domain_rules.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U38",
+      "reviewed_source_git_blob": "ded2a763890aac9b76b7b2a5fed0db7ee61cd661",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: API C du chargement unique de la blocklist et de la décision de domaine. Le matching est exécuté par son moteur dédié, pas implémenté dans ce header. Reopen if: Incohérence de décision entre résolution hôte et DNS invité."
+    },
+    {
+      "path": "headless/pad_diagnostics.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U71",
+      "reviewed_source_git_blob": "892bef9a655028c6c8215cd1fc8f2e9ed3f698ac",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Calcul d’arêtes d’entrée sans allocation ; intégré uniquement aux échantillons DualSense détaillés. Aucun log synchrone systématique. Reopen if: Perte d’un événement PlayStation sur un échantillon reproductible."
+    },
+    {
       "path": "headless/pad.cpp",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U03",
       "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
       "evidence": "Source-read optimization triage, no additional hotpath edit justified: Controller input and rumble path has release/acquire pending hint before mutex; no hotpath locking on silent polls, preserve paired publication."
+    },
+    {
+      "path": "headless/pipeline_trace_registry.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U72",
+      "reviewed_source_git_blob": "3930e89fd3a8a7b7cca948e5d867fec928066a86",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Registre de première utilisation pipeline limité à 65 536 entrées, mutex uniquement lorsque la trace DEV est active ; protège l’ancien unordered_set concurrent. Reopen if: Coût mesuré de trace-pipeline activée ou accès hors trace."
+    },
+    {
+      "path": "headless/preferences.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U73",
+      "reviewed_source_git_blob": "c23ba14a4ee176fb98183958deb892d9139d8f1e",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Header de compatibilité déléguant le stockage JSON à settings_store.h ; aucune lecture ou écriture active ici. Reopen if: Régression du composant settings_store lui-même."
     },
     {
       "path": "headless/present_interval_witness.h",
@@ -351,6 +503,14 @@
       "contract_id": "U08",
       "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
       "evidence": "Source-read optimization triage, no additional hotpath edit justified: Native resolver and fcntl compatibility wrappers preserve special console ABI; resolver setup could be profiled but blind caching could change lifecycle and errno."
+    },
+    {
+      "path": "headless/sdk_audit.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U64",
+      "reviewed_source_git_blob": "ac190be7fcc49cbe6faddedf41640abb6e972cb6",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Audit de runtime opt-in, effectue volontairement des tests mémoire lourds, pas lancé à chaque frame. Ne jamais activer en production pour optimiser. Reopen if: Exécution de l’audit sur le chemin de rendu normal."
     },
     {
       "path": "headless/stall_watchdog.h",
