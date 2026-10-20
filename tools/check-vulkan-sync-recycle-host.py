@@ -127,7 +127,10 @@ int main() {
         std::atomic<Frame*> received{nullptr};
         std::thread waiter([&] { received.store(p.GetRenderFrame()); });
         const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(4);
-        while (!p.free_cv.entered.load() && std::chrono::steady_clock::now()<deadline)
+        // The waiter publishes entered just before condition_variable_any
+        // releases free_mutex. Observe both events, not just the flag.
+        while ((!p.free_cv.entered.load() || p.free_mutex.locked.load()) &&
+               std::chrono::steady_clock::now()<deadline)
             std::this_thread::yield();
         assert(p.free_cv.entered.load() && !p.free_mutex.locked.load());
         p.Present(&frame);
