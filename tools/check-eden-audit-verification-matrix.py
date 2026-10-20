@@ -146,7 +146,7 @@ def build_matrix(rows: list[dict], workflow: str, catalog: str) -> tuple[list[di
     undirect = sorted(set(r["evidence"] for r in indirect))
     assert sum(statuses.values()) == len(rows)
     # Each new HOST claim needs a precise in-CI proof and native-limit statement.
-    assert statuses["HOST"] == 45, "HOST claims changed: review evidence before modifying guard"
+    assert statuses["HOST"] == 47, "HOST claims changed: review evidence before modifying guard"
     ownership_closures = set(["B06","B07","B08","B09","B10","B12","B13","B15","B17","B18","B19","B20"])
     for row in rows:
         if row["id"] not in ownership_closures:
@@ -155,6 +155,18 @@ def build_matrix(rows: list[dict], workflow: str, catalog: str) -> tuple[list[di
         assert row["evidence_kind"] == "python-in-preflight", row["id"]
         assert "Hôte:" in row["acceptance"] and "PS5" in row["acceptance"], row["id"]
     assert len(ownership_closures) == 12
+    # Newly qualified P0 properties are source-linked host witnesses only.
+    # They do not certify device progress, guest liveness or FPS.
+    for ident, expected in {
+        "Q07": "tools/check-native-gpu-queue-stop-fastpath-host.py",
+        "V02": "tools/check-vulkan-present-wait-host.py",
+    }.items():
+        entry = keyed[ident]
+        assert entry["status"] == "HOST" and entry["priority"] == "P0", ident
+        assert entry["evidence"] == expected, ident
+        assert entry["evidence_kind"] == "python-in-preflight", ident
+        assert "Hôte:" in entry["acceptance"] and "PS5" in entry["acceptance"], ident
+
     assert all(r["status"] != "HOST" for r in indirect)
     assert not any(r["native_game_validation"] or r["measured_frametime_improvement"]
                    for r in rows), "host coverage cannot certify console performance"
