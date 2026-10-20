@@ -67,7 +67,8 @@ untraced = untraced.replace(loading_wait, '            state.queue.PopWait(next,
 # The native crash-only breadcrumb is coarse (one relaxed atomic per 64
 # completed GPU commands); strip it solely for the upstream-body comparison.
 progress_marker = (
-    '            // Release publishes completed GPU work to acquire-side fence readers.\n'\n    '            state.signaled_fence.store(next.fence, std::memory_order_release);\n'
+    '            // Release publishes completed GPU work to acquire-side fence readers.\n'
+    '            state.signaled_fence.store(next.fence, std::memory_order_release);\n'
     '            if ((++completed_gpu_commands & 63u) == 0u)\n'
     '                ::Eden::Crash::gpu_completed_commands.fetch_add(64, std::memory_order_relaxed);'
 )

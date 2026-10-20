@@ -27,7 +27,8 @@ CONSUME="state.signaled_fence.load(std::memory_order_acquire)"
 assert ORIGINAL.count(PIN)==1
 assert QUIET.count(OPT)==DEV.count(OPT)==1
 assert QUIET.count(PIN)==DEV.count(PIN)==0
-assert QUIET.count(CONSUME)==DEV.count(CONSUME)==2
+# PushCommand has two stop/wait fallback loads and one CV wait-predicate load.
+assert QUIET.count(CONSUME)==DEV.count(CONSUME)==3
 assert QUIET.count("state.cv.notify_all();")==DEV.count("state.cv.notify_all();")==1
 assert QUIET.index(OPT)<QUIET.index("state.cv.notify_all();")
 assert DEV.index(OPT)<DEV.index("state.cv.notify_all();")
