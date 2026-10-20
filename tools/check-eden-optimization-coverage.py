@@ -26,7 +26,7 @@ assert len(entries)==len(handled),"duplicate optimization owner"
 assert handled<=owners,sorted(handled-owners)
 allowed={"code_changed_in_batch","reviewed_without_new_code_edit",
          "historical_host_contract_reviewed","previously_integrated_source_change",
-         "shipping_backport_integrated_previously","historical_maintained_unit_parity"}
+         "shipping_backport_integrated_previously","historical_maintained_unit_parity","new_source_issue_corrected"}
 assert all(e["disposition"] in allowed and e["evidence"] for e in entries)
 audit=(ROOT/"docs/EDEN_CORE_AUDIT_DEPENDENCIES.md").read_text()
 rows=audit.split("<!-- AUDIT_ROWS_START -->",1)[1].split("<!-- AUDIT_ROWS_END -->",1)[0]
@@ -88,6 +88,14 @@ for e in entries:
     assert e["profile_visibility"] in {"optional_or_staged","profile_dependent_or_selected"}
     assert e["proof_ref"].endswith(".py") and (ROOT/e["proof_ref"]).is_file()
     assert "python3 -B "+e["proof_ref"] in preflight,("not in CI",e["path"])
+# Source fixes added after the first baseline are counted only with
+# a current checked-in source and a CI-invoked, source-aware host witness.
+for e in entries:
+    if e["disposition"]!="new_source_issue_corrected":
+        continue
+    assert e["proof_ref"].endswith(".py") and (ROOT/e["proof_ref"]).is_file()
+    assert "python3 -B "+e["proof_ref"] in preflight
+    assert (ROOT/e["path"]).is_file()
 status=Counter(e["disposition"] for e in entries)
 assert len(owners)==STATE["owned_code_count_at_snapshot"],("source inventory changed",len(owners),STATE["owned_code_count_at_snapshot"])
 assert len(owners)==len(handled)+len(owners-handled)
@@ -100,5 +108,6 @@ print("EDEN_OPTIMIZATION_REVIEW_BACKLOG_PASS",
       "prior_source="+str(status["previously_integrated_source_change"]),
       "shipping_integrated="+str(status["shipping_backport_integrated_previously"]),
       "historical_maintained="+str(status["historical_maintained_unit_parity"]),
+      "new_code_fixes="+str(status["new_source_issue_corrected"]),
       "remaining_to_triage="+str(len(owners-handled)),
       "new_code_fixes_required=UNKNOWN native_console_validation=SEPARATE")
