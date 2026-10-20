@@ -30,6 +30,7 @@ on:
       - 'tools/check-vulkan-query-allocation-host.py'
       - 'tools/check-vulkan-query-grouping-host.py'
       - 'tools/check-vulkan-query-copy-plan-host.py'
+      - 'tools/check-vulkan-deferred-copy-ownership-host.py'
       - 'headless/buffer_pages.h'
       - 'headless/image_pages.h'
       - 'vendor/encore-active/eden-core/src/common/fiber.cpp'
@@ -69,6 +70,7 @@ jobs:
           python3 -B tools/check-vulkan-query-allocation-host.py
           python3 -B tools/check-vulkan-query-grouping-host.py
           python3 -B tools/check-vulkan-query-copy-plan-host.py
+          python3 -B tools/check-vulkan-deferred-copy-ownership-host.py
           python3 -B tools/check-native-dma-clear-span-host.py
           python3 -B tools/check-native-gpu-dirty-transition-host.py
           python3 -B tools/check-native-gpu-dirty-gather-host.py

@@ -296,3 +296,39 @@ Les trois contrôles du complément passent dans
 `results/gpu-dirty-gather-2026-10-20/`. Le fast gate et la prévalidation incluent
 le nouveau témoin. Le compteur reste **398 / 96 / 409** : M09 exige encore
 une preuve aux frontières réelles des caches, sans gain FPS PS5 revendiqué.
+
+## Suite — propriété des métadonnées de transfert GPU
+
+Trois sources sont modifiées : `vk_buffer_cache_cost.cpp`,
+`vk_texture_cache_cost.cpp` et `vulkan_query_cache.cpp`. Les captures des sept
+chemins de copie de buffers, copie d’images, upload normal/MSAA et download
+normal/MSAA prennent la propriété des vecteurs. Les commandes gardent donc
+leurs données pendant l’exécution différée sans recopier leurs allocations.
+Les deux chemins multi-destination réservent leurs conteneurs avant la boucle.
+La réserve initiale des résultats de samples devient
+`min(num_slots_used, pending_sync.size())` : chaque requête fournit au plus
+un résultat, et le nouveau plafond n’augmente jamais l’estimation précédente.
+Aucun transfert, ordre de commande, barrière, tick ou attente n’est supprimé.
+
+Le nouveau témoin compile les captures réelles, les classes et les méthodes
+Record/ExecuteAll du scheduler avec Boost et les types Vulkan épinglés. Sous
+ASan/UBSan, il détruit les conteneurs appelants avant de rejouer les commandes,
+force la reprise après débordement, vérifie les octets et recycle les blocs.
+Pour les scénarios au-delà du stockage inline, chaque capture simple passe
+de **1 à 0 allocation**, et chacun des deux scénarios imbriqués de **33 à 0**.
+Ces chiffres portent uniquement sur la capture/enregistrement de métadonnées,
+ni sur les allocations de ressources GPU ni sur les FPS PS5.
+
+Les témoins existants de SyncValues, consolidation, inventaire et syntaxe
+Python passent. Le rejeu part de la source après backports natifs, comme le
+build, et reproduit exactement les trois unités modifiées. Comparaison de
+41 sorties avant/après : quatre écarts préexistants et inchangés restent dans
+l’ancien rejeu (HUD SPIR-V/en-tête généré et deux en-têtes de pipelines) ;
+ils sont consignés dans `results/gpu-copy-batch-2026-10-20/replay-verified.json`.
+La tentative initiale sur le snapshot brut est conservée séparément : elle
+ne représente pas l’entrée backportée du build natif. Les sorties de ce rejeu
+historique ne remplacent pas les propriétaires C++ compilés.
+
+Le nouveau témoin rejoint les deux workflows. Les compteurs restent
+**398 fichiers / 96 P0 / 409 contrats** ; la nouvelle compilation native est
+regroupée après le lot, et le test PS5 reste reporté à la fin.

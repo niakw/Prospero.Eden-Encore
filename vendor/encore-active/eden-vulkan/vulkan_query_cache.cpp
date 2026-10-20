@@ -249,7 +249,9 @@ public:
         sync_values_stash.clear();
         sync_values_stash.emplace_back();
         std::vector<HostSyncValues>* sync_values = &sync_values_stash.back();
-        sync_values->reserve(num_slots_used);
+        // A pending query contributes at most one result. Cap the slot-based
+        // estimate without enlarging it when many queries share a few slots.
+        sync_values->reserve((std::min)(num_slots_used, pending_sync.size()));
         ::Common::unordered_map<size_t, std::pair<size_t, size_t>> offsets;
         resolve_buffers.clear();
         size_t resolve_buffer_index = ObtainBuffer<true>(num_slots_used);

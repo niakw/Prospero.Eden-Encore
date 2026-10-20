@@ -21,6 +21,19 @@ Le passage 400 → 398, 98 → 96 et 411 → 409 provient uniquement de `M08` et
 `V77`, qualifiés pour leur propriété hôte décrite dans les lignes du registre.
 Ils ne certifient pas les freezes, les graphismes ou les frametimes sur PS5.
 
+**Suite — métadonnées des transferts GPU :** trois unités Vulkan sont optimisées.
+Sept captures transfèrent leurs tableaux à la commande différée, au lieu de
+les recopier ; les deux téléchargements multiples préallouent aussi leurs
+conteneurs. La réserve des résultats de samples est plafonnée par le nombre
+de requêtes en attente, sans dépasser l’estimation précédente en slots.
+Le témoin ASan/UBSan utilise les captures réelles et les blocs de commandes :
+**1 → 0 allocation** pour une liste simple et **33 → 0** pour le scénario
+multi-destination, avec destruction des sources avant exécution, débordement
+et recyclage du bloc. Les trois unités sont reproduites exactement par le
+rejeu avec les backports natifs. La validation native du nouveau lot reste
+à effectuer ; le paquet `615510b20e` ci-dessous correspond au lot précédent.
+Les compteurs restent **398 / 96 / 409**, sans preuve PS5 ajoutée.
+
 Travail effectué : correction des transferts CV et du permis initial du
 scheduler ; bornage et réduction des lectures du bitmap fastmem ; fusion
 linéaire des requêtes GPU ; remise en cohérence de la mémoire GPU native et
