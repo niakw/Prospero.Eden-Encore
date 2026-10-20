@@ -33,8 +33,9 @@ allocations** sur les 512 blocs d’upmix après amorçage du témoin à deux
 producteurs, avec PCM identique et une seule publication par bloc. Sa capacité
 maximale reste allouée jusqu’à la fin du thread. Les sept contrôles ciblés
 passent, dont les deux nouveaux témoins sous ASan/UBSan ; ils sont intégrés
-aux workflows rapide et exhaustif. La compilation native de ce lot reste à
-terminer ; le paquet précédent reste identifié ci-dessous.
+aux workflows rapide et exhaustif. Le build release et le paquet natif de
+`fa30dc23e4` passent aussi leurs contrôles après neuf étapes incrémentales ;
+le SHA compilé a été retrouvé dans l’ELF. Aucun test console ajouté.
 **Compteurs inchangés : 398 fichiers / 96 P0 / 409 contrats.**
 
 **Suite — métadonnées des transferts GPU :** trois unités Vulkan sont optimisées.
@@ -55,7 +56,7 @@ scheduler ; bornage et réduction des lectures du bitmap fastmem ; fusion
 linéaire des requêtes GPU ; remise en cohérence de la mémoire GPU native et
 réutilisation de l’adresse physique validée ; clear DMA en octets ; corrections
 de compilation native. L’application et son paquet natif passent les contrôles
-locaux sur `033bff0b4f` (dernière suite). Les preuves et
+locaux sur `fa30dc23e4` (dernière suite). Les preuves et
 limites sont détaillées dans [le rapport du lot](EDEN_CLOUD_AUDIT_2026-10-20.md).
 
 **Optimisations supplémentaires vérifiées sur hôte en fin de lot :**
@@ -69,7 +70,7 @@ ces copies sous le verrou. Le vrai code des fibres effectue 128 transferts
 sur deux threads : environ 2 Mio contre 4 Mio alloués par fibre invitée,
 et zéro pile dédiée aux fibres hôtes. Ces mesures ne sont pas des FPS PS5.
 Les 23 unités du précontrôle syntaxique PS5 passent. Le build release complet
-et le paquet courant de `033bff0b4f` sont validés hors console : 379 dépendances sparse,
+et le paquet courant de `fa30dc23e4` sont validés hors console : 379 dépendances sparse,
 code machine du verrou JIT, liaison RADV/OpenGL, inventaire, imports et alignement.
 Le SHA publié est présent dans le binaire ; les commits documentaires suivants
 ne modifient pas ce code. Aucun résultat de CI distante n’est revendiqué.
