@@ -90,6 +90,16 @@ assert "(present_queue.empty() && !present_in_flight)" in wait_present
 assert wait_present.index("if (present_failure) std::rethrow_exception(present_failure);") < (
     wait_present.index("std::scoped_lock swapchain_lock{swapchain_mutex};")
 )
+present_method = source.split("void PresentManager::Present(Frame* frame) {", 1)[1].split(
+    "size_t PresentManager::MaxExtraFrames(", 1)[0]
+assert "scheduler.WaitWorker();" in present_method
+assert present_method.index("CopyToSwapchain(frame);") < present_method.index(
+    "std::scoped_lock lock{free_mutex};")
+assert present_method.index("std::scoped_lock lock{free_mutex};") < present_method.index(
+    "free_queue.push_back(frame);")
+assert present_method.index("free_queue.push_back(frame);") < present_method.index(
+    "free_cv.notify_one();")
+assert present_method.index("free_cv.notify_one();") < present_method.rindex("}")
 worker = source.split("void PresentManager::PresentThread(", 1)[1].split(
     "void PresentManager::RecreateSwapchain(", 1)[0]
 assert worker.index("present_queue.pop_front();") < worker.index("present_in_flight = true;")
