@@ -2094,6 +2094,15 @@
       "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
     },
     {
+      "path": "vendor/encore-active/eden-surface-lifecycle/src/core/hle/service/nvnflinger/surface_flinger.cpp",
+      "disposition": "historical_native_selected_unit",
+      "contract_id": "N06",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/install-vendored-surface-lifecycle.py",
+      "source_selector": "surface",
+      "evidence": "Existing source selected in native profile by the checked-in surface owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+    },
+    {
       "path": "vendor/encore-active/eden-sync/src/core/hle/kernel/k_synchronization_object.h",
       "disposition": "historical_host_contract_reviewed",
       "contract_id": "H17",
@@ -2154,9 +2163,45 @@
       "evidence": "Previous audit host contract H15: Full host preflight #39026035356 SUCCESS; actual SleepThread original/native UBSan and pinned YieldType 0/-1/-2 PASS; CodeQL #39026019170 SUCCESS (C/C++, Python, Actions); no console or frozen gameplay proof"
     },
     {
+      "path": "vendor/encore-active/eden-vulkan/include/core/frontend/emu_window.h",
+      "disposition": "historical_native_selected_unit",
+      "contract_id": "V36",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendored-vulkan-fork.py",
+      "source_selector": "vulkan",
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/include/video_core/present.h",
+      "disposition": "historical_native_selected_unit",
+      "contract_id": "V37",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendored-vulkan-fork.py",
+      "source_selector": "vulkan",
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+    },
+    {
       "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/pipeline_helper.h",
       "disposition": "reviewed_without_new_code_edit",
       "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/present/window_adapt_pass.h",
+      "disposition": "historical_native_selected_unit",
+      "contract_id": "V39",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendored-vulkan-fork.py",
+      "source_selector": "vulkan",
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/renderer_vulkan.h",
+      "disposition": "historical_native_selected_unit",
+      "contract_id": "V35",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendored-vulkan-fork.py",
+      "source_selector": "vulkan",
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
     },
     {
       "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/striped_wait.h",
@@ -2165,6 +2210,24 @@
       "prior_status": "HOST",
       "proof_ref": "tools/check-native-vulkan-striped-wait-host.py",
       "evidence": "Previous audit host contract V40: Hôte: véritable en-tête compilé avec ASan/UBSan, files de complétion compute/graphics reliées, partage de condition, réveil correct à prédicats distincts et nombre fixe de stripes prouvés; équité/performance GPU et FPS PS5 non qualifiés"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_blit_screen.h",
+      "disposition": "historical_native_selected_unit",
+      "contract_id": "V34",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendored-vulkan-fork.py",
+      "source_selector": "vulkan",
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_compute_pipeline.h",
+      "disposition": "historical_native_selected_unit",
+      "contract_id": "V41",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendored-vulkan-fork.py",
+      "source_selector": "vulkan",
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
     },
     {
       "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_descriptor_buffer.h",
@@ -2198,9 +2261,36 @@
       "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
     },
     {
+      "path": "vendor/encore-active/eden-vulkan/include/video_core/vulkan_common/vulkan_wrapper.h",
+      "disposition": "historical_native_selected_unit",
+      "contract_id": "V44",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendored-vulkan-fork.py",
+      "source_selector": "vulkan",
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/include/video_core/vulkan_common/vulkan.h",
+      "disposition": "historical_native_selected_unit",
+      "contract_id": "V43",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendored-vulkan-fork.py",
+      "source_selector": "vulkan",
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+    },
+    {
       "path": "vendor/encore-active/eden-vulkan/vk_buffer_cache_cost.cpp",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vk_compute_pass_cost.cpp",
+      "disposition": "historical_native_selected_unit",
+      "contract_id": "V22",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendored-vulkan-fork.py",
+      "source_selector": "vulkan",
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
     },
     {
       "path": "vendor/encore-active/eden-vulkan/vk_compute_pipeline_cost.cpp",
@@ -2260,6 +2350,33 @@
       "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
     },
     {
+      "path": "vendor/encore-active/eden-vulkan/vulkan_hud_shaders.h",
+      "disposition": "historical_native_selected_unit",
+      "contract_id": "V47",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendored-vulkan-fork.py",
+      "source_selector": "vulkan",
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vulkan_instance.cpp",
+      "disposition": "historical_native_selected_unit",
+      "contract_id": "V48",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendored-vulkan-fork.py",
+      "source_selector": "vulkan",
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vulkan_library.cpp",
+      "disposition": "historical_native_selected_unit",
+      "contract_id": "V49",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendored-vulkan-fork.py",
+      "source_selector": "vulkan",
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+    },
+    {
       "path": "vendor/encore-active/eden-vulkan/vulkan_present_layer.cpp",
       "disposition": "reviewed_without_new_code_edit",
       "evidence": "Source-level P0 optimization triage; docs/EDEN_OPTIMIZATION_REVIEW_MESA_VULKAN_2026-10-20.md"
@@ -2309,9 +2426,72 @@
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
     },
     {
+      "path": "vendor/encore-active/eden-vulkan/vulkan_wrapper.cpp",
+      "disposition": "historical_native_selected_unit",
+      "contract_id": "V30",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendored-vulkan-fork.py",
+      "source_selector": "vulkan",
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+    },
+    {
       "path": "vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h",
       "disposition": "reviewed_without_new_code_edit",
       "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/ps5-mesa/src/amd/vulkan/meta/radv_meta_clear.c",
+      "disposition": "historical_native_selected_unit",
+      "contract_id": "R12",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendored-radv-fork.py",
+      "source_selector": "radv",
+      "evidence": "Existing source selected in native profile by the checked-in radv owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+    },
+    {
+      "path": "vendor/encore-active/ps5-mesa/src/amd/vulkan/meta/radv_meta_resolve.c",
+      "disposition": "historical_native_selected_unit",
+      "contract_id": "R13",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendored-radv-fork.py",
+      "source_selector": "radv",
+      "evidence": "Existing source selected in native profile by the checked-in radv owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+    },
+    {
+      "path": "vendor/encore-active/ps5-mesa/src/amd/vulkan/radv_cmd_buffer.c",
+      "disposition": "historical_native_selected_unit",
+      "contract_id": "R14",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendored-radv-fork.py",
+      "source_selector": "radv",
+      "evidence": "Existing source selected in native profile by the checked-in radv owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+    },
+    {
+      "path": "vendor/encore-active/ps5-mesa/src/amd/vulkan/radv_descriptor_update_template.c",
+      "disposition": "historical_native_selected_unit",
+      "contract_id": "R15",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendored-radv-fork.py",
+      "source_selector": "radv",
+      "evidence": "Existing source selected in native profile by the checked-in radv owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+    },
+    {
+      "path": "vendor/encore-active/ps5-mesa/src/amd/vulkan/radv_descriptor_update_template.h",
+      "disposition": "historical_native_selected_unit",
+      "contract_id": "R16",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendored-radv-fork.py",
+      "source_selector": "radv",
+      "evidence": "Existing source selected in native profile by the checked-in radv owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+    },
+    {
+      "path": "vendor/encore-active/ps5-mesa/src/amd/vulkan/radv_physical_device.c",
+      "disposition": "historical_native_selected_unit",
+      "contract_id": "R17",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendored-radv-fork.py",
+      "source_selector": "radv",
+      "evidence": "Existing source selected in native profile by the checked-in radv owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
     },
     {
       "path": "vendor/encore-active/ps5-mesa/src/amd/vulkan/radv_pipeline.c",
