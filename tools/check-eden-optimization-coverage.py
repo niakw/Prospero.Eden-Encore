@@ -26,7 +26,7 @@ assert len(entries)==len(handled),"duplicate optimization owner"
 assert handled<=owners,sorted(handled-owners)
 allowed={"code_changed_in_batch","reviewed_without_new_code_edit",
          "historical_host_contract_reviewed","previously_integrated_source_change",
-         "shipping_backport_integrated_previously"}
+         "shipping_backport_integrated_previously","historical_maintained_unit_parity"}
 assert all(e["disposition"] in allowed and e["evidence"] for e in entries)
 audit=(ROOT/"docs/EDEN_CORE_AUDIT_DEPENDENCIES.md").read_text()
 rows=audit.split("<!-- AUDIT_ROWS_START -->",1)[1].split("<!-- AUDIT_ROWS_END -->",1)[0]
@@ -41,7 +41,8 @@ for line in rows.splitlines():
 for e in entries:
     if e["disposition"] not in {"historical_host_contract_reviewed",
                                "previously_integrated_source_change",
-                               "shipping_backport_integrated_previously"}:
+                               "shipping_backport_integrated_previously",
+                               "historical_maintained_unit_parity"}:
         continue
     cid=e["contract_id"]
     assert cid in by_id,("historical contract missing",cid)
@@ -77,6 +78,16 @@ for e in entries:
     assert record["active"]!=record["upstream"],("not a changed backport",e["path"])
 assert sum(e["disposition"]=="shipping_backport_integrated_previously"
            for e in entries)==78
+# A fast-skipped profile source must keep an exact original CI witness.
+# Off/DEV/staged paths are NOT declared active runtime optimizations.
+preflight=(ROOT/".github/workflows/encore-core-preflight.yml").read_text()
+for e in entries:
+    if e["disposition"]!="historical_maintained_unit_parity":
+        continue
+    assert e["prior_status"]=="SOURCE"
+    assert e["profile_visibility"] in {"optional_or_staged","profile_dependent_or_selected"}
+    assert e["proof_ref"].endswith(".py") and (ROOT/e["proof_ref"]).is_file()
+    assert "python3 -B "+e["proof_ref"] in preflight,("not in CI",e["path"])
 status=Counter(e["disposition"] for e in entries)
 assert len(owners)==STATE["owned_code_count_at_snapshot"],("source inventory changed",len(owners),STATE["owned_code_count_at_snapshot"])
 assert len(owners)==len(handled)+len(owners-handled)
@@ -88,5 +99,6 @@ print("EDEN_OPTIMIZATION_REVIEW_BACKLOG_PASS",
       "prior_host="+str(status["historical_host_contract_reviewed"]),
       "prior_source="+str(status["previously_integrated_source_change"]),
       "shipping_integrated="+str(status["shipping_backport_integrated_previously"]),
+      "historical_maintained="+str(status["historical_maintained_unit_parity"]),
       "remaining_to_triage="+str(len(owners-handled)),
       "new_code_fixes_required=UNKNOWN native_console_validation=SEPARATE")

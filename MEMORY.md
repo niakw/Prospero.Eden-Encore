@@ -1,5 +1,8 @@
 # Eden Encore — Project Memory
 
+- HISTORICAL PROFILE SOURCE FAST TRIAGE (20 Oct): +78 existing unique Encore source paths with exact SOURCE contract and CI-invoked source/parity verifier, including profile DEV/OFF/staged marked as such. New tally 258/491 handled, **233 remaining to optimization triage** (not 233 known defects); no C++ source edits or hardware optimization proof. `tools/check-eden-optimization-coverage.py` confirms original contract/witness path and CI invocation.
+
+
 - FAST SHIPPING BACKPORT TRIAGE (20 Oct): 78 already-modified production C/C++ files in `vendor/encore-active/eden-backports/src` with SHA256 active != upstream, unique SOURCE contract owners, exact pinned `manifest.json` and size per file; integrated code already ships in selected backport installer. `tools/check-eden-optimization-coverage.py` asserts original pinned SHA and active bytes for each. Optimization triage handled 102->180 /491, remain 389->311. These are not new fixes, HOST contract changes, native PS5 certification, or measured FPS gain.
 
 

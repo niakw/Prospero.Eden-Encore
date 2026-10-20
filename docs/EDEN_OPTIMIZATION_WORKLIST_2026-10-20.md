@@ -121,3 +121,26 @@ matérielle n'est impliquée.
 
 Les fichiers concernés restent surveillés pour les bugs et les
 régressions réels ; seul leur *premier tri d'optimisation* est évité.
+
+## Réception accélérée des unités C++ maintenues et vérifiées historiquement
+
+Le registre architectural permet de reconnaître **78 autres sources
+distinctes** possédant déjà une intervention Encore (source complète,
+variante de build ou ancien générateur CMake remplacé) et un témoin
+source/parité **lancé dans la prévalidation CI**. Aucun nouveau patch
+moteur n'est nécessaire pour répéter leur première étude.
+
+Les variantes `DEV`, `OFF` et simplement préparées sont enregistrées
+séparément comme `optional_or_staged` dans le manifeste ; ceci ne
+prouve ni sélection en version normale ni optimisation GPU réelle.
+Chaque chemin conserve son identifiant de contrat et sa preuve CI,
+dont la présence est surveillée par
+`tools/check-eden-optimization-coverage.py`.
+
+| Suivi de la passe d'optimisation | Avant | Après |
+| --- | ---: | ---: |
+| Code maintenu recensé | 491 | 491 |
+| Fichiers déjà traités / profil conservé | 180 | **258** |
+| **Restent à traiter dans la passe** | **311** | **233** |
+
+**Aucun contrat HOST ajouté. Aucune amélioration FPS PS5 affirmée.**
