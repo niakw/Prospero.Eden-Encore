@@ -192,6 +192,7 @@ jobs:
           python3 -B tools/check-worker-affinity.py
           python3 -B tools/check-ps5-thread-scheduler-probe.py
           python3 -B tools/check-native-hle-wait-queue-publication-host.py
+          python3 -B tools/check-native-hle-state-transition-fastpath-host.py
           python3 -B tools/check-native-hle-wait-null-queue-host.py
           python3 -B tools/check-native-hle-cv-key-write-host.py
           python3 -B tools/check-ps5-pad-input-chain.py
