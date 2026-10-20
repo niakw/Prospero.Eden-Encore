@@ -1427,9 +1427,14 @@ void QueryCacheRuntime::HostConditionalRenderingCompareValueImpl(VideoCommon::Lo
         impl->hcr_buffer = buffer->Handle();
         impl->hcr_offset = offset;
     }
+    // The same predicate buffer can be reused with inverted comparison.
+    // A changed comparison must re-record the conditional rendering state.
+    const VkConditionalRenderingFlagsEXT flags =
+        is_equal ? VK_CONDITIONAL_RENDERING_INVERTED_BIT_EXT : 0;
     if (impl->hcr_is_set) {
         if (impl->hcr_setup.buffer == impl->hcr_buffer &&
-            impl->hcr_setup.offset == impl->hcr_offset) {
+            impl->hcr_setup.offset == impl->hcr_offset &&
+            impl->hcr_setup.flags == flags) {
             return;
         }
     }
@@ -1439,7 +1444,7 @@ void QueryCacheRuntime::HostConditionalRenderingCompareValueImpl(VideoCommon::Lo
     }
     impl->hcr_setup.buffer = impl->hcr_buffer;
     impl->hcr_setup.offset = impl->hcr_offset;
-    impl->hcr_setup.flags = is_equal ? VK_CONDITIONAL_RENDERING_INVERTED_BIT_EXT : 0;
+    impl->hcr_setup.flags = flags;
     impl->hcr_is_set = true;
     impl->is_hcr_running = false;
     if (was_running) {
