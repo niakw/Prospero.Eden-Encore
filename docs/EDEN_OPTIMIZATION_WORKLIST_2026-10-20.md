@@ -221,3 +221,7 @@ de l'identification de véritables points chauds.
 ## 21 octobre — 16 entêtes / politiques natifs examinés sans nouveau patch
 
 Voir [EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md](EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md). La revue a lu les politiques JIT, l’analyse SMT, l’observabilité GPU/HLE, les guards de défaut et le watchdog de sortie. Ces fonctions et headers disposent déjà de chemins bornés ou ne sont utilisés qu’en DEV/initialisation. Chaque source est verrouillée par son Git blob d’origine, contrôlé en CI. **348/491 fichiers pris en charge ; 143 restants (81 moteur + 62 lanceur).** Aucune retouche spéculative sur CPU/JIT/GPU n’a été engagée ; le nombre de nouvelles modifications réellement requises n’est pas confondu avec le reste à examiner.
+
+## 21 octobre — accélération contrôlée des sources de lancement et de diagnostic
+
+Voir [EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md](EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md). 20 nouveaux chemins revus et attachés à leurs empreintes Git et contrats ; aucune modification C++ speculative. **368/491 pris en charge, 123 restants (61 moteur et infrastructure, 62 lanceur).** Les chemins CPU/JIT/HLE/GPU critiques restent prioritaires même si les headers de diagnostic, de préférences et de sondes DEV sont désormais couverts par leur revue de code.
