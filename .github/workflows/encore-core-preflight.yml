@@ -142,6 +142,7 @@ jobs:
           python3 -B tools/check-ps5-buffer-presentation-state-space.py
           python3 -B tools/check-ps5-vulkan-worker-wake.py
           python3 -B tools/check-vulkan-worker-fatal-drain-host.py
+          python3 -B tools/check-vulkan-renderpass-clear-bounds-host.py
           python3 -B tools/check-ps5-crash-only-logging.py
           python3 -B tools/check-log-pipe-unit.py
           python3 -B tools/check-performance-policy.py
