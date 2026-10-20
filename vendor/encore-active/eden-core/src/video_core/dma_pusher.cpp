@@ -5,6 +5,9 @@
 // SPDX-FileCopyrightText: Copyright 2021 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+#ifdef PS5_NATIVE
+#include "gpu_failure.h"
+#endif
 #include "common/settings.h"
 #include "core/core.h"
 #include "video_core/dma_pusher.h"
@@ -69,8 +72,20 @@ bool DmaPusher::Step() {
 
     if (signal_sync && !synced) {
         std::unique_lock lk(sync_mutex);
-        while (!synced && !system.IsShuttingDown())
+        while (!synced && !system.IsShuttingDown()) {
+#ifdef PS5_NATIVE
+            // A failed GPU worker cannot deliver this pending fence.
+            if (auto failure = ::Eden::PeekGpuFailure())
+                std::rethrow_exception(failure);
+#endif
             sync_cv.wait_for(lk, std::chrono::milliseconds(10));
+        }
+#ifdef PS5_NATIVE
+        // A failure published together with the final notification must not
+        // be mistaken for a successful DMA fence acknowledgement.
+        if (auto failure = ::Eden::PeekGpuFailure())
+            std::rethrow_exception(failure);
+#endif
         if (system.IsShuttingDown()) return false;
         signal_sync = false;
         synced = false;

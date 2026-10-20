@@ -15,6 +15,8 @@ def once(source, old, new):
 OLD_WAIT = "        sync_cv.wait(lk, [this]() { return synced; });"
 WAIT = ("        while (!synced && !system.IsShuttingDown())\n"
         "            sync_cv.wait_for(lk, std::chrono::milliseconds(10));")
+DMA_FAULT_INC = '#ifdef PS5_NATIVE\n#include "gpu_failure.h"\n#endif\n#include "common/settings.h"'
+DMA_FAULT_WAIT = "        while (!synced && !system.IsShuttingDown()) {\n#ifdef PS5_NATIVE\n            // A failed GPU worker cannot deliver this pending fence.\n            if (auto failure = ::Eden::PeekGpuFailure())\n                std::rethrow_exception(failure);\n#endif\n            sync_cv.wait_for(lk, std::chrono::milliseconds(10));\n        }\n#ifdef PS5_NATIVE\n        // A failure published together with the final notification must not\n        // be mistaken for a successful DMA fence acknowledgement.\n        if (auto failure = ::Eden::PeekGpuFailure())\n            std::rethrow_exception(failure);\n#endif"
 OLD_SEM = "    while (word != value) {"
 SEM = "    while (word != value && !dma_pusher.system.IsShuttingDown()) {"
 GPU_FAULT_INC = '#ifdef PS5_NATIVE\n#include "gpu_failure.h"\n#endif\n#include "common/assert.h"'
@@ -37,11 +39,13 @@ GPU_FAULT_LOOP = """    while (word != value && !dma_pusher.system.IsShuttingDow
 def expected(kind, dev):
     if kind == "dma":
         source = once(DMA, OLD_WAIT, WAIT + "\n        if (system.IsShuttingDown()) return false;")
+        source = once(source, '#include "common/settings.h"', DMA_FAULT_INC)
         if dev:
             timer = ("        { ::Eden::Performance::DiagnosticActiveTimer dma_fence_timer(\n"
                      "            ::Eden::Performance::gpu_dma_sync_wait, ::Eden::Performance::gpu_dma_sync_active_since_ns,\n"
                      "            !synced && !system.IsShuttingDown());\n" + WAIT + "\n        }")
             source = once(source, WAIT, timer)
+        source = once(source, WAIT, DMA_FAULT_WAIT)
     else:
         source = once(PULLER, OLD_SEM, SEM)
         source = once(source, '#include "common/assert.h"', GPU_FAULT_INC)

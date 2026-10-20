@@ -398,3 +398,24 @@ Un témoin C++ construit les méthodes natives extraites sous ASan/UBSan
 et vérifie le réveil d'un consommateur, le verrouillage, l'absence de
 recyclage après échec et l'absence de changement de la file asynchrone.
 Il ne prouve pas encore un gain de FPS ni la disparition des gels FC27.
+
+## 20 octobre — DMA : sortir d'une attente de fence après échec du GPU
+
+Dans `DmaPusher::Step`, la condition `signal_sync && !synced` attendait
+un acquittement par boucles `sync_cv.wait_for(10 ms)`, sans consulter
+`PeekGpuFailure`. Un worker GPU mort avant la notification pouvait
+laisser le producteur bloqué tant que l'arrêt global n'était pas annoncé.
+Sur PS5 seulement, la boucle consulte maintenant le registre d'échec
+GPU avant chaque attente et une seconde fois avant d'accepter un
+acquittement concurrent. Une panne provoque la propagation de la cause
+existante, **sans** créer de fence, modifier la mémoire invitée ou
+déclarer `synced=true`. La variante DEV garde son timer de contention
+et les chemins hôte ne changent pas. Le registre d'échec est remis à
+zéro entre titres comme dans le correctif précédent.
+
+Les deux implémentations normal/DEV et le contrôle de parité de leur
+source d'origine évoluent ensemble. Le test C++ extrait les vraies
+branches de `Step`, compile les quatre variantes avec ASan/UBSan, et
+vérifie l'acquittement normal, l'arrêt, la panne antérieure/pendant
+l'attente et la livraison unique au launcher. Il ne mesure pas les
+frametimes FC27 ni les performances réelles sur console.
