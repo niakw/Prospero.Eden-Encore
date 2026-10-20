@@ -45,6 +45,7 @@ jobs:
           set -euo pipefail
           python3 -B tools/check-native-a64-default-phases-host.py
           python3 -B tools/check-native-a64-cache-invalidation-host.py
+          python3 -B tools/check-jit-sparse-host.py
       - name: Boundary
         run: |
           echo 'Host source-derived checks only; native package, GPU and FPS remain unqualified.'

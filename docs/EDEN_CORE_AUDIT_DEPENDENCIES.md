@@ -47,6 +47,15 @@ Le test source-extrait `check-vulkan-worker-fatal-drain-host.py`
 prouve le réveil des attentes et la publication des exceptions du worker
 sous ASan/UBSan. Il ne mesure pas les fences physiques ni les FPS PS5.
 
+## J05 — propriété de réservation sparse qualifiée sur hôte (20 octobre 2026)
+
+Le témoin `check-jit-sparse-host.py` construit et exécute le vrai
+plan `PlanSparseCommit`, l'adaptateur Xbyak et les transitions
+simulées de mappage dual, jusqu'aux échecs d'allocation et à
+leur rollback. Il ne représente ni un nouveau gain de FPS, ni une
+preuve d'exécution sur le firmware cible. Le JIT runtime reste à
+mesurer en conditions réelles.
+
 ## Couverture quantifiée (registre courant)
 
 L'inventaire indexe des **contrats/fonctions à vérifier**, pas toutes les
@@ -58,16 +67,16 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
 | Graphe connu | 478 | 455 | 959 |
-| HOST — preuve ciblée hôte | 50 | 45 | 97 |
-| SOURCE — lecture effectuée, preuve insuffisante | 405 | 394 | 823 |
+| HOST — preuve ciblée hôte | 51 | 46 | 98 |
+| SOURCE — lecture effectuée, preuve insuffisante | 404 | 393 | 822 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 8 | 8 | 11 |
-| **Encore à qualifier (SOURCE + OPEN)** | **420** | **408** | **851** |
+| **Encore à qualifier (SOURCE + OPEN)** | **419** | **407** | **850** |
 | Dont priorité P0 (SOURCE + OPEN) | 111 | 106 | 257 |
 
-Le **noyau restant** compte donc 420 critères répartis sur
-408 fichiers et 851 mentions fonction/contrat :
-15 OPEN et 405 SOURCE.
+Le **noyau restant** compte donc 419 critères répartis sur
+407 fichiers et 850 mentions fonction/contrat :
+15 OPEN et 404 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
@@ -335,7 +344,7 @@ function/contract tokens are checked by CI for existence only; the
 | V10 | P1 | V05,V07 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_graphics_pipeline.h | Eden::StripedCondition; Eden::StripedMutex | HOST | tools/check-native-vulkan-striped-pipeline-host.py | Upstream 737152f backport only in native maintained headers; preflight #39032001757 SUCCESS: 8192 pipelines, 96 waiters, GCC/Clang O0/O2, 64 mutex + 64 conditions, exact Vulkan fork equivalence PASS; no console or FC27 FPS proof | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39032001757) |
 | A01 | P1 | H03 | vendor/sources/eden/src/audio_core/renderer/voice/voice_info.cpp | VoiceInfo::UpdateParameters; VoiceInfo::UpdatePlayState | OPEN | docs/PS5_R386_2026-10-12_FC27_FREEZE_FORENSICS.md | Validate audio voice state only if match stall traces demand it | 🟠 À contrôler |
 | F01 | P1 | Q04 | vendor/sources/eden/src/video_core/host1x/host1x.cpp | Host1x | OPEN | docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md | Trace actual host syncpoint progression if GPU command progress stops | 🟠 À contrôler |
-| J05 | P1 | J01 | headless/jit-sparse-commit.h | PlanSparseCommit | SOURCE | tools/check-jit-sparse-host.py | Check sparse JIT commit bounds and live native transitions | 🟡 Source étudiée |
+| J05 | P1 | J01 | headless/jit-sparse-commit.h | PlanSparseCommit | HOST | tools/check-jit-sparse-host.py | Hôte: PlanSparseCommit testé dans le vrai adaptateur JIT dual alias avec gestion 2 MiB, limites, croissance, retour d'échec/rollback et destruction; modèle firmware simulé, compilation et performances PS5 non qualifiées | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-jit-sparse-host.py) |
 | J06 | P1 | J05 | headless/jit-allocator.h | ReserveSparseJitCode; CommitSparseJitCode | SOURCE | tools/check-jit-allocator.py | Validate native allocator reserve commit and release lifetime | 🟡 Source étudiée |
 | J07 | P1 | J05 | headless/fastmem_handler.cpp | ExceptionHandler::Register | OPEN | tools/check-jit-protection.py | Check fastmem trap context and retired code region safety | 🟠 À contrôler |
 | J08 | P1 | J07 | headless/memory_check.cpp | MemoryRead8; MemoryRead32 | SOURCE | tools/check-ps5-sparse-jit-va-lifetime.py | Relate checked fastmem to real guest RAM and GPU mapping | 🟡 Source étudiée |
