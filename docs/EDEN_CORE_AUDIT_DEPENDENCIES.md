@@ -25,7 +25,8 @@ Travail effectué : correction des transferts CV et du permis initial du
 scheduler ; bornage et réduction des lectures du bitmap fastmem ; fusion
 linéaire des requêtes GPU ; remise en cohérence de la mémoire GPU native et
 réutilisation de l’adresse physique validée ; clear DMA en octets ; corrections
-de compilation native. Le premier exécutable PS5 a été lié. Les preuves et
+de compilation native. L’application et son paquet natif passent les contrôles
+locaux sur `615510b20e`. Les preuves et
 limites sont détaillées dans [le rapport du lot](EDEN_CLOUD_AUDIT_2026-10-20.md).
 
 **Optimisations supplémentaires vérifiées sur hôte en fin de lot :**
@@ -38,15 +39,32 @@ Le témoin de copies mesure 1 allocation contre 1 024, et aucune allocation de
 ces copies sous le verrou. Le vrai code des fibres effectue 128 transferts
 sur deux threads : environ 2 Mio contre 4 Mio alloués par fibre invitée,
 et zéro pile dédiée aux fibres hôtes. Ces mesures ne sont pas des FPS PS5.
-Les 23 unités du précontrôle syntaxique PS5 passent. La compilation complète
-native de ce dernier lot est en cours ; le package construit
-avant ces dernières modifications ne qualifie pas celles-ci.
+Les 23 unités du précontrôle syntaxique PS5 passent. Le build release complet
+et le paquet de `615510b20e` sont validés hors console : 379 dépendances sparse,
+code machine du verrou JIT, liaison RADV/OpenGL, inventaire, imports et alignement.
+Le SHA publié est présent dans le binaire ; les commits documentaires suivants
+ne modifient pas ce code. Aucun résultat de CI distante n’est revendiqué.
 
 Le complément GPU regroupe aussi les invalidations contiguës issues des
 masques dirty de 2 Kio : **1 024 → 8 appels** pour 2 Mio, par blocs limités
 à 256 Kio. Les trous, l’ordre, le traitement spécial de l’adresse zéro et les
 époques de collecte sont conservés dans le témoin hôte. M09 reste ouvert
 pour la preuve aux frontières réelles des caches GPU.
+
+Mesures des scénarios hôte du lot :
+
+| Travail mesuré | Avant | Après |
+| --- | ---: | ---: |
+| Comparaisons pour 1 024 pages de requêtes monotones | 523 776 | 1 023 |
+| Allocations des copies pour 1 024 destinations GPU | 1 024 | 1 |
+| Piles dédiées par fibre invitée | environ 4 Mio | environ 2 Mio |
+| Piles dédiées pour deux fibres de threads hôtes | environ 8 Mio | 0 |
+| Invalidations pour 2 Mio contigus | 1 024 | 8 |
+| Évaluations de permissions sur la fenêtre fastmem entière | 2 097 152 | 1 048 577 |
+
+Ces mesures portent sur des propriétés distinctes ; elles ne se cumulent pas
+en un gain FPS. Les options Zen2 sont vérifiées dans les vraies commandes
+de 922 unités des cinq cibles CPU/DSP/shader concernées.
 
 Restent notamment la progression réveil → scheduler → fibre/JIT → instruction
 invitée, les attentes GPU réelles et la stabilité/présentation en jeu, ainsi que

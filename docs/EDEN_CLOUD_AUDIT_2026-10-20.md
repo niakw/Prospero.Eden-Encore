@@ -4,7 +4,28 @@ Branche `dev/ps5-sparse-jit`, base `82c531d08641d8b28124bd2cebf37fcf85674179`.
 Les preuves de cette passe proviennent de contrôles locaux ; elles ne constituent
 pas une CI distante ni un binaire PS5 qualifié.
 **Compteur courant : 398 fichiers / 96 P0 / 409 contrats.**
-Les chiffres 400 / 98 / 411 ci-dessous décrivent le relevé initial. Le test PS5 est différé à la fin, à la demande de
+Les chiffres 400 / 98 / 411 ci-dessous décrivent le relevé initial.
+
+**État final local : build release et paquet réussis sur
+`615510b20edb161517c096e90b186a41db571ab6`.** Les lots de code ont été publiés
+sur `dev/ps5-sparse-jit`. Les 939 étapes de recompilation Zen2 ont terminé,
+puis cinq étapes incrémentales ont actualisé la provenance du binaire sans
+relancer les précontrôles déjà réussis. Les contrôles après compilation sont
+restés activés et passent : 379 dépendances sparse canoniques/dérivées identiques,
+verrou JIT réel (200 000 opérations concurrentes et code machine), liaison
+RADV/OpenGL et ABI, inventaire du paquet, imports, alignement et intégrité.
+Les deux derniers contrôles natifs ont aussi été migrés depuis leurs anciens
+fragments supprimés vers les propriétaires maintenus, sans retirer de preuve.
+
+Paquet local : `build/release/PPSA99008`. Empreinte SHA-256 de `eboot.bin` :
+`00425803a454697be35c54c4dbac589e03756d9313f4b8e0d8b699ee976d6a66`.
+La chaîne du SHA source a été vérifiée dans l’ELF ; les commits documentaires
+suivants ne changent pas le code compilé. Preuve locale :
+`results/optimization-final-2026-10-20/native-package.json`, journal
+`/workspace/shared/eden-native-package-current-sha.log`. Aucun résultat matériel
+ou de CI distante n’est ajouté. Les étapes « en cours » ci-dessous décrivent
+les passes intermédiaires et sont remplacées par cet état final.
+ Le test PS5 est différé à la fin, à la demande de
 l’utilisateur.
 
 ## Lot HLE, mémoire et Vulkan
