@@ -192,6 +192,30 @@
       "evidence": "Previously maintained GPU/memory performance guard reviewed; Checks monotone interval coverage with overflow-safe extent bounds; conservatively reports only an upper free bound. No additional correction justified without new failing evidence."
     },
     {
+      "path": "headless/elevation/elevation.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "review_scope": "startup-interface",
+      "reviewed_source_git_blob": "8c6142d7f79654bae6648d5127f1e51cd71323b9",
+      "source_review_document": "docs/EDEN_NATIVE_LIGHTWEIGHT_SOURCE_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Startup-only elevation request declaration, explicitly single-threaded before worker creation. No per-frame cost. Reopen if: this Git blob changes, new failure is reproduced, or a measured owner-specific cost appears."
+    },
+    {
+      "path": "headless/elevation/protocol.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "review_scope": "startup-interface",
+      "reviewed_source_git_blob": "6b3075fe097f2a2d7372cde28d7f27f94da6e978",
+      "source_review_document": "docs/EDEN_NATIVE_LIGHTWEIGHT_SOURCE_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Fixed-width privilege-helper wire protocol, validation and bounded socket transfer for startup requests; not GPU/guest scheduling. Reopen if: this Git blob changes, new failure is reproduced, or a measured owner-specific cost appears."
+    },
+    {
+      "path": "headless/encore_overrides_generated.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "review_scope": "generated-configuration",
+      "reviewed_source_git_blob": "cae342ba4185d3e3110e1756c45b017646ca0f59",
+      "source_review_document": "docs/EDEN_NATIVE_LIGHTWEIGHT_SOURCE_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Version-pinned constexpr title/video control profiles; one title override and bounded compile-time array lookup, no runtime parsing in this header. Reopen if: this Git blob changes, new failure is reproduced, or a measured owner-specific cost appears."
+    },
+    {
       "path": "headless/encore_overrides_runtime.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U54",
@@ -232,6 +256,14 @@
       "reviewed_source_git_blob": "446f2ab07896604cf4c46c42509a569ae7bab1a4",
       "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
       "evidence": "Current source inspected: Observateur passif ; soupçonne l’absence de progression GPU sans tuer ni relancer le jeu, et plafonne les rapports à quatre par session. Rerun this review only on source drift or Faux signal répétable en jeu ou compteur de progression trompeur."
+    },
+    {
+      "path": "headless/glyph_overrides_generated.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "review_scope": "generated-configuration",
+      "reviewed_source_git_blob": "7cb0954af2e99fd3a46ceb05245edb3bf1c67c46",
+      "source_review_document": "docs/EDEN_NATIVE_LIGHTWEIGHT_SOURCE_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Generated constexpr glyph-art rule array contains zero rules. No input mapping or dynamic asset scanning. Reopen if: this Git blob changes, new failure is reproduced, or a measured owner-specific cost appears."
     },
     {
       "path": "headless/glyph_overrides_runtime.h",
@@ -505,12 +537,36 @@
       "evidence": "Source-read optimization triage, no additional hotpath edit justified: Native resolver and fcntl compatibility wrappers preserve special console ABI; resolver setup could be profiled but blind caching could change lifecycle and errno."
     },
     {
+      "path": "headless/romfs_check.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "review_scope": "host-only-test",
+      "reviewed_source_git_blob": "901e5a7cedd19bfa875ca85695fcf9103f43d5e3",
+      "source_review_document": "docs/EDEN_NATIVE_LIGHTWEIGHT_SOURCE_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Separate eden-romfs-check executable with isolated allocation-accounting and fiber ownership assertions; not the gameplay app target. Reopen if: this Git blob changes, new failure is reproduced, or a measured owner-specific cost appears."
+    },
+    {
+      "path": "headless/scalar_check.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "review_scope": "host-only-test",
+      "reviewed_source_git_blob": "e6fdbf479104d5109e64065f550e0f0bd7606c81",
+      "source_review_document": "docs/EDEN_NATIVE_LIGHTWEIGHT_SOURCE_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Separate eden-scalar-check executable exercising Dynarmic scalar IR folding. Does not execute within emulator frames. Reopen if: this Git blob changes, new failure is reproduced, or a measured owner-specific cost appears."
+    },
+    {
       "path": "headless/sdk_audit.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U64",
       "reviewed_source_git_blob": "ac190be7fcc49cbe6faddedf41640abb6e972cb6",
       "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
       "evidence": "Source inspected: Audit de runtime opt-in, effectue volontairement des tests mémoire lourds, pas lancé à chaque frame. Ne jamais activer en production pour optimiser. Reopen if: Exécution de l’audit sur le chemin de rendu normal."
+    },
+    {
+      "path": "headless/shader_cache_check.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "review_scope": "host-only-test",
+      "reviewed_source_git_blob": "b289ca1c9fb787e87271f3a52fdf3c403820504a",
+      "source_review_document": "docs/EDEN_NATIVE_LIGHTWEIGHT_SOURCE_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Separate eden-shader-cache-check executable for damaged shader-cache recovery. Not linked into gameplay target. Reopen if: this Git blob changes, new failure is reproduced, or a measured owner-specific cost appears."
     },
     {
       "path": "headless/stall_watchdog.h",
@@ -587,9 +643,47 @@
       "evidence": "Source-read optimization triage, no additional hotpath edit justified: Vulkan surface enumerates display modes once at initialization and chooses 60/120 mode; loop and vector allocations are not a per-frame rendering bottleneck."
     },
     {
+      "path": "headless/zbic_compression.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U17",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-active-source-inventory.py",
+      "review_scope": "bounded-codec-adapter",
+      "reviewed_source_git_blob": "b980c2b53bf188e6607e1ecb2d5d7fdb45e6a0d4",
+      "source_review_document": "docs/EDEN_NATIVE_LIGHTWEIGHT_SOURCE_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Selected native ZBIC implementation: checks input/output spans then dispatches one ZSTD_decompress without extra staging allocation/copy; future codec hotspots need measurements. Reopen if: this Git blob changes, new failure is reproduced, or a measured owner-specific cost appears."
+    },
+    {
+      "path": "headless/zbic_compression.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U18",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-active-source-inventory.py",
+      "review_scope": "interface",
+      "reviewed_source_git_blob": "b2cbdf73a2d7b4e540d193a8011801e9f7e19ef2",
+      "source_review_document": "docs/EDEN_NATIVE_LIGHTWEIGHT_SOURCE_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Two ZBIC declarations accepting bounded spans; no executing loop, allocation, or thread synchronization in header. Reopen if: this Git blob changes, new failure is reproduced, or a measured owner-specific cost appears."
+    },
+    {
+      "path": "src/aligned_alloc.c",
+      "disposition": "reviewed_without_new_code_edit",
+      "review_scope": "startup-shim",
+      "reviewed_source_git_blob": "fca535072fdb6087814af775eacd27640a0fd6a1",
+      "source_review_document": "docs/EDEN_NATIVE_LIGHTWEIGHT_SOURCE_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Native startup allocator shim; one posix_memalign call with alignment checks and diagnostic on failure. No per-frame loop; no safe redundant work to eliminate. Reopen if: this Git blob changes, new failure is reproduced, or a measured owner-specific cost appears."
+    },
+    {
       "path": "src/host_memory.cpp",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "src/lifecycle.c",
+      "disposition": "reviewed_without_new_code_edit",
+      "review_scope": "shutdown-only",
+      "reviewed_source_git_blob": "3f92292052a71ab52738c92bd55a1bbc84bb5e63",
+      "source_review_document": "docs/EDEN_NATIVE_LIGHTWEIGHT_SOURCE_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Title termination/restart and fatal assertion fallbacks; sleeps only after exit is refused. Not a healthy gameplay hot path. Reopen if: this Git blob changes, new failure is reproduced, or a measured owner-specific cost appears."
     },
     {
       "path": "vendor/encore-active/compiler-rt/emutls.c",
@@ -1824,6 +1918,17 @@
       "path": "vendor/encore-active/eden-core/overrides/core/gpu_dirty_memory_manager.h",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/overrides/core/hle/service/sockets/encore_guest_network_policy.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "N10",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-active-source-inventory.py",
+      "review_scope": "constant-policy",
+      "reviewed_source_git_blob": "884fdfa36904fa87a1d47b841dd9dfbdbd995af9",
+      "source_review_document": "docs/EDEN_NATIVE_LIGHTWEIGHT_SOURCE_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Immutable guest-offline policy is constexpr true. No mutable airplane-mode consult or per-packet work in this header; DNS implementation remains separate. Reopen if: this Git blob changes, new failure is reproduced, or a measured owner-specific cost appears."
     },
     {
       "path": "vendor/encore-active/eden-core/overrides/slot-vector/common/slot_vector.h",
