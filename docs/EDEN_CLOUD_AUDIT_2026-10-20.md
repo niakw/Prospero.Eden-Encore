@@ -6,11 +6,11 @@ pas une CI distante ni un binaire PS5 qualifié.
 **Compteur courant : 398 fichiers / 96 P0 / 409 contrats.**
 Les chiffres 400 / 98 / 411 ci-dessous décrivent le relevé initial.
 
-**Suite samples : hôte et rejeu vérifiés, compilation native à terminer.**
+**Dernier lot publié : `7ab0279711` — hôte, rejeu et paquet natif vérifiés.**
 Les deux listes de métadonnées de résultats GPU sont recyclées après consommation
 par `SyncValues`, qui possède les copies différées. Le témoin extrait les fragments
 réels de préparation/conversion/recyclage et toute la méthode `SyncWrites` :
-**820 → 0 allocations après amorçage sur 128 lots**, métadonnées, ordre d’envoi
+**820 → 0 allocations des deux listes après amorçage sur 128 lots**, métadonnées, ordre d’envoi
 et drapeaux identiques sous ASan/UBSan. Il couvre aussi lots vides, appels répétés,
 remplacement avant consommation et trois exclusions de pilotes. La preuve de
 possession des copies de `SyncValues` reste assurée séparément par son vrai code.
@@ -21,7 +21,15 @@ Les six contrôles ciblés passent, ainsi que le rejeu exact du fichier modifié
 Preuves locales : `results/samples-scratch-batch-2026-10-20/host-summary.json`
 et `replay-verified.json`. Compteurs **398 / 96 / 409**, sans preuve console ajoutée.
 
-**Dernier lot publié : `0b3e0436e5` — hôte, rejeu et paquet natif vérifiés.**
+Le build release et le paquet de `7ab02797110aeb260b547d299452680fb7a56bca` passent après sept étapes
+incrémentales, avec le SHA retrouvé dans l’ELF. Tous les contrôles après compilation
+restent activés et passent : sparse 379 objets, verrou JIT 200 000 opérations et
+code machine, RADV/OpenGL/ABI, inventaire du paquet, imports, alignement et intégrité.
+`eboot.bin` : `c912b54adbb3b23d0382df5155de6c94483c64d45bba8cb29904bab8fa4c57e7`.
+Journal : `/workspace/shared/eden-native-package-samples-scratch.log` ; preuve :
+`results/samples-scratch-batch-2026-10-20/native-package.json`. Aucun build actif.
+
+**Lot TFB précédent : `0b3e0436e5` — hôte, rejeu et paquet natif vérifiés.**
 La synchronisation des compteurs transform feedback utilise directement le
 résultat d’insertion dans la table des banques, supprimant une recherche par
 requête retenue. Vraie méthode extraite, vraie table Boost et hasher instrumenté
