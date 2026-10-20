@@ -23,7 +23,7 @@ Ils ne certifient pas les freezes, les graphismes ou les frametimes sur PS5.
 
 **Suite — recyclage des métadonnées de samples :** les deux listes de résultats
 sont réutilisées après copie dans les commandes différées. Le témoin hôte
-mesure **820 → 0 allocations après amorçage sur 128 lots**. Il exécute les
+mesure **820 → 0 allocations des deux listes après amorçage sur 128 lots**. Il exécute les
 fragments réels de préparation/conversion/recyclage et la méthode `SyncWrites`
 complète, avec sorties et drapeaux identiques sous ASan/UBSan. Lots vides,
 appels répétés, remplacement avant consommation et trois exclusions de pilotes
@@ -31,7 +31,8 @@ sont couverts. Le témoin existant de `SyncValues` vérifie séparément la poss
 des copies différées. La capacité maximale observée de chacune des deux listes
 reste allouée jusqu’à la destruction du streamer ; allocation initiale et
 agrandissements demeurent possibles. Les six contrôles ciblés et le rejeu passent.
-La compilation native de ce lot reste à terminer. **398 / 96 / 409** restent à
+Le build release et le paquet de `7ab0279711` passent après sept étapes
+incrémentales, SHA vérifié dans l’ELF. **398 / 96 / 409** restent à
 qualifier selon leurs critères, sans mesure de frametime ou de progression PS5.
 
 **Suite — synchronisation TFB :** une seule recherche de banque remplace
@@ -102,7 +103,7 @@ scheduler ; bornage et réduction des lectures du bitmap fastmem ; fusion
 linéaire des requêtes GPU ; remise en cohérence de la mémoire GPU native et
 réutilisation de l’adresse physique validée ; clear DMA en octets ; corrections
 de compilation native. L’application et son paquet natif passent les contrôles
-locaux sur `0b3e0436e5` (dernière suite). Les preuves et
+locaux sur `7ab0279711` (dernière suite). Les preuves et
 limites sont détaillées dans [le rapport du lot](EDEN_CLOUD_AUDIT_2026-10-20.md).
 
 **Optimisations supplémentaires vérifiées sur hôte en fin de lot :**
@@ -116,7 +117,7 @@ ces copies sous le verrou. Le vrai code des fibres effectue 128 transferts
 sur deux threads : environ 2 Mio contre 4 Mio alloués par fibre invitée,
 et zéro pile dédiée aux fibres hôtes. Ces mesures ne sont pas des FPS PS5.
 Les 23 unités du précontrôle syntaxique PS5 passent. Le build release complet
-et le paquet courant de `0b3e0436e5` sont validés hors console : 379 dépendances sparse,
+et le paquet courant de `7ab0279711` sont validés hors console : 379 dépendances sparse,
 code machine du verrou JIT, liaison RADV/OpenGL, inventaire, imports et alignement.
 Le SHA publié est présent dans le binaire ; les commits documentaires suivants
 ne modifient pas ce code. Aucun résultat de CI distante n’est revendiqué.
@@ -131,7 +132,7 @@ Mesures des scénarios hôte du lot :
 
 | Travail mesuré | Avant | Après |
 | --- | ---: | ---: |
-| Allocations de métadonnées samples sur 128 lots après amorçage | 820 | 0 |
+| Allocations des deux listes samples sur 128 lots après amorçage | 820 | 0 |
 | Hashs TFB pour 1 024 requêtes / 1 banque | 2 048 | 1 024 |
 | Hashs TFB pour 1 024 requêtes / 32 banques | 2 077 | 1 053 |
 | Allocations par présentation Vulkan avec une couche | 6 | 0 |
