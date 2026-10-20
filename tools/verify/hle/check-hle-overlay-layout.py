@@ -80,9 +80,14 @@ notify_after = "    void KThread::NotifyAvailable(KernelCore& kernel, KSynchroni
 cancel_before = "    void KThread::CancelWait(KernelCore& kernel, Result wait_result, bool cancel_timer_task) {\n        // Lock the scheduler.\n        KScopedSchedulerLock sl(kernel);\n        // If we're waiting, notify our queue that we're available.\n        if (this->GetState() == ThreadState::Waiting) {\n            m_wait_queue->CancelWait(kernel, this, wait_result, cancel_timer_task);\n        }\n    }"
 cancel_after = "    void KThread::CancelWait(KernelCore& kernel, Result wait_result, bool cancel_timer_task) {\n        // Lock the scheduler.\n        KScopedSchedulerLock sl(kernel);\n        // If we're waiting, notify our queue that we're available.\n        if (this->GetState() == ThreadState::Waiting) {\n            if (m_wait_queue == nullptr) {\n                ASSERT_MSG(false, \"wait_queue is nullptr!\");\n                return;\n            }\n            m_wait_queue->CancelWait(kernel, this, wait_result, cancel_timer_task);\n        }\n    }"
 assert pinned.count(notify_before) == pinned.count(cancel_before) == 1
+# A no-op state transition must not publish an identical atomic state.
+state_before = "        const ThreadState old_state = m_thread_state.load(std::memory_order_relaxed);\n        m_thread_state.store(\n            static_cast<ThreadState>((old_state & ~ThreadState::Mask) | (state & ThreadState::Mask)),\n            std::memory_order_relaxed);\n        if (m_thread_state.load(std::memory_order_relaxed) != old_state) {\n            KScheduler::OnThreadStateChanged(kernel, this, old_state);\n        }"
+state_after = "        const ThreadState old_state = m_thread_state.load(std::memory_order_relaxed);\n        const ThreadState next_state = static_cast<ThreadState>(\n            (old_state & ~ThreadState::Mask) | (state & ThreadState::Mask));\n        // Scheduler lock serializes state transitions. Avoid an atomic store\n        // and second atomic load for an unchanged runnable/waiting state.\n        if (next_state != old_state) {\n            m_thread_state.store(next_state, std::memory_order_relaxed);\n            KScheduler::OnThreadStateChanged(kernel, this, old_state);\n        }"
+assert pinned.count(state_before) == 1
 assert active == (pinned.replace(old, fixed).replace(wait_before, wait_after)
                   .replace(notify_before, notify_after)
-                  .replace(cancel_before, cancel_after)), "Unexpected maintained KThread drift"
+                  .replace(cancel_before, cancel_after)
+                  .replace(state_before, state_after)), "Unexpected maintained KThread drift"
 slab_pinned = (root / "vendor/sources/eden/src/core/hle/kernel/slab_helpers.h").read_text()
 slab_active = (thread_root / "slab_helpers.h").read_text()
 slab_before = """        Free(kernel, static_cast<Derived*>(this));

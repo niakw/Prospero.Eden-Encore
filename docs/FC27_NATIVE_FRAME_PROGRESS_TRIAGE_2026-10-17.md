@@ -188,3 +188,21 @@ La méthode annule désormais le sommeil et retourne
 vérifie le retour sain et reproduit l'ancien échec silencieux.
 Le changement ne garantit pas l'absence de freeze en jeu, et ne
 modifie pas le fonctionnement d'un drapeau écrit correctement.
+
+## 20 octobre — chemin rapide d'état HLE sans changement
+
+`KThread::SetState` conservait l'ancienne valeur, réécrivait
+systématiquement `m_thread_state` avec l'état masqué, puis relisait
+l'atome pour décider d'informer le scheduler. Sous le verrou scheduler,
+la valeur suivante peut être calculée une fois et comparée à l'ancienne :
+les transitions réelles conservent l'écriture atomique et la notification,
+tandis qu'un appel sans changement évite l'écriture et la seconde lecture.
+La remise à zéro de la raison de débogage est préservée.
+
+Le témoin `tools/check-native-hle-state-transition-fastpath-host.py` extrait et compile les deux méthodes C++
+épinglée et maintenue sous ASan/UBSan sur 80 combinaisons d'états et
+de bits de suspension. Il vérifie les mêmes états/notifications et
+compte 2 lectures + 1 écriture auparavant contre 1 lecture + 0 écriture
+pour 20 appels sans changement. Cela réduit le travail hôte de ce
+chemin ; ce n'est pas une preuve de déblocage CPU, de gain FPS ou de
+progression invité sur PS5.

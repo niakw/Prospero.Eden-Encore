@@ -1396,10 +1396,12 @@ namespace Kernel {
         // Clear debugging state
         this->SetWaitReasonForDebugging({});
         const ThreadState old_state = m_thread_state.load(std::memory_order_relaxed);
-        m_thread_state.store(
-            static_cast<ThreadState>((old_state & ~ThreadState::Mask) | (state & ThreadState::Mask)),
-            std::memory_order_relaxed);
-        if (m_thread_state.load(std::memory_order_relaxed) != old_state) {
+        const ThreadState next_state = static_cast<ThreadState>(
+            (old_state & ~ThreadState::Mask) | (state & ThreadState::Mask));
+        // Scheduler lock serializes state transitions. Avoid an atomic store
+        // and second atomic load for an unchanged runnable/waiting state.
+        if (next_state != old_state) {
+            m_thread_state.store(next_state, std::memory_order_relaxed);
             KScheduler::OnThreadStateChanged(kernel, this, old_state);
         }
     }
