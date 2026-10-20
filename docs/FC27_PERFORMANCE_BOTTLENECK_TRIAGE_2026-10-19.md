@@ -516,3 +516,18 @@ il conserve le retour anticipé performant.
 reproduit l'erreur ancienne (inversion non prise en compte) avant de
 vérifier la transition dans la nouvelle. Aucune causalité spécifique
 avec le HUD de FC27 ou gain de FPS n'est encore établie matériellement.
+
+## 20 octobre — résultats de requêtes GPU traversant une page mémoire
+
+La construction de `QueryCacheRuntime::SyncValues` n'allouait qu'une
+page alignée sur l'adresse **initiale** de chaque résultat. Pour un
+résultat de 8 octets commençant quatre octets avant la frontière,
+la commande Vulkan pouvait copier au-delà de la plage obtenue.
+La nouvelle plage couvre la dernière page réellement touchée et
+étend une région déjà fusionnée en cas de chevauchement.
+Les tailles cumulées, la fin de l'espace d'adressage et la limite
+`u32` imposée par `ObtainCPUBuffer` sont vérifiées avant de demander
+la mémoire GPU. Le test `tools/check-vulkan-query-page-span-host.py` compile la boucle native
+extraite sous ASan/UBSan et vérifie les cas valides et limites.
+Le correctif empêche un débordement logique du buffer de résultats ;
+aucune mesure de saccades ni de FPS sur PS5 n'a été effectuée.
