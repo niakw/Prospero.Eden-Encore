@@ -5,6 +5,8 @@
 native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
+
+**Two-axis progress rule:** read [EDEN_TWO_AXIS_PROGRESS_2026-10-20.md](EDEN_TWO_AXIS_PROGRESS_2026-10-20.md). SOURCE+OPEN means *qualification pending*, **not** code files necessarily requiring further optimization. Do not repeatedly modify a recently fixed hotpath merely to lower that count; distinguish host test, current-SHA native build, and PS5/gameplay evidence.
 **Non, this is not an exhaustive repository-wide inventory.** The 478
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
