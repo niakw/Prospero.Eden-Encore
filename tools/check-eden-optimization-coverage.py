@@ -140,6 +140,13 @@ launcher_pending={p for p in pending_code if p.startswith(launcher_prefix) and p
 assert len(pending_code)==len(launcher_pending)+len(pending_code-launcher_pending)
 # New per-source review decisions must remain traceable to the exact
 # current contract path and a real file entry in the written source review.
+# A source reviewed as not needing a patch remains valid only for the
+# identical Git blob. A changed header must trigger a fresh optimization triage.
+for e in entries:
+    if not e.get("reviewed_source_git_blob"):
+        continue
+    actual=subprocess.check_output(["git","hash-object",e["path"]],cwd=ROOT,text=True).strip()
+    assert actual==e["reviewed_source_git_blob"],("source changed: repeat optimization review",e["path"])
 for e in entries:
     if not e.get("source_review_document"):
         continue

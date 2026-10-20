@@ -1,5 +1,8 @@
 # Eden Encore — Project Memory
 
+- NATIVE POLICY HOTPATH FAST REVIEW (2026-10-21): `docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md` records 16 distinct C++ headers/code already bounded/no extra speculative performance patch (JIT policy/fallback, GPU fault latch, HLE counters, DEV watchdog, SMT topology, lifecycle stop); each tied to exact audit contract and Git blob in `docs/EDEN_OPTIMIZATION_COVERAGE_2026-10-20.json`, CI checker requires unchanged Git blob. Total 348/491 handled; **143 remain (81 engine/runtime, 62 launcher)**. This is triage, not new FPS optimizations or gameplay fix. P0 SM service 1ms poll and JIT/memory translation owners stay open for true runtime diagnosis.
+
+
 - NATIVE GPU MEMORY POLICY SOURCE PASS (21 Oct 2026): 8 existing owned native GPU/memory headers reviewed with exact SOURCE contract and CI evidence in `docs/EDEN_GPU_MEMORY_POLICY_REVIEW_2026-10-21.md`: direct pool query/scan/accounting, Vulkan GC budget/capacity, cache trim, bounded write-ahead and 2KiB GPU-dirty split. All current guard/fastpaths already exist, so no speculative C++ edits. Triage **332/491 handled, 159 left** = **97 native/emulator priority + 62 launcher separately**. Does not demonstrate PS5 performance or close SOURCE/OPEN host qualification.
 
 

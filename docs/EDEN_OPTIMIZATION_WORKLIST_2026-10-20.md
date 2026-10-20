@@ -217,3 +217,7 @@ de l'identification de véritables points chauds.
 ## 21 octobre — huit politiques GPU/mémoire déjà optimisées
 
 [EDEN_GPU_MEMORY_POLICY_REVIEW_2026-10-21.md](EDEN_GPU_MEMORY_POLICY_REVIEW_2026-10-21.md) contient l'inspection ciblée de huit chemins (direct pool, budgets GC, capacity latch, write-ahead et régions dirty) et leurs propriétaires CI. Aucun patch C++ supplémentaire n'est justifié sans nouvelle panne reproductible. **332 / 491 traités ; 159 restants dans le périmètre complet, dont 97 moteur/runtime prioritaires et 62 lanceur séparé.**
+
+## 21 octobre — 16 entêtes / politiques natifs examinés sans nouveau patch
+
+Voir [EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md](EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md). La revue a lu les politiques JIT, l’analyse SMT, l’observabilité GPU/HLE, les guards de défaut et le watchdog de sortie. Ces fonctions et headers disposent déjà de chemins bornés ou ne sont utilisés qu’en DEV/initialisation. Chaque source est verrouillée par son Git blob d’origine, contrôlé en CI. **348/491 fichiers pris en charge ; 143 restants (81 moteur + 62 lanceur).** Aucune retouche spéculative sur CPU/JIT/GPU n’a été engagée ; le nombre de nouvelles modifications réellement requises n’est pas confondu avec le reste à examiner.
