@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <limits>
 #include "dev_vulkan.h"
 #include "diagnostics.h"
 #include <mutex>
@@ -92,19 +93,39 @@ u64 MultiRangeBufferCache::HashContent(std::span<const MultiRangeSource> sources
 }
 
 bool MultiRangeBufferCache::CanBindSparse(std::span<const MultiRangeSource> sources) const {
-    return use_sparse &&
-           std::none_of(sources.begin(), sources.end(),
+    if (!use_sparse || block_size == 0 || sources.empty()) {
+        return false;
+    }
+    return std::none_of(sources.begin(), sources.end(),
                         [block = block_size, bits = sparse_memory_type_bits](auto const& e) {
+                            if (e.memory == VK_NULL_HANDLE || e.memory_type >= 32 ||
+                                ((bits >> e.memory_type) & 1) == 0 || e.size == 0 ||
+                                e.memory_offset > std::numeric_limits<VkDeviceSize>::max() - e.offset) {
+                                return true;
+                            }
                             const VkDeviceSize memory_offset = e.memory_offset + e.offset;
-                            return e.memory == VK_NULL_HANDLE || e.memory_type >= 32 ||
-                                   ((bits >> e.memory_type) & 1) == 0 ||
+                            return memory_offset > std::numeric_limits<VkDeviceSize>::max() - e.size ||
                                    (memory_offset % block) != 0 || (e.size % block) != 0;
                         });
 }
-
 SparseBuffer MultiRangeBufferCache::CreateSparse(const Device& device, Scheduler& scheduler,
                                                  std::span<const MultiRangeSource> sources,
                                                  VkDeviceSize total) {
+    // Bound source offsets and destination extents before Vulkan allocation.
+    if (sources.empty() || total == 0 ||
+        sources.size() > std::numeric_limits<u32>::max()) {
+        return SparseBuffer{};
+    }
+    VkDeviceSize checked_total = 0;
+    for (const MultiRangeSource& source : sources) {
+        if (source.size == 0 || source.size > total - checked_total ||
+            source.memory_offset > std::numeric_limits<VkDeviceSize>::max() - source.offset ||
+            source.memory_offset + source.offset >
+                std::numeric_limits<VkDeviceSize>::max() - source.size) {
+            return SparseBuffer{};
+        }
+        checked_total += source.size;
+    }
     const VkDevice logical = *device.GetLogical();
     const auto& dld = device.GetDispatchLoader();
     const VkBufferCreateInfo buffer_ci{
