@@ -251,6 +251,17 @@ MultiRangeRef MultiRangeBufferCache::Get(const Device& device, Scheduler& schedu
     if (sources.empty() || total == 0) {
         return MultiRangeRef{};
     }
+    // Gathered fallbacks must obey the same destination bounds as sparse binds.
+    // Reject an invalid source before allocating a GPU buffer or recording copies.
+    VkDeviceSize covered = 0;
+    for (const MultiRangeSource& source : sources) {
+        if (source.handle == VK_NULL_HANDLE || source.size == 0 ||
+            source.size > total - covered ||
+            source.offset > std::numeric_limits<VkDeviceSize>::max() - source.size) {
+            return MultiRangeRef{};
+        }
+        covered += source.size;
+    }
     if (!retired.empty()) {
         DrainRetired(scheduler);
     }
