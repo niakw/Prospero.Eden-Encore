@@ -225,3 +225,7 @@ Voir [EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md](EDEN_NATIVE_HOTPATH_FAST_RE
 ## 21 octobre — accélération contrôlée des sources de lancement et de diagnostic
 
 Voir [EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md](EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md). 20 nouveaux chemins revus et attachés à leurs empreintes Git et contrats ; aucune modification C++ speculative. **368/491 pris en charge, 123 restants (61 moteur et infrastructure, 62 lanceur).** Les chemins CPU/JIT/HLE/GPU critiques restent prioritaires même si les headers de diagnostic, de préférences et de sondes DEV sont désormais couverts par leur revue de code.
+
+## 21 octobre — douze sources natives auxiliaires examinées
+
+Voir [EDEN_NATIVE_LIGHTWEIGHT_SOURCE_REVIEW_2026-10-21.md](EDEN_NATIVE_LIGHTWEIGHT_SOURCE_REVIEW_2026-10-21.md). Les trois exécutables de test indépendants, deux profils constexpr générés, l'API d'élévation démarrage, le pont d'allocation native et le contrôle du ZBIC ne justifient aucun nouveau patch en l'absence d'un défaut mesuré. **380/491 pris en charge : 111 restants, dont 49 moteur et 62 lanceur.** Tous les examens sont verrouillés par empreinte Git ; les propriétaires JIT, HLE et GPU restent à traiter sans assimilation à la validation matérielle.

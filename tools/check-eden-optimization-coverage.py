@@ -151,7 +151,18 @@ for e in entries:
     if not e.get("source_review_document"):
         continue
     assert e["disposition"]=="reviewed_without_new_code_edit"
-    assert e["contract_id"] in by_id and by_id[e["contract_id"]]["path"]==e["path"]
+    # Some native startup shims, generated headers and standalone host test
+    # executables are code owners without an ID in the *core* audit graph.
+    # Keep their explicit review and unchanged Git blob rather than invent an ID.
+    ident=e.get("contract_id")
+    if ident is not None:
+        assert ident in by_id and by_id[ident]["path"]==e["path"]
+    else:
+        assert e.get("review_scope") in {
+            "host-only-test","startup-shim","shutdown-only",
+            "generated-configuration","startup-interface",
+        }
+        assert e["path"] not in {r["path"] for r in by_id.values()}
     source_review=ROOT/e["source_review_document"]
     assert source_review.is_file()
     assert "| `"+e["path"]+"` |" in source_review.read_text(),e["path"]
