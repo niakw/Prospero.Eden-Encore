@@ -741,7 +741,9 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
     }
 
     scheduler.RequestRenderpass(texture_cache.GetFramebuffer());
-    if (!is_built.load(std::memory_order::relaxed)) {
+    // Match the builder's release publication before using its pipeline handle.
+    // A ready fast path skips the queued wait, so relaxed is insufficient here.
+    if (!is_built.load(std::memory_order_acquire)) {
         // Wait for the pipeline to be built
         scheduler.Record([this](vk::CommandBuffer) {
             // Builder published the pipeline before this ordered GPU callback.

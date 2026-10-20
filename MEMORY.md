@@ -1,5 +1,8 @@
 # Eden Encore — Project Memory
 
+- VULKAN PIPELINE RELEASE/ACQUIRE (20 Oct): `vk_compute_pipeline_cost.cpp` and `vk_graphics_pipeline_cost.cpp` Configure pre-wait ready loads changed from relaxed to acquire to synchronize with async builder release when no queued wait is needed. Existing predicate/wait remains under scheduler lock. New source-extracted ASan/UBSan host test `tools/check-vulkan-pipeline-ready-publication-host.py` in fast/full CI. One new source triaged (compute); graphics already handled; optimization triage 259/491, 232 remaining. Native GPU and FC27 effect not proven.
+
+
 - HISTORICAL PROFILE SOURCE FAST TRIAGE (20 Oct): +78 existing unique Encore source paths with exact SOURCE contract and CI-invoked source/parity verifier, including profile DEV/OFF/staged marked as such. New tally 258/491 handled, **233 remaining to optimization triage** (not 233 known defects); no C++ source edits or hardware optimization proof. `tools/check-eden-optimization-coverage.py` confirms original contract/witness path and CI invocation.
 
 

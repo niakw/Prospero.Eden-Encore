@@ -2203,6 +2203,12 @@
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
     },
     {
+      "path": "vendor/encore-active/eden-vulkan/vk_compute_pipeline_cost.cpp",
+      "disposition": "new_source_issue_corrected",
+      "proof_ref": "tools/check-vulkan-pipeline-ready-publication-host.py",
+      "evidence": "Compute pipeline ready path was relaxed with builder release; now acquires ready publication before pipeline handle usage. Source-extracted host witness tests racing and completed pipelines; PS5/native not measured."
+    },
+    {
       "path": "vendor/encore-active/eden-vulkan/vk_descriptor_buffer_cost.cpp",
       "disposition": "historical_host_contract_reviewed",
       "contract_id": "V17",
@@ -2218,7 +2224,12 @@
     {
       "path": "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp",
       "disposition": "reviewed_without_new_code_edit",
-      "evidence": "Source-level P0 optimization triage; docs/EDEN_OPTIMIZATION_REVIEW_MESA_VULKAN_2026-10-20.md"
+      "evidence": "Source-level P0 optimization triage; docs/EDEN_OPTIMIZATION_REVIEW_MESA_VULKAN_2026-10-20.md",
+      "new_optimization": {
+        "kind": "atomic_publication_correctness",
+        "proof_ref": "tools/check-vulkan-pipeline-ready-publication-host.py",
+        "statement": "Existing ready fast path upgraded relaxed->acquire to synchronize with worker's release; no extra wait."
+      }
     },
     {
       "path": "vendor/encore-active/eden-vulkan/vk_multi_range_buffer_cost.cpp",

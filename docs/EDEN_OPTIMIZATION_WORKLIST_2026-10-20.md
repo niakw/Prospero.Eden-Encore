@@ -144,3 +144,24 @@ dont la présence est surveillée par
 | **Restent à traiter dans la passe** | **311** | **233** |
 
 **Aucun contrat HOST ajouté. Aucune amélioration FPS PS5 affirmée.**
+
+## Vulkan — deux fichiers corrigés pour publication de pipeline
+
+Les fonctions graphiques et compute utilisaient déjà
+`is_built.store(true, release)`, mais l'entrée *ready* de leurs chemins
+`Configure` réalisait `load(relaxed)` et pouvait donc **sauter tout
+verrou/acquire** avant l'accès à l'objet pipeline construit sur
+un autre thread. Les deux chemins utilisent maintenant
+`load(acquire)` et conservent le protocole existant en cas
+de construction inachevée, sans verrou supplémentaire sur le
+chemin déjà prêt.
+
+Le témoin `tools/check-vulkan-pipeline-ready-publication-host.py`
+relit les deux sources et exécute le chemin ready/wait sur un
+payload non-atomique de test sous ASan/UBSan. Cette correction
+vise la sûreté des pipelines et les potentiels états transitoires
+GPU ; **aucun gain FPS ni guérison de freeze PS5 n'est encore démontré**.
+
+Un fichier compute nouveau est pris en charge dans ce lot ; le
+fichier graphics figurait déjà dans la revue des six sources.
+**Optimisation restant à traiter : 232 sur 491 (259 pris en charge).**

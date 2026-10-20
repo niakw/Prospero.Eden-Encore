@@ -264,7 +264,9 @@ bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
     PushImageDescriptors(texture_cache, guest_descriptor_queue, info, rescaling, samplers_it,
                          views_it);
 
-    if (!is_built.load(std::memory_order::relaxed)) {
+    // Match the builder's release publication before using its pipeline handle.
+    // A ready fast path skips the queued wait, so relaxed is insufficient here.
+    if (!is_built.load(std::memory_order_acquire)) {
         // Wait for the pipeline to be built
         scheduler.Record([this](vk::CommandBuffer) {
             auto timer = Eden::Performance::VulkanTimer(16);
