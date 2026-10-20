@@ -1,5 +1,8 @@
 # Eden Encore — Project Memory
 
+- NATIVE PROFILE OWNER FAST TRIAGE (Oct 2026): 20 additional Encore-owned C/C++/headers (6 RADV installer/fingerprint sources, 13 versioned Vulkan fork/byte-parity sources, 1 pinned SurfaceFlinger source) now recorded with exact audit contract and CI-invoked source proof in `docs/EDEN_OPTIMIZATION_COVERAGE_2026-10-20.json`. `tools/check-eden-optimization-coverage.py` checks each owner/selector. Handled 279/491, **212 remaining optimization-triage paths**. OpenCL `.cl` remains outside this strict C/C++ count. No new FPS or full PS5 native qualification implied.
+
+
 - VULKAN PIPELINE RELEASE/ACQUIRE (20 Oct): `vk_compute_pipeline_cost.cpp` and `vk_graphics_pipeline_cost.cpp` Configure pre-wait ready loads changed from relaxed to acquire to synchronize with async builder release when no queued wait is needed. Existing predicate/wait remains under scheduler lock. New source-extracted ASan/UBSan host test `tools/check-vulkan-pipeline-ready-publication-host.py` in fast/full CI. One new source triaged (compute); graphics already handled; optimization triage 259/491, 232 remaining. Native GPU and FC27 effect not proven.
 
 

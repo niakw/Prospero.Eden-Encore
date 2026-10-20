@@ -26,7 +26,7 @@ assert len(entries)==len(handled),"duplicate optimization owner"
 assert handled<=owners,sorted(handled-owners)
 allowed={"code_changed_in_batch","reviewed_without_new_code_edit",
          "historical_host_contract_reviewed","previously_integrated_source_change",
-         "shipping_backport_integrated_previously","historical_maintained_unit_parity","new_source_issue_corrected"}
+         "shipping_backport_integrated_previously","historical_maintained_unit_parity","new_source_issue_corrected","historical_native_selected_unit"}
 assert all(e["disposition"] in allowed and e["evidence"] for e in entries)
 audit=(ROOT/"docs/EDEN_CORE_AUDIT_DEPENDENCIES.md").read_text()
 rows=audit.split("<!-- AUDIT_ROWS_START -->",1)[1].split("<!-- AUDIT_ROWS_END -->",1)[0]
@@ -42,7 +42,7 @@ for e in entries:
     if e["disposition"] not in {"historical_host_contract_reviewed",
                                "previously_integrated_source_change",
                                "shipping_backport_integrated_previously",
-                               "historical_maintained_unit_parity"}:
+                               "historical_maintained_unit_parity","historical_native_selected_unit"}:
         continue
     cid=e["contract_id"]
     assert cid in by_id,("historical contract missing",cid)
@@ -96,6 +96,29 @@ for e in entries:
     assert e["proof_ref"].endswith(".py") and (ROOT/e["proof_ref"]).is_file()
     assert "python3 -B "+e["proof_ref"] in preflight
     assert (ROOT/e["path"]).is_file()
+# Verify every historical selected native unit against its actual selector.
+# Optional/device support and console performance are not certified here.
+radv_sel=(ROOT/"tools/install-vendored-radv.py").read_text()
+vulkan_sel=(ROOT/"headless/vulkan.cmake").read_text()
+surface_sel=(ROOT/"tools/install-vendored-surface-lifecycle.py").read_text()
+for e in entries:
+    if e["disposition"]!="historical_native_selected_unit": continue
+    assert e["prior_status"]=="SOURCE"
+    assert "python3 -B "+e["proof_ref"] in preflight
+    assert (ROOT/e["proof_ref"]).is_file() and (ROOT/e["path"]).is_file()
+    kind=e["source_selector"]
+    if kind=="radv":
+        assert e["path"].startswith("vendor/encore-active/ps5-mesa/")
+        relative=e["path"].removeprefix("vendor/encore-active/ps5-mesa/")
+        assert "'"+relative+"'" in radv_sel
+    elif kind=="vulkan":
+        assert e["path"].startswith("vendor/encore-active/eden-vulkan/")
+        assert "file(COPY " in vulkan_sel and "EDEN_ACTIVE_VULKAN" in vulkan_sel
+    elif kind=="surface":
+        assert e["path"].endswith("src/core/hle/service/nvnflinger/surface_flinger.cpp")
+        assert 'PATH = Path("src/core/hle/service/nvnflinger/surface_flinger.cpp")' in surface_sel
+    else: raise AssertionError(("unknown source selector",kind))
+assert sum(e["disposition"]=="historical_native_selected_unit" for e in entries)==20
 status=Counter(e["disposition"] for e in entries)
 assert len(owners)==STATE["owned_code_count_at_snapshot"],("source inventory changed",len(owners),STATE["owned_code_count_at_snapshot"])
 assert len(owners)==len(handled)+len(owners-handled)
@@ -109,5 +132,6 @@ print("EDEN_OPTIMIZATION_REVIEW_BACKLOG_PASS",
       "shipping_integrated="+str(status["shipping_backport_integrated_previously"]),
       "historical_maintained="+str(status["historical_maintained_unit_parity"]),
       "new_code_fixes="+str(status["new_source_issue_corrected"]),
+      "native_selected="+str(status["historical_native_selected_unit"]),
       "remaining_to_triage="+str(len(owners-handled)),
       "new_code_fixes_required=UNKNOWN native_console_validation=SEPARATE")

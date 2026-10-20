@@ -165,3 +165,24 @@ GPU ; **aucun gain FPS ni guérison de freeze PS5 n'est encore démontré**.
 Un fichier compute nouveau est pris en charge dans ce lot ; le
 fichier graphics figurait déjà dans la revue des six sources.
 **Optimisation restant à traiter : 232 sur 491 (259 pris en charge).**
+
+## Lot de 20 sources natives déjà installées — RADV / Vulkan / SurfaceFlinger
+
+Le registre d'optimisation reconnaît **20 chemins maintenus** déjà
+propriétaires d'une implémentation sélectionnée et d'un contrôle de
+contenu exécuté en CI : 6 unités RADV installées depuis la liste
+exacte des 12 sources (`tools/install-vendored-radv.py`),
+13 unités Vulkan du fork intégralement copié et vérifié par
+`tools/check-vendored-vulkan-fork.py`, et une source SurfaceFlinger
+installée depuis son commit Eden épinglé.
+
+Les chemins RADV OpenCL `.cl` continuent d'être suivis dans le graphe
+et le catalogue `vendor/encore-active`, mais ne sont actuellement
+**pas inclus** dans le périmètre strict des 491 fichiers `.c/.cpp/.h`
+et assimilés. La livraison sélectionnée ne garantit pas un gain FPS :
+ces 20 fichiers sont classés « code existant à ne pas réétudier
+sans nouveau défaut » et non « 20 optimisations réalisées maintenant ».
+
+**Indicateur principal de la passe : 279 fichiers déjà pris en charge
+sur 491 ; 212 fichiers à traiter dans l'optimisation**. Ce sont des
+sources à trier, pas 212 correctifs nécessaires.
