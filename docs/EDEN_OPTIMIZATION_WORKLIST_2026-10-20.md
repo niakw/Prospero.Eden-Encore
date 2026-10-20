@@ -90,3 +90,34 @@ son statut et sa référence de preuve historique dans
 `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md`.
 Le nombre de nouvelles modifications de code obligatoires demeure
 inconnu avant diagnostic des sources non traitées.
+
+## Réception rapide des backports de production déjà modifiés
+
+**Nouveau lot : 78 fichiers déjà intégrés** sous
+`vendor/encore-active/eden-backports/src/`, dont les fichiers C/C++
+et en-têtes GPU, texture, synchronisation, IPC, réseau, audio et services.
+Ils étaient absents du manifeste de progression mais pas du code produit.
+
+Critères **cumulatifs** de sortie de la première revue : chemin source
+exact référencé par un contrat `SOURCE` ; présence dans le manifeste
+des **83 entrées de production** (81 fichiers C/C++ et 2 recettes CMake) ;
+SHA256 actif distinct de l'empreinte amont ; empreinte et taille des
+**78 fichiers** recontrôlées sur les véritables octets du dépôt lors de
+chaque fast gate et prévalidation complète ; commit amont
+`5f142c7926d0c7fcbbd0ce30794d72f638a43b2a` épinglé dans les
+deux manifestes.
+
+Les 78 ne sont **pas** de nouvelles optimisations de cette session :
+ce sont des modifications de production **déjà reçues** et déjà
+suivies par les vérifications de préparation / réception du fork.
+Ne pas les classer `HOST` ni `FPS` : aucune qualification
+matérielle n'est impliquée.
+
+| Suivi du traitement du code | Avant | Après |
+| --- | ---: | ---: |
+| Sources maintenues | 491 | 491 |
+| Fichiers traités ou changements existants reconnus | 102 | **180** |
+| **Fichiers restant à examiner pour optimiser** | **389** | **311** |
+
+Les fichiers concernés restent surveillés pour les bugs et les
+régressions réels ; seul leur *premier tri d'optimisation* est évité.
