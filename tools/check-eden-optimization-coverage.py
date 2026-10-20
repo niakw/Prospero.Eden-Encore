@@ -119,6 +119,16 @@ for e in entries:
         assert 'PATH = Path("src/core/hle/service/nvnflinger/surface_flinger.cpp")' in surface_sel
     else: raise AssertionError(("unknown source selector",kind))
 assert sum(e["disposition"]=="historical_native_selected_unit" for e in entries)==20
+# New per-source review decisions must remain traceable to the exact
+# current contract path and a real file entry in the written source review.
+for e in entries:
+    if not e.get("source_review_document"):
+        continue
+    assert e["disposition"]=="reviewed_without_new_code_edit"
+    assert e["contract_id"] in by_id and by_id[e["contract_id"]]["path"]==e["path"]
+    source_review=ROOT/e["source_review_document"]
+    assert source_review.is_file()
+    assert "| `"+e["path"]+"` |" in source_review.read_text(),e["path"]
 status=Counter(e["disposition"] for e in entries)
 assert len(owners)==STATE["owned_code_count_at_snapshot"],("source inventory changed",len(owners),STATE["owned_code_count_at_snapshot"])
 assert len(owners)==len(handled)+len(owners-handled)

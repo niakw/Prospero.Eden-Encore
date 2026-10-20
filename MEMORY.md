@@ -1,5 +1,8 @@
 # Eden Encore — Project Memory
 
+- HEADLESS RUNTIME CODE TRIAGE (21 Oct): ten actual source-read owners U02..U11, heap, gamepad, audio, network audit/socket/domain/DNS, display surface, VMA and crash report, written in `docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md`. Existing fastpaths retained; no speculative hotpath C++ changes or FPS claim. Source-reviewed 289/491, **202 optimization-triage files remain**. `tools/check-eden-optimization-coverage.py` checks source review provenance for all ten.
+
+
 - NATIVE PROFILE OWNER FAST TRIAGE (Oct 2026): 20 additional Encore-owned C/C++/headers (6 RADV installer/fingerprint sources, 13 versioned Vulkan fork/byte-parity sources, 1 pinned SurfaceFlinger source) now recorded with exact audit contract and CI-invoked source proof in `docs/EDEN_OPTIMIZATION_COVERAGE_2026-10-20.json`. `tools/check-eden-optimization-coverage.py` checks each owner/selector. Handled 279/491, **212 remaining optimization-triage paths**. OpenCL `.cl` remains outside this strict C/C++ count. No new FPS or full PS5 native qualification implied.
 
 

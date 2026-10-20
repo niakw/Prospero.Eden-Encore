@@ -6,9 +6,23 @@
   "owned_code_count_at_snapshot": 491,
   "handled_paths": [
     {
+      "path": "headless/audio.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U04",
+      "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source-read optimization triage, no additional hotpath edit justified: Audio worker is stop-aware, output is paced by 256-frame device calls, mutex protects PCM publish; do not disrupt device cadence."
+    },
+    {
       "path": "headless/buffer_pages.h",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "headless/crash_report.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U11",
+      "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source-read optimization triage, no additional hotpath edit justified: Crash reporter keeps signal path separate from helper threads, uses fixed buffer and atomics; startup/report failure handling isn't a per-frame cost, do not simplify signal safety without fault trace."
     },
     {
       "path": "headless/graphics.cpp",
@@ -16,9 +30,65 @@
       "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
     },
     {
+      "path": "headless/heap_pages.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U02",
+      "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source-read optimization triage, no additional hotpath edit justified: Heap C bridge already delegates allocation, reservation and rollback to its single owned backend; initial direct-memory provenance is startup-only, no redundant per-allocation lookup found."
+    },
+    {
       "path": "headless/image_pages.h",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "headless/network_audit_sockets.c",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U06",
+      "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source-read optimization triage, no additional hotpath edit justified: POSIX socket wrappers preserve errno and call target formatting, getpeername and file audit only when diagnostics active; no unconditional socket peer query."
+    },
+    {
+      "path": "headless/network_audit.c",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U05",
+      "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source-read optimization triage, no additional hotpath edit justified: Network audit disabled path returns after atomic acquire; duplicate DNS denies suppressed before file lock and writes batched, so quiet-mode bottleneck not evident."
+    },
+    {
+      "path": "headless/network_domain_rules.c",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U07",
+      "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source-read optimization triage, no additional hotpath edit justified: Guest domain policy is immutable after release-ready publication and no heap/socket work in lookup; linear scan is bounded but needs DNS workload measurements to justify indexing."
+    },
+    {
+      "path": "headless/pad.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U03",
+      "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source-read optimization triage, no additional hotpath edit justified: Controller input and rumble path has release/acquire pending hint before mutex; no hotpath locking on silent polls, preserve paired publication."
+    },
+    {
+      "path": "headless/ps5_net_compat.c",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U08",
+      "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source-read optimization triage, no additional hotpath edit justified: Native resolver and fcntl compatibility wrappers preserve special console ABI; resolver setup could be profiled but blind caching could change lifecycle and errno."
+    },
+    {
+      "path": "headless/vulkan_allocator.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U10",
+      "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source-read optimization triage, no additional hotpath edit justified: Single VMA_IMPLEMENTATION ownership TU contains no hotpath logic to optimize; verify no double implementation rather than replacing allocator source."
+    },
+    {
+      "path": "headless/vulkan_surface.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U09",
+      "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source-read optimization triage, no additional hotpath edit justified: Vulkan surface enumerates display modes once at initialization and chooses 60/120 mode; loop and vector allocations are not a per-frame rendering bottleneck."
     },
     {
       "path": "src/host_memory.cpp",

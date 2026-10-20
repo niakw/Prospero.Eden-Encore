@@ -186,3 +186,7 @@ sans nouveau défaut » et non « 20 optimisations réalisées maintenant ».
 **Indicateur principal de la passe : 279 fichiers déjà pris en charge
 sur 491 ; 212 fichiers à traiter dans l'optimisation**. Ce sont des
 sources à trier, pas 212 correctifs nécessaires.
+
+## 21 octobre — dix propriétaires natifs déjà examinés
+
+Voir [EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md](EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md). Les dix sources `U02`–`U11` ont été lues directement, en distinguant leurs fast paths déjà présents et leurs fonctions seulement utilisées au démarrage, à l'arrêt ou en cas de crash. Sans anomalie de performance reproduite sur ces sources, aucun patch C++ additionnel n'a été créé. **289 sur 491 fichiers traités ; 202 restent à traiter pour l'optimisation.**
