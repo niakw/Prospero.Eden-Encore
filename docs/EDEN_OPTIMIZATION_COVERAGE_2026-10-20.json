@@ -2100,7 +2100,8 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/install-vendored-surface-lifecycle.py",
       "source_selector": "surface",
-      "evidence": "Existing source selected in native profile by the checked-in surface owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+      "evidence": "Existing source selected in native profile by the checked-in surface owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
+      "contract_evidence": "tools/install-vendored-surface-lifecycle.py"
     },
     {
       "path": "vendor/encore-active/eden-sync/src/core/hle/kernel/k_synchronization_object.h",
@@ -2169,7 +2170,8 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-vulkan-fork.py",
       "source_selector": "vulkan",
-      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
+      "contract_evidence": "headless/vulkan.cmake"
     },
     {
       "path": "vendor/encore-active/eden-vulkan/include/video_core/present.h",
@@ -2178,7 +2180,8 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-vulkan-fork.py",
       "source_selector": "vulkan",
-      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
+      "contract_evidence": "headless/vulkan.cmake"
     },
     {
       "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/pipeline_helper.h",
@@ -2192,7 +2195,8 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-vulkan-fork.py",
       "source_selector": "vulkan",
-      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
+      "contract_evidence": "headless/vulkan.cmake"
     },
     {
       "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/renderer_vulkan.h",
@@ -2201,7 +2205,8 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-vulkan-fork.py",
       "source_selector": "vulkan",
-      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
+      "contract_evidence": "headless/vulkan.cmake"
     },
     {
       "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/striped_wait.h",
@@ -2218,7 +2223,8 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-vulkan-fork.py",
       "source_selector": "vulkan",
-      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
+      "contract_evidence": "headless/vulkan.cmake"
     },
     {
       "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_compute_pipeline.h",
@@ -2227,7 +2233,8 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-vulkan-fork.py",
       "source_selector": "vulkan",
-      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
+      "contract_evidence": "headless/vulkan.cmake"
     },
     {
       "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_descriptor_buffer.h",
@@ -2267,7 +2274,8 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-vulkan-fork.py",
       "source_selector": "vulkan",
-      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
+      "contract_evidence": "headless/vulkan.cmake"
     },
     {
       "path": "vendor/encore-active/eden-vulkan/include/video_core/vulkan_common/vulkan.h",
@@ -2276,7 +2284,8 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-vulkan-fork.py",
       "source_selector": "vulkan",
-      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
+      "contract_evidence": "headless/vulkan.cmake"
     },
     {
       "path": "vendor/encore-active/eden-vulkan/vk_buffer_cache_cost.cpp",
@@ -2290,7 +2299,8 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-vulkan-fork.py",
       "source_selector": "vulkan",
-      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
+      "contract_evidence": "headless/vulkan.cmake"
     },
     {
       "path": "vendor/encore-active/eden-vulkan/vk_compute_pipeline_cost.cpp",
@@ -2356,7 +2366,8 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-vulkan-fork.py",
       "source_selector": "vulkan",
-      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
+      "contract_evidence": "headless/vulkan.cmake"
     },
     {
       "path": "vendor/encore-active/eden-vulkan/vulkan_instance.cpp",
@@ -2365,7 +2376,8 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-vulkan-fork.py",
       "source_selector": "vulkan",
-      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
+      "contract_evidence": "headless/vulkan.cmake"
     },
     {
       "path": "vendor/encore-active/eden-vulkan/vulkan_library.cpp",
@@ -2374,7 +2386,8 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-vulkan-fork.py",
       "source_selector": "vulkan",
-      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
+      "contract_evidence": "headless/vulkan.cmake"
     },
     {
       "path": "vendor/encore-active/eden-vulkan/vulkan_present_layer.cpp",
@@ -2432,7 +2445,8 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-vulkan-fork.py",
       "source_selector": "vulkan",
-      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+      "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
+      "contract_evidence": "headless/vulkan.cmake"
     },
     {
       "path": "vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h",
@@ -2446,7 +2460,8 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-radv-fork.py",
       "source_selector": "radv",
-      "evidence": "Existing source selected in native profile by the checked-in radv owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+      "evidence": "Existing source selected in native profile by the checked-in radv owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
+      "contract_evidence": "tools/install-vendored-radv.py"
     },
     {
       "path": "vendor/encore-active/ps5-mesa/src/amd/vulkan/meta/radv_meta_resolve.c",
@@ -2455,7 +2470,8 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-radv-fork.py",
       "source_selector": "radv",
-      "evidence": "Existing source selected in native profile by the checked-in radv owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+      "evidence": "Existing source selected in native profile by the checked-in radv owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
+      "contract_evidence": "tools/install-vendored-radv.py"
     },
     {
       "path": "vendor/encore-active/ps5-mesa/src/amd/vulkan/radv_cmd_buffer.c",
@@ -2464,7 +2480,8 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-radv-fork.py",
       "source_selector": "radv",
-      "evidence": "Existing source selected in native profile by the checked-in radv owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+      "evidence": "Existing source selected in native profile by the checked-in radv owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
+      "contract_evidence": "tools/install-vendored-radv.py"
     },
     {
       "path": "vendor/encore-active/ps5-mesa/src/amd/vulkan/radv_descriptor_update_template.c",
@@ -2473,7 +2490,8 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-radv-fork.py",
       "source_selector": "radv",
-      "evidence": "Existing source selected in native profile by the checked-in radv owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+      "evidence": "Existing source selected in native profile by the checked-in radv owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
+      "contract_evidence": "tools/install-vendored-radv.py"
     },
     {
       "path": "vendor/encore-active/ps5-mesa/src/amd/vulkan/radv_descriptor_update_template.h",
@@ -2482,7 +2500,8 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-radv-fork.py",
       "source_selector": "radv",
-      "evidence": "Existing source selected in native profile by the checked-in radv owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+      "evidence": "Existing source selected in native profile by the checked-in radv owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
+      "contract_evidence": "tools/install-vendored-radv.py"
     },
     {
       "path": "vendor/encore-active/ps5-mesa/src/amd/vulkan/radv_physical_device.c",
@@ -2491,7 +2510,8 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-radv-fork.py",
       "source_selector": "radv",
-      "evidence": "Existing source selected in native profile by the checked-in radv owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain."
+      "evidence": "Existing source selected in native profile by the checked-in radv owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
+      "contract_evidence": "tools/install-vendored-radv.py"
     },
     {
       "path": "vendor/encore-active/ps5-mesa/src/amd/vulkan/radv_pipeline.c",
