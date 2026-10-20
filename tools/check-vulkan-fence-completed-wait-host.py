@@ -30,6 +30,11 @@ pinned=extract(PIN)
 assert "scheduler.IsFree(wait_tick)" in native
 assert "scheduler.IsFree(wait_tick)" not in pinned
 assert native.count("scheduler.Wait(wait_tick);")==1
+# The native VulkanTimer has a real RAII destructor. The lightweight host
+# double only increments its constructor count; mark the extracted local as
+# intentionally unused without altering production code or wait ordering.
+native=native.replace("auto timer = Eden::Performance::VulkanTimer(6)",
+                      "[[maybe_unused]] auto timer = Eden::Performance::VulkanTimer(6)")
 cpp=r"""
 #include <cassert>
 #include <cstdint>
