@@ -1,0 +1,50 @@
+name: Encore core fast gate
+
+on:
+  push:
+    branches:
+      - dev/ps5-sparse-jit
+    paths:
+      - 'vendor/encore-active/eden-core/src/dynarmic/**'
+      - 'vendor/encore-active/eden-vulkan/**'
+      - 'tools/check-vulkan-multirange-overflow-host.py'
+      - 'tools/check-vulkan-renderpass-clear-bounds-host.py'
+      - 'tools/check-vulkan-worker-fatal-drain-host.py'
+      - 'tools/check-native-a64-default-phases-host.py'
+      - 'tools/check-native-a64-cache-invalidation-host.py'
+      - 'tools/prepare-vulkan-port.py'
+      - '.github/workflows/encore-core-fast-gate.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: encore-fast-core-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-core-host-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Fetch source
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+          persist-credentials: false
+      - name: C++ compiler version
+        run: |
+          g++ --version
+          python3 --version
+      - name: Vulkan arithmetic and frame worker guards
+        run: |
+          set -euo pipefail
+          python3 -B tools/check-vulkan-renderpass-clear-bounds-host.py
+          python3 -B tools/check-vulkan-multirange-overflow-host.py
+          python3 -B tools/check-vulkan-worker-fatal-drain-host.py
+      - name: Default JIT compiler and cache invalidation guards
+        run: |
+          set -euo pipefail
+          python3 -B tools/check-native-a64-default-phases-host.py
+          python3 -B tools/check-native-a64-cache-invalidation-host.py
+      - name: Boundary
+        run: |
+          echo 'Host source-derived checks only; native package, GPU and FPS remain unqualified.'
