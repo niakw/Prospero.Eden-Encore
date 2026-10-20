@@ -14,7 +14,13 @@ dynarmic = cache / 'source/src/dynarmic/src'
 monitor = (dynarmic / 'dynarmic/backend/x64/exclusive_monitor.cpp').read_text()
 # This implementation includes, but does not use, the application logger/asserts.
 monitor = monitor.replace('#include "common/assert.h"', '')
-lock = (root / 'headless/spin-lock.inc').read_text()
+# The historical include fragment was retired when the full native unit
+# became its maintained owner. Exercise its actual compiler-atomic methods.
+lock_unit = (root / 'vendor/encore-active/eden-core/src/dynarmic/common/spin_lock_x64.cpp').read_text()
+lock_start = '// PS5 x64: retain the storage ABI'
+lock_end = '\n} // namespace Dynarmic'
+assert lock_unit.count(lock_start) == lock_unit.count(lock_end) == 1
+lock = lock_unit[lock_unit.index(lock_start):lock_unit.index(lock_end)]
 source = r'''
 #include <cassert>
 #include <chrono>
