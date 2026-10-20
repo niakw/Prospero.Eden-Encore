@@ -78,16 +78,16 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
 | Graphe connu | 478 | 455 | 959 |
-| HOST — preuve ciblée hôte | 56 | 51 | 110 |
-| SOURCE — lecture effectuée, preuve insuffisante | 399 | 389 | 810 |
+| HOST — preuve ciblée hôte | 58 | 53 | 116 |
+| SOURCE — lecture effectuée, preuve insuffisante | 397 | 387 | 804 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 8 | 8 | 11 |
-| **Encore à qualifier (SOURCE + OPEN)** | **414** | **403** | **838** |
-| Dont priorité P0 (SOURCE + OPEN) | 106 | 101 | 245 |
+| **Encore à qualifier (SOURCE + OPEN)** | **412** | **401** | **832** |
+| Dont priorité P0 (SOURCE + OPEN) | 104 | 99 | 239 |
 
-Le **noyau restant** compte donc 414 critères répartis sur
-403 fichiers et 838 mentions fonction/contrat :
-15 OPEN et 399 SOURCE.
+Le **noyau restant** compte donc 412 critères répartis sur
+401 fichiers et 832 mentions fonction/contrat :
+15 OPEN et 397 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
@@ -423,7 +423,7 @@ function/contract tokens are checked by CI for existence only; the
 | V14 | P1 | V13 | vendor/encore-active/eden-core/src/video_core/renderer_opengl/gl_buffer_cache.cpp | BufferCacheRuntime::ClearBuffer | SOURCE | tools/check-vendor-consolidation-debt.py | Former one-replacement GL_RED_INTEGER unit maintained and source-selected under EDEN_PS5_OPENGL; no console proof | 🟡 Source étudiée |
 | V15 | P1 | V14 | vendor/encore-active/eden-core/src/video_core/renderer_opengl/gl_query_cache.cpp | CachedQuery::Flush | SOURCE | tools/check-vendor-consolidation-debt.py | Former query slicing bypass maintained and source-selected only with native OpenGL; no console proof | 🟡 Source étudiée |
 | V16 | P0 | V01,V02 | vendor/encore-active/eden-vulkan/vk_fence_manager_cost.cpp | InnerFence::Wait; FenceManager::WaitFence; FenceManager::QueueFence | SOURCE | headless/vulkan.cmake | Distinguish stubbed fences from scheduler completion stalls; source indexed, no native proof | 🟡 Source étudiée |
-| V17 | P0 | V05,V16 | vendor/encore-active/eden-vulkan/vk_descriptor_buffer_cost.cpp | DescriptorBufferRing::PreflightFrameReuse; DescriptorBufferRing::PreflightCapacity; DescriptorBufferRing::Allocate | SOURCE | headless/vulkan.cmake | Verify descriptor reuse and capacity preflights before paired cache mutexes; source indexed, no native proof | 🟡 Source étudiée |
+| V17 | P0 | V05,V16 | vendor/encore-active/eden-vulkan/vk_descriptor_buffer_cost.cpp | DescriptorBufferRing::PreflightFrameReuse; DescriptorBufferRing::PreflightCapacity; DescriptorBufferRing::Allocate | HOST | tools/check-ps5-descriptor-conditional-reuse-host.py | Hôte: prévalidation frame/capacité et allocation réelles testées sous ASan/UBSan, fichier instrumenté relié au générateur; repli Finish sous verrou conservé, progression GPU/FPS PS5 non qualifiés | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-ps5-descriptor-conditional-reuse-host.py) |
 | V18 | P1 | V07,V17 | vendor/encore-active/eden-vulkan/vk_compute_pipeline_cost.cpp | ComputePipeline::Configure | SOURCE | headless/vulkan.cmake | Verify compute descriptor queue acquire and binding ownership; source indexed, no native proof | 🟡 Source étudiée |
 | V19 | P0 | V05,V16 | vendor/encore-active/eden-vulkan/vk_texture_cache_cost.cpp | TextureCacheRuntime::DownloadStagingBuffer; TextureCacheRuntime::ReinterpretImage; TextureCacheRuntime::GetValidResolveShadow | SOURCE | headless/vulkan.cmake | Verify download staging and MSAA resolve shadow lifetime; source indexed, no native proof | 🟡 Source étudiée |
 | V20 | P0 | R03,V16 | vendor/encore-active/eden-vulkan/vk_multi_range_buffer_cost.cpp | MultiRangeBufferCache::DrainRetired; MultiRangeBufferCache::DropOwner; MultiRangeBufferCache::Invalidate | SOURCE | headless/vulkan.cmake | Verify GPU tick ownership when retiring and dropping multi-range buffers; source indexed, no native proof | 🟡 Source étudiée |
@@ -439,7 +439,7 @@ function/contract tokens are checked by CI for existence only; the
 | V30 | P1 | V26 | vendor/encore-active/eden-vulkan/vulkan_wrapper.cpp | Instance::Create; Device::GetQueue | SOURCE | headless/vulkan.cmake | Vulkan instance and queue wrappers selected through native fork; check native device wrappers before changing; source/selector examined, no completed device-runtime proof | 🟡 Source étudiée |
 | V31 | P0 | V01,V16 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_scheduler.h | PreflightDrawCommands; Wait(u64 tick; SubmitExecution | SOURCE | headless/vulkan.cmake | Scheduler owner queue, preflight and completion API are compiled through maintained header; verify wait paths under workload; selected ABI/header inspected, no hardware behavior proven | 🟡 Source étudiée |
 | V32 | P0 | V28 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_present_manager.h | WaitPresent; CopyToSwapchain; RecreateSwapchain | SOURCE | headless/vulkan.cmake | Present thread resource layout and swapchain retry ABI must agree with maintained implementation; selected ABI/header inspected, no hardware behavior proven | 🟡 Source étudiée |
-| V33 | P0 | V17 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_descriptor_buffer.h | PreflightFrameReuse; PreflightCapacity; Allocate(Scheduler& | SOURCE | headless/vulkan.cmake | Ring capacity and frame-reuse contract is shared with maintained descriptor implementation; selected ABI/header inspected, no hardware behavior proven | 🟡 Source étudiée |
+| V33 | P0 | V17 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_descriptor_buffer.h | PreflightFrameReuse; PreflightCapacity; Allocate(Scheduler& | HOST | tools/check-ps5-compute-descriptor-ring-preflight-host.py | Hôte: prévalidation/allocation extraites des sources natives avec en-tête maintenu, phases d'attente et générations couvertes sous ASan/UBSan; exécution GPU/FPS PS5 non qualifiés | [![Test hôte OK](https://img.shields.io/badge/test_h%C3%B4te-OK-2ea44f?style=flat-square)](https://github.com/niakw/Prospero.Eden-Encore/blob/dev/ps5-sparse-jit/tools/check-ps5-compute-descriptor-ring-preflight-host.py) |
 | V34 | P1 | V28 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_blit_screen.h | PrepareFrame; WaitIdle | SOURCE | headless/vulkan.cmake | Blit API synchronization and lifetime are shared with maintained present implementation; selected ABI/header inspected, no hardware behavior proven | 🟡 Source étudiée |
 | V35 | P1 | V26,V28 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/renderer_vulkan.h | CreateDevice; PresentLoading | SOURCE | headless/vulkan.cmake | Renderer Vulkan public ABI and loading presentation contract need consistent full rebuild; selected ABI/header inspected, no hardware behavior proven | 🟡 Source étudiée |
 | V36 | P1 | V35 | vendor/encore-active/eden-vulkan/include/core/frontend/emu_window.h | EmuWindow; WindowSystemType | SOURCE | headless/vulkan.cmake | Window abstraction and PS5 native WSI enum/header ABI; preserve device-facing config; versioned fork selected by CMake, no console-runtime proof | 🟡 Source étudiée |

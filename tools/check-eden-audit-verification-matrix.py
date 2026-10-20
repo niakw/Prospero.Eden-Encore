@@ -146,7 +146,7 @@ def build_matrix(rows: list[dict], workflow: str, catalog: str) -> tuple[list[di
     undirect = sorted(set(r["evidence"] for r in indirect))
     assert sum(statuses.values()) == len(rows)
     # Each new HOST claim needs a precise in-CI proof and native-limit statement.
-    assert statuses["HOST"] == 56, "HOST claims changed: review evidence before modifying guard"
+    assert statuses["HOST"] == 58, "HOST claims changed: review evidence before modifying guard"
     ownership_closures = set(["B06","B07","B08","B09","B10","B12","B13","B15","B17","B18","B19","B20"])
     for row in rows:
         if row["id"] not in ownership_closures:
@@ -155,6 +155,14 @@ def build_matrix(rows: list[dict], workflow: str, catalog: str) -> tuple[list[di
         assert row["evidence_kind"] == "python-in-preflight", row["id"]
         assert "Hôte:" in row["acceptance"] and "PS5" in row["acceptance"], row["id"]
     assert len(ownership_closures) == 12
+    for ident, proof in {
+        "V17": "tools/check-ps5-descriptor-conditional-reuse-host.py",
+        "V33": "tools/check-ps5-compute-descriptor-ring-preflight-host.py",
+    }.items():
+        item = keyed[ident]
+        assert item["status"] == "HOST" and item["priority"] == "P0"
+        assert item["evidence"] == proof and item["evidence_kind"] == "python-in-preflight"
+        assert "Hôte:" in item["acceptance"] and "PS5" in item["acceptance"]
     striped = keyed["V40"]
     assert striped["status"] == "HOST" and striped["priority"] == "P0"
     assert striped["evidence"] == "tools/check-native-vulkan-striped-wait-host.py"
