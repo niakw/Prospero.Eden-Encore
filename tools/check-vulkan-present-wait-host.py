@@ -46,7 +46,7 @@ present_thread = section("void PresentManager::PresentThread(std::stop_token tok
                          "void PresentManager::RecreateSwapchain(Frame* frame)")
 assert "free_cv.wait(lock, [this] { return present_failure || !free_queue.empty(); });" in render_frame
 assert "if (present_failure) std::rethrow_exception(present_failure);" in render_frame
-assert "free_queue.pop_front();\\n    }" in render_frame
+assert "free_queue.pop_front();\n    }" in render_frame
 assert render_frame.index("free_queue.pop_front();") < render_frame.index("frame->present_done.Wait();")
 assert "present_failure || (present_queue.empty() && !present_in_flight)" in wait_present
 assert wait_present.index("frame_cv.wait(") < wait_present.index(
