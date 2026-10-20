@@ -24,24 +24,24 @@ d'améliorations « terminées » n'est maintenue manuellement. Le
 contrôle échoue si un fichier, symbole, lien de catalogue actif ou
 preuve `HOST` invoquée en CI disparaît.
 
-## État initial vérifié
+## État courant vérifié (20 octobre 2026)
 
 | État | Contrats | Preuve acquise |
 |---|---:|---|
-| HOST | 45 | Invariant précis sur hôte ; **pas** de jeu sur console |
-| SOURCE | 410 | Source étudiée, comportement natif non qualifié |
+| HOST | 47 | Invariant précis sur hôte ; **pas** de jeu sur console |
+| SOURCE | 408 | Source étudiée, comportement natif non qualifié |
 | OPEN | 15 | Question de comportement/propriété non résolue |
 | PARKED | 8 | Expérimentation suspendue, ne pas activer |
 | **Total** | **478** | **0 certification de gain de FPS par ce registre** |
 
-**411 chemins distincts SOURCE + OPEN** (dont **109 chemins P0** et
-**291 dans `vendor/encore-active`**) correspondent à **425 critères SOURCE + OPEN**, dont **115 P0**, ont encore besoin
+**410 chemins distincts SOURCE + OPEN** (dont **108 chemins P0** et
+**290 dans `vendor/encore-active`**) correspondent à **423 critères SOURCE + OPEN**, dont **113 P0**, ont encore besoin
 d'une qualification supplémentaire. Leur présence n'invalide pas les
 corrections hôte : elle interdit seulement d'affirmer que leurs
 performances ou leur effet sur les freezes sont démontrés.
 
-Sur les **391 références à un script Python** parmi les preuves des
-contrats, **374 sont appelées directement** par la prévalidation et
+Sur les **392 références à un script Python** parmi les preuves des
+contrats, **375 sont appelées directement** par la prévalidation et
 **17 ne le sont pas directement** (16 SOURCE et 1 OPEN). Les 17
 références correspondent à cinq chemins distincts :
 
@@ -68,7 +68,7 @@ Le témoin de provenance `tools/install-vendored-surface-lifecycle.py
 --check` est désormais directement exécuté et a réussi sur la CI
 [39316703898](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39316703898).
 
-Les **87 autres références** pointent vers des documents, recettes
+Les **86 autres références** pointent vers des documents, recettes
 CMake, patches ou autres fichiers non exécutables : existence et
 ancres documentaires ne constituent **pas** un benchmark.
 
@@ -115,3 +115,16 @@ restent désactivées.
 ## 20 octobre — clôture des propriétés d'intégration hôte
 
 12 contrats P1 des sources maintenues (heap, JIT W^X, émetteurs A32/A64 et unités de mémoire) passent de SOURCE à HOST avec leurs tests déjà sélectionnés dans la CI. Le statut qualifie uniquement parité/compilation/staging. Le compteur de sources à qualifier devient **411** (auparavant 423), et les **109 P0** sont inchangés. Aucun contrat n'est requalifié comme amélioration FPS ni preuve de runtime console.
+
+## 20 octobre — qualification ciblée des attentes GPU (deux P0)
+
+Les contrats `Q07` (file SPSC/stop token) et `V02` (présentation
+Vulkan) ont des témoins hôte directement invoqués par la CI et des
+critères limités à leurs mécanismes vérifiés. `V02` contrôle désormais
+le source maintenu natif, et non seulement le générateur, en supprimant
+une assertion toujours vraie. Le passage SOURCE → HOST concerne la
+relecture/recyclage de slots et le déverrouillage/protocole d'attente ;
+l'effet sur les blocages du jeu et le temps de frame PS5 reste inconnu.
+Les décomptes courants sont 410 fichiers encore à qualifier, dont 108
+en priorité P0. Le total de chemins reste à 455 et celui des contrats
+à 478 : aucun chemin n'a été effacé du graphe.
