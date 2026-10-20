@@ -6,6 +6,8 @@ native build/CI. Launcher and theme work belongs to its separate conversation.
 
 This is the **single place to resume this technical audit**.
 
+**Vulkan review:** [EDEN_P0_VULKAN_REVIEW_2026-10-20.md](EDEN_P0_VULKAN_REVIEW_2026-10-20.md) adds 10 source-inspected P0 paths (20 distinct across this turn's IPC and Vulkan lots). Inspection is not a code change or a HOST/native/PS5 qualification.
+
 **P0 source review batch:** see [EDEN_P0_SOURCE_REVIEW_2026-10-20.md](EDEN_P0_SOURCE_REVIEW_2026-10-20.md) for ten explicitly inspected IPC/HLE/JIT/GPU source paths. The host IPC wake proof is not guest progress; no contract statuses or qualification debt counters are reduced.
 
 **Two-axis progress rule:** read [EDEN_TWO_AXIS_PROGRESS_2026-10-20.md](EDEN_TWO_AXIS_PROGRESS_2026-10-20.md). SOURCE+OPEN means *qualification pending*, **not** code files necessarily requiring further optimization. Do not repeatedly modify a recently fixed hotpath merely to lower that count; distinguish host test, current-SHA native build, and PS5/gameplay evidence.

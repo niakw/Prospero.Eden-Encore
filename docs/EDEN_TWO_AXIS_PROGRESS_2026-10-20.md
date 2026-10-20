@@ -105,3 +105,10 @@ Dix sources P0 ont été examinées et consignées, sans modification spéculati
 Le nouveau témoin C++ d'envoi IPC / sortie de file d'attente qualifie
 uniquement des transitions hôte ciblées, pas la reprise d'exécution invitée.
 Les compteurs SOURCE+OPEN restent inchangés.
+
+## Deuxième lot P0 — Vulkan, présentation et cache textures (10 chemins)
+
+Voir [EDEN_P0_VULKAN_REVIEW_2026-10-20.md](EDEN_P0_VULKAN_REVIEW_2026-10-20.md).
+Désormais **20 chemins P0 distincts sont inscrits comme examinés dans ces
+lots de revue**, sans suppression artificielle de dette de qualification.
+Le triage n'a pas établi de nouvelle correction moteur sûre sans preuve native.
