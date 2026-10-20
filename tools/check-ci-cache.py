@@ -24,12 +24,26 @@ for path in (
 host_workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
 native_toolchain = workflow.split("      - name: Install build toolchain", 1)[1].split(
     "      - name: Upgrade Meson", 1)[0]
-# A no-op push must not cancel deliberate core-ready tests either.
+# Native source changes now trigger core verification independent of commit
+# message suffixes. Narrow push paths mean docs/UI pushes do not start a
+# competing run; a newer native push intentionally supersedes an older one.
+host_push = host_workflow.split("  push:", 1)[1].split("  workflow_dispatch:", 1)[0]
 host_group = host_workflow.split("concurrency:", 1)[1].split("jobs:", 1)[0]
-assert "github.event_name == 'push'" in host_group
-assert "!contains(github.event.head_commit.message || '', '[core-ready]')" in host_group
-assert "'skip-only' || 'test-capable'" in host_group
+assert "branches: [dev/ps5-sparse-jit]" in host_push
+assert "paths:" in host_push
+for selected in (
+    "'vendor/encore-active/**'",
+    "'headless/**'",
+    "'tools/**'",
+    "'.github/workflows/encore-core-preflight.yml'",
+):
+    assert selected in host_push, ("core source path missing", selected)
+assert "'docs/**'" not in host_push
+assert "'launcher/**'" not in host_push
+assert "${{ github.ref }}" in host_group
+assert "${{ github.event_name }}" in host_group
 assert "cancel-in-progress: true" in host_group
+assert "if: ${{ github.event_name == 'workflow_dispatch' ||" not in host_workflow
 
 assert "libboost-container-dev" in host_workflow
 assert "libboost-container-dev" in native_toolchain
