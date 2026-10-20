@@ -6,6 +6,24 @@
   "owned_code_count_at_snapshot": 491,
   "handled_paths": [
     {
+      "path": "headless/assets_dir.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U46",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-app-policy-owners.py",
+      "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source read: Cold storage-root selection is computed once per process; no per-frame filesystem probing. Contract U46; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
+    },
+    {
+      "path": "headless/audio_out_init.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U47",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-app-policy-owners.py",
+      "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source read: Shared sceAudioOutInit is protected by call_once; no repeated device initialization on audio streams. Contract U47; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
+    },
+    {
       "path": "headless/audio.cpp",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U04",
@@ -13,9 +31,36 @@
       "evidence": "Source-read optimization triage, no additional hotpath edit justified: Audio worker is stop-aware, output is paced by 256-frame device calls, mutex protects PCM publish; do not disrupt device cadence."
     },
     {
+      "path": "headless/boot_trace.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U34",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-runtime-header-owners.py",
+      "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source read: Early boot/fatal trace only; not enabled as a per-draw hotpath. Contract U34; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
+    },
+    {
       "path": "headless/buffer_pages.h",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "headless/button_mapping.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U66",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-final-owners.py",
+      "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source read: Static/constexpr translation and bounded uniqueness validation; no additional hotpath allocation identified. Contract U66; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
+    },
+    {
+      "path": "headless/controller_applet.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U58",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-specialized-owners.py",
+      "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source read: Controller reconfiguration is event-triggered; does not participate in per-frame GPU stalls. Contract U58; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
     },
     {
       "path": "headless/crash_report.cpp",
@@ -23,6 +68,87 @@
       "contract_id": "U11",
       "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
       "evidence": "Source-read optimization triage, no additional hotpath edit justified: Crash reporter keeps signal path separate from helper threads, uses fixed buffer and atomics; startup/report failure handling isn't a per-frame cost, do not simplify signal safety without fault trace."
+    },
+    {
+      "path": "headless/crash_report.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U48",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-app-policy-owners.py",
+      "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source read: Crash lifecycle and atomic diagnostic counters are already separated; no performance defect localized. Contract U48; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
+    },
+    {
+      "path": "headless/crash_site.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U27",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-critical-interface-owners.py",
+      "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source read: DEV-only failure dump, not shipping frame handling. Contract U27; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
+    },
+    {
+      "path": "headless/crash_trigger.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U49",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-app-policy-owners.py",
+      "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source read: Manual development crash trigger, not an automatic production poll. Contract U49; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
+    },
+    {
+      "path": "headless/dev_launch_policy.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U50",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-app-policy-owners.py",
+      "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source read: Constexpr launch/previous-crash intent, not gameplay processing. Contract U50; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
+    },
+    {
+      "path": "headless/dev_replay_policy.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U45",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-runtime-header-owners.py",
+      "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source read: Constexpr title-qualified developer replay policy; opt-in, not per-frame workload. Contract U45; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
+    },
+    {
+      "path": "headless/error_applet.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U60",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-specialized-owners.py",
+      "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source read: Guest error completion is event-based and bounded; relevant to UI correctness not normal GPU performance. Contract U60; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
+    },
+    {
+      "path": "headless/filesystem_probe.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U35",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-runtime-header-owners.py",
+      "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source read: Writable-root capability probe on startup only; no frame-time filesystem check. Contract U35; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
+    },
+    {
+      "path": "headless/glyph_sha256.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U68",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-final-owners.py",
+      "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source read: Artwork integrity hashing occurs off the frame hotpath; bounded implementation maintained. Contract U68; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
+    },
+    {
+      "path": "headless/glyph_version.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U69",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-final-owners.py",
+      "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source read: Title display-version extraction is metadata work, not runtime shader input. Contract U69; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
     },
     {
       "path": "headless/graphics.cpp",
@@ -75,6 +201,24 @@
       "contract_id": "U08",
       "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
       "evidence": "Source-read optimization triage, no additional hotpath edit justified: Native resolver and fcntl compatibility wrappers preserve special console ABI; resolver setup could be profiled but blind caching could change lifecycle and errno."
+    },
+    {
+      "path": "headless/storage_paths.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U76",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-final-owners.py",
+      "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source read: Static directory resolution and sandbox fallback; no per-frame path discovery. Contract U76; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
+    },
+    {
+      "path": "headless/title_id_fallback.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U40",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-headless-runtime-header-owners.py",
+      "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source read: Constexpr title identity fallback on filename, not draw command processing. Contract U40; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
     },
     {
       "path": "headless/vulkan_allocator.cpp",
@@ -2807,5 +2951,6 @@
     "registrar": "docs/EDEN_CORE_AUDIT_DEPENDENCIES.md",
     "full_preflight": ".github/workflows/encore-core-preflight.yml",
     "claim": "Previously handled source/profile code; not hardware-qualified."
-  }
+  },
+  "active_emulation_priority_excludes_launcher_prefix": "headless/prosperoeden/"
 }
