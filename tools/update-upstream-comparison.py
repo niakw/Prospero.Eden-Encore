@@ -4,6 +4,7 @@ import argparse
 import datetime as datetime
 import json
 import os
+import re
 from pathlib import Path
 import urllib.parse
 import urllib.request
@@ -86,6 +87,15 @@ def compare(rows,api=fetch):
         print(name,repo,output[-1][3],status,flush=True)
     return output
 
+def render_source(repo):
+    # A fallback label such as "frozen archive / binary" is not a
+    # GitHub owner/repository path, even though it contains a slash.
+    # Emit ordinary text rather than an invalid Markdown hyperlink.
+    if re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo):
+        return f"[{repo}](https://github.com/{repo})"
+    return repo
+
+
 def section(rows,stamp):
     lines=[START,"### Automated comparison (daily + manual)","",
        "Checked in UTC: **"+stamp+"**. Changes are commits relative to pins, not proven missing fixes.",
@@ -94,7 +104,7 @@ def section(rows,stamp):
        "|---|---|---|---:|---|"]
     for row in rows:
         name,repo,ref,delta,status=row[:5]
-        source=("["+repo+"](https://github.com/"+repo+")") if "/" in repo else repo
+        source=render_source(repo)
         lines.append("| "+name+" | "+source+" | "+ref+" | "+delta+" | "+status+" |")
     lines.extend(["","### Source changes requiring review","",
                   "These are upstream commit titles, not validated Encore integrations."])
@@ -123,7 +133,13 @@ def test():
     assert next(x for x in rows if x[0]=="eden")[2].startswith("5f142c")
     assert next(x for x in rows if x[0]=="fmt")[2]=="12.1.0"
     assert next(x for x in rows if x[0]=="pacbrew")[1]==""
-    demo=[("demo","owner/repo","aaa","+2 / -1","diverged")]
+    assert render_source("owner/repo") == "[owner/repo](https://github.com/owner/repo)"
+    assert render_source("frozen archive / binary") == "frozen archive / binary"
+    assert render_source("a/b/c") == "a/b/c"
+    demo=[("demo","owner/repo","aaa","+2 / -1","diverged"),
+          ("non-comparable","frozen archive / binary","—","—","not comparable")]
+    assert "| non-comparable | frozen archive / binary | — | — | not comparable |" in section(demo,"2026-10-14")
+    assert "https://github.com/frozen archive" not in section(demo,"2026-10-14")
     x=update("Existing notes",section(demo,"2026-10-14"))
     y=update(x,section(demo,"2026-10-15"))
     assert y.count(START)==y.count(END)==1 and "2026-10-14" not in y
